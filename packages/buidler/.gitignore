@@ -2,3 +2,6 @@
 
 # dependencies
 mnemonic.txt
+package-lock.json
+cache/*
+artifacts/*
