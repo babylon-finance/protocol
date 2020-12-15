@@ -1,0 +1,42 @@
+{
+  "name": "@defi-advisor/monorepo",
+  "version": "1.0.0",
+  "keywords": [
+    "ethereum",
+    "react",
+    "uniswap",
+    "workspaces",
+    "yarn"
+  ],
+  "private": true,
+  "scripts": {
+    "react-app:build": "yarn workspace @defi-advisor/react-app build --max-old-space-size=12288",
+    "react-app:eject": "yarn workspace @defi-advisor/react-app eject",
+    "react-app:start": "yarn workspace @defi-advisor/react-app start",
+    "react-app:test": "yarn workspace @defi-advisor/react-app test",
+    "build": "yarn workspace @defi-advisor/react-app build --max-old-space-size=12288",
+    "chain": "yarn workspace @defi-advisor/buidler chain",
+    "node": "yarn workspace @defi-advisor/buidler chain",
+    "test": "yarn workspace @defi-advisor/buidler test",
+    "start": "yarn workspace @defi-advisor/react-app start",
+    "compile": "yarn workspace @defi-advisor/buidler compile",
+    "deploy": "yarn workspace @defi-advisor/buidler deploy",
+    "watch": "yarn workspace @defi-advisor/buidler watch",
+    "accounts": "yarn workspace @defi-advisor/buidler accounts",
+    "balance": "yarn workspace @defi-advisor/buidler balance",
+    "send": "yarn workspace @defi-advisor/buidler send",
+    "ipfs": "yarn workspace @defi-advisor/react-app ipfs",
+    "surge": "yarn workspace @defi-advisor/react-app surge --domain dreary-window.surge.sh",
+    "s3": "yarn workspace @defi-advisor/react-app s3",
+    "ship": "yarn workspace @defi-advisor/react-app ship",
+    "generate": "cd packages/buidler && npx buidler generate",
+    "account": "cd packages/buidler && npx buidler account",
+    "flatten": "cd packages/buidler && npx buidler flatten"
+  },
+  "workspaces": {
+    "packages": [
+      "packages/*"
+    ]
+  },
+  "devDependencies": {}
+}
