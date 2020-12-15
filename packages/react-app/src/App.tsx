@@ -155,9 +155,10 @@ export default class App extends React.Component<AppProps, AppState> {
   };
 
   render() {
+    const networkId = parseInt(process.env.REACT_APP_NETWORK_ID || '0')
     const onMainnet = this.state.chainId === parseInt(
       process.env.REACT_APP_CHAIN_ID || '0') &&
-      this.state.networkId === parseInt(process.env.REACT_APP_NETWORK_ID || '0')
+      this.state.networkId === networkId
     return (
       <AppWrapper className="App">
         {this.state.initialLoad && <Spin tip="Loading..." />}
@@ -179,7 +180,7 @@ export default class App extends React.Component<AppProps, AppState> {
               )}
             </div>
             {this.state.connected && !onMainnet && (
-              <Alert message="You are on a different network. Please connect your wallet to the ethereum mainnet" type="warning" />
+              <Alert message={`You are on a different network. Please connect your wallet to the ${networkId === 1 ? 'mainnet' : 'network with id ' + networkId}`} type="warning" />
             )}
             {!this.state.connected && (
               <Button value="large" type="primary" onClick={this.onConnect}>
