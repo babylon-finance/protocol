@@ -156,8 +156,6 @@ export default class App extends React.Component<AppProps, AppState> {
 
   render() {
     const networkId = parseInt(process.env.REACT_APP_NETWORK_ID || '0')
-    console.log(this.state);
-    console.log(process.env);
     const onMainnet = this.state.chainId === parseInt(
       process.env.REACT_APP_CHAIN_ID || '0') &&
       this.state.networkId === networkId
