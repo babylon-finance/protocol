@@ -1,6 +1,7 @@
+require("@nomiclabs/hardhat-ethers");
+
 const fs = require("fs");
 const chalk = require("chalk");
-const { config, ethers } = require("@nomiclabs/buidler");
 
 async function deploy(name, _args) {
   const args = _args || [];
