@@ -1,19 +1,19 @@
 {
-  "name": "@defi-advisor/buidler",
+  "name": "@defi-advisor/hardhat",
   "version": "1.0.0",
   "main": "index.js",
   "license": "MIT",
   "devDependencies": {
+    "@nomiclabs/hardhat-ethers": "^2.0.1",
+    "@nomiclabs/hardhat-waffle": "^2.0.1",
     "eslint": "^7.5.0",
     "eslint-config-airbnb": "^18.2.0",
     "eslint-config-prettier": "^6.11.0",
     "eslint-plugin-babel": "^5.3.1",
-    "eslint-plugin-prettier": "^3.1.4"
+    "eslint-plugin-prettier": "^3.1.4",
+    "hardhat": "^2.0.5"
   },
   "dependencies": {
-    "@nomiclabs/buidler": "^1.4.1",
-    "@nomiclabs/buidler-ethers": "^2.0.0",
-    "@nomiclabs/buidler-waffle": "^2.0.0",
     "@openzeppelin/contracts": "^3.2.0",
     "chai": "^4.2.0",
     "chalk": "^4.1.0",
@@ -22,13 +22,13 @@
     "node-watch": "^0.6.4"
   },
   "scripts": {
-    "chain": "buidler node",
-    "test": "buidler test --network buidlerevm",
-    "compile": "buidler compile",
-    "deploy": "buidler run scripts/deploy.js && buidler run scripts/publish.js",
+    "chain": "hardhat node",
+    "test": "hardhat test",
+    "compile": "hardhat compile",
+    "deploy": "hardhat run scripts/deploy.js && hardhat run scripts/publish.js",
     "watch": "node scripts/watch.js",
-    "accounts": "buidler accounts",
-    "balance": "buidler balance",
-    "send": "buidler send"
+    "accounts": "hardhat accounts",
+    "balance": "hardhat balance",
+    "send": "hardhat send"
   }
 }
