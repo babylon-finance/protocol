@@ -14,20 +14,20 @@ describe("Holder", async function () {
 
   let holder;
 
-  it("should start empty", async function () {
-    expect(await holder.totalHedgeFunds()).to.equal(0);
-    expect(await holder.currentHedgeFundIndex()).to.equal(1);
-  });
-
-  it("should set the protocol manager address", async function () {
-    expect(await holder.protocolManager()).to.equal(await owner.getAddress());
-  });
 
   beforeEach(async () => {
     holder = await Holder.deploy();
   });
 
   describe("Hedge Funds", function () {
+    it("should start empty", async function () {
+      expect(await holder.totalHedgeFunds()).to.equal(0);
+      expect(await holder.currentHedgeFundIndex()).to.equal(1);
+    });
+
+    it("should set the protocol manager address", async function () {
+      expect(await holder.protocolManager()).to.equal(await owner.getAddress());
+    });
 
     it("can add a hedge fund and retrieve it", async function () {
       expect(await holder.addHedgeFund('my first fund'));
