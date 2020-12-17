@@ -9,9 +9,9 @@ contract HedgeFund {
     bool public active;
     string public name;
 
-    modifier onlyManager {
+    modifier onlyManager(address _caller) {
         require(
-            msg.sender == manager,
+            _caller == manager,
             "Only the fund manager can modify fund state"
         );
         _;
@@ -27,11 +27,17 @@ contract HedgeFund {
         active = _active;
     }
 
-    function setActive(bool _active) public onlyManager {
+    function setActive(bool _active, address _caller)
+        public
+        onlyManager(_caller)
+    {
         active = _active;
     }
 
-    function setManager(address _manager) public onlyManager {
+    function setManager(address _manager, address _caller)
+        public
+        onlyManager(_caller)
+    {
         manager = _manager;
     }
 }
