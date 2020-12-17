@@ -14,6 +14,7 @@ contract HedgeFund {
             msg.sender == manager,
             "Only the fund manager can modify fund state"
         );
+        _;
     }
 
     constructor(
