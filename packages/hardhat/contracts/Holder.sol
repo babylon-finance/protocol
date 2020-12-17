@@ -53,7 +53,7 @@ contract Holder {
             _hedgeFundMapping.hedgeFund.active(),
             "The hedge fund needs to be active."
         );
-        _hedgeFundMapping.hedgeFund.setActive(false);
+        _hedgeFundMapping.hedgeFund.setActive(false, msg.sender);
         totalHedgeFunds--;
     }
 
@@ -64,7 +64,7 @@ contract Holder {
             !_hedgeFundMapping.hedgeFund.active(),
             "The hedge fund needs to be disabled."
         );
-        _hedgeFundMapping.hedgeFund.setActive(true);
+        _hedgeFundMapping.hedgeFund.setActive(true, msg.sender);
         totalHedgeFunds++;
     }
 
