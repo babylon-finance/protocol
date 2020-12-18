@@ -1,5 +1,6 @@
 pragma solidity >=0.7.0 <0.9.0;
 
+import "hardhat/console.sol";
 import './interfaces/aave/ILendingPool.sol';
 import './interfaces/aave/IProtocolDataProvider.sol';
 import './interfaces/aave/IStableDebtToken.sol';
@@ -41,7 +42,8 @@ contract AaveBorrowing {
     function depositCollateral(address asset, uint256 amount) public onlyOwner {
       IERC20(asset).safeTransferFrom(msg.sender, address(this), amount);
       IERC20(asset).safeApprove(address(lendingPool), amount);
-      lendingPool.deposit(asset, amount, address(this), 0);
+      uint allowance = IERC20(asset).allowance(address(this), address(lendingPool));
+      lendingPool.deposit(asset, amount, msg.sender, 0);
     }
 
     /**
