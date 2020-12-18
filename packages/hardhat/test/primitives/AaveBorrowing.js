@@ -1,15 +1,5 @@
 const { expect } = require("chai");
-
-const impersonateAddress = async (address) => {
-
-  await hre.network.provider.request({
-    method: "hardhat_impersonateAccount",
-    params: [address]
-  })
-  const signer = await ethers.provider.getSigner(address);
-  signer.address = signer._address;
-  return signer;
-}
+const { impersonateAddress } = require ('../../utils/rpc');
 
 describe("Aave Borrowing Deployment", function () {
   it("Should deploy AaveBorrowing", async function () {
