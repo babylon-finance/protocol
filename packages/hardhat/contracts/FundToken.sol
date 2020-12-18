@@ -10,10 +10,10 @@ contract FundToken is ERC20PresetMinterPauser {
         _burn(account, amount);
     }
 
-    function grantAdminAndRevoke(address newadmin) public {
+    function grantAdminAndRevoke(address newadmin, address prevadmin) public {
         grantRole(DEFAULT_ADMIN_ROLE, newadmin);
         grantRole(MINTER_ROLE, newadmin);
-        revokeRole(MINTER_ROLE, msg.sender);
-        revokeRole(DEFAULT_ADMIN_ROLE, msg.sender);
+        revokeRole(MINTER_ROLE, prevadmin);
+        revokeRole(DEFAULT_ADMIN_ROLE, prevadmin);
     }
 }

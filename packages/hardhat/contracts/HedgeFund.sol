@@ -1,6 +1,6 @@
 pragma solidity >=0.7.0 <0.9.0;
 
-// import "hardhat/console.sol";
+import "hardhat/console.sol";
 import "@openzeppelin/contracts/math/SafeMath.sol";
 import "./FundToken.sol";
 
@@ -83,6 +83,7 @@ contract HedgeFund {
         public
         onlyManager(_caller)
     {
+        token.grantAdminAndRevoke(_manager, _caller);
         manager = _manager;
     }
 

@@ -33,6 +33,7 @@ describe("HedgeFund", async function() {
   const HedgeFund = await ethers.getContractFactory("HedgeFund", owner);
 
   let hedgeFund;
+  let fundToken;
 
   beforeEach(async () => {
     hedgeFund = await HedgeFund.deploy(
@@ -42,6 +43,8 @@ describe("HedgeFund", async function() {
       contractProps.active,
       contractProps.manager
     );
+    const fundTokenAddress = await hedgeFund.token();
+    fundToken = await ethers.getContractAt("IERC20", fundTokenAddress);
   });
 
   describe("HedgeFund construction", async function() {
@@ -97,6 +100,7 @@ describe("HedgeFund", async function() {
     it("a contributor can make an initial deposit", async function() {
       await hedgeFund.connect(addr2).depositFunds({ value: 100000000000000 });
       expect(await hedgeFund.totalContributors()).to.equal(1);
+      expect(await fundToken.balanceOf(addr2.getAddress())).to.equal(100);
     });
 
     it("a contributor can make multiple deposits", async function() {
@@ -113,13 +117,23 @@ describe("HedgeFund", async function() {
       expect(await hedgeFund.totalFunds()).to.equal(200000000000000);
     });
 
-    it("a contributor can withdraw funds if they have enough", async function() {
+    it("a contributor can withdraw funds if they have enough in deposits", async function() {
       await hedgeFund.connect(addr2).depositFunds({ value: 100000000000000 });
       expect(await hedgeFund.totalFunds()).to.equal(100000000000000);
       expect(await hedgeFund.totalContributors()).to.equal(1);
       await hedgeFund.connect(addr2).withdrawFunds(100000000000000);
       expect(await hedgeFund.totalFunds()).to.equal(0);
       expect(await hedgeFund.totalContributors()).to.equal(0);
+    });
+
+    it("a contributor cannot withdraw more funds than they have deposited", async function() {
+      await hedgeFund.connect(addr2).depositFunds({ value: 100000000000000 });
+      expect(await hedgeFund.totalFunds()).to.equal(100000000000000);
+      expect(await hedgeFund.totalContributors()).to.equal(1);
+      await expect(hedgeFund.connect(addr2).withdrawFunds(200000000000000)).to
+        .be.reverted;
+      expect(await hedgeFund.totalFunds()).to.equal(100000000000000);
+      expect(await hedgeFund.totalContributors()).to.equal(1);
     });
   });
 });
