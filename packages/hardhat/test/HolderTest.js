@@ -20,7 +20,7 @@ describe("Holder", async function() {
     holder = await Holder.deploy();
   });
 
-  describe("Hedge Funds", function() {
+  describe("Interacting with HedgeFunds", function() {
     it("should start empty", async function() {
       expect(await holder.totalHedgeFunds()).to.equal(0);
       expect(await holder.currentHedgeFundIndex()).to.equal(1);

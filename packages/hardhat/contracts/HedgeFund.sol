@@ -113,16 +113,16 @@ contract HedgeFund {
         require(sent, "Failed to send Ether");
     }
 
-    function withdrawFunds(uint _amount, address payable _caller) public onlyContributor(_caller) {
-        Contributor storage contributor = contributors[_caller];
-        require(_amount <= contributor.amount, 'Withdrawl amount must be less than deposited amount');
+    function withdrawFunds(uint _amount) public onlyContributor(msg.sender) {
+        Contributor storage contributor = contributors[msg.sender];
+        require(_amount <= contributor.amount, 'Withdrawl amount must be less than or equal to deposited amount');
         contributor.amount = contributor.amount.sub(_amount);
         totalFunds = totalFunds.sub(_amount);
         if (contributor.amount == 0) {
           totalContributors = totalContributors.sub(1);
         }
-        token.burn(_caller, _amount.div(minContribution));
-        transferEth(_caller, _amount);
-        emit WithdrawalLog(_caller, _amount, block.timestamp);
+        token.burn(msg.sender, _amount.div(minContribution));
+        transferEth(msg.sender, _amount);
+        emit WithdrawalLog(msg.sender, _amount, block.timestamp);
     }
 }
