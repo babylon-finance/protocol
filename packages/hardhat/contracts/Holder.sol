@@ -6,6 +6,8 @@ import "./FundToken.sol";
 import "./HedgeFund.sol";
 
 contract Holder {
+    using SafeMath for uint256;
+
     struct HedgeFundMapping {
         HedgeFund hedgeFund;
         uint256 index;
@@ -32,12 +34,22 @@ contract Holder {
         _;
     }
 
-    function addHedgeFund(string memory _name) public onlyProtocol {
+    function addHedgeFund(
+        string memory _name,
+        string memory _tokenName,
+        string memory _symbol
+    ) public onlyProtocol {
         require(
             hedgeFundsMapping[_name] == 0,
             "The hedge fund already exists."
         );
-        HedgeFund newHedgeFund = new HedgeFund(_name, true, msg.sender);
+        HedgeFund newHedgeFund = new HedgeFund(
+            _name,
+            _tokenName,
+            _symbol,
+            true,
+            msg.sender
+        );
         hedgeFunds.push(
             HedgeFundMapping(newHedgeFund, currentHedgeFundIndex + 1)
         );
@@ -48,7 +60,7 @@ contract Holder {
 
     function disableHedgeFund(string memory _name) public onlyProtocol {
         uint256 atIndex = hedgeFundsMapping[_name];
-        HedgeFundMapping storage _hedgeFundMapping = hedgeFunds[atIndex - 1];
+        HedgeFundMapping storage _hedgeFundMapping = hedgeFunds[atIndex.sub(1)];
         require(
             _hedgeFundMapping.hedgeFund.active(),
             "The hedge fund needs to be active."
@@ -59,7 +71,7 @@ contract Holder {
 
     function reenableHedgeFund(string memory _name) public onlyProtocol {
         uint256 atIndex = hedgeFundsMapping[_name];
-        HedgeFundMapping storage _hedgeFundMapping = hedgeFunds[atIndex - 1];
+        HedgeFundMapping storage _hedgeFundMapping = hedgeFunds[atIndex.sub(1)];
         require(
             !_hedgeFundMapping.hedgeFund.active(),
             "The hedge fund needs to be disabled."
@@ -78,18 +90,11 @@ contract Holder {
         )
     {
         uint256 atIndex = hedgeFundsMapping[_name];
-        HedgeFundMapping storage _hedgeFundMapping = hedgeFunds[atIndex - 1];
+        HedgeFundMapping storage _hedgeFundMapping = hedgeFunds[atIndex.sub(1)];
         return (
             _hedgeFundMapping.hedgeFund.name(),
             _hedgeFundMapping.hedgeFund.active(),
             _hedgeFundMapping.index
         );
-    }
-
-    function transferEth(address payable _to, uint256 amount) private {
-        // Call returns a boolean value indicating success or failure.
-        // This is the current recommended method to use.
-        (bool sent, ) = _to.call{value: amount}("");
-        require(sent, "Failed to send Ether");
     }
 }
