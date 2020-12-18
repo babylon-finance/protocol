@@ -43,7 +43,7 @@ contract AaveBorrowing {
       IERC20(asset).safeTransferFrom(msg.sender, address(this), amount);
       IERC20(asset).safeApprove(address(lendingPool), amount);
       uint allowance = IERC20(asset).allowance(address(this), address(lendingPool));
-      lendingPool.deposit(asset, amount, msg.sender, 0);
+      lendingPool.deposit(asset, amount, address(this), 0);
     }
 
     /**
@@ -52,11 +52,10 @@ contract AaveBorrowing {
      * @param amount The amount to borrow
      * @param interestRateMode 1 for stable, 2 for variable
      */
-    function borrowAsset(address asset, uint256 amount, uint256 interestRateMode) public onlyOwner  {
-      // Borrow asset
-      lendingPool.borrow(asset, amount, interestRateMode, 0, msg.sender);
+    function borrowAsset(address asset, uint256 amount, uint256 interestRateMode, address onBehalf) public onlyOwner  {
+      lendingPool.borrow(asset, amount, interestRateMode, 0, address(this));
       // Sends the borrowed assets back to the caller
-      IERC20(asset).safeTransferFrom(address(this), msg.sender, amount);
+      IERC20(asset).transfer(msg.sender, amount);
     }
 
     /**

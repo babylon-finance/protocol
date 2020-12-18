@@ -97,8 +97,8 @@ describe("AaveBorrowing", async function () {
       expect(await aaveBorrowing.depositCollateral(daiToken.address, ethers.utils.parseEther('1000')));
       expect(await daiToken.balanceOf(aaveBorrowing.address)).to.equal(0);
       expect(await usdcToken.balanceOf(owner.getAddress())).to.equal(0);
-      expect(await aaveBorrowing.borrowAsset(usdcToken.address, ethers.utils.parseEther('50'), 1));
-      expect(await usdcToken.balanceOf(owner.getAddress())).to.equal(ethers.utils.parseEther('50'));
+      expect(await aaveBorrowing.borrowAsset(usdcToken.address, 100, 1, owner.getAddress()));
+      expect(await usdcToken.balanceOf(owner.getAddress())).to.equal(100);
     });
 
   });
