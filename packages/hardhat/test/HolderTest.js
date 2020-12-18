@@ -37,9 +37,9 @@ describe("Holder", async function() {
       const { name, active, index } = await holder.getHedgeFund(
         ADD_FUND_PROPS[0]
       );
-      expect(name == "my first fund");
-      expect(active == true);
-      expect(index == 1);
+      expect(name).to.equal(ADD_FUND_PROPS[0]);
+      expect(active).to.equal(true);
+      expect(index).to.equal(1);
     });
 
     it("only protocol manager can add hedge funds", async function() {
@@ -60,9 +60,9 @@ describe("Holder", async function() {
       const { name, active, index } = await holder.getHedgeFund(
         ADD_FUND_PROPS[0]
       );
-      expect(name == "my first fund");
-      expect(active == false);
-      expect(index == 1);
+      expect(name).to.equal(ADD_FUND_PROPS[0]);
+      expect(active).to.equal(false);
+      expect(index).to.equal(1);
       expect(await holder.totalHedgeFunds()).to.equal(0);
     });
 
@@ -80,9 +80,9 @@ describe("Holder", async function() {
       const { name, active, index } = await holder.getHedgeFund(
         ADD_FUND_PROPS[0]
       );
-      expect(name == "my first fund");
-      expect(active == true);
-      expect(index == 1);
+      expect(name).to.equal(ADD_FUND_PROPS[0]);
+      expect(active).to.equal(true);
+      expect(index).to.equal(1);
       expect(await holder.totalHedgeFunds()).to.equal(1);
     });
   });

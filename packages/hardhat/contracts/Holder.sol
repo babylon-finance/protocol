@@ -50,9 +50,7 @@ contract Holder {
             true,
             msg.sender
         );
-        hedgeFunds.push(
-            HedgeFundMapping(newHedgeFund, currentHedgeFundIndex + 1)
-        );
+        hedgeFunds.push(HedgeFundMapping(newHedgeFund, currentHedgeFundIndex));
         hedgeFundsMapping[_name] = currentHedgeFundIndex;
         currentHedgeFundIndex++;
         totalHedgeFunds++;

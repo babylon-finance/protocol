@@ -51,6 +51,14 @@ contract HedgeFund {
         _;
     }
 
+    modifier fundIsActive() {
+        require(
+            active == true,
+            "Fund must be active to deposit funds"
+        );
+        _;
+    }
+
     constructor(
         string memory _name,
         string memory _tokenName,
@@ -78,7 +86,7 @@ contract HedgeFund {
         manager = _manager;
     }
 
-    function depositFunds() public payable {
+    function depositFunds() public payable fundIsActive {
         require(
             msg.value >= minContribution,
             "Send at least 1000000000000 wei"
