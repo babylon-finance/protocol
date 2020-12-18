@@ -97,8 +97,13 @@ describe("AaveBorrowing", async function () {
       expect(await aaveBorrowing.depositCollateral(daiToken.address, ethers.utils.parseEther('1000')));
       expect(await daiToken.balanceOf(aaveBorrowing.address)).to.equal(0);
       expect(await usdcToken.balanceOf(owner.getAddress())).to.equal(0);
-      expect(await aaveBorrowing.borrowAsset(usdcToken.address, 100, 1, owner.getAddress()));
-      expect(await usdcToken.balanceOf(owner.getAddress())).to.equal(100);
+      expect(await aaveBorrowing.borrowAsset(usdcToken.address, 100000000, 1, owner.getAddress()));
+      expect(await usdcToken.balanceOf(owner.getAddress())).to.equal(100000000);
+      const things = await lendingPool.getUserAccountData(aaveBorrowing.address);
+      console.log('health factor', ethers.utils.formatEther(things.healthFactor));
+      console.log('collateral eth', ethers.utils.formatEther(things.totalCollateralETH));
+      console.log('totalDebtETH eth',ethers.utils.formatEther(things.totalDebtETH));
+      console.log('availableBorrowsETH eth',ethers.utils.formatEther(things.availableBorrowsETH));
     });
 
   });
