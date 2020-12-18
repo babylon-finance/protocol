@@ -67,7 +67,7 @@ contract AaveBorrowing {
     function repayAsset(address asset, uint256 amount, uint256 interestRateMode) public onlyOwner {
       IERC20(asset).safeTransferFrom(msg.sender, address(this), amount);
       IERC20(asset).safeApprove(address(lendingPool), amount);
-      lendingPool.repay(asset, amount, interestRateMode, msg.sender);
+      lendingPool.repay(asset, amount, interestRateMode, address(this));
     }
 
     /**
