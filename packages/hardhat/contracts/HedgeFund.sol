@@ -83,7 +83,6 @@ contract HedgeFund {
         public
         onlyManager(_caller)
     {
-        token.grantAdminAndRevoke(_manager, _caller);
         manager = _manager;
     }
 
