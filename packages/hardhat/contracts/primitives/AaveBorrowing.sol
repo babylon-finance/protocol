@@ -1,9 +1,9 @@
 pragma solidity >=0.7.0 <0.9.0;
 
 import "hardhat/console.sol";
-import './interfaces/aave/ILendingPool.sol';
-import './interfaces/aave/IProtocolDataProvider.sol';
-import './interfaces/aave/IStableDebtToken.sol';
+import '../interfaces/aave/ILendingPool.sol';
+import '../interfaces/aave/IProtocolDataProvider.sol';
+import '../interfaces/aave/IStableDebtToken.sol';
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
 
