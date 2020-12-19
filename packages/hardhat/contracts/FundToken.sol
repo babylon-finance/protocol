@@ -9,11 +9,4 @@ contract FundToken is ERC20PresetMinterPauser {
         require(hasRole(DEFAULT_ADMIN_ROLE, msg.sender), "Only admin can burn");
         _burn(account, amount);
     }
-
-    function grantAdminAndRevoke(address newadmin, address prevadmin) public {
-        grantRole(DEFAULT_ADMIN_ROLE, newadmin);
-        grantRole(MINTER_ROLE, newadmin);
-        revokeRole(MINTER_ROLE, prevadmin);
-        revokeRole(DEFAULT_ADMIN_ROLE, prevadmin);
-    }
 }
