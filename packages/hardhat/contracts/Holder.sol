@@ -48,7 +48,8 @@ contract Holder {
             _tokenName,
             _symbol,
             true,
-            msg.sender
+            msg.sender,
+            address(0)
         );
         hedgeFunds.push(HedgeFundMapping(newHedgeFund, currentHedgeFundIndex));
         hedgeFundsMapping[_name] = currentHedgeFundIndex;
@@ -63,7 +64,7 @@ contract Holder {
             _hedgeFundMapping.hedgeFund.active(),
             "The hedge fund needs to be active."
         );
-        _hedgeFundMapping.hedgeFund.setActive(false, msg.sender);
+        _hedgeFundMapping.hedgeFund.setActive(false);
         totalHedgeFunds--;
     }
 
@@ -74,7 +75,7 @@ contract Holder {
             !_hedgeFundMapping.hedgeFund.active(),
             "The hedge fund needs to be disabled."
         );
-        _hedgeFundMapping.hedgeFund.setActive(true, msg.sender);
+        _hedgeFundMapping.hedgeFund.setActive(true);
         totalHedgeFunds++;
     }
 

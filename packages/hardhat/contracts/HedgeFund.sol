@@ -3,6 +3,8 @@ pragma solidity >=0.7.0 <0.9.0;
 import "hardhat/console.sol";
 import "@openzeppelin/contracts/math/SafeMath.sol";
 import "./FundToken.sol";
+import "./strategies/FundStrategy.sol";
+import "./strategies/IProtocolStrategyRegistry.sol";
 
 contract HedgeFund {
     using SafeMath for uint256;
@@ -31,13 +33,24 @@ contract HedgeFund {
     uint256 public totalContributors;
     uint256 public totalFunds;
 
+    //Strategies
+    struct FundStrategyRel {
+      uint weight;
+      FundStrategy strategy;
+      bool initialized;
+    }
+    uint public fundStrategiesCount;
+    mapping (address => FundStrategyRel) public stratMapping;
+    FundStrategy[] public fundStrategies;
+    IProtocolStrategyRegistry strategyRegistry;
+
     // Token Properties
     FundToken public token;
     uint256 public minContribution = 1000000000000; //wei
 
-    modifier onlyManager(address _caller) {
+    modifier onlyManager {
         require(
-            _caller == manager,
+            msg.sender == manager,
             "Only the fund manager can modify fund state"
         );
         _;
@@ -64,25 +77,39 @@ contract HedgeFund {
         string memory _tokenName,
         string memory _tokenSymbol,
         bool _active,
-        address _manager
+        address _manager,
+        address _strategyRegistry
     ) {
         token = new FundToken(_tokenName, _tokenSymbol);
         manager = _manager;
         name = _name;
         active = _active;
+        fundStrategiesCount = 0;
+        strategyRegistry = IProtocolStrategyRegistry(_strategyRegistry);
     }
 
-    function setActive(bool _active, address _caller)
+    function addStrategyToFund(address strategyAddress, string memory name, uint weightOf100) public onlyManager {
+      require(!strategyRegistry.checkStrategy(strategyAddress), "Strategy needs to be added to the registry first.");
+      FundStrategyRel storage fundStrategyRel = stratMapping[strategyAddress];
+      require(!fundStrategyRel.initialized, "This strategy is already in the fund");
+      fundStrategyRel.weight = weightOf100;
+      fundStrategyRel.strategy = FundStrategy(strategyAddress);
+      fundStrategyRel.initialized = true;
+      fundStrategiesCount ++;
+    }
+
+    function setActive(bool _active)
         public
-        onlyManager(_caller)
+        onlyManager
     {
         active = _active;
     }
 
-    function setManager(address _manager, address _caller)
+    function setManager(address _manager)
         public
-        onlyManager(_caller)
+        onlyManager
     {
+        token.grantAdminAndRevoke(_manager, msg.sender);
         manager = _manager;
     }
 

@@ -2,7 +2,7 @@
 
 pragma solidity >=0.7.0 <0.9.0;
 
-interface cToken {
+interface ICToken {
     function mint(uint256 mintAmount) external returns (uint256);
 
     function redeem(uint256 redeemTokens) external returns (uint256);
@@ -18,4 +18,13 @@ interface cToken {
     function balanceOf(address _owner) external view returns (uint256);
 
     function underlying() external view returns (address);
+
+    function getAccountSnapshot(address account) external view returns (uint, uint, uint, uint);
+
+    function repayBorrowBehalf(address borrower, uint amount) external payable;
+    function borrowBalanceCurrent(address account) external returns (uint);
+    function exchangeRateCurrent() external returns (uint);
+    function supplyRatePerBlock() external returns (uint);
+
+
 }
