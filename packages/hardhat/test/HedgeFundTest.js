@@ -8,7 +8,7 @@ describe("HedgeFund Deploy", function() {
       tokenName: "FakeFundToken",
       tokenSymbol: "FFT",
       active: true,
-      manager: addr1.getAddress(),
+      manager: owner.getAddress(),
     };
     const HedgeFund = await ethers.getContractFactory("HedgeFund", owner);
     await HedgeFund.deploy(
@@ -16,8 +16,7 @@ describe("HedgeFund Deploy", function() {
       contractProps.tokenName,
       contractProps.tokenSymbol,
       contractProps.active,
-      contractProps.manager,
-      addr2.getAddress()
+      contractProps.manager
     );
   });
 });
@@ -42,8 +41,7 @@ describe("HedgeFund", async function() {
       contractProps.tokenName,
       contractProps.tokenSymbol,
       contractProps.active,
-      contractProps.manager,
-      addr2.getAddress()
+      contractProps.manager
     );
     const fundTokenAddress = await hedgeFund.token();
     fundToken = await ethers.getContractAt("IERC20", fundTokenAddress);
@@ -52,6 +50,7 @@ describe("HedgeFund", async function() {
   describe("HedgeFund construction", async function() {
     it("should have expected properties upon deployment", async function() {
       expect(await hedgeFund.totalContributors()).to.equal(0);
+      expect(await hedgeFund.manager()).to.equal(await owner.getAddress());
     });
 
     it("only the HedgeFund can call transferEth", async function() {
@@ -89,7 +88,8 @@ describe("HedgeFund", async function() {
 
     it("only the current manager should be able to update the manager", async function() {
       expect(await hedgeFund.setManager(addr2.getAddress()));
-      await expect(hedgeFund.connect(addr2).setManager(addr2.getAddress())).to.be.reverted;
+      const manager = await hedgeFund.manager()
+      await expect(hedgeFund.connect(owner).setManager(addr2.getAddress())).to.be.reverted;
     });
   });
 

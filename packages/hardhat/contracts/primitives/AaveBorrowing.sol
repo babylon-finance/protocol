@@ -27,7 +27,7 @@ contract AaveBorrowing {
      * @param amount The amount to be deposited as collateral
      *
      */
-    function depositCollateral(address asset, uint256 amount) internal {
+    function depositCollateral(address asset, uint256 amount) public {
       IERC20(asset).safeTransferFrom(msg.sender, address(this), amount);
       IERC20(asset).safeApprove(address(lendingPool), amount);
       uint allowance = IERC20(asset).allowance(address(this), address(lendingPool));
@@ -40,7 +40,7 @@ contract AaveBorrowing {
      * @param amount The amount to borrow
      * @param interestRateMode 1 for stable, 2 for variable
      */
-    function borrowAsset(address asset, uint256 amount, uint256 interestRateMode, address onBehalf) internal {
+    function borrowAsset(address asset, uint256 amount, uint256 interestRateMode, address onBehalf) public {
       lendingPool.borrow(asset, amount, interestRateMode, 0, address(this));
       // Sends the borrowed assets back to the caller
       IERC20(asset).transfer(msg.sender, amount);
@@ -52,7 +52,7 @@ contract AaveBorrowing {
      * @param amount The amount to repay
      * @param interestRateMode 1 for stable, 2 for variable
      */
-    function repayAsset(address asset, uint256 amount, uint256 interestRateMode) internal {
+    function repayAsset(address asset, uint256 amount, uint256 interestRateMode) public {
       IERC20(asset).safeTransferFrom(msg.sender, address(this), amount);
       IERC20(asset).safeApprove(address(lendingPool), amount);
       lendingPool.repay(asset, amount, interestRateMode, address(this));
@@ -63,7 +63,7 @@ contract AaveBorrowing {
      * @param asset The underlying asset to withdraw
      *
      */
-    function withdrawCollateral(address asset) internal {
+    function withdrawCollateral(address asset) public {
       (address aTokenAddress,,) = dataProvider.getReserveTokensAddresses(asset);
       uint256 assetBalance = IERC20(aTokenAddress).balanceOf(address(this));
       lendingPool.withdraw(asset, assetBalance, msg.sender);
