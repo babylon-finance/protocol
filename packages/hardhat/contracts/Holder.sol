@@ -48,8 +48,7 @@ contract Holder {
             _tokenName,
             _symbol,
             true,
-            msg.sender,
-            address(0)
+            msg.sender
         );
         hedgeFunds.push(HedgeFundMapping(newHedgeFund, currentHedgeFundIndex));
         hedgeFundsMapping[_name] = currentHedgeFundIndex;

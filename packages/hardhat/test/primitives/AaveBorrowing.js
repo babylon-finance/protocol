@@ -15,16 +15,13 @@ describe("AaveBorrowing", async function () {
   const whaleSigner = await impersonateAddress(daiWhaleAddress);
   const [owner, addr1, addr2] = await ethers.getSigners();
   const AaveBorrowing = await ethers.getContractFactory("AaveBorrowing", owner);
-  const CollateralToken = await ethers.getContractFactory("FundToken", owner);
 
   let aaveBorrowing;
-  let collateralToken;
   let daiToken;
   let lendingPool;
   let dataProvider;
 
   beforeEach(async () => {
-    collateralToken = await CollateralToken.deploy("Test Collateral", "COL");
     aaveBorrowing = await AaveBorrowing.deploy(owner.getAddress());
     lendingPool = await ethers.getContractAt('ILendingPool', addresses.aave.lendingPool);
     dataProvider = await ethers.getContractAt('IProtocolDataProvider', addresses.aave.dataProvider);
@@ -33,10 +30,7 @@ describe("AaveBorrowing", async function () {
 
   });
 
-  describe("StableDebt", function () {
-    it("should set the owner", async function () {
-      expect(await aaveBorrowing.owner()).to.equal(await owner.getAddress());
-    });
+  describe("Aave StableDebt", function () {
 
     it("can deposit collateral", async function () {
       expect(await daiToken.balanceOf(owner.getAddress())).to.equal(0);

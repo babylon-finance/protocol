@@ -4,7 +4,6 @@ import "hardhat/console.sol";
 import "@openzeppelin/contracts/math/SafeMath.sol";
 import "./FundToken.sol";
 import "./strategies/FundStrategy.sol";
-import "./strategies/IProtocolStrategyRegistry.sol";
 
 contract HedgeFund {
     using SafeMath for uint256;
@@ -27,6 +26,7 @@ contract HedgeFund {
     mapping(address => Contributor) public contributors;
 
     // Fund Properties
+    address public protocol;
     address public manager;
     bool public active;
     string public name;
@@ -42,7 +42,6 @@ contract HedgeFund {
     uint public fundStrategiesCount;
     mapping (address => FundStrategyRel) public stratMapping;
     FundStrategy[] public fundStrategies;
-    IProtocolStrategyRegistry strategyRegistry;
 
     // Token Properties
     FundToken public token;
@@ -52,6 +51,14 @@ contract HedgeFund {
         require(
             msg.sender == manager,
             "Only the fund manager can modify fund state"
+        );
+        _;
+    }
+
+    modifier onlyManagerOrProtocol {
+        require(
+            msg.sender == manager || msg.sender == protocol,
+            "Only the fund manager or the protocol can modify fund state"
         );
         _;
     }
@@ -77,19 +84,17 @@ contract HedgeFund {
         string memory _tokenName,
         string memory _tokenSymbol,
         bool _active,
-        address _manager,
-        address _strategyRegistry
+        address _manager
     ) {
         token = new FundToken(_tokenName, _tokenSymbol);
         manager = _manager;
+        protocol = msg.sender;
         name = _name;
         active = _active;
         fundStrategiesCount = 0;
-        strategyRegistry = IProtocolStrategyRegistry(_strategyRegistry);
     }
 
     function addStrategyToFund(address strategyAddress, string memory name, uint weightOf100) public onlyManager {
-      require(!strategyRegistry.checkStrategy(strategyAddress), "Strategy needs to be added to the registry first.");
       FundStrategyRel storage fundStrategyRel = stratMapping[strategyAddress];
       require(!fundStrategyRel.initialized, "This strategy is already in the fund");
       fundStrategyRel.weight = weightOf100;
@@ -100,7 +105,7 @@ contract HedgeFund {
 
     function setActive(bool _active)
         public
-        onlyManager
+        onlyManagerOrProtocol
     {
         active = _active;
     }
@@ -109,7 +114,6 @@ contract HedgeFund {
         public
         onlyManager
     {
-        token.grantAdminAndRevoke(_manager, msg.sender);
         manager = _manager;
     }
 
