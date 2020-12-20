@@ -192,7 +192,13 @@ export default class App extends React.Component<AppProps, AppState> {
             {this.state.web3 && this.state.connected && onMainnet && (
               <h2> Connected </h2>
             )}
-            <FundCard />
+            <FundCardRow>
+              {
+                [1, 2, 3].map(function (index) {
+                  return (<FundCard />);
+                })
+              }
+            </FundCardRow>
           </ContentWrapper>
         )}
 
@@ -257,4 +263,9 @@ const ConnectButton = styled.button`
   padding: 5px 10px;
   background: #FF2972;
   border: 1px solid #4420D8;
+`
+
+const FundCardRow = styled.div`
+  margin-top: 50px;
+  display: flex;
 `

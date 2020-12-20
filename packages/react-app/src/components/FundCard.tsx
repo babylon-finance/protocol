@@ -1,96 +1,40 @@
 import FundCardChart from "./FundCardChart";
 
 import React from "react";
-import Highcharts from "highcharts/highstock"
-import HighchartsReact from "highcharts-react-official";
 import styled from "styled-components";
-import Web3 from "web3";
-import Web3Modal from "web3modal";
-import { getDefaultProvider, JsonRpcProvider, Web3Provider } from "@ethersproject/providers";
-import { Alert, Button, Space, Spin } from "antd";
 
 interface Props { }
 
 export default class FundCard extends React.PureComponent<Props> {
   render() {
     return (
-      <FundCardRow>
-        <FundCardWrapper>
-          <FundCardHeader>
-            <FundTokenSymbol>ABCD</FundTokenSymbol>
-            Fund Name
-          </FundCardHeader>
-          <FundCardDesc>
-            This is a subheading and brief description of the fund.
-          </FundCardDesc>
-          <FundCompositionBlock>
-            <FundCompositionLabel>Composition</FundCompositionLabel>
-            <FundCompositionItem>ETH Long  50%</FundCompositionItem>
-            <FundCompositionItem>USD Short 50%</FundCompositionItem>
-          </FundCompositionBlock>
-          <FundPerfomanceHistogram>[ GRAPH ]</FundPerfomanceHistogram>
-          <FundPerformanceBlock>
-            <FundPerformanceReturns>Performance: +300%</FundPerformanceReturns>
-            <FundPerformanceAmount>Total Invested: 300 ETH</FundPerformanceAmount>
-          </FundPerformanceBlock>
-          <FundCardInvestButtonWrapper>
-            <FundCardInvestButton>Invest</FundCardInvestButton>
-          </FundCardInvestButtonWrapper>
-        </FundCardWrapper>
-        <FundCardWrapper>
-          <FundCardHeader>
-            <FundTokenSymbol>ABCD</FundTokenSymbol>
-            Fund Name
-          </FundCardHeader>
-          <FundCardDesc>
-            This is a subheading and brief description of the fund.
-          </FundCardDesc>
-          <FundCompositionBlock>
-            <FundCompositionLabel>Composition</FundCompositionLabel>
-            <FundCompositionItem>ETH Long  50%</FundCompositionItem>
-            <FundCompositionItem>USD Short 50%</FundCompositionItem>
-          </FundCompositionBlock>
-          <FundPerfomanceHistogram>[ GRAPH ]</FundPerfomanceHistogram>
-          <FundPerformanceBlock>
-            <FundPerformanceReturns>Performance: +300%</FundPerformanceReturns>
-            <FundPerformanceAmount>Total Invested: 300 ETH</FundPerformanceAmount>
-          </FundPerformanceBlock>
-          <FundCardInvestButtonWrapper>
-            <FundCardInvestButton>Invest</FundCardInvestButton>
-          </FundCardInvestButtonWrapper>
-        </FundCardWrapper>
-        <FundCardWrapper>
-          <FundCardHeader>
-            <FundTokenSymbol>ABCD</FundTokenSymbol>
-            Fund Name
-          </FundCardHeader>
-          <FundCardDesc>
-            This is a subheading and brief description of the fund.
-          </FundCardDesc>
-          <FundCompositionBlock>
-            <FundCompositionLabel>Composition</FundCompositionLabel>
-            <FundCompositionItem>ETH Long  50%</FundCompositionItem>
-            <FundCompositionItem>USD Short 50%</FundCompositionItem>
-          </FundCompositionBlock>
-          <FundPerfomanceHistogram>[ GRAPH ]</FundPerfomanceHistogram>
-          <FundPerformanceBlock>
-            <FundPerfomanceHistogram></FundPerfomanceHistogram>
-            <FundPerformanceReturns>Performance: +300%</FundPerformanceReturns>
-            <FundPerformanceAmount>Total Invested: 300 ETH</FundPerformanceAmount>
-          </FundPerformanceBlock>
-          <FundCardInvestButtonWrapper>
-            <FundCardInvestButton>Invest</FundCardInvestButton>
-          </FundCardInvestButtonWrapper>
-        </FundCardWrapper>
-      </FundCardRow>
+      <FundCardWrapper>
+        <FundCardHeader>
+          <FundTokenSymbol>ABCD</FundTokenSymbol>
+          Fund Name
+        </FundCardHeader>
+        <FundCardDesc>
+          This is a subheading and brief description of the fund.
+        </FundCardDesc>
+        <FundCompositionBlock>
+          <FundCompositionLabel>Composition</FundCompositionLabel>
+          <FundCompositionItem>ETH Long  50%</FundCompositionItem>
+          <FundCompositionItem>USD Short 50%</FundCompositionItem>
+        </FundCompositionBlock>
+        <FundPerfomanceHistogram>
+          <FundCardChart />
+        </FundPerfomanceHistogram>
+        <FundPerformanceBlock>
+          <FundPerformanceReturns>Performance: +300%</FundPerformanceReturns>
+          <FundPerformanceAmount>Total Invested: 300 ETH</FundPerformanceAmount>
+        </FundPerformanceBlock>
+        <FundCardInvestButtonWrapper>
+          <FundCardInvestButton>Invest</FundCardInvestButton>
+        </FundCardInvestButtonWrapper>
+      </FundCardWrapper>
     );
   }
 }
-
-const FundCardRow = styled.div`
-  margin-top: 50px;
-  display: flex;
-`
 
 const FundCardWrapper = styled.div`
   display: flex;
