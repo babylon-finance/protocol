@@ -1,3 +1,5 @@
+import FundCard from "./components/FundCard"
+
 import React from 'react';
 import styled from "styled-components";
 import Web3 from "web3";
@@ -8,7 +10,7 @@ import { Alert, Button, Space, Spin } from "antd";
 import WalletConnectProvider from "@walletconnect/web3-provider";
 import './App.css';
 
-interface AppProps {}
+interface AppProps { }
 
 interface AppState {
   web3: any
@@ -165,14 +167,14 @@ export default class App extends React.Component<AppProps, AppState> {
         {!this.state.initialLoad && (
           <ContentWrapper>
             <LogoWrapper>
-              <img width="90" src="/logo512.png" />
+              <img width="40" src="/logo-red.png" />
+              <ProjectTitle>Defi Advisor</ProjectTitle>
             </LogoWrapper>
-            <h1> Defi Advisor </h1>
             <div style={{
-                display: 'flex',
-                flexFlow: 'row wrap',
-                margin: '10px 0'
-              }}>
+              display: 'flex',
+              flexFlow: 'row wrap',
+              margin: '10px 0'
+            }}>
               {this.state.web3 && (
                 <MainLink onClick={this.resetApp} target="_blank">
                   Logout
@@ -183,13 +185,14 @@ export default class App extends React.Component<AppProps, AppState> {
               <Alert message={`You are on a different network. Please connect your wallet to the ${networkId === 1 ? 'mainnet' : 'network with id ' + networkId}`} type="warning" />
             )}
             {!this.state.connected && (
-              <Button value="large" type="primary" onClick={this.onConnect}>
-                Connect your wallet to get started
-              </Button>
+              <ConnectButton onClick={this.onConnect}>
+                <b>Connect your wallet</b>
+              </ConnectButton>
             )}
             {this.state.web3 && this.state.connected && onMainnet && (
               <h2> Connected </h2>
             )}
+            <FundCard />
           </ContentWrapper>
         )}
 
@@ -232,13 +235,26 @@ const ContentWrapper = styled.div`
 `
 
 const LogoWrapper = styled.div`
-  background: #333;
-  width: 124px;
-  height: 124px;
+  width: 240px;
+  height: 80px;
   padding: 5px;
   border-radius: 62px;
   display: flex;
   justify-content: center;
   align-items: center;
   margin: 20px 0;
+`
+
+const ProjectTitle = styled.h1`
+  color: white;
+  font-weight: 600;
+  margin-left: 12px;
+`
+
+const ConnectButton = styled.button`
+  color: white;
+  text-transform: uppercase;
+  padding: 5px 10px;
+  background: #FF2972;
+  border: 1px solid #4420D8;
 `
