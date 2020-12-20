@@ -9,21 +9,15 @@ contract FundStrategy {
   address public owner;
 
   // Strat attributes
-  bool public active;
+  bool public initialized;
   string public name;
 
   constructor(address _fundContract, string memory _name) public {
     owner = _fundContract;
     name = name;
-    active = false;
+    initialized = true;
   }
 
-
-  function enableStrategy() public onlyFund {
-    require(!active, "The strategy is already active");
-    active = true;
-    start();
-  }
 
   function start() public onlyFund {
     // override

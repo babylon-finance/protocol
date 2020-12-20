@@ -35,13 +35,13 @@ contract HedgeFund {
 
     //Strategies
     struct FundStrategyRel {
+      bool initialized;
       uint weight;
       FundStrategy strategy;
-      bool initialized;
     }
     uint public fundStrategiesCount;
     mapping (address => FundStrategyRel) public stratMapping;
-    FundStrategy[] public fundStrategies;
+    FundStrategyRel[] public fundStrategies;
 
     // Token Properties
     FundToken public token;
@@ -83,57 +83,72 @@ contract HedgeFund {
         string memory _name,
         string memory _tokenName,
         string memory _tokenSymbol,
-        bool _active,
         address _manager
     ) {
         token = new FundToken(_tokenName, _tokenSymbol);
         manager = _manager;
         protocol = msg.sender;
         name = _name;
-        active = _active;
+        active = false;
         fundStrategiesCount = 0;
     }
 
-    function addStrategyToFund(address strategyAddress, string memory name, uint weightOf100) public onlyManager {
+    /**
+      The strategy contract needs to have been deployed prior to calling this
+    */
+    function addStrategyToFund(address strategyAddress) public onlyManager {
+      require(fundStrategiesCount < 10, "A fund can only have a maximum of 10 strategies");
       FundStrategyRel storage fundStrategyRel = stratMapping[strategyAddress];
       require(!fundStrategyRel.initialized, "This strategy is already in the fund");
-      fundStrategyRel.weight = weightOf100;
-      fundStrategyRel.strategy = FundStrategy(strategyAddress);
+      fundStrategyRel.weight = 0;
       fundStrategyRel.initialized = true;
+      fundStrategyRel.strategy = FundStrategy(strategyAddress);
+      fundStrategies.push(fundStrategyRel);
       fundStrategiesCount ++;
     }
 
-    function setActive(bool _active)
-        public
-        onlyManagerOrProtocol
-    {
-        active = _active;
+    /**
+     * Setting the weight of a strategy to 0 effectively disables it
+    */
+    function changeWeightsStrategies(uint[] memory newWeights) public onlyManager {
+      uint totalWeights = 0;
+      require(newWeights.length == fundStrategiesCount, "The weights need to match the current strategies");
+      for (uint i = 0; i < newWeights.length; i++) {
+        FundStrategyRel storage fundStrategyRel = fundStrategies[i];
+        totalWeights += newWeights[i];
+        fundStrategyRel.weight = newWeights[i];
+      }
+      require(totalWeights == 100, "Total weights must add up to a 100");
     }
 
-    function setManager(address _manager)
-        public
-        onlyManager
-    {
-        manager = _manager;
+    function setActive(bool _active) public onlyManagerOrProtocol {
+      if (_active) {
+        require(fundStrategiesCount > 0, "The fund needs to have strategies to be active");
+      }
+      active = _active;
+    }
+
+    function setManager(address _manager) public onlyManager{
+      manager = _manager;
     }
 
     function depositFunds() public payable fundIsActive {
-        require(
-            msg.value >= minContribution,
-            "Send at least 1000000000000 wei"
-        );
-        Contributor storage contributor = contributors[msg.sender];
+      require(
+          msg.value >= minContribution,
+          "Send at least 1000000000000 wei"
+      );
+      Contributor storage contributor = contributors[msg.sender];
 
-        // If new contributor, create one, increment count, and set the current TS
-        if (contributor.amount == 0) {
-            totalContributors = totalContributors.add(1);
-            contributor.timestamp = block.timestamp;
-        }
+      // If new contributor, create one, increment count, and set the current TS
+      if (contributor.amount == 0) {
+          totalContributors = totalContributors.add(1);
+          contributor.timestamp = block.timestamp;
+      }
 
-        totalFunds = totalFunds.add(msg.value);
-        contributor.amount = contributor.amount.add(msg.value);
-        token.mint(msg.sender, msg.value.div(minContribution));
-        emit ContributionLog(msg.sender, msg.value, block.timestamp);
+      totalFunds = totalFunds.add(msg.value);
+      contributor.amount = contributor.amount.add(msg.value);
+      token.mint(msg.sender, msg.value.div(minContribution));
+      emit ContributionLog(msg.sender, msg.value, block.timestamp);
     }
 
     // TODO(tylerm): Move this into a utils contract

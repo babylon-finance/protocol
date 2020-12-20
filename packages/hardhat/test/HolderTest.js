@@ -38,7 +38,7 @@ describe("Holder", async function() {
         ADD_FUND_PROPS[0]
       );
       expect(name).to.equal(ADD_FUND_PROPS[0]);
-      expect(active).to.equal(true);
+      expect(active).to.equal(false);
       expect(index).to.equal(1);
     });
 

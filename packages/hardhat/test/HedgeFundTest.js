@@ -7,7 +7,6 @@ describe("HedgeFund Deploy", function() {
       name: "FakeFund",
       tokenName: "FakeFundToken",
       tokenSymbol: "FFT",
-      active: true,
       manager: owner.getAddress(),
     };
     const HedgeFund = await ethers.getContractFactory("HedgeFund", owner);
@@ -15,7 +14,6 @@ describe("HedgeFund Deploy", function() {
       contractProps.name,
       contractProps.tokenName,
       contractProps.tokenSymbol,
-      contractProps.active,
       contractProps.manager
     );
   });
@@ -27,7 +25,6 @@ describe("HedgeFund", async function() {
     name: "FakeFund",
     tokenName: "FakeFundToken",
     tokenSymbol: "FFT",
-    active: true,
     manager: owner.getAddress(),
   };
   const HedgeFund = await ethers.getContractFactory("HedgeFund", owner);
@@ -40,7 +37,6 @@ describe("HedgeFund", async function() {
       contractProps.name,
       contractProps.tokenName,
       contractProps.tokenSymbol,
-      contractProps.active,
       contractProps.manager
     );
     const fundTokenAddress = await hedgeFund.token();
