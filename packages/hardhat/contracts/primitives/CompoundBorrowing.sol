@@ -119,7 +119,9 @@ contract CompoundBorrowing {
 
   function supply(address cToken, uint256 amount) public payable {
       if (cToken == CEtherAddress) {
-          ICEther(CEtherAddress).mint{value: amount }();
+          require(msg.value == amount, "The amount of eth needs to match");
+          ICEther(CEtherAddress).mint{value: amount, gas: 250000 }();
+
       } else {
           // Approves CToken contract to call `transferFrom`
           approveCToken(cToken, amount);

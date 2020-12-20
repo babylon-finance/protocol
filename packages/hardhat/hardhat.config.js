@@ -50,7 +50,7 @@ module.exports = {
       forking: {
         url:
           "https://eth-mainnet.alchemyapi.io/v2/sncj01nDcsAQr_QWyhYWNkg3qzW2o9kt",
-        blockNumber: 11459689,
+        blockNumber: 11492019,
       },
     },
     rinkeby: {
