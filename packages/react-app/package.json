@@ -21,7 +21,7 @@
     "@types/web3": "^1.2.2",
     "@walletconnect/web3-provider": "^1.2.2",
     "antd": "^4.6.6",
-    "axios": "^0.20.0",
+    "axios": "^0.21.0",
     "bignumber.js": "^9.0.1",
     "eth-hooks": "^1.1.2",
     "ethereumjs-util": "^7.0.5",
