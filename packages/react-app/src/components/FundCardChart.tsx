@@ -10,20 +10,25 @@ interface ChartData {
   }
 }
 
-interface SeriesValues {
-
-}
-
-
 interface Props { }
 
-interface State { chartData: ChartData }
+interface State {
+  chartData: ChartData,
+  chartDataLoaded: boolean
+}
 
 export default class FundCardChart extends React.PureComponent<Props, State> {
   constructor(props: Props, state: State) {
     super(props, state);
 
-    this.state = { chartData: { data: { values: [] } } };
+    this.state = {
+      chartDataLoaded: false,
+      chartData: {
+        data: {
+          values: []
+        }
+      }
+    };
   }
 
   async getChartData() {
@@ -35,7 +40,7 @@ export default class FundCardChart extends React.PureComponent<Props, State> {
 
   componentDidMount() {
     this.getChartData().then((response) => {
-      this.setState({ chartData: response.data });
+      this.setState({ chartData: response.data, chartDataLoaded: true });
     })
   }
 

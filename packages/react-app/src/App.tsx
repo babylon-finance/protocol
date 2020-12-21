@@ -1,10 +1,12 @@
 import FundCard from "./components/FundCard"
+import { loadContractFromNameAndAddress } from "./hooks/ContractLoader";
+
 
 import React from 'react';
 import styled from "styled-components";
 import Web3 from "web3";
 import Web3Modal from "web3modal";
-import { getDefaultProvider, JsonRpcProvider, Web3Provider } from "@ethersproject/providers";
+import { Web3Provider } from "@ethersproject/providers";
 import { Alert, Button, Space, Spin } from "antd";
 // @ts-ignore
 import WalletConnectProvider from "@walletconnect/web3-provider";
@@ -23,6 +25,7 @@ interface AppState {
   networkId: number
   showDetails: boolean
   pendingRequest: boolean
+  contract: any
 }
 
 function initWeb3(provider: any) {
@@ -51,25 +54,24 @@ const INITIAL_STATE = {
   chainId: 1,
   networkId: 1,
   showDetails: false,
-  pendingRequest: false
+  pendingRequest: false,
+  contract: null
 }
+
+const holderAddress = require("./contracts/Holder.address.js");
 
 export default class App extends React.Component<AppProps, AppState> {
   web3Modal: any
 
   constructor(props: any) {
     super(props);
-    this.state = INITIAL_STATE
+    this.state = INITIAL_STATE;
 
     this.web3Modal = new Web3Modal({
       // network: this.getNetwork(),
       cacheProvider: true,
       providerOptions: this.getProviderOptions()
     });
-  }
-
-  getNetwork() {
-
   }
 
   getProviderOptions() {
@@ -95,28 +97,23 @@ export default class App extends React.Component<AppProps, AppState> {
 
   onConnect = async () => {
     const provider = await this.web3Modal.connect();
-
     const web3: any = initWeb3(provider);
     await this.subscribeProvider(provider);
-
-
     const accounts = await web3.eth.getAccounts();
-
     const address = accounts[0];
-
     const networkId = await web3.eth.net.getId();
-
     const chainId = await web3.eth.chainId();
+    const web3Provider = new Web3Provider(provider);
+
     this.setState({
       web3,
-      provider: new Web3Provider(provider),
+      provider: web3Provider,
       initialLoad: false,
       connected: true,
       address,
       chainId,
-      networkId
+      networkId,
     });
-    // biz logic
   }
 
   resetApp = async () => {
@@ -161,13 +158,15 @@ export default class App extends React.Component<AppProps, AppState> {
     const onMainnet = this.state.chainId === parseInt(
       process.env.REACT_APP_CHAIN_ID || '0') &&
       this.state.networkId === networkId
+
+    const shouldRenderFunds = (this.state.web3 && this.state.connected && onMainnet && this.state.provider);
     return (
       <AppWrapper className="App">
         {this.state.initialLoad && <Spin tip="Loading..." />}
         {!this.state.initialLoad && (
           <ContentWrapper>
             <LogoWrapper>
-              <img width="40" src="/logo-red.png" />
+              <img width="40" src="/logo-red.png" alt="" />
               <ProjectTitle>Defi Advisor</ProjectTitle>
             </LogoWrapper>
             <div style={{
@@ -177,7 +176,7 @@ export default class App extends React.Component<AppProps, AppState> {
             }}>
               {this.state.web3 && (
                 <MainLink onClick={this.resetApp} target="_blank">
-                  Logout
+                  Disconnect
                 </MainLink>
               )}
             </div>
@@ -189,19 +188,16 @@ export default class App extends React.Component<AppProps, AppState> {
                 <b>Connect your wallet</b>
               </ConnectButton>
             )}
-            {this.state.web3 && this.state.connected && onMainnet && (
-              <h2> Connected </h2>
+            {shouldRenderFunds && (
+              <div>
+                <Alert message={`Wallet Connected: ${this.state.address}`} type="warning" />
+                <FundCardRow>
+                  <FundCard address={""} provider={this.state.provider} userAddress={this.state.address} />
+                </FundCardRow>
+              </div>
             )}
-            <FundCardRow>
-              {
-                [1, 2, 3].map(function (index) {
-                  return (<FundCard />);
-                })
-              }
-            </FundCardRow>
           </ContentWrapper>
         )}
-
       </AppWrapper>
     );
   }
@@ -268,4 +264,7 @@ const ConnectButton = styled.button`
 const FundCardRow = styled.div`
   margin-top: 50px;
   display: flex;
+`
+
+const WalletConnectedBanner = styled.h2`
 `

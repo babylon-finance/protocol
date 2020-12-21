@@ -22,7 +22,7 @@ contract Holder {
     mapping(string => uint256) public hedgeFundsMapping;
 
     // Functions
-    constructor() public {
+    constructor() {
         protocolManager = msg.sender;
     }
 
