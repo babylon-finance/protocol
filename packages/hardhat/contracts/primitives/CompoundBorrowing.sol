@@ -118,22 +118,38 @@ contract CompoundBorrowing {
   }
 
   function supply(address cToken, uint256 amount) public payable {
+    // Amount of current exchange rate from cToken to underlying
       if (cToken == CEtherAddress) {
           require(msg.value == amount, "The amount of eth needs to match");
-          ICEther(CEtherAddress).mint{value: amount, gas: 250000 }();
 
+          ICEther(CEtherAddress).mint{value: msg.value, gas: 250000 }();
       } else {
           // Approves CToken contract to call `transferFrom`
           approveCToken(cToken, amount);
+          ICToken cTokenInstance = ICToken(cToken);
+          uint256 exchangeRateMantissa = cTokenInstance.exchangeRateCurrent();
+          emit MyLog("Exchange Rate (scaled up by 1e18): ", exchangeRateMantissa);
+
+          // Amount added to you supply balance this block
+          uint256 supplyRateMantissa = cTokenInstance.supplyRatePerBlock();
+          emit MyLog("Supply Rate: (scaled up by 1e18)", supplyRateMantissa);
 
           require(
-              ICToken(cToken).mint(amount) == 0,
+              cTokenInstance.mint(amount) == 0,
               "cmpnd-mgr-ctoken-supply-failed"
           );
       }
   }
 
   function borrow(address cToken, uint256 borrowAmount) public {
+    // Get my account's total liquidity value in Compound
+    (uint256 error, uint256 liquidity, uint256 shortfall) = IComptroller(CompoundComptrollerAddress)
+        .getAccountLiquidity(address(this));
+    if (error != 0) {
+        revert("Comptroller.getAccountLiquidity failed.");
+    }
+    require(shortfall == 0, "account underwater");
+    require(liquidity > 0, "account does not have collateral");
       require(
           ICToken(cToken).borrow(borrowAmount) == 0,
           "cmpnd-mgr-ctoken-borrow-failed"
@@ -348,53 +364,6 @@ contract CompoundBorrowing {
       ICEther cEth = ICEther(_cEtherAddress);
       cEth.repayBorrow{ value: amount}();
       return true;
-  }
-
-  function supplyEthToCompound(address payable _cEtherContract)
-      public
-      payable
-      returns (bool)
-  {
-      // Create a reference to the corresponding cToken contract
-      ICEther cToken = ICEther(_cEtherContract);
-
-      // Amount of current exchange rate from cToken to underlying
-      uint256 exchangeRateMantissa = cToken.exchangeRateCurrent();
-      emit MyLog("Exchange Rate (scaled up by 1e18): ", exchangeRateMantissa);
-
-      // Amount added to you supply balance this block
-      uint256 supplyRateMantissa = cToken.supplyRatePerBlock();
-      emit MyLog("Supply Rate: (scaled up by 1e18)", supplyRateMantissa);
-
-      cToken.mint{ value: msg.value, gas: 250000}();
-      return true;
-  }
-
-  function supplyErc20ToCompound(
-      address _erc20Contract,
-      address _ICTokenContract,
-      uint256 _numTokensToSupply
-  ) public returns (uint) {
-      // Create a reference to the underlying asset contract, like DAI.
-      IERC20 underlying = IERC20(_erc20Contract);
-
-      // Create a reference to the corresponding cToken contract, like cDAI
-      ICToken cToken = ICToken(_ICTokenContract);
-
-      // Amount of current exchange rate from cToken to underlying
-      uint256 exchangeRateMantissa = cToken.exchangeRateCurrent();
-      emit MyLog("Exchange Rate (scaled up): ", exchangeRateMantissa);
-
-      // Amount added to you supply balance this block
-      uint256 supplyRateMantissa = cToken.supplyRatePerBlock();
-      emit MyLog("Supply Rate: (scaled up)", supplyRateMantissa);
-
-      // Approve transfer on the ERC20 contract
-      underlying.approve(_ICTokenContract, _numTokensToSupply);
-
-      // Mint cTokens
-      uint mintResult = cToken.mint(_numTokensToSupply);
-      return mintResult;
   }
 
   function redeemICTokenTokens(
