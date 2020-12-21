@@ -9,7 +9,7 @@ import "@openzeppelin/contracts/math/SafeMath.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 /**
- * Cmpoiund Borrowing primitive
+ * Cmpound Borrowing primitive
  */
 
 contract CompoundBorrowing {
@@ -86,65 +86,68 @@ contract CompoundBorrowing {
   function enterMarkets(
       address[] memory cTokens // Address of the Compound derivation token (e.g. cDAI)
   ) public {
-      // Enter the compound markets for all the specified tokens
-      uint256[] memory errors = IComptroller(CompoundComptrollerAddress)
-          .enterMarkets(cTokens);
+    // Enter the compound markets for all the specified tokens
+    uint256[] memory errors = IComptroller(CompoundComptrollerAddress)
+      .enterMarkets(cTokens);
 
-      for (uint256 i = 0; i < errors.length; i++) {
-          require(errors[i] == 0, "cmpnd-mgr-enter-markets-failed");
-      }
+    for (uint256 i = 0; i < errors.length; i++) {
+      require(errors[i] == 0, "cmpnd-mgr-enter-markets-failed");
+    }
   }
 
   function approveCToken(address cToken, uint256 amount) public {
-      // Approves CToken contract to call `transferFrom`
-      address underlying = ICToken(cToken).underlying();
-      require(
-          IERC20(underlying).approve(cToken, amount) == true,
-          "cmpnd-mgr-ctoken-approved-failed"
-      );
+    // Approves CToken contract to call `transferFrom`
+    address underlying = ICToken(cToken).underlying();
+    require(
+        IERC20(underlying).approve(cToken, amount) == true,
+        "cmpnd-mgr-ctoken-approved-failed"
+    );
   }
 
   function approveCTokens(
       address[] memory cTokens // Tokens to approve
   ) public {
-      for (uint256 i = 0; i < cTokens.length; i++) {
-          // Don't need to approve ICEther
-          if (cTokens[i] != CEtherAddress) {
-              approveCToken(cTokens[i], uint256(-1));
-          }
+    for (uint256 i = 0; i < cTokens.length; i++) {
+      // Don't need to approve ICEther
+      if (cTokens[i] != CEtherAddress) {
+          approveCToken(cTokens[i], uint256(-1));
       }
+    }
   }
 
   function enterMarketsAndApproveCTokens(address[] memory cTokens) public {
-      enterMarkets(cTokens);
-      approveCTokens(cTokens);
+    enterMarkets(cTokens);
+    approveCTokens(cTokens);
   }
 
   function supply(address cToken, uint256 amount) public payable {
     // Amount of current exchange rate from cToken to underlying
-      if (cToken == CEtherAddress) {
-          require(msg.value == amount, "The amount of eth needs to match");
+    if (cToken == CEtherAddress) {
+      require(msg.value == amount, "The amount of eth needs to match");
 
-          ICEther(CEtherAddress).mint{value: msg.value, gas: 250000 }();
-      } else {
-          // Approves CToken contract to call `transferFrom`
-          amount = normalizeDecimals(cToken, amount);
-          approveCToken(cToken, amount);
-          ICToken cTokenInstance = ICToken(cToken);
-          // uint256 exchangeRateMantissa = cTokenInstance.exchangeRateCurrent();
-          // emit MyLog("Exchange Rate (scaled up by 1e18): ", exchangeRateMantissa);
-          //
-          // // Amount added to you supply balance this block
-          // uint256 supplyRateMantissa = cTokenInstance.supplyRatePerBlock();
-          // emit MyLog("Supply Rate: (scaled up by 1e18)", supplyRateMantissa);
+      ICEther(CEtherAddress).mint{value: msg.value, gas: 250000 }();
+    } else {
+      // Approves CToken contract to call `transferFrom`
+      amount = normalizeDecimals(cToken, amount);
+      approveCToken(cToken, amount);
+      ICToken cTokenInstance = ICToken(cToken);
+      // uint256 exchangeRateMantissa = cTokenInstance.exchangeRateCurrent();
+      // emit MyLog("Exchange Rate (scaled up by 1e18): ", exchangeRateMantissa);
+      //
+      // // Amount added to you supply balance this block
+      // uint256 supplyRateMantissa = cTokenInstance.supplyRatePerBlock();
+      // emit MyLog("Supply Rate: (scaled up by 1e18)", supplyRateMantissa);
 
-          require(
-              cTokenInstance.mint(amount) == 0,
-              "cmpnd-mgr-ctoken-supply-failed"
-          );
-      }
+      require(
+          cTokenInstance.mint(amount) == 0,
+          "cmpnd-mgr-ctoken-supply-failed"
+      );
+    }
   }
 
+  /**
+    Normalize all the amounts of all tokens so all can be called with 10^18
+  */
   function normalizeDecimals(address cToken, uint256 amount) view private returns (uint256)  {
     // cUSDC and CUSDT have only 6 decimals
     if (cToken == CUSDCAddress || cToken == CUSDTAddress) {
@@ -157,7 +160,7 @@ contract CompoundBorrowing {
     return amount;
   }
 
-  function borrow(address cToken, uint256 borrowAmount) public {
+  function safeBorrow(address cToken, uint256 borrowAmount) public {
     // Get my account's total liquidity value in Compound
     (uint256 error, uint256 liquidity, uint256 shortfall) = IComptroller(CompoundComptrollerAddress)
         .getAccountLiquidity(address(this));
@@ -175,6 +178,13 @@ contract CompoundBorrowing {
     // Borrowing near the max amount will result
     // in your account being liquidated instantly
     // emit MyLog("Maximum underlying Borrow (borrow far less!)", maxBorrowUnderlying);
+    require(
+        ICToken(cToken).borrow(normalizeDecimals(cToken, borrowAmount)) == 0,
+        "cmpnd-mgr-ctoken-borrow-failed"
+    );
+  }
+
+  function borrow(address cToken, uint256 borrowAmount) public {
     require(
         ICToken(cToken).borrow(normalizeDecimals(cToken, borrowAmount)) == 0,
         "cmpnd-mgr-ctoken-borrow-failed"
@@ -209,87 +219,35 @@ contract CompoundBorrowing {
       address cToken,
       uint256 amount
   ) public payable {
-      if (cToken == CEtherAddress) {
-          ICEther(cToken).repayBorrowBehalf{ value: amount}(recipient);
-      } else {
-          approveCToken(cToken, amount);
-          require(
-              ICToken(cToken).repayBorrowBehalf(recipient, amount) == 0,
-              "cmpnd-mgr-ctoken-repaybehalf-failed"
-          );
-      }
+    if (cToken == CEtherAddress) {
+      ICEther(cToken).repayBorrowBehalf{ value: amount}(recipient);
+    } else {
+      amount = normalizeDecimals(cToken, amount);
+      approveCToken(cToken, amount);
+      require(
+          ICToken(cToken).repayBorrowBehalf(recipient, amount) == 0,
+          "cmpnd-mgr-ctoken-repaybehalf-failed"
+      );
+    }
   }
 
   function redeem(address cToken, uint256 redeemTokens) public payable {
-      require(
-          ICToken(cToken).redeem(redeemTokens) == 0,
-          "cmpnd-mgr-ctoken-redeem-failed"
-      );
+    // Retrieve your asset based on a cToken amount
+    redeemTokens = normalizeDecimals(cToken, redeemTokens);
+    require(
+        ICToken(cToken).redeem(redeemTokens) == 0,
+        "cmpnd-mgr-ctoken-redeem-failed"
+    );
   }
 
-  function redeemUnderlying(address cToken, uint256 redeemTokens)
-      public
-      payable
+  function redeemUnderlying(address cToken, uint256 redeemTokens) public payable
   {
-      require(
-          ICToken(cToken).redeemUnderlying(redeemTokens) == 0,
-          "cmpnd-mgr-ctoken-redeem-underlying-failed"
-      );
-  }
-
-  function redeemICTokenTokens(
-      uint256 amount,
-      bool redeemType,
-      address _ICTokenContract
-  ) public returns (bool) {
-      // Create a reference to the corresponding cToken contract, like cDAI
-      ICToken cToken = ICToken(_ICTokenContract);
-
-      // `amount` is scaled up, see decimal table here:
-      // https://compound.finance/docs#protocol-math
-
-      uint256 redeemResult;
-
-      if (redeemType == true) {
-          // Retrieve your asset based on a cToken amount
-          redeemResult = cToken.redeem(amount);
-      } else {
-          // Retrieve your asset based on an amount of the asset
-          redeemResult = cToken.redeemUnderlying(amount);
-      }
-
-      // Error codes are listed here:
-      // https://compound.finance/developers/ctokens#ctoken-error-codes
-      emit MyLog("If this is not 0, there was an error", redeemResult);
-
-      return true;
-  }
-
-  function redeemCEth(
-      uint256 amount,
-      bool redeemType,
-      address _cEtherContract
-  ) public returns (bool) {
-      // Create a reference to the corresponding cToken contract
-      ICEther cToken = ICEther(_cEtherContract);
-
-      // `amount` is scaled up by 1e18 to avoid decimals
-
-      uint256 redeemResult;
-
-      if (redeemType == true) {
-          // Retrieve your asset based on a cToken amount
-          redeemResult = cToken.redeem(amount);
-      } else {
-          // Retrieve your asset based on an amount of the asset
-          redeemResult = cToken.redeemUnderlying(amount);
-      }
-
-      // Error codes are listed here:
-      // https://compound.finance/docs/ctokens#ctoken-error-codes
-      emit MyLog("If this is not 0, there was an error", redeemResult);
-
-      return true;
+    redeemTokens = normalizeDecimals(cToken, redeemTokens);
+    // Retrieve your asset based on an amount of the asset
+    require(
+        ICToken(cToken).redeemUnderlying(redeemTokens) == 0,
+        "cmpnd-mgr-ctoken-redeem-underlying-failed"
+    );
   }
 
   // Need this to receive ETH when `borrowEthExample` and calling `redeemCEth` executes
