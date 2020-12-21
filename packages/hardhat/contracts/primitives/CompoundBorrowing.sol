@@ -146,7 +146,8 @@ contract CompoundBorrowing {
   }
 
   /**
-    Normalize all the amounts of all tokens so all can be called with 10^18
+    Normalize all the amounts of all tokens so all can be called with 10^18.
+    e.g Call functions like borrow, supply with parseEther
   */
   function normalizeDecimals(address cToken, uint256 amount) view private returns (uint256)  {
     // cUSDC and CUSDT have only 6 decimals
