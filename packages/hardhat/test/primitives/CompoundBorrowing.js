@@ -68,7 +68,7 @@ describe("CompoundBorrowing", async function () {
       expect(balance).to.be.gt(0);
     });
 
-    it("can supply dai and borrow dai", async function () {
+    it("can supply dai and borrow usdc", async function () {
       expect(await daiToken.connect(whaleSigner).transfer(compoundBorrowing.address, ethers.utils.parseEther('1000'), { gasPrice: 0}));
       expect(await daiToken.connect(whaleSigner).transfer(owner.getAddress(), ethers.utils.parseEther('1000'), { gasPrice: 0}));
       expect(await cdaiToken.balanceOf(compoundBorrowing.address)).to.equal(0);
@@ -81,8 +81,8 @@ describe("CompoundBorrowing", async function () {
       expect(balance).to.be.gt(0);
       expect(await compoundBorrowing.enterMarketsAndApproveCTokens([cdaiToken.address, cusdcToken.address]));
       expect(await cdaiToken.balanceOf(compoundBorrowing.address)).to.be.gt(0);
-      expect(await compoundBorrowing.borrow(cdaiToken.address, ethers.utils.parseEther('1')));
-      balance = await cdaiToken.borrowBalanceCurrent(compoundBorrowing.address);
+      expect(await compoundBorrowing.borrow(cusdcToken.address, ethers.utils.parseEther('1')));
+      balance = await cusdcToken.borrowBalanceCurrent(compoundBorrowing.address);
       expect(balance).to.be.gt(0);
     });
 

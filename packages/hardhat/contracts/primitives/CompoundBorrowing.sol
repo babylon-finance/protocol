@@ -20,6 +20,9 @@ contract CompoundBorrowing {
 
   address constant CompoundComptrollerAddress = 0x3d9819210A31b4961b30EF54bE2aeD79B9c9Cd3B;
   address constant CEtherAddress = 0x4Ddc2D193948926D02f9B1fE9e1daa0718270ED5;
+  address constant CUSDCAddress = 0x39AA39c021dfbaE8faC545936693aC917d5E7563;
+  address constant CUSDTAddress = 0xf650C3d88D12dB855b8bf7D11Be6C55A4e07dCC9;
+  address constant CWBTCAddress = 0xC11b1268C1A384e55C48c2391d8d480264A3A7F4;
 
   function _transferFromUnderlying(
       address sender,
@@ -150,10 +153,18 @@ contract CompoundBorrowing {
     }
     require(shortfall == 0, "account underwater");
     require(liquidity > 0, "account does not have collateral");
-      require(
-          ICToken(cToken).borrow(borrowAmount) == 0,
-          "cmpnd-mgr-ctoken-borrow-failed"
-      );
+    // cUSDC and CUSDT have only 6 decimals
+    if (cToken == CUSDCAddress || cToken == CUSDTAddress) {
+      borrowAmount =  borrowAmount.div(10**12);
+    }
+    // cWBTC has 8 decimals
+    if (cToken == CWBTCAddress) {
+      borrowAmount =  borrowAmount.div(10**10);
+    }
+    require(
+        ICToken(cToken).borrow(borrowAmount) == 0,
+        "cmpnd-mgr-ctoken-borrow-failed"
+    );
   }
 
   function supplyAndBorrow(
