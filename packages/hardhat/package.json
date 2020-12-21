@@ -25,7 +25,7 @@
     "chain": "hardhat node",
     "test": "hardhat test --network hardhat",
     "compile": "hardhat compile",
-    "deploy": "hardhat run scripts/deploy.js && hardhat run scripts/publish.js",
+    "deploy": "hardhat run scripts/deploy.js --network localhost && hardhat run scripts/publish.js",
     "watch": "node scripts/watch.js",
     "accounts": "hardhat accounts",
     "balance": "hardhat balance",
