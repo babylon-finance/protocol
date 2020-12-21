@@ -86,6 +86,21 @@ describe("CompoundBorrowing", async function () {
       expect(balance).to.be.gt(0);
     });
 
+    it("can supply ether, borrow dai and repay", async function () {
+      await expect(() => owner.sendTransaction({ to: compoundBorrowing.address, gasPrice: 0, value: 1000000000 }))
+        .to.changeEtherBalance(owner, -1000000000);
+      await compoundBorrowing.supply(addresses.tokens.CETH, ethers.utils.parseEther('10'), { value: ethers.utils.parseEther('10') });
+      expect(await compoundBorrowing.enterMarketsAndApproveCTokens([cdaiToken.address, cethToken.address]));
+      expect(await compoundBorrowing.borrow(cdaiToken.address, ethers.utils.parseEther('10')));
+      balance = await cdaiToken.borrowBalanceCurrent(compoundBorrowing.address);
+      expect(balance).to.be.gt(0);
+      console.log('balance after borrow',  ethers.utils.formatEther(balance));
+      expect(await compoundBorrowing.repayBorrow(cdaiToken.address, ethers.utils.parseEther('10')));
+      let balance2 = await cdaiToken.borrowBalanceCurrent(compoundBorrowing.address);
+      console.log('balance after repayment',  ethers.utils.formatEther(balance2));
+      expect(balance2).to.be.lt(balance);
+    });
+
   })
 
 });
