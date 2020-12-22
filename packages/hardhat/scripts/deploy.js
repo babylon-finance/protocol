@@ -58,23 +58,23 @@ async function main() {
     readArgumentsFile("Holder")
   );
 
-  //const fundawait holder.addHedgeFund(
-  //  "FundNumberOne",
-  //  "FundTokenOne",
-  //  "FNON"
-  //);
+  await holder.addHedgeFund(
+    "Fund Number One",
+    "FundTokenOne",
+    "FNON"
+  );
 
-  //await holder.addHedgeFund(
-  //  "FundNumberTwo",
-  //  "FundTokenTwo",
-  //  "FNTW"
-  //);
+  await holder.addHedgeFund(
+    "Fund Number Two",
+    "FundTokenTwo",
+    "FNTW"
+  );
 
-  //await  holder.addHedgeFund(
-  //  "Fund Number Three",
-  //  "FundTokenThree",
-  //  "FNTH"
-  //);
+  await  holder.addHedgeFund(
+    "Fund Number Three",
+    "FundTokenThree",
+    "FNTH"
+  );
 
   console.log("📡 Deploy complete! \n");
 }

@@ -55,6 +55,14 @@ contract Holder {
         totalHedgeFunds++;
     }
 
+    function getAllHedgeFunds() external view returns (address[] memory) {
+        address[] memory ret = new address[](totalHedgeFunds);
+        for (uint i = 0; i < totalHedgeFunds; i++) {
+            ret[i] = address(hedgeFunds[i].hedgeFund);
+        }
+        return ret;
+    }
+
     function disableHedgeFund(string memory _name) public onlyProtocol {
         uint256 atIndex = hedgeFundsMapping[_name];
         HedgeFundMapping storage _hedgeFundMapping = hedgeFunds[atIndex.sub(1)];

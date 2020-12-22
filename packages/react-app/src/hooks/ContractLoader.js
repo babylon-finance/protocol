@@ -33,11 +33,11 @@ export async function loadContractFromNameAndAddress(address, contractName, prov
       signer = providerOrSigner;
     }
 
-    console.log({ signer });
+    const abi = require(`../contracts/${contractName}.abi.js`);
 
     newContract = new Contract(
       address,
-      require(`../contracts/${contractName}.abi.js`),
+      abi,
       signer
     );
 

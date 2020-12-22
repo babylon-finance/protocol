@@ -35,8 +35,9 @@ function publishContract(contractName) {
     );
     if (address) {
       buildAddress(publishDir, contractName, address);
+      return true;
     }
-    return true;
+    return false;
   } catch (e) {
     console.log(e);
     return false;

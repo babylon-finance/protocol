@@ -1,9 +1,9 @@
 import FundCardChart from "./FundCardChart";
-import useContractLoader, { loadContractFromNameAndAddress } from "../hooks/ContractLoader";
+import { loadContractFromNameAndAddress } from "../hooks/ContractLoader";
 import { usePoller } from "eth-hooks";
 import React, { useState, useEffect } from "react";
 import styled from "styled-components";
-import { Spin } from "antd";
+import { Card } from "antd";
 
 interface State {
   loading: boolean
@@ -13,37 +13,37 @@ interface State {
 interface FundCardProps {
   provider: any
   address: string
-  userAddress: string
 }
 
-interface HedgeFund {
-  fundActive: boolean
-  fundName: string
-  fundToken: string
-  fundTotalContributors: number
-  fundTotalContributions: number
-  fundStrategyAddresses: string[]
-}
+const contractName = "HedgeFund";
 
-const FundCard = ({ provider, address, userAddress }: FundCardProps) => {
-  const [loading, setLoading] = useState(false);
-  const contracts = useContractLoader(provider, userAddress)
+const FundCard = ({ provider, address }: FundCardProps) => {
+  const [isLoaded, setIsLoaded] = useState(false);
+  const [contract, setContract] = useState();
+  const [fundName, setFundName] = useState("");
+
+  useEffect(() => {
+    async function getContract() {
+      setContract(await loadContractFromNameAndAddress(address, contractName, provider));
+    }
+    if (!contract) {
+      getContract();
+    }
+  })
 
   usePoller(async () => {
-    if (contracts) {
-      console.log(contracts);
-      console.log("LOG", await contracts.Holder.totalHedgeFunds());
+    console.log()
+    if (contract) {
+      setIsLoaded(true);
+      setFundName(await contract.name());
     }
   }, 1000);
 
   return (
-    <FundCardWrapper>
-      {loading &&
-        <Spin tip="Loading fund..." />
-      }
+    <FundCardWrapper loading={!isLoaded}>
       <FundCardHeader>
         <FundTokenSymbol>ABCD</FundTokenSymbol>
-        Fund Name
+        {fundName}
       </FundCardHeader>
       <FundCardDesc>
         This is a subheading and brief description of the fund.
@@ -68,14 +68,11 @@ const FundCard = ({ provider, address, userAddress }: FundCardProps) => {
   );
 }
 
-const FundCardWrapper = styled.div`
-  display: flex;
-  flex-direction: column;
-  background: white;
-  width: 350px;
+const FundCardWrapper = styled(Card)`
+  width: 450px;
   height: 550px;
-  margin-right: 18px;
   border: 1px solid lightgray;
+  margin: 0 10px;
 `
 
 const FundTokenSymbol = styled.div`

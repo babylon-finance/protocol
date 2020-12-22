@@ -1,6 +1,5 @@
-import FundCard from "./components/FundCard"
+import FundCardRow from "./components/FundCardRow"
 import { loadContractFromNameAndAddress } from "./hooks/ContractLoader";
-
 
 import React from 'react';
 import styled from "styled-components";
@@ -191,9 +190,9 @@ export default class App extends React.Component<AppProps, AppState> {
             {shouldRenderFunds && (
               <div>
                 <Alert message={`Wallet Connected: ${this.state.address}`} type="warning" />
-                <FundCardRow>
-                  <FundCard address={""} provider={this.state.provider} userAddress={this.state.address} />
-                </FundCardRow>
+                <FundCardRowWrapper>
+                  <FundCardRow provider={this.state.provider} address={this.state.address} />
+                </FundCardRowWrapper>
               </div>
             )}
           </ContentWrapper>
@@ -261,9 +260,8 @@ const ConnectButton = styled.button`
   border: 1px solid #4420D8;
 `
 
-const FundCardRow = styled.div`
+const FundCardRowWrapper = styled.div`
   margin-top: 50px;
-  display: flex;
 `
 
 const WalletConnectedBanner = styled.h2`
