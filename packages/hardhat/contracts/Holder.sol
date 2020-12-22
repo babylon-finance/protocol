@@ -22,7 +22,7 @@ contract Holder {
     mapping(string => uint256) public hedgeFundsMapping;
 
     // Functions
-    constructor() public {
+    constructor() {
         protocolManager = msg.sender;
     }
 
@@ -53,6 +53,14 @@ contract Holder {
         hedgeFundsMapping[_name] = currentHedgeFundIndex;
         currentHedgeFundIndex++;
         totalHedgeFunds++;
+    }
+
+    function getAllHedgeFunds() external view returns (address[] memory) {
+        address[] memory ret = new address[](totalHedgeFunds);
+        for (uint i = 0; i < totalHedgeFunds; i++) {
+            ret[i] = address(hedgeFunds[i].hedgeFund);
+        }
+        return ret;
     }
 
     function disableHedgeFund(string memory _name) public onlyProtocol {

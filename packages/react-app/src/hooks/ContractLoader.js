@@ -17,6 +17,37 @@ const loadContract = (contractName, signer) => {
   return newContract;
 };
 
+export async function loadContractFromNameAndAddress(address, contractName, providerOrSigner) {
+  let newContract
+  try {
+    // we need to check to see if this providerOrSigner has a signer or not
+    let signer;
+    let accounts;
+    if (providerOrSigner && typeof providerOrSigner.listAccounts === "function") {
+      accounts = await providerOrSigner.listAccounts();
+    }
+
+    if (accounts && accounts.length > 0) {
+      signer = providerOrSigner.getSigner();
+    } else {
+      signer = providerOrSigner;
+    }
+
+    const abi = require(`../contracts/${contractName}.abi.js`);
+
+    newContract = new Contract(
+      address,
+      abi,
+      signer
+    );
+
+    newContract.bytecode = require(`../contracts/${contractName}.bytecode.js`);
+  } catch (err) {
+    console.log(err);
+  }
+  return newContract;
+};
+
 export default function useContractLoader(providerOrSigner, address) {
   const [contracts, setContracts] = useState();
   useEffect(() => {

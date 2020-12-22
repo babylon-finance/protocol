@@ -1,49 +1,78 @@
 import FundCardChart from "./FundCardChart";
-
-import React from "react";
+import { loadContractFromNameAndAddress } from "../hooks/ContractLoader";
+import { usePoller } from "eth-hooks";
+import React, { useState, useEffect } from "react";
 import styled from "styled-components";
+import { Card } from "antd";
 
-interface Props { }
-
-export default class FundCard extends React.PureComponent<Props> {
-  render() {
-    return (
-      <FundCardWrapper>
-        <FundCardHeader>
-          <FundTokenSymbol>ABCD</FundTokenSymbol>
-          Fund Name
-        </FundCardHeader>
-        <FundCardDesc>
-          This is a subheading and brief description of the fund.
-        </FundCardDesc>
-        <FundCompositionBlock>
-          <FundCompositionLabel>Composition</FundCompositionLabel>
-          <FundCompositionItem>ETH Long  50%</FundCompositionItem>
-          <FundCompositionItem>USD Short 50%</FundCompositionItem>
-        </FundCompositionBlock>
-        <FundPerfomanceHistogram>
-          <FundCardChart />
-        </FundPerfomanceHistogram>
-        <FundPerformanceBlock>
-          <FundPerformanceReturns>Performance: +300%</FundPerformanceReturns>
-          <FundPerformanceAmount>Total Invested: 300 ETH</FundPerformanceAmount>
-        </FundPerformanceBlock>
-        <FundCardInvestButtonWrapper>
-          <FundCardInvestButton>Invest</FundCardInvestButton>
-        </FundCardInvestButtonWrapper>
-      </FundCardWrapper>
-    );
-  }
+interface State {
+  loading: boolean
+  contract?: any
 }
 
-const FundCardWrapper = styled.div`
-  display: flex;
-  flex-direction: column;
-  background: white;
-  width: 350px;
+interface FundCardProps {
+  provider: any
+  address: string
+}
+
+const contractName = "HedgeFund";
+
+const FundCard = ({ provider, address }: FundCardProps) => {
+  const [isLoaded, setIsLoaded] = useState(false);
+  const [contract, setContract] = useState();
+  const [fundName, setFundName] = useState("");
+
+  useEffect(() => {
+    async function getContract() {
+      setContract(await loadContractFromNameAndAddress(address, contractName, provider));
+    }
+    if (!contract) {
+      getContract();
+    }
+  })
+
+  usePoller(async () => {
+    console.log()
+    if (contract) {
+      setIsLoaded(true);
+      setFundName(await contract.name());
+    }
+  }, 1000);
+
+  return (
+    <FundCardWrapper loading={!isLoaded}>
+      <FundCardHeader>
+        <FundTokenSymbol>ABCD</FundTokenSymbol>
+        {fundName}
+      </FundCardHeader>
+      <FundCardDesc>
+        This is a subheading and brief description of the fund.
+      </FundCardDesc>
+      <FundCompositionBlock>
+        <FundCompositionLabel>Composition</FundCompositionLabel>
+        <FundCompositionItem>ETH Long  50%</FundCompositionItem>
+        <FundCompositionItem>USD Short 50%</FundCompositionItem>
+      </FundCompositionBlock>
+      <FundPerfomanceHistogram>
+        <FundCardChart />
+      </FundPerfomanceHistogram>
+      <FundPerformanceBlock>
+        <FundPerformanceReturns>Performance: +300%</FundPerformanceReturns>
+        <FundPerformanceAmount>Invested: 300 ETH</FundPerformanceAmount>
+        <FundPerformanceAmount>Participants: 300</FundPerformanceAmount>
+      </FundPerformanceBlock>
+      <FundCardInvestButtonWrapper>
+        <FundCardInvestButton>Invest</FundCardInvestButton>
+      </FundCardInvestButtonWrapper>
+    </FundCardWrapper>
+  );
+}
+
+const FundCardWrapper = styled(Card)`
+  width: 450px;
   height: 550px;
-  margin-right: 18px;
   border: 1px solid lightgray;
+  margin: 0 10px;
 `
 
 const FundTokenSymbol = styled.div`
@@ -125,3 +154,4 @@ const FundCardInvestButton = styled.button`
     background: #160E6B;
   }
 `
+export default FundCard;

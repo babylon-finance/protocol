@@ -1,6 +1,7 @@
+require("@nomiclabs/hardhat-ethers");
+
 const fs = require("fs");
 const chalk = require("chalk");
-const bre = require("@nomiclabs/hardhat-ethers");
 
 const publishDir = "../react-app/src/contracts";
 
@@ -12,17 +13,18 @@ function publishContract(contractName) {
     chalk.yellow(publishDir)
   );
   try {
-    let contract = fs
-      .readFileSync(`${bre.config.paths.artifacts}/${contractName}.json`)
+    const contractFile = fs
+      .readFileSync(`${config.paths.artifacts}/contracts/${contractName}.sol/${contractName}.json`)
       .toString();
-    const address = fs
-      .readFileSync(`${bre.config.paths.artifacts}/${contractName}.address`)
-      .toString();
-    contract = JSON.parse(contract);
-    fs.writeFileSync(
-      `${publishDir}/${contractName}.address.js`,
-      `module.exports = "${address}";`
-    );
+    let address;
+    try {
+      address = fs
+        .readFileSync(`${config.paths.artifacts}/${contractName}.address`)
+        .toString();
+    } catch (err) {
+      address = null;
+    }
+    const contract = JSON.parse(contractFile);
     fs.writeFileSync(
       `${publishDir}/${contractName}.abi.js`,
       `module.exports = ${JSON.stringify(contract.abi, null, 2)};`
@@ -31,12 +33,22 @@ function publishContract(contractName) {
       `${publishDir}/${contractName}.bytecode.js`,
       `module.exports = "${contract.bytecode}";`
     );
-
-    return true;
+    if (address) {
+      buildAddress(publishDir, contractName, address);
+      return true;
+    }
+    return false;
   } catch (e) {
     console.log(e);
     return false;
   }
+}
+
+function buildAddress(publishDir, contractName, address) {
+  fs.writeFileSync(
+    `${publishDir}/${contractName}.address.js`,
+    `module.exports = "${address}";`
+  );
 }
 
 async function main() {
@@ -44,7 +56,7 @@ async function main() {
     fs.mkdirSync(publishDir);
   }
   const finalContractList = [];
-  fs.readdirSync(bre.config.paths.sources).forEach((file) => {
+  fs.readdirSync(config.paths.sources).forEach((file) => {
     if (file.indexOf(".sol") >= 0) {
       const contractName = file.replace(".sol", "");
       // Add contract to list if publishing is successful
@@ -58,6 +70,7 @@ async function main() {
     `module.exports = ${JSON.stringify(finalContractList)};`
   );
 }
+
 main()
   .then(() => process.exit(0))
   .catch((error) => {

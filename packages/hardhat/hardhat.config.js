@@ -83,6 +83,10 @@ module.exports = {
       },
     },
   },
+  paths: {
+    sources: "./contracts",
+    artifacts: "./artifacts"
+  }
 };
 
 const DEBUG = false;

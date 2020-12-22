@@ -52,23 +52,31 @@ async function autoDeploy() {
 }
 
 async function main() {
-  console.log("📡 Deploy \n");
-  const adrianoToken = await deploy(
-    "AdrianoERC20",
-    readArgumentsFile("AdrianoERC20")
+  console.log("📡 Deploying.. \n");
+  const holder = await deploy(
+    "Holder",
+    readArgumentsFile("Holder")
   );
-  const adrianoFund = await deploy(
-    "AdrianoFund",
-    readArgumentsFile("AdrianoFund").concat(adrianoToken.address)
+
+  await holder.addHedgeFund(
+    "Fund Number One",
+    "FundTokenOne",
+    "FNON"
   );
-  await adrianoToken.grantAdminAndRevoke(adrianoFund.address);
-  // auto deploy to read contract directory and deploy them all (add ".args" files for arguments)
-  // await autoDeploy();
-  // OR
-  // custom deploy (to use deployed addresses dynamically for example:)
-  // const exampleToken = await deploy("ExampleToken")
-  // const examplePriceOracle = await deploy("ExamplePriceOracle")
-  // const smartContractWallet = await deploy("SmartContractWallet",[exampleToken.address,examplePriceOracle.address])
+
+  await holder.addHedgeFund(
+    "Fund Number Two",
+    "FundTokenTwo",
+    "FNTW"
+  );
+
+  await  holder.addHedgeFund(
+    "Fund Number Three",
+    "FundTokenThree",
+    "FNTH"
+  );
+
+  console.log("📡 Deploy complete! \n");
 }
 
 main()
