@@ -68,6 +68,8 @@ typings/
 # Yarn Integrity file
 .yarn-integrity
 
+yarn.lock
+
 # dotenv environment variables file
 .env
 .env.test
@@ -106,5 +108,7 @@ dist
 # dependencies
 **/mnemonic.txt
 **/package-lock.json
+#mnemonic
+packages/hardhat/*.txt
 packages/hardhat/cache/*
 packages/hardhat/artifacts/*

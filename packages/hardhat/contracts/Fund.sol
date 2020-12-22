@@ -3,9 +3,9 @@ pragma solidity >=0.7.0 <0.9.0;
 import "hardhat/console.sol";
 import "@openzeppelin/contracts/math/SafeMath.sol";
 import "./FundToken.sol";
-import "./strategies/FundStrategy.sol";
+import "./investments/Investment.sol";
 
-contract HedgeFund {
+contract Fund {
     using SafeMath for uint256;
 
     // Events
@@ -34,14 +34,14 @@ contract HedgeFund {
     uint256 public totalFunds;
 
     //Strategies
-    struct FundStrategyRel {
+    struct FundInvestmentRel {
       bool initialized;
       uint weight;
-      FundStrategy strategy;
+      Investment investment;
     }
-    uint public fundStrategiesCount;
-    mapping (address => FundStrategyRel) public stratMapping;
-    FundStrategyRel[] public fundStrategies;
+    uint public investmentsCount;
+    mapping (address => FundInvestmentRel) public investmentMapping;
+    FundInvestmentRel[] public investments;
 
     // Token Properties
     FundToken public token;
@@ -90,40 +90,40 @@ contract HedgeFund {
         protocol = msg.sender;
         name = _name;
         active = false;
-        fundStrategiesCount = 0;
+        investmentsCount = 0;
     }
 
     /**
-      The strategy contract needs to have been deployed prior to calling this
+      The investment contract needs to have been deployed prior to calling this
     */
-    function addStrategyToFund(address strategyAddress) public onlyManager {
-      require(fundStrategiesCount < 10, "A fund can only have a maximum of 10 strategies");
-      FundStrategyRel storage fundStrategyRel = stratMapping[strategyAddress];
-      require(!fundStrategyRel.initialized, "This strategy is already in the fund");
-      fundStrategyRel.weight = 0;
-      fundStrategyRel.initialized = true;
-      fundStrategyRel.strategy = FundStrategy(strategyAddress);
-      fundStrategies.push(fundStrategyRel);
-      fundStrategiesCount ++;
+    function addInvestmentToFund(address investmentAddress) public onlyManager {
+      require(investmentsCount < 10, "A fund can only have a maximum of 10 strategies");
+      FundInvestmentRel storage fundInvestmentRel = investmentMapping[investmentAddress];
+      require(!fundInvestmentRel.initialized, "This strategy is already in the fund");
+      fundInvestmentRel.weight = 0;
+      fundInvestmentRel.initialized = true;
+      fundInvestmentRel.investment = Investment(investmentAddress);
+      investments.push(fundInvestmentRel);
+      investmentsCount ++;
     }
 
     /**
-     * Setting the weight of a strategy to 0 effectively disables it
+     * Setting the weight of an investment to 0 effectively disables it
     */
-    function changeWeightsStrategies(uint[] memory newWeights) public onlyManager {
+    function changeWeightsInvestments(uint[] memory newWeights) public onlyManager {
       uint totalWeights = 0;
-      require(newWeights.length == fundStrategiesCount, "The weights need to match the current strategies");
+      require(newWeights.length == investmentsCount, "The weights need to match the current investments");
       for (uint i = 0; i < newWeights.length; i++) {
-        FundStrategyRel storage fundStrategyRel = fundStrategies[i];
+        FundInvestmentRel storage fundInvestmentRel = investments[i];
         totalWeights += newWeights[i];
-        fundStrategyRel.weight = newWeights[i];
+        fundInvestmentRel.weight = newWeights[i];
       }
       require(totalWeights == 100, "Total weights must add up to a 100");
     }
 
     function setActive(bool _active) public onlyManagerOrProtocol {
       if (_active) {
-        require(fundStrategiesCount > 0, "The fund needs to have strategies to be active");
+        require(investmentsCount > 0, "The fund needs to have investments to be active");
       }
       active = _active;
     }

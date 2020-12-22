@@ -15,7 +15,7 @@
     "react-app:start": "yarn workspace @defi-advisor/react-app start",
     "react-app:test": "yarn workspace @defi-advisor/react-app test",
     "build": "yarn workspace @defi-advisor/react-app build --max-old-space-size=12288",
-    "chain": "yarn workspace @defi-advisor/hardhat node",
+    "chain": "yarn workspace @defi-advisor/hardhat chain",
     "node": "yarn workspace @defi-advisor/hardhat node",
     "test": "yarn workspace @defi-advisor/hardhat test",
     "start": "yarn workspace @defi-advisor/react-app start",

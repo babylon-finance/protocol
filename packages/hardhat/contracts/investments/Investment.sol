@@ -1,9 +1,8 @@
 pragma solidity >=0.7.0 <0.9.0;
 
 import "@openzeppelin/contracts/math/SafeMath.sol";
-import "./FundStrategy.sol";
 
-contract FundStrategy {
+contract Investment {
   using SafeMath for uint256;
 
   address public owner;

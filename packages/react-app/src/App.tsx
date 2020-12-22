@@ -1,12 +1,11 @@
 import FundCardRow from "./components/FundCardRow"
-import { loadContractFromNameAndAddress } from "./hooks/ContractLoader";
 
 import React from 'react';
 import styled from "styled-components";
 import Web3 from "web3";
 import Web3Modal from "web3modal";
 import { Web3Provider } from "@ethersproject/providers";
-import { Alert, Button, Space, Spin } from "antd";
+import { Alert, Spin } from "antd";
 // @ts-ignore
 import WalletConnectProvider from "@walletconnect/web3-provider";
 import './App.css';
@@ -56,8 +55,6 @@ const INITIAL_STATE = {
   pendingRequest: false,
   contract: null
 }
-
-const holderAddress = require("./contracts/Holder.address.js");
 
 export default class App extends React.Component<AppProps, AppState> {
   web3Modal: any
@@ -134,20 +131,20 @@ export default class App extends React.Component<AppProps, AppState> {
     }
     provider.on("close", () => this.resetApp());
     provider.on("accountsChanged", async (accounts: string[]) => {
-      await this.setState({ address: accounts[0] });
+      this.setState({ address: accounts[0] });
       //
     });
     provider.on("chainChanged", async (chainId: number) => {
       const { web3 } = this.state;
       const networkId = await web3.eth.net.getId();
-      await this.setState({ chainId, networkId });
+      this.setState({ chainId, networkId });
       //
     });
 
     provider.on("networkChanged", async (networkId: number) => {
       const { web3 } = this.state;
       const chainId = await web3.eth.chainId();
-      await this.setState({ chainId, networkId });
+      this.setState({ chainId, networkId });
       // biz logic
     });
   };
@@ -262,7 +259,4 @@ const ConnectButton = styled.button`
 
 const FundCardRowWrapper = styled.div`
   margin-top: 50px;
-`
-
-const WalletConnectedBanner = styled.h2`
 `

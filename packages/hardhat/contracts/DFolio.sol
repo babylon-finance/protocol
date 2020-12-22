@@ -3,22 +3,22 @@ pragma solidity >=0.7.0 <0.9.0;
 import "hardhat/console.sol";
 import "@openzeppelin/contracts/math/SafeMath.sol";
 import "./FundToken.sol";
-import "./HedgeFund.sol";
+import "./Fund.sol";
 
-contract Holder {
+contract DFolio {
     using SafeMath for uint256;
 
-    struct HedgeFundMapping {
-        HedgeFund hedgeFund;
+    struct FundMapping {
+        Fund hedgeFund;
         uint256 index;
     }
 
     address public protocolManager;
 
-    // Hedge Funds List
-    HedgeFundMapping[] public hedgeFunds;
-    uint256 public currentHedgeFundIndex = 1;
-    uint256 public totalHedgeFunds = 0;
+    //  Funds List
+    FundMapping[] public hedgeFunds;
+    uint256 public currentFundIndex = 1;
+    uint256 public totalFunds = 0;
     mapping(string => uint256) public hedgeFundsMapping;
 
     // Functions
@@ -34,7 +34,7 @@ contract Holder {
         _;
     }
 
-    function addHedgeFund(
+    function addFund(
         string memory _name,
         string memory _tokenName,
         string memory _symbol
@@ -43,49 +43,49 @@ contract Holder {
             hedgeFundsMapping[_name] == 0,
             "The hedge fund already exists."
         );
-        HedgeFund newHedgeFund = new HedgeFund(
+        Fund newFund = new Fund(
             _name,
             _tokenName,
             _symbol,
             msg.sender
         );
-        hedgeFunds.push(HedgeFundMapping(newHedgeFund, currentHedgeFundIndex));
-        hedgeFundsMapping[_name] = currentHedgeFundIndex;
-        currentHedgeFundIndex++;
-        totalHedgeFunds++;
+        hedgeFunds.push(FundMapping(newFund, currentFundIndex));
+        hedgeFundsMapping[_name] = currentFundIndex;
+        currentFundIndex++;
+        totalFunds++;
     }
 
-    function getAllHedgeFunds() external view returns (address[] memory) {
-        address[] memory ret = new address[](totalHedgeFunds);
-        for (uint i = 0; i < totalHedgeFunds; i++) {
+    function getAllFunds() external view returns (address[] memory) {
+        address[] memory ret = new address[](totalFunds);
+        for (uint i = 0; i < totalFunds; i++) {
             ret[i] = address(hedgeFunds[i].hedgeFund);
         }
         return ret;
     }
 
-    function disableHedgeFund(string memory _name) public onlyProtocol {
+    function disableFund(string memory _name) public onlyProtocol {
         uint256 atIndex = hedgeFundsMapping[_name];
-        HedgeFundMapping storage _hedgeFundMapping = hedgeFunds[atIndex.sub(1)];
+        FundMapping storage _hedgeFundMapping = hedgeFunds[atIndex.sub(1)];
         require(
             _hedgeFundMapping.hedgeFund.active(),
             "The hedge fund needs to be active."
         );
         _hedgeFundMapping.hedgeFund.setActive(false);
-        totalHedgeFunds--;
+        totalFunds--;
     }
 
-    function reenableHedgeFund(string memory _name) public onlyProtocol {
+    function reenableFund(string memory _name) public onlyProtocol {
         uint256 atIndex = hedgeFundsMapping[_name];
-        HedgeFundMapping storage _hedgeFundMapping = hedgeFunds[atIndex.sub(1)];
+        FundMapping storage _hedgeFundMapping = hedgeFunds[atIndex.sub(1)];
         require(
             !_hedgeFundMapping.hedgeFund.active(),
             "The hedge fund needs to be disabled."
         );
         _hedgeFundMapping.hedgeFund.setActive(true);
-        totalHedgeFunds++;
+        totalFunds++;
     }
 
-    function getHedgeFund(string memory _name)
+    function getFund(string memory _name)
         public
         view
         returns (
@@ -95,7 +95,7 @@ contract Holder {
         )
     {
         uint256 atIndex = hedgeFundsMapping[_name];
-        HedgeFundMapping storage _hedgeFundMapping = hedgeFunds[atIndex.sub(1)];
+        FundMapping storage _hedgeFundMapping = hedgeFunds[atIndex.sub(1)];
         return (
             _hedgeFundMapping.hedgeFund.name(),
             _hedgeFundMapping.hedgeFund.active(),

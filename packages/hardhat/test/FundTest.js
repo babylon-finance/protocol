@@ -1,7 +1,7 @@
 const { expect } = require("chai");
 
-describe("HedgeFund Deploy", function() {
-  it("Should deploy HedgeFund", async function() {
+describe("Fund Deploy", function() {
+  it("Should deploy Fund", async function() {
     const [owner, addr1, addr2] = await ethers.getSigners();
     const contractProps = {
       name: "FakeFund",
@@ -9,8 +9,8 @@ describe("HedgeFund Deploy", function() {
       tokenSymbol: "FFT",
       manager: owner.getAddress(),
     };
-    const HedgeFund = await ethers.getContractFactory("HedgeFund", owner);
-    await HedgeFund.deploy(
+    const Fund = await ethers.getContractFactory("Fund", owner);
+    await Fund.deploy(
       contractProps.name,
       contractProps.tokenName,
       contractProps.tokenSymbol,
@@ -19,7 +19,7 @@ describe("HedgeFund Deploy", function() {
   });
 });
 
-describe("HedgeFund", async function() {
+describe("Fund", async function() {
   const [owner, addr1, addr2, addr3] = await ethers.getSigners();
   const contractProps = {
     name: "FakeFund",
@@ -27,13 +27,13 @@ describe("HedgeFund", async function() {
     tokenSymbol: "FFT",
     manager: owner.getAddress(),
   };
-  const HedgeFund = await ethers.getContractFactory("HedgeFund", owner);
+  const Fund = await ethers.getContractFactory("Fund", owner);
 
   let hedgeFund;
   let fundToken;
 
   beforeEach(async () => {
-    hedgeFund = await HedgeFund.deploy(
+    hedgeFund = await Fund.deploy(
       contractProps.name,
       contractProps.tokenName,
       contractProps.tokenSymbol,
@@ -43,13 +43,13 @@ describe("HedgeFund", async function() {
     fundToken = await ethers.getContractAt("IERC20", fundTokenAddress);
   });
 
-  describe("HedgeFund construction", async function() {
+  describe("Fund construction", async function() {
     it("should have expected properties upon deployment", async function() {
       expect(await hedgeFund.totalContributors()).to.equal(0);
       expect(await hedgeFund.manager()).to.equal(await owner.getAddress());
     });
 
-    it("only the HedgeFund can call transferEth", async function() {
+    it("only the Fund can call transferEth", async function() {
       // No manager
       try {
         await hedgeFund
@@ -76,7 +76,7 @@ describe("HedgeFund", async function() {
     });
   });
 
-  describe("HedgeFund state", async function() {
+  describe("Fund state", async function() {
     it("only the current manager should be able to update active state", async function() {
       expect(await hedgeFund.setActive(false));
       await expect(hedgeFund.connect(addr2).setActive(false)).to.be.reverted;
@@ -89,7 +89,7 @@ describe("HedgeFund", async function() {
     });
   });
 
-  describe("HedgeFund contributors", async function() {
+  describe("Fund contributors", async function() {
     it("a contributor can make an initial deposit", async function() {
       await hedgeFund.connect(addr2).depositFunds({ value: 100000000000000 });
       expect(await hedgeFund.totalContributors()).to.equal(1);

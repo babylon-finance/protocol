@@ -9,7 +9,7 @@ import "@openzeppelin/contracts/math/SafeMath.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 /**
- * Cmpound Borrowing primitive
+ * Compound Borrowing primitive
  */
 
 contract CompoundBorrowing {

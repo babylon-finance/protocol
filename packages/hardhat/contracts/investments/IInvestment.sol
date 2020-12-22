@@ -1,6 +1,6 @@
 pragma solidity >=0.7.0 <0.9.0;
 
-interface IFundStrategy {
+interface IInvestment {
 
   function contractImpl() external view returns (address);
   function getFunds() external view returns (uint);

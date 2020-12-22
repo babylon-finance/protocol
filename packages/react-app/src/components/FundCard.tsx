@@ -5,17 +5,12 @@ import React, { useState, useEffect } from "react";
 import styled from "styled-components";
 import { Card } from "antd";
 
-interface State {
-  loading: boolean
-  contract?: any
-}
-
 interface FundCardProps {
   provider: any
   address: string
 }
 
-const contractName = "HedgeFund";
+const contractName = "Fund";
 
 const FundCard = ({ provider, address }: FundCardProps) => {
   const [isLoaded, setIsLoaded] = useState(false);

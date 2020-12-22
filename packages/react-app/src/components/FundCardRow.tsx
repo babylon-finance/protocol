@@ -12,12 +12,12 @@ interface FundCardRowProps {
 const FundCardRow = ({ provider, address }: FundCardRowProps) => {
   const [firstLoad, setFirstLoad] = useState(false)
   const [loading, setLoading] = useState(false);
-  const [hedgeFunds, setHedgeFunds] = useState();
+  const [funds, setFunds] = useState();
   const contracts = useContractLoader(provider, address);
 
   useEffect(() => {
     async function getFunds() {
-      setHedgeFunds(await contracts.Holder.getAllHedgeFunds());
+      setFunds(await contracts.DFolio.getAllFunds());
     }
     if (contracts) {
       getFunds();
@@ -26,8 +26,8 @@ const FundCardRow = ({ provider, address }: FundCardRowProps) => {
 
   return (
     <RowWrapper>
-      { hedgeFunds && (
-        hedgeFunds.map((address: string) => {
+      { funds && (
+        funds.map((address: string) => {
           return (
             <FundCard provider={provider} address={address} key={address} />
           )
