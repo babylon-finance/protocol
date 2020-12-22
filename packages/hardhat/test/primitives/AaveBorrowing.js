@@ -84,7 +84,7 @@ describe("AaveBorrowing", async function () {
       expect(canBeUsedAsCollateral).to.equal(true);
     })
 
-    it("can borrow an asset after depositing collateral", async function () {
+    it("can borrow usdc after depositing dai", async function () {
       expect(await daiToken.connect(whaleSigner).transfer(owner.getAddress(), ethers.utils.parseEther('1000'), { gasPrice: 0}));
       expect(await daiToken.approve(aaveBorrowing.address, ethers.utils.parseEther('1000')));
       expect(await daiToken.balanceOf(owner.getAddress())).to.equal(ethers.utils.parseEther('1000'));
