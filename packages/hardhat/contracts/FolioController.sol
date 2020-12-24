@@ -23,7 +23,7 @@ import { SafeMath } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
 import { Fund } from "./Fund.sol";
-import { AddressArrayUtils } from "../lib/AddressArrayUtils.sol";
+import { AddressArrayUtils } from "./lib/AddressArrayUtils.sol";
 
 /**
  * @title FolioController
@@ -71,6 +71,19 @@ contract FolioController is Ownable {
 
     // Recipient of protocol fees
     address public feeRecipient;
+
+    //Maximum fees a manager is allowed
+    uint256 maxManagerIssueFee;
+    uint256 maxManagerRedeemFee;
+    uint256 maxManagerPerformanceFee; // on redeem
+    // Max Premium percentage (0.01% = 1e14, 1% = 1e16). This premium is a buffer around oracle
+    // prices paid by user to the SetToken, which prevents arbitrage and oracle front running
+    uint256 maxFundPremiumPercentage;
+
+    uint256 protocolPerformanceFee; // (0.01% = 1e14, 1% = 1e16)
+    uint256 protocolFundCreationFee; // (0.01% = 1e14, 1% = 1e16)
+    uint256 protocolIssueFundTokenFee; // (0.01% = 1e14, 1% = 1e16)
+    uint256 protocolRedeemFundTokenFee; // (0.01% = 1e14, 1% = 1e16)
 
     // Total funds in the system
     uint256 public totalFunds = 0;
@@ -257,40 +270,6 @@ contract FolioController is Ownable {
     }
 
     /**
-     * PRIVILEGED GOVERNANCE FUNCTION. Allows governance to add a fee to a module
-     *
-     * @param _module               Address of the module contract to add fee to
-     * @param _feeType              Type of the fee to add in the module
-     * @param _newFeePercentage     Percentage of fee to add in the module (denominated in preciseUnits eg 1% = 1e16)
-     */
-    function addFee(address _fund, uint256 _feeType, uint256 _newFeePercentage) external onlyOwner {
-        require(isFund[_fund], "Fund does not exist");
-
-        require(fees[_fund][_feeType] == 0, "Fee type already exists on module");
-
-        fees[_fund][_feeType] = _newFeePercentage;
-
-        emit FeeEdited(_fund, _feeType, _newFeePercentage);
-    }
-
-    /**
-     * PRIVILEGED GOVERNANCE FUNCTION. Allows governance to edit a fee in an existing module
-     *
-     * @param _module               Address of the module contract to edit fee
-     * @param _feeType              Type of the fee to edit in the module
-     * @param _newFeePercentage     Percentage of fee to edit in the module (denominated in preciseUnits eg 1% = 1e16)
-     */
-    function editFee(address _module, uint256 _feeType, uint256 _newFeePercentage) external onlyOwner {
-        require(isFund[_fund], "Fund does not exist");
-
-        require(fees[_fund][_feeType] != 0, "Fee type does not exist on module");
-
-        fees[_module][_feeType] = _newFeePercentage;
-
-        emit FeeEdited(_fund, _feeType, _newFeePercentage);
-    }
-
-    /**
      * PRIVILEGED GOVERNANCE FUNCTION. Allows governance to edit the protocol fee recipient
      *
      * @param _newFeeRecipient      Address of the new protocol fee recipient
@@ -305,7 +284,7 @@ contract FolioController is Ownable {
 
     /* ============ External Getter Functions ============ */
 
-    function getModuleFee(
+    function getFundFees(
         address _moduleAddress,
         uint256 _feeType
     )
@@ -313,7 +292,7 @@ contract FolioController is Ownable {
         view
         returns (uint256)
     {
-        return fees[_moduleAddress][_feeType];
+        // TODO
     }
 
     function getIntegrationRegistry() external view returns (address memory) {
