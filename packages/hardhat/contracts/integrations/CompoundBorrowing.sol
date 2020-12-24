@@ -1,10 +1,10 @@
 pragma solidity >=0.7.0 <0.9.0;
 
 import "hardhat/console.sol";
-import '../interfaces/compound/ICToken.sol';
-import '../interfaces/compound/ICEther.sol';
-import '../interfaces/compound/ICompoundPriceOracle.sol';
-import '../interfaces/compound/IComptroller.sol';
+import './interfaces/compound/ICToken.sol';
+import './interfaces/compound/ICEther.sol';
+import './interfaces/compound/ICompoundPriceOracle.sol';
+import './interfaces/compound/IComptroller.sol';
 import "@openzeppelin/contracts/math/SafeMath.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
