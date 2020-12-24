@@ -184,7 +184,7 @@ contract FolioController is Ownable {
      *
      * @param _fund               Address of the fund
      */
-    function disableFund(address _fund) public onlyOwner {
+    function disableFund(address _fund) external onlyOwner {
         require(isFund[_fund], "Fund does not exist");
         Fund memory fund = funds[_fund];
         require(
@@ -200,7 +200,7 @@ contract FolioController is Ownable {
      *
      * @param _fund               Address of the fund
      */
-    function reenableFund(address _fund) public onlyOwner {
+    function reenableFund(address _fund) external onlyOwner {
         require(isFund[_fund], "Fund does not exist");
         Fund memory fund = funds[_fund];
         require(

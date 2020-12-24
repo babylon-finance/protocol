@@ -28,9 +28,11 @@ interface IFolioController {
 
     /* ============ Functions ============ */
 
-    function addFund(address _setToken) external;
+    function addFund(address _fund) external;
     function feeRecipient() external view returns(address);
     function getModuleFee(address _module, uint256 _feeType) external view returns(uint256);
-    function isSet(address _setToken) external view returns(bool);
+    function isFund(address _fund) external view returns(bool);
     function isSystemContract(address _contractAddress) external view returns (bool);
+
+    // TODO: FILL
 }

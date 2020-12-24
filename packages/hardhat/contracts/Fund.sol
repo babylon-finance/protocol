@@ -305,7 +305,7 @@ contract Fund is ERC20 {
     /**
      * PRIVILEGED Manager, protocol FUNCTION. When a Fund is disable, deposits and withdrawals are disabled
      */
-    function setActive(bool _active) public onlyManagerOrProtocol {
+    function setActive(bool _active) external onlyManagerOrProtocol {
       if (active) {
         require(integrations.length > 0, "Need to have active integrations");
       }
@@ -375,7 +375,7 @@ contract Fund is ERC20 {
     /**
      * Only ModuleStates of INITIALIZED modules are considered enabled
      */
-    function isInitializedModule(address _integration) external view returns (bool) {
+    function isInitializedIntegration(address _integration) external view returns (bool) {
         return integrationStates[_integration] == IFund.IntegrationState.INITIALIZED;
     }
 
@@ -391,7 +391,7 @@ contract Fund is ERC20 {
      */
     function getPositionCount() external view returns (uint256) {
 
-        return positionCount;
+        return investmentsCount;
     }
 
     // /**

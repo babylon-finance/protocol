@@ -25,7 +25,7 @@ import { SafeCast } from "@openzeppelin/contracts/utils/SafeCast.sol";
 import { SignedSafeMath } from "@openzeppelin/contracts/math/SignedSafeMath.sol";
 
 import { IController } from "../interfaces/IController.sol";
-import { ISetToken } from "../interfaces/ISetToken.sol";
+import { IFund } from "../interfaces/IFund.sol";
 import { IPriceOracle } from "../interfaces/IPriceOracle.sol";
 import { PreciseUnitMath } from "../lib/PreciseUnitMath.sol";
 import { Position } from "./lib/Position.sol";
@@ -69,19 +69,19 @@ contract FundValuer {
     /* ============ External Functions ============ */
 
     /**
-     * Gets the valuation of a SetToken using data from the price oracle. Reverts
-     * if no price exists for a component in the SetToken. Note: this works for external
+     * Gets the valuation of a Fund using data from the price oracle. Reverts
+     * if no price exists for a component in the Fund. Note: this works for external
      * positions and negative (debt) positions.
      *
      * Note: There is a risk that the valuation is off if airdrops aren't retrieved or
      * debt builds up via interest and its not reflected in the position
      *
-     * @param _setToken        SetToken instance to get valuation
+     * @param _fund            Fund instance to get valuation
      * @param _quoteAsset      Address of token to quote valuation in
      *
      * @return                 SetToken valuation in terms of quote asset in precise units 1e18
      */
-    function calculateSetTokenValuation(ISetToken _setToken, address _quoteAsset) external view returns (uint256) {
+    function calculateFundValuation(IFund _fund, address _quoteAsset) external view returns (uint256) {
         IPriceOracle priceOracle = controller.getPriceOracle();
         address masterQuoteAsset = priceOracle.masterQuoteAsset();
         address[] memory components = _setToken.getComponents();
@@ -92,7 +92,7 @@ contract FundValuer {
             // Get component price from price oracle. If price does not exist, revert.
             uint256 componentPrice = priceOracle.getPrice(component, masterQuoteAsset);
 
-            int256 aggregateUnits = _setToken.getTotalComponentRealUnits(component);
+            int256 aggregateUnits = _fund.getTotalComponentRealUnits(component);
 
             // Normalize each position unit to preciseUnits 1e18 and cast to signed int
             uint256 unitDecimals = ERC20(component).decimals();
