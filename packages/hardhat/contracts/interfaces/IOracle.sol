@@ -1,7 +1,7 @@
 /*
     Copyright 2020 DFolio
 
-    Modified from (Set Protocol SetValuer)
+    Modified from (Set Protocol IOracle)
 
     Licensed under the Apache License, Version 2.0 (the "License");
     you may not use this file except in compliance with the License.
