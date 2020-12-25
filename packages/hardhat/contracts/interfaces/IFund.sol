@@ -29,7 +29,7 @@ interface IFund is IERC20 {
 
     /* ============ Enums ============ */
 
-    enum ModuleState {
+    enum IntegrationState {
         NONE,
         PENDING,
         INITIALIZED
@@ -37,49 +37,24 @@ interface IFund is IERC20 {
 
     /* ============ Structs ============ */
     /**
-     * The base definition of a SetToken Position
-     *
-     * @param component           Address of token in the Position
-     * @param module              If not in default state, the address of associated module
-     * @param unit                Each unit is the # of components per 10^18 of a SetToken
-     * @param positionState       Position ENUM. Default is 0; External is 1
-     * @param data                Arbitrary data
-     */
-    struct Position {
-        address component;
-        address module;
-        int256 unit;
-        uint8 positionState;
-        bytes data;
-    }
-
-    /**
      * A struct that stores a component's cash position details and external positions
      * This data structure allows O(1) access to a component's cash position units and
      * virtual units.
      *
-     * @param virtualUnit               Virtual value of a component's DEFAULT position. Stored as virtual for efficiency
-     *                                  updating all units at once via the position multiplier. Virtual units are achieved
-     *                                  by dividing a "real" value by the "positionMultiplier"
-     * @param componentIndex
-     * @param externalPositionModules   List of external modules attached to each external position. Each module
-     *                                  maps to an external position
-     * @param externalPositions         Mapping of module => ExternalPosition struct for a given component
+     * @param component           Address of token in the Position
+     * @param integration         If not in default state, the address of associated module
+     * @param unit                Each unit is the # of components per 10^18 of a SetToken
+     * @param positionState       Position ENUM. Default is 0; External is 1
+     * @param data                Arbitrary data
+     * @param virtualUnit         Virtual value of a component's DEFAULT position. Stored as virtual for efficiency
+     *                            updating all units at once via the position multiplier. Virtual units are achieved
+     *                            by dividing a "real" value by the "positionMultiplier"
      */
-    struct ComponentPosition {
-      int256 virtualUnit;
-      address[] externalPositionModules;
-      mapping(address => ExternalPosition) externalPositions;
-    }
-
-    /**
-     * A struct that stores a component's external position details including virtual unit and any
-     * auxiliary data.
-     *
-     * @param virtualUnit       Virtual value of a component's EXTERNAL position.
-     * @param data              Arbitrary data
-     */
-    struct ExternalPosition {
+    struct Position {
+      address component;
+      address integration;
+      int256 unit;
+      uint8 positionState;
       int256 virtualUnit;
       bytes data;
     }
@@ -87,7 +62,6 @@ interface IFund is IERC20 {
 
     /* ============ Functions ============ */
 
-    function invoke(address _target, uint256 _value, bytes calldata _data) external returns(bytes memory);
     function addInvestment(address _investment) external;
     function removeInvestment(address _investment) external;
     function editInvestmentUnit(address _investment, int256 _realUnit) external;
@@ -105,12 +79,12 @@ interface IFund is IERC20 {
 
     function manager() external view returns (address);
     function active() external view returns (bool);
-    function integrationStates(address _module) external view returns (ModuleState);
+    function integrationStates(address _integration) external view returns (ModuleState);
     function getIntegrations() external view returns (address[] memory);
 
     function getDefaultPositionRealUnit(address _component) external view returns(int256);
     function getInvestments() external view returns(address[] memory);
-    function isInvestment(address _investment) external view returns(bool);
+    function isPosition(address _position) external view returns(bool);
 
     function positionMultiplier() external view returns (int256);
     // function getPositions() external view returns (Position[] memory);

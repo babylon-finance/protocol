@@ -24,26 +24,22 @@ import { ERC20 } from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import { ReentrancyGuard } from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import { SafeMath } from "@openzeppelin/contracts/math/SafeMath.sol";
 import { SignedSafeMath } from "@openzeppelin/contracts/math/SignedSafeMath.sol";
-import { FundToken } from "./FundToken.sol";
-import { Investment } from "./investments/Investment.sol"
+
+import { AddressArrayUtils } from "./lib/AddressArrayUtils.sol";
+import { PreciseUnitMath } from "./lib/PreciseUnitMath.sol";
 
 import { IFolioController } from "./interfaces/IFolioController.sol";
-import { INAVIssuanceHook } from "./interfaces/IManagerIssuanceHook.sol";
 import { IIntegration } from "./interfaces/IIntegration.sol";
 import { IFund } from "./interfaces/IFund.sol";
-import { Position } from "./lib/Position.sol";
-import { PreciseUnitMath } from "./lib/PreciseUnitMath.sol";
-import { AddressArrayUtils } from "./lib/AddressArrayUtils.sol";
 
 
 /**
- * @title Fund
+ * @title BaseFund
  * @author DFolio
  *
- * ERC20 Token contract that allows privileged modules to make modifications to its positions and invoke function calls
- * from the Fund.
+ * Abstract Class that holds common fund-related state and functions
  */
-contract Fund is ERC20, ReentrancyGuard {
+abstract contract BaseFund is ERC20 {
     using SafeMath for uint256;
     using SignedSafeMath for int256;
     using PreciseUnitMath for int256;
@@ -51,33 +47,17 @@ contract Fund is ERC20, ReentrancyGuard {
     using AddressArrayUtils for address[];
 
     /* ============ Events ============ */
-    event FundTokenIssued(
-        address indexed _setToken,
-        address indexed _to,
-        address _hookContract,
-        uint256 _quantity
-    );
-    event FundTokenRedeemed(
-        address indexed _setToken,
-        address indexed _redeemer,
-        address indexed _to,
-        uint256 _quantity
-    );
 
-
-    event ContributionLog(address indexed contributor,uint256 amount,uint256 timestamp);
-    event WithdrawalLog(address indexed sender, uint amount, uint timestamp);
-    event ClaimLog(address indexed sender, uint originalAmount, uint amount, uint timestamp);
-    event Invoked(address indexed _target, uint indexed _value, bytes _data, bytes _returnValue);
     event IntegrationAdded(address indexed _integration);
     event IntegrationRemoved(address indexed _integration);
     event IntegrationInitialized(address indexed _integration);
     event PendingIntegrationRemoved(address indexed _integration);
+
     event ManagerEdited(address _newManager, address _oldManager);
     event PositionMultiplierEdited(int256 _newMultiplier);
-    event InvestmentAdded(address indexed _component);
-    event InvestmentRemoved(address indexed _component);
-    event DefaultInvestmentUnitEdited(address indexed _component, int256 _realUnit);
+    event PositionAdded(address indexed _component);
+    event PositionRemoved(address indexed _component);
+    event DefaultPositionUnitEdited(address indexed _component, int256 _realUnit);
 
     /* ============ Modifiers ============ */
 
@@ -120,20 +100,12 @@ contract Fund is ERC20, ReentrancyGuard {
 
     /* ============ State Variables ============ */
 
-    INAVIssuanceHook managerIssuanceHook;      // Issuance hook configurations
-    INAVIssuanceHook managerRedemptionHook;    // Redemption hook configurations
-
     // Wrapped ETH address
     IWETH public immutable weth;
 
     // Reserve Asset of the fund
     IERC20 public reserveAsset;
 
-    uint256 managerIssueFee;  // % of the issuance denominated in the reserve asset
-    uint256 managerWithdrawalFee; // % of the redemption denominated in the reserve asset,  charged in withdrawal
-    uint256 managerPerformanceFee; // % of the profits denominated in the reserve asset, charged in withdrawal
-    uint256 premiumPercentage; // Premium percentage (0.01% = 1e14, 1% = 1e16). This premium is a buffer around oracle
-                                // prices paid by user to the SetToken, which prevents arbitrage and oracle front running
     // Address of the controller
     IController public controller;
     // The manager has the privelege to add modules, remove, and set a new manager
@@ -151,33 +123,19 @@ contract Fund is ERC20, ReentrancyGuard {
     // addModule (called by manager) and initialize  (called by module) functions
     mapping(address => IFund.IntegrationState) public integrationStates;
 
-    // List of investments
-    address[] public investments;
-    mapping (address => Investment) public investment;
-    uint public investmentsCount;
-
-    // List of contributors
-    struct Contributor {
-        uint256 amount; //wei
-        uint256 timestamp;
-        bool claimed;
-    }
-    mapping(address => Contributor) public contributors;
-    uint256 public totalContributors;
-    uint256 public totalFundsDepsited;
+    // List of positions
+    address[] public positions;
+    mapping (address => IFund.Position) public positionsByComponent;
 
     // The multiplier applied to the virtual position unit to achieve the real/actual unit.
     // This multiplier is used for efficiently modifying the entire position units (e.g. streaming fee)
     int256 public positionMultiplier;
 
-    // Min contribution in the fund
-    uint256 public minContribution = 1000000000000; //wei
-
 
     /* ============ Constructor ============ */
 
     /**
-     * When a new Fund is created, initializes Investments are set to empty.
+     * When a new Fund is created, initializes Positions are set to empty.
      * All parameter validations are on the FolioController contract. Validations are performed already on the
      * FolioController. Initiates the positionMultiplier as 1e18 (no adjustments).
      *
@@ -209,169 +167,18 @@ contract Fund is ERC20, ReentrancyGuard {
       manager = _manager;
       managerFeeRecipient = _managerFeeRecipient;
       positionMultiplier = PreciseUnitMath.preciseUnitInt();
-      components = _components;
 
       // Integrations are put in PENDING state, as they need to be individually initialized by the Module
       for (uint256 i = 0; i < _modules.length; i++) {
           integrationStates[_modules[i]] = ISetToken.IntegrationState.PENDING;
       }
 
-      investments = [];
-      investmentsCount = 0;
+      positions = [];
       active = false;
     }
 
     /* ============ External Functions ============ */
 
-    uint256 managerIssueFee;  // % of the issuance denominated in the reserve asset
-    uint256 managerWithdrawalFee; // % of the redemption denominated in the reserve asset,  charged in withdrawal
-    uint256 managerPerformanceFee; // % of the profits denominated in the reserve asset, charged in withdrawal
-    uint256 premiumPercentage;
-
-    /**
-     * SET MANAGER ONLY. Initializes this module to the Fund with hooks, allowed reserve assets,
-     * fees and issuance premium. Only callable by the Fund's manager. Hook addresses are optional.
-     * Address(0) means that no hook will be called.
-     *
-     * @param _managerIssueFee
-     * @param _managerWithdrawalFee
-     * @param _managerPerformanceFee
-     * @param _premiumPercentage
-     */
-    function initialize(
-        uint256 _managerIssueFee,
-        uint256 _managerWithdrawalFee,
-        uint256 _managerPerformanceFee,
-        uint256 _premiumPercentage,
-        INAVIssuanceHook _managerIssuanceHook,
-        INAVIssuanceHook _managerRedeemHook,
-    )
-        external
-        onlyManager
-        onlyInactive
-    {
-        require(_managerIssueFee <= IFolioController(controller).maxManagerIssueFee, "Manager issue fee must be less than max");
-        require(_managerRedeemFee <= IFolioController(controller).maxManagerRedeemFee, "Manager redeem fee must be less than max");
-        require(_managerPerformanceFee <= IFolioController(controller).maxManagerPerformanceFee, "Manager performance fee must be less than max");
-        require(_premiumPercentage <= IFolioController(controller).maxFundPremiumPercentage, "Premium must be less than max");
-        // require(_navIssuanceSettings.minSetTokenSupply > 0, "Min SetToken supply must be greater than 0");
-
-        managerIssueFee = _managerIssueFee;
-        managerWithdrawalFee = _managerWithdrawalFee;
-        managerPerformanceFee = _managerPerformanceFee;
-        premiumPercentage = _premiumPercentage;
-        managerIssuanceHook = _managerIssuanceHook;
-        maangerRedeemHook = _managerRedeemHook;
-        active = true;
-    }
-
-    /**
-     * Deposits the Fund's position components into the SetToken and mints the Fund token of the given quantity
-     * to the specified _to address. This function only handles Default Positions (positionState = 0).
-     *
-     * @param _reserveAssetQuantity  Quantity of the reserve asset that are received
-     * @param _minSetTokenReceiveQuantity   Min quantity of SetToken to receive after issuance
-     * @param _to                   Address to mint Fund tokens to
-     */
-    function deposit(
-        uint256 _reserveAssetQuantity,
-        uint256 _minSetTokenReceiveQuantity,
-        address _to
-    )
-        external
-        payable
-        nonReentrant
-        onlyActive
-    {
-        require(
-            msg.value >= minContribution,
-            "Send at least 1000000000000 wei"
-        );
-        weth.deposit{ value: msg.value }();
-
-        _validateCommon(_setToken, _reserveAsset, _reserveAssetQuantity);
-
-        _callPreIssueHooks(_setToken, _reserveAsset, _reserveAssetQuantity, msg.sender, _to);
-
-        ActionInfo memory issueInfo = _createIssuanceInfo(_setToken, _reserveAsset, _reserveAssetQuantity);
-
-        _validateIssuanceInfo(_setToken, _minSetTokenReceiveQuantity, issueInfo);
-
-        _transferCollateralAndHandleFees(_setToken, IERC20(_reserveAsset), issueInfo);
-
-        Contributor storage contributor = contributors[msg.sender];
-
-        // If new contributor, create one, increment count, and set the current TS
-        if (contributor.amount == 0) {
-          totalContributors = totalContributors.add(1);
-          contributor.timestamp = block.timestamp;
-        }
-
-        totalFunds = totalFunds.add(msg.value);
-        contributor.amount = contributor.amount.add(msg.value);
-        emit ContributionLog(msg.sender, msg.value, block.timestamp);
-
-        _handleIssueStateUpdates(_setToken, _reserveAsset, _to, issueInfo);
-    }
-
-
-    /**
-     * Redeems the SetToken's positions and sends the components of the given
-     * quantity to the caller. This function only handles Default Positions (positionState = 0).
-     *
-     * @param _setToken             Instance of the SetToken contract
-     * @param _quantity             Quantity of the SetToken to redeem
-     * @param _minReserveReceiveQuantity    Min quantity of reserve asset to receive
-     * @param _to                   Address to send component assets to
-     */
-    function withdraw(
-        ISetToken _setToken,
-        uint256 _fundTokenQuantity,
-        uint256 _minReserveReceiveQuantity,
-        address _to
-    )
-        external
-        nonReentrant
-        onlyContributor(msg.sender)
-    {
-      Contributor storage contributor = contributors[msg.sender];
-      require(_amount <= contributor.amount, 'Withdrawl amount must be less than or equal to deposited amount');
-
-      _validateCommon(_setToken, _reserveAsset, _setTokenQuantity);
-
-      _callPreRedeemHooks(_setToken, _setTokenQuantity, msg.sender, _to);
-
-      ActionInfo memory redeemInfo = _createRedemptionInfo(_setToken, _reserveAsset, _setTokenQuantity);
-
-      _validateRedemptionInfo(_setToken, _minReserveReceiveQuantity, _setTokenQuantity, redeemInfo);
-
-      _setToken.burn(msg.sender, _setTokenQuantity);
-
-      contributor.amount = contributor.amount.sub(_amount);
-      totalFunds = totalFunds.sub(_amount);
-      if (contributor.amount == 0) {
-        totalContributors = totalContributors.sub(1);
-      }
-      token.burn(msg.sender, _amount.div(minContribution));
-      Address(this).sendValue(msg.sender, _amount);
-      emit WithdrawalLog(msg.sender, _amount, block.timestamp);
-
-
-      // Instruct the SetToken to transfer the reserve asset back to the user
-      _setToken.strictInvokeTransfer(
-          _reserveAsset,
-          _to,
-          redeemInfo.netFlowQuantity
-      );
-
-      weth.withdraw(redeemInfo.netFlowQuantity);
-
-      _to.transfer(redeemInfo.netFlowQuantity);
-
-      _handleRedemptionFees(_setToken, _reserveAsset, redeemInfo);
-
-      _handleRedeemStateUpdates(_setToken, _reserveAsset, _to, redeemInfo);
-    }
 
     /**
      * SET MANAGER ONLY. Changes the reserve asset
@@ -403,7 +210,7 @@ contract Fund is ERC20, ReentrancyGuard {
      * @param _managerIssueFee         Manager issue fee percentage in 10e16 (e.g. 10e16 = 1%)
      */
     function editManagerIssueFee(
-        ISetToken _setToken,
+        Ifund _fund,
         uint256 _managerIssueFee
     )
         external
@@ -421,7 +228,7 @@ contract Fund is ERC20, ReentrancyGuard {
      * @param _managerRedeemFee         Manager redeem fee percentage in 10e16 (e.g. 10e16 = 1%)
      */
     function editManagerRedeemFee(
-        ISetToken _setToken,
+        IFund _fund,
         uint256 _managerRedeemFee
     )
         external
@@ -439,7 +246,7 @@ contract Fund is ERC20, ReentrancyGuard {
      * @param _managerFeePercentage         Manager performance fee percentage in 10e16 (e.g. 10e16 = 1%)
      */
     function editManagerPerformanceFee(
-        ISetToken _setToken,
+        IFund _fund,
         uint256 _managerPerformanceFee
     )
         external
@@ -464,59 +271,33 @@ contract Fund is ERC20, ReentrancyGuard {
         emit FeeRecipientEdited(address(this), _managerFeeRecipient);
     }
 
-    /**
-     * PRIVELEGED MODULE FUNCTION. Low level function that allows a module to make an arbitrary function
-     * call to any contract.
-     *
-     * @param _target                 Address of the smart contract to call
-     * @param _value                  Quantity of Ether to provide the call (typically 0)
-     * @param _data                   Encoded function selector and arguments
-     * @return _returnValue           Bytes encoded return value
-     */
-    function invoke(
-        address _target,
-        uint256 _value,
-        bytes calldata _data
-    )
-        external
-        onlyIntegration
-        returns (bytes memory _returnValue)
-    {
-        _returnValue = _target.functionCallWithValue(_data, _value);
-
-        emit Invoked(_target, _value, _data, _returnValue);
-
-        return _returnValue;
-    }
 
     /**
      * PRIVELEGED MODULE FUNCTION. Low level function that adds a component to the components array.
      */
-    function addInvestment(address _investment) external onlyIntegration onlyActive{
+    function addPosition(address _component) external onlyIntegration onlyActive{
       components.push(_investment);
-      investmentsCount ++;
-      emit InvestmentAdded(_investment);
+      emit PositionAdded(_investment);
     }
 
     /**
      * PRIVELEGED MODULE FUNCTION. Low level function that removes a component from the components array.
      */
-    function removeInvestment(address _investment) external onlyIntegration onlyActive{
+    function removePosition(address _component) external onlyIntegration onlyActive{
         components = components.remove(_component);
-        investmentsCount --;
-        emit InvestmentRemoved(_component);
+        emit PositionRemoved(_component);
     }
 
     /**
      * PRIVELEGED MODULE FUNCTION. Low level function that edits a component's virtual unit. Takes a real unit
      * and converts it to virtual before committing.
      */
-    function editInvestmentUnit(address _investment, int256 _realUnit) external onlyIntegration onlyActive{
+    function editPositionUnit(address _component, int256 _realUnit) external onlyIntegration onlyActive{
         int256 virtualUnit = _convertRealToVirtualUnit(_realUnit);
 
-        investmentPositions[_investment].virtualUnit = virtualUnit;
+        positionsByComponent[_component].virtualUnit = virtualUnit;
 
-        emit DefaultInvestmentUnitEdited(_component, _realUnit);
+        emit DefaultPositionUnitEdited(_component, _realUnit);
     }
 
     /**
@@ -612,7 +393,7 @@ contract Fund is ERC20, ReentrancyGuard {
 
     /* ============ External Getter Functions ============ */
 
-    function getInvestments() external view returns(address[] memory) {
+    function getPositions() external view returns(address[] memory) {
       return investments;
     }
 
@@ -620,15 +401,15 @@ contract Fund is ERC20, ReentrancyGuard {
       return reserveAsset;
     }
 
-    function getDefaultInvestmentRealUnit(address _integration) public view returns(int256) {
-      return _convertVirtualToRealUnit(_defaultInvestmentVirtualUnit(_integration));
+    function getDefaultPositionRealUnit(address _integration) public view returns(int256) {
+      return _convertVirtualToRealUnit(_defaultPositionVirtualUnit(_integration));
     }
 
     function getIntegrations() external view returns (address[] memory) {
       return integrations;
     }
 
-    function isInvestment(address _investment) external view returns(bool) {
+    function isPosition(address _investment) external view returns(bool) {
       return investments.contains(_investment);
     }
 
@@ -650,68 +431,177 @@ contract Fund is ERC20, ReentrancyGuard {
      * Gets the total number of investments
      */
     function getPositionCount() external view returns (uint256) {
-      return investmentsCount;
+      return positions.length;
     }
 
-    // /**
-    //  * Returns a list of Positions, through traversing the components. Each component with a non-zero virtual unit
-    //  * is considered a Default Position, and each externalPositionModule will generate a unique position.
-    //  * Virtual units are converted to real units. This function is typically used off-chain for data presentation purposes.
-    //  */
-    // function getPositions() external view returns (ISetToken.Position[] memory) {
-    //     ISetToken.Position[] memory positions = new ISetToken.Position[](_getPositionCount());
-    //     uint256 positionCount = 0;
-    //
-    //     for (uint256 i = 0; i < components.length; i++) {
-    //         address component = components[i];
-    //
-    //         // A default position exists if the default virtual unit is > 0
-    //         if (_defaultPositionVirtualUnit(component) > 0) {
-    //             positions[positionCount] = ISetToken.Position({
-    //                 component: component,
-    //                 module: address(0),
-    //                 unit: getDefaultPositionRealUnit(component),
-    //                 positionState: DEFAULT,
-    //                 data: ""
-    //             });
-    //
-    //             positionCount++;
-    //         }
-    //
-    //         address[] memory externalModules = _externalPositionModules(component);
-    //         for (uint256 j = 0; j < externalModules.length; j++) {
-    //             address currentModule = externalModules[j];
-    //
-    //             positions[positionCount] = ISetToken.Position({
-    //                 component: component,
-    //                 module: currentModule,
-    //                 unit: getExternalPositionRealUnit(component, currentModule),
-    //                 positionState: EXTERNAL,
-    //                 data: _externalPositionData(component, currentModule)
-    //             });
-    //
-    //             positionCount++;
-    //         }
-    //     }
-    //
-    //     return positions;
-    // }
+    /**
+     * Returns a list of Positions, through traversing the components. Each component with a non-zero virtual unit
+     * is considered a Default Position, and each externalPositionModule will generate a unique position.
+     * Virtual units are converted to real units. This function is typically used off-chain for data presentation purposes.
+     */
+    function getPositions() external view returns (IFund.Position[] memory) {
+        return positions;
+    }
 
     /**
      * Returns the total Real Units for a given component, summing the default and external position units.
      */
-    function getTotalInvestmentRealUnits(address _investment) external view returns(int256) {
-      int256 totalUnits = getDefaultInvestmentRealUnit(_investment);
+    function getTotalPositionRealUnits(address _component) external view returns(int256) {
+      int256 totalUnits = getDefaultPositionRealUnit(_component);
 
       return totalUnits;
+    }
+
+    /**
+     * Calculates the new default position unit and performs the edit with the new unit
+     *
+     * @param _component                Address of the component
+     * @param _componentPreviousBalance Pre-action component balance
+     * @return                          Current component balance
+     * @return                          Previous position unit
+     * @return                          New position unit
+     */
+    function calculateAndEditDefaultPosition(
+        address _component,
+        uint256 _componentPreviousBalance
+    )
+        external
+        onlyIntegration
+        onlyActive
+        returns (uint256, uint256, uint256)
+    {
+        uint256 currentBalance = IERC20(_component).balanceOf(address(this));
+        uint256 positionUnit = getDefaultPositionRealUnit(_component).toUint256();
+
+        uint256 newTokenUnit = calculateDefaultEditPositionUnit(
+            _componentPreviousBalance,
+            currentBalance,
+            positionUnit
+        );
+
+        editDefaultPosition(_component, newTokenUnit);
+
+        return (currentBalance, positionUnit, newTokenUnit);
     }
 
     receive() external payable {} // solium-disable-line quotes
 
     /* ============ Internal Functions ============ */
 
-    function _defaultInvestmentVirtualUnit(address _component) internal view returns(int256) {
+
+    /**
+     * Calculate the new position unit given total notional values pre and post executing an action that changes Fund state
+     * The intention is to make updates to the units without accidentally picking up airdropped assets as well.
+     *
+     * @param _preTotalNotional   Total notional amount of component prior to executing action
+     * @param _postTotalNotional  Total notional amount of component after the executing action
+     * @param _prePositionUnit    Position unit of SetToken prior to executing action
+     * @return                    New position unit
+     */
+    function calculateDefaultEditPositionUnit(
+        uint256 _preTotalNotional,
+        uint256 _postTotalNotional,
+        uint256 _prePositionUnit
+    )
+        internal
+        pure
+        returns (uint256)
+    {
+        // If pre action total notional amount is greater then subtract post action total notional and calculate new position units
+        uint256 airdroppedAmount = _preTotalNotional.sub(_prePositionUnit.preciseMul(_setTokenSupply));
+        return _postTotalNotional.sub(airdroppedAmount).preciseDiv(_setTokenSupply);
+    }
+
+
+    /**
+     * Returns whether the fund has a default position for a given component (if the real unit is > 0)
+     */
+    function hasDefaultPosition(address _component) internal view returns(bool) {
+      return getDefaultPositionRealUnit(_component) > 0;
+    }
+
+    /**
+     * Returns whether the fund component default position real unit is greater than or equal to units passed in.
+     */
+    function hasSufficientDefaultUnits(address _component, uint256 _unit) internal view returns(bool) {
+        return getDefaultPositionRealUnit(_component) >= _unit.toInt256();
+    }
+
+    /**
+     * If the position does not exist, create a new Position and add to the fund. If it already exists,
+     * then set the position units. If the new units is 0, remove the position. Handles adding/removing of
+     * components where needed (in light of potential external positions).
+     *
+     * @param _component          Address of the component
+     * @param _newUnit            Quantity of Position units - must be >= 0
+     */
+    function editDefaultPosition(address _component, uint256 _newUnit) internal {
+      bool isPositionFound = hasDefaultPosition(_setToken, _component);
+      if (!isPositionFound && _newUnit > 0) {
+        addPosition(_component);
+      } else if (isPositionFound && _newUnit == 0) {
+        removePosition(_component);
+      }
+
+      editDefaultPositionUnit(_component, _newUnit.toInt256());
+    }
+
+    /**
+     * Get total notional amount of Default position
+     *
+     * @param _positionUnit       Quantity of Position units
+     *
+     * @return                    Total notional amount of units
+     */
+    function getDefaultTotalNotional(uint256 _positionUnit) internal pure returns (uint256) {
+        return totalSupply().preciseMul(_positionUnit);
+    }
+
+    /**
+     * Get position unit from total notional amount
+     *
+     * @param _totalNotional      Total notional amount of component prior to
+     * @return                    Default position unit
+     */
+    function getDefaultPositionUnit(uint256 _totalNotional) internal pure returns (uint256) {
+        return _totalNotional.preciseDiv(totalSupply());
+    }
+
+    /**
+     * Get the total tracked balance - total supply * position unit
+     *
+     * @param _component          Address of the component
+     * @return                    Notional tracked balance
+     */
+    function getDefaultTrackedBalance(address _component) internal view returns(uint256) {
+      int256 positionUnit = getDefaultPositionRealUnit(_component);
+      return totalSupply().preciseMul(positionUnit.toUint256());
+    }
+
+    function _validateCommon(ISetToken _setToken, address _reserveAsset, uint256 _quantity) internal view {
+        require(_quantity > 0, "Quantity must be > 0");
+        require(isReserveAsset[_setToken][_reserveAsset], "Must be valid reserve asset");
+    }
+
+    function _defaultPositionVirtualUnit(address _component) internal view returns(int256) {
       return componentPositions[_component].virtualUnit;
+    }
+
+    /**
+     * Pays the _feeQuantity from the _fund denominated in _token to the protocol fee recipient
+     */
+    function payProtocolFeeFromFund(address _token, uint256 _feeQuantity) internal {
+      if (_feeQuantity > 0) {
+        IERC20(_token).transfer(controller.feeRecipient(), _feeQuantity);
+      }
+    }
+    /**
+     * Pays the _feeQuantity from the _fund denominated in _token to the manager fee recipient
+     */
+    function payManagerFeeFromFund(address _token, uint256 _feeQuantity) internal {
+      if (_feeQuantity > 0) {
+        IERC20(_token).transfer(managerFeeRecipient, _feeQuantity);
+      }
     }
 
     /**
@@ -782,31 +672,6 @@ contract Fund is ERC20, ReentrancyGuard {
           msg.sender == manager || msg.sender == protocol,
           "Only the fund manager or the protocol can modify fund state"
       );
-    }
-
-    /**
-     * If a pre-issue hook has been configured, call the external-protocol contract. Pre-issue hook logic
-     * can contain arbitrary logic including validations, external function calls, etc.
-     */
-    function _callPreIssueHooks(
-        uint256 _reserveAssetQuantity,
-        address _caller,
-        address _to
-    )
-        internal
-    {
-        if (address(managerIssuanceHook) != address(0)) {
-            managerIssuanceHook.invokePreIssueHook(address(this), reserveAsset, _reserveAssetQuantity, _caller, _to);
-        }
-    }
-
-    /**
-     * If a pre-redeem hook has been configured, call the external-protocol contract.
-     */
-    function _callPreRedeemHooks(uint256 _fundTokenQuantity, address _caller, address _to) internal {
-        if (address(managerRedemptionHook) != address(0)) {
-            managerRedemptionHook.invokePreRedeemHook(address(this), _fundTokenQuantity, _caller, _to);
-        }
     }
 
 }

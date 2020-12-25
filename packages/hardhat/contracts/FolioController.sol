@@ -42,6 +42,9 @@ contract FolioController is Ownable {
     event FundAdded(address indexed _setToken, address indexed _factory);
     event FundRemoved(address indexed _setToken);
 
+    event ReserveAssetAdded(address indexed _reserveAsset);
+    event ReserveAssetRemoved(address indexed _reserveAsset);
+
     event FeeEdited(address indexed _fund, uint256 indexed _feeType, uint256 _feePercentage);
     event FeeRecipientChanged(address _newFeeRecipient);
 
@@ -58,32 +61,30 @@ contract FolioController is Ownable {
 
     // List of enabled Funds
     address[] public funds;
+    address[] public reserveAssets;
     address public integrationRegistry;
     address public fundValuer;
     address public priceOracle;
 
     // Mappings to check whether address is valid Set, Factory, Module or Resource
     mapping(address => bool) public isFund;
-
-    // Mapping of modules to fee types to fee percentage. A module can have multiple feeTypes
-    // Fee is denominated in precise unit percentages (100% = 1e18, 1% = 1e16)
-    mapping(address => mapping(uint256 => uint256)) public fees;
+    mapping(address => bool) public validReserveAsset;
 
     // Recipient of protocol fees
     address public feeRecipient;
 
     //Maximum fees a manager is allowed
-    uint256 maxManagerIssueFee;
-    uint256 maxManagerRedeemFee;
-    uint256 maxManagerPerformanceFee; // on redeem
+    uint256 public maxManagerIssueFee;
+    uint256 public maxManagerRedeemFee;
+    uint256 public maxManagerPerformanceFee; // on redeem
     // Max Premium percentage (0.01% = 1e14, 1% = 1e16). This premium is a buffer around oracle
     // prices paid by user to the SetToken, which prevents arbitrage and oracle front running
-    uint256 maxFundPremiumPercentage;
+    uint256 public maxFundPremiumPercentage;
 
-    uint256 protocolPerformanceFee; // (0.01% = 1e14, 1% = 1e16)
-    uint256 protocolFundCreationFee; // (0.01% = 1e14, 1% = 1e16)
-    uint256 protocolIssueFundTokenFee; // (0.01% = 1e14, 1% = 1e16)
-    uint256 protocolRedeemFundTokenFee; // (0.01% = 1e14, 1% = 1e16)
+    uint256 public protocolPerformanceFee; // (0.01% = 1e14, 1% = 1e16)
+    uint256 public protocolFundCreationFee; // (0.01% = 1e14, 1% = 1e16)
+    uint256 public protocolIssueFundTokenFee; // (0.01% = 1e14, 1% = 1e16)
+    uint256 public protocolRedeemFundTokenFee; // (0.01% = 1e14, 1% = 1e16)
 
     // Total funds in the system
     uint256 public totalFunds = 0;
@@ -176,12 +177,13 @@ contract FolioController is Ownable {
       totalFunds++;
     }
 
+
     /**
      * PRIVILEGED GOVERNANCE FUNCTION. Allows governance to remove a Fund
      *
      * @param _fund               Address of the Fund contract to remove
      */
-    function removeSet(address _fund) external onlyOwner {
+    function removeFund(address _fund) external onlyOwner {
       require(isFund[_fund], "Fund does not exist");
 
       funds = funds.remove(_fund);
@@ -190,6 +192,35 @@ contract FolioController is Ownable {
 
       emit FundRemoved(_fund);
       totalFunds--;
+    }
+
+    /**
+     * PRIVILEGED FACTORY FUNCTION. Adds a new valid reserve asset for funds
+     *
+     * @param _reserveAsset Address of the reserve assset
+     */
+    function addReserveAsset(
+      address _reserveAsset
+    ) internal onlyOwner {
+      require(!validReserveAsset[_reserveAsset], "Reserve asset already added");
+      validReserveAsset[_reserveAsset] = true;
+      reserveAssets.push(_reserveAsset);
+      emit ReserveAssetAdded(_reserveAsset);
+    }
+
+    /**
+     * PRIVILEGED GOVERNANCE FUNCTION. Allows governance to remove a reserve asset
+     *
+     * @param _reserveAsset               Address of the reserve asset to remove
+     */
+    function removeReserveAsset(address _reserveAsset) external onlyOwner {
+      require(validReserveAsset[_reserveAsset], "Reserve asset does not exist");
+
+      reserveAssets = reserveAssets.remove(_reserveAsset);
+
+      validReserveAsset[_reserveAsset] = false;
+
+      emit ReserveAssetRemoved(_reserveAsset);
     }
 
     /**
@@ -284,17 +315,6 @@ contract FolioController is Ownable {
 
     /* ============ External Getter Functions ============ */
 
-    function getFundFees(
-        address _moduleAddress,
-        uint256 _feeType
-    )
-        external
-        view
-        returns (uint256)
-    {
-        // TODO
-    }
-
     function getIntegrationRegistry() external view returns (address memory) {
         return integrationRegistry;
     }
@@ -309,6 +329,10 @@ contract FolioController is Ownable {
 
     function getFunds() external view returns (address[] memory) {
         return funds;
+    }
+
+    function isValidReserveAsset(address _reserveAsset) external view returns (address[] memory) {
+      return validReserveAsset[_reserveAsset];
     }
 
     /**

@@ -84,7 +84,7 @@ contract FundValuer {
     function calculateFundValuation(IFund _fund, address _quoteAsset) external view returns (uint256) {
         IPriceOracle priceOracle = controller.getPriceOracle();
         address masterQuoteAsset = priceOracle.masterQuoteAsset();
-        address[] memory components = _setToken.getComponents();
+        address[] memory components = _fund.getComponents();
         int256 valuation;
 
         for (uint256 i = 0; i < components.length; i++) {
