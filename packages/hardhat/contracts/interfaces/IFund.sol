@@ -43,9 +43,8 @@ interface IFund is IERC20 {
      *
      * @param component           Address of token in the Position
      * @param integration         If not in default state, the address of associated module
-     * @param unit                Each unit is the # of components per 10^18 of a SetToken
      * @param positionState       Position ENUM. Default is 0; External is 1
-     * @param data                Arbitrary data
+     * @param unit                Each unit is the # of components per 10^18 of a SetToken
      * @param virtualUnit         Virtual value of a component's DEFAULT position. Stored as virtual for efficiency
      *                            updating all units at once via the position multiplier. Virtual units are achieved
      *                            by dividing a "real" value by the "positionMultiplier"
@@ -53,9 +52,12 @@ interface IFund is IERC20 {
     struct Position {
       address component;
       address integration;
-      int256 unit;
       uint8 positionState;
+      int256 unit;
       int256 virtualUnit;
+      uint256 enteredAt;
+      uint256 exitedAt;
+      uint256[] updatedAt;
       bytes data;
     }
 

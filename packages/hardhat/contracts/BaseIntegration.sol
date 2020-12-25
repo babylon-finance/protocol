@@ -37,54 +37,21 @@ abstract contract BaseIntegration is IInvestment {
     using PreciseUnitMath for uint256;
     using Invoke for IFund;
 
+    /* ============ Modifiers ============ */
+
+    /**
+     * Throws if the sender is not the protocol
+     */
+    modifier onlyProtocol() {
+      require(msg.sender == controller, "Only controller can call this");
+      _;
+    }
+
+
     /* ============ State Variables ============ */
 
     // Address of the controller
     IController public controller;
-
-    /* ============ Modifiers ============ */
-
-    modifier onlyManagerAndValidFund(IFund _fund) {
-        require(isFundManager(_fund, msg.sender), "Must be the Fund manager");
-        require(isFundValidAndInitialized(_setToken), "Must be a valid and initialized Fund");
-        _;
-    }
-
-    modifier onlyFundManager(IFund _fund, address _caller) {
-        require(isFundManager(_fund, _caller), "Must be the Fund manager");
-        _;
-    }
-
-    modifier onlyValidAndInitializedFund(IFund _fund) {
-        require(isFundValidAndInitialized(_fund), "Must be a valid and initialized Fund");
-        _;
-    }
-
-    /**
-     * Throws if the sender is not a funds's investment
-     */
-    modifier onlyIntegration(IIntegration _integration) {
-        require(
-            _integration.integrationStates(msg.sender) == IFund.IntegrationState.INITIALIZED,
-            "Only the module can call"
-        );
-
-        require(
-            controller.isIntegration(msg.sender),
-            "Module must be enabled on controller"
-        );
-        _;
-    }
-
-    /**
-     * Utilized during module initializations to check that the module is in pending state
-     * and that the SetToken is valid
-     */
-    modifier onlyValidAndPendingFund(IFund _fund) {
-        require(controller.isFund(address(_fund)), "Must be controller-enabled Fund");
-        require(isFundPendingInitialization(_fund), "Must be pending initialization");
-        _;
-    }
 
     /* ============ Constructor ============ */
 

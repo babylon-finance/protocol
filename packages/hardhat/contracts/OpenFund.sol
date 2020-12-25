@@ -195,7 +195,7 @@ contract OpenFund is BaseFund, ReentrancyGuard {
 
     /**
      * Deposits the Fund's position components into the fund and mints the Fund token of the given quantity
-     * to the specified _to address. This function only handles Default Positions (positionState = 0).
+     * to the specified _to address. This function only handles default Positions (positionState = 0).
      *
      * @param _reserveAssetQuantity  Quantity of the reserve asset that are received
      * @param _minFundTokenReceiveQuantity   Min quantity of Fund token to receive after issuance
@@ -425,19 +425,10 @@ contract OpenFund is BaseFund, ReentrancyGuard {
                 totalRedeemValue,
             );
 
-            uint256 existingUnit = getDefaultPositionRealUnit(_reserveAsset).toUint256();
+            uint256 existingUnit = getPositionRealUnit(_reserveAsset).toUint256();
 
             return existingUnit.preciseMul(setTotalSupply) >= expectedRedeemQuantity;
         }
-    }
-
-    /**
-     * Returns the total Real Units for a given component, summing the default and external position units.
-     */
-    function getTotalInvestmentRealUnits(address _investment) external view returns(int256) {
-      int256 totalUnits = getDefaultInvestmentRealUnit(_investment);
-
-      return totalUnits;
     }
 
     receive() external payable {} // solium-disable-line quotes
@@ -560,7 +551,7 @@ contract OpenFund is BaseFund, ReentrancyGuard {
     {
         editPositionMultiplier(_issueInfo.newPositionMultiplier);
 
-        editDefaultPosition(_reserveAsset, _issueInfo.newReservePositionUnit);
+        editPosition(_reserveAsset, _issueInfo.newReservePositionUnit, address(0));
 
         _mint(_to, _issueInfo.fundTokenQuantity);
 
@@ -585,7 +576,7 @@ contract OpenFund is BaseFund, ReentrancyGuard {
     {
         editPositionMultiplier(_redeemInfo.newPositionMultiplier);
 
-        editDefaultPosition(_reserveAsset, _redeemInfo.newReservePositionUnit);
+        editPosition(_reserveAsset, _redeemInfo.newReservePositionUnit, address(0));
 
         emit FundTokenRedeemed(
             address(this),
@@ -775,7 +766,7 @@ contract OpenFund is BaseFund, ReentrancyGuard {
         view
         returns (uint256)
     {
-        uint256 existingUnit = getDefaultPositionRealUnit(_reserveAsset).toUint256();
+        uint256 existingUnit = getPositionRealUnit(_reserveAsset).toUint256();
         uint256 totalReserve = existingUnit
             .preciseMul(_issueInfo.previousFundTokenSupply)
             .add(_issueInfo.netFlowQuantity);
@@ -796,7 +787,7 @@ contract OpenFund is BaseFund, ReentrancyGuard {
         view
         returns (uint256)
     {
-        uint256 existingUnit = getDefaultPositionRealUnit(_reserveAsset).toUint256();
+        uint256 existingUnit = getPositionRealUnit(_reserveAsset).toUint256();
         uint256 totalExistingUnits = existingUnit.preciseMul(_redeemInfo.previousFundTokenSupply);
 
         uint256 outflow = _redeemInfo.netFlowQuantity.add(_redeemInfo.protocolFees).add(_redeemInfo.managerFee);

@@ -57,7 +57,7 @@ abstract contract BaseFund is ERC20 {
     event PositionMultiplierEdited(int256 _newMultiplier);
     event PositionAdded(address indexed _component);
     event PositionRemoved(address indexed _component);
-    event DefaultPositionUnitEdited(address indexed _component, int256 _realUnit);
+    event PositionUnitEdited(address indexed _component, int256 _realUnit);
 
     /* ============ Modifiers ============ */
 
@@ -275,16 +275,24 @@ abstract contract BaseFund is ERC20 {
     /**
      * PRIVELEGED MODULE FUNCTION. Low level function that adds a component to the components array.
      */
-    function addPosition(address _component) external onlyIntegration onlyActive{
-      components.push(_investment);
-      emit PositionAdded(_investment);
+    function addPosition(address _component, address _integration) external onlyIntegration onlyActive {
+      IFund.Position storage position = positionsByComponent[_component];
+      position.positionState = _integration != address(0) ? 1 : 0;
+      position.integration = _integration;
+      position.updatedAt = [];
+      position.enteredAt = now;
+
+      components.push(_component);
+      emit PositionAdded(_component);
     }
 
     /**
      * PRIVELEGED MODULE FUNCTION. Low level function that removes a component from the components array.
      */
-    function removePosition(address _component) external onlyIntegration onlyActive{
+    function removePosition(address _component) external onlyIntegration onlyActive {
+        IFund.Position storage position = positionsByComponent[_component];
         components = components.remove(_component);
+        position.exitedAt = now;
         emit PositionRemoved(_component);
     }
 
@@ -296,8 +304,10 @@ abstract contract BaseFund is ERC20 {
         int256 virtualUnit = _convertRealToVirtualUnit(_realUnit);
 
         positionsByComponent[_component].virtualUnit = virtualUnit;
+        positionsByComponent[_component].unit = _realUnit;
+        positionsByComponent[_component].updatedAt.push(now);
 
-        emit DefaultPositionUnitEdited(_component, _realUnit);
+        emit PositionUnitEdited(_component, _realUnit);
     }
 
     /**
@@ -394,23 +404,23 @@ abstract contract BaseFund is ERC20 {
     /* ============ External Getter Functions ============ */
 
     function getPositions() external view returns(address[] memory) {
-      return investments;
+      return positions;
     }
 
     function getReserveAsset() external view returns (address memory) {
       return reserveAsset;
     }
 
-    function getDefaultPositionRealUnit(address _integration) public view returns(int256) {
-      return _convertVirtualToRealUnit(_defaultPositionVirtualUnit(_integration));
+    function getPositionRealUnit(address _component) public view returns(int256) {
+      return _convertVirtualToRealUnit(_positionVirtualUnit(_component));
     }
 
     function getIntegrations() external view returns (address[] memory) {
       return integrations;
     }
 
-    function isPosition(address _investment) external view returns(bool) {
-      return investments.contains(_investment);
+    function isPosition(address _component) external view returns(bool) {
+      return positions.contains(_component);
     }
 
     /**
@@ -428,15 +438,14 @@ abstract contract BaseFund is ERC20 {
     }
 
     /**
-     * Gets the total number of investments
+     * Gets the total number of positions
      */
     function getPositionCount() external view returns (uint256) {
       return positions.length;
     }
 
     /**
-     * Returns a list of Positions, through traversing the components. Each component with a non-zero virtual unit
-     * is considered a Default Position, and each externalPositionModule will generate a unique position.
+     * Returns a list of Positions, through traversing the components.
      * Virtual units are converted to real units. This function is typically used off-chain for data presentation purposes.
      */
     function getPositions() external view returns (IFund.Position[] memory) {
@@ -444,16 +453,14 @@ abstract contract BaseFund is ERC20 {
     }
 
     /**
-     * Returns the total Real Units for a given component, summing the default and external position units.
+     * Returns the total Real Units for a given component, summing the  and external position units.
      */
     function getTotalPositionRealUnits(address _component) external view returns(int256) {
-      int256 totalUnits = getDefaultPositionRealUnit(_component);
-
-      return totalUnits;
+      return getPositionRealUnit(_component);
     }
 
     /**
-     * Calculates the new default position unit and performs the edit with the new unit
+     * Calculates the new  position unit and performs the edit with the new unit
      *
      * @param _component                Address of the component
      * @param _componentPreviousBalance Pre-action component balance
@@ -461,7 +468,7 @@ abstract contract BaseFund is ERC20 {
      * @return                          Previous position unit
      * @return                          New position unit
      */
-    function calculateAndEditDefaultPosition(
+    function calculateAndEditPosition(
         address _component,
         uint256 _componentPreviousBalance
     )
@@ -471,15 +478,15 @@ abstract contract BaseFund is ERC20 {
         returns (uint256, uint256, uint256)
     {
         uint256 currentBalance = IERC20(_component).balanceOf(address(this));
-        uint256 positionUnit = getDefaultPositionRealUnit(_component).toUint256();
+        uint256 positionUnit = getPositionRealUnit(_component).toUint256();
 
-        uint256 newTokenUnit = calculateDefaultEditPositionUnit(
+        uint256 newTokenUnit = calculateEditPositionUnit(
             _componentPreviousBalance,
             currentBalance,
             positionUnit
         );
 
-        editDefaultPosition(_component, newTokenUnit);
+        editPosition(_component, newTokenUnit, msg.sender);
 
         return (currentBalance, positionUnit, newTokenUnit);
     }
@@ -495,10 +502,10 @@ abstract contract BaseFund is ERC20 {
      *
      * @param _preTotalNotional   Total notional amount of component prior to executing action
      * @param _postTotalNotional  Total notional amount of component after the executing action
-     * @param _prePositionUnit    Position unit of SetToken prior to executing action
+     * @param _prePositionUnit    Position unit of fund prior to executing action
      * @return                    New position unit
      */
-    function calculateDefaultEditPositionUnit(
+    function calculateEditPositionUnit(
         uint256 _preTotalNotional,
         uint256 _postTotalNotional,
         uint256 _prePositionUnit
@@ -508,23 +515,23 @@ abstract contract BaseFund is ERC20 {
         returns (uint256)
     {
         // If pre action total notional amount is greater then subtract post action total notional and calculate new position units
-        uint256 airdroppedAmount = _preTotalNotional.sub(_prePositionUnit.preciseMul(_setTokenSupply));
-        return _postTotalNotional.sub(airdroppedAmount).preciseDiv(_setTokenSupply);
+        uint256 airdroppedAmount = _preTotalNotional.sub(_prePositionUnit.preciseMul(totalSupply()));
+        return _postTotalNotional.sub(airdroppedAmount).preciseDiv(totalSupply());
     }
 
 
     /**
-     * Returns whether the fund has a default position for a given component (if the real unit is > 0)
+     * Returns whether the fund has a  position for a given component (if the real unit is > 0)
      */
-    function hasDefaultPosition(address _component) internal view returns(bool) {
-      return getDefaultPositionRealUnit(_component) > 0;
+    function hasPosition(address _component) internal view returns(bool) {
+      return getPositionRealUnit(_component) > 0;
     }
 
     /**
-     * Returns whether the fund component default position real unit is greater than or equal to units passed in.
+     * Returns whether the fund component  position real unit is greater than or equal to units passed in.
      */
-    function hasSufficientDefaultUnits(address _component, uint256 _unit) internal view returns(bool) {
-        return getDefaultPositionRealUnit(_component) >= _unit.toInt256();
+    function hasSufficientUnits(address _component, uint256 _unit) internal view returns(bool) {
+      return getPositionRealUnit(_component) >= _unit.toInt256();
     }
 
     /**
@@ -535,25 +542,25 @@ abstract contract BaseFund is ERC20 {
      * @param _component          Address of the component
      * @param _newUnit            Quantity of Position units - must be >= 0
      */
-    function editDefaultPosition(address _component, uint256 _newUnit) internal {
-      bool isPositionFound = hasDefaultPosition(_setToken, _component);
+    function editPosition(address _component, uint256 _newUnit, address _integration) internal {
+      bool isPositionFound = hasPosition(_component);
       if (!isPositionFound && _newUnit > 0) {
-        addPosition(_component);
+        addPosition(_component, _integration);
       } else if (isPositionFound && _newUnit == 0) {
         removePosition(_component);
       }
 
-      editDefaultPositionUnit(_component, _newUnit.toInt256());
+      editPositionUnit(_component, _newUnit.toInt256());
     }
 
     /**
-     * Get total notional amount of Default position
+     * Get total notional amount of position
      *
      * @param _positionUnit       Quantity of Position units
      *
      * @return                    Total notional amount of units
      */
-    function getDefaultTotalNotional(uint256 _positionUnit) internal pure returns (uint256) {
+    function getTotalNotional(uint256 _positionUnit) internal pure returns (uint256) {
         return totalSupply().preciseMul(_positionUnit);
     }
 
@@ -561,9 +568,9 @@ abstract contract BaseFund is ERC20 {
      * Get position unit from total notional amount
      *
      * @param _totalNotional      Total notional amount of component prior to
-     * @return                    Default position unit
+     * @return                    position unit
      */
-    function getDefaultPositionUnit(uint256 _totalNotional) internal pure returns (uint256) {
+    function getPositionUnit(uint256 _totalNotional) internal pure returns (uint256) {
         return _totalNotional.preciseDiv(totalSupply());
     }
 
@@ -573,8 +580,8 @@ abstract contract BaseFund is ERC20 {
      * @param _component          Address of the component
      * @return                    Notional tracked balance
      */
-    function getDefaultTrackedBalance(address _component) internal view returns(uint256) {
-      int256 positionUnit = getDefaultPositionRealUnit(_component);
+    function getTrackedBalance(address _component) internal view returns(uint256) {
+      int256 positionUnit = getPositionRealUnit(_component);
       return totalSupply().preciseMul(positionUnit.toUint256());
     }
 
@@ -583,7 +590,7 @@ abstract contract BaseFund is ERC20 {
         require(isReserveAsset[_setToken][_reserveAsset], "Must be valid reserve asset");
     }
 
-    function _defaultPositionVirtualUnit(address _component) internal view returns(int256) {
+    function _positionVirtualUnit(address _component) internal view returns(int256) {
       return componentPositions[_component].virtualUnit;
     }
 

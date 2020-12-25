@@ -24,12 +24,10 @@ import { ERC20 } from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import { SafeCast } from "@openzeppelin/contracts/utils/SafeCast.sol";
 import { SignedSafeMath } from "@openzeppelin/contracts/math/SignedSafeMath.sol";
 
-import { IController } from "./interfaces/IController.sol";
+import { IFolioController } from "./interfaces/IFolioController.sol";
 import { IFund } from "./interfaces/IFund.sol";
 import { IPriceOracle } from "./interfaces/IPriceOracle.sol";
 import { PreciseUnitMath } from "./lib/PreciseUnitMath.sol";
-import { Position } from "./lib/Position.sol";
-import { ResourceIdentifier } from "./lib/ResourceIdentifier.sol";
 
 
 /**
@@ -44,8 +42,6 @@ import { ResourceIdentifier } from "./lib/ResourceIdentifier.sol";
 contract FundValuer {
     using PreciseUnitMath for int256;
     using PreciseUnitMath for uint256;
-    using Position for ISetToken;
-    using ResourceIdentifier for IController;
     using SafeCast for int256;
     using SafeCast for uint256;
     using SignedSafeMath for int256;
@@ -53,7 +49,7 @@ contract FundValuer {
     /* ============ State Variables ============ */
 
     // Instance of the Controller contract
-    IController public controller;
+    IFolioController public controller;
 
     /* ============ Constructor ============ */
 
@@ -62,7 +58,7 @@ contract FundValuer {
      *
      * @param _controller             Address of controller contract
      */
-    constructor(IController _controller) public {
+    constructor(IFolioController _controller) public {
         controller = _controller;
     }
 
@@ -84,7 +80,7 @@ contract FundValuer {
     function calculateFundValuation(IFund _fund, address _quoteAsset) external view returns (uint256) {
         IPriceOracle priceOracle = controller.getPriceOracle();
         address masterQuoteAsset = priceOracle.masterQuoteAsset();
-        address[] memory components = _fund.getComponents();
+        address[] memory components = _fund.getPositions();
         int256 valuation;
 
         for (uint256 i = 0; i < components.length; i++) {
