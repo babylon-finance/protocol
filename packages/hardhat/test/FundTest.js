@@ -1,24 +1,5 @@
 const { expect } = require("chai");
 
-describe("Fund Deploy", function() {
-  it("Should deploy Fund", async function() {
-    const [owner, addr1, addr2] = await ethers.getSigners();
-    const contractProps = {
-      name: "FakeFund",
-      tokenName: "FakeFundToken",
-      tokenSymbol: "FFT",
-      manager: owner.getAddress(),
-    };
-    const Fund = await ethers.getContractFactory("Fund", owner);
-    await Fund.deploy(
-      contractProps.name,
-      contractProps.tokenName,
-      contractProps.tokenSymbol,
-      contractProps.manager
-    );
-  });
-});
-
 describe("Fund", async function() {
   const [owner, addr1, addr2, addr3] = await ethers.getSigners();
   const contractProps = {

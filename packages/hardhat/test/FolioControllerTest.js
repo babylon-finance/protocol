@@ -3,14 +3,6 @@ const { expect } = require("chai");
 const ADD_FUND_PROPS = ["new fund", "NewFundToken", "NFT"];
 const ADD_FUND_PROPS_2 = ["new fund 2", "NewFundToken2", "NFT2"];
 
-describe("FolioController Deploy", function() {
-  it("Should deploy FolioController", async function() {
-    const [owner] = await ethers.getSigners();
-    const FolioController = await ethers.getContractFactory("FolioController", owner);
-    await FolioController.deploy();
-  });
-});
-
 describe("FolioController", async function() {
   const [owner, addr1, addr2] = await ethers.getSigners();
   const FolioController = await ethers.getContractFactory("FolioController", owner);
