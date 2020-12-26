@@ -29,11 +29,19 @@ interface IFolioController {
     /* ============ Functions ============ */
 
     function addFund(address _fund) external;
-    function feeRecipient() external view returns(address);
-    function getModuleFee(address _module, uint256 _feeType) external view returns(uint256);
+    function getFeeRecipient() external view returns(address);
+    function getFundValuer() external view returns(address);
+    function getPriceOracle() external view returns (address);
     function isFund(address _fund) external view returns(bool);
+    function isValidReserveAsset(address _reserveAsset) external view returns(bool);
     function isSystemContract(address _contractAddress) external view returns (bool);
     function isValidIntegration(string memory _name) external view returns (bool);
+    function getMaxManagerDepositFee() external view returns (uint256);
+    function getMaxManagerWithdrawalFee() external view returns (uint256);
+    function getMaxManagerPerformanceFee() external view returns (uint256);
+    function getMaxFundPremiumPercentage() external view returns (uint256);
+    function getProtocolDepositFundTokenFee() external view returns (uint256);
+    function getProtocolWithdrawalFundTokenFee() external view returns (uint256);
 
     // TODO: FILL
 }

@@ -28,7 +28,7 @@ import { IWETH } from "../interfaces/external/weth/IWETH.sol";
 
 import { BorrowIntegration } from "./BorrowIntegration.sol";
 import { IFolioController } from "../interfaces/IFolioController.sol";
-import { BaseIntegration } from "../BaseIntegration.sol";
+import { BaseIntegration } from "./BaseIntegration.sol";
 
 /**
  * Aave Integration

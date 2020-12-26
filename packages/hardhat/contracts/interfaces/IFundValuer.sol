@@ -17,16 +17,6 @@
 */
 pragma solidity 0.7.4;
 
-/**
- * @title IIntegration
- * @author DFolio
- *
- * Interface for protocol integrations
- */
-interface IIntegration {
-
-
-  function updateFundPosition(address _fund, address _component, int256 newUnit) external;
-  function getName() external view returns (string memory);
-
+interface IFundValuer {
+    function calculateFundValuation(address _fund, address _quoteAsset) external view returns (uint256);
 }

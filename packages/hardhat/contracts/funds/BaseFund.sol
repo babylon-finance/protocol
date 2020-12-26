@@ -23,10 +23,11 @@ import { Address } from "@openzeppelin/contracts/utils/Address.sol";
 import { ERC20 } from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import { ReentrancyGuard } from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import { SafeMath } from "@openzeppelin/contracts/math/SafeMath.sol";
+import { SafeCast } from "@openzeppelin/contracts/utils/SafeCast.sol";
 import { SignedSafeMath } from "@openzeppelin/contracts/math/SignedSafeMath.sol";
 
-import { AddressArrayUtils } from "./lib/AddressArrayUtils.sol";
-import { PreciseUnitMath } from "./lib/PreciseUnitMath.sol";
+import { AddressArrayUtils } from "../lib/AddressArrayUtils.sol";
+import { PreciseUnitMath } from "../lib/PreciseUnitMath.sol";
 import { IFolioController } from "../interfaces/IFolioController.sol";
 import { IWETH } from "../interfaces/external/weth/IWETH.sol";
 import { IIntegration } from "../interfaces/IIntegration.sol";
@@ -40,7 +41,11 @@ import { IFund } from "../interfaces/IFund.sol";
  * Abstract Class that holds common fund-related state and functions
  */
 abstract contract BaseFund is ERC20 {
+
+    using SafeCast for uint256;
     using SafeMath for uint256;
+    using PreciseUnitMath for uint256;
+    using SafeCast for int256;
     using SignedSafeMath for int256;
     using PreciseUnitMath for int256;
     using Address for address;
@@ -98,13 +103,13 @@ abstract contract BaseFund is ERC20 {
     /* ============ State Variables ============ */
 
     // Wrapped ETH address
-    IWETH public immutable weth;
+    address public immutable weth;
 
     // Reserve Asset of the fund
     address public reserveAsset;
 
     // Address of the controller
-    IFolioController public controller;
+    address public controller;
     // The manager has the privelege to add modules, remove, and set a new manager
     address public manager;
     address public managerFeeRecipient;
@@ -148,11 +153,11 @@ abstract contract BaseFund is ERC20 {
 
     constructor(
         address[] memory _integrations,
-        IWETH _weth,
-        IFolioController _controller,
+        address _weth,
+        address _reserveAsset,
+        address _controller,
         address _manager,
         address _managerFeeRecipient,
-        address _reserveAsset,
         string memory _name,
         string memory _symbol
     ) ERC20(_name, _symbol){
@@ -272,7 +277,7 @@ abstract contract BaseFund is ERC20 {
      */
     function addIntegration(address _integration, string memory _name) external onlyManager {
         require(integrationStates[_integration] == IFund.IntegrationState.NONE, "Integration must not be added");
-        require(controller.isValidIntegration(_name), "Integration must be enabled on Controller");
+        require(IFolioController(controller).isValidIntegration(_name), "Integration must be enabled on Controller");
 
         integrationStates[_integration] = IFund.IntegrationState.PENDING;
 
@@ -395,7 +400,7 @@ abstract contract BaseFund is ERC20 {
      */
     function calculateAndEditPosition(
         address _component,
-        uint256 _componentPreviousBalance
+        int256 _componentPreviousBalance
     )
         external
         onlyIntegration
@@ -509,7 +514,7 @@ abstract contract BaseFund is ERC20 {
     }
 
     function _positionVirtualUnit(address _component) internal view returns(int256) {
-      return positions[_component].virtualUnit;
+      return positionsByComponent[_component].virtualUnit;
     }
 
     /**
@@ -517,7 +522,7 @@ abstract contract BaseFund is ERC20 {
      */
     function payProtocolFeeFromFund(address _token, uint256 _feeQuantity) internal {
       if (_feeQuantity > 0) {
-        ERC20(_token).transfer(controller.feeRecipient(), _feeQuantity);
+        ERC20(_token).transfer(IFolioController(controller).getFeeRecipient(), _feeQuantity);
       }
     }
     /**
@@ -562,7 +567,7 @@ abstract contract BaseFund is ERC20 {
         );
 
         require(
-            controller.isIntegration(msg.sender),
+            IFolioController(controller).isValidIntegration(IIntegration(msg.sender).getName()),
             "Integration must be enabled on controller"
         );
     }

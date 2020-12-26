@@ -21,13 +21,16 @@ pragma solidity 0.7.4;
 import "hardhat/console.sol";
 import { Address } from "@openzeppelin/contracts/utils/Address.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import { ERC20 } from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import { ReentrancyGuard } from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import { SafeMath } from "@openzeppelin/contracts/math/SafeMath.sol";
 import { SignedSafeMath } from "@openzeppelin/contracts/math/SignedSafeMath.sol";
-import { PreciseUnitMath } from "./lib/PreciseUnitMath.sol";
-import { AddressArrayUtils } from "./lib/AddressArrayUtils.sol";
+import { SafeCast } from "@openzeppelin/contracts/utils/SafeCast.sol";
+import { PreciseUnitMath } from "../lib/PreciseUnitMath.sol";
+import { AddressArrayUtils } from "../lib/AddressArrayUtils.sol";
 import { IWETH } from "../interfaces/external/weth/IWETH.sol";
 import { IFolioController } from "../interfaces/IFolioController.sol";
+import { IFundValuer } from "../interfaces/IFundValuer.sol";
 import { IFundIssuanceHook } from "../interfaces/IFundIssuanceHook.sol";
 import { BaseFund } from "./BaseFund.sol";
 
@@ -42,21 +45,27 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
     using SafeMath for uint256;
     using SignedSafeMath for int256;
     using PreciseUnitMath for int256;
+    using PreciseUnitMath for uint256;
+    using SafeCast for uint256;
+    using SafeCast for int256;
     using Address for address;
     using AddressArrayUtils for address[];
 
     /* ============ Events ============ */
     event FundTokenDeposited(
-        address indexed _fund,
         address indexed _to,
         address _hookContract,
-        uint256 _quantity
+        uint256 fundTokenQuantity,
+        uint256 managerFees,
+        uint256 protocolFees
     );
     event FundTokenwithdrawed(
-        address indexed _fund,
         address indexed _from,
         address indexed _to,
-        uint256 _quantity
+        address _hookContract,
+        uint256 fundTokenQuantity,
+        uint256 managerFees,
+        uint256 protocolFees
     );
 
     event PremiumEdited(uint256 amount);
@@ -67,7 +76,7 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
     /* ============ Modifiers ============ */
 
     modifier onlyContributor(address payable _caller) {
-      _validateOnlyContributor();
+      _validateOnlyContributor(_caller);
       _;
     }
 
@@ -88,8 +97,8 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
       uint256 newReservePositionUnit;                // Fund token reserve asset position unit after deposit/withdrawal
     }
 
-    IFundIssuanceHook managerDepositHook;      // Deposit hook configurations
-    IFundIssuanceHook managerWithdrawalHook;    // Withdrawal hook configurations
+    address managerDepositHook;      // Deposit hook configurations
+    address managerWithdrawalHook;    // Withdrawal hook configurations
 
     uint256 managerDepositFee;  // % of the deposit denominated in the reserve asset
     uint256 managerWithdrawalFee; // % of the withdrawal denominated in the reserve asset,  charged in withdrawal
@@ -133,9 +142,9 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
 
     constructor(
         address[] memory _integrations,
-        IWETH _weth,
-        IFolioController _controller,
+        address _weth,
         address _reserveAsset,
+        address _controller,
         address _manager,
         address _managerFeeRecipient,
         string memory _name,
@@ -146,6 +155,7 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
         _weth,
         _controller,
         _manager,
+        _managerFeeRecipient,
         _reserveAsset,
         _name,
         _symbol
@@ -177,17 +187,18 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
         uint256 _managerPerformanceFee,
         uint256 _premiumPercentage,
         uint256 _minFundTokenSupply,
-        IFundIssuanceHook _managerDepositHook,
-        IFundIssuanceHook _managerWithdrawalHook
+        address _managerDepositHook,
+        address _managerWithdrawalHook
     )
         external
         onlyManager
         onlyInactive
     {
-        require(_managerDepositFee <= IFolioController(controller).maxManagerDepositFee, "Manager deposit fee must be less than max");
-        require(_managerWithdrawalFee <= IFolioController(controller).maxManagerWithdrawalFee, "Manager withdrawal fee must be less than max");
-        require(_managerPerformanceFee <= IFolioController(controller).maxManagerPerformanceFee, "Manager performance fee must be less than max");
-        require(_premiumPercentage <= IFolioController(controller).maxFundPremiumPercentage, "Premium must be less than max");
+        IFolioController ifcontroller = IFolioController(controller);
+        require(_managerDepositFee <= ifcontroller.getMaxManagerDepositFee(), "Manager deposit fee must be less than max");
+        require(_managerWithdrawalFee <= ifcontroller.getMaxManagerWithdrawalFee(), "Manager withdrawal fee must be less than max");
+        require(_managerPerformanceFee <= ifcontroller.getMaxManagerPerformanceFee(), "Manager performance fee must be less than max");
+        require(_premiumPercentage <= ifcontroller.getMaxFundPremiumPercentage(), "Premium must be less than max");
         require(_minFundTokenSupply > 0, "Min Fund token supply must be greater than 0");
 
         managerDepositFee = _managerDepositFee;
@@ -223,7 +234,7 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
             "Send at least 1000000000000 wei"
         );
         // Always wrap to WETH
-        weth.deposit{ value: msg.value }();
+        IWETH(weth).deposit{ value: msg.value }();
 
         if (reserveAsset != weth) {
           // TODO: trade from weth into reserve asset
@@ -231,13 +242,13 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
 
         _validateReserveAsset(reserveAsset, _reserveAssetQuantity);
 
-        _callPreDepositHooks(reserveAsset, _reserveAssetQuantity, msg.sender, _to);
+        _callPreDepositHooks(_reserveAssetQuantity, msg.sender, _to);
 
         ActionInfo memory depositInfo = _createIssuanceInfo(reserveAsset, _reserveAssetQuantity);
 
         _validateIssuanceInfo(_minFundTokenReceiveQuantity, depositInfo);
 
-        _transferCollateralAndHandleFees(IERC20(reserveAsset), depositInfo);
+        _transferCollateralAndHandleFees(reserveAsset, depositInfo);
 
         Contributor storage contributor = contributors[msg.sender];
 
@@ -267,13 +278,13 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
     function withdraw(
         uint256 _fundTokenQuantity,
         uint256 _minReserveReceiveQuantity,
-        address _to
+        address payable _to
     )
         external
         nonReentrant
         onlyContributor(msg.sender)
     {
-      require(_fundTokenQuantity <= reserveAsset.balanceOf(msg.sender) > 0, 'Withdrawal amount must be less than or equal to deposited amount');
+      require(_fundTokenQuantity <= IERC20(reserveAsset).balanceOf(msg.sender), 'Withdrawal amount must be less than or equal to deposited amount');
 
       _validateReserveAsset(reserveAsset, _fundTokenQuantity);
 
@@ -290,7 +301,7 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
       // Instruct the Fund to transfer the reserve asset back to the user
       IERC20(reserveAsset).transfer(_to, withdrawalInfo.netFlowQuantity);
 
-      weth.withdraw(withdrawalInfo.netFlowQuantity);
+      IWETH(weth).withdraw(withdrawalInfo.netFlowQuantity);
 
       totalFunds = totalFunds.sub(withdrawalInfo.netFlowQuantity);
 
@@ -307,7 +318,7 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
      * @param _premiumPercentage            Premium percentage in 10e16 (e.g. 10e16 = 1%)
      */
     function editPremium(uint256 _premiumPercentage) external onlyManager {
-        require(_premiumPercentage <= IFolioController(controller).maxPremiumPercentage, "Premium must be less than maximum allowed");
+        require(_premiumPercentage <= IFolioController(controller).getMaxFundPremiumPercentage(), "Premium must be less than maximum allowed");
 
         premiumPercentage = _premiumPercentage;
 
@@ -327,7 +338,7 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
         onlyManager
         onlyInactive
     {
-        require(_managerDepositFee <= IFolioController(controller).maxManagerDepositFee, "Manager fee must be less than maximum allowed");
+        require(_managerDepositFee <= IFolioController(controller).getMaxManagerDepositFee(), "Manager fee must be less than maximum allowed");
         managerDepositFee = _managerDepositFee;
         emit ManagerFeeEdited(_managerDepositFee, "Manager Deposit Fee");
     }
@@ -345,7 +356,7 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
         onlyManager
         onlyInactive
     {
-        require(_managerWithdrawalFee <= IFolioController(controller).maxManagerWithdrawalFee, "Manager fee must be less than maximum allowed");
+        require(_managerWithdrawalFee <= IFolioController(controller).getMaxManagerWithdrawalFee(), "Manager fee must be less than maximum allowed");
         managerWithdrawalFee = _managerWithdrawalFee;
         emit ManagerFeeEdited(_managerWithdrawalFee, "Manager Withdrawal Fee");
     }
@@ -363,7 +374,7 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
         onlyManager
         onlyInactive
     {
-        require(_managerPerformanceFee <= IFolioController(controller).maxManagerPerformanceFee, "Manager fee must be less than maximum allowed");
+        require(_managerPerformanceFee <= IFolioController(controller).getMaxManagerPerformanceFee(), "Manager fee must be less than maximum allowed");
         managerPerformanceFee = _managerPerformanceFee;
         emit ManagerFeeEdited(_managerPerformanceFee, "Manager Performance Fee");
     }
@@ -518,7 +529,7 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
             "Supply must be greater than minimum to enable issuance"
         );
 
-        require(_depositInfo.setFundTokenQuantity >= _minFundTokenReceiveQuantity, "Must be greater than min Fund token");
+        require(_depositInfo.fundTokenQuantity >= _minFundTokenReceiveQuantity, "Must be greater than min Fund token");
     }
 
     function _validateRedemptionInfo(
@@ -600,15 +611,15 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
     /**
      * Transfer reserve asset from user to Fund and fees from user to appropriate fee recipients
      */
-    function _transferCollateralAndHandleFees(IERC20 _reserveAsset, ActionInfo memory _depositInfo) internal {
-        transferFrom(_reserveAsset, msg.sender, address(this), _depositInfo.netFlowQuantity);
+    function _transferCollateralAndHandleFees(address _reserveAsset, ActionInfo memory _depositInfo) internal {
+        IERC20(_reserveAsset).transferFrom(msg.sender, address(this), _depositInfo.netFlowQuantity);
 
         if (_depositInfo.protocolFees > 0) {
-            transferFrom(_reserveAsset, msg.sender, controller.feeRecipient(), _depositInfo.protocolFees);
+            IERC20(_reserveAsset).transferFrom(msg.sender, IFolioController(controller).getFeeRecipient(), _depositInfo.protocolFees);
         }
 
         if (_depositInfo.managerFee > 0) {
-            transferFrom(_reserveAsset, msg.sender, managerFeeRecipient, _depositInfo.managerFee);
+            IERC20(_reserveAsset).transferFrom(msg.sender, managerFeeRecipient, _depositInfo.managerFee);
         }
     }
 
@@ -626,12 +637,9 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
         _mint(_to, _depositInfo.fundTokenQuantity);
 
         emit FundTokenDeposited(
-            address(this),
-            msg.sender,
             _to,
-            _reserveAsset,
-            address(managerDepositHook),
-            _depositInfo._fundTokenQuantity,
+            managerDepositHook,
+            _depositInfo.fundTokenQuantity,
             _depositInfo.managerFee,
             _depositInfo.protocolFees
         );
@@ -649,12 +657,10 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
         editPosition(_reserveAsset, _withdrawalInfo.newReservePositionUnit, address(0));
 
         emit FundTokenwithdrawed(
-            address(this),
             msg.sender,
             _to,
-            _reserveAsset,
-            address(managerWithdrawalHook),
-            _withdrawalInfo._fundTokenQuantity,
+            managerWithdrawalHook,
+            _withdrawalInfo.fundTokenQuantity,
             _withdrawalInfo.managerFee,
             _withdrawalInfo.protocolFees
         );
@@ -720,7 +726,7 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
         returns (uint256, uint256, uint256)
     {
         // Get protocol fee percentages
-        uint256 protocolFeePercentage = isDeposit ? controller.protocolDepositFundTokenFee : controller.protocolWithdrawalFundTokenFee;
+        uint256 protocolFeePercentage = isDeposit ? IFolioController(controller).getProtocolDepositFundTokenFee() : IFolioController(controller).getProtocolWithdrawalFundTokenFee();
         uint256 managerFeePercentage = isDeposit ? managerDepositFee : managerWithdrawalFee;
 
         // Calculate total notional fees
@@ -741,15 +747,15 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
         view
         returns (uint256)
     {
-        uint256 premiumPercentageToApply = _getDepositPremium(_reserveAsset, _netReserveFlows);
+        uint256 premiumPercentageToApply = _getDepositPremium();
         uint256 premiumValue = _netReserveFlows.preciseMul(premiumPercentageToApply);
 
         // Get valuation of the Fund with the quote asset as the reserve asset. Returns value in precise units (1e18)
         // Reverts if price is not found
-        uint256 fundValuation = controller.getFundValuer().calculateFundValuation(address(this), _reserveAsset);
+        uint256 fundValuation = IFundValuer(IFolioController(controller).getFundValuer()).calculateFundValuation(address(this), _reserveAsset);
 
         // Get reserve asset decimals
-        uint256 reserveAssetDecimals = IERC20(_reserveAsset).decimals();
+        uint256 reserveAssetDecimals = ERC20(_reserveAsset).decimals();
         uint256 normalizedTotalReserveQuantityNetFees = _netReserveFlows.preciseDiv(10 ** reserveAssetDecimals);
         uint256 normalizedTotalReserveQuantityNetFeesAndPremium = _netReserveFlows.sub(premiumValue).preciseDiv(10 ** reserveAssetDecimals);
 
@@ -768,14 +774,14 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
     {
         // Get valuation of the Fund with the quote asset as the reserve asset. Returns value in precise units (10e18)
         // Reverts if price is not found
-        uint256 fundValuation = controller.getFundValuer().calculateFundValuation(address(this), _reserveAsset);
+        uint256 fundValuation = IFundValuer(IFolioController(controller).getFundValuer()).calculateFundValuation(address(this), _reserveAsset);
 
         uint256 totalWithdrawalValueInPreciseUnits = _fundTokenQuantity.preciseMul(fundValuation);
         // Get reserve asset decimals
-        uint256 reserveAssetDecimals = IERC20(_reserveAsset).decimals();
+        uint256 reserveAssetDecimals = ERC20(_reserveAsset).decimals();
         uint256 prePremiumReserveQuantity = totalWithdrawalValueInPreciseUnits.preciseMul(10 ** reserveAssetDecimals);
 
-        uint256 premiumPercentageToApply = _getWithdrawalPremium(_reserveAsset, _fundTokenQuantity);
+        uint256 premiumPercentageToApply = _getWithdrawalPremium();
         uint256 premiumQuantity = prePremiumReserveQuantity.preciseMulCeil(premiumPercentageToApply);
 
         return prePremiumReserveQuantity.sub(premiumQuantity);
@@ -795,7 +801,7 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
     {
         // Calculate inflation and new position multiplier. Note: Round inflation up in order to round position multiplier down
         uint256 newTotalSupply = _depositInfo.fundTokenQuantity.add(_depositInfo.previousFundTokenSupply);
-        int256 newPositionMultiplier = positionMultiplier().mul(_depositInfo.previousFundTokenSupply.toInt256()).div(newTotalSupply.toInt256());
+        int256 newPositionMultiplier = positionMultiplier.mul(_depositInfo.previousFundTokenSupply.toInt256()).div(newTotalSupply.toInt256());
 
         return (newTotalSupply, newPositionMultiplier);
     }
@@ -816,7 +822,7 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
         returns (uint256, int256)
     {
         uint256 newTotalSupply = _withdrawalInfo.previousFundTokenSupply.sub(_fundTokenQuantity);
-        int256 newPositionMultiplier = positionMultiplier()
+        int256 newPositionMultiplier = positionMultiplier
             .mul(_withdrawalInfo.previousFundTokenSupply.toInt256())
             .div(newTotalSupply.toInt256());
 
@@ -880,8 +886,8 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
     )
         internal
     {
-        if (address(managerDepositHook) != address(0)) {
-            managerDepositHook.invokePreDepositHook(address(this), reserveAsset, _reserveAssetQuantity, _caller, _to);
+        if (managerDepositHook != address(0)) {
+            IFundIssuanceHook(managerDepositHook).invokePreDepositHook(reserveAsset, _reserveAssetQuantity, _caller, _to);
         }
     }
 
@@ -889,8 +895,8 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
      * If a pre-withdrawal hook has been configured, call the external-protocol contract.
      */
     function _callPreWithdrawalHooks(uint256 _fundTokenQuantity, address _caller, address _to) internal {
-        if (address(managerWithdrawalHook) != address(0)) {
-            managerWithdrawalHook.invokePreWithdrawalHook(address(this), _fundTokenQuantity, _caller, _to);
+        if (managerWithdrawalHook != address(0)) {
+            IFundIssuanceHook(managerWithdrawalHook).invokePreWithdrawalHook(_fundTokenQuantity, _caller, _to);
         }
     }
 

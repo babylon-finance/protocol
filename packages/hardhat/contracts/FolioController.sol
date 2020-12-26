@@ -43,13 +43,9 @@ contract FolioController is Ownable {
     event FundAdded(address indexed _setToken, address indexed _factory);
     event FundRemoved(address indexed _setToken);
 
-    event ControllerIntegrationAdded(address indexed _fund, address indexed _integration, string _integrationName);
-    event ControllerIntegrationRemoved(address indexed _fund, address indexed _integration, string _integrationName);
-    event ControllerIntegrationEdited(
-        address indexed _fund,
-        address _newIntegration,
-        string _integrationName
-    );
+    event ControllerIntegrationAdded(address indexed _integration, string _integrationName);
+    event ControllerIntegrationRemoved(address indexed _integration, string _integrationName);
+    event ControllerIntegrationEdited(address _newIntegration,string _integrationName);
 
     event ReserveAssetAdded(address indexed _reserveAsset);
     event ReserveAssetRemoved(address indexed _reserveAsset);
@@ -73,7 +69,7 @@ contract FolioController is Ownable {
     address public fundValuer;
     address public priceOracle;
     // Mapping of fund => integration identifier => integration address
-   mapping(bytes32 => address) private integrations;
+    mapping(bytes32 => address) private integrations;
 
     // Mappings to check whether address is valid Fund or Reserve Asset
     mapping(address => bool) public isFund;
@@ -120,41 +116,47 @@ contract FolioController is Ownable {
      * Creates a Fund smart contract and registers the Fund with the controller. The Funds are composed
      * of positions that are instantiated as DEFAULT (positionState = 0) state.
      *
-     * @param _components             List of addresses of components for initial Positions
-     * @param _units                  List of units. Each unit is the # of components per 10^18 of a Fund
+     * @param _integrations           List of integrations to enable. All integrations must be approved by the Controller
+     * @param _weth                   Address of the WETH ERC20
+     * @param _controller             Address of the controller
+     * @param _reserveAsset           Address of the reserve asset ERC20
      * @param _manager                Address of the manager
-     * @param _name                   Name of the Fund Token
-     * @param _symbol                 Symbol of the Fund Token
-     * @return address                Address of the newly created Fund
+     * @param _managerFeeRecipient    Address where the manager will receive the fees
+     * @param _name                   Name of the Fund
+     * @param _symbol                 Symbol of the Fund
+     * @param _minContribution        Min contribution to the fund
      */
     function createFund(
-        address[] memory _components,
-        int256[] memory _units,
+        address[] memory _integrations,
+        address _weth,
+        address _reserveAsset,
         address _manager,
+        address _managerFeeRecipient,
         string memory _name,
-        string memory _symbol
+        string memory _symbol,
+        uint256 _minContribution
     )
         external
         returns (address)
     {
-        require(_components.length > 0, "Must have at least 1 component");
-        require(_components.length == _units.length, "Component and unit lengths must be the same");
-        require(!_components.hasDuplicate(), "Components must not have a duplicate");
         require(_manager != address(0), "Manager must not be empty");
+        require(_managerFeeRecipient != address(0), "Manager must not be empty");
 
-        for (uint256 i = 0; i < _components.length; i++) {
-            require(_components[i] != address(0), "Component must not be null address");
-            require(_units[i] > 0, "Units must be greater than 0");
+        for (uint256 i = 0; i < _integrations.length; i++) {
+          require(_integrations[i] != address(0), "Component must not be null address");
         }
 
         // Creates a new Fund instance
         ClosedFund fund = new ClosedFund(
-            _components,
-            _units,
+            _integrations,
+            _weth,
             address(this),
+            _reserveAsset,
             _manager,
+            _managerFeeRecipient,
             _name,
-            _symbol
+            _symbol,
+            _minContribution
         );
 
         addFund(address(fund));
@@ -230,7 +232,7 @@ contract FolioController is Ownable {
      */
     function disableFund(address _fund) external onlyOwner {
         require(isFund[_fund], "Fund does not exist");
-        IFund fund = IFund(funds[_fund]);
+        IFund fund = IFund(_fund);
         require(
             fund.active(),
             "The fund needs to be active."
@@ -245,7 +247,7 @@ contract FolioController is Ownable {
      */
     function reenableFund(address _fund) external onlyOwner {
         require(isFund[_fund], "Fund does not exist");
-        IFund fund = IFund(funds[_fund]);
+        IFund fund = IFund(_fund);
         require(
             !fund.active(),
             "The fund needs to be disabled."
@@ -324,24 +326,24 @@ contract FolioController is Ownable {
      * @param  _names        Array of human readable strings identifying the integration
      * @param  _integrations     Array of addresses of the integration contracts to add
      */
-    function batchAddIntegration(
-        string[] memory _names,
-        address[] memory _integrations
-    )
-        external
-        onlyOwner
-    {
-        // Storing funds count to local variable to save on invocation
-        require(_names.length == _integrations.length, "Names and integration addresses lengths mismatch");
-
-        for (uint256 i = 0; i < _integrations.length; i++) {
-            // Add integrations to the specified fund. Will revert if fund and name combination exists
-            addIntegration(
-                _names[i],
-                _integrations[i]
-            );
-        }
-    }
+    // function batchAddIntegration(
+    //     string[] memory _names,
+    //     address[] memory _integrations
+    // )
+    //     external
+    //     onlyOwner
+    // {
+    //     // Storing funds count to local variable to save on invocation
+    //     require(_names.length == _integrations.length, "Names and integration addresses lengths mismatch");
+    //
+    //     for (uint256 i = 0; i < _integrations.length; i++) {
+    //         // Add integrations to the specified fund. Will revert if fund and name combination exists
+    //         addIntegration(
+    //             _names[i],
+    //             _integrations[i]
+    //         );
+    //     }
+    // }
 
     /**
      * GOVERNANCE FUNCTION: Edit an existing integration on the registry
@@ -373,27 +375,27 @@ contract FolioController is Ownable {
      * @param  _names        Array of human readable strings identifying the integration
      * @param  _integrations     Array of addresses of the integration contracts to add
      */
-    function batchEditIntegration(
-        string[] memory _names,
-        address[] memory _integrations
-    )
-        external
-        onlyOwner
-    {
-        // Storing name count to local variable to save on invocation
-        uint256 fundsCount = funds.length;
-
-        require(_names.length == _integrations.length, "Names and integration addresses lengths mismatch");
-
-
-        for (uint256 i = 0; i < _integrations.length; i++) {
-            // Edits integrations to the specified fund. Will revert if fund and name combination does not exist
-            editIntegration(
-                _names[i],
-                _integrations[i]
-            );
-        }
-    }
+    // function batchEditIntegration(
+    //     string[] memory _names,
+    //     address[] memory _integrations
+    // )
+    //     external
+    //     onlyOwner
+    // {
+    //     // Storing name count to local variable to save on invocation
+    //     uint256 fundsCount = funds.length;
+    //
+    //     require(_names.length == _integrations.length, "Names and integration addresses lengths mismatch");
+    //
+    //
+    //     for (uint256 i = 0; i < _integrations.length; i++) {
+    //         // Edits integrations to the specified fund. Will revert if fund and name combination does not exist
+    //         editIntegration(
+    //             _names[i],
+    //             _integrations[i]
+    //         );
+    //     }
+    // }
 
     /**
      * GOVERNANCE FUNCTION: Remove an existing integration on the registry
@@ -425,7 +427,35 @@ contract FolioController is Ownable {
         return funds;
     }
 
-    function isValidReserveAsset(address _reserveAsset) external view returns (address[] memory) {
+    function getProtocolDepositFundTokenFee() external view returns (uint256) {
+      return protocolDepositFundTokenFee;
+    }
+
+    function getProtocolWithdrawalFundTokenFee() external view returns (uint256) {
+      return protocolWithdrawalFundTokenFee;
+    }
+
+    function getFeeRecipient() external view returns (address) {
+        return feeRecipient;
+    }
+
+    function getMaxManagerDepositFee() external view returns (uint256) {
+        return maxManagerDepositFee;
+    }
+
+    function getMaxManagerWithdrawalFee() external view returns (uint256) {
+        return maxManagerWithdrawalFee;
+    }
+
+    function getMaxManagerPerformanceFee() external view returns (uint256) {
+        return maxManagerPerformanceFee;
+    }
+
+    function getMaxFundPremiumPercentage() external view returns (uint256) {
+        return maxFundPremiumPercentage;
+    }
+
+    function isValidReserveAsset(address _reserveAsset) external view returns (bool) {
       return validReserveAsset[_reserveAsset];
     }
 
@@ -470,8 +500,8 @@ contract FolioController is Ownable {
     function isSystemContract(address _contractAddress) external view returns (bool) {
         return (
             isFund[_contractAddress] ||
-            fundValuer ||
-            priceOracle ||
+            fundValuer == address(this) ||
+            priceOracle == address(this) ||
             _contractAddress == address(this)
         );
     }

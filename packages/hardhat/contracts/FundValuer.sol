@@ -49,7 +49,7 @@ contract FundValuer {
     /* ============ State Variables ============ */
 
     // Instance of the Controller contract
-    IFolioController public controller;
+    address public controller;
 
     /* ============ Constructor ============ */
 
@@ -58,7 +58,7 @@ contract FundValuer {
      *
      * @param _controller             Address of controller contract
      */
-    constructor(IFolioController _controller) public {
+    constructor(address _controller) public {
         controller = _controller;
     }
 
@@ -78,7 +78,7 @@ contract FundValuer {
      * @return                 SetToken valuation in terms of quote asset in precise units 1e18
      */
     function calculateFundValuation(IFund _fund, address _quoteAsset) external view returns (uint256) {
-        IPriceOracle priceOracle = controller.getPriceOracle();
+        IPriceOracle priceOracle = IPriceOracle(IFolioController(controller).getPriceOracle());
         address masterQuoteAsset = priceOracle.masterQuoteAsset();
         address[] memory components = _fund.getPositions();
         int256 valuation;
@@ -88,7 +88,7 @@ contract FundValuer {
             // Get component price from price oracle. If price does not exist, revert.
             uint256 componentPrice = priceOracle.getPrice(component, masterQuoteAsset);
 
-            int256 aggregateUnits = _fund.getTotalComponentRealUnits(component);
+            int256 aggregateUnits = _fund.getTotalPositionRealUnits(component);
 
             // Normalize each position unit to preciseUnits 1e18 and cast to signed int
             uint256 unitDecimals = ERC20(component).decimals();

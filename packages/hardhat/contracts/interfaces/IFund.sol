@@ -64,6 +64,8 @@ interface IFund is IERC20 {
 
     /* ============ Functions ============ */
 
+    //TODO
+
     function addInvestment(address _investment) external;
     function removeInvestment(address _investment) external;
     function editInvestmentUnit(address _investment, int256 _realUnit) external;
@@ -85,7 +87,10 @@ interface IFund is IERC20 {
     function getIntegrations() external view returns (address[] memory);
 
     function getDefaultPositionRealUnit(address _component) external view returns(int256);
-    function getInvestments() external view returns(address[] memory);
+    function getTotalPositionRealUnits(address _component) external view returns(int256);
+    function calculateAndEditPosition(address _component, int256 _componentPreviousBalance)
+        external returns (uint256, uint256, uint256);
+    function getPositions() external view returns(address[] memory);
     function isPosition(address _position) external view returns(bool);
 
     function positionMultiplier() external view returns (int256);

@@ -48,9 +48,11 @@ abstract contract BaseIntegration {
     /* ============ State Variables ============ */
 
     // Address of the controller
-    IFolioController public controller;
+    address public controller;
     // Wrapped ETH address
-    IWETH public immutable weth;
+    address public immutable weth;
+    // Name of the integration
+    string public name;
     mapping(address => bool) public initializedByFund;
     bool initialized;
 
@@ -59,12 +61,14 @@ abstract contract BaseIntegration {
     /**
      * Creates the integration
      *
+     * @param _name                   Name of the integration
      * @param _weth                   Address of the WETH ERC20
      * @param _controller             Address of the controller
      */
 
-    constructor(IWETH _weth, IFolioController _controller) {
+    constructor(string memory _name, address _weth, address _controller) {
       require(_controller != address(0), "Controller must be non-zero address.");
+      _name = name;
       controller = _controller;
       weth = _weth;
       initialized = false;
@@ -90,7 +94,14 @@ abstract contract BaseIntegration {
      * @param _newUnit                  New unit of the fund position
      */
     function updateFundPosition(address _fund, address _component, int256 _newUnit) external {
-      IFund(_fund).calculateAndEditPosition(_fund, _component, _newUnit);
+      IFund(_fund).calculateAndEditPosition(_component, _newUnit);
+    }
+
+    /**
+     * Returns the name of the integration
+     */
+    function getName() external returns (string memory) {
+      return name;
     }
 
     /* ============ Internal Functions ============ */
@@ -111,8 +122,10 @@ abstract contract BaseIntegration {
      * Gets the total fee for this integration of the passed in index (fee % * quantity)
      */
     function getIntegrationFee(uint256 _feeIndex, uint256 _quantity) internal view returns(uint256) {
-        uint256 feePercentage = controller.getIntegrationFee(address(this), _feeIndex);
-        return _quantity.preciseMul(feePercentage);
+        // uint256 feePercentage = IFolioController(controller).getIntegrationFee(address(this), _feeIndex);
+        // return _quantity.preciseMul(feePercentage);
+        // TODO
+        return 0;
     }
 
     /**
@@ -120,7 +133,7 @@ abstract contract BaseIntegration {
      */
     function payProtocolFeeFromFund(address _fund, address _token, uint256 _feeQuantity) internal {
         if (_feeQuantity > 0) {
-          IERC20(_token).transferFrom(_fund, controller.feeRecipient(), _feeQuantity);
+          IERC20(_token).transferFrom(_fund, IFolioController(controller).getFeeRecipient(), _feeQuantity);
         }
     }
 
@@ -128,14 +141,14 @@ abstract contract BaseIntegration {
      * Returns true if the integration is in process of initialization on the fund
      */
     function isFundPendingInitialization(address _fund) internal view returns(bool) {
-        return _fund.isPendingIntegration(address(this));
+        return IFund(_fund).isPendingIntegration(address(this));
     }
 
     /**
      * Returns true if the address is the SetToken's manager
      */
     function isFundManager(address _fund, address _toCheck) internal view returns(bool) {
-        return _fund.manager() == _toCheck;
+        return IFund(_fund).manager() == _toCheck;
     }
 
     /**
@@ -143,8 +156,8 @@ abstract contract BaseIntegration {
      * and module is registered on the SetToken
      */
     function isFundValidAndInitialized(address _fund) internal view returns(bool) {
-        return controller.isFund(address(_fund)) &&
-            _fund.isInitializedIntegration(address(this));
+        return IFolioController(controller).isFund(address(_fund)) &&
+            IFund(_fund).isInitializedIntegration(address(this));
     }
 
 }
