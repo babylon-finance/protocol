@@ -37,6 +37,13 @@ abstract contract Integration is IIntegration {
     using SafeMath for uint256;
     using SignedSafeMath for int256;
 
+    /* ============ Modifier ============ */
+
+    modifier onlyProtocol {
+      require(msg.sender == controller, "Only the controller can call this");
+      _;
+    }
+
     /* ============ State Variables ============ */
 
     // Folio Controller address
