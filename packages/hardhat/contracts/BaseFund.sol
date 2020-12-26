@@ -122,6 +122,8 @@ abstract contract BaseFund is ERC20 {
     // Integrations are initialized from NONE -> PENDING -> INITIALIZED through the
     // addModule (called by manager) and initialize  (called by module) functions
     mapping(address => IFund.IntegrationState) public integrationStates;
+    // integration name => integration address
+    mapping(bytes32 => address)) private integrationsByName;
 
     // List of positions
     address[] public positions;
@@ -338,12 +340,12 @@ abstract contract BaseFund is ERC20 {
     }
 
     /**
-     * MANAGER ONLY. Adds a module into a PENDING state; Module must later be initialized via
+     * MANAGER ONLY. Adds an integration into a PENDING state; Integration must later be initialized via
      * module's initialize function
      */
-    function addIntegration(address _integration) external onlyManager {
+    function addIntegration(address _integration, string _name) external onlyManager {
         require(integrationStates[_integration] == IFund.IntegrationState.NONE, "Integration must not be added");
-        require(controller.isIntegration(_integration), "Must be enabled on Controller");
+        require(controller.isValidIntegration(_name), "Integration must be enabled on Controller");
 
         integrationStates[_integration] = IFund.IntegrationState.PENDING;
 

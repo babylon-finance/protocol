@@ -42,6 +42,14 @@ contract FolioController is Ownable {
     event FundAdded(address indexed _setToken, address indexed _factory);
     event FundRemoved(address indexed _setToken);
 
+    event ControllerIntegrationAdded(address indexed _fund, address indexed _integration, string _integrationName);
+    event ControllerIntegrationRemoved(address indexed _fund, address indexed _integration, string _integrationName);
+    event ControllerIntegrationEdited(
+        address indexed _fund,
+        address _newIntegration,
+        string _integrationName
+    );
+
     event ReserveAssetAdded(address indexed _reserveAsset);
     event ReserveAssetRemoved(address indexed _reserveAsset);
 
@@ -52,7 +60,6 @@ contract FolioController is Ownable {
     event ModuleRemoved(address indexed _module);
     event PriceOracleChanged(address indexed _resource);
     event FundValuerChanged(address indexed _resource);
-    event IntegrationRegistryChanged(address indexed _resource);
 
     /* ============ Modifiers ============ */
 
@@ -62,9 +69,10 @@ contract FolioController is Ownable {
     // List of enabled Funds
     address[] public funds;
     address[] public reserveAssets;
-    address public integrationRegistry;
     address public fundValuer;
     address public priceOracle;
+    // Mapping of fund => integration identifier => integration address
+   mapping(bytes32 => address) private integrations;
 
     // Mappings to check whether address is valid Set, Factory, Module or Resource
     mapping(address => bool) public isFund;
@@ -273,21 +281,6 @@ contract FolioController is Ownable {
     /**
      * PRIVILEGED GOVERNANCE FUNCTION. Allows governance to change the integration registry
      *
-     * @param _integrationRegistry Address of the new price oracle
-     */
-    function editIntegrationRegistry(address _integrationRegistry) external onlyOwner {
-       require(_integrationRegistry != integrationRegistry, "Integration Registry already exists");
-
-       require(_integrationRegistry != address(0), "Integration Registry must exist");
-
-       integrationRegistry = _integrationRegistry;
-
-       emit IntegrationRegistryChanged(_integrationRegistry);
-    }
-
-    /**
-     * PRIVILEGED GOVERNANCE FUNCTION. Allows governance to change the integration registry
-     *
      * @param _fundValuer Address of the new price oracle
      */
     function editFundvaluer(address _fundValuer) external onlyOwner {
@@ -313,11 +306,122 @@ contract FolioController is Ownable {
         emit FeeRecipientChanged(_newFeeRecipient);
     }
 
-    /* ============ External Getter Functions ============ */
+    /**
+     * GOVERNANCE FUNCTION: Add a new integration to the registry
+     *
+     * @param  _name         Human readable string identifying the integration
+     * @param  _integration      Address of the integration contract to add
+     */
+    function addIntegration(
+        string memory _name,
+        address _integration
+    )
+        public
+        onlyOwner
+    {
+        bytes32 hashedName = _nameHash(_name);
+        require(integrations[hashedName] == address(0), "Integration exists already.");
+        require(_integration != address(0), "Integration address must exist.");
 
-    function getIntegrationRegistry() external view returns (address memory) {
-        return integrationRegistry;
+        integrations[hashedName] = _integration;
+
+        emit ControllerIntegrationAdded(_integration, _name);
     }
+
+    /**
+     * GOVERNANCE FUNCTION: Batch add new integrations. Reverts if exists on any fund and name
+     *
+     * @param  _names        Array of human readable strings identifying the integration
+     * @param  _integrations     Array of addresses of the integration contracts to add
+     */
+    function batchAddIntegration(
+        string[] memory _names,
+        address[] memory _integrations
+    )
+        external
+        onlyOwner
+    {
+        // Storing funds count to local variable to save on invocation
+        require(_names.length == _integrations.length, "Names and integration addresses lengths mismatch");
+
+        for (uint256 i = 0; i < _integrations.length; i++) {
+            // Add integrations to the specified fund. Will revert if fund and name combination exists
+            addIntegration(
+                _names[i],
+                _integrations[i]
+            );
+        }
+    }
+
+    /**
+     * GOVERNANCE FUNCTION: Edit an existing integration on the registry
+     *
+     * @param  _name         Human readable string identifying the integration
+     * @param  _integration      Address of the integration contract to edit
+     */
+    function editIntegration(
+        string memory _name,
+        address _integration
+    )
+        public
+        onlyOwner
+    {
+        bytes32 hashedName = _nameHash(_name);
+
+        require(integrations[hashedName] != address(0), "Integration does not exist.");
+        require(_integration != address(0), "Integration address must exist.");
+
+        integrations[hashedName] = _integration;
+
+        emit ControllerIntegrationEdited(_integration, _name);
+    }
+
+    /**
+     * GOVERNANCE FUNCTION: Batch edit integrations for funds. Reverts if fund and
+     * integration name don't map to an integration address
+     *
+     * @param  _names        Array of human readable strings identifying the integration
+     * @param  _integrations     Array of addresses of the integration contracts to add
+     */
+    function batchEditIntegration(
+        string[] memory _names,
+        address[] memory _integrations
+    )
+        external
+        onlyOwner
+    {
+        // Storing name count to local variable to save on invocation
+        uint256 fundsCount = _funds.length;
+
+        require(_names.length == _integrations.length, "Names and integration addresses lengths mismatch");
+
+
+        for (uint256 i = 0; i < _integrations.length; i++) {
+            // Edits integrations to the specified fund. Will revert if fund and name combination does not exist
+            editIntegration(
+                _names[i],
+                _integrations[i]
+            );
+        }
+    }
+
+    /**
+     * GOVERNANCE FUNCTION: Remove an existing integration on the registry
+     *
+     * @param  _name         Human readable string identifying the integration
+     */
+    function removeIntegration(string memory _name) external onlyOwner {
+        bytes32 hashedName = _nameHash(_name);
+        require(integrations[hashedName] != address(0), "Integration does not exist.");
+
+        address oldIntegration = integrations[hashedName];
+        delete integrations[hashedName];
+
+        emit ControllerIntegrationRemoved(oldIntegration, _name);
+    }
+
+
+    /* ============ External Getter Functions ============ */
 
     function getPriceOracle() external view returns (address memory) {
         return priceOracle;
@@ -336,6 +440,39 @@ contract FolioController is Ownable {
     }
 
     /**
+     * Get integration integration address associated with passed human readable name
+     *
+     * @param  _name         Human readable integration name
+     *
+     * @return               Address of integration
+     */
+    function getIntegrationByName(string memory _name) external view returns (address) {
+        return integrations[_fund][_nameHash(_name)];
+    }
+
+    /**
+     * Get integration integration address associated with passed hashed name
+     *
+     * @param  _nameHash     Hash of human readable integration name
+     *
+     * @return               Address of integration
+     */
+    function getIntegrationWithHash(bytes32 _nameHash) external view returns (address) {
+        return integrations[_nameHash];
+    }
+
+    /**
+     * Check if integration name is valid
+     *
+     * @param  _name         Human readable string identifying the integration
+     *
+     * @return               Boolean indicating if valid
+     */
+    function isValidIntegration(string memory _name) external view returns (bool) {
+        return integrations[_nameHash(_name)] != address(0);
+    }
+
+    /**
      * Check if a contract address is a fund or one of the system contracts
      *
      * @param  _contractAddress           The contract address to check
@@ -345,8 +482,16 @@ contract FolioController is Ownable {
             isFund[_contractAddress] ||
             fundValuer ||
             priceOracle ||
-            integrationRegistry ||
             _contractAddress == address(this)
         );
+    }
+
+    /* ============ Internal Only Function ============ */
+
+    /**
+     * Hashes the string and returns a bytes32 value
+     */
+    function _nameHash(string memory _name) internal pure returns(bytes32) {
+        return keccak256(bytes(_name));
     }
 }
