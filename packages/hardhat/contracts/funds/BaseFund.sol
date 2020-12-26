@@ -27,10 +27,10 @@ import { SignedSafeMath } from "@openzeppelin/contracts/math/SignedSafeMath.sol"
 
 import { AddressArrayUtils } from "./lib/AddressArrayUtils.sol";
 import { PreciseUnitMath } from "./lib/PreciseUnitMath.sol";
-import { IFolioController } from "./interfaces/IFolioController.sol";
-import { IWETH } from "./interfaces/external/weth/IWETH.sol";
-import { IIntegration } from "./interfaces/IIntegration.sol";
-import { IFund } from "./interfaces/IFund.sol";
+import { IFolioController } from "../interfaces/IFolioController.sol";
+import { IWETH } from "../interfaces/external/weth/IWETH.sol";
+import { IIntegration } from "../interfaces/IIntegration.sol";
+import { IFund } from "../interfaces/IFund.sol";
 
 
 /**

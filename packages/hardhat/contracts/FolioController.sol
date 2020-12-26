@@ -22,7 +22,7 @@ import "hardhat/console.sol";
 import { SafeMath } from "@openzeppelin/contracts/math/SafeMath.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
-import { ClosedFund } from "./ClosedFund.sol";
+import { ClosedFund } from "./funds/ClosedFund.sol";
 import { IFund } from "./interfaces/IFund.sol";
 import { AddressArrayUtils } from "./lib/AddressArrayUtils.sol";
 

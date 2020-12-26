@@ -26,7 +26,7 @@ import { IFund } from "../interfaces/IFund.sol";
 import { IWETH } from "../interfaces/external/weth/IWETH.sol";
 import { IBorrowIntegration } from "../interfaces/IBorrowIntegration.sol";
 import { IFolioController } from "../interfaces/IFolioController.sol";
-import { BaseIntegration } from "../BaseIntegration.sol";
+import { BaseIntegration } from "./BaseIntegration.sol";
 
 /**
  * @title BorrowIntetration

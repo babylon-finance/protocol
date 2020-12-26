@@ -26,9 +26,9 @@ import { SafeMath } from "@openzeppelin/contracts/math/SafeMath.sol";
 import { SignedSafeMath } from "@openzeppelin/contracts/math/SignedSafeMath.sol";
 import { PreciseUnitMath } from "./lib/PreciseUnitMath.sol";
 import { AddressArrayUtils } from "./lib/AddressArrayUtils.sol";
-import { IWETH } from "./interfaces/external/weth/IWETH.sol";
-import { IFolioController } from "./interfaces/IFolioController.sol";
-import { IFundIssuanceHook } from "./interfaces/IFundIssuanceHook.sol";
+import { IWETH } from "../interfaces/external/weth/IWETH.sol";
+import { IFolioController } from "../interfaces/IFolioController.sol";
+import { IFundIssuanceHook } from "../interfaces/IFundIssuanceHook.sol";
 import { BaseFund } from "./BaseFund.sol";
 
 
