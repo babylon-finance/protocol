@@ -88,7 +88,7 @@ interface IFund is IERC20 {
 
     function getDefaultPositionRealUnit(address _component) external view returns(int256);
     function getTotalPositionRealUnits(address _component) external view returns(int256);
-    function calculateAndEditPosition(address _component, int256 _componentPreviousBalance)
+    function calculateAndEditPosition(address _component, uint256 _componentPreviousBalance)
         external returns (uint256, uint256, uint256);
     function getPositions() external view returns(address[] memory);
     function isPosition(address _position) external view returns(bool);

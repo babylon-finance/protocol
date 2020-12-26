@@ -173,13 +173,13 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
      * fees and issuance premium. Only callable by the Fund's manager. Hook addresses are optional.
      * Address(0) means that no hook will be called.
      *
-     * @param _managerDepositFee
-     * @param _managerWithdrawalFee
-     * @param _managerPerformanceFee
-     * @param _premiumPercentage
-     * @param _minFundTokenSupply
-     * @param _managerDepositHook
-     * @param _managerWithdrawalHook
+     * @param _managerDepositFee    ad
+     * @param _managerWithdrawalFee ad
+     * @param _managerPerformanceFee ad
+     * @param _premiumPercentage ad
+     * @param _minFundTokenSupply ad
+     * @param _managerDepositHook ad
+     * @param _managerWithdrawalHook ad
      */
     function initialize(
         uint256 _managerDepositFee,
@@ -711,7 +711,7 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
      * Protocol Fee = (% manager fee share + direct fee %) * reserveAssetQuantity
      *
      * @param _reserveAssetQuantity         Quantity of reserve asset to calculate fees from
-     * @param _isDeposit
+     * @param _isDeposit ad
      *
      * @return  uint256                     Fees paid to the protocol in reserve asset
      * @return  uint256                     Fees paid to the manager in reserve asset
@@ -719,15 +719,15 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
      */
     function _getFees(
         uint256 _reserveAssetQuantity,
-        bool isDeposit
+        bool _isDeposit
     )
         internal
         view
         returns (uint256, uint256, uint256)
     {
         // Get protocol fee percentages
-        uint256 protocolFeePercentage = isDeposit ? IFolioController(controller).getProtocolDepositFundTokenFee() : IFolioController(controller).getProtocolWithdrawalFundTokenFee();
-        uint256 managerFeePercentage = isDeposit ? managerDepositFee : managerWithdrawalFee;
+        uint256 protocolFeePercentage = _isDeposit ? IFolioController(controller).getProtocolDepositFundTokenFee() : IFolioController(controller).getProtocolWithdrawalFundTokenFee();
+        uint256 managerFeePercentage = _isDeposit ? managerDepositFee : managerWithdrawalFee;
 
         // Calculate total notional fees
         uint256 protocolFees = protocolFeePercentage.preciseMul(_reserveAssetQuantity);

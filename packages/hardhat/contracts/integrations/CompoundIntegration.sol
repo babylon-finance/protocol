@@ -52,7 +52,7 @@ contract CompoundIntegration is BorrowIntegration {
    * @param _controller             Address of the controller
    * @param _maxCollateralFactor    Max collateral factor allowed
    */
-  constructor(IWETH _weth, IFolioController _controller, uint256 _maxCollateralFactor) public BorrowIntegration(_weth, _controller, _maxCollateralFactor) {
+  constructor(address _weth, address _controller, uint256 _maxCollateralFactor) public BorrowIntegration('Compound Borrowing', _weth, _controller, _maxCollateralFactor) {
 
   }
 
@@ -232,7 +232,7 @@ contract CompoundIntegration is BorrowIntegration {
     );
   }
 
-  function redeemUnderlying(address cToken, uint256 redeemTokens) internal payable
+  function redeemUnderlying(address cToken, uint256 redeemTokens) public payable
   {
     redeemTokens = normalizeDecimals(cToken, redeemTokens);
     // Retrieve your asset based on an amount of the asset

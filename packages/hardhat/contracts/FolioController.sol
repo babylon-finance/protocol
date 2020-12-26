@@ -118,7 +118,6 @@ contract FolioController is Ownable {
      *
      * @param _integrations           List of integrations to enable. All integrations must be approved by the Controller
      * @param _weth                   Address of the WETH ERC20
-     * @param _controller             Address of the controller
      * @param _reserveAsset           Address of the reserve asset ERC20
      * @param _manager                Address of the manager
      * @param _managerFeeRecipient    Address where the manager will receive the fees

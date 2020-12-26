@@ -400,7 +400,7 @@ abstract contract BaseFund is ERC20 {
      */
     function calculateAndEditPosition(
         address _component,
-        int256 _componentPreviousBalance
+        uint256 _componentPreviousBalance
     )
         external
         onlyIntegration
@@ -439,7 +439,7 @@ abstract contract BaseFund is ERC20 {
         uint256 _prePositionUnit
     )
         internal
-        pure
+        view
         returns (uint256)
     {
         // If pre action total notional amount is greater then subtract post action total notional and calculate new position units
@@ -488,7 +488,7 @@ abstract contract BaseFund is ERC20 {
      *
      * @return                    Total notional amount of units
      */
-    function getTotalNotional(uint256 _positionUnit) internal pure returns (uint256) {
+    function getTotalNotional(uint256 _positionUnit) internal view returns (uint256) {
         return totalSupply().preciseMul(_positionUnit);
     }
 
@@ -498,7 +498,7 @@ abstract contract BaseFund is ERC20 {
      * @param _totalNotional      Total notional amount of component prior to
      * @return                    position unit
      */
-    function getPositionUnit(uint256 _totalNotional) internal pure returns (uint256) {
+    function getPositionUnit(uint256 _totalNotional) internal view returns (uint256) {
         return _totalNotional.preciseDiv(totalSupply());
     }
 

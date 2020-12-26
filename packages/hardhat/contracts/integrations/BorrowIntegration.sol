@@ -46,11 +46,12 @@ abstract contract BorrowIntegration is BaseIntegration {
     /**
      * Creates the integration
      *
+     * @param _name                   Name of the integration
      * @param _weth                   Address of the WETH ERC20
      * @param _controller             Address of the controller
      * @param _maxCollateralFactor    Max collateral factor allowed
      */
-    constructor(IWETH _weth, IFolioController _controller, uint256 _maxCollateralFactor) public BaseIntegration(_weth, _controller) {
+    constructor(string memory _name, address _weth, address _controller, uint256 _maxCollateralFactor) BaseIntegration(_name, _weth, _controller) {
       maxCollateralFactor = _maxCollateralFactor;
     }
 
