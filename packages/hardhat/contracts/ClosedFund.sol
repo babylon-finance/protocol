@@ -34,7 +34,7 @@ import { IFund } from "./interfaces/IFund.sol";
 
 
 /**
- * @title OpenFund
+ * @title ClosedFund
  * @author DFolio
  *
  * OpenFund holds the logic to deposit, witthdraw and track contributions and fees.
