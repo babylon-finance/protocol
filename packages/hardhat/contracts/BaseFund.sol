@@ -155,7 +155,7 @@ abstract contract BaseFund is ERC20 {
         address _reserveAsset,
         string memory _name,
         string memory _symbol
-    ) public ERC20(_name, _symbol){
+    ) ERC20(_name, _symbol){
       require(_managerFeeRecipient != address(0), "Fee Recipient must be non-zero address.");
 
       controller = _controller;
@@ -209,7 +209,7 @@ abstract contract BaseFund is ERC20 {
       position.positionState = _integration != address(0) ? 1 : 0;
       position.integration = _integration;
       // position.updatedAt = [];
-      position.enteredAt = now;
+      position.enteredAt = block.timestamp;
 
       positions.push(_component);
       emit PositionAdded(_component);
@@ -221,7 +221,7 @@ abstract contract BaseFund is ERC20 {
     function removePosition(address _component) public onlyIntegration onlyActive {
         IFund.Position storage position = positionsByComponent[_component];
         positions = positions.remove(_component);
-        position.exitedAt = now;
+        position.exitedAt = block.timestamp;
         emit PositionRemoved(_component);
     }
 
@@ -234,7 +234,7 @@ abstract contract BaseFund is ERC20 {
 
         positionsByComponent[_component].virtualUnit = virtualUnit;
         positionsByComponent[_component].unit = _realUnit;
-        positionsByComponent[_component].updatedAt.push(now);
+        positionsByComponent[_component].updatedAt.push(block.timestamp);
 
         emit PositionUnitEdited(_component, _realUnit);
     }
@@ -286,7 +286,7 @@ abstract contract BaseFund is ERC20 {
     function removeIntegration(address _integration) external onlyManager {
         require(integrationStates[_integration] == IFund.IntegrationState.PENDING, "Integration must be pending");
 
-        IIntegration(_integration).removeIntegration();
+        // TODO IIntegration(_integration).removeIntegration();
 
         integrationStates[_integration] = IFund.IntegrationState.NONE;
 
@@ -373,8 +373,8 @@ abstract contract BaseFund is ERC20 {
      * Returns a list of Positions, through traversing the components.
      * Virtual units are converted to real units. This function is typically used off-chain for data presentation purposes.
      */
-    function getPositions() external view returns (IFund.Position[] memory) {
-        return positions;
+    function getPositions() external view returns (address[] memory) {
+      return positions;
     }
 
     /**
@@ -415,8 +415,6 @@ abstract contract BaseFund is ERC20 {
 
         return (currentBalance, positionUnit, newTokenUnit);
     }
-
-    receive() external payable {} // solium-disable-line quotes
 
     /* ============ Internal Functions ============ */
 

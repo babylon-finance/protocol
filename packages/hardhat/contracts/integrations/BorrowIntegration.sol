@@ -34,7 +34,7 @@ import { BaseIntegration } from "../BaseIntegration.sol";
  *
  * Base class for integration with lending protocols
  */
-abstract contract BorrowIntegration is BaseIntegration, IBorrowIntegration {
+abstract contract BorrowIntegration is BaseIntegration {
     using SafeMath for uint256;
     using SignedSafeMath for int256;
 

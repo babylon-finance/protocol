@@ -31,7 +31,7 @@ import { PreciseUnitMath } from "./lib/PreciseUnitMath.sol";
  *
  * Abstract class that houses common Integration-related state and functions.
  */
-abstract contract BaseIntegration is IIntegration {
+abstract contract BaseIntegration {
     using PreciseUnitMath for uint256;
 
     /* ============ Modifiers ============ */
@@ -63,7 +63,7 @@ abstract contract BaseIntegration is IIntegration {
      * @param _controller             Address of the controller
      */
 
-    constructor(IWETH _weth, IFolioController _controller) public {
+    constructor(IWETH _weth, IFolioController _controller) {
       require(_controller != address(0), "Controller must be non-zero address.");
       controller = _controller;
       weth = _weth;

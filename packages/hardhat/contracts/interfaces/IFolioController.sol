@@ -33,6 +33,7 @@ interface IFolioController {
     function getModuleFee(address _module, uint256 _feeType) external view returns(uint256);
     function isFund(address _fund) external view returns(bool);
     function isSystemContract(address _contractAddress) external view returns (bool);
+    function isValidIntegration(string memory _name) external view returns (bool);
 
     // TODO: FILL
 }
