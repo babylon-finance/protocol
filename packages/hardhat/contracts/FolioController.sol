@@ -74,7 +74,7 @@ contract FolioController is Ownable {
     // Mapping of fund => integration identifier => integration address
    mapping(bytes32 => address) private integrations;
 
-    // Mappings to check whether address is valid Set, Factory, Module or Resource
+    // Mappings to check whether address is valid Fund or Reserve Asset
     mapping(address => bool) public isFund;
     mapping(address => bool) public validReserveAsset;
 
@@ -93,10 +93,6 @@ contract FolioController is Ownable {
     uint256 public protocolFundCreationFee; // (0.01% = 1e14, 1% = 1e16)
     uint256 public protocolIssueFundTokenFee; // (0.01% = 1e14, 1% = 1e16)
     uint256 public protocolRedeemFundTokenFee; // (0.01% = 1e14, 1% = 1e16)
-
-    // Total funds in the system
-    uint256 public totalFunds = 0;
-    uint256 public totalActiveFunds = 0;
 
     /* ============ Functions ============ */
 
@@ -182,7 +178,6 @@ contract FolioController is Ownable {
       isFund[_fund] = true;
       funds.push(_fund);
       emit FundAdded(_setToken, msg.sender);
-      totalFunds++;
     }
 
 
@@ -199,7 +194,6 @@ contract FolioController is Ownable {
       isFund[_fund] = false;
 
       emit FundRemoved(_fund);
-      totalFunds--;
     }
 
     /**
@@ -244,7 +238,6 @@ contract FolioController is Ownable {
             "The fund needs to be active."
         );
         fund.hedgeFund.setActive(false);
-        totalActiveFunds--;
     }
 
     /**
@@ -260,7 +253,6 @@ contract FolioController is Ownable {
             "The fund needs to be disabled."
         );
         fund.hedgeFund.setActive(false);
-        totalActiveFunds++;
     }
 
     /**
