@@ -81,7 +81,7 @@ interface IFund is IERC20 {
 
     function manager() external view returns (address);
     function active() external view returns (bool);
-    function integrationStates(address _integration) external view returns (ModuleState);
+    function integrationStates(address _integration) external view returns (IntegrationState);
     function getIntegrations() external view returns (address[] memory);
 
     function getDefaultPositionRealUnit(address _component) external view returns(int256);

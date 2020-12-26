@@ -16,15 +16,13 @@
     SPDX-License-Identifier: Apache License, Version 2.0
 */
 
-pragma solidity 0.6.10;
+pragma solidity 0.7.4;
 
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-
-import { ExplicitERC20 } from "../../lib/ExplicitERC20.sol";
-import { IController } from "./interfaces/IController.sol";
-import { IInvestment } from "./interfaces/IInvestment.sol";
+import { IFolioController } from "./interfaces/IFolioController.sol";
+import { IIntegration } from "./interfaces/IIntegration.sol";
+import { IWETH } from "./interfaces/external/weth/IWETH.sol";
 import { IFund } from "./interfaces/IFund.sol";
-import { Invoke } from "./Invoke.sol";
 import { PreciseUnitMath } from "./lib/PreciseUnitMath.sol";
 
 /**
@@ -33,9 +31,8 @@ import { PreciseUnitMath } from "./lib/PreciseUnitMath.sol";
  *
  * Abstract class that houses common Integration-related state and functions.
  */
-abstract contract BaseIntegration is IInvestment {
+abstract contract BaseIntegration is IIntegration {
     using PreciseUnitMath for uint256;
-    using Invoke for IFund;
 
     /* ============ Modifiers ============ */
 
@@ -51,17 +48,49 @@ abstract contract BaseIntegration is IInvestment {
     /* ============ State Variables ============ */
 
     // Address of the controller
-    IController public controller;
+    IFolioController public controller;
+    // Wrapped ETH address
+    IWETH public immutable weth;
+    mapping(address => bool) public initializedByFund;
+    bool initialized;
 
     /* ============ Constructor ============ */
 
     /**
-     * Set state variables and map asset pairs to their oracles
+     * Creates the integration
      *
-     * @param _controller             Address of controller contract
+     * @param _weth                   Address of the WETH ERC20
+     * @param _controller             Address of the controller
      */
-    constructor(IController _controller) public {
-        controller = _controller;
+
+    constructor(IWETH _weth, IFolioController _controller) public {
+      require(_controller != address(0), "Controller must be non-zero address.");
+      controller = _controller;
+      weth = _weth;
+      initialized = false;
+    }
+
+    /* ============ External Functions ============ */
+
+    /**
+     * Initializes the integration.
+     * @param _fund addres of the fund
+     */
+    function initialize(address _fund) virtual public {
+      require(!initializedByFund[_fund], "integration has already been initialized");
+      IFund(_fund).initializeIntegration();
+      initializedByFund[_fund] = true;
+    }
+
+    /**
+     * Updates the position in the fund with the new units
+     *
+     * @param _fund                     Address of the fund
+     * @param _component                Address of the ERC20
+     * @param _newUnit                  New unit of the fund position
+     */
+    function updateFundPosition(address _fund, address _component, int256 _newUnit) external {
+      IFund(_fund).calculateAndEditPosition(_fund, _component, _newUnit);
     }
 
     /* ============ Internal Functions ============ */
@@ -75,28 +104,7 @@ abstract contract BaseIntegration is IInvestment {
      * @param  _quantity       The number of tokens to transfer
      */
     function transferFrom(IERC20 _token, address _from, address _to, uint256 _quantity) internal {
-        ExplicitERC20.transferFrom(_token, _from, _to, _quantity);
-    }
-
-    /**
-     * Gets the integration for the module with the passed in name. Validates that the address is not empty
-     */
-    function getAndValidateAdapter(string memory _integrationName) internal view returns(address) {
-        bytes32 integrationHash = getNameHash(_integrationName);
-        return getAndValidateAdapterWithHash(integrationHash);
-    }
-
-    /**
-     * Gets the integration for the module with the passed in hash. Validates that the address is not empty
-     */
-    function getAndValidateAdapterWithHash(bytes32 _integrationHash) internal view returns(address) {
-        address adapter = controller.getIntegrationRegistry().getIntegrationAdapterWithHash(
-            address(this),
-            _integrationHash
-        );
-
-        require(adapter != address(0), "Must be valid adapter");
-        return adapter;
+        IERC20(_token).transferFrom(_from, _to, _quantity);
     }
 
     /**
@@ -110,23 +118,23 @@ abstract contract BaseIntegration is IInvestment {
     /**
      * Pays the _feeQuantity from the _setToken denominated in _token to the protocol fee recipient
      */
-    function payProtocolFeeFromFund(IFund _fund, address _token, uint256 _feeQuantity) internal {
+    function payProtocolFeeFromFund(address _fund, address _token, uint256 _feeQuantity) internal {
         if (_feeQuantity > 0) {
-            _fund.strictInvokeTransfer(_token, controller.feeRecipient(), _feeQuantity);
+          IERC20(_token).transferFrom(_fund, controller.feeRecipient(), _feeQuantity);
         }
     }
 
     /**
      * Returns true if the integration is in process of initialization on the fund
      */
-    function isFundPendingInitialization(IFund _fund) internal view returns(bool) {
+    function isFundPendingInitialization(address _fund) internal view returns(bool) {
         return _fund.isPendingIntegration(address(this));
     }
 
     /**
      * Returns true if the address is the SetToken's manager
      */
-    function isFundManager(IFund _fund, address _toCheck) internal view returns(bool) {
+    function isFundManager(address _fund, address _toCheck) internal view returns(bool) {
         return _fund.manager() == _toCheck;
     }
 
@@ -134,15 +142,9 @@ abstract contract BaseIntegration is IInvestment {
      * Returns true if Fund must be enabled on the controller
      * and module is registered on the SetToken
      */
-    function isFundValidAndInitialized(IFund _fund) internal view returns(bool) {
+    function isFundValidAndInitialized(address _fund) internal view returns(bool) {
         return controller.isFund(address(_fund)) &&
             _fund.isInitializedIntegration(address(this));
     }
 
-    /**
-     * Hashes the string and returns a bytes32 value
-     */
-    function getNameHash(string memory _name) internal pure returns(bytes32) {
-        return keccak256(bytes(_name));
-    }
 }

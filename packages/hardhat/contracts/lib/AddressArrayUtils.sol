@@ -16,7 +16,7 @@
     SPDX-License-Identifier: Apache License, Version 2.0
 */
 
-pragma solidity 0.6.10;
+pragma solidity 0.7.4;
 
 /**
  * @title AddressArrayUtils
@@ -74,7 +74,7 @@ library AddressArrayUtils {
 
     /**
      * @param A The input array to search
-     * @param a The address to remove     
+     * @param a The address to remove
      * @return Returns the array with the object removed.
      */
     function remove(address[] memory A, address a)

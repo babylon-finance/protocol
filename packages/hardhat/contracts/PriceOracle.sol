@@ -22,11 +22,11 @@ pragma solidity 0.7.4;
 
 import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
 
-import { AddressArrayUtils } from "../lib/AddressArrayUtils.sol";
-import { IFolioController } from "../interfaces/IFolioController.sol";
-import { IOracle } from "../interfaces/IOracle.sol";
-import { IOracleAdapter } from "../interfaces/IOracleAdapter.sol";
-import { PreciseUnitMath } from "../lib/PreciseUnitMath.sol";
+import { AddressArrayUtils } from "./lib/AddressArrayUtils.sol";
+import { PreciseUnitMath } from "./lib/PreciseUnitMath.sol";
+import { IFolioController } from "./interfaces/IFolioController.sol";
+import { IOracle } from "./interfaces/IOracle.sol";
+import { IOracleAdapter } from "./interfaces/IOracleAdapter.sol";
 
 
 /**
@@ -53,7 +53,7 @@ contract PriceOracle is Ownable {
     /* ============ State Variables ============ */
 
     // Address of the Controller contract
-    IController public controller;
+    IFolioController public controller;
 
     // Mapping between assetA/assetB and its associated Price Oracle
     // Asset 1 -> Asset 2 -> IOracle Interface
@@ -78,7 +78,7 @@ contract PriceOracle is Ownable {
      * @param _oracles                List of oracles, index i maps to same index in assetOnes and assetTwos
      */
     constructor(
-        IController _controller,
+        IFolioController _controller,
         address _masterQuoteAsset,
         address[] memory _adapters,
         address[] memory _assetOnes,

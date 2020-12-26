@@ -17,10 +17,10 @@
 */
 pragma solidity 0.7.4;
 
-import { IIntegration } from "./IIntegrations";
+import { IIntegration } from "./IIntegration.sol";
 
 /**
- * @title IIntegration
+ * @title IBorrowIntegration
  * @author DFolio
  *
  * Interface for lending protocol integrations

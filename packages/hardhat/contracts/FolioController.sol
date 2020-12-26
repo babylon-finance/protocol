@@ -19,10 +19,11 @@
 pragma solidity 0.7.4;
 
 import "hardhat/console.sol";
-import { SafeMath } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import { SafeMath } from "@openzeppelin/contracts/math/SafeMath.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
-import { Fund } from "./Fund.sol";
+import { ClosedFund } from "./ClosedFund.sol";
+import { IFund } from "./interfaces/IFund.sol";
 import { AddressArrayUtils } from "./lib/AddressArrayUtils.sol";
 
 /**
@@ -82,8 +83,8 @@ contract FolioController is Ownable {
     address public feeRecipient;
 
     //Maximum fees a manager is allowed
-    uint256 public maxManagerIssueFee;
-    uint256 public maxManagerRedeemFee;
+    uint256 public maxManagerDepositFee;
+    uint256 public maxManagerWithdrawalFee;
     uint256 public maxManagerPerformanceFee; // on redeem
     // Max Premium percentage (0.01% = 1e14, 1% = 1e16). This premium is a buffer around oracle
     // prices paid by user to the SetToken, which prevents arbitrage and oracle front running
@@ -91,8 +92,8 @@ contract FolioController is Ownable {
 
     uint256 public protocolPerformanceFee; // (0.01% = 1e14, 1% = 1e16)
     uint256 public protocolFundCreationFee; // (0.01% = 1e14, 1% = 1e16)
-    uint256 public protocolIssueFundTokenFee; // (0.01% = 1e14, 1% = 1e16)
-    uint256 public protocolRedeemFundTokenFee; // (0.01% = 1e14, 1% = 1e16)
+    uint256 public protocolDepositFundTokenFee; // (0.01% = 1e14, 1% = 1e16)
+    uint256 public protocolWithdrawalFundTokenFee; // (0.01% = 1e14, 1% = 1e16)
 
     /* ============ Functions ============ */
 
@@ -100,18 +101,15 @@ contract FolioController is Ownable {
      * Initializes the initial fee recipient on deployment.
      *
      * @param _feeRecipient           Address of the initial protocol fee recipient
-     * @param _integrationRegistry    Address of the initial integration registry
      * @param _fundValuer             Address of the initial fundValuer
      * @param _priceOracle            Address of the initial _priceOracle
      */
     constructor(
       address _feeRecipient,
-      address _integrationRegistry,
       address _fundValuer,
       address _priceOracle
       ) public {
         feeRecipient = _feeRecipient;
-        integrationRegistry = _integrationRegistry;
         fundValuer = _fundValuer;
         priceOracle = _priceOracle;
     }
@@ -150,7 +148,7 @@ contract FolioController is Ownable {
         }
 
         // Creates a new Fund instance
-        Fund fund = new Fund(
+        ClosedFund fund = new ClosedFund(
             _components,
             _units,
             address(this),
@@ -159,7 +157,7 @@ contract FolioController is Ownable {
             _symbol
         );
 
-        addSet(address(fund));
+        addFund(address(fund));
 
         emit FundCreated(address(fund), _manager, _name, _symbol);
 
@@ -177,7 +175,7 @@ contract FolioController is Ownable {
       require(!isFund[_fund], "Fund already exists");
       isFund[_fund] = true;
       funds.push(_fund);
-      emit FundAdded(_setToken, msg.sender);
+      emit FundAdded(_fund, msg.sender);
     }
 
 
@@ -232,12 +230,12 @@ contract FolioController is Ownable {
      */
     function disableFund(address _fund) external onlyOwner {
         require(isFund[_fund], "Fund does not exist");
-        Fund memory fund = funds[_fund];
+        IFund fund = IFund(funds[_fund]);
         require(
             fund.active(),
             "The fund needs to be active."
         );
-        fund.hedgeFund.setActive(false);
+        fund.setActive(false);
     }
 
     /**
@@ -247,12 +245,12 @@ contract FolioController is Ownable {
      */
     function reenableFund(address _fund) external onlyOwner {
         require(isFund[_fund], "Fund does not exist");
-        Fund memory fund = funds[_fund];
+        IFund fund = IFund(funds[_fund]);
         require(
             !fund.active(),
             "The fund needs to be disabled."
         );
-        fund.hedgeFund.setActive(false);
+        fund.setActive(false);
     }
 
     /**
@@ -276,13 +274,13 @@ contract FolioController is Ownable {
      * @param _fundValuer Address of the new price oracle
      */
     function editFundvaluer(address _fundValuer) external onlyOwner {
-       require(_fundvaluer != fundValuer, "Fund Valuer already exists");
+       require(_fundValuer != fundValuer, "Fund Valuer already exists");
 
-       require(_fundvaluer != address(0), "Fund Valuer must exist");
+       require(_fundValuer != address(0), "Fund Valuer must exist");
 
-       fundValuer = _fundvaluer;
+       fundValuer = _fundValuer;
 
-       emit FundValuerChanged(_fundvaluer);
+       emit FundValuerChanged(_fundValuer);
     }
 
     /**
@@ -383,7 +381,7 @@ contract FolioController is Ownable {
         onlyOwner
     {
         // Storing name count to local variable to save on invocation
-        uint256 fundsCount = _funds.length;
+        uint256 fundsCount = funds.length;
 
         require(_names.length == _integrations.length, "Names and integration addresses lengths mismatch");
 
@@ -415,11 +413,11 @@ contract FolioController is Ownable {
 
     /* ============ External Getter Functions ============ */
 
-    function getPriceOracle() external view returns (address memory) {
+    function getPriceOracle() external view returns (address) {
         return priceOracle;
     }
 
-    function getFundValuer() external view returns (address memory) {
+    function getFundValuer() external view returns (address) {
         return fundValuer;
     }
 
@@ -439,18 +437,18 @@ contract FolioController is Ownable {
      * @return               Address of integration
      */
     function getIntegrationByName(string memory _name) external view returns (address) {
-        return integrations[_fund][_nameHash(_name)];
+        return integrations[_nameHash(_name)];
     }
 
     /**
      * Get integration integration address associated with passed hashed name
      *
-     * @param  _nameHash     Hash of human readable integration name
+     * @param  _nameHashP     Hash of human readable integration name
      *
      * @return               Address of integration
      */
-    function getIntegrationWithHash(bytes32 _nameHash) external view returns (address) {
-        return integrations[_nameHash];
+    function getIntegrationWithHash(bytes32 _nameHashP) external view returns (address) {
+        return integrations[_nameHashP];
     }
 
     /**

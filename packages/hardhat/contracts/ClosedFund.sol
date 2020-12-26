@@ -20,26 +20,25 @@ pragma solidity 0.7.4;
 
 import "hardhat/console.sol";
 import { Address } from "@openzeppelin/contracts/utils/Address.sol";
-import { ERC20 } from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { ReentrancyGuard } from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import { SafeMath } from "@openzeppelin/contracts/math/SafeMath.sol";
 import { SignedSafeMath } from "@openzeppelin/contracts/math/SignedSafeMath.sol";
 import { PreciseUnitMath } from "./lib/PreciseUnitMath.sol";
 import { AddressArrayUtils } from "./lib/AddressArrayUtils.sol";
-
-import { Investment } from "./investments/Investment.sol"
+import { IWETH } from "./interfaces/external/weth/IWETH.sol";
 import { IFolioController } from "./interfaces/IFolioController.sol";
 import { IFundIssuanceHook } from "./interfaces/IFundIssuanceHook.sol";
-import { IFund } from "./interfaces/IFund.sol";
+import { BaseFund } from "./BaseFund.sol";
 
 
 /**
  * @title ClosedFund
  * @author DFolio
  *
- * OpenFund holds the logic to deposit, witthdraw and track contributions and fees.
+ * ClosedFund holds the logic to deposit, witthdraw and track contributions and fees.
  */
-contract OpenFund is BaseFund, ReentrancyGuard {
+contract ClosedFund is BaseFund, ReentrancyGuard {
     using SafeMath for uint256;
     using SignedSafeMath for int256;
     using PreciseUnitMath for int256;
@@ -47,65 +46,70 @@ contract OpenFund is BaseFund, ReentrancyGuard {
     using AddressArrayUtils for address[];
 
     /* ============ Events ============ */
-    event FundTokenIssued(
+    event FundTokenDeposited(
         address indexed _fund,
         address indexed _to,
         address _hookContract,
         uint256 _quantity
     );
-    event FundTokenRedeemed(
+    event FundTokenwithdrawed(
         address indexed _fund,
-        address indexed _redeemer,
+        address indexed _from,
         address indexed _to,
         uint256 _quantity
     );
 
-    event ContributionLog(address indexed contributor,uint256 amount,uint256 timestamp);
+    event PremiumEdited(uint256 amount);
+    event ManagerFeeEdited(uint256 amount, string kind);
+    event ContributionLog(address indexed contributor, uint256 amount, uint256 tokensReceived, uint256 timestamp);
     event WithdrawalLog(address indexed sender, uint amount, uint timestamp);
 
     /* ============ Modifiers ============ */
+
+    modifier onlyContributor(address payable _caller) {
+      _validateOnlyContributor();
+      _;
+    }
 
     /* ============ State Variables ============ */
 
     struct ActionInfo {
       uint256 preFeeReserveQuantity;                 // Reserve value before fees; During issuance, represents raw quantity
-                                                     // During redeem, represents post-premium value
+                                                     // During withdrawal, represents post-premium value
       uint256 protocolFees;                          // Total protocol fees (direct + manager revenue share)
       uint256 managerFee;                            // Total manager fee paid in reserve asset
       uint256 netFlowQuantity;                       // When issuing, quantity of reserve asset sent to Fund
-                                                     // When redeeming, quantity of reserve asset sent to redeemer
+                                                     // When withdrawaling, quantity of reserve asset sent to withdrawaler
       uint256 fundTokenQuantity;                      // When issuing, quantity of Fund tokens minted to mintee
-                                                     // When redeeming, quantity of Fund tokens redeemed
-      uint256 previousFundTokenSupply;                // Fund token supply prior to issue/redeem action
-      uint256 newFundTokenSupply;                     // Fund token supply after issue/redeem action
-      int256 newPositionMultiplier;                  // Fund token position multiplier after issue/redeem
-      uint256 newReservePositionUnit;                // Fund token reserve asset position unit after issue/redeem
+                                                     // When withdrawaling, quantity of Fund tokens withdrawaled
+      uint256 previousFundTokenSupply;                // Fund token supply prior to deposit/withdrawal action
+      uint256 newFundTokenSupply;                     // Fund token supply after deposit/withdrawal action
+      int256 newPositionMultiplier;                  // Fund token position multiplier after deposit/withdrawal
+      uint256 newReservePositionUnit;                // Fund token reserve asset position unit after deposit/withdrawal
     }
 
-    IFundIssuanceHook managerIssuanceHook;      // Issuance hook configurations
-    IFundIssuanceHook managerRedemptionHook;    // Redemption hook configurations
+    IFundIssuanceHook managerDepositHook;      // Deposit hook configurations
+    IFundIssuanceHook managerWithdrawalHook;    // Withdrawal hook configurations
 
-    uint256 managerIssueFee;  // % of the issuance denominated in the reserve asset
-    uint256 managerWithdrawalFee; // % of the redemption denominated in the reserve asset,  charged in withdrawal
+    uint256 managerDepositFee;  // % of the deposit denominated in the reserve asset
+    uint256 managerWithdrawalFee; // % of the withdrawal denominated in the reserve asset,  charged in withdrawal
     uint256 managerPerformanceFee; // % of the profits denominated in the reserve asset, charged in withdrawal
     uint256 premiumPercentage; // Premium percentage (0.01% = 1e14, 1% = 1e16). This premium is a buffer around oracle
                                 // prices paid by user to the Fund Token, which prevents arbitrage and oracle front running
 
-    // Wrapped ETH address
-    IWETH public immutable weth;
-
     // List of contributors
     struct Contributor {
-      uint256 amount; //wei
+      uint256 totalDeposit; //wei
+      uint256 tokensReceived;
       uint256 timestamp;
-      bool claimed;
-    }
+    } // TODO: may need to override transfer of tokens or disable transfer if we care to keep this in sync
+
     mapping(address => Contributor) public contributors;
     uint256 public totalContributors;
     uint256 public totalFundsDeposited;
+    uint256 public totalFunds;
     // Min contribution in the fund
     uint256 public minContribution = 1000000000000; //wei
-    uint256 public buyRate =  10 ** 9;
     uint256 public minFundTokenSupply;
 
 
@@ -118,25 +122,25 @@ contract OpenFund is BaseFund, ReentrancyGuard {
      *
      * @param _integrations           List of integrations to enable. All integrations must be approved by the Controller
      * @param _weth                   Address of the WETH ERC20
-     * @param _reserveAsset           Address of the reserve asset ERC20
      * @param _controller             Address of the controller
+     * @param _reserveAsset           Address of the reserve asset ERC20
      * @param _manager                Address of the manager
      * @param _managerFeeRecipient    Address where the manager will receive the fees
      * @param _name                   Name of the Fund
      * @param _symbol                 Symbol of the Fund
+     * @param _minContribution        Min contribution to the fund
      */
 
     constructor(
         address[] memory _integrations,
         IWETH _weth,
-        IController _controller,
+        IFolioController _controller,
+        address _reserveAsset,
         address _manager,
         address _managerFeeRecipient,
-        address _reserveAsset,
         string memory _name,
         string memory _symbol,
-        uint256 _minContribution,
-        uint 256 _buyRate
+        uint256 _minContribution
     ) public BaseFund(
         _integrations,
         _weth,
@@ -147,49 +151,52 @@ contract OpenFund is BaseFund, ReentrancyGuard {
         _symbol
       ){
         minContribution = _minContribution;
-        buyRate = _buyRate;
         totalContributors = 0;
         totalFundsDeposited = 0;
+        totalFunds = 0;
     }
 
     /* ============ External Functions ============ */
 
     /**
-     * SET MANAGER ONLY. Initializes this module to the Fund with hooks, allowed reserve assets,
+     * FUND MANAGER ONLY. Initializes this module to the Fund with hooks, allowed reserve assets,
      * fees and issuance premium. Only callable by the Fund's manager. Hook addresses are optional.
      * Address(0) means that no hook will be called.
      *
-     * @param _managerIssueFee
+     * @param _managerDepositFee
      * @param _managerWithdrawalFee
      * @param _managerPerformanceFee
      * @param _premiumPercentage
+     * @param _minFundTokenSupply
+     * @param _managerDepositHook
+     * @param _managerWithdrawalHook
      */
     function initialize(
-        uint256 _managerIssueFee,
+        uint256 _managerDepositFee,
         uint256 _managerWithdrawalFee,
         uint256 _managerPerformanceFee,
         uint256 _premiumPercentage,
         uint256 _minFundTokenSupply,
-        IFundIssuanceHook _managerIssuanceHook,
-        IFundIssuanceHook _managerRedeemHook,
+        IFundIssuanceHook _managerDepositHook,
+        IFundIssuanceHook _managerWithdrawalHook
     )
         external
         onlyManager
         onlyInactive
     {
-        require(_managerIssueFee <= IFolioController(controller).maxManagerIssueFee, "Manager issue fee must be less than max");
-        require(_managerRedeemFee <= IFolioController(controller).maxManagerRedeemFee, "Manager redeem fee must be less than max");
+        require(_managerDepositFee <= IFolioController(controller).maxManagerDepositFee, "Manager deposit fee must be less than max");
+        require(_managerWithdrawalFee <= IFolioController(controller).maxManagerWithdrawalFee, "Manager withdrawal fee must be less than max");
         require(_managerPerformanceFee <= IFolioController(controller).maxManagerPerformanceFee, "Manager performance fee must be less than max");
         require(_premiumPercentage <= IFolioController(controller).maxFundPremiumPercentage, "Premium must be less than max");
         require(_minFundTokenSupply > 0, "Min Fund token supply must be greater than 0");
 
-        managerIssueFee = _managerIssueFee;
+        managerDepositFee = _managerDepositFee;
         minFundTokenSupply = _minFundTokenSupply;
         managerWithdrawalFee = _managerWithdrawalFee;
         managerPerformanceFee = _managerPerformanceFee;
         premiumPercentage = _premiumPercentage;
-        managerIssuanceHook = _managerIssuanceHook;
-        maangerRedeemHook = _managerRedeemHook;
+        managerDepositHook = _managerDepositHook;
+        managerWithdrawalHook = _managerWithdrawalHook;
         active = true;
     }
 
@@ -218,40 +225,42 @@ contract OpenFund is BaseFund, ReentrancyGuard {
         // Always wrap to WETH
         weth.deposit{ value: msg.value }();
 
-        if (_reserveAsset != weth) {
+        if (reserveAsset != weth) {
           // TODO: trade from weth into reserve asset
         }
 
-        _validateReserveAsset( _reserveAsset, _reserveAssetQuantity);
+        _validateReserveAsset(reserveAsset, _reserveAssetQuantity);
 
-        _callPreIssueHooks(_reserveAsset, _reserveAssetQuantity, msg.sender, _to);
+        _callPreDepositHooks(reserveAsset, _reserveAssetQuantity, msg.sender, _to);
 
-        ActionInfo memory issueInfo = _createIssuanceInfo(_reserveAsset, _reserveAssetQuantity);
+        ActionInfo memory depositInfo = _createIssuanceInfo(reserveAsset, _reserveAssetQuantity);
 
-        _validateIssuanceInfo(_minFundTokenReceiveQuantity, issueInfo);
+        _validateIssuanceInfo(_minFundTokenReceiveQuantity, depositInfo);
 
-        _transferCollateralAndHandleFees(IERC20(_reserveAsset), issueInfo);
+        _transferCollateralAndHandleFees(IERC20(reserveAsset), depositInfo);
 
         Contributor storage contributor = contributors[msg.sender];
 
         // If new contributor, create one, increment count, and set the current TS
-        if (contributor.amount == 0) {
+        if (contributor.totalDeposit == 0) {
           totalContributors = totalContributors.add(1);
           contributor.timestamp = block.timestamp;
         }
 
         totalFunds = totalFunds.add(msg.value);
-        contributor.amount = contributor.amount.add(msg.value);
-        emit ContributionLog(msg.sender, msg.value, block.timestamp);
+        totalFundsDeposited = totalFundsDeposited.add(msg.value);
+        contributor.totalDeposit = contributor.totalDeposit.add(msg.value);
+        contributor.tokensReceived = contributor.tokensReceived.add(depositInfo.fundTokenQuantity);
+        emit ContributionLog(msg.sender, msg.value, depositInfo.fundTokenQuantity, block.timestamp);
 
-        _handleIssueStateUpdates(_reserveAsset, _to, issueInfo);
+        _handleDepositStateUpdates(reserveAsset, _to, depositInfo);
     }
 
     /**
-     * Redeems the Fund's positions and sends the components of the given
+     * Withdrawals the Fund's positions and sends the components of the given
      * quantity to the caller. This function only handles Default Positions (positionState = 0).
      *
-     * @param _quantity             Quantity of the fund token to redeem
+     * @param _fundTokenQuantity             Quantity of the fund token to withdrawal
      * @param _minReserveReceiveQuantity    Min quantity of reserve asset to receive
      * @param _to                   Address to send component assets to
      */
@@ -264,38 +273,99 @@ contract OpenFund is BaseFund, ReentrancyGuard {
         nonReentrant
         onlyContributor(msg.sender)
     {
-      Contributor storage contributor = contributors[msg.sender];
-      require(_amount <= contributor.amount, 'Withdrawal amount must be less than or equal to deposited amount');
+      require(_fundTokenQuantity <= reserveAsset.balanceOf(msg.sender) > 0, 'Withdrawal amount must be less than or equal to deposited amount');
 
-      _validateReserveAsset( _reserveAsset, _fundTokenQuantity);
+      _validateReserveAsset(reserveAsset, _fundTokenQuantity);
 
-      _callPreRedeemHooks(_fundTokenQuantity, msg.sender, _to);
+      _callPreWithdrawalHooks(_fundTokenQuantity, msg.sender, _to);
 
-      ActionInfo memory redeemInfo = _createRedemptionInfo(_reserveAsset, _fundTokenQuantity);
+      ActionInfo memory withdrawalInfo = _createRedemptionInfo(reserveAsset, _fundTokenQuantity);
 
-      _validateRedemptionInfo(_minReserveReceiveQuantity, _fundTokenQuantity, redeemInfo);
-
-      contributor.amount = contributor.amount.sub(_amount);
-      totalFunds = totalFunds.sub(_amount);
-      if (contributor.amount == 0) {
-        totalContributors = totalContributors.sub(1);
-      }
-
+      _validateRedemptionInfo(_minReserveReceiveQuantity, _fundTokenQuantity, withdrawalInfo);
 
       _burn(msg.sender, _fundTokenQuantity);
 
-      emit WithdrawalLog(msg.sender, _amount, block.timestamp);
+      emit WithdrawalLog(msg.sender, withdrawalInfo.netFlowQuantity, block.timestamp);
 
       // Instruct the Fund to transfer the reserve asset back to the user
-      IERC20(_reserveAsset).transfer(_to, redeemInfo.netFlowQuantity);
+      IERC20(reserveAsset).transfer(_to, withdrawalInfo.netFlowQuantity);
 
-      weth.withdraw(redeemInfo.netFlowQuantity);
+      weth.withdraw(withdrawalInfo.netFlowQuantity);
 
-      _to.transfer(redeemInfo.netFlowQuantity);
+      totalFunds = totalFunds.sub(withdrawalInfo.netFlowQuantity);
 
-      _handleRedemptionFees(_reserveAsset, redeemInfo);
+      _to.transfer(withdrawalInfo.netFlowQuantity);
 
-      _handleRedeemStateUpdates(_reserveAsset, _to, redeemInfo);
+      _handleRedemptionFees(reserveAsset, withdrawalInfo);
+
+      _handleWithdrawalStateUpdates(reserveAsset, _to, withdrawalInfo);
+    }
+
+    /**
+     * FUND MANAGER ONLY. Edit the premium percentage
+     *
+     * @param _premiumPercentage            Premium percentage in 10e16 (e.g. 10e16 = 1%)
+     */
+    function editPremium(uint256 _premiumPercentage) external onlyManager {
+        require(_premiumPercentage <= IFolioController(controller).maxPremiumPercentage, "Premium must be less than maximum allowed");
+
+        premiumPercentage = _premiumPercentage;
+
+        emit PremiumEdited(_premiumPercentage);
+    }
+
+    /**
+     * Fund MANAGER ONLY. Edit manager deposit fee
+     *
+     * @param _managerDepositFee         Manager deposit fee percentage in 10e16 (e.g. 10e16 = 1%)
+     */
+    function editManagerDepositFee(
+        address _fund,
+        uint256 _managerDepositFee
+    )
+        external
+        onlyManager
+        onlyInactive
+    {
+        require(_managerDepositFee <= IFolioController(controller).maxManagerDepositFee, "Manager fee must be less than maximum allowed");
+        managerDepositFee = _managerDepositFee;
+        emit ManagerFeeEdited(_managerDepositFee, "Manager Deposit Fee");
+    }
+
+    /**
+     * Fund MANAGER ONLY. Edit manager deposit fee
+     *
+     * @param _managerWithdrawalFee         Manager withdrawal fee percentage in 10e16 (e.g. 10e16 = 1%)
+     */
+    function editManagerWithdrawalFee(
+        address _fund,
+        uint256 _managerWithdrawalFee
+    )
+        external
+        onlyManager
+        onlyInactive
+    {
+        require(_managerWithdrawalFee <= IFolioController(controller).maxManagerWithdrawalFee, "Manager fee must be less than maximum allowed");
+        managerWithdrawalFee = _managerWithdrawalFee;
+        emit ManagerFeeEdited(_managerWithdrawalFee, "Manager Withdrawal Fee");
+    }
+
+    /**
+     * Fund MANAGER ONLY. Edit manager deposit fee
+     *
+     * @param _managerPerformanceFee         Manager performance fee percentage in 10e16 (e.g. 10e16 = 1%)
+     */
+    function editManagerPerformanceFee(
+        address _fund,
+        uint256 _managerPerformanceFee
+    )
+        external
+        onlyManager
+        onlyInactive
+    {
+        require(_managerPerformanceFee <= IFolioController(controller).maxManagerPerformanceFee, "Manager fee must be less than maximum allowed");
+        managerPerformanceFee = _managerPerformanceFee;
+        emit ManagerFeeEdited(_managerPerformanceFee, "Manager Performance Fee");
     }
 
 
@@ -305,12 +375,12 @@ contract OpenFund is BaseFund, ReentrancyGuard {
       return premiumPercentage;
     }
 
-    function getIssueManagerFee() external view returns (uint256) {
-      return managerIssueFee;
+    function getDepositManagerFee() external view returns (uint256) {
+      return managerDepositFee;
     }
 
-    function getRedeemManagerFee() external view returns (uint256) {
-      return managerRedeemFee;
+    function getWithdrawalManagerFee() external view returns (uint256) {
+      return managerWithdrawalFee;
     }
 
     function getManagerPerformanceFee() external view returns (uint256) {
@@ -321,11 +391,11 @@ contract OpenFund is BaseFund, ReentrancyGuard {
      * Get the expected fund tokens minted to recipient on issuance
      *
      * @param _reserveAsset                 Address of the reserve asset
-     * @param _reserveAssetQuantity         Quantity of the reserve asset to issue with
+     * @param _reserveAssetQuantity         Quantity of the reserve asset to deposit with
      *
      * @return  uint256                     Expected Fund tokens to be minted to recipient
      */
-    function getExpectedFundTokensIssuedQuantity(
+    function getExpectedFundTokensDepositdQuantity(
         address _reserveAsset,
         uint256 _reserveAssetQuantity
     )
@@ -334,7 +404,7 @@ contract OpenFund is BaseFund, ReentrancyGuard {
         returns (uint256)
     {
         (,, uint256 netReserveFlow) = _getFees(
-            _reserveAssetQuantity,
+            _reserveAssetQuantity, true
         );
 
         uint256 setTotalSupply = totalSupply();
@@ -347,14 +417,14 @@ contract OpenFund is BaseFund, ReentrancyGuard {
     }
 
     /**
-     * Get the expected reserve asset to be redeemed
+     * Get the expected reserve asset to be withdrawaled
      *
      * @param _reserveAsset                 Address of the reserve asset
-     * @param _fundTokenQuantity             Quantity of Fund tokens to redeem
+     * @param _fundTokenQuantity             Quantity of Fund tokens to withdrawal
      *
-     * @return  uint256                     Expected reserve asset quantity redeemed
+     * @return  uint256                     Expected reserve asset quantity withdrawaled
      */
-    function getExpectedReserveRedeemQuantity(
+    function getExpectedReserveWithdrawalQuantity(
         address _reserveAsset,
         uint256 _fundTokenQuantity
     )
@@ -362,24 +432,24 @@ contract OpenFund is BaseFund, ReentrancyGuard {
         view
         returns (uint256)
     {
-        uint256 preFeeReserveQuantity = _getRedeemReserveQuantity(_reserveAsset, _fundTokenQuantity);
+        uint256 preFeeReserveQuantity = _getWithdrawalReserveQuantity(_reserveAsset, _fundTokenQuantity);
 
         (,, uint256 netReserveFlows) = _getFees(
-            preFeeReserveQuantity,
+            preFeeReserveQuantity, false
         );
 
         return netReserveFlows;
     }
 
     /**
-     * Checks if issue is valid
+     * Checks if deposit is valid
      *
      * @param _reserveAsset                 Address of the reserve asset
-     * @param _reserveAssetQuantity         Quantity of the reserve asset to issue with
+     * @param _reserveAssetQuantity         Quantity of the reserve asset to deposit with
      *
-     * @return  bool                        Returns true if issue is valid
+     * @return  bool                        Returns true if deposit is valid
      */
-    function isIssueValid(
+    function isDepositValid(
         address _reserveAsset,
         uint256 _reserveAssetQuantity
     )
@@ -387,22 +457,22 @@ contract OpenFund is BaseFund, ReentrancyGuard {
         view
         returns (bool)
     {
-        uint256 setTotalSupply = totalSupply();
+      uint256 setTotalSupply = totalSupply();
 
-    return _reserveAssetQuantity != 0
-            && IController(controller).isValidReserveAsset(_reserveAsset)
-            && setTotalSupply >= minFundTokenSupply
+      return _reserveAssetQuantity != 0
+              && IFolioController(controller).isValidReserveAsset(_reserveAsset)
+              && setTotalSupply >= minFundTokenSupply;
     }
 
     /**
-     * Checks if redeem is valid
+     * Checks if withdrawal is valid
      *
      * @param _reserveAsset                 Address of the reserve asset
-     * @param _fundTokenQuantity             Quantity of fund tokens to redeem
+     * @param _fundTokenQuantity             Quantity of fund tokens to withdrawal
      *
-     * @return  bool                        Returns true if redeem is valid
+     * @return  bool                        Returns true if withdrawal is valid
      */
-    function isRedeemValid(
+    function isWithdrawalValid(
         address _reserveAsset,
         uint256 _fundTokenQuantity
     )
@@ -414,20 +484,20 @@ contract OpenFund is BaseFund, ReentrancyGuard {
 
         if (
             _fundTokenQuantity == 0
-            || !IController(controller).isValidReserveAsset(_reserveAsset)
+            || !IFolioController(controller).isValidReserveAsset(_reserveAsset)
             || setTotalSupply <  minFundTokenSupply.add(_fundTokenQuantity)
         ) {
             return false;
         } else {
-            uint256 totalRedeemValue =_getRedeemReserveQuantity(_reserveAsset, _fundTokenQuantity);
+            uint256 totalWithdrawalValue =_getWithdrawalReserveQuantity(_reserveAsset, _fundTokenQuantity);
 
-            (,, uint256 expectedRedeemQuantity) = _getFees(
-                totalRedeemValue,
+            (,, uint256 expectedWithdrawalQuantity) = _getFees(
+                totalWithdrawalValue, false
             );
 
             uint256 existingUnit = getPositionRealUnit(_reserveAsset).toUint256();
 
-            return existingUnit.preciseMul(setTotalSupply) >= expectedRedeemQuantity;
+            return existingUnit.preciseMul(setTotalSupply) >= expectedWithdrawalQuantity;
         }
     }
 
@@ -440,33 +510,33 @@ contract OpenFund is BaseFund, ReentrancyGuard {
         require(IFolioController(controller).isValidReserveAsset(_reserveAsset), "Must be valid reserve asset");
     }
 
-    function _validateIssuanceInfo(uint256 _minFundTokenReceiveQuantity, ActionInfo memory _issueInfo) internal view {
+    function _validateIssuanceInfo(uint256 _minFundTokenReceiveQuantity, ActionInfo memory _depositInfo) internal view {
         // Check that total supply is greater than min supply needed for issuance
         // Note: A min supply amount is needed to avoid division by 0 when Fund token supply is 0
         require(
-            _issueInfo.previousFundTokenSupply >= minFundTokenSupply,
+            _depositInfo.previousFundTokenSupply >= minFundTokenSupply,
             "Supply must be greater than minimum to enable issuance"
         );
 
-        require(_issueInfo.setFundTokenQuantity >= _minFundTokenReceiveQuantity, "Must be greater than min Fund token");
+        require(_depositInfo.setFundTokenQuantity >= _minFundTokenReceiveQuantity, "Must be greater than min Fund token");
     }
 
     function _validateRedemptionInfo(
         uint256 _minReserveReceiveQuantity,
         uint256 _fundTokenQuantity,
-        ActionInfo memory _redeemInfo
+        ActionInfo memory _withdrawalInfo
     )
         internal
         view
     {
         // Check that new supply is more than min supply needed for redemption
-        // Note: A min supply amount is needed to avoid division by 0 when redeeming fund token to 0
+        // Note: A min supply amount is needed to avoid division by 0 when withdrawaling fund token to 0
         require(
-            _redeemInfo.newFundTokenSupply >= minFundTokenSupply,
+            _withdrawalInfo.newFundTokenSupply >= minFundTokenSupply,
             "Supply must be greater than minimum to enable redemption"
         );
 
-        require(_redeemInfo.netFlowQuantity >= _minReserveReceiveQuantity, "Must be greater than min receive reserve quantity");
+        require(_withdrawalInfo.netFlowQuantity >= _minReserveReceiveQuantity, "Must be greater than min receive reserve quantity");
     }
 
     function _createIssuanceInfo(
@@ -477,27 +547,27 @@ contract OpenFund is BaseFund, ReentrancyGuard {
         view
         returns (ActionInfo memory)
     {
-        ActionInfo memory issueInfo;
+        ActionInfo memory depositInfo;
 
-        issueInfo.previousFundTokenSupply = totalSupply();
+        depositInfo.previousFundTokenSupply = totalSupply();
 
-        issueInfo.preFeeReserveQuantity = _reserveAssetQuantity;
+        depositInfo.preFeeReserveQuantity = _reserveAssetQuantity;
 
-        (issueInfo.protocolFees, issueInfo.managerFee, issueInfo.netFlowQuantity) = _getFees(
-            issueInfo.preFeeReserveQuantity
+        (depositInfo.protocolFees, depositInfo.managerFee, depositInfo.netFlowQuantity) = _getFees(
+            depositInfo.preFeeReserveQuantity, true
         );
 
-        issueInfo.fundTokenQuantity = _getFundTokenMintQuantity(
+        depositInfo.fundTokenQuantity = _getFundTokenMintQuantity(
             _reserveAsset,
-            issueInfo.netFlowQuantity,
-            issueInfo.previousFundTokenSupply
+            depositInfo.netFlowQuantity,
+            depositInfo.previousFundTokenSupply
         );
 
-        (issueInfo.newFundTokenSupply, issueInfo.newPositionMultiplier) = _getIssuePositionMultiplier(issueInfo);
+        (depositInfo.newFundTokenSupply, depositInfo.newPositionMultiplier) = _getDepositPositionMultiplier(depositInfo);
 
-        issueInfo.newReservePositionUnit = _getIssuePositionUnit(_reserveAsset, issueInfo);
+        depositInfo.newReservePositionUnit = _getDepositPositionUnit(_reserveAsset, depositInfo);
 
-        return issueInfo;
+        return depositInfo;
     }
 
     function _createRedemptionInfo(
@@ -508,103 +578,103 @@ contract OpenFund is BaseFund, ReentrancyGuard {
         view
         returns (ActionInfo memory)
     {
-        ActionInfo memory redeemInfo;
+        ActionInfo memory withdrawalInfo;
 
-        redeemInfo.fundTokenQuantity = _fundTokenQuantity;
+        withdrawalInfo.fundTokenQuantity = _fundTokenQuantity;
 
-        redeemInfo.preFeeReserveQuantity =_getRedeemReserveQuantity(_reserveAsset, _fundTokenQuantity);
+        withdrawalInfo.preFeeReserveQuantity =_getWithdrawalReserveQuantity(_reserveAsset, _fundTokenQuantity);
 
-        (redeemInfo.protocolFees, redeemInfo.managerFee, redeemInfo.netFlowQuantity) = _getFees(
-            redeemInfo.preFeeReserveQuantity,
+        (withdrawalInfo.protocolFees, withdrawalInfo.managerFee, withdrawalInfo.netFlowQuantity) = _getFees(
+            withdrawalInfo.preFeeReserveQuantity, false
         );
 
-        redeemInfo.previousFundTokenSupply = totalSupply();
+        withdrawalInfo.previousFundTokenSupply = totalSupply();
 
-        (redeemInfo.newFundTokenSupply, redeemInfo.newPositionMultiplier) = _getRedeemPositionMultiplier(_fundTokenQuantity, redeemInfo);
+        (withdrawalInfo.newFundTokenSupply, withdrawalInfo.newPositionMultiplier) = _getWithdrawalPositionMultiplier(_fundTokenQuantity, withdrawalInfo);
 
-        redeemInfo.newReservePositionUnit = _getRedeemPositionUnit(_reserveAsset, redeemInfo);
+        withdrawalInfo.newReservePositionUnit = _getWithdrawalPositionUnit(_reserveAsset, withdrawalInfo);
 
-        return redeemInfo;
+        return withdrawalInfo;
     }
 
     /**
      * Transfer reserve asset from user to Fund and fees from user to appropriate fee recipients
      */
-    function _transferCollateralAndHandleFees(IERC20 _reserveAsset, ActionInfo memory _issueInfo) internal {
-        transferFrom(_reserveAsset, msg.sender, address(this), _issueInfo.netFlowQuantity);
+    function _transferCollateralAndHandleFees(IERC20 _reserveAsset, ActionInfo memory _depositInfo) internal {
+        transferFrom(_reserveAsset, msg.sender, address(this), _depositInfo.netFlowQuantity);
 
-        if (_issueInfo.protocolFees > 0) {
-            transferFrom(_reserveAsset, msg.sender, controller.feeRecipient(), _issueInfo.protocolFees);
+        if (_depositInfo.protocolFees > 0) {
+            transferFrom(_reserveAsset, msg.sender, controller.feeRecipient(), _depositInfo.protocolFees);
         }
 
-        if (_issueInfo.managerFee > 0) {
-            transferFrom(_reserveAsset, msg.sender, managerFeeRecipient, _issueInfo.managerFee);
+        if (_depositInfo.managerFee > 0) {
+            transferFrom(_reserveAsset, msg.sender, managerFeeRecipient, _depositInfo.managerFee);
         }
     }
 
-    function _handleIssueStateUpdates(
+    function _handleDepositStateUpdates(
         address _reserveAsset,
         address _to,
-        ActionInfo memory _issueInfo
+        ActionInfo memory _depositInfo
     )
         internal
     {
-        editPositionMultiplier(_issueInfo.newPositionMultiplier);
+        editPositionMultiplier(_depositInfo.newPositionMultiplier);
 
-        editPosition(_reserveAsset, _issueInfo.newReservePositionUnit, address(0));
+        editPosition(_reserveAsset, _depositInfo.newReservePositionUnit, address(0));
 
-        _mint(_to, _issueInfo.fundTokenQuantity);
+        _mint(_to, _depositInfo.fundTokenQuantity);
 
-        emit FundTokenTokenIssued(
+        emit FundTokenDeposited(
             address(this),
             msg.sender,
             _to,
             _reserveAsset,
-            address(managerIssuanceHook),
-            _issueInfo._fundTokenQuantity,
-            _issueInfo.managerFee,
-            _issueInfo.protocolFees
+            address(managerDepositHook),
+            _depositInfo._fundTokenQuantity,
+            _depositInfo.managerFee,
+            _depositInfo.protocolFees
         );
     }
 
-    function _handleRedeemStateUpdates(
+    function _handleWithdrawalStateUpdates(
         address _reserveAsset,
         address _to,
-        ActionInfo memory _redeemInfo
+        ActionInfo memory _withdrawalInfo
     )
         internal
     {
-        editPositionMultiplier(_redeemInfo.newPositionMultiplier);
+        editPositionMultiplier(_withdrawalInfo.newPositionMultiplier);
 
-        editPosition(_reserveAsset, _redeemInfo.newReservePositionUnit, address(0));
+        editPosition(_reserveAsset, _withdrawalInfo.newReservePositionUnit, address(0));
 
-        emit FundTokenRedeemed(
+        emit FundTokenwithdrawed(
             address(this),
             msg.sender,
             _to,
             _reserveAsset,
-            address(managerRedemptionHook),
-            _redeemInfo._fundTokenQuantity,
-            _redeemInfo.managerFee,
-            _redeemInfo.protocolFees
+            address(managerWithdrawalHook),
+            _withdrawalInfo._fundTokenQuantity,
+            _withdrawalInfo.managerFee,
+            _withdrawalInfo.protocolFees
         );
     }
 
-    function _handleRedemptionFees(address _reserveAsset, ActionInfo memory _redeemInfo) internal {
+    function _handleRedemptionFees(address _reserveAsset, ActionInfo memory _withdrawalInfo) internal {
         // Instruct the Fund to transfer protocol fee to fee recipient if there is a fee
-        payProtocolFeeFromFund(_reserveAsset, _redeemInfo.protocolFees);
+        payProtocolFeeFromFund(_reserveAsset, _withdrawalInfo.protocolFees);
 
         // Instruct the Fund to transfer manager fee to manager fee recipient if there is a fee
-        if (_redeemInfo.managerFee > 0) {
-            payManagerFeeFromFund(_reserveAsset, _redeemInfo.managerFee);
+        if (_withdrawalInfo.managerFee > 0) {
+            payManagerFeeFromFund(_reserveAsset, _withdrawalInfo.managerFee);
         }
     }
 
     /**
-     * Returns the issue premium percentage. Virtual function that can be overridden in future versions of the module
+     * Returns the deposit premium percentage. Virtual function that can be overridden in future versions of the module
      * and can contain arbitrary logic to calculate the issuance premium.
      */
-    function _getIssuePremium(
+    function _getDepositPremium(
     )
         virtual
         internal
@@ -615,10 +685,10 @@ contract OpenFund is BaseFund, ReentrancyGuard {
     }
 
     /**
-     * Returns the redeem premium percentage. Virtual function that can be overridden in future versions of the module
+     * Returns the withdrawal premium percentage. Virtual function that can be overridden in future versions of the module
      * and can contain arbitrary logic to calculate the redemption premium.
      */
-    function _getRedeemPremium(
+    function _getWithdrawalPremium(
     )
         virtual
         internal
@@ -635,7 +705,7 @@ contract OpenFund is BaseFund, ReentrancyGuard {
      * Protocol Fee = (% manager fee share + direct fee %) * reserveAssetQuantity
      *
      * @param _reserveAssetQuantity         Quantity of reserve asset to calculate fees from
-     * @param _isIssue
+     * @param _isDeposit
      *
      * @return  uint256                     Fees paid to the protocol in reserve asset
      * @return  uint256                     Fees paid to the manager in reserve asset
@@ -643,15 +713,15 @@ contract OpenFund is BaseFund, ReentrancyGuard {
      */
     function _getFees(
         uint256 _reserveAssetQuantity,
-        bool isIssue
+        bool isDeposit
     )
         internal
         view
         returns (uint256, uint256, uint256)
     {
         // Get protocol fee percentages
-        uint256 protocolFeePercentage = isIssue : controller.protocolIssueFundTokenFee : protocolRedeemFundTokenFee;
-        uint256 managerFeePercentage = isIssue: managerIssueFee : managerRedeemFee;
+        uint256 protocolFeePercentage = isDeposit ? controller.protocolDepositFundTokenFee : controller.protocolWithdrawalFundTokenFee;
+        uint256 managerFeePercentage = isDeposit ? managerDepositFee : managerWithdrawalFee;
 
         // Calculate total notional fees
         uint256 protocolFees = protocolFeePercentage.preciseMul(_reserveAssetQuantity);
@@ -671,24 +741,24 @@ contract OpenFund is BaseFund, ReentrancyGuard {
         view
         returns (uint256)
     {
-        uint256 premiumPercentage = _getIssuePremium(_reserveAsset, _netReserveFlows);
-        uint256 premiumValue = _netReserveFlows.preciseMul(premiumPercentage);
+        uint256 premiumPercentageToApply = _getDepositPremium(_reserveAsset, _netReserveFlows);
+        uint256 premiumValue = _netReserveFlows.preciseMul(premiumPercentageToApply);
 
         // Get valuation of the Fund with the quote asset as the reserve asset. Returns value in precise units (1e18)
         // Reverts if price is not found
         uint256 fundValuation = controller.getFundValuer().calculateFundValuation(address(this), _reserveAsset);
 
         // Get reserve asset decimals
-        uint256 reserveAssetDecimals = ERC20(_reserveAsset).decimals();
+        uint256 reserveAssetDecimals = IERC20(_reserveAsset).decimals();
         uint256 normalizedTotalReserveQuantityNetFees = _netReserveFlows.preciseDiv(10 ** reserveAssetDecimals);
         uint256 normalizedTotalReserveQuantityNetFeesAndPremium = _netReserveFlows.sub(premiumValue).preciseDiv(10 ** reserveAssetDecimals);
 
-        // Calculate Fund tokens to mint to issuer
+        // Calculate Fund tokens to mint to depositr
         uint256 denominator = _fundTokenTotalSupply.preciseMul(fundValuation).add(normalizedTotalReserveQuantityNetFees).sub(normalizedTotalReserveQuantityNetFeesAndPremium);
         return normalizedTotalReserveQuantityNetFeesAndPremium.preciseMul(_fundTokenTotalSupply).preciseDiv(denominator);
     }
 
-    function _getRedeemReserveQuantity(
+    function _getWithdrawalReserveQuantity(
         address _reserveAsset,
         uint256 _fundTokenQuantity
     )
@@ -700,13 +770,13 @@ contract OpenFund is BaseFund, ReentrancyGuard {
         // Reverts if price is not found
         uint256 fundValuation = controller.getFundValuer().calculateFundValuation(address(this), _reserveAsset);
 
-        uint256 totalRedeemValueInPreciseUnits = _fundTokenQuantity.preciseMul(fundValuation);
+        uint256 totalWithdrawalValueInPreciseUnits = _fundTokenQuantity.preciseMul(fundValuation);
         // Get reserve asset decimals
-        uint256 reserveAssetDecimals = ERC20(_reserveAsset).decimals();
-        uint256 prePremiumReserveQuantity = totalRedeemValueInPreciseUnits.preciseMul(10 ** reserveAssetDecimals);
+        uint256 reserveAssetDecimals = IERC20(_reserveAsset).decimals();
+        uint256 prePremiumReserveQuantity = totalWithdrawalValueInPreciseUnits.preciseMul(10 ** reserveAssetDecimals);
 
-        uint256 premiumPercentage = _getRedeemPremium(_reserveAsset, _fundTokenQuantity);
-        uint256 premiumQuantity = prePremiumReserveQuantity.preciseMulCeil(premiumPercentage);
+        uint256 premiumPercentageToApply = _getWithdrawalPremium(_reserveAsset, _fundTokenQuantity);
+        uint256 premiumQuantity = prePremiumReserveQuantity.preciseMulCeil(premiumPercentageToApply);
 
         return prePremiumReserveQuantity.sub(premiumQuantity);
     }
@@ -716,16 +786,16 @@ contract OpenFund is BaseFund, ReentrancyGuard {
      * inflationPercentage = (newSupply - oldSupply) / newSupply
      * newMultiplier = (1 - inflationPercentage) * positionMultiplier
      */
-    function _getIssuePositionMultiplier(
-        ActionInfo memory _issueInfo
+    function _getDepositPositionMultiplier(
+        ActionInfo memory _depositInfo
     )
         internal
         view
         returns (uint256, int256)
     {
         // Calculate inflation and new position multiplier. Note: Round inflation up in order to round position multiplier down
-        uint256 newTotalSupply = _issueInfo.fundTokenQuantity.add(_issueInfo.previousFundTokenSupply);
-        int256 newPositionMultiplier = positionMultiplier().mul(_issueInfo.previousFundTokenSupply.toInt256()).div(newTotalSupply.toInt256());
+        uint256 newTotalSupply = _depositInfo.fundTokenQuantity.add(_depositInfo.previousFundTokenSupply);
+        int256 newPositionMultiplier = positionMultiplier().mul(_depositInfo.previousFundTokenSupply.toInt256()).div(newTotalSupply.toInt256());
 
         return (newTotalSupply, newPositionMultiplier);
     }
@@ -737,17 +807,17 @@ contract OpenFund is BaseFund, ReentrancyGuard {
      * deflationPercentage = (oldSupply - newSupply) / newSupply
      * newMultiplier = (1 + deflationPercentage) * positionMultiplier
      */
-    function _getRedeemPositionMultiplier(
+    function _getWithdrawalPositionMultiplier(
         uint256 _fundTokenQuantity,
-        ActionInfo memory _redeemInfo
+        ActionInfo memory _withdrawalInfo
     )
         internal
         view
         returns (uint256, int256)
     {
-        uint256 newTotalSupply = _redeemInfo.previousFundTokenSupply.sub(_fundTokenQuantity);
+        uint256 newTotalSupply = _withdrawalInfo.previousFundTokenSupply.sub(_fundTokenQuantity);
         int256 newPositionMultiplier = positionMultiplier()
-            .mul(_redeemInfo.previousFundTokenSupply.toInt256())
+            .mul(_withdrawalInfo.previousFundTokenSupply.toInt256())
             .div(newTotalSupply.toInt256());
 
         return (newTotalSupply, newPositionMultiplier);
@@ -758,9 +828,9 @@ contract OpenFund is BaseFund, ReentrancyGuard {
      * totalReserve = (oldUnit * oldFundTokenSupply) + reserveQuantity
      * newUnit = totalReserve / newFundTokenSupply
      */
-    function _getIssuePositionUnit(
+    function _getDepositPositionUnit(
         address _reserveAsset,
-        ActionInfo memory _issueInfo
+        ActionInfo memory _depositInfo
     )
         internal
         view
@@ -768,10 +838,10 @@ contract OpenFund is BaseFund, ReentrancyGuard {
     {
         uint256 existingUnit = getPositionRealUnit(_reserveAsset).toUint256();
         uint256 totalReserve = existingUnit
-            .preciseMul(_issueInfo.previousFundTokenSupply)
-            .add(_issueInfo.netFlowQuantity);
+            .preciseMul(_depositInfo.previousFundTokenSupply)
+            .add(_depositInfo.netFlowQuantity);
 
-        return totalReserve.preciseDiv(_issueInfo.newFundTokenSupply);
+        return totalReserve.preciseDiv(_depositInfo.newFundTokenSupply);
     }
 
     /**
@@ -779,49 +849,56 @@ contract OpenFund is BaseFund, ReentrancyGuard {
      * totalReserve = (oldUnit * oldFundTokenSupply) - reserveQuantityToSendOut
      * newUnit = totalReserve / newFundTokenSupply
      */
-    function _getRedeemPositionUnit(
+    function _getWithdrawalPositionUnit(
         address _reserveAsset,
-        ActionInfo memory _redeemInfo
+        ActionInfo memory _withdrawalInfo
     )
         internal
         view
         returns (uint256)
     {
         uint256 existingUnit = getPositionRealUnit(_reserveAsset).toUint256();
-        uint256 totalExistingUnits = existingUnit.preciseMul(_redeemInfo.previousFundTokenSupply);
+        uint256 totalExistingUnits = existingUnit.preciseMul(_withdrawalInfo.previousFundTokenSupply);
 
-        uint256 outflow = _redeemInfo.netFlowQuantity.add(_redeemInfo.protocolFees).add(_redeemInfo.managerFee);
+        uint256 outflow = _withdrawalInfo.netFlowQuantity.add(_withdrawalInfo.protocolFees).add(_withdrawalInfo.managerFee);
 
         // Require withdrawable quantity is greater than existing collateral
         require(totalExistingUnits >= outflow, "Must be greater than total available collateral");
 
-        return totalExistingUnits.sub(outflow).preciseDiv(_redeemInfo.newFundTokenSupply);
+        return totalExistingUnits.sub(outflow).preciseDiv(_withdrawalInfo.newFundTokenSupply);
     }
 
 
     /**
-     * If a pre-issue hook has been configured, call the external-protocol contract. Pre-issue hook logic
+     * If a pre-deposit hook has been configured, call the external-protocol contract. Pre-deposit hook logic
      * can contain arbitrary logic including validations, external function calls, etc.
      */
-    function _callPreIssueHooks(
+    function _callPreDepositHooks(
         uint256 _reserveAssetQuantity,
         address _caller,
         address _to
     )
         internal
     {
-        if (address(managerIssuanceHook) != address(0)) {
-            managerIssuanceHook.invokePreIssueHook(address(this), reserveAsset, _reserveAssetQuantity, _caller, _to);
+        if (address(managerDepositHook) != address(0)) {
+            managerDepositHook.invokePreDepositHook(address(this), reserveAsset, _reserveAssetQuantity, _caller, _to);
         }
     }
 
     /**
-     * If a pre-redeem hook has been configured, call the external-protocol contract.
+     * If a pre-withdrawal hook has been configured, call the external-protocol contract.
      */
-    function _callPreRedeemHooks(uint256 _fundTokenQuantity, address _caller, address _to) internal {
-        if (address(managerRedemptionHook) != address(0)) {
-            managerRedemptionHook.invokePreRedeemHook(address(this), _fundTokenQuantity, _caller, _to);
+    function _callPreWithdrawalHooks(uint256 _fundTokenQuantity, address _caller, address _to) internal {
+        if (address(managerWithdrawalHook) != address(0)) {
+            managerWithdrawalHook.invokePreWithdrawalHook(address(this), _fundTokenQuantity, _caller, _to);
         }
+    }
+
+    function _validateOnlyContributor(address _caller) internal view {
+      require(
+          IERC20(reserveAsset).balanceOf(_caller) > 0,
+          "Only someone with the fund token can withdraw"
+      );
     }
 
 }

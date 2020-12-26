@@ -16,8 +16,7 @@
     SPDX-License-Identifier: Apache License, Version 2.0
 */
 
-pragma solidity 0.6.10;
-pragma experimental ABIEncoderV2;
+pragma solidity 0.7.4;
 
 import { SafeMath } from "@openzeppelin/contracts/math/SafeMath.sol";
 import { SignedSafeMath } from "@openzeppelin/contracts/math/SignedSafeMath.sol";
@@ -149,16 +148,16 @@ library PreciseUnitMath {
     }
 
     /**
-     * @dev Multiplies value a by value b where rounding is towards the lesser number. 
-     * (positive values are rounded towards zero and negative values are rounded away from 0). 
+     * @dev Multiplies value a by value b where rounding is towards the lesser number.
+     * (positive values are rounded towards zero and negative values are rounded away from 0).
      */
     function conservativePreciseMul(int256 a, int256 b) internal pure returns (int256) {
         return divDown(a.mul(b), PRECISE_UNIT_INT);
     }
 
     /**
-     * @dev Divides value a by value b where rounding is towards the lesser number. 
-     * (positive values are rounded towards zero and negative values are rounded away from 0). 
+     * @dev Divides value a by value b where rounding is towards the lesser number.
+     * (positive values are rounded towards zero and negative values are rounded away from 0).
      */
     function conservativePreciseDiv(int256 a, int256 b) internal pure returns (int256) {
         return divDown(a.mul(PRECISE_UNIT_INT), b);

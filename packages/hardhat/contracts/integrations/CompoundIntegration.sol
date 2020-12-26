@@ -1,3 +1,21 @@
+/*
+    Copyright 2020 DFolio.
+
+    Licensed under the Apache License, Version 2.0 (the "License");
+    you may not use this file except in compliance with the License.
+    You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+    Unless required by applicable law or agreed to in writing, software
+    distributed under the License is distributed on an "AS IS" BASIS,
+    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+    See the License for the specific language governing permissions and
+    limitations under the License.
+
+    SPDX-License-Identifier: Apache License, Version 2.0
+*/
+
 pragma solidity >=0.7.0 <0.9.0;
 
 import "hardhat/console.sol";
@@ -7,6 +25,11 @@ import { ICompoundPriceOracle } from '../interfaces/external/compound/ICompoundP
 import { IComptroller } from '../interfaces/external/compound/IComptroller.sol';
 import { SafeMath } from "@openzeppelin/contracts/math/SafeMath.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import { IWETH } from "../interfaces/external/weth/IWETH.sol";
+
+import { BorrowIntegration } from "./BorrowIntegration.sol";
+import { IFolioController } from "../interfaces/IFolioController.sol";
+import { BaseIntegration } from "../BaseIntegration.sol";
 
 /**
  * Compound Borrowing primitive
@@ -33,11 +56,11 @@ contract CompoundIntegration is BorrowIntegration {
 
   }
 
-  function getBorrowBalanceUnderlying(
+  function getBorrowBalance(
       address cToken,
       address owner
   )
-      public
+      external
       view
       returns (uint256)
   {
@@ -84,11 +107,6 @@ contract CompoundIntegration is BorrowIntegration {
     }
   }
 
-  function enterMarketsAndApproveCTokens(address[] memory cTokens) public {
-    enterMarkets(cTokens);
-    approveCTokens(cTokens);
-  }
-
   function depositCollateral(address cToken, uint256 amount) external payable {
     // Amount of current exchange rate from cToken to underlying
     if (cToken == CEtherAddress) {
@@ -130,7 +148,7 @@ contract CompoundIntegration is BorrowIntegration {
     return amount;
   }
 
-  function safeBorrow(address cToken, uint256 borrowAmount) public {
+  function safeBorrow(address cToken, uint256 borrowAmount) private {
     // Get my account's total liquidity value in Compound
     (uint256 error, uint256 liquidity, uint256 shortfall) = IComptroller(CompoundComptrollerAddress)
         .getAccountLiquidity(address(this));
@@ -159,16 +177,6 @@ contract CompoundIntegration is BorrowIntegration {
         ICToken(cToken).borrow(normalizeDecimals(cToken, borrowAmount)) == 0,
         "cmpnd-mgr-ctoken-borrow-failed"
     );
-  }
-
-  function supplyAndBorrow(
-      address supplyCToken,
-      uint256 supplyAmount,
-      address borrowCToken,
-      uint256 borrowAmount
-  ) public payable {
-      supply(supplyCToken, supplyAmount);
-      borrow(borrowCToken, borrowAmount);
   }
 
   function repay(address cToken, uint256 amount) external payable {
@@ -217,14 +225,14 @@ contract CompoundIntegration is BorrowIntegration {
   function withdrawAllCollateral(address cToken) external payable {
     // Retrieve your asset based on a cToken amount
     // TODO
-    redeemTokens = normalizeDecimals(cToken, 0);
+    uint redeemTokens = normalizeDecimals(cToken, 0);
     require(
         ICToken(cToken).redeem(redeemTokens) == 0,
         "cmpnd-mgr-ctoken-redeem-failed"
     );
   }
 
-  function redeemUnderlying(address cToken, uint256 redeemTokens) public payable
+  function redeemUnderlying(address cToken, uint256 redeemTokens) internal payable
   {
     redeemTokens = normalizeDecimals(cToken, redeemTokens);
     // Retrieve your asset based on an amount of the asset

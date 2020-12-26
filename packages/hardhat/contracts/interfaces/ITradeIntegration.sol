@@ -17,7 +17,7 @@
 */
 pragma solidity 0.7.4;
 
-import { IIntegration } from "./IIntegrations";
+import { IIntegration } from "./IIntegration.sol";
 
 /**
  * @title ITrade
@@ -25,6 +25,6 @@ import { IIntegration } from "./IIntegrations";
  *
  * Interface for trading protocol integrations
  */
-interface ITrade is IIntegration {
+interface ITradeIntegration is IIntegration {
 
 }

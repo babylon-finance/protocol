@@ -18,7 +18,7 @@
 pragma solidity 0.7.4;
 
 interface IFundIssuanceHook {
-    function invokePreIssueHook(
+    function invokePreDepositHook(
         address _reserveAsset,
         uint256 _reserveAssetQuantity,
         address _sender,
@@ -26,7 +26,7 @@ interface IFundIssuanceHook {
     )
         external;
 
-    function invokePreRedeemHook(
+    function invokePreWithdrawalHook(
         uint256 _redeemQuantity,
         address _sender,
         address _to

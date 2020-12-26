@@ -27,8 +27,8 @@ import { SignedSafeMath } from "@openzeppelin/contracts/math/SignedSafeMath.sol"
 
 import { AddressArrayUtils } from "./lib/AddressArrayUtils.sol";
 import { PreciseUnitMath } from "./lib/PreciseUnitMath.sol";
-
 import { IFolioController } from "./interfaces/IFolioController.sol";
+import { IWETH } from "./interfaces/external/weth/IWETH.sol";
 import { IIntegration } from "./interfaces/IIntegration.sol";
 import { IFund } from "./interfaces/IFund.sol";
 
@@ -52,8 +52,10 @@ abstract contract BaseFund is ERC20 {
     event IntegrationRemoved(address indexed _integration);
     event IntegrationInitialized(address indexed _integration);
     event PendingIntegrationRemoved(address indexed _integration);
+    event ReserveAssetChanged(address indexed _integration);
 
     event ManagerEdited(address _newManager, address _oldManager);
+    event FeeRecipientEdited(address _newManagerFeeRecipient);
     event PositionMultiplierEdited(int256 _newMultiplier);
     event PositionAdded(address indexed _component);
     event PositionRemoved(address indexed _component);
@@ -83,11 +85,6 @@ abstract contract BaseFund is ERC20 {
       _;
     }
 
-    modifier onlyContributor(address payable _caller) {
-      _validateOnlyContributor();
-      _;
-    }
-
     modifier onlyActive() {
       _validateOnlyActive();
       _;
@@ -104,17 +101,15 @@ abstract contract BaseFund is ERC20 {
     IWETH public immutable weth;
 
     // Reserve Asset of the fund
-    IERC20 public reserveAsset;
+    address public reserveAsset;
 
     // Address of the controller
-    IController public controller;
+    IFolioController public controller;
     // The manager has the privelege to add modules, remove, and set a new manager
     address public manager;
     address public managerFeeRecipient;
     // Whether the fund is currently active or not
     bool public active;
-    // Public name of the fund
-    string public name;
 
     // List of initialized Integrations; Integrations connect with other money legos
     address[] public integrations;
@@ -123,7 +118,7 @@ abstract contract BaseFund is ERC20 {
     // addModule (called by manager) and initialize  (called by module) functions
     mapping(address => IFund.IntegrationState) public integrationStates;
     // integration name => integration address
-    mapping(bytes32 => address)) private integrationsByName;
+    mapping(bytes32 => address) private integrationsByName;
 
     // List of positions
     address[] public positions;
@@ -154,7 +149,7 @@ abstract contract BaseFund is ERC20 {
     constructor(
         address[] memory _integrations,
         IWETH _weth,
-        IController _controller,
+        IFolioController _controller,
         address _manager,
         address _managerFeeRecipient,
         address _reserveAsset,
@@ -171,11 +166,10 @@ abstract contract BaseFund is ERC20 {
       positionMultiplier = PreciseUnitMath.preciseUnitInt();
 
       // Integrations are put in PENDING state, as they need to be individually initialized by the Module
-      for (uint256 i = 0; i < _modules.length; i++) {
-          integrationStates[_modules[i]] = ISetToken.IntegrationState.PENDING;
+      for (uint256 i = 0; i < _integrations.length; i++) {
+          integrationStates[_integrations[i]] = IFund.IntegrationState.PENDING;
       }
 
-      positions = [];
       active = false;
     }
 
@@ -183,85 +177,18 @@ abstract contract BaseFund is ERC20 {
 
 
     /**
-     * SET MANAGER ONLY. Changes the reserve asset
+     * FUND MANAGER ONLY. Changes the reserve asset
      *
      * @param _reserveAsset                 Address of the new reserve asset
      */
     function editReserveAsset(address _reserveAsset) external onlyManager {
         reserveAsset = _reserveAsset;
 
-        emit ReserveAssetChange(address(this), _reserveAsset);
+        emit ReserveAssetChanged(_reserveAsset);
     }
 
     /**
-     * SET MANAGER ONLY. Edit the premium percentage
-     *
-     * @param _premiumPercentage            Premium percentage in 10e16 (e.g. 10e16 = 1%)
-     */
-    function editPremium(uint256 _premiumPercentage) external onlyManager {
-        require(_premiumPercentage <= IFolioController(controller).maxPremiumPercentage, "Premium must be less than maximum allowed");
-
-        premiumPercentage = _premiumPercentage;
-
-        emit PremiumEdited(address(this), _premiumPercentage);
-    }
-
-    /**
-     * Fund MANAGER ONLY. Edit manager issue fee
-     *
-     * @param _managerIssueFee         Manager issue fee percentage in 10e16 (e.g. 10e16 = 1%)
-     */
-    function editManagerIssueFee(
-        Ifund _fund,
-        uint256 _managerIssueFee
-    )
-        external
-        onlyManager
-        onlyInactive
-    {
-        require(_managerIssueFee <= IFolioController(controller).maxManagerIssueFee, "Manager fee must be less than maximum allowed");
-        managerIssueFee = _managerIssueFee;
-        emit ManagerFeeEdited(address(this), _managerIssueFee, "Manager Issue Fee");
-    }
-
-    /**
-     * Fund MANAGER ONLY. Edit manager issue fee
-     *
-     * @param _managerRedeemFee         Manager redeem fee percentage in 10e16 (e.g. 10e16 = 1%)
-     */
-    function editManagerRedeemFee(
-        IFund _fund,
-        uint256 _managerRedeemFee
-    )
-        external
-        onlyManager
-        onlyInactive
-    {
-        require(_managerRedeemFee <= IFolioController(controller).maxManagerRedeemFee, "Manager fee must be less than maximum allowed");
-        managerRedeemFee = _managerRedeemFee;
-        emit ManagerFeeEdited(address(this), _managerRedeemFee, "Manager Redeem Fee");
-    }
-
-    /**
-     * Fund MANAGER ONLY. Edit manager issue fee
-     *
-     * @param _managerFeePercentage         Manager performance fee percentage in 10e16 (e.g. 10e16 = 1%)
-     */
-    function editManagerPerformanceFee(
-        IFund _fund,
-        uint256 _managerPerformanceFee
-    )
-        external
-        onlyManager
-        onlyInactive
-    {
-        require(_managerPerformanceFee <= IFolioController(controller).maxManagerPerformanceFee, "Manager fee must be less than maximum allowed");
-        managerPerformanceFee = _managerPerformanceFee;
-        emit ManagerFeeEdited(address(this), _managerPerformanceFee, "Manager Performance Fee");
-    }
-
-    /**
-     * SET MANAGER ONLY. Edit the manager fee recipient
+     * Fund MANAGER ONLY. Edit the manager fee recipient
      *
      * @param _managerFeeRecipient          Manager fee recipient
      */
@@ -270,30 +197,30 @@ abstract contract BaseFund is ERC20 {
 
         managerFeeRecipient = _managerFeeRecipient;
 
-        emit FeeRecipientEdited(address(this), _managerFeeRecipient);
+        emit FeeRecipientEdited(_managerFeeRecipient);
     }
 
 
     /**
-     * PRIVELEGED MODULE FUNCTION. Low level function that adds a component to the components array.
+     * PRIVELEGED MODULE FUNCTION. Low level function that adds a component to the positions array.
      */
-    function addPosition(address _component, address _integration) external onlyIntegration onlyActive {
+    function addPosition(address _component, address _integration) public onlyIntegration onlyActive {
       IFund.Position storage position = positionsByComponent[_component];
       position.positionState = _integration != address(0) ? 1 : 0;
       position.integration = _integration;
-      position.updatedAt = [];
+      // position.updatedAt = [];
       position.enteredAt = now;
 
-      components.push(_component);
+      positions.push(_component);
       emit PositionAdded(_component);
     }
 
     /**
-     * PRIVELEGED MODULE FUNCTION. Low level function that removes a component from the components array.
+     * PRIVELEGED MODULE FUNCTION. Low level function that removes a component from the positions array.
      */
-    function removePosition(address _component) external onlyIntegration onlyActive {
+    function removePosition(address _component) public onlyIntegration onlyActive {
         IFund.Position storage position = positionsByComponent[_component];
-        components = components.remove(_component);
+        positions = positions.remove(_component);
         position.exitedAt = now;
         emit PositionRemoved(_component);
     }
@@ -302,7 +229,7 @@ abstract contract BaseFund is ERC20 {
      * PRIVELEGED MODULE FUNCTION. Low level function that edits a component's virtual unit. Takes a real unit
      * and converts it to virtual before committing.
      */
-    function editPositionUnit(address _component, int256 _realUnit) external onlyIntegration onlyActive{
+    function editPositionUnit(address _component, int256 _realUnit) public onlyIntegration onlyActive{
         int256 virtualUnit = _convertRealToVirtualUnit(_realUnit);
 
         positionsByComponent[_component].virtualUnit = virtualUnit;
@@ -316,7 +243,7 @@ abstract contract BaseFund is ERC20 {
      * PRIVELEGED MODULE FUNCTION. Modifies the position multiplier. This is typically used to efficiently
      * update all the Positions' units at once in applications where inflation is awarded (e.g. subscription fees).
      */
-    function editPositionMultiplier(int256 _newMultiplier) external onlyIntegration onlyActive{
+    function editPositionMultiplier(int256 _newMultiplier) public onlyIntegration onlyActive{
         require(_newMultiplier > 0, "Must be greater than 0");
 
         positionMultiplier = _newMultiplier;
@@ -343,7 +270,7 @@ abstract contract BaseFund is ERC20 {
      * MANAGER ONLY. Adds an integration into a PENDING state; Integration must later be initialized via
      * module's initialize function
      */
-    function addIntegration(address _integration, string _name) external onlyManager {
+    function addIntegration(address _integration, string memory _name) external onlyManager {
         require(integrationStates[_integration] == IFund.IntegrationState.NONE, "Integration must not be added");
         require(controller.isValidIntegration(_name), "Integration must be enabled on Controller");
 
@@ -357,7 +284,7 @@ abstract contract BaseFund is ERC20 {
      * it is not needed to manage any remaining positions and to remove state.
      */
     function removeIntegration(address _integration) external onlyManager {
-        require(integrationStates[_module] == IFund.IntegrationState.PENDING, "Integration must be pending");
+        require(integrationStates[_integration] == IFund.IntegrationState.PENDING, "Integration must be pending");
 
         IIntegration(_integration).removeIntegration();
 
@@ -405,11 +332,7 @@ abstract contract BaseFund is ERC20 {
 
     /* ============ External Getter Functions ============ */
 
-    function getPositions() external view returns(address[] memory) {
-      return positions;
-    }
-
-    function getReserveAsset() external view returns (address memory) {
+    function getReserveAsset() external view returns (address) {
       return reserveAsset;
     }
 
@@ -479,7 +402,7 @@ abstract contract BaseFund is ERC20 {
         onlyActive
         returns (uint256, uint256, uint256)
     {
-        uint256 currentBalance = IERC20(_component).balanceOf(address(this));
+        uint256 currentBalance = ERC20(_component).balanceOf(address(this));
         uint256 positionUnit = getPositionRealUnit(_component).toUint256();
 
         uint256 newTokenUnit = calculateEditPositionUnit(
@@ -587,13 +510,8 @@ abstract contract BaseFund is ERC20 {
       return totalSupply().preciseMul(positionUnit.toUint256());
     }
 
-    function _validateCommon(ISetToken _setToken, address _reserveAsset, uint256 _quantity) internal view {
-        require(_quantity > 0, "Quantity must be > 0");
-        require(isReserveAsset[_setToken][_reserveAsset], "Must be valid reserve asset");
-    }
-
     function _positionVirtualUnit(address _component) internal view returns(int256) {
-      return componentPositions[_component].virtualUnit;
+      return positions[_component].virtualUnit;
     }
 
     /**
@@ -601,7 +519,7 @@ abstract contract BaseFund is ERC20 {
      */
     function payProtocolFeeFromFund(address _token, uint256 _feeQuantity) internal {
       if (_feeQuantity > 0) {
-        IERC20(_token).transfer(controller.feeRecipient(), _feeQuantity);
+        ERC20(_token).transfer(controller.feeRecipient(), _feeQuantity);
       }
     }
     /**
@@ -609,7 +527,7 @@ abstract contract BaseFund is ERC20 {
      */
     function payManagerFeeFromFund(address _token, uint256 _feeQuantity) internal {
       if (_feeQuantity > 0) {
-        IERC20(_token).transfer(managerFeeRecipient, _feeQuantity);
+        ERC20(_token).transfer(managerFeeRecipient, _feeQuantity);
       }
     }
 
@@ -669,16 +587,9 @@ abstract contract BaseFund is ERC20 {
       );
     }
 
-    function _validateOnlyContributor(address _caller) internal view {
-      require(
-          contributors[_caller].amount > 0,
-          "Only the contributor can withdraw their funds"
-      );
-    }
-
     function _validateOnlyManagerOrProtocol() internal view {
       require(
-          msg.sender == manager || msg.sender == protocol,
+          msg.sender == manager || msg.sender == controller,
           "Only the fund manager or the protocol can modify fund state"
       );
     }

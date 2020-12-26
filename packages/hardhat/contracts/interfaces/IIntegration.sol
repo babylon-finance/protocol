@@ -17,8 +17,6 @@
 */
 pragma solidity 0.7.4;
 
-import { IFolioController } from "./IFolioController";
-
 /**
  * @title IIntegration
  * @author DFolio

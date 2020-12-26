@@ -17,7 +17,7 @@
 */
 pragma solidity 0.7.4;
 
-import { IIntegration } from "./IIntegrations";
+import { IIntegration } from "./IIntegration.sol";
 
 /**
  * @title IIntegration
@@ -25,6 +25,6 @@ import { IIntegration } from "./IIntegrations";
  *
  * Interface for yield farming protocol integrations
  */
-interface IFarm is IIntegration {
+interface IFarmIntegration is IIntegration {
 
 }
