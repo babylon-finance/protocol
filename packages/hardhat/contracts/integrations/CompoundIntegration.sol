@@ -52,7 +52,11 @@ contract CompoundIntegration is BorrowIntegration {
    * @param _controller             Address of the controller
    * @param _maxCollateralFactor    Max collateral factor allowed
    */
-  constructor(address _weth, address _controller, uint256 _maxCollateralFactor) public BorrowIntegration('Compound Borrowing', _weth, _controller, _maxCollateralFactor) {
+  constructor(
+    address _controller,
+    address _weth,
+    uint256 _maxCollateralFactor
+  ) public BorrowIntegration('Compound Borrowing', _weth, _controller, _maxCollateralFactor) {
 
   }
 

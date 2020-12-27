@@ -50,11 +50,13 @@ contract AaveIntegration is BorrowIntegration {
      * @param _controller             Address of the controller
      * @param _maxCollateralFactor    Max collateral factor allowed
      */
-    constructor(address _weth, address _controller, uint256 _maxCollateralFactor) public BorrowIntegration('Aave Borrow', _weth, _controller, _maxCollateralFactor) {
+    constructor(
+      address _controller,
+      address _weth,
+      uint256 _maxCollateralFactor
+    ) public BorrowIntegration('Aave Borrow', _weth, _controller, _maxCollateralFactor) {
 
     }
-
-
 
     /**
      * Deposits collateral into the Aave.

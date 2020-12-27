@@ -98,7 +98,7 @@ contract FolioController is Ownable {
      *
      * @param _feeRecipient           Address of the initial protocol fee recipient
      * @param _fundValuer             Address of the initial fundValuer
-     * @param _priceOracle            Address of the initial _priceOracle
+     * @param _priceOracle            Address of the initial priceOracle
      */
     constructor(
       address _feeRecipient,
@@ -274,7 +274,7 @@ contract FolioController is Ownable {
      *
      * @param _fundValuer Address of the new price oracle
      */
-    function editFundvaluer(address _fundValuer) external onlyOwner {
+    function editFundValuer(address _fundValuer) external onlyOwner {
        require(_fundValuer != fundValuer, "Fund Valuer already exists");
 
        require(_fundValuer != address(0), "Fund Valuer must exist");

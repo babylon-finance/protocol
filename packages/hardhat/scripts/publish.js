@@ -5,6 +5,9 @@ const chalk = require("chalk");
 
 const publishDir = "../react-app/src/contracts";
 
+const isSolidity = (fileName) =>
+  fileName.indexOf(".sol") >= 0 && fileName.indexOf(".swp") < 0;
+
 function publishContract(contractName) {
   console.log(
     "Publishing",
@@ -56,7 +59,8 @@ async function main() {
     fs.mkdirSync(publishDir);
   }
   const finalContractList = [];
-  fs.readdirSync(config.paths.sources).forEach((file) => {
+  const contractList = fs.readdirSync(config.paths.sources).filter((fileName) => isSolidity(fileName));
+  contractList.forEach((file) => {
     if (file.indexOf(".sol") >= 0) {
       const contractName = file.replace(".sol", "");
       // Add contract to list if publishing is successful
