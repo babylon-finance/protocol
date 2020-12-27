@@ -3,7 +3,7 @@ require("@nomiclabs/hardhat-ethers");
 const fs = require("fs");
 const chalk = require("chalk");
 
-const _wethAddress = "0xfc9da5D8b594B8fD7021C6B0eE5a00Ec2C4c132d";
+const _wethAddress = "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2"; // WETH ERC20 Address
 const _defaultManagerAddress = "0xfc9da5D8b594B8fD7021C6B0eE5a00Ec2C4c132d"; // ScaffoldBurner address for local testing
 
 async function deploy(name, _args) {
