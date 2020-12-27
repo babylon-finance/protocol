@@ -25,7 +25,7 @@ const isSolidity = (fileName) =>
 function readArgumentsFile(contractName) {
   let args = [];
   try {
-    const argsFile = `./contracts/${contractName}.args`;
+    const argsFile = `./args/${contractName}.args`;
     if (fs.existsSync(argsFile)) {
       args = JSON.parse(fs.readFileSync(argsFile));
     }
@@ -52,18 +52,40 @@ async function autoDeploy() {
 }
 
 async function main() {
-  // Deploy Folio controller (pass any address as fund valuer and price oracle)
+  const folioController = await deploy("FolioController", readArgumentsFile("FolioController"));
+  const fundValuer = await deploy("FundValuer", [folioController.address]);
 
-  // Deploy fundvaluer
-  // update fundvaluer en controller
+  const priceOracle = await deploy(
+    "PriceOracle",
+    [
+      folioController.address,
+      ...readArgumentsFile("PriceOracle")
+    ]
+  );
 
-  // deploy price oracle
-  // update priceoracle en controller
+  await folioController.editFundValuer(fundValuer.address);
+  await folioController.editPriceOracle(priceOracle.address);
 
-  // deploy integrations
-  // add integrations to controller
+  const aaveI = await deploy(
+    "AaveIntegration",
+    [
+      folioController.address,
+      ...readArgumentsFile("AaveIntegration")
+    ]
+  );
 
-  // deploy funds
+  const compoundI = await deploy(
+    "CompoundIntegration",
+    [
+      folioController.address,
+      ...readArgumentsFile("CompoundIntegration")
+    ]
+  );
+
+  await folioController.addIntegration("AaveIntegration", aaveI.address);
+  await folioController.addIntegration("CompundIntegration", compoundI.address);
+
+  // TODO(tylerm): deploy funds!
 
   console.log("📡 Deploy complete! \n");
 }
