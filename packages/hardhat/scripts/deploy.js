@@ -3,6 +3,9 @@ require("@nomiclabs/hardhat-ethers");
 const fs = require("fs");
 const chalk = require("chalk");
 
+const _wethAddress = "0xfc9da5D8b594B8fD7021C6B0eE5a00Ec2C4c132d";
+const _defaultManagerAddress = "0xfc9da5D8b594B8fD7021C6B0eE5a00Ec2C4c132d";
+
 async function deploy(name, _args) {
   const args = _args || [];
 
@@ -52,40 +55,62 @@ async function autoDeploy() {
 }
 
 async function main() {
-  const folioController = await deploy("FolioController", readArgumentsFile("FolioController"));
+  const folioController = await deploy(
+    "FolioController",
+    readArgumentsFile("FolioController")
+  );
   const fundValuer = await deploy("FundValuer", [folioController.address]);
 
-  const priceOracle = await deploy(
-    "PriceOracle",
-    [
-      folioController.address,
-      ...readArgumentsFile("PriceOracle")
-    ]
-  );
+  const priceOracle = await deploy("PriceOracle", [
+    folioController.address,
+    ...readArgumentsFile("PriceOracle"),
+  ]);
 
   await folioController.editFundValuer(fundValuer.address);
   await folioController.editPriceOracle(priceOracle.address);
 
-  const aaveI = await deploy(
-    "AaveIntegration",
-    [
-      folioController.address,
-      ...readArgumentsFile("AaveIntegration")
-    ]
-  );
+  const aaveI = await deploy("AaveIntegration", [
+    folioController.address,
+    ...readArgumentsFile("AaveIntegration"),
+  ]);
 
-  const compoundI = await deploy(
-    "CompoundIntegration",
-    [
-      folioController.address,
-      ...readArgumentsFile("CompoundIntegration")
-    ]
-  );
+  const compoundI = await deploy("CompoundIntegration", [
+    folioController.address,
+    ...readArgumentsFile("CompoundIntegration"),
+  ]);
 
   await folioController.addIntegration("AaveIntegration", aaveI.address);
   await folioController.addIntegration("CompundIntegration", compoundI.address);
-
-  // TODO(tylerm): deploy funds!
+  await folioController.createFund(
+    [aaveI.address],
+    _wethAddress,
+    _wethAddress,
+    _defaultManagerAddress,
+    _defaultManagerAddress,
+    "Fund Number One",
+    "FNON",
+    ethers.utils.parseEther("1")
+  );
+  await folioController.createFund(
+    [compoundI.address],
+    _wethAddress,
+    _wethAddress,
+    _defaultManagerAddress,
+    _defaultManagerAddress,
+    "Fund Number TWO",
+    "FNTW",
+    ethers.utils.parseEther("1")
+  );
+  await folioController.createFund(
+    [aaveI.address, compoundI.address],
+    _wethAddress,
+    _wethAddress,
+    _defaultManagerAddress,
+    _defaultManagerAddress,
+    "Fund Number Three",
+    "FNTH",
+    ethers.utils.parseEther("10")
+  );
 
   console.log("📡 Deploy complete! \n");
 }
