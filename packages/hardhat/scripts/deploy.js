@@ -52,29 +52,18 @@ async function autoDeploy() {
 }
 
 async function main() {
-  console.log("📡 Deploying.. \n");
-  const holder = await deploy(
-    "Holder",
-    readArgumentsFile("Holder")
-  );
+  // Deploy Folio controller (pass any address as fund valuer and price oracle)
 
-  await holder.addHedgeFund(
-    "Fund Number One",
-    "FundTokenOne",
-    "FNON"
-  );
+  // Deploy fundvaluer
+  // update fundvaluer en controller
 
-  await holder.addHedgeFund(
-    "Fund Number Two",
-    "FundTokenTwo",
-    "FNTW"
-  );
+  // deploy price oracle
+  // update priceoracle en controller
 
-  await  holder.addHedgeFund(
-    "Fund Number Three",
-    "FundTokenThree",
-    "FNTH"
-  );
+  // deploy integrations
+  // add integrations to controller
+
+  // deploy funds
 
   console.log("📡 Deploy complete! \n");
 }
