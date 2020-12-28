@@ -1,10 +1,9 @@
 require("@nomiclabs/hardhat-ethers");
 
+const addresses = require("../utils/addresses");
+
 const fs = require("fs");
 const chalk = require("chalk");
-
-const _wethAddress = "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2"; // WETH ERC20 Address
-const _defaultManagerAddress = "0xfc9da5D8b594B8fD7021C6B0eE5a00Ec2C4c132d"; // ScaffoldBurner address for local testing
 
 async function deploy(name, _args) {
   const args = _args || [];
@@ -83,30 +82,30 @@ async function main() {
   await folioController.addIntegration("CompundIntegration", compoundI.address);
   await folioController.createFund(
     [aaveI.address],
-    _wethAddress,
-    _wethAddress,
-    _defaultManagerAddress,
-    _defaultManagerAddress,
+    addresses.tokens.WETH,
+    addresses.tokens.sUSD,
+    addresses.users.hardhat1,
+    addresses.users.hardhat1,
     "Fund Number One",
     "FNON",
     ethers.utils.parseEther("1")
   );
   await folioController.createFund(
     [compoundI.address],
-    _wethAddress,
-    _wethAddress,
-    _defaultManagerAddress,
-    _defaultManagerAddress,
+    addresses.tokens.WETH,
+    addresses.tokens.sUSD,
+    addresses.users.hardhat1,
+    addresses.users.hardhat1,
     "Fund Number TWO",
     "FNTW",
     ethers.utils.parseEther("1")
   );
   await folioController.createFund(
     [aaveI.address, compoundI.address],
-    _wethAddress,
-    _wethAddress,
-    _defaultManagerAddress,
-    _defaultManagerAddress,
+    addresses.tokens.WETH,
+    addresses.tokens.sUSD,
+    addresses.users.hardhat1,
+    addresses.users.hardhat1,
     "Fund Number Three",
     "FNTH",
     ethers.utils.parseEther("10")
