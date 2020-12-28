@@ -163,7 +163,7 @@ export default class App extends React.Component<AppProps, AppState> {
           <ContentWrapper>
             <LogoWrapper>
               <img width="40" src="/logo-red.png" alt="" />
-              <ProjectTitle>Defi Advisor</ProjectTitle>
+              <ProjectTitle>Babylon.finance</ProjectTitle>
             </LogoWrapper>
             <div style={{
               display: 'flex',
@@ -197,7 +197,6 @@ export default class App extends React.Component<AppProps, AppState> {
       </AppWrapper>
     );
   }
-
 }
 
 const MainLink = styled.a`

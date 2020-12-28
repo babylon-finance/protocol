@@ -17,7 +17,9 @@ function publishContract(contractName) {
   );
   try {
     const contractFile = fs
-      .readFileSync(`${config.paths.artifacts}/contracts/${contractName}.sol/${contractName}.json`)
+      .readFileSync(
+        `${config.paths.artifacts}/contracts/${contractName}.sol/${contractName}.json`
+      )
       .toString();
     let address;
     try {
@@ -59,7 +61,9 @@ async function main() {
     fs.mkdirSync(publishDir);
   }
   const finalContractList = [];
-  const contractList = fs.readdirSync(config.paths.sources).filter((fileName) => isSolidity(fileName));
+  const contractList = fs
+    .readdirSync(config.paths.sources)
+    .filter((fileName) => isSolidity(fileName));
   contractList.forEach((file) => {
     if (file.indexOf(".sol") >= 0) {
       const contractName = file.replace(".sol", "");
