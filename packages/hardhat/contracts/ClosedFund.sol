@@ -185,13 +185,13 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
      * fees and issuance premium. Only callable by the Fund's manager. Hook addresses are optional.
      * Address(0) means that no hook will be called.
      *
-     * @param _managerDepositFee    ad
-     * @param _managerWithdrawalFee ad
-     * @param _managerPerformanceFee ad
-     * @param _premiumPercentage ad
-     * @param _minFundTokenSupply ad
-     * @param _managerDepositHook ad
-     * @param _managerWithdrawalHook ad
+     * @param _managerDepositFee              Manager deposit fee
+     * @param _managerWithdrawalFee           Manager withdrawal fee
+     * @param _managerPerformanceFee          Manager performance fee
+     * @param _premiumPercentage              Premium percentage to avoid arbitrage
+     * @param _minFundTokenSupply             Min fund token supply
+     * @param _managerDepositHook             Deposit hook (if any)
+     * @param _managerWithdrawalHook          Withdrawal hook (if any)
      */
     function initialize(
         uint256 _managerDepositFee,
