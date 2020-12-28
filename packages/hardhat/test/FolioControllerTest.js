@@ -1,36 +1,16 @@
 const { expect } = require("chai");
 const { ethers } = require("hardhat");
+const { waffle } = require("hardhat");
+const { loadFixture } = waffle;
 
-const fs = require("fs");
+const { deployFolioFixture } = require("./fixtures/FolioController");
 
-const addresses = require("../utils/addresses");
-const argsUtil = require("../utils/arguments.js");
 const ADD_FUND_PROPS = ["new fund", "NewFundToken", "NFT"];
 const ADD_FUND_PROPS_2 = ["new fund 2", "NewFundToken2", "NFT2"];
 
 describe("FolioController", function() {
-  let folioController;
-  let fundValuer;
-  let priceOracle;
-
   beforeEach(async () => {
-    const [owner, addr1, addr2] = await ethers.getSigners();
-    const FolioController = await ethers.getContractFactory(
-      "FolioController",
-      owner
-    );
-    folioController = await FolioController.deploy(
-      ...argsUtil.readArgumentsFile("FolioController")
-    );
-
-    const FundValuer = await ethers.getContractFactory("FundValuer", owner);
-    const PriceOracle = await ethers.getContractFactory("PriceOracle", owner);
-
-    fundValuer = await FundValuer.deploy(folioController.address);
-    priceOracle = await PriceOracle.deploy(
-      folioController.address,
-      ...argsUtil.readArgumentsFile("PriceOracle")
-    );
+    await loadFixture(deployFolioFixture);
   });
 
   describe("Deployment", function() {
