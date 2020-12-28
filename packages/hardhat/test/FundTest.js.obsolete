@@ -1,19 +1,18 @@
 const { expect } = require("chai");
 
-describe("Fund", async function() {
-  const [owner, addr1, addr2, addr3] = await ethers.getSigners();
-  const contractProps = {
-    name: "FakeFund",
-    tokenName: "FakeFundToken",
-    tokenSymbol: "FFT",
-    manager: owner.getAddress(),
-  };
-  const Fund = await ethers.getContractFactory("Fund", owner);
-
+describe("Fund", function() {
   let hedgeFund;
   let fundToken;
 
   beforeEach(async () => {
+    const [owner, addr1, addr2, addr3] = await ethers.getSigners();
+    const contractProps = {
+      name: "FakeFund",
+      tokenName: "FakeFundToken",
+      tokenSymbol: "FFT",
+      manager: owner.getAddress(),
+    };
+    const Fund = await ethers.getContractFactory("HedgeFund", owner);
     hedgeFund = await Fund.deploy(
       contractProps.name,
       contractProps.tokenName,
@@ -65,8 +64,9 @@ describe("Fund", async function() {
 
     it("only the current manager should be able to update the manager", async function() {
       expect(await hedgeFund.setManager(addr2.getAddress()));
-      const manager = await hedgeFund.manager()
-      await expect(hedgeFund.connect(owner).setManager(addr2.getAddress())).to.be.reverted;
+      const manager = await hedgeFund.manager();
+      await expect(hedgeFund.connect(owner).setManager(addr2.getAddress())).to
+        .be.reverted;
     });
   });
 

@@ -1,5 +1,5 @@
 require("@nomiclabs/hardhat-ethers");
-
+const argsUtil = require("../utils/arguments.js");
 const addresses = require("../utils/addresses");
 
 const fs = require("fs");
@@ -24,27 +24,13 @@ async function deploy(name, _args) {
 const isSolidity = (fileName) =>
   fileName.indexOf(".sol") >= 0 && fileName.indexOf(".swp.") < 0;
 
-function readArgumentsFile(contractName) {
-  let args = [];
-  try {
-    const argsFile = `./args/${contractName}.args`;
-    if (fs.existsSync(argsFile)) {
-      args = JSON.parse(fs.readFileSync(argsFile));
-    }
-  } catch (e) {
-    console.log(e);
-  }
-
-  return args;
-}
-
 async function autoDeploy() {
   const contractList = fs.readdirSync(config.paths.sources);
   return contractList
     .filter((fileName) => isSolidity(fileName))
     .reduce((lastDeployment, fileName) => {
       const contractName = fileName.replace(".sol", "");
-      const args = readArgumentsFile(contractName);
+      const args = arguments.readArgumentsFile(contractName);
 
       // Wait for last deployment to complete before starting the next
       return lastDeployment.then((resultArrSoFar) =>
@@ -56,13 +42,13 @@ async function autoDeploy() {
 async function main() {
   const folioController = await deploy(
     "FolioController",
-    readArgumentsFile("FolioController")
+    argsUtil.readArgumentsFile("FolioController")
   );
   const fundValuer = await deploy("FundValuer", [folioController.address]);
 
   const priceOracle = await deploy("PriceOracle", [
     folioController.address,
-    ...readArgumentsFile("PriceOracle"),
+    ...argsUtil.readArgumentsFile("PriceOracle"),
   ]);
 
   await folioController.editFundValuer(fundValuer.address);
@@ -70,12 +56,12 @@ async function main() {
 
   const aaveI = await deploy("AaveIntegration", [
     folioController.address,
-    ...readArgumentsFile("AaveIntegration"),
+    ...argsUtil.readArgumentsFile("AaveIntegration"),
   ]);
 
   const compoundI = await deploy("CompoundIntegration", [
     folioController.address,
-    ...readArgumentsFile("CompoundIntegration"),
+    ...argsUtil.readArgumentsFile("CompoundIntegration"),
   ]);
 
   await folioController.addIntegration("AaveIntegration", aaveI.address);
