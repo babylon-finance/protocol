@@ -10,7 +10,7 @@ interface FundCardProps {
   address: string
 }
 
-const contractName = "Fund";
+const contractName = "BaseFund";
 
 const FundCard = ({ provider, address }: FundCardProps) => {
   const [isLoaded, setIsLoaded] = useState(false);

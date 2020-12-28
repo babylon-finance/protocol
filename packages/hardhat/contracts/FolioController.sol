@@ -19,12 +19,12 @@
 pragma solidity 0.7.4;
 
 import "hardhat/console.sol";
-import { SafeMath } from "@openzeppelin/contracts/math/SafeMath.sol";
-import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
-import { ClosedFund } from "./funds/ClosedFund.sol";
-import { IFund } from "./interfaces/IFund.sol";
-import { AddressArrayUtils } from "./lib/AddressArrayUtils.sol";
+import {SafeMath} from "@openzeppelin/contracts/math/SafeMath.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
+import {ClosedFund} from "./funds/ClosedFund.sol";
+import {IFund} from "./interfaces/IFund.sol";
+import {AddressArrayUtils} from "./lib/AddressArrayUtils.sol";
 
 /**
  * @title FolioController
@@ -39,18 +39,36 @@ contract FolioController is Ownable {
 
     /* ============ Events ============ */
 
-    event FundCreated(address indexed _fund, address _manager, string _name, string _symbol);
+    event FundCreated(
+        address indexed _fund,
+        address _manager,
+        string _name,
+        string _symbol
+    );
     event FundAdded(address indexed _setToken, address indexed _factory);
     event FundRemoved(address indexed _setToken);
 
-    event ControllerIntegrationAdded(address indexed _integration, string _integrationName);
-    event ControllerIntegrationRemoved(address indexed _integration, string _integrationName);
-    event ControllerIntegrationEdited(address _newIntegration,string _integrationName);
+    event ControllerIntegrationAdded(
+        address indexed _integration,
+        string _integrationName
+    );
+    event ControllerIntegrationRemoved(
+        address indexed _integration,
+        string _integrationName
+    );
+    event ControllerIntegrationEdited(
+        address _newIntegration,
+        string _integrationName
+    );
 
     event ReserveAssetAdded(address indexed _reserveAsset);
     event ReserveAssetRemoved(address indexed _reserveAsset);
 
-    event FeeEdited(address indexed _fund, uint256 indexed _feeType, uint256 _feePercentage);
+    event FeeEdited(
+        address indexed _fund,
+        uint256 indexed _feeType,
+        uint256 _feePercentage
+    );
     event FeeRecipientChanged(address _newFeeRecipient);
 
     event ModuleAdded(address indexed _module);
@@ -59,7 +77,6 @@ contract FolioController is Ownable {
     event FundValuerChanged(address indexed _resource);
 
     /* ============ Modifiers ============ */
-
 
     /* ============ State Variables ============ */
 
@@ -101,10 +118,10 @@ contract FolioController is Ownable {
      * @param _priceOracle            Address of the initial priceOracle
      */
     constructor(
-      address _feeRecipient,
-      address _fundValuer,
-      address _priceOracle
-      ) public {
+        address _feeRecipient,
+        address _fundValuer,
+        address _priceOracle
+    ) public {
         feeRecipient = _feeRecipient;
         fundValuer = _fundValuer;
         priceOracle = _priceOracle;
@@ -134,29 +151,33 @@ contract FolioController is Ownable {
         string memory _name,
         string memory _symbol,
         uint256 _minContribution
-    )
-        external
-        returns (address)
-    {
+    ) external returns (address) {
         require(_manager != address(0), "Manager must not be empty");
-        require(_managerFeeRecipient != address(0), "Manager must not be empty");
+        require(
+            _managerFeeRecipient != address(0),
+            "Manager must not be empty"
+        );
 
         for (uint256 i = 0; i < _integrations.length; i++) {
-          require(_integrations[i] != address(0), "Component must not be null address");
+            require(
+                _integrations[i] != address(0),
+                "Component must not be null address"
+            );
         }
 
         // Creates a new Fund instance
-        ClosedFund fund = new ClosedFund(
-            _integrations,
-            _weth,
-            address(this),
-            _reserveAsset,
-            _manager,
-            _managerFeeRecipient,
-            _name,
-            _symbol,
-            _minContribution
-        );
+        ClosedFund fund =
+            new ClosedFund(
+                _integrations,
+                _weth,
+                address(this),
+                _reserveAsset,
+                _manager,
+                _managerFeeRecipient,
+                _name,
+                _symbol,
+                _minContribution
+            );
 
         addFund(address(fund));
 
@@ -170,15 +191,12 @@ contract FolioController is Ownable {
      *
      * @param _fund Address of the Fund contract to add
      */
-    function addFund(
-      address _fund
-    ) internal onlyOwner {
-      require(!isFund[_fund], "Fund already exists");
-      isFund[_fund] = true;
-      funds.push(_fund);
-      emit FundAdded(_fund, msg.sender);
+    function addFund(address _fund) internal onlyOwner {
+        require(!isFund[_fund], "Fund already exists");
+        isFund[_fund] = true;
+        funds.push(_fund);
+        emit FundAdded(_fund, msg.sender);
     }
-
 
     /**
      * PRIVILEGED GOVERNANCE FUNCTION. Allows governance to remove a Fund
@@ -186,13 +204,13 @@ contract FolioController is Ownable {
      * @param _fund               Address of the Fund contract to remove
      */
     function removeFund(address _fund) external onlyOwner {
-      require(isFund[_fund], "Fund does not exist");
+        require(isFund[_fund], "Fund does not exist");
 
-      funds = funds.remove(_fund);
+        funds = funds.remove(_fund);
 
-      isFund[_fund] = false;
+        isFund[_fund] = false;
 
-      emit FundRemoved(_fund);
+        emit FundRemoved(_fund);
     }
 
     /**
@@ -200,13 +218,14 @@ contract FolioController is Ownable {
      *
      * @param _reserveAsset Address of the reserve assset
      */
-    function addReserveAsset(
-      address _reserveAsset
-    ) internal onlyOwner {
-      require(!validReserveAsset[_reserveAsset], "Reserve asset already added");
-      validReserveAsset[_reserveAsset] = true;
-      reserveAssets.push(_reserveAsset);
-      emit ReserveAssetAdded(_reserveAsset);
+    function addReserveAsset(address _reserveAsset) internal onlyOwner {
+        require(
+            !validReserveAsset[_reserveAsset],
+            "Reserve asset already added"
+        );
+        validReserveAsset[_reserveAsset] = true;
+        reserveAssets.push(_reserveAsset);
+        emit ReserveAssetAdded(_reserveAsset);
     }
 
     /**
@@ -215,13 +234,16 @@ contract FolioController is Ownable {
      * @param _reserveAsset               Address of the reserve asset to remove
      */
     function removeReserveAsset(address _reserveAsset) external onlyOwner {
-      require(validReserveAsset[_reserveAsset], "Reserve asset does not exist");
+        require(
+            validReserveAsset[_reserveAsset],
+            "Reserve asset does not exist"
+        );
 
-      reserveAssets = reserveAssets.remove(_reserveAsset);
+        reserveAssets = reserveAssets.remove(_reserveAsset);
 
-      validReserveAsset[_reserveAsset] = false;
+        validReserveAsset[_reserveAsset] = false;
 
-      emit ReserveAssetRemoved(_reserveAsset);
+        emit ReserveAssetRemoved(_reserveAsset);
     }
 
     /**
@@ -232,10 +254,7 @@ contract FolioController is Ownable {
     function disableFund(address _fund) external onlyOwner {
         require(isFund[_fund], "Fund does not exist");
         IFund fund = IFund(_fund);
-        require(
-            fund.active(),
-            "The fund needs to be active."
-        );
+        require(fund.active(), "The fund needs to be active.");
         fund.setActive(false);
     }
 
@@ -247,10 +266,7 @@ contract FolioController is Ownable {
     function reenableFund(address _fund) external onlyOwner {
         require(isFund[_fund], "Fund does not exist");
         IFund fund = IFund(_fund);
-        require(
-            !fund.active(),
-            "The fund needs to be disabled."
-        );
+        require(!fund.active(), "The fund needs to be disabled.");
         fund.setActive(false);
     }
 
@@ -260,13 +276,13 @@ contract FolioController is Ownable {
      * @param _priceOracle               Address of the new price oracle
      */
     function editPriceOracle(address _priceOracle) external onlyOwner {
-       require(_priceOracle != priceOracle, "Price oracle already exists");
+        require(_priceOracle != priceOracle, "Price oracle already exists");
 
-       require(_priceOracle != address(0), "Price oracle must exist");
+        require(_priceOracle != address(0), "Price oracle must exist");
 
-       priceOracle = _priceOracle;
+        priceOracle = _priceOracle;
 
-       emit PriceOracleChanged(_priceOracle);
+        emit PriceOracleChanged(_priceOracle);
     }
 
     /**
@@ -275,13 +291,13 @@ contract FolioController is Ownable {
      * @param _fundValuer Address of the new price oracle
      */
     function editFundValuer(address _fundValuer) external onlyOwner {
-       require(_fundValuer != fundValuer, "Fund Valuer already exists");
+        require(_fundValuer != fundValuer, "Fund Valuer already exists");
 
-       require(_fundValuer != address(0), "Fund Valuer must exist");
+        require(_fundValuer != address(0), "Fund Valuer must exist");
 
-       fundValuer = _fundValuer;
+        fundValuer = _fundValuer;
 
-       emit FundValuerChanged(_fundValuer);
+        emit FundValuerChanged(_fundValuer);
     }
 
     /**
@@ -303,15 +319,15 @@ contract FolioController is Ownable {
      * @param  _name         Human readable string identifying the integration
      * @param  _integration      Address of the integration contract to add
      */
-    function addIntegration(
-        string memory _name,
-        address _integration
-    )
+    function addIntegration(string memory _name, address _integration)
         public
         onlyOwner
     {
         bytes32 hashedName = _nameHash(_name);
-        require(integrations[hashedName] == address(0), "Integration exists already.");
+        require(
+            integrations[hashedName] == address(0),
+            "Integration exists already."
+        );
         require(_integration != address(0), "Integration address must exist.");
 
         integrations[hashedName] = _integration;
@@ -350,16 +366,16 @@ contract FolioController is Ownable {
      * @param  _name         Human readable string identifying the integration
      * @param  _integration      Address of the integration contract to edit
      */
-    function editIntegration(
-        string memory _name,
-        address _integration
-    )
+    function editIntegration(string memory _name, address _integration)
         public
         onlyOwner
     {
         bytes32 hashedName = _nameHash(_name);
 
-        require(integrations[hashedName] != address(0), "Integration does not exist.");
+        require(
+            integrations[hashedName] != address(0),
+            "Integration does not exist."
+        );
         require(_integration != address(0), "Integration address must exist.");
 
         integrations[hashedName] = _integration;
@@ -403,14 +419,16 @@ contract FolioController is Ownable {
      */
     function removeIntegration(string memory _name) external onlyOwner {
         bytes32 hashedName = _nameHash(_name);
-        require(integrations[hashedName] != address(0), "Integration does not exist.");
+        require(
+            integrations[hashedName] != address(0),
+            "Integration does not exist."
+        );
 
         address oldIntegration = integrations[hashedName];
         delete integrations[hashedName];
 
         emit ControllerIntegrationRemoved(oldIntegration, _name);
     }
-
 
     /* ============ External Getter Functions ============ */
 
@@ -427,11 +445,15 @@ contract FolioController is Ownable {
     }
 
     function getProtocolDepositFundTokenFee() external view returns (uint256) {
-      return protocolDepositFundTokenFee;
+        return protocolDepositFundTokenFee;
     }
 
-    function getProtocolWithdrawalFundTokenFee() external view returns (uint256) {
-      return protocolWithdrawalFundTokenFee;
+    function getProtocolWithdrawalFundTokenFee()
+        external
+        view
+        returns (uint256)
+    {
+        return protocolWithdrawalFundTokenFee;
     }
 
     function getFeeRecipient() external view returns (address) {
@@ -454,8 +476,12 @@ contract FolioController is Ownable {
         return maxFundPremiumPercentage;
     }
 
-    function isValidReserveAsset(address _reserveAsset) external view returns (bool) {
-      return validReserveAsset[_reserveAsset];
+    function isValidReserveAsset(address _reserveAsset)
+        external
+        view
+        returns (bool)
+    {
+        return validReserveAsset[_reserveAsset];
     }
 
     /**
@@ -465,7 +491,11 @@ contract FolioController is Ownable {
      *
      * @return               Address of integration
      */
-    function getIntegrationByName(string memory _name) external view returns (address) {
+    function getIntegrationByName(string memory _name)
+        external
+        view
+        returns (address)
+    {
         return integrations[_nameHash(_name)];
     }
 
@@ -476,7 +506,11 @@ contract FolioController is Ownable {
      *
      * @return               Address of integration
      */
-    function getIntegrationWithHash(bytes32 _nameHashP) external view returns (address) {
+    function getIntegrationWithHash(bytes32 _nameHashP)
+        external
+        view
+        returns (address)
+    {
         return integrations[_nameHashP];
     }
 
@@ -487,7 +521,11 @@ contract FolioController is Ownable {
      *
      * @return               Boolean indicating if valid
      */
-    function isValidIntegration(string memory _name) external view returns (bool) {
+    function isValidIntegration(string memory _name)
+        external
+        view
+        returns (bool)
+    {
         return integrations[_nameHash(_name)] != address(0);
     }
 
@@ -496,13 +534,15 @@ contract FolioController is Ownable {
      *
      * @param  _contractAddress           The contract address to check
      */
-    function isSystemContract(address _contractAddress) external view returns (bool) {
-        return (
-            isFund[_contractAddress] ||
+    function isSystemContract(address _contractAddress)
+        external
+        view
+        returns (bool)
+    {
+        return (isFund[_contractAddress] ||
             fundValuer == address(this) ||
             priceOracle == address(this) ||
-            _contractAddress == address(this)
-        );
+            _contractAddress == address(this));
     }
 
     /* ============ Internal Only Function ============ */
@@ -510,7 +550,7 @@ contract FolioController is Ownable {
     /**
      * Hashes the string and returns a bytes32 value
      */
-    function _nameHash(string memory _name) internal pure returns(bytes32) {
+    function _nameHash(string memory _name) internal pure returns (bytes32) {
         return keccak256(bytes(_name));
     }
 }

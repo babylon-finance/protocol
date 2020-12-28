@@ -14,10 +14,10 @@ const FundCardRow = ({ provider, address }: FundCardRowProps) => {
   const [loading, setLoading] = useState(false);
   const [funds, setFunds] = useState();
   const contracts = useContractLoader(provider, address);
-
+  console.log(contracts);
   useEffect(() => {
     async function getFunds() {
-      setFunds(await contracts.DFolio.getAllFunds());
+      setFunds(await contracts.FolioController.getFunds());
     }
     if (contracts) {
       getFunds();

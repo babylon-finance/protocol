@@ -36,6 +36,7 @@ describe("FolioController", function() {
   describe("Deployment", function() {
     it("should successfully deploy the contract", async function() {
       const deployed = await folioController.deployed();
+      expect(!!deployed).to.equal(true);
     });
   });
 
