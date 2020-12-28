@@ -31,16 +31,17 @@ import { IFolioController } from "../interfaces/IFolioController.sol";
 import { BaseIntegration } from "./BaseIntegration.sol";
 
 /**
- * Aave Integration
- * This example supports stable interest rate borrows.
+ * @title AaveIntegration
+ * @author DFolio
+ *
+ * Abstract class that houses aave borring/lending logic.
  */
-
 contract AaveIntegration is BorrowIntegration {
     using SafeERC20 for IERC20;
 
     ILendingPool constant lendingPool = ILendingPool(address(0x7d2768dE32b0b80b7a3454c06BdAc94A69DDc7A9)); // Mainnet
     IProtocolDataProvider constant dataProvider = IProtocolDataProvider(address(0x057835Ad21a177dbdd3090bB1CAE03EaCF78Fc6d)); // Mainnet
-
+    uint constant interestRateMode = 1; // Stable Interest
     /* ============ Constructor ============ */
 
     /**
@@ -65,10 +66,10 @@ contract AaveIntegration is BorrowIntegration {
      * @param amount The amount to be deposited as collateral
      *
      */
-    function depositCollateral(address asset, uint256 amount) external {
+    function depositCollateral(address asset, uint256 amount) onlyFund external {
+      amount = normalizeDecimals(asset, amount);
       IERC20(asset).safeTransferFrom(msg.sender, address(this), amount);
       IERC20(asset).safeApprove(address(lendingPool), amount);
-      uint allowance = IERC20(asset).allowance(address(this), address(lendingPool));
       lendingPool.deposit(asset, amount, address(this), 0);
     }
 
@@ -76,9 +77,9 @@ contract AaveIntegration is BorrowIntegration {
      * Borrows an asset
      * @param asset The asset to be borrowed
      * @param amount The amount to borrow
-     * @param interestRateMode 1 for stable, 2 for variable
      */
-    function borrow(address asset, uint256 amount, uint256 interestRateMode, address onBehalf) external {
+    function borrow(address asset, uint256 amount) onlyFund external {
+      amount = normalizeDecimals(asset, amount);
       lendingPool.borrow(asset, amount, interestRateMode, 0, address(this));
       // Sends the borrowed assets back to the caller
       IERC20(asset).transfer(msg.sender, amount);
@@ -88,34 +89,68 @@ contract AaveIntegration is BorrowIntegration {
      * Repays a borrowed asset debt
      * @param asset The asset to be repaid
      * @param amount The amount to repay
-     * @param interestRateMode 1 for stable, 2 for variable
      */
-    function repay(address asset, uint256 amount, uint256 interestRateMode) external {
+    function repay(address asset, uint256 amount) onlyFund external {
+      amount = normalizeDecimals(asset, amount);
       IERC20(asset).safeTransferFrom(msg.sender, address(this), amount);
       IERC20(asset).safeApprove(address(lendingPool), amount);
       lendingPool.repay(asset, amount, interestRateMode, address(this));
     }
 
     /**
-     * Withdraw all of a collateral as the underlying asset
-     * @param asset The underlying asset to withdraw
+     * Repays all the borrowed asset debt
+     * @param asset The asset to be repaid
+     */
+    function repayAll(address asset) onlyFund external {
+      (uint256 assetLended, uint256 stableDebt,,,,,,,) = dataProvider.getUserReserveData(asset, address(this));
+      lendingPool.repay(asset, stableDebt, interestRateMode, address(this));
+    }
+
+    /**
+     * Withdraw an amount of collateral as the underlying asset
+     * @param asset   The underlying asset to withdraw
+     * @param amount The amount of the underlying to withdraw
      *
      */
-    function withdrawCollateral(address asset) external {
+    function withdrawCollateral(address asset, uint256 amount) onlyFund external {
+      amount = normalizeDecimals(asset, amount);
+      lendingPool.withdraw(asset, amount, msg.sender);
+    }
+
+    /**
+     * Withdraw all of a collateral as the underlying asset
+     * @param asset   The underlying asset to withdraw
+     *
+     */
+    function withdrawAllCollateral(address asset) onlyFund external {
       (address aTokenAddress,,) = dataProvider.getReserveTokensAddresses(asset);
       uint256 assetBalance = IERC20(aTokenAddress).balanceOf(address(this));
       lendingPool.withdraw(asset, assetBalance, msg.sender);
     }
 
-    function repayAll(address asset) external {
-      // TODO
+    /**
+     * Get the amount of borrowed debt that needs to be repaid
+     * @param asset   The underlying asset
+     *
+     */
+    function getBorrowBalance(address asset) onlyFund external view returns (uint256) {
+      (uint256 assetLended, uint256 stableDebt,,,,,,,) = dataProvider.getUserReserveData(asset, address(this));
+      return stableDebt;
     }
 
-    function withdrawAllCollateral(address asset) external {
-      // TODO
-    }
-    function getBorrowBalance(address asset) external view returns (uint256) {
-      // TODO
-      return 0;
+    /**
+     * Get the health factor of the total debt
+     *
+     */
+    function getHealthFactor() external view returns (uint256) {
+      (
+        uint256 totalCollateral,
+        uint256 totalDebt,
+        uint256 borrowingPower,
+        uint256 lituidationThreshold,
+        uint256 ltv,
+        uint256 healthFactor
+      ) = lendingPool.getUserAccountData(address(this));
+      return healthFactor;
     }
 }

@@ -32,18 +32,20 @@ import { IFolioController } from "../interfaces/IFolioController.sol";
 import { BaseIntegration } from "./BaseIntegration.sol";
 
 /**
- * Compound Borrowing primitive
+ * @title CompoundIntegration
+ * @author DFolio
+ *
+ * Abstract class that houses compound borring/lending logic.
  */
-
 contract CompoundIntegration is BorrowIntegration {
   using SafeMath for uint256;
 
+  /* ============ State Variables ============ */
 
   address constant CompoundComptrollerAddress = 0x3d9819210A31b4961b30EF54bE2aeD79B9c9Cd3B;
   address constant CEtherAddress = 0x4Ddc2D193948926D02f9B1fE9e1daa0718270ED5;
-  address constant CUSDCAddress = 0x39AA39c021dfbaE8faC545936693aC917d5E7563;
-  address constant CUSDTAddress = 0xf650C3d88D12dB855b8bf7D11Be6C55A4e07dCC9;
-  address constant CWBTCAddress = 0xC11b1268C1A384e55C48c2391d8d480264A3A7F4;
+
+  /* ============ Constructor ============ */
 
   /**
    * Creates the integration
@@ -57,61 +59,20 @@ contract CompoundIntegration is BorrowIntegration {
     address _weth,
     uint256 _maxCollateralFactor
   ) public BorrowIntegration('Compound Borrowing', _weth, _controller, _maxCollateralFactor) {
-
   }
 
-  function getBorrowBalance(
-      address cToken,
-      address owner
-  )
-      external
-      view
-      returns (uint256)
-  {
-      (
-          uint256 err,
-          uint256 cTokenBalance,
-          uint256 borrowBalance,
-          uint256 exchangeRateMantissa
-      ) = ICToken(cToken).getAccountSnapshot(owner);
+  /* ============ External Functions ============ */
 
-      // Source: balanceOfUnderlying from any ctoken
-      return cTokenBalance.mul(exchangeRateMantissa).div(1e18);
-  }
 
-  function enterMarkets(
-      address[] memory cTokens // Address of the Compound derivation token (e.g. cDAI)
-  ) public {
-    // Enter the compound markets for all the specified tokens
-    uint256[] memory errors = IComptroller(CompoundComptrollerAddress)
-      .enterMarkets(cTokens);
-
-    for (uint256 i = 0; i < errors.length; i++) {
-      require(errors[i] == 0, "cmpnd-mgr-enter-markets-failed");
-    }
-  }
-
-  function approveCToken(address cToken, uint256 amount) public {
-    // Approves CToken contract to call `transferFrom`
-    address underlying = ICToken(cToken).underlying();
-    require(
-        IERC20(underlying).approve(cToken, amount) == true,
-        "cmpnd-mgr-ctoken-approved-failed"
-    );
-  }
-
-  function approveCTokens(
-      address[] memory cTokens // Tokens to approve
-  ) public {
-    for (uint256 i = 0; i < cTokens.length; i++) {
-      // Don't need to approve ICEther
-      if (cTokens[i] != CEtherAddress) {
-          approveCToken(cTokens[i], uint256(-1));
-      }
-    }
-  }
-
-  function depositCollateral(address cToken, uint256 amount) external payable {
+  /**
+   * Deposits collateral into the Compound protocol.
+   * This would be called by a fund within a strategy
+   * @param asset The cAsset to be deposited as collateral
+   * @param amount The amount to be deposited as collateral
+   *
+   */
+  function depositCollateral(address asset, uint256 amount) onlyFund external payable {
+    address cToken = assetToCtoken[asset];
     // Amount of current exchange rate from cToken to underlying
     if (cToken == CEtherAddress) {
       require(msg.value == amount, "The amount of eth needs to match");
@@ -119,7 +80,7 @@ contract CompoundIntegration is BorrowIntegration {
       ICEther(CEtherAddress).mint{value: msg.value, gas: 250000 }();
     } else {
       // Approves CToken contract to call `transferFrom`
-      amount = normalizeDecimals(cToken, amount);
+      amount = normalizeDecimals(asset, amount);
       approveCToken(cToken, amount);
       ICToken cTokenInstance = ICToken(cToken);
       // uint256 exchangeRateMantissa = cTokenInstance.exchangeRateCurrent();
@@ -137,22 +98,172 @@ contract CompoundIntegration is BorrowIntegration {
   }
 
   /**
-    Normalize all the amounts of all tokens so all can be called with 10^18.
-    e.g Call functions like borrow, supply with parseEther
-  */
-  function normalizeDecimals(address cToken, uint256 amount) view private returns (uint256)  {
-    // cUSDC and CUSDT have only 6 decimals
-    if (cToken == CUSDCAddress || cToken == CUSDTAddress) {
-      amount =  amount.div(10**12);
-    }
-    // cWBTC has 8 decimals
-    if (cToken == CWBTCAddress) {
-      amount =  amount.div(10**10);
-    }
-    return amount;
+   * Borrows an asset
+   * @param asset The asset to be borrowed
+   * @param amount The amount to borrow
+   */
+  function borrow(address asset, uint256 amount) onlyFund external {
+    address cToken = assetToCtoken[asset];
+    require(
+        ICToken(cToken).borrow(normalizeDecimals(asset, amount)) == 0,
+        "cmpnd-mgr-ctoken-borrow-failed"
+    );
   }
 
-  function safeBorrow(address cToken, uint256 borrowAmount) private {
+  /**
+   * Repays a borrowed asset debt
+   * @param asset The asset to be repaid
+   * @param amount The amount to repay
+   */
+  function repay(address asset, uint256 amount) onlyFund external payable {
+    address cToken = assetToCtoken[asset];
+    if (cToken == CEtherAddress) {
+        ICEther(cToken).repayBorrow{ value: amount }();
+    } else {
+      amount = normalizeDecimals(asset, amount);
+      approveCToken(cToken, amount);
+      require(
+          ICToken(cToken).repayBorrow(amount) == 0,
+          "cmpnd-mgr-ctoken-repay-failed"
+      );
+    }
+  }
+
+  /**
+   * Repays all the borrowed asset debt
+   * @param asset The asset to be repaid
+   */
+  function repayAll(address asset) onlyFund external payable {
+    address cToken = assetToCtoken[asset];
+    if (cToken == CEtherAddress) {
+        ICEther(cToken).repayBorrow{ value: _getBorrowBalance(asset)}();
+    } else {
+      uint256 amount = normalizeDecimals(asset, _getBorrowBalance(asset));
+      approveCToken(cToken, amount);
+      require(
+          ICToken(cToken).repayBorrow(amount) == 0,
+          "cmpnd-mgr-ctoken-repay-failed"
+      );
+    }
+  }
+
+  /**
+   * Withdraw an amount of collateral as the underlying asset
+   * @param asset   The underlying asset to withdraw
+   * @param amount The amount of the underlying to withdraw
+   *
+   */
+  function withdrawCollateral(address asset, uint256 amount) onlyFund external payable {
+    address cToken = assetToCtoken[asset];
+    // Retrieve your asset based on a cToken amount
+    amount = normalizeDecimals(asset, amount);
+    require(
+        ICToken(cToken).redeem(amount) == 0,
+        "cmpnd-mgr-ctoken-redeem-failed"
+    );
+  }
+
+  /**
+   * Withdraw all of a collateral as the underlying asset
+   * @param asset   The underlying asset to withdraw
+   *
+   */
+  function withdrawAllCollateral(address asset) onlyFund external payable {
+    address cToken = assetToCtoken[asset];
+    // Retrieve your asset based on a cToken amount
+    uint amount = normalizeDecimals(asset, _getCollateralBalance(asset));
+    require(
+        ICToken(cToken).redeem(amount) == 0,
+        "cmpnd-mgr-ctoken-redeem-failed"
+    );
+  }
+
+  /**
+   * Get the amount of borrowed debt that needs to be repaid
+   * @param asset   The underlying asset
+   *
+   */
+  function getBorrowBalance(
+    address asset
+  )
+    onlyFund
+    external
+    view
+    returns (uint256)
+  {
+    return _getBorrowBalance(asset);
+  }
+
+  /**
+   * Get the health factor of the total debt situation
+   *
+   */
+  function getHealthFactor() onlyFund external view returns (uint256) {
+    IComptroller comptroller = IComptroller(CompoundComptrollerAddress);
+    (uint256 error, uint256 liquidity, uint256 shortfall) = comptroller.getAccountLiquidity(msg.sender);
+    return liquidity;
+  }
+
+  /* ============ Internal Functions ============ */
+
+  function enterMarkets(
+    address[] memory cTokens // Address of the Compound derivation token (e.g. cDAI)
+  ) private {
+    // Enter the compound markets for all the specified tokens
+    uint256[] memory errors = IComptroller(CompoundComptrollerAddress)
+      .enterMarkets(cTokens);
+
+    for (uint256 i = 0; i < errors.length; i++) {
+      require(errors[i] == 0, "cmpnd-mgr-enter-markets-failed");
+    }
+  }
+
+  function approveCToken(address cToken, uint256 amount) private {
+    // Approves CToken contract to call `transferFrom`
+    address underlying = ICToken(cToken).underlying();
+    require(
+        IERC20(underlying).approve(cToken, amount) == true,
+        "cmpnd-mgr-ctoken-approved-failed"
+    );
+  }
+
+  function approveCTokens(
+      address[] memory cTokens // Tokens to approve
+  ) private {
+    for (uint256 i = 0; i < cTokens.length; i++) {
+      // Don't need to approve ICEther
+      if (cTokens[i] != CEtherAddress) {
+          approveCToken(cTokens[i], uint256(-1));
+      }
+    }
+  }
+
+  function _getBorrowBalance(address asset) private view returns (uint256) {
+    address cToken = assetToCtoken[asset];
+    (
+      uint256 err,
+      uint256 cTokenBalance,
+      uint256 borrowBalance,
+      uint256 exchangeRateMantissa
+    ) = ICToken(cToken).getAccountSnapshot(msg.sender);
+    return borrowBalance.mul(exchangeRateMantissa).div(1e18);
+  }
+
+  function _getCollateralBalance(address asset) private view returns (uint256) {
+    address cToken = assetToCtoken[asset];
+    (
+      uint256 err,
+      uint256 cTokenBalance,
+      uint256 borrowBalance,
+      uint256 exchangeRateMantissa
+    ) = ICToken(cToken).getAccountSnapshot(msg.sender);
+
+    // Source: balanceOfUnderlying from any ctoken
+    return cTokenBalance.mul(exchangeRateMantissa).div(1e18);
+  }
+
+  function safeBorrow(address asset, uint256 borrowAmount) private {
+    address cToken = assetToCtoken[asset];
     // Get my account's total liquidity value in Compound
     (uint256 error, uint256 liquidity, uint256 shortfall) = IComptroller(CompoundComptrollerAddress)
         .getAccountLiquidity(address(this));
@@ -171,80 +282,39 @@ contract CompoundIntegration is BorrowIntegration {
     // in your account being liquidated instantly
     // emit MyLog("Maximum underlying Borrow (borrow far less!)", maxBorrowUnderlying);
     require(
-        ICToken(cToken).borrow(normalizeDecimals(cToken, borrowAmount)) == 0,
+        ICToken(cToken).borrow(normalizeDecimals(asset, borrowAmount)) == 0,
         "cmpnd-mgr-ctoken-borrow-failed"
     );
   }
 
-  function borrow(address cToken, uint256 borrowAmount) external {
-    require(
-        ICToken(cToken).borrow(normalizeDecimals(cToken, borrowAmount)) == 0,
-        "cmpnd-mgr-ctoken-borrow-failed"
-    );
-  }
-
-  function repay(address cToken, uint256 amount) external payable {
-      if (cToken == CEtherAddress) {
-          ICEther(cToken).repayBorrow{ value: amount }();
-      } else {
-        amount = normalizeDecimals(cToken, amount);
-        approveCToken(cToken, amount);
-        require(
-            ICToken(cToken).repayBorrow(amount) == 0,
-            "cmpnd-mgr-ctoken-repay-failed"
-        );
-      }
-  }
-
-  function repayAll(address asset) external payable {
-
-  }
-
-  function repayBorrowBehalf(
-      address recipient,
-      address cToken,
-      uint256 amount
-  ) public payable {
-    if (cToken == CEtherAddress) {
-      ICEther(cToken).repayBorrowBehalf{ value: amount}(recipient);
-    } else {
-      amount = normalizeDecimals(cToken, amount);
-      approveCToken(cToken, amount);
-      require(
-          ICToken(cToken).repayBorrowBehalf(recipient, amount) == 0,
-          "cmpnd-mgr-ctoken-repaybehalf-failed"
-      );
-    }
-  }
-
-  function withdrawCollateral(address cToken, uint256 redeemTokens) external payable {
-    // Retrieve your asset based on a cToken amount
-    redeemTokens = normalizeDecimals(cToken, redeemTokens);
-    require(
-        ICToken(cToken).redeem(redeemTokens) == 0,
-        "cmpnd-mgr-ctoken-redeem-failed"
-    );
-  }
-
-  function withdrawAllCollateral(address cToken) external payable {
-    // Retrieve your asset based on a cToken amount
-    // TODO
-    uint redeemTokens = normalizeDecimals(cToken, 0);
-    require(
-        ICToken(cToken).redeem(redeemTokens) == 0,
-        "cmpnd-mgr-ctoken-redeem-failed"
-    );
-  }
-
-  function redeemUnderlying(address cToken, uint256 redeemTokens) public payable
-  {
-    redeemTokens = normalizeDecimals(cToken, redeemTokens);
-    // Retrieve your asset based on an amount of the asset
-    require(
-        ICToken(cToken).redeemUnderlying(redeemTokens) == 0,
-        "cmpnd-mgr-ctoken-redeem-underlying-failed"
-    );
-  }
+  // function repayBorrowBehalf(
+  //     address recipient,
+  //     address asset,
+  //     uint256 amount
+  // ) private payable {
+  //   address cToken = assetToCtoken[asset];
+  //   if (cToken == CEtherAddress) {
+  //     ICEther(cToken).repayBorrowBehalf{ value: amount}(recipient);
+  //   } else {
+  //     amount = normalizeDecimals(asset, amount);
+  //     approveCToken(cToken, amount);
+  //     require(
+  //         ICToken(cToken).repayBorrowBehalf(recipient, amount) == 0,
+  //         "cmpnd-mgr-ctoken-repaybehalf-failed"
+  //     );
+  //   }
+  // }
+  //
+  // function redeemUnderlying(address asset, uint256 redeemTokens) private payable
+  // {
+  //   address cToken = assetToCtoken[asset];
+  //   redeemTokens = normalizeDecimals(asset, redeemTokens);
+  //   // Retrieve your asset based on an amount of the asset
+  //   require(
+  //       ICToken(cToken).redeemUnderlying(redeemTokens) == 0,
+  //       "cmpnd-mgr-ctoken-redeem-underlying-failed"
+  //   );
+  // }
 
   // Need this to receive ETH when `borrowEthExample` and calling `redeemCEth` executes
   fallback() external payable {}

@@ -41,6 +41,7 @@ abstract contract BorrowIntegration is BaseIntegration {
     /* ============ State Variables ============ */
     uint256 public maxCollateralFactor;
 
+
     /* ============ Constructor ============ */
 
     /**
@@ -53,10 +54,12 @@ abstract contract BorrowIntegration is BaseIntegration {
      */
     constructor(string memory _name, address _weth, address _controller, uint256 _maxCollateralFactor) BaseIntegration(_name, _weth, _controller) {
       maxCollateralFactor = _maxCollateralFactor;
+
     }
 
     /* ============ External Functions ============ */
-    function updateMaxCollateralFactor(uint256 _newMaxCollateralFactor) public onlyProtocol {
+    // Governance function
+    function updateMaxCollateralFactor(uint256 _newMaxCollateralFactor) external onlyProtocol {
       maxCollateralFactor = _newMaxCollateralFactor;
     }
 

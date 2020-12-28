@@ -44,8 +44,18 @@ abstract contract BaseIntegration {
       _;
     }
 
+    modifier onlyFund() {
+      require(isFundValidAndInitialized(msg.sender), "Only a fund can call this");
+      require(initializedByFund[msg.sender], "integration has already been initialized");
+      _;
+    }
+
 
     /* ============ State Variables ============ */
+
+    address constant USDCAddress = 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48;
+    address constant USDTAddress = 0xdAC17F958D2ee523a2206206994597C13D831ec7;
+    address constant WBTCAddress = 0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599;
 
     // Address of the controller
     address public controller;
@@ -55,6 +65,8 @@ abstract contract BaseIntegration {
     string public name;
     mapping(address => bool) public initializedByFund;
     bool initialized;
+    // Mapping of asset addresses to cToken addresses
+    mapping(address => address) public assetToCtoken;
 
     /* ============ Constructor ============ */
 
@@ -72,6 +84,12 @@ abstract contract BaseIntegration {
       controller = _controller;
       weth = _weth;
       initialized = false;
+      assetToCtoken[0x6B175474E89094C44Da98b954EedeAC495271d0F] = 0x5d3a536E4D6DbD6114cc1Ead35777bAB948E3643; // DAI
+      assetToCtoken[0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2] = 0x4Ddc2D193948926D02f9B1fE9e1daa0718270ED5; // WETH
+      assetToCtoken[0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48] = 0x39AA39c021dfbaE8faC545936693aC917d5E7563; // USDC
+      assetToCtoken[0xdAC17F958D2ee523a2206206994597C13D831ec7] = 0xf650C3d88D12dB855b8bf7D11Be6C55A4e07dCC9; // USDT
+      assetToCtoken[0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599] = 0xC11b1268C1A384e55C48c2391d8d480264A3A7F4; // WBTC
+      assetToCtoken[0xc00e94Cb662C3520282E6f5717214004A7f26888] = 0x70e36f6BF80a52b3B46b3aF8e106CC0ed743E8e4; // COMP
     }
 
     /* ============ External Functions ============ */
@@ -80,21 +98,10 @@ abstract contract BaseIntegration {
      * Initializes the integration.
      * @param _fund addres of the fund
      */
-    function initialize(address _fund) virtual public {
+    function initialize(address _fund) onlyFund virtual public {
       require(!initializedByFund[_fund], "integration has already been initialized");
       IFund(_fund).initializeIntegration();
       initializedByFund[_fund] = true;
-    }
-
-    /**
-     * Updates the position in the fund with the new units
-     *
-     * @param _fund                     Address of the fund
-     * @param _component                Address of the ERC20
-     * @param _newUnit                  New unit of the fund position
-     */
-    function updateFundPosition(address _fund, address _component, uint256 _newUnit) external {
-      IFund(_fund).calculateAndEditPosition(_component, _newUnit);
     }
 
     /**
@@ -104,7 +111,24 @@ abstract contract BaseIntegration {
       return name;
     }
 
+    // Governance function
+    function updateCTokenMapping(address _assetAddress, address _cTokenAddress) external onlyProtocol {
+      assetToCtoken[_assetAddress] = _cTokenAddress;
+    }
+
     /* ============ Internal Functions ============ */
+
+
+    /**
+     * Updates the position in the fund with the new units
+     *
+     * @param _fund                     Address of the fund
+     * @param _component                Address of the ERC20
+     * @param _newUnit                  New unit of the fund position
+     */
+    function updateFundPosition(address _fund, address _component, uint256 _newUnit) internal {
+      IFund(_fund).calculateAndEditPosition(_component, _newUnit);
+    }
 
     /**
      * Transfers tokens from an address (that has set allowance on the module).
@@ -143,7 +167,7 @@ abstract contract BaseIntegration {
     }
 
     /**
-     * Returns true if the address is the SetToken's manager
+     * Returns true if the address is the Fund's manager
      */
     function isFundManager(address _fund, address _toCheck) internal view returns(bool) {
         return IFund(_fund).manager() == _toCheck;
@@ -151,11 +175,27 @@ abstract contract BaseIntegration {
 
     /**
      * Returns true if Fund must be enabled on the controller
-     * and module is registered on the SetToken
+     * and module is registered on the Fund
      */
     function isFundValidAndInitialized(address _fund) internal view returns(bool) {
         return IFolioController(controller).isFund(address(_fund)) &&
             IFund(_fund).isInitializedIntegration(address(this));
+    }
+
+    /**
+      Normalize all the amounts of all tokens so all can be called with 10^18.
+      e.g Call functions like borrow, supply with parseEther
+    */
+    function normalizeDecimals(address asset, uint256 amount) internal view returns (uint256)  {
+      // USDC and USDT have only 6 decimals
+      if (asset == USDCAddress || asset == USDTAddress) {
+        amount =  amount.preciseDiv(10**12);
+      }
+      // WBTC has 8 decimals
+      if (asset == WBTCAddress) {
+        amount =  amount.preciseDiv(10**10);
+      }
+      return amount;
     }
 
 }

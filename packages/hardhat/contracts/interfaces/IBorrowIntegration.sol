@@ -35,4 +35,5 @@ interface IBorrowIntegration is IIntegration {
   function withdrawAllCollateral(address asset) external;
   function updateMaxCollateralFactor(uint256 _newMaxCollateralFactor) external;
   function getBorrowBalance(address asset) external view returns (uint256);
+  function getHealthFactor() external view returns (uint256);
 }
