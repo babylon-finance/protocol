@@ -3,14 +3,14 @@ const { ethers } = require("hardhat");
 const { waffle } = require("hardhat");
 const { loadFixture } = waffle;
 
-const { fixture } = require("./fixtures/FolioController");
+const { deployFolioFixture } = require("./fixtures/FolioController");
 
 const ADD_FUND_PROPS = ["new fund", "NewFundToken", "NFT"];
 const ADD_FUND_PROPS_2 = ["new fund 2", "NewFundToken2", "NFT2"];
 
 describe("FolioController", function() {
   beforeEach(async () => {
-    await loadFixture(fixture);
+    await loadFixture(deployFolioFixture);
   });
 
   describe("Deployment", function() {

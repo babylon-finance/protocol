@@ -5,7 +5,7 @@ const { ethers } = require("hardhat");
 
 const provider = waffle.provider;
 
-async function fixture() {
+async function deployFolioFixture() {
   const [owner, addr1, addr2, addr3] = await ethers.getSigners();
   const FolioController = await ethers.getContractFactory(
     "FolioController",
@@ -31,4 +31,4 @@ async function fixture() {
   };
 }
 
-module.exports = { fixture };
+module.exports = { deployFolioFixture };
