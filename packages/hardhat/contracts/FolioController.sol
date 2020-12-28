@@ -218,7 +218,7 @@ contract FolioController is Ownable {
      *
      * @param _reserveAsset Address of the reserve assset
      */
-    function addReserveAsset(address _reserveAsset) internal onlyOwner {
+    function addReserveAsset(address _reserveAsset) external onlyOwner {
         require(
             !validReserveAsset[_reserveAsset],
             "Reserve asset already added"
@@ -497,6 +497,21 @@ contract FolioController is Ownable {
         returns (address)
     {
         return integrations[_nameHash(_name)];
+    }
+
+    /**
+     * Get integration integration address associated with passed human readable name
+     *
+     * @param  _integration         Address of the integration
+     *
+     * @return                  Integration fee
+     */
+    function getIntegrationFee(address _integration)
+        external
+        view
+        returns (uint256)
+    {
+        return 0;
     }
 
     /**

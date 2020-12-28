@@ -29,10 +29,25 @@ interface IFolioController {
     /* ============ Functions ============ */
 
     function addFund(address _fund) external;
-    function getFeeRecipient() external view returns(address);
-    function getFundValuer() external view returns(address);
+    function removeFund(address _fund) external;
+    function addReserveAsset(address _reserveAsset) external;
+    function removeReserveAsset(address _reserveAsset) external;
+    function disableFund(address _fund) external;
+    function reenableFund(address _fund) external;
+    function editPriceOracle(address _priceOracle) external;
+    function editFundValuer(address _fundValuer) external;
+    function editFeeRecipient(address _newFeeRecipient) external;
+    function addIntegration(string memory _name, address _integration) external;
+    function editIntegration(string memory _name, address _integration) external;
+    function removeIntegration(string memory _name) external;
     function getPriceOracle() external view returns (address);
+    function getFundValuer() external view returns(address);
+    function getFeeRecipient() external view returns(address);
+    function getFunds() external view returns (address[] memory);
     function isFund(address _fund) external view returns(bool);
+    function getIntegrationByName(string memory _name) external view returns (address);
+    function getIntegrationFee(address _integration) external view returns (uint256);
+    function getIntegrationWithHash(bytes32 _nameHashP) external view returns (address);
     function isValidReserveAsset(address _reserveAsset) external view returns(bool);
     function isSystemContract(address _contractAddress) external view returns (bool);
     function isValidIntegration(string memory _name) external view returns (bool);
@@ -42,6 +57,4 @@ interface IFolioController {
     function getMaxFundPremiumPercentage() external view returns (uint256);
     function getProtocolDepositFundTokenFee() external view returns (uint256);
     function getProtocolWithdrawalFundTokenFee() external view returns (uint256);
-
-    // TODO: FILL
 }

@@ -122,10 +122,8 @@ abstract contract BaseIntegration {
      * Gets the total fee for this integration of the passed in index (fee % * quantity)
      */
     function getIntegrationFee(uint256 _feeIndex, uint256 _quantity) internal view returns(uint256) {
-        // uint256 feePercentage = IFolioController(controller).getIntegrationFee(address(this), _feeIndex);
-        // return _quantity.preciseMul(feePercentage);
-        // TODO
-        return 0;
+        uint256 feePercentage = IFolioController(controller).getIntegrationFee(address(this));
+        return _quantity.preciseMul(feePercentage);
     }
 
     /**

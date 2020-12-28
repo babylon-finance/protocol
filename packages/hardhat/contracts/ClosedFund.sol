@@ -333,14 +333,15 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
             block.timestamp
         );
 
-        // Instruct the Fund to transfer the reserve asset back to the user
-        IERC20(reserveAsset).transfer(_to, withdrawalInfo.netFlowQuantity);
-
-        IWETH(weth).withdraw(withdrawalInfo.netFlowQuantity);
-
         totalFunds = totalFunds.sub(withdrawalInfo.netFlowQuantity);
 
-        _to.transfer(withdrawalInfo.netFlowQuantity);
+        if (reserveAsset != weth) {
+          // Instruct the Fund to transfer the reserve asset back to the user
+          IERC20(reserveAsset).transfer(_to, withdrawalInfo.netFlowQuantity);
+        } else {
+          IWETH(weth).withdraw(withdrawalInfo.netFlowQuantity);
+          _to.transfer(withdrawalInfo.netFlowQuantity);
+        }
 
         _handleRedemptionFees(reserveAsset, withdrawalInfo);
 

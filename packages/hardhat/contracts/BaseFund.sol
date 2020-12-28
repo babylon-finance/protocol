@@ -327,7 +327,7 @@ abstract contract BaseFund is ERC20 {
     }
 
     /**
-     * MANAGER ONLY. Removes a module from the SetToken. SetToken calls removeModule on module itself to confirm
+     * MANAGER ONLY. Removes an integration from the Fund. Fund calls removeModule on module itself to confirm
      * it is not needed to manage any remaining positions and to remove state.
      */
     function removeIntegration(address _integration) external onlyManager {
@@ -335,8 +335,6 @@ abstract contract BaseFund is ERC20 {
             integrationStates[_integration] == IFund.IntegrationState.PENDING,
             "Integration must be pending"
         );
-
-        // TODO IIntegration(_integration).removeIntegration();
 
         integrationStates[_integration] = IFund.IntegrationState.NONE;
 

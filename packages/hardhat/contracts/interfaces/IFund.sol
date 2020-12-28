@@ -64,8 +64,6 @@ interface IFund is IERC20 {
 
     /* ============ Functions ============ */
 
-    //TODO
-
     function addInvestment(address _investment) external;
     function removeInvestment(address _investment) external;
     function editInvestmentUnit(address _investment, int256 _realUnit) external;
