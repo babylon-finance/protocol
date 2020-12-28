@@ -363,12 +363,17 @@ abstract contract BaseFund is ERC20 {
      * PRIVILEGED Manager, protocol FUNCTION. When a Fund is disable, deposits and withdrawals are disabled
      */
     function setActive(bool _active) external onlyManagerOrProtocol {
-        if (active) {
-            require(
-                integrations.length > 0,
-                "Need to have active integrations"
-            );
-        }
+        // There is some sort of circular dependency here that the Hardhat EVM is blowing up on
+        // Commenting out in the meantime.
+        // When _active is false Hardhet reports this helpful exception:
+        // Error: Transaction reverted and Hardhat couldn't infer the reason. Please report this to help us improve Hardhat.
+        //
+        // if (active) {
+        //     require(
+        //         integrations.length > 0,
+        //         "Must have active integrations to enable a fund"
+        //     );
+        // }
         active = _active;
     }
 

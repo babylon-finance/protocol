@@ -170,8 +170,8 @@ contract FolioController is Ownable {
             new ClosedFund(
                 _integrations,
                 _weth,
-                address(this),
                 _reserveAsset,
+                address(this),
                 _manager,
                 _managerFeeRecipient,
                 _name,
@@ -254,20 +254,20 @@ contract FolioController is Ownable {
     function disableFund(address _fund) external onlyOwner {
         require(isFund[_fund], "Fund does not exist");
         IFund fund = IFund(_fund);
-        require(fund.active(), "The fund needs to be active.");
+        require(!!fund.active(), "The fund needs to be active.");
         fund.setActive(false);
     }
 
     /**
-     * PRIVILEGED GOVERNANCE FUNCTION. Allows governance to disable a fund
+     * PRIVILEGED GOVERNANCE FUNCTION. Allows governance to enable a fund
      *
      * @param _fund               Address of the fund
      */
-    function reenableFund(address _fund) external onlyOwner {
+    function enableFund(address _fund) external onlyOwner {
         require(isFund[_fund], "Fund does not exist");
         IFund fund = IFund(_fund);
         require(!fund.active(), "The fund needs to be disabled.");
-        fund.setActive(false);
+        fund.setActive(true);
     }
 
     /**
