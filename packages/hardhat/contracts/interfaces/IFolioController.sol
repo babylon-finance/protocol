@@ -38,6 +38,7 @@ interface IFolioController {
     function editFundValuer(address _fundValuer) external;
     function editFeeRecipient(address _newFeeRecipient) external;
     function addIntegration(string memory _name, address _integration) external;
+    function initializeIntegration(address _integration, address _fund) external;
     function editIntegration(string memory _name, address _integration) external;
     function removeIntegration(string memory _name) external;
     function getPriceOracle() external view returns (address);
