@@ -96,7 +96,7 @@ async function deployFolioFixture() {
   const fundAddressesList = await folioController.getFunds();
   // Initialize fund integrations
   fundAddressesList.forEach(fundIter => {
-    integrationsList.forEach(async integration => {
+    integrationsAddressList.forEach(async integration => {
       await folioController.initializeIntegration(integration, fundIter);
     });
   });

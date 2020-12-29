@@ -100,7 +100,6 @@ abstract contract BaseIntegration {
      * @param _fund addres of the fund
      */
     function initialize(address _fund) onlyProtocol external {
-      console.log('aa');
       require(!initializedByFund[_fund], "integration has already been initialized");
       IFund(_fund).initializeIntegration();
       initializedByFund[_fund] = true;
