@@ -25,8 +25,7 @@ pragma solidity 0.7.4;
  */
 interface IIntegration {
 
-
-  function updateFundPosition(address _fund, address _component, int256 newUnit) external;
+  function initialize(address _fund) external;
   function getName() external view returns (string memory);
 
 }

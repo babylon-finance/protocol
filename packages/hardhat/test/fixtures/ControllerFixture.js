@@ -93,12 +93,14 @@ async function deployFolioFixture() {
     ethers.utils.parseEther("10")
   );
 
-  // Initialize fund integrations
-  [fund, fund2, fund3].forEach(fundIter => {
-    integrationsList.forEach(integration => {
-      // integration.initialize(fundIter);
-    });
-  });
+  // // Initialize fund integrations
+  // [fund, fund2, fund3].forEach(fundIter => {
+  //   integrationsList.forEach(integration => {
+  //     await integration.initialize(fundIter);
+  //   });
+  // });
+  // console.log(await aaveIntegration.getName(),fund.address);
+  // await aaveIntegration.initialize(fund);
 
   return {
     folioController,

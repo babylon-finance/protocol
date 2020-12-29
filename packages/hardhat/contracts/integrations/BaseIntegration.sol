@@ -99,7 +99,8 @@ abstract contract BaseIntegration {
      * Initializes the integration.
      * @param _fund addres of the fund
      */
-    function initialize(address _fund) onlyProtocol public {
+    function initialize(address _fund) onlyProtocol external {
+      console.log('aa');
       require(!initializedByFund[_fund], "integration has already been initialized");
       IFund(_fund).initializeIntegration();
       initializedByFund[_fund] = true;
@@ -112,6 +113,7 @@ abstract contract BaseIntegration {
       return name;
     }
 
+    // TODO: Move this to protocol
     // Governance function
     function updateCTokenMapping(address _assetAddress, address _cTokenAddress) external onlyProtocol {
       assetToCtoken[_assetAddress] = _cTokenAddress;
