@@ -60,7 +60,7 @@ async function deployFolioFixture() {
 
   const integrationsAddressList = integrationsList.map(iter => iter.address);
 
-  const fund = await folioController.createFund(
+  await folioController.createFund(
     integrationsAddressList,
     addresses.tokens.WETH,
     addresses.tokens.sUSD,
@@ -71,7 +71,7 @@ async function deployFolioFixture() {
     ethers.utils.parseEther("0.01")
   );
 
-  const fund2 = await folioController.createFund(
+  await folioController.createFund(
     integrationsAddressList,
     addresses.tokens.WETH,
     addresses.tokens.sUSD,
@@ -82,7 +82,7 @@ async function deployFolioFixture() {
     ethers.utils.parseEther("1")
   );
 
-  const fund3 = await folioController.createFund(
+  await folioController.createFund(
     integrationsAddressList,
     addresses.tokens.WETH,
     addresses.tokens.sUSD,
@@ -93,13 +93,19 @@ async function deployFolioFixture() {
     ethers.utils.parseEther("10")
   );
 
-  // // Initialize fund integrations
-  // [fund, fund2, fund3].forEach(fundIter => {
-  //   integrationsList.forEach(integration => {
+  const fundAddressesList = await folioController.getFunds();
+  console.log(fundAddressesList);
+  // Initialize fund integrations
+  // fundAddressesList.forEach(fundIter => {
+  //   integrationsList.forEach(async integration => {
   //     await integration.initialize(fundIter);
   //   });
   // });
-  // console.log(await aaveIntegration.getName(),fund.address);
+  const fund = await ethers.getContractAt("ClosedFund", fundAddressesList[0]);
+  const fund2 = await ethers.getContractAt("ClosedFund", fundAddressesList[1]);
+  const fund3 = await ethers.getContractAt("ClosedFund", fundAddressesList[2]);
+
+  console.log(fund);
   // await aaveIntegration.initialize(fund);
 
   return {
