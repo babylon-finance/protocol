@@ -102,8 +102,8 @@ contract AaveIntegration is BorrowIntegration {
      */
     function repayAll(address asset) onlyFund external {
       (uint256 assetLended, uint256 stableDebt,,,,,,,) = dataProvider.getUserReserveData(asset, msg.sender);
-      IERC20(asset).safeTransferFrom(msg.sender, address(this), amount);
-      IERC20(asset).safeApprove(address(lendingPool), amount);
+      IERC20(asset).safeTransferFrom(msg.sender, address(this), stableDebt);
+      IERC20(asset).safeApprove(address(lendingPool), stableDebt);
       lendingPool.repay(asset, stableDebt, interestRateMode, msg.sender);
     }
 

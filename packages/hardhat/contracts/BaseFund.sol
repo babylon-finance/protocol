@@ -52,6 +52,7 @@ abstract contract BaseFund is ERC20 {
 
     /* ============ Events ============ */
     event Invoked(address indexed _target, uint indexed _value, bytes _data, bytes _returnValue);
+    event IntegrationInvoked(address indexed _target, uint indexed _value, bytes _data, bytes _returnValue);
     event IntegrationAdded(address indexed _integration);
     event IntegrationRemoved(address indexed _integration);
     event IntegrationInitialized(address indexed _integration);
@@ -423,7 +424,7 @@ abstract contract BaseFund is ERC20 {
     function callIntegration(address _integration, uint256 _value, bytes calldata _data) external onlyManager returns (bytes memory _returnValue) {
       _validateOnlyIntegration(_integration);
       _returnValue = _integration.functionCallWithValue(_data, _value);
-      emit IntegrationInvoked(_target, _value, _data, _returnValue);
+      emit IntegrationInvoked(_integration, _value, _data, _returnValue);
       return _returnValue;
     }
 
