@@ -16,6 +16,8 @@ async function deployFolioFixture() {
     ...argsUtil.readArgumentsFile("FolioController")
   );
 
+  await folioController.addReserveAsset(addresses.tokens.WETH);
+
   const FundValuer = await ethers.getContractFactory("FundValuer", owner);
   const PriceOracle = await ethers.getContractFactory("PriceOracle", owner);
   // const ClosedFund = await ethers.getContractFactory("ClosedFund", owner);
@@ -58,12 +60,12 @@ async function deployFolioFixture() {
 
   const integrationsList = [aaveIntegration, compoundIntegration];
 
-  const integrationsAddressList = integrationsList.map(iter => iter.address);
+  const integrationsAddressList = integrationsList.map((iter) => iter.address);
 
   await folioController.createFund(
     integrationsAddressList,
     addresses.tokens.WETH,
-    addresses.tokens.sUSD,
+    addresses.tokens.WETH,
     addresses.users.hardhat1,
     addresses.users.hardhat1,
     "Fund Number One",
@@ -74,7 +76,7 @@ async function deployFolioFixture() {
   await folioController.createFund(
     integrationsAddressList,
     addresses.tokens.WETH,
-    addresses.tokens.sUSD,
+    addresses.tokens.WETH,
     addresses.users.hardhat1,
     addresses.users.hardhat1,
     "Fund Number TWO",
@@ -85,7 +87,7 @@ async function deployFolioFixture() {
   await folioController.createFund(
     integrationsAddressList,
     addresses.tokens.WETH,
-    addresses.tokens.sUSD,
+    addresses.tokens.WETH,
     addresses.users.hardhat1,
     addresses.users.hardhat1,
     "Fund Number Three",
@@ -94,7 +96,7 @@ async function deployFolioFixture() {
   );
 
   const fundAddressesList = await folioController.getFunds();
-  console.log(fundAddressesList);
+  // console.log(fundAddressesList);
   // Initialize fund integrations
   // fundAddressesList.forEach(fundIter => {
   //   integrationsList.forEach(async integration => {
@@ -105,7 +107,7 @@ async function deployFolioFixture() {
   const fund2 = await ethers.getContractAt("ClosedFund", fundAddressesList[1]);
   const fund3 = await ethers.getContractAt("ClosedFund", fundAddressesList[2]);
 
-  console.log(fund);
+  // console.log(fund);
   // await aaveIntegration.initialize(fund);
 
   return {

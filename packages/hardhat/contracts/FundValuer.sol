@@ -20,15 +20,15 @@
 
 pragma solidity 0.7.4;
 
-import { ERC20 } from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
-import { SafeCast } from "@openzeppelin/contracts/utils/SafeCast.sol";
-import { SignedSafeMath } from "@openzeppelin/contracts/math/SignedSafeMath.sol";
+import "hardhat/console.sol";
+import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import {SafeCast} from "@openzeppelin/contracts/utils/SafeCast.sol";
+import {SignedSafeMath} from "@openzeppelin/contracts/math/SignedSafeMath.sol";
 
-import { IFolioController } from "./interfaces/IFolioController.sol";
-import { IFund } from "./interfaces/IFund.sol";
-import { IPriceOracle } from "./interfaces/IPriceOracle.sol";
-import { PreciseUnitMath } from "./lib/PreciseUnitMath.sol";
-
+import {IFolioController} from "./interfaces/IFolioController.sol";
+import {IFund} from "./interfaces/IFund.sol";
+import {IPriceOracle} from "./interfaces/IPriceOracle.sol";
+import {PreciseUnitMath} from "./lib/PreciseUnitMath.sol";
 
 /**
  * @title FundValuer
@@ -77,8 +77,14 @@ contract FundValuer {
      *
      * @return                 SetToken valuation in terms of quote asset in precise units 1e18
      */
-    function calculateFundValuation(IFund _fund, address _quoteAsset) external view returns (uint256) {
-        IPriceOracle priceOracle = IPriceOracle(IFolioController(controller).getPriceOracle());
+    function calculateFundValuation(IFund _fund, address _quoteAsset)
+        external
+        view
+        returns (uint256)
+    {
+        console.log(_quoteAsset);
+        IPriceOracle priceOracle =
+            IPriceOracle(IFolioController(controller).getPriceOracle());
         address masterQuoteAsset = priceOracle.masterQuoteAsset();
         address[] memory components = _fund.getPositions();
         int256 valuation;
@@ -86,21 +92,26 @@ contract FundValuer {
         for (uint256 i = 0; i < components.length; i++) {
             address component = components[i];
             // Get component price from price oracle. If price does not exist, revert.
-            uint256 componentPrice = priceOracle.getPrice(component, masterQuoteAsset);
+            uint256 componentPrice =
+                priceOracle.getPrice(component, masterQuoteAsset);
 
             int256 aggregateUnits = _fund.getTotalPositionRealUnits(component);
 
             // Normalize each position unit to preciseUnits 1e18 and cast to signed int
             uint256 unitDecimals = ERC20(component).decimals();
-            uint256 baseUnits = 10 ** unitDecimals;
-            int256 normalizedUnits = aggregateUnits.preciseDiv(baseUnits.toInt256());
+            uint256 baseUnits = 10**unitDecimals;
+            int256 normalizedUnits =
+                aggregateUnits.preciseDiv(baseUnits.toInt256());
 
             // Calculate valuation of the component. Debt positions are effectively subtracted
-            valuation = normalizedUnits.preciseMul(componentPrice.toInt256()).add(valuation);
+            valuation = normalizedUnits
+                .preciseMul(componentPrice.toInt256())
+                .add(valuation);
         }
 
         if (masterQuoteAsset != _quoteAsset) {
-            uint256 quoteToMaster = priceOracle.getPrice(_quoteAsset, masterQuoteAsset);
+            uint256 quoteToMaster =
+                priceOracle.getPrice(_quoteAsset, masterQuoteAsset);
             valuation = valuation.preciseDiv(quoteToMaster.toInt256());
         }
 

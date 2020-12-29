@@ -63,13 +63,14 @@ describe("FolioController", function() {
       const funds = await controller.getFunds();
       expect(funds.length).to.equal(3);
     });
+
     it("should set the protocol manager address", async function() {
       expect(await controller.getFeeRecipient()).to.equal(
         addresses.users.hardhat1
       );
     });
 
-    it("can create a funds", async function() {
+    it("can create funds", async function() {
       expect(!!fund1).to.equal(true);
       expect(!!fund2).to.equal(true);
       expect(!!fund3).to.equal(true);
