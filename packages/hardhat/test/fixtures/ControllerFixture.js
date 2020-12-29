@@ -96,7 +96,7 @@ async function deployFolioFixture() {
   // Initialize fund integrations
   [fund, fund2, fund3].forEach(fundIter => {
     integrationsList.forEach(integration => {
-      integration.initialize(fundIter);
+      // integration.initialize(fundIter);
     });
   });
 

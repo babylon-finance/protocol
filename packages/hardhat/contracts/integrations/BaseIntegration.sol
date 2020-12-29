@@ -99,7 +99,7 @@ abstract contract BaseIntegration {
      * Initializes the integration.
      * @param _fund addres of the fund
      */
-    function initialize(address _fund) onlyFund public {
+    function initialize(address _fund) onlyProtocol public {
       require(!initializedByFund[_fund], "integration has already been initialized");
       IFund(_fund).initializeIntegration();
       initializedByFund[_fund] = true;
