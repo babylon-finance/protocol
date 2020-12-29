@@ -12,16 +12,7 @@ describe("AaveIntegration", function() {
 
   beforeEach(async () => {
     system = await loadFixture(deployFolioFixture);
-    const AaveIntegration = await ethers.getContractFactory(
-      "AaveIntegration",
-      system.owner
-    );
-    aaveIntegration = await AaveIntegration.deploy(
-      system.folioController.address,
-      addresses.tokens.WETH,
-      50
-    );
-    return aaveIntegration;
+    aaveIntegration = system.integrations.aaveIntegration;
   });
 
   describe("Deployment", function() {
