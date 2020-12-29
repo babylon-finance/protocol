@@ -406,9 +406,7 @@ abstract contract BaseFund is ERC20 {
         returns (bytes memory _returnValue)
     {
         _returnValue = _target.functionCallWithValue(_data, _value);
-
         emit Invoked(_target, _value, _data, _returnValue);
-
         return _returnValue;
     }
 
@@ -426,6 +424,12 @@ abstract contract BaseFund is ERC20 {
       _returnValue = _integration.functionCallWithValue(_data, _value);
       emit IntegrationInvoked(_integration, _value, _data, _returnValue);
       return _returnValue;
+    }
+
+    function addAllowanceIntegration(address _integration, address _asset, uint256 _quantity) external onlyManager {
+      _validateOnlyIntegration(_integration);
+      ERC20(_asset).approve(_integration, 0);
+      ERC20(_asset).approve(_integration, _quantity);
     }
 
 

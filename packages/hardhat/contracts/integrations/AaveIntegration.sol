@@ -68,7 +68,7 @@ contract AaveIntegration is BorrowIntegration {
     function depositCollateral(address asset, uint256 amount) onlyFund external {
       amount = normalizeDecimals(asset, amount);
       IERC20(asset).safeTransferFrom(msg.sender, address(this), amount);
-      IERC20(asset).safeApprove(address(lendingPool), amount);
+      IERC20(asset).safeIncreaseAllowance(address(lendingPool), amount);
       lendingPool.deposit(asset, amount, msg.sender, 0);
     }
 
