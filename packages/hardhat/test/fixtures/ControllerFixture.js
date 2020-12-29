@@ -56,13 +56,12 @@ async function deployFolioFixture() {
     compoundIntegration.address
   );
 
-  const integrationsList = [
-    aaveIntegration.address,
-    compoundIntegration.address
-  ];
+  const integrationsList = [aaveIntegration, compoundIntegration];
+
+  const integrationsAddressList = integrationsList.map(iter => iter.address);
 
   const fund = await folioController.createFund(
-    integrationsList,
+    integrationsAddressList,
     addresses.tokens.WETH,
     addresses.tokens.sUSD,
     addresses.users.hardhat1,
@@ -73,7 +72,7 @@ async function deployFolioFixture() {
   );
 
   const fund2 = await folioController.createFund(
-    integrationsList,
+    integrationsAddressList,
     addresses.tokens.WETH,
     addresses.tokens.sUSD,
     addresses.users.hardhat1,
@@ -84,7 +83,7 @@ async function deployFolioFixture() {
   );
 
   const fund3 = await folioController.createFund(
-    integrationsList,
+    integrationsAddressList,
     addresses.tokens.WETH,
     addresses.tokens.sUSD,
     addresses.users.hardhat1,
@@ -97,7 +96,6 @@ async function deployFolioFixture() {
   // Initialize fund integrations
   [fund, fund2, fund3].forEach(fundIter => {
     integrationsList.forEach(integration => {
-      console.log('integration', integration);
       integration.initialize(fundIter);
     });
   });
