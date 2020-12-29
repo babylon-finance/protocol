@@ -96,12 +96,9 @@ async function deployFolioFixture() {
 
   // Initialize fund integrations
   [fund, fund2, fund3].forEach(fundIter => {
-    integrationsList.forEach(async integration => {
-      const integrationIter = await ethers.getContractAt(
-        "IIntegration",
-        integration
-      );
-      integrationIter.getContractAt(integration).initialize(fundIter);
+    integrationsList.forEach(integration => {
+      console.log('integration', integration);
+      integration.initialize(fundIter);
     });
   });
 
