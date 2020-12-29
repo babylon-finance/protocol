@@ -65,7 +65,7 @@ contract AaveIntegration is BorrowIntegration {
      * @param amount The amount to be deposited as collateral
      *
      */
-    function depositCollateral(address asset, uint256 amount) external {
+    function depositCollateral(address asset, uint256 amount) onlyFund external {
       amount = normalizeDecimals(asset, amount);
       IERC20(asset).safeTransferFrom(msg.sender, address(this), amount);
       IERC20(asset).safeApprove(address(lendingPool), amount);
@@ -77,7 +77,7 @@ contract AaveIntegration is BorrowIntegration {
      * @param asset The asset to be borrowed
      * @param amount The amount to borrow
      */
-    function borrow(address asset, uint256 amount) external {
+    function borrow(address asset, uint256 amount) onlyFund external {
       amount = normalizeDecimals(asset, amount);
       lendingPool.borrow(asset, amount, interestRateMode, 0, msg.sender);
       // Sends the borrowed assets back to the caller
@@ -102,6 +102,8 @@ contract AaveIntegration is BorrowIntegration {
      */
     function repayAll(address asset) onlyFund external {
       (uint256 assetLended, uint256 stableDebt,,,,,,,) = dataProvider.getUserReserveData(asset, msg.sender);
+      IERC20(asset).safeTransferFrom(msg.sender, address(this), amount);
+      IERC20(asset).safeApprove(address(lendingPool), amount);
       lendingPool.repay(asset, stableDebt, interestRateMode, msg.sender);
     }
 
@@ -141,7 +143,7 @@ contract AaveIntegration is BorrowIntegration {
      * Get the health factor of the total debt
      *
      */
-    function getHealthFactor() external view returns (uint256) {
+    function getHealthFactor() onlyFund external view returns (uint256) {
       (
         uint256 totalCollateral,
         uint256 totalDebt,

@@ -46,8 +46,23 @@ async function deployFolioFixture() {
     50
   );
 
+  // Adding integrations
+  folioController.addIntegration(
+    await aaveIntegration.getName(),
+    aaveIntegration.address
+  );
+  folioController.addIntegration(
+    await compoundIntegration.getName(),
+    compoundIntegration.address
+  );
+
+  const integrationsList = [
+    aaveIntegration.address,
+    compoundIntegration.address
+  ];
+
   const fund = await folioController.createFund(
-    [aaveIntegration.address, compoundIntegration.address],
+    integrationsList,
     addresses.tokens.WETH,
     addresses.tokens.sUSD,
     addresses.users.hardhat1,
@@ -58,7 +73,7 @@ async function deployFolioFixture() {
   );
 
   const fund2 = await folioController.createFund(
-    [addresses.tokens.WETH],
+    integrationsList,
     addresses.tokens.WETH,
     addresses.tokens.sUSD,
     addresses.users.hardhat1,
@@ -69,7 +84,7 @@ async function deployFolioFixture() {
   );
 
   const fund3 = await folioController.createFund(
-    [addresses.tokens.WETH],
+    integrationsList,
     addresses.tokens.WETH,
     addresses.tokens.sUSD,
     addresses.users.hardhat1,
@@ -78,6 +93,13 @@ async function deployFolioFixture() {
     "FNTH",
     ethers.utils.parseEther("10")
   );
+
+  // Initialize fund integrations
+  [fund, fund2, fund3].forEach(fundIter => {
+    integrationsList.forEach(integration => {
+      integration.initialize(fundIter);
+    });
+  });
 
   return {
     folioController,

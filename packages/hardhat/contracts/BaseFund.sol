@@ -68,11 +68,11 @@ abstract contract BaseFund is ERC20 {
     /* ============ Modifiers ============ */
 
     /**
-     * Throws if the sender is not a Funds's integration or module not enabled
+     * Throws if the sender is not a Funds's integration or integration not enabled
      */
     modifier onlyIntegration() {
         // Internal function used to reduce bytecode size
-        _validateOnlyIntegration();
+        _validateOnlyIntegration(msg.sender);
         _;
     }
 
@@ -109,7 +109,7 @@ abstract contract BaseFund is ERC20 {
 
     // Address of the controller
     address public controller;
-    // The manager has the privelege to add modules, remove, and set a new manager
+    // The manager has the privelege to add integrations, remove, and set a new manager
     address public manager;
     address public managerFeeRecipient;
     // Whether the fund is currently active or not
@@ -119,7 +119,7 @@ abstract contract BaseFund is ERC20 {
     address[] public integrations;
 
     // Integrations are initialized from NONE -> PENDING -> INITIALIZED through the
-    // addModule (called by manager) and initialize  (called by module) functions
+    // addIntegration (called by manager) and initialize  (called by integration) functions
     mapping(address => IFund.IntegrationState) public integrationStates;
     // integration name => integration address
     mapping(bytes32 => address) private integrationsByName;
@@ -171,7 +171,7 @@ abstract contract BaseFund is ERC20 {
         managerFeeRecipient = _managerFeeRecipient;
         positionMultiplier = PreciseUnitMath.preciseUnitInt();
 
-        // Integrations are put in PENDING state, as they need to be individually initialized by the Module
+        // Integrations are put in PENDING state, as they need to be individually initialized by the Integration
         for (uint256 i = 0; i < _integrations.length; i++) {
             integrationStates[_integrations[i]] = IFund
                 .IntegrationState
@@ -305,7 +305,7 @@ abstract contract BaseFund is ERC20 {
 
     /**
      * MANAGER ONLY. Adds an integration into a PENDING state; Integration must later be initialized via
-     * module's initialize function
+     * integration's initialize function
      */
     function addIntegration(address _integration, string memory _name)
         external
@@ -326,7 +326,7 @@ abstract contract BaseFund is ERC20 {
     }
 
     /**
-     * MANAGER ONLY. Removes an integration from the Fund. Fund calls removeModule on module itself to confirm
+     * MANAGER ONLY. Removes an integration from the Fund. Fund calls removeIntegration on integration itself to confirm
      * it is not needed to manage any remaining positions and to remove state.
      */
     function removeIntegration(address _integration) external onlyManager {
@@ -344,8 +344,8 @@ abstract contract BaseFund is ERC20 {
 
     /**
      * Initializes an added integration from PENDING to INITIALIZED state. Can only call when active.
-     * An address can only enter a PENDING state if it is an enabled module added by the manager.
-     * Only callable by the module itself, hence msg.sender is the subject of update.
+     * An address can only enter a PENDING state if it is an enabled integration added by the manager.
+     * Only callable by the integration itself, hence msg.sender is the subject of update.
      */
     function initializeIntegration() external {
         require(
@@ -368,18 +368,16 @@ abstract contract BaseFund is ERC20 {
         // When _active is false Hardhet reports this helpful exception:
         // Error: Transaction reverted and Hardhat couldn't infer the reason. Please report this to help us improve Hardhat.
         //
-        // if (active) {
-        //     require(
-        //         integrations.length > 0,
-        //         "Must have active integrations to enable a fund"
-        //     );
-        // }
+        require(
+            !active || integrations.length > 0,
+            "Must have active integrations to enable a fund"
+        );
         active = _active;
     }
 
     /**
      * MANAGER ONLY. Changes manager; We allow null addresses in case the manager wishes to wind down the SetToken.
-     * Modules may rely on the manager state, so only changable when unlocked
+     * Integrations may rely on the manager state, so only changable when unlocked
      */
     function setManager(address _manager) external onlyManagerOrProtocol {
         address oldManager = manager;
@@ -389,8 +387,8 @@ abstract contract BaseFund is ERC20 {
     }
 
     /**
-     * PRIVELEGED MODULE FUNCTION. Low level function that allows a module to make an arbitrary function
-     * call to any contract.
+     * Low level function that allows an integration to make an arbitrary function
+     * call to any contract from the fund (fund as msg.sender).
      *
      * @param _target                 Address of the smart contract to call
      * @param _value                  Quantity of Ether to provide the call (typically 0)
@@ -411,6 +409,22 @@ abstract contract BaseFund is ERC20 {
         emit Invoked(_target, _value, _data, _returnValue);
 
         return _returnValue;
+    }
+
+
+    /**
+     * Funciton that allows the manager to call an integration
+     *
+     * @param _integration            Address of the integration to call
+     * @param _value                  Quantity of Ether to provide the call (typically 0)
+     * @param _data                   Encoded function selector and arguments
+     * @return _returnValue           Bytes encoded return value
+     */
+    function callIntegration(address _integration, uint256 _value, bytes calldata _data) external onlyManager returns (bytes memory _returnValue) {
+      _validateOnlyIntegration(_integration);
+      _returnValue = _integration.functionCallWithValue(_data, _value);
+      emit IntegrationInvoked(_target, _value, _data, _returnValue);
+      return _returnValue;
     }
 
 
@@ -437,7 +451,7 @@ abstract contract BaseFund is ERC20 {
     }
 
     /**
-     * Only ModuleStates of INITIALIZED modules are considered enabled
+     * Only IntegrationStates of INITIALIZED integrations are considered enabled
      */
     function isInitializedIntegration(address _integration)
         external
@@ -450,7 +464,7 @@ abstract contract BaseFund is ERC20 {
     }
 
     /**
-     * Returns whether the module is in a pending state
+     * Returns whether the integration is in a pending state
      */
     function isPendingIntegration(address _integration)
         external
@@ -698,17 +712,17 @@ abstract contract BaseFund is ERC20 {
     /**
      * Due to reason error bloat, internal functions are used to reduce bytecode size
      *
-     * Module must be initialized on the Fund and enabled by the controller
+     * Integration must be initialized on the Fund and enabled by the controller
      */
-    function _validateOnlyIntegration() internal view {
+    function _validateOnlyIntegration(address _integration) internal view {
         require(
-            integrationStates[msg.sender] == IFund.IntegrationState.INITIALIZED,
-            "Only the module can call"
+            integrationStates[_integration] == IFund.IntegrationState.INITIALIZED,
+            "Only the integration can call"
         );
 
         require(
             IFolioController(controller).isValidIntegration(
-                IIntegration(msg.sender).getName()
+                IIntegration(_integration).getName()
             ),
             "Integration must be enabled on controller"
         );

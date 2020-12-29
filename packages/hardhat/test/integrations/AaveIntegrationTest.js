@@ -9,10 +9,12 @@ const { loadFixture } = waffle;
 describe("AaveIntegration", function() {
   let system;
   let aaveIntegration;
+  let fund;
 
   beforeEach(async () => {
     system = await loadFixture(deployFolioFixture);
     aaveIntegration = system.integrations.aaveIntegration;
+    fund = system.funds.one;
   });
 
   describe("Deployment", function() {
