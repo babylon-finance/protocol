@@ -47,7 +47,6 @@ module.exports = {
   networks: {
     // Local Hardhat network using alchemy for pinned block
     hardhat: {
-      gas: 12000000,
       allowUnlimitedContractSize: true,
       forking: {
         url:
@@ -87,8 +86,8 @@ module.exports = {
   },
   paths: {
     sources: "./contracts",
-    artifacts: "./artifacts"
-  }
+    artifacts: "./artifacts",
+  },
 };
 
 const DEBUG = false;

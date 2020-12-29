@@ -3,99 +3,136 @@ const { ethers } = require("hardhat");
 const { waffle } = require("hardhat");
 const { loadFixture } = waffle;
 
+const addresses = require("../utils/addresses");
 const { deployFolioFixture } = require("./fixtures/FolioController");
 
-const ADD_FUND_PROPS = ["new fund", "NewFundToken", "NFT"];
-const ADD_FUND_PROPS_2 = ["new fund 2", "NewFundToken2", "NFT2"];
-
 describe("FolioController", function() {
+  let controller;
+  let oracle;
+  let valuer;
+  let ownerSigner;
+  let userSigner1;
+  let userSigner2;
+  let userSigner3;
+
   beforeEach(async () => {
-    await loadFixture(deployFolioFixture);
+    const {
+      folioController,
+      priceOracle,
+      fundValuer,
+      owner,
+      signer1,
+      signer2,
+      signer3,
+    } = await loadFixture(deployFolioFixture);
+
+    controller = folioController;
+    oracle = priceOracle;
+    valuer = fundValuer;
+    ownerSigner = owner;
+    userSigner1 = signer1;
+    userSigner2 = signer2;
+    userSigner3 = signer3;
   });
 
   describe("Deployment", function() {
     it("should successfully deploy the contract", async function() {
-      const deployed = await folioController.deployed();
+      const deployed = await controller.deployed();
       expect(!!deployed).to.equal(true);
     });
   });
 
-  //   describe("Interacting with Funds", function() {
-  //     it("should start empty", async function() {
-  //       expect(await folioController.totalFunds()).to.equal(0);
-  //       expect(await folioController.currentFundIndex()).to.equal(1);
-  //     });
+  describe("Interacting with Funds", function() {
+    it("should start empty", async function() {
+      expect(await controller.getFunds()).to.eql(Array());
+    });
+    it("should set the protocol manager address", async function() {
+      expect(await controller.getFeeRecipient()).to.equal(
+        addresses.users.hardhat1
+      );
+    });
 
-  //     it("should set the protocol manager address", async function() {
-  //       expect(await folioController.protocolManager()).to.equal(
-  //         await owner.getAddress()
-  //       );
-  //     });
+    it("can create a funds", async function() {
+      const { fund1, fund2, fund3 } = await createFunds(
+        controller,
+        userSigner1,
+        userSigner1
+      );
+      expect(!!fund1).to.equal(true);
+      expect(!!fund2).to.equal(true);
+      expect(!!fund3).to.equal(true);
+    });
 
-  //     it("can add a hedge fund and retrieve it", async function() {
-  //       expect(await folioController.addFund(...ADD_FUND_PROPS));
-  //       expect(await folioController.totalFunds()).to.equal(1);
-  //       expect(await folioController.currentFundIndex()).to.equal(2);
-  //       const { name, active, index } = await folioController.getFund(
-  //         ADD_FUND_PROPS[0]
-  //       );
-  //       expect(name).to.equal(ADD_FUND_PROPS[0]);
-  //       expect(active).to.equal(false);
-  //       expect(index).to.equal(1);
-  //     });
+    it("can create funds and retrieve all addresses", async function() {
+      await createFunds(controller, userSigner1, userSigner1);
+      const funds = await controller.getFunds();
+      expect(funds.length).to.equal(3);
+    });
 
-  //     it("can add a hedge funds and retrieve all", async function() {
-  //       expect(await folioController.addFund(...ADD_FUND_PROPS));
-  //       expect(await folioController.addFund(...ADD_FUND_PROPS_2));
-  //       expect(await folioController.totalFunds()).to.equal(2);
-  //       expect(await folioController.currentFundIndex()).to.equal(3);
-  //       const funds = await folioController.getAllFunds();
-  //       expect(funds.length).to.equal(2);
-  //     });
+    it("can remove a fund", async function() {
+      await createFunds(controller, userSigner1, userSigner1);
 
-  //     it("only protocol manager can add hedge funds", async function() {
-  //       await expect(folioController.connect(addr2).addFund(...ADD_FUND_PROPS)).to
-  //         .be.reverted;
-  //     });
+      const initialFunds = await controller.getFunds();
+      expect(initialFunds.length).to.equal(3);
 
-  //     it("can not add the same hedge fund twice", async function() {
-  //       expect(await folioController.addFund(...ADD_FUND_PROPS));
-  //       await expect(folioController.addFund(...ADD_FUND_PROPS)).to.be.reverted;
-  //     });
+      await controller.removeFund(initialFunds[0]);
 
-  //     it("can disable a hedge fund and retrieve it", async function() {
-  //       expect(await folioController.addFund(...ADD_FUND_PROPS));
-  //       expect(await folioController.totalFunds()).to.equal(1);
-  //       expect(await folioController.currentFundIndex()).to.equal(2);
-  //       expect(await folioController.disableFund(ADD_FUND_PROPS[0]));
-  //       const { name, active, index } = await folioController.getFund(
-  //         ADD_FUND_PROPS[0]
-  //       );
-  //       expect(name).to.equal(ADD_FUND_PROPS[0]);
-  //       expect(active).to.equal(false);
-  //       expect(index).to.equal(1);
-  //       expect(await folioController.totalFunds()).to.equal(0);
-  //     });
+      const updatedFunds = await controller.getFunds();
+      expect(updatedFunds.length).to.equal(2);
+    });
 
-  //     it("can not disable a hedge fund that does not exist", async function() {
-  //       await expect(folioController.disableFund("my imaginary fund")).to.be
-  //         .reverted;
-  //     });
+    it("cannot disable an inactive fund", async function() {
+      await createFunds(controller, userSigner1, userSigner1);
+      const initialFunds = await controller.getFunds();
 
-  //     it("can reenable a hedge fund after disabling it", async function() {
-  //       expect(await folioController.addFund(...ADD_FUND_PROPS));
-  //       expect(await folioController.totalFunds()).to.equal(1);
-  //       expect(await folioController.currentFundIndex()).to.equal(2);
-  //       expect(await folioController.disableFund(ADD_FUND_PROPS[0]));
-  //       expect(await folioController.totalFunds()).to.equal(0);
-  //       expect(await folioController.reenableFund(ADD_FUND_PROPS[0]));
-  //       const { name, active, index } = await folioController.getFund(
-  //         ADD_FUND_PROPS[0]
-  //       );
-  //       expect(name).to.equal(ADD_FUND_PROPS[0]);
-  //       expect(active).to.equal(true);
-  //       expect(index).to.equal(1);
-  //       expect(await folioController.totalFunds()).to.equal(1);
-  //     });
-  //   });
+      await expect(controller.disableFund(initialFunds[0])).to.be.reverted;
+    });
+
+    it("can enable and disable a fund", async function() {
+      await createFunds(controller, userSigner1, userSigner1);
+      const initialFunds = await controller.getFunds();
+
+      await expect(controller.enableFund(initialFunds[0])).to.not.be.reverted;
+      await expect(controller.disableFund(initialFunds[0])).to.not.be.reverted;
+    });
+  });
 });
+
+async function createFunds(controller, managerSigner, recipientSigner) {
+  // Note: for now the integrations here are not real addresses for our integration contract,
+  // we should be sure to deploy those and include soon. See deploy.js for an example.
+  const fund1 = await controller.createFund(
+    [addresses.tokens.WETH],
+    addresses.tokens.WETH,
+    addresses.tokens.sUSD,
+    managerSigner.getAddress(),
+    recipientSigner.getAddress(),
+    "Fund Number One",
+    "FNON",
+    ethers.utils.parseEther("1")
+  );
+
+  const fund2 = await controller.createFund(
+    [addresses.tokens.WETH],
+    addresses.tokens.WETH,
+    addresses.tokens.sUSD,
+    managerSigner.getAddress(),
+    recipientSigner.getAddress(),
+    "Fund Number TWO",
+    "FNTW",
+    ethers.utils.parseEther("1")
+  );
+
+  const fund3 = await controller.createFund(
+    [addresses.tokens.WETH],
+    addresses.tokens.WETH,
+    addresses.tokens.sUSD,
+    managerSigner.getAddress(),
+    recipientSigner.getAddress(),
+    "Fund Number Three",
+    "FNTH",
+    ethers.utils.parseEther("10")
+  );
+
+  return { fund1, fund2, fund3 };
+}

@@ -164,10 +164,10 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
         BaseFund(
             _integrations,
             _weth,
+            _reserveAsset,
             _controller,
             _manager,
             _managerFeeRecipient,
-            _reserveAsset,
             _name,
             _symbol
         )
@@ -336,11 +336,11 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
         totalFunds = totalFunds.sub(withdrawalInfo.netFlowQuantity);
 
         if (reserveAsset != weth) {
-          // Instruct the Fund to transfer the reserve asset back to the user
-          IERC20(reserveAsset).transfer(_to, withdrawalInfo.netFlowQuantity);
+            // Instruct the Fund to transfer the reserve asset back to the user
+            IERC20(reserveAsset).transfer(_to, withdrawalInfo.netFlowQuantity);
         } else {
-          IWETH(weth).withdraw(withdrawalInfo.netFlowQuantity);
-          _to.transfer(withdrawalInfo.netFlowQuantity);
+            IWETH(weth).withdraw(withdrawalInfo.netFlowQuantity);
+            _to.transfer(withdrawalInfo.netFlowQuantity);
         }
 
         _handleRedemptionFees(reserveAsset, withdrawalInfo);
