@@ -94,19 +94,15 @@ async function deployFolioFixture() {
   );
 
   const fundAddressesList = await folioController.getFunds();
-  console.log(fundAddressesList);
   // Initialize fund integrations
-  // fundAddressesList.forEach(fundIter => {
-  //   integrationsList.forEach(async integration => {
-  //     await integration.initialize(fundIter);
-  //   });
-  // });
+  fundAddressesList.forEach(fundIter => {
+    integrationsList.forEach(async integration => {
+      await folioController.initializeIntegration(integration, fundIter);
+    });
+  });
   const fund = await ethers.getContractAt("ClosedFund", fundAddressesList[0]);
   const fund2 = await ethers.getContractAt("ClosedFund", fundAddressesList[1]);
   const fund3 = await ethers.getContractAt("ClosedFund", fundAddressesList[2]);
-
-  console.log(fund);
-  // await aaveIntegration.initialize(fund);
 
   return {
     folioController,

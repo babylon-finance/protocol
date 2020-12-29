@@ -24,6 +24,7 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {ClosedFund} from "./ClosedFund.sol";
 import {IFund} from "./interfaces/IFund.sol";
+import {IIntegration} from "./interfaces/IIntegration.sol";
 import {AddressArrayUtils} from "./lib/AddressArrayUtils.sol";
 
 /**
@@ -333,6 +334,19 @@ contract FolioController is Ownable {
         integrations[hashedName] = _integration;
 
         emit ControllerIntegrationAdded(_integration, _name);
+    }
+
+    /**
+     * GOVERNANCE FUNCTION: Initializes an integration in a fund
+     *
+     * @param  _integration       Address of the integration contract to add
+     * @param  _fund              Address of the fund
+     */
+    function initializeIntegration(address _integration, address _fund)
+        public
+        onlyOwner
+    {
+      IIntegration(_integration).initialize(_fund);
     }
 
     /**
