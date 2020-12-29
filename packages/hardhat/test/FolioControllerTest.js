@@ -27,7 +27,7 @@ describe("FolioController", function() {
       signer1,
       funds,
       signer2,
-      signer3
+      signer3,
     } = await loadFixture(deployFolioFixture);
 
     controller = folioController;
@@ -40,15 +40,15 @@ describe("FolioController", function() {
     fund1 = funds.one;
     fund2 = funds.two;
     fund3 = funds.three;
-    console.log(
-      "Config:",
-      oracle,
-      valuer,
-      ownerSigner,
-      userSigner1,
-      userSigner2,
-      userSigner3
-    );
+    // console.log(
+    //   "Config:",
+    //   oracle,
+    //   valuer,
+    //   ownerSigner,
+    //   userSigner1,
+    //   userSigner2,
+    //   userSigner3
+    // );
   });
 
   describe("Deployment", function() {
@@ -59,8 +59,9 @@ describe("FolioController", function() {
   });
 
   describe("Interacting with Funds", function() {
-    it("should start empty", async function() {
-      expect(await controller.getFunds()).to.eql([]);
+    it("should start with 3 funds", async function() {
+      const funds = await controller.getFunds();
+      expect(funds.length).to.equal(3);
     });
     it("should set the protocol manager address", async function() {
       expect(await controller.getFeeRecipient()).to.equal(
@@ -100,6 +101,49 @@ describe("FolioController", function() {
 
       await expect(controller.enableFund(initialFunds[0])).to.not.be.reverted;
       await expect(controller.disableFund(initialFunds[0])).to.not.be.reverted;
+    });
+
+    it("can add a reserve asset", async function() {
+      const initialAssets = await controller.getReserveAssets();
+      await controller.addReserveAsset(addresses.tokens.WETH);
+
+      const updatedAssets = await controller.getReserveAssets();
+      expect(updatedAssets.length > initialAssets.length).to.equal(true);
+    });
+
+    it("can remove a reserve asset", async function() {
+      await controller.addReserveAsset(addresses.tokens.WETH);
+      const initialAssets = await controller.getReserveAssets();
+
+      await controller.removeReserveAsset(initialAssets[0]);
+
+      const updatedAssets = await controller.getReserveAssets();
+      expect(updatedAssets.length < initialAssets.length).to.equal(true);
+    });
+
+    it("can edit a price oracle", async function() {
+      // Note: This is just the wETH address and is testing that the oracle address can be changed
+      await expect(controller.editPriceOracle(addresses.tokens.WETH)).to.not.be
+        .reverted;
+      const oracle = await controller.getPriceOracle();
+      expect(oracle).to.equal(addresses.tokens.WETH);
+    });
+
+    it("can edit a fund valuer", async function() {
+      // Note: This is just the wETH address and is testing that the fundValuer address can be changed
+      await expect(controller.editFundValuer(addresses.tokens.WETH)).to.not.be
+        .reverted;
+
+      const valuer = await controller.getFundValuer();
+      expect(valuer).to.equal(addresses.tokens.WETH);
+    });
+
+    it("can edit the protocol fee recipient", async function() {
+      await controller.editFeeRecipient(addresses.users.hardhat3);
+
+      const recipient = await controller.getFeeRecipient();
+      // TODO(tylerm): Look into why this toLowerCase is needed here.
+      expect(recipient.toLowerCase()).to.equal(addresses.users.hardhat3);
     });
   });
 });

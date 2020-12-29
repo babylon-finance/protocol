@@ -444,6 +444,10 @@ contract FolioController is Ownable {
         return funds;
     }
 
+    function getReserveAssets() external view returns (address[] memory) {
+        return reserveAssets;
+    }
+
     function getProtocolDepositFundTokenFee() external view returns (uint256) {
         return protocolDepositFundTokenFee;
     }
