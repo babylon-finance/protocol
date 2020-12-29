@@ -1,8 +1,8 @@
 module.exports = {
   env: {
-    mocha: true,
+    mocha: true
   },
-  extends: ["airbnb", "plugin:prettier/recommended"],
+  extends: ["airbnb", "airbnb/hooks", "plugin:prettier/recommended"],
   plugins: ["babel"],
   rules: {
     "prettier/prettier": ["error"],
@@ -11,13 +11,13 @@ module.exports = {
       "ignorePackages",
       {
         js: "never",
-        ts: "never",
-      },
+        ts: "never"
+      }
     ],
     "import/prefer-default-export": "off",
     "prefer-destructuring": "off",
     "prefer-template": "off",
     "no-console": "off",
-    "func-names": "off",
-  },
+    "func-names": "off"
+  }
 };

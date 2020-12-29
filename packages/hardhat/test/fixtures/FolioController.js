@@ -1,11 +1,10 @@
-const { waffle } = require("hardhat");
-const { deployContract } = waffle;
-
-const addresses = require("../../utils/addresses");
-const argsUtil = require("../../utils/arguments.js");
+// const { waffle } = require("hardhat");
 const { ethers } = require("hardhat");
+// const addresses = require("../../utils/addresses");
+const argsUtil = require("../../utils/arguments.js");
 
-const provider = waffle.provider;
+// const { deployContract } = waffle;
+// const provider = waffle.provider;
 
 async function deployFolioFixture() {
   const [owner, signer1, signer2, signer3] = await ethers.getSigners();
@@ -19,7 +18,7 @@ async function deployFolioFixture() {
 
   const FundValuer = await ethers.getContractFactory("FundValuer", owner);
   const PriceOracle = await ethers.getContractFactory("PriceOracle", owner);
-  const ClosedFund = await ethers.getContractFactory("ClosedFund", owner);
+  // const ClosedFund = await ethers.getContractFactory("ClosedFund", owner);
 
   const fundValuer = await FundValuer.deploy(folioController.address);
   const priceOracle = await PriceOracle.deploy(
@@ -34,7 +33,7 @@ async function deployFolioFixture() {
     owner,
     signer1,
     signer2,
-    signer3,
+    signer3
   };
 }
 

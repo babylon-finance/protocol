@@ -188,6 +188,7 @@ abstract contract BaseIntegration {
     */
     function normalizeDecimals(address asset, uint256 amount) internal view returns (uint256)  {
       // USDC and USDT have only 6 decimals
+      // TODO: create a mpping for decimals managed by the protocol
       if (asset == USDCAddress || asset == USDTAddress) {
         amount =  amount.preciseDiv(10**12);
       }
