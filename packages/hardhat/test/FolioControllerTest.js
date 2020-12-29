@@ -102,7 +102,9 @@ describe("FolioController", function() {
       await expect(controller.enableFund(initialFunds[0])).to.not.be.reverted;
       await expect(controller.disableFund(initialFunds[0])).to.not.be.reverted;
     });
+  });
 
+  describe("Protocal operations", function() {
     it("can add a reserve asset", async function() {
       const initialAssets = await controller.getReserveAssets();
       await controller.addReserveAsset(addresses.tokens.WETH);
