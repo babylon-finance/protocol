@@ -51,7 +51,7 @@ abstract contract BaseFund is ERC20 {
     using AddressArrayUtils for address[];
 
     /* ============ Events ============ */
-
+    event Invoked(address indexed _target, uint indexed _value, bytes _data, bytes _returnValue);
     event IntegrationAdded(address indexed _integration);
     event IntegrationRemoved(address indexed _integration);
     event IntegrationInitialized(address indexed _integration);
@@ -387,6 +387,32 @@ abstract contract BaseFund is ERC20 {
 
         emit ManagerEdited(_manager, oldManager);
     }
+
+    /**
+     * PRIVELEGED MODULE FUNCTION. Low level function that allows a module to make an arbitrary function
+     * call to any contract.
+     *
+     * @param _target                 Address of the smart contract to call
+     * @param _value                  Quantity of Ether to provide the call (typically 0)
+     * @param _data                   Encoded function selector and arguments
+     * @return _returnValue           Bytes encoded return value
+     */
+    function invoke(
+        address _target,
+        uint256 _value,
+        bytes calldata _data
+    )
+        external
+        onlyIntegration
+        returns (bytes memory _returnValue)
+    {
+        _returnValue = _target.functionCallWithValue(_data, _value);
+
+        emit Invoked(_target, _value, _data, _returnValue);
+
+        return _returnValue;
+    }
+
 
     /* ============ External Getter Functions ============ */
 

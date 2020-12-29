@@ -69,7 +69,7 @@ contract AaveIntegration is BorrowIntegration {
       amount = normalizeDecimals(asset, amount);
       IERC20(asset).safeTransferFrom(msg.sender, address(this), amount);
       IERC20(asset).safeApprove(address(lendingPool), amount);
-      lendingPool.deposit(asset, amount, address(this), 0);
+      lendingPool.deposit(asset, amount, msg.sender, 0);
     }
 
     /**
@@ -79,7 +79,7 @@ contract AaveIntegration is BorrowIntegration {
      */
     function borrow(address asset, uint256 amount) external {
       amount = normalizeDecimals(asset, amount);
-      lendingPool.borrow(asset, amount, interestRateMode, 0, address(this));
+      lendingPool.borrow(asset, amount, interestRateMode, 0, msg.sender);
       // Sends the borrowed assets back to the caller
       IERC20(asset).transfer(msg.sender, amount);
     }
@@ -93,7 +93,7 @@ contract AaveIntegration is BorrowIntegration {
       amount = normalizeDecimals(asset, amount);
       IERC20(asset).safeTransferFrom(msg.sender, address(this), amount);
       IERC20(asset).safeApprove(address(lendingPool), amount);
-      lendingPool.repay(asset, amount, interestRateMode, address(this));
+      lendingPool.repay(asset, amount, interestRateMode, msg.sender);
     }
 
     /**
@@ -101,8 +101,8 @@ contract AaveIntegration is BorrowIntegration {
      * @param asset The asset to be repaid
      */
     function repayAll(address asset) onlyFund external {
-      (uint256 assetLended, uint256 stableDebt,,,,,,,) = dataProvider.getUserReserveData(asset, address(this));
-      lendingPool.repay(asset, stableDebt, interestRateMode, address(this));
+      (uint256 assetLended, uint256 stableDebt,,,,,,,) = dataProvider.getUserReserveData(asset, msg.sender);
+      lendingPool.repay(asset, stableDebt, interestRateMode, msg.sender);
     }
 
     /**
@@ -123,7 +123,7 @@ contract AaveIntegration is BorrowIntegration {
      */
     function withdrawAllCollateral(address asset) onlyFund external {
       (address aTokenAddress,,) = dataProvider.getReserveTokensAddresses(asset);
-      uint256 assetBalance = IERC20(aTokenAddress).balanceOf(address(this));
+      uint256 assetBalance = IERC20(aTokenAddress).balanceOf(msg.sender);
       lendingPool.withdraw(asset, assetBalance, msg.sender);
     }
 
@@ -133,7 +133,7 @@ contract AaveIntegration is BorrowIntegration {
      *
      */
     function getBorrowBalance(address asset) onlyFund external view returns (uint256) {
-      (uint256 assetLended, uint256 stableDebt,,,,,,,) = dataProvider.getUserReserveData(asset, address(this));
+      (uint256 assetLended, uint256 stableDebt,,,,,,,) = dataProvider.getUserReserveData(asset, msg.sender);
       return stableDebt;
     }
 
