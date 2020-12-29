@@ -51,43 +51,43 @@ module.exports = {
       forking: {
         url:
           "https://eth-mainnet.alchemyapi.io/v2/sncj01nDcsAQr_QWyhYWNkg3qzW2o9kt",
-        blockNumber: 11492019,
-      },
+        blockNumber: 11492019
+      }
     },
     rinkeby: {
-      url: "https://rinkeby.infura.io/v3/c954231486fa42ccb6d132b406483d14", //<---- YOUR INFURA ID! (or it won't work)
+      url: "https://rinkeby.infura.io/v3/c954231486fa42ccb6d132b406483d14", // <---- YOUR INFURA ID! (or it won't work)
       accounts: {
-        mnemonic: mnemonic(),
-      },
+        mnemonic: mnemonic()
+      }
     },
     mainnet: {
-      url: "https://mainnet.infura.io/v3/c954231486fa42ccb6d132b406483d14", //<---- YOUR INFURA ID! (or it won't work)
+      url: "https://mainnet.infura.io/v3/c954231486fa42ccb6d132b406483d14", // <---- YOUR INFURA ID! (or it won't work)
       accounts: {
-        mnemonic: mnemonic(),
+        mnemonic: mnemonic()
       },
-      gasPrice: 56000000000,
+      gasPrice: 56000000000
     },
     xdai: {
       url: "https://dai.poa.network",
       gasPrice: 1000000000,
       accounts: {
-        mnemonic: mnemonic(),
-      },
-    },
+        mnemonic: mnemonic()
+      }
+    }
   },
   solidity: {
     version: "0.7.4",
     settings: {
       optimizer: {
         enabled: true,
-        runs: 200,
-      },
-    },
+        runs: 200
+      }
+    }
   },
   paths: {
     sources: "./contracts",
-    artifacts: "./artifacts",
-  },
+    artifacts: "./artifacts"
+  }
 };
 
 const DEBUG = false;
@@ -111,12 +111,12 @@ task(
     const hdwallet = hdkey.fromMasterSeed(seed);
     const wallet_hdpath = "m/44'/60'/0'/0/";
     const account_index = 0;
-    let fullPath = wallet_hdpath + account_index;
+    const fullPath = wallet_hdpath + account_index;
     if (DEBUG) console.log("fullPath", fullPath);
     const wallet = hdwallet.derivePath(fullPath).getWallet();
     const privateKey = "0x" + wallet._privKey.toString("hex");
     if (DEBUG) console.log("privateKey", privateKey);
-    var EthUtil = require("ethereumjs-util");
+    const EthUtil = require("ethereumjs-util");
     const address =
       "0x" + EthUtil.privateToAddress(wallet._privKey).toString("hex");
     console.log(
@@ -139,7 +139,7 @@ task(
   async (_, { ethers }) => {
     const hdkey = require("ethereumjs-wallet/hdkey");
     const bip39 = require("bip39");
-    let mnemonic = fs
+    const mnemonic = fs
       .readFileSync("./mnemonic.txt")
       .toString()
       .trim();
@@ -149,25 +149,25 @@ task(
     const hdwallet = hdkey.fromMasterSeed(seed);
     const wallet_hdpath = "m/44'/60'/0'/0/";
     const account_index = 0;
-    let fullPath = wallet_hdpath + account_index;
+    const fullPath = wallet_hdpath + account_index;
     if (DEBUG) console.log("fullPath", fullPath);
     const wallet = hdwallet.derivePath(fullPath).getWallet();
     const privateKey = "0x" + wallet._privKey.toString("hex");
     if (DEBUG) console.log("privateKey", privateKey);
-    var EthUtil = require("ethereumjs-util");
+    const EthUtil = require("ethereumjs-util");
     const address =
       "0x" + EthUtil.privateToAddress(wallet._privKey).toString("hex");
 
-    var qrcode = require("qrcode-terminal");
+    const qrcode = require("qrcode-terminal");
     qrcode.generate(address);
     console.log("‍📬 Deployer Account is " + address);
-    for (let n in config.networks) {
-      //console.log(config.networks[n],n)
+    for (const n in config.networks) {
+      // console.log(config.networks[n],n)
       try {
-        let provider = new ethers.providers.JsonRpcProvider(
+        const provider = new ethers.providers.JsonRpcProvider(
           config.networks[n].url
         );
-        let balance = await provider.getBalance(address);
+        const balance = await provider.getBalance(address);
         console.log(" -- " + n + " --  -- -- 📡 ");
         console.log("   balance: " + ethers.utils.formatEther(balance));
         console.log(
@@ -195,7 +195,7 @@ async function addr(ethers, addr) {
 
 task("accounts", "Prints the list of accounts", async (_, { ethers }) => {
   const accounts = await ethers.provider.listAccounts();
-  accounts.forEach((account) => console.log(account));
+  accounts.forEach(account => console.log(account));
 });
 
 task("blockNumber", "Prints the block number", async (_, { ethers }) => {
@@ -254,7 +254,7 @@ task("send", "Send ETH")
         "gwei"
       ).toHexString(),
       gasLimit: taskArgs.gasLimit ? taskArgs.gasLimit : 24000,
-      chainId: network.config.chainId,
+      chainId: network.config.chainId
     };
 
     if (taskArgs.data !== undefined) {

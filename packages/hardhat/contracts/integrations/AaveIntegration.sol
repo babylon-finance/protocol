@@ -49,14 +49,13 @@ contract AaveIntegration is BorrowIntegration {
      *
      * @param _weth                   Address of the WETH ERC20
      * @param _controller             Address of the controller
-     * @param _maxCollateralFactor    Max collateral factor allowed
+     * @param _maxCollateralFactor    Max collateral factor allowed (from 0 to a 100)
      */
     constructor(
       address _controller,
       address _weth,
       uint256 _maxCollateralFactor
     ) public BorrowIntegration('Aave Borrow', _weth, _controller, _maxCollateralFactor) {
-
     }
 
     /**
@@ -66,7 +65,7 @@ contract AaveIntegration is BorrowIntegration {
      * @param amount The amount to be deposited as collateral
      *
      */
-    function depositCollateral(address asset, uint256 amount) onlyFund external {
+    function depositCollateral(address asset, uint256 amount) external {
       amount = normalizeDecimals(asset, amount);
       IERC20(asset).safeTransferFrom(msg.sender, address(this), amount);
       IERC20(asset).safeApprove(address(lendingPool), amount);
@@ -78,7 +77,7 @@ contract AaveIntegration is BorrowIntegration {
      * @param asset The asset to be borrowed
      * @param amount The amount to borrow
      */
-    function borrow(address asset, uint256 amount) onlyFund external {
+    function borrow(address asset, uint256 amount) external {
       amount = normalizeDecimals(asset, amount);
       lendingPool.borrow(asset, amount, interestRateMode, 0, address(this));
       // Sends the borrowed assets back to the caller

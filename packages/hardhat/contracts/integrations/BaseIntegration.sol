@@ -18,6 +18,7 @@
 
 pragma solidity 0.7.4;
 
+import "hardhat/console.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { IFolioController } from "../interfaces/IFolioController.sol";
 import { IIntegration } from "../interfaces/IIntegration.sol";
@@ -80,7 +81,7 @@ abstract contract BaseIntegration {
 
     constructor(string memory _name, address _weth, address _controller) {
       require(_controller != address(0), "Controller must be non-zero address.");
-      _name = name;
+      name = _name;
       controller = _controller;
       weth = _weth;
       initialized = false;
@@ -107,7 +108,7 @@ abstract contract BaseIntegration {
     /**
      * Returns the name of the integration
      */
-    function getName() external returns (string memory) {
+    function getName() external view returns (string memory) {
       return name;
     }
 

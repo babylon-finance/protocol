@@ -5,7 +5,7 @@ const { waffle } = require("hardhat");
 const { loadFixture } = waffle;
 
 const addresses = require("../utils/addresses");
-const { deployFolioFixture } = require("./fixtures/FolioController");
+const { deployFolioFixture } = require("./fixtures/ControllerFixture");
 
 async function createFunds(controller, managerSigner, recipientSigner) {
   // Note: for now the integrations here are not real addresses for our integration contract,

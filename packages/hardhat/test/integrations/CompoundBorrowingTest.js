@@ -2,44 +2,53 @@ const { expect } = require("chai");
 const { waffle, ethers } = require("hardhat");
 const { impersonateAddress } = require("../../utils/rpc");
 const addresses = require("../../utils/addresses");
-const { deployFolioFixture } = require("../fixtures/FolioController");
+const { deployFolioFixture } = require("../fixtures/ControllerFixture");
 
 const { loadFixture } = waffle;
 
-describe("AaveIntegration", function() {
+describe("CompoundIntegration", function() {
   let system;
   let owner;
   let controller;
+  let compoundIntegration;
+  const daiWhaleAddress = "0x6B175474E89094C44Da98b954EedeAC495271d0F";
+
 
   beforeEach(async () => {
     system = await loadFixture(deployFolioFixture);
     owner = system.owner;
     controller = system.controller;
+    const CompoundIntegration = await ethers.getContractFactory(
+      "CompoundIntegration",
+      system.owner
+    );
+    compoundIntegration = await CompoundIntegration.deploy(
+      system.folioController.address,
+      addresses.tokens.WETH,
+      50
+    );
+    return compoundIntegration;
   });
 
   describe("Deployment", function() {
     it("should successfully deploy the contract", async function() {
       const deployed = await controller.deployed();
+      const deployedC = await compoundIntegration.deployed();
       expect(!!deployed).to.equal(true);
+      expect(!!deployedC).to.equal(true);
     });
   });
 
   describe("CompoundBorrowing", async function() {
-    const daiWhaleAddress = "0x6B175474E89094C44Da98b954EedeAC495271d0F";
-    const whaleSigner = await impersonateAddress(daiWhaleAddress);
-    const CompoundBorrowing = await ethers.getContractFactory(
-      "CompoundBorrowing",
-      owner
-    );
-
+    let compoundBorrowing;
+    let whaleSigner;
     let cethToken;
     let daiToken;
     let cdaiToken;
     let cusdcToken;
-    let compoundBorrowing;
 
     beforeEach(async () => {
-      compoundBorrowing = await CompoundBorrowing.deploy();
+      whaleSigner = await impersonateAddress(daiWhaleAddress);
       daiToken = await ethers.getContractAt("IERC20", addresses.tokens.DAI);
       cdaiToken = await ethers.getContractAt("ICToken", addresses.tokens.CDAI);
       cusdcToken = await ethers.getContractAt(

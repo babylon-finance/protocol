@@ -5,8 +5,15 @@ const chalk = require("chalk");
 
 const publishDir = "../react-app/src/contracts";
 
-const isSolidity = (fileName) =>
+const isSolidity = fileName =>
   fileName.indexOf(".sol") >= 0 && fileName.indexOf(".swp") < 0;
+
+function buildAddress(contractName, address) {
+  fs.writeFileSync(
+    `${publishDir}/${contractName}.address.js`,
+    `module.exports = "${address}";`
+  );
+}
 
 function publishContract(contractName) {
   console.log(
@@ -39,7 +46,7 @@ function publishContract(contractName) {
       `module.exports = "${contract.bytecode}";`
     );
     if (address) {
-      buildAddress(publishDir, contractName, address);
+      buildAddress(contractName, address);
       return true;
     }
     return false;
@@ -49,13 +56,6 @@ function publishContract(contractName) {
   }
 }
 
-function buildAddress(publishDir, contractName, address) {
-  fs.writeFileSync(
-    `${publishDir}/${contractName}.address.js`,
-    `module.exports = "${address}";`
-  );
-}
-
 async function main() {
   if (!fs.existsSync(publishDir)) {
     fs.mkdirSync(publishDir);
@@ -63,8 +63,8 @@ async function main() {
   const finalContractList = [];
   const contractList = fs
     .readdirSync(config.paths.sources)
-    .filter((fileName) => isSolidity(fileName));
-  contractList.forEach((file) => {
+    .filter(fileName => isSolidity(fileName));
+  contractList.forEach(file => {
     if (file.indexOf(".sol") >= 0) {
       const contractName = file.replace(".sol", "");
       // Add contract to list if publishing is successful
@@ -81,7 +81,7 @@ async function main() {
 
 main()
   .then(() => process.exit(0))
-  .catch((error) => {
+  .catch(error => {
     console.error(error);
     process.exit(1);
   });
