@@ -100,8 +100,7 @@ contract FundValuer {
             console.log("masterQuoteAsset", masterQuoteAsset);
 
             // Get component price from price oracle. If price does not exist, revert.
-            uint256 componentPrice =
-                priceOracle.getPrice(component, masterQuoteAsset);
+            uint256 componentPrice = priceOracle.getPrice(component, masterQuoteAsset);
 
             int256 aggregateUnits = _fund.getTotalPositionRealUnits(component);
 
@@ -111,8 +110,7 @@ contract FundValuer {
 
             console.log("baseUnits", baseUnits);
 
-            int256 normalizedUnits =
-                aggregateUnits.preciseDiv(baseUnits.toInt256());
+            int256 normalizedUnits = aggregateUnits.preciseDiv(baseUnits.toInt256());
 
             console.log("Normalized", normalizedUnits.toUint256());
 
