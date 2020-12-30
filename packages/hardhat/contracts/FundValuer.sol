@@ -82,15 +82,23 @@ contract FundValuer {
         view
         returns (uint256)
     {
-        console.log(_quoteAsset);
+        console.log("Start calculate");
         IPriceOracle priceOracle =
             IPriceOracle(IFolioController(controller).getPriceOracle());
+
+        console.log("Oracle fetched");
+
         address masterQuoteAsset = priceOracle.masterQuoteAsset();
+
         address[] memory components = _fund.getPositions();
         int256 valuation;
 
         for (uint256 i = 0; i < components.length; i++) {
             address component = components[i];
+
+            console.log("Component", component);
+            console.log("masterQuoteAsset", masterQuoteAsset);
+
             // Get component price from price oracle. If price does not exist, revert.
             uint256 componentPrice =
                 priceOracle.getPrice(component, masterQuoteAsset);
@@ -100,8 +108,13 @@ contract FundValuer {
             // Normalize each position unit to preciseUnits 1e18 and cast to signed int
             uint256 unitDecimals = ERC20(component).decimals();
             uint256 baseUnits = 10**unitDecimals;
+
+            console.log("baseUnits", baseUnits);
+
             int256 normalizedUnits =
                 aggregateUnits.preciseDiv(baseUnits.toInt256());
+
+            console.log("Normalized", normalizedUnits.toUint256());
 
             // Calculate valuation of the component. Debt positions are effectively subtracted
             valuation = normalizedUnits
@@ -109,11 +122,14 @@ contract FundValuer {
                 .add(valuation);
         }
 
-        if (masterQuoteAsset != _quoteAsset) {
+
+        if (masterQuoteAsset != _quoteAsset && valuation > 0) {
             uint256 quoteToMaster =
                 priceOracle.getPrice(_quoteAsset, masterQuoteAsset);
             valuation = valuation.preciseDiv(quoteToMaster.toInt256());
         }
+
+        console.log("Final");
 
         return valuation.toUint256();
     }

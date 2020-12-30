@@ -1,13 +1,10 @@
-// const { waffle } = require("hardhat");
 const { ethers } = require("hardhat");
 const addresses = require("../../utils/addresses");
 const argsUtil = require("../../utils/arguments.js");
 
-// const { deployContract } = waffle;
-// const provider = waffle.provider;
-
 async function deployFolioFixture() {
   const [owner, signer1, signer2, signer3] = await ethers.getSigners();
+
   const FolioController = await ethers.getContractFactory(
     "FolioController",
     owner
@@ -27,6 +24,9 @@ async function deployFolioFixture() {
     folioController.address,
     ...argsUtil.readArgumentsFile("PriceOracle")
   );
+
+  await folioController.editFundValuer(fundValuer.address);
+  await folioController.editPriceOracle(priceOracle.address);
 
   const AaveIntegration = await ethers.getContractFactory(
     "AaveIntegration",
@@ -60,7 +60,7 @@ async function deployFolioFixture() {
 
   const integrationsList = [aaveIntegration, compoundIntegration];
 
-  const integrationsAddressList = integrationsList.map((iter) => iter.address);
+  const integrationsAddressList = integrationsList.map(iter => iter.address);
 
   await folioController.createFund(
     integrationsAddressList,

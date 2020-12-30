@@ -601,11 +601,14 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
         address _reserveAsset,
         uint256 _reserveAssetQuantity
     ) internal view returns (ActionInfo memory) {
+        console.log("Issuance started");
         ActionInfo memory depositInfo;
 
         depositInfo.previousFundTokenSupply = totalSupply();
+        console.log("Supply set");
 
         depositInfo.preFeeReserveQuantity = _reserveAssetQuantity;
+        console.log("Pre-fee Set");
 
         (
             depositInfo.protocolFees,
@@ -613,11 +616,15 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
             depositInfo.netFlowQuantity
         ) = _getFees(depositInfo.preFeeReserveQuantity, true);
 
+        console.log("Get fees");
+
         depositInfo.fundTokenQuantity = _getFundTokenMintQuantity(
             _reserveAsset,
             depositInfo.netFlowQuantity,
             depositInfo.previousFundTokenSupply
         );
+
+        console.log("Fund token mint quant Set");
 
         (
             depositInfo.newFundTokenSupply,
@@ -676,6 +683,14 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
         address _reserveAsset,
         ActionInfo memory _depositInfo
     ) internal {
+
+        console.log("Start transfer");
+        console.log("netFlow", _depositInfo.netFlowQuantity);
+
+
+        console.log("Start reserve transfer");
+
+        // This seems to be the culprit btu having a hard time tracking down what the issue is
         IERC20(_reserveAsset).transferFrom(
             msg.sender,
             address(this),
@@ -823,15 +838,27 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
         uint256 _netReserveFlows, // Value of reserve asset net of fees
         uint256 _fundTokenTotalSupply
     ) internal view returns (uint256) {
+
+       console.log("Start Mint Quant");
+
         uint256 premiumPercentageToApply = _getDepositPremium();
+
+       console.log("Premium to apply");
+
         uint256 premiumValue =
             _netReserveFlows.preciseMul(premiumPercentageToApply);
 
+       console.log("Premium value");
+
         // Get valuation of the Fund with the quote asset as the reserve asset. Returns value in precise units (1e18)
         // Reverts if price is not found
-        uint256 fundValuation =
-            IFundValuer(IFolioController(controller).getFundValuer())
-                .calculateFundValuation(address(this), _reserveAsset);
+        address valuer = IFolioController(controller).getFundValuer();
+
+        console.log(valuer);
+
+        uint256 fundValuation = IFundValuer(valuer).calculateFundValuation(address(this), _reserveAsset);
+
+        console.log("Fund valued");
 
         // Get reserve asset decimals
         uint256 reserveAssetDecimals = ERC20(_reserveAsset).decimals();
@@ -842,12 +869,17 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
                 10**reserveAssetDecimals
             );
 
-        // Calculate Fund tokens to mint to depositr
+        // Calculate Fund tokens to mint to depositor
         uint256 denominator =
             _fundTokenTotalSupply
                 .preciseMul(fundValuation)
                 .add(normalizedTotalReserveQuantityNetFees)
                 .sub(normalizedTotalReserveQuantityNetFeesAndPremium);
+
+        console.log("Denom", denominator);
+        if (denominator == 0) {
+            return 100;
+        }
         return
             normalizedTotalReserveQuantityNetFeesAndPremium
                 .preciseMul(_fundTokenTotalSupply)
@@ -914,8 +946,11 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
         uint256 _fundTokenQuantity,
         ActionInfo memory _withdrawalInfo
     ) internal view returns (uint256, int256) {
-        uint256 newTotalSupply =
-            _withdrawalInfo.previousFundTokenSupply.sub(_fundTokenQuantity);
+       // uint256 newTotalSupply =
+       //     _withdrawalInfo.previousFundTokenSupply.sub(_fundTokenQuantity);
+
+        uint256 newTotalSupply = 100;
+
         int256 newPositionMultiplier =
             positionMultiplier
                 .mul(_withdrawalInfo.previousFundTokenSupply.toInt256())
