@@ -58,7 +58,7 @@ contract CompoundIntegration is BorrowIntegration {
     address _controller,
     address _weth,
     uint256 _maxCollateralFactor
-  ) public BorrowIntegration('Compound Borrowing', _weth, _controller, _maxCollateralFactor) {
+  ) BorrowIntegration('Compound Borrowing', _weth, _controller, _maxCollateralFactor) {
   }
 
   /* ============ External Functions ============ */
@@ -95,6 +95,7 @@ contract CompoundIntegration is BorrowIntegration {
           "cmpnd-mgr-ctoken-supply-failed"
       );
     }
+    updateFundPosition(msg.sender, asset, amount);
   }
 
   /**
@@ -108,6 +109,7 @@ contract CompoundIntegration is BorrowIntegration {
         ICToken(cToken).borrow(normalizeDecimals(asset, amount)) == 0,
         "cmpnd-mgr-ctoken-borrow-failed"
     );
+    updateFundPosition(msg.sender, asset, 0 - amount);
   }
 
   /**

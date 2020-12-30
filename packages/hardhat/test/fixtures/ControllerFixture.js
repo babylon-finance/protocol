@@ -103,6 +103,16 @@ async function deployFolioFixture() {
     });
   });
   const fund = await ethers.getContractAt("ClosedFund", fundAddressesList[0]);
+  await fund.initialManagerDeposit({ value: ethers.utils.parseEther("0.01") });
+  await fund.initialize(
+    0,
+    0,
+    0,
+    0,
+    1,
+    ethers.utils.getAddress(addresses.zero),
+    ethers.utils.getAddress(addresses.zero)
+  );
   const fund2 = await ethers.getContractAt("ClosedFund", fundAddressesList[1]);
   const fund3 = await ethers.getContractAt("ClosedFund", fundAddressesList[2]);
 

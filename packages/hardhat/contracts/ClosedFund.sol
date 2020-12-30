@@ -91,6 +91,7 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
     }
 
     /* ============ State Variables ============ */
+    uint256 constant initialBuyRate = 1000000000000; // Initial buy rate for the manager
 
     struct ActionInfo {
         uint256 preFeeReserveQuantity; // Reserve value before fees; During issuance, represents raw quantity
@@ -128,7 +129,7 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
     uint256 public totalFundsDeposited;
     uint256 public totalFunds;
     // Min contribution in the fund
-    uint256 public minContribution = 1000000000000; //wei
+    uint256 public minContribution = initialBuyRate; //wei
     uint256 public minFundTokenSupply;
 
     /* ============ Constructor ============ */
@@ -160,7 +161,6 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
         string memory _symbol,
         uint256 _minContribution
     )
-        public
         BaseFund(
             _integrations,
             _weth,
@@ -224,6 +224,7 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
             _minFundTokenSupply > 0,
             "Min Fund token supply must be greater than 0"
         );
+        require(totalSupply() > 0, "The fund must receive an initial deposit by the manager");
 
         managerDepositFee = _managerDepositFee;
         minFundTokenSupply = _minFundTokenSupply;
@@ -233,6 +234,29 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
         managerDepositHook = _managerDepositHook;
         managerWithdrawalHook = _managerWithdrawalHook;
         active = true;
+    }
+
+    /**
+     * Manager sets the initial deposit that kickstarts the supply and allows to set the fund to active
+     *
+     */
+    function initialManagerDeposit() external onlyManager payable nonReentrant {
+      require(
+          msg.value >= minContribution,
+          "Send at least 1000000000000 wei"
+      );
+      // Always wrap to WETH
+      IWETH(weth).deposit{value: msg.value}();
+
+      // TODO: Trade to reserve asset if different than WETH
+      uint256 initialTokens = msg.value.div(initialBuyRate);
+      _mint(manager, initialTokens);
+      _udpateContributorInfo(initialTokens);
+
+      _calculateAndEditPosition(
+        weth,
+        msg.value
+      );
     }
 
     /**
@@ -270,26 +294,7 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
 
         _transferCollateralAndHandleFees(reserveAsset, depositInfo);
 
-        Contributor storage contributor = contributors[msg.sender];
-
-        // If new contributor, create one, increment count, and set the current TS
-        if (contributor.totalDeposit == 0) {
-            totalContributors = totalContributors.add(1);
-            contributor.timestamp = block.timestamp;
-        }
-
-        totalFunds = totalFunds.add(msg.value);
-        totalFundsDeposited = totalFundsDeposited.add(msg.value);
-        contributor.totalDeposit = contributor.totalDeposit.add(msg.value);
-        contributor.tokensReceived = contributor.tokensReceived.add(
-            depositInfo.fundTokenQuantity
-        );
-        emit ContributionLog(
-            msg.sender,
-            msg.value,
-            depositInfo.fundTokenQuantity,
-            block.timestamp
-        );
+        _udpateContributorInfo(depositInfo.fundTokenQuantity);
 
         _handleDepositStateUpdates(reserveAsset, _to, depositInfo);
     }
@@ -370,7 +375,7 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
      *
      * @param _managerDepositFee         Manager deposit fee percentage in 10e16 (e.g. 10e16 = 1%)
      */
-    function editManagerDepositFee(address _fund, uint256 _managerDepositFee)
+    function editManagerDepositFee(uint256 _managerDepositFee)
         external
         onlyManager
         onlyInactive
@@ -390,7 +395,6 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
      * @param _managerWithdrawalFee         Manager withdrawal fee percentage in 10e16 (e.g. 10e16 = 1%)
      */
     function editManagerWithdrawalFee(
-        address _fund,
         uint256 _managerWithdrawalFee
     ) external onlyManager onlyInactive {
         require(
@@ -408,7 +412,6 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
      * @param _managerPerformanceFee         Manager performance fee percentage in 10e16 (e.g. 10e16 = 1%)
      */
     function editManagerPerformanceFee(
-        address _fund,
         uint256 _managerPerformanceFee
     ) external onlyManager onlyInactive {
         require(
@@ -968,6 +971,32 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
             totalExistingUnits.sub(outflow).preciseDiv(
                 _withdrawalInfo.newFundTokenSupply
             );
+    }
+
+    /**
+     * Updates the contributor info in the array
+     */
+    function _udpateContributorInfo(uint256 tokensReceived) internal {
+      Contributor storage contributor = contributors[msg.sender];
+      // If new contributor, create one, increment count, and set the current TS
+      if (contributor.totalDeposit == 0) {
+          totalContributors = totalContributors.add(1);
+          contributor.timestamp = block.timestamp;
+      }
+
+      totalFunds = totalFunds.add(msg.value);
+      totalFundsDeposited = totalFundsDeposited.add(msg.value);
+      contributor.totalDeposit = contributor.totalDeposit.add(msg.value);
+      contributor.tokensReceived = contributor.tokensReceived.add(
+          tokensReceived
+      );
+
+      emit ContributionLog(
+          msg.sender,
+          msg.value,
+          tokensReceived,
+          block.timestamp
+      );
     }
 
     /**

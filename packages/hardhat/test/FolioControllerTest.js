@@ -105,7 +105,7 @@ describe("FolioController", function() {
     });
   });
 
-  describe("Protocal operations", function() {
+  describe("Protocol operations", function() {
     it("can add a reserve asset", async function() {
       const initialAssets = await controller.getReserveAssets();
       await controller.addReserveAsset(addresses.tokens.WETH);
@@ -149,4 +149,7 @@ describe("FolioController", function() {
       expect(recipient.toLowerCase()).to.equal(addresses.users.hardhat3);
     });
   });
+
+  // TODO: Integration functions
+  // TODO: add functions to update the max fees and test them
 });

@@ -58,7 +58,7 @@ contract FundValuer {
      *
      * @param _controller             Address of controller contract
      */
-    constructor(address _controller) public {
+    constructor(address _controller) {
         controller = _controller;
     }
 

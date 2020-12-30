@@ -55,7 +55,7 @@ contract AaveIntegration is BorrowIntegration {
       address _controller,
       address _weth,
       uint256 _maxCollateralFactor
-    ) public BorrowIntegration('Aave Borrow', _weth, _controller, _maxCollateralFactor) {
+    ) BorrowIntegration('Aave Borrow', _weth, _controller, _maxCollateralFactor) {
     }
 
     /**
@@ -68,8 +68,9 @@ contract AaveIntegration is BorrowIntegration {
     function depositCollateral(address asset, uint256 amount) onlyFund external {
       amount = normalizeDecimals(asset, amount);
       IERC20(asset).safeTransferFrom(msg.sender, address(this), amount);
-      IERC20(asset).safeApprove(address(lendingPool), amount);
+      IERC20(asset).safeIncreaseAllowance(address(lendingPool), amount);
       lendingPool.deposit(asset, amount, msg.sender, 0);
+      updateFundPosition(msg.sender, asset, amount);
     }
 
     /**
@@ -82,6 +83,7 @@ contract AaveIntegration is BorrowIntegration {
       lendingPool.borrow(asset, amount, interestRateMode, 0, msg.sender);
       // Sends the borrowed assets back to the caller
       IERC20(asset).transfer(msg.sender, amount);
+      updateFundPosition(msg.sender, asset, -amount);
     }
 
     /**

@@ -122,7 +122,7 @@ contract FolioController is Ownable {
         address _feeRecipient,
         address _fundValuer,
         address _priceOracle
-    ) public {
+    ) {
         feeRecipient = _feeRecipient;
         fundValuer = _fundValuer;
         priceOracle = _priceOracle;
@@ -256,7 +256,7 @@ contract FolioController is Ownable {
         require(isFund[_fund], "Fund does not exist");
         IFund fund = IFund(_fund);
         require(!!fund.active(), "The fund needs to be active.");
-        fund.setActive(false);
+        fund.setActive();
     }
 
     /**
@@ -268,7 +268,7 @@ contract FolioController is Ownable {
         require(isFund[_fund], "Fund does not exist");
         IFund fund = IFund(_fund);
         require(!fund.active(), "The fund needs to be disabled.");
-        fund.setActive(true);
+        fund.setDisabled();
     }
 
     /**

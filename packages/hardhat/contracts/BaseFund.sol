@@ -223,14 +223,7 @@ abstract contract BaseFund is ERC20 {
         onlyIntegration
         onlyActive
     {
-        IFund.Position storage position = positionsByComponent[_component];
-        position.positionState = _integration != address(0) ? 1 : 0;
-        position.integration = _integration;
-        // position.updatedAt = [];
-        position.enteredAt = block.timestamp;
-
-        positions.push(_component);
-        emit PositionAdded(_component);
+      _addPosition(_component, _integration);
     }
 
     /**
@@ -241,10 +234,7 @@ abstract contract BaseFund is ERC20 {
         onlyIntegration
         onlyActive
     {
-        IFund.Position storage position = positionsByComponent[_component];
-        positions = positions.remove(_component);
-        position.exitedAt = block.timestamp;
-        emit PositionRemoved(_component);
+      _removePosition(_component);
     }
 
     /**
@@ -256,13 +246,7 @@ abstract contract BaseFund is ERC20 {
         onlyIntegration
         onlyActive
     {
-        int256 virtualUnit = _convertRealToVirtualUnit(_realUnit);
-
-        positionsByComponent[_component].virtualUnit = virtualUnit;
-        positionsByComponent[_component].unit = _realUnit;
-        positionsByComponent[_component].updatedAt.push(block.timestamp);
-
-        emit PositionUnitEdited(_component, _realUnit);
+      editPositionUnit(_component, _realUnit);
     }
 
     /**
@@ -361,19 +345,19 @@ abstract contract BaseFund is ERC20 {
     }
 
     /**
-     * PRIVILEGED Manager, protocol FUNCTION. When a Fund is disable, deposits and withdrawals are disabled
+     * PRIVILEGED Manager, protocol FUNCTION. When a Fund is disable, deposits are disabled
      */
-    function setActive(bool _active) external onlyManagerOrProtocol {
-        // There is some sort of circular dependency here that the Hardhat EVM is blowing up on
-        // Commenting out in the meantime.
-        // When _active is false Hardhet reports this helpful exception:
-        // Error: Transaction reverted and Hardhat couldn't infer the reason. Please report this to help us improve Hardhat.
-        //
-        require(
-            !active || integrations.length > 0,
-            "Must have active integrations to enable a fund"
-        );
-        active = _active;
+    function setActive() external onlyManagerOrProtocol {
+      require(!active && integrations.length > 0,
+          "Must have active integrations to enable a fund"
+      );
+      active = true;
+    }
+
+    function setDisabled() external onlyManagerOrProtocol {
+      // TODO: the fund must be
+      require(active, "The fund must be active");
+      active = false;
     }
 
     /**
@@ -406,9 +390,7 @@ abstract contract BaseFund is ERC20 {
         returns (bytes memory _returnValue)
     {
         _returnValue = _target.functionCallWithValue(_data, _value);
-
         emit Invoked(_target, _value, _data, _returnValue);
-
         return _returnValue;
     }
 
@@ -426,6 +408,12 @@ abstract contract BaseFund is ERC20 {
       _returnValue = _integration.functionCallWithValue(_data, _value);
       emit IntegrationInvoked(_integration, _value, _data, _returnValue);
       return _returnValue;
+    }
+
+    function addAllowanceIntegration(address _integration, address _asset, uint256 _quantity) external onlyManager {
+      _validateOnlyIntegration(_integration);
+      ERC20(_asset).approve(_integration, 0);
+      ERC20(_asset).approve(_integration, _quantity);
     }
 
 
@@ -506,16 +494,17 @@ abstract contract BaseFund is ERC20 {
      * Calculates the new  position unit and performs the edit with the new unit
      *
      * @param _component                Address of the component
-     * @param _componentPreviousBalance Pre-action component balance
+     * @param _newBalance               Current balance of the component
      * @return                          Current component balance
      * @return                          Previous position unit
      * @return                          New position unit
      */
+
     function calculateAndEditPosition(
         address _component,
-        uint256 _componentPreviousBalance
+        uint256 _newBalance
     )
-        external
+        public
         onlyIntegration
         onlyActive
         returns (
@@ -524,22 +513,72 @@ abstract contract BaseFund is ERC20 {
             uint256
         )
     {
-        uint256 currentBalance = ERC20(_component).balanceOf(address(this));
-        uint256 positionUnit = getPositionRealUnit(_component).toUint256();
-
-        uint256 newTokenUnit =
-            calculateEditPositionUnit(
-                _componentPreviousBalance,
-                currentBalance,
-                positionUnit
-            );
-
-        editPosition(_component, newTokenUnit, msg.sender);
-
-        return (currentBalance, positionUnit, newTokenUnit);
+      return _calculateAndEditPosition(_component, _newBalance);
     }
 
     /* ============ Internal Functions ============ */
+
+    function _calculateAndEditPosition(
+        address _component,
+        uint256 _newBalance
+    )
+        internal
+        returns (
+            uint256,
+            uint256,
+            uint256
+        )
+    {
+      uint256 positionUnit = getPositionRealUnit(_component).toUint256();
+      uint256 _componentPreviousBalance = positionUnit.preciseMul(totalSupply());
+      uint256 newTokenUnit =
+          calculateEditPositionUnit(
+              _componentPreviousBalance,
+              _newBalance,
+              positionUnit
+          );
+      editPosition(_component, newTokenUnit, msg.sender);
+
+      return (_newBalance, positionUnit, newTokenUnit);
+    }
+
+    /**
+     * Internal MODULE FUNCTION. Low level function that adds a component to the positions array.
+     */
+    function _addPosition(address _component, address _integration) internal{
+      IFund.Position storage position = positionsByComponent[_component];
+      position.positionState = _integration != address(0) ? 1 : 0;
+      position.integration = _integration;
+      // position.updatedAt = [];
+      position.enteredAt = block.timestamp;
+
+      positions.push(_component);
+      emit PositionAdded(_component);
+    }
+
+    /**
+     * Internal MODULE FUNCTION. Low level function that removes a component from the positions array.
+     */
+    function _removePosition(address _component) internal {
+      IFund.Position storage position = positionsByComponent[_component];
+      positions = positions.remove(_component);
+      position.exitedAt = block.timestamp;
+      emit PositionRemoved(_component);
+    }
+
+    /**
+     * Internal MODULE FUNCTION. Low level function that edits a component's virtual unit. Takes a real unit
+     * and converts it to virtual before committing.
+     */
+    function _editPositionUnit(address _component, int256 _realUnit) internal {
+      int256 virtualUnit = _convertRealToVirtualUnit(_realUnit);
+
+      positionsByComponent[_component].virtualUnit = virtualUnit;
+      positionsByComponent[_component].unit = _realUnit;
+      positionsByComponent[_component].updatedAt.push(block.timestamp);
+
+      emit PositionUnitEdited(_component, _realUnit);
+    }
 
     /**
      * Calculate the new position unit given total notional values pre and post executing an action that changes Fund state
@@ -595,12 +634,12 @@ abstract contract BaseFund is ERC20 {
     ) internal {
         bool isPositionFound = hasPosition(_component);
         if (!isPositionFound && _newUnit > 0) {
-            addPosition(_component, _integration);
+          _addPosition(_component, _integration);
         } else if (isPositionFound && _newUnit == 0) {
-            removePosition(_component);
+          _removePosition(_component);
         }
 
-        editPositionUnit(_component, _newUnit.toInt256());
+        _editPositionUnit(_component, _newUnit.toInt256());
     }
 
     /**
