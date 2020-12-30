@@ -101,8 +101,11 @@ async function deployFolioFixture() {
     });
   });
   const fund = await ethers.getContractAt("ClosedFund", fundAddressesList[0]);
+  await fund.setActive();
   const fund2 = await ethers.getContractAt("ClosedFund", fundAddressesList[1]);
+  await fund2.setActive();
   const fund3 = await ethers.getContractAt("ClosedFund", fundAddressesList[2]);
+  await fund3.setActive();
 
   return {
     folioController,

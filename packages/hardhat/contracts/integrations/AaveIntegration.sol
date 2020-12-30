@@ -70,6 +70,7 @@ contract AaveIntegration is BorrowIntegration {
       IERC20(asset).safeTransferFrom(msg.sender, address(this), amount);
       IERC20(asset).safeIncreaseAllowance(address(lendingPool), amount);
       lendingPool.deposit(asset, amount, msg.sender, 0);
+      updateFundPosition(msg.sender, asset, amount);
     }
 
     /**
@@ -82,6 +83,7 @@ contract AaveIntegration is BorrowIntegration {
       lendingPool.borrow(asset, amount, interestRateMode, 0, msg.sender);
       // Sends the borrowed assets back to the caller
       IERC20(asset).transfer(msg.sender, amount);
+      updateFundPosition(msg.sender, asset, -amount);
     }
 
     /**

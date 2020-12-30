@@ -361,19 +361,19 @@ abstract contract BaseFund is ERC20 {
     }
 
     /**
-     * PRIVILEGED Manager, protocol FUNCTION. When a Fund is disable, deposits and withdrawals are disabled
+     * PRIVILEGED Manager, protocol FUNCTION. When a Fund is disable, deposits are disabled
      */
-    function setActive(bool _active) external onlyManagerOrProtocol {
-        // There is some sort of circular dependency here that the Hardhat EVM is blowing up on
-        // Commenting out in the meantime.
-        // When _active is false Hardhet reports this helpful exception:
-        // Error: Transaction reverted and Hardhat couldn't infer the reason. Please report this to help us improve Hardhat.
-        //
-        require(
-            !active || integrations.length > 0,
-            "Must have active integrations to enable a fund"
-        );
-        active = _active;
+    function setActive() external onlyManagerOrProtocol {
+      require(!active && integrations.length > 0,
+          "Must have active integrations to enable a fund"
+      );
+      active = true;
+    }
+
+    function setDisabled() external onlyManagerOrProtocol {
+      // TODO: the fund must be
+      require(active, "The fund must be active");
+      active = false;
     }
 
     /**
@@ -510,14 +510,15 @@ abstract contract BaseFund is ERC20 {
      * Calculates the new  position unit and performs the edit with the new unit
      *
      * @param _component                Address of the component
-     * @param _componentPreviousBalance Pre-action component balance
+     * @param _newBalance               Current balance of the component
      * @return                          Current component balance
      * @return                          Previous position unit
      * @return                          New position unit
      */
+
     function calculateAndEditPosition(
         address _component,
-        uint256 _componentPreviousBalance
+        uint256 _newBalance
     )
         external
         onlyIntegration
@@ -528,19 +529,18 @@ abstract contract BaseFund is ERC20 {
             uint256
         )
     {
-        uint256 currentBalance = ERC20(_component).balanceOf(address(this));
         uint256 positionUnit = getPositionRealUnit(_component).toUint256();
-
+        uint256 _componentPreviousBalance = positionUnit.preciseMul(totalSupply());
         uint256 newTokenUnit =
             calculateEditPositionUnit(
                 _componentPreviousBalance,
-                currentBalance,
+                _newBalance,
                 positionUnit
             );
 
         editPosition(_component, newTokenUnit, msg.sender);
 
-        return (currentBalance, positionUnit, newTokenUnit);
+        return (_newBalance, positionUnit, newTokenUnit);
     }
 
     /* ============ Internal Functions ============ */

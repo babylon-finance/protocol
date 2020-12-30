@@ -126,10 +126,10 @@ abstract contract BaseIntegration {
      *
      * @param _fund                     Address of the fund
      * @param _component                Address of the ERC20
-     * @param _newUnit                  New unit of the fund position
+     * @param _newTotal                 New unit of the fund position
      */
-    function updateFundPosition(address _fund, address _component, uint256 _newUnit) internal {
-      IFund(_fund).calculateAndEditPosition(_component, _newUnit);
+    function updateFundPosition(address _fund, address _component, uint256 _newTotal) internal {
+      IFund(_fund).calculateAndEditPosition(_component, _newTotal);
     }
 
     /**

@@ -107,6 +107,7 @@ describe("AaveIntegration", function() {
         ],
         [daiToken.address, ethers.utils.parseEther("10")]
       );
+      console.log('eo');
       await fund.callIntegration(aaveIntegration.address, 0, data, {
         gasPrice: 0
       });
@@ -157,41 +158,41 @@ describe("AaveIntegration", function() {
       expect(canBeUsedAsCollateral).to.equal(true);
     });
 
-    // it("can borrow usdc after depositing dai", async function() {
-    //   expect(
-    //     await daiToken
-    //       .connect(whaleSigner)
-    //       .transfer(
-    //         system.owner.getAddress(),
-    //         ethers.utils.parseEther("1000"),
-    //         {
-    //           gasPrice: 0
-    //         }
-    //       )
-    //   );
-    //   expect(
-    //     await daiToken.approve(
-    //       aaveIntegration.address,
-    //       ethers.utils.parseEther("1000")
-    //     )
-    //   );
-    //   expect(await daiToken.balanceOf(system.owner.getAddress())).to.equal(
-    //     ethers.utils.parseEther("1000")
-    //   );
-    //   expect(
-    //     await aaveIntegration.depositCollateral(
-    //       daiToken.address,
-    //       ethers.utils.parseEther("1000")
-    //     )
-    //   );
-    //   console.log('aa');
-    //   expect(await daiToken.balanceOf(aaveIntegration.address)).to.equal(0);
-    //   expect(await usdcToken.balanceOf(system.owner.getAddress())).to.equal(0);
-    //   expect(await aaveIntegration.borrow(usdcToken.address, 100000000));
-    //   // printUserAccount();
-    //   expect(await usdcToken.balanceOf(aaveIntegration.address)).to.equal(
-    //     100000000
-    //   );
-    // });
+    it("can borrow usdc after depositing dai", async function() {
+      expect(
+        await daiToken
+          .connect(whaleSigner)
+          .transfer(
+            system.owner.getAddress(),
+            ethers.utils.parseEther("1000"),
+            {
+              gasPrice: 0
+            }
+          )
+      );
+      expect(
+        await daiToken.approve(
+          aaveIntegration.address,
+          ethers.utils.parseEther("1000")
+        )
+      );
+      expect(await daiToken.balanceOf(system.owner.getAddress())).to.equal(
+        ethers.utils.parseEther("1000")
+      );
+      expect(
+        await aaveIntegration.depositCollateral(
+          daiToken.address,
+          ethers.utils.parseEther("1000")
+        )
+      );
+      console.log('aa');
+      expect(await daiToken.balanceOf(aaveIntegration.address)).to.equal(0);
+      expect(await usdcToken.balanceOf(system.owner.getAddress())).to.equal(0);
+      expect(await aaveIntegration.borrow(usdcToken.address, 100000000));
+      // printUserAccount();
+      expect(await usdcToken.balanceOf(aaveIntegration.address)).to.equal(
+        100000000
+      );
+    });
   });
 });
