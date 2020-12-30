@@ -129,7 +129,7 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
     uint256 public totalFundsDeposited;
     uint256 public totalFunds;
     // Min contribution in the fund
-    uint256 public minContribution = 1000000000000; //wei
+    uint256 public minContribution = initialBuyRate; //wei
     uint256 public minFundTokenSupply;
 
     /* ============ Constructor ============ */
@@ -161,7 +161,6 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
         string memory _symbol,
         uint256 _minContribution
     )
-        public
         BaseFund(
             _integrations,
             _weth,
@@ -376,7 +375,7 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
      *
      * @param _managerDepositFee         Manager deposit fee percentage in 10e16 (e.g. 10e16 = 1%)
      */
-    function editManagerDepositFee(address _fund, uint256 _managerDepositFee)
+    function editManagerDepositFee(uint256 _managerDepositFee)
         external
         onlyManager
         onlyInactive
@@ -396,7 +395,6 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
      * @param _managerWithdrawalFee         Manager withdrawal fee percentage in 10e16 (e.g. 10e16 = 1%)
      */
     function editManagerWithdrawalFee(
-        address _fund,
         uint256 _managerWithdrawalFee
     ) external onlyManager onlyInactive {
         require(
@@ -414,7 +412,6 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
      * @param _managerPerformanceFee         Manager performance fee percentage in 10e16 (e.g. 10e16 = 1%)
      */
     function editManagerPerformanceFee(
-        address _fund,
         uint256 _managerPerformanceFee
     ) external onlyManager onlyInactive {
         require(

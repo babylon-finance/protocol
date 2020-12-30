@@ -58,7 +58,7 @@ contract CompoundIntegration is BorrowIntegration {
     address _controller,
     address _weth,
     uint256 _maxCollateralFactor
-  ) public BorrowIntegration('Compound Borrowing', _weth, _controller, _maxCollateralFactor) {
+  ) BorrowIntegration('Compound Borrowing', _weth, _controller, _maxCollateralFactor) {
   }
 
   /* ============ External Functions ============ */

@@ -513,7 +513,7 @@ abstract contract BaseFund is ERC20 {
             uint256
         )
     {
-      _calculateAndEditPosition(_component, _newBalance);
+      return _calculateAndEditPosition(_component, _newBalance);
     }
 
     /* ============ Internal Functions ============ */

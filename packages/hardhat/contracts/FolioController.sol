@@ -122,7 +122,7 @@ contract FolioController is Ownable {
         address _feeRecipient,
         address _fundValuer,
         address _priceOracle
-    ) public {
+    ) {
         feeRecipient = _feeRecipient;
         fundValuer = _fundValuer;
         priceOracle = _priceOracle;

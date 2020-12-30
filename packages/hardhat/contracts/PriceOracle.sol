@@ -85,7 +85,6 @@ contract PriceOracle is Ownable {
         address[] memory _assetTwos,
         IOracle[] memory _oracles
     )
-        public
     {
         controller = _controller;
         masterQuoteAsset = _masterQuoteAsset;
