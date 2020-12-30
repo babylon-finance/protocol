@@ -520,7 +520,7 @@ abstract contract BaseFund is ERC20 {
         address _component,
         uint256 _newBalance
     )
-        external
+        public
         onlyIntegration
         onlyActive
         returns (
