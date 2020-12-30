@@ -223,14 +223,7 @@ abstract contract BaseFund is ERC20 {
         onlyIntegration
         onlyActive
     {
-        IFund.Position storage position = positionsByComponent[_component];
-        position.positionState = _integration != address(0) ? 1 : 0;
-        position.integration = _integration;
-        // position.updatedAt = [];
-        position.enteredAt = block.timestamp;
-
-        positions.push(_component);
-        emit PositionAdded(_component);
+      _addPosition(_component, _integration);
     }
 
     /**
@@ -241,10 +234,7 @@ abstract contract BaseFund is ERC20 {
         onlyIntegration
         onlyActive
     {
-        IFund.Position storage position = positionsByComponent[_component];
-        positions = positions.remove(_component);
-        position.exitedAt = block.timestamp;
-        emit PositionRemoved(_component);
+      _removePosition(_component);
     }
 
     /**
@@ -256,13 +246,7 @@ abstract contract BaseFund is ERC20 {
         onlyIntegration
         onlyActive
     {
-        int256 virtualUnit = _convertRealToVirtualUnit(_realUnit);
-
-        positionsByComponent[_component].virtualUnit = virtualUnit;
-        positionsByComponent[_component].unit = _realUnit;
-        positionsByComponent[_component].updatedAt.push(block.timestamp);
-
-        emit PositionUnitEdited(_component, _realUnit);
+      editPositionUnit(_component, _realUnit);
     }
 
     /**
@@ -529,21 +513,72 @@ abstract contract BaseFund is ERC20 {
             uint256
         )
     {
-        uint256 positionUnit = getPositionRealUnit(_component).toUint256();
-        uint256 _componentPreviousBalance = positionUnit.preciseMul(totalSupply());
-        uint256 newTokenUnit =
-            calculateEditPositionUnit(
-                _componentPreviousBalance,
-                _newBalance,
-                positionUnit
-            );
-
-        editPosition(_component, newTokenUnit, msg.sender);
-
-        return (_newBalance, positionUnit, newTokenUnit);
+      _calculateAndEditPosition(_component, _newBalance);
     }
 
     /* ============ Internal Functions ============ */
+
+    function _calculateAndEditPosition(
+        address _component,
+        uint256 _newBalance
+    )
+        internal
+        returns (
+            uint256,
+            uint256,
+            uint256
+        )
+    {
+      uint256 positionUnit = getPositionRealUnit(_component).toUint256();
+      uint256 _componentPreviousBalance = positionUnit.preciseMul(totalSupply());
+      uint256 newTokenUnit =
+          calculateEditPositionUnit(
+              _componentPreviousBalance,
+              _newBalance,
+              positionUnit
+          );
+      editPosition(_component, newTokenUnit, msg.sender);
+
+      return (_newBalance, positionUnit, newTokenUnit);
+    }
+
+    /**
+     * Internal MODULE FUNCTION. Low level function that adds a component to the positions array.
+     */
+    function _addPosition(address _component, address _integration) internal{
+      IFund.Position storage position = positionsByComponent[_component];
+      position.positionState = _integration != address(0) ? 1 : 0;
+      position.integration = _integration;
+      // position.updatedAt = [];
+      position.enteredAt = block.timestamp;
+
+      positions.push(_component);
+      emit PositionAdded(_component);
+    }
+
+    /**
+     * Internal MODULE FUNCTION. Low level function that removes a component from the positions array.
+     */
+    function _removePosition(address _component) internal {
+      IFund.Position storage position = positionsByComponent[_component];
+      positions = positions.remove(_component);
+      position.exitedAt = block.timestamp;
+      emit PositionRemoved(_component);
+    }
+
+    /**
+     * Internal MODULE FUNCTION. Low level function that edits a component's virtual unit. Takes a real unit
+     * and converts it to virtual before committing.
+     */
+    function _editPositionUnit(address _component, int256 _realUnit) internal {
+      int256 virtualUnit = _convertRealToVirtualUnit(_realUnit);
+
+      positionsByComponent[_component].virtualUnit = virtualUnit;
+      positionsByComponent[_component].unit = _realUnit;
+      positionsByComponent[_component].updatedAt.push(block.timestamp);
+
+      emit PositionUnitEdited(_component, _realUnit);
+    }
 
     /**
      * Calculate the new position unit given total notional values pre and post executing an action that changes Fund state
@@ -599,12 +634,12 @@ abstract contract BaseFund is ERC20 {
     ) internal {
         bool isPositionFound = hasPosition(_component);
         if (!isPositionFound && _newUnit > 0) {
-            addPosition(_component, _integration);
+          _addPosition(_component, _integration);
         } else if (isPositionFound && _newUnit == 0) {
-            removePosition(_component);
+          _removePosition(_component);
         }
 
-        editPositionUnit(_component, _newUnit.toInt256());
+        _editPositionUnit(_component, _newUnit.toInt256());
     }
 
     /**

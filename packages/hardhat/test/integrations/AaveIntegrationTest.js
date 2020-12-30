@@ -107,7 +107,6 @@ describe("AaveIntegration", function() {
         ],
         [daiToken.address, ethers.utils.parseEther("10")]
       );
-      console.log('eo');
       await fund.callIntegration(aaveIntegration.address, 0, data, {
         gasPrice: 0
       });
