@@ -24,6 +24,7 @@ import { IFolioController } from "../interfaces/IFolioController.sol";
 import { IIntegration } from "../interfaces/IIntegration.sol";
 import { IWETH } from "../interfaces/external/weth/IWETH.sol";
 import { IFund } from "../interfaces/IFund.sol";
+import { SafeMath } from "@openzeppelin/contracts/math/SafeMath.sol";
 import { PreciseUnitMath } from "../lib/PreciseUnitMath.sol";
 
 /**
@@ -33,6 +34,7 @@ import { PreciseUnitMath } from "../lib/PreciseUnitMath.sol";
  * Abstract class that houses common Integration-related state and functions.
  */
 abstract contract BaseIntegration {
+    using SafeMath for uint256;
     using PreciseUnitMath for uint256;
 
     /* ============ Modifiers ============ */
@@ -191,14 +193,15 @@ abstract contract BaseIntegration {
     function normalizeDecimals(address asset, uint256 amount) internal view returns (uint256)  {
       // USDC and USDT have only 6 decimals
       // TODO: create a mpping for decimals managed by the protocol
+      uint256 newAmount = amount;
       if (asset == USDCAddress || asset == USDTAddress) {
-        amount =  amount.preciseDiv(10**12);
+        newAmount = amount.div(10**12);
       }
       // WBTC has 8 decimals
       if (asset == WBTCAddress) {
-        amount =  amount.preciseDiv(10**10);
+        newAmount = amount.div(10**10);
       }
-      return amount;
+      return newAmount;
     }
 
 }

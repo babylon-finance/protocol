@@ -80,7 +80,7 @@ contract AaveIntegration is BorrowIntegration {
      */
     function borrow(address asset, uint256 amount) onlyFund external {
       amount = normalizeDecimals(asset, amount);
-      lendingPool.borrow(asset, amount, interestRateMode, 0, msg.sender);
+      lendingPool.borrow(asset, 100, interestRateMode, 0, msg.sender);
       // Sends the borrowed assets back to the caller
       IERC20(asset).transfer(msg.sender, amount);
       updateFundPosition(msg.sender, asset, -amount);
@@ -145,15 +145,18 @@ contract AaveIntegration is BorrowIntegration {
      * Get the health factor of the total debt
      *
      */
-    function getHealthFactor() onlyFund external view returns (uint256) {
+    function getHealthFactor() onlyFund public view returns (uint256) {
       (
         uint256 totalCollateral,
         uint256 totalDebt,
         uint256 borrowingPower,
-        uint256 lituidationThreshold,
+        uint256 liquidationThreshold,
         uint256 ltv,
         uint256 healthFactor
-      ) = lendingPool.getUserAccountData(address(this));
+      ) = lendingPool.getUserAccountData(msg.sender);
+      console.log(totalCollateral);
+      console.log(totalDebt);
+      console.log(borrowingPower);
       return healthFactor;
     }
 }
