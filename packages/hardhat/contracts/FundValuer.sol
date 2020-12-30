@@ -83,8 +83,7 @@ contract FundValuer {
         returns (uint256)
     {
         console.log("Start calculate");
-        IPriceOracle priceOracle =
-            IPriceOracle(IFolioController(controller).getPriceOracle());
+        IPriceOracle priceOracle = IPriceOracle(IFolioController(controller).getPriceOracle());
 
         console.log("Oracle fetched");
 
@@ -115,15 +114,12 @@ contract FundValuer {
             console.log("Normalized", normalizedUnits.toUint256());
 
             // Calculate valuation of the component. Debt positions are effectively subtracted
-            valuation = normalizedUnits
-                .preciseMul(componentPrice.toInt256())
-                .add(valuation);
+            valuation = normalizedUnits.preciseMul(componentPrice.toInt256()).add(valuation);
         }
 
 
         if (masterQuoteAsset != _quoteAsset && valuation > 0) {
-            uint256 quoteToMaster =
-                priceOracle.getPrice(_quoteAsset, masterQuoteAsset);
+            uint256 quoteToMaster = priceOracle.getPrice(_quoteAsset, masterQuoteAsset);
             valuation = valuation.preciseDiv(quoteToMaster.toInt256());
         }
 
