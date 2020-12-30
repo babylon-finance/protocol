@@ -21,14 +21,14 @@
 pragma solidity 0.7.4;
 
 import "hardhat/console.sol";
-import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
-import {SafeCast} from "@openzeppelin/contracts/utils/SafeCast.sol";
-import {SignedSafeMath} from "@openzeppelin/contracts/math/SignedSafeMath.sol";
+import { ERC20 } from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import { SafeCast } from "@openzeppelin/contracts/utils/SafeCast.sol";
+import { SignedSafeMath } from "@openzeppelin/contracts/math/SignedSafeMath.sol";
 
-import {IFolioController} from "./interfaces/IFolioController.sol";
-import {IFund} from "./interfaces/IFund.sol";
-import {IPriceOracle} from "./interfaces/IPriceOracle.sol";
-import {PreciseUnitMath} from "./lib/PreciseUnitMath.sol";
+import { IFolioController } from "./interfaces/IFolioController.sol";
+import { IFund } from "./interfaces/IFund.sol";
+import { IPriceOracle } from "./interfaces/IPriceOracle.sol";
+import { PreciseUnitMath } from "./lib/PreciseUnitMath.sol";
 
 /**
  * @title FundValuer
@@ -128,8 +128,6 @@ contract FundValuer {
                 priceOracle.getPrice(_quoteAsset, masterQuoteAsset);
             valuation = valuation.preciseDiv(quoteToMaster.toInt256());
         }
-
-        console.log("Final");
 
         return valuation.toUint256();
     }

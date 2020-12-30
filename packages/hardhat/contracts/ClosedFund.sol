@@ -690,7 +690,7 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
 
         console.log("Start reserve transfer");
 
-        // This seems to be the culprit btu having a hard time tracking down what the issue is
+        // This seems to be the culprit but having a hard time tracking down what the issue is
         IERC20(_reserveAsset).transferFrom(
             msg.sender,
             address(this),
