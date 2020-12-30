@@ -225,6 +225,7 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
             _minFundTokenSupply > 0,
             "Min Fund token supply must be greater than 0"
         );
+        require(totalSupply() > 0, "The fund must receive an initial deposit by the manager");
 
         managerDepositFee = _managerDepositFee;
         minFundTokenSupply = _minFundTokenSupply;
@@ -251,10 +252,9 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
       // TODO: Trade to reserve asset if different than WETH
       uint256 initialTokens = msg.value.div(initialBuyRate);
       _mint(manager, initialTokens);
-
       _udpateContributorInfo(initialTokens);
 
-      calculateAndEditPosition(
+      _calculateAndEditPosition(
         weth,
         msg.value
       );
