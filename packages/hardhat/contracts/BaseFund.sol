@@ -55,7 +55,6 @@ abstract contract BaseFund is ERC20 {
 
     /* ============ Events ============ */
     event Invoked(address indexed _target, uint indexed _value, bytes _data, bytes _returnValue);
-    event IntegrationInvoked(address indexed _target, uint indexed _value, bytes _data, bytes _returnValue);
     event IntegrationAdded(address indexed _integration);
     event IntegrationRemoved(address indexed _integration);
     event IntegrationInitialized(address indexed _integration);
@@ -375,31 +374,7 @@ abstract contract BaseFund is ERC20 {
     }
 
     /**
-     * Low level function that allows an integration to make an arbitrary function
-     * call to any contract from the fund (fund as msg.sender).
-     *
-     * @param _target                 Address of the smart contract to call
-     * @param _value                  Quantity of Ether to provide the call (typically 0)
-     * @param _data                   Encoded function selector and arguments
-     * @return _returnValue           Bytes encoded return value
-     */
-    function invoke(
-        address _target,
-        uint256 _value,
-        bytes calldata _data
-    )
-        external
-        onlyIntegration
-        returns (bytes memory _returnValue)
-    {
-        _returnValue = _target.functionCallWithValue(_data, _value);
-        emit Invoked(_target, _value, _data, _returnValue);
-        return _returnValue;
-    }
-
-
-    /**
-     * Funciton that allows the manager to call an integration
+     * Function that allows the manager to call an integration
      *
      * @param _integration            Address of the integration to call
      * @param _value                  Quantity of Ether to provide the call (typically 0)
@@ -408,9 +383,7 @@ abstract contract BaseFund is ERC20 {
      */
     function callIntegration(address _integration, uint256 _value, bytes calldata _data) external onlyManager returns (bytes memory _returnValue) {
       _validateOnlyIntegration(_integration);
-      _returnValue = _integration.functionCallWithValue(_data, _value);
-      emit IntegrationInvoked(_integration, _value, _data, _returnValue);
-      return _returnValue;
+      return _invoke(_integration, _value, _data);
     }
 
     function addAllowanceIntegration(address _integration, address _asset, uint256 _quantity) external onlyManager {
@@ -419,10 +392,26 @@ abstract contract BaseFund is ERC20 {
       ERC20(_asset).approve(_integration, _quantity);
     }
 
+    function invokeApprove(address _spender, address _asset, uint256 _quantity) external onlyIntegration{
+      ERC20(_asset).approve(_spender, 0);
+      ERC20(_asset).approve(_spender, _quantity);
+    }
+
+    function invokeFromIntegration(
+      address _target,
+      uint256 _value,
+      bytes calldata _data
+    )
+      external
+      onlyIntegration
+      returns (bytes memory _returnValue)
+    {
+      _invoke(_target, _value, _data);
+    }
+
     function addAaveBorrowAllowanceIntegration(address _integration, address _asset, uint256 _quantity) external onlyManager {
       _validateOnlyIntegration(_integration);
       address stableDebtTokenAddress = IBorrowIntegration(_integration).getDebtToken(_asset);
-      // For stable debt tokens
       IStableDebtToken(stableDebtTokenAddress).approveDelegation(_integration, _quantity);
     }
 
@@ -508,7 +497,6 @@ abstract contract BaseFund is ERC20 {
      * @return                          Previous position unit
      * @return                          New position unit
      */
-
     function calculateAndEditPosition(
         address _component,
         uint256 _newBalance
@@ -525,7 +513,40 @@ abstract contract BaseFund is ERC20 {
       return _calculateAndEditPosition(_component, _newBalance);
     }
 
+    /**
+     * Returns whether the fund component  position real unit is greater than or equal to units passed in.
+     */
+    function hasSufficientUnits(address _component, uint256 _unit)
+        external
+        view
+        returns (bool)
+    {
+        return getPositionRealUnit(_component) >= _unit.toInt256();
+    }
+
     /* ============ Internal Functions ============ */
+
+    /**
+     * Low level function that allows an integration to make an arbitrary function
+     * call to any contract from the fund (fund as msg.sender).
+     *
+     * @param _target                 Address of the smart contract to call
+     * @param _value                  Quantity of Ether to provide the call (typically 0)
+     * @param _data                   Encoded function selector and arguments
+     * @return _returnValue           Bytes encoded return value
+     */
+    function _invoke(
+        address _target,
+        uint256 _value,
+        bytes calldata _data
+    )
+        internal
+        returns (bytes memory _returnValue)
+    {
+        _returnValue = _target.functionCallWithValue(_data, _value);
+        emit Invoked(_target, _value, _data, _returnValue);
+        return _returnValue;
+    }
 
     function _calculateAndEditPosition(
         address _component,
@@ -615,17 +636,6 @@ abstract contract BaseFund is ERC20 {
      */
     function hasPosition(address _component) internal view returns (bool) {
         return getPositionRealUnit(_component) > 0;
-    }
-
-    /**
-     * Returns whether the fund component  position real unit is greater than or equal to units passed in.
-     */
-    function hasSufficientUnits(address _component, uint256 _unit)
-        internal
-        view
-        returns (bool)
-    {
-        return getPositionRealUnit(_component) >= _unit.toInt256();
     }
 
     /**

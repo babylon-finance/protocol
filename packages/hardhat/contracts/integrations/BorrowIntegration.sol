@@ -19,13 +19,6 @@
 pragma solidity 0.7.4;
 
 import "hardhat/console.sol";
-import { SafeMath } from "@openzeppelin/contracts/math/SafeMath.sol";
-import { SignedSafeMath } from "@openzeppelin/contracts/math/SignedSafeMath.sol";
-import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import { IFund } from "../interfaces/IFund.sol";
-import { IWETH } from "../interfaces/external/weth/IWETH.sol";
-import { IBorrowIntegration } from "../interfaces/IBorrowIntegration.sol";
-import { IFolioController } from "../interfaces/IFolioController.sol";
 import { BaseIntegration } from "./BaseIntegration.sol";
 
 /**
@@ -35,8 +28,6 @@ import { BaseIntegration } from "./BaseIntegration.sol";
  * Base class for integration with lending protocols
  */
 abstract contract BorrowIntegration is BaseIntegration {
-    using SafeMath for uint256;
-    using SignedSafeMath for int256;
 
     /* ============ State Variables ============ */
     uint256 public maxCollateralFactor;

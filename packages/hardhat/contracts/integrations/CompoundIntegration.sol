@@ -30,6 +30,7 @@ import { IWETH } from "../interfaces/external/weth/IWETH.sol";
 
 import { BorrowIntegration } from "./BorrowIntegration.sol";
 import { IFolioController } from "../interfaces/IFolioController.sol";
+import { IFund } from "../interfaces/IFund.sol";
 import { BaseIntegration } from "./BaseIntegration.sol";
 
 /**
@@ -67,7 +68,7 @@ contract CompoundIntegration is BorrowIntegration {
 
 
   /**
-   * Note: Fund must call addAllowanceIntegration before calling this.
+   * Note: Fund must call addAllowanceIntegration before calling this (?).
    * Deposits collateral into the Compound protocol.
    * This would be called by a fund within a strategy
    * @param asset The cAsset to be deposited as collateral
@@ -85,7 +86,7 @@ contract CompoundIntegration is BorrowIntegration {
     } else {
       // Approves CToken contract to call `transferFrom`
       ERC20(asset).safeTransferFrom(msg.sender, address(this), amount);
-      approveCToken(cToken, amount);
+      IFund(msg.sender).addAllowanceIntegration(address(this), cToken, amount);
       ICToken cTokenInstance = ICToken(cToken);
       require(
           cTokenInstance.mint(amount) == 0,
@@ -121,7 +122,7 @@ contract CompoundIntegration is BorrowIntegration {
         ICEther(cToken).repayBorrow{ value: amount }();
     } else {
       amount = normalizeDecimals(asset, amount);
-      approveCToken(cToken, amount);
+      IFund(msg.sender).addAllowanceIntegration(address(this), cToken, amount);
       require(
           ICToken(cToken).repayBorrow(amount) == 0,
           "cmpnd-mgr-ctoken-repay-failed"
@@ -139,7 +140,7 @@ contract CompoundIntegration is BorrowIntegration {
         ICEther(cToken).repayBorrow{ value: _getBorrowBalance(asset)}();
     } else {
       uint256 amount = normalizeDecimals(asset, _getBorrowBalance(asset));
-      approveCToken(cToken, amount);
+      IFund(msg.sender).addAllowanceIntegration(address(this), cToken, amount);
       require(
           ICToken(cToken).repayBorrow(amount) == 0,
           "cmpnd-mgr-ctoken-repay-failed"
@@ -215,26 +216,6 @@ contract CompoundIntegration is BorrowIntegration {
 
     for (uint256 i = 0; i < errors.length; i++) {
       require(errors[i] == 0, "cmpnd-mgr-enter-markets-failed");
-    }
-  }
-
-  function approveCToken(address cToken, uint256 amount) private {
-    // Approves CToken contract to call `transferFrom`
-    address underlying = ICToken(cToken).underlying();
-    require(
-        ERC20(underlying).approve(cToken, amount) == true,
-        "cmpnd-mgr-ctoken-approved-failed"
-    );
-  }
-
-  function approveCTokens(
-      address[] memory cTokens // Tokens to approve
-  ) private {
-    for (uint256 i = 0; i < cTokens.length; i++) {
-      // Don't need to approve ICEther
-      if (cTokens[i] != CEtherAddress) {
-          approveCToken(cTokens[i], uint256(-1));
-      }
     }
   }
 

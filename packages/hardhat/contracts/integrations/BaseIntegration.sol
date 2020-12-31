@@ -67,7 +67,7 @@ abstract contract BaseIntegration {
     // Name of the integration
     string public name;
     mapping(address => bool) public initializedByFund;
-    bool initialized;
+
     // Mapping of asset addresses to cToken addresses
     mapping(address => address) public assetToCtoken;
 
@@ -86,7 +86,6 @@ abstract contract BaseIntegration {
       name = _name;
       controller = _controller;
       weth = _weth;
-      initialized = false;
       assetToCtoken[0x6B175474E89094C44Da98b954EedeAC495271d0F] = 0x5d3a536E4D6DbD6114cc1Ead35777bAB948E3643; // DAI
       assetToCtoken[0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2] = 0x4Ddc2D193948926D02f9B1fE9e1daa0718270ED5; // WETH
       assetToCtoken[0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48] = 0x39AA39c021dfbaE8faC545936693aC917d5E7563; // USDC
@@ -130,8 +129,12 @@ abstract contract BaseIntegration {
      * @param _component                Address of the ERC20
      * @param _newTotal                 New unit of the fund position
      */
-    function updateFundPosition(address _fund, address _component, uint256 _newTotal) internal {
-      IFund(_fund).calculateAndEditPosition(_component, _newTotal);
+    function updateFundPosition(address _fund, address _component, uint256 _newTotal) internal returns (
+      uint256,
+      uint256,
+      uint256
+    ) {
+      return IFund(_fund).calculateAndEditPosition(_component, _newTotal);
     }
 
     /**
@@ -155,7 +158,7 @@ abstract contract BaseIntegration {
     }
 
     /**
-     * Pays the _feeQuantity from the _setToken denominated in _token to the protocol fee recipient
+     * Pays the _feeQuantity from the fund denominated in _token to the protocol fee recipient
      */
     function payProtocolFeeFromFund(address _fund, address _token, uint256 _feeQuantity) internal {
         if (_feeQuantity > 0) {
