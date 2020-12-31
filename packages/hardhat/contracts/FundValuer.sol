@@ -93,9 +93,14 @@ contract FundValuer {
             address component = components[i];
 
             // Get component price from price oracle. If price does not exist, revert.
-            uint256 componentPrice = priceOracle.getPrice(component, masterQuoteAsset);
+            // uint256 componentPrice = priceOracle.getPrice(component, masterQuoteAsset);
+
+            // Temporary hardcode of WETH price so that we can mint and burn tokens for deposit and withdrawl
+            uint256 componentPrice = 1000;
 
             int256 aggregateUnits = _fund.getTotalPositionRealUnits(component);
+
+            console.log("Total Position Real Units", aggregateUnits.toUint256());
 
             // Normalize each position unit to preciseUnits 1e18 and cast to signed int
             uint256 unitDecimals = ERC20(component).decimals();
@@ -107,10 +112,14 @@ contract FundValuer {
         }
 
 
-        if (masterQuoteAsset != _quoteAsset && valuation > 0) {
-            uint256 quoteToMaster = priceOracle.getPrice(_quoteAsset, masterQuoteAsset);
-            valuation = valuation.preciseDiv(quoteToMaster.toInt256());
-        }
+        // Temporarily disable so that we can mint and burn tokens for deposit / withdraw
+
+        //if (masterQuoteAsset != _quoteAsset && valuation > 0) {
+        //    uint256 quoteToMaster = priceOracle.getPrice(_quoteAsset, masterQuoteAsset);
+        //    valuation = valuation.preciseDiv(quoteToMaster.toInt256());
+        //}
+
+        console.log("Current valuation", valuation.toUint256());
 
         return valuation.toUint256();
     }

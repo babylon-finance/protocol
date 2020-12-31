@@ -295,6 +295,7 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
         _transferCollateralAndHandleFees(reserveAsset, depositInfo);
 
         _udpateContributorInfo(depositInfo.fundTokenQuantity);
+
         _handleDepositStateUpdates(reserveAsset, _to, depositInfo);
     }
 
@@ -604,6 +605,8 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
         depositInfo.previousFundTokenSupply = totalSupply();
         depositInfo.preFeeReserveQuantity = _reserveAssetQuantity;
 
+        console.log("Previous Token Supply", depositInfo.previousFundTokenSupply);
+
         (
             depositInfo.protocolFees,
             depositInfo.managerFee,
@@ -621,10 +624,14 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
             depositInfo.newPositionMultiplier
         ) = _getDepositPositionMultiplier(depositInfo);
 
+        console.log("New Token Supply", depositInfo.newFundTokenSupply);
+
         depositInfo.newReservePositionUnit = _getDepositPositionUnit(
             _reserveAsset,
             depositInfo
         );
+
+        console.log("New reserve position unit", depositInfo.newReservePositionUnit);
 
         return depositInfo;
     }
@@ -711,6 +718,8 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
         );
 
         _mint(_to, _depositInfo.fundTokenQuantity);
+
+        console.log("Minted tokens deposited", _depositInfo.fundTokenQuantity);
 
         emit FundTokenDeposited(
             _to,
@@ -825,19 +834,29 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
         uint256 premiumValue =
             _netReserveFlows.preciseMul(premiumPercentageToApply);
 
+        console.log("NetReserve", _netReserveFlows);
+        console.log("Premium", premiumValue);
+
         // Get valuation of the Fund with the quote asset as the reserve asset. Returns value in precise units (1e18)
         // Reverts if price is not found
         address valuer = IFolioController(controller).getFundValuer();
+
         uint256 fundValuation = IFundValuer(valuer).calculateFundValuation(address(this), _reserveAsset);
 
         // Get reserve asset decimals
         uint256 reserveAssetDecimals = ERC20(_reserveAsset).decimals();
+
         uint256 normalizedTotalReserveQuantityNetFees =
             _netReserveFlows.preciseDiv(10**reserveAssetDecimals);
+
+        console.log("Net Fees", normalizedTotalReserveQuantityNetFees);
+
         uint256 normalizedTotalReserveQuantityNetFeesAndPremium =
             _netReserveFlows.sub(premiumValue).preciseDiv(
                 10**reserveAssetDecimals
             );
+
+        console.log("Reserve Net Fees + Prem", normalizedTotalReserveQuantityNetFeesAndPremium);
 
         // Calculate Fund tokens to mint to depositor
         uint256 denominator =
@@ -846,13 +865,16 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
                 .add(normalizedTotalReserveQuantityNetFees)
                 .sub(normalizedTotalReserveQuantityNetFeesAndPremium);
 
-        if (denominator == 0) {
-            return 100;
-        }
-        return
+        console.log("Denom", denominator);
+
+        uint256 quantityToMint =
             normalizedTotalReserveQuantityNetFeesAndPremium
                 .preciseMul(_fundTokenTotalSupply)
                 .preciseDiv(denominator);
+
+        console.log("Minted", quantityToMint);
+
+        return quantityToMint;
     }
 
     function _getWithdrawalReserveQuantity(
@@ -915,10 +937,8 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
         uint256 _fundTokenQuantity,
         ActionInfo memory _withdrawalInfo
     ) internal view returns (uint256, int256) {
-       // uint256 newTotalSupply =
-       //     _withdrawalInfo.previousFundTokenSupply.sub(_fundTokenQuantity);
-
-        uint256 newTotalSupply = 100;
+        uint256 newTotalSupply =
+            _withdrawalInfo.previousFundTokenSupply.sub(_fundTokenQuantity);
 
         int256 newPositionMultiplier =
             positionMultiplier
@@ -1041,7 +1061,7 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
 
     function _validateOnlyContributor(address _caller) internal view {
         require(
-            IERC20(reserveAsset).balanceOf(_caller) > 0,
+            IERC20(address(this)).balanceOf(_caller) > 0,
             "Only someone with the fund token can withdraw"
         );
     }
