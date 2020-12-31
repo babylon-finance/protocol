@@ -91,10 +91,17 @@ interface IFund is IERC20 {
         external returns (uint256, uint256, uint256);
     function getPositions() external view returns(address[] memory);
     function isPosition(address _position) external view returns(bool);
+    function hasSufficientUnits(address _component, uint256 _unit) external view returns (bool);
 
     function callIntegration(address _integration, uint256 _value, bytes calldata _data) external returns (bytes memory _returnValue);
     function addAllowanceIntegration(address _integration, address _asset, uint256 _quantity) external;
     function addAaveBorrowAllowanceIntegration(address _integration, address _asset, uint256 _quantity) external;
+    function invokeApprove(address _spender, address _asset, uint256 _quantity) external;
+    function invokeFromIntegration(
+      address _target,
+      uint256 _value,
+      bytes calldata _data
+    ) external returns (bytes memory _returnValue);
 
     function positionMultiplier() external view returns (int256);
     // function getPositions() external view returns (Position[] memory);

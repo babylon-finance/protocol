@@ -304,8 +304,8 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
      * quantity to the caller. This function only handles Default Positions (positionState = 0).
      *
      * @param _fundTokenQuantity             Quantity of the fund token to withdrawal
-     * @param _minReserveReceiveQuantity    Min quantity of reserve asset to receive
-     * @param _to                   Address to send component assets to
+     * @param _minReserveReceiveQuantity     Min quantity of reserve asset to receive
+     * @param _to                            Address to send component assets to
      */
     function withdraw(
         uint256 _fundTokenQuantity,
