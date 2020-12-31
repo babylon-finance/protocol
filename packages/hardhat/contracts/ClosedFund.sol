@@ -295,7 +295,6 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
         _transferCollateralAndHandleFees(reserveAsset, depositInfo);
 
         _udpateContributorInfo(depositInfo.fundTokenQuantity);
-        console.log('eooo');
         _handleDepositStateUpdates(reserveAsset, _to, depositInfo);
     }
 
@@ -601,14 +600,9 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
         address _reserveAsset,
         uint256 _reserveAssetQuantity
     ) internal view returns (ActionInfo memory) {
-        console.log("Issuance started");
         ActionInfo memory depositInfo;
-
         depositInfo.previousFundTokenSupply = totalSupply();
-        console.log("Supply set");
-
         depositInfo.preFeeReserveQuantity = _reserveAssetQuantity;
-        console.log("Pre-fee Set");
 
         (
             depositInfo.protocolFees,
@@ -616,15 +610,11 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
             depositInfo.netFlowQuantity
         ) = _getFees(depositInfo.preFeeReserveQuantity, true);
 
-        console.log("Get fees");
-
         depositInfo.fundTokenQuantity = _getFundTokenMintQuantity(
             _reserveAsset,
             depositInfo.netFlowQuantity,
             depositInfo.previousFundTokenSupply
         );
-
-        console.log("Fund token mint quant Set");
 
         (
             depositInfo.newFundTokenSupply,
@@ -831,27 +821,14 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
         uint256 _netReserveFlows, // Value of reserve asset net of fees
         uint256 _fundTokenTotalSupply
     ) internal view returns (uint256) {
-
-       console.log("Start Mint Quant");
-
         uint256 premiumPercentageToApply = _getDepositPremium();
-
-       console.log("Premium to apply");
-
         uint256 premiumValue =
             _netReserveFlows.preciseMul(premiumPercentageToApply);
-
-       console.log("Premium value");
 
         // Get valuation of the Fund with the quote asset as the reserve asset. Returns value in precise units (1e18)
         // Reverts if price is not found
         address valuer = IFolioController(controller).getFundValuer();
-
-        console.log(valuer);
-
         uint256 fundValuation = IFundValuer(valuer).calculateFundValuation(address(this), _reserveAsset);
-
-        console.log("Fund valued");
 
         // Get reserve asset decimals
         uint256 reserveAssetDecimals = ERC20(_reserveAsset).decimals();
@@ -869,7 +846,6 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
                 .add(normalizedTotalReserveQuantityNetFees)
                 .sub(normalizedTotalReserveQuantityNetFeesAndPremium);
 
-        console.log("Denom", denominator);
         if (denominator == 0) {
             return 100;
         }

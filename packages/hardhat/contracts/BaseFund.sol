@@ -777,7 +777,6 @@ abstract contract BaseFund is ERC20 {
             integrationStates[_integration] == IFund.IntegrationState.INITIALIZED,
             "Only the integration can call"
         );
-        console.log('eooa');
         require(
             IFolioController(controller).isValidIntegration(
                 IIntegration(_integration).getName()
