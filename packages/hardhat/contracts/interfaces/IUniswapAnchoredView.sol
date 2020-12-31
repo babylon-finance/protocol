@@ -1,7 +1,7 @@
 /*
     Copyright 2020 DFolio
 
-    Modified from (Set Protocol IOracle)
+    Modified from (Set Protocol IOracleAdapter)
 
     Licensed under the Apache License, Version 2.0 (the "License");
     you may not use this file except in compliance with the License.
@@ -21,15 +21,12 @@ pragma solidity 0.7.4;
 
 
 /**
- * @title IOracle
+ * @title IOracleAdapter
  * @author DFolio
  *
- * Interface for operating with any external Oracle that returns uint256 or
- * an adapting contract that converts oracle output to uint256
+ * Interface for calling an oracle adapter.
  */
-interface IOracle {
-    /**
-     * @return  Current price of asset represented in uint256, typically a preciseUnit where 10^18 = 1.
-     */
-    function read() external view returns (uint256);
+interface IUniswapAnchoredView {
+
+    function price(string memory symbol) external view returns (uint);
 }

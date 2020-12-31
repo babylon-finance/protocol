@@ -34,7 +34,7 @@ import {IWETH} from "./interfaces/external/weth/IWETH.sol";
 import { IStableDebtToken } from './interfaces/external/aave/IStableDebtToken.sol';
 import {IIntegration} from "./interfaces/IIntegration.sol";
 import {IBorrowIntegration} from "./interfaces/IBorrowIntegration.sol";
-import {IBorrowIntegration} from "./interfaces/IBorrowIntegration.sol";
+import {IPriceOracle} from "./interfaces/IPriceOracle.sol";
 import {IFund} from "./interfaces/IFund.sol";
 
 /**
@@ -407,6 +407,11 @@ abstract contract BaseFund is ERC20 {
       returns (bytes memory _returnValue)
     {
       _invoke(_target, _value, _data);
+    }
+
+    function getPrice(address _assetOne, address _assetTwo) external onlyManager view returns (uint256) {
+      IPriceOracle oracle = IPriceOracle(IFolioController(controller).getPriceOracle());
+      return oracle.getPrice(_assetOne, _assetTwo);
     }
 
     function addAaveBorrowAllowanceIntegration(address _integration, address _asset, uint256 _quantity) external onlyManager {
