@@ -90,27 +90,23 @@ contract FundValuer {
         int256 valuation;
 
         for (uint256 i = 0; i < components.length; i++) {
-            address component = components[i];
+          address component = components[i];
+          // Get component price from price oracle. If price does not exist, revert.
+          // uint256 componentPrice = priceOracle.getPrice(component, masterQuoteAsset);
 
-            // Get component price from price oracle. If price does not exist, revert.
-            // uint256 componentPrice = priceOracle.getPrice(component, masterQuoteAsset);
+          uint256 componentPrice = 1000;
 
-            // Temporary hardcode of WETH price so that we can mint and burn tokens for deposit and withdrawl
-            uint256 componentPrice = 1000;
+          int256 aggregateUnits = _fund.getTotalPositionRealUnits(component);
 
-            int256 aggregateUnits = _fund.getTotalPositionRealUnits(component);
+          // Normalize each position unit to preciseUnits 1e18 and cast to signed int
+          uint256 unitDecimals = ERC20(component).decimals();
+          uint256 baseUnits = 10 ** unitDecimals;
+          int256 normalizedUnits = aggregateUnits.preciseDiv(baseUnits.toInt256());
 
-            console.log("Total Position Real Units", aggregateUnits.toUint256());
-
-            // Normalize each position unit to preciseUnits 1e18 and cast to signed int
-            uint256 unitDecimals = ERC20(component).decimals();
-            uint256 baseUnits = 10**unitDecimals;
-            int256 normalizedUnits = aggregateUnits.preciseDiv(baseUnits.toInt256());
-
-            // Calculate valuation of the component. Debt positions are effectively subtracted
-            valuation = normalizedUnits.preciseMul(componentPrice.toInt256()).add(valuation);
+          // Calculate valuation of the component. Debt positions are effectively subtracted
+          valuation = normalizedUnits.preciseMul(componentPrice.toInt256()).add(valuation);
+          console.log("Current valuation", valuation.toUint256());
         }
-
 
         // Temporarily disable so that we can mint and burn tokens for deposit / withdraw
 
@@ -119,7 +115,6 @@ contract FundValuer {
         //    valuation = valuation.preciseDiv(quoteToMaster.toInt256());
         //}
 
-        console.log("Current valuation", valuation.toUint256());
 
         return valuation.toUint256();
     }

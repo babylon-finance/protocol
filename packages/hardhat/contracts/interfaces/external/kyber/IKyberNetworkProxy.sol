@@ -15,32 +15,30 @@
 
     SPDX-License-Identifier: Apache License, Version 2.0
 */
+
 pragma solidity 0.7.4;
 
-import { IIntegration } from "./IIntegration.sol";
-
-/**
- * @title ITrade
- * @author DFolio
- *
- * Interface for trading protocol integrations
- */
-interface ITradeIntegration is IIntegration {
+interface IKyberNetworkProxy {
+  function getExpectedRate(
+    address _src,
+    address _dest,
+    uint256 _srcQty
+  )
+    external
+    view
+    returns (uint256, uint256);
 
   function trade(
-    string memory _exchangeName,
-    address _sendToken,
-    uint256 _sendQuantity,
-    address _receiveToken,
-    uint256 _minReceiveQuantity,
-    bytes memory _data
-  ) external;
-
-  function getConversionRates(
-      address _sourceToken,
-      address _destinationToken,
-      uint256 _sourceQuantity
+    address _src,
+    uint256 _srcAmount,
+    address _dest,
+    address _destAddress,
+    uint256 _maxDestAmount,
+    uint256 _minConversionRate,
+    address _referalFeeAddress
   )
-  external returns (uint256, uint256);
+    external
+    payable
+    returns (uint256);
 
 }
