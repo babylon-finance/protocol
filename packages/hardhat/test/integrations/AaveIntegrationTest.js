@@ -161,13 +161,9 @@ describe("AaveIntegration", function() {
       expect(
         await daiToken
           .connect(whaleSigner)
-          .transfer(
-            system.owner.getAddress(),
-            ethers.utils.parseEther("1000"),
-            {
-              gasPrice: 0
-            }
-          )
+          .transfer(fund.address, ethers.utils.parseEther("1000"), {
+            gasPrice: 0
+          })
       );
       expect(
         await daiToken.approve(
@@ -175,23 +171,54 @@ describe("AaveIntegration", function() {
           ethers.utils.parseEther("1000")
         )
       );
-      expect(await daiToken.balanceOf(system.owner.getAddress())).to.equal(
+      expect(await daiToken.balanceOf(fund.address)).to.equal(
         ethers.utils.parseEther("1000")
       );
-      expect(
-        await aaveIntegration.depositCollateral(
-          daiToken.address,
-          ethers.utils.parseEther("1000")
-        )
+      // Add allowance to the integration
+      fund.addAllowanceIntegration(
+        aaveIntegration.address,
+        daiToken.address,
+        ethers.utils.parseEther("1000")
       );
-      console.log('aa');
+
+      // Add allowance to the integration
+      fund.addAaveBorrowAllowanceIntegration(
+        aaveIntegration.address,
+        usdcToken.address,
+        ethers.utils.parseEther("100")
+      );
+
+      // Call deposit
+      const data = aaveAbi.encodeFunctionData(
+        aaveIntegration.interface.functions[
+          "depositCollateral(address,uint256)"
+        ],
+        [daiToken.address, ethers.utils.parseEther("1000")]
+      );
+      await fund.callIntegration(aaveIntegration.address, 0, data, {
+        gasPrice: 0
+      });
+      const fundAccount = await lendingPool.getUserAccountData(fund.address);
+      expect(fundAccount.totalCollateralETH).to.be.gt(0);
       expect(await daiToken.balanceOf(aaveIntegration.address)).to.equal(0);
       expect(await usdcToken.balanceOf(system.owner.getAddress())).to.equal(0);
-      expect(await aaveIntegration.borrow(usdcToken.address, 100000000));
-      // printUserAccount();
-      expect(await usdcToken.balanceOf(aaveIntegration.address)).to.equal(
-        100000000
+      console.log(
+        "before borrow",
+        ethers.utils.formatEther(fundAccount.totalCollateralETH),
+        ethers.utils.formatEther(fundAccount.availableBorrowsETH)
       );
+      // Call borrow
+      const dataBorrow = aaveAbi.encodeFunctionData(
+        aaveIntegration.interface.functions["borrow(address,uint256)"],
+        [usdcToken.address, ethers.utils.parseEther("100")]
+      );
+      await fund.callIntegration(aaveIntegration.address, 0, dataBorrow, {
+        gasPrice: 0,
+        gasLimit: 1500000
+      });
+      printUserAccount();
+      expect(await usdcToken.balanceOf(aaveIntegration.address)).to.equal(0);
+      expect(await usdcToken.balanceOf(fund.address)).to.equal(100 * 10 ** 6);
     });
   });
 });

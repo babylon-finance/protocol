@@ -24,7 +24,8 @@ import { ICEther } from '../interfaces/external/compound/ICEther.sol';
 import { ICompoundPriceOracle } from '../interfaces/external/compound/ICompoundPriceOracle.sol';
 import { IComptroller } from '../interfaces/external/compound/IComptroller.sol';
 import { SafeMath } from "@openzeppelin/contracts/math/SafeMath.sol";
-import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import { ERC20 } from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
 import { IWETH } from "../interfaces/external/weth/IWETH.sol";
 
 import { BorrowIntegration } from "./BorrowIntegration.sol";
@@ -39,6 +40,7 @@ import { BaseIntegration } from "./BaseIntegration.sol";
  */
 contract CompoundIntegration is BorrowIntegration {
   using SafeMath for uint256;
+  using SafeERC20 for ERC20;
 
   /* ============ State Variables ============ */
 
@@ -65,6 +67,7 @@ contract CompoundIntegration is BorrowIntegration {
 
 
   /**
+   * Note: Fund must call addAllowanceIntegration before calling this.
    * Deposits collateral into the Compound protocol.
    * This would be called by a fund within a strategy
    * @param asset The cAsset to be deposited as collateral
@@ -73,27 +76,22 @@ contract CompoundIntegration is BorrowIntegration {
    */
   function depositCollateral(address asset, uint256 amount) onlyFund external payable {
     address cToken = assetToCtoken[asset];
+    amount = normalizeDecimals(asset, amount);
     // Amount of current exchange rate from cToken to underlying
     if (cToken == CEtherAddress) {
       require(msg.value == amount, "The amount of eth needs to match");
-
       ICEther(CEtherAddress).mint{value: msg.value, gas: 250000 }();
+      ERC20(CEtherAddress).safeTransfer(msg.sender, ERC20(CEtherAddress).balanceOf(address(this)));
     } else {
       // Approves CToken contract to call `transferFrom`
-      amount = normalizeDecimals(asset, amount);
+      ERC20(asset).safeTransferFrom(msg.sender, address(this), amount);
       approveCToken(cToken, amount);
       ICToken cTokenInstance = ICToken(cToken);
-      // uint256 exchangeRateMantissa = cTokenInstance.exchangeRateCurrent();
-      // emit MyLog("Exchange Rate (scaled up by 1e18): ", exchangeRateMantissa);
-      //
-      // // Amount added to you supply balance this block
-      // uint256 supplyRateMantissa = cTokenInstance.supplyRatePerBlock();
-      // emit MyLog("Supply Rate: (scaled up by 1e18)", supplyRateMantissa);
-
       require(
           cTokenInstance.mint(amount) == 0,
           "cmpnd-mgr-ctoken-supply-failed"
       );
+      ERC20(cToken).safeTransfer(msg.sender, ERC20(cToken).balanceOf(address(this)));
     }
     updateFundPosition(msg.sender, asset, amount);
   }
@@ -224,7 +222,7 @@ contract CompoundIntegration is BorrowIntegration {
     // Approves CToken contract to call `transferFrom`
     address underlying = ICToken(cToken).underlying();
     require(
-        IERC20(underlying).approve(cToken, amount) == true,
+        ERC20(underlying).approve(cToken, amount) == true,
         "cmpnd-mgr-ctoken-approved-failed"
     );
   }
