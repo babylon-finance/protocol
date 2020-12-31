@@ -218,26 +218,6 @@ contract CompoundIntegration is BorrowIntegration {
     }
   }
 
-  function approveCToken(address cToken, uint256 amount) private {
-    // Approves CToken contract to call `transferFrom`
-    address underlying = ICToken(cToken).underlying();
-    require(
-        ERC20(underlying).approve(cToken, amount) == true,
-        "cmpnd-mgr-ctoken-approved-failed"
-    );
-  }
-
-  function approveCTokens(
-      address[] memory cTokens // Tokens to approve
-  ) private {
-    for (uint256 i = 0; i < cTokens.length; i++) {
-      // Don't need to approve ICEther
-      if (cTokens[i] != CEtherAddress) {
-          approveCToken(cTokens[i], uint256(-1));
-      }
-    }
-  }
-
   function _getBorrowBalance(address asset) private view returns (uint256) {
     address cToken = assetToCtoken[asset];
     (
