@@ -102,6 +102,7 @@ interface IFund is IERC20 {
       uint256 _value,
       bytes calldata _data
     ) external returns (bytes memory _returnValue);
+    function getPrice(address _assetOne, address _assetTwo) external view returns (uint256);
 
     function positionMultiplier() external view returns (int256);
     // function getPositions() external view returns (Position[] memory);
