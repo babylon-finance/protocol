@@ -68,26 +68,40 @@ describe("Fund", function() {
       //expect(await fund1Token.balanceOf(addresses.users.hardhat3.getAddress())).to.equal(100);
     });
 
-    //it("a contributor can make multiple deposits", async function() {
-    //  await fund1.connect(addresses.users.hardhat3).deposit({ value: 100000000000000 });
-    //  await fund1.connect(addresses.users.hardhat3).deposit({ value: 100000000000000 });
-    //  expect(await fund1.totalContributors()).to.equal(1);
-    //  expect(await fund1.totalFunds()).to.equal(200000000000000);
-    //});
+    it("a contributor can make multiple deposits", async function() {
+      await fund1.connect(userSigner3).deposit(ethers.utils.parseEther("1"), 1, addresses.users.hardhat3, {
+        value: ethers.utils.parseEther("1")
+      });
+      await fund1.connect(userSigner3).deposit(ethers.utils.parseEther("1"), 1, addresses.users.hardhat3, {
+        value: ethers.utils.parseEther("1")
+      });
+      // Note: Fund is initialized with manager as first contributor
+      expect(await fund1.totalContributors()).to.equal(2);
+      expect(await fund1.totalFunds()).to.equal(ethers.utils.parseEther("2.01"));
+    });
 
-    //it("multiple contributors can make deposits", async function() {
-    //  await fund1.connect(addresses.users.hardhat3).deposit({ value: 100000000000000 });
-    //  await fund1.connect(addr3).deposit({ value: 100000000000000 });
+    it("multiple contributors can make deposits", async function() {
+      await fund1.connect(userSigner3).deposit(ethers.utils.parseEther("1"), 1, addresses.users.hardhat3, {
+        value: ethers.utils.parseEther("1")
+      });
+
+      await fund1.connect(userSigner2).deposit(ethers.utils.parseEther("1"), 1, addresses.users.hardhat2, {
+        value: ethers.utils.parseEther("1")
+      });
+
+      // Note: Fund is initialized with manager as first contributor
+      expect(await fund1.totalContributors()).to.equal(3);
+      expect(await fund1.totalFunds()).to.equal(ethers.utils.parseEther("2.01"));
+    });
+
+    //it("a contributor can withdraw funds if they have enough in deposits", async function() {
+    //  await fund1.connect(userSigner3).deposit(ethers.utils.parseEther("1"), 1, addresses.users.hardhat3, {
+    //    value: ethers.utils.parseEther("1")
+    //  });
+    //  expect(await fund1.totalFunds()).to.equal(ethers.utils.parseEther("1.01"));
     //  expect(await fund1.totalContributors()).to.equal(2);
-    //  expect(await fund1.totalFunds()).to.equal(200000000000000);
-    //});
-
-    //it("a contributor can withdraw fund1s if they have enough in deposits", async function() {
-    //  await fund1.connect(addresses.users.hardhat3).deposit({ value: 100000000000000 });
-    //  expect(await fund1.totalFunds()).to.equal(100000000000000);
-    //  expect(await fund1.totalContributors()).to.equal(1);
-    //  await fund1.connect(addresses.users.hardhat3).withdrawFunds(100000000000000);
-    //  expect(await fund1.totalFunds()).to.equal(0);
+    //  await fund1.connect(userSigner3).withdraw(1, 1, userSigner3.getAddress());
+    //  expect(await fund1.totalFunds()).to.equal(ethers.utils.parseEther("0.01"));
     //  expect(await fund1.totalContributors()).to.equal(0);
     //});
 

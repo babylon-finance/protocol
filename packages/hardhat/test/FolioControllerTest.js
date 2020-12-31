@@ -100,22 +100,22 @@ describe("FolioController", function() {
     it("can enable and disable a fund", async function() {
       const initialFunds = await controller.getFunds();
 
-      await expect(controller.enableFund(initialFunds[0])).to.not.be.reverted;
       await expect(controller.disableFund(initialFunds[0])).to.not.be.reverted;
+      await expect(controller.enableFund(initialFunds[0])).to.not.be.reverted;
     });
   });
 
   describe("Protocol operations", function() {
     it("can add a reserve asset", async function() {
       const initialAssets = await controller.getReserveAssets();
-      await controller.addReserveAsset(addresses.tokens.WETH);
+      await controller.addReserveAsset(addresses.tokens.DAI);
 
       const updatedAssets = await controller.getReserveAssets();
       expect(updatedAssets.length > initialAssets.length).to.equal(true);
     });
 
     it("can remove a reserve asset", async function() {
-      await controller.addReserveAsset(addresses.tokens.WETH);
+      await controller.addReserveAsset(addresses.tokens.DAI);
       const initialAssets = await controller.getReserveAssets();
 
       await controller.removeReserveAsset(initialAssets[0]);
