@@ -181,6 +181,13 @@ describe("AaveIntegration", function() {
         ethers.utils.parseEther("1000")
       );
 
+      // Add allowance to the integration
+      fund.addAaveBorrowAllowanceIntegration(
+        aaveIntegration.address,
+        usdcToken.address,
+        ethers.utils.parseEther("100")
+      );
+
       // Call deposit
       const data = aaveAbi.encodeFunctionData(
         aaveIntegration.interface.functions[
@@ -203,17 +210,15 @@ describe("AaveIntegration", function() {
       // Call borrow
       const dataBorrow = aaveAbi.encodeFunctionData(
         aaveIntegration.interface.functions["borrow(address,uint256)"],
-        [usdcToken.address, ethers.utils.parseEther("40")]
+        [usdcToken.address, ethers.utils.parseEther("100")]
       );
-      // await fund.callIntegration(aaveIntegration.address, 0, dataBorrow, {
-      //   gasPrice: 0,
-      //   gasLimit: 1500000
-      // });
-      // // printUserAccount();
-      // expect(await daiToken.balanceOf(aaveIntegration.address)).to.equal(0);
-      // expect(await daiToken.balanceOf(fund.address)).to.equal(
-      //   ethers.utils.parseEther("40")
-      // );
+      await fund.callIntegration(aaveIntegration.address, 0, dataBorrow, {
+        gasPrice: 0,
+        gasLimit: 1500000
+      });
+      printUserAccount();
+      expect(await usdcToken.balanceOf(aaveIntegration.address)).to.equal(0);
+      expect(await usdcToken.balanceOf(fund.address)).to.equal(100 * 10 ** 6);
     });
   });
 });

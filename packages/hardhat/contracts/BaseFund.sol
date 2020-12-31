@@ -31,7 +31,10 @@ import {AddressArrayUtils} from "./lib/AddressArrayUtils.sol";
 import {PreciseUnitMath} from "./lib/PreciseUnitMath.sol";
 import {IFolioController} from "./interfaces/IFolioController.sol";
 import {IWETH} from "./interfaces/external/weth/IWETH.sol";
+import { IStableDebtToken } from './interfaces/external/aave/IStableDebtToken.sol';
 import {IIntegration} from "./interfaces/IIntegration.sol";
+import {IBorrowIntegration} from "./interfaces/IBorrowIntegration.sol";
+import {IBorrowIntegration} from "./interfaces/IBorrowIntegration.sol";
 import {IFund} from "./interfaces/IFund.sol";
 
 /**
@@ -416,6 +419,12 @@ abstract contract BaseFund is ERC20 {
       ERC20(_asset).approve(_integration, _quantity);
     }
 
+    function addAaveBorrowAllowanceIntegration(address _integration, address _asset, uint256 _quantity) external onlyManager {
+      _validateOnlyIntegration(_integration);
+      address stableDebtTokenAddress = IBorrowIntegration(_integration).getDebtToken(_asset);
+      // For stable debt tokens
+      IStableDebtToken(stableDebtTokenAddress).approveDelegation(_integration, _quantity);
+    }
 
     /* ============ External Getter Functions ============ */
 

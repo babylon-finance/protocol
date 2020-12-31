@@ -21,7 +21,6 @@ pragma solidity >=0.7.0 <0.9.0;
 import "hardhat/console.sol";
 import { ILendingPool } from '../interfaces/external/aave/ILendingPool.sol';
 import { IProtocolDataProvider} from '../interfaces/external/aave/IProtocolDataProvider.sol';
-import { IStableDebtToken } from '../interfaces/external/aave/IStableDebtToken.sol';
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
 import { IWETH } from "../interfaces/external/weth/IWETH.sol";
@@ -41,6 +40,7 @@ contract AaveIntegration is BorrowIntegration {
 
     ILendingPool constant lendingPool = ILendingPool(address(0x7d2768dE32b0b80b7a3454c06BdAc94A69DDc7A9)); // Mainnet
     IProtocolDataProvider constant dataProvider = IProtocolDataProvider(address(0x057835Ad21a177dbdd3090bB1CAE03EaCF78Fc6d)); // Mainnet
+    address aUSDC = address(0xBcca60bB61934080951369a648Fb03DF4F96263C);
     uint constant interestRateMode = 1; // Stable Interest
     /* ============ Constructor ============ */
 
@@ -59,6 +59,7 @@ contract AaveIntegration is BorrowIntegration {
     }
 
     /**
+     *  Note: Fund needs to call addAllowanceIntegration first
      * Deposits collateral into the Aave.
      * This would be called by a fund within a strategy
      * @param asset The asset to be deposited as collateral
@@ -74,16 +75,23 @@ contract AaveIntegration is BorrowIntegration {
     }
 
     /**
+     * Note: Fund needs to call addAaveBorrowAllowanceIntegration first
      * Borrows an asset
      * @param asset The asset to be borrowed
      * @param amount The amount to borrow
      */
     function borrow(address asset, uint256 amount) onlyFund external {
       amount = normalizeDecimals(asset, amount);
-      lendingPool.borrow(asset, 100, interestRateMode, 0, msg.sender);
-      // Sends the borrowed assets back to the caller
+      lendingPool.borrow(asset, amount, interestRateMode, 0, msg.sender);
+      // Sends the borrowed assets back to the fund
       IERC20(asset).transfer(msg.sender, amount);
-      updateFundPosition(msg.sender, asset, -amount);
+      updateFundPosition(msg.sender, asset, amount);
+    }
+
+    function getDebtToken(address asset) onlyFund external returns (address) {
+      // Get the relevant debt token address
+      (, address stableDebtTokenAddress,) = dataProvider.getReserveTokensAddresses(asset);
+      return stableDebtTokenAddress;
     }
 
     /**
