@@ -15,6 +15,7 @@ describe("Fund", function() {
   let fund1;
   let fund2;
   let fund3;
+  let weth;
 
   beforeEach(async () => {
     const {
@@ -34,6 +35,8 @@ describe("Fund", function() {
     fund1 = funds.one;
     fund2 = funds.two;
     fund3 = funds.three;
+    weth = await ethers.getContractAt("IERC20", addresses.tokens.WETH);
+
   });
 
   describe("Fund construction", async function() {
@@ -58,7 +61,8 @@ describe("Fund", function() {
   describe("Fund contributors", async function() {
     it("a contributor can make an initial deposit", async function() {
       expect(await fund1.totalContributors()).to.equal(1);
-      await fund1.connect(userSigner3).deposit(1, 1, addresses.users.hardhat3, {
+
+      await fund1.connect(userSigner3).deposit(ethers.utils.parseEther("1"), 1, addresses.users.hardhat3, {
         value: ethers.utils.parseEther("1")
       });
       //expect(await fund1Token.balanceOf(addresses.users.hardhat3.getAddress())).to.equal(100);

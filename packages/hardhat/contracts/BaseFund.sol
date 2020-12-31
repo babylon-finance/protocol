@@ -258,11 +258,7 @@ abstract contract BaseFund is ERC20 {
         onlyIntegration
         onlyActive
     {
-        require(_newMultiplier > 0, "Must be greater than 0");
-
-        positionMultiplier = _newMultiplier;
-
-        emit PositionMultiplierEdited(_newMultiplier);
+      _editPositionMultiplier(_newMultiplier);
     }
 
     /**
@@ -567,6 +563,19 @@ abstract contract BaseFund is ERC20 {
     }
 
     /**
+     * Modifies the position multiplier. This is typically used to efficiently
+     * update all the Positions' units at once in applications where inflation is awarded (e.g. subscription fees).
+     */
+    function _editPositionMultiplier(int256 _newMultiplier) internal
+    {
+      require(_newMultiplier > 0, "Must be greater than 0");
+
+      positionMultiplier = _newMultiplier;
+
+      emit PositionMultiplierEdited(_newMultiplier);
+    }
+
+    /**
      * Internal MODULE FUNCTION. Low level function that edits a component's virtual unit. Takes a real unit
      * and converts it to virtual before committing.
      */
@@ -759,7 +768,7 @@ abstract contract BaseFund is ERC20 {
             integrationStates[_integration] == IFund.IntegrationState.INITIALIZED,
             "Only the integration can call"
         );
-
+        console.log('eooa');
         require(
             IFolioController(controller).isValidIntegration(
                 IIntegration(_integration).getName()

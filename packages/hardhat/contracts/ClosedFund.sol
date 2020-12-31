@@ -295,7 +295,7 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
         _transferCollateralAndHandleFees(reserveAsset, depositInfo);
 
         _udpateContributorInfo(depositInfo.fundTokenQuantity);
-
+        console.log('eooo');
         _handleDepositStateUpdates(reserveAsset, _to, depositInfo);
     }
 
@@ -683,20 +683,14 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
         address _reserveAsset,
         ActionInfo memory _depositInfo
     ) internal {
-
-        console.log("Start transfer");
-        console.log("netFlow", _depositInfo.netFlowQuantity);
-
-
-        console.log("Start reserve transfer");
-
-        // This seems to be the culprit but having a hard time tracking down what the issue is
-        IERC20(_reserveAsset).transferFrom(
-            msg.sender,
-            address(this),
-            _depositInfo.netFlowQuantity
-        );
-
+        // Only need to transfer the collateral if different than WETH
+        if (_reserveAsset != weth) {
+          IERC20(_reserveAsset).transferFrom(
+              msg.sender,
+              address(this),
+              _depositInfo.netFlowQuantity
+          );
+        }
         if (_depositInfo.protocolFees > 0) {
             IERC20(_reserveAsset).transferFrom(
                 msg.sender,
@@ -704,7 +698,6 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
                 _depositInfo.protocolFees
             );
         }
-
         if (_depositInfo.managerFee > 0) {
             IERC20(_reserveAsset).transferFrom(
                 msg.sender,
@@ -719,7 +712,7 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
         address _to,
         ActionInfo memory _depositInfo
     ) internal {
-        editPositionMultiplier(_depositInfo.newPositionMultiplier);
+        _editPositionMultiplier(_depositInfo.newPositionMultiplier);
 
         editPosition(
             _reserveAsset,
@@ -743,7 +736,7 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
         address _to,
         ActionInfo memory _withdrawalInfo
     ) internal {
-        editPositionMultiplier(_withdrawalInfo.newPositionMultiplier);
+        _editPositionMultiplier(_withdrawalInfo.newPositionMultiplier);
 
         editPosition(
             _reserveAsset,
