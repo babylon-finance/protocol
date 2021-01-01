@@ -1,13 +1,10 @@
-// const { waffle } = require("hardhat");
 const { ethers } = require("hardhat");
 const addresses = require("../../utils/addresses");
 const argsUtil = require("../../utils/arguments.js");
 
-// const { deployContract } = waffle;
-// const provider = waffle.provider;
-
 async function deployFolioFixture() {
   const [owner, signer1, signer2, signer3] = await ethers.getSigners();
+
   const FolioController = await ethers.getContractFactory(
     "FolioController",
     owner
@@ -16,14 +13,15 @@ async function deployFolioFixture() {
     ...argsUtil.readArgumentsFile("FolioController")
   );
 
+  await folioController.addReserveAsset(addresses.tokens.WETH);
+
   const FundValuer = await ethers.getContractFactory("FundValuer", owner);
   const PriceOracle = await ethers.getContractFactory("PriceOracle", owner);
-  // const ClosedFund = await ethers.getContractFactory("ClosedFund", owner);
 
   const fundValuer = await FundValuer.deploy(folioController.address);
   const priceOracle = await PriceOracle.deploy(
     folioController.address,
-    "0x922018674c12a7f0d394ebeef9b58f186cde13c1",
+    addresses.compound.OpenOracle,
     []
   );
   // Sets the price oracle and fundvaluer address
@@ -84,7 +82,7 @@ async function deployFolioFixture() {
   await folioController.createFund(
     integrationsAddressList,
     addresses.tokens.WETH,
-    addresses.tokens.sUSD,
+    addresses.tokens.WETH,
     addresses.users.hardhat1,
     addresses.users.hardhat1,
     "Fund Number One",
@@ -95,7 +93,7 @@ async function deployFolioFixture() {
   await folioController.createFund(
     integrationsAddressList,
     addresses.tokens.WETH,
-    addresses.tokens.sUSD,
+    addresses.tokens.WETH,
     addresses.users.hardhat1,
     addresses.users.hardhat1,
     "Fund Number TWO",
@@ -106,7 +104,7 @@ async function deployFolioFixture() {
   await folioController.createFund(
     integrationsAddressList,
     addresses.tokens.WETH,
-    addresses.tokens.sUSD,
+    addresses.tokens.WETH,
     addresses.users.hardhat1,
     addresses.users.hardhat1,
     "Fund Number Three",

@@ -54,6 +54,8 @@ contract PriceOracle is Ownable {
 
     address immutable weth = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
 
+    address public masterQuoteAsset = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
+
     // Address of uniswap anchored view contract. See https://compound.finance/docs/prices#price
     address public uniswapAnchoredView;
 
@@ -102,6 +104,7 @@ contract PriceOracle is Ownable {
 
         bool priceFound;
         uint256 price;
+
         (priceFound, price) = _getPriceFromUniswapAnchoredView(_assetOne, _assetTwo);
 
         if (!priceFound) {

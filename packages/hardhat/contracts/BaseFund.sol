@@ -261,11 +261,7 @@ abstract contract BaseFund is ERC20 {
         onlyIntegration
         onlyActive
     {
-        require(_newMultiplier > 0, "Must be greater than 0");
-
-        positionMultiplier = _newMultiplier;
-
-        emit PositionMultiplierEdited(_newMultiplier);
+      _editPositionMultiplier(_newMultiplier);
     }
 
     /**
@@ -639,6 +635,18 @@ abstract contract BaseFund is ERC20 {
     }
 
     /**
+     * Modifies the position multiplier. This is typically used to efficiently
+     * update all the Positions' units at once in applications where inflation is awarded (e.g. subscription fees).
+     */
+    function _editPositionMultiplier(int256 _newMultiplier) internal
+    {
+      require(_newMultiplier > 0, "Must be greater than 0");
+      positionMultiplier = _newMultiplier;
+
+      emit PositionMultiplierEdited(_newMultiplier);
+    }
+
+    /**
      * Internal MODULE FUNCTION. Low level function that edits a component's virtual unit. Takes a real unit
      * and converts it to virtual before committing.
      */
@@ -669,12 +677,13 @@ abstract contract BaseFund is ERC20 {
         // If pre action total notional amount is greater then subtract post action total notional and calculate new position units
         uint256 airdroppedAmount =
             _preTotalNotional.sub(_prePositionUnit.preciseMul(totalSupply()));
+
         return
             _postTotalNotional.sub(airdroppedAmount).preciseDiv(totalSupply());
     }
 
     /**
-     * Returns whether the fund has a  position for a given component (if the real unit is > 0)
+     * Returns whether the fund has a position for a given component (if the real unit is > 0)
      */
     function hasPosition(address _component) internal view returns (bool) {
         return getPositionRealUnit(_component) > 0;
@@ -820,7 +829,6 @@ abstract contract BaseFund is ERC20 {
             integrationStates[_integration] == IFund.IntegrationState.INITIALIZED,
             "Integration needs to be initialized"
         );
-
         require(
             IFolioController(controller).isValidIntegration(
                 IIntegration(_integration).getName()

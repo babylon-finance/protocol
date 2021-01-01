@@ -276,6 +276,7 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
             msg.value >= minContribution,
             "Send at least 1000000000000 wei"
         );
+
         // Always wrap to WETH
         IWETH(weth).deposit{value: msg.value}();
 
@@ -313,7 +314,7 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
         address payable _to
     ) external nonReentrant onlyContributor(msg.sender) {
         require(
-            _fundTokenQuantity <= IERC20(reserveAsset).balanceOf(msg.sender),
+            _fundTokenQuantity <= IERC20(address(this)).balanceOf(msg.sender),
             "Withdrawal amount must be less than or equal to deposited amount"
         );
 
@@ -602,9 +603,7 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
         uint256 _reserveAssetQuantity
     ) internal view returns (ActionInfo memory) {
         ActionInfo memory depositInfo;
-
         depositInfo.previousFundTokenSupply = totalSupply();
-
         depositInfo.preFeeReserveQuantity = _reserveAssetQuantity;
 
         (
@@ -676,12 +675,14 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
         address _reserveAsset,
         ActionInfo memory _depositInfo
     ) internal {
-        IERC20(_reserveAsset).transferFrom(
-            msg.sender,
-            address(this),
-            _depositInfo.netFlowQuantity
-        );
-
+        // Only need to transfer the collateral if different than WETH
+        if (_reserveAsset != weth) {
+          IERC20(_reserveAsset).transferFrom(
+              msg.sender,
+              address(this),
+              _depositInfo.netFlowQuantity
+          );
+        }
         if (_depositInfo.protocolFees > 0) {
             IERC20(_reserveAsset).transferFrom(
                 msg.sender,
@@ -689,7 +690,6 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
                 _depositInfo.protocolFees
             );
         }
-
         if (_depositInfo.managerFee > 0) {
             IERC20(_reserveAsset).transferFrom(
                 msg.sender,
@@ -704,7 +704,7 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
         address _to,
         ActionInfo memory _depositInfo
     ) internal {
-        editPositionMultiplier(_depositInfo.newPositionMultiplier);
+        _editPositionMultiplier(_depositInfo.newPositionMultiplier);
 
         editPosition(
             _reserveAsset,
@@ -728,7 +728,7 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
         address _to,
         ActionInfo memory _withdrawalInfo
     ) internal {
-        editPositionMultiplier(_withdrawalInfo.newPositionMultiplier);
+        _editPositionMultiplier(_withdrawalInfo.newPositionMultiplier);
 
         editPosition(
             _reserveAsset,
@@ -829,29 +829,29 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
 
         // Get valuation of the Fund with the quote asset as the reserve asset. Returns value in precise units (1e18)
         // Reverts if price is not found
-        uint256 fundValuation =
-            IFundValuer(IFolioController(controller).getFundValuer())
-                .calculateFundValuation(address(this), _reserveAsset);
+        uint256 fundValuation = IFundValuer(IFolioController(controller).getFundValuer()).calculateFundValuation(address(this), _reserveAsset);
 
         // Get reserve asset decimals
         uint256 reserveAssetDecimals = ERC20(_reserveAsset).decimals();
-        uint256 normalizedTotalReserveQuantityNetFees =
-            _netReserveFlows.preciseDiv(10**reserveAssetDecimals);
-        uint256 normalizedTotalReserveQuantityNetFeesAndPremium =
-            _netReserveFlows.sub(premiumValue).preciseDiv(
-                10**reserveAssetDecimals
-            );
+        uint256 baseUnits = uint256(10) ** reserveAssetDecimals;
+        uint256 normalizedTotalReserveQuantityNetFees = _netReserveFlows.preciseDiv(baseUnits);
 
-        // Calculate Fund tokens to mint to depositr
+        uint256 normalizedTotalReserveQuantityNetFeesAndPremium =
+            _netReserveFlows.sub(premiumValue).preciseDiv(baseUnits);
+
+        // Calculate Fund tokens to mint to depositor
         uint256 denominator =
             _fundTokenTotalSupply
                 .preciseMul(fundValuation)
                 .add(normalizedTotalReserveQuantityNetFees)
                 .sub(normalizedTotalReserveQuantityNetFeesAndPremium);
-        return
+
+        uint256 quantityToMint =
             normalizedTotalReserveQuantityNetFeesAndPremium
                 .preciseMul(_fundTokenTotalSupply)
                 .preciseDiv(denominator);
+
+        return quantityToMint;
     }
 
     function _getWithdrawalReserveQuantity(
@@ -916,6 +916,7 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
     ) internal view returns (uint256, int256) {
         uint256 newTotalSupply =
             _withdrawalInfo.previousFundTokenSupply.sub(_fundTokenQuantity);
+
         int256 newPositionMultiplier =
             positionMultiplier
                 .mul(_withdrawalInfo.previousFundTokenSupply.toInt256())
@@ -1037,7 +1038,7 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
 
     function _validateOnlyContributor(address _caller) internal view {
         require(
-            IERC20(reserveAsset).balanceOf(_caller) > 0,
+            IERC20(address(this)).balanceOf(_caller) > 0,
             "Only someone with the fund token can withdraw"
         );
     }

@@ -47,7 +47,8 @@ async function main() {
 
   const priceOracle = await deploy("PriceOracle", [
     folioController.address,
-    ...argsUtil.readArgumentsFile("PriceOracle")
+    addresses.compound.OpenOracle,
+    []
   ]);
 
   await folioController.editFundValuer(fundValuer.address);
@@ -68,7 +69,7 @@ async function main() {
   await folioController.createFund(
     [aaveI.address],
     addresses.tokens.WETH,
-    addresses.tokens.sUSD,
+    addresses.tokens.WETH,
     addresses.users.hardhat1,
     addresses.users.hardhat1,
     "Fund Number One",
@@ -78,7 +79,7 @@ async function main() {
   await folioController.createFund(
     [compoundI.address],
     addresses.tokens.WETH,
-    addresses.tokens.sUSD,
+    addresses.tokens.WETH,
     addresses.users.hardhat1,
     addresses.users.hardhat1,
     "Fund Number TWO",
@@ -88,7 +89,7 @@ async function main() {
   await folioController.createFund(
     [aaveI.address, compoundI.address],
     addresses.tokens.WETH,
-    addresses.tokens.sUSD,
+    addresses.tokens.WETH,
     addresses.users.hardhat1,
     addresses.users.hardhat1,
     "Fund Number Three",

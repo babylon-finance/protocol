@@ -12,7 +12,8 @@ module.exports = {
   compound: {
     Comptroller: "0x3d9819210a31b4961b30ef54be2aed79b9c9cd3b",
     Governance: "0xc0da01a04c3f3e0be433606045bb7017a7323e38",
-    Timelock: "0x6d903f6003cca6255d85cca4d3b5e5146dc33925"
+    Timelock: "0x6d903f6003cca6255d85cca4d3b5e5146dc33925",
+    OpenOracle: "0x922018674c12a7f0d394ebeef9b58f186cde13c1"
   },
   kyber: {
     proxy: "0x9AAb3f75489902f3a48495025729a0AF77d4b11e"

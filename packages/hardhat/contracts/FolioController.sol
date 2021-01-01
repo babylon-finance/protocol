@@ -519,8 +519,8 @@ contract FolioController is Ownable {
         returns (bool)
     {
         return (isFund[_contractAddress] ||
-            fundValuer == address(this) ||
-            priceOracle == address(this) ||
+            fundValuer == _contractAddress ||
+            priceOracle == _contractAddress ||
             _contractAddress == address(this));
     }
 

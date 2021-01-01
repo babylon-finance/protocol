@@ -112,3 +112,5 @@ dist
 packages/hardhat/*.txt
 packages/hardhat/cache/*
 packages/hardhat/artifacts/*
+
+.vscode/
