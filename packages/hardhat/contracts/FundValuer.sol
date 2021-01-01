@@ -86,7 +86,7 @@ contract FundValuer {
 
         // NOTE: This is temporary to allow for deposits / withdrawls. The masterQuoetAsset no longer
         // live in the PriceOracle so we'll need to add it back or take another approach.
-        address masterQuoteAsset = _quoteAsset; //priceOracle.masterQuoteAsset();
+        address masterQuoteAsset = priceOracle.masterQuoteAsset();
 
         address[] memory components = _fund.getPositions();
         int256 valuation;
@@ -101,7 +101,7 @@ contract FundValuer {
 
           // Normalize each position unit to preciseUnits 1e18 and cast to signed int
           uint256 unitDecimals = ERC20(component).decimals();
-          uint256 baseUnits = uint256(10) ** unitDecimals;
+          uint256 baseUnits = 10 ** unitDecimals;
 
           int256 normalizedUnits = aggregateUnits.preciseDiv(baseUnits.toInt256());
 

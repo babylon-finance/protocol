@@ -603,10 +603,8 @@ abstract contract BaseFund is ERC20 {
      */
     function _editPositionMultiplier(int256 _newMultiplier) internal
     {
-      //require(_newMultiplier > 0, "Must be greater than 0");
-      //positionMultiplier = _newMultiplier;
-
-      positionMultiplier = 1;
+      require(_newMultiplier > 0, "Must be greater than 0");
+      positionMultiplier = _newMultiplier;
 
       emit PositionMultiplierEdited(_newMultiplier);
     }

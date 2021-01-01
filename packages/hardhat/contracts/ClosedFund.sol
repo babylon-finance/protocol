@@ -277,8 +277,6 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
             "Send at least 1000000000000 wei"
         );
 
-        uint256 baseUnits = 10 ** 18;
-
         // Always wrap to WETH
         IWETH(weth).deposit{value: msg.value}();
 
