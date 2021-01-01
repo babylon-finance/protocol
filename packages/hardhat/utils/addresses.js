@@ -18,6 +18,11 @@ module.exports = {
   kyber: {
     proxy: "0x9AAb3f75489902f3a48495025729a0AF77d4b11e"
   },
+  oneinch: {
+    approval: "0xe4c9194962532feb467dce8b3d42419641c6ed2e",
+    exchange: "0x11111254369792b2ca5d084ab5eea397ca8fa48b",
+    signature: 0xf88309d700000000000000000000000000000000000000000000000000000000
+  },
   tokens: {
     DAI: "0x6B175474E89094C44Da98b954EedeAC495271d0F",
     CDAI: "0x5d3a536e4d6dbd6114cc1ead35777bab948e3643",

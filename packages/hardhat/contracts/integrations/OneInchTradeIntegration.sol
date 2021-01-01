@@ -38,7 +38,7 @@ contract OneInchTradeIntegration is TradeIntegration {
   address public oneInchExchangeAddress;
 
   // Bytes to check 1Inch function signature
-  bytes4 public oneInchFunctionSignature;
+  bytes4 immutable public oneInchFunctionSignature = bytes4(0xf88309d7);
 
 
   /* ============ Constructor ============ */
@@ -50,18 +50,15 @@ contract OneInchTradeIntegration is TradeIntegration {
    * @param _controller                   Address of the controller
    * @param _oneInchApprovalAddress       Address of 1inch approval contract
    * @param _oneInchExchangeAddress       Address of 1inch exchange contract
-   * @param _oneInchFunctionSignature     Bytes of 1inch function signature
    */
   constructor(
-    address _weth,
     address _controller,
+    address _weth,
     address _oneInchApprovalAddress,
-    address _oneInchExchangeAddress,
-    bytes4 _oneInchFunctionSignature
+    address _oneInchExchangeAddress
   ) TradeIntegration("1inch", _weth, _controller) {
     oneInchApprovalAddress = _oneInchApprovalAddress;
     oneInchExchangeAddress = _oneInchExchangeAddress;
-    oneInchFunctionSignature = _oneInchFunctionSignature;
   }
 
   /* ============ External Functions ============ */
