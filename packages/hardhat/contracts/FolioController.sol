@@ -160,10 +160,10 @@ contract FolioController is Ownable {
         );
 
         for (uint256 i = 0; i < _integrations.length; i++) {
-            require(
-                _integrations[i] != address(0),
-                "Component must not be null address"
-            );
+          require(
+              _integrations[i] != address(0),
+              "Component must not be null address"
+          );
         }
 
         // Creates a new Fund instance
@@ -350,31 +350,6 @@ contract FolioController is Ownable {
     }
 
     /**
-     * GOVERNANCE FUNCTION: Batch add new integrations. Reverts if exists on any fund and name
-     *
-     * @param  _names        Array of human readable strings identifying the integration
-     * @param  _integrations     Array of addresses of the integration contracts to add
-     */
-    // function batchAddIntegration(
-    //     string[] memory _names,
-    //     address[] memory _integrations
-    // )
-    //     external
-    //     onlyOwner
-    // {
-    //     // Storing funds count to local variable to save on invocation
-    //     require(_names.length == _integrations.length, "Names and integration addresses lengths mismatch");
-    //
-    //     for (uint256 i = 0; i < _integrations.length; i++) {
-    //         // Add integrations to the specified fund. Will revert if fund and name combination exists
-    //         addIntegration(
-    //             _names[i],
-    //             _integrations[i]
-    //         );
-    //     }
-    // }
-
-    /**
      * GOVERNANCE FUNCTION: Edit an existing integration on the registry
      *
      * @param  _name         Human readable string identifying the integration
@@ -396,35 +371,6 @@ contract FolioController is Ownable {
 
         emit ControllerIntegrationEdited(_integration, _name);
     }
-
-    /**
-     * GOVERNANCE FUNCTION: Batch edit integrations for funds. Reverts if fund and
-     * integration name don't map to an integration address
-     *
-     * @param  _names        Array of human readable strings identifying the integration
-     * @param  _integrations     Array of addresses of the integration contracts to add
-     */
-    // function batchEditIntegration(
-    //     string[] memory _names,
-    //     address[] memory _integrations
-    // )
-    //     external
-    //     onlyOwner
-    // {
-    //     // Storing name count to local variable to save on invocation
-    //     uint256 fundsCount = funds.length;
-    //
-    //     require(_names.length == _integrations.length, "Names and integration addresses lengths mismatch");
-    //
-    //
-    //     for (uint256 i = 0; i < _integrations.length; i++) {
-    //         // Edits integrations to the specified fund. Will revert if fund and name combination does not exist
-    //         editIntegration(
-    //             _names[i],
-    //             _integrations[i]
-    //         );
-    //     }
-    // }
 
     /**
      * GOVERNANCE FUNCTION: Remove an existing integration on the registry

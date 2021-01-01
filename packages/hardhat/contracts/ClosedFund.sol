@@ -842,7 +842,7 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
 
         // Get reserve asset decimals
         uint256 reserveAssetDecimals = ERC20(_reserveAsset).decimals();
-        uint256 baseUnits = 10 ** reserveAssetDecimals;
+        uint256 baseUnits = unint256(10) ** reserveAssetDecimals;
         uint256 normalizedTotalReserveQuantityNetFees = _netReserveFlows.preciseDiv(baseUnits);
 
         uint256 normalizedTotalReserveQuantityNetFeesAndPremium =

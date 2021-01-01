@@ -20,12 +20,13 @@
 
 pragma solidity 0.7.4;
 
+import "hardhat/console.sol";
 import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
-
+import { ERC20 } from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import { AddressArrayUtils } from "./lib/AddressArrayUtils.sol";
 import { PreciseUnitMath } from "./lib/PreciseUnitMath.sol";
 import { IFolioController } from "./interfaces/IFolioController.sol";
-import { IOracle } from "./interfaces/IOracle.sol";
+import { IUniswapAnchoredView } from "./interfaces/IUniswapAnchoredView.sol";
 import { IOracleAdapter } from "./interfaces/IOracleAdapter.sol";
 
 
@@ -43,24 +44,18 @@ contract PriceOracle is Ownable {
 
     /* ============ Events ============ */
 
-    event PairAdded(address indexed _assetOne, address indexed _assetTwo, address _oracle);
-    event PairRemoved(address indexed _assetOne, address indexed _assetTwo, address _oracle);
-    event PairEdited(address indexed _assetOne, address indexed _assetTwo, address _newOracle);
     event AdapterAdded(address _adapter);
     event AdapterRemoved(address _adapter);
-    event MasterQuoteAssetEdited(address _newMasterQuote);
 
     /* ============ State Variables ============ */
 
     // Address of the Controller contract
     IFolioController public controller;
 
-    // Mapping between assetA/assetB and its associated Price Oracle
-    // Asset 1 -> Asset 2 -> IOracle Interface
-    mapping(address => mapping(address => IOracle)) public oracles;
+    address immutable weth = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
 
-    // Token address of the bridge asset that prices are derived from if the specified pair price is missing
-    address public masterQuoteAsset;
+    // Address of uniswap anchored view contract. See https://compound.finance/docs/prices#price
+    address public uniswapAnchoredView;
 
     // List of IOracleAdapters used to return prices of third party protocols (e.g. Uniswap, Compound, Balancer)
     address[] public adapters;
@@ -70,33 +65,18 @@ contract PriceOracle is Ownable {
     /**
      * Set state variables and map asset pairs to their oracles
      *
-     * @param _controller             Address of controller contract
-     * @param _masterQuoteAsset       Address of asset that can be used to link unrelated asset pairs
-     * @param _adapters               List of adapters used to price assets created by other protocols
-     * @param _assetOnes              List of first asset in pair, index i maps to same index in assetTwos and oracles
-     * @param _assetTwos              List of second asset in pair, index i maps to same index in assetOnes and oracles
-     * @param _oracles                List of oracles, index i maps to same index in assetOnes and assetTwos
+     * @param _controller                   Address of controller contract
+     * @param _uniswapAnchoredView          Address of the uniswap anchored view that compound maintains
+     * @param _adapters                     List of adapters used to price assets created by other protocols
      */
     constructor(
-        IFolioController _controller,
-        address _masterQuoteAsset,
-        address[] memory _adapters,
-        address[] memory _assetOnes,
-        address[] memory _assetTwos,
-        IOracle[] memory _oracles
-    )
-    {
+      IFolioController _controller,
+      address _uniswapAnchoredView,
+      address[] memory _adapters
+    ) {
         controller = _controller;
-        masterQuoteAsset = _masterQuoteAsset;
+        uniswapAnchoredView = _uniswapAnchoredView;
         adapters = _adapters;
-        require(
-            _assetOnes.length == _assetTwos.length && _assetTwos.length == _oracles.length,
-            "Array lengths do not match."
-        );
-
-        for (uint256 i = 0; i < _assetOnes.length; i++) {
-            oracles[_assetOnes[i]][_assetTwos[i]] = _oracles[i];
-        }
     }
 
     /* ============ External Functions ============ */
@@ -116,18 +96,14 @@ contract PriceOracle is Ownable {
      */
     function getPrice(address _assetOne, address _assetTwo) external view returns (uint256) {
         require(
-            controller.isSystemContract(msg.sender),
-            "PriceOracle.getPrice: Caller must be system contract."
+          controller.isSystemContract(msg.sender),
+          "PriceOracle.getPrice: Caller must be system contract."
         );
 
         bool priceFound;
         uint256 price = 1;
 
-        (priceFound, price) = _getDirectOrInversePrice(_assetOne, _assetTwo);
-
-        if (!priceFound) {
-            (priceFound, price) = _getPriceFromMasterQuote(_assetOne, _assetTwo);
-        }
+        (priceFound, price) = _getPriceFromUniswapAnchoredView(_assetOne, _assetTwo);
 
         if (!priceFound) {
             (priceFound, price) = _getPriceFromAdapters(_assetOne, _assetTwo);
@@ -136,57 +112,6 @@ contract PriceOracle is Ownable {
         //require(priceFound, "PriceOracle.getPrice: Price not found.");
 
         return price;
-    }
-
-    /**
-     * GOVERNANCE FUNCTION: Add new asset pair oracle.
-     *
-     * @param _assetOne         Address of first asset in pair
-     * @param _assetTwo         Address of second asset in pair
-     * @param _oracle           Address of asset pair's oracle
-     */
-    function addPair(address _assetOne, address _assetTwo, IOracle _oracle) external onlyOwner {
-        require(
-            address(oracles[_assetOne][_assetTwo]) == address(0),
-            "PriceOracle.addPair: Pair already exists."
-        );
-        oracles[_assetOne][_assetTwo] = _oracle;
-
-        emit PairAdded(_assetOne, _assetTwo, address(_oracle));
-    }
-
-    /**
-     * GOVERNANCE FUNCTION: Edit an existing asset pair's oracle.
-     *
-     * @param _assetOne         Address of first asset in pair
-     * @param _assetTwo         Address of second asset in pair
-     * @param _oracle           Address of asset pair's new oracle
-     */
-    function editPair(address _assetOne, address _assetTwo, IOracle _oracle) external onlyOwner {
-        require(
-            address(oracles[_assetOne][_assetTwo]) != address(0),
-            "PriceOracle.editPair: Pair doesn't exist."
-        );
-        oracles[_assetOne][_assetTwo] = _oracle;
-
-        emit PairEdited(_assetOne, _assetTwo, address(_oracle));
-    }
-
-    /**
-     * GOVERNANCE FUNCTION: Remove asset pair's oracle.
-     *
-     * @param _assetOne         Address of first asset in pair
-     * @param _assetTwo         Address of second asset in pair
-     */
-    function removePair(address _assetOne, address _assetTwo) external onlyOwner {
-        require(
-            address(oracles[_assetOne][_assetTwo]) != address(0),
-            "PriceOracle.removePair: Pair doesn't exist."
-        );
-        IOracle oldOracle = oracles[_assetOne][_assetTwo];
-        delete oracles[_assetOne][_assetTwo];
-
-        emit PairRemoved(_assetOne, _assetTwo, address(oldOracle));
     }
 
     /**
@@ -219,17 +144,6 @@ contract PriceOracle is Ownable {
         emit AdapterRemoved(_adapter);
     }
 
-    /**
-     * GOVERNANCE FUNCTION: Change the master quote asset.
-     *
-     * @param _newMasterQuoteAsset         New address of master quote asset
-     */
-    function editMasterQuoteAsset(address _newMasterQuoteAsset) external onlyOwner {
-        masterQuoteAsset = _newMasterQuoteAsset;
-
-        emit MasterQuoteAssetEdited(_newMasterQuoteAsset);
-    }
-
     /* ============ External View Functions ============ */
 
     /**
@@ -242,15 +156,15 @@ contract PriceOracle is Ownable {
     /* ============ Internal Functions ============ */
 
     /**
-     * Check if direct or inverse oracle exists. If so return that price along with boolean indicating
-     * it exists. Otherwise return boolean indicating oracle doesn't exist.
+     * Try to calculate asset pair price by getting each asset in the pair's price relative to USD.
+     * Both prices must exist otherwise function returns false and no price.
      *
      * @param _assetOne         Address of first asset in pair
      * @param _assetTwo         Address of second asset in pair
      * @return bool             Boolean indicating if oracle exists
      * @return uint256          Price of asset pair to 18 decimal precision (if exists, otherwise 0)
      */
-    function _getDirectOrInversePrice(
+    function _getPriceFromUniswapAnchoredView(
         address _assetOne,
         address _assetTwo
     )
@@ -258,57 +172,17 @@ contract PriceOracle is Ownable {
         view
         returns (bool, uint256)
     {
-        IOracle directOracle = oracles[_assetOne][_assetTwo];
-        bool hasDirectOracle = address(directOracle) != address(0);
+      string memory symbol1 = _assetOne == weth ? 'ETH' : ERC20(_assetOne).symbol();
+      string memory symbol2 = _assetTwo == weth ? 'ETH' : ERC20(_assetTwo).symbol();
 
-        // Check asset1 -> asset 2. If exists, then return value
-        if (hasDirectOracle) {
-            return (true, directOracle.read());
-        }
+      uint256 assetOnePrice = IUniswapAnchoredView(uniswapAnchoredView).price(symbol1);
+      uint256 assetTwoPrice = IUniswapAnchoredView(uniswapAnchoredView).price(symbol2);
 
-        IOracle inverseOracle = oracles[_assetTwo][_assetOne];
-        bool hasInverseOracle = address(inverseOracle) != address(0);
+      if (assetOnePrice > 0 && assetTwoPrice > 0) {
+        return (true, assetOnePrice.preciseDiv(assetTwoPrice));
+      }
 
-        // If not, check asset 2 -> asset 1. If exists, then return 1 / asset1 -> asset2
-        if (hasInverseOracle) {
-            return (true, _calculateInversePrice(inverseOracle));
-        }
-
-        return (false, 0);
-    }
-
-    /**
-     * Try to calculate asset pair price by getting each asset in the pair's price relative to master
-     * quote asset. Both prices must exist otherwise function returns false and no price.
-     *
-     * @param _assetOne         Address of first asset in pair
-     * @param _assetTwo         Address of second asset in pair
-     * @return bool             Boolean indicating if oracle exists
-     * @return uint256          Price of asset pair to 18 decimal precision (if exists, otherwise 0)
-     */
-    function _getPriceFromMasterQuote(
-        address _assetOne,
-        address _assetTwo
-    )
-        internal
-        view
-        returns (bool, uint256)
-    {
-        (
-            bool priceFoundOne,
-            uint256 assetOnePrice
-        ) = _getDirectOrInversePrice(_assetOne, masterQuoteAsset);
-
-        (
-            bool priceFoundTwo,
-            uint256 assetTwoPrice
-        ) = _getDirectOrInversePrice(_assetTwo, masterQuoteAsset);
-
-        if (priceFoundOne && priceFoundTwo) {
-            return (true, assetOnePrice.preciseDiv(assetTwoPrice));
-        }
-
-        return (false, 0);
+      return (false, 0);
     }
 
     /**
@@ -321,36 +195,24 @@ contract PriceOracle is Ownable {
      * @return uint256          Price of asset pair to 18 decimal precision (if exists, otherwise 0)
      */
     function _getPriceFromAdapters(
-        address _assetOne,
-        address _assetTwo
+      address _assetOne,
+      address _assetTwo
     )
-        internal
-        view
-        returns (bool, uint256)
+      internal
+      view
+      returns (bool, uint256)
     {
-        for (uint256 i = 0; i < adapters.length; i++) {
-            (
-                bool priceFound,
-                uint256 price
-            ) = IOracleAdapter(adapters[i]).getPrice(_assetOne, _assetTwo);
+      for (uint256 i = 0; i < adapters.length; i++) {
+        (
+            bool priceFound,
+            uint256 price
+        ) = IOracleAdapter(adapters[i]).getPrice(_assetOne, _assetTwo);
 
-            if (priceFound) {
-                return (priceFound, price);
-            }
+        if (priceFound) {
+            return (priceFound, price);
         }
+      }
 
-        return (false, 0);
-    }
-
-    /**
-     * Calculate inverse price of passed oracle. The inverse price is 1 (or 1e18) / inverse price
-     *
-     * @param _inverseOracle        Address of oracle to invert
-     * @return uint256              Inverted price of asset pair to 18 decimal precision
-     */
-    function _calculateInversePrice(IOracle _inverseOracle) internal view returns(uint256) {
-        uint256 inverseValue = _inverseOracle.read();
-
-        return PreciseUnitMath.preciseUnit().preciseDiv(inverseValue);
+      return (false, 0);
     }
 }

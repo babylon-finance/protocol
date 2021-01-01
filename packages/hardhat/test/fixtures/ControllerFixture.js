@@ -22,12 +22,12 @@ async function deployFolioFixture() {
   const fundValuer = await FundValuer.deploy(folioController.address);
   const priceOracle = await PriceOracle.deploy(
     folioController.address,
-    ...argsUtil.readArgumentsFile("PriceOracle")
+    "0x922018674c12a7f0d394ebeef9b58f186cde13c1",
+    []
   );
-
-  await folioController.editFundValuer(fundValuer.address);
-  await folioController.editPriceOracle(priceOracle.address);
-
+  // Sets the price oracle and fundvaluer address
+  folioController.editPriceOracle(priceOracle.address);
+  folioController.editFundValuer(fundValuer.address);
   const AaveIntegration = await ethers.getContractFactory(
     "AaveIntegration",
     owner
