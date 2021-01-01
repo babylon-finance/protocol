@@ -37,9 +37,7 @@ describe("AaveIntegration", function() {
     const daiWhaleAddress = "0x6B175474E89094C44Da98b954EedeAC495271d0F";
 
     async function printUserAccount(asset) {
-      const things = await lendingPool.getUserAccountData(
-        fund.address
-      );
+      const things = await lendingPool.getUserAccountData(fund.address);
       console.log(
         "health factor",
         ethers.utils.formatEther(things.healthFactor)

@@ -28,7 +28,6 @@ import { IIntegration } from "./IIntegration.sol";
 interface ITradeIntegration is IIntegration {
 
   function trade(
-    string memory _exchangeName,
     address _sendToken,
     uint256 _sendQuantity,
     address _receiveToken,

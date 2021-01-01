@@ -14,6 +14,9 @@ module.exports = {
     Governance: "0xc0da01a04c3f3e0be433606045bb7017a7323e38",
     Timelock: "0x6d903f6003cca6255d85cca4d3b5e5146dc33925"
   },
+  kyber: {
+    proxy: "0x9AAb3f75489902f3a48495025729a0AF77d4b11e"
+  },
   tokens: {
     DAI: "0x6B175474E89094C44Da98b954EedeAC495271d0F",
     CDAI: "0x5d3a536e4d6dbd6114cc1ead35777bab948e3643",
@@ -33,6 +36,7 @@ module.exports = {
     DAI: "0x0B30483057D6A7798378EdbA707d625116Ed7640",
     sUSD: "0x49BE88F0fcC3A8393a59d3688480d7D253C37D2A",
     WETH: "0xee2826453a4fd5afeb7ceffeef3ffa2320081268",
-    USDC: "0xD1669Ac6044269b59Fa12c5822439F609Ca54F41"
+    USDC: "0xD1669Ac6044269b59Fa12c5822439F609Ca54F41",
+    ETH: "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE"
   }
 };
