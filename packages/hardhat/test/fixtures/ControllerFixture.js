@@ -64,7 +64,6 @@ async function deployFolioFixture() {
   const oneInchTradeIntegration = await OneInchIntegration.deploy(
     folioController.address,
     addresses.tokens.WETH,
-    addresses.oneinch.approval,
     addresses.oneinch.exchange
   );
 

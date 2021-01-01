@@ -1,9 +1,10 @@
 const { expect } = require("chai");
+const superagent = require("superagent");
 const { waffle, ethers } = require("hardhat");
 const { impersonateAddress } = require("../../utils/rpc");
 const { deployFolioFixture } = require("../fixtures/ControllerFixture");
 const addresses = require("../../utils/addresses");
-const { EMPTY_BYTES } = require("../../utils/constants");
+const { ZERO } = require("../../utils/constants");
 
 const { loadFixture } = waffle;
 
@@ -31,12 +32,17 @@ describe("OneInchTradeIntegration", function() {
     let daiToken;
     let usdcToken;
     let whaleSigner;
+    let oneInchExchange;
     const daiWhaleAddress = "0x6B175474E89094C44Da98b954EedeAC495271d0F";
 
     beforeEach(async () => {
       whaleSigner = await impersonateAddress(daiWhaleAddress);
       daiToken = await ethers.getContractAt("IERC20", addresses.tokens.DAI);
       usdcToken = await ethers.getContractAt("IERC20", addresses.tokens.USDC);
+      oneInchExchange = await ethers.getContractAt(
+        "IOneInchExchange",
+        addresses.oneinch.exchange
+      );
     });
 
     it("trade dai to usdc", async function() {
@@ -50,16 +56,51 @@ describe("OneInchTradeIntegration", function() {
       expect(await daiToken.balanceOf(fund.address)).to.equal(
         ethers.utils.parseEther("100")
       );
+      // Get the quote
+      const quote = await superagent
+        .get(`${addresses.api.oneinch}quote`)
+        .query({
+          fromTokenAddress: daiToken.address,
+          toTokenAddress: usdcToken.address,
+          amount: 100 * 10 ** 18
+        });
+      // Get the parts
+      const parts = await oneInchExchange.getExpectedReturn(
+        daiToken.address,
+        usdcToken.address,
+        ethers.utils.parseEther("100"),
+        1,
+        0
+      );
+
+      // Get call data
+      const callData = oneInchExchange.interface.encodeFunctionData(
+        oneInchExchange.interface.functions[
+          "swap(address,address,uint256,uint256,uint256[],uint256)"
+        ],
+        [
+          daiToken.address, // Send token
+          usdcToken.address, // Receive token
+          ethers.utils.parseEther("100"), // Send quantity
+          quote.body.toTokenAmount, // Min receive quantity
+          parts.distribution,
+          0
+        ]
+      );
+
       await fund.trade(
         "1inch",
         addresses.tokens.DAI,
         ethers.utils.parseEther("100"),
         usdcToken.address,
-        ethers.utils.parseEther("90") / 10 ** 12,
-        EMPTY_BYTES,
+        quote.body.toTokenAmount,
+        callData,
         { gasPrice: 0 }
       );
       expect(await daiToken.balanceOf(fund.address)).to.equal(0);
+      console.log(
+        ethers.utils.formatEther(await usdcToken.balanceOf(fund.address))
+      );
       expect(await usdcToken.balanceOf(fund.address)).to.be.gt(
         ethers.utils.parseEther("97") / 10 ** 12
       );
