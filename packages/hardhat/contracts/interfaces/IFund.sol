@@ -104,6 +104,21 @@ interface IFund is IERC20 {
     ) external returns (bytes memory _returnValue);
     function getPrice(address _assetOne, address _assetTwo) external view returns (uint256);
 
+    function trade(
+      string memory _integrationName,
+      address _sendToken,
+      uint256 _sendQuantity,
+      address _receiveToken,
+      uint256 _minReceiveQuantity,
+      bytes memory _data) external;
+
+    function calculateMinAndTrade(
+      string memory _integrationName,
+      address _sendToken,
+      uint256 _sendQuantity,
+      address _receiveToken,
+      bytes memory _data) external;
+
     function positionMultiplier() external view returns (int256);
     // function getPositions() external view returns (Position[] memory);
     function getTotalInvestmentRealUnits(address _component) external view returns(int256);

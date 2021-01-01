@@ -49,6 +49,16 @@ async function deployFolioFixture() {
     50
   );
 
+  const KyberTradeIntegration = await ethers.getContractFactory(
+    "KyberTradeIntegration",
+    owner
+  );
+  const kyberTradeIntegration = await KyberTradeIntegration.deploy(
+    folioController.address,
+    addresses.tokens.WETH,
+    addresses.kyber.proxy
+  );
+
   // Adding integrations
   folioController.addIntegration(
     await aaveIntegration.getName(),
@@ -58,8 +68,16 @@ async function deployFolioFixture() {
     await compoundIntegration.getName(),
     compoundIntegration.address
   );
+  folioController.addIntegration(
+    await kyberTradeIntegration.getName(),
+    kyberTradeIntegration.address
+  );
 
-  const integrationsList = [aaveIntegration, compoundIntegration];
+  const integrationsList = [
+    aaveIntegration,
+    compoundIntegration,
+    kyberTradeIntegration
+  ];
 
   const integrationsAddressList = integrationsList.map(iter => iter.address);
 
@@ -121,7 +139,8 @@ async function deployFolioFixture() {
     folioController,
     integrations: {
       aaveIntegration,
-      compoundIntegration
+      compoundIntegration,
+      kyberTradeIntegration
     },
     funds: {
       one: fund,

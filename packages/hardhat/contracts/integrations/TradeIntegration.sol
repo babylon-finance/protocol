@@ -39,7 +39,7 @@ abstract contract TradeIntegration is BaseIntegration, ReentrancyGuard {
 
     struct TradeInfo {
       IFund fund;                                     // Fund
-      uint8 exchangeIndex;                            // Which exchange to use
+      string exchangeName;                            // Which exchange to use
       address sendToken;                              // Address of token being sold
       address receiveToken;                           // Address of token being bought
       uint256 fundTotalSupply;                        // Total supply of Fund in Precise Units (10^18)
@@ -49,9 +49,6 @@ abstract contract TradeIntegration is BaseIntegration, ReentrancyGuard {
       uint256 preTradeReceiveTokenBalance;            // Total initial balance of token being bought
     }
 
-    /* ============ Constants ============ */
-    mapping(string => uint8) public exchangeNameToIndex;
-
 
     /* ============ Events ============ */
 
@@ -59,7 +56,7 @@ abstract contract TradeIntegration is BaseIntegration, ReentrancyGuard {
       IFund indexed _fund,
       address indexed _sendToken,
       address indexed _receiveToken,
-      uint8 _exchangeIndex,
+      string _exchangeName,
       uint256 _totalSendAmount,
       uint256 _totalReceiveAmount,
       uint256 _protocolFee
@@ -76,10 +73,6 @@ abstract contract TradeIntegration is BaseIntegration, ReentrancyGuard {
      * @param _controller             Address of the controller
      */
     constructor(string memory _name, address _weth, address _controller) BaseIntegration(_name, _weth, _controller) {
-      exchangeNameToIndex["uniswap"] = 0;
-      exchangeNameToIndex["sushiswap"] = 1;
-      exchangeNameToIndex["1inch"] = 2;
-      exchangeNameToIndex["kyber"] = 3;
     }
 
     /* ============ External Functions ============ */
@@ -89,7 +82,6 @@ abstract contract TradeIntegration is BaseIntegration, ReentrancyGuard {
      * @dev Although the SetToken units are passed in for the send and receive quantities, the total quantity
      * sent and received is the quantity of SetToken units multiplied by the SetToken totalSupply.
      *
-     * @param _exchangeName         Human readable name of the exchange in the integrations registry
      * @param _sendToken            Address of the token to be sent to the exchange
      * @param _sendQuantity         Units of token in SetToken sent to the exchange
      * @param _receiveToken         Address of the token that will be received from the exchange
@@ -97,7 +89,6 @@ abstract contract TradeIntegration is BaseIntegration, ReentrancyGuard {
      * @param _data                 Arbitrary bytes to be used to construct trade call data
      */
     function trade(
-      string memory _exchangeName,
       address _sendToken,
       uint256 _sendQuantity,
       address _receiveToken,
@@ -109,19 +100,16 @@ abstract contract TradeIntegration is BaseIntegration, ReentrancyGuard {
       onlyFund
     {
       TradeInfo memory tradeInfo = _createTradeInfo(
-        _exchangeName,
+        name,
         _sendToken,
         _receiveToken,
         _sendQuantity,
         _minReceiveQuantity
       );
-
       _validatePreTradeData(tradeInfo, _sendQuantity);
-
       _executeTrade(tradeInfo, _data);
 
       uint256 exchangedQuantity = _validatePostTrade(tradeInfo);
-
       uint256 protocolFee = _accrueProtocolFee(tradeInfo, exchangedQuantity);
 
       (
@@ -133,7 +121,7 @@ abstract contract TradeIntegration is BaseIntegration, ReentrancyGuard {
         tradeInfo.fund,
         _sendToken,
         _receiveToken,
-        tradeInfo.exchangeIndex,
+        tradeInfo.exchangeName,
         netSendAmount,
         netReceiveAmount,
         protocolFee
@@ -182,7 +170,7 @@ abstract contract TradeIntegration is BaseIntegration, ReentrancyGuard {
 
       tradeInfo.fund = IFund(msg.sender);
 
-      tradeInfo.exchangeIndex = exchangeNameToIndex[_exchangeName];
+      tradeInfo.exchangeName = _exchangeName;
 
       tradeInfo.sendToken = _sendToken;
       tradeInfo.receiveToken = _receiveToken;
@@ -208,10 +196,10 @@ abstract contract TradeIntegration is BaseIntegration, ReentrancyGuard {
     function _validatePreTradeData(TradeInfo memory _tradeInfo, uint256 _sendQuantity) internal view {
       require(_tradeInfo.totalSendQuantity > 0, "Token to sell must be nonzero");
 
-      require(
-          _tradeInfo.fund.hasSufficientUnits(_tradeInfo.sendToken, _sendQuantity),
-          "Unit cant be greater than existing"
-      );
+      // require(
+      //     _tradeInfo.fund.hasSufficientUnits(_tradeInfo.sendToken, _sendQuantity),
+      //     "Unit cant be greater than existing"
+      // );
     }
 
     /**
@@ -232,7 +220,6 @@ abstract contract TradeIntegration is BaseIntegration, ReentrancyGuard {
         _tradeInfo.sendToken,
         _tradeInfo.totalSendQuantity
       );
-
       (
           address targetExchange,
           uint256 callValue,
@@ -245,7 +232,6 @@ abstract contract TradeIntegration is BaseIntegration, ReentrancyGuard {
           _tradeInfo.totalMinReceiveQuantity,
           _data
       );
-
       _tradeInfo.fund.invokeFromIntegration(targetExchange, callValue, methodData);
     }
 
@@ -259,7 +245,6 @@ abstract contract TradeIntegration is BaseIntegration, ReentrancyGuard {
       uint256 exchangedQuantity = IERC20(_tradeInfo.receiveToken)
         .balanceOf(address(_tradeInfo.fund))
         .sub(_tradeInfo.preTradeReceiveTokenBalance);
-
       require(
         exchangedQuantity >= _tradeInfo.totalMinReceiveQuantity,
         "Slippage greater than allowed"

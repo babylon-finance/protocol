@@ -57,17 +57,15 @@ contract KyberTradeIntegration is TradeIntegration {
   /**
    * Creates the integration
    *
-   * @param _name                         Name of the integration
-   * @param _weth                         Address of the WETH ERC20
    * @param _controller                   Address of the controller
+   * @param _weth                         Address of the WETH ERC20
    * @param _kyberNetworkProxyAddress    Address of Kyber Network Proxy contract
    */
   constructor(
-    string memory _name,
-    address _weth,
     address _controller,
+    address _weth,
     address _kyberNetworkProxyAddress
-  ) TradeIntegration(_name, _weth, _controller) {
+  ) TradeIntegration("kyber", _weth, _controller) {
     kyberNetworkProxyAddress = _kyberNetworkProxyAddress;
   }
 
@@ -134,13 +132,9 @@ contract KyberTradeIntegration is TradeIntegration {
     kyberTradeInfo.sourceTokenDecimals = ERC20(_sourceToken).decimals();
     kyberTradeInfo.destinationTokenDecimals = ERC20(_destinationToken).decimals();
 
-    // Get conversion rate from minimum receive token quantity.
-    // dstQty * (10 ** 18) * (10 ** dstDecimals) / (10 ** srcDecimals) / srcQty
-    kyberTradeInfo.conversionRate = _minDestinationQuantity
-      .mul(PreciseUnitMath.preciseUnit())
-      .mul(10 ** kyberTradeInfo.sourceTokenDecimals)
-      .div(10 ** kyberTradeInfo.destinationTokenDecimals)
-      .div(_sourceQuantity);
+    (uint256 bestRate, uint256 worstRate) = IKyberNetworkProxy(kyberNetworkProxyAddress).getExpectedRate(_sourceToken, _destinationToken, _sourceQuantity);
+
+    kyberTradeInfo.conversionRate = worstRate;
 
     // Encode method data for SetToken to invoke
     bytes memory methodData = abi.encodeWithSignature(
@@ -151,7 +145,7 @@ contract KyberTradeIntegration is TradeIntegration {
       _destinationAddress,
       PreciseUnitMath.maxUint256(), // Sell entire amount of sourceToken
       kyberTradeInfo.conversionRate, // Trade with implied conversion rate
-      address(0) // No referrer address
+      msg.sender // Fund address
     );
 
     return (kyberNetworkProxyAddress, 0, methodData);

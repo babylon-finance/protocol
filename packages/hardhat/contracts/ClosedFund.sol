@@ -286,7 +286,7 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
         _validateReserveAsset(reserveAsset, _reserveAssetQuantity);
 
         _callPreDepositHooks(_reserveAssetQuantity, msg.sender, _to);
-
+        console.log('hereee');
         ActionInfo memory depositInfo =
             _createIssuanceInfo(reserveAsset, _reserveAssetQuantity);
 

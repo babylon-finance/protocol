@@ -46,7 +46,6 @@ contract OneInchTradeIntegration is TradeIntegration {
   /**
    * Creates the integration
    *
-   * @param _name                         Name of the integration
    * @param _weth                         Address of the WETH ERC20
    * @param _controller                   Address of the controller
    * @param _oneInchApprovalAddress       Address of 1inch approval contract
@@ -54,13 +53,12 @@ contract OneInchTradeIntegration is TradeIntegration {
    * @param _oneInchFunctionSignature     Bytes of 1inch function signature
    */
   constructor(
-    string memory _name,
     address _weth,
     address _controller,
     address _oneInchApprovalAddress,
     address _oneInchExchangeAddress,
     bytes4 _oneInchFunctionSignature
-  ) TradeIntegration(_name, _weth, _controller) {
+  ) TradeIntegration("1inch", _weth, _controller) {
     oneInchApprovalAddress = _oneInchApprovalAddress;
     oneInchExchangeAddress = _oneInchExchangeAddress;
     oneInchFunctionSignature = _oneInchFunctionSignature;

@@ -18,24 +18,25 @@
 pragma solidity 0.7.4;
 
 import "hardhat/console.sol";
-import {Address} from "@openzeppelin/contracts/utils/Address.sol";
-import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import { Address } from "@openzeppelin/contracts/utils/Address.sol";
+import { ERC20 } from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import {
     ReentrancyGuard
 } from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
-import {SafeMath} from "@openzeppelin/contracts/math/SafeMath.sol";
-import {SafeCast} from "@openzeppelin/contracts/utils/SafeCast.sol";
-import {SignedSafeMath} from "@openzeppelin/contracts/math/SignedSafeMath.sol";
+import { SafeMath } from "@openzeppelin/contracts/math/SafeMath.sol";
+import { SafeCast } from "@openzeppelin/contracts/utils/SafeCast.sol";
+import { SignedSafeMath } from "@openzeppelin/contracts/math/SignedSafeMath.sol";
 
-import {AddressArrayUtils} from "./lib/AddressArrayUtils.sol";
-import {PreciseUnitMath} from "./lib/PreciseUnitMath.sol";
-import {IFolioController} from "./interfaces/IFolioController.sol";
-import {IWETH} from "./interfaces/external/weth/IWETH.sol";
+import { AddressArrayUtils } from "./lib/AddressArrayUtils.sol";
+import { PreciseUnitMath } from "./lib/PreciseUnitMath.sol";
+import { IFolioController } from "./interfaces/IFolioController.sol";
+import { IWETH } from "./interfaces/external/weth/IWETH.sol";
 import { IStableDebtToken } from './interfaces/external/aave/IStableDebtToken.sol';
-import {IIntegration} from "./interfaces/IIntegration.sol";
-import {IBorrowIntegration} from "./interfaces/IBorrowIntegration.sol";
-import {IPriceOracle} from "./interfaces/IPriceOracle.sol";
-import {IFund} from "./interfaces/IFund.sol";
+import { IIntegration } from "./interfaces/IIntegration.sol";
+import { IBorrowIntegration } from "./interfaces/IBorrowIntegration.sol";
+import { ITradeIntegration } from "./interfaces/ITradeIntegration.sol";
+import { IPriceOracle } from "./interfaces/IPriceOracle.sol";
+import { IFund } from "./interfaces/IFund.sol";
 
 /**
  * @title BaseFund
@@ -392,7 +393,7 @@ abstract contract BaseFund is ERC20 {
       ERC20(_asset).approve(_integration, _quantity);
     }
 
-    function invokeApprove(address _spender, address _asset, uint256 _quantity) external onlyIntegration{
+    function invokeApprove(address _spender, address _asset, uint256 _quantity) external onlyIntegration {
       ERC20(_asset).approve(_spender, 0);
       ERC20(_asset).approve(_spender, _quantity);
     }
@@ -401,17 +402,35 @@ abstract contract BaseFund is ERC20 {
       address _target,
       uint256 _value,
       bytes calldata _data
-    )
-      external
-      onlyIntegration
-      returns (bytes memory _returnValue)
-    {
+    ) external onlyIntegration returns (bytes memory _returnValue) {
       _invoke(_target, _value, _data);
     }
 
     function getPrice(address _assetOne, address _assetTwo) external onlyManager view returns (uint256) {
-      IPriceOracle oracle = IPriceOracle(IFolioController(controller).getPriceOracle());
-      return oracle.getPrice(_assetOne, _assetTwo);
+      _getPrice(_assetOne, _assetTwo);
+    }
+
+    function calculateMinAndTrade(
+      string memory _integrationName,
+      address _sendToken,
+      uint256 _sendQuantity,
+      address _receiveToken,
+      bytes memory _data) onlyManager
+      external
+    {
+      uint256 minReceiveQuantity = _getPrice(_sendToken, _receiveToken).preciseMul(_sendQuantity);
+      _trade(_integrationName, _sendToken, _sendQuantity, _receiveToken, minReceiveQuantity, _data);
+    }
+
+    function trade(
+      string memory _integrationName,
+      address _sendToken,
+      uint256 _sendQuantity,
+      address _receiveToken,
+      uint256 _minReceiveQuantity,
+      bytes memory _data) onlyManager external
+    {
+      return _trade(_integrationName, _sendToken, _sendQuantity, _receiveToken, _minReceiveQuantity, _data);
     }
 
     function addAaveBorrowAllowanceIntegration(address _integration, address _asset, uint256 _quantity) external onlyManager {
@@ -422,16 +441,34 @@ abstract contract BaseFund is ERC20 {
 
     /* ============ External Getter Functions ============ */
 
+    function _getPrice(address _assetOne, address _assetTwo) internal view returns (uint256) {
+      IPriceOracle oracle = IPriceOracle(IFolioController(controller).getPriceOracle());
+      return oracle.getPrice(_assetOne, _assetTwo);
+    }
+
+    function _trade(
+      string memory _integrationName,
+      address _sendToken,
+      uint256 _sendQuantity,
+      address _receiveToken,
+      uint256 _minReceiveQuantity,
+      bytes memory _data) internal
+    {
+      address tradeIntegration = IFolioController(controller).getIntegrationByName(_integrationName);
+      _validateOnlyIntegration(tradeIntegration);
+      return ITradeIntegration(tradeIntegration).trade(_sendToken, _sendQuantity, _receiveToken, _minReceiveQuantity, _data);
+    }
+
     function getReserveAsset() external view returns (address) {
-        return reserveAsset;
+      return reserveAsset;
     }
 
     function getPositionRealUnit(address _component)
-        public
-        view
-        returns (int256)
+      public
+      view
+      returns (int256)
     {
-        return _convertVirtualToRealUnit(_positionVirtualUnit(_component));
+      return _convertVirtualToRealUnit(_positionVirtualUnit(_component));
     }
 
     function getIntegrations() external view returns (address[] memory) {
@@ -781,7 +818,7 @@ abstract contract BaseFund is ERC20 {
     function _validateOnlyIntegration(address _integration) internal view {
         require(
             integrationStates[_integration] == IFund.IntegrationState.INITIALIZED,
-            "Only the integration can call"
+            "Integration needs to be initialized"
         );
 
         require(
