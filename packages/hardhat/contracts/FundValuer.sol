@@ -84,37 +84,35 @@ contract FundValuer {
     {
         IPriceOracle priceOracle = IPriceOracle(IFolioController(controller).getPriceOracle());
 
-        address masterQuoteAsset = priceOracle.masterQuoteAsset();
+        // NOTE: This is temporary to allow for deposits / withdrawls. The masterQuoetAsset no longer
+        // live in the PriceOracle so we'll need to add it back or take another approach.
+        address masterQuoteAsset = _quoteAsset; //priceOracle.masterQuoteAsset();
 
         address[] memory components = _fund.getPositions();
         int256 valuation;
 
         for (uint256 i = 0; i < components.length; i++) {
           address component = components[i];
-          // Get component price from price oracle. If price does not exist, revert.
-          // uint256 componentPrice = priceOracle.getPrice(component, masterQuoteAsset);
 
-          uint256 componentPrice = 1000;
+          // Get component price from price oracle. If price does not exist, revert.
+          uint256 componentPrice = priceOracle.getPrice(component, masterQuoteAsset);
 
           int256 aggregateUnits = _fund.getTotalPositionRealUnits(component);
 
           // Normalize each position unit to preciseUnits 1e18 and cast to signed int
           uint256 unitDecimals = ERC20(component).decimals();
-          uint256 baseUnits = 10 ** unitDecimals;
+          uint256 baseUnits = uint256(10) ** unitDecimals;
+
           int256 normalizedUnits = aggregateUnits.preciseDiv(baseUnits.toInt256());
 
           // Calculate valuation of the component. Debt positions are effectively subtracted
           valuation = normalizedUnits.preciseMul(componentPrice.toInt256()).add(valuation);
-          console.log("Current valuation", valuation.toUint256());
         }
 
-        // Temporarily disable so that we can mint and burn tokens for deposit / withdraw
-
-        //if (masterQuoteAsset != _quoteAsset && valuation > 0) {
-        //    uint256 quoteToMaster = priceOracle.getPrice(_quoteAsset, masterQuoteAsset);
-        //    valuation = valuation.preciseDiv(quoteToMaster.toInt256());
-        //}
-
+        if (masterQuoteAsset != _quoteAsset && valuation > 0) {
+            uint256 quoteToMaster = priceOracle.getPrice(_quoteAsset, masterQuoteAsset);
+            valuation = valuation.preciseDiv(quoteToMaster.toInt256());
+        }
 
         return valuation.toUint256();
     }

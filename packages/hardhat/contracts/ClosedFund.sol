@@ -278,7 +278,6 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
         );
 
         uint256 baseUnits = 10 ** 18;
-        console.log("Deposit amount ETH", _reserveAssetQuantity / baseUnits); //.preciseDiv(baseUnits));
 
         // Always wrap to WETH
         IWETH(weth).deposit{value: msg.value}();
@@ -317,7 +316,7 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
         address payable _to
     ) external nonReentrant onlyContributor(msg.sender) {
         require(
-            _fundTokenQuantity <= IERC20(reserveAsset).balanceOf(msg.sender),
+            _fundTokenQuantity <= IERC20(address(this)).balanceOf(msg.sender),
             "Withdrawal amount must be less than or equal to deposited amount"
         );
 
@@ -609,8 +608,6 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
         depositInfo.previousFundTokenSupply = totalSupply();
         depositInfo.preFeeReserveQuantity = _reserveAssetQuantity;
 
-        console.log("Previous Token Supply", depositInfo.previousFundTokenSupply);
-
         (
             depositInfo.protocolFees,
             depositInfo.managerFee,
@@ -627,8 +624,6 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
             depositInfo.newFundTokenSupply,
             depositInfo.newPositionMultiplier
         ) = _getDepositPositionMultiplier(depositInfo);
-
-        console.log("New Token Supply", depositInfo.newFundTokenSupply);
 
         depositInfo.newReservePositionUnit = _getDepositPositionUnit(
             _reserveAsset,
@@ -720,8 +715,6 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
         );
 
         _mint(_to, _depositInfo.fundTokenQuantity);
-
-        console.log("Minted tokens deposited", _depositInfo.fundTokenQuantity);
 
         emit FundTokenDeposited(
             _to,
@@ -842,13 +835,11 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
 
         // Get reserve asset decimals
         uint256 reserveAssetDecimals = ERC20(_reserveAsset).decimals();
-        uint256 baseUnits = unint256(10) ** reserveAssetDecimals;
+        uint256 baseUnits = uint256(10) ** reserveAssetDecimals;
         uint256 normalizedTotalReserveQuantityNetFees = _netReserveFlows.preciseDiv(baseUnits);
 
         uint256 normalizedTotalReserveQuantityNetFeesAndPremium =
             _netReserveFlows.sub(premiumValue).preciseDiv(baseUnits);
-
-        console.log("Net Reserve Flows ETH", normalizedTotalReserveQuantityNetFeesAndPremium / baseUnits);
 
         // Calculate Fund tokens to mint to depositor
         uint256 denominator =
@@ -861,8 +852,6 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
             normalizedTotalReserveQuantityNetFeesAndPremium
                 .preciseMul(_fundTokenTotalSupply)
                 .preciseDiv(denominator);
-
-        console.log("Minted tokens", quantityToMint);
 
         return quantityToMint;
     }

@@ -101,7 +101,7 @@ contract PriceOracle is Ownable {
         );
 
         bool priceFound;
-        uint256 price = 1;
+        uint256 price;
 
         (priceFound, price) = _getPriceFromUniswapAnchoredView(_assetOne, _assetTwo);
 
@@ -109,7 +109,7 @@ contract PriceOracle is Ownable {
             (priceFound, price) = _getPriceFromAdapters(_assetOne, _assetTwo);
         }
 
-        //require(priceFound, "PriceOracle.getPrice: Price not found.");
+        require(priceFound, "PriceOracle.getPrice: Price not found.");
 
         return price;
     }

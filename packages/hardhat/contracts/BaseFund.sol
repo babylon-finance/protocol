@@ -639,9 +639,6 @@ abstract contract BaseFund is ERC20 {
         uint256 _postTotalNotional,
         uint256 _prePositionUnit
     ) internal view returns (uint256) {
-
-        console.log("Base total supply", totalSupply());
-
         // If pre action total notional amount is greater then subtract post action total notional and calculate new position units
         uint256 airdroppedAmount =
             _preTotalNotional.sub(_prePositionUnit.preciseMul(totalSupply()));

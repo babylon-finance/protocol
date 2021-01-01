@@ -17,12 +17,11 @@ async function deployFolioFixture() {
 
   const FundValuer = await ethers.getContractFactory("FundValuer", owner);
   const PriceOracle = await ethers.getContractFactory("PriceOracle", owner);
-  // const ClosedFund = await ethers.getContractFactory("ClosedFund", owner);
 
   const fundValuer = await FundValuer.deploy(folioController.address);
   const priceOracle = await PriceOracle.deploy(
     folioController.address,
-    "0x922018674c12a7f0d394ebeef9b58f186cde13c1",
+    addresses.compound.OpenOracle,
     []
   );
   // Sets the price oracle and fundvaluer address
