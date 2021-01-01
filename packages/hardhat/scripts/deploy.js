@@ -47,7 +47,8 @@ async function main() {
 
   const priceOracle = await deploy("PriceOracle", [
     folioController.address,
-    ...argsUtil.readArgumentsFile("PriceOracle")
+    addresses.compound.OpenOracle,
+    []
   ]);
 
   await folioController.editFundValuer(fundValuer.address);
