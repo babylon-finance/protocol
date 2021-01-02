@@ -1,1 +1,1 @@
-module.exports = ["FolioController","FundValuer","PriceOracle"];
+module.exports = [];

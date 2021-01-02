@@ -27,4 +27,8 @@ import { IIntegration } from "./IIntegration.sol";
  */
 interface IPoolIntegraion is IIntegration {
 
+
+  function joinPool(address _poolAddress, uint256 _poolTokensOut, address[] calldata _tokensIn, uint256[] calldata _maxAmountsIn) external;
+  function exitPool(address _poolAddress, uint256 _poolTokensIn, address[] calldata _tokensOut, uint256[] calldata _minAmountsOut) external;
+
 }

@@ -188,18 +188,6 @@ contract FolioController is Ownable {
     }
 
     /**
-     * PRIVILEGED FACTORY FUNCTION. Adds a newly deployed Fund as an enabled Fund.
-     *
-     * @param _fund Address of the Fund contract to add
-     */
-    function addFund(address _fund) internal onlyOwner {
-        require(!isFund[_fund], "Fund already exists");
-        isFund[_fund] = true;
-        funds.push(_fund);
-        emit FundAdded(_fund, msg.sender);
-    }
-
-    /**
      * PRIVILEGED GOVERNANCE FUNCTION. Allows governance to remove a Fund
      *
      * @param _fund               Address of the Fund contract to remove
@@ -390,6 +378,7 @@ contract FolioController is Ownable {
         emit ControllerIntegrationRemoved(oldIntegration, _name);
     }
 
+
     /* ============ External Getter Functions ============ */
 
     function getPriceOracle() external view returns (address) {
@@ -531,5 +520,17 @@ contract FolioController is Ownable {
      */
     function _nameHash(string memory _name) internal pure returns (bytes32) {
         return keccak256(bytes(_name));
+    }
+
+    /**
+     * PRIVILEGED FACTORY FUNCTION. Adds a newly deployed Fund as an enabled Fund.
+     *
+     * @param _fund Address of the Fund contract to add
+     */
+    function addFund(address _fund) internal {
+        require(!isFund[_fund], "Fund already exists");
+        isFund[_fund] = true;
+        funds.push(_fund);
+        emit FundAdded(_fund, msg.sender);
     }
 }
