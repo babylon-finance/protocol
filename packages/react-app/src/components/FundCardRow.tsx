@@ -6,13 +6,12 @@ import React, { useState, useEffect } from 'react';
 
 interface FundCardRowProps {
   provider: any
-  address: string
-  callback: any
+  userAddress: string
 }
 
-const FundCardRow = ({ provider, address, callback }: FundCardRowProps) => {
+const FundCardRow = ({ provider, userAddress }: FundCardRowProps) => {
   const [funds, setFunds] = useState();
-  const contracts = useContractLoader(provider, address);
+  const contracts = useContractLoader(provider, userAddress);
 
   useEffect(() => {
     async function getFunds() {
@@ -28,7 +27,7 @@ const FundCardRow = ({ provider, address, callback }: FundCardRowProps) => {
       { funds && (
         funds.map((address: string) => {
           return (
-            <FundCard provider={provider} address={address} callback={callback} key={address} />
+            <FundCard provider={provider} contractAddress={address} userAddress={userAddress} key={address} />
           )
         })
       )}

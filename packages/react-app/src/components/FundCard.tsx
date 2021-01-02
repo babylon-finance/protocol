@@ -9,20 +9,20 @@ import { Card } from 'rimble-ui';
 
 interface FundCardProps {
   provider: any
-  address: string
-  callback: any
+  contractAddress: string
+  userAddress: string
 }
 
 const contractName = "BaseFund";
 
-const FundCard = ({ provider, address, callback }: FundCardProps) => {
+const FundCard = ({ provider, contractAddress, userAddress }: FundCardProps) => {
   const [isLoaded, setIsLoaded] = useState("false");
   const [contract, setContract] = useState();
   const [fundName, setFundName] = useState("");
 
   useEffect(() => {
     async function getContract() {
-      setContract(await loadContractFromNameAndAddress(address, contractName, provider));
+      setContract(await loadContractFromNameAndAddress(contractAddress, contractName, provider));
     }
     if (!contract) {
       getContract();
@@ -59,7 +59,7 @@ const FundCard = ({ provider, address, callback }: FundCardProps) => {
         <FundPerformanceAmount>Participants: 300</FundPerformanceAmount>
       </FundPerformanceBlock>
       <FundCardInvestButtonWrapper>
-        <InvestModal provider={provider} contract={contract} address={address} />
+        <InvestModal provider={provider} contractAddress={contractAddress} userAddress={userAddress} />
       </FundCardInvestButtonWrapper>
     </FundCardWrapper>
   );

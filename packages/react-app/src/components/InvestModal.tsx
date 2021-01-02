@@ -1,22 +1,35 @@
 import { Transactor } from "../helpers";
 import useGasPrice from "../hooks/GasPrice";
+import { loadContractFromNameAndAddress } from "../hooks/ContractLoader";
 
-import { parseEther } from "@ethersproject/units";
-import React, { useState } from "react";
+import { parseEther, formatEther } from "@ethersproject/units";
+import React, { useState, useEffect } from "react";
 import styled from "styled-components";
 import { notification } from "antd";
 import { Box, Blockie, EthAddress, Field, Form, Heading, Button, Modal, Card } from "rimble-ui";
 
 interface InvesModalProps {
   provider: any
-  contract: any
-  address: string
+  contractAddress: string
+  userAddress: string
 }
 
-function InvestModal({ provider, contract, address }: InvesModalProps) {
+const contractName = "ClosedFund";
+
+function InvestModal({ provider, contractAddress, userAddress }: InvesModalProps) {
   const [isOpen, setIsOpen] = useState(false);
-  const [depositAmount, setDepositAmount] = useState("");
+  const [depositAmount, setDepositAmount] = useState(0);
+  const [contract, setContract] = useState();
   const tx = Transactor(provider, useGasPrice("fast"));
+
+  useEffect(() => {
+    async function getContract() {
+      setContract(await loadContractFromNameAndAddress(contractAddress, contractName, provider));
+    }
+    if (!contract) {
+      getContract();
+    }
+  })
 
   const closeModal = e => {
     e.preventDefault();
@@ -30,9 +43,18 @@ function InvestModal({ provider, contract, address }: InvesModalProps) {
 
   const handleSubmitDeposit = async e => {
     e.preventDefault();
-    if (tx && depositAmount) {
+    if (tx && (depositAmount > 0)) {
       try {
-        const result = await tx(contract.deposit(parseEther("1"), 1, { value: parseEther(depositAmount.toString()) }));
+        const result = await tx(
+          contract.deposit(
+            parseEther("1"),
+            1,
+            userAddress,
+            {
+              value: parseEther(depositAmount.toString())
+            },
+          )
+        );
         if (result) {
           notification.success({
             message: "Transaction Sent",
@@ -76,7 +98,7 @@ function InvestModal({ provider, contract, address }: InvesModalProps) {
               <Heading.h3>How much would you like to invest?</Heading.h3>
               <Blockie
                 opts={{
-                  seed: address,
+                  seed: userAddress,
                   color: "#dfe",
                   bgcolor: "#a71",
                   size: 15,
@@ -84,7 +106,7 @@ function InvestModal({ provider, contract, address }: InvesModalProps) {
                   spotcolor: "#000"
                 }}
               />
-              <EthAddress mb={3} address={address} />
+              <EthAddress mb={3} address={userAddress} />
               <Form onSubmit={handleSubmitDeposit}>
                 <Field label="Deposit Amount" width={1}>
                   <Form.Input onChange={handleInputChange} type="number" required placeholder="0" value={depositAmount} />

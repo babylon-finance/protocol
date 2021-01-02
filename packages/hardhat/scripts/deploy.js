@@ -43,6 +43,7 @@ async function main() {
     "FolioController",
     argsUtil.readArgumentsFile("FolioController")
   );
+
   const fundValuer = await deploy("FundValuer", [folioController.address]);
 
   const priceOracle = await deploy("PriceOracle", [
@@ -56,18 +57,45 @@ async function main() {
 
   const aaveI = await deploy("AaveIntegration", [
     folioController.address,
-    ...argsUtil.readArgumentsFile("AaveIntegration")
+    addresses.tokens.WETH,
+    50
   ]);
 
   const compoundI = await deploy("CompoundIntegration", [
     folioController.address,
-    ...argsUtil.readArgumentsFile("CompoundIntegration")
+    addresses.tokens.WETH,
+    50
   ]);
+
+  const oneInchTradeI = await deploy("OneInchTradeIntegration", [
+    folioController.address,
+    addresses.tokens.WETH,
+    addresses.oneinch.exchange
+  ]);
+
+  const kyberTradeI = await deploy("KyberTradeIntegration", [
+    folioController.address,
+    addresses.tokens.WETH,
+    addresses.kyber.proxy
+  ]);
+
+  const integrationsList = [aaveI, compoundI, kyberTradeI, oneInchTradeI];
+
+  const integrationsAddressList = integrationsList.map(iter => iter.address);
 
   await folioController.addIntegration("AaveIntegration", aaveI.address);
   await folioController.addIntegration("CompundIntegration", compoundI.address);
+  await folioController.addIntegration(
+    "KyberTradeIntegration",
+    kyberTradeI.address
+  );
+  await folioController.addIntegration(
+    "OnceInchTradeIntegration",
+    oneInchTradeI.address
+  );
+
   await folioController.createFund(
-    [aaveI.address],
+    integrationsAddressList,
     addresses.tokens.WETH,
     addresses.tokens.WETH,
     addresses.users.hardhat1,
@@ -76,8 +104,9 @@ async function main() {
     "FNON",
     ethers.utils.parseEther("1")
   );
+
   await folioController.createFund(
-    [compoundI.address],
+    integrationsAddressList,
     addresses.tokens.WETH,
     addresses.tokens.WETH,
     addresses.users.hardhat1,
@@ -86,8 +115,9 @@ async function main() {
     "FNTW",
     ethers.utils.parseEther("1")
   );
+
   await folioController.createFund(
-    [aaveI.address, compoundI.address],
+    integrationsAddressList,
     addresses.tokens.WETH,
     addresses.tokens.WETH,
     addresses.users.hardhat1,
@@ -96,6 +126,59 @@ async function main() {
     "FNTH",
     ethers.utils.parseEther("10")
   );
+
+  const fundAddressesList = await folioController.getFunds();
+
+  // Initialize fund integrations
+  fundAddressesList.forEach(fundIter => {
+    integrationsAddressList.forEach(async integration => {
+      await folioController.initializeIntegration(integration, fundIter);
+    });
+  });
+
+  // Initialize each fund
+  const fund1 = await ethers.getContractAt("ClosedFund", fundAddressesList[0]);
+  const managerSigner = await ethers.getSigner(addresses.users.hardhat1);
+
+  // NOTE: below does not deploy successfully
+
+  //await fund1
+  //  .connect(managerSigner)
+  //  .initialManagerDeposit({ value: ethers.utils.parseEther("0.01") });
+
+  //await fund1.initialize(
+  //  0,
+  //  0,
+  //  0,
+  //  0,
+  //  1,
+  //  ethers.utils.getAddress(addresses.zero),
+  //  ethers.utils.getAddress(addresses.zero)
+  //);
+
+  //const fund2 = await ethers.getContractAt("ClosedFund", fundAddressesList[1]);
+  //await fund2.initialManagerDeposit({ value: ethers.utils.parseEther("0.01") });
+  //await fund2.initialize(
+  //  0,
+  //  0,
+  //  0,
+  //  0,
+  //  1,
+  //  ethers.utils.getAddress(addresses.zero),
+  //  ethers.utils.getAddress(addresses.zero)
+  //);
+
+  //const fund3 = await ethers.getContractAt("ClosedFund", fundAddressesList[2]);
+  //await fund3.initialManagerDeposit({ value: ethers.utils.parseEther("0.01") });
+  //await fund3.initialize(
+  //  0,
+  //  0,
+  //  0,
+  //  0,
+  //  1,
+  //  ethers.utils.getAddress(addresses.zero),
+  //  ethers.utils.getAddress(addresses.zero)
+  //);
 
   console.log("📡 Deploy complete! \n");
 }

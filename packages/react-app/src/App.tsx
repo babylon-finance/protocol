@@ -203,8 +203,8 @@ export default class App extends React.Component<AppProps, AppState> {
                   <FundCardRowWrapper>
                     <FundCardRow
                       provider={this.state.provider}
-                      address={this.state.address}
-                      callback={this.renderInvestModal} />
+                      userAddress={this.state.address}
+                    />
                   </FundCardRowWrapper>
                 </div>
               )}

@@ -1,5 +1,6 @@
 require("@nomiclabs/hardhat-ethers");
 require("@nomiclabs/hardhat-waffle");
+require("hardhat-deploy-ethers");
 
 const { utils } = require("ethers");
 const fs = require("fs");
@@ -51,7 +52,7 @@ module.exports = {
       forking: {
         url:
           "https://eth-mainnet.alchemyapi.io/v2/sncj01nDcsAQr_QWyhYWNkg3qzW2o9kt",
-        blockNumber: 11570063
+        blockNumber: 11571063
       }
     },
     rinkeby: {
