@@ -31,14 +31,11 @@ contract OneInchTradeIntegration is TradeIntegration {
 
   /* ============ State Variables ============ */
 
-  // Address of 1Inch approve token address
-  address public oneInchApprovalAddress;
-
   // Address of 1Inch exchange address
   address public oneInchExchangeAddress;
 
   // Bytes to check 1Inch function signature
-  bytes4 immutable public oneInchFunctionSignature = bytes4(0xf88309d7);
+  bytes4 immutable public oneInchFunctionSignature = bytes4(0xe2a7515e);
 
 
   /* ============ Constructor ============ */
@@ -48,20 +45,21 @@ contract OneInchTradeIntegration is TradeIntegration {
    *
    * @param _weth                         Address of the WETH ERC20
    * @param _controller                   Address of the controller
-   * @param _oneInchApprovalAddress       Address of 1inch approval contract
    * @param _oneInchExchangeAddress       Address of 1inch exchange contract
    */
   constructor(
     address _controller,
     address _weth,
-    address _oneInchApprovalAddress,
     address _oneInchExchangeAddress
   ) TradeIntegration("1inch", _weth, _controller) {
-    oneInchApprovalAddress = _oneInchApprovalAddress;
     oneInchExchangeAddress = _oneInchExchangeAddress;
   }
 
   /* ============ External Functions ============ */
+
+  function updateExchangeAddress(address _newExchangeAddress) public onlyProtocol {
+    oneInchExchangeAddress = _newExchangeAddress;
+  }
 
   /**
    * Returns the conversion rate between the source token and the destination token
@@ -165,7 +163,7 @@ contract OneInchTradeIntegration is TradeIntegration {
    * @return address             Address of the contract to approve tokens to
    */
   function _getSpender() internal override view returns (address) {
-    return oneInchApprovalAddress;
+    return oneInchExchangeAddress;
   }
 
 }

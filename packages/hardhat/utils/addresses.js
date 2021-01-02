@@ -19,9 +19,7 @@ module.exports = {
     proxy: "0x9AAb3f75489902f3a48495025729a0AF77d4b11e"
   },
   oneinch: {
-    approval: "0xe4c9194962532feb467dce8b3d42419641c6ed2e",
-    exchange: "0x11111254369792b2ca5d084ab5eea397ca8fa48b",
-    signature: 0xf88309d700000000000000000000000000000000000000000000000000000000
+    exchange: "0xC586BeF4a0992C495Cf22e1aeEE4E446CECDee0E"
   },
   tokens: {
     DAI: "0x6B175474E89094C44Da98b954EedeAC495271d0F",
@@ -44,5 +42,8 @@ module.exports = {
     WETH: "0xee2826453a4fd5afeb7ceffeef3ffa2320081268",
     USDC: "0xD1669Ac6044269b59Fa12c5822439F609Ca54F41",
     ETH: "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE"
+  },
+  api: {
+    oneinch: "https://api.1inch.exchange/v2.0/"
   }
 };
