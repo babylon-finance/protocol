@@ -103,6 +103,21 @@ abstract contract BaseFund is ERC20 {
         _;
     }
 
+    modifier onlyPendingIntegration() {
+      require(
+          IFolioController(controller).isValidIntegration(
+              IIntegration(msg.sender).getName()
+          ),
+          "Integration must be enabled on controller"
+      );
+      _;
+    }
+
+    modifier onlyProtocol() {
+      require(msg.sender == controller, "Only the controller can call this");
+      _;
+    }
+
     /* ============ State Variables ============ */
 
     // Wrapped ETH address
@@ -331,7 +346,7 @@ abstract contract BaseFund is ERC20 {
      * An address can only enter a PENDING state if it is an enabled integration added by the manager.
      * Only callable by the integration itself, hence msg.sender is the subject of update.
      */
-    function initializeIntegration() external {
+    function initializeIntegration() external onlyPendingIntegration {
         require(
             integrationStates[msg.sender] == IFund.IntegrationState.PENDING,
             "Integration must be pending"
@@ -400,10 +415,6 @@ abstract contract BaseFund is ERC20 {
       bytes calldata _data
     ) external onlyIntegration returns (bytes memory _returnValue) {
       _invoke(_target, _value, _data);
-    }
-
-    function getPrice(address _assetOne, address _assetTwo) external onlyManager view returns (uint256) {
-      _getPrice(_assetOne, _assetTwo);
     }
 
     function calculateMinAndTrade(

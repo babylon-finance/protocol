@@ -21,6 +21,9 @@ module.exports = {
   oneinch: {
     exchange: "0xC586BeF4a0992C495Cf22e1aeEE4E446CECDee0E"
   },
+  balancer: {
+    factory: "0x9424B1412450D0f8Fc2255FAf6046b98213B76Bd"
+  },
   tokens: {
     DAI: "0x6B175474E89094C44Da98b954EedeAC495271d0F",
     CDAI: "0x5d3a536e4d6dbd6114cc1ead35777bab948e3643",
