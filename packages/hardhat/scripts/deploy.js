@@ -2,6 +2,7 @@ const { ethers } = require("hardhat");
 const fs = require("fs");
 const chalk = require("chalk");
 const argsUtil = require("../utils/arguments.js");
+const { deployFolioFixture } = require("../test/fixtures/ControllerFixture");
 const addresses = require("../utils/addresses");
 
 async function deploy(name, _args) {
@@ -39,6 +40,7 @@ async function autoDeploy() {
 }
 
 async function main() {
+<<<<<<< HEAD
   const folioController = await deploy(
     "FolioController",
     argsUtil.readArgumentsFile("FolioController")
@@ -180,6 +182,9 @@ async function main() {
   //  ethers.utils.getAddress(addresses.zero)
   //);
 
+=======
+  deployFolioFixture();
+>>>>>>> 8866439dc3c2da428f33f6a77d1a6fdd3b2e9dfa
   console.log("📡 Deploy complete! \n");
 }
 
