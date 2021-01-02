@@ -1,10 +1,11 @@
-import FundCardRow from "./components/FundCardRow"
+import FundCardRow from "./components/FundCardRow";
 
 import React from 'react';
 import styled from "styled-components";
 import Web3 from "web3";
 import Web3Modal from "web3modal";
 import { Web3Provider } from "@ethersproject/providers";
+import { Flex, Box } from 'rimble-ui';
 import { Alert, Spin } from "antd";
 // @ts-ignore
 import WalletConnectProvider from "@walletconnect/web3-provider";
@@ -91,6 +92,10 @@ export default class App extends React.Component<AppProps, AppState> {
     }
   }
 
+  renderInvestModal = (props: any) => {
+    console.log(props);
+  }
+
   onConnect = async () => {
     const provider = await this.web3Modal.connect();
     const web3: any = initWeb3(provider);
@@ -156,48 +161,73 @@ export default class App extends React.Component<AppProps, AppState> {
       this.state.networkId === networkId
 
     const shouldRenderFunds = (this.state.web3 && this.state.connected && onMainnet && this.state.provider);
+
     return (
       <AppWrapper className="App">
+        <HeaderWrapper>
+          <ContainerLarge>
+            <StyledHeader>
+              <LogoWrapper>
+                <img width="40" src="/logo-red.png" alt="" />
+                <ProjectTitle>Babylon.finance</ProjectTitle>
+              </LogoWrapper>
+            </StyledHeader>
+          </ContainerLarge>
+        </HeaderWrapper>
         {this.state.initialLoad && <Spin tip="Loading..." />}
         {!this.state.initialLoad && (
           <ContentWrapper>
-            <LogoWrapper>
-              <img width="40" src="/logo-red.png" alt="" />
-              <ProjectTitle>Babylon.finance</ProjectTitle>
-            </LogoWrapper>
-            <div style={{
-              display: 'flex',
-              flexFlow: 'row wrap',
-              margin: '10px 0'
-            }}>
-              {this.state.web3 && (
-                <MainLink onClick={this.resetApp} target="_blank">
-                  Disconnect
-                </MainLink>
-              )}
-            </div>
-            {this.state.connected && !onMainnet && (
-              <Alert message={`You are on a different network. Please connect your wallet to the ${networkId === 1 ? 'mainnet' : 'network with id ' + networkId}`} type="warning" />
-            )}
-            {!this.state.connected && (
-              <ConnectButton onClick={this.onConnect}>
-                <b>Connect your wallet</b>
-              </ConnectButton>
-            )}
-            {shouldRenderFunds && (
-              <div>
-                <Alert message={`Wallet Connected: ${this.state.address}`} type="warning" />
-                <FundCardRowWrapper>
-                  <FundCardRow provider={this.state.provider} address={this.state.address} />
-                </FundCardRowWrapper>
+            <ContainerLarge>
+              <div style={{
+                display: 'flex',
+                flexFlow: 'row wrap',
+                margin: '10px 0'
+              }}>
+                {this.state.web3 && (
+                  <MainLink onClick={this.resetApp} target="_blank">
+                    Disconnect
+                  </MainLink>
+                )}
               </div>
-            )}
+              {this.state.connected && !onMainnet && (
+                <Alert message={`You are on a different network. Please connect your wallet to the ${networkId === 1 ? 'mainnet' : 'network with id ' + networkId}`} type="warning" />
+              )}
+              {!this.state.connected && (
+                <ConnectButton onClick={this.onConnect}>
+                  <b>Connect your wallet</b>
+                </ConnectButton>
+              )}
+              {shouldRenderFunds && (
+                <div>
+                  <Alert message={`Wallet Connected: ${this.state.address}`} type="warning" />
+                  <FundCardRowWrapper>
+                    <FundCardRow
+                      provider={this.state.provider}
+                      address={this.state.address}
+                      callback={this.renderInvestModal} />
+                  </FundCardRowWrapper>
+                </div>
+              )}
+            </ContainerLarge>
           </ContentWrapper>
         )}
       </AppWrapper>
     );
   }
 }
+
+const ContainerLarge = styled(Box)`
+  position: relative;
+`
+
+const HeaderWrapper = styled.div`
+  width: 100%;
+  background: #160E6B;
+`
+
+const StyledHeader = styled.header`
+  padding-left: 15%;
+`
 
 const MainLink = styled.a`
   font-size: 16px;
@@ -210,11 +240,8 @@ const MainLink = styled.a`
   }
 `
 
-const AppWrapper = styled.div`
-  display: flex;
+const AppWrapper = styled(Flex)`
   flex-flow: column nowrap;
-  align-items: center;
-  justify-content: center;
   width: 100%;
   min-height: 100vh;
   height: auto;
@@ -223,21 +250,18 @@ const AppWrapper = styled.div`
 const ContentWrapper = styled.div`
   display: flex;
   flex-flow: column nowrap;
-  justify-content: center;
+  justify-content: left;
   align-items: center;
   text-align: center;
   width: 100%;
   height: auto;
-  padding: 20px;
 `
 
 const LogoWrapper = styled.div`
-  width: 240px;
   height: 80px;
   padding: 5px;
   border-radius: 62px;
   display: flex;
-  justify-content: center;
   align-items: center;
   margin: 20px 0;
 `
@@ -257,5 +281,8 @@ const ConnectButton = styled.button`
 `
 
 const FundCardRowWrapper = styled.div`
+  div:not(:first-child) {
+    margin-left: 12px;
+  }
   margin-top: 50px;
 `
