@@ -1,20 +1,18 @@
 import FundCard from "../components/FundCard"
 import useContractLoader from "../hooks/ContractLoader";
 
-import React, { useState, useEffect } from 'react';
 import styled from "styled-components";
+import React, { useState, useEffect } from 'react';
 
 interface FundCardRowProps {
   provider: any
-  address: string
+  userAddress: string
 }
 
-const FundCardRow = ({ provider, address }: FundCardRowProps) => {
-  const [firstLoad, setFirstLoad] = useState(false)
-  const [loading, setLoading] = useState(false);
+const FundCardRow = ({ provider, userAddress }: FundCardRowProps) => {
   const [funds, setFunds] = useState();
-  const contracts = useContractLoader(provider, address);
-  console.log(contracts);
+  const contracts = useContractLoader(provider, userAddress);
+
   useEffect(() => {
     async function getFunds() {
       setFunds(await contracts.FolioController.getFunds());
@@ -29,7 +27,7 @@ const FundCardRow = ({ provider, address }: FundCardRowProps) => {
       { funds && (
         funds.map((address: string) => {
           return (
-            <FundCard provider={provider} address={address} key={address} />
+            <FundCard provider={provider} contractAddress={address} userAddress={userAddress} key={address} />
           )
         })
       )}

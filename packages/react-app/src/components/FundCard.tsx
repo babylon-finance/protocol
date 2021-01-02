@@ -1,25 +1,28 @@
 import FundCardChart from "./FundCardChart";
+import InvestModal from "./InvestModal";
+
 import { loadContractFromNameAndAddress } from "../hooks/ContractLoader";
 import { usePoller } from "eth-hooks";
 import React, { useState, useEffect } from "react";
 import styled from "styled-components";
-import { Card } from "antd";
+import { Card } from 'rimble-ui';
 
 interface FundCardProps {
   provider: any
-  address: string
+  contractAddress: string
+  userAddress: string
 }
 
 const contractName = "BaseFund";
 
-const FundCard = ({ provider, address }: FundCardProps) => {
-  const [isLoaded, setIsLoaded] = useState(false);
+const FundCard = ({ provider, contractAddress, userAddress }: FundCardProps) => {
+  const [isLoaded, setIsLoaded] = useState("false");
   const [contract, setContract] = useState();
   const [fundName, setFundName] = useState("");
 
   useEffect(() => {
     async function getContract() {
-      setContract(await loadContractFromNameAndAddress(address, contractName, provider));
+      setContract(await loadContractFromNameAndAddress(contractAddress, contractName, provider));
     }
     if (!contract) {
       getContract();
@@ -27,15 +30,14 @@ const FundCard = ({ provider, address }: FundCardProps) => {
   })
 
   usePoller(async () => {
-    console.log()
     if (contract) {
-      setIsLoaded(true);
+      setIsLoaded("true");
       setFundName(await contract.name());
     }
   }, 1000);
 
   return (
-    <FundCardWrapper loading={!isLoaded}>
+    <FundCardWrapper loading={isLoaded}>
       <FundCardHeader>
         <FundTokenSymbol>ABCD</FundTokenSymbol>
         {fundName}
@@ -57,7 +59,7 @@ const FundCard = ({ provider, address }: FundCardProps) => {
         <FundPerformanceAmount>Participants: 300</FundPerformanceAmount>
       </FundPerformanceBlock>
       <FundCardInvestButtonWrapper>
-        <FundCardInvestButton>Invest</FundCardInvestButton>
+        <InvestModal provider={provider} contractAddress={contractAddress} userAddress={userAddress} />
       </FundCardInvestButtonWrapper>
     </FundCardWrapper>
   );
@@ -65,9 +67,7 @@ const FundCard = ({ provider, address }: FundCardProps) => {
 
 const FundCardWrapper = styled(Card)`
   width: 450px;
-  height: 550px;
-  border: 1px solid lightgray;
-  margin: 0 10px;
+  height: 625px;
 `
 
 const FundTokenSymbol = styled.div`
@@ -125,28 +125,10 @@ const FundPerformanceAmount = styled.div`
 `
 
 const FundPerfomanceHistogram = styled.div`
-  margin-bottom: 10px;
-  height: 80%;
   background: white;
 `
 
 const FundCardInvestButtonWrapper = styled.div`
-  padding: 20px;
 `
 
-const FundCardInvestButton = styled.button`
-  font-size: 18px;
-  font-weight: 700;
-  color: #160E6B;
-  width: 90%;
-  border-radius: 0;
-  background: white;
-  border: 1px solid #160E6B;
-
-  &:hover {
-    cursor: pointer;
-    color: white;
-    background: #160E6B;
-  }
-`
 export default FundCard;

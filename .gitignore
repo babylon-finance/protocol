@@ -113,4 +113,7 @@ packages/hardhat/*.txt
 packages/hardhat/cache/*
 packages/hardhat/artifacts/*
 
+#contract abi,bytecode
+packages/react-app/src/contracts/*
+
 .vscode/

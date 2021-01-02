@@ -1,9 +1,7 @@
 const { ethers } = require("hardhat");
 const fs = require("fs");
 const chalk = require("chalk");
-const argsUtil = require("../utils/arguments.js");
 const { deployFolioFixture } = require("../test/fixtures/ControllerFixture");
-const addresses = require("../utils/addresses");
 
 async function deploy(name, _args) {
   const args = _args || [];
@@ -40,8 +38,27 @@ async function autoDeploy() {
 }
 
 async function main() {
-  deployFolioFixture();
-  console.log("📡 Deploy complete! \n");
+  const { contractsToPublish } = await deployFolioFixture();
+
+  console.log("Contracts deployed...");
+  console.log("Syncing artifacts for publish...");
+
+  // Let the fixture response determine which contracts to write address
+  // files for and publish accordingly in contracts.js.
+  contractsToPublish.forEach(contractObj => {
+    const name = contractObj.name;
+    const address = contractObj.contract.address;
+
+    if (!name) {
+      console.log("No name provided for contract, exiting...");
+      process.exit(1);
+    }
+
+    fs.writeFileSync(`artifacts/${name}.address`, address);
+  });
+
+  console.log("Artifacts sync complete..");
+  console.log("📡 Contract deploy complete! \n");
 }
 
 main()

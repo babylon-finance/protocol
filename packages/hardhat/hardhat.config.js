@@ -1,5 +1,6 @@
 require("@nomiclabs/hardhat-ethers");
 require("@nomiclabs/hardhat-waffle");
+require("hardhat-deploy-ethers");
 
 const { utils } = require("ethers");
 const fs = require("fs");
@@ -47,12 +48,13 @@ module.exports = {
   networks: {
     // Local Hardhat network using alchemy for pinned block
     hardhat: {
+      chainId: 1,
       allowUnlimitedContractSize: true,
-      forking: {
+       forking: {
         url:
-          "https://eth-mainnet.alchemyapi.io/v2/sncj01nDcsAQr_QWyhYWNkg3qzW2o9kt",
-        blockNumber: 11570063
-      }
+         "https://eth-mainnet.alchemyapi.io/v2/sncj01nDcsAQr_QWyhYWNkg3qzW2o9kt",
+          blockNumber: 11577024
+       }
     },
     rinkeby: {
       url: "https://rinkeby.infura.io/v3/c954231486fa42ccb6d132b406483d14", // <---- YOUR INFURA ID! (or it won't work)

@@ -10,9 +10,7 @@ export default function Transactor(provider, gasPrice, etherscan) {
   if (typeof provider !== "undefined") {
     // eslint-disable-next-line consistent-return
     return async tx => {
-      const signer = provider.getSigner();
-      const network = await provider.getNetwork();
-      console.log("network", network);
+      const signer = await provider.getSigner();
       try {
         let result;
         if (tx instanceof Promise) {
@@ -28,8 +26,6 @@ export default function Transactor(provider, gasPrice, etherscan) {
           console.log("RUNNING TX", tx);
           result = await signer.sendTransaction(tx);
         }
-        console.log("RESULT:", result);
-        // console.log("Notify", notify);
 
         return result;
       } catch (e) {
