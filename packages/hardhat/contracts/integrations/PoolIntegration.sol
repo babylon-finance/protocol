@@ -100,11 +100,11 @@ abstract contract PoolIntegration is BaseIntegration, ReentrancyGuard {
         _poolTokensOut,
         _tokensIn,
         _maxAmountsIn
-      )
-      _validatePreJoinPoolData(poolInfo, _poolTokensOut);
+      );
+      _validatePreJoinPoolData(poolInfo);
       // Approve spendning of the tokens
       for (uint i = 0; i < _tokensIn.length; i++) {
-        _poolInfo.fund.invokeApprove(
+        poolInfo.fund.invokeApprove(
           _poolAddress,
           _tokensIn[i],
           _maxAmountsIn[i]
@@ -116,15 +116,13 @@ abstract contract PoolIntegration is BaseIntegration, ReentrancyGuard {
           uint256 callValue,
           bytes memory methodData
       ) = _getJoinPoolCalldata(
-          _tradeInfo.sendToken,
-          _tradeInfo.receiveToken,
-          address(_tradeInfo.fund),
-          _tradeInfo.totalSendQuantity,
-          _tradeInfo.totalMinReceiveQuantity,
-          _data
+          _poolAddress,
+          _poolTokensOut,
+          _tokensIn,
+          _maxAmountsIn
       );
-      _poolInfo.fund.invokeFromIntegration(targetPool, callValue, methodData);
-      _validatePostJoinPool(poolInfo);
+      poolInfo.fund.invokeFromIntegration(targetPool, callValue, methodData);
+      _validatePostJoinPoolData(poolInfo);
 
       _updateFundPositions(poolInfo);
 
@@ -157,31 +155,40 @@ abstract contract PoolIntegration is BaseIntegration, ReentrancyGuard {
         _poolTokensIn,
         _tokensOut,
         _minAmountsOut
-      )
-      _validatePreExitPoolData(poolInfo, _poolTokensIn);
+      );
+      _validatePreExitPoolData(poolInfo);
 
       (
           address targetPool,
           uint256 callValue,
           bytes memory methodData
       ) = _getExitPoolCalldata(
-          _tradeInfo.sendToken,
-          _tradeInfo.receiveToken,
-          address(_tradeInfo.fund),
-          _tradeInfo.totalSendQuantity,
-          _tradeInfo.totalMinReceiveQuantity,
-          _data
+          _poolAddress,
+          _poolTokensIn,
+          _tokensOut,
+          _minAmountsOut
       );
-      _poolInfo.fund.invokeFromIntegration(targetPool, callValue, methodData);
-      _validatePostExitPool(poolInfo);
+      poolInfo.fund.invokeFromIntegration(targetPool, callValue, methodData);
+      _validatePostExitPoolData(poolInfo);
       uint256 protocolFee = _accrueProtocolFee(poolInfo, _minAmountsOut[0]);
 
       _updateFundPositions(poolInfo);
 
       emit PoolExited(
         poolInfo.pool,
-        _poolTokensIn
+        _poolTokensIn,
+        protocolFee
       );
+    }
+
+    /**
+     * Checks whether a pool address is valid
+     *
+     * @param _poolAddress                 Pool address to check
+     * @return bool                        True if the address is a pool
+     */
+    function isPool(address _poolAddress) view virtual external returns (bool) {
+      require(false, "This needs to be overriden");
     }
 
     /* ============ Internal Functions ============ */
@@ -195,7 +202,7 @@ abstract contract PoolIntegration is BaseIntegration, ReentrancyGuard {
     function _accrueProtocolFee(PoolInfo memory _poolInfo, uint256 _exchangedQuantity) internal returns (uint256) {
       uint256 protocolFeeTotal = getIntegrationFee(0, _exchangedQuantity);
 
-      payProtocolFeeFromFund(address(_poolInfo.fund), _poolInfo.poolTokens[0], protocolFeeTotal);
+      payProtocolFeeFromFund(address(_poolInfo.fund), address(_poolInfo.poolTokens[0]), protocolFeeTotal);
 
       return protocolFeeTotal;
     }
@@ -213,20 +220,19 @@ abstract contract PoolIntegration is BaseIntegration, ReentrancyGuard {
     function _createPoolInfo(
       address _pool,
       uint256 _poolTokensInTransaction,
-      address[] _poolTokens,
-      address[] _limitPoolTokenQuantities
+      address[] calldata _poolTokens,
+      uint256[] calldata _limitPoolTokenQuantities
     )
       internal
       view
-      returns (TradeInfo memory)
+      returns (PoolInfo memory)
     {
       PoolInfo memory poolInfo;
       poolInfo.fund = IFund(msg.sender);
       poolInfo.pool = _pool;
-      poolInfo.poolTokens = _poolTokens;
-      poolInfo.totalSupply = IERC20(pool).totalSupply();
-      poolInfo.poolTokensInFund = IERC20(pool).balanceOf(address(msg.sender));
-      poolInfo.poolTokensInTransaction = _poolTokensInTransaction
+      poolInfo.totalSupply = IERC20(_pool).totalSupply();
+      poolInfo.poolTokensInFund = IERC20(_pool).balanceOf(address(msg.sender));
+      poolInfo.poolTokensInTransaction = _poolTokensInTransaction;
       for (uint i = 0; i < _poolTokens.length; i++) {
         poolInfo.poolTokens[i] = IERC20(_poolTokens[i]);
         poolInfo.poolTokenQuantities[i] = IERC20(_poolTokens[i]).balanceOf(_pool);
@@ -240,21 +246,21 @@ abstract contract PoolIntegration is BaseIntegration, ReentrancyGuard {
      * Validate pre pool join data. Check pool is valid, token quantity is valid.
      *
      * @param _poolInfo               Struct containing pool information used in internal functions
-     * @param _minPoolTokensOut       Min amount of pool tokens to get
      */
-    function _validatePreJoinPoolData(PoolInfo memory _poolInfo, uint256 _minPoolTokensOut) internal view {
-      require(_poolInfo.poolTokens > 0, "Min pool tokens to receive must be greater than 0");
+    function _validatePreJoinPoolData(PoolInfo memory _poolInfo) internal view {
+      require(_poolInfo.pool != address(0), "The pool addres is not valid");
+      require(_poolInfo.poolTokensInTransaction > 0, "Min pool tokens to receive must be greater than 0");
     }
 
     /**
      * Validate pre pool data. Check pool is valid, token quantity is valid.
      *
      * @param _poolInfo               Struct containing pool information used in internal functions
-     * @param _poolTokensIn           Amount of tokens to exchange
      */
     function _validatePreExitPoolData(PoolInfo memory _poolInfo) internal view {
-      require(_poolInfo.poolTokens > 0, "Pool tokens to exchange must be greater than 0");
-      require(_poolInfo.poolTokensInFund > _poolInfo.poolTokens, "The fund does not have enough pool tokens");
+      require(_poolInfo.pool != address(0), "The pool addres is not valid");
+      require(_poolInfo.poolTokensInTransaction > 0, "Pool tokens to exchange must be greater than 0");
+      require(_poolInfo.poolTokensInFund > _poolInfo.poolTokensInTransaction, "The fund does not have enough pool tokens");
     }
 
     /**
@@ -283,33 +289,29 @@ abstract contract PoolIntegration is BaseIntegration, ReentrancyGuard {
     function _updateFundPositions(PoolInfo memory _poolInfo) internal {
       // balance pool individual component
       for (uint i = 0; i < _poolInfo.poolTokens.length; i++) {
-        uint256 newAmountReceiveTokens = _tradeInfo.preTradeReceiveTokenBalance.add(exchangedQuantity);
-        updateFundPosition(address(_poolInfo.fund), address(_poolInfo.poolTokens[i]), _poolInfo.poolTokens[i].balanceOf(_poolInfo.fund));
+        updateFundPosition(address(_poolInfo.fund), address(_poolInfo.poolTokens[i]), _poolInfo.poolTokens[i].balanceOf(address(_poolInfo.fund)));
       }
       // balance pool token
-      updateFundPosition(address(_poolInfo.fund), _poolInfo.pool, IERC20(_poolInfo.pool).balanaceOf(_poolInfo.fund));
+      updateFundPosition(address(_poolInfo.fund), _poolInfo.pool, IERC20(_poolInfo.pool).balanceOf(address(_poolInfo.fund)));
     }
 
     /**
      * Return join pool calldata which is already generated from the pool API
      *
-     * @param  _sourceToken              Address of source token to be sold
-     * @param  _destinationToken         Address of destination token to buy
-     * @param  _sourceQuantity           Amount of source token to sell
-     * @param  _minDestinationQuantity   Min amount of destination token to buy
-     * @param  _data                    Arbitrage bytes containing trade call data
+     * @param  _poolAddress              Address of the pool
+     * @param  _poolTokensOut            Amount of pool tokens to send
+     * @param  _tokensIn                 Addresses of tokens to send to the pool
+     * @param  _maxAmountsIn             Amounts of tokens to send to the pool
      *
      * @return address                   Target contract address
      * @return uint256                   Call value
      * @return bytes                     Trade calldata
      */
     function _getJoinPoolCalldata(
-      address _sourceToken,
-      address _destinationToken,
-      address _destinationAddress,
-      uint256 _sourceQuantity,
-      uint256 _minDestinationQuantity,
-      bytes memory _data
+      address _poolAddress,
+      uint256 _poolTokensOut,
+      address[] calldata _tokensIn,
+      uint256[] calldata _maxAmountsIn
     ) internal virtual view returns (address, uint256, bytes memory) {
       require(false, "This needs to be overriden");
     }
@@ -317,23 +319,20 @@ abstract contract PoolIntegration is BaseIntegration, ReentrancyGuard {
     /**
      * Return exit pool calldata which is already generated from the pool API
      *
-     * @param  _sourceToken              Address of source token to be sold
-     * @param  _destinationToken         Address of destination token to buy
-     * @param  _sourceQuantity           Amount of source token to sell
-     * @param  _minDestinationQuantity   Min amount of destination token to buy
-     * @param  _data                    Arbitrage bytes containing trade call data
+     * @param  _poolAddress              Address of the pool
+     * @param  _poolTokensIn             Amount of pool tokens to receive
+     * @param  _tokensOut                Addresses of tokens to receive
+     * @param  _minAmountsOut            Amounts of pool tokens to receive
      *
      * @return address                   Target contract address
      * @return uint256                   Call value
      * @return bytes                     Trade calldata
      */
     function _getExitPoolCalldata(
-      address _sourceToken,
-      address _destinationToken,
-      address _destinationAddress,
-      uint256 _sourceQuantity,
-      uint256 _minDestinationQuantity,
-      bytes memory _data
+      address _poolAddress,
+      uint256 _poolTokensIn,
+      address[] calldata _tokensOut,
+      uint256[] calldata _minAmountsOut
     ) internal virtual view returns (address, uint256, bytes memory) {
       require(false, "This needs to be overriden");
     }
