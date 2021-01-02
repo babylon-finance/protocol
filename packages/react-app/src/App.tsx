@@ -150,16 +150,13 @@ export default class App extends React.Component<AppProps, AppState> {
       const { web3 } = this.state;
       const chainId = await web3.eth.chainId();
       this.setState({ chainId, networkId });
-      // biz logic
+      // biz logic, maybe force a page refresh to avoid complicated rehydration
     });
   };
 
   render() {
-    const networkId = parseInt(process.env.REACT_APP_NETWORK_ID || '0')
-    const onMainnet = this.state.chainId === parseInt(
-      process.env.REACT_APP_CHAIN_ID || '0') &&
-      this.state.networkId === networkId
-
+    const networkId = parseInt(process.env.REACT_APP_NETWORK_ID || '0');
+    const onMainnet = this.state.chainId === parseInt(process.env.REACT_APP_CHAIN_ID || '0') && this.state.networkId === networkId;
     const shouldRenderFunds = (this.state.web3 && this.state.connected && onMainnet && this.state.provider);
 
     return (

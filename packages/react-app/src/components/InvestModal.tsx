@@ -78,7 +78,7 @@ function InvestModal({ provider, contractAddress, userAddress }: InvesModalProps
   };
 
   return (
-    <Box className="App" p={4}>
+    <Box className="InvestModel" p={4}>
       <Box>
         <StyledInvestButton onClick={openModal}>Invest</StyledInvestButton>
         <Modal isOpen={isOpen}>
