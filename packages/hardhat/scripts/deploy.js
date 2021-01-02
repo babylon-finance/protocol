@@ -2,6 +2,7 @@ const { ethers } = require("hardhat");
 const fs = require("fs");
 const chalk = require("chalk");
 const argsUtil = require("../utils/arguments.js");
+const { deployFolioFixture } = require("../test/fixtures/ControllerFixture");
 const addresses = require("../utils/addresses");
 
 async function deploy(name, _args) {
@@ -39,64 +40,7 @@ async function autoDeploy() {
 }
 
 async function main() {
-  const folioController = await deploy(
-    "FolioController",
-    argsUtil.readArgumentsFile("FolioController")
-  );
-  const fundValuer = await deploy("FundValuer", [folioController.address]);
-
-  const priceOracle = await deploy("PriceOracle", [
-    folioController.address,
-    addresses.compound.OpenOracle,
-    []
-  ]);
-
-  await folioController.editFundValuer(fundValuer.address);
-  await folioController.editPriceOracle(priceOracle.address);
-
-  const aaveI = await deploy("AaveIntegration", [
-    folioController.address,
-    ...argsUtil.readArgumentsFile("AaveIntegration")
-  ]);
-
-  const compoundI = await deploy("CompoundIntegration", [
-    folioController.address,
-    ...argsUtil.readArgumentsFile("CompoundIntegration")
-  ]);
-
-  await folioController.addIntegration("AaveIntegration", aaveI.address);
-  await folioController.addIntegration("CompundIntegration", compoundI.address);
-  await folioController.createFund(
-    [aaveI.address],
-    addresses.tokens.WETH,
-    addresses.tokens.WETH,
-    addresses.users.hardhat1,
-    addresses.users.hardhat1,
-    "Fund Number One",
-    "FNON",
-    ethers.utils.parseEther("1")
-  );
-  await folioController.createFund(
-    [compoundI.address],
-    addresses.tokens.WETH,
-    addresses.tokens.WETH,
-    addresses.users.hardhat1,
-    addresses.users.hardhat1,
-    "Fund Number TWO",
-    "FNTW",
-    ethers.utils.parseEther("1")
-  );
-  await folioController.createFund(
-    [aaveI.address, compoundI.address],
-    addresses.tokens.WETH,
-    addresses.tokens.WETH,
-    addresses.users.hardhat1,
-    addresses.users.hardhat1,
-    "Fund Number Three",
-    "FNTH",
-    ethers.utils.parseEther("10")
-  );
-
+  deployFolioFixture();
   console.log("📡 Deploy complete! \n");
 }
 
