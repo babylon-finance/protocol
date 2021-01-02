@@ -166,7 +166,8 @@ async function deployFolioFixture() {
     owner,
     signer1,
     signer2,
-    signer3
+    signer3,
+    contractsToPublish: [{ name: "FolioController", contract: folioController }]
   };
 }
 
