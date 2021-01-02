@@ -67,6 +67,16 @@ async function deployFolioFixture() {
     addresses.oneinch.exchange
   );
 
+  const BalancerIntegration = await ethers.getContractFactory(
+    "BalancerIntegration",
+    owner
+  );
+  const balancerIntegration = await BalancerIntegration.deploy(
+    folioController.address,
+    addresses.tokens.WETH,
+    addresses.balancer.factory
+  );
+
   // Adding integrations
   folioController.addIntegration(
     await aaveIntegration.getName(),
@@ -84,12 +94,17 @@ async function deployFolioFixture() {
     await oneInchTradeIntegration.getName(),
     oneInchTradeIntegration.address
   );
+  folioController.addIntegration(
+    await balancerIntegration.getName(),
+    balancerIntegration.address
+  );
 
   const integrationsList = [
     aaveIntegration,
     compoundIntegration,
     kyberTradeIntegration,
-    oneInchTradeIntegration
+    oneInchTradeIntegration,
+    balancerIntegration
   ];
 
   const integrationsAddressList = integrationsList.map(iter => iter.address);
@@ -154,7 +169,8 @@ async function deployFolioFixture() {
       aaveIntegration,
       compoundIntegration,
       kyberTradeIntegration,
-      oneInchTradeIntegration
+      oneInchTradeIntegration,
+      balancerIntegration
     },
     funds: {
       one: fund,
