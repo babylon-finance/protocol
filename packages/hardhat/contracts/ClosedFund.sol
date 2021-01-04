@@ -427,6 +427,11 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
         );
     }
 
+    function getContributor(address _contributor) public view returns (uint256, uint256, uint256) {
+        Contributor memory contributor = contributors[_contributor];
+        return (contributor.totalDeposit, contributor.tokensReceived, contributor.timestamp);
+    }
+
     /* ============ External Getter Functions ============ */
 
     function getPremiumPercentage() external view returns (uint256) {

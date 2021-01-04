@@ -1,7 +1,10 @@
 import FundCardChart from "./FundCardChart";
-import InvestModal from "./InvestModal";
+import DepositModal from "./DepositModal";
+import WithdrawModal from "./WithdrawModal";
 
 import { loadContractFromNameAndAddress } from "../hooks/ContractLoader";
+
+import { formatEther } from "@ethersproject/units";
 import { usePoller } from "eth-hooks";
 import React, { useState, useEffect } from "react";
 import styled from "styled-components";
@@ -13,31 +16,79 @@ interface FundCardProps {
   userAddress: string
 }
 
-const contractName = "BaseFund";
+interface Contributor {
+  totalDeposit: number
+  tokensReceived: number
+  lastDeposit: number
+}
+
+const contractName = "ClosedFund";
 
 const FundCard = ({ provider, contractAddress, userAddress }: FundCardProps) => {
-  const [isLoaded, setIsLoaded] = useState("false");
+  const [loading, setLoading] = useState("true");
   const [contract, setContract] = useState();
   const [fundName, setFundName] = useState("");
+  const [fundSymbol, setFundSymbol] = useState("");
+  const [contributor, setContributor] = useState<Contributor | undefined>(undefined);
+  const [isFundManager, setIsFundManager] = useState(false);
+  const [hasPosition, setHasPosition] = useState(false);
+  const [fundActive, setFundActive] = useState(false);
+  const [fundIntegrations, setFundIntegrations] = useState<string[]>([]);
+
+  const getFundMetaPoller = async () => {
+    setFundName(await contract.name());
+  };
 
   useEffect(() => {
     async function getContract() {
       setContract(await loadContractFromNameAndAddress(contractAddress, contractName, provider));
     }
+
+    async function getIsFundManager() {
+      setIsFundManager(await contract.manager() === userAddress);
+    }
+
+    async function getMeta() {
+      setFundName(await contract.name());
+      setFundActive(await contract.active());
+      setFundIntegrations(await contract.getIntegrations());
+
+      const maybeContributor = await contract.getContributor(userAddress);
+
+      if (maybeContributor) {
+        const totalDeposit = parseInt(formatEther(maybeContributor[0]));
+
+        setContributor({
+          totalDeposit: totalDeposit,
+          tokensReceived: maybeContributor[1].toNumber(),
+          lastDeposit: maybeContributor[2].toNumber()
+        });
+
+        if (totalDeposit > 0) {
+          setHasPosition(true);
+        }
+      }
+    }
+
     if (!contract) {
       getContract();
     }
-  })
+
+    if (contract) {
+      getMeta();
+      getIsFundManager();
+      setLoading("false");
+    }
+  }, [contract, contractAddress, provider, userAddress]);
 
   usePoller(async () => {
     if (contract) {
-      setIsLoaded("true");
-      setFundName(await contract.name());
+      getFundMetaPoller();
     }
   }, 1000);
 
   return (
-    <FundCardWrapper loading={isLoaded}>
+    <FundCardWrapper loading={loading}>
       <FundCardHeader>
         <FundTokenSymbol>ABCD</FundTokenSymbol>
         {fundName}
@@ -58,9 +109,16 @@ const FundCard = ({ provider, contractAddress, userAddress }: FundCardProps) => 
         <FundPerformanceAmount>Invested: 300 ETH</FundPerformanceAmount>
         <FundPerformanceAmount>Participants: 300</FundPerformanceAmount>
       </FundPerformanceBlock>
-      <FundCardInvestButtonWrapper>
-        <InvestModal provider={provider} contractAddress={contractAddress} userAddress={userAddress} />
-      </FundCardInvestButtonWrapper>
+      <FundCardButtonRow>
+        <FundCardActionButton>
+          <DepositModal active={fundActive} provider={provider} contractAddress={contractAddress} userAddress={userAddress} />
+        </FundCardActionButton>
+        {hasPosition && (
+          <FundCardActionButton>
+            <WithdrawModal active={fundActive} provider={provider} contractAddress={contractAddress} userAddress={userAddress} contributor={contributor} />
+          </FundCardActionButton>
+        )}
+      </FundCardButtonRow>
     </FundCardWrapper>
   );
 }
@@ -128,7 +186,14 @@ const FundPerfomanceHistogram = styled.div`
   background: white;
 `
 
-const FundCardInvestButtonWrapper = styled.div`
+const FundCardActionButton = styled.div`
+  flex: 1;
+  flex-shrink: 0
+`
+
+const FundCardButtonRow = styled.div`
+  margin-top: 25px;
+  display: flex;
 `
 
 export default FundCard;

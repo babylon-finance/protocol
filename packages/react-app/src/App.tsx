@@ -92,10 +92,6 @@ export default class App extends React.Component<AppProps, AppState> {
     }
   }
 
-  renderInvestModal = (props: any) => {
-    console.log(props);
-  }
-
   onConnect = async () => {
     const provider = await this.web3Modal.connect();
     const web3: any = initWeb3(provider);
@@ -180,11 +176,6 @@ export default class App extends React.Component<AppProps, AppState> {
                 flexFlow: 'row wrap',
                 margin: '10px 0'
               }}>
-                {this.state.web3 && (
-                  <MainLink onClick={this.resetApp} target="_blank">
-                    Disconnect
-                  </MainLink>
-                )}
               </div>
               {this.state.connected && !onMainnet && (
                 <Alert message={`You are on a different network. Please connect your wallet to the ${networkId === 1 ? 'mainnet' : 'network with id ' + networkId}`} type="warning" />
@@ -197,6 +188,11 @@ export default class App extends React.Component<AppProps, AppState> {
               {shouldRenderFunds && (
                 <div>
                   <Alert message={`Wallet Connected: ${this.state.address}`} type="warning" />
+                  {this.state.web3 && (
+                    <MainLink onClick={this.resetApp} target="_blank">
+                      Disconnect
+                    </MainLink>
+                  )}
                   <FundCardRowWrapper>
                     <FundCardRow
                       provider={this.state.provider}
