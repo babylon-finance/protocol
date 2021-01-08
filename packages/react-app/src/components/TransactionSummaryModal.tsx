@@ -19,46 +19,49 @@ import { useEffect } from 'react';
 
 interface TxSummaryProps {
   submitCallback: any
-  showModal: boolean
+  closeCallback: any
+  isOpen: boolean
   toAddress: string
-  tokensAfterTx: number
   fromAddress: string
   ethToReceive: number
   estGasPrice: string
   tokenSymbol: string
   headerText: string
+  tokenBalance: number
+  tokensToBurn: number
 }
 
 function TransactionSummaryModal({
-  showModal,
+  isOpen,
   toAddress,
   fromAddress,
-  tokensAfterTx,
+  tokenBalance,
+  tokensToBurn,
   ethToReceive,
   estGasPrice,
   tokenSymbol,
   submitCallback,
+  closeCallback,
   headerText
 }: TxSummaryProps) {
-  const [isOpen, setIsOpen] = useState(false);
+  const [showModal, setShowModal] = useState(isOpen);
 
   useEffect(() => {
-    setIsOpen(showModal);
-  }, [showModal]);
+    setShowModal(isOpen);
+  }, [isOpen]);
 
   const closeModal = e => {
     e.preventDefault();
-    setIsOpen(false);
+    closeCallback(e);
   };
 
   const handleSubmit = e => {
     submitCallback(e);
-    setIsOpen(false);
   }
 
   return (
     <Box className="TransactionSummaryModal">
-      <Modal isOpen={isOpen}>
+      <Modal isOpen={showModal}>
         <Card borderRadius={1} p={0}>
           <Flex
             justifyContent="space-between"
@@ -178,7 +181,7 @@ function TransactionSummaryModal({
                     color="near-black"
                     fontWeight="bold"
                   >
-                    Token Balance
+                    Updated Balance
                     </Text>
                   <Flex
                     alignItems={["center", "flex-end"]}
@@ -190,10 +193,10 @@ function TransactionSummaryModal({
                       fontWeight="bold"
                       lineHeight={"1em"}
                     >
-                      {tokensAfterTx} {tokenSymbol}
+                      {(tokenBalance - tokensToBurn)} {tokenSymbol}
                     </Text>
                     <Text color="mid-gray" fontSize={1}>
-                      -1
+                      -{tokensToBurn}
                     </Text>
                   </Flex>
                 </Flex>

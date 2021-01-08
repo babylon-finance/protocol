@@ -23,6 +23,7 @@ interface Contracts {
   IERC20: any
 }
 
+// TODO(tylerm): Move these under a const file that we cna reuse
 const fundContractName = "ClosedFund";
 const tokenContractName = "IERC20";
 
@@ -32,7 +33,7 @@ function WithdrawModal({ provider, contractAddress, userAddress, active, contrib
   const [withdrawAmount, setWithdrawAmount] = useState<number>(0);
   const [formValidated, setFormaValidated] = useState<boolean>(false);
   const [contracts, setContracts] = useState<Contracts | undefined>(undefined);
-  const [tokenBalance, setTokenBalance] = useState<number | undefined>(undefined);
+  const [tokenBalance, setTokenBalance] = useState<number>(0);
   const [tokenSymbol, setTokenSymbol] = useState<string | undefined>(undefined);
 
   const estGasPrice = useGasPrice("fast");
@@ -44,7 +45,13 @@ function WithdrawModal({ provider, contractAddress, userAddress, active, contrib
     setIsOpen(false);
   };
 
+  const handleCloseSummary = e => {
+    e.preventDefault();
+    setShowSummary(false);
+  };
+
   const handleSubmit = async e => {
+    setShowSummary(false);
     if (contracts && tx && (withdrawAmount > 0)) {
       try {
         const result = await tx(
@@ -72,16 +79,8 @@ function WithdrawModal({ provider, contractAddress, userAddress, active, contrib
     setIsOpen(false);
   }
 
-  const getTokensAfterBurn = () => {
-    if (tokenBalance && withdrawAmount) {
-      return tokenBalance - withdrawAmount;
-    } else {
-      return 0;
-    }
-  }
-
   const handleInputChange = e => {
-    setWithdrawAmount(e.target.value);
+    setWithdrawAmount(parseInt(e.target.value));
   };
 
   const buttonText = () => {
@@ -100,8 +99,6 @@ function WithdrawModal({ provider, contractAddress, userAddress, active, contrib
     }
   };
 
-  // The math here is wrong. I think we need to grab the "available amount to withdraw" from somwhere else. For now
-  // this is just PoC to experience simple withdrawl flow.
   const validateWithdrawForm = () => {
     if (tokenBalance && withdrawAmount <= tokenBalance && withdrawAmount > 0) {
       setFormaValidated(true);
@@ -162,7 +159,7 @@ function WithdrawModal({ provider, contractAddress, userAddress, active, contrib
               )}
               <Form onSubmit={handleShowSummary} validated={formValidated}>
                 <Field label="Withdrawl Amount" width={1}>
-                  <Form.Input onChange={handleInputChange} type="number" required placeholder="0" value={withdrawAmount} />
+                  <Form.Input onChange={handleInputChange} type="number" required placeholder="" value={withdrawAmount} />
                 </Field>
                 <Button type="submit" disabled={!formValidated}>Preview Withdrawl</Button>
               </Form>
@@ -173,8 +170,10 @@ function WithdrawModal({ provider, contractAddress, userAddress, active, contrib
           <TransactionSummaryModal
             headerText={"Withdrawl Preview"}
             submitCallback={handleSubmit}
-            showModal={showSummary}
-            tokensAfterTx={getTokensAfterBurn()}
+            closeCallback={handleCloseSummary}
+            isOpen={showSummary}
+            tokenBalance={tokenBalance}
+            tokensToBurn={withdrawAmount}
             toAddress={userAddress}
             fromAddress={contracts.ClosedFund.address}
             ethToReceive={withdrawAmount}
