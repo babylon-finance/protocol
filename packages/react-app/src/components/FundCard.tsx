@@ -5,10 +5,12 @@ import WithdrawModal from "./WithdrawModal";
 import { loadContractFromNameAndAddress } from "../hooks/ContractLoader";
 
 import { formatEther } from "@ethersproject/units";
+import BigNumber from "@ethersproject/bignumber";
 import { usePoller } from "eth-hooks";
 import React, { useState, useEffect } from "react";
 import styled from "styled-components";
 import { Card } from 'rimble-ui';
+import contracts from "../contracts/contracts";
 
 interface FundCardProps {
   provider: any
@@ -17,74 +19,100 @@ interface FundCardProps {
 }
 
 interface Contributor {
-  totalDeposit: number
+  totalDeposit: any
   tokensReceived: number
   lastDeposit: number
 }
 
-const contractName = "ClosedFund";
+interface Contracts {
+  ClosedFund: any
+  IERC20: any
+}
+
+// TODO(tylerm): Move these under a const file that we cna reuse
+const fundContractName = "ClosedFund";
+const tokenContractName = "IERC20";
 
 const FundCard = ({ provider, contractAddress, userAddress }: FundCardProps) => {
   const [loading, setLoading] = useState("true");
-  const [contract, setContract] = useState();
+  const [contracts, setContracts] = useState<Contracts | undefined>(undefined);
   const [fundName, setFundName] = useState("");
   const [contributor, setContributor] = useState<Contributor | undefined>(undefined);
   const [isFundManager, setIsFundManager] = useState(false);
   const [hasPosition, setHasPosition] = useState(false);
   const [fundActive, setFundActive] = useState(false);
   const [fundIntegrations, setFundIntegrations] = useState<string[]>([]);
+  const [tokenBalance, setTokenBalance] = useState<number>(0);
 
   const getFundMetaPoller = async () => {
-    setFundName(await contract.name());
+    let latestBalance;
+    if (contracts) {
+      //
+      latestBalance = await contracts.IERC20.balanceOf(userAddress);
+    }
+    if (latestBalance) {
+      setHasPosition(latestBalance > 0);
+    }
   };
 
   useEffect(() => {
-    async function getContract() {
-      setContract(await loadContractFromNameAndAddress(contractAddress, contractName, provider));
+    async function getContracts() {
+      const fund = await loadContractFromNameAndAddress(contractAddress, fundContractName, provider);
+      const token = await loadContractFromNameAndAddress(contractAddress, tokenContractName, provider);
+      setContracts({ ClosedFund: fund, IERC20: token });
+      if (token) {
+        setTokenBalance(await token.balanceOf(userAddress));
+      }
+    }
+
+    if (!contracts) {
+      getContracts();
     }
 
     async function getIsFundManager() {
-      setIsFundManager(await contract.manager() === userAddress);
+      if (contracts) {
+        setIsFundManager(await contracts.ClosedFund.manager() === userAddress);
+      }
     }
 
     async function getMeta() {
-      setFundName(await contract.name());
-      setFundActive(await contract.active());
-      setFundIntegrations(await contract.getIntegrations());
+      if (contracts) {
+        setFundName(await contracts.ClosedFund.name());
+        setFundActive(await contracts.ClosedFund.active());
+        setFundIntegrations(await contracts.ClosedFund.getIntegrations());
 
-      const maybeContributor = await contract.getContributor(userAddress);
+        const maybeContributor = await contracts.ClosedFund.getContributor(userAddress);
 
-      if (maybeContributor) {
-        const totalDeposit = parseInt(formatEther(maybeContributor[0]));
+        if (maybeContributor) {
+          const totalDeposit = maybeContributor[0];
 
-        setContributor({
-          totalDeposit: totalDeposit,
-          tokensReceived: maybeContributor[1].toNumber(),
-          lastDeposit: maybeContributor[2].toNumber()
-        });
+          setContributor({
+            totalDeposit: totalDeposit,
+            tokensReceived: maybeContributor[1].toNumber(),
+            lastDeposit: maybeContributor[2].toNumber()
+          });
 
-        if (totalDeposit > 0) {
-          setHasPosition(true);
+          if (tokenBalance > 0) {
+            setHasPosition(true);
+          }
         }
       }
     }
 
-    if (!contract) {
-      getContract();
+    if (!contracts) {
+      getContracts();
     }
 
-    if (contract) {
-      getMeta();
-      getIsFundManager();
-      setLoading("false");
-    }
-  }, [contract, contractAddress, provider, userAddress]);
+    getMeta();
+    getIsFundManager();
+    setLoading("false");
+  }, [contracts, contractAddress, provider, userAddress, tokenBalance]);
 
   usePoller(async () => {
-    if (contract) {
+    if (contracts) {
       getFundMetaPoller();
     }
-  }, 1000);
+  }, 500);
 
   return (
     <FundCardWrapper loading={loading}>

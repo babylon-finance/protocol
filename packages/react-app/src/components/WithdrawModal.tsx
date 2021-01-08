@@ -5,6 +5,7 @@ import useGasPrice from "../hooks/GasPrice";
 import { loadContractFromNameAndAddress } from "../hooks/ContractLoader";
 
 import { formatEther } from "@ethersproject/units";
+import { usePoller } from "eth-hooks";
 import React, { useState, useEffect } from "react";
 import styled from "styled-components";
 import { notification } from "antd";
@@ -39,6 +40,16 @@ function WithdrawModal({ provider, contractAddress, userAddress, active, contrib
   const estGasPrice = useGasPrice("fast");
   const tx = Transactor(provider, estGasPrice);
 
+  const getFundMetaPoller = async () => {
+    let tokenBalance;
+    if (contracts) {
+      tokenBalance = await contracts.IERC20.balanceOf(userAddress);
+    }
+    if (tokenBalance) {
+      setTokenBalance(tokenBalance);
+    }
+  };
+
   const handleShowSummary = e => {
     e.preventDefault();
     setShowSummary(true);
@@ -67,6 +78,7 @@ function WithdrawModal({ provider, contractAddress, userAddress, active, contrib
             description:
               "Your withdraw transaction has been submitted.",
           });
+          setWithdrawAmount(0);
         }
       } catch (err) {
         notification.error({
@@ -106,6 +118,12 @@ function WithdrawModal({ provider, contractAddress, userAddress, active, contrib
       setFormaValidated(false);
     }
   };
+
+  usePoller(async () => {
+    if (contracts) {
+      getFundMetaPoller();
+    }
+  }, 500);
 
   useEffect(() => {
     async function getContracts() {
@@ -159,7 +177,7 @@ function WithdrawModal({ provider, contractAddress, userAddress, active, contrib
               )}
               <Form onSubmit={handleShowSummary} validated={formValidated}>
                 <Field label="Withdrawl Amount" width={1}>
-                  <Form.Input onChange={handleInputChange} type="number" required placeholder="" value={withdrawAmount} />
+                  <Form.Input onChange={handleInputChange} type="number" required value={withdrawAmount} />
                 </Field>
                 <Button type="submit" disabled={!formValidated}>Preview Withdrawl</Button>
               </Form>
