@@ -12,11 +12,12 @@ interface InvesModalProps {
   provider: any
   contractAddress: string
   userAddress: string
+  active: boolean
 }
 
 const contractName = "ClosedFund";
 
-function InvestModal({ provider, contractAddress, userAddress }: InvesModalProps) {
+function InvestModal({ provider, contractAddress, userAddress, active }: InvesModalProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [depositAmount, setDepositAmount] = useState(0);
   const [contract, setContract] = useState();
@@ -38,7 +39,9 @@ function InvestModal({ provider, contractAddress, userAddress }: InvesModalProps
 
   const openModal = e => {
     e.preventDefault();
-    setIsOpen(true);
+    if (active) {
+      setIsOpen(true);
+    }
   };
 
   const handleSubmitDeposit = async e => {
@@ -59,7 +62,7 @@ function InvestModal({ provider, contractAddress, userAddress }: InvesModalProps
           notification.success({
             message: "Transaction Sent",
             description:
-              "Your deposit transaction has been sent.",
+              "Your deposit transaction has been submitted.",
           });
         }
       } catch (err) {
@@ -77,10 +80,14 @@ function InvestModal({ provider, contractAddress, userAddress }: InvesModalProps
     setDepositAmount(e.target.value);
   };
 
+  const investButtonText = () => {
+    return active === true ? "Deposit" : "Inactive";
+  };
+
   return (
-    <Box className="InvestModel" p={4}>
+    <Box className="InvestModel" p={1}>
       <Box>
-        <StyledInvestButton onClick={openModal}>Invest</StyledInvestButton>
+        <StyledInvestButton onClick={openModal} disabled={!active}>{investButtonText()}</StyledInvestButton>
         <Modal isOpen={isOpen}>
           <Card width={"550px"} p={0}>
             <Button.Text
@@ -111,7 +118,7 @@ function InvestModal({ provider, contractAddress, userAddress }: InvesModalProps
                 <Field label="Deposit Amount" width={1}>
                   <Form.Input onChange={handleInputChange} type="number" required placeholder="0" value={depositAmount} />
                 </Field>
-                <Button type="submit">Deposit</Button>
+                <Button type="submit">Preview Deposit</Button>
               </Form>
             </Box>
           </Card>
