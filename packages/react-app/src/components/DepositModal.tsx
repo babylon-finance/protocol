@@ -39,7 +39,9 @@ function InvestModal({ provider, contractAddress, userAddress, active }: InvesMo
 
   const openModal = e => {
     e.preventDefault();
-    setIsOpen(true);
+    if (active) {
+      setIsOpen(true);
+    }
   };
 
   const handleSubmitDeposit = async e => {

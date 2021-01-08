@@ -1,8 +1,10 @@
+import TransactionSummaryModal from "./TransactionSummaryModal";
+
 import { Transactor } from "../helpers";
 import useGasPrice from "../hooks/GasPrice";
 import { loadContractFromNameAndAddress } from "../hooks/ContractLoader";
 
-import { parseEther, formatEther } from "@ethersproject/units";
+import { formatEther } from "@ethersproject/units";
 import React, { useState, useEffect } from "react";
 import styled from "styled-components";
 import { notification } from "antd";
@@ -16,21 +18,37 @@ interface InvesModalProps {
   contributor: any
 }
 
-const contractName = "ClosedFund";
+interface Contracts {
+  ClosedFund: any
+  IERC20: any
+}
+
+const fundContractName = "ClosedFund";
+const tokenContractName = "IERC20";
 
 function WithdrawModal({ provider, contractAddress, userAddress, active, contributor }: InvesModalProps) {
-  const [isOpen, setIsOpen] = useState(false);
-  const [withdrawAmount, setWithdrawAmount] = useState(0);
-  const [formValidated, setFormaValidated] = useState(false);
-  const [contract, setContract] = useState();
-  const tx = Transactor(provider, useGasPrice("fast"));
+  const [isOpen, setIsOpen] = useState<boolean>(false);
+  const [showSummary, setShowSummary] = useState<boolean>(false);
+  const [withdrawAmount, setWithdrawAmount] = useState<number>(0);
+  const [formValidated, setFormaValidated] = useState<boolean>(false);
+  const [contracts, setContracts] = useState<Contracts | undefined>(undefined);
+  const [tokenBalance, setTokenBalance] = useState<number | undefined>(undefined);
+  const [tokenSymbol, setTokenSymbol] = useState<string | undefined>(undefined);
+
+  const estGasPrice = useGasPrice("fast");
+  const tx = Transactor(provider, estGasPrice);
+
+  const handleShowSummary = e => {
+    e.preventDefault();
+    setShowSummary(true);
+    setIsOpen(false);
+  };
 
   const handleSubmit = async e => {
-    e.preventDefault();
-    if (tx && (withdrawAmount > 0)) {
+    if (contracts && tx && (withdrawAmount > 0)) {
       try {
         const result = await tx(
-          contract.withdraw(
+          contracts.ClosedFund.withdraw(
             withdrawAmount,
             1,
             userAddress,
@@ -54,6 +72,14 @@ function WithdrawModal({ provider, contractAddress, userAddress, active, contrib
     setIsOpen(false);
   }
 
+  const getTokensAfterBurn = () => {
+    if (tokenBalance && withdrawAmount) {
+      return tokenBalance - withdrawAmount;
+    } else {
+      return 0;
+    }
+  }
+
   const handleInputChange = e => {
     setWithdrawAmount(e.target.value);
   };
@@ -69,13 +95,15 @@ function WithdrawModal({ provider, contractAddress, userAddress, active, contrib
 
   const openModal = e => {
     e.preventDefault();
-    setIsOpen(true);
+    if (active) {
+      setIsOpen(true);
+    }
   };
 
   // The math here is wrong. I think we need to grab the "available amount to withdraw" from somwhere else. For now
   // this is just PoC to experience simple withdrawl flow.
   const validateWithdrawForm = () => {
-    if (withdrawAmount <= contributor.totalDeposit && (withdrawAmount > 0)) {
+    if (tokenBalance && withdrawAmount <= tokenBalance && withdrawAmount > 0) {
       setFormaValidated(true);
     } else {
       setFormaValidated(false);
@@ -83,11 +111,16 @@ function WithdrawModal({ provider, contractAddress, userAddress, active, contrib
   };
 
   useEffect(() => {
-    async function getContract() {
-      setContract(await loadContractFromNameAndAddress(contractAddress, contractName, provider));
+    async function getContracts() {
+      const fund = await loadContractFromNameAndAddress(contractAddress, fundContractName, provider);
+      const token = await loadContractFromNameAndAddress(contractAddress, tokenContractName, provider);
+      setContracts({ ClosedFund: fund, IERC20: token });
+      if (token) {
+        setTokenBalance(await token.balanceOf(userAddress));
+      }
     }
-    if (!contract) {
-      getContract();
+    if (!contracts) {
+      getContracts();
     }
     validateWithdrawForm();
   });
@@ -122,10 +155,12 @@ function WithdrawModal({ provider, contractAddress, userAddress, active, contrib
                 }}
               />
               <EthAddress mb={3} address={userAddress} />
-              <Pill color="green">
-                Supplied: {contributor.totalDeposit}
-              </Pill>
-              <Form onSubmit={handleSubmit} validated={formValidated}>
+              {tokenBalance && (
+                <Pill color="green">
+                  Available: {tokenBalance.toString()}
+                </Pill>
+              )}
+              <Form onSubmit={handleShowSummary} validated={formValidated}>
                 <Field label="Withdrawl Amount" width={1}>
                   <Form.Input onChange={handleInputChange} type="number" required placeholder="0" value={withdrawAmount} />
                 </Field>
@@ -134,6 +169,18 @@ function WithdrawModal({ provider, contractAddress, userAddress, active, contrib
             </Box>
           </Card>
         </Modal>
+        {contracts && estGasPrice && (
+          <TransactionSummaryModal
+            headerText={"Withdrawl Preview"}
+            submitCallback={handleSubmit}
+            showModal={showSummary}
+            tokensAfterTx={getTokensAfterBurn()}
+            toAddress={userAddress}
+            fromAddress={contracts.ClosedFund.address}
+            ethToReceive={withdrawAmount}
+            estGasPrice={formatEther(estGasPrice)}
+            tokenSymbol="TOKEN" />
+        )}
       </Box>
     </Box>
   );

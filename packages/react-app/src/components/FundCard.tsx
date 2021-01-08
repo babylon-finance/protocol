@@ -28,7 +28,6 @@ const FundCard = ({ provider, contractAddress, userAddress }: FundCardProps) => 
   const [loading, setLoading] = useState("true");
   const [contract, setContract] = useState();
   const [fundName, setFundName] = useState("");
-  const [fundSymbol, setFundSymbol] = useState("");
   const [contributor, setContributor] = useState<Contributor | undefined>(undefined);
   const [isFundManager, setIsFundManager] = useState(false);
   const [hasPosition, setHasPosition] = useState(false);
@@ -111,11 +110,20 @@ const FundCard = ({ provider, contractAddress, userAddress }: FundCardProps) => 
       </FundPerformanceBlock>
       <FundCardButtonRow>
         <FundCardActionButton>
-          <DepositModal active={fundActive} provider={provider} contractAddress={contractAddress} userAddress={userAddress} />
+          <DepositModal
+            active={fundActive}
+            provider={provider}
+            contractAddress={contractAddress}
+            userAddress={userAddress} />
         </FundCardActionButton>
         {hasPosition && (
           <FundCardActionButton>
-            <WithdrawModal active={fundActive} provider={provider} contractAddress={contractAddress} userAddress={userAddress} contributor={contributor} />
+            <WithdrawModal
+              active={fundActive}
+              provider={provider}
+              contractAddress={contractAddress}
+              userAddress={userAddress}
+              contributor={contributor} />
           </FundCardActionButton>
         )}
       </FundCardButtonRow>
