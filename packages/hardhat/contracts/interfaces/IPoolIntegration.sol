@@ -25,7 +25,7 @@ import { IIntegration } from "./IIntegration.sol";
  *
  * Interface for liquiditypool protocol integrations
  */
-interface IPoolIntegraion is IIntegration {
+interface IPoolIntegration is IIntegration {
 
 
   function joinPool(address _poolAddress, uint256 _poolTokensOut, address[] calldata _tokensIn, uint256[] calldata _maxAmountsIn) external;

@@ -81,7 +81,7 @@ abstract contract PoolIntegration is BaseIntegration, ReentrancyGuard {
      * Joins a pool
      *
      * @param _poolAddress          Address of the pool token to join
-     * @param _poolTokensOut     Min amount of pool tokens to receive
+     * @param _poolTokensOut        Min amount of pool tokens to receive
      * @param _tokensIn             Array of token addresses to deposit
      * @param _maxAmountsIn         Array of max token quantities to pull out from the fund
      */
@@ -248,7 +248,7 @@ abstract contract PoolIntegration is BaseIntegration, ReentrancyGuard {
      * @param _poolInfo               Struct containing pool information used in internal functions
      */
     function _validatePreJoinPoolData(PoolInfo memory _poolInfo) internal view {
-      require(_poolInfo.pool != address(0), "The pool addres is not valid");
+      require(_isPool(_poolInfo.pool), "The pool addres is not valid");
       require(_poolInfo.poolTokensInTransaction > 0, "Min pool tokens to receive must be greater than 0");
     }
 
@@ -258,7 +258,7 @@ abstract contract PoolIntegration is BaseIntegration, ReentrancyGuard {
      * @param _poolInfo               Struct containing pool information used in internal functions
      */
     function _validatePreExitPoolData(PoolInfo memory _poolInfo) internal view {
-      require(_poolInfo.pool != address(0), "The pool addres is not valid");
+      require(_isPool(_poolInfo.pool), "The pool addres is not valid");
       require(_poolInfo.poolTokensInTransaction > 0, "Pool tokens to exchange must be greater than 0");
       require(_poolInfo.poolTokensInFund > _poolInfo.poolTokensInTransaction, "The fund does not have enough pool tokens");
     }
@@ -336,4 +336,9 @@ abstract contract PoolIntegration is BaseIntegration, ReentrancyGuard {
     ) internal virtual view returns (address, uint256, bytes memory) {
       require(false, "This needs to be overriden");
     }
+
+    function _isPool(address _poolAddress) view virtual internal returns (bool) {
+      require(false, "This needs to be overriden");
+    }
+
 }

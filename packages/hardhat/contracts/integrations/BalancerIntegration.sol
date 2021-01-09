@@ -61,11 +61,15 @@ contract BalancerIntegration is PoolIntegration {
   /* ============ External Functions ============ */
 
   function isPool(address _poolAddress) view override external returns (bool) {
-    return coreFactory.isBPool(_poolAddress);
+    return _isPool(_poolAddress);
   }
 
 
   /* ============ Internal Functions ============ */
+
+  function _isPool(address _poolAddress) view override internal returns (bool) {
+    return coreFactory.isBPool(_poolAddress);
+  }
 
   /**
    * Return join pool calldata which is already generated from the pool API

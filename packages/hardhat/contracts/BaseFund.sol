@@ -34,6 +34,7 @@ import { IWETH } from "./interfaces/external/weth/IWETH.sol";
 import { IStableDebtToken } from './interfaces/external/aave/IStableDebtToken.sol';
 import { IIntegration } from "./interfaces/IIntegration.sol";
 import { IBorrowIntegration } from "./interfaces/IBorrowIntegration.sol";
+import { IPoolIntegration } from "./interfaces/IPoolIntegration.sol";
 import { ITradeIntegration } from "./interfaces/ITradeIntegration.sol";
 import { IPriceOracle } from "./interfaces/IPriceOracle.sol";
 import { IFund } from "./interfaces/IFund.sol";
@@ -417,6 +418,17 @@ abstract contract BaseFund is ERC20 {
       _invoke(_target, _value, _data);
     }
 
+    /* ============ Trade Integration hooks ============ */
+
+    /**
+     * Function that calculates the price using the oracle and executes a trade.
+     * Note: Recommend to use the oracle offchain and call trade directly
+     * @param _integrationName        Name of the integration to call
+     * @param _sendToken              Token to exchange
+     * @param _sendQuantity           Amount of tokens to send
+     * @param _receiveToken           Token to receive
+     * @param _data                   Bytes call data
+     */
     function calculateMinAndTrade(
       string memory _integrationName,
       address _sendToken,
@@ -429,6 +441,16 @@ abstract contract BaseFund is ERC20 {
       _trade(_integrationName, _sendToken, _sendQuantity, _receiveToken, minReceiveQuantity, _data);
     }
 
+    /**
+     * Function that calculates the price using the oracle and executes a trade.
+     * Must call the exchange to get the price and pass minReceiveQuantity accordingly.
+     * @param _integrationName        Name of the integration to call
+     * @param _sendToken              Token to exchange
+     * @param _sendQuantity           Amount of tokens to send
+     * @param _receiveToken           Token to receive
+     * @param _minReceiveQuantity     Min amount of tokens to receive
+     * @param _data                   Bytes call data
+     */
     function trade(
       string memory _integrationName,
       address _sendToken,
@@ -439,6 +461,52 @@ abstract contract BaseFund is ERC20 {
     {
       return _trade(_integrationName, _sendToken, _sendQuantity, _receiveToken, _minReceiveQuantity, _data);
     }
+
+    /* ============ Pool Integration hooks ============ */
+
+    /**
+     * Joins a pool
+     *
+     * @param _integrationName      Integration to use
+     * @param _poolAddress          Address of the pool token to join
+     * @param _poolTokensOut        Min amount of pool tokens to receive
+     * @param _tokensIn             Array of token addresses to deposit
+     * @param _maxAmountsIn         Array of max token quantities to pull out from the fund
+     */
+    function joinPool(
+      string memory _integrationName,
+      address _poolAddress,
+      uint256 _poolTokensOut,
+      address[] calldata _tokensIn,
+      uint256[] calldata _maxAmountsIn
+    ) onlyManager external {
+      address poolIntegration = IFolioController(controller).getIntegrationByName(_integrationName);
+      _validateOnlyIntegration(poolIntegration);
+      IPoolIntegration(poolIntegration).joinPool(_poolAddress, _poolTokensOut, _tokensIn, _maxAmountsIn);
+    }
+
+    /**
+     * Exits a liquidity pool. Accrue protocol fee (if any)
+     *
+     * @param _integrationName      Integration to use
+     * @param _poolAddress          Address of the pool token to join
+     * @param _poolTokensIn         Pool tokens to exchange for the underlying tokens
+     * @param _tokensOut            Array of token addresses to withdraw
+     * @param _minAmountsOut        Array of min token quantities to receive from the pool
+     */
+    function exitPool(
+      string memory _integrationName,
+      address _poolAddress,
+      uint256 _poolTokensIn,
+      address[] calldata _tokensOut,
+      uint256[] calldata _minAmountsOut
+    ) external onlyManager {
+      address poolIntegration = IFolioController(controller).getIntegrationByName(_integrationName);
+      _validateOnlyIntegration(poolIntegration);
+      IPoolIntegration(poolIntegration).exitPool(_poolAddress, _poolTokensIn, _tokensOut, _minAmountsOut);
+    }
+
+    /* ============ Borrow Integration Hooks============ */
 
     function addAaveBorrowAllowanceIntegration(address _integration, address _asset, uint256 _quantity) external onlyManager {
       _validateOnlyIntegration(_integration);
