@@ -103,7 +103,7 @@ abstract contract PoolIntegration is BaseIntegration, ReentrancyGuard {
       // Approve spending of the tokens
       for (uint i = 0; i < _tokensIn.length; i++) {
         poolInfo.fund.invokeApprove(
-          _poolAddress,
+          _getSpender(_poolAddress),
           _tokensIn[i],
           _maxAmountsIn[i]
         );
@@ -184,11 +184,12 @@ abstract contract PoolIntegration is BaseIntegration, ReentrancyGuard {
      * @param _poolAddress                 Pool address to check
      * @return bool                        True if the address is a pool
      */
-    function isPool(address _poolAddress) view virtual external returns (bool) {
-      require(false, "This needs to be overriden");
-    }
+     function isPool(address _poolAddress) view external returns (bool) {
+       return _isPool(_poolAddress);
+     }
 
     /* ============ Internal Functions ============ */
+
 
     /**
      * Retrieve fee from controller and calculate total protocol fee and send from fund to protocol recipient
@@ -274,6 +275,7 @@ abstract contract PoolIntegration is BaseIntegration, ReentrancyGuard {
      */
     function _validatePostExitPoolData(PoolInfo memory _poolInfo) internal view {
       require(IERC20(_poolInfo.pool).balanceOf(address(_poolInfo.fund)) == _poolInfo.poolTokensInFund - _poolInfo.poolTokensInTransaction, "The fund did not return the pool tokens");
+      // TODO: validate individual tokens received
     }
 
     /**
@@ -334,6 +336,10 @@ abstract contract PoolIntegration is BaseIntegration, ReentrancyGuard {
 
     function _isPool(address _poolAddress) view virtual internal returns (bool) {
       require(false, "This needs to be overriden");
+    }
+
+    function _getSpender(address _poolAddress) view virtual internal returns (address) {
+      require(false, "This must be overriden");
     }
 
 }

@@ -23,7 +23,8 @@ import { PoolIntegration } from "./PoolIntegration.sol";
 import { ERC20 } from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import { SafeMath } from "@openzeppelin/contracts/math/SafeMath.sol";
 import { PreciseUnitMath } from "../lib/PreciseUnitMath.sol";
-import { IBFactory } from "../interfaces/external/balancer/IBFactory.sol";
+import { IUniswapV2Router } from "../interfaces/external/uniswap/IUniswapV2Router.sol";
+import { IUniswapV2Pair } from "../interfaces/external/uniswap/IUniswapV2Pair.sol";
 
 /**
  * @title BalancerIntegration
@@ -31,14 +32,15 @@ import { IBFactory } from "../interfaces/external/balancer/IBFactory.sol";
  *
  * Kyber protocol trade integration
  */
-contract BalancerIntegration is PoolIntegration {
+contract UniswapPoolIntegration is PoolIntegration {
   using SafeMath for uint256;
   using PreciseUnitMath for uint256;
 
   /* ============ State Variables ============ */
 
-  // Address of Kyber Network Proxy
-  IBFactory public coreFactory;
+  // Address of Uniswap V2 Router
+  IUniswapV2Router public uniRouter;
+  uint8 immutable MAX_DELTA_BLOCKS = 5;
 
 
   /* ============ Constructor ============ */
@@ -48,25 +50,24 @@ contract BalancerIntegration is PoolIntegration {
    *
    * @param _controller                   Address of the controller
    * @param _weth                         Address of the WETH ERC20
-   * @param _coreFactoryAddress           Address of Balancer core factory address
+   * @param _uniswapRouterAddress         Address of Uniswap router
    */
   constructor(
     address _controller,
     address _weth,
-    address _coreFactoryAddress
-  ) PoolIntegration("balancer", _weth, _controller) {
-    coreFactory = IBFactory(_coreFactoryAddress);
+    address _uniswapRouterAddress
+  ) PoolIntegration("uniswap_pool", _weth, _controller) {
+    uniRouter = IUniswapV2Router(_uniswapRouterAddress);
   }
-
 
   /* ============ Internal Functions ============ */
 
   function _isPool(address _poolAddress) view override internal returns (bool) {
-    return coreFactory.isBPool(_poolAddress);
+    return IUniswapV2Pair(_poolAddress).MINIMUM_LIQUIDITY() > 0;
   }
 
   function _getSpender(address _poolAddress) view override internal returns (address) {
-    return _poolAddress;
+    return address(uniRouter);
   }
 
   /**
@@ -88,13 +89,21 @@ contract BalancerIntegration is PoolIntegration {
     uint256[] calldata _maxAmountsIn
   ) internal override view returns (address, uint256, bytes memory) {
     // Encode method data for Fund to invoke
+    require(_tokensIn.length == 2, "Adding liquidity to a uniswap pool requires exactly two tokens");
+    require(_maxAmountsIn.length == 2, "Adding liquidity to a uniswap pool requires exactly two tokens");
     bytes memory methodData = abi.encodeWithSignature(
-      "joinPool(uint256,uint256[])",
-      _poolTokensOut,
-      _maxAmountsIn
+      "addLiquidity(address,address,uint256,uint256,uint256,uint256,address,uint256)",
+      _tokensIn[0],
+      _tokensIn[1],
+      _maxAmountsIn[0],
+      _maxAmountsIn[1],
+      _maxAmountsIn[0],
+      _maxAmountsIn[1],
+      _poolAddress,
+      block.timestamp + MAX_DELTA_BLOCKS
     );
 
-    return (_poolAddress, 0, methodData);
+    return (address(uniRouter), 0, methodData);
   }
 
   /**
@@ -115,11 +124,18 @@ contract BalancerIntegration is PoolIntegration {
     address[] calldata _tokensOut,
     uint256[] calldata _minAmountsOut
   ) internal override view returns (address, uint256, bytes memory) {
+    require(_tokensOut.length == 2, "Removing liquidity from a uniswap pool requires exactly two tokens");
+    require(_minAmountsOut.length == 2, "Removing liquidity from a uniswap pool requires exactly two tokens");
     // Encode method data for Fund to invoke
     bytes memory methodData = abi.encodeWithSignature(
-      "exitPool(uint256,uint256[])",
+      "removeLiquidity(address,address,uint256,uint256,uint256,address,uint256)",
+      _tokensOut[0],
+      _tokensOut[1],
       _poolTokensIn,
-      _minAmountsOut
+      _minAmountsOut[0],
+      _minAmountsOut[1],
+      _poolAddress,
+      block.timestamp + MAX_DELTA_BLOCKS
     );
 
     return (_poolAddress, 0, methodData);
