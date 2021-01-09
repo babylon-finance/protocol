@@ -31,6 +31,7 @@ import { AddressArrayUtils } from "./lib/AddressArrayUtils.sol";
 import { PreciseUnitMath } from "./lib/PreciseUnitMath.sol";
 import { IFolioController } from "./interfaces/IFolioController.sol";
 import { IWETH } from "./interfaces/external/weth/IWETH.sol";
+import { IBPool } from "./interfaces/external/balancer/IBPool.sol";
 import { IStableDebtToken } from './interfaces/external/aave/IStableDebtToken.sol';
 import { IIntegration } from "./interfaces/IIntegration.sol";
 import { IBorrowIntegration } from "./interfaces/IBorrowIntegration.sol";
@@ -417,6 +418,12 @@ abstract contract BaseFund is ERC20 {
     ) external onlyIntegration returns (bytes memory _returnValue) {
       _invoke(_target, _value, _data);
     }
+
+    // TODO: Remove
+    function callJoinPool(address _pool, uint256 tokensOut, uint256[] calldata params) external onlyIntegration {
+      IBPool(_pool).joinPool(tokensOut, params);
+    }
+
 
     /* ============ Trade Integration hooks ============ */
 

@@ -22,7 +22,10 @@ module.exports = {
     exchange: "0xC586BeF4a0992C495Cf22e1aeEE4E446CECDee0E"
   },
   balancer: {
-    factory: "0x9424B1412450D0f8Fc2255FAf6046b98213B76Bd"
+    factory: "0x9424B1412450D0f8Fc2255FAf6046b98213B76Bd",
+    pools: {
+      wethdai: "0x8b6e6e7b5b3801fed2cafd4b22b8a16c2f2db21a"
+    }
   },
   tokens: {
     DAI: "0x6B175474E89094C44Da98b954EedeAC495271d0F",
@@ -40,9 +43,9 @@ module.exports = {
     sUSD: "0x57Ab1ec28D129707052df4dF418D58a2D46d5f51"
   },
   holders: {
-    DAI: "0x0B30483057D6A7798378EdbA707d625116Ed7640",
+    DAI: "0x6B175474E89094C44Da98b954EedeAC495271d0F",
     sUSD: "0x49BE88F0fcC3A8393a59d3688480d7D253C37D2A",
-    WETH: "0xee2826453a4fd5afeb7ceffeef3ffa2320081268",
+    WETH: "0x2f0b23f53734252bda2277357e97e1517d6b042a",
     USDC: "0xD1669Ac6044269b59Fa12c5822439F609Ca54F41",
     ETH: "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE"
   },

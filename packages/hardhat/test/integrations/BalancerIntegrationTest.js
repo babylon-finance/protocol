@@ -3,7 +3,7 @@ const { waffle, ethers } = require("hardhat");
 const { impersonateAddress } = require("../../utils/rpc");
 const { deployFolioFixture } = require("../fixtures/ControllerFixture");
 const addresses = require("../../utils/addresses");
-const { EMPTY_BYTES } = require("../../utils/constants");
+const { ADDRESS_ZERO } = require("../../utils/constants");
 
 const { loadFixture } = waffle;
 
@@ -29,40 +29,64 @@ describe("BalancerIntegrationTest", function() {
 
   describe("Liquidity Pools", function() {
     let daiToken;
-    let usdcToken;
+    let wethToken;
     let whaleSigner;
-    const daiWhaleAddress = "0x6B175474E89094C44Da98b954EedeAC495271d0F";
+    let whaleWeth;
+    let daiWethPool;
 
     beforeEach(async () => {
-      whaleSigner = await impersonateAddress(daiWhaleAddress);
+      whaleSigner = await impersonateAddress(addresses.holders.DAI);
+      whaleWeth = await impersonateAddress(addresses.holders.WETH);
       daiToken = await ethers.getContractAt("IERC20", addresses.tokens.DAI);
-      usdcToken = await ethers.getContractAt("IERC20", addresses.tokens.USDC);
+      wethToken = await ethers.getContractAt("IERC20", addresses.tokens.WETH);
+      daiWethPool = await ethers.getContractAt(
+        "IBPool",
+        addresses.balancer.pools.wethdai
+      );
     });
 
-    it("trade dai to usdc", async function() {
+    it("check that a valid pool is valid", async function() {
+      expect(
+        await balancerIntegration.isPool(addresses.balancer.pools.wethdai)
+      ).to.equal(true);
+    });
+
+    it("check that an invalid pool is not valid", async function() {
+      expect(await balancerIntegration.isPool(ADDRESS_ZERO)).to.equal(false);
+    });
+
+    it("can enter the weth dai pool", async function() {
       expect(
         await daiToken
           .connect(whaleSigner)
-          .transfer(fund.address, ethers.utils.parseEther("100"), {
+          .transfer(fund.address, ethers.utils.parseEther("1000"), {
+            gasPrice: 0
+          })
+      );
+      expect(
+        await wethToken
+          .connect(whaleWeth)
+          .transfer(fund.address, ethers.utils.parseEther("10"), {
             gasPrice: 0
           })
       );
       expect(await daiToken.balanceOf(fund.address)).to.equal(
-        ethers.utils.parseEther("100")
+        ethers.utils.parseEther("1000")
       );
-      // await fund.trade(
-      //   "kyber",
-      //   addresses.tokens.DAI,
-      //   ethers.utils.parseEther("100"),
-      //   usdcToken.address,
-      //   ethers.utils.parseEther("90") / 10 ** 12,
-      //   EMPTY_BYTES,
-      //   { gasPrice: 0 }
-      // );
-      // expect(await daiToken.balanceOf(fund.address)).to.equal(0);
-      // expect(await usdcToken.balanceOf(fund.address)).to.be.gt(
-      //   ethers.utils.parseEther("97") / 10 ** 12
-      // );
+      expect(await wethToken.balanceOf(fund.address)).to.equal(
+        ethers.utils.parseEther("10.01")
+      );
+      await fund.joinPool(
+        "balancer",
+        addresses.balancer.pools.wethdai,
+        ethers.utils.parseEther("0.0000001"),
+        await daiWethPool.getFinalTokens(),
+        [ethers.utils.parseEther("1000"), ethers.utils.parseEther("10")],
+        { gasPrice: 0 }
+      );
+      expect(await daiWethPool.balanceOf(fund.address)).to.be.eq(
+        ethers.utils.parseEther("0.0000001")
+      );
     });
   });
 });
