@@ -154,6 +154,12 @@ abstract contract PoolIntegration is BaseIntegration, ReentrancyGuard {
         _minAmountsOut
       );
       _validatePreExitPoolData(poolInfo);
+      // Approve spending of the pool token
+      poolInfo.fund.invokeApprove(
+        _getSpender(_poolAddress),
+        _poolAddress,
+        _poolTokensIn
+      );
 
       (
           address targetPool,
@@ -265,7 +271,7 @@ abstract contract PoolIntegration is BaseIntegration, ReentrancyGuard {
      * @param _poolInfo               Struct containing pool information used in internal functions
      */
     function _validatePostJoinPoolData(PoolInfo memory _poolInfo) internal view {
-      require(_poolInfo.poolTokensInTransaction == (IERC20(_poolInfo.pool).balanceOf(address(_poolInfo.fund)) - _poolInfo.poolTokensInFund), "The fund did not receive the pool tokens");
+      require((IERC20(_poolInfo.pool).balanceOf(address(_poolInfo.fund)) > _poolInfo.poolTokensInFund), "The fund did not receive the pool tokens");
     }
 
     /**

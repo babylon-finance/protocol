@@ -95,6 +95,13 @@ describe("BalancerIntegrationTest", function() {
         [ethers.utils.parseEther("100"), ethers.utils.parseEther("0.1")],
         { gasPrice: 0 }
       );
+      expect(await daiWethPool.balanceOf(fund.address)).to.equal(0);
+      expect(await daiToken.balanceOf(fund.address)).to.be.gt(
+        ethers.utils.parseEther("999")
+      );
+      expect(await wethToken.balanceOf(fund.address)).to.be.gt(
+        ethers.utils.parseEther("10.00")
+      );
     });
   });
 });

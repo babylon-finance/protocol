@@ -97,9 +97,9 @@ contract UniswapPoolIntegration is PoolIntegration {
       _tokensIn[1],
       _maxAmountsIn[0],
       _maxAmountsIn[1],
-      _maxAmountsIn[0],
-      _maxAmountsIn[1],
-      _poolAddress,
+      _maxAmountsIn[0] - 10000000,
+      0, // TODO: tighten this up
+      msg.sender,
       block.timestamp + MAX_DELTA_BLOCKS
     );
 
@@ -134,10 +134,10 @@ contract UniswapPoolIntegration is PoolIntegration {
       _poolTokensIn,
       _minAmountsOut[0],
       _minAmountsOut[1],
-      _poolAddress,
+      msg.sender,
       block.timestamp + MAX_DELTA_BLOCKS
     );
 
-    return (_poolAddress, 0, methodData);
+    return (address(uniRouter), 0, methodData);
   }
 }
