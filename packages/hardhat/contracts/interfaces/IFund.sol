@@ -134,8 +134,6 @@ interface IFund is IERC20 {
         uint256[] calldata _minAmountsOut
       ) external;
 
-    function callJoinPool(address _pool, uint256 tokensOut, uint256[] calldata params) external;
-
     function positionMultiplier() external view returns (int256);
     // function getPositions() external view returns (Position[] memory);
     function getTotalInvestmentRealUnits(address _component) external view returns(int256);

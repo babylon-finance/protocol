@@ -419,12 +419,6 @@ abstract contract BaseFund is ERC20 {
       _invoke(_target, _value, _data);
     }
 
-    // TODO: Remove
-    function callJoinPool(address _pool, uint256 tokensOut, uint256[] calldata params) external onlyIntegration {
-      IBPool(_pool).joinPool(tokensOut, params);
-    }
-
-
     /* ============ Trade Integration hooks ============ */
 
     /**

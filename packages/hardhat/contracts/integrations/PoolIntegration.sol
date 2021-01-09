@@ -119,9 +119,7 @@ abstract contract PoolIntegration is BaseIntegration, ReentrancyGuard {
           _tokensIn,
           _maxAmountsIn
       );
-      // TODO: Figure out why the invoke doesn't work
-      poolInfo.fund.callJoinPool(targetPool, _poolTokensOut, _maxAmountsIn);
-      // poolInfo.fund.invokeFromIntegration(targetPool, callValue, methodData);
+      poolInfo.fund.invokeFromIntegration(targetPool, callValue, methodData);
       _validatePostJoinPoolData(poolInfo);
       _updateFundPositions(poolInfo, _tokensIn);
 
@@ -257,7 +255,7 @@ abstract contract PoolIntegration is BaseIntegration, ReentrancyGuard {
     function _validatePreExitPoolData(PoolInfo memory _poolInfo) internal view {
       require(_isPool(_poolInfo.pool), "The pool address is not valid");
       require(_poolInfo.poolTokensInTransaction > 0, "Pool tokens to exchange must be greater than 0");
-      require(_poolInfo.poolTokensInFund > _poolInfo.poolTokensInTransaction, "The fund does not have enough pool tokens");
+      require(_poolInfo.poolTokensInFund >= _poolInfo.poolTokensInTransaction, "The fund does not have enough pool tokens");
     }
 
     /**

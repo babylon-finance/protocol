@@ -91,7 +91,7 @@ contract BalancerIntegration is PoolIntegration {
   ) internal override view returns (address, uint256, bytes memory) {
     // Encode method data for Fund to invoke
     bytes memory methodData = abi.encodeWithSignature(
-      "joinPool(uint,uint[])",
+      "joinPool(uint256,uint256[])",
       _poolTokensOut,
       _maxAmountsIn
     );
@@ -119,7 +119,7 @@ contract BalancerIntegration is PoolIntegration {
   ) internal override view returns (address, uint256, bytes memory) {
     // Encode method data for Fund to invoke
     bytes memory methodData = abi.encodeWithSignature(
-      "exitPool(uint,uint[])",
+      "exitPool(uint256,uint256[])",
       _poolTokensIn,
       _minAmountsOut
     );
