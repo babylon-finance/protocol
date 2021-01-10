@@ -182,7 +182,6 @@ describe("AaveIntegration", function() {
         ethers.utils.formatEther(fundAccount.availableBorrowsETH)
       );
       // Call borrow
-
       await fund.borrow(
         "aave",
         usdcToken.address,

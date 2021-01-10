@@ -248,7 +248,6 @@ abstract contract BorrowIntegration is BaseIntegration, ReentrancyGuard {
       debtInfo.fund.invokeFromIntegration(targetAddressP, callValueP, methodDataP);
     }
 
-
     (
       address targetAddress,
       uint256 callValue,
@@ -257,14 +256,15 @@ abstract contract BorrowIntegration is BaseIntegration, ReentrancyGuard {
       asset,
       amount
     );
-
     // Invoke protocol specific call
     debtInfo.fund.invokeFromIntegration(targetAddress, callValue, methodData);
     // Validate borrow
     _validatePostBorrow(debtInfo);
+
     // Protocol Fee
     uint256 protocolFee = _accrueProtocolFee(debtInfo, asset, amount, BORROW_OPERATION_BORROW);
-    updateFundPosition(msg.sender, asset, 0 - amount);
+    //  TODO: Handle negative position
+    updateFundPosition(msg.sender, asset, amount);
 
     emit AmountBorrowed(
       debtInfo.fund,

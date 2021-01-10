@@ -144,7 +144,7 @@ contract AaveIntegration is BorrowIntegration {
     ) internal override view returns (address, uint256, bytes memory) {
       // Encode method data for Fund to invoke
       bytes memory methodData = abi.encodeWithSignature(
-        "withdraw(address,uint256,uint256,uint16,address)",
+        "borrow(address,uint256,uint256,uint16,address)",
         _asset,
         _amount,
         interestRateMode,
