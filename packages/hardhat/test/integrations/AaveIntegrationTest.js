@@ -9,13 +9,11 @@ const { loadFixture } = waffle;
 describe("AaveIntegration", function() {
   let system;
   let aaveIntegration;
-  let aaveAbi;
   let fund;
 
   beforeEach(async () => {
     system = await loadFixture(deployFolioFixture);
     aaveIntegration = system.integrations.aaveIntegration;
-    aaveAbi = aaveIntegration.interface;
     fund = system.funds.one;
   });
 
@@ -92,15 +90,14 @@ describe("AaveIntegration", function() {
       expect(await daiToken.balanceOf(fund.address)).to.not.equal(0);
 
       // Call deposit
-      const data = aaveAbi.encodeFunctionData(
-        aaveIntegration.interface.functions[
-          "depositCollateral(address,uint256)"
-        ],
-        [daiToken.address, ethers.utils.parseEther("10")]
+      await fund.depositCollateral(
+        "aave",
+        daiToken.address,
+        ethers.utils.parseEther("10"),
+        {
+          gasPrice: 0
+        }
       );
-      await fund.callIntegration(aaveIntegration.address, 0, data, {
-        gasPrice: 0
-      });
       expect(await daiToken.balanceOf(system.owner.address)).to.equal(0);
       // await printUserAccount(daiToken.address);
       const fundAccount = await lendingPool.getUserAccountData(fund.address);
@@ -165,30 +162,16 @@ describe("AaveIntegration", function() {
       expect(await daiToken.balanceOf(fund.address)).to.equal(
         ethers.utils.parseEther("1000")
       );
-      // Add allowance to the integration
-      fund.addAllowanceIntegration(
-        aaveIntegration.address,
-        daiToken.address,
-        ethers.utils.parseEther("1000")
-      );
-
-      // Add allowance to the integration
-      fund.addAaveBorrowAllowanceIntegration(
-        aaveIntegration.address,
-        usdcToken.address,
-        ethers.utils.parseEther("100")
-      );
 
       // Call deposit
-      const data = aaveAbi.encodeFunctionData(
-        aaveIntegration.interface.functions[
-          "depositCollateral(address,uint256)"
-        ],
-        [daiToken.address, ethers.utils.parseEther("1000")]
+      await fund.depositCollateral(
+        "aave",
+        daiToken.address,
+        ethers.utils.parseEther("1000"),
+        {
+          gasPrice: 0
+        }
       );
-      await fund.callIntegration(aaveIntegration.address, 0, data, {
-        gasPrice: 0
-      });
       const fundAccount = await lendingPool.getUserAccountData(fund.address);
       expect(fundAccount.totalCollateralETH).to.be.gt(0);
       expect(await daiToken.balanceOf(aaveIntegration.address)).to.equal(0);
@@ -199,14 +182,16 @@ describe("AaveIntegration", function() {
         ethers.utils.formatEther(fundAccount.availableBorrowsETH)
       );
       // Call borrow
-      const dataBorrow = aaveAbi.encodeFunctionData(
-        aaveIntegration.interface.functions["borrow(address,uint256)"],
-        [usdcToken.address, ethers.utils.parseEther("100")]
+
+      await fund.borrow(
+        "aave",
+        usdcToken.address,
+        ethers.utils.parseEther("100"),
+        {
+          gasPrice: 0,
+          gasLimit: 1500000
+        }
       );
-      await fund.callIntegration(aaveIntegration.address, 0, dataBorrow, {
-        gasPrice: 0,
-        gasLimit: 1500000
-      });
       printUserAccount();
       expect(await usdcToken.balanceOf(aaveIntegration.address)).to.equal(0);
       expect(await usdcToken.balanceOf(fund.address)).to.equal(100 * 10 ** 6);

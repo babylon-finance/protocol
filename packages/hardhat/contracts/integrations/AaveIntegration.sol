@@ -55,7 +55,7 @@ contract AaveIntegration is BorrowIntegration {
       address _controller,
       address _weth,
       uint256 _maxCollateralFactor
-    ) BorrowIntegration('Aave Borrow', _weth, _controller, _maxCollateralFactor) {
+    ) BorrowIntegration('aave', _weth, _controller, _maxCollateralFactor) {
     }
 
     /**
@@ -74,6 +74,7 @@ contract AaveIntegration is BorrowIntegration {
       uint256 _amount,
       uint _borrowOp
     ) internal override view returns (address, uint256, bytes memory) {
+      return (address(0),0,bytes(""));
     }
 
     /**

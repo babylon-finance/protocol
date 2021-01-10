@@ -20,19 +20,13 @@ pragma solidity 0.7.4;
 import "hardhat/console.sol";
 import { Address } from "@openzeppelin/contracts/utils/Address.sol";
 import { ERC20 } from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
-import {
-    ReentrancyGuard
-} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import { SafeMath } from "@openzeppelin/contracts/math/SafeMath.sol";
 import { SafeCast } from "@openzeppelin/contracts/utils/SafeCast.sol";
 import { SignedSafeMath } from "@openzeppelin/contracts/math/SignedSafeMath.sol";
-
 import { AddressArrayUtils } from "./lib/AddressArrayUtils.sol";
 import { PreciseUnitMath } from "./lib/PreciseUnitMath.sol";
 import { IFolioController } from "./interfaces/IFolioController.sol";
 import { IWETH } from "./interfaces/external/weth/IWETH.sol";
-import { IBPool } from "./interfaces/external/balancer/IBPool.sol";
-import { IStableDebtToken } from './interfaces/external/aave/IStableDebtToken.sol';
 import { IIntegration } from "./interfaces/IIntegration.sol";
 import { IBorrowIntegration } from "./interfaces/IBorrowIntegration.sol";
 import { IPoolIntegration } from "./interfaces/IPoolIntegration.sol";
@@ -403,27 +397,6 @@ abstract contract BaseFund is ERC20 {
 
     /**
      * Function that calculates the price using the oracle and executes a trade.
-     * Note: Recommend to use the oracle offchain and call trade directly
-     * @param _integrationName        Name of the integration to call
-     * @param _sendToken              Token to exchange
-     * @param _sendQuantity           Amount of tokens to send
-     * @param _receiveToken           Token to receive
-     * @param _data                   Bytes call data
-     */
-    function calculateMinAndTrade(
-      string memory _integrationName,
-      address _sendToken,
-      uint256 _sendQuantity,
-      address _receiveToken,
-      bytes memory _data) onlyManager
-      external
-    {
-      uint256 minReceiveQuantity = _getPrice(_sendToken, _receiveToken).preciseMul(_sendQuantity);
-      _trade(_integrationName, _sendToken, _sendQuantity, _receiveToken, minReceiveQuantity, _data);
-    }
-
-    /**
-     * Function that calculates the price using the oracle and executes a trade.
      * Must call the exchange to get the price and pass minReceiveQuantity accordingly.
      * @param _integrationName        Name of the integration to call
      * @param _sendToken              Token to exchange
@@ -513,11 +486,6 @@ abstract contract BaseFund is ERC20 {
     }
 
     /* ============ External Getter Functions ============ */
-
-    function _getPrice(address _assetOne, address _assetTwo) internal view returns (uint256) {
-      IPriceOracle oracle = IPriceOracle(IFolioController(controller).getPriceOracle());
-      return oracle.getPrice(_assetOne, _assetTwo);
-    }
 
     function _trade(
       string memory _integrationName,
@@ -640,6 +608,11 @@ abstract contract BaseFund is ERC20 {
     }
 
     /* ============ Internal Functions ============ */
+
+    function _getPrice(address _assetOne, address _assetTwo) internal view returns (uint256) {
+      IPriceOracle oracle = IPriceOracle(IFolioController(controller).getPriceOracle());
+      return oracle.getPrice(_assetOne, _assetTwo);
+    }
 
     /**
      * Low level function that allows an integration to make an arbitrary function

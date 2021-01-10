@@ -132,9 +132,10 @@ abstract contract BorrowIntegration is BaseIntegration, ReentrancyGuard {
       amount,
       BORROW_OPERATION_DEPOSIT
     );
-
-    // Invoke protocol specific call
-    debtInfo.fund.invokeFromIntegration(targetAddressP, callValueP, methodDataP);
+    if (targetAddressP != address(0)) {
+      // Invoke protocol specific call
+      debtInfo.fund.invokeFromIntegration(targetAddressP, callValueP, methodDataP);
+    }
 
     (
       address targetAddress,
@@ -189,8 +190,10 @@ abstract contract BorrowIntegration is BaseIntegration, ReentrancyGuard {
       BORROW_OPERATION_REMOVAL
     );
 
-    // Invoke protocol prespecific call
-    debtInfo.fund.invokeFromIntegration(targetAddressP, callValueP, methodDataP);
+    if (targetAddressP != address(0)) {
+      // Invoke protocol specific call
+      debtInfo.fund.invokeFromIntegration(targetAddressP, callValueP, methodDataP);
+    }
 
     (
       address targetAddress,
@@ -240,8 +243,10 @@ abstract contract BorrowIntegration is BaseIntegration, ReentrancyGuard {
       BORROW_OPERATION_BORROW
     );
 
-    // Invoke protocol prespecific call
-    debtInfo.fund.invokeFromIntegration(targetAddressP, callValueP, methodDataP);
+    if (targetAddressP != address(0)) {
+      // Invoke protocol specific call
+      debtInfo.fund.invokeFromIntegration(targetAddressP, callValueP, methodDataP);
+    }
 
 
     (
@@ -292,8 +297,10 @@ abstract contract BorrowIntegration is BaseIntegration, ReentrancyGuard {
       BORROW_OPERATION_REPAY
     );
 
-    // Invoke protocol prespecific call
-    debtInfo.fund.invokeFromIntegration(targetAddressP, callValueP, methodDataP);
+    if (targetAddressP != address(0)) {
+      // Invoke protocol specific call
+      debtInfo.fund.invokeFromIntegration(targetAddressP, callValueP, methodDataP);
+    }
 
     (
       address targetAddress,

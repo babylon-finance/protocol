@@ -108,13 +108,6 @@ interface IFund is IERC20 {
       uint256 _minReceiveQuantity,
       bytes memory _data) external;
 
-    function calculateMinAndTrade(
-      string memory _integrationName,
-      address _sendToken,
-      uint256 _sendQuantity,
-      address _receiveToken,
-      bytes memory _data) external;
-
     function joinPool(
       string memory _integrationName,
       address _poolAddress,
