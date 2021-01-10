@@ -2,15 +2,14 @@ import FundCardChart from "./FundCardChart";
 import DepositModal from "./DepositModal";
 import WithdrawModal from "./WithdrawModal";
 
+import * as contractNames from "../constants/contracts";
 import { loadContractFromNameAndAddress } from "../hooks/ContractLoader";
 
-import { formatEther } from "@ethersproject/units";
-import BigNumber from "@ethersproject/bignumber";
 import { usePoller } from "eth-hooks";
 import React, { useState, useEffect } from "react";
+import { Link } from "react-router-dom";
 import styled from "styled-components";
 import { Card } from 'rimble-ui';
-import contracts from "../contracts/contracts";
 
 interface FundCardProps {
   provider: any
@@ -29,9 +28,6 @@ interface Contracts {
   IERC20: any
 }
 
-// TODO(tylerm): Move these under a const file that we cna reuse
-const fundContractName = "ClosedFund";
-const tokenContractName = "IERC20";
 
 const FundCard = ({ provider, contractAddress, userAddress }: FundCardProps) => {
   const [loading, setLoading] = useState("true");
@@ -47,7 +43,6 @@ const FundCard = ({ provider, contractAddress, userAddress }: FundCardProps) => 
   const getFundMetaPoller = async () => {
     let latestBalance;
     if (contracts) {
-      //
       latestBalance = await contracts.IERC20.balanceOf(userAddress);
     }
     if (latestBalance) {
@@ -57,8 +52,8 @@ const FundCard = ({ provider, contractAddress, userAddress }: FundCardProps) => 
 
   useEffect(() => {
     async function getContracts() {
-      const fund = await loadContractFromNameAndAddress(contractAddress, fundContractName, provider);
-      const token = await loadContractFromNameAndAddress(contractAddress, tokenContractName, provider);
+      const fund = await loadContractFromNameAndAddress(contractAddress, contractNames.ClosedFund, provider);
+      const token = await loadContractFromNameAndAddress(contractAddress, contractNames.IERC20, provider);
       setContracts({ ClosedFund: fund, IERC20: token });
       if (token) {
         setTokenBalance(await token.balanceOf(userAddress));
@@ -118,7 +113,7 @@ const FundCard = ({ provider, contractAddress, userAddress }: FundCardProps) => 
     <FundCardWrapper loading={loading}>
       <FundCardHeader>
         <FundTokenSymbol>ABCD</FundTokenSymbol>
-        {fundName}
+        <Link to={`/fund/${contractAddress}`}>{fundName}</Link>
       </FundCardHeader>
       <FundCardDesc>
         This is a subheading and brief description of the fund.
@@ -155,7 +150,7 @@ const FundCard = ({ provider, contractAddress, userAddress }: FundCardProps) => 
           </FundCardActionButton>
         )}
       </FundCardButtonRow>
-    </FundCardWrapper>
+    </FundCardWrapper >
   );
 }
 

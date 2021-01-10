@@ -1,11 +1,18 @@
-import FundCardRow from "./components/FundCardRow";
+import AppHeader from "./components/AppHeader";
+import FundDetailPage from "./components/FundDetailPage";
+import FundSummaryPage from "./components/FundSummaryPage";
 
 import React from 'react';
+import {
+  BrowserRouter as Router,
+  Switch,
+  Route
+} from "react-router-dom";
 import styled from "styled-components";
 import Web3 from "web3";
 import Web3Modal from "web3modal";
 import { Web3Provider } from "@ethersproject/providers";
-import { Flex, Box } from 'rimble-ui';
+import { Flex } from 'rimble-ui';
 import { Alert, Spin } from "antd";
 // @ts-ignore
 import WalletConnectProvider from "@walletconnect/web3-provider";
@@ -150,92 +157,40 @@ export default class App extends React.Component<AppProps, AppState> {
     });
   };
 
+  renderFundSummary = () => {
+    return (
+      !this.state.initialLoad && this.state.connected && (
+        <FundSummaryPage appState={this.state} />
+      )
+    );
+  }
+
   render() {
     const networkId = parseInt(process.env.REACT_APP_NETWORK_ID || '0');
     const onMainnet = this.state.chainId === parseInt(process.env.REACT_APP_CHAIN_ID || '0') && this.state.networkId === networkId;
-    const shouldRenderFunds = (this.state.web3 && this.state.connected && onMainnet && this.state.provider);
 
     return (
-      <AppWrapper className="App">
-        <HeaderWrapper>
-          <ContainerLarge>
-            <StyledHeader>
-              <LogoWrapper>
-                <img width="40" src="/logo-red.png" alt="" />
-                <ProjectTitle>Babylon.finance</ProjectTitle>
-              </LogoWrapper>
-            </StyledHeader>
-          </ContainerLarge>
-        </HeaderWrapper>
-        {this.state.initialLoad && <Spin tip="Loading..." />}
-        {!this.state.initialLoad && (
+      <Router>
+        <AppWrapper className="App">
+          <AppHeader appState={this.state} resetApp={this.resetApp} onConnect={this.onConnect} />
+          {this.state.initialLoad && <Spin tip="Loading..." />}
           <ContentWrapper>
-            <ContainerLarge>
-              <div style={{
-                display: 'flex',
-                flexFlow: 'row wrap',
-                margin: '10px 0'
-              }}>
-              </div>
-              {this.state.connected && !onMainnet && (
-                <Alert message={`You are on a different network. Please connect your wallet to the ${networkId === 1 ? 'mainnet' : 'network with id ' + networkId}`} type="warning" />
-              )}
-              {!this.state.connected && (
-                <ConnectButton onClick={this.onConnect}>
-                  <b>Connect your wallet</b>
-                </ConnectButton>
-              )}
-              {shouldRenderFunds && (
-                <div>
-                  <Alert message={`Wallet Connected: ${this.state.address}`} type="warning" />
-                  {this.state.web3 && (
-                    <MainLink onClick={this.resetApp} target="_blank">
-                      Disconnect
-                    </MainLink>
-                  )}
-                  <FundCardRowWrapper>
-                    <FundCardRow
-                      provider={this.state.provider}
-                      userAddress={this.state.address}
-                    />
-                  </FundCardRowWrapper>
-                </div>
-              )}
-            </ContainerLarge>
+            {this.state.connected && !onMainnet && (
+              <Alert message={`You are on a different network. Please connect your wallet to the ${networkId === 1 ? 'mainnet' : 'network with id ' + networkId}`} type="warning" />
+            )}
+            <Switch>
+              <Route path="/fund/:address" children={<FundDetailPage />} />
+              <Route extec path="/" children={this.renderFundSummary()} />
+            </Switch>
           </ContentWrapper>
-        )}
-      </AppWrapper>
+        </AppWrapper>
+      </Router>
     );
   }
 }
 
-const ContainerLarge = styled(Box)`
-  position: relative;
-`
-
-const HeaderWrapper = styled.div`
-  width: 100%;
-  background: #160E6B;
-`
-
-const StyledHeader = styled.header`
-  padding-left: 15%;
-`
-
-const MainLink = styled.a`
-  font-size: 16px;
-  padding: 16px;
-  color: rgb(170, 149, 133);
-  text-decoration: none;
-
-  &:hover {
-    color: rgb(128, 94, 73);
-  }
-`
-
 const AppWrapper = styled(Flex)`
   flex-flow: column nowrap;
-  width: 100%;
   min-height: 100vh;
   height: auto;
 `
@@ -244,38 +199,5 @@ const ContentWrapper = styled.div`
   display: flex;
   flex-flow: column nowrap;
   justify-content: left;
-  align-items: center;
-  text-align: center;
-  width: 100%;
   height: auto;
-`
-
-const LogoWrapper = styled.div`
-  height: 80px;
-  padding: 5px;
-  border-radius: 62px;
-  display: flex;
-  align-items: center;
-  margin: 20px 0;
-`
-
-const ProjectTitle = styled.h1`
-  color: white;
-  font-weight: 600;
-  margin-left: 12px;
-`
-
-const ConnectButton = styled.button`
-  color: white;
-  text-transform: uppercase;
-  padding: 5px 10px;
-  background: #FF2972;
-  border: 1px solid #4420D8;
-`
-
-const FundCardRowWrapper = styled.div`
-  div:not(:first-child) {
-    margin-left: 12px;
-  }
-  margin-top: 50px;
 `
