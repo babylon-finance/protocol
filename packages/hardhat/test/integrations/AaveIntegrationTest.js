@@ -91,13 +91,6 @@ describe("AaveIntegration", function() {
       );
       expect(await daiToken.balanceOf(fund.address)).to.not.equal(0);
 
-      // Add allowance to the integration
-      fund.addAllowanceIntegration(
-        aaveIntegration.address,
-        daiToken.address,
-        ethers.utils.parseEther("10")
-      );
-
       // Call deposit
       const data = aaveAbi.encodeFunctionData(
         aaveIntegration.interface.functions[

@@ -383,27 +383,7 @@ abstract contract BaseFund is ERC20 {
     function setManager(address _manager) external onlyManagerOrProtocol {
         address oldManager = manager;
         manager = _manager;
-
         emit ManagerEdited(_manager, oldManager);
-    }
-
-    /**
-     * Function that allows the manager to call an integration
-     *
-     * @param _integration            Address of the integration to call
-     * @param _value                  Quantity of Ether to provide the call (typically 0)
-     * @param _data                   Encoded function selector and arguments
-     * @return _returnValue           Bytes encoded return value
-     */
-    function callIntegration(address _integration, uint256 _value, bytes calldata _data) external onlyManager returns (bytes memory _returnValue) {
-      _validateOnlyIntegration(_integration);
-      return _invoke(_integration, _value, _data);
-    }
-
-    function addAllowanceIntegration(address _integration, address _asset, uint256 _quantity) external onlyManager {
-      _validateOnlyIntegration(_integration);
-      ERC20(_asset).approve(_integration, 0);
-      ERC20(_asset).approve(_integration, _quantity);
     }
 
     function invokeApprove(address _spender, address _asset, uint256 _quantity) external onlyIntegration {
@@ -507,12 +487,29 @@ abstract contract BaseFund is ERC20 {
       IPoolIntegration(poolIntegration).exitPool(_poolAddress, _poolTokensIn, _tokensOut, _minAmountsOut);
     }
 
-    /* ============ Borrow Integration Hooks============ */
+    /* ============ Borrow Integration hooks ============ */
+    function depositCollateral(string memory _integrationName, address asset, uint256 amount) external onlyManager {
+      address borrowIntegration = IFolioController(controller).getIntegrationByName(_integrationName);
+      _validateOnlyIntegration(borrowIntegration);
+      IBorrowIntegration(borrowIntegration).depositCollateral(asset, amount);
+    }
 
-    function addAaveBorrowAllowanceIntegration(address _integration, address _asset, uint256 _quantity) external onlyManager {
-      _validateOnlyIntegration(_integration);
-      address stableDebtTokenAddress = IBorrowIntegration(_integration).getDebtToken(_asset);
-      IStableDebtToken(stableDebtTokenAddress).approveDelegation(_integration, _quantity);
+    function removeCollateral(string memory _integrationName, address asset, uint256 amount) external onlyManager {
+      address borrowIntegration = IFolioController(controller).getIntegrationByName(_integrationName);
+      _validateOnlyIntegration(borrowIntegration);
+      IBorrowIntegration(borrowIntegration).removeCollateral(asset, amount);
+    }
+
+    function borrow(string memory _integrationName, address asset, uint256 amount) external onlyManager {
+      address borrowIntegration = IFolioController(controller).getIntegrationByName(_integrationName);
+      _validateOnlyIntegration(borrowIntegration);
+      IBorrowIntegration(borrowIntegration).borrow(asset, amount);
+    }
+
+    function repay(string memory _integrationName, address asset, uint256 amount) external onlyManager {
+      address borrowIntegration = IFolioController(controller).getIntegrationByName(_integrationName);
+      _validateOnlyIntegration(borrowIntegration);
+      IBorrowIntegration(borrowIntegration).repay(asset, amount);
     }
 
     /* ============ External Getter Functions ============ */

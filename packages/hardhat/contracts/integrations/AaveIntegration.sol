@@ -40,8 +40,8 @@ contract AaveIntegration is BorrowIntegration {
 
     ILendingPool constant lendingPool = ILendingPool(address(0x7d2768dE32b0b80b7a3454c06BdAc94A69DDc7A9)); // Mainnet
     IProtocolDataProvider constant dataProvider = IProtocolDataProvider(address(0x057835Ad21a177dbdd3090bB1CAE03EaCF78Fc6d)); // Mainnet
-    address aUSDC = address(0xBcca60bB61934080951369a648Fb03DF4F96263C);
     uint constant interestRateMode = 1; // Stable Interest
+
     /* ============ Constructor ============ */
 
     /**
@@ -59,84 +59,141 @@ contract AaveIntegration is BorrowIntegration {
     }
 
     /**
-     *  Note: Fund needs to call addAllowanceIntegration first
-     * Deposits collateral into the Aave.
-     * This would be called by a fund within a strategy
-     * @param asset The asset to be deposited as collateral
-     * @param amount The amount to be deposited as collateral
+     * Return pre action calldata
      *
+     * @param  _asset                    Address of the asset to deposit
+     * @param  _amount                   Amount of the token to deposit
+     * @param  _borrowOp                Type of Borrow op
+     *
+     * @return address                   Target contract address
+     * @return uint256                   Call value
+     * @return bytes                     Trade calldata
      */
-    function depositCollateral(address asset, uint256 amount) onlyFund external {
-      amount = normalizeDecimals(asset, amount);
-      IERC20(asset).safeTransferFrom(msg.sender, address(this), amount);
-      IERC20(asset).safeIncreaseAllowance(address(lendingPool), amount);
-      lendingPool.deposit(asset, amount, msg.sender, 0);
-      updateFundPosition(msg.sender, asset, amount);
+    function _getPreActionCallData(
+      address _asset,
+      uint256 _amount,
+      uint _borrowOp
+    ) internal override view returns (address, uint256, bytes memory) {
     }
 
     /**
-     * Note: Fund needs to call addAaveBorrowAllowanceIntegration first
-     * Borrows an asset
-     * @param asset The asset to be borrowed
-     * @param amount The amount to borrow
+     * Return deposit collateral calldata
+     *
+     * @param  _asset                    Address of the asset to deposit
+     * @param  _amount                   Amount of the token to deposit
+     *
+     * @return address                   Target contract address
+     * @return uint256                   Call value
+     * @return bytes                     Trade calldata
      */
-    function borrow(address asset, uint256 amount) onlyFund external {
-      amount = normalizeDecimals(asset, amount);
-      lendingPool.borrow(asset, amount, interestRateMode, 0, msg.sender);
-      // Sends the borrowed assets back to the fund
-      IERC20(asset).transfer(msg.sender, amount);
-      updateFundPosition(msg.sender, asset, amount);
+    function _getDepositCalldata(
+      address _asset,
+      uint256 _amount
+    ) internal override view returns (address, uint256, bytes memory) {
+      // Encode method data for Fund to invoke
+      bytes memory methodData = abi.encodeWithSignature(
+        "deposit(address,uint256,address,uint16)",
+        _asset,
+        _amount,
+        msg.sender,
+        0
+      );
+
+      return (address(lendingPool), 0, methodData);
     }
 
-    function getDebtToken(address asset) onlyFund external returns (address) {
+    /**
+     * Return collateral removal calldata
+     *
+     * @param  _asset                    Address of the asset to deposit
+     * @param  _amount                   Amount of the token to deposit
+     *
+     * @return address                   Target contract address
+     * @return uint256                   Call value
+     * @return bytes                     Trade calldata
+     */
+    function _getRemovalCalldata(
+      address _asset,
+      uint256 _amount
+    ) internal override view returns (address, uint256, bytes memory) {
+      // Encode method data for Fund to invoke
+      bytes memory methodData = abi.encodeWithSignature(
+        "withdraw(address,uint256,address)",
+        _asset,
+        _amount,
+        msg.sender
+      );
+
+      return (address(lendingPool), 0, methodData);
+    }
+
+    /**
+     * Return borrow token calldata
+     *
+     * @param  _asset                    Address of the asset to deposit
+     * @param  _amount                   Amount of the token to deposit
+     *
+     * @return address                   Target contract address
+     * @return uint256                   Call value
+     * @return bytes                     Trade calldata
+     */
+    function _getBorrowCalldata(
+      address _asset,
+      uint256 _amount
+    ) internal override view returns (address, uint256, bytes memory) {
+      // Encode method data for Fund to invoke
+      bytes memory methodData = abi.encodeWithSignature(
+        "withdraw(address,uint256,uint256,uint16,address)",
+        _asset,
+        _amount,
+        interestRateMode,
+        0,
+        msg.sender
+      );
+
+      return (address(lendingPool), 0, methodData);
+    }
+
+    /**
+     * Return repay borrowed asset calldata
+     *
+     * @param  _asset                    Address of the asset to deposit
+     * @param  _amount                   Amount of the token to deposit
+     *
+     * @return address                   Target contract address
+     * @return uint256                   Call value
+     * @return bytes                     Trade calldata
+     */
+    function _getRepayCalldata(
+      address _asset,
+      uint256 _amount
+    ) internal override view returns (address, uint256, bytes memory) {
+      // Encode method data for Fund to invoke
+      bytes memory methodData = abi.encodeWithSignature(
+        "repay(address,uint256,uint256,address)",
+        _asset,
+        _amount,
+        interestRateMode,
+        msg.sender
+      );
+      return (address(lendingPool), 0, methodData);
+    }
+
+
+    /* ============ Internal Functions ============ */
+
+    function _getCollateralAsset(address asset, uint8 _borrowOp) internal override view  returns (address) {
+      return asset;
+    }
+
+    function _getSpender(address asset) internal override view returns (address) {
+      return address(lendingPool);
+    }
+
+    function _getDebtToken(address asset) view internal returns (address) {
       // Get the relevant debt token address
       (, address stableDebtTokenAddress,) = dataProvider.getReserveTokensAddresses(asset);
       return stableDebtTokenAddress;
-    }
-
-    /**
-     * Repays a borrowed asset debt
-     * @param asset The asset to be repaid
-     * @param amount The amount to repay
-     */
-    function repay(address asset, uint256 amount) onlyFund external {
-      amount = normalizeDecimals(asset, amount);
-      IERC20(asset).safeTransferFrom(msg.sender, address(this), amount);
-      IERC20(asset).safeApprove(address(lendingPool), amount);
-      lendingPool.repay(asset, amount, interestRateMode, msg.sender);
-    }
-
-    /**
-     * Repays all the borrowed asset debt
-     * @param asset The asset to be repaid
-     */
-    function repayAll(address asset) onlyFund external {
-      (uint256 assetLended, uint256 stableDebt,,,,,,,) = dataProvider.getUserReserveData(asset, msg.sender);
-      IERC20(asset).safeTransferFrom(msg.sender, address(this), stableDebt);
-      IERC20(asset).safeApprove(address(lendingPool), stableDebt);
-      lendingPool.repay(asset, stableDebt, interestRateMode, msg.sender);
-    }
-
-    /**
-     * Withdraw an amount of collateral as the underlying asset
-     * @param asset   The underlying asset to withdraw
-     * @param amount The amount of the underlying to withdraw
-     *
-     */
-    function withdrawCollateral(address asset, uint256 amount) onlyFund external {
-      amount = normalizeDecimals(asset, amount);
-      lendingPool.withdraw(asset, amount, msg.sender);
-    }
-
-    /**
-     * Withdraw all of a collateral as the underlying asset
-     * @param asset   The underlying asset to withdraw
-     *
-     */
-    function withdrawAllCollateral(address asset) onlyFund external {
-      (address aTokenAddress,,) = dataProvider.getReserveTokensAddresses(asset);
-      uint256 assetBalance = IERC20(aTokenAddress).balanceOf(msg.sender);
-      lendingPool.withdraw(asset, assetBalance, msg.sender);
     }
 
     /**
@@ -144,7 +201,7 @@ contract AaveIntegration is BorrowIntegration {
      * @param asset   The underlying asset
      *
      */
-    function getBorrowBalance(address asset) onlyFund external view returns (uint256) {
+    function _getBorrowBalance(address asset) internal view returns (uint256) {
       (uint256 assetLended, uint256 stableDebt,,,,,,,) = dataProvider.getUserReserveData(asset, msg.sender);
       return stableDebt;
     }
@@ -153,7 +210,7 @@ contract AaveIntegration is BorrowIntegration {
      * Get the health factor of the total debt
      *
      */
-    function getHealthFactor() onlyFund public view returns (uint256) {
+    function getHealthFactor() internal view returns (uint256) {
       (
         uint256 totalCollateral,
         uint256 totalDebt,
@@ -162,9 +219,6 @@ contract AaveIntegration is BorrowIntegration {
         uint256 ltv,
         uint256 healthFactor
       ) = lendingPool.getUserAccountData(msg.sender);
-      console.log(totalCollateral);
-      console.log(totalDebt);
-      console.log(borrowingPower);
       return healthFactor;
     }
 }
