@@ -238,7 +238,6 @@ abstract contract PoolIntegration is BaseIntegration, ReentrancyGuard {
       poolInfo.totalSupply = IERC20(_pool).totalSupply();
       poolInfo.poolTokensInFund = IERC20(_pool).balanceOf(address(msg.sender));
       poolInfo.poolTokensInTransaction = _poolTokensInTransaction;
-
       poolInfo.limitPoolTokenQuantities = _limitPoolTokenQuantities;
 
       return poolInfo;

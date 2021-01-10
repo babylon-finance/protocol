@@ -20,19 +20,13 @@ pragma solidity 0.7.4;
 import "hardhat/console.sol";
 import { Address } from "@openzeppelin/contracts/utils/Address.sol";
 import { ERC20 } from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
-import {
-    ReentrancyGuard
-} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import { SafeMath } from "@openzeppelin/contracts/math/SafeMath.sol";
 import { SafeCast } from "@openzeppelin/contracts/utils/SafeCast.sol";
 import { SignedSafeMath } from "@openzeppelin/contracts/math/SignedSafeMath.sol";
-
 import { AddressArrayUtils } from "./lib/AddressArrayUtils.sol";
 import { PreciseUnitMath } from "./lib/PreciseUnitMath.sol";
 import { IFolioController } from "./interfaces/IFolioController.sol";
 import { IWETH } from "./interfaces/external/weth/IWETH.sol";
-import { IBPool } from "./interfaces/external/balancer/IBPool.sol";
-import { IStableDebtToken } from './interfaces/external/aave/IStableDebtToken.sol';
 import { IIntegration } from "./interfaces/IIntegration.sol";
 import { IBorrowIntegration } from "./interfaces/IBorrowIntegration.sol";
 import { IPoolIntegration } from "./interfaces/IPoolIntegration.sol";
@@ -383,27 +377,7 @@ abstract contract BaseFund is ERC20 {
     function setManager(address _manager) external onlyManagerOrProtocol {
         address oldManager = manager;
         manager = _manager;
-
         emit ManagerEdited(_manager, oldManager);
-    }
-
-    /**
-     * Function that allows the manager to call an integration
-     *
-     * @param _integration            Address of the integration to call
-     * @param _value                  Quantity of Ether to provide the call (typically 0)
-     * @param _data                   Encoded function selector and arguments
-     * @return _returnValue           Bytes encoded return value
-     */
-    function callIntegration(address _integration, uint256 _value, bytes calldata _data) external onlyManager returns (bytes memory _returnValue) {
-      _validateOnlyIntegration(_integration);
-      return _invoke(_integration, _value, _data);
-    }
-
-    function addAllowanceIntegration(address _integration, address _asset, uint256 _quantity) external onlyManager {
-      _validateOnlyIntegration(_integration);
-      ERC20(_asset).approve(_integration, 0);
-      ERC20(_asset).approve(_integration, _quantity);
     }
 
     function invokeApprove(address _spender, address _asset, uint256 _quantity) external onlyIntegration {
@@ -420,27 +394,6 @@ abstract contract BaseFund is ERC20 {
     }
 
     /* ============ Trade Integration hooks ============ */
-
-    /**
-     * Function that calculates the price using the oracle and executes a trade.
-     * Note: Recommend to use the oracle offchain and call trade directly
-     * @param _integrationName        Name of the integration to call
-     * @param _sendToken              Token to exchange
-     * @param _sendQuantity           Amount of tokens to send
-     * @param _receiveToken           Token to receive
-     * @param _data                   Bytes call data
-     */
-    function calculateMinAndTrade(
-      string memory _integrationName,
-      address _sendToken,
-      uint256 _sendQuantity,
-      address _receiveToken,
-      bytes memory _data) onlyManager
-      external
-    {
-      uint256 minReceiveQuantity = _getPrice(_sendToken, _receiveToken).preciseMul(_sendQuantity);
-      _trade(_integrationName, _sendToken, _sendQuantity, _receiveToken, minReceiveQuantity, _data);
-    }
 
     /**
      * Function that calculates the price using the oracle and executes a trade.
@@ -507,20 +460,32 @@ abstract contract BaseFund is ERC20 {
       IPoolIntegration(poolIntegration).exitPool(_poolAddress, _poolTokensIn, _tokensOut, _minAmountsOut);
     }
 
-    /* ============ Borrow Integration Hooks============ */
+    /* ============ Borrow Integration hooks ============ */
+    function depositCollateral(string memory _integrationName, address asset, uint256 amount) external onlyManager {
+      address borrowIntegration = IFolioController(controller).getIntegrationByName(_integrationName);
+      _validateOnlyIntegration(borrowIntegration);
+      IBorrowIntegration(borrowIntegration).depositCollateral(asset, amount);
+    }
 
-    function addAaveBorrowAllowanceIntegration(address _integration, address _asset, uint256 _quantity) external onlyManager {
-      _validateOnlyIntegration(_integration);
-      address stableDebtTokenAddress = IBorrowIntegration(_integration).getDebtToken(_asset);
-      IStableDebtToken(stableDebtTokenAddress).approveDelegation(_integration, _quantity);
+    function removeCollateral(string memory _integrationName, address asset, uint256 amount) external onlyManager {
+      address borrowIntegration = IFolioController(controller).getIntegrationByName(_integrationName);
+      _validateOnlyIntegration(borrowIntegration);
+      IBorrowIntegration(borrowIntegration).removeCollateral(asset, amount);
+    }
+
+    function borrow(string memory _integrationName, address asset, uint256 amount) external onlyManager {
+      address borrowIntegration = IFolioController(controller).getIntegrationByName(_integrationName);
+      _validateOnlyIntegration(borrowIntegration);
+      IBorrowIntegration(borrowIntegration).borrow(asset, amount);
+    }
+
+    function repay(string memory _integrationName, address asset, uint256 amount) external onlyManager {
+      address borrowIntegration = IFolioController(controller).getIntegrationByName(_integrationName);
+      _validateOnlyIntegration(borrowIntegration);
+      IBorrowIntegration(borrowIntegration).repay(asset, amount);
     }
 
     /* ============ External Getter Functions ============ */
-
-    function _getPrice(address _assetOne, address _assetTwo) internal view returns (uint256) {
-      IPriceOracle oracle = IPriceOracle(IFolioController(controller).getPriceOracle());
-      return oracle.getPrice(_assetOne, _assetTwo);
-    }
 
     function _trade(
       string memory _integrationName,
@@ -643,6 +608,11 @@ abstract contract BaseFund is ERC20 {
     }
 
     /* ============ Internal Functions ============ */
+
+    function _getPrice(address _assetOne, address _assetTwo) internal view returns (uint256) {
+      IPriceOracle oracle = IPriceOracle(IFolioController(controller).getPriceOracle());
+      return oracle.getPrice(_assetOne, _assetTwo);
+    }
 
     /**
      * Low level function that allows an integration to make an arbitrary function

@@ -68,9 +68,6 @@ abstract contract BaseIntegration {
     string public name;
     mapping(address => bool) public initializedByFund;
 
-    // Mapping of asset addresses to cToken addresses
-    mapping(address => address) public assetToCtoken;
-
     /* ============ Constructor ============ */
 
     /**
@@ -86,12 +83,6 @@ abstract contract BaseIntegration {
       name = _name;
       controller = _controller;
       weth = _weth;
-      assetToCtoken[0x6B175474E89094C44Da98b954EedeAC495271d0F] = 0x5d3a536E4D6DbD6114cc1Ead35777bAB948E3643; // DAI
-      assetToCtoken[0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2] = 0x4Ddc2D193948926D02f9B1fE9e1daa0718270ED5; // WETH
-      assetToCtoken[0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48] = 0x39AA39c021dfbaE8faC545936693aC917d5E7563; // USDC
-      assetToCtoken[0xdAC17F958D2ee523a2206206994597C13D831ec7] = 0xf650C3d88D12dB855b8bf7D11Be6C55A4e07dCC9; // USDT
-      assetToCtoken[0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599] = 0xC11b1268C1A384e55C48c2391d8d480264A3A7F4; // WBTC
-      assetToCtoken[0xc00e94Cb662C3520282E6f5717214004A7f26888] = 0x70e36f6BF80a52b3B46b3aF8e106CC0ed743E8e4; // COMP
     }
 
     /* ============ External Functions ============ */
@@ -111,12 +102,6 @@ abstract contract BaseIntegration {
      */
     function getName() external view returns (string memory) {
       return name;
-    }
-
-    // TODO: Move this to protocol
-    // Governance function
-    function updateCTokenMapping(address _assetAddress, address _cTokenAddress) external onlyProtocol {
-      assetToCtoken[_assetAddress] = _cTokenAddress;
     }
 
     /* ============ Internal Functions ============ */
