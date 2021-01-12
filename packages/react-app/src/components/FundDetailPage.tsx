@@ -49,7 +49,7 @@ const FundDetailPage = () => {
           <DetailsBlockLeft>
             <DetailsManager>
               <ManagerName>
-                Manager: Ramon Recuerro
+                Manager: Ramon Recuero
               </ManagerName>
               <ManagerPosition>
                 Holds <b>10%</b> of this fund
