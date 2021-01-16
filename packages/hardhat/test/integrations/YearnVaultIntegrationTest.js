@@ -45,17 +45,18 @@ describe("YearnVaultIntegrationTest", function() {
       );
     });
 
-    it("check that a valid pool is valid", async function() {
+    it("check that a valid yearn vault is valid", async function() {
       expect(
-        await balancerIntegration.isPool(addresses.balancer.pools.wethdai)
+        await yearnVaultIntegration.isInvestment(addresses.yearn.vaults.ydai)
       ).to.equal(true);
     });
 
-    it("check that an invalid pool is not valid", async function() {
-      expect(await balancerIntegration.isPool(ADDRESS_ZERO)).to.equal(false);
+    it("check that an invalid vault is not valid", async function() {
+      await expect(yearnVaultIntegration.isInvestment(ADDRESS_ZERO)).to.be
+        .reverted;
     });
 
-    it("can enter and exit the weth dai pool", async function() {
+    it("can enter and exit the yearn dai vault", async function() {
       expect(
         await daiToken
           .connect(whaleSigner)
@@ -63,44 +64,40 @@ describe("YearnVaultIntegrationTest", function() {
             gasPrice: 0
           })
       );
-      expect(
-        await wethToken
-          .connect(whaleWeth)
-          .transfer(fund.address, ethers.utils.parseEther("10"), {
-            gasPrice: 0
-          })
-      );
       expect(await daiToken.balanceOf(fund.address)).to.equal(
         ethers.utils.parseEther("1000")
       );
-      expect(await wethToken.balanceOf(fund.address)).to.equal(
-        ethers.utils.parseEther("10.01")
-      );
-      await fund.joinPool(
-        "balancer",
-        addresses.balancer.pools.wethdai,
-        ethers.utils.parseEther("0.001"),
-        await daiWethPool.getFinalTokens(),
-        [ethers.utils.parseEther("1000"), ethers.utils.parseEther("10")],
+      const amountToDeposit = ethers.utils.parseEther("1000");
+      const sharePrice = await yearnDaiVault.getPricePerFullShare();
+      const expectedYShares = amountToDeposit.div(sharePrice);
+      await fund.enterPassiveInvestment(
+        "yearnvaults",
+        yearnDaiVault.address,
+        expectedYShares,
+        daiToken.address,
+        ethers.utils.parseEther("1000"),
         { gasPrice: 0 }
       );
-      expect(await daiWethPool.balanceOf(fund.address)).to.be.eq(
-        ethers.utils.parseEther("0.001")
+      console.log("price", ethers.utils.formatEther(sharePrice));
+      console.log(
+        "balance",
+        ethers.utils.formatEther(await yearnDaiVault.balanceOf(fund.address))
       );
-      await fund.exitPool(
-        "balancer",
-        addresses.balancer.pools.wethdai,
-        ethers.utils.parseEther("0.001"),
-        await daiWethPool.getFinalTokens(),
-        [ethers.utils.parseEther("100"), ethers.utils.parseEther("0.1")],
+      console.log("yshares to receive", expectedYShares.toString());
+      expect(await yearnDaiVault.balanceOf(fund.address)).to.be.gte(
+        expectedYShares
+      );
+      await fund.exitPassiveInvestment(
+        "yearnvaults",
+        yearnDaiVault.address,
+        await yearnDaiVault.balanceOf(fund.address),
+        daiToken.address,
+        ethers.utils.parseEther("999"),
         { gasPrice: 0 }
       );
-      expect(await daiWethPool.balanceOf(fund.address)).to.equal(0);
+      expect(await yearnDaiVault.balanceOf(fund.address)).to.equal(0);
       expect(await daiToken.balanceOf(fund.address)).to.be.gt(
         ethers.utils.parseEther("999")
-      );
-      expect(await wethToken.balanceOf(fund.address)).to.be.gt(
-        ethers.utils.parseEther("10.00")
       );
     });
   });
