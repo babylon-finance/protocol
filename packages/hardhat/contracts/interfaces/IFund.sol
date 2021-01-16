@@ -80,6 +80,7 @@ interface IFund is IERC20 {
     function setDisabled() external;
     function setManager(address _manager) external;
 
+    function controller() external view returns (address);
     function manager() external view returns (address);
     function active() external view returns (bool);
     function integrationStates(address _integration) external view returns (IntegrationState);

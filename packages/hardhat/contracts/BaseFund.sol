@@ -174,6 +174,11 @@ abstract contract BaseFund is ERC20 {
         string memory _name,
         string memory _symbol
     ) ERC20(_name, _symbol) {
+        require(_manager != address(0), "Manager must not be empty");
+        require(
+            _managerFeeRecipient != address(0),
+            "Manager must not be empty"
+        );
         require(
             _managerFeeRecipient != address(0),
             "Fee Recipient must be non-zero address."

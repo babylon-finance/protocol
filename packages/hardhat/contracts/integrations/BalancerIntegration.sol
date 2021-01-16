@@ -65,7 +65,7 @@ contract BalancerIntegration is PoolIntegration {
     return coreFactory.isBPool(_poolAddress);
   }
 
-  function _getSpender(address _poolAddress) view override internal returns (address) {
+  function _getSpender(address _poolAddress) pure override internal returns (address) {
     return _poolAddress;
   }
 
@@ -86,7 +86,7 @@ contract BalancerIntegration is PoolIntegration {
     uint256 _poolTokensOut,
     address[] calldata _tokensIn,
     uint256[] calldata _maxAmountsIn
-  ) internal override view returns (address, uint256, bytes memory) {
+  ) internal override pure returns (address, uint256, bytes memory) {
     // Encode method data for Fund to invoke
     bytes memory methodData = abi.encodeWithSignature(
       "joinPool(uint256,uint256[])",
