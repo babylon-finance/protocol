@@ -29,6 +29,7 @@ import { IFolioController } from "./interfaces/IFolioController.sol";
 import { IWETH } from "./interfaces/external/weth/IWETH.sol";
 import { IIntegration } from "./interfaces/IIntegration.sol";
 import { IBorrowIntegration } from "./interfaces/IBorrowIntegration.sol";
+import { IPassiveIntegration } from "./interfaces/IPassiveIntegration.sol";
 import { IPoolIntegration } from "./interfaces/IPoolIntegration.sol";
 import { ITradeIntegration } from "./interfaces/ITradeIntegration.sol";
 import { IPriceOracle } from "./interfaces/IPriceOracle.sol";
@@ -174,6 +175,11 @@ abstract contract BaseFund is ERC20 {
         string memory _name,
         string memory _symbol
     ) ERC20(_name, _symbol) {
+        require(_manager != address(0), "Manager must not be empty");
+        require(
+            _managerFeeRecipient != address(0),
+            "Manager must not be empty"
+        );
         require(
             _managerFeeRecipient != address(0),
             "Fee Recipient must be non-zero address."
@@ -414,6 +420,50 @@ abstract contract BaseFund is ERC20 {
       bytes memory _data) onlyManager external
     {
       return _trade(_integrationName, _sendToken, _sendQuantity, _receiveToken, _minReceiveQuantity, _data);
+    }
+
+    /* ============ Passive Integration hooks ============ */
+
+    /**
+     * Enters a passive invement
+     *
+     * @param _integrationName            Integration to use
+     * @param _investmentAddress          Address of the investment to buy
+     * @param _investmentTokensOut        Min amount of investment tokens to receive
+     * @param _tokenIn                    Token aaddress to deposit
+     * @param _maxAmountIn                Max amount of the token to deposit
+     */
+    function enterPassiveInvestment(
+      string memory _integrationName,
+      address _investmentAddress,
+      uint256 _investmentTokensOut,
+      address _tokenIn,
+      uint256 _maxAmountIn
+    ) onlyManager external {
+      address passiveIntegration = IFolioController(controller).getIntegrationByName(_integrationName);
+      _validateOnlyIntegration(passiveIntegration);
+      IPassiveIntegration(passiveIntegration).enterInvestment(_investmentAddress, _investmentTokensOut, _tokenIn, _maxAmountIn);
+    }
+
+    /**
+     * Exits an outside passive investment
+     *
+     * @param _integrationName            Integration to use
+     * @param _investmentAddress          Address of the investment token to join
+     * @param _investmentTokenIn          Quantity of investment tokens to return
+     * @param _tokenOut                   Token address to withdraw
+     * @param _minAmountOut               Min token quantities to receive from the investment
+     */
+    function exitPassiveInvestment(
+      string memory _integrationName,
+      address _investmentAddress,
+      uint256 _investmentTokenIn,
+      address _tokenOut,
+      uint256 _minAmountOut
+    ) external onlyManager {
+      address passiveIntegration = IFolioController(controller).getIntegrationByName(_integrationName);
+      _validateOnlyIntegration(passiveIntegration);
+      IPassiveIntegration(passiveIntegration).exitInvestment(_investmentAddress, _investmentTokenIn, _tokenOut, _minAmountOut);
     }
 
     /* ============ Pool Integration hooks ============ */

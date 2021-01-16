@@ -5,10 +5,13 @@ const argsUtil = require("../../utils/arguments.js");
 async function deployFolioFixture() {
   const [owner, signer1, signer2, signer3] = await ethers.getSigners();
 
+  const ClosedFund = await ethers.getContractFactory("ClosedFund", owner);
+
   const FolioController = await ethers.getContractFactory(
     "FolioController",
     owner
   );
+
   const folioController = await FolioController.deploy(
     ...argsUtil.readArgumentsFile("FolioController")
   );
@@ -87,13 +90,24 @@ async function deployFolioFixture() {
     addresses.uniswap.router
   );
 
+  const YearnVaultIntegration = await ethers.getContractFactory(
+    "YearnVaultIntegration",
+    owner
+  );
+  const yearnVaultIntegration = await YearnVaultIntegration.deploy(
+    folioController.address,
+    addresses.tokens.WETH,
+    addresses.yearn.vaultRegistry
+  );
+
   const integrationsList = [
     aaveIntegration,
     compoundIntegration,
     kyberTradeIntegration,
     oneInchTradeIntegration,
     balancerIntegration,
-    uniswapPoolIntegration
+    uniswapPoolIntegration,
+    yearnVaultIntegration
   ];
 
   // Adding integrations
@@ -106,10 +120,12 @@ async function deployFolioFixture() {
 
   const integrationsAddressList = integrationsList.map(iter => iter.address);
 
-  await folioController.createFund(
+  // Creates a new Fund instance
+  const fund = await ClosedFund.deploy(
     integrationsAddressList,
     addresses.tokens.WETH,
     addresses.tokens.WETH,
+    folioController.address,
     addresses.users.hardhat1,
     addresses.users.hardhat1,
     "Fund Number One",
@@ -117,27 +133,33 @@ async function deployFolioFixture() {
     ethers.utils.parseEther("0.01")
   );
 
-  await folioController.createFund(
+  const fund2 = await ClosedFund.deploy(
     integrationsAddressList,
     addresses.tokens.WETH,
     addresses.tokens.WETH,
+    folioController.address,
     addresses.users.hardhat1,
     addresses.users.hardhat1,
-    "Fund Number TWO",
+    "Fund Number Two",
     "FNTW",
     ethers.utils.parseEther("1")
   );
 
-  await folioController.createFund(
+  const fund3 = await ClosedFund.deploy(
     integrationsAddressList,
     addresses.tokens.WETH,
     addresses.tokens.WETH,
+    folioController.address,
     addresses.users.hardhat1,
     addresses.users.hardhat1,
     "Fund Number Three",
     "FNTH",
     ethers.utils.parseEther("10")
   );
+
+  await folioController.createFund(integrationsAddressList, fund.address);
+  await folioController.createFund(integrationsAddressList, fund2.address);
+  await folioController.createFund(integrationsAddressList, fund3.address);
 
   const fundAddressesList = await folioController.getFunds();
   // Initialize fund integrations
@@ -146,7 +168,8 @@ async function deployFolioFixture() {
       await folioController.initializeIntegration(integration, fundIter);
     });
   });
-  const fund = await ethers.getContractAt("ClosedFund", fundAddressesList[0]);
+
+  // Initial deposit
   await fund.initialManagerDeposit({ value: ethers.utils.parseEther("0.01") });
   await fund.initialize(
     0,
@@ -157,8 +180,6 @@ async function deployFolioFixture() {
     ethers.utils.getAddress(addresses.zero),
     ethers.utils.getAddress(addresses.zero)
   );
-  const fund2 = await ethers.getContractAt("ClosedFund", fundAddressesList[1]);
-  const fund3 = await ethers.getContractAt("ClosedFund", fundAddressesList[2]);
 
   return {
     folioController,
@@ -168,7 +189,8 @@ async function deployFolioFixture() {
       kyberTradeIntegration,
       oneInchTradeIntegration,
       balancerIntegration,
-      uniswapPoolIntegration
+      uniswapPoolIntegration,
+      yearnVaultIntegration
     },
     funds: {
       one: fund,

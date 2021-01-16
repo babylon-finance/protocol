@@ -20,15 +20,25 @@ pragma solidity 0.7.4;
 import { IIntegration } from "./IIntegration.sol";
 
 /**
- * @title IIntegration
+ * @title IPassiveIntegration
  * @author DFolio
  *
- * Interface for liquiditypool protocol integrations
+ * Interface for passive investments protocol integrations
  */
-interface IPoolIntegration is IIntegration {
+interface IPassiveIntegration is IIntegration {
 
-  function joinPool(address _poolAddress, uint256 _poolTokensOut, address[] calldata _tokensIn, uint256[] calldata _maxAmountsIn) external;
-  function exitPool(address _poolAddress, uint256 _poolTokensIn, address[] calldata _tokensOut, uint256[] calldata _minAmountsOut) external;
-  function isPool(address _poolAddress) view external returns (bool);
+  function enterInvestment(
+    address _investmentAddress,
+    uint256 _investmentTokensOut,
+    address _tokenIn,
+    uint256 _maxAmountIn
+  ) external;
+  function exitInvestment(
+    address _investmentAddress,
+    uint256 _investmentTokenIn,
+    address _tokenOut,
+    uint256 _minAmountOut
+  ) external;
+  function isInvestment(address _investmentAddress) view external returns (bool);
 
 }

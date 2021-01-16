@@ -33,6 +33,12 @@ module.exports = {
       wethdai: "0xa478c2975ab1ea89e8196811f51a7b7ade33eb11"
     }
   },
+  yearn: {
+    vaultRegistry: "0x3eE41C098f9666ed2eA246f4D2558010e59d63A0",
+    vaults: {
+      ydai: "0xacd43e627e64355f1861cec6d3a6688b31a6f952"
+    }
+  },
   tokens: {
     DAI: "0x6B175474E89094C44Da98b954EedeAC495271d0F",
     CDAI: "0x5d3a536e4d6dbd6114cc1ead35777bab948e3643",

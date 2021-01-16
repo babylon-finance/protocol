@@ -19,13 +19,12 @@
 pragma solidity 0.7.4;
 
 import "hardhat/console.sol";
-import {SafeMath} from "@openzeppelin/contracts/math/SafeMath.sol";
-import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
-import {ClosedFund} from "./ClosedFund.sol";
-import {IFund} from "./interfaces/IFund.sol";
-import {IIntegration} from "./interfaces/IIntegration.sol";
-import {AddressArrayUtils} from "./lib/AddressArrayUtils.sol";
+import { SafeMath } from "@openzeppelin/contracts/math/SafeMath.sol";
+import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
+import { IFund } from "./interfaces/IFund.sol";
+import { IIntegration } from "./interfaces/IIntegration.sol";
+import { AddressArrayUtils } from "./lib/AddressArrayUtils.sol";
 
 /**
  * @title FolioController
@@ -39,15 +38,8 @@ contract FolioController is Ownable {
     using SafeMath for uint256;
 
     /* ============ Events ============ */
-
-    event FundCreated(
-        address indexed _fund,
-        address _manager,
-        string _name,
-        string _symbol
-    );
-    event FundAdded(address indexed _setToken, address indexed _factory);
-    event FundRemoved(address indexed _setToken);
+    event FundAdded(address indexed _fund, address indexed _factory);
+    event FundRemoved(address indexed _fund);
 
     event ControllerIntegrationAdded(
         address indexed _integration,
@@ -135,54 +127,21 @@ contract FolioController is Ownable {
      * of positions that are instantiated as DEFAULT (positionState = 0) state.
      *
      * @param _integrations           List of integrations to enable. All integrations must be approved by the Controller
-     * @param _weth                   Address of the WETH ERC20
-     * @param _reserveAsset           Address of the reserve asset ERC20
-     * @param _manager                Address of the manager
-     * @param _managerFeeRecipient    Address where the manager will receive the fees
-     * @param _name                   Name of the Fund
-     * @param _symbol                 Symbol of the Fund
-     * @param _minContribution        Min contribution to the fund
+     * @param _fund                   Address of the fund
      */
     function createFund(
-        address[] memory _integrations,
-        address _weth,
-        address _reserveAsset,
-        address _manager,
-        address _managerFeeRecipient,
-        string memory _name,
-        string memory _symbol,
-        uint256 _minContribution
+      address[] memory _integrations,
+      address _fund
     ) external returns (address) {
-        require(_manager != address(0), "Manager must not be empty");
-        require(
-            _managerFeeRecipient != address(0),
-            "Manager must not be empty"
-        );
-
         for (uint256 i = 0; i < _integrations.length; i++) {
           require(
               _integrations[i] != address(0),
               "Component must not be null address"
           );
         }
-
-        // Creates a new Fund instance
-        ClosedFund fund =
-            new ClosedFund(
-                _integrations,
-                _weth,
-                _reserveAsset,
-                address(this),
-                _manager,
-                _managerFeeRecipient,
-                _name,
-                _symbol,
-                _minContribution
-            );
-
+        IFund fund = IFund(_fund);
+        require(fund.controller() == address(this), "The controller must be this contract");
         addFund(address(fund));
-
-        emit FundCreated(address(fund), _manager, _name, _symbol);
 
         return address(fund);
     }

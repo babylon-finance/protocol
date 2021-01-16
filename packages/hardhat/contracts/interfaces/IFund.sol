@@ -80,6 +80,7 @@ interface IFund is IERC20 {
     function setDisabled() external;
     function setManager(address _manager) external;
 
+    function controller() external view returns (address);
     function manager() external view returns (address);
     function active() external view returns (bool);
     function integrationStates(address _integration) external view returns (IntegrationState);
@@ -117,12 +118,28 @@ interface IFund is IERC20 {
     ) external;
 
     function exitPool(
-        string memory _integrationName,
-        address _poolAddress,
-        uint256 _poolTokensIn,
-        address[] calldata _tokensOut,
-        uint256[] calldata _minAmountsOut
-      ) external;
+      string memory _integrationName,
+      address _poolAddress,
+      uint256 _poolTokensIn,
+      address[] calldata _tokensOut,
+      uint256[] calldata _minAmountsOut
+    ) external;
+
+    function enterPassiveInvestment(
+      string memory _integrationName,
+      address _investmentAddress,
+      uint256 _investmentTokensOut,
+      address _tokenIn,
+      uint256 _maxAmountIn
+    ) external;
+
+    function exitPassiveInvestment(
+      string memory _integrationName,
+      address _investmentAddress,
+      uint256 _investmentTokenIn,
+      address _tokenOut,
+      uint256 _minAmountOut
+    ) external;
 
     function depositCollateral(address asset, uint256 amount) external;
     function removeCollateral(address asset, uint256 amount) external;

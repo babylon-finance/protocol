@@ -38,18 +38,18 @@ describe("CompoundIntegration", function() {
     let cethToken;
     let daiToken;
     let cdaiToken;
-    let usdcToken;
-    let cusdcToken;
+    // let usdcToken;
+    // let cusdcToken;
 
     beforeEach(async () => {
       whaleSigner = await impersonateAddress(daiWhaleAddress);
       daiToken = await ethers.getContractAt("IERC20", addresses.tokens.DAI);
       cdaiToken = await ethers.getContractAt("ICToken", addresses.tokens.CDAI);
-      usdcToken = await ethers.getContractAt("IERC20", addresses.tokens.USDC);
-      cusdcToken = await ethers.getContractAt(
-        "ICToken",
-        addresses.tokens.CUSDC
-      );
+      // usdcToken = await ethers.getContractAt("IERC20", addresses.tokens.USDC);
+      // cusdcToken = await ethers.getContractAt(
+      //   "ICToken",
+      //   addresses.tokens.CUSDC
+      // );
       cethToken = await ethers.getContractAt("ICEther", addresses.tokens.CETH);
     });
 
