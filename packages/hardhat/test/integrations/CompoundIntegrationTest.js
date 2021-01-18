@@ -38,18 +38,27 @@ describe("CompoundIntegration", function() {
     let cethToken;
     let daiToken;
     let cdaiToken;
-    // let usdcToken;
-    // let cusdcToken;
+    let whaleWeth;
+    let wethToken;
+    let comptroller;
+    let usdcToken;
+    let cusdcToken;
 
     beforeEach(async () => {
       whaleSigner = await impersonateAddress(daiWhaleAddress);
+      wethToken = await ethers.getContractAt("IERC20", addresses.tokens.WETH);
+      whaleWeth = await impersonateAddress(addresses.holders.WETH);
+      comptroller = await ethers.getContractAt(
+        "IComptroller",
+        addresses.compound.Comptroller
+      );
       daiToken = await ethers.getContractAt("IERC20", addresses.tokens.DAI);
       cdaiToken = await ethers.getContractAt("ICToken", addresses.tokens.CDAI);
-      // usdcToken = await ethers.getContractAt("IERC20", addresses.tokens.USDC);
-      // cusdcToken = await ethers.getContractAt(
-      //   "ICToken",
-      //   addresses.tokens.CUSDC
-      // );
+      usdcToken = await ethers.getContractAt("IERC20", addresses.tokens.USDC);
+      cusdcToken = await ethers.getContractAt(
+        "ICToken",
+        addresses.tokens.CUSDC
+      );
       cethToken = await ethers.getContractAt("ICEther", addresses.tokens.CETH);
     });
 
@@ -60,29 +69,36 @@ describe("CompoundIntegration", function() {
           owner.sendTransaction({
             to: fund.address,
             gasPrice: 0,
-            value: ethers.utils.parseEther("1")
+            value: ethers.utils.parseEther("10")
           })
-        ).to.changeEtherBalance(owner, ethers.utils.parseEther("-1"));
-        console.log(fund.address);
-        const data = compAbi.encodeFunctionData(
-          compoundBorrowing.interface.functions[
-            "depositCollateral(address,uint256)"
-          ],
-          [addresses.tokens.WETH, ethers.utils.parseEther("1")]
-        );
-        await fund.callIntegration(
-          compoundBorrowing.address,
-          ethers.utils.parseEther("1"),
-          data,
+        ).to.changeEtherBalance(owner, ethers.utils.parseEther("-10"));
+        // const data = compAbi.encodeFunctionData(
+        //   compoundBorrowing.interface.functions[
+        //     "depositCollateral(address,uint256)"
+        //   ],
+        //   [addresses.tokens.WETH, ethers.utils.parseEther("1")]
+        // );
+        // await fund.callIntegration(
+        //   compoundBorrowing.address,
+        //   ethers.utils.parseEther("1"),
+        //   data,
+        //   {
+        //     gasPrice: 0
+        //   }
+        // );
+        await fund.depositCollateral(
+          "compound",
+          addresses.tokens.WETH,
+          ethers.utils.parseEther("10"),
           {
             gasPrice: 0
           }
         );
-        const balance = await cethToken.balanceOf(fund.address);
-        expect(balance).to.be.gt(0);
         expect(await cethToken.balanceOf(compoundBorrowing.address)).to.equal(
           0
         );
+        const balance = await cethToken.balanceOf(fund.address);
+        expect(balance).to.be.gt(0);
       });
 
       it("can supply erc20", async function() {
@@ -98,180 +114,28 @@ describe("CompoundIntegration", function() {
           ethers.utils.parseEther("1000")
         );
 
-        // Add allowance to the integration
-        fund.addAllowanceIntegration(
-          compoundBorrowing.address,
-          daiToken.address,
-          ethers.utils.parseEther("100")
+        await fund.depositCollateral(
+          "compound",
+          addresses.tokens.DAI,
+          ethers.utils.parseEther("100"),
+          {
+            gasPrice: 0
+          }
         );
-        await expect(() =>
-          owner.sendTransaction({
-            to: compoundBorrowing.address,
-            gasPrice: 0,
-            value: ethers.utils.parseEther("1")
-          })
-        ).to.changeEtherBalance(owner, ethers.utils.parseEther("-1"));
-        const data = compAbi.encodeFunctionData(
-          compoundBorrowing.interface.functions[
-            "depositCollateral(address,uint256)"
-          ],
-          [addresses.tokens.DAI, ethers.utils.parseEther("100")]
-        );
-        await fund.callIntegration(compoundBorrowing.address, 0, data, {
-          gasPrice: 0
-        });
 
         const balance = await cdaiToken.balanceOf(fund.address);
         expect(balance).to.be.gt(0);
       });
 
-      // it("can supply ether and borrow dai", async function() {
-      //   expect(await cethToken.balanceOf(compoundBorrowing.address)).to.equal(
-      //     0
-      //   );
-      //   await expect(() =>
-      //     owner.sendTransaction({
-      //       to: compoundBorrowing.address,
-      //       gasPrice: 0,
-      //       value: 1000000000
-      //     })
-      //   ).to.changeEtherBalance(owner, -1000000000);
-      //   await compoundBorrowing.depositCollateral(
-      //     addresses.tokens.WETH,
-      //     ethers.utils.parseEther("10"),
-      //     { value: ethers.utils.parseEther("10") }
-      //   );
-      //   let balance = await cethToken.balanceOf(compoundBorrowing.address);
-      //   expect(balance).to.be.gt(0);
-      //   expect(
-      //     await compoundBorrowing.enterMarketsAndApproveCTokens([
-      //       cdaiToken.address,
-      //       cethToken.address
-      //     ])
-      //   );
-      //   expect(await cdaiToken.balanceOf(compoundBorrowing.address)).to.equal(
-      //     0
-      //   );
-      //   expect(
-      //     await compoundBorrowing.borrow(
-      //       daiToken.address,
-      //       ethers.utils.parseEther("10")
-      //     )
-      //   );
-      //   balance = await cdaiToken.borrowBalanceCurrent(
-      //     compoundBorrowing.address
-      //   );
-      //   expect(balance).to.be.gt(0);
-      // });
+      it("can supply ether and borrow dai", async function() {
+        // TODO
+      });
 
       // it("can supply dai and borrow usdc", async function() {
-      //   expect(
-      //     await daiToken
-      //       .connect(whaleSigner)
-      //       .transfer(
-      //         compoundBorrowing.address,
-      //         ethers.utils.parseEther("1000"),
-      //         { gasPrice: 0 }
-      //       )
-      //   );
-      //   expect(
-      //     await daiToken
-      //       .connect(whaleSigner)
-      //       .transfer(owner.getAddress(), ethers.utils.parseEther("1000"), {
-      //         gasPrice: 0
-      //       })
-      //   );
-      //   expect(await cdaiToken.balanceOf(compoundBorrowing.address)).to.equal(
-      //     0
-      //   );
-      //   expect(await daiToken.balanceOf(compoundBorrowing.address)).to.equal(
-      //     ethers.utils.parseEther("1000")
-      //   );
-      //   expect(await daiToken.balanceOf(owner.getAddress())).to.equal(
-      //     ethers.utils.parseEther("2000")
-      //   );
-      //   await expect(() =>
-      //     owner.sendTransaction({
-      //       to: compoundBorrowing.address,
-      //       gasPrice: 0,
-      //       value: 1000000000
-      //     })
-      //   ).to.changeEtherBalance(owner, -1000000000);
-      //   expect(
-      //     await compoundBorrowing.depositCollateral(
-      //       addresses.tokens.DAI,
-      //       ethers.utils.parseEther("100"),
-      //       { gasPrice: 0 }
-      //     )
-      //   );
-      //   let balance = await cdaiToken.balanceOf(compoundBorrowing.address);
-      //   expect(balance).to.be.gt(0);
-      //   expect(
-      //     await compoundBorrowing.enterMarketsAndApproveCTokens([
-      //       cdaiToken.address,
-      //       cusdcToken.address
-      //     ])
-      //   );
-      //   expect(await cdaiToken.balanceOf(compoundBorrowing.address)).to.be.gt(
-      //     0
-      //   );
-      //   expect(
-      //     await compoundBorrowing.borrow(
-      //       usdcToken.address,
-      //       ethers.utils.parseEther("1")
-      //     )
-      //   );
-      //   balance = await cusdcToken.borrowBalanceCurrent(
-      //     compoundBorrowing.address
-      //   );
-      //   expect(balance).to.be.gt(0);
       // });
 
       // it("can supply ether, borrow dai and repay", async function() {
-      //   await expect(() =>
-      //     owner.sendTransaction({
-      //       to: compoundBorrowing.address,
-      //       gasPrice: 0,
-      //       value: 1000000000
-      //     })
-      //   ).to.changeEtherBalance(owner, -1000000000);
-      //   await compoundBorrowing.depositCollateral(
-      //     addresses.tokens.WETH,
-      //     ethers.utils.parseEther("10"),
-      //     { value: ethers.utils.parseEther("10") }
-      //   );
-      //   expect(
-      //     await compoundBorrowing.enterMarketsAndApproveCTokens([
-      //       cdaiToken.address,
-      //       cethToken.address
-      //     ])
-      //   );
-      //   expect(
-      //     await compoundBorrowing.borrow(
-      //       daiToken.address,
-      //       ethers.utils.parseEther("10")
-      //     )
-      //   );
-      //   const balance = await cdaiToken.borrowBalanceCurrent(
-      //     compoundBorrowing.address
-      //   );
-      //   expect(balance).to.be.gt(0);
-      //   console.log("balance after borrow", ethers.utils.formatEther(balance));
-      //   expect(
-      //     await compoundBorrowing.repayBorrow(
-      //       cdaiToken.address,
-      //       ethers.utils.parseEther("10")
-      //     )
-      //   );
-      //   const balance2 = await cdaiToken.borrowBalanceCurrent(
-      //     compoundBorrowing.address
-      //   );
-      //   console.log(
-      //     "balance after repayment",
-      //     ethers.utils.formatEther(balance2)
-      //   );
-      //   expect(balance2).to.be.lt(balance);
-      // });
+      //
     });
   });
 });

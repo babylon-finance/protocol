@@ -27,6 +27,7 @@ import { AddressArrayUtils } from "./lib/AddressArrayUtils.sol";
 import { PreciseUnitMath } from "./lib/PreciseUnitMath.sol";
 import { IFolioController } from "./interfaces/IFolioController.sol";
 import { IWETH } from "./interfaces/external/weth/IWETH.sol";
+import { IComptroller } from './interfaces/external/compound/IComptroller.sol';
 import { IIntegration } from "./interfaces/IIntegration.sol";
 import { IBorrowIntegration } from "./interfaces/IBorrowIntegration.sol";
 import { IPassiveIntegration } from "./interfaces/IPassiveIntegration.sol";

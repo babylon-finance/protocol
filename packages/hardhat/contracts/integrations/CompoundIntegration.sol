@@ -63,7 +63,7 @@ contract CompoundIntegration is BorrowIntegration {
     address _controller,
     address _weth,
     uint256 _maxCollateralFactor
-  ) BorrowIntegration('Compound Borrowing', _weth, _controller, _maxCollateralFactor) {
+  ) BorrowIntegration('compound', _weth, _controller, _maxCollateralFactor) {
     assetToCtoken[0x6B175474E89094C44Da98b954EedeAC495271d0F] = 0x5d3a536E4D6DbD6114cc1Ead35777bAB948E3643; // DAI
     assetToCtoken[0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2] = 0x4Ddc2D193948926D02f9B1fE9e1daa0718270ED5; // WETH
     assetToCtoken[0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48] = 0x39AA39c021dfbaE8faC545936693aC917d5E7563; // USDC
@@ -101,11 +101,13 @@ contract CompoundIntegration is BorrowIntegration {
   ) internal override view returns (address, uint256, bytes memory) {
     if (_borrowOp == 2 || _borrowOp == 0) {
       // Encode method data for Fund to invoke
+      address[] memory markets = new address[](1);
+      markets[0] = _asset;
       bytes memory methodData = abi.encodeWithSignature(
         "enterMarkets(address[])",
-        [_asset]
+        markets
       );
-      return (address(CompoundComptrollerAddress), 0, methodData);
+      return (CompoundComptrollerAddress, 0, methodData);
     }
   }
 
@@ -128,7 +130,8 @@ contract CompoundIntegration is BorrowIntegration {
       "mint(uint256)",
       _amount
     );
-    return (assetToCtoken[_asset], 0, methodData);
+    // If it is eth, send the value
+    return (_asset, _asset == CEtherAddress ? _amount : 0, methodData);
   }
 
   /**
@@ -151,7 +154,7 @@ contract CompoundIntegration is BorrowIntegration {
       _amount
     );
 
-    return (assetToCtoken[_asset], 0, methodData);
+    return (_asset, 0, methodData);
   }
 
   /**
@@ -174,7 +177,7 @@ contract CompoundIntegration is BorrowIntegration {
       _amount
     );
 
-    return (assetToCtoken[_asset], 0, methodData);
+    return (_asset, 0, methodData);
   }
 
   /**

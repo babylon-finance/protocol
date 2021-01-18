@@ -115,27 +115,28 @@ abstract contract BorrowIntegration is BaseIntegration, ReentrancyGuard {
 
     _validatePreDeposit(debtInfo);
 
-    // Approve the collateral
-    debtInfo.fund.invokeApprove(
-      _getSpender(assetToDeposit),
-      assetToDeposit,
-      amount
-    );
-
     // Pre actions (enter markets for compound)
     (
       address targetAddressP,
       uint256 callValueP,
       bytes memory methodDataP
     ) = _getPreActionCallData(
-      asset,
+      assetToDeposit,
       amount,
       BORROW_OPERATION_DEPOSIT
     );
     if (targetAddressP != address(0)) {
-      // Invoke protocol specific call
       debtInfo.fund.invokeFromIntegration(targetAddressP, callValueP, methodDataP);
     }
+
+    // Approve the collateral
+    debtInfo.fund.invokeApprove(
+      _getSpender(asset),
+      asset,
+      amount
+    );
+
+    // Execute the deposit
 
     (
       address targetAddress,
@@ -377,6 +378,7 @@ abstract contract BorrowIntegration is BaseIntegration, ReentrancyGuard {
    * @param _debtInfo               Struct containing debt information used in internal functions
    */
   function _validatePreDeposit(DebtInfo memory _debtInfo) internal view {
+    // TODO
   }
 
   /**
@@ -385,6 +387,7 @@ abstract contract BorrowIntegration is BaseIntegration, ReentrancyGuard {
    * @param _debtInfo               Struct containing debt information used in internal functions
    */
   function _validatePostDeposit(DebtInfo memory _debtInfo) internal view {
+    // TODO
   }
 
   /**
@@ -393,6 +396,7 @@ abstract contract BorrowIntegration is BaseIntegration, ReentrancyGuard {
    * @param _debtInfo               Struct containing debt information used in internal functions
    */
   function _validatePreBorrow(DebtInfo memory _debtInfo) internal view {
+    // TODO
   }
 
   /**
@@ -401,6 +405,7 @@ abstract contract BorrowIntegration is BaseIntegration, ReentrancyGuard {
    * @param _debtInfo               Struct containing debt information used in internal functions
    */
   function _validatePostBorrow(DebtInfo memory _debtInfo) internal view {
+    // TODO
   }
 
   /**
@@ -409,14 +414,16 @@ abstract contract BorrowIntegration is BaseIntegration, ReentrancyGuard {
    * @param _debtInfo               Struct containing debt information used in internal functions
    */
   function _validatePreRemoval(DebtInfo memory _debtInfo) internal view {
+    // TODO
   }
 
   /**
-   * Validate pre deposit collateral.
+   * Validate post withdrawal collateral.
    *
    * @param _debtInfo               Struct containing debt information used in internal functions
    */
   function _validatePostRemoval(DebtInfo memory _debtInfo) internal view {
+    // TODO
   }
 
   /**
@@ -425,6 +432,7 @@ abstract contract BorrowIntegration is BaseIntegration, ReentrancyGuard {
    * @param _debtInfo               Struct containing debt information used in internal functions
    */
   function _validatePreRepay(DebtInfo memory _debtInfo) internal view {
+    // TODO
   }
 
   /**
@@ -433,6 +441,7 @@ abstract contract BorrowIntegration is BaseIntegration, ReentrancyGuard {
    * @param _debtInfo               Struct containing debt information used in internal functions
    */
   function _validatePostRepay(DebtInfo memory _debtInfo) internal view {
+    // TODO
   }
 
   /* ============ Virtual Functions ============ */
