@@ -186,7 +186,7 @@ abstract contract BorrowIntegration is BaseIntegration, ReentrancyGuard {
       uint256 callValueP,
       bytes memory methodDataP
     ) = _getPreActionCallData(
-      asset,
+      assetToDeposit,
       amount,
       BORROW_OPERATION_REMOVAL
     );

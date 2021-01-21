@@ -15,7 +15,7 @@ function buildAddress(contractName, address) {
   );
 }
 
-function publishContract(contractName) {
+function publishContract(contractName, path) {
   console.log(
     "Publishing",
     chalk.cyan(contractName),
@@ -25,13 +25,13 @@ function publishContract(contractName) {
   try {
     const contractFile = fs
       .readFileSync(
-        `${config.paths.artifacts}/contracts/${contractName}.sol/${contractName}.json`
+        `${config.paths.artifacts}/contracts/${path}${contractName}.sol/${contractName}.json`
       )
       .toString();
     let address;
     try {
       address = fs
-        .readFileSync(`${config.paths.artifacts}/${contractName}.address`)
+        .readFileSync(`${config.paths.artifacts}/${path}${contractName}.address`)
         .toString();
     } catch (err) {
       address = null;
@@ -57,22 +57,35 @@ function publishContract(contractName) {
 }
 
 async function main() {
+  const finalContractList = [];
+  const publishAndPushContract = (file, path = "") => {
+    if (file.indexOf(".sol") >= 0) {
+      const contractName = file.replace(".sol", "");
+      // Add contract to list if publishing is successful
+      if (publishContract(contractName, path)) {
+        finalContractList.push(contractName);
+      }
+    }
+  };
+
   if (!fs.existsSync(publishDir)) {
     fs.mkdirSync(publishDir);
   }
-  const finalContractList = [];
   const contractList = fs
     .readdirSync(config.paths.sources)
     .filter(fileName => isSolidity(fileName));
   contractList.forEach(file => {
-    if (file.indexOf(".sol") >= 0) {
-      const contractName = file.replace(".sol", "");
-      // Add contract to list if publishing is successful
-      if (publishContract(contractName)) {
-        finalContractList.push(contractName);
-      }
-    }
+    publishAndPushContract(file);
   });
+  // External interfaces
+  const externalInterfaces = [
+    { name: "IKyberNetworkProxy.sol", path: "interfaces/external/kyber/" }
+  ];
+  externalInterfaces.forEach(interfaceC => {
+    publishAndPushContract(interfaceC.name, interfaceC.path);
+  });
+  // Publish addresses
+  fs.copyFileSync("utils/addresses.js", `${publishDir}/addresses.js`);
   fs.writeFileSync(
     `${publishDir}/contracts.js`,
     `module.exports = ${JSON.stringify(finalContractList)};`
