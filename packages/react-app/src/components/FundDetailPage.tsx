@@ -1,16 +1,63 @@
 import FundDetailChart from "./FundDetailChart";
+import FundManageActions from "./FundManageActions";
 
-import React from 'react';
-import { Avatar, Flex, Box, Table } from 'rimble-ui';
-import { useParams } from "react-router-dom";
+import * as contractNames from "../constants/contracts";
+import { loadContractFromNameAndAddress } from "../hooks/ContractLoader";
+
+import {
+  Link,
+  Switch,
+  Route
+} from "react-router-dom";
+import React, { useState, useEffect } from 'react';
+import { Avatar, Box, Flex, Table } from 'rimble-ui';
+import { useParams, useRouteMatch } from "react-router-dom";
 import styled from "styled-components";
 
 interface FundDetailPageState { }
 
-interface FundDetailPageProps { }
+interface FundDetailPageProps {
+  provider: any
+  userAddress: any
+}
 
-const FundDetailPage = () => {
+interface Contracts {
+  ClosedFund: any
+  IERC20: any
+}
+
+const FundDetailPage = ({ provider, userAddress }: FundDetailPageProps) => {
+  const [contracts, setContracts] = useState<Contracts | undefined>(undefined);
+  const [isFundManager, setIsFundManager] = useState(false);
+
+  let { path, url } = useRouteMatch();
   let { address } = useParams();
+
+  useEffect(() => {
+    async function getContracts() {
+      const fund = await loadContractFromNameAndAddress(address, contractNames.ClosedFund, provider);
+      const token = await loadContractFromNameAndAddress(address, contractNames.IERC20, provider);
+
+      setContracts({ ClosedFund: fund, IERC20: token });
+
+      if (token) {
+        setTokenBalance(await token.balanceOf(userAddress));
+      }
+    }
+
+    if (!contracts && provider) {
+      getContracts();
+    }
+
+    async function getIsFundManager() {
+      if (contracts) {
+        setIsFundManager(await contracts.ClosedFund.manager() === userAddress);
+      }
+    }
+
+    getIsFundManager();
+  });
+
   return (
     <ContainerLarge>
       <ContentWrapper>
@@ -18,6 +65,9 @@ const FundDetailPage = () => {
           <TitleHero>
             Cool Fund Name: {address.slice(0, 6)}
           </TitleHero>
+          {isFundManager && (
+            <ManageLink to={`${url}/manage`}>Manage</ManageLink>
+          )}
           <StatsHero>
             <StatsHeroItem>
               <StatsHeroItemLabel>
@@ -151,9 +201,18 @@ const FundDetailPage = () => {
           </PerformanceBlockRight>
         </PerformanceWrapper>
       </ContentWrapper>
-    </ContainerLarge >
+      <Switch>
+        <Route path={`${path}/manage`} children={<FundManageActions provider={this.props.provider} />} />
+      </Switch>
+    </ContainerLarge>
   );
 }
+
+const ManageLink = styled(Link)`
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+`
 
 const PerformanceTable = styled(Table)`
   height: 300px;
@@ -184,7 +243,7 @@ const ContainerLarge = styled(Box)`
 `
 
 const ContentWrapper = styled.div`
-  padding: 80px 6px;
+  padding: 20px 6px 0 6px;
 `
 
 const TitleWrapper = styled(Flex)`

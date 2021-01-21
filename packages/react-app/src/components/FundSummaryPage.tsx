@@ -48,7 +48,6 @@ const FundCardRowWrapper = styled.div`
   div:not(:first-child) {
     margin-left: 12px;
   }
-  margin-top: 50px;
 `
 
 export default FundSummaryPage;

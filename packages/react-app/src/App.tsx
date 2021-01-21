@@ -1,5 +1,6 @@
 import AppHeader from "./components/AppHeader";
 import FundDetailPage from "./components/FundDetailPage";
+import FundManageActions from "./components/FundManageActions";
 import FundSummaryPage from "./components/FundSummaryPage";
 
 import React from 'react';
@@ -179,8 +180,9 @@ export default class App extends React.Component<AppProps, AppState> {
               <Alert message={`You are on a different network. Please connect your wallet to the ${networkId === 1 ? 'mainnet' : 'network with id ' + networkId}`} type="warning" />
             )}
             <Switch>
-              <Route path="/fund/:address" children={<FundDetailPage />} />
-              <Route extec path="/" children={this.renderFundSummary()} />
+              <Route path="/fund/:address/manage" children={<FundManageActions provider={this.state.provider} />} />
+              <Route path="/fund/:address" children={<FundDetailPage provider={this.state.provider} userAddress={this.state.address} />} />
+              <Route path="/" children={this.renderFundSummary()} />
             </Switch>
           </ContentWrapper>
         </AppWrapper>
