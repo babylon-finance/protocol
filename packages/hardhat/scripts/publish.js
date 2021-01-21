@@ -84,6 +84,8 @@ async function main() {
   externalInterfaces.forEach(interfaceC => {
     publishAndPushContract(interfaceC.name, interfaceC.path);
   });
+  // Publish addresses
+  fs.copyFileSync("utils/addresses.js", `${publishDir}/addresses.js`);
   fs.writeFileSync(
     `${publishDir}/contracts.js`,
     `module.exports = ${JSON.stringify(finalContractList)};`
