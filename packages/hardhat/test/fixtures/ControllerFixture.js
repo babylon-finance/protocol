@@ -170,7 +170,7 @@ async function deployFolioFixture() {
   });
 
   // Initial deposit
-  await fund.initialManagerDeposit({ value: ethers.utils.parseEther("0.01") });
+  await fund.initialManagerDeposit({ value: ethers.utils.parseEther("100") });
   await fund.initialize(
     0,
     0,
