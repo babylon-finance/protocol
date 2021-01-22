@@ -268,7 +268,7 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
         uint256 _reserveAssetQuantity,
         uint256 _minFundTokenReceiveQuantity,
         address _to
-    ) public external nonReentrant onlyActive {
+    ) public payable nonReentrant onlyActive {
         require(
             msg.value >= minContribution,
             "Send at least 1000000000000 wei"
