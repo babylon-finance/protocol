@@ -55,6 +55,8 @@ interface IClosedFund is IERC20, IFund {
     function editManagerDepositFee(uint256 _managerDepositFee) external;
     function editManagerWithdrawalFee(uint256 _managerWithdrawalFee) external;
     function editManagerPerformanceFee(uint256 _managerPerformanceFee) external;
+    function setDepositLimit(uint limit) external;
+    function setFundEndDate(uint256 _endsTimestamp) external;
 
     function getPremiumPercentage() external view returns (uint256);
     function getDepositManagerFee() external view returns (uint256);

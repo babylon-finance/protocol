@@ -25,6 +25,8 @@ const EMPTY_BYTES = "0x";
 const MAX_UINT_256 = MaxUint256;
 const ONE = One;
 const TWO = Two;
+const now = new Date();
+const NOW = Math.round(now.getTime() / 1000);
 const THREE = ethers.BigNumber.from(3);
 const ZERO = Zero;
 const MAX_INT_256 =
@@ -51,5 +53,6 @@ module.exports = {
   ONE_DAY_IN_SECONDS,
   PRECISE_UNIT,
   ONE_YEAR_IN_SECONDS,
-  ONE_HOUR_IN_SECONDS
+  ONE_HOUR_IN_SECONDS,
+  NOW
 };

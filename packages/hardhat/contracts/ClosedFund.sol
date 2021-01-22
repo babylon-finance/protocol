@@ -113,6 +113,7 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
 
     uint256 public maxDepositLimit; // Limits the amount of deposits
     uint256 public managerStake; // Amount staked by the manager
+    uint256 public fundEndsBy; // Timestamp when the fund ends and withdrawals are allowed
 
     // Fees
     uint256 public managerDepositFee; // % of the deposit denominated in the reserve asset
@@ -180,6 +181,7 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
         totalContributors = 0;
         totalFundsDeposited = 0;
         totalFunds = 0;
+        fundEndsBy = block.timestamp + 90 days;
     }
 
     /* ============ External Functions ============ */
@@ -287,6 +289,7 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
             msg.value >= minContribution,
             "Send at least 1000000000000 wei"
         );
+        require(block.timestamp < fundEndsBy, "Fund is already closed");
         // if deposit limit is 0, then there is no deposit limit
         if(maxDepositLimit > 0) {
           require(totalFundsDeposited.add(msg.value) <= maxDepositLimit, "Max Deposit Limit reached");
@@ -327,7 +330,8 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
         uint256 _fundTokenQuantity,
         uint256 _minReserveReceiveQuantity,
         address payable _to
-    ) external nonReentrant onlyContributor(msg.sender) {
+    ) external nonReentrant onlyContributor(msg.sender) onlyActive {
+        require(block.timestamp > fundEndsBy, "Withdrawals are disabled until the fund ends");
         require(
             _fundTokenQuantity <= IERC20(address(this)).balanceOf(msg.sender),
             "Withdrawal amount must be less than or equal to deposited amount"
@@ -443,8 +447,12 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
     }
 
     // if limit == 0 then there is no deposit limit
-    function setDepositLimit(uint limit) public onlyManager {
+    function setDepositLimit(uint limit) external onlyManager {
       maxDepositLimit = limit;
+    }
+
+    function setFundEndDate(uint256 _endsTimestamp) external onlyProtocol {
+      fundEndsBy = _endsTimestamp;
     }
 
     /* ============ External Getter Functions ============ */

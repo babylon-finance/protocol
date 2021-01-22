@@ -372,7 +372,6 @@ abstract contract BaseFund is ERC20 {
     }
 
     function setDisabled() external onlyManagerOrProtocol {
-      // TODO: the fund must be
       require(active, "The fund must be active");
       active = false;
     }
