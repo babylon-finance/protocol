@@ -65,6 +65,19 @@ describe("Fund", function() {
     });
   });
 
+  describe("Fund deposit limit", async function() {
+    it("reverts if the deposit is bigger than the limit", async function() {
+      await fund1.setDepositLimit(ethers.utils.parseEther("1"));
+      await expect(
+        fund1
+          .connect(userSigner3)
+          .deposit(ethers.utils.parseEther("1"), 1, userSigner3.getAddress(), {
+            value: ethers.utils.parseEther("1")
+          })
+      ).to.be.reverted;
+    });
+  });
+
   describe("Fund contributors", async function() {
     it("a contributor can make an initial deposit", async function() {
       expect(await fund1.totalContributors()).to.equal(1);
