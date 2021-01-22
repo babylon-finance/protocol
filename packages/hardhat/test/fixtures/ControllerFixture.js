@@ -170,7 +170,6 @@ async function deployFolioFixture() {
   });
 
   // Initial deposit
-  await fund.initialManagerDeposit({ value: ethers.utils.parseEther("0.01") });
   await fund.initialize(
     0,
     0,
@@ -178,7 +177,8 @@ async function deployFolioFixture() {
     0,
     1,
     ethers.utils.getAddress(addresses.zero),
-    ethers.utils.getAddress(addresses.zero)
+    ethers.utils.getAddress(addresses.zero),
+    { value: ethers.utils.parseEther("0.01") }
   );
 
   return {

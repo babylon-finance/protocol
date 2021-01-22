@@ -46,7 +46,7 @@ describe("FundValuer", function() {
       );
       console.log('fund value', ethers.utils.formatEther(price));
 
-      expect(price).to.equal(ethers.utils.parseEther("0.01"));
+      expect(price.mul(10000)).to.equal(ethers.utils.parseEther("0.01"));
     });
   });
 });

@@ -201,7 +201,7 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
         uint256 _minFundTokenSupply,
         address _managerDepositHook,
         address _managerWithdrawalHook
-    ) external onlyManager onlyInactive {
+    ) external onlyManager onlyInactive payable {
         IFolioController ifcontroller = IFolioController(controller);
         require(
             _managerDepositFee <= ifcontroller.getMaxManagerDepositFee(),
@@ -224,8 +224,6 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
             _minFundTokenSupply > 0,
             "Min Fund token supply must be greater than 0"
         );
-        require(totalSupply() > 0, "The fund must receive an initial deposit by the manager");
-
         managerDepositFee = _managerDepositFee;
         minFundTokenSupply = _minFundTokenSupply;
         managerWithdrawalFee = _managerWithdrawalFee;
@@ -233,30 +231,29 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
         premiumPercentage = _premiumPercentage;
         managerDepositHook = _managerDepositHook;
         managerWithdrawalHook = _managerWithdrawalHook;
+
+        // make initial deposit
+        uint256 initialTokens = msg.value.div(initialBuyRate);
+
+        IWETH(weth).deposit{value: msg.value}();
+
+        // TODO: Trade to reserve asset if different than WETH
+
+        _mint(manager, initialTokens);
+        _udpateContributorInfo(initialTokens);
+
+        uint256 newTotalSupply = totalSupply();
+        int256 newPositionMultiplier = positionMultiplier.div(newTotalSupply.toInt256());
+        _editPositionMultiplier(newPositionMultiplier);
+
+        _calculateAndEditPosition(
+          weth,
+          msg.value
+        );
+
+        require(totalSupply() > 0, "The fund must receive an initial deposit by the manager");
+
         active = true;
-    }
-
-    /**
-     * Manager sets the initial deposit that kickstarts the supply and allows to set the fund to active
-     *
-     */
-    function initialManagerDeposit() external onlyManager payable nonReentrant {
-      require(
-          msg.value >= minContribution,
-          "Send at least 1000000000000 wei"
-      );
-      // Always wrap to WETH
-      IWETH(weth).deposit{value: msg.value}();
-
-      // TODO: Trade to reserve asset if different than WETH
-      uint256 initialTokens = msg.value.div(initialBuyRate);
-      _mint(manager, initialTokens);
-      _udpateContributorInfo(initialTokens);
-
-      _calculateAndEditPosition(
-        weth,
-        msg.value
-      );
     }
 
     /**
@@ -271,7 +268,7 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
         uint256 _reserveAssetQuantity,
         uint256 _minFundTokenReceiveQuantity,
         address _to
-    ) external payable nonReentrant onlyActive {
+    ) public external nonReentrant onlyActive {
         require(
             msg.value >= minContribution,
             "Send at least 1000000000000 wei"
