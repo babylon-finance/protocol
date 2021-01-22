@@ -101,6 +101,10 @@ contract PriceOracle is Ownable {
           controller.isSystemContract(msg.sender),
           "PriceOracle.getPrice: Caller must be system contract."
         );
+        // Same asset
+        if (_assetOne == _assetTwo) {
+          return 1;
+        }
 
         bool priceFound;
         uint256 price;

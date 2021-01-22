@@ -69,6 +69,9 @@ describe("Fund", function() {
         });
       const fundBalanceAfter = await weth.balanceOf(fund1.address);
       const supplyAfter = await fund1.totalSupply();
+      // Funds
+      // Manager deposit in fixture is only 0.01
+      expect(supplyAfter.div(101)).to.equal(supplyBefore);
       expect(fundBalanceAfter.sub(fundBalance)).to.equal(
         ethers.utils.parseEther("1")
       );
@@ -79,6 +82,12 @@ describe("Fund", function() {
       expect(await fund1.totalFundsDeposited()).to.equal(
         ethers.utils.parseEther("1.01")
       );
+      // Positions
+      console.log('multiplier after', ethers.utils.formatEther(await fund1.positionMultiplier()));
+      expect(await fund1.getPositionCount()).to.equal(1);
+      const wethPosition = await fund1.getTotalPositionRealUnits(weth.address);
+      console.log('weth', ethers.utils.formatEther(wethPosition));
+      // Contributor Struct
       const contributor = await fund1.contributors(userSigner3.getAddress());
       expect(contributor.totalDeposit).to.equal(ethers.utils.parseEther("1"));
       expect(contributor.tokensReceived).to.equal(
