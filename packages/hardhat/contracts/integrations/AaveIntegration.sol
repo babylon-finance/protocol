@@ -61,18 +61,18 @@ contract AaveIntegration is BorrowIntegration {
     /**
      * Return pre action calldata
      *
-     * @param  _asset                    Address of the asset to deposit
-     * @param  _amount                   Amount of the token to deposit
-     * @param  _borrowOp                Type of Borrow op
+     * hparam  _asset                    Address of the asset to deposit
+     * hparam  _amount                   Amount of the token to deposit
+     * hparam  _borrowOp                Type of Borrow op
      *
      * @return address                   Target contract address
      * @return uint256                   Call value
      * @return bytes                     Trade calldata
      */
     function _getPreActionCallData(
-      address _asset,
-      uint256 _amount,
-      uint _borrowOp
+      address /* _asset */,
+      uint256 /* _amount */ ,
+      uint /* _borrowOp */
     ) internal override pure returns (address, uint256, bytes memory) {
       return (address(0),0,bytes(""));
     }
@@ -183,11 +183,16 @@ contract AaveIntegration is BorrowIntegration {
 
     /* ============ Internal Functions ============ */
 
-    function _getCollateralAsset(address asset, uint8 _borrowOp) internal override view  returns (address) {
+    function _getCollateralAsset(
+      address asset,
+      uint8 /* _borrowOp */
+    ) internal override pure  returns (address) {
       return asset;
     }
 
-    function _getSpender(address asset) internal override view returns (address) {
+    function _getSpender(
+      address /* asset */
+    ) internal override pure returns (address) {
       return address(lendingPool);
     }
 
@@ -203,7 +208,7 @@ contract AaveIntegration is BorrowIntegration {
      *
      */
     function _getBorrowBalance(address asset) internal view returns (uint256) {
-      (uint256 assetLended, uint256 stableDebt,,,,,,,) = dataProvider.getUserReserveData(asset, msg.sender);
+      (, uint256 stableDebt,,,,,,,) = dataProvider.getUserReserveData(asset, msg.sender);
       return stableDebt;
     }
 
@@ -213,11 +218,11 @@ contract AaveIntegration is BorrowIntegration {
      */
     function getHealthFactor() internal view returns (uint256) {
       (
-        uint256 totalCollateral,
-        uint256 totalDebt,
-        uint256 borrowingPower,
-        uint256 liquidationThreshold,
-        uint256 ltv,
+        , // uint256 totalCollateral,
+        , // uint256 totalDebt,
+        , // uint256 borrowingPower,
+        , // uint256 liquidationThreshold,
+        , // uint256 ltv,
         uint256 healthFactor
       ) = lendingPool.getUserAccountData(msg.sender);
       return healthFactor;

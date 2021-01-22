@@ -108,7 +108,8 @@ contract KyberTradeIntegration is TradeIntegration {
    * @param  _destinationToken         Address of destination token to buy
    * @param  _destinationAddress       Address to receive traded tokens
    * @param  _sourceQuantity           Amount of source token to sell
-   * @param  _minDestinationQuantity   Min amount of destination token to buy
+   * hparam  _minDestinationQuantity   Min amount of destination token to buy
+   * hparam  _data                     Calldata
    *
    * @return address                   Target address
    * @return uint256                   Call value
@@ -119,7 +120,7 @@ contract KyberTradeIntegration is TradeIntegration {
     address _destinationToken,
     address _destinationAddress,
     uint256 _sourceQuantity,
-    uint256 _minDestinationQuantity,
+    uint256 /* _minDestinationQuantity */,
     bytes memory /* _data */
   )
     internal
@@ -132,7 +133,7 @@ contract KyberTradeIntegration is TradeIntegration {
     kyberTradeInfo.sourceTokenDecimals = ERC20(_sourceToken).decimals();
     kyberTradeInfo.destinationTokenDecimals = ERC20(_destinationToken).decimals();
 
-    (uint256 bestRate, uint256 worstRate) = IKyberNetworkProxy(kyberNetworkProxyAddress).getExpectedRate(_sourceToken, _destinationToken, _sourceQuantity);
+    (, uint256 worstRate) = IKyberNetworkProxy(kyberNetworkProxyAddress).getExpectedRate(_sourceToken, _destinationToken, _sourceQuantity);
 
     kyberTradeInfo.conversionRate = worstRate;
 

@@ -336,10 +336,15 @@ abstract contract BorrowIntegration is BaseIntegration, ReentrancyGuard {
    * @param _debtInfo                 Struct containing trade information used in internal functions
    * @param _feeToken                 Address of the token to pay the fee with
    * @param _exchangedQuantity        Amount of exchanged amounts
-   * @param _borrowOp                 Type of borrow operation
+   * hparam _borrowOp                 Type of borrow operation
    * @return uint256                  Amount of receive token taken as protocol fee
    */
-  function _accrueProtocolFee(DebtInfo memory _debtInfo, address _feeToken, uint256 _exchangedQuantity, uint8 _borrowOp) internal returns (uint256) {
+  function _accrueProtocolFee(
+    DebtInfo memory _debtInfo,
+    address _feeToken,
+    uint256 _exchangedQuantity,
+    uint8 /* _borrowOp */
+  ) internal returns (uint256) {
     uint256 protocolFeeTotal = getIntegrationFee(0, _exchangedQuantity);
     payProtocolFeeFromFund(address(_debtInfo.fund), _feeToken, protocolFeeTotal);
     return protocolFeeTotal;
@@ -468,6 +473,7 @@ abstract contract BorrowIntegration is BaseIntegration, ReentrancyGuard {
     uint256 /* _amount */
   ) internal virtual view returns (address, uint256, bytes memory) {
     require(false, "This needs to be overriden");
+    return (address(0),0,bytes(""));
   }
 
   /**
@@ -485,23 +491,25 @@ abstract contract BorrowIntegration is BaseIntegration, ReentrancyGuard {
     uint256 /* _amount */
   ) internal virtual view returns (address, uint256, bytes memory) {
     require(false, "This needs to be overriden");
+    return (address(0),0,bytes(""));
   }
 
   /**
    * Return borrow token calldata
    *
-   * @param  _asset                    Address of the asset to deposit
-   * @param  _amount                   Amount of the token to deposit
+   * hparam  _asset                    Address of the asset to deposit
+   * hparam  _amount                   Amount of the token to deposit
    *
    * @return address                   Target contract address
    * @return uint256                   Call value
    * @return bytes                     Trade calldata
    */
   function _getBorrowCalldata(
-    address _asset,
-    uint256 _amount
+    address /* _asset */,
+    uint256 /* _amount */
   ) internal virtual view returns (address, uint256, bytes memory) {
     require(false, "This needs to be overriden");
+    return (address(0),0,bytes(""));
   }
 
   /**
@@ -519,6 +527,7 @@ abstract contract BorrowIntegration is BaseIntegration, ReentrancyGuard {
     uint256 /* _amount */
   ) internal virtual view returns (address, uint256, bytes memory) {
     require(false, "This needs to be overriden");
+    return (address(0),0,bytes(""));
   }
 
   /**
@@ -538,6 +547,7 @@ abstract contract BorrowIntegration is BaseIntegration, ReentrancyGuard {
     uint /* _borrowOp */
   ) internal virtual view returns (address, uint256, bytes memory) {
     require(false, "This needs to be overriden");
+    return (address(0),0,bytes(""));
   }
 
 }

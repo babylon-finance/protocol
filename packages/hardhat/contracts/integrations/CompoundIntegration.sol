@@ -87,7 +87,7 @@ contract CompoundIntegration is BorrowIntegration {
    * Return pre action calldata
    *
    * @param  _asset                    Address of the asset to deposit
-   * @param  _amount                   Amount of the token to deposit
+   * hparam  _amount                   Amount of the token to deposit
    * @param  _borrowOp                Type of Borrow op
    *
    * @return address                   Target contract address
@@ -96,7 +96,7 @@ contract CompoundIntegration is BorrowIntegration {
    */
   function _getPreActionCallData(
     address _asset,
-    uint256 _amount,
+    uint256 /* _amount */,
     uint _borrowOp
   ) internal override pure returns (address, uint256, bytes memory) {
     if (_borrowOp == 2 || _borrowOp == 0) {
@@ -109,6 +109,7 @@ contract CompoundIntegration is BorrowIntegration {
       );
       return (CompoundComptrollerAddress, 0, methodData);
     }
+    return (address(0),0,bytes(""));
   }
 
   /**
@@ -210,15 +211,15 @@ contract CompoundIntegration is BorrowIntegration {
    */
   function _getHealthFactor() onlyFund external view returns (uint256) {
     IComptroller comptroller = IComptroller(CompoundComptrollerAddress);
-    (uint256 error, uint256 liquidity, uint256 shortfall) = comptroller.getAccountLiquidity(msg.sender);
+    (/* error */, uint256 liquidity, /* shortfall */) = comptroller.getAccountLiquidity(msg.sender);
     return liquidity;
   }
 
   function _getBorrowBalance(address asset) private view returns (uint256) {
     address cToken = assetToCtoken[asset];
     (
-      uint256 err,
-      uint256 cTokenBalance,
+      , // err
+      , // cTokenBalance
       uint256 borrowBalance,
       uint256 exchangeRateMantissa
     ) = ICToken(cToken).getAccountSnapshot(msg.sender);
@@ -228,9 +229,9 @@ contract CompoundIntegration is BorrowIntegration {
   function _getCollateralBalance(address asset) private view returns (uint256) {
     address cToken = assetToCtoken[asset];
     (
-      uint256 err,
+      , // err
       uint256 cTokenBalance,
-      uint256 borrowBalance,
+      , // borrow balance
       uint256 exchangeRateMantissa
     ) = ICToken(cToken).getAccountSnapshot(msg.sender);
 
@@ -265,7 +266,10 @@ contract CompoundIntegration is BorrowIntegration {
 
   /* ============ Internal Functions ============ */
 
-  function _getCollateralAsset(address _asset, uint8 _borrowOp) internal override view returns (address) {
+  function _getCollateralAsset(
+    address _asset,
+    uint8 /* _borrowOp */
+  ) internal override view returns (address) {
     // TODO: check this
     return assetToCtoken[_asset];
   }

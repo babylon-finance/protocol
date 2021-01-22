@@ -288,9 +288,10 @@ abstract contract TradeIntegration is BaseIntegration, ReentrancyGuard {
       address /* _destinationAddress */,
       uint256 /* _sourceQuantity */,
       uint256 /* _minDestinationQuantity */,
-      bytes memory _data
+      bytes memory /* _data */
     ) internal virtual view returns (address, uint256, bytes memory) {
       require(false, "This needs to be overriden");
+      return (address(0),0,bytes(""));
     }
 
     /**

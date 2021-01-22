@@ -312,6 +312,7 @@ abstract contract PassiveIntegration is BaseIntegration, ReentrancyGuard {
       uint256 /* _maxAmountIn */
     ) internal virtual view returns (address, uint256, bytes memory) {
       require(false, "This needs to be overriden");
+      return (address(0),0,bytes(""));
     }
 
     /**
@@ -333,6 +334,7 @@ abstract contract PassiveIntegration is BaseIntegration, ReentrancyGuard {
       uint256 /* _minAmountOut */
     ) internal virtual view returns (address, uint256, bytes memory) {
       require(false, "This needs to be overriden");
+      return (address(0),0,bytes(""));
     }
 
     function _isInvestment(

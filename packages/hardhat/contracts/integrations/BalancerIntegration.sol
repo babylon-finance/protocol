@@ -74,7 +74,7 @@ contract BalancerIntegration is PoolIntegration {
    *
    * @param  _poolAddress              Address of the pool
    * @param  _poolTokensOut            Amount of pool tokens to send
-   * @param  _tokensIn                 Addresses of tokens to send to the pool
+   * hparam  _tokensIn                 Addresses of tokens to send to the pool
    * @param  _maxAmountsIn             Amounts of tokens to send to the pool
    *
    * @return address                   Target contract address
@@ -84,7 +84,7 @@ contract BalancerIntegration is PoolIntegration {
   function _getJoinPoolCalldata(
     address _poolAddress,
     uint256 _poolTokensOut,
-    address[] calldata _tokensIn,
+    address[] calldata /* _tokensIn */,
     uint256[] calldata _maxAmountsIn
   ) internal override pure returns (address, uint256, bytes memory) {
     // Encode method data for Fund to invoke
@@ -102,7 +102,7 @@ contract BalancerIntegration is PoolIntegration {
    *
    * @param  _poolAddress              Address of the pool
    * @param  _poolTokensIn             Amount of pool tokens to receive
-   * @param  _tokensOut                Addresses of tokens to receive
+   * hparam  _tokensOut                Addresses of tokens to receive
    * @param  _minAmountsOut            Amounts of pool tokens to receive
    *
    * @return address                   Target contract address
@@ -112,7 +112,7 @@ contract BalancerIntegration is PoolIntegration {
   function _getExitPoolCalldata(
     address _poolAddress,
     uint256 _poolTokensIn,
-    address[] calldata _tokensOut,
+    address[] calldata /* _tokensOut */,
     uint256[] calldata _minAmountsOut
   ) internal override pure returns (address, uint256, bytes memory) {
     // Encode method data for Fund to invoke
