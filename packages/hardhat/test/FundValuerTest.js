@@ -38,13 +38,13 @@ describe("FundValuer", function() {
         addresses.tokens.WETH,
         addresses.tokens.DAI
       );
-      console.log('price of weth', ethers.utils.formatEther(priceOfWeth));
-      console.log('wethInFund', ethers.utils.formatEther(wethInFund));
+      console.log("price of weth", ethers.utils.formatEther(priceOfWeth));
+      console.log("wethInFund", ethers.utils.formatEther(wethInFund));
       const price = await valuer.calculateFundValuation(
         fund.address,
         addresses.tokens.WETH
       );
-      console.log('fund value', ethers.utils.formatEther(price));
+      console.log("fund value", ethers.utils.formatEther(price));
 
       expect(price.mul(10000)).to.equal(ethers.utils.parseEther("0.01"));
     });
