@@ -32,7 +32,7 @@ describe("FundValuer", function() {
   });
 
   describe("Calls FundValuer", function() {
-    it("should return 0.01 for fund1", async function() {
+    it("should return 0.1 for fund1", async function() {
       const wethInFund = await weth.balanceOf(fund.address);
       const priceOfWeth = await fund.getPrice(
         addresses.tokens.WETH,
@@ -48,7 +48,7 @@ describe("FundValuer", function() {
       console.log("fund value", ethers.utils.formatEther(price));
       console.log("fund multiplier", ethers.utils.formatEther(multiplier));
       const finalValue = price.div(multiplier);
-      expect(finalValue).to.equal(ethers.utils.parseEther("0.01"));
+      expect(finalValue).to.equal(ethers.utils.parseEther("0.1"));
     });
   });
 });

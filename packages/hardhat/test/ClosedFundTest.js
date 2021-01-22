@@ -55,6 +55,14 @@ describe("Fund", function() {
         fund1.connect(userSigner3).setManager(userSigner3.getAddress())
       ).to.be.reverted;
     });
+
+    it("the stake and initial deposit must be correct", async function() {
+      const balance = await fund1.signer.getBalance();
+      await expect(balance).to.be.gt(ethers.utils.parseEther("0.099"));
+      await expect(await fund1.managerStake()).to.equal(
+        ethers.utils.parseEther("0.1")
+      );
+    });
   });
 
   describe("Fund contributors", async function() {
@@ -70,20 +78,21 @@ describe("Fund", function() {
       const fundBalanceAfter = await weth.balanceOf(fund1.address);
       const supplyAfter = await fund1.totalSupply();
       // Funds
-      // Manager deposit in fixture is only 0.01
-      expect(supplyAfter.div(101)).to.equal(supplyBefore);
+      // Manager deposit in fixture is only 0.1
+      expect(supplyAfter.div(11)).to.equal(supplyBefore);
       expect(fundBalanceAfter.sub(fundBalance)).to.equal(
         ethers.utils.parseEther("1")
       );
       expect(await fund1.totalContributors()).to.equal(2);
-      expect(await fund1.totalFunds()).to.equal(
-        ethers.utils.parseEther("1.01")
-      );
+      expect(await fund1.totalFunds()).to.equal(ethers.utils.parseEther("1.1"));
       expect(await fund1.totalFundsDeposited()).to.equal(
-        ethers.utils.parseEther("1.01")
+        ethers.utils.parseEther("1.1")
       );
       // Positions
-      console.log('multiplier after', ethers.utils.formatEther(await fund1.positionMultiplier()));
+      console.log(
+        "multiplier after",
+        ethers.utils.formatEther(await fund1.positionMultiplier())
+      );
       expect(await fund1.getPositionCount()).to.equal(1);
       const wethPosition = await fund1.getTrackedBalance(weth.address);
       expect(wethPosition).to.be.gt(ethers.utils.parseEther("1.0099"));
@@ -109,7 +118,7 @@ describe("Fund", function() {
       // Note: Fund is initialized with manager as first contributor, hence the count and totalFunds delta
       expect(await fund1.totalContributors()).to.equal(2);
       expect(await fund1.totalFunds()).to.equal(
-        ethers.utils.parseEther("2.01")
+        ethers.utils.parseEther("2.1")
       );
     });
 
@@ -129,7 +138,7 @@ describe("Fund", function() {
       // Note: Fund is initialized with manager as first contributor
       expect(await fund1.totalContributors()).to.equal(3);
       expect(await fund1.totalFunds()).to.equal(
-        ethers.utils.parseEther("2.01")
+        ethers.utils.parseEther("2.1")
       );
     });
 
@@ -137,7 +146,7 @@ describe("Fund", function() {
       await fund1.connect(userSigner3).deposit(ethers.utils.parseEther("1"), 1, userSigner3.getAddress(), {
         value: ethers.utils.parseEther("1")
       });
-      expect(await fund1.totalFunds()).to.equal(ethers.utils.parseEther("1.01"));
+      expect(await fund1.totalFunds()).to.equal(ethers.utils.parseEther("1.1"));
       expect(await fund1.totalContributors()).to.equal(2);
       await fund1.connect(userSigner3).withdraw(1000000, 1, userSigner3.getAddress());
     });
@@ -146,7 +155,7 @@ describe("Fund", function() {
       await fund1.connect(userSigner3).deposit(ethers.utils.parseEther("1"), 1, userSigner3.getAddress(), {
         value: ethers.utils.parseEther("1")
       });
-      expect(await fund1.totalFunds()).to.equal(ethers.utils.parseEther("1.01"));
+      expect(await fund1.totalFunds()).to.equal(ethers.utils.parseEther("1.1"));
       expect(await fund1.totalContributors()).to.equal(2);
       await expect(fund1.connect(userSigner3).withdraw(10000000, 2, userSigner3.getAddress())).to.be.reverted;
       await expect(fund1.connect(userSigner3).withdraw(1000001, 2, userSigner3.getAddress())).to.be.reverted;
