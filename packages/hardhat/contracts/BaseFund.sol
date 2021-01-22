@@ -854,7 +854,7 @@ abstract contract BaseFund is ERC20 {
      * @return                    Notional tracked balance
      */
     function getTrackedBalance(address _component)
-        internal
+        external
         view
         returns (uint256)
     {

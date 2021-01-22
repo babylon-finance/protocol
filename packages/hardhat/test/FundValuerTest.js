@@ -44,9 +44,11 @@ describe("FundValuer", function() {
         fund.address,
         addresses.tokens.WETH
       );
+      const multiplier = await fund.positionMultiplier();
       console.log("fund value", ethers.utils.formatEther(price));
-
-      expect(price.mul(10000)).to.equal(ethers.utils.parseEther("0.01"));
+      console.log("fund multiplier", ethers.utils.formatEther(multiplier));
+      const finalValue = price.div(multiplier);
+      expect(finalValue).to.equal(ethers.utils.parseEther("0.01"));
     });
   });
 });

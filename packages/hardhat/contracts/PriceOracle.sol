@@ -101,22 +101,20 @@ contract PriceOracle is Ownable {
           controller.isSystemContract(msg.sender),
           "PriceOracle.getPrice: Caller must be system contract."
         );
-        // Same asset
+        // Same asset. Returns base unit
         if (_assetOne == _assetTwo) {
-          return 1;
+          return 10 ** 18;
         }
 
         bool priceFound;
         uint256 price;
 
         (priceFound, price) = _getPriceFromUniswapAnchoredView(_assetOne, _assetTwo);
-
         if (!priceFound) {
             (priceFound, price) = _getPriceFromAdapters(_assetOne, _assetTwo);
         }
 
         require(priceFound, "PriceOracle.getPrice: Price not found.");
-
         return price;
     }
 
@@ -138,7 +136,7 @@ contract PriceOracle is Ownable {
     /**
      * GOVERNANCE FUNCTION: Remove oracle adapter.
      *
-     * @param _adapter         Address of adapter to remove
+     * @param _adapter         Address of  adapter to remove
      */
     function removeAdapter(address _adapter) external onlyOwner {
         require(
