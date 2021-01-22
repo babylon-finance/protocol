@@ -318,7 +318,7 @@ abstract contract BorrowIntegration is BaseIntegration, ReentrancyGuard {
     _validatePostRepay(debtInfo);
     // Protocol Fee
     uint256 protocolFee = _accrueProtocolFee(debtInfo, asset, amount, BORROW_OPERATION_REPAY);
-    updateFundPosition(msg.sender, asset, amount); //TODO: is this absolute or delta
+    updateFundPosition(msg.sender, asset, amount); //TODO: negative
 
     emit AmountRepaid(
       debtInfo.fund,

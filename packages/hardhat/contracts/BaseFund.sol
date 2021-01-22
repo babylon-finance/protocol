@@ -267,7 +267,7 @@ abstract contract BaseFund is ERC20 {
         onlyIntegration
         onlyActive
     {
-      editPositionUnit(_component, _realUnit);
+      _editPositionUnit(_component, _realUnit);
     }
 
     /**
