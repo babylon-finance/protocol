@@ -104,7 +104,6 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
         // When withdrawaling, quantity of Fund tokens withdrawaled
         uint256 previousFundTokenSupply; // Fund token supply prior to deposit/withdrawal action
         uint256 newFundTokenSupply; // Fund token supply after deposit/withdrawal action
-        int256 newPositionMultiplier; // Fund token position multiplier after deposit/withdrawal
         uint256 newReservePositionUnit; // Fund token reserve asset position unit after deposit/withdrawal
     }
 
@@ -142,7 +141,7 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
     /**
      * When a new Fund is created, initializes Investments are set to empty.
      * All parameter validations are on the FolioController contract. Validations are performed already on the
-     * FolioController. Initiates the positionMultiplier as 1e18 (no adjustments).
+     * FolioController.
      *
      * @param _integrations           List of integrations to enable. All integrations must be approved by the Controller
      * @param _weth                   Address of the WETH ERC20
@@ -257,10 +256,6 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
 
         _mint(manager, initialTokens);
         _udpateContributorInfo(initialTokens, initialDepositAmount);
-
-        uint256 newTotalSupply = totalSupply();
-        int256 newPositionMultiplier = positionMultiplier.div(newTotalSupply.toInt256());
-        _editPositionMultiplier(newPositionMultiplier);
 
         _calculateAndEditPosition(
           weth,
@@ -573,7 +568,7 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
                 _getFees(totalWithdrawalValue, false);
 
             uint256 existingUnit =
-                getPositionRealUnit(_reserveAsset).toUint256();
+                _getPositionUnit(_reserveAsset).toUint256();
 
             return
                 existingUnit.preciseMul(setTotalSupply) >=
@@ -651,11 +646,6 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
             depositInfo.previousFundTokenSupply
         );
 
-        (
-            depositInfo.newFundTokenSupply,
-            depositInfo.newPositionMultiplier
-        ) = _getDepositPositionMultiplier(depositInfo);
-
         depositInfo.newReservePositionUnit = _getDepositPositionUnit(
             _reserveAsset,
             depositInfo
@@ -685,20 +675,30 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
 
         withdrawalInfo.previousFundTokenSupply = totalSupply();
 
-        (
-            withdrawalInfo.newFundTokenSupply,
-            withdrawalInfo.newPositionMultiplier
-        ) = _getWithdrawalPositionMultiplier(
-            _fundTokenQuantity,
-            withdrawalInfo
-        );
-
         withdrawalInfo.newReservePositionUnit = _getWithdrawalPositionUnit(
             _reserveAsset,
             withdrawalInfo
         );
 
         return withdrawalInfo;
+    }
+
+    /**
+     * The new position reserve asset unit is calculated as follows:
+     * totalReserve = (oldUnit * oldFundTokenSupply) + reserveQuantity
+     * newUnit = totalReserve / newFundTokenSupply
+     */
+    function _getDepositPositionUnit(
+        address _reserveAsset,
+        ActionInfo memory _depositInfo
+    ) internal view returns (uint256) {
+        uint256 existingUnit = _getPositionUnit(_reserveAsset).toUint256();
+        uint256 totalReserve =
+            existingUnit.preciseMul(_depositInfo.previousFundTokenSupply).add(
+                _depositInfo.netFlowQuantity
+            );
+
+        return totalReserve.preciseDiv(_depositInfo.newFundTokenSupply);
     }
 
     /**
@@ -737,7 +737,6 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
         address _to,
         ActionInfo memory _depositInfo
     ) internal {
-        _editPositionMultiplier(_depositInfo.newPositionMultiplier);
 
         editPosition(
             _reserveAsset,
@@ -761,7 +760,6 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
         address _to,
         ActionInfo memory _withdrawalInfo
     ) internal {
-        _editPositionMultiplier(_withdrawalInfo.newPositionMultiplier);
 
         editPosition(
             _reserveAsset,
@@ -914,69 +912,6 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
     }
 
     /**
-     * The new position multiplier is calculated as follows:
-     * inflationPercentage = (newSupply - oldSupply) / newSupply
-     * newMultiplier = (1 - inflationPercentage) * positionMultiplier
-     */
-    function _getDepositPositionMultiplier(ActionInfo memory _depositInfo)
-        internal
-        view
-        returns (uint256, int256)
-    {
-        // Calculate inflation and new position multiplier. Note: Round inflation up in order to round position multiplier down
-        uint256 newTotalSupply =
-            _depositInfo.fundTokenQuantity.add(
-                _depositInfo.previousFundTokenSupply
-            );
-        int256 newPositionMultiplier =
-            positionMultiplier
-                .mul(_depositInfo.previousFundTokenSupply.toInt256())
-                .div(newTotalSupply.toInt256());
-
-        return (newTotalSupply, newPositionMultiplier);
-    }
-
-    /**
-     * Calculate deflation and new position multiplier. Note: Round deflation down in order to round position multiplier down
-     *
-     * The new position multiplier is calculated as follows:
-     * deflationPercentage = (oldSupply - newSupply) / newSupply
-     * newMultiplier = (1 + deflationPercentage) * positionMultiplier
-     */
-    function _getWithdrawalPositionMultiplier(
-        uint256 _fundTokenQuantity,
-        ActionInfo memory _withdrawalInfo
-    ) internal view returns (uint256, int256) {
-        uint256 newTotalSupply =
-            _withdrawalInfo.previousFundTokenSupply.sub(_fundTokenQuantity);
-
-        int256 newPositionMultiplier =
-            positionMultiplier
-                .mul(_withdrawalInfo.previousFundTokenSupply.toInt256())
-                .div(newTotalSupply.toInt256());
-
-        return (newTotalSupply, newPositionMultiplier);
-    }
-
-    /**
-     * The new position reserve asset unit is calculated as follows:
-     * totalReserve = (oldUnit * oldFundTokenSupply) + reserveQuantity
-     * newUnit = totalReserve / newFundTokenSupply
-     */
-    function _getDepositPositionUnit(
-        address _reserveAsset,
-        ActionInfo memory _depositInfo
-    ) internal view returns (uint256) {
-        uint256 existingUnit = getPositionRealUnit(_reserveAsset).toUint256();
-        uint256 totalReserve =
-            existingUnit.preciseMul(_depositInfo.previousFundTokenSupply).add(
-                _depositInfo.netFlowQuantity
-            );
-
-        return totalReserve.preciseDiv(_depositInfo.newFundTokenSupply);
-    }
-
-    /**
      * The new position reserve asset unit is calculated as follows:
      * totalReserve = (oldUnit * oldFundTokenSupply) - reserveQuantityToSendOut
      * newUnit = totalReserve / newFundTokenSupply
@@ -985,7 +920,7 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
         address _reserveAsset,
         ActionInfo memory _withdrawalInfo
     ) internal view returns (uint256) {
-        uint256 existingUnit = getPositionRealUnit(_reserveAsset).toUint256();
+        uint256 existingUnit = _getPositionUnit(_reserveAsset).toUint256();
         uint256 totalExistingUnits =
             existingUnit.preciseMul(_withdrawalInfo.previousFundTokenSupply);
 

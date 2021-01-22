@@ -145,10 +145,6 @@ abstract contract BaseFund is ERC20 {
     address[] public positions;
     mapping(address => IFund.Position) public positionsByComponent;
 
-    // The multiplier applied to the virtual position unit to achieve the real/actual unit.
-    // This multiplier is used for efficiently modifying the entire position units (e.g. streaming fee)
-    int256 public positionMultiplier;
-
     /* ============ Constructor ============ */
 
     /**
@@ -191,7 +187,6 @@ abstract contract BaseFund is ERC20 {
         reserveAsset = _reserveAsset;
         manager = _manager;
         managerFeeRecipient = _managerFeeRecipient;
-        positionMultiplier = PreciseUnitMath.preciseUnitInt();
 
         // Integrations are put in PENDING state, as they need to be individually initialized by the Integration
         for (uint256 i = 0; i < _integrations.length; i++) {
@@ -234,52 +229,6 @@ abstract contract BaseFund is ERC20 {
         managerFeeRecipient = _managerFeeRecipient;
 
         emit FeeRecipientEdited(_managerFeeRecipient);
-    }
-
-    /**
-     * PRIVELEGED MODULE FUNCTION. Low level function that adds a component to the positions array.
-     */
-    function addPosition(address _component, address _integration)
-        public
-        onlyIntegration
-        onlyActive
-    {
-      _addPosition(_component, _integration);
-    }
-
-    /**
-     * PRIVELEGED MODULE FUNCTION. Low level function that removes a component from the positions array.
-     */
-    function removePosition(address _component)
-        public
-        onlyIntegration
-        onlyActive
-    {
-      _removePosition(_component);
-    }
-
-    /**
-     * PRIVELEGED MODULE FUNCTION. Low level function that edits a component's virtual unit. Takes a real unit
-     * and converts it to virtual before committing.
-     */
-    function editPositionUnit(address _component, int256 _realUnit)
-        public
-        onlyIntegration
-        onlyActive
-    {
-      _editPositionUnit(_component, _realUnit);
-    }
-
-    /**
-     * PRIVELEGED MODULE FUNCTION. Modifies the position multiplier. This is typically used to efficiently
-     * update all the Positions' units at once in applications where inflation is awarded (e.g. subscription fees).
-     */
-    function editPositionMultiplier(int256 _newMultiplier)
-        public
-        onlyIntegration
-        onlyActive
-    {
-      _editPositionMultiplier(_newMultiplier);
     }
 
     /**
@@ -554,20 +503,12 @@ abstract contract BaseFund is ERC20 {
       return reserveAsset;
     }
 
-    function getPositionRealUnit(address _component)
-      public
-      view
-      returns (int256)
-    {
-      return _convertVirtualToRealUnit(_positionVirtualUnit(_component));
-    }
-
     function getIntegrations() external view returns (address[] memory) {
         return integrations;
     }
 
     function isPosition(address _component) external view returns (bool) {
-        return positions.contains(_component);
+      return positions.contains(_component);
     }
 
     /**
@@ -604,22 +545,51 @@ abstract contract BaseFund is ERC20 {
 
     /**
      * Returns a list of Positions, through traversing the components.
-     * Virtual units are converted to real units. This function is typically used off-chain for data presentation purposes.
+     * units are converted to real units. This function is typically used off-chain for data presentation purposes.
      */
     function getPositions() external view returns (address[] memory) {
         return positions;
     }
 
     /**
-     * Returns the total Real Units for a given component, summing the  and external position units.
+     * Returns whether the fund component  position real unit is greater than or equal to units passed in.
      */
-    function getTotalPositionRealUnits(address _component)
+    function hasSufficientBalance(address _component, uint256 _unit)
+        external
+        view
+        returns (bool)
+    {
+      return _getPositionUnit(_component).toUint256().preciseMul(totalSupply()) >= _unit;
+    }
+
+    /**
+     * Get the position of a component
+     *
+     * @param _component          Address of the component
+     * @return                    Unit balance
+     */
+    function getPositionUnit(address _component)
         external
         view
         returns (int256)
     {
-        return getPositionRealUnit(_component);
+      return _getPositionUnit(_component);
     }
+
+    /**
+     * Get the total tracked balance - total supply * position unit
+     *
+     * @param _component          Address of the component
+     * @return                    Notional tracked balance
+     */
+    function getTrackedBalance(address _component)
+        external
+        view
+        returns (uint256)
+    {
+      return _getPositionUnit(_component).toUint256().preciseMul(totalSupply());
+    }
+
 
     /**
      * Calculates the new  position unit and performs the edit with the new unit
@@ -646,23 +616,126 @@ abstract contract BaseFund is ERC20 {
       return _calculateAndEditPosition(_component, _newBalance);
     }
 
-    /**
-     * Returns whether the fund component  position real unit is greater than or equal to units passed in.
-     */
-    function hasSufficientUnits(address _component, uint256 _unit)
-        external
-        view
-        returns (bool)
-    {
-        return getPositionRealUnit(_component) >= _unit.toInt256();
-    }
-
     // TODO: Remove
     function getPrice(address _assetOne, address _assetTwo) external view returns (uint256) {
       return _getPrice(_assetOne, _assetTwo);
     }
 
     /* ============ Internal Functions ============ */
+
+    /**
+     * Internal MODULE FUNCTION. Low level function that adds a component to the positions array.
+     */
+    function _addPosition(address _component, address _integration) internal{
+      IFund.Position storage position = positionsByComponent[_component];
+      position.positionState = _integration != address(0) ? 1 : 0;
+      position.integration = _integration;
+      position.enteredAt = block.timestamp;
+
+      positions.push(_component);
+      emit PositionAdded(_component);
+    }
+
+    /**
+     * Internal MODULE FUNCTION. Low level function that removes a component from the positions array.
+     */
+    function _removePosition(address _component) internal {
+      IFund.Position storage position = positionsByComponent[_component];
+      positions = positions.remove(_component);
+      position.exitedAt = block.timestamp;
+      emit PositionRemoved(_component);
+    }
+
+    /**
+     * Internal MODULE FUNCTION. Low level function that edits a component's position
+     */
+    function _editPositionUnit(address _component, int256 _amount) internal {
+      positionsByComponent[_component].unit = _amount;
+      positionsByComponent[_component].updatedAt.push(block.timestamp);
+
+      emit PositionUnitEdited(_component, _amount);
+    }
+
+    function _calculateAndEditPosition(
+        address _component,
+        uint256 _newBalance
+    )
+        internal
+        returns (
+            uint256,
+            uint256,
+            uint256
+        )
+    {
+      // uint256 currentBalance = ERC20(_component).balanceOf(address(this));
+      uint256 positionUnit = _getPositionUnit(_component).toUint256();
+      uint256 _componentPreviousBalance = positionUnit.preciseMul(totalSupply());
+      uint256 newTokenUnit =
+          _calculateEditPositionUnit(
+              _componentPreviousBalance,
+              _newBalance,
+              positionUnit
+          );
+      editPosition(_component, newTokenUnit, msg.sender);
+
+      return (_newBalance, positionUnit, newTokenUnit);
+    }
+
+    /**
+     * Calculate the new position unit given total notional values pre and post executing an action that changes Fund state
+     * The intention is to make updates to the units without accidentally picking up airdropped assets as well.
+     *
+     * @param _preTotalNotional   Total notional amount of component prior to executing action
+     * @param _postTotalNotional  Total notional amount of component after the executing action
+     * @param _prePositionUnit    Position unit of fund prior to executing action
+     * @return                    New position unit
+     */
+    function _calculateEditPositionUnit(
+        uint256 _preTotalNotional,
+        uint256 _postTotalNotional,
+        uint256 _prePositionUnit
+    ) internal view returns (uint256) {
+        // If pre action total notional amount is greater then subtract post action total notional and calculate new position units
+        uint256 airdroppedAmount =
+            _preTotalNotional.sub(_prePositionUnit.preciseMul(totalSupply()));
+
+        return
+            _postTotalNotional.sub(airdroppedAmount).preciseDiv(totalSupply());
+    }
+
+    /**
+     * Returns whether the fund has a position for a given component (if the real unit is > 0)
+     */
+    function _hasPosition(address _component) internal view returns (bool) {
+        return _getPositionUnit(_component) > 0;
+    }
+
+    function _getPositionUnit(address _component) internal view returns (int256) {
+      return positionsByComponent[_component].unit;
+    }
+
+    /**
+     * If the position does not exist, create a new Position and add to the fund. If it already exists,
+     * then set the position units. If the new units is 0, remove the position. Handles adding/removing of
+     * components where needed (in light of potential external positions).
+     *
+     * @param _component          Address of the component
+     * @param _newUnit            Quantity of Position units - must be >= 0
+     */
+    function editPosition(
+        address _component,
+        uint256 _newUnit,
+        address _integration
+    ) internal {
+        bool isPositionFound = _hasPosition(_component);
+        if (!isPositionFound && _newUnit > 0) {
+          _addPosition(_component, _integration);
+        } else if (isPositionFound && _newUnit == 0) {
+          _removePosition(_component);
+        }
+
+        _editPositionUnit(_component, _newUnit.toInt256());
+    }
 
     function _getPrice(address _assetOne, address _assetTwo) internal view returns (uint256) {
       IPriceOracle oracle = IPriceOracle(IFolioController(controller).getPriceOracle());
@@ -691,184 +764,6 @@ abstract contract BaseFund is ERC20 {
         return _returnValue;
     }
 
-    function _calculateAndEditPosition(
-        address _component,
-        uint256 _newBalance
-    )
-        internal
-        returns (
-            uint256,
-            uint256,
-            uint256
-        )
-    {
-      uint256 positionUnit = getPositionRealUnit(_component).toUint256();
-      uint256 _componentPreviousBalance = positionUnit.preciseMul(totalSupply());
-      uint256 newTokenUnit =
-          calculateEditPositionUnit(
-              _componentPreviousBalance,
-              _newBalance,
-              positionUnit
-          );
-      editPosition(_component, newTokenUnit, msg.sender);
-
-      return (_newBalance, positionUnit, newTokenUnit);
-    }
-
-    /**
-     * Internal MODULE FUNCTION. Low level function that adds a component to the positions array.
-     */
-    function _addPosition(address _component, address _integration) internal{
-      IFund.Position storage position = positionsByComponent[_component];
-      position.positionState = _integration != address(0) ? 1 : 0;
-      position.integration = _integration;
-      // position.updatedAt = [];
-      position.enteredAt = block.timestamp;
-
-      positions.push(_component);
-      emit PositionAdded(_component);
-    }
-
-    /**
-     * Internal MODULE FUNCTION. Low level function that removes a component from the positions array.
-     */
-    function _removePosition(address _component) internal {
-      IFund.Position storage position = positionsByComponent[_component];
-      positions = positions.remove(_component);
-      position.exitedAt = block.timestamp;
-      emit PositionRemoved(_component);
-    }
-
-    /**
-     * Modifies the position multiplier. This is typically used to efficiently
-     * update all the Positions' units at once in applications where inflation is awarded (e.g. subscription fees).
-     */
-    function _editPositionMultiplier(int256 _newMultiplier) internal
-    {
-      require(_newMultiplier > 0, "Must be greater than 0");
-      positionMultiplier = _newMultiplier;
-
-      emit PositionMultiplierEdited(_newMultiplier);
-    }
-
-    /**
-     * Internal MODULE FUNCTION. Low level function that edits a component's virtual unit. Takes a real unit
-     * and converts it to virtual before committing.
-     */
-    function _editPositionUnit(address _component, int256 _realUnit) internal {
-      int256 virtualUnit = _convertRealToVirtualUnit(_realUnit);
-
-      positionsByComponent[_component].virtualUnit = virtualUnit;
-      positionsByComponent[_component].unit = _realUnit;
-      positionsByComponent[_component].updatedAt.push(block.timestamp);
-
-      emit PositionUnitEdited(_component, _realUnit);
-    }
-
-    /**
-     * Calculate the new position unit given total notional values pre and post executing an action that changes Fund state
-     * The intention is to make updates to the units without accidentally picking up airdropped assets as well.
-     *
-     * @param _preTotalNotional   Total notional amount of component prior to executing action
-     * @param _postTotalNotional  Total notional amount of component after the executing action
-     * @param _prePositionUnit    Position unit of fund prior to executing action
-     * @return                    New position unit
-     */
-    function calculateEditPositionUnit(
-        uint256 _preTotalNotional,
-        uint256 _postTotalNotional,
-        uint256 _prePositionUnit
-    ) internal view returns (uint256) {
-        // If pre action total notional amount is greater then subtract post action total notional and calculate new position units
-        uint256 airdroppedAmount =
-            _preTotalNotional.sub(_prePositionUnit.preciseMul(totalSupply()));
-
-        return
-            _postTotalNotional.sub(airdroppedAmount).preciseDiv(totalSupply());
-    }
-
-    /**
-     * Returns whether the fund has a position for a given component (if the real unit is > 0)
-     */
-    function hasPosition(address _component) internal view returns (bool) {
-        return getPositionRealUnit(_component) > 0;
-    }
-
-    /**
-     * If the position does not exist, create a new Position and add to the fund. If it already exists,
-     * then set the position units. If the new units is 0, remove the position. Handles adding/removing of
-     * components where needed (in light of potential external positions).
-     *
-     * @param _component          Address of the component
-     * @param _newUnit            Quantity of Position units - must be >= 0
-     */
-    function editPosition(
-        address _component,
-        uint256 _newUnit,
-        address _integration
-    ) internal {
-        bool isPositionFound = hasPosition(_component);
-        if (!isPositionFound && _newUnit > 0) {
-          _addPosition(_component, _integration);
-        } else if (isPositionFound && _newUnit == 0) {
-          _removePosition(_component);
-        }
-
-        _editPositionUnit(_component, _newUnit.toInt256());
-    }
-
-    /**
-     * Get total notional amount of position
-     *
-     * @param _positionUnit       Quantity of Position units
-     *
-     * @return                    Total notional amount of units
-     */
-    function getTotalNotional(uint256 _positionUnit)
-        internal
-        view
-        returns (uint256)
-    {
-        return totalSupply().preciseMul(_positionUnit);
-    }
-
-    /**
-     * Get position unit from total notional amount
-     *
-     * @param _totalNotional      Total notional amount of component prior to
-     * @return                    position unit
-     */
-    function getPositionUnit(uint256 _totalNotional)
-        internal
-        view
-        returns (uint256)
-    {
-        return _totalNotional.preciseDiv(totalSupply());
-    }
-
-    /**
-     * Get the total tracked balance - total supply * position unit
-     *
-     * @param _component          Address of the component
-     * @return                    Notional tracked balance
-     */
-    function getTrackedBalance(address _component)
-        external
-        view
-        returns (uint256)
-    {
-        int256 positionUnit = getPositionRealUnit(_component);
-        return totalSupply().preciseMul(positionUnit.toUint256());
-    }
-
-    function _positionVirtualUnit(address _component)
-        internal
-        view
-        returns (int256)
-    {
-        return positionsByComponent[_component].virtualUnit;
-    }
-
     /**
      * Pays the _feeQuantity from the _fund denominated in _token to the protocol fee recipient
      */
@@ -892,36 +787,6 @@ abstract contract BaseFund is ERC20 {
         if (_feeQuantity > 0) {
             ERC20(_token).transfer(managerFeeRecipient, _feeQuantity);
         }
-    }
-
-    /**
-     * Takes a real unit and divides by the position multiplier to return the virtual unit
-     */
-    function _convertRealToVirtualUnit(int256 _realUnit)
-        internal
-        view
-        returns (int256)
-    {
-        int256 virtualUnit =
-            _realUnit.conservativePreciseDiv(positionMultiplier);
-
-        // These checks ensure that the virtual unit does not return a result that has rounded down to 0
-        if (_realUnit > 0 && virtualUnit == 0) {
-            revert("Virtual unit conversion invalid");
-        }
-
-        return virtualUnit;
-    }
-
-    /**
-     * Takes a virtual unit and multiplies by the position multiplier to return the real unit
-     */
-    function _convertVirtualToRealUnit(int256 _virtualUnit)
-        internal
-        view
-        returns (int256)
-    {
-        return _virtualUnit.conservativePreciseMul(positionMultiplier);
     }
 
     /**
