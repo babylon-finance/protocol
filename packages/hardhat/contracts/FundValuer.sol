@@ -97,7 +97,7 @@ contract FundValuer {
           // Get component price from price oracle. If price does not exist, revert.
           uint256 componentPrice = priceOracle.getPrice(component, masterQuoteAsset);
 
-          int256 aggregateUnits = _fund.getTotalPositionRealUnits(component);
+          int256 aggregateUnits = _fund.getPositionUnit(component);
 
           // Normalize each position unit to preciseUnits 1e18 and cast to signed int
           uint256 unitDecimals = ERC20(component).decimals();

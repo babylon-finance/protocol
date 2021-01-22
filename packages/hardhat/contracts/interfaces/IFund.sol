@@ -82,13 +82,21 @@ interface IFund is IERC20 {
     function integrationStates(address _integration) external view returns (IntegrationState);
     function getIntegrations() external view returns (address[] memory);
 
-    function getDefaultPositionRealUnit(address _component) external view returns(int256);
-    function getTotalPositionRealUnits(address _component) external view returns(int256);
+    function isPosition(address _component) external view returns (bool);
+    function getPositionCount() external view returns (uint256);
+    function getPositions() external view returns (address[] memory);
+    function hasSufficientBalance(address _component, uint256 _unit)
+        external
+        view
+        returns (bool);
+    function getPositionUnit(address _component) external view returns(int256);
+    function getTrackedBalance(address _component)
+        external
+        view
+        returns (uint256);
     function calculateAndEditPosition(address _component, uint256 _newBalance)
         external returns (uint256, uint256, uint256);
-    function getPositions() external view returns(address[] memory);
-    function isPosition(address _position) external view returns(bool);
-    function hasSufficientBalance(address _component, uint256 _unit) external view returns (bool);
+
 
     function invokeApprove(address _spender, address _asset, uint256 _quantity) external;
     function invokeFromIntegration(
@@ -142,9 +150,6 @@ interface IFund is IERC20 {
     function borrow(address asset, uint256 amount) external;
     function repay(address asset, uint256 amount) external;
 
-    function positionMultiplier() external view returns (int256);
-    // function getPositions() external view returns (Position[] memory);
-    function getTotalInvestmentRealUnits(address _component) external view returns(int256);
 
     function isInitializedIntegration(address _integration) external view returns(bool);
     function isPendingIntegration(address _integration) external view returns(bool);

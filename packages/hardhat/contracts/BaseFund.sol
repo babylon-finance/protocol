@@ -507,10 +507,6 @@ abstract contract BaseFund is ERC20 {
         return integrations;
     }
 
-    function isPosition(address _component) external view returns (bool) {
-      return positions.contains(_component);
-    }
-
     /**
      * Only IntegrationStates of INITIALIZED integrations are considered enabled
      */
@@ -534,6 +530,10 @@ abstract contract BaseFund is ERC20 {
     {
         return
             integrationStates[_integration] == IFund.IntegrationState.PENDING;
+    }
+
+    function isPosition(address _component) external view returns (bool) {
+      return positions.contains(_component);
     }
 
     /**

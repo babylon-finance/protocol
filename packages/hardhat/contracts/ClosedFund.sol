@@ -646,6 +646,12 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
             depositInfo.previousFundTokenSupply
         );
 
+        // Calculate inflation and new position multiplier. Note: Round inflation up in order to round position multiplier down
+        depositInfo.newFundTokenSupply =
+            depositInfo.fundTokenQuantity.add(
+              depositInfo.previousFundTokenSupply
+            );
+
         depositInfo.newReservePositionUnit = _getDepositPositionUnit(
             _reserveAsset,
             depositInfo
@@ -674,6 +680,9 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
         ) = _getFees(withdrawalInfo.preFeeReserveQuantity, false);
 
         withdrawalInfo.previousFundTokenSupply = totalSupply();
+
+        withdrawalInfo.newFundTokenSupply =
+            withdrawalInfo.previousFundTokenSupply.sub(_fundTokenQuantity);
 
         withdrawalInfo.newReservePositionUnit = _getWithdrawalPositionUnit(
             _reserveAsset,
