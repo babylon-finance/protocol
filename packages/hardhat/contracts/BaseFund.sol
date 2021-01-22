@@ -395,7 +395,7 @@ abstract contract BaseFund is ERC20 {
       address _target,
       uint256 _value,
       bytes calldata _data
-    ) external onlyIntegration returns (bytes memory _returnValue) {
+    ) external onlyIntegration returns (bytes memory) {
       _invoke(_target, _value, _data);
     }
 

@@ -114,7 +114,7 @@ contract BalancerIntegration is PoolIntegration {
     uint256 _poolTokensIn,
     address[] calldata _tokensOut,
     uint256[] calldata _minAmountsOut
-  ) internal override view returns (address, uint256, bytes memory) {
+  ) internal override pure returns (address, uint256, bytes memory) {
     // Encode method data for Fund to invoke
     bytes memory methodData = abi.encodeWithSignature(
       "exitPool(uint256,uint256[])",

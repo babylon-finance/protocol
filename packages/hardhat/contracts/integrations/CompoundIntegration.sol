@@ -98,7 +98,7 @@ contract CompoundIntegration is BorrowIntegration {
     address _asset,
     uint256 _amount,
     uint _borrowOp
-  ) internal override view returns (address, uint256, bytes memory) {
+  ) internal override pure returns (address, uint256, bytes memory) {
     if (_borrowOp == 2 || _borrowOp == 0) {
       // Encode method data for Fund to invoke
       address[] memory markets = new address[](1);
@@ -124,7 +124,7 @@ contract CompoundIntegration is BorrowIntegration {
   function _getDepositCalldata(
     address _asset,
     uint256 _amount
-  ) internal override view returns (address, uint256, bytes memory) {
+  ) internal override pure returns (address, uint256, bytes memory) {
     // Encode method data for Fund to invoke
     bytes memory methodData = abi.encodeWithSignature(
       "mint(uint256)",
@@ -147,7 +147,7 @@ contract CompoundIntegration is BorrowIntegration {
   function _getRemovalCalldata(
     address _asset,
     uint256 _amount
-  ) internal override view returns (address, uint256, bytes memory) {
+  ) internal override pure returns (address, uint256, bytes memory) {
     // Encode method data for Fund to invoke
     bytes memory methodData = abi.encodeWithSignature(
       "redeem(uint256)",
@@ -170,7 +170,7 @@ contract CompoundIntegration is BorrowIntegration {
   function _getBorrowCalldata(
     address _asset,
     uint256 _amount
-  ) internal override view returns (address, uint256, bytes memory) {
+  ) internal override pure returns (address, uint256, bytes memory) {
     // Encode method data for Fund to invoke
     bytes memory methodData = abi.encodeWithSignature(
       "borrow(uint256)",

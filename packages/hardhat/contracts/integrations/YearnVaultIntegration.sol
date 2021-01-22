@@ -74,8 +74,8 @@ contract YearnVaultIntegration is PassiveIntegration {
    * Return join investment calldata which is already generated from the investment API
    *
    * @param  _investmentAddress              Address of the vault
-   * @param  _investmentTokensOut            Amount of investment tokens to send
-   * @param  _tokenIn                        Addresses of tokens to send to the investment
+   * hparam  _investmentTokensOut            Amount of investment tokens to send
+   * hparam  _tokenIn                        Addresses of tokens to send to the investment
    * @param  _maxAmountIn                    Amounts of tokens to send to the investment
    *
    * @return address                         Target contract address
@@ -84,8 +84,8 @@ contract YearnVaultIntegration is PassiveIntegration {
    */
   function _getEnterInvestmentCalldata(
     address _investmentAddress,
-    uint256 _investmentTokensOut,
-    address _tokenIn,
+    uint256 /* _investmentTokensOut */,
+    address /* _tokenIn */,
     uint256 _maxAmountIn
   ) internal override pure returns (address, uint256, bytes memory) {
     // Encode method data for Fund to invoke
@@ -102,8 +102,8 @@ contract YearnVaultIntegration is PassiveIntegration {
    *
    * @param  _investmentAddress              Address of the investment
    * @param  _investmentTokensIn             Amount of investment tokens to receive
-   * @param  _tokenOut                       Addresses of tokens to receive
-   * @param  _minAmountOut                   Amounts of investment tokens to receive
+   * hparam  _tokenOut                       Addresses of tokens to receive
+   * hparam  _minAmountOut                   Amounts of investment tokens to receive
    *
    * @return address                         Target contract address
    * @return uint256                         Call value
@@ -112,8 +112,8 @@ contract YearnVaultIntegration is PassiveIntegration {
   function _getExitInvestmentCalldata(
     address _investmentAddress,
     uint256 _investmentTokensIn,
-    address _tokenOut,
-    uint256 _minAmountOut
+    address /* _tokenOut */,
+    uint256 /* _minAmountOut */
   ) internal override pure returns (address, uint256, bytes memory) {
     // Encode method data for Fund to invoke
     bytes memory methodData = abi.encodeWithSignature(

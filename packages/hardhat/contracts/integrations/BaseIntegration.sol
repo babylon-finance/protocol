@@ -178,7 +178,7 @@ abstract contract BaseIntegration {
       Normalize all the amounts of all tokens so all can be called with 10^18.
       e.g Call functions like borrow, supply with parseEther
     */
-    function normalizeDecimals(address asset, uint256 amount) internal view returns (uint256)  {
+    function normalizeDecimals(address asset, uint256 amount) internal pure returns (uint256)  {
       // USDC and USDT have only 6 decimals
       // TODO: create a mpping for decimals managed by the protocol
       uint256 newAmount = amount;

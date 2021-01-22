@@ -428,13 +428,15 @@ contract FolioController is Ownable {
     /**
      * Get integration integration address associated with passed human readable name
      *
-     * @param  _integration         Address of the integration
+     * hparam  _integration         Address of the integration
      *
      * @return                  Integration fee
      */
-    function getIntegrationFee(address _integration)
+    function getIntegrationFee(
+      address /* _integration */
+    )
         external
-        view
+        pure
         returns (uint256)
     {
         return 0;

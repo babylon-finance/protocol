@@ -345,12 +345,19 @@ abstract contract BorrowIntegration is BaseIntegration, ReentrancyGuard {
     return protocolFeeTotal;
   }
 
-  function _getCollateralAsset(address _asset, uint8 _borrowOp) internal virtual view returns (address) {
+  function _getCollateralAsset(
+    address /* _asset */,
+    uint8 /* _borrowOp */
+  ) internal virtual view returns (address) {
     require(false, "This method must be overriden");
+    return address(0);
   }
 
-  function _getSpender(address asset) internal virtual view returns (address) {
+  function _getSpender(
+    address /* asset */
+  ) internal virtual view returns (address) {
     require(false, "This method must be overriden");
+    return address(0);
   }
 
   /**
@@ -449,16 +456,16 @@ abstract contract BorrowIntegration is BaseIntegration, ReentrancyGuard {
   /**
    * Return deposit collateral calldata
    *
-   * @param  _asset                    Address of the asset to deposit
-   * @param  _amount                   Amount of the token to deposit
+   * hparam  _asset                    Address of the asset to deposit
+   * hparam  _amount                   Amount of the token to deposit
    *
    * @return address                   Target contract address
    * @return uint256                   Call value
    * @return bytes                     Trade calldata
    */
   function _getDepositCalldata(
-    address _asset,
-    uint256 _amount
+    address /* _asset */,
+    uint256 /* _amount */
   ) internal virtual view returns (address, uint256, bytes memory) {
     require(false, "This needs to be overriden");
   }
@@ -466,16 +473,16 @@ abstract contract BorrowIntegration is BaseIntegration, ReentrancyGuard {
   /**
    * Return collateral removal calldata
    *
-   * @param  _asset                    Address of the asset to deposit
-   * @param  _amount                   Amount of the token to deposit
+   * hparam  _asset                    Address of the asset to deposit
+   * hparam  _amount                   Amount of the token to deposit
    *
    * @return address                   Target contract address
    * @return uint256                   Call value
    * @return bytes                     Trade calldata
    */
   function _getRemovalCalldata(
-    address _asset,
-    uint256 _amount
+    address /* _asset */,
+    uint256 /* _amount */
   ) internal virtual view returns (address, uint256, bytes memory) {
     require(false, "This needs to be overriden");
   }
@@ -500,16 +507,16 @@ abstract contract BorrowIntegration is BaseIntegration, ReentrancyGuard {
   /**
    * Return repay borrowed asset calldata
    *
-   * @param  _asset                    Address of the asset to deposit
-   * @param  _amount                   Amount of the token to deposit
+   * hparam  _asset                    Address of the asset to deposit
+   * hparam  _amount                   Amount of the token to deposit
    *
    * @return address                   Target contract address
    * @return uint256                   Call value
    * @return bytes                     Trade calldata
    */
   function _getRepayCalldata(
-    address _asset,
-    uint256 _amount
+    address /* _asset */,
+    uint256 /* _amount */
   ) internal virtual view returns (address, uint256, bytes memory) {
     require(false, "This needs to be overriden");
   }
@@ -517,18 +524,18 @@ abstract contract BorrowIntegration is BaseIntegration, ReentrancyGuard {
   /**
    * Return pre action calldata
    *
-   * @param  _asset                    Address of the asset to deposit
-   * @param  _amount                   Amount of the token to deposit
-   * @param  _borrowOp                Type of Borrow op
+   * hparam  _asset                    Address of the asset to deposit
+   * hparam  _amount                   Amount of the token to deposit
+   * hparam  _borrowOp                Type of Borrow op
    *
    * @return address                   Target contract address
    * @return uint256                   Call value
    * @return bytes                     Trade calldata
    */
   function _getPreActionCallData(
-    address _asset,
-    uint256 _amount,
-    uint _borrowOp
+    address /* _asset */,
+    uint256 /* _amount */,
+    uint /* _borrowOp */
   ) internal virtual view returns (address, uint256, bytes memory) {
     require(false, "This needs to be overriden");
   }

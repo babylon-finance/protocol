@@ -73,7 +73,7 @@ contract AaveIntegration is BorrowIntegration {
       address _asset,
       uint256 _amount,
       uint _borrowOp
-    ) internal override view returns (address, uint256, bytes memory) {
+    ) internal override pure returns (address, uint256, bytes memory) {
       return (address(0),0,bytes(""));
     }
 

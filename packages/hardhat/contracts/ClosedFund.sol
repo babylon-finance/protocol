@@ -615,7 +615,7 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
 
     function _validateRedemptionInfo(
         uint256 _minReserveReceiveQuantity,
-        uint256 _fundTokenQuantity,
+        uint256 /* _fundTokenQuantity */,
         ActionInfo memory _withdrawalInfo
     ) internal view {
         // Check that new supply is more than min supply needed for redemption
