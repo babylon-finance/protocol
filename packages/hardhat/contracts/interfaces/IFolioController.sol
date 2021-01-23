@@ -34,6 +34,7 @@ interface IFolioController {
     function removeReserveAsset(address _reserveAsset) external;
     function disableFund(address _fund) external;
     function reenableFund(address _fund) external;
+    function changeFundEndDate(address _fund, uint256 _newEndTimestamp) external;
     function editPriceOracle(address _priceOracle) external;
     function editFundValuer(address _fundValuer) external;
     function editFeeRecipient(address _newFeeRecipient) external;
@@ -41,6 +42,8 @@ interface IFolioController {
     function initializeIntegration(address _integration, address _fund) external;
     function editIntegration(string memory _name, address _integration) external;
     function removeIntegration(string memory _name) external;
+
+    // Getters
     function getPriceOracle() external view returns (address);
     function getFundValuer() external view returns(address);
     function getFeeRecipient() external view returns(address);

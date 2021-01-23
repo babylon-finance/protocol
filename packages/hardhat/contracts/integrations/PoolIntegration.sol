@@ -217,7 +217,7 @@ abstract contract PoolIntegration is BaseIntegration, ReentrancyGuard {
      *
      * @param _pool                          Address of the pool
      * @param _poolTokensInTransaction       Number of pool tokens involved
-     * @param _poolTokens                    Addresseses of the pool tokens
+     * hparam _poolTokens                    Addresseses of the pool tokens
      * @param _limitPoolTokenQuantities      Limit quantity of the pool tokens
      *
      * return PoolInfo             Struct containing data for pool
@@ -225,7 +225,7 @@ abstract contract PoolIntegration is BaseIntegration, ReentrancyGuard {
     function _createPoolInfo(
       address _pool,
       uint256 _poolTokensInTransaction,
-      address[] calldata _poolTokens,
+      address[] calldata /* _poolTokens */,
       uint256[] calldata _limitPoolTokenQuantities
     )
       internal
@@ -300,51 +300,59 @@ abstract contract PoolIntegration is BaseIntegration, ReentrancyGuard {
     /**
      * Return join pool calldata which is already generated from the pool API
      *
-     * @param  _poolAddress              Address of the pool
-     * @param  _poolTokensOut            Amount of pool tokens to send
-     * @param  _tokensIn                 Addresses of tokens to send to the pool
-     * @param  _maxAmountsIn             Amounts of tokens to send to the pool
+     * hparam  _poolAddress              Address of the pool
+     * hparam  _poolTokensOut            Amount of pool tokens to send
+     * hparam  _tokensIn                 Addresses of tokens to send to the pool
+     * hparam  _maxAmountsIn             Amounts of tokens to send to the pool
      *
      * @return address                   Target contract address
      * @return uint256                   Call value
      * @return bytes                     Trade calldata
      */
     function _getJoinPoolCalldata(
-      address _poolAddress,
-      uint256 _poolTokensOut,
-      address[] calldata _tokensIn,
-      uint256[] calldata _maxAmountsIn
+      address /* _poolAddress */,
+      uint256 /* _poolTokensOut */,
+      address[] calldata /* _tokensIn */,
+      uint256[] calldata /* _maxAmountsIn */
     ) internal virtual view returns (address, uint256, bytes memory) {
       require(false, "This needs to be overriden");
+      return (address(0),0,bytes(""));
     }
 
     /**
      * Return exit pool calldata which is already generated from the pool API
      *
-     * @param  _poolAddress              Address of the pool
-     * @param  _poolTokensIn             Amount of pool tokens to receive
-     * @param  _tokensOut                Addresses of tokens to receive
-     * @param  _minAmountsOut            Amounts of pool tokens to receive
+     * hparam  _poolAddress              Address of the pool
+     * hparam  _poolTokensIn             Amount of pool tokens to receive
+     * hparam  _tokensOut                Addresses of tokens to receive
+     * hparam  _minAmountsOut            Amounts of pool tokens to receive
      *
      * @return address                   Target contract address
      * @return uint256                   Call value
      * @return bytes                     Trade calldata
      */
     function _getExitPoolCalldata(
-      address _poolAddress,
-      uint256 _poolTokensIn,
-      address[] calldata _tokensOut,
-      uint256[] calldata _minAmountsOut
+      address /* _poolAddress */,
+      uint256 /* _poolTokensIn */,
+      address[] calldata /* _tokensOut */,
+      uint256[] calldata /* _minAmountsOut */
     ) internal virtual view returns (address, uint256, bytes memory) {
       require(false, "This needs to be overriden");
+      return (address(0),0,bytes(""));
     }
 
-    function _isPool(address _poolAddress) view virtual internal returns (bool) {
+    function _isPool(
+      address /* _poolAddress */
+    ) view virtual internal returns (bool) {
       require(false, "This needs to be overriden");
+      return false;
     }
 
-    function _getSpender(address _poolAddress) view virtual internal returns (address) {
+    function _getSpender(
+      address /* _poolAddress */
+    ) view virtual internal returns (address) {
       require(false, "This must be overriden");
+      return address(0);
     }
 
 }

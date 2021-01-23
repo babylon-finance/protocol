@@ -372,7 +372,6 @@ abstract contract BaseFund is ERC20 {
     }
 
     function setDisabled() external onlyManagerOrProtocol {
-      // TODO: the fund must be
       require(active, "The fund must be active");
       active = false;
     }
@@ -396,8 +395,8 @@ abstract contract BaseFund is ERC20 {
       address _target,
       uint256 _value,
       bytes calldata _data
-    ) external onlyIntegration returns (bytes memory _returnValue) {
-      _invoke(_target, _value, _data);
+    ) external onlyIntegration returns (bytes memory) {
+      return _invoke(_target, _value, _data);
     }
 
     /* ============ Trade Integration hooks ============ */
@@ -658,6 +657,11 @@ abstract contract BaseFund is ERC20 {
         return getPositionRealUnit(_component) >= _unit.toInt256();
     }
 
+    // TODO: Remove
+    function getPrice(address _assetOne, address _assetTwo) external view returns (uint256) {
+      return _getPrice(_assetOne, _assetTwo);
+    }
+
     /* ============ Internal Functions ============ */
 
     function _getPrice(address _assetOne, address _assetTwo) internal view returns (uint256) {
@@ -849,7 +853,7 @@ abstract contract BaseFund is ERC20 {
      * @return                    Notional tracked balance
      */
     function getTrackedBalance(address _component)
-        internal
+        external
         view
         returns (uint256)
     {

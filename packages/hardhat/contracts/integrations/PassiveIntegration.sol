@@ -216,7 +216,7 @@ abstract contract PassiveIntegration is BaseIntegration, ReentrancyGuard {
      *
      * @param _investment                               Address of the investment
      * @param _investmentTokensInTransaction            Number of investment tokens involved
-     * @param _tokenIn                                  Addresseses of the deposit token
+     * hparam _tokenIn                                  Addresseses of the deposit token
      * @param _limitDepositToken                        Limit quantity of the deposit/withdrawal token
      *
      * return InvestmentInfo                            Struct containing data for the investment
@@ -224,7 +224,7 @@ abstract contract PassiveIntegration is BaseIntegration, ReentrancyGuard {
     function _createInvestmentInfo(
       address _investment,
       uint256 _investmentTokensInTransaction,
-      address _tokenIn,
+      address /*_tokenIn*/,
       uint256 _limitDepositToken
     )
       internal
@@ -296,51 +296,59 @@ abstract contract PassiveIntegration is BaseIntegration, ReentrancyGuard {
     /**
      * Return join investment calldata which is already generated from the investment API
      *
-     * @param  _investmentAddress              Address of the investment
-     * @param  _investmentTokensOut            Amount of investment tokens to send
-     * @param  _tokenIn                       Addresses of tokens to send to the investment
-     * @param  _maxAmountIn                   Amounts of tokens to send to the investment
+     * hparam  _investmentAddress              Address of the investment
+     * hparam  _investmentTokensOut            Amount of investment tokens to send
+     * hparam  _tokenIn                       Addresses of tokens to send to the investment
+     * hparam  _maxAmountIn                   Amounts of tokens to send to the investment
      *
      * @return address                         Target contract address
      * @return uint256                         Call value
      * @return bytes                           Trade calldata
      */
     function _getEnterInvestmentCalldata(
-      address _investmentAddress,
-      uint256 _investmentTokensOut,
-      address _tokenIn,
-      uint256 _maxAmountIn
+      address /* _investmentAddress */,
+      uint256 /* _investmentTokensOut */,
+      address /* _tokenIn */,
+      uint256 /* _maxAmountIn */
     ) internal virtual view returns (address, uint256, bytes memory) {
       require(false, "This needs to be overriden");
+      return (address(0),0,bytes(""));
     }
 
     /**
      * Return exit investment calldata which is already generated from the investment API
      *
-     * @param  _investmentAddress              Address of the investment
-     * @param  _investmentTokensIn             Amount of investment tokens to receive
-     * @param  _tokenOut                       Addresses of token to receive
-     * @param  _minAmountOut                   Amount of investment tokens to receive
+     * hparam  _investmentAddress              Address of the investment
+     * hparam  _investmentTokensIn             Amount of investment tokens to receive
+     * hparam  _tokenOut                       Addresses of token to receive
+     * hparam  _minAmountOut                   Amount of investment tokens to receive
      *
      * @return address                         Target contract address
      * @return uint256                         Call value
      * @return bytes                           Trade calldata
      */
     function _getExitInvestmentCalldata(
-      address _investmentAddress,
-      uint256 _investmentTokensIn,
-      address _tokenOut,
-      uint256 _minAmountOut
+      address /*_investmentAddress */,
+      uint256 /*_investmentTokensIn */,
+      address /*_tokenOut */,
+      uint256 /* _minAmountOut */
     ) internal virtual view returns (address, uint256, bytes memory) {
       require(false, "This needs to be overriden");
+      return (address(0),0,bytes(""));
     }
 
-    function _isInvestment(address _investmentAddress) view virtual internal returns (bool) {
+    function _isInvestment(
+      address //_investmentAddress
+    ) view virtual internal returns (bool) {
       require(false, "This needs to be overriden");
+      return false;
     }
 
-    function _getSpender(address _investmentAddress) view virtual internal returns (address) {
+    function _getSpender(
+      address //_investmentAddress
+    ) view virtual internal returns (address) {
       require(false, "This must be overriden");
+      return address(0);
     }
 
 }

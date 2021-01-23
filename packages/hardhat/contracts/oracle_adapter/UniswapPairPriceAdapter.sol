@@ -74,9 +74,7 @@ contract UniswapPairPriceAdapter is Ownable {
         IFolioController _controller,
         address _uniswapFactory,
         IUniswapV2Pair[] memory _uniswapPools
-    )
-        public
-    {
+    ) {
         controller = _controller;
         uniswapFactory = _uniswapFactory;
 

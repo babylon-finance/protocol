@@ -86,6 +86,7 @@ async function main() {
   });
   // Publish addresses
   fs.copyFileSync("utils/addresses.js", `${publishDir}/addresses.js`);
+  fs.copyFileSync("utils/constants.js", `${publishDir}/constants.js`);
   fs.writeFileSync(
     `${publishDir}/contracts.js`,
     `module.exports = ${JSON.stringify(finalContractList)};`

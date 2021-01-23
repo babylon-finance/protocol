@@ -23,6 +23,7 @@ import { SafeMath } from "@openzeppelin/contracts/math/SafeMath.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
 import { IFund } from "./interfaces/IFund.sol";
+import { IClosedFund } from "./interfaces/IClosedFund.sol";
 import { IIntegration } from "./interfaces/IIntegration.sol";
 import { AddressArrayUtils } from "./lib/AddressArrayUtils.sol";
 
@@ -216,6 +217,19 @@ contract FolioController is Ownable {
         IFund fund = IFund(_fund);
         require(!fund.active(), "The fund needs to be disabled.");
         fund.setDisabled();
+    }
+
+    /**
+     * PRIVILEGED GOVERNANCE FUNCTION. Allows governance to disable a fund
+     *
+     * @param _fund               Address of the fund
+     * @param _newEndTimestamp    New end timestamp for the fund
+     */
+    function changeFundEndDate(address _fund, uint256 _newEndTimestamp) external onlyOwner {
+        require(isFund[_fund], "Fund does not exist");
+        IClosedFund fund = IClosedFund(_fund);
+        require(!!fund.active(), "The fund needs to be active.");
+        fund.setFundEndDate(_newEndTimestamp);
     }
 
     /**
@@ -414,13 +428,15 @@ contract FolioController is Ownable {
     /**
      * Get integration integration address associated with passed human readable name
      *
-     * @param  _integration         Address of the integration
+     * hparam  _integration         Address of the integration
      *
      * @return                  Integration fee
      */
-    function getIntegrationFee(address _integration)
+    function getIntegrationFee(
+      address /* _integration */
+    )
         external
-        view
+        pure
         returns (uint256)
     {
         return 0;

@@ -137,7 +137,10 @@ abstract contract BaseIntegration {
     /**
      * Gets the total fee for this integration of the passed in index (fee % * quantity)
      */
-    function getIntegrationFee(uint256 _feeIndex, uint256 _quantity) internal view returns(uint256) {
+    function getIntegrationFee(
+      uint256 /* _feeIndex */,
+      uint256 _quantity
+    ) internal view returns(uint256) {
         uint256 feePercentage = IFolioController(controller).getIntegrationFee(address(this));
         return _quantity.preciseMul(feePercentage);
     }
@@ -178,7 +181,7 @@ abstract contract BaseIntegration {
       Normalize all the amounts of all tokens so all can be called with 10^18.
       e.g Call functions like borrow, supply with parseEther
     */
-    function normalizeDecimals(address asset, uint256 amount) internal view returns (uint256)  {
+    function normalizeDecimals(address asset, uint256 amount) internal pure returns (uint256)  {
       // USDC and USDT have only 6 decimals
       // TODO: create a mpping for decimals managed by the protocol
       uint256 newAmount = amount;

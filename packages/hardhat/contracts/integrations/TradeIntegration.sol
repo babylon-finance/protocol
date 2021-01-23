@@ -272,25 +272,26 @@ abstract contract TradeIntegration is BaseIntegration, ReentrancyGuard {
     /**
      * Return exchange calldata which is already generated from the exchange API
      *
-     * @param  _sourceToken              Address of source token to be sold
-     * @param  _destinationToken         Address of destination token to buy
-     * @param  _sourceQuantity           Amount of source token to sell
-     * @param  _minDestinationQuantity   Min amount of destination token to buy
-     * @param  _data                    Arbitrage bytes containing trade call data
+     * hparam  _sourceToken              Address of source token to be sold
+     * hparam  _destinationToken         Address of destination token to buy
+     * hparam  _sourceQuantity           Amount of source token to sell
+     * hparam  _minDestinationQuantity   Min amount of destination token to buy
+     * hparam  _data                    Arbitrage bytes containing trade call data
      *
      * @return address                   Target contract address
      * @return uint256                   Call value
      * @return bytes                     Trade calldata
      */
     function _getTradeCalldata(
-      address _sourceToken,
-      address _destinationToken,
-      address _destinationAddress,
-      uint256 _sourceQuantity,
-      uint256 _minDestinationQuantity,
-      bytes memory _data
+      address /* _sourceToken */,
+      address /* _destinationToken */,
+      address /* _destinationAddress */,
+      uint256 /* _sourceQuantity */,
+      uint256 /* _minDestinationQuantity */,
+      bytes memory /* _data */
     ) internal virtual view returns (address, uint256, bytes memory) {
       require(false, "This needs to be overriden");
+      return (address(0),0,bytes(""));
     }
 
     /**
@@ -300,6 +301,7 @@ abstract contract TradeIntegration is BaseIntegration, ReentrancyGuard {
      */
     function _getSpender() internal view virtual returns (address) {
       require(false, "This needs to be overriden");
+      return address(0);
     }
 
 }

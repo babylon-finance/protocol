@@ -108,13 +108,18 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
         uint256 newReservePositionUnit; // Fund token reserve asset position unit after deposit/withdrawal
     }
 
-    address managerDepositHook; // Deposit hook configurations
-    address managerWithdrawalHook; // Withdrawal hook configurations
+    address public managerDepositHook; // Deposit hook configurations
+    address public managerWithdrawalHook; // Withdrawal hook configurations
 
-    uint256 managerDepositFee; // % of the deposit denominated in the reserve asset
-    uint256 managerWithdrawalFee; // % of the withdrawal denominated in the reserve asset,  charged in withdrawal
-    uint256 managerPerformanceFee; // % of the profits denominated in the reserve asset, charged in withdrawal
-    uint256 premiumPercentage; // Premium percentage (0.01% = 1e14, 1% = 1e16). This premium is a buffer around oracle
+    uint256 public maxDepositLimit; // Limits the amount of deposits
+    uint256 public managerStake; // Amount staked by the manager
+    uint256 public fundEndsBy; // Timestamp when the fund ends and withdrawals are allowed
+
+    // Fees
+    uint256 public managerDepositFee; // % of the deposit denominated in the reserve asset
+    uint256 public managerWithdrawalFee; // % of the withdrawal denominated in the reserve asset,  charged in withdrawal
+    uint256 public managerPerformanceFee; // % of the profits denominated in the reserve asset, charged in withdrawal
+    uint256 public premiumPercentage; // Premium percentage (0.01% = 1e14, 1% = 1e16). This premium is a buffer around oracle
     // prices paid by user to the Fund Token, which prevents arbitrage and oracle front running
 
     // List of contributors
@@ -176,6 +181,7 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
         totalContributors = 0;
         totalFundsDeposited = 0;
         totalFunds = 0;
+        fundEndsBy = block.timestamp + 90 days;
     }
 
     /* ============ External Functions ============ */
@@ -185,6 +191,8 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
      * fees and issuance premium. Only callable by the Fund's manager. Hook addresses are optional.
      * Address(0) means that no hook will be called.
      *
+     * @param _managerStake                   Manager stake
+     * @param _maxDepositLimit                Max deposit limit
      * @param _managerDepositFee              Manager deposit fee
      * @param _managerWithdrawalFee           Manager withdrawal fee
      * @param _managerPerformanceFee          Manager performance fee
@@ -194,6 +202,8 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
      * @param _managerWithdrawalHook          Withdrawal hook (if any)
      */
     function initialize(
+        uint256 _managerStake,
+        uint256 _maxDepositLimit,
         uint256 _managerDepositFee,
         uint256 _managerWithdrawalFee,
         uint256 _managerPerformanceFee,
@@ -201,7 +211,9 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
         uint256 _minFundTokenSupply,
         address _managerDepositHook,
         address _managerWithdrawalHook
-    ) external onlyManager onlyInactive {
+    ) external onlyManager onlyInactive payable {
+        require(_managerStake > minContribution, "Manager needs to stake");
+        require(msg.value > (2 * minContribution), "Manager needs to also deposit");
         IFolioController ifcontroller = IFolioController(controller);
         require(
             _managerDepositFee <= ifcontroller.getMaxManagerDepositFee(),
@@ -224,8 +236,6 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
             _minFundTokenSupply > 0,
             "Min Fund token supply must be greater than 0"
         );
-        require(totalSupply() > 0, "The fund must receive an initial deposit by the manager");
-
         managerDepositFee = _managerDepositFee;
         minFundTokenSupply = _minFundTokenSupply;
         managerWithdrawalFee = _managerWithdrawalFee;
@@ -233,30 +243,33 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
         premiumPercentage = _premiumPercentage;
         managerDepositHook = _managerDepositHook;
         managerWithdrawalHook = _managerWithdrawalHook;
+        managerStake = _managerStake;
+        maxDepositLimit = _maxDepositLimit;
+
+        uint256 initialDepositAmount = msg.value - managerStake;
+
+        // make initial deposit
+        uint256 initialTokens = initialDepositAmount.div(initialBuyRate);
+
+        IWETH(weth).deposit{value: initialDepositAmount}();
+
+        // TODO: Trade to reserve asset if different than WETH
+
+        _mint(manager, initialTokens);
+        _udpateContributorInfo(initialTokens, initialDepositAmount);
+
+        uint256 newTotalSupply = totalSupply();
+        int256 newPositionMultiplier = positionMultiplier.div(newTotalSupply.toInt256());
+        _editPositionMultiplier(newPositionMultiplier);
+
+        _calculateAndEditPosition(
+          weth,
+          initialDepositAmount
+        );
+
+        require(totalSupply() > 0, "The fund must receive an initial deposit by the manager");
+
         active = true;
-    }
-
-    /**
-     * Manager sets the initial deposit that kickstarts the supply and allows to set the fund to active
-     *
-     */
-    function initialManagerDeposit() external onlyManager payable nonReentrant {
-      require(
-          msg.value >= minContribution,
-          "Send at least 1000000000000 wei"
-      );
-      // Always wrap to WETH
-      IWETH(weth).deposit{value: msg.value}();
-
-      // TODO: Trade to reserve asset if different than WETH
-      uint256 initialTokens = msg.value.div(initialBuyRate);
-      _mint(manager, initialTokens);
-      _udpateContributorInfo(initialTokens);
-
-      _calculateAndEditPosition(
-        weth,
-        msg.value
-      );
     }
 
     /**
@@ -271,11 +284,16 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
         uint256 _reserveAssetQuantity,
         uint256 _minFundTokenReceiveQuantity,
         address _to
-    ) external payable nonReentrant onlyActive {
+    ) public payable nonReentrant onlyActive {
         require(
             msg.value >= minContribution,
             "Send at least 1000000000000 wei"
         );
+        require(block.timestamp < fundEndsBy, "Fund is already closed");
+        // if deposit limit is 0, then there is no deposit limit
+        if(maxDepositLimit > 0) {
+          require(totalFundsDeposited.add(msg.value) <= maxDepositLimit, "Max Deposit Limit reached");
+        }
 
         // Always wrap to WETH
         IWETH(weth).deposit{value: msg.value}();
@@ -295,7 +313,7 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
 
         _transferCollateralAndHandleFees(reserveAsset, depositInfo);
 
-        _udpateContributorInfo(depositInfo.fundTokenQuantity);
+        _udpateContributorInfo(depositInfo.fundTokenQuantity, msg.value);
 
         _handleDepositStateUpdates(reserveAsset, _to, depositInfo);
     }
@@ -312,7 +330,8 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
         uint256 _fundTokenQuantity,
         uint256 _minReserveReceiveQuantity,
         address payable _to
-    ) external nonReentrant onlyContributor(msg.sender) {
+    ) external nonReentrant onlyContributor(msg.sender) onlyActive {
+        require(block.timestamp > fundEndsBy, "Withdrawals are disabled until the fund ends");
         require(
             _fundTokenQuantity <= IERC20(address(this)).balanceOf(msg.sender),
             "Withdrawal amount must be less than or equal to deposited amount"
@@ -427,12 +446,21 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
         );
     }
 
+    // if limit == 0 then there is no deposit limit
+    function setDepositLimit(uint limit) external onlyManager {
+      maxDepositLimit = limit;
+    }
+
+    function setFundEndDate(uint256 _endsTimestamp) external onlyProtocol {
+      fundEndsBy = _endsTimestamp;
+    }
+
+    /* ============ External Getter Functions ============ */
+
     function getContributor(address _contributor) public view returns (uint256, uint256, uint256) {
         Contributor memory contributor = contributors[_contributor];
         return (contributor.totalDeposit, contributor.tokensReceived, contributor.timestamp);
     }
-
-    /* ============ External Getter Functions ============ */
 
     function getPremiumPercentage() external view returns (uint256) {
         return premiumPercentage;
@@ -587,7 +615,7 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
 
     function _validateRedemptionInfo(
         uint256 _minReserveReceiveQuantity,
-        uint256 _fundTokenQuantity,
+        uint256 /* _fundTokenQuantity */,
         ActionInfo memory _withdrawalInfo
     ) internal view {
         // Check that new supply is more than min supply needed for redemption
@@ -982,26 +1010,26 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
     /**
      * Updates the contributor info in the array
      */
-    function _udpateContributorInfo(uint256 tokensReceived) internal {
+    function _udpateContributorInfo(uint256 tokensReceived, uint256 amount) internal {
       Contributor storage contributor = contributors[msg.sender];
       // If new contributor, create one, increment count, and set the current TS
       if (contributor.totalDeposit == 0) {
-          totalContributors = totalContributors.add(1);
-          contributor.timestamp = block.timestamp;
+        totalContributors = totalContributors.add(1);
+        contributor.timestamp = block.timestamp;
       }
 
-      totalFunds = totalFunds.add(msg.value);
-      totalFundsDeposited = totalFundsDeposited.add(msg.value);
-      contributor.totalDeposit = contributor.totalDeposit.add(msg.value);
+      totalFunds = totalFunds.add(amount);
+      totalFundsDeposited = totalFundsDeposited.add(amount);
+      contributor.totalDeposit = contributor.totalDeposit.add(amount);
       contributor.tokensReceived = contributor.tokensReceived.add(
           tokensReceived
       );
 
       emit ContributionLog(
-          msg.sender,
-          msg.value,
-          tokensReceived,
-          block.timestamp
+        msg.sender,
+        amount,
+        tokensReceived,
+        block.timestamp
       );
     }
 

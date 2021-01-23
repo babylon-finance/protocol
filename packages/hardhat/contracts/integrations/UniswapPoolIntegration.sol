@@ -62,19 +62,21 @@ contract UniswapPoolIntegration is PoolIntegration {
 
   /* ============ Internal Functions ============ */
 
-  function _isPool(address _poolAddress) view override internal returns (bool) {
+  function _isPool(address _poolAddress) pure override internal returns (bool) {
     return IUniswapV2Pair(_poolAddress).MINIMUM_LIQUIDITY() > 0;
   }
 
-  function _getSpender(address _poolAddress) view override internal returns (address) {
+  function _getSpender(
+    address //_poolAddress
+  ) view override internal returns (address) {
     return address(uniRouter);
   }
 
   /**
    * Return join pool calldata which is already generated from the pool API
    *
-   * @param  _poolAddress              Address of the pool
-   * @param  _poolTokensOut            Amount of pool tokens to send
+   * hparam  _poolAddress              Address of the pool
+   * hparam  _poolTokensOut            Amount of pool tokens to send
    * @param  _tokensIn                 Addresses of tokens to send to the pool
    * @param  _maxAmountsIn             Amounts of tokens to send to the pool
    *
@@ -83,8 +85,8 @@ contract UniswapPoolIntegration is PoolIntegration {
    * @return bytes                     Trade calldata
    */
   function _getJoinPoolCalldata(
-    address _poolAddress,
-    uint256 _poolTokensOut,
+    address /* _poolAddress */,
+    uint256 /* _poolTokensOut */,
     address[] calldata _tokensIn,
     uint256[] calldata _maxAmountsIn
   ) internal override view returns (address, uint256, bytes memory) {
@@ -109,7 +111,7 @@ contract UniswapPoolIntegration is PoolIntegration {
   /**
    * Return exit pool calldata which is already generated from the pool API
    *
-   * @param  _poolAddress              Address of the pool
+   * hparam  _poolAddress              Address of the pool
    * @param  _poolTokensIn             Amount of pool tokens to receive
    * @param  _tokensOut                Addresses of tokens to receive
    * @param  _minAmountsOut            Amounts of pool tokens to receive
@@ -119,7 +121,7 @@ contract UniswapPoolIntegration is PoolIntegration {
    * @return bytes                     Trade calldata
    */
   function _getExitPoolCalldata(
-    address _poolAddress,
+    address /* _poolAddress */,
     uint256 _poolTokensIn,
     address[] calldata _tokensOut,
     uint256[] calldata _minAmountsOut

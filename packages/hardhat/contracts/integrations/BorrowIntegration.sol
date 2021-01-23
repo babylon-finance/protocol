@@ -336,21 +336,33 @@ abstract contract BorrowIntegration is BaseIntegration, ReentrancyGuard {
    * @param _debtInfo                 Struct containing trade information used in internal functions
    * @param _feeToken                 Address of the token to pay the fee with
    * @param _exchangedQuantity        Amount of exchanged amounts
-   * @param _borrowOp                 Type of borrow operation
+   * hparam _borrowOp                 Type of borrow operation
    * @return uint256                  Amount of receive token taken as protocol fee
    */
-  function _accrueProtocolFee(DebtInfo memory _debtInfo, address _feeToken, uint256 _exchangedQuantity, uint8 _borrowOp) internal returns (uint256) {
+  function _accrueProtocolFee(
+    DebtInfo memory _debtInfo,
+    address _feeToken,
+    uint256 _exchangedQuantity,
+    uint8 /* _borrowOp */
+  ) internal returns (uint256) {
     uint256 protocolFeeTotal = getIntegrationFee(0, _exchangedQuantity);
     payProtocolFeeFromFund(address(_debtInfo.fund), _feeToken, protocolFeeTotal);
     return protocolFeeTotal;
   }
 
-  function _getCollateralAsset(address _asset, uint8 _borrowOp) internal virtual view returns (address) {
+  function _getCollateralAsset(
+    address /* _asset */,
+    uint8 /* _borrowOp */
+  ) internal virtual view returns (address) {
     require(false, "This method must be overriden");
+    return address(0);
   }
 
-  function _getSpender(address asset) internal virtual view returns (address) {
+  function _getSpender(
+    address /* asset */
+  ) internal virtual view returns (address) {
     require(false, "This method must be overriden");
+    return address(0);
   }
 
   /**
@@ -449,88 +461,93 @@ abstract contract BorrowIntegration is BaseIntegration, ReentrancyGuard {
   /**
    * Return deposit collateral calldata
    *
-   * @param  _asset                    Address of the asset to deposit
-   * @param  _amount                   Amount of the token to deposit
+   * hparam  _asset                    Address of the asset to deposit
+   * hparam  _amount                   Amount of the token to deposit
    *
    * @return address                   Target contract address
    * @return uint256                   Call value
    * @return bytes                     Trade calldata
    */
   function _getDepositCalldata(
-    address _asset,
-    uint256 _amount
+    address /* _asset */,
+    uint256 /* _amount */
   ) internal virtual view returns (address, uint256, bytes memory) {
     require(false, "This needs to be overriden");
+    return (address(0),0,bytes(""));
   }
 
   /**
    * Return collateral removal calldata
    *
-   * @param  _asset                    Address of the asset to deposit
-   * @param  _amount                   Amount of the token to deposit
+   * hparam  _asset                    Address of the asset to deposit
+   * hparam  _amount                   Amount of the token to deposit
    *
    * @return address                   Target contract address
    * @return uint256                   Call value
    * @return bytes                     Trade calldata
    */
   function _getRemovalCalldata(
-    address _asset,
-    uint256 _amount
+    address /* _asset */,
+    uint256 /* _amount */
   ) internal virtual view returns (address, uint256, bytes memory) {
     require(false, "This needs to be overriden");
+    return (address(0),0,bytes(""));
   }
 
   /**
    * Return borrow token calldata
    *
-   * @param  _asset                    Address of the asset to deposit
-   * @param  _amount                   Amount of the token to deposit
+   * hparam  _asset                    Address of the asset to deposit
+   * hparam  _amount                   Amount of the token to deposit
    *
    * @return address                   Target contract address
    * @return uint256                   Call value
    * @return bytes                     Trade calldata
    */
   function _getBorrowCalldata(
-    address _asset,
-    uint256 _amount
+    address /* _asset */,
+    uint256 /* _amount */
   ) internal virtual view returns (address, uint256, bytes memory) {
     require(false, "This needs to be overriden");
+    return (address(0),0,bytes(""));
   }
 
   /**
    * Return repay borrowed asset calldata
    *
-   * @param  _asset                    Address of the asset to deposit
-   * @param  _amount                   Amount of the token to deposit
+   * hparam  _asset                    Address of the asset to deposit
+   * hparam  _amount                   Amount of the token to deposit
    *
    * @return address                   Target contract address
    * @return uint256                   Call value
    * @return bytes                     Trade calldata
    */
   function _getRepayCalldata(
-    address _asset,
-    uint256 _amount
+    address /* _asset */,
+    uint256 /* _amount */
   ) internal virtual view returns (address, uint256, bytes memory) {
     require(false, "This needs to be overriden");
+    return (address(0),0,bytes(""));
   }
 
   /**
    * Return pre action calldata
    *
-   * @param  _asset                    Address of the asset to deposit
-   * @param  _amount                   Amount of the token to deposit
-   * @param  _borrowOp                Type of Borrow op
+   * hparam  _asset                    Address of the asset to deposit
+   * hparam  _amount                   Amount of the token to deposit
+   * hparam  _borrowOp                Type of Borrow op
    *
    * @return address                   Target contract address
    * @return uint256                   Call value
    * @return bytes                     Trade calldata
    */
   function _getPreActionCallData(
-    address _asset,
-    uint256 _amount,
-    uint _borrowOp
+    address /* _asset */,
+    uint256 /* _amount */,
+    uint /* _borrowOp */
   ) internal virtual view returns (address, uint256, bytes memory) {
     require(false, "This needs to be overriden");
+    return (address(0),0,bytes(""));
   }
 
 }
