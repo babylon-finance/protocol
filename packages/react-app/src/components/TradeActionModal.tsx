@@ -3,13 +3,15 @@ import * as contractNames from "../constants/contracts";
 import { loadContractFromNameAndAddress } from "../hooks/ContractLoader";
 import { Transactor } from "../helpers";
 import useGasPrice from "../hooks/GasPrice";
+import { Token, UniswapTokenList } from "../constants/UniswapTokenList";
 
 import { notification } from "antd";
-import { formatEther, parseEther } from "@ethersproject/units";
-import { Card, Box, Button, Heading, Field, Flex, Form, Modal } from 'rimble-ui';
+import { commify, formatEther, parseEther } from "@ethersproject/units";
+import { BigNumber } from "@ethersproject/bignumber";
+import { Box, Button, Card, Heading, Input, Loader, Field, Flex, Form, Modal } from 'rimble-ui';
 
 import { usePoller } from "eth-hooks";
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import styled from "styled-components";
 
 interface TradeActionModalProps {
@@ -23,26 +25,85 @@ interface Contracts {
 }
 
 interface QuotePair {
-  expectedRate: string
-  worstRate: string
+  expectedRate: BigNumber
+  expectedRateDisplay: string
+  worstRate: BigNumber
+  worstRateDisplay: string
 }
+
+const EMPTY_QUOTE_PAIR = {
+  expectedRate: BigNumber.from(0),
+  expectedRateDisplay: "0",
+  worstRate: BigNumber.from(0),
+  worstRateDisplay: "0"
+};
 
 const TradeActionModal = ({ fundAddress, provider }: TradeActionModalProps) => {
   const [showModal, setShowModal] = useState(false);
   const [showSummary, setShowSummary] = useState(false);
   const [contracts, setContracts] = useState<Contracts | undefined>(undefined);
-  const [providing, setProviding] = useState<string>("weth");
-  const [receiving, setReceiving] = useState<string>("dai");
-  const [quotePair, setQuotePair] = useState<QuotePair | undefined>(undefined);
+  const [providing, setProviding] = useState<string | undefined>(undefined);
+  const [providingDetails, setProvidingDetails] = useState<Token | undefined>(undefined);
+  const [providingAmount, setProvidingAmount] = useState<number>(1);
+  const [txConfirm, setTxConfirm] = useState<boolean>(false);
+  const [receiving, setReceiving] = useState<string | undefined>(undefined);
+  const [receivingDetails, setReceivingDetails] = useState<Token | undefined>(undefined);
+  const [quotePair, setQuotePair] = useState<QuotePair>(EMPTY_QUOTE_PAIR);
+  const [quoteLoading, setQuoteLoading] = useState<boolean>(false);
 
   const estGasPrice = useGasPrice("fast");
   const tx = Transactor(provider, estGasPrice);
+  const TokensMapByAddress = new Map(UniswapTokenList.tokens.map(token => [token.address, token]));
+
+  const updateQuotePair = useCallback(async () => {
+    if (contracts && providingDetails && receivingDetails) {
+      setQuoteLoading(true);
+
+      const quote = await contracts.IKyberNetworkProxy.getExpectedRate(providingDetails.address, receivingDetails.address, parseEther(providingAmount.toString() || "0"));
+      const expectedReturn = quote[0].mul(BigNumber.from(providingAmount));
+      const worstReturn = quote[1].mul(BigNumber.from(providingAmount));
+
+      setQuotePair({
+        expectedRate: quote[0],
+        expectedRateDisplay: formatTokenDisplay(expectedReturn),
+        worstRate: quote[1],
+        worstRateDisplay: formatTokenDisplay(worstReturn)
+      });
+
+      setQuoteLoading(false);
+    }
+  }, [contracts, providingDetails, receivingDetails, providingAmount]);
 
   useEffect(() => {
     async function getContracts() {
       const kyber = await loadContractFromNameAndAddress(addresses.kyber.proxy, contractNames.IKyberNetworkProxy, provider);
       const fund = await loadContractFromNameAndAddress(fundAddress, contractNames.ClosedFund, provider);
+
       setContracts({ IKyberNetworkProxy: kyber, ClosedFund: fund });
+
+      if (kyber && providing && receiving) {
+        setQuoteLoading(true);
+
+        const providingDetails = TokensMapByAddress.get(providing);
+        const receivingDetails = TokensMapByAddress.get(receiving);
+
+        if (!providingDetails || !receivingDetails) {
+          throw Error();
+        }
+
+        const initialQuote = await kyber.getExpectedRate(providingDetails.address, receivingDetails.address, parseEther(providingAmount.toString()));
+        const initialExpected = initialQuote[0];
+        const initialWorst = initialQuote[1];
+
+        setQuotePair({
+          expectedRate: initialQuote[0],
+          expectedRateDisplay: formatTokenDisplay(initialExpected),
+          worstRate: initialQuote[1],
+          worstRateDisplay: formatTokenDisplay(initialWorst),
+        });
+
+        setQuoteLoading(false);
+      }
     }
 
     if (!contracts && provider) {
@@ -52,9 +113,9 @@ const TradeActionModal = ({ fundAddress, provider }: TradeActionModalProps) => {
 
   usePoller(async () => {
     if (contracts && providing && receiving) {
-      setQuotePair(await contracts.IKyberNetworkProxy.getExpectedRate(addresses.tokens.WETH, addresses.tokens.DAI, parseEther("1")));
+      updateQuotePair();
     }
-  }, 500);
+  }, 5000);
 
   const openModal = e => {
     e.preventDefault();
@@ -71,30 +132,37 @@ const TradeActionModal = ({ fundAddress, provider }: TradeActionModalProps) => {
     setShowSummary(false);
   }
 
-  const submitTradeAction = e => {
+  const handleEditTradeOnClick = e => {
+    e.preventDefault()
+    setShowSummary(false);
+    setShowModal(true);
+  }
+
+  const startTradeAction = async e => {
     e.preventDefault();
-    if (quotePair) {
-      console.log(formatEther(quotePair[0]));
-    }
+    updateQuotePair();
     setShowModal(false);
     setShowSummary(true);
   };
 
   const handleConfirmTrade = async e => {
     e.preventDefault();
-    if (contracts && tx && quotePair) {
+    if (contracts && tx && quotePair && providingDetails && receivingDetails) {
       try {
+        setTxConfirm(true);
+
         const result = await tx(
           contracts.ClosedFund.trade(
             "kyber",
-            addresses.tokens.WETH,
-            parseEther("1"),
-            addresses.tokens.DAI,
-            quotePair[0],
+            providingDetails.address,
+            parseEther(providingAmount.toString()),
+            receivingDetails.address,
+            quotePair.expectedRate,
             "0x",
             { gasPrice: estGasPrice }
           )
         );
+
         if (result) {
           notification.success({
             message: "Transaction Sent",
@@ -110,15 +178,46 @@ const TradeActionModal = ({ fundAddress, provider }: TradeActionModalProps) => {
         });
       }
     }
-    setShowSummary(false);
-  }
 
-  const handleProvidingOnChange = e => {
-    setProviding(e.target.value)
+    setTxConfirm(false);
+    setShowSummary(false);
   };
 
-  const handleReceivingOnChange = e => {
-    setReceiving(e.target.value)
+  const formatTokenDisplay = (value: BigNumber) => {
+    const MAX_CHARS = 7;
+    const splitArray = formatEther(value).split('.');
+
+    if (splitArray[0].length < MAX_CHARS) {
+      return commify(splitArray[0] + "." + splitArray[1].substring(0, (MAX_CHARS - splitArray[0].length)));
+    } else {
+      return commify(splitArray[0]);
+    }
+  }
+
+  const handleProvidingOnChange = async e => {
+    setQuoteLoading(true);
+    setProviding(e.target.value);
+
+    const providingDetails = TokensMapByAddress.get(e.target.value);
+
+    if (providingDetails) {
+      setProvidingDetails(providingDetails);
+    }
+  };
+
+  const handleProvidingAmountOnChange = async e => {
+    setProvidingAmount(e.target.value ? parseInt(e.target.value) : 0);
+  };
+
+  const handleReceivingOnChange = async e => {
+    setQuoteLoading(true);
+    setReceiving(e.target.value);
+
+    const receivingDetails = TokensMapByAddress.get(e.target.value);
+
+    if (receivingDetails) {
+      setReceivingDetails(receivingDetails);
+    }
   };
 
   return (
@@ -139,7 +238,7 @@ const TradeActionModal = ({ fundAddress, provider }: TradeActionModalProps) => {
           />
           <Box p={4} mb={3}>
             <Heading.h3>Perform Trade Action</Heading.h3>
-            <Form onSubmit={submitTradeAction}>
+            <Form onSubmit={startTradeAction}>
               <Flex
                 justifyContent={"space-between"}
                 bg="light-gray"
@@ -149,10 +248,17 @@ const TradeActionModal = ({ fundAddress, provider }: TradeActionModalProps) => {
                 flexDirection={["column", "row"]}
               >
                 <Field label="Providing">
-                  <select required onChange={handleProvidingOnChange} value={providing}>
-                    <option value="weth">wETH</option>
-                    <option value="dai">DAI</option>
-                  </select>
+                  <AssetSelect required onChange={handleProvidingOnChange} value={providing}>
+                    <option value="">--</option>
+                    {UniswapTokenList.tokens.map((tokenObj) => (
+                      <option value={tokenObj.address} key={tokenObj.address}>
+                        {tokenObj.name}
+                      </option>
+                    ))}
+                  </AssetSelect>
+                </Field>
+                <Field label="Amount">
+                  <Input type="number" required={true} placeholder="Amount" onChange={handleProvidingAmountOnChange} value={providingAmount} />
                 </Field>
               </Flex>
               <Flex
@@ -162,10 +268,20 @@ const TradeActionModal = ({ fundAddress, provider }: TradeActionModalProps) => {
                 flexDirection={["column", "row"]}
               >
                 <Field label="Receiving">
-                  <select required onChange={handleReceivingOnChange} value={receiving}>
-                    <option value="dai">DAI</option>
-                    <option value="eth">ETH</option>
-                  </select>
+                  <AssetSelect required onChange={handleReceivingOnChange} value={receiving}>
+                    <option value="">--</option>
+                    {UniswapTokenList.tokens.map((tokenObj) => (
+                      <option value={tokenObj.address} key={tokenObj.address}>
+                        {tokenObj.name}
+                      </option>
+                    ))}
+                  </AssetSelect>
+                </Field>
+                {quoteLoading && (
+                  <Loader />
+                )}
+                <Field label="Amount" required>
+                  <Input type="text" disabled required={true} value={quoteLoading ? "--" : quotePair.expectedRateDisplay} />
                 </Field>
               </Flex>
               <FormSubmitButton type="submit">Perform Trade</FormSubmitButton>
@@ -174,9 +290,10 @@ const TradeActionModal = ({ fundAddress, provider }: TradeActionModalProps) => {
         </TradeCard>
       </Modal>
       <Modal isOpen={showSummary}>
-        <TradeCard width={"550px"} p={0}>
-          <p>Providing: 1 {providing} </p>
-          <p>Receiving: 1000 {receiving} </p>
+        <TradeCard width={"550px"} p={4}>
+          <p>Providing: {providingAmount} {providingDetails && providingDetails.symbol} </p>
+          <p>Receiving: {quotePair.expectedRateDisplay} {receivingDetails && receivingDetails.symbol} </p>
+          <p>Estimated Gas Fees: {estGasPrice}</p>
           <Button.Text
             icononly
             icon={"Close"}
@@ -188,18 +305,43 @@ const TradeActionModal = ({ fundAddress, provider }: TradeActionModalProps) => {
             mr={3}
             onClick={closeSummary}
           />
-          <FormSubmitButton onClick={handleConfirmTrade}>Confirm Trade</FormSubmitButton>
+          <FormSubmitButton onClick={handleConfirmTrade}>
+            {txConfirm
+              ? <Loader color="white" />
+              : "Confirm Trade"
+            }
+          </FormSubmitButton>
+          <Button.Outline
+            disabled={txConfirm}
+            color={"moon-gray"}
+            ml={3}
+            onClick={handleEditTradeOnClick}
+          >
+            Edit Trade
+          </Button.Outline>
         </TradeCard>
+        }
       </Modal>
-    </div>
+    </div >
   );
 };
+
+const AssetSelect = styled.select`
+  min-width: 200px;
+  height: 3rem;
+  padding: 12px;
+  font-size: 1rem;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  box-shadow: 0px 2px 4px rgba(0,0,0,0.1);
+`
 
 const TradeCard = styled(Card)`
   height: 700px;
 `
 
 const FormSubmitButton = styled(Button)`
+  min-width: 200px;
   margin-top: 12px;
 `
 
