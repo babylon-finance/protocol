@@ -24,6 +24,7 @@ import "hardhat/console.sol";
 import { ERC20 } from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import { SafeCast } from "@openzeppelin/contracts/utils/SafeCast.sol";
 import { SignedSafeMath } from "@openzeppelin/contracts/math/SignedSafeMath.sol";
+import { SafeMath } from "@openzeppelin/contracts/math/SafeMath.sol";
 
 import { IFolioController } from "./interfaces/IFolioController.sol";
 import { IFund } from "./interfaces/IFund.sol";
@@ -45,6 +46,7 @@ contract FundValuer {
     using SafeCast for int256;
     using SafeCast for uint256;
     using SignedSafeMath for int256;
+    using SafeMath for uint256;
 
     /* ============ State Variables ============ */
 
@@ -96,15 +98,12 @@ contract FundValuer {
 
           // Get component price from price oracle. If price does not exist, revert.
           uint256 componentPrice = priceOracle.getPrice(component, masterQuoteAsset);
-
-          int256 aggregateUnits = _fund.getPositionUnit(component);
-
+          int256 aggregateUnits = _fund.getPositionBalance(component);
           // Normalize each position unit to preciseUnits 1e18 and cast to signed int
           uint256 unitDecimals = ERC20(component).decimals();
           uint256 baseUnits = 10 ** unitDecimals;
 
           int256 normalizedUnits = aggregateUnits.preciseDiv(baseUnits.toInt256());
-
           // Calculate valuation of the component. Debt positions are effectively subtracted
           valuation = normalizedUnits.preciseMul(componentPrice.toInt256()).add(valuation);
         }
@@ -114,6 +113,6 @@ contract FundValuer {
             valuation = valuation.preciseDiv(quoteToMaster.toInt256());
         }
 
-        return valuation.toUint256();
+        return valuation.toUint256().preciseDiv(_fund.totalSupply());
     }
 }

@@ -126,8 +126,7 @@ abstract contract BaseIntegration {
       uint256,
       uint256
     ) {
-      // TODO: get newTotal
-      uint256 _newTotal = IFund(_fund).getPositionUnit(_component).toUint256().add(_deltaOperation);
+      uint256 _newTotal = IFund(_fund).getPositionBalance(_component).toUint256().add(_deltaOperation);
       return IFund(_fund).calculateAndEditPosition(_component, _newTotal, _deltaOperation, _subpositionStatus);
     }
 

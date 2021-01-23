@@ -39,7 +39,7 @@ interface IFund is IERC20 {
 
     struct SubPosition {
       address integration;
-      int256 unit;
+      int256 balance;
       uint8 status;
     }
 
@@ -49,7 +49,7 @@ interface IFund is IERC20 {
      * virtual units.
      *
      * @param component           Address of token in the Position
-     * @param unit                Each unit is the # of components per 10^18 of a Fund
+     * @param balance                Balance of this component
      * @param enteredAt           Timestamp when this position was entered
      * @param exitedAt            Timestamp when this position was exited
      * @param updatedAt           Timestamp when this position was updated
@@ -57,7 +57,7 @@ interface IFund is IERC20 {
     struct Position {
       address component;
       uint8 positionState;
-      int256 unit;
+      int256 balance;
       SubPosition[] subpositions;
       uint8 subpositionsCount;
       uint256 enteredAt;
@@ -93,15 +93,11 @@ interface IFund is IERC20 {
     function isPosition(address _component) external view returns (bool);
     function getPositionCount() external view returns (uint256);
     function getPositions() external view returns (address[] memory);
-    function hasSufficientBalance(address _component, uint256 _unit)
+    function hasSufficientBalance(address _component, uint256 _balance)
         external
         view
         returns (bool);
-    function getPositionUnit(address _component) external view returns(int256);
-    function getTrackedBalance(address _component)
-        external
-        view
-        returns (uint256);
+    function getPositionBalance(address _component) external view returns(int256);
     function calculateAndEditPosition(
         address _component,
         uint256 _newBalance,

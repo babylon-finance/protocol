@@ -28,29 +28,28 @@ import {
 import {SafeMath} from "@openzeppelin/contracts/math/SafeMath.sol";
 import {SignedSafeMath} from "@openzeppelin/contracts/math/SignedSafeMath.sol";
 import {SafeCast} from "@openzeppelin/contracts/utils/SafeCast.sol";
-import {PreciseUnitMath} from "./lib/PreciseUnitMath.sol";
 import {AddressArrayUtils} from "./lib/AddressArrayUtils.sol";
 import {IWETH} from "./interfaces/external/weth/IWETH.sol";
 import {IFolioController} from "./interfaces/IFolioController.sol";
 import {IFundValuer} from "./interfaces/IFundValuer.sol";
 import {IFundIssuanceHook} from "./interfaces/IFundIssuanceHook.sol";
 import {BaseFund} from "./BaseFund.sol";
+import { PreciseUnitMath } from "./lib/PreciseUnitMath.sol";
+
 
 /**
  * @title ClosedFund
  * @author DFolio
  *
- * ClosedFund holds the logic to deposit, witthdraw and track contributions and fees.
+ * ClosedFund holds the logic to deposit, withdraw and track contributions and fees.
  */
 contract ClosedFund is BaseFund, ReentrancyGuard {
-    using SafeMath for uint256;
-    using SignedSafeMath for int256;
-    using PreciseUnitMath for int256;
-    using PreciseUnitMath for uint256;
-    using SafeCast for uint256;
-    using SafeCast for int256;
-    using Address for address;
-    using AddressArrayUtils for address[];
+  using SafeCast for uint256;
+  using SafeCast for int256;
+  using SafeMath for uint256;
+  using SignedSafeMath for int256;
+  using PreciseUnitMath for int256;
+  using PreciseUnitMath for uint256;
 
     /* ============ Events ============ */
     event FundTokenDeposited(
@@ -104,7 +103,7 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
         // When withdrawaling, quantity of Fund tokens withdrawaled
         uint256 previousFundTokenSupply; // Fund token supply prior to deposit/withdrawal action
         uint256 newFundTokenSupply; // Fund token supply after deposit/withdrawal action
-        uint256 newReservePositionUnit; // Fund token reserve asset position unit after deposit/withdrawal
+        uint256 newReservePositionBalance; // Fund token reserve asset position balance after deposit/withdrawal
     }
 
     address public managerDepositHook; // Deposit hook configurations
@@ -211,6 +210,7 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
         address _managerDepositHook,
         address _managerWithdrawalHook
     ) external onlyManager onlyInactive payable {
+        require(_managerStake < msg.value, "Stake must be less than amount sent");
         require(_managerStake > minContribution, "Manager needs to stake");
         require(msg.value > (2 * minContribution), "Manager needs to also deposit");
         IFolioController ifcontroller = IFolioController(controller);
@@ -244,6 +244,7 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
         managerWithdrawalHook = _managerWithdrawalHook;
         managerStake = _managerStake;
         maxDepositLimit = _maxDepositLimit;
+
 
         uint256 initialDepositAmount = msg.value - managerStake;
 
@@ -576,12 +577,10 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
             (, , uint256 expectedWithdrawalQuantity) =
                 _getFees(totalWithdrawalValue, false);
 
-            uint256 existingUnit =
-                _getPositionUnit(_reserveAsset).toUint256();
+            uint256 existingBalance =
+                _getPositionBalance(_reserveAsset).toUint256();
 
-            return
-                existingUnit.preciseMul(setTotalSupply) >=
-                expectedWithdrawalQuantity;
+            return existingBalance >= expectedWithdrawalQuantity;
         }
     }
 
@@ -661,10 +660,9 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
               depositInfo.previousFundTokenSupply
             );
 
-        depositInfo.newReservePositionUnit = _getDepositPositionUnit(
-            _reserveAsset,
-            depositInfo
-        );
+        uint256 existingBalance = _getPositionBalance(_reserveAsset).toUint256();
+
+        depositInfo.newReservePositionBalance = existingBalance.add(depositInfo.netFlowQuantity);
 
         return depositInfo;
     }
@@ -693,30 +691,12 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
         withdrawalInfo.newFundTokenSupply =
             withdrawalInfo.previousFundTokenSupply.sub(_fundTokenQuantity);
 
-        withdrawalInfo.newReservePositionUnit = _getWithdrawalPositionUnit(
+        withdrawalInfo.newReservePositionBalance = _getWithdrawalPositionBalance(
             _reserveAsset,
             withdrawalInfo
         );
 
         return withdrawalInfo;
-    }
-
-    /**
-     * The new position reserve asset unit is calculated as follows:
-     * totalReserve = (oldUnit * oldFundTokenSupply) + reserveQuantity
-     * newUnit = totalReserve / newFundTokenSupply
-     */
-    function _getDepositPositionUnit(
-        address _reserveAsset,
-        ActionInfo memory _depositInfo
-    ) internal view returns (uint256) {
-        uint256 existingUnit = _getPositionUnit(_reserveAsset).toUint256();
-        uint256 totalReserve =
-            existingUnit.preciseMul(_depositInfo.previousFundTokenSupply).add(
-                _depositInfo.netFlowQuantity
-            );
-
-        return totalReserve.preciseDiv(_depositInfo.newFundTokenSupply);
     }
 
     /**
@@ -758,7 +738,7 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
 
         editPosition(
             _reserveAsset,
-            _depositInfo.newReservePositionUnit,
+            _depositInfo.newReservePositionBalance,
             address(0),
             msg.value,
             0
@@ -783,7 +763,7 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
 
         editPosition(
             _reserveAsset,
-            _withdrawalInfo.newReservePositionUnit,
+            _withdrawalInfo.newReservePositionBalance,
             address(0),
             uint256(-_withdrawalInfo.netFlowQuantity),
             0
@@ -880,7 +860,7 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
         uint256 premiumValue =
             _netReserveFlows.preciseMul(premiumPercentageToApply);
 
-        // Get valuation of the Fund with the quote asset as the reserve asset. Returns value in precise units (1e18)
+        // Get valuation of the Fund with the quote asset as the reserve asset.
         // Reverts if price is not found
         uint256 fundValuation = IFundValuer(IFolioController(controller).getFundValuer()).calculateFundValuation(address(this), _reserveAsset);
 
@@ -934,17 +914,16 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
     }
 
     /**
-     * The new position reserve asset unit is calculated as follows:
-     * totalReserve = (oldUnit * oldFundTokenSupply) - reserveQuantityToSendOut
-     * newUnit = totalReserve / newFundTokenSupply
+     * The new position reserve asset balance is calculated as follows:
+     * totalReserve = oldBalance - reserveQuantityToSendOut
+     * newBalance = totalReserve / newFundTokenSupply
      */
-    function _getWithdrawalPositionUnit(
+    function _getWithdrawalPositionBalance(
         address _reserveAsset,
         ActionInfo memory _withdrawalInfo
     ) internal view returns (uint256) {
-        uint256 existingUnit = _getPositionUnit(_reserveAsset).toUint256();
-        uint256 totalExistingUnits =
-            existingUnit.preciseMul(_withdrawalInfo.previousFundTokenSupply);
+        uint256 totalExistingBalance = _getPositionBalance(_reserveAsset).toUint256();
+
 
         uint256 outflow =
             _withdrawalInfo
@@ -954,14 +933,12 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
 
         // Require withdrawable quantity is greater than existing collateral
         require(
-            totalExistingUnits >= outflow,
+            totalExistingBalance >= outflow,
             "Must be greater than total available collateral"
         );
 
         return
-            totalExistingUnits.sub(outflow).preciseDiv(
-                _withdrawalInfo.newFundTokenSupply
-            );
+            totalExistingBalance.sub(outflow);
     }
 
     /**

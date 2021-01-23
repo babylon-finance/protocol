@@ -24,7 +24,6 @@ import { SafeMath } from "@openzeppelin/contracts/math/SafeMath.sol";
 import { SafeCast } from "@openzeppelin/contracts/utils/SafeCast.sol";
 import { SignedSafeMath } from "@openzeppelin/contracts/math/SignedSafeMath.sol";
 import { AddressArrayUtils } from "./lib/AddressArrayUtils.sol";
-import { PreciseUnitMath } from "./lib/PreciseUnitMath.sol";
 import { IFolioController } from "./interfaces/IFolioController.sol";
 import { IWETH } from "./interfaces/external/weth/IWETH.sol";
 import { IComptroller } from './interfaces/external/compound/IComptroller.sol';
@@ -44,11 +43,9 @@ import { IFund } from "./interfaces/IFund.sol";
  */
 abstract contract BaseFund is ERC20 {
     using SafeCast for uint256;
-    using SafeMath for uint256;
-    using PreciseUnitMath for uint256;
     using SafeCast for int256;
+    using SafeMath for uint256;
     using SignedSafeMath for int256;
-    using PreciseUnitMath for int256;
     using Address for address;
     using AddressArrayUtils for address[];
 
@@ -65,7 +62,7 @@ abstract contract BaseFund is ERC20 {
     event PositionMultiplierEdited(int256 _newMultiplier);
     event PositionAdded(address indexed _component);
     event PositionRemoved(address indexed _component);
-    event PositionUnitEdited(address indexed _component, int256 _realUnit);
+    event PositionBalanceEdited(address indexed _component, int256 _realBalance);
 
     /* ============ Modifiers ============ */
 
@@ -551,60 +548,45 @@ abstract contract BaseFund is ERC20 {
 
     /**
      * Returns a list of Positions, through traversing the components.
-     * units are converted to real units. This function is typically used off-chain for data presentation purposes.
+     * balances are converted to real balances. This function is typically used off-chain for data presentation purposes.
      */
     function getPositions() external view returns (address[] memory) {
         return positions;
     }
 
     /**
-     * Returns whether the fund component  position real unit is greater than or equal to units passed in.
+     * Returns whether the fund component  position real balance is greater than or equal to balances passed in.
      */
-    function hasSufficientBalance(address _component, uint256 _unit)
+    function hasSufficientBalance(address _component, uint256 _balance)
         external
         view
         returns (bool)
     {
-      return _getPositionUnit(_component).toUint256().preciseMul(totalSupply()) >= _unit;
+      return _getPositionBalance(_component).toUint256() >= _balance;
     }
 
     /**
      * Get the position of a component
      *
      * @param _component          Address of the component
-     * @return                    Unit balance
+     * @return                    Balance
      */
-    function getPositionUnit(address _component)
+    function getPositionBalance(address _component)
         external
         view
         returns (int256)
     {
-      return _getPositionUnit(_component);
+      return _getPositionBalance(_component);
     }
 
     /**
-     * Get the total tracked balance - total supply * position unit
-     *
-     * @param _component          Address of the component
-     * @return                    Notional tracked balance
-     */
-    function getTrackedBalance(address _component)
-        external
-        view
-        returns (uint256)
-    {
-      return _getPositionUnit(_component).toUint256().preciseMul(totalSupply());
-    }
-
-
-    /**
-     * Calculates the new  position unit and performs the edit with the new unit
+     * Calculates the new  position balance and performs the edit with new balance
      *
      * @param _component                Address of the component
      * @param _newBalance               Current balance of the component
      * @return                          Current component balance
-     * @return                          Previous position unit
-     * @return                          New position unit
+     * @return                          Previous position balance
+     * @return                          New position balance
      */
     function calculateAndEditPosition(
         address _component,
@@ -639,7 +621,7 @@ abstract contract BaseFund is ERC20 {
 
       position.subpositions.push(IFund.SubPosition({
         integration: _integration,
-        unit: 0,
+        balance: 0,
         status: 0
       }));
       position.subpositionsCount ++;
@@ -672,7 +654,7 @@ abstract contract BaseFund is ERC20 {
     /**
      * Internal MODULE FUNCTION. Low level function that edits a component's position
      */
-    function _editPositionUnit(
+    function _editPositionBalance(
       address _component,
       int256 _amount,
       address _integration,
@@ -680,21 +662,23 @@ abstract contract BaseFund is ERC20 {
       uint8 _subpositionStatus
     ) internal {
       IFund.Position storage position = positionsByComponent[_component];
-      position.unit = _amount;
+      console.log('hola');
+      console.log(_deltaBalance);
+      position.balance = _amount;
       position.updatedAt.push(block.timestamp);
       int256 subpositionIndex = _getSubpositionIndex(_component, _integration);
       if (subpositionIndex == -1) {
         position.subpositions.push(IFund.SubPosition({
           integration: _integration,
-          unit: _deltaBalance.preciseDiv(totalSupply()).toInt256(),
+          balance: _deltaBalance.toInt256(),
           status: _subpositionStatus
         }));
       } else {
-        position.subpositions[subpositionIndex.toUint256()].unit = _deltaBalance.preciseDiv(totalSupply()).toInt256();
+        position.subpositions[subpositionIndex.toUint256()].balance = _deltaBalance.toInt256();
         position.subpositions[subpositionIndex.toUint256()].status = _subpositionStatus;
       }
 
-      emit PositionUnitEdited(_component, _amount);
+      emit PositionBalanceEdited(_component, _amount);
     }
 
     function _calculateAndEditPosition(
@@ -710,74 +694,47 @@ abstract contract BaseFund is ERC20 {
             uint256
         )
     {
-      uint256 positionUnit = _getPositionUnit(_component).toUint256();
-      uint256 _componentPreviousBalance = positionUnit.preciseMul(totalSupply());
-      uint256 newTokenUnit =
-          _calculateEditPositionUnit(
-              _componentPreviousBalance,
-              _newBalance,
-              positionUnit
-          );
-      editPosition(_component, newTokenUnit, msg.sender, _deltaBalance, _subpositionStatus);
+      uint256 positionBalance = _getPositionBalance(_component).toUint256();
+      console.log('balances');
+      console.log(_newBalance);
+      editPosition(_component, _newBalance, msg.sender, _deltaBalance, _subpositionStatus);
 
-      return (_newBalance, positionUnit, newTokenUnit);
+      return (_newBalance, positionBalance, _newBalance);
     }
 
     /**
-     * Calculate the new position unit given total notional values pre and post executing an action that changes Fund state
-     * The intention is to make updates to the units without accidentally picking up airdropped assets as well.
-     *
-     * @param _preTotalNotional   Total notional amount of component prior to executing action
-     * @param _postTotalNotional  Total notional amount of component after the executing action
-     * @param _prePositionUnit    Position unit of fund prior to executing action
-     * @return                    New position unit
-     */
-    function _calculateEditPositionUnit(
-        uint256 _preTotalNotional,
-        uint256 _postTotalNotional,
-        uint256 _prePositionUnit
-    ) internal view returns (uint256) {
-        // If pre action total notional amount is greater then subtract post action total notional and calculate new position units
-        uint256 airdroppedAmount =
-            _preTotalNotional.sub(_prePositionUnit.preciseMul(totalSupply()));
-
-        return
-            _postTotalNotional.sub(airdroppedAmount).preciseDiv(totalSupply());
-    }
-
-    /**
-     * Returns whether the fund has a position for a given component (if the real unit is > 0)
+     * Returns whether the fund has a position for a given component (if the real balance is > 0)
      */
     function _hasPosition(address _component) internal view returns (bool) {
-        return _getPositionUnit(_component) > 0;
+        return _getPositionBalance(_component) > 0;
     }
 
-    function _getPositionUnit(address _component) internal view returns (int256) {
-      return positionsByComponent[_component].unit;
+    function _getPositionBalance(address _component) internal view returns (int256) {
+      return positionsByComponent[_component].balance;
     }
 
     /**
      * If the position does not exist, create a new Position and add to the fund. If it already exists,
-     * then set the position units. If the new units is 0, remove the position. Handles adding/removing of
+     * then set the position balance. If the new balance is 0, remove the position. Handles adding/removing of
      * components where needed (in light of potential external positions).
      *
      * @param _component          Address of the component
-     * @param _newUnit            Quantity of Position units - must be >= 0
+     * @param _newBalance         Mew Balance
      */
     function editPosition(
         address _component,
-        uint256 _newUnit,
+        uint256 _newBalance,
         address _integration,
         uint256 _deltaBalance,
         uint8 _subpositionStatus
     ) internal {
         bool isPositionFound = _hasPosition(_component);
-        if (!isPositionFound && _newUnit > 0) {
+        if (!isPositionFound && _newBalance > 0) {
           _addPosition(_component, _integration);
-        } else if (isPositionFound && _newUnit == 0) {
+        } else if (isPositionFound && _newBalance == 0) {
           _removePosition(_component);
         }
-        _editPositionUnit(_component, _newUnit.toInt256(), _integration, _deltaBalance, _subpositionStatus);
+        _editPositionBalance(_component, _newBalance.toInt256(), _integration, _deltaBalance, _subpositionStatus);
     }
 
     function _getPrice(address _assetOne, address _assetTwo) internal view returns (uint256) {
