@@ -116,12 +116,8 @@ describe("Fund", function() {
         ethers.utils.parseEther("1.1")
       );
       // Positions
-      console.log(
-        "multiplier after",
-        ethers.utils.formatEther(await fund1.positionMultiplier())
-      );
       expect(await fund1.getPositionCount()).to.equal(1);
-      const wethPosition = await fund1.getTrackedBalance(weth.address);
+      const wethPosition = await fund1.getPositionBalance(weth.address);
       expect(wethPosition).to.be.gt(ethers.utils.parseEther("1.0099"));
       // Contributor Struct
       const contributor = await fund1.contributors(userSigner3.getAddress());

@@ -25,6 +25,7 @@ import { IIntegration } from "../interfaces/IIntegration.sol";
 import { IWETH } from "../interfaces/external/weth/IWETH.sol";
 import { IFund } from "../interfaces/IFund.sol";
 import { SafeMath } from "@openzeppelin/contracts/math/SafeMath.sol";
+import { SafeCast } from "@openzeppelin/contracts/utils/SafeCast.sol";
 import { PreciseUnitMath } from "../lib/PreciseUnitMath.sol";
 
 /**
@@ -34,6 +35,7 @@ import { PreciseUnitMath } from "../lib/PreciseUnitMath.sol";
  * Abstract class that houses common Integration-related state and functions.
  */
 abstract contract BaseIntegration {
+    using SafeCast for int256;
     using SafeMath for uint256;
     using PreciseUnitMath for uint256;
 
@@ -112,14 +114,20 @@ abstract contract BaseIntegration {
      *
      * @param _fund                     Address of the fund
      * @param _component                Address of the ERC20
-     * @param _newTotal                 New unit of the fund position
+     * @param _deltaOperation           Delta balance of the operation
      */
-    function updateFundPosition(address _fund, address _component, uint256 _newTotal) internal returns (
+    function updateFundPosition(
+      address _fund,
+      address _component,
+      uint256 _deltaOperation,
+      uint8 _subpositionStatus
+    ) internal returns (
       uint256,
       uint256,
       uint256
     ) {
-      return IFund(_fund).calculateAndEditPosition(_component, _newTotal);
+      uint256 _newTotal = IFund(_fund).getPositionBalance(_component).toUint256().add(_deltaOperation);
+      return IFund(_fund).calculateAndEditPosition(_component, _newTotal, _deltaOperation, _subpositionStatus);
     }
 
     /**

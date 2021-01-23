@@ -34,21 +34,20 @@ describe("FundValuer", function() {
   describe("Calls FundValuer", function() {
     it("should return 0.1 for fund1", async function() {
       const wethInFund = await weth.balanceOf(fund.address);
-      const priceOfWeth = await fund.getPrice(
-        addresses.tokens.WETH,
-        addresses.tokens.DAI
-      );
-      console.log("price of weth", ethers.utils.formatEther(priceOfWeth));
-      console.log("wethInFund", ethers.utils.formatEther(wethInFund));
-      const price = await valuer.calculateFundValuation(
+      // const priceOfWeth = await fund.getPrice(
+      //   addresses.tokens.WETH,
+      //   addresses.tokens.DAI
+      // );
+      console.log("wethInFund", wethInFund);
+      // console.log('format', ethers.utils.formatEther(100000000000000000));
+      const pricePerFundToken = await valuer.calculateFundValuation(
         fund.address,
         addresses.tokens.WETH
       );
-      const multiplier = await fund.positionMultiplier();
-      console.log("fund value", ethers.utils.formatEther(price));
-      console.log("fund multiplier", ethers.utils.formatEther(multiplier));
-      const finalValue = price.div(multiplier);
-      expect(finalValue).to.equal(ethers.utils.parseEther("0.1"));
+      const tokens = await fund.totalSupply();
+      expect(pricePerFundToken.mul(tokens / 1000).div(10 ** 15)).to.equal(
+        ethers.utils.parseEther("0.1")
+      );
     });
   });
 });

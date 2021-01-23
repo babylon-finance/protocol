@@ -196,10 +196,10 @@ abstract contract TradeIntegration is BaseIntegration, ReentrancyGuard {
     function _validatePreTradeData(TradeInfo memory _tradeInfo, uint256 _sendQuantity) internal view {
       require(_tradeInfo.totalSendQuantity > 0, "Token to sell must be nonzero");
       require(IERC20(_tradeInfo.sendToken).balanceOf(msg.sender) > _sendQuantity, "Fund needs to have enough tokens");
-      // require(
-      //     _tradeInfo.fund.hasSufficientUnits(_tradeInfo.sendToken, _sendQuantity),
-      //     "Unit cant be greater than existing"
-      // );
+      require(
+          _tradeInfo.fund.hasSufficientBalance(_tradeInfo.sendToken, _sendQuantity),
+          "Unit cant be greater than existing"
+      );
     }
 
     /**
@@ -263,8 +263,8 @@ abstract contract TradeIntegration is BaseIntegration, ReentrancyGuard {
     function _updateFundPositions(TradeInfo memory _tradeInfo, uint256 exchangedQuantity) internal returns (uint256, uint256) {
       uint256 newAmountSendTokens = _tradeInfo.preTradeSendTokenBalance.sub(_tradeInfo.totalSendQuantity);
       uint256 newAmountReceiveTokens = _tradeInfo.preTradeReceiveTokenBalance.add(exchangedQuantity);
-      updateFundPosition(address(_tradeInfo.fund), _tradeInfo.sendToken, newAmountSendTokens);
-      updateFundPosition(address(_tradeInfo.fund), _tradeInfo.receiveToken, newAmountReceiveTokens);
+      updateFundPosition(address(_tradeInfo.fund), _tradeInfo.sendToken, uint256(-_tradeInfo.totalSendQuantity), 0);
+      updateFundPosition(address(_tradeInfo.fund), _tradeInfo.receiveToken, exchangedQuantity, 0);
 
       return (newAmountSendTokens, newAmountReceiveTokens);
     }

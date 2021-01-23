@@ -36,29 +36,33 @@ interface IFund is IERC20 {
     }
 
     /* ============ Structs ============ */
+
+    struct SubPosition {
+      address integration;
+      uint256 balance;
+      uint8 status;
+    }
+
     /**
      * A struct that stores a component's cash position details and external positions
      * This data structure allows O(1) access to a component's cash position units and
      * virtual units.
      *
      * @param component           Address of token in the Position
-     * @param integration         If not in default state, the address of associated module
-     * @param positionState       Position ENUM. Default is 0; External is 1
-     * @param unit                Each unit is the # of components per 10^18 of a SetToken
-     * @param virtualUnit         Virtual value of a component's DEFAULT position. Stored as virtual for efficiency
-     *                            updating all units at once via the position multiplier. Virtual units are achieved
-     *                            by dividing a "real" value by the "positionMultiplier"
+     * @param balance                Balance of this component
+     * @param enteredAt           Timestamp when this position was entered
+     * @param exitedAt            Timestamp when this position was exited
+     * @param updatedAt           Timestamp when this position was updated
      */
     struct Position {
       address component;
-      address integration;
       uint8 positionState;
-      int256 unit;
-      int256 virtualUnit;
+      int256 balance;
+      SubPosition[] subpositions;
+      uint8 subpositionsCount;
       uint256 enteredAt;
       uint256 exitedAt;
       uint256[] updatedAt;
-      bytes data;
     }
 
 
@@ -86,13 +90,27 @@ interface IFund is IERC20 {
     function integrationStates(address _integration) external view returns (IntegrationState);
     function getIntegrations() external view returns (address[] memory);
 
-    function getDefaultPositionRealUnit(address _component) external view returns(int256);
-    function getTotalPositionRealUnits(address _component) external view returns(int256);
-    function calculateAndEditPosition(address _component, uint256 _newBalance)
-        external returns (uint256, uint256, uint256);
-    function getPositions() external view returns(address[] memory);
-    function isPosition(address _position) external view returns(bool);
-    function hasSufficientUnits(address _component, uint256 _unit) external view returns (bool);
+    function isPosition(address _component) external view returns (bool);
+    function getPositionCount() external view returns (uint256);
+    function getPositions() external view returns (address[] memory);
+    function hasSufficientBalance(address _component, uint256 _balance)
+        external
+        view
+        returns (bool);
+    function getPositionBalance(address _component) external view returns(int256);
+    function calculateAndEditPosition(
+        address _component,
+        uint256 _newBalance,
+        uint256 _deltaBalance,
+        uint8 _subpositionStatus
+    )
+      external
+      returns (
+          uint256,
+          uint256,
+          uint256
+      );
+
 
     function invokeApprove(address _spender, address _asset, uint256 _quantity) external;
     function invokeFromIntegration(
@@ -146,9 +164,6 @@ interface IFund is IERC20 {
     function borrow(address asset, uint256 amount) external;
     function repay(address asset, uint256 amount) external;
 
-    function positionMultiplier() external view returns (int256);
-    // function getPositions() external view returns (Position[] memory);
-    function getTotalInvestmentRealUnits(address _component) external view returns(int256);
 
     function isInitializedIntegration(address _integration) external view returns(bool);
     function isPendingIntegration(address _integration) external view returns(bool);
