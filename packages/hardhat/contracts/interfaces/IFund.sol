@@ -39,7 +39,7 @@ interface IFund is IERC20 {
 
     struct SubPosition {
       address integration;
-      int256 balance;
+      uint256 balance;
       uint8 status;
     }
 

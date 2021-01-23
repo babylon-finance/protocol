@@ -19,7 +19,6 @@
 pragma solidity 0.7.4;
 
 import "hardhat/console.sol";
-import {Address} from "@openzeppelin/contracts/utils/Address.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import {
@@ -28,7 +27,6 @@ import {
 import {SafeMath} from "@openzeppelin/contracts/math/SafeMath.sol";
 import {SignedSafeMath} from "@openzeppelin/contracts/math/SignedSafeMath.sol";
 import {SafeCast} from "@openzeppelin/contracts/utils/SafeCast.sol";
-import {AddressArrayUtils} from "./lib/AddressArrayUtils.sol";
 import {IWETH} from "./interfaces/external/weth/IWETH.sol";
 import {IFolioController} from "./interfaces/IFolioController.sol";
 import {IFundValuer} from "./interfaces/IFundValuer.sol";
@@ -334,7 +332,6 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
             _fundTokenQuantity <= IERC20(address(this)).balanceOf(msg.sender),
             "Withdrawal amount must be less than or equal to deposited amount"
         );
-
         _validateReserveAsset(reserveAsset, _fundTokenQuantity);
 
         _callPreWithdrawalHooks(_fundTokenQuantity, msg.sender, _to);
@@ -760,7 +757,6 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
         address _to,
         ActionInfo memory _withdrawalInfo
     ) internal {
-
         editPosition(
             _reserveAsset,
             _withdrawalInfo.newReservePositionBalance,
@@ -878,12 +874,10 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
                 .preciseMul(fundValuation)
                 .add(normalizedTotalReserveQuantityNetFees)
                 .sub(normalizedTotalReserveQuantityNetFeesAndPremium);
-
         uint256 quantityToMint =
             normalizedTotalReserveQuantityNetFeesAndPremium
                 .preciseMul(_fundTokenTotalSupply)
                 .preciseDiv(denominator);
-
         return quantityToMint;
     }
 

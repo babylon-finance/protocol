@@ -662,19 +662,17 @@ abstract contract BaseFund is ERC20 {
       uint8 _subpositionStatus
     ) internal {
       IFund.Position storage position = positionsByComponent[_component];
-      console.log('hola');
-      console.log(_deltaBalance);
       position.balance = _amount;
       position.updatedAt.push(block.timestamp);
       int256 subpositionIndex = _getSubpositionIndex(_component, _integration);
       if (subpositionIndex == -1) {
         position.subpositions.push(IFund.SubPosition({
           integration: _integration,
-          balance: _deltaBalance.toInt256(),
+          balance: _deltaBalance,
           status: _subpositionStatus
         }));
       } else {
-        position.subpositions[subpositionIndex.toUint256()].balance = _deltaBalance.toInt256();
+        position.subpositions[subpositionIndex.toUint256()].balance = _deltaBalance;
         position.subpositions[subpositionIndex.toUint256()].status = _subpositionStatus;
       }
 
@@ -695,8 +693,6 @@ abstract contract BaseFund is ERC20 {
         )
     {
       uint256 positionBalance = _getPositionBalance(_component).toUint256();
-      console.log('balances');
-      console.log(_newBalance);
       editPosition(_component, _newBalance, msg.sender, _deltaBalance, _subpositionStatus);
 
       return (_newBalance, positionBalance, _newBalance);
