@@ -36,25 +36,33 @@ interface IFund is IERC20 {
     }
 
     /* ============ Structs ============ */
+
+    struct SubPosition {
+      address integration;
+      int256 unit;
+      uint8 status;
+    }
+
     /**
      * A struct that stores a component's cash position details and external positions
      * This data structure allows O(1) access to a component's cash position units and
      * virtual units.
      *
      * @param component           Address of token in the Position
-     * @param integration         If not in default state, the address of associated module
-     * @param positionState       Position ENUM. Default is 0; External is 1
      * @param unit                Each unit is the # of components per 10^18 of a Fund
+     * @param enteredAt           Timestamp when this position was entered
+     * @param exitedAt            Timestamp when this position was exited
+     * @param updatedAt           Timestamp when this position was updated
      */
     struct Position {
       address component;
-      address integration;
       uint8 positionState;
       int256 unit;
+      SubPosition[] subpositions;
+      uint8 subpositionsCount;
       uint256 enteredAt;
       uint256 exitedAt;
       uint256[] updatedAt;
-      bytes data;
     }
 
 
@@ -94,8 +102,18 @@ interface IFund is IERC20 {
         external
         view
         returns (uint256);
-    function calculateAndEditPosition(address _component, uint256 _newBalance)
-        external returns (uint256, uint256, uint256);
+    function calculateAndEditPosition(
+        address _component,
+        uint256 _newBalance,
+        uint256 _deltaBalance,
+        uint8 _subpositionStatus
+    )
+      external
+      returns (
+          uint256,
+          uint256,
+          uint256
+      );
 
 
     function invokeApprove(address _spender, address _asset, uint256 _quantity) external;

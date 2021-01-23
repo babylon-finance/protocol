@@ -259,7 +259,9 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
 
         _calculateAndEditPosition(
           weth,
-          initialDepositAmount
+          initialDepositAmount,
+          initialDepositAmount,
+          0
         );
 
         require(totalSupply() > 0, "The fund must receive an initial deposit by the manager");
@@ -448,6 +450,13 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
 
     function setFundEndDate(uint256 _endsTimestamp) external onlyProtocol {
       fundEndsBy = _endsTimestamp;
+    }
+
+    // Any tokens (other than the target) that are sent here by mistake are recoverable by the owner
+    function sweep(address _token) external onlyManager {
+       require(!_hasPosition(_token), "This token is one of the fund positions");
+       // TODO: Sell and add to weth to the fund instead of giving it to the manager
+       IERC20(_token).transfer(manager, IERC20(_token).balanceOf(address(this)));
     }
 
     /* ============ External Getter Functions ============ */
@@ -750,7 +759,9 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
         editPosition(
             _reserveAsset,
             _depositInfo.newReservePositionUnit,
-            address(0)
+            address(0),
+            msg.value,
+            0
         );
 
         _mint(_to, _depositInfo.fundTokenQuantity);
@@ -773,7 +784,9 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
         editPosition(
             _reserveAsset,
             _withdrawalInfo.newReservePositionUnit,
-            address(0)
+            address(0),
+            uint256(-_withdrawalInfo.netFlowQuantity),
+            0
         );
 
         emit FundTokenwithdrawed(

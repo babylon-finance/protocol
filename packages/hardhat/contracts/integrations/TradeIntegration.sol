@@ -263,8 +263,8 @@ abstract contract TradeIntegration is BaseIntegration, ReentrancyGuard {
     function _updateFundPositions(TradeInfo memory _tradeInfo, uint256 exchangedQuantity) internal returns (uint256, uint256) {
       uint256 newAmountSendTokens = _tradeInfo.preTradeSendTokenBalance.sub(_tradeInfo.totalSendQuantity);
       uint256 newAmountReceiveTokens = _tradeInfo.preTradeReceiveTokenBalance.add(exchangedQuantity);
-      updateFundPosition(address(_tradeInfo.fund), _tradeInfo.sendToken, newAmountSendTokens);
-      updateFundPosition(address(_tradeInfo.fund), _tradeInfo.receiveToken, newAmountReceiveTokens);
+      updateFundPosition(address(_tradeInfo.fund), _tradeInfo.sendToken, uint256(-_tradeInfo.totalSendQuantity), 0);
+      updateFundPosition(address(_tradeInfo.fund), _tradeInfo.receiveToken, exchangedQuantity, 0);
 
       return (newAmountSendTokens, newAmountReceiveTokens);
     }

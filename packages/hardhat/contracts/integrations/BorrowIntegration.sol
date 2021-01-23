@@ -154,7 +154,7 @@ abstract contract BorrowIntegration is BaseIntegration, ReentrancyGuard {
     _validatePostDeposit(debtInfo);
     // Protocol Fee
     uint256 protocolFee = _accrueProtocolFee(debtInfo, assetToDeposit, amount, BORROW_OPERATION_DEPOSIT);
-    // updateFundPosition(msg.sender, asset, amount); TODO: Do we need to update? maybe say it's locked somewhere
+    updateFundPosition(msg.sender, asset, 0, 1); // Mark as locked
 
     emit CollateralDeposited(
       debtInfo.fund,
@@ -211,7 +211,7 @@ abstract contract BorrowIntegration is BaseIntegration, ReentrancyGuard {
     _validatePostRemoval(debtInfo);
     // Protocol Fee
     uint256 protocolFee = _accrueProtocolFee(debtInfo, assetToDeposit, amount, BORROW_OPERATION_REMOVAL);
-    // updateFundPosition(msg.sender, asset, amount); // TODO: Unlock position
+    updateFundPosition(msg.sender, asset, 0, 0); // Back to liquid
 
     emit CollateralRemoved(
       debtInfo.fund,
@@ -265,7 +265,7 @@ abstract contract BorrowIntegration is BaseIntegration, ReentrancyGuard {
     // Protocol Fee
     uint256 protocolFee = _accrueProtocolFee(debtInfo, asset, amount, BORROW_OPERATION_BORROW);
     //  TODO: Handle negative position
-    updateFundPosition(msg.sender, asset, uint256(-amount));
+    updateFundPosition(msg.sender, asset, uint256(-amount), 3);
 
     emit AmountBorrowed(
       debtInfo.fund,
@@ -318,7 +318,7 @@ abstract contract BorrowIntegration is BaseIntegration, ReentrancyGuard {
     _validatePostRepay(debtInfo);
     // Protocol Fee
     uint256 protocolFee = _accrueProtocolFee(debtInfo, asset, amount, BORROW_OPERATION_REPAY);
-    updateFundPosition(msg.sender, asset, amount);
+    updateFundPosition(msg.sender, asset, 0, 0);
 
     emit AmountRepaid(
       debtInfo.fund,

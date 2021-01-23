@@ -287,10 +287,11 @@ abstract contract PassiveIntegration is BaseIntegration, ReentrancyGuard {
      * @param _investmentInfo                Struct containing investment information used in internal functions
      */
     function _updateFundPositions(InvestmentInfo memory _investmentInfo, address _depositToken) internal {
+      // TODO: don't use balance
       // balance deposit/withdrawal token
-      updateFundPosition(address(_investmentInfo.fund), _depositToken, IERC20(_depositToken).balanceOf(address(_investmentInfo.fund)));
+      updateFundPosition(address(_investmentInfo.fund), _depositToken, IERC20(_depositToken).balanceOf(address(_investmentInfo.fund)), 2);
       // balance investment token
-      updateFundPosition(address(_investmentInfo.fund), _investmentInfo.investment, IERC20(_investmentInfo.investment).balanceOf(address(_investmentInfo.fund)));
+      updateFundPosition(address(_investmentInfo.fund), _investmentInfo.investment, IERC20(_investmentInfo.investment).balanceOf(address(_investmentInfo.fund)), 2);
     }
 
     /**

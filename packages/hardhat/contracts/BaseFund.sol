@@ -118,6 +118,12 @@ abstract contract BaseFund is ERC20 {
 
     /* ============ State Variables ============ */
 
+    // Subposition constants
+    uint8 constant LIQUID_STATUS = 0;
+    uint8 constant LOCKED_AS_COLLATERAL_STATUS = 1;
+    uint8 constant IN_INVESTMENT_STATUS = 2;
+    uint8 constant BORROWED_STATUS = 3;
+
     // Wrapped ETH address
     address public immutable weth;
 
@@ -602,7 +608,9 @@ abstract contract BaseFund is ERC20 {
      */
     function calculateAndEditPosition(
         address _component,
-        uint256 _newBalance
+        uint256 _newBalance,
+        uint256 _deltaBalance,
+        uint8 _subpositionStatus
     )
         public
         onlyIntegration
@@ -613,7 +621,7 @@ abstract contract BaseFund is ERC20 {
             uint256
         )
     {
-      return _calculateAndEditPosition(_component, _newBalance);
+      return _calculateAndEditPosition(_component, _newBalance, _deltaBalance, _subpositionStatus);
     }
 
     // TODO: Remove
@@ -628,12 +636,27 @@ abstract contract BaseFund is ERC20 {
      */
     function _addPosition(address _component, address _integration) internal{
       IFund.Position storage position = positionsByComponent[_component];
-      position.positionState = _integration != address(0) ? 1 : 0;
-      position.integration = _integration;
+
+      position.subpositions.push(IFund.SubPosition({
+        integration: _integration,
+        unit: 0,
+        status: 0
+      }));
+      position.subpositionsCount ++;
       position.enteredAt = block.timestamp;
 
       positions.push(_component);
       emit PositionAdded(_component);
+    }
+
+    function _getSubpositionIndex(address _component, address _integration) view internal returns (int256) {
+      IFund.Position storage position = positionsByComponent[_component];
+      for (uint8 i = 0; i < position.subpositionsCount; i++) {
+        if (position.subpositions[i].integration == _integration) {
+          return i;
+        }
+      }
+      return -1;
     }
 
     /**
@@ -649,16 +672,36 @@ abstract contract BaseFund is ERC20 {
     /**
      * Internal MODULE FUNCTION. Low level function that edits a component's position
      */
-    function _editPositionUnit(address _component, int256 _amount) internal {
-      positionsByComponent[_component].unit = _amount;
-      positionsByComponent[_component].updatedAt.push(block.timestamp);
+    function _editPositionUnit(
+      address _component,
+      int256 _amount,
+      address _integration,
+      uint256 _deltaBalance,
+      uint8 _subpositionStatus
+    ) internal {
+      IFund.Position storage position = positionsByComponent[_component];
+      position.unit = _amount;
+      position.updatedAt.push(block.timestamp);
+      int256 subpositionIndex = _getSubpositionIndex(_component, _integration);
+      if (subpositionIndex == -1) {
+        position.subpositions.push(IFund.SubPosition({
+          integration: _integration,
+          unit: _deltaBalance.preciseDiv(totalSupply()).toInt256(),
+          status: _subpositionStatus
+        }));
+      } else {
+        position.subpositions[subpositionIndex.toUint256()].unit = _deltaBalance.preciseDiv(totalSupply()).toInt256();
+        position.subpositions[subpositionIndex.toUint256()].status = _subpositionStatus;
+      }
 
       emit PositionUnitEdited(_component, _amount);
     }
 
     function _calculateAndEditPosition(
         address _component,
-        uint256 _newBalance
+        uint256 _newBalance,
+        uint256 _deltaBalance,
+        uint8 _subpositionStatus
     )
         internal
         returns (
@@ -667,7 +710,6 @@ abstract contract BaseFund is ERC20 {
             uint256
         )
     {
-      // uint256 currentBalance = ERC20(_component).balanceOf(address(this));
       uint256 positionUnit = _getPositionUnit(_component).toUint256();
       uint256 _componentPreviousBalance = positionUnit.preciseMul(totalSupply());
       uint256 newTokenUnit =
@@ -676,7 +718,7 @@ abstract contract BaseFund is ERC20 {
               _newBalance,
               positionUnit
           );
-      editPosition(_component, newTokenUnit, msg.sender);
+      editPosition(_component, newTokenUnit, msg.sender, _deltaBalance, _subpositionStatus);
 
       return (_newBalance, positionUnit, newTokenUnit);
     }
@@ -725,7 +767,9 @@ abstract contract BaseFund is ERC20 {
     function editPosition(
         address _component,
         uint256 _newUnit,
-        address _integration
+        address _integration,
+        uint256 _deltaBalance,
+        uint8 _subpositionStatus
     ) internal {
         bool isPositionFound = _hasPosition(_component);
         if (!isPositionFound && _newUnit > 0) {
@@ -733,8 +777,7 @@ abstract contract BaseFund is ERC20 {
         } else if (isPositionFound && _newUnit == 0) {
           _removePosition(_component);
         }
-
-        _editPositionUnit(_component, _newUnit.toInt256());
+        _editPositionUnit(_component, _newUnit.toInt256(), _integration, _deltaBalance, _subpositionStatus);
     }
 
     function _getPrice(address _assetOne, address _assetTwo) internal view returns (uint256) {

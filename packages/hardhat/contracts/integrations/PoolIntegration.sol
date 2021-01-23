@@ -290,11 +290,13 @@ abstract contract PoolIntegration is BaseIntegration, ReentrancyGuard {
      */
     function _updateFundPositions(PoolInfo memory _poolInfo, address[] calldata _poolTokens) internal {
       // balance pool individual component
+      // TODO: Grab actual min tokens on added and withdrawed on exit
+      // TODO: status 2 on deposit, 0 on exit
       for (uint i = 0; i < _poolTokens.length; i++) {
-        updateFundPosition(address(_poolInfo.fund), _poolTokens[i], IERC20(_poolTokens[i]).balanceOf(address(_poolInfo.fund)));
+        updateFundPosition(address(_poolInfo.fund), _poolTokens[i], IERC20(_poolTokens[i]).balanceOf(address(_poolInfo.fund)), 2);
       }
       // balance pool token
-      updateFundPosition(address(_poolInfo.fund), _poolInfo.pool, IERC20(_poolInfo.pool).balanceOf(address(_poolInfo.fund)));
+      // updateFundPosition(address(_poolInfo.fund), _poolInfo.pool, IERC20(_poolInfo.pool).balanceOf(address(_poolInfo.fund)));
     }
 
     /**
