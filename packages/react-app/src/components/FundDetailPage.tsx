@@ -1,16 +1,78 @@
 import FundDetailChart from "./FundDetailChart";
+import FundManageActions from "./FundManageActions";
 
-import React from 'react';
-import { Avatar, Flex, Box, Table } from 'rimble-ui';
-import { useParams } from "react-router-dom";
+import * as addresses from "../contracts/addresses";
+import * as contractNames from "../constants/contracts";
+import { loadContractFromNameAndAddress } from "../hooks/ContractLoader";
+
+import {
+  BrowserRouter as Router,
+  Link,
+  Switch,
+  Route
+} from "react-router-dom";
+import { formatEther } from "@ethersproject/units";
+import React, { useState, useEffect } from 'react';
+import { Avatar, Box, Flex, Table } from 'rimble-ui';
+import { useParams, useRouteMatch } from "react-router-dom";
 import styled from "styled-components";
 
 interface FundDetailPageState { }
 
-interface FundDetailPageProps { }
+interface FundDetailPageProps {
+  provider: any
+  userAddress: any
+}
 
-const FundDetailPage = () => {
+interface Contracts {
+  ClosedFund: any
+  DAI: any
+}
+
+const FundDetailPage = ({ provider, userAddress }: FundDetailPageProps) => {
+  const [contracts, setContracts] = useState<Contracts | undefined>(undefined);
+  const [daiPosition, setDaiPosition] = useState("");
+  const [wethPosition, setWethPosition] = useState("");
+  const [isFundManager, setIsFundManager] = useState(false);
+  const [tokenBalance, setTokenBalance] = useState<number>(0);
+
+  let { path, url } = useRouteMatch();
   let { address } = useParams();
+
+  useEffect(() => {
+    async function getContracts() {
+      const fund = await loadContractFromNameAndAddress(address, contractNames.ClosedFund, provider);
+      const daiToken = await loadContractFromNameAndAddress(addresses.tokens.DAI, contractNames.IERC20, provider);
+      const wethToken = await loadContractFromNameAndAddress(addresses.tokens.WETH, contractNames.IERC20, provider);
+
+      setContracts({ ClosedFund: fund, DAI: daiToken });
+
+      if (fund) {
+        setTokenBalance(await fund.balanceOf(userAddress));
+      }
+
+      if (daiToken) {
+        setDaiPosition(formatEther(await daiToken.balanceOf(address)));
+      }
+
+      if (wethToken) {
+        setWethPosition(formatEther(await wethToken.balanceOf(address)));
+      }
+    }
+
+    if (!contracts && provider) {
+      getContracts();
+    }
+
+    async function getIsFundManager() {
+      if (contracts) {
+        setIsFundManager(await contracts.ClosedFund.manager() === userAddress);
+      }
+    }
+
+    getIsFundManager();
+  });
+
   return (
     <ContainerLarge>
       <ContentWrapper>
@@ -18,6 +80,9 @@ const FundDetailPage = () => {
           <TitleHero>
             Cool Fund Name: {address.slice(0, 6)}
           </TitleHero>
+          {isFundManager && (
+            <ManageLink to={`${url}/manage`}>Manage</ManageLink>
+          )}
           <StatsHero>
             <StatsHeroItem>
               <StatsHeroItemLabel>
@@ -124,7 +189,7 @@ const FundDetailPage = () => {
                     <Avatar src="https://airswap-token-images.s3.amazonaws.com/DAI.png" />
                   </td>
                   <th>DAI</th>
-                  <td>100</td>
+                  <td>{daiPosition}</td>
                   <td>100.10</td>
                   <td>+25%</td>
                 </tr>
@@ -133,7 +198,7 @@ const FundDetailPage = () => {
                     <Avatar src="https://airswap-token-images.s3.amazonaws.com/WETH.png" />
                   </td>
                   <th>wETH</th>
-                  <td>100</td>
+                  <td>{wethPosition}</td>
                   <td>100.10</td>
                   <td>+25%</td>
                 </tr>
@@ -151,9 +216,18 @@ const FundDetailPage = () => {
           </PerformanceBlockRight>
         </PerformanceWrapper>
       </ContentWrapper>
-    </ContainerLarge >
+      <Switch>
+        <Route path={`${path}/manage`} children={<FundManageActions provider={provider} />} />
+      </Switch>
+    </ContainerLarge>
   );
 }
+
+const ManageLink = styled(Link)`
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+`
 
 const PerformanceTable = styled(Table)`
   height: 300px;
@@ -184,7 +258,7 @@ const ContainerLarge = styled(Box)`
 `
 
 const ContentWrapper = styled.div`
-  padding: 80px 6px;
+  padding: 20px 6px 0 6px;
 `
 
 const TitleWrapper = styled(Flex)`

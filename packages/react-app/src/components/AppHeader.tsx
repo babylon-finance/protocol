@@ -70,6 +70,7 @@ const ConnectedWrapper = styled.div`
 const HeaderWrapper = styled.div`
   width: 100%;
   background: #160E6B;
+  margin-bottom: 40px;
 `
 
 const LogoWrapper = styled.div`
