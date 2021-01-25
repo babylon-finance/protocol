@@ -453,8 +453,9 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
     // Any tokens (other than the target) that are sent here by mistake are recoverable by the owner
     function sweep(address _token) external onlyManager {
        require(!_hasPosition(_token), "This token is one of the fund positions");
-       // TODO: Sell and add to weth to the fund instead of giving it to the manager
-       IERC20(_token).transfer(manager, IERC20(_token).balanceOf(address(this)));
+       uint256 balance = IERC20(_token).balanceOf(address(this));
+       require(balance > 0, "The token needs to have a positive balance");
+       _calculateAndEditPosition(_token, balance, IERC20(_token).balanceOf(address(this)), 0);
     }
 
     /* ============ External Getter Functions ============ */
