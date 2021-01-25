@@ -6,7 +6,6 @@ import * as contractNames from "../constants/contracts";
 import { loadContractFromNameAndAddress } from "../hooks/ContractLoader";
 
 import {
-  BrowserRouter as Router,
   Link,
   Switch,
   Route
@@ -318,9 +317,7 @@ const ManagerPosition = styled.div`
 const DetailsDescription = styled.p`
 `
 
-const TitleHero = styled.div`
-  font-size: 36px;
-`
+const TitleHero = styled.h1``
 
 const StatsHero = styled(Flex)`
   margin-left: auto;
