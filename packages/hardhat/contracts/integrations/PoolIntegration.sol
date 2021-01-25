@@ -121,7 +121,7 @@ abstract contract PoolIntegration is BaseIntegration, ReentrancyGuard {
       );
       poolInfo.fund.invokeFromIntegration(targetPool, callValue, methodData);
       _validatePostJoinPoolData(poolInfo);
-      _updateFundPositions(poolInfo, _tokensIn);
+      _updateFundPositions(poolInfo, _tokensIn, true);
 
       emit PoolEntered(
         poolInfo.pool,
@@ -175,7 +175,7 @@ abstract contract PoolIntegration is BaseIntegration, ReentrancyGuard {
       _validatePostExitPoolData(poolInfo);
       uint256 protocolFee = _accrueProtocolFee(poolInfo, _tokensOut[0], _minAmountsOut[0]);
 
-      _updateFundPositions(poolInfo, _tokensOut);
+      _updateFundPositions(poolInfo, _tokensOut, false);
 
       emit PoolExited(
         poolInfo.pool,
@@ -288,15 +288,15 @@ abstract contract PoolIntegration is BaseIntegration, ReentrancyGuard {
      *
      * @param _poolInfo                Struct containing pool information used in internal functions
      */
-    function _updateFundPositions(PoolInfo memory _poolInfo, address[] calldata _poolTokens) internal {
+    function _updateFundPositions(PoolInfo memory _poolInfo, address[] calldata _poolTokens, bool isDeposit) internal {
       // balance pool individual component
       // TODO: Grab actual min tokens on added and withdrawed on exit
       // TODO: status 2 on deposit, 0 on exit
       for (uint i = 0; i < _poolTokens.length; i++) {
-        updateFundPosition(address(_poolInfo.fund), _poolTokens[i], IERC20(_poolTokens[i]).balanceOf(address(_poolInfo.fund)), 2);
+        updateFundPosition(address(_poolInfo.fund), _poolTokens[i], isDeposit ? uint256(-_poolInfo.limitPoolTokenQuantities[i]) : _poolInfo.limitPoolTokenQuantities[i], isDeposit ? 2 : 0);
       }
       // balance pool token
-      // updateFundPosition(address(_poolInfo.fund), _poolInfo.pool, IERC20(_poolInfo.pool).balanceOf(address(_poolInfo.fund)));
+      updateFundPosition(address(_poolInfo.fund), _poolInfo.pool, isDeposit ? _poolInfo.poolTokensInTransaction : uint256(-_poolInfo.poolTokensInTransaction), 0);
     }
 
     /**

@@ -119,7 +119,7 @@ abstract contract PassiveIntegration is BaseIntegration, ReentrancyGuard {
       );
       investmentInfo.fund.invokeFromIntegration(targetInvestment, callValue, methodData);
       _validatePostEnterInvestmentData(investmentInfo);
-      _updateFundPositions(investmentInfo, _tokenIn);
+      _updateFundPositions(investmentInfo, _tokenIn, true);
 
       emit InvestmentEntered(
         _investmentAddress,
@@ -174,7 +174,7 @@ abstract contract PassiveIntegration is BaseIntegration, ReentrancyGuard {
       _validatePostExitInvestmentData(investmentInfo);
       uint256 protocolFee = _accrueProtocolFee(investmentInfo, _tokenOut, _minAmountOut);
 
-      _updateFundPositions(investmentInfo, _tokenOut);
+      _updateFundPositions(investmentInfo, _tokenOut, false);
 
       emit InvestmentExited(
         investmentInfo.investment,
@@ -286,12 +286,13 @@ abstract contract PassiveIntegration is BaseIntegration, ReentrancyGuard {
      *
      * @param _investmentInfo                Struct containing investment information used in internal functions
      */
-    function _updateFundPositions(InvestmentInfo memory _investmentInfo, address _depositToken) internal {
-      // TODO: don't use balance
+    function _updateFundPositions(InvestmentInfo memory _investmentInfo, address _depositToken, bool isDeposit) internal {
+      uint256 depositTokenDelta = isDeposit ? uint256(-_investmentInfo.limitDepositTokenQuantity) : _investmentInfo.limitDepositTokenQuantity;
+      uint256 investmentTokenDelta = isDeposit ? _investmentInfo.investmentTokensInTransaction : uint256(_investmentInfo.investmentTokensInTransaction);
       // balance deposit/withdrawal token
-      updateFundPosition(address(_investmentInfo.fund), _depositToken, IERC20(_depositToken).balanceOf(address(_investmentInfo.fund)), 2);
+      updateFundPosition(address(_investmentInfo.fund), _depositToken, depositTokenDelta, isDeposit ? 2 : 0);
       // balance investment token
-      updateFundPosition(address(_investmentInfo.fund), _investmentInfo.investment, IERC20(_investmentInfo.investment).balanceOf(address(_investmentInfo.fund)), 2);
+      updateFundPosition(address(_investmentInfo.fund), _investmentInfo.investment, investmentTokenDelta, 0);
     }
 
     /**
