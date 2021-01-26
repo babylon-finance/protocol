@@ -346,3 +346,5 @@ export const UniswapTokenList: TokenList = {
     }
   ]
 };
+
+export const TokensMapByAddress = new Map(UniswapTokenList.tokens.map(token => [token.address, token]));
