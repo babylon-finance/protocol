@@ -1,5 +1,6 @@
-import { Box, Button, Flex } from 'rimble-ui';
+import { Box, Button } from 'rimble-ui';
 
+import { Link } from "react-router-dom";
 import React from "react";
 import styled from "styled-components";
 
@@ -16,8 +17,12 @@ const Lander = () => {
           Grow your Ether with a single click.
         </HeroSubHeading>
         <HeroCtaRow>
-          <HeroCtaPrimary>Start Investing</HeroCtaPrimary>
-          <HeroCtaSecondary>Learn before you <Emoji role="img">🦍</Emoji></HeroCtaSecondary>
+          <Link to="/funds">
+            <HeroCtaPrimary>Start Investing</HeroCtaPrimary>
+          </Link>
+          <Link to="/funds">
+            <HeroCtaSecondary>Learn before you <Emoji role="img">🦍</Emoji></HeroCtaSecondary>
+          </Link>
         </HeroCtaRow>
         <HeroStatsBox>
           <HeroStatsItem>
