@@ -19,6 +19,7 @@
 pragma solidity 0.7.4;
 
 import "hardhat/console.sol";
+import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { SafeMath } from "@openzeppelin/contracts/math/SafeMath.sol";
 import { BaseIntegration } from "./BaseIntegration.sol";
 import { IFund } from "../interfaces/IFund.sol";
@@ -37,6 +38,9 @@ abstract contract BorrowIntegration is BaseIntegration, ReentrancyGuard {
 
   struct DebtInfo {
     IFund fund;         // Fund address
+    address asset;      // Asset involved in the operation
+    uint256 amount;     // Amount involved in the operation
+    uint8 borrowOp;     // Borrow operation type
   }
 
   uint8 constant BORROW_OPERATION_DEPOSIT = 0;
@@ -110,8 +114,7 @@ abstract contract BorrowIntegration is BaseIntegration, ReentrancyGuard {
     address assetToDeposit = _getCollateralAsset(asset, BORROW_OPERATION_DEPOSIT);
     amount = normalizeDecimals(asset, amount);
 
-    DebtInfo memory debtInfo = _createDebtInfo(
-    );
+    DebtInfo memory debtInfo = _createDebtInfo(asset, amount, BORROW_OPERATION_DEPOSIT);
 
     _validatePreDeposit(debtInfo);
 
@@ -175,8 +178,7 @@ abstract contract BorrowIntegration is BaseIntegration, ReentrancyGuard {
     address assetToDeposit = _getCollateralAsset(asset, BORROW_OPERATION_REMOVAL);
     amount = normalizeDecimals(asset, amount);
 
-    DebtInfo memory debtInfo = _createDebtInfo(
-    );
+    DebtInfo memory debtInfo = _createDebtInfo(asset, amount, BORROW_OPERATION_REMOVAL);
 
     _validatePreRemoval(debtInfo);
 
@@ -229,7 +231,7 @@ abstract contract BorrowIntegration is BaseIntegration, ReentrancyGuard {
   function borrow(address asset, uint256 amount) nonReentrant onlyFund external {
     amount = normalizeDecimals(asset, amount);
 
-    DebtInfo memory debtInfo = _createDebtInfo();
+    DebtInfo memory debtInfo = _createDebtInfo(asset, amount, BORROW_OPERATION_BORROW);
 
     _validatePreBorrow(debtInfo);
 
@@ -283,7 +285,7 @@ abstract contract BorrowIntegration is BaseIntegration, ReentrancyGuard {
   function repay(address asset, uint256 amount) nonReentrant onlyFund external {
     amount = normalizeDecimals(asset, amount);
 
-    DebtInfo memory debtInfo = _createDebtInfo();
+    DebtInfo memory debtInfo = _createDebtInfo(asset, amount, BORROW_OPERATION_REPAY);
 
     _validatePreRepay(debtInfo);
 
@@ -368,11 +370,15 @@ abstract contract BorrowIntegration is BaseIntegration, ReentrancyGuard {
   /**
    * Create and return DebtInfo struct
    *
-   *
+   * @param _asset               The asset involved in the op
+   * @param _amount              The amount involved in the op
+   * @param _borrowOp            Type of borrow operation
    * return DebtInfo             Struct containing data for the debt position
    */
   function _createDebtInfo(
-
+    address _asset,
+    uint256 _amount,
+    uint8 _borrowOp
   )
     internal
     view
@@ -380,6 +386,9 @@ abstract contract BorrowIntegration is BaseIntegration, ReentrancyGuard {
   {
     DebtInfo memory debtInfo;
     debtInfo.fund = IFund(msg.sender);
+    debtInfo.asset = _asset;
+    debtInfo.amount = _amount;
+    debtInfo.borrowOp = _borrowOp;
 
     return debtInfo;
   }
@@ -390,7 +399,7 @@ abstract contract BorrowIntegration is BaseIntegration, ReentrancyGuard {
    * @param _debtInfo               Struct containing debt information used in internal functions
    */
   function _validatePreDeposit(DebtInfo memory _debtInfo) internal view {
-    // TODO
+    require(IERC20(_debtInfo.asset).balanceOf(address(_debtInfo.fund)) > _debtInfo.amount, "Need to have enough collateral to deposit");
   }
 
   /**
@@ -399,7 +408,7 @@ abstract contract BorrowIntegration is BaseIntegration, ReentrancyGuard {
    * @param _debtInfo               Struct containing debt information used in internal functions
    */
   function _validatePostDeposit(DebtInfo memory _debtInfo) internal view {
-    // TODO
+    // TODO: Check deposit health
   }
 
   /**
@@ -408,7 +417,7 @@ abstract contract BorrowIntegration is BaseIntegration, ReentrancyGuard {
    * @param _debtInfo               Struct containing debt information used in internal functions
    */
   function _validatePreBorrow(DebtInfo memory _debtInfo) internal view {
-    // TODO
+    // TODO: Check collateral factor
   }
 
   /**
@@ -417,7 +426,7 @@ abstract contract BorrowIntegration is BaseIntegration, ReentrancyGuard {
    * @param _debtInfo               Struct containing debt information used in internal functions
    */
   function _validatePostBorrow(DebtInfo memory _debtInfo) internal view {
-    // TODO
+    require(IERC20(_debtInfo.asset).balanceOf(address(_debtInfo.fund)) >= _debtInfo.amount, "Did not receive the borrowed asset");
   }
 
   /**
@@ -426,7 +435,7 @@ abstract contract BorrowIntegration is BaseIntegration, ReentrancyGuard {
    * @param _debtInfo               Struct containing debt information used in internal functions
    */
   function _validatePreRemoval(DebtInfo memory _debtInfo) internal view {
-    // TODO
+    // TODO: check we have underlying debt
   }
 
   /**
@@ -435,7 +444,7 @@ abstract contract BorrowIntegration is BaseIntegration, ReentrancyGuard {
    * @param _debtInfo               Struct containing debt information used in internal functions
    */
   function _validatePostRemoval(DebtInfo memory _debtInfo) internal view {
-    // TODO
+    require(IERC20(_debtInfo.asset).balanceOf(address(_debtInfo.fund)) >= _debtInfo.amount, "Did not receive the collateral");
   }
 
   /**
@@ -444,7 +453,7 @@ abstract contract BorrowIntegration is BaseIntegration, ReentrancyGuard {
    * @param _debtInfo               Struct containing debt information used in internal functions
    */
   function _validatePreRepay(DebtInfo memory _debtInfo) internal view {
-    // TODO
+    require(IERC20(_debtInfo.asset).balanceOf(address(_debtInfo.fund)) >= _debtInfo.amount, "We do not have enough to repay debt");
   }
 
   /**
@@ -453,7 +462,7 @@ abstract contract BorrowIntegration is BaseIntegration, ReentrancyGuard {
    * @param _debtInfo               Struct containing debt information used in internal functions
    */
   function _validatePostRepay(DebtInfo memory _debtInfo) internal view {
-    // TODO
+    // TODO: Check debt went down
   }
 
   /* ============ Virtual Functions ============ */

@@ -118,7 +118,7 @@ describe("Fund", function() {
       // Positions
       expect(await fund1.getPositionCount()).to.equal(1);
       const wethPosition = await fund1.getPositionBalance(weth.address);
-      expect(wethPosition).to.be.gt(ethers.utils.parseEther("1.0099"));
+      expect(wethPosition).to.be.gt(ethers.utils.parseEther("1.099"));
       // Contributor Struct
       const contributor = await fund1.contributors(userSigner3.getAddress());
       expect(contributor.totalDeposit).to.equal(ethers.utils.parseEther("1"));
