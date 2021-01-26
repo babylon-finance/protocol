@@ -108,7 +108,6 @@ abstract contract TradeIntegration is BaseIntegration, ReentrancyGuard {
       );
       _validatePreTradeData(tradeInfo, _sendQuantity);
       _executeTrade(tradeInfo, _data);
-
       uint256 exchangedQuantity = _validatePostTrade(tradeInfo);
       uint256 protocolFee = _accrueProtocolFee(tradeInfo, exchangedQuantity);
 
@@ -195,10 +194,10 @@ abstract contract TradeIntegration is BaseIntegration, ReentrancyGuard {
      */
     function _validatePreTradeData(TradeInfo memory _tradeInfo, uint256 _sendQuantity) internal view {
       require(_tradeInfo.totalSendQuantity > 0, "Token to sell must be nonzero");
-      require(IERC20(_tradeInfo.sendToken).balanceOf(msg.sender) > _sendQuantity, "Fund needs to have enough tokens");
+      require(IERC20(_tradeInfo.sendToken).balanceOf(msg.sender) >= _sendQuantity, "Fund needs to have enough liquid tokens");
       require(
           _tradeInfo.fund.hasSufficientBalance(_tradeInfo.sendToken, _sendQuantity),
-          "Unit cant be greater than existing"
+          "Position needs to have enough"
       );
     }
 

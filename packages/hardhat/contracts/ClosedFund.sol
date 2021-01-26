@@ -88,7 +88,7 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
     }
 
     /* ============ State Variables ============ */
-    uint256 constant initialBuyRate = 1000000000000; // Initial buy rate for the manager
+    uint256 constant public initialBuyRate = 1000000000000; // Initial buy rate for the manager
 
     struct ActionInfo {
         uint256 preFeeReserveQuantity; // Reserve value before fees; During issuance, represents raw quantity
@@ -451,6 +451,7 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
     }
 
     // Any tokens (other than the target) that are sent here by mistake are recoverable by the owner
+    // TODO: If it is not whitelisted, trade it for weth
     function sweep(address _token) external onlyManager {
        require(!_hasPosition(_token), "This token is one of the fund positions");
        uint256 balance = IERC20(_token).balanceOf(address(this));

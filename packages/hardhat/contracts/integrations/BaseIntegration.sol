@@ -25,6 +25,7 @@ import { IIntegration } from "../interfaces/IIntegration.sol";
 import { IWETH } from "../interfaces/external/weth/IWETH.sol";
 import { IFund } from "../interfaces/IFund.sol";
 import { SafeMath } from "@openzeppelin/contracts/math/SafeMath.sol";
+import { SignedSafeMath } from "@openzeppelin/contracts/math/SignedSafeMath.sol";
 import { SafeCast } from "@openzeppelin/contracts/utils/SafeCast.sol";
 import { PreciseUnitMath } from "../lib/PreciseUnitMath.sol";
 
@@ -37,6 +38,7 @@ import { PreciseUnitMath } from "../lib/PreciseUnitMath.sol";
 abstract contract BaseIntegration {
     using SafeCast for int256;
     using SafeMath for uint256;
+    using SignedSafeMath for int256;
     using PreciseUnitMath for uint256;
 
     /* ============ Modifiers ============ */
@@ -126,7 +128,7 @@ abstract contract BaseIntegration {
       uint256,
       uint256
     ) {
-      uint256 _newTotal = IFund(_fund).getPositionBalance(_component).toUint256().add(_deltaOperation);
+      uint256 _newTotal = IFund(_fund).getPositionBalance(_component).add(int256(_deltaOperation)).toUint256();
       return IFund(_fund).calculateAndEditPosition(_component, _newTotal, _deltaOperation, _subpositionStatus);
     }
 
