@@ -11,10 +11,12 @@ describe("KyberTradeIntegration", function() {
   let system;
   let kyberIntegration;
   let fund;
+  let userSigner3;
 
   beforeEach(async () => {
     system = await loadFixture(deployFolioFixture);
     kyberIntegration = system.integrations.kyberTradeIntegration;
+    userSigner3 = system.signer3;
     fund = system.funds.one;
   });
 
@@ -28,38 +30,42 @@ describe("KyberTradeIntegration", function() {
   });
 
   describe("Trading", function() {
-    let daiToken;
+    let wethToken;
     let usdcToken;
-    let whaleSigner;
-    const daiWhaleAddress = "0x6B175474E89094C44Da98b954EedeAC495271d0F";
 
     beforeEach(async () => {
-      whaleSigner = await impersonateAddress(daiWhaleAddress);
-      daiToken = await ethers.getContractAt("IERC20", addresses.tokens.DAI);
+      wethToken = await ethers.getContractAt("IERC20", addresses.tokens.WETH);
       usdcToken = await ethers.getContractAt("IERC20", addresses.tokens.USDC);
     });
 
-    it("trade dai to usdc", async function() {
-      expect(
-        await daiToken
-          .connect(whaleSigner)
-          .transfer(fund.address, ethers.utils.parseEther("100"), {
-            gasPrice: 0
-          })
-      );
-      expect(await daiToken.balanceOf(fund.address)).to.equal(
-        ethers.utils.parseEther("100")
+    it("trade weth to usdc", async function() {
+      await fund
+        .connect(userSigner3)
+        .deposit(ethers.utils.parseEther("1"), 1, userSigner3.getAddress(), {
+          value: ethers.utils.parseEther("1")
+        });
+      // expect(
+      //   await daiToken
+      //     .connect(whaleSigner)
+      //     .transfer(fund.address, ethers.utils.parseEther("100"), {
+      //       gasPrice: 0
+      //     })
+      // );
+      expect(await wethToken.balanceOf(fund.address)).to.equal(
+        ethers.utils.parseEther("1.1")
       );
       await fund.trade(
         "kyber",
-        addresses.tokens.DAI,
-        ethers.utils.parseEther("100"),
+        addresses.tokens.WETH,
+        ethers.utils.parseEther("1"),
         usdcToken.address,
-        ethers.utils.parseEther("90") / 10 ** 12,
+        ethers.utils.parseEther("900") / 10 ** 12,
         EMPTY_BYTES,
         { gasPrice: 0 }
       );
-      expect(await daiToken.balanceOf(fund.address)).to.equal(0);
+      expect(await wethToken.balanceOf(fund.address)).to.equal(
+        ethers.utils.parseEther("0.1")
+      );
       expect(await usdcToken.balanceOf(fund.address)).to.be.gt(
         ethers.utils.parseEther("97") / 10 ** 12
       );

@@ -2,7 +2,7 @@ const { expect } = require("chai");
 const { ethers, waffle } = require("hardhat");
 
 const { loadFixture } = waffle;
-
+const { EMPTY_BYTES } = require("../utils/constants");
 const addresses = require("../utils/addresses");
 const constants = require("../utils/constants");
 const { deployFolioFixture } = require("./fixtures/ControllerFixture");
@@ -17,6 +17,7 @@ describe("Position testing", function() {
   let fund2;
   let integrationList;
   let weth;
+  let usdcToken;
 
   beforeEach(async () => {
     const {
@@ -37,6 +38,7 @@ describe("Position testing", function() {
     userSigner3 = signer3;
     fund1 = funds.one;
     fund2 = funds.two;
+    usdcToken = await ethers.getContractAt("IERC20", addresses.tokens.USDC);
     weth = await ethers.getContractAt("IERC20", addresses.tokens.WETH);
   });
 
@@ -128,11 +130,57 @@ describe("Position testing", function() {
     });
   });
 
+  describe("Interacting with Trade integrations", async function() {
+    it("updates positions accordingly after trading", async function() {
+      await fund1
+        .connect(userSigner3)
+        .deposit(ethers.utils.parseEther("1"), 1, userSigner3.getAddress(), {
+          value: ethers.utils.parseEther("1")
+        });
+      const fundBalance = await weth.balanceOf(fund1.address);
+      const supplyBefore = await fund1.totalSupply();
+      const wethPositionBefore = await fund1.getPositionBalance(weth.address);
+      const usdcPositionBefore = await fund1.getPositionBalance(
+        usdcToken.address
+      );
+      expect(usdcPositionBefore).to.equal(0);
+
+      await fund1.trade(
+        "kyber",
+        addresses.tokens.WETH,
+        ethers.utils.parseEther("1"),
+        usdcToken.address,
+        ethers.utils.parseEther("900") / 10 ** 12,
+        EMPTY_BYTES,
+        { gasPrice: 0 }
+      );
+
+      const wethPosition = await fund1.getPositionBalance(weth.address);
+      const usdcPosition = await fund1.getPositionBalance(usdcToken.address);
+      const fundBalanceAfter = await weth.balanceOf(fund1.address);
+      const supplyAfter = await fund1.totalSupply();
+
+      // Funds don't change
+      expect(await fund1.totalFundsDeposited()).to.equal(
+        ethers.utils.parseEther("1.1")
+      );
+      expect(await fund1.totalFunds()).to.equal(ethers.utils.parseEther("1.1"));
+      expect(supplyAfter).to.equal(supplyBefore);
+      expect(fundBalance.sub(ethers.utils.parseEther("1"))).to.equal(
+        fundBalanceAfter
+      );
+      // Positions do
+      expect(wethPositionBefore.sub(wethPosition)).to.equal(
+        ethers.utils.parseEther("1")
+      );
+      expect(usdcPosition.sub(usdcPositionBefore)).to.be.gt(900 * 10 ** 6);
+    });
+  });
+
   describe("Interacting with Borrowing integrations", async function() {
   });
 
-  describe("Interacting with Trade integrations", async function() {
-  });
+
 
   describe("Interacting with Pool integrations", async function() {
   });
