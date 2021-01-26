@@ -77,7 +77,7 @@ const FundDetailPage = ({ provider, userAddress }: FundDetailPageProps) => {
       <ContentWrapper>
         <TitleWrapper>
           <TitleHero>
-            Cool Fund Name: {address.slice(0, 6)}
+            Long ETH
           </TitleHero>
           {isFundManager && (
             <ManageLink to={`${url}/manage`}>Manage</ManageLink>
@@ -253,7 +253,7 @@ const PerformanceBlockLeft = styled.div`
 const ContainerLarge = styled(Box)`
   position: relative;
   margin: 0 auto;
-  width: 1400px;
+  width: var(--screen-md-max);
 `
 
 const ContentWrapper = styled.div`

@@ -3,7 +3,7 @@ import * as contractNames from "../constants/contracts";
 import { loadContractFromNameAndAddress } from "../hooks/ContractLoader";
 import { Transactor } from "../helpers";
 import useGasPrice from "../hooks/GasPrice";
-import { Token, UniswapTokenList } from "../constants/UniswapTokenList";
+import { Token, UniswapTokenList, TokensMapByAddress } from "../constants/UniswapTokenList";
 
 import { notification } from "antd";
 import { commify, formatEther, parseEther } from "@ethersproject/units";
@@ -53,7 +53,6 @@ const TradeActionModal = ({ fundAddress, provider }: TradeActionModalProps) => {
 
   const estGasPrice = useGasPrice("fast");
   const tx = Transactor(provider, estGasPrice);
-  const TokensMapByAddress = new Map(UniswapTokenList.tokens.map(token => [token.address, token]));
 
   const updateQuotePair = useCallback(async () => {
     if (contracts && providingDetails && receivingDetails) {
