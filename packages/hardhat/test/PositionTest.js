@@ -174,6 +174,7 @@ describe("Position testing", function() {
         ethers.utils.parseEther("1")
       );
       expect(usdcPosition.sub(usdcPositionBefore)).to.be.gt(900 * 10 ** 6);
+      expect(await fund1.getPositionCount()).to.equal(2);
     });
   });
 
@@ -188,16 +189,4 @@ describe("Position testing", function() {
   describe("Interacting with Passive Investment integrations", async function() {
   });
 
-  describe("Fund deposit disabled", async function() {
-    it("reverts if the fund is disabled", async function() {
-      await fund1.setDisabled();
-      await expect(
-        fund1
-          .connect(userSigner3)
-          .deposit(ethers.utils.parseEther("1"), 1, userSigner3.getAddress(), {
-            value: ethers.utils.parseEther("1")
-          })
-      ).to.be.reverted;
-    });
-  });
 });
