@@ -4,6 +4,8 @@ import { Link } from "react-router-dom";
 import React from "react";
 import styled from "styled-components";
 
+const PRIMARY_FUND = "0x0DCd1Bf9A1b36cE34237eEaFef220932846BCD82"
+
 const Lander = () => {
   return (
     <ContainerLarge>
@@ -14,32 +16,32 @@ const Lander = () => {
           The best investments in DeFi.
         </HeroValueProp>
         <HeroSubHeading>
-          Grow your Ether with a single click.
+          Grow your Ether with a single click. ~80% ΞAPY
         </HeroSubHeading>
         <HeroCtaRow>
-          <Link to="/funds">
+          <Link to={`/fund/${PRIMARY_FUND}`}>
             <HeroCtaPrimary>Start Investing</HeroCtaPrimary>
           </Link>
-          <Link to="/funds">
+          <Link to="/">
             <HeroCtaSecondary>Learn before you <Emoji role="img">🦍</Emoji></HeroCtaSecondary>
           </Link>
         </HeroCtaRow>
         <HeroStatsBox>
           <HeroStatsItem>
+            <StatValue>>$25B</StatValue>
+            <StatSubLabel>TVL in DeFi</StatSubLabel>
+          </HeroStatsItem>
+          <HeroStatsItem>
+            <StatValue>+703.7%</StatValue>
+            <StatSubLabel>ETH growth YoY</StatSubLabel>
+          </HeroStatsItem>
+          <HeroStatsItem>
             <StatValue>~80%</StatValue>
-            <StatSubLabel>APY</StatSubLabel>
+            <StatSubLabel>*Historic Fund ΞAPY</StatSubLabel>
           </HeroStatsItem>
           <HeroStatsItem>
-            <StatValue>$10MM</StatValue>
-            <StatSubLabel>Under management</StatSubLabel>
-          </HeroStatsItem>
-          <HeroStatsItem>
-            <StatValue>150</StatValue>
+            <StatValue>25</StatValue>
             <StatSubLabel>Investors</StatSubLabel>
-          </HeroStatsItem>
-          <HeroStatsItem>
-            <StatValue>1,000,000</StatValue>
-            <StatSubLabel>New wallets</StatSubLabel>
           </HeroStatsItem>
         </HeroStatsBox>
       </HeroContainer>

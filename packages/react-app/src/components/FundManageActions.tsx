@@ -1,6 +1,6 @@
 import TradeActionModal from "./TradeActionModal";
 
-import { Box } from 'rimble-ui';
+import { Box, Button, Flex } from 'rimble-ui';
 import React from "react";
 import styled from "styled-components";
 import { useParams } from "react-router-dom";
@@ -15,13 +15,23 @@ const FundManageActions = ({ provider }: FundManageActionsProps) => {
     <PageWrapper>
       <ContainerLarge>
         <h1>{address}</h1>
-        <div className="manage-action__trade">
-          <TradeActionModal provider={provider} fundAddress={address} />
-        </div>
+        <ActionButtonRow>
+          <div className="manage-action__trade">
+            <TradeActionModal provider={provider} fundAddress={address} />
+          </div>
+          <Button>Liquidity</Button>
+          <Button>Leverage</Button>
+        </ActionButtonRow>
       </ContainerLarge>
     </PageWrapper>
   );
 }
+
+const ActionButtonRow = styled(Flex)`
+  width: 100%;
+  flex-flow: row;
+  justify-content: space-between;
+`
 
 const PageWrapper = styled.div`
   width: 100%;
@@ -30,7 +40,7 @@ const PageWrapper = styled.div`
 const ContainerLarge = styled(Box)`
   position: relative;
   margin: 0 auto;
-  width: 1400px;
+  max-width: var(--screen-md-max);
 `
 
 export default FundManageActions;

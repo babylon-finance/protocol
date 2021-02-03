@@ -128,8 +128,8 @@ async function deployFolioFixture() {
     folioController.address,
     addresses.users.hardhat1,
     addresses.users.hardhat1,
-    "Fund Number One",
-    "FNON",
+    "Absolute ETH Return [beta]",
+    "EYFA",
     ethers.utils.parseEther("0.01")
   );
 
@@ -140,8 +140,8 @@ async function deployFolioFixture() {
     folioController.address,
     addresses.users.hardhat1,
     addresses.users.hardhat1,
-    "Fund Number Two",
-    "FNTW",
+    "ETH Yield Farm [a]",
+    "EYFB",
     ethers.utils.parseEther("1")
   );
 
@@ -152,8 +152,8 @@ async function deployFolioFixture() {
     folioController.address,
     addresses.users.hardhat1,
     addresses.users.hardhat1,
-    "Fund Number Three",
-    "FNTH",
+    "ETH Yield Farm [b]",
+    "EYFG",
     ethers.utils.parseEther("10")
   );
 

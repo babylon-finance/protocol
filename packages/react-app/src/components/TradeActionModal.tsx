@@ -221,7 +221,7 @@ const TradeActionModal = ({ fundAddress, provider }: TradeActionModalProps) => {
 
   return (
     <div>
-      <Button onClick={openModal}>Start Trade</Button>
+      <Button onClick={openModal}>Trade</Button>
       <Modal isOpen={showModal}>
         <TradeCard width={"550px"} p={0}>
           <Button.Text
