@@ -129,6 +129,7 @@ function InvestModal({ provider, contractAddress, userAddress, active }: InvesMo
 }
 
 const StyledInvestButton = styled(Button)`
+  font-family: cera-regular;
   width: 100%;
 `
 

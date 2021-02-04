@@ -1991,7 +1991,7 @@
     path-browserify "^1.0.0"
     url "^0.11.0"
 
-"@rimble/icons@^1.0.2":
+"@rimble/icons@^1.0.2", "@rimble/icons@^1.1.0":
   version "1.1.0"
   resolved "https://registry.yarnpkg.com/@rimble/icons/-/icons-1.1.0.tgz#e69bdff01190c304af95fae578a5d1b90f34e14d"
   integrity sha512-lR6cVMe/wum6bi6H5qmUH0wEPvCg269XdYMaRwgxpvqbhu0gytH9vTSMkWhbaBLWjmALONt/qjDCQGCESQ+qbg==

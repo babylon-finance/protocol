@@ -190,7 +190,6 @@ export default class App extends React.Component<AppProps, AppState> {
     return (
       <Router>
         <AppWrapper className="App">
-          {this.state.initialLoad && <Spin tip="Loading..." />}
           <ContentWrapper>
             {this.state.connected && !onMainnet && (
               <Alert message={`You are on a different network. Please connect your wallet to the ${networkId === 1 ? 'mainnet' : 'network with id ' + networkId}`} type="warning" />
@@ -198,7 +197,6 @@ export default class App extends React.Component<AppProps, AppState> {
             <Switch>
               <Route path="/fund/:address/manage" children={[this.renderHeader(), this.renderFundManagePage()]} />
               <Route path="/fund/:address" children={[this.renderHeader(), this.renderFundDetailPage()]} />
-              <Route path="/funds" children={[this.renderHeader(), this.renderFundSummary()]} />
               <Route path="/" children={[this.renderHeader(true), <Lander />]} />
             </Switch>
           </ContentWrapper>

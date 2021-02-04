@@ -2,5 +2,5 @@
 
 html,body {
   font-family: cera-regular;
-  background: #F9FAFB;
+  background: var(--white);
 }

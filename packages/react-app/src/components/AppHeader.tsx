@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { Box, Blockie, Button, MetaMaskButton } from 'rimble-ui';
 import styled from "styled-components";
 
+const PRIMARY_FUND = "0x0DCd1Bf9A1b36cE34237eEaFef220932846BCD82"
 interface AppHeaderProps {
   onConnect: any
   resetApp: any
@@ -11,6 +12,12 @@ interface AppHeaderProps {
 }
 
 const AppHeader = ({ onConnect, resetApp, appState, index }: AppHeaderProps) => {
+  const mkShortAddress = (address): string => {
+    const prefix = address.slice(0, 4);
+    const suffix = address.slice(address.length - 4, address.length);
+
+    return (`${prefix}...${suffix}`);
+  }
   const renderConnectionWrapper = () => {
     return (
       <ConnectionWrapper>
@@ -21,15 +28,20 @@ const AppHeader = ({ onConnect, resetApp, appState, index }: AppHeaderProps) => 
                 seed: appState.address,
                 color: "#dfe",
                 bgcolor: "#a71",
-                size: 15,
-                scale: 3,
+                size: 6,
+                scale: 6,
                 spotcolor: "#000"
               }} />
-            <LinkWrapper>
-              <DisconnectLink onClick={resetApp} target="_blank">
-                Disconnect
-                  </DisconnectLink>
-            </LinkWrapper>
+            <AddressButton>
+              {mkShortAddress(appState.address)}
+            </AddressButton>
+            {false && (
+              <LinkWrapper>
+                <DisconnectLink onClick={resetApp} target="_blank">
+                  Disconnect
+                </DisconnectLink>
+              </LinkWrapper>
+            )}
           </ConnectedWrapper>
         )}
         {!appState.connected && (
@@ -43,8 +55,8 @@ const AppHeader = ({ onConnect, resetApp, appState, index }: AppHeaderProps) => 
 
   const renderIndexButton = () => {
     return (
-      <IndexLink to="/funds">
-        <IndexButton>Application</IndexButton>
+      <IndexLink to={`/fund/${PRIMARY_FUND}`}>
+        <IndexButton>View Fund</IndexButton>
       </IndexLink>
     );
   };
@@ -54,7 +66,7 @@ const AppHeader = ({ onConnect, resetApp, appState, index }: AppHeaderProps) => 
       <ContainerLarge>
         <StyledHeader>
           <LogoWrapper>
-            <img width="30" src="/logo-red.png" alt="" />
+            <img width="30" src="/tmp_logo_1.png" alt="" />
             <HomeLink to="/"><span className="main-text">Babylon</span><span className="tld-text">.finance</span></HomeLink>
           </LogoWrapper>
           {index
@@ -66,6 +78,27 @@ const AppHeader = ({ onConnect, resetApp, appState, index }: AppHeaderProps) => 
     </HeaderWrapper>
   );
 }
+
+const AddressButton = styled(Button.Outline)`
+  font-family: cera-light;
+  color: var(--purple);
+  margin-left: 10px;
+`
+
+const DisconnectLink = styled.a`
+  font-size: 16px;
+  color: rgb(170, 149, 133);
+  text-decoration: none;
+  margin-left: 10px;
+  &:hover {
+    color: rgb(128, 94, 73);
+  }
+`
+
+const LinkWrapper = styled.div`
+  display: flex;
+  align-items: center;
+`
 
 const IndexButton = styled(Button.Outline)`
   font-family: cera-regular;
@@ -100,7 +133,7 @@ const ConnectedWrapper = styled.div`
 
 const HeaderWrapper = styled.div`
   width: 100%;
-  margin-bottom: 40px;
+  margin-bottom: 20px;
 `
 
 const LogoWrapper = styled.div`
@@ -108,28 +141,13 @@ const LogoWrapper = styled.div`
   padding: 5px;
   display: flex;
   align-items: center;
+
   .main-text {
     color: var(--primary);
   }
 
   .tld-text {
     color: var(--purple-aux);
-  }
-`
-
-const LinkWrapper = styled.div`
-  display: flex;
-  align-items: center;
-`
-
-const DisconnectLink = styled.a`
-  font-size: 16px;
-  padding-left: 16px;
-  color: rgb(170, 149, 133);
-  text-decoration: none;
-
-  &:hover {
-    color: rgb(128, 94, 73);
   }
 `
 
