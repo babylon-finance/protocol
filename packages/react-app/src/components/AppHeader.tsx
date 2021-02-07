@@ -1,58 +1,122 @@
 import React from 'react';
 import { Link } from "react-router-dom";
-import { Box, Blockie, MetaMaskButton } from 'rimble-ui';
+import { Box, Blockie, Button, MetaMaskButton } from 'rimble-ui';
 import styled from "styled-components";
 
+const PRIMARY_FUND = "0x0DCd1Bf9A1b36cE34237eEaFef220932846BCD82"
 interface AppHeaderProps {
   onConnect: any
   resetApp: any
   appState: any
+  index?: boolean
 }
 
-const AppHeader = ({ onConnect, resetApp, appState }: AppHeaderProps) => {
+const AppHeader = ({ onConnect, resetApp, appState, index }: AppHeaderProps) => {
+  const mkShortAddress = (address): string => {
+    const prefix = address.slice(0, 4);
+    const suffix = address.slice(address.length - 4, address.length);
+
+    return (`${prefix}...${suffix}`);
+  }
+  const renderConnectionWrapper = () => {
+    return (
+      <ConnectionWrapper>
+        {appState.connected && (
+          <ConnectedWrapper>
+            <Blockie
+              opts={{
+                seed: appState.address,
+                color: "#dfe",
+                bgcolor: "#a71",
+                size: 6,
+                scale: 6,
+                spotcolor: "#000"
+              }} />
+            <AddressButton>
+              {mkShortAddress(appState.address)}
+            </AddressButton>
+            {false && (
+              <LinkWrapper>
+                <DisconnectLink onClick={resetApp} target="_blank">
+                  Disconnect
+                </DisconnectLink>
+              </LinkWrapper>
+            )}
+          </ConnectedWrapper>
+        )}
+        {!appState.connected && (
+          <MetaMaskButton.Outline onClick={onConnect} size="small">
+            Connect with MetaMask
+          </MetaMaskButton.Outline>
+        )}
+      </ConnectionWrapper>
+    );
+  };
+
+  const renderIndexButton = () => {
+    return (
+      <IndexLink to={`/fund/${PRIMARY_FUND}`}>
+        <IndexButton>View Fund</IndexButton>
+      </IndexLink>
+    );
+  };
+
   return (
     <HeaderWrapper>
       <ContainerLarge>
         <StyledHeader>
           <LogoWrapper>
-            <img width="30" src="/logo-red.png" alt="" />
-            <HomeLink to="/">Babylon.finance</HomeLink>
+            <img width="30" src="/tmp_logo_1.png" alt="" />
+            <HomeLink to="/"><span className="main-text">Babylon</span><span className="tld-text">.finance</span></HomeLink>
           </LogoWrapper>
-          <ConnectionWrapper>
-            {appState.connected && (
-              <ConnectedWrapper>
-                <Blockie
-                  opts={{
-                    seed: appState.address,
-                    color: "#dfe",
-                    bgcolor: "#a71",
-                    size: 15,
-                    scale: 3,
-                    spotcolor: "#000"
-                  }} />
-                <LinkWrapper>
-                  <DisconnectLink onClick={resetApp} target="_blank">
-                    Disconnect
-                  </DisconnectLink>
-                </LinkWrapper>
-              </ConnectedWrapper>
-            )}
-            {!appState.connected && (
-              <MetaMaskButton.Outline onClick={onConnect} size="small">
-                Connect with MetaMask
-              </MetaMaskButton.Outline>
-            )}
-          </ConnectionWrapper>
+          {index
+            ? renderIndexButton()
+            : renderConnectionWrapper()
+          }
         </StyledHeader>
       </ContainerLarge>
     </HeaderWrapper>
   );
 }
 
+const AddressButton = styled(Button.Outline)`
+  font-family: cera-light;
+  color: var(--purple);
+  margin-left: 10px;
+`
+
+const DisconnectLink = styled.a`
+  font-size: 16px;
+  color: rgb(170, 149, 133);
+  text-decoration: none;
+  margin-left: 10px;
+  &:hover {
+    color: rgb(128, 94, 73);
+  }
+`
+
+const LinkWrapper = styled.div`
+  display: flex;
+  align-items: center;
+`
+
+const IndexButton = styled(Button.Outline)`
+  font-family: cera-regular;
+  color: var(--primary);
+  background-color: var(--white);
+  margin-left: auto;
+`
+
+const IndexLink = styled(Link)`
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+`
+
 const ContainerLarge = styled(Box)`
   position: relative;
   margin: 0 auto;
-  width: 1400px;
+  width: var(--screen-md-max);
 `
 
 const ConnectionWrapper = styled.div`
@@ -69,39 +133,34 @@ const ConnectedWrapper = styled.div`
 
 const HeaderWrapper = styled.div`
   width: 100%;
-  background: #160E6B;
-  margin-bottom: 40px;
+  margin-bottom: 20px;
 `
 
 const LogoWrapper = styled.div`
   height: 60px;
   padding: 5px;
-  border-radius: 62px;
   display: flex;
   align-items: center;
-`
 
-const LinkWrapper = styled.div`
-  display: flex;
-  align-items: center
-`
+  .main-text {
+    color: var(--primary);
+  }
 
-const DisconnectLink = styled.a`
-  font-size: 16px;
-  padding-left: 16px;
-  color: rgb(170, 149, 133);
-  text-decoration: none;
-
-  &:hover {
-    color: rgb(128, 94, 73);
+  .tld-text {
+    color: var(--purple-aux);
   }
 `
 
 const HomeLink = styled(Link)`
   color: white;
   font-size: 24px;
-  font-weight: 600;
+  font-family: cera-bold;
   margin-left: 12px;
+
+  &:hover {
+    color: white;
+    text-decoration: none;
+  }
 `
 
 const StyledHeader = styled.div`

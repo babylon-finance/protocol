@@ -96,7 +96,7 @@ function WithdrawModal({ provider, contractAddress, userAddress, active, contrib
   };
 
   const buttonText = () => {
-    return active === true ? "Withdraw" : "Inactive";
+    return active === true ? "Withdraw in 63 days" : "Inactive";
   };
 
   const closeModal = e => {
@@ -143,7 +143,7 @@ function WithdrawModal({ provider, contractAddress, userAddress, active, contrib
   return (
     <Box className="WithdrawModel" p={1}>
       <Box>
-        <StyledWithdrawButton onClick={openModal} disabled={!active}>{buttonText()}</StyledWithdrawButton>
+        <StyledWithdrawButton onClick={openModal} disabled={true}>{buttonText()}</StyledWithdrawButton>
         <Modal isOpen={isOpen}>
           <Card width={"550px"} p={0}>
             <Button.Text
@@ -204,6 +204,7 @@ function WithdrawModal({ provider, contractAddress, userAddress, active, contrib
 }
 
 const StyledWithdrawButton = styled(Button)`
+  font-family: cera-regular;
   width: 100%;
 `
 

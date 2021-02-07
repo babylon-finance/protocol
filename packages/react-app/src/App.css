@@ -1,5 +1,6 @@
 @import '~antd/dist/antd.css';
 
 html,body {
-  background: #F9FAFB;
+  font-family: cera-regular;
+  background: var(--white);
 }

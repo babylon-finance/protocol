@@ -2,6 +2,7 @@ import AppHeader from "./components/AppHeader";
 import FundDetailPage from "./components/FundDetailPage";
 import FundManageActions from "./components/FundManageActions";
 import FundSummaryPage from "./components/FundSummaryPage";
+import Lander from "./components/Lander";
 
 import React from 'react';
 import {
@@ -166,6 +167,22 @@ export default class App extends React.Component<AppProps, AppState> {
     );
   }
 
+  renderHeader = (index?: boolean) => {
+    return (
+      <AppHeader appState={this.state} resetApp={this.resetApp} onConnect={this.onConnect} index={index} />
+    );
+  }
+
+  renderFundDetailPage = () => {
+    return (
+      <FundDetailPage provider={this.state.provider} userAddress={this.state.address} />
+    );
+  }
+
+  renderFundManagePage = () => {
+    return (<FundManageActions provider={this.state.provider} />);
+  }
+
   render() {
     const networkId = parseInt(process.env.REACT_APP_NETWORK_ID || '0');
     const onMainnet = this.state.chainId === parseInt(process.env.REACT_APP_CHAIN_ID || '0') && this.state.networkId === networkId;
@@ -173,16 +190,14 @@ export default class App extends React.Component<AppProps, AppState> {
     return (
       <Router>
         <AppWrapper className="App">
-          <AppHeader appState={this.state} resetApp={this.resetApp} onConnect={this.onConnect} />
-          {this.state.initialLoad && <Spin tip="Loading..." />}
           <ContentWrapper>
             {this.state.connected && !onMainnet && (
               <Alert message={`You are on a different network. Please connect your wallet to the ${networkId === 1 ? 'mainnet' : 'network with id ' + networkId}`} type="warning" />
             )}
             <Switch>
-              <Route path="/fund/:address/manage" children={<FundManageActions provider={this.state.provider} />} />
-              <Route path="/fund/:address" children={<FundDetailPage provider={this.state.provider} userAddress={this.state.address} />} />
-              <Route path="/" children={this.renderFundSummary()} />
+              <Route path="/fund/:address/manage" children={[this.renderHeader(), this.renderFundManagePage()]} />
+              <Route path="/fund/:address" children={[this.renderHeader(), this.renderFundDetailPage()]} />
+              <Route path="/" children={[this.renderHeader(true), <Lander />]} />
             </Switch>
           </ContentWrapper>
         </AppWrapper>

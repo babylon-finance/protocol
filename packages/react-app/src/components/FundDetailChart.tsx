@@ -51,13 +51,21 @@ export default class FundCardChart extends React.PureComponent<Props, State> {
       chart: {
         type: "spline",
         height: this.props.height,
-        shadow: true
+        shadow: true,
+        style: {
+          fontFamily: 'cera-regular'
+        }
+      },
+      plotOptions: {
+        series: {
+          color: 'var(--purple-aux)'
+        }
       },
       credits: {
         enabled: false
       },
       title: {
-        text: "Net Asset Value vs Benchmark (30d)"
+        text: "NAT vs Benchmark (30d)"
       },
       yAxis: {
         title: {

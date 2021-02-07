@@ -117,3 +117,6 @@ packages/hardhat/artifacts/*
 packages/react-app/src/contracts/*
 
 .vscode/
+
+.DS_Store
+/packages/.DS_Store
