@@ -173,7 +173,7 @@ async function deployFolioFixture() {
     ONE_DAY_IN_SECONDS * 90,
     ONE_DAY_IN_SECONDS * 3,
     ONE_DAY_IN_SECONDS,
-    { value: ethers.utils.parseEther("0.2") }
+    { value: ethers.utils.parseEther("0.1") }
   );
   return {
     babController,

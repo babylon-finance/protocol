@@ -203,6 +203,19 @@ contract BabController is Ownable {
         fund.setFundEndDate(_newEndTimestamp);
     }
 
+    /**
+     * PRIVILEGED GOVERNANCE FUNCTION. Allows governance to change the max deposit for the fund
+     *
+     * @param _fund               Address of the fund
+     * @param _newDepositLimit    New deposit limit
+     */
+    function changeFundDepositLimit(address _fund, uint256 _newDepositLimit) external onlyOwner {
+        require(isFund[_fund], "Fund does not exist");
+        IClosedFund fund = IClosedFund(_fund);
+        require(!!fund.active(), "The fund needs to be active.");
+        fund.setDepositLimit(_newDepositLimit);
+    }
+
     // ===========  Protocol related Gov Functions ======
 
     /**

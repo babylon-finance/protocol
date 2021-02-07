@@ -20,7 +20,7 @@ describe("Fund", function() {
 
   beforeEach(async () => {
     const {
-      folioController,
+      babController,
       signer1,
       signer2,
       signer3,
@@ -28,7 +28,7 @@ describe("Fund", function() {
       owner
     } = await loadFixture(deployFolioFixture);
 
-    controller = folioController;
+    controller = babController;
     ownerSigner = owner;
     userSigner1 = signer1;
     userSigner2 = signer2;
@@ -59,12 +59,15 @@ describe("Fund", function() {
 
   describe("Fund deposit limit", async function() {
     it("reverts if the deposit is bigger than the limit", async function() {
-      await fund1.setDepositLimit(ethers.utils.parseEther("1"));
+      await controller.changeFundDepositLimit(
+        fund1.address,
+        ethers.utils.parseEther("11")
+      );
       await expect(
         fund1
           .connect(userSigner3)
-          .deposit(ethers.utils.parseEther("1"), 1, userSigner3.getAddress(), {
-            value: ethers.utils.parseEther("1")
+          .deposit(ethers.utils.parseEther("11"), 1, userSigner3.getAddress(), {
+            value: ethers.utils.parseEther("11")
           })
       ).to.be.reverted;
     });
@@ -72,7 +75,7 @@ describe("Fund", function() {
 
   describe("Fund deposit disabled", async function() {
     it("reverts if the fund is disabled", async function() {
-      await fund1.setDisabled();
+      await controller.disableFund(fund1.address);
       await expect(
         fund1
           .connect(userSigner3)

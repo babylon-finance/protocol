@@ -21,7 +21,7 @@ describe("Position testing", function() {
 
   beforeEach(async () => {
     const {
-      folioController,
+      babController,
       signer1,
       signer2,
       signer3,
@@ -31,7 +31,7 @@ describe("Position testing", function() {
     } = await loadFixture(deployFolioFixture);
 
     integrationList = integrations;
-    controller = folioController;
+    controller = babController;
     ownerSigner = owner;
     userSigner1 = signer1;
     userSigner2 = signer2;

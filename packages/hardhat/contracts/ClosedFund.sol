@@ -219,9 +219,6 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
         uint256 _fundDeliberationDuration
     ) external onlyCreator onlyInactive payable {
         require(_maxDepositLimit >= 1**19, "Max deposit limit needs to be greater than ten eth");
-        console.log(msg.value);
-        console.log(minContribution);
-        console.log(_maxDepositLimit);
 
         require(msg.value > minContribution && msg.value < _maxDepositLimit.div(10), "Creator needs to deposit, up to 10% of the max fund eth");
         IBabController ifcontroller = IBabController(controller);
