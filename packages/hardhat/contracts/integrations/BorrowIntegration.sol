@@ -1,5 +1,5 @@
 /*
-    Copyright 2020 DFolio
+    Copyright 2020 Babylon Finance
 
     Licensed under the Apache License, Version 2.0 (the "License");
     you may not use this file except in compliance with the License.
@@ -27,7 +27,7 @@ import { ReentrancyGuard } from "@openzeppelin/contracts/utils/ReentrancyGuard.s
 
 /**
  * @title BorrowIntetration
- * @author dFolio Protocol
+ * @author Babylon Finance Protocol
  *
  * Base class for integration with lending protocols
  */
@@ -266,7 +266,7 @@ abstract contract BorrowIntegration is BaseIntegration, ReentrancyGuard {
 
     // Protocol Fee
     uint256 protocolFee = _accrueProtocolFee(debtInfo, asset, amount, BORROW_OPERATION_BORROW);
-    //  TODO: Handle negative position
+
     updateFundPosition(msg.sender, asset, uint256(-amount), 3);
 
     emit AmountBorrowed(
@@ -352,21 +352,6 @@ abstract contract BorrowIntegration is BaseIntegration, ReentrancyGuard {
     return protocolFeeTotal;
   }
 
-  function _getCollateralAsset(
-    address /* _asset */,
-    uint8 /* _borrowOp */
-  ) internal virtual view returns (address) {
-    require(false, "This method must be overriden");
-    return address(0);
-  }
-
-  function _getSpender(
-    address /* asset */
-  ) internal virtual view returns (address) {
-    require(false, "This method must be overriden");
-    return address(0);
-  }
-
   /**
    * Create and return DebtInfo struct
    *
@@ -405,19 +390,20 @@ abstract contract BorrowIntegration is BaseIntegration, ReentrancyGuard {
   /**
    * Validate post deposit collateral.
    *
-   * @param _debtInfo               Struct containing debt information used in internal functions
+   * hparam _debtInfo               Struct containing debt information used in internal functions
    */
-  function _validatePostDeposit(DebtInfo memory _debtInfo) internal view {
-    // TODO: Check deposit health
+  function _validatePostDeposit(DebtInfo memory /* _debtInfo */) internal view {
+    require(_getRemainingLiquidity() > 0, "Not enough liquidity");
   }
 
   /**
    * Validate pre borrow.
    *
-   * @param _debtInfo               Struct containing debt information used in internal functions
+   * hparam _debtInfo               Struct containing debt information used in internal functions
    */
-  function _validatePreBorrow(DebtInfo memory _debtInfo) internal view {
-    // TODO: Check collateral factor
+  function _validatePreBorrow(DebtInfo memory /* _debtInfo */) internal view {
+    // TODO: Check healthy collateral factor
+    require(_getRemainingLiquidity() > 0, "Not enough liquidity");
   }
 
   /**
@@ -427,6 +413,7 @@ abstract contract BorrowIntegration is BaseIntegration, ReentrancyGuard {
    */
   function _validatePostBorrow(DebtInfo memory _debtInfo) internal view {
     require(IERC20(_debtInfo.asset).balanceOf(address(_debtInfo.fund)) >= _debtInfo.amount, "Did not receive the borrowed asset");
+    require(_getRemainingLiquidity() > 0, "Not enough liquidity");
   }
 
   /**
@@ -435,7 +422,8 @@ abstract contract BorrowIntegration is BaseIntegration, ReentrancyGuard {
    * @param _debtInfo               Struct containing debt information used in internal functions
    */
   function _validatePreRemoval(DebtInfo memory _debtInfo) internal view {
-    // TODO: check we have underlying debt
+    require(_getCollateralBalance(_debtInfo.asset) > 0, "No collateral locked");
+    // require(_getBorrowBalance() == 0, "Still have debt");
   }
 
   /**
@@ -445,6 +433,7 @@ abstract contract BorrowIntegration is BaseIntegration, ReentrancyGuard {
    */
   function _validatePostRemoval(DebtInfo memory _debtInfo) internal view {
     require(IERC20(_debtInfo.asset).balanceOf(address(_debtInfo.fund)) >= _debtInfo.amount, "Did not receive the collateral");
+    require(_getRemainingLiquidity() > 0, "Not enough liquidity");
   }
 
   /**
@@ -454,6 +443,7 @@ abstract contract BorrowIntegration is BaseIntegration, ReentrancyGuard {
    */
   function _validatePreRepay(DebtInfo memory _debtInfo) internal view {
     require(IERC20(_debtInfo.asset).balanceOf(address(_debtInfo.fund)) >= _debtInfo.amount, "We do not have enough to repay debt");
+    require(_getBorrowBalance(_debtInfo.asset) > 0, "No debt to repay");
   }
 
   /**
@@ -557,6 +547,51 @@ abstract contract BorrowIntegration is BaseIntegration, ReentrancyGuard {
   ) internal virtual view returns (address, uint256, bytes memory) {
     require(false, "This needs to be overriden");
     return (address(0),0,bytes(""));
+  }
+
+
+  /**
+   * Get the amount of borrowed debt that needs to be repaid
+   * hparam asset   The underlying asset
+   *
+   */
+  function _getBorrowBalance(address /* asset */) internal virtual view returns (uint256) {
+    require(false, "This method must be overriden");
+    return 0;
+  }
+
+  /**
+   * Get the amount of collateral supplied
+   * hparam asset   The collateral asset
+   *
+   */
+  function _getCollateralBalance(address /* asset */) internal virtual view returns (uint256) {
+    require(false, "This method must be overriden");
+    return 0;
+  }
+
+  /**
+   * Get the remaining liquidity available to borrow
+   *
+   */
+  function _getRemainingLiquidity() public virtual view returns (uint256) {
+    require(false, "This method must be overriden");
+    return 0;
+  }
+
+  function _getCollateralAsset(
+    address /* _asset */,
+    uint8 /* _borrowOp */
+  ) internal virtual view returns (address) {
+    require(false, "This method must be overriden");
+    return address(0);
+  }
+
+  function _getSpender(
+    address /* asset */
+  ) internal virtual view returns (address) {
+    require(false, "This method must be overriden");
+    return address(0);
   }
 
 }

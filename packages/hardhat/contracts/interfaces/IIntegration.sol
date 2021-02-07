@@ -1,5 +1,5 @@
 /*
-    Copyright 2020 DFolio
+    Copyright 2020 Babylon Finance
 
     Licensed under the Apache License, Version 2.0 (the "License");
     you may not use this file except in compliance with the License.
@@ -19,7 +19,7 @@ pragma solidity 0.7.4;
 
 /**
  * @title IIntegration
- * @author DFolio
+ * @author Babylon Finance
  *
  * Interface for protocol integrations
  */

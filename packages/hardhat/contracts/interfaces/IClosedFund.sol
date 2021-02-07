@@ -1,5 +1,5 @@
 /*
-    Copyright 2020 DFolio
+    Copyright 2020 Babylon Finance
 
     Licensed under the Apache License, Version 2.0 (the "License");
     you may not use this file except in compliance with the License.
@@ -23,16 +23,13 @@ import { IFund } from "./IFund.sol";
 
 /**
  * @title IFund
- * @author DFolio
+ * @author Babylon Finance
  *
  * Interface for operating with SetTokens.
  */
 interface IClosedFund is IERC20, IFund {
 
     function initialize(
-        uint256 _managerDepositFee,
-        uint256 _managerWithdrawalFee,
-        uint256 _managerPerformanceFee,
         uint256 _premiumPercentage,
         uint256 _minFundTokenSupply,
         address _managerDepositHook,
@@ -52,16 +49,10 @@ interface IClosedFund is IERC20, IFund {
     ) external;
 
     function editPremium(uint256 _premiumPercentage) external;
-    function editManagerDepositFee(uint256 _managerDepositFee) external;
-    function editManagerWithdrawalFee(uint256 _managerWithdrawalFee) external;
-    function editManagerPerformanceFee(uint256 _managerPerformanceFee) external;
     function setDepositLimit(uint limit) external;
     function setFundEndDate(uint256 _endsTimestamp) external;
 
     function getPremiumPercentage() external view returns (uint256);
-    function getDepositManagerFee() external view returns (uint256);
-    function getWithdrawalManagerFee() external view returns (uint256);
-    function getManagerPerformanceFee() external view returns (uint256);
     function getExpectedFundTokensDepositdQuantity(
         address _reserveAsset,
         uint256 _reserveAssetQuantity

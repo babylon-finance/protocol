@@ -1,5 +1,5 @@
 /*
-    Copyright 2020 DFolio.
+    Copyright 2020 Babylon Finance.
 
     Licensed under the Apache License, Version 2.0 (the "License");
     you may not use this file except in compliance with the License.
@@ -28,7 +28,7 @@ import {SafeMath} from "@openzeppelin/contracts/math/SafeMath.sol";
 import {SignedSafeMath} from "@openzeppelin/contracts/math/SignedSafeMath.sol";
 import {SafeCast} from "@openzeppelin/contracts/utils/SafeCast.sol";
 import {IWETH} from "./interfaces/external/weth/IWETH.sol";
-import {IFolioController} from "./interfaces/IFolioController.sol";
+import {IBabController} from "./interfaces/IBabController.sol";
 import {IFundValuer} from "./interfaces/IFundValuer.sol";
 import {IFundIssuanceHook} from "./interfaces/IFundIssuanceHook.sol";
 import {BaseFund} from "./BaseFund.sol";
@@ -37,7 +37,7 @@ import { PreciseUnitMath } from "./lib/PreciseUnitMath.sol";
 
 /**
  * @title ClosedFund
- * @author DFolio
+ * @author Babylon Finance
  *
  * ClosedFund holds the logic to deposit, withdraw and track contributions and fees.
  */
@@ -52,22 +52,17 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
     /* ============ Events ============ */
     event FundTokenDeposited(
         address indexed _to,
-        address _hookContract,
         uint256 fundTokenQuantity,
-        uint256 managerFees,
         uint256 protocolFees
     );
     event FundTokenwithdrawed(
         address indexed _from,
         address indexed _to,
-        address _hookContract,
         uint256 fundTokenQuantity,
-        uint256 managerFees,
         uint256 protocolFees
     );
 
     event PremiumEdited(uint256 amount);
-    event ManagerFeeEdited(uint256 amount, string kind);
     event ContributionLog(
         address indexed contributor,
         uint256 amount,
@@ -94,7 +89,6 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
         uint256 preFeeReserveQuantity; // Reserve value before fees; During issuance, represents raw quantity
         // During withdrawal, represents post-premium value
         uint256 protocolFees; // Total protocol fees (direct + manager revenue share)
-        uint256 managerFee; // Total manager fee paid in reserve asset
         uint256 netFlowQuantity; // When issuing, quantity of reserve asset sent to Fund
         // When withdrawaling, quantity of reserve asset sent to withdrawaler
         uint256 fundTokenQuantity; // When issuing, quantity of Fund tokens minted to mintee
@@ -104,17 +98,43 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
         uint256 newReservePositionBalance; // Fund token reserve asset position balance after deposit/withdrawal
     }
 
-    address public managerDepositHook; // Deposit hook configurations
-    address public managerWithdrawalHook; // Withdrawal hook configurations
 
     uint256 public maxDepositLimit; // Limits the amount of deposits
-    uint256 public managerStake; // Amount staked by the manager
+    uint256 public fundDuration; // Initial duration of the fund
+    uint256 public fundEpoch; // Set window of time to decide the next investment idea
     uint256 public fundEndsBy; // Timestamp when the fund ends and withdrawals are allowed
+    uint256 public fundDeliberationDuration; // Window for endorsing / downvoting an idea
+
+    // ======= Investment ideas =========
+    uint8 public constant maxIdeasPerEpoch = 3;
+    uint256 public currentInvestmentsIndex = 1;
+
+    struct InvestmentIdea {
+      uint256 index;                     // Investment index (used for votes)
+      address participant;               // Address of the participant that submitted the bet
+      uint256 enteredAt;                 // Timestamp when the idea was submitted
+      uint256 executedAt;                // Timestamp when the idea was executed
+      uint256 exitedAt;                  // Timestamp when the idea was submitted
+      uint256 stake;                     // Amount of stake (in reserve asset)
+      uint256 capitalRequested;          // Amount of capital requested (in reserve asset)
+      uint256 duration;                  // Duration of the bet
+      int256 totalVotes;                 // Total votes
+      uint256 totalVoters;               // Total amount of participants that voted
+      bytes enterPayload;                // Calldata to execute when entering
+      bytes exitPayload;                 // Calldata to execute when exiting the trade
+      bool finalized;                    // Flag that indicates whether we exited the idea
+    }
+
+    mapping(uint256 => mapping(address => int256)) internal votes;  // Investment idea votes from participants (can be negative if downvoting)
+
+    uint256 currentMinStakeEpoch;        // Used to keep track of the min staked amount. An idea can only be submitted if there are less than 3 or above the limit
+    uint256 currentMinStakeIndex;        // Index position of the investment idea with the lowest stake
+    InvestmentIdea[maxIdeasPerEpoch] investmentIdeasCurrentEpoch;
+    InvestmentIdea[] investmentsExecuted;
+
+    uint256 public lastInvestmentExecutedAt; // Timestamp when the last investment was executed
 
     // Fees
-    uint256 public managerDepositFee; // % of the deposit denominated in the reserve asset
-    uint256 public managerWithdrawalFee; // % of the withdrawal denominated in the reserve asset,  charged in withdrawal
-    uint256 public managerPerformanceFee; // % of the profits denominated in the reserve asset, charged in withdrawal
     uint256 public premiumPercentage; // Premium percentage (0.01% = 1e14, 1% = 1e16). This premium is a buffer around oracle
     // prices paid by user to the Fund Token, which prevents arbitrage and oracle front running
 
@@ -123,7 +143,7 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
         uint256 totalDeposit; //wei
         uint256 tokensReceived;
         uint256 timestamp;
-    } // TODO: may need to override transfer of tokens or disable transfer if we care to keep this in sync
+    }
 
     mapping(address => Contributor) public contributors;
     uint256 public totalContributors;
@@ -137,15 +157,14 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
 
     /**
      * When a new Fund is created, initializes Investments are set to empty.
-     * All parameter validations are on the FolioController contract. Validations are performed already on the
-     * FolioController.
+     * All parameter validations are on the BabController contract. Validations are performed already on the
+     * BabController.
      *
      * @param _integrations           List of integrations to enable. All integrations must be approved by the Controller
      * @param _weth                   Address of the WETH ERC20
      * @param _controller             Address of the controller
      * @param _reserveAsset           Address of the reserve asset ERC20
-     * @param _manager                Address of the manager
-     * @param _managerFeeRecipient    Address where the manager will receive the fees
+     * @param _creator                Address of the creator
      * @param _name                   Name of the Fund
      * @param _symbol                 Symbol of the Fund
      * @param _minContribution        Min contribution to the fund
@@ -156,8 +175,7 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
         address _weth,
         address _reserveAsset,
         address _controller,
-        address _manager,
-        address _managerFeeRecipient,
+        address _creator,
         string memory _name,
         string memory _symbol,
         uint256 _minContribution
@@ -167,8 +185,7 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
             _weth,
             _reserveAsset,
             _controller,
-            _manager,
-            _managerFeeRecipient,
+            _creator,
             _name,
             _symbol
         )
@@ -177,7 +194,6 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
         totalContributors = 0;
         totalFundsDeposited = 0;
         totalFunds = 0;
-        fundEndsBy = block.timestamp + 90 days;
     }
 
     /* ============ External Functions ============ */
@@ -187,64 +203,58 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
      * fees and issuance premium. Only callable by the Fund's manager. Hook addresses are optional.
      * Address(0) means that no hook will be called.
      *
-     * @param _managerStake                   Manager stake
      * @param _maxDepositLimit                Max deposit limit
-     * @param _managerDepositFee              Manager deposit fee
-     * @param _managerWithdrawalFee           Manager withdrawal fee
-     * @param _managerPerformanceFee          Manager performance fee
      * @param _premiumPercentage              Premium percentage to avoid arbitrage
      * @param _minFundTokenSupply             Min fund token supply
-     * @param _managerDepositHook             Deposit hook (if any)
-     * @param _managerWithdrawalHook          Withdrawal hook (if any)
+     * @param _fundDuration                   Fund duration
+     * @param _fundEpoch                      Controls how often an investment idea can be executed
+     * @param _fundDeliberationDuration       How long after the epoch has completed, people can curate before the top idea being executed
      */
     function initialize(
-        uint256 _managerStake,
         uint256 _maxDepositLimit,
-        uint256 _managerDepositFee,
-        uint256 _managerWithdrawalFee,
-        uint256 _managerPerformanceFee,
         uint256 _premiumPercentage,
         uint256 _minFundTokenSupply,
-        address _managerDepositHook,
-        address _managerWithdrawalHook
-    ) external onlyManager onlyInactive payable {
-        require(_managerStake < msg.value, "Stake must be less than amount sent");
-        require(_managerStake > minContribution, "Manager needs to stake");
-        require(msg.value > (2 * minContribution), "Manager needs to also deposit");
-        IFolioController ifcontroller = IFolioController(controller);
-        require(
-            _managerDepositFee <= ifcontroller.getMaxManagerDepositFee(),
-            "Manager deposit fee must be less than max"
-        );
-        require(
-            _managerWithdrawalFee <= ifcontroller.getMaxManagerWithdrawalFee(),
-            "Manager withdrawal fee must be less than max"
-        );
-        require(
-            _managerPerformanceFee <=
-                ifcontroller.getMaxManagerPerformanceFee(),
-            "Manager performance fee must be less than max"
-        );
+        uint256 _fundDuration,
+        uint256 _fundEpoch,
+        uint256 _fundDeliberationDuration
+    ) external onlyCreator onlyInactive payable {
+        require(_maxDepositLimit >= 1**19, "Max deposit limit needs to be greater than ten eth");
+        console.log(msg.value);
+        console.log(minContribution);
+        console.log(_maxDepositLimit);
+
+        require(msg.value > minContribution && msg.value < _maxDepositLimit.div(10), "Creator needs to deposit, up to 10% of the max fund eth");
+        IBabController ifcontroller = IBabController(controller);
         require(
             _premiumPercentage <= ifcontroller.getMaxFundPremiumPercentage(),
             "Premium must be less than max"
         );
         require(
+            _fundDuration <= ifcontroller.getMaxFundDuration() && _fundDuration >= ifcontroller.getMinFundDuration() ,
+            "Fund duration must be within the range allowed by the protocol"
+        );
+        require(
+            _fundEpoch <= ifcontroller.getMaxFundEpoch() && _fundEpoch >= ifcontroller.getMinFundEpoch() ,
+            "Fund epoch must be within the range allowed by the protocol"
+        );
+        require(
+            _fundDeliberationDuration <= ifcontroller.getMaxDeliberationPeriod() && _fundDeliberationDuration >= ifcontroller.getMinDeliberationPeriod() ,
+            "Fund deliberation must be within the range allowed by the protocol"
+        );
+        require(
             _minFundTokenSupply > 0,
             "Min Fund token supply must be greater than 0"
         );
-        managerDepositFee = _managerDepositFee;
         minFundTokenSupply = _minFundTokenSupply;
-        managerWithdrawalFee = _managerWithdrawalFee;
-        managerPerformanceFee = _managerPerformanceFee;
         premiumPercentage = _premiumPercentage;
-        managerDepositHook = _managerDepositHook;
-        managerWithdrawalHook = _managerWithdrawalHook;
-        managerStake = _managerStake;
         maxDepositLimit = _maxDepositLimit;
+        fundDuration = _fundDuration;
+        fundEpoch = _fundEpoch;
+        fundEndsBy = block.timestamp + _fundDuration;
+        fundDeliberationDuration = _fundDeliberationDuration;
+        lastInvestmentExecutedAt = block.timestamp; // Start the counter for first epoch
 
-
-        uint256 initialDepositAmount = msg.value - managerStake;
+        uint256 initialDepositAmount = msg.value;
 
         // make initial deposit
         uint256 initialTokens = initialDepositAmount.div(initialBuyRate);
@@ -253,7 +263,7 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
 
         // TODO: Trade to reserve asset if different than WETH
 
-        _mint(manager, initialTokens);
+        _mint(creator, initialTokens);
         _udpateContributorInfo(initialTokens, initialDepositAmount);
 
         _calculateAndEditPosition(
@@ -300,8 +310,6 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
 
         _validateReserveAsset(reserveAsset, _reserveAssetQuantity);
 
-        _callPreDepositHooks(_reserveAssetQuantity, msg.sender, _to);
-
         ActionInfo memory depositInfo =
             _createIssuanceInfo(reserveAsset, _reserveAssetQuantity);
 
@@ -333,8 +341,6 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
             "Withdrawal amount must be less than or equal to deposited amount"
         );
         _validateReserveAsset(reserveAsset, _fundTokenQuantity);
-
-        _callPreWithdrawalHooks(_fundTokenQuantity, msg.sender, _to);
 
         ActionInfo memory withdrawalInfo =
             _createRedemptionInfo(reserveAsset, _fundTokenQuantity);
@@ -373,10 +379,10 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
      *
      * @param _premiumPercentage            Premium percentage in 10e16 (e.g. 10e16 = 1%)
      */
-    function editPremium(uint256 _premiumPercentage) external onlyManager {
+    function editPremium(uint256 _premiumPercentage) external onlyGovernanceFund {
         require(
             _premiumPercentage <=
-                IFolioController(controller).getMaxFundPremiumPercentage(),
+                IBabController(controller).getMaxFundPremiumPercentage(),
             "Premium must be less than maximum allowed"
         );
 
@@ -385,74 +391,18 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
         emit PremiumEdited(_premiumPercentage);
     }
 
-    /**
-     * Fund MANAGER ONLY. Edit manager deposit fee
-     *
-     * @param _managerDepositFee         Manager deposit fee percentage in 10e16 (e.g. 10e16 = 1%)
-     */
-    function editManagerDepositFee(uint256 _managerDepositFee)
-        external
-        onlyManager
-        onlyInactive
-    {
-        require(
-            _managerDepositFee <=
-                IFolioController(controller).getMaxManagerDepositFee(),
-            "Manager fee must be less than maximum allowed"
-        );
-        managerDepositFee = _managerDepositFee;
-        emit ManagerFeeEdited(_managerDepositFee, "Manager Deposit Fee");
-    }
-
-    /**
-     * Fund MANAGER ONLY. Edit manager deposit fee
-     *
-     * @param _managerWithdrawalFee         Manager withdrawal fee percentage in 10e16 (e.g. 10e16 = 1%)
-     */
-    function editManagerWithdrawalFee(
-        uint256 _managerWithdrawalFee
-    ) external onlyManager onlyInactive {
-        require(
-            _managerWithdrawalFee <=
-                IFolioController(controller).getMaxManagerWithdrawalFee(),
-            "Manager fee must be less than maximum allowed"
-        );
-        managerWithdrawalFee = _managerWithdrawalFee;
-        emit ManagerFeeEdited(_managerWithdrawalFee, "Manager Withdrawal Fee");
-    }
-
-    /**
-     * Fund MANAGER ONLY. Edit manager deposit fee
-     *
-     * @param _managerPerformanceFee         Manager performance fee percentage in 10e16 (e.g. 10e16 = 1%)
-     */
-    function editManagerPerformanceFee(
-        uint256 _managerPerformanceFee
-    ) external onlyManager onlyInactive {
-        require(
-            _managerPerformanceFee <=
-                IFolioController(controller).getMaxManagerPerformanceFee(),
-            "Manager fee must be less than maximum allowed"
-        );
-        managerPerformanceFee = _managerPerformanceFee;
-        emit ManagerFeeEdited(
-            _managerPerformanceFee,
-            "Manager Performance Fee"
-        );
-    }
-
     // if limit == 0 then there is no deposit limit
-    function setDepositLimit(uint limit) external onlyManager {
+    function setDepositLimit(uint limit) external onlyGovernanceFund {
       maxDepositLimit = limit;
     }
 
-    function setFundEndDate(uint256 _endsTimestamp) external onlyProtocol {
+    function setFundEndDate(uint256 _endsTimestamp) external onlyGovernanceFund {
       fundEndsBy = _endsTimestamp;
     }
 
     // Any tokens (other than the target) that are sent here by mistake are recoverable by the owner
     // TODO: If it is not whitelisted, trade it for weth
-    function sweep(address _token) external onlyManager {
+    function sweep(address _token) external onlyParticipant {
        require(!_hasPosition(_token), "This token is one of the fund positions");
        uint256 balance = IERC20(_token).balanceOf(address(this));
        require(balance > 0, "The token needs to have a positive balance");
@@ -470,18 +420,6 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
         return premiumPercentage;
     }
 
-    function getDepositManagerFee() external view returns (uint256) {
-        return managerDepositFee;
-    }
-
-    function getWithdrawalManagerFee() external view returns (uint256) {
-        return managerWithdrawalFee;
-    }
-
-    function getManagerPerformanceFee() external view returns (uint256) {
-        return managerPerformanceFee;
-    }
-
     /**
      * Get the expected fund tokens minted to recipient on issuance
      *
@@ -494,7 +432,7 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
         address _reserveAsset,
         uint256 _reserveAssetQuantity
     ) external view returns (uint256) {
-        (, , uint256 netReserveFlow) = _getFees(_reserveAssetQuantity, true);
+        (, uint256 netReserveFlow) = _getFees(_reserveAssetQuantity, true);
 
         uint256 setTotalSupply = totalSupply();
 
@@ -521,7 +459,7 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
         uint256 preFeeReserveQuantity =
             _getWithdrawalReserveQuantity(_reserveAsset, _fundTokenQuantity);
 
-        (, , uint256 netReserveFlows) = _getFees(preFeeReserveQuantity, false);
+        (, uint256 netReserveFlows) = _getFees(preFeeReserveQuantity, false);
 
         return netReserveFlows;
     }
@@ -542,7 +480,7 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
 
         return
             _reserveAssetQuantity != 0 &&
-            IFolioController(controller).isValidReserveAsset(_reserveAsset) &&
+            IBabController(controller).isValidReserveAsset(_reserveAsset) &&
             setTotalSupply >= minFundTokenSupply;
     }
 
@@ -562,7 +500,7 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
 
         if (
             _fundTokenQuantity == 0 ||
-            !IFolioController(controller).isValidReserveAsset(_reserveAsset) ||
+            !IBabController(controller).isValidReserveAsset(_reserveAsset) ||
             setTotalSupply < minFundTokenSupply.add(_fundTokenQuantity)
         ) {
             return false;
@@ -573,7 +511,7 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
                     _fundTokenQuantity
                 );
 
-            (, , uint256 expectedWithdrawalQuantity) =
+            (, uint256 expectedWithdrawalQuantity) =
                 _getFees(totalWithdrawalValue, false);
 
             uint256 existingBalance =
@@ -581,6 +519,93 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
 
             return existingBalance >= expectedWithdrawalQuantity;
         }
+    }
+
+    /**
+     * Adds an investment idea to the contenders array for this epoch.
+     * Investment stake is stored in the contract. (not converted to reserve asset).
+     * If the array is already at the limit, replace the one with the lowest stake.
+     * @param _capitalRequested              Capital requested denominated in the reserve asset
+     * @param _stake                         Stake denominated in the reserve asset
+     * @param _investmentDuration            Investment duration in seconds
+     * @param _enterData                     Operation to perform to enter the investment
+     * @param _exitData                      Operation to perform to exit the investment
+     * TODO: Meta Transaction
+     */
+    function addInvestmentIdea(uint256 _capitalRequested, uint256 _stake, uint256 _investmentDuration, bytes memory _enterData, bytes memory _exitData) external onlyParticipant payable {
+      require(block.timestamp < lastInvestmentExecutedAt.add(fundEpoch), "Idea can only be suggested before the deliberation period");
+      require(_stake > 0, "Stake amount must be greater than 0");
+      require(_investmentDuration > 1 hours, "Investment duration must be greater than an hour");
+      require(_capitalRequested < _getPositionBalance(reserveAsset).toUint256(), "The capital requested is greater than the capital available");
+      require(investmentIdeasCurrentEpoch.length < maxIdeasPerEpoch || _stake > currentMinStakeEpoch, "Not enough stake to add the idea");
+      uint ideaIndex = investmentIdeasCurrentEpoch.length;
+      if (ideaIndex >= maxIdeasPerEpoch) {
+        ideaIndex = currentMinStakeIndex;
+      }
+      // Check than enter and exit data call callIntegration
+      InvestmentIdea storage idea = investmentIdeasCurrentEpoch[ideaIndex];
+      idea.index = currentInvestmentsIndex;
+      idea.participant = msg.sender;
+      idea.capitalRequested = _capitalRequested;
+      idea.enteredAt = block.timestamp;
+      idea.stake = _stake;
+      idea.duration = _investmentDuration;
+      idea.enterPayload = _enterData;
+      idea.exitPayload = _exitData;
+      currentInvestmentsIndex ++;
+    }
+
+    /**
+     * Curates an investment idea fromt the contenders array for this epoch.
+     * This can happen at any time. As long as there are investment ideas.
+     * @param _ideaIndex                The position of the idea index in the array for the current epoch
+     * @param _amount                   Amount to curate, positive to endorse, negative to downvote
+     * TODO: Meta Transaction
+     */
+    function curateInvestmentIdea(uint8 _ideaIndex, int256 _amount) external onlyParticipant {
+      require(investmentIdeasCurrentEpoch.length > _ideaIndex, "The idea index does not exist");
+      require(_amount.toUint256() < balanceOf(msg.sender), "Participant does not have enough balance");
+      InvestmentIdea storage idea = investmentIdeasCurrentEpoch[_ideaIndex];
+      // TODO: Check that the curator has not used all his fund tokens during this epoch already
+      if (votes[idea.index][msg.sender] == 0) {
+        idea.totalVoters++;
+      }
+      votes[idea.index][msg.sender] = _amount;
+      idea.totalVotes.add(_amount);
+    }
+
+    function executeTopTrade() external onlyKeeper {
+      require(block.timestamp > lastInvestmentExecutedAt.add(fundEpoch).add(fundDeliberationDuration), "Idea can only be executed after the minimum period has elapsed");
+      require(investmentIdeasCurrentEpoch.length > 0, "There must be an investment idea ready to execute");
+      // check that the keeper is registered and healthy
+      uint8 topIdeaIndex = 0;
+      InvestmentIdea storage idea = investmentIdeasCurrentEpoch[topIdeaIndex];
+      // Execute enter trade
+      // _invoke(_integration, _value, _data);
+      // Push the trade to the investments executed
+      investmentsExecuted[investmentsExecuted.length] = idea;
+
+      // Clear investment ideas
+      delete investmentIdeasCurrentEpoch;
+      // Restarts the epoc counter
+      lastInvestmentExecutedAt = block.timestamp;
+      idea.executedAt = block.timestamp;
+      // Sends fee to the keeper
+    }
+
+    function finalizeTrade(uint _ideaIndex) external onlyKeeper {
+      require(investmentsExecuted.length > _ideaIndex, "This idea index does not exist");
+      InvestmentIdea storage idea = investmentsExecuted[_ideaIndex];
+      require(!idea.finalized, "This investment was already exited");
+      // check that the keeper is registered and healthy
+      // Execute exit trade
+      //_invoke(_integration, _value, _data);
+      // Mark as finalized
+      idea.finalized = true;
+      idea.exitedAt = block.timestamp;
+      // Reward contributors accordingly with reserve asset & update position of the reserve asset
+
+      // Sends fee to the keeper
     }
 
     receive() external payable {} // solium-disable-line quotes
@@ -593,7 +618,7 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
     {
         require(_quantity > 0, "Quantity must be > 0");
         require(
-            IFolioController(controller).isValidReserveAsset(_reserveAsset),
+            IBabController(controller).isValidReserveAsset(_reserveAsset),
             "Must be valid reserve asset"
         );
     }
@@ -643,7 +668,6 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
 
         (
             depositInfo.protocolFees,
-            depositInfo.managerFee,
             depositInfo.netFlowQuantity
         ) = _getFees(depositInfo.preFeeReserveQuantity, true);
 
@@ -681,7 +705,6 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
 
         (
             withdrawalInfo.protocolFees,
-            withdrawalInfo.managerFee,
             withdrawalInfo.netFlowQuantity
         ) = _getFees(withdrawalInfo.preFeeReserveQuantity, false);
 
@@ -716,15 +739,8 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
         if (_depositInfo.protocolFees > 0) {
             IERC20(_reserveAsset).transferFrom(
                 msg.sender,
-                IFolioController(controller).getFeeRecipient(),
+                IBabController(controller).getFeeRecipient(),
                 _depositInfo.protocolFees
-            );
-        }
-        if (_depositInfo.managerFee > 0) {
-            IERC20(_reserveAsset).transferFrom(
-                msg.sender,
-                managerFeeRecipient,
-                _depositInfo.managerFee
             );
         }
     }
@@ -747,9 +763,7 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
 
         emit FundTokenDeposited(
             _to,
-            managerDepositHook,
             _depositInfo.fundTokenQuantity,
-            _depositInfo.managerFee,
             _depositInfo.protocolFees
         );
     }
@@ -770,9 +784,7 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
         emit FundTokenwithdrawed(
             msg.sender,
             _to,
-            managerWithdrawalHook,
             _withdrawalInfo.fundTokenQuantity,
-            _withdrawalInfo.managerFee,
             _withdrawalInfo.protocolFees
         );
     }
@@ -783,11 +795,6 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
     ) internal {
         // Instruct the Fund to transfer protocol fee to fee recipient if there is a fee
         payProtocolFeeFromFund(_reserveAsset, _withdrawalInfo.protocolFees);
-
-        // Instruct the Fund to transfer manager fee to manager fee recipient if there is a fee
-        if (_withdrawalInfo.managerFee > 0) {
-            payManagerFeeFromFund(_reserveAsset, _withdrawalInfo.managerFee);
-        }
     }
 
     /**
@@ -809,14 +816,12 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
     /**
      * Returns the fees attributed to the manager and the protocol. The fees are calculated as follows:
      *
-     * ManagerFee = (manager fee % - % to protocol) * reserveAssetQuantity
-     * Protocol Fee = (% manager fee share + direct fee %) * reserveAssetQuantity
+     * Protocol Fee = (% direct fee %) * reserveAssetQuantity
      *
      * @param _reserveAssetQuantity         Quantity of reserve asset to calculate fees from
      * @param _isDeposit ad
      *
      * @return  uint256                     Fees paid to the protocol in reserve asset
-     * @return  uint256                     Fees paid to the manager in reserve asset
      * @return  uint256                     Net reserve to user net of fees
      */
     function _getFees(uint256 _reserveAssetQuantity, bool _isDeposit)
@@ -824,29 +829,33 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
         view
         returns (
             uint256,
-            uint256,
             uint256
         )
     {
         // Get protocol fee percentages
         uint256 protocolFeePercentage =
             _isDeposit
-                ? IFolioController(controller).getProtocolDepositFundTokenFee()
-                : IFolioController(controller)
+                ? IBabController(controller).getProtocolDepositFundTokenFee()
+                : IBabController(controller)
                     .getProtocolWithdrawalFundTokenFee();
-        uint256 managerFeePercentage =
-            _isDeposit ? managerDepositFee : managerWithdrawalFee;
+        // Get performance if withdrawal and there are profits
+        if (!_isDeposit) {
+          uint profits = _reserveAssetQuantity.sub(contributors[msg.sender].totalDeposit);
+          if (profits > 0) {
+            uint perfFee = IBabController(controller)
+            .getProtocolPerformanceFee().preciseMul(profits);
+            protocolFeePercentage = protocolFeePercentage.add(perfFee);
+          }
+        }
 
         // Calculate total notional fees
         uint256 protocolFees =
             protocolFeePercentage.preciseMul(_reserveAssetQuantity);
-        uint256 managerFee =
-            managerFeePercentage.preciseMul(_reserveAssetQuantity);
 
         uint256 netReserveFlow =
-            _reserveAssetQuantity.sub(protocolFees).sub(managerFee);
+            _reserveAssetQuantity.sub(protocolFees);
 
-        return (protocolFees, managerFee, netReserveFlow);
+        return (protocolFees, netReserveFlow);
     }
 
     function _getFundTokenMintQuantity(
@@ -860,7 +869,7 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
 
         // Get valuation of the Fund with the quote asset as the reserve asset.
         // Reverts if price is not found
-        uint256 fundValuation = IFundValuer(IFolioController(controller).getFundValuer()).calculateFundValuation(address(this), _reserveAsset);
+        uint256 fundValuation = IFundValuer(IBabController(controller).getFundValuer()).calculateFundValuation(address(this), _reserveAsset);
 
         // Get reserve asset decimals
         uint256 reserveAssetDecimals = ERC20(_reserveAsset).decimals();
@@ -890,7 +899,7 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
         // Get valuation of the Fund with the quote asset as the reserve asset. Returns value in precise units (10e18)
         // Reverts if price is not found
         uint256 fundValuation =
-            IFundValuer(IFolioController(controller).getFundValuer())
+            IFundValuer(IBabController(controller).getFundValuer())
                 .calculateFundValuation(address(this), _reserveAsset);
 
         uint256 totalWithdrawalValueInPreciseUnits =
@@ -924,8 +933,7 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
         uint256 outflow =
             _withdrawalInfo
                 .netFlowQuantity
-                .add(_withdrawalInfo.protocolFees)
-                .add(_withdrawalInfo.managerFee);
+                .add(_withdrawalInfo.protocolFees);
 
         // Require withdrawable quantity is greater than existing collateral
         require(
@@ -961,42 +969,6 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
         tokensReceived,
         block.timestamp
       );
-    }
-
-    /**
-     * If a pre-deposit hook has been configured, call the external-protocol contract. Pre-deposit hook logic
-     * can contain arbitrary logic including validations, external function calls, etc.
-     */
-    function _callPreDepositHooks(
-        uint256 _reserveAssetQuantity,
-        address _caller,
-        address _to
-    ) internal {
-        if (managerDepositHook != address(0)) {
-            IFundIssuanceHook(managerDepositHook).invokePreDepositHook(
-                reserveAsset,
-                _reserveAssetQuantity,
-                _caller,
-                _to
-            );
-        }
-    }
-
-    /**
-     * If a pre-withdrawal hook has been configured, call the external-protocol contract.
-     */
-    function _callPreWithdrawalHooks(
-        uint256 _fundTokenQuantity,
-        address _caller,
-        address _to
-    ) internal {
-        if (managerWithdrawalHook != address(0)) {
-            IFundIssuanceHook(managerWithdrawalHook).invokePreWithdrawalHook(
-                _fundTokenQuantity,
-                _caller,
-                _to
-            );
-        }
     }
 
     function _validateOnlyContributor(address _caller) internal view {

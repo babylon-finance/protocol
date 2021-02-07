@@ -42,27 +42,18 @@ describe("Fund", function() {
   describe("Fund construction", async function() {
     it("should have expected properties upon deployment", async function() {
       expect(await fund1.totalContributors()).to.equal(1);
-      expect(await fund1.manager()).to.equal(await ownerSigner.getAddress());
+      expect(await fund1.creator()).to.equal(await ownerSigner.getAddress());
     });
   });
 
   describe("Fund state", async function() {
-    it("only the current manager or protocol should be able to update active state", async function() {
+    it("only the protocol should be able to update active state", async function() {
       await expect(fund1.connect(userSigner1).setActive(true)).to.be.reverted;
     });
 
-    it("only the current manager or the protocol should be able to update the manager", async function() {
-      await expect(
-        fund1.connect(userSigner3).setManager(userSigner3.getAddress())
-      ).to.be.reverted;
-    });
-
-    it("the stake and initial deposit must be correct", async function() {
+    it("the initial deposit must be correct", async function() {
       const balance = await fund1.signer.getBalance();
       await expect(balance).to.be.gt(ethers.utils.parseEther("0.099"));
-      await expect(await fund1.managerStake()).to.equal(
-        ethers.utils.parseEther("0.1")
-      );
     });
   });
 

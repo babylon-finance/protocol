@@ -1,5 +1,5 @@
 /*
-    Copyright 2020 DFolio.
+    Copyright 2020 Babylon Finance.
 
     Licensed under the Apache License, Version 2.0 (the "License");
     you may not use this file except in compliance with the License.
@@ -24,7 +24,7 @@ import { SafeMath } from "@openzeppelin/contracts/math/SafeMath.sol";
 import { SafeCast } from "@openzeppelin/contracts/utils/SafeCast.sol";
 import { SignedSafeMath } from "@openzeppelin/contracts/math/SignedSafeMath.sol";
 import { AddressArrayUtils } from "./lib/AddressArrayUtils.sol";
-import { IFolioController } from "./interfaces/IFolioController.sol";
+import { IBabController } from "./interfaces/IBabController.sol";
 import { IWETH } from "./interfaces/external/weth/IWETH.sol";
 import { IComptroller } from './interfaces/external/compound/IComptroller.sol';
 import { IIntegration } from "./interfaces/IIntegration.sol";
@@ -37,7 +37,7 @@ import { IFund } from "./interfaces/IFund.sol";
 
 /**
  * @title BaseFund
- * @author DFolio
+ * @author Babylon Finance
  *
  * Abstract Class that holds common fund-related state and functions
  */
@@ -57,8 +57,6 @@ abstract contract BaseFund is ERC20 {
     event PendingIntegrationRemoved(address indexed _integration);
     event ReserveAssetChanged(address indexed _integration);
 
-    event ManagerEdited(address _newManager, address _oldManager);
-    event FeeRecipientEdited(address _newManagerFeeRecipient);
     event PositionMultiplierEdited(int256 _newMultiplier);
     event PositionAdded(address indexed _component);
     event PositionRemoved(address indexed _component);
@@ -76,23 +74,55 @@ abstract contract BaseFund is ERC20 {
     }
 
     /**
-     * Throws if the sender is not the Fund's manager
+     * Throws if the sender is not the protocol
      */
-    modifier onlyManager() {
-        _validateOnlyManager();
-        _;
+    modifier onlyProtocol() {
+      require(msg.sender == controller, "Only the controller can call this");
+      _;
     }
 
-    modifier onlyManagerOrProtocol {
-        _validateOnlyManagerOrProtocol();
-        _;
+    /**
+     * Throws if the sender is not the  fund governance. (Initially protocol)
+     */
+    modifier onlyGovernanceFund() {
+      require(msg.sender == controller, "Only the controller can call this");
+      _;
     }
 
+    /**
+     * Throws if the sender is not a participant in the fund
+     */
+    modifier onlyParticipant() {
+      // TODO
+      // require(msg.sender == controller, "Only the controller can call this");
+      _;
+    }
+
+    modifier onlyCreator() {
+      require(msg.sender == creator, "Only the creator can call this");
+      _;
+    }
+
+    /**
+     * Throws if the sender is not a keeper in the protocol
+     */
+    modifier onlyKeeper() {
+      // TODO
+      // require(msg.sender == controller, "Only the controller can call this");
+      _;
+    }
+
+    /**
+    * Throws if the fund is not active
+    */
     modifier onlyActive() {
         _validateOnlyActive();
         _;
     }
 
+    /**
+    * Throws if the fund is not disabled
+    */
     modifier onlyInactive() {
         _validateOnlyInactive();
         _;
@@ -100,16 +130,11 @@ abstract contract BaseFund is ERC20 {
 
     modifier onlyPendingIntegration() {
       require(
-          IFolioController(controller).isValidIntegration(
+          IBabController(controller).isValidIntegration(
               IIntegration(msg.sender).getName()
           ),
           "Integration must be enabled on controller"
       );
-      _;
-    }
-
-    modifier onlyProtocol() {
-      require(msg.sender == controller, "Only the controller can call this");
       _;
     }
 
@@ -129,9 +154,8 @@ abstract contract BaseFund is ERC20 {
 
     // Address of the controller
     address public controller;
-    // The manager has the privelege to add integrations, remove, and set a new manager
-    address public manager;
-    address public managerFeeRecipient;
+    // The person that creates the fund
+    address public creator;
     // Whether the fund is currently active or not
     bool public active;
 
@@ -152,15 +176,14 @@ abstract contract BaseFund is ERC20 {
 
     /**
      * When a new Fund is created, initializes Positions are set to empty.
-     * All parameter validations are on the FolioController contract. Validations are performed already on the
-     * FolioController. Initiates the positionMultiplier as 1e18 (no adjustments).
+     * All parameter validations are on the BabController contract. Validations are performed already on the
+     * BabController. Initiates the positionMultiplier as 1e18 (no adjustments).
      *
      * @param _integrations           List of integrations to enable. All integrations must be approved by the Controller
      * @param _weth                   Address of the WETH ERC20
      * @param _reserveAsset           Address of the reserve asset ERC20
      * @param _controller             Address of the controller
-     * @param _manager                Address of the manager
-     * @param _managerFeeRecipient    Address where the manager will receive the fees
+     * @param _creator                Address of the creator
      * @param _name                   Name of the Fund
      * @param _symbol                 Symbol of the Fund
      */
@@ -170,26 +193,16 @@ abstract contract BaseFund is ERC20 {
         address _weth,
         address _reserveAsset,
         address _controller,
-        address _manager,
-        address _managerFeeRecipient,
+        address _creator,
         string memory _name,
         string memory _symbol
     ) ERC20(_name, _symbol) {
-        require(_manager != address(0), "Manager must not be empty");
-        require(
-            _managerFeeRecipient != address(0),
-            "Manager must not be empty"
-        );
-        require(
-            _managerFeeRecipient != address(0),
-            "Fee Recipient must be non-zero address."
-        );
+        require(_creator != address(0), "Creator must not be empty");
 
         controller = _controller;
         weth = _weth;
         reserveAsset = _reserveAsset;
-        manager = _manager;
-        managerFeeRecipient = _managerFeeRecipient;
+        creator = _creator;
 
         // Integrations are put in PENDING state, as they need to be individually initialized by the Integration
         for (uint256 i = 0; i < _integrations.length; i++) {
@@ -204,34 +217,32 @@ abstract contract BaseFund is ERC20 {
     /* ============ External Functions ============ */
 
     /**
-     * FUND MANAGER ONLY. Changes the reserve asset
+     * PRIVILEGED Manager, protocol FUNCTION. Changes the reserve asset
      *
      * @param _reserveAsset                 Address of the new reserve asset
      */
-    function editReserveAsset(address _reserveAsset) external onlyManager {
+    function editReserveAsset(address _reserveAsset) external onlyProtocol {
         reserveAsset = _reserveAsset;
 
         emit ReserveAssetChanged(_reserveAsset);
     }
 
     /**
-     * Fund MANAGER ONLY. Edit the manager fee recipient
-     *
-     * @param _managerFeeRecipient          Manager fee recipient
+     * PRIVILEGED Manager, protocol FUNCTION. When a Fund is disabled, deposits are disabled.
      */
-    function editManagerFeeRecipient(address _managerFeeRecipient)
-        external
-        onlyManager
-        onlyActive
-    {
-        require(
-            _managerFeeRecipient != address(0),
-            "Fee recipient must not be 0 address"
-        );
+    function setActive() external onlyProtocol {
+      require(!active && integrations.length > 0,
+          "Must have active integrations to enable a fund"
+      );
+      active = true;
+    }
 
-        managerFeeRecipient = _managerFeeRecipient;
-
-        emit FeeRecipientEdited(_managerFeeRecipient);
+    /**
+     * PRIVILEGED Manager, protocol FUNCTION. When a Fund is disabled, deposits are disabled.
+     */
+    function setDisabled() external onlyProtocol {
+      require(active, "The fund must be active");
+      active = false;
     }
 
     /**
@@ -263,14 +274,14 @@ abstract contract BaseFund is ERC20 {
      */
     function addIntegration(address _integration, string memory _name)
         external
-        onlyManager
+        onlyGovernanceFund
     {
         require(
             integrationStates[_integration] == IFund.IntegrationState.NONE,
             "Integration must not be added"
         );
         require(
-            IFolioController(controller).isValidIntegration(_name),
+            IBabController(controller).isValidIntegration(_name),
             "Integration must be enabled on Controller"
         );
 
@@ -283,7 +294,7 @@ abstract contract BaseFund is ERC20 {
      * MANAGER ONLY. Removes an integration from the Fund. Fund calls removeIntegration on integration itself to confirm
      * it is not needed to manage any remaining positions and to remove state.
      */
-    function removeIntegration(address _integration) external onlyManager {
+    function removeIntegration(address _integration) external onlyGovernanceFund {
         require(
             integrationStates[_integration] == IFund.IntegrationState.PENDING,
             "Integration must be pending"
@@ -313,30 +324,6 @@ abstract contract BaseFund is ERC20 {
         emit IntegrationInitialized(msg.sender);
     }
 
-    /**
-     * PRIVILEGED Manager, protocol FUNCTION. When a Fund is disable, deposits are disabled
-     */
-    function setActive() external onlyManagerOrProtocol {
-      require(!active && integrations.length > 0,
-          "Must have active integrations to enable a fund"
-      );
-      active = true;
-    }
-
-    function setDisabled() external onlyManagerOrProtocol {
-      require(active, "The fund must be active");
-      active = false;
-    }
-
-    /**
-     * MANAGER ONLY. Changes manager; We allow null addresses in case the manager wishes to wind down the SetToken.
-     * Integrations may rely on the manager state, so only changable when unlocked
-     */
-    function setManager(address _manager) external onlyManagerOrProtocol {
-        address oldManager = manager;
-        manager = _manager;
-        emit ManagerEdited(_manager, oldManager);
-    }
 
     function invokeApprove(address _spender, address _asset, uint256 _quantity) external onlyIntegration {
       ERC20(_asset).approve(_spender, 0);
@@ -354,6 +341,19 @@ abstract contract BaseFund is ERC20 {
     /* ============ Trade Integration hooks ============ */
 
     /**
+     * Function that allows the manager to call an integration
+     *
+     * @param _integration            Address of the integration to call
+     * @param _value                  Quantity of Ether to provide the call (typically 0)
+     * @param _data                   Encoded function selector and arguments
+     * @return _returnValue           Bytes encoded return value
+     */
+    function callIntegration(address _integration, uint256 _value, bytes calldata _data) external onlyKeeper returns (bytes memory _returnValue) {
+      _validateOnlyIntegration(_integration);
+      return _invoke(_integration, _value, _data);
+    }
+
+    /**
      * Function that calculates the price using the oracle and executes a trade.
      * Must call the exchange to get the price and pass minReceiveQuantity accordingly.
      * @param _integrationName        Name of the integration to call
@@ -369,7 +369,7 @@ abstract contract BaseFund is ERC20 {
       uint256 _sendQuantity,
       address _receiveToken,
       uint256 _minReceiveQuantity,
-      bytes memory _data) onlyManager external
+      bytes memory _data) onlyKeeper external
     {
       return _trade(_integrationName, _sendToken, _sendQuantity, _receiveToken, _minReceiveQuantity, _data);
     }
@@ -391,8 +391,8 @@ abstract contract BaseFund is ERC20 {
       uint256 _investmentTokensOut,
       address _tokenIn,
       uint256 _maxAmountIn
-    ) onlyManager external {
-      address passiveIntegration = IFolioController(controller).getIntegrationByName(_integrationName);
+    ) onlyKeeper external {
+      address passiveIntegration = IBabController(controller).getIntegrationByName(_integrationName);
       _validateOnlyIntegration(passiveIntegration);
       IPassiveIntegration(passiveIntegration).enterInvestment(_investmentAddress, _investmentTokensOut, _tokenIn, _maxAmountIn);
     }
@@ -412,8 +412,8 @@ abstract contract BaseFund is ERC20 {
       uint256 _investmentTokenIn,
       address _tokenOut,
       uint256 _minAmountOut
-    ) external onlyManager {
-      address passiveIntegration = IFolioController(controller).getIntegrationByName(_integrationName);
+    ) external onlyKeeper {
+      address passiveIntegration = IBabController(controller).getIntegrationByName(_integrationName);
       _validateOnlyIntegration(passiveIntegration);
       IPassiveIntegration(passiveIntegration).exitInvestment(_investmentAddress, _investmentTokenIn, _tokenOut, _minAmountOut);
     }
@@ -435,8 +435,8 @@ abstract contract BaseFund is ERC20 {
       uint256 _poolTokensOut,
       address[] calldata _tokensIn,
       uint256[] calldata _maxAmountsIn
-    ) onlyManager external {
-      address poolIntegration = IFolioController(controller).getIntegrationByName(_integrationName);
+    ) onlyKeeper external {
+      address poolIntegration = IBabController(controller).getIntegrationByName(_integrationName);
       _validateOnlyIntegration(poolIntegration);
       IPoolIntegration(poolIntegration).joinPool(_poolAddress, _poolTokensOut, _tokensIn, _maxAmountsIn);
     }
@@ -456,33 +456,33 @@ abstract contract BaseFund is ERC20 {
       uint256 _poolTokensIn,
       address[] calldata _tokensOut,
       uint256[] calldata _minAmountsOut
-    ) external onlyManager {
-      address poolIntegration = IFolioController(controller).getIntegrationByName(_integrationName);
+    ) external onlyKeeper {
+      address poolIntegration = IBabController(controller).getIntegrationByName(_integrationName);
       _validateOnlyIntegration(poolIntegration);
       IPoolIntegration(poolIntegration).exitPool(_poolAddress, _poolTokensIn, _tokensOut, _minAmountsOut);
     }
 
     /* ============ Borrow Integration hooks ============ */
-    function depositCollateral(string memory _integrationName, address asset, uint256 amount) external onlyManager {
-      address borrowIntegration = IFolioController(controller).getIntegrationByName(_integrationName);
+    function depositCollateral(string memory _integrationName, address asset, uint256 amount) external onlyKeeper {
+      address borrowIntegration = IBabController(controller).getIntegrationByName(_integrationName);
       _validateOnlyIntegration(borrowIntegration);
       IBorrowIntegration(borrowIntegration).depositCollateral(asset, amount);
     }
 
-    function removeCollateral(string memory _integrationName, address asset, uint256 amount) external onlyManager {
-      address borrowIntegration = IFolioController(controller).getIntegrationByName(_integrationName);
+    function removeCollateral(string memory _integrationName, address asset, uint256 amount) external onlyKeeper {
+      address borrowIntegration = IBabController(controller).getIntegrationByName(_integrationName);
       _validateOnlyIntegration(borrowIntegration);
       IBorrowIntegration(borrowIntegration).removeCollateral(asset, amount);
     }
 
-    function borrow(string memory _integrationName, address asset, uint256 amount) external onlyManager {
-      address borrowIntegration = IFolioController(controller).getIntegrationByName(_integrationName);
+    function borrow(string memory _integrationName, address asset, uint256 amount) external onlyKeeper {
+      address borrowIntegration = IBabController(controller).getIntegrationByName(_integrationName);
       _validateOnlyIntegration(borrowIntegration);
       IBorrowIntegration(borrowIntegration).borrow(asset, amount);
     }
 
-    function repay(string memory _integrationName, address asset, uint256 amount) external onlyManager {
-      address borrowIntegration = IFolioController(controller).getIntegrationByName(_integrationName);
+    function repay(string memory _integrationName, address asset, uint256 amount) external onlyKeeper {
+      address borrowIntegration = IBabController(controller).getIntegrationByName(_integrationName);
       _validateOnlyIntegration(borrowIntegration);
       IBorrowIntegration(borrowIntegration).repay(asset, amount);
     }
@@ -497,7 +497,7 @@ abstract contract BaseFund is ERC20 {
       uint256 _minReceiveQuantity,
       bytes memory _data) internal
     {
-      address tradeIntegration = IFolioController(controller).getIntegrationByName(_integrationName);
+      address tradeIntegration = IBabController(controller).getIntegrationByName(_integrationName);
       _validateOnlyIntegration(tradeIntegration);
       return ITradeIntegration(tradeIntegration).trade(_sendToken, _sendQuantity, _receiveToken, _minReceiveQuantity, _data);
     }
@@ -734,7 +734,7 @@ abstract contract BaseFund is ERC20 {
     }
 
     function _getPrice(address _assetOne, address _assetTwo) internal view returns (uint256) {
-      IPriceOracle oracle = IPriceOracle(IFolioController(controller).getPriceOracle());
+      IPriceOracle oracle = IPriceOracle(IBabController(controller).getPriceOracle());
       return oracle.getPrice(_assetOne, _assetTwo);
     }
 
@@ -768,20 +768,9 @@ abstract contract BaseFund is ERC20 {
     {
         if (_feeQuantity > 0) {
             ERC20(_token).transfer(
-                IFolioController(controller).getFeeRecipient(),
+                IBabController(controller).getFeeRecipient(),
                 _feeQuantity
             );
-        }
-    }
-
-    /**
-     * Pays the _feeQuantity from the _fund denominated in _token to the manager fee recipient
-     */
-    function payManagerFeeFromFund(address _token, uint256 _feeQuantity)
-        internal
-    {
-        if (_feeQuantity > 0) {
-            ERC20(_token).transfer(managerFeeRecipient, _feeQuantity);
         }
     }
 
@@ -796,15 +785,11 @@ abstract contract BaseFund is ERC20 {
             "Integration needs to be initialized"
         );
         require(
-            IFolioController(controller).isValidIntegration(
+            IBabController(controller).isValidIntegration(
                 IIntegration(_integration).getName()
             ),
             "Integration must be enabled on controller"
         );
-    }
-
-    function _validateOnlyManager() internal view {
-        require(msg.sender == manager, "Only manager can call");
     }
 
     function _validateOnlyActive() internal view {
@@ -815,10 +800,8 @@ abstract contract BaseFund is ERC20 {
         require(active == false, "Fund must be disabled");
     }
 
-    function _validateOnlyManagerOrProtocol() internal view {
-        require(
-            msg.sender == manager || msg.sender == controller,
-            "Only the fund manager or the protocol can modify fund state"
-        );
+    // Disable fund token transfers. Allow minting and burning.
+    function _beforeTokenTransfer(address from, address to, uint256 /* amount */) override pure internal {
+      require(from == address(0) || to == address(0), "Fund token transfers are disabled");
     }
 }

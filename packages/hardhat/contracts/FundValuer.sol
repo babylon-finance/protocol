@@ -1,5 +1,5 @@
 /*
-    Copyright 2020 DFolio
+    Copyright 2020 Babylon Finance
 
     Modified from (Set Protocol FundValuer)
 
@@ -26,14 +26,14 @@ import { SafeCast } from "@openzeppelin/contracts/utils/SafeCast.sol";
 import { SignedSafeMath } from "@openzeppelin/contracts/math/SignedSafeMath.sol";
 import { SafeMath } from "@openzeppelin/contracts/math/SafeMath.sol";
 
-import { IFolioController } from "./interfaces/IFolioController.sol";
+import { IBabController } from "./interfaces/IBabController.sol";
 import { IFund } from "./interfaces/IFund.sol";
 import { IPriceOracle } from "./interfaces/IPriceOracle.sol";
 import { PreciseUnitMath } from "./lib/PreciseUnitMath.sol";
 
 /**
  * @title FundValuer
- * @author dfolio
+ * @author Babylon Finance
  *
  * Contract that returns the valuation of SetTokens using price oracle data used in contracts
  * that are external to the system.
@@ -84,7 +84,7 @@ contract FundValuer {
         view
         returns (uint256)
     {
-        IPriceOracle priceOracle = IPriceOracle(IFolioController(controller).getPriceOracle());
+        IPriceOracle priceOracle = IPriceOracle(IBabController(controller).getPriceOracle());
 
         // NOTE: This is temporary to allow for deposits / withdrawls. The masterQuoetAsset no longer
         // live in the PriceOracle so we'll need to add it back or take another approach.
@@ -112,6 +112,8 @@ contract FundValuer {
             uint256 quoteToMaster = priceOracle.getPrice(_quoteAsset, masterQuoteAsset);
             valuation = valuation.preciseDiv(quoteToMaster.toInt256());
         }
+
+        // TODO: Add eth balance
 
         return valuation.toUint256().preciseDiv(_fund.totalSupply());
     }

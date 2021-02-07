@@ -14,6 +14,7 @@ describe("CompoundIntegration", function() {
   const daiWhaleAddress = "0x6B175474E89094C44Da98b954EedeAC495271d0F";
   let fund;
   let compAbi;
+  let userSigner3;
 
   beforeEach(async () => {
     system = await loadFixture(deployFolioFixture);
@@ -21,6 +22,7 @@ describe("CompoundIntegration", function() {
     controller = system.folioController;
     compoundBorrowing = system.integrations.compoundIntegration;
     compAbi = compoundBorrowing.interface;
+    userSigner3 = system.signer3;
     fund = system.funds.one;
   });
 
@@ -65,13 +67,13 @@ describe("CompoundIntegration", function() {
     describe("Compound Borrowing/Lending", function() {
       it("can supply ether", async function() {
         expect(await cethToken.balanceOf(fund.address)).to.equal(0);
-        await expect(() =>
-          owner.sendTransaction({
-            to: fund.address,
-            gasPrice: 0,
-            value: ethers.utils.parseEther("10")
-          })
-        ).to.changeEtherBalance(owner, ethers.utils.parseEther("-10"));
+        // await expect(() =>
+        //   owner.sendTransaction({
+        //     to: fund.address,
+        //     gasPrice: 0,
+        //     value: ethers.utils.parseEther("10")
+        //   })
+        // ).to.changeEtherBalance(owner, ethers.utils.parseEther("-10"));
         // const data = compAbi.encodeFunctionData(
         //   compoundBorrowing.interface.functions[
         //     "depositCollateral(address,uint256)"
@@ -86,10 +88,15 @@ describe("CompoundIntegration", function() {
         //     gasPrice: 0
         //   }
         // );
+        await fund
+          .connect(userSigner3)
+          .deposit(ethers.utils.parseEther("1"), 1, userSigner3.getAddress(), {
+            value: ethers.utils.parseEther("1")
+          });
         await fund.depositCollateral(
           "compound",
           addresses.tokens.WETH,
-          ethers.utils.parseEther("10"),
+          ethers.utils.parseEther("1"),
           {
             gasPrice: 0
           }

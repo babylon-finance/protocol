@@ -1,5 +1,5 @@
 /*
-    Copyright 2020 DFolio
+    Copyright 2020 Babylon Finance
 
     Licensed under the Apache License, Version 2.0 (the "License");
     you may not use this file except in compliance with the License.
@@ -23,7 +23,7 @@ import { TradeIntegration } from "./TradeIntegration.sol";
 
 /**
  * @title 1InchTradeIntegration
- * @author dFolio Protocol
+ * @author Babylon Finance Protocol
  *
  * 1Inch protocol trade integration
  */

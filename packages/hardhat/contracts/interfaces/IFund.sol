@@ -1,5 +1,5 @@
 /*
-    Copyright 2020 DFolio
+    Copyright 2020 Babylon Finance
 
     Licensed under the Apache License, Version 2.0 (the "License");
     you may not use this file except in compliance with the License.
@@ -21,7 +21,7 @@ import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 /**
  * @title IFund
- * @author DFolio
+ * @author Babylon Finance
  *
  * Interface for operating with SetTokens.
  */
@@ -85,7 +85,7 @@ interface IFund is IERC20 {
     function setManager(address _manager) external;
 
     function controller() external view returns (address);
-    function manager() external view returns (address);
+    function creator() external view returns (address);
     function active() external view returns (bool);
     function integrationStates(address _integration) external view returns (IntegrationState);
     function getIntegrations() external view returns (address[] memory);
@@ -111,7 +111,7 @@ interface IFund is IERC20 {
           uint256
       );
 
-
+    function callIntegration(address _integration, uint256 _value, bytes calldata _data) external returns (bytes memory _returnValue);
     function invokeApprove(address _spender, address _asset, uint256 _quantity) external;
     function invokeFromIntegration(
       address _target,
@@ -119,50 +119,13 @@ interface IFund is IERC20 {
       bytes calldata _data
     ) external returns (bytes memory _returnValue);
 
-    function trade(
-      string memory _integrationName,
-      address _sendToken,
-      uint256 _sendQuantity,
-      address _receiveToken,
-      uint256 _minReceiveQuantity,
-      bytes memory _data) external;
-
-    function joinPool(
-      string memory _integrationName,
-      address _poolAddress,
-      uint256 _poolTokensOut,
-      address[] calldata _tokensIn,
-      uint256[] calldata _maxAmountsIn
-    ) external;
-
-    function exitPool(
-      string memory _integrationName,
-      address _poolAddress,
-      uint256 _poolTokensIn,
-      address[] calldata _tokensOut,
-      uint256[] calldata _minAmountsOut
-    ) external;
-
-    function enterPassiveInvestment(
-      string memory _integrationName,
-      address _investmentAddress,
-      uint256 _investmentTokensOut,
-      address _tokenIn,
-      uint256 _maxAmountIn
-    ) external;
-
-    function exitPassiveInvestment(
-      string memory _integrationName,
-      address _investmentAddress,
-      uint256 _investmentTokenIn,
-      address _tokenOut,
-      uint256 _minAmountOut
-    ) external;
-
-    function depositCollateral(address asset, uint256 amount) external;
-    function removeCollateral(address asset, uint256 amount) external;
-    function borrow(address asset, uint256 amount) external;
-    function repay(address asset, uint256 amount) external;
+    // function trade(
+    //   string memory _integrationName,
+    //   address _sendToken,
+    //   uint256 _sendQuantity,
+    //   address _receiveToken,
+    //   uint256 _minReceiveQuantity,
+    //   bytes memory _data) external;
 
 
     function isInitializedIntegration(address _integration) external view returns(bool);
