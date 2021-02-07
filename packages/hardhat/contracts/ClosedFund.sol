@@ -355,8 +355,7 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
             withdrawalInfo.netFlowQuantity,
             block.timestamp
         );
-
-        totalFunds = totalFunds.sub(withdrawalInfo.netFlowQuantity);
+        totalFunds = totalFunds.sub(withdrawalInfo.netFlowQuantity).sub(withdrawalInfo.protocolFees);
 
         if (reserveAsset != weth) {
             // Instruct the Fund to transfer the reserve asset back to the user
@@ -429,7 +428,7 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
         address _reserveAsset,
         uint256 _reserveAssetQuantity
     ) external view returns (uint256) {
-        (, uint256 netReserveFlow) = _getFees(_reserveAssetQuantity, true);
+        (, uint256 netReserveFlow) = _getFees(_reserveAssetQuantity, true, 0);
 
         uint256 setTotalSupply = totalSupply();
 
@@ -456,7 +455,7 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
         uint256 preFeeReserveQuantity =
             _getWithdrawalReserveQuantity(_reserveAsset, _fundTokenQuantity);
 
-        (, uint256 netReserveFlows) = _getFees(preFeeReserveQuantity, false);
+        (, uint256 netReserveFlows) = _getFees(preFeeReserveQuantity, false, _fundTokenQuantity);
 
         return netReserveFlows;
     }
@@ -509,7 +508,7 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
                 );
 
             (, uint256 expectedWithdrawalQuantity) =
-                _getFees(totalWithdrawalValue, false);
+                _getFees(totalWithdrawalValue, false, _fundTokenQuantity);
 
             uint256 existingBalance =
                 _getPositionBalance(_reserveAsset).toUint256();
@@ -666,7 +665,7 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
         (
             depositInfo.protocolFees,
             depositInfo.netFlowQuantity
-        ) = _getFees(depositInfo.preFeeReserveQuantity, true);
+        ) = _getFees(depositInfo.preFeeReserveQuantity, true, 0);
 
         depositInfo.fundTokenQuantity = _getFundTokenMintQuantity(
             _reserveAsset,
@@ -703,7 +702,7 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
         (
             withdrawalInfo.protocolFees,
             withdrawalInfo.netFlowQuantity
-        ) = _getFees(withdrawalInfo.preFeeReserveQuantity, false);
+        ) = _getFees(withdrawalInfo.preFeeReserveQuantity, false, _fundTokenQuantity);
 
         withdrawalInfo.previousFundTokenSupply = totalSupply();
 
@@ -816,12 +815,13 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
      * Protocol Fee = (% direct fee %) * reserveAssetQuantity
      *
      * @param _reserveAssetQuantity         Quantity of reserve asset to calculate fees from
-     * @param _isDeposit ad
+     * @param _isDeposit                    Boolean that is true when it is a deposit
+     * @param _fundTokenQuantity            Number of fund tokens involved in the operation
      *
      * @return  uint256                     Fees paid to the protocol in reserve asset
      * @return  uint256                     Net reserve to user net of fees
      */
-    function _getFees(uint256 _reserveAssetQuantity, bool _isDeposit)
+    function _getFees(uint256 _reserveAssetQuantity, bool _isDeposit, uint256 _fundTokenQuantity)
         internal
         view
         returns (
@@ -837,7 +837,8 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
                     .getProtocolWithdrawalFundTokenFee();
         // Get performance if withdrawal and there are profits
         if (!_isDeposit) {
-          uint profits = _reserveAssetQuantity.sub(contributors[msg.sender].totalDeposit);
+          uint percentage = balanceOf(msg.sender).div(_fundTokenQuantity); // Divide by the % tokens being withdrawn
+          uint profits = contributors[msg.sender].totalDeposit.div(percentage).sub(_reserveAssetQuantity);
           if (profits > 0) {
             uint perfFee = IBabController(controller)
             .getProtocolPerformanceFee().preciseMul(profits);
