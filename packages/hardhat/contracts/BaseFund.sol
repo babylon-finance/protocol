@@ -26,12 +26,7 @@ import { SafeCast } from "@openzeppelin/contracts/utils/SafeCast.sol";
 import { SignedSafeMath } from "@openzeppelin/contracts/math/SignedSafeMath.sol";
 import { AddressArrayUtils } from "./lib/AddressArrayUtils.sol";
 import { IBabController } from "./interfaces/IBabController.sol";
-import { IWETH } from "./interfaces/external/weth/IWETH.sol";
-import { IComptroller } from './interfaces/external/compound/IComptroller.sol';
 import { IIntegration } from "./interfaces/IIntegration.sol";
-import { IBorrowIntegration } from "./interfaces/IBorrowIntegration.sol";
-import { IPassiveIntegration } from "./interfaces/IPassiveIntegration.sol";
-import { IPoolIntegration } from "./interfaces/IPoolIntegration.sol";
 import { ITradeIntegration } from "./interfaces/ITradeIntegration.sol";
 import { IPriceOracle } from "./interfaces/IPriceOracle.sol";
 import { IFund } from "./interfaces/IFund.sol";
@@ -359,27 +354,6 @@ abstract contract BaseFund is ERC20 {
       }
       return _invoke(_integration, _value, _data);
     }
-
-    /**
-     * Function that calculates the price using the oracle and executes a trade.
-     * Must call the exchange to get the price and pass minReceiveQuantity accordingly.
-     * @param _integrationName        Name of the integration to call
-     * @param _sendToken              Token to exchange
-     * @param _sendQuantity           Amount of tokens to send
-     * @param _receiveToken           Token to receive
-     * @param _minReceiveQuantity     Min amount of tokens to receive
-     * @param _data                   Bytes call data
-     */
-    // function trade(
-    //   string memory _integrationName,
-    //   address _sendToken,
-    //   uint256 _sendQuantity,
-    //   address _receiveToken,
-    //   uint256 _minReceiveQuantity,
-    //   bytes memory _data) onlyKeeper external
-    // {
-    //   return _trade(_integrationName, _sendToken, _sendQuantity, _receiveToken, _minReceiveQuantity, _data);
-    // }
 
     /* ============ Passive Integration hooks ============ */
 
