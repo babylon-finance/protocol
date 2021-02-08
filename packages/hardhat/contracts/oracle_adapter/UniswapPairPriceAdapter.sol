@@ -23,7 +23,7 @@ import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
 import { SafeMath } from "@openzeppelin/contracts/math/SafeMath.sol";
 
 import { AddressArrayUtils } from "../lib/AddressArrayUtils.sol";
-import { IFolioController } from "../interfaces/IFolioController.sol";
+import { IBabController } from "../interfaces/IBabController.sol";
 import { IPriceOracle } from "../interfaces/IPriceOracle.sol";
 import { IUniswapV2Pair } from "../interfaces/external/uniswap/IUniswapV2Pair.sol";
 import { UniswapV2Library } from "../lib/external/UniswapV2Library.sol";
@@ -50,7 +50,7 @@ contract UniswapPairPriceAdapter is Ownable {
     /* ============ State Variables ============ */
 
     // Instance of the Controller contract
-    IFolioController public controller;
+    IBabController public controller;
 
     // Uniswap allowed pools to settings mapping
     mapping(address => PoolSettings) public uniswapPoolsToSettings;
@@ -71,7 +71,7 @@ contract UniswapPairPriceAdapter is Ownable {
      * @param _uniswapPools       Array of allowed Uniswap pools
      */
     constructor(
-        IFolioController _controller,
+        IBabController _controller,
         address _uniswapFactory,
         IUniswapV2Pair[] memory _uniswapPools
     ) {

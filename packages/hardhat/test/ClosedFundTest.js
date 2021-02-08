@@ -20,7 +20,7 @@ describe("Fund", function() {
 
   beforeEach(async () => {
     const {
-      folioController,
+      babController,
       signer1,
       signer2,
       signer3,
@@ -28,7 +28,7 @@ describe("Fund", function() {
       owner
     } = await loadFixture(deployFolioFixture);
 
-    controller = folioController;
+    controller = babController;
     ownerSigner = owner;
     userSigner1 = signer1;
     userSigner2 = signer2;
@@ -42,38 +42,32 @@ describe("Fund", function() {
   describe("Fund construction", async function() {
     it("should have expected properties upon deployment", async function() {
       expect(await fund1.totalContributors()).to.equal(1);
-      expect(await fund1.manager()).to.equal(await ownerSigner.getAddress());
+      expect(await fund1.creator()).to.equal(await ownerSigner.getAddress());
     });
   });
 
   describe("Fund state", async function() {
-    it("only the current manager or protocol should be able to update active state", async function() {
+    it("only the protocol should be able to update active state", async function() {
       await expect(fund1.connect(userSigner1).setActive(true)).to.be.reverted;
     });
 
-    it("only the current manager or the protocol should be able to update the manager", async function() {
-      await expect(
-        fund1.connect(userSigner3).setManager(userSigner3.getAddress())
-      ).to.be.reverted;
-    });
-
-    it("the stake and initial deposit must be correct", async function() {
+    it("the initial deposit must be correct", async function() {
       const balance = await fund1.signer.getBalance();
       await expect(balance).to.be.gt(ethers.utils.parseEther("0.099"));
-      await expect(await fund1.managerStake()).to.equal(
-        ethers.utils.parseEther("0.1")
-      );
     });
   });
 
   describe("Fund deposit limit", async function() {
     it("reverts if the deposit is bigger than the limit", async function() {
-      await fund1.setDepositLimit(ethers.utils.parseEther("1"));
+      await controller.changeFundDepositLimit(
+        fund1.address,
+        ethers.utils.parseEther("11")
+      );
       await expect(
         fund1
           .connect(userSigner3)
-          .deposit(ethers.utils.parseEther("1"), 1, userSigner3.getAddress(), {
-            value: ethers.utils.parseEther("1")
+          .deposit(ethers.utils.parseEther("11"), 1, userSigner3.getAddress(), {
+            value: ethers.utils.parseEther("11")
           })
       ).to.be.reverted;
     });
@@ -81,7 +75,7 @@ describe("Fund", function() {
 
   describe("Fund deposit disabled", async function() {
     it("reverts if the fund is disabled", async function() {
-      await fund1.setDisabled();
+      await controller.disableFund(fund1.address);
       await expect(
         fund1
           .connect(userSigner3)

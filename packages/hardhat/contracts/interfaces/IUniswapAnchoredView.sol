@@ -1,5 +1,5 @@
 /*
-    Copyright 2020 DFolio
+    Copyright 2020 Babylon Finance
 
     Modified from (Set Protocol IOracleAdapter)
 
@@ -22,7 +22,7 @@ pragma solidity 0.7.4;
 
 /**
  * @title IOracleAdapter
- * @author DFolio
+ * @author Babylon Finance
  *
  * Interface for calling an oracle adapter.
  */

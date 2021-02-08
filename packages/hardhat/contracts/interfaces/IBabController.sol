@@ -1,5 +1,5 @@
 /*
-    Copyright 2020 DFolio.
+    Copyright 2020 Babylon Finance.
 
     Licensed under the Apache License, Version 2.0 (the "License");
     you may not use this file except in compliance with the License.
@@ -18,13 +18,13 @@
 pragma solidity 0.7.4;
 
 /**
- * @title IFolioController
- * @author DFolio
+ * @title IBabController
+ * @author Babylon Finance
  *
- * Interface for interacting with FolioController
+ * Interface for interacting with BabController
  */
 
-interface IFolioController {
+interface IBabController {
 
     /* ============ Functions ============ */
 
@@ -42,6 +42,10 @@ interface IFolioController {
     function initializeIntegration(address _integration, address _fund) external;
     function editIntegration(string memory _name, address _integration) external;
     function removeIntegration(string memory _name) external;
+    function setMinFundEpoch(uint256 _newMinFundEpoch) external;
+    function setMaxFundEpoch(uint256 _newMaxFundEpoch) external;
+    function setMinFundDuration(uint256 _newMinFundDuration) external;
+    function setMaxFundDuration(uint256 _newMaxFundDuration) external;
 
     // Getters
     function getPriceOracle() external view returns (address);
@@ -55,10 +59,14 @@ interface IFolioController {
     function isValidReserveAsset(address _reserveAsset) external view returns(bool);
     function isSystemContract(address _contractAddress) external view returns (bool);
     function isValidIntegration(string memory _name) external view returns (bool);
-    function getMaxManagerDepositFee() external view returns (uint256);
-    function getMaxManagerWithdrawalFee() external view returns (uint256);
-    function getMaxManagerPerformanceFee() external view returns (uint256);
+    function getMaxFundDuration() external view returns (uint256);
+    function getMinFundDuration() external view returns (uint256);
+    function getMaxFundEpoch() external view returns (uint256);
+    function getMinFundEpoch() external view returns (uint256);
+    function getMinDeliberationPeriod() external view returns (uint256);
+    function getMaxDeliberationPeriod() external view returns (uint256);
     function getMaxFundPremiumPercentage() external view returns (uint256);
+    function getProtocolPerformanceFee() external view returns (uint256);
     function getProtocolDepositFundTokenFee() external view returns (uint256);
     function getProtocolWithdrawalFundTokenFee() external view returns (uint256);
 }

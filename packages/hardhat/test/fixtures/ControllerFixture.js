@@ -1,4 +1,5 @@
 const { ethers } = require("hardhat");
+const { ONE_DAY_IN_SECONDS } = require("../../utils/constants.js");
 const addresses = require("../../utils/addresses");
 const argsUtil = require("../../utils/arguments.js");
 
@@ -7,35 +8,33 @@ async function deployFolioFixture() {
 
   const ClosedFund = await ethers.getContractFactory("ClosedFund", owner);
 
-  const FolioController = await ethers.getContractFactory(
-    "FolioController",
-    owner
+  const BabController = await ethers.getContractFactory("BabController", owner);
+
+  const babController = await BabController.deploy(
+    ...argsUtil.readArgumentsFile("BabController")
   );
 
-  const folioController = await FolioController.deploy(
-    ...argsUtil.readArgumentsFile("FolioController")
-  );
-
-  await folioController.addReserveAsset(addresses.tokens.WETH);
+  await babController.addReserveAsset(addresses.tokens.WETH);
 
   const FundValuer = await ethers.getContractFactory("FundValuer", owner);
   const PriceOracle = await ethers.getContractFactory("PriceOracle", owner);
 
-  const fundValuer = await FundValuer.deploy(folioController.address);
+  const fundValuer = await FundValuer.deploy(babController.address);
   const priceOracle = await PriceOracle.deploy(
-    folioController.address,
+    babController.address,
     addresses.compound.OpenOracle,
     []
   );
   // Sets the price oracle and fundvaluer address
-  folioController.editPriceOracle(priceOracle.address);
-  folioController.editFundValuer(fundValuer.address);
+  babController.editPriceOracle(priceOracle.address);
+  babController.editFundValuer(fundValuer.address);
+
   const AaveIntegration = await ethers.getContractFactory(
     "AaveIntegration",
     owner
   );
   const aaveIntegration = await AaveIntegration.deploy(
-    folioController.address,
+    babController.address,
     addresses.tokens.WETH,
     50
   );
@@ -45,7 +44,7 @@ async function deployFolioFixture() {
     owner
   );
   const compoundIntegration = await CompoundIntegration.deploy(
-    folioController.address,
+    babController.address,
     addresses.tokens.WETH,
     50
   );
@@ -55,7 +54,7 @@ async function deployFolioFixture() {
     owner
   );
   const kyberTradeIntegration = await KyberTradeIntegration.deploy(
-    folioController.address,
+    babController.address,
     addresses.tokens.WETH,
     addresses.kyber.proxy
   );
@@ -65,7 +64,7 @@ async function deployFolioFixture() {
     owner
   );
   const oneInchTradeIntegration = await OneInchIntegration.deploy(
-    folioController.address,
+    babController.address,
     addresses.tokens.WETH,
     addresses.oneinch.exchange
   );
@@ -75,7 +74,7 @@ async function deployFolioFixture() {
     owner
   );
   const balancerIntegration = await BalancerIntegration.deploy(
-    folioController.address,
+    babController.address,
     addresses.tokens.WETH,
     addresses.balancer.factory
   );
@@ -85,7 +84,7 @@ async function deployFolioFixture() {
     owner
   );
   const uniswapPoolIntegration = await UniswapPoolIntegration.deploy(
-    folioController.address,
+    babController.address,
     addresses.tokens.WETH,
     addresses.uniswap.router
   );
@@ -95,7 +94,7 @@ async function deployFolioFixture() {
     owner
   );
   const yearnVaultIntegration = await YearnVaultIntegration.deploy(
-    folioController.address,
+    babController.address,
     addresses.tokens.WETH,
     addresses.yearn.vaultRegistry
   );
@@ -112,7 +111,7 @@ async function deployFolioFixture() {
 
   // Adding integrations
   integrationsList.forEach(async integration => {
-    folioController.addIntegration(
+    babController.addIntegration(
       await integration.getName(),
       integration.address
     );
@@ -125,8 +124,7 @@ async function deployFolioFixture() {
     integrationsAddressList,
     addresses.tokens.WETH,
     addresses.tokens.WETH,
-    folioController.address,
-    addresses.users.hardhat1,
+    babController.address,
     addresses.users.hardhat1,
     "Absolute ETH Return [beta]",
     "EYFA",
@@ -137,8 +135,7 @@ async function deployFolioFixture() {
     integrationsAddressList,
     addresses.tokens.WETH,
     addresses.tokens.WETH,
-    folioController.address,
-    addresses.users.hardhat1,
+    babController.address,
     addresses.users.hardhat1,
     "ETH Yield Farm [a]",
     "EYFB",
@@ -149,42 +146,37 @@ async function deployFolioFixture() {
     integrationsAddressList,
     addresses.tokens.WETH,
     addresses.tokens.WETH,
-    folioController.address,
-    addresses.users.hardhat1,
+    babController.address,
     addresses.users.hardhat1,
     "ETH Yield Farm [b]",
     "EYFG",
     ethers.utils.parseEther("10")
   );
 
-  await folioController.createFund(integrationsAddressList, fund.address);
-  await folioController.createFund(integrationsAddressList, fund2.address);
-  await folioController.createFund(integrationsAddressList, fund3.address);
+  await babController.createFund(integrationsAddressList, fund.address);
+  await babController.createFund(integrationsAddressList, fund2.address);
+  await babController.createFund(integrationsAddressList, fund3.address);
 
-  const fundAddressesList = await folioController.getFunds();
+  const fundAddressesList = await babController.getFunds();
   // Initialize fund integrations
   fundAddressesList.forEach(fundIter => {
     integrationsAddressList.forEach(async integration => {
-      await folioController.initializeIntegration(integration, fundIter);
+      await babController.initializeIntegration(integration, fundIter);
     });
   });
 
   // Initial deposit
   await fund.initialize(
-    ethers.utils.parseEther("0.1"),
-    0,
-    0,
-    0,
-    0,
+    ethers.utils.parseEther("10"),
     0,
     1,
-    ethers.utils.getAddress(addresses.zero),
-    ethers.utils.getAddress(addresses.zero),
-    { value: ethers.utils.parseEther("0.2") }
+    ONE_DAY_IN_SECONDS * 90,
+    ONE_DAY_IN_SECONDS * 3,
+    ONE_DAY_IN_SECONDS,
+    { value: ethers.utils.parseEther("0.1") }
   );
-
   return {
-    folioController,
+    babController,
     integrations: {
       aaveIntegration,
       compoundIntegration,
@@ -205,7 +197,7 @@ async function deployFolioFixture() {
     signer1,
     signer2,
     signer3,
-    contractsToPublish: [{ name: "FolioController", contract: folioController }]
+    contractsToPublish: [{ name: "BabController", contract: babController }]
   };
 }
 

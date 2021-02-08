@@ -1,5 +1,5 @@
 /*
-    Copyright 2020 DFolio
+    Copyright 2020 Babylon Finance
 
     Licensed under the Apache License, Version 2.0 (the "License");
     you may not use this file except in compliance with the License.
@@ -23,12 +23,12 @@ import { SafeMath } from "@openzeppelin/contracts/math/SafeMath.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { IFund } from "../interfaces/IFund.sol";
 import { ReentrancyGuard } from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
-import { IFolioController } from "../interfaces/IFolioController.sol";
+import { IBabController } from "../interfaces/IBabController.sol";
 import { BaseIntegration } from "./BaseIntegration.sol";
 
 /**
  * @title PassiveIntegration
- * @author dFolio Protocol
+ * @author Babylon Finance Protocol
  *
  * Base class for integration with passive investments like Yearn, Indexed
  */
@@ -119,6 +119,7 @@ abstract contract PassiveIntegration is BaseIntegration, ReentrancyGuard {
       );
       investmentInfo.fund.invokeFromIntegration(targetInvestment, callValue, methodData);
       _validatePostEnterInvestmentData(investmentInfo);
+
       _updateFundPositions(investmentInfo, _tokenIn, true);
 
       emit InvestmentEntered(

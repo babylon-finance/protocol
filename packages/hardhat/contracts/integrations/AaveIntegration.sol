@@ -1,5 +1,5 @@
 /*
-    Copyright 2020 DFolio.
+    Copyright 2020 Babylon Finance.
 
     Licensed under the Apache License, Version 2.0 (the "License");
     you may not use this file except in compliance with the License.
@@ -26,12 +26,12 @@ import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
 import { IWETH } from "../interfaces/external/weth/IWETH.sol";
 
 import { BorrowIntegration } from "./BorrowIntegration.sol";
-import { IFolioController } from "../interfaces/IFolioController.sol";
+import { IBabController } from "../interfaces/IBabController.sol";
 import { BaseIntegration } from "./BaseIntegration.sol";
 
 /**
  * @title AaveIntegration
- * @author DFolio
+ * @author Babylon Finance
  *
  * Abstract class that houses aave borring/lending logic.
  */
@@ -207,24 +207,41 @@ contract AaveIntegration is BorrowIntegration {
      * @param asset   The underlying asset
      *
      */
-    function _getBorrowBalance(address asset) internal view returns (uint256) {
+    function _getBorrowBalance(address asset) internal override view returns (uint256) {
       (, uint256 stableDebt,,,,,,,) = dataProvider.getUserReserveData(asset, msg.sender);
       return stableDebt;
     }
 
     /**
-     * Get the health factor of the total debt
+     * Get the amount of collateral supplied
+     * hparam asset   The collateral asset
      *
      */
-    function getHealthFactor() internal view returns (uint256) {
+    function _getCollateralBalance(address /* asset */) internal override view returns (uint256) {
       (
-        , // uint256 totalCollateral,
+        uint256 totalCollateral,
         , // uint256 totalDebt,
         , // uint256 borrowingPower,
         , // uint256 liquidationThreshold,
         , // uint256 ltv,
-        uint256 healthFactor
+          // uint256 healthFactor
       ) = lendingPool.getUserAccountData(msg.sender);
-      return healthFactor;
+      return totalCollateral;
+    }
+
+    /**
+     * Get the remaining liquidity available to borrow
+     *
+     */
+    function _getRemainingLiquidity() public override view returns (uint256) {
+      (
+        , // uint256 totalCollateral,
+        , // uint256 totalDebt,
+        uint256 borrowingPower, // uint256 borrowingPower,
+        , // uint256 liquidationThreshold,
+        , // uint256 ltv,
+          // uint256 healthFactor
+      ) = lendingPool.getUserAccountData(msg.sender);
+      return borrowingPower;
     }
 }

@@ -1,5 +1,5 @@
 /*
-    Copyright 2020 DFolio
+    Copyright 2020 Babylon Finance
 
     Licensed under the Apache License, Version 2.0 (the "License");
     you may not use this file except in compliance with the License.
@@ -27,7 +27,7 @@ import { IKyberNetworkProxy } from "../interfaces/external/kyber/IKyberNetworkPr
 
 /**
  * @title KyberTradeIntegration
- * @author dFolio Protocol
+ * @author Babylon Finance Protocol
  *
  * Kyber protocol trade integration
  */

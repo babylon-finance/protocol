@@ -1,5 +1,5 @@
 /*
-    Copyright 2020 DFolio
+    Copyright 2020 Babylon Finance
 
     Licensed under the Apache License, Version 2.0 (the "License");
     you may not use this file except in compliance with the License.
@@ -21,7 +21,7 @@ import { IIntegration } from "./IIntegration.sol";
 
 /**
  * @title IIntegration
- * @author DFolio
+ * @author Babylon Finance
  *
  * Interface for liquiditypool protocol integrations
  */

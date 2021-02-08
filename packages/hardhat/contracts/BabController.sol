@@ -1,5 +1,5 @@
 /*
-    Copyright 2020 DFolio
+    Copyright 2020 Babylon Finance
 
     Licensed under the Apache License, Version 2.0 (the "License");
     you may not use this file except in compliance with the License.
@@ -28,13 +28,13 @@ import { IIntegration } from "./interfaces/IIntegration.sol";
 import { AddressArrayUtils } from "./lib/AddressArrayUtils.sol";
 
 /**
- * @title FolioController
- * @author dFolio Protocol
+ * @title BabController
+ * @author Babylon Finance Protocol
  *
- * FolioController is a smart contract used to deploy new funds contracts and house the
+ * BabController is a smart contract used to deploy new funds contracts and house the
  * integrations and resources of the system.
  */
-contract FolioController is Ownable {
+contract BabController is Ownable {
     using AddressArrayUtils for address[];
     using SafeMath for uint256;
 
@@ -57,16 +57,16 @@ contract FolioController is Ownable {
 
     event ReserveAssetAdded(address indexed _reserveAsset);
     event ReserveAssetRemoved(address indexed _reserveAsset);
-
-    event FeeEdited(
-        address indexed _fund,
-        uint256 indexed _feeType,
-        uint256 _feePercentage
-    );
     event FeeRecipientChanged(address _newFeeRecipient);
+
+    event MinFundEpochChanged(uint256 _newMinFundEpoch);
+    event MaxFundEpochChanged(uint256 _newMaxFundEpoch);
+    event MinFundDurationChanged(uint256 _newMinFundDuration);
+    event MaxFundDurationChanged(uint256 _newMaxFundDuration);
 
     event ModuleAdded(address indexed _module);
     event ModuleRemoved(address indexed _module);
+
     event PriceOracleChanged(address indexed _resource);
     event FundValuerChanged(address indexed _resource);
 
@@ -89,18 +89,21 @@ contract FolioController is Ownable {
     // Recipient of protocol fees
     address public feeRecipient;
 
-    //Maximum fees a manager is allowed
-    uint256 public maxManagerDepositFee;
-    uint256 public maxManagerWithdrawalFee;
-    uint256 public maxManagerPerformanceFee; // on redeem
+    uint256 public minFundDuration = 90 days;
+    uint256 public maxFundDuration = 90 days;
+    uint256 public minFundEpoch = 18 hours;
+    uint256 public maxFundEpoch = 7 * 24 hours;
+    uint256 public minDeliberationPeriod = 6 hours;
+    uint256 public maxDeliberationPeriod = 7 days;
+
     // Max Premium percentage (0.01% = 1e14, 1% = 1e16). This premium is a buffer around oracle
     // prices paid by user to the SetToken, which prevents arbitrage and oracle front running
     uint256 public maxFundPremiumPercentage;
 
-    uint256 public protocolPerformanceFee; // (0.01% = 1e14, 1% = 1e16)
-    uint256 public protocolFundCreationFee; // (0.01% = 1e14, 1% = 1e16)
-    uint256 public protocolDepositFundTokenFee; // (0.01% = 1e14, 1% = 1e16)
-    uint256 public protocolWithdrawalFundTokenFee; // (0.01% = 1e14, 1% = 1e16)
+    uint256 public protocolPerformanceFee = 1e17; // (0.01% = 1e14, 1% = 1e16) on profits
+    uint256 public protocolFundCreationFee = 0; // (0.01% = 1e14, 1% = 1e16)
+    uint256 public protocolDepositFundTokenFee = 0; // (0.01% = 1e14, 1% = 1e16)
+    uint256 public protocolWithdrawalFundTokenFee = 5e15; // (0.01% = 1e14, 1% = 1e16)
 
     /* ============ Functions ============ */
 
@@ -123,6 +126,7 @@ contract FolioController is Ownable {
 
     /* ============ External Functions ============ */
 
+    // ===========  Fund related Gov Functions ======
     /**
      * Creates a Fund smart contract and registers the Fund with the controller. The Funds are composed
      * of positions that are instantiated as DEFAULT (positionState = 0) state.
@@ -142,7 +146,7 @@ contract FolioController is Ownable {
         }
         IFund fund = IFund(_fund);
         require(fund.controller() == address(this), "The controller must be this contract");
-        addFund(address(fund));
+        _addFund(address(fund));
 
         return address(fund);
     }
@@ -161,6 +165,58 @@ contract FolioController is Ownable {
 
         emit FundRemoved(_fund);
     }
+
+    /**
+     * PRIVILEGED GOVERNANCE FUNCTION. Allows governance to disable a fund
+     *
+     * @param _fund               Address of the fund
+     */
+    function disableFund(address _fund) external onlyOwner {
+        require(isFund[_fund], "Fund does not exist");
+        IFund fund = IFund(_fund);
+        require(!!fund.active(), "The fund needs to be active.");
+        fund.setDisabled();
+    }
+
+    /**
+     * PRIVILEGED GOVERNANCE FUNCTION. Allows governance to enable a fund
+     *
+     * @param _fund               Address of the fund
+     */
+    function enableFund(address _fund) external onlyOwner {
+        require(isFund[_fund], "Fund does not exist");
+        IFund fund = IFund(_fund);
+        require(!fund.active(), "The fund needs to be disabled.");
+        fund.setActive();
+    }
+
+    /**
+     * PRIVILEGED GOVERNANCE FUNCTION. Allows governance to change the fund end date
+     *
+     * @param _fund               Address of the fund
+     * @param _newEndTimestamp    New end timestamp for the fund
+     */
+    function changeFundEndDate(address _fund, uint256 _newEndTimestamp) external onlyOwner {
+        require(isFund[_fund], "Fund does not exist");
+        IClosedFund fund = IClosedFund(_fund);
+        require(!!fund.active(), "The fund needs to be active.");
+        fund.setFundEndDate(_newEndTimestamp);
+    }
+
+    /**
+     * PRIVILEGED GOVERNANCE FUNCTION. Allows governance to change the max deposit for the fund
+     *
+     * @param _fund               Address of the fund
+     * @param _newDepositLimit    New deposit limit
+     */
+    function changeFundDepositLimit(address _fund, uint256 _newDepositLimit) external onlyOwner {
+        require(isFund[_fund], "Fund does not exist");
+        IClosedFund fund = IClosedFund(_fund);
+        require(!!fund.active(), "The fund needs to be active.");
+        fund.setDepositLimit(_newDepositLimit);
+    }
+
+    // ===========  Protocol related Gov Functions ======
 
     /**
      * PRIVILEGED FACTORY FUNCTION. Adds a new valid reserve asset for funds
@@ -193,43 +249,6 @@ contract FolioController is Ownable {
         validReserveAsset[_reserveAsset] = false;
 
         emit ReserveAssetRemoved(_reserveAsset);
-    }
-
-    /**
-     * PRIVILEGED GOVERNANCE FUNCTION. Allows governance to disable a fund
-     *
-     * @param _fund               Address of the fund
-     */
-    function disableFund(address _fund) external onlyOwner {
-        require(isFund[_fund], "Fund does not exist");
-        IFund fund = IFund(_fund);
-        require(!!fund.active(), "The fund needs to be active.");
-        fund.setActive();
-    }
-
-    /**
-     * PRIVILEGED GOVERNANCE FUNCTION. Allows governance to enable a fund
-     *
-     * @param _fund               Address of the fund
-     */
-    function enableFund(address _fund) external onlyOwner {
-        require(isFund[_fund], "Fund does not exist");
-        IFund fund = IFund(_fund);
-        require(!fund.active(), "The fund needs to be disabled.");
-        fund.setDisabled();
-    }
-
-    /**
-     * PRIVILEGED GOVERNANCE FUNCTION. Allows governance to disable a fund
-     *
-     * @param _fund               Address of the fund
-     * @param _newEndTimestamp    New end timestamp for the fund
-     */
-    function changeFundEndDate(address _fund, uint256 _newEndTimestamp) external onlyOwner {
-        require(isFund[_fund], "Fund does not exist");
-        IClosedFund fund = IClosedFund(_fund);
-        require(!!fund.active(), "The fund needs to be active.");
-        fund.setFundEndDate(_newEndTimestamp);
     }
 
     /**
@@ -278,7 +297,7 @@ contract FolioController is Ownable {
     /**
      * GOVERNANCE FUNCTION: Add a new integration to the registry
      *
-     * @param  _name         Human readable string identifying the integration
+     * @param  _name             Human readable string identifying the integration
      * @param  _integration      Address of the integration contract to add
      */
     function addIntegration(string memory _name, address _integration)
@@ -351,6 +370,58 @@ contract FolioController is Ownable {
         emit ControllerIntegrationRemoved(oldIntegration, _name);
     }
 
+    /**
+     * PRIVILEGED GOVERNANCE FUNCTION. Allows governance to edit the protol min epoch allowed in funds
+     *
+     * @param _newMinFundEpoch      New min fund epoch duration
+     */
+    function setMinFundEpoch(uint256 _newMinFundEpoch) external onlyOwner {
+        require(_newMinFundEpoch > 1 hours, "Absolute minimum is one hour");
+
+        minFundEpoch = _newMinFundEpoch;
+
+        emit MinFundEpochChanged(_newMinFundEpoch);
+    }
+
+    /**
+     * PRIVILEGED GOVERNANCE FUNCTION. Allows governance to edit the protol max epoch allowed in funds
+     *
+     * @param _newMaxFundEpoch      New max fund epoch duration
+     */
+    function setMaxFundEpoch(uint256 _newMaxFundEpoch) external onlyOwner {
+        require(_newMaxFundEpoch < maxFundDuration, "Absolute maximum is the fund duration");
+
+        maxFundEpoch = _newMaxFundEpoch;
+
+        emit MaxFundEpochChanged(_newMaxFundEpoch);
+    }
+
+    /**
+     * PRIVILEGED GOVERNANCE FUNCTION. Allows governance to edit the protol min fund duration
+     *
+     * @param _newMinFundDuration      New min fund duration
+     */
+    function setMinFundDuration(uint256 _newMinFundDuration) external onlyOwner {
+        require(_newMinFundDuration > 30 days, "Absolute minimum is thirty days");
+
+        minFundDuration = _newMinFundDuration;
+
+        emit MinFundDurationChanged(_newMinFundDuration);
+    }
+
+    /**
+     * PRIVILEGED GOVERNANCE FUNCTION. Allows governance to edit the protol max fund duration
+     *
+     * @param _newMaxFundDuration      New max fund duration
+     */
+    function setMaxFundDuration(uint256 _newMaxFundDuration) external onlyOwner {
+        require(_newMaxFundDuration < 12 * 30 days, "Absolute maximum is one year");
+
+        maxFundDuration = _newMaxFundDuration;
+
+        emit MaxFundDurationChanged(_newMaxFundDuration);
+    }
+
 
     /* ============ External Getter Functions ============ */
 
@@ -370,8 +441,36 @@ contract FolioController is Ownable {
         return reserveAssets;
     }
 
+    function getMaxFundDuration() external view returns (uint256) {
+        return maxFundDuration;
+    }
+
+    function getMinFundDuration() external view returns (uint256) {
+        return minFundDuration;
+    }
+
+    function getMaxFundEpoch() external view returns (uint256) {
+        return maxFundEpoch;
+    }
+
+    function getMinFundEpoch() external view returns (uint256) {
+        return minFundEpoch;
+    }
+
+    function getMinDeliberationPeriod() external view returns (uint256) {
+        return minDeliberationPeriod;
+    }
+
+    function getMaxDeliberationPeriod() external view returns (uint256) {
+        return maxDeliberationPeriod;
+    }
+
     function getProtocolDepositFundTokenFee() external view returns (uint256) {
         return protocolDepositFundTokenFee;
+    }
+
+    function getProtocolPerformanceFee() external view returns (uint256) {
+        return protocolPerformanceFee;
     }
 
     function getProtocolWithdrawalFundTokenFee()
@@ -384,18 +483,6 @@ contract FolioController is Ownable {
 
     function getFeeRecipient() external view returns (address) {
         return feeRecipient;
-    }
-
-    function getMaxManagerDepositFee() external view returns (uint256) {
-        return maxManagerDepositFee;
-    }
-
-    function getMaxManagerWithdrawalFee() external view returns (uint256) {
-        return maxManagerWithdrawalFee;
-    }
-
-    function getMaxManagerPerformanceFee() external view returns (uint256) {
-        return maxManagerPerformanceFee;
     }
 
     function getMaxFundPremiumPercentage() external view returns (uint256) {
@@ -502,7 +589,7 @@ contract FolioController is Ownable {
      *
      * @param _fund Address of the Fund contract to add
      */
-    function addFund(address _fund) internal {
+    function _addFund(address _fund) internal {
         require(!isFund[_fund], "Fund already exists");
         isFund[_fund] = true;
         funds.push(_fund);

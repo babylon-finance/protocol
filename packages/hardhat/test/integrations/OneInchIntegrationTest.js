@@ -21,7 +21,7 @@ describe("OneInchTradeIntegration", function() {
 
   describe("Deployment", function() {
     it("should successfully deploy the contract", async function() {
-      const deployed = await system.folioController.deployed();
+      const deployed = await system.babController.deployed();
       const deployedKyber = await oneInchIntegration.deployed();
       expect(!!deployed).to.equal(true);
       expect(!!deployedKyber).to.equal(true);

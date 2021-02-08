@@ -12,11 +12,11 @@ describe("PriceOracle", function() {
   let fund;
 
   beforeEach(async () => {
-    const { folioController, priceOracle, funds } = await loadFixture(
+    const { babController, priceOracle, funds } = await loadFixture(
       deployFolioFixture
     );
     fund = funds.one;
-    controller = folioController;
+    controller = babController;
     oracle = priceOracle;
   });
 

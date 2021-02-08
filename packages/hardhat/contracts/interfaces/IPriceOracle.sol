@@ -1,5 +1,5 @@
 /*
-    Copyright 2020 DFolio
+    Copyright 2020 Babylon Finance
 
     Modified from (Set Protocol IPriceOracle)
 
@@ -21,7 +21,7 @@ pragma solidity 0.7.4;
 
 /**
  * @title IPriceOracle
- * @author DFolio
+ * @author Babylon Finance
  *
  * Interface for interacting with PriceOracle
  */

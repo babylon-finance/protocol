@@ -1,5 +1,5 @@
 /*
-    Copyright 2020 DFolio
+    Copyright 2020 Babylon Finance
 
     Modified from (Set Protocol SetValuer)
 
@@ -25,14 +25,14 @@ import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
 import { ERC20 } from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import { AddressArrayUtils } from "./lib/AddressArrayUtils.sol";
 import { PreciseUnitMath } from "./lib/PreciseUnitMath.sol";
-import { IFolioController } from "./interfaces/IFolioController.sol";
+import { IBabController } from "./interfaces/IBabController.sol";
 import { IUniswapAnchoredView } from "./interfaces/IUniswapAnchoredView.sol";
 import { IOracleAdapter } from "./interfaces/IOracleAdapter.sol";
 
 
 /**
  * @title PriceOracle
- * @author DFolio
+ * @author Babylon Finance
  *
  * Contract that returns the price for any given asset pair. Price is retrieved either directly from an oracle,
  * calculated using common asset pairs, or uses external data to calculate price.
@@ -50,7 +50,7 @@ contract PriceOracle is Ownable {
     /* ============ State Variables ============ */
 
     // Address of the Controller contract
-    IFolioController public controller;
+    IBabController public controller;
 
     address immutable weth = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
 
@@ -72,7 +72,7 @@ contract PriceOracle is Ownable {
      * @param _adapters                     List of adapters used to price assets created by other protocols
      */
     constructor(
-      IFolioController _controller,
+      IBabController _controller,
       address _uniswapAnchoredView,
       address[] memory _adapters
     ) {

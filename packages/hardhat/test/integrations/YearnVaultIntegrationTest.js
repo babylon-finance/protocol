@@ -20,7 +20,7 @@ describe("YearnVaultIntegrationTest", function() {
 
   describe("Deployment", function() {
     it("should successfully deploy the contract", async function() {
-      const deployed = await system.folioController.deployed();
+      const deployed = await system.babController.deployed();
       const deployedYearn = await yearnVaultIntegration.deployed();
       expect(!!deployed).to.equal(true);
       expect(!!deployedYearn).to.equal(true);

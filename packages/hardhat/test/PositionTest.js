@@ -21,7 +21,7 @@ describe("Position testing", function() {
 
   beforeEach(async () => {
     const {
-      folioController,
+      babController,
       signer1,
       signer2,
       signer3,
@@ -31,7 +31,7 @@ describe("Position testing", function() {
     } = await loadFixture(deployFolioFixture);
 
     integrationList = integrations;
-    controller = folioController;
+    controller = babController;
     ownerSigner = owner;
     userSigner1 = signer1;
     userSigner2 = signer2;
@@ -61,7 +61,7 @@ describe("Position testing", function() {
         ethers.utils.parseEther("0.1")
       );
       expect(wethPosition).to.equal(ethers.utils.parseEther("0.1"));
-      expect(await fund1.manager()).to.equal(await ownerSigner.getAddress());
+      expect(await fund1.creator()).to.equal(await ownerSigner.getAddress());
       expect(await fund1.balanceOf(ownerSigner.getAddress())).to.equal(
         await fund1.totalSupply()
       );
@@ -110,6 +110,7 @@ describe("Position testing", function() {
       const supplyBefore = await fund1.totalSupply();
       const wethPositionBefore = await fund1.getPositionBalance(weth.address);
       await controller.changeFundEndDate(fund1.address, constants.NOW); // Ends now
+      const protocolFeeRecipient = await weth.balanceOf(ownerSigner.address);
       await fund1
         .connect(userSigner3)
         .withdraw(tokenBalance.div(2), 1, userSigner3.getAddress());
@@ -124,6 +125,16 @@ describe("Position testing", function() {
         ethers.utils.parseEther("0.5")
       );
       expect(await fund1.totalFunds()).to.equal(ethers.utils.parseEther("0.6"));
+      // Check that the protocol got 0.5% exit fee
+      const protocolFeeRecipientAfter = await weth.balanceOf(
+        ownerSigner.address
+      );
+      expect(protocolFeeRecipientAfter.sub(protocolFeeRecipient)).to.equal(
+        ethers.utils
+          .parseEther("0.5")
+          .mul(5)
+          .div(1000)
+      );
       expect(await fund1.totalFundsDeposited()).to.equal(
         ethers.utils.parseEther("1.1")
       );

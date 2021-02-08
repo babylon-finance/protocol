@@ -13,11 +13,11 @@ describe("FundValuer", function() {
   let weth;
 
   beforeEach(async () => {
-    const { folioController, fundValuer, funds } = await loadFixture(
+    const { babController, fundValuer, funds } = await loadFixture(
       deployFolioFixture
     );
     fund = funds.one;
-    controller = folioController;
+    controller = babController;
     valuer = fundValuer;
     weth = await ethers.getContractAt("IERC20", addresses.tokens.WETH);
   });

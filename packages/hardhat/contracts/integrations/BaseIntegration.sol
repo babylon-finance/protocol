@@ -1,5 +1,5 @@
 /*
-    Copyright 2020 DFolio.
+    Copyright 2020 Babylon Finance.
 
     Licensed under the Apache License, Version 2.0 (the "License");
     you may not use this file except in compliance with the License.
@@ -20,7 +20,7 @@ pragma solidity 0.7.4;
 
 import "hardhat/console.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import { IFolioController } from "../interfaces/IFolioController.sol";
+import { IBabController } from "../interfaces/IBabController.sol";
 import { IIntegration } from "../interfaces/IIntegration.sol";
 import { IWETH } from "../interfaces/external/weth/IWETH.sol";
 import { IFund } from "../interfaces/IFund.sol";
@@ -31,7 +31,7 @@ import { PreciseUnitMath } from "../lib/PreciseUnitMath.sol";
 
 /**
  * @title BaseIntegration
- * @author DFolio
+ * @author Babylon Finance
  *
  * Abstract class that houses common Integration-related state and functions.
  */
@@ -151,7 +151,7 @@ abstract contract BaseIntegration {
       uint256 /* _feeIndex */,
       uint256 _quantity
     ) internal view returns(uint256) {
-        uint256 feePercentage = IFolioController(controller).getIntegrationFee(address(this));
+        uint256 feePercentage = IBabController(controller).getIntegrationFee(address(this));
         return _quantity.preciseMul(feePercentage);
     }
 
@@ -160,7 +160,7 @@ abstract contract BaseIntegration {
      */
     function payProtocolFeeFromFund(address _fund, address _token, uint256 _feeQuantity) internal {
         if (_feeQuantity > 0) {
-          IERC20(_token).transferFrom(_fund, IFolioController(controller).getFeeRecipient(), _feeQuantity);
+          IERC20(_token).transferFrom(_fund, IBabController(controller).getFeeRecipient(), _feeQuantity);
         }
     }
 
@@ -172,18 +172,11 @@ abstract contract BaseIntegration {
     }
 
     /**
-     * Returns true if the address is the Fund's manager
-     */
-    function isFundManager(address _fund, address _toCheck) internal view returns(bool) {
-        return IFund(_fund).manager() == _toCheck;
-    }
-
-    /**
      * Returns true if Fund must be enabled on the controller
      * and module is registered on the Fund
      */
     function isFundValidAndInitialized(address _fund) internal view returns(bool) {
-        return IFolioController(controller).isFund(address(_fund)) &&
+        return IBabController(controller).isFund(address(_fund)) &&
             IFund(_fund).isInitializedIntegration(address(this));
     }
 

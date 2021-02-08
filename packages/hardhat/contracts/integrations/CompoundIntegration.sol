@@ -1,5 +1,5 @@
 /*
-    Copyright 2020 DFolio.
+    Copyright 2020 Babylon Finance.
 
     Licensed under the Apache License, Version 2.0 (the "License");
     you may not use this file except in compliance with the License.
@@ -29,13 +29,13 @@ import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
 import { IWETH } from "../interfaces/external/weth/IWETH.sol";
 
 import { BorrowIntegration } from "./BorrowIntegration.sol";
-import { IFolioController } from "../interfaces/IFolioController.sol";
+import { IBabController } from "../interfaces/IBabController.sol";
 import { IFund } from "../interfaces/IFund.sol";
 import { BaseIntegration } from "./BaseIntegration.sol";
 
 /**
  * @title CompoundIntegration
- * @author DFolio
+ * @author Babylon Finance
  *
  * Abstract class that houses compound borring/lending logic.
  */
@@ -206,16 +206,21 @@ contract CompoundIntegration is BorrowIntegration {
   /* ============ Internal Functions ============ */
 
   /**
-   * Get the health factor of the total debt situation
+   * Get the remaining liquidity available to borrow
    *
    */
-  function _getHealthFactor() onlyFund external view returns (uint256) {
+  function _getRemainingLiquidity() override public view returns (uint256) {
     IComptroller comptroller = IComptroller(CompoundComptrollerAddress);
     (/* error */, uint256 liquidity, /* shortfall */) = comptroller.getAccountLiquidity(msg.sender);
     return liquidity;
   }
 
-  function _getBorrowBalance(address asset) private view returns (uint256) {
+  /**
+   * Get the amount of borrowed debt that needs to be repaid
+   * @param asset   The underlying asset
+   *
+   */
+  function _getBorrowBalance(address asset) internal override view returns (uint256) {
     address cToken = assetToCtoken[asset];
     (
       , // err
@@ -226,7 +231,7 @@ contract CompoundIntegration is BorrowIntegration {
     return borrowBalance.mul(exchangeRateMantissa).div(1e18);
   }
 
-  function _getCollateralBalance(address asset) private view returns (uint256) {
+  function _getCollateralBalance(address asset) internal override  view returns (uint256) {
     address cToken = assetToCtoken[asset];
     (
       , // err
@@ -238,33 +243,6 @@ contract CompoundIntegration is BorrowIntegration {
     // Source: balanceOfUnderlying from any ctoken
     return cTokenBalance.mul(exchangeRateMantissa).div(1e18);
   }
-
-  function _safeBorrow(address asset, uint256 borrowAmount) private {
-    address cToken = assetToCtoken[asset];
-    // Get my account's total liquidity value in Compound
-    (uint256 error, uint256 liquidity, uint256 shortfall) = IComptroller(CompoundComptrollerAddress)
-        .getAccountLiquidity(address(this));
-    if (error != 0) {
-        revert("Comptroller.getAccountLiquidity failed.");
-    }
-    require(shortfall == 0, "account underwater");
-    require(liquidity > 0, "account does not have collateral");
-
-    // Get the underlying price in USD from the Price Feed,
-    // so we can find out the maximum amount of underlying we can borrow.
-    // uint256 underlyingPrice = compoundPriceOracle.getUnderlyingPrice(_cTokenAddress);
-    // uint256 maxBorrowUnderlying = liquidity / underlyingPrice;
-
-    // Borrowing near the max amount will result
-    // in your account being liquidated instantly
-    // emit MyLog("Maximum underlying Borrow (borrow far less!)", maxBorrowUnderlying);
-    require(
-        ICToken(cToken).borrow(normalizeDecimals(asset, borrowAmount)) == 0,
-        "cmpnd-mgr-ctoken-borrow-failed"
-    );
-  }
-
-  /* ============ Internal Functions ============ */
 
   function _getCollateralAsset(
     address _asset,
