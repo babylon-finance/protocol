@@ -19,7 +19,7 @@ describe("CompoundIntegration", function() {
   beforeEach(async () => {
     system = await loadFixture(deployFolioFixture);
     owner = system.owner;
-    controller = system.folioController;
+    controller = system.babController;
     compoundBorrowing = system.integrations.compoundIntegration;
     compAbi = compoundBorrowing.interface;
     userSigner3 = system.signer3;

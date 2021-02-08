@@ -119,6 +119,7 @@ abstract contract PassiveIntegration is BaseIntegration, ReentrancyGuard {
       );
       investmentInfo.fund.invokeFromIntegration(targetInvestment, callValue, methodData);
       _validatePostEnterInvestmentData(investmentInfo);
+
       _updateFundPositions(investmentInfo, _tokenIn, true);
 
       emit InvestmentEntered(

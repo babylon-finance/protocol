@@ -20,7 +20,7 @@ describe("BalancerIntegrationTest", function() {
 
   describe("Deployment", function() {
     it("should successfully deploy the contract", async function() {
-      const deployed = await system.folioController.deployed();
+      const deployed = await system.babController.deployed();
       const deployedBalancer = await balancerIntegration.deployed();
       expect(!!deployed).to.equal(true);
       expect(!!deployedBalancer).to.equal(true);
@@ -74,7 +74,7 @@ describe("BalancerIntegrationTest", function() {
         ethers.utils.parseEther("1000")
       );
       expect(await wethToken.balanceOf(fund.address)).to.equal(
-        ethers.utils.parseEther("10.01")
+        ethers.utils.parseEther("10.1")
       );
       await fund.joinPool(
         "balancer",

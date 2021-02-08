@@ -18,6 +18,7 @@
 pragma solidity 0.7.4;
 
 import "hardhat/console.sol";
+import { GSNRecipient } from "@openzeppelin/contracts/GSN/GSNRecipient.sol";
 import { Address } from "@openzeppelin/contracts/utils/Address.sol";
 import { ERC20 } from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import { SafeMath } from "@openzeppelin/contracts/math/SafeMath.sol";
@@ -86,15 +87,6 @@ abstract contract BaseFund is ERC20 {
      */
     modifier onlyGovernanceFund() {
       require(msg.sender == controller, "Only the controller can call this");
-      _;
-    }
-
-    /**
-     * Throws if the sender is not a participant in the fund
-     */
-    modifier onlyParticipant() {
-      // TODO
-      // require(msg.sender == controller, "Only the controller can call this");
       _;
     }
 
@@ -346,10 +338,25 @@ abstract contract BaseFund is ERC20 {
      * @param _integration            Address of the integration to call
      * @param _value                  Quantity of Ether to provide the call (typically 0)
      * @param _data                   Encoded function selector and arguments
+     * @param _tokensNeeded           Tokens that we need to acquire more of before executing the investment
+     * @param _tokenAmountsNeeded     Tokens amounts that we need. Same index.
      * @return _returnValue           Bytes encoded return value
      */
-    function callIntegration(address _integration, uint256 _value, bytes calldata _data) external onlyKeeper returns (bytes memory _returnValue) {
+    function callIntegration(
+      address _integration,
+      uint256 _value,
+      bytes calldata _data,
+      address[] memory _tokensNeeded,
+      uint256[] memory _tokenAmountsNeeded
+    )
+    external onlyKeeper returns (bytes memory _returnValue) {
+      require(_tokensNeeded.length == _tokenAmountsNeeded.length);
       _validateOnlyIntegration(_integration);
+      // Exchange the tokens needed
+      for (uint i = 0; i < _tokensNeeded.length; i++) {
+        uint pricePerTokenUnit = _getPrice(_tokensNeeded[i], reserveAsset);
+        _trade("kyber", reserveAsset, _tokenAmountsNeeded[i].mul(pricePerTokenUnit),_tokensNeeded[i], _tokenAmountsNeeded[i], _data);
+      }
       return _invoke(_integration, _value, _data);
     }
 
@@ -363,16 +370,16 @@ abstract contract BaseFund is ERC20 {
      * @param _minReceiveQuantity     Min amount of tokens to receive
      * @param _data                   Bytes call data
      */
-    function trade(
-      string memory _integrationName,
-      address _sendToken,
-      uint256 _sendQuantity,
-      address _receiveToken,
-      uint256 _minReceiveQuantity,
-      bytes memory _data) onlyKeeper external
-    {
-      return _trade(_integrationName, _sendToken, _sendQuantity, _receiveToken, _minReceiveQuantity, _data);
-    }
+    // function trade(
+    //   string memory _integrationName,
+    //   address _sendToken,
+    //   uint256 _sendQuantity,
+    //   address _receiveToken,
+    //   uint256 _minReceiveQuantity,
+    //   bytes memory _data) onlyKeeper external
+    // {
+    //   return _trade(_integrationName, _sendToken, _sendQuantity, _receiveToken, _minReceiveQuantity, _data);
+    // }
 
     /* ============ Passive Integration hooks ============ */
 
@@ -385,17 +392,17 @@ abstract contract BaseFund is ERC20 {
      * @param _tokenIn                    Token aaddress to deposit
      * @param _maxAmountIn                Max amount of the token to deposit
      */
-    function enterPassiveInvestment(
-      string memory _integrationName,
-      address _investmentAddress,
-      uint256 _investmentTokensOut,
-      address _tokenIn,
-      uint256 _maxAmountIn
-    ) onlyKeeper external {
-      address passiveIntegration = IBabController(controller).getIntegrationByName(_integrationName);
-      _validateOnlyIntegration(passiveIntegration);
-      IPassiveIntegration(passiveIntegration).enterInvestment(_investmentAddress, _investmentTokensOut, _tokenIn, _maxAmountIn);
-    }
+    // function enterPassiveInvestment(
+    //   string memory _integrationName,
+    //   address _investmentAddress,
+    //   uint256 _investmentTokensOut,
+    //   address _tokenIn,
+    //   uint256 _maxAmountIn
+    // ) onlyKeeper external {
+    //   address passiveIntegration = IBabController(controller).getIntegrationByName(_integrationName);
+    //   _validateOnlyIntegration(passiveIntegration);
+    //   IPassiveIntegration(passiveIntegration).enterInvestment(_investmentAddress, _investmentTokensOut, _tokenIn, _maxAmountIn);
+    // }
 
     /**
      * Exits an outside passive investment
@@ -406,17 +413,17 @@ abstract contract BaseFund is ERC20 {
      * @param _tokenOut                   Token address to withdraw
      * @param _minAmountOut               Min token quantities to receive from the investment
      */
-    function exitPassiveInvestment(
-      string memory _integrationName,
-      address _investmentAddress,
-      uint256 _investmentTokenIn,
-      address _tokenOut,
-      uint256 _minAmountOut
-    ) external onlyKeeper {
-      address passiveIntegration = IBabController(controller).getIntegrationByName(_integrationName);
-      _validateOnlyIntegration(passiveIntegration);
-      IPassiveIntegration(passiveIntegration).exitInvestment(_investmentAddress, _investmentTokenIn, _tokenOut, _minAmountOut);
-    }
+    // function exitPassiveInvestment(
+    //   string memory _integrationName,
+    //   address _investmentAddress,
+    //   uint256 _investmentTokenIn,
+    //   address _tokenOut,
+    //   uint256 _minAmountOut
+    // ) external onlyKeeper {
+    //   address passiveIntegration = IBabController(controller).getIntegrationByName(_integrationName);
+    //   _validateOnlyIntegration(passiveIntegration);
+    //   IPassiveIntegration(passiveIntegration).exitInvestment(_investmentAddress, _investmentTokenIn, _tokenOut, _minAmountOut);
+    // }
 
     /* ============ Pool Integration hooks ============ */
 
@@ -429,17 +436,17 @@ abstract contract BaseFund is ERC20 {
      * @param _tokensIn             Array of token addresses to deposit
      * @param _maxAmountsIn         Array of max token quantities to pull out from the fund
      */
-    function joinPool(
-      string memory _integrationName,
-      address _poolAddress,
-      uint256 _poolTokensOut,
-      address[] calldata _tokensIn,
-      uint256[] calldata _maxAmountsIn
-    ) onlyKeeper external {
-      address poolIntegration = IBabController(controller).getIntegrationByName(_integrationName);
-      _validateOnlyIntegration(poolIntegration);
-      IPoolIntegration(poolIntegration).joinPool(_poolAddress, _poolTokensOut, _tokensIn, _maxAmountsIn);
-    }
+    // function joinPool(
+    //   string memory _integrationName,
+    //   address _poolAddress,
+    //   uint256 _poolTokensOut,
+    //   address[] calldata _tokensIn,
+    //   uint256[] calldata _maxAmountsIn
+    // ) onlyKeeper external {
+    //   address poolIntegration = IBabController(controller).getIntegrationByName(_integrationName);
+    //   _validateOnlyIntegration(poolIntegration);
+    //   IPoolIntegration(poolIntegration).joinPool(_poolAddress, _poolTokensOut, _tokensIn, _maxAmountsIn);
+    // }
 
     /**
      * Exits a liquidity pool. Accrue protocol fee (if any)
@@ -450,45 +457,55 @@ abstract contract BaseFund is ERC20 {
      * @param _tokensOut            Array of token addresses to withdraw
      * @param _minAmountsOut        Array of min token quantities to receive from the pool
      */
-    function exitPool(
-      string memory _integrationName,
-      address _poolAddress,
-      uint256 _poolTokensIn,
-      address[] calldata _tokensOut,
-      uint256[] calldata _minAmountsOut
-    ) external onlyKeeper {
-      address poolIntegration = IBabController(controller).getIntegrationByName(_integrationName);
-      _validateOnlyIntegration(poolIntegration);
-      IPoolIntegration(poolIntegration).exitPool(_poolAddress, _poolTokensIn, _tokensOut, _minAmountsOut);
-    }
+    // function exitPool(
+    //   string memory _integrationName,
+    //   address _poolAddress,
+    //   uint256 _poolTokensIn,
+    //   address[] calldata _tokensOut,
+    //   uint256[] calldata _minAmountsOut
+    // ) external onlyKeeper {
+    //   address poolIntegration = IBabController(controller).getIntegrationByName(_integrationName);
+    //   _validateOnlyIntegration(poolIntegration);
+    //   IPoolIntegration(poolIntegration).exitPool(_poolAddress, _poolTokensIn, _tokensOut, _minAmountsOut);
+    // }
 
     /* ============ Borrow Integration hooks ============ */
-    function depositCollateral(string memory _integrationName, address asset, uint256 amount) external onlyKeeper {
-      address borrowIntegration = IBabController(controller).getIntegrationByName(_integrationName);
-      _validateOnlyIntegration(borrowIntegration);
-      IBorrowIntegration(borrowIntegration).depositCollateral(asset, amount);
-    }
-
-    function removeCollateral(string memory _integrationName, address asset, uint256 amount) external onlyKeeper {
-      address borrowIntegration = IBabController(controller).getIntegrationByName(_integrationName);
-      _validateOnlyIntegration(borrowIntegration);
-      IBorrowIntegration(borrowIntegration).removeCollateral(asset, amount);
-    }
-
-    function borrow(string memory _integrationName, address asset, uint256 amount) external onlyKeeper {
-      address borrowIntegration = IBabController(controller).getIntegrationByName(_integrationName);
-      _validateOnlyIntegration(borrowIntegration);
-      IBorrowIntegration(borrowIntegration).borrow(asset, amount);
-    }
-
-    function repay(string memory _integrationName, address asset, uint256 amount) external onlyKeeper {
-      address borrowIntegration = IBabController(controller).getIntegrationByName(_integrationName);
-      _validateOnlyIntegration(borrowIntegration);
-      IBorrowIntegration(borrowIntegration).repay(asset, amount);
-    }
+    // function depositCollateral(string memory _integrationName, address asset, uint256 amount) external onlyKeeper {
+    //   address borrowIntegration = IBabController(controller).getIntegrationByName(_integrationName);
+    //   _validateOnlyIntegration(borrowIntegration);
+    //   IBorrowIntegration(borrowIntegration).depositCollateral(asset, amount);
+    // }
+    //
+    // function removeCollateral(string memory _integrationName, address asset, uint256 amount) external onlyKeeper {
+    //   address borrowIntegration = IBabController(controller).getIntegrationByName(_integrationName);
+    //   _validateOnlyIntegration(borrowIntegration);
+    //   IBorrowIntegration(borrowIntegration).removeCollateral(asset, amount);
+    // }
+    //
+    // function borrow(string memory _integrationName, address asset, uint256 amount) external onlyKeeper {
+    //   address borrowIntegration = IBabController(controller).getIntegrationByName(_integrationName);
+    //   _validateOnlyIntegration(borrowIntegration);
+    //   IBorrowIntegration(borrowIntegration).borrow(asset, amount);
+    // }
+    //
+    // function repay(string memory _integrationName, address asset, uint256 amount) external onlyKeeper {
+    //   address borrowIntegration = IBabController(controller).getIntegrationByName(_integrationName);
+    //   _validateOnlyIntegration(borrowIntegration);
+    //   IBorrowIntegration(borrowIntegration).repay(asset, amount);
+    //}
 
     /* ============ External Getter Functions ============ */
 
+    /**
+     * Function that calculates the price using the oracle and executes a trade.
+     * Must call the exchange to get the price and pass minReceiveQuantity accordingly.
+     * @param _integrationName        Name of the integration to call
+     * @param _sendToken              Token to exchange
+     * @param _sendQuantity           Amount of tokens to send
+     * @param _receiveToken           Token to receive
+     * @param _minReceiveQuantity     Min amount of tokens to receive
+     * @param _data                   Bytes call data
+     */
     function _trade(
       string memory _integrationName,
       address _sendToken,

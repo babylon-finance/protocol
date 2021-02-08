@@ -119,15 +119,6 @@ interface IFund is IERC20 {
       bytes calldata _data
     ) external returns (bytes memory _returnValue);
 
-    // function trade(
-    //   string memory _integrationName,
-    //   address _sendToken,
-    //   uint256 _sendQuantity,
-    //   address _receiveToken,
-    //   uint256 _minReceiveQuantity,
-    //   bytes memory _data) external;
-
-
     function isInitializedIntegration(address _integration) external view returns(bool);
     function isPendingIntegration(address _integration) external view returns(bool);
 }

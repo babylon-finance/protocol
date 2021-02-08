@@ -220,7 +220,7 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
     ) external onlyCreator onlyInactive payable {
         require(_maxDepositLimit >= 1**19, "Max deposit limit needs to be greater than ten eth");
 
-        require(msg.value > minContribution && msg.value < _maxDepositLimit.div(10), "Creator needs to deposit, up to 10% of the max fund eth");
+        require(msg.value > minContribution && msg.value < _maxDepositLimit.div(20), "Creator needs to deposit, up to 20% of the max fund eth");
         IBabController ifcontroller = IBabController(controller);
         require(
             _premiumPercentage <= ifcontroller.getMaxFundPremiumPercentage(),
@@ -398,7 +398,7 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
 
     // Any tokens (other than the target) that are sent here by mistake are recoverable by the owner
     // TODO: If it is not whitelisted, trade it for weth
-    function sweep(address _token) external onlyParticipant {
+    function sweep(address _token) external onlyContributor(msg.sender) {
        require(!_hasPosition(_token), "This token is one of the fund positions");
        uint256 balance = IERC20(_token).balanceOf(address(this));
        require(balance > 0, "The token needs to have a positive balance");
@@ -528,7 +528,7 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
      * @param _exitData                      Operation to perform to exit the investment
      * TODO: Meta Transaction
      */
-    function addInvestmentIdea(uint256 _capitalRequested, uint256 _stake, uint256 _investmentDuration, bytes memory _enterData, bytes memory _exitData) external onlyParticipant payable {
+    function addInvestmentIdea(uint256 _capitalRequested, uint256 _stake, uint256 _investmentDuration, bytes memory _enterData, bytes memory _exitData) external onlyContributor(msg.sender) payable {
       require(block.timestamp < lastInvestmentExecutedAt.add(fundEpoch), "Idea can only be suggested before the deliberation period");
       require(_stake > 0, "Stake amount must be greater than 0");
       require(_investmentDuration > 1 hours, "Investment duration must be greater than an hour");
@@ -558,7 +558,7 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
      * @param _amount                   Amount to curate, positive to endorse, negative to downvote
      * TODO: Meta Transaction
      */
-    function curateInvestmentIdea(uint8 _ideaIndex, int256 _amount) external onlyParticipant {
+    function curateInvestmentIdea(uint8 _ideaIndex, int256 _amount) external onlyContributor(msg.sender) {
       require(investmentIdeasCurrentEpoch.length > _ideaIndex, "The idea index does not exist");
       require(_amount.toUint256() < balanceOf(msg.sender), "Participant does not have enough balance");
       InvestmentIdea storage idea = investmentIdeasCurrentEpoch[_ideaIndex];
