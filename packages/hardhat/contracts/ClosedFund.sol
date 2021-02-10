@@ -19,20 +19,18 @@
 pragma solidity 0.7.4;
 
 import "hardhat/console.sol";
-import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import { ERC20 } from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import {
     ReentrancyGuard
 } from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
-import {SafeMath} from "@openzeppelin/contracts/math/SafeMath.sol";
-import {SignedSafeMath} from "@openzeppelin/contracts/math/SignedSafeMath.sol";
-import {SafeCast} from "@openzeppelin/contracts/utils/SafeCast.sol";
-import {IWETH} from "./interfaces/external/weth/IWETH.sol";
-import {IBabController} from "./interfaces/IBabController.sol";
-import {IFundValuer} from "./interfaces/IFundValuer.sol";
-import {IFundIssuanceHook} from "./interfaces/IFundIssuanceHook.sol";
-import {BaseFund} from "./BaseFund.sol";
+import { SafeMath } from "@openzeppelin/contracts/math/SafeMath.sol";
+import { SignedSafeMath } from "@openzeppelin/contracts/math/SignedSafeMath.sol";
 import { PreciseUnitMath } from "./lib/PreciseUnitMath.sol";
+import { SafeCast } from "@openzeppelin/contracts/utils/SafeCast.sol";
+import { IWETH } from "./interfaces/external/weth/IWETH.sol";
+import { IBabController } from "./interfaces/IBabController.sol";
+import { IFundValuer } from "./interfaces/IFundValuer.sol";
+import { BaseFund } from "./BaseFund.sol";
 
 
 /**
@@ -334,7 +332,7 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
     ) external nonReentrant onlyContributor(msg.sender) onlyActive {
         require(block.timestamp > fundEndsBy, "Withdrawals are disabled until the fund ends");
         require(
-            _fundTokenQuantity <= IERC20(address(this)).balanceOf(msg.sender),
+            _fundTokenQuantity <= ERC20(address(this)).balanceOf(msg.sender),
             "Withdrawal amount must be less than or equal to deposited amount"
         );
         _validateReserveAsset(reserveAsset, _fundTokenQuantity);
@@ -359,7 +357,7 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
 
         if (reserveAsset != weth) {
             // Instruct the Fund to transfer the reserve asset back to the user
-            IERC20(reserveAsset).transfer(_to, withdrawalInfo.netFlowQuantity);
+            ERC20(reserveAsset).transfer(_to, withdrawalInfo.netFlowQuantity);
         } else {
             IWETH(weth).withdraw(withdrawalInfo.netFlowQuantity);
             _to.transfer(withdrawalInfo.netFlowQuantity);
@@ -400,9 +398,9 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
     // TODO: If it is not whitelisted, trade it for weth
     function sweep(address _token) external onlyContributor(msg.sender) {
        require(!_hasPosition(_token), "This token is one of the fund positions");
-       uint256 balance = IERC20(_token).balanceOf(address(this));
+       uint256 balance = ERC20(_token).balanceOf(address(this));
        require(balance > 0, "The token needs to have a positive balance");
-       _calculateAndEditPosition(_token, balance, IERC20(_token).balanceOf(address(this)), 0);
+       _calculateAndEditPosition(_token, balance, ERC20(_token).balanceOf(address(this)), 0);
     }
 
     /* ============ External Getter Functions ============ */
@@ -726,14 +724,14 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
     ) internal {
         // Only need to transfer the collateral if different than WETH
         if (_reserveAsset != weth) {
-          IERC20(_reserveAsset).transferFrom(
+          ERC20(_reserveAsset).transferFrom(
               msg.sender,
               address(this),
               _depositInfo.netFlowQuantity
           );
         }
         if (_depositInfo.protocolFees > 0) {
-            IERC20(_reserveAsset).transferFrom(
+            ERC20(_reserveAsset).transferFrom(
                 msg.sender,
                 IBabController(controller).getFeeRecipient(),
                 _depositInfo.protocolFees
@@ -971,7 +969,7 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
 
     function _validateOnlyContributor(address _caller) internal view {
         require(
-            IERC20(address(this)).balanceOf(_caller) > 0,
+            ERC20(address(this)).balanceOf(_caller) > 0,
             "Only someone with the fund token can withdraw"
         );
     }

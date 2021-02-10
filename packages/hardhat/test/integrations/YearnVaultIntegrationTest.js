@@ -11,10 +11,12 @@ describe("YearnVaultIntegrationTest", function() {
   let system;
   let yearnVaultIntegration;
   let fund;
+  let userSigner3;
 
   beforeEach(async () => {
     system = await loadFixture(deployFolioFixture);
     yearnVaultIntegration = system.integrations.yearnVaultIntegration;
+    userSigner3 = system.signer3;
     fund = system.funds.one;
   });
 
@@ -57,27 +59,47 @@ describe("YearnVaultIntegrationTest", function() {
     });
 
     it("can enter and exit the yearn dai vault", async function() {
-      expect(
-        await daiToken
-          .connect(whaleSigner)
-          .transfer(fund.address, ethers.utils.parseEther("1000"), {
-            gasPrice: 0
-          })
-      );
-      expect(await daiToken.balanceOf(fund.address)).to.equal(
-        ethers.utils.parseEther("1000")
-      );
+      // expect(
+      //   await daiToken
+      //     .connect(whaleSigner)
+      //     .transfer(fund.address, ethers.utils.parseEther("1000"), {
+      //       gasPrice: 0
+      //     })
+      // );
+      // expect(await daiToken.balanceOf(fund.address)).to.equal(
+      //   ethers.utils.parseEther("1000")
+      // );
+      await fund
+        .connect(userSigner3)
+        .deposit(ethers.utils.parseEther("1"), 1, userSigner3.getAddress(), {
+          value: ethers.utils.parseEther("1")
+        });
       const amountToDeposit = ethers.utils.parseEther("1000");
       const sharePrice = await yearnDaiVault.getPricePerFullShare();
       const expectedYShares = amountToDeposit.div(sharePrice);
-      await fund.enterPassiveInvestment(
-        "yearnvaults",
-        yearnDaiVault.address,
-        expectedYShares,
-        daiToken.address,
-        ethers.utils.parseEther("1000"),
-        { gasPrice: 0 }
+
+      const yearnAbi = yearnVaultIntegration.interface;
+      const data = yearnAbi.encodeFunctionData(
+        yearnAbi.functions["enterInvestment(address,uint256,address,uint256)"],
+        [
+          yearnDaiVault.address,
+          expectedYShares,
+          daiToken.address,
+          ethers.utils.parseEther("100")
+        ]
       );
+
+      await fund.callIntegration(
+        yearnVaultIntegration.address,
+        ethers.utils.parseEther("0"),
+        data,
+        [daiToken.address],
+        [ethers.utils.parseEther("100")],
+        {
+          gasPrice: 0
+        }
+      );
+
       console.log("price", ethers.utils.formatEther(sharePrice));
       console.log(
         "balance",
@@ -87,17 +109,31 @@ describe("YearnVaultIntegrationTest", function() {
       expect(await yearnDaiVault.balanceOf(fund.address)).to.be.gte(
         expectedYShares
       );
-      await fund.exitPassiveInvestment(
-        "yearnvaults",
-        yearnDaiVault.address,
-        await yearnDaiVault.balanceOf(fund.address),
-        daiToken.address,
-        ethers.utils.parseEther("999"),
-        { gasPrice: 0 }
+
+      const dataExit = yearnAbi.encodeFunctionData(
+        yearnAbi.functions["exitInvestment(address,uint256,address,uint256)"],
+        [
+          yearnDaiVault.address,
+          await yearnDaiVault.balanceOf(fund.address),
+          daiToken.address,
+          ethers.utils.parseEther("99")
+        ]
       );
+
+      await fund.callIntegration(
+        yearnVaultIntegration.address,
+        ethers.utils.parseEther("0"),
+        dataExit,
+        [],
+        [],
+        {
+          gasPrice: 0
+        }
+      );
+
       expect(await yearnDaiVault.balanceOf(fund.address)).to.equal(0);
       expect(await daiToken.balanceOf(fund.address)).to.be.gt(
-        ethers.utils.parseEther("999")
+        ethers.utils.parseEther("99")
       );
     });
   });
