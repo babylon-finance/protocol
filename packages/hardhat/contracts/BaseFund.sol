@@ -30,6 +30,7 @@ import { IIntegration } from "./interfaces/IIntegration.sol";
 import { ITradeIntegration } from "./interfaces/ITradeIntegration.sol";
 import { IPriceOracle } from "./interfaces/IPriceOracle.sol";
 import { IFund } from "./interfaces/IFund.sol";
+import { PreciseUnitMath } from "./lib/PreciseUnitMath.sol";
 
 /**
  * @title BaseFund
@@ -42,6 +43,7 @@ abstract contract BaseFund is ERC20 {
     using SafeCast for int256;
     using SafeMath for uint256;
     using SignedSafeMath for int256;
+    using PreciseUnitMath for uint256;
     using Address for address;
     using AddressArrayUtils for address[];
 
@@ -349,8 +351,8 @@ abstract contract BaseFund is ERC20 {
       _validateOnlyIntegration(_integration);
       // Exchange the tokens needed
       for (uint i = 0; i < _tokensNeeded.length; i++) {
-        uint pricePerTokenUnit = _getPrice(_tokensNeeded[i], reserveAsset);
-        _trade("kyber", reserveAsset, _tokenAmountsNeeded[i].mul(pricePerTokenUnit),_tokensNeeded[i], _tokenAmountsNeeded[i], _data);
+        uint pricePerTokenUnit = _getPrice(reserveAsset, _tokensNeeded[i]);
+        _trade("kyber", reserveAsset, _tokenAmountsNeeded[i].preciseDiv(pricePerTokenUnit),_tokensNeeded[i], _tokenAmountsNeeded[i], _data);
       }
       return _invoke(_integration, _value, _data);
     }
