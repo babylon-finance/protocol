@@ -524,7 +524,6 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
      * @param _investmentDuration            Investment duration in seconds
      * @param _enterData                     Operation to perform to enter the investment
      * @param _exitData                      Operation to perform to exit the investment
-     * TODO: Meta Transaction
      */
     function addInvestmentIdea(uint256 _capitalRequested, uint256 _stake, uint256 _investmentDuration, bytes memory _enterData, bytes memory _exitData) external onlyContributor(msg.sender) payable {
       require(block.timestamp < lastInvestmentExecutedAt.add(fundEpoch), "Idea can only be suggested before the deliberation period");
@@ -572,13 +571,13 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
       require(block.timestamp > lastInvestmentExecutedAt.add(fundEpoch).add(fundDeliberationDuration), "Idea can only be executed after the minimum period has elapsed");
       require(investmentIdeasCurrentEpoch.length > 0, "There must be an investment idea ready to execute");
       // check that the keeper is registered and healthy
+      // TODO: create function to get the top investment idea from stake + votes
       uint8 topIdeaIndex = 0;
       InvestmentIdea storage idea = investmentIdeasCurrentEpoch[topIdeaIndex];
       // Execute enter trade
-      // _invoke(_integration, _value, _data);
+      // callIntegration
       // Push the trade to the investments executed
       investmentsExecuted[investmentsExecuted.length] = idea;
-
       // Clear investment ideas
       delete investmentIdeasCurrentEpoch;
       // Restarts the epoc counter
@@ -593,12 +592,11 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
       require(!idea.finalized, "This investment was already exited");
       // check that the keeper is registered and healthy
       // Execute exit trade
-      //_invoke(_integration, _value, _data);
+      // callIntegration
       // Mark as finalized
       idea.finalized = true;
       idea.exitedAt = block.timestamp;
       // Reward contributors accordingly with reserve asset & update position of the reserve asset
-
       // Sends fee to the keeper
     }
 
