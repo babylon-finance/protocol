@@ -6,7 +6,7 @@ const { loadFixture } = waffle;
 const addresses = require("../utils/addresses");
 const { deployFolioFixture } = require("./fixtures/ControllerFixture");
 
-describe("FolioController", function() {
+describe("BabController", function() {
   let controller;
   let oracle;
   let valuer;
@@ -20,17 +20,17 @@ describe("FolioController", function() {
 
   beforeEach(async () => {
     const {
-      folioController,
+      babController,
       priceOracle,
       fundValuer,
       owner,
       signer1,
       funds,
       signer2,
-      signer3,
+      signer3
     } = await loadFixture(deployFolioFixture);
 
-    controller = folioController;
+    controller = babController;
     oracle = priceOracle;
     valuer = fundValuer;
     ownerSigner = owner;
@@ -128,8 +128,8 @@ describe("FolioController", function() {
       // Note: This is just the wETH address and is testing that the oracle address can be changed
       await expect(controller.editPriceOracle(addresses.tokens.WETH)).to.not.be
         .reverted;
-      const oracle = await controller.getPriceOracle();
-      expect(oracle).to.equal(addresses.tokens.WETH);
+      const oracle2 = await controller.getPriceOracle();
+      expect(oracle2).to.equal(addresses.tokens.WETH);
     });
 
     it("can edit a fund valuer", async function() {
@@ -137,8 +137,8 @@ describe("FolioController", function() {
       await expect(controller.editFundValuer(addresses.tokens.WETH)).to.not.be
         .reverted;
 
-      const valuer = await controller.getFundValuer();
-      expect(valuer).to.equal(addresses.tokens.WETH);
+      const valuer2 = await controller.getFundValuer();
+      expect(valuer2).to.equal(addresses.tokens.WETH);
     });
 
     it("can edit the protocol fee recipient", async function() {
