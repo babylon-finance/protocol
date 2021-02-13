@@ -15,6 +15,7 @@ async function deployFolioFixture() {
   );
 
   await babController.addReserveAsset(addresses.tokens.WETH);
+  await babController.addAssetsWhitelist(Object.values(addresses.tokens));
 
   const FundValuer = await ethers.getContractFactory("FundValuer", owner);
   const PriceOracle = await ethers.getContractFactory("PriceOracle", owner);

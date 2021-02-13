@@ -194,6 +194,7 @@ abstract contract TradeIntegration is BaseIntegration, ReentrancyGuard {
      */
     function _validatePreTradeData(TradeInfo memory _tradeInfo, uint256 _sendQuantity) internal view {
       require(_tradeInfo.totalSendQuantity > 0, "Token to sell must be nonzero");
+      require(IBabController(controller).isValidAsset(_tradeInfo.receiveToken), "Receive token must be whitelisted");
       require(IERC20(_tradeInfo.sendToken).balanceOf(msg.sender) >= _sendQuantity, "Fund needs to have enough liquid tokens");
       require(
           _tradeInfo.fund.hasSufficientBalance(_tradeInfo.sendToken, _sendQuantity),

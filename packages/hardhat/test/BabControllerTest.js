@@ -94,6 +94,7 @@ describe("BabController", function() {
     it("cannot disable an inactive fund", async function() {
       const initialFunds = await controller.getFunds();
 
+      await expect(controller.disableFund(initialFunds[0])).to.not.be.reverted;
       await expect(controller.disableFund(initialFunds[0])).to.be.reverted;
     });
 
@@ -102,6 +103,32 @@ describe("BabController", function() {
 
       await expect(controller.disableFund(initialFunds[0])).to.not.be.reverted;
       await expect(controller.enableFund(initialFunds[0])).to.not.be.reverted;
+    });
+  });
+
+  describe("Whitelisted assets", function() {
+    const YFI = "0x0bc529c00C6401aEF6D220BE8C6Ea1667F6Ad93e";
+    const ZRX = "0xe41d2489571d322189246dafa5ebde1f4699f498";
+    it("can add new whitelisted assets", async function() {
+      await controller.addAssetWhitelist();
+
+      const valid = await controller.isValidAsset(YFI);
+      expect(valid).to.equal(true);
+    });
+
+    it("can remove whitelisted assets", async function() {
+      await controller.addAssetWhitelist(YFI);
+      await controller.removeAssetWhitelist(YFI);
+
+      const valid = await controller.isValidAsset(YFI);
+      expect(valid).to.equal(false);
+    });
+
+    it("can add whitelisted assets in bulk", async function() {
+      await controller.addAssetsWhitelist([YFI, ZRX]);
+
+      expect(await controller.isValidAsset(YFI)).to.equal(true);
+      expect(await controller.isValidAsset(ZRX)).to.equal(true);
     });
   });
 

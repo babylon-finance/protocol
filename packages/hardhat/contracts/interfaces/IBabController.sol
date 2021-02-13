@@ -46,6 +46,9 @@ interface IBabController {
     function setMaxFundEpoch(uint256 _newMaxFundEpoch) external;
     function setMinFundDuration(uint256 _newMinFundDuration) external;
     function setMaxFundDuration(uint256 _newMaxFundDuration) external;
+    function addAssetWhitelist(address _asset) external;
+    function removeAssetWhitelist(address _asset) external;
+    function addAssetsWhitelist(address[] memory _assets) external;
 
     // Getters
     function getPriceOracle() external view returns (address);
@@ -57,6 +60,7 @@ interface IBabController {
     function getIntegrationFee(address _integration) external view returns (uint256);
     function getIntegrationWithHash(bytes32 _nameHashP) external view returns (address);
     function isValidReserveAsset(address _reserveAsset) external view returns(bool);
+    function isValidAsset(address _asset) external view returns (bool);
     function isSystemContract(address _contractAddress) external view returns (bool);
     function isValidIntegration(string memory _name) external view returns (bool);
     function getMaxFundDuration() external view returns (uint256);
