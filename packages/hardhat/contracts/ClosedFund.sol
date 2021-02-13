@@ -433,7 +433,7 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
       if (ideaIndex >= maxIdeasPerEpoch) {
         ideaIndex = currentMinStakeIndex;
       }
-      // Check than enter and exit data call callIntegration
+      // Check than enter and exit data call integrations
       InvestmentIdea storage idea = investmentIdeasCurrentEpoch[ideaIndex];
       idea.index = currentInvestmentsIndex;
       idea.integration = _integration;
