@@ -260,8 +260,6 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
 
         IWETH(weth).deposit{value: initialDepositAmount}();
 
-        // TODO: Trade to reserve asset if different than WETH
-
         _mint(creator, initialTokens);
         _udpateContributorInfo(initialTokens, initialDepositAmount);
 
@@ -302,10 +300,6 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
 
         // Always wrap to WETH
         IWETH(weth).deposit{value: msg.value}();
-
-        if (reserveAsset != weth) {
-            // TODO: trade from weth into reserve asset
-        }
 
         _validateReserveAsset(reserveAsset, _reserveAssetQuantity);
 
@@ -486,7 +480,6 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
     function executeTopInvestment() external onlyKeeper {
       require(block.timestamp > lastInvestmentExecutedAt.add(fundEpoch).add(fundDeliberationDuration), "Idea can only be executed after the minimum period has elapsed");
       require(investmentIdeasCurrentEpoch.length > 0, "There must be an investment idea ready to execute");
-      // TODO: create function to get the top investment idea from stake + votes
       uint8 topIdeaIndex = getCurrentTopInvestmentIdea();
       require(topIdeaIndex < investmentIdeasCurrentEpoch.length, "No idea available to execute");
       InvestmentIdea storage idea = investmentIdeasCurrentEpoch[topIdeaIndex];
