@@ -74,7 +74,6 @@ contract CompoundIntegration is BorrowIntegration {
 
   /* ============ External Functions ============ */
 
-  // TODO: Move this to protocol
   // Governance function
   function updateCTokenMapping(address _assetAddress, address _cTokenAddress) external onlyProtocol {
     assetToCtoken[_assetAddress] = _cTokenAddress;

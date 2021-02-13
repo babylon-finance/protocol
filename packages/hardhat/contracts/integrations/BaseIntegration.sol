@@ -19,7 +19,7 @@
 pragma solidity 0.7.4;
 
 import "hardhat/console.sol";
-import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import { ERC20 } from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import { IBabController } from "../interfaces/IBabController.sol";
 import { IIntegration } from "../interfaces/IIntegration.sol";
 import { IWETH } from "../interfaces/external/weth/IWETH.sol";
@@ -140,8 +140,8 @@ abstract contract BaseIntegration {
      * @param  _to             The address to transfer to
      * @param  _quantity       The number of tokens to transfer
      */
-    function transferFrom(IERC20 _token, address _from, address _to, uint256 _quantity) internal {
-        IERC20(_token).transferFrom(_from, _to, _quantity);
+    function transferFrom(ERC20 _token, address _from, address _to, uint256 _quantity) internal {
+        ERC20(_token).transferFrom(_from, _to, _quantity);
     }
 
     /**
@@ -160,7 +160,7 @@ abstract contract BaseIntegration {
      */
     function payProtocolFeeFromFund(address _fund, address _token, uint256 _feeQuantity) internal {
         if (_feeQuantity > 0) {
-          IERC20(_token).transferFrom(_fund, IBabController(controller).getFeeRecipient(), _feeQuantity);
+          ERC20(_token).transferFrom(_fund, IBabController(controller).getFeeRecipient(), _feeQuantity);
         }
     }
 
@@ -184,16 +184,12 @@ abstract contract BaseIntegration {
       Normalize all the amounts of all tokens so all can be called with 10^18.
       e.g Call functions like borrow, supply with parseEther
     */
-    function normalizeDecimals(address asset, uint256 amount) internal pure returns (uint256)  {
+    function normalizeDecimals(address asset, uint256 amount) internal view returns (uint256)  {
       // USDC and USDT have only 6 decimals
-      // TODO: create a mpping for decimals managed by the protocol
       uint256 newAmount = amount;
-      if (asset == USDCAddress || asset == USDTAddress) {
-        newAmount = amount.div(10**12);
-      }
-      // WBTC has 8 decimals
-      if (asset == WBTCAddress) {
-        newAmount = amount.div(10**10);
+      uint8 decimalsAsset = ERC20(asset).decimals();
+      if (decimalsAsset < 18) {
+        newAmount = amount.div(10 ** (18 - decimalsAsset));
       }
       return newAmount;
     }

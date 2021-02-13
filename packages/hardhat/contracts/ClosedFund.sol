@@ -457,7 +457,7 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
     }
 
     /**
-     * Curates an investment idea fromt the contenders array for this epoch.
+     * Curates an investment idea from the contenders array for this epoch.
      * This can happen at any time. As long as there are investment ideas.
      * @param _ideaIndex                The position of the idea index in the array for the current epoch
      * @param _amount                   Amount to curate, positive to endorse, negative to downvote
@@ -479,6 +479,10 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
       idea.totalVotes.add(_amount);
     }
 
+    /**
+     * Executes the top investment idea for this epoch.
+     * We enter into the investment and add it to the executed ideas array.
+     */
     function executeTopInvestment() external onlyKeeper {
       require(block.timestamp > lastInvestmentExecutedAt.add(fundEpoch).add(fundDeliberationDuration), "Idea can only be executed after the minimum period has elapsed");
       require(investmentIdeasCurrentEpoch.length > 0, "There must be an investment idea ready to execute");
@@ -498,6 +502,11 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
       idea.executedAt = block.timestamp;
     }
 
+    /**
+     * Exits from an executed investment.
+     * Sends rewards to the person that created the idea, the voters, and the rest to the fund.
+     * Updates the reserve asset position accordingly.
+     */
     function finalizeInvestment(uint _ideaIndex) external onlyKeeper {
       require(investmentsExecuted.length > _ideaIndex, "This idea index does not exist");
       InvestmentIdea storage idea = investmentsExecuted[_ideaIndex];
