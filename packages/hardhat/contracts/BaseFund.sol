@@ -467,11 +467,6 @@ abstract contract BaseFund is ERC20 {
       return _calculateAndEditPosition(_component, _newBalance, _deltaBalance, _subpositionStatus);
     }
 
-    // TODO: Remove
-    function getPrice(address _assetOne, address _assetTwo) external view returns (uint256) {
-      return _getPrice(_assetOne, _assetTwo);
-    }
-
     /* ============ Internal Functions ============ */
 
     /**

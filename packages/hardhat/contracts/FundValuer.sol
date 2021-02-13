@@ -113,7 +113,7 @@ contract FundValuer {
             valuation = valuation.preciseDiv(quoteToMaster.toInt256());
         }
 
-        // TODO: Add eth balance
+        // TODO: Add eth balance??
 
         return valuation.toUint256().preciseDiv(_fund.totalSupply());
     }
