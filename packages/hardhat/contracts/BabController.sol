@@ -22,6 +22,7 @@ import "hardhat/console.sol";
 import { SafeMath } from "@openzeppelin/contracts/math/SafeMath.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
+import { Address } from "@openzeppelin/contracts/utils/Address.sol";
 import { IFund } from "./interfaces/IFund.sol";
 import { IClosedFund } from "./interfaces/IClosedFund.sol";
 import { IIntegration } from "./interfaces/IIntegration.sol";
@@ -37,6 +38,7 @@ import { AddressArrayUtils } from "./lib/AddressArrayUtils.sol";
 contract BabController is Ownable {
     using AddressArrayUtils for address[];
     using SafeMath for uint256;
+    using Address for address;
 
     /* ============ Events ============ */
     event FundAdded(address indexed _fund, address indexed _factory);
@@ -85,6 +87,9 @@ contract BabController is Ownable {
     // Mappings to check whether address is valid Fund or Reserve Asset
     mapping(address => bool) public isFund;
     mapping(address => bool) public validReserveAsset;
+
+    // Mapping to check whitelisted assets
+    mapping(address => bool) public assetWhitelist;
 
     // Recipient of protocol fees
     address public feeRecipient;
@@ -217,6 +222,36 @@ contract BabController is Ownable {
     }
 
     // ===========  Protocol related Gov Functions ======
+
+    /**
+     * PRIVILEGED FACTORY FUNCTION. Adds a new valid asset to the whitelist
+     *
+     * @param _asset Address of the asset
+     */
+    function addAssetWhitelist(address _asset) external onlyOwner {
+      _addAssetWhitelist(_asset);
+    }
+
+    /**
+     * PRIVILEGED FACTORY FUNCTION. Removes an asset from the whitelist
+     *
+     * @param _asset Address of the asset
+     */
+    function removeAssetWhitelist(address _asset) external onlyOwner {
+      require(assetWhitelist[_asset], "Asset is whitelisted");
+      assetWhitelist[_asset] = false;
+    }
+
+    /**
+     * PRIVILEGED FACTORY FUNCTION. Adds a list of assets to the whitelist
+     *
+     * @param _assets List with addresses of the assets to whitelist
+     */
+    function addAssetsWhitelist(address[] memory _assets) external onlyOwner {
+      for (uint i = 0; i < _assets.length; i++) {
+        _addAssetWhitelist(_assets[i]);
+      }
+    }
 
     /**
      * PRIVILEGED FACTORY FUNCTION. Adds a new valid reserve asset for funds
@@ -497,6 +532,14 @@ contract BabController is Ownable {
         return validReserveAsset[_reserveAsset];
     }
 
+    function isValidAsset(address _asset)
+        external
+        view
+        returns (bool)
+    {
+        return assetWhitelist[_asset];
+    }
+
     /**
      * Get integration integration address associated with passed human readable name
      *
@@ -576,6 +619,15 @@ contract BabController is Ownable {
     }
 
     /* ============ Internal Only Function ============ */
+
+    /**
+     * Adds an asset to the whitelist
+     */
+    function _addAssetWhitelist(address _asset) internal {
+      require(_asset.isContract(), "Asset must be a contract");
+      require(!assetWhitelist[_asset], "Asset is already whitelisted");
+      assetWhitelist[_asset] = true;
+    }
 
     /**
      * Hashes the string and returns a bytes32 value
