@@ -91,6 +91,9 @@ contract BabController is Ownable {
     // Mapping to check whitelisted assets
     mapping(address => bool) public assetWhitelist;
 
+    // Mapping to check keepers
+    mapping(address => bool) public keeperList;
+
     // Recipient of protocol fees
     address public feeRecipient;
 
@@ -250,6 +253,36 @@ contract BabController is Ownable {
     function addAssetsWhitelist(address[] memory _assets) external onlyOwner {
       for (uint i = 0; i < _assets.length; i++) {
         _addAssetWhitelist(_assets[i]);
+      }
+    }
+
+    /**
+     * PRIVILEGED FACTORY FUNCTION. Adds a new valid keeper to the list
+     *
+     * @param _keeper Address of the keeper
+     */
+    function addKeeper(address _keeper) external onlyOwner {
+      keeperList[_keeper] = true;
+    }
+
+    /**
+     * PRIVILEGED FACTORY FUNCTION. Removes a keeper
+     *
+     * @param _keeper Address of the keeper
+     */
+    function removeKeeper(address _keeper) external onlyOwner {
+      require(keeperList[_keeper], "Keeper is whitelisted");
+      keeperList[_keeper] = false;
+    }
+
+    /**
+     * PRIVILEGED FACTORY FUNCTION. Adds a list of assets to the whitelist
+     *
+     * @param _keepers List with keeprs of the assets to whitelist
+     */
+    function addKeepers(address[] memory _keepers) external onlyOwner {
+      for (uint i = 0; i < _keepers.length; i++) {
+        keeperList[_keepers[i]] = true;
       }
     }
 
@@ -538,6 +571,14 @@ contract BabController is Ownable {
         returns (bool)
     {
         return assetWhitelist[_asset];
+    }
+
+    function isValidKeeper(address _keeper)
+        external
+        view
+        returns (bool)
+    {
+        return keeperList[_keeper];
     }
 
     /**

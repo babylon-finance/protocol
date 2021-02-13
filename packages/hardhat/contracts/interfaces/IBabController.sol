@@ -49,6 +49,9 @@ interface IBabController {
     function addAssetWhitelist(address _asset) external;
     function removeAssetWhitelist(address _asset) external;
     function addAssetsWhitelist(address[] memory _assets) external;
+    function addKeeper(address _keeper) external;
+    function removeKeeper(address _keeper) external;
+    function addKeepers(address[] memory _keepers) external;
 
     // Getters
     function getPriceOracle() external view returns (address);
@@ -61,6 +64,7 @@ interface IBabController {
     function getIntegrationWithHash(bytes32 _nameHashP) external view returns (address);
     function isValidReserveAsset(address _reserveAsset) external view returns(bool);
     function isValidAsset(address _asset) external view returns (bool);
+    function isValidKeeper(address _keeper) external view returns (bool);
     function isSystemContract(address _contractAddress) external view returns (bool);
     function isValidIntegration(string memory _name) external view returns (bool);
     function getMaxFundDuration() external view returns (uint256);

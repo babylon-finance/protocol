@@ -110,7 +110,7 @@ describe("BabController", function() {
     const YFI = "0x0bc529c00C6401aEF6D220BE8C6Ea1667F6Ad93e";
     const ZRX = "0xe41d2489571d322189246dafa5ebde1f4699f498";
     it("can add new whitelisted assets", async function() {
-      await controller.addAssetWhitelist();
+      await controller.addAssetWhitelist(YFI);
 
       const valid = await controller.isValidAsset(YFI);
       expect(valid).to.equal(true);
@@ -129,6 +129,37 @@ describe("BabController", function() {
 
       expect(await controller.isValidAsset(YFI)).to.equal(true);
       expect(await controller.isValidAsset(ZRX)).to.equal(true);
+    });
+  });
+
+  describe("Keeper List", function() {
+    it("can add new keepers", async function() {
+      await controller.addKeeper(addresses.users.hardhat3);
+
+      const valid = await controller.isValidKeeper(addresses.users.hardhat3);
+      expect(valid).to.equal(true);
+    });
+
+    it("can remove whitelisted assets", async function() {
+      await controller.addKeeper(addresses.users.hardhat3);
+      await controller.removeKeeper(addresses.users.hardhat3);
+
+      const valid = await controller.isValidKeeper(addresses.users.hardhat3);
+      expect(valid).to.equal(false);
+    });
+
+    it("can add whitelisted assets in bulk", async function() {
+      await controller.addKeepers([
+        addresses.users.hardhat3,
+        addresses.users.hardhat2
+      ]);
+
+      expect(await controller.isValidKeeper(addresses.users.hardhat3)).to.equal(
+        true
+      );
+      expect(await controller.isValidKeeper(addresses.users.hardhat2)).to.equal(
+        true
+      );
     });
   });
 

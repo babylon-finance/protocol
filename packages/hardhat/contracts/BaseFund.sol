@@ -99,8 +99,7 @@ abstract contract BaseFund is ERC20 {
      * Throws if the sender is not a keeper in the protocol
      */
     modifier onlyKeeper() {
-      // TODO
-      // require(msg.sender == controller, "Only the controller can call this");
+      require(IBabController(controller).isValidKeeper(msg.sender), "Only a keeper can call this");
       _;
     }
 
