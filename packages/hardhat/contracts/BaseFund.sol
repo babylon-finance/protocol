@@ -99,8 +99,7 @@ abstract contract BaseFund is ERC20 {
      * Throws if the sender is not a keeper in the protocol
      */
     modifier onlyKeeper() {
-      // TODO
-      // require(msg.sender == controller, "Only the controller can call this");
+      require(IBabController(controller).isValidKeeper(msg.sender), "Only a keeper can call this");
       _;
     }
 
@@ -354,8 +353,10 @@ abstract contract BaseFund is ERC20 {
       _validateOnlyIntegration(_integration);
       // Exchange the tokens needed
       for (uint i = 0; i < _tokensNeeded.length; i++) {
-        uint pricePerTokenUnit = _getPrice(reserveAsset, _tokensNeeded[i]);
-        _trade("kyber", reserveAsset, _tokenAmountsNeeded[i].preciseDiv(pricePerTokenUnit),_tokensNeeded[i], _tokenAmountsNeeded[i], _data);
+        if (_tokensNeeded[i] != reserveAsset) {
+          uint pricePerTokenUnit = _getPrice(reserveAsset, _tokensNeeded[i]);
+          _trade("kyber", reserveAsset, _tokenAmountsNeeded[i].preciseDiv(pricePerTokenUnit),_tokensNeeded[i], _tokenAmountsNeeded[i], _data);
+        }
       }
       return _invoke(_integration, _value, _data);
     }
