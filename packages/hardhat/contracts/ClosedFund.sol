@@ -467,15 +467,19 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
       require(investmentIdeasCurrentEpoch.length > _ideaIndex, "The idea index does not exist");
       require(_amount.toUint256() < balanceOf(msg.sender), "Participant does not have enough balance");
       InvestmentIdea storage idea = investmentIdeasCurrentEpoch[_ideaIndex];
-      // TODO: Check that the curator has not used all his fund tokens during this epoch already
+      uint256 totalVotesUser = 0;
+      for (uint8 i = 0; i < investmentIdeasCurrentEpoch.length; i++) {
+        totalVotesUser = totalVotesUser.add(votes[idea.index][msg.sender].toUint256());
+      }
+      require(totalVotesUser.add(_amount.toUint256()) < balanceOf(msg.sender), "Participant does not have enough balance");
       if (votes[idea.index][msg.sender] == 0) {
         idea.totalVoters++;
       }
-      votes[idea.index][msg.sender] = _amount;
+      votes[idea.index][msg.sender] = votes[idea.index][msg.sender].add(_amount);
       idea.totalVotes.add(_amount);
     }
 
-    function executeTopTrade() external onlyKeeper {
+    function executeTopInvestment() external onlyKeeper {
       require(block.timestamp > lastInvestmentExecutedAt.add(fundEpoch).add(fundDeliberationDuration), "Idea can only be executed after the minimum period has elapsed");
       require(investmentIdeasCurrentEpoch.length > 0, "There must be an investment idea ready to execute");
       // TODO: create function to get the top investment idea from stake + votes
@@ -483,7 +487,8 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
       require(topIdeaIndex < investmentIdeasCurrentEpoch.length, "No idea available to execute");
       InvestmentIdea storage idea = investmentIdeasCurrentEpoch[topIdeaIndex];
       // Execute enter trade
-      // callIntegration(idea.integration, 0, data, idea.enterTokensNeeded, idea.enterTokensAmounts);
+      bytes memory _data = idea.enterPayload;
+      callIntegration(idea.integration, 0, _data, idea.enterTokensNeeded, idea.enterTokensAmounts);
       // Push the trade to the investments executed
       investmentsExecuted[investmentsExecuted.length] = idea;
       // Clear investment ideas
@@ -493,13 +498,16 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
       idea.executedAt = block.timestamp;
     }
 
-    function finalizeTrade(uint _ideaIndex) external onlyKeeper {
+    function finalizeInvestment(uint _ideaIndex) external onlyKeeper {
       require(investmentsExecuted.length > _ideaIndex, "This idea index does not exist");
       InvestmentIdea storage idea = investmentsExecuted[_ideaIndex];
       require(block.timestamp > lastInvestmentExecutedAt.add(fundEpoch).add(idea.duration), "Idea can only be executed after the minimum period has elapsed");
       require(!idea.finalized, "This investment was already exited");
+      address[] memory _tokensNeeded;
+      uint256[] memory _tokenAmounts;
       // Execute exit trade
-      // callIntegration(idea.integration, 0, idea.exitPayload, tokensNeeded, tokenAmounts);
+      bytes memory _data = idea.exitPayload;
+      callIntegration(idea.integration, 0, _data, _tokensNeeded, _tokenAmounts);
       // Mark as finalized
       idea.finalized = true;
       idea.exitedAt = block.timestamp;
@@ -520,9 +528,11 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
       for (uint8 i = 0; i < investmentIdeasCurrentEpoch.length; i++) {
         InvestmentIdea memory idea = investmentIdeasCurrentEpoch[i];
         // TODO: tweak this formula
-        uint256 currentScore = idea.stake.mul(idea.totalVotes.toUint256()).mul(idea.totalVoters);
-        if (currentScore > maxScore) {
-          indexResult = i;
+        if (idea.totalVotes > 0) {
+          uint256 currentScore = idea.stake.mul(idea.totalVotes.toUint256()).mul(idea.totalVoters);
+          if (currentScore > maxScore) {
+            indexResult = i;
+          }
         }
       }
       return indexResult;

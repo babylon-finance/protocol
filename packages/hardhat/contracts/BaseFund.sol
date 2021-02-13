@@ -344,7 +344,7 @@ abstract contract BaseFund is ERC20 {
     function callIntegration(
       address _integration,
       uint256 _value,
-      bytes calldata _data,
+      bytes memory _data,
       address[] memory _tokensNeeded,
       uint256[] memory _tokenAmountsNeeded
     )
@@ -635,7 +635,7 @@ abstract contract BaseFund is ERC20 {
     function _invoke(
         address _target,
         uint256 _value,
-        bytes calldata _data
+        bytes memory _data
     )
         internal
         returns (bytes memory _returnValue)
