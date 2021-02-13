@@ -10,11 +10,15 @@ const { loadFixture } = waffle;
 describe("BalancerIntegrationTest", function() {
   let system;
   let balancerIntegration;
+  let balancerAbi;
   let fund;
+  let userSigner3;
 
   beforeEach(async () => {
     system = await loadFixture(deployFolioFixture);
     balancerIntegration = system.integrations.balancerIntegration;
+    userSigner3 = system.signer3;
+    balancerAbi = balancerIntegration.interface;
     fund = system.funds.one;
   });
 
@@ -56,51 +60,101 @@ describe("BalancerIntegrationTest", function() {
     });
 
     it("can enter and exit the weth dai pool", async function() {
-      expect(
-        await daiToken
-          .connect(whaleSigner)
-          .transfer(fund.address, ethers.utils.parseEther("1000"), {
-            gasPrice: 0
-          })
+      // expect(
+      //   await daiToken
+      //     .connect(whaleSigner)
+      //     .transfer(fund.address, ethers.utils.parseEther("1000"), {
+      //       gasPrice: 0
+      //     })
+      // );
+      // expect(
+      //   await wethToken
+      //     .connect(whaleWeth)
+      //     .transfer(fund.address, ethers.utils.parseEther("10"), {
+      //       gasPrice: 0
+      //     })
+      // );
+      // expect(await daiToken.balanceOf(fund.address)).to.equal(
+      //   ethers.utils.parseEther("1000")
+      // );
+      // expect(await wethToken.balanceOf(fund.address)).to.equal(
+      //   ethers.utils.parseEther("10.1")
+      // );
+
+      await fund
+        .connect(userSigner3)
+        .deposit(ethers.utils.parseEther("5"), 1, userSigner3.getAddress(), {
+          value: ethers.utils.parseEther("5")
+        });
+
+      const dataEnter = balancerAbi.encodeFunctionData(
+        balancerAbi.functions["joinPool(address,uint256,address[],uint256[])"],
+        [
+          addresses.balancer.pools.wethdai,
+          ethers.utils.parseEther("0.001"),
+          await daiWethPool.getFinalTokens(),
+          [ethers.utils.parseEther("1000"), ethers.utils.parseEther("2")]
+        ]
       );
-      expect(
-        await wethToken
-          .connect(whaleWeth)
-          .transfer(fund.address, ethers.utils.parseEther("10"), {
-            gasPrice: 0
-          })
+
+      await fund.callIntegration(
+        balancerIntegration.address,
+        ethers.utils.parseEther("0"),
+        dataEnter,
+        [daiToken.address],
+        [ethers.utils.parseEther("1000")],
+        {
+          gasPrice: 0
+        }
       );
-      expect(await daiToken.balanceOf(fund.address)).to.equal(
-        ethers.utils.parseEther("1000")
-      );
-      expect(await wethToken.balanceOf(fund.address)).to.equal(
-        ethers.utils.parseEther("10.1")
-      );
-      await fund.joinPool(
-        "balancer",
-        addresses.balancer.pools.wethdai,
-        ethers.utils.parseEther("0.001"),
-        await daiWethPool.getFinalTokens(),
-        [ethers.utils.parseEther("1000"), ethers.utils.parseEther("10")],
-        { gasPrice: 0 }
-      );
+
+      // await fund.joinPool(
+      //   "balancer",
+      //   addresses.balancer.pools.wethdai,
+      //   ethers.utils.parseEther("0.001"),
+      //   await daiWethPool.getFinalTokens(),
+      //   [ethers.utils.parseEther("1000"), ethers.utils.parseEther("10")],
+      //   { gasPrice: 0 }
+      // );
       expect(await daiWethPool.balanceOf(fund.address)).to.be.eq(
         ethers.utils.parseEther("0.001")
       );
-      await fund.exitPool(
-        "balancer",
-        addresses.balancer.pools.wethdai,
-        ethers.utils.parseEther("0.001"),
-        await daiWethPool.getFinalTokens(),
-        [ethers.utils.parseEther("100"), ethers.utils.parseEther("0.1")],
-        { gasPrice: 0 }
+
+      const dataExit = balancerAbi.encodeFunctionData(
+        balancerAbi.functions["exitPool(address,uint256,address[],uint256[])"],
+        [
+          addresses.balancer.pools.wethdai,
+          ethers.utils.parseEther("0.001"),
+          await daiWethPool.getFinalTokens(),
+          [ethers.utils.parseEther("100"), ethers.utils.parseEther("0.1")]
+        ]
       );
+
+      await fund.callIntegration(
+        balancerIntegration.address,
+        ethers.utils.parseEther("0"),
+        dataExit,
+        [],
+        [],
+        {
+          gasPrice: 0
+        }
+      );
+
+      // await fund.exitPool(
+      //   "balancer",
+      //   addresses.balancer.pools.wethdai,
+      //   ethers.utils.parseEther("0.001"),
+      //   await daiWethPool.getFinalTokens(),
+      //   [ethers.utils.parseEther("100"), ethers.utils.parseEther("0.1")],
+      //   { gasPrice: 0 }
+      // );
       expect(await daiWethPool.balanceOf(fund.address)).to.equal(0);
       expect(await daiToken.balanceOf(fund.address)).to.be.gt(
         ethers.utils.parseEther("999")
       );
       expect(await wethToken.balanceOf(fund.address)).to.be.gt(
-        ethers.utils.parseEther("10.00")
+        ethers.utils.parseEther("4.00")
       );
     });
   });

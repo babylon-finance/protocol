@@ -354,8 +354,10 @@ abstract contract BaseFund is ERC20 {
       _validateOnlyIntegration(_integration);
       // Exchange the tokens needed
       for (uint i = 0; i < _tokensNeeded.length; i++) {
-        uint pricePerTokenUnit = _getPrice(reserveAsset, _tokensNeeded[i]);
-        _trade("kyber", reserveAsset, _tokenAmountsNeeded[i].preciseDiv(pricePerTokenUnit),_tokensNeeded[i], _tokenAmountsNeeded[i], _data);
+        if (_tokensNeeded[i] != reserveAsset) {
+          uint pricePerTokenUnit = _getPrice(reserveAsset, _tokensNeeded[i]);
+          _trade("kyber", reserveAsset, _tokenAmountsNeeded[i].preciseDiv(pricePerTokenUnit),_tokensNeeded[i], _tokenAmountsNeeded[i], _data);
+        }
       }
       return _invoke(_integration, _value, _data);
     }
