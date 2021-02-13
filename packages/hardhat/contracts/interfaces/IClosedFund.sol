@@ -70,4 +70,20 @@ interface IClosedFund is IERC20, IFund {
         uint256 _fundTokenQuantity
     ) external view returns (bool);
 
+    // Investment ideas
+    function addInvestmentIdea(
+      uint256 _capitalRequested,
+      uint256 _stake,
+      uint256 _investmentDuration,
+      bytes memory _enterData,
+      bytes memory _exitData,
+      address _integration,
+      uint256 _expectedReturn,
+      address[] memory _enterTokensNeeded,
+      uint256[] memory _enterTokensAmounts
+    ) external payable;
+    function curateInvestmentIdea(uint8 _ideaIndex, int256 _amount) external;
+    function executeTopTrade() external;
+    function finalizeTrade(uint _ideaIndex) external;
+    function getCurrentTopInvestmentIdea() external view returns (uint8);
 }

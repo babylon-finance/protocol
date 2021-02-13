@@ -115,9 +115,13 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
       uint256 exitedAt;                  // Timestamp when the idea was submitted
       uint256 stake;                     // Amount of stake (in reserve asset)
       uint256 capitalRequested;          // Amount of capital requested (in reserve asset)
+      uint256 expectedReturn;            // Expect return by this investment idea
+      address[] enterTokensNeeded;       // Positions that need to be taken prior to enter trade
+      uint256[] enterTokensAmounts;      // Amount of these positions
       uint256 duration;                  // Duration of the bet
       int256 totalVotes;                 // Total votes
       uint256 totalVoters;               // Total amount of participants that voted
+      address integration;               // Address of the integration
       bytes enterPayload;                // Calldata to execute when entering
       bytes exitPayload;                 // Calldata to execute when exiting the trade
       bool finalized;                    // Flag that indicates whether we exited the idea
@@ -403,7 +407,126 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
        _calculateAndEditPosition(_token, balance, ERC20(_token).balanceOf(address(this)), 0);
     }
 
+    /**
+     * Adds an investment idea to the contenders array for this epoch.
+     * Investment stake is stored in the contract. (not converted to reserve asset).
+     * If the array is already at the limit, replace the one with the lowest stake.
+     * @param _capitalRequested              Capital requested denominated in the reserve asset
+     * @param _stake                         Stake denominated in the reserve asset
+     * @param _investmentDuration            Investment duration in seconds
+     * @param _enterData                     Operation to perform to enter the investment
+     * @param _exitData                      Operation to perform to exit the investment
+     * @param _integration                   Address of the integration
+     */
+    function addInvestmentIdea(
+      uint256 _capitalRequested,
+      uint256 _stake,
+      uint256 _investmentDuration,
+      bytes memory _enterData,
+      bytes memory _exitData,
+      address _integration,
+      uint256 _expectedReturn,
+      address[] memory _enterTokensNeeded,
+      uint256[] memory _enterTokensAmounts
+    ) external onlyContributor(msg.sender) payable {
+      require(block.timestamp < lastInvestmentExecutedAt.add(fundEpoch), "Idea can only be suggested before the deliberation period");
+      // require(_validateOnlyIntegration(_integration), "Contract address is not a valid integration");
+      require(_stake > 0, "Stake amount must be greater than 0");
+      require(_investmentDuration > 1 hours, "Investment duration must be greater than an hour");
+      require(_capitalRequested < _getPositionBalance(reserveAsset).toUint256(), "The capital requested is greater than the capital available");
+      require(investmentIdeasCurrentEpoch.length < maxIdeasPerEpoch || _stake > currentMinStakeEpoch, "Not enough stake to add the idea");
+      uint ideaIndex = investmentIdeasCurrentEpoch.length;
+      if (ideaIndex >= maxIdeasPerEpoch) {
+        ideaIndex = currentMinStakeIndex;
+      }
+      // Check than enter and exit data call callIntegration
+      InvestmentIdea storage idea = investmentIdeasCurrentEpoch[ideaIndex];
+      idea.index = currentInvestmentsIndex;
+      idea.integration = _integration;
+      idea.participant = msg.sender;
+      idea.capitalRequested = _capitalRequested;
+      idea.enteredAt = block.timestamp;
+      idea.stake = _stake;
+      idea.duration = _investmentDuration;
+      idea.enterPayload = _enterData;
+      idea.exitPayload = _exitData;
+      idea.enterTokensNeeded = _enterTokensNeeded;
+      idea.enterTokensAmounts = _enterTokensAmounts;
+      idea.expectedReturn = _expectedReturn;
+      currentInvestmentsIndex ++;
+    }
+
+    /**
+     * Curates an investment idea fromt the contenders array for this epoch.
+     * This can happen at any time. As long as there are investment ideas.
+     * @param _ideaIndex                The position of the idea index in the array for the current epoch
+     * @param _amount                   Amount to curate, positive to endorse, negative to downvote
+     * TODO: Meta Transaction
+     */
+    function curateInvestmentIdea(uint8 _ideaIndex, int256 _amount) external onlyContributor(msg.sender) {
+      require(investmentIdeasCurrentEpoch.length > _ideaIndex, "The idea index does not exist");
+      require(_amount.toUint256() < balanceOf(msg.sender), "Participant does not have enough balance");
+      InvestmentIdea storage idea = investmentIdeasCurrentEpoch[_ideaIndex];
+      // TODO: Check that the curator has not used all his fund tokens during this epoch already
+      if (votes[idea.index][msg.sender] == 0) {
+        idea.totalVoters++;
+      }
+      votes[idea.index][msg.sender] = _amount;
+      idea.totalVotes.add(_amount);
+    }
+
+    function executeTopTrade() external onlyKeeper {
+      require(block.timestamp > lastInvestmentExecutedAt.add(fundEpoch).add(fundDeliberationDuration), "Idea can only be executed after the minimum period has elapsed");
+      require(investmentIdeasCurrentEpoch.length > 0, "There must be an investment idea ready to execute");
+      // TODO: create function to get the top investment idea from stake + votes
+      uint8 topIdeaIndex = getCurrentTopInvestmentIdea();
+      require(topIdeaIndex < investmentIdeasCurrentEpoch.length, "No idea available to execute");
+      InvestmentIdea storage idea = investmentIdeasCurrentEpoch[topIdeaIndex];
+      // Execute enter trade
+      // callIntegration(idea.integration, 0, data, idea.enterTokensNeeded, idea.enterTokensAmounts);
+      // Push the trade to the investments executed
+      investmentsExecuted[investmentsExecuted.length] = idea;
+      // Clear investment ideas
+      delete investmentIdeasCurrentEpoch;
+      // Restarts the epoc counter
+      lastInvestmentExecutedAt = block.timestamp;
+      idea.executedAt = block.timestamp;
+    }
+
+    function finalizeTrade(uint _ideaIndex) external onlyKeeper {
+      require(investmentsExecuted.length > _ideaIndex, "This idea index does not exist");
+      InvestmentIdea storage idea = investmentsExecuted[_ideaIndex];
+      require(block.timestamp > lastInvestmentExecutedAt.add(fundEpoch).add(idea.duration), "Idea can only be executed after the minimum period has elapsed");
+      require(!idea.finalized, "This investment was already exited");
+      // Execute exit trade
+      // callIntegration(idea.integration, 0, idea.exitPayload, tokensNeeded, tokenAmounts);
+      // Mark as finalized
+      idea.finalized = true;
+      idea.exitedAt = block.timestamp;
+      // TODO: Reward contributors accordingly with reserve asset & update position of the reserve asset
+    }
+
     /* ============ External Getter Functions ============ */
+
+    /**
+     * Gets the index of the top investment idea in this epoch
+     * Uses the stake, the number of voters and the total weight behind the idea.
+     *
+     * @return  uint8        Top Idea index. Returns the max length + 1 if none.
+     */
+    function getCurrentTopInvestmentIdea() public view returns (uint8) {
+      uint256 maxScore = 0;
+      uint8 indexResult = maxIdeasPerEpoch + 1;
+      for (uint8 i = 0; i < investmentIdeasCurrentEpoch.length; i++) {
+        InvestmentIdea memory idea = investmentIdeasCurrentEpoch[i];
+        // TODO: tweak this formula
+        uint256 currentScore = idea.stake.mul(idea.totalVotes.toUint256()).mul(idea.totalVoters);
+        if (currentScore > maxScore) {
+          indexResult = i;
+        }
+      }
+      return indexResult;
+    }
 
     function getContributor(address _contributor) public view returns (uint256, uint256, uint256) {
         Contributor memory contributor = contributors[_contributor];
@@ -513,91 +636,6 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
 
             return existingBalance >= expectedWithdrawalQuantity;
         }
-    }
-
-    /**
-     * Adds an investment idea to the contenders array for this epoch.
-     * Investment stake is stored in the contract. (not converted to reserve asset).
-     * If the array is already at the limit, replace the one with the lowest stake.
-     * @param _capitalRequested              Capital requested denominated in the reserve asset
-     * @param _stake                         Stake denominated in the reserve asset
-     * @param _investmentDuration            Investment duration in seconds
-     * @param _enterData                     Operation to perform to enter the investment
-     * @param _exitData                      Operation to perform to exit the investment
-     */
-    function addInvestmentIdea(uint256 _capitalRequested, uint256 _stake, uint256 _investmentDuration, bytes memory _enterData, bytes memory _exitData) external onlyContributor(msg.sender) payable {
-      require(block.timestamp < lastInvestmentExecutedAt.add(fundEpoch), "Idea can only be suggested before the deliberation period");
-      require(_stake > 0, "Stake amount must be greater than 0");
-      require(_investmentDuration > 1 hours, "Investment duration must be greater than an hour");
-      require(_capitalRequested < _getPositionBalance(reserveAsset).toUint256(), "The capital requested is greater than the capital available");
-      require(investmentIdeasCurrentEpoch.length < maxIdeasPerEpoch || _stake > currentMinStakeEpoch, "Not enough stake to add the idea");
-      uint ideaIndex = investmentIdeasCurrentEpoch.length;
-      if (ideaIndex >= maxIdeasPerEpoch) {
-        ideaIndex = currentMinStakeIndex;
-      }
-      // Check than enter and exit data call callIntegration
-      InvestmentIdea storage idea = investmentIdeasCurrentEpoch[ideaIndex];
-      idea.index = currentInvestmentsIndex;
-      idea.participant = msg.sender;
-      idea.capitalRequested = _capitalRequested;
-      idea.enteredAt = block.timestamp;
-      idea.stake = _stake;
-      idea.duration = _investmentDuration;
-      idea.enterPayload = _enterData;
-      idea.exitPayload = _exitData;
-      currentInvestmentsIndex ++;
-    }
-
-    /**
-     * Curates an investment idea fromt the contenders array for this epoch.
-     * This can happen at any time. As long as there are investment ideas.
-     * @param _ideaIndex                The position of the idea index in the array for the current epoch
-     * @param _amount                   Amount to curate, positive to endorse, negative to downvote
-     * TODO: Meta Transaction
-     */
-    function curateInvestmentIdea(uint8 _ideaIndex, int256 _amount) external onlyContributor(msg.sender) {
-      require(investmentIdeasCurrentEpoch.length > _ideaIndex, "The idea index does not exist");
-      require(_amount.toUint256() < balanceOf(msg.sender), "Participant does not have enough balance");
-      InvestmentIdea storage idea = investmentIdeasCurrentEpoch[_ideaIndex];
-      // TODO: Check that the curator has not used all his fund tokens during this epoch already
-      if (votes[idea.index][msg.sender] == 0) {
-        idea.totalVoters++;
-      }
-      votes[idea.index][msg.sender] = _amount;
-      idea.totalVotes.add(_amount);
-    }
-
-    function executeTopTrade() external onlyKeeper {
-      require(block.timestamp > lastInvestmentExecutedAt.add(fundEpoch).add(fundDeliberationDuration), "Idea can only be executed after the minimum period has elapsed");
-      require(investmentIdeasCurrentEpoch.length > 0, "There must be an investment idea ready to execute");
-      // check that the keeper is registered and healthy
-      // TODO: create function to get the top investment idea from stake + votes
-      uint8 topIdeaIndex = 0;
-      InvestmentIdea storage idea = investmentIdeasCurrentEpoch[topIdeaIndex];
-      // Execute enter trade
-      // callIntegration
-      // Push the trade to the investments executed
-      investmentsExecuted[investmentsExecuted.length] = idea;
-      // Clear investment ideas
-      delete investmentIdeasCurrentEpoch;
-      // Restarts the epoc counter
-      lastInvestmentExecutedAt = block.timestamp;
-      idea.executedAt = block.timestamp;
-      // Sends fee to the keeper
-    }
-
-    function finalizeTrade(uint _ideaIndex) external onlyKeeper {
-      require(investmentsExecuted.length > _ideaIndex, "This idea index does not exist");
-      InvestmentIdea storage idea = investmentsExecuted[_ideaIndex];
-      require(!idea.finalized, "This investment was already exited");
-      // check that the keeper is registered and healthy
-      // Execute exit trade
-      // callIntegration
-      // Mark as finalized
-      idea.finalized = true;
-      idea.exitedAt = block.timestamp;
-      // Reward contributors accordingly with reserve asset & update position of the reserve asset
-      // Sends fee to the keeper
     }
 
     receive() external payable {} // solium-disable-line quotes
