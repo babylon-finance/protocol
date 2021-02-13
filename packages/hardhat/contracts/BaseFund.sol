@@ -345,10 +345,10 @@ abstract contract BaseFund is ERC20 {
       address _integration,
       uint256 _value,
       bytes calldata _data,
-      address[] memory _tokensNeeded,
-      uint256[] memory _tokenAmountsNeeded
+      address[] calldata _tokensNeeded,
+      uint256[] calldata _tokenAmountsNeeded
     )
-    external onlyKeeper returns (bytes memory _returnValue) {
+    public onlyKeeper returns (bytes memory _returnValue) {
       require(_tokensNeeded.length == _tokenAmountsNeeded.length);
       _validateOnlyIntegration(_integration);
       // Exchange the tokens needed
