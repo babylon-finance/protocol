@@ -109,7 +109,7 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
 
     struct InvestmentIdea {
       uint256 index;                     // Investment index (used for votes)
-      address participant;               // Address of the participant that submitted the bet
+      address payable participant;               // Address of the participant that submitted the bet
       uint256 enteredAt;                 // Timestamp when the idea was submitted
       uint256 executedAt;                // Timestamp when the idea was executed
       uint256 exitedAt;                  // Timestamp when the idea was submitted
@@ -118,6 +118,7 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
       uint256 expectedReturn;            // Expect return by this investment idea
       address[] enterTokensNeeded;       // Positions that need to be taken prior to enter trade
       uint256[] enterTokensAmounts;      // Amount of these positions
+      address[] voters;                  // Addresses with the voters
       uint256 duration;                  // Duration of the bet
       int256 totalVotes;                 // Total votes
       uint256 totalVoters;               // Total amount of participants that voted
@@ -134,6 +135,9 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
     InvestmentIdea[maxIdeasPerEpoch] investmentIdeasCurrentEpoch;
     InvestmentIdea[] investmentsExecuted;
 
+    // Investment rewards
+    uint256 public ideaCreatorProfitPercentage = 15e16; // (0.01% = 1e14, 1% = 1e16)
+    uint256 public ideaVotersProfitPercentage = 5e16; // (0.01% = 1e14, 1% = 1e16)
     uint256 public lastInvestmentExecutedAt; // Timestamp when the last investment was executed
 
     // Fees
@@ -468,6 +472,9 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
       require(totalVotesUser.add(_amount.toUint256()) < balanceOf(msg.sender), "Participant does not have enough balance");
       if (votes[idea.index][msg.sender] == 0) {
         idea.totalVoters++;
+        idea.voters = [msg.sender];
+      } else {
+        idea.voters.push(msg.sender);
       }
       votes[idea.index][msg.sender] = votes[idea.index][msg.sender].add(_amount);
       idea.totalVotes.add(_amount);
@@ -498,9 +505,10 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
     /**
      * Exits from an executed investment.
      * Sends rewards to the person that created the idea, the voters, and the rest to the fund.
+     * If there are profits
      * Updates the reserve asset position accordingly.
      */
-    function finalizeInvestment(uint _ideaIndex) external onlyKeeper {
+    function finalizeInvestment(uint _ideaIndex) external onlyKeeper nonReentrant {
       require(investmentsExecuted.length > _ideaIndex, "This idea index does not exist");
       InvestmentIdea storage idea = investmentsExecuted[_ideaIndex];
       require(block.timestamp > lastInvestmentExecutedAt.add(fundEpoch).add(idea.duration), "Idea can only be executed after the minimum period has elapsed");
@@ -513,7 +521,58 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
       // Mark as finalized
       idea.finalized = true;
       idea.exitedAt = block.timestamp;
-      // TODO: Reward contributors accordingly with reserve asset & update position of the reserve asset
+      uint256 reserveAssetDelta = 0;
+      // TODO: Calculate capital returned
+      uint256 capitalReturned = 0;
+      // Idea returns were positive
+      if (capitalReturned > idea.capitalRequested) {
+        uint256 profits = capitalReturned - idea.capitalRequested; // in reserve asset (weth)
+        // Send stake back to the creator
+        idea.participant.transfer(idea.stake);
+        uint256 ideatorProfits = ideaCreatorProfitPercentage.preciseMul(profits);
+        // Send rewards to the creator
+        ERC20(reserveAsset).transfer(
+          idea.participant,
+          ideatorProfits
+        );
+        reserveAssetDelta.add(uint256(-ideatorProfits));
+        uint256 votersProfits = ideaVotersProfitPercentage.preciseMul(profits);
+        // Send rewards to voters that voted in favor
+        for (uint256 i = 0; i < idea.voters.length; i++) {
+          int256 voterWeight = votes[_ideaIndex][idea.voters[i]];
+          if (voterWeight > 0) {
+            ERC20(reserveAsset).transfer(
+              idea.voters[i],
+              votersProfits.mul(voterWeight.toUint256()).div(idea.totalVotes.toUint256())
+            );
+          }
+        }
+        reserveAssetDelta.add(uint256(-votersProfits));
+      } else {
+        // Returns were negative
+        uint256 stakeToSlash = idea.stake;
+        if (capitalReturned.add(idea.stake) > idea.capitalRequested) {
+          stakeToSlash = capitalReturned.add(idea.stake).sub(idea.capitalRequested);
+        }
+        // We slash and add to the fund the stake from the creator
+        IWETH(weth).deposit{value: stakeToSlash}();
+        reserveAssetDelta.add(stakeToSlash);
+        uint256 votersRewards = ideaVotersProfitPercentage.preciseMul(stakeToSlash);
+        // Send rewards to voters that voted against
+        for (uint256 i = 0; i < idea.voters.length; i++) {
+          int256 voterWeight = votes[_ideaIndex][idea.voters[i]];
+          if (voterWeight < 0) {
+            ERC20(reserveAsset).transfer(
+              idea.voters[i],
+              votersRewards.mul(voterWeight.toUint256()).div(idea.totalVotes.toUint256())
+            );
+          }
+        }
+        reserveAssetDelta.add(uint256(-stakeToSlash));
+      }
+      // Updates reserve asset position in the fund
+      uint256 _newTotal = _getPositionBalance(reserveAsset).add(int256(reserveAssetDelta)).toUint256();
+      calculateAndEditPosition(reserveAsset, _newTotal, reserveAssetDelta, 0);
     }
 
     /* ============ External Getter Functions ============ */
@@ -882,19 +941,19 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
                 : IBabController(controller)
                     .getProtocolWithdrawalFundTokenFee();
         // Get performance if withdrawal and there are profits
+        uint perfFee = 0;
         if (!_isDeposit) {
           uint percentage = balanceOf(msg.sender).div(_fundTokenQuantity); // Divide by the % tokens being withdrawn
           uint profits = contributors[msg.sender].totalDeposit.div(percentage).sub(_reserveAssetQuantity);
           if (profits > 0) {
-            uint perfFee = IBabController(controller)
+            perfFee = IBabController(controller)
             .getProtocolPerformanceFee().preciseMul(profits);
-            protocolFeePercentage = protocolFeePercentage.add(perfFee);
           }
         }
 
         // Calculate total notional fees
         uint256 protocolFees =
-            protocolFeePercentage.preciseMul(_reserveAssetQuantity);
+            protocolFeePercentage.preciseMul(_reserveAssetQuantity).add(perfFee);
 
         uint256 netReserveFlow =
             _reserveAssetQuantity.sub(protocolFees);
