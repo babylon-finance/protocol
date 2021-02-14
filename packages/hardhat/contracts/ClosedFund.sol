@@ -528,6 +528,7 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
       for (uint i = 0; i < idea.enterTokensNeeded.length; i++) {
         if (idea.enterTokensNeeded[i] != reserveAsset) {
           uint pricePerTokenUnit = _getPrice(reserveAsset, idea.enterTokensNeeded[i]);
+          // TODO: The actual amount must be supposedly higher when we exit
           _trade("kyber", idea.enterTokensNeeded[i], idea.enterTokensAmounts[i], reserveAsset, idea.enterTokensAmounts[i].preciseDiv(pricePerTokenUnit), _emptyTradeData);
         }
       }
