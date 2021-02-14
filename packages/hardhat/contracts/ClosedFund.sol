@@ -521,13 +521,22 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
       uint256[] memory _tokenAmounts;
       // Execute exit trade
       bytes memory _data = idea.exitPayload;
+      uint256 reserveAssetBeforeExiting = _getPositionBalance(reserveAsset).toUint256();
       callIntegration(idea.integration, 0, _data, _tokensNeeded, _tokenAmounts);
+      // Exchange the tokens back to the reserve asset
+      bytes memory _emptyTradeData;
+      for (uint i = 0; i < idea.enterTokensNeeded.length; i++) {
+        if (idea.enterTokensNeeded[i] != reserveAsset) {
+          uint pricePerTokenUnit = _getPrice(reserveAsset, idea.enterTokensNeeded[i]);
+          _trade("kyber", idea.enterTokensNeeded[i], idea.enterTokensAmounts[i], reserveAsset, idea.enterTokensAmounts[i].preciseDiv(pricePerTokenUnit), _emptyTradeData);
+        }
+      }
+      uint256 capitalReturned = _getPositionBalance(reserveAsset).toUint256().sub(reserveAssetBeforeExiting);
       // Mark as finalized
       idea.finalized = true;
       idea.exitedAt = block.timestamp;
       uint256 reserveAssetDelta = 0;
-      // TODO: Calculate capital returned
-      uint256 capitalReturned = 0;
+
       // Idea returns were positive
       if (capitalReturned > idea.capitalRequested) {
         uint256 profits = capitalReturned - idea.capitalRequested; // in reserve asset (weth)
