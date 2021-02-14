@@ -237,29 +237,6 @@ abstract contract BaseFund is ERC20 {
     }
 
     /**
-     * PRIVELEGED MODULE FUNCTION. Increases the "account" balance by the "quantity".
-     */
-    function mint(address _account, uint256 _quantity)
-        external
-        onlyIntegration
-        onlyActive
-    {
-        _mint(_account, _quantity);
-    }
-
-    /**
-     * PRIVELEGED MODULE FUNCTION. Decreases the "account" balance by the "quantity".
-     * _burn checks that the "account" already has the required "quantity".
-     */
-    function burn(address _account, uint256 _quantity)
-        external
-        onlyIntegration
-        onlyActive
-    {
-        _burn(_account, _quantity);
-    }
-
-    /**
      * MANAGER ONLY. Adds an integration into a PENDING state; Integration must later be initialized via
      * integration's initialize function
      */

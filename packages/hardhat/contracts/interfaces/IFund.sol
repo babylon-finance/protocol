@@ -68,16 +68,12 @@ interface IFund is IERC20 {
 
     /* ============ Functions ============ */
 
-    function mint(address _account, uint256 _quantity) external;
-    function burn(address _account, uint256 _quantity) external;
-
     function addIntegration(address _integration) external;
     function removeIntegration(address _integration) external;
     function initializeIntegration() external;
 
     function setActive() external;
     function setDisabled() external;
-    function setManager(address _manager) external;
 
     function controller() external view returns (address);
     function creator() external view returns (address);
