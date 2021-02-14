@@ -139,6 +139,7 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
     uint256 public ideaCreatorProfitPercentage = 15e16; // (0.01% = 1e14, 1% = 1e16)
     uint256 public ideaVotersProfitPercentage = 5e16; // (0.01% = 1e14, 1% = 1e16)
     uint256 public lastInvestmentExecutedAt; // Timestamp when the last investment was executed
+    uint8 public minVotersQuorum = 1;
 
     // Fees
     uint256 public premiumPercentage; // Premium percentage (0.01% = 1e14, 1% = 1e16). This premium is a buffer around oracle
@@ -428,10 +429,13 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
       uint256[] memory _enterTokensAmounts
     ) external onlyContributor(msg.sender) payable {
       require(block.timestamp < lastInvestmentExecutedAt.add(fundEpoch), "Idea can only be suggested before the deliberation period");
-      // require(_validateOnlyIntegration(_integration), "Contract address is not a valid integration");
+      _validateOnlyIntegration(_integration);
       require(_stake > 0, "Stake amount must be greater than 0");
+      require(_capitalRequested > 0, "Capital requested amount must be greater than 0");
       require(_investmentDuration > 1 hours, "Investment duration must be greater than an hour");
-      require(_capitalRequested < _getPositionBalance(reserveAsset).toUint256(), "The capital requested is greater than the capital available");
+      uint256 liquidReserveAsset = _getPositionBalance(reserveAsset).toUint256();
+      uint256 lockedInCurrentInvestment = investmentsExecuted[investmentsExecuted.length - 1].capitalRequested;
+      require(_capitalRequested <= liquidReserveAsset.add(lockedInCurrentInvestment), "The capital requested is greater than the capital available");
       require(investmentIdeasCurrentEpoch.length < maxIdeasPerEpoch || _stake > currentMinStakeEpoch, "Not enough stake to add the idea");
       uint ideaIndex = investmentIdeasCurrentEpoch.length;
       if (ideaIndex >= maxIdeasPerEpoch) {
@@ -589,7 +593,7 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
       for (uint8 i = 0; i < investmentIdeasCurrentEpoch.length; i++) {
         InvestmentIdea memory idea = investmentIdeasCurrentEpoch[i];
         // TODO: tweak this formula
-        if (idea.totalVotes > 0) {
+        if (idea.totalVotes > 0 && idea.totalVoters >= minVotersQuorum) {
           uint256 currentScore = idea.stake.mul(idea.totalVotes.toUint256()).mul(idea.totalVoters);
           if (currentScore > maxScore) {
             indexResult = i;
