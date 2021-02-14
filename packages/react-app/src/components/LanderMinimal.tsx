@@ -67,7 +67,7 @@ const LanderMinimal = () => {
     <ContainerLarge>
       <HeroContainer>
         <HeroValuePropA className="uvp-a">
-          One fund.
+          Community-led asset management.
         </HeroValuePropA>
         <HeroValuePropB className="uvp-b">
           The best investments in DeFi.
@@ -102,14 +102,14 @@ const FormButton = styled(Button)`
 
 const ContainerLarge = styled(Box)`
   max-width: var(--screen-md-max);
-  padding: 50px 30px 0 60px;
+  padding: 100px 120px 0 120px;
   position: relative;
   line-height: 1.15;
 
   @media only screen and (max-width: 840px) {
     padding: 30px 30px 0 30px;
     .uvp-a, .uvp-b {
-      font-size: 48px;
+      font-size: 34px;
     }
   }
 `

@@ -21,7 +21,7 @@ const AppHeaderMinimal = () => {
 const ContainerLarge = styled(Box)`
   margin: 0 auto;
   position: relative;
-  padding: 40px 40px 0 60px;
+  padding: 40px 120px 0 120px;
   width: 100%;
 
   @media only screen and (max-width: 840px) {

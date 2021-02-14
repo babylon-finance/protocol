@@ -1,4 +1,5 @@
 import AppHeaderMinimal from "./components/AppHeaderMinimal";
+import AppFooter from "./components/AppFooter";
 import LanderMinimal from "./components/LanderMinimal";
 
 import React from 'react';
@@ -19,7 +20,12 @@ interface AppState {
 export default class AppMinimal extends React.Component<AppProps, AppState> {
   renderHeader = (index?: boolean) => {
     return (
-      <AppHeaderMinimal key={"header"} />
+      <AppHeaderMinimal key={"app-header"} />
+    );
+  }
+  renderFooter = () => {
+    return (
+      <AppFooter key={"app-footer"} />
     );
   }
   render() {
@@ -28,7 +34,7 @@ export default class AppMinimal extends React.Component<AppProps, AppState> {
         <AppWrapper className="App">
           <ContentWrapper>
             <Switch>
-              <Route path="/" children={[this.renderHeader(true), <LanderMinimal key={"lander"} />]} />
+              <Route path="/" children={[this.renderHeader(true), <LanderMinimal key={"lander"} />, this.renderFooter()]} />
             </Switch>
           </ContentWrapper>
         </AppWrapper>
