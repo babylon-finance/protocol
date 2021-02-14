@@ -427,7 +427,7 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
       uint256 _expectedReturn,
       address[] memory _enterTokensNeeded,
       uint256[] memory _enterTokensAmounts
-    ) external onlyContributor(msg.sender) payable {
+    ) external onlyContributor(msg.sender) payable onlyActive {
       require(block.timestamp < lastInvestmentExecutedAt.add(fundEpoch), "Idea can only be suggested before the deliberation period");
       _validateOnlyIntegration(_integration);
       require(_stake > 0, "Stake amount must be greater than 0");
@@ -465,7 +465,7 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
      * @param _amount                   Amount to curate, positive to endorse, negative to downvote
      * TODO: Meta Transaction
      */
-    function curateInvestmentIdea(uint8 _ideaIndex, int256 _amount) external onlyContributor(msg.sender) {
+    function curateInvestmentIdea(uint8 _ideaIndex, int256 _amount) external onlyContributor(msg.sender) onlyActive {
       require(investmentIdeasCurrentEpoch.length > _ideaIndex, "The idea index does not exist");
       require(_amount.toUint256() < balanceOf(msg.sender), "Participant does not have enough balance");
       InvestmentIdea storage idea = investmentIdeasCurrentEpoch[_ideaIndex];
@@ -488,7 +488,7 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
      * Executes the top investment idea for this epoch.
      * We enter into the investment and add it to the executed ideas array.
      */
-    function executeTopInvestment() external onlyKeeper {
+    function executeTopInvestment() external onlyKeeper onlyActive {
       require(block.timestamp > lastInvestmentExecutedAt.add(fundEpoch).add(fundDeliberationDuration), "Idea can only be executed after the minimum period has elapsed");
       require(investmentIdeasCurrentEpoch.length > 0, "There must be an investment idea ready to execute");
       uint8 topIdeaIndex = getCurrentTopInvestmentIdea();
@@ -512,7 +512,7 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
      * If there are profits
      * Updates the reserve asset position accordingly.
      */
-    function finalizeInvestment(uint _ideaIndex) external onlyKeeper nonReentrant {
+    function finalizeInvestment(uint _ideaIndex) external onlyKeeper nonReentrant onlyActive {
       require(investmentsExecuted.length > _ideaIndex, "This idea index does not exist");
       InvestmentIdea storage idea = investmentsExecuted[_ideaIndex];
       require(block.timestamp > lastInvestmentExecutedAt.add(fundEpoch).add(idea.duration), "Idea can only be executed after the minimum period has elapsed");
