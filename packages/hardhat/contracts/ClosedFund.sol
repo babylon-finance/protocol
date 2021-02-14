@@ -535,8 +535,13 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
       // Mark as finalized
       idea.finalized = true;
       idea.exitedAt = block.timestamp;
-      uint256 reserveAssetDelta = 0;
+      // Transfer rewards and update positions
+       _transferIdeaRewards(_ideaIndex, capitalReturned);
+    }
 
+    function _transferIdeaRewards(uint _ideaIndex, uint capitalReturned) internal {
+      uint256 reserveAssetDelta = 0;
+      InvestmentIdea storage idea = investmentsExecuted[_ideaIndex];
       // Idea returns were positive
       if (capitalReturned > idea.capitalRequested) {
         uint256 profits = capitalReturned - idea.capitalRequested; // in reserve asset (weth)
