@@ -9,7 +9,7 @@ const AppHeaderMinimal = () => {
       <ContainerLarge>
         <StyledHeader>
           <LogoWrapper>
-            <img width="30" src="/tmp_logo_1.png" alt="" />
+            <LogoImg src="/tmp_logo_1.png" alt="" />
             <HomeLink to="/"><span className="main-text">Babylon</span><span className="tld-text">.finance</span></HomeLink>
           </LogoWrapper>
         </StyledHeader>
@@ -25,7 +25,14 @@ const ContainerLarge = styled(Box)`
   width: 100%;
 
   @media only screen and (max-width: 840px) {
-    padding: 30px 30px 0 30px;
+    padding: 20px 30px 0 30px;
+  }
+`
+
+const LogoImg = styled.img`
+  width: 30px;
+  @media only screen and (max-width: 840px) {
+    width: 22px;
   }
 `
 
@@ -45,6 +52,16 @@ const LogoWrapper = styled.div`
 
   .tld-text {
     color: var(--purple-aux);
+  }
+
+  @media only screen and (max-width: 840px) {
+    .main-text {
+      font-size: 18px;
+    }
+
+    .tld-text {
+      font-size: 18px;
+    }
   }
 `
 

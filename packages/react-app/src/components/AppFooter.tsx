@@ -139,7 +139,7 @@ const FooterTextLink = styled(StyledLink)`
 const FooterContentWrapper = styled.div`
   display: flex;
   flex-flow: row;
-  min-height: 280px;
+  min-height: 200px;
   width: 100%;
 
   @media only screen and (max-width: 840px) {

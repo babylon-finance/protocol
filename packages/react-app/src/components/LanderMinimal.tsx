@@ -101,7 +101,7 @@ const FormButton = styled(Button)`
 `
 
 const ContainerLarge = styled(Box)`
-  max-width: var(--screen-md-max);
+  max-width: 100%;
   padding: 100px 120px 0 120px;
   position: relative;
   line-height: 1.15;
@@ -109,7 +109,7 @@ const ContainerLarge = styled(Box)`
   @media only screen and (max-width: 840px) {
     padding: 30px 30px 0 30px;
     .uvp-a, .uvp-b {
-      font-size: 34px;
+      font-size: 30px;
     }
   }
 `
@@ -124,6 +124,10 @@ const HeroValuePropA = styled.div`
   color: var(--primary);
   font-family: cera-bold;
   font-size: 56px;
+
+  @media only screen and (max-width: 840px) {
+    margin-bottom: 4px;
+  }
 `
 
 const HeroValuePropB = styled.div`
@@ -136,6 +140,10 @@ const HeroSubHeading = styled.h2`
   font-family: cera-regular;
   color: var(--primary);
   margin-bottom: 8px;
+
+  @media only screen and (max-width: 840px) {
+    font-size: 18px;
+  }
 `
 
 export default LanderMinimal;
