@@ -28,6 +28,7 @@ import { SignedSafeMath } from "@openzeppelin/contracts/math/SignedSafeMath.sol"
 import { PreciseUnitMath } from "./lib/PreciseUnitMath.sol";
 import { SafeCast } from "@openzeppelin/contracts/utils/SafeCast.sol";
 import { IWETH } from "./interfaces/external/weth/IWETH.sol";
+import { IFundIdeas } from "./interfaces/IFundIdeas.sol";
 import { IBabController } from "./interfaces/IBabController.sol";
 import { IFundValuer } from "./interfaces/IFundValuer.sol";
 import { BaseFund } from "./BaseFund.sol";
@@ -96,50 +97,8 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
         uint256 newReservePositionBalance; // Fund token reserve asset position balance after deposit/withdrawal
     }
 
-
     uint256 public maxDepositLimit; // Limits the amount of deposits
-    uint256 public fundDuration; // Initial duration of the fund
-    uint256 public fundEpoch; // Set window of time to decide the next investment idea
     uint256 public fundEndsBy; // Timestamp when the fund ends and withdrawals are allowed
-    uint256 public fundDeliberationDuration; // Window for endorsing / downvoting an idea
-
-    // ======= Investment ideas =========
-    uint8 public constant maxIdeasPerEpoch = 3;
-    uint256 public currentInvestmentsIndex = 1;
-
-    struct InvestmentIdea {
-      uint256 index;                     // Investment index (used for votes)
-      address payable participant;               // Address of the participant that submitted the bet
-      uint256 enteredAt;                 // Timestamp when the idea was submitted
-      uint256 executedAt;                // Timestamp when the idea was executed
-      uint256 exitedAt;                  // Timestamp when the idea was submitted
-      uint256 stake;                     // Amount of stake (in reserve asset)
-      uint256 capitalRequested;          // Amount of capital requested (in reserve asset)
-      uint256 expectedReturn;            // Expect return by this investment idea
-      address[] enterTokensNeeded;       // Positions that need to be taken prior to enter trade
-      uint256[] enterTokensAmounts;      // Amount of these positions
-      address[] voters;                  // Addresses with the voters
-      uint256 duration;                  // Duration of the bet
-      int256 totalVotes;                 // Total votes
-      uint256 totalVoters;               // Total amount of participants that voted
-      address integration;               // Address of the integration
-      bytes enterPayload;                // Calldata to execute when entering
-      bytes exitPayload;                 // Calldata to execute when exiting the trade
-      bool finalized;                    // Flag that indicates whether we exited the idea
-    }
-
-    mapping(uint256 => mapping(address => int256)) internal votes;  // Investment idea votes from participants (can be negative if downvoting)
-
-    uint256 currentMinStakeEpoch;        // Used to keep track of the min staked amount. An idea can only be submitted if there are less than 3 or above the limit
-    uint256 currentMinStakeIndex;        // Index position of the investment idea with the lowest stake
-    InvestmentIdea[maxIdeasPerEpoch] investmentIdeasCurrentEpoch;
-    InvestmentIdea[] investmentsExecuted;
-
-    // Investment rewards
-    uint256 public ideaCreatorProfitPercentage = 15e16; // (0.01% = 1e14, 1% = 1e16)
-    uint256 public ideaVotersProfitPercentage = 5e16; // (0.01% = 1e14, 1% = 1e16)
-    uint256 public lastInvestmentExecutedAt; // Timestamp when the last investment was executed
-    uint8 public minVotersQuorum = 1;
 
     // Fees
     uint256 public premiumPercentage; // Premium percentage (0.01% = 1e14, 1% = 1e16). This premium is a buffer around oracle
@@ -214,16 +173,14 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
      * @param _premiumPercentage              Premium percentage to avoid arbitrage
      * @param _minFundTokenSupply             Min fund token supply
      * @param _fundDuration                   Fund duration
-     * @param _fundEpoch                      Controls how often an investment idea can be executed
-     * @param _fundDeliberationDuration       How long after the epoch has completed, people can curate before the top idea being executed
+     * @param _fundIdeas                      Address of the instance with the investment ideas
      */
     function initialize(
         uint256 _maxDepositLimit,
         uint256 _premiumPercentage,
         uint256 _minFundTokenSupply,
         uint256 _fundDuration,
-        uint256 _fundEpoch,
-        uint256 _fundDeliberationDuration
+        address _fundIdeas
     ) external onlyCreator onlyInactive payable {
         require(_maxDepositLimit >= 1**19, "Max deposit limit needs to be greater than ten eth");
 
@@ -238,25 +195,18 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
             "Fund duration must be within the range allowed by the protocol"
         );
         require(
-            _fundEpoch <= ifcontroller.getMaxFundEpoch() && _fundEpoch >= ifcontroller.getMinFundEpoch() ,
-            "Fund epoch must be within the range allowed by the protocol"
-        );
-        require(
-            _fundDeliberationDuration <= ifcontroller.getMaxDeliberationPeriod() && _fundDeliberationDuration >= ifcontroller.getMinDeliberationPeriod() ,
-            "Fund deliberation must be within the range allowed by the protocol"
-        );
-        require(
             _minFundTokenSupply > 0,
             "Min Fund token supply must be greater than 0"
         );
         minFundTokenSupply = _minFundTokenSupply;
         premiumPercentage = _premiumPercentage;
         maxDepositLimit = _maxDepositLimit;
-        fundDuration = _fundDuration;
-        fundEpoch = _fundEpoch;
         fundEndsBy = block.timestamp + _fundDuration;
-        fundDeliberationDuration = _fundDeliberationDuration;
-        lastInvestmentExecutedAt = block.timestamp; // Start the counter for first epoch
+
+        IFundIdeas fundIdeasC = IFundIdeas(_fundIdeas);
+        require(fundIdeasC.controller() == controller, "The controller must be the same");
+        require(fundIdeasC.fund() == address(this), "The fund must be this contract");
+        fundIdeas = _fundIdeas;
 
         uint256 initialDepositAmount = msg.value;
 
@@ -406,217 +356,7 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
        _calculateAndEditPosition(_token, balance, ERC20(_token).balanceOf(address(this)), 0);
     }
 
-    /**
-     * Adds an investment idea to the contenders array for this epoch.
-     * Investment stake is stored in the contract. (not converted to reserve asset).
-     * If the array is already at the limit, replace the one with the lowest stake.
-     * @param _capitalRequested              Capital requested denominated in the reserve asset
-     * @param _stake                         Stake denominated in the reserve asset
-     * @param _investmentDuration            Investment duration in seconds
-     * @param _enterData                     Operation to perform to enter the investment
-     * @param _exitData                      Operation to perform to exit the investment
-     * @param _integration                   Address of the integration
-     */
-    function addInvestmentIdea(
-      uint256 _capitalRequested,
-      uint256 _stake,
-      uint256 _investmentDuration,
-      bytes memory _enterData,
-      bytes memory _exitData,
-      address _integration,
-      uint256 _expectedReturn,
-      address[] memory _enterTokensNeeded,
-      uint256[] memory _enterTokensAmounts
-    ) external onlyContributor(msg.sender) payable onlyActive {
-      require(block.timestamp < lastInvestmentExecutedAt.add(fundEpoch), "Idea can only be suggested before the deliberation period");
-      _validateOnlyIntegration(_integration);
-      require(_stake > 0, "Stake amount must be greater than 0");
-      require(_capitalRequested > 0, "Capital requested amount must be greater than 0");
-      require(_investmentDuration > 1 hours, "Investment duration must be greater than an hour");
-      uint256 liquidReserveAsset = _getPositionBalance(reserveAsset).toUint256();
-      uint256 lockedInCurrentInvestment = investmentsExecuted[investmentsExecuted.length - 1].capitalRequested;
-      require(_capitalRequested <= liquidReserveAsset.add(lockedInCurrentInvestment), "The capital requested is greater than the capital available");
-      require(investmentIdeasCurrentEpoch.length < maxIdeasPerEpoch || _stake > currentMinStakeEpoch, "Not enough stake to add the idea");
-      uint ideaIndex = investmentIdeasCurrentEpoch.length;
-      if (ideaIndex >= maxIdeasPerEpoch) {
-        ideaIndex = currentMinStakeIndex;
-      }
-      // Check than enter and exit data call integrations
-      InvestmentIdea storage idea = investmentIdeasCurrentEpoch[ideaIndex];
-      idea.index = currentInvestmentsIndex;
-      idea.integration = _integration;
-      idea.participant = msg.sender;
-      idea.capitalRequested = _capitalRequested;
-      idea.enteredAt = block.timestamp;
-      idea.stake = _stake;
-      idea.duration = _investmentDuration;
-      idea.enterPayload = _enterData;
-      idea.exitPayload = _exitData;
-      idea.enterTokensNeeded = _enterTokensNeeded;
-      idea.enterTokensAmounts = _enterTokensAmounts;
-      idea.expectedReturn = _expectedReturn;
-      currentInvestmentsIndex ++;
-    }
-
-    /**
-     * Curates an investment idea from the contenders array for this epoch.
-     * This can happen at any time. As long as there are investment ideas.
-     * @param _ideaIndex                The position of the idea index in the array for the current epoch
-     * @param _amount                   Amount to curate, positive to endorse, negative to downvote
-     * TODO: Meta Transaction
-     */
-    function curateInvestmentIdea(uint8 _ideaIndex, int256 _amount) external onlyContributor(msg.sender) onlyActive {
-      require(investmentIdeasCurrentEpoch.length > _ideaIndex, "The idea index does not exist");
-      require(_amount.toUint256() < balanceOf(msg.sender), "Participant does not have enough balance");
-      InvestmentIdea storage idea = investmentIdeasCurrentEpoch[_ideaIndex];
-      uint256 totalVotesUser = 0;
-      for (uint8 i = 0; i < investmentIdeasCurrentEpoch.length; i++) {
-        totalVotesUser = totalVotesUser.add(votes[idea.index][msg.sender].toUint256());
-      }
-      require(totalVotesUser.add(_amount.toUint256()) < balanceOf(msg.sender), "Participant does not have enough balance");
-      if (votes[idea.index][msg.sender] == 0) {
-        idea.totalVoters++;
-        idea.voters = [msg.sender];
-      } else {
-        idea.voters.push(msg.sender);
-      }
-      votes[idea.index][msg.sender] = votes[idea.index][msg.sender].add(_amount);
-      idea.totalVotes.add(_amount);
-    }
-
-    /**
-     * Executes the top investment idea for this epoch.
-     * We enter into the investment and add it to the executed ideas array.
-     */
-    function executeTopInvestment() external onlyKeeper onlyActive {
-      require(block.timestamp > lastInvestmentExecutedAt.add(fundEpoch).add(fundDeliberationDuration), "Idea can only be executed after the minimum period has elapsed");
-      require(investmentIdeasCurrentEpoch.length > 0, "There must be an investment idea ready to execute");
-      uint8 topIdeaIndex = getCurrentTopInvestmentIdea();
-      require(topIdeaIndex < investmentIdeasCurrentEpoch.length, "No idea available to execute");
-      InvestmentIdea storage idea = investmentIdeasCurrentEpoch[topIdeaIndex];
-      // Execute enter trade
-      bytes memory _data = idea.enterPayload;
-      callIntegration(idea.integration, 0, _data, idea.enterTokensNeeded, idea.enterTokensAmounts);
-      // Push the trade to the investments executed
-      investmentsExecuted[investmentsExecuted.length] = idea;
-      // Clear investment ideas
-      delete investmentIdeasCurrentEpoch;
-      // Restarts the epoc counter
-      lastInvestmentExecutedAt = block.timestamp;
-      idea.executedAt = block.timestamp;
-    }
-
-    /**
-     * Exits from an executed investment.
-     * Sends rewards to the person that created the idea, the voters, and the rest to the fund.
-     * If there are profits
-     * Updates the reserve asset position accordingly.
-     */
-    function finalizeInvestment(uint _ideaIndex) external onlyKeeper nonReentrant onlyActive {
-      require(investmentsExecuted.length > _ideaIndex, "This idea index does not exist");
-      InvestmentIdea storage idea = investmentsExecuted[_ideaIndex];
-      require(block.timestamp > lastInvestmentExecutedAt.add(fundEpoch).add(idea.duration), "Idea can only be executed after the minimum period has elapsed");
-      require(!idea.finalized, "This investment was already exited");
-      address[] memory _tokensNeeded;
-      uint256[] memory _tokenAmounts;
-      // Execute exit trade
-      bytes memory _data = idea.exitPayload;
-      uint256 reserveAssetBeforeExiting = _getPositionBalance(reserveAsset).toUint256();
-      callIntegration(idea.integration, 0, _data, _tokensNeeded, _tokenAmounts);
-      // Exchange the tokens back to the reserve asset
-      bytes memory _emptyTradeData;
-      for (uint i = 0; i < idea.enterTokensNeeded.length; i++) {
-        if (idea.enterTokensNeeded[i] != reserveAsset) {
-          uint pricePerTokenUnit = _getPrice(reserveAsset, idea.enterTokensNeeded[i]);
-          // TODO: The actual amount must be supposedly higher when we exit
-          _trade("kyber", idea.enterTokensNeeded[i], idea.enterTokensAmounts[i], reserveAsset, idea.enterTokensAmounts[i].preciseDiv(pricePerTokenUnit), _emptyTradeData);
-        }
-      }
-      uint256 capitalReturned = _getPositionBalance(reserveAsset).toUint256().sub(reserveAssetBeforeExiting);
-      // Mark as finalized
-      idea.finalized = true;
-      idea.exitedAt = block.timestamp;
-      // Transfer rewards and update positions
-       _transferIdeaRewards(_ideaIndex, capitalReturned);
-    }
-
-    function _transferIdeaRewards(uint _ideaIndex, uint capitalReturned) internal {
-      uint256 reserveAssetDelta = 0;
-      InvestmentIdea storage idea = investmentsExecuted[_ideaIndex];
-      // Idea returns were positive
-      if (capitalReturned > idea.capitalRequested) {
-        uint256 profits = capitalReturned - idea.capitalRequested; // in reserve asset (weth)
-        // Send stake back to the creator
-        idea.participant.transfer(idea.stake);
-        uint256 ideatorProfits = ideaCreatorProfitPercentage.preciseMul(profits);
-        // Send rewards to the creator
-        ERC20(reserveAsset).transfer(
-          idea.participant,
-          ideatorProfits
-        );
-        reserveAssetDelta.add(uint256(-ideatorProfits));
-        uint256 votersProfits = ideaVotersProfitPercentage.preciseMul(profits);
-        // Send rewards to voters that voted in favor
-        for (uint256 i = 0; i < idea.voters.length; i++) {
-          int256 voterWeight = votes[_ideaIndex][idea.voters[i]];
-          if (voterWeight > 0) {
-            ERC20(reserveAsset).transfer(
-              idea.voters[i],
-              votersProfits.mul(voterWeight.toUint256()).div(idea.totalVotes.toUint256())
-            );
-          }
-        }
-        reserveAssetDelta.add(uint256(-votersProfits));
-      } else {
-        // Returns were negative
-        uint256 stakeToSlash = idea.stake;
-        if (capitalReturned.add(idea.stake) > idea.capitalRequested) {
-          stakeToSlash = capitalReturned.add(idea.stake).sub(idea.capitalRequested);
-        }
-        // We slash and add to the fund the stake from the creator
-        IWETH(weth).deposit{value: stakeToSlash}();
-        reserveAssetDelta.add(stakeToSlash);
-        uint256 votersRewards = ideaVotersProfitPercentage.preciseMul(stakeToSlash);
-        // Send rewards to voters that voted against
-        for (uint256 i = 0; i < idea.voters.length; i++) {
-          int256 voterWeight = votes[_ideaIndex][idea.voters[i]];
-          if (voterWeight < 0) {
-            ERC20(reserveAsset).transfer(
-              idea.voters[i],
-              votersRewards.mul(voterWeight.toUint256()).div(idea.totalVotes.toUint256())
-            );
-          }
-        }
-        reserveAssetDelta.add(uint256(-stakeToSlash));
-      }
-      // Updates reserve asset position in the fund
-      uint256 _newTotal = _getPositionBalance(reserveAsset).add(int256(reserveAssetDelta)).toUint256();
-      calculateAndEditPosition(reserveAsset, _newTotal, reserveAssetDelta, 0);
-    }
-
     /* ============ External Getter Functions ============ */
-
-    /**
-     * Gets the index of the top investment idea in this epoch
-     * Uses the stake, the number of voters and the total weight behind the idea.
-     *
-     * @return  uint8        Top Idea index. Returns the max length + 1 if none.
-     */
-    function getCurrentTopInvestmentIdea() public view returns (uint8) {
-      uint256 maxScore = 0;
-      uint8 indexResult = maxIdeasPerEpoch + 1;
-      for (uint8 i = 0; i < investmentIdeasCurrentEpoch.length; i++) {
-        InvestmentIdea memory idea = investmentIdeasCurrentEpoch[i];
-        // TODO: tweak this formula
-        if (idea.totalVotes > 0 && idea.totalVoters >= minVotersQuorum) {
-          uint256 currentScore = idea.stake.mul(idea.totalVotes.toUint256()).mul(idea.totalVoters);
-          if (currentScore > maxScore) {
-            indexResult = i;
-          }
-        }
-      }
-      return indexResult;
-    }
 
     function getContributor(address _contributor) public view returns (uint256, uint256, uint256) {
         Contributor memory contributor = contributors[_contributor];

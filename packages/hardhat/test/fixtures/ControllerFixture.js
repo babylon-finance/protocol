@@ -7,6 +7,7 @@ async function deployFolioFixture() {
   const [owner, signer1, signer2, signer3] = await ethers.getSigners();
 
   const ClosedFund = await ethers.getContractFactory("ClosedFund", owner);
+  const FundIdeas = await ethers.getContractFactory("FundIdeas", owner);
 
   const BabController = await ethers.getContractFactory("BabController", owner);
 
@@ -167,14 +168,26 @@ async function deployFolioFixture() {
     });
   });
 
+  // Investment ideas first fund
+
+  const fundIdeas1 = await FundIdeas.deploy(
+    fund.address,
+    babController.address,
+    ONE_DAY_IN_SECONDS * 3,
+    ONE_DAY_IN_SECONDS,
+    ethers.utils.parseEther("0.015"), // 15%
+    ethers.utils.parseEther("0.005"), // 15%
+    1,
+    3
+  );
+
   // Initial deposit
   await fund.initialize(
     ethers.utils.parseEther("10"),
     0,
     1,
     ONE_DAY_IN_SECONDS * 90,
-    ONE_DAY_IN_SECONDS * 3,
-    ONE_DAY_IN_SECONDS,
+    fundIdeas1.address,
     { value: ethers.utils.parseEther("0.1") }
   );
   return {
