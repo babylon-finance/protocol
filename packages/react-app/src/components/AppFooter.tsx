@@ -55,7 +55,6 @@ const AppFooter = () => {
             </FooterSocialLinkIcons>
           </FooterSocialLinkBlock>
           <FooterLogoWrapper>
-            <img width="30" src="/tmp_logo_1.png" alt="" />
             <span className="main-text">Babylon</span><span className="tld-text">.finance</span>
           </FooterLogoWrapper>
         </FooterContentWrapper>
