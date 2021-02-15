@@ -3,6 +3,7 @@ import { Box, Button, Field, Form } from 'rimble-ui';
 
 import React, { useState } from "react";
 import styled from "styled-components";
+
 const LanderMinimal = () => {
   const [submitted, setSubmitted] = useState(false);
   const [email, setEmail] = useState("");
