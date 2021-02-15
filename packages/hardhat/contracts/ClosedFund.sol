@@ -182,21 +182,21 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
         uint256 _fundDuration,
         address _fundIdeas
     ) external onlyCreator onlyInactive payable {
-        require(_maxDepositLimit >= 1**19, "Max deposit limit needs to be greater than ten eth");
+        require(_maxDepositLimit >= 1**19, "Max deposit limit needs >= 10");
 
-        require(msg.value > minContribution && msg.value < _maxDepositLimit.div(20), "Creator needs to deposit, up to 20% of the max fund eth");
+        require(msg.value > minContribution && msg.value < _maxDepositLimit.div(20), "Creator needs to deposit, up to 20% of the max fund");
         IBabController ifcontroller = IBabController(controller);
         require(
             _premiumPercentage <= ifcontroller.getMaxFundPremiumPercentage(),
-            "Premium must be less than max"
+            "Premium must < max"
         );
         require(
             _fundDuration <= ifcontroller.getMaxFundDuration() && _fundDuration >= ifcontroller.getMinFundDuration() ,
-            "Fund duration must be within the range allowed by the protocol"
+            "Fund duration must be within the range allowed"
         );
         require(
             _minFundTokenSupply > 0,
-            "Min Fund token supply must be greater than 0"
+            "Min Fund token supply >= 0"
         );
         minFundTokenSupply = _minFundTokenSupply;
         premiumPercentage = _premiumPercentage;
@@ -204,8 +204,8 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
         fundEndsBy = block.timestamp + _fundDuration;
 
         IFundIdeas fundIdeasC = IFundIdeas(_fundIdeas);
-        require(fundIdeasC.controller() == controller, "The controller must be the same");
-        require(fundIdeasC.fund() == address(this), "The fund must be this contract");
+        require(fundIdeasC.controller() == controller, "Controller must be the same");
+        require(fundIdeasC.fund() == address(this), "Fund must be this contract");
         fundIdeas = _fundIdeas;
 
         uint256 initialDepositAmount = msg.value;
@@ -225,7 +225,7 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
           0
         );
 
-        require(totalSupply() > 0, "The fund must receive an initial deposit by the manager");
+        require(totalSupply() > 0, "Fund must receive an initial deposit");
 
         active = true;
     }
@@ -245,12 +245,12 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
     ) public payable nonReentrant onlyActive {
         require(
             msg.value >= minContribution,
-            "Send at least 1000000000000 wei"
+            ">= minContribution"
         );
-        require(block.timestamp < fundEndsBy, "Fund is already closed");
+        require(block.timestamp < fundEndsBy, "Fund is closed");
         // if deposit limit is 0, then there is no deposit limit
         if(maxDepositLimit > 0) {
-          require(totalFundsDeposited.add(msg.value) <= maxDepositLimit, "Max Deposit Limit reached");
+          require(totalFundsDeposited.add(msg.value) <= maxDepositLimit, "Max Deposit Limit");
         }
 
         // Always wrap to WETH
@@ -283,10 +283,10 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
         uint256 _minReserveReceiveQuantity,
         address payable _to
     ) external nonReentrant onlyContributor(msg.sender) onlyActive {
-        require(block.timestamp > fundEndsBy, "Withdrawals are disabled until the fund ends");
+        require(block.timestamp > fundEndsBy, "Withdrawals are disabled until fund ends");
         require(
             _fundTokenQuantity <= ERC20(address(this)).balanceOf(msg.sender),
-            "Withdrawal amount must be less than or equal to deposited amount"
+            "Withdrawal amount <= to deposited amount"
         );
         _validateReserveAsset(reserveAsset, _fundTokenQuantity);
 
@@ -330,7 +330,7 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
         require(
             _premiumPercentage <=
                 IBabController(controller).getMaxFundPremiumPercentage(),
-            "Premium must be less than maximum allowed"
+            "Premium < maximum allowed"
         );
 
         premiumPercentage = _premiumPercentage;
@@ -350,9 +350,9 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
     // Any tokens (other than the target) that are sent here by mistake are recoverable by the owner
     // TODO: If it is not whitelisted, trade it for weth
     function sweep(address _token) external onlyContributor(msg.sender) {
-       require(!_hasPosition(_token), "This token is one of the fund positions");
+       require(!_hasPosition(_token), "Token is one of the fund positions");
        uint256 balance = ERC20(_token).balanceOf(address(this));
-       require(balance > 0, "The token needs to have a positive balance");
+       require(balance > 0, "Token balance > 0");
        _calculateAndEditPosition(_token, balance, ERC20(_token).balanceOf(address(this)), 0);
     }
 
@@ -361,10 +361,6 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
     function getContributor(address _contributor) public view returns (uint256, uint256, uint256) {
         Contributor memory contributor = contributors[_contributor];
         return (contributor.totalDeposit, contributor.tokensReceived, contributor.timestamp);
-    }
-
-    function getPremiumPercentage() external view returns (uint256) {
-        return premiumPercentage;
     }
 
     /**
@@ -476,10 +472,10 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
         internal
         view
     {
-        require(_quantity > 0, "Quantity must be > 0");
+        require(_quantity > 0, "Quantity > 0");
         require(
             IBabController(controller).isValidReserveAsset(_reserveAsset),
-            "Must be valid reserve asset"
+            "Must be reserve asset"
         );
     }
 
@@ -491,12 +487,12 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
         // Note: A min supply amount is needed to avoid division by 0 when Fund token supply is 0
         require(
             _depositInfo.previousFundTokenSupply >= minFundTokenSupply,
-            "Supply must be greater than minimum to enable issuance"
+            "Supply must > than minimum"
         );
 
         require(
             _depositInfo.fundTokenQuantity >= _minFundTokenReceiveQuantity,
-            "Must be greater than min Fund token"
+            "Must be > min Fund token"
         );
     }
 
@@ -509,12 +505,12 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
         // Note: A min supply amount is needed to avoid division by 0 when withdrawaling fund token to 0
         require(
             _withdrawalInfo.newFundTokenSupply >= minFundTokenSupply,
-            "Supply must be greater than minimum to enable redemption"
+            "Supply must be > than minimum"
         );
 
         require(
             _withdrawalInfo.netFlowQuantity >= _minReserveReceiveQuantity,
-            "Must be greater than min receive reserve quantity"
+            "Must be > than min receive"
         );
     }
 
@@ -658,22 +654,6 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
     }
 
     /**
-     * Returns the deposit premium percentage. Virtual function that can be overridden in future versions of the module
-     * and can contain arbitrary logic to calculate the issuance premium.
-     */
-    function _getDepositPremium() internal view virtual returns (uint256) {
-        return premiumPercentage;
-    }
-
-    /**
-     * Returns the withdrawal premium percentage. Virtual function that can be overridden in future versions of the module
-     * and can contain arbitrary logic to calculate the redemption premium.
-     */
-    function _getWithdrawalPremium() internal view virtual returns (uint256) {
-        return premiumPercentage;
-    }
-
-    /**
      * Returns the fees attributed to the manager and the protocol. The fees are calculated as follows:
      *
      * Protocol Fee = (% direct fee %) * reserveAssetQuantity
@@ -725,7 +705,7 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
         uint256 _netReserveFlows, // Value of reserve asset net of fees
         uint256 _fundTokenTotalSupply
     ) internal view returns (uint256) {
-        uint256 premiumPercentageToApply = _getDepositPremium();
+        uint256 premiumPercentageToApply = premiumPercentage;
         uint256 premiumValue =
             _netReserveFlows.preciseMul(premiumPercentageToApply);
 
@@ -773,7 +753,7 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
                 10**reserveAssetDecimals
             );
 
-        uint256 premiumPercentageToApply = _getWithdrawalPremium();
+        uint256 premiumPercentageToApply = premiumPercentage;
         uint256 premiumQuantity =
             prePremiumReserveQuantity.preciseMulCeil(premiumPercentageToApply);
 
@@ -800,7 +780,7 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
         // Require withdrawable quantity is greater than existing collateral
         require(
             totalExistingBalance >= outflow,
-            "Must be greater than total available collateral"
+            "Must have enough balance"
         );
 
         return
@@ -836,7 +816,7 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
     function _validateOnlyContributor(address _caller) internal view {
         require(
             ERC20(address(this)).balanceOf(_caller) > 0,
-            "Only someone with the fund token can withdraw"
+            "Only participant can withdraw"
         );
     }
 }

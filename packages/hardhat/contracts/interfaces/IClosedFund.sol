@@ -52,7 +52,7 @@ interface IClosedFund is IERC20, IFund {
     function setDepositLimit(uint limit) external;
     function setFundEndDate(uint256 _endsTimestamp) external;
 
-    function getPremiumPercentage() external view returns (uint256);
+    function premiumPercentage() external view returns (uint256);
     function getExpectedFundTokensDepositdQuantity(
         address _reserveAsset,
         uint256 _reserveAssetQuantity
