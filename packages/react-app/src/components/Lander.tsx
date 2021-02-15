@@ -23,7 +23,7 @@ const Lander = () => {
             <HeroCtaPrimary>Start Investing</HeroCtaPrimary>
           </Link>
           <Link to="/">
-            <HeroCtaSecondary>Learn before you <Emoji role="img">🦍</Emoji></HeroCtaSecondary>
+            <HeroCtaSecondary>Learn before you <Emoji role="img" aria-label="ape-emoji">🦍</Emoji></HeroCtaSecondary>
           </Link>
         </HeroCtaRow>
         <HeroStatsBox>

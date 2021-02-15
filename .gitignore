@@ -120,3 +120,6 @@ packages/react-app/src/contracts/*
 
 .DS_Store
 /packages/.DS_Store
+
+# Local Netlify folder
+.netlify
