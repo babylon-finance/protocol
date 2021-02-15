@@ -201,8 +201,11 @@ contract FundIdeas is ReentrancyGuard {
     require(_capitalRequested > 0, "Capital requested amount must be greater than 0");
     require(_investmentDuration > 1 hours, "Investment duration must be greater than an hour");
     uint256 liquidReserveAsset = fund.getPositionBalance(fund.getReserveAsset()).toUint256();
-    uint256 lockedInCurrentInvestment = investmentsExecuted[investmentsExecuted.length - 1].capitalRequested;
-    require(_capitalRequested <= liquidReserveAsset.add(lockedInCurrentInvestment), "The capital requested is greater than the capital available");
+    // TODO: loop over previous investments as well
+    if (investmentsExecuted[investmentsExecuted.length - 1].duration < lastInvestmentExecutedAt.add(fundEpoch)) {
+      liquidReserveAsset = liquidReserveAsset.add(investmentsExecuted[investmentsExecuted.length - 1].capitalRequested);
+    }
+    require(_capitalRequested <= liquidReserveAsset, "The capital requested is greater than the capital available");
     require(investmentIdeasCurrentEpoch.length < maxIdeasPerEpoch || _stake > currentMinStakeEpoch, "Not enough stake to add the idea");
     uint ideaIndex = investmentIdeasCurrentEpoch.length;
     if (ideaIndex >= maxIdeasPerEpoch) {

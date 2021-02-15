@@ -54,6 +54,7 @@ interface IBabController {
     function addKeepers(address[] memory _keepers) external;
 
     // Getters
+    function owner() external view returns (address);
     function getPriceOracle() external view returns (address);
     function getFundValuer() external view returns(address);
     function getFeeRecipient() external view returns(address);

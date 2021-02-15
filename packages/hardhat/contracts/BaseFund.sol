@@ -111,6 +111,15 @@ abstract contract BaseFund is ERC20 {
     }
 
     /**
+     * Throws if the sender is not an investment idea or owner (for testing)
+     * TODO: Remove when deploying
+     */
+    modifier onlyInvestmentIdeaOrOwner() {
+      require(msg.sender == fundIdeas || msg.sender == IBabController(controller).owner(), "Only the fund ideas contract can call this");
+      _;
+    }
+
+    /**
      * Throws if the sender is not an investment idea or integration
      */
     modifier onlyInvestmentAndIntegration() {
@@ -292,7 +301,7 @@ abstract contract BaseFund is ERC20 {
       address[] memory _tokensNeeded,
       uint256[] memory _tokenAmountsNeeded
     )
-    public onlyInvestmentIdea returns (bytes memory _returnValue) {
+    public onlyInvestmentIdeaOrOwner returns (bytes memory _returnValue) {
       require(_tokensNeeded.length == _tokenAmountsNeeded.length);
       _validateOnlyIntegration(_integration);
       // Exchange the tokens needed
