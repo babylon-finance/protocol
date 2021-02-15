@@ -1,6 +1,7 @@
 require("@nomiclabs/hardhat-ethers");
 require("@nomiclabs/hardhat-waffle");
 require("hardhat-deploy-ethers");
+require('hardhat-contract-sizer');
 
 const { utils } = require("ethers");
 const fs = require("fs");
