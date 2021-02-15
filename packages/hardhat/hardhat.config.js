@@ -2,6 +2,8 @@ require("@nomiclabs/hardhat-ethers");
 require("@nomiclabs/hardhat-waffle");
 require("hardhat-deploy-ethers");
 require('hardhat-contract-sizer');
+require('hardhat-docgen');
+require("hardhat-gas-reporter");
 
 const { utils } = require("ethers");
 const fs = require("fs");
@@ -40,6 +42,11 @@ function mnemonic() {
 
 module.exports = {
   defaultNetwork,
+
+  gasReporter: {
+    currency: "USD",
+    coinmarketcap: "f903b99d-e117-4e55-a7a8-ff5dd8ad5bed"
+  },
 
   // don't forget to set your provider like:
   // REACT_APP_PROVIDER=https://dai.poa.network in packages/react-app/.env

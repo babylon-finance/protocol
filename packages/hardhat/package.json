@@ -16,7 +16,9 @@
     "eslint-plugin-react": "^7.21.5",
     "eslint-plugin-react-hooks": "^4.0.0",
     "hardhat-contract-sizer": "^2.0.2",
-    "hardhat-deploy-ethers": "^0.3.0-beta.7"
+    "hardhat-deploy-ethers": "^0.3.0-beta.7",
+    "hardhat-docgen": "^1.0.3",
+    "hardhat-gas-reporter": "^1.0.4"
   },
   "dependencies": {
     "@openzeppelin/contracts": "^3.3.0",
