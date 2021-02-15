@@ -27,14 +27,6 @@ import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
  */
 interface IFund is IERC20 {
 
-    /* ============ Enums ============ */
-
-    enum IntegrationState {
-        NONE,
-        PENDING,
-        INITIALIZED
-    }
-
     /* ============ Structs ============ */
 
     struct SubPosition {
@@ -70,7 +62,6 @@ interface IFund is IERC20 {
 
     function addIntegration(address _integration) external;
     function removeIntegration(address _integration) external;
-    function initializeIntegration() external;
 
     function setActive() external;
     function setDisabled() external;
@@ -78,8 +69,8 @@ interface IFund is IERC20 {
     function controller() external view returns (address);
     function creator() external view returns (address);
     function active() external view returns (bool);
-    function integrationStates(address _integration) external view returns (IntegrationState);
     function getIntegrations() external view returns (address[] memory);
+    function hasIntegration(address _integration) external view returns (bool);
 
     function isPosition(address _component) external view returns (bool);
     function getPositionCount() external view returns (uint256);
@@ -109,7 +100,4 @@ interface IFund is IERC20 {
       uint256 _value,
       bytes calldata _data
     ) external returns (bytes memory _returnValue);
-
-    function isInitializedIntegration(address _integration) external view returns(bool);
-    function isPendingIntegration(address _integration) external view returns(bool);
 }
