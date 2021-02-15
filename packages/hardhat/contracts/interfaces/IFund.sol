@@ -69,8 +69,11 @@ interface IFund is IERC20 {
     function controller() external view returns (address);
     function creator() external view returns (address);
     function active() external view returns (bool);
+    function weth() external view returns (address);
+    function getReserveAsset() external view returns (address);
     function getIntegrations() external view returns (address[] memory);
     function hasIntegration(address _integration) external view returns (bool);
+    function isValidIntegration(address _integration) external returns (bool);
 
     function isPosition(address _component) external view returns (bool);
     function getPositionCount() external view returns (uint256);
@@ -93,7 +96,17 @@ interface IFund is IERC20 {
           uint256
       );
 
-    function callIntegration(address _integration, uint256 _value, bytes calldata _data) external returns (bytes memory _returnValue);
+    function tradeFromInvestmentIdea(
+      string memory _integrationName,
+      address _sendToken,
+      uint256 _sendQuantity,
+      address _receiveToken,
+      uint256 _minReceiveQuantity,
+      bytes memory _data) external;
+
+    function callIntegration(address _integration, uint256 _value, bytes calldata _data,
+        address[] memory _tokensNeeded,
+        uint256[] memory _tokenAmountsNeeded) external returns (bytes memory _returnValue);
     function invokeApprove(address _spender, address _asset, uint256 _quantity) external;
     function invokeFromIntegration(
       address _target,

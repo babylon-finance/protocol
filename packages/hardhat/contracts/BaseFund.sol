@@ -65,9 +65,9 @@ abstract contract BaseFund is ERC20 {
      * Throws if the sender is not a Funds's integration or integration not enabled
      */
     modifier onlyIntegration() {
-        // Internal function used to reduce bytecode size
-        _validateOnlyIntegration(msg.sender);
-        _;
+      // Internal function used to reduce bytecode size
+      _validateOnlyIntegration(msg.sender);
+      _;
     }
 
     /**
@@ -101,6 +101,33 @@ abstract contract BaseFund is ERC20 {
       require(IBabController(controller).isValidKeeper(msg.sender), "Only a keeper can call this");
       _;
     }
+
+    /**
+     * Throws if the sender is not a keeper in the protocol
+     */
+    modifier onlyInvestmentIdea() {
+      require(msg.sender == fundIdeas, "Only the fund ideas contract can call this");
+      _;
+    }
+
+    /**
+     * Throws if the sender is not an investment idea or owner (for testing)
+     * TODO: Remove when deploying
+     */
+    modifier onlyInvestmentIdeaOrOwner() {
+      require(msg.sender == fundIdeas || msg.sender == IBabController(controller).owner(), "Only the fund ideas contract can call this");
+      _;
+    }
+
+    /**
+     * Throws if the sender is not an investment idea or integration
+     */
+    modifier onlyInvestmentAndIntegration() {
+      require(msg.sender == fundIdeas || isValidIntegration(msg.sender), "Only the fund ideas contract can call this");
+      _;
+    }
+
+
 
     /**
     * Throws if the fund is not active
@@ -138,6 +165,9 @@ abstract contract BaseFund is ERC20 {
     address public creator;
     // Whether the fund is currently active or not
     bool public active;
+
+    // FundIdeas
+    address fundIdeas;
 
     // List of initialized Integrations; Integrations connect with other money legos
     address[] public integrations;
@@ -271,7 +301,7 @@ abstract contract BaseFund is ERC20 {
       address[] memory _tokensNeeded,
       uint256[] memory _tokenAmountsNeeded
     )
-    public onlyKeeper returns (bytes memory _returnValue) {
+    public onlyInvestmentIdeaOrOwner returns (bytes memory _returnValue) {
       require(_tokensNeeded.length == _tokenAmountsNeeded.length);
       _validateOnlyIntegration(_integration);
       // Exchange the tokens needed
@@ -366,7 +396,7 @@ abstract contract BaseFund is ERC20 {
         uint8 _subpositionStatus
     )
         public
-        onlyIntegration
+        onlyInvestmentAndIntegration
         onlyActive
         returns (
             uint256,
@@ -375,6 +405,22 @@ abstract contract BaseFund is ERC20 {
         )
     {
       return _calculateAndEditPosition(_component, _newBalance, _deltaBalance, _subpositionStatus);
+    }
+
+    function isValidIntegration(address _integration) public view returns (bool) {
+      return integrations.contains(_integration) &&
+        IBabController(controller).isValidIntegration(IIntegration(_integration).getName(), _integration);
+    }
+
+    function tradeFromInvestmentIdea(
+      string memory _integrationName,
+      address _sendToken,
+      uint256 _sendQuantity,
+      address _receiveToken,
+      uint256 _minReceiveQuantity,
+      bytes memory _data) external onlyInvestmentIdea
+    {
+      _trade(_integrationName, _sendToken, _sendQuantity, _receiveToken, _minReceiveQuantity, _data);
     }
 
     /* ============ Internal Functions ============ */
@@ -580,14 +626,8 @@ abstract contract BaseFund is ERC20 {
      */
     function _validateOnlyIntegration(address _integration) internal view {
         require(
-            integrations.contains(_integration),
-            "Integration needs to be added to the fund"
-        );
-        require(
-            IBabController(controller).isValidIntegration(
-                IIntegration(_integration).getName(), _integration
-            ),
-            "Integration must be enabled on controller"
+            isValidIntegration(_integration),
+            "Integration needs to be added to the fund and controller"
         );
     }
 
