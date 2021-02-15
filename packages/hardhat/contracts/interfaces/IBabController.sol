@@ -66,7 +66,7 @@ interface IBabController {
     function isValidAsset(address _asset) external view returns (bool);
     function isValidKeeper(address _keeper) external view returns (bool);
     function isSystemContract(address _contractAddress) external view returns (bool);
-    function isValidIntegration(string memory _name) external view returns (bool);
+    function isValidIntegration(string memory _name, address _integration) external view returns (bool);
     function getMaxFundDuration() external view returns (uint256);
     function getMinFundDuration() external view returns (uint256);
     function getMaxFundEpoch() external view returns (uint256);

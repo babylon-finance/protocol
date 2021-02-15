@@ -152,6 +152,7 @@ contract BabController is Ownable {
               "Component must not be null address"
           );
         }
+        require(_integrations.length > 0); // Just for checking that the fund has some integrations enabled
         IFund fund = IFund(_fund);
         require(fund.controller() == address(this), "The controller must be this contract");
         _addFund(address(fund));
@@ -635,12 +636,12 @@ contract BabController is Ownable {
      *
      * @return               Boolean indicating if valid
      */
-    function isValidIntegration(string memory _name)
+    function isValidIntegration(string memory _name, address _integration)
         external
         view
         returns (bool)
     {
-        return integrations[_nameHash(_name)] != address(0);
+        return integrations[_nameHash(_name)] == _integration;
     }
 
     /**

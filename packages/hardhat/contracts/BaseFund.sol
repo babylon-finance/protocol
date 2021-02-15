@@ -17,8 +17,7 @@
 
 pragma solidity 0.7.4;
 
-import "hardhat/console.sol";
-import { GSNRecipient } from "@openzeppelin/contracts/GSN/GSNRecipient.sol";
+// import "hardhat/console.sol";
 import { Address } from "@openzeppelin/contracts/utils/Address.sol";
 import { ERC20 } from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import { SafeMath } from "@openzeppelin/contracts/math/SafeMath.sol";
@@ -119,16 +118,6 @@ abstract contract BaseFund is ERC20 {
         _;
     }
 
-    modifier onlyPendingIntegration() {
-      require(
-          IBabController(controller).isValidIntegration(
-              IIntegration(msg.sender).getName()
-          ),
-          "Integration must be enabled on controller"
-      );
-      _;
-    }
-
     /* ============ State Variables ============ */
 
     // Subposition constants
@@ -152,12 +141,6 @@ abstract contract BaseFund is ERC20 {
 
     // List of initialized Integrations; Integrations connect with other money legos
     address[] public integrations;
-
-    // Integrations are initialized from NONE -> PENDING -> INITIALIZED through the
-    // addIntegration (called by manager) and initialize  (called by integration) functions
-    mapping(address => IFund.IntegrationState) public integrationStates;
-    // integration name => integration address
-    mapping(bytes32 => address) private integrationsByName;
 
     // List of positions
     address[] public positions;
@@ -195,11 +178,8 @@ abstract contract BaseFund is ERC20 {
         reserveAsset = _reserveAsset;
         creator = _creator;
 
-        // Integrations are put in PENDING state, as they need to be individually initialized by the Integration
-        for (uint256 i = 0; i < _integrations.length; i++) {
-            integrationStates[_integrations[i]] = IFund
-                .IntegrationState
-                .PENDING;
+        for (uint i = 0; i < _integrations.length; i++) {
+          _addIntegration(_integrations[i]);
         }
 
         active = false;
@@ -237,25 +217,13 @@ abstract contract BaseFund is ERC20 {
     }
 
     /**
-     * MANAGER ONLY. Adds an integration into a PENDING state; Integration must later be initialized via
-     * integration's initialize function
+     * MANAGER ONLY. Adds an integration into the list of integrations
      */
-    function addIntegration(address _integration, string memory _name)
-        external
+    function addIntegration(address _integration)
+        public
         onlyGovernanceFund
     {
-        require(
-            integrationStates[_integration] == IFund.IntegrationState.NONE,
-            "Integration must not be added"
-        );
-        require(
-            IBabController(controller).isValidIntegration(_name),
-            "Integration must be enabled on Controller"
-        );
-
-        integrationStates[_integration] = IFund.IntegrationState.PENDING;
-
-        emit IntegrationAdded(_integration);
+        _addIntegration(_integration);
     }
 
     /**
@@ -263,33 +231,11 @@ abstract contract BaseFund is ERC20 {
      * it is not needed to manage any remaining positions and to remove state.
      */
     function removeIntegration(address _integration) external onlyGovernanceFund {
-        require(
-            integrationStates[_integration] == IFund.IntegrationState.PENDING,
-            "Integration must be pending"
-        );
-
-        integrationStates[_integration] = IFund.IntegrationState.NONE;
+        require(integrations.contains(_integration), "Integration not found");
 
         integrations = integrations.remove(_integration);
 
         emit IntegrationRemoved(_integration);
-    }
-
-    /**
-     * Initializes an added integration from PENDING to INITIALIZED state. Can only call when active.
-     * An address can only enter a PENDING state if it is an enabled integration added by the manager.
-     * Only callable by the integration itself, hence msg.sender is the subject of update.
-     */
-    function initializeIntegration() external onlyPendingIntegration {
-        require(
-            integrationStates[msg.sender] == IFund.IntegrationState.PENDING,
-            "Integration must be pending"
-        );
-
-        integrationStates[msg.sender] = IFund.IntegrationState.INITIALIZED;
-        integrations.push(msg.sender);
-
-        emit IntegrationInitialized(msg.sender);
     }
 
 
@@ -349,29 +295,16 @@ abstract contract BaseFund is ERC20 {
     }
 
     /**
-     * Only IntegrationStates of INITIALIZED integrations are considered enabled
+     * Check if this fund has this integration
      */
-    function isInitializedIntegration(address _integration)
+    function hasIntegration(address _integration)
         external
         view
         returns (bool)
     {
-        return
-            integrationStates[_integration] ==
-            IFund.IntegrationState.INITIALIZED;
+        return integrations.contains(_integration);
     }
 
-    /**
-     * Returns whether the integration is in a pending state
-     */
-    function isPendingIntegration(address _integration)
-        external
-        view
-        returns (bool)
-    {
-        return
-            integrationStates[_integration] == IFund.IntegrationState.PENDING;
-    }
 
     function isPosition(address _component) external view returns (bool) {
       return positions.contains(_component);
@@ -445,6 +378,15 @@ abstract contract BaseFund is ERC20 {
     }
 
     /* ============ Internal Functions ============ */
+
+    function _addIntegration(address _integration) internal
+    {
+        require(!integrations.contains(_integration), "Integration already added");
+
+        integrations.push(_integration);
+
+        emit IntegrationAdded(_integration);
+    }
 
     /**
      * Function that calculates the price using the oracle and executes a trade.
@@ -638,12 +580,12 @@ abstract contract BaseFund is ERC20 {
      */
     function _validateOnlyIntegration(address _integration) internal view {
         require(
-            integrationStates[_integration] == IFund.IntegrationState.INITIALIZED,
-            "Integration needs to be initialized"
+            integrations.contains(_integration),
+            "Integration needs to be added to the fund"
         );
         require(
             IBabController(controller).isValidIntegration(
-                IIntegration(_integration).getName()
+                IIntegration(_integration).getName(), _integration
             ),
             "Integration must be enabled on controller"
         );

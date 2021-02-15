@@ -52,7 +52,7 @@ abstract contract BaseIntegration {
     }
 
     modifier onlyFund() {
-      require(isFundValidAndInitialized(msg.sender), "Only a fund can call this");
+      require(IBabController(controller).isSystemContract(msg.sender), "Only a fund can call this");
       require(initializedByFund[msg.sender], "integration has already been initialized");
       _;
     }
@@ -97,7 +97,6 @@ abstract contract BaseIntegration {
      */
     function initialize(address _fund) onlyProtocol external {
       require(!initializedByFund[_fund], "integration has already been initialized");
-      IFund(_fund).initializeIntegration();
       initializedByFund[_fund] = true;
     }
 
@@ -162,22 +161,6 @@ abstract contract BaseIntegration {
         if (_feeQuantity > 0) {
           ERC20(_token).transferFrom(_fund, IBabController(controller).getFeeRecipient(), _feeQuantity);
         }
-    }
-
-    /**
-     * Returns true if the integration is in process of initialization on the fund
-     */
-    function isFundPendingInitialization(address _fund) internal view returns(bool) {
-        return IFund(_fund).isPendingIntegration(address(this));
-    }
-
-    /**
-     * Returns true if Fund must be enabled on the controller
-     * and module is registered on the Fund
-     */
-    function isFundValidAndInitialized(address _fund) internal view returns(bool) {
-        return IBabController(controller).isFund(address(_fund)) &&
-            IFund(_fund).isInitializedIntegration(address(this));
     }
 
     /**
