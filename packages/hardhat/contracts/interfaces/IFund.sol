@@ -66,6 +66,7 @@ interface IFund is IERC20 {
     function setActive() external;
     function setDisabled() external;
 
+    function fundIdeas() external view returns (address);
     function controller() external view returns (address);
     function creator() external view returns (address);
     function active() external view returns (bool);
