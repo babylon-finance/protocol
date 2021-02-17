@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import { Box, Blockie, Button, MetaMaskButton } from 'rimble-ui';
 import styled from "styled-components";
 
-const PRIMARY_FUND = "0x0DCd1Bf9A1b36cE34237eEaFef220932846BCD82"
+const PRIMARY_FUND = "0x0b306bf915c4d645ff596e518faf3f9669b97016";
 interface AppHeaderProps {
   onConnect: any
   resetApp: any
@@ -35,18 +35,16 @@ const AppHeader = ({ onConnect, resetApp, appState, index }: AppHeaderProps) => 
             <AddressButton>
               {mkShortAddress(appState.address)}
             </AddressButton>
-            {false && (
-              <LinkWrapper>
-                <DisconnectLink onClick={resetApp} target="_blank">
-                  Disconnect
+            <LinkWrapper>
+              <DisconnectLink onClick={resetApp} target="_blank">
+                Disconnect
                 </DisconnectLink>
-              </LinkWrapper>
-            )}
+            </LinkWrapper>
           </ConnectedWrapper>
         )}
         {!appState.connected && (
           <MetaMaskButton.Outline onClick={onConnect} size="small">
-            Connect with MetaMask
+            Connect Wallet
           </MetaMaskButton.Outline>
         )}
       </ConnectionWrapper>

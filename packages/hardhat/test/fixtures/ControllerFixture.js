@@ -190,6 +190,9 @@ async function deployFolioFixture() {
     fundIdeas1.address,
     { value: ethers.utils.parseEther("0.1") }
   );
+
+  console.log(yearnVaultIntegration.address);
+
   return {
     babController,
     integrations: {
@@ -212,7 +215,11 @@ async function deployFolioFixture() {
     signer1,
     signer2,
     signer3,
-    contractsToPublish: [{ name: "BabController", contract: babController }]
+    contractsToPublish: [
+      { name: "BabController", contract: babController },
+      { name: "KyberTradeIntegration", contract: kyberTradeIntegration },
+      { name: "YearnVaultIntegration", contract: yearnVaultIntegration }
+    ]
   };
 }
 
