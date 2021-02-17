@@ -9,8 +9,7 @@ const AppHeaderMinimal = () => {
       <ContainerLarge>
         <StyledHeader>
           <LogoWrapper>
-            <LogoImg src="/tmp_logo_1.png" alt="" />
-            <HomeLink to="/"><span className="main-text">Babylon</span><span className="tld-text">.finance</span></HomeLink>
+            <LogoImg src="/Babylon_logo-horizontal-full.svg" alt="babylon-logo-full" />
           </LogoWrapper>
         </StyledHeader>
       </ContainerLarge>
@@ -30,9 +29,9 @@ const ContainerLarge = styled(Box)`
 `
 
 const LogoImg = styled.img`
-  width: 30px;
+  height: 80px;
   @media only screen and (max-width: 840px) {
-    width: 22px;
+    height: 70px;
   }
 `
 
@@ -41,28 +40,8 @@ const HeaderWrapper = styled.div`
 `
 
 const LogoWrapper = styled.div`
-  height: 60px;
-  padding: 5px;
   display: flex;
-  align-items: center;
-
-  .main-text {
-    color: var(--primary);
-  }
-
-  .tld-text {
-    color: var(--purple-aux);
-  }
-
-  @media only screen and (max-width: 840px) {
-    .main-text {
-      font-size: 18px;
-    }
-
-    .tld-text {
-      font-size: 18px;
-    }
-  }
+  align-items: flex-start;
 `
 
 const HomeLink = styled(Link)`

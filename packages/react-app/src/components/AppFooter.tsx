@@ -22,10 +22,10 @@ const AppFooter = () => {
         window.open('https://twitter.com/BabylonFinance');
         break
       case ExternalTarget.medium:
-        window.open('https://medium.com/@rrecuero/8199fa89f918');
+        window.open('https://medium.com/babylon-finance');
         break
       case ExternalTarget.discord:
-        window.open('https://discord.gg/fQNpNJ9ahb');
+        window.open('https://discord.gg/eGatHr2a5u');
         break
     }
   }
@@ -55,7 +55,7 @@ const AppFooter = () => {
             </FooterSocialLinkIcons>
           </FooterSocialLinkBlock>
           <FooterLogoWrapper>
-            <span className="main-text">Babylon</span><span className="tld-text">.finance</span>
+            <img height="80" src="/Babylon_logo_horizontal-blue.svg" alt="babylon-logo-mono" />
           </FooterLogoWrapper>
         </FooterContentWrapper>
       </ContainerLarge>
@@ -151,22 +151,11 @@ const FooterWrapper = styled.div`
 `
 
 const FooterLogoWrapper = styled.div`
-  align-items: center;
+  align-items: top;
   display: flex;
   font-family: cera-bold;
-  font-size: 24px;
-  height: 60px;
   margin-left: auto;
   padding: 5px;
-
-  .main-text {
-    margin-left: 14px;
-    color: var(--primary);
-  }
-
-  .tld-text {
-    color: var(--primary);
-  }
 
   @media only screen and (max-width: 840px) {
     display: none;

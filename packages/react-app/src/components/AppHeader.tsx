@@ -66,8 +66,7 @@ const AppHeader = ({ onConnect, resetApp, appState, index }: AppHeaderProps) => 
       <ContainerLarge>
         <StyledHeader>
           <LogoWrapper>
-            <img width="30" src="/tmp_logo_1.png" alt="" />
-            <HomeLink to="/"><span className="main-text">Babylon</span><span className="tld-text">.finance</span></HomeLink>
+            <img width="30" src="/Babylon_logo-horizontal-full.svg" alt="" />
           </LogoWrapper>
           {index
             ? renderIndexButton()
