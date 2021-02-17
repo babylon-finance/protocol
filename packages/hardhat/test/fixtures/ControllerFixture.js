@@ -169,7 +169,6 @@ async function deployFolioFixture() {
   });
 
   // Investment ideas first fund
-
   const fundIdeas1 = await FundIdeas.deploy(
     fund.address,
     babController.address,
@@ -190,8 +189,6 @@ async function deployFolioFixture() {
     fundIdeas1.address,
     { value: ethers.utils.parseEther("0.1") }
   );
-
-  console.log(yearnVaultIntegration.address);
 
   return {
     babController,

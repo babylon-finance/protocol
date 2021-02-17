@@ -77,12 +77,22 @@ async function main() {
 
   // Internal Integrations
   const integrations = [
-    { name: "YearnVaultIntegration.sol", path: "integrations/" },
-    { name: "KyberTradeIntegration.sol", path: "integrations/" }
+    "YearnVaultIntegration.sol",
+    "KyberTradeIntegration.sol"
+  ];
+  integrations.forEach(file => {
+    publishAndPushContract(file, "integrations/");
+  });
+  // Internal Interfaces
+  const interfaces = [
+    "IFund.sol",
+    "IFundIdeas.sol",
+    "IClosedFund.sol",
+    "IIntegration.sol"
   ];
 
-  integrations.forEach(file => {
-    publishAndPushContract(file.name, file.path);
+  interfaces.forEach(file => {
+    publishAndPushContract(file, "interfaces/");
   });
 
   const contractList = fs

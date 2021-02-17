@@ -41,7 +41,7 @@ interface FundDetails {
   fundEndDate: BigNumber
 }
 
-interface Contract {
+interface Contracts {
   ClosedFund: any
 }
 
@@ -64,7 +64,7 @@ const INITIAL_DETAILS: FundDetails = {
 
 const FundDetailPage = ({ provider, userAddress }: FundDetailPageProps) => {
   const [isLoading, setIsLoading] = useState(true);
-  const [contracts, setContracts] = useState<Contract | undefined>(undefined);
+  const [contracts, setContracts] = useState<Contracts | undefined>(undefined);
   const [contributor, setContributor] = useState<Contributor | undefined>(undefined);
   const [contributors, setContributors] = useState<string[]>([]);
   const [fundDetails, setFundDetails] = useState<FundDetails>(INITIAL_DETAILS);
@@ -166,7 +166,6 @@ const FundDetailPage = ({ provider, userAddress }: FundDetailPageProps) => {
   usePoller(async () => {
     if (contracts) {
       getFundMetaPoller();
-      console.log(fundDetails.integrations);
     }
   }, 5000);
 
@@ -337,7 +336,7 @@ const FundDetailPage = ({ provider, userAddress }: FundDetailPageProps) => {
         </PerformanceWrapper>
         <TabbedActionsWrapper>
           {contracts && (
-            <PassiveActionForm provider={provider} fundContract={contracts.ClosedFund}/>
+            <PassiveActionForm provider={provider} fundContract={contracts.ClosedFund} />
           )}
         </TabbedActionsWrapper>
       </ContentWrapper>
