@@ -1,3 +1,4 @@
+import BaseActionForm from "./BaseActionForm";
 import DepositModal from "./DepositModal";
 import FundDetailChart from "./FundDetailChart";
 import PassiveActionForm from "./PassiveActionForm";
@@ -43,6 +44,7 @@ interface FundDetails {
 
 interface Contracts {
   ClosedFund: any
+  FundIdeas: any
 }
 
 interface Contributor {
@@ -144,7 +146,13 @@ const FundDetailPage = ({ provider, userAddress }: FundDetailPageProps) => {
 
   const initialize = useCallback(async () => {
     const fund = await loadContractFromNameAndAddress(address, contractNames.ClosedFund, provider);
-    setContracts({ ClosedFund: fund });
+    let fundIdeas;
+    if (fund) {
+      const ideasAddress = await fund.fundIdeas();
+      fundIdeas = await loadContractFromNameAndAddress(ideasAddress, contractNames.FundIdeas, provider);
+    }
+
+    setContracts({ ClosedFund: fund, FundIdeas: fundIdeas });
 
     if (fund) {
       setTokenBalance(await fund.balanceOf(userAddress));
@@ -336,7 +344,7 @@ const FundDetailPage = ({ provider, userAddress }: FundDetailPageProps) => {
         </PerformanceWrapper>
         <TabbedActionsWrapper>
           {contracts && (
-            <PassiveActionForm provider={provider} fundContract={contracts.ClosedFund} />
+            <BaseActionForm provider={provider} fundContract={contracts.ClosedFund} fundIdeasContract={contracts.FundIdeas} />
           )}
         </TabbedActionsWrapper>
       </ContentWrapper>
