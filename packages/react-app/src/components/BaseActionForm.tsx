@@ -1,16 +1,18 @@
 import PassiveActionForm from "./PassiveActionForm";
 
+import { Integration, IntegrationList, IntegrationType, getIntegrationsWithAddress } from "../models/Integration";
 import InvestmentIdea from "../models/InvestmentIdea";
 import { Transactor } from "../helpers";
 import useGasPrice from "../hooks/GasPrice";
 import * as addresses from "../contracts/addresses";
 
 import { BigNumber } from "@ethersproject/bignumber";
-import { Box,  Button, Flex, Field, Form, Input, Heading } from "rimble-ui";
+import { Box,  Button, Flex, Field, Form, Input, Heading, Select } from "rimble-ui";
 import { notification } from "antd";
 import { parseEther } from "@ethersproject/units";
 import React, { useState } from 'react';
 import styled from "styled-components";
+import { useEffect } from "react";
 
 interface BaseActionFormProps {
   provider: any
@@ -18,15 +20,13 @@ interface BaseActionFormProps {
   fundIdeasContract: any
 }
 
-interface Integration {
-  name: string
-  address: string
-}
 
 const BaseActionForm = ({provider, fundContract, fundIdeasContract}: BaseActionFormProps) => {
+  const [initialLoad, setInitialLoad] = useState(true);
+  const [integrationList, setIntegrationList] = useState<IntegrationList | undefined>(undefined);
   const [capitalRequested, setCapitalRequested] = useState<number>(0);
   const [duration, setDuration] = useState<number>(0);
-  const [integration, setIntegration] = useState<Integration>({name: "", address: ""});
+  const [integration, setIntegration] = useState<Integration>({name: "", address: "", type: IntegrationType.passive});
   const [investmentType, setInvestmentType] = useState("Passive");
   const [stake, setStake] = useState(0);
   const [expectedReturn, setExpectedReturn] = useState(0);
@@ -38,8 +38,16 @@ const BaseActionForm = ({provider, fundContract, fundIdeasContract}: BaseActionF
   const [showSummaryForm, setShowSummaryForm] = useState(false);
   const [txConfirm, setTxConfirm] = useState<boolean>(false);
 
+
   const estGasPrice = useGasPrice("fast");
   const tx = Transactor(provider, estGasPrice);
+
+  useEffect(() => {
+    if (initialLoad) {
+      setIntegrationList(getIntegrationsWithAddress());
+    }
+    setInitialLoad(false);
+  }, [initialLoad]);
 
   const handleSubmit = async e => {
     e.preventDefault();
@@ -71,10 +79,6 @@ const BaseActionForm = ({provider, fundContract, fundIdeasContract}: BaseActionF
     setExpectedReturn(e.target.value);
   }
 
-  const buildInvestmentIdeaFromState = () => {
-    return null; // Grab all state props here
-  };
-
   const handleNextStepClick = e => {
     e.preventDefault();
     setShowPrimaryForm(false);
@@ -98,6 +102,20 @@ const BaseActionForm = ({provider, fundContract, fundIdeasContract}: BaseActionF
 
   const handleShowChildFormChange = (state) => {
     setShowChildForm(state);
+  };
+
+  const renderIntegrationSelector = () => {
+    if (integrationList) {
+      return (
+        <Field label="Investment Type" width={1}>
+          <Select>
+            { integrationList.integrations.map(item => {
+              return (<option value={item.name}>item.name</option>);
+            })}
+          </Select>
+        </Field>
+      )
+    }
   };
 
   const resetForms = () => {
@@ -184,15 +202,7 @@ const BaseActionForm = ({provider, fundContract, fundIdeasContract}: BaseActionF
                     width={1}
                   />
                 </Field>
-                <Field label="Investment Type" width={1}>
-                  <Input
-                    type="text"
-                    required
-                    onChange={handleInvestmentTypeChange}
-                    value={investmentType}
-                    width={1}
-                  />
-                </Field>
+                {renderIntegrationSelector()}
                 <Field label="Investment Duration (Days)" width={1}>
                   <Input
                     type="number"
