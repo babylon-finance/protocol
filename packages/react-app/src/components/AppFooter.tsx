@@ -1,6 +1,7 @@
 import { ReactComponent as MediumLogo } from "../icons/medium_logo.svg"
 import { ReactComponent as DiscordLogo } from "../icons/discord_logo.svg"
 import { ReactComponent as TwitterLogo } from "../icons/twitter_logo.svg"
+import { ReactComponent as TelegramLogo } from "../icons/telegram_logo.svg"
 
 import React from "react";
 import { Box, Link as StyledLink } from "rimble-ui";
@@ -12,6 +13,7 @@ const ExternalTarget = {
   litepaper: "litepaper",
   team: "team",
   medium: "medium",
+  telegram: "telegram",
   twitter: "twitter",
 };
 
@@ -26,6 +28,9 @@ const AppFooter = () => {
         break
       case ExternalTarget.discord:
         window.open('https://discord.gg/eGatHr2a5u');
+        break
+      case ExternalTarget.telegram:
+        window.open('https://t.me/joinchat/HQ5TId7ZUCb9ktgT');
         break
     }
   }
@@ -44,13 +49,16 @@ const AppFooter = () => {
             <FooterSocialLinkLabel>Join us!</FooterSocialLinkLabel>
             <FooterSocialLinkIcons>
               <FooterSocialIcon>
+                <TelegramLogo onClick={() => onClickSocialIcon(ExternalTarget.telegram)} />
+              </FooterSocialIcon>
+              <FooterSocialIcon>
+                <DiscordLogo onClick={() => onClickSocialIcon(ExternalTarget.discord)} />
+              </FooterSocialIcon>
+              <FooterSocialIcon>
                 <MediumLogo onClick={() => onClickSocialIcon(ExternalTarget.medium)} />
               </FooterSocialIcon>
               <FooterSocialIcon>
                 <TwitterLogo onClick={() => onClickSocialIcon(ExternalTarget.twitter)} />
-              </FooterSocialIcon>
-              <FooterSocialIcon>
-                <DiscordLogo onClick={() => onClickSocialIcon(ExternalTarget.discord)} />
               </FooterSocialIcon>
             </FooterSocialLinkIcons>
           </FooterSocialLinkBlock>
@@ -106,15 +114,17 @@ const FooterSocialLinkLabel = styled.div`
 const FooterSocialLinkIcons = styled.div`
   display: flex;
   flex-flow: row;
-  min-width: 145px;
+  min-width: 180px;
   justify-content: space-between;
 `
 
 const FooterSocialIcon = styled.svg`
+  display: flex;
   width: 40px;
   height: 40px;
   fill: var(--primary);
   opacity: 0.3;
+  padding: 4px;
 
   &:hover {
     color: var(--primary);
