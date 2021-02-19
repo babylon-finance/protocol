@@ -1,6 +1,7 @@
 import { ReactComponent as MediumLogo } from "../icons/medium_logo.svg"
 import { ReactComponent as DiscordLogo } from "../icons/discord_logo.svg"
 import { ReactComponent as TwitterLogo } from "../icons/twitter_logo.svg"
+import { ReactComponent as TelegramLogo } from "../icons/telegram_logo.svg"
 
 import React from "react";
 import { Box, Link as StyledLink } from "rimble-ui";
@@ -12,6 +13,7 @@ const ExternalTarget = {
   litepaper: "litepaper",
   team: "team",
   medium: "medium",
+  telegram: "telegram",
   twitter: "twitter",
 };
 
@@ -22,10 +24,13 @@ const AppFooter = () => {
         window.open('https://twitter.com/BabylonFinance');
         break
       case ExternalTarget.medium:
-        window.open('https://medium.com/@rrecuero/8199fa89f918');
+        window.open('https://medium.com/babylon-finance');
         break
       case ExternalTarget.discord:
-        window.open('https://discord.gg/fQNpNJ9ahb');
+        window.open('https://discord.gg/eGatHr2a5u');
+        break
+      case ExternalTarget.telegram:
+        window.open('https://t.me/joinchat/HQ5TId7ZUCb9ktgT');
         break
     }
   }
@@ -44,18 +49,21 @@ const AppFooter = () => {
             <FooterSocialLinkLabel>Join us!</FooterSocialLinkLabel>
             <FooterSocialLinkIcons>
               <FooterSocialIcon>
+                <TelegramLogo onClick={() => onClickSocialIcon(ExternalTarget.telegram)} />
+              </FooterSocialIcon>
+              <FooterSocialIcon>
+                <DiscordLogo onClick={() => onClickSocialIcon(ExternalTarget.discord)} />
+              </FooterSocialIcon>
+              <FooterSocialIcon>
                 <MediumLogo onClick={() => onClickSocialIcon(ExternalTarget.medium)} />
               </FooterSocialIcon>
               <FooterSocialIcon>
                 <TwitterLogo onClick={() => onClickSocialIcon(ExternalTarget.twitter)} />
               </FooterSocialIcon>
-              <FooterSocialIcon>
-                <DiscordLogo onClick={() => onClickSocialIcon(ExternalTarget.discord)} />
-              </FooterSocialIcon>
             </FooterSocialLinkIcons>
           </FooterSocialLinkBlock>
           <FooterLogoWrapper>
-            <span className="main-text">Babylon</span><span className="tld-text">.finance</span>
+            <img height="80" src="/Babylon_logo_horizontal-blue.svg" alt="babylon-logo-mono" />
           </FooterLogoWrapper>
         </FooterContentWrapper>
       </ContainerLarge>
@@ -106,15 +114,17 @@ const FooterSocialLinkLabel = styled.div`
 const FooterSocialLinkIcons = styled.div`
   display: flex;
   flex-flow: row;
-  min-width: 145px;
+  min-width: 180px;
   justify-content: space-between;
 `
 
 const FooterSocialIcon = styled.svg`
+  display: flex;
   width: 40px;
   height: 40px;
   fill: var(--primary);
   opacity: 0.3;
+  padding: 4px;
 
   &:hover {
     color: var(--primary);
@@ -151,22 +161,11 @@ const FooterWrapper = styled.div`
 `
 
 const FooterLogoWrapper = styled.div`
-  align-items: center;
+  align-items: top;
   display: flex;
   font-family: cera-bold;
-  font-size: 24px;
-  height: 60px;
   margin-left: auto;
   padding: 5px;
-
-  .main-text {
-    margin-left: 14px;
-    color: var(--primary);
-  }
-
-  .tld-text {
-    color: var(--primary);
-  }
 
   @media only screen and (max-width: 840px) {
     display: none;
