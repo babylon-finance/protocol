@@ -17,10 +17,10 @@ export interface IntegrationList {
   integrations: Integration[]
 }
 
-const integrations = [
+export const integrations = [
   { name: "YearnVaultIntegration", type: IntegrationType.passive },
   { name: "KyberTradeIntegration", type: IntegrationType.trade },
-]
+];
 
 export function getIntegrationsWithAddress(): IntegrationList {
   const integrationList = integrations.map(item => {
@@ -31,4 +31,15 @@ export function getIntegrationsWithAddress(): IntegrationList {
   );
 
   return { integrations: integrationList };
-}
+};
+
+export type GroupedIntegrations = any;
+
+export function integrationsGroupedByKey(key: string): GroupedIntegrations {
+  return getIntegrationsWithAddress().integrations.reduce(function(storage, item) {
+    var group = item[key];
+    storage[group] = storage[group] || [];
+    storage[group].push(item);
+    return storage;
+  }, {});
+};

@@ -13,6 +13,7 @@ interface PassiveActionFormProps {
   provider: any
   capitalRequested: number
   fundContract: any
+  resetForm: any
   setContractData: any
   showChildForm: any
   showSummaryForm: any
@@ -24,7 +25,7 @@ interface Contracts {
   IVault: any
 }
 
-const PassiveActionForm = ({capitalRequested, provider, fundContract, setContractData, showSummaryForm, showChildForm}: PassiveActionFormProps) => {
+const PassiveActionForm = ({capitalRequested, provider, fundContract, resetForm, setContractData, showSummaryForm, showChildForm}: PassiveActionFormProps) => {
   const [contracts, setContracts] = useState<Contracts | undefined>(undefined);
 
   const intitialize = useCallback(async () => {

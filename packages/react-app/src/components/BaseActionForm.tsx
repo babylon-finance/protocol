@@ -1,6 +1,6 @@
 import PassiveActionForm from "./PassiveActionForm";
 
-import { Integration, IntegrationList, IntegrationType, getIntegrationsWithAddress } from "../models/Integration";
+import { integrations, getIntegrationsWithAddress, integrationsGroupedByKey } from "../models/Integration";
 import InvestmentIdea from "../models/InvestmentIdea";
 import { Transactor } from "../helpers";
 import useGasPrice from "../hooks/GasPrice";
@@ -10,9 +10,9 @@ import { BigNumber } from "@ethersproject/bignumber";
 import { Box,  Button, Flex, Field, Form, Input, Heading, Select } from "rimble-ui";
 import { notification } from "antd";
 import { parseEther } from "@ethersproject/units";
-import React, { useState } from 'react';
+
+import React, { FC, Reducer, useEffect, useReducer } from "react";
 import styled from "styled-components";
-import { useEffect } from "react";
 
 interface BaseActionFormProps {
   provider: any
@@ -20,127 +20,170 @@ interface BaseActionFormProps {
   fundIdeasContract: any
 }
 
+interface IFormState{
+    capitalRequested: number
+    integrationName: string
+    integrationMap: any
+    initialLoad: boolean
+    duration: number
+    stake: number
+    expectedReturn: number
+    enterData: string
+    exitData: string
+    formValidated: boolean
+    showPrimaryForm: boolean
+    showChildForm: boolean
+    showSummaryForm: boolean
+}
+
+interface IAction {
+  type: string
+  value?: any
+}
+
+const initialFormState: IFormState = {
+  capitalRequested: 0,
+  integrationName: "",
+  integrationMap: null,
+  initialLoad: true,
+  duration: 0,
+  stake: 0,
+  expectedReturn: 0,
+  enterData: "",
+  exitData: "",
+  formValidated: true,
+  showPrimaryForm: true,
+  showChildForm: false,
+  showSummaryForm: false,
+};
+
+const reducer = (state: IFormState, action: IAction) => {
+  if (action.type === "reset") {
+      return initialFormState;
+  }
+
+  const result: IFormState = { ...state };
+  result[action.type] = action.value;
+  return result;
+};
 
 const BaseActionForm = ({provider, fundContract, fundIdeasContract}: BaseActionFormProps) => {
-  const [initialLoad, setInitialLoad] = useState(true);
-  const [integrationList, setIntegrationList] = useState<IntegrationList | undefined>(undefined);
-  const [capitalRequested, setCapitalRequested] = useState<number>(0);
-  const [duration, setDuration] = useState<number>(0);
-  const [integration, setIntegration] = useState<Integration>({name: "", address: "", type: IntegrationType.passive});
-  const [investmentType, setInvestmentType] = useState("Passive");
-  const [stake, setStake] = useState(0);
-  const [expectedReturn, setExpectedReturn] = useState(0);
-  const [enterData, setEnterData] = useState("");
-  const [exitData, setExitData] = useState("");
-  const [formValidated, setFormValidated] = useState(true);
-  const [showPrimaryForm, setShowPrimaryForm] = useState(true);
-  const [showChildForm, setShowChildForm] = useState(false);
-  const [showSummaryForm, setShowSummaryForm] = useState(false);
-  const [txConfirm, setTxConfirm] = useState<boolean>(false);
-
+  const [state, dispatch] = useReducer<Reducer<IFormState, IAction>, IFormState>(reducer, initialFormState, () => initialFormState);
+  const {
+    capitalRequested,
+    integrationName,
+    integrationMap,
+    initialLoad,
+    duration,
+    formValidated,
+    stake,
+    expectedReturn,
+    enterData,
+    exitData,
+    showPrimaryForm,
+    showChildForm,
+    showSummaryForm,
+  } = state;
 
   const estGasPrice = useGasPrice("fast");
   const tx = Transactor(provider, estGasPrice);
 
   useEffect(() => {
     if (initialLoad) {
-      setIntegrationList(getIntegrationsWithAddress());
+      dispatch({type: "integrationMap", value: integrationsGroupedByKey("type")});
     }
-    setInitialLoad(false);
+    dispatch({type: "initialLoad", value: false});
   }, [initialLoad]);
 
-  const handleSubmit = async e => {
-    e.preventDefault();
-    console.log("submit");
+  const onChange = (e) => {
+    const { name, value } = e.target;
+    dispatch({ type: name, value });
   };
-
-  const handleRequestedChange = e => {
-    e.preventDefault();
-    setCapitalRequested(e.target.value);
-  };
-
-  const handleIntegrationChange = e => {
-    e.preventDefault();
-    setIntegration(e.target.value);
-  };
-
-  const handleDurationChange = e => {
-    e.preventDefault();
-    setDuration(e.target.value);
-  };
-
-  const handleStakeChange = e => {
-    e.preventDefault();
-    setStake(e.target.value);
-  }
-
-  const handleExpectedChange = e => {
-    e.preventDefault();
-    setExpectedReturn(e.target.value);
-  }
 
   const handleNextStepClick = e => {
     e.preventDefault();
-    setShowPrimaryForm(false);
-    setShowChildForm(true);
-  }
-
-  // Pass this callback down to child form
-  const handleContractDataChange = (enterData: string, exitData: string, integration: Integration) => {
-    setEnterData(enterData);
-    setExitData(exitData);
-    setIntegration(integration)
+    dispatch({type: "showPrimaryForm", value: false });
+    dispatch({type: "showChildForm", value: true });
   };
 
-  const handleInvestmentTypeChange = e => {
-    setInvestmentType(e.target.value);
+  // Pass this callback down to child form
+  const handleContractDataChange = (enterData: string, exitData: string) => {
+    dispatch({type: "enterData", value: enterData});
+    dispatch({type: "exitData", value: exitData});
   };
 
   const handleShowSummaryFormChange = (state) => {
-    setShowSummaryForm(state);
+    dispatch({type: "showSummaryForm", value: state})
   };
 
   const handleShowChildFormChange = (state) => {
-    setShowChildForm(state);
+    dispatch({type: "showChildForm", value: state });
   };
 
-  const renderIntegrationSelector = () => {
-    if (integrationList) {
+  const toUpperFirst = (string: string) => {
+    return string[0].toUpperCase() + string.substring(1);
+  };
+
+  const buildIntegrationOptions = () => {
+    if (integrationMap) {
+      const groups = Object.keys(integrationMap);
       return (
-        <Field label="Investment Type" width={1}>
-          <Select>
-            { integrationList.integrations.map(item => {
-              return (<option value={item.name}>item.name</option>);
-            })}
-          </Select>
-        </Field>
-      )
+        groups.map((group) => (
+          <optgroup label={toUpperFirst(group)} key={group}>
+            <option>--</option>
+            {integrationMap[group.toString()].map((item) => (
+              <option value={item.name} key={item.address}>
+                {item.name}
+              </option>
+            ))}
+          </optgroup>
+        )
+      ))
+    } else {
+      return null;
     }
   };
 
-  const resetForms = () => {
-    console.log("reset");
+  const renderIntegrationSelector = () => {
+    return (
+      <Field label="Investment Type" width={1}>
+        <IntegrationSelect required onChange={onChange} name="integrationName" value={integrationName}>
+          {buildIntegrationOptions()}
+        </IntegrationSelect>
+      </Field>
+    );
   };
 
-  const handleSubmitIdea= async e => {
+  const resetForm = () => {
+    dispatch({ type: "reset" });
+  };
+
+  const getIntegrationByName = (name: string) => {
+    return getIntegrationsWithAddress().integrations.map(el => {
+      if (el.name === name) {
+        return el;
+      }
+    })[0];
+  };
+
+  const handleSubmitIdea = async e => {
     e.preventDefault();
+    const integration = getIntegrationByName(integrationName);
+
     if (tx && fundContract && integration) {
       try {
-        setTxConfirm(true);
-
         const idea = new InvestmentIdea(
           parseEther(capitalRequested.toString()),
-          parseEther("1"),
-          BigNumber.from(60 * 60 * 24 * duration), // clean this up
+          parseEther(stake.toString()),
+          BigNumber.from(60 * 60 * 24 * duration),
           enterData,
           exitData,
           integration.address,
-          parseEther("0"),
+          parseEther(expectedReturn.toString()),
           [addresses.tokens.DAI], // where should this come from
           [BigNumber.from(1)] // where should this come from
         );
 
-        // TODO(undfined): These params need to be cleaned up
         const result = await tx(
           fundIdeasContract.addInvestmentIdea(...idea.getProps())
         );
@@ -149,25 +192,26 @@ const BaseActionForm = ({provider, fundContract, fundIdeasContract}: BaseActionF
           notification.success({
             message: "Transaction Sent",
             description:
-              "Your Idea has been submitted."
+              "Your proposed investment has been submitted."
           });
-          resetForms();
         }
       } catch (error) {
         notification.error({
-          message: "Transaction Failed: Idea not submitted",
+          message: "Transaction Failed: Investment idea not submitted",
           description:
             error.toString()
         });
       }
     }
 
-    setTxConfirm(false);
+    dispatch({ type: "reset" });
   };
 
   // Add validation logic
   const validateForm = () => {
-    setFormValidated(true);
+    if (true) {
+      dispatch({ type: "formValidated", value: "true" });
+    }
   };
 
   const renderChildForm = () => {
@@ -176,6 +220,7 @@ const BaseActionForm = ({provider, fundContract, fundIdeasContract}: BaseActionF
     return (
       <PassiveActionForm
           capitalRequested={capitalRequested}
+          resetForm={resetForm}
           showSummaryForm={handleShowSummaryFormChange}
           showChildForm={handleShowChildFormChange}
           provider={provider}
@@ -189,7 +234,7 @@ const BaseActionForm = ({provider, fundContract, fundIdeasContract}: BaseActionF
     <Box p={4}>
       <Box>
         {showPrimaryForm && !showChildForm && !showSummaryForm && (
-          <Form onSubmit={handleSubmit} validated={true}>
+          <Form validated={true}>
             <Heading>Submit an Investment Idea</Heading>
             <Flex mx={-3} flexWrap={"wrap"}>
               <Box width={[1, 1, 1/2]} px={3}>
@@ -197,7 +242,8 @@ const BaseActionForm = ({provider, fundContract, fundIdeasContract}: BaseActionF
                   <Input
                     type="number"
                     required
-                    onChange={handleRequestedChange}
+                    onChange={onChange}
+                    name="capitalRequested"
                     value={capitalRequested}
                     width={1}
                   />
@@ -207,7 +253,8 @@ const BaseActionForm = ({provider, fundContract, fundIdeasContract}: BaseActionF
                   <Input
                     type="number"
                     required
-                    onChange={handleDurationChange}
+                    onChange={onChange}
+                    name="duration"
                     value={duration}
                     width={1}
                   />
@@ -216,7 +263,8 @@ const BaseActionForm = ({provider, fundContract, fundIdeasContract}: BaseActionF
                   <Input
                     type="number"
                     required
-                    onChange={handleStakeChange}
+                    onChange={onChange}
+                    name="stake"
                     value={stake}
                     width={1}
                   />
@@ -225,7 +273,8 @@ const BaseActionForm = ({provider, fundContract, fundIdeasContract}: BaseActionF
                   <Input
                     type="number"
                     required
-                    onChange={handleExpectedChange}
+                    onChange={onChange}
+                    name="expectedReturn"
                     value={expectedReturn}
                     width={1}
                   />
@@ -245,7 +294,7 @@ const BaseActionForm = ({provider, fundContract, fundIdeasContract}: BaseActionF
               <span>Capital Requested: {capitalRequested}</span>
               <span>Staked Amount: {stake}</span>
               <span>Investment Duration: {duration}</span>
-              <span>Integration: {integration.name}</span>
+              <span>Integration: {integrationName}</span>
               <span>Expected Return: {expectedReturn}</span>
             </SummaryDetails>
             <Button disabled={!formValidated} onClick={handleSubmitIdea} type="submit">Submit Idea</Button>
@@ -256,6 +305,16 @@ const BaseActionForm = ({provider, fundContract, fundIdeasContract}: BaseActionF
   );
 }
 
+const IntegrationSelect = styled.select`
+  height: 45px;
+  border-radius: 4px;
+  width: 100%;
+  box-shadow: 0px 2px 4px rgb(0 0 0 / 10%);
+
+  &:hover {
+    box-shadow: 0px 2px 6px rgb(0 0 0 / 30%);
+  }
+`
 const SummaryDetails = styled(Box)`
   display: flex;
   flex-flow: column;
