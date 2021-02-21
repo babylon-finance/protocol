@@ -683,7 +683,7 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
         uint perfFee = 0;
         if (!_isDeposit) {
           uint percentage = balanceOf(msg.sender).div(_fundTokenQuantity); // Divide by the % tokens being withdrawn
-          uint profits = contributors[msg.sender].totalDeposit.div(percentage).sub(_reserveAssetQuantity);
+          uint profits = _reserveAssetQuantity.sub(contributors[msg.sender].totalDeposit.div(percentage));
           if (profits > 0) {
             perfFee = IBabController(controller)
             .getProtocolPerformanceFee().preciseMul(profits);
