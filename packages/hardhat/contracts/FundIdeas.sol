@@ -339,7 +339,7 @@ contract FundIdeas is ReentrancyGuard {
 
   function _transferIdeaRewards(uint _ideaIndex, uint capitalReturned) internal {
     address reserveAsset = fund.getReserveAsset();
-    uint256 reserveAssetDelta = 0;
+    int256 reserveAssetDelta = 0;
     InvestmentIdea storage idea = investmentsExecuted[_ideaIndex];
     // Idea returns were positive
     if (capitalReturned > idea.capitalRequested) {
@@ -352,7 +352,7 @@ contract FundIdeas is ReentrancyGuard {
         idea.participant,
         ideatorProfits
       );
-      reserveAssetDelta.add(uint256(-ideatorProfits));
+      reserveAssetDelta.add(int256(-ideatorProfits));
       uint256 votersProfits = ideaVotersProfitPercentage.preciseMul(profits);
       // Send rewards to voters that voted in favor
       for (uint256 i = 0; i < idea.voters.length; i++) {
@@ -364,7 +364,7 @@ contract FundIdeas is ReentrancyGuard {
           );
         }
       }
-      reserveAssetDelta.add(uint256(-votersProfits));
+      reserveAssetDelta.add(int256(-votersProfits));
     } else {
       // Returns were negative
       uint256 stakeToSlash = idea.stake;
@@ -373,7 +373,7 @@ contract FundIdeas is ReentrancyGuard {
       }
       // We slash and add to the fund the stake from the creator
       IWETH(fund.weth()).deposit{value: stakeToSlash}();
-      reserveAssetDelta.add(stakeToSlash);
+      reserveAssetDelta.add(stakeToSlash.toInt256());
       uint256 votersRewards = ideaVotersProfitPercentage.preciseMul(stakeToSlash);
       // Send rewards to voters that voted against
       for (uint256 i = 0; i < idea.voters.length; i++) {
@@ -385,7 +385,7 @@ contract FundIdeas is ReentrancyGuard {
           );
         }
       }
-      reserveAssetDelta.add(uint256(-stakeToSlash));
+      reserveAssetDelta.add(int256(-stakeToSlash));
     }
     // Updates reserve asset position in the fund
     uint256 _newTotal = fund.getPositionBalance(reserveAsset).add(int256(reserveAssetDelta)).toUint256();

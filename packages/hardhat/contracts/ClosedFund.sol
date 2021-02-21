@@ -221,7 +221,7 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
         _calculateAndEditPosition(
           weth,
           initialDepositAmount,
-          initialDepositAmount,
+          initialDepositAmount.toInt256(),
           0
         );
 
@@ -353,7 +353,7 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
        require(!_hasPosition(_token), "Token is one of the fund positions");
        uint256 balance = ERC20(_token).balanceOf(address(this));
        require(balance > 0, "Token balance > 0");
-       _calculateAndEditPosition(_token, balance, ERC20(_token).balanceOf(address(this)), 0);
+       _calculateAndEditPosition(_token, balance, ERC20(_token).balanceOf(address(this)).toInt256(), 0);
     }
 
     /* ============ External Getter Functions ============ */
@@ -611,7 +611,7 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
             _reserveAsset,
             _depositInfo.newReservePositionBalance,
             address(0),
-            msg.value,
+            msg.value.toInt256(),
             0
         );
 
@@ -633,7 +633,7 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
             _reserveAsset,
             _withdrawalInfo.newReservePositionBalance,
             address(0),
-            uint256(-_withdrawalInfo.netFlowQuantity),
+            int256(-_withdrawalInfo.netFlowQuantity),
             0
         );
 

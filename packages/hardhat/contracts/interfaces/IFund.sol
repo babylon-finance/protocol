@@ -31,7 +31,7 @@ interface IFund is IERC20 {
 
     struct SubPosition {
       address integration;
-      uint256 balance;
+      int256 balance;
       uint8 status;
     }
 
@@ -87,7 +87,7 @@ interface IFund is IERC20 {
     function calculateAndEditPosition(
         address _component,
         uint256 _newBalance,
-        uint256 _deltaBalance,
+        int256 _deltaBalance,
         uint8 _subpositionStatus
     )
       external

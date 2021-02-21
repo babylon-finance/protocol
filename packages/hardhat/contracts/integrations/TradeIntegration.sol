@@ -20,6 +20,7 @@ pragma solidity 0.7.4;
 
 import "hardhat/console.sol";
 import { SafeMath } from "@openzeppelin/contracts/math/SafeMath.sol";
+import { SafeCast } from "@openzeppelin/contracts/utils/SafeCast.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { IFund } from "../interfaces/IFund.sol";
 import { ReentrancyGuard } from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
@@ -34,6 +35,7 @@ import { BaseIntegration } from "./BaseIntegration.sol";
  */
 abstract contract TradeIntegration is BaseIntegration, ReentrancyGuard {
     using SafeMath for uint256;
+    using SafeCast for uint256;
 
     /* ============ Struct ============ */
 
@@ -263,8 +265,8 @@ abstract contract TradeIntegration is BaseIntegration, ReentrancyGuard {
     function _updateFundPositions(TradeInfo memory _tradeInfo, uint256 exchangedQuantity) internal returns (uint256, uint256) {
       uint256 newAmountSendTokens = _tradeInfo.preTradeSendTokenBalance.sub(_tradeInfo.totalSendQuantity);
       uint256 newAmountReceiveTokens = _tradeInfo.preTradeReceiveTokenBalance.add(exchangedQuantity);
-      updateFundPosition(address(_tradeInfo.fund), _tradeInfo.sendToken, uint256(-_tradeInfo.totalSendQuantity), 0);
-      updateFundPosition(address(_tradeInfo.fund), _tradeInfo.receiveToken, exchangedQuantity, 0);
+      updateFundPosition(address(_tradeInfo.fund), _tradeInfo.sendToken, int256(-_tradeInfo.totalSendQuantity), 0);
+      updateFundPosition(address(_tradeInfo.fund), _tradeInfo.receiveToken, exchangedQuantity.toInt256(), 0);
 
       return (newAmountSendTokens, newAmountReceiveTokens);
     }

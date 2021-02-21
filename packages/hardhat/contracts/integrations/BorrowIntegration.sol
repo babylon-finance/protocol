@@ -267,7 +267,7 @@ abstract contract BorrowIntegration is BaseIntegration, ReentrancyGuard {
     // Protocol Fee
     uint256 protocolFee = _accrueProtocolFee(debtInfo, asset, amount, BORROW_OPERATION_BORROW);
 
-    updateFundPosition(msg.sender, asset, uint256(-amount), 3);
+    updateFundPosition(msg.sender, asset, int256(-amount), 3);
 
     emit AmountBorrowed(
       debtInfo.fund,
