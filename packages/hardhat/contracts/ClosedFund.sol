@@ -98,7 +98,9 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
     }
 
     uint256 public maxDepositLimit; // Limits the amount of deposits
-    uint256 public fundEndsBy; // Timestamp when the fund ends and withdrawals are allowed
+    uint256 public fundActiveWindow;          // Duration of the fund active window
+    uint256 public fundWithdrawalWindow;      // Duration of the fund withdrawal window
+    uint256 public fundInitializedAt;         // Fund Initialized at timestamp
 
     // Fees
     uint256 public premiumPercentage; // Premium percentage (0.01% = 1e14, 1% = 1e16). This premium is a buffer around oracle
@@ -172,14 +174,16 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
      * @param _maxDepositLimit                Max deposit limit
      * @param _premiumPercentage              Premium percentage to avoid arbitrage
      * @param _minFundTokenSupply             Min fund token supply
-     * @param _fundDuration                   Fund duration
+     * @param _fundActiveWindow               Fund active window
+     * @param _fundWithdrawalWindow           Fund withdrawal window
      * @param _fundIdeas                      Address of the instance with the investment ideas
      */
     function initialize(
         uint256 _maxDepositLimit,
         uint256 _premiumPercentage,
         uint256 _minFundTokenSupply,
-        uint256 _fundDuration,
+        uint256 _fundActiveWindow,
+        uint256 _fundWithdrawalWindow,
         address _fundIdeas
     ) external onlyCreator onlyInactive payable {
         require(_maxDepositLimit >= 1**19, "Max deposit limit needs >= 10");
@@ -191,8 +195,12 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
             "Premium must < max"
         );
         require(
-            _fundDuration <= ifcontroller.getMaxFundDuration() && _fundDuration >= ifcontroller.getMinFundDuration() ,
-            "Fund duration must be within the range allowed"
+            _fundActiveWindow <= ifcontroller.getMaxFundActiveWindow() && _fundActiveWindow >= ifcontroller.getMinFundActiveWindow() ,
+            "Fund active window must be within range"
+        );
+        require(
+            _fundWithdrawalWindow <= ifcontroller.getMaxWithdrawalWindow() && _fundWithdrawalWindow >= ifcontroller.getMinWithdrawalWindow() ,
+            "Fund active window must be within range"
         );
         require(
             _minFundTokenSupply > 0,
@@ -201,7 +209,9 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
         minFundTokenSupply = _minFundTokenSupply;
         premiumPercentage = _premiumPercentage;
         maxDepositLimit = _maxDepositLimit;
-        fundEndsBy = block.timestamp + _fundDuration;
+        fundActiveWindow = _fundActiveWindow;
+        fundWithdrawalWindow = _fundWithdrawalWindow;
+        fundInitializedAt = block.timestamp;
 
         IFundIdeas fundIdeasC = IFundIdeas(_fundIdeas);
         require(fundIdeasC.controller() == controller, "Controller must be the same");
@@ -247,7 +257,7 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
             msg.value >= minContribution,
             ">= minContribution"
         );
-        require(block.timestamp < fundEndsBy, "Fund is closed");
+        // TODO: Check if is in active period require(block.timestamp < fundEndsBy, "Fund is closed");
         // if deposit limit is 0, then there is no deposit limit
         if(maxDepositLimit > 0) {
           require(totalFundsDeposited.add(msg.value) <= maxDepositLimit, "Max Deposit Limit");
@@ -283,7 +293,8 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
         uint256 _minReserveReceiveQuantity,
         address payable _to
     ) external nonReentrant onlyContributor(msg.sender) onlyActive {
-        require(block.timestamp > fundEndsBy, "Withdrawals are disabled until fund ends");
+        // TODO: Check if it's in active period
+        // require(block.timestamp > fundEndsBy, "Withdrawals are disabled until fund ends");
         require(
             _fundTokenQuantity <= ERC20(address(this)).balanceOf(msg.sender),
             "Withdrawal amount <= to deposited amount"
@@ -341,10 +352,6 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
     // if limit == 0 then there is no deposit limit
     function setDepositLimit(uint limit) external onlyGovernanceFund {
       maxDepositLimit = limit;
-    }
-
-    function setFundEndDate(uint256 _endsTimestamp) external onlyGovernanceFund {
-      fundEndsBy = _endsTimestamp;
     }
 
     // Any tokens (other than the target) that are sent here by mistake are recoverable by the owner

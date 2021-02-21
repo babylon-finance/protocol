@@ -61,10 +61,10 @@ contract BabController is Ownable {
     event ReserveAssetRemoved(address indexed _reserveAsset);
     event FeeRecipientChanged(address _newFeeRecipient);
 
-    event MinFundEpochChanged(uint256 _newMinFundEpoch);
-    event MaxFundEpochChanged(uint256 _newMaxFundEpoch);
-    event MinFundDurationChanged(uint256 _newMinFundDuration);
-    event MaxFundDurationChanged(uint256 _newMaxFundDuration);
+    event MinWithdrawalWindowChanged(uint256 _newMinWithdrawalWindow);
+    event MaxWithdrawalWindowChanged(uint256 _newMaxWithdrawalWindow);
+    event MinFundActiveWindowChanged(uint256 _newminFundActiveWindow);
+    event MaxFundActiveWindowChanged(uint256 _newmaxFundActiveWindow);
 
     event ModuleAdded(address indexed _module);
     event ModuleRemoved(address indexed _module);
@@ -97,12 +97,17 @@ contract BabController is Ownable {
     // Recipient of protocol fees
     address public feeRecipient;
 
-    uint256 public minFundDuration = 90 days;
-    uint256 public maxFundDuration = 90 days;
-    uint256 public minFundEpoch = 18 hours;
-    uint256 public maxFundEpoch = 7 * 24 hours;
-    uint256 public minDeliberationPeriod = 6 hours;
-    uint256 public maxDeliberationPeriod = 7 days;
+    // Active window for the rolling fund
+    uint256 public minFundActiveWindow = 90 days;
+    uint256 public maxFundActiveWindow = 90 days;
+
+    // Active window for withdrawals after every active period
+    uint256 public minWithdrawalWindow = 1 days;
+    uint256 public maxWithdrawalWindow = 7 days;
+
+    // Idea cooldown period
+    uint256 public minCooldownPeriod = 6 hours;
+    uint256 public maxCooldownPeriod = 7 days;
 
     // Max Premium percentage (0.01% = 1e14, 1% = 1e16). This premium is a buffer around oracle
     // prices paid by user to the SetToken, which prevents arbitrage and oracle front running
@@ -197,19 +202,6 @@ contract BabController is Ownable {
         IFund fund = IFund(_fund);
         require(!fund.active(), "The fund needs to be disabled.");
         fund.setActive();
-    }
-
-    /**
-     * PRIVILEGED GOVERNANCE FUNCTION. Allows governance to change the fund end date
-     *
-     * @param _fund               Address of the fund
-     * @param _newEndTimestamp    New end timestamp for the fund
-     */
-    function changeFundEndDate(address _fund, uint256 _newEndTimestamp) external onlyOwner {
-        require(isFund[_fund], "Fund does not exist");
-        IClosedFund fund = IClosedFund(_fund);
-        require(!!fund.active(), "The fund needs to be active.");
-        fund.setFundEndDate(_newEndTimestamp);
     }
 
     /**
@@ -442,53 +434,53 @@ contract BabController is Ownable {
     /**
      * PRIVILEGED GOVERNANCE FUNCTION. Allows governance to edit the protol min epoch allowed in funds
      *
-     * @param _newMinFundEpoch      New min fund epoch duration
+     * @param _newMinWithdrawalWindow      New min fund epoch duration
      */
-    function setMinFundEpoch(uint256 _newMinFundEpoch) external onlyOwner {
-        require(_newMinFundEpoch > 1 hours, "Absolute minimum is one hour");
+    function setMinWithdrawalWindow(uint256 _newMinWithdrawalWindow) external onlyOwner {
+        require(_newMinWithdrawalWindow > 1 hours, "Absolute minimum is one hour");
 
-        minFundEpoch = _newMinFundEpoch;
+        minWithdrawalWindow = _newMinWithdrawalWindow;
 
-        emit MinFundEpochChanged(_newMinFundEpoch);
+        emit MinWithdrawalWindowChanged(_newMinWithdrawalWindow);
     }
 
     /**
      * PRIVILEGED GOVERNANCE FUNCTION. Allows governance to edit the protol max epoch allowed in funds
      *
-     * @param _newMaxFundEpoch      New max fund epoch duration
+     * @param _newMaxWithdrawalWindow      New max fund epoch duration
      */
-    function setMaxFundEpoch(uint256 _newMaxFundEpoch) external onlyOwner {
-        require(_newMaxFundEpoch < maxFundDuration, "Absolute maximum is the fund duration");
+    function setMaxWithdrawalWindow(uint256 _newMaxWithdrawalWindow) external onlyOwner {
+        require(_newMaxWithdrawalWindow < maxFundActiveWindow, "Absolute maximum is the fund duration");
 
-        maxFundEpoch = _newMaxFundEpoch;
+        maxWithdrawalWindow = _newMaxWithdrawalWindow;
 
-        emit MaxFundEpochChanged(_newMaxFundEpoch);
+        emit MaxWithdrawalWindowChanged(_newMaxWithdrawalWindow);
     }
 
     /**
      * PRIVILEGED GOVERNANCE FUNCTION. Allows governance to edit the protol min fund duration
      *
-     * @param _newMinFundDuration      New min fund duration
+     * @param _newMinFundActiveWindow      New min fund duration
      */
-    function setMinFundDuration(uint256 _newMinFundDuration) external onlyOwner {
-        require(_newMinFundDuration > 30 days, "Absolute minimum is thirty days");
+    function setMinFundActiveWindow(uint256 _newMinFundActiveWindow) external onlyOwner {
+        require(_newMinFundActiveWindow > 30 days, "Absolute minimum is thirty days");
 
-        minFundDuration = _newMinFundDuration;
+        minFundActiveWindow = _newMinFundActiveWindow;
 
-        emit MinFundDurationChanged(_newMinFundDuration);
+        emit MinFundActiveWindowChanged(_newMinFundActiveWindow);
     }
 
     /**
      * PRIVILEGED GOVERNANCE FUNCTION. Allows governance to edit the protol max fund duration
      *
-     * @param _newMaxFundDuration      New max fund duration
+     * @param _newMaxFundActiveWindow      New max fund duration
      */
-    function setMaxFundDuration(uint256 _newMaxFundDuration) external onlyOwner {
-        require(_newMaxFundDuration < 12 * 30 days, "Absolute maximum is one year");
+    function setMaxFundActiveWindow(uint256 _newMaxFundActiveWindow) external onlyOwner {
+        require(_newMaxFundActiveWindow < 12 * 30 days, "Absolute maximum is one year");
 
-        maxFundDuration = _newMaxFundDuration;
+        maxFundActiveWindow = _newMaxFundActiveWindow;
 
-        emit MaxFundDurationChanged(_newMaxFundDuration);
+        emit MaxFundActiveWindowChanged(_newMaxFundActiveWindow);
     }
 
 
@@ -510,28 +502,28 @@ contract BabController is Ownable {
         return reserveAssets;
     }
 
-    function getMaxFundDuration() external view returns (uint256) {
-        return maxFundDuration;
+    function getMaxFundActiveWindow() external view returns (uint256) {
+        return maxFundActiveWindow;
     }
 
-    function getMinFundDuration() external view returns (uint256) {
-        return minFundDuration;
+    function getMinFundActiveWindow() external view returns (uint256) {
+        return minFundActiveWindow;
     }
 
-    function getMaxFundEpoch() external view returns (uint256) {
-        return maxFundEpoch;
+    function getMaxWithdrawalWindow() external view returns (uint256) {
+        return maxWithdrawalWindow;
     }
 
-    function getMinFundEpoch() external view returns (uint256) {
-        return minFundEpoch;
+    function getMinWithdrawalWindow() external view returns (uint256) {
+        return minWithdrawalWindow;
     }
 
-    function getMinDeliberationPeriod() external view returns (uint256) {
-        return minDeliberationPeriod;
+    function getMinCooldownPeriod() external view returns (uint256) {
+        return minCooldownPeriod;
     }
 
-    function getMaxDeliberationPeriod() external view returns (uint256) {
-        return maxDeliberationPeriod;
+    function getMaxCooldownPeriod() external view returns (uint256) {
+        return maxCooldownPeriod;
     }
 
     function getProtocolDepositFundTokenFee() external view returns (uint256) {

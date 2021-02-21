@@ -173,12 +173,10 @@ async function deployFolioFixture() {
   const fundIdeas1 = await FundIdeas.deploy(
     fund.address,
     babController.address,
-    ONE_DAY_IN_SECONDS * 3,
     ONE_DAY_IN_SECONDS,
     ethers.utils.parseEther("0.015"), // 15%
     ethers.utils.parseEther("0.005"), // 15%
-    1,
-    3
+    ethers.utils.parseEther("0.010") // 10%
   );
 
   // Initial deposit
@@ -187,6 +185,7 @@ async function deployFolioFixture() {
     0,
     1,
     ONE_DAY_IN_SECONDS * 90,
+    ONE_DAY_IN_SECONDS * 3,
     fundIdeas1.address,
     { value: ethers.utils.parseEther("0.1") }
   );

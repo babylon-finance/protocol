@@ -25,22 +25,24 @@ pragma solidity 0.7.4;
  */
 interface IFundIdeas {
   function addInvestmentIdea(
-    uint256 _capitalRequested,
+    uint256 _maxCapitalRequested,
     uint256 _stake,
     uint256 _investmentDuration,
     bytes memory _enterData,
     bytes memory _exitData,
     address _integration,
     uint256 _expectedReturn,
+    uint256 _minRebalanceCapital,
     address[] memory _enterTokensNeeded,
     uint256[] memory _enterTokensAmounts
   ) external payable;
 
   function curateInvestmentIdea(uint8 _ideaIndex, int256 _amount) external;
-  function executeTopInvestment() external;
+  function rebalanceInvestments() external;
+  function executeInvestmentIdea(uint8 _ideaIndex) external;
   function finalizeInvestment(uint _ideaIndex) external;
 
-  function getCurrentTopInvestmentIdea() external view returns (uint8);
+  function getActiveIdeas() external view returns (uint8[] memory);
   function controller() external pure returns (address);
   function fund() external pure returns (address);
 }
