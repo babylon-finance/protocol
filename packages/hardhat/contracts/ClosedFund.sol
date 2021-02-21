@@ -252,7 +252,7 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
         if(maxDepositLimit > 0) {
           require(totalFundsDeposited.add(msg.value) <= maxDepositLimit, "Max Deposit Limit");
         }
-
+        require(msg.value == _reserveAssetQuantity. "ETH does not match");
         // Always wrap to WETH
         IWETH(weth).deposit{value: msg.value}();
 
