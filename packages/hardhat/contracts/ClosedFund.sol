@@ -129,7 +129,6 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
      * @param _integrations           List of integrations to enable. All integrations must be approved by the Controller
      * @param _weth                   Address of the WETH ERC20
      * @param _controller             Address of the controller
-     * @param _reserveAsset           Address of the reserve asset ERC20
      * @param _creator                Address of the creator
      * @param _name                   Name of the Fund
      * @param _symbol                 Symbol of the Fund
@@ -139,7 +138,6 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
     constructor(
         address[] memory _integrations,
         address _weth,
-        address _reserveAsset,
         address _controller,
         address _creator,
         string memory _name,
@@ -149,7 +147,7 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
         BaseFund(
             _integrations,
             _weth,
-            _reserveAsset,
+            _weth,
             _controller,
             _creator,
             _name,
@@ -308,13 +306,8 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
         );
         totalFunds = totalFunds.sub(withdrawalInfo.netFlowQuantity).sub(withdrawalInfo.protocolFees);
 
-        if (reserveAsset != weth) {
-            // Instruct the Fund to transfer the reserve asset back to the user
-            ERC20(reserveAsset).transfer(_to, withdrawalInfo.netFlowQuantity);
-        } else {
-            IWETH(weth).withdraw(withdrawalInfo.netFlowQuantity);
-            _to.transfer(withdrawalInfo.netFlowQuantity);
-        }
+        IWETH(weth).withdraw(withdrawalInfo.netFlowQuantity);
+        _to.transfer(withdrawalInfo.netFlowQuantity);
 
         _handleRedemptionFees(reserveAsset, withdrawalInfo);
 
@@ -584,14 +577,6 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
         address _reserveAsset,
         ActionInfo memory _depositInfo
     ) internal {
-        // Only need to transfer the collateral if different than WETH
-        if (_reserveAsset != weth) {
-          ERC20(_reserveAsset).transferFrom(
-              msg.sender,
-              address(this),
-              _depositInfo.netFlowQuantity
-          );
-        }
         if (_depositInfo.protocolFees > 0) {
             ERC20(_reserveAsset).transferFrom(
                 msg.sender,

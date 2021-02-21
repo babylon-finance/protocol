@@ -126,7 +126,6 @@ async function deployFolioFixture() {
   const fund = await ClosedFund.deploy(
     integrationsAddressList,
     addresses.tokens.WETH,
-    addresses.tokens.WETH,
     babController.address,
     addresses.users.hardhat1,
     "Absolute ETH Return [beta]",
@@ -137,7 +136,6 @@ async function deployFolioFixture() {
   const fund2 = await ClosedFund.deploy(
     integrationsAddressList,
     addresses.tokens.WETH,
-    addresses.tokens.WETH,
     babController.address,
     addresses.users.hardhat1,
     "ETH Yield Farm [a]",
@@ -147,7 +145,6 @@ async function deployFolioFixture() {
 
   const fund3 = await ClosedFund.deploy(
     integrationsAddressList,
-    addresses.tokens.WETH,
     addresses.tokens.WETH,
     babController.address,
     addresses.users.hardhat1,
