@@ -593,11 +593,11 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
           );
         }
         if (_depositInfo.protocolFees > 0) {
-            ERC20(_reserveAsset).transferFrom(
-                msg.sender,
+            require(ERC20(_reserveAsset).transferFrom(
+                address(this),
                 IBabController(controller).getFeeRecipient(),
                 _depositInfo.protocolFees
-            );
+            ), "Deposit Protocol fee failed");
         }
     }
 

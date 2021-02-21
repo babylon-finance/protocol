@@ -612,10 +612,10 @@ abstract contract BaseFund is ERC20 {
         internal
     {
         if (_feeQuantity > 0) {
-            ERC20(_token).transfer(
+            require(ERC20(_token).transfer(
                 IBabController(controller).getFeeRecipient(),
                 _feeQuantity
-            );
+            ), "Protocol fee failed");
         }
     }
 
