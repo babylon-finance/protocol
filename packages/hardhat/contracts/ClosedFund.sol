@@ -579,7 +579,7 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
     ) internal {
         if (_depositInfo.protocolFees > 0) {
             ERC20(_reserveAsset).transferFrom(
-                msg.sender,
+                address(this),
                 IBabController(controller).getFeeRecipient(),
                 _depositInfo.protocolFees
             );
