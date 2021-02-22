@@ -1,10 +1,10 @@
 import PassiveActionForm from "./PassiveActionForm";
 
-import { integrations, getIntegrationsWithAddress, integrationsGroupedByKey } from "../models/Integration";
+import * as addresses from "../contracts/addresses";
+import { getIntegrationsWithAddress, integrationsGroupedByKey } from "../models/Integration";
 import InvestmentIdea from "../models/InvestmentIdea";
 import { Transactor } from "../helpers";
 import useGasPrice from "../hooks/GasPrice";
-import * as addresses from "../contracts/addresses";
 
 import { BigNumber } from "@ethersproject/bignumber";
 import { Box,  Button, Flex, Field, Form, Input, Heading, Select } from "rimble-ui";
@@ -20,20 +20,20 @@ interface BaseActionFormProps {
   fundIdeasContract: any
 }
 
-interface IFormState{
-    capitalRequested: number
-    integrationName: string
-    integrationMap: any
-    initialLoad: boolean
-    duration: number
-    stake: number
-    expectedReturn: number
-    enterData: string
-    exitData: string
-    formValidated: boolean
-    showPrimaryForm: boolean
-    showChildForm: boolean
-    showSummaryForm: boolean
+interface IFormState {
+  capitalRequested: number
+  integrationName: string
+  integrationMap: any
+  initialLoad: boolean
+  duration: number
+  stake: number
+  expectedReturn: number
+  enterData: string
+  exitData: string
+  formValidated: boolean
+  showPrimaryForm: boolean
+  showChildForm: boolean
+  showSummaryForm: boolean
 }
 
 interface IAction {
@@ -41,6 +41,7 @@ interface IAction {
   value?: any
 }
 
+// TODO(undfined): Add an enum with these state/dispatch names
 const initialFormState: IFormState = {
   capitalRequested: 0,
   integrationName: "",
@@ -112,11 +113,11 @@ const BaseActionForm = ({provider, fundContract, fundIdeasContract}: BaseActionF
     dispatch({type: "exitData", value: exitData});
   };
 
-  const handleShowSummaryFormChange = (state) => {
+  const handleShowSummaryFormChange = (state: boolean) => {
     dispatch({type: "showSummaryForm", value: state})
   };
 
-  const handleShowChildFormChange = (state) => {
+  const handleShowChildFormChange = (state: boolean) => {
     dispatch({type: "showChildForm", value: state });
   };
 
