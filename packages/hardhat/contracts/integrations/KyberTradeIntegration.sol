@@ -41,8 +41,8 @@ contract KyberTradeIntegration is TradeIntegration {
    * Struct containing information for trade function
    */
   struct KyberTradeInfo {
-    uint256 sourceTokenDecimals;        // Decimals of the token to send
-    uint256 destinationTokenDecimals;   // Decimals of the token to receive
+    uint8 sourceTokenDecimals;        // Decimals of the token to send
+    uint8 destinationTokenDecimals;   // Decimals of the token to receive
     uint256 conversionRate;             // Derived conversion rate from min receive quantity
   }
 

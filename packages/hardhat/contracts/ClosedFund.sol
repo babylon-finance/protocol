@@ -714,7 +714,7 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
         uint256 fundValuation = IFundValuer(IBabController(controller).getFundValuer()).calculateFundValuation(address(this), _reserveAsset);
 
         // Get reserve asset decimals
-        uint256 reserveAssetDecimals = ERC20(_reserveAsset).decimals();
+        uint8 reserveAssetDecimals = ERC20(_reserveAsset).decimals();
         uint256 baseUnits = uint256(10) ** reserveAssetDecimals;
         uint256 normalizedTotalReserveQuantityNetFees = _netReserveFlows.preciseDiv(baseUnits);
 
@@ -747,7 +747,7 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
         uint256 totalWithdrawalValueInPreciseUnits =
             _fundTokenQuantity.preciseMul(fundValuation);
         // Get reserve asset decimals
-        uint256 reserveAssetDecimals = ERC20(_reserveAsset).decimals();
+        uint8 reserveAssetDecimals = ERC20(_reserveAsset).decimals();
         uint256 prePremiumReserveQuantity =
             totalWithdrawalValueInPreciseUnits.preciseMul(
                 10**reserveAssetDecimals
