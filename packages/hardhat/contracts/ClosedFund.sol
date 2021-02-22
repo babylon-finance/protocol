@@ -283,7 +283,7 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
         uint256 _minReserveReceiveQuantity,
         address payable _to
     ) external nonReentrant onlyContributor(msg.sender) onlyActive {
-        require(block.timestamp > fundEndsBy, "Withdrawals are disabled until fund ends");
+        require(block.timestamp >= fundEndsBy, "Withdrawals are disabled until fund ends");
         require(
             _fundTokenQuantity <= ERC20(address(this)).balanceOf(msg.sender),
             "Withdrawal amount <= to deposited amount"
