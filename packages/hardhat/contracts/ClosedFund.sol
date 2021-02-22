@@ -54,7 +54,7 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
         uint256 fundTokenQuantity,
         uint256 protocolFees
     );
-    event FundTokenwithdrawed(
+    event FundTokenWithdrawn(
         address indexed _from,
         address indexed _to,
         uint256 fundTokenQuantity,
@@ -217,7 +217,7 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
         IWETH(weth).deposit{value: initialDepositAmount}();
 
         _mint(creator, initialTokens);
-        _udpateContributorInfo(initialTokens, initialDepositAmount);
+        _updateContributorInfo(initialTokens, initialDepositAmount);
 
         _calculateAndEditPosition(
           weth,
@@ -266,7 +266,7 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
 
         _transferCollateralAndHandleFees(reserveAsset, depositInfo);
 
-        _udpateContributorInfo(depositInfo.fundTokenQuantity, msg.value);
+        _updateContributorInfo(depositInfo.fundTokenQuantity, msg.value);
 
         _handleDepositStateUpdates(reserveAsset, _to, depositInfo);
     }
@@ -372,7 +372,7 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
      *
      * @return  uint256                     Expected Fund tokens to be minted to recipient
      */
-    function getExpectedFundTokensDepositdQuantity(
+    function getExpectedFundTokensDepositedQuantity(
         address _reserveAsset,
         uint256 _reserveAssetQuantity
     ) external view returns (uint256) {
@@ -638,7 +638,7 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
             0
         );
 
-        emit FundTokenwithdrawed(
+        emit FundTokenWithdrawn(
             msg.sender,
             _to,
             _withdrawalInfo.fundTokenQuantity,
@@ -791,7 +791,7 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
     /**
      * Updates the contributor info in the array
      */
-    function _udpateContributorInfo(uint256 tokensReceived, uint256 amount) internal {
+    function _updateContributorInfo(uint256 tokensReceived, uint256 amount) internal {
       Contributor storage contributor = contributors[msg.sender];
       // If new contributor, create one, increment count, and set the current TS
       if (contributor.totalDeposit == 0) {
