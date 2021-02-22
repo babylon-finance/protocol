@@ -1,12 +1,13 @@
 import * as addresses from "../contracts/addresses";
 import * as contractNames from "../constants/contracts";
+import { formatTokenDisplay } from "../helpers/Numbers";
 import { loadContractFromNameAndAddress } from "../hooks/ContractLoader";
 import { Transactor } from "../helpers";
 import useGasPrice from "../hooks/GasPrice";
-import { Token, UniswapTokenList, TokensMapByAddress } from "../constants/UniswapTokenList";
+import { Token, GlobalTokenList, TokensMapByAddress } from "../constants/GlobalTokenList";
 
 import { notification } from "antd";
-import { commify, formatEther, parseEther } from "@ethersproject/units";
+import { parseEther } from "@ethersproject/units";
 import { BigNumber } from "@ethersproject/bignumber";
 import { Box, Button, Card, Heading, Input, Loader, Field, Flex, Form, Modal } from 'rimble-ui';
 
@@ -182,17 +183,6 @@ const TradeActionModal = ({ fundAddress, provider }: TradeActionModalProps) => {
     setShowSummary(false);
   };
 
-  const formatTokenDisplay = (value: BigNumber) => {
-    const MAX_CHARS = 7;
-    const splitArray = formatEther(value).split('.');
-
-    if (splitArray[0].length < MAX_CHARS) {
-      return commify(splitArray[0] + "." + splitArray[1].substring(0, (MAX_CHARS - splitArray[0].length)));
-    } else {
-      return commify(splitArray[0]);
-    }
-  }
-
   const handleProvidingOnChange = async e => {
     setQuoteLoading(true);
     setProviding(e.target.value);
@@ -249,7 +239,7 @@ const TradeActionModal = ({ fundAddress, provider }: TradeActionModalProps) => {
                 <Field label="Providing">
                   <AssetSelect required onChange={handleProvidingOnChange} value={providing}>
                     <option value="">--</option>
-                    {UniswapTokenList.tokens.map((tokenObj) => (
+                    {GlobalTokenList.tokens.map((tokenObj) => (
                       <option value={tokenObj.address} key={tokenObj.address}>
                         {tokenObj.name}
                       </option>
@@ -269,7 +259,7 @@ const TradeActionModal = ({ fundAddress, provider }: TradeActionModalProps) => {
                 <Field label="Receiving">
                   <AssetSelect required onChange={handleReceivingOnChange} value={receiving}>
                     <option value="">--</option>
-                    {UniswapTokenList.tokens.map((tokenObj) => (
+                    {GlobalTokenList.tokens.map((tokenObj) => (
                       <option value={tokenObj.address} key={tokenObj.address}>
                         {tokenObj.name}
                       </option>

@@ -8,7 +8,7 @@ import styled from "styled-components";
 import { notification } from "antd";
 import { Box, Blockie, EthAddress, Field, Form, Heading, Button, Modal, Card } from "rimble-ui";
 
-interface InvesModalProps {
+interface DepositModalProps {
   provider: any
   contractAddress: string
   userAddress: string
@@ -17,7 +17,7 @@ interface InvesModalProps {
 
 const contractName = "ClosedFund";
 
-function InvestModal({ provider, contractAddress, userAddress, active }: InvesModalProps) {
+function DepositModal({ provider, contractAddress, userAddress, active }: DepositModalProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [depositAmount, setDepositAmount] = useState(0);
   const [contract, setContract] = useState();
@@ -30,7 +30,7 @@ function InvestModal({ provider, contractAddress, userAddress, active }: InvesMo
     if (!contract) {
       getContract();
     }
-  })
+  }, [contract, provider, contractAddress])
 
   const closeModal = e => {
     e.preventDefault();
@@ -133,4 +133,4 @@ const StyledInvestButton = styled(Button)`
   width: 100%;
 `
 
-export default InvestModal;
+export default DepositModal;

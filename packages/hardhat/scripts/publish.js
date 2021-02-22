@@ -31,9 +31,12 @@ function publishContract(contractName, path) {
     let address;
     try {
       address = fs
-        .readFileSync(`${config.paths.artifacts}/${path}${contractName}.address`)
+        .readFileSync(`${config.paths.artifacts}/${contractName}.address`)
         .toString();
     } catch (err) {
+      console.log(
+        `No address file found for: ${contractName}, skipping address sync`
+      );
       address = null;
     }
     const contract = JSON.parse(contractFile);
@@ -71,15 +74,40 @@ async function main() {
   if (!fs.existsSync(publishDir)) {
     fs.mkdirSync(publishDir);
   }
+
+  // Internal Integrations
+  const integrations = [
+    "YearnVaultIntegration.sol",
+    "KyberTradeIntegration.sol"
+  ];
+  integrations.forEach(file => {
+    publishAndPushContract(file, "integrations/");
+  });
+  // Internal Interfaces
+  const interfaces = [
+    "IFund.sol",
+    "IFundIdeas.sol",
+    "IClosedFund.sol",
+    "IIntegration.sol"
+  ];
+
+  interfaces.forEach(file => {
+    publishAndPushContract(file, "interfaces/");
+  });
+
   const contractList = fs
     .readdirSync(config.paths.sources)
     .filter(fileName => isSolidity(fileName));
+
   contractList.forEach(file => {
     publishAndPushContract(file);
   });
+
   // External interfaces
   const externalInterfaces = [
-    { name: "IKyberNetworkProxy.sol", path: "interfaces/external/kyber/" }
+    { name: "IKyberNetworkProxy.sol", path: "interfaces/external/kyber/" },
+    { name: "IVault.sol", path: "interfaces/external/yearn/" },
+    { name: "IERC20.sol", path: "../@openzeppelin/contracts/token/ERC20/" }
   ];
   externalInterfaces.forEach(interfaceC => {
     publishAndPushContract(interfaceC.name, interfaceC.path);

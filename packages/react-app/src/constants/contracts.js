@@ -1,5 +1,17 @@
 module.exports = {
+  AaveIntegration: "AaveIntegration",
+  BalancerIntegration: "BalancerIntegration",
+  CompoundIntegration: "CompoundIntegration",
   ClosedFund: "ClosedFund",
+  FundIdeas: "FundIdeas",
+  IClosedFund: "IClosedFund",
   IERC20: "IERC20",
-  IKyberNetworkProxy: "IKyberNetworkProxy"
+  IFund: "IFund",
+  IFundIdeas: "IFundIdeas",
+  IKyberNetworkProxy: "IKyberNetworkProxy",
+  IIntegration: "IIntegration",
+  KyberTradeIntegration: "KyberTradeIntegration",
+  OneInchTradeIntegration: "OneInchTradeIntegration",
+  UniSwapPoolIntegration: "UniSwapPoolIntegration",
+  YearnVaultIntegration: "YearnVaultIntegration",
 };
