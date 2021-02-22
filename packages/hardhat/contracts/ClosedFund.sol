@@ -83,6 +83,7 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
 
     /* ============ State Variables ============ */
     uint256 constant public initialBuyRate = 1000000000000; // Initial buy rate for the manager
+    uint256 constant public MAX_DEPOSITS_FUND_V1 = 1e21; // Max deposit per fund is 1000 eth for v1
 
     struct ActionInfo {
         uint256 preFeeReserveQuantity; // Reserve value before fees; During issuance, represents raw quantity
@@ -182,9 +183,9 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
         uint256 _fundDuration,
         address _fundIdeas
     ) external onlyCreator onlyInactive payable {
-        require(_maxDepositLimit >= 1**19, "Max deposit limit needs >= 10");
+        require(_maxDepositLimit < MAX_DEPOSITS_FUND_V1, "Max deposit limit needs to be under the limit");
 
-        require(msg.value > minContribution && msg.value < _maxDepositLimit.div(20), "Creator needs to deposit, up to 20% of the max fund");
+        require(msg.value >= minContribution, "Creator needs to deposit");
         IBabController ifcontroller = IBabController(controller);
         require(
             _premiumPercentage <= ifcontroller.getMaxFundPremiumPercentage(),
