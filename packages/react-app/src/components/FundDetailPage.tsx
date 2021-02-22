@@ -43,7 +43,7 @@ interface FundDetails {
 }
 
 interface Contracts {
-  ClosedFund: any
+  IFund: any
   FundIdeas: any
 }
 
@@ -86,23 +86,23 @@ const FundDetailPage = ({ provider, userAddress }: FundDetailPageProps) => {
   };
 
   const fetchFundDetails = useCallback(async () => {
-    if (contracts?.ClosedFund) {
+    if (contracts?.IFund) {
       setFundDetails({
-        name: await contracts.ClosedFund.name(),
-        active: await contracts.ClosedFund.active(),
-        positions: await contracts.ClosedFund.getPositions(),
-        reserveAsset: await contracts.ClosedFund.getReserveAsset(),
-        integrations: await contracts.ClosedFund.getIntegrations(),
-        totalContributors: await contracts.ClosedFund.totalContributors(),
-        totalFunds: await contracts.ClosedFund.totalFundsDeposited(),
-        fundEndDate: await contracts.ClosedFund.fundEndsBy()
+        name: await contracts.IFund.name(),
+        active: await contracts.IFund.active(),
+        positions: await contracts.IFund.getPositions(),
+        reserveAsset: await contracts.IFund.getReserveAsset(),
+        integrations: await contracts.IFund.getIntegrations(),
+        totalContributors: await contracts.IFund.totalContributors(),
+        totalFunds: await contracts.IFund.totalFundsDeposited(),
+        fundEndDate: await contracts.IFund.fundEndsBy()
       });
     }
   }, [contracts]);
 
   const fetchPositionDetails = useCallback(async () => {
-    if (contracts?.ClosedFund) {
-      const addresses = await contracts.ClosedFund.getPositions();
+    if (contracts?.IFund) {
+      const addresses = await contracts.IFund.getPositions();
       const positions: Promise<Position>[] = await addresses.map(async address => {
         const token = TokensMapByAddress.get(address);
         const erc20 = await loadContractFromNameAndAddress(address, contractNames.IERC20, provider);
@@ -118,8 +118,8 @@ const FundDetailPage = ({ provider, userAddress }: FundDetailPageProps) => {
   }, [contracts, provider]);
 
   const fetchContributorDetails = useCallback(async () => {
-    if (contracts?.ClosedFund && userAddress) {
-      const maybeContributor = await contracts.ClosedFund.getContributor(userAddress);
+    if (contracts?.IFund && userAddress) {
+      const maybeContributor = await contracts.IFund.getContributor(userAddress);
 
       if (maybeContributor) {
         const totalDeposit = maybeContributor[0];
@@ -139,20 +139,20 @@ const FundDetailPage = ({ provider, userAddress }: FundDetailPageProps) => {
 
   // This could be a very large array at some point. Consider how to paginate or similar
   const fetchContributors = useCallback(async () => {
-    if (contracts?.ClosedFund) {
+    if (contracts?.IFund) {
       //setContributors(await contracts.ClosedFund.contributors());
     }
   }, [contracts]);
 
   const initialize = useCallback(async () => {
-    const fund = await loadContractFromNameAndAddress(address, contractNames.ClosedFund, provider);
+    const fund = await loadContractFromNameAndAddress(address, contractNames.IFund, provider);
     let fundIdeas;
     if (fund) {
       const ideasAddress = await fund.fundIdeas();
       fundIdeas = await loadContractFromNameAndAddress(ideasAddress, contractNames.FundIdeas, provider);
     }
 
-    setContracts({ ClosedFund: fund, FundIdeas: fundIdeas });
+    setContracts({ IFund: fund, FundIdeas: fundIdeas });
 
     if (fund) {
       setTokenBalance(await fund.balanceOf(userAddress));
@@ -344,7 +344,7 @@ const FundDetailPage = ({ provider, userAddress }: FundDetailPageProps) => {
         </PerformanceWrapper>
         <TabbedActionsWrapper>
           {contracts && (
-            <BaseActionForm provider={provider} fundContract={contracts.ClosedFund} fundIdeasContract={contracts.FundIdeas} />
+            <BaseActionForm provider={provider} fundContract={contracts.IFund} fundIdeasContract={contracts.FundIdeas} />
           )}
         </TabbedActionsWrapper>
       </ContentWrapper>

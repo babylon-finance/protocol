@@ -167,7 +167,7 @@ abstract contract BaseFund is ERC20 {
     bool public active;
 
     // FundIdeas
-    address public fundIdeas;
+    address fundIdeas;
 
     // List of initialized Integrations; Integrations connect with other money legos
     address[] public integrations;
