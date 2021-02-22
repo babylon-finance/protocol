@@ -76,8 +76,8 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
 
     /* ============ Modifiers ============ */
 
-    modifier onlyContributor(address payable _caller) {
-        _validateOnlyContributor(_caller);
+    modifier onlyContributor {
+        _validateOnlyContributor(msg.sender);
         _;
     }
 
@@ -282,7 +282,7 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
         uint256 _fundTokenQuantity,
         uint256 _minReserveReceiveQuantity,
         address payable _to
-    ) external nonReentrant onlyContributor(msg.sender) onlyActive {
+    ) external nonReentrant onlyContributor onlyActive {
         require(block.timestamp > fundEndsBy, "Withdrawals are disabled until fund ends");
         require(
             _fundTokenQuantity <= ERC20(address(this)).balanceOf(msg.sender),
@@ -349,7 +349,7 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
 
     // Any tokens (other than the target) that are sent here by mistake are recoverable by the owner
     // TODO: If it is not whitelisted, trade it for weth
-    function sweep(address _token) external onlyContributor(msg.sender) {
+    function sweep(address _token) external onlyContributor {
        require(!_hasPosition(_token), "Token is one of the fund positions");
        uint256 balance = ERC20(_token).balanceOf(address(this));
        require(balance > 0, "Token balance > 0");
