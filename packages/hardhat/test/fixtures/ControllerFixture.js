@@ -190,8 +190,6 @@ async function deployFolioFixture() {
     { value: ethers.utils.parseEther("0.1") }
   );
 
-  console.log(fund.address);
-
   return {
     babController,
     integrations: {
