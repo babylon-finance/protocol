@@ -196,7 +196,7 @@ contract FundIdeas is ReentrancyGuard {
     uint256[] memory _enterTokensAmounts
   ) external onlyContributor(msg.sender) payable onlyActive {
     require(block.timestamp < lastInvestmentExecutedAt.add(fundEpoch), "Idea can only be suggested before the deliberation period");
-    require(fund.isValidIntegration(_integration), "Integration must be valid");
+    //require(fund.isValidIntegration(_integration), "Integration must be valid");
     require(_stake > 0, "Stake amount must be greater than 0");
     require(_capitalRequested > 0, "Capital requested amount must be greater than 0");
     require(_investmentDuration > 1 hours, "Investment duration must be greater than an hour");

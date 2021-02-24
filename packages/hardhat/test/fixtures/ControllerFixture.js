@@ -215,7 +215,8 @@ async function deployFolioFixture() {
     contractsToPublish: [
       { name: "BabController", contract: babController },
       { name: "KyberTradeIntegration", contract: kyberTradeIntegration },
-      { name: "YearnVaultIntegration", contract: yearnVaultIntegration }
+      { name: "YearnVaultIntegration", contract: yearnVaultIntegration },
+      { name: "UniswapPoolIntegration", contract: uniswapPoolIntegration }
     ]
   };
 }

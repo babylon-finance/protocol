@@ -1,4 +1,5 @@
 import PassiveActionForm from "./PassiveActionForm";
+import PoolActionForm from "./PoolActionForm";
 import TradeActionForm from "./TradeActionForm";
 
 import * as addresses from "../../contracts/addresses";
@@ -230,6 +231,20 @@ const BaseActionForm = ({provider, fundContract, fundIdeasContract}: BaseActionF
     );
   }
 
+  const poolActionForm = () => {
+    return (
+      <PoolActionForm
+          integrationName={integrationName}
+          capitalRequested={capitalRequested}
+          resetForm={resetForm}
+          showSummaryForm={handleShowSummaryFormChange}
+          showChildForm={handleShowChildFormChange}
+          provider={provider}
+          fundContract={fundContract}
+          setContractData={handleContractDataChange} />
+    );
+  }
+
   const tradeActionForm = () => {
     return (
       <TradeActionForm
@@ -246,11 +261,14 @@ const BaseActionForm = ({provider, fundContract, fundIdeasContract}: BaseActionF
 
   const renderChildForm = () => {
     if (integrationName) {
+      // Add a lookup by type and use that for the switch here
       switch (integrationName) {
         case "YearnVaultIntegration":
           return passiveActionForm();
         case "KyberTradeIntegration":
           return tradeActionForm();
+        case "UniswapPoolIntegration":
+          return poolActionForm();
       }
     }
   };

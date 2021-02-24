@@ -1,8 +1,8 @@
 export enum IntegrationType {
   passive = "passive",
   trade = "trade",
-  liquidity = "liquidity",
-  leverage = "leverage"
+  pool = "pool",
+  lend = "lend"
 }
 
 export type IntegrationTypes = keyof typeof IntegrationType
@@ -20,6 +20,7 @@ export interface IntegrationList {
 export const integrations = [
   { name: "YearnVaultIntegration", type: IntegrationType.passive },
   { name: "KyberTradeIntegration", type: IntegrationType.trade },
+  { name: "UniswapPoolIntegration", type: IntegrationType.pool },
 ];
 
 export function getIntegrationsWithAddress(): IntegrationList {
