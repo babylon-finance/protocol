@@ -1,6 +1,6 @@
 import AppHeader from "./components/AppHeader";
+import AppFooter from "./components/AppFooter";
 import FundDetailPage from "./components/FundDetailPage";
-import FundManageActions from "./components/FundManageActions";
 import FundSummaryPage from "./components/FundSummaryPage";
 import Lander from "./components/Lander";
 
@@ -179,10 +179,6 @@ export default class App extends React.Component<AppProps, AppState> {
     );
   }
 
-  renderFundManagePage = () => {
-    return (<FundManageActions provider={this.state.provider} />);
-  }
-
   render() {
     const networkId = parseInt(process.env.REACT_APP_NETWORK_ID || '0');
     const onMainnet = this.state.chainId === parseInt(process.env.REACT_APP_CHAIN_ID || '0') && this.state.networkId === networkId;
@@ -195,12 +191,12 @@ export default class App extends React.Component<AppProps, AppState> {
               <Alert message={`You are on a different network. Please connect your wallet to the ${networkId === 1 ? 'mainnet' : 'network with id ' + networkId}`} type="warning" />
             )}
             <Switch>
-              <Route path="/fund/:address/manage" children={[this.renderHeader(), this.renderFundManagePage()]} />
               <Route path="/fund/:address" children={[this.renderHeader(), this.renderFundDetailPage()]} />
               <Route path="/" children={[this.renderHeader(true), <Lander />]} />
             </Switch>
           </ContentWrapper>
         </AppWrapper>
+        <AppFooter />
       </Router>
     );
   }
