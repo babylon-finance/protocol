@@ -46,7 +46,16 @@ const EMPTY_QUOTE_PAIR = {
   worstRateDisplay: "0"
 };
 
-const TradeActionForm = ({capitalRequested, provider, fundContract, integrationName, resetForm, setContractData, showSummaryForm, showChildForm}: TradeActionFormProps) => {
+const TradeActionForm = ({
+  capitalRequested,
+  provider,
+  fundContract,
+  integrationName,
+  resetForm,
+  setContractData,
+  showSummaryForm,
+  showChildForm
+}: TradeActionFormProps) => {
   const [contracts, setContracts] = useState<Contracts | undefined>(undefined);
   const [providing, setProviding] = useState<string | undefined>(undefined);
   const [providingDetails, setProvidingDetails] = useState<Token | undefined>(undefined);
