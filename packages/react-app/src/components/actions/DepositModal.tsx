@@ -1,8 +1,8 @@
-import { Transactor } from "../helpers";
-import useGasPrice from "../hooks/GasPrice";
-import { loadContractFromNameAndAddress } from "../hooks/ContractLoader";
+import { Transactor } from "../../helpers";
+import useGasPrice from "../../hooks/GasPrice";
+import { loadContractFromNameAndAddress } from "../../hooks/ContractLoader";
 
-import { parseEther, formatEther } from "@ethersproject/units";
+import { parseEther } from "@ethersproject/units";
 import React, { useState, useEffect } from "react";
 import styled from "styled-components";
 import { notification } from "antd";

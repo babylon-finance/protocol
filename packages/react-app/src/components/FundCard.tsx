@@ -1,6 +1,6 @@
 import FundCardChart from "./FundCardChart";
-import DepositModal from "./DepositModal";
-import WithdrawModal from "./WithdrawModal";
+import DepositModal from "./actions/DepositModal";
+import WithdrawModal from "./actions/WithdrawModal";
 
 import * as contractNames from "../constants/contracts";
 import { loadContractFromNameAndAddress } from "../hooks/ContractLoader";
@@ -27,7 +27,6 @@ interface Contracts {
   ClosedFund: any
   IERC20: any
 }
-
 
 const FundCard = ({ provider, contractAddress, userAddress }: FundCardProps) => {
   const [loading, setLoading] = useState("true");

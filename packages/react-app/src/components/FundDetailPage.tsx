@@ -1,8 +1,7 @@
-import BaseActionForm from "./BaseActionForm";
-import DepositModal from "./DepositModal";
+import BaseActionForm from "./actions/BaseActionForm";
+import DepositModal from "./actions/DepositModal";
 import FundDetailChart from "./FundDetailChart";
-import PassiveActionForm from "./PassiveActionForm";
-import WithdrawModal from "./WithdrawModal";
+import WithdrawModal from "./actions/WithdrawModal";
 
 import * as contractNames from "../constants/contracts";
 import { formatTokenDisplay, formatBigNumberDate } from "../helpers/Numbers";
@@ -11,7 +10,7 @@ import { loadContractFromNameAndAddress } from "../hooks/ContractLoader";
 import { usePoller } from "eth-hooks";
 
 import { BigNumber } from "@ethersproject/bignumber";
-import { commify, formatEther, parseEther } from "@ethersproject/units";
+import { formatEther } from "@ethersproject/units";
 import { Link } from "react-router-dom";
 import React, { useState, useEffect } from 'react';
 import { Avatar, Box, Button, Flex, Loader, Table } from 'rimble-ui';

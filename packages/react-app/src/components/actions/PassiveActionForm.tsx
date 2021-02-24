@@ -1,7 +1,7 @@
-import * as addresses from "../contracts/addresses";
-import * as contractNames from "../constants/contracts";
-import { loadContractFromNameAndAddress } from "../hooks/ContractLoader";
-import YearnVaultIntegrationAddress from "../contracts/YearnVaultIntegration.address";
+import * as addresses from "../../contracts/addresses";
+import * as contractNames from "../../constants/contracts";
+import { loadContractFromNameAndAddress } from "../../hooks/ContractLoader";
+import YearnVaultIntegrationAddress from "../../contracts/YearnVaultIntegration.address";
 
 import { Box, Button, Form, Heading } from "rimble-ui";
 import { parseEther } from "@ethersproject/units";
@@ -13,6 +13,7 @@ interface PassiveActionFormProps {
   provider: any
   capitalRequested: number
   fundContract: any
+  integrationName: string
   resetForm: any
   setContractData: any
   showChildForm: any
@@ -25,7 +26,16 @@ interface Contracts {
   IVault: any
 }
 
-const PassiveActionForm = ({capitalRequested, provider, fundContract, resetForm, setContractData, showSummaryForm, showChildForm}: PassiveActionFormProps) => {
+const PassiveActionForm = ({
+  capitalRequested,
+  provider,
+  fundContract,
+  integrationName,
+  resetForm,
+  setContractData,
+  showSummaryForm,
+  showChildForm
+}: PassiveActionFormProps) => {
   const [contracts, setContracts] = useState<Contracts | undefined>(undefined);
 
   const intitialize = useCallback(async () => {
@@ -45,7 +55,7 @@ const PassiveActionForm = ({capitalRequested, provider, fundContract, resetForm,
     }
   });
 
-  const handleCompleteChildForm = async e => {
+  const handleConfirmPassiveForm = async e => {
     e.preventDefault();
     if (contracts && fundContract) {
       const amountToDeposit = parseEther(capitalRequested.toString());
@@ -91,7 +101,7 @@ const PassiveActionForm = ({capitalRequested, provider, fundContract, resetForm,
     <Box p={4}>
       <Heading>Set passive investment details</Heading>
       <Box>
-        <Form onSubmit={handleCompleteChildForm} validated={formValidated}>
+        <Form onSubmit={handleConfirmPassiveForm} validated={formValidated}>
           <FormSubmitButton type="submit">Show Summary</FormSubmitButton>
         </Form>
       </Box>

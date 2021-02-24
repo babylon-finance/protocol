@@ -1,17 +1,18 @@
 import PassiveActionForm from "./PassiveActionForm";
+import TradeActionForm from "./TradeActionForm";
 
-import * as addresses from "../contracts/addresses";
-import { getIntegrationsWithAddress, integrationsGroupedByKey } from "../models/Integration";
-import InvestmentIdea from "../models/InvestmentIdea";
-import { Transactor } from "../helpers";
-import useGasPrice from "../hooks/GasPrice";
+import * as addresses from "../../contracts/addresses";
+import { getIntegrationsWithAddress, integrationsGroupedByKey, IntegrationType } from "../../models/Integration";
+import InvestmentIdea from "../../models/InvestmentIdea";
+import { Transactor } from "../../helpers";
+import useGasPrice from "../../hooks/GasPrice";
 
 import { BigNumber } from "@ethersproject/bignumber";
 import { Box,  Button, Flex, Field, Form, Input, Heading, Select } from "rimble-ui";
 import { notification } from "antd";
 import { parseEther } from "@ethersproject/units";
 
-import React, { FC, Reducer, useEffect, useReducer } from "react";
+import React, { Reducer, useEffect, useReducer } from "react";
 import styled from "styled-components";
 
 interface BaseActionFormProps {
@@ -22,6 +23,7 @@ interface BaseActionFormProps {
 
 interface IFormState {
   capitalRequested: number
+  integrationList: any
   integrationName: string
   integrationMap: any
   initialLoad: boolean
@@ -44,6 +46,7 @@ interface IAction {
 // TODO(undfined): Add an enum with these state/dispatch names
 const initialFormState: IFormState = {
   capitalRequested: 0,
+  integrationList: [],
   integrationName: "",
   integrationMap: null,
   initialLoad: true,
@@ -72,6 +75,7 @@ const BaseActionForm = ({provider, fundContract, fundIdeasContract}: BaseActionF
   const [state, dispatch] = useReducer<Reducer<IFormState, IAction>, IFormState>(reducer, initialFormState, () => initialFormState);
   const {
     capitalRequested,
+    integrationList,
     integrationName,
     integrationMap,
     initialLoad,
@@ -91,6 +95,7 @@ const BaseActionForm = ({provider, fundContract, fundIdeasContract}: BaseActionF
 
   useEffect(() => {
     if (initialLoad) {
+      dispatch({type: "integrationList", value: getIntegrationsWithAddress()});
       dispatch({type: "integrationMap", value: integrationsGroupedByKey("type")});
     }
     dispatch({type: "initialLoad", value: false});
@@ -159,12 +164,8 @@ const BaseActionForm = ({provider, fundContract, fundIdeasContract}: BaseActionF
     dispatch({ type: "reset" });
   };
 
-  const getIntegrationByName = (name: string) => {
-    return getIntegrationsWithAddress().integrations.map(el => {
-      if (el.name === name) {
-        return el;
-      }
-    })[0];
+  const getIntegrationByName = (integrationName: string) => {
+    return integrationList.integrations.find( ({ name }) => name === integrationName);
   };
 
   const handleSubmitIdea = async e => {
@@ -215,11 +216,10 @@ const BaseActionForm = ({provider, fundContract, fundIdeasContract}: BaseActionF
     }
   };
 
-  const renderChildForm = () => {
-    // consider using a switch here that checks a map of the
-    // child forms and selects based on state prop
+  const passiveActionForm = () => {
     return (
       <PassiveActionForm
+          integrationName={integrationName}
           capitalRequested={capitalRequested}
           resetForm={resetForm}
           showSummaryForm={handleShowSummaryFormChange}
@@ -227,7 +227,32 @@ const BaseActionForm = ({provider, fundContract, fundIdeasContract}: BaseActionF
           provider={provider}
           fundContract={fundContract}
           setContractData={handleContractDataChange} />
-    )
+    );
+  }
+
+  const tradeActionForm = () => {
+    return (
+      <TradeActionForm
+          integrationName={integrationName}
+          capitalRequested={capitalRequested}
+          resetForm={resetForm}
+          showSummaryForm={handleShowSummaryFormChange}
+          showChildForm={handleShowChildFormChange}
+          provider={provider}
+          fundContract={fundContract}
+          setContractData={handleContractDataChange} />
+    );
+  }
+
+  const renderChildForm = () => {
+    if (integrationName) {
+      switch (integrationName) {
+        case "YearnVaultIntegration":
+          return passiveActionForm();
+        case "KyberTradeIntegration":
+          return tradeActionForm();
+      }
+    }
   };
 
   // clean up the rendering logic for when to show each form
@@ -239,6 +264,7 @@ const BaseActionForm = ({provider, fundContract, fundIdeasContract}: BaseActionF
             <Heading>Submit an Investment Idea</Heading>
             <Flex mx={-3} flexWrap={"wrap"}>
               <Box width={[1, 1, 1/2]} px={3}>
+                {renderIntegrationSelector()}
                 <Field label="Capital Requested" width={1}>
                   <Input
                     type="number"
@@ -249,7 +275,6 @@ const BaseActionForm = ({provider, fundContract, fundIdeasContract}: BaseActionF
                     width={1}
                   />
                 </Field>
-                {renderIntegrationSelector()}
                 <Field label="Investment Duration (Days)" width={1}>
                   <Input
                     type="number"
