@@ -329,6 +329,8 @@ contract FundIdeas is ReentrancyGuard {
         uint256 currentScore = idea.stake.mul(idea.totalVotes.toUint256()).mul(idea.totalVoters);
         if (currentScore > maxScore) {
           indexResult = i;
+          // Update of the maxScore storing the highest value before continuing the comparison
+          maxScore = currentScore;
         }
       }
     }
