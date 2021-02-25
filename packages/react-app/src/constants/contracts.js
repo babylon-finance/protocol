@@ -8,10 +8,10 @@ module.exports = {
   IERC20: "IERC20",
   IFund: "IFund",
   IFundIdeas: "IFundIdeas",
-  IKyberNetworkProxy: "IKyberNetworkProxy",
   IIntegration: "IIntegration",
+  IKyberNetworkProxy: "IKyberNetworkProxy",
   KyberTradeIntegration: "KyberTradeIntegration",
   OneInchTradeIntegration: "OneInchTradeIntegration",
-  UniSwapPoolIntegration: "UniSwapPoolIntegration",
+  UniswapPoolIntegration: "UniswapPoolIntegration",
   YearnVaultIntegration: "YearnVaultIntegration",
 };
