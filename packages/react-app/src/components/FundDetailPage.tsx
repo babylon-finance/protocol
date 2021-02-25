@@ -11,9 +11,8 @@ import { usePoller } from "eth-hooks";
 
 import { BigNumber } from "@ethersproject/bignumber";
 import { formatEther } from "@ethersproject/units";
-import { Link } from "react-router-dom";
 import React, { useState, useEffect } from 'react';
-import { Avatar, Box, Button, Flex, Loader, Table } from 'rimble-ui';
+import { Avatar, Box, Flex, Table } from 'rimble-ui';
 import { useParams } from "react-router-dom";
 import styled from "styled-components";
 import { useCallback } from "react";
