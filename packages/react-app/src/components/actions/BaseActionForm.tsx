@@ -3,7 +3,7 @@ import PoolActionForm from "./PoolActionForm";
 import TradeActionForm from "./TradeActionForm";
 
 import * as addresses from "../../contracts/addresses";
-import { getIntegrationsWithAddress, integrationsGroupedByKey, IntegrationType } from "../../models/Integration";
+import { getIntegrationByName, integrationsGroupedByKey } from "../../models/Integrations";
 import InvestmentIdea from "../../models/InvestmentIdea";
 import { Transactor } from "../../helpers";
 import useGasPrice from "../../hooks/GasPrice";
@@ -24,7 +24,6 @@ interface BaseActionFormProps {
 
 interface IFormState {
   capitalRequested: number
-  integrationList: any
   integrationName: string
   integrationMap: any
   initialLoad: boolean
@@ -47,7 +46,6 @@ interface IAction {
 // TODO(undfined): Add an enum with these state/dispatch names
 const initialFormState: IFormState = {
   capitalRequested: 0,
-  integrationList: [],
   integrationName: "",
   integrationMap: null,
   initialLoad: true,
@@ -76,7 +74,6 @@ const BaseActionForm = ({provider, fundContract, fundIdeasContract}: BaseActionF
   const [state, dispatch] = useReducer<Reducer<IFormState, IAction>, IFormState>(reducer, initialFormState, () => initialFormState);
   const {
     capitalRequested,
-    integrationList,
     integrationName,
     integrationMap,
     initialLoad,
@@ -96,7 +93,6 @@ const BaseActionForm = ({provider, fundContract, fundIdeasContract}: BaseActionF
 
   useEffect(() => {
     if (initialLoad) {
-      dispatch({type: "integrationList", value: getIntegrationsWithAddress()});
       dispatch({type: "integrationMap", value: integrationsGroupedByKey("type")});
     }
     dispatch({type: "initialLoad", value: false});
@@ -163,10 +159,6 @@ const BaseActionForm = ({provider, fundContract, fundIdeasContract}: BaseActionF
 
   const resetForm = () => {
     dispatch({ type: "reset" });
-  };
-
-  const getIntegrationByName = (integrationName: string) => {
-    return integrationList.integrations.find( ({ name }) => name === integrationName);
   };
 
   const handleSubmitIdea = async e => {

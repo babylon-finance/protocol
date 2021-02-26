@@ -44,3 +44,7 @@ export function integrationsGroupedByKey(key: string): GroupedIntegrations {
     return storage;
   }, {});
 };
+
+export function getIntegrationByName(integrationName: string) {
+  return getIntegrationsWithAddress().integrations.find( ({ name }) => name === integrationName);
+};

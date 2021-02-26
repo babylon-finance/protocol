@@ -2,8 +2,9 @@ import * as addresses from "../../contracts/addresses";
 import * as contractNames from "../../constants/contracts";
 import { loadContractFromNameAndAddress } from "../../hooks/ContractLoader";
 import YearnVaultIntegrationAddress from "../../contracts/YearnVaultIntegration.address";
+import { getVaults, getVaultByName, Vault } from "../../models/Vaults";
 
-import { Box, Button, Form, Heading } from "rimble-ui";
+import { Box, Button, Field, Flex, Form, Heading } from "rimble-ui";
 import { parseEther } from "@ethersproject/units";
 
 import React, { useState, useEffect, useCallback } from 'react';
@@ -23,7 +24,6 @@ interface PassiveActionFormProps {
 interface Contracts {
   YearnVaultIntegration: any
   FundIdeas: any
-  IVault: any
 }
 
 const PassiveActionForm = ({
@@ -37,29 +37,33 @@ const PassiveActionForm = ({
   showChildForm
 }: PassiveActionFormProps) => {
   const [contracts, setContracts] = useState<Contracts | undefined>(undefined);
+  const [vaultName, setVaultName] = useState<string | undefined>(undefined);
+  const [vault, setVault] = useState<Vault | undefined>(undefined);
+  const [vaults, setVaults] = useState<Vault[] | undefined>(undefined);
 
   const intitialize = useCallback(async () => {
     if (fundContract) {
       const ideasAddress = await fundContract.fundIdeas();
       const fundIdeas = await loadContractFromNameAndAddress(ideasAddress, contractNames.FundIdeas, provider);
       const yearnI = await loadContractFromNameAndAddress(YearnVaultIntegrationAddress, contractNames.YearnVaultIntegration, provider);
-      const yearnV = await loadContractFromNameAndAddress(addresses.yearn.vaults.ydai, "IVault", provider);
+      const yRegistry = await loadContractFromNameAndAddress(addresses.yearn.vaultRegistry, contractNames.YRegistry, provider);
 
-      setContracts({ YearnVaultIntegration: yearnI, IVault: yearnV, FundIdeas: fundIdeas });
+      setVaults(await getVaults(yRegistry, provider));
+      setContracts({ YearnVaultIntegration: yearnI, FundIdeas: fundIdeas });
     }
   }, [provider, fundContract]);
 
   useEffect(() => {
-    if (!contracts) {
+    if (!contracts && provider) {
       intitialize();
     }
-  }, [contracts]);
+  }, [contracts, provider]);
 
   const handleConfirmPassiveForm = async e => {
     e.preventDefault();
-    if (contracts && fundContract) {
+    if (contracts && fundContract && vault) {
       const amountToDeposit = parseEther(capitalRequested.toString());
-      const sharePrice = await contracts.IVault.getPricePerFullShare();
+      const sharePrice = await vault.contract.getPricePerFullShare();
       const expectedYShares = amountToDeposit.div(sharePrice);
       const yearnInterface = contracts.YearnVaultIntegration.interface;
 
@@ -73,7 +77,7 @@ const PassiveActionForm = ({
         ]
       );
 
-      const investmentTokensIn = await contracts.IVault.balanceOf(fundContract.address);
+      const investmentTokensIn = await vault.contract.balanceOf(fundContract.address);
 
       const exitData = yearnInterface.encodeFunctionData(
         yearnInterface.functions["exitInvestment(address,uint256,address,uint256)"],
@@ -87,7 +91,7 @@ const PassiveActionForm = ({
 
       const integrationName = await contracts.YearnVaultIntegration.name();
 
-      setContractData(enterData, exitData, {name: integrationName, address: YearnVaultIntegrationAddress });
+      setContractData(enterData, exitData, { name: integrationName, address: YearnVaultIntegrationAddress });
       showChildForm(false);
       showSummaryForm(true);
     }
@@ -95,19 +99,53 @@ const PassiveActionForm = ({
 
   const formValidated = true;
 
-  // Add Passive type selector and any meta data for sub integration needed. For now this only
-  // submits YearnVault passive integration.
+  const handleVaultNameOnChange = e => {
+    console.log(vaults);
+    setVaultName(e.target.value);
+    if (vaults) {
+      setVault(getVaultByName(vaults, e.target.value));
+    }
+  }
+
+  const buildVaultOptions = () => {
+    return (
+      vaults?.map(vault => (
+        <option value={vault.name} key={vault.address}>
+          {vault.name}
+        </option>
+      ))
+    )
+  };
+
   return (
     <Box p={4}>
       <Heading>Set passive investment details</Heading>
-      <Box>
         <Form onSubmit={handleConfirmPassiveForm} validated={formValidated}>
+          <Flex mx={-3} flexWrap={"wrap"}>
+            <Box width={[1, 1, 1/2]} px={3}>
+              <Field label="Select Vault Type" width={1/2}>
+                <VaultSelect required onChange={handleVaultNameOnChange} value={vaultName}>
+                  {buildVaultOptions()}
+                </VaultSelect>
+              </Field>
+            </Box>
+          </Flex>
           <FormSubmitButton type="submit">Show Summary</FormSubmitButton>
         </Form>
-      </Box>
     </Box>
   )
 };
+
+const VaultSelect = styled.select`
+  height: 45px;
+  border-radius: 4px;
+  width: 100%;
+  box-shadow: 0px 2px 4px rgb(0 0 0 / 10%);
+
+  &:hover {
+    box-shadow: 0px 2px 6px rgb(0 0 0 / 30%);
+  }
+`
 
 const FormSubmitButton = styled(Button)`
   min-width: 200px;
