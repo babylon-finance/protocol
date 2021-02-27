@@ -50,9 +50,9 @@ contract FundIdeas is ReentrancyGuard {
 
   /* ============ Modifiers ============ */
 
-  modifier onlyContributor(address payable _caller) {
+  modifier onlyContributor {
     require(
-        ERC20(address(fund)).balanceOf(_caller) > 0,
+        ERC20(address(fund)).balanceOf(msg.sender) > 0,
         "Only someone with the fund token can withdraw"
     );
     _;
@@ -142,8 +142,8 @@ contract FundIdeas is ReentrancyGuard {
     uint256 _ideaCooldownPeriod,
     uint256 _ideaCreatorProfitPercentage,
     uint256 _ideaVotersProfitPercentage,
-    uint8 _minVotersQuorum
-  ) onlyContributor(msg.sender)
+    uint256 _minVotersQuorum
+  ) onlyContributor
   {
     controller = IBabController(_controller);
     require(
@@ -191,7 +191,7 @@ contract FundIdeas is ReentrancyGuard {
     uint256 _minRebalanceCapital,
     address[] memory _enterTokensNeeded,
     uint256[] memory _enterTokensAmounts
-  ) external onlyContributor(msg.sender) onlyActive {
+  ) external onlyContributor onlyActive {
     require(fund.isValidIntegration(_integration), "Integration must be valid");
     require(_stake > fund.totalSupply().div(100), "Stake amount must be at least 1% of the fund");
     require(_investmentDuration > 1 days, "Investment duration must be greater than a a day");
@@ -242,7 +242,7 @@ contract FundIdeas is ReentrancyGuard {
    * @param _amount                   Amount to curate, positive to endorse, negative to downvote
    * TODO: Meta Transaction
    */
-  function curateInvestmentIdea(uint8 _ideaIndex, int256 _amount) external onlyContributor(msg.sender) onlyActive {
+  function curateInvestmentIdea(uint8 _ideaIndex, int256 _amount) external onlyContributor onlyActive {
     require(ideas.length > _ideaIndex, "The idea index does not exist");
     require(_amount.toUint256() < fund.balanceOf(msg.sender), "Participant does not have enough balance");
     InvestmentIdea storage idea = ideas[_ideaIndex];

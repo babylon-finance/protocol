@@ -174,7 +174,7 @@ async function deployFolioFixture() {
     babController.address,
     ONE_DAY_IN_SECONDS,
     ethers.utils.parseEther("0.015"), // 15%
-    ethers.utils.parseEther("0.005"), // 15%
+    ethers.utils.parseEther("0.005"), // 5%
     ethers.utils.parseEther("0.010") // 10%
   );
 

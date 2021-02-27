@@ -101,6 +101,7 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
     uint256 public fundActiveWindow;          // Duration of the fund active window
     uint256 public fundWithdrawalWindow;      // Duration of the fund withdrawal window
     uint256 public fundInitializedAt;         // Fund Initialized at timestamp
+    uint256 public fundCurrentActiveWindowStartedAt;   // Fund Initialized at timestamp
 
     // Fees
     uint256 public premiumPercentage; // Premium percentage (0.01% = 1e14, 1% = 1e16). This premium is a buffer around oracle
@@ -257,7 +258,10 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
             msg.value >= minContribution,
             ">= minContribution"
         );
-        // TODO: Check if is in active period require(block.timestamp < fundEndsBy, "Fund is closed");
+        require(block.timestamp >= fundCurrentActiveWindowStartedAt &&
+          block.timestamp < fundCurrentActiveWindowStartedAt.add(fundActiveWindow),
+          "Fund is not in the withdrawal window"
+        );
         // if deposit limit is 0, then there is no deposit limit
         if(maxDepositLimit > 0) {
           require(totalFundsDeposited.add(msg.value) <= maxDepositLimit, "Max Deposit Limit");
@@ -293,7 +297,10 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
         uint256 _minReserveReceiveQuantity,
         address payable _to
     ) external nonReentrant onlyContributor(msg.sender) onlyActive {
-        // TODO: Check if it's in active period
+        require(block.timestamp >= fundCurrentActiveWindowStartedAt.add(fundActiveWindow) &&
+          block.timestamp < fundCurrentActiveWindowStartedAt.add(fundActiveWindow).add(fundWithdrawalWindow),
+          "Fund is not in the withdrawal window"
+        );
         // require(block.timestamp > fundEndsBy, "Withdrawals are disabled until fund ends");
         require(
             _fundTokenQuantity <= ERC20(address(this)).balanceOf(msg.sender),
