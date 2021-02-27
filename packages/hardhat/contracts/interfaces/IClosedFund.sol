@@ -30,10 +30,12 @@ import { IFund } from "./IFund.sol";
 interface IClosedFund is IERC20, IFund {
 
     function initialize(
-        uint256 _premiumPercentage,
-        uint256 _minFundTokenSupply,
-        address _managerDepositHook,
-        address _managerWithdrawalHook
+      uint256 _maxDepositLimit,
+      uint256 _premiumPercentage,
+      uint256 _minFundTokenSupply,
+      uint256 _fundActiveWindow,
+      uint256 _fundWithdrawalWindow,
+      address _fundIdeas
     ) external;
 
     function deposit(
@@ -50,8 +52,6 @@ interface IClosedFund is IERC20, IFund {
 
     function editPremium(uint256 _premiumPercentage) external;
     function setDepositLimit(uint limit) external;
-    function setFundEndDate(uint256 _endsTimestamp) external;
-
     function premiumPercentage() external view returns (uint256);
     function getExpectedFundTokensDepositdQuantity(
         address _reserveAsset,

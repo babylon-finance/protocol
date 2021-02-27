@@ -1,7 +1,6 @@
 import AppHeader from "./components/AppHeader";
 import AppFooter from "./components/AppFooter";
 import FundDetailPage from "./components/FundDetailPage";
-import FundSummaryPage from "./components/FundSummaryPage";
 import Lander from "./components/Lander";
 
 import React from 'react';
@@ -158,14 +157,6 @@ export default class App extends React.Component<AppProps, AppState> {
       // biz logic, maybe force a page refresh to avoid complicated rehydration
     });
   };
-
-  renderFundSummary = () => {
-    return (
-      !this.state.initialLoad && this.state.connected && (
-        <FundSummaryPage appState={this.state} />
-      )
-    );
-  }
 
   renderHeader = (index?: boolean) => {
     return (

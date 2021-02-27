@@ -53,7 +53,7 @@ const PassiveActionForm = ({
     if (!contracts) {
       intitialize();
     }
-  });
+  }, [contracts]);
 
   const handleConfirmPassiveForm = async e => {
     e.preventDefault();
