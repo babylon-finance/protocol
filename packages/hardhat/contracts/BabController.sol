@@ -450,7 +450,7 @@ contract BabController is Ownable {
      * @param _newMaxWithdrawalWindow      New max fund epoch duration
      */
     function setMaxWithdrawalWindow(uint256 _newMaxWithdrawalWindow) external onlyOwner {
-        require(_newMaxWithdrawalWindow < maxFundActiveWindow, "Absolute maximum is the fund duration");
+        require(_newMaxWithdrawalWindow < maxWithdrawalWindow, "Absolute maximum is the fund duration");
 
         maxWithdrawalWindow = _newMaxWithdrawalWindow;
 
