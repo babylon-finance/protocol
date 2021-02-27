@@ -100,7 +100,7 @@ contract FundValuer {
           uint256 componentPrice = priceOracle.getPrice(component, masterQuoteAsset);
           int256 aggregateUnits = _fund.getPositionBalance(component);
           // Normalize each position unit to preciseUnits 1e18 and cast to signed int
-          uint256 unitDecimals = ERC20(component).decimals();
+          uint8 unitDecimals = ERC20(component).decimals();
           uint256 baseUnits = 10 ** unitDecimals;
 
           int256 normalizedUnits = aggregateUnits.preciseDiv(baseUnits.toInt256());

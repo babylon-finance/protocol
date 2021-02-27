@@ -54,7 +54,7 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
         uint256 fundTokenQuantity,
         uint256 protocolFees
     );
-    event FundTokenwithdrawed(
+    event FundTokenWithdrawn(
         address indexed _from,
         address indexed _to,
         uint256 fundTokenQuantity,
@@ -76,13 +76,14 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
 
     /* ============ Modifiers ============ */
 
-    modifier onlyContributor(address payable _caller) {
-        _validateOnlyContributor(_caller);
+    modifier onlyContributor {
+        _validateOnlyContributor(msg.sender);
         _;
     }
 
     /* ============ State Variables ============ */
     uint256 constant public initialBuyRate = 1000000000000; // Initial buy rate for the manager
+    uint256 constant public MAX_DEPOSITS_FUND_V1 = 1e21; // Max deposit per fund is 1000 eth for v1
 
     struct ActionInfo {
         uint256 preFeeReserveQuantity; // Reserve value before fees; During issuance, represents raw quantity
@@ -185,9 +186,9 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
         uint256 _fundWithdrawalWindow,
         address _fundIdeas
     ) external onlyCreator onlyInactive payable {
-        require(_maxDepositLimit >= 1**19, "Max deposit limit needs >= 10");
+        require(_maxDepositLimit < MAX_DEPOSITS_FUND_V1, "Max deposit limit needs to be under the limit");
 
-        require(msg.value > minContribution && msg.value < _maxDepositLimit.div(20), "Creator needs to deposit, up to 20% of the max fund");
+        require(msg.value >= minContribution, "Creator needs to deposit");
         IBabController ifcontroller = IBabController(controller);
         require(
             _premiumPercentage <= ifcontroller.getMaxFundPremiumPercentage(),
@@ -225,7 +226,7 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
         IWETH(weth).deposit{value: initialDepositAmount}();
 
         _mint(creator, initialTokens);
-        _udpateContributorInfo(initialTokens, initialDepositAmount);
+        _updateContributorInfo(initialTokens, initialDepositAmount);
 
         _calculateAndEditPosition(
           weth,
@@ -290,7 +291,7 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
 
         _transferCollateralAndHandleFees(reserveAsset, depositInfo);
 
-        _udpateContributorInfo(depositInfo.fundTokenQuantity, msg.value);
+        _updateContributorInfo(depositInfo.fundTokenQuantity, msg.value);
 
         _handleDepositStateUpdates(reserveAsset, _to, depositInfo);
     }
@@ -307,7 +308,7 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
         uint256 _fundTokenQuantity,
         uint256 _minReserveReceiveQuantity,
         address payable _to
-    ) external nonReentrant onlyContributor(msg.sender) onlyActive {
+    ) external nonReentrant onlyContributor onlyActive {
         require(block.timestamp >= fundCurrentActiveWindowStartedAt.add(fundActiveWindow) &&
           block.timestamp < fundCurrentActiveWindowStartedAt.add(fundActiveWindow).add(fundWithdrawalWindow),
           "Fund is not in the withdrawal window"
@@ -369,7 +370,7 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
 
     // Any tokens (other than the target) that are sent here by mistake are recoverable by the owner
     // TODO: If it is not whitelisted, trade it for weth
-    function sweep(address _token) external onlyContributor(msg.sender) {
+    function sweep(address _token) external onlyContributor {
        require(!_hasPosition(_token), "Token is one of the fund positions");
        uint256 balance = ERC20(_token).balanceOf(address(this));
        require(balance > 0, "Token balance > 0");
@@ -391,7 +392,7 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
      *
      * @return  uint256                     Expected Fund tokens to be minted to recipient
      */
-    function getExpectedFundTokensDepositdQuantity(
+    function getExpectedFundTokensDepositedQuantity(
         address _reserveAsset,
         uint256 _reserveAssetQuantity
     ) external view returns (uint256) {
@@ -649,7 +650,7 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
             0
         );
 
-        emit FundTokenwithdrawed(
+        emit FundTokenWithdrawn(
             msg.sender,
             _to,
             _withdrawalInfo.fundTokenQuantity,
@@ -726,7 +727,7 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
         uint256 fundValuation = IFundValuer(IBabController(controller).getFundValuer()).calculateFundValuation(address(this), _reserveAsset);
 
         // Get reserve asset decimals
-        uint256 reserveAssetDecimals = ERC20(_reserveAsset).decimals();
+        uint8 reserveAssetDecimals = ERC20(_reserveAsset).decimals();
         uint256 baseUnits = uint256(10) ** reserveAssetDecimals;
         uint256 normalizedTotalReserveQuantityNetFees = _netReserveFlows.preciseDiv(baseUnits);
 
@@ -759,7 +760,7 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
         uint256 totalWithdrawalValueInPreciseUnits =
             _fundTokenQuantity.preciseMul(fundValuation);
         // Get reserve asset decimals
-        uint256 reserveAssetDecimals = ERC20(_reserveAsset).decimals();
+        uint8 reserveAssetDecimals = ERC20(_reserveAsset).decimals();
         uint256 prePremiumReserveQuantity =
             totalWithdrawalValueInPreciseUnits.preciseMul(
                 10**reserveAssetDecimals
@@ -802,7 +803,7 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
     /**
      * Updates the contributor info in the array
      */
-    function _udpateContributorInfo(uint256 tokensReceived, uint256 amount) internal {
+    function _updateContributorInfo(uint256 tokensReceived, uint256 amount) internal {
       Contributor storage contributor = contributors[msg.sender];
       // If new contributor, create one, increment count, and set the current TS
       if (contributor.totalDeposit == 0) {

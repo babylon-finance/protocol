@@ -368,7 +368,7 @@ contract FundIdeas is ReentrancyGuard {
 
   function _transferIdeaRewards(uint _ideaIndex, uint capitalReturned) internal {
     address reserveAsset = fund.getReserveAsset();
-    uint256 reserveAssetDelta = 0;
+    int256 reserveAssetDelta = 0;
     InvestmentIdea storage idea = ideas[_ideaIndex];
     // Idea returns were positive
     if (capitalReturned > idea.capitalAllocated) {
