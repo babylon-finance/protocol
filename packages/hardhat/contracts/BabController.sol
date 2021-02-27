@@ -70,6 +70,7 @@ contract BabController is Ownable {
     event ModuleRemoved(address indexed _module);
 
     event PriceOracleChanged(address indexed _resource);
+    event ReservePoolChanged(address indexed _reservePool);
     event FundValuerChanged(address indexed _resource);
 
     /* ============ Modifiers ============ */
@@ -81,6 +82,7 @@ contract BabController is Ownable {
     address[] public reserveAssets;
     address public fundValuer;
     address public priceOracle;
+    address public reservePool;
     // Mapping of fund => integration identifier => integration address
     mapping(bytes32 => address) private integrations;
 
@@ -121,15 +123,18 @@ contract BabController is Ownable {
      * @param _feeRecipient           Address of the initial protocol fee recipient
      * @param _fundValuer             Address of the initial fundValuer
      * @param _priceOracle            Address of the initial priceOracle
+     * @param _reservePool            Address of the initial reservePool
      */
     constructor(
         address _feeRecipient,
         address _fundValuer,
-        address _priceOracle
+        address _priceOracle,
+        address _reservePool
     ) {
         feeRecipient = _feeRecipient;
         fundValuer = _fundValuer;
         priceOracle = _priceOracle;
+        reservePool = _reservePool;
     }
 
     /* ============ External Functions ============ */
@@ -336,6 +341,21 @@ contract BabController is Ownable {
     }
 
     /**
+     * PRIVILEGED GOVERNANCE FUNCTION. Allows governance to change the reserve pool
+     *
+     * @param _reservePool               Address of the new reserve pool
+     */
+    function editReservePool(address _reservePool) external onlyOwner {
+        require(_reservePool != reservePool, "Reserve Pool already exists");
+
+        require(_reservePool != address(0), "Reserve pool must exist");
+
+        reservePool = _reservePool;
+
+        emit ReservePoolChanged(_reservePool);
+    }
+
+    /**
      * PRIVILEGED GOVERNANCE FUNCTION. Allows governance to change the integration registry
      *
      * @param _fundValuer Address of the new price oracle
@@ -498,6 +518,10 @@ contract BabController is Ownable {
         return priceOracle;
     }
 
+    function getReservePool() external view returns (address) {
+      return reservePool;
+    }
+
     function getFundValuer() external view returns (address) {
         return fundValuer;
     }
@@ -657,6 +681,7 @@ contract BabController is Ownable {
         return (isFund[_contractAddress] ||
             fundValuer == _contractAddress ||
             priceOracle == _contractAddress ||
+            reservePool == _contractAddress ||
             _contractAddress == address(this));
     }
 

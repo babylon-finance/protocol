@@ -36,6 +36,7 @@ interface IBabController {
     function reenableFund(address _fund) external;
     function changeFundEndDate(address _fund, uint256 _newEndTimestamp) external;
     function editPriceOracle(address _priceOracle) external;
+    function editReservePool(address _reservePool) external;
     function editFundValuer(address _fundValuer) external;
     function editFeeRecipient(address _newFeeRecipient) external;
     function addIntegration(string memory _name, address _integration) external;
@@ -56,6 +57,7 @@ interface IBabController {
     // Getters
     function owner() external view returns (address);
     function getPriceOracle() external view returns (address);
+    function getReservePool() external view returns (address);
     function getFundValuer() external view returns(address);
     function getFeeRecipient() external view returns(address);
     function getFunds() external view returns (address[] memory);

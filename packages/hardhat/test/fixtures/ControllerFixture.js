@@ -10,7 +10,7 @@ async function deployFolioFixture() {
   const FundIdeas = await ethers.getContractFactory("FundIdeas", owner);
 
   const BabController = await ethers.getContractFactory("BabController", owner);
-
+  console.log(argsUtil.readArgumentsFile("BabController"));
   const babController = await BabController.deploy(
     ...argsUtil.readArgumentsFile("BabController")
   );
@@ -21,8 +21,10 @@ async function deployFolioFixture() {
 
   const FundValuer = await ethers.getContractFactory("FundValuer", owner);
   const PriceOracle = await ethers.getContractFactory("PriceOracle", owner);
+  const ReservePool = await ethers.getContractFactory("ReservePool", owner);
 
   const fundValuer = await FundValuer.deploy(babController.address);
+  const reservePool = await ReservePool.deploy(babController.address);
   const priceOracle = await PriceOracle.deploy(
     babController.address,
     addresses.compound.OpenOracle,
@@ -31,6 +33,7 @@ async function deployFolioFixture() {
   // Sets the price oracle and fundvaluer address
   babController.editPriceOracle(priceOracle.address);
   babController.editFundValuer(fundValuer.address);
+  babController.editReservePool(reservePool.address);
 
   const AaveIntegration = await ethers.getContractFactory(
     "AaveIntegration",
