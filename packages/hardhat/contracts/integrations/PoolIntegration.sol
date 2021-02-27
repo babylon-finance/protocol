@@ -21,6 +21,7 @@ pragma solidity 0.7.4;
 import "hardhat/console.sol";
 import { SafeMath } from "@openzeppelin/contracts/math/SafeMath.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import { SafeCast } from "@openzeppelin/contracts/utils/SafeCast.sol";
 import { IFund } from "../interfaces/IFund.sol";
 import { ReentrancyGuard } from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import { IBabController } from "../interfaces/IBabController.sol";
@@ -34,6 +35,7 @@ import { BaseIntegration } from "./BaseIntegration.sol";
  */
 abstract contract PoolIntegration is BaseIntegration, ReentrancyGuard {
     using SafeMath for uint256;
+    using SafeCast for uint256;
 
     /* ============ Struct ============ */
 
@@ -292,10 +294,10 @@ abstract contract PoolIntegration is BaseIntegration, ReentrancyGuard {
       // balance pool individual component
       // TODO: Grab actual min tokens on added and withdrawed on exit
       for (uint i = 0; i < _poolTokens.length; i++) {
-        updateFundPosition(address(_poolInfo.fund), _poolTokens[i], isDeposit ? uint256(-_poolInfo.limitPoolTokenQuantities[i]) : _poolInfo.limitPoolTokenQuantities[i], isDeposit ? 2 : 0);
+        updateFundPosition(address(_poolInfo.fund), _poolTokens[i], isDeposit ? int256(-_poolInfo.limitPoolTokenQuantities[i]) : _poolInfo.limitPoolTokenQuantities[i].toInt256(), isDeposit ? 2 : 0);
       }
       // balance pool token
-      updateFundPosition(address(_poolInfo.fund), _poolInfo.pool, isDeposit ? _poolInfo.poolTokensInTransaction : uint256(-_poolInfo.poolTokensInTransaction), 0);
+      updateFundPosition(address(_poolInfo.fund), _poolInfo.pool, isDeposit ? _poolInfo.poolTokensInTransaction.toInt256() : int256(-_poolInfo.poolTokensInTransaction), 0);
     }
 
     /**

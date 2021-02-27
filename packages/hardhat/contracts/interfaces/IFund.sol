@@ -28,10 +28,15 @@ import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 interface IFund is IERC20 {
 
     /* ============ Structs ============ */
+    struct Contributor {
+        uint256 totalDeposit; //wei
+        uint256 tokensReceived;
+        uint256 timestamp;
+    }
 
     struct SubPosition {
       address integration;
-      uint256 balance;
+      int256 balance;
       uint8 status;
     }
 
@@ -66,15 +71,20 @@ interface IFund is IERC20 {
     function setActive() external;
     function setDisabled() external;
 
-    function fundIdeas() external view returns (address);
+    function active() external view returns (bool);
     function controller() external view returns (address);
     function creator() external view returns (address);
-    function active() external view returns (bool);
-    function weth() external view returns (address);
-    function getReserveAsset() external view returns (address);
+    function fundEndsBy() external view returns (uint256);
+    function fundIdeas() external view returns (address);
+    function getContributor(address _contributor) external view returns (uint256, uint256, uint256);
     function getIntegrations() external view returns (address[] memory);
+    function getReserveAsset() external view returns (address);
     function hasIntegration(address _integration) external view returns (bool);
     function isValidIntegration(address _integration) external returns (bool);
+    function name() external view returns (string memory);
+    function totalContributors() external view returns (uint256);
+    function totalFundsDeposited() external view returns (uint256);
+    function weth() external view returns (address);
 
     function isPosition(address _component) external view returns (bool);
     function getPositionCount() external view returns (uint256);
@@ -87,7 +97,7 @@ interface IFund is IERC20 {
     function calculateAndEditPosition(
         address _component,
         uint256 _newBalance,
-        uint256 _deltaBalance,
+        int256 _deltaBalance,
         uint8 _subpositionStatus
     )
       external

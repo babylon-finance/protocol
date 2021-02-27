@@ -1,56 +1,48 @@
-import DepositModal from "./DepositModal";
+import BaseActionForm from "./actions/BaseActionForm";
+import DepositModal from "./actions/DepositModal";
 import FundDetailChart from "./FundDetailChart";
-import FundManageActions from "./FundManageActions";
-import WithdrawModal from "./WithdrawModal";
+import WithdrawModal from "./actions/WithdrawModal";
 
-import * as addresses from "../contracts/addresses";
 import * as contractNames from "../constants/contracts";
+import { formatTokenDisplay, formatBigNumberDate } from "../helpers/Numbers";
+import { Token, TokensMapByAddress } from "../constants/GlobalTokenList";
 import { loadContractFromNameAndAddress } from "../hooks/ContractLoader";
-
-import {
-  Link,
-  Switch,
-  Route
-} from "react-router-dom";
 import { usePoller } from "eth-hooks";
-import { commify, formatEther, parseEther } from "@ethersproject/units";
+
+import { BigNumber } from "@ethersproject/bignumber";
+import { formatEther } from "@ethersproject/units";
 import React, { useState, useEffect } from 'react';
-import { Avatar, Box, Button, Flex, Loader, Table } from 'rimble-ui';
-import { useParams, useRouteMatch } from "react-router-dom";
+import { Avatar, Box, Flex, Table } from 'rimble-ui';
+import { useParams } from "react-router-dom";
 import styled from "styled-components";
+import { useCallback } from "react";
 
 interface FundDetailPageState { }
 
 interface FundDetailPageProps {
-  provider: any
-  userAddress: any
-}
-
-interface Token {
-  chainId: number;
-  address: string;
-  name: string;
-  symbol: string;
-  decimals: number;
-  logoURI: string;
+  provider?: any
+  userAddress?: any
 }
 
 interface Position {
   token: Token
-  ammount: number
+  amount: BigNumber
 }
 
 interface FundDetails {
   name: string
   active: boolean
-  rollDate: number
   positions: Position[]
+  reserveAsset: string
+  integrations: string[]
+  totalContributors: BigNumber
+  totalFunds: BigNumber
+  fundEndDate: BigNumber
 }
 
 interface Contracts {
-  ClosedFund: any
-  DAI: any
-  WETH: any
+  IFund: any
+  FundIdeas: any
 }
 
 interface Contributor {
@@ -59,109 +51,129 @@ interface Contributor {
   lastDeposit: number
 }
 
-const INITIAL_DETAILS = {
+const INITIAL_DETAILS: FundDetails = {
   name: "",
   active: false,
-  rollDate: 0,
-  positions: []
+  positions: [],
+  reserveAsset: "",
+  integrations: [],
+  totalContributors: BigNumber.from(0),
+  totalFunds: BigNumber.from(0),
+  fundEndDate: BigNumber.from(0)
 }
 
 const FundDetailPage = ({ provider, userAddress }: FundDetailPageProps) => {
+  const [isLoading, setIsLoading] = useState(true);
   const [contracts, setContracts] = useState<Contracts | undefined>(undefined);
   const [contributor, setContributor] = useState<Contributor | undefined>(undefined);
-  const [daiPosition, setDaiPosition] = useState("");
+  const [contributors, setContributors] = useState<string[]>([]);
   const [fundDetails, setFundDetails] = useState<FundDetails>(INITIAL_DETAILS);
-  const [isLoading, setIsLoading] = useState(true);
-  const [isFundManager, setIsFundManager] = useState(false);
+  const [positions, setPositions] = useState<Position[]>([]);
   const [tokenBalance, setTokenBalance] = useState<number>(0);
   const [userHasPosition, setUserHasPosition] = useState(false);
-  const [wethPosition, setWethPosition] = useState("");
 
-  const currDate = Date.now();
-
-  let { path, url } = useRouteMatch();
   let { address } = useParams();
 
   const getFundMetaPoller = async () => {
-    let latestBalance;
-    if (contracts) {
-      latestBalance = await contracts.ClosedFund.balanceOf(userAddress);
-    }
-    if (latestBalance) {
-      setUserHasPosition(latestBalance > 0);
+    if (contracts && provider) {
+      fetchContributorDetails();
+      fetchFundDetails();
+      fetchPositionDetails();
+      fetchContributors();
     }
   };
 
-  useEffect(() => {
-    async function getContracts() {
-      const fund = await loadContractFromNameAndAddress(address, contractNames.ClosedFund, provider);
-      // TODO(undfined): Grab these addresses as an array from the fund and then map over to build up the positions
-      const daiToken = await loadContractFromNameAndAddress(addresses.tokens.DAI, contractNames.IERC20, provider);
-      const wethToken = await loadContractFromNameAndAddress(addresses.tokens.WETH, contractNames.IERC20, provider);
-
-      setContracts({ ClosedFund: fund, DAI: daiToken, WETH: wethToken });
-
-      if (fund) {
-        setTokenBalance(await fund.balanceOf(userAddress));
-      }
-
-      if (daiToken) {
-        setDaiPosition(formatEther(await daiToken.balanceOf(address)));
-      }
-
-      if (wethToken) {
-        setWethPosition(formatEther(await wethToken.balanceOf(address)));
-      }
+  const fetchFundDetails = useCallback(async () => {
+    if (contracts?.IFund) {
+      setFundDetails({
+        name: await contracts.IFund.name(),
+        active: await contracts.IFund.active(),
+        positions: await contracts.IFund.getPositions(),
+        reserveAsset: await contracts.IFund.getReserveAsset(),
+        integrations: await contracts.IFund.getIntegrations(),
+        totalContributors: await contracts.IFund.totalContributors(),
+        totalFunds: await contracts.IFund.totalFundsDeposited(),
+        fundEndDate: await contracts.IFund.fundEndsBy()
+      });
     }
+  }, [contracts]);
 
-    if (!contracts && provider) {
-      getContracts();
+  const fetchPositionDetails = useCallback(async () => {
+    if (contracts?.IFund) {
+      const addresses = await contracts.IFund.getPositions();
+      const positions: Promise<Position>[] = await addresses.map(async address => {
+        const token = TokensMapByAddress.get(address);
+        const erc20 = await loadContractFromNameAndAddress(address, contractNames.IERC20, provider);
+        const amount = await erc20?.balanceOf(address);
+
+        return { token: token, amount: amount };
+      });
+
+      const mergedPositions = await Promise.all(positions);
+
+      setPositions(mergedPositions);
     }
+  }, [contracts, provider]);
 
-    async function getMeta() {
-      if (contracts) {
-        setFundDetails({
-          name: await contracts.ClosedFund.name(),
-          active: await contracts.ClosedFund.active(),
-          rollDate: 0,
-          positions: []
-        })
+  const fetchContributorDetails = useCallback(async () => {
+    if (contracts?.IFund && userAddress) {
+      const maybeContributor = await contracts.IFund.getContributor(userAddress);
 
-        const maybeContributor = await contracts.ClosedFund.getContributor(userAddress);
+      if (maybeContributor) {
+        const totalDeposit = maybeContributor[0];
 
-        if (maybeContributor) {
-          const totalDeposit = maybeContributor[0];
+        setContributor({
+          totalDeposit: totalDeposit,
+          tokensReceived: maybeContributor[1].toNumber(),
+          lastDeposit: maybeContributor[2].toNumber()
+        });
 
-          setContributor({
-            totalDeposit: totalDeposit,
-            tokensReceived: maybeContributor[1].toNumber(),
-            lastDeposit: maybeContributor[2].toNumber()
-          });
-
-          if (tokenBalance > 0) {
-            setUserHasPosition(true);
-          }
+        if (tokenBalance > 0) {
+          setUserHasPosition(true);
         }
-
-        setIsLoading(false);
       }
     }
+  }, [contracts, tokenBalance, userAddress]);
 
-    async function getIsFundManager() {
-      if (contracts) {
-        setIsFundManager(await contracts.ClosedFund.manager() === userAddress);
-      }
+  // This could be a very large array at some point. Consider how to paginate or similar
+  const fetchContributors = useCallback(async () => {
+    if (contracts?.IFund) {
+      //setContributors(await contracts.ClosedFund.contributors());
+    }
+  }, [contracts]);
+
+  const initialize = useCallback(async () => {
+    const fund = await loadContractFromNameAndAddress(address, contractNames.IFund, provider);
+    let fundIdeas;
+    if (fund) {
+      const ideasAddress = await fund.fundIdeas();
+      fundIdeas = await loadContractFromNameAndAddress(ideasAddress, contractNames.FundIdeas, provider);
     }
 
-    getIsFundManager();
-    getMeta();
-  });
+    setContracts({ IFund: fund, FundIdeas: fundIdeas });
 
-  //usePoller(async () => {
-  //  if (contracts) {
-  //    getFundMetaPoller();
-  //  }
-  //}, 5000);
+    if (fund) {
+      setTokenBalance(await fund.balanceOf(userAddress));
+    }
+  }, [address, provider, userAddress]);
+
+  useEffect(() => {
+    setIsLoading(true);
+    if (!contracts && provider) {
+      initialize();
+    }
+    fetchFundDetails();
+    fetchPositionDetails();
+    fetchContributorDetails();
+    fetchContributors();
+    setIsLoading(false);
+  }, [contracts, fundDetails, fetchContributors, fetchFundDetails, fetchContributorDetails, fetchPositionDetails, initialize, provider]);
+
+  usePoller(async () => {
+    if (contracts) {
+      getFundMetaPoller();
+    }
+  }, 5000);
 
   return (
     <ContainerLarge>
@@ -180,7 +192,7 @@ const FundDetailPage = ({ provider, userAddress }: FundDetailPageProps) => {
                     Your Position
                     </InvestorStatsItemLabel>
                   <InvestorStatsItemMetric>
-                    Ξ{formatEther(contributor.totalDeposit)}
+                    {formatEther(contributor.totalDeposit)}Ξ
                   </InvestorStatsItemMetric>
                 </InvestorStatsItem>
                 <InvestorStatsItem>
@@ -196,7 +208,7 @@ const FundDetailPage = ({ provider, userAddress }: FundDetailPageProps) => {
                     End Date
                   </InvestorStatsItemLabel>
                   <InvestorStatsItemMetric>
-                    03/31/2021
+                    {formatBigNumberDate(fundDetails.fundEndDate).toLocaleDateString("en-US")}
                   </InvestorStatsItemMetric>
                 </InvestorStatsItem>
               </InvestorStatsRow>
@@ -205,17 +217,6 @@ const FundDetailPage = ({ provider, userAddress }: FundDetailPageProps) => {
         </HeroRow>
         <DetailsWrapper>
           <DetailsBlockLeft>
-            <DetailsManager>
-              <ManagerLabel>
-                Managed By:
-              </ManagerLabel>
-              <ManagerName>
-                Babylon.labs
-              </ManagerName>
-              <ManagerPosition>
-                Holds <b>10%</b> of this fund
-              </ManagerPosition>
-            </DetailsManager>
             <DetailsDescription>
               This strategy aims to generate ETH for investors by exploiting changes in market structure and offering positive convexity in both up and down markets. We believe ETH will outperform BTC and USD in the medium term. The goal is to accumulate more ETH while capturing upside. No impermanent loss will occur because we will not be exchanging the underlying ETH assets. We will use crypto lending protocols to obtain a safe position of stablecoin borrowings that can be used to engage in liquidity pool, staking, and yield farming opportunities.
             </DetailsDescription>
@@ -252,13 +253,15 @@ const FundDetailPage = ({ provider, userAddress }: FundDetailPageProps) => {
           </DetailsBlockLeft>
           <DetailsBlockRight>
             <InvestorActionButtonRow>
-              <InvestorActionButton>
-                <DepositModal
-                  active={fundDetails.active}
-                  provider={provider}
-                  contractAddress={address}
-                  userAddress={userAddress} />
-              </InvestorActionButton>
+              {provider && (
+                <InvestorActionButton>
+                  <DepositModal
+                    active={fundDetails.active}
+                    provider={provider}
+                    contractAddress={address}
+                    userAddress={userAddress} />
+                </InvestorActionButton>
+              )}
               {userHasPosition && (
                 <InvestorActionButton>
                   <WithdrawModal
@@ -269,11 +272,6 @@ const FundDetailPage = ({ provider, userAddress }: FundDetailPageProps) => {
                     contributor={contributor} />
                 </InvestorActionButton>
               )}
-              {isFundManager && (
-                <ManageLink to={`${url}/manage`}>
-                  <ManageActionButton>Manage</ManageActionButton>
-                </ManageLink>
-              )}
             </InvestorActionButtonRow>
             <FundStatsRow>
               <FundStatsItem>
@@ -281,16 +279,16 @@ const FundDetailPage = ({ provider, userAddress }: FundDetailPageProps) => {
                   Total Contributors
                   </FundStatsItemLabel>
                 <FundStatsItemMetric>
-                  100
-                  </FundStatsItemMetric>
+                  {fundDetails.totalContributors.toNumber()}
+                </FundStatsItemMetric>
               </FundStatsItem>
               <FundStatsItem>
                 <FundStatsItemLabel>
-                  Net Asset Value
+                  Total Deposits
                   </FundStatsItemLabel>
                 <FundStatsItemMetric>
-                  $1,000,000
-                  </FundStatsItemMetric>
+                  {formatEther(fundDetails.totalFunds)}Ξ
+                </FundStatsItemMetric>
               </FundStatsItem>
               <FundStatsItem>
                 <FundStatsItemLabel>
@@ -325,49 +323,39 @@ const FundDetailPage = ({ provider, userAddress }: FundDetailPageProps) => {
                 </tr>
               </thead>
               <tbody>
-                <tr>
-                  <td>
-                    <Avatar src="https://airswap-token-images.s3.amazonaws.com/DAI.png" />
-                  </td>
-                  <th>DAI</th>
-                  <td>{daiPosition}</td>
-                  <td>100.10</td>
-                  <td>+25%</td>
-                </tr>
-                <tr>
-                  <td>
-                    <Avatar src="https://airswap-token-images.s3.amazonaws.com/WETH.png" />
-                  </td>
-                  <th>wETH</th>
-                  <td>{wethPosition}</td>
-                  <td>100.10</td>
-                  <td>+25%</td>
-                </tr>
-                <tr>
-                  <td>
-                    <Avatar src="https://airswap-token-images.s3.amazonaws.com/WBTC.png" />
-                  </td>
-                  <th>wBTC</th>
-                  <td>0</td>
-                  <td>100.10</td>
-                  <td>+25%</td>
-                </tr>
+                {positions.map(position => {
+                  return (
+                    <tr key={position.token.address}>
+                      <td>
+                        <Avatar src={position.token.logoURI} />
+                      </td>
+                      <th>{position.token.symbol}</th>
+                      <td>{formatTokenDisplay(position.amount)}</td>
+                      <td>100.10</td>
+                      <td>+25%</td>
+                    </tr>
+                  )
+                })}
               </tbody>
             </PerformanceTable>
           </PerformanceBlockRight>
         </PerformanceWrapper>
+        <TabbedActionsWrapper>
+          {contracts && (
+            <BaseActionForm provider={provider} fundContract={contracts.IFund} fundIdeasContract={contracts.FundIdeas} />
+          )}
+        </TabbedActionsWrapper>
       </ContentWrapper>
-      <Switch>
-        <Route path={`${path}/manage`} children={<FundManageActions provider={provider} />} />
-      </Switch>
     </ContainerLarge>
   );
 }
 
-const ManageLink = styled(Link)`
-  margin-left: auto;
-  display: flex;
-  align-items: center;
+const TabbedActionsWrapper = styled(Box)`
+  margin-top: 40px;
+  width: 100%;
+  background: white;
+  border: 1px #ccc solid;
+  height: 700px;
 `
 
 const PerformanceTable = styled(Table)`
@@ -513,13 +501,6 @@ const InvestorStatsItemMetric = styled.span`
   font-family: cera-light;
   font-size: 24px;
   text-align: left;
-`
-
-const ManageActionButton = styled(Button.Outline)`
-  font-family: cera-regular;
-  color: var(--primary);
-  background-color: var(--white);
-  margin-left: 8px;
 `
 
 const ManagerLabel = styled.span`
