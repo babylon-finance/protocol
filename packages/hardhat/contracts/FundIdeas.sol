@@ -143,14 +143,14 @@ contract FundIdeas is ReentrancyGuard {
     uint256 _ideaCreatorProfitPercentage,
     uint256 _ideaVotersProfitPercentage,
     uint256 _minVotersQuorum
-  ) onlyContributor
+  )
   {
     controller = IBabController(_controller);
     require(
         _ideaCooldownPeriod <= controller.getMaxCooldownPeriod() && _ideaCooldownPeriod >= controller.getMinCooldownPeriod() ,
         "Fund cooldown must be within the range allowed by the protocol"
     );
-    require(_minVotersQuorum > 1e17, "You need at least 10% votes");
+    require(_minVotersQuorum >= 1e17, "You need at least 10% votes");
     require(controller.isSystemContract(_fund), "Must be a valid fund");
     // TODO: require(_maxCandidateIdeas.add(100.previseDiv(1e17)) < MAX_TOTAL_IDEAS, "Number of ideas must be less than the limit");
     fund = IClosedFund(_fund);

@@ -213,6 +213,7 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
         fundActiveWindow = _fundActiveWindow;
         fundWithdrawalWindow = _fundWithdrawalWindow;
         fundInitializedAt = block.timestamp;
+        fundCurrentActiveWindowStartedAt = block.timestamp;
 
         IFundIdeas fundIdeasC = IFundIdeas(_fundIdeas);
         require(fundIdeasC.controller() == controller, "Controller must be the same");
@@ -242,6 +243,18 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
     }
 
     /**
+      * Restarts the current deposit window if needed
+      *
+    */
+    function restartWindow() public {
+      if (block.timestamp >= fundCurrentActiveWindowStartedAt.add(fundActiveWindow.add(fundWithdrawalWindow))) {
+        if (active) {
+          fundCurrentActiveWindowStartedAt = block.timestamp;
+        }
+      }
+    }
+
+    /**
      * Deposits the Fund's position components into the fund and mints the Fund token of the given quantity
      * to the specified _to address. This function only handles default Positions (positionState = 0).
      *
@@ -254,6 +267,7 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
         uint256 _minFundTokenReceiveQuantity,
         address _to
     ) public payable nonReentrant onlyActive {
+        restartWindow();
         require(
             msg.value >= minContribution,
             ">= minContribution"
