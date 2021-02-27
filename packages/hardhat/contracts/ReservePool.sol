@@ -32,15 +32,15 @@ import { IPriceOracle } from "./interfaces/IPriceOracle.sol";
 import { PreciseUnitMath } from "./lib/PreciseUnitMath.sol";
 
 /**
- * @title FundValuer
+ * @title ReservePool
  * @author Babylon Finance
  *
- * Contract that returns the valuation of SetTokens using price oracle data used in contracts
- * that are external to the system.
+ * Contract that holds the reserve pool of the protocol.
+ * The reserve pool of the protocol is used to provide liquidity to community depositors.
+ * The reserve pool gets a discount for this liquidity provisioning.
  *
- * Note: Prices are returned in preciseUnits (i.e. 18 decimals of precision)
  */
-contract ReservePool {
+contract ReservePool is ERC20 {
     using PreciseUnitMath for int256;
     using PreciseUnitMath for uint256;
     using SafeCast for int256;
@@ -52,6 +52,9 @@ contract ReservePool {
 
     // Instance of the Controller contract
     address public controller;
+
+    mapping(address => uint256) public communityTokenBalances; // Balances of tokens per community
+    uint256 public wethBalance;
 
     /* ============ Constructor ============ */
 
@@ -65,5 +68,13 @@ contract ReservePool {
     }
 
     /* ============ External Functions ============ */
+
+    function sellTokensToLiquidityPool(address _community, uint256 _amount) external onlyCommunity {
+
+    }
+
+    function withdrawWETHFromCommunityTokens() external onlyProtocol {
+
+    }
 
 }
