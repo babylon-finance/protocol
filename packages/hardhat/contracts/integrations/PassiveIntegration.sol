@@ -20,6 +20,7 @@ pragma solidity 0.7.4;
 
 import "hardhat/console.sol";
 import { SafeMath } from "@openzeppelin/contracts/math/SafeMath.sol";
+import { SafeCast } from "@openzeppelin/contracts/utils/SafeCast.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { IFund } from "../interfaces/IFund.sol";
 import { ReentrancyGuard } from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
@@ -34,6 +35,7 @@ import { BaseIntegration } from "./BaseIntegration.sol";
  */
 abstract contract PassiveIntegration is BaseIntegration, ReentrancyGuard {
     using SafeMath for uint256;
+    using SafeCast for uint256;
 
     /* ============ Struct ============ */
 
@@ -288,8 +290,8 @@ abstract contract PassiveIntegration is BaseIntegration, ReentrancyGuard {
      * @param _investmentInfo                Struct containing investment information used in internal functions
      */
     function _updateFundPositions(InvestmentInfo memory _investmentInfo, address _depositToken, bool isDeposit) internal {
-      uint256 depositTokenDelta = isDeposit ? uint256(-_investmentInfo.limitDepositTokenQuantity) : _investmentInfo.limitDepositTokenQuantity;
-      uint256 investmentTokenDelta = isDeposit ? _investmentInfo.investmentTokensInTransaction : uint256(_investmentInfo.investmentTokensInTransaction);
+      int256 depositTokenDelta = isDeposit ? int256(-_investmentInfo.limitDepositTokenQuantity) : _investmentInfo.limitDepositTokenQuantity.toInt256();
+      int256 investmentTokenDelta = isDeposit ? _investmentInfo.investmentTokensInTransaction.toInt256() : _investmentInfo.investmentTokensInTransaction.toInt256();
       // balance deposit/withdrawal token
       updateFundPosition(address(_investmentInfo.fund), _depositToken, depositTokenDelta, isDeposit ? 2 : 0);
       // balance investment token
