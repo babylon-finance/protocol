@@ -1,8 +1,8 @@
 require("@nomiclabs/hardhat-ethers");
 require("@nomiclabs/hardhat-waffle");
 require("hardhat-deploy-ethers");
-require('hardhat-contract-sizer');
-require('hardhat-docgen');
+require("hardhat-contract-sizer");
+require("hardhat-docgen");
 require("hardhat-gas-reporter");
 
 const { utils } = require("ethers");
@@ -58,11 +58,11 @@ module.exports = {
     hardhat: {
       chainId: 1,
       allowUnlimitedContractSize: true,
-       forking: {
+      forking: {
         url:
-         "https://eth-mainnet.alchemyapi.io/v2/sncj01nDcsAQr_QWyhYWNkg3qzW2o9kt",
-          blockNumber: 11623000
-       }
+          "https://eth-mainnet.alchemyapi.io/v2/sncj01nDcsAQr_QWyhYWNkg3qzW2o9kt",
+        blockNumber: 11522000
+      }
     },
     rinkeby: {
       url: "https://rinkeby.infura.io/v3/c954231486fa42ccb6d132b406483d14", // <---- YOUR INFURA ID! (or it won't work)
@@ -96,6 +96,7 @@ module.exports = {
   },
   paths: {
     sources: "./contracts",
+    integrations: "./contracts/integrations",
     artifacts: "./artifacts"
   }
 };

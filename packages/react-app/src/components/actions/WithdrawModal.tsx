@@ -1,8 +1,8 @@
-import TransactionSummaryModal from "./TransactionSummaryModal";
+import TransactionSummaryModal from "../TransactionSummaryModal";
 
-import { Transactor } from "../helpers";
-import useGasPrice from "../hooks/GasPrice";
-import { loadContractFromNameAndAddress } from "../hooks/ContractLoader";
+import { Transactor } from "../../helpers";
+import useGasPrice from "../../hooks/GasPrice";
+import { loadContractFromNameAndAddress } from "../../hooks/ContractLoader";
 
 import { formatEther } from "@ethersproject/units";
 import { usePoller } from "eth-hooks";

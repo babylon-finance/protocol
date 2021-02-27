@@ -50,9 +50,9 @@ contract FundIdeas is ReentrancyGuard {
 
   /* ============ Modifiers ============ */
 
-  modifier onlyContributor(address payable _caller) {
+  modifier onlyContributor {
     require(
-        ERC20(address(fund)).balanceOf(_caller) > 0,
+        ERC20(address(fund)).balanceOf(msg.sender) > 0,
         "Only someone with the fund token can withdraw"
     );
     _;
@@ -77,29 +77,34 @@ contract FundIdeas is ReentrancyGuard {
   /* ============ Structs ============ */
 
   struct InvestmentIdea {
-    uint256 index;                     // Investment index (used for votes)
+    uint8 index;                       // Investment index (used for votes)
     address payable participant;       // Address of the participant that submitted the bet
     uint256 enteredAt;                 // Timestamp when the idea was submitted
+    uint256 enteredCooldownAt;         // Timestamp when the idea reached quorum
     uint256 executedAt;                // Timestamp when the idea was executed
     uint256 exitedAt;                  // Timestamp when the idea was submitted
-    uint256 stake;                     // Amount of stake (in reserve asset)
-    uint256 capitalRequested;          // Amount of capital requested (in reserve asset)
+    uint256 stake;                     // Amount of stake by the ideator (in reserve asset) Neds to be positive
+    uint256 maxCapitalRequested;       // Amount of max capital to allocate
+    uint256 capitalAllocated;          // Current amount of capital allocated
     uint256 expectedReturn;            // Expect return by this investment idea
+    uint256 minRebalanceCapital;       // Min amount of capital so that it is worth to rebalance the capital here
     address[] enterTokensNeeded;       // Positions that need to be taken prior to enter trade
     uint256[] enterTokensAmounts;      // Amount of these positions
     address[] voters;                  // Addresses with the voters
     uint256 duration;                  // Duration of the bet
-    int256 totalVotes;                 // Total votes
+    int256 totalVotes;                 // Total votes staked
+    uint256 absoluteTotalVotes;        // Absolute number of votes staked
     uint256 totalVoters;               // Total amount of participants that voted
     address integration;               // Address of the integration
     bytes enterPayload;                // Calldata to execute when entering
     bytes exitPayload;                 // Calldata to execute when exiting the trade
     bool finalized;                    // Flag that indicates whether we exited the idea
+    bool active;                       // Whether the idea has met the voting quorum
   }
 
   /* ============ State Variables ============ */
 
-  uint8 constant MAX_IDEAS = 10;
+  uint8 constant MAX_TOTAL_IDEAS = 10;
 
   // Babylon Controller Address
   IBabController public controller;
@@ -107,25 +112,17 @@ contract FundIdeas is ReentrancyGuard {
   // Fund that these ideas belong to
   IClosedFund public fund;
 
-  mapping(uint256 => mapping(address => int256)) internal votes;  // Investment idea votes from participants (can be negative if downvoting)
+  mapping(uint256 => mapping(address => int256)) public votes;  // Investment idea votes from participants (can be negative if downvoting)
+  uint256 public totalStake = 0;
 
-  uint256 currentMinStakeEpoch;        // Used to keep track of the min staked amount. An idea can only be submitted if there are less than 3 or above the limit
-  uint256 currentMinStakeIndex;        // Index position of the investment idea with the lowest stake
+  uint256 public minVotersQuorum = 1e17;          // 10%. (0.01% = 1e14, 1% = 1e16)
 
-  uint8 public maxIdeasPerEpoch = 3;
-  uint256 public currentInvestmentsIndex = 1;
-  uint8 public minVotersQuorum = 1;
+  uint256 public ideaCooldownPeriod;            // Window for the idea to cooldown after approval before receiving capital
 
-  InvestmentIdea[MAX_IDEAS] investmentIdeasCurrentEpoch;
-  InvestmentIdea[] investmentsExecuted;
+  InvestmentIdea[MAX_TOTAL_IDEAS] ideas;
 
   uint256 public ideaCreatorProfitPercentage = 15e16; // (0.01% = 1e14, 1% = 1e16)
   uint256 public ideaVotersProfitPercentage = 5e16; // (0.01% = 1e14, 1% = 1e16)
-  uint256 public lastInvestmentExecutedAt; // Timestamp when the last investment was executed
-
-  uint256 public fundDuration; // Initial duration of the fund
-  uint256 public fundEpoch; // Set window of time to decide the next investment idea
-  uint256 public fundDeliberationDuration; // Window for endorsing / downvoting an idea
 
   /* ============ Constructor ============ */
 
@@ -134,40 +131,34 @@ contract FundIdeas is ReentrancyGuard {
    *
    * @param _fund                           Address of the fund
    * @param _controller                     Address of the controller
-   * @param _fundEpoch                      Controls how often an investment idea can be executed
-   * @param _fundDeliberationDuration       How long after the epoch has completed, people can curate before the top idea being executed
+   * @param _ideaCooldownPeriod             How long after the idea has been activated, will it be ready to be executed
+   * @param _ideaCreatorProfitPercentage    What percentage of the profits go to the idea creator
+   * @param _ideaVotersProfitPercentage     What percentage of the profits go to the idea curators
+   * @param _minVotersQuorum                Percentage of votes needed to activate an investment idea (0.01% = 1e14, 1% = 1e16)
    */
   constructor(
     address _fund,
     address _controller,
-    uint256 _fundEpoch,
-    uint256 _fundDeliberationDuration,
+    uint256 _ideaCooldownPeriod,
     uint256 _ideaCreatorProfitPercentage,
     uint256 _ideaVotersProfitPercentage,
-    uint8 _minVotersQuorum,
-    uint8 _maxIdeasPerEpoch
+    uint256 _minVotersQuorum
   )
   {
     controller = IBabController(_controller);
     require(
-        _fundEpoch <= controller.getMaxFundEpoch() && _fundEpoch >= controller.getMinFundEpoch() ,
-        "Fund epoch must be within the range allowed by the protocol"
+        _ideaCooldownPeriod <= controller.getMaxCooldownPeriod() && _ideaCooldownPeriod >= controller.getMinCooldownPeriod() ,
+        "Fund cooldown must be within the range allowed by the protocol"
     );
-    require(
-        _fundDeliberationDuration <= controller.getMaxDeliberationPeriod() && _fundDeliberationDuration >= controller.getMinDeliberationPeriod() ,
-        "Fund deliberation must be within the range allowed by the protocol"
-    );
-    require(_minVotersQuorum > 0, "You need at least one additional vote");
+    require(_minVotersQuorum >= 1e17, "You need at least 10% votes");
     require(controller.isSystemContract(_fund), "Must be a valid fund");
-    require(_maxIdeasPerEpoch < MAX_IDEAS, "Number of ideas must be less than the limit");
+    // TODO: require(_maxCandidateIdeas.add(100.previseDiv(1e17)) < MAX_TOTAL_IDEAS, "Number of ideas must be less than the limit");
     fund = IClosedFund(_fund);
-    fundEpoch = _fundEpoch;
-    fundDeliberationDuration = _fundDeliberationDuration;
     ideaCreatorProfitPercentage = _ideaCreatorProfitPercentage;
     ideaVotersProfitPercentage = _ideaVotersProfitPercentage;
+    ideaCooldownPeriod = _ideaCooldownPeriod;
     minVotersQuorum = _minVotersQuorum;
-    maxIdeasPerEpoch = _maxIdeasPerEpoch;
-    lastInvestmentExecutedAt = block.timestamp; // Start the counter for first epoch
+    totalStake = 0;
   }
 
 
@@ -177,46 +168,44 @@ contract FundIdeas is ReentrancyGuard {
    * Adds an investment idea to the contenders array for this epoch.
    * Investment stake is stored in the contract. (not converted to reserve asset).
    * If the array is already at the limit, replace the one with the lowest stake.
-   * @param _capitalRequested              Capital requested denominated in the reserve asset
-   * @param _stake                         Stake denominated in the reserve asset
+   * @param _maxCapitalRequested           Max Capital requested denominated in the reserve asset (0 to be unlimited)
+   * @param _stake                         Stake with fund participations absolute amounts 1e18
    * @param _investmentDuration            Investment duration in seconds
    * @param _enterData                     Operation to perform to enter the investment
    * @param _exitData                      Operation to perform to exit the investment
    * @param _integration                   Address of the integration
+   * @param _expectedReturn                Expected return
+   * @param _minRebalanceCapital           Min capital that is worth it to deposit into this idea
+   * @param _enterTokensNeeded             Tokens that we need to acquire to enter this investment
+   * @param _enterTokensAmounts            Token amounts of these assets we need
+   * TODO: Meta Transaction
    */
   function addInvestmentIdea(
-    uint256 _capitalRequested,
+    uint256 _maxCapitalRequested,
     uint256 _stake,
     uint256 _investmentDuration,
     bytes memory _enterData,
     bytes memory _exitData,
     address _integration,
     uint256 _expectedReturn,
+    uint256 _minRebalanceCapital,
     address[] memory _enterTokensNeeded,
     uint256[] memory _enterTokensAmounts
-  ) external onlyContributor(msg.sender) payable onlyActive {
-    require(block.timestamp < lastInvestmentExecutedAt.add(fundEpoch), "Idea can only be suggested before the deliberation period");
+  ) external onlyContributor onlyActive {
     require(fund.isValidIntegration(_integration), "Integration must be valid");
+    require(_stake > fund.totalSupply().div(100), "Stake amount must be at least 1% of the fund");
+    require(_investmentDuration > 1 days, "Investment duration must be greater than a a day");
+    // TODO: require(_investmentDuration < end of fund window, "Investment idea must end before the fund ends");
     require(_stake > 0, "Stake amount must be greater than 0");
-    require(_capitalRequested > 0, "Capital requested amount must be greater than 0");
-    require(_investmentDuration > 1 hours, "Investment duration must be greater than an hour");
-    uint256 liquidReserveAsset = fund.getPositionBalance(fund.getReserveAsset()).toUint256();
-    // TODO: loop over previous investments as well
-    if (investmentsExecuted[investmentsExecuted.length - 1].duration < lastInvestmentExecutedAt.add(fundEpoch)) {
-      liquidReserveAsset = liquidReserveAsset.add(investmentsExecuted[investmentsExecuted.length - 1].capitalRequested);
-    }
-    require(_capitalRequested <= liquidReserveAsset, "The capital requested is greater than the capital available");
-    require(investmentIdeasCurrentEpoch.length < maxIdeasPerEpoch || _stake > currentMinStakeEpoch, "Not enough stake to add the idea");
-    uint ideaIndex = investmentIdeasCurrentEpoch.length;
-    if (ideaIndex >= maxIdeasPerEpoch) {
-      ideaIndex = currentMinStakeIndex;
-    }
+    require(_minRebalanceCapital > 0, "Min Capital requested amount must be greater than 0");
+    require(_maxCapitalRequested >= _minRebalanceCapital, "The max amount of capital must be greater than one chunk");
+    require(ideas.length < MAX_TOTAL_IDEAS, "Reached the limit of ideas");
+    uint8 ideaIndex = ideas.length.toUint8();
     // Check than enter and exit data call integrations
-    InvestmentIdea storage idea = investmentIdeasCurrentEpoch[ideaIndex];
-    idea.index = currentInvestmentsIndex;
+    InvestmentIdea storage idea = ideas[ideaIndex];
+    idea.index = ideaIndex;
     idea.integration = _integration;
     idea.participant = msg.sender;
-    idea.capitalRequested = _capitalRequested;
     idea.enteredAt = block.timestamp;
     idea.stake = _stake;
     idea.duration = _investmentDuration;
@@ -225,25 +214,38 @@ contract FundIdeas is ReentrancyGuard {
     idea.enterTokensNeeded = _enterTokensNeeded;
     idea.enterTokensAmounts = _enterTokensAmounts;
     idea.expectedReturn = _expectedReturn;
-    currentInvestmentsIndex ++;
+    idea.capitalAllocated = 0;
+    idea.minRebalanceCapital = _minRebalanceCapital;
+    idea.maxCapitalRequested = _maxCapitalRequested;
+    idea.totalVotes = _stake.toInt256();
+    idea.absoluteTotalVotes = _stake;
+    totalStake = totalStake.add(_stake);
+  }
+
+  function abs(int x) private pure returns (int) {
+    return x >= 0 ? x : -x;
+  }
+
+  /**
+   * Returns whether this idea is currently active or not
+   * @param _idea               The idea struct
+   * TODO: Meta Transaction
+   */
+  function isIdeaActive(InvestmentIdea memory _idea) private pure returns (bool) {
+    return _idea.executedAt > 0 && _idea.exitedAt == 0;
   }
 
   /**
    * Curates an investment idea from the contenders array for this epoch.
    * This can happen at any time. As long as there are investment ideas.
-   * @param _ideaIndex                The position of the idea index in the array for the current epoch
+   * @param _ideaIndex                The position of the idea index in the array
    * @param _amount                   Amount to curate, positive to endorse, negative to downvote
    * TODO: Meta Transaction
    */
-  function curateInvestmentIdea(uint8 _ideaIndex, int256 _amount) external onlyContributor(msg.sender) onlyActive {
-    require(investmentIdeasCurrentEpoch.length > _ideaIndex, "The idea index does not exist");
+  function curateInvestmentIdea(uint8 _ideaIndex, int256 _amount) external onlyContributor onlyActive {
+    require(ideas.length > _ideaIndex, "The idea index does not exist");
     require(_amount.toUint256() < fund.balanceOf(msg.sender), "Participant does not have enough balance");
-    InvestmentIdea storage idea = investmentIdeasCurrentEpoch[_ideaIndex];
-    uint256 totalVotesUser = 0;
-    for (uint8 i = 0; i < investmentIdeasCurrentEpoch.length; i++) {
-      totalVotesUser = totalVotesUser.add(votes[idea.index][msg.sender].toUint256());
-    }
-    require(totalVotesUser.add(_amount.toUint256()) < fund.balanceOf(msg.sender), "Participant does not have enough balance");
+    InvestmentIdea storage idea = ideas[_ideaIndex];
     if (votes[idea.index][msg.sender] == 0) {
       idea.totalVoters++;
       idea.voters = [msg.sender];
@@ -252,28 +254,56 @@ contract FundIdeas is ReentrancyGuard {
     }
     votes[idea.index][msg.sender] = votes[idea.index][msg.sender].add(_amount);
     idea.totalVotes.add(_amount);
+    idea.absoluteTotalVotes = idea.absoluteTotalVotes.add(abs(_amount).toUint256());
+    idea.totalVotes = idea.totalVotes.add(_amount);
+    totalStake = totalStake.add(abs(_amount).toUint256()); // Adds total amount staked at the moment
+    // TODO: Introduce conviction voting
+    uint256 votingThreshold = minVotersQuorum.preciseMul(fund.totalSupply());
+    if (_amount > 0 && idea.totalVotes.toUint256() >= votingThreshold) {
+      idea.active = true;
+      idea.enteredCooldownAt = block.timestamp;
+    }
+    if (_amount < 0 && idea.totalVotes.toUint256() < votingThreshold && idea.active && idea.executedAt == 0) {
+      idea.active = false;
+    }
   }
 
   /**
-   * Executes the top investment idea for this epoch.
-   * We enter into the investment and add it to the executed ideas array.
+   * Executes an idea that has been activated and gone through the cooldown period.
+   * @param _ideaIndex                The position of the idea index in the array
+   * @param _capital                  The capital to allocate to this idea
    */
-  function executeTopInvestment() external onlyKeeper onlyActive {
-    require(block.timestamp > lastInvestmentExecutedAt.add(fundEpoch).add(fundDeliberationDuration), "Idea can only be executed after the minimum period has elapsed");
-    require(investmentIdeasCurrentEpoch.length > 0, "There must be an investment idea ready to execute");
-    uint8 topIdeaIndex = getCurrentTopInvestmentIdea();
-    require(topIdeaIndex < investmentIdeasCurrentEpoch.length, "No idea available to execute");
-    InvestmentIdea storage idea = investmentIdeasCurrentEpoch[topIdeaIndex];
+  function executeInvestmentIdea(uint8 _ideaIndex, uint256 _capital) public onlyKeeper onlyActive {
+    require(_ideaIndex < ideas.length, "No idea available to execute");
+    InvestmentIdea storage idea = ideas[_ideaIndex];
+    require(idea.executedAt == 0, "Idea has already been executed");
+    uint256 liquidReserveAsset = fund.getPositionBalance(fund.getReserveAsset()).toUint256();
+    require(_capital <= liquidReserveAsset, "Not enough capital");
+    require(idea.capitalAllocated.add(_capital) <= idea.maxCapitalRequested, "Max capital reached");
+    require(liquidReserveAsset >= idea.minRebalanceCapital, "Fund does not have enough capital to enter the idea");
+    require(block.timestamp.sub(idea.enteredCooldownAt) >= ideaCooldownPeriod, "Idea has not completed the cooldown period");
     // Execute enter trade
+    idea.capitalAllocated = idea.capitalAllocated.add(_capital);
     bytes memory _data = idea.enterPayload;
     fund.callIntegration(idea.integration, 0, _data, idea.enterTokensNeeded, idea.enterTokensAmounts);
-    // Push the trade to the investments executed
-    investmentsExecuted[investmentsExecuted.length] = idea;
-    // Clear investment ideas
-    delete investmentIdeasCurrentEpoch;
-    // Restarts the epoc counter
-    lastInvestmentExecutedAt = block.timestamp;
+    // Sets the executed timestamp
     idea.executedAt = block.timestamp;
+  }
+
+  /**
+   * Rebalances available capital of the fund between the investment ideas that are active.
+   * We enter into the investment and add it to the executed ideas array.
+   */
+  function rebalanceInvestments() external onlyKeeper onlyActive {
+    uint256 liquidReserveAsset = fund.getPositionBalance(fund.getReserveAsset()).toUint256();
+    for (uint i = 0; i < ideas.length; i++) {
+      InvestmentIdea storage idea = ideas[i];
+      uint256 percentage = idea.totalVotes.toUint256().preciseDiv(totalStake);
+      uint256 toAllocate = liquidReserveAsset.preciseMul(percentage);
+      if (toAllocate >= idea.minRebalanceCapital && toAllocate.add(idea.capitalAllocated) <= idea.maxCapitalRequested) {
+        executeInvestmentIdea(idea.index, toAllocate);
+      }
+    }
   }
 
   /**
@@ -283,9 +313,10 @@ contract FundIdeas is ReentrancyGuard {
    * Updates the reserve asset position accordingly.
    */
   function finalizeInvestment(uint _ideaIndex) external onlyKeeper nonReentrant onlyActive {
-    require(investmentsExecuted.length > _ideaIndex, "This idea index does not exist");
-    InvestmentIdea storage idea = investmentsExecuted[_ideaIndex];
-    require(block.timestamp > lastInvestmentExecutedAt.add(fundEpoch).add(idea.duration), "Idea can only be executed after the minimum period has elapsed");
+    require(ideas.length > _ideaIndex, "This idea index does not exist");
+    InvestmentIdea storage idea = ideas[_ideaIndex];
+    require(idea.executedAt > 0, "This idea has not been executed");
+    require(block.timestamp > idea.executedAt.add(idea.duration), "Idea can only be finalized after the minimum period has elapsed");
     require(!idea.finalized, "This investment was already exited");
     address[] memory _tokensNeeded;
     uint256[] memory _tokenAmounts;
@@ -307,6 +338,7 @@ contract FundIdeas is ReentrancyGuard {
     // Mark as finalized
     idea.finalized = true;
     idea.exitedAt = block.timestamp;
+    totalStake = totalStake.sub(idea.absoluteTotalVotes);
     // Transfer rewards and update positions
      _transferIdeaRewards(_ideaIndex, capitalReturned);
   }
@@ -314,25 +346,22 @@ contract FundIdeas is ReentrancyGuard {
   /* ============ External Getter Functions ============ */
 
   /**
-   * Gets the index of the top investment idea in this epoch
+   * Gets active investment ideas sorted by stake
    * Uses the stake, the number of voters and the total weight behind the idea.
    *
-   * @return  uint8        Top Idea index. Returns the max length + 1 if none.
+   * @return  uint8        Returns indexes of the top active ideas in order
    */
-  function getCurrentTopInvestmentIdea() public view returns (uint8) {
-    uint256 maxScore = 0;
-    uint8 indexResult = maxIdeasPerEpoch + 1;
-    for (uint8 i = 0; i < investmentIdeasCurrentEpoch.length; i++) {
-      InvestmentIdea memory idea = investmentIdeasCurrentEpoch[i];
-      // TODO: tweak this formula
-      if (idea.totalVotes > 0 && idea.totalVoters >= minVotersQuorum) {
-        uint256 currentScore = idea.stake.mul(idea.totalVotes.toUint256()).mul(idea.totalVoters);
-        if (currentScore > maxScore) {
-          indexResult = i;
-        }
+
+  function getActiveIdeas() public view returns (uint8[] memory) {
+    uint8[] memory result;
+    for (uint8 i = 0; i < ideas.length; i++) {
+      InvestmentIdea memory idea = ideas[i];
+      // TODO: sort by score
+      if (isIdeaActive(idea)) {
+        result[i] = idea.index;
       }
     }
-    return indexResult;
+    return result;
   }
 
   /* ============ Internal Functions ============ */
@@ -340,10 +369,10 @@ contract FundIdeas is ReentrancyGuard {
   function _transferIdeaRewards(uint _ideaIndex, uint capitalReturned) internal {
     address reserveAsset = fund.getReserveAsset();
     uint256 reserveAssetDelta = 0;
-    InvestmentIdea storage idea = investmentsExecuted[_ideaIndex];
+    InvestmentIdea storage idea = ideas[_ideaIndex];
     // Idea returns were positive
-    if (capitalReturned > idea.capitalRequested) {
-      uint256 profits = capitalReturned - idea.capitalRequested; // in reserve asset (weth)
+    if (capitalReturned > idea.capitalAllocated) {
+      uint256 profits = capitalReturned - idea.capitalAllocated; // in reserve asset (weth)
       // Send stake back to the creator
       idea.participant.transfer(idea.stake);
       uint256 ideatorProfits = ideaCreatorProfitPercentage.preciseMul(profits);
@@ -368,8 +397,8 @@ contract FundIdeas is ReentrancyGuard {
     } else {
       // Returns were negative
       uint256 stakeToSlash = idea.stake;
-      if (capitalReturned.add(idea.stake) > idea.capitalRequested) {
-        stakeToSlash = capitalReturned.add(idea.stake).sub(idea.capitalRequested);
+      if (capitalReturned.add(idea.stake) > idea.capitalAllocated) {
+        stakeToSlash = capitalReturned.add(idea.stake).sub(idea.capitalAllocated);
       }
       // We slash and add to the fund the stake from the creator
       IWETH(fund.weth()).deposit{value: stakeToSlash}();

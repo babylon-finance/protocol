@@ -126,7 +126,6 @@ async function deployFolioFixture() {
   const fund = await ClosedFund.deploy(
     integrationsAddressList,
     addresses.tokens.WETH,
-    addresses.tokens.WETH,
     babController.address,
     addresses.users.hardhat1,
     "Absolute ETH Return [beta]",
@@ -137,7 +136,6 @@ async function deployFolioFixture() {
   const fund2 = await ClosedFund.deploy(
     integrationsAddressList,
     addresses.tokens.WETH,
-    addresses.tokens.WETH,
     babController.address,
     addresses.users.hardhat1,
     "ETH Yield Farm [a]",
@@ -147,7 +145,6 @@ async function deployFolioFixture() {
 
   const fund3 = await ClosedFund.deploy(
     integrationsAddressList,
-    addresses.tokens.WETH,
     addresses.tokens.WETH,
     babController.address,
     addresses.users.hardhat1,
@@ -169,16 +166,13 @@ async function deployFolioFixture() {
   });
 
   // Investment ideas first fund
-
   const fundIdeas1 = await FundIdeas.deploy(
     fund.address,
     babController.address,
-    ONE_DAY_IN_SECONDS * 3,
     ONE_DAY_IN_SECONDS,
-    ethers.utils.parseEther("0.015"), // 15%
-    ethers.utils.parseEther("0.005"), // 15%
-    1,
-    3
+    ethers.utils.parseEther("0.15"), // 15%
+    ethers.utils.parseEther("0.05"), // 5%
+    ethers.utils.parseEther("0.10") // 10%
   );
 
   // Initial deposit
@@ -187,9 +181,11 @@ async function deployFolioFixture() {
     0,
     1,
     ONE_DAY_IN_SECONDS * 90,
+    ONE_DAY_IN_SECONDS * 3,
     fundIdeas1.address,
     { value: ethers.utils.parseEther("0.1") }
   );
+
   return {
     babController,
     integrations: {
@@ -212,7 +208,12 @@ async function deployFolioFixture() {
     signer1,
     signer2,
     signer3,
-    contractsToPublish: [{ name: "BabController", contract: babController }]
+    contractsToPublish: [
+      { name: "BabController", contract: babController },
+      { name: "KyberTradeIntegration", contract: kyberTradeIntegration },
+      { name: "YearnVaultIntegration", contract: yearnVaultIntegration },
+      { name: "UniswapPoolIntegration", contract: uniswapPoolIntegration }
+    ]
   };
 }
 
