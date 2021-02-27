@@ -315,7 +315,7 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
         );
         // require(block.timestamp > fundEndsBy, "Withdrawals are disabled until fund ends");
         require(
-            _fundTokenQuantity <= ERC20(address(this)).balanceOf(msg.sender),
+            _fundTokenQuantity <= balanceOf(msg.sender),
             "Withdrawal amount <= to deposited amount"
         );
         _validateReserveAsset(reserveAsset, _fundTokenQuantity);
@@ -828,7 +828,7 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
 
     function _validateOnlyContributor(address _caller) internal view {
         require(
-            ERC20(address(this)).balanceOf(_caller) > 0,
+            balanceOf(_caller) > 0,
             "Only participant can withdraw"
         );
     }
