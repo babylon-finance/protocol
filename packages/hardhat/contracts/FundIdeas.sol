@@ -351,6 +351,7 @@ contract FundIdeas is ReentrancyGuard {
    *
    * @return  uint8        Returns indexes of the top active ideas in order
    */
+
   function getActiveIdeas() public view returns (uint8[] memory) {
     uint8[] memory result;
     for (uint8 i = 0; i < ideas.length; i++) {
