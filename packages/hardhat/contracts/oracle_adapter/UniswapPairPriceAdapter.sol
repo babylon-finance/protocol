@@ -92,9 +92,9 @@ contract UniswapPairPriceAdapter is Ownable {
             PoolSettings memory poolSettings;
             poolSettings.tokenOne = uniswapPoolToAdd.token0();
             poolSettings.tokenTwo = uniswapPoolToAdd.token1();
-            uint256 tokenOneDecimals = ERC20(poolSettings.tokenOne).decimals();
+            uint8 tokenOneDecimals = ERC20(poolSettings.tokenOne).decimals();
             poolSettings.tokenOneBaseUnit = 10 ** tokenOneDecimals;
-            uint256 tokenTwoDecimals = ERC20(poolSettings.tokenTwo).decimals();
+            uint8 tokenTwoDecimals = ERC20(poolSettings.tokenTwo).decimals();
             poolSettings.tokenTwoBaseUnit = 10 ** tokenTwoDecimals;
             poolSettings.isValid = true;
 
@@ -153,9 +153,9 @@ contract UniswapPairPriceAdapter is Ownable {
 
         uniswapPoolsToSettings[_poolAddress].tokenOne = poolToken.token0();
         uniswapPoolsToSettings[_poolAddress].tokenTwo = poolToken.token1();
-        uint256 tokenOneDecimals = ERC20(uniswapPoolsToSettings[_poolAddress].tokenOne).decimals();
+        uint8 tokenOneDecimals = ERC20(uniswapPoolsToSettings[_poolAddress].tokenOne).decimals();
         uniswapPoolsToSettings[_poolAddress].tokenOneBaseUnit = 10 ** tokenOneDecimals;
-        uint256 tokenTwoDecimals = ERC20(uniswapPoolsToSettings[_poolAddress].tokenTwo).decimals();
+        uint8 tokenTwoDecimals = ERC20(uniswapPoolsToSettings[_poolAddress].tokenTwo).decimals();
         uniswapPoolsToSettings[_poolAddress].tokenTwoBaseUnit = 10 ** tokenTwoDecimals;
         uniswapPoolsToSettings[_poolAddress].isValid = true;
 

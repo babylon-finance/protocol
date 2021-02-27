@@ -1,13 +1,11 @@
-import * as addresses from "../../contracts/addresses";
 import * as contractNames from "../../constants/contracts";
 import * as solidity from "../../constants/solidity";
-import { formatTokenDisplay } from "../../helpers/Numbers";
+import { getBestPairQuote, PairQuote, EMPTY_PAIR_QUOTE } from "../../helpers/PairQuote";
 import { loadContractFromNameAndAddress } from "../../hooks/ContractLoader";
 import { Token, GlobalTokenList, TokensMapByAddress } from "../../constants/GlobalTokenList";
 import KyberTradeIntegrationAddress from "../../contracts/KyberTradeIntegration.address";
 
 import { parseEther } from "@ethersproject/units";
-import { BigNumber } from "@ethersproject/bignumber";
 import { Box, Button, Card, Heading, Input, Loader, Field, Flex, Form } from 'rimble-ui';
 
 import { usePoller } from "eth-hooks";
@@ -27,24 +25,8 @@ interface TradeActionFormProps {
 
 interface Contracts {
   ClosedFund: any
-  IKyberNetworkProxy: any
   KyberTradeIntegration: any
-  USDC: any
 }
-
-interface QuotePair {
-  expectedRate: BigNumber
-  expectedRateDisplay: string
-  worstRate: BigNumber
-  worstRateDisplay: string
-}
-
-const EMPTY_QUOTE_PAIR = {
-  expectedRate: BigNumber.from(0),
-  expectedRateDisplay: "0",
-  worstRate: BigNumber.from(0),
-  worstRateDisplay: "0"
-};
 
 const TradeActionForm = ({
   capitalRequested,
@@ -62,62 +44,55 @@ const TradeActionForm = ({
   const [providingAmount, setProvidingAmount] = useState<number>(1);
   const [receiving, setReceiving] = useState<string | undefined>(undefined);
   const [receivingDetails, setReceivingDetails] = useState<Token | undefined>(undefined);
-  const [quotePair, setQuotePair] = useState<QuotePair>(EMPTY_QUOTE_PAIR);
+  const [pairQuote, setPairQuote] = useState<PairQuote>(EMPTY_PAIR_QUOTE);
   const [quoteLoading, setQuoteLoading] = useState<boolean>(false);
 
   const updateQuotePair = useCallback(async () => {
-    if (contracts && providingDetails && receivingDetails) {
+    if (providingDetails && receivingDetails) {
       setQuoteLoading(true);
-
-      const quote = await contracts.IKyberNetworkProxy.getExpectedRate(providingDetails.address, receivingDetails.address, parseEther(providingAmount.toString() || "0"));
-      const expectedReturn = quote[0].mul(BigNumber.from(providingAmount));
-      const worstReturn = quote[1].mul(BigNumber.from(providingAmount));
-
-      setQuotePair({
-        expectedRate: quote[0],
-        expectedRateDisplay: formatTokenDisplay(expectedReturn),
-        worstRate: quote[1],
-        worstRateDisplay: formatTokenDisplay(worstReturn)
-      });
-
+      setPairQuote(
+        await getBestPairQuote({
+          provider: provider,
+          providingAmount: providingAmount,
+          providingAddress: providingDetails.address,
+          receivingAddress: receivingDetails.address
+        })
+      );
       setQuoteLoading(false);
     }
-  }, [contracts, providingDetails, receivingDetails, providingAmount]);
+  }, [provider, providingDetails, receivingDetails, providingAmount]);
 
   useEffect(() => {
     async function getContracts() {
-      const kyberNetwork = await loadContractFromNameAndAddress(addresses.kyber.proxy, contractNames.IKyberNetworkProxy, provider);
-      const kyberIntegration = await loadContractFromNameAndAddress(KyberTradeIntegrationAddress, contractNames.KyberTradeIntegration, provider);
-      const usdc = await loadContractFromNameAndAddress(addresses.tokens.USDC, contractNames.IERC20, provider);
+      const kyberIntegration = await loadContractFromNameAndAddress(
+        KyberTradeIntegrationAddress,
+        contractNames.KyberTradeIntegration,
+        provider
+      );
 
       setContracts({
         KyberTradeIntegration: kyberIntegration,
-        IKyberNetworkProxy: kyberNetwork,
-        ClosedFund: fundContract,
-        USDC: usdc
+        ClosedFund: fundContract
       });
 
-      if (kyberNetwork && providing && receiving) {
+      if (providing && receiving) {
         setQuoteLoading(true);
 
         const providingDetails = TokensMapByAddress.get(providing);
         const receivingDetails = TokensMapByAddress.get(receiving);
 
         if (!providingDetails || !receivingDetails) {
-          throw Error();
+          throw Error("Failed to find details for provided token");
         }
 
-        const initialQuote = await kyberNetwork.getExpectedRate(providingDetails.address, receivingDetails.address, parseEther(providingAmount.toString()));
-        const initialExpected = initialQuote[0];
-        const initialWorst = initialQuote[1];
-
-        setQuotePair({
-          expectedRate: initialQuote[0],
-          expectedRateDisplay: formatTokenDisplay(initialExpected),
-          worstRate: initialQuote[1],
-          worstRateDisplay: formatTokenDisplay(initialWorst),
-        });
-
+        setPairQuote(
+          await getBestPairQuote({
+            provider: provider,
+            providingAmount: providingAmount,
+            providingAddress: providingDetails.address,
+            receivingAddress: receivingDetails.address
+          })
+        );
         setQuoteLoading(false);
       }
     }
@@ -137,8 +112,6 @@ const TradeActionForm = ({
     e.preventDefault();
 
     if (contracts && fundContract && providingDetails && receivingDetails) {
-      console.log({providingDetails});
-      console.log({receivingDetails});
       const kyberInterface = contracts.KyberTradeIntegration.interface;
       const enterData = kyberInterface.encodeFunctionData(
         kyberInterface.functions["trade(address,uint256,address,uint256,bytes)"],
@@ -171,7 +144,6 @@ const TradeActionForm = ({
   };
 
   const handleProvidingOnChange = async e => {
-    setQuoteLoading(true);
     setProviding(e.target.value);
 
     const providingDetails = TokensMapByAddress.get(e.target.value);
@@ -188,7 +160,6 @@ const TradeActionForm = ({
   };
 
   const handleReceivingOnChange = async e => {
-    setQuoteLoading(true);
     setReceiving(e.target.value);
 
     const receivingDetails = TokensMapByAddress.get(e.target.value);
@@ -201,59 +172,57 @@ const TradeActionForm = ({
 
   return (
     <div>
-      <TradeCard width={"550px"} p={0}>
-        <Box p={4} mb={3}>
-          <Heading.h3>Set trade investment details</Heading.h3>
-          <Form onSubmit={handleConfirmTradeForm}>
-            <Flex
-              justifyContent={"space-between"}
-              bg="light-gray"
-              p={[2, 3]}
-              borderBottom={"1px solid gray"}
-              borderColor={"moon-gray"}
-              flexDirection={["column", "row"]}
-            >
-              <Field label="Providing">
-                <AssetSelect required onChange={handleProvidingOnChange} value={providing}>
-                  <option value="">--</option>
-                  {GlobalTokenList.tokens.map((tokenObj) => (
-                    <option value={tokenObj.address} key={tokenObj.address}>
-                      {tokenObj.name}
-                    </option>
-                  ))}
-                </AssetSelect>
-              </Field>
-              <Field label="Amount">
-                <Input type="number" required={true} placeholder="Amount" onChange={handleProvidingAmountOnChange} value={providingAmount} />
-              </Field>
-            </Flex>
-            <Flex
-              justifyContent={"space-between"}
-              bg="white"
-              p={[2, 3]}
-              flexDirection={["column", "row"]}
-            >
-              <Field label="Receiving">
-                <AssetSelect required onChange={handleReceivingOnChange} value={receiving}>
-                  <option value="">--</option>
-                  {GlobalTokenList.tokens.map((tokenObj) => (
-                    <option value={tokenObj.address} key={tokenObj.address}>
-                      {tokenObj.name}
-                    </option>
-                  ))}
-                </AssetSelect>
-              </Field>
-              {quoteLoading && (
-                <Loader />
-              )}
-              <Field label="Amount" required>
-                <Input type="text" disabled required={true} value={quoteLoading ? "--" : quotePair.expectedRateDisplay} />
-              </Field>
-            </Flex>
-            <FormSubmitButton type="submit">Confirm Trade</FormSubmitButton>
-          </Form>
-        </Box>
-      </TradeCard>
+      <Box p={4} mb={3}>
+        <Heading.h3>Set trade investment details</Heading.h3>
+        <Form onSubmit={handleConfirmTradeForm}>
+          <Flex
+            justifyContent={"space-between"}
+            bg="light-gray"
+            p={[2, 3]}
+            borderBottom={"1px solid gray"}
+            borderColor={"moon-gray"}
+            flexDirection={["column", "row"]}
+          >
+            <Field label="Providing">
+              <AssetSelect required onChange={handleProvidingOnChange} value={providing}>
+                <option value="">--</option>
+                {GlobalTokenList.tokens.map((tokenObj) => (
+                  <option value={tokenObj.address} key={tokenObj.address}>
+                    {tokenObj.symbol}
+                  </option>
+                ))}
+              </AssetSelect>
+            </Field>
+            <Field label="Amount">
+              <Input type="number" required={true} placeholder="Amount" onChange={handleProvidingAmountOnChange} value={providingAmount} />
+            </Field>
+          </Flex>
+          <Flex
+            justifyContent={"space-between"}
+            bg="white"
+            p={[2, 3]}
+            flexDirection={["column", "row"]}
+          >
+            <Field label="Receiving">
+              <AssetSelect required onChange={handleReceivingOnChange} value={receiving}>
+                <option value="">--</option>
+                {GlobalTokenList.tokens.map((tokenObj) => (
+                  <option value={tokenObj.address} key={tokenObj.address}>
+                    {tokenObj.symbol}
+                  </option>
+                ))}
+              </AssetSelect>
+            </Field>
+            {quoteLoading && (
+              <Loader />
+            )}
+            <Field label="Amount" required>
+              <Input type="text" disabled required={true} value={quoteLoading ? "--" : pairQuote.expectedRateDisplay} />
+            </Field>
+          </Flex>
+          <FormSubmitButton type="submit">Confirm Trade</FormSubmitButton>
+        </Form>
+      </Box>
     </div >
   );
 };
@@ -266,10 +235,6 @@ const AssetSelect = styled.select`
   border: 1px solid #ccc;
   border-radius: 4px;
   box-shadow: 0px 2px 4px rgba(0,0,0,0.1);
-`
-
-const TradeCard = styled(Card)`
-  height: 700px;
 `
 
 const FormSubmitButton = styled(Button)`

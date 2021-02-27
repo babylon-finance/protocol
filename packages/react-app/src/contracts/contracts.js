@@ -1,1 +1,1 @@
-module.exports = ["YearnVaultIntegration","KyberTradeIntegration","BabController"];
+module.exports = ["YearnVaultIntegration","KyberTradeIntegration","UniswapPoolIntegration","BabController"];

@@ -120,7 +120,7 @@ abstract contract BaseIntegration {
     function updateFundPosition(
       address _fund,
       address _component,
-      uint256 _deltaOperation,
+      int256 _deltaOperation,
       uint8 _subpositionStatus
     ) internal returns (
       uint256,
