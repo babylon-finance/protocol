@@ -205,6 +205,10 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
             _minFundTokenSupply > 0,
             "Min Fund token supply >= 0"
         );
+        // make initial deposit
+        uint256 initialDepositAmount = msg.value;
+        uint256 initialTokens = initialDepositAmount.div(initialBuyRate);
+        require(initialTokens >= minFundTokenSupply, "Initial Fund token supply too low");
         minFundTokenSupply = _minFundTokenSupply;
         premiumPercentage = _premiumPercentage;
         maxDepositLimit = _maxDepositLimit;
@@ -217,11 +221,6 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
         require(fundIdeasC.controller() == controller, "Controller must be the same");
         require(fundIdeasC.fund() == address(this), "Fund must be this contract");
         fundIdeas = _fundIdeas;
-
-        uint256 initialDepositAmount = msg.value;
-
-        // make initial deposit
-        uint256 initialTokens = initialDepositAmount.div(initialBuyRate);
 
         IWETH(weth).deposit{value: initialDepositAmount}();
 
