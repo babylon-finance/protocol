@@ -169,7 +169,6 @@ async function deployFolioFixture() {
   });
 
   // Investment ideas first fund
-
   const fundIdeas1 = await FundIdeas.deploy(
     fund.address,
     babController.address,
@@ -189,6 +188,7 @@ async function deployFolioFixture() {
     fundIdeas1.address,
     { value: ethers.utils.parseEther("0.1") }
   );
+
   return {
     babController,
     integrations: {
@@ -211,7 +211,12 @@ async function deployFolioFixture() {
     signer1,
     signer2,
     signer3,
-    contractsToPublish: [{ name: "BabController", contract: babController }]
+    contractsToPublish: [
+      { name: "BabController", contract: babController },
+      { name: "KyberTradeIntegration", contract: kyberTradeIntegration },
+      { name: "YearnVaultIntegration", contract: yearnVaultIntegration },
+      { name: "UniswapPoolIntegration", contract: uniswapPoolIntegration }
+    ]
   };
 }
 

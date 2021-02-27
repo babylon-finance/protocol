@@ -196,6 +196,9 @@ contract FundIdeas is ReentrancyGuard {
     require(_stake > fund.totalSupply().div(100), "Stake amount must be at least 1% of the fund");
     require(_investmentDuration > 1 days, "Investment duration must be greater than a a day");
     // TODO: require(_investmentDuration < end of fund window, "Investment idea must end before the fund ends");
+    require(_stake > 0, "Stake amount must be greater than 0");
+    require(_minRebalanceCapital > 0, "Min Capital requested amount must be greater than 0");
+    require(_maxCapitalRequested >= _minRebalanceCapital, "The max amount of capital must be greater than one chunk");
     require(ideas.length < MAX_TOTAL_IDEAS, "Reached the limit of ideas");
     uint8 ideaIndex = ideas.length.toUint8();
     // Check than enter and exit data call integrations
