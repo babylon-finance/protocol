@@ -77,13 +77,13 @@ contract FundIdeas is ReentrancyGuard {
   /* ============ Structs ============ */
 
   struct InvestmentIdea {
-    uint256 index;                     // Investment index (used for votes)
+    uint8 index;                       // Investment index (used for votes)
     address payable participant;       // Address of the participant that submitted the bet
     uint256 enteredAt;                 // Timestamp when the idea was submitted
     uint256 enteredCooldownAt;         // Timestamp when the idea reached quorum
     uint256 executedAt;                // Timestamp when the idea was executed
     uint256 exitedAt;                  // Timestamp when the idea was submitted
-    uint256 stake;                     // Amount of stake (in reserve asset)
+    uint256 stake;                     // Amount of stake by the ideator (in reserve asset) Neds to be positive
     uint256 maxCapitalRequested;       // Amount of max capital to allocate
     uint256 capitalAllocated;          // Current amount of capital allocated
     uint256 expectedReturn;            // Expect return by this investment idea
@@ -92,7 +92,8 @@ contract FundIdeas is ReentrancyGuard {
     uint256[] enterTokensAmounts;      // Amount of these positions
     address[] voters;                  // Addresses with the voters
     uint256 duration;                  // Duration of the bet
-    int256 totalVotes;                 // Total votes
+    int256 totalVotes;                 // Total votes staked
+    uint256 absoluteTotalVotes;        // Absolute number of votes staked
     uint256 totalVoters;               // Total amount of participants that voted
     address integration;               // Address of the integration
     bytes enterPayload;                // Calldata to execute when entering
@@ -111,7 +112,8 @@ contract FundIdeas is ReentrancyGuard {
   // Fund that these ideas belong to
   IClosedFund public fund;
 
-  mapping(uint256 => mapping(address => int256)) internal votes;  // Investment idea votes from participants (can be negative if downvoting)
+  mapping(uint256 => mapping(address => int256)) public votes;  // Investment idea votes from participants (can be negative if downvoting)
+  uint256 public totalStake = 0;
 
   uint256 public minVotersQuorum = 1e17;          // 10%. (0.01% = 1e14, 1% = 1e16)
 
@@ -156,6 +158,7 @@ contract FundIdeas is ReentrancyGuard {
     ideaVotersProfitPercentage = _ideaVotersProfitPercentage;
     ideaCooldownPeriod = _ideaCooldownPeriod;
     minVotersQuorum = _minVotersQuorum;
+    totalStake = 0;
   }
 
 
@@ -194,7 +197,7 @@ contract FundIdeas is ReentrancyGuard {
     require(_investmentDuration > 1 days, "Investment duration must be greater than a a day");
     // TODO: require(_investmentDuration < end of fund window, "Investment idea must end before the fund ends");
     require(ideas.length < MAX_TOTAL_IDEAS, "Reached the limit of ideas");
-    uint ideaIndex = ideas.length;
+    uint8 ideaIndex = ideas.length.toUint8();
     // Check than enter and exit data call integrations
     InvestmentIdea storage idea = ideas[ideaIndex];
     idea.index = ideaIndex;
@@ -211,6 +214,22 @@ contract FundIdeas is ReentrancyGuard {
     idea.capitalAllocated = 0;
     idea.minRebalanceCapital = _minRebalanceCapital;
     idea.maxCapitalRequested = _maxCapitalRequested;
+    idea.totalVotes = _stake.toInt256();
+    idea.absoluteTotalVotes = _stake;
+    totalStake = totalStake.add(_stake);
+  }
+
+  function abs(int x) private pure returns (int) {
+    return x >= 0 ? x : -x;
+  }
+
+  /**
+   * Returns whether this idea is currently active or not
+   * @param _idea               The idea struct
+   * TODO: Meta Transaction
+   */
+  function isIdeaActive(InvestmentIdea memory _idea) private pure returns (bool) {
+    return _idea.executedAt > 0 && _idea.exitedAt == 0;
   }
 
   /**
@@ -232,7 +251,10 @@ contract FundIdeas is ReentrancyGuard {
     }
     votes[idea.index][msg.sender] = votes[idea.index][msg.sender].add(_amount);
     idea.totalVotes.add(_amount);
-    // TODO: When we stake and vote that should reduce and affect the balanceOf.
+    idea.absoluteTotalVotes = idea.absoluteTotalVotes.add(abs(_amount).toUint256());
+    idea.totalVotes = idea.totalVotes.add(_amount);
+    totalStake = totalStake.add(abs(_amount).toUint256()); // Adds total amount staked at the moment
+    // TODO: Introduce conviction voting
     uint256 votingThreshold = minVotersQuorum.preciseMul(fund.totalSupply());
     if (_amount > 0 && idea.totalVotes.toUint256() >= votingThreshold) {
       idea.active = true;
@@ -246,17 +268,19 @@ contract FundIdeas is ReentrancyGuard {
   /**
    * Executes an idea that has been activated and gone through the cooldown period.
    * @param _ideaIndex                The position of the idea index in the array
+   * @param _capital                  The capital to allocate to this idea
    */
-  function executeInvestmentIdea(uint8 _ideaIndex) external onlyKeeper onlyActive {
-    // TODO: Check fund is in active window
+  function executeInvestmentIdea(uint8 _ideaIndex, uint256 _capital) public onlyKeeper onlyActive {
     require(_ideaIndex < ideas.length, "No idea available to execute");
     InvestmentIdea storage idea = ideas[_ideaIndex];
     require(idea.executedAt == 0, "Idea has already been executed");
     uint256 liquidReserveAsset = fund.getPositionBalance(fund.getReserveAsset()).toUint256();
-    require(liquidReserveAsset > idea.minRebalanceCapital, "Fund does not have enough capital to enter the idea");
-    require(block.timestamp.sub(idea.enteredCooldownAt) > ideaCooldownPeriod, "Idea has not completed the cooldown period");
+    require(_capital <= liquidReserveAsset, "Not enough capital");
+    require(idea.capitalAllocated.add(_capital) <= idea.maxCapitalRequested, "Max capital reached");
+    require(liquidReserveAsset >= idea.minRebalanceCapital, "Fund does not have enough capital to enter the idea");
+    require(block.timestamp.sub(idea.enteredCooldownAt) >= ideaCooldownPeriod, "Idea has not completed the cooldown period");
     // Execute enter trade
-    idea.capitalAllocated = idea.minRebalanceCapital;
+    idea.capitalAllocated = idea.capitalAllocated.add(_capital);
     bytes memory _data = idea.enterPayload;
     fund.callIntegration(idea.integration, 0, _data, idea.enterTokensNeeded, idea.enterTokensAmounts);
     // Sets the executed timestamp
@@ -268,11 +292,14 @@ contract FundIdeas is ReentrancyGuard {
    * We enter into the investment and add it to the executed ideas array.
    */
   function rebalanceInvestments() external onlyKeeper onlyActive {
-    // TODO: Check fund is in active window
     uint256 liquidReserveAsset = fund.getPositionBalance(fund.getReserveAsset()).toUint256();
     for (uint i = 0; i < ideas.length; i++) {
       InvestmentIdea storage idea = ideas[i];
-      // TODO:
+      uint256 percentage = idea.totalVotes.toUint256().preciseDiv(totalStake);
+      uint256 toAllocate = liquidReserveAsset.preciseMul(percentage);
+      if (toAllocate >= idea.minRebalanceCapital && toAllocate.add(idea.capitalAllocated) <= idea.maxCapitalRequested) {
+        executeInvestmentIdea(idea.index, toAllocate);
+      }
     }
   }
 
@@ -308,6 +335,7 @@ contract FundIdeas is ReentrancyGuard {
     // Mark as finalized
     idea.finalized = true;
     idea.exitedAt = block.timestamp;
+    totalStake = totalStake.sub(idea.absoluteTotalVotes);
     // Transfer rewards and update positions
      _transferIdeaRewards(_ideaIndex, capitalReturned);
   }
@@ -324,13 +352,10 @@ contract FundIdeas is ReentrancyGuard {
     uint8[] memory result;
     for (uint8 i = 0; i < ideas.length; i++) {
       InvestmentIdea memory idea = ideas[i];
-      // TODO: tweak this formula
-      // if (idea.totalVotes > 0 && idea.totalVoters >= minVotersQuorum) {
-      //   uint256 currentScore = idea.stake.mul(idea.totalVotes.toUint256()).mul(idea.totalVoters);
-      //   if (currentScore > maxScore) {
-      //     indexResult = i;
-      //   }
-      // }
+      // TODO: sort by score
+      if (isIdeaActive(idea)) {
+        result[i] = idea.index;
+      }
     }
     return result;
   }

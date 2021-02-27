@@ -39,7 +39,7 @@ interface IFundIdeas {
 
   function curateInvestmentIdea(uint8 _ideaIndex, int256 _amount) external;
   function rebalanceInvestments() external;
-  function executeInvestmentIdea(uint8 _ideaIndex) external;
+  function executeInvestmentIdea(uint8 _ideaIndex, uint256 _capital) external;
   function finalizeInvestment(uint _ideaIndex) external;
 
   function getActiveIdeas() external view returns (uint8[] memory);
