@@ -167,7 +167,7 @@ abstract contract BaseFund is ERC20 {
     bool public active;
 
     // FundIdeas
-    address fundIdeas;
+    address public fundIdeas;
 
     // List of initialized Integrations; Integrations connect with other money legos
     address[] public integrations;
@@ -410,8 +410,7 @@ abstract contract BaseFund is ERC20 {
     }
 
     function isValidIntegration(address _integration) public view returns (bool) {
-      return integrations.contains(_integration) &&
-        IBabController(controller).isValidIntegration(IIntegration(_integration).getName(), _integration);
+      return integrations.contains(_integration); //IBabController(controller).isValidIntegration(IIntegration(_integration).getName(), _integration);
     }
 
     function tradeFromInvestmentIdea(
@@ -614,10 +613,10 @@ abstract contract BaseFund is ERC20 {
         internal
     {
         if (_feeQuantity > 0) {
-            ERC20(_token).transfer(
+            require(ERC20(_token).transfer(
                 IBabController(controller).getFeeRecipient(),
                 _feeQuantity
-            );
+            ), "Protocol fee failed");
         }
     }
 

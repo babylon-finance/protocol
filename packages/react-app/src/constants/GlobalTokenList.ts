@@ -25,7 +25,7 @@ export interface TokenList {
   tokens: Token[];
 }
 
-export const UniswapTokenList: TokenList = {
+export const GlobalTokenList: TokenList = {
   "name": "Uniswap Default List",
   "timestamp": "2021-01-21T23:57:10.982Z",
   "version": {
@@ -347,4 +347,4 @@ export const UniswapTokenList: TokenList = {
   ]
 };
 
-export const TokensMapByAddress = new Map(UniswapTokenList.tokens.map(token => [token.address, token]));
+export const TokensMapByAddress = new Map(GlobalTokenList.tokens.map(token => [token.address, token]));

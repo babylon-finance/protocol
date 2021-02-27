@@ -4,7 +4,7 @@ const { ethers, waffle } = require("hardhat");
 const { loadFixture } = waffle;
 
 const addresses = require("../utils/addresses");
-const constants = require("../utils/constants");
+const { ONE_DAY_IN_SECONDS, NOW } = require("../utils/constants.js");
 const { deployFolioFixture } = require("./fixtures/ControllerFixture");
 
 describe("Fund", function() {
@@ -163,7 +163,7 @@ describe("Fund", function() {
         .deposit(ethers.utils.parseEther("1"), 1, userSigner3.getAddress(), {
           value: ethers.utils.parseEther("1")
         });
-      await controller.changeFundEndDate(fund1.address, constants.NOW); // Ends now
+      ethers.provider.send("evm_increaseTime", [ONE_DAY_IN_SECONDS * 90]);
       expect(await fund1.totalFunds()).to.equal(ethers.utils.parseEther("1.1"));
       expect(await fund1.totalContributors()).to.equal(2);
       await fund1
@@ -187,7 +187,7 @@ describe("Fund", function() {
     });
 
     it("a contributor cannot make a deposit when the fund ends", async function() {
-      await controller.changeFundEndDate(fund1.address, constants.NOW); // Ends now
+      ethers.provider.send("evm_increaseTime", [ONE_DAY_IN_SECONDS * 90]);
       await expect(
         fund1
           .connect(userSigner3)
@@ -203,7 +203,7 @@ describe("Fund", function() {
         .deposit(ethers.utils.parseEther("1"), 1, userSigner3.getAddress(), {
           value: ethers.utils.parseEther("1")
         });
-      await controller.changeFundEndDate(fund1.address, constants.NOW); // Ends now
+      ethers.provider.send("evm_increaseTime", [ONE_DAY_IN_SECONDS * 90]);
       expect(await fund1.totalFunds()).to.equal(ethers.utils.parseEther("1.1"));
       expect(await fund1.totalContributors()).to.equal(2);
       await expect(
