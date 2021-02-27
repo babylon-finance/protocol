@@ -99,7 +99,10 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
     }
 
     uint256 public maxDepositLimit; // Limits the amount of deposits
-    uint256 public fundEndsBy; // Timestamp when the fund ends and withdrawals are allowed
+    uint256 public fundActiveWindow;          // Duration of the fund active window
+    uint256 public fundWithdrawalWindow;      // Duration of the fund withdrawal window
+    uint256 public fundInitializedAt;         // Fund Initialized at timestamp
+    uint256 public fundCurrentActiveWindowStartedAt;   // Fund Initialized at timestamp
 
     // Fees
     uint256 public premiumPercentage; // Premium percentage (0.01% = 1e14, 1% = 1e16). This premium is a buffer around oracle
@@ -130,7 +133,6 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
      * @param _integrations           List of integrations to enable. All integrations must be approved by the Controller
      * @param _weth                   Address of the WETH ERC20
      * @param _controller             Address of the controller
-     * @param _reserveAsset           Address of the reserve asset ERC20
      * @param _creator                Address of the creator
      * @param _name                   Name of the Fund
      * @param _symbol                 Symbol of the Fund
@@ -140,7 +142,6 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
     constructor(
         address[] memory _integrations,
         address _weth,
-        address _reserveAsset,
         address _controller,
         address _creator,
         string memory _name,
@@ -150,7 +151,7 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
         BaseFund(
             _integrations,
             _weth,
-            _reserveAsset,
+            _weth,
             _controller,
             _creator,
             _name,
@@ -173,14 +174,16 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
      * @param _maxDepositLimit                Max deposit limit
      * @param _premiumPercentage              Premium percentage to avoid arbitrage
      * @param _minFundTokenSupply             Min fund token supply
-     * @param _fundDuration                   Fund duration
+     * @param _fundActiveWindow               Fund active window
+     * @param _fundWithdrawalWindow           Fund withdrawal window
      * @param _fundIdeas                      Address of the instance with the investment ideas
      */
     function initialize(
         uint256 _maxDepositLimit,
         uint256 _premiumPercentage,
         uint256 _minFundTokenSupply,
-        uint256 _fundDuration,
+        uint256 _fundActiveWindow,
+        uint256 _fundWithdrawalWindow,
         address _fundIdeas
     ) external onlyCreator onlyInactive payable {
         require(_maxDepositLimit < MAX_DEPOSITS_FUND_V1, "Max deposit limit needs to be under the limit");
@@ -192,27 +195,33 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
             "Premium must < max"
         );
         require(
-            _fundDuration <= ifcontroller.getMaxFundDuration() && _fundDuration >= ifcontroller.getMinFundDuration() ,
-            "Fund duration must be within the range allowed"
+            _fundActiveWindow <= ifcontroller.getMaxFundActiveWindow() && _fundActiveWindow >= ifcontroller.getMinFundActiveWindow() ,
+            "Fund active window must be within range"
+        );
+        require(
+            _fundWithdrawalWindow <= ifcontroller.getMaxWithdrawalWindow() && _fundWithdrawalWindow >= ifcontroller.getMinWithdrawalWindow() ,
+            "Fund active window must be within range"
         );
         require(
             _minFundTokenSupply > 0,
             "Min Fund token supply >= 0"
         );
+        // make initial deposit
+        uint256 initialDepositAmount = msg.value;
+        uint256 initialTokens = initialDepositAmount.div(initialBuyRate);
+        require(initialTokens >= minFundTokenSupply, "Initial Fund token supply too low");
         minFundTokenSupply = _minFundTokenSupply;
         premiumPercentage = _premiumPercentage;
         maxDepositLimit = _maxDepositLimit;
-        fundEndsBy = block.timestamp + _fundDuration;
+        fundActiveWindow = _fundActiveWindow;
+        fundWithdrawalWindow = _fundWithdrawalWindow;
+        fundInitializedAt = block.timestamp;
+        fundCurrentActiveWindowStartedAt = block.timestamp;
 
         IFundIdeas fundIdeasC = IFundIdeas(_fundIdeas);
         require(fundIdeasC.controller() == controller, "Controller must be the same");
         require(fundIdeasC.fund() == address(this), "Fund must be this contract");
         fundIdeas = _fundIdeas;
-
-        uint256 initialDepositAmount = msg.value;
-
-        // make initial deposit
-        uint256 initialTokens = initialDepositAmount.div(initialBuyRate);
 
         IWETH(weth).deposit{value: initialDepositAmount}();
 
@@ -222,13 +231,25 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
         _calculateAndEditPosition(
           weth,
           initialDepositAmount,
-          initialDepositAmount,
+          initialDepositAmount.toInt256(),
           0
         );
 
         require(totalSupply() > 0, "Fund must receive an initial deposit");
 
         active = true;
+    }
+
+    /**
+      * Restarts the current deposit window if needed
+      *
+    */
+    function restartWindow() public {
+      if (block.timestamp >= fundCurrentActiveWindowStartedAt.add(fundActiveWindow.add(fundWithdrawalWindow))) {
+        if (active) {
+          fundCurrentActiveWindowStartedAt = block.timestamp;
+        }
+      }
     }
 
     /**
@@ -244,16 +265,20 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
         uint256 _minFundTokenReceiveQuantity,
         address _to
     ) public payable nonReentrant onlyActive {
+        restartWindow();
         require(
             msg.value >= minContribution,
             ">= minContribution"
         );
-        require(block.timestamp < fundEndsBy, "Fund is closed");
+        require(block.timestamp >= fundCurrentActiveWindowStartedAt &&
+          block.timestamp < fundCurrentActiveWindowStartedAt.add(fundActiveWindow),
+          "Fund is not in the withdrawal window"
+        );
         // if deposit limit is 0, then there is no deposit limit
         if(maxDepositLimit > 0) {
           require(totalFundsDeposited.add(msg.value) <= maxDepositLimit, "Max Deposit Limit");
         }
-
+        require(msg.value == _reserveAssetQuantity, "ETH does not match");
         // Always wrap to WETH
         IWETH(weth).deposit{value: msg.value}();
 
@@ -284,9 +309,13 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
         uint256 _minReserveReceiveQuantity,
         address payable _to
     ) external nonReentrant onlyContributor onlyActive {
-        require(block.timestamp > fundEndsBy, "Withdrawals are disabled until fund ends");
+        require(block.timestamp >= fundCurrentActiveWindowStartedAt.add(fundActiveWindow) &&
+          block.timestamp < fundCurrentActiveWindowStartedAt.add(fundActiveWindow).add(fundWithdrawalWindow),
+          "Fund is not in the withdrawal window"
+        );
+        // require(block.timestamp > fundEndsBy, "Withdrawals are disabled until fund ends");
         require(
-            _fundTokenQuantity <= ERC20(address(this)).balanceOf(msg.sender),
+            _fundTokenQuantity <= balanceOf(msg.sender),
             "Withdrawal amount <= to deposited amount"
         );
         _validateReserveAsset(reserveAsset, _fundTokenQuantity);
@@ -309,13 +338,8 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
         );
         totalFunds = totalFunds.sub(withdrawalInfo.netFlowQuantity).sub(withdrawalInfo.protocolFees);
 
-        if (reserveAsset != weth) {
-            // Instruct the Fund to transfer the reserve asset back to the user
-            ERC20(reserveAsset).transfer(_to, withdrawalInfo.netFlowQuantity);
-        } else {
-            IWETH(weth).withdraw(withdrawalInfo.netFlowQuantity);
-            _to.transfer(withdrawalInfo.netFlowQuantity);
-        }
+        IWETH(weth).withdraw(withdrawalInfo.netFlowQuantity);
+        _to.transfer(withdrawalInfo.netFlowQuantity);
 
         _handleRedemptionFees(reserveAsset, withdrawalInfo);
 
@@ -344,17 +368,13 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
       maxDepositLimit = limit;
     }
 
-    function setFundEndDate(uint256 _endsTimestamp) external onlyGovernanceFund {
-      fundEndsBy = _endsTimestamp;
-    }
-
     // Any tokens (other than the target) that are sent here by mistake are recoverable by the owner
     // TODO: If it is not whitelisted, trade it for weth
     function sweep(address _token) external onlyContributor {
        require(!_hasPosition(_token), "Token is one of the fund positions");
        uint256 balance = ERC20(_token).balanceOf(address(this));
        require(balance > 0, "Token balance > 0");
-       _calculateAndEditPosition(_token, balance, ERC20(_token).balanceOf(address(this)), 0);
+       _calculateAndEditPosition(_token, balance, ERC20(_token).balanceOf(address(this)).toInt256(), 0);
     }
 
     /* ============ External Getter Functions ============ */
@@ -585,20 +605,12 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
         address _reserveAsset,
         ActionInfo memory _depositInfo
     ) internal {
-        // Only need to transfer the collateral if different than WETH
-        if (_reserveAsset != weth) {
-          ERC20(_reserveAsset).transferFrom(
-              msg.sender,
-              address(this),
-              _depositInfo.netFlowQuantity
-          );
-        }
         if (_depositInfo.protocolFees > 0) {
-            ERC20(_reserveAsset).transferFrom(
-                msg.sender,
+            require(ERC20(_reserveAsset).transferFrom(
+                address(this),
                 IBabController(controller).getFeeRecipient(),
                 _depositInfo.protocolFees
-            );
+            ), "Deposit Protocol fee failed");
         }
     }
 
@@ -612,7 +624,7 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
             _reserveAsset,
             _depositInfo.newReservePositionBalance,
             address(0),
-            msg.value,
+            msg.value.toInt256(),
             0
         );
 
@@ -634,7 +646,7 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
             _reserveAsset,
             _withdrawalInfo.newReservePositionBalance,
             address(0),
-            uint256(-_withdrawalInfo.netFlowQuantity),
+            int256(-_withdrawalInfo.netFlowQuantity),
             0
         );
 
@@ -684,10 +696,10 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
         uint perfFee = 0;
         if (!_isDeposit) {
           uint percentage = balanceOf(msg.sender).div(_fundTokenQuantity); // Divide by the % tokens being withdrawn
-          uint profits = contributors[msg.sender].totalDeposit.div(percentage).sub(_reserveAssetQuantity);
+          int256 profits = _reserveAssetQuantity.toInt256().sub(contributors[msg.sender].totalDeposit.toInt256().div(percentage.toInt256()));
           if (profits > 0) {
             perfFee = IBabController(controller)
-            .getProtocolPerformanceFee().preciseMul(profits);
+            .getProtocolPerformanceFee().preciseMul(profits.toUint256());
           }
         }
 
@@ -816,7 +828,7 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
 
     function _validateOnlyContributor(address _caller) internal view {
         require(
-            ERC20(address(this)).balanceOf(_caller) > 0,
+            balanceOf(_caller) > 0,
             "Only participant can withdraw"
         );
     }

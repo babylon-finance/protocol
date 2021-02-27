@@ -167,7 +167,7 @@ abstract contract BaseFund is ERC20 {
     bool public active;
 
     // FundIdeas
-    address fundIdeas;
+    address public fundIdeas;
 
     // List of initialized Integrations; Integrations connect with other money legos
     address[] public integrations;
@@ -385,6 +385,8 @@ abstract contract BaseFund is ERC20 {
      *
      * @param _component                Address of the component
      * @param _newBalance               Current balance of the component
+     * @param _deltaBalance             Delta applied on this op
+     * @param _subpositionStatus        Status of the position
      * @return                          Current component balance
      * @return                          Previous position balance
      * @return                          New position balance
@@ -392,7 +394,7 @@ abstract contract BaseFund is ERC20 {
     function calculateAndEditPosition(
         address _component,
         uint256 _newBalance,
-        uint256 _deltaBalance,
+        int256 _deltaBalance,
         uint8 _subpositionStatus
     )
         public
@@ -408,8 +410,7 @@ abstract contract BaseFund is ERC20 {
     }
 
     function isValidIntegration(address _integration) public view returns (bool) {
-      return integrations.contains(_integration) &&
-        IBabController(controller).isValidIntegration(IIntegration(_integration).getName(), _integration);
+      return integrations.contains(_integration); //IBabController(controller).isValidIntegration(IIntegration(_integration).getName(), _integration);
     }
 
     function tradeFromInvestmentIdea(
@@ -503,7 +504,7 @@ abstract contract BaseFund is ERC20 {
       address _component,
       int256 _amount,
       address _integration,
-      uint256 _deltaBalance,
+      int256 _deltaBalance,
       uint8 _subpositionStatus
     ) internal {
       IFund.Position storage position = positionsByComponent[_component];
@@ -527,7 +528,7 @@ abstract contract BaseFund is ERC20 {
     function _calculateAndEditPosition(
         address _component,
         uint256 _newBalance,
-        uint256 _deltaBalance,
+        int256 _deltaBalance,
         uint8 _subpositionStatus
     )
         internal
@@ -566,7 +567,7 @@ abstract contract BaseFund is ERC20 {
         address _component,
         uint256 _newBalance,
         address _integration,
-        uint256 _deltaBalance,
+        int256 _deltaBalance,
         uint8 _subpositionStatus
     ) internal {
         bool isPositionFound = _hasPosition(_component);
@@ -612,10 +613,10 @@ abstract contract BaseFund is ERC20 {
         internal
     {
         if (_feeQuantity > 0) {
-            ERC20(_token).transfer(
+            require(ERC20(_token).transfer(
                 IBabController(controller).getFeeRecipient(),
                 _feeQuantity
-            );
+            ), "Protocol fee failed");
         }
     }
 
