@@ -11,27 +11,27 @@ const ExternalTarget = {
   discord: "discord",
   docs: "docs",
   litepaper: "litepaper",
-  team: "team",
   medium: "medium",
   telegram: "telegram",
   twitter: "twitter",
 };
 
 const AppFooter = () => {
-  const onClickSocialIcon = (target) => {
+  const getTargetLink = (target) => {
     switch (target) {
       case ExternalTarget.twitter:
-        window.open('https://twitter.com/BabylonFinance');
-        break
+        return 'https://twitter.com/BabylonFinance';
       case ExternalTarget.medium:
-        window.open('https://medium.com/babylon-finance');
-        break
+        return 'https://medium.com/babylon-finance';
       case ExternalTarget.discord:
-        window.open('https://discord.gg/eGatHr2a5u');
-        break
+        return 'https://discord.gg/eGatHr2a5u';
       case ExternalTarget.telegram:
-        window.open('https://t.me/joinchat/HQ5TId7ZUCb9ktgT');
-        break
+        return 'https://t.me/joinchat/HQ5TId7ZUCb9ktgT';
+      // Update these when we have the new links!!!!!!!
+      case ExternalTarget.docs:
+        return 'https://t.me/joinchat/HQ5TId7ZUCb9ktgT';
+      case ExternalTarget.litepaper:
+        return 'https://t.me/joinchat/HQ5TId7ZUCb9ktgT';
     }
   }
 
@@ -39,27 +39,37 @@ const AppFooter = () => {
     <FooterWrapper>
       <ContainerLarge>
         <FooterContentWrapper>
-          {/*  <FooterTextLinkBlock>
-                <FooterTextLink>Documentation</FooterTextLink>
-                <FooterTextLink>Litepaper</FooterTextLink>
-                <FooterTextLink>Core Team</FooterTextLink>
-              </FooterTextLinkBlock>
-          */}
+           <FooterTextLinkBlock>
+            <FooterTextLink href={getTargetLink(ExternalTarget.docs)} target="_blank" rel="noopener noreferrer">
+              Documentation
+            </FooterTextLink>
+            <FooterTextLink href={getTargetLink(ExternalTarget.litepaper)} target="_blank" rel="noopener noreferrer">
+              Litepaper
+            </FooterTextLink>
+          </FooterTextLinkBlock>
           <FooterSocialLinkBlock>
             <FooterSocialLinkLabel>Join us!</FooterSocialLinkLabel>
             <FooterSocialLinkIcons>
-              <FooterSocialIcon>
-                <TelegramLogo onClick={() => onClickSocialIcon(ExternalTarget.telegram)} />
-              </FooterSocialIcon>
-              <FooterSocialIcon>
-                <DiscordLogo onClick={() => onClickSocialIcon(ExternalTarget.discord)} />
-              </FooterSocialIcon>
-              <FooterSocialIcon>
-                <MediumLogo onClick={() => onClickSocialIcon(ExternalTarget.medium)} />
-              </FooterSocialIcon>
-              <FooterSocialIcon>
-                <TwitterLogo onClick={() => onClickSocialIcon(ExternalTarget.twitter)} />
-              </FooterSocialIcon>
+              <a href={getTargetLink(ExternalTarget.telegram)} target="_blank" rel="noopener noreferrer">
+                <FooterSocialIcon>
+                  <TelegramLogo/>
+                </FooterSocialIcon>
+              </a>
+              <a href={getTargetLink(ExternalTarget.discord)} target="_blank" rel="noopener noreferrer">
+                <FooterSocialIcon>
+                  <DiscordLogo />
+                </FooterSocialIcon>
+              </a>
+              <a href={getTargetLink(ExternalTarget.medium)} target="_blank" rel="noopener noreferrer">
+                <FooterSocialIcon>
+                  <MediumLogo />
+                </FooterSocialIcon>
+              </a>
+              <a href={getTargetLink(ExternalTarget.twitter)} target="_blank" rel="noopener noreferrer">
+                <FooterSocialIcon>
+                  <TwitterLogo />
+                </FooterSocialIcon>
+              </a>
             </FooterSocialLinkIcons>
           </FooterSocialLinkBlock>
           <FooterLogoWrapper>
@@ -77,26 +87,19 @@ const ContainerLarge = styled(Box)`
   position: relative;
   width: 100%;
 
-  @media only screen and (max-width: 840px) {
+  @media only screen and (max-width: 1240px) {
     padding: 30px 30px 0 30px;
   }
-`
-
-const MailingListWrapper = styled.div`
-  font-family: cera-light;
-  color: var(--primary);
-  min-height: 280px;
-  background: var(--primary);
-  filter: alpha(opacity=10);
-  -moz-opacity: 0.1;
-  opacity: 0.1;
-  width: 100%;
 `
 
 const FooterTextLinkBlock = styled.div`
   display: flex;
   flex-flow: column;
-  min-width: 145px;
+  min-width: 175px;
+
+  @media only screen and (max-width: 1240px) {
+    min-width: 140px;
+  }
 `
 
 const FooterSocialLinkBlock = styled.div`
@@ -142,6 +145,7 @@ const FooterTextLink = styled(StyledLink)`
   &:hover {
     color: var(--primary);
     opacity: 0.3;
+    text-decoration: none;
   }
 `
 
@@ -151,7 +155,7 @@ const FooterContentWrapper = styled.div`
   min-height: 200px;
   width: 100%;
 
-  @media only screen and (max-width: 840px) {
+  @media only screen and (max-width: 1240px) {
     min-height: 100px;
   }
 `
@@ -167,7 +171,7 @@ const FooterLogoWrapper = styled.div`
   margin-left: auto;
   padding: 5px;
 
-  @media only screen and (max-width: 840px) {
+  @media only screen and (max-width: 1240px) {
     display: none;
   }
 `
