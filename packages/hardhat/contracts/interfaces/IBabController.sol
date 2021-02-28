@@ -42,6 +42,7 @@ interface IBabController {
     function initializeIntegration(address _integration, address _fund) external;
     function editIntegration(string memory _name, address _integration) external;
     function removeIntegration(string memory _name) external;
+    function setProtocolReservePoolDiscount(uint256 _newProtocolReservePoolDiscount) external;
     function setMinWithdrawalWindow(uint256 _newMinWithdrawalWindow) external;
     function setMaxWithdrawalWindow(uint256 _newMaxWithdrawalWindow) external;
     function setMinFundActiveWindow(uint256 _newMinFundActiveWindow) external;
@@ -55,6 +56,7 @@ interface IBabController {
 
     // Getters
     function owner() external view returns (address);
+    function protocolReservePoolDiscount() external view returns (uint256);
     function getPriceOracle() external view returns (address);
     function getReservePool() external view returns (address);
     function getFundValuer() external view returns(address);

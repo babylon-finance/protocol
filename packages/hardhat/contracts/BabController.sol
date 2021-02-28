@@ -65,6 +65,7 @@ contract BabController is Ownable {
     event MaxWithdrawalWindowChanged(uint256 _newMaxWithdrawalWindow);
     event MinFundActiveWindowChanged(uint256 _newminFundActiveWindow);
     event MaxFundActiveWindowChanged(uint256 _newmaxFundActiveWindow);
+    event ReservePoolDiscountChanged(uint256 _newReservePoolDiscount);
 
     event ModuleAdded(address indexed _module);
     event ModuleRemoved(address indexed _module);
@@ -119,6 +120,8 @@ contract BabController is Ownable {
     uint256 public protocolFundCreationFee = 0; // (0.01% = 1e14, 1% = 1e16)
     uint256 public protocolDepositFundTokenFee = 0; // (0.01% = 1e14, 1% = 1e16)
     uint256 public protocolWithdrawalFundTokenFee = 5e15; // (0.01% = 1e14, 1% = 1e16)
+
+    uint256 public protocolReservePoolDiscount = 1e17; // 10%
 
     /* ============ Functions ============ */
 
@@ -462,6 +465,19 @@ contract BabController is Ownable {
         minWithdrawalWindow = _newMinWithdrawalWindow;
 
         emit MinWithdrawalWindowChanged(_newMinWithdrawalWindow);
+    }
+
+    /**
+     * PRIVILEGED GOVERNANCE FUNCTION. Allows governance to edit the reservePool discount
+     *
+     * @param _newProtocolReservePoolDiscount      New reserve pool discount
+     */
+    function setProtocolReservePoolDiscount(uint256 _newProtocolReservePoolDiscount) external onlyOwner {
+        require(_newProtocolReservePoolDiscount > 0, "There needs to be a discount");
+
+        protocolReservePoolDiscount = _newProtocolReservePoolDiscount;
+
+        emit ReservePoolDiscountChanged(_newProtocolReservePoolDiscount);
     }
 
     /**
