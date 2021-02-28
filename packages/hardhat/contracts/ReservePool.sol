@@ -118,8 +118,8 @@ contract ReservePool is ERC20, ReentrancyGuard {
     function claim(uint256 _amount, address payable _to) external nonReentrant {
       require(_amount < balanceOf(msg.sender), "Insufficient balance");
       _burn(msg.sender, _amount);
-      // TODO: add valuation of all the community tokens that the reserve pool has
       uint ethAmount = _amount.preciseDiv(totalSupply()).preciseMul(getReservePoolValuation());
+      require(IWETH(weth).balanceOf(address(this)) >= ethAmount, "Not enough liquidity in the reserve pool");
       IWETH(weth).withdraw(ethAmount);
       _to.transfer(ethAmount);
       emit ReservePoolClaim(msg.sender, _amount, ethAmount, block.timestamp);
