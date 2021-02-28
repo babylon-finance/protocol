@@ -6,7 +6,7 @@ import { Token, GlobalTokenList, TokensMapByAddress } from "../../constants/Glob
 import KyberTradeIntegrationAddress from "../../contracts/KyberTradeIntegration.address";
 
 import { parseEther } from "@ethersproject/units";
-import { Box, Button, Card, Heading, Input, Loader, Field, Flex, Form } from 'rimble-ui';
+import { Box, Button, Heading, Input, Loader, Field, Flex, Form } from 'rimble-ui';
 
 import { usePoller } from "eth-hooks";
 import React, { useCallback, useEffect, useState } from "react";

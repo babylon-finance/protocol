@@ -14,4 +14,5 @@ module.exports = {
   OneInchTradeIntegration: "OneInchTradeIntegration",
   UniswapPoolIntegration: "UniswapPoolIntegration",
   YearnVaultIntegration: "YearnVaultIntegration",
+  YRegistry: "YRegistry",
 };

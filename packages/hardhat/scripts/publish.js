@@ -109,7 +109,8 @@ async function main() {
     { name: "IKyberNetworkProxy.sol", path: "interfaces/external/kyber/" },
     { name: "IVault.sol", path: "interfaces/external/yearn/" },
     { name: "IERC20.sol", path: "../@openzeppelin/contracts/token/ERC20/" },
-    { name: "IUniswapV2Pair.sol", path: "interfaces/external/uniswap/" }
+    { name: "IUniswapV2Pair.sol", path: "interfaces/external/uniswap/" },
+    { name: "YRegistry.sol", path: "interfaces/external/yearn/" }
   ];
   externalInterfaces.forEach(interfaceC => {
     publishAndPushContract(interfaceC.name, interfaceC.path);
