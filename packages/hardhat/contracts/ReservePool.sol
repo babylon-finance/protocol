@@ -65,14 +65,12 @@ contract ReservePool is ERC20, ReentrancyGuard {
     string constant SYMBOL = "RBABL";
 
     uint256 constant MIN_DEPOSIT = 1e17; // Min Deposit
-    uint256 constant BUY_RATE = 1e8; // Makes the rpool token a more manageable number
 
     // Instance of the Controller contract
     address public controller;
     address public constant weth = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
 
     mapping(address => uint256) public communityTokenBalances; // Balances of tokens per community
-    uint256 public wethBalance;
 
     /* ============ Constructor ============ */
 
@@ -87,13 +85,26 @@ contract ReservePool is ERC20, ReentrancyGuard {
 
     /* ============ External Functions ============ */
 
+    function getReservePoolValuation() public returns (uint256) {
+      uint total = 0;
+      address[] memory _communities = IBabController(controller).getFunds();
+      for (uint i = 0; i < _communities.length; i++) {
+        uint256 communityBalance = IClosedFund(_communities[i]).balanceOf(address(this));
+        if (communityBalance > 0) {
+          uint256 communityValuation = IFundValuer(IBabController(controller).getFundValuer()).calculateFundValuation(_communities[i], weth);
+          total = total.add(communityValuation.preciseMul(communityBalance));
+        }
+      }
+      return total.add(IWETH(weth).balanceOf(address(this)));
+    }
+
     /**
      * Deposits ETH and obtains RBABL. The Babylon Finance Reserve Pool tokens
      *
      */
-    function deposit() public payable nonReentrant {
+    function deposit() external payable nonReentrant {
       require(msg.value >= MIN_DEPOSIT, "Send at least 0.1 eth");
-      _mint(msg.sender, msg.value.div(BUY_RATE));
+      _mint(msg.sender, msg.value);
       IWETH(weth).deposit{value: msg.value}();
       emit ReservePoolDeposit(msg.sender, msg.value, block.timestamp);
     }
@@ -107,7 +118,8 @@ contract ReservePool is ERC20, ReentrancyGuard {
     function claim(uint256 _amount, address payable _to) external nonReentrant {
       require(_amount < balanceOf(msg.sender), "Insufficient balance");
       _burn(msg.sender, _amount);
-      uint ethAmount = _amount.preciseDiv(totalSupply()).preciseMul(IWETH(weth).balanceOf(address(this)));
+      // TODO: add valuation of all the community tokens that the reserve pool has
+      uint ethAmount = _amount.preciseDiv(totalSupply()).preciseMul(getReservePoolValuation());
       IWETH(weth).withdraw(ethAmount);
       _to.transfer(ethAmount);
       emit ReservePoolClaim(msg.sender, _amount, ethAmount, block.timestamp);

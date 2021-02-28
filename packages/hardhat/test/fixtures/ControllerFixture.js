@@ -10,7 +10,6 @@ async function deployFolioFixture() {
   const FundIdeas = await ethers.getContractFactory("FundIdeas", owner);
 
   const BabController = await ethers.getContractFactory("BabController", owner);
-  console.log(argsUtil.readArgumentsFile("BabController"));
   const babController = await BabController.deploy(
     ...argsUtil.readArgumentsFile("BabController")
   );
