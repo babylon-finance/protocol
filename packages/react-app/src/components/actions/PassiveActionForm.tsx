@@ -100,7 +100,6 @@ const PassiveActionForm = ({
   const formValidated = true;
 
   const handleVaultNameOnChange = e => {
-    console.log(vaults);
     setVaultName(e.target.value);
     if (vaults) {
       setVault(getVaultByName(vaults, e.target.value));
