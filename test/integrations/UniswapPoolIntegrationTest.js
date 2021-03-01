@@ -72,7 +72,7 @@ describe("UniswapPoolIntegrationTest", function() {
           addresses.uniswap.pairs.wethdai,
           ethers.utils.parseEther("20"),
           [addresses.tokens.DAI, addresses.tokens.WETH],
-          [ethers.utils.parseEther("1000"), ethers.utils.parseEther("0.9")]
+          [ethers.utils.parseEther("1000"), ethers.utils.parseEther("1.5")]
         ]
       );
 

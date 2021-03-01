@@ -2,7 +2,7 @@ const { expect } = require("chai");
 const { ethers, waffle } = require("hardhat");
 
 const { loadFixture } = waffle;
-const { EMPTY_BYTES } = require("../utils/constants");
+const { EMPTY_BYTES, ONE_DAY_IN_SECONDS } = require("../utils/constants");
 const addresses = require("../utils/addresses");
 const constants = require("../utils/constants");
 const { deployFolioFixture } = require("./fixtures/ControllerFixture");
@@ -109,7 +109,7 @@ describe("Position testing", function() {
       const tokenBalance = await fund1.balanceOf(userSigner3.getAddress());
       const supplyBefore = await fund1.totalSupply();
       const wethPositionBefore = await fund1.getPositionBalance(weth.address);
-      await controller.changeFundEndDate(fund1.address, constants.NOW); // Ends now
+      ethers.provider.send("evm_increaseTime", [ONE_DAY_IN_SECONDS * 90]);
       const protocolFeeRecipient = await weth.balanceOf(ownerSigner.address);
       await fund1
         .connect(userSigner3)
