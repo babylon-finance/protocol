@@ -1,42 +1,45 @@
 {
-  "name": "@defi-advisor/monorepo",
+  "name": "@babylon-finance/protocol",
   "version": "1.0.0",
-  "keywords": [
-    "ethereum",
-    "react",
-    "uniswap",
-    "workspaces",
-    "yarn"
-  ],
-  "private": true,
+  "main": "index.js",
+  "license": "MIT",
+  "devDependencies": {
+    "@nomiclabs/hardhat-ethers": "^2.0.1",
+    "@nomiclabs/hardhat-waffle": "^2.0.1",
+    "eslint": "^7.2.0",
+    "eslint-config-airbnb": "^18.2.1",
+    "eslint-config-prettier": "^6.11.0",
+    "eslint-plugin-babel": "^5.3.1",
+    "eslint-plugin-import": "^2.22.1",
+    "eslint-plugin-jsx-a11y": "^6.4.1",
+    "eslint-plugin-prettier": "^3.1.4",
+    "eslint-plugin-react": "^7.21.5",
+    "eslint-plugin-react-hooks": "^4.0.0",
+    "hardhat-contract-sizer": "^2.0.2",
+    "hardhat-deploy-ethers": "^0.3.0-beta.7",
+    "hardhat-docgen": "^1.0.3",
+    "hardhat-gas-reporter": "^1.0.4"
+  },
+  "dependencies": {
+    "@openzeppelin/contracts": "^3.3.0",
+    "chai": "^4.2.0",
+    "chalk": "^4.1.0",
+    "ethereum-waffle": "^3.0.2",
+    "ethers": "^5.0.7",
+    "hardhat": "^2.0.5",
+    "node-watch": "^0.6.4",
+    "superagent": "^6.1.0"
+  },
   "scripts": {
-    "react-app:build": "yarn workspace @defi-advisor/react-app build --max-old-space-size=12288",
-    "react-app:eject": "yarn workspace @defi-advisor/react-app eject",
-    "react-app:start": "yarn workspace @defi-advisor/react-app start",
-    "react-app:test": "yarn workspace @defi-advisor/react-app test",
-    "build": "yarn workspace @defi-advisor/react-app build --max-old-space-size=12288",
-    "chain": "yarn workspace @defi-advisor/hardhat chain",
-    "node": "yarn workspace @defi-advisor/hardhat node",
-    "test": "yarn workspace @defi-advisor/hardhat test",
-    "start": "yarn workspace @defi-advisor/react-app start",
-    "compile": "yarn workspace @defi-advisor/hardhat compile",
-    "deploy": "yarn workspace @defi-advisor/hardhat deploy",
-    "watch": "yarn workspace @defi-advisor/hardhat watch",
-    "accounts": "yarn workspace @defi-advisor/hardhat accounts",
-    "balance": "yarn workspace @defi-advisor/hardhat balance",
-    "send": "yarn workspace @defi-advisor/hardhat send",
-    "ipfs": "yarn workspace @defi-advisor/react-app ipfs",
-    "surge": "yarn workspace @defi-advisor/react-app surge --domain dreary-window.surge.sh",
-    "s3": "yarn workspace @defi-advisor/react-app s3",
-    "ship": "yarn workspace @defi-advisor/react-app ship",
-    "generate": "cd packages/hardhat && npx hardhat generate",
-    "account": "cd packages/hardhat && npx hardhat account",
-    "flatten": "cd packages/hardhat && npx hardhat flatten"
-  },
-  "workspaces": {
-    "packages": [
-      "packages/*"
-    ]
-  },
-  "devDependencies": {}
+    "chain": "hardhat node",
+    "test": "hardhat test --network hardhat",
+    "compile": "hardhat compile",
+    "deploy": "hardhat run scripts/deploy.js --network localhost && hardhat run scripts/publish.js",
+    "publish": "hardhat run scripts/publish.js",
+    "deploy-mainnet": "hardhat run scripts/deploy.js --network mainnet && hardhat run scripts/publish.js",
+    "watch": "node scripts/watch.js",
+    "accounts": "hardhat accounts",
+    "balance": "hardhat balance",
+    "send": "hardhat send"
+  }
 }
