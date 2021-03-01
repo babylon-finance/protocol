@@ -65,11 +65,13 @@ contract BabController is Ownable {
     event MaxWithdrawalWindowChanged(uint256 _newMaxWithdrawalWindow);
     event MinFundActiveWindowChanged(uint256 _newminFundActiveWindow);
     event MaxFundActiveWindowChanged(uint256 _newmaxFundActiveWindow);
+    event ReservePoolDiscountChanged(uint256 _newReservePoolDiscount);
 
     event ModuleAdded(address indexed _module);
     event ModuleRemoved(address indexed _module);
 
     event PriceOracleChanged(address indexed _resource);
+    event ReservePoolChanged(address indexed _reservePool);
     event FundValuerChanged(address indexed _resource);
 
     /* ============ Modifiers ============ */
@@ -81,6 +83,7 @@ contract BabController is Ownable {
     address[] public reserveAssets;
     address public fundValuer;
     address public priceOracle;
+    address public reservePool;
     // Mapping of fund => integration identifier => integration address
     mapping(bytes32 => address) private integrations;
 
@@ -118,6 +121,8 @@ contract BabController is Ownable {
     uint256 public protocolDepositFundTokenFee = 0; // (0.01% = 1e14, 1% = 1e16)
     uint256 public protocolWithdrawalFundTokenFee = 5e15; // (0.01% = 1e14, 1% = 1e16)
 
+    uint256 public protocolReservePoolDiscount = 1e17; // 10%
+
     /* ============ Functions ============ */
 
     /**
@@ -126,15 +131,18 @@ contract BabController is Ownable {
      * @param _feeRecipient           Address of the initial protocol fee recipient
      * @param _fundValuer             Address of the initial fundValuer
      * @param _priceOracle            Address of the initial priceOracle
+     * @param _reservePool            Address of the initial reservePool
      */
     constructor(
         address _feeRecipient,
         address _fundValuer,
-        address _priceOracle
+        address _priceOracle,
+        address _reservePool
     ) {
         feeRecipient = _feeRecipient;
         fundValuer = _fundValuer;
         priceOracle = _priceOracle;
+        reservePool = _reservePool;
     }
 
     /* ============ External Functions ============ */
@@ -328,6 +336,21 @@ contract BabController is Ownable {
     }
 
     /**
+     * PRIVILEGED GOVERNANCE FUNCTION. Allows governance to change the reserve pool
+     *
+     * @param _reservePool               Address of the new reserve pool
+     */
+    function editReservePool(address _reservePool) external onlyOwner {
+        require(_reservePool != reservePool, "Reserve Pool already exists");
+
+        require(_reservePool != address(0), "Reserve pool must exist");
+
+        reservePool = _reservePool;
+
+        emit ReservePoolChanged(_reservePool);
+    }
+
+    /**
      * PRIVILEGED GOVERNANCE FUNCTION. Allows governance to change the integration registry
      *
      * @param _fundValuer Address of the new price oracle
@@ -445,6 +468,19 @@ contract BabController is Ownable {
     }
 
     /**
+     * PRIVILEGED GOVERNANCE FUNCTION. Allows governance to edit the reservePool discount
+     *
+     * @param _newProtocolReservePoolDiscount      New reserve pool discount
+     */
+    function setProtocolReservePoolDiscount(uint256 _newProtocolReservePoolDiscount) external onlyOwner {
+        require(_newProtocolReservePoolDiscount > 0, "There needs to be a discount");
+
+        protocolReservePoolDiscount = _newProtocolReservePoolDiscount;
+
+        emit ReservePoolDiscountChanged(_newProtocolReservePoolDiscount);
+    }
+
+    /**
      * PRIVILEGED GOVERNANCE FUNCTION. Allows governance to edit the protol max epoch allowed in funds
      *
      * @param _newMaxWithdrawalWindow      New max fund epoch duration
@@ -488,6 +524,10 @@ contract BabController is Ownable {
 
     function getPriceOracle() external view returns (address) {
         return priceOracle;
+    }
+
+    function getReservePool() external view returns (address) {
+      return reservePool;
     }
 
     function getFundValuer() external view returns (address) {
@@ -649,6 +689,7 @@ contract BabController is Ownable {
         return (isFund[_contractAddress] ||
             fundValuer == _contractAddress ||
             priceOracle == _contractAddress ||
+            reservePool == _contractAddress ||
             _contractAddress == address(this));
     }
 
