@@ -88,7 +88,7 @@ describe("UniswapPoolIntegrationTest", function() {
       );
 
       expect(await daiWethPair.balanceOf(fund.address)).to.be.gt(
-        ethers.utils.parseEther("22")
+        ethers.utils.parseEther("19")
       );
 
       const dataExit = uniAbi.encodeFunctionData(
@@ -97,7 +97,7 @@ describe("UniswapPoolIntegrationTest", function() {
           addresses.uniswap.pairs.wethdai,
           await daiWethPair.balanceOf(fund.address),
           [addresses.tokens.DAI, addresses.tokens.WETH],
-          [ethers.utils.parseEther("900"), ethers.utils.parseEther("0.7")]
+          [ethers.utils.parseEther("900"), ethers.utils.parseEther("0.2")]
         ]
       );
 
@@ -116,7 +116,7 @@ describe("UniswapPoolIntegrationTest", function() {
         ethers.utils.parseEther("999")
       );
       expect(await wethToken.balanceOf(fund.address)).to.be.gt(
-        ethers.utils.parseEther("10.00")
+        ethers.utils.parseEther("4")
       );
     });
   });
