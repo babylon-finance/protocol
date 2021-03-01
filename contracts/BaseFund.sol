@@ -308,7 +308,11 @@ abstract contract BaseFund is ERC20 {
       for (uint i = 0; i < _tokensNeeded.length; i++) {
         if (_tokensNeeded[i] != reserveAsset) {
           uint pricePerTokenUnit = _getPrice(reserveAsset, _tokensNeeded[i]);
-          _trade("kyber", reserveAsset, _tokenAmountsNeeded[i].preciseDiv(pricePerTokenUnit),_tokensNeeded[i], _tokenAmountsNeeded[i], _data);
+          uint slippageAllowed = 1e16; // 1%
+          uint exactAmount = _tokenAmountsNeeded[i].preciseDiv(pricePerTokenUnit);
+          uint amountOfReserveAssetToAllow = exactAmount.add(exactAmount.preciseMul(slippageAllowed));
+          require(ERC20(reserveAsset).balanceOf(address(this)) >= amountOfReserveAssetToAllow, "Need enough liquid reserve asset");
+          _trade("kyber", reserveAsset, amountOfReserveAssetToAllow,_tokensNeeded[i], _tokenAmountsNeeded[i], _data);
         }
       }
       return _invoke(_integration, _value, _data);
