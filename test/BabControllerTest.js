@@ -14,32 +14,32 @@ describe("BabController", function() {
   let userSigner1;
   let userSigner2;
   let userSigner3;
-  let fund1;
-  let fund2;
-  let fund3;
+  let community1;
+  let community2;
+  let community3;
 
   beforeEach(async () => {
     const {
       babController,
       priceOracle,
-      fundValuer,
+      communityValuer,
       owner,
       signer1,
-      funds,
+      communitys,
       signer2,
       signer3
     } = await loadFixture(deployFolioFixture);
 
     controller = babController;
     oracle = priceOracle;
-    valuer = fundValuer;
+    valuer = communityValuer;
     ownerSigner = owner;
     userSigner1 = signer1;
     userSigner2 = signer2;
     userSigner3 = signer3;
-    fund1 = funds.one;
-    fund2 = funds.two;
-    fund3 = funds.three;
+    community1 = communitys.one;
+    community2 = communitys.two;
+    community3 = communitys.three;
     // console.log(
     //   "Config:",
     //   oracle,
@@ -58,10 +58,10 @@ describe("BabController", function() {
     });
   });
 
-  describe("Interacting with Funds", function() {
-    it("should start with 3 funds", async function() {
-      const funds = await controller.getFunds();
-      expect(funds.length).to.equal(3);
+  describe("Interacting with Communities", function() {
+    it("should start with 3 communitys", async function() {
+      const communitys = await controller.getCommunities();
+      expect(communitys.length).to.equal(3);
     });
 
     it("should set the protocol manager address", async function() {
@@ -70,39 +70,39 @@ describe("BabController", function() {
       );
     });
 
-    it("can create funds", async function() {
-      expect(!!fund1).to.equal(true);
-      expect(!!fund2).to.equal(true);
-      expect(!!fund3).to.equal(true);
+    it("can create communitys", async function() {
+      expect(!!community1).to.equal(true);
+      expect(!!community2).to.equal(true);
+      expect(!!community3).to.equal(true);
     });
 
-    it("can create funds and retrieve all addresses", async function() {
-      const funds = await controller.getFunds();
-      expect(funds.length).to.equal(3);
+    it("can create communitys and retrieve all addresses", async function() {
+      const communitys = await controller.getCommunities();
+      expect(communitys.length).to.equal(3);
     });
 
-    it("can remove a fund", async function() {
-      const initialFunds = await controller.getFunds();
-      expect(initialFunds.length).to.equal(3);
+    it("can remove a community", async function() {
+      const initialCommunities = await controller.getCommunities();
+      expect(initialCommunities.length).to.equal(3);
 
-      await controller.removeFund(initialFunds[0]);
+      await controller.removeCommunity(initialCommunities[0]);
 
-      const updatedFunds = await controller.getFunds();
-      expect(updatedFunds.length).to.equal(2);
+      const updatedCommunities = await controller.getCommunities();
+      expect(updatedCommunities.length).to.equal(2);
     });
 
-    it("cannot disable an inactive fund", async function() {
-      const initialFunds = await controller.getFunds();
+    it("cannot disable an inactive community", async function() {
+      const initialCommunities = await controller.getCommunities();
 
-      await expect(controller.disableFund(initialFunds[0])).to.not.be.reverted;
-      await expect(controller.disableFund(initialFunds[0])).to.be.reverted;
+      await expect(controller.disableCommunity(initialCommunities[0])).to.not.be.reverted;
+      await expect(controller.disableCommunity(initialCommunities[0])).to.be.reverted;
     });
 
-    it("can enable and disable a fund", async function() {
-      const initialFunds = await controller.getFunds();
+    it("can enable and disable a community", async function() {
+      const initialCommunities = await controller.getCommunities();
 
-      await expect(controller.disableFund(initialFunds[0])).to.not.be.reverted;
-      await expect(controller.enableFund(initialFunds[0])).to.not.be.reverted;
+      await expect(controller.disableCommunity(initialCommunities[0])).to.not.be.reverted;
+      await expect(controller.enableCommunity(initialCommunities[0])).to.not.be.reverted;
     });
   });
 
@@ -190,12 +190,12 @@ describe("BabController", function() {
       expect(oracle2).to.equal(addresses.tokens.WETH);
     });
 
-    it("can edit a fund valuer", async function() {
-      // Note: This is just the wETH address and is testing that the fundValuer address can be changed
-      await expect(controller.editFundValuer(addresses.tokens.WETH)).to.not.be
+    it("can edit a community valuer", async function() {
+      // Note: This is just the wETH address and is testing that the communityValuer address can be changed
+      await expect(controller.editCommunityValuer(addresses.tokens.WETH)).to.not.be
         .reverted;
 
-      const valuer2 = await controller.getFundValuer();
+      const valuer2 = await controller.getCommunityValuer();
       expect(valuer2).to.equal(addresses.tokens.WETH);
     });
 

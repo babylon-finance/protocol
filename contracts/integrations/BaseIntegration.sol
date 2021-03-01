@@ -23,7 +23,7 @@ import { ERC20 } from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import { IBabController } from "../interfaces/IBabController.sol";
 import { IIntegration } from "../interfaces/IIntegration.sol";
 import { IWETH } from "../interfaces/external/weth/IWETH.sol";
-import { IFund } from "../interfaces/IFund.sol";
+import { ICommunity } from "../interfaces/ICommunity.sol";
 import { SafeMath } from "@openzeppelin/contracts/math/SafeMath.sol";
 import { SignedSafeMath } from "@openzeppelin/contracts/math/SignedSafeMath.sol";
 import { SafeCast } from "@openzeppelin/contracts/utils/SafeCast.sol";
@@ -51,9 +51,9 @@ abstract contract BaseIntegration {
       _;
     }
 
-    modifier onlyFund() {
-      require(IBabController(controller).isSystemContract(msg.sender), "Only a fund can call this");
-      require(initializedByFund[msg.sender], "integration has already been initialized");
+    modifier onlyCommunity() {
+      require(IBabController(controller).isSystemContract(msg.sender), "Only a community can call this");
+      require(initializedByCommunity[msg.sender], "integration has already been initialized");
       _;
     }
 
@@ -70,7 +70,7 @@ abstract contract BaseIntegration {
     address public immutable weth;
     // Name of the integration
     string public name;
-    mapping(address => bool) public initializedByFund;
+    mapping(address => bool) public initializedByCommunity;
 
     /* ============ Constructor ============ */
 
@@ -93,11 +93,11 @@ abstract contract BaseIntegration {
 
     /**
      * Initializes the integration.
-     * @param _fund addres of the fund
+     * @param _community addres of the community
      */
-    function initialize(address _fund) onlyProtocol external {
-      require(!initializedByFund[_fund], "integration has already been initialized");
-      initializedByFund[_fund] = true;
+    function initialize(address _community) onlyProtocol external {
+      require(!initializedByCommunity[_community], "integration has already been initialized");
+      initializedByCommunity[_community] = true;
     }
 
     /**
@@ -111,14 +111,14 @@ abstract contract BaseIntegration {
 
 
     /**
-     * Updates the position in the fund with the new units
+     * Updates the position in the community with the new units
      *
-     * @param _fund                     Address of the fund
+     * @param _community                     Address of the community
      * @param _component                Address of the ERC20
      * @param _deltaOperation           Delta balance of the operation
      */
-    function updateFundPosition(
-      address _fund,
+    function updateCommunityPosition(
+      address _community,
       address _component,
       int256 _deltaOperation,
       uint8 _subpositionStatus
@@ -127,8 +127,8 @@ abstract contract BaseIntegration {
       uint256,
       uint256
     ) {
-      uint256 _newTotal = IFund(_fund).getPositionBalance(_component).add(int256(_deltaOperation)).toUint256();
-      return IFund(_fund).calculateAndEditPosition(_component, _newTotal, _deltaOperation, _subpositionStatus);
+      uint256 _newTotal = ICommunity(_community).getPositionBalance(_component).add(int256(_deltaOperation)).toUint256();
+      return ICommunity(_community).calculateAndEditPosition(_component, _newTotal, _deltaOperation, _subpositionStatus);
     }
 
     /**
@@ -155,11 +155,11 @@ abstract contract BaseIntegration {
     }
 
     /**
-     * Pays the _feeQuantity from the fund denominated in _token to the protocol fee recipient
+     * Pays the _feeQuantity from the community denominated in _token to the protocol fee recipient
      */
-    function payProtocolFeeFromFund(address _fund, address _token, uint256 _feeQuantity) internal {
+    function payProtocolFeeFromCommunity(address _community, address _token, uint256 _feeQuantity) internal {
         if (_feeQuantity > 0) {
-          ERC20(_token).transferFrom(_fund, IBabController(controller).getFeeRecipient(), _feeQuantity);
+          ERC20(_token).transferFrom(_community, IBabController(controller).getFeeRecipient(), _feeQuantity);
         }
     }
 

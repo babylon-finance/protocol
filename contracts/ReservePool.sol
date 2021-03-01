@@ -1,7 +1,7 @@
 /*
     Copyright 2020 Babylon Finance
 
-    Modified from (Set Protocol FundValuer)
+    Modified from (Set Protocol CommunityValuer)
 
     Licensed under the Apache License, Version 2.0 (the "License");
     you may not use this file except in compliance with the License.
@@ -30,8 +30,8 @@ import { SignedSafeMath } from "@openzeppelin/contracts/math/SignedSafeMath.sol"
 import { SafeMath } from "@openzeppelin/contracts/math/SafeMath.sol";
 import { IWETH } from "./interfaces/external/weth/IWETH.sol";
 import { IBabController } from "./interfaces/IBabController.sol";
-import { IClosedFund } from "./interfaces/IClosedFund.sol";
-import { IFundValuer } from "./interfaces/IFundValuer.sol";
+import { IRollingCommunity } from "./interfaces/IRollingCommunity.sol";
+import { ICommunityValuer } from "./interfaces/ICommunityValuer.sol";
 import { IPriceOracle } from "./interfaces/IPriceOracle.sol";
 import { PreciseUnitMath } from "./lib/PreciseUnitMath.sol";
 
@@ -87,11 +87,11 @@ contract ReservePool is ERC20, ReentrancyGuard {
 
     function getReservePoolValuation() public returns (uint256) {
       uint total = 0;
-      address[] memory _communities = IBabController(controller).getFunds();
+      address[] memory _communities = IBabController(controller).getCommunities();
       for (uint i = 0; i < _communities.length; i++) {
-        uint256 communityBalance = IClosedFund(_communities[i]).balanceOf(address(this));
+        uint256 communityBalance = IRollingCommunity(_communities[i]).balanceOf(address(this));
         if (communityBalance > 0) {
-          uint256 communityValuation = IFundValuer(IBabController(controller).getFundValuer()).calculateFundValuation(_communities[i], weth);
+          uint256 communityValuation = ICommunityValuer(IBabController(controller).getCommunityValuer()).calculateCommunityValuation(_communities[i], weth);
           total = total.add(communityValuation.preciseMul(communityBalance));
         }
       }
@@ -132,11 +132,11 @@ contract ReservePool is ERC20, ReentrancyGuard {
      * @param _amount                  Quantity of the community tokens that sender wants to sell
      */
     function sellTokensToLiquidityPool(address _community, uint256 _amount) external nonReentrant {
-      require(IClosedFund(_community).balanceOf(msg.sender) >= _amount, "Sender does not have enough tokens");
+      require(IRollingCommunity(_community).balanceOf(msg.sender) >= _amount, "Sender does not have enough tokens");
       uint256 discount = IBabController(controller).protocolReservePoolDiscount();
-      // Get valuation of the Fund with the quote asset as the reserve asset.
-      uint256 fundValuation = IFundValuer(IBabController(controller).getFundValuer()).calculateFundValuation(_community, weth);
-      uint256 amountValue = fundValuation.preciseMul(_amount);
+      // Get valuation of the Community with the quote asset as the reserve asset.
+      uint256 communityValuation = ICommunityValuer(IBabController(controller).getCommunityValuer()).calculateCommunityValuation(_community, weth);
+      uint256 amountValue = communityValuation.preciseMul(_amount);
       uint256 amountDiscounted = amountValue - amountValue.preciseMul(discount);
       require(IWETH(weth).balanceOf(address(this)) >= amountDiscounted, "There needs to be enough WETH");
       require(ERC20(_community).transferFrom(
@@ -156,12 +156,12 @@ contract ReservePool is ERC20, ReentrancyGuard {
     function redeemETHFromCommunityTokens(address _community, uint256 _amount) external nonReentrant {
       require(msg.sender == IBabController(controller).owner(), "Only owner can call this");
       require(_amount > 0, "There needs to be tokens to redeem");
-      require(IClosedFund(_community).active(), "Community must be active");
-      // Get valuation of the Fund with the quote asset as the reserve asset.
-      uint256 fundValuation = IFundValuer(IBabController(controller).getFundValuer()).calculateFundValuation(_community, weth);
-      require(fundValuation > 0, "Fund must be worth something");
-      uint minReceive = fundValuation.preciseMul(IClosedFund(_community).totalSupply()).preciseDiv(_amount);
-      IClosedFund(_community).withdraw(_amount, minReceive.mul(98).div(100), msg.sender);
+      require(IRollingCommunity(_community).active(), "Community must be active");
+      // Get valuation of the Community with the quote asset as the reserve asset.
+      uint256 communityValuation = ICommunityValuer(IBabController(controller).getCommunityValuer()).calculateCommunityValuation(_community, weth);
+      require(communityValuation > 0, "Community must be worth something");
+      uint minReceive = communityValuation.preciseMul(IRollingCommunity(_community).totalSupply()).preciseDiv(_amount);
+      IRollingCommunity(_community).withdraw(_amount, minReceive.mul(98).div(100), msg.sender);
       IWETH(weth).deposit{value: address(this).balance}();
     }
 

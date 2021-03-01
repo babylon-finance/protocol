@@ -1,7 +1,7 @@
 /*
     Copyright 2020 Babylon Finance
 
-    Modified from (Set Protocol FundValuer)
+    Modified from (Set Protocol CommunityValuer)
 
     Licensed under the Apache License, Version 2.0 (the "License");
     you may not use this file except in compliance with the License.
@@ -27,12 +27,12 @@ import { SignedSafeMath } from "@openzeppelin/contracts/math/SignedSafeMath.sol"
 import { SafeMath } from "@openzeppelin/contracts/math/SafeMath.sol";
 
 import { IBabController } from "./interfaces/IBabController.sol";
-import { IFund } from "./interfaces/IFund.sol";
+import { ICommunity } from "./interfaces/ICommunity.sol";
 import { IPriceOracle } from "./interfaces/IPriceOracle.sol";
 import { PreciseUnitMath } from "./lib/PreciseUnitMath.sol";
 
 /**
- * @title FundValuer
+ * @title CommunityValuer
  * @author Babylon Finance
  *
  * Contract that returns the valuation of SetTokens using price oracle data used in contracts
@@ -40,7 +40,7 @@ import { PreciseUnitMath } from "./lib/PreciseUnitMath.sol";
  *
  * Note: Prices are returned in preciseUnits (i.e. 18 decimals of precision)
  */
-contract FundValuer {
+contract CommunityValuer {
     using PreciseUnitMath for int256;
     using PreciseUnitMath for uint256;
     using SafeCast for int256;
@@ -67,19 +67,19 @@ contract FundValuer {
     /* ============ External Functions ============ */
 
     /**
-     * Gets the valuation of a Fund using data from the price oracle. Reverts
-     * if no price exists for a component in the Fund. Note: this works for external
+     * Gets the valuation of a Community using data from the price oracle. Reverts
+     * if no price exists for a component in the Community. Note: this works for external
      * positions and negative (debt) positions.
      *
      * Note: There is a risk that the valuation is off if airdrops aren't retrieved or
      * debt builds up via interest and its not reflected in the position
      *
-     * @param _fund            Fund instance to get valuation
+     * @param _community            Community instance to get valuation
      * @param _quoteAsset      Address of token to quote valuation in
      *
      * @return                 SetToken valuation in terms of quote asset in precise units 1e18
      */
-    function calculateFundValuation(IFund _fund, address _quoteAsset)
+    function calculateCommunityValuation(ICommunity _community, address _quoteAsset)
         external
         view
         returns (uint256)
@@ -90,7 +90,7 @@ contract FundValuer {
         // live in the PriceOracle so we'll need to add it back or take another approach.
         address masterQuoteAsset = priceOracle.masterQuoteAsset();
 
-        address[] memory components = _fund.getPositions();
+        address[] memory components = _community.getPositions();
         int256 valuation;
 
         for (uint256 i = 0; i < components.length; i++) {
@@ -98,7 +98,7 @@ contract FundValuer {
 
           // Get component price from price oracle. If price does not exist, revert.
           uint256 componentPrice = priceOracle.getPrice(component, masterQuoteAsset);
-          int256 aggregateUnits = _fund.getPositionBalance(component);
+          int256 aggregateUnits = _community.getPositionBalance(component);
           // Normalize each position unit to preciseUnits 1e18 and cast to signed int
           uint8 unitDecimals = ERC20(component).decimals();
           uint256 baseUnits = 10 ** unitDecimals;
@@ -115,6 +115,6 @@ contract FundValuer {
 
         // TODO: Add eth balance??
 
-        return valuation.toUint256().preciseDiv(_fund.totalSupply());
+        return valuation.toUint256().preciseDiv(_community.totalSupply());
     }
 }

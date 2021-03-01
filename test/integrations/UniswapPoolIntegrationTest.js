@@ -10,7 +10,7 @@ const { loadFixture } = waffle;
 describe("UniswapPoolIntegrationTest", function() {
   let system;
   let uniswapIntegration;
-  let fund;
+  let community;
   let uniAbi;
   let userSigner3;
 
@@ -19,7 +19,7 @@ describe("UniswapPoolIntegrationTest", function() {
     uniswapIntegration = system.integrations.uniswapPoolIntegration;
     userSigner3 = system.signer3;
     uniAbi = uniswapIntegration.interface;
-    fund = system.funds.one;
+    community = system.communitys.one;
   });
 
   describe("Deployment", function() {
@@ -60,7 +60,7 @@ describe("UniswapPoolIntegrationTest", function() {
     });
 
     it("can enter and exit the weth dai pool", async function() {
-      await fund
+      await community
         .connect(userSigner3)
         .deposit(ethers.utils.parseEther("5"), 1, userSigner3.getAddress(), {
           value: ethers.utils.parseEther("5")
@@ -76,7 +76,7 @@ describe("UniswapPoolIntegrationTest", function() {
         ]
       );
 
-      await fund.callIntegration(
+      await community.callIntegration(
         uniswapIntegration.address,
         ethers.utils.parseEther("0"),
         dataEnter,
@@ -87,7 +87,7 @@ describe("UniswapPoolIntegrationTest", function() {
         }
       );
 
-      expect(await daiWethPair.balanceOf(fund.address)).to.be.gt(
+      expect(await daiWethPair.balanceOf(community.address)).to.be.gt(
         ethers.utils.parseEther("19")
       );
 
@@ -95,13 +95,13 @@ describe("UniswapPoolIntegrationTest", function() {
         uniAbi.functions["exitPool(address,uint256,address[],uint256[])"],
         [
           addresses.uniswap.pairs.wethdai,
-          await daiWethPair.balanceOf(fund.address),
+          await daiWethPair.balanceOf(community.address),
           [addresses.tokens.DAI, addresses.tokens.WETH],
           [ethers.utils.parseEther("900"), ethers.utils.parseEther("0.2")]
         ]
       );
 
-      await fund.callIntegration(
+      await community.callIntegration(
         uniswapIntegration.address,
         ethers.utils.parseEther("0"),
         dataExit,
@@ -111,11 +111,11 @@ describe("UniswapPoolIntegrationTest", function() {
           gasPrice: 0
         }
       );
-      expect(await daiWethPair.balanceOf(fund.address)).to.equal(0);
-      expect(await daiToken.balanceOf(fund.address)).to.be.gt(
+      expect(await daiWethPair.balanceOf(community.address)).to.equal(0);
+      expect(await daiToken.balanceOf(community.address)).to.be.gt(
         ethers.utils.parseEther("999")
       );
-      expect(await wethToken.balanceOf(fund.address)).to.be.gt(
+      expect(await wethToken.balanceOf(community.address)).to.be.gt(
         ethers.utils.parseEther("4")
       );
     });

@@ -91,7 +91,7 @@ contract AaveIntegration is BorrowIntegration {
       address _asset,
       uint256 _amount
     ) internal override view returns (address, uint256, bytes memory) {
-      // Encode method data for Fund to invoke
+      // Encode method data for Community to invoke
       bytes memory methodData = abi.encodeWithSignature(
         "deposit(address,uint256,address,uint16)",
         _asset,
@@ -117,7 +117,7 @@ contract AaveIntegration is BorrowIntegration {
       address _asset,
       uint256 _amount
     ) internal override view returns (address, uint256, bytes memory) {
-      // Encode method data for Fund to invoke
+      // Encode method data for Community to invoke
       bytes memory methodData = abi.encodeWithSignature(
         "withdraw(address,uint256,address)",
         _asset,
@@ -142,7 +142,7 @@ contract AaveIntegration is BorrowIntegration {
       address _asset,
       uint256 _amount
     ) internal override view returns (address, uint256, bytes memory) {
-      // Encode method data for Fund to invoke
+      // Encode method data for Community to invoke
       bytes memory methodData = abi.encodeWithSignature(
         "borrow(address,uint256,uint256,uint16,address)",
         _asset,
@@ -169,7 +169,7 @@ contract AaveIntegration is BorrowIntegration {
       address _asset,
       uint256 _amount
     ) internal override view returns (address, uint256, bytes memory) {
-      // Encode method data for Fund to invoke
+      // Encode method data for Community to invoke
       bytes memory methodData = abi.encodeWithSignature(
         "repay(address,uint256,uint256,address)",
         _asset,

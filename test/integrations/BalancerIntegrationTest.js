@@ -11,7 +11,7 @@ describe("BalancerIntegrationTest", function() {
   let system;
   let balancerIntegration;
   let balancerAbi;
-  let fund;
+  let community;
   let userSigner3;
 
   beforeEach(async () => {
@@ -19,7 +19,7 @@ describe("BalancerIntegrationTest", function() {
     balancerIntegration = system.integrations.balancerIntegration;
     userSigner3 = system.signer3;
     balancerAbi = balancerIntegration.interface;
-    fund = system.funds.one;
+    community = system.communitys.one;
   });
 
   describe("Deployment", function() {
@@ -63,12 +63,12 @@ describe("BalancerIntegrationTest", function() {
       // expect(
       //   await daiToken
       //     .connect(whaleSigner)
-      //     .transfer(fund.address, ethers.utils.parseEther("1000"), {
+      //     .transfer(community.address, ethers.utils.parseEther("1000"), {
       //       gasPrice: 0
       //     })
       // );
 
-      await fund
+      await community
         .connect(userSigner3)
         .deposit(ethers.utils.parseEther("5"), 1, userSigner3.getAddress(), {
           value: ethers.utils.parseEther("5")
@@ -84,7 +84,7 @@ describe("BalancerIntegrationTest", function() {
         ]
       );
 
-      await fund.callIntegration(
+      await community.callIntegration(
         balancerIntegration.address,
         ethers.utils.parseEther("0"),
         dataEnter,
@@ -95,7 +95,7 @@ describe("BalancerIntegrationTest", function() {
         }
       );
 
-      expect(await daiWethPool.balanceOf(fund.address)).to.be.eq(
+      expect(await daiWethPool.balanceOf(community.address)).to.be.eq(
         ethers.utils.parseEther("0.001")
       );
 
@@ -109,7 +109,7 @@ describe("BalancerIntegrationTest", function() {
         ]
       );
 
-      await fund.callIntegration(
+      await community.callIntegration(
         balancerIntegration.address,
         ethers.utils.parseEther("0"),
         dataExit,
@@ -120,11 +120,11 @@ describe("BalancerIntegrationTest", function() {
         }
       );
 
-      expect(await daiWethPool.balanceOf(fund.address)).to.equal(0);
-      expect(await daiToken.balanceOf(fund.address)).to.be.gt(
+      expect(await daiWethPool.balanceOf(community.address)).to.equal(0);
+      expect(await daiToken.balanceOf(community.address)).to.be.gt(
         ethers.utils.parseEther("999")
       );
-      expect(await wethToken.balanceOf(fund.address)).to.be.gt(
+      expect(await wethToken.balanceOf(community.address)).to.be.gt(
         ethers.utils.parseEther("4.00")
       );
     });

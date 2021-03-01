@@ -18,12 +18,12 @@
 pragma solidity 0.7.4;
 
 /**
- * @title IFundIdeas
+ * @title ICommunityIdeas
  * @author Babylon Finance
  *
- * Interface for fund ideas
+ * Interface for community ideas
  */
-interface IFundIdeas {
+interface ICommunityIdeas {
   function addInvestmentIdea(
     uint256 _maxCapitalRequested,
     uint256 _stake,
@@ -44,5 +44,5 @@ interface IFundIdeas {
 
   function getActiveIdeas() external view returns (uint8[] memory);
   function controller() external pure returns (address);
-  function fund() external pure returns (address);
+  function community() external pure returns (address);
 }

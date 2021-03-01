@@ -22,7 +22,7 @@ import "hardhat/console.sol";
 import { SafeMath } from "@openzeppelin/contracts/math/SafeMath.sol";
 import { SafeCast } from "@openzeppelin/contracts/utils/SafeCast.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import { IFund } from "../interfaces/IFund.sol";
+import { ICommunity } from "../interfaces/ICommunity.sol";
 import { ReentrancyGuard } from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import { IBabController } from "../interfaces/IBabController.sol";
 import { BaseIntegration } from "./BaseIntegration.sol";
@@ -40,11 +40,11 @@ abstract contract PassiveIntegration is BaseIntegration, ReentrancyGuard {
     /* ============ Struct ============ */
 
     struct InvestmentInfo {
-      IFund fund;                                     // Fund address
+      ICommunity community;                                     // Community address
       address investment;                             // Investment address
       uint256 totalSupply;                            // Total Supply of the investment
       uint256 investmentTokensInTransaction;          // Investment tokens affected by this transaction
-      uint256 investmentTokensInFund;                 // Investment tokens fund balance
+      uint256 investmentTokensInCommunity;                 // Investment tokens community balance
       uint256 limitDepositTokenQuantity;              // Limit deposit/withdrawal token amount
     }
 
@@ -93,7 +93,7 @@ abstract contract PassiveIntegration is BaseIntegration, ReentrancyGuard {
     )
       external
       nonReentrant
-      onlyFund
+      onlyCommunity
     {
       InvestmentInfo memory investmentInfo = _createInvestmentInfo(
         _investmentAddress,
@@ -103,7 +103,7 @@ abstract contract PassiveIntegration is BaseIntegration, ReentrancyGuard {
       );
       _validatePreJoinInvestmentData(investmentInfo);
       // Approve spending of the token
-      investmentInfo.fund.invokeApprove(
+      investmentInfo.community.invokeApprove(
         _getSpender(_investmentAddress),
         _tokenIn,
         _maxAmountIn
@@ -119,10 +119,10 @@ abstract contract PassiveIntegration is BaseIntegration, ReentrancyGuard {
           _tokenIn,
           _maxAmountIn
       );
-      investmentInfo.fund.invokeFromIntegration(targetInvestment, callValue, methodData);
+      investmentInfo.community.invokeFromIntegration(targetInvestment, callValue, methodData);
       _validatePostEnterInvestmentData(investmentInfo);
 
-      _updateFundPositions(investmentInfo, _tokenIn, true);
+      _updateCommunityPositions(investmentInfo, _tokenIn, true);
 
       emit InvestmentEntered(
         _investmentAddress,
@@ -147,7 +147,7 @@ abstract contract PassiveIntegration is BaseIntegration, ReentrancyGuard {
     )
       external
       nonReentrant
-      onlyFund
+      onlyCommunity
     {
       InvestmentInfo memory investmentInfo = _createInvestmentInfo(
         _investmentAddress,
@@ -157,7 +157,7 @@ abstract contract PassiveIntegration is BaseIntegration, ReentrancyGuard {
       );
       _validatePreExitInvestmentData(investmentInfo);
       // Approve spending of the investment token
-      investmentInfo.fund.invokeApprove(
+      investmentInfo.community.invokeApprove(
         _getSpender(_investmentAddress),
         _investmentAddress,
         _investmentTokenIn
@@ -173,11 +173,11 @@ abstract contract PassiveIntegration is BaseIntegration, ReentrancyGuard {
           _tokenOut,
           _minAmountOut
       );
-      investmentInfo.fund.invokeFromIntegration(targetInvestment, callValue, methodData);
+      investmentInfo.community.invokeFromIntegration(targetInvestment, callValue, methodData);
       _validatePostExitInvestmentData(investmentInfo);
       uint256 protocolFee = _accrueProtocolFee(investmentInfo, _tokenOut, _minAmountOut);
 
-      _updateFundPositions(investmentInfo, _tokenOut, false);
+      _updateCommunityPositions(investmentInfo, _tokenOut, false);
 
       emit InvestmentExited(
         investmentInfo.investment,
@@ -200,7 +200,7 @@ abstract contract PassiveIntegration is BaseIntegration, ReentrancyGuard {
 
 
     /**
-     * Retrieve fee from controller and calculate total protocol fee and send from fund to protocol recipient
+     * Retrieve fee from controller and calculate total protocol fee and send from community to protocol recipient
      *
      * @param _investmentInfo                 Struct containing trade information used in internal functions
      * @param _feeToken                       Address of the token to pay the fee with
@@ -209,7 +209,7 @@ abstract contract PassiveIntegration is BaseIntegration, ReentrancyGuard {
     function _accrueProtocolFee(InvestmentInfo memory _investmentInfo, address _feeToken, uint256 _exchangedQuantity) internal returns (uint256) {
       uint256 protocolFeeTotal = getIntegrationFee(0, _exchangedQuantity);
 
-      payProtocolFeeFromFund(address(_investmentInfo.fund), _feeToken, protocolFeeTotal);
+      payProtocolFeeFromCommunity(address(_investmentInfo.community), _feeToken, protocolFeeTotal);
 
       return protocolFeeTotal;
     }
@@ -235,10 +235,10 @@ abstract contract PassiveIntegration is BaseIntegration, ReentrancyGuard {
       returns (InvestmentInfo memory)
     {
       InvestmentInfo memory investmentInfo;
-      investmentInfo.fund = IFund(msg.sender);
+      investmentInfo.community = ICommunity(msg.sender);
       investmentInfo.investment = _investment;
       investmentInfo.totalSupply = IERC20(_investment).totalSupply();
-      investmentInfo.investmentTokensInFund = IERC20(_investment).balanceOf(address(msg.sender));
+      investmentInfo.investmentTokensInCommunity = IERC20(_investment).balanceOf(address(msg.sender));
       investmentInfo.investmentTokensInTransaction = _investmentTokensInTransaction;
       investmentInfo.limitDepositTokenQuantity = _limitDepositToken;
 
@@ -263,7 +263,7 @@ abstract contract PassiveIntegration is BaseIntegration, ReentrancyGuard {
     function _validatePreExitInvestmentData(InvestmentInfo memory _investmentInfo) internal view {
       require(_isInvestment(_investmentInfo.investment), "The investment address is not valid");
       require(_investmentInfo.investmentTokensInTransaction > 0, "Investment tokens to exchange must be greater than 0");
-      require(_investmentInfo.investmentTokensInFund >= _investmentInfo.investmentTokensInTransaction, "The fund does not have enough investment tokens");
+      require(_investmentInfo.investmentTokensInCommunity >= _investmentInfo.investmentTokensInTransaction, "The community does not have enough investment tokens");
     }
 
     /**
@@ -272,7 +272,7 @@ abstract contract PassiveIntegration is BaseIntegration, ReentrancyGuard {
      * @param _investmentInfo               Struct containing investment information used in internal functions
      */
     function _validatePostEnterInvestmentData(InvestmentInfo memory _investmentInfo) internal view {
-      require((IERC20(_investmentInfo.investment).balanceOf(address(_investmentInfo.fund)) > _investmentInfo.investmentTokensInFund), "The fund did not receive the investment tokens");
+      require((IERC20(_investmentInfo.investment).balanceOf(address(_investmentInfo.community)) > _investmentInfo.investmentTokensInCommunity), "The community did not receive the investment tokens");
     }
 
     /**
@@ -281,21 +281,21 @@ abstract contract PassiveIntegration is BaseIntegration, ReentrancyGuard {
      * @param _investmentInfo               Struct containing investment information used in internal functions
      */
     function _validatePostExitInvestmentData(InvestmentInfo memory _investmentInfo) internal view {
-      require(IERC20(_investmentInfo.investment).balanceOf(address(_investmentInfo.fund)) == _investmentInfo.investmentTokensInFund - _investmentInfo.investmentTokensInTransaction, "The fund did not return the investment tokens");
+      require(IERC20(_investmentInfo.investment).balanceOf(address(_investmentInfo.community)) == _investmentInfo.investmentTokensInCommunity - _investmentInfo.investmentTokensInTransaction, "The community did not return the investment tokens");
     }
 
     /**
-     * Update Fund positions
+     * Update Community positions
      *
      * @param _investmentInfo                Struct containing investment information used in internal functions
      */
-    function _updateFundPositions(InvestmentInfo memory _investmentInfo, address _depositToken, bool isDeposit) internal {
+    function _updateCommunityPositions(InvestmentInfo memory _investmentInfo, address _depositToken, bool isDeposit) internal {
       int256 depositTokenDelta = isDeposit ? int256(-_investmentInfo.limitDepositTokenQuantity) : _investmentInfo.limitDepositTokenQuantity.toInt256();
       int256 investmentTokenDelta = isDeposit ? _investmentInfo.investmentTokensInTransaction.toInt256() : _investmentInfo.investmentTokensInTransaction.toInt256();
       // balance deposit/withdrawal token
-      updateFundPosition(address(_investmentInfo.fund), _depositToken, depositTokenDelta, isDeposit ? 2 : 0);
+      updateCommunityPosition(address(_investmentInfo.community), _depositToken, depositTokenDelta, isDeposit ? 2 : 0);
       // balance investment token
-      updateFundPosition(address(_investmentInfo.fund), _investmentInfo.investment, investmentTokenDelta, 0);
+      updateCommunityPosition(address(_investmentInfo.community), _investmentInfo.investment, investmentTokenDelta, 0);
     }
 
     /**
