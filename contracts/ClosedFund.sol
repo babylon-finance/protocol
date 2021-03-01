@@ -313,7 +313,6 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
           block.timestamp < fundCurrentActiveWindowStartedAt.add(fundActiveWindow).add(fundWithdrawalWindow),
           "Fund is not in the withdrawal window"
         );
-        // require(block.timestamp > fundEndsBy, "Withdrawals are disabled until fund ends");
         require(
             _fundTokenQuantity <= balanceOf(msg.sender),
             "Withdrawal amount <= to deposited amount"
