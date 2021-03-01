@@ -3,7 +3,7 @@ require("@nomiclabs/hardhat-ethers");
 const fs = require("fs");
 const chalk = require("chalk");
 
-const publishDir = "../react-app/src/contracts";
+const publishDir = "/tmp/hardhat/contracts";
 
 const isSolidity = fileName =>
   fileName.indexOf(".sol") >= 0 && fileName.indexOf(".swp") < 0;
