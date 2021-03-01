@@ -23,8 +23,8 @@ import { SafeMath } from "@openzeppelin/contracts/math/SafeMath.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
 import { Address } from "@openzeppelin/contracts/utils/Address.sol";
-import { IFund } from "./interfaces/IFund.sol";
-import { IClosedFund } from "./interfaces/IClosedFund.sol";
+import { ICommunity } from "./interfaces/ICommunity.sol";
+import { IRollingCommunity } from "./interfaces/IRollingCommunity.sol";
 import { IIntegration } from "./interfaces/IIntegration.sol";
 import { AddressArrayUtils } from "./lib/AddressArrayUtils.sol";
 
@@ -32,7 +32,7 @@ import { AddressArrayUtils } from "./lib/AddressArrayUtils.sol";
  * @title BabController
  * @author Babylon Finance Protocol
  *
- * BabController is a smart contract used to deploy new funds contracts and house the
+ * BabController is a smart contract used to deploy new communitys contracts and house the
  * integrations and resources of the system.
  */
 contract BabController is Ownable {
@@ -41,8 +41,8 @@ contract BabController is Ownable {
     using Address for address;
 
     /* ============ Events ============ */
-    event FundAdded(address indexed _fund, address indexed _factory);
-    event FundRemoved(address indexed _fund);
+    event CommunityAdded(address indexed _community, address indexed _factory);
+    event CommunityRemoved(address indexed _community);
 
     event ControllerIntegrationAdded(
         address indexed _integration,
@@ -63,8 +63,8 @@ contract BabController is Ownable {
 
     event MinWithdrawalWindowChanged(uint256 _newMinWithdrawalWindow);
     event MaxWithdrawalWindowChanged(uint256 _newMaxWithdrawalWindow);
-    event MinFundActiveWindowChanged(uint256 _newminFundActiveWindow);
-    event MaxFundActiveWindowChanged(uint256 _newmaxFundActiveWindow);
+    event MinCommunityActiveWindowChanged(uint256 _newminCommunityActiveWindow);
+    event MaxCommunityActiveWindowChanged(uint256 _newmaxCommunityActiveWindow);
     event ReservePoolDiscountChanged(uint256 _newReservePoolDiscount);
 
     event ModuleAdded(address indexed _module);
@@ -72,23 +72,23 @@ contract BabController is Ownable {
 
     event PriceOracleChanged(address indexed _resource);
     event ReservePoolChanged(address indexed _reservePool);
-    event FundValuerChanged(address indexed _resource);
+    event CommunityValuerChanged(address indexed _resource);
 
     /* ============ Modifiers ============ */
 
     /* ============ State Variables ============ */
 
-    // List of enabled Funds
-    address[] public funds;
+    // List of enabled Communities
+    address[] public communitys;
     address[] public reserveAssets;
-    address public fundValuer;
+    address public communityValuer;
     address public priceOracle;
     address public reservePool;
-    // Mapping of fund => integration identifier => integration address
+    // Mapping of community => integration identifier => integration address
     mapping(bytes32 => address) private integrations;
 
-    // Mappings to check whether address is valid Fund or Reserve Asset
-    mapping(address => bool) public isFund;
+    // Mappings to check whether address is valid Community or Reserve Asset
+    mapping(address => bool) public isCommunity;
     mapping(address => bool) public validReserveAsset;
 
     // Mapping to check whitelisted assets
@@ -100,9 +100,9 @@ contract BabController is Ownable {
     // Recipient of protocol fees
     address public feeRecipient;
 
-    // Active window for the rolling fund
-    uint256 public minFundActiveWindow = 90 days;
-    uint256 public maxFundActiveWindow = 90 days;
+    // Active window for the rolling community
+    uint256 public minCommunityActiveWindow = 90 days;
+    uint256 public maxCommunityActiveWindow = 90 days;
 
     // Active window for withdrawals after every active period
     uint256 public minWithdrawalWindow = 1 days;
@@ -114,12 +114,12 @@ contract BabController is Ownable {
 
     // Max Premium percentage (0.01% = 1e14, 1% = 1e16). This premium is a buffer around oracle
     // prices paid by user to the SetToken, which prevents arbitrage and oracle front running
-    uint256 public maxFundPremiumPercentage;
+    uint256 public maxCommunityPremiumPercentage;
 
     uint256 public protocolPerformanceFee = 1e17; // (0.01% = 1e14, 1% = 1e16) on profits
-    uint256 public protocolFundCreationFee = 0; // (0.01% = 1e14, 1% = 1e16)
-    uint256 public protocolDepositFundTokenFee = 0; // (0.01% = 1e14, 1% = 1e16)
-    uint256 public protocolWithdrawalFundTokenFee = 5e15; // (0.01% = 1e14, 1% = 1e16)
+    uint256 public protocolCommunityCreationFee = 0; // (0.01% = 1e14, 1% = 1e16)
+    uint256 public protocolDepositCommunityTokenFee = 0; // (0.01% = 1e14, 1% = 1e16)
+    uint256 public protocolWithdrawalCommunityTokenFee = 5e15; // (0.01% = 1e14, 1% = 1e16)
 
     uint256 public protocolReservePoolDiscount = 1e17; // 10%
 
@@ -129,35 +129,35 @@ contract BabController is Ownable {
      * Initializes the initial fee recipient on deployment.
      *
      * @param _feeRecipient           Address of the initial protocol fee recipient
-     * @param _fundValuer             Address of the initial fundValuer
+     * @param _communityValuer             Address of the initial communityValuer
      * @param _priceOracle            Address of the initial priceOracle
      * @param _reservePool            Address of the initial reservePool
      */
     constructor(
         address _feeRecipient,
-        address _fundValuer,
+        address _communityValuer,
         address _priceOracle,
         address _reservePool
     ) {
         feeRecipient = _feeRecipient;
-        fundValuer = _fundValuer;
+        communityValuer = _communityValuer;
         priceOracle = _priceOracle;
         reservePool = _reservePool;
     }
 
     /* ============ External Functions ============ */
 
-    // ===========  Fund related Gov Functions ======
+    // ===========  Community related Gov Functions ======
     /**
-     * Creates a Fund smart contract and registers the Fund with the controller. The Funds are composed
+     * Creates a Community smart contract and registers the Community with the controller. The Communities are composed
      * of positions that are instantiated as DEFAULT (positionState = 0) state.
      *
      * @param _integrations           List of integrations to enable. All integrations must be approved by the Controller
-     * @param _fund                   Address of the fund
+     * @param _community                   Address of the community
      */
-    function createFund(
+    function createCommunity(
       address[] memory _integrations,
-      address _fund
+      address _community
     ) external returns (address) {
         for (uint256 i = 0; i < _integrations.length; i++) {
           require(
@@ -165,64 +165,64 @@ contract BabController is Ownable {
               "Component must not be null address"
           );
         }
-        require(_integrations.length > 0); // Just for checking that the fund has some integrations enabled
-        IFund fund = IFund(_fund);
-        require(fund.controller() == address(this), "The controller must be this contract");
-        _addFund(address(fund));
+        require(_integrations.length > 0); // Just for checking that the community has some integrations enabled
+        ICommunity community = ICommunity(_community);
+        require(community.controller() == address(this), "The controller must be this contract");
+        _addCommunity(address(community));
 
-        return address(fund);
+        return address(community);
     }
 
     /**
-     * PRIVILEGED GOVERNANCE FUNCTION. Allows governance to remove a Fund
+     * PRIVILEGED GOVERNANCE FUNCTION. Allows governance to remove a Community
      *
-     * @param _fund               Address of the Fund contract to remove
+     * @param _community               Address of the Community contract to remove
      */
-    function removeFund(address _fund) external onlyOwner {
-        require(isFund[_fund], "Fund does not exist");
+    function removeCommunity(address _community) external onlyOwner {
+        require(isCommunity[_community], "Community does not exist");
 
-        funds = funds.remove(_fund);
+        communitys = communitys.remove(_community);
 
-        isFund[_fund] = false;
+        isCommunity[_community] = false;
 
-        emit FundRemoved(_fund);
+        emit CommunityRemoved(_community);
     }
 
     /**
-     * PRIVILEGED GOVERNANCE FUNCTION. Allows governance to disable a fund
+     * PRIVILEGED GOVERNANCE FUNCTION. Allows governance to disable a community
      *
-     * @param _fund               Address of the fund
+     * @param _community               Address of the community
      */
-    function disableFund(address _fund) external onlyOwner {
-        require(isFund[_fund], "Fund does not exist");
-        IFund fund = IFund(_fund);
-        require(!!fund.active(), "The fund needs to be active.");
-        fund.setDisabled();
+    function disableCommunity(address _community) external onlyOwner {
+        require(isCommunity[_community], "Community does not exist");
+        ICommunity community = ICommunity(_community);
+        require(!!community.active(), "The community needs to be active.");
+        community.setDisabled();
     }
 
     /**
-     * PRIVILEGED GOVERNANCE FUNCTION. Allows governance to enable a fund
+     * PRIVILEGED GOVERNANCE FUNCTION. Allows governance to enable a community
      *
-     * @param _fund               Address of the fund
+     * @param _community               Address of the community
      */
-    function enableFund(address _fund) external onlyOwner {
-        require(isFund[_fund], "Fund does not exist");
-        IFund fund = IFund(_fund);
-        require(!fund.active(), "The fund needs to be disabled.");
-        fund.setActive();
+    function enableCommunity(address _community) external onlyOwner {
+        require(isCommunity[_community], "Community does not exist");
+        ICommunity community = ICommunity(_community);
+        require(!community.active(), "The community needs to be disabled.");
+        community.setActive();
     }
 
     /**
-     * PRIVILEGED GOVERNANCE FUNCTION. Allows governance to change the max deposit for the fund
+     * PRIVILEGED GOVERNANCE FUNCTION. Allows governance to change the max deposit for the community
      *
-     * @param _fund               Address of the fund
+     * @param _community               Address of the community
      * @param _newDepositLimit    New deposit limit
      */
-    function changeFundDepositLimit(address _fund, uint256 _newDepositLimit) external onlyOwner {
-        require(isFund[_fund], "Fund does not exist");
-        IClosedFund fund = IClosedFund(_fund);
-        require(!!fund.active(), "The fund needs to be active.");
-        fund.setDepositLimit(_newDepositLimit);
+    function changeCommunityDepositLimit(address _community, uint256 _newDepositLimit) external onlyOwner {
+        require(isCommunity[_community], "Community does not exist");
+        IRollingCommunity community = IRollingCommunity(_community);
+        require(!!community.active(), "The community needs to be active.");
+        community.setDepositLimit(_newDepositLimit);
     }
 
     // ===========  Protocol related Gov Functions ======
@@ -288,7 +288,7 @@ contract BabController is Ownable {
     }
 
     /**
-     * PRIVILEGED FACTORY FUNCTION. Adds a new valid reserve asset for funds
+     * PRIVILEGED FACTORY FUNCTION. Adds a new valid reserve asset for communitys
      *
      * @param _reserveAsset Address of the reserve assset
      */
@@ -353,16 +353,16 @@ contract BabController is Ownable {
     /**
      * PRIVILEGED GOVERNANCE FUNCTION. Allows governance to change the integration registry
      *
-     * @param _fundValuer Address of the new price oracle
+     * @param _communityValuer Address of the new price oracle
      */
-    function editFundValuer(address _fundValuer) external onlyOwner {
-        require(_fundValuer != fundValuer, "Fund Valuer already exists");
+    function editCommunityValuer(address _communityValuer) external onlyOwner {
+        require(_communityValuer != communityValuer, "Community Valuer already exists");
 
-        require(_fundValuer != address(0), "Fund Valuer must exist");
+        require(_communityValuer != address(0), "Community Valuer must exist");
 
-        fundValuer = _fundValuer;
+        communityValuer = _communityValuer;
 
-        emit FundValuerChanged(_fundValuer);
+        emit CommunityValuerChanged(_communityValuer);
     }
 
     /**
@@ -401,16 +401,16 @@ contract BabController is Ownable {
     }
 
     /**
-     * GOVERNANCE FUNCTION: Initializes an integration in a fund
+     * GOVERNANCE FUNCTION: Initializes an integration in a community
      *
      * @param  _integration       Address of the integration contract to add
-     * @param  _fund              Address of the fund
+     * @param  _community              Address of the community
      */
-    function initializeIntegration(address _integration, address _fund)
+    function initializeIntegration(address _integration, address _community)
         public
         onlyOwner
     {
-      IIntegration(_integration).initialize(_fund);
+      IIntegration(_integration).initialize(_community);
     }
 
     /**
@@ -455,9 +455,9 @@ contract BabController is Ownable {
     }
 
     /**
-     * PRIVILEGED GOVERNANCE FUNCTION. Allows governance to edit the protol min epoch allowed in funds
+     * PRIVILEGED GOVERNANCE FUNCTION. Allows governance to edit the protol min epoch allowed in communitys
      *
-     * @param _newMinWithdrawalWindow      New min fund epoch duration
+     * @param _newMinWithdrawalWindow      New min community epoch duration
      */
     function setMinWithdrawalWindow(uint256 _newMinWithdrawalWindow) external onlyOwner {
         require(_newMinWithdrawalWindow > 1 hours, "Absolute minimum is one hour");
@@ -481,12 +481,12 @@ contract BabController is Ownable {
     }
 
     /**
-     * PRIVILEGED GOVERNANCE FUNCTION. Allows governance to edit the protol max epoch allowed in funds
+     * PRIVILEGED GOVERNANCE FUNCTION. Allows governance to edit the protol max epoch allowed in communitys
      *
-     * @param _newMaxWithdrawalWindow      New max fund epoch duration
+     * @param _newMaxWithdrawalWindow      New max community epoch duration
      */
     function setMaxWithdrawalWindow(uint256 _newMaxWithdrawalWindow) external onlyOwner {
-        require(_newMaxWithdrawalWindow < maxWithdrawalWindow, "Absolute maximum is the fund duration");
+        require(_newMaxWithdrawalWindow < maxWithdrawalWindow, "Absolute maximum is the community duration");
 
         maxWithdrawalWindow = _newMaxWithdrawalWindow;
 
@@ -494,29 +494,29 @@ contract BabController is Ownable {
     }
 
     /**
-     * PRIVILEGED GOVERNANCE FUNCTION. Allows governance to edit the protol min fund duration
+     * PRIVILEGED GOVERNANCE FUNCTION. Allows governance to edit the protol min community duration
      *
-     * @param _newMinFundActiveWindow      New min fund duration
+     * @param _newMinCommunityActiveWindow      New min community duration
      */
-    function setMinFundActiveWindow(uint256 _newMinFundActiveWindow) external onlyOwner {
-        require(_newMinFundActiveWindow > 30 days, "Absolute minimum is thirty days");
+    function setMinCommunityActiveWindow(uint256 _newMinCommunityActiveWindow) external onlyOwner {
+        require(_newMinCommunityActiveWindow > 30 days, "Absolute minimum is thirty days");
 
-        minFundActiveWindow = _newMinFundActiveWindow;
+        minCommunityActiveWindow = _newMinCommunityActiveWindow;
 
-        emit MinFundActiveWindowChanged(_newMinFundActiveWindow);
+        emit MinCommunityActiveWindowChanged(_newMinCommunityActiveWindow);
     }
 
     /**
-     * PRIVILEGED GOVERNANCE FUNCTION. Allows governance to edit the protol max fund duration
+     * PRIVILEGED GOVERNANCE FUNCTION. Allows governance to edit the protol max community duration
      *
-     * @param _newMaxFundActiveWindow      New max fund duration
+     * @param _newMaxCommunityActiveWindow      New max community duration
      */
-    function setMaxFundActiveWindow(uint256 _newMaxFundActiveWindow) external onlyOwner {
-        require(_newMaxFundActiveWindow < 12 * 30 days, "Absolute maximum is one year");
+    function setMaxCommunityActiveWindow(uint256 _newMaxCommunityActiveWindow) external onlyOwner {
+        require(_newMaxCommunityActiveWindow < 12 * 30 days, "Absolute maximum is one year");
 
-        maxFundActiveWindow = _newMaxFundActiveWindow;
+        maxCommunityActiveWindow = _newMaxCommunityActiveWindow;
 
-        emit MaxFundActiveWindowChanged(_newMaxFundActiveWindow);
+        emit MaxCommunityActiveWindowChanged(_newMaxCommunityActiveWindow);
     }
 
 
@@ -530,24 +530,24 @@ contract BabController is Ownable {
       return reservePool;
     }
 
-    function getFundValuer() external view returns (address) {
-        return fundValuer;
+    function getCommunityValuer() external view returns (address) {
+        return communityValuer;
     }
 
-    function getFunds() external view returns (address[] memory) {
-        return funds;
+    function getCommunities() external view returns (address[] memory) {
+        return communitys;
     }
 
     function getReserveAssets() external view returns (address[] memory) {
         return reserveAssets;
     }
 
-    function getMaxFundActiveWindow() external view returns (uint256) {
-        return maxFundActiveWindow;
+    function getMaxCommunityActiveWindow() external view returns (uint256) {
+        return maxCommunityActiveWindow;
     }
 
-    function getMinFundActiveWindow() external view returns (uint256) {
-        return minFundActiveWindow;
+    function getMinCommunityActiveWindow() external view returns (uint256) {
+        return minCommunityActiveWindow;
     }
 
     function getMaxWithdrawalWindow() external view returns (uint256) {
@@ -566,28 +566,28 @@ contract BabController is Ownable {
         return maxCooldownPeriod;
     }
 
-    function getProtocolDepositFundTokenFee() external view returns (uint256) {
-        return protocolDepositFundTokenFee;
+    function getProtocolDepositCommunityTokenFee() external view returns (uint256) {
+        return protocolDepositCommunityTokenFee;
     }
 
     function getProtocolPerformanceFee() external view returns (uint256) {
         return protocolPerformanceFee;
     }
 
-    function getProtocolWithdrawalFundTokenFee()
+    function getProtocolWithdrawalCommunityTokenFee()
         external
         view
         returns (uint256)
     {
-        return protocolWithdrawalFundTokenFee;
+        return protocolWithdrawalCommunityTokenFee;
     }
 
     function getFeeRecipient() external view returns (address) {
         return feeRecipient;
     }
 
-    function getMaxFundPremiumPercentage() external view returns (uint256) {
-        return maxFundPremiumPercentage;
+    function getMaxCommunityPremiumPercentage() external view returns (uint256) {
+        return maxCommunityPremiumPercentage;
     }
 
     function isValidReserveAsset(address _reserveAsset)
@@ -677,7 +677,7 @@ contract BabController is Ownable {
     }
 
     /**
-     * Check if a contract address is a fund or one of the system contracts
+     * Check if a contract address is a community or one of the system contracts
      *
      * @param  _contractAddress           The contract address to check
      */
@@ -686,8 +686,8 @@ contract BabController is Ownable {
         view
         returns (bool)
     {
-        return (isFund[_contractAddress] ||
-            fundValuer == _contractAddress ||
+        return (isCommunity[_contractAddress] ||
+            communityValuer == _contractAddress ||
             priceOracle == _contractAddress ||
             reservePool == _contractAddress ||
             _contractAddress == address(this));
@@ -712,14 +712,14 @@ contract BabController is Ownable {
     }
 
     /**
-     * PRIVILEGED FACTORY FUNCTION. Adds a newly deployed Fund as an enabled Fund.
+     * PRIVILEGED FACTORY FUNCTION. Adds a newly deployed Community as an enabled Community.
      *
-     * @param _fund Address of the Fund contract to add
+     * @param _community Address of the Community contract to add
      */
-    function _addFund(address _fund) internal {
-        require(!isFund[_fund], "Fund already exists");
-        isFund[_fund] = true;
-        funds.push(_fund);
-        emit FundAdded(_fund, msg.sender);
+    function _addCommunity(address _community) internal {
+        require(!isCommunity[_community], "Community already exists");
+        isCommunity[_community] = true;
+        communitys.push(_community);
+        emit CommunityAdded(_community, msg.sender);
     }
 }

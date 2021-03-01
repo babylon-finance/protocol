@@ -6,19 +6,19 @@ const { loadFixture } = waffle;
 const addresses = require("../utils/addresses");
 const { deployFolioFixture } = require("./fixtures/ControllerFixture");
 
-describe("FundValuer", function() {
+describe("CommunityValuer", function() {
   let controller;
   let valuer;
-  let fund;
+  let community;
   let weth;
 
   beforeEach(async () => {
-    const { babController, fundValuer, funds } = await loadFixture(
+    const { babController, communityValuer, communitys } = await loadFixture(
       deployFolioFixture
     );
-    fund = funds.one;
+    community = communitys.one;
     controller = babController;
-    valuer = fundValuer;
+    valuer = communityValuer;
     weth = await ethers.getContractAt("IERC20", addresses.tokens.WETH);
   });
 
@@ -31,21 +31,21 @@ describe("FundValuer", function() {
     });
   });
 
-  describe("Calls FundValuer", function() {
-    it("should return 0.1 for fund1", async function() {
-      const wethInFund = await weth.balanceOf(fund.address);
-      // const priceOfWeth = await fund.getPrice(
+  describe("Calls CommunityValuer", function() {
+    it("should return 0.1 for community1", async function() {
+      const wethInCommunity = await weth.balanceOf(community.address);
+      // const priceOfWeth = await community.getPrice(
       //   addresses.tokens.WETH,
       //   addresses.tokens.DAI
       // );
-      console.log("wethInFund", wethInFund);
+      console.log("wethInCommunity", wethInCommunity);
       // console.log('format', ethers.utils.formatEther(100000000000000000));
-      const pricePerFundToken = await valuer.calculateFundValuation(
-        fund.address,
+      const pricePerCommunityToken = await valuer.calculateCommunityValuation(
+        community.address,
         addresses.tokens.WETH
       );
-      const tokens = await fund.totalSupply();
-      expect(pricePerFundToken.mul(tokens / 1000).div(10 ** 15)).to.equal(
+      const tokens = await community.totalSupply();
+      expect(pricePerCommunityToken.mul(tokens / 1000).div(10 ** 15)).to.equal(
         ethers.utils.parseEther("0.1")
       );
     });

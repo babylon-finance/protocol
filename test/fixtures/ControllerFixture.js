@@ -6,8 +6,14 @@ const argsUtil = require("../../utils/arguments.js");
 async function deployFolioFixture() {
   const [owner, signer1, signer2, signer3] = await ethers.getSigners();
 
-  const ClosedFund = await ethers.getContractFactory("ClosedFund", owner);
-  const FundIdeas = await ethers.getContractFactory("FundIdeas", owner);
+  const RollingCommunity = await ethers.getContractFactory(
+    "RollingCommunity",
+    owner
+  );
+  const CommunityIdeas = await ethers.getContractFactory(
+    "CommunityIdeas",
+    owner
+  );
 
   const BabController = await ethers.getContractFactory("BabController", owner);
   const babController = await BabController.deploy(
@@ -18,20 +24,22 @@ async function deployFolioFixture() {
   await babController.addAssetsWhitelist(Object.values(addresses.tokens));
   await babController.addKeepers(Object.values(addresses.users));
 
-  const FundValuer = await ethers.getContractFactory("FundValuer", owner);
+  const CommunityValuer = await ethers.getContractFactory(
+    "CommunityValuer",
+    owner
+  );
   const PriceOracle = await ethers.getContractFactory("PriceOracle", owner);
   const ReservePool = await ethers.getContractFactory("ReservePool", owner);
-
-  const fundValuer = await FundValuer.deploy(babController.address);
+  const communityValuer = await CommunityValuer.deploy(babController.address);
   const reservePool = await ReservePool.deploy(babController.address);
   const priceOracle = await PriceOracle.deploy(
     babController.address,
     addresses.compound.OpenOracle,
     []
   );
-  // Sets the price oracle and fundvaluer address
+  // Sets the price oracle and communityvaluer address
   babController.editPriceOracle(priceOracle.address);
-  babController.editFundValuer(fundValuer.address);
+  babController.editCommunityValuer(communityValuer.address);
   babController.editReservePool(reservePool.address);
 
   const AaveIntegration = await ethers.getContractFactory(
@@ -124,8 +132,8 @@ async function deployFolioFixture() {
 
   const integrationsAddressList = integrationsList.map(iter => iter.address);
 
-  // Creates a new Fund instance
-  const fund = await ClosedFund.deploy(
+  // Creates a new Community instance
+  const community = await RollingCommunity.deploy(
     integrationsAddressList,
     addresses.tokens.WETH,
     babController.address,
@@ -135,7 +143,7 @@ async function deployFolioFixture() {
     ethers.utils.parseEther("0.01")
   );
 
-  const fund2 = await ClosedFund.deploy(
+  const community2 = await RollingCommunity.deploy(
     integrationsAddressList,
     addresses.tokens.WETH,
     babController.address,
@@ -145,7 +153,7 @@ async function deployFolioFixture() {
     ethers.utils.parseEther("1")
   );
 
-  const fund3 = await ClosedFund.deploy(
+  const community3 = await RollingCommunity.deploy(
     integrationsAddressList,
     addresses.tokens.WETH,
     babController.address,
@@ -155,21 +163,21 @@ async function deployFolioFixture() {
     ethers.utils.parseEther("10")
   );
 
-  await babController.createFund(integrationsAddressList, fund.address);
-  await babController.createFund(integrationsAddressList, fund2.address);
-  await babController.createFund(integrationsAddressList, fund3.address);
+  await babController.createCommunity(integrationsAddressList, community.address);
+  await babController.createCommunity(integrationsAddressList, community2.address);
+  await babController.createCommunity(integrationsAddressList, community3.address);
 
-  const fundAddressesList = await babController.getFunds();
-  // Initialize fund integrations
-  fundAddressesList.forEach(fundIter => {
+  const communityAddressesList = await babController.getCommunities();
+  // Initialize community integrations
+  communityAddressesList.forEach(communityIter => {
     integrationsAddressList.forEach(async integration => {
-      await babController.initializeIntegration(integration, fundIter);
+      await babController.initializeIntegration(integration, communityIter);
     });
   });
 
-  // Investment ideas first fund
-  const fundIdeas1 = await FundIdeas.deploy(
-    fund.address,
+  // Investment ideas first community
+  const communityIdeas1 = await CommunityIdeas.deploy(
+    community.address,
     babController.address,
     ONE_DAY_IN_SECONDS,
     ethers.utils.parseEther("0.15"), // 15%
@@ -178,13 +186,13 @@ async function deployFolioFixture() {
   );
 
   // Initial deposit
-  await fund.initialize(
+  await community.initialize(
     ethers.utils.parseEther("10"),
     0,
     1,
     ONE_DAY_IN_SECONDS * 90,
     ONE_DAY_IN_SECONDS * 3,
-    fundIdeas1.address,
+    communityIdeas1.address,
     { value: ethers.utils.parseEther("0.1") }
   );
 
@@ -199,12 +207,12 @@ async function deployFolioFixture() {
       uniswapPoolIntegration,
       yearnVaultIntegration
     },
-    funds: {
-      one: fund,
-      two: fund2,
-      three: fund3
+    communitys: {
+      one: community,
+      two: community2,
+      three: community3
     },
-    fundValuer,
+    communityValuer,
     priceOracle,
     owner,
     signer1,

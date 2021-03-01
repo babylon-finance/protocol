@@ -12,7 +12,7 @@ describe("CompoundIntegration", function() {
   let controller;
   let compoundBorrowing;
   const daiWhaleAddress = "0x6B175474E89094C44Da98b954EedeAC495271d0F";
-  let fund;
+  let community;
   let compAbi;
   let userSigner3;
 
@@ -23,7 +23,7 @@ describe("CompoundIntegration", function() {
     compoundBorrowing = system.integrations.compoundIntegration;
     compAbi = compoundBorrowing.interface;
     userSigner3 = system.signer3;
-    fund = system.funds.one;
+    community = system.communitys.one;
   });
 
   describe("Deployment", function() {
@@ -66,10 +66,10 @@ describe("CompoundIntegration", function() {
 
     describe("Compound Borrowing/Lending", function() {
       it("can supply ether", async function() {
-        expect(await cethToken.balanceOf(fund.address)).to.equal(0);
+        expect(await cethToken.balanceOf(community.address)).to.equal(0);
         // await expect(() =>
         //   owner.sendTransaction({
-        //     to: fund.address,
+        //     to: community.address,
         //     gasPrice: 0,
         //     value: ethers.utils.parseEther("10")
         //   })
@@ -80,7 +80,7 @@ describe("CompoundIntegration", function() {
         //   ],
         //   [addresses.tokens.WETH, ethers.utils.parseEther("1")]
         // );
-        // await fund.callIntegration(
+        // await community.callIntegration(
         //   compoundBorrowing.address,
         //   ethers.utils.parseEther("1"),
         //   data,
@@ -88,12 +88,12 @@ describe("CompoundIntegration", function() {
         //     gasPrice: 0
         //   }
         // );
-        // await fund
+        // await community
         //   .connect(userSigner3)
         //   .deposit(ethers.utils.parseEther("1"), 1, userSigner3.getAddress(), {
         //     value: ethers.utils.parseEther("1")
         //   });
-        // await fund.depositCollateral(
+        // await community.depositCollateral(
         //   "compound",
         //   addresses.tokens.WETH,
         //   ethers.utils.parseEther("1"),
@@ -104,7 +104,7 @@ describe("CompoundIntegration", function() {
         // expect(await cethToken.balanceOf(compoundBorrowing.address)).to.equal(
         //   0
         // );
-        // const balance = await cethToken.balanceOf(fund.address);
+        // const balance = await cethToken.balanceOf(community.address);
         // expect(balance).to.be.gt(0);
       });
 
@@ -112,16 +112,16 @@ describe("CompoundIntegration", function() {
         // expect(
         //   await daiToken
         //     .connect(whaleSigner)
-        //     .transfer(fund.address, ethers.utils.parseEther("1000"), {
+        //     .transfer(community.address, ethers.utils.parseEther("1000"), {
         //       gasPrice: 0
         //     })
         // );
-        // expect(await cdaiToken.balanceOf(fund.address)).to.equal(0);
-        // expect(await daiToken.balanceOf(fund.address)).to.equal(
+        // expect(await cdaiToken.balanceOf(community.address)).to.equal(0);
+        // expect(await daiToken.balanceOf(community.address)).to.equal(
         //   ethers.utils.parseEther("1000")
         // );
         //
-        // await fund.depositCollateral(
+        // await community.depositCollateral(
         //   "compound",
         //   addresses.tokens.DAI,
         //   ethers.utils.parseEther("100"),
@@ -130,7 +130,7 @@ describe("CompoundIntegration", function() {
         //   }
         // );
 
-        // const balance = await cdaiToken.balanceOf(fund.address);
+        // const balance = await cdaiToken.balanceOf(community.address);
         // expect(balance).to.be.gt(0);
       });
 

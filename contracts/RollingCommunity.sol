@@ -28,19 +28,19 @@ import { SignedSafeMath } from "@openzeppelin/contracts/math/SignedSafeMath.sol"
 import { PreciseUnitMath } from "./lib/PreciseUnitMath.sol";
 import { SafeCast } from "@openzeppelin/contracts/utils/SafeCast.sol";
 import { IWETH } from "./interfaces/external/weth/IWETH.sol";
-import { IFundIdeas } from "./interfaces/IFundIdeas.sol";
+import { ICommunityIdeas } from "./interfaces/ICommunityIdeas.sol";
 import { IBabController } from "./interfaces/IBabController.sol";
-import { IFundValuer } from "./interfaces/IFundValuer.sol";
-import { BaseFund } from "./BaseFund.sol";
+import { ICommunityValuer } from "./interfaces/ICommunityValuer.sol";
+import { BaseCommunity } from "./BaseCommunity.sol";
 
 
 /**
- * @title ClosedFund
+ * @title RollingCommunity
  * @author Babylon Finance
  *
- * ClosedFund holds the logic to deposit, withdraw and track contributions and fees.
+ * RollingCommunity holds the logic to deposit, withdraw and track contributions and fees.
  */
-contract ClosedFund is BaseFund, ReentrancyGuard {
+contract RollingCommunity is BaseCommunity, ReentrancyGuard {
   using SafeCast for uint256;
   using SafeCast for int256;
   using SafeMath for uint256;
@@ -49,15 +49,15 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
   using PreciseUnitMath for uint256;
 
     /* ============ Events ============ */
-    event FundTokenDeposited(
+    event CommunityTokenDeposited(
         address indexed _to,
-        uint256 fundTokenQuantity,
+        uint256 communityTokenQuantity,
         uint256 protocolFees
     );
-    event FundTokenWithdrawn(
+    event CommunityTokenWithdrawn(
         address indexed _from,
         address indexed _to,
-        uint256 fundTokenQuantity,
+        uint256 communityTokenQuantity,
         uint256 protocolFees
     );
 
@@ -83,30 +83,30 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
 
     /* ============ State Variables ============ */
     uint256 constant public initialBuyRate = 1000000000000; // Initial buy rate for the manager
-    uint256 constant public MAX_DEPOSITS_FUND_V1 = 1e21; // Max deposit per fund is 1000 eth for v1
+    uint256 constant public MAX_DEPOSITS_FUND_V1 = 1e21; // Max deposit per community is 1000 eth for v1
 
     struct ActionInfo {
         uint256 preFeeReserveQuantity; // Reserve value before fees; During issuance, represents raw quantity
         // During withdrawal, represents post-premium value
         uint256 protocolFees; // Total protocol fees (direct + manager revenue share)
-        uint256 netFlowQuantity; // When issuing, quantity of reserve asset sent to Fund
+        uint256 netFlowQuantity; // When issuing, quantity of reserve asset sent to Community
         // When withdrawaling, quantity of reserve asset sent to withdrawaler
-        uint256 fundTokenQuantity; // When issuing, quantity of Fund tokens minted to mintee
-        // When withdrawaling, quantity of Fund tokens withdrawaled
-        uint256 previousFundTokenSupply; // Fund token supply prior to deposit/withdrawal action
-        uint256 newFundTokenSupply; // Fund token supply after deposit/withdrawal action
-        uint256 newReservePositionBalance; // Fund token reserve asset position balance after deposit/withdrawal
+        uint256 communityTokenQuantity; // When issuing, quantity of Community tokens minted to mintee
+        // When withdrawaling, quantity of Community tokens withdrawaled
+        uint256 previousCommunityTokenSupply; // Community token supply prior to deposit/withdrawal action
+        uint256 newCommunityTokenSupply; // Community token supply after deposit/withdrawal action
+        uint256 newReservePositionBalance; // Community token reserve asset position balance after deposit/withdrawal
     }
 
     uint256 public maxDepositLimit; // Limits the amount of deposits
-    uint256 public fundActiveWindow;          // Duration of the fund active window
-    uint256 public fundWithdrawalWindow;      // Duration of the fund withdrawal window
-    uint256 public fundInitializedAt;         // Fund Initialized at timestamp
-    uint256 public fundCurrentActiveWindowStartedAt;   // Fund Initialized at timestamp
+    uint256 public communityActiveWindow;          // Duration of the community active window
+    uint256 public communityWithdrawalWindow;      // Duration of the community withdrawal window
+    uint256 public communityInitializedAt;         // Community Initialized at timestamp
+    uint256 public communityCurrentActiveWindowStartedAt;   // Community Initialized at timestamp
 
     // Fees
     uint256 public premiumPercentage; // Premium percentage (0.01% = 1e14, 1% = 1e16). This premium is a buffer around oracle
-    // prices paid by user to the Fund Token, which prevents arbitrage and oracle front running
+    // prices paid by user to the Community Token, which prevents arbitrage and oracle front running
 
     // List of contributors
     struct Contributor {
@@ -117,16 +117,16 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
 
     mapping(address => Contributor) public contributors;
     uint256 public totalContributors;
-    uint256 public totalFundsDeposited;
-    uint256 public totalFunds;
-    // Min contribution in the fund
+    uint256 public totalCommunitiesDeposited;
+    uint256 public totalCommunities;
+    // Min contribution in the community
     uint256 public minContribution = initialBuyRate; //wei
-    uint256 public minFundTokenSupply;
+    uint256 public minCommunityTokenSupply;
 
     /* ============ Constructor ============ */
 
     /**
-     * When a new Fund is created, initializes Investments are set to empty.
+     * When a new Community is created, initializes Investments are set to empty.
      * All parameter validations are on the BabController contract. Validations are performed already on the
      * BabController.
      *
@@ -134,9 +134,9 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
      * @param _weth                   Address of the WETH ERC20
      * @param _controller             Address of the controller
      * @param _creator                Address of the creator
-     * @param _name                   Name of the Fund
-     * @param _symbol                 Symbol of the Fund
-     * @param _minContribution        Min contribution to the fund
+     * @param _name                   Name of the Community
+     * @param _symbol                 Symbol of the Community
+     * @param _minContribution        Min contribution to the community
      */
 
     constructor(
@@ -148,7 +148,7 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
         string memory _symbol,
         uint256 _minContribution
     )
-        BaseFund(
+        BaseCommunity(
             _integrations,
             _weth,
             _weth,
@@ -160,68 +160,68 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
     {
         minContribution = _minContribution;
         totalContributors = 0;
-        totalFundsDeposited = 0;
-        totalFunds = 0;
+        totalCommunitiesDeposited = 0;
+        totalCommunities = 0;
     }
 
     /* ============ External Functions ============ */
 
     /**
-     * FUND MANAGER ONLY. Initializes this module to the Fund with hooks, allowed reserve assets,
-     * fees and issuance premium. Only callable by the Fund's manager. Hook addresses are optional.
+     * FUND MANAGER ONLY. Initializes this module to the Community with hooks, allowed reserve assets,
+     * fees and issuance premium. Only callable by the Community's manager. Hook addresses are optional.
      * Address(0) means that no hook will be called.
      *
      * @param _maxDepositLimit                Max deposit limit
      * @param _premiumPercentage              Premium percentage to avoid arbitrage
-     * @param _minFundTokenSupply             Min fund token supply
-     * @param _fundActiveWindow               Fund active window
-     * @param _fundWithdrawalWindow           Fund withdrawal window
-     * @param _fundIdeas                      Address of the instance with the investment ideas
+     * @param _minCommunityTokenSupply             Min community token supply
+     * @param _communityActiveWindow               Community active window
+     * @param _communityWithdrawalWindow           Community withdrawal window
+     * @param _communityIdeas                      Address of the instance with the investment ideas
      */
     function initialize(
         uint256 _maxDepositLimit,
         uint256 _premiumPercentage,
-        uint256 _minFundTokenSupply,
-        uint256 _fundActiveWindow,
-        uint256 _fundWithdrawalWindow,
-        address _fundIdeas
+        uint256 _minCommunityTokenSupply,
+        uint256 _communityActiveWindow,
+        uint256 _communityWithdrawalWindow,
+        address _communityIdeas
     ) external onlyCreator onlyInactive payable {
         require(_maxDepositLimit < MAX_DEPOSITS_FUND_V1, "Max deposit limit needs to be under the limit");
 
         require(msg.value >= minContribution, "Creator needs to deposit");
         IBabController ifcontroller = IBabController(controller);
         require(
-            _premiumPercentage <= ifcontroller.getMaxFundPremiumPercentage(),
+            _premiumPercentage <= ifcontroller.getMaxCommunityPremiumPercentage(),
             "Premium must < max"
         );
         require(
-            _fundActiveWindow <= ifcontroller.getMaxFundActiveWindow() && _fundActiveWindow >= ifcontroller.getMinFundActiveWindow() ,
-            "Fund active window must be within range"
+            _communityActiveWindow <= ifcontroller.getMaxCommunityActiveWindow() && _communityActiveWindow >= ifcontroller.getMinCommunityActiveWindow() ,
+            "Community active window must be within range"
         );
         require(
-            _fundWithdrawalWindow <= ifcontroller.getMaxWithdrawalWindow() && _fundWithdrawalWindow >= ifcontroller.getMinWithdrawalWindow() ,
-            "Fund active window must be within range"
+            _communityWithdrawalWindow <= ifcontroller.getMaxWithdrawalWindow() && _communityWithdrawalWindow >= ifcontroller.getMinWithdrawalWindow() ,
+            "Community active window must be within range"
         );
         require(
-            _minFundTokenSupply > 0,
-            "Min Fund token supply >= 0"
+            _minCommunityTokenSupply > 0,
+            "Min Community token supply >= 0"
         );
         // make initial deposit
         uint256 initialDepositAmount = msg.value;
         uint256 initialTokens = initialDepositAmount.div(initialBuyRate);
-        require(initialTokens >= minFundTokenSupply, "Initial Fund token supply too low");
-        minFundTokenSupply = _minFundTokenSupply;
+        require(initialTokens >= minCommunityTokenSupply, "Initial Community token supply too low");
+        minCommunityTokenSupply = _minCommunityTokenSupply;
         premiumPercentage = _premiumPercentage;
         maxDepositLimit = _maxDepositLimit;
-        fundActiveWindow = _fundActiveWindow;
-        fundWithdrawalWindow = _fundWithdrawalWindow;
-        fundInitializedAt = block.timestamp;
-        fundCurrentActiveWindowStartedAt = block.timestamp;
+        communityActiveWindow = _communityActiveWindow;
+        communityWithdrawalWindow = _communityWithdrawalWindow;
+        communityInitializedAt = block.timestamp;
+        communityCurrentActiveWindowStartedAt = block.timestamp;
 
-        IFundIdeas fundIdeasC = IFundIdeas(_fundIdeas);
-        require(fundIdeasC.controller() == controller, "Controller must be the same");
-        require(fundIdeasC.fund() == address(this), "Fund must be this contract");
-        fundIdeas = _fundIdeas;
+        ICommunityIdeas communityIdeasC = ICommunityIdeas(_communityIdeas);
+        require(communityIdeasC.controller() == controller, "Controller must be the same");
+        require(communityIdeasC.community() == address(this), "Community must be this contract");
+        communityIdeas = _communityIdeas;
 
         IWETH(weth).deposit{value: initialDepositAmount}();
 
@@ -235,7 +235,7 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
           0
         );
 
-        require(totalSupply() > 0, "Fund must receive an initial deposit");
+        require(totalSupply() > 0, "Community must receive an initial deposit");
 
         active = true;
     }
@@ -245,24 +245,24 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
       *
     */
     function restartWindow() public {
-      if (block.timestamp >= fundCurrentActiveWindowStartedAt.add(fundActiveWindow.add(fundWithdrawalWindow))) {
+      if (block.timestamp >= communityCurrentActiveWindowStartedAt.add(communityActiveWindow.add(communityWithdrawalWindow))) {
         if (active) {
-          fundCurrentActiveWindowStartedAt = block.timestamp;
+          communityCurrentActiveWindowStartedAt = block.timestamp;
         }
       }
     }
 
     /**
-     * Deposits the Fund's position components into the fund and mints the Fund token of the given quantity
+     * Deposits the Community's position components into the community and mints the Community token of the given quantity
      * to the specified _to address. This function only handles default Positions (positionState = 0).
      *
      * @param _reserveAssetQuantity  Quantity of the reserve asset that are received
-     * @param _minFundTokenReceiveQuantity   Min quantity of Fund token to receive after issuance
-     * @param _to                   Address to mint Fund tokens to
+     * @param _minCommunityTokenReceiveQuantity   Min quantity of Community token to receive after issuance
+     * @param _to                   Address to mint Community tokens to
      */
     function deposit(
         uint256 _reserveAssetQuantity,
-        uint256 _minFundTokenReceiveQuantity,
+        uint256 _minCommunityTokenReceiveQuantity,
         address _to
     ) public payable nonReentrant onlyActive {
         restartWindow();
@@ -270,13 +270,13 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
             msg.value >= minContribution,
             ">= minContribution"
         );
-        require(block.timestamp >= fundCurrentActiveWindowStartedAt &&
-          block.timestamp < fundCurrentActiveWindowStartedAt.add(fundActiveWindow),
-          "Fund is not in the withdrawal window"
+        require(block.timestamp >= communityCurrentActiveWindowStartedAt &&
+          block.timestamp < communityCurrentActiveWindowStartedAt.add(communityActiveWindow),
+          "Community is not in the withdrawal window"
         );
         // if deposit limit is 0, then there is no deposit limit
         if(maxDepositLimit > 0) {
-          require(totalFundsDeposited.add(msg.value) <= maxDepositLimit, "Max Deposit Limit");
+          require(totalCommunitiesDeposited.add(msg.value) <= maxDepositLimit, "Max Deposit Limit");
         }
         require(msg.value == _reserveAssetQuantity, "ETH does not match");
         // Always wrap to WETH
@@ -287,55 +287,55 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
         ActionInfo memory depositInfo =
             _createIssuanceInfo(reserveAsset, _reserveAssetQuantity);
 
-        _validateIssuanceInfo(_minFundTokenReceiveQuantity, depositInfo);
+        _validateIssuanceInfo(_minCommunityTokenReceiveQuantity, depositInfo);
 
         _transferCollateralAndHandleFees(reserveAsset, depositInfo);
 
-        _updateContributorInfo(depositInfo.fundTokenQuantity, msg.value);
+        _updateContributorInfo(depositInfo.communityTokenQuantity, msg.value);
 
         _handleDepositStateUpdates(reserveAsset, _to, depositInfo);
     }
 
     /**
-     * Withdrawals the Fund's positions and sends the components of the given
+     * Withdrawals the Community's positions and sends the components of the given
      * quantity to the caller. This function only handles Default Positions (positionState = 0).
      *
-     * @param _fundTokenQuantity             Quantity of the fund token to withdrawal
+     * @param _communityTokenQuantity             Quantity of the community token to withdrawal
      * @param _minReserveReceiveQuantity     Min quantity of reserve asset to receive
      * @param _to                            Address to send component assets to
      */
     function withdraw(
-        uint256 _fundTokenQuantity,
+        uint256 _communityTokenQuantity,
         uint256 _minReserveReceiveQuantity,
         address payable _to
     ) external nonReentrant onlyContributor onlyActive {
-        require(block.timestamp >= fundCurrentActiveWindowStartedAt.add(fundActiveWindow) &&
-          block.timestamp < fundCurrentActiveWindowStartedAt.add(fundActiveWindow).add(fundWithdrawalWindow),
-          "Fund is not in the withdrawal window"
+        require(block.timestamp >= communityCurrentActiveWindowStartedAt.add(communityActiveWindow) &&
+          block.timestamp < communityCurrentActiveWindowStartedAt.add(communityActiveWindow).add(communityWithdrawalWindow),
+          "Community is not in the withdrawal window"
         );
         require(
-            _fundTokenQuantity <= balanceOf(msg.sender),
+            _communityTokenQuantity <= balanceOf(msg.sender),
             "Withdrawal amount <= to deposited amount"
         );
-        _validateReserveAsset(reserveAsset, _fundTokenQuantity);
+        _validateReserveAsset(reserveAsset, _communityTokenQuantity);
 
         ActionInfo memory withdrawalInfo =
-            _createRedemptionInfo(reserveAsset, _fundTokenQuantity);
+            _createRedemptionInfo(reserveAsset, _communityTokenQuantity);
 
         _validateRedemptionInfo(
             _minReserveReceiveQuantity,
-            _fundTokenQuantity,
+            _communityTokenQuantity,
             withdrawalInfo
         );
 
-        _burn(msg.sender, _fundTokenQuantity);
+        _burn(msg.sender, _communityTokenQuantity);
 
         emit WithdrawalLog(
             msg.sender,
             withdrawalInfo.netFlowQuantity,
             block.timestamp
         );
-        totalFunds = totalFunds.sub(withdrawalInfo.netFlowQuantity).sub(withdrawalInfo.protocolFees);
+        totalCommunities = totalCommunities.sub(withdrawalInfo.netFlowQuantity).sub(withdrawalInfo.protocolFees);
 
         IWETH(weth).withdraw(withdrawalInfo.netFlowQuantity);
         _to.transfer(withdrawalInfo.netFlowQuantity);
@@ -350,10 +350,10 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
      *
      * @param _premiumPercentage            Premium percentage in 10e16 (e.g. 10e16 = 1%)
      */
-    function editPremium(uint256 _premiumPercentage) external onlyGovernanceFund {
+    function editPremium(uint256 _premiumPercentage) external onlyGovernanceCommunity {
         require(
             _premiumPercentage <=
-                IBabController(controller).getMaxFundPremiumPercentage(),
+                IBabController(controller).getMaxCommunityPremiumPercentage(),
             "Premium < maximum allowed"
         );
 
@@ -363,14 +363,14 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
     }
 
     // if limit == 0 then there is no deposit limit
-    function setDepositLimit(uint limit) external onlyGovernanceFund {
+    function setDepositLimit(uint limit) external onlyGovernanceCommunity {
       maxDepositLimit = limit;
     }
 
     // Any tokens (other than the target) that are sent here by mistake are recoverable by the owner
     // TODO: If it is not whitelisted, trade it for weth
     function sweep(address _token) external onlyContributor {
-       require(!_hasPosition(_token), "Token is one of the fund positions");
+       require(!_hasPosition(_token), "Token is one of the community positions");
        uint256 balance = ERC20(_token).balanceOf(address(this));
        require(balance > 0, "Token balance > 0");
        _calculateAndEditPosition(_token, balance, ERC20(_token).balanceOf(address(this)).toInt256(), 0);
@@ -384,14 +384,14 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
     }
 
     /**
-     * Get the expected fund tokens minted to recipient on issuance
+     * Get the expected community tokens minted to recipient on issuance
      *
      * @param _reserveAsset                 Address of the reserve asset
      * @param _reserveAssetQuantity         Quantity of the reserve asset to deposit with
      *
-     * @return  uint256                     Expected Fund tokens to be minted to recipient
+     * @return  uint256                     Expected Community tokens to be minted to recipient
      */
-    function getExpectedFundTokensDepositedQuantity(
+    function getExpectedCommunityTokensDepositedQuantity(
         address _reserveAsset,
         uint256 _reserveAssetQuantity
     ) external view returns (uint256) {
@@ -400,7 +400,7 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
         uint256 setTotalSupply = totalSupply();
 
         return
-            _getFundTokenMintQuantity(
+            _getCommunityTokenMintQuantity(
                 _reserveAsset,
                 netReserveFlow,
                 setTotalSupply
@@ -411,18 +411,18 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
      * Get the expected reserve asset to be withdrawaled
      *
      * @param _reserveAsset                 Address of the reserve asset
-     * @param _fundTokenQuantity             Quantity of Fund tokens to withdrawal
+     * @param _communityTokenQuantity             Quantity of Community tokens to withdrawal
      *
      * @return  uint256                     Expected reserve asset quantity withdrawaled
      */
     function getExpectedReserveWithdrawalQuantity(
         address _reserveAsset,
-        uint256 _fundTokenQuantity
+        uint256 _communityTokenQuantity
     ) external view returns (uint256) {
         uint256 preFeeReserveQuantity =
-            _getWithdrawalReserveQuantity(_reserveAsset, _fundTokenQuantity);
+            _getWithdrawalReserveQuantity(_reserveAsset, _communityTokenQuantity);
 
-        (, uint256 netReserveFlows) = _getFees(preFeeReserveQuantity, false, _fundTokenQuantity);
+        (, uint256 netReserveFlows) = _getFees(preFeeReserveQuantity, false, _communityTokenQuantity);
 
         return netReserveFlows;
     }
@@ -444,38 +444,38 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
         return
             _reserveAssetQuantity != 0 &&
             IBabController(controller).isValidReserveAsset(_reserveAsset) &&
-            setTotalSupply >= minFundTokenSupply;
+            setTotalSupply >= minCommunityTokenSupply;
     }
 
     /**
      * Checks if withdrawal is valid
      *
      * @param _reserveAsset                 Address of the reserve asset
-     * @param _fundTokenQuantity             Quantity of fund tokens to withdrawal
+     * @param _communityTokenQuantity             Quantity of community tokens to withdrawal
      *
      * @return  bool                        Returns true if withdrawal is valid
      */
     function isWithdrawalValid(
         address _reserveAsset,
-        uint256 _fundTokenQuantity
+        uint256 _communityTokenQuantity
     ) external view returns (bool) {
         uint256 setTotalSupply = totalSupply();
 
         if (
-            _fundTokenQuantity == 0 ||
+            _communityTokenQuantity == 0 ||
             !IBabController(controller).isValidReserveAsset(_reserveAsset) ||
-            setTotalSupply < minFundTokenSupply.add(_fundTokenQuantity)
+            setTotalSupply < minCommunityTokenSupply.add(_communityTokenQuantity)
         ) {
             return false;
         } else {
             uint256 totalWithdrawalValue =
                 _getWithdrawalReserveQuantity(
                     _reserveAsset,
-                    _fundTokenQuantity
+                    _communityTokenQuantity
                 );
 
             (, uint256 expectedWithdrawalQuantity) =
-                _getFees(totalWithdrawalValue, false, _fundTokenQuantity);
+                _getFees(totalWithdrawalValue, false, _communityTokenQuantity);
 
             uint256 existingBalance =
                 _getPositionBalance(_reserveAsset).toUint256();
@@ -500,31 +500,31 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
     }
 
     function _validateIssuanceInfo(
-        uint256 _minFundTokenReceiveQuantity,
+        uint256 _minCommunityTokenReceiveQuantity,
         ActionInfo memory _depositInfo
     ) internal view {
         // Check that total supply is greater than min supply needed for issuance
-        // Note: A min supply amount is needed to avoid division by 0 when Fund token supply is 0
+        // Note: A min supply amount is needed to avoid division by 0 when Community token supply is 0
         require(
-            _depositInfo.previousFundTokenSupply >= minFundTokenSupply,
+            _depositInfo.previousCommunityTokenSupply >= minCommunityTokenSupply,
             "Supply must > than minimum"
         );
 
         require(
-            _depositInfo.fundTokenQuantity >= _minFundTokenReceiveQuantity,
-            "Must be > min Fund token"
+            _depositInfo.communityTokenQuantity >= _minCommunityTokenReceiveQuantity,
+            "Must be > min Community token"
         );
     }
 
     function _validateRedemptionInfo(
         uint256 _minReserveReceiveQuantity,
-        uint256 /* _fundTokenQuantity */,
+        uint256 /* _communityTokenQuantity */,
         ActionInfo memory _withdrawalInfo
     ) internal view {
         // Check that new supply is more than min supply needed for redemption
-        // Note: A min supply amount is needed to avoid division by 0 when withdrawaling fund token to 0
+        // Note: A min supply amount is needed to avoid division by 0 when withdrawaling community token to 0
         require(
-            _withdrawalInfo.newFundTokenSupply >= minFundTokenSupply,
+            _withdrawalInfo.newCommunityTokenSupply >= minCommunityTokenSupply,
             "Supply must be > than minimum"
         );
 
@@ -539,7 +539,7 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
         uint256 _reserveAssetQuantity
     ) internal view returns (ActionInfo memory) {
         ActionInfo memory depositInfo;
-        depositInfo.previousFundTokenSupply = totalSupply();
+        depositInfo.previousCommunityTokenSupply = totalSupply();
         depositInfo.preFeeReserveQuantity = _reserveAssetQuantity;
 
         (
@@ -547,16 +547,16 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
             depositInfo.netFlowQuantity
         ) = _getFees(depositInfo.preFeeReserveQuantity, true, 0);
 
-        depositInfo.fundTokenQuantity = _getFundTokenMintQuantity(
+        depositInfo.communityTokenQuantity = _getCommunityTokenMintQuantity(
             _reserveAsset,
             depositInfo.netFlowQuantity,
-            depositInfo.previousFundTokenSupply
+            depositInfo.previousCommunityTokenSupply
         );
 
         // Calculate inflation and new position multiplier. Note: Round inflation up in order to round position multiplier down
-        depositInfo.newFundTokenSupply =
-            depositInfo.fundTokenQuantity.add(
-              depositInfo.previousFundTokenSupply
+        depositInfo.newCommunityTokenSupply =
+            depositInfo.communityTokenQuantity.add(
+              depositInfo.previousCommunityTokenSupply
             );
 
         uint256 existingBalance = _getPositionBalance(_reserveAsset).toUint256();
@@ -568,26 +568,26 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
 
     function _createRedemptionInfo(
         address _reserveAsset,
-        uint256 _fundTokenQuantity
+        uint256 _communityTokenQuantity
     ) internal view returns (ActionInfo memory) {
         ActionInfo memory withdrawalInfo;
 
-        withdrawalInfo.fundTokenQuantity = _fundTokenQuantity;
+        withdrawalInfo.communityTokenQuantity = _communityTokenQuantity;
 
         withdrawalInfo.preFeeReserveQuantity = _getWithdrawalReserveQuantity(
             _reserveAsset,
-            _fundTokenQuantity
+            _communityTokenQuantity
         );
 
         (
             withdrawalInfo.protocolFees,
             withdrawalInfo.netFlowQuantity
-        ) = _getFees(withdrawalInfo.preFeeReserveQuantity, false, _fundTokenQuantity);
+        ) = _getFees(withdrawalInfo.preFeeReserveQuantity, false, _communityTokenQuantity);
 
-        withdrawalInfo.previousFundTokenSupply = totalSupply();
+        withdrawalInfo.previousCommunityTokenSupply = totalSupply();
 
-        withdrawalInfo.newFundTokenSupply =
-            withdrawalInfo.previousFundTokenSupply.sub(_fundTokenQuantity);
+        withdrawalInfo.newCommunityTokenSupply =
+            withdrawalInfo.previousCommunityTokenSupply.sub(_communityTokenQuantity);
 
         withdrawalInfo.newReservePositionBalance = _getWithdrawalPositionBalance(
             _reserveAsset,
@@ -598,7 +598,7 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
     }
 
     /**
-     * Transfer reserve asset from user to Fund and fees from user to appropriate fee recipients
+     * Transfer reserve asset from user to Community and fees from user to appropriate fee recipients
      */
     function _transferCollateralAndHandleFees(
         address _reserveAsset,
@@ -627,11 +627,11 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
             0
         );
 
-        _mint(_to, _depositInfo.fundTokenQuantity);
+        _mint(_to, _depositInfo.communityTokenQuantity);
 
-        emit FundTokenDeposited(
+        emit CommunityTokenDeposited(
             _to,
-            _depositInfo.fundTokenQuantity,
+            _depositInfo.communityTokenQuantity,
             _depositInfo.protocolFees
         );
     }
@@ -649,10 +649,10 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
             0
         );
 
-        emit FundTokenWithdrawn(
+        emit CommunityTokenWithdrawn(
             msg.sender,
             _to,
-            _withdrawalInfo.fundTokenQuantity,
+            _withdrawalInfo.communityTokenQuantity,
             _withdrawalInfo.protocolFees
         );
     }
@@ -661,8 +661,8 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
         address _reserveAsset,
         ActionInfo memory _withdrawalInfo
     ) internal {
-        // Instruct the Fund to transfer protocol fee to fee recipient if there is a fee
-        payProtocolFeeFromFund(_reserveAsset, _withdrawalInfo.protocolFees);
+        // Instruct the Community to transfer protocol fee to fee recipient if there is a fee
+        payProtocolFeeFromCommunity(_reserveAsset, _withdrawalInfo.protocolFees);
     }
 
     /**
@@ -672,12 +672,12 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
      *
      * @param _reserveAssetQuantity         Quantity of reserve asset to calculate fees from
      * @param _isDeposit                    Boolean that is true when it is a deposit
-     * @param _fundTokenQuantity            Number of fund tokens involved in the operation
+     * @param _communityTokenQuantity            Number of community tokens involved in the operation
      *
      * @return  uint256                     Fees paid to the protocol in reserve asset
      * @return  uint256                     Net reserve to user net of fees
      */
-    function _getFees(uint256 _reserveAssetQuantity, bool _isDeposit, uint256 _fundTokenQuantity)
+    function _getFees(uint256 _reserveAssetQuantity, bool _isDeposit, uint256 _communityTokenQuantity)
         internal
         view
         returns (
@@ -688,13 +688,13 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
         // Get protocol fee percentages
         uint256 protocolFeePercentage =
             _isDeposit
-                ? IBabController(controller).getProtocolDepositFundTokenFee()
+                ? IBabController(controller).getProtocolDepositCommunityTokenFee()
                 : IBabController(controller)
-                    .getProtocolWithdrawalFundTokenFee();
+                    .getProtocolWithdrawalCommunityTokenFee();
         // Get performance if withdrawal and there are profits
         uint perfFee = 0;
         if (!_isDeposit) {
-          uint percentage = balanceOf(msg.sender).div(_fundTokenQuantity); // Divide by the % tokens being withdrawn
+          uint percentage = balanceOf(msg.sender).div(_communityTokenQuantity); // Divide by the % tokens being withdrawn
           int256 profits = _reserveAssetQuantity.toInt256().sub(contributors[msg.sender].totalDeposit.toInt256().div(percentage.toInt256()));
           if (profits > 0) {
             perfFee = IBabController(controller)
@@ -712,18 +712,18 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
         return (protocolFees, netReserveFlow);
     }
 
-    function _getFundTokenMintQuantity(
+    function _getCommunityTokenMintQuantity(
         address _reserveAsset,
         uint256 _netReserveFlows, // Value of reserve asset net of fees
-        uint256 _fundTokenTotalSupply
+        uint256 _communityTokenTotalSupply
     ) internal view returns (uint256) {
         uint256 premiumPercentageToApply = premiumPercentage;
         uint256 premiumValue =
             _netReserveFlows.preciseMul(premiumPercentageToApply);
 
-        // Get valuation of the Fund with the quote asset as the reserve asset.
+        // Get valuation of the Community with the quote asset as the reserve asset.
         // Reverts if price is not found
-        uint256 fundValuation = IFundValuer(IBabController(controller).getFundValuer()).calculateFundValuation(address(this), _reserveAsset);
+        uint256 communityValuation = ICommunityValuer(IBabController(controller).getCommunityValuer()).calculateCommunityValuation(address(this), _reserveAsset);
 
         // Get reserve asset decimals
         uint8 reserveAssetDecimals = ERC20(_reserveAsset).decimals();
@@ -733,31 +733,31 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
         uint256 normalizedTotalReserveQuantityNetFeesAndPremium =
             _netReserveFlows.sub(premiumValue).preciseDiv(baseUnits);
 
-        // Calculate Fund tokens to mint to depositor
+        // Calculate Community tokens to mint to depositor
         uint256 denominator =
-            _fundTokenTotalSupply
-                .preciseMul(fundValuation)
+            _communityTokenTotalSupply
+                .preciseMul(communityValuation)
                 .add(normalizedTotalReserveQuantityNetFees)
                 .sub(normalizedTotalReserveQuantityNetFeesAndPremium);
         uint256 quantityToMint =
             normalizedTotalReserveQuantityNetFeesAndPremium
-                .preciseMul(_fundTokenTotalSupply)
+                .preciseMul(_communityTokenTotalSupply)
                 .preciseDiv(denominator);
         return quantityToMint;
     }
 
     function _getWithdrawalReserveQuantity(
         address _reserveAsset,
-        uint256 _fundTokenQuantity
+        uint256 _communityTokenQuantity
     ) internal view returns (uint256) {
-        // Get valuation of the Fund with the quote asset as the reserve asset. Returns value in precise units (10e18)
+        // Get valuation of the Community with the quote asset as the reserve asset. Returns value in precise units (10e18)
         // Reverts if price is not found
-        uint256 fundValuation =
-            IFundValuer(IBabController(controller).getFundValuer())
-                .calculateFundValuation(address(this), _reserveAsset);
+        uint256 communityValuation =
+            ICommunityValuer(IBabController(controller).getCommunityValuer())
+                .calculateCommunityValuation(address(this), _reserveAsset);
 
         uint256 totalWithdrawalValueInPreciseUnits =
-            _fundTokenQuantity.preciseMul(fundValuation);
+            _communityTokenQuantity.preciseMul(communityValuation);
         // Get reserve asset decimals
         uint8 reserveAssetDecimals = ERC20(_reserveAsset).decimals();
         uint256 prePremiumReserveQuantity =
@@ -775,7 +775,7 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
     /**
      * The new position reserve asset balance is calculated as follows:
      * totalReserve = oldBalance - reserveQuantityToSendOut
-     * newBalance = totalReserve / newFundTokenSupply
+     * newBalance = totalReserve / newCommunityTokenSupply
      */
     function _getWithdrawalPositionBalance(
         address _reserveAsset,
@@ -810,8 +810,8 @@ contract ClosedFund is BaseFund, ReentrancyGuard {
         contributor.timestamp = block.timestamp;
       }
 
-      totalFunds = totalFunds.add(amount);
-      totalFundsDeposited = totalFundsDeposited.add(amount);
+      totalCommunities = totalCommunities.add(amount);
+      totalCommunitiesDeposited = totalCommunitiesDeposited.add(amount);
       contributor.totalDeposit = contributor.totalDeposit.add(amount);
       contributor.tokensReceived = contributor.tokensReceived.add(
           tokensReceived

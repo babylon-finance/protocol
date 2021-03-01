@@ -18,34 +18,34 @@
 pragma solidity 0.7.4;
 
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import { IFund } from "./IFund.sol";
+import { ICommunity } from "./ICommunity.sol";
 
 
 /**
- * @title IFund
+ * @title ICommunity
  * @author Babylon Finance
  *
  * Interface for operating with SetTokens.
  */
-interface IClosedFund is IERC20, IFund {
+interface IRollingCommunity is IERC20, ICommunity {
 
     function initialize(
       uint256 _maxDepositLimit,
       uint256 _premiumPercentage,
-      uint256 _minFundTokenSupply,
-      uint256 _fundActiveWindow,
-      uint256 _fundWithdrawalWindow,
-      address _fundIdeas
+      uint256 _minCommunityTokenSupply,
+      uint256 _communityActiveWindow,
+      uint256 _communityWithdrawalWindow,
+      address _communityIdeas
     ) external;
 
     function deposit(
         uint256 _reserveAssetQuantity,
-        uint256 _minFundTokenReceiveQuantity,
+        uint256 _minCommunityTokenReceiveQuantity,
         address _to
     ) external payable;
 
     function withdraw(
-        uint256 _fundTokenQuantity,
+        uint256 _communityTokenQuantity,
         uint256 _minReserveReceiveQuantity,
         address payable _to
     ) external;
@@ -53,13 +53,13 @@ interface IClosedFund is IERC20, IFund {
     function editPremium(uint256 _premiumPercentage) external;
     function setDepositLimit(uint limit) external;
     function premiumPercentage() external view returns (uint256);
-    function getExpectedFundTokensDepositedQuantity(
+    function getExpectedCommunityTokensDepositedQuantity(
         address _reserveAsset,
         uint256 _reserveAssetQuantity
     ) external view returns (uint256);
     function getExpectedReserveWithdrawalQuantity(
         address _reserveAsset,
-        uint256 _fundTokenQuantity
+        uint256 _communityTokenQuantity
     ) external view returns (uint256);
     function isDepositValid(
         address _reserveAsset,
@@ -67,7 +67,7 @@ interface IClosedFund is IERC20, IFund {
     ) external view returns (bool);
     function isWithdrawalValid(
         address _reserveAsset,
-        uint256 _fundTokenQuantity
+        uint256 _communityTokenQuantity
     ) external view returns (bool);
 
     // Investment ideas

@@ -17,14 +17,6 @@
 */
 pragma solidity 0.7.4;
 
-import { IIntegration } from "./IIntegration.sol";
-
-/**
- * @title IIntegration
- * @author Babylon Finance
- *
- * Interface for derivatives protocol integrations
- */
-interface IHedgeIntegration is IIntegration {
-
+interface ICommunityValuer {
+    function calculateCommunityValuation(address _community, address _quoteAsset) external view returns (uint256);
 }
