@@ -29,6 +29,7 @@ module.exports = {
   },
   uniswap: {
     router: "0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D",
+    factory: "0x5C69bEe701ef814a2B6a3EDD4B1652CB9cc5aA6f",
     pairs: {
       wethdai: "0xa478c2975ab1ea89e8196811f51a7b7ade33eb11"
     }
@@ -52,6 +53,7 @@ module.exports = {
     CWBTC: "0xc11b1268c1a384e55c48c2391d8d480264a3a7f4",
     COMP: "0xc00e94cb662c3520282e6f5717214004a7f26888",
     CCOMP: "0x70e36f6bf80a52b3b46b3af8e106cc0ed743e8e4",
+    YFI: "0x0bc529c00C6401aEF6D220BE8C6Ea1667F6Ad93e",
     sUSD: "0x57Ab1ec28D129707052df4dF418D58a2D46d5f51"
   },
   holders: {

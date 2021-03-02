@@ -24,7 +24,7 @@ import { ERC20 } from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import { SafeMath } from "@openzeppelin/contracts/math/SafeMath.sol";
 import { PreciseUnitMath } from "../lib/PreciseUnitMath.sol";
 import { IUniswapV2Router } from "../interfaces/external/uniswap/IUniswapV2Router.sol";
-import { IUniswapV2Pair } from "../interfaces/external/uniswap/IUniswapV2Pair.sol";
+import '@uniswap/v2-core/contracts/interfaces/IUniswapV2Pair.sol';
 
 /**
  * @title BalancerIntegration

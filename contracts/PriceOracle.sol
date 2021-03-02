@@ -98,7 +98,7 @@ contract PriceOracle is Ownable {
      */
     function getPrice(address _assetOne, address _assetTwo) external view returns (uint256) {
         require(
-          controller.isSystemContract(msg.sender),
+          controller.isSystemContract(msg.sender) || msg.sender == owner(),
           "PriceOracle.getPrice: Caller must be system contract."
         );
         // Same asset. Returns base unit
@@ -157,6 +157,18 @@ contract PriceOracle is Ownable {
         return adapters;
     }
 
+    /**
+     * Calls the update function in every adapter.
+     * e.g Uniswap TWAP
+     * @param _assetOne       First Asset of the pair
+     * @param _assetTwo       Second Asset of the pair
+     */
+    function updateAdapters(address _assetOne, address _assetTwo) external {
+      for (uint i = 0; i < adapters.length; i += 1) {
+        IOracleAdapter(adapters[i]).update(_assetOne, _assetTwo);
+      }
+    }
+
     /* ============ Internal Functions ============ */
 
     /**
@@ -178,12 +190,26 @@ contract PriceOracle is Ownable {
     {
       string memory symbol1 = _assetOne == weth ? 'ETH' : ERC20(_assetOne).symbol();
       string memory symbol2 = _assetTwo == weth ? 'ETH' : ERC20(_assetTwo).symbol();
+      address assetToCheck = _assetOne;
+      if (_assetOne == weth) {
+        assetToCheck = _assetTwo;
+      }
+      if (
+        assetToCheck == 0x6B175474E89094C44Da98b954EedeAC495271d0F || //dai
+        assetToCheck == 0x1985365e9f78359a9B6AD760e32412f4a445E862 || // rep
+        assetToCheck == 0xE41d2489571d322189246DaFA5ebDe1F4699F498 || //zrx
+        assetToCheck == 0x0D8775F648430679A709E98d2b0Cb6250d2887EF || // bat
+        assetToCheck == 0xdd974D5C2e2928deA5F71b9825b8b646686BD200 || // knc
+        assetToCheck == 0x514910771AF9Ca656af840dff83E8264EcF986CA || //link
+        assetToCheck == 0xc00e94Cb662C3520282E6f5717214004A7f26888 || // comp
+        assetToCheck == 0x1f9840a85d5aF5bf1D1762F925BDADdC4201F984 // uni
+      ) {
+        uint256 assetOnePrice = IUniswapAnchoredView(uniswapAnchoredView).price(symbol1);
+        uint256 assetTwoPrice = IUniswapAnchoredView(uniswapAnchoredView).price(symbol2);
 
-      uint256 assetOnePrice = IUniswapAnchoredView(uniswapAnchoredView).price(symbol1);
-      uint256 assetTwoPrice = IUniswapAnchoredView(uniswapAnchoredView).price(symbol2);
-
-      if (assetOnePrice > 0 && assetTwoPrice > 0) {
-        return (true, assetOnePrice.preciseDiv(assetTwoPrice));
+        if (assetOnePrice > 0 && assetTwoPrice > 0) {
+          return (true, assetOnePrice.preciseDiv(assetTwoPrice));
+        }
       }
 
       return (false, 0);

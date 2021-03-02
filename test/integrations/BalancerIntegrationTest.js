@@ -19,7 +19,7 @@ describe("BalancerIntegrationTest", function() {
     balancerIntegration = system.integrations.balancerIntegration;
     userSigner3 = system.signer3;
     balancerAbi = balancerIntegration.interface;
-    community = system.communitys.one;
+    community = system.comunities.one;
   });
 
   describe("Deployment", function() {

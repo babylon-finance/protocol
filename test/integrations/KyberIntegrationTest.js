@@ -19,7 +19,7 @@ describe("KyberTradeIntegration", function() {
     kyberIntegration = system.integrations.kyberTradeIntegration;
     kyberAbi = kyberIntegration.interface;
     userSigner3 = system.signer3;
-    community = system.communitys.one;
+    community = system.comunities.one;
   });
 
   describe("Deployment", function() {

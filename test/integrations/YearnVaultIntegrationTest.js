@@ -17,7 +17,7 @@ describe("YearnVaultIntegrationTest", function() {
     system = await loadFixture(deployFolioFixture);
     yearnVaultIntegration = system.integrations.yearnVaultIntegration;
     userSigner3 = system.signer3;
-    community = system.communitys.one;
+    community = system.comunities.one;
   });
 
   describe("Deployment", function() {

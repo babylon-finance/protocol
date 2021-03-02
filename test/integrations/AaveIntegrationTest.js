@@ -14,7 +14,7 @@ describe("AaveIntegration", function() {
   beforeEach(async () => {
     system = await loadFixture(deployFolioFixture);
     aaveIntegration = system.integrations.aaveIntegration;
-    community = system.communitys.one;
+    community = system.comunities.one;
   });
 
   describe("Deployment", function() {

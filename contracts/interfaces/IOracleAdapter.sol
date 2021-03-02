@@ -37,4 +37,5 @@ interface IOracleAdapter {
      * @return              Current price of asset represented in uint256
      */
     function getPrice(address _assetOne, address _assetTwo) external view returns (bool, uint256);
+    function update(address _assetOne, address _assetTwo) external;
 }

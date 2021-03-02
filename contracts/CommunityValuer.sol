@@ -113,8 +113,6 @@ contract CommunityValuer {
             valuation = valuation.preciseDiv(quoteToMaster.toInt256());
         }
 
-        // TODO: Add eth balance??
-
         return valuation.toUint256().preciseDiv(_community.totalSupply());
     }
 }

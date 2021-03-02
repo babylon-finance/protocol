@@ -24,7 +24,7 @@ describe("Community", function() {
       signer1,
       signer2,
       signer3,
-      communitys,
+      comunities,
       owner
     } = await loadFixture(deployFolioFixture);
 
@@ -33,9 +33,9 @@ describe("Community", function() {
     userSigner1 = signer1;
     userSigner2 = signer2;
     userSigner3 = signer3;
-    community1 = communitys.one;
-    community2 = communitys.two;
-    community3 = communitys.three;
+    community1 = comunities.one;
+    community2 = comunities.two;
+    community3 = comunities.three;
     weth = await ethers.getContractAt("IERC20", addresses.tokens.WETH);
   });
 
@@ -157,7 +157,7 @@ describe("Community", function() {
       expect(await community1.totalCommunities()).to.equal(ethers.utils.parseEther("2.1"));
     });
 
-    it("a contributor can withdraw communitys if they have enough in deposits", async function() {
+    it("a contributor can withdraw comunities if they have enough in deposits", async function() {
       await community1
         .connect(userSigner3)
         .deposit(ethers.utils.parseEther("1"), 1, userSigner3.getAddress(), {
@@ -171,7 +171,7 @@ describe("Community", function() {
         .withdraw(1000000, 1, userSigner3.getAddress());
     });
 
-    it("a contributor cannot withdraw communitys until the time ends", async function() {
+    it("a contributor cannot withdraw comunities until the time ends", async function() {
       await community1
         .connect(userSigner3)
         .deposit(ethers.utils.parseEther("1"), 1, userSigner3.getAddress(), {
@@ -197,7 +197,7 @@ describe("Community", function() {
       ).to.be.reverted;
     });
 
-    it("a contributor cannot withdraw more communitys than they have deposited", async function() {
+    it("a contributor cannot withdraw more comunities than they have deposited", async function() {
       await community1
         .connect(userSigner3)
         .deposit(ethers.utils.parseEther("1"), 1, userSigner3.getAddress(), {
