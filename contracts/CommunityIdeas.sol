@@ -119,7 +119,7 @@ contract CommunityIdeas is ReentrancyGuard {
 
   uint256 public ideaCooldownPeriod;            // Window for the idea to cooldown after approval before receiving capital
 
-  InvestmentIdea[MAX_TOTAL_IDEAS] ideas;
+  InvestmentIdea[] ideas;
 
   uint256 public ideaCreatorProfitPercentage = 15e16; // (0.01% = 1e14, 1% = 1e16)
   uint256 public ideaVotersProfitPercentage = 5e16; // (0.01% = 1e14, 1% = 1e16)
@@ -200,10 +200,9 @@ contract CommunityIdeas is ReentrancyGuard {
     require(_minRebalanceCapital > 0, "Min Capital requested amount must be greater than 0");
     require(_maxCapitalRequested >= _minRebalanceCapital, "The max amount of capital must be greater than one chunk");
     require(ideas.length < MAX_TOTAL_IDEAS, "Reached the limit of ideas");
-    uint8 ideaIndex = ideas.length.toUint8();
     // Check than enter and exit data call integrations
-    InvestmentIdea storage idea = ideas[ideaIndex];
-    idea.index = ideaIndex;
+    InvestmentIdea storage idea;
+    idea.index = ideas.length.toUint8();
     idea.integration = _integration;
     idea.participant = msg.sender;
     idea.enteredAt = block.timestamp;
@@ -220,6 +219,8 @@ contract CommunityIdeas is ReentrancyGuard {
     idea.totalVotes = _stake.toInt256();
     idea.absoluteTotalVotes = _stake;
     totalStake = totalStake.add(_stake);
+
+    ideas.push(idea);
   }
 
   function abs(int x) private pure returns (int) {

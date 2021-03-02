@@ -34,6 +34,7 @@
     "chain": "hardhat node",
     "test": "hardhat test --network hardhat",
     "compile": "hardhat compile",
+    "clean" : "rm -rf cache/* && rm -rf artifacts/* && rm -rf /tmp/hardhat/contracts/*",
     "deploy": "hardhat run scripts/deploy.js --network localhost && hardhat run scripts/publish.js",
     "publish": "hardhat run scripts/publish.js",
     "deploy-mainnet": "hardhat run scripts/deploy.js --network mainnet && hardhat run scripts/publish.js",
