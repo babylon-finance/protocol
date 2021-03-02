@@ -18,8 +18,17 @@
 pragma solidity 0.7.4;
 
 import { SafeMath } from "@openzeppelin/contracts/math/SafeMath.sol";
+import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import { Context } from "@openzeppelin/contracts/utils/Context.sol";
+import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
+import { Address } from "@openzeppelin/contracts/utils/Address.sol";
 
-contract BABLToken {
+//BABLToken with governance
+
+contract BABLToken is Context, IERC20, Ownable {
+    
+    using SafeMath for uint256;
+    using Address for address;
 
     /// @notice EIP-20 token name for this token
     string public constant name = "Babylon.Finance";
@@ -31,7 +40,7 @@ contract BABLToken {
     uint8 public constant decimals = 18;
 
     /// @notice Total number of tokens in circulation
-    uint public totalSupply = 1_000_000e18; // 1 million BABL
+    uint256 public _totalSupply = 1_000_000e18; // 1 million BABL
     
     /// @notice Maximum number of tokens in circulation
     uint public constant MAX_SUPPLY = 1_000_000e18; // 1 million BABL
@@ -91,10 +100,10 @@ contract BABLToken {
     event DelegateVotesChanged(address indexed delegate, uint previousBalance, uint newBalance);
 
     /// @notice The standard EIP-20 transfer event
-    event Transfer(address indexed from, address indexed to, uint256 amount);
+    // event Transfer(address indexed from, address indexed to, uint256 value); TODO - CHECK DEFINITION IN IERC20
 
     /// @notice The standard EIP-20 approval event
-    event Approval(address indexed owner, address indexed spender, uint256 amount);
+    // event Approval(address indexed owner, address indexed spender, uint256 value); TODO - CHECK DEFINITION IN IERC20
 
     /**
      * @notice Construct a new BABL token
@@ -111,14 +120,13 @@ contract BABLToken {
      */
    
      
-     
-    //constructor(address account, address minter_, uint mintingAllowedAfter_) {
+    //constructor(address account, address minter_, uint mintingAllowedAfter_) { TODO - GET BACK INTO NORMAL STATE
     constructor(address account, address minter_) {
         uint mintingAllowedAfter_ = block.timestamp;
         require(mintingAllowedAfter_ >= block.timestamp, "BABL::constructor: minting can only begin after deployment");
 
-        balances[account] = uint96(totalSupply);
-        emit Transfer(address(0), account, totalSupply);
+        balances[account] = uint96(_totalSupply);
+        emit Transfer(address(0), account, _totalSupply);
         minter = minter_;
         emit MinterChanged(address(0), minter);
         mintingAllowedAfter = mintingAllowedAfter_;
@@ -142,7 +150,7 @@ contract BABLToken {
      */
     function mint(address dst, uint rawAmount) external {
         require(msg.sender == minter, "BABL::mint: only the minter can mint");
-        require(SafeMath.add(totalSupply, rawAmount)<= MAX_SUPPLY, "BABL::mint: max supply exceeded"); // TODO ADDED - CHECK
+        require(SafeMath.add(_totalSupply, rawAmount)<= MAX_SUPPLY, "BABL::mint: max supply exceeded"); // TODO ADDED - CHECK
         require(rawAmount>0, "BABL::mint: mint should be higher than zero"); // TODO ADDED TO AVOID GAS - CHECK
         require(block.timestamp >= mintingAllowedAfter, "BABL::mint: minting not allowed yet");
         require(dst != address(0), "BABL::mint: cannot transfer to the zero address");
@@ -152,8 +160,8 @@ contract BABLToken {
 
         // mint the amount
         uint96 amount = safe96(rawAmount, "BABL::mint: amount exceeds 96 bits");
-        require(amount <= SafeMath.div(SafeMath.mul(totalSupply, mintCap), 100), "BABL::mint: exceeded mint cap");
-        totalSupply = safe96(SafeMath.add(totalSupply, amount), "BABL::mint: totalSupply exceeds 96 bits");
+        require(amount <= SafeMath.div(SafeMath.mul(_totalSupply, mintCap), 100), "BABL::mint: exceeded mint cap");
+        _totalSupply = safe96(SafeMath.add(_totalSupply, amount), "BABL::mint: totalSupply exceeds 96 bits");
 
         // transfer the amount to the recipient
         balances[dst] = add96(balances[dst], amount, "BABL::mint: transfer amount overflows");
@@ -162,14 +170,26 @@ contract BABLToken {
         // move delegates
         _moveDelegates(address(0), delegates[dst], amount);
     }
-
+    
+    /**
+     * @notice Override  burn function to avoid BABL token burning
+     * @param account The address of the account holding the funds
+     * @param amount The amount of tokens requested to burn
+     * 
+     */
+    
+     
+    function _burn(address account, uint256 amount) internal virtual { // TODO - CHECK OVERRIDE TO AVOID BURNING
+        revert("BABL::burn: cannot burn tokens");
+    }
+    
     /**
      * @notice Get the number of tokens `spender` is approved to spend on behalf of `account`
      * @param account The address of the account holding the funds
      * @param spender The address of the account spending the funds
      * @return The number of tokens approved
      */
-    function allowance(address account, address spender) external view returns (uint) {
+    function allowance(address account, address spender) external view override returns (uint) { // TODO - CHECK OVERRIDE
         return allowances[account][spender];
     }
 
@@ -181,7 +201,7 @@ contract BABLToken {
      * @param rawAmount The number of tokens that are approved (2^256-1 means infinite)
      * @return Whether or not the approval succeeded
      */
-    function approve(address spender, uint rawAmount) external returns (bool) {
+    function approve(address spender, uint rawAmount) external override returns (bool) { // TODO - CHECK OVERRIDE
         uint96 amount;
         if (rawAmount == uint(-1)) {
             amount = uint96(-1);
@@ -227,11 +247,20 @@ contract BABLToken {
     }
 
     /**
+     * @notice Get the number of totalSupply tokens
+     * @return The number of totalSupply BABL tokens
+     */
+     
+    function totalSupply() public view override returns (uint256) {
+        return _totalSupply;
+    }
+    
+    /**
      * @notice Get the number of tokens held by the `account`
      * @param account The address of the account to get the balance of
      * @return The number of tokens held
      */
-    function balanceOf(address account) external view returns (uint) {
+    function balanceOf(address account) external view override returns (uint) { // TODO - CHECK OVERRIDE
         return balances[account];
     }
 
@@ -241,7 +270,7 @@ contract BABLToken {
      * @param rawAmount The number of tokens to transfer
      * @return Whether or not the transfer succeeded
      */
-    function transfer(address dst, uint rawAmount) external returns (bool) {
+    function transfer(address dst, uint rawAmount) external override returns (bool) { // TODO - CHECK OVERRIDE
         uint96 amount = safe96(rawAmount, "BABL::transfer: amount exceeds 96 bits");
         _transferTokens(msg.sender, dst, amount);
         return true;
@@ -254,7 +283,7 @@ contract BABLToken {
      * @param rawAmount The number of tokens to transfer
      * @return Whether or not the transfer succeeded
      */
-    function transferFrom(address src, address dst, uint rawAmount) external returns (bool) {
+    function transferFrom(address src, address dst, uint rawAmount) external override returns (bool) { // TODO - CHECK OVERRIDE
         address spender = msg.sender;
         uint96 spenderAllowance = allowances[src][spender];
         uint96 amount = safe96(rawAmount, "BABL::approve: amount exceeds 96 bits");
