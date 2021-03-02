@@ -394,7 +394,7 @@ contract RollingCommunity is BaseCommunity, ReentrancyGuard {
     function getExpectedCommunityTokensDepositedQuantity(
         address _reserveAsset,
         uint256 _reserveAssetQuantity
-    ) external view returns (uint256) {
+    ) external returns (uint256) {
         (, uint256 netReserveFlow) = _getFees(_reserveAssetQuantity, true, 0);
 
         uint256 setTotalSupply = totalSupply();
@@ -418,7 +418,7 @@ contract RollingCommunity is BaseCommunity, ReentrancyGuard {
     function getExpectedReserveWithdrawalQuantity(
         address _reserveAsset,
         uint256 _communityTokenQuantity
-    ) external view returns (uint256) {
+    ) external returns (uint256) {
         uint256 preFeeReserveQuantity =
             _getWithdrawalReserveQuantity(_reserveAsset, _communityTokenQuantity);
 
@@ -458,7 +458,7 @@ contract RollingCommunity is BaseCommunity, ReentrancyGuard {
     function isWithdrawalValid(
         address _reserveAsset,
         uint256 _communityTokenQuantity
-    ) external view returns (bool) {
+    ) external returns (bool) {
         uint256 setTotalSupply = totalSupply();
 
         if (
@@ -537,7 +537,7 @@ contract RollingCommunity is BaseCommunity, ReentrancyGuard {
     function _createIssuanceInfo(
         address _reserveAsset,
         uint256 _reserveAssetQuantity
-    ) internal view returns (ActionInfo memory) {
+    ) internal returns (ActionInfo memory) {
         ActionInfo memory depositInfo;
         depositInfo.previousCommunityTokenSupply = totalSupply();
         depositInfo.preFeeReserveQuantity = _reserveAssetQuantity;
@@ -569,7 +569,7 @@ contract RollingCommunity is BaseCommunity, ReentrancyGuard {
     function _createRedemptionInfo(
         address _reserveAsset,
         uint256 _communityTokenQuantity
-    ) internal view returns (ActionInfo memory) {
+    ) internal returns (ActionInfo memory) {
         ActionInfo memory withdrawalInfo;
 
         withdrawalInfo.communityTokenQuantity = _communityTokenQuantity;
@@ -716,7 +716,7 @@ contract RollingCommunity is BaseCommunity, ReentrancyGuard {
         address _reserveAsset,
         uint256 _netReserveFlows, // Value of reserve asset net of fees
         uint256 _communityTokenTotalSupply
-    ) internal view returns (uint256) {
+    ) internal returns (uint256) {
         uint256 premiumPercentageToApply = premiumPercentage;
         uint256 premiumValue =
             _netReserveFlows.preciseMul(premiumPercentageToApply);
@@ -749,7 +749,7 @@ contract RollingCommunity is BaseCommunity, ReentrancyGuard {
     function _getWithdrawalReserveQuantity(
         address _reserveAsset,
         uint256 _communityTokenQuantity
-    ) internal view returns (uint256) {
+    ) internal returns (uint256) {
         // Get valuation of the Community with the quote asset as the reserve asset. Returns value in precise units (10e18)
         // Reverts if price is not found
         uint256 communityValuation =

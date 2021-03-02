@@ -44,7 +44,7 @@ describe("UniswapPoolIntegrationTest", function() {
       daiToken = await ethers.getContractAt("IERC20", addresses.tokens.DAI);
       wethToken = await ethers.getContractAt("IERC20", addresses.tokens.WETH);
       daiWethPair = await ethers.getContractAt(
-        "IUniswapV2Pair",
+        "IUniswapV2PairB",
         addresses.uniswap.pairs.wethdai
       );
     });

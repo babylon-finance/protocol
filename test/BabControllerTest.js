@@ -107,27 +107,27 @@ describe("BabController", function() {
   });
 
   describe("Whitelisted assets", function() {
-    const YFI = "0x0bc529c00C6401aEF6D220BE8C6Ea1667F6Ad93e";
+    const SCAM = "0x49488350b4b2ed2fd164dd0d50b00e7e3f531651";
     const ZRX = "0xe41d2489571d322189246dafa5ebde1f4699f498";
     it("can add new whitelisted assets", async function() {
-      await controller.addAssetWhitelist(YFI);
+      await controller.addAssetWhitelist(SCAM);
 
-      const valid = await controller.isValidAsset(YFI);
+      const valid = await controller.isValidAsset(SCAM);
       expect(valid).to.equal(true);
     });
 
     it("can remove whitelisted assets", async function() {
-      await controller.addAssetWhitelist(YFI);
-      await controller.removeAssetWhitelist(YFI);
+      await controller.addAssetWhitelist(SCAM);
+      await controller.removeAssetWhitelist(SCAM);
 
-      const valid = await controller.isValidAsset(YFI);
+      const valid = await controller.isValidAsset(SCAM);
       expect(valid).to.equal(false);
     });
 
     it("can add whitelisted assets in bulk", async function() {
-      await controller.addAssetsWhitelist([YFI, ZRX]);
+      await controller.addAssetsWhitelist([SCAM, ZRX]);
 
-      expect(await controller.isValidAsset(YFI)).to.equal(true);
+      expect(await controller.isValidAsset(SCAM)).to.equal(true);
       expect(await controller.isValidAsset(ZRX)).to.equal(true);
     });
   });
@@ -140,7 +140,7 @@ describe("BabController", function() {
       expect(valid).to.equal(true);
     });
 
-    it("can remove whitelisted assets", async function() {
+    it("can remove keepers", async function() {
       await controller.addKeeper(addresses.users.hardhat3);
       await controller.removeKeeper(addresses.users.hardhat3);
 
@@ -148,7 +148,7 @@ describe("BabController", function() {
       expect(valid).to.equal(false);
     });
 
-    it("can add whitelisted assets in bulk", async function() {
+    it("can add keepers in bulk", async function() {
       await controller.addKeepers([
         addresses.users.hardhat3,
         addresses.users.hardhat2

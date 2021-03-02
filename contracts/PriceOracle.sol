@@ -157,6 +157,18 @@ contract PriceOracle is Ownable {
         return adapters;
     }
 
+    /**
+     * Calls the update function in every adapter.
+     * e.g Uniswap TWAP
+     * @param _assetOne       First Asset of the pair
+     * @param _assetTwo       Second Asset of the pair
+     */
+    function updateAdapters(address _assetOne, address _assetTwo) external {
+      for (uint i = 0; i < adapters.length; i += 1) {
+        IOracleAdapter(adapters[i]).update(_assetOne, _assetTwo);
+      }
+    }
+
     /* ============ Internal Functions ============ */
 
     /**

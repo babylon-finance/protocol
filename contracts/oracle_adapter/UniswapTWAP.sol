@@ -53,6 +53,9 @@ contract UniswapTWAP is Ownable {
     // Instance of the Controller contract
     IBabController public controller;
 
+    // Name to identify this adapter
+    string public constant name = "uniswapTwap";
+
     // Address of Uniswap factory
     address public immutable factory;
     // the desired amount of time over which the moving average should be computed, e.g. 24 hours
