@@ -86,9 +86,9 @@ async function main() {
   });
   // Internal Interfaces
   const interfaces = [
-    "IFund.sol",
-    "IFundIdeas.sol",
-    "IClosedFund.sol",
+    "ICommunity.sol",
+    "ICommunityIdeas.sol",
+    "IRollingCommunity.sol",
     "IIntegration.sol"
   ];
 
