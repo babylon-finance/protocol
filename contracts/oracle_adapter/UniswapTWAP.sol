@@ -128,7 +128,7 @@ contract UniswapTWAP is Ownable {
     // returns the amount out corresponding to the amount in for a given token using the moving average over the time
     // range [now - [windowSize, windowSize - periodSize * 2], now]
     // update must have been called for the bucket corresponding to timestamp `now - windowSize`
-    function getPrice(address tokenIn, address tokenOut) external view returns (uint amountOut) {
+    function getPrice(address tokenIn, address tokenOut) external view returns (bool found, uint256 amountOut) {
       address pair = UniswapV2Library.pairFor(factory, tokenIn, tokenOut);
       Observation storage firstObservation = getFirstObservationInWindow(pair);
 
@@ -141,9 +141,9 @@ contract UniswapTWAP is Ownable {
       (address token0,) = UniswapV2Library.sortTokens(tokenIn, tokenOut);
 
       if (token0 == tokenIn) {
-        return computeAmountOut(firstObservation.price0Cumulative, price0Cumulative, timeElapsed);
+        return (true, computeAmountOut(firstObservation.price0Cumulative, price0Cumulative, timeElapsed));
       } else {
-        return computeAmountOut(firstObservation.price1Cumulative, price1Cumulative, timeElapsed);
+        return (true, computeAmountOut(firstObservation.price1Cumulative, price1Cumulative, timeElapsed));
       }
     }
 

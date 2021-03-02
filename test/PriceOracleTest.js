@@ -68,11 +68,11 @@ describe("PriceOracle", function() {
           TWAP_ORACLE_WINDOW / TWAP_ORACLE_GRANULARITY
         ]);
       }
-      const price = await adapter.getPrice(
+      const { amountOut } = await adapter.getPrice(
         addresses.tokens.YFI,
         addresses.tokens.WETH
       );
-      expect(price).to.be.gt(ethers.utils.parseEther("15"));
+      expect(amountOut).to.be.gt(ethers.utils.parseEther("15"));
     });
 
     it("should get the price of DAI", async function() {
@@ -82,11 +82,28 @@ describe("PriceOracle", function() {
           TWAP_ORACLE_WINDOW / TWAP_ORACLE_GRANULARITY
         ]);
       }
-      const price = await adapter.getPrice(
+      const { amountOut } = await adapter.getPrice(
         addresses.tokens.WETH,
         addresses.tokens.DAI
       );
-      expect(price).to.be.gt(ethers.utils.parseEther("500"));
+      expect(amountOut).to.be.gt(ethers.utils.parseEther("500"));
+    });
+  });
+
+  describe("Global Oracle", function() {
+
+    it("should get the price of YFI with enough observations", async function() {
+      for (let i = 0; i < TWAP_ORACLE_GRANULARITY; i += 1) {
+        await adapter.update(addresses.tokens.YFI, addresses.tokens.WETH);
+        ethers.provider.send("evm_increaseTime", [
+          TWAP_ORACLE_WINDOW / TWAP_ORACLE_GRANULARITY
+        ]);
+      }
+      const price = await oracle.getPrice(
+        addresses.tokens.YFI,
+        addresses.tokens.WETH
+      );
+      expect(price).to.be.gt(ethers.utils.parseEther("15"));
     });
   });
 });
