@@ -20,12 +20,12 @@ pragma solidity 0.7.4;
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 /**
- * @title IFund
+ * @title ICommunity
  * @author Babylon Finance
  *
  * Interface for operating with SetTokens.
  */
-interface IFund is IERC20 {
+interface ICommunity is IERC20 {
 
     /* ============ Structs ============ */
     struct Contributor {
@@ -74,8 +74,8 @@ interface IFund is IERC20 {
     function active() external view returns (bool);
     function controller() external view returns (address);
     function creator() external view returns (address);
-    function fundEndsBy() external view returns (uint256);
-    function fundIdeas() external view returns (address);
+    function communityEndsBy() external view returns (uint256);
+    function communityIdeas() external view returns (address);
     function getContributor(address _contributor) external view returns (uint256, uint256, uint256);
     function getIntegrations() external view returns (address[] memory);
     function getReserveAsset() external view returns (address);
@@ -83,7 +83,7 @@ interface IFund is IERC20 {
     function isValidIntegration(address _integration) external returns (bool);
     function name() external view returns (string memory);
     function totalContributors() external view returns (uint256);
-    function totalFundsDeposited() external view returns (uint256);
+    function totalCommunitiesDeposited() external view returns (uint256);
     function weth() external view returns (address);
 
     function isPosition(address _component) external view returns (bool);

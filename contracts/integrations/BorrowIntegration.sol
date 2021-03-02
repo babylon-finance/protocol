@@ -22,7 +22,7 @@ import "hardhat/console.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { SafeMath } from "@openzeppelin/contracts/math/SafeMath.sol";
 import { BaseIntegration } from "./BaseIntegration.sol";
-import { IFund } from "../interfaces/IFund.sol";
+import { ICommunity } from "../interfaces/ICommunity.sol";
 import { ReentrancyGuard } from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 
 /**
@@ -37,7 +37,7 @@ abstract contract BorrowIntegration is BaseIntegration, ReentrancyGuard {
   /* ============ Struct ============ */
 
   struct DebtInfo {
-    IFund fund;         // Fund address
+    ICommunity community;         // Community address
     address asset;      // Asset involved in the operation
     uint256 amount;     // Amount involved in the operation
     uint8 borrowOp;     // Borrow operation type
@@ -52,28 +52,28 @@ abstract contract BorrowIntegration is BaseIntegration, ReentrancyGuard {
   /* ============ Events ============ */
 
   event CollateralDeposited(
-    IFund fund,
+    ICommunity community,
     address asset,
     uint256 amount,
     uint256 protocolFee
   );
 
   event CollateralRemoved(
-    IFund fund,
+    ICommunity community,
     address asset,
     uint256 amount,
     uint256 protocolFee
   );
 
   event AmountBorrowed(
-    IFund fund,
+    ICommunity community,
     address asset,
     uint256 amount,
     uint256 protocolFee
   );
 
   event AmountRepaid(
-    IFund fund,
+    ICommunity community,
     address asset,
     uint256 amount,
     uint256 protocolFee
@@ -105,12 +105,12 @@ abstract contract BorrowIntegration is BaseIntegration, ReentrancyGuard {
 
   /**
    * Deposits collateral into the lending protocol.
-   * This would be called by a fund
+   * This would be called by a community
    * @param asset The asset to be deposited as collateral
    * @param amount The amount to be deposited as collateral
    *
    */
-  function depositCollateral(address asset, uint256 amount) nonReentrant onlyFund external {
+  function depositCollateral(address asset, uint256 amount) nonReentrant onlyCommunity external {
     address assetToDeposit = _getCollateralAsset(asset, BORROW_OPERATION_DEPOSIT);
     amount = normalizeDecimals(asset, amount);
 
@@ -129,11 +129,11 @@ abstract contract BorrowIntegration is BaseIntegration, ReentrancyGuard {
       BORROW_OPERATION_DEPOSIT
     );
     if (targetAddressP != address(0)) {
-      debtInfo.fund.invokeFromIntegration(targetAddressP, callValueP, methodDataP);
+      debtInfo.community.invokeFromIntegration(targetAddressP, callValueP, methodDataP);
     }
 
     // Approve the collateral
-    debtInfo.fund.invokeApprove(
+    debtInfo.community.invokeApprove(
       _getSpender(asset),
       asset,
       amount
@@ -152,15 +152,15 @@ abstract contract BorrowIntegration is BaseIntegration, ReentrancyGuard {
 
     // // Need to enter markets
     // Invoke protocol specific call
-    debtInfo.fund.invokeFromIntegration(targetAddress, callValue, methodData);
+    debtInfo.community.invokeFromIntegration(targetAddress, callValue, methodData);
     // Validate deposit
     _validatePostDeposit(debtInfo);
     // Protocol Fee
     uint256 protocolFee = _accrueProtocolFee(debtInfo, assetToDeposit, amount, BORROW_OPERATION_DEPOSIT);
-    updateFundPosition(msg.sender, asset, 0, 1); // Mark as locked
+    updateCommunityPosition(msg.sender, asset, 0, 1); // Mark as locked
 
     emit CollateralDeposited(
-      debtInfo.fund,
+      debtInfo.community,
       asset,
       amount,
       protocolFee
@@ -169,12 +169,12 @@ abstract contract BorrowIntegration is BaseIntegration, ReentrancyGuard {
 
   /**
    * Deposits collateral into the lending protocol.
-   * This would be called by a fund
+   * This would be called by a community
    * @param asset The asset to be deposited as collateral
    * @param amount The amount to be deposited as collateral
    *
    */
-  function removeCollateral(address asset, uint256 amount) nonReentrant onlyFund external {
+  function removeCollateral(address asset, uint256 amount) nonReentrant onlyCommunity external {
     address assetToDeposit = _getCollateralAsset(asset, BORROW_OPERATION_REMOVAL);
     amount = normalizeDecimals(asset, amount);
 
@@ -195,7 +195,7 @@ abstract contract BorrowIntegration is BaseIntegration, ReentrancyGuard {
 
     if (targetAddressP != address(0)) {
       // Invoke protocol specific call
-      debtInfo.fund.invokeFromIntegration(targetAddressP, callValueP, methodDataP);
+      debtInfo.community.invokeFromIntegration(targetAddressP, callValueP, methodDataP);
     }
 
     (
@@ -208,15 +208,15 @@ abstract contract BorrowIntegration is BaseIntegration, ReentrancyGuard {
     );
 
     // Invoke protocol specific call
-    debtInfo.fund.invokeFromIntegration(targetAddress, callValue, methodData);
+    debtInfo.community.invokeFromIntegration(targetAddress, callValue, methodData);
     // Validate deposit
     _validatePostRemoval(debtInfo);
     // Protocol Fee
     uint256 protocolFee = _accrueProtocolFee(debtInfo, assetToDeposit, amount, BORROW_OPERATION_REMOVAL);
-    updateFundPosition(msg.sender, asset, 0, 0); // Back to liquid
+    updateCommunityPosition(msg.sender, asset, 0, 0); // Back to liquid
 
     emit CollateralRemoved(
-      debtInfo.fund,
+      debtInfo.community,
       asset,
       amount,
       protocolFee
@@ -228,7 +228,7 @@ abstract contract BorrowIntegration is BaseIntegration, ReentrancyGuard {
    * @param asset The asset to be borrowed
    * @param amount The amount to borrow
    */
-  function borrow(address asset, uint256 amount) nonReentrant onlyFund external {
+  function borrow(address asset, uint256 amount) nonReentrant onlyCommunity external {
     amount = normalizeDecimals(asset, amount);
 
     DebtInfo memory debtInfo = _createDebtInfo(asset, amount, BORROW_OPERATION_BORROW);
@@ -248,7 +248,7 @@ abstract contract BorrowIntegration is BaseIntegration, ReentrancyGuard {
 
     if (targetAddressP != address(0)) {
       // Invoke protocol specific call
-      debtInfo.fund.invokeFromIntegration(targetAddressP, callValueP, methodDataP);
+      debtInfo.community.invokeFromIntegration(targetAddressP, callValueP, methodDataP);
     }
 
     (
@@ -260,17 +260,17 @@ abstract contract BorrowIntegration is BaseIntegration, ReentrancyGuard {
       amount
     );
     // Invoke protocol specific call
-    debtInfo.fund.invokeFromIntegration(targetAddress, callValue, methodData);
+    debtInfo.community.invokeFromIntegration(targetAddress, callValue, methodData);
     // Validate borrow
     _validatePostBorrow(debtInfo);
 
     // Protocol Fee
     uint256 protocolFee = _accrueProtocolFee(debtInfo, asset, amount, BORROW_OPERATION_BORROW);
 
-    updateFundPosition(msg.sender, asset, int256(-amount), 3);
+    updateCommunityPosition(msg.sender, asset, int256(-amount), 3);
 
     emit AmountBorrowed(
-      debtInfo.fund,
+      debtInfo.community,
       asset,
       amount,
       protocolFee
@@ -282,7 +282,7 @@ abstract contract BorrowIntegration is BaseIntegration, ReentrancyGuard {
    * @param asset The asset to be repaid
    * @param amount The amount to repay
    */
-  function repay(address asset, uint256 amount) nonReentrant onlyFund external {
+  function repay(address asset, uint256 amount) nonReentrant onlyCommunity external {
     amount = normalizeDecimals(asset, amount);
 
     DebtInfo memory debtInfo = _createDebtInfo(asset, amount, BORROW_OPERATION_REPAY);
@@ -302,7 +302,7 @@ abstract contract BorrowIntegration is BaseIntegration, ReentrancyGuard {
 
     if (targetAddressP != address(0)) {
       // Invoke protocol specific call
-      debtInfo.fund.invokeFromIntegration(targetAddressP, callValueP, methodDataP);
+      debtInfo.community.invokeFromIntegration(targetAddressP, callValueP, methodDataP);
     }
 
     (
@@ -315,15 +315,15 @@ abstract contract BorrowIntegration is BaseIntegration, ReentrancyGuard {
     );
 
     // Invoke protocol specific call
-    debtInfo.fund.invokeFromIntegration(targetAddress, callValue, methodData);
+    debtInfo.community.invokeFromIntegration(targetAddress, callValue, methodData);
     // Validate borrow
     _validatePostRepay(debtInfo);
     // Protocol Fee
     uint256 protocolFee = _accrueProtocolFee(debtInfo, asset, amount, BORROW_OPERATION_REPAY);
-    updateFundPosition(msg.sender, asset, 0, 0);
+    updateCommunityPosition(msg.sender, asset, 0, 0);
 
     emit AmountRepaid(
-      debtInfo.fund,
+      debtInfo.community,
       asset,
       amount,
       protocolFee
@@ -333,7 +333,7 @@ abstract contract BorrowIntegration is BaseIntegration, ReentrancyGuard {
   /* ============ Internal Functions ============ */
 
   /**
-   * Retrieve fee from controller and calculate total protocol fee and send from fund to protocol recipient
+   * Retrieve fee from controller and calculate total protocol fee and send from community to protocol recipient
    *
    * @param _debtInfo                 Struct containing trade information used in internal functions
    * @param _feeToken                 Address of the token to pay the fee with
@@ -348,7 +348,7 @@ abstract contract BorrowIntegration is BaseIntegration, ReentrancyGuard {
     uint8 /* _borrowOp */
   ) internal returns (uint256) {
     uint256 protocolFeeTotal = getIntegrationFee(0, _exchangedQuantity);
-    payProtocolFeeFromFund(address(_debtInfo.fund), _feeToken, protocolFeeTotal);
+    payProtocolFeeFromCommunity(address(_debtInfo.community), _feeToken, protocolFeeTotal);
     return protocolFeeTotal;
   }
 
@@ -370,7 +370,7 @@ abstract contract BorrowIntegration is BaseIntegration, ReentrancyGuard {
     returns (DebtInfo memory)
   {
     DebtInfo memory debtInfo;
-    debtInfo.fund = IFund(msg.sender);
+    debtInfo.community = ICommunity(msg.sender);
     debtInfo.asset = _asset;
     debtInfo.amount = _amount;
     debtInfo.borrowOp = _borrowOp;
@@ -384,7 +384,7 @@ abstract contract BorrowIntegration is BaseIntegration, ReentrancyGuard {
    * @param _debtInfo               Struct containing debt information used in internal functions
    */
   function _validatePreDeposit(DebtInfo memory _debtInfo) internal view {
-    require(IERC20(_debtInfo.asset).balanceOf(address(_debtInfo.fund)) > _debtInfo.amount, "Need to have enough collateral to deposit");
+    require(IERC20(_debtInfo.asset).balanceOf(address(_debtInfo.community)) > _debtInfo.amount, "Need to have enough collateral to deposit");
   }
 
   /**
@@ -412,7 +412,7 @@ abstract contract BorrowIntegration is BaseIntegration, ReentrancyGuard {
    * @param _debtInfo               Struct containing debt information used in internal functions
    */
   function _validatePostBorrow(DebtInfo memory _debtInfo) internal view {
-    require(IERC20(_debtInfo.asset).balanceOf(address(_debtInfo.fund)) >= _debtInfo.amount, "Did not receive the borrowed asset");
+    require(IERC20(_debtInfo.asset).balanceOf(address(_debtInfo.community)) >= _debtInfo.amount, "Did not receive the borrowed asset");
     require(_getRemainingLiquidity() > 0, "Not enough liquidity");
   }
 
@@ -432,7 +432,7 @@ abstract contract BorrowIntegration is BaseIntegration, ReentrancyGuard {
    * @param _debtInfo               Struct containing debt information used in internal functions
    */
   function _validatePostRemoval(DebtInfo memory _debtInfo) internal view {
-    require(IERC20(_debtInfo.asset).balanceOf(address(_debtInfo.fund)) >= _debtInfo.amount, "Did not receive the collateral");
+    require(IERC20(_debtInfo.asset).balanceOf(address(_debtInfo.community)) >= _debtInfo.amount, "Did not receive the collateral");
     require(_getRemainingLiquidity() > 0, "Not enough liquidity");
   }
 
@@ -442,7 +442,7 @@ abstract contract BorrowIntegration is BaseIntegration, ReentrancyGuard {
    * @param _debtInfo               Struct containing debt information used in internal functions
    */
   function _validatePreRepay(DebtInfo memory _debtInfo) internal view {
-    require(IERC20(_debtInfo.asset).balanceOf(address(_debtInfo.fund)) >= _debtInfo.amount, "We do not have enough to repay debt");
+    require(IERC20(_debtInfo.asset).balanceOf(address(_debtInfo.community)) >= _debtInfo.amount, "We do not have enough to repay debt");
     require(_getBorrowBalance(_debtInfo.asset) > 0, "No debt to repay");
   }
 

@@ -11,7 +11,7 @@ describe("KyberTradeIntegration", function() {
   let system;
   let kyberIntegration;
   let kyberAbi;
-  let fund;
+  let community;
   let userSigner3;
 
   beforeEach(async () => {
@@ -19,7 +19,7 @@ describe("KyberTradeIntegration", function() {
     kyberIntegration = system.integrations.kyberTradeIntegration;
     kyberAbi = kyberIntegration.interface;
     userSigner3 = system.signer3;
-    fund = system.funds.one;
+    community = system.communitys.one;
   });
 
   describe("Deployment", function() {
@@ -41,12 +41,12 @@ describe("KyberTradeIntegration", function() {
     });
 
     it("trade weth to usdc", async function() {
-      await fund
+      await community
         .connect(userSigner3)
         .deposit(ethers.utils.parseEther("1"), 1, userSigner3.getAddress(), {
           value: ethers.utils.parseEther("1")
         });
-      expect(await wethToken.balanceOf(fund.address)).to.equal(
+      expect(await wethToken.balanceOf(community.address)).to.equal(
         ethers.utils.parseEther("1.1")
       );
 
@@ -61,7 +61,7 @@ describe("KyberTradeIntegration", function() {
         ]
       );
 
-      await fund.callIntegration(
+      await community.callIntegration(
         kyberIntegration.address,
         ethers.utils.parseEther("0"),
         data,
@@ -71,10 +71,10 @@ describe("KyberTradeIntegration", function() {
           gasPrice: 0
         }
       );
-      expect(await wethToken.balanceOf(fund.address)).to.equal(
+      expect(await wethToken.balanceOf(community.address)).to.equal(
         ethers.utils.parseEther("0.1")
       );
-      expect(await usdcToken.balanceOf(fund.address)).to.be.gt(
+      expect(await usdcToken.balanceOf(community.address)).to.be.gt(
         ethers.utils.parseEther("97") / 10 ** 12
       );
     });

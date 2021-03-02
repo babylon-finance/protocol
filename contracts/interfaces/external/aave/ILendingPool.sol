@@ -34,7 +34,7 @@ interface ILendingPool {
   /**
    * @dev Emitted on borrow() and flashLoan() when debt needs to be opened
    * @param reserve The address of the underlying asset being borrowed
-   * @param user The address of the user initiating the borrow(), receiving the funds on borrow() or just
+   * @param user The address of the user initiating the borrow(), receiving the communitys on borrow() or just
    * initiator of the transaction on flashLoan()
    * @param onBehalfOf The address that will be getting the debt
    * @param amount The amount borrowed out
@@ -56,7 +56,7 @@ interface ILendingPool {
    * @dev Emitted on repay()
    * @param reserve The address of the underlying asset of the reserve
    * @param user The beneficiary of the repayment, getting his debt reduced
-   * @param repayer The address of the user initiating the repay(), providing the funds
+   * @param repayer The address of the user initiating the repay(), providing the communitys
    * @param amount The amount repaid
    **/
   event Repay(
@@ -293,11 +293,11 @@ interface ILendingPool {
    * as long as the amount taken plus a fee is returned.
    * IMPORTANT There are security concerns for developers of flashloan receiver contracts that must be kept into consideration.
    * For further details please visit https://developers.aave.com
-   * @param receiverAddress The address of the contract receiving the funds, implementing the IFlashLoanReceiver interface
+   * @param receiverAddress The address of the contract receiving the communitys, implementing the IFlashLoanReceiver interface
    * @param assets The addresses of the assets being flash-borrowed
    * @param amounts The amounts amounts being flash-borrowed
    * @param modes Types of the debt to open if the flash loan is not returned:
-   *   0 -> Don't open any debt, just revert if funds can't be transferred from the receiver
+   *   0 -> Don't open any debt, just revert if communitys can't be transferred from the receiver
    *   1 -> Open debt at stable rate for the value of the amount flash-borrowed to the `onBehalfOf` address
    *   2 -> Open debt at variable rate for the value of the amount flash-borrowed to the `onBehalfOf` address
    * @param onBehalfOf The address  that will receive the debt in the case of using on `modes` 1 or 2

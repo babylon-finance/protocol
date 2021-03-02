@@ -88,7 +88,7 @@ contract YearnVaultIntegration is PassiveIntegration {
     address /* _tokenIn */,
     uint256 _maxAmountIn
   ) internal override pure returns (address, uint256, bytes memory) {
-    // Encode method data for Fund to invoke
+    // Encode method data for Community to invoke
     bytes memory methodData = abi.encodeWithSignature(
       "deposit(uint256)",
       _maxAmountIn
@@ -115,7 +115,7 @@ contract YearnVaultIntegration is PassiveIntegration {
     address /* _tokenOut */,
     uint256 /* _minAmountOut */
   ) internal override pure returns (address, uint256, bytes memory) {
-    // Encode method data for Fund to invoke
+    // Encode method data for Community to invoke
     bytes memory methodData = abi.encodeWithSignature(
       "withdraw(uint256)",
       _investmentTokensIn

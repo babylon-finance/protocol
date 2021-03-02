@@ -22,7 +22,7 @@ import "hardhat/console.sol";
 import { SafeMath } from "@openzeppelin/contracts/math/SafeMath.sol";
 import { SafeCast } from "@openzeppelin/contracts/utils/SafeCast.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import { IFund } from "../interfaces/IFund.sol";
+import { ICommunity } from "../interfaces/ICommunity.sol";
 import { ReentrancyGuard } from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import { IBabController } from "../interfaces/IBabController.sol";
 import { BaseIntegration } from "./BaseIntegration.sol";
@@ -40,11 +40,11 @@ abstract contract TradeIntegration is BaseIntegration, ReentrancyGuard {
     /* ============ Struct ============ */
 
     struct TradeInfo {
-      IFund fund;                                     // Fund
+      ICommunity community;                                     // Community
       string exchangeName;                            // Which exchange to use
       address sendToken;                              // Address of token being sold
       address receiveToken;                           // Address of token being bought
-      uint256 fundTotalSupply;                        // Total supply of Fund in Precise Units (10^18)
+      uint256 communityTotalSupply;                        // Total supply of Community in Precise Units (10^18)
       uint256 totalSendQuantity;                      // Total quantity of sold tokens
       uint256 totalMinReceiveQuantity;                // Total minimum quantity of token to receive back
       uint256 preTradeSendTokenBalance;               // Total initial balance of token being sold
@@ -55,7 +55,7 @@ abstract contract TradeIntegration is BaseIntegration, ReentrancyGuard {
     /* ============ Events ============ */
 
     event ComponentExchanged(
-      IFund indexed _fund,
+      ICommunity indexed _community,
       address indexed _sendToken,
       address indexed _receiveToken,
       string _exchangeName,
@@ -99,7 +99,7 @@ abstract contract TradeIntegration is BaseIntegration, ReentrancyGuard {
     )
       external
       nonReentrant
-      onlyFund
+      onlyCommunity
     {
       TradeInfo memory tradeInfo = _createTradeInfo(
         name,
@@ -116,10 +116,10 @@ abstract contract TradeIntegration is BaseIntegration, ReentrancyGuard {
       (
         uint256 netSendAmount,
         uint256 netReceiveAmount
-      ) = _updateFundPositions(tradeInfo, exchangedQuantity);
+      ) = _updateCommunityPositions(tradeInfo, exchangedQuantity);
 
       emit ComponentExchanged(
-        tradeInfo.fund,
+        tradeInfo.community,
         _sendToken,
         _receiveToken,
         tradeInfo.exchangeName,
@@ -132,7 +132,7 @@ abstract contract TradeIntegration is BaseIntegration, ReentrancyGuard {
     /* ============ Internal Functions ============ */
 
     /**
-     * Retrieve fee from controller and calculate total protocol fee and send from fund to protocol recipient
+     * Retrieve fee from controller and calculate total protocol fee and send from community to protocol recipient
      *
      * @param _tradeInfo                Struct containing trade information used in internal functions
      * @return uint256                  Amount of receive token taken as protocol fee
@@ -140,7 +140,7 @@ abstract contract TradeIntegration is BaseIntegration, ReentrancyGuard {
     function _accrueProtocolFee(TradeInfo memory _tradeInfo, uint256 _exchangedQuantity) internal returns (uint256) {
       uint256 protocolFeeTotal = getIntegrationFee(0, _exchangedQuantity);
 
-      payProtocolFeeFromFund(address(_tradeInfo.fund), _tradeInfo.receiveToken, protocolFeeTotal);
+      payProtocolFeeFromCommunity(address(_tradeInfo.community), _tradeInfo.receiveToken, protocolFeeTotal);
 
       return protocolFeeTotal;
     }
@@ -169,14 +169,14 @@ abstract contract TradeIntegration is BaseIntegration, ReentrancyGuard {
     {
       TradeInfo memory tradeInfo;
 
-      tradeInfo.fund = IFund(msg.sender);
+      tradeInfo.community = ICommunity(msg.sender);
 
       tradeInfo.exchangeName = _exchangeName;
 
       tradeInfo.sendToken = _sendToken;
       tradeInfo.receiveToken = _receiveToken;
 
-      tradeInfo.fundTotalSupply = tradeInfo.fund.totalSupply();
+      tradeInfo.communityTotalSupply = tradeInfo.community.totalSupply();
 
       tradeInfo.totalSendQuantity = _sendQuantity;
 
@@ -197,15 +197,15 @@ abstract contract TradeIntegration is BaseIntegration, ReentrancyGuard {
     function _validatePreTradeData(TradeInfo memory _tradeInfo, uint256 _sendQuantity) internal view {
       require(_tradeInfo.totalSendQuantity > 0, "Token to sell must be nonzero");
       require(IBabController(controller).isValidAsset(_tradeInfo.receiveToken), "Receive token must be whitelisted");
-      require(IERC20(_tradeInfo.sendToken).balanceOf(msg.sender) >= _sendQuantity, "Fund needs to have enough liquid tokens");
+      require(IERC20(_tradeInfo.sendToken).balanceOf(msg.sender) >= _sendQuantity, "Community needs to have enough liquid tokens");
       require(
-          _tradeInfo.fund.hasSufficientBalance(_tradeInfo.sendToken, _sendQuantity),
+          _tradeInfo.community.hasSufficientBalance(_tradeInfo.sendToken, _sendQuantity),
           "Position needs to have enough"
       );
     }
 
     /**
-     * Invoke approve for fund, get method data and invoke trade in the context of the fund.
+     * Invoke approve for community, get method data and invoke trade in the context of the community.
      *
      * @param _tradeInfo            Struct containing trade information used in internal functions
      * @param _data                 Arbitrary bytes to be used to construct trade call data
@@ -217,7 +217,7 @@ abstract contract TradeIntegration is BaseIntegration, ReentrancyGuard {
       internal
     {
       // Get spender address from exchange adapter and invoke approve for exact amount on sendToken
-      _tradeInfo.fund.invokeApprove(
+      _tradeInfo.community.invokeApprove(
         _getSpender(),
         _tradeInfo.sendToken,
         _tradeInfo.totalSendQuantity
@@ -229,12 +229,12 @@ abstract contract TradeIntegration is BaseIntegration, ReentrancyGuard {
       ) = _getTradeCalldata(
           _tradeInfo.sendToken,
           _tradeInfo.receiveToken,
-          address(_tradeInfo.fund),
+          address(_tradeInfo.community),
           _tradeInfo.totalSendQuantity,
           _tradeInfo.totalMinReceiveQuantity,
           _data
       );
-      _tradeInfo.fund.invokeFromIntegration(targetExchange, callValue, methodData);
+      _tradeInfo.community.invokeFromIntegration(targetExchange, callValue, methodData);
     }
 
     /**
@@ -245,7 +245,7 @@ abstract contract TradeIntegration is BaseIntegration, ReentrancyGuard {
      */
     function _validatePostTrade(TradeInfo memory _tradeInfo) internal view returns (uint256) {
       uint256 exchangedQuantity = IERC20(_tradeInfo.receiveToken)
-        .balanceOf(address(_tradeInfo.fund))
+        .balanceOf(address(_tradeInfo.community))
         .sub(_tradeInfo.preTradeReceiveTokenBalance);
       require(
         exchangedQuantity >= _tradeInfo.totalMinReceiveQuantity,
@@ -256,17 +256,17 @@ abstract contract TradeIntegration is BaseIntegration, ReentrancyGuard {
     }
 
     /**
-     * Update Fund positions
+     * Update Community positions
      *
      * @param _tradeInfo                Struct containing trade information used in internal functions
      * @return uint256                  Amount of sendTokens used in the trade
      * @return uint256                  Amount of receiveTokens received in the trade (net of fees)
      */
-    function _updateFundPositions(TradeInfo memory _tradeInfo, uint256 exchangedQuantity) internal returns (uint256, uint256) {
+    function _updateCommunityPositions(TradeInfo memory _tradeInfo, uint256 exchangedQuantity) internal returns (uint256, uint256) {
       uint256 newAmountSendTokens = _tradeInfo.preTradeSendTokenBalance.sub(_tradeInfo.totalSendQuantity);
       uint256 newAmountReceiveTokens = _tradeInfo.preTradeReceiveTokenBalance.add(exchangedQuantity);
-      updateFundPosition(address(_tradeInfo.fund), _tradeInfo.sendToken, int256(-_tradeInfo.totalSendQuantity), 0);
-      updateFundPosition(address(_tradeInfo.fund), _tradeInfo.receiveToken, exchangedQuantity.toInt256(), 0);
+      updateCommunityPosition(address(_tradeInfo.community), _tradeInfo.sendToken, int256(-_tradeInfo.totalSendQuantity), 0);
+      updateCommunityPosition(address(_tradeInfo.community), _tradeInfo.receiveToken, exchangedQuantity.toInt256(), 0);
 
       return (newAmountSendTokens, newAmountReceiveTokens);
     }

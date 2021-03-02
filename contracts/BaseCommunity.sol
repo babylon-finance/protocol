@@ -28,16 +28,16 @@ import { IBabController } from "./interfaces/IBabController.sol";
 import { IIntegration } from "./interfaces/IIntegration.sol";
 import { ITradeIntegration } from "./interfaces/ITradeIntegration.sol";
 import { IPriceOracle } from "./interfaces/IPriceOracle.sol";
-import { IFund } from "./interfaces/IFund.sol";
+import { ICommunity } from "./interfaces/ICommunity.sol";
 import { PreciseUnitMath } from "./lib/PreciseUnitMath.sol";
 
 /**
- * @title BaseFund
+ * @title BaseCommunity
  * @author Babylon Finance
  *
- * Abstract Class that holds common fund-related state and functions
+ * Abstract Class that holds common community-related state and functions
  */
-abstract contract BaseFund is ERC20 {
+abstract contract BaseCommunity is ERC20 {
     using SafeCast for uint256;
     using SafeCast for int256;
     using SafeMath for uint256;
@@ -62,7 +62,7 @@ abstract contract BaseFund is ERC20 {
     /* ============ Modifiers ============ */
 
     /**
-     * Throws if the sender is not a Funds's integration or integration not enabled
+     * Throws if the sender is not a Communities's integration or integration not enabled
      */
     modifier onlyIntegration() {
       // Internal function used to reduce bytecode size
@@ -79,15 +79,15 @@ abstract contract BaseFund is ERC20 {
     }
 
     /**
-     * Throws if the sender is not the fund governance. (Initially protocol)
+     * Throws if the sender is not the community governance. (Initially protocol)
      */
-    modifier onlyGovernanceFund() {
+    modifier onlyGovernanceCommunity() {
       require(msg.sender == controller, "Only the controller can call this");
       _;
     }
 
     /**
-     * Throws if the sender is not the fund creator
+     * Throws if the sender is not the community creator
      */
     modifier onlyCreator() {
       require(msg.sender == creator, "Only the creator can call this");
@@ -106,7 +106,7 @@ abstract contract BaseFund is ERC20 {
      * Throws if the sender is not a keeper in the protocol
      */
     modifier onlyInvestmentIdea() {
-      require(msg.sender == fundIdeas, "Only the fund ideas contract can call this");
+      require(msg.sender == communityIdeas, "Only the community ideas contract can call this");
       _;
     }
 
@@ -115,7 +115,7 @@ abstract contract BaseFund is ERC20 {
      * TODO: Remove when deploying
      */
     modifier onlyInvestmentIdeaOrOwner() {
-      require(msg.sender == fundIdeas || msg.sender == IBabController(controller).owner(), "Only the fund ideas contract can call this");
+      require(msg.sender == communityIdeas || msg.sender == IBabController(controller).owner(), "Only the community ideas contract can call this");
       _;
     }
 
@@ -123,14 +123,14 @@ abstract contract BaseFund is ERC20 {
      * Throws if the sender is not an investment idea or integration
      */
     modifier onlyInvestmentAndIntegration() {
-      require(msg.sender == fundIdeas || isValidIntegration(msg.sender), "Only the fund ideas contract can call this");
+      require(msg.sender == communityIdeas || isValidIntegration(msg.sender), "Only the community ideas contract can call this");
       _;
     }
 
 
 
     /**
-    * Throws if the fund is not active
+    * Throws if the community is not active
     */
     modifier onlyActive() {
         _validateOnlyActive();
@@ -138,7 +138,7 @@ abstract contract BaseFund is ERC20 {
     }
 
     /**
-    * Throws if the fund is not disabled
+    * Throws if the community is not disabled
     */
     modifier onlyInactive() {
         _validateOnlyInactive();
@@ -156,30 +156,30 @@ abstract contract BaseFund is ERC20 {
     // Wrapped ETH address
     address public immutable weth;
 
-    // Reserve Asset of the fund
+    // Reserve Asset of the community
     address public reserveAsset;
 
     // Address of the controller
     address public controller;
-    // The person that creates the fund
+    // The person that creates the community
     address public creator;
-    // Whether the fund is currently active or not
+    // Whether the community is currently active or not
     bool public active;
 
-    // FundIdeas
-    address public fundIdeas;
+    // CommunityIdeas
+    address public communityIdeas;
 
     // List of initialized Integrations; Integrations connect with other money legos
     address[] public integrations;
 
     // List of positions
     address[] public positions;
-    mapping(address => IFund.Position) public positionsByComponent;
+    mapping(address => ICommunity.Position) public positionsByComponent;
 
     /* ============ Constructor ============ */
 
     /**
-     * When a new Fund is created, initializes Positions are set to empty.
+     * When a new Community is created, initializes Positions are set to empty.
      * All parameter validations are on the BabController contract. Validations are performed already on the
      * BabController. Initiates the positionMultiplier as 1e18 (no adjustments).
      *
@@ -188,8 +188,8 @@ abstract contract BaseFund is ERC20 {
      * @param _reserveAsset           Address of the reserve asset ERC20
      * @param _controller             Address of the controller
      * @param _creator                Address of the creator
-     * @param _name                   Name of the Fund
-     * @param _symbol                 Symbol of the Fund
+     * @param _name                   Name of the Community
+     * @param _symbol                 Symbol of the Community
      */
 
     constructor(
@@ -229,20 +229,20 @@ abstract contract BaseFund is ERC20 {
     }
 
     /**
-     * PRIVILEGED Manager, protocol FUNCTION. When a Fund is disabled, deposits are disabled.
+     * PRIVILEGED Manager, protocol FUNCTION. When a Community is disabled, deposits are disabled.
      */
     function setActive() external onlyProtocol {
       require(!active && integrations.length > 0,
-          "Must have active integrations to enable a fund"
+          "Must have active integrations to enable a community"
       );
       active = true;
     }
 
     /**
-     * PRIVILEGED Manager, protocol FUNCTION. When a Fund is disabled, deposits are disabled.
+     * PRIVILEGED Manager, protocol FUNCTION. When a Community is disabled, deposits are disabled.
      */
     function setDisabled() external onlyProtocol {
-      require(active, "The fund must be active");
+      require(active, "The community must be active");
       active = false;
     }
 
@@ -251,16 +251,16 @@ abstract contract BaseFund is ERC20 {
      */
     function addIntegration(address _integration)
         public
-        onlyGovernanceFund
+        onlyGovernanceCommunity
     {
         _addIntegration(_integration);
     }
 
     /**
-     * MANAGER ONLY. Removes an integration from the Fund. Fund calls removeIntegration on integration itself to confirm
+     * MANAGER ONLY. Removes an integration from the Community. Community calls removeIntegration on integration itself to confirm
      * it is not needed to manage any remaining positions and to remove state.
      */
-    function removeIntegration(address _integration) external onlyGovernanceFund {
+    function removeIntegration(address _integration) external onlyGovernanceCommunity {
         require(integrations.contains(_integration), "Integration not found");
 
         integrations = integrations.remove(_integration);
@@ -329,7 +329,7 @@ abstract contract BaseFund is ERC20 {
     }
 
     /**
-     * Check if this fund has this integration
+     * Check if this community has this integration
      */
     function hasIntegration(address _integration)
         external
@@ -360,7 +360,7 @@ abstract contract BaseFund is ERC20 {
     }
 
     /**
-     * Returns whether the fund component  position real balance is greater than or equal to balances passed in.
+     * Returns whether the community component  position real balance is greater than or equal to balances passed in.
      */
     function hasSufficientBalance(address _component, uint256 _balance)
         external
@@ -467,9 +467,9 @@ abstract contract BaseFund is ERC20 {
      * Internal MODULE FUNCTION. Low level function that adds a component to the positions array.
      */
     function _addPosition(address _component, address _integration) internal{
-      IFund.Position storage position = positionsByComponent[_component];
+      ICommunity.Position storage position = positionsByComponent[_component];
 
-      position.subpositions.push(IFund.SubPosition({
+      position.subpositions.push(ICommunity.SubPosition({
         integration: _integration,
         balance: 0,
         status: 0
@@ -482,7 +482,7 @@ abstract contract BaseFund is ERC20 {
     }
 
     function _getSubpositionIndex(address _component, address _integration) view internal returns (int256) {
-      IFund.Position storage position = positionsByComponent[_component];
+      ICommunity.Position storage position = positionsByComponent[_component];
       for (uint8 i = 0; i < position.subpositionsCount; i++) {
         if (position.subpositions[i].integration == _integration) {
           return i;
@@ -495,7 +495,7 @@ abstract contract BaseFund is ERC20 {
      * Internal MODULE FUNCTION. Low level function that removes a component from the positions array.
      */
     function _removePosition(address _component) internal {
-      IFund.Position storage position = positionsByComponent[_component];
+      ICommunity.Position storage position = positionsByComponent[_component];
       positions = positions.remove(_component);
       position.exitedAt = block.timestamp;
       emit PositionRemoved(_component);
@@ -511,12 +511,12 @@ abstract contract BaseFund is ERC20 {
       int256 _deltaBalance,
       uint8 _subpositionStatus
     ) internal {
-      IFund.Position storage position = positionsByComponent[_component];
+      ICommunity.Position storage position = positionsByComponent[_component];
       position.balance = _amount;
       position.updatedAt.push(block.timestamp);
       int256 subpositionIndex = _getSubpositionIndex(_component, _integration);
       if (subpositionIndex == -1) {
-        position.subpositions.push(IFund.SubPosition({
+        position.subpositions.push(ICommunity.SubPosition({
           integration: _integration,
           balance: _deltaBalance,
           status: _subpositionStatus
@@ -549,7 +549,7 @@ abstract contract BaseFund is ERC20 {
     }
 
     /**
-     * Returns whether the fund has a position for a given component (if the real balance is > 0)
+     * Returns whether the community has a position for a given component (if the real balance is > 0)
      */
     function _hasPosition(address _component) internal view returns (bool) {
         return _getPositionBalance(_component) > 0;
@@ -560,7 +560,7 @@ abstract contract BaseFund is ERC20 {
     }
 
     /**
-     * If the position does not exist, create a new Position and add to the fund. If it already exists,
+     * If the position does not exist, create a new Position and add to the community. If it already exists,
      * then set the position balance. If the new balance is 0, remove the position. Handles adding/removing of
      * components where needed (in light of potential external positions).
      *
@@ -590,7 +590,7 @@ abstract contract BaseFund is ERC20 {
 
     /**
      * Low level function that allows an integration to make an arbitrary function
-     * call to any contract from the fund (fund as msg.sender).
+     * call to any contract from the community (community as msg.sender).
      *
      * @param _target                 Address of the smart contract to call
      * @param _value                  Quantity of Ether to provide the call (typically 0)
@@ -611,9 +611,9 @@ abstract contract BaseFund is ERC20 {
     }
 
     /**
-     * Pays the _feeQuantity from the _fund denominated in _token to the protocol fee recipient
+     * Pays the _feeQuantity from the _community denominated in _token to the protocol fee recipient
      */
-    function payProtocolFeeFromFund(address _token, uint256 _feeQuantity)
+    function payProtocolFeeFromCommunity(address _token, uint256 _feeQuantity)
         internal
     {
         if (_feeQuantity > 0) {
@@ -627,25 +627,25 @@ abstract contract BaseFund is ERC20 {
     /**
      * Due to reason error bloat, internal functions are used to reduce bytecode size
      *
-     * Integration must be initialized on the Fund and enabled by the controller
+     * Integration must be initialized on the Community and enabled by the controller
      */
     function _validateOnlyIntegration(address _integration) internal view {
         require(
             isValidIntegration(_integration),
-            "Integration needs to be added to the fund and controller"
+            "Integration needs to be added to the community and controller"
         );
     }
 
     function _validateOnlyActive() internal view {
-        require(active == true, "Fund must be active");
+        require(active == true, "Community must be active");
     }
 
     function _validateOnlyInactive() internal view {
-        require(active == false, "Fund must be disabled");
+        require(active == false, "Community must be disabled");
     }
 
-    // Disable fund token transfers. Allow minting and burning.
+    // Disable community token transfers. Allow minting and burning.
     function _beforeTokenTransfer(address from, address to, uint256 /* amount */) override pure internal {
-      require(from == address(0) || to == address(0), "Fund token transfers are disabled");
+      require(from == address(0) || to == address(0), "Community token transfers are disabled");
     }
 }

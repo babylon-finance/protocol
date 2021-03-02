@@ -9,13 +9,13 @@ const { deployFolioFixture } = require("./fixtures/ControllerFixture");
 describe("PriceOracle", function() {
   let controller;
   let oracle;
-  let fund;
+  let community;
 
   beforeEach(async () => {
-    const { babController, priceOracle, funds } = await loadFixture(
+    const { babController, priceOracle, communitys } = await loadFixture(
       deployFolioFixture
     );
-    fund = funds.one;
+    community = communitys.one;
     controller = babController;
     oracle = priceOracle;
   });
@@ -31,7 +31,7 @@ describe("PriceOracle", function() {
 
   describe("UniswapAnchoredView", function() {
     it("should get the price of ETH/DAI", async function() {
-      // const price = await fund.getPrice(
+      // const price = await community.getPrice(
       //   addresses.tokens.WETH,
       //   addresses.tokens.DAI
       // );
@@ -39,7 +39,7 @@ describe("PriceOracle", function() {
     });
 
     it("should get the price of DAI/USDC", async function() {
-      // const price = await fund.getPrice(
+      // const price = await community.getPrice(
       //   addresses.tokens.DAI,
       //   addresses.tokens.USDC
       // );

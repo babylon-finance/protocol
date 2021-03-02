@@ -146,7 +146,7 @@ contract KyberTradeIntegration is TradeIntegration {
       _destinationAddress,
       PreciseUnitMath.maxUint256(), // Sell entire amount of sourceToken
       kyberTradeInfo.conversionRate, // Trade with implied conversion rate
-      msg.sender // Fund address
+      msg.sender // Community address
     );
 
     return (kyberNetworkProxyAddress, 0, methodData);
