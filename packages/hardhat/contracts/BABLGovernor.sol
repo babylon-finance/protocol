@@ -15,12 +15,13 @@
     SPDX-License-Identifier: Apache License, Version 2.0
 */
 
-pragma solidity 0.6.0;
+pragma solidity 0.7.4;
 pragma experimental ABIEncoderV2;
 
-contract BABLGovernorAlpha {
+contract BABLGovernor {
+    
     /// @notice The name of this contract
-    string public constant name = "BABLGovernorAlpha";
+    string public constant name = "BABL Governor Alpha";
 
     /// @notice The number of votes in support of a proposal required in order for a quorum to be reached and for a vote to succeed
     function quorumVotes() public pure returns (uint) { return 40_000e18; } // 4% of BABL
@@ -141,7 +142,7 @@ contract BABLGovernorAlpha {
     /// @notice An event emitted when a proposal has been executed in the Timelock
     event ProposalExecuted(uint id);
 
-    constructor(address timelock_, address babl_) public {
+    constructor(address timelock_, address babl_) {
         timelock = ITimeLock(timelock_);
         babl = BABLInterface(babl_);
     }
@@ -163,6 +164,7 @@ contract BABLGovernorAlpha {
         uint endBlock = add256(startBlock, votingPeriod());
 
         proposalCount++;
+        /***
         Proposal memory newProposal = Proposal({
             id: proposalCount,
             proposer: msg.sender,
@@ -178,8 +180,25 @@ contract BABLGovernorAlpha {
             canceled: false,
             executed: false
         });
+        ***/
+        
+        Proposal storage newProposal = proposals[proposalCount];
+        newProposal.id = proposalCount;
+        newProposal.proposer = msg.sender;
+        newProposal.eta = 0;
+        newProposal.targets = targets;
+        newProposal.values = values;
+        newProposal.signatures = signatures;
+        newProposal.calldatas = calldatas;
+        newProposal.startBlock = startBlock;
+        newProposal.endBlock = endBlock;
+        newProposal.forVotes = 0;
+        newProposal.againstVotes = 0;
+        newProposal.canceled = false;
+        newProposal.executed = false;
+        
 
-        proposals[newProposal.id] = newProposal;
+        // proposals[newProposal.id] = newProposal; TODO - REPLACED OLD STRUCT - MAPPING CODE
         latestProposalIds[newProposal.proposer] = newProposal.id;
 
         emit ProposalCreated(newProposal.id, msg.sender, targets, values, signatures, calldatas, startBlock, endBlock, description);
@@ -207,14 +226,14 @@ contract BABLGovernorAlpha {
         Proposal storage proposal = proposals[proposalId];
         proposal.executed = true;
         for (uint i = 0; i < proposal.targets.length; i++) {
-            timelock.executeTransaction.value(proposal.values[i])(proposal.targets[i], proposal.values[i], proposal.signatures[i], proposal.calldatas[i], proposal.eta);
+            timelock.executeTransaction{value: (proposal.values[i])}(proposal.targets[i], proposal.values[i], proposal.signatures[i], proposal.calldatas[i], proposal.eta);
         }
         emit ProposalExecuted(proposalId);
     }
 
     function cancel(uint proposalId) public {
-        ProposalState state = state(proposalId);
-        require(state != ProposalState.Executed, "GovernorAlpha::cancel: cannot cancel executed proposal");
+        ProposalState _state = state(proposalId); // TODO: MODIFIED CHECK
+        require(_state != ProposalState.Executed, "GovernorAlpha::cancel: cannot cancel executed proposal");
 
         Proposal storage proposal = proposals[proposalId];
         require(babl.getPriorVotes(proposal.proposer, sub256(block.number, 1)) < proposalThreshold(), "GovernorAlpha::cancel: proposer above threshold");
