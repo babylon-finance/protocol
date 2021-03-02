@@ -30,12 +30,20 @@ async function deployFolioFixture() {
   );
   const PriceOracle = await ethers.getContractFactory("PriceOracle", owner);
   const ReservePool = await ethers.getContractFactory("ReservePool", owner);
+  const UniswapTWAP = await ethers.getContractFactory("UniswapTWAP", owner);
   const communityValuer = await CommunityValuer.deploy(babController.address);
   const reservePool = await ReservePool.deploy(babController.address);
+
+  const uniswapTWAPAdapter = await UniswapTWAP.deploy(
+    babController.address,
+    addresses.uniswap.factory,
+    ONE_DAY_IN_SECONDS,
+    2
+  );
   const priceOracle = await PriceOracle.deploy(
     babController.address,
     addresses.compound.OpenOracle,
-    []
+    [uniswapTWAPAdapter.address]
   );
   // Sets the price oracle and communityvaluer address
   babController.editPriceOracle(priceOracle.address);

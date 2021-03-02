@@ -29,6 +29,7 @@ module.exports = {
   },
   uniswap: {
     router: "0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D",
+    factory: "0x5C69bEe701ef814a2B6a3EDD4B1652CB9cc5aA6f",
     pairs: {
       wethdai: "0xa478c2975ab1ea89e8196811f51a7b7ade33eb11"
     }
