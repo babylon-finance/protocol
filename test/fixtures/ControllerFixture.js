@@ -1,5 +1,9 @@
 const { ethers } = require("hardhat");
 const { ONE_DAY_IN_SECONDS } = require("../../utils/constants.js");
+const {
+  TWAP_ORACLE_WINDOW,
+  TWAP_ORACLE_GRANULARITY
+} = require("../../utils/system.js");
 const addresses = require("../../utils/addresses");
 const argsUtil = require("../../utils/arguments.js");
 
@@ -37,8 +41,8 @@ async function deployFolioFixture() {
   const uniswapTWAPAdapter = await UniswapTWAP.deploy(
     babController.address,
     addresses.uniswap.factory,
-    ONE_DAY_IN_SECONDS,
-    2
+    TWAP_ORACLE_WINDOW,
+    TWAP_ORACLE_GRANULARITY
   );
   const priceOracle = await PriceOracle.deploy(
     babController.address,
@@ -215,7 +219,7 @@ async function deployFolioFixture() {
       uniswapPoolIntegration,
       yearnVaultIntegration
     },
-    communitys: {
+    comunities: {
       one: community,
       two: community2,
       three: community3

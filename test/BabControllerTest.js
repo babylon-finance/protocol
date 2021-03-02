@@ -25,7 +25,7 @@ describe("BabController", function() {
       communityValuer,
       owner,
       signer1,
-      communitys,
+      comunities,
       signer2,
       signer3
     } = await loadFixture(deployFolioFixture);
@@ -37,9 +37,9 @@ describe("BabController", function() {
     userSigner1 = signer1;
     userSigner2 = signer2;
     userSigner3 = signer3;
-    community1 = communitys.one;
-    community2 = communitys.two;
-    community3 = communitys.three;
+    community1 = comunities.one;
+    community2 = comunities.two;
+    community3 = comunities.three;
     // console.log(
     //   "Config:",
     //   oracle,
@@ -59,9 +59,9 @@ describe("BabController", function() {
   });
 
   describe("Interacting with Communities", function() {
-    it("should start with 3 communitys", async function() {
-      const communitys = await controller.getCommunities();
-      expect(communitys.length).to.equal(3);
+    it("should start with 3 comunities", async function() {
+      const comunities = await controller.getCommunities();
+      expect(comunities.length).to.equal(3);
     });
 
     it("should set the protocol manager address", async function() {
@@ -70,15 +70,15 @@ describe("BabController", function() {
       );
     });
 
-    it("can create communitys", async function() {
+    it("can create comunities", async function() {
       expect(!!community1).to.equal(true);
       expect(!!community2).to.equal(true);
       expect(!!community3).to.equal(true);
     });
 
-    it("can create communitys and retrieve all addresses", async function() {
-      const communitys = await controller.getCommunities();
-      expect(communitys.length).to.equal(3);
+    it("can create comunities and retrieve all addresses", async function() {
+      const comunities = await controller.getCommunities();
+      expect(comunities.length).to.equal(3);
     });
 
     it("can remove a community", async function() {

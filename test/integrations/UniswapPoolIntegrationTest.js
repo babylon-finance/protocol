@@ -19,7 +19,7 @@ describe("UniswapPoolIntegrationTest", function() {
     uniswapIntegration = system.integrations.uniswapPoolIntegration;
     userSigner3 = system.signer3;
     uniAbi = uniswapIntegration.interface;
-    community = system.communitys.one;
+    community = system.comunities.one;
   });
 
   describe("Deployment", function() {

@@ -16,7 +16,7 @@ describe("OneInchTradeIntegration", function() {
   beforeEach(async () => {
     system = await loadFixture(deployFolioFixture);
     oneInchIntegration = system.integrations.oneInchTradeIntegration;
-    community = system.communitys.one;
+    community = system.comunities.one;
   });
 
   describe("Deployment", function() {

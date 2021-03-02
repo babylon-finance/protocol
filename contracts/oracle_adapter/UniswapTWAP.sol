@@ -18,12 +18,14 @@
 
 pragma solidity 0.7.4;
 
+import "hardhat/console.sol";
 import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
 import '@uniswap/v2-core/contracts/interfaces/IUniswapV2Factory.sol';
 import '@uniswap/v2-core/contracts/interfaces/IUniswapV2Pair.sol';
 import '@uniswap/v2-periphery/contracts/libraries/UniswapV2OracleLibrary.sol';
 import '@uniswap/v2-periphery/contracts/libraries/UniswapV2Library.sol';
 import '@uniswap/lib/contracts/libraries/FixedPoint.sol';
+import { PreciseUnitMath } from "../lib/PreciseUnitMath.sol";
 import { IBabController } from "../interfaces/IBabController.sol";
 
 /**
@@ -38,6 +40,7 @@ import { IBabController } from "../interfaces/IBabController.sol";
 contract UniswapTWAP is Ownable {
     using FixedPoint for *;
     using SafeMath for uint;
+    using PreciseUnitMath for uint256;
 
     struct Observation {
         uint timestamp;
@@ -86,6 +89,7 @@ contract UniswapTWAP is Ownable {
         'SlidingWindowOracle: WINDOW_NOT_EVENLY_DIVISIBLE'
       );
       factory = _factory;
+      controller = IBabController(_controller);
       windowSize = _windowSize;
       granularity = _granularity;
     }
@@ -107,7 +111,6 @@ contract UniswapTWAP is Ownable {
       for (uint i = pairObservations[pair].length; i < granularity; i++) {
         pairObservations[pair].push();
       }
-
       // get the observation for the current period
       uint8 observationIndex = observationIndexOf(block.timestamp);
       Observation storage observation = pairObservations[pair][observationIndex];
@@ -157,6 +160,7 @@ contract UniswapTWAP is Ownable {
         uint224((priceCumulativeEnd - priceCumulativeStart) / timeElapsed)
       );
       amountOut = priceAverage.mul(1).decode144();
+      amountOut = amountOut.preciseDiv(1);
     }
 
     // returns the observation from the oldest epoch (at the beginning of the window) relative to the current time

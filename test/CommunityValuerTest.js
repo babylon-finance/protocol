@@ -13,10 +13,10 @@ describe("CommunityValuer", function() {
   let weth;
 
   beforeEach(async () => {
-    const { babController, communityValuer, communitys } = await loadFixture(
+    const { babController, communityValuer, comunities } = await loadFixture(
       deployFolioFixture
     );
-    community = communitys.one;
+    community = comunities.one;
     controller = babController;
     valuer = communityValuer;
     weth = await ethers.getContractAt("IERC20", addresses.tokens.WETH);

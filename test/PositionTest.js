@@ -25,7 +25,7 @@ describe("Position testing", function() {
       signer1,
       signer2,
       signer3,
-      communitys,
+      comunities,
       integrations,
       owner
     } = await loadFixture(deployFolioFixture);
@@ -36,8 +36,8 @@ describe("Position testing", function() {
     userSigner1 = signer1;
     userSigner2 = signer2;
     userSigner3 = signer3;
-    community1 = communitys.one;
-    community2 = communitys.two;
+    community1 = comunities.one;
+    community2 = comunities.two;
     usdcToken = await ethers.getContractAt("IERC20", addresses.tokens.USDC);
     weth = await ethers.getContractAt("IERC20", addresses.tokens.WETH);
   });
