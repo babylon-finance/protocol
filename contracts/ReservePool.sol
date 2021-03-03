@@ -127,11 +127,13 @@ contract ReservePool is ERC20, ReentrancyGuard {
 
     /**
      * Exchanges the reserve pool tokens for the underlying amount of weth.
-     *
+     * Only a community or the owner can call this
      * @param _community               Community that the sender wants to sell tokens of
      * @param _amount                  Quantity of the community tokens that sender wants to sell
      */
     function sellTokensToLiquidityPool(address _community, uint256 _amount) external nonReentrant {
+      bool callerIsCommunity = IBabController(controller).isSystemContract(msg.sender) && msg.sender == _community;
+      require(callerIsCommunity || IBabController(controller).owner() == msg.sender, "Only community can call this");
       require(IRollingCommunity(_community).balanceOf(msg.sender) >= _amount, "Sender does not have enough tokens");
       uint256 discount = IBabController(controller).protocolReservePoolDiscount();
       // Get valuation of the Community with the quote asset as the reserve asset.
@@ -139,6 +141,7 @@ contract ReservePool is ERC20, ReentrancyGuard {
       uint256 amountValue = communityValuation.preciseMul(_amount);
       uint256 amountDiscounted = amountValue - amountValue.preciseMul(discount);
       require(IWETH(weth).balanceOf(address(this)) >= amountDiscounted, "There needs to be enough WETH");
+      // TODO: Need to burn and mint. Transfers are disabled
       require(ERC20(_community).transferFrom(
           msg.sender,
           address(this),
@@ -149,20 +152,31 @@ contract ReservePool is ERC20, ReentrancyGuard {
 
     /**
      * Withdraws the principal and profits from the community using its participation tokens.
-     *
+     * Only a keeper or owner can call this.
      * @param _community                Address of the community contract
      * @param _amount                   Amount of the community tokens to redeem
      */
     function redeemETHFromCommunityTokens(address _community, uint256 _amount) external nonReentrant {
-      require(msg.sender == IBabController(controller).owner(), "Only owner can call this");
+      bool isValidKeeper = IBabController(controller).isValidKeeper(msg.sender);
+      require(isValidKeeper || msg.sender == IBabController(controller).owner(), "Only owner can call this");
       require(_amount > 0, "There needs to be tokens to redeem");
       require(IRollingCommunity(_community).active(), "Community must be active");
       // Get valuation of the Community with the quote asset as the reserve asset.
       uint256 communityValuation = ICommunityValuer(IBabController(controller).getCommunityValuer()).calculateCommunityValuation(_community, weth);
       require(communityValuation > 0, "Community must be worth something");
       uint minReceive = communityValuation.preciseMul(IRollingCommunity(_community).totalSupply()).preciseDiv(_amount);
+      uint rewards = address(this).balance;
       IRollingCommunity(_community).withdraw(_amount, minReceive.mul(98).div(100), msg.sender);
-      IWETH(weth).deposit{value: address(this).balance}();
+      rewards = address(this).balance.sub(rewards);
+      IWETH(weth).deposit{value: rewards}();
+      // TODO: Create a new fee in protocol
+      uint256 protocolFee = IBabController(controller).getProtocolWithdrawalCommunityTokenFee().preciseMul(rewards);
+      // Send to the treasury the protocol fee
+      require(IWETH(weth).transfer(
+          IBabController(controller).getFeeRecipient(),
+          protocolFee
+      ), "Protocol fee failed");
+      rewards = rewards.sub(protocolFee);
     }
 
 }

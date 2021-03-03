@@ -210,6 +210,7 @@ async function deployFolioFixture() {
 
   return {
     babController,
+    reservePool,
     integrations: {
       aaveIntegration,
       compoundIntegration,
