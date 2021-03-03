@@ -79,7 +79,8 @@ async function main() {
   const integrations = [
     "YearnVaultIntegration.sol",
     "KyberTradeIntegration.sol",
-    "UniswapPoolIntegration.sol"
+    "UniswapPoolIntegration.sol",
+    "BalancerIntegration.sol"
   ];
   integrations.forEach(file => {
     publishAndPushContract(file, "integrations/");
@@ -106,10 +107,13 @@ async function main() {
 
   // External interfaces
   const externalInterfaces = [
+    { name: "IBPool.sol", path: "interfaces/external/balancer/" },
+    { name: "IBRegistry.sol", path: "interfaces/external/balancer/" },
     { name: "IKyberNetworkProxy.sol", path: "interfaces/external/kyber/" },
     { name: "IVault.sol", path: "interfaces/external/yearn/" },
     { name: "IERC20.sol", path: "../@openzeppelin/contracts/token/ERC20/" },
     { name: "IUniswapV2Pair.sol", path: "interfaces/external/uniswap/" },
+    { name: "IUniswapV2Factory.sol", path: "interfaces/external/uniswap/" },
     { name: "YRegistry.sol", path: "interfaces/external/yearn/" }
   ];
   externalInterfaces.forEach(interfaceC => {

@@ -163,9 +163,18 @@ async function deployFolioFixture() {
     ethers.utils.parseEther("10")
   );
 
-  await babController.createCommunity(integrationsAddressList, community.address);
-  await babController.createCommunity(integrationsAddressList, community2.address);
-  await babController.createCommunity(integrationsAddressList, community3.address);
+  await babController.createCommunity(
+    integrationsAddressList,
+    community.address
+  );
+  await babController.createCommunity(
+    integrationsAddressList,
+    community2.address
+  );
+  await babController.createCommunity(
+    integrationsAddressList,
+    community3.address
+  );
 
   const communityAddressesList = await babController.getCommunities();
   // Initialize community integrations
@@ -222,7 +231,8 @@ async function deployFolioFixture() {
       { name: "BabController", contract: babController },
       { name: "KyberTradeIntegration", contract: kyberTradeIntegration },
       { name: "YearnVaultIntegration", contract: yearnVaultIntegration },
-      { name: "UniswapPoolIntegration", contract: uniswapPoolIntegration }
+      { name: "UniswapPoolIntegration", contract: uniswapPoolIntegration },
+      { name: "BalancerIntegration", contract: balancerIntegration }
     ]
   };
 }

@@ -23,12 +23,14 @@ module.exports = {
   },
   balancer: {
     factory: "0x9424B1412450D0f8Fc2255FAf6046b98213B76Bd",
+    registry: "0x7226DaaF09B3972320Db05f5aB81FF38417Dd687",
     pools: {
       wethdai: "0x8b6e6e7b5b3801fed2cafd4b22b8a16c2f2db21a"
     }
   },
   uniswap: {
     router: "0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D",
+    factory: "0x5C69bEe701ef814a2B6a3EDD4B1652CB9cc5aA6f",
     pairs: {
       wethdai: "0xa478c2975ab1ea89e8196811f51a7b7ade33eb11"
     }
