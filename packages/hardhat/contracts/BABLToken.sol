@@ -23,12 +23,33 @@ import { Context } from "@openzeppelin/contracts/utils/Context.sol";
 import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
 import { Address } from "@openzeppelin/contracts/utils/Address.sol";
 
-//BABLToken with governance
+// BABL Token with governance
 
 contract BABLToken is Context, IERC20, Ownable {
     
     using SafeMath for uint256;
     using Address for address;
+
+    /* ============ Events ============ */
+
+    /// @notice An event thats emitted when the minter address is changed
+    event MinterChanged(address minter, address newMinter);
+
+    /// @notice An event thats emitted when an account changes its delegate
+    event DelegateChanged(address indexed delegator, address indexed fromDelegate, address indexed toDelegate);
+
+    /// @notice An event thats emitted when a delegate account's vote balance changes
+    event DelegateVotesChanged(address indexed delegate, uint previousBalance, uint newBalance);
+
+    /// @notice The standard EIP-20 transfer event
+    // event Transfer(address indexed from, address indexed to, uint256 value); TODO - CHECK DEFINITION IN IERC20
+
+    /// @notice The standard EIP-20 approval event
+    // event Approval(address indexed owner, address indexed spender, uint256 value); TODO - CHECK DEFINITION IN IERC20
+
+    /* ============ Modifiers ============ */
+
+    /* ============ State Variables ============ */
 
     /// @notice EIP-20 token name for this token
     string public constant name = "Babylon.Finance";
@@ -90,20 +111,10 @@ contract BABLToken is Context, IERC20, Ownable {
     /// @notice A record of states for signing / validating signatures
     mapping (address => uint) public nonces;
 
-    /// @notice An event thats emitted when the minter address is changed
-    event MinterChanged(address minter, address newMinter);
+    
+    /* ============ Functions ============ */
 
-    /// @notice An event thats emitted when an account changes its delegate
-    event DelegateChanged(address indexed delegator, address indexed fromDelegate, address indexed toDelegate);
-
-    /// @notice An event thats emitted when a delegate account's vote balance changes
-    event DelegateVotesChanged(address indexed delegate, uint previousBalance, uint newBalance);
-
-    /// @notice The standard EIP-20 transfer event
-    // event Transfer(address indexed from, address indexed to, uint256 value); TODO - CHECK DEFINITION IN IERC20
-
-    /// @notice The standard EIP-20 approval event
-    // event Approval(address indexed owner, address indexed spender, uint256 value); TODO - CHECK DEFINITION IN IERC20
+    /* ============ Constructor ============ */
 
     /**
      * @notice Construct a new BABL token
@@ -112,17 +123,8 @@ contract BABLToken is Context, IERC20, Ownable {
      * @param mintingAllowedAfter_ The timestamp after which minting may occur
      */
      
-      /**
-     * @notice Construct a new BABL token
-     * @dev account The initial account to grant all the tokens
-     * @dev minter_ The account with minting ability
-     * @dev mintingAllowedAfter_ The timestamp after which minting may occur
-     */
-   
      
-    //constructor(address account, address minter_, uint mintingAllowedAfter_) { TODO - GET BACK INTO NORMAL STATE
-    constructor(address account, address minter_) {
-        uint mintingAllowedAfter_ = block.timestamp;
+    constructor(address account, address minter_, uint mintingAllowedAfter_) { // TODO - CHECK
         require(mintingAllowedAfter_ >= block.timestamp, "BABL::constructor: minting can only begin after deployment");
 
         balances[account] = uint96(_totalSupply);
@@ -132,11 +134,17 @@ contract BABLToken is Context, IERC20, Ownable {
         mintingAllowedAfter = mintingAllowedAfter_;
     }
 
+    /* ============ External Functions ============ */
+
+    // ===========  Token related Gov Functions ======
+
     /**
+     * PRIVILEGED GOVERNANCE FUNCTION. Allows governance to set the new minter
+     *
      * @notice Change the minter address
      * @param _minter_ The address of the new minter
      */
-    function setMinter(address _minter_) external {
+    function setMinter(address _minter_) external onlyOwner {
         require(msg.sender == minter, "BABL::setMinter: only the minter can change the minter address");
         require(_minter_ != minter, "BABL::setMinter: you are already the minter"); // TODO ADDED TO AVOID GAS - CHECK
         emit MinterChanged(minter, _minter_);
@@ -144,11 +152,13 @@ contract BABLToken is Context, IERC20, Ownable {
     }
 
     /**
+     * PRIVILEGED GOVERNANCE FUNCTION. Allows governance to order the minter to mint new tokens
+     *
      * @notice Mint new tokens
      * @param dst The address of the destination account
      * @param rawAmount The number of tokens to be minted
      */
-    function mint(address dst, uint rawAmount) external {
+    function mint(address dst, uint rawAmount) external onlyOwner {
         require(msg.sender == minter, "BABL::mint: only the minter can mint");
         require(SafeMath.add(_totalSupply, rawAmount)<= MAX_SUPPLY, "BABL::mint: max supply exceeded"); // TODO ADDED - CHECK
         require(rawAmount>0, "BABL::mint: mint should be higher than zero"); // TODO ADDED TO AVOID GAS - CHECK
@@ -169,31 +179,11 @@ contract BABLToken is Context, IERC20, Ownable {
 
         // move delegates
         _moveDelegates(address(0), delegates[dst], amount);
-    }
-    
-    /**
-     * @notice Override  burn function to avoid BABL token burning
-     * @param account The address of the account holding the funds
-     * @param amount The amount of tokens requested to burn
-     * 
-     */
-    
-     
-    function _burn(address account, uint256 amount) internal virtual { // TODO - CHECK OVERRIDE TO AVOID BURNING
-        revert("BABL::burn: cannot burn tokens");
-    }
-    
-    /**
-     * @notice Get the number of tokens `spender` is approved to spend on behalf of `account`
-     * @param account The address of the account holding the funds
-     * @param spender The address of the account spending the funds
-     * @return The number of tokens approved
-     */
-    function allowance(address account, address spender) external view override returns (uint) { // TODO - CHECK OVERRIDE
-        return allowances[account][spender];
-    }
+    }  
 
     /**
+     * PRIVILEGED GOVERNANCE FUNCTION. Approve the allowances
+     *
      * @notice Approve `spender` to transfer up to `amount` from `src`
      * @dev This will overwrite the approval amount for `spender`
      *  and is subject to issues noted [here](https://eips.ethereum.org/EIPS/eip-20#approve)
@@ -201,7 +191,7 @@ contract BABLToken is Context, IERC20, Ownable {
      * @param rawAmount The number of tokens that are approved (2^256-1 means infinite)
      * @return Whether or not the approval succeeded
      */
-    function approve(address spender, uint rawAmount) external override returns (bool) { // TODO - CHECK OVERRIDE
+    function approve(address spender, uint rawAmount) external onlyOwner override returns (bool) { // TODO - CHECK OVERRIDE
         uint96 amount;
         if (rawAmount == uint(-1)) {
             amount = uint96(-1);
@@ -216,6 +206,8 @@ contract BABLToken is Context, IERC20, Ownable {
     }
 
     /**
+     * PRIVILEGED GOVERNANCE FUNCTION. Permission from owners to spenders to spend certain amount with deadline
+     *
      * @notice Triggers an approval from owner to spends
      * @param owner The address to approve from
      * @param spender The address to be approved
@@ -225,7 +217,7 @@ contract BABLToken is Context, IERC20, Ownable {
      * @param r Half of the ECDSA signature pair
      * @param s Half of the ECDSA signature pair
      */
-    function permit(address owner, address spender, uint rawAmount, uint deadline, uint8 v, bytes32 r, bytes32 s) external {
+    function permit(address owner, address spender, uint rawAmount, uint deadline, uint8 v, bytes32 r, bytes32 s) external onlyOwner {
         uint96 amount;
         if (rawAmount == uint(-1)) {
             amount = uint96(-1);
@@ -247,43 +239,29 @@ contract BABLToken is Context, IERC20, Ownable {
     }
 
     /**
-     * @notice Get the number of totalSupply tokens
-     * @return The number of totalSupply BABL tokens
-     */
-     
-    function totalSupply() public view override returns (uint256) {
-        return _totalSupply;
-    }
-    
-    /**
-     * @notice Get the number of tokens held by the `account`
-     * @param account The address of the account to get the balance of
-     * @return The number of tokens held
-     */
-    function balanceOf(address account) external view override returns (uint) { // TODO - CHECK OVERRIDE
-        return balances[account];
-    }
-
-    /**
+     * PRIVILEGED GOVERNANCE FUNCTION. Transfer tokens
+     *
      * @notice Transfer `amount` tokens from `msg.sender` to `dst`
      * @param dst The address of the destination account
      * @param rawAmount The number of tokens to transfer
      * @return Whether or not the transfer succeeded
      */
-    function transfer(address dst, uint rawAmount) external override returns (bool) { // TODO - CHECK OVERRIDE
+    function transfer(address dst, uint rawAmount) external onlyOwner override returns (bool) { // TODO - CHECK OVERRIDE
         uint96 amount = safe96(rawAmount, "BABL::transfer: amount exceeds 96 bits");
         _transferTokens(msg.sender, dst, amount);
         return true;
     }
 
     /**
+     * PRIVILEGED GOVERNANCE FUNCTION. Transfer tokens from source to destination
+     *
      * @notice Transfer `amount` tokens from `src` to `dst`
      * @param src The address of the source account
      * @param dst The address of the destination account
      * @param rawAmount The number of tokens to transfer
      * @return Whether or not the transfer succeeded
      */
-    function transferFrom(address src, address dst, uint rawAmount) external override returns (bool) { // TODO - CHECK OVERRIDE
+    function transferFrom(address src, address dst, uint rawAmount) external onlyOwner override returns (bool) { // TODO - CHECK OVERRIDE
         address spender = msg.sender;
         uint96 spenderAllowance = allowances[src][spender];
         uint96 amount = safe96(rawAmount, "BABL::approve: amount exceeds 96 bits");
@@ -300,14 +278,18 @@ contract BABLToken is Context, IERC20, Ownable {
     }
 
     /**
+     * PRIVILEGED GOVERNANCE FUNCTION. Delegating votes from msg.sender to delegatee
+     *
      * @notice Delegate votes from `msg.sender` to `delegatee`
      * @param delegatee The address to delegate votes to
      */
-    function delegate(address delegatee) public {
+    function delegate(address delegatee) public onlyOwner {
         return _delegate(msg.sender, delegatee);
     }
 
     /**
+     * PRIVILEGED GOVERNANCE FUNCTION. Delegating votes from signatory to 'delegatee'
+     *
      * @notice Delegates votes from signatory to `delegatee`
      * @param delegatee The address to delegate votes to
      * @param nonce The contract state required to match the signature
@@ -316,7 +298,7 @@ contract BABLToken is Context, IERC20, Ownable {
      * @param r Half of the ECDSA signature pair
      * @param s Half of the ECDSA signature pair
      */
-    function delegateBySig(address delegatee, uint nonce, uint expiry, uint8 v, bytes32 r, bytes32 s) public {
+    function delegateBySig(address delegatee, uint nonce, uint expiry, uint8 v, bytes32 r, bytes32 s) public onlyOwner {
         bytes32 domainSeparator = keccak256(abi.encode(DOMAIN_TYPEHASH, keccak256(bytes(name)), getChainId(), address(this)));
         bytes32 structHash = keccak256(abi.encode(DELEGATION_TYPEHASH, delegatee, nonce, expiry));
         bytes32 digest = keccak256(abi.encodePacked("\x19\x01", domainSeparator, structHash));
@@ -325,6 +307,38 @@ contract BABLToken is Context, IERC20, Ownable {
         require(nonce == nonces[signatory]++, "BABL::delegateBySig: invalid nonce");
         require(block.timestamp <= expiry, "BABL::delegateBySig: signature expired");
         return _delegate(signatory, delegatee);
+    }
+
+    /* ============ External Getter Functions ============ */
+
+    /**
+     * Returns the remaining number of tokens that spender will be allowed to spend on behalf of owner through
+     * @notice Get the number of tokens still available for spending by the spender on behalf of the `account`
+     * @param account The address of the account that gave permission allowance to 'spender'
+     * @param spender The address of the spender that has permission allowance from 'account'
+     * @return The number of tokens available to spend on behalf
+     */
+
+    function allowance(address account, address spender) external view onlyOwner override returns (uint256) { // TODO - CHECK OVERRIDE
+        return allowances[account][spender];
+    }
+    
+    /**
+     * @notice Get the number of totalSupply tokens
+     * @return The number of totalSupply BABL tokens
+     */
+     
+    function totalSupply() public view override returns (uint256) {
+        return _totalSupply;
+    }
+    
+    /**
+     * @notice Get the number of tokens held by the `account`
+     * @param account The address of the account to get the balance of
+     * @return The number of tokens held
+     */
+    function balanceOf(address account) external view onlyOwner override returns (uint256) { // TODO - CHECK OVERRIDE
+        return balances[account];
     }
 
     /**
@@ -378,6 +392,30 @@ contract BABLToken is Context, IERC20, Ownable {
         return checkpoints[account][lower].votes;
     }
 
+    /* ============ Internal Only Function ============ */
+    
+    /**
+     * PRIVILEGED FACTORY FUNCTION. Disable the burning of any BABL tokens
+     *
+     * @notice Override  burn function to avoid BABL token burning
+     * @param account The address of the account holding the funds
+     * @param amount The amount of tokens requested to burn
+     * 
+     */ 
+
+    function _burn(address account, uint256 amount) internal virtual { // TODO - CHECK OVERRIDE TO AVOID BURNING
+        revert("BABL::burn: cannot burn tokens");
+    }
+
+    /**
+     * PRIVILEGED GOVERNANCE FUNCTION. Make a delegation
+     *
+     * @notice Make a delegation
+     * @param delegator The address of the account delegating into delegatee
+     * @param delegatee The address to delegate into
+     * 
+     */
+
     function _delegate(address delegator, address delegatee) internal {
         address currentDelegate = delegates[delegator];
         uint96 delegatorBalance = balances[delegator];
@@ -387,6 +425,16 @@ contract BABLToken is Context, IERC20, Ownable {
 
         _moveDelegates(currentDelegate, delegatee, delegatorBalance);
     }
+
+    /**
+     * PRIVILEGED GOVERNANCE FUNCTION. Make a transfer of tokens from src to dst
+     *
+     * @notice Make a Token Transfer
+     * @param src The address of the account originating the transfer
+     * @param dst The receiving address
+     * @param amount The amount sent
+     * 
+     */
 
     function _transferTokens(address src, address dst, uint96 amount) internal {
         require(src != address(0), "BABL::_transferTokens: cannot transfer from the zero address");
