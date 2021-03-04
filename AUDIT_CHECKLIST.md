@@ -90,7 +90,7 @@ Auditing helps catch many bugs, but shouldn’t also be seen as a magic bullet. 
 
 ### High Risk Areas
 
-When performing an audit, CryptoFin pays special attention to the these areas which require greater scrutiny, as they often add bugs.
+When performing an audit, we should pay special attention to the these areas which require greater scrutiny, as they often add bugs.
 
 - external and public functions
 - Assembly code and other low level calls
