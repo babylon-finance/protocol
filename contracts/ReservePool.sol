@@ -65,12 +65,13 @@ contract ReservePool is ERC20, ReentrancyGuard {
     string constant SYMBOL = "RBABL";
 
     uint256 constant MIN_DEPOSIT = 1e17; // Min Deposit
+    uint256 constant LOCK_WINDOW = 7 days; // How long your deposit will be locked
 
     // Instance of the Controller contract
     address public controller;
     address public constant weth = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
 
-    mapping(address => uint256) public communityTokenBalances; // Balances of tokens per community
+    mapping(address => uint256) public userTimelock; // Balances of timelock per user
 
     /* ============ Constructor ============ */
 
@@ -85,7 +86,7 @@ contract ReservePool is ERC20, ReentrancyGuard {
 
     /* ============ External Functions ============ */
 
-    function getReservePoolValuation() public returns (uint256) {
+    function getReservePoolValuation() public view returns (uint256) {
       uint total = 0;
       address[] memory _communities = IBabController(controller).getCommunities();
       for (uint i = 0; i < _communities.length; i++) {
@@ -106,6 +107,7 @@ contract ReservePool is ERC20, ReentrancyGuard {
       require(msg.value >= MIN_DEPOSIT, "Send at least 0.1 eth");
       _mint(msg.sender, msg.value);
       IWETH(weth).deposit{value: msg.value}();
+      userTimelock[msg.sender] = block.timestamp; // Window resets with every deposit
       emit ReservePoolDeposit(msg.sender, msg.value, block.timestamp);
     }
 
@@ -116,10 +118,11 @@ contract ReservePool is ERC20, ReentrancyGuard {
      * @param _to                   Address to send component assets to
      */
     function claim(uint256 _amount, address payable _to) external nonReentrant {
-      require(_amount < balanceOf(msg.sender), "Insufficient balance");
-      _burn(msg.sender, _amount);
+      require(_amount <= balanceOf(msg.sender), "Insufficient balance");
+      require(block.timestamp.sub(userTimelock[msg.sender]) > LOCK_WINDOW, "The principal is still locked");
       uint ethAmount = _amount.preciseDiv(totalSupply()).preciseMul(getReservePoolValuation());
       require(IWETH(weth).balanceOf(address(this)) >= ethAmount, "Not enough liquidity in the reserve pool");
+      _burn(msg.sender, _amount);
       IWETH(weth).withdraw(ethAmount);
       _to.transfer(ethAmount);
       emit ReservePoolClaim(msg.sender, _amount, ethAmount, block.timestamp);
@@ -132,7 +135,8 @@ contract ReservePool is ERC20, ReentrancyGuard {
      * @param _amount                  Quantity of the community tokens that sender wants to sell
      */
     function sellTokensToLiquidityPool(address _community, uint256 _amount) external nonReentrant {
-      bool callerIsCommunity = IBabController(controller).isSystemContract(msg.sender) && msg.sender == _community;
+      require(IBabController(controller).isSystemContract(_community), "Only valid communities");
+      bool callerIsCommunity = msg.sender == _community;
       require(callerIsCommunity || IBabController(controller).owner() == msg.sender, "Only community can call this");
       require(IRollingCommunity(_community).balanceOf(msg.sender) >= _amount, "Sender does not have enough tokens");
       uint256 discount = IBabController(controller).protocolReservePoolDiscount();
@@ -164,6 +168,7 @@ contract ReservePool is ERC20, ReentrancyGuard {
       // Get valuation of the Community with the quote asset as the reserve asset.
       uint256 communityValuation = ICommunityValuer(IBabController(controller).getCommunityValuer()).calculateCommunityValuation(_community, weth);
       require(communityValuation > 0, "Community must be worth something");
+      // TODO: check that the community has liquidity
       uint minReceive = communityValuation.preciseMul(IRollingCommunity(_community).totalSupply()).preciseDiv(_amount);
       uint rewards = address(this).balance;
       IRollingCommunity(_community).withdraw(_amount, minReceive.mul(98).div(100), msg.sender);
@@ -179,4 +184,5 @@ contract ReservePool is ERC20, ReentrancyGuard {
       rewards = rewards.sub(protocolFee);
     }
 
+    receive() external payable {} // solium-disable-line quotes
 }

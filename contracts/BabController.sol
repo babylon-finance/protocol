@@ -180,7 +180,7 @@ contract BabController is Ownable {
      */
     function removeCommunity(address _community) external onlyOwner {
         require(isCommunity[_community], "Community does not exist");
-
+        require(!ICommunity(_community).active(), "The community needs to be disabled.");
         communitys = communitys.remove(_community);
 
         isCommunity[_community] = false;
