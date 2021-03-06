@@ -139,7 +139,8 @@ contract ReservePool is ERC20, ReentrancyGuard {
       bool callerIsCommunity = msg.sender == _community;
       require(callerIsCommunity || IBabController(controller).owner() == msg.sender, "Only community can call this");
       require(IRollingCommunity(_community).balanceOf(msg.sender) >= _amount, "Sender does not have enough tokens");
-      uint256 discount = IBabController(controller).protocolReservePoolDiscount();
+      // TODO: Make dynamic
+      uint256 discount = 1e17;
       // Get valuation of the Community with the quote asset as the reserve asset.
       uint256 communityValuation = ICommunityValuer(IBabController(controller).getCommunityValuer()).calculateCommunityValuation(_community, weth);
       uint256 amountValue = communityValuation.preciseMul(_amount);

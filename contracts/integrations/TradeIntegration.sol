@@ -19,11 +19,12 @@
 pragma solidity 0.7.4;
 
 import "hardhat/console.sol";
-import { SafeMath } from "@openzeppelin/contracts/math/SafeMath.sol";
 import { SafeCast } from "@openzeppelin/contracts/utils/SafeCast.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { ICommunity } from "../interfaces/ICommunity.sol";
 import { ReentrancyGuard } from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
+import '@uniswap/v2-core/contracts/interfaces/IUniswapV2Pair.sol';
+import '@uniswap/v2-periphery/contracts/libraries/UniswapV2Library.sol';
 import { IBabController } from "../interfaces/IBabController.sol";
 import { BaseIntegration } from "./BaseIntegration.sol";
 
@@ -196,7 +197,12 @@ abstract contract TradeIntegration is BaseIntegration, ReentrancyGuard {
      */
     function _validatePreTradeData(TradeInfo memory _tradeInfo, uint256 _sendQuantity) internal view {
       require(_tradeInfo.totalSendQuantity > 0, "Token to sell must be nonzero");
-      require(IBabController(controller).isValidAsset(_tradeInfo.receiveToken), "Receive token must be whitelisted");
+      address pair = UniswapV2Library.pairFor(IBabController(controller).getUniswapFactory(), _tradeInfo.sendToken, _tradeInfo.receiveToken);
+      uint256 minLiquidity = ICommunity(msg.sender).minLiquidityAsset();
+      // Check that there is enough liquidity
+      (uint256 liquidity0, uint256 liquidity1, uint256 timestamp) = IUniswapV2Pair(pair).getReserves();
+      require((IUniswapV2Pair(pair).token0() == weth && liquidity0 >= minLiquidity) ||
+              (IUniswapV2Pair(pair).token1() == weth && liquidity1 >= minLiquidity) && block.timestamp.sub(timestamp) <= 300, "Not enough liquidity");
       require(IERC20(_tradeInfo.sendToken).balanceOf(msg.sender) >= _sendQuantity, "Community needs to have enough liquid tokens");
       require(
           _tradeInfo.community.hasSufficientBalance(_tradeInfo.sendToken, _sendQuantity),

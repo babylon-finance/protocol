@@ -61,7 +61,6 @@ contract RollingCommunity is BaseCommunity, ReentrancyGuard {
         uint256 protocolFees
     );
 
-    event PremiumEdited(uint256 amount);
     event ContributionLog(
         address indexed contributor,
         uint256 amount,
@@ -77,8 +76,8 @@ contract RollingCommunity is BaseCommunity, ReentrancyGuard {
     /* ============ Modifiers ============ */
 
     modifier onlyContributor {
-        _validateOnlyContributor(msg.sender);
-        _;
+      _validateOnlyContributor(msg.sender);
+      _;
     }
 
     /* ============ State Variables ============ */
@@ -86,33 +85,27 @@ contract RollingCommunity is BaseCommunity, ReentrancyGuard {
     uint256 constant public MAX_DEPOSITS_FUND_V1 = 1e21; // Max deposit per community is 1000 eth for v1
 
     struct ActionInfo {
-        uint256 preFeeReserveQuantity; // Reserve value before fees; During issuance, represents raw quantity
-        // During withdrawal, represents post-premium value
-        uint256 protocolFees; // Total protocol fees (direct + manager revenue share)
-        uint256 netFlowQuantity; // When issuing, quantity of reserve asset sent to Community
-        // When withdrawaling, quantity of reserve asset sent to withdrawaler
-        uint256 communityTokenQuantity; // When issuing, quantity of Community tokens minted to mintee
-        // When withdrawaling, quantity of Community tokens withdrawaled
-        uint256 previousCommunityTokenSupply; // Community token supply prior to deposit/withdrawal action
-        uint256 newCommunityTokenSupply; // Community token supply after deposit/withdrawal action
-        uint256 newReservePositionBalance; // Community token reserve asset position balance after deposit/withdrawal
+      uint256 preFeeReserveQuantity; // Reserve value before fees; During issuance, represents raw quantity
+      // During withdrawal, represents post-premium value
+      uint256 protocolFees; // Total protocol fees (direct + manager revenue share)
+      uint256 netFlowQuantity; // When issuing, quantity of reserve asset sent to Community
+      // When withdrawaling, quantity of reserve asset sent to withdrawaler
+      uint256 communityTokenQuantity; // When issuing, quantity of Community tokens minted to mintee
+      // When withdrawaling, quantity of Community tokens withdrawaled
+      uint256 previousCommunityTokenSupply; // Community token supply prior to deposit/withdrawal action
+      uint256 newCommunityTokenSupply; // Community token supply after deposit/withdrawal action
+      uint256 newReservePositionBalance; // Community token reserve asset position balance after deposit/withdrawal
     }
 
-    uint256 public maxDepositLimit; // Limits the amount of deposits
-    uint256 public communityActiveWindow;          // Duration of the community active window
-    uint256 public communityWithdrawalWindow;      // Duration of the community withdrawal window
+    uint256 public maxDepositLimit;                // Limits the amount of deposits
     uint256 public communityInitializedAt;         // Community Initialized at timestamp
-    uint256 public communityCurrentActiveWindowStartedAt;   // Community Initialized at timestamp
-
-    // Fees
-    uint256 public premiumPercentage; // Premium percentage (0.01% = 1e14, 1% = 1e16). This premium is a buffer around oracle
-    // prices paid by user to the Community Token, which prevents arbitrage and oracle front running
+    uint256 public depositHardlock;                // Window of time after deposits when withdraws are disabled for that user
 
     // List of contributors
     struct Contributor {
-        uint256 totalDeposit; //wei
-        uint256 tokensReceived;
-        uint256 timestamp;
+      uint256 totalDeposit; //wei
+      uint256 tokensReceived;
+      uint256 timestamp;
     }
 
     mapping(address => Contributor) public contributors;
@@ -167,57 +160,43 @@ contract RollingCommunity is BaseCommunity, ReentrancyGuard {
     /* ============ External Functions ============ */
 
     /**
-     * FUND MANAGER ONLY. Initializes this module to the Community with hooks, allowed reserve assets,
-     * fees and issuance premium. Only callable by the Community's manager. Hook addresses are optional.
-     * Address(0) means that no hook will be called.
+     * FUND MANAGER ONLY. Initializes this module to the Community with allowed reserve assets,
+     * fees and issuance premium. Only callable by the Community's creator
      *
-     * @param _maxDepositLimit                Max deposit limit
-     * @param _premiumPercentage              Premium percentage to avoid arbitrage
+     * @param _maxDepositLimit                     Max deposit limit
      * @param _minCommunityTokenSupply             Min community token supply
-     * @param _communityActiveWindow               Community active window
-     * @param _communityWithdrawalWindow           Community withdrawal window
      * @param _communityIdeas                      Address of the instance with the investment ideas
+     * @param _minLiquidityAsset                   Number thar represents min amount of liquidity denominated in ETH
+     * @param _depositHardlock                     Number that represents the time deposits are locked for an user after he deposits
      */
     function initialize(
         uint256 _maxDepositLimit,
-        uint256 _premiumPercentage,
         uint256 _minCommunityTokenSupply,
-        uint256 _communityActiveWindow,
-        uint256 _communityWithdrawalWindow,
-        address _communityIdeas
+        address _communityIdeas,
+        uint256 _minLiquidityAsset,
+        uint256 _depositHardlock
     ) external onlyCreator onlyInactive payable {
         require(_maxDepositLimit < MAX_DEPOSITS_FUND_V1, "Max deposit limit needs to be under the limit");
 
         require(msg.value >= minContribution, "Creator needs to deposit");
         IBabController ifcontroller = IBabController(controller);
         require(
-            _premiumPercentage <= ifcontroller.getMaxCommunityPremiumPercentage(),
-            "Premium must < max"
-        );
-        require(
-            _communityActiveWindow <= ifcontroller.getMaxCommunityActiveWindow() && _communityActiveWindow >= ifcontroller.getMinCommunityActiveWindow() ,
-            "Community active window must be within range"
-        );
-        require(
-            _communityWithdrawalWindow <= ifcontroller.getMaxWithdrawalWindow() && _communityWithdrawalWindow >= ifcontroller.getMinWithdrawalWindow() ,
-            "Community active window must be within range"
-        );
-        require(
             _minCommunityTokenSupply > 0,
             "Min Community token supply >= 0"
         );
+        require(_minLiquidityAsset >= ifcontroller.minRiskyPairLiquidityEth(),
+          "Needs to be at least the minimum set by protocol");
         // make initial deposit
         uint256 initialDepositAmount = msg.value;
         uint256 initialTokens = initialDepositAmount.div(initialBuyRate);
-        require(initialTokens >= minCommunityTokenSupply, "Initial Community token supply too low");
+        require(initialTokens >= minCommunityTokenSupply,
+          "Initial Community token supply too low");
+        require(_depositHardlock > 1, "Needs to be at least a couple of seconds to prevent flash loan attacks");
         minCommunityTokenSupply = _minCommunityTokenSupply;
-        premiumPercentage = _premiumPercentage;
         maxDepositLimit = _maxDepositLimit;
-        communityActiveWindow = _communityActiveWindow;
-        communityWithdrawalWindow = _communityWithdrawalWindow;
         communityInitializedAt = block.timestamp;
-        communityCurrentActiveWindowStartedAt = block.timestamp;
-
+        minLiquidityAsset = _minLiquidityAsset;
+        depositHardlock = _depositHardlock;
         ICommunityIdeas communityIdeasC = ICommunityIdeas(_communityIdeas);
         require(communityIdeasC.controller() == controller, "Controller must be the same");
         require(communityIdeasC.community() == address(this), "Community must be this contract");
@@ -241,18 +220,6 @@ contract RollingCommunity is BaseCommunity, ReentrancyGuard {
     }
 
     /**
-      * Restarts the current deposit window if needed
-      *
-    */
-    function restartWindow() public {
-      if (block.timestamp >= communityCurrentActiveWindowStartedAt.add(communityActiveWindow.add(communityWithdrawalWindow))) {
-        if (active) {
-          communityCurrentActiveWindowStartedAt = block.timestamp;
-        }
-      }
-    }
-
-    /**
      * Deposits the Community's position components into the community and mints the Community token of the given quantity
      * to the specified _to address. This function only handles default Positions (positionState = 0).
      *
@@ -265,14 +232,9 @@ contract RollingCommunity is BaseCommunity, ReentrancyGuard {
         uint256 _minCommunityTokenReceiveQuantity,
         address _to
     ) public payable nonReentrant onlyActive {
-        restartWindow();
         require(
             msg.value >= minContribution,
             ">= minContribution"
-        );
-        require(block.timestamp >= communityCurrentActiveWindowStartedAt &&
-          block.timestamp < communityCurrentActiveWindowStartedAt.add(communityActiveWindow),
-          "Community is not in the withdrawal window"
         );
         // if deposit limit is 0, then there is no deposit limit
         if(maxDepositLimit > 0) {
@@ -309,18 +271,17 @@ contract RollingCommunity is BaseCommunity, ReentrancyGuard {
         uint256 _minReserveReceiveQuantity,
         address payable _to
     ) external nonReentrant onlyContributor onlyActive {
-        require(block.timestamp >= communityCurrentActiveWindowStartedAt.add(communityActiveWindow) &&
-          block.timestamp < communityCurrentActiveWindowStartedAt.add(communityActiveWindow).add(communityWithdrawalWindow),
-          "Community is not in the withdrawal window"
-        );
         require(
             _communityTokenQuantity <= balanceOf(msg.sender),
             "Withdrawal amount <= to deposited amount"
         );
-        _validateReserveAsset(reserveAsset, _communityTokenQuantity);
+        // Flashloan protection
+        require(block.timestamp.sub(contributors[msg.sender].timestamp) >= depositHardlock, "Cannot withdraw. Hardlock");
 
         ActionInfo memory withdrawalInfo =
             _createRedemptionInfo(reserveAsset, _communityTokenQuantity);
+
+        _validateReserveAsset(reserveAsset, withdrawalInfo.netFlowQuantity);
 
         _validateRedemptionInfo(
             _minReserveReceiveQuantity,
@@ -343,23 +304,6 @@ contract RollingCommunity is BaseCommunity, ReentrancyGuard {
         _handleRedemptionFees(reserveAsset, withdrawalInfo);
 
         _handleWithdrawalStateUpdates(reserveAsset, _to, withdrawalInfo);
-    }
-
-    /**
-     * FUND MANAGER ONLY. Edit the premium percentage
-     *
-     * @param _premiumPercentage            Premium percentage in 10e16 (e.g. 10e16 = 1%)
-     */
-    function editPremium(uint256 _premiumPercentage) external onlyGovernanceCommunity {
-        require(
-            _premiumPercentage <=
-                IBabController(controller).getMaxCommunityPremiumPercentage(),
-            "Premium < maximum allowed"
-        );
-
-        premiumPercentage = _premiumPercentage;
-
-        emit PremiumEdited(_premiumPercentage);
     }
 
     // if limit == 0 then there is no deposit limit
@@ -394,7 +338,7 @@ contract RollingCommunity is BaseCommunity, ReentrancyGuard {
     function getExpectedCommunityTokensDepositedQuantity(
         address _reserveAsset,
         uint256 _reserveAssetQuantity
-    ) external returns (uint256) {
+    ) external view returns (uint256) {
         (, uint256 netReserveFlow) = _getFees(_reserveAssetQuantity, true, 0);
 
         uint256 setTotalSupply = totalSupply();
@@ -418,7 +362,7 @@ contract RollingCommunity is BaseCommunity, ReentrancyGuard {
     function getExpectedReserveWithdrawalQuantity(
         address _reserveAsset,
         uint256 _communityTokenQuantity
-    ) external returns (uint256) {
+    ) external view returns (uint256) {
         uint256 preFeeReserveQuantity =
             _getWithdrawalReserveQuantity(_reserveAsset, _communityTokenQuantity);
 
@@ -458,7 +402,7 @@ contract RollingCommunity is BaseCommunity, ReentrancyGuard {
     function isWithdrawalValid(
         address _reserveAsset,
         uint256 _communityTokenQuantity
-    ) external returns (bool) {
+    ) external view returns (bool) {
         uint256 setTotalSupply = totalSupply();
 
         if (
@@ -537,7 +481,7 @@ contract RollingCommunity is BaseCommunity, ReentrancyGuard {
     function _createIssuanceInfo(
         address _reserveAsset,
         uint256 _reserveAssetQuantity
-    ) internal returns (ActionInfo memory) {
+    ) internal view returns (ActionInfo memory) {
         ActionInfo memory depositInfo;
         depositInfo.previousCommunityTokenSupply = totalSupply();
         depositInfo.preFeeReserveQuantity = _reserveAssetQuantity;
@@ -569,7 +513,7 @@ contract RollingCommunity is BaseCommunity, ReentrancyGuard {
     function _createRedemptionInfo(
         address _reserveAsset,
         uint256 _communityTokenQuantity
-    ) internal returns (ActionInfo memory) {
+    ) internal view returns (ActionInfo memory) {
         ActionInfo memory withdrawalInfo;
 
         withdrawalInfo.communityTokenQuantity = _communityTokenQuantity;
@@ -717,10 +661,7 @@ contract RollingCommunity is BaseCommunity, ReentrancyGuard {
         address _reserveAsset,
         uint256 _netReserveFlows, // Value of reserve asset net of fees
         uint256 _communityTokenTotalSupply
-    ) internal returns (uint256) {
-        uint256 premiumPercentageToApply = premiumPercentage;
-        uint256 premiumValue =
-            _netReserveFlows.preciseMul(premiumPercentageToApply);
+    ) internal view returns (uint256) {
 
         // Get valuation of the Community with the quote asset as the reserve asset.
         // Reverts if price is not found
@@ -732,7 +673,7 @@ contract RollingCommunity is BaseCommunity, ReentrancyGuard {
         uint256 normalizedTotalReserveQuantityNetFees = _netReserveFlows.preciseDiv(baseUnits);
 
         uint256 normalizedTotalReserveQuantityNetFeesAndPremium =
-            _netReserveFlows.sub(premiumValue).preciseDiv(baseUnits);
+            _netReserveFlows.preciseDiv(baseUnits);
 
         // Calculate Community tokens to mint to depositor
         uint256 denominator =
@@ -750,7 +691,7 @@ contract RollingCommunity is BaseCommunity, ReentrancyGuard {
     function _getWithdrawalReserveQuantity(
         address _reserveAsset,
         uint256 _communityTokenQuantity
-    ) internal returns (uint256) {
+    ) internal view returns (uint256) {
         // Get valuation of the Community with the quote asset as the reserve asset. Returns value in precise units (10e18)
         // Reverts if price is not found
         uint256 communityValuation =
@@ -766,11 +707,7 @@ contract RollingCommunity is BaseCommunity, ReentrancyGuard {
                 10**reserveAssetDecimals
             );
 
-        uint256 premiumPercentageToApply = premiumPercentage;
-        uint256 premiumQuantity =
-            prePremiumReserveQuantity.preciseMulCeil(premiumPercentageToApply);
-
-        return prePremiumReserveQuantity.sub(premiumQuantity);
+        return prePremiumReserveQuantity;
     }
 
     /**
@@ -808,8 +745,8 @@ contract RollingCommunity is BaseCommunity, ReentrancyGuard {
       // If new contributor, create one, increment count, and set the current TS
       if (contributor.totalDeposit == 0) {
         totalContributors = totalContributors.add(1);
-        contributor.timestamp = block.timestamp;
       }
+      contributor.timestamp = block.timestamp;
 
       totalCommunities = totalCommunities.add(amount);
       totalCommunitiesDeposited = totalCommunitiesDeposited.add(amount);

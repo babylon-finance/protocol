@@ -25,7 +25,6 @@ async function deployFolioFixture() {
   );
 
   await babController.addReserveAsset(addresses.tokens.WETH);
-  await babController.addAssetsWhitelist(Object.values(addresses.tokens));
   await babController.addKeepers(Object.values(addresses.users));
 
   const CommunityValuer = await ethers.getContractFactory(
@@ -192,7 +191,11 @@ async function deployFolioFixture() {
   // Initialize community integrations
   communityAddressesList.forEach(communityIter => {
     integrationsAddressList.forEach(async integration => {
-      await babController.initializeIntegration(integration, communityIter);
+      const communityI = await ethers.getContractAt(
+        "RollingCommunity",
+        communityIter
+      );
+      await communityI.initializeIntegration(integration);
     });
   });
 
@@ -203,17 +206,18 @@ async function deployFolioFixture() {
     ONE_DAY_IN_SECONDS,
     ethers.utils.parseEther("0.15"), // 15%
     ethers.utils.parseEther("0.05"), // 5%
-    ethers.utils.parseEther("0.10") // 10%
+    ethers.utils.parseEther("0.10"), // 10%
+    ONE_DAY_IN_SECONDS * 3,
+    ONE_DAY_IN_SECONDS * 365
   );
 
   // Initial deposit
   await community.initialize(
     ethers.utils.parseEther("10"),
-    0,
     1,
-    ONE_DAY_IN_SECONDS * 90,
-    ONE_DAY_IN_SECONDS * 3,
     communityIdeas1.address,
+    ethers.utils.parseEther("1000"),
+    2,
     { value: ethers.utils.parseEther("0.1") }
   );
 

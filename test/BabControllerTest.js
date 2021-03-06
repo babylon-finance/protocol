@@ -81,16 +81,6 @@ describe("BabController", function() {
       expect(comunities.length).to.equal(3);
     });
 
-    it("can remove a community", async function() {
-      const initialCommunities = await controller.getCommunities();
-      expect(initialCommunities.length).to.equal(3);
-
-      await controller.removeCommunity(initialCommunities[0]);
-
-      const updatedCommunities = await controller.getCommunities();
-      expect(updatedCommunities.length).to.equal(2);
-    });
-
     it("cannot disable an inactive community", async function() {
       const initialCommunities = await controller.getCommunities();
 
@@ -98,37 +88,21 @@ describe("BabController", function() {
       await expect(controller.disableCommunity(initialCommunities[0])).to.be.reverted;
     });
 
+    it("can remove a disabled community", async function() {
+      const initialCommunities = await controller.getCommunities();
+      expect(initialCommunities.length).to.equal(3);
+      await expect(controller.disableCommunity(initialCommunities[0])).to.not.be.reverted;
+      await controller.removeCommunity(initialCommunities[0]);
+
+      const updatedCommunities = await controller.getCommunities();
+      expect(updatedCommunities.length).to.equal(2);
+    });
+
     it("can enable and disable a community", async function() {
       const initialCommunities = await controller.getCommunities();
 
       await expect(controller.disableCommunity(initialCommunities[0])).to.not.be.reverted;
       await expect(controller.enableCommunity(initialCommunities[0])).to.not.be.reverted;
-    });
-  });
-
-  describe("Whitelisted assets", function() {
-    const SCAM = "0x49488350b4b2ed2fd164dd0d50b00e7e3f531651";
-    const ZRX = "0xe41d2489571d322189246dafa5ebde1f4699f498";
-    it("can add new whitelisted assets", async function() {
-      await controller.addAssetWhitelist(SCAM);
-
-      const valid = await controller.isValidAsset(SCAM);
-      expect(valid).to.equal(true);
-    });
-
-    it("can remove whitelisted assets", async function() {
-      await controller.addAssetWhitelist(SCAM);
-      await controller.removeAssetWhitelist(SCAM);
-
-      const valid = await controller.isValidAsset(SCAM);
-      expect(valid).to.equal(false);
-    });
-
-    it("can add whitelisted assets in bulk", async function() {
-      await controller.addAssetsWhitelist([SCAM, ZRX]);
-
-      expect(await controller.isValidAsset(SCAM)).to.equal(true);
-      expect(await controller.isValidAsset(ZRX)).to.equal(true);
     });
   });
 

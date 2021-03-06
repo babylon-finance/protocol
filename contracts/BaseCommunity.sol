@@ -82,7 +82,7 @@ abstract contract BaseCommunity is ERC20 {
      * Throws if the sender is not the community governance. (Initially protocol)
      */
     modifier onlyGovernanceCommunity() {
-      require(msg.sender == controller, "Only the controller can call this");
+      require(msg.sender == creator, "Only the creator can call this");
       _;
     }
 
@@ -172,6 +172,9 @@ abstract contract BaseCommunity is ERC20 {
     // List of initialized Integrations; Integrations connect with other money legos
     address[] public integrations;
 
+    // Indicates the minimum liquidity the asset needs to have to be tradable by this community
+    uint256 public minLiquidityAsset;
+
     // List of positions
     address[] public positions;
     mapping(address => ICommunity.Position) public positionsByComponent;
@@ -257,7 +260,7 @@ abstract contract BaseCommunity is ERC20 {
     }
 
     /**
-     * MANAGER ONLY. Removes an integration from the Community. Community calls removeIntegration on integration itself to confirm
+     * CREATOR ONLY. Removes an integration from the Community. Community calls removeIntegration on integration itself to confirm
      * it is not needed to manage any remaining positions and to remove state.
      */
     function removeIntegration(address _integration) external onlyGovernanceCommunity {
@@ -280,6 +283,18 @@ abstract contract BaseCommunity is ERC20 {
       bytes calldata _data
     ) external onlyIntegration returns (bytes memory) {
       return _invoke(_target, _value, _data);
+    }
+
+    /**
+     * CREATOR ONLY. Initializes an integration in a community
+     *
+     * @param  _integration       Address of the integration contract to add
+     */
+    function initializeIntegration(address _integration)
+        public
+        onlyGovernanceCommunity
+    {
+      IIntegration(_integration).initialize(address(this));
     }
 
     /* ============ Trade Integration hooks ============ */
