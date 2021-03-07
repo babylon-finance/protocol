@@ -35,8 +35,8 @@ import { ReentrancyGuard } from "@openzeppelin/contracts/utils/ReentrancyGuard.s
  * Checkpoints are created every time state is changed which record voting power
  * Inherits standard ERC20 behavior
  */
- 
-abstract contract VoteToken is Context, ERC20, Ownable, IVoteToken, ReentrancyGuard {
+
+contract VoteToken is Context, ERC20, Ownable, IVoteToken, ReentrancyGuard {
     using SafeMath for uint256;
     using Address for address;
 
@@ -51,11 +51,10 @@ abstract contract VoteToken is Context, ERC20, Ownable, IVoteToken, ReentrancyGu
 
     /* ============ State Variables ============ */
 
-    string private _name;
-    string private _symbol;
-    uint8 private _decimals;
-
-/// @notice The EIP-712 typehash for the contract's domain
+    string public _name;
+    string public _symbol;
+    
+    /// @notice The EIP-712 typehash for the contract's domain
     bytes32 public constant DOMAIN_TYPEHASH = keccak256("EIP712Domain(string name,uint256 chainId,address verifyingContract)");
 
     /// @notice The EIP-712 typehash for the delegation struct used by the contract
@@ -89,10 +88,7 @@ abstract contract VoteToken is Context, ERC20, Ownable, IVoteToken, ReentrancyGu
     
     /* ============ Constructor ============ */
 
-    constructor (string memory name_, string memory symbol_) {
-        _name = name_;
-        _symbol = symbol_;
-        _decimals = 18;
+    constructor () ERC20 (_name, _symbol) {
     }
     
     /* ============ External Functions ============ */

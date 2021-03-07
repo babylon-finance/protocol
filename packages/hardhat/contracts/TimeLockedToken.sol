@@ -16,10 +16,10 @@
 */
 
 
-pragma solidity 0.7.4;
+pragma solidity 7.0.4;
 
-import { SafeMath } from "@openzeppelin/contracts/math/SafeMath.sol";
-import { VoteToken } from "./VoteToken.sol";
+import {SafeMath } from "@openzeppelin/contracts/math/SafeMath.sol";
+import { VoteToken } from "VoteToken.sol";
 import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
 
 /**
@@ -38,7 +38,7 @@ import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
  */
 
 
-abstract contract TimeLockedToken is VoteToken {
+contract TimeLockedToken is VoteToken {
     using SafeMath for uint256;
 
     /* ============ Events ============ */
@@ -53,9 +53,6 @@ abstract contract TimeLockedToken is VoteToken {
     
     /* ============ State Variables ============ */
 
-    string private _name;
-    string private _symbol;
-    uint8 private _decimals;
     
     // represents total distribution for locked balances
     mapping(address => uint256) distribution;
@@ -83,10 +80,7 @@ abstract contract TimeLockedToken is VoteToken {
     
     /* ============ Constructor ============ */
 
-    constructor (string memory name_, string memory symbol_) {
-        _name = name_;
-        _symbol = symbol_;
-        _decimals = 18;
+    constructor () {
     }
     
     /* ============ External Functions ============ */
