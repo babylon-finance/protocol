@@ -22,12 +22,18 @@ import { SafeMath } from "@openzeppelin/contracts/math/SafeMath.sol";
 contract Timelock {
     using SafeMath for uint;
 
+    /* ============ Events ============ */
+
     event NewAdmin(address indexed newAdmin);
     event NewPendingAdmin(address indexed newPendingAdmin);
     event NewDelay(uint indexed newDelay);
     event CancelTransaction(bytes32 indexed txHash, address indexed target, uint value, string signature,  bytes data, uint eta);
     event ExecuteTransaction(bytes32 indexed txHash, address indexed target, uint value, string signature,  bytes data, uint eta);
     event QueueTransaction(bytes32 indexed txHash, address indexed target, uint value, string signature, bytes data, uint eta);
+
+    /* ============ Modifiers ============ */
+
+    /* ============ State Variables ============ */
 
     uint public constant GRACE_PERIOD = 14 days;
     uint public constant MINIMUM_DELAY = 2 days;
@@ -39,6 +45,9 @@ contract Timelock {
 
     mapping (bytes32 => bool) public queuedTransactions;
 
+    /* ============ Functions ============ */
+
+    /* ============ Constructor ============ */
 
     constructor(address admin_, uint delay_) {
         require(delay_ >= MINIMUM_DELAY, "Timelock::constructor: Delay must exceed minimum delay.");
@@ -48,8 +57,13 @@ contract Timelock {
         delay = delay_;
     }
 
-    fallback() external payable { } // TODO: CHECK IF FINALLY NEEDED only need to implement the new fallback function if you are following an upgrade or proxy pattern - is called when no other function matches (if the receive ether function does not exist then this includes calls with empty call data
-    receive() external payable { } // TODO: CHECK IF THERE IS A NEED TO ACCEPT INCOMING PAYMENTS is called whenever the call data is empty (whether or not ether is received
+    /* ============ Fallback ============ */
+
+    fallback() external payable { } // TODO: CHECK 
+
+    /* ============ External Functions ============ */
+
+    /* ===========  Token related Gov Functions ====== */
 
     function setDelay(uint delay_) public {
         require(msg.sender == address(this), "Timelock::setDelay: Call must come from Timelock.");
@@ -121,6 +135,8 @@ contract Timelock {
 
         return returnData;
     }
+
+    /* ============ Internal Only Function ============ */
 
     function getBlockTimestamp() internal view returns (uint) {
         // solium-disable-next-line security/no-block-members

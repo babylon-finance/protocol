@@ -20,8 +20,38 @@ pragma experimental ABIEncoderV2;
 
 contract GovernorAlpha {
 
+    /* ============ Events ============ */
+
+    /// @notice An event emitted when a new proposal is created
+    event ProposalCreated(uint id, address proposer, address[] targets, uint[] values, string[] signatures, bytes[] calldatas, uint startBlock, uint endBlock, string description);
+
+    /// @notice An event emitted when a vote has been cast on a proposal
+    event VoteCast(address voter, uint proposalId, bool support, uint votes);
+
+    /// @notice An event emitted when a proposal has been canceled
+    event ProposalCanceled(uint id);
+
+    /// @notice An event emitted when a proposal has been queued in the Timelock
+    event ProposalQueued(uint id, uint eta);
+
+    /// @notice An event emitted when a proposal has been executed in the Timelock
+    event ProposalExecuted(uint id);
+
+    /* ============ Modifiers ============ */
+
+    /* ============ State Variables ============ */
+
     /// @notice The name of this contract
     string public constant name = "BABL Governor Alpha";
+
+    /// @notice The address of the BABL Protocol Timelock
+    ITimeLock public timelock;
+
+    /// @notice The address of the BABL governance token
+    BABLInterface public babl;
+
+     /// @notice The address of the Governor Guardian
+    address public guardian;
 
     /// @notice The number of votes in support of a proposal required in order for a quorum to be reached and for a vote to succeed
     function quorumVotes() public pure returns (uint) { return 40_000e18; } // 4% of BABL
@@ -37,12 +67,6 @@ contract GovernorAlpha {
 
     /// @notice The duration of voting on a proposal, in blocks
     function votingPeriod() public pure returns (uint) { return 40_320; } // ~7 days in blocks (assuming 15s blocks)
-
-    /// @notice The address of the BABL Protocol Timelock
-    ITimeLock public timelock;
-
-    /// @notice The address of the BABL governance token
-    BABLInterface public babl;
 
     /// @notice The total number of proposals
     uint public proposalCount;
@@ -127,25 +151,19 @@ contract GovernorAlpha {
     /// @notice The EIP-712 typehash for the ballot struct used by the contract
     bytes32 public constant BALLOT_TYPEHASH = keccak256("Ballot(uint256 proposalId,bool support)");
 
-    /// @notice An event emitted when a new proposal is created
-    event ProposalCreated(uint id, address proposer, address[] targets, uint[] values, string[] signatures, bytes[] calldatas, uint startBlock, uint endBlock, string description);
+    /* ============ Functions ============ */
 
-    /// @notice An event emitted when a vote has been cast on a proposal
-    event VoteCast(address voter, uint proposalId, bool support, uint votes);
+    /* ============ Constructor ============ */
 
-    /// @notice An event emitted when a proposal has been canceled
-    event ProposalCanceled(uint id);
-
-    /// @notice An event emitted when a proposal has been queued in the Timelock
-    event ProposalQueued(uint id, uint eta);
-
-    /// @notice An event emitted when a proposal has been executed in the Timelock
-    event ProposalExecuted(uint id);
-
-    constructor(address timelock_, address babl_) {
+    constructor(address timelock_, address babl_, address guardian_) {
         timelock = ITimeLock(timelock_);
         babl = BABLInterface(babl_);
+        guardian = guardian_;
     }
+
+    /* ============ External Functions ============ */
+
+    /* ===========  Token related Gov Functions ====== */
 
     function propose(address[] memory targets, uint[] memory values, string[] memory signatures, bytes[] memory calldatas, string memory description) public returns (uint) {
         require(babl.getPriorVotes(msg.sender, sub256(block.number, 1)) > proposalThreshold(), "GovernorAlpha::propose: proposer votes below proposal threshold");
@@ -164,23 +182,6 @@ contract GovernorAlpha {
         uint endBlock = add256(startBlock, votingPeriod());
 
         proposalCount++;
-        /***
-        Proposal memory newProposal = Proposal({
-            id: proposalCount,
-            proposer: msg.sender,
-            eta: 0,
-            targets: targets,
-            values: values,
-            signatures: signatures,
-            calldatas: calldatas,
-            startBlock: startBlock,
-            endBlock: endBlock,
-            forVotes: 0,
-            againstVotes: 0,
-            canceled: false,
-            executed: false
-        });
-        ***/
         
         Proposal storage newProposal = proposals[proposalCount];
         newProposal.id = proposalCount;
@@ -198,7 +199,6 @@ contract GovernorAlpha {
         newProposal.executed = false;
         
 
-        // proposals[newProposal.id] = newProposal; TODO - REPLACED OLD STRUCT - MAPPING CODE
         latestProposalIds[newProposal.proposer] = newProposal.id;
 
         emit ProposalCreated(newProposal.id, msg.sender, targets, values, signatures, calldatas, startBlock, endBlock, description);
@@ -236,7 +236,8 @@ contract GovernorAlpha {
         require(_state != ProposalState.Executed, "GovernorAlpha::cancel: cannot cancel executed proposal");
 
         Proposal storage proposal = proposals[proposalId];
-        require(babl.getPriorVotes(proposal.proposer, sub256(block.number, 1)) < proposalThreshold(), "GovernorAlpha::cancel: proposer above threshold");
+        // A Pause Guardian is capable of disabling protocol functionality. Used only in the event of an unforeseen vulnerability and just for specific operations.
+        require(msg.sender == guardian || babl.getPriorVotes(proposal.proposer, sub256(block.number, 1)) < proposalThreshold(), "GovernorAlpha::cancel: proposer above threshold");
 
         proposal.canceled = true;
         for (uint i = 0; i < proposal.targets.length; i++) {
@@ -310,6 +311,32 @@ contract GovernorAlpha {
         emit VoteCast(voter, proposalId, support, votes);
     }
 
+    function __acceptAdmin() public {
+        // The Pause Guardian is capable of disabling protocol functionality. Used only in the event of an unforeseen vulnerability and just for specific operations.
+        require(msg.sender == guardian, "GovernorAlpha::__acceptAdmin: sender must be gov guardian");
+        timelock.acceptAdmin();
+    }
+
+    function __abdicate() public {
+        // The Pause Guardian is capable of disabling protocol functionality. Used only in the event of an unforeseen vulnerability and just for specific operations.
+        require(msg.sender == guardian, "GovernorAlpha::__abdicate: sender must be gov guardian");
+        guardian = address(0);
+    }
+
+    function __queueSetTimelockPendingAdmin(address newPendingAdmin, uint eta) public {
+        // The Pause Guardian is capable of disabling protocol functionality. Used only in the event of an unforeseen vulnerability and just for specific operations.
+        require(msg.sender == guardian, "GovernorAlpha::__queueSetTimelockPendingAdmin: sender must be gov guardian");
+        timelock.queueTransaction(address(timelock), 0, "setPendingAdmin(address)", abi.encode(newPendingAdmin), eta);
+    }
+
+    function __executeSetTimelockPendingAdmin(address newPendingAdmin, uint eta) public {
+        // The Pause Guardian is capable of disabling protocol functionality. Used only in the event of an unforeseen vulnerability and just for specific operations.
+        require(msg.sender == guardian, "GovernorAlpha::__executeSetTimelockPendingAdmin: sender must be gov guardian");
+        timelock.executeTransaction(address(timelock), 0, "setPendingAdmin(address)", abi.encode(newPendingAdmin), eta);
+    }
+
+    /* ============ Internal Only Function ============ */
+
     function add256(uint256 a, uint256 b) internal pure returns (uint) {
         uint c = a + b;
         require(c >= a, "addition overflow");
@@ -328,6 +355,9 @@ contract GovernorAlpha {
     }
 }
 
+    /* ============ Interfaces ============ */
+
+
 interface ITimeLock {
     function delay() external view returns (uint);
     function GRACE_PERIOD() external view returns (uint);
@@ -338,6 +368,6 @@ interface ITimeLock {
     function executeTransaction(address target, uint value, string calldata signature, bytes calldata data, uint eta) external payable returns (bytes memory);
 }
 
-interface BABLInterface { // TODO - CHECK
+interface BABLInterface { 
     function getPriorVotes(address account, uint blockNumber) external view returns (uint96);
 }
