@@ -61,11 +61,7 @@ contract BabController is Ownable {
     event ReserveAssetRemoved(address indexed _reserveAsset);
     event FeeRecipientChanged(address _newFeeRecipient);
 
-    event MinWithdrawalWindowChanged(uint256 _newMinWithdrawalWindow);
-    event MaxWithdrawalWindowChanged(uint256 _newMaxWithdrawalWindow);
-    event MinCommunityActiveWindowChanged(uint256 _newminCommunityActiveWindow);
-    event MaxCommunityActiveWindowChanged(uint256 _newmaxCommunityActiveWindow);
-    event ReservePoolDiscountChanged(uint256 _newReservePoolDiscount);
+    event LiquidityMinimumEdited(uint256 _minRiskyPairLiquidityEth);
 
     event ModuleAdded(address indexed _module);
     event ModuleRemoved(address indexed _module);
@@ -77,6 +73,8 @@ contract BabController is Ownable {
     /* ============ Modifiers ============ */
 
     /* ============ State Variables ============ */
+
+    address public constant UNISWAP_FACTORY = 0x5C69bEe701ef814a2B6a3EDD4B1652CB9cc5aA6f;
 
     // List of enabled Communities
     address[] public communitys;
@@ -100,28 +98,17 @@ contract BabController is Ownable {
     // Recipient of protocol fees
     address public feeRecipient;
 
-    // Active window for the rolling community
-    uint256 public minCommunityActiveWindow = 90 days;
-    uint256 public maxCommunityActiveWindow = 90 days;
-
-    // Active window for withdrawals after every active period
-    uint256 public minWithdrawalWindow = 1 days;
-    uint256 public maxWithdrawalWindow = 7 days;
-
     // Idea cooldown period
     uint256 public minCooldownPeriod = 6 hours;
     uint256 public maxCooldownPeriod = 7 days;
 
-    // Max Premium percentage (0.01% = 1e14, 1% = 1e16). This premium is a buffer around oracle
-    // prices paid by user to the SetToken, which prevents arbitrage and oracle front running
-    uint256 public maxCommunityPremiumPercentage;
+    // Assets
+    uint256 public minRiskyPairLiquidityEth = 1000 * 1e18;   // Absolute Min liquidity of assets for risky communities 1000 ETH
 
     uint256 public protocolPerformanceFee = 1e17; // (0.01% = 1e14, 1% = 1e16) on profits
     uint256 public protocolCommunityCreationFee = 0; // (0.01% = 1e14, 1% = 1e16)
     uint256 public protocolDepositCommunityTokenFee = 0; // (0.01% = 1e14, 1% = 1e16)
     uint256 public protocolWithdrawalCommunityTokenFee = 5e15; // (0.01% = 1e14, 1% = 1e16)
-
-    uint256 public protocolReservePoolDiscount = 1e17; // 10%
 
     /* ============ Functions ============ */
 
@@ -212,50 +199,7 @@ contract BabController is Ownable {
         community.setActive();
     }
 
-    /**
-     * PRIVILEGED GOVERNANCE FUNCTION. Allows governance to change the max deposit for the community
-     *
-     * @param _community               Address of the community
-     * @param _newDepositLimit    New deposit limit
-     */
-    function changeCommunityDepositLimit(address _community, uint256 _newDepositLimit) external onlyOwner {
-        require(isCommunity[_community], "Community does not exist");
-        IRollingCommunity community = IRollingCommunity(_community);
-        require(!!community.active(), "The community needs to be active.");
-        community.setDepositLimit(_newDepositLimit);
-    }
-
     // ===========  Protocol related Gov Functions ======
-
-    /**
-     * PRIVILEGED FACTORY FUNCTION. Adds a new valid asset to the whitelist
-     *
-     * @param _asset Address of the asset
-     */
-    function addAssetWhitelist(address _asset) external onlyOwner {
-      _addAssetWhitelist(_asset);
-    }
-
-    /**
-     * PRIVILEGED FACTORY FUNCTION. Removes an asset from the whitelist
-     *
-     * @param _asset Address of the asset
-     */
-    function removeAssetWhitelist(address _asset) external onlyOwner {
-      require(assetWhitelist[_asset], "Asset is whitelisted");
-      assetWhitelist[_asset] = false;
-    }
-
-    /**
-     * PRIVILEGED FACTORY FUNCTION. Adds a list of assets to the whitelist
-     *
-     * @param _assets List with addresses of the assets to whitelist
-     */
-    function addAssetsWhitelist(address[] memory _assets) external onlyOwner {
-      for (uint i = 0; i < _assets.length; i++) {
-        _addAssetWhitelist(_assets[i]);
-      }
-    }
 
     /**
      * PRIVILEGED FACTORY FUNCTION. Adds a new valid keeper to the list
@@ -401,19 +345,6 @@ contract BabController is Ownable {
     }
 
     /**
-     * GOVERNANCE FUNCTION: Initializes an integration in a community
-     *
-     * @param  _integration       Address of the integration contract to add
-     * @param  _community              Address of the community
-     */
-    function initializeIntegration(address _integration, address _community)
-        public
-        onlyOwner
-    {
-      IIntegration(_integration).initialize(_community);
-    }
-
-    /**
      * GOVERNANCE FUNCTION: Edit an existing integration on the registry
      *
      * @param  _name         Human readable string identifying the integration
@@ -455,73 +386,25 @@ contract BabController is Ownable {
     }
 
     /**
-     * PRIVILEGED GOVERNANCE FUNCTION. Allows governance to edit the protol min epoch allowed in communitys
+     * GOVERNANCE FUNCTION: Edit
      *
-     * @param _newMinWithdrawalWindow      New min community epoch duration
+     * @param  _minRiskyPairLiquidityEth       Absolute min liquidity of an asset to grab price
      */
-    function setMinWithdrawalWindow(uint256 _newMinWithdrawalWindow) external onlyOwner {
-        require(_newMinWithdrawalWindow > 1 hours, "Absolute minimum is one hour");
+    function editLiquidityMinimum(uint256 _minRiskyPairLiquidityEth)
+        public
+        onlyOwner
+    {
+        require(_minRiskyPairLiquidityEth > 0);
+        minRiskyPairLiquidityEth = _minRiskyPairLiquidityEth;
 
-        minWithdrawalWindow = _newMinWithdrawalWindow;
-
-        emit MinWithdrawalWindowChanged(_newMinWithdrawalWindow);
+        emit LiquidityMinimumEdited(_minRiskyPairLiquidityEth);
     }
-
-    /**
-     * PRIVILEGED GOVERNANCE FUNCTION. Allows governance to edit the reservePool discount
-     *
-     * @param _newProtocolReservePoolDiscount      New reserve pool discount
-     */
-    function setProtocolReservePoolDiscount(uint256 _newProtocolReservePoolDiscount) external onlyOwner {
-        require(_newProtocolReservePoolDiscount > 0, "There needs to be a discount");
-
-        protocolReservePoolDiscount = _newProtocolReservePoolDiscount;
-
-        emit ReservePoolDiscountChanged(_newProtocolReservePoolDiscount);
-    }
-
-    /**
-     * PRIVILEGED GOVERNANCE FUNCTION. Allows governance to edit the protol max epoch allowed in communitys
-     *
-     * @param _newMaxWithdrawalWindow      New max community epoch duration
-     */
-    function setMaxWithdrawalWindow(uint256 _newMaxWithdrawalWindow) external onlyOwner {
-        require(_newMaxWithdrawalWindow < maxWithdrawalWindow, "Absolute maximum is the community duration");
-
-        maxWithdrawalWindow = _newMaxWithdrawalWindow;
-
-        emit MaxWithdrawalWindowChanged(_newMaxWithdrawalWindow);
-    }
-
-    /**
-     * PRIVILEGED GOVERNANCE FUNCTION. Allows governance to edit the protol min community duration
-     *
-     * @param _newMinCommunityActiveWindow      New min community duration
-     */
-    function setMinCommunityActiveWindow(uint256 _newMinCommunityActiveWindow) external onlyOwner {
-        require(_newMinCommunityActiveWindow > 30 days, "Absolute minimum is thirty days");
-
-        minCommunityActiveWindow = _newMinCommunityActiveWindow;
-
-        emit MinCommunityActiveWindowChanged(_newMinCommunityActiveWindow);
-    }
-
-    /**
-     * PRIVILEGED GOVERNANCE FUNCTION. Allows governance to edit the protol max community duration
-     *
-     * @param _newMaxCommunityActiveWindow      New max community duration
-     */
-    function setMaxCommunityActiveWindow(uint256 _newMaxCommunityActiveWindow) external onlyOwner {
-        require(_newMaxCommunityActiveWindow < 12 * 30 days, "Absolute maximum is one year");
-
-        maxCommunityActiveWindow = _newMaxCommunityActiveWindow;
-
-        emit MaxCommunityActiveWindowChanged(_newMaxCommunityActiveWindow);
-    }
-
 
     /* ============ External Getter Functions ============ */
 
+    function getUniswapFactory() external pure returns (address) {
+        return UNISWAP_FACTORY;
+    }
     function getPriceOracle() external view returns (address) {
         return priceOracle;
     }
@@ -540,22 +423,6 @@ contract BabController is Ownable {
 
     function getReserveAssets() external view returns (address[] memory) {
         return reserveAssets;
-    }
-
-    function getMaxCommunityActiveWindow() external view returns (uint256) {
-        return maxCommunityActiveWindow;
-    }
-
-    function getMinCommunityActiveWindow() external view returns (uint256) {
-        return minCommunityActiveWindow;
-    }
-
-    function getMaxWithdrawalWindow() external view returns (uint256) {
-        return maxWithdrawalWindow;
-    }
-
-    function getMinWithdrawalWindow() external view returns (uint256) {
-        return minWithdrawalWindow;
     }
 
     function getMinCooldownPeriod() external view returns (uint256) {
@@ -586,24 +453,12 @@ contract BabController is Ownable {
         return feeRecipient;
     }
 
-    function getMaxCommunityPremiumPercentage() external view returns (uint256) {
-        return maxCommunityPremiumPercentage;
-    }
-
     function isValidReserveAsset(address _reserveAsset)
         external
         view
         returns (bool)
     {
         return validReserveAsset[_reserveAsset];
-    }
-
-    function isValidAsset(address _asset)
-        external
-        view
-        returns (bool)
-    {
-        return assetWhitelist[_asset];
     }
 
     function isValidKeeper(address _keeper)
@@ -694,15 +549,6 @@ contract BabController is Ownable {
     }
 
     /* ============ Internal Only Function ============ */
-
-    /**
-     * Adds an asset to the whitelist
-     */
-    function _addAssetWhitelist(address _asset) internal {
-      require(_asset.isContract(), "Asset must be a contract");
-      require(!assetWhitelist[_asset], "Asset is already whitelisted");
-      assetWhitelist[_asset] = true;
-    }
 
     /**
      * Hashes the string and returns a bytes32 value

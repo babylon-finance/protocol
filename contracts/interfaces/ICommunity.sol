@@ -124,4 +124,5 @@ interface ICommunity is IERC20 {
       uint256 _value,
       bytes calldata _data
     ) external returns (bytes memory _returnValue);
+    function minLiquidityAsset() external view returns (uint256);
 }

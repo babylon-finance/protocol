@@ -117,6 +117,8 @@ contract CommunityIdeas is ReentrancyGuard {
 
   uint256 public minVotersQuorum = 1e17;          // 10%. (0.01% = 1e14, 1% = 1e16)
 
+  uint256 public minIdeaDuration;               // Min duration for an investment Idea
+  uint256 public maxIdeaDuration;               // Max duration for an investment idea
   uint256 public ideaCooldownPeriod;            // Window for the idea to cooldown after approval before receiving capital
 
   InvestmentIdea[] ideas;
@@ -135,6 +137,8 @@ contract CommunityIdeas is ReentrancyGuard {
    * @param _ideaCreatorProfitPercentage    What percentage of the profits go to the idea creator
    * @param _ideaVotersProfitPercentage     What percentage of the profits go to the idea curators
    * @param _minVotersQuorum                Percentage of votes needed to activate an investment idea (0.01% = 1e14, 1% = 1e16)
+   * @param _minIdeaDuration                Min duration of an investment idea
+   * @param _maxIdeaDuration                Max duration of an investment idea
    */
   constructor(
     address _community,
@@ -142,7 +146,9 @@ contract CommunityIdeas is ReentrancyGuard {
     uint256 _ideaCooldownPeriod,
     uint256 _ideaCreatorProfitPercentage,
     uint256 _ideaVotersProfitPercentage,
-    uint256 _minVotersQuorum
+    uint256 _minVotersQuorum,
+    uint256 _minIdeaDuration,
+    uint256 _maxIdeaDuration
   )
   {
     controller = IBabController(_controller);
@@ -158,6 +164,9 @@ contract CommunityIdeas is ReentrancyGuard {
     ideaVotersProfitPercentage = _ideaVotersProfitPercentage;
     ideaCooldownPeriod = _ideaCooldownPeriod;
     minVotersQuorum = _minVotersQuorum;
+    minIdeaDuration = _minIdeaDuration;
+    maxIdeaDuration = _maxIdeaDuration;
+
     totalStake = 0;
   }
 
@@ -194,8 +203,7 @@ contract CommunityIdeas is ReentrancyGuard {
   ) external onlyContributor onlyActive {
     require(community.isValidIntegration(_integration), "Integration must be valid");
     require(_stake > community.totalSupply().div(100), "Stake amount must be at least 1% of the community");
-    require(_investmentDuration > 1 days, "Investment duration must be greater than a a day");
-    // TODO: require(_investmentDuration < end of community window, "Investment idea must end before the community ends");
+    require(_investmentDuration >= minIdeaDuration && _investmentDuration <= maxIdeaDuration, "Investment duration must be in range");
     require(_stake > 0, "Stake amount must be greater than 0");
     require(_minRebalanceCapital > 0, "Min Capital requested amount must be greater than 0");
     require(_maxCapitalRequested >= _minRebalanceCapital, "The max amount of capital must be greater than one chunk");

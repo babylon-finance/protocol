@@ -95,7 +95,9 @@ abstract contract BaseIntegration {
      * Initializes the integration.
      * @param _community addres of the community
      */
-    function initialize(address _community) onlyProtocol external {
+    function initialize(address _community) external {
+      require(IBabController(controller).isSystemContract(msg.sender), "The caller is a community");
+      require(msg.sender == _community, "Only the community can initialize it");
       require(!initializedByCommunity[_community], "integration has already been initialized");
       initializedByCommunity[_community] = true;
     }

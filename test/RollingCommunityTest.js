@@ -59,10 +59,10 @@ describe("Community", function() {
 
   describe("Community deposit limit", async function() {
     it("reverts if the deposit is bigger than the limit", async function() {
-      await controller.changeCommunityDepositLimit(
-        community1.address,
-        ethers.utils.parseEther("11")
-      );
+      await community1
+        .setDepositLimit(
+          ethers.utils.parseEther("11")
+        );
       await expect(
         community1
           .connect(userSigner3)
@@ -186,8 +186,9 @@ describe("Community", function() {
       ).to.be.reverted;
     });
 
-    it("a contributor cannot make a deposit when the community ends", async function() {
-      ethers.provider.send("evm_increaseTime", [ONE_DAY_IN_SECONDS * 90]);
+    it("a contributor cannot make a deposit when the community is disabled", async function() {
+      await expect(controller.disableCommunity(community1.address)).to.not.be
+        .reverted;
       await expect(
         community1
           .connect(userSigner3)
@@ -197,7 +198,7 @@ describe("Community", function() {
       ).to.be.reverted;
     });
 
-    it("a contributor cannot withdraw more comunities than they have deposited", async function() {
+    it("a contributor cannot withdraw more comunity tokens than they have deposited", async function() {
       await community1
         .connect(userSigner3)
         .deposit(ethers.utils.parseEther("1"), 1, userSigner3.getAddress(), {

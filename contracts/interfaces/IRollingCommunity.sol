@@ -50,9 +50,7 @@ interface IRollingCommunity is IERC20, ICommunity {
         address payable _to
     ) external;
 
-    function editPremium(uint256 _premiumPercentage) external;
     function setDepositLimit(uint limit) external;
-    function premiumPercentage() external view returns (uint256);
     function getExpectedCommunityTokensDepositedQuantity(
         address _reserveAsset,
         uint256 _reserveAssetQuantity
