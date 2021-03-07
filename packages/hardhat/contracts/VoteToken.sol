@@ -24,7 +24,7 @@ import { SafeMath } from "@openzeppelin/contracts/math/SafeMath.sol";
 import { Context } from "@openzeppelin/contracts/utils/Context.sol";
 import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
 import { Address } from "@openzeppelin/contracts/utils/Address.sol";
-import { ReentrancyGuard } from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";  
+import { ReentrancyGuard } from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 
 
 /**
@@ -51,9 +51,6 @@ contract VoteToken is Context, ERC20, Ownable, IVoteToken, ReentrancyGuard {
 
     /* ============ State Variables ============ */
 
-    string public _name;
-    string public _symbol;
-    
     /// @notice The EIP-712 typehash for the contract's domain
     bytes32 public constant DOMAIN_TYPEHASH = keccak256("EIP712Domain(string name,uint256 chainId,address verifyingContract)");
 
@@ -65,10 +62,10 @@ contract VoteToken is Context, ERC20, Ownable, IVoteToken, ReentrancyGuard {
 
     /// @dev override of ERC20 _allowances
     mapping (address => mapping (address => uint256)) public _allowances;
-    
+
     /// @dev A record of votes checkpoints for each account, by index
-    mapping(address => address) public delegates; 
-    
+    mapping(address => address) public delegates;
+
     /// @notice A checkpoint for marking number of votes from a given block
     struct Checkpoint {
         uint32 fromBlock;
@@ -85,12 +82,12 @@ contract VoteToken is Context, ERC20, Ownable, IVoteToken, ReentrancyGuard {
     mapping (address => uint) public nonces;
 
     /* ============ Functions ============ */
-    
+
     /* ============ Constructor ============ */
 
-    constructor () ERC20 (_name, _symbol) {
+    constructor (string memory _name, string memory _symbol) ERC20 (_name, _symbol) {
     }
-    
+
     /* ============ External Functions ============ */
 
     /* ===========  Token related Gov Functions ====== */
@@ -117,7 +114,7 @@ contract VoteToken is Context, ERC20, Ownable, IVoteToken, ReentrancyGuard {
      * @param r Half of the ECDSA signature pair
      * @param s Half of the ECDSA signature pair
      */
-    
+
     function delegateBySig(
         address delegatee,
         uint256 nonce,
@@ -216,7 +213,7 @@ contract VoteToken is Context, ERC20, Ownable, IVoteToken, ReentrancyGuard {
     * PRIVILEGED GOVERNANCE FUNCTION. Make a delegation
     *
     * @dev Internal function to delegate voting power to an account
-    * @param delegator The address of the account delegating votes from 
+    * @param delegator The address of the account delegating votes from
     * @param delegatee The address to delegate votes to
     */
 
@@ -249,14 +246,14 @@ contract VoteToken is Context, ERC20, Ownable, IVoteToken, ReentrancyGuard {
         address _to,
         uint96 _value
     ) internal virtual nonReentrant returns (bool) { // TODO - CHECK WHY OVERRIDE WAS NOT WORKING PROPERLY
-    
+
         address spender = msg.sender;
         uint96 spenderAllowance = safe96(_allowances[_from][spender], "BABL::_transfer: allowances exceeds 96 bits");
         uint96 amount = safe96(_value, "BABL::_transfer: amount exceeds 96 bits");
         require(_from != address(0), "BABL::_transfer: cannot transfer from the zero address");
         require(_to != address(0), "BABL::_transfer: cannot transfer to the zero address");
         require(_to != address(this), "BABL::_transfer: do not transfer tokens to the token contract itself!!");
-        
+
         // TODO - CHECK ALLOWANCES
 
         if (spender != _from && spenderAllowance != uint96(-1)) {
@@ -265,12 +262,12 @@ contract VoteToken is Context, ERC20, Ownable, IVoteToken, ReentrancyGuard {
 
             emit Approval(_from, spender, newAllowance);
         }
-        
+
         super._transfer(_from, _to, amount);
         _moveDelegates(delegates[_from], delegates[_to], safe96(amount, "BABLToken: uint96 overflow"));
         return true;
     }
-    
+
     function _mint(address account, uint256 amount) internal virtual override nonReentrant {
         super._mint(account, amount);
         _moveDelegates(address(0), delegates[account], safe96(amount, "BABLToken: uint96 overflow"));
@@ -308,7 +305,7 @@ contract VoteToken is Context, ERC20, Ownable, IVoteToken, ReentrancyGuard {
         }
     }
 
-    /** 
+    /**
      * @dev internal function to write a checkpoint for voting power
      */
     function _writeCheckpoint(
@@ -370,7 +367,7 @@ contract VoteToken is Context, ERC20, Ownable, IVoteToken, ReentrancyGuard {
         return a - b;
     }
 
-    /** 
+    /**
      * @dev internal function to get chain ID
      */
     function getChainId() internal pure returns (uint256) {

@@ -16,16 +16,16 @@
 */
 
 
-pragma solidity 7.0.4;
+pragma solidity 0.7.4;
 
 import {SafeMath } from "@openzeppelin/contracts/math/SafeMath.sol";
-import { VoteToken } from "VoteToken.sol";
+import { VoteToken } from "./VoteToken.sol";
 import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
 
 /**
  * @title TimeLockedToken
  * @notice Time Locked ERC20 Token
- * @author Babylon Finance modified a version of TimeLockedToken provided by Harold Hyatt 
+ * @author Babylon Finance modified a version of TimeLockedToken provided by Harold Hyatt
  * @dev Contract which gives the ability to time-lock tokens
  *
  * By overriding the balanceOf(), transfer(), and transferFrom()
@@ -50,10 +50,10 @@ contract TimeLockedToken is VoteToken {
         require(msg.sender == timeLockRegistry, "only TimeLockRegistry");
         _;
     }
-    
+
     /* ============ State Variables ============ */
 
-    
+
     // represents total distribution for locked balances
     mapping(address => uint256) distribution;
 
@@ -76,13 +76,13 @@ contract TimeLockedToken is VoteToken {
     // allow unlocked transfers to special account
     bool public returnsLocked;
 
-    /* ============ Functions ============ */ 
-    
+    /* ============ Functions ============ */
+
     /* ============ Constructor ============ */
 
-    constructor () {
+    constructor (string memory _name, string memory _symbol) VoteToken(_name, _symbol) {
     }
-    
+
     /* ============ External Functions ============ */
 
     /* ===========  Token related Gov Functions ====== */
@@ -259,7 +259,7 @@ contract TimeLockedToken is VoteToken {
         //    transferToOwner(_from, _value);
         //    return;
         //} TODO - CHECK ADDR AND TYPE FUNCTION RETURN ADDRESS
-        
+
         // check if enough unlocked balance to transfer
         require(unlockedBalance(_from) >= _value, "attempting to transfer locked funds");
         super._transfer(_from, _to, _value);
@@ -269,7 +269,7 @@ contract TimeLockedToken is VoteToken {
      * @dev Transfer tokens to owner. Used only when returns allowed.
      * @param _from The address to send tokens from
      * @param _value The amount of tokens to be transferred
-     
+
     function transferToOwner(address _from, uint256 _value) internal {
         uint256 unlocked = unlockedBalance(_from);
 
@@ -293,7 +293,7 @@ contract TimeLockedToken is VoteToken {
         require(unlockedBalance(_from) >= _value, "attempting to burn locked funds");
 
         super._burn(_from, _value);
-    } 
+    }
 
     /**
      * @notice Get the number of tokens held by the `account`
@@ -306,6 +306,3 @@ contract TimeLockedToken is VoteToken {
     }
 
 }
-
-
-    
