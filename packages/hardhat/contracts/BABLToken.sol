@@ -27,12 +27,13 @@ import { ReentrancyGuard } from "@openzeppelin/contracts/utils/ReentrancyGuard.s
  * @dev The BABLToken contract is a ownable contract where the
  * owner can only mint or transfer ownership. BABLToken use 18 decimals as a standard
  */
-contract BABLToken is TimeLockedToken {
+ 
+ contract BABLToken is TimeLockedToken {
     using SafeMath for uint256;
     using Address for address;
 
     /* ============ Events ============ */
-
+    
     /// @notice An event thats emitted when the minter address is changed
     event MinterChanged(address minter, address newMinter);
 
@@ -53,15 +54,11 @@ contract BABLToken is TimeLockedToken {
 
     /* ============ State Variables ============ */
 
-    string private _name;
-    string private _symbol;
-    uint8 private _decimals;
-
     /// @dev EIP-20 token name for this token
-    string private constant name_ = "Babylon.Finance";
+    string public constant NAME = "Babylon.Finance";
 
     /// @dev EIP-20 token symbol for this token
-    string private constant symbol_ = "BABL";
+    string public constant SYMBOL = "BABL";
 
     /// @notice Total number of tokens in circulation
     uint256 public _totalSupply = 1_000_000e18; // 1 million BABL
@@ -73,7 +70,10 @@ contract BABLToken is TimeLockedToken {
     uint public maxSupplyAllowedAfter;
     
      /// @notice Cap on the percentage of MAX_SUPPLY that can be increased at each change
-    uint8 public maxSupplyCap = 10;
+    uint8 public maxSupplyCap = 5;
+    
+    /// @notice Cap on the percentage of totalSupply that can be minted at each mint
+    uint8 public constant mintCap = 2;
 
     /// @notice The timestamp after which minting may occur
     uint public mintingAllowedAfter;
@@ -81,17 +81,16 @@ contract BABLToken is TimeLockedToken {
     /// @notice The timestamp of BABL Token deployment
     uint public BABLTokenDeploymentTimestamp;
 
-    /// @notice First Epoche Mint minimum time between the first mint of 1 Million BABL and the 2nd mint (>= 8 Years)
-    uint32 public firstEpocheMint = 52 weeks * 8;
+    /// @notice First Epoch Mint with a maximum of 1 Million BABL (>= 8 Years)
+    uint32 public firstEpochMint = 52 weeks * 8;
     
     /// @notice Minimum time between mints after
-    uint32 public minimumTimeBetweenMints = 1 days * 365;
+    uint32 public minimumTimeBetweenMints;
     
-    /// @notice Minimum time between mints after
-    uint32 public MinimumTimeBetweenMintsAllowedAfter = 1 days * 365;
+    /// @notice Minimum time between changes on mint parameters
+    uint public ChangeTimeBetweenMintsAllowedAfter;
 
-    /// @notice Cap on the percentage of totalSupply that can be minted at each mint
-    uint8 public constant mintCap = 2;
+
 
     
     /* ============ Functions ============ */
@@ -101,13 +100,15 @@ contract BABLToken is TimeLockedToken {
     /**
     * @notice Construct a new BABL token and gives ownership to sender
     */
-    constructor(string memory name_, string memory symbol_) { // TODO - CHECK
-        _name = name_;
-        _symbol = symbol_;
-        _decimals = 18;
-        
-        mintingAllowedAfter = block.timestamp + 5 minutes;
+    constructor() { // TODO - CHECK
+        _name = NAME;
+        _symbol = SYMBOL;
+        mintingAllowedAfter = block.timestamp.add(5 minutes);
+        minimumTimeBetweenMints = 1 days * 365;
+        ChangeTimeBetweenMintsAllowedAfter = block.timestamp.add(52 weeks);
         BABLTokenDeploymentTimestamp = block.timestamp;
+        maxSupplyAllowedAfter = block.timestamp.add(52 weeks * 8);
+        
     }
     
     /* ============ External Functions ============ */
@@ -132,20 +133,20 @@ contract BABLToken is TimeLockedToken {
     *
     */
     function mint(address _to, uint256 _amount) external onlyOwner nonReentrant {
-        require(SafeMath.add(_totalSupply, _amount)<= MAX_SUPPLY, "BABL::mint: max supply exceeded");
+        require(_totalSupply.add(_amount)<= MAX_SUPPLY, "BABL::mint: max supply exceeded");
         require(_amount>0, "BABL::mint: mint should be higher than zero"); 
         require(block.timestamp >= mintingAllowedAfter, "BABL::mint: minting not allowed yet");
         require(_to != address(0), "BABL::mint: cannot transfer to the zero address");
         
-         // record the mint
-        mintingAllowedAfter = SafeMath.add(block.timestamp, minimumTimeBetweenMints);
+        // record the mint
+        mintingAllowedAfter = block.timestamp.add(minimumTimeBetweenMints);
 
         // mint the amount
         uint96 amount = safe96(_amount, "BABL::mint: amount exceeds 96 bits");        
         
-        if (block.timestamp >= SafeMath.add(BABLTokenDeploymentTimestamp,firstEpocheMint)) { 
+        if (block.timestamp >= BABLTokenDeploymentTimestamp.add(firstEpochMint)) { 
             // New BABL tokens beyond initial 1 Million cannot be minted until 8 years passed, then a mintcap applies
-            require(amount <= SafeMath.div(SafeMath.mul(_totalSupply, mintCap), 100), "BABL::mint: exceeded mint cap"); // TODO - IMPLEMENT THE CAP LIMIT ONLY AFTER 8 YEARS
+            require(amount <= _totalSupply.mul(mintCap).div(100), "BABL::mint: exceeded mint cap"); // TODO - IMPLEMENT THE CAP LIMIT ONLY AFTER 8 YEARS
             _mint(_to, amount);
         }
         else {
@@ -160,22 +161,23 @@ contract BABLToken is TimeLockedToken {
      * PRIVILEGED GOVERNANCE FUNCTION. Allows governance to change MAX_SUPPLY
      *
      * @notice Set-up a greater MAX_SUPPLY value to allow more tokens to be minted
-     * @param newMaxSupply The new maximum limit
-     * @param newMaxSupplyAllowedAfter The new waiting period to change the MAX_SUPPLY
+     * @param newMaxSupply The new maximum limit, limited by a 5% cap a year
+     * @param newMaxSupplyAllowedAfter The new waiting period to change the MAX_SUPPLY limited for a minimum of 1 year
      */
     function changeMaxSupply(uint256 newMaxSupply, uint newMaxSupplyAllowedAfter) external {
-        require(block.timestamp >= SafeMath.add(BABLTokenDeploymentTimestamp,firstEpocheMint), "BABL::changeMaxSupply: a change on MAX_SUPPLY not allowed until 8 years after deployment");
+        require(block.timestamp >= BABLTokenDeploymentTimestamp.add(firstEpochMint), "BABL::changeMaxSupply: a change on MAX_SUPPLY not allowed until 8 years after deployment");
         require(block.timestamp >= maxSupplyAllowedAfter, "BABL::changeMaxSupply: a change on MAX_SUPPLY not allowed yet");
         require(newMaxSupply > MAX_SUPPLY, "BABL::changeMaxSupply: changeMaxSupply should be higher than previous value");
        
         // update the amount
         uint96 amount = safe96(newMaxSupply, "BABL::changeMaxSupply: new max amount exceeds 96 bits");
-        require(amount <= SafeMath.div(SafeMath.mul(MAX_SUPPLY, maxSupplyCap), 100), "BABL::changeMaxSupply: exceeded max supply cap");
+        require(amount <= MAX_SUPPLY.add(MAX_SUPPLY.mul(maxSupplyCap).div(100)), "BABL::changeMaxSupply: exceeded max supply cap");
         emit MaxSupplyChanged(MAX_SUPPLY, amount);
         MAX_SUPPLY = safe96(amount, "BABL::changeMaxSupply: MAX_SUPPLY exceeds 96 bits");
         
 
         // update the new waiting time until a new change could be done
+        require(newMaxSupplyAllowedAfter > block.timestamp.add(365 days), "BABL::changeMaxSupply: the newMaxSupplyAllowedAfter should be at least 1 year in the future");
         emit maxSupplyAllowedAfterChanged(maxSupplyAllowedAfter, newMaxSupplyAllowedAfter);
         maxSupplyAllowedAfter = newMaxSupplyAllowedAfter;
     } 
@@ -187,10 +189,11 @@ contract BABLToken is TimeLockedToken {
      * @param newTimeBetweenMints The new limit
      * @param newTimeBetweenMintsAllowedAfter The new waiting period to change the minimumTimeBetweenMints
      */
-    function changeTimeBetweenMints(uint newTimeBetweenMints, uint newTimeBetweenMintsAllowedAfter) external onlyOwner {
-        require(block.timestamp >= newTimeBetweenMintsAllowedAfter, "BABL::changeTimeBetweenMints: a change on minimumTimeBetweenMints not allowed yet");
+    function changeTimeBetweenMints(uint newTimeBetweenMints, uint newTimeBetweenMintsAllowedAfter) external {
+        require(block.timestamp >= ChangeTimeBetweenMintsAllowedAfter, "BABL::changeTimeBetweenMints: a change on minimumTimeBetweenMints not allowed yet");
 
         // update the amount
+        require(newTimeBetweenMints > 30 days, "BABL::mint: time between mints should be higher than 30 days"); 
         uint96 amount = safe32(newTimeBetweenMints, "BABL::changeTimeBetweenMints: new amount exceeds 32 bits");
         emit MinimumTimeBetweenMintsChanged(minimumTimeBetweenMints, amount);
         minimumTimeBetweenMints = safe32(amount, "BABL::changeTimeBetweenMints: new amount exceeds 32 bits");
@@ -198,7 +201,7 @@ contract BABLToken is TimeLockedToken {
 
         // update the new waiting time until a new change could be done
         uint96 amountAllowedAfter = safe32(newTimeBetweenMintsAllowedAfter, "BABL::changeTimeBetweenMints: new amountAllowedAfter exceeds 32 bits");
-        emit TimeBetweenMintsAllowedAfterChanged(MinimumTimeBetweenMintsAllowedAfter, amountAllowedAfter);
-        MinimumTimeBetweenMintsAllowedAfter = safe32(amountAllowedAfter,"BABL::changeTimeBetweenMints: new amountAllowedAfter exceeds 32 bits");
+        emit TimeBetweenMintsAllowedAfterChanged(ChangeTimeBetweenMintsAllowedAfter, amountAllowedAfter);
+        ChangeTimeBetweenMintsAllowedAfter = safe32(amountAllowedAfter,"BABL::changeTimeBetweenMints: new amountAllowedAfter exceeds 32 bits");
     }
 }
