@@ -100,6 +100,8 @@ contract RollingCommunity is BaseCommunity, ReentrancyGuard {
     uint256 public maxDepositLimit;                // Limits the amount of deposits
     uint256 public communityInitializedAt;         // Community Initialized at timestamp
     uint256 public depositHardlock;                // Window of time after deposits when withdraws are disabled for that user
+    uint256 public redemptionWindowAfterInvestmentCompletes; // Window of time after an investment idea finishes when the capital is available for withdrawals
+    uint256 public redemptionsOpenUntil;           // Indicates until when the redemptions are open and the ETH is set aside
 
     // List of contributors
     struct Contributor {
@@ -201,6 +203,7 @@ contract RollingCommunity is BaseCommunity, ReentrancyGuard {
         require(communityIdeasC.controller() == controller, "Controller must be the same");
         require(communityIdeasC.community() == address(this), "Community must be this contract");
         communityIdeas = _communityIdeas;
+        redemptionWindowAfterInvestmentCompletes = 7 days;
 
         IWETH(weth).deposit{value: initialDepositAmount}();
 
@@ -243,6 +246,8 @@ contract RollingCommunity is BaseCommunity, ReentrancyGuard {
         require(msg.value == _reserveAssetQuantity, "ETH does not match");
         // Always wrap to WETH
         IWETH(weth).deposit{value: msg.value}();
+        // Check this here to avoid having relayers
+        reenableEthForInvestments();
 
         _validateReserveAsset(reserveAsset, _reserveAssetQuantity);
 
@@ -277,7 +282,8 @@ contract RollingCommunity is BaseCommunity, ReentrancyGuard {
         );
         // Flashloan protection
         require(block.timestamp.sub(contributors[msg.sender].timestamp) >= depositHardlock, "Cannot withdraw. Hardlock");
-
+        // Check this here to avoid having relayers
+        reenableEthForInvestments();
         ActionInfo memory withdrawalInfo =
             _createRedemptionInfo(reserveAsset, _communityTokenQuantity);
 
@@ -297,9 +303,17 @@ contract RollingCommunity is BaseCommunity, ReentrancyGuard {
             block.timestamp
         );
         totalCommunities = totalCommunities.sub(withdrawalInfo.netFlowQuantity).sub(withdrawalInfo.protocolFees);
-
-        IWETH(weth).withdraw(withdrawalInfo.netFlowQuantity);
-        _to.transfer(withdrawalInfo.netFlowQuantity);
+        // Check that the rdemption is possible
+        require(canWithdrawEthAmount(withdrawalInfo.netFlowQuantity), "Not enough liquidity in the fund");
+        if (address(this).balance >= withdrawalInfo.netFlowQuantity) {
+          // Send eth
+          (bool sent,) = _to.call{value: withdrawalInfo.netFlowQuantity}("");
+          require(sent, "Failed to send Ether");
+        } else {
+          // Send liquid weth balance
+          IWETH(weth).withdraw(withdrawalInfo.netFlowQuantity);
+          _to.transfer(withdrawalInfo.netFlowQuantity);
+        }
 
         _handleRedemptionFees(reserveAsset, withdrawalInfo);
 
@@ -326,7 +340,42 @@ contract RollingCommunity is BaseCommunity, ReentrancyGuard {
        }
     }
 
+    /**
+     * When an investment idea finishes execution, we want to make that eth available for withdrawals
+     * from members of the community.
+     *
+     * @param _amount                        Amount of WETH to convert to ETH to set aside
+     */
+    function startRedemptionWindow(uint256 _amount) external onlyInvestmentIdeaOrOwner {
+      redemptionsOpenUntil = block.timestamp.add(redemptionWindowAfterInvestmentCompletes);
+      IWETH(weth).withdraw(_amount);
+    }
+
+    /**
+     * When the window of redemptions finishes, we need to make the capital available again for investments
+     *
+     */
+    function reenableEthForInvestments() public {
+      if (block.timestamp >= redemptionsOpenUntil && address(this).balance > minContribution) {
+        // Always wrap to WETH
+        IWETH(weth).deposit{value: address(this).balance}();
+      }
+    }
+
     /* ============ External Getter Functions ============ */
+
+    /**
+     * Check if the fund has ETH amount available for withdrawals
+     *
+     * @param _amount                        Amount of ETH to withdraw
+     */
+    function canWithdrawEthAmount(uint256 _amount) public view returns (bool) {
+      uint256 ethAsideBalance = address(this).balance;
+      uint256 liquidWeth = ERC20(reserveAsset).balanceOf(address(this));
+      return
+        (redemptionsOpenUntil <= block.timestamp && ethAsideBalance >= _amount) ||
+        liquidWeth >= _amount;
+    }
 
     function getContributor(address _contributor) public view returns (uint256, uint256, uint256) {
         Contributor memory contributor = contributors[_contributor];
