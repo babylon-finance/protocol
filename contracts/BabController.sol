@@ -207,7 +207,7 @@ contract BabController is Ownable {
      * Can only happen after 2021 is finished.
      */
     function enableCommunityTokensTransfers() external onlyOwner {
-        require(block.timestamp > 1641024000000, "Community does not exist"); // TODO: Check timestamp. January 1 2022
+        require(block.timestamp > 1641024000000, "Transfers cannot be enabled yet"); // TODO: Check timestamp. January 1 2022
         communityTokensTransfersEnabled = true;
     }
 
