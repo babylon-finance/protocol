@@ -311,13 +311,19 @@ contract RollingCommunity is BaseCommunity, ReentrancyGuard {
       maxDepositLimit = limit;
     }
 
-    // Any tokens (other than the target) that are sent here by mistake are recoverable by the owner
-    // TODO: If it is not whitelisted, trade it for weth
-    function sweep(address _token) external onlyContributor {
+    // Any tokens (other than the target) that are sent here by mistake are recoverable by contributors
+    // Exchange for WETH or add as a position
+    function sweep(address _token, bool _sell) external onlyContributor {
        require(!_hasPosition(_token), "Token is one of the community positions");
        uint256 balance = ERC20(_token).balanceOf(address(this));
        require(balance > 0, "Token balance > 0");
-       _calculateAndEditPosition(_token, balance, ERC20(_token).balanceOf(address(this)).toInt256(), 0);
+       if (_sell) {
+         bytes memory _emptyTradeData;
+         // TODO: probably use uniswap or 1inch
+         _trade("_kyber", _token, balance, reserveAsset, 0, _emptyTradeData);
+       } else {
+         _calculateAndEditPosition(_token, balance, ERC20(_token).balanceOf(address(this)).toInt256(), 0);
+       }
     }
 
     /* ============ External Getter Functions ============ */
@@ -551,7 +557,7 @@ contract RollingCommunity is BaseCommunity, ReentrancyGuard {
         if (_depositInfo.protocolFees > 0) {
             require(ERC20(_reserveAsset).transferFrom(
                 address(this),
-                IBabController(controller).getFeeRecipient(),
+                IBabController(controller).getTreasury(),
                 _depositInfo.protocolFees
             ), "Deposit Protocol fee failed");
         }
@@ -635,21 +641,10 @@ contract RollingCommunity is BaseCommunity, ReentrancyGuard {
                 ? IBabController(controller).getProtocolDepositCommunityTokenFee()
                 : IBabController(controller)
                     .getProtocolWithdrawalCommunityTokenFee();
-        // Get performance if withdrawal and there are profits
-        uint perfFee = 0;
-        if (!_isDeposit) {
-          uint percentage = balanceOf(msg.sender).div(_communityTokenQuantity); // Divide by the % tokens being withdrawn
-          // TODO: Move this out to the investment idea execution instead of here
-          int256 profits = _reserveAssetQuantity.toInt256().sub(contributors[msg.sender].totalDeposit.toInt256().div(percentage.toInt256()));
-          if (profits > 0) {
-            perfFee = IBabController(controller)
-            .getProtocolPerformanceFee().preciseMul(profits.toUint256());
-          }
-        }
 
         // Calculate total notional fees
         uint256 protocolFees =
-            protocolFeePercentage.preciseMul(_reserveAssetQuantity).add(perfFee);
+            protocolFeePercentage.preciseMul(_reserveAssetQuantity);
 
         uint256 netReserveFlow =
             _reserveAssetQuantity.sub(protocolFees);

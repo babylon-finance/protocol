@@ -635,7 +635,7 @@ abstract contract BaseCommunity is ERC20 {
     {
         if (_feeQuantity > 0) {
             require(ERC20(_token).transfer(
-                IBabController(controller).getFeeRecipient(),
+                IBabController(controller).getTreasury(),
                 _feeQuantity
             ), "Protocol fee failed");
         }
@@ -662,7 +662,7 @@ abstract contract BaseCommunity is ERC20 {
     }
 
     // Disable community token transfers. Allow minting and burning.
-    function _beforeTokenTransfer(address from, address to, uint256 /* amount */) override pure internal {
-      require(from == address(0) || to == address(0), "Community token transfers are disabled");
+    function _beforeTokenTransfer(address from, address to, uint256 /* amount */) override view internal {
+      require(from == address(0) || to == address(0) || IBabController(controller).communityTokensTransfersEnabled(), "Community token transfers are disabled");
     }
 }

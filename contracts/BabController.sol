@@ -59,7 +59,7 @@ contract BabController is Ownable {
 
     event ReserveAssetAdded(address indexed _reserveAsset);
     event ReserveAssetRemoved(address indexed _reserveAsset);
-    event FeeRecipientChanged(address _newFeeRecipient);
+    event TreasuryChanged(address _newTreasury);
 
     event LiquidityMinimumEdited(uint256 _minRiskyPairLiquidityEth);
 
@@ -96,7 +96,7 @@ contract BabController is Ownable {
     mapping(address => bool) public keeperList;
 
     // Recipient of protocol fees
-    address public feeRecipient;
+    address public treasury;
 
     // Idea cooldown period
     uint256 public minCooldownPeriod = 6 hours;
@@ -104,6 +104,9 @@ contract BabController is Ownable {
 
     // Assets
     uint256 public minRiskyPairLiquidityEth = 1000 * 1e18;   // Absolute Min liquidity of assets for risky communities 1000 ETH
+
+    // Enable Transfer of ERC20 communityTokens
+    bool public communityTokensTransfersEnabled = false; // Only members can transfer tokens until the protocol is fully decentralized
 
     uint256 public protocolPerformanceFee = 1e17; // (0.01% = 1e14, 1% = 1e16) on profits
     uint256 public protocolCommunityCreationFee = 0; // (0.01% = 1e14, 1% = 1e16)
@@ -115,18 +118,18 @@ contract BabController is Ownable {
     /**
      * Initializes the initial fee recipient on deployment.
      *
-     * @param _feeRecipient           Address of the initial protocol fee recipient
+     * @param _treasury           Address of the initial protocol fee recipient
      * @param _communityValuer             Address of the initial communityValuer
      * @param _priceOracle            Address of the initial priceOracle
      * @param _reservePool            Address of the initial reservePool
      */
     constructor(
-        address _feeRecipient,
+        address _treasury,
         address _communityValuer,
         address _priceOracle,
         address _reservePool
     ) {
-        feeRecipient = _feeRecipient;
+        treasury = _treasury;
         communityValuer = _communityValuer;
         priceOracle = _priceOracle;
         reservePool = _reservePool;
@@ -197,6 +200,15 @@ contract BabController is Ownable {
         ICommunity community = ICommunity(_community);
         require(!community.active(), "The community needs to be disabled.");
         community.setActive();
+    }
+
+    /**
+     * PRIVILEGED GOVERNANCE FUNCTION. Allows transfers of ERC20 communityTokens
+     * Can only happen after 2021 is finished.
+     */
+    function enableCommunityTokensTransfers() external onlyOwner {
+        require(block.timestamp > 1641024000000, "Transfers cannot be enabled yet"); // TODO: Check timestamp. January 1 2022
+        communityTokensTransfersEnabled = true;
     }
 
     // ===========  Protocol related Gov Functions ======
@@ -312,14 +324,14 @@ contract BabController is Ownable {
     /**
      * PRIVILEGED GOVERNANCE FUNCTION. Allows governance to edit the protocol fee recipient
      *
-     * @param _newFeeRecipient      Address of the new protocol fee recipient
+     * @param _newTreasury      Address of the new protocol fee recipient
      */
-    function editFeeRecipient(address _newFeeRecipient) external onlyOwner {
-        require(_newFeeRecipient != address(0), "Address must not be 0");
+    function editTreasury(address _newTreasury) external onlyOwner {
+        require(_newTreasury != address(0), "Address must not be 0");
 
-        feeRecipient = _newFeeRecipient;
+        treasury = _newTreasury;
 
-        emit FeeRecipientChanged(_newFeeRecipient);
+        emit TreasuryChanged(_newTreasury);
     }
 
     /**
@@ -405,6 +417,7 @@ contract BabController is Ownable {
     function getUniswapFactory() external pure returns (address) {
         return UNISWAP_FACTORY;
     }
+
     function getPriceOracle() external view returns (address) {
         return priceOracle;
     }
@@ -449,8 +462,8 @@ contract BabController is Ownable {
         return protocolWithdrawalCommunityTokenFee;
     }
 
-    function getFeeRecipient() external view returns (address) {
-        return feeRecipient;
+    function getTreasury() external view returns (address) {
+        return treasury;
     }
 
     function isValidReserveAsset(address _reserveAsset)

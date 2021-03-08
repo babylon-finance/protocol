@@ -10,6 +10,7 @@ describe("BabController", function() {
   let controller;
   let oracle;
   let valuer;
+  let treasuryD;
   let ownerSigner;
   let userSigner1;
   let userSigner2;
@@ -22,6 +23,7 @@ describe("BabController", function() {
     const {
       babController,
       priceOracle,
+      treasury,
       communityValuer,
       owner,
       signer1,
@@ -31,6 +33,7 @@ describe("BabController", function() {
     } = await loadFixture(deployFolioFixture);
 
     controller = babController;
+    treasuryD = treasury;
     oracle = priceOracle;
     valuer = communityValuer;
     ownerSigner = owner;
@@ -65,8 +68,8 @@ describe("BabController", function() {
     });
 
     it("should set the protocol manager address", async function() {
-      expect(await controller.getFeeRecipient()).to.equal(
-        addresses.users.hardhat1
+      expect(await controller.getTreasury()).to.equal(
+        treasuryD.address
       );
     });
 
@@ -174,9 +177,9 @@ describe("BabController", function() {
     });
 
     it("can edit the protocol fee recipient", async function() {
-      await controller.editFeeRecipient(addresses.users.hardhat3);
+      await controller.editTreasury(addresses.users.hardhat3);
 
-      const recipient = await controller.getFeeRecipient();
+      const recipient = await controller.getTreasury();
       // TODO(tylerm): Look into why this toLowerCase is needed here.
       expect(recipient.toLowerCase()).to.equal(addresses.users.hardhat3);
     });

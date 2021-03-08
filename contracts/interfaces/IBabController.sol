@@ -37,22 +37,24 @@ interface IBabController {
     function editPriceOracle(address _priceOracle) external;
     function editReservePool(address _reservePool) external;
     function editCommunityValuer(address _communityValuer) external;
-    function editFeeRecipient(address _newFeeRecipient) external;
+    function editTreasury(address _newTreasury) external;
     function addIntegration(string memory _name, address _integration) external;
     function editIntegration(string memory _name, address _integration) external;
     function removeIntegration(string memory _name) external;
     function addKeeper(address _keeper) external;
     function addKeepers(address[] memory _keepers) external;
     function removeKeeper(address _keeper) external;
+    function enableCommunityTokensTransfers() external;
     function editLiquidityMinimum(uint256 _minRiskyPairLiquidityEth) external;
 
     // Getters
     function owner() external view returns (address);
+    function communityTokensTransfersEnabled() external view returns (bool);
     function protocolReservePoolDiscount() external view returns (uint256);
     function getPriceOracle() external view returns (address);
     function getReservePool() external view returns (address);
     function getCommunityValuer() external view returns(address);
-    function getFeeRecipient() external view returns(address);
+    function getTreasury() external view returns(address);
     function getCommunities() external view returns (address[] memory);
     function isCommunity(address _community) external view returns(bool);
     function getIntegrationByName(string memory _name) external view returns (address);
