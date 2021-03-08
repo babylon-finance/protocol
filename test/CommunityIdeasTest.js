@@ -4,7 +4,7 @@ const { ethers, waffle } = require("hardhat");
 const { loadFixture } = waffle;
 
 const addresses = require("../utils/addresses");
-const { ONE_DAY_IN_SECONDS } = require("../utils/constants.js");
+const { ONE_DAY_IN_SECONDS, EMPTY_BYTES } = require("../utils/constants.js");
 const { deployFolioFixture } = require("./fixtures/ControllerFixture");
 
 describe("Community Ideas", function() {
@@ -15,6 +15,7 @@ describe("Community Ideas", function() {
   let userSigner3;
   let community1;
   let ideas;
+  let balancerIntegration;
   let weth;
 
   beforeEach(async () => {
@@ -24,9 +25,11 @@ describe("Community Ideas", function() {
       signer2,
       signer3,
       comunities,
+      integrations,
       owner
     } = await loadFixture(deployFolioFixture);
 
+    balancerIntegration = integrations.balancerIntegration;
     controller = babController;
     ownerSigner = owner;
     userSigner1 = signer1;
@@ -66,6 +69,37 @@ describe("Community Ideas", function() {
       );
       expect(await ideas.minIdeaDuration()).to.equal(ONE_DAY_IN_SECONDS * 3);
       expect(await ideas.maxIdeaDuration()).to.equal(ONE_DAY_IN_SECONDS * 365);
+    });
+  });
+
+  describe("Add Investment Idea", async function() {
+    it("should not be able to add an investment idea unless there is a contributor", async function() {
+      await expect(
+        ideas.addInvestmentIdea(
+          ethers.utils.parseEther("10"),
+          ethers.utils.parseEther("1"),
+          ONE_DAY_IN_SECONDS * 15,
+          EMPTY_BYTES,
+          EMPTY_BYTES,
+          balancerIntegration.address,
+          ethers.utils.parseEther("0.05"),
+          ethers.utils.parseEther("2"),
+          [addresses.tokens.DAI],
+          [ethers.utils.parseEther("100")],
+          {
+            gasLimit: 9500000,
+            gasPrice: 0
+          }
+        )
+      ).to.be.reverted;
+    });
+
+    it("should be able to add an investment idea", async function() {
+      await community1
+        .connect(userSigner3)
+        .deposit(ethers.utils.parseEther("1"), 1, userSigner3.getAddress(), {
+          value: ethers.utils.parseEther("1")
+        });
     });
   });
 });

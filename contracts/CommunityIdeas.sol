@@ -213,7 +213,7 @@ contract CommunityIdeas is ReentrancyGuard {
     require(_maxCapitalRequested >= _minRebalanceCapital, "The max amount of capital must be greater than one chunk");
     require(ideas.length < MAX_TOTAL_IDEAS, "Reached the limit of ideas");
     // Check than enter and exit data call integrations
-    InvestmentIdea storage idea;
+    InvestmentIdea storage idea = ideas[ideas.length.toUint8()];
     idea.index = ideas.length.toUint8();
     idea.integration = _integration;
     idea.participant = msg.sender;
