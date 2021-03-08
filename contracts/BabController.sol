@@ -202,6 +202,15 @@ contract BabController is Ownable {
         community.setActive();
     }
 
+    /**
+     * PRIVILEGED GOVERNANCE FUNCTION. Allows transfers of ERC20 communityTokens
+     * Can only happen after 2021 is finished.
+     */
+    function enableCommunityTokensTransfers() external onlyOwner {
+        require(block.timestamp > 1641024000000, "Community does not exist"); // TODO: Check timestamp. January 1 2022
+        communityTokensTransfersEnabled = true;
+    }
+
     // ===========  Protocol related Gov Functions ======
 
     /**

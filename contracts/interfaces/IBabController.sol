@@ -44,6 +44,7 @@ interface IBabController {
     function addKeeper(address _keeper) external;
     function addKeepers(address[] memory _keepers) external;
     function removeKeeper(address _keeper) external;
+    function enableCommunityTokensTransfers() external;
     function editLiquidityMinimum(uint256 _minRiskyPairLiquidityEth) external;
 
     // Getters

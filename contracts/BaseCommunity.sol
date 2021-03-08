@@ -662,7 +662,7 @@ abstract contract BaseCommunity is ERC20 {
     }
 
     // Disable community token transfers. Allow minting and burning.
-    function _beforeTokenTransfer(address from, address to, uint256 /* amount */) override pure internal {
+    function _beforeTokenTransfer(address from, address to, uint256 /* amount */) override view internal {
       require(from == address(0) || to == address(0) || IBabController(controller).communityTokensTransfersEnabled(), "Community token transfers are disabled");
     }
 }

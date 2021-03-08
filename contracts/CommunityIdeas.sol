@@ -165,7 +165,7 @@ contract CommunityIdeas is ReentrancyGuard {
     community = IRollingCommunity(_community);
     ideaCreatorProfitPercentage = _ideaCreatorProfitPercentage;
     ideaVotersProfitPercentage = _ideaVotersProfitPercentage;
-    ideaCreatorProfitPercentage = _ideaCreatorProfitPercentage;
+    communityCreatorProfitPercentage = _communityCreatorProfitPercentage;
     ideaCooldownPeriod = _ideaCooldownPeriod;
     minVotersQuorum = _minVotersQuorum;
     minIdeaDuration = _minIdeaDuration;
