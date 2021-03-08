@@ -48,6 +48,7 @@ interface IBabController {
 
     // Getters
     function owner() external view returns (address);
+    function communityTokensTransfersEnabled() external view returns (bool);
     function protocolReservePoolDiscount() external view returns (uint256);
     function getPriceOracle() external view returns (address);
     function getReservePool() external view returns (address);

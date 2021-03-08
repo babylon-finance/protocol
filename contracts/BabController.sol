@@ -105,6 +105,9 @@ contract BabController is Ownable {
     // Assets
     uint256 public minRiskyPairLiquidityEth = 1000 * 1e18;   // Absolute Min liquidity of assets for risky communities 1000 ETH
 
+    // Enable Transfer of ERC20 communityTokens
+    bool public communityTokensTransfersEnabled = false; // Only members can transfer tokens until the protocol is fully decentralized
+
     uint256 public protocolPerformanceFee = 1e17; // (0.01% = 1e14, 1% = 1e16) on profits
     uint256 public protocolCommunityCreationFee = 0; // (0.01% = 1e14, 1% = 1e16)
     uint256 public protocolDepositCommunityTokenFee = 0; // (0.01% = 1e14, 1% = 1e16)
