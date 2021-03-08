@@ -45,4 +45,11 @@ interface ICommunityIdeas {
   function getActiveIdeas() external view returns (uint8[] memory);
   function controller() external pure returns (address);
   function community() external pure returns (address);
+  function totalStake() external pure returns (uint256);
+  function minVotersQuorum() external pure returns (uint256);
+  function maxIdeaDuration() external pure returns (uint256);
+  function ideaCooldownPeriod() external pure returns (uint256);
+  function ideaCreatorProfitPercentage() external pure returns (uint256);
+  function ideaVotersProfitPercentage() external pure returns (uint256);
+  function communityCreatorProfitPercentage() external pure returns (uint256);
 }
