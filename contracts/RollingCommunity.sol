@@ -635,21 +635,10 @@ contract RollingCommunity is BaseCommunity, ReentrancyGuard {
                 ? IBabController(controller).getProtocolDepositCommunityTokenFee()
                 : IBabController(controller)
                     .getProtocolWithdrawalCommunityTokenFee();
-        // Get performance if withdrawal and there are profits
-        uint perfFee = 0;
-        if (!_isDeposit) {
-          uint percentage = balanceOf(msg.sender).div(_communityTokenQuantity); // Divide by the % tokens being withdrawn
-          // TODO: Move this out to the investment idea execution instead of here
-          int256 profits = _reserveAssetQuantity.toInt256().sub(contributors[msg.sender].totalDeposit.toInt256().div(percentage.toInt256()));
-          if (profits > 0) {
-            perfFee = IBabController(controller)
-            .getProtocolPerformanceFee().preciseMul(profits.toUint256());
-          }
-        }
 
         // Calculate total notional fees
         uint256 protocolFees =
-            protocolFeePercentage.preciseMul(_reserveAssetQuantity).add(perfFee);
+            protocolFeePercentage.preciseMul(_reserveAssetQuantity);
 
         uint256 netReserveFlow =
             _reserveAssetQuantity.sub(protocolFees);

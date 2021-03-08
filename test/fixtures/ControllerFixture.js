@@ -204,9 +204,10 @@ async function deployFolioFixture() {
     community.address,
     babController.address,
     ONE_DAY_IN_SECONDS,
-    ethers.utils.parseEther("0.15"), // 15%
-    ethers.utils.parseEther("0.05"), // 5%
-    ethers.utils.parseEther("0.10"), // 10%
+    ethers.utils.parseEther("0.13"), // 13% Ideator
+    ethers.utils.parseEther("0.05"), // 5% Voters
+    ethers.utils.parseEther("0.02"), // 2% community creator
+    ethers.utils.parseEther("0.10"), // 10% quorum
     ONE_DAY_IN_SECONDS * 3,
     ONE_DAY_IN_SECONDS * 365
   );

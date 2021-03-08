@@ -123,22 +123,24 @@ contract CommunityIdeas is ReentrancyGuard {
 
   InvestmentIdea[] ideas;
 
-  uint256 public ideaCreatorProfitPercentage = 15e16; // (0.01% = 1e14, 1% = 1e16)
+  uint256 public ideaCreatorProfitPercentage = 13e16; // (0.01% = 1e14, 1% = 1e16)
   uint256 public ideaVotersProfitPercentage = 5e16; // (0.01% = 1e14, 1% = 1e16)
+  uint256 public communityCreatorProfitPercentage = 2e16; //
 
   /* ============ Constructor ============ */
 
   /**
    * Before a community is initialized, the community ideas need to be created and passed to community initialization.
    *
-   * @param _community                           Address of the community
-   * @param _controller                     Address of the controller
-   * @param _ideaCooldownPeriod             How long after the idea has been activated, will it be ready to be executed
-   * @param _ideaCreatorProfitPercentage    What percentage of the profits go to the idea creator
-   * @param _ideaVotersProfitPercentage     What percentage of the profits go to the idea curators
-   * @param _minVotersQuorum                Percentage of votes needed to activate an investment idea (0.01% = 1e14, 1% = 1e16)
-   * @param _minIdeaDuration                Min duration of an investment idea
-   * @param _maxIdeaDuration                Max duration of an investment idea
+   * @param _community                        Address of the community
+   * @param _controller                       Address of the controller
+   * @param _ideaCooldownPeriod               How long after the idea has been activated, will it be ready to be executed
+   * @param _ideaCreatorProfitPercentage      What percentage of the profits go to the idea creator
+   * @param _ideaVotersProfitPercentage       What percentage of the profits go to the idea curators
+   * @param _communityCreatorProfitPercentage What percentage of the profits go to the creator of the community
+   * @param _minVotersQuorum                  Percentage of votes needed to activate an investment idea (0.01% = 1e14, 1% = 1e16)
+   * @param _minIdeaDuration                  Min duration of an investment idea
+   * @param _maxIdeaDuration                  Max duration of an investment idea
    */
   constructor(
     address _community,
@@ -146,6 +148,7 @@ contract CommunityIdeas is ReentrancyGuard {
     uint256 _ideaCooldownPeriod,
     uint256 _ideaCreatorProfitPercentage,
     uint256 _ideaVotersProfitPercentage,
+    uint256 _communityCreatorProfitPercentage,
     uint256 _minVotersQuorum,
     uint256 _minIdeaDuration,
     uint256 _maxIdeaDuration
@@ -162,6 +165,7 @@ contract CommunityIdeas is ReentrancyGuard {
     community = IRollingCommunity(_community);
     ideaCreatorProfitPercentage = _ideaCreatorProfitPercentage;
     ideaVotersProfitPercentage = _ideaVotersProfitPercentage;
+    ideaCreatorProfitPercentage = _ideaCreatorProfitPercentage;
     ideaCooldownPeriod = _ideaCooldownPeriod;
     minVotersQuorum = _minVotersQuorum;
     minIdeaDuration = _minIdeaDuration;
@@ -382,24 +386,42 @@ contract CommunityIdeas is ReentrancyGuard {
     // Idea returns were positive
     if (capitalReturned > idea.capitalAllocated) {
       uint256 profits = capitalReturned - idea.capitalAllocated; // in reserve asset (weth)
-      // Send stake back to the creator
+      // Send stake back to the ideator
       idea.participant.transfer(idea.stake);
+      // Send weth rewards to the ideator
       uint256 ideatorProfits = ideaCreatorProfitPercentage.preciseMul(profits);
-      // Send rewards to the creator
-      ERC20(reserveAsset).transfer(
+      require(ERC20(reserveAsset).transferFrom(
+        address(community),
         idea.participant,
         ideatorProfits
-      );
+      ), "Ideator perf fee failed");
       reserveAssetDelta.add(int256(-ideatorProfits));
+      // Send weth rewards to the commmunity lead
+      uint256 creatorProfits = communityCreatorProfitPercentage.preciseMul(profits);
+      require(ERC20(reserveAsset).transferFrom(
+        address(community),
+        community.creator(),
+        creatorProfits
+      ), "Community lead perf fee failed");
+      reserveAssetDelta.add(int256(-creatorProfits));
+      // Send weth performance fee to the protocol
+      uint256 protocolProfits = IBabController(controller).getProtocolPerformanceFee().preciseMul(profits);
+      require(ERC20(reserveAsset).transferFrom(
+        address(community),
+        IBabController(controller).getFeeRecipient(),
+        protocolProfits
+      ), "Protocol perf fee failed");
+      reserveAssetDelta.add(int256(-protocolProfits));
+      // Send weth rewards to voters that voted in favor
       uint256 votersProfits = ideaVotersProfitPercentage.preciseMul(profits);
-      // Send rewards to voters that voted in favor
       for (uint256 i = 0; i < idea.voters.length; i++) {
         int256 voterWeight = votes[_ideaIndex][idea.voters[i]];
         if (voterWeight > 0) {
-          ERC20(reserveAsset).transfer(
+          require(ERC20(reserveAsset).transferFrom(
+            address(community),
             idea.voters[i],
             votersProfits.mul(voterWeight.toUint256()).div(idea.totalVotes.toUint256())
-          );
+          ), "Voter perf fee failed");
         }
       }
       reserveAssetDelta.add(int256(-votersProfits));
@@ -413,14 +435,15 @@ contract CommunityIdeas is ReentrancyGuard {
       IWETH(community.weth()).deposit{value: stakeToSlash}();
       reserveAssetDelta.add(stakeToSlash.toInt256());
       uint256 votersRewards = ideaVotersProfitPercentage.preciseMul(stakeToSlash);
-      // Send rewards to voters that voted against
+      // Send weth rewards to voters that voted against
       for (uint256 i = 0; i < idea.voters.length; i++) {
         int256 voterWeight = votes[_ideaIndex][idea.voters[i]];
         if (voterWeight < 0) {
-          ERC20(reserveAsset).transfer(
+          require(ERC20(reserveAsset).transferFrom(
+            address(community),
             idea.voters[i],
             votersRewards.mul(voterWeight.toUint256()).div(idea.totalVotes.toUint256())
-          );
+          ), "Voter perf fee failed");
         }
       }
       reserveAssetDelta.add(int256(-stakeToSlash));
