@@ -353,7 +353,7 @@ contract CommunityIdeas is ReentrancyGuard {
     idea.exitedAt = block.timestamp;
     totalStake = totalStake.sub(idea.absoluteTotalVotes);
     // Transfer rewards and update positions
-     _transferIdeaRewards(_ideaIndex, capitalReturned);
+    _transferIdeaRewards(_ideaIndex, capitalReturned);
   }
 
   /* ============ External Getter Functions ============ */
@@ -448,8 +448,10 @@ contract CommunityIdeas is ReentrancyGuard {
       }
       reserveAssetDelta.add(int256(-stakeToSlash));
     }
+    // Start a redemption window in the community with this capital
+    community.startRedemptionWindow(capitalReturned);
     // Updates reserve asset position in the community
-    uint256 _newTotal = community.getPositionBalance(reserveAsset).add(int256(reserveAssetDelta)).toUint256();
+    uint256 _newTotal = community.getPositionBalance(reserveAsset).add(reserveAssetDelta).toUint256();
     community.calculateAndEditPosition(reserveAsset, _newTotal, reserveAssetDelta, 0);
   }
 

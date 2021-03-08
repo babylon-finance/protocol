@@ -68,6 +68,9 @@ interface IRollingCommunity is IERC20, ICommunity {
         uint256 _communityTokenQuantity
     ) external view returns (bool);
 
+    function startRedemptionWindow(uint256 _amount) external;
+    function reenableEthForInvestments() external;
+
     // Investment ideas
     function addInvestmentIdea(
       uint256 _capitalRequested,
@@ -84,4 +87,5 @@ interface IRollingCommunity is IERC20, ICommunity {
     function executeTopInvestment() external;
     function finalizeInvestment(uint _ideaIndex) external;
     function getCurrentTopInvestmentIdea() external view returns (uint8);
+    function canWithdrawEthAmount(address _amount) external view returns (bool);
 }
