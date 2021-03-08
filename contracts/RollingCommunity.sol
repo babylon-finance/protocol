@@ -311,13 +311,19 @@ contract RollingCommunity is BaseCommunity, ReentrancyGuard {
       maxDepositLimit = limit;
     }
 
-    // Any tokens (other than the target) that are sent here by mistake are recoverable by the owner
-    // TODO: If it is not whitelisted, trade it for weth
-    function sweep(address _token) external onlyContributor {
+    // Any tokens (other than the target) that are sent here by mistake are recoverable by contributors
+    // Exchange for WETH or add as a position
+    function sweep(address _token, bool _sell) external onlyContributor {
        require(!_hasPosition(_token), "Token is one of the community positions");
        uint256 balance = ERC20(_token).balanceOf(address(this));
        require(balance > 0, "Token balance > 0");
-       _calculateAndEditPosition(_token, balance, ERC20(_token).balanceOf(address(this)).toInt256(), 0);
+       if (_sell) {
+         bytes memory _emptyTradeData;
+         // TODO: probably use uniswap or 1inch
+         _trade("_kyber", _token, balance, reserveAsset, 0, _emptyTradeData);
+       } else {
+         _calculateAndEditPosition(_token, balance, ERC20(_token).balanceOf(address(this)).toInt256(), 0);
+       }
     }
 
     /* ============ External Getter Functions ============ */
