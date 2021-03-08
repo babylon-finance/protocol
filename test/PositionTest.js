@@ -14,6 +14,7 @@ describe("Position testing", function() {
   let userSigner2;
   let userSigner3;
   let community1;
+  let treasuryD;
   let community2;
   let integrationList;
   let weth;
@@ -22,6 +23,7 @@ describe("Position testing", function() {
   beforeEach(async () => {
     const {
       babController,
+      treasury,
       signer1,
       signer2,
       signer3,
@@ -32,6 +34,7 @@ describe("Position testing", function() {
 
     integrationList = integrations;
     controller = babController;
+    treasuryD = treasury;
     ownerSigner = owner;
     userSigner1 = signer1;
     userSigner2 = signer2;
@@ -110,7 +113,7 @@ describe("Position testing", function() {
       const supplyBefore = await community1.totalSupply();
       const wethPositionBefore = await community1.getPositionBalance(weth.address);
       ethers.provider.send("evm_increaseTime", [ONE_DAY_IN_SECONDS * 90]);
-      const protocolTreasury = await weth.balanceOf(ownerSigner.address);
+      const protocolTreasury = await weth.balanceOf(treasuryD.address);
       await community1
         .connect(userSigner3)
         .withdraw(tokenBalance.div(2), 1, userSigner3.getAddress());
@@ -127,7 +130,7 @@ describe("Position testing", function() {
       expect(await community1.totalCommunities()).to.equal(ethers.utils.parseEther("0.6"));
       // Check that the protocol got 0.5% exit fee
       const protocolTreasuryAfter = await weth.balanceOf(
-        ownerSigner.address
+        treasuryD.address
       );
       expect(protocolTreasuryAfter.sub(protocolTreasury)).to.equal(
         ethers.utils
