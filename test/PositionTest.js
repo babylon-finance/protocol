@@ -110,7 +110,7 @@ describe("Position testing", function() {
       const supplyBefore = await community1.totalSupply();
       const wethPositionBefore = await community1.getPositionBalance(weth.address);
       ethers.provider.send("evm_increaseTime", [ONE_DAY_IN_SECONDS * 90]);
-      const protocolFeeRecipient = await weth.balanceOf(ownerSigner.address);
+      const protocolTreasury = await weth.balanceOf(ownerSigner.address);
       await community1
         .connect(userSigner3)
         .withdraw(tokenBalance.div(2), 1, userSigner3.getAddress());
@@ -126,10 +126,10 @@ describe("Position testing", function() {
       );
       expect(await community1.totalCommunities()).to.equal(ethers.utils.parseEther("0.6"));
       // Check that the protocol got 0.5% exit fee
-      const protocolFeeRecipientAfter = await weth.balanceOf(
+      const protocolTreasuryAfter = await weth.balanceOf(
         ownerSigner.address
       );
-      expect(protocolFeeRecipientAfter.sub(protocolFeeRecipient)).to.equal(
+      expect(protocolTreasuryAfter.sub(protocolTreasury)).to.equal(
         ethers.utils
           .parseEther("0.5")
           .mul(5)

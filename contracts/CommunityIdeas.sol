@@ -408,7 +408,7 @@ contract CommunityIdeas is ReentrancyGuard {
       uint256 protocolProfits = IBabController(controller).getProtocolPerformanceFee().preciseMul(profits);
       require(ERC20(reserveAsset).transferFrom(
         address(community),
-        IBabController(controller).getFeeRecipient(),
+        IBabController(controller).getTreasury(),
         protocolProfits
       ), "Protocol perf fee failed");
       reserveAssetDelta.add(int256(-protocolProfits));

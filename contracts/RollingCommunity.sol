@@ -551,7 +551,7 @@ contract RollingCommunity is BaseCommunity, ReentrancyGuard {
         if (_depositInfo.protocolFees > 0) {
             require(ERC20(_reserveAsset).transferFrom(
                 address(this),
-                IBabController(controller).getFeeRecipient(),
+                IBabController(controller).getTreasury(),
                 _depositInfo.protocolFees
             ), "Deposit Protocol fee failed");
         }

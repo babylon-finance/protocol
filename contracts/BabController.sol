@@ -59,7 +59,7 @@ contract BabController is Ownable {
 
     event ReserveAssetAdded(address indexed _reserveAsset);
     event ReserveAssetRemoved(address indexed _reserveAsset);
-    event FeeRecipientChanged(address _newFeeRecipient);
+    event TreasuryChanged(address _newTreasury);
 
     event LiquidityMinimumEdited(uint256 _minRiskyPairLiquidityEth);
 
@@ -96,7 +96,7 @@ contract BabController is Ownable {
     mapping(address => bool) public keeperList;
 
     // Recipient of protocol fees
-    address public feeRecipient;
+    address public treasury;
 
     // Idea cooldown period
     uint256 public minCooldownPeriod = 6 hours;
@@ -115,18 +115,18 @@ contract BabController is Ownable {
     /**
      * Initializes the initial fee recipient on deployment.
      *
-     * @param _feeRecipient           Address of the initial protocol fee recipient
+     * @param _treasury           Address of the initial protocol fee recipient
      * @param _communityValuer             Address of the initial communityValuer
      * @param _priceOracle            Address of the initial priceOracle
      * @param _reservePool            Address of the initial reservePool
      */
     constructor(
-        address _feeRecipient,
+        address _treasury,
         address _communityValuer,
         address _priceOracle,
         address _reservePool
     ) {
-        feeRecipient = _feeRecipient;
+        treasury = _treasury;
         communityValuer = _communityValuer;
         priceOracle = _priceOracle;
         reservePool = _reservePool;
@@ -312,14 +312,14 @@ contract BabController is Ownable {
     /**
      * PRIVILEGED GOVERNANCE FUNCTION. Allows governance to edit the protocol fee recipient
      *
-     * @param _newFeeRecipient      Address of the new protocol fee recipient
+     * @param _newTreasury      Address of the new protocol fee recipient
      */
-    function editFeeRecipient(address _newFeeRecipient) external onlyOwner {
-        require(_newFeeRecipient != address(0), "Address must not be 0");
+    function editTreasury(address _newTreasury) external onlyOwner {
+        require(_newTreasury != address(0), "Address must not be 0");
 
-        feeRecipient = _newFeeRecipient;
+        treasury = _newTreasury;
 
-        emit FeeRecipientChanged(_newFeeRecipient);
+        emit TreasuryChanged(_newTreasury);
     }
 
     /**
@@ -405,6 +405,7 @@ contract BabController is Ownable {
     function getUniswapFactory() external pure returns (address) {
         return UNISWAP_FACTORY;
     }
+
     function getPriceOracle() external view returns (address) {
         return priceOracle;
     }
@@ -449,8 +450,8 @@ contract BabController is Ownable {
         return protocolWithdrawalCommunityTokenFee;
     }
 
-    function getFeeRecipient() external view returns (address) {
-        return feeRecipient;
+    function getTreasury() external view returns (address) {
+        return treasury;
     }
 
     function isValidReserveAsset(address _reserveAsset)

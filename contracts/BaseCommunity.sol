@@ -635,7 +635,7 @@ abstract contract BaseCommunity is ERC20 {
     {
         if (_feeQuantity > 0) {
             require(ERC20(_token).transfer(
-                IBabController(controller).getFeeRecipient(),
+                IBabController(controller).getTreasury(),
                 _feeQuantity
             ), "Protocol fee failed");
         }

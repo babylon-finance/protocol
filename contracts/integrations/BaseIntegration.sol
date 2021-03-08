@@ -161,7 +161,7 @@ abstract contract BaseIntegration {
      */
     function payProtocolFeeFromCommunity(address _community, address _token, uint256 _feeQuantity) internal {
         if (_feeQuantity > 0) {
-          ERC20(_token).transferFrom(_community, IBabController(controller).getFeeRecipient(), _feeQuantity);
+          ERC20(_token).transferFrom(_community, IBabController(controller).getTreasury(), _feeQuantity);
         }
     }
 

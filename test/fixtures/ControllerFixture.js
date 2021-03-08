@@ -33,9 +33,11 @@ async function deployFolioFixture() {
   );
   const PriceOracle = await ethers.getContractFactory("PriceOracle", owner);
   const ReservePool = await ethers.getContractFactory("ReservePool", owner);
+  const Treasury = await ethers.getContractFactory("Treasury", owner);
   const UniswapTWAP = await ethers.getContractFactory("UniswapTWAP", owner);
   const communityValuer = await CommunityValuer.deploy(babController.address);
   const reservePool = await ReservePool.deploy(babController.address);
+  const treasury = await Treasury.deploy(babController.address);
 
   const uniswapTWAPAdapter = await UniswapTWAP.deploy(
     babController.address,
@@ -50,6 +52,7 @@ async function deployFolioFixture() {
   );
   // Sets the price oracle and communityvaluer address
   babController.editPriceOracle(priceOracle.address);
+  babController.editTreasury(treasury.address);
   babController.editCommunityValuer(communityValuer.address);
   babController.editReservePool(reservePool.address);
 
@@ -225,6 +228,7 @@ async function deployFolioFixture() {
   return {
     babController,
     reservePool,
+    treasury,
     integrations: {
       aaveIntegration,
       compoundIntegration,

@@ -179,7 +179,7 @@ contract ReservePool is ERC20, ReentrancyGuard {
       uint256 protocolFee = IBabController(controller).getProtocolWithdrawalCommunityTokenFee().preciseMul(rewards);
       // Send to the treasury the protocol fee
       require(IWETH(weth).transfer(
-          IBabController(controller).getFeeRecipient(),
+          IBabController(controller).getTreasury(),
           protocolFee
       ), "Protocol fee failed");
       rewards = rewards.sub(protocolFee);
