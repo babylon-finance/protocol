@@ -18,7 +18,7 @@
 
 pragma solidity 0.7.4;
 
-// import "hardhat/console.sol";
+import "hardhat/console.sol";
 import { ERC20 } from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import { IWETH } from "./interfaces/external/weth/IWETH.sol";
 import {
@@ -71,6 +71,16 @@ contract CommunityIdeas is ReentrancyGuard {
    */
   modifier onlyActive() {
     require(community.active() == true, "Community must be active");
+    _;
+  }
+
+  /**
+   * Throws if the sender is not the creator of the idea
+   * @param _ideaIndex                Index of the investment idea
+   */
+  modifier onlyIdeator(uint8 _ideaIndex) {
+    require(ideas.length > _ideaIndex, "This idea index does not exist");
+    require(msg.sender == ideas[_ideaIndex].participant, "Only Ideator can access this");
     _;
   }
 
@@ -213,7 +223,7 @@ contract CommunityIdeas is ReentrancyGuard {
     require(_maxCapitalRequested >= _minRebalanceCapital, "The max amount of capital must be greater than one chunk");
     require(ideas.length < MAX_TOTAL_IDEAS, "Reached the limit of ideas");
     // Check than enter and exit data call integrations
-    InvestmentIdea storage idea = ideas[ideas.length.toUint8()];
+    InvestmentIdea memory idea;
     idea.index = ideas.length.toUint8();
     idea.integration = _integration;
     idea.participant = msg.sender;
@@ -233,19 +243,6 @@ contract CommunityIdeas is ReentrancyGuard {
     totalStake = totalStake.add(_stake);
 
     ideas.push(idea);
-  }
-
-  function abs(int x) private pure returns (int) {
-    return x >= 0 ? x : -x;
-  }
-
-  /**
-   * Returns whether this idea is currently active or not
-   * @param _idea               The idea struct
-   * TODO: Meta Transaction
-   */
-  function isIdeaActive(InvestmentIdea memory _idea) private pure returns (bool) {
-    return _idea.executedAt > 0 && _idea.exitedAt == 0;
   }
 
   /**
@@ -356,6 +353,17 @@ contract CommunityIdeas is ReentrancyGuard {
     _transferIdeaRewards(_ideaIndex, capitalReturned);
   }
 
+  /**
+   * Lets the ideator change the duration of the investment idea.
+   * @param _ideaIndex              Index of the investment idea in the array
+   * @param _newDuration            New duration of the idea
+   */
+  function changeInvestmentDuration(uint8 _ideaIndex, uint256 _newDuration) external onlyIdeator(_ideaIndex) onlyActive {
+    InvestmentIdea storage idea = ideas[_ideaIndex];
+    require(!idea.finalized, "This investment was already exited");
+    idea.duration = _newDuration;
+  }
+
   /* ============ External Getter Functions ============ */
 
   /**
@@ -370,7 +378,7 @@ contract CommunityIdeas is ReentrancyGuard {
     for (uint8 i = 0; i < ideas.length; i++) {
       InvestmentIdea memory idea = ideas[i];
       // TODO: sort by score
-      if (isIdeaActive(idea)) {
+      if (_isIdeaActive(idea)) {
         result[i] = idea.index;
       }
     }
@@ -378,6 +386,18 @@ contract CommunityIdeas is ReentrancyGuard {
   }
 
   /* ============ Internal Functions ============ */
+
+  function abs(int x) private pure returns (int) {
+    return x >= 0 ? x : -x;
+  }
+
+  /**
+   * Returns whether this idea is currently active or not
+   * @param _idea               The idea struct
+   */
+  function _isIdeaActive(InvestmentIdea memory _idea) private pure returns (bool) {
+    return _idea.executedAt > 0 && _idea.exitedAt == 0;
+  }
 
   function _transferIdeaRewards(uint _ideaIndex, uint capitalReturned) internal {
     address reserveAsset = community.getReserveAsset();

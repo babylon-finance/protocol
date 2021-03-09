@@ -75,31 +75,86 @@ describe("Community Ideas", function() {
   describe("Add Investment Idea", async function() {
     it("should not be able to add an investment idea unless there is a contributor", async function() {
       await expect(
-        ideas.addInvestmentIdea(
-          ethers.utils.parseEther("10"),
-          ethers.utils.parseEther("1"),
-          ONE_DAY_IN_SECONDS * 15,
-          EMPTY_BYTES,
-          EMPTY_BYTES,
-          balancerIntegration.address,
-          ethers.utils.parseEther("0.05"),
-          ethers.utils.parseEther("2"),
-          [addresses.tokens.DAI],
-          [ethers.utils.parseEther("100")],
-          {
-            gasLimit: 9500000,
-            gasPrice: 0
-          }
-        )
+        ideas
+          .connect(userSigner2)
+          .addInvestmentIdea(
+            ethers.utils.parseEther("10"),
+            ethers.utils.parseEther("1"),
+            ONE_DAY_IN_SECONDS * 15,
+            EMPTY_BYTES,
+            EMPTY_BYTES,
+            balancerIntegration.address,
+            ethers.utils.parseEther("0.05"),
+            ethers.utils.parseEther("2"),
+            [addresses.tokens.DAI],
+            [ethers.utils.parseEther("100")],
+            {
+              gasLimit: 9500000,
+              gasPrice: 0
+            }
+          )
       ).to.be.reverted;
     });
 
-    it("should be able to add an investment idea", async function() {
+    it("a cotnributor should be able to add an investment idea", async function() {
       await community1
         .connect(userSigner3)
         .deposit(ethers.utils.parseEther("1"), 1, userSigner3.getAddress(), {
           value: ethers.utils.parseEther("1")
         });
+      await expect(
+        ideas
+          .connect(userSigner3)
+          .addInvestmentIdea(
+            ethers.utils.parseEther("10"),
+            ethers.utils.parseEther("1"),
+            ONE_DAY_IN_SECONDS * 15,
+            EMPTY_BYTES,
+            EMPTY_BYTES,
+            balancerIntegration.address,
+            ethers.utils.parseEther("0.05"),
+            ethers.utils.parseEther("2"),
+            [addresses.tokens.DAI],
+            [ethers.utils.parseEther("100")],
+            {
+              gasLimit: 9500000,
+              gasPrice: 0
+            }
+          )
+      ).to.not.be.reverted;
+    });
+
+    it("ideator should be able to change the duration of an investment idea", async function() {
+      await community1
+        .connect(userSigner3)
+        .deposit(ethers.utils.parseEther("1"), 1, userSigner3.getAddress(), {
+          value: ethers.utils.parseEther("1")
+        });
+      await expect(
+        ideas
+          .connect(userSigner3)
+          .addInvestmentIdea(
+            ethers.utils.parseEther("10"),
+            ethers.utils.parseEther("1"),
+            ONE_DAY_IN_SECONDS * 15,
+            EMPTY_BYTES,
+            EMPTY_BYTES,
+            balancerIntegration.address,
+            ethers.utils.parseEther("0.05"),
+            ethers.utils.parseEther("2"),
+            [addresses.tokens.DAI],
+            [ethers.utils.parseEther("100")],
+            {
+              gasLimit: 9500000,
+              gasPrice: 0
+            }
+          )
+      ).to.not.be.reverted;
+      await expect(
+        ideas
+          .connect(userSigner3)
+          .changeInvestmentDuration(0, ONE_DAY_IN_SECONDS)
+      ).to.not.be.reverted;
     });
   });
 });

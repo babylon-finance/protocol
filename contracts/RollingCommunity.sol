@@ -31,6 +31,7 @@ import { IWETH } from "./interfaces/external/weth/IWETH.sol";
 import { ICommunityIdeas } from "./interfaces/ICommunityIdeas.sol";
 import { IBabController } from "./interfaces/IBabController.sol";
 import { ICommunityValuer } from "./interfaces/ICommunityValuer.sol";
+import { IPriceOracle } from "./interfaces/IPriceOracle.sol";
 import { BaseCommunity } from "./BaseCommunity.sol";
 
 
@@ -248,6 +249,7 @@ contract RollingCommunity is BaseCommunity, ReentrancyGuard {
         IWETH(weth).deposit{value: msg.value}();
         // Check this here to avoid having relayers
         reenableEthForInvestments();
+        updatePositionTWAPPrices();
 
         _validateReserveAsset(reserveAsset, _reserveAssetQuantity);
 
@@ -284,6 +286,7 @@ contract RollingCommunity is BaseCommunity, ReentrancyGuard {
         require(block.timestamp.sub(contributors[msg.sender].timestamp) >= depositHardlock, "Cannot withdraw. Hardlock");
         // Check this here to avoid having relayers
         reenableEthForInvestments();
+        updatePositionTWAPPrices();
         ActionInfo memory withdrawalInfo =
             _createRedemptionInfo(reserveAsset, _communityTokenQuantity);
 
@@ -359,6 +362,20 @@ contract RollingCommunity is BaseCommunity, ReentrancyGuard {
       if (block.timestamp >= redemptionsOpenUntil && address(this).balance > minContribution) {
         // Always wrap to WETH
         IWETH(weth).deposit{value: address(this).balance}();
+      }
+    }
+
+    /**
+     * Updates the TWAP prices for the community positions
+     *
+     */
+    function updatePositionTWAPPrices() public {
+      // Updates UniSwap TWAP
+      address oracle = IBabController(controller).getPriceOracle();
+      for(uint i = 0; i < positions.length; i++) {
+        if (positions[i] != reserveAsset) {
+          IPriceOracle(oracle).updateAdapters(reserveAsset, positions[i]);
+        }
       }
     }
 
@@ -706,7 +723,6 @@ contract RollingCommunity is BaseCommunity, ReentrancyGuard {
         uint256 _netReserveFlows, // Value of reserve asset net of fees
         uint256 _communityTokenTotalSupply
     ) internal view returns (uint256) {
-
         // Get valuation of the Community with the quote asset as the reserve asset.
         // Reverts if price is not found
         uint256 communityValuation = ICommunityValuer(IBabController(controller).getCommunityValuer()).calculateCommunityValuation(address(this), _reserveAsset);

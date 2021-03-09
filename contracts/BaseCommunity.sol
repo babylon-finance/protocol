@@ -474,6 +474,9 @@ abstract contract BaseCommunity is ERC20 {
     {
       address tradeIntegration = IBabController(controller).getIntegrationByName(_integrationName);
       _validateOnlyIntegration(tradeIntegration);
+      // Updates UniSwap TWAP
+      IPriceOracle oracle = IPriceOracle(IBabController(controller).getPriceOracle());
+      oracle.updateAdapters(_sendToken, _receiveToken);
       return ITradeIntegration(tradeIntegration).trade(_sendToken, _sendQuantity, _receiveToken, _minReceiveQuantity, _data);
     }
 
