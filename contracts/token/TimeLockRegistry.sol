@@ -77,6 +77,7 @@ contract TimeLockRegistry is Ownable {
      */
     function register(address receiver, uint256 distribution) external onlyOwner {
         require(receiver != address(0), "Zero address");
+        require(receiver != address(this), "Distribution address cannot be this smartcontract");
         require(distribution != 0, "Distribution = 0");
         require(registeredDistributions[receiver] == 0, "Distribution for this address is already registered");
 

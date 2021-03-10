@@ -41,6 +41,9 @@ import { ReentrancyGuard } from "@openzeppelin/contracts/utils/ReentrancyGuard.s
     /// @notice An event that emitted when maxSupplyAllowedAfter changes
     event maxSupplyAllowedAfterChanged(uint previousAllowedAfterValue, uint newAllowedAfterValue);
 
+    /// @notice An event that emitted when a new mint ocurr
+    event mintedNewTokens(address account, uint256 tokensminted);
+
     /* ============ Modifiers ============ */
 
     /* ============ State Variables ============ */
@@ -84,14 +87,19 @@ import { ReentrancyGuard } from "@openzeppelin/contracts/utils/ReentrancyGuard.s
     * @notice Construct a new BABL token and gives ownership to sender
     */
     constructor() TimeLockedToken(NAME, SYMBOL) { // TODO - CHECK
+        
         //mintingAllowedAfter = block.timestamp.add(5 minutes); TODO - USE IT BACK IN PRODUCTION
-        mintingAllowedAfter = block.timestamp;
-        minimumTimeBetweenMints = 1 days * 365;
+
         BABLTokenDeploymentTimestamp = block.timestamp;
-        maxSupplyAllowedAfter = block.timestamp.add(52 weeks * 8);
+        maxSupplyAllowedAfter = block.timestamp.add(firstEpochMint);
         
         //Starting with a MAX_SUPPLY of 1 million for the first 8 years
         _mint(msg.sender, 1_000_000e18);
+        
+        //After the first mint of 1 million BABL tokens the contract will wait 8 years for a potential new mint to be decided by governance
+
+        mintingAllowedAfter = block.timestamp.add(firstEpochMint);
+        minimumTimeBetweenMints = 1 days * 365;
     }
 
     /* ============ External Functions ============ */
@@ -111,7 +119,9 @@ import { ReentrancyGuard } from "@openzeppelin/contracts/utils/ReentrancyGuard.s
         require(totalSupply().add(_amount)<= MAX_SUPPLY, "BABL::mint: max supply exceeded");
         require(_amount>0, "BABL::mint: mint should be higher than zero");
         require(block.timestamp >= mintingAllowedAfter, "BABL::mint: minting not allowed yet");
-        require(_to != address(0), "BABL::mint: cannot transfer to the zero address");
+        require(_to != address(0), "BABL::mint: cannot mint to the zero address");
+        require(_to != address(this), "BABL::mint: cannot mint to this contract");
+
 
         // record the mint
         mintingAllowedAfter = block.timestamp.add(minimumTimeBetweenMints);
@@ -120,20 +130,22 @@ import { ReentrancyGuard } from "@openzeppelin/contracts/utils/ReentrancyGuard.s
         uint96 amount = safe96(_amount, "BABL::mint: amount exceeds 96 bits");
 
         if (block.timestamp >= BABLTokenDeploymentTimestamp.add(firstEpochMint)) {
-            // New BABL tokens beyond initial 1 Million cannot be minted until 8 years passed, then a mintcap applies
-            require(amount <= totalSupply().mul(mintCap).div(100), "BABL::mint: exceeded mint cap"); // TODO - IMPLEMENT THE CAP LIMIT ONLY AFTER 8 YEARS
+            // New BABL tokens beyond initial 1 Million cannot be minted until 8 years has passed, then a mintcap applies
+            require(amount <= totalSupply().mul(mintCap).div(100), "BABL::mint: exceeded mint cap"); 
             _mint(_to, amount);
         }
         else {
         _mint(_to, amount);
         }
+        
+        emit mintedNewTokens(_to, amount);
 
         // move delegates
         _moveDelegates(address(0), delegates[_to], amount);
     }
 
     /**
-     * PRIVILEGED GOVERNANCE FUNCTION. Allows governance to change MAX_SUPPLY
+     * PRIVILEGED GOVERNANCE FUNCTION. Allows governance to change MAX_SUPPLY and when a new change might happen
      *
      * @notice Set-up a greater MAX_SUPPLY value to allow more tokens to be minted
      * @param newMaxSupply The new maximum limit, limited by a 5% cap a year
@@ -142,7 +154,7 @@ import { ReentrancyGuard } from "@openzeppelin/contracts/utils/ReentrancyGuard.s
     function changeMaxSupply(uint256 newMaxSupply, uint newMaxSupplyAllowedAfter) external {
         require(block.timestamp >= BABLTokenDeploymentTimestamp.add(firstEpochMint), "BABL::changeMaxSupply: a change on MAX_SUPPLY not allowed until 8 years after deployment");
         require(block.timestamp >= maxSupplyAllowedAfter, "BABL::changeMaxSupply: a change on MAX_SUPPLY not allowed yet");
-        require(newMaxSupply > MAX_SUPPLY, "BABL::changeMaxSupply: changeMaxSupply should be higher than previous value");
+        require(newMaxSupply > maxSupply(), "BABL::changeMaxSupply: changeMaxSupply should be higher than previous value");
 
         // update the amount
         uint96 amount = safe96(newMaxSupply, "BABL::changeMaxSupply: new max amount exceeds 96 bits");
@@ -152,7 +164,7 @@ import { ReentrancyGuard } from "@openzeppelin/contracts/utils/ReentrancyGuard.s
 
 
         // update the new waiting time until a new change could be done
-        require(newMaxSupplyAllowedAfter > block.timestamp.add(365 days), "BABL::changeMaxSupply: the newMaxSupplyAllowedAfter should be at least 1 year in the future");
+        require(newMaxSupplyAllowedAfter > block.timestamp.add(minimumTimeBetweenMints), "BABL::changeMaxSupply: the newMaxSupplyAllowedAfter should be at least 1 year in the future");
         emit maxSupplyAllowedAfterChanged(maxSupplyAllowedAfter, newMaxSupplyAllowedAfter);
         maxSupplyAllowedAfter = newMaxSupplyAllowedAfter;
     }

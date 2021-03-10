@@ -243,10 +243,6 @@ contract TimeLockedToken is VoteToken {
 
     /* ============ Internal Only Function ============ */
 
-
-    
-        /* ============ Internal Only Function ============ */
-
     /**
      * @dev Transfer function which includes unlocked tokens
      * Locked tokens can always be transfered back to the returns address
