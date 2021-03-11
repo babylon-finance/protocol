@@ -26,7 +26,6 @@ import { SafeMath } from "@openzeppelin/contracts/math/SafeMath.sol";
 import { Context } from "@openzeppelin/contracts/utils/Context.sol";
 import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
 import { Address } from "@openzeppelin/contracts/utils/Address.sol";
-import { ReentrancyGuard } from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";  
 
 /**
  * @title VoteToken
@@ -37,7 +36,7 @@ import { ReentrancyGuard } from "@openzeppelin/contracts/utils/ReentrancyGuard.s
  * Inherits standard ERC20 behavior
  */
 
-contract VoteToken is Context, ERC20, Ownable, IVoteToken, ReentrancyGuard {
+abstract contract VoteToken is Context, ERC20, Ownable, IVoteToken, ReentrancyGuard {
     using SafeMath for uint256;
     using Address for address;
 
@@ -61,8 +60,6 @@ contract VoteToken is Context, ERC20, Ownable, IVoteToken, ReentrancyGuard {
     /// @notice The EIP-712 typehash for the permit struct used by the contract // TODO - CHECK
     bytes32 public constant PERMIT_TYPEHASH = keccak256("Permit(address owner,address spender,uint256 value,uint256 nonce,uint256 deadline)");
 
-    /// @dev override of ERC20 _allowances
-    mapping (address => mapping (address => uint256)) public _allowances;
 
     /// @dev A record of votes checkpoints for each account, by index
     mapping(address => address) public delegates;
@@ -202,33 +199,14 @@ contract VoteToken is Context, ERC20, Ownable, IVoteToken, ReentrancyGuard {
             amount = safe96(rawAmount, "BABL::approve: amount exceeds 96 bits");
         }
 
-        _allowances[msg.sender][spender] = amount;
-
+         _approve(msg.sender, spender, amount);
+         
         emit Approval(msg.sender, spender, amount);
         return true;
     }
 
     /* ============ Internal Only Function ============ */
 
-
-/**
-     * PRIVILEGED GOVERNANCE FUNCTION. Make a transfer of tokens from _from to _to
-     *
-     * @notice Make a Token Transfer
-     * @param _from The address of the account originating the transfer
-     * @param _to The receiving address
-     * @param _value The amount sent
-     * @return Whether or not the transfer succeeded
-     */
-    function _transfer(
-        address _from,
-        address _to,
-        uint96 _value
-    ) internal virtual nonReentrant returns (bool) { // TODO - CHECK WHY OVERRIDE WAS NOT WORKING PROPERLY
-        require(balanceOf(_from) >= _value, "insufficient balance");
-        super._transfer(_from, _to, _value);
-        return true;
-    }
 
     /**
     * PRIVILEGED GOVERNANCE FUNCTION. Make a delegation
@@ -240,7 +218,7 @@ contract VoteToken is Context, ERC20, Ownable, IVoteToken, ReentrancyGuard {
 
     function _delegate(address delegator, address delegatee) internal {
         address currentDelegate = delegates[delegator];
-        uint96 delegatorBalance = safe96(_balanceOf(delegator), "BABLToken: uint96 overflow");
+        uint96 delegatorBalance = safe96(_balanceOf(delegator), "VoteToken::_delegate: uint96 overflow");
         delegates[delegator] = delegatee;
 
         emit DelegateChanged(delegator, currentDelegate, delegatee);
@@ -251,21 +229,7 @@ contract VoteToken is Context, ERC20, Ownable, IVoteToken, ReentrancyGuard {
     function _balanceOf(address account) internal view virtual returns (uint256) {
         return balanceOf(account);
     }
-
-
     
-    function _mint(address account, uint256 amount) internal virtual override nonReentrant {
-        super._mint(account, amount);
-        _moveDelegates(address(0), delegates[account], safe96(amount, "BABLToken: uint96 overflow"));
-    }
-
-
-    function _burn(address account, uint256 amount) internal virtual override {
-        super._burn(account, amount);
-        _moveDelegates(delegates[account], address(0), safe96(amount, "BABLToken: uint96 overflow"));
-    }
-
-
     /**
      * @dev internal function to move delegates between accounts
      */
@@ -278,14 +242,14 @@ contract VoteToken is Context, ERC20, Ownable, IVoteToken, ReentrancyGuard {
             if (srcRep != address(0)) {
                 uint32 srcRepNum = numCheckpoints[srcRep];
                 uint96 srcRepOld = srcRepNum > 0 ? checkpoints[srcRep][srcRepNum - 1].votes : 0;
-                uint96 srcRepNew = sub96(srcRepOld, amount, "BABLToken::_moveVotes: vote amount underflows");
+                uint96 srcRepNew = sub96(srcRepOld, amount, "VoteToken::_moveDelegates: vote amount underflows");
                 _writeCheckpoint(srcRep, srcRepNum, srcRepOld, srcRepNew);
             }
 
             if (dstRep != address(0)) {
                 uint32 dstRepNum = numCheckpoints[dstRep];
                 uint96 dstRepOld = dstRepNum > 0 ? checkpoints[dstRep][dstRepNum - 1].votes : 0;
-                uint96 dstRepNew = add96(dstRepOld, amount, "BABLToken::_moveVotes: vote amount overflows");
+                uint96 dstRepNew = add96(dstRepOld, amount, "VoteToken::_moveDelegates: vote amount overflows");
                 _writeCheckpoint(dstRep, dstRepNum, dstRepOld, dstRepNew);
             }
         }
@@ -300,7 +264,7 @@ contract VoteToken is Context, ERC20, Ownable, IVoteToken, ReentrancyGuard {
         uint96 oldVotes,
         uint96 newVotes
     ) internal {
-        uint32 blockNumber = safe32(block.number, "BABLToken::_writeCheckpoint: block number exceeds 32 bits");
+        uint32 blockNumber = safe32(block.number, "VoteToken::_writeCheckpoint: block number exceeds 32 bits");
 
         if (nCheckpoints > 0 && checkpoints[delegatee][nCheckpoints - 1].fromBlock == blockNumber) {
             checkpoints[delegatee][nCheckpoints - 1].votes = newVotes;

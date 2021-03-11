@@ -23,7 +23,7 @@ import { Address } from "@openzeppelin/contracts/utils/Address.sol";
 /**
  * @title TimeLockRegistry
  * @notice Register Lockups for TimeLocked ERC20 Token BABL
- * @author Babylon Finance modified a version of TimeLockedToken provided by Harold Hyatt 
+ * @author Babylon Finance after modifying a version of TimeLockedToken provided by Harold Hyatt 
  * @dev This contract allows owner to register distributions for a TimeLockedToken
  *
  * To register a distribution, register method should be called by the owner.
@@ -77,7 +77,6 @@ contract TimeLockRegistry is Ownable {
      */
     function register(address receiver, uint256 distribution) external onlyOwner {
         require(receiver != address(0), "Zero address");
-        require(receiver != address(this), "Distribution address cannot be this smartcontract");
         require(distribution != 0, "Distribution = 0");
         require(registeredDistributions[receiver] == 0, "Distribution for this address is already registered");
 

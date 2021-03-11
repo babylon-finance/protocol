@@ -120,20 +120,20 @@ describe("BABLToken contract", function () {
 
   describe("Minting", function () {
         
-     
+  /**   
     it("Should fail when trying to mint new tokens beyond MAX_SUPPLY", async function () {
-      //const maxSupply = await Token.maxSupply();
-      //const totalSupply = await Token.totalSupply();
+      const maxSupply = await Token.maxSupply();
+      const totalSupply = await Token.totalSupply();
 
       // Try to mint 100000 new BABL Tokens to addr1.
       // `require` will evaluate false and revert the transaction if MAX_SUPPLY is reached.
       const value = BigInt("100000000000000000000000");
       await expect(
-        Token.mint(addr1, value.toString())
+        Token.mint(addr1, value)
       ).to.be.revertedWith("BABL::mint: max supply exceeded");
 
       // TOTAL_SYPPLY shouldn't have changed.
-      //expect(maxSupply).to.equal(totalSupply);
+      expect(maxSupply).to.equal(totalSupply);
     });
   
     /**      ethers.provider.send("evm_increaseTime", [ONE_DAY_IN_SECONDS * 90]);
