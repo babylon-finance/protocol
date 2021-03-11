@@ -38,7 +38,6 @@ describe("CommunityValuer", function() {
       //   addresses.tokens.WETH,
       //   addresses.tokens.DAI
       // );
-      console.log("wethInCommunity", wethInCommunity);
       // console.log('format', ethers.utils.formatEther(100000000000000000));
       const pricePerCommunityToken = await valuer.calculateCommunityValuation(
         community.address,
