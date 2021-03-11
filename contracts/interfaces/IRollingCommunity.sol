@@ -93,5 +93,5 @@ interface IRollingCommunity is IERC20, ICommunity {
     function executeTopInvestment() external;
     function finalizeInvestment(uint _ideaIndex) external;
     function getCurrentTopInvestmentIdea() external view returns (uint8);
-    function canWithdrawEthAmount(address _amount) external view returns (bool);
+    function canWithdrawEthAmount(uint _amount) external view returns (bool);
 }
