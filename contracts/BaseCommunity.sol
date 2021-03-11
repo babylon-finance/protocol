@@ -53,11 +53,7 @@ abstract contract BaseCommunity is ERC20 {
     event IntegrationInitialized(address indexed _integration);
     event PendingIntegrationRemoved(address indexed _integration);
     event ReserveAssetChanged(address indexed _integration);
-
-    event PositionMultiplierEdited(int256 _newMultiplier);
-    event PositionAdded(address indexed _component);
-    event PositionRemoved(address indexed _component);
-    event PositionBalanceEdited(address indexed _component, int256 _realBalance);
+    event ReserveBalanceChanged(uint256 _newAmount, uint256 _oldAmount);
 
     /* ============ Modifiers ============ */
 
@@ -127,8 +123,6 @@ abstract contract BaseCommunity is ERC20 {
       _;
     }
 
-
-
     /**
     * Throws if the community is not active
     */
@@ -145,13 +139,15 @@ abstract contract BaseCommunity is ERC20 {
         _;
     }
 
-    /* ============ State Variables ============ */
+    /* ============ Structs ============ */
 
-    // Subposition constants
-    uint8 constant LIQUID_STATUS = 0;
-    uint8 constant LOCKED_AS_COLLATERAL_STATUS = 1;
-    uint8 constant IN_INVESTMENT_STATUS = 2;
-    uint8 constant BORROWED_STATUS = 3;
+    struct Contributor {
+        uint256 totalDeposit; //wei
+        uint256 tokensReceived;
+        uint256 timestamp;
+    }
+
+    /* ============ State Variables ============ */
 
     // Wrapped ETH address
     address public immutable weth;
@@ -172,19 +168,18 @@ abstract contract BaseCommunity is ERC20 {
     // List of initialized Integrations; Integrations connect with other money legos
     address[] public integrations;
 
+    // Keeps track of the reserve balance. In case we receive some through other means
+    uint256 reserveBalance;
+
     // Indicates the minimum liquidity the asset needs to have to be tradable by this community
     uint256 public minLiquidityAsset;
-
-    // List of positions
-    address[] public positions;
-    mapping(address => ICommunity.Position) public positionsByComponent;
 
     /* ============ Constructor ============ */
 
     /**
-     * When a new Community is created, initializes Positions are set to empty.
+     * When a new Community is created.
      * All parameter validations are on the BabController contract. Validations are performed already on the
-     * BabController. Initiates the positionMultiplier as 1e18 (no adjustments).
+     * BabController.
      *
      * @param _integrations           List of integrations to enable. All integrations must be approved by the Controller
      * @param _weth                   Address of the WETH ERC20
@@ -296,6 +291,15 @@ abstract contract BaseCommunity is ERC20 {
       IIntegration(_integration).initialize(address(this));
     }
 
+    /**
+     * Function that allows the reserve balance to be updated
+     *
+     * @param _amount             Amount of the reserve balance
+     */
+    function updateReserveBalance(uint256 _amount) external onlyInvestmentIdea {
+      _updateReserveBalance(_amount);
+    }
+
     /* ============ Trade Integration hooks ============ */
 
     /**
@@ -334,6 +338,10 @@ abstract contract BaseCommunity is ERC20 {
 
     /* ============ External Getter Functions ============ */
 
+    function getReserveBalance() external view returns (uint256) {
+      return reserveBalance;
+    }
+
     function getReserveAsset() external view returns (address) {
       return reserveAsset;
     }
@@ -353,80 +361,6 @@ abstract contract BaseCommunity is ERC20 {
         return integrations.contains(_integration);
     }
 
-
-    function isPosition(address _component) external view returns (bool) {
-      return positions.contains(_component);
-    }
-
-    /**
-     * Gets the total number of positions
-     */
-    function getPositionCount() external view returns (uint256) {
-        return positions.length;
-    }
-
-    /**
-     * Returns a list of Positions, through traversing the components.
-     * balances are converted to real balances. This function is typically used off-chain for data presentation purposes.
-     */
-    function getPositions() external view returns (address[] memory) {
-        return positions;
-    }
-
-    /**
-     * Returns whether the community component  position real balance is greater than or equal to balances passed in.
-     */
-    function hasSufficientBalance(address _component, uint256 _balance)
-        external
-        view
-        returns (bool)
-    {
-      return _getPositionBalance(_component).toUint256() >= _balance;
-    }
-
-    /**
-     * Get the position of a component
-     *
-     * @param _component          Address of the component
-     * @return                    Balance
-     */
-    function getPositionBalance(address _component)
-        external
-        view
-        returns (int256)
-    {
-      return _getPositionBalance(_component);
-    }
-
-    /**
-     * Calculates the new  position balance and performs the edit with new balance
-     *
-     * @param _component                Address of the component
-     * @param _newBalance               Current balance of the component
-     * @param _deltaBalance             Delta applied on this op
-     * @param _subpositionStatus        Status of the position
-     * @return                          Current component balance
-     * @return                          Previous position balance
-     * @return                          New position balance
-     */
-    function calculateAndEditPosition(
-        address _component,
-        uint256 _newBalance,
-        int256 _deltaBalance,
-        uint8 _subpositionStatus
-    )
-        public
-        onlyInvestmentAndIntegration
-        onlyActive
-        returns (
-            uint256,
-            uint256,
-            uint256
-        )
-    {
-      return _calculateAndEditPosition(_component, _newBalance, _deltaBalance, _subpositionStatus);
-    }
-
     function isValidIntegration(address _integration) public view returns (bool) {
       return integrations.contains(_integration); //IBabController(controller).isValidIntegration(IIntegration(_integration).getName(), _integration);
     }
@@ -443,6 +377,17 @@ abstract contract BaseCommunity is ERC20 {
     }
 
     /* ============ Internal Functions ============ */
+
+    /**
+     * Function that allows the reserve balance to be updated
+     *
+     * @param _amount             Amount of the reserve balance
+     */
+    function _updateReserveBalance(uint256 _amount) internal {
+      uint256 oldAmount = reserveBalance;
+      reserveBalance = _amount;
+      emit ReserveBalanceChanged(_amount, oldAmount);
+    }
 
     function _addIntegration(address _integration) internal
     {
@@ -477,127 +422,6 @@ abstract contract BaseCommunity is ERC20 {
       IPriceOracle oracle = IPriceOracle(IBabController(controller).getPriceOracle());
       oracle.updateAdapters(_sendToken, _receiveToken);
       return ITradeIntegration(tradeIntegration).trade(_sendToken, _sendQuantity, _receiveToken, _minReceiveQuantity, _data);
-    }
-
-
-    /**
-     * Internal MODULE FUNCTION. Low level function that adds a component to the positions array.
-     */
-    function _addPosition(address _component, address _integration) internal{
-      ICommunity.Position storage position = positionsByComponent[_component];
-
-      position.subpositions.push(ICommunity.SubPosition({
-        integration: _integration,
-        balance: 0,
-        status: 0
-      }));
-      position.subpositionsCount ++;
-      position.enteredAt = block.timestamp;
-
-      positions.push(_component);
-      emit PositionAdded(_component);
-    }
-
-    function _getSubpositionIndex(address _component, address _integration) view internal returns (int256) {
-      ICommunity.Position storage position = positionsByComponent[_component];
-      for (uint8 i = 0; i < position.subpositionsCount; i++) {
-        if (position.subpositions[i].integration == _integration) {
-          return i;
-        }
-      }
-      return -1;
-    }
-
-    /**
-     * Internal MODULE FUNCTION. Low level function that removes a component from the positions array.
-     */
-    function _removePosition(address _component) internal {
-      ICommunity.Position storage position = positionsByComponent[_component];
-      positions = positions.remove(_component);
-      position.exitedAt = block.timestamp;
-      emit PositionRemoved(_component);
-    }
-
-    /**
-     * Internal MODULE FUNCTION. Low level function that edits a component's position
-     */
-    function _editPositionBalance(
-      address _component,
-      int256 _amount,
-      address _integration,
-      int256 _deltaBalance,
-      uint8 _subpositionStatus
-    ) internal {
-      ICommunity.Position storage position = positionsByComponent[_component];
-      position.balance = _amount;
-      position.updatedAt.push(block.timestamp);
-      int256 subpositionIndex = _getSubpositionIndex(_component, _integration);
-      if (subpositionIndex == -1) {
-        position.subpositions.push(ICommunity.SubPosition({
-          integration: _integration,
-          balance: _deltaBalance,
-          status: _subpositionStatus
-        }));
-      } else {
-        position.subpositions[subpositionIndex.toUint256()].balance = _deltaBalance;
-        position.subpositions[subpositionIndex.toUint256()].status = _subpositionStatus;
-      }
-
-      emit PositionBalanceEdited(_component, _amount);
-    }
-
-    function _calculateAndEditPosition(
-        address _component,
-        uint256 _newBalance,
-        int256 _deltaBalance,
-        uint8 _subpositionStatus
-    )
-        internal
-        returns (
-            uint256,
-            uint256,
-            uint256
-        )
-    {
-      uint256 positionBalance = _getPositionBalance(_component).toUint256();
-      editPosition(_component, _newBalance, msg.sender, _deltaBalance, _subpositionStatus);
-
-      return (_newBalance, positionBalance, _newBalance);
-    }
-
-    /**
-     * Returns whether the community has a position for a given component (if the real balance is > 0)
-     */
-    function _hasPosition(address _component) internal view returns (bool) {
-        return _getPositionBalance(_component) > 0;
-    }
-
-    function _getPositionBalance(address _component) internal view returns (int256) {
-      return positionsByComponent[_component].balance;
-    }
-
-    /**
-     * If the position does not exist, create a new Position and add to the community. If it already exists,
-     * then set the position balance. If the new balance is 0, remove the position. Handles adding/removing of
-     * components where needed (in light of potential external positions).
-     *
-     * @param _component          Address of the component
-     * @param _newBalance         Mew Balance
-     */
-    function editPosition(
-        address _component,
-        uint256 _newBalance,
-        address _integration,
-        int256 _deltaBalance,
-        uint8 _subpositionStatus
-    ) internal {
-        bool isPositionFound = _hasPosition(_component);
-        if (!isPositionFound && _newBalance > 0) {
-          _addPosition(_component, _integration);
-        } else if (isPositionFound && _newBalance == 0) {
-          _removePosition(_component);
-        }
-        _editPositionBalance(_component, _newBalance.toInt256(), _integration, _deltaBalance, _subpositionStatus);
     }
 
     function _getPrice(address _assetOne, address _assetTwo) internal returns (uint256) {

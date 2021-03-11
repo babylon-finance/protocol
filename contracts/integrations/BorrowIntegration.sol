@@ -157,7 +157,7 @@ abstract contract BorrowIntegration is BaseIntegration, ReentrancyGuard {
     _validatePostDeposit(debtInfo);
     // Protocol Fee
     uint256 protocolFee = _accrueProtocolFee(debtInfo, assetToDeposit, amount, BORROW_OPERATION_DEPOSIT);
-    updateCommunityPosition(msg.sender, asset, 0, 1); // Mark as locked
+    _updateInvestmentIdeaPosition(msg.sender, asset, 0, 1); // Mark as locked
 
     emit CollateralDeposited(
       debtInfo.community,
@@ -213,7 +213,7 @@ abstract contract BorrowIntegration is BaseIntegration, ReentrancyGuard {
     _validatePostRemoval(debtInfo);
     // Protocol Fee
     uint256 protocolFee = _accrueProtocolFee(debtInfo, assetToDeposit, amount, BORROW_OPERATION_REMOVAL);
-    updateCommunityPosition(msg.sender, asset, 0, 0); // Back to liquid
+    _updateInvestmentIdeaPosition(msg.sender, asset, 0, 0); // Back to liquid
 
     emit CollateralRemoved(
       debtInfo.community,
@@ -267,7 +267,7 @@ abstract contract BorrowIntegration is BaseIntegration, ReentrancyGuard {
     // Protocol Fee
     uint256 protocolFee = _accrueProtocolFee(debtInfo, asset, amount, BORROW_OPERATION_BORROW);
 
-    updateCommunityPosition(msg.sender, asset, int256(-amount), 3);
+    _updateInvestmentIdeaPosition(msg.sender, asset, int256(-amount), 3);
 
     emit AmountBorrowed(
       debtInfo.community,
@@ -320,7 +320,7 @@ abstract contract BorrowIntegration is BaseIntegration, ReentrancyGuard {
     _validatePostRepay(debtInfo);
     // Protocol Fee
     uint256 protocolFee = _accrueProtocolFee(debtInfo, asset, amount, BORROW_OPERATION_REPAY);
-    updateCommunityPosition(msg.sender, asset, 0, 0);
+    _updateInvestmentIdeaPosition(msg.sender, asset, 0, 0);
 
     emit AmountRepaid(
       debtInfo.community,

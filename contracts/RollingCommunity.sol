@@ -105,13 +105,6 @@ contract RollingCommunity is BaseCommunity, ReentrancyGuard {
     uint256 public redemptionWindowAfterInvestmentCompletes; // Window of time after an investment idea finishes when the capital is available for withdrawals
     uint256 public redemptionsOpenUntil;           // Indicates until when the redemptions are open and the ETH is set aside
 
-    // List of contributors
-    struct Contributor {
-      uint256 totalDeposit; //wei
-      uint256 tokensReceived;
-      uint256 timestamp;
-    }
-
     mapping(address => Contributor) public contributors;
     uint256 public totalContributors;
     uint256 public totalFundsDeposited;
@@ -211,13 +204,7 @@ contract RollingCommunity is BaseCommunity, ReentrancyGuard {
 
         _mint(creator, initialTokens);
         _updateContributorInfo(initialTokens, initialDepositAmount);
-
-        _calculateAndEditPosition(
-          weth,
-          initialDepositAmount,
-          initialDepositAmount.toInt256(),
-          0
-        );
+        _updateReserveBalance(initialDepositAmount);
 
         require(totalSupply() > 0, "Community must receive an initial deposit");
 
@@ -226,7 +213,7 @@ contract RollingCommunity is BaseCommunity, ReentrancyGuard {
 
     /**
      * Deposits the Community's position components into the community and mints the Community token of the given quantity
-     * to the specified _to address. This function only handles default Positions (positionState = 0).
+     * to the specified _to address.
      *
      * @param _reserveAssetQuantity  Quantity of the reserve asset that are received
      * @param _minCommunityTokenReceiveQuantity   Min quantity of Community token to receive after issuance
@@ -250,7 +237,6 @@ contract RollingCommunity is BaseCommunity, ReentrancyGuard {
         IWETH(weth).deposit{value: msg.value}();
         // Check this here to avoid having relayers
         reenableEthForInvestments();
-        updatePositionTWAPPrices();
 
         _validateReserveAsset(reserveAsset, _reserveAssetQuantity);
 
@@ -259,11 +245,19 @@ contract RollingCommunity is BaseCommunity, ReentrancyGuard {
 
         _validateIssuanceInfo(_minCommunityTokenReceiveQuantity, depositInfo);
 
-        _transferCollateralAndHandleFees(reserveAsset, depositInfo);
+        // Send Protocol Fee
+        payProtocolFeeFromCommunity(reserveAsset, depositInfo.protocolFees);
 
+        // Updates Reserve Balance and Mint
+        _mint(_to, depositInfo.communityTokenQuantity);
         _updateContributorInfo(depositInfo.communityTokenQuantity, msg.value);
+        _updateReserveBalance(depositInfo.newReservePositionBalance);
 
-        _handleDepositStateUpdates(reserveAsset, _to, depositInfo);
+        emit CommunityTokenDeposited(
+            _to,
+            depositInfo.communityTokenQuantity,
+            depositInfo.protocolFees
+        );
     }
 
     /**
@@ -286,7 +280,6 @@ contract RollingCommunity is BaseCommunity, ReentrancyGuard {
         require(block.timestamp.sub(contributors[msg.sender].timestamp) >= depositHardlock, "Cannot withdraw. Hardlock");
         // Check this here to avoid having relayers
         reenableEthForInvestments();
-        updatePositionTWAPPrices();
         ActionInfo memory withdrawalInfo =
             _createRedemptionInfo(reserveAsset, _communityTokenQuantity);
 
@@ -318,9 +311,16 @@ contract RollingCommunity is BaseCommunity, ReentrancyGuard {
           _to.transfer(withdrawalInfo.netFlowQuantity);
         }
 
-        _handleRedemptionFees(reserveAsset, withdrawalInfo);
+        payProtocolFeeFromCommunity(reserveAsset, withdrawalInfo.protocolFees);
 
-        _handleWithdrawalStateUpdates(reserveAsset, _to, withdrawalInfo);
+        _updateReserveBalance(withdrawalInfo.newReservePositionBalance);
+
+        emit CommunityTokenWithdrawn(
+            msg.sender,
+            _to,
+            withdrawalInfo.communityTokenQuantity,
+            withdrawalInfo.protocolFees
+        );
     }
 
     /**
@@ -367,9 +367,16 @@ contract RollingCommunity is BaseCommunity, ReentrancyGuard {
       );
       totalFunds = totalFunds.sub(withdrawalInfo.netFlowQuantity).sub(withdrawalInfo.protocolFees);
 
-      _handleRedemptionFees(reserveAsset, withdrawalInfo);
+      payProtocolFeeFromCommunity(reserveAsset, withdrawalInfo.protocolFees);
 
-      _handleWithdrawalStateUpdates(reserveAsset, _to, withdrawalInfo);
+      _updateReserveBalance(withdrawalInfo.newReservePositionBalance);
+
+      emit CommunityTokenWithdrawn(
+          msg.sender,
+          _to,
+          withdrawalInfo.communityTokenQuantity,
+          withdrawalInfo.protocolFees
+      );
     }
 
     // if limit == 0 then there is no deposit limit
@@ -378,18 +385,14 @@ contract RollingCommunity is BaseCommunity, ReentrancyGuard {
     }
 
     // Any tokens (other than the target) that are sent here by mistake are recoverable by contributors
-    // Exchange for WETH or add as a position
-    function sweep(address _token, bool _sell) external onlyContributor {
-       require(!_hasPosition(_token), "Token is one of the community positions");
+    // Exchange for WETH
+    function sweep(address _token) external onlyContributor {
+       require(_token != reserveAsset, "Token is not the reserve asset");
        uint256 balance = ERC20(_token).balanceOf(address(this));
        require(balance > 0, "Token balance > 0");
-       if (_sell) {
-         bytes memory _emptyTradeData;
-         // TODO: probably use uniswap or 1inch
-         _trade("_kyber", _token, balance, reserveAsset, 0, _emptyTradeData);
-       } else {
-         _calculateAndEditPosition(_token, balance, ERC20(_token).balanceOf(address(this)).toInt256(), 0);
-       }
+       bytes memory _emptyTradeData;
+       // TODO: probably use uniswap or 1inch
+       _trade("_kyber", _token, balance, reserveAsset, 0, _emptyTradeData);
     }
 
     /**
@@ -411,20 +414,6 @@ contract RollingCommunity is BaseCommunity, ReentrancyGuard {
       if (block.timestamp >= redemptionsOpenUntil && address(this).balance > minContribution) {
         // Always wrap to WETH
         IWETH(weth).deposit{value: address(this).balance}();
-      }
-    }
-
-    /**
-     * Updates the TWAP prices for the community positions
-     *
-     */
-    function updatePositionTWAPPrices() public {
-      // Updates UniSwap TWAP
-      address oracle = IBabController(controller).getPriceOracle();
-      for(uint i = 0; i < positions.length; i++) {
-        if (positions[i] != reserveAsset) {
-          IPriceOracle(oracle).updateAdapters(reserveAsset, positions[i]);
-        }
       }
     }
 
@@ -461,30 +450,6 @@ contract RollingCommunity is BaseCommunity, ReentrancyGuard {
     }
 
     /**
-     * Get the expected community tokens minted to recipient on issuance
-     *
-     * @param _reserveAsset                 Address of the reserve asset
-     * @param _reserveAssetQuantity         Quantity of the reserve asset to deposit with
-     *
-     * @return  uint256                     Expected Community tokens to be minted to recipient
-     */
-    function getExpectedCommunityTokensDepositedQuantity(
-        address _reserveAsset,
-        uint256 _reserveAssetQuantity
-    ) external view returns (uint256) {
-        (, uint256 netReserveFlow) = _getFees(_reserveAssetQuantity, true, 0);
-
-        uint256 setTotalSupply = totalSupply();
-
-        return
-            _getCommunityTokenMintQuantity(
-                _reserveAsset,
-                netReserveFlow,
-                setTotalSupply
-            );
-    }
-
-    /**
      * Get the expected reserve asset to be withdrawaled
      *
      * @param _reserveAsset                 Address of the reserve asset
@@ -516,12 +481,10 @@ contract RollingCommunity is BaseCommunity, ReentrancyGuard {
         address _reserveAsset,
         uint256 _reserveAssetQuantity
     ) external view returns (bool) {
-        uint256 setTotalSupply = totalSupply();
-
         return
             _reserveAssetQuantity != 0 &&
             IBabController(controller).isValidReserveAsset(_reserveAsset) &&
-            setTotalSupply >= minCommunityTokenSupply;
+            totalSupply() >= minCommunityTokenSupply;
     }
 
     /**
@@ -554,10 +517,7 @@ contract RollingCommunity is BaseCommunity, ReentrancyGuard {
             (, uint256 expectedWithdrawalQuantity) =
                 _getFees(totalWithdrawalValue, false, _communityTokenQuantity);
 
-            uint256 existingBalance =
-                _getPositionBalance(_reserveAsset).toUint256();
-
-            return existingBalance >= expectedWithdrawalQuantity;
+            return reserveBalance >= expectedWithdrawalQuantity;
         }
     }
 
@@ -636,9 +596,7 @@ contract RollingCommunity is BaseCommunity, ReentrancyGuard {
               depositInfo.previousCommunityTokenSupply
             );
 
-        uint256 existingBalance = _getPositionBalance(_reserveAsset).toUint256();
-
-        depositInfo.newReservePositionBalance = existingBalance.add(depositInfo.netFlowQuantity);
+        depositInfo.newReservePositionBalance = reserveBalance.add(depositInfo.netFlowQuantity);
 
         return depositInfo;
     }
@@ -681,65 +639,7 @@ contract RollingCommunity is BaseCommunity, ReentrancyGuard {
         address _reserveAsset,
         ActionInfo memory _depositInfo
     ) internal {
-        if (_depositInfo.protocolFees > 0) {
-            require(ERC20(_reserveAsset).transferFrom(
-                address(this),
-                IBabController(controller).getTreasury(),
-                _depositInfo.protocolFees
-            ), "Deposit Protocol fee failed");
-        }
-    }
 
-    function _handleDepositStateUpdates(
-        address _reserveAsset,
-        address _to,
-        ActionInfo memory _depositInfo
-    ) internal {
-
-        editPosition(
-            _reserveAsset,
-            _depositInfo.newReservePositionBalance,
-            address(0),
-            msg.value.toInt256(),
-            0
-        );
-
-        _mint(_to, _depositInfo.communityTokenQuantity);
-
-        emit CommunityTokenDeposited(
-            _to,
-            _depositInfo.communityTokenQuantity,
-            _depositInfo.protocolFees
-        );
-    }
-
-    function _handleWithdrawalStateUpdates(
-        address _reserveAsset,
-        address _to,
-        ActionInfo memory _withdrawalInfo
-    ) internal {
-        editPosition(
-            _reserveAsset,
-            _withdrawalInfo.newReservePositionBalance,
-            address(0),
-            int256(-_withdrawalInfo.netFlowQuantity),
-            0
-        );
-
-        emit CommunityTokenWithdrawn(
-            msg.sender,
-            _to,
-            _withdrawalInfo.communityTokenQuantity,
-            _withdrawalInfo.protocolFees
-        );
-    }
-
-    function _handleRedemptionFees(
-        address _reserveAsset,
-        ActionInfo memory _withdrawalInfo
-    ) internal {
-        // Instruct the Community to transfer protocol fee to fee recipient if there is a fee
-        payProtocolFeeFromCommunity(_reserveAsset, _withdrawalInfo.protocolFees);
     }
 
     /**
@@ -786,7 +686,9 @@ contract RollingCommunity is BaseCommunity, ReentrancyGuard {
     ) internal view returns (uint256) {
         // Get valuation of the Community with the quote asset as the reserve asset.
         // Reverts if price is not found
-        uint256 communityValuation = ICommunityValuer(IBabController(controller).getCommunityValuer()).calculateCommunityValuation(address(this), _reserveAsset);
+        uint256 communityValuation = reserveBalance;
+        // TODO: get current from investment ideas
+        // uint256 communityValuation = ICommunityValuer(IBabController(controller).getCommunityValuer()).calculateCommunityValuation(address(this), _reserveAsset);
 
         // Get reserve asset decimals
         uint8 reserveAssetDecimals = ERC20(_reserveAsset).decimals();
@@ -840,7 +742,7 @@ contract RollingCommunity is BaseCommunity, ReentrancyGuard {
         address _reserveAsset,
         ActionInfo memory _withdrawalInfo
     ) internal view returns (uint256) {
-        uint256 totalExistingBalance = _getPositionBalance(_reserveAsset).toUint256();
+        uint256 totalExistingBalance = reserveBalance;
 
 
         uint256 outflow =

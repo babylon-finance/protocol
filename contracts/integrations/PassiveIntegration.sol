@@ -293,9 +293,9 @@ abstract contract PassiveIntegration is BaseIntegration, ReentrancyGuard {
       int256 depositTokenDelta = isDeposit ? int256(-_investmentInfo.limitDepositTokenQuantity) : _investmentInfo.limitDepositTokenQuantity.toInt256();
       int256 investmentTokenDelta = isDeposit ? _investmentInfo.investmentTokensInTransaction.toInt256() : _investmentInfo.investmentTokensInTransaction.toInt256();
       // balance deposit/withdrawal token
-      updateCommunityPosition(address(_investmentInfo.community), _depositToken, depositTokenDelta, isDeposit ? 2 : 0);
+      _updateInvestmentIdeaPosition(address(_investmentInfo.community), _depositToken, depositTokenDelta, isDeposit ? 2 : 0);
       // balance investment token
-      updateCommunityPosition(address(_investmentInfo.community), _investmentInfo.investment, investmentTokenDelta, 0);
+      _updateInvestmentIdeaPosition(address(_investmentInfo.community), _investmentInfo.investment, investmentTokenDelta, 0);
     }
 
     /**

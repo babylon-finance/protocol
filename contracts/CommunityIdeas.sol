@@ -287,7 +287,7 @@ contract CommunityIdeas is ReentrancyGuard {
     require(_ideaIndex < ideas.length, "No idea available to execute");
     InvestmentIdea storage idea = ideas[_ideaIndex];
     require(idea.executedAt == 0, "Idea has already been executed");
-    uint256 liquidReserveAsset = community.getPositionBalance(community.getReserveAsset()).toUint256();
+    uint256 liquidReserveAsset = community.getReserveBalance();
     require(_capital <= liquidReserveAsset, "Not enough capital");
     require(idea.capitalAllocated.add(_capital) <= idea.maxCapitalRequested, "Max capital reached");
     require(liquidReserveAsset >= idea.minRebalanceCapital, "Community does not have enough capital to enter the idea");
@@ -305,7 +305,7 @@ contract CommunityIdeas is ReentrancyGuard {
    * We enter into the investment and add it to the executed ideas array.
    */
   function rebalanceInvestments() external onlyKeeper onlyActive {
-    uint256 liquidReserveAsset = community.getPositionBalance(community.getReserveAsset()).toUint256();
+    uint256 liquidReserveAsset = community.getReserveBalance();
     for (uint i = 0; i < ideas.length; i++) {
       InvestmentIdea storage idea = ideas[i];
       uint256 percentage = idea.totalVotes.toUint256().preciseDiv(totalStake);
@@ -333,7 +333,7 @@ contract CommunityIdeas is ReentrancyGuard {
     // Execute exit trade
     bytes memory _data = idea.exitPayload;
     address reserveAsset = community.getReserveAsset();
-    uint256 reserveAssetBeforeExiting = community.getPositionBalance(reserveAsset).toUint256();
+    uint256 reserveAssetBeforeExiting = community.getReserveBalance();
     community.callIntegration(idea.integration, 0, _data, _tokensNeeded, _tokenAmounts);
     // Exchange the tokens back to the reserve asset
     bytes memory _emptyTradeData;
@@ -344,7 +344,7 @@ contract CommunityIdeas is ReentrancyGuard {
         community.tradeFromInvestmentIdea("kyber", idea.enterTokensNeeded[i], idea.enterTokensAmounts[i], reserveAsset, idea.enterTokensAmounts[i].preciseDiv(pricePerTokenUnit), _emptyTradeData);
       }
     }
-    uint256 capitalReturned = community.getPositionBalance(reserveAsset).toUint256().sub(reserveAssetBeforeExiting);
+    uint256 capitalReturned = community.getReserveBalance().sub(reserveAssetBeforeExiting);
     // Mark as finalized
     idea.finalized = true;
     idea.exitedAt = block.timestamp;
@@ -471,8 +471,8 @@ contract CommunityIdeas is ReentrancyGuard {
     // Start a redemption window in the community with this capital
     community.startRedemptionWindow(capitalReturned);
     // Updates reserve asset position in the community
-    uint256 _newTotal = community.getPositionBalance(reserveAsset).add(reserveAssetDelta).toUint256();
-    community.calculateAndEditPosition(reserveAsset, _newTotal, reserveAssetDelta, 0);
+    uint256 _newTotal = community.getReserveBalance().toInt256().add(reserveAssetDelta).toUint256();
+    community.updateReserveBalance(_newTotal);
   }
 
   function _getPrice(address _assetOne, address _assetTwo) internal view returns (uint256) {

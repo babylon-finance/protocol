@@ -26,43 +26,6 @@ import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
  * Interface for operating with SetTokens.
  */
 interface ICommunity is IERC20 {
-
-    /* ============ Structs ============ */
-    struct Contributor {
-        uint256 totalDeposit; //wei
-        uint256 tokensReceived;
-        uint256 timestamp;
-    }
-
-    struct SubPosition {
-      address integration;
-      int256 balance;
-      uint8 status;
-    }
-
-    /**
-     * A struct that stores a component's cash position details and external positions
-     * This data structure allows O(1) access to a component's cash position units and
-     * virtual units.
-     *
-     * @param component           Address of token in the Position
-     * @param balance                Balance of this component
-     * @param enteredAt           Timestamp when this position was entered
-     * @param exitedAt            Timestamp when this position was exited
-     * @param updatedAt           Timestamp when this position was updated
-     */
-    struct Position {
-      address component;
-      uint8 positionState;
-      int256 balance;
-      SubPosition[] subpositions;
-      uint8 subpositionsCount;
-      uint256 enteredAt;
-      uint256 exitedAt;
-      uint256[] updatedAt;
-    }
-
-
     /* ============ Functions ============ */
 
     function addIntegration(address _integration) external;
@@ -85,27 +48,8 @@ interface ICommunity is IERC20 {
     function totalContributors() external view returns (uint256);
     function totalCommunitiesDeposited() external view returns (uint256);
     function weth() external view returns (address);
-
-    function isPosition(address _component) external view returns (bool);
-    function getPositionCount() external view returns (uint256);
-    function getPositions() external view returns (address[] memory);
-    function hasSufficientBalance(address _component, uint256 _balance)
-        external
-        view
-        returns (bool);
-    function getPositionBalance(address _component) external view returns(int256);
-    function calculateAndEditPosition(
-        address _component,
-        uint256 _newBalance,
-        int256 _deltaBalance,
-        uint8 _subpositionStatus
-    )
-      external
-      returns (
-          uint256,
-          uint256,
-          uint256
-      );
+    function minLiquidityAsset() external view returns (uint256);
+    function getReserveBalance() external view returns (uint256);
 
     function tradeFromInvestmentIdea(
       string memory _integrationName,
@@ -124,5 +68,7 @@ interface ICommunity is IERC20 {
       uint256 _value,
       bytes calldata _data
     ) external returns (bytes memory _returnValue);
-    function minLiquidityAsset() external view returns (uint256);
+
+    function updateReserveBalance(uint256 _amount) external;
+
 }

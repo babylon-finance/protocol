@@ -294,10 +294,10 @@ abstract contract PoolIntegration is BaseIntegration, ReentrancyGuard {
       // balance pool individual component
       // TODO: Grab actual min tokens on added and withdrawed on exit
       for (uint i = 0; i < _poolTokens.length; i++) {
-        updateCommunityPosition(address(_poolInfo.community), _poolTokens[i], isDeposit ? int256(-_poolInfo.limitPoolTokenQuantities[i]) : _poolInfo.limitPoolTokenQuantities[i].toInt256(), isDeposit ? 2 : 0);
+        _updateInvestmentIdeaPosition(address(_poolInfo.community), _poolTokens[i], isDeposit ? int256(-_poolInfo.limitPoolTokenQuantities[i]) : _poolInfo.limitPoolTokenQuantities[i].toInt256(), isDeposit ? 2 : 0);
       }
       // balance pool token
-      updateCommunityPosition(address(_poolInfo.community), _poolInfo.pool, isDeposit ? _poolInfo.poolTokensInTransaction.toInt256() : int256(-_poolInfo.poolTokensInTransaction), 0);
+      _updateInvestmentIdeaPosition(address(_poolInfo.community), _poolInfo.pool, isDeposit ? _poolInfo.poolTokensInTransaction.toInt256() : int256(-_poolInfo.poolTokensInTransaction), 0);
     }
 
     /**

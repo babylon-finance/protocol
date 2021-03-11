@@ -204,10 +204,6 @@ abstract contract TradeIntegration is BaseIntegration, ReentrancyGuard {
       require((IUniswapV2Pair(pair).token0() == weth && liquidity0 >= minLiquidity) ||
               (IUniswapV2Pair(pair).token1() == weth && liquidity1 >= minLiquidity) && block.timestamp.sub(timestamp) <= 300, "Not enough liquidity");
       require(IERC20(_tradeInfo.sendToken).balanceOf(msg.sender) >= _sendQuantity, "Community needs to have enough liquid tokens");
-      require(
-          _tradeInfo.community.hasSufficientBalance(_tradeInfo.sendToken, _sendQuantity),
-          "Position needs to have enough"
-      );
     }
 
     /**
@@ -271,8 +267,8 @@ abstract contract TradeIntegration is BaseIntegration, ReentrancyGuard {
     function _updateCommunityPositions(TradeInfo memory _tradeInfo, uint256 exchangedQuantity) internal returns (uint256, uint256) {
       uint256 newAmountSendTokens = _tradeInfo.preTradeSendTokenBalance.sub(_tradeInfo.totalSendQuantity);
       uint256 newAmountReceiveTokens = _tradeInfo.preTradeReceiveTokenBalance.add(exchangedQuantity);
-      updateCommunityPosition(address(_tradeInfo.community), _tradeInfo.sendToken, int256(-_tradeInfo.totalSendQuantity), 0);
-      updateCommunityPosition(address(_tradeInfo.community), _tradeInfo.receiveToken, exchangedQuantity.toInt256(), 0);
+      _updateInvestmentIdeaPosition(address(_tradeInfo.community), _tradeInfo.sendToken, int256(-_tradeInfo.totalSendQuantity), 0);
+      _updateInvestmentIdeaPosition(address(_tradeInfo.community), _tradeInfo.receiveToken, exchangedQuantity.toInt256(), 0);
 
       return (newAmountSendTokens, newAmountReceiveTokens);
     }

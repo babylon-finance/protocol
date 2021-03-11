@@ -48,18 +48,16 @@ describe("Position testing", function() {
   describe("Initial Positions", async function() {
     it("when creating a community the positions are at 0", async function() {
       expect(await community2.totalContributors()).to.equal(0);
-      expect(await community2.getPositionCount()).to.equal(0);
-      expect(await community2.totalCommunities()).to.equal(ethers.utils.parseEther("0"));
-      const wethPosition = await community1.getPositionBalance(weth.address);
+      expect(await community2.totalFunds()).to.equal(ethers.utils.parseEther("0"));
+      const wethPosition = await community1.getReserveBalance();
       expect(wethPosition).to.be.gt(ethers.utils.parseEther("0"));
       expect(await community2.totalSupply()).to.equal(ethers.utils.parseEther("0"));
     });
 
     it("updates weth position accordingly when initializing the community", async function() {
       expect(await community1.totalContributors()).to.equal(1);
-      expect(await community1.getPositionCount()).to.equal(1);
-      expect(await community1.totalCommunities()).to.equal(ethers.utils.parseEther("0.1"));
-      const wethPosition = await community1.getPositionBalance(weth.address);
+      expect(await community1.totalFunds()).to.equal(ethers.utils.parseEther("0.1"));
+      const wethPosition = await community1.getReserveBalance();
       expect(await weth.balanceOf(community1.address)).to.equal(
         ethers.utils.parseEther("0.1")
       );
@@ -78,15 +76,14 @@ describe("Position testing", function() {
     it("supply and positions update accordingly after deposits", async function() {
       const communityBalance = await weth.balanceOf(community1.address);
       const supplyBefore = await community1.totalSupply();
-      const wethPositionBefore = await community1.getPositionBalance(weth.address);
+      const wethPositionBefore = await community1.getReserveBalance();
       await community1
         .connect(userSigner3)
         .deposit(ethers.utils.parseEther("1"), 1, userSigner3.getAddress(), {
           value: ethers.utils.parseEther("1")
         });
       expect(await community1.totalContributors()).to.equal(2);
-      expect(await community1.getPositionCount()).to.equal(1);
-      const wethPosition = await community1.getPositionBalance(weth.address);
+      const wethPosition = await community1.getReserveBalance();
       const communityBalanceAfter = await weth.balanceOf(community1.address);
       const supplyAfter = await community1.totalSupply();
       expect(supplyAfter.div(11)).to.equal(supplyBefore);
@@ -96,8 +93,8 @@ describe("Position testing", function() {
       expect(wethPosition.sub(wethPositionBefore)).to.equal(
         ethers.utils.parseEther("1")
       );
-      expect(await community1.totalCommunities()).to.equal(ethers.utils.parseEther("1.1"));
-      expect(await community1.totalCommunitiesDeposited()).to.equal(
+      expect(await community1.totalFunds()).to.equal(ethers.utils.parseEther("1.1"));
+      expect(await community1.totalFundsDeposited()).to.equal(
         ethers.utils.parseEther("1.1")
       );
     });
@@ -127,7 +124,7 @@ describe("Position testing", function() {
       expect(wethPositionBefore.sub(wethPosition)).to.equal(
         ethers.utils.parseEther("0.5")
       );
-      expect(await community1.totalCommunities()).to.equal(ethers.utils.parseEther("0.6"));
+      expect(await community1.totalFunds()).to.equal(ethers.utils.parseEther("0.6"));
       // Check that the protocol got 0.5% exit fee
       const protocolTreasuryAfter = await weth.balanceOf(
         treasuryD.address
@@ -138,7 +135,7 @@ describe("Position testing", function() {
           .mul(5)
           .div(1000)
       );
-      expect(await community1.totalCommunitiesDeposited()).to.equal(
+      expect(await community1.totalFundsDeposited()).to.equal(
         ethers.utils.parseEther("1.1")
       );
     });
@@ -175,10 +172,10 @@ describe("Position testing", function() {
       // const supplyAfter = await community1.totalSupply();
       //
       // // Communities don't change
-      // expect(await community1.totalCommunitiesDeposited()).to.equal(
+      // expect(await community1.totalFundsDeposited()).to.equal(
       //   ethers.utils.parseEther("1.1")
       // );
-      // expect(await community1.totalCommunities()).to.equal(ethers.utils.parseEther("1.1"));
+      // expect(await community1.totalFunds()).to.equal(ethers.utils.parseEther("1.1"));
       // expect(supplyAfter).to.equal(supplyBefore);
       // expect(communityBalance.sub(ethers.utils.parseEther("1"))).to.equal(
       //   communityBalanceAfter

@@ -115,12 +115,12 @@ abstract contract BaseIntegration {
     /**
      * Updates the position in the community with the new units
      *
-     * @param _community                     Address of the community
+     * @param _investmentIdea           Address of the investment idea
      * @param _component                Address of the ERC20
      * @param _deltaOperation           Delta balance of the operation
      */
-    function updateCommunityPosition(
-      address _community,
+    function _updateInvestmentIdeaPosition(
+      address _investmentIdea,
       address _component,
       int256 _deltaOperation,
       uint8 _subpositionStatus
@@ -129,8 +129,8 @@ abstract contract BaseIntegration {
       uint256,
       uint256
     ) {
-      uint256 _newTotal = ICommunity(_community).getPositionBalance(_component).add(int256(_deltaOperation)).toUint256();
-      return ICommunity(_community).calculateAndEditPosition(_component, _newTotal, _deltaOperation, _subpositionStatus);
+      // uint256 _newTotal = ICommunity(_community).getPositionBalance(_component).add(int256(_deltaOperation)).toUint256();
+      // return ICommunity(_community).calculateAndEditPosition(_component, _newTotal, _deltaOperation, _subpositionStatus);
     }
 
     /**

@@ -56,10 +56,6 @@ interface IRollingCommunity is IERC20, ICommunity {
     ) external;
 
     function setDepositLimit(uint limit) external;
-    function getExpectedCommunityTokensDepositedQuantity(
-        address _reserveAsset,
-        uint256 _reserveAssetQuantity
-    ) external view returns (uint256);
     function getExpectedReserveWithdrawalQuantity(
         address _reserveAsset,
         uint256 _communityTokenQuantity
