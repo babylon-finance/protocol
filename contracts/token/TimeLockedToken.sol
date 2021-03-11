@@ -83,8 +83,6 @@ abstract contract TimeLockedToken is VoteToken {
     // registry of locked addresses
     address public timeLockRegistry;
 
-    // allow unlocked transfers to special account 
-    bool public returnsLocked; // TODO - CHECK HOW REIMBURSEMENT WILL BE DONE
 
     /* ============ Functions ============ */
 
@@ -112,13 +110,6 @@ abstract contract TimeLockedToken is VoteToken {
         return true;
     }
 
-    /**
-     * @dev Permanently lock transfers to return address
-     * Lock returns so there isn't always a way to send locked tokens
-     */
-    function lockReturns() external onlyOwner { // TODO - CHECK REIMBURSEMENTS TO OWNER
-        returnsLocked = true;
-    }
 
     /**
     * @dev Allows an account to transfer tokens to another account under the lockup schedule
@@ -280,17 +271,6 @@ abstract contract TimeLockedToken is VoteToken {
         // check if enough unlocked balance to transfer
         require(unlockedBalance(_from) >= _value, "TimeLockedToken:: _transfer: attempting to transfer locked funds");
         super._transfer(_from, _to, _value);
-    }
-    
-
-    /**
-     * @notice Get the number of unlocked tokens held by the `account`
-     * @param account The address of the account to get the balance of
-     * @return The number of unlocked tokens held
-     */
-
-    function _balanceOf(address account) internal override view returns (uint256) {
-        return unlockedBalance(account);
     }
 
 }
