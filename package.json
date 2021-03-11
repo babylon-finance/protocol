@@ -43,6 +43,8 @@
     "deploy-mainnet": "hardhat run scripts/deploy.js --network mainnet && hardhat run scripts/publish.js",
     "watch": "node scripts/watch.js",
     "accounts": "hardhat accounts",
+    "account": "hardhat account",
+    "generate": "hardhat generate",
     "balance": "hardhat balance",
     "send": "hardhat send"
   }
