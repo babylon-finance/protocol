@@ -49,6 +49,11 @@ interface IRollingCommunity is IERC20, ICommunity {
         uint256 _minReserveReceiveQuantity,
         address payable _to
     ) external;
+    function withdrawToReservePool(
+      uint256 _communityTokenQuantity,
+      uint256 _minReserveReceiveQuantity,
+      address payable _to
+    ) external;
 
     function setDepositLimit(uint limit) external;
     function getExpectedCommunityTokensDepositedQuantity(
@@ -70,6 +75,7 @@ interface IRollingCommunity is IERC20, ICommunity {
 
     function startRedemptionWindow(uint256 _amount) external;
     function reenableEthForInvestments() external;
+    function burnAssetsFromSenderAndMintToReserve(address _contributor, uint256 _quantity) external;
 
     // Investment ideas
     function addInvestmentIdea(
