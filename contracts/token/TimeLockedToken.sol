@@ -20,16 +20,16 @@ pragma solidity 0.7.4;
 
 import "hardhat/console.sol";
 import { SafeMath } from "@openzeppelin/contracts/math/SafeMath.sol";
-import { VoteToken } from "./VoteToken.sol";
+import { VoteToken } from "../governance/VoteToken.sol";
 import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
 
 /**
  * @title TimeLockedToken
  * @notice Time Locked ERC20 Token
- * @author Babylon Finance modified a version of TimeLockedToken provided by Harold Hyatt
+ * @author Babylon Finance after modifying a version of TimeLockedToken provided by Harold Hyatt
  * @dev Contract which gives the ability to time-lock tokens
  *
- * By overriding the balanceOf(), transfer(), and transferFrom()
+ * By overriding the balanceOf() and transfer()
  * functions in ERC20, an account can show its full, post-distribution
  * balance but only transfer or spend up to an allowed amount
  *
@@ -39,10 +39,16 @@ import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
  */
 
 
-contract TimeLockedToken is VoteToken {
+abstract contract TimeLockedToken is VoteToken {
     using SafeMath for uint256;
 
     /* ============ Events ============ */
+
+    /// @notice An event that emitted when a new lockout ocurr
+    event newLockout(address account, uint256 tokenslocked);
+    
+    /// @notice An event that emitted when a new Time Lock is registered
+    event newTimeLockRegistration(address account);
 
 
     /* ============ Modifiers ============ */
@@ -77,8 +83,8 @@ contract TimeLockedToken is VoteToken {
     // registry of locked addresses
     address public timeLockRegistry;
 
-    // allow unlocked transfers to special account
-    bool public returnsLocked;
+    // allow unlocked transfers to special account 
+    bool public returnsLocked; // TODO - CHECK HOW REIMBURSEMENT WILL BE DONE
 
     /* ============ Functions ============ */
 
@@ -95,17 +101,22 @@ contract TimeLockedToken is VoteToken {
      * @dev Set TimeLockRegistry address
      * @param newTimeLockRegistry Address of TimeLockRegistry contract
      */
-    function setTimeLockRegistry(address newTimeLockRegistry) external onlyOwner {
+    function setTimeLockRegistry(address newTimeLockRegistry) external onlyOwner returns(bool){
         require(newTimeLockRegistry != address(0), "cannot be zero address");
+        require(newTimeLockRegistry != address(this), "cannot be this contract");
         require(newTimeLockRegistry != timeLockRegistry, "must be new TimeLockRegistry");
         timeLockRegistry = newTimeLockRegistry;
+        
+        emit newTimeLockRegistration(newTimeLockRegistry);
+        
+        return true;
     }
 
     /**
      * @dev Permanently lock transfers to return address
      * Lock returns so there isn't always a way to send locked tokens
      */
-    function lockReturns() external onlyOwner {
+    function lockReturns() external onlyOwner { // TODO - CHECK REIMBURSEMENTS TO OWNER
         returnsLocked = true;
     }
 
@@ -119,12 +130,19 @@ contract TimeLockedToken is VoteToken {
     */
     function registerLockup(address receiver, uint256 amount) external onlyTimeLockRegistry {
         require(balanceOf(msg.sender) >= amount, "insufficient balance");
+        require(receiver != address(0), "cannot be zero address");
+        require(receiver != address(this), "cannot be this contract");
+        require(receiver != timeLockRegistry, "must be new TimeLockRegistry");
+        require(receiver != msg.sender, "the owner cannot lockup itself");
+
 
         // add amount to locked distribution
         distribution[receiver] = distribution[receiver].add(amount);
 
         // transfer to recipient
         _transfer(msg.sender, receiver, amount);
+        emit newLockout(receiver, amount);
+
     }
 
      /**
@@ -143,31 +161,26 @@ contract TimeLockedToken is VoteToken {
      * @return Amount that is unlocked and available eg. to transfer
      */
     function unlockedBalance(address account) public view returns (uint256) {
-        require(balanceOf(account)>0,"TimeLockedToken:: _unlockedBalance: no tokens yet"); 
+        require(balanceOf(account)>0,"TimeLockedToken:: unlockedBalance: no tokens yet"); 
         // totalBalance - lockedBalance
         return balanceOf(account).sub(lockedBalance(account));
     }
 
     /*
      * @dev Get number of epochs passed
-     * @return Value between 0 and 8 of lockup epochs already passed
+     * @return Value of lockup epochs already passed
      */
     function epochsPassed() public view returns (uint256) {
         // return 0 if timestamp is lower than start time
-        if (block.timestamp < LOCK_START) {
+        if (block.timestamp <= LOCK_START) {
             return 0;
         }
 
-        // how long it has been since the beginning of lockup period
+        // how long it has been since the beginning of lockup period - we prevent substraction underflow
         uint256 timePassed = block.timestamp.sub(LOCK_START);
 
-        // 1st epoch is FIRST_EPOCH_DELAY longer; we check to prevent subtraction underflow
-        if (timePassed < FIRST_EPOCH_DELAY) {
-            return 0;
-        }
-
-        // subtract the FIRST_EPOCH_DELAY, so that we can count all epochs as lasting EPOCH_DURATION
-        uint256 totalEpochsPassed = timePassed.sub(FIRST_EPOCH_DELAY).div(EPOCH_DURATION);
+        // calculate the number of epochs (days) that has passed
+        uint256 totalEpochsPassed = timePassed.div(EPOCH_DURATION);
 
         // epochs don't count over TOTAL_EPOCHS_INVESTORS
         if (totalEpochsPassed > TOTAL_EPOCHS_INVESTORS) {
@@ -243,6 +256,7 @@ contract TimeLockedToken is VoteToken {
 
     /* ============ Internal Only Function ============ */
 
+
     /**
      * @dev Transfer function which includes unlocked tokens
      * Locked tokens can always be transfered back to the returns address
@@ -270,9 +284,9 @@ contract TimeLockedToken is VoteToken {
     
 
     /**
-     * @notice Get the number of tokens held by the `account`
+     * @notice Get the number of unlocked tokens held by the `account`
      * @param account The address of the account to get the balance of
-     * @return The number of tokens held
+     * @return The number of unlocked tokens held
      */
 
     function _balanceOf(address account) internal override view returns (uint256) {
