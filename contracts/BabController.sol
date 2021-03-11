@@ -45,30 +45,30 @@ contract BabController is Ownable {
     event CommunityRemoved(address indexed _community);
 
     event ControllerIntegrationAdded(
-        address indexed _integration,
-        string _integrationName
+        address _integration,
+        string indexed _integrationName
     );
     event ControllerIntegrationRemoved(
-        address indexed _integration,
-        string _integrationName
+        address _integration,
+        string indexed _integrationName
     );
     event ControllerIntegrationEdited(
         address _newIntegration,
-        string _integrationName
+        string indexed _integrationName
     );
 
     event ReserveAssetAdded(address indexed _reserveAsset);
     event ReserveAssetRemoved(address indexed _reserveAsset);
-    event TreasuryChanged(address _newTreasury);
 
     event LiquidityMinimumEdited(uint256 _minRiskyPairLiquidityEth);
 
     event ModuleAdded(address indexed _module);
     event ModuleRemoved(address indexed _module);
 
-    event PriceOracleChanged(address indexed _resource);
-    event ReservePoolChanged(address indexed _reservePool);
-    event CommunityValuerChanged(address indexed _resource);
+    event PriceOracleChanged(address indexed _priceOracle, address _oldPriceOracle);
+    event ReservePoolChanged(address indexed _reservePool, address _oldReservePool);
+    event TreasuryChanged(address _newTreasury, address _oldTreasury);
+    event CommunityValuerChanged(address indexed _communityValuer, address _oldCommunityValuer);
 
     /* ============ Modifiers ============ */
 
@@ -286,9 +286,10 @@ contract BabController is Ownable {
 
         require(_priceOracle != address(0), "Price oracle must exist");
 
+        address oldPriceOracle = priceOracle;
         priceOracle = _priceOracle;
 
-        emit PriceOracleChanged(_priceOracle);
+        emit PriceOracleChanged(_priceOracle, oldPriceOracle);
     }
 
     /**
@@ -301,9 +302,10 @@ contract BabController is Ownable {
 
         require(_reservePool != address(0), "Reserve pool must exist");
 
+        address oldReservePool = reservePool;
         reservePool = _reservePool;
 
-        emit ReservePoolChanged(_reservePool);
+        emit ReservePoolChanged(_reservePool, oldReservePool);
     }
 
     /**
@@ -316,9 +318,10 @@ contract BabController is Ownable {
 
         require(_communityValuer != address(0), "Community Valuer must exist");
 
+        address oldCommunityValuer = communityValuer;
         communityValuer = _communityValuer;
 
-        emit CommunityValuerChanged(_communityValuer);
+        emit CommunityValuerChanged(_communityValuer, oldCommunityValuer);
     }
 
     /**
@@ -329,9 +332,10 @@ contract BabController is Ownable {
     function editTreasury(address _newTreasury) external onlyOwner {
         require(_newTreasury != address(0), "Address must not be 0");
 
+        address oldTreasury = treasury;
         treasury = _newTreasury;
 
-        emit TreasuryChanged(_newTreasury);
+        emit TreasuryChanged(_newTreasury, oldTreasury);
     }
 
     /**

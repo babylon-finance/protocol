@@ -142,7 +142,7 @@ abstract contract BaseIntegration {
      * @param  _quantity       The number of tokens to transfer
      */
     function transferFrom(ERC20 _token, address _from, address _to, uint256 _quantity) internal {
-        ERC20(_token).transferFrom(_from, _to, _quantity);
+        require(ERC20(_token).transferFrom(_from, _to, _quantity), "Integration transfer failed");
     }
 
     /**
@@ -169,12 +169,13 @@ abstract contract BaseIntegration {
       Normalize all the amounts of all tokens so all can be called with 10^18.
       e.g Call functions like borrow, supply with parseEther
     */
-    function normalizeDecimals(address asset, uint256 amount) internal view returns (uint256)  {
+    function normalizeAmountWithDecimals(address _asset, uint256 _amount) internal view returns (uint256)  {
       // USDC and USDT have only 6 decimals
-      uint256 newAmount = amount;
-      uint8 decimalsAsset = ERC20(asset).decimals();
+      uint256 newAmount = _amount;
+      // TODO: try/catch
+      uint8 decimalsAsset = ERC20(_asset).decimals();
       if (decimalsAsset < 18) {
-        newAmount = amount.div(10 ** (18 - decimalsAsset));
+        newAmount = _amount.div(10 ** (18 - decimalsAsset));
       }
       return newAmount;
     }

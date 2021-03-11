@@ -112,7 +112,7 @@ abstract contract BorrowIntegration is BaseIntegration, ReentrancyGuard {
    */
   function depositCollateral(address asset, uint256 amount) nonReentrant onlyCommunity external {
     address assetToDeposit = _getCollateralAsset(asset, BORROW_OPERATION_DEPOSIT);
-    amount = normalizeDecimals(asset, amount);
+    amount = normalizeAmountWithDecimals(asset, amount);
 
     DebtInfo memory debtInfo = _createDebtInfo(asset, amount, BORROW_OPERATION_DEPOSIT);
 
@@ -176,7 +176,7 @@ abstract contract BorrowIntegration is BaseIntegration, ReentrancyGuard {
    */
   function removeCollateral(address asset, uint256 amount) nonReentrant onlyCommunity external {
     address assetToDeposit = _getCollateralAsset(asset, BORROW_OPERATION_REMOVAL);
-    amount = normalizeDecimals(asset, amount);
+    amount = normalizeAmountWithDecimals(asset, amount);
 
     DebtInfo memory debtInfo = _createDebtInfo(asset, amount, BORROW_OPERATION_REMOVAL);
 
@@ -229,7 +229,7 @@ abstract contract BorrowIntegration is BaseIntegration, ReentrancyGuard {
    * @param amount The amount to borrow
    */
   function borrow(address asset, uint256 amount) nonReentrant onlyCommunity external {
-    amount = normalizeDecimals(asset, amount);
+    amount = normalizeAmountWithDecimals(asset, amount);
 
     DebtInfo memory debtInfo = _createDebtInfo(asset, amount, BORROW_OPERATION_BORROW);
 
@@ -283,7 +283,7 @@ abstract contract BorrowIntegration is BaseIntegration, ReentrancyGuard {
    * @param amount The amount to repay
    */
   function repay(address asset, uint256 amount) nonReentrant onlyCommunity external {
-    amount = normalizeDecimals(asset, amount);
+    amount = normalizeAmountWithDecimals(asset, amount);
 
     DebtInfo memory debtInfo = _createDebtInfo(asset, amount, BORROW_OPERATION_REPAY);
 
