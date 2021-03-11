@@ -77,7 +77,7 @@ contract CommunityValuer {
      * @param _community            Community instance to get valuation
      * @param _quoteAsset      Address of token to quote valuation in
      *
-     * @return                 SetToken valuation in terms of quote asset in precise units 1e18
+     * @return                 Token valuation in terms of quote asset in precise units 1e18
      */
     function calculateCommunityValuation(ICommunity _community, address _quoteAsset)
         external

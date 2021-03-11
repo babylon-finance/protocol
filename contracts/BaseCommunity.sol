@@ -271,7 +271,6 @@ abstract contract BaseCommunity is ERC20 {
         emit IntegrationRemoved(_integration);
     }
 
-
     function invokeApprove(address _spender, address _asset, uint256 _quantity) external onlyIntegration {
       ERC20(_asset).approve(_spender, 0);
       ERC20(_asset).approve(_spender, _quantity);

@@ -31,6 +31,7 @@ import { IWETH } from "./interfaces/external/weth/IWETH.sol";
 import { ICommunityIdeas } from "./interfaces/ICommunityIdeas.sol";
 import { IBabController } from "./interfaces/IBabController.sol";
 import { ICommunityValuer } from "./interfaces/ICommunityValuer.sol";
+import { IReservePool } from "./interfaces/IReservePool.sol";
 import { IPriceOracle } from "./interfaces/IPriceOracle.sol";
 import { BaseCommunity } from "./BaseCommunity.sol";
 
@@ -113,8 +114,8 @@ contract RollingCommunity is BaseCommunity, ReentrancyGuard {
 
     mapping(address => Contributor) public contributors;
     uint256 public totalContributors;
-    uint256 public totalCommunitiesDeposited;
-    uint256 public totalCommunities;
+    uint256 public totalFundsDeposited;
+    uint256 public totalFunds;
     // Min contribution in the community
     uint256 public minContribution = initialBuyRate; //wei
     uint256 public minCommunityTokenSupply;
@@ -156,8 +157,8 @@ contract RollingCommunity is BaseCommunity, ReentrancyGuard {
     {
         minContribution = _minContribution;
         totalContributors = 0;
-        totalCommunitiesDeposited = 0;
-        totalCommunities = 0;
+        totalFundsDeposited = 0;
+        totalFunds = 0;
     }
 
     /* ============ External Functions ============ */
@@ -169,7 +170,7 @@ contract RollingCommunity is BaseCommunity, ReentrancyGuard {
      * @param _maxDepositLimit                     Max deposit limit
      * @param _minCommunityTokenSupply             Min community token supply
      * @param _communityIdeas                      Address of the instance with the investment ideas
-     * @param _minLiquidityAsset                   Number thar represents min amount of liquidity denominated in ETH
+     * @param _minLiquidityAsset                   Number that represents min amount of liquidity denominated in ETH
      * @param _depositHardlock                     Number that represents the time deposits are locked for an user after he deposits
      */
     function initialize(
@@ -242,7 +243,7 @@ contract RollingCommunity is BaseCommunity, ReentrancyGuard {
         );
         // if deposit limit is 0, then there is no deposit limit
         if(maxDepositLimit > 0) {
-          require(totalCommunitiesDeposited.add(msg.value) <= maxDepositLimit, "Max Deposit Limit");
+          require(totalFundsDeposited.add(msg.value) <= maxDepositLimit, "Max Deposit Limit");
         }
         require(msg.value == _reserveAssetQuantity, "ETH does not match");
         // Always wrap to WETH
@@ -266,8 +267,7 @@ contract RollingCommunity is BaseCommunity, ReentrancyGuard {
     }
 
     /**
-     * Withdrawals the Community's positions and sends the components of the given
-     * quantity to the caller. This function only handles Default Positions (positionState = 0).
+     * Withdraws the ETH relative to the token participation in the community and sends it back to the sender.
      *
      * @param _communityTokenQuantity             Quantity of the community token to withdrawal
      * @param _minReserveReceiveQuantity     Min quantity of reserve asset to receive
@@ -305,7 +305,7 @@ contract RollingCommunity is BaseCommunity, ReentrancyGuard {
             withdrawalInfo.netFlowQuantity,
             block.timestamp
         );
-        totalCommunities = totalCommunities.sub(withdrawalInfo.netFlowQuantity).sub(withdrawalInfo.protocolFees);
+        totalFunds = totalFunds.sub(withdrawalInfo.netFlowQuantity).sub(withdrawalInfo.protocolFees);
         // Check that the rdemption is possible
         require(canWithdrawEthAmount(withdrawalInfo.netFlowQuantity), "Not enough liquidity in the fund");
         if (address(this).balance >= withdrawalInfo.netFlowQuantity) {
@@ -321,6 +321,55 @@ contract RollingCommunity is BaseCommunity, ReentrancyGuard {
         _handleRedemptionFees(reserveAsset, withdrawalInfo);
 
         _handleWithdrawalStateUpdates(reserveAsset, _to, withdrawalInfo);
+    }
+
+    /**
+     * Sender is selling his tokens to the reserve pool at a discount.
+     * Reserve pool will receive the tokens.
+     *
+     * @param _communityTokenQuantity        Quantity of the community token to withdrawal
+     * @param _minReserveReceiveQuantity     Min quantity of reserve asset to receive
+     * @param _to                            Address to send component assets to
+     */
+    function withdrawToReservePool(
+      uint256 _communityTokenQuantity,
+      uint256 _minReserveReceiveQuantity,
+      address payable _to
+    ) external nonReentrant onlyContributor onlyActive {
+      require(
+          _communityTokenQuantity <= balanceOf(msg.sender),
+          "Withdrawal amount <= to deposited amount"
+      );
+      // Flashloan protection
+      require(block.timestamp.sub(contributors[msg.sender].timestamp) >= depositHardlock, "Cannot withdraw. Hardlock");
+
+      IReservePool reservePool = IReservePool(IBabController(controller).getReservePool());
+      require(reservePool.isReservePoolAllowedToBuy(address(this), _communityTokenQuantity), "Reserve Pool not active");
+
+      ActionInfo memory withdrawalInfo =
+          _createRedemptionInfo(reserveAsset, _communityTokenQuantity);
+
+      _validateReserveAsset(reserveAsset, withdrawalInfo.netFlowQuantity);
+      // If normal redemption is available, don't use the reserve pool
+      require(!canWithdrawEthAmount(withdrawalInfo.netFlowQuantity), "Not enough liquidity in the fund");
+      _validateRedemptionInfo(
+          _minReserveReceiveQuantity,
+          _communityTokenQuantity,
+          withdrawalInfo
+      );
+
+      withdrawalInfo.netFlowQuantity = reservePool.sellTokensToLiquidityPool(address(this), _communityTokenQuantity);
+
+      emit WithdrawalLog(
+          msg.sender,
+          withdrawalInfo.netFlowQuantity,
+          block.timestamp
+      );
+      totalFunds = totalFunds.sub(withdrawalInfo.netFlowQuantity).sub(withdrawalInfo.protocolFees);
+
+      _handleRedemptionFees(reserveAsset, withdrawalInfo);
+
+      _handleWithdrawalStateUpdates(reserveAsset, _to, withdrawalInfo);
     }
 
     // if limit == 0 then there is no deposit limit
@@ -377,6 +426,18 @@ contract RollingCommunity is BaseCommunity, ReentrancyGuard {
           IPriceOracle(oracle).updateAdapters(reserveAsset, positions[i]);
         }
       }
+    }
+
+    /**
+     * Burns seller community tokens and mints them to the reserve pool
+     *  @param _contributor           Contributor that is selling the tokens
+     *  @param _quantity              Amount of tokens being sold to the reserve pool
+     */
+    function burnAssetsFromSenderAndMintToReserve(address _contributor, uint256 _quantity) external {
+      address reservePool = IBabController(controller).getReservePool();
+      require(msg.sender == reservePool, "Only reserve pool can call this");
+      _burn(msg.sender, _quantity);
+      _mint(reservePool, _quantity);
     }
 
     /* ============ External Getter Functions ============ */
@@ -808,8 +869,8 @@ contract RollingCommunity is BaseCommunity, ReentrancyGuard {
       }
       contributor.timestamp = block.timestamp;
 
-      totalCommunities = totalCommunities.add(amount);
-      totalCommunitiesDeposited = totalCommunitiesDeposited.add(amount);
+      totalFunds = totalFunds.add(amount);
+      totalFundsDeposited = totalFundsDeposited.add(amount);
       contributor.totalDeposit = contributor.totalDeposit.add(amount);
       contributor.tokensReceived = contributor.tokensReceived.add(
           tokensReceived
