@@ -37,13 +37,12 @@
   },
   "scripts": {
     "clean": "rm -rf cache/* && rm -rf artifacts/* && rm -rf /tmp/hardhat/contracts/*",
-    "prettier": "prettier --write 'contracts/**/*.sol'",
+    "prettier": "prettier --write 'contracts/**/*.sol' 'test/**/*.js'",
+    "prettier:check": "prettier --check 'contracts/**/*.sol' 'test/**/*.js'",
     "compile": "hardhat compile",
-
     "publish": "hardhat run scripts/publish.js",
     "deploy": "hardhat run scripts/deploy.js --network localhost && hardhat run scripts/publish.js",
     "deploy-mainnet": "hardhat run scripts/deploy.js --network mainnet && hardhat run scripts/publish.js",
-
     "watch": "node scripts/watch.js",
     "chain": "hardhat node",
     "accounts": "hardhat accounts",
@@ -51,7 +50,6 @@
     "generate": "hardhat generate",
     "balance": "hardhat balance",
     "send": "hardhat send",
-    
     "test": "hardhat test --network hardhat",
     "gas-report": "env REPORT_GAS=1 yarn test"
   }
