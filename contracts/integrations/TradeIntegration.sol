@@ -21,6 +21,7 @@ pragma solidity 0.7.4;
 import "hardhat/console.sol";
 import { SafeCast } from "@openzeppelin/contracts/utils/SafeCast.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import { IInvestmentIdea } from "../interfaces/IInvestmentIdea.sol";
 import { ICommunity } from "../interfaces/ICommunity.sol";
 import { ReentrancyGuard } from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import '@uniswap/v2-core/contracts/interfaces/IUniswapV2Pair.sol';
@@ -42,6 +43,7 @@ abstract contract TradeIntegration is BaseIntegration, ReentrancyGuard {
 
     struct TradeInfo {
       ICommunity community;                           // Community
+      IInvestmentIdea idea;                                // Idea
       string exchangeName;                            // Which exchange to use
       address sendToken;                              // Address of token being sold
       address receiveToken;                           // Address of token being bought
@@ -57,8 +59,9 @@ abstract contract TradeIntegration is BaseIntegration, ReentrancyGuard {
 
     event ComponentExchanged(
       ICommunity indexed _community,
+      IInvestmentIdea indexed _idea,
       address indexed _sendToken,
-      address indexed _receiveToken,
+      address _receiveToken,
       string _exchangeName,
       uint256 _totalSendAmount,
       uint256 _totalReceiveAmount,
@@ -100,7 +103,7 @@ abstract contract TradeIntegration is BaseIntegration, ReentrancyGuard {
     )
       external
       nonReentrant
-      onlyCommunity
+      onlyIdea
     {
       TradeInfo memory tradeInfo = _createTradeInfo(
         name,
@@ -113,14 +116,13 @@ abstract contract TradeIntegration is BaseIntegration, ReentrancyGuard {
       _executeTrade(tradeInfo, _data);
       uint256 exchangedQuantity = _validatePostTrade(tradeInfo);
       uint256 protocolFee = _accrueProtocolFee(tradeInfo, exchangedQuantity);
-
       (
         uint256 netSendAmount,
         uint256 netReceiveAmount
       ) = _updateCommunityPositions(tradeInfo, exchangedQuantity);
-
       emit ComponentExchanged(
         tradeInfo.community,
+        tradeInfo.idea,
         _sendToken,
         _receiveToken,
         tradeInfo.exchangeName,
@@ -170,7 +172,8 @@ abstract contract TradeIntegration is BaseIntegration, ReentrancyGuard {
     {
       TradeInfo memory tradeInfo;
 
-      tradeInfo.community = ICommunity(msg.sender);
+      tradeInfo.idea = IInvestmentIdea(msg.sender);
+      tradeInfo.community = ICommunity(tradeInfo.idea.community());
 
       tradeInfo.exchangeName = _exchangeName;
 
@@ -198,11 +201,11 @@ abstract contract TradeIntegration is BaseIntegration, ReentrancyGuard {
     function _validatePreTradeData(TradeInfo memory _tradeInfo, uint256 _sendQuantity) internal view {
       require(_tradeInfo.totalSendQuantity > 0, "Token to sell must be nonzero");
       address pair = UniswapV2Library.pairFor(IBabController(controller).getUniswapFactory(), _tradeInfo.sendToken, _tradeInfo.receiveToken);
-      uint256 minLiquidity = ICommunity(msg.sender).minLiquidityAsset();
+      uint256 minLiquidity = _tradeInfo.community.minLiquidityAsset();
       // Check that there is enough liquidity
       (uint256 liquidity0, uint256 liquidity1, uint256 timestamp) = IUniswapV2Pair(pair).getReserves();
       require((IUniswapV2Pair(pair).token0() == weth && liquidity0 >= minLiquidity) ||
-              (IUniswapV2Pair(pair).token1() == weth && liquidity1 >= minLiquidity) && block.timestamp.sub(timestamp) <= 300, "Not enough liquidity");
+              (IUniswapV2Pair(pair).token1() == weth && liquidity1 >= minLiquidity), "Not enough liquidity");
       require(IERC20(_tradeInfo.sendToken).balanceOf(msg.sender) >= _sendQuantity, "Community needs to have enough liquid tokens");
     }
 
@@ -219,7 +222,7 @@ abstract contract TradeIntegration is BaseIntegration, ReentrancyGuard {
       internal
     {
       // Get spender address from exchange adapter and invoke approve for exact amount on sendToken
-      _tradeInfo.community.invokeApprove(
+      _tradeInfo.idea.invokeApprove(
         _getSpender(),
         _tradeInfo.sendToken,
         _tradeInfo.totalSendQuantity
@@ -236,7 +239,7 @@ abstract contract TradeIntegration is BaseIntegration, ReentrancyGuard {
           _tradeInfo.totalMinReceiveQuantity,
           _data
       );
-      _tradeInfo.community.invokeFromIntegration(targetExchange, callValue, methodData);
+      _tradeInfo.idea.invokeFromIntegration(targetExchange, callValue, methodData);
     }
 
     /**
@@ -267,9 +270,8 @@ abstract contract TradeIntegration is BaseIntegration, ReentrancyGuard {
     function _updateCommunityPositions(TradeInfo memory _tradeInfo, uint256 exchangedQuantity) internal returns (uint256, uint256) {
       uint256 newAmountSendTokens = _tradeInfo.preTradeSendTokenBalance.sub(_tradeInfo.totalSendQuantity);
       uint256 newAmountReceiveTokens = _tradeInfo.preTradeReceiveTokenBalance.add(exchangedQuantity);
-      _updateInvestmentIdeaPosition(address(_tradeInfo.community), _tradeInfo.sendToken, int256(-_tradeInfo.totalSendQuantity), 0);
-      _updateInvestmentIdeaPosition(address(_tradeInfo.community), _tradeInfo.receiveToken, exchangedQuantity.toInt256(), 0);
-
+      _updateInvestmentIdeaPosition(address(_tradeInfo.idea), _tradeInfo.sendToken, int256(-_tradeInfo.totalSendQuantity), 0);
+      _updateInvestmentIdeaPosition(address(_tradeInfo.idea), _tradeInfo.receiveToken, exchangedQuantity.toInt256(), 0);
       return (newAmountSendTokens, newAmountReceiveTokens);
     }
 

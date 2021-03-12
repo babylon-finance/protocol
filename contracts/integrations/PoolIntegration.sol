@@ -23,6 +23,7 @@ import { SafeMath } from "@openzeppelin/contracts/math/SafeMath.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { SafeCast } from "@openzeppelin/contracts/utils/SafeCast.sol";
 import { ICommunity } from "../interfaces/ICommunity.sol";
+import { IInvestmentIdea } from "../interfaces/IInvestmentIdea.sol";
 import { ReentrancyGuard } from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import { IBabController } from "../interfaces/IBabController.sol";
 import { BaseIntegration } from "./BaseIntegration.sol";
@@ -41,6 +42,7 @@ abstract contract PoolIntegration is BaseIntegration, ReentrancyGuard {
 
     struct PoolInfo {
       ICommunity community;                                     // Community address
+      IInvestmentIdea idea;                                     // Idea address
       address pool;                                   // Pool address
       uint256 totalSupply;                            // Total Supply of the pool
       uint256 poolTokensInTransaction;                // Pool tokens affected by this transaction
@@ -52,11 +54,15 @@ abstract contract PoolIntegration is BaseIntegration, ReentrancyGuard {
     /* ============ Events ============ */
 
     event PoolEntered(
+      address indexed _idea,
+      address indexed _community,
       address _pool,
       uint256 _poolTokensOut
     );
 
     event PoolExited(
+      address indexed _idea,
+      address indexed _community,
       address _pool,
       uint256 _poolTokensIn,
       uint256 _protocolFee
@@ -93,7 +99,7 @@ abstract contract PoolIntegration is BaseIntegration, ReentrancyGuard {
     )
       external
       nonReentrant
-      onlyCommunity
+      onlyIdea
     {
       PoolInfo memory poolInfo = _createPoolInfo(
         _poolAddress,
@@ -104,7 +110,7 @@ abstract contract PoolIntegration is BaseIntegration, ReentrancyGuard {
       _validatePreJoinPoolData(poolInfo);
       // Approve spending of the tokens
       for (uint i = 0; i < _tokensIn.length; i++) {
-        poolInfo.community.invokeApprove(
+        poolInfo.idea.invokeApprove(
           _getSpender(_poolAddress),
           _tokensIn[i],
           _maxAmountsIn[i]
@@ -121,11 +127,13 @@ abstract contract PoolIntegration is BaseIntegration, ReentrancyGuard {
           _tokensIn,
           _maxAmountsIn
       );
-      poolInfo.community.invokeFromIntegration(targetPool, callValue, methodData);
+      poolInfo.idea.invokeFromIntegration(targetPool, callValue, methodData);
       _validatePostJoinPoolData(poolInfo);
       _updateCommunityPositions(poolInfo, _tokensIn, true);
 
       emit PoolEntered(
+        address(poolInfo.idea),
+        address(poolInfo.community),
         poolInfo.pool,
         _poolTokensOut
       );
@@ -147,7 +155,7 @@ abstract contract PoolIntegration is BaseIntegration, ReentrancyGuard {
     )
       external
       nonReentrant
-      onlyCommunity
+      onlyIdea
     {
       PoolInfo memory poolInfo = _createPoolInfo(
         _poolAddress,
@@ -157,7 +165,7 @@ abstract contract PoolIntegration is BaseIntegration, ReentrancyGuard {
       );
       _validatePreExitPoolData(poolInfo);
       // Approve spending of the pool token
-      poolInfo.community.invokeApprove(
+      poolInfo.idea.invokeApprove(
         _getSpender(_poolAddress),
         _poolAddress,
         _poolTokensIn
@@ -173,13 +181,15 @@ abstract contract PoolIntegration is BaseIntegration, ReentrancyGuard {
           _tokensOut,
           _minAmountsOut
       );
-      poolInfo.community.invokeFromIntegration(targetPool, callValue, methodData);
+      poolInfo.idea.invokeFromIntegration(targetPool, callValue, methodData);
       _validatePostExitPoolData(poolInfo);
       uint256 protocolFee = _accrueProtocolFee(poolInfo, _tokensOut[0], _minAmountsOut[0]);
 
       _updateCommunityPositions(poolInfo, _tokensOut, false);
 
       emit PoolExited(
+        address(poolInfo.idea),
+        address(poolInfo.community),
         poolInfo.pool,
         _poolTokensIn,
         protocolFee
@@ -235,7 +245,8 @@ abstract contract PoolIntegration is BaseIntegration, ReentrancyGuard {
       returns (PoolInfo memory)
     {
       PoolInfo memory poolInfo;
-      poolInfo.community = ICommunity(msg.sender);
+      poolInfo.idea = IInvestmentIdea(msg.sender);
+      poolInfo.community = ICommunity(poolInfo.idea.community());
       poolInfo.pool = _pool;
       poolInfo.totalSupply = IERC20(_pool).totalSupply();
       poolInfo.poolTokensInCommunity = IERC20(_pool).balanceOf(address(msg.sender));
@@ -272,7 +283,7 @@ abstract contract PoolIntegration is BaseIntegration, ReentrancyGuard {
      * @param _poolInfo               Struct containing pool information used in internal functions
      */
     function _validatePostJoinPoolData(PoolInfo memory _poolInfo) internal view {
-      require((IERC20(_poolInfo.pool).balanceOf(address(_poolInfo.community)) > _poolInfo.poolTokensInCommunity), "The community did not receive the pool tokens");
+      require((IERC20(_poolInfo.pool).balanceOf(address(_poolInfo.idea)) > _poolInfo.poolTokensInCommunity), "The community did not receive the pool tokens");
     }
 
     /**
@@ -281,7 +292,7 @@ abstract contract PoolIntegration is BaseIntegration, ReentrancyGuard {
      * @param _poolInfo               Struct containing pool information used in internal functions
      */
     function _validatePostExitPoolData(PoolInfo memory _poolInfo) internal view {
-      require(IERC20(_poolInfo.pool).balanceOf(address(_poolInfo.community)) == _poolInfo.poolTokensInCommunity - _poolInfo.poolTokensInTransaction, "The community did not return the pool tokens");
+      require(IERC20(_poolInfo.pool).balanceOf(address(_poolInfo.idea)) == _poolInfo.poolTokensInCommunity - _poolInfo.poolTokensInTransaction, "The community did not return the pool tokens");
       // TODO: validate individual tokens received
     }
 
@@ -294,10 +305,10 @@ abstract contract PoolIntegration is BaseIntegration, ReentrancyGuard {
       // balance pool individual component
       // TODO: Grab actual min tokens on added and withdrawed on exit
       for (uint i = 0; i < _poolTokens.length; i++) {
-        _updateInvestmentIdeaPosition(address(_poolInfo.community), _poolTokens[i], isDeposit ? int256(-_poolInfo.limitPoolTokenQuantities[i]) : _poolInfo.limitPoolTokenQuantities[i].toInt256(), isDeposit ? 2 : 0);
+        _updateInvestmentIdeaPosition(address(_poolInfo.idea), _poolTokens[i], isDeposit ? int256(-_poolInfo.limitPoolTokenQuantities[i]) : _poolInfo.limitPoolTokenQuantities[i].toInt256(), isDeposit ? 2 : 0);
       }
       // balance pool token
-      _updateInvestmentIdeaPosition(address(_poolInfo.community), _poolInfo.pool, isDeposit ? _poolInfo.poolTokensInTransaction.toInt256() : int256(-_poolInfo.poolTokensInTransaction), 0);
+      _updateInvestmentIdeaPosition(address(_poolInfo.idea), _poolInfo.pool, isDeposit ? _poolInfo.poolTokensInTransaction.toInt256() : int256(-_poolInfo.poolTokensInTransaction), 0);
     }
 
     /**

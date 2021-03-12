@@ -24,6 +24,7 @@ import { IBabController } from "../interfaces/IBabController.sol";
 import { IIntegration } from "../interfaces/IIntegration.sol";
 import { IWETH } from "../interfaces/external/weth/IWETH.sol";
 import { IInvestmentIdea } from "../interfaces/IInvestmentIdea.sol";
+import { ICommunity } from "../interfaces/ICommunity.sol";
 import { SafeMath } from "@openzeppelin/contracts/math/SafeMath.sol";
 import { SignedSafeMath } from "@openzeppelin/contracts/math/SignedSafeMath.sol";
 import { SafeCast } from "@openzeppelin/contracts/utils/SafeCast.sol";
@@ -51,9 +52,12 @@ abstract contract BaseIntegration {
       _;
     }
 
-    modifier onlyCommunity() {
-      require(IBabController(controller).isSystemContract(msg.sender), "Only a community can call this");
-      require(initializedByCommunity[msg.sender], "integration has already been initialized");
+    modifier onlyIdea() {
+      IInvestmentIdea idea = IInvestmentIdea(msg.sender);
+      address community = idea.community();
+      require(IBabController(controller).isSystemContract(community), "Only a community can call this");
+      require(initializedByCommunity[community], "integration has already been initialized");
+      require(ICommunity(community).isInvestmentIdea(msg.sender), "Sender myst be an investment idea from the community");
       _;
     }
 
@@ -129,7 +133,7 @@ abstract contract BaseIntegration {
       uint256,
       uint256
     ) {
-      uint256 _newTotal = IInvestmentIdea(_investmentIdea).getPositionBalance(_component).add(int256(_deltaOperation)).toUint256();
+      uint256 _newTotal = IInvestmentIdea(_investmentIdea).getPositionBalance(_component).add(_deltaOperation).toUint256();
       return IInvestmentIdea(_investmentIdea).calculateAndEditPosition(_component, _newTotal, _deltaOperation, _subpositionStatus);
     }
 

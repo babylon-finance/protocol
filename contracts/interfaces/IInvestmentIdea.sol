@@ -36,9 +36,14 @@ interface IInvestmentIdea {
     address[] memory _enterTokensNeeded,
     uint256[] memory _enterTokensAmounts
   ) external;
+  function invokeFromIntegration(
+    address _target,
+    uint256 _value,
+    bytes calldata _data
+  ) external returns (bytes memory);
+  function invokeApprove(address _spender, address _asset, uint256 _quantity) external;
 
   function isIdeaActive() external pure returns (bool);
-
   function isPosition(address _component) external view returns (bool);
   function getPositionCount() external view returns (uint256);
   function getPositions() external view returns (address[] memory);
@@ -86,5 +91,6 @@ interface IInvestmentIdea {
   function exitPayload() external pure returns(bytes memory);
   function finalized() external pure returns(bool);
   function active() external pure returns(bool);
+  function community() external pure returns(address);
 
 }

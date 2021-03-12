@@ -40,6 +40,7 @@ contract IdeaFactory {
   /**
    * Creates a new investment idea using minimal proxies
    *
+   * @param _ideator                       Address of the ideator
    * @param _community                     Address of the community
    * @param _controller                    Address of the controller
    * @param _maxCapitalRequested           Max Capital requested denominated in the reserve asset (0 to be unlimited)
@@ -49,6 +50,7 @@ contract IdeaFactory {
    * @param _minRebalanceCapital           Min capital that is worth it to deposit into this idea
    */
   function createInvestmentIdea(
+    address _ideator,
     address _community,
     address _controller,
     uint256 _maxCapitalRequested,
@@ -59,6 +61,7 @@ contract IdeaFactory {
   ) external returns (address) {
       address clone = Clones.clone(investmentIdea);
       InvestmentIdea(clone).initialize(
+        _ideator,
         _community,
         _controller,
         _maxCapitalRequested,

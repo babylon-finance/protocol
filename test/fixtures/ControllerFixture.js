@@ -201,7 +201,6 @@ async function deployFolioFixture() {
       await communityI.connect(signer1).initializeIntegration(integration);
     });
   });
-
   // Initial deposit
   await community.connect(signer1).start(
     ethers.utils.parseEther("10"),
@@ -220,12 +219,15 @@ async function deployFolioFixture() {
   );
 
   await community.connect(signer1).addInvestmentIdea(
-    ethers.utils.parseEther("1"),
+    ethers.utils.parseEther("10"),
     ethers.utils.parseEther("0.001"),
     ONE_DAY_IN_SECONDS * 30,
     ethers.utils.parseEther("0.05"), // 5%
-    ethers.utils.parseEther("0.1")
+    ethers.utils.parseEther("1")
   );
+
+  const ideas = await community.getIdeas();
+
 
   return {
     babController,
@@ -245,7 +247,7 @@ async function deployFolioFixture() {
       two: community2,
       three: community3
     },
-    ideas: await community.getIdeas(),
+    ideas: [await ethers.getContractAt("InvestmentIdea", ideas[0])],
     communityValuer,
     priceOracle,
     owner,

@@ -28,6 +28,7 @@ import { IIntegration } from "./IIntegration.sol";
 interface IIdeaFactory {
 
   function createInvestmentIdea(
+    address _ideator,
     address _community,
     address _controller,
     uint256 _maxCapitalRequested,

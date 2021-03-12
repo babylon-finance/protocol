@@ -59,6 +59,7 @@ interface ICommunity is IERC20 {
     function ideaVotersProfitPercentage() external pure returns (uint256);
     function communityCreatorProfitPercentage() external pure returns (uint256);
     function getIdeas() external view returns (address[] memory);
+    function isInvestmentIdea(address _idea) external view returns (bool);
 
     function startRedemptionWindow(uint256 _amount) external;
     function allocateCapitalToInvestment(uint256 _capital) external;

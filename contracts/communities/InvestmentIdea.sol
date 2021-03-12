@@ -106,6 +106,11 @@ contract InvestmentIdea is ReentrancyGuard, Initializable {
   }
 
   /* ============ Struct ============ */
+  // Subposition constants
+  uint8 constant LIQUID_STATUS = 0;
+  uint8 constant LOCKED_AS_COLLATERAL_STATUS = 1;
+  uint8 constant IN_INVESTMENT_STATUS = 2;
+  uint8 constant BORROWED_STATUS = 3;
 
   struct SubPosition {
     address integration;
@@ -179,8 +184,9 @@ contract InvestmentIdea is ReentrancyGuard, Initializable {
   /**
    * Before a community is initialized, the community ideas need to be created and passed to community initialization.
    *
-   * @param _community                        Address of the community
-   * @param _controller                       Address of the controller
+   * @param _ideator                       Address of the ideator
+   * @param _community                     Address of the community
+   * @param _controller                    Address of the controller
    * @param _maxCapitalRequested           Max Capital requested denominated in the reserve asset (0 to be unlimited)
    * @param _stake                         Stake with community participations absolute amounts 1e18
    * @param _investmentDuration            Investment duration in seconds
@@ -188,6 +194,7 @@ contract InvestmentIdea is ReentrancyGuard, Initializable {
    * @param _minRebalanceCapital           Min capital that is worth it to deposit into this idea
    */
   function initialize(
+    address _ideator,
     address _community,
     address _controller,
     uint256 _maxCapitalRequested,
@@ -200,13 +207,17 @@ contract InvestmentIdea is ReentrancyGuard, Initializable {
     controller = IBabController(_controller);
     community = ICommunity(_community);
     require(controller.isSystemContract(_community), "Must be a valid community");
+    require(
+        ERC20(address(community)).balanceOf(_ideator) > 0,
+        "Only someone with the community token can withdraw"
+    );
     require(_stake > community.totalSupply().div(100), "Stake amount must be at least 1% of the community");
     require(_investmentDuration >= community.minIdeaDuration() && _investmentDuration <= community.maxIdeaDuration(), "Investment duration must be in range");
     require(_stake > 0, "Stake amount must be greater than 0");
     require(_minRebalanceCapital > 0, "Min Capital requested amount must be greater than 0");
     require(_maxCapitalRequested >= _minRebalanceCapital, "The max amount of capital must be greater than one chunk");
     // Check than enter and exit data call integrations
-    ideator = msg.sender;
+    ideator = _ideator;
     enteredAt = block.timestamp;
     stake = _stake;
     duration = _investmentDuration;
@@ -239,7 +250,7 @@ contract InvestmentIdea is ReentrancyGuard, Initializable {
   ) public onlyIdeator {
     require(!dataSet, "Data is set already");
     require(community.isValidIntegration(_integration), "Integration must be valid");
-    require(enterTokensNeeded.length == _enterTokensAmounts.length, "Tokens and amounts must match");
+    require(_enterTokensNeeded.length == _enterTokensAmounts.length, "Tokens and amounts must match");
     integration = _integration;
     enterPayload = _enterData;
     exitPayload = _exitData;
@@ -255,7 +266,7 @@ contract InvestmentIdea is ReentrancyGuard, Initializable {
    * TODO: Meta Transaction
    */
   function curateIdea(int256 _amount) external onlyContributor onlyActiveCommunity {
-    require(_amount.toUint256() < community.balanceOf(msg.sender), "Participant does not have enough balance");
+    require(_amount.toUint256() <= community.balanceOf(msg.sender), "Participant does not have enough balance");
     if (votes[msg.sender] == 0) {
       totalVoters++;
       voters = [msg.sender];
@@ -288,6 +299,7 @@ contract InvestmentIdea is ReentrancyGuard, Initializable {
     require(block.timestamp.sub(enteredCooldownAt) >= community.ideaCooldownPeriod(), "Idea has not completed the cooldown period");
     // Execute enter trade
     community.allocateCapitalToInvestment(_capital);
+    calculateAndEditPosition(community.getReserveAsset(), _capital, _capital.toInt256(), LIQUID_STATUS);
     capitalAllocated = capitalAllocated.add(_capital);
     bytes memory _data = enterPayload;
     _callIntegration(integration, 0, _data, enterTokensNeeded, enterTokensAmounts);
@@ -355,7 +367,7 @@ contract InvestmentIdea is ReentrancyGuard, Initializable {
     int256 _deltaBalance,
     uint8 _subpositionStatus
   )
-    external
+    public
     returns (
         uint256,
         uint256,

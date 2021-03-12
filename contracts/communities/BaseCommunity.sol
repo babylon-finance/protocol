@@ -121,7 +121,7 @@ abstract contract BaseCommunity is ERC20Upgradeable {
      * Throws if the sender is not an investment idea of this community
      */
     modifier onlyInvestmentIdea() {
-      require(isInvestmentIdea[msg.sender], "Only the community ideas contract can call this");
+      require(ideaMapping[msg.sender], "Only the community ideas contract can call this");
       _;
     }
 
@@ -129,7 +129,7 @@ abstract contract BaseCommunity is ERC20Upgradeable {
      * Throws if the sender is not an investment idea or the protocol
      */
     modifier onlyInvestmentIdeaOrOwner() {
-      require(isInvestmentIdea[msg.sender] || msg.sender == controller, "Only the community ideas or owner can call this");
+      require(ideaMapping[msg.sender] || msg.sender == controller, "Only the community ideas or owner can call this");
       _;
     }
 
@@ -204,7 +204,7 @@ abstract contract BaseCommunity is ERC20Upgradeable {
     uint256 public ideaCooldownPeriod;            // Window for the idea to cooldown after approval before receiving capital
 
     address[] ideas;
-    mapping(address => bool) public isInvestmentIdea;
+    mapping(address => bool) public ideaMapping;
 
     uint256 public ideaCreatorProfitPercentage = 13e16; // (0.01% = 1e14, 1% = 1e16)
     uint256 public ideaVotersProfitPercentage = 5e16; // (0.01% = 1e14, 1% = 1e16)
@@ -380,6 +380,7 @@ abstract contract BaseCommunity is ERC20Upgradeable {
       require(ideas.length < MAX_TOTAL_IDEAS, "Reached the limit of ideas");
       IIdeaFactory ideaFactory = IIdeaFactory(IBabController(controller).getIdeaFactory());
       address idea = ideaFactory.createInvestmentIdea(
+        msg.sender,
         address(this),
         controller,
         _maxCapitalRequested,
@@ -388,7 +389,7 @@ abstract contract BaseCommunity is ERC20Upgradeable {
         _expectedReturn,
         _minRebalanceCapital
       );
-      isInvestmentIdea[idea] = true;
+      ideaMapping[idea] = true;
       totalStake = totalStake.add(_stake);
       ideas.push(idea);
     }
@@ -433,6 +434,10 @@ abstract contract BaseCommunity is ERC20Upgradeable {
 
     function getIdeas() public view returns (address[] memory) {
       return ideas;
+    }
+
+    function isInvestmentIdea(address _idea) external view returns (bool) {
+      return ideaMapping[_idea];
     }
 
     function getReserveBalance() external view returns (uint256) {
