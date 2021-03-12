@@ -41,7 +41,7 @@ import { BaseCommunity } from "./BaseCommunity.sol";
  *
  * RollingCommunity holds the logic to deposit, withdraw and track contributions and fees.
  */
-contract RollingCommunity is BaseCommunity, ReentrancyGuard {
+contract RollingCommunity is ReentrancyGuard, BaseCommunity {
   using SafeCast for uint256;
   using SafeCast for int256;
   using SafeMath for uint256;
@@ -91,7 +91,7 @@ contract RollingCommunity is BaseCommunity, ReentrancyGuard {
         address _creator,
         string memory _name,
         string memory _symbol
-    ) public override
+    ) public
     {
       super.initialize(
           _integrations,

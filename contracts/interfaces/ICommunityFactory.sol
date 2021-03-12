@@ -34,5 +34,5 @@ interface ICommunityFactory {
     address _creator,
     string memory _name,
     string memory _symbol
-  ) external;
+  ) external returns(address);
 }

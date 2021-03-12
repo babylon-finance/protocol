@@ -20,7 +20,6 @@ pragma solidity 0.7.4;
 // import "hardhat/console.sol";
 import { Address } from "@openzeppelin/contracts/utils/Address.sol";
 import { ERC20Upgradeable } from "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
-import { Initializable } from "@openzeppelin/contracts/proxy/Initializable.sol";
 import { SafeMath } from "@openzeppelin/contracts/math/SafeMath.sol";
 import { SafeCast } from "@openzeppelin/contracts/utils/SafeCast.sol";
 import { SignedSafeMath } from "@openzeppelin/contracts/math/SignedSafeMath.sol";
@@ -40,7 +39,7 @@ import { PreciseUnitMath } from "../lib/PreciseUnitMath.sol";
  *
  * Abstract Class that holds common community-related state and functions
  */
-abstract contract BaseCommunity is Initializable, ERC20Upgradeable {
+abstract contract BaseCommunity is ERC20Upgradeable {
     using SafeCast for uint256;
     using SafeCast for int256;
     using SafeMath for uint256;
@@ -163,7 +162,7 @@ abstract contract BaseCommunity is Initializable, ERC20Upgradeable {
     uint256 constant public MAX_DEPOSITS_FUND_V1 = 1e21; // Max deposit per community is 1000 eth for v1
     uint256 constant public MAX_TOTAL_IDEAS = 20; // Max deposit per community is 1000 eth for v1
     // Wrapped ETH address
-    address public immutable weth;
+    address public weth;
 
     // Reserve Asset of the community
     address public reserveAsset;
