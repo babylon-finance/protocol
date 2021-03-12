@@ -24,10 +24,12 @@ import { SafeMath } from "@openzeppelin/contracts/math/SafeMath.sol";
 import { VoteToken } from "../governance/VoteToken.sol";
 import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
 
+
+
 /**
  * @title TimeLockedToken
  * @notice Time Locked ERC20 Token
- * @author Babylon Finance after modifying a version of TimeLockedToken provided by Harold Hyatt
+ * @author Babylon Finance
  * @dev Contract which gives the ability to time-lock tokens
  *
  * By overriding the balanceOf() and transfer()
@@ -124,8 +126,7 @@ abstract contract TimeLockedToken is VoteToken {
 
         require(address(newTimeLockRegistry) != address(0), "cannot be zero address");
         require(address(newTimeLockRegistry) != address(this), "cannot be this contract");
-        require(address(newTimeLockRegistry) != address(timeLockRegistry), "must be new TimeLockRegistry");
-        
+        require(address(newTimeLockRegistry) != address(timeLockRegistry), "must be new TimeLockRegistry");        
         emit newTimeLockRegistration(address(timeLockRegistry), address(newTimeLockRegistry));
 
         timeLockRegistry = newTimeLockRegistry;
@@ -178,7 +179,7 @@ abstract contract TimeLockedToken is VoteToken {
     }
     
     /**
-     * @dev Cancel distribution registration from the TimeRegistry itself
+     * @dev Cancel distribution registration
      * @param lockedAccount that should have its still locked distribution removed due to non-completion of its cliff or vesting period
      */
     function cancelTokens(address lockedAccount) public onlyTimeLockRegistry returns (uint256) {
@@ -259,6 +260,40 @@ abstract contract TimeLockedToken is VoteToken {
 
     function getTimeLockRegistry() public view returns (address) {
         return address(timeLockRegistry);
+    }
+    
+    /**
+    * @dev Atomically increases the allowance granted to `spender` by the caller.
+    *
+    * This is an override with respect to the fulfillment of vesting conditions along the way
+    * However an user can increase allowance many times, it will never be able to transfer locked tokens during vesting period
+    */
+    function increaseAllowance(address spender, uint256 addedValue) public override returns (bool) {
+        require(unlockedBalance(msg.sender) >= addedValue, "Not enough unlocked tokens");
+        require(spender != address(0), "Spender cannot be zero address");
+        require(spender != msg.sender, "Spender cannot be the msg.sender");
+        approve(spender, allowance(msg.sender, spender).add(addedValue));
+        return true;
+    }
+
+    /**
+     * @dev Atomically decreases the allowance granted to `spender` by the caller.
+    * This is an override with respect to the fulfillment of vesting conditions along the way
+    * An user cannot decrease the allowance to the Time Lock Registry who is in charge of vesting conditions
+    */
+    function decreaseAllowance(address spender, uint256 subtractedValue) public override returns (bool) {
+        require(spender != address(0), "Spender cannot be zero address");
+        require(allowance(msg.sender,spender) >= subtractedValue, "Underflow condition");
+        require(spender != msg.sender, "Spender cannot be the msg.sender");
+
+        
+        // There is no option to decreaseAllowance in case of vested tokens
+        if (spender == address(timeLockRegistry)){
+            return false;
+        } else {
+        approve(spender, allowance(msg.sender, spender).sub(subtractedValue));
+        return true;
+        }
     }
 
     /* ============ Internal Only Function ============ */
