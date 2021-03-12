@@ -61,6 +61,12 @@ describe("BABLToken contract", function () {
       const deployedc2 = await Registry.deployed();
       expect(!!deployedc2).to.equal(true);
     });
+
+    it("should successfully assign the TimeLockRegistry address to BABLToken contract", async function() {
+      // Set up TimeLockRegistry
+      await Token.connect(owner).setTimeLockRegistry(Registry.address);
+      //expect(Registry.address).to.equal(Token.getTimeLockRegistry());   
+    });
   
 
     // If the callback function is async, Mocha will `await` it.
@@ -74,14 +80,14 @@ describe("BABLToken contract", function () {
     });
 
      // If the callback function is async, Mocha will `await` it.
-     it("Should set the right owner to Registry", async function () {
+    it("Should set the right owner to Registry", async function () {
       // Expect receives a value, and wraps it in an Assertion object. These
       // objects have a lot of utility methods to assert values.
 
       // This test expects the owner variable stored in the contract to be equal
       // to our Signer's owner.
       expect(await Registry.owner()).to.equal(owner.address);
-    });
+    });    
 
     it("Should assign the total supply of tokens to the owner", async function () {
       const ownerBalance = await Token.balanceOf(owner.address);

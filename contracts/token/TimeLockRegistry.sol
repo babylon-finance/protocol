@@ -174,7 +174,7 @@ contract TimeLockRegistry is Ownable {
         // register lockup in TimeLockedToken
         
         // it will also increase the allowance to the owner to retire locked tokens in case of non-compliance vesting conditions take places
-        token.increaseAllowance(token.owner(), amount); // TODO-CHECK RESTRICTIONS TO DECREASE ALLOWANCE TO OWNER BY MSG.SENDER
+        token.approve(token.owner(), amount); // TODO-CHECK RESTRICTIONS TO DECREASE ALLOWANCE TO OWNER BY MSG.SENDER
         
         // this will transfer funds from this contract and lock them for sender
         token.registerLockup(msg.sender, amount, tokenVested[msg.sender].team, tokenVested[msg.sender].cliff, tokenVested[msg.sender].vestingBegin, tokenVested[msg.sender].vestingEnd, tokenVested[msg.sender].lastClaim);

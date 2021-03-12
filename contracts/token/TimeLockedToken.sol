@@ -49,7 +49,7 @@ abstract contract TimeLockedToken is VoteToken {
     event newLockout(address account, uint256 tokenslocked, bool isTeamOrAdvisor, uint256 startingVesting, uint256 endingVesting);
     
     /// @notice An event that emitted when a new Time Lock is registered
-    event newTimeLockRegistration(address account);
+    event newTimeLockRegistration(address previousAddress, address newAddress);
     
     /// @notice An event that emitted when a cancellation of Lock tokens is registered 
     event Cancel(address account, uint256 amount);
@@ -117,10 +117,10 @@ abstract contract TimeLockedToken is VoteToken {
     function setTimeLockRegistry(address newTimeLockRegistry) external onlyOwner returns(bool){
         require(newTimeLockRegistry != address(0), "cannot be zero address");
         require(newTimeLockRegistry != address(this), "cannot be this contract");
-        require(newTimeLockRegistry != timeLockRegistry, "must be new TimeLockRegistry");
-        timeLockRegistry = newTimeLockRegistry;
+        require(newTimeLockRegistry != timeLockRegistry, "must be a new TimeLockRegistry");
         
-        emit newTimeLockRegistration(newTimeLockRegistry);
+        emit newTimeLockRegistration(timeLockRegistry, newTimeLockRegistry);
+        timeLockRegistry = newTimeLockRegistry;
         
         return true;
     }
@@ -253,7 +253,7 @@ abstract contract TimeLockedToken is VoteToken {
 
         require(balanceOf(_from) >= _value, "TimeLockedToken:: _transfer: insufficient balance");
 
-        // check if enough unlocked balance to transfer
+        // check if enough unlocked balance to transfer, transfers are only allowed if enough unlocked balance
         require(unlockedBalance(_from) >= _value, "TimeLockedToken:: _transfer: attempting to transfer locked funds");
         super._transfer(_from, _to, _value);
     }
