@@ -18,13 +18,16 @@
     "hardhat-contract-sizer": "^2.0.2",
     "hardhat-deploy-ethers": "^0.3.0-beta.7",
     "hardhat-docgen": "^1.0.3",
-    "hardhat-gas-reporter": "^1.0.4"
+    "hardhat-gas-reporter": "^1.0.4",
+    "prettier": "^2.2.1",
+    "prettier-plugin-solidity": "^1.0.0-beta.6",
+    "solidity-coverage": "^0.7.16"
   },
   "dependencies": {
     "@openzeppelin/contracts": "^3.3.0",
     "@uniswap/lib": "^4.0.1-alpha",
     "@uniswap/v2-core": "^1.0.1",
-    "@uniswap/v2-periphery": "^1.1.0-beta.0",
+    "@uniswap/v2-periphery": "https://github.com/hoytech/uniswap-v2-periphery.git#e8c36e5ad5178341cd67f8b0fdb983073428fb6b",
     "chai": "^4.2.0",
     "chalk": "^4.1.0",
     "ethereum-waffle": "^3.0.2",
@@ -34,18 +37,22 @@
     "superagent": "^6.1.0"
   },
   "scripts": {
-    "chain": "hardhat node",
-    "test": "hardhat test --network hardhat",
+    "clean": "rm -rf cache/* && rm -rf artifacts/* && rm -rf /tmp/hardhat/contracts/*",
+    "prettier": "prettier --write 'contracts/**/*.sol' 'test/**/*.js'",
+    "prettier:check": "prettier --check 'contracts/**/*.sol' 'test/**/*.js'",
     "compile": "hardhat compile",
-    "clean" : "rm -rf cache/* && rm -rf artifacts/* && rm -rf /tmp/hardhat/contracts/*",
-    "deploy": "hardhat run scripts/deploy.js --network localhost && hardhat run scripts/publish.js",
     "publish": "hardhat run scripts/publish.js",
+    "deploy": "hardhat run scripts/deploy.js --network localhost && hardhat run scripts/publish.js",
     "deploy-mainnet": "hardhat run scripts/deploy.js --network mainnet && hardhat run scripts/publish.js",
     "watch": "node scripts/watch.js",
+    "chain": "hardhat node",
     "accounts": "hardhat accounts",
     "account": "hardhat account",
     "generate": "hardhat generate",
     "balance": "hardhat balance",
-    "send": "hardhat send"
+    "send": "hardhat send",
+    "test": "hardhat test --network hardhat",
+    "gas-report": "env REPORT_GAS=1 yarn test",
+    "coverage": "hardhat coverage"
   }
 }

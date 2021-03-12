@@ -1,12 +1,13 @@
-require("@nomiclabs/hardhat-ethers");
-require("@nomiclabs/hardhat-waffle");
-require("hardhat-deploy-ethers");
-require("hardhat-contract-sizer");
-require("hardhat-docgen");
-require("hardhat-gas-reporter");
+require('@nomiclabs/hardhat-ethers');
+require('@nomiclabs/hardhat-waffle');
+require('hardhat-deploy-ethers');
+require('hardhat-contract-sizer');
+require('hardhat-docgen');
+require('hardhat-gas-reporter');
+require('solidity-coverage');
 
-const { utils } = require("ethers");
-const fs = require("fs");
+const { utils } = require('ethers');
+const fs = require('fs');
 
 const { isAddress, getAddress, formatUnits, parseUnits } = utils;
 
@@ -22,30 +23,28 @@ const { isAddress, getAddress, formatUnits, parseUnits } = utils;
 //
 // Select the network you want to deploy to here:
 //
-const defaultNetwork = "hardhat";
+const defaultNetwork = 'hardhat';
 
 function mnemonic() {
   try {
-    return fs
-      .readFileSync("./mnemonic.txt")
-      .toString()
-      .trim();
+    return fs.readFileSync('./mnemonic.txt').toString().trim();
   } catch (e) {
-    if (defaultNetwork !== "localhost") {
+    if (defaultNetwork !== 'localhost') {
       console.log(
-        "☢️ WARNING: No mnemonic file created for a deploy account. Try `yarn run generate` and then `yarn run account`."
+        '☢️ WARNING: No mnemonic file created for a deploy account. Try `yarn run generate` and then `yarn run account`.',
       );
     }
   }
-  return "";
+  return '';
 }
 
 module.exports = {
   defaultNetwork,
 
   gasReporter: {
-    currency: "USD",
-    coinmarketcap: "f903b99d-e117-4e55-a7a8-ff5dd8ad5bed"
+    currency: 'USD',
+    coinmarketcap: 'f903b99d-e117-4e55-a7a8-ff5dd8ad5bed',
+    enabled: !!process.env.REPORT_GAS,
   },
 
   // don't forget to set your provider like:
@@ -59,50 +58,49 @@ module.exports = {
       chainId: 1,
       allowUnlimitedContractSize: true,
       forking: {
-        url:
-          "https://eth-mainnet.alchemyapi.io/v2/sncj01nDcsAQr_QWyhYWNkg3qzW2o9kt",
-        blockNumber: 11953004
-      }
+        url: 'https://eth-mainnet.alchemyapi.io/v2/sncj01nDcsAQr_QWyhYWNkg3qzW2o9kt',
+        blockNumber: 11953004,
+      },
     },
     rinkeby: {
-      url: "https://rinkeby.infura.io/v3/c954231486fa42ccb6d132b406483d14", // <---- YOUR INFURA ID! (or it won't work)
+      url: 'https://rinkeby.infura.io/v3/c954231486fa42ccb6d132b406483d14', // <---- YOUR INFURA ID! (or it won't work)
       accounts: {
-        mnemonic: mnemonic()
-      }
+        mnemonic: mnemonic(),
+      },
     },
     mainnet: {
-      url: "https://mainnet.infura.io/v3/c954231486fa42ccb6d132b406483d14", // <---- YOUR INFURA ID! (or it won't work)
+      url: 'https://mainnet.infura.io/v3/c954231486fa42ccb6d132b406483d14', // <---- YOUR INFURA ID! (or it won't work)
       accounts: {
-        mnemonic: mnemonic()
+        mnemonic: mnemonic(),
       },
-      gasPrice: 56000000000
+      gasPrice: 56000000000,
     },
     xdai: {
-      url: "https://dai.poa.network",
+      url: 'https://dai.poa.network',
       gasPrice: 1000000000,
       accounts: {
-        mnemonic: mnemonic()
-      }
-    }
+        mnemonic: mnemonic(),
+      },
+    },
   },
   solidity: {
     compilers: [
       {
-        version: "0.7.4",
+        version: '0.7.4',
         settings: {
           optimizer: {
             enabled: true,
-            runs: 200
-          }
-        }
+            runs: 200,
+          },
+        },
       },
-    ]
+    ],
   },
   paths: {
-    sources: "./contracts",
-    integrations: "./contracts/integrations",
-    artifacts: "./artifacts"
-  }
+    sources: './contracts',
+    integrations: './contracts/integrations',
+    artifacts: './artifacts',
+  },
 };
 
 const DEBUG = false;
@@ -113,88 +111,65 @@ function debug(text) {
   }
 }
 
-task(
-  "generate",
-  "Create a mnemonic for builder deploys",
-  async (_, { ethers }) => {
-    const bip39 = require("bip39");
-    const hdkey = require("ethereumjs-wallet/hdkey");
-    const mnemonic = bip39.generateMnemonic();
-    if (DEBUG) console.log("mnemonic", mnemonic);
-    const seed = await bip39.mnemonicToSeed(mnemonic);
-    if (DEBUG) console.log("seed", seed);
-    const hdwallet = hdkey.fromMasterSeed(seed);
-    const wallet_hdpath = "m/44'/60'/0'/0/";
-    const account_index = 0;
-    const fullPath = wallet_hdpath + account_index;
-    if (DEBUG) console.log("fullPath", fullPath);
-    const wallet = hdwallet.derivePath(fullPath).getWallet();
-    const privateKey = "0x" + wallet._privKey.toString("hex");
-    if (DEBUG) console.log("privateKey", privateKey);
-    const EthUtil = require("ethereumjs-util");
-    const address =
-      "0x" + EthUtil.privateToAddress(wallet._privKey).toString("hex");
-    console.log(
-      "🔐 Account Generated as " +
-        address +
-        ".txt and saved as mnemonic.txt"
-    );
-    console.log(
-      "💬 Use 'yarn run account' to get more information about the deployment account."
-    );
+task('generate', 'Create a mnemonic for builder deploys', async (_, { ethers }) => {
+  const bip39 = require('bip39');
+  const hdkey = require('ethereumjs-wallet/hdkey');
+  const mnemonic = bip39.generateMnemonic();
+  if (DEBUG) console.log('mnemonic', mnemonic);
+  const seed = await bip39.mnemonicToSeed(mnemonic);
+  if (DEBUG) console.log('seed', seed);
+  const hdwallet = hdkey.fromMasterSeed(seed);
+  const wallet_hdpath = "m/44'/60'/0'/0/";
+  const account_index = 0;
+  const fullPath = wallet_hdpath + account_index;
+  if (DEBUG) console.log('fullPath', fullPath);
+  const wallet = hdwallet.derivePath(fullPath).getWallet();
+  const privateKey = '0x' + wallet._privKey.toString('hex');
+  if (DEBUG) console.log('privateKey', privateKey);
+  const EthUtil = require('ethereumjs-util');
+  const address = '0x' + EthUtil.privateToAddress(wallet._privKey).toString('hex');
+  console.log('🔐 Account Generated as ' + address + '.txt and saved as mnemonic.txt');
+  console.log("💬 Use 'yarn run account' to get more information about the deployment account.");
 
-    fs.writeFileSync("./mnemonic.txt", mnemonic.toString());
-  }
-);
+  fs.writeFileSync('./mnemonic.txt', mnemonic.toString());
+});
 
-task(
-  "account",
-  "Get balance informations for the deployment account.",
-  async (_, { ethers }) => {
-    const hdkey = require("ethereumjs-wallet/hdkey");
-    const bip39 = require("bip39");
-    const mnemonic = fs
-      .readFileSync("./mnemonic.txt")
-      .toString()
-      .trim();
-    if (DEBUG) console.log("mnemonic", mnemonic);
-    const seed = await bip39.mnemonicToSeed(mnemonic);
-    if (DEBUG) console.log("seed", seed);
-    const hdwallet = hdkey.fromMasterSeed(seed);
-    const wallet_hdpath = "m/44'/60'/0'/0/";
-    const account_index = 0;
-    const fullPath = wallet_hdpath + account_index;
-    if (DEBUG) console.log("fullPath", fullPath);
-    const wallet = hdwallet.derivePath(fullPath).getWallet();
-    const privateKey = "0x" + wallet._privKey.toString("hex");
-    if (DEBUG) console.log("privateKey", privateKey);
-    const EthUtil = require("ethereumjs-util");
-    const address =
-      "0x" + EthUtil.privateToAddress(wallet._privKey).toString("hex");
+task('account', 'Get balance informations for the deployment account.', async (_, { ethers }) => {
+  const hdkey = require('ethereumjs-wallet/hdkey');
+  const bip39 = require('bip39');
+  const mnemonic = fs.readFileSync('./mnemonic.txt').toString().trim();
+  if (DEBUG) console.log('mnemonic', mnemonic);
+  const seed = await bip39.mnemonicToSeed(mnemonic);
+  if (DEBUG) console.log('seed', seed);
+  const hdwallet = hdkey.fromMasterSeed(seed);
+  const wallet_hdpath = "m/44'/60'/0'/0/";
+  const account_index = 0;
+  const fullPath = wallet_hdpath + account_index;
+  if (DEBUG) console.log('fullPath', fullPath);
+  const wallet = hdwallet.derivePath(fullPath).getWallet();
+  const privateKey = '0x' + wallet._privKey.toString('hex');
+  if (DEBUG) console.log('privateKey', privateKey);
+  const EthUtil = require('ethereumjs-util');
+  const address = '0x' + EthUtil.privateToAddress(wallet._privKey).toString('hex');
 
-    const qrcode = require("qrcode-terminal");
-    qrcode.generate(address);
-    console.log("‍📬 Deployer Account is " + address);
-    for (const n in config.networks) {
-      // console.log(config.networks[n],n)
-      try {
-        const provider = new ethers.providers.JsonRpcProvider(
-          config.networks[n].url
-        );
-        const balance = await provider.getBalance(address);
-        console.log(" -- " + n + " --  -- -- 📡 ");
-        console.log("   balance: " + ethers.utils.formatEther(balance));
-        console.log(
-          "   nonce: " + (await provider.getTransactionCount(address))
-        );
-      } catch (e) {
-        if (DEBUG) {
-          console.log(e);
-        }
+  const qrcode = require('qrcode-terminal');
+  qrcode.generate(address);
+  console.log('‍📬 Deployer Account is ' + address);
+  for (const n in config.networks) {
+    // console.log(config.networks[n],n)
+    try {
+      const provider = new ethers.providers.JsonRpcProvider(config.networks[n].url);
+      const balance = await provider.getBalance(address);
+      console.log(' -- ' + n + ' --  -- -- 📡 ');
+      console.log('   balance: ' + ethers.utils.formatEther(balance));
+      console.log('   nonce: ' + (await provider.getTransactionCount(address)));
+    } catch (e) {
+      if (DEBUG) {
+        console.log(e);
       }
     }
   }
-);
+});
 
 async function addr(ethers, addr) {
   if (isAddress(addr)) {
@@ -207,23 +182,21 @@ async function addr(ethers, addr) {
   throw `Could not normalize address: ${addr}`;
 }
 
-task("accounts", "Prints the list of accounts", async (_, { ethers }) => {
+task('accounts', 'Prints the list of accounts', async (_, { ethers }) => {
   const accounts = await ethers.provider.listAccounts();
-  accounts.forEach(account => console.log(account));
+  accounts.forEach((account) => console.log(account));
 });
 
-task("blockNumber", "Prints the block number", async (_, { ethers }) => {
+task('blockNumber', 'Prints the block number', async (_, { ethers }) => {
   const blockNumber = await ethers.provider.getBlockNumber();
   console.log(blockNumber);
 });
 
-task("balance", "Prints an account's balance")
-  .addPositionalParam("account", "The account's address")
+task('balance', "Prints an account's balance")
+  .addPositionalParam('account', "The account's address")
   .setAction(async (taskArgs, { ethers }) => {
-    const balance = await ethers.provider.getBalance(
-      await addr(ethers, taskArgs.account)
-    );
-    console.log(formatUnits(balance, "ether"), "ETH");
+    const balance = await ethers.provider.getBalance(await addr(ethers, taskArgs.account));
+    console.log(formatUnits(balance, 'ether'), 'ETH');
   });
 
 function send(signer, txparams) {
@@ -236,13 +209,13 @@ function send(signer, txparams) {
   });
 }
 
-task("send", "Send ETH")
-  .addParam("from", "From address or account index")
-  .addOptionalParam("to", "To address or account index")
-  .addOptionalParam("amount", "Amount to send in ether")
-  .addOptionalParam("data", "Data included in transaction")
-  .addOptionalParam("gasPrice", "Price you are willing to pay in gwei")
-  .addOptionalParam("gasLimit", "Limit of how much gas to spend")
+task('send', 'Send ETH')
+  .addParam('from', 'From address or account index')
+  .addOptionalParam('to', 'To address or account index')
+  .addOptionalParam('amount', 'Amount to send in ether')
+  .addOptionalParam('data', 'Data included in transaction')
+  .addOptionalParam('gasPrice', 'Price you are willing to pay in gwei')
+  .addOptionalParam('gasLimit', 'Limit of how much gas to spend')
 
   .setAction(async (taskArgs, { network, ethers }) => {
     const from = await addr(ethers, taskArgs.from);
@@ -258,24 +231,18 @@ task("send", "Send ETH")
     const txRequest = {
       from: await fromSigner.getAddress(),
       to,
-      value: parseUnits(
-        taskArgs.amount ? taskArgs.amount : "0",
-        "ether"
-      ).toHexString(),
+      value: parseUnits(taskArgs.amount ? taskArgs.amount : '0', 'ether').toHexString(),
       nonce: await fromSigner.getTransactionCount(),
-      gasPrice: parseUnits(
-        taskArgs.gasPrice ? taskArgs.gasPrice : "1.001",
-        "gwei"
-      ).toHexString(),
+      gasPrice: parseUnits(taskArgs.gasPrice ? taskArgs.gasPrice : '1.001', 'gwei').toHexString(),
       gasLimit: taskArgs.gasLimit ? taskArgs.gasLimit : 24000,
-      chainId: network.config.chainId
+      chainId: network.config.chainId,
     };
 
     if (taskArgs.data !== undefined) {
       txRequest.data = taskArgs.data;
       debug(`Adding data to payload: ${txRequest.data}`);
     }
-    debug(txRequest.gasPrice / 1000000000 + " gwei");
+    debug(txRequest.gasPrice / 1000000000 + ' gwei');
     debug(JSON.stringify(txRequest, null, 2));
 
     return send(fromSigner, txRequest);
