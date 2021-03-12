@@ -29,6 +29,13 @@ interface IInvestmentIdea {
   function executeInvestment(uint256 _capital) external;
   function finalizeInvestment() external;
   function changeInvestmentDuration(uint256 _newDuration) external;
+  function setIntegrationData(
+    address _integration,
+    bytes memory _enterData,
+    bytes memory _exitData,
+    address[] memory _enterTokensNeeded,
+    uint256[] memory _enterTokensAmounts
+  ) external;
 
   function isIdeaActive() external pure returns (bool);
 

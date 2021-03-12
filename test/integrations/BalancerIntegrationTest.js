@@ -13,6 +13,7 @@ describe("BalancerIntegrationTest", function() {
   let balancerAbi;
   let community;
   let userSigner3;
+  let idea;
 
   beforeEach(async () => {
     system = await loadFixture(deployFolioFixture);
@@ -20,6 +21,7 @@ describe("BalancerIntegrationTest", function() {
     userSigner3 = system.signer3;
     balancerAbi = balancerIntegration.interface;
     community = system.comunities.one;
+    idea = system.ideas[0];
   });
 
   describe("Deployment", function() {
@@ -84,21 +86,6 @@ describe("BalancerIntegrationTest", function() {
         ]
       );
 
-      await community.callIntegration(
-        balancerIntegration.address,
-        ethers.utils.parseEther("0"),
-        dataEnter,
-        [daiToken.address],
-        [ethers.utils.parseEther("1000")],
-        {
-          gasPrice: 0
-        }
-      );
-
-      expect(await daiWethPool.balanceOf(community.address)).to.be.eq(
-        ethers.utils.parseEther("0.001")
-      );
-
       const dataExit = balancerAbi.encodeFunctionData(
         balancerAbi.functions["exitPool(address,uint256,address[],uint256[])"],
         [
@@ -109,16 +96,26 @@ describe("BalancerIntegrationTest", function() {
         ]
       );
 
-      await community.callIntegration(
+      await idea.setIntegrationData(
         balancerIntegration.address,
-        ethers.utils.parseEther("0"),
+        dataEnter,
         dataExit,
-        [],
-        [],
+        [daiToken.address],
+        [ethers.utils.parseEther("1000")],
         {
           gasPrice: 0
         }
       );
+
+      await idea.executeInvestment(ethers.utils.parseEther("0.1"), {
+        gasPrice: 0
+      });
+
+      expect(await daiWethPool.balanceOf(community.address)).to.be.eq(
+        ethers.utils.parseEther("0.001")
+      );
+
+      await idea.finalizeInvestment({ gasPrice: 0 });
 
       expect(await daiWethPool.balanceOf(community.address)).to.equal(0);
       expect(await daiToken.balanceOf(community.address)).to.be.gt(

@@ -231,9 +231,9 @@ contract InvestmentIdea is ReentrancyGuard, Initializable {
     * @param _enterTokensAmounts            Token amounts of these assets we need
     */
   function setIntegrationData(
+    address _integration,
     bytes memory _enterData,
     bytes memory _exitData,
-    address _integration,
     address[] memory _enterTokensNeeded,
     uint256[] memory _enterTokensAmounts
   ) public onlyIdeator {
@@ -373,28 +373,6 @@ contract InvestmentIdea is ReentrancyGuard, Initializable {
     _editPositionBalance(_component, _newBalance.toInt256(), msg.sender, _deltaBalance, _subpositionStatus);
 
     return (_newBalance, positionBalance, _newBalance);
-  }
-
-  /* ============ Integration hooks ============ */
-
-  /**
-   * Function that allows the manager to call an integration
-   *
-   * @param _integration            Address of the integration to call
-   * @param _value                  Quantity of Ether to provide the call (typically 0)
-   * @param _data                   Encoded function selector and arguments
-   * @param _tokensNeeded           Tokens that we need to acquire more of before executing the investment
-   * @param _tokenAmountsNeeded     Tokens amounts that we need. Same index.
-   * @return _returnValue           Bytes encoded return value
-   */
-  function callIntegration(
-    address _integration,
-    uint256 _value,
-    bytes memory _data,
-    address[] memory _tokensNeeded,
-    uint256[] memory _tokenAmountsNeeded
-  ) public onlyController returns (bytes memory _returnValue) {
-    return _callIntegration(_integration, _value, _data, _tokensNeeded, _tokenAmountsNeeded);
   }
 
   /* ============ External Getter Functions ============ */
