@@ -42,3 +42,21 @@ jobs:
 
     - name: Run tests
       run: yarn test
+
+  prettier:
+    name: Prettier
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Use node@12
+      uses: actions/setup-node@v1
+      with: { node-version: '12.x' }
+
+    - name: Install dependencies
+      run: yarn --frozen-lockfile
+
+    - name: Run prettier
+      run: yarn prettier:check
