@@ -20,7 +20,8 @@
     "hardhat-docgen": "^1.0.3",
     "hardhat-gas-reporter": "^1.0.4",
     "prettier": "^2.2.1",
-    "prettier-plugin-solidity": "^1.0.0-beta.6"
+    "prettier-plugin-solidity": "^1.0.0-beta.6",
+    "solidity-coverage": "^0.7.16"
   },
   "dependencies": {
     "@openzeppelin/contracts": "^3.3.0",
@@ -51,6 +52,7 @@
     "balance": "hardhat balance",
     "send": "hardhat send",
     "test": "hardhat test --network hardhat",
-    "gas-report": "env REPORT_GAS=1 yarn test"
+    "gas-report": "env REPORT_GAS=1 yarn test",
+    "coverage": "hardhat coverage"
   }
 }

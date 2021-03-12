@@ -3,8 +3,7 @@
 **Community-led Asset Management. Powered by DeFi.**
 
 ![CI](https://github.com/babylon-finance/protocol/actions/workflows/ci.yml/badge.svg)
-
-Will CI work?
+<!-- [![Coverage Status](https://codecov.io/gh/babylon-finance/protocol/graph/badge.svg)](https://codecov.io/gh/babylon-finance/protocol) -->
 
 ## Quick Start
 
@@ -19,15 +18,6 @@ Install dependencies
 ```bash
 yarn
 ```
-
-Fix Uniswap Solidity version issue by replacing:
-
-```diff
--pragma solidity =0.6.6;
-+pragma solidity 0.7.4;
-```
-
-at `@uniswap/v2-periphery/contracts/libraries/SafeMath.sol` file.
 
 Run
 
@@ -44,6 +34,22 @@ yarn generate
 ```
 
 to generate mnemonic.txt file.
+
+## Gas Report
+
+Run
+
+```bash
+yarn gas-report
+```
+
+## Coverage
+
+Run
+
+```bash
+yarn coverage
+```
 
 ## Test
 
