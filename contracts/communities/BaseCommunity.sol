@@ -470,6 +470,27 @@ abstract contract BaseCommunity is ERC20Upgradeable {
     /* ============ Internal Functions ============ */
 
     /**
+     * Updates the TWAP prices for the community positions
+     *
+     */
+    function updatePositionTWAPPrices() public {
+      // Updates UniSwap TWAP
+      address oracle = IBabController(controller).getPriceOracle();
+      address[] memory ideas = getIdeas();
+      for (uint256 j = 0; j < ideas.length; j++) {
+        IInvestmentIdea idea = IInvestmentIdea(ideas[j]);
+        address[] memory components = idea.getPositions();
+        if (idea.active()) {
+          for(uint i = 0; i < components.length; i++) {
+            if (components[i] != reserveAsset) {
+              IPriceOracle(oracle).updateAdapters(reserveAsset, components[i]);
+            }
+          }
+        }
+      }
+    }
+
+    /**
      * Function that calculates the price using the oracle and executes a trade.
      * Must call the exchange to get the price and pass minReceiveQuantity accordingly.
      * @param _integrationName        Name of the integration to call

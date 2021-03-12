@@ -207,6 +207,8 @@ contract RollingCommunity is ReentrancyGuard, BaseCommunity {
           require(totalFundsDeposited.add(msg.value) <= maxDepositLimit, "Max Deposit Limit");
         }
         require(msg.value == _reserveAssetQuantity, "ETH does not match");
+        // Oracle maintenance
+        updatePositionTWAPPrices();
         // Always wrap to WETH
         IWETH(weth).deposit{value: msg.value}();
         // Check this here to avoid having relayers

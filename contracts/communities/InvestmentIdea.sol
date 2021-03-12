@@ -336,6 +336,7 @@ contract InvestmentIdea is ReentrancyGuard, Initializable {
     uint256 capitalReturned = community.getReserveBalance().sub(reserveAssetBeforeExiting);
     // Mark as finalized
     finalized = true;
+    active = false;
     exitedAt = block.timestamp;
     // Transfer rewards and update positions
     _transferIdeaRewards(capitalReturned);
