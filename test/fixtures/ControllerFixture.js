@@ -152,29 +152,32 @@ async function deployFolioFixture() {
   const integrationsAddressList = integrationsList.map(iter => iter.address);
 
   // Creates a new Community instance
-  const community = await babController.createRollingCommunity(
-    integrationsAddressList,
-    addresses.tokens.WETH,
-    addresses.users.hardhat1,
-    "Absolute ETH Return [beta]",
-    "EYFA"
-  );
+  const community = await babController
+    .connect(signer1)
+    .createRollingCommunity(
+      integrationsAddressList,
+      addresses.tokens.WETH,
+      "Absolute ETH Return [beta]",
+      "EYFA"
+    );
 
-  const community2 = await babController.createRollingCommunity(
-    integrationsAddressList,
-    addresses.tokens.WETH,
-    addresses.users.hardhat1,
-    "ETH Yield Farm [a]",
-    "EYFB"
-  );
+  const community2 = await babController
+    .connect(signer1)
+    .createRollingCommunity(
+      integrationsAddressList,
+      addresses.tokens.WETH,
+      "ETH Yield Farm [a]",
+      "EYFB"
+    );
 
-  const community3 = await babController.createRollingCommunity(
-    integrationsAddressList,
-    addresses.tokens.WETH,
-    addresses.users.hardhat1,
-    "ETH Yield Farm [b]",
-    "EYFG"
-  );
+  const community3 = await babController
+    .connect(signer1)
+    .createRollingCommunity(
+      integrationsAddressList,
+      addresses.tokens.WETH,
+      "ETH Yield Farm [b]",
+      "EYFG"
+    );
 
   const communityAddressesList = await babController.getCommunities();
   // Initialize community integrations

@@ -366,26 +366,16 @@ abstract contract BaseCommunity is ERC20Upgradeable {
      * @param _maxCapitalRequested           Max Capital requested denominated in the reserve asset (0 to be unlimited)
      * @param _stake                         Stake with community participations absolute amounts 1e18
      * @param _investmentDuration            Investment duration in seconds
-     * @param _enterData                     Operation to perform to enter the investment
-     * @param _exitData                      Operation to perform to exit the investment
-     * @param _integration                   Address of the integration
      * @param _expectedReturn                Expected return
      * @param _minRebalanceCapital           Min capital that is worth it to deposit into this idea
-     * @param _enterTokensNeeded             Tokens that we need to acquire to enter this investment
-     * @param _enterTokensAmounts            Token amounts of these assets we need
      * TODO: Meta Transaction
      */
     function addInvestmentIdea(
       uint256 _maxCapitalRequested,
       uint256 _stake,
       uint256 _investmentDuration,
-      bytes memory _enterData,
-      bytes memory _exitData,
-      address _integration,
       uint256 _expectedReturn,
-      uint256 _minRebalanceCapital,
-      address[] memory _enterTokensNeeded,
-      uint256[] memory _enterTokensAmounts
+      uint256 _minRebalanceCapital
     ) external onlyContributor onlyActive {
       require(ideas.length < MAX_TOTAL_IDEAS, "Reached the limit of ideas");
       IIdeaFactory ideaFactory = IIdeaFactory(IBabController(controller).getIdeaFactory());
@@ -395,13 +385,8 @@ abstract contract BaseCommunity is ERC20Upgradeable {
         _maxCapitalRequested,
         _stake,
         _investmentDuration,
-        _enterData,
-        _exitData,
-        _integration,
         _expectedReturn,
-        _minRebalanceCapital,
-        _enterTokensNeeded,
-        _enterTokensAmounts
+        _minRebalanceCapital
       );
       isInvestmentIdea[idea] = true;
       totalStake = totalStake.add(_stake);
@@ -514,7 +499,7 @@ abstract contract BaseCommunity is ERC20Upgradeable {
         emit IntegrationAdded(_integration);
     }
 
-    function _getPrice(address _assetOne, address _assetTwo) internal returns (uint256) {
+    function _getPrice(address _assetOne, address _assetTwo) view internal returns (uint256) {
       IPriceOracle oracle = IPriceOracle(IBabController(controller).getPriceOracle());
       return oracle.getPrice(_assetOne, _assetTwo);
     }

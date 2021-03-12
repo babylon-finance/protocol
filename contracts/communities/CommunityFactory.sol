@@ -32,7 +32,7 @@ contract CommunityFactory {
 
   address immutable rollingCommunity;
 
-  constructor() public {
+  constructor() {
     rollingCommunity = address(new RollingCommunity());
   }
 

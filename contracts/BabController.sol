@@ -154,14 +154,12 @@ contract BabController is Ownable {
      *
      * @param _integrations           List of integrations to enable. All integrations must be approved by the Controller
      * @param _weth                   Address of the WETH ERC20
-     * @param _creator                Address of the creator
      * @param _name                   Name of the Community
      * @param _symbol                 Symbol of the Community
      */
     function createRollingCommunity(
       address[] memory _integrations,
       address _weth,
-      address _creator,
       string memory _name,
       string memory _symbol
     ) external returns (address) {

@@ -92,7 +92,7 @@ contract InvestmentIdea is ReentrancyGuard, Initializable {
   /**
    * Throws if the community is not active
    */
-  modifier onlyActive() {
+  modifier onlyActiveCommunity() {
     require(community.active() == true, "Community must be active");
     _;
   }
@@ -165,6 +165,7 @@ contract InvestmentIdea is ReentrancyGuard, Initializable {
   bytes public exitPayload;                 // Calldata to execute when exiting the trade
   bool public finalized;                    // Flag that indicates whether we exited the idea
   bool public active;                       // Whether the idea has met the voting quorum
+  bool public dataSet;                      // Whether integration data is set
 
   // Votes mapping
   mapping(address => int256) public votes;
@@ -183,13 +184,8 @@ contract InvestmentIdea is ReentrancyGuard, Initializable {
    * @param _maxCapitalRequested           Max Capital requested denominated in the reserve asset (0 to be unlimited)
    * @param _stake                         Stake with community participations absolute amounts 1e18
    * @param _investmentDuration            Investment duration in seconds
-   * @param _enterData                     Operation to perform to enter the investment
-   * @param _exitData                      Operation to perform to exit the investment
-   * @param _integration                   Address of the integration
    * @param _expectedReturn                Expected return
    * @param _minRebalanceCapital           Min capital that is worth it to deposit into this idea
-   * @param _enterTokensNeeded             Tokens that we need to acquire to enter this investment
-   * @param _enterTokensAmounts            Token amounts of these assets we need
    */
   function initialize(
     address _community,
@@ -197,43 +193,60 @@ contract InvestmentIdea is ReentrancyGuard, Initializable {
     uint256 _maxCapitalRequested,
     uint256 _stake,
     uint256 _investmentDuration,
-    bytes memory _enterData,
-    bytes memory _exitData,
-    address _integration,
     uint256 _expectedReturn,
-    uint256 _minRebalanceCapital,
-    address[] memory _enterTokensNeeded,
-    uint256[] memory _enterTokensAmounts
+    uint256 _minRebalanceCapital
   ) public initializer
   {
     controller = IBabController(_controller);
     community = ICommunity(_community);
     require(controller.isSystemContract(_community), "Must be a valid community");
-    require(community.isValidIntegration(_integration), "Integration must be valid");
     require(_stake > community.totalSupply().div(100), "Stake amount must be at least 1% of the community");
     require(_investmentDuration >= community.minIdeaDuration() && _investmentDuration <= community.maxIdeaDuration(), "Investment duration must be in range");
     require(_stake > 0, "Stake amount must be greater than 0");
     require(_minRebalanceCapital > 0, "Min Capital requested amount must be greater than 0");
     require(_maxCapitalRequested >= _minRebalanceCapital, "The max amount of capital must be greater than one chunk");
     // Check than enter and exit data call integrations
-    integration = _integration;
     ideator = msg.sender;
     enteredAt = block.timestamp;
     stake = _stake;
     duration = _investmentDuration;
-    enterPayload = _enterData;
-    exitPayload = _exitData;
-    enterTokensNeeded = _enterTokensNeeded;
-    enterTokensAmounts = _enterTokensAmounts;
     expectedReturn = _expectedReturn;
     capitalAllocated = 0;
     minRebalanceCapital = _minRebalanceCapital;
     maxCapitalRequested = _maxCapitalRequested;
     totalVotes = _stake.toInt256();
     absoluteTotalVotes = _stake;
+    dataSet = false;
   }
 
   /* ============ External Functions ============ */
+
+  /**
+   * Sets integration data for the investment
+   *
+    * @param _enterData                     Operation to perform to enter the investment
+    * @param _exitData                      Operation to perform to exit the investment
+    * @param _integration                   Address of the integration
+    * @param _enterTokensNeeded             Tokens that we need to acquire to enter this investment
+    * @param _enterTokensAmounts            Token amounts of these assets we need
+    */
+  function setIntegrationData(
+    bytes memory _enterData,
+    bytes memory _exitData,
+    address _integration,
+    address[] memory _enterTokensNeeded,
+    uint256[] memory _enterTokensAmounts
+  ) public onlyIdeator {
+    require(!dataSet, "Data is set already");
+    require(community.isValidIntegration(_integration), "Integration must be valid");
+    require(enterTokensNeeded.length == _enterTokensAmounts.length, "Tokens and amounts must match");
+    integration = _integration;
+    enterPayload = _enterData;
+    exitPayload = _exitData;
+    enterTokensNeeded = _enterTokensNeeded;
+    enterTokensAmounts = _enterTokensAmounts;
+    dataSet = true;
+  }
 
   /**
    * Curates an investment idea from the contenders array for this epoch.
@@ -241,7 +254,7 @@ contract InvestmentIdea is ReentrancyGuard, Initializable {
    * @param _amount                   Amount to curate, positive to endorse, negative to downvote
    * TODO: Meta Transaction
    */
-  function curateIdea(int256 _amount) external onlyContributor onlyActive {
+  function curateIdea(int256 _amount) external onlyContributor onlyActiveCommunity {
     require(_amount.toUint256() < community.balanceOf(msg.sender), "Participant does not have enough balance");
     if (votes[msg.sender] == 0) {
       totalVoters++;
@@ -268,7 +281,7 @@ contract InvestmentIdea is ReentrancyGuard, Initializable {
    * Executes an idea that has been activated and gone through the cooldown period.
    * @param _capital                  The capital to allocate to this idea
    */
-  function executeInvestment(uint256 _capital) public onlyKeeper nonReentrant onlyActive {
+  function executeInvestment(uint256 _capital) public onlyKeeper nonReentrant onlyActiveCommunity {
     require(executedAt == 0, "Idea has already been executed");
     uint256 liquidReserveAsset = community.getReserveBalance();
     require(_capital <= liquidReserveAsset, "Not enough capital");
@@ -289,7 +302,7 @@ contract InvestmentIdea is ReentrancyGuard, Initializable {
    * If there are profits
    * Updates the reserve asset position accordingly.
    */
-  function finalizeInvestment() external onlyKeeper nonReentrant onlyActive {
+  function finalizeInvestment() external onlyKeeper nonReentrant onlyActiveCommunity {
     require(executedAt > 0, "This idea has not been executed");
     require(block.timestamp > executedAt.add(duration), "Idea can only be finalized after the minimum period has elapsed");
     require(!finalized, "This investment was already exited");
@@ -382,7 +395,7 @@ contract InvestmentIdea is ReentrancyGuard, Initializable {
     address[] memory _tokensNeeded,
     uint256[] memory _tokenAmountsNeeded
   ) public onlyController returns (bytes memory _returnValue) {
-    _callIntegration(_integration, _value, _data, _tokensNeeded, _tokenAmountsNeeded);
+    return _callIntegration(_integration, _value, _data, _tokensNeeded, _tokenAmountsNeeded);
   }
 
   /* ============ External Getter Functions ============ */

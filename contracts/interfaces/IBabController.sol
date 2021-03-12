@@ -30,7 +30,6 @@ interface IBabController {
     function createRollingCommunity(
       address[] memory _integrations,
       address _weth,
-      address _creator,
       string memory _name,
       string memory _symbol
     ) external returns (address);
