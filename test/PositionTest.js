@@ -2,9 +2,8 @@ const { expect } = require("chai");
 const { ethers, waffle } = require("hardhat");
 
 const { loadFixture } = waffle;
-const { EMPTY_BYTES, ONE_DAY_IN_SECONDS } = require("../utils/constants");
+const { ONE_DAY_IN_SECONDS } = require("../utils/constants");
 const addresses = require("../utils/addresses");
-const constants = require("../utils/constants");
 const { deployFolioFixture } = require("./fixtures/ControllerFixture");
 
 describe("Position testing", function() {
@@ -16,9 +15,7 @@ describe("Position testing", function() {
   let community1;
   let treasuryD;
   let community2;
-  let integrationList;
   let weth;
-  let usdcToken;
 
   beforeEach(async () => {
     const {
@@ -32,7 +29,6 @@ describe("Position testing", function() {
       owner
     } = await loadFixture(deployFolioFixture);
 
-    integrationList = integrations;
     controller = babController;
     treasuryD = treasury;
     ownerSigner = owner;
@@ -41,28 +37,35 @@ describe("Position testing", function() {
     userSigner3 = signer3;
     community1 = comunities.one;
     community2 = comunities.two;
-    usdcToken = await ethers.getContractAt("IERC20", addresses.tokens.USDC);
     weth = await ethers.getContractAt("IERC20", addresses.tokens.WETH);
   });
 
   describe("Initial Positions", async function() {
     it("when creating a community the positions are at 0", async function() {
       expect(await community2.totalContributors()).to.equal(0);
-      expect(await community2.totalFunds()).to.equal(ethers.utils.parseEther("0"));
+      expect(await community2.totalFunds()).to.equal(
+        ethers.utils.parseEther("0")
+      );
       const wethPosition = await community1.getReserveBalance();
       expect(wethPosition).to.be.gt(ethers.utils.parseEther("0"));
-      expect(await community2.totalSupply()).to.equal(ethers.utils.parseEther("0"));
+      expect(await community2.totalSupply()).to.equal(
+        ethers.utils.parseEther("0")
+      );
     });
 
     it("updates weth position accordingly when initializing the community", async function() {
       expect(await community1.totalContributors()).to.equal(1);
-      expect(await community1.totalFunds()).to.equal(ethers.utils.parseEther("0.1"));
+      expect(await community1.totalFunds()).to.equal(
+        ethers.utils.parseEther("0.1")
+      );
       const wethPosition = await community1.getReserveBalance();
       expect(await weth.balanceOf(community1.address)).to.equal(
         ethers.utils.parseEther("0.1")
       );
       expect(wethPosition).to.equal(ethers.utils.parseEther("0.1"));
-      expect(await community1.creator()).to.equal(await ownerSigner.getAddress());
+      expect(await community1.creator()).to.equal(
+        await ownerSigner.getAddress()
+      );
       expect(await community1.balanceOf(ownerSigner.getAddress())).to.equal(
         await community1.totalSupply()
       );
@@ -93,7 +96,9 @@ describe("Position testing", function() {
       expect(wethPosition.sub(wethPositionBefore)).to.equal(
         ethers.utils.parseEther("1")
       );
-      expect(await community1.totalFunds()).to.equal(ethers.utils.parseEther("1.1"));
+      expect(await community1.totalFunds()).to.equal(
+        ethers.utils.parseEther("1.1")
+      );
       expect(await community1.totalFundsDeposited()).to.equal(
         ethers.utils.parseEther("1.1")
       );
@@ -140,64 +145,4 @@ describe("Position testing", function() {
       );
     });
   });
-
-  describe("Interacting with Trade integrations", async function() {
-    it("updates positions accordingly after trading", async function() {
-      // await community1
-      //   .connect(userSigner3)
-      //   .deposit(ethers.utils.parseEther("1"), 1, userSigner3.getAddress(), {
-      //     value: ethers.utils.parseEther("1")
-      //   });
-      // const communityBalance = await weth.balanceOf(community1.address);
-      // const supplyBefore = await community1.totalSupply();
-      // const wethPositionBefore = await community1.getReserveBalance();
-      // const usdcPositionBefore = await community1.getPositionBalance(
-      //   usdcToken.address
-      // );
-      // expect(usdcPositionBefore).to.equal(0);
-
-      // await community1.trade(
-      //   "kyber",
-      //   addresses.tokens.WETH,
-      //   ethers.utils.parseEther("1"),
-      //   usdcToken.address,
-      //   ethers.utils.parseEther("900") / 10 ** 12,
-      //   EMPTY_BYTES,
-      //   { gasPrice: 0 }
-      // );
-      //
-      // const wethPosition = await community1.getPositionBalance(weth.address);
-      // const usdcPosition = await community1.getPositionBalance(usdcToken.address);
-      // const communityBalanceAfter = await weth.balanceOf(community1.address);
-      // const supplyAfter = await community1.totalSupply();
-      //
-      // // Communities don't change
-      // expect(await community1.totalFundsDeposited()).to.equal(
-      //   ethers.utils.parseEther("1.1")
-      // );
-      // expect(await community1.totalFunds()).to.equal(ethers.utils.parseEther("1.1"));
-      // expect(supplyAfter).to.equal(supplyBefore);
-      // expect(communityBalance.sub(ethers.utils.parseEther("1"))).to.equal(
-      //   communityBalanceAfter
-      // );
-      // // Positions do
-      // expect(wethPositionBefore.sub(wethPosition)).to.equal(
-      //   ethers.utils.parseEther("1")
-      // );
-      // expect(usdcPosition.sub(usdcPositionBefore)).to.be.gt(900 * 10 ** 6);
-      // expect(await community1.getPositionCount()).to.equal(2);
-    });
-  });
-
-  describe("Interacting with Borrowing integrations", async function() {
-  });
-
-
-
-  describe("Interacting with Pool integrations", async function() {
-  });
-
-  describe("Interacting with Passive Investment integrations", async function() {
-  });
-
 });

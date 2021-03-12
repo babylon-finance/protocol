@@ -192,9 +192,6 @@ abstract contract BaseCommunity is ERC20 {
     // Whether the community is currently active or not
     bool public active;
 
-    // CommunityIdeas
-    address public communityIdeas;
-
     // List of initialized Integrations; Integrations connect with other money legos
     address[] public integrations;
 

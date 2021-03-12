@@ -171,6 +171,9 @@ contract RollingCommunity is BaseCommunity, ReentrancyGuard {
             _minVotersQuorum,
             _minIdeaDuration,
             _maxIdeaDuration);
+
+
+        // Deposit
         IWETH(weth).deposit{value: initialDepositAmount}();
 
         _mint(creator, initialTokens);
@@ -604,16 +607,6 @@ contract RollingCommunity is BaseCommunity, ReentrancyGuard {
     }
 
     /**
-     * Transfer reserve asset from user to Community and fees from user to appropriate fee recipients
-     */
-    function _transferCollateralAndHandleFees(
-        address _reserveAsset,
-        ActionInfo memory _depositInfo
-    ) internal {
-
-    }
-
-    /**
      * Returns the fees attributed to the manager and the protocol. The fees are calculated as follows:
      *
      * Protocol Fee = (% direct fee %) * reserveAssetQuantity
@@ -657,9 +650,7 @@ contract RollingCommunity is BaseCommunity, ReentrancyGuard {
     ) internal view returns (uint256) {
         // Get valuation of the Community with the quote asset as the reserve asset.
         // Reverts if price is not found
-        // TODO: get current from investment ideas
         uint256 communityValuation = ICommunityValuer(IBabController(controller).getCommunityValuer()).calculateCommunityValuation(address(this), _reserveAsset);
-
         // Get reserve asset decimals
         uint8 reserveAssetDecimals = ERC20(_reserveAsset).decimals();
         uint256 baseUnits = uint256(10) ** reserveAssetDecimals;
