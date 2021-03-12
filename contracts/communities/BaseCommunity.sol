@@ -409,6 +409,20 @@ abstract contract BaseCommunity is ERC20Upgradeable {
       }
     }
 
+    /**
+     * Allocates community capital to an investment
+     *
+     * @param _capital        Amount of capital to allocate to the investment
+     */
+    function allocateCapitalToInvestment(uint256 _capital) external onlyInvestmentIdea onlyActive {
+      uint256 liquidReserveAsset = ERC20Upgradeable(reserveAsset).balanceOf(address(this));
+      require(_capital <= liquidReserveAsset, "Not enough capital");
+      require(ERC20Upgradeable(reserveAsset).transfer(
+          msg.sender,
+          _capital
+      ), "Failed to allocate capital to the investment");
+    }
+
     /* ============ External Getter Functions ============ */
 
     /**

@@ -282,16 +282,15 @@ contract InvestmentIdea is ReentrancyGuard, Initializable {
    * @param _capital                  The capital to allocate to this idea
    */
   function executeInvestment(uint256 _capital) public onlyKeeper nonReentrant onlyActiveCommunity {
-    require(executedAt == 0, "Idea has already been executed");
-    uint256 liquidReserveAsset = community.getReserveBalance();
-    require(_capital <= liquidReserveAsset, "Not enough capital");
+    require(active, "Idea needs to be active");
     require(capitalAllocated.add(_capital) <= maxCapitalRequested, "Max capital reached");
-    require(liquidReserveAsset >= minRebalanceCapital, "Community does not have enough capital to enter the idea");
+    require(_capital >= minRebalanceCapital, "Amount needs to be more than min");
     require(block.timestamp.sub(enteredCooldownAt) >= community.ideaCooldownPeriod(), "Idea has not completed the cooldown period");
     // Execute enter trade
+    community.allocateCapitalToInvestment(_capital);
     capitalAllocated = capitalAllocated.add(_capital);
     bytes memory _data = enterPayload;
-    community.callIntegration(integration, 0, _data, enterTokensNeeded, enterTokensAmounts);
+    callIntegration(integration, 0, _data, enterTokensNeeded, enterTokensAmounts);
     // Sets the executed timestamp
     executedAt = block.timestamp;
   }

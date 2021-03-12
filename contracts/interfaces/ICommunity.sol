@@ -61,7 +61,7 @@ interface ICommunity is IERC20 {
     function getIdeas() external view returns (address[] memory);
 
     function startRedemptionWindow(uint256 _amount) external;
-
+    function allocateCapitalToInvestment(uint256 _capital) external;
     function addInvestmentIdea(
       uint256 _maxCapitalRequested,
       uint256 _stake,
