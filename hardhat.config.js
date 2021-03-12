@@ -45,7 +45,8 @@ module.exports = {
 
   gasReporter: {
     currency: "USD",
-    coinmarketcap: "f903b99d-e117-4e55-a7a8-ff5dd8ad5bed"
+    coinmarketcap: "f903b99d-e117-4e55-a7a8-ff5dd8ad5bed",
+    enabled: !!process.env.REPORT_GAS
   },
 
   // don't forget to set your provider like:
@@ -95,7 +96,7 @@ module.exports = {
             runs: 200
           }
         }
-      },
+      }
     ]
   },
   paths: {
@@ -135,9 +136,7 @@ task(
     const address =
       "0x" + EthUtil.privateToAddress(wallet._privKey).toString("hex");
     console.log(
-      "🔐 Account Generated as " +
-        address +
-        ".txt and saved as mnemonic.txt"
+      "🔐 Account Generated as " + address + ".txt and saved as mnemonic.txt"
     );
     console.log(
       "💬 Use 'yarn run account' to get more information about the deployment account."

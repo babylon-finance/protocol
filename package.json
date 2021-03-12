@@ -36,6 +36,7 @@
   "scripts": {
     "chain": "hardhat node",
     "test": "hardhat test --network hardhat",
+    "gas-report": "env REPORT_GAS=1 yarn test",
     "compile": "hardhat compile",
     "clean": "rm -rf cache/* && rm -rf artifacts/* && rm -rf /tmp/hardhat/contracts/*",
     "deploy": "hardhat run scripts/deploy.js --network localhost && hardhat run scripts/publish.js",
