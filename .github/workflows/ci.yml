@@ -4,7 +4,7 @@ on: [push, pull_request]
 
 jobs:
   build:
-    name: Compiles Contracts
+    name: Compile Contracts
     runs-on: ubuntu-latest
     timeout-minutes: 20
 
