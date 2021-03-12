@@ -15,6 +15,10 @@
 pragma solidity 0.7.4;
 pragma experimental ABIEncoderV2;
 
+import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
+import { ITimelock } from "../interfaces/ITimelock.sol";
+import { IVoteToken } from "../interfaces/IVoteToken.sol";
+
 contract GovernorAlpha {
 
     /* ============ Events ============ */
@@ -42,10 +46,10 @@ contract GovernorAlpha {
     string public constant name = "BABL Governor Alpha";
 
     /// @notice The address of the BABL Protocol Timelock
-    ITimeLock public timelock;
+    ITimelock public timelock;
 
     /// @notice The address of the BABL governance token
-    BABLInterface public babl;
+    IVoteToken public babl;
 
      /// @notice The address of the Governor Guardian
     address public guardian;
@@ -153,8 +157,8 @@ contract GovernorAlpha {
     /* ============ Constructor ============ */
 
     constructor(address timelock_, address babl_, address guardian_) {
-        timelock = ITimeLock(timelock_);
-        babl = BABLInterface(babl_);
+        timelock = ITimelock(timelock_);
+        babl = IVoteToken(babl_);
         guardian = guardian_;
     }
 
@@ -350,21 +354,4 @@ contract GovernorAlpha {
         assembly { chainId := chainid() }
         return chainId;
     }
-}
-
-    /* ============ Interfaces ============ */
-
-
-interface ITimeLock {
-    function delay() external view returns (uint);
-    function GRACE_PERIOD() external view returns (uint);
-    function acceptAdmin() external;
-    function queuedTransactions(bytes32 hash) external view returns (bool);
-    function queueTransaction(address target, uint value, string calldata signature, bytes calldata data, uint eta) external returns (bytes32);
-    function cancelTransaction(address target, uint value, string calldata signature, bytes calldata data, uint eta) external;
-    function executeTransaction(address target, uint value, string calldata signature, bytes calldata data, uint eta) external payable returns (bytes memory);
-}
-
-interface BABLInterface { 
-    function getPriorVotes(address account, uint blockNumber) external view returns (uint96);
 }

@@ -19,7 +19,6 @@ import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
 import { SafeMath } from "@openzeppelin/contracts/math/SafeMath.sol";
 import { Address } from "@openzeppelin/contracts/utils/Address.sol";
 
-
 /**
  * @title TimeLockRegistry
  * @notice Register Lockups for TimeLocked ERC20 Token BABL
@@ -51,8 +50,34 @@ contract TimeLockRegistry is Ownable {
     // time locked token
     TimeLockedToken public token;
 
-    // mapping from SAFT address to BABL due amount
+    /// @notice The profile of each token owner under vesting conditions and its special conditions 
+    /**
+    * @param team Indicates whether or not is a Team member (true = team member / advisor, false = private investor)
+    * @param vestingBegin When the vesting begins for such token owner
+    * @param vestingEnd When the vesting ends for such token owner
+    */
+    struct TokenVested {
+        bool team;
+        bool cliff;
+        uint256 vestingBegin;
+        uint256 vestingEnd;
+        uint256 lastClaim;
+    }
+
+    /// @notice A record of token owners under vesting conditions for each account, by index
+    mapping (address => TokenVested) public tokenVested;
+    
+    // mapping from token owners under vesting conditions to BABL due amount (e.g. SAFT addresses, team members, advisors) 
     mapping(address => uint256) public registeredDistributions;
+    
+    // vesting Cliff just for Team Members
+    uint256 private vestingCliff = 365 days;
+    
+    // vesting for Team Members
+    uint256 private teamVesting = 365 days * 4;
+    
+    // vesting for Investors and Advisors
+    uint256 private investorVesting = 365 days * 3;
 
     /* ============ Functions ============ */
 
@@ -75,19 +100,41 @@ contract TimeLockRegistry is Ownable {
      * @param receiver Address belonging to SAFT purchaser
      * @param distribution Tokens amount that receiver is due to get
      */
-    function register(address receiver, uint256 distribution) external onlyOwner {
+    function register(address receiver, uint256 distribution, bool investorType, uint vestingStartingDate) external onlyOwner returns (bool) {
         require(receiver != address(0), "Zero address");
         require(distribution != 0, "Distribution = 0");
         require(registeredDistributions[receiver] == 0, "Distribution for this address is already registered");
 
         // register distribution in mapping
         registeredDistributions[receiver] = distribution;
+        
+        // register distribution in token vested
+        TokenVested storage newTokenVested = tokenVested[receiver];
+        newTokenVested.team = investorType;
+        newTokenVested.vestingBegin = vestingStartingDate;
+
+        
+        if (newTokenVested.team == true){
+            newTokenVested.vestingEnd = vestingStartingDate.add(teamVesting);
+            // Team members & advisors have Cliff of 1 year
+            newTokenVested.cliff = true;
+        }
+        else {
+            newTokenVested.vestingEnd = vestingStartingDate.add(investorVesting);
+            // Investors has not Cliff
+            newTokenVested.cliff = false;
+        }
+        newTokenVested.lastClaim = vestingStartingDate;
+        
+        tokenVested[receiver] = newTokenVested;
 
         // transfer tokens from owner
         require(token.transferFrom(msg.sender, address(this), distribution), "Transfer failed");
 
         // emit register event
         emit Register(receiver, distribution);
+        
+        return true;
     }
 
     /**
@@ -102,6 +149,9 @@ contract TimeLockRegistry is Ownable {
 
         // set distribution mapping to 0
         delete registeredDistributions[receiver];
+        
+         // set tokenVested mapping to 0
+        delete tokenVested[receiver];
 
         // transfer tokens back to owner
         require(token.transfer(msg.sender, amount), "Transfer failed");
@@ -111,20 +161,31 @@ contract TimeLockRegistry is Ownable {
     }
 
     /// @dev Claim tokens due amount
-    function claim() external {
+    function claim() external returns (uint256){
         require(registeredDistributions[msg.sender] != 0, "Not registered");
 
         // get amount from distributions
         uint256 amount = registeredDistributions[msg.sender];
+        tokenVested[msg.sender].lastClaim = block.timestamp;
 
         // set distribution mapping to 0
         delete registeredDistributions[msg.sender];
 
         // register lockup in TimeLockedToken
+        
+        // it will also increase the allowance to the owner to retire locked tokens in case of non-compliance vesting conditions take places
+        token.increaseAllowance(token.owner(), amount); // TODO-CHECK RESTRICTIONS TO DECREASE ALLOWANCE TO OWNER BY MSG.SENDER
+        
         // this will transfer funds from this contract and lock them for sender
-        token.registerLockup(msg.sender, amount);
+        token.registerLockup(msg.sender, amount, tokenVested[msg.sender].team, tokenVested[msg.sender].cliff, tokenVested[msg.sender].vestingBegin, tokenVested[msg.sender].vestingEnd, tokenVested[msg.sender].lastClaim);
+
+        // set tokenVested mapping to 0
+        delete tokenVested[msg.sender];
 
         // emit claim event
         emit Claim(msg.sender, amount);
+    
+        
+        return amount;
     }
 }

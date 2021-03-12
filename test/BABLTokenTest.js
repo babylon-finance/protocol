@@ -36,6 +36,15 @@ describe("BABLToken contract", function () {
     // for it to be deployed(), which happens onces its transaction has been
     // mined.
     Token = await BABLToken.deploy();
+    
+
+    TimeLockRegistry = await ethers.getContractFactory("TimeLockRegistry");
+
+    // To deploy our contract, we just have to call TimeLockRegistry.deploy() and await
+    // for it to be deployed(), which happens onces its transaction has been
+    // mined.
+
+    Registry = await TimeLockRegistry.deploy(Token.address);
   });
 
   // You can nest describe calls to create subsections.
@@ -43,20 +52,35 @@ describe("BABLToken contract", function () {
     // `it` is another Mocha function. This is the one you use to define your
     // tests. It receives the test name, and a callback function.
 
-    it("should successfully deploy the contract", async function() {
+    it("should successfully deploy BABLToken contract", async function() {
       const deployedc = await Token.deployed();
       expect(!!deployedc).to.equal(true);
+    });
+
+    it("should successfully deploy TimeLockRegistry contract", async function() {
+      const deployedc2 = await Registry.deployed();
+      expect(!!deployedc2).to.equal(true);
     });
   
 
     // If the callback function is async, Mocha will `await` it.
-    it("Should set the right owner", async function () {
+    it("Should set the right owner to BABL", async function () {
       // Expect receives a value, and wraps it in an Assertion object. These
       // objects have a lot of utility methods to assert values.
 
       // This test expects the owner variable stored in the contract to be equal
       // to our Signer's owner.
       expect(await Token.owner()).to.equal(owner.address);
+    });
+
+     // If the callback function is async, Mocha will `await` it.
+     it("Should set the right owner to Registry", async function () {
+      // Expect receives a value, and wraps it in an Assertion object. These
+      // objects have a lot of utility methods to assert values.
+
+      // This test expects the owner variable stored in the contract to be equal
+      // to our Signer's owner.
+      expect(await Registry.owner()).to.equal(owner.address);
     });
 
     it("Should assign the total supply of tokens to the owner", async function () {
