@@ -36,19 +36,23 @@
     "superagent": "^6.1.0"
   },
   "scripts": {
-    "chain": "hardhat node",
-    "test": "hardhat test --network hardhat",
-    "gas-report": "env REPORT_GAS=1 yarn test",
-    "compile": "hardhat compile",
     "clean": "rm -rf cache/* && rm -rf artifacts/* && rm -rf /tmp/hardhat/contracts/*",
-    "deploy": "hardhat run scripts/deploy.js --network localhost && hardhat run scripts/publish.js",
+    "prettier": "prettier --write 'contracts/**/*.sol'",
+    "compile": "hardhat compile",
+
     "publish": "hardhat run scripts/publish.js",
+    "deploy": "hardhat run scripts/deploy.js --network localhost && hardhat run scripts/publish.js",
     "deploy-mainnet": "hardhat run scripts/deploy.js --network mainnet && hardhat run scripts/publish.js",
+
     "watch": "node scripts/watch.js",
+    "chain": "hardhat node",
     "accounts": "hardhat accounts",
     "account": "hardhat account",
     "generate": "hardhat generate",
     "balance": "hardhat balance",
-    "send": "hardhat send"
+    "send": "hardhat send",
+    
+    "test": "hardhat test --network hardhat",
+    "gas-report": "env REPORT_GAS=1 yarn test"
   }
 }
