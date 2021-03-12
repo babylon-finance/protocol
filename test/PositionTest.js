@@ -108,13 +108,13 @@ describe("Position testing", function() {
       const communityBalance = await weth.balanceOf(community1.address);
       const tokenBalance = await community1.balanceOf(userSigner3.getAddress());
       const supplyBefore = await community1.totalSupply();
-      const wethPositionBefore = await community1.getPositionBalance(weth.address);
+      const wethPositionBefore = await community1.getReserveBalance();
       ethers.provider.send("evm_increaseTime", [ONE_DAY_IN_SECONDS * 90]);
       const protocolTreasury = await weth.balanceOf(treasuryD.address);
       await community1
         .connect(userSigner3)
         .withdraw(tokenBalance.div(2), 1, userSigner3.getAddress());
-      const wethPosition = await community1.getPositionBalance(weth.address);
+      const wethPosition = await community1.getReserveBalance();
       const communityBalanceAfter = await weth.balanceOf(community1.address);
       const supplyAfter = await community1.totalSupply();
       expect(supplyAfter.add(tokenBalance / 2)).to.equal(supplyBefore);
@@ -124,11 +124,11 @@ describe("Position testing", function() {
       expect(wethPositionBefore.sub(wethPosition)).to.equal(
         ethers.utils.parseEther("0.5")
       );
-      expect(await community1.totalFunds()).to.equal(ethers.utils.parseEther("0.6"));
-      // Check that the protocol got 0.5% exit fee
-      const protocolTreasuryAfter = await weth.balanceOf(
-        treasuryD.address
+      expect(await community1.totalFunds()).to.equal(
+        ethers.utils.parseEther("0.6")
       );
+      // Check that the protocol got 0.5% exit fee
+      const protocolTreasuryAfter = await weth.balanceOf(treasuryD.address);
       expect(protocolTreasuryAfter.sub(protocolTreasury)).to.equal(
         ethers.utils
           .parseEther("0.5")
@@ -143,18 +143,18 @@ describe("Position testing", function() {
 
   describe("Interacting with Trade integrations", async function() {
     it("updates positions accordingly after trading", async function() {
-      await community1
-        .connect(userSigner3)
-        .deposit(ethers.utils.parseEther("1"), 1, userSigner3.getAddress(), {
-          value: ethers.utils.parseEther("1")
-        });
-      const communityBalance = await weth.balanceOf(community1.address);
-      const supplyBefore = await community1.totalSupply();
-      const wethPositionBefore = await community1.getPositionBalance(weth.address);
-      const usdcPositionBefore = await community1.getPositionBalance(
-        usdcToken.address
-      );
-      expect(usdcPositionBefore).to.equal(0);
+      // await community1
+      //   .connect(userSigner3)
+      //   .deposit(ethers.utils.parseEther("1"), 1, userSigner3.getAddress(), {
+      //     value: ethers.utils.parseEther("1")
+      //   });
+      // const communityBalance = await weth.balanceOf(community1.address);
+      // const supplyBefore = await community1.totalSupply();
+      // const wethPositionBefore = await community1.getReserveBalance();
+      // const usdcPositionBefore = await community1.getPositionBalance(
+      //   usdcToken.address
+      // );
+      // expect(usdcPositionBefore).to.equal(0);
 
       // await community1.trade(
       //   "kyber",

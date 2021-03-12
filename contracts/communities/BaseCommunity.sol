@@ -562,8 +562,6 @@ abstract contract BaseCommunity is ERC20 {
 
     function _getPrice(address _assetOne, address _assetTwo) internal returns (uint256) {
       IPriceOracle oracle = IPriceOracle(IBabController(controller).getPriceOracle());
-      // Updates UniSwap TWAP
-      oracle.updateAdapters(_assetOne, _assetTwo);
       return oracle.getPrice(_assetOne, _assetTwo);
     }
 
