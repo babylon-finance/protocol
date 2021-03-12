@@ -290,7 +290,7 @@ contract InvestmentIdea is ReentrancyGuard, Initializable {
     community.allocateCapitalToInvestment(_capital);
     capitalAllocated = capitalAllocated.add(_capital);
     bytes memory _data = enterPayload;
-    callIntegration(integration, 0, _data, enterTokensNeeded, enterTokensAmounts);
+    _callIntegration(integration, 0, _data, enterTokensNeeded, enterTokensAmounts);
     // Sets the executed timestamp
     executedAt = block.timestamp;
   }
