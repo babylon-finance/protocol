@@ -44,6 +44,19 @@ interface IInvestmentIdea {
       view
       returns (int256);
 
+  function calculateAndEditPosition(
+    address _component,
+    uint256 _newBalance,
+    int256 _deltaBalance,
+    uint8 _subpositionStatus
+  )
+    external
+    returns (
+        uint256,
+        uint256,
+        uint256
+    );
+
   function ideator() external pure returns(address);
   function enteredAt() external pure returns(uint256);
   function enteredCooldownAt() external pure returns(uint256);

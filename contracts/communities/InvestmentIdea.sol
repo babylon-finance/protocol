@@ -307,6 +307,43 @@ contract InvestmentIdea is ReentrancyGuard {
     duration = _newDuration;
   }
 
+  /**
+    * Calculates the new  position balance and performs the edit with new balance
+    *
+    * @param _component                Address of the component
+    * @param _newBalance               Current balance of the component
+    * @param _deltaBalance             Delta applied on this op
+    * @param _subpositionStatus        Status of the position
+    * @return                          Current component balance
+    * @return                          Previous position balance
+    * @return                          New position balance
+    */
+  function _calculateAndEditPosition(
+    address _component,
+    uint256 _newBalance,
+    int256 _deltaBalance,
+    uint8 _subpositionStatus
+  )
+    external
+    returns (
+        uint256,
+        uint256,
+        uint256
+    )
+  {
+    uint256 positionBalance = _getPositionBalance(_component).toUint256();
+
+    bool isPositionFound = _hasPosition(_component);
+    if (!isPositionFound && _newBalance > 0) {
+      _addPosition(_component, msg.sender);
+    } else if (isPositionFound && _newBalance == 0) {
+      _removePosition(_component);
+    }
+    _editPositionBalance(_component, _newBalance.toInt256(), msg.sender, _deltaBalance, _subpositionStatus);
+
+    return (_newBalance, positionBalance, _newBalance);
+  }
+
   /* ============ External Getter Functions ============ */
 
   /**
@@ -439,43 +476,6 @@ contract InvestmentIdea is ReentrancyGuard {
     // Updates reserve asset position in the community
     uint256 _newTotal = community.getReserveBalance().toInt256().add(reserveAssetDelta).toUint256();
     community.updateReserveBalance(_newTotal);
-  }
-
-  /**
-    * Calculates the new  position balance and performs the edit with new balance
-    *
-    * @param _component                Address of the component
-    * @param _newBalance               Current balance of the component
-    * @param _deltaBalance             Delta applied on this op
-    * @param _subpositionStatus        Status of the position
-    * @return                          Current component balance
-    * @return                          Previous position balance
-    * @return                          New position balance
-    */
-  function _calculateAndEditPosition(
-    address _component,
-    uint256 _newBalance,
-    int256 _deltaBalance,
-    uint8 _subpositionStatus
-  )
-    internal
-    returns (
-        uint256,
-        uint256,
-        uint256
-    )
-  {
-    uint256 positionBalance = _getPositionBalance(_component).toUint256();
-
-    bool isPositionFound = _hasPosition(_component);
-    if (!isPositionFound && _newBalance > 0) {
-      _addPosition(_component, msg.sender);
-    } else if (isPositionFound && _newBalance == 0) {
-      _removePosition(_component);
-    }
-    _editPositionBalance(_component, _newBalance.toInt256(), msg.sender, _deltaBalance, _subpositionStatus);
-
-    return (_newBalance, positionBalance, _newBalance);
   }
 
   /**

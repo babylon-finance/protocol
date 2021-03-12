@@ -41,11 +41,11 @@ abstract contract TradeIntegration is BaseIntegration, ReentrancyGuard {
     /* ============ Struct ============ */
 
     struct TradeInfo {
-      ICommunity community;                                     // Community
+      ICommunity community;                           // Community
       string exchangeName;                            // Which exchange to use
       address sendToken;                              // Address of token being sold
       address receiveToken;                           // Address of token being bought
-      uint256 communityTotalSupply;                        // Total supply of Community in Precise Units (10^18)
+      uint256 communityTotalSupply;                   // Total supply of Community in Precise Units (10^18)
       uint256 totalSendQuantity;                      // Total quantity of sold tokens
       uint256 totalMinReceiveQuantity;                // Total minimum quantity of token to receive back
       uint256 preTradeSendTokenBalance;               // Total initial balance of token being sold

@@ -23,7 +23,7 @@ import { ERC20 } from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import { IBabController } from "../interfaces/IBabController.sol";
 import { IIntegration } from "../interfaces/IIntegration.sol";
 import { IWETH } from "../interfaces/external/weth/IWETH.sol";
-import { ICommunity } from "../interfaces/ICommunity.sol";
+import { IInvestmentIdea } from "../interfaces/IInvestmentIdea.sol";
 import { SafeMath } from "@openzeppelin/contracts/math/SafeMath.sol";
 import { SignedSafeMath } from "@openzeppelin/contracts/math/SignedSafeMath.sol";
 import { SafeCast } from "@openzeppelin/contracts/utils/SafeCast.sol";
@@ -129,8 +129,8 @@ abstract contract BaseIntegration {
       uint256,
       uint256
     ) {
-      // uint256 _newTotal = ICommunity(_community).getPositionBalance(_component).add(int256(_deltaOperation)).toUint256();
-      // return ICommunity(_community).calculateAndEditPosition(_component, _newTotal, _deltaOperation, _subpositionStatus);
+      uint256 _newTotal = IInvestmentIdea(_investmentIdea).getPositionBalance(_component).add(int256(_deltaOperation)).toUint256();
+      return IInvestmentIdea(_investmentIdea).calculateAndEditPosition(_component, _newTotal, _deltaOperation, _subpositionStatus);
     }
 
     /**
