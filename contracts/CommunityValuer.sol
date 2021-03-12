@@ -28,6 +28,7 @@ import { SafeMath } from "@openzeppelin/contracts/math/SafeMath.sol";
 
 import { IBabController } from "./interfaces/IBabController.sol";
 import { ICommunity } from "./interfaces/ICommunity.sol";
+import { IInvestmentIdea } from "./interfaces/IInvestmentIdea.sol";
 import { IPriceOracle } from "./interfaces/IPriceOracle.sol";
 import { PreciseUnitMath } from "./lib/PreciseUnitMath.sol";
 
@@ -84,36 +85,39 @@ contract CommunityValuer {
         view
         returns (uint256)
     {
-      return 0;
-        // IPriceOracle priceOracle = IPriceOracle(IBabController(controller).getPriceOracle());
-        //
-        // // NOTE: This is temporary to allow for deposits / withdrawls. The masterQuoetAsset no longer
-        // // live in the PriceOracle so we'll need to add it back or take another approach.
-        // address masterQuoteAsset = priceOracle.masterQuoteAsset();
-        //
-        // address[] memory components = _community.getPositions();
-        // int256 valuation;
-        //
-        // for (uint256 i = 0; i < components.length; i++) {
-        //   address component = components[i];
-        //
-        //   // Get component price from price oracle. If price does not exist, revert.
-        //   uint256 componentPrice = priceOracle.getPrice(component, masterQuoteAsset);
-        //   int256 aggregateUnits = _community.getPositionBalance(component);
-        //   // Normalize each position unit to preciseUnits 1e18 and cast to signed int
-        //   uint8 unitDecimals = ERC20(component).decimals();
-        //   uint256 baseUnits = 10 ** unitDecimals;
-        //
-        //   int256 normalizedUnits = aggregateUnits.preciseDiv(baseUnits.toInt256());
-        //   // Calculate valuation of the component. Debt positions are effectively subtracted
-        //   valuation = normalizedUnits.preciseMul(componentPrice.toInt256()).add(valuation);
-        // }
-        //
-        // if (masterQuoteAsset != _quoteAsset && valuation > 0) {
-        //     uint256 quoteToMaster = priceOracle.getPrice(_quoteAsset, masterQuoteAsset);
-        //     valuation = valuation.preciseDiv(quoteToMaster.toInt256());
-        // }
-        //
-        // return valuation.toUint256().preciseDiv(_community.totalSupply());
+        IPriceOracle priceOracle = IPriceOracle(IBabController(controller).getPriceOracle());
+
+        // NOTE: This is temporary to allow for deposits / withdrawls. The masterQuoetAsset no longer
+        // live in the PriceOracle so we'll need to add it back or take another approach.
+        address masterQuoteAsset = priceOracle.masterQuoteAsset();
+
+        address[] memory ideas = _community.getIdeas();
+        int256 valuation;
+        for (uint256 j = 0; j < ideas.length; j++) {
+          IInvestmentIdea idea = IInvestmentIdea(ideas[j]);
+          address[] memory components = idea.getPositions();
+
+          for (uint256 i = 0; i < components.length; i++) {
+            address component = components[i];
+
+            // Get component price from price oracle. If price does not exist, revert.
+            uint256 componentPrice = priceOracle.getPrice(component, masterQuoteAsset);
+            int256 aggregateUnits = idea.getPositionBalance(component);
+            // Normalize each position unit to preciseUnits 1e18 and cast to signed int
+            uint8 unitDecimals = ERC20(component).decimals();
+            uint256 baseUnits = 10 ** unitDecimals;
+
+            int256 normalizedUnits = aggregateUnits.preciseDiv(baseUnits.toInt256());
+            // Calculate valuation of the component. Debt positions are effectively subtracted
+            valuation = normalizedUnits.preciseMul(componentPrice.toInt256()).add(valuation);
+          }
+        }
+
+        if (masterQuoteAsset != _quoteAsset && valuation > 0) {
+            uint256 quoteToMaster = priceOracle.getPrice(_quoteAsset, masterQuoteAsset);
+            valuation = valuation.preciseDiv(quoteToMaster.toInt256());
+        }
+
+        return valuation.toUint256().preciseDiv(_community.totalSupply());
     }
 }

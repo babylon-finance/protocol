@@ -82,14 +82,6 @@ contract RollingCommunity is BaseCommunity, ReentrancyGuard {
      * @param _creator                Address of the creator
      * @param _name                   Name of the Community
      * @param _symbol                 Symbol of the Community
-     * @param _minContribution        Min contribution to the community
-     * @param _ideaCooldownPeriod               How long after the idea has been activated, will it be ready to be executed
-     * @param _ideaCreatorProfitPercentage      What percentage of the profits go to the idea creator
-     * @param _ideaVotersProfitPercentage       What percentage of the profits go to the idea curators
-     * @param _communityCreatorProfitPercentage What percentage of the profits go to the creator of the community
-     * @param _minVotersQuorum                  Percentage of votes needed to activate an investment idea (0.01% = 1e14, 1% = 1e16)
-     * @param _minIdeaDuration                  Min duration of an investment idea
-     * @param _maxIdeaDuration                  Max duration of an investment idea
      */
 
     constructor(
@@ -98,15 +90,7 @@ contract RollingCommunity is BaseCommunity, ReentrancyGuard {
         address _controller,
         address _creator,
         string memory _name,
-        string memory _symbol,
-        uint256 _minContribution,
-        uint256 _ideaCooldownPeriod,
-        uint256 _ideaCreatorProfitPercentage,
-        uint256 _ideaVotersProfitPercentage,
-        uint256 _communityCreatorProfitPercentage,
-        uint256 _minVotersQuorum,
-        uint256 _minIdeaDuration,
-        uint256 _maxIdeaDuration
+        string memory _symbol
     )
         BaseCommunity(
             _integrations,
@@ -115,17 +99,9 @@ contract RollingCommunity is BaseCommunity, ReentrancyGuard {
             _controller,
             _creator,
             _name,
-            _symbol,
-            _ideaCooldownPeriod,
-            _ideaCreatorProfitPercentage,
-            _ideaVotersProfitPercentage,
-            _communityCreatorProfitPercentage,
-            _minVotersQuorum,
-            _minIdeaDuration,
-            _maxIdeaDuration
+            _symbol
         )
     {
-        minContribution = _minContribution;
         totalContributors = 0;
         totalFundsDeposited = 0;
         totalFunds = 0;
@@ -139,16 +115,30 @@ contract RollingCommunity is BaseCommunity, ReentrancyGuard {
      *
      * @param _maxDepositLimit                     Max deposit limit
      * @param _minCommunityTokenSupply             Min community token supply
-     * @param _communityIdeas                      Address of the instance with the investment ideas
      * @param _minLiquidityAsset                   Number that represents min amount of liquidity denominated in ETH
      * @param _depositHardlock                     Number that represents the time deposits are locked for an user after he deposits
+     * @param _minContribution        Min contribution to the community
+     * @param _ideaCooldownPeriod               How long after the idea has been activated, will it be ready to be executed
+     * @param _ideaCreatorProfitPercentage      What percentage of the profits go to the idea creator
+     * @param _ideaVotersProfitPercentage       What percentage of the profits go to the idea curators
+     * @param _communityCreatorProfitPercentage What percentage of the profits go to the creator of the community
+     * @param _minVotersQuorum                  Percentage of votes needed to activate an investment idea (0.01% = 1e14, 1% = 1e16)
+     * @param _minIdeaDuration                  Min duration of an investment idea
+     * @param _maxIdeaDuration                  Max duration of an investment idea
      */
     function initialize(
         uint256 _maxDepositLimit,
         uint256 _minCommunityTokenSupply,
-        address _communityIdeas,
         uint256 _minLiquidityAsset,
-        uint256 _depositHardlock
+        uint256 _depositHardlock,
+        uint256 _minContribution,
+        uint256 _ideaCooldownPeriod,
+        uint256 _ideaCreatorProfitPercentage,
+        uint256 _ideaVotersProfitPercentage,
+        uint256 _communityCreatorProfitPercentage,
+        uint256 _minVotersQuorum,
+        uint256 _minIdeaDuration,
+        uint256 _maxIdeaDuration
     ) external onlyCreator onlyInactive payable {
         require(_maxDepositLimit < MAX_DEPOSITS_FUND_V1, "Max deposit limit needs to be under the limit");
 
@@ -172,7 +162,15 @@ contract RollingCommunity is BaseCommunity, ReentrancyGuard {
         minLiquidityAsset = _minLiquidityAsset;
         depositHardlock = _depositHardlock;
         redemptionWindowAfterInvestmentCompletes = 7 days;
-
+        initializeCommon(
+            _minContribution,
+            _ideaCooldownPeriod,
+            _ideaCreatorProfitPercentage,
+            _ideaVotersProfitPercentage,
+            _communityCreatorProfitPercentage,
+            _minVotersQuorum,
+            _minIdeaDuration,
+            _maxIdeaDuration);
         IWETH(weth).deposit{value: initialDepositAmount}();
 
         _mint(creator, initialTokens);
@@ -398,7 +396,7 @@ contract RollingCommunity is BaseCommunity, ReentrancyGuard {
     function burnAssetsFromSenderAndMintToReserve(address _contributor, uint256 _quantity) external {
       address reservePool = IBabController(controller).getReservePool();
       require(msg.sender == reservePool, "Only reserve pool can call this");
-      _burn(msg.sender, _quantity);
+      _burn(_contributor, _quantity);
       _mint(reservePool, _quantity);
     }
 
@@ -659,9 +657,8 @@ contract RollingCommunity is BaseCommunity, ReentrancyGuard {
     ) internal view returns (uint256) {
         // Get valuation of the Community with the quote asset as the reserve asset.
         // Reverts if price is not found
-        uint256 communityValuation = reserveBalance;
         // TODO: get current from investment ideas
-        // uint256 communityValuation = ICommunityValuer(IBabController(controller).getCommunityValuer()).calculateCommunityValuation(address(this), _reserveAsset);
+        uint256 communityValuation = ICommunityValuer(IBabController(controller).getCommunityValuer()).calculateCommunityValuation(address(this), _reserveAsset);
 
         // Get reserve asset decimals
         uint8 reserveAssetDecimals = ERC20(_reserveAsset).decimals();

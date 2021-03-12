@@ -222,7 +222,7 @@ contract InvestmentIdea is ReentrancyGuard {
    * @param _amount                   Amount to curate, positive to endorse, negative to downvote
    * TODO: Meta Transaction
    */
-  function curateIdea(int256 _amount, uint256 _minVotersQuorum, uint256 _votingThreshold) external onlyContributor onlyActive {
+  function curateIdea(int256 _amount) external onlyContributor onlyActive {
     require(_amount.toUint256() < community.balanceOf(msg.sender), "Participant does not have enough balance");
     if (votes[msg.sender] == 0) {
       totalVoters++;
@@ -235,12 +235,12 @@ contract InvestmentIdea is ReentrancyGuard {
     absoluteTotalVotes = absoluteTotalVotes.add(abs(_amount).toUint256());
     totalVotes = totalVotes.add(_amount);
     // TODO: Introduce conviction voting
-    uint256 votingThreshold = _minVotersQuorum.preciseMul(community.totalSupply());
-    if (_amount > 0 && totalVotes.toUint256() >= _votingThreshold) {
+    uint256 votingThreshold = community.minVotersQuorum().preciseMul(community.totalSupply());
+    if (_amount > 0 && totalVotes.toUint256() >= votingThreshold) {
       active = true;
       enteredCooldownAt = block.timestamp;
     }
-    if (_amount < 0 && totalVotes.toUint256() < _votingThreshold && active && executedAt == 0) {
+    if (_amount < 0 && totalVotes.toUint256() < votingThreshold && active && executedAt == 0) {
       active = false;
     }
   }

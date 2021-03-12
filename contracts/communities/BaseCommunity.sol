@@ -29,7 +29,7 @@ import { IIntegration } from "../interfaces/IIntegration.sol";
 import { ITradeIntegration } from "../interfaces/ITradeIntegration.sol";
 import { IPriceOracle } from "../interfaces/IPriceOracle.sol";
 import { ICommunity } from "../interfaces/ICommunity.sol";
-import { InvestmentIdea } from "./InvestmentIdea.sol";
+import { IInvestmentIdea } from "../interfaces/IInvestmentIdea.sol";
 import { PreciseUnitMath } from "../lib/PreciseUnitMath.sol";
 
 /**
@@ -244,13 +244,6 @@ abstract contract BaseCommunity is ERC20 {
      * @param _creator                Address of the creator
      * @param _name                   Name of the Community
      * @param _symbol                 Symbol of the Community
-     * @param _ideaCooldownPeriod               How long after the idea has been activated, will it be ready to be executed
-     * @param _ideaCreatorProfitPercentage      What percentage of the profits go to the idea creator
-     * @param _ideaVotersProfitPercentage       What percentage of the profits go to the idea curators
-     * @param _communityCreatorProfitPercentage What percentage of the profits go to the creator of the community
-     * @param _minVotersQuorum                  Percentage of votes needed to activate an investment idea (0.01% = 1e14, 1% = 1e16)
-     * @param _minIdeaDuration                  Min duration of an investment idea
-     * @param _maxIdeaDuration                  Max duration of an investment idea
      */
 
     constructor(
@@ -260,14 +253,7 @@ abstract contract BaseCommunity is ERC20 {
         address _controller,
         address _creator,
         string memory _name,
-        string memory _symbol,
-        uint256 _ideaCooldownPeriod,
-        uint256 _ideaCreatorProfitPercentage,
-        uint256 _ideaVotersProfitPercentage,
-        uint256 _communityCreatorProfitPercentage,
-        uint256 _minVotersQuorum,
-        uint256 _minIdeaDuration,
-        uint256 _maxIdeaDuration
+        string memory _symbol
     ) ERC20(_name, _symbol) {
         require(_creator != address(0), "Creator must not be empty");
 
@@ -276,24 +262,47 @@ abstract contract BaseCommunity is ERC20 {
         reserveAsset = _reserveAsset;
         creator = _creator;
 
-        require(
-            _ideaCooldownPeriod <= IBabController(controller).getMaxCooldownPeriod() && _ideaCooldownPeriod >= IBabController(controller).getMinCooldownPeriod() ,
-            "Community cooldown must be within the range allowed by the protocol"
-        );
-        require(_minVotersQuorum >= 1e17, "You need at least 10% votes");
-        ideaCreatorProfitPercentage = _ideaCreatorProfitPercentage;
-        ideaVotersProfitPercentage = _ideaVotersProfitPercentage;
-        communityCreatorProfitPercentage = _communityCreatorProfitPercentage;
-        ideaCooldownPeriod = _ideaCooldownPeriod;
-        minVotersQuorum = _minVotersQuorum;
-        minIdeaDuration = _minIdeaDuration;
-        maxIdeaDuration = _maxIdeaDuration;
-
         for (uint i = 0; i < _integrations.length; i++) {
           _addIntegration(_integrations[i]);
         }
 
         active = false;
+    }
+    /**
+    * Virtual function that assigns several community params. Must be overriden
+    *
+    * @param _minContribution                  Min contribution to participate in this community
+    * @param _ideaCooldownPeriod               How long after the idea has been activated, will it be ready to be executed
+    * @param _ideaCreatorProfitPercentage      What percentage of the profits go to the idea creator
+    * @param _ideaVotersProfitPercentage       What percentage of the profits go to the idea curators
+    * @param _communityCreatorProfitPercentage What percentage of the profits go to the creator of the community
+    * @param _minVotersQuorum                  Percentage of votes needed to activate an investment idea (0.01% = 1e14, 1% = 1e16)
+    * @param _minIdeaDuration                  Min duration of an investment idea
+    * @param _maxIdeaDuration                  Max duration of an investment idea
+    */
+    function initializeCommon (
+      uint256 _minContribution,
+      uint256 _ideaCooldownPeriod,
+      uint256 _ideaCreatorProfitPercentage,
+      uint256 _ideaVotersProfitPercentage,
+      uint256 _communityCreatorProfitPercentage,
+      uint256 _minVotersQuorum,
+      uint256 _minIdeaDuration,
+      uint256 _maxIdeaDuration
+    ) internal {
+      require(
+          _ideaCooldownPeriod <= IBabController(controller).getMaxCooldownPeriod() && _ideaCooldownPeriod >= IBabController(controller).getMinCooldownPeriod() ,
+          "Community cooldown must be within the range allowed by the protocol"
+      );
+      require(_minVotersQuorum >= 1e17, "You need at least 10% votes");
+      minContribution = _minContribution;
+      ideaCreatorProfitPercentage = _ideaCreatorProfitPercentage;
+      ideaVotersProfitPercentage = _ideaVotersProfitPercentage;
+      communityCreatorProfitPercentage = _communityCreatorProfitPercentage;
+      ideaCooldownPeriod = _ideaCooldownPeriod;
+      minVotersQuorum = _minVotersQuorum;
+      minIdeaDuration = _minIdeaDuration;
+      maxIdeaDuration = _maxIdeaDuration;
     }
 
     /* ============ External Functions ============ */
@@ -424,54 +433,17 @@ abstract contract BaseCommunity is ERC20 {
      * Adds an investment idea to the contenders array for this epoch.
      * Investment stake is stored in the contract. (not converted to reserve asset).
      * If the array is already at the limit, replace the one with the lowest stake.
-     * @param _maxCapitalRequested           Max Capital requested denominated in the reserve asset (0 to be unlimited)
+     * @param _idea                          Address of the investment idea
      * @param _stake                         Stake with community participations absolute amounts 1e18
-     * @param _investmentDuration            Investment duration in seconds
-     * @param _enterData                     Operation to perform to enter the investment
-     * @param _exitData                      Operation to perform to exit the investment
-     * @param _integration                   Address of the integration
-     * @param _expectedReturn                Expected return
-     * @param _minRebalanceCapital           Min capital that is worth it to deposit into this idea
-     * @param _enterTokensNeeded             Tokens that we need to acquire to enter this investment
-     * @param _enterTokensAmounts            Token amounts of these assets we need
      * TODO: Meta Transaction
      */
     function addInvestmentIdea(
-      uint256 _maxCapitalRequested,
-      uint256 _stake,
-      uint256 _investmentDuration,
-      bytes memory _enterData,
-      bytes memory _exitData,
-      address _integration,
-      uint256 _expectedReturn,
-      uint256 _minRebalanceCapital,
-      address[] memory _enterTokensNeeded,
-      uint256[] memory _enterTokensAmounts
+      address _idea,
+      uint256 _stake
     ) external onlyContributor onlyActive {
-      require(isValidIntegration(_integration), "Integration must be valid");
-      require(_stake > totalSupply().div(100), "Stake amount must be at least 1% of the community");
-      require(_investmentDuration >= minIdeaDuration && _investmentDuration <= maxIdeaDuration, "Investment duration must be in range");
-      require(_stake > 0, "Stake amount must be greater than 0");
-      require(_minRebalanceCapital > 0, "Min Capital requested amount must be greater than 0");
-      require(_maxCapitalRequested >= _minRebalanceCapital, "The max amount of capital must be greater than one chunk");
       require(ideas.length < MAX_TOTAL_IDEAS, "Reached the limit of ideas");
-      // Check than enter and exit data call integrations
-      InvestmentIdea idea = new InvestmentIdea(
-        address(this),
-        controller,
-        _maxCapitalRequested,
-        _stake,
-        _investmentDuration,
-        _enterData,
-        _exitData,
-        _integration,
-        _expectedReturn,
-        _minRebalanceCapital,
-        _enterTokensNeeded,
-        _enterTokensAmounts
-      );
       totalStake = totalStake.add(_stake);
-      ideas.push(address(idea));
+      ideas.push(_idea);
     }
 
     /**
@@ -481,7 +453,7 @@ abstract contract BaseCommunity is ERC20 {
     function rebalanceInvestments() external onlyKeeper onlyActive {
       uint256 liquidReserveAsset = ERC20(reserveAsset).balanceOf(address(this));
       for (uint i = 0; i < ideas.length; i++) {
-        InvestmentIdea idea = InvestmentIdea(ideas[i]);
+        IInvestmentIdea idea = IInvestmentIdea(ideas[i]);
         uint256 percentage = idea.totalVotes().toUint256().preciseDiv(totalStake);
         uint256 toAllocate = liquidReserveAsset.preciseMul(percentage);
         if (toAllocate >= idea.minRebalanceCapital() && toAllocate.add(idea.capitalAllocated()) <= idea.maxCapitalRequested()) {

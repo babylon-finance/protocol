@@ -25,8 +25,8 @@ pragma solidity 0.7.4;
  */
 interface IInvestmentIdea {
 
-  function curateInvestmentIdea(int256 _amount) external;
-  function executeInvestmentIdea(uint256 _capital) external;
+  function curateIdea(int256 _amount) external;
+  function executeInvestment(uint256 _capital) external;
   function finalizeInvestment() external;
   function changeInvestmentDuration(uint256 _newDuration) external;
 
