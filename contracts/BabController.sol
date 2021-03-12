@@ -25,6 +25,7 @@ import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
 import { Address } from "@openzeppelin/contracts/utils/Address.sol";
 import { ICommunity } from "./interfaces/ICommunity.sol";
 import { IRollingCommunity } from "./interfaces/IRollingCommunity.sol";
+import { ICommunityFactory } from "./interfaces/ICommunityFactory.sol";
 import { IIntegration } from "./interfaces/IIntegration.sol";
 import { AddressArrayUtils } from "./lib/AddressArrayUtils.sol";
 
@@ -32,7 +33,7 @@ import { AddressArrayUtils } from "./lib/AddressArrayUtils.sol";
  * @title BabController
  * @author Babylon Finance Protocol
  *
- * BabController is a smart contract used to deploy new communitys contracts and house the
+ * BabController is a smart contract used to deploy new communities contracts and house the
  * integrations and resources of the system.
  */
 contract BabController is Ownable {
@@ -69,6 +70,8 @@ contract BabController is Ownable {
     event ReservePoolChanged(address indexed _reservePool, address _oldReservePool);
     event TreasuryChanged(address _newTreasury, address _oldTreasury);
     event CommunityValuerChanged(address indexed _communityValuer, address _oldCommunityValuer);
+    event CommunityFactoryChanged(address indexed _communityFactory, address _oldCommunityFactory);
+    event IdeaFactoryChanged(address indexed _ideaFactory, address _oldIdeaFactory);
 
     /* ============ Modifiers ============ */
 
@@ -77,11 +80,13 @@ contract BabController is Ownable {
     address public constant UNISWAP_FACTORY = 0x5C69bEe701ef814a2B6a3EDD4B1652CB9cc5aA6f;
 
     // List of enabled Communities
-    address[] public communitys;
+    address[] public communities;
     address[] public reserveAssets;
     address public communityValuer;
     address public priceOracle;
     address public reservePool;
+    address public communityFactory;
+    address public ideaFactory;
     // Mapping of community => integration identifier => integration address
     mapping(bytes32 => address) private integrations;
 
@@ -118,49 +123,66 @@ contract BabController is Ownable {
     /**
      * Initializes the initial fee recipient on deployment.
      *
-     * @param _treasury           Address of the initial protocol fee recipient
+     * @param _treasury                    Address of the initial protocol fee recipient
      * @param _communityValuer             Address of the initial communityValuer
-     * @param _priceOracle            Address of the initial priceOracle
-     * @param _reservePool            Address of the initial reservePool
+     * @param _priceOracle                 Address of the initial priceOracle
+     * @param _reservePool                 Address of the initial reservePool
+     * @param _communityFactory            Address of the initial community factory
+     * @param _ideaFactory                 Address of the initial idea factory
      */
     constructor(
-        address _treasury,
-        address _communityValuer,
-        address _priceOracle,
-        address _reservePool
+      address _treasury,
+      address _communityValuer,
+      address _priceOracle,
+      address _reservePool,
+      address _communityFactory,
+      address _ideaFactory
     ) {
         treasury = _treasury;
         communityValuer = _communityValuer;
         priceOracle = _priceOracle;
         reservePool = _reservePool;
+        communityFactory = _communityFactory;
+        ideaFactory = _ideaFactory;
     }
 
     /* ============ External Functions ============ */
 
     // ===========  Community related Gov Functions ======
     /**
-     * Creates a Community smart contract and registers the Community with the controller. The Communities are composed
-     * of positions that are instantiated as DEFAULT (positionState = 0) state.
+     * Creates a Community smart contract and registers the Community with the controller.
      *
      * @param _integrations           List of integrations to enable. All integrations must be approved by the Controller
-     * @param _community                   Address of the community
+     * @param _weth                   Address of the WETH ERC20
+     * @param _creator                Address of the creator
+     * @param _name                   Name of the Community
+     * @param _symbol                 Symbol of the Community
      */
-    function createCommunity(
+    function createRollingCommunity(
       address[] memory _integrations,
-      address _community
+      address _weth,
+      address _creator,
+      string memory _name,
+      string memory _symbol
     ) external returns (address) {
-        for (uint256 i = 0; i < _integrations.length; i++) {
-          require(
-              _integrations[i] != address(0),
-              "Component must not be null address"
-          );
-        }
-        require(_integrations.length > 0); // Just for checking that the community has some integrations enabled
-        ICommunity community = ICommunity(_community);
-        require(community.controller() == address(this), "The controller must be this contract");
-        _addCommunity(address(community));
+      require(_integrations.length > 0); // Just for checking that the community has some integrations enabled
+      for (uint256 i = 0; i < _integrations.length; i++) {
+        require(
+            _integrations[i] != address(0),
+            "Component must not be null address"
+        );
+      }
+      address newCommunity = ICommunityFactory.createRollingCommunity(
+        _integrations,
+        _weth,
+        address(this),
+        msg.sender,
+        _name,
+        _symbol
+      );
+      _addCommunity(newCommunity);
 
-        return address(community);
+      return newCommunity;
     }
 
     /**
@@ -171,7 +193,7 @@ contract BabController is Ownable {
     function removeCommunity(address _community) external onlyOwner {
         require(isCommunity[_community], "Community does not exist");
         require(!ICommunity(_community).active(), "The community needs to be disabled.");
-        communitys = communitys.remove(_community);
+        communities = communities.remove(_community);
 
         isCommunity[_community] = false;
 
@@ -244,7 +266,7 @@ contract BabController is Ownable {
     }
 
     /**
-     * PRIVILEGED FACTORY FUNCTION. Adds a new valid reserve asset for communitys
+     * PRIVILEGED FACTORY FUNCTION. Adds a new valid reserve asset for communities
      *
      * @param _reserveAsset Address of the reserve assset
      */
@@ -336,6 +358,34 @@ contract BabController is Ownable {
         treasury = _newTreasury;
 
         emit TreasuryChanged(_newTreasury, oldTreasury);
+    }
+
+    /**
+     * PRIVILEGED GOVERNANCE FUNCTION. Allows governance to edit the protocol community factory
+     *
+     * @param _newCommunityFactory      Address of the new community factory
+     */
+    function editCommunityFactory(address _newCommunityFactory) external onlyOwner {
+        require(_newCommunityFactory != address(0), "Address must not be 0");
+
+        address oldCommunityFactory = communityFactory;
+        communityFactory = _newCommunityFactory;
+
+        emit CommunityFactoryChanged(_newCommunityFactory, oldCommunityFactory);
+    }
+
+    /**
+     * PRIVILEGED GOVERNANCE FUNCTION. Allows governance to edit the protocol idea factory
+     *
+     * @param _newIdeaFactory      Address of the new idea factory
+     */
+    function editIdeaFactory(address _newIdeaFactory) external onlyOwner {
+        require(_newIdeaFactory != address(0), "Address must not be 0");
+
+        address oldIdeaFactory = ideaFactory;
+        ideaFactory = _newIdeaFactory;
+
+        emit IdeaFactoryChanged(_newIdeaFactory, oldIdeaFactory);
     }
 
     /**
@@ -435,7 +485,7 @@ contract BabController is Ownable {
     }
 
     function getCommunities() external view returns (address[] memory) {
-        return communitys;
+        return communities;
     }
 
     function getReserveAssets() external view returns (address[] memory) {
@@ -582,7 +632,7 @@ contract BabController is Ownable {
     function _addCommunity(address _community) internal {
         require(!isCommunity[_community], "Community already exists");
         isCommunity[_community] = true;
-        communitys.push(_community);
+        communities.push(_community);
         emit CommunityAdded(_community, msg.sender);
     }
 }

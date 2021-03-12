@@ -18,7 +18,7 @@
 
 pragma solidity 0.7.4;
 
-// import "hardhat/console.sol";
+import "hardhat/console.sol";
 import { ERC20 } from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import {
     ReentrancyGuard
@@ -84,33 +84,33 @@ contract RollingCommunity is BaseCommunity, ReentrancyGuard {
      * @param _symbol                 Symbol of the Community
      */
 
-    constructor(
+    function initialize(
         address[] memory _integrations,
         address _weth,
         address _controller,
         address _creator,
         string memory _name,
         string memory _symbol
-    )
-        BaseCommunity(
-            _integrations,
-            _weth,
-            _weth,
-            _controller,
-            _creator,
-            _name,
-            _symbol
-        )
+    ) external initializer
     {
-        totalContributors = 0;
-        totalFundsDeposited = 0;
-        totalFunds = 0;
+      super.initialize(
+          _integrations,
+          _weth,
+          _weth,
+          _controller,
+          _creator,
+          _name,
+          _symbol
+      );
+      totalContributors = 0;
+      totalFundsDeposited = 0;
+      totalFunds = 0;
     }
 
     /* ============ External Functions ============ */
 
     /**
-     * FUND LEAD ONLY. Initializes this module to the Community with allowed reserve assets,
+     * FUND LEAD ONLY.  Starts the Community with allowed reserve assets,
      * fees and issuance premium. Only callable by the Community's creator
      *
      * @param _maxDepositLimit                     Max deposit limit
@@ -126,7 +126,7 @@ contract RollingCommunity is BaseCommunity, ReentrancyGuard {
      * @param _minIdeaDuration                  Min duration of an investment idea
      * @param _maxIdeaDuration                  Max duration of an investment idea
      */
-    function initialize(
+    function start(
         uint256 _maxDepositLimit,
         uint256 _minCommunityTokenSupply,
         uint256 _minLiquidityAsset,
@@ -162,7 +162,7 @@ contract RollingCommunity is BaseCommunity, ReentrancyGuard {
         minLiquidityAsset = _minLiquidityAsset;
         depositHardlock = _depositHardlock;
         redemptionWindowAfterInvestmentCompletes = 7 days;
-        initializeCommon(
+        startCommon(
             _minContribution,
             _ideaCooldownPeriod,
             _ideaCreatorProfitPercentage,
@@ -288,7 +288,8 @@ contract RollingCommunity is BaseCommunity, ReentrancyGuard {
         payProtocolFeeFromCommunity(reserveAsset, withdrawalInfo.protocolFees);
 
         _updateReserveBalance(withdrawalInfo.newReservePositionBalance);
-
+        console.log(withdrawalInfo.newReservePositionBalance);
+        console.log(withdrawalInfo.netFlowQuantity);
         emit CommunityTokenWithdrawn(
             msg.sender,
             _to,

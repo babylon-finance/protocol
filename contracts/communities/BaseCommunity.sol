@@ -19,7 +19,8 @@ pragma solidity 0.7.4;
 
 // import "hardhat/console.sol";
 import { Address } from "@openzeppelin/contracts/utils/Address.sol";
-import { ERC20 } from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import { ERC20Upgradeable } from "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
+import { Initializable } from "@openzeppelin/contracts/proxy/Initializable.sol";
 import { SafeMath } from "@openzeppelin/contracts/math/SafeMath.sol";
 import { SafeCast } from "@openzeppelin/contracts/utils/SafeCast.sol";
 import { SignedSafeMath } from "@openzeppelin/contracts/math/SignedSafeMath.sol";
@@ -29,6 +30,7 @@ import { IIntegration } from "../interfaces/IIntegration.sol";
 import { ITradeIntegration } from "../interfaces/ITradeIntegration.sol";
 import { IPriceOracle } from "../interfaces/IPriceOracle.sol";
 import { ICommunity } from "../interfaces/ICommunity.sol";
+import { IIdeaFactory } from "../interfaces/IIdeaFactory.sol";
 import { IInvestmentIdea } from "../interfaces/IInvestmentIdea.sol";
 import { PreciseUnitMath } from "../lib/PreciseUnitMath.sol";
 
@@ -38,7 +40,7 @@ import { PreciseUnitMath } from "../lib/PreciseUnitMath.sol";
  *
  * Abstract Class that holds common community-related state and functions
  */
-abstract contract BaseCommunity is ERC20 {
+abstract contract BaseCommunity is Initializable, ERC20Upgradeable {
     using SafeCast for uint256;
     using SafeCast for int256;
     using SafeMath for uint256;
@@ -48,7 +50,6 @@ abstract contract BaseCommunity is ERC20 {
     using AddressArrayUtils for address[];
 
     /* ============ Events ============ */
-    event Invoked(address indexed _target, uint indexed _value, bytes _data, bytes _returnValue);
     event IntegrationAdded(address indexed _integration);
     event IntegrationRemoved(address indexed _integration);
     event IntegrationInitialized(address indexed _integration);
@@ -86,15 +87,6 @@ abstract contract BaseCommunity is ERC20 {
     }
 
     /**
-     * Throws if the sender is not a Communities's integration or integration not enabled
-     */
-    modifier onlyIntegration() {
-      // Internal function used to reduce bytecode size
-      _validateOnlyIntegration(msg.sender);
-      _;
-    }
-
-    /**
      * Throws if the sender is not the protocol
      */
     modifier onlyProtocol() {
@@ -127,27 +119,18 @@ abstract contract BaseCommunity is ERC20 {
     }
 
     /**
-     * Throws if the sender is not a keeper in the protocol
+     * Throws if the sender is not an investment idea of this community
      */
     modifier onlyInvestmentIdea() {
-      require(msg.sender == communityIdeas, "Only the community ideas contract can call this");
+      require(ideas[msg.sender], "Only the community ideas contract can call this");
       _;
     }
 
     /**
-     * Throws if the sender is not an investment idea or owner (for testing)
-     * TODO: Remove when deploying
+     * Throws if the sender is not an investment idea or the protocol
      */
     modifier onlyInvestmentIdeaOrOwner() {
-      require(msg.sender == communityIdeas || msg.sender == IBabController(controller).owner(), "Only the community ideas contract can call this");
-      _;
-    }
-
-    /**
-     * Throws if the sender is not an investment idea or integration
-     */
-    modifier onlyInvestmentAndIntegration() {
-      require(msg.sender == communityIdeas || isValidIntegration(msg.sender), "Only the community ideas contract can call this");
+      require(ideas[msg.sender] || msg.sender == controller, "Only the community ideas or owner can call this");
       _;
     }
 
@@ -222,6 +205,7 @@ abstract contract BaseCommunity is ERC20 {
     uint256 public ideaCooldownPeriod;            // Window for the idea to cooldown after approval before receiving capital
 
     address[] ideas;
+    mapping(address => bool) public isInvestmentIdea;
 
     uint256 public ideaCreatorProfitPercentage = 13e16; // (0.01% = 1e14, 1% = 1e16)
     uint256 public ideaVotersProfitPercentage = 5e16; // (0.01% = 1e14, 1% = 1e16)
@@ -242,8 +226,7 @@ abstract contract BaseCommunity is ERC20 {
      * @param _name                   Name of the Community
      * @param _symbol                 Symbol of the Community
      */
-
-    constructor(
+    function initialize(
         address[] memory _integrations,
         address _weth,
         address _reserveAsset,
@@ -251,8 +234,9 @@ abstract contract BaseCommunity is ERC20 {
         address _creator,
         string memory _name,
         string memory _symbol
-    ) ERC20(_name, _symbol) {
+    ) public initializer {
         require(_creator != address(0), "Creator must not be empty");
+        ERC20Upgradeable(_name, _symbol).initialize();
 
         controller = _controller;
         weth = _weth;
@@ -265,6 +249,7 @@ abstract contract BaseCommunity is ERC20 {
 
         active = false;
     }
+
     /**
     * Virtual function that assigns several community params. Must be overriden
     *
@@ -277,7 +262,7 @@ abstract contract BaseCommunity is ERC20 {
     * @param _minIdeaDuration                  Min duration of an investment idea
     * @param _maxIdeaDuration                  Max duration of an investment idea
     */
-    function initializeCommon (
+    function startCommon (
       uint256 _minContribution,
       uint256 _ideaCooldownPeriod,
       uint256 _ideaCreatorProfitPercentage,
@@ -355,19 +340,6 @@ abstract contract BaseCommunity is ERC20 {
         emit IntegrationRemoved(_integration);
     }
 
-    function invokeApprove(address _spender, address _asset, uint256 _quantity) external onlyIntegration {
-      ERC20(_asset).approve(_spender, 0);
-      ERC20(_asset).approve(_spender, _quantity);
-    }
-
-    function invokeFromIntegration(
-      address _target,
-      uint256 _value,
-      bytes calldata _data
-    ) external onlyIntegration returns (bytes memory) {
-      return _invoke(_target, _value, _data);
-    }
-
     /**
      * CREATOR ONLY. Initializes an integration in a community
      *
@@ -389,58 +361,52 @@ abstract contract BaseCommunity is ERC20 {
       _updateReserveBalance(_amount);
     }
 
-    /* ============ Trade Integration hooks ============ */
-
-    /**
-     * Function that allows the manager to call an integration
-     *
-     * @param _integration            Address of the integration to call
-     * @param _value                  Quantity of Ether to provide the call (typically 0)
-     * @param _data                   Encoded function selector and arguments
-     * @param _tokensNeeded           Tokens that we need to acquire more of before executing the investment
-     * @param _tokenAmountsNeeded     Tokens amounts that we need. Same index.
-     * @return _returnValue           Bytes encoded return value
-     */
-    function callIntegration(
-      address _integration,
-      uint256 _value,
-      bytes memory _data,
-      address[] memory _tokensNeeded,
-      uint256[] memory _tokenAmountsNeeded
-    )
-    public onlyInvestmentIdeaOrOwner returns (bytes memory _returnValue) {
-      require(_tokensNeeded.length == _tokenAmountsNeeded.length);
-      _validateOnlyIntegration(_integration);
-      // Exchange the tokens needed
-      for (uint i = 0; i < _tokensNeeded.length; i++) {
-        if (_tokensNeeded[i] != reserveAsset) {
-          uint pricePerTokenUnit = _getPrice(reserveAsset, _tokensNeeded[i]);
-          uint slippageAllowed = 1e16; // 1%
-          uint exactAmount = _tokenAmountsNeeded[i].preciseDiv(pricePerTokenUnit);
-          uint amountOfReserveAssetToAllow = exactAmount.add(exactAmount.preciseMul(slippageAllowed));
-          require(ERC20(reserveAsset).balanceOf(address(this)) >= amountOfReserveAssetToAllow, "Need enough liquid reserve asset");
-          _trade("kyber", reserveAsset, amountOfReserveAssetToAllow,_tokensNeeded[i], _tokenAmountsNeeded[i], _data);
-        }
-      }
-      return _invoke(_integration, _value, _data);
-    }
-
     /* ============ Investment Idea Functions ============ */
     /**
-     * Adds an investment idea to the contenders array for this epoch.
-     * Investment stake is stored in the contract. (not converted to reserve asset).
-     * If the array is already at the limit, replace the one with the lowest stake.
-     * @param _idea                          Address of the investment idea
+     * Creates a new investment idea calling the factory and adds it to the array
+     * @param _maxCapitalRequested           Max Capital requested denominated in the reserve asset (0 to be unlimited)
      * @param _stake                         Stake with community participations absolute amounts 1e18
+     * @param _investmentDuration            Investment duration in seconds
+     * @param _enterData                     Operation to perform to enter the investment
+     * @param _exitData                      Operation to perform to exit the investment
+     * @param _integration                   Address of the integration
+     * @param _expectedReturn                Expected return
+     * @param _minRebalanceCapital           Min capital that is worth it to deposit into this idea
+     * @param _enterTokensNeeded             Tokens that we need to acquire to enter this investment
+     * @param _enterTokensAmounts            Token amounts of these assets we need
      * TODO: Meta Transaction
      */
     function addInvestmentIdea(
-      address _idea,
-      uint256 _stake
+      uint256 _maxCapitalRequested,
+      uint256 _stake,
+      uint256 _investmentDuration,
+      bytes memory _enterData,
+      bytes memory _exitData,
+      address _integration,
+      uint256 _expectedReturn,
+      uint256 _minRebalanceCapital,
+      address[] memory _enterTokensNeeded,
+      uint256[] memory _enterTokensAmounts
     ) external onlyContributor onlyActive {
       require(ideas.length < MAX_TOTAL_IDEAS, "Reached the limit of ideas");
+      IIdeaFactory ideaFactory = IBabController(controller).getIdeaFactory();
+      address idea = ideaFactory.createInvestmentIdea(
+        msg.sender,
+        controller,
+        _maxCapitalRequested,
+        _stake,
+        _investmentDuration,
+        _enterData,
+        _exitData,
+        _integration,
+        _expectedReturn,
+        _minRebalanceCapital,
+        _enterTokensNeeded,
+        _enterTokensAmounts
+      );
+      isInvestmentIdea[idea] = true;
       totalStake = totalStake.add(_stake);
-      ideas.push(_idea);
+      ideas.push(idea);
     }
 
     /**
@@ -448,7 +414,7 @@ abstract contract BaseCommunity is ERC20 {
      * We enter into the investment and add it to the executed ideas array.
      */
     function rebalanceInvestments() external onlyKeeper onlyActive {
-      uint256 liquidReserveAsset = ERC20(reserveAsset).balanceOf(address(this));
+      uint256 liquidReserveAsset = ERC20Upgradeable(reserveAsset).balanceOf(address(this));
       for (uint i = 0; i < ideas.length; i++) {
         IInvestmentIdea idea = IInvestmentIdea(ideas[i]);
         uint256 percentage = idea.totalVotes().toUint256().preciseDiv(totalStake);
@@ -498,18 +464,36 @@ abstract contract BaseCommunity is ERC20 {
       return integrations.contains(_integration); //IBabController(controller).isValidIntegration(IIntegration(_integration).getName(), _integration);
     }
 
-    function tradeFromInvestmentIdea(
+    /* ============ Internal Functions ============ */
+
+    /**
+     * Function that calculates the price using the oracle and executes a trade.
+     * Must call the exchange to get the price and pass minReceiveQuantity accordingly.
+     * @param _integrationName        Name of the integration to call
+     * @param _sendToken              Token to exchange
+     * @param _sendQuantity           Amount of tokens to send
+     * @param _receiveToken           Token to receive
+     * @param _minReceiveQuantity     Min amount of tokens to receive
+     * @param _data                   Bytes call data
+     */
+    function _trade(
       string memory _integrationName,
       address _sendToken,
       uint256 _sendQuantity,
       address _receiveToken,
       uint256 _minReceiveQuantity,
-      bytes memory _data) external onlyInvestmentIdea
+      bytes memory _data) internal
     {
-      _trade(_integrationName, _sendToken, _sendQuantity, _receiveToken, _minReceiveQuantity, _data);
+      address tradeIntegration = IBabController(controller).getIntegrationByName(_integrationName);
+      require(
+          isValidIntegration(tradeIntegration),
+          "Integration needs to be added to the community and controller"
+      );
+      // Updates UniSwap TWAP
+      IPriceOracle oracle = IPriceOracle(IBabController(controller).getPriceOracle());
+      oracle.updateAdapters(_sendToken, _receiveToken);
+      return ITradeIntegration(tradeIntegration).trade(_sendToken, _sendQuantity, _receiveToken, _minReceiveQuantity, _data);
     }
-
-    /* ============ Internal Functions ============ */
 
     /**
      * Function that allows the reserve balance to be updated
@@ -531,57 +515,9 @@ abstract contract BaseCommunity is ERC20 {
         emit IntegrationAdded(_integration);
     }
 
-    /**
-     * Function that calculates the price using the oracle and executes a trade.
-     * Must call the exchange to get the price and pass minReceiveQuantity accordingly.
-     * @param _integrationName        Name of the integration to call
-     * @param _sendToken              Token to exchange
-     * @param _sendQuantity           Amount of tokens to send
-     * @param _receiveToken           Token to receive
-     * @param _minReceiveQuantity     Min amount of tokens to receive
-     * @param _data                   Bytes call data
-     */
-    function _trade(
-      string memory _integrationName,
-      address _sendToken,
-      uint256 _sendQuantity,
-      address _receiveToken,
-      uint256 _minReceiveQuantity,
-      bytes memory _data) internal
-    {
-      address tradeIntegration = IBabController(controller).getIntegrationByName(_integrationName);
-      _validateOnlyIntegration(tradeIntegration);
-      // Updates UniSwap TWAP
-      IPriceOracle oracle = IPriceOracle(IBabController(controller).getPriceOracle());
-      oracle.updateAdapters(_sendToken, _receiveToken);
-      return ITradeIntegration(tradeIntegration).trade(_sendToken, _sendQuantity, _receiveToken, _minReceiveQuantity, _data);
-    }
-
     function _getPrice(address _assetOne, address _assetTwo) internal returns (uint256) {
       IPriceOracle oracle = IPriceOracle(IBabController(controller).getPriceOracle());
       return oracle.getPrice(_assetOne, _assetTwo);
-    }
-
-    /**
-     * Low level function that allows an integration to make an arbitrary function
-     * call to any contract from the community (community as msg.sender).
-     *
-     * @param _target                 Address of the smart contract to call
-     * @param _value                  Quantity of Ether to provide the call (typically 0)
-     * @param _data                   Encoded function selector and arguments
-     * @return _returnValue           Bytes encoded return value
-     */
-    function _invoke(
-        address _target,
-        uint256 _value,
-        bytes memory _data
-    )
-        internal
-        returns (bytes memory _returnValue)
-    {
-        _returnValue = _target.functionCallWithValue(_data, _value);
-        emit Invoked(_target, _value, _data, _returnValue);
-        return _returnValue;
     }
 
     /**
@@ -591,23 +527,11 @@ abstract contract BaseCommunity is ERC20 {
         internal
     {
         if (_feeQuantity > 0) {
-            require(ERC20(_token).transfer(
+            require(ERC20Upgradeable(_token).transfer(
                 IBabController(controller).getTreasury(),
                 _feeQuantity
             ), "Protocol fee failed");
         }
-    }
-
-    /**
-     * Due to reason error bloat, internal functions are used to reduce bytecode size
-     *
-     * Integration must be initialized on the Community and enabled by the controller
-     */
-    function _validateOnlyIntegration(address _integration) internal view {
-        require(
-            isValidIntegration(_integration),
-            "Integration needs to be added to the community and controller"
-        );
     }
 
     function _validateOnlyActive() internal view {

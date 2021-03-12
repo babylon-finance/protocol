@@ -76,14 +76,6 @@ interface ICommunity is IERC20 {
     ) external;
     function rebalanceInvestments() external;
 
-    function tradeFromInvestmentIdea(
-      string memory _integrationName,
-      address _sendToken,
-      uint256 _sendQuantity,
-      address _receiveToken,
-      uint256 _minReceiveQuantity,
-      bytes memory _data) external;
-
     function callIntegration(address _integration, uint256 _value, bytes calldata _data,
         address[] memory _tokensNeeded,
         uint256[] memory _tokenAmountsNeeded) external returns (bytes memory _returnValue);

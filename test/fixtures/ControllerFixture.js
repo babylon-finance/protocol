@@ -31,9 +31,16 @@ async function deployFolioFixture() {
   const ReservePool = await ethers.getContractFactory("ReservePool", owner);
   const Treasury = await ethers.getContractFactory("Treasury", owner);
   const UniswapTWAP = await ethers.getContractFactory("UniswapTWAP", owner);
+  const CommunityFactory = await ethers.getContractFactory(
+    "CommunityFactory",
+    owner
+  );
+  const IdeaFactory = await ethers.getContractFactory("IdeaFactory", owner);
   const communityValuer = await CommunityValuer.deploy(babController.address);
   const reservePool = await ReservePool.deploy(babController.address);
   const treasury = await Treasury.deploy(babController.address);
+  const communityFactory = await CommunityFactory.deploy(babController.address);
+  const ideaFactory = await IdeaFactory.deploy(babController.address);
 
   const uniswapTWAPAdapter = await UniswapTWAP.deploy(
     babController.address,
@@ -51,6 +58,8 @@ async function deployFolioFixture() {
   babController.editTreasury(treasury.address);
   babController.editCommunityValuer(communityValuer.address);
   babController.editReservePool(reservePool.address);
+  babController.editCommunityFactory(communityFactory.address);
+  babController.editIdeaFactory(ideaFactory.address);
 
   const AaveIntegration = await ethers.getContractFactory(
     "AaveIntegration",
@@ -143,44 +152,28 @@ async function deployFolioFixture() {
   const integrationsAddressList = integrationsList.map(iter => iter.address);
 
   // Creates a new Community instance
-  const community = await RollingCommunity.deploy(
+  const community = await babController.createRollingCommunity(
     integrationsAddressList,
     addresses.tokens.WETH,
-    babController.address,
     addresses.users.hardhat1,
     "Absolute ETH Return [beta]",
     "EYFA"
   );
 
-  const community2 = await RollingCommunity.deploy(
+  const community2 = await babController.createRollingCommunity(
     integrationsAddressList,
     addresses.tokens.WETH,
-    babController.address,
     addresses.users.hardhat1,
     "ETH Yield Farm [a]",
     "EYFB"
   );
 
-  const community3 = await RollingCommunity.deploy(
+  const community3 = await babController.createRollingCommunity(
     integrationsAddressList,
     addresses.tokens.WETH,
-    babController.address,
     addresses.users.hardhat1,
     "ETH Yield Farm [b]",
     "EYFG"
-  );
-
-  await babController.createCommunity(
-    integrationsAddressList,
-    community.address
-  );
-  await babController.createCommunity(
-    integrationsAddressList,
-    community2.address
-  );
-  await babController.createCommunity(
-    integrationsAddressList,
-    community3.address
   );
 
   const communityAddressesList = await babController.getCommunities();
@@ -196,7 +189,7 @@ async function deployFolioFixture() {
   });
 
   // Initial deposit
-  await community.initialize(
+  await community.start(
     ethers.utils.parseEther("10"),
     1,
     ethers.utils.parseEther("1000"),

@@ -26,11 +26,13 @@ import {
 import { SafeMath } from "@openzeppelin/contracts/math/SafeMath.sol";
 import { SignedSafeMath } from "@openzeppelin/contracts/math/SignedSafeMath.sol";
 import { SafeCast } from "@openzeppelin/contracts/utils/SafeCast.sol";
+import { Initializable } from "@openzeppelin/contracts/proxy/Initializable.sol";
 import { AddressArrayUtils } from "../lib/AddressArrayUtils.sol";
 import { IWETH } from "../interfaces/external/weth/IWETH.sol";
 import { PreciseUnitMath } from "../lib/PreciseUnitMath.sol";
 import { IBabController } from "../interfaces/IBabController.sol";
 import { ICommunity } from "../interfaces/ICommunity.sol";
+import { ITradeIntegration } from "../interfaces/ITradeIntegration.sol";
 import { IPriceOracle } from "../interfaces/IPriceOracle.sol";
 
 /**
@@ -39,7 +41,7 @@ import { IPriceOracle } from "../interfaces/IPriceOracle.sol";
  *
  * Holds the data for an investment idea
  */
-contract InvestmentIdea is ReentrancyGuard {
+contract InvestmentIdea is ReentrancyGuard, Initializable {
   using SignedSafeMath for int256;
   using SafeMath for uint256;
   using SafeCast for uint256;
@@ -49,6 +51,7 @@ contract InvestmentIdea is ReentrancyGuard {
   using AddressArrayUtils for address[];
 
   /* ============ Events ============ */
+  event Invoked(address indexed _target, uint indexed _value, bytes _data, bytes _returnValue);
   event PositionAdded(address indexed _component);
   event PositionRemoved(address indexed _component);
   event PositionBalanceEdited(address indexed _component, int256 _realBalance);
@@ -57,6 +60,11 @@ contract InvestmentIdea is ReentrancyGuard {
   /**
    * Throws if the sender is not the creator of the idea
    */
+  modifier onlyController {
+    require(msg.sender == controller, "Only Controller can access this");
+    _;
+  }
+
   modifier onlyIdeator {
     require(msg.sender == ideator, "Only Ideator can access this");
     _;
@@ -67,6 +75,15 @@ contract InvestmentIdea is ReentrancyGuard {
         ERC20(address(community)).balanceOf(msg.sender) > 0,
         "Only someone with the community token can withdraw"
     );
+    _;
+  }
+
+  /**
+   * Throws if the sender is not a Communities's integration or integration not enabled
+   */
+  modifier onlyIntegration() {
+    // Internal function used to reduce bytecode size
+    require(community.isValidIntegration(msg.sender), "Integration must be valid");
     _;
   }
 
@@ -172,7 +189,7 @@ contract InvestmentIdea is ReentrancyGuard {
    * @param _enterTokensNeeded             Tokens that we need to acquire to enter this investment
    * @param _enterTokensAmounts            Token amounts of these assets we need
    */
-  constructor(
+  function initialize(
     address _community,
     address _controller,
     uint256 _maxCapitalRequested,
@@ -185,7 +202,7 @@ contract InvestmentIdea is ReentrancyGuard {
     uint256 _minRebalanceCapital,
     address[] memory _enterTokensNeeded,
     uint256[] memory _enterTokensAmounts
-  )
+  ) public initializer
   {
     controller = IBabController(_controller);
     community = ICommunity(_community);
@@ -280,14 +297,14 @@ contract InvestmentIdea is ReentrancyGuard {
     bytes memory _data = exitPayload;
     address reserveAsset = community.getReserveAsset();
     uint256 reserveAssetBeforeExiting = community.getReserveBalance();
-    community.callIntegration(integration, 0, _data, _tokensNeeded, _tokenAmounts);
+    _callIntegration(integration, 0, _data, _tokensNeeded, _tokenAmounts);
     // Exchange the tokens back to the reserve asset
     bytes memory _emptyTradeData;
     for (uint i = 0; i < enterTokensNeeded.length; i++) {
       if (enterTokensNeeded[i] != reserveAsset) {
         uint pricePerTokenUnit = _getPrice(reserveAsset, enterTokensNeeded[i]);
         // TODO: The actual amount must be supposedly higher when we exit
-        community.tradeFromInvestmentIdea("kyber", enterTokensNeeded[i], enterTokensAmounts[i], reserveAsset, enterTokensAmounts[i].preciseDiv(pricePerTokenUnit), _emptyTradeData);
+        _trade("kyber", enterTokensNeeded[i], enterTokensAmounts[i], reserveAsset, enterTokensAmounts[i].preciseDiv(pricePerTokenUnit), _emptyTradeData);
       }
     }
     uint256 capitalReturned = community.getReserveBalance().sub(reserveAssetBeforeExiting);
@@ -318,7 +335,7 @@ contract InvestmentIdea is ReentrancyGuard {
     * @return                          Previous position balance
     * @return                          New position balance
     */
-  function _calculateAndEditPosition(
+  function calculateAndEditPosition(
     address _component,
     uint256 _newBalance,
     int256 _deltaBalance,
@@ -342,6 +359,28 @@ contract InvestmentIdea is ReentrancyGuard {
     _editPositionBalance(_component, _newBalance.toInt256(), msg.sender, _deltaBalance, _subpositionStatus);
 
     return (_newBalance, positionBalance, _newBalance);
+  }
+
+  /* ============ Integration hooks ============ */
+
+  /**
+   * Function that allows the manager to call an integration
+   *
+   * @param _integration            Address of the integration to call
+   * @param _value                  Quantity of Ether to provide the call (typically 0)
+   * @param _data                   Encoded function selector and arguments
+   * @param _tokensNeeded           Tokens that we need to acquire more of before executing the investment
+   * @param _tokenAmountsNeeded     Tokens amounts that we need. Same index.
+   * @return _returnValue           Bytes encoded return value
+   */
+  function callIntegration(
+    address _integration,
+    uint256 _value,
+    bytes memory _data,
+    address[] memory _tokensNeeded,
+    uint256[] memory _tokenAmountsNeeded
+  ) public onlyController returns (bytes memory _returnValue) {
+    _callIntegration(_integration, _value, _data, _tokensNeeded, _tokenAmountsNeeded);
   }
 
   /* ============ External Getter Functions ============ */
@@ -398,6 +437,100 @@ contract InvestmentIdea is ReentrancyGuard {
   }
 
   /* ============ Internal Functions ============ */
+
+  /**
+   * Low level function that allows an integration to make an arbitrary function
+   * call to any contract from the community (community as msg.sender).
+   *
+   * @param _target                 Address of the smart contract to call
+   * @param _value                  Quantity of Ether to provide the call (typically 0)
+   * @param _data                   Encoded function selector and arguments
+   * @return _returnValue           Bytes encoded return value
+   */
+  function _invoke(
+      address _target,
+      uint256 _value,
+      bytes memory _data
+  )
+      internal
+      returns (bytes memory _returnValue)
+  {
+      _returnValue = _target.functionCallWithValue(_data, _value);
+      emit Invoked(_target, _value, _data, _returnValue);
+      return _returnValue;
+  }
+
+  function invokeApprove(address _spender, address _asset, uint256 _quantity) external onlyIntegration {
+    ERC20(_asset).approve(_spender, 0);
+    ERC20(_asset).approve(_spender, _quantity);
+  }
+
+  function invokeFromIntegration(
+    address _target,
+    uint256 _value,
+    bytes calldata _data
+  ) external onlyIntegration returns (bytes memory) {
+    return _invoke(_target, _value, _data);
+  }
+
+  /**
+   * Function that allows the manager to call an integration
+   *
+   * @param _integration            Address of the integration to call
+   * @param _value                  Quantity of Ether to provide the call (typically 0)
+   * @param _data                   Encoded function selector and arguments
+   * @param _tokensNeeded           Tokens that we need to acquire more of before executing the investment
+   * @param _tokenAmountsNeeded     Tokens amounts that we need. Same index.
+   * @return _returnValue           Bytes encoded return value
+   */
+  function _callIntegration(
+    address _integration,
+    uint256 _value,
+    bytes memory _data,
+    address[] memory _tokensNeeded,
+    uint256[] memory _tokenAmountsNeeded
+  ) internal returns (bytes memory _returnValue) {
+    require(_tokensNeeded.length == _tokenAmountsNeeded.length);
+    // _validateOnlyIntegration(_integration);
+    // Exchange the tokens needed
+    for (uint i = 0; i < _tokensNeeded.length; i++) {
+      if (_tokensNeeded[i] != community.getReserveAsset()) {
+        uint pricePerTokenUnit = _getPrice(community.getReserveAsset(), _tokensNeeded[i]);
+        uint slippageAllowed = 1e16; // 1%
+        uint exactAmount = _tokenAmountsNeeded[i].preciseDiv(pricePerTokenUnit);
+        uint amountOfReserveAssetToAllow = exactAmount.add(exactAmount.preciseMul(slippageAllowed));
+        require(ERC20(community.getReserveAsset()).balanceOf(address(this)) >= amountOfReserveAssetToAllow, "Need enough liquid reserve asset");
+        _trade("kyber", community.getReserveAsset(), amountOfReserveAssetToAllow,_tokensNeeded[i], _tokenAmountsNeeded[i], _data);
+      }
+    }
+    return _invoke(_integration, _value, _data);
+  }
+
+  /**
+   * Function that calculates the price using the oracle and executes a trade.
+   * Must call the exchange to get the price and pass minReceiveQuantity accordingly.
+   * @param _integrationName        Name of the integration to call
+   * @param _sendToken              Token to exchange
+   * @param _sendQuantity           Amount of tokens to send
+   * @param _receiveToken           Token to receive
+   * @param _minReceiveQuantity     Min amount of tokens to receive
+   * @param _data                   Bytes call data
+   */
+  function _trade(
+    string memory _integrationName,
+    address _sendToken,
+    uint256 _sendQuantity,
+    address _receiveToken,
+    uint256 _minReceiveQuantity,
+    bytes memory _data) internal
+  {
+    address tradeIntegration = IBabController(controller).getIntegrationByName(_integrationName);
+    require(community.isValidIntegration(tradeIntegration), "Integration is not valid");
+    // Updates UniSwap TWAP
+    IPriceOracle oracle = IPriceOracle(IBabController(controller).getPriceOracle());
+    oracle.updateAdapters(_sendToken, _receiveToken);
+    return ITradeIntegration(tradeIntegration).trade(_sendToken, _sendQuantity, _receiveToken, _minReceiveQuantity, _data);
+  }
 
   function _transferIdeaRewards(uint capitalReturned) internal {
     address reserveAsset = community.getReserveAsset();

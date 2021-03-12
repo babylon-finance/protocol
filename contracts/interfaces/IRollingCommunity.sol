@@ -29,13 +29,19 @@ import { ICommunity } from "./ICommunity.sol";
  */
 interface IRollingCommunity is IERC20, ICommunity {
 
-    function initialize(
+    function start(
       uint256 _maxDepositLimit,
-      uint256 _premiumPercentage,
       uint256 _minCommunityTokenSupply,
-      uint256 _communityActiveWindow,
-      uint256 _communityWithdrawalWindow,
-      address _communityIdeas
+      uint256 _minLiquidityAsset,
+      uint256 _depositHardlock,
+      uint256 _minContribution,
+      uint256 _ideaCooldownPeriod,
+      uint256 _ideaCreatorProfitPercentage,
+      uint256 _ideaVotersProfitPercentage,
+      uint256 _communityCreatorProfitPercentage,
+      uint256 _minVotersQuorum,
+      uint256 _minIdeaDuration,
+      uint256 _maxIdeaDuration
     ) external;
 
     function deposit(
