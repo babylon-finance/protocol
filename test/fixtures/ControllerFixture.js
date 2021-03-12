@@ -219,6 +219,14 @@ async function deployFolioFixture() {
     { value: ethers.utils.parseEther("0.1") }
   );
 
+  await community.connect(signer1).addInvestmentIdea(
+    ethers.utils.parseEther("1"),
+    ethers.utils.parseEther("0.001"),
+    ONE_DAY_IN_SECONDS * 30,
+    ethers.utils.parseEther("0.05"), // 5%
+    ethers.utils.parseEther("0.1")
+  );
+
   return {
     babController,
     reservePool,
@@ -237,6 +245,7 @@ async function deployFolioFixture() {
       two: community2,
       three: community3
     },
+    ideas: await community.getIdeas(),
     communityValuer,
     priceOracle,
     owner,

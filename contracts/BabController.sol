@@ -481,6 +481,14 @@ contract BabController is Ownable {
         return communityValuer;
     }
 
+    function getCommunityFactory() external view returns (address) {
+        return communityFactory;
+    }
+
+    function getIdeaFactory() external view returns (address) {
+        return ideaFactory;
+    }
+
     function getCommunities() external view returns (address[] memory) {
         return communities;
     }

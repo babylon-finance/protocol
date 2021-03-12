@@ -17,7 +17,7 @@
 
 pragma solidity 0.7.4;
 
-// import "hardhat/console.sol";
+import "hardhat/console.sol";
 import { Address } from "@openzeppelin/contracts/utils/Address.sol";
 import { ERC20Upgradeable } from "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
 import { SafeMath } from "@openzeppelin/contracts/math/SafeMath.sol";
@@ -380,7 +380,7 @@ abstract contract BaseCommunity is ERC20Upgradeable {
       require(ideas.length < MAX_TOTAL_IDEAS, "Reached the limit of ideas");
       IIdeaFactory ideaFactory = IIdeaFactory(IBabController(controller).getIdeaFactory());
       address idea = ideaFactory.createInvestmentIdea(
-        msg.sender,
+        address(this),
         controller,
         _maxCapitalRequested,
         _stake,
