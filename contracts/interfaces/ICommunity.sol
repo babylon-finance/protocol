@@ -50,6 +50,31 @@ interface ICommunity is IERC20 {
     function weth() external view returns (address);
     function minLiquidityAsset() external view returns (uint256);
     function getReserveBalance() external view returns (uint256);
+    function totalStake() external pure returns (uint256);
+    function minVotersQuorum() external pure returns (uint256);
+    function minIdeaDuration() external pure returns (uint256);
+    function maxIdeaDuration() external pure returns (uint256);
+    function ideaCooldownPeriod() external pure returns (uint256);
+    function ideaCreatorProfitPercentage() external pure returns (uint256);
+    function ideaVotersProfitPercentage() external pure returns (uint256);
+    function communityCreatorProfitPercentage() external pure returns (uint256);
+    function getIdeas() external view returns (uint8[] memory);
+
+    function startRedemptionWindow(uint256 _amount) external;
+
+    function addInvestmentIdea(
+      uint256 _maxCapitalRequested,
+      uint256 _stake,
+      uint256 _investmentDuration,
+      bytes memory _enterData,
+      bytes memory _exitData,
+      address _integration,
+      uint256 _expectedReturn,
+      uint256 _minRebalanceCapital,
+      address[] memory _enterTokensNeeded,
+      uint256[] memory _enterTokensAmounts
+    ) external;
+    function rebalanceInvestments() external;
 
     function tradeFromInvestmentIdea(
       string memory _integrationName,

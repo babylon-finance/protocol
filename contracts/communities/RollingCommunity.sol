@@ -25,14 +25,13 @@ import {
 } from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import { SafeMath } from "@openzeppelin/contracts/math/SafeMath.sol";
 import { SignedSafeMath } from "@openzeppelin/contracts/math/SignedSafeMath.sol";
-import { PreciseUnitMath } from "./lib/PreciseUnitMath.sol";
 import { SafeCast } from "@openzeppelin/contracts/utils/SafeCast.sol";
-import { IWETH } from "./interfaces/external/weth/IWETH.sol";
-import { ICommunityIdeas } from "./interfaces/ICommunityIdeas.sol";
-import { IBabController } from "./interfaces/IBabController.sol";
-import { ICommunityValuer } from "./interfaces/ICommunityValuer.sol";
-import { IReservePool } from "./interfaces/IReservePool.sol";
-import { IPriceOracle } from "./interfaces/IPriceOracle.sol";
+import { PreciseUnitMath } from "../lib/PreciseUnitMath.sol";
+import { IWETH } from "../interfaces/external/weth/IWETH.sol";
+import { IBabController } from "../interfaces/IBabController.sol";
+import { ICommunityValuer } from "../interfaces/ICommunityValuer.sol";
+import { IReservePool } from "../interfaces/IReservePool.sol";
+import { IPriceOracle } from "../interfaces/IPriceOracle.sol";
 import { BaseCommunity } from "./BaseCommunity.sol";
 
 
@@ -50,41 +49,7 @@ contract RollingCommunity is BaseCommunity, ReentrancyGuard {
   using PreciseUnitMath for int256;
   using PreciseUnitMath for uint256;
 
-    /* ============ Events ============ */
-    event CommunityTokenDeposited(
-        address indexed _to,
-        uint256 communityTokenQuantity,
-        uint256 protocolFees
-    );
-    event CommunityTokenWithdrawn(
-        address indexed _from,
-        address indexed _to,
-        uint256 communityTokenQuantity,
-        uint256 protocolFees
-    );
-
-    event ContributionLog(
-        address indexed contributor,
-        uint256 amount,
-        uint256 tokensReceived,
-        uint256 timestamp
-    );
-    event WithdrawalLog(
-        address indexed sender,
-        uint256 amount,
-        uint256 timestamp
-    );
-
-    /* ============ Modifiers ============ */
-
-    modifier onlyContributor {
-      _validateOnlyContributor(msg.sender);
-      _;
-    }
-
     /* ============ State Variables ============ */
-    uint256 constant public initialBuyRate = 1000000000000; // Initial buy rate for the manager
-    uint256 constant public MAX_DEPOSITS_FUND_V1 = 1e21; // Max deposit per community is 1000 eth for v1
 
     struct ActionInfo {
       uint256 preFeeReserveQuantity; // Reserve value before fees; During issuance, represents raw quantity
@@ -99,19 +64,10 @@ contract RollingCommunity is BaseCommunity, ReentrancyGuard {
       uint256 newReservePositionBalance; // Community token reserve asset position balance after deposit/withdrawal
     }
 
-    uint256 public maxDepositLimit;                // Limits the amount of deposits
-    uint256 public communityInitializedAt;         // Community Initialized at timestamp
     uint256 public depositHardlock;                // Window of time after deposits when withdraws are disabled for that user
     uint256 public redemptionWindowAfterInvestmentCompletes; // Window of time after an investment idea finishes when the capital is available for withdrawals
     uint256 public redemptionsOpenUntil;           // Indicates until when the redemptions are open and the ETH is set aside
 
-    mapping(address => Contributor) public contributors;
-    uint256 public totalContributors;
-    uint256 public totalFundsDeposited;
-    uint256 public totalFunds;
-    // Min contribution in the community
-    uint256 public minContribution = initialBuyRate; //wei
-    uint256 public minCommunityTokenSupply;
 
     /* ============ Constructor ============ */
 
@@ -127,6 +83,13 @@ contract RollingCommunity is BaseCommunity, ReentrancyGuard {
      * @param _name                   Name of the Community
      * @param _symbol                 Symbol of the Community
      * @param _minContribution        Min contribution to the community
+     * @param _ideaCooldownPeriod               How long after the idea has been activated, will it be ready to be executed
+     * @param _ideaCreatorProfitPercentage      What percentage of the profits go to the idea creator
+     * @param _ideaVotersProfitPercentage       What percentage of the profits go to the idea curators
+     * @param _communityCreatorProfitPercentage What percentage of the profits go to the creator of the community
+     * @param _minVotersQuorum                  Percentage of votes needed to activate an investment idea (0.01% = 1e14, 1% = 1e16)
+     * @param _minIdeaDuration                  Min duration of an investment idea
+     * @param _maxIdeaDuration                  Max duration of an investment idea
      */
 
     constructor(
@@ -136,7 +99,14 @@ contract RollingCommunity is BaseCommunity, ReentrancyGuard {
         address _creator,
         string memory _name,
         string memory _symbol,
-        uint256 _minContribution
+        uint256 _minContribution,
+        uint256 _ideaCooldownPeriod,
+        uint256 _ideaCreatorProfitPercentage,
+        uint256 _ideaVotersProfitPercentage,
+        uint256 _communityCreatorProfitPercentage,
+        uint256 _minVotersQuorum,
+        uint256 _minIdeaDuration,
+        uint256 _maxIdeaDuration
     )
         BaseCommunity(
             _integrations,
@@ -145,7 +115,14 @@ contract RollingCommunity is BaseCommunity, ReentrancyGuard {
             _controller,
             _creator,
             _name,
-            _symbol
+            _symbol,
+            _ideaCooldownPeriod,
+            _ideaCreatorProfitPercentage,
+            _ideaVotersProfitPercentage,
+            _communityCreatorProfitPercentage,
+            _minVotersQuorum,
+            _minIdeaDuration,
+            _maxIdeaDuration
         )
     {
         minContribution = _minContribution;
@@ -157,7 +134,7 @@ contract RollingCommunity is BaseCommunity, ReentrancyGuard {
     /* ============ External Functions ============ */
 
     /**
-     * FUND MANAGER ONLY. Initializes this module to the Community with allowed reserve assets,
+     * FUND LEAD ONLY. Initializes this module to the Community with allowed reserve assets,
      * fees and issuance premium. Only callable by the Community's creator
      *
      * @param _maxDepositLimit                     Max deposit limit
@@ -194,10 +171,6 @@ contract RollingCommunity is BaseCommunity, ReentrancyGuard {
         communityInitializedAt = block.timestamp;
         minLiquidityAsset = _minLiquidityAsset;
         depositHardlock = _depositHardlock;
-        ICommunityIdeas communityIdeasC = ICommunityIdeas(_communityIdeas);
-        require(communityIdeasC.controller() == controller, "Controller must be the same");
-        require(communityIdeasC.community() == address(this), "Community must be this contract");
-        communityIdeas = _communityIdeas;
         redemptionWindowAfterInvestmentCompletes = 7 days;
 
         IWETH(weth).deposit{value: initialDepositAmount}();
@@ -784,12 +757,5 @@ contract RollingCommunity is BaseCommunity, ReentrancyGuard {
         tokensReceived,
         block.timestamp
       );
-    }
-
-    function _validateOnlyContributor(address _caller) internal view {
-        require(
-            balanceOf(_caller) > 0,
-            "Only participant can withdraw"
-        );
     }
 }

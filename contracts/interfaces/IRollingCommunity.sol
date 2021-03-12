@@ -69,7 +69,6 @@ interface IRollingCommunity is IERC20, ICommunity {
         uint256 _communityTokenQuantity
     ) external view returns (bool);
 
-    function startRedemptionWindow(uint256 _amount) external;
     function reenableEthForInvestments() external;
     function burnAssetsFromSenderAndMintToReserve(address _contributor, uint256 _quantity) external;
 

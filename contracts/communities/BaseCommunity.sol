@@ -23,13 +23,14 @@ import { ERC20 } from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import { SafeMath } from "@openzeppelin/contracts/math/SafeMath.sol";
 import { SafeCast } from "@openzeppelin/contracts/utils/SafeCast.sol";
 import { SignedSafeMath } from "@openzeppelin/contracts/math/SignedSafeMath.sol";
-import { AddressArrayUtils } from "./lib/AddressArrayUtils.sol";
-import { IBabController } from "./interfaces/IBabController.sol";
-import { IIntegration } from "./interfaces/IIntegration.sol";
-import { ITradeIntegration } from "./interfaces/ITradeIntegration.sol";
-import { IPriceOracle } from "./interfaces/IPriceOracle.sol";
-import { ICommunity } from "./interfaces/ICommunity.sol";
-import { PreciseUnitMath } from "./lib/PreciseUnitMath.sol";
+import { AddressArrayUtils } from "../lib/AddressArrayUtils.sol";
+import { IBabController } from "../interfaces/IBabController.sol";
+import { IIntegration } from "../interfaces/IIntegration.sol";
+import { ITradeIntegration } from "../interfaces/ITradeIntegration.sol";
+import { IPriceOracle } from "../interfaces/IPriceOracle.sol";
+import { ICommunity } from "../interfaces/ICommunity.sol";
+import { InvestmentIdea } from "./InvestmentIdea.sol";
+import { PreciseUnitMath } from "../lib/PreciseUnitMath.sol";
 
 /**
  * @title BaseCommunity
@@ -54,8 +55,35 @@ abstract contract BaseCommunity is ERC20 {
     event PendingIntegrationRemoved(address indexed _integration);
     event ReserveAssetChanged(address indexed _integration);
     event ReserveBalanceChanged(uint256 _newAmount, uint256 _oldAmount);
+    event CommunityTokenDeposited(
+        address indexed _to,
+        uint256 communityTokenQuantity,
+        uint256 protocolFees
+    );
+    event CommunityTokenWithdrawn(
+        address indexed _from,
+        address indexed _to,
+        uint256 communityTokenQuantity,
+        uint256 protocolFees
+    );
+
+    event ContributionLog(
+        address indexed contributor,
+        uint256 amount,
+        uint256 tokensReceived,
+        uint256 timestamp
+    );
+    event WithdrawalLog(
+        address indexed sender,
+        uint256 amount,
+        uint256 timestamp
+    );
 
     /* ============ Modifiers ============ */
+    modifier onlyContributor {
+      _validateOnlyContributor(msg.sender);
+      _;
+    }
 
     /**
      * Throws if the sender is not a Communities's integration or integration not enabled
@@ -148,7 +176,9 @@ abstract contract BaseCommunity is ERC20 {
     }
 
     /* ============ State Variables ============ */
-
+    uint256 constant public initialBuyRate = 1000000000000; // Initial buy rate for the manager
+    uint256 constant public MAX_DEPOSITS_FUND_V1 = 1e21; // Max deposit per community is 1000 eth for v1
+    uint256 constant public MAX_TOTAL_IDEAS = 20; // Max deposit per community is 1000 eth for v1
     // Wrapped ETH address
     address public immutable weth;
 
@@ -174,6 +204,32 @@ abstract contract BaseCommunity is ERC20 {
     // Indicates the minimum liquidity the asset needs to have to be tradable by this community
     uint256 public minLiquidityAsset;
 
+    // Contributors
+    mapping(address => Contributor) public contributors;
+    uint256 public totalContributors;
+    uint256 public totalFundsDeposited;
+    uint256 public totalFunds;
+    uint256 public maxDepositLimit;                // Limits the amount of deposits
+
+    uint256 public communityInitializedAt;         // Community Initialized at timestamp
+
+    // Min contribution in the community
+    uint256 public minContribution = initialBuyRate; //wei
+    uint256 public minCommunityTokenSupply;
+
+    // Investment ideas variables
+    uint256 public totalStake = 0;
+    uint256 public minVotersQuorum = 1e17;          // 10%. (0.01% = 1e14, 1% = 1e16)
+    uint256 public minIdeaDuration;               // Min duration for an investment Idea
+    uint256 public maxIdeaDuration;               // Max duration for an investment idea
+    uint256 public ideaCooldownPeriod;            // Window for the idea to cooldown after approval before receiving capital
+
+    address[] ideas;
+
+    uint256 public ideaCreatorProfitPercentage = 13e16; // (0.01% = 1e14, 1% = 1e16)
+    uint256 public ideaVotersProfitPercentage = 5e16; // (0.01% = 1e14, 1% = 1e16)
+    uint256 public communityCreatorProfitPercentage = 2e16; //
+
     /* ============ Constructor ============ */
 
     /**
@@ -188,6 +244,13 @@ abstract contract BaseCommunity is ERC20 {
      * @param _creator                Address of the creator
      * @param _name                   Name of the Community
      * @param _symbol                 Symbol of the Community
+     * @param _ideaCooldownPeriod               How long after the idea has been activated, will it be ready to be executed
+     * @param _ideaCreatorProfitPercentage      What percentage of the profits go to the idea creator
+     * @param _ideaVotersProfitPercentage       What percentage of the profits go to the idea curators
+     * @param _communityCreatorProfitPercentage What percentage of the profits go to the creator of the community
+     * @param _minVotersQuorum                  Percentage of votes needed to activate an investment idea (0.01% = 1e14, 1% = 1e16)
+     * @param _minIdeaDuration                  Min duration of an investment idea
+     * @param _maxIdeaDuration                  Max duration of an investment idea
      */
 
     constructor(
@@ -197,7 +260,14 @@ abstract contract BaseCommunity is ERC20 {
         address _controller,
         address _creator,
         string memory _name,
-        string memory _symbol
+        string memory _symbol,
+        uint256 _ideaCooldownPeriod,
+        uint256 _ideaCreatorProfitPercentage,
+        uint256 _ideaVotersProfitPercentage,
+        uint256 _communityCreatorProfitPercentage,
+        uint256 _minVotersQuorum,
+        uint256 _minIdeaDuration,
+        uint256 _maxIdeaDuration
     ) ERC20(_name, _symbol) {
         require(_creator != address(0), "Creator must not be empty");
 
@@ -205,6 +275,19 @@ abstract contract BaseCommunity is ERC20 {
         weth = _weth;
         reserveAsset = _reserveAsset;
         creator = _creator;
+
+        require(
+            _ideaCooldownPeriod <= IBabController(controller).getMaxCooldownPeriod() && _ideaCooldownPeriod >= IBabController(controller).getMinCooldownPeriod() ,
+            "Community cooldown must be within the range allowed by the protocol"
+        );
+        require(_minVotersQuorum >= 1e17, "You need at least 10% votes");
+        ideaCreatorProfitPercentage = _ideaCreatorProfitPercentage;
+        ideaVotersProfitPercentage = _ideaVotersProfitPercentage;
+        communityCreatorProfitPercentage = _communityCreatorProfitPercentage;
+        ideaCooldownPeriod = _ideaCooldownPeriod;
+        minVotersQuorum = _minVotersQuorum;
+        minIdeaDuration = _minIdeaDuration;
+        maxIdeaDuration = _maxIdeaDuration;
 
         for (uint i = 0; i < _integrations.length; i++) {
           _addIntegration(_integrations[i]);
@@ -336,7 +419,88 @@ abstract contract BaseCommunity is ERC20 {
       return _invoke(_integration, _value, _data);
     }
 
+    /* ============ Investment Idea Functions ============ */
+    /**
+     * Adds an investment idea to the contenders array for this epoch.
+     * Investment stake is stored in the contract. (not converted to reserve asset).
+     * If the array is already at the limit, replace the one with the lowest stake.
+     * @param _maxCapitalRequested           Max Capital requested denominated in the reserve asset (0 to be unlimited)
+     * @param _stake                         Stake with community participations absolute amounts 1e18
+     * @param _investmentDuration            Investment duration in seconds
+     * @param _enterData                     Operation to perform to enter the investment
+     * @param _exitData                      Operation to perform to exit the investment
+     * @param _integration                   Address of the integration
+     * @param _expectedReturn                Expected return
+     * @param _minRebalanceCapital           Min capital that is worth it to deposit into this idea
+     * @param _enterTokensNeeded             Tokens that we need to acquire to enter this investment
+     * @param _enterTokensAmounts            Token amounts of these assets we need
+     * TODO: Meta Transaction
+     */
+    function addInvestmentIdea(
+      uint256 _maxCapitalRequested,
+      uint256 _stake,
+      uint256 _investmentDuration,
+      bytes memory _enterData,
+      bytes memory _exitData,
+      address _integration,
+      uint256 _expectedReturn,
+      uint256 _minRebalanceCapital,
+      address[] memory _enterTokensNeeded,
+      uint256[] memory _enterTokensAmounts
+    ) external onlyContributor onlyActive {
+      require(isValidIntegration(_integration), "Integration must be valid");
+      require(_stake > totalSupply().div(100), "Stake amount must be at least 1% of the community");
+      require(_investmentDuration >= minIdeaDuration && _investmentDuration <= maxIdeaDuration, "Investment duration must be in range");
+      require(_stake > 0, "Stake amount must be greater than 0");
+      require(_minRebalanceCapital > 0, "Min Capital requested amount must be greater than 0");
+      require(_maxCapitalRequested >= _minRebalanceCapital, "The max amount of capital must be greater than one chunk");
+      require(ideas.length < MAX_TOTAL_IDEAS, "Reached the limit of ideas");
+      // Check than enter and exit data call integrations
+      InvestmentIdea idea = new InvestmentIdea(
+        address(this),
+        controller,
+        _maxCapitalRequested,
+        _stake,
+        _investmentDuration,
+        _enterData,
+        _exitData,
+        _integration,
+        _expectedReturn,
+        _minRebalanceCapital,
+        _enterTokensNeeded,
+        _enterTokensAmounts
+      );
+      totalStake = totalStake.add(_stake);
+      ideas.push(address(idea));
+    }
+
+    /**
+     * Rebalances available capital of the community between the investment ideas that are active.
+     * We enter into the investment and add it to the executed ideas array.
+     */
+    function rebalanceInvestments() external onlyKeeper onlyActive {
+      uint256 liquidReserveAsset = ERC20(reserveAsset).balanceOf(address(this));
+      for (uint i = 0; i < ideas.length; i++) {
+        InvestmentIdea idea = InvestmentIdea(ideas[i]);
+        uint256 percentage = idea.totalVotes().toUint256().preciseDiv(totalStake);
+        uint256 toAllocate = liquidReserveAsset.preciseMul(percentage);
+        if (toAllocate >= idea.minRebalanceCapital() && toAllocate.add(idea.capitalAllocated()) <= idea.maxCapitalRequested()) {
+          idea.executeInvestment(toAllocate);
+        }
+      }
+    }
+
     /* ============ External Getter Functions ============ */
+
+    /**
+     * Gets current investment ideas
+     *
+     * @return  address[]        Returns list of addresses
+     */
+
+    function getIdeas() public view returns (address[] memory) {
+      return ideas;
+    }
 
     function getReserveBalance() external view returns (uint256) {
       return reserveBalance;
@@ -487,8 +651,19 @@ abstract contract BaseCommunity is ERC20 {
         require(active == false, "Community must be disabled");
     }
 
+    function _validateOnlyContributor(address _caller) internal view {
+        require(
+            balanceOf(_caller) > 0,
+            "Only participant can withdraw"
+        );
+    }
+
     // Disable community token transfers. Allow minting and burning.
     function _beforeTokenTransfer(address from, address to, uint256 /* amount */) override view internal {
       require(from == address(0) || to == address(0) || IBabController(controller).communityTokensTransfersEnabled(), "Community token transfers are disabled");
+    }
+
+    function abs(int x) private pure returns (int) {
+      return x >= 0 ? x : -x;
     }
 }
