@@ -18,7 +18,7 @@
 
 pragma solidity 0.7.4;
 
-import "hardhat/console.sol";
+//import "hardhat/console.sol";
 import { SafeMath } from "@openzeppelin/contracts/math/SafeMath.sol";
 import { VoteToken } from "../governance/VoteToken.sol";
 import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
@@ -33,9 +33,10 @@ import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
  * functions in ERC20, an account can show its full, post-distribution
  * balance but only transfer or spend up to an allowed amount
  *
- * Every time an epoch passes, a portion of previously non-spendable tokens
- * are allowed to be transferred, and after all epochs have passed, the full
- * account balance is unlocked
+ * A portion of previously non-spendable tokens are allowed to be transferred
+ * along the time depending on each vesting conditions, and after all epochs have passed, the full
+ * account balance is unlocked. In case on non-completion vesting period, only the owner can cancel 
+ * the delivery of the pending tokens.
  */
 
 
@@ -45,10 +46,13 @@ abstract contract TimeLockedToken is VoteToken {
     /* ============ Events ============ */
 
     /// @notice An event that emitted when a new lockout ocurr
-    event newLockout(address account, uint256 tokenslocked);
+    event newLockout(address account, uint256 tokenslocked, bool isTeamOrAdvisor, uint256 startingVesting, uint256 endingVesting);
     
     /// @notice An event that emitted when a new Time Lock is registered
     event newTimeLockRegistration(address account);
+    
+    /// @notice An event that emitted when a cancellation of Lock tokens is registered 
+    event Cancel(address account, uint256 amount);
 
 
     /* ============ Modifiers ============ */
@@ -64,24 +68,35 @@ abstract contract TimeLockedToken is VoteToken {
     // represents total distribution for locked balances
     mapping(address => uint256) distribution;
 
-    // start of the lockup period
-    // Monday, March 01, 2021 18:05:55 GMT + 1
-    uint256 constant LOCK_START = 1614618355;
+    /// @notice The profile of each token owner under vesting conditions and its special conditions 
+    /**
+    * @param team Indicates whether or not is a Team member or Advisor (true = team member/advisor, false = private investor)
+    * @param vestingBegin When the vesting begins for such token owner
+    * @param vestingEnd When the vesting ends for such token owner
+    */
+    struct VestedToken {
+        bool teamOrAdvisor;
+        bool cliff;
+        uint256 vestingBegin;
+        uint256 vestingEnd;
+        uint256 lastClaim;
+    }
 
-    // length of time to delay first epoch
-    uint256 constant FIRST_EPOCH_DELAY = 365 days;
-
-    // how long does an epoch last
-    uint256 constant EPOCH_DURATION = 1 days;
-
-    // number of epochs for Investors
-    uint256 constant TOTAL_EPOCHS_INVESTORS = 365 days * 3;
-
-     // number of epochs for Team Members
-    uint256 constant TOTAL_EPOCHS_TEAM = 365 days * 4;
-
-    // registry of locked addresses
+    /// @notice A record of token owners under vesting conditions for each account, by index
+    mapping (address => VestedToken) public vestedToken;
+    
+    // vesting Cliff for Team Members and Advisors
+    uint256 private vestingCliff = 365 days;
+    
+    // vesting for Team Members
+    uint256 private teamVesting = 365 days * 4;
+    
+    // vesting for Investors and Advisors
+    uint256 private investorVesting = 365 days * 3;
+    
+    // registry of Time Lock Registry
     address public timeLockRegistry;
+    
 
 
     /* ============ Functions ============ */
@@ -116,34 +131,64 @@ abstract contract TimeLockedToken is VoteToken {
     * locking them according to the distribution epoch periods
     * Emits a transfer event showing a transfer to the recipient
     * Only the registry can call this function
-    * @param receiver Address to receive the tokens
-    * @param amount Tokens to be transferred
+    * @param _receiver Address to receive the tokens
+    * @param _amount Tokens to be transferred
+    * @param _profile True if is a Team Member or Advisor
+    * @param _cliff True if is a Team Member or Advisor under cliff clause
+    * @param _vestingBegin Unix Time when the vesting for that particular address
+    * @param _vestingEnd Unix Time when the vesting for that particular address
+    * @param _lastClaim Unix Time when the claim was done from that particular address
+    *
     */
-    function registerLockup(address receiver, uint256 amount) external onlyTimeLockRegistry {
-        require(balanceOf(msg.sender) >= amount, "insufficient balance");
-        require(receiver != address(0), "cannot be zero address");
-        require(receiver != address(this), "cannot be this contract");
-        require(receiver != timeLockRegistry, "must be new TimeLockRegistry");
-        require(receiver != msg.sender, "the owner cannot lockup itself");
-
-
-        // add amount to locked distribution
-        distribution[receiver] = distribution[receiver].add(amount);
+    function registerLockup(address _receiver, uint256 _amount, bool _profile, bool _cliff, uint256 _vestingBegin, uint256 _vestingEnd, uint256 _lastClaim) external onlyTimeLockRegistry returns (bool) {
+        require(balanceOf(msg.sender) >= _amount, "insufficient balance");
+        require(_receiver != address(0), "cannot be zero address");
+        require(_receiver != address(this), "cannot be this contract");
+        require(_receiver != timeLockRegistry, "cannot be the TimeLockRegistry contract itself");
+        require(_receiver != msg.sender, "the owner cannot lockup itself");
+        
+        // update amount of locked distribution
+        distribution[_receiver] = distribution[_receiver].add(_amount);
+        
+        VestedToken storage newVestedToken = vestedToken[_receiver];
+        
+        newVestedToken.teamOrAdvisor = _profile;
+        newVestedToken.cliff = _cliff;
+        newVestedToken.vestingBegin = _vestingBegin;
+        newVestedToken.vestingEnd = _vestingEnd;
+        newVestedToken.lastClaim = _lastClaim;
+        
+        vestedToken[_receiver]=newVestedToken;
+        
 
         // transfer to recipient
-        _transfer(msg.sender, receiver, amount);
-        emit newLockout(receiver, amount);
-
+        _transfer(msg.sender, _receiver, _amount);
+        emit newLockout(_receiver, _amount, _profile, _vestingBegin, _vestingEnd);
+        
+        return true;
     }
-
-     /**
-     * @dev Get locked balance for an account
-     * @param account Account to check
-     * @return Amount locked
+    
+    /**
+     * @dev Cancel distribution registration
+     * @param lockedAccount that should have it's still locked distribution removed due to non-completion of its cliff or vesting period
      */
-    function lockedBalance(address account) public view returns (uint256) {
-        // distribution * (epochsLeft / totalEpochs)
-        return distribution[account].mul(epochsLeft()).div(TOTAL_EPOCHS_INVESTORS);
+    function cancelTokens(address lockedAccount) public onlyOwner {
+        require(distribution[lockedAccount] != 0, "Not registered");
+
+        // get amount from distributions
+        uint256 loosingAmount = lockedBalance(lockedAccount);
+        
+        // set distribution mapping to 0
+        delete distribution[lockedAccount];
+        
+         // set tokenVested mapping to 0
+        delete vestedToken[lockedAccount];
+
+        // transfer tokens back to owner
+        require(transferFrom(lockedAccount, msg.sender, loosingAmount), "Transfer failed");
+
+        // emit cancel event
+        emit Cancel(lockedAccount, loosingAmount);
     }
 
     /**
@@ -151,99 +196,39 @@ abstract contract TimeLockedToken is VoteToken {
      * @param account Account to check
      * @return Amount that is unlocked and available eg. to transfer
      */
-    function unlockedBalance(address account) public view returns (uint256) {
-        require(balanceOf(account)>0,"TimeLockedToken:: unlockedBalance: no tokens yet"); 
+    function unlockedBalance(address account) public returns (uint256) {
         // totalBalance - lockedBalance
         return balanceOf(account).sub(lockedBalance(account));
     }
-
-    /*
-     * @dev Get number of epochs passed
-     * @return Value of lockup epochs already passed
-     */
-    function epochsPassed() public view returns (uint256) {
-        // return 0 if timestamp is lower than start time
-        if (block.timestamp <= LOCK_START) {
-            return 0;
-        }
-
-        // how long it has been since the beginning of lockup period - we prevent substraction underflow
-        uint256 timePassed = block.timestamp.sub(LOCK_START);
-
-        // calculate the number of epochs (days) that has passed
-        uint256 totalEpochsPassed = timePassed.div(EPOCH_DURATION);
-
-        // epochs don't count over TOTAL_EPOCHS_INVESTORS
-        if (totalEpochsPassed > TOTAL_EPOCHS_INVESTORS) {
-            return TOTAL_EPOCHS_INVESTORS;
-        }
-
-        return totalEpochsPassed;
-    }
-
-    function epochsLeft() public view returns (uint256) {
-        return TOTAL_EPOCHS_INVESTORS.sub(epochsPassed());
-    }
-
+    
+    
     /**
-     * @dev Get timestamp of next epoch
-     * Will revert if all epochs have passed
-     * @return Timestamp of when the next epoch starts
-     */
-    function nextEpoch() public view returns (uint256) {
-        // get number of epochs passed
-        uint256 passed = epochsPassed();
+    * @dev Get locked balance for an account
+    * @param account Account to check
+    * @return Amount locked
+    */
+    function lockedBalance(address account) public returns (uint256) {
+        // distribution of locked tokens
+        // get amount from distributions
+        
+        uint256 amount = distribution[account];
+        uint256 lockedAmount = amount;
+        
+        if (vestedToken[account].cliff == true && (block.timestamp < vestedToken[account].vestingBegin.add(vestingCliff))) {
+            return lockedAmount;
+        } 
 
-        // if all epochs passed, return
-        if (passed == TOTAL_EPOCHS_INVESTORS) {
-            // return INT_MAX
-            return uint256(-1);
+        if (block.timestamp >= vestedToken[account].vestingEnd) {
+            lockedAmount = 0;
+            if (msg.sender == account) {// set distribution mapping to 0
+            delete distribution[account];
+            }
+        } else {
+            lockedAmount = amount.mul(vestedToken[account].vestingEnd - block.timestamp).div(vestedToken[account].vestingEnd - vestedToken[account].vestingBegin);
+            vestedToken[account].lastClaim = block.timestamp;
         }
-
-        // if no epochs passed, return latest epoch + delay + standard duration
-        if (passed == 0) {
-            return latestEpoch().add(FIRST_EPOCH_DELAY).add(EPOCH_DURATION);
-        }
-
-        // otherwise return latest epoch + epoch duration
-        return latestEpoch().add(EPOCH_DURATION);
+        return lockedAmount;
     }
-
-    /**
-     * @dev Get timestamp of latest epoch
-     * @return Timestamp of when the current epoch has started
-     */
-    function latestEpoch() public view returns (uint256) {
-        // get number of epochs passed
-        uint256 passed = epochsPassed();
-
-        // if no epochs passed, return lock start time
-        if (passed == 0) {
-            return LOCK_START;
-        }
-
-        // accounts for first epoch being longer
-        // lockStart + firstEpochDelay + (epochsPassed * epochDuration)
-        return LOCK_START.add(FIRST_EPOCH_DELAY).add(passed.mul(EPOCH_DURATION));
-    }
-
-    /**
-     * @dev Get timestamp of final epoch
-     * @return Timestamp of when the last epoch ends and all funds are released
-     */
-    function finalEpoch() public pure returns (uint256) {
-        // lockStart + firstEpochDelay + (epochDuration * totalEpochs)
-        return LOCK_START.add(FIRST_EPOCH_DELAY).add(EPOCH_DURATION.mul(TOTAL_EPOCHS_INVESTORS));
-    }
-
-    /**
-     * @dev Get timestamp of locking period start
-     * @return Timestamp of locking period start
-     */
-    function lockStart() public pure returns (uint256) {
-        return LOCK_START;
-    }
-
 
     /* ============ Internal Only Function ============ */
 
@@ -272,6 +257,4 @@ abstract contract TimeLockedToken is VoteToken {
         require(unlockedBalance(_from) >= _value, "TimeLockedToken:: _transfer: attempting to transfer locked funds");
         super._transfer(_from, _to, _value);
     }
-
 }
-
