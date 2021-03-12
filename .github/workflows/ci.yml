@@ -27,7 +27,7 @@ jobs:
     - name: Compile smart-contracts
       run: yarn compile
 
-  build:
+  test:
     name: Unit Tests
     needs: build
     runs-on: ubuntu-latest
