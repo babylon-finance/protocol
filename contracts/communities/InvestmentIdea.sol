@@ -19,6 +19,7 @@
 pragma solidity 0.7.4;
 
 import "hardhat/console.sol";
+import { Address } from "@openzeppelin/contracts/utils/Address.sol";
 import { ERC20 } from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import {
     ReentrancyGuard
@@ -49,6 +50,7 @@ contract InvestmentIdea is ReentrancyGuard, Initializable {
   using PreciseUnitMath for int256;
   using PreciseUnitMath for uint256;
   using AddressArrayUtils for address[];
+  using Address for address;
 
   /* ============ Events ============ */
   event Invoked(address indexed _target, uint indexed _value, bytes _data, bytes _returnValue);
@@ -61,7 +63,7 @@ contract InvestmentIdea is ReentrancyGuard, Initializable {
    * Throws if the sender is not the creator of the idea
    */
   modifier onlyController {
-    require(msg.sender == controller, "Only Controller can access this");
+    require(msg.sender == address(controller), "Only Controller can access this");
     _;
   }
 

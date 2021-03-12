@@ -62,6 +62,8 @@ interface IBabController {
     function getReservePool() external view returns (address);
     function getCommunityValuer() external view returns(address);
     function getTreasury() external view returns(address);
+    function getIdeaFactory() external view returns(address);
+    function getCommunityFactory() external view returns(address);
     function getCommunities() external view returns (address[] memory);
     function isCommunity(address _community) external view returns(bool);
     function getIntegrationByName(string memory _name) external view returns (address);

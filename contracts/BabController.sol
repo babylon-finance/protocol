@@ -172,7 +172,7 @@ contract BabController is Ownable {
             "Component must not be null address"
         );
       }
-      address newCommunity = ICommunityFactory.createRollingCommunity(
+      address newCommunity = ICommunityFactory(communityFactory).createRollingCommunity(
         _integrations,
         _weth,
         address(this),

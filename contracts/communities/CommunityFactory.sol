@@ -44,7 +44,7 @@ contract CommunityFactory {
     string memory _name,
     string memory _symbol
   ) external returns (address) {
-      address clone = Clones.clone(rollingCommunity);
+      address payable clone = payable(Clones.clone(rollingCommunity));
       RollingCommunity(clone).initialize(
         _integrations,
         _weth,

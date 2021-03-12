@@ -122,7 +122,7 @@ abstract contract BaseCommunity is Initializable, ERC20Upgradeable {
      * Throws if the sender is not an investment idea of this community
      */
     modifier onlyInvestmentIdea() {
-      require(ideas[msg.sender], "Only the community ideas contract can call this");
+      require(isInvestmentIdea[msg.sender], "Only the community ideas contract can call this");
       _;
     }
 
@@ -130,7 +130,7 @@ abstract contract BaseCommunity is Initializable, ERC20Upgradeable {
      * Throws if the sender is not an investment idea or the protocol
      */
     modifier onlyInvestmentIdeaOrOwner() {
-      require(ideas[msg.sender] || msg.sender == controller, "Only the community ideas or owner can call this");
+      require(isInvestmentIdea[msg.sender] || msg.sender == controller, "Only the community ideas or owner can call this");
       _;
     }
 
@@ -234,9 +234,9 @@ abstract contract BaseCommunity is Initializable, ERC20Upgradeable {
         address _creator,
         string memory _name,
         string memory _symbol
-    ) public initializer {
+    ) public virtual initializer {
         require(_creator != address(0), "Creator must not be empty");
-        ERC20Upgradeable(_name, _symbol).initialize();
+        __ERC20_init(_name, _symbol);
 
         controller = _controller;
         weth = _weth;
@@ -389,7 +389,7 @@ abstract contract BaseCommunity is Initializable, ERC20Upgradeable {
       uint256[] memory _enterTokensAmounts
     ) external onlyContributor onlyActive {
       require(ideas.length < MAX_TOTAL_IDEAS, "Reached the limit of ideas");
-      IIdeaFactory ideaFactory = IBabController(controller).getIdeaFactory();
+      IIdeaFactory ideaFactory = IIdeaFactory(IBabController(controller).getIdeaFactory());
       address idea = ideaFactory.createInvestmentIdea(
         msg.sender,
         controller,

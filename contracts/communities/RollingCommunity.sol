@@ -91,7 +91,7 @@ contract RollingCommunity is BaseCommunity, ReentrancyGuard {
         address _creator,
         string memory _name,
         string memory _symbol
-    ) external initializer
+    ) public override
     {
       super.initialize(
           _integrations,
