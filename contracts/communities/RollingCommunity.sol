@@ -288,8 +288,6 @@ contract RollingCommunity is ReentrancyGuard, BaseCommunity {
         payProtocolFeeFromCommunity(reserveAsset, withdrawalInfo.protocolFees);
 
         _updateReserveBalance(withdrawalInfo.newReservePositionBalance);
-        console.log(withdrawalInfo.newReservePositionBalance);
-        console.log(withdrawalInfo.netFlowQuantity);
         emit CommunityTokenWithdrawn(
             msg.sender,
             _to,
@@ -599,10 +597,16 @@ contract RollingCommunity is ReentrancyGuard, BaseCommunity {
         withdrawalInfo.newCommunityTokenSupply =
             withdrawalInfo.previousCommunityTokenSupply.sub(_communityTokenQuantity);
 
-        withdrawalInfo.newReservePositionBalance = _getWithdrawalPositionBalance(
-            _reserveAsset,
-            withdrawalInfo
+        uint256 outflow = withdrawalInfo.netFlowQuantity.add(withdrawalInfo.protocolFees);
+
+        // Require withdrawable quantity is greater than existing collateral
+        require(
+            reserveBalance >= outflow,
+            "Must have enough balance"
         );
+
+        withdrawalInfo.newReservePositionBalance =
+            reserveBalance.sub(outflow);
 
         return withdrawalInfo;
     }
@@ -693,33 +697,6 @@ contract RollingCommunity is ReentrancyGuard, BaseCommunity {
             );
 
         return prePremiumReserveQuantity;
-    }
-
-    /**
-     * The new position reserve asset balance is calculated as follows:
-     * totalReserve = oldBalance - reserveQuantityToSendOut
-     * newBalance = totalReserve / newCommunityTokenSupply
-     */
-    function _getWithdrawalPositionBalance(
-        address _reserveAsset,
-        ActionInfo memory _withdrawalInfo
-    ) internal view returns (uint256) {
-        uint256 totalExistingBalance = reserveBalance;
-
-
-        uint256 outflow =
-            _withdrawalInfo
-                .netFlowQuantity
-                .add(_withdrawalInfo.protocolFees);
-
-        // Require withdrawable quantity is greater than existing collateral
-        require(
-            totalExistingBalance >= outflow,
-            "Must have enough balance"
-        );
-
-        return
-            totalExistingBalance.sub(outflow);
     }
 
     /**
