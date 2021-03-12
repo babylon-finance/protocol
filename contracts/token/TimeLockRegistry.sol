@@ -44,6 +44,11 @@ contract TimeLockRegistry is Ownable {
 
     /* ============ Modifiers ============ */
     
+    modifier onlyBABLToken() {
+        require(msg.sender == address(token), "only BABL Token");
+        _;
+    }
+    
     /* ============ State Variables ============ */
 
 
@@ -89,6 +94,7 @@ contract TimeLockRegistry is Ownable {
      */
     constructor(TimeLockedToken _token) { // TODO - CHECK
         token = _token;
+        
     }
 
     /* ============ External Functions ============ */
@@ -141,7 +147,7 @@ contract TimeLockRegistry is Ownable {
      * @dev Cancel distribution registration
      * @param receiver Address that should have it's distribution removed
      */
-    function cancel(address receiver) external onlyOwner {
+    function cancelRegistration(address receiver) external onlyOwner {
         require(registeredDistributions[receiver] != 0, "Not registered");
 
         // get amount from distributions
@@ -159,31 +165,36 @@ contract TimeLockRegistry is Ownable {
         // emit cancel event
         emit Cancel(receiver, amount);
     }
+    
+    function cancelDeliveredTokens(address receiver) external onlyOwner {
+       
+        uint256 loosingAmount = token.cancelTokens(receiver);
+
+        // emit cancel event
+        emit Cancel(receiver, loosingAmount);
+    }
 
     /// @dev Claim tokens due amount
-    function claim() external returns (uint256){
-        require(registeredDistributions[msg.sender] != 0, "Not registered");
+    function claim(address _receiver) external onlyBABLToken returns (uint256){
+        require(registeredDistributions[_receiver] != 0, "Not registered");
 
         // get amount from distributions
-        uint256 amount = registeredDistributions[msg.sender];
-        tokenVested[msg.sender].lastClaim = block.timestamp;
+        uint256 amount = registeredDistributions[_receiver];
+        tokenVested[_receiver].lastClaim = block.timestamp;
 
         // set distribution mapping to 0
-        delete registeredDistributions[msg.sender];
+        delete registeredDistributions[_receiver];
 
         // register lockup in TimeLockedToken
         
-        // it will also increase the allowance to the owner to retire locked tokens in case of non-compliance vesting conditions take places
-        token.approve(token.owner(), amount); // TODO-CHECK RESTRICTIONS TO DECREASE ALLOWANCE TO OWNER BY MSG.SENDER
-        
         // this will transfer funds from this contract and lock them for sender
-        token.registerLockup(msg.sender, amount, tokenVested[msg.sender].team, tokenVested[msg.sender].cliff, tokenVested[msg.sender].vestingBegin, tokenVested[msg.sender].vestingEnd, tokenVested[msg.sender].lastClaim);
-
+        token.registerLockup(_receiver, amount, tokenVested[_receiver].team, tokenVested[_receiver].cliff, tokenVested[_receiver].vestingBegin, tokenVested[_receiver].vestingEnd, tokenVested[_receiver].lastClaim);
+        
         // set tokenVested mapping to 0
-        delete tokenVested[msg.sender];
+        delete tokenVested[_receiver];
 
         // emit claim event
-        emit Claim(msg.sender, amount);
+        emit Claim(_receiver, amount);
     
         
         return amount;

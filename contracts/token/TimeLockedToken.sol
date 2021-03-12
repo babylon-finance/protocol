@@ -18,7 +18,8 @@
 
 pragma solidity 0.7.4;
 
-//import "hardhat/console.sol";
+import "hardhat/console.sol";
+import { TimeLockRegistry } from "./TimeLockRegistry.sol";
 import { SafeMath } from "@openzeppelin/contracts/math/SafeMath.sol";
 import { VoteToken } from "../governance/VoteToken.sol";
 import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
@@ -53,12 +54,15 @@ abstract contract TimeLockedToken is VoteToken {
     
     /// @notice An event that emitted when a cancellation of Lock tokens is registered 
     event Cancel(address account, uint256 amount);
+    
+    /// @notice An event that emitted when a claim of tokens are registered
+    event Claim(address _receiver, uint256 amount);
 
 
     /* ============ Modifiers ============ */
 
     modifier onlyTimeLockRegistry() {
-        require(msg.sender == timeLockRegistry, "only TimeLockRegistry");
+        require(msg.sender == address(timeLockRegistry), "only TimeLockRegistry");
         _;
     }
 
@@ -94,8 +98,8 @@ abstract contract TimeLockedToken is VoteToken {
     // vesting for Investors and Advisors
     uint256 private investorVesting = 365 days * 3;
     
-    // registry of Time Lock Registry
-    address public timeLockRegistry;
+    // address of Time Lock Registry
+    TimeLockRegistry public timeLockRegistry;
     
 
 
@@ -114,13 +118,18 @@ abstract contract TimeLockedToken is VoteToken {
      * @dev Set TimeLockRegistry address
      * @param newTimeLockRegistry Address of TimeLockRegistry contract
      */
-    function setTimeLockRegistry(address newTimeLockRegistry) external onlyOwner returns(bool){
-        require(newTimeLockRegistry != address(0), "cannot be zero address");
-        require(newTimeLockRegistry != address(this), "cannot be this contract");
-        require(newTimeLockRegistry != timeLockRegistry, "must be a new TimeLockRegistry");
+    function setTimeLockRegistry(TimeLockRegistry newTimeLockRegistry) external onlyOwner returns(bool){
+        //console.log(" %s is the new timelockRegistry", newTimeLockRegistry);
+        //console.log(" %s is the old timelockRegistry", timeLockRegistry);
+
+        require(address(newTimeLockRegistry) != address(0), "cannot be zero address");
+        require(address(newTimeLockRegistry) != address(this), "cannot be this contract");
+        require(address(newTimeLockRegistry) != address(timeLockRegistry), "must be new TimeLockRegistry");
         
-        emit newTimeLockRegistration(timeLockRegistry, newTimeLockRegistry);
+        emit newTimeLockRegistration(address(timeLockRegistry), address(newTimeLockRegistry));
+
         timeLockRegistry = newTimeLockRegistry;
+
         
         return true;
     }
@@ -144,7 +153,7 @@ abstract contract TimeLockedToken is VoteToken {
         require(balanceOf(msg.sender) >= _amount, "insufficient balance");
         require(_receiver != address(0), "cannot be zero address");
         require(_receiver != address(this), "cannot be this contract");
-        require(_receiver != timeLockRegistry, "cannot be the TimeLockRegistry contract itself");
+        require(_receiver != address(timeLockRegistry), "cannot be the TimeLockRegistry contract itself");
         require(_receiver != msg.sender, "the owner cannot lockup itself");
         
         // update amount of locked distribution
@@ -169,28 +178,46 @@ abstract contract TimeLockedToken is VoteToken {
     }
     
     /**
-     * @dev Cancel distribution registration
-     * @param lockedAccount that should have it's still locked distribution removed due to non-completion of its cliff or vesting period
+     * @dev Cancel distribution registration from the TimeRegistry itself
+     * @param lockedAccount that should have its still locked distribution removed due to non-completion of its cliff or vesting period
      */
-    function cancelTokens(address lockedAccount) public onlyOwner {
+    function cancelTokens(address lockedAccount) public onlyTimeLockRegistry returns (uint256) {
         require(distribution[lockedAccount] != 0, "Not registered");
 
-        // get amount from distributions
+        // get an update on locked amount from distributions at this precise moment
         uint256 loosingAmount = lockedBalance(lockedAccount);
         
+        require(loosingAmount > 0, "There are no more locked tokens");
+
         // set distribution mapping to 0
         delete distribution[lockedAccount];
         
          // set tokenVested mapping to 0
         delete vestedToken[lockedAccount];
 
-        // transfer tokens back to owner
-        require(transferFrom(lockedAccount, msg.sender, loosingAmount), "Transfer failed");
+        // transfer only locked tokens back to TimeLockRegistry
+        require(transferFrom(lockedAccount, address(timeLockRegistry), loosingAmount), "Transfer failed");
 
         // emit cancel event
         emit Cancel(lockedAccount, loosingAmount);
+        
+        return loosingAmount;
     }
+    
+    function claimMyTokens() public {
+        
+        // claim our tokens from timeLockRegistry
+        uint256 amount = timeLockRegistry.claim(msg.sender);
+        
+        require(amount > 0, "No tokens to claim");
+        
+        // After a proper claim, locked tokens are under restricted vesting giving the owner the possibility to only retire locked tokens if non-compliance vesting conditions take places
+        approve(address(timeLockRegistry), amount); // TODO-CHECK RESTRICTIONS TO DECREASE ALLOWANCE TO OWNER BY MSG.SENDER
 
+        // emit claim event
+        emit Claim(msg.sender, amount);
+    }
+    
     /**
      * @dev Get unlocked balance for an account
      * @param account Account to check
@@ -230,6 +257,10 @@ abstract contract TimeLockedToken is VoteToken {
         return lockedAmount;
     }
 
+    function getTimeLockRegistry() public view returns (address) {
+        return address(timeLockRegistry);
+    }
+
     /* ============ Internal Only Function ============ */
 
 
@@ -253,8 +284,10 @@ abstract contract TimeLockedToken is VoteToken {
 
         require(balanceOf(_from) >= _value, "TimeLockedToken:: _transfer: insufficient balance");
 
-        // check if enough unlocked balance to transfer, transfers are only allowed if enough unlocked balance
+        // check if enough unlocked balance to transfer
         require(unlockedBalance(_from) >= _value, "TimeLockedToken:: _transfer: attempting to transfer locked funds");
         super._transfer(_from, _to, _value);
     }
+
+    
 }
