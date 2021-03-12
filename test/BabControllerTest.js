@@ -43,15 +43,6 @@ describe("BabController", function() {
     community1 = comunities.one;
     community2 = comunities.two;
     community3 = comunities.three;
-    // console.log(
-    //   "Config:",
-    //   oracle,
-    //   valuer,
-    //   ownerSigner,
-    //   userSigner1,
-    //   userSigner2,
-    //   userSigner3
-    // );
   });
 
   describe("Deployment", function() {

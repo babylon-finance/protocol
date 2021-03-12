@@ -179,7 +179,6 @@ contract BabController is Ownable {
         _symbol
       );
       _addCommunity(newCommunity);
-
       return newCommunity;
     }
 
