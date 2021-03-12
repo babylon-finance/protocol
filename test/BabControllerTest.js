@@ -169,8 +169,8 @@ describe("BabController", function() {
 
     it("can edit a community valuer", async function() {
       // Note: This is just the wETH address and is testing that the communityValuer address can be changed
-      await expect(controller.editCommunityValuer(addresses.tokens.WETH)).to.not.be
-        .reverted;
+      await expect(controller.editCommunityValuer(addresses.tokens.WETH)).to.not
+        .be.reverted;
 
       const valuer2 = await controller.getCommunityValuer();
       expect(valuer2).to.equal(addresses.tokens.WETH);

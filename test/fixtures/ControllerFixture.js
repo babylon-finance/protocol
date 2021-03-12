@@ -14,10 +14,6 @@ async function deployFolioFixture() {
     "RollingCommunity",
     owner
   );
-  const CommunityIdeas = await ethers.getContractFactory(
-    "CommunityIdeas",
-    owner
-  );
 
   const BabController = await ethers.getContractFactory("BabController", owner);
   const babController = await BabController.deploy(
@@ -153,8 +149,7 @@ async function deployFolioFixture() {
     babController.address,
     addresses.users.hardhat1,
     "Absolute ETH Return [beta]",
-    "EYFA",
-    ethers.utils.parseEther("0.01")
+    "EYFA"
   );
 
   const community2 = await RollingCommunity.deploy(
@@ -163,8 +158,7 @@ async function deployFolioFixture() {
     babController.address,
     addresses.users.hardhat1,
     "ETH Yield Farm [a]",
-    "EYFB",
-    ethers.utils.parseEther("1")
+    "EYFB"
   );
 
   const community3 = await RollingCommunity.deploy(
@@ -173,8 +167,7 @@ async function deployFolioFixture() {
     babController.address,
     addresses.users.hardhat1,
     "ETH Yield Farm [b]",
-    "EYFG",
-    ethers.utils.parseEther("10")
+    "EYFG"
   );
 
   await babController.createCommunity(
@@ -202,26 +195,20 @@ async function deployFolioFixture() {
     });
   });
 
-  // Investment ideas first community
-  const communityIdeas1 = await CommunityIdeas.deploy(
-    community.address,
-    babController.address,
+  // Initial deposit
+  await community.initialize(
+    ethers.utils.parseEther("10"),
+    1,
+    ethers.utils.parseEther("1000"),
+    2,
+    ethers.utils.parseEther("0.01"),
     ONE_DAY_IN_SECONDS,
     ethers.utils.parseEther("0.13"), // 13% Ideator
     ethers.utils.parseEther("0.05"), // 5% Voters
     ethers.utils.parseEther("0.02"), // 2% community creator
     ethers.utils.parseEther("0.10"), // 10% quorum
     ONE_DAY_IN_SECONDS * 3,
-    ONE_DAY_IN_SECONDS * 365
-  );
-
-  // Initial deposit
-  await community.initialize(
-    ethers.utils.parseEther("10"),
-    1,
-    communityIdeas1.address,
-    ethers.utils.parseEther("1000"),
-    2,
+    ONE_DAY_IN_SECONDS * 365,
     { value: ethers.utils.parseEther("0.1") }
   );
 
