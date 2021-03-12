@@ -4,6 +4,8 @@
 
 ![CI](https://github.com/babylon-finance/protocol/actions/workflows/ci.yml/badge.svg)
 
+Will CI work?
+
 ## Quick Start
 
 Git clone
