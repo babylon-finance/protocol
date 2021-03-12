@@ -19,41 +19,39 @@ Install dependencies
 yarn
 ```
 
-Run
+Compile contracts
 
 ```bash
 yarn compile
 ```
 
-to compile Solidity contracts.
-
-Run
+Generate mnemonic.txt file
 
 ```bash
 yarn generate
 ```
 
-to generate mnemonic.txt file.
+## Development
 
-## Gas Report
-
-Run
+⛽️ Gas Report
 
 ```bash
 yarn gas-report
 ```
 
-## Coverage
-
-Run
+🛡 Coverage
 
 ```bash
 yarn coverage
 ```
 
-## Test
+🤖 Prettier
 
-Run
+```bash
+yarn prettier
+```
+
+🧪 Test
 
 ```bash
 yarn test
