@@ -3,7 +3,6 @@
 **Community-led Asset Management. Powered by DeFi.**
 
 ![CI](https://github.com/babylon-finance/protocol/actions/workflows/ci.yml/badge.svg)
-Will CI work?
 
 ## Quick Start
 

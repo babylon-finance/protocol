@@ -1,16 +1,10 @@
 name: CI
 
-on:
-  push:
-    branches:
-    - master
-  pull_request:
-    branches:
-    - master
+on: [push, pull_request]
 
 jobs:
   build:
-    name: Compile Contracts
+    name: Build
     runs-on: ubuntu-latest
     timeout-minutes: 20
 
@@ -23,6 +17,9 @@ jobs:
 
     - name: Install dependencies
       run: yarn --frozen-lockfile
-      
+
     - name: Compile smart-contracts
       run: yarn compile
+
+    - name: Run tests
+      run: yarn test
