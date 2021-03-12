@@ -137,13 +137,12 @@ task(
     console.log(
       "🔐 Account Generated as " +
         address +
-        ".txt and set as mnemonic in packages/hardhat"
+        ".txt and saved as mnemonic.txt"
     );
     console.log(
       "💬 Use 'yarn run account' to get more information about the deployment account."
     );
 
-    fs.writeFileSync("./" + address + ".txt", mnemonic.toString());
     fs.writeFileSync("./mnemonic.txt", mnemonic.toString());
   }
 );
