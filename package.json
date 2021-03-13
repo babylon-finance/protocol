@@ -54,6 +54,7 @@
     "send": "hardhat send",
     "test": "hardhat test --network hardhat",
     "gas-report": "env REPORT_GAS=1 yarn test",
+    "estimate-size": "yarn run hardhat size-contracts",
     "coverage": "hardhat coverage"
   }
 }
