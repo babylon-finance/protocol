@@ -56,7 +56,6 @@ abstract contract BaseIntegration {
       IInvestmentIdea idea = IInvestmentIdea(msg.sender);
       address community = idea.community();
       require(IBabController(controller).isSystemContract(community), "Only a community can call this");
-      require(initializedByCommunity[community], "integration has already been initialized");
       require(ICommunity(community).isInvestmentIdea(msg.sender), "Sender myst be an investment idea from the community");
       _;
     }
@@ -94,17 +93,6 @@ abstract contract BaseIntegration {
     }
 
     /* ============ External Functions ============ */
-
-    /**
-     * Initializes the integration.
-     * @param _community addres of the community
-     */
-    function initialize(address _community) external {
-      require(IBabController(controller).isSystemContract(msg.sender), "The caller is a community");
-      require(msg.sender == _community, "Only the community can initialize it");
-      require(!initializedByCommunity[_community], "integration has already been initialized");
-      initializedByCommunity[_community] = true;
-    }
 
     /**
      * Returns the name of the integration

@@ -27,10 +27,6 @@ import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
  */
 interface ICommunity is IERC20 {
     /* ============ Functions ============ */
-
-    function addIntegration(address _integration) external;
-    function removeIntegration(address _integration) external;
-
     function setActive() external;
     function setDisabled() external;
 

@@ -190,17 +190,6 @@ async function deployFolioFixture() {
     communities[2]
   );
 
-  const communityAddressesList = await babController.getCommunities();
-  // Initialize community integrations
-  communityAddressesList.forEach(communityIter => {
-    integrationsAddressList.forEach(async integration => {
-      const communityI = await ethers.getContractAt(
-        "RollingCommunity",
-        communityIter
-      );
-      await communityI.connect(signer1).initializeIntegration(integration);
-    });
-  });
   // Initial deposit
   await community.connect(signer1).start(
     ethers.utils.parseEther("10"),
@@ -227,7 +216,6 @@ async function deployFolioFixture() {
   );
 
   const ideas = await community.getIdeas();
-
 
   return {
     babController,

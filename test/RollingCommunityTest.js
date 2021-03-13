@@ -46,7 +46,7 @@ describe("Community", function() {
     it("should have expected properties upon deployment", async function() {
       expect(await community1.totalContributors()).to.equal(1);
       expect(await community1.creator()).to.equal(
-        await ownerSigner.getAddress()
+        await userSigner1.getAddress()
       );
       expect(await community1.controller()).to.equal(controller.address);
       expect(await community1.ideaCooldownPeriod()).to.equal(
@@ -87,7 +87,6 @@ describe("Community", function() {
 
   describe("Community deposit limit", async function() {
     it("reverts if the deposit is bigger than the limit", async function() {
-      await community1.setDepositLimit(ethers.utils.parseEther("11"));
       await expect(
         community1
           .connect(userSigner3)
@@ -292,24 +291,13 @@ describe("Community", function() {
           value: ethers.utils.parseEther("1")
         });
       await expect(
-        community1
-          .connect(userSigner3)
-          .addInvestmentIdea(
-            ethers.utils.parseEther("10"),
-            ethers.utils.parseEther("1"),
-            ONE_DAY_IN_SECONDS * 15,
-            EMPTY_BYTES,
-            EMPTY_BYTES,
-            balancerIntegration.address,
-            ethers.utils.parseEther("0.05"),
-            ethers.utils.parseEther("2"),
-            [addresses.tokens.DAI],
-            [ethers.utils.parseEther("100")],
-            {
-              gasLimit: 9500000,
-              gasPrice: 0
-            }
-          )
+        community1.connect(userSigner3).addInvestmentIdea(
+          ethers.utils.parseEther("10"),
+          ethers.utils.parseEther("0.001"),
+          ONE_DAY_IN_SECONDS * 30,
+          ethers.utils.parseEther("0.05"), // 5%
+          ethers.utils.parseEther("1")
+        )
       ).to.not.be.reverted;
     });
   });

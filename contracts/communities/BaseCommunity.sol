@@ -94,14 +94,6 @@ abstract contract BaseCommunity is ERC20Upgradeable {
     }
 
     /**
-     * Throws if the sender is not the community governance. (Initially protocol)
-     */
-    modifier onlyGovernanceCommunity() {
-      require(msg.sender == creator, "Only the creator can call this");
-      _;
-    }
-
-    /**
      * Throws if the sender is not the community creator
      */
     modifier onlyCreator() {
@@ -318,40 +310,6 @@ abstract contract BaseCommunity is ERC20Upgradeable {
     }
 
     /**
-     * MANAGER ONLY. Adds an integration into the list of integrations
-     */
-    function addIntegration(address _integration)
-        public
-        onlyGovernanceCommunity
-    {
-        _addIntegration(_integration);
-    }
-
-    /**
-     * CREATOR ONLY. Removes an integration from the Community. Community calls removeIntegration on integration itself to confirm
-     * it is not needed to manage any remaining positions and to remove state.
-     */
-    function removeIntegration(address _integration) external onlyGovernanceCommunity {
-        require(integrations.contains(_integration), "Integration not found");
-
-        integrations = integrations.remove(_integration);
-
-        emit IntegrationRemoved(_integration);
-    }
-
-    /**
-     * CREATOR ONLY. Initializes an integration in a community
-     *
-     * @param  _integration       Address of the integration contract to add
-     */
-    function initializeIntegration(address _integration)
-        public
-        onlyGovernanceCommunity
-    {
-      IIntegration(_integration).initialize(address(this));
-    }
-
-    /**
      * Function that allows the reserve balance to be updated
      *
      * @param _amount             Amount of the reserve balance
@@ -476,9 +434,9 @@ abstract contract BaseCommunity is ERC20Upgradeable {
     function updatePositionTWAPPrices() public {
       // Updates UniSwap TWAP
       address oracle = IBabController(controller).getPriceOracle();
-      address[] memory ideas = getIdeas();
-      for (uint256 j = 0; j < ideas.length; j++) {
-        IInvestmentIdea idea = IInvestmentIdea(ideas[j]);
+      address[] memory ideasC = getIdeas();
+      for (uint256 j = 0; j < ideasC.length; j++) {
+        IInvestmentIdea idea = IInvestmentIdea(ideasC[j]);
         address[] memory components = idea.getPositions();
         if (idea.active()) {
           for(uint i = 0; i < components.length; i++) {

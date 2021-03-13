@@ -354,11 +354,6 @@ contract RollingCommunity is ReentrancyGuard, BaseCommunity {
       );
     }
 
-    // if limit == 0 then there is no deposit limit
-    function setDepositLimit(uint limit) external onlyGovernanceCommunity {
-      maxDepositLimit = limit;
-    }
-
     // Any tokens (other than the target) that are sent here by mistake are recoverable by contributors
     // Exchange for WETH
     function sweep(address _token) external onlyContributor {
