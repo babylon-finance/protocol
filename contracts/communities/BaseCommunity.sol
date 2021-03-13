@@ -153,6 +153,7 @@ abstract contract BaseCommunity is ERC20Upgradeable {
     uint256 constant public initialBuyRate = 1000000000000; // Initial buy rate for the manager
     uint256 constant public MAX_DEPOSITS_FUND_V1 = 1e21; // Max deposit per community is 1000 eth for v1
     uint256 constant public MAX_TOTAL_IDEAS = 20; // Max deposit per community is 1000 eth for v1
+    uint256 constant internal TEN_PERCENT = 1e17;
     // Wrapped ETH address
     address public weth;
 
@@ -190,7 +191,7 @@ abstract contract BaseCommunity is ERC20Upgradeable {
 
     // Investment ideas variables
     uint256 public totalStake = 0;
-    uint256 public minVotersQuorum = 1e17;          // 10%. (0.01% = 1e14, 1% = 1e16)
+    uint256 public minVotersQuorum = TEN_PERCENT;          // 10%. (0.01% = 1e14, 1% = 1e16)
     uint256 public minIdeaDuration;               // Min duration for an investment Idea
     uint256 public maxIdeaDuration;               // Max duration for an investment idea
     uint256 public ideaCooldownPeriod;            // Window for the idea to cooldown after approval before receiving capital
@@ -227,6 +228,8 @@ abstract contract BaseCommunity is ERC20Upgradeable {
         string memory _symbol
     ) public virtual initializer {
         require(_creator != address(0), "Creator must not be empty");
+        require(_controller != address(0), "Controller must not be empty");
+        require(_reserveAsset != address(0), "Reserve asset must exist");
         __ERC20_init(_name, _symbol);
 
         controller = _controller;
@@ -267,7 +270,7 @@ abstract contract BaseCommunity is ERC20Upgradeable {
           _ideaCooldownPeriod <= IBabController(controller).getMaxCooldownPeriod() && _ideaCooldownPeriod >= IBabController(controller).getMinCooldownPeriod() ,
           "Community cooldown must be within the range allowed by the protocol"
       );
-      require(_minVotersQuorum >= 1e17, "You need at least 10% votes");
+      require(_minVotersQuorum >= TEN_PERCENT, "You need at least 10% votes");
       minContribution = _minContribution;
       ideaCreatorProfitPercentage = _ideaCreatorProfitPercentage;
       ideaVotersProfitPercentage = _ideaVotersProfitPercentage;
@@ -380,6 +383,17 @@ abstract contract BaseCommunity is ERC20Upgradeable {
           msg.sender,
           _capital
       ), "Failed to allocate capital to the investment");
+    }
+
+    // Any tokens (other than the target) that are sent here by mistake are recoverable by contributors
+    // Exchange for WETH
+    function sweep(address _token) external onlyContributor {
+       require(_token != reserveAsset, "Token is not the reserve asset");
+       uint256 balance = ERC20Upgradeable(_token).balanceOf(address(this));
+       require(balance > 0, "Token balance > 0");
+       bytes memory _emptyTradeData;
+       // TODO: probably use uniswap or 1inch. Don't go through TWAP
+       _trade("_kyber", _token, balance, reserveAsset, 0, _emptyTradeData);
     }
 
     /* ============ External Getter Functions ============ */

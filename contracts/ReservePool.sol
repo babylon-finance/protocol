@@ -184,7 +184,7 @@ contract ReservePool is ERC20, ReentrancyGuard, Ownable {
     function redeemETHFromCommunityTokens(address _community, uint256 _amount) external nonReentrant {
       bool isValidKeeper = IBabController(controller).isValidKeeper(msg.sender);
       IRollingCommunity community = IRollingCommunity(_community);
-      require(isValidKeeper || msg.sender == IBabController(controller).owner(), "Only owner can call this");
+      require(isValidKeeper || msg.sender == IBabController(controller).owner(), "Only owner or keeper can call this");
       require(_amount > 0, "There needs to be tokens to redeem");
       require(community.active(), "Community must be active");
       // Get valuation of the Community with the quote asset as the reserve asset.

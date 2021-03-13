@@ -95,10 +95,10 @@ contract CommunityValuer {
         int256 valuation;
         for (uint256 j = 0; j < ideas.length; j++) {
           IInvestmentIdea idea = IInvestmentIdea(ideas[j]);
-          address[] memory components = idea.getPositions();
+          address[] memory positions = idea.getPositions();
 
-          for (uint256 i = 0; i < components.length; i++) {
-            address component = components[i];
+          for (uint256 i = 0; i < positions.length; i++) {
+            address component = positions[i];
 
             // Get component price from price oracle. If price does not exist, revert.
             uint256 componentPrice = priceOracle.getPrice(component, masterQuoteAsset);

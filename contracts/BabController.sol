@@ -163,11 +163,11 @@ contract BabController is Ownable {
       string memory _name,
       string memory _symbol
     ) external returns (address) {
-      require(_integrations.length > 0); // Just for checking that the community has some integrations enabled
+      require(_integrations.length > 0, "Community requires at least one integration");
       for (uint256 i = 0; i < _integrations.length; i++) {
         require(
             _integrations[i] != address(0),
-            "Component must not be null address"
+            "Integration must not be null address"
         );
       }
       address newCommunity = ICommunityFactory(communityFactory).createRollingCommunity(

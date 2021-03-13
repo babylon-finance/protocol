@@ -46,7 +46,7 @@ abstract contract PoolIntegration is BaseIntegration, ReentrancyGuard {
       address pool;                                   // Pool address
       uint256 totalSupply;                            // Total Supply of the pool
       uint256 poolTokensInTransaction;                // Pool tokens affected by this transaction
-      uint256 poolTokensInCommunity;                       // Pool tokens community balance
+      uint256 poolTokensInIdea;                       // Pool tokens idea balance
       uint256[] limitPoolTokenQuantities;
     }
 
@@ -210,7 +210,7 @@ abstract contract PoolIntegration is BaseIntegration, ReentrancyGuard {
 
 
     /**
-     * Retrieve fee from controller and calculate total protocol fee and send from community to protocol recipient
+     * Retrieve fee from controller and calculate total protocol fee and send from idea to protocol recipient
      *
      * @param _poolInfo                 Struct containing trade information used in internal functions
      * @param _feeToken                 Address of the token to pay the fee with
@@ -219,7 +219,7 @@ abstract contract PoolIntegration is BaseIntegration, ReentrancyGuard {
     function _accrueProtocolFee(PoolInfo memory _poolInfo, address _feeToken, uint256 _exchangedQuantity) internal returns (uint256) {
       uint256 protocolFeeTotal = getIntegrationFee(0, _exchangedQuantity);
 
-      payProtocolFeeFromCommunity(address(_poolInfo.community), _feeToken, protocolFeeTotal);
+      payProtocolFeeFromIdea(address(_poolInfo.idea), _feeToken, protocolFeeTotal);
 
       return protocolFeeTotal;
     }
@@ -249,7 +249,7 @@ abstract contract PoolIntegration is BaseIntegration, ReentrancyGuard {
       poolInfo.community = ICommunity(poolInfo.idea.community());
       poolInfo.pool = _pool;
       poolInfo.totalSupply = IERC20(_pool).totalSupply();
-      poolInfo.poolTokensInCommunity = IERC20(_pool).balanceOf(address(msg.sender));
+      poolInfo.poolTokensInIdea = IERC20(_pool).balanceOf(address(msg.sender));
       poolInfo.poolTokensInTransaction = _poolTokensInTransaction;
       poolInfo.limitPoolTokenQuantities = _limitPoolTokenQuantities;
 
@@ -274,7 +274,7 @@ abstract contract PoolIntegration is BaseIntegration, ReentrancyGuard {
     function _validatePreExitPoolData(PoolInfo memory _poolInfo) internal view {
       require(_isPool(_poolInfo.pool), "The pool address is not valid");
       require(_poolInfo.poolTokensInTransaction > 0, "Pool tokens to exchange must be greater than 0");
-      require(_poolInfo.poolTokensInCommunity >= _poolInfo.poolTokensInTransaction, "The community does not have enough pool tokens");
+      require(_poolInfo.poolTokensInIdea >= _poolInfo.poolTokensInTransaction, "The idea does not have enough pool tokens");
     }
 
     /**
@@ -283,7 +283,7 @@ abstract contract PoolIntegration is BaseIntegration, ReentrancyGuard {
      * @param _poolInfo               Struct containing pool information used in internal functions
      */
     function _validatePostJoinPoolData(PoolInfo memory _poolInfo) internal view {
-      require((IERC20(_poolInfo.pool).balanceOf(address(_poolInfo.idea)) > _poolInfo.poolTokensInCommunity), "The community did not receive the pool tokens");
+      require((IERC20(_poolInfo.pool).balanceOf(address(_poolInfo.idea)) > _poolInfo.poolTokensInIdea), "The idea did not receive the pool tokens");
     }
 
     /**
@@ -292,7 +292,7 @@ abstract contract PoolIntegration is BaseIntegration, ReentrancyGuard {
      * @param _poolInfo               Struct containing pool information used in internal functions
      */
     function _validatePostExitPoolData(PoolInfo memory _poolInfo) internal view {
-      require(IERC20(_poolInfo.pool).balanceOf(address(_poolInfo.idea)) == _poolInfo.poolTokensInCommunity - _poolInfo.poolTokensInTransaction, "The community did not return the pool tokens");
+      require(IERC20(_poolInfo.pool).balanceOf(address(_poolInfo.idea)) == _poolInfo.poolTokensInIdea - _poolInfo.poolTokensInTransaction, "The idea did not return the pool tokens");
       // TODO: validate individual tokens received
     }
 

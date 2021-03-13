@@ -135,7 +135,7 @@ abstract contract TradeIntegration is BaseIntegration, ReentrancyGuard {
     /* ============ Internal Functions ============ */
 
     /**
-     * Retrieve fee from controller and calculate total protocol fee and send from community to protocol recipient
+     * Retrieve fee from controller and calculate total protocol fee and send from idea to protocol recipient
      *
      * @param _tradeInfo                Struct containing trade information used in internal functions
      * @return uint256                  Amount of receive token taken as protocol fee
@@ -143,7 +143,7 @@ abstract contract TradeIntegration is BaseIntegration, ReentrancyGuard {
     function _accrueProtocolFee(TradeInfo memory _tradeInfo, uint256 _exchangedQuantity) internal returns (uint256) {
       uint256 protocolFeeTotal = getIntegrationFee(0, _exchangedQuantity);
 
-      payProtocolFeeFromCommunity(address(_tradeInfo.community), _tradeInfo.receiveToken, protocolFeeTotal);
+      payProtocolFeeFromIdea(address(_tradeInfo.idea), _tradeInfo.receiveToken, protocolFeeTotal);
 
       return protocolFeeTotal;
     }
@@ -210,7 +210,7 @@ abstract contract TradeIntegration is BaseIntegration, ReentrancyGuard {
     }
 
     /**
-     * Invoke approve for community, get method data and invoke trade in the context of the community.
+     * Invoke approve for idea, get method data and invoke trade in the context of the idea.
      *
      * @param _tradeInfo            Struct containing trade information used in internal functions
      * @param _data                 Arbitrary bytes to be used to construct trade call data
@@ -234,7 +234,7 @@ abstract contract TradeIntegration is BaseIntegration, ReentrancyGuard {
       ) = _getTradeCalldata(
           _tradeInfo.sendToken,
           _tradeInfo.receiveToken,
-          address(_tradeInfo.community),
+          address(_tradeInfo.idea),
           _tradeInfo.totalSendQuantity,
           _tradeInfo.totalMinReceiveQuantity,
           _data
@@ -250,8 +250,9 @@ abstract contract TradeIntegration is BaseIntegration, ReentrancyGuard {
      */
     function _validatePostTrade(TradeInfo memory _tradeInfo) internal view returns (uint256) {
       uint256 exchangedQuantity = IERC20(_tradeInfo.receiveToken)
-        .balanceOf(address(_tradeInfo.community))
+        .balanceOf(address(_tradeInfo.idea))
         .sub(_tradeInfo.preTradeReceiveTokenBalance);
+
       require(
         exchangedQuantity >= _tradeInfo.totalMinReceiveQuantity,
         "Slippage greater than allowed"

@@ -354,17 +354,6 @@ contract RollingCommunity is ReentrancyGuard, BaseCommunity {
       );
     }
 
-    // Any tokens (other than the target) that are sent here by mistake are recoverable by contributors
-    // Exchange for WETH
-    function sweep(address _token) external onlyContributor {
-       require(_token != reserveAsset, "Token is not the reserve asset");
-       uint256 balance = ERC20(_token).balanceOf(address(this));
-       require(balance > 0, "Token balance > 0");
-       bytes memory _emptyTradeData;
-       // TODO: probably use uniswap or 1inch
-       _trade("_kyber", _token, balance, reserveAsset, 0, _emptyTradeData);
-    }
-
     /**
      * When an investment idea finishes execution, we want to make that eth available for withdrawals
      * from members of the community.

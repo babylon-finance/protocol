@@ -358,7 +358,7 @@ abstract contract BorrowIntegration is BaseIntegration, ReentrancyGuard {
     uint8 /* _borrowOp */
   ) internal returns (uint256) {
     uint256 protocolFeeTotal = getIntegrationFee(0, _exchangedQuantity);
-    payProtocolFeeFromCommunity(address(_debtInfo.community), _feeToken, protocolFeeTotal);
+    payProtocolFeeFromIdea(address(_debtInfo.community), _feeToken, protocolFeeTotal);
     return protocolFeeTotal;
   }
 

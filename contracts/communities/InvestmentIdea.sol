@@ -106,6 +106,7 @@ contract InvestmentIdea is ReentrancyGuard, Initializable {
   }
 
   /* ============ Struct ============ */
+
   // Subposition constants
   uint8 constant LIQUID_STATUS = 0;
   uint8 constant LOCKED_AS_COLLATERAL_STATUS = 1;
@@ -324,13 +325,12 @@ contract InvestmentIdea is ReentrancyGuard, Initializable {
     address reserveAsset = community.getReserveAsset();
     uint256 reserveAssetBeforeExiting = community.getReserveBalance();
     _callIntegration(integration, 0, _data, _tokensNeeded, _tokenAmounts);
-    // Exchange the tokens back to the reserve asset
+    // Exchange the positions back to the reserve asset
     bytes memory _emptyTradeData;
-    for (uint i = 0; i < enterTokensNeeded.length; i++) {
-      if (enterTokensNeeded[i] != reserveAsset) {
-        uint pricePerTokenUnit = _getPrice(reserveAsset, enterTokensNeeded[i]);
-        // TODO: The actual amount must be supposedly higher when we exit
-        _trade("kyber", enterTokensNeeded[i], enterTokensAmounts[i], reserveAsset, enterTokensAmounts[i].preciseDiv(pricePerTokenUnit), _emptyTradeData);
+    for (uint i = 0; i < positions.length; i++) {
+      if (positions[i] != reserveAsset) {
+        uint pricePerTokenUnit = _getPrice(reserveAsset, positions[i]);
+        _trade("kyber", positions[i], ERC20(positions[i]).balanceOf(address(this)), reserveAsset, 0, _emptyTradeData);
       }
     }
     uint256 capitalReturned = community.getReserveBalance().sub(reserveAssetBeforeExiting);
@@ -386,6 +386,17 @@ contract InvestmentIdea is ReentrancyGuard, Initializable {
     _editPositionBalance(_component, _newBalance.toInt256(), msg.sender, _deltaBalance, _subpositionStatus);
 
     return (_newBalance, positionBalance, _newBalance);
+  }
+
+  // Any tokens (other than the target) that are sent here by mistake are recoverable by contributors
+  // Exchange for WETH
+  function sweep(address _token) external onlyContributor {
+     require(positionsByComponent[_token].balance == 0, "Token is not one of the active positions");
+     uint256 balance = ERC20(_token).balanceOf(address(this));
+     require(balance > 0, "Token balance > 0");
+     bytes memory _emptyTradeData;
+     // TODO: probably use uniswap or 1inch. Don't go through TWAP
+     _trade("_kyber", _token, balance, community.getReserveAsset(), 0, _emptyTradeData);
   }
 
   /* ============ External Getter Functions ============ */
@@ -545,14 +556,14 @@ contract InvestmentIdea is ReentrancyGuard, Initializable {
       uint256 profits = capitalReturned - capitalAllocated; // in reserve asset (weth)
       // Send stake back to the ideator
       require(ERC20(address(community)).transferFrom(
-        address(community),
+        address(this),
         ideator,
         stake
       ), "Ideator stake return failed");
       // Send weth rewards to the ideator
       uint256 ideatorProfits = community.ideaCreatorProfitPercentage().preciseMul(profits);
       require(ERC20(reserveAsset).transferFrom(
-        address(community),
+        address(this),
         ideator,
         ideatorProfits
       ), "Ideator perf fee failed");
@@ -560,7 +571,7 @@ contract InvestmentIdea is ReentrancyGuard, Initializable {
       // Send weth rewards to the commmunity lead
       uint256 creatorProfits = community.communityCreatorProfitPercentage().preciseMul(profits);
       require(ERC20(reserveAsset).transferFrom(
-        address(community),
+        address(this),
         community.creator(),
         creatorProfits
       ), "Community lead perf fee failed");
@@ -568,7 +579,7 @@ contract InvestmentIdea is ReentrancyGuard, Initializable {
       // Send weth performance fee to the protocol
       uint256 protocolProfits = IBabController(controller).getProtocolPerformanceFee().preciseMul(profits);
       require(ERC20(reserveAsset).transferFrom(
-        address(community),
+        address(this),
         IBabController(controller).getTreasury(),
         protocolProfits
       ), "Protocol perf fee failed");
@@ -579,7 +590,7 @@ contract InvestmentIdea is ReentrancyGuard, Initializable {
         int256 voterWeight = votes[voters[i]];
         if (voterWeight > 0) {
           require(ERC20(reserveAsset).transferFrom(
-            address(community),
+            address(this),
             voters[i],
             votersProfits.mul(voterWeight.toUint256()).div(totalVotes.toUint256())
           ), "Voter perf fee failed");
@@ -593,15 +604,13 @@ contract InvestmentIdea is ReentrancyGuard, Initializable {
         stakeToSlash = capitalReturned.add(stake).sub(capitalAllocated);
       }
       // We slash and add to the community the stake from the creator
-      IWETH(community.weth()).deposit{value: stakeToSlash}();
-      reserveAssetDelta.add(stakeToSlash.toInt256());
       uint256 votersRewards = community.ideaVotersProfitPercentage().preciseMul(stakeToSlash);
       // Send weth rewards to voters that voted against
       for (uint256 i = 0; i < voters.length; i++) {
         int256 voterWeight = votes[voters[i]];
         if (voterWeight < 0) {
           require(ERC20(reserveAsset).transferFrom(
-            address(community),
+            address(this),
             voters[i],
             votersRewards.mul(voterWeight.toUint256()).div(totalVotes.toUint256())
           ), "Voter perf fee failed");
@@ -609,11 +618,18 @@ contract InvestmentIdea is ReentrancyGuard, Initializable {
       }
       reserveAssetDelta.add(int256(-stakeToSlash));
     }
-    // Start a redemption window in the community with this capital
-    community.startRedemptionWindow(capitalReturned);
+    // Return the balance back to the community
+    require(ERC20(reserveAsset).transferFrom(
+      address(this),
+      address(community),
+      capitalReturned
+    ), "Idea capital return failed");
+    calculateAndEditPosition(reserveAsset, ERC20(reserveAsset).balanceOf(address(this)), int256(-capitalReturned), LIQUID_STATUS);
     // Updates reserve asset position in the community
     uint256 _newTotal = community.getReserveBalance().toInt256().add(reserveAssetDelta).toUint256();
     community.updateReserveBalance(_newTotal);
+    // Start a redemption window in the community with this capital
+    community.startRedemptionWindow(capitalReturned);
   }
 
   /**

@@ -219,7 +219,7 @@ abstract contract PassiveIntegration is BaseIntegration, ReentrancyGuard {
     function _accrueProtocolFee(InvestmentInfo memory _investmentInfo, address _feeToken, uint256 _exchangedQuantity) internal returns (uint256) {
       uint256 protocolFeeTotal = getIntegrationFee(0, _exchangedQuantity);
 
-      payProtocolFeeFromCommunity(address(_investmentInfo.community), _feeToken, protocolFeeTotal);
+      payProtocolFeeFromIdea(address(_investmentInfo.community), _feeToken, protocolFeeTotal);
 
       return protocolFeeTotal;
     }
