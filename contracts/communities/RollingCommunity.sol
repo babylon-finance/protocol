@@ -18,21 +18,20 @@
 
 pragma solidity 0.7.4;
 
-// import "hardhat/console.sol";
+import "hardhat/console.sol";
 import { ERC20 } from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import {
     ReentrancyGuard
 } from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import { SafeMath } from "@openzeppelin/contracts/math/SafeMath.sol";
 import { SignedSafeMath } from "@openzeppelin/contracts/math/SignedSafeMath.sol";
-import { PreciseUnitMath } from "./lib/PreciseUnitMath.sol";
 import { SafeCast } from "@openzeppelin/contracts/utils/SafeCast.sol";
-import { IWETH } from "./interfaces/external/weth/IWETH.sol";
-import { ICommunityIdeas } from "./interfaces/ICommunityIdeas.sol";
-import { IBabController } from "./interfaces/IBabController.sol";
-import { ICommunityValuer } from "./interfaces/ICommunityValuer.sol";
-import { IReservePool } from "./interfaces/IReservePool.sol";
-import { IPriceOracle } from "./interfaces/IPriceOracle.sol";
+import { PreciseUnitMath } from "../lib/PreciseUnitMath.sol";
+import { IWETH } from "../interfaces/external/weth/IWETH.sol";
+import { IBabController } from "../interfaces/IBabController.sol";
+import { ICommunityValuer } from "../interfaces/ICommunityValuer.sol";
+import { IReservePool } from "../interfaces/IReservePool.sol";
+import { IPriceOracle } from "../interfaces/IPriceOracle.sol";
 import { BaseCommunity } from "./BaseCommunity.sol";
 
 
@@ -42,7 +41,7 @@ import { BaseCommunity } from "./BaseCommunity.sol";
  *
  * RollingCommunity holds the logic to deposit, withdraw and track contributions and fees.
  */
-contract RollingCommunity is BaseCommunity, ReentrancyGuard {
+contract RollingCommunity is ReentrancyGuard, BaseCommunity {
   using SafeCast for uint256;
   using SafeCast for int256;
   using SafeMath for uint256;
@@ -50,41 +49,7 @@ contract RollingCommunity is BaseCommunity, ReentrancyGuard {
   using PreciseUnitMath for int256;
   using PreciseUnitMath for uint256;
 
-    /* ============ Events ============ */
-    event CommunityTokenDeposited(
-        address indexed _to,
-        uint256 communityTokenQuantity,
-        uint256 protocolFees
-    );
-    event CommunityTokenWithdrawn(
-        address indexed _from,
-        address indexed _to,
-        uint256 communityTokenQuantity,
-        uint256 protocolFees
-    );
-
-    event ContributionLog(
-        address indexed contributor,
-        uint256 amount,
-        uint256 tokensReceived,
-        uint256 timestamp
-    );
-    event WithdrawalLog(
-        address indexed sender,
-        uint256 amount,
-        uint256 timestamp
-    );
-
-    /* ============ Modifiers ============ */
-
-    modifier onlyContributor {
-      _validateOnlyContributor(msg.sender);
-      _;
-    }
-
     /* ============ State Variables ============ */
-    uint256 constant public initialBuyRate = 1000000000000; // Initial buy rate for the manager
-    uint256 constant public MAX_DEPOSITS_FUND_V1 = 1e21; // Max deposit per community is 1000 eth for v1
 
     struct ActionInfo {
       uint256 preFeeReserveQuantity; // Reserve value before fees; During issuance, represents raw quantity
@@ -99,26 +64,10 @@ contract RollingCommunity is BaseCommunity, ReentrancyGuard {
       uint256 newReservePositionBalance; // Community token reserve asset position balance after deposit/withdrawal
     }
 
-    uint256 public maxDepositLimit;                // Limits the amount of deposits
-    uint256 public communityInitializedAt;         // Community Initialized at timestamp
     uint256 public depositHardlock;                // Window of time after deposits when withdraws are disabled for that user
     uint256 public redemptionWindowAfterInvestmentCompletes; // Window of time after an investment idea finishes when the capital is available for withdrawals
     uint256 public redemptionsOpenUntil;           // Indicates until when the redemptions are open and the ETH is set aside
 
-    // List of contributors
-    struct Contributor {
-      uint256 totalDeposit; //wei
-      uint256 tokensReceived;
-      uint256 timestamp;
-    }
-
-    mapping(address => Contributor) public contributors;
-    uint256 public totalContributors;
-    uint256 public totalFundsDeposited;
-    uint256 public totalFunds;
-    // Min contribution in the community
-    uint256 public minContribution = initialBuyRate; //wei
-    uint256 public minCommunityTokenSupply;
 
     /* ============ Constructor ============ */
 
@@ -133,52 +82,63 @@ contract RollingCommunity is BaseCommunity, ReentrancyGuard {
      * @param _creator                Address of the creator
      * @param _name                   Name of the Community
      * @param _symbol                 Symbol of the Community
-     * @param _minContribution        Min contribution to the community
      */
 
-    constructor(
+    function initialize(
         address[] memory _integrations,
         address _weth,
         address _controller,
         address _creator,
         string memory _name,
-        string memory _symbol,
-        uint256 _minContribution
-    )
-        BaseCommunity(
-            _integrations,
-            _weth,
-            _weth,
-            _controller,
-            _creator,
-            _name,
-            _symbol
-        )
+        string memory _symbol
+    ) public
     {
-        minContribution = _minContribution;
-        totalContributors = 0;
-        totalFundsDeposited = 0;
-        totalFunds = 0;
+      super.initialize(
+          _integrations,
+          _weth,
+          _weth,
+          _controller,
+          _creator,
+          _name,
+          _symbol
+      );
+      totalContributors = 0;
+      totalFundsDeposited = 0;
+      totalFunds = 0;
     }
 
     /* ============ External Functions ============ */
 
     /**
-     * FUND MANAGER ONLY. Initializes this module to the Community with allowed reserve assets,
+     * FUND LEAD ONLY.  Starts the Community with allowed reserve assets,
      * fees and issuance premium. Only callable by the Community's creator
      *
      * @param _maxDepositLimit                     Max deposit limit
      * @param _minCommunityTokenSupply             Min community token supply
-     * @param _communityIdeas                      Address of the instance with the investment ideas
      * @param _minLiquidityAsset                   Number that represents min amount of liquidity denominated in ETH
      * @param _depositHardlock                     Number that represents the time deposits are locked for an user after he deposits
+     * @param _minContribution        Min contribution to the community
+     * @param _ideaCooldownPeriod               How long after the idea has been activated, will it be ready to be executed
+     * @param _ideaCreatorProfitPercentage      What percentage of the profits go to the idea creator
+     * @param _ideaVotersProfitPercentage       What percentage of the profits go to the idea curators
+     * @param _communityCreatorProfitPercentage What percentage of the profits go to the creator of the community
+     * @param _minVotersQuorum                  Percentage of votes needed to activate an investment idea (0.01% = 1e14, 1% = 1e16)
+     * @param _minIdeaDuration                  Min duration of an investment idea
+     * @param _maxIdeaDuration                  Max duration of an investment idea
      */
-    function initialize(
+    function start(
         uint256 _maxDepositLimit,
         uint256 _minCommunityTokenSupply,
-        address _communityIdeas,
         uint256 _minLiquidityAsset,
-        uint256 _depositHardlock
+        uint256 _depositHardlock,
+        uint256 _minContribution,
+        uint256 _ideaCooldownPeriod,
+        uint256 _ideaCreatorProfitPercentage,
+        uint256 _ideaVotersProfitPercentage,
+        uint256 _communityCreatorProfitPercentage,
+        uint256 _minVotersQuorum,
+        uint256 _minIdeaDuration,
+        uint256 _maxIdeaDuration
     ) external onlyCreator onlyInactive payable {
         require(_maxDepositLimit < MAX_DEPOSITS_FUND_V1, "Max deposit limit needs to be under the limit");
 
@@ -201,23 +161,24 @@ contract RollingCommunity is BaseCommunity, ReentrancyGuard {
         communityInitializedAt = block.timestamp;
         minLiquidityAsset = _minLiquidityAsset;
         depositHardlock = _depositHardlock;
-        ICommunityIdeas communityIdeasC = ICommunityIdeas(_communityIdeas);
-        require(communityIdeasC.controller() == controller, "Controller must be the same");
-        require(communityIdeasC.community() == address(this), "Community must be this contract");
-        communityIdeas = _communityIdeas;
         redemptionWindowAfterInvestmentCompletes = 7 days;
+        startCommon(
+            _minContribution,
+            _ideaCooldownPeriod,
+            _ideaCreatorProfitPercentage,
+            _ideaVotersProfitPercentage,
+            _communityCreatorProfitPercentage,
+            _minVotersQuorum,
+            _minIdeaDuration,
+            _maxIdeaDuration);
 
+
+        // Deposit
         IWETH(weth).deposit{value: initialDepositAmount}();
 
         _mint(creator, initialTokens);
         _updateContributorInfo(initialTokens, initialDepositAmount);
-
-        _calculateAndEditPosition(
-          weth,
-          initialDepositAmount,
-          initialDepositAmount.toInt256(),
-          0
-        );
+        _updateReserveBalance(initialDepositAmount);
 
         require(totalSupply() > 0, "Community must receive an initial deposit");
 
@@ -226,7 +187,7 @@ contract RollingCommunity is BaseCommunity, ReentrancyGuard {
 
     /**
      * Deposits the Community's position components into the community and mints the Community token of the given quantity
-     * to the specified _to address. This function only handles default Positions (positionState = 0).
+     * to the specified _to address.
      *
      * @param _reserveAssetQuantity  Quantity of the reserve asset that are received
      * @param _minCommunityTokenReceiveQuantity   Min quantity of Community token to receive after issuance
@@ -246,11 +207,12 @@ contract RollingCommunity is BaseCommunity, ReentrancyGuard {
           require(totalFundsDeposited.add(msg.value) <= maxDepositLimit, "Max Deposit Limit");
         }
         require(msg.value == _reserveAssetQuantity, "ETH does not match");
+        // Oracle maintenance
+        updatePositionTWAPPrices();
         // Always wrap to WETH
         IWETH(weth).deposit{value: msg.value}();
         // Check this here to avoid having relayers
         reenableEthForInvestments();
-        updatePositionTWAPPrices();
 
         _validateReserveAsset(reserveAsset, _reserveAssetQuantity);
 
@@ -259,11 +221,19 @@ contract RollingCommunity is BaseCommunity, ReentrancyGuard {
 
         _validateIssuanceInfo(_minCommunityTokenReceiveQuantity, depositInfo);
 
-        _transferCollateralAndHandleFees(reserveAsset, depositInfo);
+        // Send Protocol Fee
+        payProtocolFeeFromCommunity(reserveAsset, depositInfo.protocolFees);
 
+        // Updates Reserve Balance and Mint
+        _mint(_to, depositInfo.communityTokenQuantity);
         _updateContributorInfo(depositInfo.communityTokenQuantity, msg.value);
+        _updateReserveBalance(depositInfo.newReservePositionBalance);
 
-        _handleDepositStateUpdates(reserveAsset, _to, depositInfo);
+        emit CommunityTokenDeposited(
+            _to,
+            depositInfo.communityTokenQuantity,
+            depositInfo.protocolFees
+        );
     }
 
     /**
@@ -286,7 +256,6 @@ contract RollingCommunity is BaseCommunity, ReentrancyGuard {
         require(block.timestamp.sub(contributors[msg.sender].timestamp) >= depositHardlock, "Cannot withdraw. Hardlock");
         // Check this here to avoid having relayers
         reenableEthForInvestments();
-        updatePositionTWAPPrices();
         ActionInfo memory withdrawalInfo =
             _createRedemptionInfo(reserveAsset, _communityTokenQuantity);
 
@@ -318,9 +287,15 @@ contract RollingCommunity is BaseCommunity, ReentrancyGuard {
           _to.transfer(withdrawalInfo.netFlowQuantity);
         }
 
-        _handleRedemptionFees(reserveAsset, withdrawalInfo);
+        payProtocolFeeFromCommunity(reserveAsset, withdrawalInfo.protocolFees);
 
-        _handleWithdrawalStateUpdates(reserveAsset, _to, withdrawalInfo);
+        _updateReserveBalance(withdrawalInfo.newReservePositionBalance);
+        emit CommunityTokenWithdrawn(
+            msg.sender,
+            _to,
+            withdrawalInfo.communityTokenQuantity,
+            withdrawalInfo.protocolFees
+        );
     }
 
     /**
@@ -367,29 +342,16 @@ contract RollingCommunity is BaseCommunity, ReentrancyGuard {
       );
       totalFunds = totalFunds.sub(withdrawalInfo.netFlowQuantity).sub(withdrawalInfo.protocolFees);
 
-      _handleRedemptionFees(reserveAsset, withdrawalInfo);
+      payProtocolFeeFromCommunity(reserveAsset, withdrawalInfo.protocolFees);
 
-      _handleWithdrawalStateUpdates(reserveAsset, _to, withdrawalInfo);
-    }
+      _updateReserveBalance(withdrawalInfo.newReservePositionBalance);
 
-    // if limit == 0 then there is no deposit limit
-    function setDepositLimit(uint limit) external onlyGovernanceCommunity {
-      maxDepositLimit = limit;
-    }
-
-    // Any tokens (other than the target) that are sent here by mistake are recoverable by contributors
-    // Exchange for WETH or add as a position
-    function sweep(address _token, bool _sell) external onlyContributor {
-       require(!_hasPosition(_token), "Token is one of the community positions");
-       uint256 balance = ERC20(_token).balanceOf(address(this));
-       require(balance > 0, "Token balance > 0");
-       if (_sell) {
-         bytes memory _emptyTradeData;
-         // TODO: probably use uniswap or 1inch
-         _trade("_kyber", _token, balance, reserveAsset, 0, _emptyTradeData);
-       } else {
-         _calculateAndEditPosition(_token, balance, ERC20(_token).balanceOf(address(this)).toInt256(), 0);
-       }
+      emit CommunityTokenWithdrawn(
+          msg.sender,
+          _to,
+          withdrawalInfo.communityTokenQuantity,
+          withdrawalInfo.protocolFees
+      );
     }
 
     /**
@@ -415,20 +377,6 @@ contract RollingCommunity is BaseCommunity, ReentrancyGuard {
     }
 
     /**
-     * Updates the TWAP prices for the community positions
-     *
-     */
-    function updatePositionTWAPPrices() public {
-      // Updates UniSwap TWAP
-      address oracle = IBabController(controller).getPriceOracle();
-      for(uint i = 0; i < positions.length; i++) {
-        if (positions[i] != reserveAsset) {
-          IPriceOracle(oracle).updateAdapters(reserveAsset, positions[i]);
-        }
-      }
-    }
-
-    /**
      * Burns seller community tokens and mints them to the reserve pool
      *  @param _contributor           Contributor that is selling the tokens
      *  @param _quantity              Amount of tokens being sold to the reserve pool
@@ -436,7 +384,7 @@ contract RollingCommunity is BaseCommunity, ReentrancyGuard {
     function burnAssetsFromSenderAndMintToReserve(address _contributor, uint256 _quantity) external {
       address reservePool = IBabController(controller).getReservePool();
       require(msg.sender == reservePool, "Only reserve pool can call this");
-      _burn(msg.sender, _quantity);
+      _burn(_contributor, _quantity);
       _mint(reservePool, _quantity);
     }
 
@@ -458,30 +406,6 @@ contract RollingCommunity is BaseCommunity, ReentrancyGuard {
     function getContributor(address _contributor) public view returns (uint256, uint256, uint256) {
         Contributor memory contributor = contributors[_contributor];
         return (contributor.totalDeposit, contributor.tokensReceived, contributor.timestamp);
-    }
-
-    /**
-     * Get the expected community tokens minted to recipient on issuance
-     *
-     * @param _reserveAsset                 Address of the reserve asset
-     * @param _reserveAssetQuantity         Quantity of the reserve asset to deposit with
-     *
-     * @return  uint256                     Expected Community tokens to be minted to recipient
-     */
-    function getExpectedCommunityTokensDepositedQuantity(
-        address _reserveAsset,
-        uint256 _reserveAssetQuantity
-    ) external view returns (uint256) {
-        (, uint256 netReserveFlow) = _getFees(_reserveAssetQuantity, true, 0);
-
-        uint256 setTotalSupply = totalSupply();
-
-        return
-            _getCommunityTokenMintQuantity(
-                _reserveAsset,
-                netReserveFlow,
-                setTotalSupply
-            );
     }
 
     /**
@@ -516,12 +440,10 @@ contract RollingCommunity is BaseCommunity, ReentrancyGuard {
         address _reserveAsset,
         uint256 _reserveAssetQuantity
     ) external view returns (bool) {
-        uint256 setTotalSupply = totalSupply();
-
         return
             _reserveAssetQuantity != 0 &&
             IBabController(controller).isValidReserveAsset(_reserveAsset) &&
-            setTotalSupply >= minCommunityTokenSupply;
+            totalSupply() >= minCommunityTokenSupply;
     }
 
     /**
@@ -554,10 +476,7 @@ contract RollingCommunity is BaseCommunity, ReentrancyGuard {
             (, uint256 expectedWithdrawalQuantity) =
                 _getFees(totalWithdrawalValue, false, _communityTokenQuantity);
 
-            uint256 existingBalance =
-                _getPositionBalance(_reserveAsset).toUint256();
-
-            return existingBalance >= expectedWithdrawalQuantity;
+            return reserveBalance >= expectedWithdrawalQuantity;
         }
     }
 
@@ -636,9 +555,7 @@ contract RollingCommunity is BaseCommunity, ReentrancyGuard {
               depositInfo.previousCommunityTokenSupply
             );
 
-        uint256 existingBalance = _getPositionBalance(_reserveAsset).toUint256();
-
-        depositInfo.newReservePositionBalance = existingBalance.add(depositInfo.netFlowQuantity);
+        depositInfo.newReservePositionBalance = reserveBalance.add(depositInfo.netFlowQuantity);
 
         return depositInfo;
     }
@@ -666,80 +583,18 @@ contract RollingCommunity is BaseCommunity, ReentrancyGuard {
         withdrawalInfo.newCommunityTokenSupply =
             withdrawalInfo.previousCommunityTokenSupply.sub(_communityTokenQuantity);
 
-        withdrawalInfo.newReservePositionBalance = _getWithdrawalPositionBalance(
-            _reserveAsset,
-            withdrawalInfo
+        uint256 outflow = withdrawalInfo.netFlowQuantity.add(withdrawalInfo.protocolFees);
+
+        // Require withdrawable quantity is greater than existing collateral
+        require(
+            reserveBalance >= outflow,
+            "Must have enough balance"
         );
+
+        withdrawalInfo.newReservePositionBalance =
+            reserveBalance.sub(outflow);
 
         return withdrawalInfo;
-    }
-
-    /**
-     * Transfer reserve asset from user to Community and fees from user to appropriate fee recipients
-     */
-    function _transferCollateralAndHandleFees(
-        address _reserveAsset,
-        ActionInfo memory _depositInfo
-    ) internal {
-        if (_depositInfo.protocolFees > 0) {
-            require(ERC20(_reserveAsset).transferFrom(
-                address(this),
-                IBabController(controller).getTreasury(),
-                _depositInfo.protocolFees
-            ), "Deposit Protocol fee failed");
-        }
-    }
-
-    function _handleDepositStateUpdates(
-        address _reserveAsset,
-        address _to,
-        ActionInfo memory _depositInfo
-    ) internal {
-
-        editPosition(
-            _reserveAsset,
-            _depositInfo.newReservePositionBalance,
-            address(0),
-            msg.value.toInt256(),
-            0
-        );
-
-        _mint(_to, _depositInfo.communityTokenQuantity);
-
-        emit CommunityTokenDeposited(
-            _to,
-            _depositInfo.communityTokenQuantity,
-            _depositInfo.protocolFees
-        );
-    }
-
-    function _handleWithdrawalStateUpdates(
-        address _reserveAsset,
-        address _to,
-        ActionInfo memory _withdrawalInfo
-    ) internal {
-        editPosition(
-            _reserveAsset,
-            _withdrawalInfo.newReservePositionBalance,
-            address(0),
-            int256(-_withdrawalInfo.netFlowQuantity),
-            0
-        );
-
-        emit CommunityTokenWithdrawn(
-            msg.sender,
-            _to,
-            _withdrawalInfo.communityTokenQuantity,
-            _withdrawalInfo.protocolFees
-        );
-    }
-
-    function _handleRedemptionFees(
-        address _reserveAsset,
-        ActionInfo memory _withdrawalInfo
-    ) internal {
-        // Instruct the Community to transfer protocol fee to fee recipient if there is a fee
-        payProtocolFeeFromCommunity(_reserveAsset, _withdrawalInfo.protocolFees);
     }
 
     /**
@@ -786,7 +641,9 @@ contract RollingCommunity is BaseCommunity, ReentrancyGuard {
     ) internal view returns (uint256) {
         // Get valuation of the Community with the quote asset as the reserve asset.
         // Reverts if price is not found
-        uint256 communityValuation = ICommunityValuer(IBabController(controller).getCommunityValuer()).calculateCommunityValuation(address(this), _reserveAsset);
+        uint256 communityValuationPerToken =
+          ICommunityValuer(IBabController(controller).getCommunityValuer()).calculateCommunityValuation(address(this), _reserveAsset);
+        communityValuationPerToken = communityValuationPerToken.sub(_netReserveFlows.preciseDiv(totalSupply()));
 
         // Get reserve asset decimals
         uint8 reserveAssetDecimals = ERC20(_reserveAsset).decimals();
@@ -799,7 +656,7 @@ contract RollingCommunity is BaseCommunity, ReentrancyGuard {
         // Calculate Community tokens to mint to depositor
         uint256 denominator =
             _communityTokenTotalSupply
-                .preciseMul(communityValuation)
+                .preciseMul(communityValuationPerToken)
                 .add(normalizedTotalReserveQuantityNetFees)
                 .sub(normalizedTotalReserveQuantityNetFeesAndPremium);
         uint256 quantityToMint =
@@ -815,12 +672,12 @@ contract RollingCommunity is BaseCommunity, ReentrancyGuard {
     ) internal view returns (uint256) {
         // Get valuation of the Community with the quote asset as the reserve asset. Returns value in precise units (10e18)
         // Reverts if price is not found
-        uint256 communityValuation =
+        uint256 communityValuationPerToken =
             ICommunityValuer(IBabController(controller).getCommunityValuer())
                 .calculateCommunityValuation(address(this), _reserveAsset);
 
         uint256 totalWithdrawalValueInPreciseUnits =
-            _communityTokenQuantity.preciseMul(communityValuation);
+            _communityTokenQuantity.preciseMul(communityValuationPerToken);
         // Get reserve asset decimals
         uint8 reserveAssetDecimals = ERC20(_reserveAsset).decimals();
         uint256 prePremiumReserveQuantity =
@@ -829,33 +686,6 @@ contract RollingCommunity is BaseCommunity, ReentrancyGuard {
             );
 
         return prePremiumReserveQuantity;
-    }
-
-    /**
-     * The new position reserve asset balance is calculated as follows:
-     * totalReserve = oldBalance - reserveQuantityToSendOut
-     * newBalance = totalReserve / newCommunityTokenSupply
-     */
-    function _getWithdrawalPositionBalance(
-        address _reserveAsset,
-        ActionInfo memory _withdrawalInfo
-    ) internal view returns (uint256) {
-        uint256 totalExistingBalance = _getPositionBalance(_reserveAsset).toUint256();
-
-
-        uint256 outflow =
-            _withdrawalInfo
-                .netFlowQuantity
-                .add(_withdrawalInfo.protocolFees);
-
-        // Require withdrawable quantity is greater than existing collateral
-        require(
-            totalExistingBalance >= outflow,
-            "Must have enough balance"
-        );
-
-        return
-            totalExistingBalance.sub(outflow);
     }
 
     /**
@@ -882,12 +712,5 @@ contract RollingCommunity is BaseCommunity, ReentrancyGuard {
         tokensReceived,
         block.timestamp
       );
-    }
-
-    function _validateOnlyContributor(address _caller) internal view {
-        require(
-            balanceOf(_caller) > 0,
-            "Only participant can withdraw"
-        );
     }
 }

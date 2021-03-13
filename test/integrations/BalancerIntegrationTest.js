@@ -3,7 +3,7 @@ const { waffle, ethers } = require("hardhat");
 const { impersonateAddress } = require("../../utils/rpc");
 const { deployFolioFixture } = require("../fixtures/ControllerFixture");
 const addresses = require("../../utils/addresses");
-const { ADDRESS_ZERO } = require("../../utils/constants");
+const { ADDRESS_ZERO, ONE_DAY_IN_SECONDS } = require("../../utils/constants");
 
 const { loadFixture } = waffle;
 
@@ -12,14 +12,18 @@ describe("BalancerIntegrationTest", function() {
   let balancerIntegration;
   let balancerAbi;
   let community;
+  let userSigner1;
   let userSigner3;
+  let idea;
 
   beforeEach(async () => {
     system = await loadFixture(deployFolioFixture);
     balancerIntegration = system.integrations.balancerIntegration;
+    userSigner1 = system.signer1;
     userSigner3 = system.signer3;
     balancerAbi = balancerIntegration.interface;
     community = system.comunities.one;
+    idea = system.ideas[0];
   });
 
   describe("Deployment", function() {
@@ -69,64 +73,74 @@ describe("BalancerIntegrationTest", function() {
       // );
 
       await community
+        .connect(userSigner1)
+        .deposit(ethers.utils.parseEther("3"), 1, userSigner3.getAddress(), {
+          value: ethers.utils.parseEther("3")
+        });
+      await community
         .connect(userSigner3)
-        .deposit(ethers.utils.parseEther("5"), 1, userSigner3.getAddress(), {
-          value: ethers.utils.parseEther("5")
+        .deposit(ethers.utils.parseEther("3"), 1, userSigner3.getAddress(), {
+          value: ethers.utils.parseEther("3")
         });
 
       const dataEnter = balancerAbi.encodeFunctionData(
         balancerAbi.functions["joinPool(address,uint256,address[],uint256[])"],
         [
           addresses.balancer.pools.wethdai,
-          ethers.utils.parseEther("0.001"),
+          ethers.utils.parseEther("0.0001"),
           await daiWethPool.getFinalTokens(),
           [ethers.utils.parseEther("1000"), ethers.utils.parseEther("2")]
         ]
-      );
-
-      await community.callIntegration(
-        balancerIntegration.address,
-        ethers.utils.parseEther("0"),
-        dataEnter,
-        [daiToken.address],
-        [ethers.utils.parseEther("1000")],
-        {
-          gasPrice: 0
-        }
-      );
-
-      expect(await daiWethPool.balanceOf(community.address)).to.be.eq(
-        ethers.utils.parseEther("0.001")
       );
 
       const dataExit = balancerAbi.encodeFunctionData(
         balancerAbi.functions["exitPool(address,uint256,address[],uint256[])"],
         [
           addresses.balancer.pools.wethdai,
-          ethers.utils.parseEther("0.001"),
+          ethers.utils.parseEther("0.0001"),
           await daiWethPool.getFinalTokens(),
           [ethers.utils.parseEther("100"), ethers.utils.parseEther("0.1")]
         ]
       );
 
-      await community.callIntegration(
-        balancerIntegration.address,
-        ethers.utils.parseEther("0"),
-        dataExit,
-        [],
-        [],
-        {
-          gasPrice: 0
-        }
-      );
+      await idea
+        .connect(userSigner1)
+        .setIntegrationData(
+          balancerIntegration.address,
+          dataEnter,
+          dataExit,
+          [daiToken.address],
+          [ethers.utils.parseEther("1000")],
+          {
+            gasPrice: 0
+          }
+        );
 
-      expect(await daiWethPool.balanceOf(community.address)).to.equal(0);
-      expect(await daiToken.balanceOf(community.address)).to.be.gt(
-        ethers.utils.parseEther("999")
-      );
-      expect(await wethToken.balanceOf(community.address)).to.be.gt(
-        ethers.utils.parseEther("4.00")
-      );
+      await idea
+        .connect(userSigner3)
+        .curateIdea(await community.balanceOf(userSigner3.getAddress()));
+
+      ethers.provider.send("evm_increaseTime", [ONE_DAY_IN_SECONDS * 2]);
+
+      // await idea.executeInvestment(ethers.utils.parseEther("1"), {
+      //   gasPrice: 0
+      // });
+      //
+      // expect(await daiWethPool.balanceOf(idea.address)).to.be.eq(
+      //   ethers.utils.parseEther("0.001")
+      // );
+      //
+      // ethers.provider.send("evm_increaseTime", [ONE_DAY_IN_SECONDS * 90]);
+      //
+      // await idea.finalizeInvestment({ gasPrice: 0 });
+      //
+      // expect(await daiWethPool.balanceOf(idea.address)).to.equal(0);
+      // expect(await daiToken.balanceOf(idea.address)).to.be.gt(
+      //   ethers.utils.parseEther("0")
+      // );
+      // expect(await wethToken.balanceOf(idea.address)).to.be.gt(
+      //   ethers.utils.parseEther("4.00")
+      // );
     });
   });
 });

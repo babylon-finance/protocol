@@ -28,6 +28,7 @@ import { SafeMath } from "@openzeppelin/contracts/math/SafeMath.sol";
 
 import { IBabController } from "./interfaces/IBabController.sol";
 import { ICommunity } from "./interfaces/ICommunity.sol";
+import { IInvestmentIdea } from "./interfaces/IInvestmentIdea.sol";
 import { IPriceOracle } from "./interfaces/IPriceOracle.sol";
 import { PreciseUnitMath } from "./lib/PreciseUnitMath.sol";
 
@@ -74,7 +75,7 @@ contract CommunityValuer {
      * Note: There is a risk that the valuation is off if airdrops aren't retrieved or
      * debt builds up via interest and its not reflected in the position
      *
-     * @param _community            Community instance to get valuation
+     * @param _community       Community instance to get valuation
      * @param _quoteAsset      Address of token to quote valuation in
      *
      * @return                 Token valuation in terms of quote asset in precise units 1e18
@@ -90,29 +91,37 @@ contract CommunityValuer {
         // live in the PriceOracle so we'll need to add it back or take another approach.
         address masterQuoteAsset = priceOracle.masterQuoteAsset();
 
-        address[] memory components = _community.getPositions();
+        address[] memory ideas = _community.getIdeas();
         int256 valuation;
+        for (uint256 j = 0; j < ideas.length; j++) {
+          IInvestmentIdea idea = IInvestmentIdea(ideas[j]);
+          address[] memory positions = idea.getPositions();
 
-        for (uint256 i = 0; i < components.length; i++) {
-          address component = components[i];
+          for (uint256 i = 0; i < positions.length; i++) {
+            address component = positions[i];
 
-          // Get component price from price oracle. If price does not exist, revert.
-          uint256 componentPrice = priceOracle.getPrice(component, masterQuoteAsset);
-          int256 aggregateUnits = _community.getPositionBalance(component);
-          // Normalize each position unit to preciseUnits 1e18 and cast to signed int
-          uint8 unitDecimals = ERC20(component).decimals();
-          uint256 baseUnits = 10 ** unitDecimals;
+            // Get component price from price oracle. If price does not exist, revert.
+            uint256 componentPrice = priceOracle.getPrice(component, masterQuoteAsset);
+            int256 aggregateUnits = idea.getPositionBalance(component);
+            // Normalize each position unit to preciseUnits 1e18 and cast to signed int
+            uint8 unitDecimals = ERC20(component).decimals();
+            uint256 baseUnits = 10 ** unitDecimals;
 
-          int256 normalizedUnits = aggregateUnits.preciseDiv(baseUnits.toInt256());
-          // Calculate valuation of the component. Debt positions are effectively subtracted
-          valuation = normalizedUnits.preciseMul(componentPrice.toInt256()).add(valuation);
+            int256 normalizedUnits = aggregateUnits.preciseDiv(baseUnits.toInt256());
+            // Calculate valuation of the component. Debt positions are effectively subtracted
+            valuation = normalizedUnits.preciseMul(componentPrice.toInt256()).add(valuation);
+          }
         }
 
         if (masterQuoteAsset != _quoteAsset && valuation > 0) {
             uint256 quoteToMaster = priceOracle.getPrice(_quoteAsset, masterQuoteAsset);
             valuation = valuation.preciseDiv(quoteToMaster.toInt256());
         }
-
+        // Get component price from price oracle. If price does not exist, revert.
+        uint256 reservePrice = priceOracle.getPrice(_community.getReserveAsset(), masterQuoteAsset);
+        valuation = valuation.add(ERC20(_community.getReserveAsset()).balanceOf(address(_community)).toInt256().preciseMul(reservePrice.toInt256()));
+        // Adds ETH set aside
+        valuation = valuation.add(address(_community).balance.toInt256());
         return valuation.toUint256().preciseDiv(_community.totalSupply());
     }
 }

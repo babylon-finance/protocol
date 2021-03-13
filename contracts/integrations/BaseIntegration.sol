@@ -23,6 +23,7 @@ import { ERC20 } from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import { IBabController } from "../interfaces/IBabController.sol";
 import { IIntegration } from "../interfaces/IIntegration.sol";
 import { IWETH } from "../interfaces/external/weth/IWETH.sol";
+import { IInvestmentIdea } from "../interfaces/IInvestmentIdea.sol";
 import { ICommunity } from "../interfaces/ICommunity.sol";
 import { SafeMath } from "@openzeppelin/contracts/math/SafeMath.sol";
 import { SignedSafeMath } from "@openzeppelin/contracts/math/SignedSafeMath.sol";
@@ -51,9 +52,11 @@ abstract contract BaseIntegration {
       _;
     }
 
-    modifier onlyCommunity() {
-      require(IBabController(controller).isSystemContract(msg.sender), "Only a community can call this");
-      require(initializedByCommunity[msg.sender], "integration has already been initialized");
+    modifier onlyIdea() {
+      IInvestmentIdea idea = IInvestmentIdea(msg.sender);
+      address community = idea.community();
+      require(IBabController(controller).isSystemContract(community), "Only a community can call this");
+      require(ICommunity(community).isInvestmentIdea(msg.sender), "Sender myst be an investment idea from the community");
       _;
     }
 
@@ -92,17 +95,6 @@ abstract contract BaseIntegration {
     /* ============ External Functions ============ */
 
     /**
-     * Initializes the integration.
-     * @param _community addres of the community
-     */
-    function initialize(address _community) external {
-      require(IBabController(controller).isSystemContract(msg.sender), "The caller is a community");
-      require(msg.sender == _community, "Only the community can initialize it");
-      require(!initializedByCommunity[_community], "integration has already been initialized");
-      initializedByCommunity[_community] = true;
-    }
-
-    /**
      * Returns the name of the integration
      */
     function getName() external view returns (string memory) {
@@ -115,12 +107,12 @@ abstract contract BaseIntegration {
     /**
      * Updates the position in the community with the new units
      *
-     * @param _community                     Address of the community
+     * @param _investmentIdea           Address of the investment idea
      * @param _component                Address of the ERC20
      * @param _deltaOperation           Delta balance of the operation
      */
-    function updateCommunityPosition(
-      address _community,
+    function _updateInvestmentIdeaPosition(
+      address _investmentIdea,
       address _component,
       int256 _deltaOperation,
       uint8 _subpositionStatus
@@ -129,8 +121,8 @@ abstract contract BaseIntegration {
       uint256,
       uint256
     ) {
-      uint256 _newTotal = ICommunity(_community).getPositionBalance(_component).add(int256(_deltaOperation)).toUint256();
-      return ICommunity(_community).calculateAndEditPosition(_component, _newTotal, _deltaOperation, _subpositionStatus);
+      uint256 _newTotal = IInvestmentIdea(_investmentIdea).getPositionBalance(_component).add(_deltaOperation).toUint256();
+      return IInvestmentIdea(_investmentIdea).calculateAndEditPosition(_component, _newTotal, _deltaOperation, _subpositionStatus);
     }
 
     /**
@@ -159,9 +151,9 @@ abstract contract BaseIntegration {
     /**
      * Pays the _feeQuantity from the community denominated in _token to the protocol fee recipient
      */
-    function payProtocolFeeFromCommunity(address _community, address _token, uint256 _feeQuantity) internal {
+    function payProtocolFeeFromIdea(address _idea, address _token, uint256 _feeQuantity) internal {
         if (_feeQuantity > 0) {
-          ERC20(_token).transferFrom(_community, IBabController(controller).getTreasury(), _feeQuantity);
+          ERC20(_token).transferFrom(_idea, IBabController(controller).getTreasury(), _feeQuantity);
         }
     }
 

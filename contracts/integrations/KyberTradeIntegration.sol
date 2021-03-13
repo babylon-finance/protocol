@@ -137,7 +137,7 @@ contract KyberTradeIntegration is TradeIntegration {
 
     kyberTradeInfo.conversionRate = worstRate;
 
-    // Encode method data for SetToken to invoke
+    // Encode method data for TradeIntegration to invoke
     bytes memory methodData = abi.encodeWithSignature(
       "trade(address,uint256,address,address,uint256,uint256,address)",
       _sourceToken,

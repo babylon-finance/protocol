@@ -183,16 +183,18 @@ contract ReservePool is ERC20, ReentrancyGuard, Ownable {
      */
     function redeemETHFromCommunityTokens(address _community, uint256 _amount) external nonReentrant {
       bool isValidKeeper = IBabController(controller).isValidKeeper(msg.sender);
-      require(isValidKeeper || msg.sender == IBabController(controller).owner(), "Only owner can call this");
+      IRollingCommunity community = IRollingCommunity(_community);
+      require(isValidKeeper || msg.sender == IBabController(controller).owner(), "Only owner or keeper can call this");
       require(_amount > 0, "There needs to be tokens to redeem");
-      require(IRollingCommunity(_community).active(), "Community must be active");
+      require(community.active(), "Community must be active");
       // Get valuation of the Community with the quote asset as the reserve asset.
       uint256 communityValuation = ICommunityValuer(IBabController(controller).getCommunityValuer()).calculateCommunityValuation(_community, weth);
       require(communityValuation > 0, "Community must be worth something");
-      // TODO: check that the community has liquidity
-      uint minReceive = communityValuation.preciseMul(IRollingCommunity(_community).totalSupply()).preciseDiv(_amount);
+      // Check that the community has normal liquidity
+      uint minReceive = communityValuation.preciseMul(community.totalSupply()).preciseDiv(_amount);
+      require(community.canWithdrawEthAmount(minReceive), "Not enough liquidity in the fund");
       uint rewards = address(this).balance;
-      IRollingCommunity(_community).withdraw(_amount, minReceive.mul(98).div(100), msg.sender);
+      community.withdraw(_amount, minReceive.mul(95).div(100), msg.sender);
       rewards = address(this).balance.sub(rewards);
       IWETH(weth).deposit{value: rewards}();
       // TODO: Create a new fee in protocol
@@ -202,7 +204,6 @@ contract ReservePool is ERC20, ReentrancyGuard, Ownable {
           IBabController(controller).getTreasury(),
           protocolFee
       ), "Protocol fee failed");
-      rewards = rewards.sub(protocolFee);
     }
 
     receive() external payable {} // solium-disable-line quotes

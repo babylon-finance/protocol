@@ -43,15 +43,6 @@ describe("BabController", function() {
     community1 = comunities.one;
     community2 = comunities.two;
     community3 = comunities.three;
-    // console.log(
-    //   "Config:",
-    //   oracle,
-    //   valuer,
-    //   ownerSigner,
-    //   userSigner1,
-    //   userSigner2,
-    //   userSigner3
-    // );
   });
 
   describe("Deployment", function() {
@@ -169,8 +160,8 @@ describe("BabController", function() {
 
     it("can edit a community valuer", async function() {
       // Note: This is just the wETH address and is testing that the communityValuer address can be changed
-      await expect(controller.editCommunityValuer(addresses.tokens.WETH)).to.not.be
-        .reverted;
+      await expect(controller.editCommunityValuer(addresses.tokens.WETH)).to.not
+        .be.reverted;
 
       const valuer2 = await controller.getCommunityValuer();
       expect(valuer2).to.equal(addresses.tokens.WETH);

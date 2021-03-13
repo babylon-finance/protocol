@@ -23,12 +23,16 @@ pragma solidity 0.7.4;
  *
  * Interface for interacting with BabController
  */
-
 interface IBabController {
 
     /* ============ Functions ============ */
 
-    function addCommunity(address _community) external;
+    function createRollingCommunity(
+      address[] memory _integrations,
+      address _weth,
+      string memory _name,
+      string memory _symbol
+    ) external returns (address);
     function removeCommunity(address _community) external;
     function addReserveAsset(address _reserveAsset) external;
     function removeReserveAsset(address _reserveAsset) external;
@@ -38,6 +42,8 @@ interface IBabController {
     function editReservePool(address _reservePool) external;
     function editCommunityValuer(address _communityValuer) external;
     function editTreasury(address _newTreasury) external;
+    function editCommunityFactory(address _newCommunityFactory) external;
+    function editIdeaFactory(address _newIdeaFactory) external;
     function addIntegration(string memory _name, address _integration) external;
     function editIntegration(string memory _name, address _integration) external;
     function removeIntegration(string memory _name) external;
@@ -55,6 +61,8 @@ interface IBabController {
     function getReservePool() external view returns (address);
     function getCommunityValuer() external view returns(address);
     function getTreasury() external view returns(address);
+    function getIdeaFactory() external view returns(address);
+    function getCommunityFactory() external view returns(address);
     function getCommunities() external view returns (address[] memory);
     function isCommunity(address _community) external view returns(bool);
     function getIntegrationByName(string memory _name) external view returns (address);

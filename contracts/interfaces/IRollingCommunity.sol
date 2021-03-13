@@ -29,13 +29,19 @@ import { ICommunity } from "./ICommunity.sol";
  */
 interface IRollingCommunity is IERC20, ICommunity {
 
-    function initialize(
+    function start(
       uint256 _maxDepositLimit,
-      uint256 _premiumPercentage,
       uint256 _minCommunityTokenSupply,
-      uint256 _communityActiveWindow,
-      uint256 _communityWithdrawalWindow,
-      address _communityIdeas
+      uint256 _minLiquidityAsset,
+      uint256 _depositHardlock,
+      uint256 _minContribution,
+      uint256 _ideaCooldownPeriod,
+      uint256 _ideaCreatorProfitPercentage,
+      uint256 _ideaVotersProfitPercentage,
+      uint256 _communityCreatorProfitPercentage,
+      uint256 _minVotersQuorum,
+      uint256 _minIdeaDuration,
+      uint256 _maxIdeaDuration
     ) external;
 
     function deposit(
@@ -56,10 +62,6 @@ interface IRollingCommunity is IERC20, ICommunity {
     ) external;
 
     function setDepositLimit(uint limit) external;
-    function getExpectedCommunityTokensDepositedQuantity(
-        address _reserveAsset,
-        uint256 _reserveAssetQuantity
-    ) external view returns (uint256);
     function getExpectedReserveWithdrawalQuantity(
         address _reserveAsset,
         uint256 _communityTokenQuantity
@@ -73,7 +75,6 @@ interface IRollingCommunity is IERC20, ICommunity {
         uint256 _communityTokenQuantity
     ) external view returns (bool);
 
-    function startRedemptionWindow(uint256 _amount) external;
     function reenableEthForInvestments() external;
     function burnAssetsFromSenderAndMintToReserve(address _contributor, uint256 _quantity) external;
 
@@ -93,5 +94,5 @@ interface IRollingCommunity is IERC20, ICommunity {
     function executeTopInvestment() external;
     function finalizeInvestment(uint _ideaIndex) external;
     function getCurrentTopInvestmentIdea() external view returns (uint8);
-    function canWithdrawEthAmount(address _amount) external view returns (bool);
+    function canWithdrawEthAmount(uint _amount) external view returns (bool);
 }
