@@ -25,7 +25,6 @@ import { VoteToken } from "../governance/VoteToken.sol";
 import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
 
 
-
 /**
  * @title TimeLockedToken
  * @notice Time Locked ERC20 Token
@@ -263,6 +262,36 @@ abstract contract TimeLockedToken is VoteToken {
     }
     
     /**
+     * PRIVILEGED GOVERNANCE FUNCTION. Approve the allowances
+     *
+     * @notice Approve `spender` to transfer up to `amount` from `src`
+     * @dev This will overwrite the approval amount for `spender`
+     *  and is subject to issues noted [here](https://eips.ethereum.org/EIPS/eip-20#approve)
+     * @param spender The address of the account which may transfer tokens
+     * @param rawAmount The number of tokens that are approved (2^256-1 means infinite)
+     * @return Whether or not the approval succeeded
+     */
+    function approve(address spender, uint rawAmount) public virtual override nonReentrant returns (bool) { // TODO - CHECK OVERRIDE
+        require(spender != address(0), "TimeLockedToken::approve: spender cannot be zero address");
+        require(spender != msg.sender, "Spender cannot be the msg.sender");
+        
+        uint96 amount;
+        if (rawAmount == uint(-1)) {
+            amount = uint96(-1);
+        } else {
+            amount = safe96(rawAmount, "TimeLockedToken::approve: amount exceeds 96 bits");
+        }
+        
+        // There is no option to decreaseAllowance to timeLockRegistry in case of vested tokens
+        if ((spender == address(timeLockRegistry)) && (amount < allowance(msg.sender, address(timeLockRegistry)))) {
+            amount = safe96(allowance(msg.sender, address(timeLockRegistry)), "TimeLockedToken::approve: amount exceeds 96 bits");
+        }
+        _approve(msg.sender, spender, amount);
+        emit Approval(msg.sender, spender, amount);
+        return true;
+    }
+    
+    /**
     * @dev Atomically increases the allowance granted to `spender` by the caller.
     *
     * This is an override with respect to the fulfillment of vesting conditions along the way
@@ -282,18 +311,16 @@ abstract contract TimeLockedToken is VoteToken {
     * An user cannot decrease the allowance to the Time Lock Registry who is in charge of vesting conditions
     */
     function decreaseAllowance(address spender, uint256 subtractedValue) public override returns (bool) {
-        require(spender != address(0), "Spender cannot be zero address");
-        require(allowance(msg.sender,spender) >= subtractedValue, "Underflow condition");
-        require(spender != msg.sender, "Spender cannot be the msg.sender");
+        require(spender != address(0), "TimeLockedToken::decreaseAllowance:Spender cannot be zero address");
+        require(allowance(msg.sender,spender) >= subtractedValue, "TimeLockedToken::decreaseAllowance:Underflow condition");
+        require(spender != msg.sender, "TimeLockedToken::decreaseAllowance:Spender cannot be the msg.sender");
 
         
-        // There is no option to decreaseAllowance in case of vested tokens
-        if (spender == address(timeLockRegistry)){
-            return false;
-        } else {
+        // There is no option to decreaseAllowance to timeLockRegistry in case of vested tokens
+        require(address(spender) != address(timeLockRegistry), "TimeLockedToken::decreaseAllowance: cannot decrease allowance to timeLockRegistry");
+        
         approve(spender, allowance(msg.sender, spender).sub(subtractedValue));
         return true;
-        }
     }
 
     /* ============ Internal Only Function ============ */

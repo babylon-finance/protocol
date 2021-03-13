@@ -181,30 +181,6 @@ abstract contract VoteToken is Context, ERC20, Ownable, IVoteToken, ReentrancyGu
         return checkpoints[account][lower].votes;
     }
 
-    /**
-     * PRIVILEGED GOVERNANCE FUNCTION. Approve the allowances
-     *
-     * @notice Approve `spender` to transfer up to `amount` from `src`
-     * @dev This will overwrite the approval amount for `spender`
-     *  and is subject to issues noted [here](https://eips.ethereum.org/EIPS/eip-20#approve)
-     * @param spender The address of the account which may transfer tokens
-     * @param rawAmount The number of tokens that are approved (2^256-1 means infinite)
-     * @return Whether or not the approval succeeded
-     */
-    function approve(address spender, uint rawAmount) public virtual override nonReentrant returns (bool) { // TODO - CHECK OVERRIDE
-        uint96 amount;
-        if (rawAmount == uint(-1)) {
-            amount = uint96(-1);
-        } else {
-            amount = safe96(rawAmount, "BABL::approve: amount exceeds 96 bits");
-        }
-
-         _approve(msg.sender, spender, amount);
-         
-        emit Approval(msg.sender, spender, amount);
-        return true;
-    }
-
     /* ============ Internal Only Function ============ */
 
 
@@ -225,7 +201,7 @@ abstract contract VoteToken is Context, ERC20, Ownable, IVoteToken, ReentrancyGu
 
         _moveDelegates(currentDelegate, delegatee, delegatorBalance);
     }
-
+    
     function _balanceOf(address account) internal view virtual returns (uint256) {
         return balanceOf(account);
     }
