@@ -120,7 +120,8 @@ contract CommunityValuer {
         // Get component price from price oracle. If price does not exist, revert.
         uint256 reservePrice = priceOracle.getPrice(_community.getReserveAsset(), masterQuoteAsset);
         valuation = valuation.add(ERC20(_community.getReserveAsset()).balanceOf(address(_community)).toInt256().preciseMul(reservePrice.toInt256()));
-
+        // Adds ETH set aside
+        valuation = valuation.add(address(_community).balance.toInt256());
         return valuation.toUint256().preciseDiv(_community.totalSupply());
     }
 }

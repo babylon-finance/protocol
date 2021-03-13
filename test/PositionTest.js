@@ -70,7 +70,7 @@ describe("Position testing", function() {
         await community1.totalSupply()
       );
       expect(await community1.totalSupply()).to.equal(
-        ethers.utils.parseEther("0.1").div(await community1.initialBuyRate())
+        ethers.utils.parseEther("0.1")
       );
     });
   });
@@ -83,7 +83,8 @@ describe("Position testing", function() {
       await community1
         .connect(userSigner3)
         .deposit(ethers.utils.parseEther("1"), 1, userSigner3.getAddress(), {
-          value: ethers.utils.parseEther("1")
+          value: ethers.utils.parseEther("1"),
+          gasPrice: 0
         });
       expect(await community1.totalContributors()).to.equal(2);
       const wethPosition = await community1.getReserveBalance();
