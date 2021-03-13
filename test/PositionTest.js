@@ -64,9 +64,9 @@ describe("Position testing", function() {
       );
       expect(wethPosition).to.equal(ethers.utils.parseEther("0.1"));
       expect(await community1.creator()).to.equal(
-        await ownerSigner.getAddress()
+        await userSigner1.getAddress()
       );
-      expect(await community1.balanceOf(ownerSigner.getAddress())).to.equal(
+      expect(await community1.balanceOf(userSigner1.getAddress())).to.equal(
         await community1.totalSupply()
       );
       expect(await community1.totalSupply()).to.equal(
@@ -104,7 +104,7 @@ describe("Position testing", function() {
       );
     });
 
-    it("supply and positions update accordingly after deposits", async function() {
+    it("supply and positions update accordingly after deposits & withdraws", async function() {
       await community1
         .connect(userSigner3)
         .deposit(ethers.utils.parseEther("1"), 1, userSigner3.getAddress(), {
