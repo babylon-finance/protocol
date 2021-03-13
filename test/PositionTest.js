@@ -70,7 +70,7 @@ describe("Position testing", function() {
         await community1.totalSupply()
       );
       expect(await community1.totalSupply()).to.equal(
-        ethers.utils.parseEther("0.1")
+        ethers.utils.parseEther("0.1").div(await community1.initialBuyRate())
       );
     });
   });

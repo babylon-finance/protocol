@@ -652,7 +652,10 @@ contract RollingCommunity is ReentrancyGuard, BaseCommunity {
     ) internal view returns (uint256) {
         // Get valuation of the Community with the quote asset as the reserve asset.
         // Reverts if price is not found
-        uint256 communityValuation = ICommunityValuer(IBabController(controller).getCommunityValuer()).calculateCommunityValuation(address(this), _reserveAsset);
+        uint256 communityValuationPerToken =
+          ICommunityValuer(IBabController(controller).getCommunityValuer()).calculateCommunityValuation(address(this), _reserveAsset);
+        communityValuationPerToken = communityValuationPerToken.sub(_netReserveFlows.preciseDiv(totalSupply()));
+
         // Get reserve asset decimals
         uint8 reserveAssetDecimals = ERC20(_reserveAsset).decimals();
         uint256 baseUnits = uint256(10) ** reserveAssetDecimals;
@@ -664,7 +667,7 @@ contract RollingCommunity is ReentrancyGuard, BaseCommunity {
         // Calculate Community tokens to mint to depositor
         uint256 denominator =
             _communityTokenTotalSupply
-                .preciseMul(communityValuation)
+                .preciseMul(communityValuationPerToken)
                 .add(normalizedTotalReserveQuantityNetFees)
                 .sub(normalizedTotalReserveQuantityNetFeesAndPremium);
         uint256 quantityToMint =
@@ -680,12 +683,12 @@ contract RollingCommunity is ReentrancyGuard, BaseCommunity {
     ) internal view returns (uint256) {
         // Get valuation of the Community with the quote asset as the reserve asset. Returns value in precise units (10e18)
         // Reverts if price is not found
-        uint256 communityValuation =
+        uint256 communityValuationPerToken =
             ICommunityValuer(IBabController(controller).getCommunityValuer())
                 .calculateCommunityValuation(address(this), _reserveAsset);
 
         uint256 totalWithdrawalValueInPreciseUnits =
-            _communityTokenQuantity.preciseMul(communityValuation);
+            _communityTokenQuantity.preciseMul(communityValuationPerToken);
         // Get reserve asset decimals
         uint8 reserveAssetDecimals = ERC20(_reserveAsset).decimals();
         uint256 prePremiumReserveQuantity =
