@@ -57,10 +57,6 @@ abstract contract VoteToken is Context, ERC20, Ownable, IVoteToken, ReentrancyGu
     /// @notice The EIP-712 typehash for the delegation struct used by the contract
     bytes32 public constant DELEGATION_TYPEHASH = keccak256("Delegation(address delegatee,uint256 nonce,uint256 expiry)");
 
-    /// @notice The EIP-712 typehash for the permit struct used by the contract // TODO - CHECK
-    bytes32 public constant PERMIT_TYPEHASH = keccak256("Permit(address owner,address spender,uint256 value,uint256 nonce,uint256 deadline)");
-
-
     /// @dev A record of votes checkpoints for each account, by index
     mapping(address => address) public delegates;
 
@@ -125,14 +121,16 @@ abstract contract VoteToken is Context, ERC20, Ownable, IVoteToken, ReentrancyGu
         bytes32 structHash = keccak256(abi.encode(DELEGATION_TYPEHASH, delegatee, nonce, expiry));
         bytes32 digest = keccak256(abi.encodePacked("\x19\x01", domainSeparator, structHash));
         address signatory = ecrecover(digest, v, r, s);
-        require(signatory != address(0), "BABLToken::delegateBySig: invalid signature");
-        require(nonce == nonces[signatory]++, "BABLToken::delegateBySig: invalid nonce");
-        require(block.timestamp <= expiry, "BABLToken::delegateBySig: signature expired");
+        require(signatory != address(0), "VoteToken::delegateBySig: invalid signature");
+        require(nonce == nonces[signatory]++, "VoteToken::delegateBySig: invalid nonce");
+        require(block.timestamp <= expiry, "VoteToken::delegateBySig: signature expired");
         return _delegate(signatory, delegatee);
     }
 
-    /**
-     * @dev Get current voting power for an account
+     /**
+     * GOVERNANCE FUNCTION. Check Delegate votes using signature to 'delegatee'
+     *
+     * @notice Get current voting power for an account
      * @param account Account to get voting power for
      * @return Voting power for an account
      */
@@ -141,8 +139,9 @@ abstract contract VoteToken is Context, ERC20, Ownable, IVoteToken, ReentrancyGu
         return nCheckpoints > 0 ? checkpoints[account][nCheckpoints - 1].votes : 0;
     }
 
-    /**
-     * @dev Get voting power at a specific block for an account
+     /**
+     * GOVERNANCE FUNCTION. Get voting power at a specific block for an account
+     *
      * @param account Account to get voting power for
      * @param blockNumber Block to get voting power at
      * @return Voting power for an account at specific block
@@ -185,7 +184,7 @@ abstract contract VoteToken is Context, ERC20, Ownable, IVoteToken, ReentrancyGu
 
 
     /**
-    * PRIVILEGED GOVERNANCE FUNCTION. Make a delegation
+    * GOVERNANCE FUNCTION. Make a delegation
     *
     * @dev Internal function to delegate voting power to an account
     * @param delegator The address of the account delegating votes from
@@ -207,8 +206,13 @@ abstract contract VoteToken is Context, ERC20, Ownable, IVoteToken, ReentrancyGu
     }
     
     /**
-     * @dev internal function to move delegates between accounts
-     */
+    * GOVERNANCE FUNCTION. Move the delegates
+    *
+    * @dev Internal function to move delegates between accounts
+    * @param srcRep The address of the account delegating votes from
+    * @param dstRep The address of the account delegating votes to
+    * @param amount The voting power to move
+    */
     function _moveDelegates(
         address srcRep,
         address dstRep,
@@ -232,8 +236,14 @@ abstract contract VoteToken is Context, ERC20, Ownable, IVoteToken, ReentrancyGu
     }
 
     /**
-     * @dev internal function to write a checkpoint for voting power
-     */
+    * GOVERNANCE FUNCTION. Internal function to write a checkpoint for voting power
+    *
+    * @dev internal function to write a checkpoint for voting power
+    * @param delegatee The address of the account delegating votes to
+    * @param nCheckpoints The num checkpoint
+    * @param oldVotes The previous voting power
+    * @param newVotes The new voting power
+    */
     function _writeCheckpoint(
         address delegatee,
         uint32 nCheckpoints,
@@ -253,24 +263,31 @@ abstract contract VoteToken is Context, ERC20, Ownable, IVoteToken, ReentrancyGu
     }
 
     /**
-     * @dev internal function to convert from uint256 to uint32
-     */
+    * INTERNAL FUNCTION. Internal function to convert from uint256 to uint32
+    *
+    * @dev internal function to convert from uint256 to uint32
+    */
     function safe32(uint256 n, string memory errorMessage) internal pure returns (uint32) {
         require(n < 2**32, errorMessage);
         return uint32(n);
     }
 
     /**
-     * @dev internal function to convert from uint256 to uint96
-     */
+    * INTERNAL FUNCTION. Internal function to convert from uint256 to uint96
+    * 
+    * @dev internal function to convert from uint256 to uint96
+    */
     function safe96(uint256 n, string memory errorMessage) internal pure returns (uint96) {
         require(n < 2**96, errorMessage);
         return uint96(n);
     }
 
+
     /**
-     * @dev internal safe math function to add two uint96 numbers
-     */
+    * INTERNAL FUNCTION. Internal function to add two uint96 numbers
+    * 
+    * @dev internal safe math function to add two uint96 numbers
+    */
     function add96(
         uint96 a,
         uint96 b,
@@ -282,8 +299,10 @@ abstract contract VoteToken is Context, ERC20, Ownable, IVoteToken, ReentrancyGu
     }
 
     /**
-     * @dev internal safe math function to subtract two uint96 numbers
-     */
+    * INTERNAL FUNCTION. Internal function to subtract two uint96 numbers
+    * 
+    * @dev internal safe math function to subtract two uint96 numbers
+    */
     function sub96(
         uint96 a,
         uint96 b,
@@ -294,8 +313,10 @@ abstract contract VoteToken is Context, ERC20, Ownable, IVoteToken, ReentrancyGu
     }
 
     /**
-     * @dev internal function to get chain ID
-     */
+    * INTERNAL FUNCTION. Internal function to get chain ID
+    * 
+    * @dev internal function to get chain ID
+    */
     function getChainId() internal pure returns (uint256) {
         uint256 chainId;
         assembly {
@@ -304,3 +325,4 @@ abstract contract VoteToken is Context, ERC20, Ownable, IVoteToken, ReentrancyGu
         return chainId;
     }
 }
+

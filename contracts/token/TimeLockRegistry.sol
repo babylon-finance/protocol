@@ -21,15 +21,15 @@ import { Address } from "@openzeppelin/contracts/utils/Address.sol";
 
 /**
  * @title TimeLockRegistry
- * @notice Register Lockups for TimeLocked ERC20 Token BABL
+ * @notice Register Lockups for TimeLocked ERC20 Token BABL (e.g. vesting)
  * @author Babylon Finance 
  * @dev This contract allows owner to register distributions for a TimeLockedToken
  *
  * To register a distribution, register method should be called by the owner.
- * claim() should then be called by account registered to recieve tokens under lockup period
- * If case of a mistake, owner can cancel registration
+ * claim() should be called only by the BABL Token smartcontract (modifier onlyBABLToken) when any account registered to receive tokens make its own claim
+ * If case of a mistake, owner can cancel registration before the claim is done by the account
  *
- * Note this contract must be setup in TimeLockedToken's setTimeLockRegistry() function
+ * Note this contract address must be setup in the TimeLockedToken's contract pointing to interact with (e.g. setTimeLockRegistry() function)
  */
 
 contract TimeLockRegistry is Ownable {
@@ -60,6 +60,7 @@ contract TimeLockRegistry is Ownable {
     * @param team Indicates whether or not is a Team member (true = team member / advisor, false = private investor)
     * @param vestingBegin When the vesting begins for such token owner
     * @param vestingEnd When the vesting ends for such token owner
+    * @param lastClaim When the last claim was done
     */
     struct TokenVested {
         bool team;
@@ -92,7 +93,7 @@ contract TimeLockRegistry is Ownable {
     * @notice Construct a new Time Lock Registry and gives ownership to sender
     * @param _token TimeLockedToken contract to use in this registry
      */
-    constructor(TimeLockedToken _token) { // TODO - CHECK
+    constructor(TimeLockedToken _token) { 
         token = _token;
         
     }
@@ -102,20 +103,23 @@ contract TimeLockRegistry is Ownable {
     /* ===========  Token related Gov Functions ====== */
 
     /**
-     * @dev Register new SAFT account
-     * @param receiver Address belonging to SAFT purchaser
-     * @param distribution Tokens amount that receiver is due to get
-     */
+    * PRIVILEGED GOVERNANCE FUNCTION. Register new account under vesting conditions (Team, Advisors, Investors e.g. SAFT purchaser)
+    *  
+    * @notice Register new account under vesting conditions (Team, Advisors, Investors e.g. SAFT purchaser)
+    * @param receiver Address belonging vesting conditions
+    * @param distribution Tokens amount that receiver is due to get
+    * @return Whether or not the registration succeeded
+    */
     function register(address receiver, uint256 distribution, bool investorType, uint vestingStartingDate) external onlyOwner returns (bool) {
-        require(receiver != address(0), "Zero address");
-        require(receiver != address(this), "Time Lock Registry contract cannot be an investor");
-        require(distribution != 0, "Distribution = 0");
-        require(registeredDistributions[receiver] == 0, "Distribution for this address is already registered");
+        require(receiver != address(0), "TimeLockRegistry::register: cannot register the zero address");
+        require(receiver != address(this), "TimeLockRegistry::register: Time Lock Registry contract cannot be an investor");
+        require(distribution != 0, "TimeLockRegistry::register: Distribution = 0");
+        require(registeredDistributions[receiver] == 0, "TimeLockRegistry::register:Distribution for this address is already registered");
 
-        // register distribution in mapping
+        // register distribution
         registeredDistributions[receiver] = distribution;
         
-        // register distribution in token vested
+        // register token vested conditions
         TokenVested storage newTokenVested = tokenVested[receiver];
         newTokenVested.team = investorType;
         newTokenVested.vestingBegin = vestingStartingDate;
@@ -135,7 +139,7 @@ contract TimeLockRegistry is Ownable {
         
         tokenVested[receiver] = newTokenVested;
 
-        // transfer tokens from owner
+        // transfer tokens from owner who might have enough allowance of tokens by BABL Token owner
         require(token.transferFrom(msg.sender, address(this), distribution), "Transfer failed");
 
         // emit register event
@@ -145,10 +149,14 @@ contract TimeLockRegistry is Ownable {
     }
 
     /**
-     * @dev Cancel distribution registration
-     * @param receiver Address that should have it's distribution removed
-     */
-    function cancelRegistration(address receiver) external onlyOwner {
+    * PRIVILEGED GOVERNANCE FUNCTION. Cancel distribution registration in case of mistake and before a claim is done
+    *  
+    * @notice Cancel distribution registration
+    * @dev A claim has not to be done earlier
+    * @param receiver Address that should have it's distribution removed
+    * @return Whether or not it succeeded
+    */
+    function cancelRegistration(address receiver) external onlyOwner returns(bool){
         require(registeredDistributions[receiver] != 0, "Not registered");
 
         // get amount from distributions
@@ -165,17 +173,35 @@ contract TimeLockRegistry is Ownable {
 
         // emit cancel event
         emit Cancel(receiver, amount);
+        
+        return true;
     }
     
-    function cancelDeliveredTokens(address receiver) external onlyOwner {
+    /**
+    * PRIVILEGED GOVERNANCE FUNCTION. Cancel distribution registration in case of mistake and before a claim is done
+    *  
+    * @notice Cancel already delivered tokens. It might only apply when non-completion of vesting period of Team members or Advisors
+    * @dev An automatic override allowance is granted during the claim process
+    * @param receiver Address that should have it's distribution removed
+    * @return Whether or not it succeeded
+    */
+    function cancelDeliveredTokens(address receiver) external onlyOwner returns(bool){
        
         uint256 loosingAmount = token.cancelTokens(receiver);
 
         // emit cancel event
         emit Cancel(receiver, loosingAmount);
+        return true;
     }
 
-    /// @dev Claim tokens due amount
+    /**
+    * PRIVILEGED GOVERNANCE FUNCTION. Claim locked tokens by the registered account
+    *  
+    * @notice Claim tokens due amount. 
+    * @dev Claim is done by the user in the TimeLocked contract and the contract is the only allowed to call 
+    * this function on behalf of the user to make the claim
+    * @return The amount of tokens registered and delivered after the claim
+    */
     function claim(address _receiver) external onlyBABLToken returns (uint256){
         require(registeredDistributions[_receiver] != 0, "Not registered");
 

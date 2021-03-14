@@ -29,16 +29,16 @@ import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
  * @title TimeLockedToken
  * @notice Time Locked ERC20 Token
  * @author Babylon Finance
- * @dev Contract which gives the ability to time-lock tokens
+ * @dev Contract which gives the ability to time-lock tokens specially for vesting purposes usage
  *
- * By overriding the balanceOf() and transfer()
- * functions in ERC20, an account can show its full, post-distribution
- * balance but only transfer or spend up to an allowed amount
+ * By overriding the balanceOf() and transfer() functions in ERC20,
+ * an account can show its full, post-distribution balance and use it for voting power
+ * but only transfer or spend up to an allowed amount
  *
  * A portion of previously non-spendable tokens are allowed to be transferred
  * along the time depending on each vesting conditions, and after all epochs have passed, the full
- * account balance is unlocked. In case on non-completion vesting period, only the owner can cancel 
- * the delivery of the pending tokens.
+ * account balance is unlocked. In case on non-completion vesting period, only the Time Lock Registry can cancel 
+ * the delivery of the pending tokens and only can cancel the remaining locked ones.
  */
 
 
@@ -63,7 +63,7 @@ abstract contract TimeLockedToken is VoteToken {
     /* ============ Modifiers ============ */
 
     modifier onlyTimeLockRegistry() {
-        require(msg.sender == address(timeLockRegistry), "only TimeLockRegistry");
+        require(msg.sender == address(timeLockRegistry), "TimeLockedToken:: onlyTimeLockRegistry: can only be executed by TimeLockRegistry");
         _;
     }
 
@@ -73,11 +73,13 @@ abstract contract TimeLockedToken is VoteToken {
     // represents total distribution for locked balances
     mapping(address => uint256) distribution;
 
-    /// @notice The profile of each token owner under vesting conditions and its special conditions 
+    /// @notice The profile of each token owner under its particular vesting conditions
     /**
     * @param team Indicates whether or not is a Team member or Advisor (true = team member/advisor, false = private investor)
+    * @param cliff Indicates whether or not is under cliff agreement of 1 year
     * @param vestingBegin When the vesting begins for such token owner
     * @param vestingEnd When the vesting ends for such token owner
+    * @param lastClaim When the last claim was done
     */
     struct VestedToken {
         bool teamOrAdvisor;
@@ -93,13 +95,13 @@ abstract contract TimeLockedToken is VoteToken {
     // vesting Cliff for Team Members and Advisors
     uint256 private vestingCliff = 365 days;
     
-    // vesting for Team Members
+    // vesting duration for Team Members and Advisors
     uint256 private teamVesting = 365 days * 4;
     
-    // vesting for Investors and Advisors
+    // vesting duration for Investors
     uint256 private investorVesting = 365 days * 3;
     
-    // address of Time Lock Registry
+    // address of Time Lock Registry contract
     TimeLockRegistry public timeLockRegistry;
     
 
@@ -116,10 +118,12 @@ abstract contract TimeLockedToken is VoteToken {
     /* ===========  Token related Gov Functions ====== */
 
     /**
-     * @dev Set TimeLockRegistry address
-     * @param newTimeLockRegistry Address of TimeLockRegistry contract
-     */
-    function setTimeLockRegistry(TimeLockRegistry newTimeLockRegistry) external onlyOwner returns(bool){
+    * PRIVILEGED GOVERNANCE FUNCTION. Set the Time Lock Registry contract to control token vesting conditions
+    *
+    * @notice Set the Time Lock Registry contract to control token vesting conditions
+    * @param newTimeLockRegistry Address of TimeLockRegistry contract
+    */
+    function setTimeLockRegistry(TimeLockRegistry newTimeLockRegistry) external onlyOwner returns(bool){ //TODO - REMOVE AFTER USING CREATE2 DURING DEPLOYMENT TO ASSIGN ITS ADDRESS AS A CONSTANT FOREVER - NOT ABLE TO BE CHANGED BY OWNER
         //console.log(" %s is the new timelockRegistry", newTimeLockRegistry);
         //console.log(" %s is the old timelockRegistry", timeLockRegistry);
 
@@ -136,8 +140,10 @@ abstract contract TimeLockedToken is VoteToken {
 
 
     /**
-    * @dev Allows an account to transfer tokens to another account under the lockup schedule
-    * locking them according to the distribution epoch periods
+    * PRIVILEGED GOVERNANCE FUNCTION. Register new token lockup conditions for vested tokens defined only by Time Lock Registry
+    *
+    * @notice Tokens are completely delivered during the registration however lockup conditions apply for vested tokens
+    * locking them according to the distribution epoch periods and the type of recipient (Team, Advisor, Investor)
     * Emits a transfer event showing a transfer to the recipient
     * Only the registry can call this function
     * @param _receiver Address to receive the tokens
@@ -170,7 +176,7 @@ abstract contract TimeLockedToken is VoteToken {
         vestedToken[_receiver]=newVestedToken;
         
 
-        // transfer to recipient
+        // transfer tokens to the recipient
         _transfer(msg.sender, _receiver, _amount);
         emit newLockout(_receiver, _amount, _profile, _vestingBegin, _vestingEnd);
         
@@ -178,16 +184,20 @@ abstract contract TimeLockedToken is VoteToken {
     }
     
     /**
-     * @dev Cancel distribution registration
-     * @param lockedAccount that should have its still locked distribution removed due to non-completion of its cliff or vesting period
-     */
+    * PRIVILEGED GOVERNANCE FUNCTION. Cancel and remove locked tokens due to non-completion of cliff or vesting period
+    * applied only by Time Lock Registry and specifically to Team or Advisors
+    *
+    * @dev Cancel distribution registration
+    * @param lockedAccount that should have its still locked distribution removed due to non-completion of its cliff or vesting period
+    */
     function cancelTokens(address lockedAccount) public onlyTimeLockRegistry returns (uint256) {
-        require(distribution[lockedAccount] != 0, "Not registered");
+        require(distribution[lockedAccount] != 0, "TimeLockedToken::cancelTokens:Not registered");
 
         // get an update on locked amount from distributions at this precise moment
         uint256 loosingAmount = lockedBalance(lockedAccount);
         
-        require(loosingAmount > 0, "There are no more locked tokens");
+        require(loosingAmount > 0, "TimeLockedToken::cancelTokens:There are no more locked tokens");
+        require(vestedToken[lockedAccount].teamOrAdvisor == true, "TimeLockedToken::cancelTokens:cannot cancel locked tokens to Investors");
 
         // set distribution mapping to 0
         delete distribution[lockedAccount];
@@ -196,7 +206,7 @@ abstract contract TimeLockedToken is VoteToken {
         delete vestedToken[lockedAccount];
 
         // transfer only locked tokens back to TimeLockRegistry
-        require(transferFrom(lockedAccount, address(timeLockRegistry), loosingAmount), "Transfer failed");
+        require(transferFrom(lockedAccount, address(timeLockRegistry), loosingAmount), "TimeLockedToken::cancelTokens:Transfer failed");
 
         // emit cancel event
         emit Cancel(lockedAccount, loosingAmount);
@@ -204,35 +214,46 @@ abstract contract TimeLockedToken is VoteToken {
         return loosingAmount;
     }
     
+    /**
+    * GOVERNANCE FUNCTION. Each token owner can claim its own specific tokens with its own specific vesting conditions from the Time Lock Registry
+    *
+    * @dev Claim msg.sender tokens (if any available in the registry)
+    */
     function claimMyTokens() public {
         
-        // claim our tokens from timeLockRegistry
+        // claim msg.sender tokens from timeLockRegistry
         uint256 amount = timeLockRegistry.claim(msg.sender);
         
         require(amount > 0, "No tokens to claim");
         
-        // After a proper claim, locked tokens are under restricted vesting giving the owner the possibility to only retire locked tokens if non-compliance vesting conditions take places
-        approve(address(timeLockRegistry), amount); // TODO-CHECK RESTRICTIONS TO DECREASE ALLOWANCE TO OWNER BY MSG.SENDER
-
+        // After a proper claim, locked tokens of Team and Advisors profiles are under restricted special vesting conditions so they automatic grant
+        // rights to the Time Lock Registry to only retire locked tokens if non-compliance vesting conditions take places along the cliff and vesting periods.
+        // It does not apply to Investors under vesting (their locked tokens cannot be removed).
+        if (vestedToken[msg.sender].teamOrAdvisor == true){
+        approve(address(timeLockRegistry), amount); 
+        }
         // emit claim event
         emit Claim(msg.sender, amount);
     }
     
     /**
-     * @dev Get unlocked balance for an account
-     * @param account Account to check
-     * @return Amount that is unlocked and available eg. to transfer
-     */
+    * GOVERNANCE FUNCTION. Get unlocked balance for an account
+    * 
+    * @notice Get unlocked balance for an account
+    * @param account Account to check
+    * @return Amount that is unlocked and available eg. to transfer
+    */
     function unlockedBalance(address account) public returns (uint256) {
         // totalBalance - lockedBalance
         return balanceOf(account).sub(lockedBalance(account));
     }
     
-    
     /**
-    * @dev Get locked balance for an account
+    * GOVERNANCE FUNCTION. Get locked balance for an account
+    * 
+    * @notice Get locked balance for an account
     * @param account Account to check
-    * @return Amount locked
+    * @return Amount locked in the time of checking
     */
     function lockedBalance(address account) public returns (uint256) {
         // distribution of locked tokens
@@ -241,39 +262,48 @@ abstract contract TimeLockedToken is VoteToken {
         uint256 amount = distribution[account];
         uint256 lockedAmount = amount;
         
+        // in case of restriction under cliff, all tokens will be locked until first year
         if (vestedToken[account].cliff == true && (block.timestamp < vestedToken[account].vestingBegin.add(vestingCliff))) {
             return lockedAmount;
         } 
-
+        
+        // in case of vesting has passed, all tokens are now available
         if (block.timestamp >= vestedToken[account].vestingEnd) {
             lockedAmount = 0;
             if (msg.sender == account) {// set distribution mapping to 0
             delete distribution[account];
             }
         } else {
+            // in case of still under vesting period, locked tokens are recalculated 
             lockedAmount = amount.mul(vestedToken[account].vestingEnd - block.timestamp).div(vestedToken[account].vestingEnd - vestedToken[account].vestingBegin);
             vestedToken[account].lastClaim = block.timestamp;
         }
         return lockedAmount;
     }
 
+    /**
+    * PUBLIC FUNCTION. Get the address of Time Lock Registry
+    * 
+    * @notice Get the address of Time Lock Registry
+    * @return Address of the Time Lock Registry
+    */
     function getTimeLockRegistry() public view returns (address) {
         return address(timeLockRegistry);
     }
     
     /**
-     * PRIVILEGED GOVERNANCE FUNCTION. Approve the allowances
-     *
-     * @notice Approve `spender` to transfer up to `amount` from `src`
-     * @dev This will overwrite the approval amount for `spender`
-     *  and is subject to issues noted [here](https://eips.ethereum.org/EIPS/eip-20#approve)
-     * @param spender The address of the account which may transfer tokens
-     * @param rawAmount The number of tokens that are approved (2^256-1 means infinite)
-     * @return Whether or not the approval succeeded
-     */
-    function approve(address spender, uint rawAmount) public virtual override nonReentrant returns (bool) { // TODO - CHECK OVERRIDE
+    * PRIVILEGED GOVERNANCE FUNCTION. Override the Approval of allowances of ERC20 with special conditions for vesting
+    *
+    * @notice Override of "Approve" function to allow the `spender` to transfer up to `amount` from `src`
+    * @dev This will overwrite the approval amount for `spender` except in the case of spender is Time Lock Registry
+    * and is subject to issues noted [here](https://eips.ethereum.org/EIPS/eip-20#approve)
+    * @param spender The address of the account which may transfer tokens
+    * @param rawAmount The number of tokens that are approved (2^256-1 means infinite)
+    * @return Whether or not the approval succeeded
+    */
+    function approve(address spender, uint rawAmount) public override nonReentrant returns (bool) { 
         require(spender != address(0), "TimeLockedToken::approve: spender cannot be zero address");
-        require(spender != msg.sender, "Spender cannot be the msg.sender");
+        require(spender != msg.sender, "TimeLockedToken::approve: spender cannot be the msg.sender");
         
         uint96 amount;
         if (rawAmount == uint(-1)) {
@@ -292,12 +322,15 @@ abstract contract TimeLockedToken is VoteToken {
     }
     
     /**
-    * @dev Atomically increases the allowance granted to `spender` by the caller.
+    * PRIVILEGED GOVERNANCE FUNCTION. Override the Increase of allowances of ERC20 with special conditions for vesting
+    * 
+    * @notice Atomically increases the allowance granted to `spender` by the caller.
     *
-    * This is an override with respect to the fulfillment of vesting conditions along the way
+    * @dev This is an override with respect to the fulfillment of vesting conditions along the way
     * However an user can increase allowance many times, it will never be able to transfer locked tokens during vesting period
+    * @return Whether or not the increaseAllowance succeeded
     */
-    function increaseAllowance(address spender, uint256 addedValue) public override returns (bool) {
+    function increaseAllowance(address spender, uint256 addedValue) public override nonReentrant returns (bool) {
         require(unlockedBalance(msg.sender) >= addedValue, "Not enough unlocked tokens");
         require(spender != address(0), "Spender cannot be zero address");
         require(spender != msg.sender, "Spender cannot be the msg.sender");
@@ -305,12 +338,18 @@ abstract contract TimeLockedToken is VoteToken {
         return true;
     }
 
+    
     /**
-     * @dev Atomically decreases the allowance granted to `spender` by the caller.
+    * PRIVILEGED GOVERNANCE FUNCTION. Override the decrease of allowances of ERC20 with special conditions for vesting
+    * 
+    * @notice Atomically decrease the allowance granted to `spender` by the caller.
+    *
+    * @dev Atomically decreases the allowance granted to `spender` by the caller.
     * This is an override with respect to the fulfillment of vesting conditions along the way
     * An user cannot decrease the allowance to the Time Lock Registry who is in charge of vesting conditions
+    * @return Whether or not the decreaseAllowance succeeded
     */
-    function decreaseAllowance(address spender, uint256 subtractedValue) public override returns (bool) {
+    function decreaseAllowance(address spender, uint256 subtractedValue) public override nonReentrant returns (bool) {
         require(spender != address(0), "TimeLockedToken::decreaseAllowance:Spender cannot be zero address");
         require(allowance(msg.sender,spender) >= subtractedValue, "TimeLockedToken::decreaseAllowance:Underflow condition");
         require(spender != msg.sender, "TimeLockedToken::decreaseAllowance:Spender cannot be the msg.sender");
@@ -325,16 +364,17 @@ abstract contract TimeLockedToken is VoteToken {
 
     /* ============ Internal Only Function ============ */
 
-
     /**
-     * @dev Transfer function which includes unlocked tokens
-     * Locked tokens can always be transfered back to the returns address
-     * Transferring to owner allows re-issuance of funds through registry
-     *
-     * @param _from The address to send tokens from
-     * @param _to The address that will receive the tokens
-     * @param _value The amount of tokens to be transferred
-     */
+    * PRIVILEGED GOVERNANCE FUNCTION. Override the _transfer of ERC20 BABL tokens only allowing the transfer of unlocked tokens
+    * 
+    * @dev Transfer function which includes only unlocked tokens
+    * Locked tokens can always be transfered back to the returns address
+    * Transferring to owner allows re-issuance of funds through registry
+    *
+    * @param _from The address to send tokens from
+    * @param _to The address that will receive the tokens
+    * @param _value The amount of tokens to be transferred
+    */
     function _transfer(
         address _from,
         address _to,
