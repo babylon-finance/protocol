@@ -19,7 +19,7 @@ import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
 import { ITimelock } from "../interfaces/ITimelock.sol";
 import { IVoteToken } from "../interfaces/IVoteToken.sol";
 
-contract GovernorAlpha {
+contract GovernorAlpha is Ownable {
 
     /* ============ Events ============ */
 
@@ -48,26 +48,26 @@ contract GovernorAlpha {
     /// @notice The address of the BABL Protocol Timelock
     ITimelock public timelock;
 
-    /// @notice The address of the BABL governance token
+    /// @notice The address of the BABL governance token 
     IVoteToken public babl;
 
      /// @notice The address of the Governor Guardian
     address public guardian;
 
     /// @notice The number of votes in support of a proposal required in order for a quorum to be reached and for a vote to succeed
-    function quorumVotes() public pure returns (uint) { return 40_000e18; } // 4% of BABL
-
+    function quorumVotes() public pure returns (uint) { return 40_000e18; } // 4% of BABL TODO - CHECK % ALONG THE TIME (TOTALSUPPLY CHECK)
+    
     /// @notice The number of votes required in order for a voter to become a proposer
-    function proposalThreshold() public pure returns (uint) { return 10_000e18; } // 1% of BABL
+    function proposalThreshold() public pure returns (uint) { return 10_000e18; } // 1% of BABL TODO - CHECK % ALONG THE TIME (TOTALSUPPLY CHECK)
 
     /// @notice The maximum number of actions that can be included in a proposal
     function proposalMaxOperations() public pure returns (uint) { return 10; } // 10 actions
 
     /// @notice The delay before voting on a proposal may take place, once proposed
-    function votingDelay() public pure returns (uint) { return 1; } // 1 block
+    function votingDelay() public pure returns (uint) { return 1; } // 1 block TODO - CHECK DELAY TO PROPOSE
 
     /// @notice The duration of voting on a proposal, in blocks
-    function votingPeriod() public pure returns (uint) { return 40_320; } // ~7 days in blocks (assuming 15s blocks)
+    function votingPeriod() public pure returns (uint) { return 7 days; } // TODO - CHECK AND AGREE ON THE VOTING PERIOD
 
     /// @notice The total number of proposals
     uint public proposalCount;
@@ -156,6 +156,14 @@ contract GovernorAlpha {
 
     /* ============ Constructor ============ */
 
+    /**
+    * @notice Construct a GovernorAlpha and gives ownership to sender
+    * @param timelock_ is the address of the timelock instance
+    * @param babl_ is the instance of the BABL Token instance
+    * @param guardian_ the Pause Guardian address capable of disabling protocol functionality. Used only in the event 
+    * of an unforeseen vulnerability.
+    */
+    
     constructor(address timelock_, address babl_, address guardian_) {
         timelock = ITimelock(timelock_);
         babl = IVoteToken(babl_);
@@ -166,6 +174,17 @@ contract GovernorAlpha {
 
     /* ===========  Token related Gov Functions ====== */
 
+    /**
+    * GOVERNANCE FUNCTION. Allows to propose governance actions
+    *
+    * @notice Propose new governance actions. Depends on power voting capacity of idea proposer
+    * @param targets The array of addresses as destination targets
+    * @param values The array of values 
+    * @param signatures The array of signatures
+    * @param calldatas The array of calldatas to be executed as part of the proposals 
+    * @param description The description of the proposal 
+    * @return The proposal id created if it was successfully created  
+    */
     function propose(address[] memory targets, uint[] memory values, string[] memory signatures, bytes[] memory calldatas, string memory description) public returns (uint) {
         require(babl.getPriorVotes(msg.sender, sub256(block.number, 1)) > proposalThreshold(), "GovernorAlpha::propose: proposer votes below proposal threshold");
         require(targets.length == values.length && targets.length == signatures.length && targets.length == calldatas.length, "GovernorAlpha::propose: proposal function information arity mismatch");
@@ -205,7 +224,13 @@ contract GovernorAlpha {
         emit ProposalCreated(newProposal.id, msg.sender, targets, values, signatures, calldatas, startBlock, endBlock, description);
         return newProposal.id;
     }
-
+    
+    /**
+    * GOVERNANCE FUNCTION. Allows to queue a specific proposal 
+    *
+    * @notice Allows to queue a specific proposal in state = Succeeded
+    * @param proposalId The ID of the proposal
+    */
     function queue(uint proposalId) public {
         require(state(proposalId) == ProposalState.Succeeded, "GovernorAlpha::queue: proposal can only be queued if it is succeeded");
         Proposal storage proposal = proposals[proposalId];
@@ -217,11 +242,27 @@ contract GovernorAlpha {
         emit ProposalQueued(proposalId, eta);
     }
 
+    /**
+    * GOVERNANCE FUNCTION. Allows to queue or revert a transaction part of a proposal within the timelock
+    *
+    * @notice Allows to queue or revert a transaction part of a proposal (not queued earlier) within the timelock
+    * @param target The addresses of the target
+    * @param value The uint values 
+    * @param signature The signature
+    * @param data The data
+    * @param eta The timestamp of allowed execution 
+    */
     function _queueOrRevert(address target, uint value, string memory signature, bytes memory data, uint eta) internal {
         require(!timelock.queuedTransactions(keccak256(abi.encode(target, value, signature, data, eta))), "GovernorAlpha::_queueOrRevert: proposal action already queued at eta");
         timelock.queueTransaction(target, value, signature, data, eta);
     }
 
+    /**
+    * GOVERNANCE FUNCTION. Allows to execute a queued (state = queued) proposal
+    *
+    * @notice Allows to queue or revert a transaction part of a proposal (not queued earlier) within the timelock
+    * @param proposalId The ID of the proposal
+    */
     function execute(uint proposalId) public payable {
         require(state(proposalId) == ProposalState.Queued, "GovernorAlpha::execute: proposal can only be executed if it is queued");
         Proposal storage proposal = proposals[proposalId];
@@ -232,8 +273,44 @@ contract GovernorAlpha {
         emit ProposalExecuted(proposalId);
     }
 
+    /**
+    * GOVERNANCE FUNCTION. Allows the msg.sender to cast a vote
+    *
+    * @notice Allows the msg.sender to cast a vote
+    * @param proposalId The ID of the proposal
+    * @param support Boolean whether it supports or not the proposal
+    */
+    function castVote(uint proposalId, bool support) public {
+        return _castVote(msg.sender, proposalId, support);
+    }
+
+    /**
+    * GOVERNANCE FUNCTION. Allows the cast of a vote by signature
+    *
+    * @notice Allows the cast of a vote by signature
+    * @param proposalId The ID of the proposal
+    * @param support Boolean whether it supports or not the proposal
+    * @param v The recovery byte of the signature
+    * @param r Half of the ECDSA signature pair
+    * @param s Half of the ECDSA signature pair
+    */
+    function castVoteBySig(uint proposalId, bool support, uint8 v, bytes32 r, bytes32 s) public {
+        bytes32 domainSeparator = keccak256(abi.encode(DOMAIN_TYPEHASH, keccak256(bytes(name)), getChainId(), address(this)));
+        bytes32 structHash = keccak256(abi.encode(BALLOT_TYPEHASH, proposalId, support));
+        bytes32 digest = keccak256(abi.encodePacked("\x19\x01", domainSeparator, structHash));
+        address signatory = ecrecover(digest, v, r, s);
+        require(signatory != address(0), "GovernorAlpha::castVoteBySig: invalid signature");
+        return _castVote(signatory, proposalId, support);
+    }
+
+    /**
+    * PRIVILEGED GOVERNANCE FUNCTION. Allows the Pause Guardian to cancel a proposal if state != executed
+    *
+    * @notice Allows the Pause Guardian to cancel a proposal if state != executed
+    * @param proposalId The ID of the proposal
+    */
     function cancel(uint proposalId) public {
-        ProposalState _state = state(proposalId); // TODO: MODIFIED CHECK
+        ProposalState _state = state(proposalId);
         require(_state != ProposalState.Executed, "GovernorAlpha::cancel: cannot cancel executed proposal");
 
         Proposal storage proposal = proposals[proposalId];
@@ -248,15 +325,86 @@ contract GovernorAlpha {
         emit ProposalCanceled(proposalId);
     }
 
+    /**
+    * PRIVILEGED GOVERNANCE FUNCTION. Allows the Pause Guardian to execute acceptAdmin in the timelock instance
+    *
+    * @notice Allows the Pause Guardian to execute acceptAdmin in the timelock instance
+    */    
+    function __acceptAdmin() public {
+        // The Pause Guardian is capable of disabling protocol functionality. Used only in the event of an unforeseen vulnerability and just for specific operations.
+        require(msg.sender == guardian, "GovernorAlpha::__acceptAdmin: sender must be gov guardian");
+        timelock.acceptAdmin();
+    }
+
+    /**
+    * PRIVILEGED GOVERNANCE FUNCTION. Allows the Pause Guardian to abdicate as Guardian
+    *
+    * @notice Allows the Pause Guardian to abdicate as Guardian
+    */ 
+    function __abdicate() public {
+        // The Pause Guardian is capable of disabling protocol functionality. Used only in the event of an unforeseen vulnerability and just for specific operations.
+        require(msg.sender == guardian, "GovernorAlpha::__abdicate: sender must be gov guardian");
+        guardian = address(0);
+    }
+
+    /**
+    * PRIVILEGED GOVERNANCE FUNCTION. Allows the Pause Guardian to queue a set of timelock pending admin
+    *
+    * @notice Allows the Pause Guardian to queue a set of timelock pending admin
+    */ 
+    function __queueSetTimelockPendingAdmin(address newPendingAdmin, uint eta) public {
+        // The Pause Guardian is capable of disabling protocol functionality. Used only in the event of an unforeseen vulnerability and just for specific operations.
+        require(msg.sender == guardian, "GovernorAlpha::__queueSetTimelockPendingAdmin: sender must be gov guardian");
+        timelock.queueTransaction(address(timelock), 0, "setPendingAdmin(address)", abi.encode(newPendingAdmin), eta);
+    }
+
+    /**
+    * PRIVILEGED GOVERNANCE FUNCTION. Allows the Pause Guardian to execute the set of timelock pending admin
+    *
+    * @notice Allows the Pause Guardian to execute the set of timelock pending admin
+    */ 
+    function __executeSetTimelockPendingAdmin(address newPendingAdmin, uint eta) public {
+        // The Pause Guardian is capable of disabling protocol functionality. Used only in the event of an unforeseen vulnerability and just for specific operations.
+        require(msg.sender == guardian, "GovernorAlpha::__executeSetTimelockPendingAdmin: sender must be gov guardian");
+        timelock.executeTransaction(address(timelock), 0, "setPendingAdmin(address)", abi.encode(newPendingAdmin), eta);
+    }
+
+    /* ============ External Getter Functions ============ */
+
+    /**
+    * GOVERNANCE FUNCTION. Allows the caller to  check the list of actions of a proposal 
+    *
+    * @notice Allows the caller to check the list of actions of a proposal 
+    * @param proposalId The ID of the proposal
+    * @return targets of the proposalId
+    * @return values of the proposalId
+    * @return signatures of the proposalId
+    * @return calldatas of the proposalId
+    * 
+    */
     function getActions(uint proposalId) public view returns (address[] memory targets, uint[] memory values, string[] memory signatures, bytes[] memory calldatas) {
         Proposal storage p = proposals[proposalId];
         return (p.targets, p.values, p.signatures, p.calldatas);
     }
 
+    /**
+    * GOVERNANCE FUNCTION. Allows the caller to get the receipt of the voter for a specific proposalId 
+    *
+    * @notice Allows the caller to get the receipt of the voter for a specific proposalId
+    * @param proposalId The ID of the proposal
+    * @param voter The ID of the proposal
+    * @return The receipt
+    */
     function getReceipt(uint proposalId, address voter) public view returns (Receipt memory) {
         return proposals[proposalId].receipts[voter];
     }
 
+    /**
+    * GOVERNANCE FUNCTION. Allows the caller to get the state a specific proposalId 
+    *
+    * @notice Allows the caller to get the state a specific proposalId
+    * @return The proposal state
+    */
     function state(uint proposalId) public view returns (ProposalState) {
         require(proposalCount >= proposalId && proposalId > 0, "GovernorAlpha::state: invalid proposal id");
         Proposal storage proposal = proposals[proposalId];
@@ -279,19 +427,16 @@ contract GovernorAlpha {
         }
     }
 
-    function castVote(uint proposalId, bool support) public {
-        return _castVote(msg.sender, proposalId, support);
-    }
+    /* ============ Internal Only Function ============ */
 
-    function castVoteBySig(uint proposalId, bool support, uint8 v, bytes32 r, bytes32 s) public {
-        bytes32 domainSeparator = keccak256(abi.encode(DOMAIN_TYPEHASH, keccak256(bytes(name)), getChainId(), address(this)));
-        bytes32 structHash = keccak256(abi.encode(BALLOT_TYPEHASH, proposalId, support));
-        bytes32 digest = keccak256(abi.encodePacked("\x19\x01", domainSeparator, structHash));
-        address signatory = ecrecover(digest, v, r, s);
-        require(signatory != address(0), "GovernorAlpha::castVoteBySig: invalid signature");
-        return _castVote(signatory, proposalId, support);
-    }
-
+    /**
+    * GOVERNANCE FUNCTION. Allows the voter to cast a vote
+    *
+    * @dev Allows the voter to cast a vote
+    * @param voter The address of the voter
+    * @param proposalId The ID of the proposal
+    * @param support Boolean whether it supports or not the proposal
+    */
     function _castVote(address voter, uint proposalId, bool support) internal {
         require(state(proposalId) == ProposalState.Active, "GovernorAlpha::_castVote: voting is closed");
         Proposal storage proposal = proposals[proposalId];
@@ -311,44 +456,33 @@ contract GovernorAlpha {
 
         emit VoteCast(voter, proposalId, support, votes);
     }
-
-    function __acceptAdmin() public {
-        // The Pause Guardian is capable of disabling protocol functionality. Used only in the event of an unforeseen vulnerability and just for specific operations.
-        require(msg.sender == guardian, "GovernorAlpha::__acceptAdmin: sender must be gov guardian");
-        timelock.acceptAdmin();
-    }
-
-    function __abdicate() public {
-        // The Pause Guardian is capable of disabling protocol functionality. Used only in the event of an unforeseen vulnerability and just for specific operations.
-        require(msg.sender == guardian, "GovernorAlpha::__abdicate: sender must be gov guardian");
-        guardian = address(0);
-    }
-
-    function __queueSetTimelockPendingAdmin(address newPendingAdmin, uint eta) public {
-        // The Pause Guardian is capable of disabling protocol functionality. Used only in the event of an unforeseen vulnerability and just for specific operations.
-        require(msg.sender == guardian, "GovernorAlpha::__queueSetTimelockPendingAdmin: sender must be gov guardian");
-        timelock.queueTransaction(address(timelock), 0, "setPendingAdmin(address)", abi.encode(newPendingAdmin), eta);
-    }
-
-    function __executeSetTimelockPendingAdmin(address newPendingAdmin, uint eta) public {
-        // The Pause Guardian is capable of disabling protocol functionality. Used only in the event of an unforeseen vulnerability and just for specific operations.
-        require(msg.sender == guardian, "GovernorAlpha::__executeSetTimelockPendingAdmin: sender must be gov guardian");
-        timelock.executeTransaction(address(timelock), 0, "setPendingAdmin(address)", abi.encode(newPendingAdmin), eta);
-    }
-
-    /* ============ Internal Only Function ============ */
-
+    
+    /**
+    * INTERNAL SAFE MATH FUNCTION. Safe add two uint256 values checking overflow returning uint
+    *
+    * @dev Safe add two uint256 values checking overflow
+    */    
     function add256(uint256 a, uint256 b) internal pure returns (uint) {
         uint c = a + b;
         require(c >= a, "addition overflow");
         return c;
     }
 
+    /**
+    * INTERNAL SAFE MATH FUNCTION. Safe sub two uint256 values checking underflow returning uint
+    *
+    * @dev Safe sub two uint256 values checking overflow
+    */  
     function sub256(uint256 a, uint256 b) internal pure returns (uint) {
         require(b <= a, "subtraction underflow");
         return a - b;
     }
 
+    /**
+    * INTERNAL FUNCTION. Internal function to get chain ID
+    * 
+    * @dev internal function to get chain ID
+    */
     function getChainId() internal pure returns (uint) {
         uint chainId;
         assembly { chainId := chainid() }
