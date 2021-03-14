@@ -153,7 +153,7 @@ import { ReentrancyGuard } from "@openzeppelin/contracts/utils/ReentrancyGuard.s
     * @param newMaxSupplyAllowedAfter The new waiting period to change the MAX_SUPPLY limited for a minimum of 1 year
     * @return Whether or not the changeMaxSupply succeeded
     */
-    function changeMaxSupply(uint256 newMaxSupply, uint newMaxSupplyAllowedAfter) external returns(bool){
+    function changeMaxSupply(uint256 newMaxSupply, uint newMaxSupplyAllowedAfter) external onlyOwner returns(bool){
         require(block.timestamp >= BABLTokenDeploymentTimestamp.add(firstEpochMint), "BABLToken::changeMaxSupply: a change on MAX_SUPPLY not allowed until 8 years after deployment");
         require(block.timestamp >= maxSupplyAllowedAfter, "BABLToken::changeMaxSupply: a change on MAX_SUPPLY not allowed yet");
 
