@@ -55,11 +55,11 @@ contract GovernorAlpha is Ownable {
     address public guardian;
 
     /// @notice The number of votes in support of a proposal required in order for a quorum to be reached and for a vote to succeed
-    function quorumVotes() public pure returns (uint) { return 40_000e18; } // 4% of BABL TODO - CHECK % ALONG THE TIME (TOTALSUPPLY CHECK)
+    function quorumVotes() public pure returns (uint) { return 40_000e18; } // 4% of BABL 
     
     /// @notice The number of votes required in order for a voter to become a proposer
-    function proposalThreshold() public pure returns (uint) { return 10_000e18; } // 1% of BABL TODO - CHECK % ALONG THE TIME (TOTALSUPPLY CHECK)
-
+    function proposalThreshold() public pure returns (uint) { return 10_000e18; } // 1% of BABL 
+    
     /// @notice The maximum number of actions that can be included in a proposal
     function proposalMaxOperations() public pure returns (uint) { return 10; } // 10 actions
 
