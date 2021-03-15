@@ -10,14 +10,14 @@ const { loadFixture } = waffle;
 describe("YearnVaultIntegrationTest", function() {
   let system;
   let yearnVaultIntegration;
-  let community;
+  let garden;
   let userSigner3;
 
   beforeEach(async () => {
     system = await loadFixture(deployFolioFixture);
     yearnVaultIntegration = system.integrations.yearnVaultIntegration;
     userSigner3 = system.signer3;
-    community = system.comunities.one;
+    garden = system.comunities.one;
   });
 
   describe("Deployment", function() {
@@ -62,14 +62,14 @@ describe("YearnVaultIntegrationTest", function() {
       // expect(
       //   await daiToken
       //     .connect(whaleSigner)
-      //     .transfer(community.address, ethers.utils.parseEther("1000"), {
+      //     .transfer(garden.address, ethers.utils.parseEther("1000"), {
       //       gasPrice: 0
       //     })
       // );
-      // expect(await daiToken.balanceOf(community.address)).to.equal(
+      // expect(await daiToken.balanceOf(garden.address)).to.equal(
       //   ethers.utils.parseEther("1000")
       // );
-      await community
+      await garden
         .connect(userSigner3)
         .deposit(ethers.utils.parseEther("1"), 1, userSigner3.getAddress(), {
           value: ethers.utils.parseEther("1")
@@ -89,7 +89,7 @@ describe("YearnVaultIntegrationTest", function() {
         ]
       );
 
-      // await community.callIntegration(
+      // await garden.callIntegration(
       //   yearnVaultIntegration.address,
       //   ethers.utils.parseEther("0"),
       //   data,
@@ -103,10 +103,10 @@ describe("YearnVaultIntegrationTest", function() {
       // console.log("price", ethers.utils.formatEther(sharePrice));
       // console.log(
       //   "balance",
-      //   ethers.utils.formatEther(await yearnDaiVault.balanceOf(community.address))
+      //   ethers.utils.formatEther(await yearnDaiVault.balanceOf(garden.address))
       // );
       // console.log("yshares to receive", expectedYShares.toString());
-      // expect(await yearnDaiVault.balanceOf(community.address)).to.be.gte(
+      // expect(await yearnDaiVault.balanceOf(garden.address)).to.be.gte(
       //   expectedYShares
       // );
       //
@@ -114,13 +114,13 @@ describe("YearnVaultIntegrationTest", function() {
       //   yearnAbi.functions["exitInvestment(address,uint256,address,uint256)"],
       //   [
       //     yearnDaiVault.address,
-      //     await yearnDaiVault.balanceOf(community.address),
+      //     await yearnDaiVault.balanceOf(garden.address),
       //     daiToken.address,
       //     ethers.utils.parseEther("99")
       //   ]
       // );
       //
-      // await community.callIntegration(
+      // await garden.callIntegration(
       //   yearnVaultIntegration.address,
       //   ethers.utils.parseEther("0"),
       //   dataExit,
@@ -131,8 +131,8 @@ describe("YearnVaultIntegrationTest", function() {
       //   }
       // );
       //
-      // expect(await yearnDaiVault.balanceOf(community.address)).to.equal(0);
-      // expect(await daiToken.balanceOf(community.address)).to.be.gt(
+      // expect(await yearnDaiVault.balanceOf(garden.address)).to.equal(0);
+      // expect(await daiToken.balanceOf(garden.address)).to.be.gt(
       //   ethers.utils.parseEther("99")
       // );
     });

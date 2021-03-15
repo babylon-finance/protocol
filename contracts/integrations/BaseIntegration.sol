@@ -23,8 +23,8 @@ import { ERC20 } from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import { IBabController } from "../interfaces/IBabController.sol";
 import { IIntegration } from "../interfaces/IIntegration.sol";
 import { IWETH } from "../interfaces/external/weth/IWETH.sol";
-import { IInvestmentIdea } from "../interfaces/IInvestmentIdea.sol";
-import { ICommunity } from "../interfaces/ICommunity.sol";
+import { IStrategy } from "../interfaces/IStrategy.sol";
+import { IGarden } from "../interfaces/IGarden.sol";
 import { SafeMath } from "@openzeppelin/contracts/math/SafeMath.sol";
 import { SignedSafeMath } from "@openzeppelin/contracts/math/SignedSafeMath.sol";
 import { SafeCast } from "@openzeppelin/contracts/utils/SafeCast.sol";
@@ -53,10 +53,10 @@ abstract contract BaseIntegration {
     }
 
     modifier onlyIdea() {
-      IInvestmentIdea idea = IInvestmentIdea(msg.sender);
-      address community = idea.community();
-      require(IBabController(controller).isSystemContract(community), "Only a community can call this");
-      require(ICommunity(community).isInvestmentIdea(msg.sender), "Sender myst be an investment idea from the community");
+      IStrategy strategy = IStrategy(msg.sender);
+      address garden = strategy.garden();
+      require(IBabController(controller).isSystemContract(garden), "Only a garden can call this");
+      require(IGarden(garden).isStrategy(msg.sender), "Sender myst be an investment strategy from the garden");
       _;
     }
 
@@ -73,7 +73,7 @@ abstract contract BaseIntegration {
     address public immutable weth;
     // Name of the integration
     string public name;
-    mapping(address => bool) public initializedByCommunity;
+    mapping(address => bool) public initializedByGarden;
 
     /* ============ Constructor ============ */
 
@@ -105,14 +105,14 @@ abstract contract BaseIntegration {
 
 
     /**
-     * Updates the position in the community with the new units
+     * Updates the position in the garden with the new units
      *
-     * @param _investmentIdea           Address of the investment idea
+     * @param _strategy           Address of the investment strategy
      * @param _component                Address of the ERC20
      * @param _deltaOperation           Delta balance of the operation
      */
-    function _updateInvestmentIdeaPosition(
-      address _investmentIdea,
+    function _updateStrategyPosition(
+      address _strategy,
       address _component,
       int256 _deltaOperation,
       uint8 _subpositionStatus
@@ -121,8 +121,8 @@ abstract contract BaseIntegration {
       uint256,
       uint256
     ) {
-      uint256 _newTotal = IInvestmentIdea(_investmentIdea).getPositionBalance(_component).add(_deltaOperation).toUint256();
-      return IInvestmentIdea(_investmentIdea).calculateAndEditPosition(_component, _newTotal, _deltaOperation, _subpositionStatus);
+      uint256 _newTotal = IStrategy(_strategy).getPositionBalance(_component).add(_deltaOperation).toUint256();
+      return IStrategy(_strategy).calculateAndEditPosition(_component, _newTotal, _deltaOperation, _subpositionStatus);
     }
 
     /**
@@ -149,11 +149,11 @@ abstract contract BaseIntegration {
     }
 
     /**
-     * Pays the _feeQuantity from the community denominated in _token to the protocol fee recipient
+     * Pays the _feeQuantity from the garden denominated in _token to the protocol fee recipient
      */
-    function payProtocolFeeFromIdea(address _idea, address _token, uint256 _feeQuantity) internal {
+    function payProtocolFeeFromIdea(address _strategy, address _token, uint256 _feeQuantity) internal {
         if (_feeQuantity > 0) {
-          ERC20(_token).transferFrom(_idea, IBabController(controller).getTreasury(), _feeQuantity);
+          ERC20(_token).transferFrom(_strategy, IBabController(controller).getTreasury(), _feeQuantity);
         }
     }
 

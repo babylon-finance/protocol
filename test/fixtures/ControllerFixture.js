@@ -17,24 +17,24 @@ async function deployFolioFixture() {
   await babController.addReserveAsset(addresses.tokens.WETH);
   await babController.addKeepers(Object.values(addresses.users));
 
-  const CommunityValuer = await ethers.getContractFactory(
-    "CommunityValuer",
+  const GardenValuer = await ethers.getContractFactory(
+    "GardenValuer",
     owner
   );
   const PriceOracle = await ethers.getContractFactory("PriceOracle", owner);
   const ReservePool = await ethers.getContractFactory("ReservePool", owner);
   const Treasury = await ethers.getContractFactory("Treasury", owner);
   const UniswapTWAP = await ethers.getContractFactory("UniswapTWAP", owner);
-  const CommunityFactory = await ethers.getContractFactory(
-    "CommunityFactory",
+  const GardenFactory = await ethers.getContractFactory(
+    "GardenFactory",
     owner
   );
-  const IdeaFactory = await ethers.getContractFactory("IdeaFactory", owner);
-  const communityValuer = await CommunityValuer.deploy(babController.address);
+  const StrategyFactory = await ethers.getContractFactory("StrategyFactory", owner);
+  const gardenValuer = await GardenValuer.deploy(babController.address);
   const reservePool = await ReservePool.deploy(babController.address);
   const treasury = await Treasury.deploy(babController.address);
-  const communityFactory = await CommunityFactory.deploy();
-  const ideaFactory = await IdeaFactory.deploy();
+  const gardenFactory = await GardenFactory.deploy();
+  const strategyFactory = await StrategyFactory.deploy();
 
   const uniswapTWAPAdapter = await UniswapTWAP.deploy(
     babController.address,
@@ -47,13 +47,13 @@ async function deployFolioFixture() {
     addresses.compound.OpenOracle,
     [uniswapTWAPAdapter.address]
   );
-  // Sets the price oracle and communityvaluer address
+  // Sets the price oracle and gardenvaluer address
   babController.editPriceOracle(priceOracle.address);
   babController.editTreasury(treasury.address);
-  babController.editCommunityValuer(communityValuer.address);
+  babController.editGardenValuer(gardenValuer.address);
   babController.editReservePool(reservePool.address);
-  babController.editCommunityFactory(communityFactory.address);
-  babController.editIdeaFactory(ideaFactory.address);
+  babController.editGardenFactory(gardenFactory.address);
+  babController.editStrategyFactory(strategyFactory.address);
 
   const AaveIntegration = await ethers.getContractFactory(
     "AaveIntegration",
@@ -144,11 +144,11 @@ async function deployFolioFixture() {
   });
 
   const integrationsAddressList = integrationsList.map(iter => iter.address);
-  // Creates a new Community instance
+  // Creates a new Garden instance
 
   await babController
     .connect(signer1)
-    .createRollingCommunity(
+    .createRollingGarden(
       integrationsAddressList,
       addresses.tokens.WETH,
       "Absolute ETH Return [beta]",
@@ -157,7 +157,7 @@ async function deployFolioFixture() {
 
   await babController
     .connect(signer1)
-    .createRollingCommunity(
+    .createRollingGarden(
       integrationsAddressList,
       addresses.tokens.WETH,
       "ETH Yield Farm [a]",
@@ -166,32 +166,32 @@ async function deployFolioFixture() {
 
   await babController
     .connect(signer1)
-    .createRollingCommunity(
+    .createRollingGarden(
       integrationsAddressList,
       addresses.tokens.WETH,
       "ETH Yield Farm [b]",
       "EYFG"
     );
 
-  const communities = await babController.getCommunities();
+  const gardens = await babController.getCommunities();
 
-  const community = await ethers.getContractAt(
-    "RollingCommunity",
-    communities[0]
+  const garden = await ethers.getContractAt(
+    "RollingGarden",
+    gardens[0]
   );
 
-  const community2 = await ethers.getContractAt(
-    "RollingCommunity",
-    communities[1]
+  const garden2 = await ethers.getContractAt(
+    "RollingGarden",
+    gardens[1]
   );
 
-  const community3 = await ethers.getContractAt(
-    "RollingCommunity",
-    communities[2]
+  const garden3 = await ethers.getContractAt(
+    "RollingGarden",
+    gardens[2]
   );
 
   // Initial deposit
-  await community.connect(signer1).start(
+  await garden.connect(signer1).start(
     ethers.utils.parseEther("10"),
     1,
     ethers.utils.parseEther("1000"),
@@ -200,22 +200,23 @@ async function deployFolioFixture() {
     ONE_DAY_IN_SECONDS,
     ethers.utils.parseEther("0.13"), // 13% Ideator
     ethers.utils.parseEther("0.05"), // 5% Voters
-    ethers.utils.parseEther("0.02"), // 2% community creator
+    ethers.utils.parseEther("0.02"), // 2% garden creator
     ethers.utils.parseEther("0.10"), // 10% quorum
     ONE_DAY_IN_SECONDS * 3,
     ONE_DAY_IN_SECONDS * 365,
     { value: ethers.utils.parseEther("0.1") }
   );
+  console.log('eo');
 
-  await community.connect(signer1).addInvestmentIdea(
+  await garden.connect(signer1).addStrategy(
     ethers.utils.parseEther("10"),
-    await community.totalSupply(),
+    await garden.totalSupply(),
     ONE_DAY_IN_SECONDS * 30,
     ethers.utils.parseEther("0.05"), // 5%
     ethers.utils.parseEther("1")
   );
 
-  const ideas = await community.getIdeas();
+  const strategies = await garden.getStrategies();
 
   return {
     babController,
@@ -231,12 +232,12 @@ async function deployFolioFixture() {
       yearnVaultIntegration
     },
     comunities: {
-      one: community,
-      two: community2,
-      three: community3
+      one: garden,
+      two: garden2,
+      three: garden3
     },
-    ideas: [await ethers.getContractAt("InvestmentIdea", ideas[0])],
-    communityValuer,
+    strategies: [await ethers.getContractAt("Strategy", strategies[0])],
+    gardenValuer,
     priceOracle,
     owner,
     signer1,

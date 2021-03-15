@@ -30,7 +30,7 @@ import { IWETH } from "../interfaces/external/weth/IWETH.sol";
 
 import { BorrowIntegration } from "./BorrowIntegration.sol";
 import { IBabController } from "../interfaces/IBabController.sol";
-import { ICommunity } from "../interfaces/ICommunity.sol";
+import { IGarden } from "../interfaces/IGarden.sol";
 import { BaseIntegration } from "./BaseIntegration.sol";
 
 /**
@@ -99,7 +99,7 @@ contract CompoundIntegration is BorrowIntegration {
     uint _borrowOp
   ) internal override pure returns (address, uint256, bytes memory) {
     if (_borrowOp == 2 || _borrowOp == 0) {
-      // Encode method data for Community to invoke
+      // Encode method data for Garden to invoke
       address[] memory markets = new address[](1);
       markets[0] = _asset;
       bytes memory methodData = abi.encodeWithSignature(
@@ -125,7 +125,7 @@ contract CompoundIntegration is BorrowIntegration {
     address _asset,
     uint256 _amount
   ) internal override pure returns (address, uint256, bytes memory) {
-    // Encode method data for Community to invoke
+    // Encode method data for Garden to invoke
     bytes memory methodData = abi.encodeWithSignature(
       "mint(uint256)",
       _amount
@@ -148,7 +148,7 @@ contract CompoundIntegration is BorrowIntegration {
     address _asset,
     uint256 _amount
   ) internal override pure returns (address, uint256, bytes memory) {
-    // Encode method data for Community to invoke
+    // Encode method data for Garden to invoke
     bytes memory methodData = abi.encodeWithSignature(
       "redeem(uint256)",
       _amount
@@ -171,7 +171,7 @@ contract CompoundIntegration is BorrowIntegration {
     address _asset,
     uint256 _amount
   ) internal override pure returns (address, uint256, bytes memory) {
-    // Encode method data for Community to invoke
+    // Encode method data for Garden to invoke
     bytes memory methodData = abi.encodeWithSignature(
       "borrow(uint256)",
       _amount
@@ -194,7 +194,7 @@ contract CompoundIntegration is BorrowIntegration {
     address _asset,
     uint256 _amount
   ) internal override view returns (address, uint256, bytes memory) {
-    // Encode method data for Community to invoke
+    // Encode method data for Garden to invoke
     bytes memory methodData = abi.encodeWithSignature(
       "repayBorrow(uint256)",
       _amount

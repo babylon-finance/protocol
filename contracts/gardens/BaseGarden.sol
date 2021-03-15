@@ -28,18 +28,18 @@ import { IBabController } from "../interfaces/IBabController.sol";
 import { IIntegration } from "../interfaces/IIntegration.sol";
 import { ITradeIntegration } from "../interfaces/ITradeIntegration.sol";
 import { IPriceOracle } from "../interfaces/IPriceOracle.sol";
-import { ICommunity } from "../interfaces/ICommunity.sol";
-import { IIdeaFactory } from "../interfaces/IIdeaFactory.sol";
-import { IInvestmentIdea } from "../interfaces/IInvestmentIdea.sol";
+import { IGarden } from "../interfaces/IGarden.sol";
+import { IStrategyFactory } from "../interfaces/IStrategyFactory.sol";
+import { IStrategy } from "../interfaces/IStrategy.sol";
 import { PreciseUnitMath } from "../lib/PreciseUnitMath.sol";
 
 /**
- * @title BaseCommunity
+ * @title BaseGarden
  * @author Babylon Finance
  *
- * Abstract Class that holds common community-related state and functions
+ * Abstract Class that holds common garden-related state and functions
  */
-abstract contract BaseCommunity is ERC20Upgradeable {
+abstract contract BaseGarden is ERC20Upgradeable {
     using SafeCast for uint256;
     using SafeCast for int256;
     using SafeMath for uint256;
@@ -55,15 +55,15 @@ abstract contract BaseCommunity is ERC20Upgradeable {
     event PendingIntegrationRemoved(address indexed _integration);
     event ReserveAssetChanged(address indexed _integration);
     event PrincipalChanged(uint256 _newAmount, uint256 _oldAmount);
-    event CommunityTokenDeposited(
+    event GardenTokenDeposited(
         address indexed _to,
-        uint256 communityTokenQuantity,
+        uint256 gardenTokenQuantity,
         uint256 protocolFees
     );
-    event CommunityTokenWithdrawn(
+    event GardenTokenWithdrawn(
         address indexed _from,
         address indexed _to,
-        uint256 communityTokenQuantity,
+        uint256 gardenTokenQuantity,
         uint256 protocolFees
     );
 
@@ -94,7 +94,7 @@ abstract contract BaseCommunity is ERC20Upgradeable {
     }
 
     /**
-     * Throws if the sender is not the community creator
+     * Throws if the sender is not the garden creator
      */
     modifier onlyCreator() {
       require(msg.sender == creator, "Only the creator can call this");
@@ -110,23 +110,23 @@ abstract contract BaseCommunity is ERC20Upgradeable {
     }
 
     /**
-     * Throws if the sender is not an investment idea of this community
+     * Throws if the sender is not an investment strategy of this garden
      */
-    modifier onlyInvestmentIdea() {
-      require(ideaMapping[msg.sender], "Only the community ideas contract can call this");
+    modifier onlyStrategy() {
+      require(strategyMapping[msg.sender], "Only the garden strategies contract can call this");
       _;
     }
 
     /**
-     * Throws if the sender is not an investment idea or the protocol
+     * Throws if the sender is not an investment strategy or the protocol
      */
-    modifier onlyInvestmentIdeaOrOwner() {
-      require(ideaMapping[msg.sender] || msg.sender == controller, "Only the community ideas or owner can call this");
+    modifier onlyStrategyOrOwner() {
+      require(strategyMapping[msg.sender] || msg.sender == controller, "Only the garden strategies or owner can call this");
       _;
     }
 
     /**
-    * Throws if the community is not active
+    * Throws if the garden is not active
     */
     modifier onlyActive() {
         _validateOnlyActive();
@@ -134,7 +134,7 @@ abstract contract BaseCommunity is ERC20Upgradeable {
     }
 
     /**
-    * Throws if the community is not disabled
+    * Throws if the garden is not disabled
     */
     modifier onlyInactive() {
         _validateOnlyInactive();
@@ -151,20 +151,20 @@ abstract contract BaseCommunity is ERC20Upgradeable {
 
     /* ============ State Variables ============ */
     uint256 constant public initialBuyRate = 1000000000000; // Initial buy rate for the manager
-    uint256 constant public MAX_DEPOSITS_FUND_V1 = 1e21; // Max deposit per community is 1000 eth for v1
-    uint256 constant public MAX_TOTAL_IDEAS = 20; // Max deposit per community is 1000 eth for v1
+    uint256 constant public MAX_DEPOSITS_FUND_V1 = 1e21; // Max deposit per garden is 1000 eth for v1
+    uint256 constant public MAX_TOTAL_IDEAS = 20; // Max deposit per garden is 1000 eth for v1
     uint256 constant internal TEN_PERCENT = 1e17;
     // Wrapped ETH address
     address public weth;
 
-    // Reserve Asset of the community
+    // Reserve Asset of the garden
     address public reserveAsset;
 
     // Address of the controller
     address public controller;
-    // The person that creates the community
+    // The person that creates the garden
     address public creator;
-    // Whether the community is currently active or not
+    // Whether the garden is currently active or not
     bool public active;
 
     // List of initialized Integrations; Integrations connect with other money legos
@@ -173,7 +173,7 @@ abstract contract BaseCommunity is ERC20Upgradeable {
     // Keeps track of the reserve balance. In case we receive some through other means
     uint256 principal;
 
-    // Indicates the minimum liquidity the asset needs to have to be tradable by this community
+    // Indicates the minimum liquidity the asset needs to have to be tradable by this garden
     uint256 public minLiquidityAsset;
 
     // Contributors
@@ -181,30 +181,30 @@ abstract contract BaseCommunity is ERC20Upgradeable {
     uint256 public totalContributors;
     uint256 public maxDepositLimit;                // Limits the amount of deposits
 
-    uint256 public communityInitializedAt;         // Community Initialized at timestamp
+    uint256 public gardenInitializedAt;         // Garden Initialized at timestamp
 
-    // Min contribution in the community
+    // Min contribution in the garden
     uint256 public minContribution = initialBuyRate; //wei
-    uint256 public minCommunityTokenSupply;
+    uint256 public minGardenTokenSupply;
 
-    // Investment ideas variables
+    // Investment strategies variables
     uint256 public totalStake = 0;
     uint256 public minVotersQuorum = TEN_PERCENT;          // 10%. (0.01% = 1e14, 1% = 1e16)
     uint256 public minIdeaDuration;               // Min duration for an investment Idea
-    uint256 public maxIdeaDuration;               // Max duration for an investment idea
-    uint256 public ideaCooldownPeriod;            // Window for the idea to cooldown after approval before receiving capital
+    uint256 public maxIdeaDuration;               // Max duration for an investment strategy
+    uint256 public strategyCooldownPeriod;            // Window for the strategy to cooldown after approval before receiving capital
 
-    address[] ideas;
-    mapping(address => bool) public ideaMapping;
+    address[] strategies;
+    mapping(address => bool) public strategyMapping;
 
-    uint256 public ideaCreatorProfitPercentage = 13e16; // (0.01% = 1e14, 1% = 1e16)
-    uint256 public ideaVotersProfitPercentage = 5e16; // (0.01% = 1e14, 1% = 1e16)
-    uint256 public communityCreatorProfitPercentage = 2e16; //
+    uint256 public strategyCreatorProfitPercentage = 13e16; // (0.01% = 1e14, 1% = 1e16)
+    uint256 public strategyVotersProfitPercentage = 5e16; // (0.01% = 1e14, 1% = 1e16)
+    uint256 public gardenCreatorProfitPercentage = 2e16; //
 
     /* ============ Constructor ============ */
 
     /**
-     * When a new Community is created.
+     * When a new Garden is created.
      * All parameter validations are on the BabController contract. Validations are performed already on the
      * BabController.
      *
@@ -213,8 +213,8 @@ abstract contract BaseCommunity is ERC20Upgradeable {
      * @param _reserveAsset           Address of the reserve asset ERC20
      * @param _controller             Address of the controller
      * @param _creator                Address of the creator
-     * @param _name                   Name of the Community
-     * @param _symbol                 Symbol of the Community
+     * @param _name                   Name of the Garden
+     * @param _symbol                 Symbol of the Garden
      */
     function initialize(
         address[] memory _integrations,
@@ -243,37 +243,37 @@ abstract contract BaseCommunity is ERC20Upgradeable {
     }
 
     /**
-    * Virtual function that assigns several community params. Must be overriden
+    * Virtual function that assigns several garden params. Must be overriden
     *
-    * @param _minContribution                  Min contribution to participate in this community
-    * @param _ideaCooldownPeriod               How long after the idea has been activated, will it be ready to be executed
-    * @param _ideaCreatorProfitPercentage      What percentage of the profits go to the idea creator
-    * @param _ideaVotersProfitPercentage       What percentage of the profits go to the idea curators
-    * @param _communityCreatorProfitPercentage What percentage of the profits go to the creator of the community
-    * @param _minVotersQuorum                  Percentage of votes needed to activate an investment idea (0.01% = 1e14, 1% = 1e16)
-    * @param _minIdeaDuration                  Min duration of an investment idea
-    * @param _maxIdeaDuration                  Max duration of an investment idea
+    * @param _minContribution                  Min contribution to participate in this garden
+    * @param _strategyCooldownPeriod               How long after the strategy has been activated, will it be ready to be executed
+    * @param _strategyCreatorProfitPercentage      What percentage of the profits go to the strategy creator
+    * @param _strategyVotersProfitPercentage       What percentage of the profits go to the strategy curators
+    * @param _gardenCreatorProfitPercentage What percentage of the profits go to the creator of the garden
+    * @param _minVotersQuorum                  Percentage of votes needed to activate an investment strategy (0.01% = 1e14, 1% = 1e16)
+    * @param _minIdeaDuration                  Min duration of an investment strategy
+    * @param _maxIdeaDuration                  Max duration of an investment strategy
     */
     function startCommon (
       uint256 _minContribution,
-      uint256 _ideaCooldownPeriod,
-      uint256 _ideaCreatorProfitPercentage,
-      uint256 _ideaVotersProfitPercentage,
-      uint256 _communityCreatorProfitPercentage,
+      uint256 _strategyCooldownPeriod,
+      uint256 _strategyCreatorProfitPercentage,
+      uint256 _strategyVotersProfitPercentage,
+      uint256 _gardenCreatorProfitPercentage,
       uint256 _minVotersQuorum,
       uint256 _minIdeaDuration,
       uint256 _maxIdeaDuration
     ) internal {
       require(
-          _ideaCooldownPeriod <= IBabController(controller).getMaxCooldownPeriod() && _ideaCooldownPeriod >= IBabController(controller).getMinCooldownPeriod() ,
-          "Community cooldown must be within the range allowed by the protocol"
+          _strategyCooldownPeriod <= IBabController(controller).getMaxCooldownPeriod() && _strategyCooldownPeriod >= IBabController(controller).getMinCooldownPeriod() ,
+          "Garden cooldown must be within the range allowed by the protocol"
       );
       require(_minVotersQuorum >= TEN_PERCENT, "You need at least 10% votes");
       minContribution = _minContribution;
-      ideaCreatorProfitPercentage = _ideaCreatorProfitPercentage;
-      ideaVotersProfitPercentage = _ideaVotersProfitPercentage;
-      communityCreatorProfitPercentage = _communityCreatorProfitPercentage;
-      ideaCooldownPeriod = _ideaCooldownPeriod;
+      strategyCreatorProfitPercentage = _strategyCreatorProfitPercentage;
+      strategyVotersProfitPercentage = _strategyVotersProfitPercentage;
+      gardenCreatorProfitPercentage = _gardenCreatorProfitPercentage;
+      strategyCooldownPeriod = _strategyCooldownPeriod;
       minVotersQuorum = _minVotersQuorum;
       minIdeaDuration = _minIdeaDuration;
       maxIdeaDuration = _maxIdeaDuration;
@@ -293,20 +293,20 @@ abstract contract BaseCommunity is ERC20Upgradeable {
     }
 
     /**
-     * PRIVILEGED Manager, protocol FUNCTION. When a Community is disabled, deposits are disabled.
+     * PRIVILEGED Manager, protocol FUNCTION. When a Garden is disabled, deposits are disabled.
      */
     function setActive() external onlyProtocol {
       require(!active && integrations.length > 0,
-          "Must have active integrations to enable a community"
+          "Must have active integrations to enable a garden"
       );
       active = true;
     }
 
     /**
-     * PRIVILEGED Manager, protocol FUNCTION. When a Community is disabled, deposits are disabled.
+     * PRIVILEGED Manager, protocol FUNCTION. When a Garden is disabled, deposits are disabled.
      */
     function setDisabled() external onlyProtocol {
-      require(active, "The community must be active");
+      require(active, "The garden must be active");
       active = false;
     }
 
@@ -315,30 +315,30 @@ abstract contract BaseCommunity is ERC20Upgradeable {
      *
      * @param _amount             Amount of the reserve balance
      */
-    function updatePrincipal(uint256 _amount) external onlyInvestmentIdea {
+    function updatePrincipal(uint256 _amount) external onlyStrategy {
       _updatePrincipal(_amount);
     }
 
     /* ============ Investment Idea Functions ============ */
     /**
-     * Creates a new investment idea calling the factory and adds it to the array
+     * Creates a new investment strategy calling the factory and adds it to the array
      * @param _maxCapitalRequested           Max Capital requested denominated in the reserve asset (0 to be unlimited)
-     * @param _stake                         Stake with community participations absolute amounts 1e18
+     * @param _stake                         Stake with garden participations absolute amounts 1e18
      * @param _investmentDuration            Investment duration in seconds
      * @param _expectedReturn                Expected return
-     * @param _minRebalanceCapital           Min capital that is worth it to deposit into this idea
+     * @param _minRebalanceCapital           Min capital that is worth it to deposit into this strategy
      * TODO: Meta Transaction
      */
-    function addInvestmentIdea(
+    function addStrategy(
       uint256 _maxCapitalRequested,
       uint256 _stake,
       uint256 _investmentDuration,
       uint256 _expectedReturn,
       uint256 _minRebalanceCapital
     ) external onlyContributor onlyActive {
-      require(ideas.length < MAX_TOTAL_IDEAS, "Reached the limit of ideas");
-      IIdeaFactory ideaFactory = IIdeaFactory(IBabController(controller).getIdeaFactory());
-      address idea = ideaFactory.createInvestmentIdea(
+      require(strategies.length < MAX_TOTAL_IDEAS, "Reached the limit of strategies");
+      IStrategyFactory strategyFactory = IStrategyFactory(IBabController(controller).getStrategyFactory());
+      address strategy = strategyFactory.createStrategy(
         msg.sender,
         address(this),
         controller,
@@ -348,33 +348,33 @@ abstract contract BaseCommunity is ERC20Upgradeable {
         _expectedReturn,
         _minRebalanceCapital
       );
-      ideaMapping[idea] = true;
+      strategyMapping[strategy] = true;
       totalStake = totalStake.add(_stake);
-      ideas.push(idea);
+      strategies.push(strategy);
     }
 
     /**
-     * Rebalances available capital of the community between the investment ideas that are active.
-     * We enter into the investment and add it to the executed ideas array.
+     * Rebalances available capital of the garden between the investment strategies that are active.
+     * We enter into the investment and add it to the executed strategies array.
      */
     function rebalanceInvestments() external onlyKeeper onlyActive {
       uint256 liquidReserveAsset = ERC20Upgradeable(reserveAsset).balanceOf(address(this));
-      for (uint i = 0; i < ideas.length; i++) {
-        IInvestmentIdea idea = IInvestmentIdea(ideas[i]);
-        uint256 percentage = idea.totalVotes().toUint256().preciseDiv(totalStake);
+      for (uint i = 0; i < strategies.length; i++) {
+        IStrategy strategy = IStrategy(strategies[i]);
+        uint256 percentage = strategy.totalVotes().toUint256().preciseDiv(totalStake);
         uint256 toAllocate = liquidReserveAsset.preciseMul(percentage);
-        if (toAllocate >= idea.minRebalanceCapital() && toAllocate.add(idea.capitalAllocated()) <= idea.maxCapitalRequested()) {
-          idea.executeInvestment(toAllocate);
+        if (toAllocate >= strategy.minRebalanceCapital() && toAllocate.add(strategy.capitalAllocated()) <= strategy.maxCapitalRequested()) {
+          strategy.executeInvestment(toAllocate);
         }
       }
     }
 
     /**
-     * Allocates community capital to an investment
+     * Allocates garden capital to an investment
      *
      * @param _capital        Amount of capital to allocate to the investment
      */
-    function allocateCapitalToInvestment(uint256 _capital) external onlyInvestmentIdea onlyActive {
+    function allocateCapitalToInvestment(uint256 _capital) external onlyStrategy onlyActive {
       uint256 liquidReserveAsset = ERC20Upgradeable(reserveAsset).balanceOf(address(this));
       require(_capital <= liquidReserveAsset, "Not enough capital");
       require(ERC20Upgradeable(reserveAsset).transfer(
@@ -397,17 +397,17 @@ abstract contract BaseCommunity is ERC20Upgradeable {
     /* ============ External Getter Functions ============ */
 
     /**
-     * Gets current investment ideas
+     * Gets current investment strategies
      *
      * @return  address[]        Returns list of addresses
      */
 
-    function getIdeas() public view returns (address[] memory) {
-      return ideas;
+    function getStrategies() public view returns (address[] memory) {
+      return strategies;
     }
 
-    function isInvestmentIdea(address _idea) external view returns (bool) {
-      return ideaMapping[_idea];
+    function isStrategy(address _strategy) external view returns (bool) {
+      return strategyMapping[_strategy];
     }
 
     function getPrincipal() external view returns (uint256) {
@@ -423,7 +423,7 @@ abstract contract BaseCommunity is ERC20Upgradeable {
     }
 
     /**
-     * Check if this community has this integration
+     * Check if this garden has this integration
      */
     function hasIntegration(address _integration)
         external
@@ -440,17 +440,17 @@ abstract contract BaseCommunity is ERC20Upgradeable {
     /* ============ Internal Functions ============ */
 
     /**
-     * Updates the TWAP prices for the community positions
+     * Updates the TWAP prices for the garden positions
      *
      */
     function updatePositionTWAPPrices() public {
       // Updates UniSwap TWAP
       address oracle = IBabController(controller).getPriceOracle();
-      address[] memory ideasC = getIdeas();
-      for (uint256 j = 0; j < ideasC.length; j++) {
-        IInvestmentIdea idea = IInvestmentIdea(ideasC[j]);
-        address[] memory components = idea.getPositions();
-        if (idea.active()) {
+      address[] memory strategiesC = getStrategies();
+      for (uint256 j = 0; j < strategiesC.length; j++) {
+        IStrategy strategy = IStrategy(strategiesC[j]);
+        address[] memory components = strategy.getPositions();
+        if (strategy.active()) {
           for(uint i = 0; i < components.length; i++) {
             if (components[i] != reserveAsset) {
               IPriceOracle(oracle).updateAdapters(reserveAsset, components[i]);
@@ -481,7 +481,7 @@ abstract contract BaseCommunity is ERC20Upgradeable {
       address tradeIntegration = IBabController(controller).getIntegrationByName(_integrationName);
       require(
           isValidIntegration(tradeIntegration),
-          "Integration needs to be added to the community and controller"
+          "Integration needs to be added to the garden and controller"
       );
       // Updates UniSwap TWAP
       IPriceOracle oracle = IPriceOracle(IBabController(controller).getPriceOracle());
@@ -515,9 +515,9 @@ abstract contract BaseCommunity is ERC20Upgradeable {
     }
 
     /**
-     * Pays the _feeQuantity from the _community denominated in _token to the protocol fee recipient
+     * Pays the _feeQuantity from the _garden denominated in _token to the protocol fee recipient
      */
-    function payProtocolFeeFromCommunity(address _token, uint256 _feeQuantity)
+    function payProtocolFeeFromGarden(address _token, uint256 _feeQuantity)
         internal
     {
         if (_feeQuantity > 0) {
@@ -529,11 +529,11 @@ abstract contract BaseCommunity is ERC20Upgradeable {
     }
 
     function _validateOnlyActive() internal view {
-        require(active == true, "Community must be active");
+        require(active == true, "Garden must be active");
     }
 
     function _validateOnlyInactive() internal view {
-        require(active == false, "Community must be disabled");
+        require(active == false, "Garden must be disabled");
     }
 
     function _validateOnlyContributor(address _caller) internal view {
@@ -543,9 +543,9 @@ abstract contract BaseCommunity is ERC20Upgradeable {
         );
     }
 
-    // Disable community token transfers. Allow minting and burning.
+    // Disable garden token transfers. Allow minting and burning.
     function _beforeTokenTransfer(address from, address to, uint256 /* amount */) override view internal {
-      require(from == address(0) || to == address(0) || IBabController(controller).communityTokensTransfersEnabled(), "Community token transfers are disabled");
+      require(from == address(0) || to == address(0) || IBabController(controller).gardenTokensTransfersEnabled(), "Garden token transfers are disabled");
     }
 
     function abs(int x) private pure returns (int) {

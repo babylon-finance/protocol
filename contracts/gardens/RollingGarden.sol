@@ -29,19 +29,19 @@ import { SafeCast } from "@openzeppelin/contracts/utils/SafeCast.sol";
 import { PreciseUnitMath } from "../lib/PreciseUnitMath.sol";
 import { IWETH } from "../interfaces/external/weth/IWETH.sol";
 import { IBabController } from "../interfaces/IBabController.sol";
-import { ICommunityValuer } from "../interfaces/ICommunityValuer.sol";
+import { IGardenValuer } from "../interfaces/IGardenValuer.sol";
 import { IReservePool } from "../interfaces/IReservePool.sol";
 import { IPriceOracle } from "../interfaces/IPriceOracle.sol";
-import { BaseCommunity } from "./BaseCommunity.sol";
+import { BaseGarden } from "./BaseGarden.sol";
 
 
 /**
- * @title RollingCommunity
+ * @title RollingGarden
  * @author Babylon Finance
  *
- * RollingCommunity holds the logic to deposit, withdraw and track contributions and fees.
+ * RollingGarden holds the logic to deposit, withdraw and track contributions and fees.
  */
-contract RollingCommunity is ReentrancyGuard, BaseCommunity {
+contract RollingGarden is ReentrancyGuard, BaseGarden {
   using SafeCast for uint256;
   using SafeCast for int256;
   using SafeMath for uint256;
@@ -55,24 +55,24 @@ contract RollingCommunity is ReentrancyGuard, BaseCommunity {
       uint256 preFeeReserveQuantity; // Reserve value before fees; During issuance, represents raw quantity
       // During withdrawal, represents post-premium value
       uint256 protocolFees; // Total protocol fees (direct + manager revenue share)
-      uint256 netFlowQuantity; // When issuing, quantity of reserve asset sent to Community
+      uint256 netFlowQuantity; // When issuing, quantity of reserve asset sent to Garden
       // When withdrawaling, quantity of reserve asset sent to withdrawaler
-      uint256 communityTokenQuantity; // When issuing, quantity of Community tokens minted to mintee
-      // When withdrawaling, quantity of Community tokens withdrawaled
-      uint256 previousCommunityTokenSupply; // Community token supply prior to deposit/withdrawal action
-      uint256 newCommunityTokenSupply; // Community token supply after deposit/withdrawal action
-      uint256 newReservePositionBalance; // Community token reserve asset position balance after deposit/withdrawal
+      uint256 gardenTokenQuantity; // When issuing, quantity of Garden tokens minted to mintee
+      // When withdrawaling, quantity of Garden tokens withdrawaled
+      uint256 previousGardenTokenSupply; // Garden token supply prior to deposit/withdrawal action
+      uint256 newGardenTokenSupply; // Garden token supply after deposit/withdrawal action
+      uint256 newReservePositionBalance; // Garden token reserve asset position balance after deposit/withdrawal
     }
 
     uint256 public depositHardlock;                // Window of time after deposits when withdraws are disabled for that user
-    uint256 public redemptionWindowAfterInvestmentCompletes; // Window of time after an investment idea finishes when the capital is available for withdrawals
+    uint256 public redemptionWindowAfterInvestmentCompletes; // Window of time after an investment strategy finishes when the capital is available for withdrawals
     uint256 public redemptionsOpenUntil;           // Indicates until when the redemptions are open and the ETH is set aside
 
 
     /* ============ Constructor ============ */
 
     /**
-     * When a new Community is created, initializes Investments are set to empty.
+     * When a new Garden is created, initializes Investments are set to empty.
      * All parameter validations are on the BabController contract. Validations are performed already on the
      * BabController.
      *
@@ -80,8 +80,8 @@ contract RollingCommunity is ReentrancyGuard, BaseCommunity {
      * @param _weth                   Address of the WETH ERC20
      * @param _controller             Address of the controller
      * @param _creator                Address of the creator
-     * @param _name                   Name of the Community
-     * @param _symbol                 Symbol of the Community
+     * @param _name                   Name of the Garden
+     * @param _symbol                 Symbol of the Garden
      */
 
     function initialize(
@@ -108,32 +108,32 @@ contract RollingCommunity is ReentrancyGuard, BaseCommunity {
     /* ============ External Functions ============ */
 
     /**
-     * FUND LEAD ONLY.  Starts the Community with allowed reserve assets,
-     * fees and issuance premium. Only callable by the Community's creator
+     * FUND LEAD ONLY.  Starts the Garden with allowed reserve assets,
+     * fees and issuance premium. Only callable by the Garden's creator
      *
      * @param _maxDepositLimit                     Max deposit limit
-     * @param _minCommunityTokenSupply             Min community token supply
+     * @param _minGardenTokenSupply             Min garden token supply
      * @param _minLiquidityAsset                   Number that represents min amount of liquidity denominated in ETH
      * @param _depositHardlock                     Number that represents the time deposits are locked for an user after he deposits
-     * @param _minContribution        Min contribution to the community
-     * @param _ideaCooldownPeriod               How long after the idea has been activated, will it be ready to be executed
-     * @param _ideaCreatorProfitPercentage      What percentage of the profits go to the idea creator
-     * @param _ideaVotersProfitPercentage       What percentage of the profits go to the idea curators
-     * @param _communityCreatorProfitPercentage What percentage of the profits go to the creator of the community
-     * @param _minVotersQuorum                  Percentage of votes needed to activate an investment idea (0.01% = 1e14, 1% = 1e16)
-     * @param _minIdeaDuration                  Min duration of an investment idea
-     * @param _maxIdeaDuration                  Max duration of an investment idea
+     * @param _minContribution        Min contribution to the garden
+     * @param _strategyCooldownPeriod               How long after the strategy has been activated, will it be ready to be executed
+     * @param _strategyCreatorProfitPercentage      What percentage of the profits go to the strategy creator
+     * @param _strategyVotersProfitPercentage       What percentage of the profits go to the strategy curators
+     * @param _gardenCreatorProfitPercentage What percentage of the profits go to the creator of the garden
+     * @param _minVotersQuorum                  Percentage of votes needed to activate an investment strategy (0.01% = 1e14, 1% = 1e16)
+     * @param _minIdeaDuration                  Min duration of an investment strategy
+     * @param _maxIdeaDuration                  Max duration of an investment strategy
      */
     function start(
         uint256 _maxDepositLimit,
-        uint256 _minCommunityTokenSupply,
+        uint256 _minGardenTokenSupply,
         uint256 _minLiquidityAsset,
         uint256 _depositHardlock,
         uint256 _minContribution,
-        uint256 _ideaCooldownPeriod,
-        uint256 _ideaCreatorProfitPercentage,
-        uint256 _ideaVotersProfitPercentage,
-        uint256 _communityCreatorProfitPercentage,
+        uint256 _strategyCooldownPeriod,
+        uint256 _strategyCreatorProfitPercentage,
+        uint256 _strategyVotersProfitPercentage,
+        uint256 _gardenCreatorProfitPercentage,
         uint256 _minVotersQuorum,
         uint256 _minIdeaDuration,
         uint256 _maxIdeaDuration
@@ -143,29 +143,29 @@ contract RollingCommunity is ReentrancyGuard, BaseCommunity {
         require(msg.value >= minContribution, "Creator needs to deposit");
         IBabController ifcontroller = IBabController(controller);
         require(
-            _minCommunityTokenSupply > 0,
-            "Min Community token supply >= 0"
+            _minGardenTokenSupply > 0,
+            "Min Garden token supply >= 0"
         );
         require(_minLiquidityAsset >= ifcontroller.minRiskyPairLiquidityEth(),
           "Needs to be at least the minimum set by protocol");
         // make initial deposit
         uint256 initialDepositAmount = msg.value;
         uint256 initialTokens = initialDepositAmount.div(initialBuyRate);
-        require(initialTokens >= minCommunityTokenSupply,
-          "Initial Community token supply too low");
+        require(initialTokens >= minGardenTokenSupply,
+          "Initial Garden token supply too low");
         require(_depositHardlock > 1, "Needs to be at least a couple of seconds to prevent flash loan attacks");
-        minCommunityTokenSupply = _minCommunityTokenSupply;
+        minGardenTokenSupply = _minGardenTokenSupply;
         maxDepositLimit = _maxDepositLimit;
-        communityInitializedAt = block.timestamp;
+        gardenInitializedAt = block.timestamp;
         minLiquidityAsset = _minLiquidityAsset;
         depositHardlock = _depositHardlock;
         redemptionWindowAfterInvestmentCompletes = 7 days;
         startCommon(
             _minContribution,
-            _ideaCooldownPeriod,
-            _ideaCreatorProfitPercentage,
-            _ideaVotersProfitPercentage,
-            _communityCreatorProfitPercentage,
+            _strategyCooldownPeriod,
+            _strategyCreatorProfitPercentage,
+            _strategyVotersProfitPercentage,
+            _gardenCreatorProfitPercentage,
             _minVotersQuorum,
             _minIdeaDuration,
             _maxIdeaDuration);
@@ -178,22 +178,22 @@ contract RollingCommunity is ReentrancyGuard, BaseCommunity {
         _updateContributorInfo(initialTokens, initialDepositAmount);
         _updatePrincipal(initialDepositAmount);
 
-        require(totalSupply() > 0, "Community must receive an initial deposit");
+        require(totalSupply() > 0, "Garden must receive an initial deposit");
 
         active = true;
     }
 
     /**
-     * Deposits the Community's position components into the community and mints the Community token of the given quantity
+     * Deposits the Garden's position components into the garden and mints the Garden token of the given quantity
      * to the specified _to address.
      *
      * @param _reserveAssetQuantity  Quantity of the reserve asset that are received
-     * @param _minCommunityTokenReceiveQuantity   Min quantity of Community token to receive after issuance
-     * @param _to                   Address to mint Community tokens to
+     * @param _minGardenTokenReceiveQuantity   Min quantity of Garden token to receive after issuance
+     * @param _to                   Address to mint Garden tokens to
      */
     function deposit(
         uint256 _reserveAssetQuantity,
-        uint256 _minCommunityTokenReceiveQuantity,
+        uint256 _minGardenTokenReceiveQuantity,
         address _to
     ) public payable nonReentrant onlyActive {
         require(
@@ -217,37 +217,37 @@ contract RollingCommunity is ReentrancyGuard, BaseCommunity {
         ActionInfo memory depositInfo =
             _createIssuanceInfo(reserveAsset, _reserveAssetQuantity);
 
-        _validateIssuanceInfo(_minCommunityTokenReceiveQuantity, depositInfo);
+        _validateIssuanceInfo(_minGardenTokenReceiveQuantity, depositInfo);
 
         // Send Protocol Fee
-        payProtocolFeeFromCommunity(reserveAsset, depositInfo.protocolFees);
+        payProtocolFeeFromGarden(reserveAsset, depositInfo.protocolFees);
 
         // Updates Reserve Balance and Mint
-        _mint(_to, depositInfo.communityTokenQuantity);
-        _updateContributorInfo(depositInfo.communityTokenQuantity, msg.value);
+        _mint(_to, depositInfo.gardenTokenQuantity);
+        _updateContributorInfo(depositInfo.gardenTokenQuantity, msg.value);
         _updatePrincipal(depositInfo.newReservePositionBalance);
 
-        emit CommunityTokenDeposited(
+        emit GardenTokenDeposited(
             _to,
-            depositInfo.communityTokenQuantity,
+            depositInfo.gardenTokenQuantity,
             depositInfo.protocolFees
         );
     }
 
     /**
-     * Withdraws the ETH relative to the token participation in the community and sends it back to the sender.
+     * Withdraws the ETH relative to the token participation in the garden and sends it back to the sender.
      *
-     * @param _communityTokenQuantity             Quantity of the community token to withdrawal
+     * @param _gardenTokenQuantity             Quantity of the garden token to withdrawal
      * @param _minReserveReceiveQuantity     Min quantity of reserve asset to receive
      * @param _to                            Address to send component assets to
      */
     function withdraw(
-        uint256 _communityTokenQuantity,
+        uint256 _gardenTokenQuantity,
         uint256 _minReserveReceiveQuantity,
         address payable _to
     ) external nonReentrant onlyContributor onlyActive {
         require(
-            _communityTokenQuantity <= balanceOf(msg.sender),
+            _gardenTokenQuantity <= balanceOf(msg.sender),
             "Withdrawal amount <= to deposited amount"
         );
         // Flashloan protection
@@ -255,17 +255,17 @@ contract RollingCommunity is ReentrancyGuard, BaseCommunity {
         // Check this here to avoid having relayers
         reenableEthForInvestments();
         ActionInfo memory withdrawalInfo =
-            _createRedemptionInfo(reserveAsset, _communityTokenQuantity);
+            _createRedemptionInfo(reserveAsset, _gardenTokenQuantity);
 
         _validateReserveAsset(reserveAsset, withdrawalInfo.netFlowQuantity);
 
         _validateRedemptionInfo(
             _minReserveReceiveQuantity,
-            _communityTokenQuantity,
+            _gardenTokenQuantity,
             withdrawalInfo
         );
 
-        _burn(msg.sender, _communityTokenQuantity);
+        _burn(msg.sender, _gardenTokenQuantity);
 
         emit WithdrawalLog(
             msg.sender,
@@ -284,13 +284,13 @@ contract RollingCommunity is ReentrancyGuard, BaseCommunity {
           _to.transfer(withdrawalInfo.netFlowQuantity);
         }
 
-        payProtocolFeeFromCommunity(reserveAsset, withdrawalInfo.protocolFees);
+        payProtocolFeeFromGarden(reserveAsset, withdrawalInfo.protocolFees);
 
         _updatePrincipal(withdrawalInfo.newReservePositionBalance);
-        emit CommunityTokenWithdrawn(
+        emit GardenTokenWithdrawn(
             msg.sender,
             _to,
-            withdrawalInfo.communityTokenQuantity,
+            withdrawalInfo.gardenTokenQuantity,
             withdrawalInfo.protocolFees
         );
     }
@@ -299,38 +299,38 @@ contract RollingCommunity is ReentrancyGuard, BaseCommunity {
      * Sender is selling his tokens to the reserve pool at a discount.
      * Reserve pool will receive the tokens.
      *
-     * @param _communityTokenQuantity        Quantity of the community token to withdrawal
+     * @param _gardenTokenQuantity        Quantity of the garden token to withdrawal
      * @param _minReserveReceiveQuantity     Min quantity of reserve asset to receive
      * @param _to                            Address to send component assets to
      */
     function withdrawToReservePool(
-      uint256 _communityTokenQuantity,
+      uint256 _gardenTokenQuantity,
       uint256 _minReserveReceiveQuantity,
       address payable _to
     ) external nonReentrant onlyContributor onlyActive {
       require(
-          _communityTokenQuantity <= balanceOf(msg.sender),
+          _gardenTokenQuantity <= balanceOf(msg.sender),
           "Withdrawal amount <= to deposited amount"
       );
       // Flashloan protection
       require(block.timestamp.sub(contributors[msg.sender].timestamp) >= depositHardlock, "Cannot withdraw. Hardlock");
 
       IReservePool reservePool = IReservePool(IBabController(controller).getReservePool());
-      require(reservePool.isReservePoolAllowedToBuy(address(this), _communityTokenQuantity), "Reserve Pool not active");
+      require(reservePool.isReservePoolAllowedToBuy(address(this), _gardenTokenQuantity), "Reserve Pool not active");
 
       ActionInfo memory withdrawalInfo =
-          _createRedemptionInfo(reserveAsset, _communityTokenQuantity);
+          _createRedemptionInfo(reserveAsset, _gardenTokenQuantity);
 
       _validateReserveAsset(reserveAsset, withdrawalInfo.netFlowQuantity);
       // If normal redemption is available, don't use the reserve pool
       require(!canWithdrawEthAmount(withdrawalInfo.netFlowQuantity), "Not enough liquidity in the fund");
       _validateRedemptionInfo(
           _minReserveReceiveQuantity,
-          _communityTokenQuantity,
+          _gardenTokenQuantity,
           withdrawalInfo
       );
 
-      withdrawalInfo.netFlowQuantity = reservePool.sellTokensToLiquidityPool(address(this), _communityTokenQuantity);
+      withdrawalInfo.netFlowQuantity = reservePool.sellTokensToLiquidityPool(address(this), _gardenTokenQuantity);
 
       emit WithdrawalLog(
           msg.sender,
@@ -338,25 +338,25 @@ contract RollingCommunity is ReentrancyGuard, BaseCommunity {
           block.timestamp
       );
 
-      payProtocolFeeFromCommunity(reserveAsset, withdrawalInfo.protocolFees);
+      payProtocolFeeFromGarden(reserveAsset, withdrawalInfo.protocolFees);
 
       _updatePrincipal(withdrawalInfo.newReservePositionBalance);
 
-      emit CommunityTokenWithdrawn(
+      emit GardenTokenWithdrawn(
           msg.sender,
           _to,
-          withdrawalInfo.communityTokenQuantity,
+          withdrawalInfo.gardenTokenQuantity,
           withdrawalInfo.protocolFees
       );
     }
 
     /**
-     * When an investment idea finishes execution, we want to make that eth available for withdrawals
-     * from members of the community.
+     * When an investment strategy finishes execution, we want to make that eth available for withdrawals
+     * from members of the garden.
      *
      * @param _amount                        Amount of WETH to convert to ETH to set aside
      */
-    function startRedemptionWindow(uint256 _amount) external onlyInvestmentIdeaOrOwner {
+    function startRedemptionWindow(uint256 _amount) external onlyStrategyOrOwner {
       redemptionsOpenUntil = block.timestamp.add(redemptionWindowAfterInvestmentCompletes);
       IWETH(weth).withdraw(_amount);
     }
@@ -373,7 +373,7 @@ contract RollingCommunity is ReentrancyGuard, BaseCommunity {
     }
 
     /**
-     * Burns seller community tokens and mints them to the reserve pool
+     * Burns seller garden tokens and mints them to the reserve pool
      *  @param _contributor           Contributor that is selling the tokens
      *  @param _quantity              Amount of tokens being sold to the reserve pool
      */
@@ -408,18 +408,18 @@ contract RollingCommunity is ReentrancyGuard, BaseCommunity {
      * Get the expected reserve asset to be withdrawaled
      *
      * @param _reserveAsset                 Address of the reserve asset
-     * @param _communityTokenQuantity             Quantity of Community tokens to withdrawal
+     * @param _gardenTokenQuantity             Quantity of Garden tokens to withdrawal
      *
      * @return  uint256                     Expected reserve asset quantity withdrawaled
      */
     function getExpectedReserveWithdrawalQuantity(
         address _reserveAsset,
-        uint256 _communityTokenQuantity
+        uint256 _gardenTokenQuantity
     ) external view returns (uint256) {
         uint256 preFeeReserveQuantity =
-            _getWithdrawalReserveQuantity(_reserveAsset, _communityTokenQuantity);
+            _getWithdrawalReserveQuantity(_reserveAsset, _gardenTokenQuantity);
 
-        (, uint256 netReserveFlows) = _getFees(preFeeReserveQuantity, false, _communityTokenQuantity);
+        (, uint256 netReserveFlows) = _getFees(preFeeReserveQuantity, false, _gardenTokenQuantity);
 
         return netReserveFlows;
     }
@@ -439,38 +439,38 @@ contract RollingCommunity is ReentrancyGuard, BaseCommunity {
         return
             _reserveAssetQuantity != 0 &&
             IBabController(controller).isValidReserveAsset(_reserveAsset) &&
-            totalSupply() >= minCommunityTokenSupply;
+            totalSupply() >= minGardenTokenSupply;
     }
 
     /**
      * Checks if withdrawal is valid
      *
      * @param _reserveAsset                 Address of the reserve asset
-     * @param _communityTokenQuantity             Quantity of community tokens to withdrawal
+     * @param _gardenTokenQuantity             Quantity of garden tokens to withdrawal
      *
      * @return  bool                        Returns true if withdrawal is valid
      */
     function isWithdrawalValid(
         address _reserveAsset,
-        uint256 _communityTokenQuantity
+        uint256 _gardenTokenQuantity
     ) external view returns (bool) {
         uint256 setTotalSupply = totalSupply();
 
         if (
-            _communityTokenQuantity == 0 ||
+            _gardenTokenQuantity == 0 ||
             !IBabController(controller).isValidReserveAsset(_reserveAsset) ||
-            setTotalSupply < minCommunityTokenSupply.add(_communityTokenQuantity)
+            setTotalSupply < minGardenTokenSupply.add(_gardenTokenQuantity)
         ) {
             return false;
         } else {
             uint256 totalWithdrawalValue =
                 _getWithdrawalReserveQuantity(
                     _reserveAsset,
-                    _communityTokenQuantity
+                    _gardenTokenQuantity
                 );
 
             (, uint256 expectedWithdrawalQuantity) =
-                _getFees(totalWithdrawalValue, false, _communityTokenQuantity);
+                _getFees(totalWithdrawalValue, false, _gardenTokenQuantity);
 
             return principal >= expectedWithdrawalQuantity;
         }
@@ -492,31 +492,31 @@ contract RollingCommunity is ReentrancyGuard, BaseCommunity {
     }
 
     function _validateIssuanceInfo(
-        uint256 _minCommunityTokenReceiveQuantity,
+        uint256 _minGardenTokenReceiveQuantity,
         ActionInfo memory _depositInfo
     ) internal view {
         // Check that total supply is greater than min supply needed for issuance
-        // Note: A min supply amount is needed to avoid division by 0 when Community token supply is 0
+        // Note: A min supply amount is needed to avoid division by 0 when Garden token supply is 0
         require(
-            _depositInfo.previousCommunityTokenSupply >= minCommunityTokenSupply,
+            _depositInfo.previousGardenTokenSupply >= minGardenTokenSupply,
             "Supply must > than minimum"
         );
 
         require(
-            _depositInfo.communityTokenQuantity >= _minCommunityTokenReceiveQuantity,
-            "Must be > min Community token"
+            _depositInfo.gardenTokenQuantity >= _minGardenTokenReceiveQuantity,
+            "Must be > min Garden token"
         );
     }
 
     function _validateRedemptionInfo(
         uint256 _minReserveReceiveQuantity,
-        uint256 /* _communityTokenQuantity */,
+        uint256 /* _gardenTokenQuantity */,
         ActionInfo memory _withdrawalInfo
     ) internal view {
         // Check that new supply is more than min supply needed for redemption
-        // Note: A min supply amount is needed to avoid division by 0 when withdrawaling community token to 0
+        // Note: A min supply amount is needed to avoid division by 0 when withdrawaling garden token to 0
         require(
-            _withdrawalInfo.newCommunityTokenSupply >= minCommunityTokenSupply,
+            _withdrawalInfo.newGardenTokenSupply >= minGardenTokenSupply,
             "Supply must be > than minimum"
         );
 
@@ -531,7 +531,7 @@ contract RollingCommunity is ReentrancyGuard, BaseCommunity {
         uint256 _reserveAssetQuantity
     ) internal view returns (ActionInfo memory) {
         ActionInfo memory depositInfo;
-        depositInfo.previousCommunityTokenSupply = totalSupply();
+        depositInfo.previousGardenTokenSupply = totalSupply();
         depositInfo.preFeeReserveQuantity = _reserveAssetQuantity;
 
         (
@@ -539,16 +539,16 @@ contract RollingCommunity is ReentrancyGuard, BaseCommunity {
             depositInfo.netFlowQuantity
         ) = _getFees(depositInfo.preFeeReserveQuantity, true, 0);
 
-        depositInfo.communityTokenQuantity = _getCommunityTokenMintQuantity(
+        depositInfo.gardenTokenQuantity = _getGardenTokenMintQuantity(
             _reserveAsset,
             depositInfo.netFlowQuantity,
-            depositInfo.previousCommunityTokenSupply
+            depositInfo.previousGardenTokenSupply
         );
 
         // Calculate inflation and new position multiplier. Note: Round inflation up in order to round position multiplier down
-        depositInfo.newCommunityTokenSupply =
-            depositInfo.communityTokenQuantity.add(
-              depositInfo.previousCommunityTokenSupply
+        depositInfo.newGardenTokenSupply =
+            depositInfo.gardenTokenQuantity.add(
+              depositInfo.previousGardenTokenSupply
             );
 
         depositInfo.newReservePositionBalance = principal.add(depositInfo.netFlowQuantity);
@@ -558,26 +558,26 @@ contract RollingCommunity is ReentrancyGuard, BaseCommunity {
 
     function _createRedemptionInfo(
         address _reserveAsset,
-        uint256 _communityTokenQuantity
+        uint256 _gardenTokenQuantity
     ) internal view returns (ActionInfo memory) {
         ActionInfo memory withdrawalInfo;
 
-        withdrawalInfo.communityTokenQuantity = _communityTokenQuantity;
+        withdrawalInfo.gardenTokenQuantity = _gardenTokenQuantity;
 
         withdrawalInfo.preFeeReserveQuantity = _getWithdrawalReserveQuantity(
             _reserveAsset,
-            _communityTokenQuantity
+            _gardenTokenQuantity
         );
 
         (
             withdrawalInfo.protocolFees,
             withdrawalInfo.netFlowQuantity
-        ) = _getFees(withdrawalInfo.preFeeReserveQuantity, false, _communityTokenQuantity);
+        ) = _getFees(withdrawalInfo.preFeeReserveQuantity, false, _gardenTokenQuantity);
 
-        withdrawalInfo.previousCommunityTokenSupply = totalSupply();
+        withdrawalInfo.previousGardenTokenSupply = totalSupply();
 
-        withdrawalInfo.newCommunityTokenSupply =
-            withdrawalInfo.previousCommunityTokenSupply.sub(_communityTokenQuantity);
+        withdrawalInfo.newGardenTokenSupply =
+            withdrawalInfo.previousGardenTokenSupply.sub(_gardenTokenQuantity);
 
         uint256 outflow = withdrawalInfo.netFlowQuantity.add(withdrawalInfo.protocolFees);
 
@@ -600,12 +600,12 @@ contract RollingCommunity is ReentrancyGuard, BaseCommunity {
      *
      * @param _reserveAssetQuantity         Quantity of reserve asset to calculate fees from
      * @param _isDeposit                    Boolean that is true when it is a deposit
-     * @param _communityTokenQuantity            Number of community tokens involved in the operation
+     * @param _gardenTokenQuantity            Number of garden tokens involved in the operation
      *
      * @return  uint256                     Fees paid to the protocol in reserve asset
      * @return  uint256                     Net reserve to user net of fees
      */
-    function _getFees(uint256 _reserveAssetQuantity, bool _isDeposit, uint256 _communityTokenQuantity)
+    function _getFees(uint256 _reserveAssetQuantity, bool _isDeposit, uint256 _gardenTokenQuantity)
         internal
         view
         returns (
@@ -616,9 +616,9 @@ contract RollingCommunity is ReentrancyGuard, BaseCommunity {
         // Get protocol fee percentages
         uint256 protocolFeePercentage =
             _isDeposit
-                ? IBabController(controller).getProtocolDepositCommunityTokenFee()
+                ? IBabController(controller).getProtocolDepositGardenTokenFee()
                 : IBabController(controller)
-                    .getProtocolWithdrawalCommunityTokenFee();
+                    .getProtocolWithdrawalGardenTokenFee();
 
         // Calculate total notional fees
         uint256 protocolFees =
@@ -630,16 +630,16 @@ contract RollingCommunity is ReentrancyGuard, BaseCommunity {
         return (protocolFees, netReserveFlow);
     }
 
-    function _getCommunityTokenMintQuantity(
+    function _getGardenTokenMintQuantity(
         address _reserveAsset,
         uint256 _netReserveFlows, // Value of reserve asset net of fees
-        uint256 _communityTokenTotalSupply
+        uint256 _gardenTokenTotalSupply
     ) internal view returns (uint256) {
-        // Get valuation of the Community with the quote asset as the reserve asset.
+        // Get valuation of the Garden with the quote asset as the reserve asset.
         // Reverts if price is not found
-        uint256 communityValuationPerToken =
-          ICommunityValuer(IBabController(controller).getCommunityValuer()).calculateCommunityValuation(address(this), _reserveAsset);
-        communityValuationPerToken = communityValuationPerToken.sub(_netReserveFlows.preciseDiv(totalSupply()));
+        uint256 gardenValuationPerToken =
+          IGardenValuer(IBabController(controller).getGardenValuer()).calculateGardenValuation(address(this), _reserveAsset);
+        gardenValuationPerToken = gardenValuationPerToken.sub(_netReserveFlows.preciseDiv(totalSupply()));
 
         // Get reserve asset decimals
         uint8 reserveAssetDecimals = ERC20(_reserveAsset).decimals();
@@ -649,31 +649,31 @@ contract RollingCommunity is ReentrancyGuard, BaseCommunity {
         uint256 normalizedTotalReserveQuantityNetFeesAndPremium =
             _netReserveFlows.preciseDiv(baseUnits);
 
-        // Calculate Community tokens to mint to depositor
+        // Calculate Garden tokens to mint to depositor
         uint256 denominator =
-            _communityTokenTotalSupply
-                .preciseMul(communityValuationPerToken)
+            _gardenTokenTotalSupply
+                .preciseMul(gardenValuationPerToken)
                 .add(normalizedTotalReserveQuantityNetFees)
                 .sub(normalizedTotalReserveQuantityNetFeesAndPremium);
         uint256 quantityToMint =
             normalizedTotalReserveQuantityNetFeesAndPremium
-                .preciseMul(_communityTokenTotalSupply)
+                .preciseMul(_gardenTokenTotalSupply)
                 .preciseDiv(denominator);
         return quantityToMint;
     }
 
     function _getWithdrawalReserveQuantity(
         address _reserveAsset,
-        uint256 _communityTokenQuantity
+        uint256 _gardenTokenQuantity
     ) internal view returns (uint256) {
-        // Get valuation of the Community with the quote asset as the reserve asset. Returns value in precise units (10e18)
+        // Get valuation of the Garden with the quote asset as the reserve asset. Returns value in precise units (10e18)
         // Reverts if price is not found
-        uint256 communityValuationPerToken =
-            ICommunityValuer(IBabController(controller).getCommunityValuer())
-                .calculateCommunityValuation(address(this), _reserveAsset);
+        uint256 gardenValuationPerToken =
+            IGardenValuer(IBabController(controller).getGardenValuer())
+                .calculateGardenValuation(address(this), _reserveAsset);
 
         uint256 totalWithdrawalValueInPreciseUnits =
-            _communityTokenQuantity.preciseMul(communityValuationPerToken);
+            _gardenTokenQuantity.preciseMul(gardenValuationPerToken);
         // Get reserve asset decimals
         uint8 reserveAssetDecimals = ERC20(_reserveAsset).decimals();
         uint256 prePremiumReserveQuantity =

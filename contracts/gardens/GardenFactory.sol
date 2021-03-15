@@ -19,24 +19,24 @@
 pragma solidity 0.7.4;
 
 import "hardhat/console.sol";
-import { RollingCommunity } from "./RollingCommunity.sol";
+import { RollingGarden } from "./RollingGarden.sol";
 import { Clones } from "@openzeppelin/contracts/proxy/Clones.sol";
 
 /**
- * @title CommunityFactory
+ * @title GardenFactory
  * @author Babylon Finance
  *
- * Factory to create community contracts
+ * Factory to create garden contracts
  */
-contract CommunityFactory {
+contract GardenFactory {
 
-  address immutable rollingCommunity;
+  address immutable rollingGarden;
 
   constructor() {
-    rollingCommunity = address(new RollingCommunity());
+    rollingGarden = address(new RollingGarden());
   }
 
-  function createRollingCommunity(
+  function createRollingGarden(
     address[] memory _integrations,
     address _weth,
     address _controller,
@@ -44,8 +44,8 @@ contract CommunityFactory {
     string memory _name,
     string memory _symbol
   ) external returns (address) {
-      address payable clone = payable(Clones.clone(rollingCommunity));
-      RollingCommunity(clone).initialize(
+      address payable clone = payable(Clones.clone(rollingGarden));
+      RollingGarden(clone).initialize(
         _integrations,
         _weth,
         _controller,

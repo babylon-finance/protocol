@@ -6,19 +6,19 @@ const { loadFixture } = waffle;
 const addresses = require("../utils/addresses");
 const { deployFolioFixture } = require("./fixtures/ControllerFixture");
 
-describe("CommunityValuer", function() {
+describe("GardenValuer", function() {
   let controller;
   let valuer;
-  let community;
+  let garden;
   let weth;
 
   beforeEach(async () => {
-    const { babController, communityValuer, comunities } = await loadFixture(
+    const { babController, gardenValuer, comunities } = await loadFixture(
       deployFolioFixture
     );
-    community = comunities.one;
+    garden = comunities.one;
     controller = babController;
-    valuer = communityValuer;
+    valuer = gardenValuer;
     weth = await ethers.getContractAt("IERC20", addresses.tokens.WETH);
   });
 
@@ -31,20 +31,20 @@ describe("CommunityValuer", function() {
     });
   });
 
-  describe("Calls CommunityValuer", function() {
-    it("should return 0.1 for community1", async function() {
-      const wethInCommunity = await weth.balanceOf(community.address);
-      // const priceOfWeth = await community.getPrice(
+  describe("Calls GardenValuer", function() {
+    it("should return 0.1 for garden1", async function() {
+      const wethInGarden = await weth.balanceOf(garden.address);
+      // const priceOfWeth = await garden.getPrice(
       //   addresses.tokens.WETH,
       //   addresses.tokens.DAI
       // );
       // console.log('format', ethers.utils.formatEther(100000000000000000));
-      const pricePerCommunityToken = await valuer.calculateCommunityValuation(
-        community.address,
+      const pricePerGardenToken = await valuer.calculateGardenValuation(
+        garden.address,
         addresses.tokens.WETH
       );
-      const tokens = await community.totalSupply();
-      expect(pricePerCommunityToken.mul(tokens / 1000).div(10 ** 15)).to.equal(
+      const tokens = await garden.totalSupply();
+      expect(pricePerGardenToken.mul(tokens / 1000).div(10 ** 15)).to.equal(
         ethers.utils.parseEther("0.1")
       );
     });

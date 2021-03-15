@@ -22,8 +22,8 @@ import "hardhat/console.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { SafeMath } from "@openzeppelin/contracts/math/SafeMath.sol";
 import { BaseIntegration } from "./BaseIntegration.sol";
-import { ICommunity } from "../interfaces/ICommunity.sol";
-import { IInvestmentIdea } from "../interfaces/IInvestmentIdea.sol";
+import { IGarden } from "../interfaces/IGarden.sol";
+import { IStrategy } from "../interfaces/IStrategy.sol";
 import { ReentrancyGuard } from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 
 /**
@@ -38,8 +38,8 @@ abstract contract BorrowIntegration is BaseIntegration, ReentrancyGuard {
   /* ============ Struct ============ */
 
   struct DebtInfo {
-    IInvestmentIdea idea;         // Idea address
-    ICommunity community;         // Community address
+    IStrategy strategy;         // Idea address
+    IGarden garden;         // Garden address
     address asset;                // Asset involved in the operation
     uint256 amount;               // Amount involved in the operation
     uint8 borrowOp;               // Borrow operation type
@@ -54,32 +54,32 @@ abstract contract BorrowIntegration is BaseIntegration, ReentrancyGuard {
   /* ============ Events ============ */
 
   event CollateralDeposited(
-    IInvestmentIdea indexed idea,
-    ICommunity indexed community,
+    IStrategy indexed strategy,
+    IGarden indexed garden,
     address asset,
     uint256 amount,
     uint256 protocolFee
   );
 
   event CollateralRemoved(
-    IInvestmentIdea indexed idea,
-    ICommunity indexed community,
+    IStrategy indexed strategy,
+    IGarden indexed garden,
     address asset,
     uint256 amount,
     uint256 protocolFee
   );
 
   event AmountBorrowed(
-    IInvestmentIdea indexed idea,
-    ICommunity indexed community,
+    IStrategy indexed strategy,
+    IGarden indexed garden,
     address asset,
     uint256 amount,
     uint256 protocolFee
   );
 
   event AmountRepaid(
-    IInvestmentIdea indexed idea,
-    ICommunity indexed community,
+    IStrategy indexed strategy,
+    IGarden indexed garden,
     address asset,
     uint256 amount,
     uint256 protocolFee
@@ -111,7 +111,7 @@ abstract contract BorrowIntegration is BaseIntegration, ReentrancyGuard {
 
   /**
    * Deposits collateral into the lending protocol.
-   * This would be called by a community
+   * This would be called by a garden
    * @param asset The asset to be deposited as collateral
    * @param amount The amount to be deposited as collateral
    *
@@ -135,11 +135,11 @@ abstract contract BorrowIntegration is BaseIntegration, ReentrancyGuard {
       BORROW_OPERATION_DEPOSIT
     );
     if (targetAddressP != address(0)) {
-      debtInfo.idea.invokeFromIntegration(targetAddressP, callValueP, methodDataP);
+      debtInfo.strategy.invokeFromIntegration(targetAddressP, callValueP, methodDataP);
     }
 
     // Approve the collateral
-    debtInfo.idea.invokeApprove(
+    debtInfo.strategy.invokeApprove(
       _getSpender(asset),
       asset,
       amount
@@ -158,16 +158,16 @@ abstract contract BorrowIntegration is BaseIntegration, ReentrancyGuard {
 
     // // Need to enter markets
     // Invoke protocol specific call
-    debtInfo.idea.invokeFromIntegration(targetAddress, callValue, methodData);
+    debtInfo.strategy.invokeFromIntegration(targetAddress, callValue, methodData);
     // Validate deposit
     _validatePostDeposit(debtInfo);
     // Protocol Fee
     uint256 protocolFee = _accrueProtocolFee(debtInfo, assetToDeposit, amount, BORROW_OPERATION_DEPOSIT);
-    _updateInvestmentIdeaPosition(msg.sender, asset, 0, 1); // Mark as locked
+    _updateStrategyPosition(msg.sender, asset, 0, 1); // Mark as locked
 
     emit CollateralDeposited(
-      debtInfo.idea,
-      debtInfo.community,
+      debtInfo.strategy,
+      debtInfo.garden,
       asset,
       amount,
       protocolFee
@@ -176,7 +176,7 @@ abstract contract BorrowIntegration is BaseIntegration, ReentrancyGuard {
 
   /**
    * Deposits collateral into the lending protocol.
-   * This would be called by a community
+   * This would be called by a garden
    * @param asset The asset to be deposited as collateral
    * @param amount The amount to be deposited as collateral
    *
@@ -202,7 +202,7 @@ abstract contract BorrowIntegration is BaseIntegration, ReentrancyGuard {
 
     if (targetAddressP != address(0)) {
       // Invoke protocol specific call
-      debtInfo.idea.invokeFromIntegration(targetAddressP, callValueP, methodDataP);
+      debtInfo.strategy.invokeFromIntegration(targetAddressP, callValueP, methodDataP);
     }
 
     (
@@ -215,16 +215,16 @@ abstract contract BorrowIntegration is BaseIntegration, ReentrancyGuard {
     );
 
     // Invoke protocol specific call
-    debtInfo.idea.invokeFromIntegration(targetAddress, callValue, methodData);
+    debtInfo.strategy.invokeFromIntegration(targetAddress, callValue, methodData);
     // Validate deposit
     _validatePostRemoval(debtInfo);
     // Protocol Fee
     uint256 protocolFee = _accrueProtocolFee(debtInfo, assetToDeposit, amount, BORROW_OPERATION_REMOVAL);
-    _updateInvestmentIdeaPosition(msg.sender, asset, 0, 0); // Back to liquid
+    _updateStrategyPosition(msg.sender, asset, 0, 0); // Back to liquid
 
     emit CollateralRemoved(
-      debtInfo.idea,
-      debtInfo.community,
+      debtInfo.strategy,
+      debtInfo.garden,
       asset,
       amount,
       protocolFee
@@ -256,7 +256,7 @@ abstract contract BorrowIntegration is BaseIntegration, ReentrancyGuard {
 
     if (targetAddressP != address(0)) {
       // Invoke protocol specific call
-      debtInfo.idea.invokeFromIntegration(targetAddressP, callValueP, methodDataP);
+      debtInfo.strategy.invokeFromIntegration(targetAddressP, callValueP, methodDataP);
     }
 
     (
@@ -268,18 +268,18 @@ abstract contract BorrowIntegration is BaseIntegration, ReentrancyGuard {
       amount
     );
     // Invoke protocol specific call
-    debtInfo.idea.invokeFromIntegration(targetAddress, callValue, methodData);
+    debtInfo.strategy.invokeFromIntegration(targetAddress, callValue, methodData);
     // Validate borrow
     _validatePostBorrow(debtInfo);
 
     // Protocol Fee
     uint256 protocolFee = _accrueProtocolFee(debtInfo, asset, amount, BORROW_OPERATION_BORROW);
 
-    _updateInvestmentIdeaPosition(msg.sender, asset, int256(-amount), 3);
+    _updateStrategyPosition(msg.sender, asset, int256(-amount), 3);
 
     emit AmountBorrowed(
-      debtInfo.idea,
-      debtInfo.community,
+      debtInfo.strategy,
+      debtInfo.garden,
       asset,
       amount,
       protocolFee
@@ -311,7 +311,7 @@ abstract contract BorrowIntegration is BaseIntegration, ReentrancyGuard {
 
     if (targetAddressP != address(0)) {
       // Invoke protocol specific call
-      debtInfo.idea.invokeFromIntegration(targetAddressP, callValueP, methodDataP);
+      debtInfo.strategy.invokeFromIntegration(targetAddressP, callValueP, methodDataP);
     }
 
     (
@@ -324,16 +324,16 @@ abstract contract BorrowIntegration is BaseIntegration, ReentrancyGuard {
     );
 
     // Invoke protocol specific call
-    debtInfo.idea.invokeFromIntegration(targetAddress, callValue, methodData);
+    debtInfo.strategy.invokeFromIntegration(targetAddress, callValue, methodData);
     // Validate borrow
     _validatePostRepay(debtInfo);
     // Protocol Fee
     uint256 protocolFee = _accrueProtocolFee(debtInfo, asset, amount, BORROW_OPERATION_REPAY);
-    _updateInvestmentIdeaPosition(msg.sender, asset, 0, 0);
+    _updateStrategyPosition(msg.sender, asset, 0, 0);
 
     emit AmountRepaid(
-      debtInfo.idea,
-      debtInfo.community,
+      debtInfo.strategy,
+      debtInfo.garden,
       asset,
       amount,
       protocolFee
@@ -343,7 +343,7 @@ abstract contract BorrowIntegration is BaseIntegration, ReentrancyGuard {
   /* ============ Internal Functions ============ */
 
   /**
-   * Retrieve fee from controller and calculate total protocol fee and send from community to protocol recipient
+   * Retrieve fee from controller and calculate total protocol fee and send from garden to protocol recipient
    *
    * @param _debtInfo                 Struct containing trade information used in internal functions
    * @param _feeToken                 Address of the token to pay the fee with
@@ -358,7 +358,7 @@ abstract contract BorrowIntegration is BaseIntegration, ReentrancyGuard {
     uint8 /* _borrowOp */
   ) internal returns (uint256) {
     uint256 protocolFeeTotal = getIntegrationFee(0, _exchangedQuantity);
-    payProtocolFeeFromIdea(address(_debtInfo.community), _feeToken, protocolFeeTotal);
+    payProtocolFeeFromIdea(address(_debtInfo.garden), _feeToken, protocolFeeTotal);
     return protocolFeeTotal;
   }
 
@@ -380,8 +380,8 @@ abstract contract BorrowIntegration is BaseIntegration, ReentrancyGuard {
     returns (DebtInfo memory)
   {
     DebtInfo memory debtInfo;
-    debtInfo.idea = IInvestmentIdea(msg.sender);
-    debtInfo.community = ICommunity(debtInfo.idea.community());
+    debtInfo.strategy = IStrategy(msg.sender);
+    debtInfo.garden = IGarden(debtInfo.strategy.garden());
     debtInfo.asset = _asset;
     debtInfo.amount = _amount;
     debtInfo.borrowOp = _borrowOp;
@@ -395,7 +395,7 @@ abstract contract BorrowIntegration is BaseIntegration, ReentrancyGuard {
    * @param _debtInfo               Struct containing debt information used in internal functions
    */
   function _validatePreDeposit(DebtInfo memory _debtInfo) internal view {
-    require(IERC20(_debtInfo.asset).balanceOf(address(_debtInfo.idea)) > _debtInfo.amount, "Need to have enough collateral to deposit");
+    require(IERC20(_debtInfo.asset).balanceOf(address(_debtInfo.strategy)) > _debtInfo.amount, "Need to have enough collateral to deposit");
   }
 
   /**
@@ -423,7 +423,7 @@ abstract contract BorrowIntegration is BaseIntegration, ReentrancyGuard {
    * @param _debtInfo               Struct containing debt information used in internal functions
    */
   function _validatePostBorrow(DebtInfo memory _debtInfo) internal view {
-    require(IERC20(_debtInfo.asset).balanceOf(address(_debtInfo.idea)) >= _debtInfo.amount, "Did not receive the borrowed asset");
+    require(IERC20(_debtInfo.asset).balanceOf(address(_debtInfo.strategy)) >= _debtInfo.amount, "Did not receive the borrowed asset");
     require(_getRemainingLiquidity() > 0, "Not enough liquidity");
   }
 
@@ -443,7 +443,7 @@ abstract contract BorrowIntegration is BaseIntegration, ReentrancyGuard {
    * @param _debtInfo               Struct containing debt information used in internal functions
    */
   function _validatePostRemoval(DebtInfo memory _debtInfo) internal view {
-    require(IERC20(_debtInfo.asset).balanceOf(address(_debtInfo.idea)) >= _debtInfo.amount, "Did not receive the collateral");
+    require(IERC20(_debtInfo.asset).balanceOf(address(_debtInfo.strategy)) >= _debtInfo.amount, "Did not receive the collateral");
     require(_getRemainingLiquidity() > 0, "Not enough liquidity");
   }
 
@@ -453,7 +453,7 @@ abstract contract BorrowIntegration is BaseIntegration, ReentrancyGuard {
    * @param _debtInfo               Struct containing debt information used in internal functions
    */
   function _validatePreRepay(DebtInfo memory _debtInfo) internal view {
-    require(IERC20(_debtInfo.asset).balanceOf(address(_debtInfo.idea)) >= _debtInfo.amount, "We do not have enough to repay debt");
+    require(IERC20(_debtInfo.asset).balanceOf(address(_debtInfo.strategy)) >= _debtInfo.amount, "We do not have enough to repay debt");
     require(_getBorrowBalance(_debtInfo.asset) > 0, "No debt to repay");
   }
 

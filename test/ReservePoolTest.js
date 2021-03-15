@@ -8,7 +8,7 @@ const { deployFolioFixture } = require("./fixtures/ControllerFixture");
 describe("ReservePool", function() {
   let controller;
   let reserve;
-  let community;
+  let garden;
   let ownerSigner;
   let userSigner1;
   let userSigner2;
@@ -24,7 +24,7 @@ describe("ReservePool", function() {
       owner
     } = await loadFixture(deployFolioFixture);
     ownerSigner = owner;
-    community = comunities.one;
+    garden = comunities.one;
     userSigner1 = signer1;
     userSigner2 = signer2;
     controller = babController;

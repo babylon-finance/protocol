@@ -18,27 +18,27 @@
 pragma solidity 0.7.4;
 
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import { ICommunity } from "./ICommunity.sol";
+import { IGarden } from "./IGarden.sol";
 
 
 /**
- * @title ICommunity
+ * @title IGarden
  * @author Babylon Finance
  *
  * Interface for operating with SetTokens.
  */
-interface IRollingCommunity is IERC20, ICommunity {
+interface IRollingGarden is IERC20, IGarden {
 
     function start(
       uint256 _maxDepositLimit,
-      uint256 _minCommunityTokenSupply,
+      uint256 _minGardenTokenSupply,
       uint256 _minLiquidityAsset,
       uint256 _depositHardlock,
       uint256 _minContribution,
-      uint256 _ideaCooldownPeriod,
-      uint256 _ideaCreatorProfitPercentage,
-      uint256 _ideaVotersProfitPercentage,
-      uint256 _communityCreatorProfitPercentage,
+      uint256 _strategyCooldownPeriod,
+      uint256 _strategyCreatorProfitPercentage,
+      uint256 _strategyVotersProfitPercentage,
+      uint256 _gardenCreatorProfitPercentage,
       uint256 _minVotersQuorum,
       uint256 _minIdeaDuration,
       uint256 _maxIdeaDuration
@@ -46,17 +46,17 @@ interface IRollingCommunity is IERC20, ICommunity {
 
     function deposit(
         uint256 _reserveAssetQuantity,
-        uint256 _minCommunityTokenReceiveQuantity,
+        uint256 _minGardenTokenReceiveQuantity,
         address _to
     ) external payable;
 
     function withdraw(
-        uint256 _communityTokenQuantity,
+        uint256 _gardenTokenQuantity,
         uint256 _minReserveReceiveQuantity,
         address payable _to
     ) external;
     function withdrawToReservePool(
-      uint256 _communityTokenQuantity,
+      uint256 _gardenTokenQuantity,
       uint256 _minReserveReceiveQuantity,
       address payable _to
     ) external;
@@ -64,7 +64,7 @@ interface IRollingCommunity is IERC20, ICommunity {
     function setDepositLimit(uint limit) external;
     function getExpectedReserveWithdrawalQuantity(
         address _reserveAsset,
-        uint256 _communityTokenQuantity
+        uint256 _gardenTokenQuantity
     ) external view returns (uint256);
     function isDepositValid(
         address _reserveAsset,
@@ -72,14 +72,14 @@ interface IRollingCommunity is IERC20, ICommunity {
     ) external view returns (bool);
     function isWithdrawalValid(
         address _reserveAsset,
-        uint256 _communityTokenQuantity
+        uint256 _gardenTokenQuantity
     ) external view returns (bool);
 
     function reenableEthForInvestments() external;
     function burnAssetsFromSenderAndMintToReserve(address _contributor, uint256 _quantity) external;
 
-    // Investment ideas
-    function addInvestmentIdea(
+    // Investment strategies
+    function addStrategy(
       uint256 _capitalRequested,
       uint256 _stake,
       uint256 _investmentDuration,
@@ -90,9 +90,9 @@ interface IRollingCommunity is IERC20, ICommunity {
       address[] memory _enterTokensNeeded,
       uint256[] memory _enterTokensAmounts
     ) external payable;
-    function curateInvestmentIdea(uint8 _ideaIndex, int256 _amount) external;
+    function curateStrategy(uint8 _strategyIndex, int256 _amount) external;
     function executeTopInvestment() external;
-    function finalizeInvestment(uint _ideaIndex) external;
-    function getCurrentTopInvestmentIdea() external view returns (uint8);
+    function finalizeInvestment(uint _strategyIndex) external;
+    function getCurrentTopStrategy() external view returns (uint8);
     function canWithdrawEthAmount(uint _amount) external view returns (bool);
 }

@@ -19,39 +19,39 @@
 pragma solidity 0.7.4;
 
 import "hardhat/console.sol";
-import { InvestmentIdea } from "./InvestmentIdea.sol";
+import { Strategy } from "./Strategy.sol";
 import { Clones } from "@openzeppelin/contracts/proxy/Clones.sol";
 
 /**
- * @title IdeaFactory
+ * @title StrategyFactory
  * @author Babylon Finance
  *
- * Factory to create investment idea contracts
+ * Factory to create investment strategy contracts
  */
-contract IdeaFactory {
+contract StrategyFactory {
 
-  address immutable investmentIdea;
+  address immutable strategy;
 
   constructor() {
-    investmentIdea = address(new InvestmentIdea());
+    strategy = address(new Strategy());
   }
 
 
   /**
-   * Creates a new investment idea using minimal proxies
+   * Creates a new investment strategy using minimal proxies
    *
-   * @param _ideator                       Address of the ideator
-   * @param _community                     Address of the community
+   * @param _strategytor                       Address of the strategytor
+   * @param _garden                     Address of the garden
    * @param _controller                    Address of the controller
    * @param _maxCapitalRequested           Max Capital requested denominated in the reserve asset (0 to be unlimited)
-   * @param _stake                         Stake with community participations absolute amounts 1e18
+   * @param _stake                         Stake with garden participations absolute amounts 1e18
    * @param _investmentDuration            Investment duration in seconds
    * @param _expectedReturn                Expected return
-   * @param _minRebalanceCapital           Min capital that is worth it to deposit into this idea
+   * @param _minRebalanceCapital           Min capital that is worth it to deposit into this strategy
    */
-  function createInvestmentIdea(
-    address _ideator,
-    address _community,
+  function createStrategy(
+    address _strategytor,
+    address _garden,
     address _controller,
     uint256 _maxCapitalRequested,
     uint256 _stake,
@@ -59,10 +59,10 @@ contract IdeaFactory {
     uint256 _expectedReturn,
     uint256 _minRebalanceCapital
   ) external returns (address) {
-      address clone = Clones.clone(investmentIdea);
-      InvestmentIdea(clone).initialize(
-        _ideator,
-        _community,
+      address clone = Clones.clone(strategy);
+      Strategy(clone).initialize(
+        _strategytor,
+        _garden,
         _controller,
         _maxCapitalRequested,
         _stake,

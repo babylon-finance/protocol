@@ -15,16 +15,16 @@ describe("BabController", function() {
   let userSigner1;
   let userSigner2;
   let userSigner3;
-  let community1;
-  let community2;
-  let community3;
+  let garden1;
+  let garden2;
+  let garden3;
 
   beforeEach(async () => {
     const {
       babController,
       priceOracle,
       treasury,
-      communityValuer,
+      gardenValuer,
       owner,
       signer1,
       comunities,
@@ -35,14 +35,14 @@ describe("BabController", function() {
     controller = babController;
     treasuryD = treasury;
     oracle = priceOracle;
-    valuer = communityValuer;
+    valuer = gardenValuer;
     ownerSigner = owner;
     userSigner1 = signer1;
     userSigner2 = signer2;
     userSigner3 = signer3;
-    community1 = comunities.one;
-    community2 = comunities.two;
-    community3 = comunities.three;
+    garden1 = comunities.one;
+    garden2 = comunities.two;
+    garden3 = comunities.three;
   });
 
   describe("Deployment", function() {
@@ -65,9 +65,9 @@ describe("BabController", function() {
     });
 
     it("can create comunities", async function() {
-      expect(!!community1).to.equal(true);
-      expect(!!community2).to.equal(true);
-      expect(!!community3).to.equal(true);
+      expect(!!garden1).to.equal(true);
+      expect(!!garden2).to.equal(true);
+      expect(!!garden3).to.equal(true);
     });
 
     it("can create comunities and retrieve all addresses", async function() {
@@ -75,28 +75,28 @@ describe("BabController", function() {
       expect(comunities.length).to.equal(3);
     });
 
-    it("cannot disable an inactive community", async function() {
+    it("cannot disable an inactive garden", async function() {
       const initialCommunities = await controller.getCommunities();
 
-      await expect(controller.disableCommunity(initialCommunities[0])).to.not.be.reverted;
-      await expect(controller.disableCommunity(initialCommunities[0])).to.be.reverted;
+      await expect(controller.disableGarden(initialCommunities[0])).to.not.be.reverted;
+      await expect(controller.disableGarden(initialCommunities[0])).to.be.reverted;
     });
 
-    it("can remove a disabled community", async function() {
+    it("can remove a disabled garden", async function() {
       const initialCommunities = await controller.getCommunities();
       expect(initialCommunities.length).to.equal(3);
-      await expect(controller.disableCommunity(initialCommunities[0])).to.not.be.reverted;
-      await controller.removeCommunity(initialCommunities[0]);
+      await expect(controller.disableGarden(initialCommunities[0])).to.not.be.reverted;
+      await controller.removeGarden(initialCommunities[0]);
 
       const updatedCommunities = await controller.getCommunities();
       expect(updatedCommunities.length).to.equal(2);
     });
 
-    it("can enable and disable a community", async function() {
+    it("can enable and disable a garden", async function() {
       const initialCommunities = await controller.getCommunities();
 
-      await expect(controller.disableCommunity(initialCommunities[0])).to.not.be.reverted;
-      await expect(controller.enableCommunity(initialCommunities[0])).to.not.be.reverted;
+      await expect(controller.disableGarden(initialCommunities[0])).to.not.be.reverted;
+      await expect(controller.enableGarden(initialCommunities[0])).to.not.be.reverted;
     });
   });
 
@@ -158,12 +158,12 @@ describe("BabController", function() {
       expect(oracle2).to.equal(addresses.tokens.WETH);
     });
 
-    it("can edit a community valuer", async function() {
-      // Note: This is just the wETH address and is testing that the communityValuer address can be changed
-      await expect(controller.editCommunityValuer(addresses.tokens.WETH)).to.not
+    it("can edit a garden valuer", async function() {
+      // Note: This is just the wETH address and is testing that the gardenValuer address can be changed
+      await expect(controller.editGardenValuer(addresses.tokens.WETH)).to.not
         .be.reverted;
 
-      const valuer2 = await controller.getCommunityValuer();
+      const valuer2 = await controller.getGardenValuer();
       expect(valuer2).to.equal(addresses.tokens.WETH);
     });
 

@@ -98,7 +98,7 @@ contract PriceOracle is Ownable {
      */
     function getPrice(address _assetOne, address _assetTwo) external view returns (uint256) {
         require(
-          controller.isSystemContract(msg.sender) || msg.sender == owner() || true, // TODO: check is an idea
+          controller.isSystemContract(msg.sender) || msg.sender == owner() || true, // TODO: check is an strategy
           "PriceOracle.getPrice: Caller must be system contract."
         );
         // Same asset. Returns base unit

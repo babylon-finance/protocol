@@ -90,7 +90,7 @@ contract UniswapPoolIntegration is PoolIntegration {
     address[] calldata _tokensIn,
     uint256[] calldata _maxAmountsIn
   ) internal override view returns (address, uint256, bytes memory) {
-    // Encode method data for Community to invoke
+    // Encode method data for Garden to invoke
     require(_tokensIn.length == 2, "Adding liquidity to a uniswap pool requires exactly two tokens");
     require(_maxAmountsIn.length == 2, "Adding liquidity to a uniswap pool requires exactly two tokens");
     bytes memory methodData = abi.encodeWithSignature(
@@ -128,7 +128,7 @@ contract UniswapPoolIntegration is PoolIntegration {
   ) internal override view returns (address, uint256, bytes memory) {
     require(_tokensOut.length == 2, "Removing liquidity from a uniswap pool requires exactly two tokens");
     require(_minAmountsOut.length == 2, "Removing liquidity from a uniswap pool requires exactly two tokens");
-    // Encode method data for Community to invoke
+    // Encode method data for Garden to invoke
     bytes memory methodData = abi.encodeWithSignature(
       "removeLiquidity(address,address,uint256,uint256,uint256,address,uint256)",
       _tokensOut[0],

@@ -87,7 +87,7 @@ contract BalancerIntegration is PoolIntegration {
     address[] calldata /* _tokensIn */,
     uint256[] calldata _maxAmountsIn
   ) internal override pure returns (address, uint256, bytes memory) {
-    // Encode method data for Community to invoke
+    // Encode method data for Garden to invoke
     bytes memory methodData = abi.encodeWithSignature(
       "joinPool(uint256,uint256[])",
       _poolTokensOut,
@@ -115,7 +115,7 @@ contract BalancerIntegration is PoolIntegration {
     address[] calldata /* _tokensOut */,
     uint256[] calldata _minAmountsOut
   ) internal override pure returns (address, uint256, bytes memory) {
-    // Encode method data for Community to invoke
+    // Encode method data for Garden to invoke
     bytes memory methodData = abi.encodeWithSignature(
       "exitPool(uint256,uint256[])",
       _poolTokensIn,

@@ -10,14 +10,14 @@ const { deployFolioFixture } = require("./fixtures/ControllerFixture");
 describe("PriceOracle", function() {
   let controller;
   let oracle;
-  let community;
+  let garden;
   let adapter;
 
   beforeEach(async () => {
     const { babController, priceOracle, comunities } = await loadFixture(
       deployFolioFixture
     );
-    community = comunities.one;
+    garden = comunities.one;
     controller = babController;
     oracle = priceOracle;
     adapter = await ethers.getContractAt(

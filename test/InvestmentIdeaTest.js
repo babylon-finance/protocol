@@ -13,8 +13,8 @@ describe("Investment Idea", function() {
   let userSigner1;
   let userSigner2;
   let userSigner3;
-  let community1;
-  let ideasC;
+  let garden1;
+  let strategiesC;
   let balancerIntegration;
   let weth;
 
@@ -26,7 +26,7 @@ describe("Investment Idea", function() {
       signer3,
       comunities,
       integrations,
-      ideas,
+      strategies,
       owner
     } = await loadFixture(deployFolioFixture);
 
@@ -36,30 +36,30 @@ describe("Investment Idea", function() {
     userSigner1 = signer1;
     userSigner2 = signer2;
     userSigner3 = signer3;
-    community1 = comunities.one;
-    ideasC = ideas;
+    garden1 = comunities.one;
+    strategiesC = strategies;
     weth = await ethers.getContractAt("IERC20", addresses.tokens.WETH);
   });
 
   describe("Deployment", function() {
     it("should successfully deploy the contract", async function() {
-      const deployed = await ideasC[0].deployed();
+      const deployed = await strategiesC[0].deployed();
       expect(!!deployed).to.equal(true);
     });
   });
 
   describe("Ideator can change the duration", function() {
-    it("ideator should be able to change the duration of an investment idea", async function() {
+    it("strategytor should be able to change the duration of an investment strategy", async function() {
       await expect(
-        ideasC[0]
+        strategiesC[0]
           .connect(userSigner1)
           .changeInvestmentDuration(ONE_DAY_IN_SECONDS)
       ).to.not.be.reverted;
     });
 
-    it("other member should be able to change the duration of an investment idea", async function() {
+    it("other member should be able to change the duration of an investment strategy", async function() {
       await expect(
-        ideasC[0]
+        strategiesC[0]
           .connect(userSigner3)
           .changeInvestmentDuration(ONE_DAY_IN_SECONDS)
       ).to.be.reverted;

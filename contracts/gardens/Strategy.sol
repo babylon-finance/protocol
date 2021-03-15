@@ -32,17 +32,17 @@ import { AddressArrayUtils } from "../lib/AddressArrayUtils.sol";
 import { IWETH } from "../interfaces/external/weth/IWETH.sol";
 import { PreciseUnitMath } from "../lib/PreciseUnitMath.sol";
 import { IBabController } from "../interfaces/IBabController.sol";
-import { ICommunity } from "../interfaces/ICommunity.sol";
+import { IGarden } from "../interfaces/IGarden.sol";
 import { ITradeIntegration } from "../interfaces/ITradeIntegration.sol";
 import { IPriceOracle } from "../interfaces/IPriceOracle.sol";
 
 /**
- * @title InvestmentIdea
+ * @title Strategy
  * @author Babylon Finance
  *
- * Holds the data for an investment idea
+ * Holds the data for an investment strategy
  */
-contract InvestmentIdea is ReentrancyGuard, Initializable {
+contract Strategy is ReentrancyGuard, Initializable {
   using SignedSafeMath for int256;
   using SafeMath for uint256;
   using SafeCast for uint256;
@@ -60,7 +60,7 @@ contract InvestmentIdea is ReentrancyGuard, Initializable {
 
   /* ============ Modifiers ============ */
   /**
-   * Throws if the sender is not the creator of the idea
+   * Throws if the sender is not the creator of the strategy
    */
   modifier onlyController {
     require(msg.sender == address(controller), "Only Controller can access this");
@@ -68,14 +68,14 @@ contract InvestmentIdea is ReentrancyGuard, Initializable {
   }
 
   modifier onlyIdeator {
-    require(msg.sender == ideator, "Only Ideator can access this");
+    require(msg.sender == strategytor, "Only Ideator can access this");
     _;
   }
 
   modifier onlyContributor {
     require(
-        ERC20(address(community)).balanceOf(msg.sender) > 0,
-        "Only someone with the community token can withdraw"
+        ERC20(address(garden)).balanceOf(msg.sender) > 0,
+        "Only someone with the garden token can withdraw"
     );
     _;
   }
@@ -85,15 +85,15 @@ contract InvestmentIdea is ReentrancyGuard, Initializable {
    */
   modifier onlyIntegration() {
     // Internal function used to reduce bytecode size
-    require(community.isValidIntegration(msg.sender), "Integration must be valid");
+    require(garden.isValidIntegration(msg.sender), "Integration must be valid");
     _;
   }
 
   /**
-   * Throws if the community is not active
+   * Throws if the garden is not active
    */
-  modifier onlyActiveCommunity() {
-    require(community.active() == true, "Community must be active");
+  modifier onlyActiveGarden() {
+    require(garden.active() == true, "Garden must be active");
     _;
   }
 
@@ -146,18 +146,18 @@ contract InvestmentIdea is ReentrancyGuard, Initializable {
   // Babylon Controller Address
   IBabController public controller;
 
-  // Community that these ideas belong to
-  ICommunity public community;
+  // Garden that these strategies belong to
+  IGarden public garden;
 
-  address public ideator;           // Address of the ideator that submitted the bet
-  uint256 public enteredAt;                 // Timestamp when the idea was submitted
-  uint256 public enteredCooldownAt;         // Timestamp when the idea reached quorum
-  uint256 public executedAt;                // Timestamp when the idea was executed
-  uint256 public exitedAt;                  // Timestamp when the idea was submitted
-  uint256 public stake;                     // Amount of stake by the ideator (in reserve asset) Neds to be positive
+  address public strategytor;           // Address of the strategytor that submitted the bet
+  uint256 public enteredAt;                 // Timestamp when the strategy was submitted
+  uint256 public enteredCooldownAt;         // Timestamp when the strategy reached quorum
+  uint256 public executedAt;                // Timestamp when the strategy was executed
+  uint256 public exitedAt;                  // Timestamp when the strategy was submitted
+  uint256 public stake;                     // Amount of stake by the strategytor (in reserve asset) Neds to be positive
   uint256 public maxCapitalRequested;       // Amount of max capital to allocate
   uint256 public capitalAllocated;          // Current amount of capital allocated
-  uint256 public expectedReturn;            // Expect return by this investment idea
+  uint256 public expectedReturn;            // Expect return by this investment strategy
   uint256 public minRebalanceCapital;       // Min amount of capital so that it is worth to rebalance the capital here
   address[] public enterTokensNeeded;       // Positions that need to be taken prior to enter trade
   uint256[] public enterTokensAmounts;      // Amount of these positions
@@ -169,8 +169,8 @@ contract InvestmentIdea is ReentrancyGuard, Initializable {
   address public integration;               // Address of the integration
   bytes public enterPayload;                // Calldata to execute when entering
   bytes public exitPayload;                 // Calldata to execute when exiting the trade
-  bool public finalized;                    // Flag that indicates whether we exited the idea
-  bool public active;                       // Whether the idea has met the voting quorum
+  bool public finalized;                    // Flag that indicates whether we exited the strategy
+  bool public active;                       // Whether the strategy has met the voting quorum
   bool public dataSet;                      // Whether integration data is set
 
   // Votes mapping
@@ -183,20 +183,20 @@ contract InvestmentIdea is ReentrancyGuard, Initializable {
   /* ============ Constructor ============ */
 
   /**
-   * Before a community is initialized, the community ideas need to be created and passed to community initialization.
+   * Before a garden is initialized, the garden strategies need to be created and passed to garden initialization.
    *
-   * @param _ideator                       Address of the ideator
-   * @param _community                     Address of the community
+   * @param _strategytor                       Address of the strategytor
+   * @param _garden                     Address of the garden
    * @param _controller                    Address of the controller
    * @param _maxCapitalRequested           Max Capital requested denominated in the reserve asset (0 to be unlimited)
-   * @param _stake                         Stake with community participations absolute amounts 1e18
+   * @param _stake                         Stake with garden participations absolute amounts 1e18
    * @param _investmentDuration            Investment duration in seconds
    * @param _expectedReturn                Expected return
-   * @param _minRebalanceCapital           Min capital that is worth it to deposit into this idea
+   * @param _minRebalanceCapital           Min capital that is worth it to deposit into this strategy
    */
   function initialize(
-    address _ideator,
-    address _community,
+    address _strategytor,
+    address _garden,
     address _controller,
     uint256 _maxCapitalRequested,
     uint256 _stake,
@@ -206,19 +206,19 @@ contract InvestmentIdea is ReentrancyGuard, Initializable {
   ) public initializer
   {
     controller = IBabController(_controller);
-    community = ICommunity(_community);
-    require(controller.isSystemContract(_community), "Must be a valid community");
+    garden = IGarden(_garden);
+    require(controller.isSystemContract(_garden), "Must be a valid garden");
     require(
-        ERC20(address(community)).balanceOf(_ideator) > 0,
-        "Only someone with the community token can withdraw"
+        ERC20(address(garden)).balanceOf(_strategytor) > 0,
+        "Only someone with the garden token can withdraw"
     );
-    require(_stake > community.totalSupply().div(100), "Stake amount must be at least 1% of the community");
-    require(_investmentDuration >= community.minIdeaDuration() && _investmentDuration <= community.maxIdeaDuration(), "Investment duration must be in range");
+    require(_stake > garden.totalSupply().div(100), "Stake amount must be at least 1% of the garden");
+    require(_investmentDuration >= garden.minIdeaDuration() && _investmentDuration <= garden.maxIdeaDuration(), "Investment duration must be in range");
     require(_stake > 0, "Stake amount must be greater than 0");
     require(_minRebalanceCapital > 0, "Min Capital requested amount must be greater than 0");
     require(_maxCapitalRequested >= _minRebalanceCapital, "The max amount of capital must be greater than one chunk");
     // Check than enter and exit data call integrations
-    ideator = _ideator;
+    strategytor = _strategytor;
     enteredAt = block.timestamp;
     stake = _stake;
     duration = _investmentDuration;
@@ -250,7 +250,7 @@ contract InvestmentIdea is ReentrancyGuard, Initializable {
     uint256[] memory _enterTokensAmounts
   ) public onlyIdeator {
     require(!dataSet, "Data is set already");
-    require(community.isValidIntegration(_integration), "Integration must be valid");
+    require(garden.isValidIntegration(_integration), "Integration must be valid");
     require(_enterTokensNeeded.length == _enterTokensAmounts.length, "Tokens and amounts must match");
     integration = _integration;
     enterPayload = _enterData;
@@ -261,13 +261,13 @@ contract InvestmentIdea is ReentrancyGuard, Initializable {
   }
 
   /**
-   * Curates an investment idea from the contenders array for this epoch.
-   * This can happen at any time. As long as there are investment ideas.
+   * Curates an investment strategy from the contenders array for this epoch.
+   * This can happen at any time. As long as there are investment strategies.
    * @param _amount                   Amount to curate, positive to endorse, negative to downvote
    * TODO: Meta Transaction
    */
-  function curateIdea(int256 _amount) external onlyContributor onlyActiveCommunity {
-    require(_amount.toUint256() <= community.balanceOf(msg.sender), "Participant does not have enough balance");
+  function curateIdea(int256 _amount) external onlyContributor onlyActiveGarden {
+    require(_amount.toUint256() <= garden.balanceOf(msg.sender), "Participant does not have enough balance");
     if (votes[msg.sender] == 0) {
       totalVoters++;
       voters = [msg.sender];
@@ -279,7 +279,7 @@ contract InvestmentIdea is ReentrancyGuard, Initializable {
     absoluteTotalVotes = absoluteTotalVotes.add(abs(_amount).toUint256());
     totalVotes = totalVotes.add(_amount);
     // TODO: Introduce conviction voting
-    uint256 votingThreshold = community.minVotersQuorum().preciseMul(community.totalSupply());
+    uint256 votingThreshold = garden.minVotersQuorum().preciseMul(garden.totalSupply());
     if (_amount > 0 && totalVotes.toUint256() >= votingThreshold) {
       active = true;
       enteredCooldownAt = block.timestamp;
@@ -290,17 +290,17 @@ contract InvestmentIdea is ReentrancyGuard, Initializable {
   }
 
   /**
-   * Executes an idea that has been activated and gone through the cooldown period.
-   * @param _capital                  The capital to allocate to this idea
+   * Executes an strategy that has been activated and gone through the cooldown period.
+   * @param _capital                  The capital to allocate to this strategy
    */
-  function executeInvestment(uint256 _capital) public onlyKeeper nonReentrant onlyActiveCommunity {
+  function executeInvestment(uint256 _capital) public onlyKeeper nonReentrant onlyActiveGarden {
     require(active, "Idea needs to be active");
     require(capitalAllocated.add(_capital) <= maxCapitalRequested, "Max capital reached");
     require(_capital >= minRebalanceCapital, "Amount needs to be more than min");
-    require(block.timestamp.sub(enteredCooldownAt) >= community.ideaCooldownPeriod(), "Idea has not completed the cooldown period");
+    require(block.timestamp.sub(enteredCooldownAt) >= garden.strategyCooldownPeriod(), "Idea has not completed the cooldown period");
     // Execute enter trade
-    community.allocateCapitalToInvestment(_capital);
-    calculateAndEditPosition(community.getReserveAsset(), _capital, _capital.toInt256(), LIQUID_STATUS);
+    garden.allocateCapitalToInvestment(_capital);
+    calculateAndEditPosition(garden.getReserveAsset(), _capital, _capital.toInt256(), LIQUID_STATUS);
     capitalAllocated = capitalAllocated.add(_capital);
     bytes memory _data = enterPayload;
     _callIntegration(integration, 0, _data, enterTokensNeeded, enterTokensAmounts);
@@ -310,20 +310,20 @@ contract InvestmentIdea is ReentrancyGuard, Initializable {
 
   /**
    * Exits from an executed investment.
-   * Sends rewards to the person that created the idea, the voters, and the rest to the community.
+   * Sends rewards to the person that created the strategy, the voters, and the rest to the garden.
    * If there are profits
    * Updates the reserve asset position accordingly.
    */
-  function finalizeInvestment() external onlyKeeper nonReentrant onlyActiveCommunity {
-    require(executedAt > 0, "This idea has not been executed");
+  function finalizeInvestment() external onlyKeeper nonReentrant onlyActiveGarden {
+    require(executedAt > 0, "This strategy has not been executed");
     require(block.timestamp > executedAt.add(duration), "Idea can only be finalized after the minimum period has elapsed");
     require(!finalized, "This investment was already exited");
     address[] memory _tokensNeeded;
     uint256[] memory _tokenAmounts;
     // Execute exit trade
     bytes memory _data = exitPayload;
-    address reserveAsset = community.getReserveAsset();
-    uint256 reserveAssetBeforeExiting = community.getReserveBalance();
+    address reserveAsset = garden.getReserveAsset();
+    uint256 reserveAssetBeforeExiting = garden.getReserveBalance();
     _callIntegration(integration, 0, _data, _tokensNeeded, _tokenAmounts);
     // Exchange the positions back to the reserve asset
     bytes memory _emptyTradeData;
@@ -333,7 +333,7 @@ contract InvestmentIdea is ReentrancyGuard, Initializable {
         _trade("kyber", positions[i], ERC20(positions[i]).balanceOf(address(this)), reserveAsset, 0, _emptyTradeData);
       }
     }
-    uint256 capitalReturned = community.getReserveBalance().sub(reserveAssetBeforeExiting);
+    uint256 capitalReturned = garden.getReserveBalance().sub(reserveAssetBeforeExiting);
     // Mark as finalized
     finalized = true;
     active = false;
@@ -343,8 +343,8 @@ contract InvestmentIdea is ReentrancyGuard, Initializable {
   }
 
   /**
-   * Lets the ideator change the duration of the investment
-   * @param _newDuration            New duration of the idea
+   * Lets the strategytor change the duration of the investment
+   * @param _newDuration            New duration of the strategy
    */
   function changeInvestmentDuration(uint256 _newDuration) external onlyIdeator {
     require(!finalized, "This investment was already exited");
@@ -396,13 +396,13 @@ contract InvestmentIdea is ReentrancyGuard, Initializable {
      require(balance > 0, "Token balance > 0");
      bytes memory _emptyTradeData;
      // TODO: probably use uniswap or 1inch. Don't go through TWAP
-     _trade("_kyber", _token, balance, community.getReserveAsset(), 0, _emptyTradeData);
+     _trade("_kyber", _token, balance, garden.getReserveAsset(), 0, _emptyTradeData);
   }
 
   /* ============ External Getter Functions ============ */
 
   /**
-   * Returns whether this idea is currently active or not
+   * Returns whether this strategy is currently active or not
    */
   function isIdeaActive() external view returns (bool) {
     return executedAt > 0 && exitedAt == 0;
@@ -428,7 +428,7 @@ contract InvestmentIdea is ReentrancyGuard, Initializable {
   }
 
   /**
-   * Returns whether the community component  position real balance is greater than or equal to balances passed in.
+   * Returns whether the garden component  position real balance is greater than or equal to balances passed in.
    */
   function hasSufficientBalance(address _component, uint256 _balance)
       external
@@ -456,7 +456,7 @@ contract InvestmentIdea is ReentrancyGuard, Initializable {
 
   /**
    * Low level function that allows an integration to make an arbitrary function
-   * call to any contract from the community (community as msg.sender).
+   * call to any contract from the garden (garden as msg.sender).
    *
    * @param _target                 Address of the smart contract to call
    * @param _value                  Quantity of Ether to provide the call (typically 0)
@@ -510,13 +510,13 @@ contract InvestmentIdea is ReentrancyGuard, Initializable {
     // _validateOnlyIntegration(_integration);
     // Exchange the tokens needed
     for (uint i = 0; i < _tokensNeeded.length; i++) {
-      if (_tokensNeeded[i] != community.getReserveAsset()) {
-        uint pricePerTokenUnit = _getPrice(community.getReserveAsset(), _tokensNeeded[i]);
+      if (_tokensNeeded[i] != garden.getReserveAsset()) {
+        uint pricePerTokenUnit = _getPrice(garden.getReserveAsset(), _tokensNeeded[i]);
         uint slippageAllowed = 1e16; // 1%
         uint exactAmount = _tokenAmountsNeeded[i].preciseDiv(pricePerTokenUnit);
         uint amountOfReserveAssetToAllow = exactAmount.add(exactAmount.preciseMul(slippageAllowed));
-        require(ERC20(community.getReserveAsset()).balanceOf(address(this)) >= amountOfReserveAssetToAllow, "Need enough liquid reserve asset");
-        _trade("kyber", community.getReserveAsset(), amountOfReserveAssetToAllow,_tokensNeeded[i], _tokenAmountsNeeded[i], _data);
+        require(ERC20(garden.getReserveAsset()).balanceOf(address(this)) >= amountOfReserveAssetToAllow, "Need enough liquid reserve asset");
+        _trade("kyber", garden.getReserveAsset(), amountOfReserveAssetToAllow,_tokensNeeded[i], _tokenAmountsNeeded[i], _data);
       }
     }
     return _invoke(_integration, _value, _data);
@@ -541,7 +541,7 @@ contract InvestmentIdea is ReentrancyGuard, Initializable {
     bytes memory _data) internal
   {
     address tradeIntegration = IBabController(controller).getIntegrationByName(_integrationName);
-    require(community.isValidIntegration(tradeIntegration), "Integration is not valid");
+    require(garden.isValidIntegration(tradeIntegration), "Integration is not valid");
     // Updates UniSwap TWAP
     IPriceOracle oracle = IPriceOracle(IBabController(controller).getPriceOracle());
     oracle.updateAdapters(_sendToken, _receiveToken);
@@ -549,32 +549,32 @@ contract InvestmentIdea is ReentrancyGuard, Initializable {
   }
 
   function _transferIdeaRewards(uint capitalReturned) internal {
-    address reserveAsset = community.getReserveAsset();
+    address reserveAsset = garden.getReserveAsset();
     int256 reserveAssetDelta = 0;
     // Idea returns were positive
     if (capitalReturned > capitalAllocated) {
       uint256 profits = capitalReturned - capitalAllocated; // in reserve asset (weth)
-      // Send stake back to the ideator
-      require(ERC20(address(community)).transferFrom(
+      // Send stake back to the strategytor
+      require(ERC20(address(garden)).transferFrom(
         address(this),
-        ideator,
+        strategytor,
         stake
       ), "Ideator stake return failed");
-      // Send weth rewards to the ideator
-      uint256 ideatorProfits = community.ideaCreatorProfitPercentage().preciseMul(profits);
+      // Send weth rewards to the strategytor
+      uint256 strategytorProfits = garden.strategyCreatorProfitPercentage().preciseMul(profits);
       require(ERC20(reserveAsset).transferFrom(
         address(this),
-        ideator,
-        ideatorProfits
+        strategytor,
+        strategytorProfits
       ), "Ideator perf fee failed");
-      reserveAssetDelta.add(int256(-ideatorProfits));
+      reserveAssetDelta.add(int256(-strategytorProfits));
       // Send weth rewards to the commmunity lead
-      uint256 creatorProfits = community.communityCreatorProfitPercentage().preciseMul(profits);
+      uint256 creatorProfits = garden.gardenCreatorProfitPercentage().preciseMul(profits);
       require(ERC20(reserveAsset).transferFrom(
         address(this),
-        community.creator(),
+        garden.creator(),
         creatorProfits
-      ), "Community lead perf fee failed");
+      ), "Garden lead perf fee failed");
       reserveAssetDelta.add(int256(-creatorProfits));
       // Send weth performance fee to the protocol
       uint256 protocolProfits = IBabController(controller).getProtocolPerformanceFee().preciseMul(profits);
@@ -585,7 +585,7 @@ contract InvestmentIdea is ReentrancyGuard, Initializable {
       ), "Protocol perf fee failed");
       reserveAssetDelta.add(int256(-protocolProfits));
       // Send weth rewards to voters that voted in favor
-      uint256 votersProfits = community.ideaVotersProfitPercentage().preciseMul(profits);
+      uint256 votersProfits = garden.strategyVotersProfitPercentage().preciseMul(profits);
       for (uint256 i = 0; i < voters.length; i++) {
         int256 voterWeight = votes[voters[i]];
         if (voterWeight > 0) {
@@ -603,8 +603,8 @@ contract InvestmentIdea is ReentrancyGuard, Initializable {
       if (capitalReturned.add(stake) > capitalAllocated) {
         stakeToSlash = capitalReturned.add(stake).sub(capitalAllocated);
       }
-      // We slash and add to the community the stake from the creator
-      uint256 votersRewards = community.ideaVotersProfitPercentage().preciseMul(stakeToSlash);
+      // We slash and add to the garden the stake from the creator
+      uint256 votersRewards = garden.strategyVotersProfitPercentage().preciseMul(stakeToSlash);
       // Send weth rewards to voters that voted against
       for (uint256 i = 0; i < voters.length; i++) {
         int256 voterWeight = votes[voters[i]];
@@ -618,18 +618,18 @@ contract InvestmentIdea is ReentrancyGuard, Initializable {
       }
       reserveAssetDelta.add(int256(-stakeToSlash));
     }
-    // Return the balance back to the community
+    // Return the balance back to the garden
     require(ERC20(reserveAsset).transferFrom(
       address(this),
-      address(community),
+      address(garden),
       capitalReturned
     ), "Idea capital return failed");
     calculateAndEditPosition(reserveAsset, ERC20(reserveAsset).balanceOf(address(this)), int256(-capitalReturned), LIQUID_STATUS);
-    // Updates reserve asset position in the community
-    uint256 _newTotal = community.getReserveBalance().toInt256().add(reserveAssetDelta).toUint256();
-    community.updateReserveBalance(_newTotal);
-    // Start a redemption window in the community with this capital
-    community.startRedemptionWindow(capitalReturned);
+    // Updates reserve asset position in the garden
+    uint256 _newTotal = garden.getReserveBalance().toInt256().add(reserveAssetDelta).toUint256();
+    garden.updateReserveBalance(_newTotal);
+    // Start a redemption window in the garden with this capital
+    garden.startRedemptionWindow(capitalReturned);
   }
 
   /**
@@ -699,7 +699,7 @@ contract InvestmentIdea is ReentrancyGuard, Initializable {
   }
 
   /**
-   * Returns whether the community has a position for a given component (if the real balance is > 0)
+   * Returns whether the garden has a position for a given component (if the real balance is > 0)
    */
   function _hasPosition(address _component) internal view returns (bool) {
       return _getPositionBalance(_component) > 0;
