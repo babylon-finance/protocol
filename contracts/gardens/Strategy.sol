@@ -68,7 +68,7 @@ contract Strategy is ReentrancyGuard, Initializable {
   }
 
   modifier onlyIdeator {
-    require(msg.sender == strategytor, "Only Ideator can access this");
+    require(msg.sender == strategist, "Only Ideator can access this");
     _;
   }
 
@@ -149,12 +149,12 @@ contract Strategy is ReentrancyGuard, Initializable {
   // Garden that these strategies belong to
   IGarden public garden;
 
-  address public strategytor;           // Address of the strategytor that submitted the bet
+  address public strategist;           // Address of the strategist that submitted the bet
   uint256 public enteredAt;                 // Timestamp when the strategy was submitted
   uint256 public enteredCooldownAt;         // Timestamp when the strategy reached quorum
   uint256 public executedAt;                // Timestamp when the strategy was executed
   uint256 public exitedAt;                  // Timestamp when the strategy was submitted
-  uint256 public stake;                     // Amount of stake by the strategytor (in reserve asset) Neds to be positive
+  uint256 public stake;                     // Amount of stake by the strategist (in reserve asset) Neds to be positive
   uint256 public maxCapitalRequested;       // Amount of max capital to allocate
   uint256 public capitalAllocated;          // Current amount of capital allocated
   uint256 public expectedReturn;            // Expect return by this investment strategy
@@ -185,7 +185,7 @@ contract Strategy is ReentrancyGuard, Initializable {
   /**
    * Before a garden is initialized, the garden strategies need to be created and passed to garden initialization.
    *
-   * @param _strategytor                       Address of the strategytor
+   * @param _strategist                       Address of the strategist
    * @param _garden                     Address of the garden
    * @param _controller                    Address of the controller
    * @param _maxCapitalRequested           Max Capital requested denominated in the reserve asset (0 to be unlimited)
@@ -195,7 +195,7 @@ contract Strategy is ReentrancyGuard, Initializable {
    * @param _minRebalanceCapital           Min capital that is worth it to deposit into this strategy
    */
   function initialize(
-    address _strategytor,
+    address _strategist,
     address _garden,
     address _controller,
     uint256 _maxCapitalRequested,
@@ -209,7 +209,7 @@ contract Strategy is ReentrancyGuard, Initializable {
     garden = IGarden(_garden);
     require(controller.isSystemContract(_garden), "Must be a valid garden");
     require(
-        ERC20(address(garden)).balanceOf(_strategytor) > 0,
+        ERC20(address(garden)).balanceOf(_strategist) > 0,
         "Only someone with the garden token can withdraw"
     );
     require(_stake > garden.totalSupply().div(100), "Stake amount must be at least 1% of the garden");
@@ -218,7 +218,7 @@ contract Strategy is ReentrancyGuard, Initializable {
     require(_minRebalanceCapital > 0, "Min Capital requested amount must be greater than 0");
     require(_maxCapitalRequested >= _minRebalanceCapital, "The max amount of capital must be greater than one chunk");
     // Check than enter and exit data call integrations
-    strategytor = _strategytor;
+    strategist = _strategist;
     enteredAt = block.timestamp;
     stake = _stake;
     duration = _investmentDuration;
@@ -343,7 +343,7 @@ contract Strategy is ReentrancyGuard, Initializable {
   }
 
   /**
-   * Lets the strategytor change the duration of the investment
+   * Lets the strategist change the duration of the investment
    * @param _newDuration            New duration of the strategy
    */
   function changeInvestmentDuration(uint256 _newDuration) external onlyIdeator {
@@ -554,20 +554,20 @@ contract Strategy is ReentrancyGuard, Initializable {
     // Idea returns were positive
     if (capitalReturned > capitalAllocated) {
       uint256 profits = capitalReturned - capitalAllocated; // in reserve asset (weth)
-      // Send stake back to the strategytor
+      // Send stake back to the strategist
       require(ERC20(address(garden)).transferFrom(
         address(this),
-        strategytor,
+        strategist,
         stake
       ), "Ideator stake return failed");
-      // Send weth rewards to the strategytor
-      uint256 strategytorProfits = garden.strategyCreatorProfitPercentage().preciseMul(profits);
+      // Send weth rewards to the strategist
+      uint256 strategistProfits = garden.strategyCreatorProfitPercentage().preciseMul(profits);
       require(ERC20(reserveAsset).transferFrom(
         address(this),
-        strategytor,
-        strategytorProfits
+        strategist,
+        strategistProfits
       ), "Ideator perf fee failed");
-      reserveAssetDelta.add(int256(-strategytorProfits));
+      reserveAssetDelta.add(int256(-strategistProfits));
       // Send weth rewards to the commmunity lead
       uint256 creatorProfits = garden.gardenCreatorProfitPercentage().preciseMul(profits);
       require(ERC20(reserveAsset).transferFrom(

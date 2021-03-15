@@ -40,7 +40,7 @@ contract StrategyFactory {
   /**
    * Creates a new investment strategy using minimal proxies
    *
-   * @param _strategytor                       Address of the strategytor
+   * @param _strategist                       Address of the strategist
    * @param _garden                     Address of the garden
    * @param _controller                    Address of the controller
    * @param _maxCapitalRequested           Max Capital requested denominated in the reserve asset (0 to be unlimited)
@@ -50,7 +50,7 @@ contract StrategyFactory {
    * @param _minRebalanceCapital           Min capital that is worth it to deposit into this strategy
    */
   function createStrategy(
-    address _strategytor,
+    address _strategist,
     address _garden,
     address _controller,
     uint256 _maxCapitalRequested,
@@ -61,7 +61,7 @@ contract StrategyFactory {
   ) external returns (address) {
       address clone = Clones.clone(strategy);
       Strategy(clone).initialize(
-        _strategytor,
+        _strategist,
         _garden,
         _controller,
         _maxCapitalRequested,

@@ -49,7 +49,7 @@ describe("Investment Idea", function() {
   });
 
   describe("Ideator can change the duration", function() {
-    it("strategytor should be able to change the duration of an investment strategy", async function() {
+    it("strategist should be able to change the duration of an investment strategy", async function() {
       await expect(
         strategiesC[0]
           .connect(userSigner1)

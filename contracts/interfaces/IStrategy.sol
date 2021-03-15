@@ -69,7 +69,7 @@ interface IStrategy {
         uint256
     );
 
-  function strategytor() external pure returns(address);
+  function strategist() external pure returns(address);
   function enteredAt() external pure returns(uint256);
   function enteredCooldownAt() external pure returns(uint256);
   function executedAt() external pure returns(uint256);
