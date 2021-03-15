@@ -17,22 +17,6 @@
 */
 pragma solidity 0.7.4;
 
-import { IIntegration } from "./IIntegration.sol";
-
-/**
- * @title ICommunityFactory
- * @author Babylon Finance
- *
- * Interface for the community factory
- */
-interface ICommunityFactory {
-
-  function createRollingCommunity(
-    address[] memory _integrations,
-    address _weth,
-    address _controller,
-    address _creator,
-    string memory _name,
-    string memory _symbol
-  ) external returns(address);
+interface IGardenValuer {
+    function calculateGardenValuation(address _garden, address _quoteAsset) external view returns (uint256);
 }

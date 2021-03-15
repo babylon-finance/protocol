@@ -11,10 +11,10 @@ describe("KyberTradeIntegration", function() {
   let system;
   let kyberIntegration;
   let kyberAbi;
-  let community;
+  let garden;
   let userSigner1;
   let userSigner3;
-  let idea;
+  let strategy;
 
   beforeEach(async () => {
     system = await loadFixture(deployFolioFixture);
@@ -22,8 +22,8 @@ describe("KyberTradeIntegration", function() {
     kyberAbi = kyberIntegration.interface;
     userSigner3 = system.signer3;
     userSigner1 = system.signer1;
-    community = system.comunities.one;
-    idea = system.ideas[0];
+    garden = system.comunities.one;
+    strategy = system.strategies[0];
   });
 
   describe("Deployment", function() {
@@ -45,17 +45,17 @@ describe("KyberTradeIntegration", function() {
     });
 
     it("trade weth to usdc", async function() {
-      await community
+      await garden
         .connect(userSigner3)
         .deposit(ethers.utils.parseEther("2"), 1, userSigner3.getAddress(), {
           value: ethers.utils.parseEther("2")
         });
-      await community
+      await garden
         .connect(userSigner1)
         .deposit(ethers.utils.parseEther("2"), 1, userSigner3.getAddress(), {
           value: ethers.utils.parseEther("2")
         });
-      expect(await wethToken.balanceOf(community.address)).to.equal(
+      expect(await wethToken.balanceOf(garden.address)).to.equal(
         ethers.utils.parseEther("4.1")
       );
 
@@ -81,7 +81,7 @@ describe("KyberTradeIntegration", function() {
         ]
       );
 
-      await idea
+      await strategy
         .connect(userSigner1)
         .setIntegrationData(
           kyberIntegration.address,
@@ -94,27 +94,27 @@ describe("KyberTradeIntegration", function() {
           }
         );
 
-      await idea
+      await strategy
         .connect(userSigner3)
-        .curateIdea(await community.balanceOf(userSigner3.getAddress()));
+        .curateIdea(await garden.balanceOf(userSigner3.getAddress()));
 
       ethers.provider.send("evm_increaseTime", [ONE_DAY_IN_SECONDS * 2]);
 
-      await idea.executeInvestment(ethers.utils.parseEther("1"), {
+      await strategy.executeInvestment(ethers.utils.parseEther("1"), {
         gasPrice: 0
       });
 
-      expect(await wethToken.balanceOf(idea.address)).to.equal(
+      expect(await wethToken.balanceOf(strategy.address)).to.equal(
         ethers.utils.parseEther("0")
       );
-      expect(await usdcToken.balanceOf(idea.address)).to.be.gt(
+      expect(await usdcToken.balanceOf(strategy.address)).to.be.gt(
         ethers.utils.parseEther("97") / 10 ** 12
       );
 
       ethers.provider.send("evm_increaseTime", [ONE_DAY_IN_SECONDS * 90]);
 
-      // await idea.finalizeInvestment({ gasPrice: 0 });
-      // expect(await usdcToken.balanceOf(idea.address)).to.equal(0);
+      // await strategy.finalizeInvestment({ gasPrice: 0 });
+      // expect(await usdcToken.balanceOf(strategy.address)).to.equal(0);
     });
   });
 });

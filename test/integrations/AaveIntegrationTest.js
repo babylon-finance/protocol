@@ -9,12 +9,12 @@ const { loadFixture } = waffle;
 describe("AaveIntegration", function() {
   let system;
   let aaveIntegration;
-  let community;
+  let garden;
 
   beforeEach(async () => {
     system = await loadFixture(deployFolioFixture);
     aaveIntegration = system.integrations.aaveIntegration;
-    community = system.comunities.one;
+    garden = system.comunities.one;
   });
 
   describe("Deployment", function() {
@@ -35,7 +35,7 @@ describe("AaveIntegration", function() {
     const daiWhaleAddress = "0x6B175474E89094C44Da98b954EedeAC495271d0F";
 
     async function printUserAccount(asset) {
-      const things = await lendingPool.getUserAccountData(community.address);
+      const things = await lendingPool.getUserAccountData(garden.address);
       console.log(
         "health factor",
         ethers.utils.formatEther(things.healthFactor)
@@ -76,21 +76,21 @@ describe("AaveIntegration", function() {
     });
 
     it("can deposit collateral", async function() {
-      expect(await daiToken.balanceOf(community.address)).to.equal(0);
+      expect(await daiToken.balanceOf(garden.address)).to.equal(0);
       expect(await daiToken.balanceOf(whaleSigner.getAddress())).to.not.equal(
         0
       );
       expect(
         await daiToken
           .connect(whaleSigner)
-          .transfer(community.address, ethers.utils.parseEther("10"), {
+          .transfer(garden.address, ethers.utils.parseEther("10"), {
             gasPrice: 0
           })
       );
-      expect(await daiToken.balanceOf(community.address)).to.not.equal(0);
+      expect(await daiToken.balanceOf(garden.address)).to.not.equal(0);
 
       // // Call deposit
-      // await community.depositCollateral(
+      // await garden.depositCollateral(
       //   "aave",
       //   daiToken.address,
       //   ethers.utils.parseEther("10"),
@@ -100,8 +100,8 @@ describe("AaveIntegration", function() {
       // );
       // expect(await daiToken.balanceOf(system.owner.address)).to.equal(0);
       // // await printUserAccount(daiToken.address);
-      // const communityAccount = await lendingPool.getUserAccountData(community.address);
-      // expect(communityAccount.totalCollateralETH).to.be.gt(0);
+      // const gardenAccount = await lendingPool.getUserAccountData(garden.address);
+      // expect(gardenAccount.totalCollateralETH).to.be.gt(0);
     });
 
     it("checks that the dai/usdc pair works", async function() {
@@ -149,7 +149,7 @@ describe("AaveIntegration", function() {
       expect(
         await daiToken
           .connect(whaleSigner)
-          .transfer(community.address, ethers.utils.parseEther("1000"), {
+          .transfer(garden.address, ethers.utils.parseEther("1000"), {
             gasPrice: 0
           })
       );
@@ -159,12 +159,12 @@ describe("AaveIntegration", function() {
           ethers.utils.parseEther("1000")
         )
       );
-      expect(await daiToken.balanceOf(community.address)).to.equal(
+      expect(await daiToken.balanceOf(garden.address)).to.equal(
         ethers.utils.parseEther("1000")
       );
 
       // // Call deposit
-      // await community.depositCollateral(
+      // await garden.depositCollateral(
       //   "aave",
       //   daiToken.address,
       //   ethers.utils.parseEther("1000"),
@@ -172,17 +172,17 @@ describe("AaveIntegration", function() {
       //     gasPrice: 0
       //   }
       // );
-      // const communityAccount = await lendingPool.getUserAccountData(community.address);
-      // expect(communityAccount.totalCollateralETH).to.be.gt(0);
+      // const gardenAccount = await lendingPool.getUserAccountData(garden.address);
+      // expect(gardenAccount.totalCollateralETH).to.be.gt(0);
       // expect(await daiToken.balanceOf(aaveIntegration.address)).to.equal(0);
       // expect(await usdcToken.balanceOf(system.owner.getAddress())).to.equal(0);
       // console.log(
       //   "before borrow",
-      //   ethers.utils.formatEther(communityAccount.totalCollateralETH),
-      //   ethers.utils.formatEther(communityAccount.availableBorrowsETH)
+      //   ethers.utils.formatEther(gardenAccount.totalCollateralETH),
+      //   ethers.utils.formatEther(gardenAccount.availableBorrowsETH)
       // );
       // // Call borrow
-      // await community.borrow(
+      // await garden.borrow(
       //   "aave",
       //   usdcToken.address,
       //   ethers.utils.parseEther("100"),
@@ -193,7 +193,7 @@ describe("AaveIntegration", function() {
       // );
       // printUserAccount();
       // expect(await usdcToken.balanceOf(aaveIntegration.address)).to.equal(0);
-      // expect(await usdcToken.balanceOf(community.address)).to.equal(100 * 10 ** 6);
+      // expect(await usdcToken.balanceOf(garden.address)).to.equal(100 * 10 ** 6);
     });
   });
 });

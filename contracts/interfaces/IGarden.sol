@@ -20,12 +20,12 @@ pragma solidity 0.7.4;
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 /**
- * @title ICommunity
+ * @title IGarden
  * @author Babylon Finance
  *
  * Interface for operating with SetTokens.
  */
-interface ICommunity is IERC20 {
+interface IGarden is IERC20 {
     /* ============ Functions ============ */
     function setActive() external;
     function setDisabled() external;
@@ -33,8 +33,8 @@ interface ICommunity is IERC20 {
     function active() external view returns (bool);
     function controller() external view returns (address);
     function creator() external view returns (address);
-    function communityEndsBy() external view returns (uint256);
-    function communityIdeas() external view returns (address);
+    function gardenEndsBy() external view returns (uint256);
+    function gardenIdeas() external view returns (address);
     function getContributor(address _contributor) external view returns (uint256, uint256, uint256);
     function getIntegrations() external view returns (address[] memory);
     function getReserveAsset() external view returns (address);
@@ -50,16 +50,16 @@ interface ICommunity is IERC20 {
     function minVotersQuorum() external pure returns (uint256);
     function minIdeaDuration() external pure returns (uint256);
     function maxIdeaDuration() external pure returns (uint256);
-    function ideaCooldownPeriod() external pure returns (uint256);
-    function ideaCreatorProfitPercentage() external pure returns (uint256);
-    function ideaVotersProfitPercentage() external pure returns (uint256);
-    function communityCreatorProfitPercentage() external pure returns (uint256);
-    function getIdeas() external view returns (address[] memory);
-    function isInvestmentIdea(address _idea) external view returns (bool);
+    function strategyCooldownPeriod() external pure returns (uint256);
+    function strategyCreatorProfitPercentage() external pure returns (uint256);
+    function strategyVotersProfitPercentage() external pure returns (uint256);
+    function gardenCreatorProfitPercentage() external pure returns (uint256);
+    function getStrategies() external view returns (address[] memory);
+    function isStrategy(address _strategy) external view returns (bool);
 
     function startRedemptionWindow(uint256 _amount) external;
     function allocateCapitalToInvestment(uint256 _capital) external;
-    function addInvestmentIdea(
+    function addStrategy(
       uint256 _maxCapitalRequested,
       uint256 _stake,
       uint256 _investmentDuration,

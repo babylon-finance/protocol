@@ -11,10 +11,10 @@ describe("BalancerIntegrationTest", function() {
   let system;
   let balancerIntegration;
   let balancerAbi;
-  let community;
+  let garden;
   let userSigner1;
   let userSigner3;
-  let idea;
+  let strategy;
 
   beforeEach(async () => {
     system = await loadFixture(deployFolioFixture);
@@ -22,8 +22,8 @@ describe("BalancerIntegrationTest", function() {
     userSigner1 = system.signer1;
     userSigner3 = system.signer3;
     balancerAbi = balancerIntegration.interface;
-    community = system.comunities.one;
-    idea = system.ideas[0];
+    garden = system.comunities.one;
+    strategy = system.strategies[0];
   });
 
   describe("Deployment", function() {
@@ -67,17 +67,17 @@ describe("BalancerIntegrationTest", function() {
       // expect(
       //   await daiToken
       //     .connect(whaleSigner)
-      //     .transfer(community.address, ethers.utils.parseEther("1000"), {
+      //     .transfer(garden.address, ethers.utils.parseEther("1000"), {
       //       gasPrice: 0
       //     })
       // );
 
-      await community
+      await garden
         .connect(userSigner1)
         .deposit(ethers.utils.parseEther("3"), 1, userSigner3.getAddress(), {
           value: ethers.utils.parseEther("3")
         });
-      await community
+      await garden
         .connect(userSigner3)
         .deposit(ethers.utils.parseEther("3"), 1, userSigner3.getAddress(), {
           value: ethers.utils.parseEther("3")
@@ -103,7 +103,7 @@ describe("BalancerIntegrationTest", function() {
         ]
       );
 
-      await idea
+      await strategy
         .connect(userSigner1)
         .setIntegrationData(
           balancerIntegration.address,
@@ -116,29 +116,29 @@ describe("BalancerIntegrationTest", function() {
           }
         );
 
-      await idea
+      await strategy
         .connect(userSigner3)
-        .curateIdea(await community.balanceOf(userSigner3.getAddress()));
+        .curateIdea(await garden.balanceOf(userSigner3.getAddress()));
 
       ethers.provider.send("evm_increaseTime", [ONE_DAY_IN_SECONDS * 2]);
 
-      // await idea.executeInvestment(ethers.utils.parseEther("1"), {
+      // await strategy.executeInvestment(ethers.utils.parseEther("1"), {
       //   gasPrice: 0
       // });
       //
-      // expect(await daiWethPool.balanceOf(idea.address)).to.be.eq(
+      // expect(await daiWethPool.balanceOf(strategy.address)).to.be.eq(
       //   ethers.utils.parseEther("0.001")
       // );
       //
       // ethers.provider.send("evm_increaseTime", [ONE_DAY_IN_SECONDS * 90]);
       //
-      // await idea.finalizeInvestment({ gasPrice: 0 });
+      // await strategy.finalizeInvestment({ gasPrice: 0 });
       //
-      // expect(await daiWethPool.balanceOf(idea.address)).to.equal(0);
-      // expect(await daiToken.balanceOf(idea.address)).to.be.gt(
+      // expect(await daiWethPool.balanceOf(strategy.address)).to.equal(0);
+      // expect(await daiToken.balanceOf(strategy.address)).to.be.gt(
       //   ethers.utils.parseEther("0")
       // );
-      // expect(await wethToken.balanceOf(idea.address)).to.be.gt(
+      // expect(await wethToken.balanceOf(strategy.address)).to.be.gt(
       //   ethers.utils.parseEther("4.00")
       // );
     });

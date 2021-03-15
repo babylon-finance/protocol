@@ -20,21 +20,19 @@ pragma solidity 0.7.4;
 import { IIntegration } from "./IIntegration.sol";
 
 /**
- * @title IIdeaFactory
+ * @title IGardenFactory
  * @author Babylon Finance
  *
- * Interface for the idea factory
+ * Interface for the garden factory
  */
-interface IIdeaFactory {
+interface IGardenFactory {
 
-  function createInvestmentIdea(
-    address _ideator,
-    address _community,
+  function createRollingGarden(
+    address[] memory _integrations,
+    address _weth,
     address _controller,
-    uint256 _maxCapitalRequested,
-    uint256 _stake,
-    uint256 _investmentDuration,
-    uint256 _expectedReturn,
-    uint256 _minRebalanceCapital
-  ) external returns (address);
+    address _creator,
+    string memory _name,
+    string memory _symbol
+  ) external returns(address);
 }

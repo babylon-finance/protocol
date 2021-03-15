@@ -18,12 +18,12 @@
 pragma solidity 0.7.4;
 
 /**
- * @title IInvestmentIdea
+ * @title IStrategy
  * @author Babylon Finance
  *
  * Interface for Investment Idea
  */
-interface IInvestmentIdea {
+interface IStrategy {
 
   function curateIdea(int256 _amount) external;
   function executeInvestment(uint256 _capital) external;
@@ -69,7 +69,7 @@ interface IInvestmentIdea {
         uint256
     );
 
-  function ideator() external pure returns(address);
+  function strategist() external pure returns(address);
   function enteredAt() external pure returns(uint256);
   function enteredCooldownAt() external pure returns(uint256);
   function executedAt() external pure returns(uint256);
@@ -91,6 +91,6 @@ interface IInvestmentIdea {
   function exitPayload() external pure returns(bytes memory);
   function finalized() external pure returns(bool);
   function active() external pure returns(bool);
-  function community() external pure returns(address);
+  function garden() external pure returns(address);
 
 }

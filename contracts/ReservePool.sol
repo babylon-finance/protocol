@@ -1,7 +1,7 @@
 /*
     Copyright 2020 Babylon Finance
 
-    Modified from (Set Protocol CommunityValuer)
+    Modified from (Set Protocol GardenValuer)
 
     Licensed under the Apache License, Version 2.0 (the "License");
     you may not use this file except in compliance with the License.
@@ -31,8 +31,8 @@ import { SignedSafeMath } from "@openzeppelin/contracts/math/SignedSafeMath.sol"
 import { SafeMath } from "@openzeppelin/contracts/math/SafeMath.sol";
 import { IWETH } from "./interfaces/external/weth/IWETH.sol";
 import { IBabController } from "./interfaces/IBabController.sol";
-import { IRollingCommunity } from "./interfaces/IRollingCommunity.sol";
-import { ICommunityValuer } from "./interfaces/ICommunityValuer.sol";
+import { IRollingGarden } from "./interfaces/IRollingGarden.sol";
+import { IGardenValuer } from "./interfaces/IGardenValuer.sol";
 import { IPriceOracle } from "./interfaces/IPriceOracle.sol";
 import { PreciseUnitMath } from "./lib/PreciseUnitMath.sol";
 
@@ -41,7 +41,7 @@ import { PreciseUnitMath } from "./lib/PreciseUnitMath.sol";
  * @author Babylon Finance
  *
  * Contract that holds the reserve pool of the protocol.
- * The reserve pool of the protocol is used to provide liquidity to community depositors.
+ * The reserve pool of the protocol is used to provide liquidity to garden depositors.
  * The reserve pool gets a discount for this liquidity provisioning.
  *
  */
@@ -56,7 +56,7 @@ contract ReservePool is ERC20, ReentrancyGuard, Ownable {
     /* ============ Events ============ */
     event ReservePoolDeposit(address indexed sender, uint amount, uint timestamp);
     event ReservePoolClaim(address indexed sender, uint tokenAmount, uint wethAmount, uint timestamp);
-    event MaxPercentageCommunityOwnershipChanged(uint newMax, uint oldMax);
+    event MaxPercentageGardenOwnershipChanged(uint newMax, uint oldMax);
 
     /* ============ Modifiers ============ */
 
@@ -68,8 +68,8 @@ contract ReservePool is ERC20, ReentrancyGuard, Ownable {
 
     uint256 constant MIN_DEPOSIT = 1e17; // Min Deposit
     uint256 constant LOCK_WINDOW = 7 days; // How long your deposit will be locked
-    uint256 constant MAX_OWNERSHIP = 5e17; // 20% is the actual max ownership of the reserve pool allowed per community
-    uint256 constant MIN_NAV = 100 * 1e18; // Absolute min NAV of the community in WETH. 500
+    uint256 constant MAX_OWNERSHIP = 5e17; // 20% is the actual max ownership of the reserve pool allowed per garden
+    uint256 constant MIN_NAV = 100 * 1e18; // Absolute min NAV of the garden in WETH. 500
 
     // Instance of the Controller contract
     address public controller;
@@ -77,8 +77,8 @@ contract ReservePool is ERC20, ReentrancyGuard, Ownable {
 
     mapping(address => uint256) public userTimelock; // Balances of timelock per user
 
-    uint256 public maxPercentageCommunityOwnership = 1e17; // 10% (0.01% = 1e14, 1% = 1e16)
-    uint256 public minCommunityNAV = 1e17; // 10% (0.01% = 1e14, 1% = 1e16)
+    uint256 public maxPercentageGardenOwnership = 1e17; // 10% (0.01% = 1e14, 1% = 1e16)
+    uint256 public minGardenNAV = 1e17; // 10% (0.01% = 1e14, 1% = 1e16)
 
     /* ============ Constructor ============ */
 
@@ -94,33 +94,33 @@ contract ReservePool is ERC20, ReentrancyGuard, Ownable {
     /* ============ External Functions ============ */
 
     /**
-     * Updates the max percentage community ownership
+     * Updates the max percentage garden ownership
      *
-     * @param _newMax         New Max Percentage community ownership
+     * @param _newMax         New Max Percentage garden ownership
      */
-    function editMaxPercentageCommunityOwnership(uint256 _newMax) external {
+    function editMaxPercentageGardenOwnership(uint256 _newMax) external {
       require(_newMax < MAX_OWNERSHIP, "Must be < total Max");
 
-      uint256 oldMax = maxPercentageCommunityOwnership;
+      uint256 oldMax = maxPercentageGardenOwnership;
 
-      maxPercentageCommunityOwnership = _newMax;
+      maxPercentageGardenOwnership = _newMax;
 
-      emit MaxPercentageCommunityOwnershipChanged(maxPercentageCommunityOwnership, oldMax);
+      emit MaxPercentageGardenOwnershipChanged(maxPercentageGardenOwnership, oldMax);
     }
 
     /**
-     * Updates the min community NAV to enable Reserve Pool for a community
+     * Updates the min garden NAV to enable Reserve Pool for a garden
      *
-     * @param _newMinCommunityNav         New Min Community NAV
+     * @param _newMinGardenNav         New Min Garden NAV
      */
-    function editMinCommunityNAV(uint256 _newMinCommunityNav) external {
-      require(_newMinCommunityNav >= MIN_NAV, "Must be > min nav");
+    function editMinGardenNAV(uint256 _newMinGardenNav) external {
+      require(_newMinGardenNav >= MIN_NAV, "Must be > min nav");
 
-      uint256 oldNAV = minCommunityNAV;
+      uint256 oldNAV = minGardenNAV;
 
-      minCommunityNAV = _newMinCommunityNav;
+      minGardenNAV = _newMinGardenNav;
 
-      emit MaxPercentageCommunityOwnershipChanged(minCommunityNAV, oldNAV);
+      emit MaxPercentageGardenOwnershipChanged(minGardenNAV, oldNAV);
     }
 
     /**
@@ -154,51 +154,51 @@ contract ReservePool is ERC20, ReentrancyGuard, Ownable {
 
     /**
      * Exchanges the reserve pool tokens for the underlying amount of weth.
-     * Only a community or the owner can call this
-     * @param _community               Community that the sender wants to sell tokens of
-     * @param _amount                  Quantity of the community tokens that sender wants to sell
+     * Only a garden or the owner can call this
+     * @param _garden               Garden that the sender wants to sell tokens of
+     * @param _amount                  Quantity of the garden tokens that sender wants to sell
      */
-    function sellTokensToLiquidityPool(address _community, uint256 _amount) external nonReentrant returns (uint256) {
-      require(IBabController(controller).isSystemContract(_community), "Only valid communities");
-      require(IRollingCommunity(_community).balanceOf(msg.sender) >= _amount, "Sender does not have enough tokens");
-      require(isReservePoolAllowedToBuy(_community, _amount), "Check if the buy is allowed");
+    function sellTokensToLiquidityPool(address _garden, uint256 _amount) external nonReentrant returns (uint256) {
+      require(IBabController(controller).isSystemContract(_garden), "Only valid gardens");
+      require(IRollingGarden(_garden).balanceOf(msg.sender) >= _amount, "Sender does not have enough tokens");
+      require(isReservePoolAllowedToBuy(_garden, _amount), "Check if the buy is allowed");
       // TODO: Make dynamic
       uint256 discount = 1e17;
-      // Get valuation of the Community with the quote asset as the reserve asset.
-      uint256 communityValuation = ICommunityValuer(IBabController(controller).getCommunityValuer()).calculateCommunityValuation(_community, weth);
-      uint256 amountValue = communityValuation.preciseMul(_amount);
+      // Get valuation of the Garden with the quote asset as the reserve asset.
+      uint256 gardenValuation = IGardenValuer(IBabController(controller).getGardenValuer()).calculateGardenValuation(_garden, weth);
+      uint256 amountValue = gardenValuation.preciseMul(_amount);
       uint256 amountDiscounted = amountValue - amountValue.preciseMul(discount);
       require(IWETH(weth).balanceOf(address(this)) >= amountDiscounted, "There needs to be enough WETH");
       // Mints tokens to the reserve pool
-      IRollingCommunity(_community).burnAssetsFromSenderAndMintToReserve(msg.sender, _amount);
+      IRollingGarden(_garden).burnAssetsFromSenderAndMintToReserve(msg.sender, _amount);
       require(IWETH(weth).transfer(msg.sender, amountDiscounted), "WETH transfer failed");
       return amountDiscounted;
     }
 
     /**
-     * Withdraws the principal and profits from the community using its participation tokens.
+     * Withdraws the principal and profits from the garden using its participation tokens.
      * Only a keeper or owner can call this.
-     * @param _community                Address of the community contract
-     * @param _amount                   Amount of the community tokens to redeem
+     * @param _garden                Address of the garden contract
+     * @param _amount                   Amount of the garden tokens to redeem
      */
-    function redeemETHFromCommunityTokens(address _community, uint256 _amount) external nonReentrant {
+    function redeemETHFromGardenTokens(address _garden, uint256 _amount) external nonReentrant {
       bool isValidKeeper = IBabController(controller).isValidKeeper(msg.sender);
-      IRollingCommunity community = IRollingCommunity(_community);
+      IRollingGarden garden = IRollingGarden(_garden);
       require(isValidKeeper || msg.sender == IBabController(controller).owner(), "Only owner or keeper can call this");
       require(_amount > 0, "There needs to be tokens to redeem");
-      require(community.active(), "Community must be active");
-      // Get valuation of the Community with the quote asset as the reserve asset.
-      uint256 communityValuation = ICommunityValuer(IBabController(controller).getCommunityValuer()).calculateCommunityValuation(_community, weth);
-      require(communityValuation > 0, "Community must be worth something");
-      // Check that the community has normal liquidity
-      uint minReceive = communityValuation.preciseMul(community.totalSupply()).preciseDiv(_amount);
-      require(community.canWithdrawEthAmount(minReceive), "Not enough liquidity in the fund");
+      require(garden.active(), "Garden must be active");
+      // Get valuation of the Garden with the quote asset as the reserve asset.
+      uint256 gardenValuation = IGardenValuer(IBabController(controller).getGardenValuer()).calculateGardenValuation(_garden, weth);
+      require(gardenValuation > 0, "Garden must be worth something");
+      // Check that the garden has normal liquidity
+      uint minReceive = gardenValuation.preciseMul(garden.totalSupply()).preciseDiv(_amount);
+      require(garden.canWithdrawEthAmount(minReceive), "Not enough liquidity in the fund");
       uint rewards = address(this).balance;
-      community.withdraw(_amount, minReceive.mul(95).div(100), msg.sender);
+      garden.withdraw(_amount, minReceive.mul(95).div(100), msg.sender);
       rewards = address(this).balance.sub(rewards);
       IWETH(weth).deposit{value: rewards}();
       // TODO: Create a new fee in protocol
-      uint256 protocolFee = IBabController(controller).getProtocolWithdrawalCommunityTokenFee().preciseMul(rewards);
+      uint256 protocolFee = IBabController(controller).getProtocolWithdrawalGardenTokenFee().preciseMul(rewards);
       // Send to the treasury the protocol fee
       require(IWETH(weth).transfer(
           IBabController(controller).getTreasury(),
@@ -212,31 +212,31 @@ contract ReservePool is ERC20, ReentrancyGuard, Ownable {
 
     function getReservePoolValuation() public view returns (uint256) {
       uint total = 0;
-      address[] memory _communities = IBabController(controller).getCommunities();
-      for (uint i = 0; i < _communities.length; i++) {
-        uint256 communityBalance = IRollingCommunity(_communities[i]).balanceOf(address(this));
-        if (communityBalance > 0) {
-          uint256 communityValuation = ICommunityValuer(IBabController(controller).getCommunityValuer()).calculateCommunityValuation(_communities[i], weth);
-          total = total.add(communityValuation.preciseMul(communityBalance));
+      address[] memory _gardens = IBabController(controller).getCommunities();
+      for (uint i = 0; i < _gardens.length; i++) {
+        uint256 gardenBalance = IRollingGarden(_gardens[i]).balanceOf(address(this));
+        if (gardenBalance > 0) {
+          uint256 gardenValuation = IGardenValuer(IBabController(controller).getGardenValuer()).calculateGardenValuation(_gardens[i], weth);
+          total = total.add(gardenValuation.preciseMul(gardenBalance));
         }
       }
       return total.add(IWETH(weth).balanceOf(address(this)));
     }
 
     /**
-     * Returns whether or not the reserve pool can buy tokens of this community
+     * Returns whether or not the reserve pool can buy tokens of this garden
      *
-     * @param _community The community to check
-     * @param _newAmount The amount of community tokens to buy
+     * @param _garden The garden to check
+     * @param _newAmount The amount of garden tokens to buy
     */
-    function isReservePoolAllowedToBuy(address _community, uint256 _newAmount) public view returns (bool) {
-      // TODO: Check only RollingCommunity not ClosedCommunity
-      uint256 totalNav = ICommunityValuer(IBabController(controller).getCommunityValuer()).calculateCommunityValuation(_community, weth).preciseMul(ERC20(_community).totalSupply());
-      if (totalNav < minCommunityNAV) {
+    function isReservePoolAllowedToBuy(address _garden, uint256 _newAmount) public view returns (bool) {
+      // TODO: Check only RollingGarden not ClosedGarden
+      uint256 totalNav = IGardenValuer(IBabController(controller).getGardenValuer()).calculateGardenValuation(_garden, weth).preciseMul(ERC20(_garden).totalSupply());
+      if (totalNav < minGardenNAV) {
         return false;
       }
-      uint256 newCommunityTokensInReservePool = IRollingCommunity(_community).balanceOf(address(this)).add(_newAmount);
-      if (newCommunityTokensInReservePool.preciseDiv(ERC20(_community).totalSupply()) > maxPercentageCommunityOwnership) {
+      uint256 newGardenTokensInReservePool = IRollingGarden(_garden).balanceOf(address(this)).add(_newAmount);
+      if (newGardenTokensInReservePool.preciseDiv(ERC20(_garden).totalSupply()) > maxPercentageGardenOwnership) {
         return false;
       }
       return true;

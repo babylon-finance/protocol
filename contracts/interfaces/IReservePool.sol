@@ -26,13 +26,13 @@ pragma solidity 0.7.4;
  */
 interface IReservePool {
 
-  function editMaxPercentageCommunityOwnership(uint256 _newMax) external;
-  function editMinCommunityNAV(uint256 _newMinCommunityNav) external;
+  function editMaxPercentageGardenOwnership(uint256 _newMax) external;
+  function editMinGardenNAV(uint256 _newMinGardenNav) external;
   function deposit() external payable;
   function claim(uint256 _amount, address payable _to) external;
 
-  function sellTokensToLiquidityPool(address _community, uint256 _amount) external returns (uint256);
-  function redeemETHFromCommunityTokens(address _community, uint256 _amount) external;
+  function sellTokensToLiquidityPool(address _garden, uint256 _amount) external returns (uint256);
+  function redeemETHFromGardenTokens(address _garden, uint256 _amount) external;
 
-  function isReservePoolAllowedToBuy(address _community, uint256 _newAmount) external view returns (bool);
+  function isReservePoolAllowedToBuy(address _garden, uint256 _newAmount) external view returns (bool);
 }

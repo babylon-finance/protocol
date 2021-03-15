@@ -27,44 +27,44 @@ interface IBabController {
 
     /* ============ Functions ============ */
 
-    function createRollingCommunity(
+    function createRollingGarden(
       address[] memory _integrations,
       address _weth,
       string memory _name,
       string memory _symbol
     ) external returns (address);
-    function removeCommunity(address _community) external;
+    function removeGarden(address _garden) external;
     function addReserveAsset(address _reserveAsset) external;
     function removeReserveAsset(address _reserveAsset) external;
-    function disableCommunity(address _community) external;
-    function reenableCommunity(address _community) external;
+    function disableGarden(address _garden) external;
+    function reenableGarden(address _garden) external;
     function editPriceOracle(address _priceOracle) external;
     function editReservePool(address _reservePool) external;
-    function editCommunityValuer(address _communityValuer) external;
+    function editGardenValuer(address _gardenValuer) external;
     function editTreasury(address _newTreasury) external;
-    function editCommunityFactory(address _newCommunityFactory) external;
-    function editIdeaFactory(address _newIdeaFactory) external;
+    function editGardenFactory(address _newGardenFactory) external;
+    function editStrategyFactory(address _newStrategyFactory) external;
     function addIntegration(string memory _name, address _integration) external;
     function editIntegration(string memory _name, address _integration) external;
     function removeIntegration(string memory _name) external;
     function addKeeper(address _keeper) external;
     function addKeepers(address[] memory _keepers) external;
     function removeKeeper(address _keeper) external;
-    function enableCommunityTokensTransfers() external;
+    function enableGardenTokensTransfers() external;
     function editLiquidityMinimum(uint256 _minRiskyPairLiquidityEth) external;
 
     // Getters
     function owner() external view returns (address);
-    function communityTokensTransfersEnabled() external view returns (bool);
+    function gardenTokensTransfersEnabled() external view returns (bool);
     function protocolReservePoolDiscount() external view returns (uint256);
     function getPriceOracle() external view returns (address);
     function getReservePool() external view returns (address);
-    function getCommunityValuer() external view returns(address);
+    function getGardenValuer() external view returns(address);
     function getTreasury() external view returns(address);
-    function getIdeaFactory() external view returns(address);
-    function getCommunityFactory() external view returns(address);
+    function getStrategyFactory() external view returns(address);
+    function getGardenFactory() external view returns(address);
     function getCommunities() external view returns (address[] memory);
-    function isCommunity(address _community) external view returns(bool);
+    function isGarden(address _garden) external view returns(bool);
     function getIntegrationByName(string memory _name) external view returns (address);
     function getIntegrationFee(address _integration) external view returns (uint256);
     function getIntegrationWithHash(bytes32 _nameHashP) external view returns (address);
@@ -75,8 +75,8 @@ interface IBabController {
     function getMinCooldownPeriod() external view returns (uint256);
     function getMaxCooldownPeriod() external view returns (uint256);
     function getProtocolPerformanceFee() external view returns (uint256);
-    function getProtocolDepositCommunityTokenFee() external view returns (uint256);
-    function getProtocolWithdrawalCommunityTokenFee() external view returns (uint256);
+    function getProtocolDepositGardenTokenFee() external view returns (uint256);
+    function getProtocolWithdrawalGardenTokenFee() external view returns (uint256);
     function minRiskyPairLiquidityEth() external view returns(uint256);
     function getUniswapFactory() external view returns(address);
 }

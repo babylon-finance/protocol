@@ -17,6 +17,24 @@
 */
 pragma solidity 0.7.4;
 
-interface ICommunityValuer {
-    function calculateCommunityValuation(address _community, address _quoteAsset) external view returns (uint256);
+import { IIntegration } from "./IIntegration.sol";
+
+/**
+ * @title IStrategyFactory
+ * @author Babylon Finance
+ *
+ * Interface for the strategy factory
+ */
+interface IStrategyFactory {
+
+  function createStrategy(
+    address _strategist,
+    address _garden,
+    address _controller,
+    uint256 _maxCapitalRequested,
+    uint256 _stake,
+    uint256 _investmentDuration,
+    uint256 _expectedReturn,
+    uint256 _minRebalanceCapital
+  ) external returns (address);
 }

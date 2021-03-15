@@ -11,12 +11,12 @@ const { loadFixture } = waffle;
 describe("OneInchTradeIntegration", function() {
   let system;
   let oneInchIntegration;
-  let community;
+  let garden;
 
   beforeEach(async () => {
     system = await loadFixture(deployFolioFixture);
     oneInchIntegration = system.integrations.oneInchTradeIntegration;
-    community = system.comunities.one;
+    garden = system.comunities.one;
   });
 
   describe("Deployment", function() {
@@ -49,11 +49,11 @@ describe("OneInchTradeIntegration", function() {
       expect(
         await daiToken
           .connect(whaleSigner)
-          .transfer(community.address, ethers.utils.parseEther("100"), {
+          .transfer(garden.address, ethers.utils.parseEther("100"), {
             gasPrice: 0
           })
       );
-      expect(await daiToken.balanceOf(community.address)).to.equal(
+      expect(await daiToken.balanceOf(garden.address)).to.equal(
         ethers.utils.parseEther("100")
       );
       // Get the quote
@@ -88,7 +88,7 @@ describe("OneInchTradeIntegration", function() {
       //   ]
       // );
       //
-      // await community.trade(
+      // await garden.trade(
       //   "1inch",
       //   addresses.tokens.DAI,
       //   ethers.utils.parseEther("100"),
@@ -97,11 +97,11 @@ describe("OneInchTradeIntegration", function() {
       //   callData,
       //   { gasPrice: 0 }
       // );
-      // expect(await daiToken.balanceOf(community.address)).to.equal(0);
+      // expect(await daiToken.balanceOf(garden.address)).to.equal(0);
       // console.log(
-      //   ethers.utils.formatEther(await usdcToken.balanceOf(community.address))
+      //   ethers.utils.formatEther(await usdcToken.balanceOf(garden.address))
       // );
-      // expect(await usdcToken.balanceOf(community.address)).to.be.gt(
+      // expect(await usdcToken.balanceOf(garden.address)).to.be.gt(
       //   ethers.utils.parseEther("97") / 10 ** 12
       // );
     });
