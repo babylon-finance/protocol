@@ -54,7 +54,7 @@ abstract contract BaseCommunity is ERC20Upgradeable {
     event IntegrationInitialized(address indexed _integration);
     event PendingIntegrationRemoved(address indexed _integration);
     event ReserveAssetChanged(address indexed _integration);
-    event ReserveBalanceChanged(uint256 _newAmount, uint256 _oldAmount);
+    event PrincipalChanged(uint256 _newAmount, uint256 _oldAmount);
     event CommunityTokenDeposited(
         address indexed _to,
         uint256 communityTokenQuantity,
@@ -171,7 +171,7 @@ abstract contract BaseCommunity is ERC20Upgradeable {
     address[] public integrations;
 
     // Keeps track of the reserve balance. In case we receive some through other means
-    uint256 reserveBalance;
+    uint256 principal;
 
     // Indicates the minimum liquidity the asset needs to have to be tradable by this community
     uint256 public minLiquidityAsset;
@@ -179,8 +179,6 @@ abstract contract BaseCommunity is ERC20Upgradeable {
     // Contributors
     mapping(address => Contributor) public contributors;
     uint256 public totalContributors;
-    uint256 public totalFundsDeposited;
-    uint256 public totalFunds;
     uint256 public maxDepositLimit;                // Limits the amount of deposits
 
     uint256 public communityInitializedAt;         // Community Initialized at timestamp
@@ -240,7 +238,7 @@ abstract contract BaseCommunity is ERC20Upgradeable {
         for (uint i = 0; i < _integrations.length; i++) {
           _addIntegration(_integrations[i]);
         }
-
+        principal = 0;
         active = false;
     }
 
@@ -317,8 +315,8 @@ abstract contract BaseCommunity is ERC20Upgradeable {
      *
      * @param _amount             Amount of the reserve balance
      */
-    function updateReserveBalance(uint256 _amount) external onlyInvestmentIdea {
-      _updateReserveBalance(_amount);
+    function updatePrincipal(uint256 _amount) external onlyInvestmentIdea {
+      _updatePrincipal(_amount);
     }
 
     /* ============ Investment Idea Functions ============ */
@@ -412,8 +410,8 @@ abstract contract BaseCommunity is ERC20Upgradeable {
       return ideaMapping[_idea];
     }
 
-    function getReserveBalance() external view returns (uint256) {
-      return reserveBalance;
+    function getPrincipal() external view returns (uint256) {
+      return principal;
     }
 
     function getReserveAsset() external view returns (address) {
@@ -496,10 +494,10 @@ abstract contract BaseCommunity is ERC20Upgradeable {
      *
      * @param _amount             Amount of the reserve balance
      */
-    function _updateReserveBalance(uint256 _amount) internal {
-      uint256 oldAmount = reserveBalance;
-      reserveBalance = _amount;
-      emit ReserveBalanceChanged(_amount, oldAmount);
+    function _updatePrincipal(uint256 _amount) internal {
+      uint256 oldAmount = principal;
+      principal = _amount;
+      emit PrincipalChanged(_amount, oldAmount);
     }
 
     function _addIntegration(address _integration) internal

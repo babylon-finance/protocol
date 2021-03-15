@@ -103,8 +103,6 @@ contract RollingCommunity is ReentrancyGuard, BaseCommunity {
           _symbol
       );
       totalContributors = 0;
-      totalFundsDeposited = 0;
-      totalFunds = 0;
     }
 
     /* ============ External Functions ============ */
@@ -178,7 +176,7 @@ contract RollingCommunity is ReentrancyGuard, BaseCommunity {
 
         _mint(creator, initialTokens);
         _updateContributorInfo(initialTokens, initialDepositAmount);
-        _updateReserveBalance(initialDepositAmount);
+        _updatePrincipal(initialDepositAmount);
 
         require(totalSupply() > 0, "Community must receive an initial deposit");
 
@@ -204,7 +202,7 @@ contract RollingCommunity is ReentrancyGuard, BaseCommunity {
         );
         // if deposit limit is 0, then there is no deposit limit
         if(maxDepositLimit > 0) {
-          require(totalFundsDeposited.add(msg.value) <= maxDepositLimit, "Max Deposit Limit");
+          require(principal.add(msg.value) <= maxDepositLimit, "Max Deposit Limit");
         }
         require(msg.value == _reserveAssetQuantity, "ETH does not match");
         // Oracle maintenance
@@ -227,7 +225,7 @@ contract RollingCommunity is ReentrancyGuard, BaseCommunity {
         // Updates Reserve Balance and Mint
         _mint(_to, depositInfo.communityTokenQuantity);
         _updateContributorInfo(depositInfo.communityTokenQuantity, msg.value);
-        _updateReserveBalance(depositInfo.newReservePositionBalance);
+        _updatePrincipal(depositInfo.newReservePositionBalance);
 
         emit CommunityTokenDeposited(
             _to,
@@ -274,7 +272,6 @@ contract RollingCommunity is ReentrancyGuard, BaseCommunity {
             withdrawalInfo.netFlowQuantity,
             block.timestamp
         );
-        totalFunds = totalFunds.sub(withdrawalInfo.netFlowQuantity).sub(withdrawalInfo.protocolFees);
         // Check that the rdemption is possible
         require(canWithdrawEthAmount(withdrawalInfo.netFlowQuantity), "Not enough liquidity in the fund");
         if (address(this).balance >= withdrawalInfo.netFlowQuantity) {
@@ -289,7 +286,7 @@ contract RollingCommunity is ReentrancyGuard, BaseCommunity {
 
         payProtocolFeeFromCommunity(reserveAsset, withdrawalInfo.protocolFees);
 
-        _updateReserveBalance(withdrawalInfo.newReservePositionBalance);
+        _updatePrincipal(withdrawalInfo.newReservePositionBalance);
         emit CommunityTokenWithdrawn(
             msg.sender,
             _to,
@@ -340,11 +337,10 @@ contract RollingCommunity is ReentrancyGuard, BaseCommunity {
           withdrawalInfo.netFlowQuantity,
           block.timestamp
       );
-      totalFunds = totalFunds.sub(withdrawalInfo.netFlowQuantity).sub(withdrawalInfo.protocolFees);
 
       payProtocolFeeFromCommunity(reserveAsset, withdrawalInfo.protocolFees);
 
-      _updateReserveBalance(withdrawalInfo.newReservePositionBalance);
+      _updatePrincipal(withdrawalInfo.newReservePositionBalance);
 
       emit CommunityTokenWithdrawn(
           msg.sender,
@@ -476,7 +472,7 @@ contract RollingCommunity is ReentrancyGuard, BaseCommunity {
             (, uint256 expectedWithdrawalQuantity) =
                 _getFees(totalWithdrawalValue, false, _communityTokenQuantity);
 
-            return reserveBalance >= expectedWithdrawalQuantity;
+            return principal >= expectedWithdrawalQuantity;
         }
     }
 
@@ -555,7 +551,7 @@ contract RollingCommunity is ReentrancyGuard, BaseCommunity {
               depositInfo.previousCommunityTokenSupply
             );
 
-        depositInfo.newReservePositionBalance = reserveBalance.add(depositInfo.netFlowQuantity);
+        depositInfo.newReservePositionBalance = principal.add(depositInfo.netFlowQuantity);
 
         return depositInfo;
     }
@@ -587,12 +583,12 @@ contract RollingCommunity is ReentrancyGuard, BaseCommunity {
 
         // Require withdrawable quantity is greater than existing collateral
         require(
-            reserveBalance >= outflow,
+            principal >= outflow,
             "Must have enough balance"
         );
 
         withdrawalInfo.newReservePositionBalance =
-            reserveBalance.sub(outflow);
+            principal.sub(outflow);
 
         return withdrawalInfo;
     }
@@ -698,9 +694,6 @@ contract RollingCommunity is ReentrancyGuard, BaseCommunity {
         totalContributors = totalContributors.add(1);
       }
       contributor.timestamp = block.timestamp;
-
-      totalFunds = totalFunds.add(amount);
-      totalFundsDeposited = totalFundsDeposited.add(amount);
       contributor.totalDeposit = contributor.totalDeposit.add(amount);
       contributor.tokensReceived = contributor.tokensReceived.add(
           tokensReceived

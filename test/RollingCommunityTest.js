@@ -129,13 +129,13 @@ describe("Community", function() {
         ethers.utils.parseEther("1")
       );
       expect(await community1.totalContributors()).to.equal(2);
-      expect(await community1.totalFunds()).to.equal(
+      expect(await community1.getPrincipal()).to.equal(
         ethers.utils.parseEther("1.1")
       );
-      expect(await community1.totalFundsDeposited()).to.equal(
+      expect(await community1.getPrincipal()).to.equal(
         ethers.utils.parseEther("1.1")
       );
-      const wethPosition = await community1.getReserveBalance();
+      const wethPosition = await community1.getPrincipal();
       expect(wethPosition).to.be.gt(ethers.utils.parseEther("1.099"));
       // Contributor Struct
       const contributor = await community1.contributors(
@@ -158,9 +158,9 @@ describe("Community", function() {
         .deposit(ethers.utils.parseEther("1"), 1, userSigner3.getAddress(), {
           value: ethers.utils.parseEther("1")
         });
-      // Note: Community is initialized with manager as first contributor, hence the count and totalFunds delta
+      // Note: Community is initialized with manager as first contributor, hence the count and principal delta
       expect(await community1.totalContributors()).to.equal(2);
-      expect(await community1.totalFunds()).to.equal(
+      expect(await community1.getPrincipal()).to.equal(
         ethers.utils.parseEther("2.1")
       );
     });
@@ -180,7 +180,7 @@ describe("Community", function() {
 
       // Note: Community is initialized with manager as first contributor
       expect(await community1.totalContributors()).to.equal(3);
-      expect(await community1.totalFunds()).to.equal(
+      expect(await community1.getPrincipal()).to.equal(
         ethers.utils.parseEther("2.1")
       );
     });
@@ -192,7 +192,7 @@ describe("Community", function() {
           value: ethers.utils.parseEther("1")
         });
       ethers.provider.send("evm_increaseTime", [ONE_DAY_IN_SECONDS * 90]);
-      expect(await community1.totalFunds()).to.equal(
+      expect(await community1.getPrincipal()).to.equal(
         ethers.utils.parseEther("1.1")
       );
       expect(await community1.totalContributors()).to.equal(2);
@@ -213,7 +213,7 @@ describe("Community", function() {
         .deposit(ethers.utils.parseEther("1"), 1, userSigner3.getAddress(), {
           value: ethers.utils.parseEther("1")
         });
-      expect(await community1.totalFunds()).to.equal(
+      expect(await community1.getPrincipal()).to.equal(
         ethers.utils.parseEther("1.1")
       );
       expect(await community1.totalContributors()).to.equal(2);
@@ -243,7 +243,7 @@ describe("Community", function() {
           value: ethers.utils.parseEther("1")
         });
       ethers.provider.send("evm_increaseTime", [ONE_DAY_IN_SECONDS * 90]);
-      expect(await community1.totalFunds()).to.equal(
+      expect(await community1.getPrincipal()).to.equal(
         ethers.utils.parseEther("1.1")
       );
       expect(await community1.totalContributors()).to.equal(2);
