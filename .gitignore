@@ -83,3 +83,5 @@ artifacts/*
 
 .DS_Store
 /packages/.DS_Store
+
+coverage.json
