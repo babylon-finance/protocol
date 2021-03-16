@@ -607,6 +607,7 @@ contract Strategy is ReentrancyGuard, Initializable {
 
             // Send weth rewards to voters that voted in favor
             uint256 votersProfits = garden.strategyVotersProfitPercentage().preciseMul(profits);
+            // TODO: Pull rewards
             for (uint256 i = 0; i < voters.length; i++) {
                 int256 voterWeight = votes[voters[i]];
                 if (voterWeight > 0) {
@@ -631,6 +632,7 @@ contract Strategy is ReentrancyGuard, Initializable {
             // We slash and add to the garden the stake from the creator
             uint256 votersRewards = garden.strategyVotersProfitPercentage().preciseMul(stakeToSlash);
             // Send weth rewards to voters that voted against
+            // TODO: Pull rewards
             for (uint256 i = 0; i < voters.length; i++) {
                 int256 voterWeight = votes[voters[i]];
                 if (voterWeight < 0) {
