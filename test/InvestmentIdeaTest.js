@@ -1,13 +1,13 @@
-const { expect } = require("chai");
-const { ethers, waffle } = require("hardhat");
+const { expect } = require('chai');
+const { ethers, waffle } = require('hardhat');
 
 const { loadFixture } = waffle;
 
-const addresses = require("../utils/addresses");
-const { ONE_DAY_IN_SECONDS, EMPTY_BYTES } = require("../utils/constants.js");
-const { deployFolioFixture } = require("./fixtures/ControllerFixture");
+const addresses = require('../utils/addresses');
+const { ONE_DAY_IN_SECONDS, EMPTY_BYTES } = require('../utils/constants.js');
+const { deployFolioFixture } = require('./fixtures/ControllerFixture');
 
-describe("Investment Idea", function() {
+describe('Investment Idea', function () {
   let controller;
   let ownerSigner;
   let userSigner1;
@@ -19,16 +19,9 @@ describe("Investment Idea", function() {
   let weth;
 
   beforeEach(async () => {
-    const {
-      babController,
-      signer1,
-      signer2,
-      signer3,
-      comunities,
-      integrations,
-      strategies,
-      owner
-    } = await loadFixture(deployFolioFixture);
+    const { babController, signer1, signer2, signer3, comunities, integrations, strategies, owner } = await loadFixture(
+      deployFolioFixture,
+    );
 
     balancerIntegration = integrations.balancerIntegration;
     controller = babController;
@@ -38,31 +31,23 @@ describe("Investment Idea", function() {
     userSigner3 = signer3;
     garden1 = comunities.one;
     strategiesC = strategies;
-    weth = await ethers.getContractAt("IERC20", addresses.tokens.WETH);
+    weth = await ethers.getContractAt('IERC20', addresses.tokens.WETH);
   });
 
-  describe("Deployment", function() {
-    it("should successfully deploy the contract", async function() {
+  describe('Deployment', function () {
+    it('should successfully deploy the contract', async function () {
       const deployed = await strategiesC[0].deployed();
       expect(!!deployed).to.equal(true);
     });
   });
 
-  describe("Ideator can change the duration", function() {
-    it("strategist should be able to change the duration of an investment strategy", async function() {
-      await expect(
-        strategiesC[0]
-          .connect(userSigner1)
-          .changeInvestmentDuration(ONE_DAY_IN_SECONDS)
-      ).to.not.be.reverted;
+  describe('Ideator can change the duration', function () {
+    it('strategist should be able to change the duration of an investment strategy', async function () {
+      await expect(strategiesC[0].connect(userSigner1).changeInvestmentDuration(ONE_DAY_IN_SECONDS)).to.not.be.reverted;
     });
 
-    it("other member should be able to change the duration of an investment strategy", async function() {
-      await expect(
-        strategiesC[0]
-          .connect(userSigner3)
-          .changeInvestmentDuration(ONE_DAY_IN_SECONDS)
-      ).to.be.reverted;
+    it('other member should be able to change the duration of an investment strategy', async function () {
+      await expect(strategiesC[0].connect(userSigner3).changeInvestmentDuration(ONE_DAY_IN_SECONDS)).to.be.reverted;
     });
   });
 });

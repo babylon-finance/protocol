@@ -17,7 +17,7 @@
 */
 pragma solidity 0.7.4;
 
-import { IIntegration } from "./IIntegration.sol";
+import {IIntegration} from './IIntegration.sol';
 
 /**
  * @title ITrade
@@ -26,20 +26,17 @@ import { IIntegration } from "./IIntegration.sol";
  * Interface for trading protocol integrations
  */
 interface ITradeIntegration is IIntegration {
+    function trade(
+        address _sendToken,
+        uint256 _sendQuantity,
+        address _receiveToken,
+        uint256 _minReceiveQuantity,
+        bytes memory _data
+    ) external;
 
-  function trade(
-    address _sendToken,
-    uint256 _sendQuantity,
-    address _receiveToken,
-    uint256 _minReceiveQuantity,
-    bytes memory _data
-  ) external;
-
-  function getConversionRates(
-      address _sourceToken,
-      address _destinationToken,
-      uint256 _sourceQuantity
-  )
-  external returns (uint256, uint256);
-
+    function getConversionRates(
+        address _sourceToken,
+        address _destinationToken,
+        uint256 _sourceQuantity
+    ) external returns (uint256, uint256);
 }

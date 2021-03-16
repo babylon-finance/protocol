@@ -17,7 +17,7 @@
 */
 pragma solidity 0.7.4;
 
-import { IIntegration } from "./IIntegration.sol";
+import {IIntegration} from './IIntegration.sol';
 
 /**
  * @title IIntegration
@@ -26,9 +26,19 @@ import { IIntegration } from "./IIntegration.sol";
  * Interface for liquiditypool protocol integrations
  */
 interface IPoolIntegration is IIntegration {
+    function joinPool(
+        address _poolAddress,
+        uint256 _poolTokensOut,
+        address[] calldata _tokensIn,
+        uint256[] calldata _maxAmountsIn
+    ) external;
 
-  function joinPool(address _poolAddress, uint256 _poolTokensOut, address[] calldata _tokensIn, uint256[] calldata _maxAmountsIn) external;
-  function exitPool(address _poolAddress, uint256 _poolTokensIn, address[] calldata _tokensOut, uint256[] calldata _minAmountsOut) external;
-  function isPool(address _poolAddress) view external returns (bool);
+    function exitPool(
+        address _poolAddress,
+        uint256 _poolTokensIn,
+        address[] calldata _tokensOut,
+        uint256[] calldata _minAmountsOut
+    ) external;
 
+    function isPool(address _poolAddress) external view returns (bool);
 }

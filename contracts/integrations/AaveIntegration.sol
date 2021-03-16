@@ -18,16 +18,16 @@
 
 pragma solidity >=0.7.0 <0.9.0;
 
-import "hardhat/console.sol";
-import { ILendingPool } from '../interfaces/external/aave/ILendingPool.sol';
-import { IProtocolDataProvider} from '../interfaces/external/aave/IProtocolDataProvider.sol';
-import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
-import { IWETH } from "../interfaces/external/weth/IWETH.sol";
+import 'hardhat/console.sol';
+import {ILendingPool} from '../interfaces/external/aave/ILendingPool.sol';
+import {IProtocolDataProvider} from '../interfaces/external/aave/IProtocolDataProvider.sol';
+import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
+import {SafeERC20} from '@openzeppelin/contracts/token/ERC20/SafeERC20.sol';
+import {IWETH} from '../interfaces/external/weth/IWETH.sol';
 
-import { BorrowIntegration } from "./BorrowIntegration.sol";
-import { IBabController } from "../interfaces/IBabController.sol";
-import { BaseIntegration } from "./BaseIntegration.sol";
+import {BorrowIntegration} from './BorrowIntegration.sol';
+import {IBabController} from '../interfaces/IBabController.sol';
+import {BaseIntegration} from './BaseIntegration.sol';
 
 /**
  * @title AaveIntegration
@@ -39,8 +39,9 @@ contract AaveIntegration is BorrowIntegration {
     using SafeERC20 for IERC20;
 
     ILendingPool constant lendingPool = ILendingPool(address(0x7d2768dE32b0b80b7a3454c06BdAc94A69DDc7A9)); // Mainnet
-    IProtocolDataProvider constant dataProvider = IProtocolDataProvider(address(0x057835Ad21a177dbdd3090bB1CAE03EaCF78Fc6d)); // Mainnet
-    uint constant interestRateMode = 1; // Stable Interest
+    IProtocolDataProvider constant dataProvider =
+        IProtocolDataProvider(address(0x057835Ad21a177dbdd3090bB1CAE03EaCF78Fc6d)); // Mainnet
+    uint256 constant interestRateMode = 1; // Stable Interest
 
     /* ============ Constructor ============ */
 
@@ -52,11 +53,10 @@ contract AaveIntegration is BorrowIntegration {
      * @param _maxCollateralFactor    Max collateral factor allowed (from 0 to a 100)
      */
     constructor(
-      address _controller,
-      address _weth,
-      uint256 _maxCollateralFactor
-    ) BorrowIntegration('aave', _weth, _controller, _maxCollateralFactor) {
-    }
+        address _controller,
+        address _weth,
+        uint256 _maxCollateralFactor
+    ) BorrowIntegration('aave', _weth, _controller, _maxCollateralFactor) {}
 
     /**
      * Return pre action calldata
@@ -70,11 +70,20 @@ contract AaveIntegration is BorrowIntegration {
      * @return bytes                     Trade calldata
      */
     function _getPreActionCallData(
-      address /* _asset */,
-      uint256 /* _amount */ ,
-      uint /* _borrowOp */
-    ) internal override pure returns (address, uint256, bytes memory) {
-      return (address(0),0,bytes(""));
+        address, /* _asset */
+        uint256, /* _amount */
+        uint256 /* _borrowOp */
+    )
+        internal
+        pure
+        override
+        returns (
+            address,
+            uint256,
+            bytes memory
+        )
+    {
+        return (address(0), 0, bytes(''));
     }
 
     /**
@@ -87,20 +96,21 @@ contract AaveIntegration is BorrowIntegration {
      * @return uint256                   Call value
      * @return bytes                     Trade calldata
      */
-    function _getDepositCalldata(
-      address _asset,
-      uint256 _amount
-    ) internal override view returns (address, uint256, bytes memory) {
-      // Encode method data for Garden to invoke
-      bytes memory methodData = abi.encodeWithSignature(
-        "deposit(address,uint256,address,uint16)",
-        _asset,
-        _amount,
-        msg.sender,
-        0
-      );
+    function _getDepositCalldata(address _asset, uint256 _amount)
+        internal
+        view
+        override
+        returns (
+            address,
+            uint256,
+            bytes memory
+        )
+    {
+        // Encode method data for Garden to invoke
+        bytes memory methodData =
+            abi.encodeWithSignature('deposit(address,uint256,address,uint16)', _asset, _amount, msg.sender, 0);
 
-      return (address(lendingPool), 0, methodData);
+        return (address(lendingPool), 0, methodData);
     }
 
     /**
@@ -113,19 +123,21 @@ contract AaveIntegration is BorrowIntegration {
      * @return uint256                   Call value
      * @return bytes                     Trade calldata
      */
-    function _getRemovalCalldata(
-      address _asset,
-      uint256 _amount
-    ) internal override view returns (address, uint256, bytes memory) {
-      // Encode method data for Garden to invoke
-      bytes memory methodData = abi.encodeWithSignature(
-        "withdraw(address,uint256,address)",
-        _asset,
-        _amount,
-        msg.sender
-      );
+    function _getRemovalCalldata(address _asset, uint256 _amount)
+        internal
+        view
+        override
+        returns (
+            address,
+            uint256,
+            bytes memory
+        )
+    {
+        // Encode method data for Garden to invoke
+        bytes memory methodData =
+            abi.encodeWithSignature('withdraw(address,uint256,address)', _asset, _amount, msg.sender);
 
-      return (address(lendingPool), 0, methodData);
+        return (address(lendingPool), 0, methodData);
     }
 
     /**
@@ -138,21 +150,28 @@ contract AaveIntegration is BorrowIntegration {
      * @return uint256                   Call value
      * @return bytes                     Trade calldata
      */
-    function _getBorrowCalldata(
-      address _asset,
-      uint256 _amount
-    ) internal override view returns (address, uint256, bytes memory) {
-      // Encode method data for Garden to invoke
-      bytes memory methodData = abi.encodeWithSignature(
-        "borrow(address,uint256,uint256,uint16,address)",
-        _asset,
-        _amount,
-        interestRateMode,
-        0,
-        msg.sender
-      );
+    function _getBorrowCalldata(address _asset, uint256 _amount)
+        internal
+        view
+        override
+        returns (
+            address,
+            uint256,
+            bytes memory
+        )
+    {
+        // Encode method data for Garden to invoke
+        bytes memory methodData =
+            abi.encodeWithSignature(
+                'borrow(address,uint256,uint256,uint16,address)',
+                _asset,
+                _amount,
+                interestRateMode,
+                0,
+                msg.sender
+            );
 
-      return (address(lendingPool), 0, methodData);
+        return (address(lendingPool), 0, methodData);
     }
 
     /**
@@ -165,41 +184,47 @@ contract AaveIntegration is BorrowIntegration {
      * @return uint256                   Call value
      * @return bytes                     Trade calldata
      */
-    function _getRepayCalldata(
-      address _asset,
-      uint256 _amount
-    ) internal override view returns (address, uint256, bytes memory) {
-      // Encode method data for Garden to invoke
-      bytes memory methodData = abi.encodeWithSignature(
-        "repay(address,uint256,uint256,address)",
-        _asset,
-        _amount,
-        interestRateMode,
-        msg.sender
-      );
-      return (address(lendingPool), 0, methodData);
+    function _getRepayCalldata(address _asset, uint256 _amount)
+        internal
+        view
+        override
+        returns (
+            address,
+            uint256,
+            bytes memory
+        )
+    {
+        // Encode method data for Garden to invoke
+        bytes memory methodData =
+            abi.encodeWithSignature(
+                'repay(address,uint256,uint256,address)',
+                _asset,
+                _amount,
+                interestRateMode,
+                msg.sender
+            );
+        return (address(lendingPool), 0, methodData);
     }
-
 
     /* ============ Internal Functions ============ */
 
     function _getCollateralAsset(
-      address asset,
-      uint8 /* _borrowOp */
-    ) internal override pure  returns (address) {
-      return asset;
+        address asset,
+        uint8 /* _borrowOp */
+    ) internal pure override returns (address) {
+        return asset;
     }
 
     function _getSpender(
-      address /* asset */
-    ) internal override pure returns (address) {
-      return address(lendingPool);
+        address /* asset */
+    ) internal pure override returns (address) {
+        return address(lendingPool);
     }
 
-    function _getDebtToken(address asset) view internal returns (address) {
-      // Get the relevant debt token address
-      (, address stableDebtTokenAddress,) = dataProvider.getReserveTokensAddresses(asset);
-      return stableDebtTokenAddress;
+    function _getDebtToken(address asset) internal view returns (address) {
+        // Get the relevant debt token address
+        (, address stableDebtTokenAddress, ) = dataProvider.getReserveTokensAddresses(asset);
+        return stableDebtTokenAddress;
     }
 
     /**
@@ -207,9 +232,9 @@ contract AaveIntegration is BorrowIntegration {
      * @param asset   The underlying asset
      *
      */
-    function _getBorrowBalance(address asset) internal override view returns (uint256) {
-      (, uint256 stableDebt,,,,,,,) = dataProvider.getUserReserveData(asset, msg.sender);
-      return stableDebt;
+    function _getBorrowBalance(address asset) internal view override returns (uint256) {
+        (, uint256 stableDebt, , , , , , , ) = dataProvider.getUserReserveData(asset, msg.sender);
+        return stableDebt;
     }
 
     /**
@@ -217,31 +242,39 @@ contract AaveIntegration is BorrowIntegration {
      * hparam asset   The collateral asset
      *
      */
-    function _getCollateralBalance(address /* asset */) internal override view returns (uint256) {
-      (
-        uint256 totalCollateral,
-        , // uint256 totalDebt,
-        , // uint256 borrowingPower,
-        , // uint256 liquidationThreshold,
-        , // uint256 ltv,
-          // uint256 healthFactor
-      ) = lendingPool.getUserAccountData(msg.sender);
-      return totalCollateral;
+    function _getCollateralBalance(
+        address /* asset */
+    ) internal view override returns (uint256) {
+        (
+            uint256 totalCollateral, // uint256 totalDebt, // uint256 borrowingPower, // uint256 liquidationThreshold, // uint256 ltv,
+            ,
+            ,
+            ,
+            ,
+
+        ) =
+            // uint256 healthFactor
+            lendingPool.getUserAccountData(msg.sender);
+        return totalCollateral;
     }
 
     /**
      * Get the remaining liquidity available to borrow
      *
      */
-    function _getRemainingLiquidity() public override view returns (uint256) {
-      (
-        , // uint256 totalCollateral,
-        , // uint256 totalDebt,
-        uint256 borrowingPower, // uint256 borrowingPower,
-        , // uint256 liquidationThreshold,
-        , // uint256 ltv,
-          // uint256 healthFactor
-      ) = lendingPool.getUserAccountData(msg.sender);
-      return borrowingPower;
+    function _getRemainingLiquidity() public view override returns (uint256) {
+        (
+            ,
+            ,
+            // uint256 totalCollateral,
+            // uint256 totalDebt,
+            uint256 borrowingPower, // uint256 borrowingPower, // uint256 liquidationThreshold, // uint256 ltv,
+            ,
+            ,
+
+        ) =
+            // uint256 healthFactor
+            lendingPool.getUserAccountData(msg.sender);
+        return borrowingPower;
     }
 }

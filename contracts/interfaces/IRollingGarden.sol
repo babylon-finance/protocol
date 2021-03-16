@@ -17,9 +17,8 @@
 */
 pragma solidity 0.7.4;
 
-import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import { IGarden } from "./IGarden.sol";
-
+import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
+import {IGarden} from './IGarden.sol';
 
 /**
  * @title IGarden
@@ -28,20 +27,19 @@ import { IGarden } from "./IGarden.sol";
  * Interface for operating with SetTokens.
  */
 interface IRollingGarden is IERC20, IGarden {
-
     function start(
-      uint256 _maxDepositLimit,
-      uint256 _minGardenTokenSupply,
-      uint256 _minLiquidityAsset,
-      uint256 _depositHardlock,
-      uint256 _minContribution,
-      uint256 _strategyCooldownPeriod,
-      uint256 _strategyCreatorProfitPercentage,
-      uint256 _strategyVotersProfitPercentage,
-      uint256 _gardenCreatorProfitPercentage,
-      uint256 _minVotersQuorum,
-      uint256 _minIdeaDuration,
-      uint256 _maxIdeaDuration
+        uint256 _maxDepositLimit,
+        uint256 _minGardenTokenSupply,
+        uint256 _minLiquidityAsset,
+        uint256 _depositHardlock,
+        uint256 _minContribution,
+        uint256 _strategyCooldownPeriod,
+        uint256 _strategyCreatorProfitPercentage,
+        uint256 _strategyVotersProfitPercentage,
+        uint256 _gardenCreatorProfitPercentage,
+        uint256 _minVotersQuorum,
+        uint256 _minIdeaDuration,
+        uint256 _maxIdeaDuration
     ) external;
 
     function deposit(
@@ -55,31 +53,35 @@ interface IRollingGarden is IERC20, IGarden {
         uint256 _minReserveReceiveQuantity,
         address payable _to
     ) external;
+
     function withdrawToReservePool(
-      uint256 _gardenTokenQuantity,
-      uint256 _minReserveReceiveQuantity,
-      address payable _to
+        uint256 _gardenTokenQuantity,
+        uint256 _minReserveReceiveQuantity,
+        address payable _to
     ) external;
 
-    function setDepositLimit(uint limit) external;
-    function getExpectedReserveWithdrawalQuantity(
-        address _reserveAsset,
-        uint256 _gardenTokenQuantity
-    ) external view returns (uint256);
-    function isDepositValid(
-        address _reserveAsset,
-        uint256 _reserveAssetQuantity
-    ) external view returns (bool);
-    function isWithdrawalValid(
-        address _reserveAsset,
-        uint256 _gardenTokenQuantity
-    ) external view returns (bool);
+    function setDepositLimit(uint256 limit) external;
+
+    function getExpectedReserveWithdrawalQuantity(address _reserveAsset, uint256 _gardenTokenQuantity)
+        external
+        view
+        returns (uint256);
+
+    function isDepositValid(address _reserveAsset, uint256 _reserveAssetQuantity) external view returns (bool);
+
+    function isWithdrawalValid(address _reserveAsset, uint256 _gardenTokenQuantity) external view returns (bool);
 
     function reenableEthForInvestments() external;
+
     function burnAssetsFromSenderAndMintToReserve(address _contributor, uint256 _quantity) external;
+
     function curateStrategy(uint8 _strategyIndex, int256 _amount) external;
+
     function executeTopInvestment() external;
-    function finalizeInvestment(uint _strategyIndex) external;
+
+    function finalizeInvestment(uint256 _strategyIndex) external;
+
     function getCurrentTopStrategy() external view returns (uint8);
-    function canWithdrawEthAmount(uint _amount) external view returns (bool);
+
+    function canWithdrawEthAmount(uint256 _amount) external view returns (bool);
 }

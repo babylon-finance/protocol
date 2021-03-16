@@ -17,7 +17,7 @@
 */
 pragma solidity 0.7.4;
 
-import { IIntegration } from "./IIntegration.sol";
+import {IIntegration} from './IIntegration.sol';
 
 /**
  * @title IIntegration

@@ -1,13 +1,13 @@
-const { expect } = require("chai");
-const { waffle, ethers } = require("hardhat");
-const { impersonateAddress } = require("../../utils/rpc");
-const { deployFolioFixture } = require("../fixtures/ControllerFixture");
-const addresses = require("../../utils/addresses");
-const { ADDRESS_ZERO } = require("../../utils/constants");
+const { expect } = require('chai');
+const { waffle, ethers } = require('hardhat');
+const { impersonateAddress } = require('../../utils/rpc');
+const { deployFolioFixture } = require('../fixtures/ControllerFixture');
+const addresses = require('../../utils/addresses');
+const { ADDRESS_ZERO } = require('../../utils/constants');
 
 const { loadFixture } = waffle;
 
-describe("YearnVaultIntegrationTest", function() {
+describe('YearnVaultIntegrationTest', function () {
   let system;
   let yearnVaultIntegration;
   let garden;
@@ -20,8 +20,8 @@ describe("YearnVaultIntegrationTest", function() {
     garden = system.comunities.one;
   });
 
-  describe("Deployment", function() {
-    it("should successfully deploy the contract", async function() {
+  describe('Deployment', function () {
+    it('should successfully deploy the contract', async function () {
       const deployed = await system.babController.deployed();
       const deployedYearn = await yearnVaultIntegration.deployed();
       expect(!!deployed).to.equal(true);
@@ -29,7 +29,7 @@ describe("YearnVaultIntegrationTest", function() {
     });
   });
 
-  describe("Yearn Vaults", function() {
+  describe('Yearn Vaults', function () {
     let daiToken;
     let wethToken;
     let whaleSigner;
@@ -39,26 +39,20 @@ describe("YearnVaultIntegrationTest", function() {
     beforeEach(async () => {
       whaleSigner = await impersonateAddress(addresses.holders.DAI);
       whaleWeth = await impersonateAddress(addresses.holders.WETH);
-      daiToken = await ethers.getContractAt("IERC20", addresses.tokens.DAI);
-      wethToken = await ethers.getContractAt("IERC20", addresses.tokens.WETH);
-      yearnDaiVault = await ethers.getContractAt(
-        "IVault",
-        addresses.yearn.vaults.ydai
-      );
+      daiToken = await ethers.getContractAt('IERC20', addresses.tokens.DAI);
+      wethToken = await ethers.getContractAt('IERC20', addresses.tokens.WETH);
+      yearnDaiVault = await ethers.getContractAt('IVault', addresses.yearn.vaults.ydai);
     });
 
-    it("check that a valid yearn vault is valid", async function() {
-      expect(
-        await yearnVaultIntegration.isInvestment(addresses.yearn.vaults.ydai)
-      ).to.equal(true);
+    it('check that a valid yearn vault is valid', async function () {
+      expect(await yearnVaultIntegration.isInvestment(addresses.yearn.vaults.ydai)).to.equal(true);
     });
 
-    it("check that an invalid vault is not valid", async function() {
-      await expect(yearnVaultIntegration.isInvestment(ADDRESS_ZERO)).to.be
-        .reverted;
+    it('check that an invalid vault is not valid', async function () {
+      await expect(yearnVaultIntegration.isInvestment(ADDRESS_ZERO)).to.be.reverted;
     });
 
-    it("can enter and exit the yearn dai vault", async function() {
+    it('can enter and exit the yearn dai vault', async function () {
       // expect(
       //   await daiToken
       //     .connect(whaleSigner)
@@ -69,25 +63,20 @@ describe("YearnVaultIntegrationTest", function() {
       // expect(await daiToken.balanceOf(garden.address)).to.equal(
       //   ethers.utils.parseEther("1000")
       // );
-      await garden
-        .connect(userSigner3)
-        .deposit(ethers.utils.parseEther("1"), 1, userSigner3.getAddress(), {
-          value: ethers.utils.parseEther("1")
-        });
-      const amountToDeposit = ethers.utils.parseEther("1000");
+      await garden.connect(userSigner3).deposit(ethers.utils.parseEther('1'), 1, userSigner3.getAddress(), {
+        value: ethers.utils.parseEther('1'),
+      });
+      const amountToDeposit = ethers.utils.parseEther('1000');
       const sharePrice = await yearnDaiVault.getPricePerFullShare();
       const expectedYShares = amountToDeposit.div(sharePrice);
 
       const yearnAbi = yearnVaultIntegration.interface;
-      const data = yearnAbi.encodeFunctionData(
-        yearnAbi.functions["enterInvestment(address,uint256,address,uint256)"],
-        [
-          yearnDaiVault.address,
-          expectedYShares,
-          daiToken.address,
-          ethers.utils.parseEther("100")
-        ]
-      );
+      const data = yearnAbi.encodeFunctionData(yearnAbi.functions['enterInvestment(address,uint256,address,uint256)'], [
+        yearnDaiVault.address,
+        expectedYShares,
+        daiToken.address,
+        ethers.utils.parseEther('100'),
+      ]);
 
       // await garden.callIntegration(
       //   yearnVaultIntegration.address,

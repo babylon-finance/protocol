@@ -17,7 +17,7 @@
 */
 pragma solidity 0.7.4;
 
-import { IIntegration } from "./IIntegration.sol";
+import {IIntegration} from './IIntegration.sol';
 
 /**
  * @title IPassiveIntegration
@@ -26,19 +26,19 @@ import { IIntegration } from "./IIntegration.sol";
  * Interface for passive investments protocol integrations
  */
 interface IPassiveIntegration is IIntegration {
+    function enterInvestment(
+        address _investmentAddress,
+        uint256 _investmentTokensOut,
+        address _tokenIn,
+        uint256 _maxAmountIn
+    ) external;
 
-  function enterInvestment(
-    address _investmentAddress,
-    uint256 _investmentTokensOut,
-    address _tokenIn,
-    uint256 _maxAmountIn
-  ) external;
-  function exitInvestment(
-    address _investmentAddress,
-    uint256 _investmentTokenIn,
-    address _tokenOut,
-    uint256 _minAmountOut
-  ) external;
-  function isInvestment(address _investmentAddress) view external returns (bool);
+    function exitInvestment(
+        address _investmentAddress,
+        uint256 _investmentTokenIn,
+        address _tokenOut,
+        uint256 _minAmountOut
+    ) external;
 
+    function isInvestment(address _investmentAddress) external view returns (bool);
 }

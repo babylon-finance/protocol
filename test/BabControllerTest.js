@@ -1,12 +1,12 @@
-const { expect } = require("chai");
-const { ethers, waffle } = require("hardhat");
+const { expect } = require('chai');
+const { ethers, waffle } = require('hardhat');
 
 const { loadFixture } = waffle;
 
-const addresses = require("../utils/addresses");
-const { deployFolioFixture } = require("./fixtures/ControllerFixture");
+const addresses = require('../utils/addresses');
+const { deployFolioFixture } = require('./fixtures/ControllerFixture');
 
-describe("BabController", function() {
+describe('BabController', function () {
   let controller;
   let oracle;
   let valuer;
@@ -29,7 +29,7 @@ describe("BabController", function() {
       signer1,
       comunities,
       signer2,
-      signer3
+      signer3,
     } = await loadFixture(deployFolioFixture);
 
     controller = babController;
@@ -45,44 +45,42 @@ describe("BabController", function() {
     garden3 = comunities.three;
   });
 
-  describe("Deployment", function() {
-    it("should successfully deploy the contract", async function() {
+  describe('Deployment', function () {
+    it('should successfully deploy the contract', async function () {
       const deployed = await controller.deployed();
       expect(!!deployed).to.equal(true);
     });
   });
 
-  describe("Interacting with Communities", function() {
-    it("should start with 3 comunities", async function() {
+  describe('Interacting with Communities', function () {
+    it('should start with 3 comunities', async function () {
       const comunities = await controller.getCommunities();
       expect(comunities.length).to.equal(3);
     });
 
-    it("should set the protocol manager address", async function() {
-      expect(await controller.getTreasury()).to.equal(
-        treasuryD.address
-      );
+    it('should set the protocol manager address', async function () {
+      expect(await controller.getTreasury()).to.equal(treasuryD.address);
     });
 
-    it("can create comunities", async function() {
+    it('can create comunities', async function () {
       expect(!!garden1).to.equal(true);
       expect(!!garden2).to.equal(true);
       expect(!!garden3).to.equal(true);
     });
 
-    it("can create comunities and retrieve all addresses", async function() {
+    it('can create comunities and retrieve all addresses', async function () {
       const comunities = await controller.getCommunities();
       expect(comunities.length).to.equal(3);
     });
 
-    it("cannot disable an inactive garden", async function() {
+    it('cannot disable an inactive garden', async function () {
       const initialCommunities = await controller.getCommunities();
 
       await expect(controller.disableGarden(initialCommunities[0])).to.not.be.reverted;
       await expect(controller.disableGarden(initialCommunities[0])).to.be.reverted;
     });
 
-    it("can remove a disabled garden", async function() {
+    it('can remove a disabled garden', async function () {
       const initialCommunities = await controller.getCommunities();
       expect(initialCommunities.length).to.equal(3);
       await expect(controller.disableGarden(initialCommunities[0])).to.not.be.reverted;
@@ -92,7 +90,7 @@ describe("BabController", function() {
       expect(updatedCommunities.length).to.equal(2);
     });
 
-    it("can enable and disable a garden", async function() {
+    it('can enable and disable a garden', async function () {
       const initialCommunities = await controller.getCommunities();
 
       await expect(controller.disableGarden(initialCommunities[0])).to.not.be.reverted;
@@ -100,15 +98,15 @@ describe("BabController", function() {
     });
   });
 
-  describe("Keeper List", function() {
-    it("can add new keepers", async function() {
+  describe('Keeper List', function () {
+    it('can add new keepers', async function () {
       await controller.addKeeper(addresses.users.hardhat3);
 
       const valid = await controller.isValidKeeper(addresses.users.hardhat3);
       expect(valid).to.equal(true);
     });
 
-    it("can remove keepers", async function() {
+    it('can remove keepers', async function () {
       await controller.addKeeper(addresses.users.hardhat3);
       await controller.removeKeeper(addresses.users.hardhat3);
 
@@ -116,23 +114,16 @@ describe("BabController", function() {
       expect(valid).to.equal(false);
     });
 
-    it("can add keepers in bulk", async function() {
-      await controller.addKeepers([
-        addresses.users.hardhat3,
-        addresses.users.hardhat2
-      ]);
+    it('can add keepers in bulk', async function () {
+      await controller.addKeepers([addresses.users.hardhat3, addresses.users.hardhat2]);
 
-      expect(await controller.isValidKeeper(addresses.users.hardhat3)).to.equal(
-        true
-      );
-      expect(await controller.isValidKeeper(addresses.users.hardhat2)).to.equal(
-        true
-      );
+      expect(await controller.isValidKeeper(addresses.users.hardhat3)).to.equal(true);
+      expect(await controller.isValidKeeper(addresses.users.hardhat2)).to.equal(true);
     });
   });
 
-  describe("Protocol operations", function() {
-    it("can add a reserve asset", async function() {
+  describe('Protocol operations', function () {
+    it('can add a reserve asset', async function () {
       const initialAssets = await controller.getReserveAssets();
       await controller.addReserveAsset(addresses.tokens.DAI);
 
@@ -140,7 +131,7 @@ describe("BabController", function() {
       expect(updatedAssets.length > initialAssets.length).to.equal(true);
     });
 
-    it("can remove a reserve asset", async function() {
+    it('can remove a reserve asset', async function () {
       await controller.addReserveAsset(addresses.tokens.DAI);
       const initialAssets = await controller.getReserveAssets();
 
@@ -150,24 +141,22 @@ describe("BabController", function() {
       expect(updatedAssets.length < initialAssets.length).to.equal(true);
     });
 
-    it("can edit a price oracle", async function() {
+    it('can edit a price oracle', async function () {
       // Note: This is just the wETH address and is testing that the oracle address can be changed
-      await expect(controller.editPriceOracle(addresses.tokens.WETH)).to.not.be
-        .reverted;
+      await expect(controller.editPriceOracle(addresses.tokens.WETH)).to.not.be.reverted;
       const oracle2 = await controller.getPriceOracle();
       expect(oracle2).to.equal(addresses.tokens.WETH);
     });
 
-    it("can edit a garden valuer", async function() {
+    it('can edit a garden valuer', async function () {
       // Note: This is just the wETH address and is testing that the gardenValuer address can be changed
-      await expect(controller.editGardenValuer(addresses.tokens.WETH)).to.not
-        .be.reverted;
+      await expect(controller.editGardenValuer(addresses.tokens.WETH)).to.not.be.reverted;
 
       const valuer2 = await controller.getGardenValuer();
       expect(valuer2).to.equal(addresses.tokens.WETH);
     });
 
-    it("can edit the protocol fee recipient", async function() {
+    it('can edit the protocol fee recipient', async function () {
       await controller.editTreasury(addresses.users.hardhat3);
 
       const recipient = await controller.getTreasury();
