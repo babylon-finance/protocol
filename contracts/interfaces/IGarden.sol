@@ -45,7 +45,7 @@ interface IGarden is IERC20 {
     function totalCommunitiesDeposited() external view returns (uint256);
     function weth() external view returns (address);
     function minLiquidityAsset() external view returns (uint256);
-    function getReserveBalance() external view returns (uint256);
+    function getPrincipal() external view returns (uint256);
     function totalStake() external pure returns (uint256);
     function minVotersQuorum() external pure returns (uint256);
     function minIdeaDuration() external pure returns (uint256);
@@ -83,6 +83,6 @@ interface IGarden is IERC20 {
       bytes calldata _data
     ) external returns (bytes memory _returnValue);
 
-    function updateReserveBalance(uint256 _amount) external;
+    function updatePrincipal(uint256 _amount) external;
 
 }

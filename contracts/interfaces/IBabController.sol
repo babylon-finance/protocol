@@ -75,6 +75,7 @@ interface IBabController {
     function getMinCooldownPeriod() external view returns (uint256);
     function getMaxCooldownPeriod() external view returns (uint256);
     function getProtocolPerformanceFee() external view returns (uint256);
+    function getProtocolManagementFee() external view returns (uint256);
     function getProtocolDepositGardenTokenFee() external view returns (uint256);
     function getProtocolWithdrawalGardenTokenFee() external view returns (uint256);
     function minRiskyPairLiquidityEth() external view returns(uint256);
