@@ -104,7 +104,8 @@ contract BabController is Ownable {
     // Enable Transfer of ERC20 gardenTokens
     bool public gardenTokensTransfersEnabled = false; // Only members can transfer tokens until the protocol is fully decentralized
 
-    uint256 public protocolPerformanceFee = 1e17; // (0.01% = 1e14, 1% = 1e16) on profits
+    uint256 public protocolPerformanceFee = 5e16; // 5% (0.01% = 1e14, 1% = 1e16) on profits
+    uint256 public protocolManagementFee = 5e15; // 0.5% (0.01% = 1e14, 1% = 1e16)
     uint256 public protocolGardenCreationFee = 0; // (0.01% = 1e14, 1% = 1e16)
     uint256 public protocolDepositGardenTokenFee = 0; // (0.01% = 1e14, 1% = 1e16)
     uint256 public protocolWithdrawalGardenTokenFee = 5e15; // (0.01% = 1e14, 1% = 1e16)
@@ -476,6 +477,10 @@ contract BabController is Ownable {
 
     function getProtocolPerformanceFee() external view returns (uint256) {
         return protocolPerformanceFee;
+    }
+
+    function getProtocolManagementFee() external view returns (uint256) {
+        return protocolManagementFee;
     }
 
     function getProtocolWithdrawalGardenTokenFee() external view returns (uint256) {

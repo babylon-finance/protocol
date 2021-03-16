@@ -369,7 +369,16 @@ abstract contract BaseGarden is ERC20Upgradeable {
      */
     function allocateCapitalToInvestment(uint256 _capital) external onlyStrategy onlyActive {
         uint256 liquidReserveAsset = ERC20Upgradeable(reserveAsset).balanceOf(address(this));
-        require(_capital <= liquidReserveAsset, 'Not enough capital');
+        uint256 protocolMgmtFee = IBabController(controller).getProtocolManagementFee().preciseMul(_capital);
+        require(_capital.add(protocolMgmtFee) <= liquidReserveAsset, 'Not enough capital');
+
+        // Take protocol mgmt fee
+        require(
+            ERC20Upgradeable(reserveAsset).transfer(IBabController(controller).getTreasury(), protocolMgmtFee),
+            'Protocol Mgmt fee failed'
+        );
+
+        // Send Capital to strategy
         require(
             ERC20Upgradeable(reserveAsset).transfer(msg.sender, _capital),
             'Failed to allocate capital to the investment'

@@ -137,7 +137,6 @@ async function deployFolioFixture() {
     ONE_DAY_IN_SECONDS * 365,
     { value: ethers.utils.parseEther('0.1') },
   );
-  console.log('eo');
 
   await garden.connect(signer1).addStrategy(
     ethers.utils.parseEther('10'),
