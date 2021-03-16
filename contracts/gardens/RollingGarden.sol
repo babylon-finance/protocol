@@ -18,22 +18,19 @@
 
 pragma solidity 0.7.4;
 
-import "hardhat/console.sol";
-import { ERC20 } from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
-import {
-    ReentrancyGuard
-} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
-import { SafeMath } from "@openzeppelin/contracts/math/SafeMath.sol";
-import { SignedSafeMath } from "@openzeppelin/contracts/math/SignedSafeMath.sol";
-import { SafeCast } from "@openzeppelin/contracts/utils/SafeCast.sol";
-import { PreciseUnitMath } from "../lib/PreciseUnitMath.sol";
-import { IWETH } from "../interfaces/external/weth/IWETH.sol";
-import { IBabController } from "../interfaces/IBabController.sol";
-import { IGardenValuer } from "../interfaces/IGardenValuer.sol";
-import { IReservePool } from "../interfaces/IReservePool.sol";
-import { IPriceOracle } from "../interfaces/IPriceOracle.sol";
-import { BaseGarden } from "./BaseGarden.sol";
-
+import 'hardhat/console.sol';
+import {ERC20} from '@openzeppelin/contracts/token/ERC20/ERC20.sol';
+import {ReentrancyGuard} from '@openzeppelin/contracts/utils/ReentrancyGuard.sol';
+import {SafeMath} from '@openzeppelin/contracts/math/SafeMath.sol';
+import {SignedSafeMath} from '@openzeppelin/contracts/math/SignedSafeMath.sol';
+import {SafeCast} from '@openzeppelin/contracts/utils/SafeCast.sol';
+import {PreciseUnitMath} from '../lib/PreciseUnitMath.sol';
+import {IWETH} from '../interfaces/external/weth/IWETH.sol';
+import {IBabController} from '../interfaces/IBabController.sol';
+import {IGardenValuer} from '../interfaces/IGardenValuer.sol';
+import {IReservePool} from '../interfaces/IReservePool.sol';
+import {IPriceOracle} from '../interfaces/IPriceOracle.sol';
+import {BaseGarden} from './BaseGarden.sol';
 
 /**
  * @title RollingGarden
@@ -42,32 +39,31 @@ import { BaseGarden } from "./BaseGarden.sol";
  * RollingGarden holds the logic to deposit, withdraw and track contributions and fees.
  */
 contract RollingGarden is ReentrancyGuard, BaseGarden {
-  using SafeCast for uint256;
-  using SafeCast for int256;
-  using SafeMath for uint256;
-  using SignedSafeMath for int256;
-  using PreciseUnitMath for int256;
-  using PreciseUnitMath for uint256;
+    using SafeCast for uint256;
+    using SafeCast for int256;
+    using SafeMath for uint256;
+    using SignedSafeMath for int256;
+    using PreciseUnitMath for int256;
+    using PreciseUnitMath for uint256;
 
     /* ============ State Variables ============ */
 
     struct ActionInfo {
-      uint256 preFeeReserveQuantity; // Reserve value before fees; During issuance, represents raw quantity
-      // During withdrawal, represents post-premium value
-      uint256 protocolFees; // Total protocol fees (direct + manager revenue share)
-      uint256 netFlowQuantity; // When issuing, quantity of reserve asset sent to Garden
-      // When withdrawaling, quantity of reserve asset sent to withdrawaler
-      uint256 gardenTokenQuantity; // When issuing, quantity of Garden tokens minted to mintee
-      // When withdrawaling, quantity of Garden tokens withdrawaled
-      uint256 previousGardenTokenSupply; // Garden token supply prior to deposit/withdrawal action
-      uint256 newGardenTokenSupply; // Garden token supply after deposit/withdrawal action
-      uint256 newReservePositionBalance; // Garden token reserve asset position balance after deposit/withdrawal
+        uint256 preFeeReserveQuantity; // Reserve value before fees; During issuance, represents raw quantity
+        // During withdrawal, represents post-premium value
+        uint256 protocolFees; // Total protocol fees (direct + manager revenue share)
+        uint256 netFlowQuantity; // When issuing, quantity of reserve asset sent to Garden
+        // When withdrawaling, quantity of reserve asset sent to withdrawaler
+        uint256 gardenTokenQuantity; // When issuing, quantity of Garden tokens minted to mintee
+        // When withdrawaling, quantity of Garden tokens withdrawaled
+        uint256 previousGardenTokenSupply; // Garden token supply prior to deposit/withdrawal action
+        uint256 newGardenTokenSupply; // Garden token supply after deposit/withdrawal action
+        uint256 newReservePositionBalance; // Garden token reserve asset position balance after deposit/withdrawal
     }
 
-    uint256 public depositHardlock;                // Window of time after deposits when withdraws are disabled for that user
+    uint256 public depositHardlock; // Window of time after deposits when withdraws are disabled for that user
     uint256 public redemptionWindowAfterInvestmentCompletes; // Window of time after an investment strategy finishes when the capital is available for withdrawals
-    uint256 public redemptionsOpenUntil;           // Indicates until when the redemptions are open and the ETH is set aside
-
+    uint256 public redemptionsOpenUntil; // Indicates until when the redemptions are open and the ETH is set aside
 
     /* ============ Constructor ============ */
 
@@ -91,18 +87,9 @@ contract RollingGarden is ReentrancyGuard, BaseGarden {
         address _creator,
         string memory _name,
         string memory _symbol
-    ) public
-    {
-      super.initialize(
-          _integrations,
-          _weth,
-          _weth,
-          _controller,
-          _creator,
-          _name,
-          _symbol
-      );
-      totalContributors = 0;
+    ) public {
+        super.initialize(_integrations, _weth, _weth, _controller, _creator, _name, _symbol);
+        totalContributors = 0;
     }
 
     /* ============ External Functions ============ */
@@ -137,23 +124,21 @@ contract RollingGarden is ReentrancyGuard, BaseGarden {
         uint256 _minVotersQuorum,
         uint256 _minIdeaDuration,
         uint256 _maxIdeaDuration
-    ) external onlyCreator onlyInactive payable {
-        require(_maxDepositLimit < MAX_DEPOSITS_FUND_V1, "Max deposit limit needs to be under the limit");
+    ) external payable onlyCreator onlyInactive {
+        require(_maxDepositLimit < MAX_DEPOSITS_FUND_V1, 'Max deposit limit needs to be under the limit');
 
-        require(msg.value >= minContribution, "Creator needs to deposit");
+        require(msg.value >= minContribution, 'Creator needs to deposit');
         IBabController ifcontroller = IBabController(controller);
+        require(_minGardenTokenSupply > 0, 'Min Garden token supply >= 0');
         require(
-            _minGardenTokenSupply > 0,
-            "Min Garden token supply >= 0"
+            _minLiquidityAsset >= ifcontroller.minRiskyPairLiquidityEth(),
+            'Needs to be at least the minimum set by protocol'
         );
-        require(_minLiquidityAsset >= ifcontroller.minRiskyPairLiquidityEth(),
-          "Needs to be at least the minimum set by protocol");
         // make initial deposit
         uint256 initialDepositAmount = msg.value;
         uint256 initialTokens = initialDepositAmount.div(initialBuyRate);
-        require(initialTokens >= minGardenTokenSupply,
-          "Initial Garden token supply too low");
-        require(_depositHardlock > 1, "Needs to be at least a couple of seconds to prevent flash loan attacks");
+        require(initialTokens >= minGardenTokenSupply, 'Initial Garden token supply too low');
+        require(_depositHardlock > 1, 'Needs to be at least a couple of seconds to prevent flash loan attacks');
         minGardenTokenSupply = _minGardenTokenSupply;
         maxDepositLimit = _maxDepositLimit;
         gardenInitializedAt = block.timestamp;
@@ -168,8 +153,8 @@ contract RollingGarden is ReentrancyGuard, BaseGarden {
             _gardenCreatorProfitPercentage,
             _minVotersQuorum,
             _minIdeaDuration,
-            _maxIdeaDuration);
-
+            _maxIdeaDuration
+        );
 
         // Deposit
         IWETH(weth).deposit{value: initialDepositAmount}();
@@ -178,7 +163,7 @@ contract RollingGarden is ReentrancyGuard, BaseGarden {
         _updateContributorInfo(initialTokens, initialDepositAmount);
         _updatePrincipal(initialDepositAmount);
 
-        require(totalSupply() > 0, "Garden must receive an initial deposit");
+        require(totalSupply() > 0, 'Garden must receive an initial deposit');
 
         active = true;
     }
@@ -196,15 +181,12 @@ contract RollingGarden is ReentrancyGuard, BaseGarden {
         uint256 _minGardenTokenReceiveQuantity,
         address _to
     ) public payable nonReentrant onlyActive {
-        require(
-            msg.value >= minContribution,
-            ">= minContribution"
-        );
+        require(msg.value >= minContribution, '>= minContribution');
         // if deposit limit is 0, then there is no deposit limit
-        if(maxDepositLimit > 0) {
-          require(principal.add(msg.value) <= maxDepositLimit, "Max Deposit Limit");
+        if (maxDepositLimit > 0) {
+            require(principal.add(msg.value) <= maxDepositLimit, 'Max Deposit Limit');
         }
-        require(msg.value == _reserveAssetQuantity, "ETH does not match");
+        require(msg.value == _reserveAssetQuantity, 'ETH does not match');
         // Oracle maintenance
         updatePositionTWAPPrices();
         // Always wrap to WETH
@@ -214,8 +196,7 @@ contract RollingGarden is ReentrancyGuard, BaseGarden {
 
         _validateReserveAsset(reserveAsset, _reserveAssetQuantity);
 
-        ActionInfo memory depositInfo =
-            _createIssuanceInfo(reserveAsset, _reserveAssetQuantity);
+        ActionInfo memory depositInfo = _createIssuanceInfo(reserveAsset, _reserveAssetQuantity);
 
         _validateIssuanceInfo(_minGardenTokenReceiveQuantity, depositInfo);
 
@@ -227,11 +208,7 @@ contract RollingGarden is ReentrancyGuard, BaseGarden {
         _updateContributorInfo(depositInfo.gardenTokenQuantity, msg.value);
         _updatePrincipal(depositInfo.newReservePositionBalance);
 
-        emit GardenTokenDeposited(
-            _to,
-            depositInfo.gardenTokenQuantity,
-            depositInfo.protocolFees
-        );
+        emit GardenTokenDeposited(_to, depositInfo.gardenTokenQuantity, depositInfo.protocolFees);
     }
 
     /**
@@ -246,53 +223,39 @@ contract RollingGarden is ReentrancyGuard, BaseGarden {
         uint256 _minReserveReceiveQuantity,
         address payable _to
     ) external nonReentrant onlyContributor onlyActive {
-        require(
-            _gardenTokenQuantity <= balanceOf(msg.sender),
-            "Withdrawal amount <= to deposited amount"
-        );
+        require(_gardenTokenQuantity <= balanceOf(msg.sender), 'Withdrawal amount <= to deposited amount');
         // Flashloan protection
-        require(block.timestamp.sub(contributors[msg.sender].timestamp) >= depositHardlock, "Cannot withdraw. Hardlock");
+        require(
+            block.timestamp.sub(contributors[msg.sender].timestamp) >= depositHardlock,
+            'Cannot withdraw. Hardlock'
+        );
         // Check this here to avoid having relayers
         reenableEthForInvestments();
-        ActionInfo memory withdrawalInfo =
-            _createRedemptionInfo(reserveAsset, _gardenTokenQuantity);
+        ActionInfo memory withdrawalInfo = _createRedemptionInfo(reserveAsset, _gardenTokenQuantity);
 
         _validateReserveAsset(reserveAsset, withdrawalInfo.netFlowQuantity);
 
-        _validateRedemptionInfo(
-            _minReserveReceiveQuantity,
-            _gardenTokenQuantity,
-            withdrawalInfo
-        );
+        _validateRedemptionInfo(_minReserveReceiveQuantity, _gardenTokenQuantity, withdrawalInfo);
 
         _burn(msg.sender, _gardenTokenQuantity);
 
-        emit WithdrawalLog(
-            msg.sender,
-            withdrawalInfo.netFlowQuantity,
-            block.timestamp
-        );
+        emit WithdrawalLog(msg.sender, withdrawalInfo.netFlowQuantity, block.timestamp);
         // Check that the rdemption is possible
-        require(canWithdrawEthAmount(withdrawalInfo.netFlowQuantity), "Not enough liquidity in the fund");
+        require(canWithdrawEthAmount(withdrawalInfo.netFlowQuantity), 'Not enough liquidity in the fund');
         if (address(this).balance >= withdrawalInfo.netFlowQuantity) {
-          // Send eth
-          (bool sent,) = _to.call{value: withdrawalInfo.netFlowQuantity}("");
-          require(sent, "Failed to send Ether");
+            // Send eth
+            (bool sent, ) = _to.call{value: withdrawalInfo.netFlowQuantity}('');
+            require(sent, 'Failed to send Ether');
         } else {
-          // Send liquid weth balance
-          IWETH(weth).withdraw(withdrawalInfo.netFlowQuantity);
-          _to.transfer(withdrawalInfo.netFlowQuantity);
+            // Send liquid weth balance
+            IWETH(weth).withdraw(withdrawalInfo.netFlowQuantity);
+            _to.transfer(withdrawalInfo.netFlowQuantity);
         }
 
         payProtocolFeeFromGarden(reserveAsset, withdrawalInfo.protocolFees);
 
         _updatePrincipal(withdrawalInfo.newReservePositionBalance);
-        emit GardenTokenWithdrawn(
-            msg.sender,
-            _to,
-            withdrawalInfo.gardenTokenQuantity,
-            withdrawalInfo.protocolFees
-        );
+        emit GardenTokenWithdrawn(msg.sender, _to, withdrawalInfo.gardenTokenQuantity, withdrawalInfo.protocolFees);
     }
 
     /**
@@ -304,50 +267,36 @@ contract RollingGarden is ReentrancyGuard, BaseGarden {
      * @param _to                            Address to send component assets to
      */
     function withdrawToReservePool(
-      uint256 _gardenTokenQuantity,
-      uint256 _minReserveReceiveQuantity,
-      address payable _to
+        uint256 _gardenTokenQuantity,
+        uint256 _minReserveReceiveQuantity,
+        address payable _to
     ) external nonReentrant onlyContributor onlyActive {
-      require(
-          _gardenTokenQuantity <= balanceOf(msg.sender),
-          "Withdrawal amount <= to deposited amount"
-      );
-      // Flashloan protection
-      require(block.timestamp.sub(contributors[msg.sender].timestamp) >= depositHardlock, "Cannot withdraw. Hardlock");
+        require(_gardenTokenQuantity <= balanceOf(msg.sender), 'Withdrawal amount <= to deposited amount');
+        // Flashloan protection
+        require(
+            block.timestamp.sub(contributors[msg.sender].timestamp) >= depositHardlock,
+            'Cannot withdraw. Hardlock'
+        );
 
-      IReservePool reservePool = IReservePool(IBabController(controller).getReservePool());
-      require(reservePool.isReservePoolAllowedToBuy(address(this), _gardenTokenQuantity), "Reserve Pool not active");
+        IReservePool reservePool = IReservePool(IBabController(controller).getReservePool());
+        require(reservePool.isReservePoolAllowedToBuy(address(this), _gardenTokenQuantity), 'Reserve Pool not active');
 
-      ActionInfo memory withdrawalInfo =
-          _createRedemptionInfo(reserveAsset, _gardenTokenQuantity);
+        ActionInfo memory withdrawalInfo = _createRedemptionInfo(reserveAsset, _gardenTokenQuantity);
 
-      _validateReserveAsset(reserveAsset, withdrawalInfo.netFlowQuantity);
-      // If normal redemption is available, don't use the reserve pool
-      require(!canWithdrawEthAmount(withdrawalInfo.netFlowQuantity), "Not enough liquidity in the fund");
-      _validateRedemptionInfo(
-          _minReserveReceiveQuantity,
-          _gardenTokenQuantity,
-          withdrawalInfo
-      );
+        _validateReserveAsset(reserveAsset, withdrawalInfo.netFlowQuantity);
+        // If normal redemption is available, don't use the reserve pool
+        require(!canWithdrawEthAmount(withdrawalInfo.netFlowQuantity), 'Not enough liquidity in the fund');
+        _validateRedemptionInfo(_minReserveReceiveQuantity, _gardenTokenQuantity, withdrawalInfo);
 
-      withdrawalInfo.netFlowQuantity = reservePool.sellTokensToLiquidityPool(address(this), _gardenTokenQuantity);
+        withdrawalInfo.netFlowQuantity = reservePool.sellTokensToLiquidityPool(address(this), _gardenTokenQuantity);
 
-      emit WithdrawalLog(
-          msg.sender,
-          withdrawalInfo.netFlowQuantity,
-          block.timestamp
-      );
+        emit WithdrawalLog(msg.sender, withdrawalInfo.netFlowQuantity, block.timestamp);
 
-      payProtocolFeeFromGarden(reserveAsset, withdrawalInfo.protocolFees);
+        payProtocolFeeFromGarden(reserveAsset, withdrawalInfo.protocolFees);
 
-      _updatePrincipal(withdrawalInfo.newReservePositionBalance);
+        _updatePrincipal(withdrawalInfo.newReservePositionBalance);
 
-      emit GardenTokenWithdrawn(
-          msg.sender,
-          _to,
-          withdrawalInfo.gardenTokenQuantity,
-          withdrawalInfo.protocolFees
-      );
+        emit GardenTokenWithdrawn(msg.sender, _to, withdrawalInfo.gardenTokenQuantity, withdrawalInfo.protocolFees);
     }
 
     /**
@@ -357,8 +306,8 @@ contract RollingGarden is ReentrancyGuard, BaseGarden {
      * @param _amount                        Amount of WETH to convert to ETH to set aside
      */
     function startRedemptionWindow(uint256 _amount) external onlyStrategyOrOwner {
-      redemptionsOpenUntil = block.timestamp.add(redemptionWindowAfterInvestmentCompletes);
-      IWETH(weth).withdraw(_amount);
+        redemptionsOpenUntil = block.timestamp.add(redemptionWindowAfterInvestmentCompletes);
+        IWETH(weth).withdraw(_amount);
     }
 
     /**
@@ -366,10 +315,10 @@ contract RollingGarden is ReentrancyGuard, BaseGarden {
      *
      */
     function reenableEthForInvestments() public {
-      if (block.timestamp >= redemptionsOpenUntil && address(this).balance > minContribution) {
-        // Always wrap to WETH
-        IWETH(weth).deposit{value: address(this).balance}();
-      }
+        if (block.timestamp >= redemptionsOpenUntil && address(this).balance > minContribution) {
+            // Always wrap to WETH
+            IWETH(weth).deposit{value: address(this).balance}();
+        }
     }
 
     /**
@@ -378,10 +327,10 @@ contract RollingGarden is ReentrancyGuard, BaseGarden {
      *  @param _quantity              Amount of tokens being sold to the reserve pool
      */
     function burnAssetsFromSenderAndMintToReserve(address _contributor, uint256 _quantity) external {
-      address reservePool = IBabController(controller).getReservePool();
-      require(msg.sender == reservePool, "Only reserve pool can call this");
-      _burn(_contributor, _quantity);
-      _mint(reservePool, _quantity);
+        address reservePool = IBabController(controller).getReservePool();
+        require(msg.sender == reservePool, 'Only reserve pool can call this');
+        _burn(_contributor, _quantity);
+        _mint(reservePool, _quantity);
     }
 
     /* ============ External Getter Functions ============ */
@@ -392,14 +341,20 @@ contract RollingGarden is ReentrancyGuard, BaseGarden {
      * @param _amount                        Amount of ETH to withdraw
      */
     function canWithdrawEthAmount(uint256 _amount) public view returns (bool) {
-      uint256 ethAsideBalance = address(this).balance;
-      uint256 liquidWeth = ERC20(reserveAsset).balanceOf(address(this));
-      return
-        (redemptionsOpenUntil <= block.timestamp && ethAsideBalance >= _amount) ||
-        liquidWeth >= _amount;
+        uint256 ethAsideBalance = address(this).balance;
+        uint256 liquidWeth = ERC20(reserveAsset).balanceOf(address(this));
+        return (redemptionsOpenUntil <= block.timestamp && ethAsideBalance >= _amount) || liquidWeth >= _amount;
     }
 
-    function getContributor(address _contributor) public view returns (uint256, uint256, uint256) {
+    function getContributor(address _contributor)
+        public
+        view
+        returns (
+            uint256,
+            uint256,
+            uint256
+        )
+    {
         Contributor memory contributor = contributors[_contributor];
         return (contributor.totalDeposit, contributor.tokensReceived, contributor.timestamp);
     }
@@ -412,12 +367,12 @@ contract RollingGarden is ReentrancyGuard, BaseGarden {
      *
      * @return  uint256                     Expected reserve asset quantity withdrawaled
      */
-    function getExpectedReserveWithdrawalQuantity(
-        address _reserveAsset,
-        uint256 _gardenTokenQuantity
-    ) external view returns (uint256) {
-        uint256 preFeeReserveQuantity =
-            _getWithdrawalReserveQuantity(_reserveAsset, _gardenTokenQuantity);
+    function getExpectedReserveWithdrawalQuantity(address _reserveAsset, uint256 _gardenTokenQuantity)
+        external
+        view
+        returns (uint256)
+    {
+        uint256 preFeeReserveQuantity = _getWithdrawalReserveQuantity(_reserveAsset, _gardenTokenQuantity);
 
         (, uint256 netReserveFlows) = _getFees(preFeeReserveQuantity, false, _gardenTokenQuantity);
 
@@ -432,10 +387,7 @@ contract RollingGarden is ReentrancyGuard, BaseGarden {
      *
      * @return  bool                        Returns true if deposit is valid
      */
-    function isDepositValid(
-        address _reserveAsset,
-        uint256 _reserveAssetQuantity
-    ) external view returns (bool) {
+    function isDepositValid(address _reserveAsset, uint256 _reserveAssetQuantity) external view returns (bool) {
         return
             _reserveAssetQuantity != 0 &&
             IBabController(controller).isValidReserveAsset(_reserveAsset) &&
@@ -450,10 +402,7 @@ contract RollingGarden is ReentrancyGuard, BaseGarden {
      *
      * @return  bool                        Returns true if withdrawal is valid
      */
-    function isWithdrawalValid(
-        address _reserveAsset,
-        uint256 _gardenTokenQuantity
-    ) external view returns (bool) {
+    function isWithdrawalValid(address _reserveAsset, uint256 _gardenTokenQuantity) external view returns (bool) {
         uint256 setTotalSupply = totalSupply();
 
         if (
@@ -463,14 +412,9 @@ contract RollingGarden is ReentrancyGuard, BaseGarden {
         ) {
             return false;
         } else {
-            uint256 totalWithdrawalValue =
-                _getWithdrawalReserveQuantity(
-                    _reserveAsset,
-                    _gardenTokenQuantity
-                );
+            uint256 totalWithdrawalValue = _getWithdrawalReserveQuantity(_reserveAsset, _gardenTokenQuantity);
 
-            (, uint256 expectedWithdrawalQuantity) =
-                _getFees(totalWithdrawalValue, false, _gardenTokenQuantity);
+            (, uint256 expectedWithdrawalQuantity) = _getFees(totalWithdrawalValue, false, _gardenTokenQuantity);
 
             return principal >= expectedWithdrawalQuantity;
         }
@@ -480,64 +424,44 @@ contract RollingGarden is ReentrancyGuard, BaseGarden {
 
     /* ============ Internal Functions ============ */
 
-    function _validateReserveAsset(address _reserveAsset, uint256 _quantity)
+    function _validateReserveAsset(address _reserveAsset, uint256 _quantity) internal view {
+        require(_quantity > 0, 'Quantity > 0');
+        require(IBabController(controller).isValidReserveAsset(_reserveAsset), 'Must be reserve asset');
+    }
+
+    function _validateIssuanceInfo(uint256 _minGardenTokenReceiveQuantity, ActionInfo memory _depositInfo)
         internal
         view
     {
-        require(_quantity > 0, "Quantity > 0");
-        require(
-            IBabController(controller).isValidReserveAsset(_reserveAsset),
-            "Must be reserve asset"
-        );
-    }
-
-    function _validateIssuanceInfo(
-        uint256 _minGardenTokenReceiveQuantity,
-        ActionInfo memory _depositInfo
-    ) internal view {
         // Check that total supply is greater than min supply needed for issuance
         // Note: A min supply amount is needed to avoid division by 0 when Garden token supply is 0
-        require(
-            _depositInfo.previousGardenTokenSupply >= minGardenTokenSupply,
-            "Supply must > than minimum"
-        );
+        require(_depositInfo.previousGardenTokenSupply >= minGardenTokenSupply, 'Supply must > than minimum');
 
-        require(
-            _depositInfo.gardenTokenQuantity >= _minGardenTokenReceiveQuantity,
-            "Must be > min Garden token"
-        );
+        require(_depositInfo.gardenTokenQuantity >= _minGardenTokenReceiveQuantity, 'Must be > min Garden token');
     }
 
     function _validateRedemptionInfo(
         uint256 _minReserveReceiveQuantity,
-        uint256 /* _gardenTokenQuantity */,
+        uint256, /* _gardenTokenQuantity */
         ActionInfo memory _withdrawalInfo
     ) internal view {
         // Check that new supply is more than min supply needed for redemption
         // Note: A min supply amount is needed to avoid division by 0 when withdrawaling garden token to 0
-        require(
-            _withdrawalInfo.newGardenTokenSupply >= minGardenTokenSupply,
-            "Supply must be > than minimum"
-        );
+        require(_withdrawalInfo.newGardenTokenSupply >= minGardenTokenSupply, 'Supply must be > than minimum');
 
-        require(
-            _withdrawalInfo.netFlowQuantity >= _minReserveReceiveQuantity,
-            "Must be > than min receive"
-        );
+        require(_withdrawalInfo.netFlowQuantity >= _minReserveReceiveQuantity, 'Must be > than min receive');
     }
 
-    function _createIssuanceInfo(
-        address _reserveAsset,
-        uint256 _reserveAssetQuantity
-    ) internal view returns (ActionInfo memory) {
+    function _createIssuanceInfo(address _reserveAsset, uint256 _reserveAssetQuantity)
+        internal
+        view
+        returns (ActionInfo memory)
+    {
         ActionInfo memory depositInfo;
         depositInfo.previousGardenTokenSupply = totalSupply();
         depositInfo.preFeeReserveQuantity = _reserveAssetQuantity;
 
-        (
-            depositInfo.protocolFees,
-            depositInfo.netFlowQuantity
-        ) = _getFees(depositInfo.preFeeReserveQuantity, true, 0);
+        (depositInfo.protocolFees, depositInfo.netFlowQuantity) = _getFees(depositInfo.preFeeReserveQuantity, true, 0);
 
         depositInfo.gardenTokenQuantity = _getGardenTokenMintQuantity(
             _reserveAsset,
@@ -546,49 +470,40 @@ contract RollingGarden is ReentrancyGuard, BaseGarden {
         );
 
         // Calculate inflation and new position multiplier. Note: Round inflation up in order to round position multiplier down
-        depositInfo.newGardenTokenSupply =
-            depositInfo.gardenTokenQuantity.add(
-              depositInfo.previousGardenTokenSupply
-            );
+        depositInfo.newGardenTokenSupply = depositInfo.gardenTokenQuantity.add(depositInfo.previousGardenTokenSupply);
 
         depositInfo.newReservePositionBalance = principal.add(depositInfo.netFlowQuantity);
 
         return depositInfo;
     }
 
-    function _createRedemptionInfo(
-        address _reserveAsset,
-        uint256 _gardenTokenQuantity
-    ) internal view returns (ActionInfo memory) {
+    function _createRedemptionInfo(address _reserveAsset, uint256 _gardenTokenQuantity)
+        internal
+        view
+        returns (ActionInfo memory)
+    {
         ActionInfo memory withdrawalInfo;
 
         withdrawalInfo.gardenTokenQuantity = _gardenTokenQuantity;
 
-        withdrawalInfo.preFeeReserveQuantity = _getWithdrawalReserveQuantity(
-            _reserveAsset,
+        withdrawalInfo.preFeeReserveQuantity = _getWithdrawalReserveQuantity(_reserveAsset, _gardenTokenQuantity);
+
+        (withdrawalInfo.protocolFees, withdrawalInfo.netFlowQuantity) = _getFees(
+            withdrawalInfo.preFeeReserveQuantity,
+            false,
             _gardenTokenQuantity
         );
 
-        (
-            withdrawalInfo.protocolFees,
-            withdrawalInfo.netFlowQuantity
-        ) = _getFees(withdrawalInfo.preFeeReserveQuantity, false, _gardenTokenQuantity);
-
         withdrawalInfo.previousGardenTokenSupply = totalSupply();
 
-        withdrawalInfo.newGardenTokenSupply =
-            withdrawalInfo.previousGardenTokenSupply.sub(_gardenTokenQuantity);
+        withdrawalInfo.newGardenTokenSupply = withdrawalInfo.previousGardenTokenSupply.sub(_gardenTokenQuantity);
 
         uint256 outflow = withdrawalInfo.netFlowQuantity.add(withdrawalInfo.protocolFees);
 
         // Require withdrawable quantity is greater than existing collateral
-        require(
-            principal >= outflow,
-            "Must have enough balance"
-        );
+        require(principal >= outflow, 'Must have enough balance');
 
-        withdrawalInfo.newReservePositionBalance =
-            principal.sub(outflow);
+        withdrawalInfo.newReservePositionBalance = principal.sub(outflow);
 
         return withdrawalInfo;
     }
@@ -605,27 +520,21 @@ contract RollingGarden is ReentrancyGuard, BaseGarden {
      * @return  uint256                     Fees paid to the protocol in reserve asset
      * @return  uint256                     Net reserve to user net of fees
      */
-    function _getFees(uint256 _reserveAssetQuantity, bool _isDeposit, uint256 _gardenTokenQuantity)
-        internal
-        view
-        returns (
-            uint256,
-            uint256
-        )
-    {
+    function _getFees(
+        uint256 _reserveAssetQuantity,
+        bool _isDeposit,
+        uint256 _gardenTokenQuantity
+    ) internal view returns (uint256, uint256) {
         // Get protocol fee percentages
         uint256 protocolFeePercentage =
             _isDeposit
                 ? IBabController(controller).getProtocolDepositGardenTokenFee()
-                : IBabController(controller)
-                    .getProtocolWithdrawalGardenTokenFee();
+                : IBabController(controller).getProtocolWithdrawalGardenTokenFee();
 
         // Calculate total notional fees
-        uint256 protocolFees =
-            protocolFeePercentage.preciseMul(_reserveAssetQuantity);
+        uint256 protocolFees = protocolFeePercentage.preciseMul(_reserveAssetQuantity);
 
-        uint256 netReserveFlow =
-            _reserveAssetQuantity.sub(protocolFees);
+        uint256 netReserveFlow = _reserveAssetQuantity.sub(protocolFees);
 
         return (protocolFees, netReserveFlow);
     }
@@ -638,48 +547,46 @@ contract RollingGarden is ReentrancyGuard, BaseGarden {
         // Get valuation of the Garden with the quote asset as the reserve asset.
         // Reverts if price is not found
         uint256 gardenValuationPerToken =
-          IGardenValuer(IBabController(controller).getGardenValuer()).calculateGardenValuation(address(this), _reserveAsset);
+            IGardenValuer(IBabController(controller).getGardenValuer()).calculateGardenValuation(
+                address(this),
+                _reserveAsset
+            );
         gardenValuationPerToken = gardenValuationPerToken.sub(_netReserveFlows.preciseDiv(totalSupply()));
 
         // Get reserve asset decimals
         uint8 reserveAssetDecimals = ERC20(_reserveAsset).decimals();
-        uint256 baseUnits = uint256(10) ** reserveAssetDecimals;
+        uint256 baseUnits = uint256(10)**reserveAssetDecimals;
         uint256 normalizedTotalReserveQuantityNetFees = _netReserveFlows.preciseDiv(baseUnits);
 
-        uint256 normalizedTotalReserveQuantityNetFeesAndPremium =
-            _netReserveFlows.preciseDiv(baseUnits);
+        uint256 normalizedTotalReserveQuantityNetFeesAndPremium = _netReserveFlows.preciseDiv(baseUnits);
 
         // Calculate Garden tokens to mint to depositor
         uint256 denominator =
-            _gardenTokenTotalSupply
-                .preciseMul(gardenValuationPerToken)
-                .add(normalizedTotalReserveQuantityNetFees)
-                .sub(normalizedTotalReserveQuantityNetFeesAndPremium);
+            _gardenTokenTotalSupply.preciseMul(gardenValuationPerToken).add(normalizedTotalReserveQuantityNetFees).sub(
+                normalizedTotalReserveQuantityNetFeesAndPremium
+            );
         uint256 quantityToMint =
-            normalizedTotalReserveQuantityNetFeesAndPremium
-                .preciseMul(_gardenTokenTotalSupply)
-                .preciseDiv(denominator);
+            normalizedTotalReserveQuantityNetFeesAndPremium.preciseMul(_gardenTokenTotalSupply).preciseDiv(denominator);
         return quantityToMint;
     }
 
-    function _getWithdrawalReserveQuantity(
-        address _reserveAsset,
-        uint256 _gardenTokenQuantity
-    ) internal view returns (uint256) {
+    function _getWithdrawalReserveQuantity(address _reserveAsset, uint256 _gardenTokenQuantity)
+        internal
+        view
+        returns (uint256)
+    {
         // Get valuation of the Garden with the quote asset as the reserve asset. Returns value in precise units (10e18)
         // Reverts if price is not found
         uint256 gardenValuationPerToken =
-            IGardenValuer(IBabController(controller).getGardenValuer())
-                .calculateGardenValuation(address(this), _reserveAsset);
+            IGardenValuer(IBabController(controller).getGardenValuer()).calculateGardenValuation(
+                address(this),
+                _reserveAsset
+            );
 
-        uint256 totalWithdrawalValueInPreciseUnits =
-            _gardenTokenQuantity.preciseMul(gardenValuationPerToken);
+        uint256 totalWithdrawalValueInPreciseUnits = _gardenTokenQuantity.preciseMul(gardenValuationPerToken);
         // Get reserve asset decimals
         uint8 reserveAssetDecimals = ERC20(_reserveAsset).decimals();
-        uint256 prePremiumReserveQuantity =
-            totalWithdrawalValueInPreciseUnits.preciseMul(
-                10**reserveAssetDecimals
-            );
+        uint256 prePremiumReserveQuantity = totalWithdrawalValueInPreciseUnits.preciseMul(10**reserveAssetDecimals);
 
         return prePremiumReserveQuantity;
     }
@@ -688,22 +595,15 @@ contract RollingGarden is ReentrancyGuard, BaseGarden {
      * Updates the contributor info in the array
      */
     function _updateContributorInfo(uint256 tokensReceived, uint256 amount) internal {
-      Contributor storage contributor = contributors[msg.sender];
-      // If new contributor, create one, increment count, and set the current TS
-      if (contributor.totalDeposit == 0) {
-        totalContributors = totalContributors.add(1);
-      }
-      contributor.timestamp = block.timestamp;
-      contributor.totalDeposit = contributor.totalDeposit.add(amount);
-      contributor.tokensReceived = contributor.tokensReceived.add(
-          tokensReceived
-      );
+        Contributor storage contributor = contributors[msg.sender];
+        // If new contributor, create one, increment count, and set the current TS
+        if (contributor.totalDeposit == 0) {
+            totalContributors = totalContributors.add(1);
+        }
+        contributor.timestamp = block.timestamp;
+        contributor.totalDeposit = contributor.totalDeposit.add(amount);
+        contributor.tokensReceived = contributor.tokensReceived.add(tokensReceived);
 
-      emit ContributionLog(
-        msg.sender,
-        amount,
-        tokensReceived,
-        block.timestamp
-      );
+        emit ContributionLog(msg.sender, amount, tokensReceived, block.timestamp);
     }
 }

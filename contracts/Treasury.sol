@@ -20,10 +20,10 @@
 
 pragma solidity 0.7.4;
 
-import "hardhat/console.sol";
-import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
-import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import { IBabController } from "./interfaces/IBabController.sol";
+import 'hardhat/console.sol';
+import {Ownable} from '@openzeppelin/contracts/access/Ownable.sol';
+import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
+import {IBabController} from './interfaces/IBabController.sol';
 
 /**
  * @title Treasury
@@ -33,10 +33,9 @@ import { IBabController } from "./interfaces/IBabController.sol";
  * Governance will be able to send funds from the treasury.
  */
 contract Treasury is Ownable {
-
     /* ============ Events ============ */
 
-    event TreasuryFundsSent(address _asset, uint256 _amount , address _to);
+    event TreasuryFundsSent(address _asset, uint256 _amount, address _to);
 
     /* ============ State Variables ============ */
 
@@ -50,9 +49,7 @@ contract Treasury is Ownable {
      *
      * @param _controller         Address of controller contract
      */
-    constructor(
-      IBabController _controller
-    ) {
+    constructor(IBabController _controller) {
         controller = _controller;
     }
 
@@ -65,16 +62,16 @@ contract Treasury is Ownable {
      * @param _amount           Amount to send of the asset
      * @param _to               Address to send the assets to
      */
-    function sendTreasuryFunds(address _asset, uint256 _amount, address _to) external onlyOwner {
-      require(_asset != address(0), "Asset must exist");
-      require(_to != address(0), "Target address must exist");
-      require(IERC20(_asset).balanceOf(address(this)) >= _amount, "Not enough funds in treasury");
-      require(IERC20(_asset).transferFrom(
-        address(this),
-        _to,
-        _amount
-      ), "Ideator perf fee failed");
-      emit TreasuryFundsSent(_asset, _amount, _to);
+    function sendTreasuryFunds(
+        address _asset,
+        uint256 _amount,
+        address _to
+    ) external onlyOwner {
+        require(_asset != address(0), 'Asset must exist');
+        require(_to != address(0), 'Target address must exist');
+        require(IERC20(_asset).balanceOf(address(this)) >= _amount, 'Not enough funds in treasury');
+        require(IERC20(_asset).transferFrom(address(this), _to, _amount), 'Ideator perf fee failed');
+        emit TreasuryFundsSent(_asset, _amount, _to);
     }
 
     // Can receive ETH

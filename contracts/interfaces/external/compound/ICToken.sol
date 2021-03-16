@@ -19,12 +19,21 @@ interface ICToken {
 
     function underlying() external view returns (address);
 
-    function getAccountSnapshot(address account) external view returns (uint, uint, uint, uint);
+    function getAccountSnapshot(address account)
+        external
+        view
+        returns (
+            uint256,
+            uint256,
+            uint256,
+            uint256
+        );
 
-    function repayBorrowBehalf(address borrower, uint amount) external payable returns (uint);
-    function borrowBalanceCurrent(address account) external view returns (uint);
-    function exchangeRateCurrent() external returns (uint);
-    function supplyRatePerBlock() external returns (uint);
+    function repayBorrowBehalf(address borrower, uint256 amount) external payable returns (uint256);
 
+    function borrowBalanceCurrent(address account) external view returns (uint256);
 
+    function exchangeRateCurrent() external returns (uint256);
+
+    function supplyRatePerBlock() external returns (uint256);
 }
