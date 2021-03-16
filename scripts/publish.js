@@ -68,12 +68,12 @@ async function main() {
     publishAndPushContract(file, 'integrations/');
   });
   // Factory Contracts
-  const factories = ['IdeaFactory.sol', 'CommunityFactory.sol'];
+  const factories = ['StrategyFactory.sol', 'GardenFactory.sol'];
   factories.forEach((file) => {
-    publishAndPushContract(file, 'communities/');
+    publishAndPushContract(file, 'gardens/');
   });
   // Internal Interfaces
-  const interfaces = ['ICommunity.sol', 'IRollingCommunity.sol', 'IIntegration.sol', 'IInvestmentIdea.sol'];
+  const interfaces = ['IGarden.sol', 'IRollingGarden.sol', 'IIntegration.sol', 'IStrategy.sol'];
 
   interfaces.forEach((file) => {
     publishAndPushContract(file, 'interfaces/');
