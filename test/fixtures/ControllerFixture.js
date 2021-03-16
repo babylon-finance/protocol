@@ -176,6 +176,7 @@ async function deployFolioFixture() {
     signer3,
     contractsToPublish: [
       { name: 'BabController', contract: babController },
+      { name: 'StrategyFactory', contract: strategyFactory },
       { name: 'KyberTradeIntegration', contract: kyberTradeIntegration },
       { name: 'BalancerIntegration', contract: balancerIntegration },
       { name: 'YearnVaultIntegration', contract: yearnVaultIntegration },
