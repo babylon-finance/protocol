@@ -1,17 +1,17 @@
-const { expect } = require("chai");
-const { waffle, ethers } = require("hardhat");
-const { impersonateAddress } = require("../../utils/rpc");
-const addresses = require("../../utils/addresses");
-const { deployFolioFixture } = require("../fixtures/ControllerFixture");
+const { expect } = require('chai');
+const { waffle, ethers } = require('hardhat');
+const { impersonateAddress } = require('../../utils/rpc');
+const addresses = require('../../utils/addresses');
+const { deployFolioFixture } = require('../fixtures/ControllerFixture');
 
 const { loadFixture } = waffle;
 
-describe("CompoundIntegration", function() {
+describe('CompoundIntegration', function () {
   let system;
   let owner;
   let controller;
   let compoundBorrowing;
-  const daiWhaleAddress = "0x6B175474E89094C44Da98b954EedeAC495271d0F";
+  const daiWhaleAddress = '0x6B175474E89094C44Da98b954EedeAC495271d0F';
   let garden;
   let compAbi;
   let userSigner3;
@@ -26,8 +26,8 @@ describe("CompoundIntegration", function() {
     garden = system.comunities.one;
   });
 
-  describe("Deployment", function() {
-    it("should successfully deploy the contract", async function() {
+  describe('Deployment', function () {
+    it('should successfully deploy the contract', async function () {
       const deployed = await controller.deployed();
       const deployedC = await compoundBorrowing.deployed();
       expect(!!deployed).to.equal(true);
@@ -35,7 +35,7 @@ describe("CompoundIntegration", function() {
     });
   });
 
-  describe("CompoundBorrowing", async function() {
+  describe('CompoundBorrowing', async function () {
     let whaleSigner;
     let cethToken;
     let daiToken;
@@ -48,24 +48,18 @@ describe("CompoundIntegration", function() {
 
     beforeEach(async () => {
       whaleSigner = await impersonateAddress(daiWhaleAddress);
-      wethToken = await ethers.getContractAt("IERC20", addresses.tokens.WETH);
+      wethToken = await ethers.getContractAt('IERC20', addresses.tokens.WETH);
       whaleWeth = await impersonateAddress(addresses.holders.WETH);
-      comptroller = await ethers.getContractAt(
-        "IComptroller",
-        addresses.compound.Comptroller
-      );
-      daiToken = await ethers.getContractAt("IERC20", addresses.tokens.DAI);
-      cdaiToken = await ethers.getContractAt("ICToken", addresses.tokens.CDAI);
-      usdcToken = await ethers.getContractAt("IERC20", addresses.tokens.USDC);
-      cusdcToken = await ethers.getContractAt(
-        "ICToken",
-        addresses.tokens.CUSDC
-      );
-      cethToken = await ethers.getContractAt("ICEther", addresses.tokens.CETH);
+      comptroller = await ethers.getContractAt('IComptroller', addresses.compound.Comptroller);
+      daiToken = await ethers.getContractAt('IERC20', addresses.tokens.DAI);
+      cdaiToken = await ethers.getContractAt('ICToken', addresses.tokens.CDAI);
+      usdcToken = await ethers.getContractAt('IERC20', addresses.tokens.USDC);
+      cusdcToken = await ethers.getContractAt('ICToken', addresses.tokens.CUSDC);
+      cethToken = await ethers.getContractAt('ICEther', addresses.tokens.CETH);
     });
 
-    describe("Compound Borrowing/Lending", function() {
-      it("can supply ether", async function() {
+    describe('Compound Borrowing/Lending', function () {
+      it('can supply ether', async function () {
         expect(await cethToken.balanceOf(garden.address)).to.equal(0);
         // await expect(() =>
         //   owner.sendTransaction({
@@ -108,7 +102,7 @@ describe("CompoundIntegration", function() {
         // expect(balance).to.be.gt(0);
       });
 
-      it("can supply erc20", async function() {
+      it('can supply erc20', async function () {
         // expect(
         //   await daiToken
         //     .connect(whaleSigner)
@@ -129,12 +123,11 @@ describe("CompoundIntegration", function() {
         //     gasPrice: 0
         //   }
         // );
-
         // const balance = await cdaiToken.balanceOf(garden.address);
         // expect(balance).to.be.gt(0);
       });
 
-      it("can supply ether and borrow dai", async function() {
+      it('can supply ether and borrow dai', async function () {
         // TODO
       });
 

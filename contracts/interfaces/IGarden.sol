@@ -17,7 +17,7 @@
 */
 pragma solidity 0.7.4;
 
-import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 
 /**
  * @title IGarden
@@ -28,61 +28,106 @@ import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 interface IGarden is IERC20 {
     /* ============ Functions ============ */
     function setActive() external;
+
     function setDisabled() external;
 
     function active() external view returns (bool);
+
     function controller() external view returns (address);
+
     function creator() external view returns (address);
+
     function gardenEndsBy() external view returns (uint256);
+
     function gardenIdeas() external view returns (address);
-    function getContributor(address _contributor) external view returns (uint256, uint256, uint256);
+
+    function getContributor(address _contributor)
+        external
+        view
+        returns (
+            uint256,
+            uint256,
+            uint256
+        );
+
     function getIntegrations() external view returns (address[] memory);
+
     function getReserveAsset() external view returns (address);
+
     function hasIntegration(address _integration) external view returns (bool);
+
     function isValidIntegration(address _integration) external returns (bool);
+
     function name() external view returns (string memory);
+
     function totalContributors() external view returns (uint256);
+
     function totalCommunitiesDeposited() external view returns (uint256);
+
     function weth() external view returns (address);
+
     function minLiquidityAsset() external view returns (uint256);
+
     function getPrincipal() external view returns (uint256);
+
     function totalStake() external pure returns (uint256);
+
     function minVotersQuorum() external pure returns (uint256);
+
     function minIdeaDuration() external pure returns (uint256);
+
     function maxIdeaDuration() external pure returns (uint256);
+
     function strategyCooldownPeriod() external pure returns (uint256);
+
     function strategyCreatorProfitPercentage() external pure returns (uint256);
+
     function strategyVotersProfitPercentage() external pure returns (uint256);
+
     function gardenCreatorProfitPercentage() external pure returns (uint256);
+
     function getStrategies() external view returns (address[] memory);
+
     function isStrategy(address _strategy) external view returns (bool);
 
     function startRedemptionWindow(uint256 _amount) external;
+
     function allocateCapitalToInvestment(uint256 _capital) external;
+
     function addStrategy(
-      uint256 _maxCapitalRequested,
-      uint256 _stake,
-      uint256 _investmentDuration,
-      bytes memory _enterData,
-      bytes memory _exitData,
-      address _integration,
-      uint256 _expectedReturn,
-      uint256 _minRebalanceCapital,
-      address[] memory _enterTokensNeeded,
-      uint256[] memory _enterTokensAmounts
+        uint256 _maxCapitalRequested,
+        uint256 _stake,
+        uint256 _investmentDuration,
+        bytes memory _enterData,
+        bytes memory _exitData,
+        address _integration,
+        uint256 _expectedReturn,
+        uint256 _minRebalanceCapital,
+        address[] memory _enterTokensNeeded,
+        uint256[] memory _enterTokensAmounts
     ) external;
+
     function rebalanceInvestments() external;
 
-    function callIntegration(address _integration, uint256 _value, bytes calldata _data,
+    function callIntegration(
+        address _integration,
+        uint256 _value,
+        bytes calldata _data,
         address[] memory _tokensNeeded,
-        uint256[] memory _tokenAmountsNeeded) external returns (bytes memory _returnValue);
-    function invokeApprove(address _spender, address _asset, uint256 _quantity) external;
+        uint256[] memory _tokenAmountsNeeded
+    ) external returns (bytes memory _returnValue);
+
+    function invokeApprove(
+        address _spender,
+        address _asset,
+        uint256 _quantity
+    ) external;
+
     function invokeFromIntegration(
-      address _target,
-      uint256 _value,
-      bytes calldata _data
+        address _target,
+        uint256 _value,
+        bytes calldata _data
     ) external returns (bytes memory _returnValue);
 
     function updatePrincipal(uint256 _amount) external;
-
 }

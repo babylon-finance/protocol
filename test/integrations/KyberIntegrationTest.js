@@ -80,7 +80,6 @@ describe('KyberTradeIntegration', function () {
 
       ethers.provider.send('evm_increaseTime', [ONE_DAY_IN_SECONDS * 2]);
 
-      console.log('execute');
       await strategy.executeInvestment(ethers.utils.parseEther('1'), {
         gasPrice: 0,
       });

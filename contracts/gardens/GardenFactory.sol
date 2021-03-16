@@ -18,9 +18,9 @@
 
 pragma solidity 0.7.4;
 
-import "hardhat/console.sol";
-import { RollingGarden } from "./RollingGarden.sol";
-import { Clones } from "@openzeppelin/contracts/proxy/Clones.sol";
+import 'hardhat/console.sol';
+import {RollingGarden} from './RollingGarden.sol';
+import {Clones} from '@openzeppelin/contracts/proxy/Clones.sol';
 
 /**
  * @title GardenFactory
@@ -29,31 +29,22 @@ import { Clones } from "@openzeppelin/contracts/proxy/Clones.sol";
  * Factory to create garden contracts
  */
 contract GardenFactory {
+    address immutable rollingGarden;
 
-  address immutable rollingGarden;
+    constructor() {
+        rollingGarden = address(new RollingGarden());
+    }
 
-  constructor() {
-    rollingGarden = address(new RollingGarden());
-  }
-
-  function createRollingGarden(
-    address[] memory _integrations,
-    address _weth,
-    address _controller,
-    address _creator,
-    string memory _name,
-    string memory _symbol
-  ) external returns (address) {
-      address payable clone = payable(Clones.clone(rollingGarden));
-      RollingGarden(clone).initialize(
-        _integrations,
-        _weth,
-        _controller,
-        _creator,
-        _name,
-        _symbol
-      );
-      return clone;
-  }
-
+    function createRollingGarden(
+        address[] memory _integrations,
+        address _weth,
+        address _controller,
+        address _creator,
+        string memory _name,
+        string memory _symbol
+    ) external returns (address) {
+        address payable clone = payable(Clones.clone(rollingGarden));
+        RollingGarden(clone).initialize(_integrations, _weth, _controller, _creator, _name, _symbol);
+        return clone;
+    }
 }

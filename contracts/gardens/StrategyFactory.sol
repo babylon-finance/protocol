@@ -18,9 +18,9 @@
 
 pragma solidity 0.7.4;
 
-import "hardhat/console.sol";
-import { Strategy } from "./Strategy.sol";
-import { Clones } from "@openzeppelin/contracts/proxy/Clones.sol";
+import 'hardhat/console.sol';
+import {Strategy} from './Strategy.sol';
+import {Clones} from '@openzeppelin/contracts/proxy/Clones.sol';
 
 /**
  * @title StrategyFactory
@@ -29,48 +29,45 @@ import { Clones } from "@openzeppelin/contracts/proxy/Clones.sol";
  * Factory to create investment strategy contracts
  */
 contract StrategyFactory {
+    address immutable strategy;
 
-  address immutable strategy;
+    constructor() {
+        strategy = address(new Strategy());
+    }
 
-  constructor() {
-    strategy = address(new Strategy());
-  }
-
-
-  /**
-   * Creates a new investment strategy using minimal proxies
-   *
-   * @param _strategist                       Address of the strategist
-   * @param _garden                     Address of the garden
-   * @param _controller                    Address of the controller
-   * @param _maxCapitalRequested           Max Capital requested denominated in the reserve asset (0 to be unlimited)
-   * @param _stake                         Stake with garden participations absolute amounts 1e18
-   * @param _investmentDuration            Investment duration in seconds
-   * @param _expectedReturn                Expected return
-   * @param _minRebalanceCapital           Min capital that is worth it to deposit into this strategy
-   */
-  function createStrategy(
-    address _strategist,
-    address _garden,
-    address _controller,
-    uint256 _maxCapitalRequested,
-    uint256 _stake,
-    uint256 _investmentDuration,
-    uint256 _expectedReturn,
-    uint256 _minRebalanceCapital
-  ) external returns (address) {
-      address clone = Clones.clone(strategy);
-      Strategy(clone).initialize(
-        _strategist,
-        _garden,
-        _controller,
-        _maxCapitalRequested,
-        _stake,
-        _investmentDuration,
-        _expectedReturn,
-        _minRebalanceCapital
-      );
-      return clone;
-  }
-
+    /**
+     * Creates a new investment strategy using minimal proxies
+     *
+     * @param _strategist                       Address of the strategist
+     * @param _garden                     Address of the garden
+     * @param _controller                    Address of the controller
+     * @param _maxCapitalRequested           Max Capital requested denominated in the reserve asset (0 to be unlimited)
+     * @param _stake                         Stake with garden participations absolute amounts 1e18
+     * @param _investmentDuration            Investment duration in seconds
+     * @param _expectedReturn                Expected return
+     * @param _minRebalanceCapital           Min capital that is worth it to deposit into this strategy
+     */
+    function createStrategy(
+        address _strategist,
+        address _garden,
+        address _controller,
+        uint256 _maxCapitalRequested,
+        uint256 _stake,
+        uint256 _investmentDuration,
+        uint256 _expectedReturn,
+        uint256 _minRebalanceCapital
+    ) external returns (address) {
+        address clone = Clones.clone(strategy);
+        Strategy(clone).initialize(
+            _strategist,
+            _garden,
+            _controller,
+            _maxCapitalRequested,
+            _stake,
+            _investmentDuration,
+            _expectedReturn,
+            _minRebalanceCapital
+        );
+        return clone;
+    }
 }

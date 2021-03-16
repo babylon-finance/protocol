@@ -17,7 +17,7 @@
 */
 pragma solidity 0.7.4;
 
-import { IIntegration } from "./IIntegration.sol";
+import {IIntegration} from './IIntegration.sol';
 
 /**
  * @title IBorrowIntegration
@@ -26,14 +26,19 @@ import { IIntegration } from "./IIntegration.sol";
  * Interface for lending protocol integrations
  */
 interface IBorrowIntegration is IIntegration {
+    function depositCollateral(address asset, uint256 amount) external;
 
-  function depositCollateral(address asset, uint256 amount) external;
-  function removeCollateral(address asset, uint256 amount) external;
-  function borrow(address asset, uint256 borrowAmount) external;
-  function repay(address asset, uint256 amount) external;
-  function updateMaxCollateralFactor(uint256 _newMaxCollateralFactor) external;
+    function removeCollateral(address asset, uint256 amount) external;
 
-  function getBorrowBalance(address asset) external view returns (uint256);
-  function getDebtToken(address asset) external returns (address);
-  function getHealthFactor() external view returns (uint256);
+    function borrow(address asset, uint256 borrowAmount) external;
+
+    function repay(address asset, uint256 amount) external;
+
+    function updateMaxCollateralFactor(uint256 _newMaxCollateralFactor) external;
+
+    function getBorrowBalance(address asset) external view returns (uint256);
+
+    function getDebtToken(address asset) external returns (address);
+
+    function getHealthFactor() external view returns (uint256);
 }

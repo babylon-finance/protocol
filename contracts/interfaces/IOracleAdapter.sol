@@ -19,7 +19,6 @@
 */
 pragma solidity 0.7.4;
 
-
 /**
  * @title IOracleAdapter
  * @author Babylon Finance
@@ -27,7 +26,6 @@ pragma solidity 0.7.4;
  * Interface for calling an oracle adapter.
  */
 interface IOracleAdapter {
-
     /**
      * Function for retrieving a price that requires sourcing data from outside protocols to calculate.
      *
@@ -37,5 +35,6 @@ interface IOracleAdapter {
      * @return              Current price of asset represented in uint256
      */
     function getPrice(address _assetOne, address _assetTwo) external view returns (bool, uint256);
+
     function update(address _assetOne, address _assetTwo) external;
 }

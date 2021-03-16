@@ -17,7 +17,7 @@
 */
 pragma solidity 0.7.4;
 
-import { IIntegration } from "./IIntegration.sol";
+import {IIntegration} from './IIntegration.sol';
 
 /**
  * @title IGardenFactory
@@ -26,13 +26,12 @@ import { IIntegration } from "./IIntegration.sol";
  * Interface for the garden factory
  */
 interface IGardenFactory {
-
-  function createRollingGarden(
-    address[] memory _integrations,
-    address _weth,
-    address _controller,
-    address _creator,
-    string memory _name,
-    string memory _symbol
-  ) external returns(address);
+    function createRollingGarden(
+        address[] memory _integrations,
+        address _weth,
+        address _controller,
+        address _creator,
+        string memory _name,
+        string memory _symbol
+    ) external returns (address);
 }

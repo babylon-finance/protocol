@@ -1,14 +1,14 @@
-const { expect } = require("chai");
-const superagent = require("superagent");
-const { waffle, ethers } = require("hardhat");
-const { impersonateAddress } = require("../../utils/rpc");
-const { deployFolioFixture } = require("../fixtures/ControllerFixture");
-const addresses = require("../../utils/addresses");
-const { ZERO } = require("../../utils/constants");
+const { expect } = require('chai');
+const superagent = require('superagent');
+const { waffle, ethers } = require('hardhat');
+const { impersonateAddress } = require('../../utils/rpc');
+const { deployFolioFixture } = require('../fixtures/ControllerFixture');
+const addresses = require('../../utils/addresses');
+const { ZERO } = require('../../utils/constants');
 
 const { loadFixture } = waffle;
 
-describe("OneInchTradeIntegration", function() {
+describe('OneInchTradeIntegration', function () {
   let system;
   let oneInchIntegration;
   let garden;
@@ -19,8 +19,8 @@ describe("OneInchTradeIntegration", function() {
     garden = system.comunities.one;
   });
 
-  describe("Deployment", function() {
-    it("should successfully deploy the contract", async function() {
+  describe('Deployment', function () {
+    it('should successfully deploy the contract', async function () {
       const deployed = await system.babController.deployed();
       const deployedKyber = await oneInchIntegration.deployed();
       expect(!!deployed).to.equal(true);
@@ -28,42 +28,33 @@ describe("OneInchTradeIntegration", function() {
     });
   });
 
-  describe("Trading", function() {
+  describe('Trading', function () {
     let daiToken;
     let usdcToken;
     let whaleSigner;
     let oneInchExchange;
-    const daiWhaleAddress = "0x6B175474E89094C44Da98b954EedeAC495271d0F";
+    const daiWhaleAddress = '0x6B175474E89094C44Da98b954EedeAC495271d0F';
 
     beforeEach(async () => {
       whaleSigner = await impersonateAddress(daiWhaleAddress);
-      daiToken = await ethers.getContractAt("IERC20", addresses.tokens.DAI);
-      usdcToken = await ethers.getContractAt("IERC20", addresses.tokens.USDC);
-      oneInchExchange = await ethers.getContractAt(
-        "IOneInchExchange",
-        addresses.oneinch.exchange
-      );
+      daiToken = await ethers.getContractAt('IERC20', addresses.tokens.DAI);
+      usdcToken = await ethers.getContractAt('IERC20', addresses.tokens.USDC);
+      oneInchExchange = await ethers.getContractAt('IOneInchExchange', addresses.oneinch.exchange);
     });
 
-    it("trade dai to usdc", async function() {
+    it('trade dai to usdc', async function () {
       expect(
-        await daiToken
-          .connect(whaleSigner)
-          .transfer(garden.address, ethers.utils.parseEther("100"), {
-            gasPrice: 0
-          })
+        await daiToken.connect(whaleSigner).transfer(garden.address, ethers.utils.parseEther('100'), {
+          gasPrice: 0,
+        }),
       );
-      expect(await daiToken.balanceOf(garden.address)).to.equal(
-        ethers.utils.parseEther("100")
-      );
+      expect(await daiToken.balanceOf(garden.address)).to.equal(ethers.utils.parseEther('100'));
       // Get the quote
-      const quote = await superagent
-        .get(`${addresses.api.oneinch}quote`)
-        .query({
-          fromTokenAddress: daiToken.address,
-          toTokenAddress: usdcToken.address,
-          amount: 100 * 10 ** 18
-        });
+      const quote = await superagent.get(`${addresses.api.oneinch}quote`).query({
+        fromTokenAddress: daiToken.address,
+        toTokenAddress: usdcToken.address,
+        amount: 100 * 10 ** 18,
+      });
       // Get the parts
       // const parts = await oneInchExchange.getExpectedReturn(
       //   daiToken.address,
