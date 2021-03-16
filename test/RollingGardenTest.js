@@ -196,12 +196,6 @@ describe("Garden", function() {
         ethers.utils.parseEther("1.1")
       );
       expect(await garden1.totalContributors()).to.equal(2);
-      console.log(
-        "balance",
-        ethers.utils.formatEther(
-          await garden1.balanceOf(userSigner3.getAddress())
-        )
-      );
       await garden1
         .connect(userSigner3)
         .withdraw(90909, 1, userSigner3.getAddress());
