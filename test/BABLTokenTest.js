@@ -1,5 +1,13 @@
 // We import Chai to use its asserting functions here.
+
 const { expect } = require("chai");
+const { ethers, waffle } = require("hardhat");
+
+const { EMPTY_BYTES, ONE_DAY_IN_SECONDS } = require("../utils/constants");
+const { loadFixture } = waffle;
+
+const addresses = require("../utils/addresses");
+const { deployFolioFixture } = require("./fixtures/ControllerFixture");
 
 // `describe` is a Mocha function that allows you to organize your tests. It's
 // not actually needed, but having your tests organized makes debugging them
@@ -18,34 +26,45 @@ describe("BABLToken contract", function () {
   // A common pattern is to declare some variables, and assign them in the
   // `before` and `beforeEach` callbacks.
 
-  let BABLToken;
-  let hardhatToken;
-  let owner;
-  let addr1;
-  let addr2;
-  let addrs;
-
+  let bablToken;
+  let timeLockRegistry;
+  let ownerSigner;
+  let userSigner1;
+  let userSigner2;
+  let userSigner3;
+  
   // `beforeEach` will run before each test, re-deploying the contract every
   // time. It receives a callback, which can be async.
-  beforeEach(async function () {
-    // Get the ContractFactory and Signers here.
-    BABLToken = await ethers.getContractFactory("BABLToken");
-    [owner, addr1, addr2, ...addrs] = await ethers.getSigners();
 
-    // To deploy our contract, we just have to call BABLToken.deploy() and await
-    // for it to be deployed(), which happens onces its transaction has been
-    // mined.
-    Token = await BABLToken.deploy();
-    
+  beforeEach(async () => {
+    const {
+      bablToken,
+      timeLockRegistry,
+      owner,
+      signer1,
+      signer2,
+      signer3
+    } = await loadFixture(deployFolioFixture);
+  
+    token = bablToken;
+    registry = timeLockRegistry;
+    ownerSigner = owner;
+    userSigner1 = signer1;
+    userSigner2 = signer2;
+    userSigner3 = signer3;
 
-    TimeLockRegistry = await ethers.getContractFactory("TimeLockRegistry");
+    // console.log(
+    //   "Config:",
+    //   oracle,
+    //   valuer,
+    //   ownerSigner,
+    //   userSigner1,
+    //   userSigner2,
+    //   userSigner3
+    // );
 
-    // To deploy our contract, we just have to call TimeLockRegistry.deploy() and await
-    // for it to be deployed(), which happens onces its transaction has been
-    // mined.
 
-    Registry = await TimeLockRegistry.deploy(Token.address);
-  });
+  });  
 
   // You can nest describe calls to create subsections.
   describe("Deployment", function () {
@@ -53,19 +72,19 @@ describe("BABLToken contract", function () {
     // tests. It receives the test name, and a callback function.
 
     it("should successfully deploy BABLToken contract", async function() {
-      const deployedc = await Token.deployed();
+      const deployedc = await token.deployed();
       expect(!!deployedc).to.equal(true);
     });
 
     it("should successfully deploy TimeLockRegistry contract", async function() {
-      const deployedc2 = await Registry.deployed();
+      const deployedc2 = await registry.deployed();
       expect(!!deployedc2).to.equal(true);
     });
 
-    it("should successfully assign the TimeLockRegistry address to BABLToken contract", async function() {
+    it("should successfully have assigned the TimeLockRegistry address to BABLToken contract", async function() {
       // Set up TimeLockRegistry
-      await Token.connect(owner).setTimeLockRegistry(Registry.address);
-      //expect(Registry.address).to.equal(Token.getTimeLockRegistry());   
+      const addressRegistry = await token.timeLockRegistry();
+      expect(registry.address).to.equal(addressRegistry);   
     });
   
 
@@ -76,7 +95,7 @@ describe("BABLToken contract", function () {
 
       // This test expects the owner variable stored in the contract to be equal
       // to our Signer's owner.
-      expect(await Token.owner()).to.equal(owner.address);
+      expect(await token.owner()).to.equal(ownerSigner.address);
     });
 
      // If the callback function is async, Mocha will `await` it.
@@ -86,127 +105,178 @@ describe("BABLToken contract", function () {
 
       // This test expects the owner variable stored in the contract to be equal
       // to our Signer's owner.
-      expect(await Registry.owner()).to.equal(owner.address);
+      expect(await registry.owner()).to.equal(ownerSigner.address);
     });    
 
     it("Should assign the total supply of tokens to the owner", async function () {
-      const ownerBalance = await Token.balanceOf(owner.address);
-      expect(await Token.totalSupply()).to.equal(ownerBalance);
+      const ownerBalance = await token.balanceOf(ownerSigner.address);
+      expect(await token.totalSupply()).to.equal(ownerBalance);
     });
   });
 
   describe("Transactions", function () {
     it("Should transfer tokens between accounts", async function () {
-      // Transfer 260_000e18 tokens from owner to addr1
+      // Transfer 260_000e18 tokens from owner to userSigner1
       const value = BigInt("260000000000000000000000");
-      await Token.transfer(addr1.address, value.toString());
-      const addr1Balance = await Token.balanceOf(addr1.address);
+      await token.connect(ownerSigner).transfer(userSigner1.address, value.toString());
+      const addr1Balance = await token.balanceOf(userSigner1.address);
       expect(addr1Balance).to.equal(value).toString();
 
-      // Transfer 180_000e18 tokens from addr1 to addr2
+      // Transfer 180_000e18 tokens from userSigner1 to userSigner2
       // We use .connect(signer) to send a transaction from another account
       const value2 = BigInt("180000000000000000000000");
-      await Token.connect(addr1).transfer(addr2.address, value2.toString());
-      const addr2Balance = await Token.balanceOf(addr2.address);
+      await token.connect(userSigner1).transfer(userSigner2.address, value2.toString());
+      const addr2Balance = await token.balanceOf(userSigner2.address);
       expect(addr2Balance).to.equal(value2).toString();
     });
 
     it("Should fail if sender doesn’t have enough tokens", async function () {
-      const initialOwnerBalance = await Token.balanceOf(owner.address);
+      const initialOwnerBalance = await token.balanceOf(ownerSigner.address);
 
-      // Try to send 1 BABLToken from addr1 (0 tokens) to owner (1000 tokens).
+      // Try to send 1 BABLToken from userSigner1 (0 tokens) to owner (1000 tokens).
       // `require` will evaluate false and revert the transaction.
       await expect(
-        Token.connect(addr1).transfer(owner.address, 1)
+        token.connect(userSigner1).transfer(ownerSigner.address, 1)
       ).to.be.revertedWith("TimeLockedToken:: _transfer: insufficient balance");
 
       // Owner balance shouldn't have changed.
-      expect(await Token.balanceOf(owner.address)).to.equal(
+      expect(await token.balanceOf(ownerSigner.address)).to.equal(
         initialOwnerBalance
       );
     });
 
     it("Should update balances after transfers", async function () {
-      const initialOwnerBalance = await Token.balanceOf(owner.address);
+      const initialOwnerBalance = await token.balanceOf(ownerSigner.address);
       const value = BigInt("260000000000000000000000");
-      // Transfer 260_000e18 tokens from owner to addr1.
-      await Token.transfer(addr1.address, value.toString());
+      // Transfer 260_000e18 tokens from owner to userSigner1.
+      await token.transfer(userSigner1.address, value.toString());
       const value2 = BigInt("180000000000000000000000");
-      // Transfer another 180_000e18 tokens from owner to addr2.
-      await Token.transfer(addr2.address, value2.toString());
+      // Transfer another 180_000e18 tokens from owner to userSigner2.
+      await token.transfer(userSigner2.address, value2.toString());
 
       // Check balances.
       const totalsent = BigInt("440000000000000000000000");
-      const finalOwnerBalance = await Token.balanceOf(owner.address);
+      const finalOwnerBalance = await token.balanceOf(ownerSigner.address);
       expect(finalOwnerBalance).to.equal(BigInt(initialOwnerBalance) - totalsent);
 
-      const addr1Balance = await Token.balanceOf(addr1.address);
+      const addr1Balance = await token.balanceOf(userSigner1.address);
       expect(addr1Balance).to.equal(value);
 
-      const addr2Balance = await Token.balanceOf(addr2.address);
+      const addr2Balance = await token.balanceOf(userSigner2.address);
       expect(addr2Balance).to.equal(value2);
     });
   });
 
   describe("Minting", function () {
         
-  /**   
-    it("Should fail when trying to mint new tokens beyond MAX_SUPPLY", async function () {
-      const maxSupply = await Token.maxSupply();
-      const totalSupply = await Token.totalSupply();
-
-      // Try to mint 100000 new BABL Tokens to addr1.
-      // `require` will evaluate false and revert the transaction if MAX_SUPPLY is reached.
-      const value = BigInt("100000000000000000000000");
-      await expect(
-        Token.mint(addr1, value)
-      ).to.be.revertedWith("BABL::mint: max supply exceeded");
-
-      // TOTAL_SYPPLY shouldn't have changed.
-      expect(maxSupply).to.equal(totalSupply);
-    });
-  
-    /**      ethers.provider.send("evm_increaseTime", [ONE_DAY_IN_SECONDS * 90]);
- */
-    
-
     it("Should fail a try of minting new tokens by an address that is not the owner", async function () {
       try {
-        const totalSupply = await Token.totalSupply();
+        const totalSupply = await token.totalSupply();
         const value2 = BigInt("1000000000000000000000000");
-        let result = await Token.mint.call({from: addr1})
-        assert.equal(result.toString(), owner)
+        let result = await token.mint.call({from: userSigner1})
+        assert.equal(result.toString(), ownerSigner)
         await expect(
-          Token.connect(addr1).mint(addr1, value)
+          token.connect(userSigner1).mint(userSigner1, value)
         ).to.be.revertedWith("Only owner");
   
-        // TOTAL_SYPPLY shouldn't have changed.
+        // TOTAL_SUPPLY shouldn't have changed.
         expect(totalSupply).to.equal(value2);
 
       } catch (e) {
-        //assert.fail(null, null, `${addr1} is not owner`)}; 
-        console.log(`${addr1} is not owner`)};     
+        //assert.fail(null, null, `${userSigner1} is not owner`)}; 
+        console.log(`%s is not owner, which is %s`, userSigner1.address, ownerSigner.address)};     
     });
+
+    /** 
+    it("Should fail when trying to mint new tokens beyond MAX_SUPPLY", async function () {
+      const maxSupply = await token.maxSupply();
+      const totalSupply = await token.totalSupply();
+
+      // Try to mint new BABL Tokens > (above) maxSupply to userSigner1.
+      // `require` will evaluate false and revert the transaction if MAX_SUPPLY is reached.
+      const value = maxSupply-totalSupply+1;
+      await expect(
+        token.connect(ownerSigner).mint(userSigner1, value)
+      ).to.be.revertedWith("BABLToken::mint: max supply exceeded");
+
+      const newTotalSupply = await token.totalSupply();
+
+      // TOTAL_SUPPLY shouldn't have changed.
+      expect(totalSupply).to.equal(newTotalSupply);
+    });
+    */
 
   });
 
 
   describe("MAX_SUPPLY Change", function () {
         
+    it("Should fail a try of changing MAX_SUPPLY from an address different from the owner", async function () {
+      try {
+        const maxSupply = await token.maxSupply();
+        const NEW_MAX_SUPPLY = maxSupply+ 100000;
+        let result = await token.changeMaxSupply.call({from: userSigner1})
+        assert.equal(result.toString(), ownerSigner)
+        await expect(
+          token.connect(userSigner1).changeMaxSupply(NEW_MAX_SUPPLY, 251596800)
+        ).to.be.revertedWith("Only owner");
+  
+        // MAX_SUPPLY shouldn't have changed.
+        expect(maxSupply).to.equal(NEW_MAX_SUPPLY);
+
+      } catch (e) {
+        //assert.fail(null, null, `${userSigner1} is not owner`)}; 
+        console.log(`%s is not owner, which is %s`, userSigner1.address, ownerSigner.address)}; 
+    });
+
     it("Should fail a try of changing MAX_SUPPLY before 8 years", async function () {
-      const OLD_MAX_SUPPLY = await Token.maxSupply();
+      const OLD_MAX_SUPPLY = await token.maxSupply();
 
       // Try to change MAX_SUPPLY by a new number before 8 years
       // `require` will evaluate false and revert the transaction if MAX_SUPPLY is reached.
       const NEW_MAX_SUPPLY = BigInt("11000000000000000000000000");
       const value2 = BigInt("1000000000000000000000000");
       await expect(
-        Token.changeMaxSupply(NEW_MAX_SUPPLY, 251596800)
-      ).to.be.revertedWith("BABL::changeMaxSupply: a change on MAX_SUPPLY not allowed until 8 years after deployment");
+        token.changeMaxSupply(NEW_MAX_SUPPLY, 251596800)
+      ).to.be.revertedWith("BABLToken::changeMaxSupply: a change on MAX_SUPPLY not allowed until 8 years after deployment");
+
+      // MAX_SUPPLY shouldn't have changed.
+      expect(OLD_MAX_SUPPLY).to.equal(value2);
+    });
+
+    it("Should fail a try of changing MAX_SUPPLY after 8 years by an amount below the current MAX_SUPPLY", async function () {
+    const OLD_MAX_SUPPLY = await token.maxSupply();
+
+    // Try to change MAX_SUPPLY by a new number after 8 years by a lower amount
+    // `require` will evaluate false and revert the transaction if the new value is below the current MAX_SUPPLY.
+    const NEW_MAX_SUPPLY = BigInt("900000000000000000000000"); // 900_000e18
+    const value2 = BigInt("1000000000000000000000000");
+    // Traveling on time >8 years ahead
+    ethers.provider.send("evm_increaseTime", [ONE_DAY_IN_SECONDS * 365 * 8]);
+    await expect(
+      token.changeMaxSupply(NEW_MAX_SUPPLY, 251596800)
+    ).to.be.revertedWith("BABLToken::changeMaxSupply: changeMaxSupply should be higher than previous value");
+
+    // MAX_SUPPLY shouldn't have changed.
+    expect(OLD_MAX_SUPPLY).to.equal(value2);
+    });
+
+    it("Should fail a try of changing MAX_SUPPLY after 8 years by an amount above the cap of 5%", async function () {
+      const OLD_MAX_SUPPLY = await token.maxSupply();
+  
+      // Try to change MAX_SUPPLY by a new number after 8 years by a lower amount
+      // `require` will evaluate false and revert the transaction if the new value is above the cap (5%) the current MAX_SUPPLY.
+      const NEW_MAX_SUPPLY = BigInt("1150000000000000000000000"); // 1_150_000e18
+      // Traveling on time >8 years ahead
+      ethers.provider.send("evm_increaseTime", [ONE_DAY_IN_SECONDS * 365 * 8]);
+      await expect(
+        token.changeMaxSupply(NEW_MAX_SUPPLY, 251596800)
+      ).to.be.revertedWith("BABLToken::changeMaxSupply: exceeded of allowed 5% cap");
+        
+      const value2 = await token.maxSupply();
 
       // MAX_SUPPLY shouldn't have changed.
       expect(OLD_MAX_SUPPLY).to.equal(value2);
     });
   });
-
 });
