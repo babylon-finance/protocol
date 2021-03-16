@@ -20,17 +20,17 @@
 
 pragma solidity 0.7.4;
 
-import "hardhat/console.sol";
-import { ERC20 } from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
-import { SafeCast } from "@openzeppelin/contracts/utils/SafeCast.sol";
-import { SignedSafeMath } from "@openzeppelin/contracts/math/SignedSafeMath.sol";
-import { SafeMath } from "@openzeppelin/contracts/math/SafeMath.sol";
+import 'hardhat/console.sol';
+import {ERC20} from '@openzeppelin/contracts/token/ERC20/ERC20.sol';
+import {SafeCast} from '@openzeppelin/contracts/utils/SafeCast.sol';
+import {SignedSafeMath} from '@openzeppelin/contracts/math/SignedSafeMath.sol';
+import {SafeMath} from '@openzeppelin/contracts/math/SafeMath.sol';
 
-import { IBabController } from "./interfaces/IBabController.sol";
-import { IGarden } from "./interfaces/IGarden.sol";
-import { IStrategy } from "./interfaces/IStrategy.sol";
-import { IPriceOracle } from "./interfaces/IPriceOracle.sol";
-import { PreciseUnitMath } from "./lib/PreciseUnitMath.sol";
+import {IBabController} from './interfaces/IBabController.sol';
+import {IGarden} from './interfaces/IGarden.sol';
+import {IStrategy} from './interfaces/IStrategy.sol';
+import {IPriceOracle} from './interfaces/IPriceOracle.sol';
+import {PreciseUnitMath} from './lib/PreciseUnitMath.sol';
 
 /**
  * @title GardenValuer
@@ -80,11 +80,7 @@ contract GardenValuer {
      *
      * @return                 Token valuation in terms of quote asset in precise units 1e18
      */
-    function calculateGardenValuation(IGarden _garden, address _quoteAsset)
-        external
-        view
-        returns (uint256)
-    {
+    function calculateGardenValuation(IGarden _garden, address _quoteAsset) external view returns (uint256) {
         IPriceOracle priceOracle = IPriceOracle(IBabController(controller).getPriceOracle());
 
         // NOTE: This is temporary to allow for deposits / withdrawls. The masterQuoetAsset no longer
@@ -94,23 +90,23 @@ contract GardenValuer {
         address[] memory strategies = _garden.getStrategies();
         int256 valuation;
         for (uint256 j = 0; j < strategies.length; j++) {
-          IStrategy strategy = IStrategy(strategies[j]);
-          address[] memory positions = strategy.getPositions();
+            IStrategy strategy = IStrategy(strategies[j]);
+            address[] memory positions = strategy.getPositions();
 
-          for (uint256 i = 0; i < positions.length; i++) {
-            address component = positions[i];
+            for (uint256 i = 0; i < positions.length; i++) {
+                address component = positions[i];
 
-            // Get component price from price oracle. If price does not exist, revert.
-            uint256 componentPrice = priceOracle.getPrice(component, masterQuoteAsset);
-            int256 aggregateUnits = strategy.getPositionBalance(component);
-            // Normalize each position unit to preciseUnits 1e18 and cast to signed int
-            uint8 unitDecimals = ERC20(component).decimals();
-            uint256 baseUnits = 10 ** unitDecimals;
+                // Get component price from price oracle. If price does not exist, revert.
+                uint256 componentPrice = priceOracle.getPrice(component, masterQuoteAsset);
+                int256 aggregateUnits = strategy.getPositionBalance(component);
+                // Normalize each position unit to preciseUnits 1e18 and cast to signed int
+                uint8 unitDecimals = ERC20(component).decimals();
+                uint256 baseUnits = 10**unitDecimals;
 
-            int256 normalizedUnits = aggregateUnits.preciseDiv(baseUnits.toInt256());
-            // Calculate valuation of the component. Debt positions are effectively subtracted
-            valuation = normalizedUnits.preciseMul(componentPrice.toInt256()).add(valuation);
-          }
+                int256 normalizedUnits = aggregateUnits.preciseDiv(baseUnits.toInt256());
+                // Calculate valuation of the component. Debt positions are effectively subtracted
+                valuation = normalizedUnits.preciseMul(componentPrice.toInt256()).add(valuation);
+            }
         }
 
         if (masterQuoteAsset != _quoteAsset && valuation > 0) {
@@ -119,7 +115,9 @@ contract GardenValuer {
         }
         // Get component price from price oracle. If price does not exist, revert.
         uint256 reservePrice = priceOracle.getPrice(_garden.getReserveAsset(), masterQuoteAsset);
-        valuation = valuation.add(ERC20(_garden.getReserveAsset()).balanceOf(address(_garden)).toInt256().preciseMul(reservePrice.toInt256()));
+        valuation = valuation.add(
+            ERC20(_garden.getReserveAsset()).balanceOf(address(_garden)).toInt256().preciseMul(reservePrice.toInt256())
+        );
         // Adds ETH set aside
         valuation = valuation.add(address(_garden).balance.toInt256());
         return valuation.toUint256().preciseDiv(_garden.totalSupply());
