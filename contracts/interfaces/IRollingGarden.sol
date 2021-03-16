@@ -77,19 +77,6 @@ interface IRollingGarden is IERC20, IGarden {
 
     function reenableEthForInvestments() external;
     function burnAssetsFromSenderAndMintToReserve(address _contributor, uint256 _quantity) external;
-
-    // Investment strategies
-    function addStrategy(
-      uint256 _capitalRequested,
-      uint256 _stake,
-      uint256 _investmentDuration,
-      bytes memory _enterData,
-      bytes memory _exitData,
-      address _integration,
-      uint256 _expectedReturn,
-      address[] memory _enterTokensNeeded,
-      uint256[] memory _enterTokensAmounts
-    ) external payable;
     function curateStrategy(uint8 _strategyIndex, int256 _amount) external;
     function executeTopInvestment() external;
     function finalizeInvestment(uint _strategyIndex) external;
