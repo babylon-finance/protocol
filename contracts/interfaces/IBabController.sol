@@ -114,6 +114,8 @@ interface IBabController {
 
     function getProtocolPerformanceFee() external view returns (uint256);
 
+    function getProtocolManagementFee() external view returns (uint256);
+
     function getProtocolDepositGardenTokenFee() external view returns (uint256);
 
     function getProtocolWithdrawalGardenTokenFee() external view returns (uint256);

@@ -326,7 +326,7 @@ contract Strategy is ReentrancyGuard, Initializable {
         // Execute exit trade
         bytes memory _data = exitPayload;
         address reserveAsset = garden.getReserveAsset();
-        uint256 reserveAssetBeforeExiting = garden.getReserveBalance();
+        uint256 reserveAssetBeforeExiting = garden.getPrincipal();
         _callIntegration(integration, 0, _data, _tokensNeeded, _tokenAmounts);
         // Exchange the positions back to the reserve asset
         bytes memory _emptyTradeData;
@@ -343,7 +343,7 @@ contract Strategy is ReentrancyGuard, Initializable {
                 );
             }
         }
-        uint256 capitalReturned = garden.getReserveBalance().sub(reserveAssetBeforeExiting);
+        uint256 capitalReturned = garden.getPrincipal().sub(reserveAssetBeforeExiting);
         // Mark as finalized
         finalized = true;
         active = false;
@@ -571,6 +571,7 @@ contract Strategy is ReentrancyGuard, Initializable {
     function _transferIdeaRewards(uint256 capitalReturned) internal {
         address reserveAsset = garden.getReserveAsset();
         int256 reserveAssetDelta = 0;
+
         // Idea returns were positive
         if (capitalReturned > capitalAllocated) {
             uint256 profits = capitalReturned - capitalAllocated; // in reserve asset (weth)
@@ -579,20 +580,7 @@ contract Strategy is ReentrancyGuard, Initializable {
                 ERC20(address(garden)).transferFrom(address(this), strategist, stake),
                 'Ideator stake return failed'
             );
-            // Send weth rewards to the strategist
-            uint256 strategistProfits = garden.strategyCreatorProfitPercentage().preciseMul(profits);
-            require(
-                ERC20(reserveAsset).transferFrom(address(this), strategist, strategistProfits),
-                'Ideator perf fee failed'
-            );
-            reserveAssetDelta.add(int256(-strategistProfits));
-            // Send weth rewards to the commmunity lead
-            uint256 creatorProfits = garden.gardenCreatorProfitPercentage().preciseMul(profits);
-            require(
-                ERC20(reserveAsset).transferFrom(address(this), garden.creator(), creatorProfits),
-                'Garden lead perf fee failed'
-            );
-            reserveAssetDelta.add(int256(-creatorProfits));
+
             // Send weth performance fee to the protocol
             uint256 protocolProfits = IBabController(controller).getProtocolPerformanceFee().preciseMul(profits);
             require(
@@ -604,17 +592,32 @@ contract Strategy is ReentrancyGuard, Initializable {
                 'Protocol perf fee failed'
             );
             reserveAssetDelta.add(int256(-protocolProfits));
+
+            // Send weth rewards to the strategist
+            uint256 strategistProfits = garden.strategyCreatorProfitPercentage().preciseMul(profits);
+            // Creator Bonus
+            if (strategist == garden.creator()) {
+                strategistProfits = strategistProfits.mul(2);
+            }
+            require(
+                ERC20(reserveAsset).transferFrom(address(this), strategist, strategistProfits),
+                'Ideator perf fee failed'
+            );
+            reserveAssetDelta.add(int256(-strategistProfits));
+
             // Send weth rewards to voters that voted in favor
             uint256 votersProfits = garden.strategyVotersProfitPercentage().preciseMul(profits);
+            // TODO: Pull rewards
             for (uint256 i = 0; i < voters.length; i++) {
                 int256 voterWeight = votes[voters[i]];
                 if (voterWeight > 0) {
+                    uint256 voterProfits = votersProfits.mul(voterWeight.toUint256()).div(totalVotes.toUint256());
+                    if (strategist == garden.creator()) {
+                        // Creator Bonus
+                        voterProfits = voterProfits.mul(2);
+                    }
                     require(
-                        ERC20(reserveAsset).transferFrom(
-                            address(this),
-                            voters[i],
-                            votersProfits.mul(voterWeight.toUint256()).div(totalVotes.toUint256())
-                        ),
+                        ERC20(reserveAsset).transferFrom(address(this), voters[i], voterProfits),
                         'Voter perf fee failed'
                     );
                 }
@@ -629,6 +632,7 @@ contract Strategy is ReentrancyGuard, Initializable {
             // We slash and add to the garden the stake from the creator
             uint256 votersRewards = garden.strategyVotersProfitPercentage().preciseMul(stakeToSlash);
             // Send weth rewards to voters that voted against
+            // TODO: Pull rewards
             for (uint256 i = 0; i < voters.length; i++) {
                 int256 voterWeight = votes[voters[i]];
                 if (voterWeight < 0) {
@@ -649,6 +653,7 @@ contract Strategy is ReentrancyGuard, Initializable {
             ERC20(reserveAsset).transferFrom(address(this), address(garden), capitalReturned),
             'Idea capital return failed'
         );
+        // Updates strategy posiiton
         calculateAndEditPosition(
             reserveAsset,
             ERC20(reserveAsset).balanceOf(address(this)),
@@ -656,8 +661,8 @@ contract Strategy is ReentrancyGuard, Initializable {
             LIQUID_STATUS
         );
         // Updates reserve asset position in the garden
-        uint256 _newTotal = garden.getReserveBalance().toInt256().add(reserveAssetDelta).toUint256();
-        garden.updateReserveBalance(_newTotal);
+        uint256 _newTotal = garden.getPrincipal().toInt256().add(reserveAssetDelta).toUint256();
+        garden.updatePrincipal(_newTotal);
         // Start a redemption window in the garden with this capital
         garden.startRedemptionWindow(capitalReturned);
     }
