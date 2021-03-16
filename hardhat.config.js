@@ -101,6 +101,9 @@ module.exports = {
     integrations: './contracts/integrations',
     artifacts: './artifacts',
   },
+  mocha: {
+    timeout: 30000,
+  },
 };
 
 const DEBUG = false;
