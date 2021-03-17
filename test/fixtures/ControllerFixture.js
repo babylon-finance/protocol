@@ -146,6 +146,8 @@ async function deployFolioFixture() {
     ethers.utils.parseEther('1'),
   );
 
+  console.log('Created and started garden', garden.address);
+
   const strategies = await garden.getStrategies();
 
   return {
