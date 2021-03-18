@@ -669,14 +669,14 @@ contract RollingGarden is ReentrancyGuard, BaseGarden {
         // Save when the LP became a member in the current window
         if (contributor.totalCurrentPrincipal == 0) {
             contributor.timestamp = block.timestamp;
-            contributor.averageDepositPrice = amount.preciseDiv(tokensReceived);
+            contributor.averageDepositPrice = amount.div(tokensReceived);
         } else {
             // Avg Deposit Price = ((OldPrincipal * Avg Price old) +
             //         (New principal * New price)) / Total Principal
             contributor.averageDepositPrice = contributor
                 .averageDepositPrice
                 .preciseMul(contributor.totalCurrentPrincipal)
-                .add(amount.preciseDiv(tokensReceived))
+                .add(amount.div(tokensReceived))
                 .preciseDiv(contributor.totalCurrentPrincipal.add(amount));
         }
         contributor.totalCurrentPrincipal = contributor.totalCurrentPrincipal.add(amount);
