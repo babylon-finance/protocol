@@ -251,7 +251,7 @@ contract RollingGarden is ReentrancyGuard, BaseGarden {
         _burn(msg.sender, _gardenTokenQuantity);
         _updateContributorWithdrawalInfo(_gardenTokenQuantity, withdrawalInfo.netFlowQuantity);
 
-        // Check that the rdemption is possible
+        // Check that the redemption is possible
         require(canWithdrawEthAmount(msg.sender, withdrawalInfo.netFlowQuantity), 'Not enough liquidity in the fund');
         if (address(this).balance >= withdrawalInfo.netFlowQuantity) {
             // Send eth
