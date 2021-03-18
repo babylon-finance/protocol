@@ -104,7 +104,7 @@ describe('Garden', function () {
       expect(wethPosition).to.be.gt(ethers.utils.parseEther('1.099'));
       // Contributor Struct
       const contributor = await garden1.contributors(userSigner3.getAddress());
-      expect(contributor.totalDeposit).to.equal(ethers.utils.parseEther('1'));
+      expect(contributor.totalCurrentPrincipal).to.equal(ethers.utils.parseEther('1'));
       expect(contributor.tokensReceived).to.equal(supplyAfter.sub(supplyBefore));
     });
 
