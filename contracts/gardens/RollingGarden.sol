@@ -163,12 +163,14 @@ contract RollingGarden is ReentrancyGuard, BaseGarden {
         IWETH(weth).deposit{value: initialDepositAmount}();
 
         _mint(creator, initialTokens);
-        _updateContributorInfo(initialTokens, initialDepositAmount);
+        _updateContributorDepositInfo(initialTokens, initialDepositAmount);
         _updatePrincipal(initialDepositAmount);
 
         require(totalSupply() > 0, 'Garden must receive an initial deposit');
 
         active = true;
+        emit GardenTokenDeposited(msg.sender, msg.value, initialTokens, 0, block.timestamp);
+
     }
 
     /**
@@ -208,10 +210,9 @@ contract RollingGarden is ReentrancyGuard, BaseGarden {
 
         // Updates Reserve Balance and Mint
         _mint(_to, depositInfo.gardenTokenQuantity);
-        _updateContributorInfo(depositInfo.gardenTokenQuantity, msg.value);
+        _updateContributorDepositInfo(depositInfo.gardenTokenQuantity, msg.value);
         _updatePrincipal(depositInfo.newReservePositionBalance);
-
-        emit GardenTokenDeposited(_to, depositInfo.gardenTokenQuantity, depositInfo.protocolFees);
+        emit GardenTokenDeposited(_to, msg.value, depositInfo.gardenTokenQuantity, depositInfo.protocolFees, block.timestamp);
     }
 
     /**
@@ -241,8 +242,8 @@ contract RollingGarden is ReentrancyGuard, BaseGarden {
         _validateRedemptionInfo(_minReserveReceiveQuantity, _gardenTokenQuantity, withdrawalInfo);
 
         _burn(msg.sender, _gardenTokenQuantity);
+        _updateContributorWithdrawalInfo(_gardenTokenQuantity, withdrawalInfo.netFlowQuantity);
 
-        emit WithdrawalLog(msg.sender, _gardenTokenQuantity, withdrawalInfo.netFlowQuantity, block.timestamp);
         // Check that the rdemption is possible
         require(canWithdrawEthAmount(msg.sender, withdrawalInfo.netFlowQuantity), 'Not enough liquidity in the fund');
         if (address(this).balance >= withdrawalInfo.netFlowQuantity) {
@@ -258,7 +259,8 @@ contract RollingGarden is ReentrancyGuard, BaseGarden {
         payProtocolFeeFromGarden(reserveAsset, withdrawalInfo.protocolFees);
 
         _updatePrincipal(withdrawalInfo.newReservePositionBalance);
-        emit GardenTokenWithdrawn(msg.sender, _to, withdrawalInfo.gardenTokenQuantity, withdrawalInfo.protocolFees);
+
+        emit GardenTokenWithdrawn(msg.sender, _to, withdrawalInfo.netFlowQuantity, withdrawalInfo.gardenTokenQuantity, withdrawalInfo.protocolFees, block.timestamp);
     }
 
     /**
@@ -292,14 +294,13 @@ contract RollingGarden is ReentrancyGuard, BaseGarden {
         _validateRedemptionInfo(_minReserveReceiveQuantity, _gardenTokenQuantity, withdrawalInfo);
 
         withdrawalInfo.netFlowQuantity = reservePool.sellTokensToLiquidityPool(address(this), _gardenTokenQuantity);
-
-        emit WithdrawalLog(msg.sender, _gardenTokenQuantity, withdrawalInfo.netFlowQuantity, block.timestamp);
+        _updateContributorWithdrawalInfo(_gardenTokenQuantity, withdrawalInfo.netFlowQuantity);
 
         payProtocolFeeFromGarden(reserveAsset, withdrawalInfo.protocolFees);
 
         _updatePrincipal(withdrawalInfo.newReservePositionBalance);
 
-        emit GardenTokenWithdrawn(msg.sender, _to, withdrawalInfo.gardenTokenQuantity, withdrawalInfo.protocolFees);
+        emit GardenTokenWithdrawn(msg.sender, _to, withdrawalInfo.netFlowQuantity, withdrawalInfo.gardenTokenQuantity, withdrawalInfo.protocolFees, block.timestamp);
     }
 
     /**
@@ -397,7 +398,7 @@ contract RollingGarden is ReentrancyGuard, BaseGarden {
         )
     {
         Contributor memory contributor = contributors[_contributor];
-        return (contributor.totalDeposit, contributor.tokensReceived, contributor.timestamp);
+        return (contributor.totalCurrentPrincipal, contributor.tokensReceived, contributor.timestamp);
     }
 
     /**
@@ -635,16 +636,39 @@ contract RollingGarden is ReentrancyGuard, BaseGarden {
     /**
      * Updates the contributor info in the array
      */
-    function _updateContributorInfo(uint256 tokensReceived, uint256 amount) internal {
+    function _updateContributorDepositInfo(uint256 tokensReceived, uint256 amount) internal {
         Contributor storage contributor = contributors[msg.sender];
         // If new contributor, create one, increment count, and set the current TS
-        if (contributor.totalDeposit == 0) {
+        if (contributor.totalCurrentPrincipal == 0) {
             totalContributors = totalContributors.add(1);
         }
-        contributor.timestamp = block.timestamp;
-        contributor.totalDeposit = contributor.totalDeposit.add(amount);
+        // Save when the LP became a member in the current window
+        if (contributor.totalCurrentPrincipal == 0) {
+          contributor.timestamp = block.timestamp;
+          contributor.averageDepositPrice = amount.preciseDiv(tokensReceived);
+        } else {
+          // Avg Deposit Price = ((OldPrincipal * Avg Price old) +
+          //         (New principal * New price)) / Total Principal
+          contributor.averageDepositPrice =
+            contributor.averageDepositPrice.preciseMul(contributor.totalCurrentPrincipal).add(
+              amount.preciseDiv(tokensReceived)
+            ).preciseDiv(contributor.totalCurrentPrincipal.add(amount));
+        }
+        contributor.totalCurrentPrincipal = contributor.totalCurrentPrincipal.add(amount);
         contributor.tokensReceived = contributor.tokensReceived.add(tokensReceived);
+    }
 
-        emit ContributionLog(msg.sender, amount, tokensReceived, block.timestamp);
+    /**
+     * Updates the contributor info in the array
+     */
+    function _updateContributorWithdrawalInfo(uint256 tokensWithdrawn, uint256 amount) internal {
+        Contributor storage contributor = contributors[msg.sender];
+        // If sold everything
+        uint256 principalWithdrawn = tokensWithdrawn * contributor.averageDepositPrice;
+        if (balanceOf(msg.sender) == 0 || principalWithdrawn > contributor.totalCurrentPrincipal) {
+          contributor.totalCurrentPrincipal = balanceOf(msg.sender).preciseMul(amount.preciseDiv(tokensWithdrawn));
+        } else  {
+          contributor.totalCurrentPrincipal = contributor.totalCurrentPrincipal.sub(principalWithdrawn);
+        }
     }
 }
