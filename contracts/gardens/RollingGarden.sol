@@ -65,9 +65,10 @@ contract RollingGarden is ReentrancyGuard, BaseGarden {
     uint256 public redemptionWindowAfterInvestmentCompletes; // Window of time after an investment strategy finishes when the capital is available for withdrawals
     uint256 public redemptionsOpenUntil; // Indicates until when the redemptions are open and the ETH is set aside
 
-    mapping (address => uint256) public redemptionRequests; // Current redemption requests for this window
-    uint256 public totalRequestsAmountInWindow;             // Total Redemption Request Amount
-    uint256 public reserveAvailableForRedemptionsInWindow;  // Total available for redemptions in this window
+    mapping(address => uint256) public redemptionRequests; // Current redemption requests for this window
+    uint256 public totalRequestsAmountInWindow; // Total Redemption Request Amount
+    uint256 public reserveAvailableForRedemptionsInWindow; // Total available for redemptions in this window
+
     /* ============ Constructor ============ */
 
     /**
@@ -170,7 +171,6 @@ contract RollingGarden is ReentrancyGuard, BaseGarden {
 
         active = true;
         emit GardenTokenDeposited(msg.sender, msg.value, initialTokens, 0, block.timestamp);
-
     }
 
     /**
@@ -212,7 +212,13 @@ contract RollingGarden is ReentrancyGuard, BaseGarden {
         _mint(_to, depositInfo.gardenTokenQuantity);
         _updateContributorDepositInfo(depositInfo.gardenTokenQuantity, msg.value);
         _updatePrincipal(depositInfo.newReservePositionBalance);
-        emit GardenTokenDeposited(_to, msg.value, depositInfo.gardenTokenQuantity, depositInfo.protocolFees, block.timestamp);
+        emit GardenTokenDeposited(
+            _to,
+            msg.value,
+            depositInfo.gardenTokenQuantity,
+            depositInfo.protocolFees,
+            block.timestamp
+        );
     }
 
     /**
@@ -260,7 +266,14 @@ contract RollingGarden is ReentrancyGuard, BaseGarden {
 
         _updatePrincipal(withdrawalInfo.newReservePositionBalance);
 
-        emit GardenTokenWithdrawn(msg.sender, _to, withdrawalInfo.netFlowQuantity, withdrawalInfo.gardenTokenQuantity, withdrawalInfo.protocolFees, block.timestamp);
+        emit GardenTokenWithdrawn(
+            msg.sender,
+            _to,
+            withdrawalInfo.netFlowQuantity,
+            withdrawalInfo.gardenTokenQuantity,
+            withdrawalInfo.protocolFees,
+            block.timestamp
+        );
     }
 
     /**
@@ -300,7 +313,14 @@ contract RollingGarden is ReentrancyGuard, BaseGarden {
 
         _updatePrincipal(withdrawalInfo.newReservePositionBalance);
 
-        emit GardenTokenWithdrawn(msg.sender, _to, withdrawalInfo.netFlowQuantity, withdrawalInfo.gardenTokenQuantity, withdrawalInfo.protocolFees, block.timestamp);
+        emit GardenTokenWithdrawn(
+            msg.sender,
+            _to,
+            withdrawalInfo.netFlowQuantity,
+            withdrawalInfo.gardenTokenQuantity,
+            withdrawalInfo.protocolFees,
+            block.timestamp
+        );
     }
 
     /**
@@ -335,16 +355,16 @@ contract RollingGarden is ReentrancyGuard, BaseGarden {
      * @param _amount Amount to request a redemption in next window
      */
     function requestRedemptionAmount(uint256 _amount) public {
-      require(_amount <= balanceOf(msg.sender), 'Withdrawal amount <= to deposited amount');
-      // Flashloan protection
-      require(
-          block.timestamp.sub(contributors[msg.sender].timestamp) >= depositHardlock,
-          'Cannot withdraw. Hardlock'
-      );
-      require(redemptionsOpenUntil == 0, "There is an open redemption window already");
-      require(redemptionRequests[msg.sender] == 0, "Cannot request twice in the same window");
-      redemptionRequests[msg.sender] = _amount;
-      totalRequestsAmountInWindow.add(_amount);
+        require(_amount <= balanceOf(msg.sender), 'Withdrawal amount <= to deposited amount');
+        // Flashloan protection
+        require(
+            block.timestamp.sub(contributors[msg.sender].timestamp) >= depositHardlock,
+            'Cannot withdraw. Hardlock'
+        );
+        require(redemptionsOpenUntil == 0, 'There is an open redemption window already');
+        require(redemptionRequests[msg.sender] == 0, 'Cannot request twice in the same window');
+        redemptionRequests[msg.sender] = _amount;
+        totalRequestsAmountInWindow.add(_amount);
     }
 
     /**
@@ -373,17 +393,20 @@ contract RollingGarden is ReentrancyGuard, BaseGarden {
 
         // Weth already available
         if (liquidWeth >= _amount) {
-          return true;
+            return true;
         }
 
         // Redemptions open
         if (block.timestamp <= redemptionsOpenUntil) {
-          // Requested a redemption
-          if (redemptionRequests[_contributor] > 0) {
-            return redemptionRequests[_contributor].div(totalRequestsAmountInWindow).mul(reserveAvailableForRedemptionsInWindow) >= _amount;
-          }
-          // Didn't request a redemption
-          return ethAsideBalance.sub(reserveAvailableForRedemptionsInWindow) >= _amount;
+            // Requested a redemption
+            if (redemptionRequests[_contributor] > 0) {
+                return
+                    redemptionRequests[_contributor].div(totalRequestsAmountInWindow).mul(
+                        reserveAvailableForRedemptionsInWindow
+                    ) >= _amount;
+            }
+            // Didn't request a redemption
+            return ethAsideBalance.sub(reserveAvailableForRedemptionsInWindow) >= _amount;
         }
         return false;
     }
@@ -644,15 +667,16 @@ contract RollingGarden is ReentrancyGuard, BaseGarden {
         }
         // Save when the LP became a member in the current window
         if (contributor.totalCurrentPrincipal == 0) {
-          contributor.timestamp = block.timestamp;
-          contributor.averageDepositPrice = amount.preciseDiv(tokensReceived);
+            contributor.timestamp = block.timestamp;
+            contributor.averageDepositPrice = amount.preciseDiv(tokensReceived);
         } else {
-          // Avg Deposit Price = ((OldPrincipal * Avg Price old) +
-          //         (New principal * New price)) / Total Principal
-          contributor.averageDepositPrice =
-            contributor.averageDepositPrice.preciseMul(contributor.totalCurrentPrincipal).add(
-              amount.preciseDiv(tokensReceived)
-            ).preciseDiv(contributor.totalCurrentPrincipal.add(amount));
+            // Avg Deposit Price = ((OldPrincipal * Avg Price old) +
+            //         (New principal * New price)) / Total Principal
+            contributor.averageDepositPrice = contributor
+                .averageDepositPrice
+                .preciseMul(contributor.totalCurrentPrincipal)
+                .add(amount.preciseDiv(tokensReceived))
+                .preciseDiv(contributor.totalCurrentPrincipal.add(amount));
         }
         contributor.totalCurrentPrincipal = contributor.totalCurrentPrincipal.add(amount);
         contributor.tokensReceived = contributor.tokensReceived.add(tokensReceived);
@@ -666,9 +690,9 @@ contract RollingGarden is ReentrancyGuard, BaseGarden {
         // If sold everything
         uint256 principalWithdrawn = tokensWithdrawn * contributor.averageDepositPrice;
         if (balanceOf(msg.sender) == 0 || principalWithdrawn > contributor.totalCurrentPrincipal) {
-          contributor.totalCurrentPrincipal = balanceOf(msg.sender).preciseMul(amount.preciseDiv(tokensWithdrawn));
-        } else  {
-          contributor.totalCurrentPrincipal = contributor.totalCurrentPrincipal.sub(principalWithdrawn);
+            contributor.totalCurrentPrincipal = balanceOf(msg.sender).preciseMul(amount.preciseDiv(tokensWithdrawn));
+        } else {
+            contributor.totalCurrentPrincipal = contributor.totalCurrentPrincipal.sub(principalWithdrawn);
         }
     }
 }
