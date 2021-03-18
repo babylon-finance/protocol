@@ -4,7 +4,7 @@ const { ethers, waffle } = require('hardhat');
 const { loadFixture } = waffle;
 
 const addresses = require('../utils/addresses');
-const { ONE_DAY_IN_SECONDS, EMPTY_BYTES } = require('../utils/constants.js');
+const { ONE_DAY_IN_SECONDS, NOW, EMPTY_BYTES } = require('../utils/constants.js');
 const { deployFolioFixture } = require('./fixtures/ControllerFixture');
 
 describe('Garden', function () {
@@ -95,7 +95,7 @@ describe('Garden', function () {
       const supplyAfter = await garden1.totalSupply();
       // Communities
       // Manager deposit in fixture is only 0.1
-      // expect(supplyAfter.div(11)).to.equal(supplyBefore);
+      expect(supplyAfter.div(11)).to.equal(supplyBefore);
       expect(gardenBalanceAfter.sub(gardenBalance)).to.equal(ethers.utils.parseEther('1'));
       expect(await garden1.totalContributors()).to.equal(2);
       expect(await garden1.getPrincipal()).to.equal(ethers.utils.parseEther('1.1'));
@@ -104,8 +104,10 @@ describe('Garden', function () {
       expect(wethPosition).to.be.gt(ethers.utils.parseEther('1.099'));
       // Contributor Struct
       const contributor = await garden1.contributors(userSigner3.getAddress());
-      expect(contributor.totalDeposit).to.equal(ethers.utils.parseEther('1'));
+      expect(contributor.totalCurrentPrincipal).to.equal(ethers.utils.parseEther('1'));
       expect(contributor.tokensReceived).to.equal(supplyAfter.sub(supplyBefore));
+      expect(contributor.averageDepositPrice).to.equal(1000000000000); // Initial buy rate
+      expect(contributor.timestamp).to.be.gt(0);
     });
 
     it('a contributor can make multiple deposits', async function () {

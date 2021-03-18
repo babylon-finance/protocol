@@ -55,16 +55,21 @@ abstract contract BaseGarden is ERC20Upgradeable {
     event PendingIntegrationRemoved(address indexed _integration);
     event ReserveAssetChanged(address indexed _integration);
     event PrincipalChanged(uint256 _newAmount, uint256 _oldAmount);
-    event GardenTokenDeposited(address indexed _to, uint256 gardenTokenQuantity, uint256 protocolFees);
+    event GardenTokenDeposited(
+        address indexed _to,
+        uint256 reserveDeposited,
+        uint256 gardenTokenQuantity,
+        uint256 protocolFees,
+        uint256 timestamp
+    );
     event GardenTokenWithdrawn(
         address indexed _from,
         address indexed _to,
+        uint256 reserveReceived,
         uint256 gardenTokenQuantity,
-        uint256 protocolFees
+        uint256 protocolFees,
+        uint256 timestamp
     );
-
-    event ContributionLog(address indexed contributor, uint256 amount, uint256 tokensReceived, uint256 timestamp);
-    event WithdrawalLog(address indexed sender, uint256 amount, uint256 timestamp);
 
     /* ============ Modifiers ============ */
     modifier onlyContributor {
@@ -134,7 +139,8 @@ abstract contract BaseGarden is ERC20Upgradeable {
     /* ============ Structs ============ */
 
     struct Contributor {
-        uint256 totalDeposit; //wei
+        uint256 totalCurrentPrincipal; //wei
+        uint256 averageDepositPrice;
         uint256 tokensReceived;
         uint256 timestamp;
     }
