@@ -160,7 +160,6 @@ contract Strategy is ReentrancyGuard, Initializable {
     uint256 public duration; // Duration of the bet
     int256 public totalVotes; // Total votes staked
     uint256 public absoluteTotalVotes; // Absolute number of votes staked
-    uint256 public totalVoters; // Total amount of curators that voted
     address public integration; // Address of the integration
     bytes public enterPayload; // Calldata to execute when entering
     bytes public exitPayload; // Calldata to execute when exiting the trade
@@ -266,13 +265,9 @@ contract Strategy is ReentrancyGuard, Initializable {
     function curateIdea(int256 _amount) external onlyContributor onlyActiveGarden {
         require(_amount.toUint256() <= garden.balanceOf(msg.sender), 'Participant does not have enough balance');
         if (votes[msg.sender] == 0) {
-            totalVoters++;
-            voters = [msg.sender];
-        } else {
             voters.push(msg.sender);
         }
         votes[msg.sender] = votes[msg.sender].add(_amount);
-        totalVotes.add(_amount);
         absoluteTotalVotes = absoluteTotalVotes.add(abs(_amount).toUint256());
         totalVotes = totalVotes.add(_amount);
         // TODO: Introduce conviction voting
