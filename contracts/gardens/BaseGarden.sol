@@ -57,7 +57,7 @@ abstract contract BaseGarden is ERC20Upgradeable {
     event PrincipalChanged(uint256 _newAmount, uint256 _oldAmount);
     event GardenTokenDeposited(
         address indexed _to,
-        uint256 resserveDeposited,
+        uint256 reserveDeposited,
         uint256 gardenTokenQuantity,
         uint256 protocolFees,
         uint256 timestamp
