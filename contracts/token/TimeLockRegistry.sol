@@ -226,4 +226,8 @@ contract TimeLockRegistry is Ownable {
         
         return amount;
     }
+
+    function checkVesting(address address_) public view returns(bool team, bool cliff, uint256 start, uint256 end, uint256 last){
+        return (tokenVested[address_].team, tokenVested[address_].cliff, tokenVested[address_].vestingBegin, tokenVested[address_].vestingEnd, tokenVested[address_].lastClaim);
+    }
 }

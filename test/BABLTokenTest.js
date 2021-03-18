@@ -167,6 +167,74 @@ describe("BABLToken contract", function () {
     });
   });
 
+  describe("Vesting", function () { // TODO CHECK ALLOWANCE FLOW WHICH IS FINALLY NEEDED TO DISPOSE/REGISTER BABL TOKENS ON BEHALF OF TOKEN.OWNER()
+    it("Owner Should approve the allowance of 31% of 1M tokens to Time Lock Registry for vesting but keep balance without change", async function () {
+      // Approve 310_000e18 tokens from owner to Time Lock Registry
+      await token.approve(registry.address, ethers.utils.parseEther("310000"));
+      const ownerBalance = await token.balanceOf(ownerSigner.address);
+      expect(await token.totalSupply()).to.equal(ownerBalance);
+
+      // Check allowance has been done
+      const allowSigner1 = await token.allowance(ownerSigner.address,registry.address);
+      expect(allowSigner1).to.equal(ethers.utils.parseEther("310000"));
+    });
+    
+    it("Time Lock Registry should properly register 1 Team Member, 1 Advisor and 1 Investor with its own vesting conditions", async function () {
+      //First of all there should be an allowance from BABL Token Owner into the Registry
+      // Approve 310_000e18 tokens from owner to Time Lock Registry
+      await token.approve(registry.address, ethers.utils.parseEther("310000"));
+      const ownerBalance = await token.balanceOf(ownerSigner.address);
+      expect(await token.totalSupply()).to.equal(ownerBalance);
+
+      // Check allowance has been done
+      const allowSigner1 = await token.allowance(ownerSigner.address,registry.address);
+      expect(allowSigner1).to.equal(ethers.utils.parseEther("310000"));
+      
+      
+      // Register 1 Team Member with 26_000 BABL 1Y cliff and 4Y of Vesting
+      // Vesting starting date 1 March 2021 9h PST Unix Time 1614618000
+      await registry.register(userSigner1.address, ethers.utils.parseEther("26000"), true,1614618000);
+      const userSigner1Registered = await registry.checkVesting(userSigner1.address);
+      const userSigner1RegisteredTeam = userSigner1Registered[0];
+      const userSigner1RegisteredCliff = userSigner1Registered[1];
+      const userSigner1RegisteredVestingBegin = userSigner1Registered[2];
+      const userSigner1RegisteredVestingEnd = userSigner1Registered[3];
+      expect(userSigner1RegisteredTeam).to.equal(true);
+      expect(userSigner1RegisteredCliff).to.equal(true);
+      expect(userSigner1RegisteredVestingBegin).to.equal(1614618000);
+      expect(userSigner1RegisteredVestingEnd).to.equal(1614618000 + (ONE_DAY_IN_SECONDS * 365 * 4));
+      
+
+      // Register 1 Advisor with 2_000 BABL 1Y cliff and 4Y of Vesting
+      // Vesting starting date 1 March 2021 9h PST Unix Time 1614618000
+      await registry.register(userSigner2.address, ethers.utils.parseEther("2000"), true,1614618000);
+      const userSigner2Registered = await registry.checkVesting(userSigner2.address);
+      const userSigner2RegisteredTeam = userSigner2Registered[0];
+      const userSigner2RegisteredCliff = userSigner2Registered[1];
+      const userSigner2RegisteredVestingBegin = userSigner2Registered[2];
+      const userSigner2RegisteredVestingEnd = userSigner2Registered[3];
+      expect(userSigner2RegisteredTeam).to.equal(true);
+      expect(userSigner2RegisteredCliff).to.equal(true);
+      expect(userSigner2RegisteredVestingBegin).to.equal(1614618000);
+      expect(userSigner2RegisteredVestingEnd).to.equal(1614618000 + (ONE_DAY_IN_SECONDS * 365 * 4));
+
+      // Register 1 Investor with 10_000 BABL no Cliff and 3Y of Vesting
+      // Vesting starting date 1 March 2021 9h PST Unix Time 1614618000
+      await registry.register(userSigner3.address, ethers.utils.parseEther("10000"), false,1614618000);
+      const userSigner3Registered = await registry.checkVesting(userSigner3.address);
+      const userSigner3RegisteredTeam = userSigner3Registered[0];
+      const userSigner3RegisteredCliff = userSigner3Registered[1];
+      const userSigner3RegisteredVestingBegin = userSigner3Registered[2];
+      const userSigner3RegisteredVestingEnd = userSigner3Registered[3];
+      expect(userSigner3RegisteredTeam).to.equal(false);
+      expect(userSigner3RegisteredCliff).to.equal(false);
+      expect(userSigner3RegisteredVestingBegin).to.equal(1614618000);
+      expect(userSigner3RegisteredVestingEnd).to.equal(1614618000 + (ONE_DAY_IN_SECONDS * 365 * 3));
+    });
+
+    
+  });
+
   describe("Minting", function () {
         
     it("Should fail a try of minting new tokens by an address that is not the owner", async function () {
