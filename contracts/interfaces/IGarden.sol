@@ -47,6 +47,7 @@ interface IGarden is IERC20 {
         returns (
             uint256,
             uint256,
+            uint256,
             uint256
         );
 

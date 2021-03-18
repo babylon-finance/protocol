@@ -418,11 +418,17 @@ contract RollingGarden is ReentrancyGuard, BaseGarden {
         returns (
             uint256,
             uint256,
+            uint256,
             uint256
         )
     {
         Contributor memory contributor = contributors[_contributor];
-        return (contributor.totalCurrentPrincipal, contributor.tokensReceived, contributor.timestamp);
+        return (
+            contributor.totalCurrentPrincipal,
+            contributor.averageDepositPrice,
+            contributor.tokensReceived,
+            contributor.timestamp
+        );
     }
 
     /**
