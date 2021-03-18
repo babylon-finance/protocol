@@ -38,13 +38,13 @@ import { ReentrancyGuard } from "@openzeppelin/contracts/utils/ReentrancyGuard.s
     /* ============ Events ============ */
 
     /// @notice An event that emitted when a new mint ocurr
-    event mintedNewTokens(address account, uint256 tokensminted);
+    event MintedNewTokens(address account, uint256 tokensminted);
     
     /// @notice An event thats emitted when MAX_SUPPLY changes
     event MaxSupplyChanged(uint256 previousMaxValue, uint256 newMaxValue);
 
     /// @notice An event that emitted when maxSupplyAllowedAfter changes
-    event maxSupplyAllowedAfterChanged(uint previousAllowedAfterValue, uint newAllowedAfterValue);
+    event MaxSupplyAllowedAfterChanged(uint previousAllowedAfterValue, uint newAllowedAfterValue);
 
     /* ============ Modifiers ============ */
 
@@ -137,7 +137,7 @@ import { ReentrancyGuard } from "@openzeppelin/contracts/utils/ReentrancyGuard.s
         require(amount <= totalSupply().mul(mintCap).div(100), "BABLToken::mint: exceeded mint cap of 2% of total supply");
         _mint(_to, amount);
         
-        emit mintedNewTokens(_to, amount);
+        emit MintedNewTokens(_to, amount);
 
         // move delegates
         _moveDelegates(address(0), delegates[_to], amount); // TODO - CHECK IF IT IS FINALLY NEEDED FOR VOTING POWER
@@ -170,7 +170,7 @@ import { ReentrancyGuard } from "@openzeppelin/contracts/utils/ReentrancyGuard.s
         uint96 time = safe96(newMaxSupplyAllowedAfter, "BABLToken::changeMaxSupply: new newMaxSupplyAllowedAfter exceeds 96 bits"); // Overflow check
         uint96 futureTime = safe96(block.timestamp.add(365 days), "BABLToken::changeMaxSupply: minimum future time exceeds 96 bits"); // Overflow check
         require(time >= futureTime, "BABLToken::changeMaxSupply: the newMaxSupplyAllowedAfter should be at least 1 year in the future");
-        emit maxSupplyAllowedAfterChanged(maxSupplyAllowedAfter, time);
+        emit MaxSupplyAllowedAfterChanged(maxSupplyAllowedAfter, time);
         maxSupplyAllowedAfter = time;
         
         return true;

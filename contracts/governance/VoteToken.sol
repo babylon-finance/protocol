@@ -122,7 +122,8 @@ abstract contract VoteToken is Context, ERC20, Ownable, IVoteToken, ReentrancyGu
         bytes32 digest = keccak256(abi.encodePacked("\x19\x01", domainSeparator, structHash));
         address signatory = ecrecover(digest, v, r, s);
         require(signatory != address(0), "VoteToken::delegateBySig: invalid signature");
-        require(nonce == nonces[signatory]++, "VoteToken::delegateBySig: invalid nonce");
+        require(nonce == nonces[signatory]+1, "VoteToken::delegateBySig: invalid nonce");
+        nonces[signatory]++;
         require(block.timestamp <= expiry, "VoteToken::delegateBySig: signature expired");
         return _delegate(signatory, delegatee);
     }
@@ -218,21 +219,25 @@ abstract contract VoteToken is Context, ERC20, Ownable, IVoteToken, ReentrancyGu
         address dstRep,
         uint96 amount
     ) internal {
-        if (srcRep != dstRep && amount > 0) {
-            if (srcRep != address(0)) {
-                uint32 srcRepNum = numCheckpoints[srcRep];
-                uint96 srcRepOld = srcRepNum > 0 ? checkpoints[srcRep][srcRepNum - 1].votes : 0;
-                uint96 srcRepNew = sub96(srcRepOld, amount, "VoteToken::_moveDelegates: vote amount underflows");
-                _writeCheckpoint(srcRep, srcRepNum, srcRepOld, srcRepNew);
-            }
+        require(srcRep != dstRep, "VoteToken::_moveDelegates: srcRep and dstRep should be different");
+        require(amount > 0, "VoteToken::_moveDelegates: amount must be >0");
+        require(srcRep != address(0), "VoteToken::_moveDelegates: srcRep cannot be the Zero address");
+        require(srcRep != address(0), "VoteToken::_moveDelegates: srcRep cannot be the Zero address");
 
-            if (dstRep != address(0)) {
-                uint32 dstRepNum = numCheckpoints[dstRep];
-                uint96 dstRepOld = dstRepNum > 0 ? checkpoints[dstRep][dstRepNum - 1].votes : 0;
-                uint96 dstRepNew = add96(dstRepOld, amount, "VoteToken::_moveDelegates: vote amount overflows");
-                _writeCheckpoint(dstRep, dstRepNum, dstRepOld, dstRepNew);
-            }
-        }
+        // Sub voting amount to source
+        uint32 srcRepNum = numCheckpoints[srcRep];
+        uint96 srcRepOld = srcRepNum > 0 ? checkpoints[srcRep][srcRepNum - 1].votes : 0;
+        uint96 srcRepNew = sub96(srcRepOld, amount, "VoteToken::_moveDelegates: vote amount underflows");
+        _writeCheckpoint(srcRep, srcRepNum, srcRepOld, srcRepNew);
+        
+        // Add it to destination
+       
+        uint32 dstRepNum = numCheckpoints[dstRep];
+        uint96 dstRepOld = dstRepNum > 0 ? checkpoints[dstRep][dstRepNum - 1].votes : 0;
+        uint96 dstRepNew = add96(dstRepOld, amount, "VoteToken::_moveDelegates: vote amount overflows");
+        _writeCheckpoint(dstRep, dstRepNum, dstRepOld, dstRepNew);
+        
+        
     }
 
     /**

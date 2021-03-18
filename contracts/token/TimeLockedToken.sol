@@ -48,10 +48,10 @@ abstract contract TimeLockedToken is VoteToken {
     /* ============ Events ============ */
 
     /// @notice An event that emitted when a new lockout ocurr
-    event newLockout(address account, uint256 tokenslocked, bool isTeamOrAdvisor, uint256 startingVesting, uint256 endingVesting);
+    event NewLockout(address account, uint256 tokenslocked, bool isTeamOrAdvisor, uint256 startingVesting, uint256 endingVesting);
     
     /// @notice An event that emitted when a new Time Lock is registered
-    event newTimeLockRegistration(address previousAddress, address newAddress);
+    event NewTimeLockRegistration(address previousAddress, address newAddress);
     
     /// @notice An event that emitted when a cancellation of Lock tokens is registered 
     event Cancel(address account, uint256 amount);
@@ -130,7 +130,7 @@ abstract contract TimeLockedToken is VoteToken {
         require(address(newTimeLockRegistry) != address(0), "cannot be zero address");
         require(address(newTimeLockRegistry) != address(this), "cannot be this contract");
         require(address(newTimeLockRegistry) != address(timeLockRegistry), "must be new TimeLockRegistry");        
-        emit newTimeLockRegistration(address(timeLockRegistry), address(newTimeLockRegistry));
+        emit NewTimeLockRegistration(address(timeLockRegistry), address(newTimeLockRegistry));
 
         timeLockRegistry = newTimeLockRegistry;
 
@@ -178,7 +178,7 @@ abstract contract TimeLockedToken is VoteToken {
 
         // transfer tokens to the recipient
         _transfer(msg.sender, _receiver, _amount);
-        emit newLockout(_receiver, _amount, _profile, _vestingBegin, _vestingEnd);
+        emit NewLockout(_receiver, _amount, _profile, _vestingBegin, _vestingEnd);
         
         return true;
     }
