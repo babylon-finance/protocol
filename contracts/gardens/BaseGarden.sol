@@ -441,6 +441,25 @@ abstract contract BaseGarden is ERC20Upgradeable {
         return integrations.contains(_integration); //IBabController(controller).isValidIntegration(IIntegration(_integration).getName(), _integration);
     }
 
+    function getContributor(address _contributor)
+        public
+        view
+        returns (
+            uint256,
+            uint256,
+            uint256,
+            uint256
+        )
+    {
+        Contributor memory contributor = contributors[_contributor];
+        return (
+            contributor.totalCurrentPrincipal,
+            contributor.averageDepositPrice,
+            contributor.tokensReceived,
+            contributor.timestamp
+        );
+    }
+
     /* ============ Internal Functions ============ */
 
     /**

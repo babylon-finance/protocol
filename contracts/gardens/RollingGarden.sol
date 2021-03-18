@@ -412,25 +412,6 @@ contract RollingGarden is ReentrancyGuard, BaseGarden {
         return false;
     }
 
-    function getContributor(address _contributor)
-        public
-        view
-        returns (
-            uint256,
-            uint256,
-            uint256,
-            uint256
-        )
-    {
-        Contributor memory contributor = contributors[_contributor];
-        return (
-            contributor.totalCurrentPrincipal,
-            contributor.averageDepositPrice,
-            contributor.tokensReceived,
-            contributor.timestamp
-        );
-    }
-
     /**
      * Get the expected reserve asset to be withdrawaled
      *
