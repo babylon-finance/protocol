@@ -108,7 +108,7 @@ contract BabController is Ownable {
     uint256 public protocolManagementFee = 5e15; // 0.5% (0.01% = 1e14, 1% = 1e16)
     uint256 public protocolGardenCreationFee = 0; // (0.01% = 1e14, 1% = 1e16)
     uint256 public protocolDepositGardenTokenFee = 0; // (0.01% = 1e14, 1% = 1e16)
-    uint256 public protocolWithdrawalGardenTokenFee = 5e15; // (0.01% = 1e14, 1% = 1e16)
+    uint256 public protocolWithdrawalGardenTokenFee = 0; // (0.01% = 1e14, 1% = 1e16)
 
     /* ============ Functions ============ */
 
