@@ -64,7 +64,7 @@ abstract contract BaseGarden is ERC20Upgradeable {
     );
 
     event ContributionLog(address indexed contributor, uint256 amount, uint256 tokensReceived, uint256 timestamp);
-    event WithdrawalLog(address indexed sender, uint256 amount, uint256 timestamp);
+    event WithdrawalLog(address indexed sender, uint256 gardenTokens, uint256 reserveAmountReceived, uint256 timestamp);
 
     /* ============ Modifiers ============ */
     modifier onlyContributor {
