@@ -54,7 +54,7 @@ describe('BabController', function () {
 
   describe('Interacting with Communities', function () {
     it('should start with 3 comunities', async function () {
-      const comunities = await controller.getCommunities();
+      const comunities = await controller.getGardens();
       expect(comunities.length).to.equal(3);
     });
 
@@ -69,29 +69,29 @@ describe('BabController', function () {
     });
 
     it('can create comunities and retrieve all addresses', async function () {
-      const comunities = await controller.getCommunities();
+      const comunities = await controller.getGardens();
       expect(comunities.length).to.equal(3);
     });
 
     it('cannot disable an inactive garden', async function () {
-      const initialCommunities = await controller.getCommunities();
+      const initialCommunities = await controller.getGardens();
 
       await expect(controller.disableGarden(initialCommunities[0])).to.not.be.reverted;
       await expect(controller.disableGarden(initialCommunities[0])).to.be.reverted;
     });
 
     it('can remove a disabled garden', async function () {
-      const initialCommunities = await controller.getCommunities();
+      const initialCommunities = await controller.getGardens();
       expect(initialCommunities.length).to.equal(3);
       await expect(controller.disableGarden(initialCommunities[0])).to.not.be.reverted;
       await controller.removeGarden(initialCommunities[0]);
 
-      const updatedCommunities = await controller.getCommunities();
+      const updatedCommunities = await controller.getGardens();
       expect(updatedCommunities.length).to.equal(2);
     });
 
     it('can enable and disable a garden', async function () {
-      const initialCommunities = await controller.getCommunities();
+      const initialCommunities = await controller.getGardens();
 
       await expect(controller.disableGarden(initialCommunities[0])).to.not.be.reverted;
       await expect(controller.enableGarden(initialCommunities[0])).to.not.be.reverted;

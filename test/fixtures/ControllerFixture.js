@@ -113,7 +113,7 @@ async function deployFolioFixture() {
     .connect(signer1)
     .createRollingGarden(integrationsAddressList, addresses.tokens.WETH, 'ETH Yield Farm [b]', 'EYFG');
 
-  const gardens = await babController.getCommunities();
+  const gardens = await babController.getGardens();
 
   const garden = await ethers.getContractAt('RollingGarden', gardens[0]);
 

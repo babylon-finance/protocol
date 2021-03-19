@@ -119,6 +119,8 @@ interface IGarden is IERC20 {
         uint256 _quantity
     ) external;
 
+    function moveStrategyToFinalized(address _strategy) external;
+
     function invokeFromIntegration(
         address _target,
         uint256 _value,

@@ -345,6 +345,8 @@ contract Strategy is ReentrancyGuard, Initializable {
         exitedAt = block.timestamp;
         // Transfer rewards and update positions
         _transferIdeaRewards(capitalReturned);
+        // Moves strategy to finalized
+        IGarden(garden).moveStrategyToFinalized(address(this));
     }
 
     /**
