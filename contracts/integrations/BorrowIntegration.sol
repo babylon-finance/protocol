@@ -18,12 +18,13 @@
 
 pragma solidity 0.7.4;
 
-import "hardhat/console.sol";
-import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import { SafeMath } from "@openzeppelin/contracts/math/SafeMath.sol";
-import { BaseIntegration } from "./BaseIntegration.sol";
-import { ICommunity } from "../interfaces/ICommunity.sol";
-import { ReentrancyGuard } from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
+import 'hardhat/console.sol';
+import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
+import {SafeMath} from '@openzeppelin/contracts/math/SafeMath.sol';
+import {BaseIntegration} from './BaseIntegration.sol';
+import {IGarden} from '../interfaces/IGarden.sol';
+import {IStrategy} from '../interfaces/IStrategy.sol';
+import {ReentrancyGuard} from '@openzeppelin/contracts/utils/ReentrancyGuard.sol';
 
 /**
  * @title BorrowIntetration
@@ -32,566 +33,556 @@ import { ReentrancyGuard } from "@openzeppelin/contracts/utils/ReentrancyGuard.s
  * Base class for integration with lending protocols
  */
 abstract contract BorrowIntegration is BaseIntegration, ReentrancyGuard {
-  using SafeMath for uint256;
+    using SafeMath for uint256;
 
-  /* ============ Struct ============ */
+    /* ============ Struct ============ */
 
-  struct DebtInfo {
-    ICommunity community;         // Community address
-    address asset;      // Asset involved in the operation
-    uint256 amount;     // Amount involved in the operation
-    uint8 borrowOp;     // Borrow operation type
-  }
-
-  uint8 constant BORROW_OPERATION_DEPOSIT = 0;
-  uint8 constant BORROW_OPERATION_REMOVAL = 1;
-  uint8 constant BORROW_OPERATION_BORROW = 2;
-  uint8 constant BORROW_OPERATION_REPAY = 3;
-
-
-  /* ============ Events ============ */
-
-  event CollateralDeposited(
-    ICommunity community,
-    address asset,
-    uint256 amount,
-    uint256 protocolFee
-  );
-
-  event CollateralRemoved(
-    ICommunity community,
-    address asset,
-    uint256 amount,
-    uint256 protocolFee
-  );
-
-  event AmountBorrowed(
-    ICommunity community,
-    address asset,
-    uint256 amount,
-    uint256 protocolFee
-  );
-
-  event AmountRepaid(
-    ICommunity community,
-    address asset,
-    uint256 amount,
-    uint256 protocolFee
-  );
-
-  /* ============ State Variables ============ */
-  uint256 public maxCollateralFactor;
-
-
-  /* ============ Constructor ============ */
-
-  /**
-   * Creates the integration
-   *
-   * @param _name                   Name of the integration
-   * @param _weth                   Address of the WETH ERC20
-   * @param _controller             Address of the controller
-   * @param _maxCollateralFactor    Max collateral factor allowed
-   */
-  constructor(string memory _name, address _weth, address _controller, uint256 _maxCollateralFactor) BaseIntegration(_name, _weth, _controller) {
-    maxCollateralFactor = _maxCollateralFactor;
-  }
-
-  /* ============ External Functions ============ */
-  // Governance function
-  function updateMaxCollateralFactor(uint256 _newMaxCollateralFactor) external onlyProtocol {
-    maxCollateralFactor = _newMaxCollateralFactor;
-  }
-
-  /**
-   * Deposits collateral into the lending protocol.
-   * This would be called by a community
-   * @param asset The asset to be deposited as collateral
-   * @param amount The amount to be deposited as collateral
-   *
-   */
-  function depositCollateral(address asset, uint256 amount) nonReentrant onlyCommunity external {
-    address assetToDeposit = _getCollateralAsset(asset, BORROW_OPERATION_DEPOSIT);
-    amount = normalizeDecimals(asset, amount);
-
-    DebtInfo memory debtInfo = _createDebtInfo(asset, amount, BORROW_OPERATION_DEPOSIT);
-
-    _validatePreDeposit(debtInfo);
-
-    // Pre actions (enter markets for compound)
-    (
-      address targetAddressP,
-      uint256 callValueP,
-      bytes memory methodDataP
-    ) = _getPreActionCallData(
-      assetToDeposit,
-      amount,
-      BORROW_OPERATION_DEPOSIT
-    );
-    if (targetAddressP != address(0)) {
-      debtInfo.community.invokeFromIntegration(targetAddressP, callValueP, methodDataP);
+    struct DebtInfo {
+        IStrategy strategy; // Idea address
+        IGarden garden; // Garden address
+        address asset; // Asset involved in the operation
+        uint256 amount; // Amount involved in the operation
+        uint8 borrowOp; // Borrow operation type
     }
 
-    // Approve the collateral
-    debtInfo.community.invokeApprove(
-      _getSpender(asset),
-      asset,
-      amount
+    uint8 constant BORROW_OPERATION_DEPOSIT = 0;
+    uint8 constant BORROW_OPERATION_REMOVAL = 1;
+    uint8 constant BORROW_OPERATION_BORROW = 2;
+    uint8 constant BORROW_OPERATION_REPAY = 3;
+
+    /* ============ Events ============ */
+
+    event CollateralDeposited(
+        IStrategy indexed strategy,
+        IGarden indexed garden,
+        address asset,
+        uint256 amount,
+        uint256 protocolFee
     );
 
-    // Execute the deposit
-
-    (
-      address targetAddress,
-      uint256 callValue,
-      bytes memory methodData
-    ) = _getDepositCalldata(
-      assetToDeposit,
-      amount
+    event CollateralRemoved(
+        IStrategy indexed strategy,
+        IGarden indexed garden,
+        address asset,
+        uint256 amount,
+        uint256 protocolFee
     );
 
-    // // Need to enter markets
-    // Invoke protocol specific call
-    debtInfo.community.invokeFromIntegration(targetAddress, callValue, methodData);
-    // Validate deposit
-    _validatePostDeposit(debtInfo);
-    // Protocol Fee
-    uint256 protocolFee = _accrueProtocolFee(debtInfo, assetToDeposit, amount, BORROW_OPERATION_DEPOSIT);
-    updateCommunityPosition(msg.sender, asset, 0, 1); // Mark as locked
-
-    emit CollateralDeposited(
-      debtInfo.community,
-      asset,
-      amount,
-      protocolFee
-    );
-  }
-
-  /**
-   * Deposits collateral into the lending protocol.
-   * This would be called by a community
-   * @param asset The asset to be deposited as collateral
-   * @param amount The amount to be deposited as collateral
-   *
-   */
-  function removeCollateral(address asset, uint256 amount) nonReentrant onlyCommunity external {
-    address assetToDeposit = _getCollateralAsset(asset, BORROW_OPERATION_REMOVAL);
-    amount = normalizeDecimals(asset, amount);
-
-    DebtInfo memory debtInfo = _createDebtInfo(asset, amount, BORROW_OPERATION_REMOVAL);
-
-    _validatePreRemoval(debtInfo);
-
-    // Pre actions (enter markets for compound)
-    (
-      address targetAddressP,
-      uint256 callValueP,
-      bytes memory methodDataP
-    ) = _getPreActionCallData(
-      assetToDeposit,
-      amount,
-      BORROW_OPERATION_REMOVAL
+    event AmountBorrowed(
+        IStrategy indexed strategy,
+        IGarden indexed garden,
+        address asset,
+        uint256 amount,
+        uint256 protocolFee
     );
 
-    if (targetAddressP != address(0)) {
-      // Invoke protocol specific call
-      debtInfo.community.invokeFromIntegration(targetAddressP, callValueP, methodDataP);
+    event AmountRepaid(
+        IStrategy indexed strategy,
+        IGarden indexed garden,
+        address asset,
+        uint256 amount,
+        uint256 protocolFee
+    );
+
+    /* ============ State Variables ============ */
+    uint256 public maxCollateralFactor;
+
+    /* ============ Constructor ============ */
+
+    /**
+     * Creates the integration
+     *
+     * @param _name                   Name of the integration
+     * @param _weth                   Address of the WETH ERC20
+     * @param _controller             Address of the controller
+     * @param _maxCollateralFactor    Max collateral factor allowed
+     */
+    constructor(
+        string memory _name,
+        address _weth,
+        address _controller,
+        uint256 _maxCollateralFactor
+    ) BaseIntegration(_name, _weth, _controller) {
+        maxCollateralFactor = _maxCollateralFactor;
     }
 
-    (
-      address targetAddress,
-      uint256 callValue,
-      bytes memory methodData
-    ) = _getRemovalCalldata(
-      assetToDeposit,
-      amount
-    );
-
-    // Invoke protocol specific call
-    debtInfo.community.invokeFromIntegration(targetAddress, callValue, methodData);
-    // Validate deposit
-    _validatePostRemoval(debtInfo);
-    // Protocol Fee
-    uint256 protocolFee = _accrueProtocolFee(debtInfo, assetToDeposit, amount, BORROW_OPERATION_REMOVAL);
-    updateCommunityPosition(msg.sender, asset, 0, 0); // Back to liquid
-
-    emit CollateralRemoved(
-      debtInfo.community,
-      asset,
-      amount,
-      protocolFee
-    );
-  }
-
-  /**
-   * Borrows an asset
-   * @param asset The asset to be borrowed
-   * @param amount The amount to borrow
-   */
-  function borrow(address asset, uint256 amount) nonReentrant onlyCommunity external {
-    amount = normalizeDecimals(asset, amount);
-
-    DebtInfo memory debtInfo = _createDebtInfo(asset, amount, BORROW_OPERATION_BORROW);
-
-    _validatePreBorrow(debtInfo);
-
-    // Pre actions (enter markets for compound)
-    (
-      address targetAddressP,
-      uint256 callValueP,
-      bytes memory methodDataP
-    ) = _getPreActionCallData(
-      asset,
-      amount,
-      BORROW_OPERATION_BORROW
-    );
-
-    if (targetAddressP != address(0)) {
-      // Invoke protocol specific call
-      debtInfo.community.invokeFromIntegration(targetAddressP, callValueP, methodDataP);
+    /* ============ External Functions ============ */
+    // Governance function
+    function updateMaxCollateralFactor(uint256 _newMaxCollateralFactor) external onlyProtocol {
+        maxCollateralFactor = _newMaxCollateralFactor;
     }
 
-    (
-      address targetAddress,
-      uint256 callValue,
-      bytes memory methodData
-    ) = _getBorrowCalldata(
-      asset,
-      amount
-    );
-    // Invoke protocol specific call
-    debtInfo.community.invokeFromIntegration(targetAddress, callValue, methodData);
-    // Validate borrow
-    _validatePostBorrow(debtInfo);
+    /**
+     * Deposits collateral into the lending protocol.
+     * This would be called by a garden
+     * @param asset The asset to be deposited as collateral
+     * @param amount The amount to be deposited as collateral
+     *
+     */
+    function depositCollateral(address asset, uint256 amount) external nonReentrant onlyIdea {
+        address assetToDeposit = _getCollateralAsset(asset, BORROW_OPERATION_DEPOSIT);
+        amount = normalizeAmountWithDecimals(asset, amount);
 
-    // Protocol Fee
-    uint256 protocolFee = _accrueProtocolFee(debtInfo, asset, amount, BORROW_OPERATION_BORROW);
+        DebtInfo memory debtInfo = _createDebtInfo(asset, amount, BORROW_OPERATION_DEPOSIT);
 
-    updateCommunityPosition(msg.sender, asset, int256(-amount), 3);
+        _validatePreDeposit(debtInfo);
 
-    emit AmountBorrowed(
-      debtInfo.community,
-      asset,
-      amount,
-      protocolFee
-    );
-  }
+        // Pre actions (enter markets for compound)
+        (address targetAddressP, uint256 callValueP, bytes memory methodDataP) =
+            _getPreActionCallData(assetToDeposit, amount, BORROW_OPERATION_DEPOSIT);
+        if (targetAddressP != address(0)) {
+            debtInfo.strategy.invokeFromIntegration(targetAddressP, callValueP, methodDataP);
+        }
 
-  /**
-   * Repays a borrowed asset debt
-   * @param asset The asset to be repaid
-   * @param amount The amount to repay
-   */
-  function repay(address asset, uint256 amount) nonReentrant onlyCommunity external {
-    amount = normalizeDecimals(asset, amount);
+        // Approve the collateral
+        debtInfo.strategy.invokeApprove(_getSpender(asset), asset, amount);
 
-    DebtInfo memory debtInfo = _createDebtInfo(asset, amount, BORROW_OPERATION_REPAY);
+        // Execute the deposit
 
-    _validatePreRepay(debtInfo);
+        (address targetAddress, uint256 callValue, bytes memory methodData) =
+            _getDepositCalldata(assetToDeposit, amount);
 
-    // Pre actions (enter markets for compound)
-    (
-      address targetAddressP,
-      uint256 callValueP,
-      bytes memory methodDataP
-    ) = _getPreActionCallData(
-      asset,
-      amount,
-      BORROW_OPERATION_REPAY
-    );
+        // // Need to enter markets
+        // Invoke protocol specific call
+        debtInfo.strategy.invokeFromIntegration(targetAddress, callValue, methodData);
+        // Validate deposit
+        _validatePostDeposit(debtInfo);
+        // Protocol Fee
+        uint256 protocolFee = _accrueProtocolFee(debtInfo, assetToDeposit, amount, BORROW_OPERATION_DEPOSIT);
+        _updateStrategyPosition(msg.sender, asset, 0, 1); // Mark as locked
 
-    if (targetAddressP != address(0)) {
-      // Invoke protocol specific call
-      debtInfo.community.invokeFromIntegration(targetAddressP, callValueP, methodDataP);
+        emit CollateralDeposited(debtInfo.strategy, debtInfo.garden, asset, amount, protocolFee);
     }
 
-    (
-      address targetAddress,
-      uint256 callValue,
-      bytes memory methodData
-    ) = _getRepayCalldata(
-      asset,
-      amount
-    );
+    /**
+     * Deposits collateral into the lending protocol.
+     * This would be called by a garden
+     * @param asset The asset to be deposited as collateral
+     * @param amount The amount to be deposited as collateral
+     *
+     */
+    function removeCollateral(address asset, uint256 amount) external nonReentrant onlyIdea {
+        address assetToDeposit = _getCollateralAsset(asset, BORROW_OPERATION_REMOVAL);
+        amount = normalizeAmountWithDecimals(asset, amount);
 
-    // Invoke protocol specific call
-    debtInfo.community.invokeFromIntegration(targetAddress, callValue, methodData);
-    // Validate borrow
-    _validatePostRepay(debtInfo);
-    // Protocol Fee
-    uint256 protocolFee = _accrueProtocolFee(debtInfo, asset, amount, BORROW_OPERATION_REPAY);
-    updateCommunityPosition(msg.sender, asset, 0, 0);
+        DebtInfo memory debtInfo = _createDebtInfo(asset, amount, BORROW_OPERATION_REMOVAL);
 
-    emit AmountRepaid(
-      debtInfo.community,
-      asset,
-      amount,
-      protocolFee
-    );
-  }
+        _validatePreRemoval(debtInfo);
 
-  /* ============ Internal Functions ============ */
+        // Pre actions (enter markets for compound)
+        (address targetAddressP, uint256 callValueP, bytes memory methodDataP) =
+            _getPreActionCallData(assetToDeposit, amount, BORROW_OPERATION_REMOVAL);
 
-  /**
-   * Retrieve fee from controller and calculate total protocol fee and send from community to protocol recipient
-   *
-   * @param _debtInfo                 Struct containing trade information used in internal functions
-   * @param _feeToken                 Address of the token to pay the fee with
-   * @param _exchangedQuantity        Amount of exchanged amounts
-   * hparam _borrowOp                 Type of borrow operation
-   * @return uint256                  Amount of receive token taken as protocol fee
-   */
-  function _accrueProtocolFee(
-    DebtInfo memory _debtInfo,
-    address _feeToken,
-    uint256 _exchangedQuantity,
-    uint8 /* _borrowOp */
-  ) internal returns (uint256) {
-    uint256 protocolFeeTotal = getIntegrationFee(0, _exchangedQuantity);
-    payProtocolFeeFromCommunity(address(_debtInfo.community), _feeToken, protocolFeeTotal);
-    return protocolFeeTotal;
-  }
+        if (targetAddressP != address(0)) {
+            // Invoke protocol specific call
+            debtInfo.strategy.invokeFromIntegration(targetAddressP, callValueP, methodDataP);
+        }
 
-  /**
-   * Create and return DebtInfo struct
-   *
-   * @param _asset               The asset involved in the op
-   * @param _amount              The amount involved in the op
-   * @param _borrowOp            Type of borrow operation
-   * return DebtInfo             Struct containing data for the debt position
-   */
-  function _createDebtInfo(
-    address _asset,
-    uint256 _amount,
-    uint8 _borrowOp
-  )
-    internal
-    view
-    returns (DebtInfo memory)
-  {
-    DebtInfo memory debtInfo;
-    debtInfo.community = ICommunity(msg.sender);
-    debtInfo.asset = _asset;
-    debtInfo.amount = _amount;
-    debtInfo.borrowOp = _borrowOp;
+        (address targetAddress, uint256 callValue, bytes memory methodData) =
+            _getRemovalCalldata(assetToDeposit, amount);
 
-    return debtInfo;
-  }
+        // Invoke protocol specific call
+        debtInfo.strategy.invokeFromIntegration(targetAddress, callValue, methodData);
+        // Validate deposit
+        _validatePostRemoval(debtInfo);
+        // Protocol Fee
+        uint256 protocolFee = _accrueProtocolFee(debtInfo, assetToDeposit, amount, BORROW_OPERATION_REMOVAL);
+        _updateStrategyPosition(msg.sender, asset, 0, 0); // Back to liquid
 
-  /**
-   * Validate pre deposit collateral.
-   *
-   * @param _debtInfo               Struct containing debt information used in internal functions
-   */
-  function _validatePreDeposit(DebtInfo memory _debtInfo) internal view {
-    require(IERC20(_debtInfo.asset).balanceOf(address(_debtInfo.community)) > _debtInfo.amount, "Need to have enough collateral to deposit");
-  }
+        emit CollateralRemoved(debtInfo.strategy, debtInfo.garden, asset, amount, protocolFee);
+    }
 
-  /**
-   * Validate post deposit collateral.
-   *
-   * hparam _debtInfo               Struct containing debt information used in internal functions
-   */
-  function _validatePostDeposit(DebtInfo memory /* _debtInfo */) internal view {
-    require(_getRemainingLiquidity() > 0, "Not enough liquidity");
-  }
+    /**
+     * Borrows an asset
+     * @param asset The asset to be borrowed
+     * @param amount The amount to borrow
+     */
+    function borrow(address asset, uint256 amount) external nonReentrant onlyIdea {
+        amount = normalizeAmountWithDecimals(asset, amount);
 
-  /**
-   * Validate pre borrow.
-   *
-   * hparam _debtInfo               Struct containing debt information used in internal functions
-   */
-  function _validatePreBorrow(DebtInfo memory /* _debtInfo */) internal view {
-    // TODO: Check healthy collateral factor
-    require(_getRemainingLiquidity() > 0, "Not enough liquidity");
-  }
+        DebtInfo memory debtInfo = _createDebtInfo(asset, amount, BORROW_OPERATION_BORROW);
 
-  /**
-   * Validate post borrow.
-   *
-   * @param _debtInfo               Struct containing debt information used in internal functions
-   */
-  function _validatePostBorrow(DebtInfo memory _debtInfo) internal view {
-    require(IERC20(_debtInfo.asset).balanceOf(address(_debtInfo.community)) >= _debtInfo.amount, "Did not receive the borrowed asset");
-    require(_getRemainingLiquidity() > 0, "Not enough liquidity");
-  }
+        _validatePreBorrow(debtInfo);
 
-  /**
-   * Validate pre withdrawal of collateral.
-   *
-   * @param _debtInfo               Struct containing debt information used in internal functions
-   */
-  function _validatePreRemoval(DebtInfo memory _debtInfo) internal view {
-    require(_getCollateralBalance(_debtInfo.asset) > 0, "No collateral locked");
-    // require(_getBorrowBalance() == 0, "Still have debt");
-  }
+        // Pre actions (enter markets for compound)
+        (address targetAddressP, uint256 callValueP, bytes memory methodDataP) =
+            _getPreActionCallData(asset, amount, BORROW_OPERATION_BORROW);
 
-  /**
-   * Validate post withdrawal collateral.
-   *
-   * @param _debtInfo               Struct containing debt information used in internal functions
-   */
-  function _validatePostRemoval(DebtInfo memory _debtInfo) internal view {
-    require(IERC20(_debtInfo.asset).balanceOf(address(_debtInfo.community)) >= _debtInfo.amount, "Did not receive the collateral");
-    require(_getRemainingLiquidity() > 0, "Not enough liquidity");
-  }
+        if (targetAddressP != address(0)) {
+            // Invoke protocol specific call
+            debtInfo.strategy.invokeFromIntegration(targetAddressP, callValueP, methodDataP);
+        }
 
-  /**
-   * Validate pre repaid.
-   *
-   * @param _debtInfo               Struct containing debt information used in internal functions
-   */
-  function _validatePreRepay(DebtInfo memory _debtInfo) internal view {
-    require(IERC20(_debtInfo.asset).balanceOf(address(_debtInfo.community)) >= _debtInfo.amount, "We do not have enough to repay debt");
-    require(_getBorrowBalance(_debtInfo.asset) > 0, "No debt to repay");
-  }
+        (address targetAddress, uint256 callValue, bytes memory methodData) = _getBorrowCalldata(asset, amount);
+        // Invoke protocol specific call
+        debtInfo.strategy.invokeFromIntegration(targetAddress, callValue, methodData);
+        // Validate borrow
+        _validatePostBorrow(debtInfo);
 
-  /**
-   * Validate post repaid.
-   *
-   * @param _debtInfo               Struct containing debt information used in internal functions
-   */
-  function _validatePostRepay(DebtInfo memory _debtInfo) internal view {
-    // TODO: Check debt went down
-  }
+        // Protocol Fee
+        uint256 protocolFee = _accrueProtocolFee(debtInfo, asset, amount, BORROW_OPERATION_BORROW);
 
-  /* ============ Virtual Functions ============ */
+        _updateStrategyPosition(msg.sender, asset, int256(-amount), 3);
 
-  /**
-   * Return deposit collateral calldata
-   *
-   * hparam  _asset                    Address of the asset to deposit
-   * hparam  _amount                   Amount of the token to deposit
-   *
-   * @return address                   Target contract address
-   * @return uint256                   Call value
-   * @return bytes                     Trade calldata
-   */
-  function _getDepositCalldata(
-    address /* _asset */,
-    uint256 /* _amount */
-  ) internal virtual view returns (address, uint256, bytes memory) {
-    require(false, "This needs to be overriden");
-    return (address(0),0,bytes(""));
-  }
+        emit AmountBorrowed(debtInfo.strategy, debtInfo.garden, asset, amount, protocolFee);
+    }
 
-  /**
-   * Return collateral removal calldata
-   *
-   * hparam  _asset                    Address of the asset to deposit
-   * hparam  _amount                   Amount of the token to deposit
-   *
-   * @return address                   Target contract address
-   * @return uint256                   Call value
-   * @return bytes                     Trade calldata
-   */
-  function _getRemovalCalldata(
-    address /* _asset */,
-    uint256 /* _amount */
-  ) internal virtual view returns (address, uint256, bytes memory) {
-    require(false, "This needs to be overriden");
-    return (address(0),0,bytes(""));
-  }
+    /**
+     * Repays a borrowed asset debt
+     * @param asset The asset to be repaid
+     * @param amount The amount to repay
+     */
+    function repay(address asset, uint256 amount) external nonReentrant onlyIdea {
+        amount = normalizeAmountWithDecimals(asset, amount);
 
-  /**
-   * Return borrow token calldata
-   *
-   * hparam  _asset                    Address of the asset to deposit
-   * hparam  _amount                   Amount of the token to deposit
-   *
-   * @return address                   Target contract address
-   * @return uint256                   Call value
-   * @return bytes                     Trade calldata
-   */
-  function _getBorrowCalldata(
-    address /* _asset */,
-    uint256 /* _amount */
-  ) internal virtual view returns (address, uint256, bytes memory) {
-    require(false, "This needs to be overriden");
-    return (address(0),0,bytes(""));
-  }
+        DebtInfo memory debtInfo = _createDebtInfo(asset, amount, BORROW_OPERATION_REPAY);
 
-  /**
-   * Return repay borrowed asset calldata
-   *
-   * hparam  _asset                    Address of the asset to deposit
-   * hparam  _amount                   Amount of the token to deposit
-   *
-   * @return address                   Target contract address
-   * @return uint256                   Call value
-   * @return bytes                     Trade calldata
-   */
-  function _getRepayCalldata(
-    address /* _asset */,
-    uint256 /* _amount */
-  ) internal virtual view returns (address, uint256, bytes memory) {
-    require(false, "This needs to be overriden");
-    return (address(0),0,bytes(""));
-  }
+        _validatePreRepay(debtInfo);
 
-  /**
-   * Return pre action calldata
-   *
-   * hparam  _asset                    Address of the asset to deposit
-   * hparam  _amount                   Amount of the token to deposit
-   * hparam  _borrowOp                Type of Borrow op
-   *
-   * @return address                   Target contract address
-   * @return uint256                   Call value
-   * @return bytes                     Trade calldata
-   */
-  function _getPreActionCallData(
-    address /* _asset */,
-    uint256 /* _amount */,
-    uint /* _borrowOp */
-  ) internal virtual view returns (address, uint256, bytes memory) {
-    require(false, "This needs to be overriden");
-    return (address(0),0,bytes(""));
-  }
+        // Pre actions (enter markets for compound)
+        (address targetAddressP, uint256 callValueP, bytes memory methodDataP) =
+            _getPreActionCallData(asset, amount, BORROW_OPERATION_REPAY);
 
+        if (targetAddressP != address(0)) {
+            // Invoke protocol specific call
+            debtInfo.strategy.invokeFromIntegration(targetAddressP, callValueP, methodDataP);
+        }
 
-  /**
-   * Get the amount of borrowed debt that needs to be repaid
-   * hparam asset   The underlying asset
-   *
-   */
-  function _getBorrowBalance(address /* asset */) internal virtual view returns (uint256) {
-    require(false, "This method must be overriden");
-    return 0;
-  }
+        (address targetAddress, uint256 callValue, bytes memory methodData) = _getRepayCalldata(asset, amount);
 
-  /**
-   * Get the amount of collateral supplied
-   * hparam asset   The collateral asset
-   *
-   */
-  function _getCollateralBalance(address /* asset */) internal virtual view returns (uint256) {
-    require(false, "This method must be overriden");
-    return 0;
-  }
+        // Invoke protocol specific call
+        debtInfo.strategy.invokeFromIntegration(targetAddress, callValue, methodData);
+        // Validate borrow
+        _validatePostRepay(debtInfo);
+        // Protocol Fee
+        uint256 protocolFee = _accrueProtocolFee(debtInfo, asset, amount, BORROW_OPERATION_REPAY);
+        _updateStrategyPosition(msg.sender, asset, 0, 0);
 
-  /**
-   * Get the remaining liquidity available to borrow
-   *
-   */
-  function _getRemainingLiquidity() public virtual view returns (uint256) {
-    require(false, "This method must be overriden");
-    return 0;
-  }
+        emit AmountRepaid(debtInfo.strategy, debtInfo.garden, asset, amount, protocolFee);
+    }
 
-  function _getCollateralAsset(
-    address /* _asset */,
-    uint8 /* _borrowOp */
-  ) internal virtual view returns (address) {
-    require(false, "This method must be overriden");
-    return address(0);
-  }
+    /* ============ Internal Functions ============ */
 
-  function _getSpender(
-    address /* asset */
-  ) internal virtual view returns (address) {
-    require(false, "This method must be overriden");
-    return address(0);
-  }
+    /**
+     * Retrieve fee from controller and calculate total protocol fee and send from garden to protocol recipient
+     *
+     * @param _debtInfo                 Struct containing trade information used in internal functions
+     * @param _feeToken                 Address of the token to pay the fee with
+     * @param _exchangedQuantity        Amount of exchanged amounts
+     * hparam _borrowOp                 Type of borrow operation
+     * @return uint256                  Amount of receive token taken as protocol fee
+     */
+    function _accrueProtocolFee(
+        DebtInfo memory _debtInfo,
+        address _feeToken,
+        uint256 _exchangedQuantity,
+        uint8 /* _borrowOp */
+    ) internal returns (uint256) {
+        uint256 protocolFeeTotal = getIntegrationFee(0, _exchangedQuantity);
+        payProtocolFeeFromIdea(address(_debtInfo.garden), _feeToken, protocolFeeTotal);
+        return protocolFeeTotal;
+    }
 
+    /**
+     * Create and return DebtInfo struct
+     *
+     * @param _asset               The asset involved in the op
+     * @param _amount              The amount involved in the op
+     * @param _borrowOp            Type of borrow operation
+     * return DebtInfo             Struct containing data for the debt position
+     */
+    function _createDebtInfo(
+        address _asset,
+        uint256 _amount,
+        uint8 _borrowOp
+    ) internal view returns (DebtInfo memory) {
+        DebtInfo memory debtInfo;
+        debtInfo.strategy = IStrategy(msg.sender);
+        debtInfo.garden = IGarden(debtInfo.strategy.garden());
+        debtInfo.asset = _asset;
+        debtInfo.amount = _amount;
+        debtInfo.borrowOp = _borrowOp;
+
+        return debtInfo;
+    }
+
+    /**
+     * Validate pre deposit collateral.
+     *
+     * @param _debtInfo               Struct containing debt information used in internal functions
+     */
+    function _validatePreDeposit(DebtInfo memory _debtInfo) internal view {
+        require(
+            IERC20(_debtInfo.asset).balanceOf(address(_debtInfo.strategy)) > _debtInfo.amount,
+            'Need to have enough collateral to deposit'
+        );
+    }
+
+    /**
+     * Validate post deposit collateral.
+     *
+     * hparam _debtInfo               Struct containing debt information used in internal functions
+     */
+    function _validatePostDeposit(
+        DebtInfo memory /* _debtInfo */
+    ) internal view {
+        require(_getRemainingLiquidity() > 0, 'Not enough liquidity');
+    }
+
+    /**
+     * Validate pre borrow.
+     *
+     * hparam _debtInfo               Struct containing debt information used in internal functions
+     */
+    function _validatePreBorrow(
+        DebtInfo memory /* _debtInfo */
+    ) internal view {
+        // TODO: Check healthy collateral factor
+        require(_getRemainingLiquidity() > 0, 'Not enough liquidity');
+    }
+
+    /**
+     * Validate post borrow.
+     *
+     * @param _debtInfo               Struct containing debt information used in internal functions
+     */
+    function _validatePostBorrow(DebtInfo memory _debtInfo) internal view {
+        require(
+            IERC20(_debtInfo.asset).balanceOf(address(_debtInfo.strategy)) >= _debtInfo.amount,
+            'Did not receive the borrowed asset'
+        );
+        require(_getRemainingLiquidity() > 0, 'Not enough liquidity');
+    }
+
+    /**
+     * Validate pre withdrawal of collateral.
+     *
+     * @param _debtInfo               Struct containing debt information used in internal functions
+     */
+    function _validatePreRemoval(DebtInfo memory _debtInfo) internal view {
+        require(_getCollateralBalance(_debtInfo.asset) > 0, 'No collateral locked');
+        // require(_getBorrowBalance() == 0, "Still have debt");
+    }
+
+    /**
+     * Validate post withdrawal collateral.
+     *
+     * @param _debtInfo               Struct containing debt information used in internal functions
+     */
+    function _validatePostRemoval(DebtInfo memory _debtInfo) internal view {
+        require(
+            IERC20(_debtInfo.asset).balanceOf(address(_debtInfo.strategy)) >= _debtInfo.amount,
+            'Did not receive the collateral'
+        );
+        require(_getRemainingLiquidity() > 0, 'Not enough liquidity');
+    }
+
+    /**
+     * Validate pre repaid.
+     *
+     * @param _debtInfo               Struct containing debt information used in internal functions
+     */
+    function _validatePreRepay(DebtInfo memory _debtInfo) internal view {
+        require(
+            IERC20(_debtInfo.asset).balanceOf(address(_debtInfo.strategy)) >= _debtInfo.amount,
+            'We do not have enough to repay debt'
+        );
+        require(_getBorrowBalance(_debtInfo.asset) > 0, 'No debt to repay');
+    }
+
+    /**
+     * Validate post repaid.
+     *
+     * @param _debtInfo               Struct containing debt information used in internal functions
+     */
+    function _validatePostRepay(DebtInfo memory _debtInfo) internal view {
+        // TODO: Check debt went down
+    }
+
+    /* ============ Virtual Functions ============ */
+
+    /**
+     * Return deposit collateral calldata
+     *
+     * hparam  _asset                    Address of the asset to deposit
+     * hparam  _amount                   Amount of the token to deposit
+     *
+     * @return address                   Target contract address
+     * @return uint256                   Call value
+     * @return bytes                     Trade calldata
+     */
+    function _getDepositCalldata(
+        address, /* _asset */
+        uint256 /* _amount */
+    )
+        internal
+        view
+        virtual
+        returns (
+            address,
+            uint256,
+            bytes memory
+        )
+    {
+        require(false, 'This needs to be overriden');
+        return (address(0), 0, bytes(''));
+    }
+
+    /**
+     * Return collateral removal calldata
+     *
+     * hparam  _asset                    Address of the asset to deposit
+     * hparam  _amount                   Amount of the token to deposit
+     *
+     * @return address                   Target contract address
+     * @return uint256                   Call value
+     * @return bytes                     Trade calldata
+     */
+    function _getRemovalCalldata(
+        address, /* _asset */
+        uint256 /* _amount */
+    )
+        internal
+        view
+        virtual
+        returns (
+            address,
+            uint256,
+            bytes memory
+        )
+    {
+        require(false, 'This needs to be overriden');
+        return (address(0), 0, bytes(''));
+    }
+
+    /**
+     * Return borrow token calldata
+     *
+     * hparam  _asset                    Address of the asset to deposit
+     * hparam  _amount                   Amount of the token to deposit
+     *
+     * @return address                   Target contract address
+     * @return uint256                   Call value
+     * @return bytes                     Trade calldata
+     */
+    function _getBorrowCalldata(
+        address, /* _asset */
+        uint256 /* _amount */
+    )
+        internal
+        view
+        virtual
+        returns (
+            address,
+            uint256,
+            bytes memory
+        )
+    {
+        require(false, 'This needs to be overriden');
+        return (address(0), 0, bytes(''));
+    }
+
+    /**
+     * Return repay borrowed asset calldata
+     *
+     * hparam  _asset                    Address of the asset to deposit
+     * hparam  _amount                   Amount of the token to deposit
+     *
+     * @return address                   Target contract address
+     * @return uint256                   Call value
+     * @return bytes                     Trade calldata
+     */
+    function _getRepayCalldata(
+        address, /* _asset */
+        uint256 /* _amount */
+    )
+        internal
+        view
+        virtual
+        returns (
+            address,
+            uint256,
+            bytes memory
+        )
+    {
+        require(false, 'This needs to be overriden');
+        return (address(0), 0, bytes(''));
+    }
+
+    /**
+     * Return pre action calldata
+     *
+     * hparam  _asset                    Address of the asset to deposit
+     * hparam  _amount                   Amount of the token to deposit
+     * hparam  _borrowOp                Type of Borrow op
+     *
+     * @return address                   Target contract address
+     * @return uint256                   Call value
+     * @return bytes                     Trade calldata
+     */
+    function _getPreActionCallData(
+        address, /* _asset */
+        uint256, /* _amount */
+        uint256 /* _borrowOp */
+    )
+        internal
+        view
+        virtual
+        returns (
+            address,
+            uint256,
+            bytes memory
+        )
+    {
+        require(false, 'This needs to be overriden');
+        return (address(0), 0, bytes(''));
+    }
+
+    /**
+     * Get the amount of borrowed debt that needs to be repaid
+     * hparam asset   The underlying asset
+     *
+     */
+    function _getBorrowBalance(
+        address /* asset */
+    ) internal view virtual returns (uint256) {
+        require(false, 'This method must be overriden');
+        return 0;
+    }
+
+    /**
+     * Get the amount of collateral supplied
+     * hparam asset   The collateral asset
+     *
+     */
+    function _getCollateralBalance(
+        address /* asset */
+    ) internal view virtual returns (uint256) {
+        require(false, 'This method must be overriden');
+        return 0;
+    }
+
+    /**
+     * Get the remaining liquidity available to borrow
+     *
+     */
+    function _getRemainingLiquidity() public view virtual returns (uint256) {
+        require(false, 'This method must be overriden');
+        return 0;
+    }
+
+    function _getCollateralAsset(
+        address, /* _asset */
+        uint8 /* _borrowOp */
+    ) internal view virtual returns (address) {
+        require(false, 'This method must be overriden');
+        return address(0);
+    }
+
+    function _getSpender(
+        address /* asset */
+    ) internal view virtual returns (address) {
+        require(false, 'This method must be overriden');
+        return address(0);
+    }
 }

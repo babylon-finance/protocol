@@ -1,29 +1,35 @@
-const { expect } = require("chai");
-const { waffle, ethers } = require("hardhat");
-const { impersonateAddress } = require("../../utils/rpc");
-const { deployFolioFixture } = require("../fixtures/ControllerFixture");
-const addresses = require("../../utils/addresses");
-const { EMPTY_BYTES } = require("../../utils/constants");
+const { expect } = require('chai');
+const { waffle, ethers } = require('hardhat');
+// const { impersonateAddress } = require("../../utils/rpc");
+const { deployFolioFixture } = require('../fixtures/ControllerFixture');
+const addresses = require('../../utils/addresses');
+const { EMPTY_BYTES, ONE_DAY_IN_SECONDS } = require('../../utils/constants');
 
 const { loadFixture } = waffle;
 
-describe("KyberTradeIntegration", function() {
+describe('KyberTradeIntegration', function () {
   let system;
   let kyberIntegration;
   let kyberAbi;
-  let community;
+  let garden;
+  let userSigner1;
+  let userSigner2;
   let userSigner3;
+  let strategy;
 
   beforeEach(async () => {
     system = await loadFixture(deployFolioFixture);
     kyberIntegration = system.integrations.kyberTradeIntegration;
     kyberAbi = kyberIntegration.interface;
     userSigner3 = system.signer3;
-    community = system.comunities.one;
+    userSigner1 = system.signer1;
+    userSigner2 = system.signer2;
+    garden = system.comunities.one;
+    strategy = system.strategies[0];
   });
 
-  describe("Deployment", function() {
-    it("should successfully deploy the contract", async function() {
+  describe('Deployment', function () {
+    it('should successfully deploy the contract', async function () {
       const deployed = await system.babController.deployed();
       const deployedKyber = await kyberIntegration.deployed();
       expect(!!deployed).to.equal(true);
@@ -31,52 +37,66 @@ describe("KyberTradeIntegration", function() {
     });
   });
 
-  describe("Trading", function() {
+  describe('Trading', function () {
     let wethToken;
     let usdcToken;
 
     beforeEach(async () => {
-      wethToken = await ethers.getContractAt("IERC20", addresses.tokens.WETH);
-      usdcToken = await ethers.getContractAt("IERC20", addresses.tokens.USDC);
+      wethToken = await ethers.getContractAt('IERC20', addresses.tokens.WETH);
+      usdcToken = await ethers.getContractAt('IERC20', addresses.tokens.USDC);
     });
 
-    it("trade weth to usdc", async function() {
-      await community
-        .connect(userSigner3)
-        .deposit(ethers.utils.parseEther("1"), 1, userSigner3.getAddress(), {
-          value: ethers.utils.parseEther("1")
-        });
-      expect(await wethToken.balanceOf(community.address)).to.equal(
-        ethers.utils.parseEther("1.1")
-      );
+    it('trade weth to usdc', async function () {
+      await garden.connect(userSigner3).deposit(ethers.utils.parseEther('2'), 1, userSigner3.getAddress(), {
+        value: ethers.utils.parseEther('2'),
+      });
+      await garden.connect(userSigner1).deposit(ethers.utils.parseEther('2'), 1, userSigner1.getAddress(), {
+        value: ethers.utils.parseEther('2'),
+      });
+      await garden.connect(userSigner2).deposit(ethers.utils.parseEther('2'), 1, userSigner2.getAddress(), {
+        value: ethers.utils.parseEther('2'),
+      });
+      expect(await wethToken.balanceOf(garden.address)).to.equal(ethers.utils.parseEther('6.1'));
 
-      const data = kyberAbi.encodeFunctionData(
-        kyberAbi.functions["trade(address,uint256,address,uint256,bytes)"],
+      const dataEnter = kyberAbi.encodeFunctionData(
+        kyberAbi.functions['trade(address,uint256,address,uint256,bytes)'],
         [
           addresses.tokens.WETH,
-          ethers.utils.parseEther("1"),
+          ethers.utils.parseEther('1'),
           usdcToken.address,
-          ethers.utils.parseEther("900") / 10 ** 12,
-          EMPTY_BYTES
-        ]
+          ethers.utils.parseEther('900') / 10 ** 12,
+          EMPTY_BYTES,
+        ],
       );
 
-      await community.callIntegration(
-        kyberIntegration.address,
-        ethers.utils.parseEther("0"),
-        data,
-        [],
-        [],
-        {
-          gasPrice: 0
-        }
-      );
-      expect(await wethToken.balanceOf(community.address)).to.equal(
-        ethers.utils.parseEther("0.1")
-      );
-      expect(await usdcToken.balanceOf(community.address)).to.be.gt(
-        ethers.utils.parseEther("97") / 10 ** 12
-      );
+      const dataExit = kyberAbi.encodeFunctionData(kyberAbi.functions['trade(address,uint256,address,uint256,bytes)'], [
+        usdcToken.address,
+        ethers.utils.parseEther('900') / 10 ** 12,
+        addresses.tokens.WETH,
+        ethers.utils.parseEther('0.1'),
+        EMPTY_BYTES,
+      ]);
+
+      await strategy.connect(userSigner1).setIntegrationData(kyberIntegration.address, dataEnter, dataExit, [], [], {
+        gasPrice: 0,
+      });
+
+      await strategy.connect(userSigner3).curateIdea(await garden.balanceOf(userSigner3.getAddress()));
+      await strategy.connect(userSigner2).curateIdea(await garden.balanceOf(userSigner2.getAddress()));
+
+      ethers.provider.send('evm_increaseTime', [ONE_DAY_IN_SECONDS * 2]);
+
+      await strategy.executeInvestment(ethers.utils.parseEther('1'), {
+        gasPrice: 0,
+      });
+
+      expect(await wethToken.balanceOf(strategy.address)).to.equal(ethers.utils.parseEther('0'));
+      expect(await usdcToken.balanceOf(strategy.address)).to.be.gt(ethers.utils.parseEther('97') / 10 ** 12);
+
+      ethers.provider.send('evm_increaseTime', [ONE_DAY_IN_SECONDS * 90]);
+
+      await strategy.finalizeInvestment({ gasPrice: 0 });
+      expect(await usdcToken.balanceOf(strategy.address)).to.equal(0);
     });
   });
 });

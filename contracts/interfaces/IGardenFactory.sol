@@ -17,6 +17,21 @@
 */
 pragma solidity 0.7.4;
 
-interface ICommunityValuer {
-    function calculateCommunityValuation(address _community, address _quoteAsset) external view returns (uint256);
+import {IIntegration} from './IIntegration.sol';
+
+/**
+ * @title IGardenFactory
+ * @author Babylon Finance
+ *
+ * Interface for the garden factory
+ */
+interface IGardenFactory {
+    function createRollingGarden(
+        address[] memory _integrations,
+        address _weth,
+        address _controller,
+        address _creator,
+        string memory _name,
+        string memory _symbol
+    ) external returns (address);
 }

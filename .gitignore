@@ -62,8 +62,6 @@ typings/
 # Yarn Integrity file
 .yarn-integrity
 
-yarn.lock
-
 # dotenv environment variables file
 .env
 .env.test
@@ -85,3 +83,5 @@ artifacts/*
 
 .DS_Store
 /packages/.DS_Store
+
+coverage.json

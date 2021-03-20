@@ -18,12 +18,12 @@
 
 pragma solidity 0.7.4;
 
-import "hardhat/console.sol";
-import { TradeIntegration } from "./TradeIntegration.sol";
-import { ERC20 } from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
-import { SafeMath } from "@openzeppelin/contracts/math/SafeMath.sol";
-import { PreciseUnitMath } from "../lib/PreciseUnitMath.sol";
-import { IKyberNetworkProxy } from "../interfaces/external/kyber/IKyberNetworkProxy.sol";
+import 'hardhat/console.sol';
+import {TradeIntegration} from './TradeIntegration.sol';
+import {ERC20} from '@openzeppelin/contracts/token/ERC20/ERC20.sol';
+import {SafeMath} from '@openzeppelin/contracts/math/SafeMath.sol';
+import {PreciseUnitMath} from '../lib/PreciseUnitMath.sol';
+import {IKyberNetworkProxy} from '../interfaces/external/kyber/IKyberNetworkProxy.sol';
 
 /**
  * @title KyberTradeIntegration
@@ -32,139 +32,139 @@ import { IKyberNetworkProxy } from "../interfaces/external/kyber/IKyberNetworkPr
  * Kyber protocol trade integration
  */
 contract KyberTradeIntegration is TradeIntegration {
-  using SafeMath for uint256;
-  using PreciseUnitMath for uint256;
+    using SafeMath for uint256;
+    using PreciseUnitMath for uint256;
 
-  /* ============ Structs ============ */
+    /* ============ Structs ============ */
 
-  /**
-   * Struct containing information for trade function
-   */
-  struct KyberTradeInfo {
-    uint8 sourceTokenDecimals;        // Decimals of the token to send
-    uint8 destinationTokenDecimals;   // Decimals of the token to receive
-    uint256 conversionRate;             // Derived conversion rate from min receive quantity
-  }
+    /**
+     * Struct containing information for trade function
+     */
+    struct KyberTradeInfo {
+        uint8 sourceTokenDecimals; // Decimals of the token to send
+        uint8 destinationTokenDecimals; // Decimals of the token to receive
+        uint256 conversionRate; // Derived conversion rate from min receive quantity
+    }
 
-  /* ============ State Variables ============ */
+    /* ============ State Variables ============ */
 
-  // Address of Kyber Network Proxy
-  address public kyberNetworkProxyAddress;
+    // Address of Kyber Network Proxy
+    address public kyberNetworkProxyAddress;
 
+    /* ============ Constructor ============ */
 
-  /* ============ Constructor ============ */
+    /**
+     * Creates the integration
+     *
+     * @param _controller                   Address of the controller
+     * @param _weth                         Address of the WETH ERC20
+     * @param _kyberNetworkProxyAddress    Address of Kyber Network Proxy contract
+     */
+    constructor(
+        address _controller,
+        address _weth,
+        address _kyberNetworkProxyAddress
+    ) TradeIntegration('kyber', _weth, _controller) {
+        kyberNetworkProxyAddress = _kyberNetworkProxyAddress;
+    }
 
-  /**
-   * Creates the integration
-   *
-   * @param _controller                   Address of the controller
-   * @param _weth                         Address of the WETH ERC20
-   * @param _kyberNetworkProxyAddress    Address of Kyber Network Proxy contract
-   */
-  constructor(
-    address _controller,
-    address _weth,
-    address _kyberNetworkProxyAddress
-  ) TradeIntegration("kyber", _weth, _controller) {
-    kyberNetworkProxyAddress = _kyberNetworkProxyAddress;
-  }
+    /* ============ External Functions ============ */
 
-  /* ============ External Functions ============ */
+    /**
+     * Returns the conversion rate between the source token and the destination token
+     * in 18 decimals, regardless of component token's decimals
+     *
+     * @param  _sourceToken        Address of source token to be sold
+     * @param  _destinationToken   Address of destination token to buy
+     * @param  _sourceQuantity     Amount of source token to sell
+     *
+     * @return uint256             Conversion rate in wei
+     * @return uint256             Slippage rate in wei
+     */
+    function getConversionRates(
+        address _sourceToken,
+        address _destinationToken,
+        uint256 _sourceQuantity
+    ) external view returns (uint256, uint256) {
+        // Get Kyber expectedRate to trade with
+        return
+            IKyberNetworkProxy(kyberNetworkProxyAddress).getExpectedRate(
+                _sourceToken,
+                _destinationToken,
+                _sourceQuantity
+            );
+    }
 
-  /**
-   * Returns the conversion rate between the source token and the destination token
-   * in 18 decimals, regardless of component token's decimals
-   *
-   * @param  _sourceToken        Address of source token to be sold
-   * @param  _destinationToken   Address of destination token to buy
-   * @param  _sourceQuantity     Amount of source token to sell
-   *
-   * @return uint256             Conversion rate in wei
-   * @return uint256             Slippage rate in wei
-   */
-  function getConversionRates(
-    address _sourceToken,
-    address _destinationToken,
-    uint256 _sourceQuantity
-  )
-    external
-    view
-    returns (uint256, uint256)
-  {
-    // Get Kyber expectedRate to trade with
-    return IKyberNetworkProxy(kyberNetworkProxyAddress).getExpectedRate(
-      _sourceToken,
-      _destinationToken,
-      _sourceQuantity
-    );
-  }
+    /* ============ Internal Functions ============ */
 
-  /* ============ Internal Functions ============ */
+    /**
+     * Calculate Kyber trade encoded calldata. To be invoked on the SetToken.
+     *
+     * @param  _sourceToken              Address of source token to be sold
+     * @param  _destinationToken         Address of destination token to buy
+     * @param  _destinationAddress       Address to receive traded tokens
+     * @param  _sourceQuantity           Amount of source token to sell
+     * hparam  _minDestinationQuantity   Min amount of destination token to buy
+     * hparam  _data                     Calldata
+     *
+     * @return address                   Target address
+     * @return uint256                   Call value
+     * @return bytes                     Trade calldata
+     */
+    function _getTradeCalldata(
+        address _sourceToken,
+        address _destinationToken,
+        address _destinationAddress,
+        uint256 _sourceQuantity,
+        uint256, /* _minDestinationQuantity */
+        bytes memory /* _data */
+    )
+        internal
+        view
+        override
+        returns (
+            address,
+            uint256,
+            bytes memory
+        )
+    {
+        KyberTradeInfo memory kyberTradeInfo;
 
-  /**
-   * Calculate Kyber trade encoded calldata. To be invoked on the SetToken.
-   *
-   * @param  _sourceToken              Address of source token to be sold
-   * @param  _destinationToken         Address of destination token to buy
-   * @param  _destinationAddress       Address to receive traded tokens
-   * @param  _sourceQuantity           Amount of source token to sell
-   * hparam  _minDestinationQuantity   Min amount of destination token to buy
-   * hparam  _data                     Calldata
-   *
-   * @return address                   Target address
-   * @return uint256                   Call value
-   * @return bytes                     Trade calldata
-   */
-  function _getTradeCalldata(
-    address _sourceToken,
-    address _destinationToken,
-    address _destinationAddress,
-    uint256 _sourceQuantity,
-    uint256 /* _minDestinationQuantity */,
-    bytes memory /* _data */
-  )
-    internal
-    override
-    view
-    returns (address, uint256, bytes memory)
-  {
-    KyberTradeInfo memory kyberTradeInfo;
+        kyberTradeInfo.sourceTokenDecimals = ERC20(_sourceToken).decimals();
+        kyberTradeInfo.destinationTokenDecimals = ERC20(_destinationToken).decimals();
 
-    kyberTradeInfo.sourceTokenDecimals = ERC20(_sourceToken).decimals();
-    kyberTradeInfo.destinationTokenDecimals = ERC20(_destinationToken).decimals();
+        (, uint256 worstRate) =
+            IKyberNetworkProxy(kyberNetworkProxyAddress).getExpectedRate(
+                _sourceToken,
+                _destinationToken,
+                _sourceQuantity
+            );
 
-    (, uint256 worstRate) = IKyberNetworkProxy(kyberNetworkProxyAddress).getExpectedRate(_sourceToken, _destinationToken, _sourceQuantity);
+        kyberTradeInfo.conversionRate = worstRate;
 
-    kyberTradeInfo.conversionRate = worstRate;
+        // Encode method data for TradeIntegration to invoke
+        bytes memory methodData =
+            abi.encodeWithSignature(
+                'trade(address,uint256,address,address,uint256,uint256,address)',
+                _sourceToken,
+                _sourceQuantity,
+                _destinationToken,
+                _destinationAddress,
+                PreciseUnitMath.maxUint256(), // Sell entire amount of sourceToken
+                kyberTradeInfo.conversionRate, // Trade with implied conversion rate
+                msg.sender // Garden address
+            );
 
-    // Encode method data for SetToken to invoke
-    bytes memory methodData = abi.encodeWithSignature(
-      "trade(address,uint256,address,address,uint256,uint256,address)",
-      _sourceToken,
-      _sourceQuantity,
-      _destinationToken,
-      _destinationAddress,
-      PreciseUnitMath.maxUint256(), // Sell entire amount of sourceToken
-      kyberTradeInfo.conversionRate, // Trade with implied conversion rate
-      msg.sender // Community address
-    );
+        return (kyberNetworkProxyAddress, 0, methodData);
+    }
 
-    return (kyberNetworkProxyAddress, 0, methodData);
-  }
-
-  /**
-   * Returns the address to approve source tokens to for trading. This is the Kyber Network
-   * Proxy address
-   *
-   * @return address             Address of the contract to approve tokens to
-   */
-  function _getSpender()
-    internal
-    override
-    view
-    returns (address)
-  {
-    return kyberNetworkProxyAddress;
-  }
-
+    /**
+     * Returns the address to approve source tokens to for trading. This is the Kyber Network
+     * Proxy address
+     *
+     * @return address             Address of the contract to approve tokens to
+     */
+    function _getSpender() internal view override returns (address) {
+        return kyberNetworkProxyAddress;
+    }
 }

@@ -10,17 +10,14 @@ pragma solidity >=0.7.0 <0.9.0;
  * @author Aave
  **/
 interface ILendingPoolAddressesProviderRegistry {
-  event AddressesProviderRegistered(address indexed newAddress);
-  event AddressesProviderUnregistered(address indexed newAddress);
+    event AddressesProviderRegistered(address indexed newAddress);
+    event AddressesProviderUnregistered(address indexed newAddress);
 
-  function getAddressesProvidersList() external view returns (address[] memory);
+    function getAddressesProvidersList() external view returns (address[] memory);
 
-  function getAddressesProviderIdByAddress(address addressesProvider)
-    external
-    view
-    returns (uint256);
+    function getAddressesProviderIdByAddress(address addressesProvider) external view returns (uint256);
 
-  function registerAddressesProvider(address provider, uint256 id) external;
+    function registerAddressesProvider(address provider, uint256 id) external;
 
-  function unregisterAddressesProvider(address provider) external;
+    function unregisterAddressesProvider(address provider) external;
 }

@@ -24,8 +24,7 @@ pragma solidity 0.7.4;
  * Interface for protocol integrations
  */
 interface IIntegration {
+    function initialize(address _garden) external;
 
-  function initialize(address _community) external;
-  function getName() external view returns (string memory);
-
+    function getName() external view returns (string memory);
 }

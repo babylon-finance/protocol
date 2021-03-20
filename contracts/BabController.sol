@@ -18,21 +18,22 @@
 
 pragma solidity 0.7.4;
 
-import "hardhat/console.sol";
-import { SafeMath } from "@openzeppelin/contracts/math/SafeMath.sol";
-import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
-import { Address } from "@openzeppelin/contracts/utils/Address.sol";
-import { ICommunity } from "./interfaces/ICommunity.sol";
-import { IRollingCommunity } from "./interfaces/IRollingCommunity.sol";
-import { IIntegration } from "./interfaces/IIntegration.sol";
-import { AddressArrayUtils } from "./lib/AddressArrayUtils.sol";
+import 'hardhat/console.sol';
+import {SafeMath} from '@openzeppelin/contracts/math/SafeMath.sol';
+import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
+import {Ownable} from '@openzeppelin/contracts/access/Ownable.sol';
+import {Address} from '@openzeppelin/contracts/utils/Address.sol';
+import {IGarden} from './interfaces/IGarden.sol';
+import {IRollingGarden} from './interfaces/IRollingGarden.sol';
+import {IGardenFactory} from './interfaces/IGardenFactory.sol';
+import {IIntegration} from './interfaces/IIntegration.sol';
+import {AddressArrayUtils} from './lib/AddressArrayUtils.sol';
 
 /**
  * @title BabController
  * @author Babylon Finance Protocol
  *
- * BabController is a smart contract used to deploy new communitys contracts and house the
+ * BabController is a smart contract used to deploy new gardens contracts and house the
  * integrations and resources of the system.
  */
 contract BabController is Ownable {
@@ -41,34 +42,27 @@ contract BabController is Ownable {
     using Address for address;
 
     /* ============ Events ============ */
-    event CommunityAdded(address indexed _community, address indexed _factory);
-    event CommunityRemoved(address indexed _community);
+    event GardenAdded(address indexed _garden, address indexed _factory);
+    event GardenRemoved(address indexed _garden);
 
-    event ControllerIntegrationAdded(
-        address indexed _integration,
-        string _integrationName
-    );
-    event ControllerIntegrationRemoved(
-        address indexed _integration,
-        string _integrationName
-    );
-    event ControllerIntegrationEdited(
-        address _newIntegration,
-        string _integrationName
-    );
+    event ControllerIntegrationAdded(address _integration, string indexed _integrationName);
+    event ControllerIntegrationRemoved(address _integration, string indexed _integrationName);
+    event ControllerIntegrationEdited(address _newIntegration, string indexed _integrationName);
 
     event ReserveAssetAdded(address indexed _reserveAsset);
     event ReserveAssetRemoved(address indexed _reserveAsset);
-    event TreasuryChanged(address _newTreasury);
 
     event LiquidityMinimumEdited(uint256 _minRiskyPairLiquidityEth);
 
     event ModuleAdded(address indexed _module);
     event ModuleRemoved(address indexed _module);
 
-    event PriceOracleChanged(address indexed _resource);
-    event ReservePoolChanged(address indexed _reservePool);
-    event CommunityValuerChanged(address indexed _resource);
+    event PriceOracleChanged(address indexed _priceOracle, address _oldPriceOracle);
+    event ReservePoolChanged(address indexed _reservePool, address _oldReservePool);
+    event TreasuryChanged(address _newTreasury, address _oldTreasury);
+    event GardenValuerChanged(address indexed _gardenValuer, address _oldGardenValuer);
+    event GardenFactoryChanged(address indexed _gardenFactory, address _oldGardenFactory);
+    event StrategyFactoryChanged(address indexed _strategyFactory, address _oldStrategyFactory);
 
     /* ============ Modifiers ============ */
 
@@ -77,16 +71,18 @@ contract BabController is Ownable {
     address public constant UNISWAP_FACTORY = 0x5C69bEe701ef814a2B6a3EDD4B1652CB9cc5aA6f;
 
     // List of enabled Communities
-    address[] public communitys;
+    address[] public gardens;
     address[] public reserveAssets;
-    address public communityValuer;
+    address public gardenValuer;
     address public priceOracle;
     address public reservePool;
-    // Mapping of community => integration identifier => integration address
+    address public gardenFactory;
+    address public strategyFactory;
+    // Mapping of garden => integration identifier => integration address
     mapping(bytes32 => address) private integrations;
 
-    // Mappings to check whether address is valid Community or Reserve Asset
-    mapping(address => bool) public isCommunity;
+    // Mappings to check whether address is valid Garden or Reserve Asset
+    mapping(address => bool) public isGarden;
     mapping(address => bool) public validReserveAsset;
 
     // Mapping to check whitelisted assets
@@ -103,112 +99,125 @@ contract BabController is Ownable {
     uint256 public maxCooldownPeriod = 7 days;
 
     // Assets
-    uint256 public minRiskyPairLiquidityEth = 1000 * 1e18;   // Absolute Min liquidity of assets for risky communities 1000 ETH
+    uint256 public minRiskyPairLiquidityEth = 1000 * 1e18; // Absolute Min liquidity of assets for risky gardens 1000 ETH
 
-    // Enable Transfer of ERC20 communityTokens
-    bool public communityTokensTransfersEnabled = false; // Only members can transfer tokens until the protocol is fully decentralized
+    // Enable Transfer of ERC20 gardenTokens
+    bool public gardenTokensTransfersEnabled = false; // Only members can transfer tokens until the protocol is fully decentralized
 
-    uint256 public protocolPerformanceFee = 1e17; // (0.01% = 1e14, 1% = 1e16) on profits
-    uint256 public protocolCommunityCreationFee = 0; // (0.01% = 1e14, 1% = 1e16)
-    uint256 public protocolDepositCommunityTokenFee = 0; // (0.01% = 1e14, 1% = 1e16)
-    uint256 public protocolWithdrawalCommunityTokenFee = 5e15; // (0.01% = 1e14, 1% = 1e16)
+    uint256 public protocolPerformanceFee = 5e16; // 5% (0.01% = 1e14, 1% = 1e16) on profits
+    uint256 public protocolManagementFee = 5e15; // 0.5% (0.01% = 1e14, 1% = 1e16)
+    uint256 public protocolGardenCreationFee = 0; // (0.01% = 1e14, 1% = 1e16)
+    uint256 public protocolDepositGardenTokenFee = 0; // (0.01% = 1e14, 1% = 1e16)
+    uint256 public protocolWithdrawalGardenTokenFee = 0; // (0.01% = 1e14, 1% = 1e16)
 
     /* ============ Functions ============ */
 
     /**
      * Initializes the initial fee recipient on deployment.
      *
-     * @param _treasury           Address of the initial protocol fee recipient
-     * @param _communityValuer             Address of the initial communityValuer
-     * @param _priceOracle            Address of the initial priceOracle
-     * @param _reservePool            Address of the initial reservePool
+     * @param _treasury                    Address of the initial protocol fee recipient
+     * @param _gardenValuer             Address of the initial gardenValuer
+     * @param _priceOracle                 Address of the initial priceOracle
+     * @param _reservePool                 Address of the initial reservePool
+     * @param _gardenFactory            Address of the initial garden factory
+     * @param _strategyFactory                 Address of the initial strategy factory
      */
     constructor(
         address _treasury,
-        address _communityValuer,
+        address _gardenValuer,
         address _priceOracle,
-        address _reservePool
+        address _reservePool,
+        address _gardenFactory,
+        address _strategyFactory
     ) {
         treasury = _treasury;
-        communityValuer = _communityValuer;
+        gardenValuer = _gardenValuer;
         priceOracle = _priceOracle;
         reservePool = _reservePool;
+        gardenFactory = _gardenFactory;
+        strategyFactory = _strategyFactory;
     }
 
     /* ============ External Functions ============ */
 
-    // ===========  Community related Gov Functions ======
+    // ===========  Garden related Gov Functions ======
     /**
-     * Creates a Community smart contract and registers the Community with the controller. The Communities are composed
-     * of positions that are instantiated as DEFAULT (positionState = 0) state.
+     * Creates a Garden smart contract and registers the Garden with the controller.
      *
      * @param _integrations           List of integrations to enable. All integrations must be approved by the Controller
-     * @param _community                   Address of the community
+     * @param _weth                   Address of the WETH ERC20
+     * @param _name                   Name of the Garden
+     * @param _symbol                 Symbol of the Garden
      */
-    function createCommunity(
-      address[] memory _integrations,
-      address _community
+    function createRollingGarden(
+        address[] memory _integrations,
+        address _weth,
+        string memory _name,
+        string memory _symbol
     ) external returns (address) {
+        require(_integrations.length > 0, 'Garden requires at least one integration');
         for (uint256 i = 0; i < _integrations.length; i++) {
-          require(
-              _integrations[i] != address(0),
-              "Component must not be null address"
-          );
+            require(_integrations[i] != address(0), 'Integration must not be null address');
         }
-        require(_integrations.length > 0); // Just for checking that the community has some integrations enabled
-        ICommunity community = ICommunity(_community);
-        require(community.controller() == address(this), "The controller must be this contract");
-        _addCommunity(address(community));
-
-        return address(community);
+        address newGarden =
+            IGardenFactory(gardenFactory).createRollingGarden(
+                _integrations,
+                _weth,
+                address(this),
+                msg.sender,
+                _name,
+                _symbol
+            );
+        _addGarden(newGarden);
+        return newGarden;
     }
 
     /**
-     * PRIVILEGED GOVERNANCE FUNCTION. Allows governance to remove a Community
+     * PRIVILEGED GOVERNANCE FUNCTION. Allows governance to remove a Garden
      *
-     * @param _community               Address of the Community contract to remove
+     * @param _garden               Address of the Garden contract to remove
      */
-    function removeCommunity(address _community) external onlyOwner {
-        require(isCommunity[_community], "Community does not exist");
-        require(!ICommunity(_community).active(), "The community needs to be disabled.");
-        communitys = communitys.remove(_community);
+    function removeGarden(address _garden) external onlyOwner {
+        require(isGarden[_garden], 'Garden does not exist');
+        require(!IGarden(_garden).active(), 'The garden needs to be disabled.');
+        gardens = gardens.remove(_garden);
 
-        isCommunity[_community] = false;
+        isGarden[_garden] = false;
 
-        emit CommunityRemoved(_community);
+        emit GardenRemoved(_garden);
     }
 
     /**
-     * PRIVILEGED GOVERNANCE FUNCTION. Allows governance to disable a community
+     * PRIVILEGED GOVERNANCE FUNCTION. Allows governance to disable a garden
      *
-     * @param _community               Address of the community
+     * @param _garden               Address of the garden
      */
-    function disableCommunity(address _community) external onlyOwner {
-        require(isCommunity[_community], "Community does not exist");
-        ICommunity community = ICommunity(_community);
-        require(!!community.active(), "The community needs to be active.");
-        community.setDisabled();
+    function disableGarden(address _garden) external onlyOwner {
+        require(isGarden[_garden], 'Garden does not exist');
+        IGarden garden = IGarden(_garden);
+        require(!!garden.active(), 'The garden needs to be active.');
+        garden.setDisabled();
     }
 
     /**
-     * PRIVILEGED GOVERNANCE FUNCTION. Allows governance to enable a community
+     * PRIVILEGED GOVERNANCE FUNCTION. Allows governance to enable a garden
      *
-     * @param _community               Address of the community
+     * @param _garden               Address of the garden
      */
-    function enableCommunity(address _community) external onlyOwner {
-        require(isCommunity[_community], "Community does not exist");
-        ICommunity community = ICommunity(_community);
-        require(!community.active(), "The community needs to be disabled.");
-        community.setActive();
+    function enableGarden(address _garden) external onlyOwner {
+        require(isGarden[_garden], 'Garden does not exist');
+        IGarden garden = IGarden(_garden);
+        require(!garden.active(), 'The garden needs to be disabled.');
+        garden.setActive();
     }
 
     /**
-     * PRIVILEGED GOVERNANCE FUNCTION. Allows transfers of ERC20 communityTokens
+     * PRIVILEGED GOVERNANCE FUNCTION. Allows transfers of ERC20 gardenTokens
      * Can only happen after 2021 is finished.
      */
-    function enableCommunityTokensTransfers() external onlyOwner {
-        require(block.timestamp > 1641024000000, "Transfers cannot be enabled yet"); // TODO: Check timestamp. January 1 2022
-        communityTokensTransfersEnabled = true;
+    function enableGardenTokensTransfers() external onlyOwner {
+        require(block.timestamp > 1641024000000, 'Transfers cannot be enabled yet'); // TODO: Check timestamp. January 1 2022
+        gardenTokensTransfersEnabled = true;
     }
 
     // ===========  Protocol related Gov Functions ======
@@ -219,7 +228,7 @@ contract BabController is Ownable {
      * @param _keeper Address of the keeper
      */
     function addKeeper(address _keeper) external onlyOwner {
-      keeperList[_keeper] = true;
+        keeperList[_keeper] = true;
     }
 
     /**
@@ -228,8 +237,8 @@ contract BabController is Ownable {
      * @param _keeper Address of the keeper
      */
     function removeKeeper(address _keeper) external onlyOwner {
-      require(keeperList[_keeper], "Keeper is whitelisted");
-      keeperList[_keeper] = false;
+        require(keeperList[_keeper], 'Keeper is whitelisted');
+        keeperList[_keeper] = false;
     }
 
     /**
@@ -238,21 +247,18 @@ contract BabController is Ownable {
      * @param _keepers List with keeprs of the assets to whitelist
      */
     function addKeepers(address[] memory _keepers) external onlyOwner {
-      for (uint i = 0; i < _keepers.length; i++) {
-        keeperList[_keepers[i]] = true;
-      }
+        for (uint256 i = 0; i < _keepers.length; i++) {
+            keeperList[_keepers[i]] = true;
+        }
     }
 
     /**
-     * PRIVILEGED FACTORY FUNCTION. Adds a new valid reserve asset for communitys
+     * PRIVILEGED FACTORY FUNCTION. Adds a new valid reserve asset for gardens
      *
      * @param _reserveAsset Address of the reserve assset
      */
     function addReserveAsset(address _reserveAsset) external onlyOwner {
-        require(
-            !validReserveAsset[_reserveAsset],
-            "Reserve asset already added"
-        );
+        require(!validReserveAsset[_reserveAsset], 'Reserve asset already added');
         validReserveAsset[_reserveAsset] = true;
         reserveAssets.push(_reserveAsset);
         emit ReserveAssetAdded(_reserveAsset);
@@ -264,10 +270,7 @@ contract BabController is Ownable {
      * @param _reserveAsset               Address of the reserve asset to remove
      */
     function removeReserveAsset(address _reserveAsset) external onlyOwner {
-        require(
-            validReserveAsset[_reserveAsset],
-            "Reserve asset does not exist"
-        );
+        require(validReserveAsset[_reserveAsset], 'Reserve asset does not exist');
 
         reserveAssets = reserveAssets.remove(_reserveAsset);
 
@@ -282,13 +285,14 @@ contract BabController is Ownable {
      * @param _priceOracle               Address of the new price oracle
      */
     function editPriceOracle(address _priceOracle) external onlyOwner {
-        require(_priceOracle != priceOracle, "Price oracle already exists");
+        require(_priceOracle != priceOracle, 'Price oracle already exists');
 
-        require(_priceOracle != address(0), "Price oracle must exist");
+        require(_priceOracle != address(0), 'Price oracle must exist');
 
+        address oldPriceOracle = priceOracle;
         priceOracle = _priceOracle;
 
-        emit PriceOracleChanged(_priceOracle);
+        emit PriceOracleChanged(_priceOracle, oldPriceOracle);
     }
 
     /**
@@ -297,28 +301,30 @@ contract BabController is Ownable {
      * @param _reservePool               Address of the new reserve pool
      */
     function editReservePool(address _reservePool) external onlyOwner {
-        require(_reservePool != reservePool, "Reserve Pool already exists");
+        require(_reservePool != reservePool, 'Reserve Pool already exists');
 
-        require(_reservePool != address(0), "Reserve pool must exist");
+        require(_reservePool != address(0), 'Reserve pool must exist');
 
+        address oldReservePool = reservePool;
         reservePool = _reservePool;
 
-        emit ReservePoolChanged(_reservePool);
+        emit ReservePoolChanged(_reservePool, oldReservePool);
     }
 
     /**
      * PRIVILEGED GOVERNANCE FUNCTION. Allows governance to change the integration registry
      *
-     * @param _communityValuer Address of the new price oracle
+     * @param _gardenValuer Address of the new price oracle
      */
-    function editCommunityValuer(address _communityValuer) external onlyOwner {
-        require(_communityValuer != communityValuer, "Community Valuer already exists");
+    function editGardenValuer(address _gardenValuer) external onlyOwner {
+        require(_gardenValuer != gardenValuer, 'Garden Valuer already exists');
 
-        require(_communityValuer != address(0), "Community Valuer must exist");
+        require(_gardenValuer != address(0), 'Garden Valuer must exist');
 
-        communityValuer = _communityValuer;
+        address oldGardenValuer = gardenValuer;
+        gardenValuer = _gardenValuer;
 
-        emit CommunityValuerChanged(_communityValuer);
+        emit GardenValuerChanged(_gardenValuer, oldGardenValuer);
     }
 
     /**
@@ -327,11 +333,40 @@ contract BabController is Ownable {
      * @param _newTreasury      Address of the new protocol fee recipient
      */
     function editTreasury(address _newTreasury) external onlyOwner {
-        require(_newTreasury != address(0), "Address must not be 0");
+        require(_newTreasury != address(0), 'Address must not be 0');
 
+        address oldTreasury = treasury;
         treasury = _newTreasury;
 
-        emit TreasuryChanged(_newTreasury);
+        emit TreasuryChanged(_newTreasury, oldTreasury);
+    }
+
+    /**
+     * PRIVILEGED GOVERNANCE FUNCTION. Allows governance to edit the protocol garden factory
+     *
+     * @param _newGardenFactory      Address of the new garden factory
+     */
+    function editGardenFactory(address _newGardenFactory) external onlyOwner {
+        require(_newGardenFactory != address(0), 'Address must not be 0');
+
+        address oldGardenFactory = gardenFactory;
+        gardenFactory = _newGardenFactory;
+
+        emit GardenFactoryChanged(_newGardenFactory, oldGardenFactory);
+    }
+
+    /**
+     * PRIVILEGED GOVERNANCE FUNCTION. Allows governance to edit the protocol strategy factory
+     *
+     * @param _newStrategyFactory      Address of the new strategy factory
+     */
+    function editStrategyFactory(address _newStrategyFactory) external onlyOwner {
+        require(_newStrategyFactory != address(0), 'Address must not be 0');
+
+        address oldStrategyFactory = strategyFactory;
+        strategyFactory = _newStrategyFactory;
+
+        emit StrategyFactoryChanged(_newStrategyFactory, oldStrategyFactory);
     }
 
     /**
@@ -340,16 +375,10 @@ contract BabController is Ownable {
      * @param  _name             Human readable string identifying the integration
      * @param  _integration      Address of the integration contract to add
      */
-    function addIntegration(string memory _name, address _integration)
-        public
-        onlyOwner
-    {
+    function addIntegration(string memory _name, address _integration) public onlyOwner {
         bytes32 hashedName = _nameHash(_name);
-        require(
-            integrations[hashedName] == address(0),
-            "Integration exists already."
-        );
-        require(_integration != address(0), "Integration address must exist.");
+        require(integrations[hashedName] == address(0), 'Integration exists already.');
+        require(_integration != address(0), 'Integration address must exist.');
 
         integrations[hashedName] = _integration;
 
@@ -362,17 +391,11 @@ contract BabController is Ownable {
      * @param  _name         Human readable string identifying the integration
      * @param  _integration      Address of the integration contract to edit
      */
-    function editIntegration(string memory _name, address _integration)
-        public
-        onlyOwner
-    {
+    function editIntegration(string memory _name, address _integration) public onlyOwner {
         bytes32 hashedName = _nameHash(_name);
 
-        require(
-            integrations[hashedName] != address(0),
-            "Integration does not exist."
-        );
-        require(_integration != address(0), "Integration address must exist.");
+        require(integrations[hashedName] != address(0), 'Integration does not exist.');
+        require(_integration != address(0), 'Integration address must exist.');
 
         integrations[hashedName] = _integration;
 
@@ -386,10 +409,7 @@ contract BabController is Ownable {
      */
     function removeIntegration(string memory _name) external onlyOwner {
         bytes32 hashedName = _nameHash(_name);
-        require(
-            integrations[hashedName] != address(0),
-            "Integration does not exist."
-        );
+        require(integrations[hashedName] != address(0), 'Integration does not exist.');
 
         address oldIntegration = integrations[hashedName];
         delete integrations[hashedName];
@@ -402,10 +422,7 @@ contract BabController is Ownable {
      *
      * @param  _minRiskyPairLiquidityEth       Absolute min liquidity of an asset to grab price
      */
-    function editLiquidityMinimum(uint256 _minRiskyPairLiquidityEth)
-        public
-        onlyOwner
-    {
+    function editLiquidityMinimum(uint256 _minRiskyPairLiquidityEth) public onlyOwner {
         require(_minRiskyPairLiquidityEth > 0);
         minRiskyPairLiquidityEth = _minRiskyPairLiquidityEth;
 
@@ -423,15 +440,23 @@ contract BabController is Ownable {
     }
 
     function getReservePool() external view returns (address) {
-      return reservePool;
+        return reservePool;
     }
 
-    function getCommunityValuer() external view returns (address) {
-        return communityValuer;
+    function getGardenValuer() external view returns (address) {
+        return gardenValuer;
     }
 
-    function getCommunities() external view returns (address[] memory) {
-        return communitys;
+    function getGardenFactory() external view returns (address) {
+        return gardenFactory;
+    }
+
+    function getStrategyFactory() external view returns (address) {
+        return strategyFactory;
+    }
+
+    function getGardens() external view returns (address[] memory) {
+        return gardens;
     }
 
     function getReserveAssets() external view returns (address[] memory) {
@@ -446,39 +471,31 @@ contract BabController is Ownable {
         return maxCooldownPeriod;
     }
 
-    function getProtocolDepositCommunityTokenFee() external view returns (uint256) {
-        return protocolDepositCommunityTokenFee;
+    function getProtocolDepositGardenTokenFee() external view returns (uint256) {
+        return protocolDepositGardenTokenFee;
     }
 
     function getProtocolPerformanceFee() external view returns (uint256) {
         return protocolPerformanceFee;
     }
 
-    function getProtocolWithdrawalCommunityTokenFee()
-        external
-        view
-        returns (uint256)
-    {
-        return protocolWithdrawalCommunityTokenFee;
+    function getProtocolManagementFee() external view returns (uint256) {
+        return protocolManagementFee;
+    }
+
+    function getProtocolWithdrawalGardenTokenFee() external view returns (uint256) {
+        return protocolWithdrawalGardenTokenFee;
     }
 
     function getTreasury() external view returns (address) {
         return treasury;
     }
 
-    function isValidReserveAsset(address _reserveAsset)
-        external
-        view
-        returns (bool)
-    {
+    function isValidReserveAsset(address _reserveAsset) external view returns (bool) {
         return validReserveAsset[_reserveAsset];
     }
 
-    function isValidKeeper(address _keeper)
-        external
-        view
-        returns (bool)
-    {
+    function isValidKeeper(address _keeper) external view returns (bool) {
         return keeperList[_keeper];
     }
 
@@ -489,11 +506,7 @@ contract BabController is Ownable {
      *
      * @return               Address of integration
      */
-    function getIntegrationByName(string memory _name)
-        external
-        view
-        returns (address)
-    {
+    function getIntegrationByName(string memory _name) external view returns (address) {
         return integrations[_nameHash(_name)];
     }
 
@@ -505,12 +518,8 @@ contract BabController is Ownable {
      * @return                  Integration fee
      */
     function getIntegrationFee(
-      address /* _integration */
-    )
-        external
-        pure
-        returns (uint256)
-    {
+        address /* _integration */
+    ) external pure returns (uint256) {
         return 0;
     }
 
@@ -521,11 +530,7 @@ contract BabController is Ownable {
      *
      * @return               Address of integration
      */
-    function getIntegrationWithHash(bytes32 _nameHashP)
-        external
-        view
-        returns (address)
-    {
+    function getIntegrationWithHash(bytes32 _nameHashP) external view returns (address) {
         return integrations[_nameHashP];
     }
 
@@ -536,26 +541,18 @@ contract BabController is Ownable {
      *
      * @return               Boolean indicating if valid
      */
-    function isValidIntegration(string memory _name, address _integration)
-        external
-        view
-        returns (bool)
-    {
+    function isValidIntegration(string memory _name, address _integration) external view returns (bool) {
         return integrations[_nameHash(_name)] == _integration;
     }
 
     /**
-     * Check if a contract address is a community or one of the system contracts
+     * Check if a contract address is a garden or one of the system contracts
      *
      * @param  _contractAddress           The contract address to check
      */
-    function isSystemContract(address _contractAddress)
-        external
-        view
-        returns (bool)
-    {
-        return (isCommunity[_contractAddress] ||
-            communityValuer == _contractAddress ||
+    function isSystemContract(address _contractAddress) external view returns (bool) {
+        return (isGarden[_contractAddress] ||
+            gardenValuer == _contractAddress ||
             priceOracle == _contractAddress ||
             reservePool == _contractAddress ||
             _contractAddress == address(this));
@@ -571,14 +568,14 @@ contract BabController is Ownable {
     }
 
     /**
-     * PRIVILEGED FACTORY FUNCTION. Adds a newly deployed Community as an enabled Community.
+     * PRIVILEGED FACTORY FUNCTION. Adds a newly deployed Garden as an enabled Garden.
      *
-     * @param _community Address of the Community contract to add
+     * @param _garden Address of the Garden contract to add
      */
-    function _addCommunity(address _community) internal {
-        require(!isCommunity[_community], "Community already exists");
-        isCommunity[_community] = true;
-        communitys.push(_community);
-        emit CommunityAdded(_community, msg.sender);
+    function _addGarden(address _garden) internal {
+        require(!isGarden[_garden], 'Garden already exists');
+        isGarden[_garden] = true;
+        gardens.push(_garden);
+        emit GardenAdded(_garden, msg.sender);
     }
 }

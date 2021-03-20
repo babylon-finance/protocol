@@ -19,7 +19,6 @@
 */
 pragma solidity 0.7.4;
 
-
 /**
  * @title IOracleAdapter
  * @author Babylon Finance
@@ -27,6 +26,5 @@ pragma solidity 0.7.4;
  * Interface for calling an oracle adapter.
  */
 interface IUniswapAnchoredView {
-
-    function price(string memory symbol) external view returns (uint);
+    function price(string memory symbol) external view returns (uint256);
 }
