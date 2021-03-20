@@ -108,6 +108,9 @@ contract Strategy is ReentrancyGuard, Initializable {
     uint8 constant IN_INVESTMENT_STATUS = 2;
     uint8 constant BORROWED_STATUS = 3;
 
+    // Max candidate period
+    uint constant MAX_CANDIDATE_PERIOD = 7 days;
+
     struct SubPosition {
         address integration;
         int256 balance;
@@ -350,6 +353,18 @@ contract Strategy is ReentrancyGuard, Initializable {
     }
 
     /**
+     * Expires a candidate that has spent more than CANDIDATE_PERIOD without
+     * reaching quorum
+     */
+    function expireStrategy() external onlyKeeper nonReentrant onlyActiveGarden {
+      require(block.timestamp.sub(enteredAt) > MAX_CANDIDATE_PERIOD, "Voters still have time");
+      require(executedAt == 0, 'This strategy has executed');
+      require(!finalized, 'This strategy already exited');
+      _returnStake();
+      IGarden(garden).expireCandidateStrategy(address(this));
+    }
+
+    /**
      * Lets the strategist change the duration of the investment
      * @param _newDuration            New duration of the strategy
      */
@@ -572,12 +587,7 @@ contract Strategy is ReentrancyGuard, Initializable {
         // Idea returns were positive
         if (capitalReturned > capitalAllocated) {
             uint256 profits = capitalReturned - capitalAllocated; // in reserve asset (weth)
-            // Send stake back to the strategist
-            require(
-                ERC20(address(garden)).transferFrom(address(this), strategist, stake),
-                'Ideator stake return failed'
-            );
-
+            _returnStake();
             // Send weth performance fee to the protocol
             uint256 protocolProfits = IBabController(controller).getProtocolPerformanceFee().preciseMul(profits);
             require(
@@ -662,6 +672,14 @@ contract Strategy is ReentrancyGuard, Initializable {
         garden.updatePrincipal(_newTotal);
         // Start a redemption window in the garden with this capital
         garden.startRedemptionWindow(capitalReturned);
+    }
+
+    function _returnStake() internal {
+      // Send stake back to the strategist
+      require(
+          ERC20(address(garden)).transferFrom(address(this), strategist, stake),
+          'Ideator stake return failed'
+      );
     }
 
     /**

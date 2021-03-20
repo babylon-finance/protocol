@@ -416,6 +416,14 @@ abstract contract BaseGarden is ERC20Upgradeable {
         finalizedStrategies.push(_strategy);
     }
 
+    /*
+     * Remove an expire candidate from the strategy Array
+     * @param _strategy      Strategy to remove
+     */
+    function expireCandidateStrategy(address _strategy) external onlyStrategy {
+        strategies.remove(_strategy);
+    }
+
     /* ============ External Getter Functions ============ */
 
     /**
