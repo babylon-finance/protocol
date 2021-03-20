@@ -110,6 +110,7 @@ contract Strategy is ReentrancyGuard, Initializable {
 
     // Max candidate period
     uint256 constant MAX_CANDIDATE_PERIOD = 7 days;
+    uint256 constant MIN_VOTERS_TO_BECOME_ACTIVE = 2;
 
     struct SubPosition {
         address integration;
@@ -275,7 +276,7 @@ contract Strategy is ReentrancyGuard, Initializable {
         totalVotes = totalVotes.add(_amount);
         // TODO: Introduce conviction voting
         uint256 votingThreshold = garden.minVotersQuorum().preciseMul(garden.totalSupply());
-        if (_amount > 0 && totalVotes.toUint256() >= votingThreshold) {
+        if (_amount > 0 && voters.length >= MIN_VOTERS_TO_BECOME_ACTIVE && totalVotes.toUint256() >= votingThreshold) {
             active = true;
             enteredCooldownAt = block.timestamp;
         }
@@ -330,13 +331,12 @@ contract Strategy is ReentrancyGuard, Initializable {
         bytes memory _emptyTradeData;
         for (uint256 i = 0; i < positions.length; i++) {
             if (positions[i] != reserveAsset) {
-                uint256 pricePerTokenUnit = _getPrice(reserveAsset, positions[i]);
                 _trade(
                     'kyber',
                     positions[i],
                     ERC20(positions[i]).balanceOf(address(this)),
                     reserveAsset,
-                    0,
+                    0, // no minimum. use onchain oracle?
                     _emptyTradeData
                 );
             }
@@ -522,7 +522,6 @@ contract Strategy is ReentrancyGuard, Initializable {
         uint256[] memory _tokenAmountsNeeded
     ) internal returns (bytes memory _returnValue) {
         require(_tokensNeeded.length == _tokenAmountsNeeded.length);
-        // _validateOnlyIntegration(_integration);
         // Exchange the tokens needed
         for (uint256 i = 0; i < _tokensNeeded.length; i++) {
             if (_tokensNeeded[i] != garden.getReserveAsset()) {
