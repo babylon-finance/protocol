@@ -123,6 +123,8 @@ interface IGarden is IERC20 {
 
     function expireCandidateStrategy(address _strategy) external;
 
+    function payKeeper(address payable _keeper, uint256 _initialGas) external;
+
     function invokeFromIntegration(
         address _target,
         uint256 _value,

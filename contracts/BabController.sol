@@ -109,6 +109,7 @@ contract BabController is Ownable {
     uint256 public protocolGardenCreationFee = 0; // (0.01% = 1e14, 1% = 1e16)
     uint256 public protocolDepositGardenTokenFee = 0; // (0.01% = 1e14, 1% = 1e16)
     uint256 public protocolWithdrawalGardenTokenFee = 0; // (0.01% = 1e14, 1% = 1e16)
+    uint256 public protocolKeeperFee = 1e14; // 1% of the gas cost (0.01% = 1e14, 1% = 1e16)
 
     /* ============ Functions ============ */
 
@@ -481,6 +482,10 @@ contract BabController is Ownable {
 
     function getProtocolManagementFee() external view returns (uint256) {
         return protocolManagementFee;
+    }
+
+    function getProtocolKeeperFee() external view returns (uint256) {
+        return protocolKeeperFee;
     }
 
     function getProtocolWithdrawalGardenTokenFee() external view returns (uint256) {

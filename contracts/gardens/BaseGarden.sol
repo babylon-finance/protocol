@@ -359,6 +359,7 @@ abstract contract BaseGarden is ERC20Upgradeable {
      * We enter into the investment and add it to the executed strategies array.
      */
     function rebalanceInvestments() external onlyKeeper onlyActive {
+        uint256 initialGas = gasleft();
         uint256 liquidReserveAsset = ERC20Upgradeable(reserveAsset).balanceOf(address(this));
         for (uint256 i = 0; i < strategies.length; i++) {
             IStrategy strategy = IStrategy(strategies[i]);
@@ -371,6 +372,16 @@ abstract contract BaseGarden is ERC20Upgradeable {
                 strategy.executeInvestment(toAllocate);
             }
         }
+        _payKeeper(msg.sender, initialGas);
+    }
+
+    /**
+     * Pays gas cost back to the keeper from executing a transaction
+     * @param _keeper             Keeper that executed the transaction
+     * @param _initialGas         Max amount of gas available for transaction
+     */
+    function payKeeper(address payable _keeper, uint256 _initialGas) external onlyStrategy onlyActive {
+        _payKeeper(_keeper, _initialGas);
     }
 
     /**
@@ -412,7 +423,7 @@ abstract contract BaseGarden is ERC20Upgradeable {
      * @param _strategy      Strategy to move from active to finalized
      */
     function moveStrategyToFinalized(address _strategy) external onlyStrategy {
-        strategies.remove(_strategy);
+        strategies = strategies.remove(_strategy);
         finalizedStrategies.push(_strategy);
     }
 
@@ -421,7 +432,28 @@ abstract contract BaseGarden is ERC20Upgradeable {
      * @param _strategy      Strategy to remove
      */
     function expireCandidateStrategy(address _strategy) external onlyStrategy {
-        strategies.remove(_strategy);
+        strategies = strategies.remove(_strategy);
+    }
+
+    /**
+     * Updates the TWAP prices for the garden positions
+     *
+     */
+    function updatePositionTWAPPrices() public {
+        // Updates UniSwap TWAP
+        address oracle = IBabController(controller).getPriceOracle();
+        address[] memory strategiesC = getStrategies();
+        for (uint256 j = 0; j < strategiesC.length; j++) {
+            IStrategy strategy = IStrategy(strategiesC[j]);
+            address[] memory components = strategy.getPositions();
+            if (strategy.active()) {
+                for (uint256 i = 0; i < components.length; i++) {
+                    if (components[i] != reserveAsset) {
+                        IPriceOracle(oracle).updateAdapters(reserveAsset, components[i]);
+                    }
+                }
+            }
+        }
     }
 
     /* ============ External Getter Functions ============ */
@@ -484,25 +516,14 @@ abstract contract BaseGarden is ERC20Upgradeable {
 
     /* ============ Internal Functions ============ */
 
-    /**
-     * Updates the TWAP prices for the garden positions
-     *
-     */
-    function updatePositionTWAPPrices() public {
-        // Updates UniSwap TWAP
-        address oracle = IBabController(controller).getPriceOracle();
-        address[] memory strategiesC = getStrategies();
-        for (uint256 j = 0; j < strategiesC.length; j++) {
-            IStrategy strategy = IStrategy(strategiesC[j]);
-            address[] memory components = strategy.getPositions();
-            if (strategy.active()) {
-                for (uint256 i = 0; i < components.length; i++) {
-                    if (components[i] != reserveAsset) {
-                        IPriceOracle(oracle).updateAdapters(reserveAsset, components[i]);
-                    }
-                }
-            }
-        }
+    function _payKeeper(address payable _keeper, uint256 _initialGas) internal {
+        require(IBabController(controller).isValidKeeper(_keeper), 'Only a keeper can call this');
+        uint256 gasCost = _initialGas.sub(gasleft()).mul(tx.gasprice);
+        uint256 totalFee = gasCost.add(IBabController(controller).getProtocolKeeperFee());
+        require(ERC20Upgradeable(reserveAsset).balanceOf(address(this)) >= gasCost, 'Not enough WETH for gas subsidy');
+        // TODO: this assumes reserve asset is WETH
+        // Pay Keeper in WETH
+        require(ERC20Upgradeable(reserveAsset).transfer(_keeper, totalFee), 'Not enough WETH for gas subsidy');
     }
 
     /**

@@ -290,6 +290,7 @@ contract Strategy is ReentrancyGuard, Initializable {
      * @param _capital                  The capital to allocate to this strategy
      */
     function executeInvestment(uint256 _capital) public onlyKeeper nonReentrant onlyActiveGarden {
+        uint256 initialGas = gasleft();
         require(active, 'Idea needs to be active');
         require(capitalAllocated.add(_capital) <= maxCapitalRequested, 'Max capital reached');
         require(_capital >= minRebalanceCapital, 'Amount needs to be more than min');
@@ -305,6 +306,8 @@ contract Strategy is ReentrancyGuard, Initializable {
         _callIntegration(integration, 0, _data, enterTokensNeeded, enterTokensAmounts);
         // Sets the executed timestamp
         executedAt = block.timestamp;
+        // Refund fee to the keeper
+        garden.payKeeper(msg.sender, initialGas);
     }
 
     /**
@@ -314,6 +317,7 @@ contract Strategy is ReentrancyGuard, Initializable {
      * Updates the reserve asset position accordingly.
      */
     function finalizeInvestment() external onlyKeeper nonReentrant onlyActiveGarden {
+        uint256 initialGas = gasleft();
         require(executedAt > 0, 'This strategy has not been executed');
         require(
             block.timestamp > executedAt.add(duration),
@@ -350,6 +354,8 @@ contract Strategy is ReentrancyGuard, Initializable {
         _transferIdeaRewards(capitalReturned);
         // Moves strategy to finalized
         IGarden(garden).moveStrategyToFinalized(address(this));
+        // Refund fee to the keeper
+        garden.payKeeper(msg.sender, initialGas);
     }
 
     /**
@@ -357,7 +363,9 @@ contract Strategy is ReentrancyGuard, Initializable {
      * reaching quorum
      */
     function expireStrategy() external onlyKeeper nonReentrant onlyActiveGarden {
+        uint256 initialGas = gasleft();
         _deleteCandidateStrategy();
+        garden.payKeeper(msg.sender, initialGas);
     }
 
     /**
