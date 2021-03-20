@@ -357,11 +357,14 @@ contract Strategy is ReentrancyGuard, Initializable {
      * reaching quorum
      */
     function expireStrategy() external onlyKeeper nonReentrant onlyActiveGarden {
-        require(block.timestamp.sub(enteredAt) > MAX_CANDIDATE_PERIOD, 'Voters still have time');
-        require(executedAt == 0, 'This strategy has executed');
-        require(!finalized, 'This strategy already exited');
-        _returnStake();
-        IGarden(garden).expireCandidateStrategy(address(this));
+        _deleteCandidateStrategy();
+    }
+
+    /**
+     * Delete a candidate strategy by the ideator
+     */
+    function deleteCandidateStrategy() external onlyIdeator {
+        _deleteCandidateStrategy();
     }
 
     /**
@@ -370,6 +373,7 @@ contract Strategy is ReentrancyGuard, Initializable {
      */
     function changeInvestmentDuration(uint256 _newDuration) external onlyIdeator {
         require(!finalized, 'This investment was already exited');
+        require(_newDuration < duration, 'Duration needs to be less than the old duration');
         duration = _newDuration;
     }
 
@@ -467,6 +471,14 @@ contract Strategy is ReentrancyGuard, Initializable {
     }
 
     /* ============ Internal Functions ============ */
+
+    function _deleteCandidateStrategy() internal {
+        require(block.timestamp.sub(enteredAt) > MAX_CANDIDATE_PERIOD, 'Voters still have time');
+        require(executedAt == 0, 'This strategy has executed');
+        require(!finalized, 'This strategy already exited');
+        _returnStake();
+        IGarden(garden).expireCandidateStrategy(address(this));
+    }
 
     /**
      * Low level function that allows an integration to make an arbitrary function
