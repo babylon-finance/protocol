@@ -222,7 +222,7 @@ abstract contract VoteToken is Context, ERC20, Ownable, IVoteToken, ReentrancyGu
         require(srcRep != dstRep, "VoteToken::_moveDelegates: srcRep and dstRep should be different");
         require(amount > 0, "VoteToken::_moveDelegates: amount must be >0");
         require(srcRep != address(0), "VoteToken::_moveDelegates: srcRep cannot be the Zero address");
-        require(srcRep != address(0), "VoteToken::_moveDelegates: srcRep cannot be the Zero address");
+        require(dstRep != address(0), "VoteToken::_moveDelegates: dstRep cannot be the Zero address");
 
         // Sub voting amount to source
         uint32 srcRepNum = numCheckpoints[srcRep];
