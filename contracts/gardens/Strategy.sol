@@ -109,7 +109,7 @@ contract Strategy is ReentrancyGuard, Initializable {
     uint8 constant BORROWED_STATUS = 3;
 
     // Max candidate period
-    uint constant MAX_CANDIDATE_PERIOD = 7 days;
+    uint256 constant MAX_CANDIDATE_PERIOD = 7 days;
 
     struct SubPosition {
         address integration;
@@ -357,11 +357,11 @@ contract Strategy is ReentrancyGuard, Initializable {
      * reaching quorum
      */
     function expireStrategy() external onlyKeeper nonReentrant onlyActiveGarden {
-      require(block.timestamp.sub(enteredAt) > MAX_CANDIDATE_PERIOD, "Voters still have time");
-      require(executedAt == 0, 'This strategy has executed');
-      require(!finalized, 'This strategy already exited');
-      _returnStake();
-      IGarden(garden).expireCandidateStrategy(address(this));
+        require(block.timestamp.sub(enteredAt) > MAX_CANDIDATE_PERIOD, 'Voters still have time');
+        require(executedAt == 0, 'This strategy has executed');
+        require(!finalized, 'This strategy already exited');
+        _returnStake();
+        IGarden(garden).expireCandidateStrategy(address(this));
     }
 
     /**
@@ -675,11 +675,8 @@ contract Strategy is ReentrancyGuard, Initializable {
     }
 
     function _returnStake() internal {
-      // Send stake back to the strategist
-      require(
-          ERC20(address(garden)).transferFrom(address(this), strategist, stake),
-          'Ideator stake return failed'
-      );
+        // Send stake back to the strategist
+        require(ERC20(address(garden)).transferFrom(address(this), strategist, stake), 'Ideator stake return failed');
     }
 
     /**

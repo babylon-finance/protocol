@@ -120,6 +120,7 @@ interface IGarden is IERC20 {
     ) external;
 
     function moveStrategyToFinalized(address _strategy) external;
+
     function expireCandidateStrategy(address _strategy) external;
 
     function invokeFromIntegration(
