@@ -105,7 +105,10 @@ abstract contract BaseGarden is ERC20Upgradeable {
      * Throws if the sender is not an investment strategy of this garden
      */
     modifier onlyStrategy() {
-        require(strategyMapping[msg.sender], 'Only the garden strategies contract can call this');
+        require(
+            strategyMapping[msg.sender] && IStrategy(msg.sender).garden() == address(this),
+            'Only a strategy of this community'
+        );
         _;
     }
 
@@ -114,7 +117,8 @@ abstract contract BaseGarden is ERC20Upgradeable {
      */
     modifier onlyStrategyOrOwner() {
         require(
-            strategyMapping[msg.sender] || msg.sender == controller,
+            (strategyMapping[msg.sender] && IStrategy(msg.sender).garden() == address(this)) ||
+                msg.sender == controller,
             'Only the garden strategies or owner can call this'
         );
         _;
@@ -148,7 +152,7 @@ abstract contract BaseGarden is ERC20Upgradeable {
     /* ============ State Variables ============ */
     uint256 public constant initialBuyRate = 1000000000000; // Initial buy rate for the manager
     uint256 public constant MAX_DEPOSITS_FUND_V1 = 1e21; // Max deposit per garden is 1000 eth for v1
-    uint256 public constant MAX_TOTAL_IDEAS = 20; // Max deposit per garden is 1000 eth for v1
+    uint256 public constant MAX_TOTAL_IDEAS = 20; // Max number of ideas
     uint256 internal constant TEN_PERCENT = 1e17;
     // Wrapped ETH address
     address public weth;
@@ -190,7 +194,8 @@ abstract contract BaseGarden is ERC20Upgradeable {
     uint256 public maxIdeaDuration; // Max duration for an investment strategy
     uint256 public strategyCooldownPeriod; // Window for the strategy to cooldown after approval before receiving capital
 
-    address[] strategies;
+    address[] strategies; // Strategies that are either in candidate or active state
+    address[] finalizedStrategies; // Strategies that have finalized execution
     mapping(address => bool) public strategyMapping;
 
     uint256 public strategyCreatorProfitPercentage = 13e16; // (0.01% = 1e14, 1% = 1e16)
@@ -400,6 +405,23 @@ abstract contract BaseGarden is ERC20Upgradeable {
         bytes memory _emptyTradeData;
         // TODO: probably use uniswap or 1inch. Don't go through TWAP
         _trade('_kyber', _token, balance, reserveAsset, 0, _emptyTradeData);
+    }
+
+    /*
+     * Moves an estrategy from the active array to the finalized array
+     * @param _strategy      Strategy to move from active to finalized
+     */
+    function moveStrategyToFinalized(address _strategy) external onlyStrategy {
+        strategies.remove(_strategy);
+        finalizedStrategies.push(_strategy);
+    }
+
+    /*
+     * Remove an expire candidate from the strategy Array
+     * @param _strategy      Strategy to remove
+     */
+    function expireCandidateStrategy(address _strategy) external onlyStrategy {
+        strategies.remove(_strategy);
     }
 
     /* ============ External Getter Functions ============ */

@@ -92,9 +92,9 @@ describe('Position testing', function () {
       expect(gardenBalance.sub(gardenBalanceAfter)).to.equal(ethers.utils.parseEther('0.5'));
       expect(wethPositionBefore.sub(wethPosition)).to.equal(ethers.utils.parseEther('0.5'));
       expect(await garden1.getPrincipal()).to.equal(ethers.utils.parseEther('0.6'));
-      // Check that the protocol got 0.5% exit fee
+      // Check that the protocol didn't get an exit fee
       const protocolTreasuryAfter = await weth.balanceOf(treasuryD.address);
-      expect(protocolTreasuryAfter.sub(protocolTreasury)).to.equal(ethers.utils.parseEther('0.5').mul(5).div(1000));
+      expect(protocolTreasuryAfter.sub(protocolTreasury)).to.equal(ethers.utils.parseEther('0'));
     });
   });
 });

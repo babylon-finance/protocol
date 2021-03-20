@@ -90,7 +90,7 @@ interface IBabController {
 
     function getGardenFactory() external view returns (address);
 
-    function getCommunities() external view returns (address[] memory);
+    function getGardens() external view returns (address[] memory);
 
     function isGarden(address _garden) external view returns (bool);
 
