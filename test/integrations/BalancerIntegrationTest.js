@@ -22,7 +22,7 @@ describe('BalancerIntegrationTest', function () {
     userSigner1 = system.signer1;
     userSigner3 = system.signer3;
     balancerAbi = balancerIntegration.interface;
-    garden = system.comunities.one;
+    garden = system.gardens.one;
     strategy = system.strategies[0];
   });
 

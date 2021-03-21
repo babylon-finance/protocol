@@ -19,7 +19,7 @@ describe('Investment Idea', function () {
   let weth;
 
   beforeEach(async () => {
-    const { babController, signer1, signer2, signer3, comunities, integrations, strategies, owner } = await loadFixture(
+    const { babController, signer1, signer2, signer3, gardens, integrations, strategies, owner } = await loadFixture(
       deployFolioFixture,
     );
 
@@ -29,7 +29,7 @@ describe('Investment Idea', function () {
     userSigner1 = signer1;
     userSigner2 = signer2;
     userSigner3 = signer3;
-    garden1 = comunities.one;
+    garden1 = gardens.one;
     strategiesC = strategies;
     weth = await ethers.getContractAt('IERC20', addresses.tokens.WETH);
   });

@@ -27,7 +27,7 @@ describe('BabController', function () {
       gardenValuer,
       owner,
       signer1,
-      comunities,
+      gardens,
       signer2,
       signer3,
     } = await loadFixture(deployFolioFixture);
@@ -40,9 +40,9 @@ describe('BabController', function () {
     userSigner1 = signer1;
     userSigner2 = signer2;
     userSigner3 = signer3;
-    garden1 = comunities.one;
-    garden2 = comunities.two;
-    garden3 = comunities.three;
+    garden1 = gardens.one;
+    garden2 = gardens.two;
+    garden3 = gardens.three;
   });
 
   describe('Deployment', function () {
@@ -53,45 +53,45 @@ describe('BabController', function () {
   });
 
   describe('Interacting with Communities', function () {
-    it('should start with 3 comunities', async function () {
-      const comunities = await controller.getCommunities();
-      expect(comunities.length).to.equal(3);
+    it('should start with 3 gardens', async function () {
+      const gardens = await controller.getGardens();
+      expect(gardens.length).to.equal(3);
     });
 
     it('should set the protocol manager address', async function () {
       expect(await controller.getTreasury()).to.equal(treasuryD.address);
     });
 
-    it('can create comunities', async function () {
+    it('can create gardens', async function () {
       expect(!!garden1).to.equal(true);
       expect(!!garden2).to.equal(true);
       expect(!!garden3).to.equal(true);
     });
 
-    it('can create comunities and retrieve all addresses', async function () {
-      const comunities = await controller.getCommunities();
-      expect(comunities.length).to.equal(3);
+    it('can create gardens and retrieve all addresses', async function () {
+      const gardens = await controller.getGardens();
+      expect(gardens.length).to.equal(3);
     });
 
     it('cannot disable an inactive garden', async function () {
-      const initialCommunities = await controller.getCommunities();
+      const initialCommunities = await controller.getGardens();
 
       await expect(controller.disableGarden(initialCommunities[0])).to.not.be.reverted;
       await expect(controller.disableGarden(initialCommunities[0])).to.be.reverted;
     });
 
     it('can remove a disabled garden', async function () {
-      const initialCommunities = await controller.getCommunities();
+      const initialCommunities = await controller.getGardens();
       expect(initialCommunities.length).to.equal(3);
       await expect(controller.disableGarden(initialCommunities[0])).to.not.be.reverted;
       await controller.removeGarden(initialCommunities[0]);
 
-      const updatedCommunities = await controller.getCommunities();
+      const updatedCommunities = await controller.getGardens();
       expect(updatedCommunities.length).to.equal(2);
     });
 
     it('can enable and disable a garden', async function () {
-      const initialCommunities = await controller.getCommunities();
+      const initialCommunities = await controller.getGardens();
 
       await expect(controller.disableGarden(initialCommunities[0])).to.not.be.reverted;
       await expect(controller.enableGarden(initialCommunities[0])).to.not.be.reverted;

@@ -455,7 +455,7 @@ contract BabController is Ownable {
         return strategyFactory;
     }
 
-    function getCommunities() external view returns (address[] memory) {
+    function getGardens() external view returns (address[] memory) {
         return gardens;
     }
 

@@ -23,7 +23,7 @@ describe('CompoundIntegration', function () {
     compoundBorrowing = system.integrations.compoundIntegration;
     compAbi = compoundBorrowing.interface;
     userSigner3 = system.signer3;
-    garden = system.comunities.one;
+    garden = system.gardens.one;
   });
 
   describe('Deployment', function () {

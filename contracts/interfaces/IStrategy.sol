@@ -52,6 +52,33 @@ interface IStrategy {
         uint256 _quantity
     ) external;
 
+    function getStrategyDetails()
+        external
+        view
+        returns (
+            address,
+            address,
+            uint256,
+            uint256,
+            uint256,
+            uint256,
+            uint256,
+            uint256,
+            uint256,
+            uint256
+        );
+
+    function getStrategyState()
+        external
+        view
+        returns (
+            bool,
+            bool,
+            bool,
+            uint256,
+            uint256
+        );
+
     function isIdeaActive() external pure returns (bool);
 
     function isPosition(address _component) external view returns (bool);

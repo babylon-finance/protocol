@@ -14,7 +14,7 @@ describe('AaveIntegration', function () {
   beforeEach(async () => {
     system = await loadFixture(deployFolioFixture);
     aaveIntegration = system.integrations.aaveIntegration;
-    garden = system.comunities.one;
+    garden = system.gardens.one;
   });
 
   describe('Deployment', function () {

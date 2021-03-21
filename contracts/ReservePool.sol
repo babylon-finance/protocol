@@ -211,7 +211,7 @@ contract ReservePool is ERC20, ReentrancyGuard, Ownable {
 
     function getReservePoolValuation() public view returns (uint256) {
         uint256 total = 0;
-        address[] memory _gardens = IBabController(controller).getCommunities();
+        address[] memory _gardens = IBabController(controller).getGardens();
         for (uint256 i = 0; i < _gardens.length; i++) {
             uint256 gardenBalance = IRollingGarden(_gardens[i]).balanceOf(address(this));
             if (gardenBalance > 0) {

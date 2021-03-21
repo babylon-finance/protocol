@@ -113,7 +113,7 @@ async function deployFolioFixture() {
     .connect(signer1)
     .createRollingGarden(integrationsAddressList, addresses.tokens.WETH, 'ETH Yield Farm [b]', 'EYFG');
 
-  const gardens = await babController.getCommunities();
+  const gardens = await babController.getGardens();
 
   const garden = await ethers.getContractAt('RollingGarden', gardens[0]);
 
@@ -140,7 +140,7 @@ async function deployFolioFixture() {
 
   await garden.connect(signer1).addStrategy(
     ethers.utils.parseEther('10'),
-    await garden.totalSupply(),
+    ethers.utils.parseEther('5'),
     ONE_DAY_IN_SECONDS * 30,
     ethers.utils.parseEther('0.05'), // 5%
     ethers.utils.parseEther('1'),
@@ -149,6 +149,8 @@ async function deployFolioFixture() {
   console.log('Created and started garden', garden.address);
 
   const strategies = await garden.getStrategies();
+
+  const strategy1 = await ethers.getContractAt('Strategy', strategies[0]);
 
   return {
     babController,
@@ -163,12 +165,12 @@ async function deployFolioFixture() {
       uniswapPoolIntegration,
       yearnVaultIntegration,
     },
-    comunities: {
+    gardens: {
       one: garden,
       two: garden2,
       three: garden3,
     },
-    strategies: [await ethers.getContractAt('Strategy', strategies[0])],
+    strategies: [strategy1],
     gardenValuer,
     priceOracle,
     owner,
