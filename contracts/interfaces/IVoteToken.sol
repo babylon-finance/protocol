@@ -17,7 +17,7 @@
 
 pragma solidity 0.7.4;
 
-import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 
 interface IVoteToken {
     function delegate(address delegatee) external;
