@@ -108,6 +108,10 @@ contract Strategy is ReentrancyGuard, Initializable {
     uint8 constant IN_INVESTMENT_STATUS = 2;
     uint8 constant BORROWED_STATUS = 3;
 
+    // Max candidate period
+    uint256 constant MAX_CANDIDATE_PERIOD = 7 days;
+    uint256 constant MIN_VOTERS_TO_BECOME_ACTIVE = 2;
+
     struct SubPosition {
         address integration;
         int256 balance;
@@ -272,7 +276,7 @@ contract Strategy is ReentrancyGuard, Initializable {
         totalVotes = totalVotes.add(_amount);
         // TODO: Introduce conviction voting
         uint256 votingThreshold = garden.minVotersQuorum().preciseMul(garden.totalSupply());
-        if (_amount > 0 && totalVotes.toUint256() >= votingThreshold) {
+        if (_amount > 0 && voters.length >= MIN_VOTERS_TO_BECOME_ACTIVE && totalVotes.toUint256() >= votingThreshold) {
             active = true;
             enteredCooldownAt = block.timestamp;
         }
@@ -327,13 +331,12 @@ contract Strategy is ReentrancyGuard, Initializable {
         bytes memory _emptyTradeData;
         for (uint256 i = 0; i < positions.length; i++) {
             if (positions[i] != reserveAsset) {
-                uint256 pricePerTokenUnit = _getPrice(reserveAsset, positions[i]);
                 _trade(
                     'kyber',
                     positions[i],
                     ERC20(positions[i]).balanceOf(address(this)),
                     reserveAsset,
-                    0,
+                    0, // no minimum. use onchain oracle?
                     _emptyTradeData
                 );
             }
@@ -345,6 +348,23 @@ contract Strategy is ReentrancyGuard, Initializable {
         exitedAt = block.timestamp;
         // Transfer rewards and update positions
         _transferIdeaRewards(capitalReturned);
+        // Moves strategy to finalized
+        IGarden(garden).moveStrategyToFinalized(address(this));
+    }
+
+    /**
+     * Expires a candidate that has spent more than CANDIDATE_PERIOD without
+     * reaching quorum
+     */
+    function expireStrategy() external onlyKeeper nonReentrant onlyActiveGarden {
+        _deleteCandidateStrategy();
+    }
+
+    /**
+     * Delete a candidate strategy by the ideator
+     */
+    function deleteCandidateStrategy() external onlyIdeator {
+        _deleteCandidateStrategy();
     }
 
     /**
@@ -353,6 +373,7 @@ contract Strategy is ReentrancyGuard, Initializable {
      */
     function changeInvestmentDuration(uint256 _newDuration) external onlyIdeator {
         require(!finalized, 'This investment was already exited');
+        require(_newDuration < duration, 'Duration needs to be less than the old duration');
         duration = _newDuration;
     }
 
@@ -503,6 +524,14 @@ contract Strategy is ReentrancyGuard, Initializable {
 
     /* ============ Internal Functions ============ */
 
+    function _deleteCandidateStrategy() internal {
+        require(block.timestamp.sub(enteredAt) > MAX_CANDIDATE_PERIOD, 'Voters still have time');
+        require(executedAt == 0, 'This strategy has executed');
+        require(!finalized, 'This strategy already exited');
+        _returnStake();
+        IGarden(garden).expireCandidateStrategy(address(this));
+    }
+
     /**
      * Low level function that allows an integration to make an arbitrary function
      * call to any contract from the garden (garden as msg.sender).
@@ -557,7 +586,6 @@ contract Strategy is ReentrancyGuard, Initializable {
         uint256[] memory _tokenAmountsNeeded
     ) internal returns (bytes memory _returnValue) {
         require(_tokensNeeded.length == _tokenAmountsNeeded.length);
-        // _validateOnlyIntegration(_integration);
         // Exchange the tokens needed
         for (uint256 i = 0; i < _tokensNeeded.length; i++) {
             if (_tokensNeeded[i] != garden.getReserveAsset()) {
@@ -622,12 +650,7 @@ contract Strategy is ReentrancyGuard, Initializable {
         // Idea returns were positive
         if (capitalReturned > capitalAllocated) {
             uint256 profits = capitalReturned - capitalAllocated; // in reserve asset (weth)
-            // Send stake back to the strategist
-            require(
-                ERC20(address(garden)).transferFrom(address(this), strategist, stake),
-                'Ideator stake return failed'
-            );
-
+            _returnStake();
             // Send weth performance fee to the protocol
             uint256 protocolProfits = IBabController(controller).getProtocolPerformanceFee().preciseMul(profits);
             require(
@@ -712,6 +735,11 @@ contract Strategy is ReentrancyGuard, Initializable {
         garden.updatePrincipal(_newTotal);
         // Start a redemption window in the garden with this capital
         garden.startRedemptionWindow(capitalReturned);
+    }
+
+    function _returnStake() internal {
+        // Send stake back to the strategist
+        require(ERC20(address(garden)).transferFrom(address(this), strategist, stake), 'Ideator stake return failed');
     }
 
     /**

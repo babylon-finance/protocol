@@ -13,6 +13,7 @@ describe('KyberTradeIntegration', function () {
   let kyberAbi;
   let garden;
   let userSigner1;
+  let userSigner2;
   let userSigner3;
   let strategy;
 
@@ -21,6 +22,7 @@ describe('KyberTradeIntegration', function () {
     kyberIntegration = system.integrations.kyberTradeIntegration;
     kyberAbi = kyberIntegration.interface;
     userSigner3 = system.signer3;
+    userSigner2 = system.signer2;
     userSigner1 = system.signer1;
     garden = system.gardens.one;
     strategy = system.strategies[0];
@@ -48,10 +50,13 @@ describe('KyberTradeIntegration', function () {
       await garden.connect(userSigner3).deposit(ethers.utils.parseEther('2'), 1, userSigner3.getAddress(), {
         value: ethers.utils.parseEther('2'),
       });
-      await garden.connect(userSigner1).deposit(ethers.utils.parseEther('2'), 1, userSigner3.getAddress(), {
+      await garden.connect(userSigner1).deposit(ethers.utils.parseEther('2'), 1, userSigner1.getAddress(), {
         value: ethers.utils.parseEther('2'),
       });
-      expect(await wethToken.balanceOf(garden.address)).to.equal(ethers.utils.parseEther('4.1'));
+      await garden.connect(userSigner2).deposit(ethers.utils.parseEther('2'), 1, userSigner2.getAddress(), {
+        value: ethers.utils.parseEther('2'),
+      });
+      expect(await wethToken.balanceOf(garden.address)).to.equal(ethers.utils.parseEther('6.1'));
 
       const dataEnter = kyberAbi.encodeFunctionData(
         kyberAbi.functions['trade(address,uint256,address,uint256,bytes)'],
@@ -77,6 +82,7 @@ describe('KyberTradeIntegration', function () {
       });
 
       await strategy.connect(userSigner3).curateIdea(await garden.balanceOf(userSigner3.getAddress()));
+      await strategy.connect(userSigner2).curateIdea(await garden.balanceOf(userSigner2.getAddress()));
 
       ethers.provider.send('evm_increaseTime', [ONE_DAY_IN_SECONDS * 2]);
 
@@ -89,8 +95,8 @@ describe('KyberTradeIntegration', function () {
 
       ethers.provider.send('evm_increaseTime', [ONE_DAY_IN_SECONDS * 90]);
 
-      // await strategy.finalizeInvestment({ gasPrice: 0 });
-      // expect(await usdcToken.balanceOf(strategy.address)).to.equal(0);
+      await strategy.finalizeInvestment({ gasPrice: 0 });
+      expect(await usdcToken.balanceOf(strategy.address)).to.equal(0);
     });
   });
 });

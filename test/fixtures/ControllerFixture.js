@@ -9,8 +9,23 @@ async function deployFolioFixture() {
 
   const BabController = await ethers.getContractFactory('BabController', owner);
   const babController = await BabController.deploy(...argsUtil.readArgumentsFile('BabController'));
+
   await babController.addReserveAsset(addresses.tokens.WETH);
   await babController.addKeepers(Object.values(addresses.users));
+
+  // Deployment of BABL Token contract
+  const BABLToken = await ethers.getContractFactory('BABLToken', owner);
+  const bablToken = await BABLToken.deploy();
+
+  // Deployment of Time Lock Registry contract
+  const TimeLockRegistry = await ethers.getContractFactory('TimeLockRegistry', owner);
+  const timeLockRegistry = await TimeLockRegistry.deploy(bablToken.address);
+
+  // Sets the Time Lock Registry address
+  await bablToken.setTimeLockRegistry(timeLockRegistry.address);
+
+  // Approve Time Lock Registry to handle 31% of the Tokens for vesting (Team, Advisors, Investors)
+  await bablToken.approve(timeLockRegistry.address, ethers.utils.parseEther('310000'));
 
   const GardenValuer = await ethers.getContractFactory('GardenValuer', owner);
   const PriceOracle = await ethers.getContractFactory('PriceOracle', owner);
@@ -154,6 +169,8 @@ async function deployFolioFixture() {
 
   return {
     babController,
+    bablToken,
+    timeLockRegistry,
     reservePool,
     treasury,
     integrations: {
@@ -179,6 +196,8 @@ async function deployFolioFixture() {
     signer3,
     contractsToPublish: [
       { name: 'BabController', contract: babController },
+      { name: 'BABLToken', contract: bablToken },
+      { name: 'TimeLockRegistry', contract: timeLockRegistry },
       { name: 'StrategyFactory', contract: strategyFactory },
       { name: 'KyberTradeIntegration', contract: kyberTradeIntegration },
       { name: 'BalancerIntegration', contract: balancerIntegration },
