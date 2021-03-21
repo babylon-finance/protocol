@@ -28,6 +28,7 @@ describe('Strategy', function () {
   describe('getStrategyDetails()', async function () {
     it('should return the expected strategy properties', async function () {
       const [
+        address,
         strategist,
         integration,
         stake,
@@ -40,6 +41,7 @@ describe('Strategy', function () {
         enteredAt,
       ] = await strategy.getStrategyDetails();
 
+      expect(address).to.equal(strategy.address);
       expect(strategist).to.equal(userSigner1.address);
       expect(integration).to.equal(addresses.zero);
       expect(stake).to.equal(ethers.utils.parseEther('5'));
@@ -55,8 +57,9 @@ describe('Strategy', function () {
 
   describe('getStrategyState()', async function () {
     it('should return the expected strategy state', async function () {
-      const [active, dataSet, finalized, executedAt, exitedAt] = await strategy.getStrategyState();
+      const [address, active, dataSet, finalized, executedAt, exitedAt] = await strategy.getStrategyState();
 
+      expect(address).to.equal(strategy.address);
       expect(active).to.equal(false);
       expect(dataSet).to.equal(false);
       expect(finalized).to.equal(false);
