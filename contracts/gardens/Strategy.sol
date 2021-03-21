@@ -480,6 +480,7 @@ contract Strategy is ReentrancyGuard, Initializable {
         returns (
             address,
             address,
+            address,
             uint256,
             uint256,
             uint256,
@@ -491,6 +492,7 @@ contract Strategy is ReentrancyGuard, Initializable {
         )
     {
         return (
+            address(this),
             strategist,
             integration,
             stake,
@@ -512,6 +514,7 @@ contract Strategy is ReentrancyGuard, Initializable {
         external
         view
         returns (
+            address,
             bool,
             bool,
             bool,
@@ -519,7 +522,7 @@ contract Strategy is ReentrancyGuard, Initializable {
             uint256
         )
     {
-        return (active, dataSet, finalized, executedAt, exitedAt);
+        return (address(this), active, dataSet, finalized, executedAt, exitedAt);
     }
 
     /* ============ Internal Functions ============ */

@@ -58,6 +58,7 @@ interface IStrategy {
         returns (
             address,
             address,
+            address,
             uint256,
             uint256,
             uint256,
@@ -72,6 +73,7 @@ interface IStrategy {
         external
         view
         returns (
+            address,
             bool,
             bool,
             bool,
