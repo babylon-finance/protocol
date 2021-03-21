@@ -470,6 +470,61 @@ contract Strategy is ReentrancyGuard, Initializable {
         return _getPositionBalance(_component);
     }
 
+    /**
+     * Get the non-state related details of a Strategy
+     *
+     */
+    function getStrategyDetails()
+        external
+        view
+        returns (
+            address,
+            address,
+            address,
+            uint256,
+            uint256,
+            uint256,
+            uint256,
+            uint256,
+            uint256,
+            uint256,
+            uint256
+        )
+    {
+        return (
+            address(this),
+            strategist,
+            integration,
+            stake,
+            absoluteTotalVotes,
+            capitalAllocated,
+            duration,
+            expectedReturn,
+            maxCapitalRequested,
+            minRebalanceCapital,
+            enteredAt
+        );
+    }
+
+    /**
+     * Get the state of a Strategy
+     *
+     */
+    function getStrategyState()
+        external
+        view
+        returns (
+            address,
+            bool,
+            bool,
+            bool,
+            uint256,
+            uint256
+        )
+    {
+        return (address(this), active, dataSet, finalized, executedAt, exitedAt);
+    }
+
     /* ============ Internal Functions ============ */
 
     function _deleteCandidateStrategy() internal {

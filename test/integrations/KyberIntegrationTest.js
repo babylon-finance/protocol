@@ -22,9 +22,9 @@ describe('KyberTradeIntegration', function () {
     kyberIntegration = system.integrations.kyberTradeIntegration;
     kyberAbi = kyberIntegration.interface;
     userSigner3 = system.signer3;
-    userSigner1 = system.signer1;
     userSigner2 = system.signer2;
-    garden = system.comunities.one;
+    userSigner1 = system.signer1;
+    garden = system.gardens.one;
     strategy = system.strategies[0];
   });
 

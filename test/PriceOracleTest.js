@@ -14,8 +14,8 @@ describe('PriceOracle', function () {
   let adapter;
 
   beforeEach(async () => {
-    const { babController, priceOracle, comunities } = await loadFixture(deployFolioFixture);
-    garden = comunities.one;
+    const { babController, priceOracle, gardens } = await loadFixture(deployFolioFixture);
+    garden = gardens.one;
     controller = babController;
     oracle = priceOracle;
     adapter = await ethers.getContractAt('UniswapTWAP', (await oracle.getAdapters())[0]);

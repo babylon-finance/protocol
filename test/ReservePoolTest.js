@@ -15,9 +15,9 @@ describe('ReservePool', function () {
   let weth;
 
   beforeEach(async () => {
-    const { babController, comunities, reservePool, signer1, signer2, owner } = await loadFixture(deployFolioFixture);
+    const { babController, gardens, reservePool, signer1, signer2, owner } = await loadFixture(deployFolioFixture);
     ownerSigner = owner;
-    garden = comunities.one;
+    garden = gardens.one;
     userSigner1 = signer1;
     userSigner2 = signer2;
     controller = babController;

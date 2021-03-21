@@ -13,8 +13,8 @@ describe('GardenValuer', function () {
   let weth;
 
   beforeEach(async () => {
-    const { babController, gardenValuer, comunities } = await loadFixture(deployFolioFixture);
-    garden = comunities.one;
+    const { babController, gardenValuer, gardens } = await loadFixture(deployFolioFixture);
+    garden = gardens.one;
     controller = babController;
     valuer = gardenValuer;
     weth = await ethers.getContractAt('IERC20', addresses.tokens.WETH);

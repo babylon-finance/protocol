@@ -18,7 +18,7 @@ describe('Position testing', function () {
   let weth;
 
   beforeEach(async () => {
-    const { babController, treasury, signer1, signer2, signer3, comunities, integrations, owner } = await loadFixture(
+    const { babController, treasury, signer1, signer2, signer3, gardens, integrations, owner } = await loadFixture(
       deployFolioFixture,
     );
 
@@ -28,8 +28,8 @@ describe('Position testing', function () {
     userSigner1 = signer1;
     userSigner2 = signer2;
     userSigner3 = signer3;
-    garden1 = comunities.one;
-    garden2 = comunities.two;
+    garden1 = gardens.one;
+    garden2 = gardens.two;
     weth = await ethers.getContractAt('IERC20', addresses.tokens.WETH);
   });
 

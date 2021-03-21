@@ -20,7 +20,7 @@ describe('Garden', function () {
   let balancerIntegration;
 
   beforeEach(async () => {
-    const { babController, signer1, signer2, signer3, comunities, integrations, owner } = await loadFixture(
+    const { babController, signer1, signer2, signer3, gardens, integrations, owner } = await loadFixture(
       deployFolioFixture,
     );
 
@@ -30,9 +30,9 @@ describe('Garden', function () {
     userSigner1 = signer1;
     userSigner2 = signer2;
     userSigner3 = signer3;
-    garden1 = comunities.one;
-    garden2 = comunities.two;
-    garden3 = comunities.three;
+    garden1 = gardens.one;
+    garden2 = gardens.two;
+    garden3 = gardens.three;
     weth = await ethers.getContractAt('IERC20', addresses.tokens.WETH);
   });
 
@@ -146,7 +146,7 @@ describe('Garden', function () {
       await garden1.connect(userSigner3).withdraw(90909, 1, userSigner3.getAddress());
     });
 
-    it('a contributor cannot withdraw comunities until the time ends', async function () {
+    it('a contributor cannot withdraw gardens until the time ends', async function () {
       await garden1.connect(userSigner3).deposit(ethers.utils.parseEther('1'), 1, userSigner3.getAddress(), {
         value: ethers.utils.parseEther('1'),
       });
