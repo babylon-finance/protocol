@@ -4,6 +4,7 @@ const { expect } = require('chai');
 const { ethers, waffle } = require('hardhat');
 
 const { EMPTY_BYTES, ONE_DAY_IN_SECONDS } = require('../utils/constants');
+
 const { loadFixture } = waffle;
 
 const addresses = require('../utils/addresses');
@@ -114,7 +115,6 @@ describe('BABLToken contract', function () {
       const addr1Balance = await token.balanceOf(userSigner1.address);
       expect(addr1Balance).to.equal(value);
 
-
       // Transfer 180_000e18 tokens from userSigner1 to userSigner2
       // We use .connect(signer) to send a transaction from another account
       const value2 = ethers.utils.parseEther('180000');
@@ -122,7 +122,6 @@ describe('BABLToken contract', function () {
 
       const addr2Balance = await token.balanceOf(userSigner2.address);
       expect(addr2Balance).to.equal(value2);
-
     });
 
     it('Should fail if sender doesn’t have enough tokens', async function () {
@@ -140,15 +139,15 @@ describe('BABLToken contract', function () {
 
     it('Should update balances after transfers', async function () {
       const initialOwnerBalance = await token.balanceOf(ownerSigner.address);
-      const value = ethers.utils.parseEther("260000");
+      const value = ethers.utils.parseEther('260000');
       // Transfer 260_000e18 tokens from owner to userSigner1.
       await token.transfer(userSigner1.address, value);
-      const value2 = ethers.utils.parseEther("180000");
+      const value2 = ethers.utils.parseEther('180000');
       // Transfer another 180_000e18 tokens from owner to userSigner2.
       await token.transfer(userSigner2.address, value2);
 
       // Check balances.
-      const totalsent = ethers.utils.parseEther("440000");
+      const totalsent = ethers.utils.parseEther('440000');
       const finalOwnerBalance = await token.balanceOf(ownerSigner.address);
       const differenceBalance = BigInt(initialOwnerBalance) - BigInt(totalsent);
       expect(finalOwnerBalance).to.equal(differenceBalance);
@@ -175,7 +174,7 @@ describe('BABLToken contract', function () {
     });
 
     it('Time Lock Registry should properly register 1 Team Member, 1 Advisor and 1 Investor with its own vesting conditions', async function () {
-      //First of all there should be an allowance from BABL Token Owner into the Registry
+      // First of all there should be an allowance from BABL Token Owner into the Registry
       // Approve 310_000e18 tokens from owner to Time Lock Registry
       await token.approve(registry.address, ethers.utils.parseEther('310000'));
       const ownerBalance = await token.balanceOf(ownerSigner.address);
@@ -226,7 +225,6 @@ describe('BABLToken contract', function () {
     });
 
     it('Should cancel a registration of an Advisor before tokens are claimed', async function () {
-
       // Register 1 Advisor with 2_000 BABL 1Y cliff and 4Y of Vesting
       // Vesting starting date 1 March 2021 9h PST Unix Time 1614618000
       await registry.register(userSigner2.address, ethers.utils.parseEther('2000'), true, 1614618000);
@@ -241,20 +239,18 @@ describe('BABLToken contract', function () {
       expect(userSigner2RegisteredVestingEnd).to.equal(1614618000 + ONE_DAY_IN_SECONDS * 365 * 4);
 
       // Cancel the registration of above registered Advisor before the claim is done
-      const ownerSignerBalance= await token.balanceOf(ownerSigner.address);
+      const ownerSignerBalance = await token.balanceOf(ownerSigner.address);
       const registryBalance = await token.balanceOf(registry.address);
-      const newOwnerSignerBalance= BigInt(ownerSignerBalance) + BigInt(registryBalance);
+      const newOwnerSignerBalance = BigInt(ownerSignerBalance) + BigInt(registryBalance);
 
       await registry.cancelRegistration(userSigner2.address);
 
       expect(newOwnerSignerBalance).to.equal(await token.balanceOf(ownerSigner.address));
       expect(await token.balanceOf(registry.address)).to.equal(0);
       await expect(registry.cancelRegistration(userSigner2.address)).to.be.revertedWith('Not registered');
-    
     });
 
-    it('Should cancel all delivered tokens after a Team Member left before cliff', async function () {
-
+    it.only('Should cancel all delivered tokens after a Team Member left before cliff', async function () {
       // Register 1 Team Member with 26_000 BABL 1Y cliff and 4Y of Vesting
       // Vesting starting date 1 March 2021 9h PST Unix Time 1614618000
       await registry.register(userSigner1.address, ethers.utils.parseEther('26000'), true, 1614618000);
@@ -274,52 +270,58 @@ describe('BABLToken contract', function () {
       ethers.provider.send('evm_increaseTime', [ONE_DAY_IN_SECONDS * 30]);
 
       const userSigner1Balance = await token.balanceOf(userSigner1.address);
-      const userSigner1LockedBalance = await token.lockedBalance(userSigner1.address);
-      expect(userSigner1Balance).to.equal(ethers.utils.parseEther("26000"));
+      const userSigner1LockedBalance = await token.viewLockedBalance(userSigner1.address);
+      expect(userSigner1Balance).to.equal(ethers.utils.parseEther('26000'));
       await expect(registry.cancelRegistration(userSigner2.address)).to.be.revertedWith('Not registered');
 
-      
       // Cancel the registration of above registered Team Member before the cliff is passed
 
       const registryBalance = await token.balanceOf(registry.address);
-      const newRegistrySignerBalance= registryBalance.toString() + userSigner1LockedBalance.toString();
+      console.log(registryBalance, userSigner1LockedBalance);
+      const newRegistrySignerBalance = BigNumber.from(registryBalance).add(BigNumber.from(userSigner1LockedBalance));
       const newUserSigner1Balance = userSigner1Balance.toString() - userSigner1LockedBalance.toString();
-      //const newRegistrySignerBalance= registryBalance + userSigner1LockedBalance;
-      //const newUserSigner1Balance = userSigner1Balance - userSigner1LockedBalance;
-      //const newRegistrySignerBalance= registryBalance.toString() + userSigner1LockedBalance.toString();
-      //const newUserSigner1Balance = userSigner1Balance.toString() - userSigner1LockedBalance.toString();
-      //let newRegistrySignerBalance= ethers.utils.bigNumberify(registryBalance.add(userSigner1LockedBalance));
-      //let newUserSigner1Balance = ethers.utils.bigNumberify(userSigner1Balance.sub(userSigner1LockedBalance));
+      // const newRegistrySignerBalance= registryBalance + userSigner1LockedBalance;
+      // const newUserSigner1Balance = userSigner1Balance - userSigner1LockedBalance;
+      // const newRegistrySignerBalance= registryBalance.toString() + userSigner1LockedBalance.toString();
+      // const newUserSigner1Balance = userSigner1Balance.toString() - userSigner1LockedBalance.toString();
+      // let newRegistrySignerBalance= ethers.utils.bigNumberify(registryBalance.add(userSigner1LockedBalance));
+      // let newUserSigner1Balance = ethers.utils.bigNumberify(userSigner1Balance.sub(userSigner1LockedBalance));
 
       await registry.cancelDeliveredTokens(userSigner1.address);
 
-      //expect(await token.balanceOf(registry.address).toString()).to.equal(newRegistrySignerBalance);
-      //expect(await token.balanceOf(userSigner1.address).toString()).to.equal(newUserSigner1Balance);
-      console.log(`%s is the new balance of the registry, %s is the old balance`, newRegistrySignerBalance, registryBalance);
-      console.log(`%s is the new balance of the signer user1, %s is its old balance`, newUserSigner1Balance, userSigner1Balance);
+      // expect(await token.balanceOf(registry.address).toString()).to.equal(newRegistrySignerBalance);
+      // expect(await token.balanceOf(userSigner1.address).toString()).to.equal(newUserSigner1Balance);
+      console.log(
+        `%s is the new balance of the registry, %s is the old balance`,
+        newRegistrySignerBalance,
+        registryBalance,
+      );
+      console.log(
+        `%s is the new balance of the signer user1, %s is its old balance`,
+        newUserSigner1Balance,
+        userSigner1Balance,
+      );
 
       expect(await token.balanceOf(registry.address)).to.equal(newRegistrySignerBalance);
       expect(await token.balanceOf(userSigner1.address)).to.equal(newUserSigner1Balance);
 
-      //await expect(registry.cancelRegistration(userSigner2.address)).to.be.revertedWith('Not registered');
-    
+      // await expect(registry.cancelRegistration(userSigner2.address)).to.be.revertedWith('Not registered');
     });
-
   });
 
   describe('Minting', function () {
     it('Should fail a try of minting new tokens by an address that is not the owner', async function () {
       try {
         const totalSupply = await token.totalSupply();
-        const value2 = ethers.utils.parseEther("1000000");
-        let result = await token.mint.call({ from: userSigner1 });
+        const value2 = ethers.utils.parseEther('1000000');
+        const result = await token.mint.call({ from: userSigner1 });
         assert.equal(result.toString(), ownerSigner);
         await expect(token.connect(userSigner1).mint(userSigner1, value)).to.be.revertedWith('Only owner');
 
         // TOTAL_SUPPLY shouldn't have changed.
         expect(totalSupply).to.equal(value2);
       } catch (e) {
-        //assert.fail(null, null, `${userSigner1} is not owner`)};
+        // assert.fail(null, null, `${userSigner1} is not owner`)};
         console.log(`%s is not owner, which is %s`, userSigner1.address, ownerSigner.address);
       }
     });
@@ -349,7 +351,7 @@ describe('BABLToken contract', function () {
       try {
         const maxSupply = await token.maxSupply();
         const NEW_MAX_SUPPLY = maxSupply + 1;
-        let result = await token.changeMaxSupply.call({ from: userSigner1 });
+        const result = await token.changeMaxSupply.call({ from: userSigner1 });
         assert.equal(result.toString(), ownerSigner);
         await expect(token.connect(userSigner1).changeMaxSupply(NEW_MAX_SUPPLY, 251596800)).to.be.revertedWith(
           'Only owner',
@@ -358,7 +360,7 @@ describe('BABLToken contract', function () {
         // MAX_SUPPLY shouldn't have changed.
         expect(maxSupply).to.equal(NEW_MAX_SUPPLY);
       } catch (e) {
-        //assert.fail(null, null, `${userSigner1} is not owner`)};
+        // assert.fail(null, null, `${userSigner1} is not owner`)};
         console.log(`%s is not owner, which is %s`, userSigner1.address, ownerSigner.address);
       }
     });
@@ -368,8 +370,8 @@ describe('BABLToken contract', function () {
 
       // Try to change MAX_SUPPLY by a new number before 8 years
       // `require` will evaluate false and revert the transaction if MAX_SUPPLY is reached.
-      const NEW_MAX_SUPPLY = ethers.utils.parseEther("1100000");
-      const value2 = ethers.utils.parseEther("1000000");
+      const NEW_MAX_SUPPLY = ethers.utils.parseEther('1100000');
+      const value2 = ethers.utils.parseEther('1000000');
       await expect(token.changeMaxSupply(NEW_MAX_SUPPLY, 251596800)).to.be.revertedWith(
         'BABLToken::changeMaxSupply: a change on MAX_SUPPLY not allowed until 8 years after deployment',
       );
@@ -383,8 +385,8 @@ describe('BABLToken contract', function () {
 
       // Try to change MAX_SUPPLY by a new number after 8 years by a lower amount
       // `require` will evaluate false and revert the transaction if the new value is below the current MAX_SUPPLY.
-      const NEW_MAX_SUPPLY = ethers.utils.parseEther("900000"); // 900_000e18
-      const value2 = ethers.utils.parseEther("1000000");
+      const NEW_MAX_SUPPLY = ethers.utils.parseEther('900000'); // 900_000e18
+      const value2 = ethers.utils.parseEther('1000000');
       // Traveling on time >8 years ahead
       ethers.provider.send('evm_increaseTime', [ONE_DAY_IN_SECONDS * 365 * 8]);
       await expect(token.changeMaxSupply(NEW_MAX_SUPPLY, 251596800)).to.be.revertedWith(
@@ -400,7 +402,7 @@ describe('BABLToken contract', function () {
 
       // Try to change MAX_SUPPLY by a new number after 8 years by a lower amount
       // `require` will evaluate false and revert the transaction if the new value is above the cap (5%) the current MAX_SUPPLY.
-      const NEW_MAX_SUPPLY = ethers.utils.parseEther("1150000"); // 1_150_000e18
+      const NEW_MAX_SUPPLY = ethers.utils.parseEther('1150000'); // 1_150_000e18
       // Traveling on time >8 years ahead
       ethers.provider.send('evm_increaseTime', [ONE_DAY_IN_SECONDS * 365 * 8]);
       await expect(token.changeMaxSupply(NEW_MAX_SUPPLY, 251596800)).to.be.revertedWith(

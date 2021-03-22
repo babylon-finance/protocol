@@ -267,6 +267,43 @@ abstract contract TimeLockedToken is VoteToken {
      * @param account Account to check
      * @return Amount locked in the time of checking
      */
+    function viewLockedBalance(address account) public view returns (uint256) {
+        // distribution of locked tokens
+        // get amount from distributions
+
+        uint256 amount = distribution[account];
+        uint256 lockedAmount = amount;
+
+        // in case of restriction under cliff, all tokens will be locked until first year
+        if (
+            vestedToken[account].cliff == true &&
+            (block.timestamp < vestedToken[account].vestingBegin.add(vestingCliff))
+        ) {
+            return lockedAmount;
+        }
+
+        // in case of vesting has passed, all tokens are now available
+        if (block.timestamp >= vestedToken[account].vestingEnd) {
+            lockedAmount = 0;
+            if (msg.sender == account) {
+                // set distribution mapping to 0
+            }
+        } else {
+            // in case of still under vesting period, locked tokens are recalculated
+            lockedAmount = amount.mul(vestedToken[account].vestingEnd - block.timestamp).div(
+                vestedToken[account].vestingEnd - vestedToken[account].vestingBegin
+            );
+        }
+        return lockedAmount;
+    }
+
+    /**
+     * GOVERNANCE FUNCTION. Get locked balance for an account
+     *
+     * @notice Get locked balance for an account
+     * @param account Account to check
+     * @return Amount locked in the time of checking
+     */
     function lockedBalance(address account) public returns (uint256) {
         // distribution of locked tokens
         // get amount from distributions

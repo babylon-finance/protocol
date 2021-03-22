@@ -290,7 +290,6 @@ contract Strategy is ReentrancyGuard, Initializable {
      * @param _capital                  The capital to allocate to this strategy
      */
     function executeInvestment(uint256 _capital) public onlyKeeper nonReentrant onlyActiveGarden {
-        require(active, 'Idea needs to be active');
         require(capitalAllocated.add(_capital) <= maxCapitalRequested, 'Max capital reached');
         require(_capital >= minRebalanceCapital, 'Amount needs to be more than min');
         require(
