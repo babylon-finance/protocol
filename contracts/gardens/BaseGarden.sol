@@ -519,7 +519,7 @@ abstract contract BaseGarden is ERC20Upgradeable {
     function _payKeeper(address payable _keeper, uint256 _initialGas) internal {
         require(IBabController(controller).isValidKeeper(_keeper), 'Only a keeper can call this');
         uint256 gasCost = _initialGas.sub(gasleft()).mul(tx.gasprice);
-        uint256 totalFee = gasCost.add(IBabController(controller).getProtocolKeeperFee());
+        uint256 totalFee = IBabController(controller).getProtocolKeeperFee().preciseMul(gasCost);
         require(ERC20Upgradeable(reserveAsset).balanceOf(address(this)) >= gasCost, 'Not enough WETH for gas subsidy');
         // TODO: this assumes reserve asset is WETH
         // Pay Keeper in WETH
