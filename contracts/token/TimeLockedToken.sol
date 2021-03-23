@@ -259,7 +259,7 @@ abstract contract TimeLockedToken is VoteToken {
         // totalBalance - lockedBalance
         return balanceOf(account).sub(lockedBalance(account));
     }
-    
+
     /**
      * GOVERNANCE FUNCTION. View the locked balance for an account
      *
@@ -293,9 +293,8 @@ abstract contract TimeLockedToken is VoteToken {
             );
         }
         return lockedAmount;
-    
     }
-    
+
     /**
      * GOVERNANCE FUNCTION. Get locked balance for an account
      *
@@ -310,11 +309,8 @@ abstract contract TimeLockedToken is VoteToken {
 
         // in case of vesting has passed, all tokens are now available so we set mapping to 0
         if (block.timestamp >= vestedToken[account].vestingEnd && msg.sender == account && lockedAmount == 0) {
-         
             delete distribution[account];
-            
         } else {
-
             vestedToken[account].lastClaim = block.timestamp;
         }
         return lockedAmount;

@@ -3,6 +3,7 @@
 **Community-led Asset Management. Powered by DeFi.**
 
 [![CI](https://github.com/babylon-finance/protocol/actions/workflows/ci.yml/badge.svg)](https://github.com/babylon-finance/protocol/actions)
+
 <!-- [![Coverage Status](https://codecov.io/gh/babylon-finance/protocol/graph/badge.svg)](https://codecov.io/gh/babylon-finance/protocol) -->
 
 ## Setup git hooks
