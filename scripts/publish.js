@@ -1,9 +1,12 @@
 require('@nomiclabs/hardhat-ethers');
 
-const fs = require('fs');
+const fs = require('fs-extra');
+
 const chalk = require('chalk');
 
-const publishDir = '/tmp/hardhat/contracts';
+const publishDir = './publish/contracts';
+
+fs.ensureDirSync(publishDir);
 
 const isSolidity = (fileName) => fileName.indexOf('.sol') >= 0 && fileName.indexOf('.swp') < 0;
 
