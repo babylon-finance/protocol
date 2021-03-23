@@ -6,12 +6,6 @@
 
 <!-- [![Coverage Status](https://codecov.io/gh/babylon-finance/protocol/graph/badge.svg)](https://codecov.io/gh/babylon-finance/protocol) -->
 
-## Setup git hooks
-
-```bash
-git config core.hooksPath git-hooks/
-```
-
 ## Quick Start
 
 Git clone
@@ -36,6 +30,12 @@ Generate mnemonic.txt file
 
 ```bash
 yarn generate
+```
+
+Setup Git hooks
+
+```bash
+git config core.hooksPath git-hooks/
 ```
 
 ## Development
