@@ -274,7 +274,7 @@ describe('BABLToken contract', function () {
       ethers.provider.send('evm_increaseTime', [ONE_DAY_IN_SECONDS * 30]);
 
       const userSigner1Balance = await token.balanceOf(userSigner1.address);
-      const userSigner1LockedBalance = await token.lockedBalance(userSigner1.address);
+      const userSigner1LockedBalance = await token.viewLockedBalance(userSigner1.address);
       expect(userSigner1Balance).to.equal(ethers.utils.parseEther("26000"));
       await expect(registry.cancelRegistration(userSigner2.address)).to.be.revertedWith('Not registered');
 
@@ -282,26 +282,20 @@ describe('BABLToken contract', function () {
       // Cancel the registration of above registered Team Member before the cliff is passed
 
       const registryBalance = await token.balanceOf(registry.address);
-      const newRegistrySignerBalance= registryBalance.toString() + userSigner1LockedBalance.toString();
-      const newUserSigner1Balance = userSigner1Balance.toString() - userSigner1LockedBalance.toString();
-      //const newRegistrySignerBalance= registryBalance + userSigner1LockedBalance;
-      //const newUserSigner1Balance = userSigner1Balance - userSigner1LockedBalance;
-      //const newRegistrySignerBalance= registryBalance.toString() + userSigner1LockedBalance.toString();
-      //const newUserSigner1Balance = userSigner1Balance.toString() - userSigner1LockedBalance.toString();
-      //let newRegistrySignerBalance= ethers.utils.bigNumberify(registryBalance.add(userSigner1LockedBalance));
-      //let newUserSigner1Balance = ethers.utils.bigNumberify(userSigner1Balance.sub(userSigner1LockedBalance));
+
+      const newRegistrySignerBalance = registryBalance.add(userSigner1LockedBalance);
+      const newUserSigner1Balance = userSigner1Balance.sub(userSigner1LockedBalance);
+
 
       await registry.cancelDeliveredTokens(userSigner1.address);
 
-      //expect(await token.balanceOf(registry.address).toString()).to.equal(newRegistrySignerBalance);
-      //expect(await token.balanceOf(userSigner1.address).toString()).to.equal(newUserSigner1Balance);
       console.log(`%s is the new balance of the registry, %s is the old balance`, newRegistrySignerBalance, registryBalance);
       console.log(`%s is the new balance of the signer user1, %s is its old balance`, newUserSigner1Balance, userSigner1Balance);
 
       expect(await token.balanceOf(registry.address)).to.equal(newRegistrySignerBalance);
       expect(await token.balanceOf(userSigner1.address)).to.equal(newUserSigner1Balance);
 
-      //await expect(registry.cancelRegistration(userSigner2.address)).to.be.revertedWith('Not registered');
+      await expect(registry.cancelRegistration(userSigner1.address)).to.be.revertedWith('Not registered');
     
     });
 

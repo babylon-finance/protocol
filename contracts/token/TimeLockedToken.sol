@@ -259,15 +259,16 @@ abstract contract TimeLockedToken is VoteToken {
         // totalBalance - lockedBalance
         return balanceOf(account).sub(lockedBalance(account));
     }
-
+    
     /**
-     * GOVERNANCE FUNCTION. Get locked balance for an account
+     * GOVERNANCE FUNCTION. View the locked balance for an account
      *
-     * @notice Get locked balance for an account
+     * @notice View locked balance for an account
      * @param account Account to check
      * @return Amount locked in the time of checking
      */
-    function lockedBalance(address account) public returns (uint256) {
+
+    function viewLockedBalance(address account) public view returns (uint256) {
         // distribution of locked tokens
         // get amount from distributions
 
@@ -285,15 +286,35 @@ abstract contract TimeLockedToken is VoteToken {
         // in case of vesting has passed, all tokens are now available
         if (block.timestamp >= vestedToken[account].vestingEnd) {
             lockedAmount = 0;
-            if (msg.sender == account) {
-                // set distribution mapping to 0
-                delete distribution[account];
-            }
         } else {
             // in case of still under vesting period, locked tokens are recalculated
             lockedAmount = amount.mul(vestedToken[account].vestingEnd - block.timestamp).div(
                 vestedToken[account].vestingEnd - vestedToken[account].vestingBegin
             );
+        }
+        return lockedAmount;
+    
+    }
+    
+    /**
+     * GOVERNANCE FUNCTION. Get locked balance for an account
+     *
+     * @notice Get locked balance for an account
+     * @param account Account to check
+     * @return Amount locked in the time of checking
+     */
+    function lockedBalance(address account) public returns (uint256) {
+        // get amount from distributions locked tokens (if any)
+
+        uint256 lockedAmount = viewLockedBalance(account);
+
+        // in case of vesting has passed, all tokens are now available
+        if (block.timestamp >= vestedToken[account].vestingEnd && msg.sender == account && lockedAmount == 0) {
+         
+            delete distribution[account];
+            
+        } else {
+
             vestedToken[account].lastClaim = block.timestamp;
         }
         return lockedAmount;
