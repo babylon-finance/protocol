@@ -5,6 +5,7 @@
 ### Core Checks
 
 - [ ] FAILSAFE approach to the smartcontract
+
   - [ ] More confidence to investors and users, e.g., Self-check if it fails, it enter into failsafe mode -> delegating the control on a third party or returning cash flow back
   - [ ] Off chain computation (no gas left…)
 

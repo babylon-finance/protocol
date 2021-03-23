@@ -102,7 +102,7 @@ module.exports = {
     artifacts: './artifacts',
   },
   mocha: {
-    timeout: 60000,
+    timeout: 80000,
   },
 };
 

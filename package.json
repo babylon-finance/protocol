@@ -39,8 +39,8 @@
   },
   "scripts": {
     "clean": "rm -rf cache/* && rm -rf artifacts/* && rm -rf /tmp/hardhat/contracts/*",
-    "prettier": "prettier --write 'contracts/**/*.sol' 'test/**/*.js'",
-    "prettier:check": "prettier --check 'contracts/**/*.sol' 'test/**/*.js'",
+    "prettier": "prettier --write .",
+    "prettier:check": "prettier --check .",
     "compile": "hardhat compile",
     "publish": "hardhat run scripts/publish.js",
     "deploy": "hardhat run scripts/deploy.js --network localhost && hardhat run scripts/publish.js",

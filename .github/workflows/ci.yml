@@ -13,17 +13,17 @@ jobs:
     timeout-minutes: 20
 
     steps:
-    - uses: actions/checkout@v2
+      - uses: actions/checkout@v2
 
-    - name: Use node@12
-      uses: actions/setup-node@v1
-      with: { node-version: '12.x' }
+      - name: Use node@12
+        uses: actions/setup-node@v1
+        with: { node-version: '12.x' }
 
-    - name: Install dependencies
-      run: yarn --frozen-lockfile
+      - name: Install dependencies
+        run: yarn --frozen-lockfile
 
-    - name: Compile smart-contracts
-      run: yarn compile
+      - name: Compile smart-contracts
+        run: yarn compile
 
   test:
     name: Test
@@ -31,17 +31,17 @@ jobs:
     timeout-minutes: 20
 
     steps:
-    - uses: actions/checkout@v2
+      - uses: actions/checkout@v2
 
-    - name: Use node@12
-      uses: actions/setup-node@v1
-      with: { node-version: '12.x' }
+      - name: Use node@12
+        uses: actions/setup-node@v1
+        with: { node-version: '12.x' }
 
-    - name: Install dependencies
-      run: yarn --frozen-lockfile
+      - name: Install dependencies
+        run: yarn --frozen-lockfile
 
-    - name: Run tests
-      run: yarn test
+      - name: Run tests
+        run: yarn test
 
   prettier:
     name: Prettier
@@ -49,14 +49,14 @@ jobs:
     timeout-minutes: 20
 
     steps:
-    - uses: actions/checkout@v2
+      - uses: actions/checkout@v2
 
-    - name: Use node@12
-      uses: actions/setup-node@v1
-      with: { node-version: '12.x' }
+      - name: Use node@12
+        uses: actions/setup-node@v1
+        with: { node-version: '12.x' }
 
-    - name: Install dependencies
-      run: yarn --frozen-lockfile
+      - name: Install dependencies
+        run: yarn --frozen-lockfile
 
-    - name: Run prettier
-      run: yarn prettier:check
+      - name: Run prettier
+        run: yarn prettier:check
