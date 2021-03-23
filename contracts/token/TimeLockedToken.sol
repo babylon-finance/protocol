@@ -308,7 +308,7 @@ abstract contract TimeLockedToken is VoteToken {
 
         uint256 lockedAmount = viewLockedBalance(account);
 
-        // in case of vesting has passed, all tokens are now available
+        // in case of vesting has passed, all tokens are now available so we set mapping to 0
         if (block.timestamp >= vestedToken[account].vestingEnd && msg.sender == account && lockedAmount == 0) {
          
             delete distribution[account];

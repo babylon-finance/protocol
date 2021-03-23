@@ -289,8 +289,8 @@ describe('BABLToken contract', function () {
 
       await registry.cancelDeliveredTokens(userSigner1.address);
 
-      console.log(`%s is the new balance of the registry, %s is the old balance`, newRegistrySignerBalance, registryBalance);
-      console.log(`%s is the new balance of the signer user1, %s is its old balance`, newUserSigner1Balance, userSigner1Balance);
+      //console.log(`%s is the new balance of the registry, %s is the old balance`, newRegistrySignerBalance, registryBalance);
+      //console.log(`%s is the new balance of the signer user1, %s is its old balance`, newUserSigner1Balance, userSigner1Balance);
 
       expect(await token.balanceOf(registry.address)).to.equal(newRegistrySignerBalance);
       expect(await token.balanceOf(userSigner1.address)).to.equal(newUserSigner1Balance);
@@ -313,29 +313,29 @@ describe('BABLToken contract', function () {
         // TOTAL_SUPPLY shouldn't have changed.
         expect(totalSupply).to.equal(value2);
       } catch (e) {
-        //assert.fail(null, null, `${userSigner1} is not owner`)};
-        console.log(`%s is not owner, which is %s`, userSigner1.address, ownerSigner.address);
+        //console.log(`%s is not owner, which is %s`, userSigner1.address, ownerSigner.address);
       }
     });
 
-    /** 
+     
     it("Should fail when trying to mint new tokens beyond MAX_SUPPLY", async function () {
       const maxSupply = await token.maxSupply();
       const totalSupply = await token.totalSupply();
 
-      // Try to mint new BABL Tokens > (above) maxSupply to userSigner1.
-      // `require` will evaluate false and revert the transaction if MAX_SUPPLY is reached.
-      const value = maxSupply-totalSupply+1;
+      // We define the the limit + 1 to overflow the mint beyond maxSupply
+      const value = BigInt(maxSupply) - BigInt(totalSupply) + ethers.utils.parseEther("1");
+      
       await expect(
-        token.connect(ownerSigner).mint(userSigner1, value)
+        token.mint(userSigner1.address, value)
       ).to.be.revertedWith("BABLToken::mint: max supply exceeded");
+      //console.log(`%s is total supply, which is equal to the max supply %s`,totalSupply , maxSupply);
 
-      const newTotalSupply = await token.totalSupply();
 
-      // TOTAL_SUPPLY shouldn't have changed.
-      expect(totalSupply).to.equal(newTotalSupply);
+      // Total_Supply shouldn't have changed.
+      expect(totalSupply).to.equal(await token.totalSupply());
+      
     });
-    */
+    
   });
 
   describe('MAX_SUPPLY Change', function () {
@@ -352,8 +352,7 @@ describe('BABLToken contract', function () {
         // MAX_SUPPLY shouldn't have changed.
         expect(maxSupply).to.equal(NEW_MAX_SUPPLY);
       } catch (e) {
-        //assert.fail(null, null, `${userSigner1} is not owner`)};
-        console.log(`%s is not owner, which is %s`, userSigner1.address, ownerSigner.address);
+        //console.log(`%s is not owner, which is %s`, userSigner1.address, ownerSigner.address);
       }
     });
 
