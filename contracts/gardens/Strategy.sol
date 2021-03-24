@@ -226,8 +226,8 @@ contract Strategy is ReentrancyGuard, Initializable {
         capitalAllocated = 0;
         minRebalanceCapital = _minRebalanceCapital;
         maxCapitalRequested = _maxCapitalRequested;
-        totalVotes = _stake.toInt256().div(1000000000000);
-        absoluteTotalVotes = _stake.div(1000000000000);
+        totalVotes = _stake.div(garden.initialBuyRate()).toInt256();
+        absoluteTotalVotes = _stake.div(garden.initialBuyRate());
         dataSet = false;
     }
 
