@@ -203,7 +203,11 @@ contract RollingGarden is ReentrancyGuard, BaseGarden {
 
         ActionInfo memory depositInfo = _createIssuanceInfo(reserveAsset, _reserveAssetQuantity);
 
-        _validateIssuanceInfo(_minGardenTokenReceiveQuantity, depositInfo);
+        // Check that total supply is greater than min supply needed for issuance
+        // Note: A min supply amount is needed to avoid division by 0 when Garden token supply is 0
+        require(depositInfo.previousGardenTokenSupply >= minGardenTokenSupply, 'Supply must > than minimum');
+
+        require(depositInfo.gardenTokenQuantity >= _minGardenTokenReceiveQuantity, 'Must be > min Garden token');
 
         // Send Protocol Fee
         payProtocolFeeFromGarden(reserveAsset, depositInfo.protocolFees);
@@ -504,17 +508,6 @@ contract RollingGarden is ReentrancyGuard, BaseGarden {
     function _validateReserveAsset(address _reserveAsset, uint256 _quantity) internal view {
         require(_quantity > 0, 'Quantity > 0');
         require(IBabController(controller).isValidReserveAsset(_reserveAsset), 'Must be reserve asset');
-    }
-
-    function _validateIssuanceInfo(uint256 _minGardenTokenReceiveQuantity, ActionInfo memory _depositInfo)
-        internal
-        view
-    {
-        // Check that total supply is greater than min supply needed for issuance
-        // Note: A min supply amount is needed to avoid division by 0 when Garden token supply is 0
-        require(_depositInfo.previousGardenTokenSupply >= minGardenTokenSupply, 'Supply must > than minimum');
-
-        require(_depositInfo.gardenTokenQuantity >= _minGardenTokenReceiveQuantity, 'Must be > min Garden token');
     }
 
     function _validateRedemptionInfo(
