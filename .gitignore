@@ -85,3 +85,6 @@ artifacts/*
 /packages/.DS_Store
 
 coverage.json
+
+types
+publish

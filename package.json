@@ -6,6 +6,7 @@
   "devDependencies": {
     "@nomiclabs/hardhat-ethers": "^2.0.1",
     "@nomiclabs/hardhat-waffle": "^2.0.1",
+    "@typechain/ethers-v5": "^6.0.5",
     "eslint": "^7.2.0",
     "eslint-config-airbnb": "^18.2.1",
     "eslint-config-prettier": "^6.11.0",
@@ -15,13 +16,17 @@
     "eslint-plugin-prettier": "^3.1.4",
     "eslint-plugin-react": "^7.21.5",
     "eslint-plugin-react-hooks": "^4.0.0",
+    "fs-extra": "^9.1.0",
     "hardhat-contract-sizer": "^2.0.2",
     "hardhat-deploy-ethers": "^0.3.0-beta.7",
     "hardhat-docgen": "^1.0.3",
     "hardhat-gas-reporter": "^1.0.4",
     "prettier": "^2.2.1",
     "prettier-plugin-solidity": "^1.0.0-beta.6",
-    "solidity-coverage": "^0.7.16"
+    "solidity-coverage": "^0.7.16",
+    "ts-node": "^9.1.1",
+    "typechain": "^4.0.3",
+    "typescript": "^4.2.3"
   },
   "dependencies": {
     "@openzeppelin/contracts": "^3.3.0",
@@ -38,7 +43,7 @@
     "superagent": "^6.1.0"
   },
   "scripts": {
-    "clean": "rm -rf cache/* && rm -rf artifacts/* && rm -rf /tmp/hardhat/contracts/*",
+    "clean": "rm -rf cache/* && rm -rf artifacts/* && rm -rf ./publish/contracts/*",
     "prettier": "prettier --write .",
     "prettier:check": "prettier --check .",
     "compile": "hardhat compile",
@@ -55,6 +60,7 @@
     "test": "hardhat test --network hardhat",
     "gas-report": "env REPORT_GAS=1 yarn test",
     "estimate-size": "yarn run hardhat size-contracts",
-    "coverage": "hardhat coverage"
+    "coverage": "hardhat coverage",
+    "typechain": "typechain --target=ethers-v5 'artifacts/**/!(build-info)/**/!(*.dbg).json'"
   }
 }
