@@ -65,6 +65,9 @@ async function finalizeStrategy(strategy) {
 
 async function createStrategy(kind, signers, kyberIntegration, garden) {
   const strategy = await createKyberDummyStrategy(garden, kyberIntegration, signers[0]);
+  if (kind === 'dataset') {
+    return strategy;
+  }
   await curateStrategy(strategy, garden, signers);
   if (kind === 'candidate') {
     return strategy;

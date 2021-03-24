@@ -172,7 +172,7 @@ async function deployFolioFixture() {
   );
 
   // Create strategies
-  await createStrategy('candidate', [signer1, signer2, signer3], kyberTradeIntegration, garden2);
+  await createStrategy('dataset', [signer1, signer2, signer3], kyberTradeIntegration, garden);
   await createStrategy('candidate', [signer1, signer2, signer3], kyberTradeIntegration, garden2);
   // await createStrategy('active', [signer1, signer2, signer3], kyberTradeIntegration, garden2);
   // await createStrategy('active', [signer1, signer2, signer3], kyberTradeIntegration, garden2);

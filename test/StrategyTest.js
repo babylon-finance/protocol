@@ -43,9 +43,9 @@ describe('Strategy', function () {
 
       expect(address).to.equal(strategy.address);
       expect(strategist).to.equal(userSigner1.address);
-      expect(integration).to.equal(addresses.zero);
+      expect(integration).to.not.equal(addresses.zero);
       expect(stake).to.equal(ethers.utils.parseEther('5'));
-      expect(absoluteTotalVotes).to.equal(ethers.utils.parseEther('5'));
+      expect(absoluteTotalVotes).to.equal(5000000);
       expect(capitalAllocated).to.equal(ethers.BigNumber.from(0));
       expect(duration).to.equal(ethers.BigNumber.from(ONE_DAY_IN_SECONDS * 30));
       expect(expectedReturn).to.equal(ethers.utils.parseEther('0.05'));
@@ -61,7 +61,7 @@ describe('Strategy', function () {
 
       expect(address).to.equal(strategy.address);
       expect(active).to.equal(false);
-      expect(dataSet).to.equal(false);
+      expect(dataSet).to.equal(true);
       expect(finalized).to.equal(false);
       expect(executedAt).to.equal(ethers.BigNumber.from(0));
       expect(exitedAt).to.equal(ethers.BigNumber.from(0));

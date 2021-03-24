@@ -25,7 +25,7 @@ describe('KyberTradeIntegration', function () {
     userSigner2 = system.signer2;
     userSigner1 = system.signer1;
     garden = system.gardens.one;
-    strategy = system.strategies[0];
+    strategy = await ethers.getContractAt('Strategy', system.strategies[0]);
   });
 
   describe('Deployment', function () {
@@ -57,30 +57,6 @@ describe('KyberTradeIntegration', function () {
         value: ethers.utils.parseEther('2'),
       });
       expect(await wethToken.balanceOf(garden.address)).to.equal(ethers.utils.parseEther('6.1'));
-
-      const dataEnter = kyberAbi.encodeFunctionData(
-        kyberAbi.functions['trade(address,uint256,address,uint256,bytes)'],
-        [
-          addresses.tokens.WETH,
-          ethers.utils.parseEther('1'),
-          usdcToken.address,
-          ethers.utils.parseEther('900') / 10 ** 12,
-          EMPTY_BYTES,
-        ],
-      );
-
-      const dataExit = kyberAbi.encodeFunctionData(kyberAbi.functions['trade(address,uint256,address,uint256,bytes)'], [
-        usdcToken.address,
-        ethers.utils.parseEther('900') / 10 ** 12,
-        addresses.tokens.WETH,
-        ethers.utils.parseEther('0.1'),
-        EMPTY_BYTES,
-      ]);
-
-      await strategy.connect(userSigner1).setIntegrationData(kyberIntegration.address, dataEnter, dataExit, [], [], {
-        gasPrice: 0,
-      });
-
       await strategy.connect(userSigner3).curateIdea(await garden.balanceOf(userSigner3.getAddress()));
       await strategy.connect(userSigner2).curateIdea(await garden.balanceOf(userSigner2.getAddress()));
 

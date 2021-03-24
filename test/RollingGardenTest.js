@@ -65,8 +65,8 @@ describe('Garden', function () {
   describe('Garden deposit limit', async function () {
     it('reverts if the deposit is bigger than the limit', async function () {
       await expect(
-        garden1.connect(userSigner3).deposit(ethers.utils.parseEther('11'), 1, userSigner3.getAddress(), {
-          value: ethers.utils.parseEther('11'),
+        garden1.connect(userSigner3).deposit(ethers.utils.parseEther('21'), 1, userSigner3.getAddress(), {
+          value: ethers.utils.parseEther('21'),
         }),
       ).to.be.reverted;
     });
