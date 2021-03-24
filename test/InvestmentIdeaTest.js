@@ -16,6 +16,7 @@ describe('Investment Idea', function () {
   let garden1;
   let strategiesC;
   let balancerIntegration;
+  let strategy;
   let weth;
 
   beforeEach(async () => {
@@ -31,23 +32,24 @@ describe('Investment Idea', function () {
     userSigner3 = signer3;
     garden1 = gardens.one;
     strategiesC = strategies;
+    strategy = await ethers.getContractAt('Strategy', strategiesC[0]);
     weth = await ethers.getContractAt('IERC20', addresses.tokens.WETH);
   });
 
   describe('Deployment', function () {
     it('should successfully deploy the contract', async function () {
-      const deployed = await strategiesC[0].deployed();
+      const deployed = await strategy.deployed();
       expect(!!deployed).to.equal(true);
     });
   });
 
   describe('Ideator can change the duration', function () {
     it('strategist should be able to change the duration of an investment strategy', async function () {
-      await expect(strategiesC[0].connect(userSigner1).changeInvestmentDuration(ONE_DAY_IN_SECONDS)).to.not.be.reverted;
+      await expect(strategy.connect(userSigner1).changeInvestmentDuration(ONE_DAY_IN_SECONDS)).to.not.be.reverted;
     });
 
     it('other member should be able to change the duration of an investment strategy', async function () {
-      await expect(strategiesC[0].connect(userSigner3).changeInvestmentDuration(ONE_DAY_IN_SECONDS)).to.be.reverted;
+      await expect(strategy.connect(userSigner3).changeInvestmentDuration(ONE_DAY_IN_SECONDS)).to.be.reverted;
     });
   });
 });

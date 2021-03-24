@@ -14,7 +14,7 @@ describe('Strategy', function () {
   beforeEach(async () => {
     const { signer1, strategies } = await loadFixture(deployFolioFixture);
 
-    strategy = strategies[0];
+    strategy = await ethers.getContractAt('Strategy', strategies[0]);
     userSigner1 = signer1;
   });
 

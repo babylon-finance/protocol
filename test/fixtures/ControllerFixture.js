@@ -154,21 +154,34 @@ async function deployFolioFixture() {
     { value: ethers.utils.parseEther('0.1') },
   );
 
+  // Initial deposit
+  await garden2.connect(signer1).start(
+    ethers.utils.parseEther('20'),
+    1,
+    ethers.utils.parseEther('1000'),
+    2,
+    ethers.utils.parseEther('0.01'),
+    ONE_DAY_IN_SECONDS,
+    ethers.utils.parseEther('0.13'), // 13% Ideator
+    ethers.utils.parseEther('0.05'), // 5% Voters
+    ethers.utils.parseEther('0.02'), // 2% garden creator
+    ethers.utils.parseEther('0.10'), // 10% quorum
+    ONE_DAY_IN_SECONDS * 3,
+    ONE_DAY_IN_SECONDS * 365,
+    { value: ethers.utils.parseEther('0.1') },
+  );
+
   // Create strategies
-  await createStrategy('candidate', [signer1, signer2, signer3], kyberTradeIntegration, garden);
-  await createStrategy('candidate', [signer1, signer2, signer3], kyberTradeIntegration, garden);
-  await createStrategy('active', [signer1, signer2, signer3], kyberTradeIntegration, garden);
-  // await createStrategy('active', [signer1, signer2, signer3], kyberTradeIntegration, garden);
+  await createStrategy('candidate', [signer1, signer2, signer3], kyberTradeIntegration, garden2);
+  await createStrategy('candidate', [signer1, signer2, signer3], kyberTradeIntegration, garden2);
+  // await createStrategy('active', [signer1, signer2, signer3], kyberTradeIntegration, garden2);
+  // await createStrategy('active', [signer1, signer2, signer3], kyberTradeIntegration, garden2);
   // await createStrategy('finalized', [signer1, signer2, signer3], kyberTradeIntegration, garden);
   // await createStrategy('finalized', [signer1, signer2, signer3], kyberTradeIntegration, garden);
 
   console.log('Created and started garden', garden.address);
 
   const strategies = await garden.getStrategies();
-  console.log('strategies', strategies.length);
-  strategies.map(async (stratAddress) => {
-    return ethers.getContractAt('Strategy', stratAddress);
-  });
 
   return {
     babController,
