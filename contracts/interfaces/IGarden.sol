@@ -81,6 +81,8 @@ interface IGarden is IERC20 {
 
     function strategyCooldownPeriod() external pure returns (uint256);
 
+    function initialBuyRate() external pure returns (uint256);
+
     function strategyCreatorProfitPercentage() external pure returns (uint256);
 
     function strategyVotersProfitPercentage() external pure returns (uint256);

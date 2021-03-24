@@ -15,6 +15,7 @@ describe('Position testing', function () {
   let garden1;
   let treasuryD;
   let garden2;
+  let garden3;
   let weth;
 
   beforeEach(async () => {
@@ -30,16 +31,17 @@ describe('Position testing', function () {
     userSigner3 = signer3;
     garden1 = gardens.one;
     garden2 = gardens.two;
+    garden3 = gardens.three;
     weth = await ethers.getContractAt('IERC20', addresses.tokens.WETH);
   });
 
   describe('Initial Positions', async function () {
     it('when creating a garden the positions are at 0', async function () {
-      expect(await garden2.totalContributors()).to.equal(0);
-      expect(await garden2.getPrincipal()).to.equal(ethers.utils.parseEther('0'));
+      expect(await garden3.totalContributors()).to.equal(0);
+      expect(await garden3.getPrincipal()).to.equal(ethers.utils.parseEther('0'));
       const wethPosition = await garden1.getPrincipal();
       expect(wethPosition).to.be.gt(ethers.utils.parseEther('0'));
-      expect(await garden2.totalSupply()).to.equal(ethers.utils.parseEther('0'));
+      expect(await garden3.totalSupply()).to.equal(ethers.utils.parseEther('0'));
     });
 
     it('updates weth position accordingly when initializing the garden', async function () {
