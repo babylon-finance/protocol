@@ -5,6 +5,7 @@ require('hardhat-contract-sizer');
 require('hardhat-docgen');
 require('hardhat-gas-reporter');
 require('solidity-coverage');
+require('@typechain/hardhat');
 
 const { utils } = require('ethers');
 const fs = require('fs');

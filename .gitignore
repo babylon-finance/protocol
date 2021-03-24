@@ -87,4 +87,5 @@ artifacts/*
 coverage.json
 
 types
+typechain
 publish
