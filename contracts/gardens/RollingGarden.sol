@@ -324,30 +324,30 @@ contract RollingGarden is ReentrancyGuard, BaseGarden {
     }
 
     /**
-     * User can claim the returns from the strategies that his principal
+     * User can claim the profits from the strategies that his principal
      * was invested in.
      */
     function claimReturns() external nonReentrant onlyContributor {
-      Contributor memory contributor = contributors[msg.sender];
-      require(contributor.lastDepositAt > contributor.claimedAt, "Nothing new to claim");
-      uint256 totalProfits = 0;
-      for (uint i = 0; i < finalizedStrategies.length; i++) {
-        IStrategy strategy = IStrategy(finalizedStrategies[i]);
-        // Positive strategies not yet claimed
-        console.log(address(strategy));
-        if (strategy.exitedAt() > contributor.claimedAt && strategy.capitalReturned() > 0) {
-          // (User percentage * total profits) / (total capital allocated)
-          // TODO: replace current user principal with the principal of the user at that moment in time
-          totalProfits = totalProfits.add(contributor.totalCurrentPrincipal.mul(strategy.capitalReturned()).div(strategy.capitalAllocated()));
+        Contributor memory contributor = contributors[msg.sender];
+        require(contributor.lastDepositAt > contributor.claimedAt, 'Nothing new to claim');
+        uint256 totalProfits = 0;
+        for (uint256 i = 0; i < finalizedStrategies.length; i++) {
+            IStrategy strategy = IStrategy(finalizedStrategies[i]);
+            // Positive strategies not yet claimed
+            if (strategy.exitedAt() > contributor.claimedAt && strategy.capitalReturned() > 0) {
+                // (User percentage * total profits) / (total capital allocated)
+                // TODO: replace current user principal with the percentage of the user in the garden at that moment in time
+                totalProfits = totalProfits.add(
+                    contributor.totalCurrentPrincipal.mul(strategy.capitalReturned()).div(strategy.capitalAllocated())
+                );
+            }
         }
-      }
-      if (totalProfits > 0 && address(this).balance > 0) {
-        // Send eth
-        (bool sent, ) = msg.sender.call{value: totalProfits}('');
-        require(sent, 'Failed to send Ether');
-        contributor.claimedAt = block.timestamp;
-      }
-
+        if (totalProfits > 0 && address(this).balance > 0) {
+            // Send eth
+            (bool sent, ) = msg.sender.call{value: totalProfits}('');
+            require(sent, 'Failed to send Ether');
+            contributor.claimedAt = block.timestamp;
+        }
     }
 
     /**
