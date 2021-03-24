@@ -27,9 +27,9 @@ import {SafeCast} from '@openzeppelin/contracts/utils/SafeCast.sol';
 import {PreciseUnitMath} from '../lib/PreciseUnitMath.sol';
 import {IWETH} from '../interfaces/external/weth/IWETH.sol';
 import {IBabController} from '../interfaces/IBabController.sol';
-import {IGardenValuer} from '../interfaces/IGardenValuer.sol';
 import {IReservePool} from '../interfaces/IReservePool.sol';
 import {IPriceOracle} from '../interfaces/IPriceOracle.sol';
+import {IStrategy} from '../interfaces/IStrategy.sol';
 import {BaseGarden} from './BaseGarden.sol';
 
 /**
@@ -141,7 +141,7 @@ contract RollingGarden is ReentrancyGuard, BaseGarden {
         );
         // make initial deposit
         uint256 initialDepositAmount = msg.value;
-        uint256 initialTokens = initialDepositAmount.div(initialBuyRate);
+        uint256 initialTokens = initialDepositAmount;
         require(initialTokens >= minGardenTokenSupply, 'Initial Garden token supply too low');
         require(_depositHardlock > 1, 'Needs to be at least a couple of seconds to prevent flash loan attacks');
         minGardenTokenSupply = _minGardenTokenSupply;
@@ -169,7 +169,6 @@ contract RollingGarden is ReentrancyGuard, BaseGarden {
         _updatePrincipal(initialDepositAmount);
 
         require(totalSupply() > 0, 'Garden must receive an initial deposit');
-
         active = true;
         emit GardenTokenDeposited(msg.sender, msg.value, initialTokens, 0, block.timestamp);
     }
@@ -233,11 +232,11 @@ contract RollingGarden is ReentrancyGuard, BaseGarden {
         uint256 _gardenTokenQuantity,
         uint256 _minReserveReceiveQuantity,
         address payable _to
-    ) external nonReentrant onlyContributor onlyActive {
+    ) external nonReentrant onlyContributor {
         require(_gardenTokenQuantity <= balanceOf(msg.sender), 'Withdrawal amount <= to deposited amount');
         // Flashloan protection
         require(
-            block.timestamp.sub(contributors[msg.sender].timestamp) >= depositHardlock,
+            block.timestamp.sub(contributors[msg.sender].lastDepositAt) >= depositHardlock,
             'Cannot withdraw. Hardlock'
         );
         // Check this here to avoid having relayers
@@ -293,7 +292,7 @@ contract RollingGarden is ReentrancyGuard, BaseGarden {
         require(_gardenTokenQuantity <= balanceOf(msg.sender), 'Withdrawal amount <= to deposited amount');
         // Flashloan protection
         require(
-            block.timestamp.sub(contributors[msg.sender].timestamp) >= depositHardlock,
+            block.timestamp.sub(contributors[msg.sender].lastDepositAt) >= depositHardlock,
             'Cannot withdraw. Hardlock'
         );
 
@@ -322,6 +321,33 @@ contract RollingGarden is ReentrancyGuard, BaseGarden {
             withdrawalInfo.protocolFees,
             block.timestamp
         );
+    }
+
+    /**
+     * User can claim the returns from the strategies that his principal
+     * was invested in.
+     */
+    function claimReturns() external nonReentrant onlyContributor {
+      Contributor memory contributor = contributors[msg.sender];
+      require(contributor.lastDepositAt > contributor.claimedAt, "Nothing new to claim");
+      uint256 totalProfits = 0;
+      for (uint i = 0; i < finalizedStrategies.length; i++) {
+        IStrategy strategy = IStrategy(finalizedStrategies[i]);
+        // Positive strategies not yet claimed
+        console.log(address(strategy));
+        if (strategy.exitedAt() > contributor.claimedAt && strategy.capitalReturned() > 0) {
+          // (User percentage * total profits) / (total capital allocated)
+          // TODO: replace current user principal with the principal of the user at that moment in time
+          totalProfits = totalProfits.add(contributor.totalCurrentPrincipal.mul(strategy.capitalReturned()).div(strategy.capitalAllocated()));
+        }
+      }
+      if (totalProfits > 0 && address(this).balance > 0) {
+        // Send eth
+        (bool sent, ) = msg.sender.call{value: totalProfits}('');
+        require(sent, 'Failed to send Ether');
+        contributor.claimedAt = block.timestamp;
+      }
+
     }
 
     /**
@@ -359,7 +385,7 @@ contract RollingGarden is ReentrancyGuard, BaseGarden {
         require(_amount <= balanceOf(msg.sender), 'Withdrawal amount <= to deposited amount');
         // Flashloan protection
         require(
-            block.timestamp.sub(contributors[msg.sender].timestamp) >= depositHardlock,
+            block.timestamp.sub(contributors[msg.sender].lastDepositAt) >= depositHardlock,
             'Cannot withdraw. Hardlock'
         );
         require(redemptionsOpenUntil == 0, 'There is an open redemption window already');
@@ -425,7 +451,7 @@ contract RollingGarden is ReentrancyGuard, BaseGarden {
         view
         returns (uint256)
     {
-        uint256 preFeeReserveQuantity = _getWithdrawalReserveQuantity(_reserveAsset, _gardenTokenQuantity);
+        uint256 preFeeReserveQuantity = _gardenTokenQuantity;
 
         (, uint256 netReserveFlows) = _getFees(preFeeReserveQuantity, false, _gardenTokenQuantity);
 
@@ -456,16 +482,14 @@ contract RollingGarden is ReentrancyGuard, BaseGarden {
      * @return  bool                        Returns true if withdrawal is valid
      */
     function isWithdrawalValid(address _reserveAsset, uint256 _gardenTokenQuantity) external view returns (bool) {
-        uint256 setTotalSupply = totalSupply();
-
         if (
             _gardenTokenQuantity == 0 ||
             !IBabController(controller).isValidReserveAsset(_reserveAsset) ||
-            setTotalSupply < minGardenTokenSupply.add(_gardenTokenQuantity)
+            totalSupply() < minGardenTokenSupply.add(_gardenTokenQuantity)
         ) {
             return false;
         } else {
-            uint256 totalWithdrawalValue = _getWithdrawalReserveQuantity(_reserveAsset, _gardenTokenQuantity);
+            uint256 totalWithdrawalValue = _gardenTokenQuantity;
 
             (, uint256 expectedWithdrawalQuantity) = _getFees(totalWithdrawalValue, false, _gardenTokenQuantity);
 
@@ -516,11 +540,7 @@ contract RollingGarden is ReentrancyGuard, BaseGarden {
 
         (depositInfo.protocolFees, depositInfo.netFlowQuantity) = _getFees(depositInfo.preFeeReserveQuantity, true, 0);
 
-        depositInfo.gardenTokenQuantity = _getGardenTokenMintQuantity(
-            _reserveAsset,
-            depositInfo.netFlowQuantity,
-            depositInfo.previousGardenTokenSupply
-        );
+        depositInfo.gardenTokenQuantity = depositInfo.netFlowQuantity;
 
         // Calculate inflation and new position multiplier. Note: Round inflation up in order to round position multiplier down
         depositInfo.newGardenTokenSupply = depositInfo.gardenTokenQuantity.add(depositInfo.previousGardenTokenSupply);
@@ -539,7 +559,7 @@ contract RollingGarden is ReentrancyGuard, BaseGarden {
 
         withdrawalInfo.gardenTokenQuantity = _gardenTokenQuantity;
 
-        withdrawalInfo.preFeeReserveQuantity = _getWithdrawalReserveQuantity(_reserveAsset, _gardenTokenQuantity);
+        withdrawalInfo.preFeeReserveQuantity = _gardenTokenQuantity;
 
         (withdrawalInfo.protocolFees, withdrawalInfo.netFlowQuantity) = _getFees(
             withdrawalInfo.preFeeReserveQuantity,
@@ -592,58 +612,6 @@ contract RollingGarden is ReentrancyGuard, BaseGarden {
         return (protocolFees, netReserveFlow);
     }
 
-    function _getGardenTokenMintQuantity(
-        address _reserveAsset,
-        uint256 _netReserveFlows, // Value of reserve asset net of fees
-        uint256 _gardenTokenTotalSupply
-    ) internal view returns (uint256) {
-        // Get valuation of the Garden with the quote asset as the reserve asset.
-        // Reverts if price is not found
-        uint256 gardenValuationPerToken =
-            IGardenValuer(IBabController(controller).getGardenValuer()).calculateGardenValuation(
-                address(this),
-                _reserveAsset
-            );
-        gardenValuationPerToken = gardenValuationPerToken.sub(_netReserveFlows.preciseDiv(totalSupply()));
-
-        // Get reserve asset decimals
-        uint8 reserveAssetDecimals = ERC20(_reserveAsset).decimals();
-        uint256 baseUnits = uint256(10)**reserveAssetDecimals;
-        uint256 normalizedTotalReserveQuantityNetFees = _netReserveFlows.preciseDiv(baseUnits);
-
-        uint256 normalizedTotalReserveQuantityNetFeesAndPremium = _netReserveFlows.preciseDiv(baseUnits);
-
-        // Calculate Garden tokens to mint to depositor
-        uint256 denominator =
-            _gardenTokenTotalSupply.preciseMul(gardenValuationPerToken).add(normalizedTotalReserveQuantityNetFees).sub(
-                normalizedTotalReserveQuantityNetFeesAndPremium
-            );
-        uint256 quantityToMint =
-            normalizedTotalReserveQuantityNetFeesAndPremium.preciseMul(_gardenTokenTotalSupply).preciseDiv(denominator);
-        return quantityToMint;
-    }
-
-    function _getWithdrawalReserveQuantity(address _reserveAsset, uint256 _gardenTokenQuantity)
-        internal
-        view
-        returns (uint256)
-    {
-        // Get valuation of the Garden with the quote asset as the reserve asset. Returns value in precise units (10e18)
-        // Reverts if price is not found
-        uint256 gardenValuationPerToken =
-            IGardenValuer(IBabController(controller).getGardenValuer()).calculateGardenValuation(
-                address(this),
-                _reserveAsset
-            );
-
-        uint256 totalWithdrawalValueInPreciseUnits = _gardenTokenQuantity.preciseMul(gardenValuationPerToken);
-        // Get reserve asset decimals
-        uint8 reserveAssetDecimals = ERC20(_reserveAsset).decimals();
-        uint256 prePremiumReserveQuantity = totalWithdrawalValueInPreciseUnits.preciseMul(10**reserveAssetDecimals);
-
-        return prePremiumReserveQuantity;
-    }
-
     /**
      * Updates the contributor info in the array
      */
@@ -655,16 +623,7 @@ contract RollingGarden is ReentrancyGuard, BaseGarden {
         }
         // Save when the LP became a member in the current window
         if (contributor.totalCurrentPrincipal == 0) {
-            contributor.timestamp = block.timestamp;
-            contributor.averageDepositPrice = amount.div(tokensReceived);
-        } else {
-            // Avg Deposit Price = ((OldPrincipal * Avg Price old) +
-            //         (New principal * New price)) / Total Principal
-            contributor.averageDepositPrice = contributor
-                .averageDepositPrice
-                .preciseMul(contributor.totalCurrentPrincipal)
-                .add(amount.div(tokensReceived))
-                .preciseDiv(contributor.totalCurrentPrincipal.add(amount));
+            contributor.lastDepositAt = block.timestamp;
         }
         contributor.totalCurrentPrincipal = contributor.totalCurrentPrincipal.add(amount);
         contributor.tokensReceived = contributor.tokensReceived.add(tokensReceived);
@@ -676,7 +635,7 @@ contract RollingGarden is ReentrancyGuard, BaseGarden {
     function _updateContributorWithdrawalInfo(uint256 tokensWithdrawn, uint256 amount) internal {
         Contributor storage contributor = contributors[msg.sender];
         // If sold everything
-        uint256 principalWithdrawn = tokensWithdrawn * contributor.averageDepositPrice;
+        uint256 principalWithdrawn = tokensWithdrawn;
         if (balanceOf(msg.sender) == 0 || principalWithdrawn > contributor.totalCurrentPrincipal) {
             contributor.totalCurrentPrincipal = balanceOf(msg.sender).preciseMul(amount.preciseDiv(tokensWithdrawn));
         } else {

@@ -144,13 +144,12 @@ abstract contract BaseGarden is ERC20Upgradeable {
 
     struct Contributor {
         uint256 totalCurrentPrincipal; //wei
-        uint256 averageDepositPrice;
         uint256 tokensReceived;
-        uint256 timestamp;
+        uint256 lastDepositAt;
+        uint256 claimedAt;
     }
 
     /* ============ State Variables ============ */
-    uint256 public constant initialBuyRate = 1000000000000; // Initial buy rate for the manager
     uint256 public constant MAX_DEPOSITS_FUND_V1 = 1e21; // Max deposit per garden is 1000 eth for v1
     uint256 public constant MAX_TOTAL_IDEAS = 20; // Max number of ideas
     uint256 internal constant TEN_PERCENT = 1e17;
@@ -184,7 +183,7 @@ abstract contract BaseGarden is ERC20Upgradeable {
     uint256 public gardenInitializedAt; // Garden Initialized at timestamp
 
     // Min contribution in the garden
-    uint256 public minContribution = initialBuyRate; //wei
+    uint256 public minContribution = 1e18; //wei
     uint256 public minGardenTokenSupply;
 
     // Investment strategies variables
@@ -476,9 +475,9 @@ abstract contract BaseGarden is ERC20Upgradeable {
         Contributor memory contributor = contributors[_contributor];
         return (
             contributor.totalCurrentPrincipal,
-            contributor.averageDepositPrice,
             contributor.tokensReceived,
-            contributor.timestamp
+            contributor.lastDepositAt,
+            contributor.claimedAt
         );
     }
 

@@ -157,6 +157,7 @@ contract Strategy is ReentrancyGuard, Initializable {
     uint256 public maxCapitalRequested; // Amount of max capital to allocate
     uint256 public capitalAllocated; // Current amount of capital allocated
     uint256 public expectedReturn; // Expect return by this investment strategy
+    uint256 public capitalReturned; // Actual return by this investment strategy
     uint256 public minRebalanceCapital; // Min amount of capital so that it is worth to rebalance the capital here
     address[] public enterTokensNeeded; // Positions that need to be taken prior to enter trade
     uint256[] public enterTokensAmounts; // Amount of these positions
@@ -226,8 +227,8 @@ contract Strategy is ReentrancyGuard, Initializable {
         capitalAllocated = 0;
         minRebalanceCapital = _minRebalanceCapital;
         maxCapitalRequested = _maxCapitalRequested;
-        totalVotes = _stake.div(garden.initialBuyRate()).toInt256();
-        absoluteTotalVotes = _stake.div(garden.initialBuyRate());
+        totalVotes = _stake.toInt256();
+        absoluteTotalVotes = _stake;
         dataSet = false;
     }
 
@@ -341,13 +342,13 @@ contract Strategy is ReentrancyGuard, Initializable {
                 );
             }
         }
-        uint256 capitalReturned = garden.getPrincipal().sub(reserveAssetBeforeExiting);
+        capitalReturned = garden.getPrincipal().sub(reserveAssetBeforeExiting);
         // Mark as finalized
         finalized = true;
         active = false;
         exitedAt = block.timestamp;
         // Transfer rewards and update positions
-        _transferIdeaRewards(capitalReturned);
+        _transferIdeaRewards();
         // Moves strategy to finalized
         IGarden(garden).moveStrategyToFinalized(address(this));
     }
@@ -646,7 +647,7 @@ contract Strategy is ReentrancyGuard, Initializable {
             );
     }
 
-    function _transferIdeaRewards(uint256 capitalReturned) internal {
+    function _transferIdeaRewards() internal {
         address reserveAsset = garden.getReserveAsset();
         int256 reserveAssetDelta = 0;
 
