@@ -3,6 +3,7 @@ const { ONE_DAY_IN_SECONDS } = require('../../utils/constants.js');
 const { TWAP_ORACLE_WINDOW, TWAP_ORACLE_GRANULARITY } = require('../../utils/system.js');
 const addresses = require('../../utils/addresses');
 const argsUtil = require('../../utils/arguments.js');
+const { createStrategy } = require('./StrategyHelper.js');
 
 async function deployFolioFixture() {
   const [owner, signer1, signer2, signer3] = await ethers.getSigners();
@@ -138,7 +139,7 @@ async function deployFolioFixture() {
 
   // Initial deposit
   await garden.connect(signer1).start(
-    ethers.utils.parseEther('10'),
+    ethers.utils.parseEther('20'),
     1,
     ethers.utils.parseEther('1000'),
     2,
@@ -153,19 +154,21 @@ async function deployFolioFixture() {
     { value: ethers.utils.parseEther('0.1') },
   );
 
-  await garden.connect(signer1).addStrategy(
-    ethers.utils.parseEther('10'),
-    ethers.utils.parseEther('5'),
-    ONE_DAY_IN_SECONDS * 30,
-    ethers.utils.parseEther('0.05'), // 5%
-    ethers.utils.parseEther('1'),
-  );
+  // Create strategies
+  await createStrategy('candidate', [signer1, signer2, signer3], kyberTradeIntegration, garden);
+  await createStrategy('candidate', [signer1, signer2, signer3], kyberTradeIntegration, garden);
+  await createStrategy('active', [signer1, signer2, signer3], kyberTradeIntegration, garden);
+  // await createStrategy('active', [signer1, signer2, signer3], kyberTradeIntegration, garden);
+  // await createStrategy('finalized', [signer1, signer2, signer3], kyberTradeIntegration, garden);
+  // await createStrategy('finalized', [signer1, signer2, signer3], kyberTradeIntegration, garden);
 
   console.log('Created and started garden', garden.address);
 
   const strategies = await garden.getStrategies();
-
-  const strategy1 = await ethers.getContractAt('Strategy', strategies[0]);
+  console.log('strategies', strategies.length);
+  strategies.map(async (stratAddress) => {
+    return ethers.getContractAt('Strategy', stratAddress);
+  });
 
   return {
     babController,
@@ -187,7 +190,7 @@ async function deployFolioFixture() {
       two: garden2,
       three: garden3,
     },
-    strategies: [strategy1],
+    strategies,
     gardenValuer,
     priceOracle,
     owner,

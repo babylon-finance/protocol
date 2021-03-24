@@ -226,8 +226,8 @@ contract Strategy is ReentrancyGuard, Initializable {
         capitalAllocated = 0;
         minRebalanceCapital = _minRebalanceCapital;
         maxCapitalRequested = _maxCapitalRequested;
-        totalVotes = _stake.toInt256();
-        absoluteTotalVotes = _stake;
+        totalVotes = _stake.toInt256().div(1000000000000);
+        absoluteTotalVotes = _stake.div(1000000000000);
         dataSet = false;
     }
 
@@ -274,7 +274,7 @@ contract Strategy is ReentrancyGuard, Initializable {
         votes[msg.sender] = votes[msg.sender].add(_amount);
         absoluteTotalVotes = absoluteTotalVotes.add(abs(_amount).toUint256());
         totalVotes = totalVotes.add(_amount);
-        // TODO: Introduce conviction voting
+        // TODO: Redo and move with signatures to execute
         uint256 votingThreshold = garden.minVotersQuorum().preciseMul(garden.totalSupply());
         if (_amount > 0 && voters.length >= MIN_VOTERS_TO_BECOME_ACTIVE && totalVotes.toUint256() >= votingThreshold) {
             active = true;
