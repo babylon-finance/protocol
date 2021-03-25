@@ -71,6 +71,8 @@ interface IGarden is IERC20 {
 
     function getPrincipal() external view returns (uint256);
 
+    function absoluteReturns() external view returns (int256);
+
     function totalStake() external pure returns (uint256);
 
     function minVotersQuorum() external pure returns (uint256);
@@ -123,7 +125,7 @@ interface IGarden is IERC20 {
         uint256 _quantity
     ) external;
 
-    function moveStrategyToFinalized(address _strategy) external;
+    function moveStrategyToFinalized(int256 _returns, address _strategy) external;
 
     function expireCandidateStrategy(address _strategy) external;
 

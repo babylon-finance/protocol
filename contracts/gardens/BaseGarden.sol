@@ -143,14 +143,14 @@ abstract contract BaseGarden is ERC20Upgradeable {
     /* ============ Structs ============ */
 
     struct Contributor {
-        uint256 totalCurrentPrincipal; //wei
-        uint256 averageDepositPrice;
-        uint256 tokensReceived;
-        uint256 timestamp;
+        uint256 lastDepositAt;
+        uint256 initialDepositAt;
+        uint256 claimedAt;
+        uint256 numberOfOps;
+        uint256 gardenAverageOwnership;
     }
 
     /* ============ State Variables ============ */
-    uint256 public constant initialBuyRate = 1000000000000; // Initial buy rate for the manager
     uint256 public constant MAX_DEPOSITS_FUND_V1 = 1e21; // Max deposit per garden is 1000 eth for v1
     uint256 public constant MAX_TOTAL_IDEAS = 20; // Max number of ideas
     uint256 internal constant TEN_PERCENT = 1e17;
@@ -172,6 +172,7 @@ abstract contract BaseGarden is ERC20Upgradeable {
 
     // Keeps track of the reserve balance. In case we receive some through other means
     uint256 principal;
+    int256 absoluteReturns; // Total profits or losses of this garden
 
     // Indicates the minimum liquidity the asset needs to have to be tradable by this garden
     uint256 public minLiquidityAsset;
@@ -184,7 +185,7 @@ abstract contract BaseGarden is ERC20Upgradeable {
     uint256 public gardenInitializedAt; // Garden Initialized at timestamp
 
     // Min contribution in the garden
-    uint256 public minContribution = initialBuyRate; //wei
+    uint256 public minContribution = 1e18; //wei
     uint256 public minGardenTokenSupply;
 
     // Investment strategies variables
@@ -409,9 +410,11 @@ abstract contract BaseGarden is ERC20Upgradeable {
 
     /*
      * Moves an estrategy from the active array to the finalized array
+     * @param _returns       Positive or negative returns of the strategy
      * @param _strategy      Strategy to move from active to finalized
      */
-    function moveStrategyToFinalized(address _strategy) external onlyStrategy {
+    function moveStrategyToFinalized(int256 _returns, address _strategy) external onlyStrategy {
+        absoluteReturns.add(_returns);
         strategies.remove(_strategy);
         finalizedStrategies.push(_strategy);
     }
@@ -474,15 +477,17 @@ abstract contract BaseGarden is ERC20Upgradeable {
             uint256,
             uint256,
             uint256,
+            uint256,
             uint256
         )
     {
         Contributor memory contributor = contributors[_contributor];
         return (
-            contributor.totalCurrentPrincipal,
-            contributor.averageDepositPrice,
-            contributor.tokensReceived,
-            contributor.timestamp
+            contributor.lastDepositAt,
+            contributor.initialDepositAt,
+            contributor.claimedAt,
+            contributor.numberOfOps,
+            contributor.gardenAverageOwnership
         );
     }
 

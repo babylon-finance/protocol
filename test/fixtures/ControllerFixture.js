@@ -147,14 +147,14 @@ async function deployFolioFixture() {
 
   const gardens = await babController.getGardens();
 
-  const garden = await ethers.getContractAt('RollingGarden', gardens[0]);
+  const garden1 = await ethers.getContractAt('RollingGarden', gardens[0]);
 
   const garden2 = await ethers.getContractAt('RollingGarden', gardens[1]);
 
   const garden3 = await ethers.getContractAt('RollingGarden', gardens[2]);
 
   // Initial deposit
-  await garden.connect(signer1).start(
+  await garden1.connect(signer1).start(
     ethers.utils.parseEther('20'),
     1,
     ethers.utils.parseEther('1000'),
@@ -188,16 +188,17 @@ async function deployFolioFixture() {
   );
 
   // Create strategies
-  await createStrategy('dataset', [signer1, signer2, signer3], kyberTradeIntegration, garden);
+  await createStrategy('dataset', [signer1, signer2, signer3], kyberTradeIntegration, garden1);
   await createStrategy('candidate', [signer1, signer2, signer3], kyberTradeIntegration, garden2);
   // await createStrategy('active', [signer1, signer2, signer3], kyberTradeIntegration, garden2);
   // await createStrategy('active', [signer1, signer2, signer3], kyberTradeIntegration, garden2);
   // await createStrategy('finalized', [signer1, signer2, signer3], kyberTradeIntegration, garden);
   // await createStrategy('finalized', [signer1, signer2, signer3], kyberTradeIntegration, garden);
 
-  console.log('Created and started garden', garden.address);
+  console.log('Created and started garden', garden1.address);
 
-  const strategies = await garden.getStrategies();
+  const [strategy11] = await garden1.getStrategies();
+  const [strategy21] = await garden2.getStrategies();
 
   return {
     babController,
@@ -207,27 +208,29 @@ async function deployFolioFixture() {
     treasury,
     rewardsSupplySchedule,
     rewardsDistributor,
-    integrations: {
-      aaveIntegration,
-      compoundIntegration,
-      kyberTradeIntegration,
-      oneInchTradeIntegration,
-      balancerIntegration,
-      uniswapPoolIntegration,
-      yearnVaultIntegration,
-    },
-    gardens: {
-      one: garden,
-      two: garden2,
-      three: garden3,
-    },
-    strategies,
+    aaveIntegration,
+    compoundIntegration,
+    kyberTradeIntegration,
+    oneInchTradeIntegration,
+    balancerIntegration,
+    uniswapPoolIntegration,
+    yearnVaultIntegration,
+
+    garden1,
+    garden2,
+    garden3,
+
+    strategy11,
+    strategy21,
+
     gardenValuer,
     priceOracle,
+
     owner,
     signer1,
     signer2,
     signer3,
+
     contractsToPublish: [
       { name: 'BabController', contract: babController },
       { name: 'BABLToken', contract: bablToken },

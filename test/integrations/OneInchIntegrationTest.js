@@ -9,20 +9,18 @@ const { ZERO } = require('../../utils/constants');
 const { loadFixture } = waffle;
 
 describe('OneInchTradeIntegration', function () {
-  let system;
-  let oneInchIntegration;
-  let garden;
+  let oneInchTradeIntegration;
+  let garden1;
+  let babController;
 
   beforeEach(async () => {
-    system = await loadFixture(deployFolioFixture);
-    oneInchIntegration = system.integrations.oneInchTradeIntegration;
-    garden = system.gardens.one;
+    ({ babController, garden1, oneInchTradeIntegration } = await loadFixture(deployFolioFixture));
   });
 
   describe('Deployment', function () {
     it('should successfully deploy the contract', async function () {
-      const deployed = await system.babController.deployed();
-      const deployedKyber = await oneInchIntegration.deployed();
+      const deployed = await babController.deployed();
+      const deployedKyber = await oneInchTradeIntegration.deployed();
       expect(!!deployed).to.equal(true);
       expect(!!deployedKyber).to.equal(true);
     });
@@ -44,11 +42,11 @@ describe('OneInchTradeIntegration', function () {
 
     it('trade dai to usdc', async function () {
       expect(
-        await daiToken.connect(whaleSigner).transfer(garden.address, ethers.utils.parseEther('100'), {
+        await daiToken.connect(whaleSigner).transfer(garden1.address, ethers.utils.parseEther('100'), {
           gasPrice: 0,
         }),
       );
-      expect(await daiToken.balanceOf(garden.address)).to.equal(ethers.utils.parseEther('100'));
+      expect(await daiToken.balanceOf(garden1.address)).to.equal(ethers.utils.parseEther('100'));
       // Get the quote
       const quote = await superagent.get(`${addresses.api.oneinch}quote`).query({
         fromTokenAddress: daiToken.address,

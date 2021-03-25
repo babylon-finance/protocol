@@ -36,18 +36,13 @@ async function createKyberDummyStrategy(garden, kyberIntegration, signer) {
   return strategy;
 }
 
-async function curateStrategy(strategy, garden, signers) {
+async function deposit(garden, signers) {
   await garden.connect(signers[0]).deposit(ethers.utils.parseEther('2'), 1, signers[0].getAddress(), {
     value: ethers.utils.parseEther('2'),
   });
-  let balanceSigner = await garden.balanceOf(signers[0].getAddress());
-  await strategy.connect(signers[0]).curateIdea(balanceSigner);
-
   await garden.connect(signers[1]).deposit(ethers.utils.parseEther('2'), 1, signers[1].getAddress(), {
     value: ethers.utils.parseEther('2'),
   });
-  balanceSigner = await garden.balanceOf(signers[1].getAddress());
-  await strategy.connect(signers[1]).curateIdea(balanceSigner);
 }
 
 async function executeStrategy(strategy) {
@@ -68,7 +63,7 @@ async function createStrategy(kind, signers, kyberIntegration, garden) {
   if (kind === 'dataset') {
     return strategy;
   }
-  await curateStrategy(strategy, garden, signers);
+  await deposit(garden, signers);
   if (kind === 'candidate') {
     return strategy;
   }
