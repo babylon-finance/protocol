@@ -24,60 +24,50 @@ import {PreciseUnitMath} from '../lib/PreciseUnitMath.sol';
 import {SafeDecimalMath} from '../lib/SafeDecimalMath.sol';
 import {Math} from '../lib/Math.sol';
 
-
 import {TimeLockedToken} from './TimeLockedToken.sol';
 import {IRewardsDistributor} from '../interfaces/IRewardsDistributor.sol';
 
-
 contract RewardsSupplySchedule is Ownable, ReentrancyGuard {
-    using SafeMath for uint;
     using SafeMath for uint256;
-    using PreciseUnitMath for uint;
+    using SafeMath for uint256;
     using PreciseUnitMath for uint256;
-    using SafeDecimalMath for uint;
+    using PreciseUnitMath for uint256;
     using SafeDecimalMath for uint256;
-    using Math for uint;
+    using SafeDecimalMath for uint256;
+    using Math for uint256;
     using Math for uint256;
 
     /* ============ State Variables ============ */
-
 
     // The initial quarterly supply in Quarter 1 (Q1) is 53_571
     //uint public constant INITIAL_QUARTERLY_SUPPLY = 53_571_430e15; // 53_571e18 for first quarter
 
     // Max BABL rewards for mining 500_000e18
     uint256 public constant MAX_REWARD = 500_000e18;
-    
+
     uint256 public constant Q1_REWARDS = 53_571_428_571_428_600e6;
 
-    // Quarterly percentage decay of inflationary supply 
+    // Quarterly percentage decay of inflationary supply
     uint256 public constant DECAY_RATE = 120000000000000000; // 12% quarterly (each 90 days) (Rewards on Q1 = 1,12 * Rewards on Q2) Q1= Quarter 1, Q2 = Quarter 2
 
-    
-    constructor(
-        //TimeLockedToken _token,
-        //IRewardsDistributor _rewardsDistributor,
-        //uint _lastMintEvent,
-        //uint _currentQuarter
-    ) {
+    constructor() //TimeLockedToken _token,
+    //IRewardsDistributor _rewardsDistributor,
+    //uint _lastMintEvent,
+    //uint _currentQuarter
+    {
         //lastMintEvent = _lastMintEvent;
         //quarterCounter = _currentQuarter;
         //token = _token;
         //rewardsDistributor = _rewardsDistributor;
     }
 
-    function tokenSupplyPerQuarter(uint quarter) public pure returns (uint256) {
+    function tokenSupplyPerQuarter(uint256 quarter) public pure returns (uint256) {
+        require(quarter >= 1, 'RewardsSupplySchedule::tokenSupplyPerQuarter: There are only 1 or more quarters');
+        require(quarter < 513, 'RewardsSupplySchedule::tokenSupplyPerQuarter: overflow');
 
-        require(quarter>=1,"RewardsSupplySchedule::tokenSupplyPerQuarter: There are only 1 or more quarters");
-        require(quarter <513, "RewardsSupplySchedule::tokenSupplyPerQuarter: overflow");
-          
         uint256 firstFactor = (SafeDecimalMath.unit().add(DECAY_RATE)).powDecimal(quarter.sub(1));
         uint256 supplyForQuarter = Q1_REWARDS.divideDecimal(firstFactor);
 
-
         return supplyForQuarter;
-    } 
-
-    
-
+    }
 }

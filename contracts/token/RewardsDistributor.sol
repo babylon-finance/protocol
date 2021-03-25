@@ -35,7 +35,7 @@ import {SafeMath} from '@openzeppelin/contracts/math/SafeMath.sol';
 import {PreciseUnitMath} from '../lib/PreciseUnitMath.sol';
 import {Math} from '../lib/Math.sol';
 
-contract BABLRewardsDistributor is Ownable {
+contract RewardsDistributor is Ownable {
     using SafeMath for uint256;
     using SafeMath for uint256;
     using PreciseUnitMath for uint256;
@@ -117,17 +117,21 @@ contract BABLRewardsDistributor is Ownable {
 
     /* ============ Constructor ============ */
 
-    constructor(RewardsSupplySchedule _supply, uint256 epochs) {
-        uint256 timestamp = block.timestamp;
-        for (uint256 i = 0; i <= epochs; i++) {
-            rewardsProtocol[i].potentialProtocolTokenRewards = uint96(_supply.tokenSupplyPerQuarter(i));
-            rewardsProtocol[i].lastUpdate = timestamp;
-        }
+    constructor(RewardsSupplySchedule _supply) {
+        supplySchedule = _supply;
     }
 
     /* ============ External Functions ============ */
 
     /* ============ Getter Functions ============ */
+
+    function getEpochRewards(uint256 epochs) public {
+        uint256 timestamp = block.timestamp;
+        for (uint256 i = 0; i <= epochs; i++) {
+            rewardsProtocol[i].potentialProtocolTokenRewards = uint96(supplySchedule.tokenSupplyPerQuarter(i.add(1)));
+            rewardsProtocol[i].lastUpdate = timestamp;
+        }
+    }
 
     function getFinalizedStrategiesinGarden(IGarden _garden) public returns (uint256) {
         // TODO CHECK GAS REDUCTION
