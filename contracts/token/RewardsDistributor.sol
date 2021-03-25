@@ -27,33 +27,27 @@ import {IBabController} from '../interfaces/IBabController.sol';
 import {IGarden} from '../interfaces/IGarden.sol';
 import {IStrategy} from '../interfaces/IStrategy.sol';
 
-import {IRewardsDistributor} from  "../interfaces/IRewardsDistributor.sol";
-import {RewardsSupplySchedule} from  "./RewardsSupplySchedule.sol";
+import {IRewardsDistributor} from '../interfaces/IRewardsDistributor.sol';
+import {RewardsSupplySchedule} from './RewardsSupplySchedule.sol';
 
-
-import {SafeDecimalMath} from "../lib/SafeDecimalMath.sol";
+import {SafeDecimalMath} from '../lib/SafeDecimalMath.sol';
 import {SafeMath} from '@openzeppelin/contracts/math/SafeMath.sol';
 import {PreciseUnitMath} from '../lib/PreciseUnitMath.sol';
 import {Math} from '../lib/Math.sol';
 
-
-
 contract BABLRewardsDistributor is Ownable {
-    using SafeMath for uint;
     using SafeMath for uint256;
-    using PreciseUnitMath for uint;
+    using SafeMath for uint256;
     using PreciseUnitMath for uint256;
-    using SafeDecimalMath for uint;
+    using PreciseUnitMath for uint256;
     using SafeDecimalMath for uint256;
-    using Math for uint;
+    using SafeDecimalMath for uint256;
+    using Math for uint256;
     using Math for uint256;
 
     /* ========== Events ========== */
 
-
-    
     /* ============ Modifiers ============ */
-
 
     /* ============ State Variables ============ */
 
@@ -69,7 +63,7 @@ contract BABLRewardsDistributor is Ownable {
     // Strategies that the reward calculations belong to
     RewardsSupplySchedule public supplySchedule;
 
-    struct AccountStrategies{
+    struct AccountStrategies {
         bool isGardenCreator;
         bool isStrategist;
         bool isSteward;
@@ -78,7 +72,6 @@ contract BABLRewardsDistributor is Ownable {
         uint96 principalInStrategy;
         uint96 rewardsInStrategy;
         bool claimedRewards;
-
     }
     struct AccountTokenRewards {
         uint256 tokensRewardedAlready;
@@ -116,76 +109,71 @@ contract BABLRewardsDistributor is Ownable {
         uint96 availableProtocolTokenRewards;
         uint256 lastUpdate;
     }
-    mapping(uint256=> RewardsProtocol) public rewardsProtocol;
+    mapping(uint256 => RewardsProtocol) public rewardsProtocol;
 
     uint256 public EPOCH_DURATION = 90 days;
-
-
-
 
     /* ============ Functions ============ */
 
     /* ============ Constructor ============ */
 
-
-    constructor(RewardsSupplySchedule _supply, uint epochs) {
+    constructor(RewardsSupplySchedule _supply, uint256 epochs) {
         uint256 timestamp = block.timestamp;
-        for (uint i=0; i <= epochs; i++) {
+        for (uint256 i = 0; i <= epochs; i++) {
             rewardsProtocol[i].potentialProtocolTokenRewards = uint96(_supply.tokenSupplyPerQuarter(i));
             rewardsProtocol[i].lastUpdate = timestamp;
         }
-
     }
-
 
     /* ============ External Functions ============ */
 
-
     /* ============ Getter Functions ============ */
 
-    function getFinalizedStrategiesinGarden(IGarden _garden) public returns (uint) {
-        // TODO CHECK GAS REDUCTION 
+    function getFinalizedStrategiesinGarden(IGarden _garden) public returns (uint256) {
+        // TODO CHECK GAS REDUCTION
 
         address[] memory finalizedStrategies = _garden.getFinalizedStrategies();
-        uint256 strategiesCount = 0 ;
-        
-        for (uint i = 0 ; i <= finalizedStrategies.length ; i++) {
-                        
+        uint256 strategiesCount = 0;
+
+        for (uint256 i = 0; i <= finalizedStrategies.length; i++) {
             if (!strategyIncluded[address(finalizedStrategies[i])]) {
-                // Only updates new finalized strategies 
+                // Only updates new finalized strategies
                 IStrategy updatingStrategy = IStrategy(finalizedStrategies[i]);
 
                 strategiesCount++;
-                StrategyTokenRewards storage newFinalizedStrategy = strategyTokenRewards[address(updatingStrategy)];    
+                StrategyTokenRewards storage newFinalizedStrategy = strategyTokenRewards[address(updatingStrategy)];
                 newFinalizedStrategy.gardenBelonging = address(_garden);
                 newFinalizedStrategy.strategyProfit = updatingStrategy.profit();
                 newFinalizedStrategy.strategyPrincipal = updatingStrategy.capitalAllocated();
                 newFinalizedStrategy.strategyStart = updatingStrategy.executedAt();
                 newFinalizedStrategy.strategyEnd = updatingStrategy.exitedAt();
-                newFinalizedStrategy.strategyDuration = newFinalizedStrategy.strategyEnd.sub(newFinalizedStrategy.strategyStart);
-                newFinalizedStrategy.potentialTokenRewards = uint96(SafeDecimalMath.multiplyDecimal(newFinalizedStrategy.strategyPrincipal,newFinalizedStrategy.strategyDuration));
+                newFinalizedStrategy.strategyDuration = newFinalizedStrategy.strategyEnd.sub(
+                    newFinalizedStrategy.strategyStart
+                );
+                newFinalizedStrategy.potentialTokenRewards = uint96(
+                    SafeDecimalMath.multiplyDecimal(
+                        newFinalizedStrategy.strategyPrincipal,
+                        newFinalizedStrategy.strategyDuration
+                    )
+                );
                 newFinalizedStrategy.finalTokenRewards = uint96(0); // TODO To be calculated depending on profit
                 newFinalizedStrategy.strategist = address(updatingStrategy.strategist());
                 newFinalizedStrategy.voters = updatingStrategy.voters();
                 newFinalizedStrategy.lastUpdate = block.timestamp;
                 // we include it in the mapping to use a filter for updates
-                strategyIncluded[address(updatingStrategy)]=true;
+                strategyIncluded[address(updatingStrategy)] = true;
             }
-            
         }
-        
+
         return strategiesCount; // Returns the number of strategies updated
     }
-
 
     /* ========== View functions ========== */
 
     /**
      * @notice Retrieve the length of the finalized strategies in a garden array
      */
-    function finalizedStrategiesinGardenLength(IGarden _garden) external view returns (uint) {
+    function finalizedStrategiesinGardenLength(IGarden _garden) external view returns (uint256) {
         return _garden.getFinalizedStrategies().length;
     }
-
-
 }

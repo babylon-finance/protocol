@@ -17,22 +17,20 @@
 
 pragma solidity 0.7.4;
 
-
 interface IRewardsDistributor {
-    
     // Structs
     struct DistributionData {
         address destination;
-        uint amount;
+        uint256 amount;
     }
 
     // Views
     function authority() external view returns (address);
 
-    function distributions(uint index) external view returns (address destination, uint amount); // DistributionData
+    function distributions(uint256 index) external view returns (address destination, uint256 amount); // DistributionData
 
-    function distributionsLength() external view returns (uint);
+    function distributionsLength() external view returns (uint256);
 
     // Mutative Functions
-    function distributeRewards(uint amount) external returns (bool);
+    function distributeRewards(uint256 amount) external returns (bool);
 }
