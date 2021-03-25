@@ -7,29 +7,19 @@ const { deployFolioFixture } = require('../fixtures/ControllerFixture');
 const { loadFixture } = waffle;
 
 describe('CompoundIntegration', function () {
-  let system;
-  let owner;
-  let controller;
-  let compoundBorrowing;
+  let babController;
+  let compoundIntegration;
   const daiWhaleAddress = '0x6B175474E89094C44Da98b954EedeAC495271d0F';
-  let garden;
-  let compAbi;
-  let userSigner3;
+  let garden1;
 
   beforeEach(async () => {
-    system = await loadFixture(deployFolioFixture);
-    owner = system.owner;
-    controller = system.babController;
-    compoundBorrowing = system.integrations.compoundIntegration;
-    compAbi = compoundBorrowing.interface;
-    userSigner3 = system.signer3;
-    garden = system.gardens.one;
+    ({ garden1, babController, compoundIntegration } = await loadFixture(deployFolioFixture));
   });
 
   describe('Deployment', function () {
     it('should successfully deploy the contract', async function () {
-      const deployed = await controller.deployed();
-      const deployedC = await compoundBorrowing.deployed();
+      const deployed = await babController.deployed();
+      const deployedC = await compoundIntegration.deployed();
       expect(!!deployed).to.equal(true);
       expect(!!deployedC).to.equal(true);
     });
@@ -60,7 +50,7 @@ describe('CompoundIntegration', function () {
 
     describe('Compound Borrowing/Lending', function () {
       it('can supply ether', async function () {
-        expect(await cethToken.balanceOf(garden.address)).to.equal(0);
+        expect(await cethToken.balanceOf(garden1.address)).to.equal(0);
         // await expect(() =>
         //   owner.sendTransaction({
         //     to: garden.address,

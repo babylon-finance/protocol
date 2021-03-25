@@ -8,24 +8,21 @@ const { ADDRESS_ZERO } = require('../../utils/constants');
 const { loadFixture } = waffle;
 
 describe('UniswapPoolIntegrationTest', function () {
-  let system;
-  let uniswapIntegration;
-  let garden;
+  let uniswapPoolIntegration;
+  let garden1;
   let uniAbi;
-  let userSigner3;
+  let signer3;
+  let babController;
 
   beforeEach(async () => {
-    system = await loadFixture(deployFolioFixture);
-    uniswapIntegration = system.integrations.uniswapPoolIntegration;
-    userSigner3 = system.signer3;
-    uniAbi = uniswapIntegration.interface;
-    garden = system.gardens.one;
+    ({ babController, garden1, uniswapPoolIntegration, signer3 } = await loadFixture(deployFolioFixture));
+    uniAbi = uniswapPoolIntegration.interface;
   });
 
   describe('Deployment', function () {
     it('should successfully deploy the contract', async function () {
-      const deployed = await system.babController.deployed();
-      const deployedUni = await uniswapIntegration.deployed();
+      const deployed = await babController.deployed();
+      const deployedUni = await uniswapPoolIntegration.deployed();
       expect(!!deployed).to.equal(true);
       expect(!!deployedUni).to.equal(true);
     });
@@ -47,15 +44,15 @@ describe('UniswapPoolIntegrationTest', function () {
     });
 
     it('check that a valid pool is valid', async function () {
-      expect(await uniswapIntegration.isPool(addresses.uniswap.pairs.wethdai)).to.equal(true);
+      expect(await uniswapPoolIntegration.isPool(addresses.uniswap.pairs.wethdai)).to.equal(true);
     });
 
     it('check that an invalid pool is not valid', async function () {
-      await expect(uniswapIntegration.isPool(ADDRESS_ZERO)).to.be.reverted;
+      await expect(uniswapPoolIntegration.isPool(ADDRESS_ZERO)).to.be.reverted;
     });
 
     it('can enter and exit the weth dai pool', async function () {
-      await garden.connect(userSigner3).deposit(ethers.utils.parseEther('5'), 1, userSigner3.getAddress(), {
+      await garden1.connect(signer3).deposit(ethers.utils.parseEther('5'), 1, signer3.getAddress(), {
         value: ethers.utils.parseEther('5'),
       });
 
