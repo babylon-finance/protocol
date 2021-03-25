@@ -15,15 +15,15 @@ describe('Strategy', function () {
   let signer1;
   let signer2;
   let signer3;
-  let garden1;
-  let strategy1;
-  let strategy2;
+  let garden2;
+  let strategy11;
+  let strategy21;
 
   beforeEach(async () => {
-    ({ signer1, garden1, strategy1, strategy2, signer2, signer3 } = await loadFixture(deployFolioFixture));
+    ({ signer1, garden2, strategy11, strategy21, signer2, signer3 } = await loadFixture(deployFolioFixture));
 
-    strategyDataset = await ethers.getContractAt('Strategy', strategy1);
-    strategyCandidate = await ethers.getContractAt('Strategy', strategy2);
+    strategyDataset = await ethers.getContractAt('Strategy', strategy11);
+    strategyCandidate = await ethers.getContractAt('Strategy', strategy21);
   });
 
   describe('Strategy Deployment', async function () {
@@ -41,6 +41,7 @@ describe('Strategy', function () {
         integration,
         stake,
         absoluteTotalVotes,
+        totalVotes,
         capitalAllocated,
         duration,
         expectedReturn,
@@ -54,6 +55,7 @@ describe('Strategy', function () {
       expect(integration).to.not.equal(addresses.zero);
       expect(stake).to.equal(ethers.utils.parseEther('5'));
       expect(absoluteTotalVotes).to.equal(5000000);
+      expect(totalVotes).to.equal(5000000);
       expect(capitalAllocated).to.equal(ethers.BigNumber.from(0));
       expect(duration).to.equal(ethers.BigNumber.from(ONE_DAY_IN_SECONDS * 30));
       expect(expectedReturn).to.equal(ethers.utils.parseEther('0.05'));
@@ -80,19 +82,24 @@ describe('Strategy', function () {
     it('should execute investemnet idea', async function () {
       ethers.provider.send('evm_increaseTime', [ONE_DAY_IN_SECONDS * 2]);
 
-      const user2GardenBalance = await garden1.balanceOf(signer2.getAddress());
-      const user3GardenBalance = await garden1.balanceOf(signer3.getAddress());
+      const signer1Balance = await garden2.balanceOf(signer1.getAddress());
+      const signer2Balance = await garden2.balanceOf(signer2.getAddress());
 
       await strategyCandidate.executeInvestment(
         ethers.utils.parseEther('1'),
         [signer2.getAddress(), signer3.getAddress()],
-        [user2GardenBalance, user3GardenBalance],
-        user2GardenBalance.add(user3GardenBalance).toString(),
-        user2GardenBalance.add(user3GardenBalance).toString(),
+        [signer1Balance, signer2Balance],
+        signer1Balance.add(signer2Balance).toString(),
+        signer1Balance.add(signer2Balance).toString(),
         {
           gasPrice: 0,
         },
       );
+
+      const [, , , , absoluteTotalVotes, totalVotes] = await strategyCandidate.getStrategyDetails();
+
+      expect(absoluteTotalVotes).to.equal(9100000);
+      expect(totalVotes).to.equal(9100000);
     });
   });
 });

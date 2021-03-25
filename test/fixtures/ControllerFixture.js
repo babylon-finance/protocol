@@ -181,8 +181,8 @@ async function deployFolioFixture() {
 
   console.log('Created and started garden', garden1.address);
 
-  const [strategy1] = await garden1.getStrategies();
-  const [strategy2] = await garden2.getStrategies();
+  const [strategy11] = await garden1.getStrategies();
+  const [strategy21] = await garden2.getStrategies();
 
   return {
     babController,
@@ -203,8 +203,8 @@ async function deployFolioFixture() {
     garden2,
     garden3,
 
-    strategy1,
-    strategy2,
+    strategy11,
+    strategy21,
 
     gardenValuer,
     priceOracle,

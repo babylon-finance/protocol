@@ -10,14 +10,14 @@ const { deployFolioFixture } = require('./fixtures/ControllerFixture');
 describe('Investment Idea', function () {
   let signer1;
   let signer3;
-  let strategy1;
+  let strategy11;
   let strategyContract;
   let weth;
 
   beforeEach(async () => {
-    ({ signer1, signer3, strategy1 } = await loadFixture(deployFolioFixture));
+    ({ signer1, signer3, strategy11 } = await loadFixture(deployFolioFixture));
 
-    strategyContract = await ethers.getContractAt('Strategy', strategy1);
+    strategyContract = await ethers.getContractAt('Strategy', strategy11);
     weth = await ethers.getContractAt('IERC20', addresses.tokens.WETH);
   });
 

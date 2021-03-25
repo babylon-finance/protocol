@@ -14,14 +14,14 @@ describe('KyberTradeIntegration', function () {
   let signer1;
   let signer2;
   let signer3;
-  let strategy1;
+  let strategy11;
   let strategyContract;
 
   beforeEach(async () => {
-    ({ babController, garden1, strategy1, kyberTradeIntegration, signer1, signer2, signer3 } = await loadFixture(
+    ({ babController, garden1, strategy11, kyberTradeIntegration, signer1, signer2, signer3 } = await loadFixture(
       deployFolioFixture,
     ));
-    strategyContract = await ethers.getContractAt('Strategy', strategy1);
+    strategyContract = await ethers.getContractAt('Strategy', strategy11);
   });
 
   describe('Deployment', function () {

@@ -307,8 +307,8 @@ contract Strategy is ReentrancyGuard, Initializable {
         // Set votes data
         voters = _voters;
         votes = _votes;
-        absoluteTotalVotes = _absoluteTotalVotes;
-        totalVotes = _totalVotes;
+        absoluteTotalVotes = absoluteTotalVotes + _absoluteTotalVotes;
+        totalVotes = totalVotes + _totalVotes;
 
         // Execute enter trade
         garden.allocateCapitalToInvestment(_capital);
@@ -496,6 +496,7 @@ contract Strategy is ReentrancyGuard, Initializable {
             address,
             uint256,
             uint256,
+            int256,
             uint256,
             uint256,
             uint256,
@@ -510,6 +511,7 @@ contract Strategy is ReentrancyGuard, Initializable {
             integration,
             stake,
             absoluteTotalVotes,
+            totalVotes,
             capitalAllocated,
             duration,
             expectedReturn,
