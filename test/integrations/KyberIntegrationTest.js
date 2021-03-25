@@ -6,6 +6,7 @@ const addresses = require('../../utils/addresses');
 const { EMPTY_BYTES, ONE_DAY_IN_SECONDS } = require('../../utils/constants');
 
 const { loadFixture } = waffle;
+const { BigNumber } = ethers;
 
 describe('KyberTradeIntegration', function () {
   let system;
@@ -46,7 +47,7 @@ describe('KyberTradeIntegration', function () {
       usdcToken = await ethers.getContractAt('IERC20', addresses.tokens.USDC);
     });
 
-    it('trade weth to usdc', async function () {
+    it.only('trade weth to usdc', async function () {
       await garden.connect(userSigner3).deposit(ethers.utils.parseEther('2'), 1, userSigner3.getAddress(), {
         value: ethers.utils.parseEther('2'),
       });
@@ -57,14 +58,22 @@ describe('KyberTradeIntegration', function () {
         value: ethers.utils.parseEther('2'),
       });
       expect(await wethToken.balanceOf(garden.address)).to.equal(ethers.utils.parseEther('6.1'));
-      await strategy.connect(userSigner3).curateIdea(await garden.balanceOf(userSigner3.getAddress()));
-      await strategy.connect(userSigner2).curateIdea(await garden.balanceOf(userSigner2.getAddress()));
 
       ethers.provider.send('evm_increaseTime', [ONE_DAY_IN_SECONDS * 2]);
 
-      await strategy.executeInvestment(ethers.utils.parseEther('1'), {
-        gasPrice: 0,
-      });
+      const user2GardenBalance = await garden.balanceOf(userSigner2.getAddress());
+      const user3GardenBalance = await garden.balanceOf(userSigner3.getAddress());
+      console.log('user balance', user2GardenBalance.add(user3GardenBalance).toString());
+      await strategy.executeInvestment(
+        ethers.utils.parseEther('1'),
+        [userSigner2.getAddress(), userSigner3.getAddress()],
+        [user2GardenBalance, user3GardenBalance],
+        user2GardenBalance.add(user3GardenBalance).toString(),
+        user2GardenBalance.add(user3GardenBalance).toString(),
+        {
+          gasPrice: 0,
+        },
+      );
 
       expect(await wethToken.balanceOf(strategy.address)).to.equal(ethers.utils.parseEther('0'));
       expect(await usdcToken.balanceOf(strategy.address)).to.be.gt(ethers.utils.parseEther('97') / 10 ** 12);
