@@ -54,8 +54,8 @@ describe('Strategy', function () {
       expect(strategist).to.equal(signer1.address);
       expect(integration).to.not.equal(addresses.zero);
       expect(stake).to.equal(ethers.utils.parseEther('5'));
-      expect(absoluteTotalVotes).to.equal(5000000);
-      expect(totalVotes).to.equal(5000000);
+      expect(absoluteTotalVotes).to.equal(ethers.utils.parseEther('5'));
+      expect(totalVotes).to.equal(ethers.utils.parseEther('5'));
       expect(capitalAllocated).to.equal(ethers.BigNumber.from(0));
       expect(duration).to.equal(ethers.BigNumber.from(ONE_DAY_IN_SECONDS * 30));
       expect(expectedReturn).to.equal(ethers.utils.parseEther('0.05'));
@@ -98,8 +98,8 @@ describe('Strategy', function () {
 
       const [, , , , absoluteTotalVotes, totalVotes] = await strategyCandidate.getStrategyDetails();
 
-      expect(absoluteTotalVotes).to.equal(9100000);
-      expect(totalVotes).to.equal(9100000);
+      expect(absoluteTotalVotes).to.equal(ethers.utils.parseEther('9.1'));
+      expect(totalVotes).to.equal(ethers.utils.parseEther('9.1'));
     });
   });
 });

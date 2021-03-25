@@ -92,10 +92,9 @@ describe('Garden', function () {
       expect(wethPosition).to.be.gt(ethers.utils.parseEther('1.099'));
       // Contributor Struct
       const contributor = await garden1.contributors(signer3.getAddress());
-      expect(contributor.totalCurrentPrincipal).to.equal(ethers.utils.parseEther('1'));
-      expect(contributor.tokensReceived).to.equal(supplyAfter.sub(supplyBefore));
-      expect(contributor.averageDepositPrice).to.equal(1000000000000); // Initial buy rate
-      expect(contributor.timestamp).to.be.gt(0);
+      expect(contributor.lastDepositAt).to.be.gt(0);
+      expect(contributor.initialDepositAt).to.be.gt(0);
+      expect(contributor.numberOfOps).to.equal(1);
     });
 
     it('a contributor can make multiple deposits', async function () {
@@ -140,7 +139,8 @@ describe('Garden', function () {
       });
       expect(await garden1.getPrincipal()).to.equal(ethers.utils.parseEther('1.1'));
       expect(await garden1.totalContributors()).to.equal(2);
-      await expect(garden1.connect(signer3).withdraw(1000000, 1, signer3.getAddress())).to.be.reverted;
+      await expect(garden1.connect(signer3).withdraw(ethers.utils.parseEther('20'), 1, signer3.getAddress())).to.be
+        .reverted;
     });
 
     it('a contributor cannot make a deposit when the garden is disabled', async function () {
@@ -159,8 +159,10 @@ describe('Garden', function () {
       ethers.provider.send('evm_increaseTime', [ONE_DAY_IN_SECONDS * 90]);
       expect(await garden1.getPrincipal()).to.equal(ethers.utils.parseEther('1.1'));
       expect(await garden1.totalContributors()).to.equal(2);
-      await expect(garden1.connect(signer3).withdraw(10000000, 2, signer3.getAddress())).to.be.reverted;
-      await expect(garden1.connect(signer3).withdraw(1000001, 2, signer3.getAddress())).to.be.reverted;
+      await expect(garden1.connect(signer3).withdraw(ethers.utils.parseEther('1.12'), 2, signer3.getAddress())).to.be
+        .reverted;
+      await expect(garden1.connect(signer3).withdraw(ethers.utils.parseEther('20'), 2, signer3.getAddress())).to.be
+        .reverted;
     });
   });
 
@@ -192,15 +194,32 @@ describe('Garden', function () {
       await garden1.connect(signer3).deposit(ethers.utils.parseEther('1'), 1, signer3.getAddress(), {
         value: ethers.utils.parseEther('1'),
       });
+
       await expect(
         garden1.connect(signer3).addStrategy(
           ethers.utils.parseEther('10'),
-          ethers.utils.parseEther('0.001'),
+          ethers.utils.parseEther('1'),
           ONE_DAY_IN_SECONDS * 30,
           ethers.utils.parseEther('0.05'), // 5%
           ethers.utils.parseEther('1'),
         ),
       ).to.not.be.reverted;
+    });
+
+    it('a contributor should not be able to add an investment strategy with a small stake', async function () {
+      await garden1.connect(signer3).deposit(ethers.utils.parseEther('1'), 1, signer3.getAddress(), {
+        value: ethers.utils.parseEther('1'),
+      });
+
+      await expect(
+        garden1.connect(signer3).addStrategy(
+          ethers.utils.parseEther('10'),
+          ethers.utils.parseEther('0.00001'),
+          ONE_DAY_IN_SECONDS * 30,
+          ethers.utils.parseEther('0.05'), // 5%
+          ethers.utils.parseEther('1'),
+        ),
+      ).to.be.reverted;
     });
   });
 });

@@ -2,7 +2,7 @@ const { expect } = require('chai');
 const { ethers, waffle } = require('hardhat');
 
 const { loadFixture } = waffle;
-const { ONE_DAY_IN_SECONDS } = require('../utils/constants');
+const { ONE_DAY_IN_SECONDS, NOW } = require('../utils/constants');
 const addresses = require('../utils/addresses');
 const { deployFolioFixture } = require('./fixtures/ControllerFixture');
 
@@ -37,7 +37,7 @@ describe('Position testing', function () {
       expect(wethPosition).to.equal(ethers.utils.parseEther('0.1'));
       expect(await garden1.creator()).to.equal(await signer1.getAddress());
       expect(await garden1.balanceOf(signer1.getAddress())).to.equal(await garden1.totalSupply());
-      expect(await garden1.totalSupply()).to.equal(ethers.utils.parseEther('0.1').div(await garden1.initialBuyRate()));
+      expect(await garden1.totalSupply()).to.equal(ethers.utils.parseEther('0.1'));
     });
   });
 
@@ -50,6 +50,13 @@ describe('Position testing', function () {
         value: ethers.utils.parseEther('1'),
         gasPrice: 0,
       });
+      let contributor = await garden1.getContributor(signer3.address);
+      expect(contributor[0]).to.equal(contributor[1]);
+      expect(contributor[2]).to.equal(0);
+      expect(contributor[3]).to.equal(1);
+      const oldAverage = contributor[4];
+      expect(contributor[4]).to.equal(ethers.utils.parseEther('1').div(11).mul(10));
+
       expect(await garden1.totalContributors()).to.equal(2);
       const wethPosition = await garden1.getPrincipal();
       const gardenBalanceAfter = await weth.balanceOf(garden1.address);
@@ -59,6 +66,15 @@ describe('Position testing', function () {
       expect(wethPosition.sub(wethPositionBefore)).to.equal(ethers.utils.parseEther('1'));
       expect(await garden1.getPrincipal()).to.equal(ethers.utils.parseEther('1.1'));
       expect(await garden1.getPrincipal()).to.equal(ethers.utils.parseEther('1.1'));
+
+      await garden1.connect(signer3).deposit(ethers.utils.parseEther('0.5'), 1, signer3.getAddress(), {
+        value: ethers.utils.parseEther('0.5'),
+        gasPrice: 0,
+      });
+      contributor = await garden1.getContributor(signer3.address);
+      expect(contributor[0]).to.not.equal(contributor[1]);
+      expect(contributor[3]).to.equal(2);
+      expect(contributor[4]).to.be.gt(oldAverage);
     });
 
     it('supply and positions update accordingly after deposits & withdraws', async function () {
@@ -75,13 +91,18 @@ describe('Position testing', function () {
       const wethPosition = await garden1.getPrincipal();
       const gardenBalanceAfter = await weth.balanceOf(garden1.address);
       const supplyAfter = await garden1.totalSupply();
-      expect(supplyAfter.add(tokenBalance / 2)).to.equal(supplyBefore);
+      expect(supplyAfter.add(tokenBalance.div(2))).to.equal(supplyBefore);
       expect(gardenBalance.sub(gardenBalanceAfter)).to.equal(ethers.utils.parseEther('0.5'));
       expect(wethPositionBefore.sub(wethPosition)).to.equal(ethers.utils.parseEther('0.5'));
       expect(await garden1.getPrincipal()).to.equal(ethers.utils.parseEther('0.6'));
       // Check that the protocol didn't get an exit fee
       const protocolTreasuryAfter = await weth.balanceOf(treasury.address);
       expect(protocolTreasuryAfter.sub(protocolTreasury)).to.equal(ethers.utils.parseEther('0'));
+      const contributor = await garden1.getContributor(signer3.address);
+      expect(contributor[0]).to.equal(contributor[1]);
+      expect(contributor[2]).to.equal(0);
+      expect(contributor[3]).to.equal(2);
+      // TODO: Check moving average calc
     });
   });
 });

@@ -120,8 +120,6 @@ interface IStrategy {
 
     function maxCapitalRequested() external pure returns (uint256);
 
-    function capitalAllocated() external pure returns (uint256);
-
     function expectedReturn() external pure returns (uint256);
 
     function minRebalanceCapital() external pure returns (uint256);
@@ -145,6 +143,10 @@ interface IStrategy {
     function enterPayload() external pure returns (bytes memory);
 
     function exitPayload() external pure returns (bytes memory);
+
+    function capitalReturned() external returns (uint256);
+
+    function capitalAllocated() external returns (uint256);
 
     function finalized() external pure returns (bool);
 
