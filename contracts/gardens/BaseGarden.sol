@@ -143,10 +143,11 @@ abstract contract BaseGarden is ERC20Upgradeable {
     /* ============ Structs ============ */
 
     struct Contributor {
-        uint256 totalCurrentPrincipal; //wei
-        uint256 tokensReceived;
         uint256 lastDepositAt;
+        uint256 initialDepositAt;
         uint256 claimedAt;
+        uint256 numberOfOps;
+        uint256 gardenAverageOwnership;
     }
 
     /* ============ State Variables ============ */
@@ -469,15 +470,17 @@ abstract contract BaseGarden is ERC20Upgradeable {
             uint256,
             uint256,
             uint256,
+            uint256,
             uint256
         )
     {
         Contributor memory contributor = contributors[_contributor];
         return (
-            contributor.totalCurrentPrincipal,
-            contributor.tokensReceived,
             contributor.lastDepositAt,
-            contributor.claimedAt
+            contributor.initialDepositAt,
+            contributor.claimedAt,
+            contributor.numberOfOps,
+            contributor.gardenAverageOwnership
         );
     }
 

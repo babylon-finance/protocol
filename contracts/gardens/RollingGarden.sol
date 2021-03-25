@@ -164,8 +164,9 @@ contract RollingGarden is ReentrancyGuard, BaseGarden {
         // Deposit
         IWETH(weth).deposit{value: initialDepositAmount}();
 
+        uint256 previousBalance = balanceOf(msg.sender);
         _mint(creator, initialTokens);
-        _updateContributorDepositInfo(initialTokens, initialDepositAmount);
+        _updateContributorDepositInfo(previousBalance, initialDepositAmount);
         _updatePrincipal(initialDepositAmount);
 
         require(totalSupply() > 0, 'Garden must receive an initial deposit');
@@ -213,8 +214,9 @@ contract RollingGarden is ReentrancyGuard, BaseGarden {
         payProtocolFeeFromGarden(reserveAsset, depositInfo.protocolFees);
 
         // Updates Reserve Balance and Mint
+        uint256 previousBalance = balanceOf(msg.sender);
         _mint(_to, depositInfo.gardenTokenQuantity);
-        _updateContributorDepositInfo(depositInfo.gardenTokenQuantity, msg.value);
+        _updateContributorDepositInfo(previousBalance, msg.value);
         _updatePrincipal(depositInfo.newReservePositionBalance);
         emit GardenTokenDeposited(
             _to,
@@ -252,7 +254,7 @@ contract RollingGarden is ReentrancyGuard, BaseGarden {
         _validateRedemptionInfo(_minReserveReceiveQuantity, _gardenTokenQuantity, withdrawalInfo);
 
         _burn(msg.sender, _gardenTokenQuantity);
-        _updateContributorWithdrawalInfo(_gardenTokenQuantity, withdrawalInfo.netFlowQuantity);
+        _updateContributorWithdrawalInfo(withdrawalInfo.netFlowQuantity);
 
         // Check that the redemption is possible
         require(canWithdrawEthAmount(msg.sender, withdrawalInfo.netFlowQuantity), 'Not enough liquidity in the fund');
@@ -311,7 +313,7 @@ contract RollingGarden is ReentrancyGuard, BaseGarden {
         _validateRedemptionInfo(_minReserveReceiveQuantity, _gardenTokenQuantity, withdrawalInfo);
 
         withdrawalInfo.netFlowQuantity = reservePool.sellTokensToLiquidityPool(address(this), _gardenTokenQuantity);
-        _updateContributorWithdrawalInfo(_gardenTokenQuantity, withdrawalInfo.netFlowQuantity);
+        _updateContributorWithdrawalInfo(withdrawalInfo.netFlowQuantity);
 
         payProtocolFeeFromGarden(reserveAsset, withdrawalInfo.protocolFees);
 
@@ -339,10 +341,12 @@ contract RollingGarden is ReentrancyGuard, BaseGarden {
             IStrategy strategy = IStrategy(finalizedStrategies[i]);
             // Positive strategies not yet claimed
             if (strategy.exitedAt() > contributor.claimedAt && strategy.capitalReturned() > 0) {
-                // (User percentage * total profits) / (total capital allocated)
-                // TODO: replace current user principal with the percentage of the user in the garden at that moment in time
+                // (User percentage * strategy profits) / (strategy capital)
                 totalProfits = totalProfits.add(
-                    contributor.totalCurrentPrincipal.mul(strategy.capitalReturned()).div(strategy.capitalAllocated())
+                    contributor
+                        .gardenAverageOwnership
+                        .mul(strategy.capitalReturned().sub(strategy.capitalAllocated()))
+                        .div(strategy.capitalAllocated())
                 );
             }
         }
@@ -608,31 +612,45 @@ contract RollingGarden is ReentrancyGuard, BaseGarden {
     /**
      * Updates the contributor info in the array
      */
-    function _updateContributorDepositInfo(uint256 tokensReceived, uint256 amount) internal {
+    function _updateContributorDepositInfo(uint256 previousBalance, uint256 amount) internal {
         Contributor storage contributor = contributors[msg.sender];
         // If new contributor, create one, increment count, and set the current TS
-        if (contributor.totalCurrentPrincipal == 0) {
+        if (previousBalance == 0) {
             totalContributors = totalContributors.add(1);
+            contributor.gardenAverageOwnership = amount.preciseDiv(totalSupply());
+            contributor.initialDepositAt = block.timestamp;
+        } else {
+            // Cumulative moving average
+            // CMAn+1 = New value + (CMAn * operations) / (operations + 1)
+            contributor.gardenAverageOwnership = contributor
+                .gardenAverageOwnership
+                .mul(contributor.numberOfOps)
+                .add(balanceOf(msg.sender).preciseDiv(totalSupply()))
+                .div(contributor.numberOfOps.add(1));
         }
-        // Save when the LP became a member in the current window
-        if (contributor.totalCurrentPrincipal == 0) {
-            contributor.lastDepositAt = block.timestamp;
-        }
-        contributor.totalCurrentPrincipal = contributor.totalCurrentPrincipal.add(amount);
-        contributor.tokensReceived = contributor.tokensReceived.add(tokensReceived);
+        contributor.lastDepositAt = block.timestamp;
+        contributor.numberOfOps = contributor.numberOfOps.add(1);
     }
 
     /**
      * Updates the contributor info in the array
      */
-    function _updateContributorWithdrawalInfo(uint256 tokensWithdrawn, uint256 amount) internal {
+    function _updateContributorWithdrawalInfo(uint256 amount) internal {
         Contributor storage contributor = contributors[msg.sender];
         // If sold everything
-        uint256 principalWithdrawn = tokensWithdrawn;
-        if (balanceOf(msg.sender) == 0 || principalWithdrawn > contributor.totalCurrentPrincipal) {
-            contributor.totalCurrentPrincipal = balanceOf(msg.sender).preciseMul(amount.preciseDiv(tokensWithdrawn));
+        if (balanceOf(msg.sender) == 0) {
+            contributor.lastDepositAt = 0;
+            contributor.initialDepositAt = 0;
+            contributor.gardenAverageOwnership = 0;
+            contributor.numberOfOps = 0;
+            totalContributors = totalContributors.sub(1);
         } else {
-            contributor.totalCurrentPrincipal = contributor.totalCurrentPrincipal.sub(principalWithdrawn);
+            contributor.gardenAverageOwnership = contributor
+                .gardenAverageOwnership
+                .mul(contributor.numberOfOps)
+                .add(balanceOf(msg.sender).preciseDiv(totalSupply()))
+                .div(contributor.numberOfOps.add(1));
+            contributor.numberOfOps = contributor.numberOfOps.add(1);
         }
     }
 }
