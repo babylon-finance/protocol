@@ -172,6 +172,7 @@ abstract contract BaseGarden is ERC20Upgradeable {
 
     // Keeps track of the reserve balance. In case we receive some through other means
     uint256 principal;
+    int256 absoluteReturns; // Total profits or losses of this garden
 
     // Indicates the minimum liquidity the asset needs to have to be tradable by this garden
     uint256 public minLiquidityAsset;
@@ -409,9 +410,11 @@ abstract contract BaseGarden is ERC20Upgradeable {
 
     /*
      * Moves an estrategy from the active array to the finalized array
+     * @param _returns       Positive or negative returns of the strategy
      * @param _strategy      Strategy to move from active to finalized
      */
-    function moveStrategyToFinalized(address _strategy) external onlyStrategy {
+    function moveStrategyToFinalized(int256 _returns, address _strategy) external onlyStrategy {
+        absoluteReturns.add(_returns);
         strategies.remove(_strategy);
         finalizedStrategies.push(_strategy);
     }
