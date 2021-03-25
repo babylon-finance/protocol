@@ -172,7 +172,7 @@ contract Strategy is ReentrancyGuard, Initializable {
     bool public active; // Whether the strategy has met the voting quorum
     bool public dataSet; // Whether integration data is set
 
-    // Votes mapping
+    // Voters mapped to their votes.
     mapping(address => int256) public votes;
 
     // List of positions
@@ -267,37 +267,52 @@ contract Strategy is ReentrancyGuard, Initializable {
      * @param _amount                   Amount to curate, positive to endorse, negative to downvote
      * TODO: Meta Transaction
      */
-    function curateIdea(int256 _amount) external onlyContributor onlyActiveGarden {
-        require(_amount.toUint256() <= garden.balanceOf(msg.sender), 'Participant does not have enough balance');
-        if (votes[msg.sender] == 0) {
-            voters.push(msg.sender);
-        }
-        votes[msg.sender] = votes[msg.sender].add(_amount);
-        absoluteTotalVotes = absoluteTotalVotes.add(abs(_amount).toUint256());
-        totalVotes = totalVotes.add(_amount);
-        // TODO: Redo and move with signatures to execute
-        uint256 votingThreshold = garden.minVotersQuorum().preciseMul(garden.totalSupply());
-        if (_amount > 0 && voters.length >= MIN_VOTERS_TO_BECOME_ACTIVE && totalVotes.toUint256() >= votingThreshold) {
-            active = true;
-            enteredCooldownAt = block.timestamp;
-        }
-        if (_amount < 0 && totalVotes.toUint256() < votingThreshold && active && executedAt == 0) {
-            active = false;
-        }
-    }
+    // function curateIdea(int256 _amount) external onlyContributor onlyActiveGarden {
+    //     require(_amount.toUint256() <= garden.balanceOf(msg.sender), 'Participant does not have enough balance');
+    //     if (votes[msg.sender] == 0) {
+    //         voters.push(msg.sender);
+    //     }
+    //     votes[msg.sender] = votes[msg.sender].add(_amount);
+    //     absoluteTotalVotes = absoluteTotalVotes.add(abs(_amount).toUint256());
+    //     totalVotes = totalVotes.add(_amount);
+    //     // TODO: Redo and move with signatures to execute
+    //     uint256 votingThreshold = garden.minVotersQuorum().preciseMul(garden.totalSupply());
+    //     if (_amount > 0 && voters.length >= MIN_VOTERS_TO_BECOME_ACTIVE && totalVotes.toUint256() >= votingThreshold) {
+    //         active = true;
+    //         enteredCooldownAt = block.timestamp;
+    //     }
+    //     if (_amount < 0 && totalVotes.toUint256() < votingThreshold && active && executedAt == 0) {
+    //         active = false;
+    //     }
+    // }
 
     /**
      * Executes an strategy that has been activated and gone through the cooldown period.
+     * Keeper will validate that quorum is reached, cacluates all the voting data and push it.
      * @param _capital                  The capital to allocate to this strategy
      */
-    function executeInvestment(uint256 _capital) public onlyKeeper nonReentrant onlyActiveGarden {
-        require(active, 'Idea needs to be active');
+    function executeInvestment(
+        uint256 _capital,
+        address[] calldata _voters,
+        int256[] calldata _votes,
+        uint256 _absoluteTotalVotes,
+        int256 _totalVotes
+    ) public onlyKeeper nonReentrant onlyActiveGarden {
+        // require(active, 'Idea needs to be active');
         require(capitalAllocated.add(_capital) <= maxCapitalRequested, 'Max capital reached');
         require(_capital >= minRebalanceCapital, 'Amount needs to be more than min');
         require(
             block.timestamp.sub(enteredCooldownAt) >= garden.strategyCooldownPeriod(),
             'Idea has not completed the cooldown period'
         );
+        // Set votes data
+        for (uint256 i = 0; i < _voters.length; i++) {
+            votes[_voters[i]] = _votes[i];
+        }
+        voters = _voters;
+        absoluteTotalVotes = absoluteTotalVotes + _absoluteTotalVotes;
+        totalVotes = totalVotes + _totalVotes;
+        active = true;
         // Execute enter trade
         garden.allocateCapitalToInvestment(_capital);
         calculateAndEditPosition(garden.getReserveAsset(), _capital, _capital.toInt256(), LIQUID_STATUS);
@@ -350,7 +365,10 @@ contract Strategy is ReentrancyGuard, Initializable {
         // Transfer rewards and update positions
         _transferIdeaRewards();
         // Moves strategy to finalized
-        IGarden(garden).moveStrategyToFinalized(capitalReturned.toInt256().sub(capitalAllocated.toInt256()), address(this));
+        IGarden(garden).moveStrategyToFinalized(
+            capitalReturned.toInt256().sub(capitalAllocated.toInt256()),
+            address(this)
+        );
     }
 
     /**
@@ -484,6 +502,7 @@ contract Strategy is ReentrancyGuard, Initializable {
             address,
             uint256,
             uint256,
+            int256,
             uint256,
             uint256,
             uint256,
@@ -498,6 +517,7 @@ contract Strategy is ReentrancyGuard, Initializable {
             integration,
             stake,
             absoluteTotalVotes,
+            totalVotes,
             capitalAllocated,
             duration,
             expectedReturn,
