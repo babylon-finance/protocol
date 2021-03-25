@@ -309,7 +309,7 @@ contract Strategy is ReentrancyGuard, Initializable {
         votes = _votes;
         absoluteTotalVotes = absoluteTotalVotes + _absoluteTotalVotes;
         totalVotes = totalVotes + _totalVotes;
-
+active = true;
         // Execute enter trade
         garden.allocateCapitalToInvestment(_capital);
         calculateAndEditPosition(garden.getReserveAsset(), _capital, _capital.toInt256(), LIQUID_STATUS);
