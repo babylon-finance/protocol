@@ -28,6 +28,15 @@ async function deployFolioFixture() {
   // Approve Time Lock Registry to handle 31% of the Tokens for vesting (Team, Advisors, Investors)
   await bablToken.approve(timeLockRegistry.address, ethers.utils.parseEther('310000'));
 
+  // Deployment of BABL Rewards Supply Schedule
+  const RewardsSupplySchedule = await ethers.getContractFactory('RewardsSupplySchedule', owner);
+  const rewardsSupplySchedule = await RewardsSupplySchedule.deploy();
+  
+  // Deployment of BABL Rewards Distributor
+  const RewardsDistributor = await ethers.getContractFactory('RewardsDistributor', owner);
+  const rewardsDistributor = await RewardsDistributor.deploy(rewardsSupplySchedule.address, ethers.utils.parseEther('50'));
+
+
   const GardenValuer = await ethers.getContractFactory('GardenValuer', owner);
   const PriceOracle = await ethers.getContractFactory('PriceOracle', owner);
   const ReservePool = await ethers.getContractFactory('ReservePool', owner);
@@ -189,6 +198,8 @@ async function deployFolioFixture() {
     timeLockRegistry,
     reservePool,
     treasury,
+    rewardsSupplySchedule,
+    rewardsDistributor,
     integrations: {
       aaveIntegration,
       compoundIntegration,
@@ -214,6 +225,8 @@ async function deployFolioFixture() {
       { name: 'BabController', contract: babController },
       { name: 'BABLToken', contract: bablToken },
       { name: 'TimeLockRegistry', contract: timeLockRegistry },
+      { name: 'RewardsSupplySchedule', contract: rewardsSupplySchedule },
+      { name: 'RewardsDistributor', contract: rewardsDistributor},
       { name: 'StrategyFactory', contract: strategyFactory },
       { name: 'KyberTradeIntegration', contract: kyberTradeIntegration },
       { name: 'BalancerIntegration', contract: balancerIntegration },
