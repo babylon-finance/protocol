@@ -7,19 +7,17 @@ const addresses = require('../../utils/addresses');
 const { loadFixture } = waffle;
 
 describe('AaveIntegration', function () {
-  let system;
   let aaveIntegration;
-  let garden;
+  let garden1;
+  let babController;
 
   beforeEach(async () => {
-    system = await loadFixture(deployFolioFixture);
-    aaveIntegration = system.integrations.aaveIntegration;
-    garden = system.gardens.one;
+    ({ garden1, aaveIntegration, babController } = await loadFixture(deployFolioFixture));
   });
 
   describe('Deployment', function () {
     it('should successfully deploy the contract', async function () {
-      const deployed = await system.babController.deployed();
+      const deployed = await babController.deployed();
       const deployedAave = await aaveIntegration.deployed();
       expect(!!deployed).to.equal(true);
       expect(!!deployedAave).to.equal(true);
@@ -35,7 +33,7 @@ describe('AaveIntegration', function () {
     const daiWhaleAddress = '0x6B175474E89094C44Da98b954EedeAC495271d0F';
 
     async function printUserAccount(asset) {
-      const things = await lendingPool.getUserAccountData(garden.address);
+      const things = await lendingPool.getUserAccountData(garden1.address);
       console.log('health factor', ethers.utils.formatEther(things.healthFactor));
       console.log('collateral eth', ethers.utils.formatEther(things.totalCollateralETH));
       console.log('totalDebtETH eth', ethers.utils.formatEther(things.totalDebtETH));
@@ -55,14 +53,14 @@ describe('AaveIntegration', function () {
     });
 
     it('can deposit collateral', async function () {
-      expect(await daiToken.balanceOf(garden.address)).to.equal(0);
+      expect(await daiToken.balanceOf(garden1.address)).to.equal(0);
       expect(await daiToken.balanceOf(whaleSigner.getAddress())).to.not.equal(0);
       expect(
-        await daiToken.connect(whaleSigner).transfer(garden.address, ethers.utils.parseEther('10'), {
+        await daiToken.connect(whaleSigner).transfer(garden1.address, ethers.utils.parseEther('10'), {
           gasPrice: 0,
         }),
       );
-      expect(await daiToken.balanceOf(garden.address)).to.not.equal(0);
+      expect(await daiToken.balanceOf(garden1.address)).to.not.equal(0);
 
       // // Call deposit
       // await garden.depositCollateral(
@@ -118,12 +116,12 @@ describe('AaveIntegration', function () {
 
     it('can borrow usdc after depositing dai', async function () {
       expect(
-        await daiToken.connect(whaleSigner).transfer(garden.address, ethers.utils.parseEther('1000'), {
+        await daiToken.connect(whaleSigner).transfer(garden1.address, ethers.utils.parseEther('1000'), {
           gasPrice: 0,
         }),
       );
       expect(await daiToken.approve(aaveIntegration.address, ethers.utils.parseEther('1000')));
-      expect(await daiToken.balanceOf(garden.address)).to.equal(ethers.utils.parseEther('1000'));
+      expect(await daiToken.balanceOf(garden1.address)).to.equal(ethers.utils.parseEther('1000'));
 
       // // Call deposit
       // await garden.depositCollateral(

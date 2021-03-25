@@ -8,21 +8,18 @@ const { ADDRESS_ZERO } = require('../../utils/constants');
 const { loadFixture } = waffle;
 
 describe('YearnVaultIntegrationTest', function () {
-  let system;
   let yearnVaultIntegration;
-  let garden;
-  let userSigner3;
+  let garden1;
+  let signer3;
+  let babController;
 
   beforeEach(async () => {
-    system = await loadFixture(deployFolioFixture);
-    yearnVaultIntegration = system.integrations.yearnVaultIntegration;
-    userSigner3 = system.signer3;
-    garden = system.gardens.one;
+    ({ garden1, babController, yearnVaultIntegration, signer3 } = await loadFixture(deployFolioFixture));
   });
 
   describe('Deployment', function () {
     it('should successfully deploy the contract', async function () {
-      const deployed = await system.babController.deployed();
+      const deployed = await babController.deployed();
       const deployedYearn = await yearnVaultIntegration.deployed();
       expect(!!deployed).to.equal(true);
       expect(!!deployedYearn).to.equal(true);
@@ -63,7 +60,7 @@ describe('YearnVaultIntegrationTest', function () {
       // expect(await daiToken.balanceOf(garden.address)).to.equal(
       //   ethers.utils.parseEther("1000")
       // );
-      await garden.connect(userSigner3).deposit(ethers.utils.parseEther('1'), 1, userSigner3.getAddress(), {
+      await garden1.connect(signer3).deposit(ethers.utils.parseEther('1'), 1, signer3.getAddress(), {
         value: ethers.utils.parseEther('1'),
       });
       const amountToDeposit = ethers.utils.parseEther('1000');

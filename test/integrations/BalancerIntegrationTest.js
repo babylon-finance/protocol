@@ -8,27 +8,16 @@ const { ADDRESS_ZERO, ONE_DAY_IN_SECONDS } = require('../../utils/constants');
 const { loadFixture } = waffle;
 
 describe('BalancerIntegrationTest', function () {
-  let system;
   let balancerIntegration;
-  let balancerAbi;
-  let garden;
-  let userSigner1;
-  let userSigner3;
-  let strategy;
+  let babController;
 
   beforeEach(async () => {
-    system = await loadFixture(deployFolioFixture);
-    balancerIntegration = system.integrations.balancerIntegration;
-    userSigner1 = system.signer1;
-    userSigner3 = system.signer3;
-    balancerAbi = balancerIntegration.interface;
-    garden = system.gardens.one;
-    strategy = system.strategies[0];
+    ({ balancerIntegration, babController } = await loadFixture(deployFolioFixture));
   });
 
   describe('Deployment', function () {
     it('should successfully deploy the contract', async function () {
-      const deployed = await system.babController.deployed();
+      const deployed = await babController.deployed();
       const deployedBalancer = await balancerIntegration.deployed();
       expect(!!deployed).to.equal(true);
       expect(!!deployedBalancer).to.equal(true);
