@@ -7,9 +7,6 @@ const { createStrategy } = require('./StrategyHelper.js');
 
 async function deployFolioFixture() {
   const [owner, signer1, signer2, signer3] = await ethers.getSigners();
-  // We get the contract to deploy
-  // const Greeter = await ethers.getContractFactory('Greeter');
-  // const greeter = await Greeter.deploy('Hello, Hardhat!');
 
   const SafeDecimalMathFactory = await ethers.getContractFactory('SafeDecimalMath');
   const SafeDecimalMath = await SafeDecimalMathFactory.deploy();
