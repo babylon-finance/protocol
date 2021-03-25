@@ -172,7 +172,7 @@ contract Strategy is ReentrancyGuard, Initializable {
     bool public dataSet; // Whether integration data is set
 
     // Votes values mapped to voters
-    int256[] public votes;
+    mapping(address => int256) public votes;
 
     // List of positions
     address[] public positions;
@@ -305,11 +305,13 @@ contract Strategy is ReentrancyGuard, Initializable {
             'Idea has not completed the cooldown period'
         );
         // Set votes data
+        for (uint256 i = 0; i < _voters.length; i++) {
+            votes[_voters[i]] = _votes[i];
+        }
         voters = _voters;
-        votes = _votes;
         absoluteTotalVotes = absoluteTotalVotes + _absoluteTotalVotes;
         totalVotes = totalVotes + _totalVotes;
-active = true;
+        active = true;
         // Execute enter trade
         garden.allocateCapitalToInvestment(_capital);
         calculateAndEditPosition(garden.getReserveAsset(), _capital, _capital.toInt256(), LIQUID_STATUS);
@@ -697,7 +699,7 @@ active = true;
             uint256 votersProfits = garden.strategyVotersProfitPercentage().preciseMul(profits);
             // TODO: Pull rewards
             for (uint256 i = 0; i < voters.length; i++) {
-                int256 voterWeight = votes[i];
+                int256 voterWeight = votes[voters[i]];
                 if (voterWeight > 0) {
                     uint256 voterProfits = votersProfits.mul(voterWeight.toUint256()).div(totalVotes.toUint256());
                     if (strategist == garden.creator()) {
@@ -722,7 +724,7 @@ active = true;
             // Send weth rewards to voters that voted against
             // TODO: Pull rewards
             for (uint256 i = 0; i < voters.length; i++) {
-                int256 voterWeight = votes[i];
+                int256 voterWeight = votes[voters[i]];
                 if (voterWeight < 0) {
                     require(
                         ERC20(reserveAsset).transferFrom(
