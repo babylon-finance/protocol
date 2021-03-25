@@ -171,7 +171,7 @@ contract Strategy is ReentrancyGuard, Initializable {
     bool public active; // Whether the strategy has met the voting quorum
     bool public dataSet; // Whether integration data is set
 
-    // Votes values mapped to voters
+    // Voters mapped to their votes.
     mapping(address => int256) public votes;
 
     // List of positions
