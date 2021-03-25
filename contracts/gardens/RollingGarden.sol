@@ -340,7 +340,11 @@ contract RollingGarden is ReentrancyGuard, BaseGarden {
         for (uint256 i = 0; i < finalizedStrategies.length; i++) {
             IStrategy strategy = IStrategy(finalizedStrategies[i]);
             // Positive strategies not yet claimed
-            if (strategy.exitedAt() > contributor.claimedAt && strategy.capitalReturned() > 0) {
+            if (
+                strategy.exitedAt() > contributor.claimedAt &&
+                strategy.enteredAt() >= contributor.initialDepositAt &&
+                strategy.capitalReturned() > strategy.capitalAllocated()
+            ) {
                 // (User percentage * strategy profits) / (strategy capital)
                 totalProfits = totalProfits.add(
                     contributor
