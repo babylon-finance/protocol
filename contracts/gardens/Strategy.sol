@@ -94,14 +94,16 @@ contract Strategy is ReentrancyGuard, Initializable {
 
     /**
      * Throws if the sender is not a keeper in the protocol
+     * @param _fee                     The fee paid to keeper to compensate the gas cost
      */
     modifier onlyKeeper(uint256 _fee) {
         require(IBabController(controller).isValidKeeper(msg.sender), 'Only a keeper can call this');
-        require(_fee < (gasleft() * 1000 gwei), 'Fee is too high');
+        // We assume that calling keeper functions should be less expensive than 1 million gas and the gas price should be lower than 1000 gwei.
+        require(_fee < (1000000 * 1000 gwei), 'Fee is too high');
         _;
     }
 
-    /* ============ Struct ============ */
+    /* ============ Constants ============ */
 
     // Subposition constants
     uint8 constant LIQUID_STATUS = 0;
@@ -112,6 +114,8 @@ contract Strategy is ReentrancyGuard, Initializable {
     // Max candidate period
     uint256 constant MAX_CANDIDATE_PERIOD = 7 days;
     uint256 constant MIN_VOTERS_TO_BECOME_ACTIVE = 2;
+
+    /* ============ Struct ============ */
 
     struct SubPosition {
         address integration;
@@ -293,7 +297,7 @@ contract Strategy is ReentrancyGuard, Initializable {
      * @param _votes                   An array of votes by on strategy by garden members. Votes can be positive or negative.
      * @param _absoluteTotalVotes      Abosulte number of votes. _absoluteTotalVotes = abs(upvotes) + abs(downvotes).
      * @param _totalVotes              Total number of votes. _totalVotes = upvotes + downvotes.
-     * @param _fee                     The fee paid to keeper to compensate gas cost
+     * @param _fee                     The fee paid to keeper to compensate the gas cost
      */
     function resolveVoting(
         address[] calldata _voters,
@@ -310,13 +314,14 @@ contract Strategy is ReentrancyGuard, Initializable {
         absoluteTotalVotes = absoluteTotalVotes + _absoluteTotalVotes;
         totalVotes = totalVotes + _totalVotes;
         active = true;
+        garden.payKeeper(msg.sender, _fee);
     }
 
     /**
      * Executes an strategy that has been activated and gone through the cooldown period.
      * Keeper will validate that quorum is reached, cacluates all the voting data and push it.
-     * @param _capital                  The capital to allocate to this strategy
-     * @param _fee                      The fee paid to keeper to compensate gas cost
+     * @param _capital                  The capital to allocate to this strategy.
+     * @param _fee                      The fee paid to keeper to compensate the gas cost.
      */
     function executeInvestment(uint256 _capital, uint256 _fee) public onlyKeeper(_fee) nonReentrant onlyActiveGarden {
         require(active, 'Idea needs to be active');
@@ -334,6 +339,7 @@ contract Strategy is ReentrancyGuard, Initializable {
         _callIntegration(integration, 0, _data, enterTokensNeeded, enterTokensAmounts);
         // Sets the executed timestamp
         executedAt = block.timestamp;
+        garden.payKeeper(msg.sender, _fee);
     }
 
     /**
@@ -341,8 +347,9 @@ contract Strategy is ReentrancyGuard, Initializable {
      * Sends rewards to the person that created the strategy, the voters, and the rest to the garden.
      * If there are profits
      * Updates the reserve asset position accordingly.
+     * @param _fee                     The fee paid to keeper to compensate the gas cost
      */
-    function finalizeInvestment(uint256 fee) external onlyKeeper(fee) nonReentrant onlyActiveGarden {
+    function finalizeInvestment(uint256 _fee) external onlyKeeper(_fee) nonReentrant onlyActiveGarden {
         require(executedAt > 0, 'This strategy has not been executed');
         require(
             block.timestamp > executedAt.add(duration),
@@ -382,14 +389,16 @@ contract Strategy is ReentrancyGuard, Initializable {
             capitalReturned.toInt256().sub(capitalAllocated.toInt256()),
             address(this)
         );
+        garden.payKeeper(msg.sender, _fee);
     }
 
     /**
      * Expires a candidate that has spent more than CANDIDATE_PERIOD without
      * reaching quorum
      */
-    function expireStrategy(uint256 fee) external onlyKeeper(fee) nonReentrant onlyActiveGarden {
+    function expireStrategy(uint256 _fee) external onlyKeeper(_fee) nonReentrant onlyActiveGarden {
         _deleteCandidateStrategy();
+        garden.payKeeper(msg.sender, _fee);
     }
 
     /**
