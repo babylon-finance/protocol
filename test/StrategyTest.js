@@ -1,4 +1,7 @@
 const { expect } = require('chai');
+const chaiAsPromised = require('chai-as-promised');
+require('chai').use(chaiAsPromised);
+
 const { ethers, waffle } = require('hardhat');
 
 const { loadFixture } = waffle;
@@ -137,6 +140,24 @@ describe('Strategy', function () {
       expect(finalized).to.equal(false);
       expect(executedAt).to.not.equal(0);
       expect(exitedAt).to.equal(ethers.BigNumber.from(0));
+    });
+
+    it('refuse to pay a high fee to the keeper', async function () {
+      const strategyContract = await createStrategy(
+        'vote',
+        [signer1, signer2, signer3],
+        kyberTradeIntegration,
+        garden1,
+      );
+
+      ethers.provider.send('evm_increaseTime', [ONE_DAY_IN_SECONDS * 2]);
+
+      // await expect(fetchItem(3)).to.be.rejected;
+      await expect(
+        strategyContract.executeInvestment(ethers.utils.parseEther('1'), ethers.utils.parseEther('100'), {
+          gasPrice: 0,
+        }),
+      ).to.be.rejectedWith(/fee is too high/i);
     });
   });
 
