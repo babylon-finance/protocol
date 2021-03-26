@@ -109,7 +109,7 @@ describe('Strategy', function () {
         [signer1Balance, signer2Balance],
         signer1Balance.add(signer2Balance).toString(),
         signer1Balance.add(signer2Balance).toString(),
-        0,
+        42,
         {
           gasPrice: 0,
         },
@@ -128,6 +128,9 @@ describe('Strategy', function () {
       expect(finalized).to.equal(false);
       expect(executedAt).to.equal(ethers.BigNumber.from(0));
       expect(exitedAt).to.equal(ethers.BigNumber.from(0));
+
+      // Keeper gets paid
+      expect(await wethToken.balanceOf(await owner.getAddress())).to.equal(42);
     });
   });
 
@@ -188,7 +191,7 @@ describe('Strategy', function () {
 
       ethers.provider.send('evm_increaseTime', [ONE_DAY_IN_SECONDS * 90]);
 
-      await strategyContract.finalizeInvestment(0, { gasPrice: 0 });
+      await strategyContract.finalizeInvestment(42, { gasPrice: 0 });
 
       const [address, active, dataSet, finalized, executedAt, exitedAt] = await strategyContract.getStrategyState();
 
@@ -198,6 +201,9 @@ describe('Strategy', function () {
       expect(finalized).to.equal(true);
       expect(executedAt).to.not.equal(0);
       expect(exitedAt).to.not.equal(0);
+
+      // Keeper gets paid
+      expect(await wethToken.balanceOf(await owner.getAddress())).to.equal(42);
     });
   });
 });
