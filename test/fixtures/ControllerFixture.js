@@ -42,7 +42,7 @@ async function deployFolioFixture() {
 
   // Deployment of BABL Rewards Distributor
   const RewardsDistributor = await ethers.getContractFactory('RewardsDistributor', owner);
-  const rewardsDistributor = await RewardsDistributor.deploy(rewardsSupplySchedule.address);
+  const rewardsDistributor = await RewardsDistributor.deploy(rewardsSupplySchedule.address, bablToken.address);
 
   const GardenValuer = await ethers.getContractFactory('GardenValuer', owner);
   const PriceOracle = await ethers.getContractFactory('PriceOracle', owner);

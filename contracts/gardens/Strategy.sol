@@ -154,7 +154,6 @@ contract Strategy is ReentrancyGuard, Initializable {
     uint256 public executedAt; // Timestamp when the strategy was executed
     uint256 public exitedAt; // Timestamp when the strategy was submitted
     uint256 public stake; // Amount of stake by the strategist (in reserve asset) Neds to be positive
-    int256 public profit; // Final profit of the strategy (it can be negative)
     uint256 public maxCapitalRequested; // Amount of max capital to allocate
     uint256 public capitalAllocated; // Current amount of capital allocated
     uint256 public expectedReturn; // Expect return by this investment strategy

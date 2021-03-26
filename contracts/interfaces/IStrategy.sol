@@ -118,8 +118,6 @@ interface IStrategy {
 
     function stake() external pure returns (uint256);
 
-    function profit() external pure returns (int256);
-
     function maxCapitalRequested() external pure returns (uint256);
 
     function expectedReturn() external pure returns (uint256);

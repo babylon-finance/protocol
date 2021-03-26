@@ -69,7 +69,7 @@ describe('BABL Rewards Distributor', function () {
     });
 
     it('should successfully deploy BABL Mining Rewards Distributor contract', async function () {
-      const deployedc = await rewardsDistributor.deployed(rewardsSupplySchedule.address, '50');
+      const deployedc = await rewardsDistributor.deployed(rewardsSupplySchedule.address, bablToken.address);
       expect(!!deployedc).to.equal(true);
     });
   });
@@ -119,39 +119,40 @@ describe('BABL Rewards Distributor', function () {
       expect(minRebalanceCapital).to.equal(ethers.utils.parseEther('1'));
       expect(enteredAt.isZero()).to.equal(false);
     });
-  });
+ 
 
-  it('should return the expected strategy state by getStrategyState()', async function () {
-    const [address, active, dataSet, finalized, executedAt, exitedAt] = await strategyDataset.getStrategyState();
+    it('should return the expected strategy state by getStrategyState()', async function () {
+      const [address, active, dataSet, finalized, executedAt, exitedAt] = await strategyDataset.getStrategyState();
 
-    expect(address).to.equal(strategyDataset.address);
-    expect(active).to.equal(false);
-    expect(dataSet).to.equal(true);
-    expect(finalized).to.equal(false);
-    expect(executedAt).to.equal(ethers.BigNumber.from(0));
-    expect(exitedAt).to.equal(ethers.BigNumber.from(0));
-  });
+      expect(address).to.equal(strategyDataset.address);
+      expect(active).to.equal(false);
+      expect(dataSet).to.equal(true);
+      expect(finalized).to.equal(false);
+      expect(executedAt).to.equal(ethers.BigNumber.from(0));
+      expect(exitedAt).to.equal(ethers.BigNumber.from(0));
+    });
 
-  it('should execute investment idea', async function () {
-    ethers.provider.send('evm_increaseTime', [ONE_DAY_IN_SECONDS * 2]);
+    it('should execute investment idea', async function () {
+      ethers.provider.send('evm_increaseTime', [ONE_DAY_IN_SECONDS * 2]);
 
-    const signer1Balance = await garden2.balanceOf(signer1.getAddress());
-    const signer2Balance = await garden2.balanceOf(signer2.getAddress());
+      const signer1Balance = await garden2.balanceOf(signer1.getAddress());
+      const signer2Balance = await garden2.balanceOf(signer2.getAddress());
 
-    await strategyCandidate.executeInvestment(
-      ethers.utils.parseEther('1'),
-      [signer2.getAddress(), signer3.getAddress()],
-      [signer1Balance, signer2Balance],
-      signer1Balance.add(signer2Balance).toString(),
-      signer1Balance.add(signer2Balance).toString(),
-      {
-        gasPrice: 0,
-      },
+      await strategyCandidate.executeInvestment(
+        ethers.utils.parseEther('1'),
+        [signer2.getAddress(), signer3.getAddress()],
+        [signer1Balance, signer2Balance],
+        signer1Balance.add(signer2Balance).toString(),
+        signer1Balance.add(signer2Balance).toString(),
+        {
+          gasPrice: 0,
+        },
     );
 
-    const [, , , , absoluteTotalVotes, totalVotes] = await strategyCandidate.getStrategyDetails();
+      const [, , , , absoluteTotalVotes, totalVotes] = await strategyCandidate.getStrategyDetails();
 
-    expect(absoluteTotalVotes).to.equal(ethers.utils.parseEther('9.1'));
-    expect(totalVotes).to.equal(ethers.utils.parseEther('9.1'));
+      expect(absoluteTotalVotes).to.equal(ethers.utils.parseEther('9.1'));
+      expect(totalVotes).to.equal(ethers.utils.parseEther('9.1'));
+    });
   });
 });
