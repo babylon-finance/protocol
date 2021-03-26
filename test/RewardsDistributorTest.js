@@ -119,7 +119,6 @@ describe('BABL Rewards Distributor', function () {
       expect(minRebalanceCapital).to.equal(ethers.utils.parseEther('1'));
       expect(enteredAt.isZero()).to.equal(false);
     });
- 
 
     it('should return the expected strategy state by getStrategyState()', async function () {
       const [address, active, dataSet, finalized, executedAt, exitedAt] = await strategyDataset.getStrategyState();
@@ -147,7 +146,7 @@ describe('BABL Rewards Distributor', function () {
         {
           gasPrice: 0,
         },
-    );
+      );
 
       const [, , , , absoluteTotalVotes, totalVotes] = await strategyCandidate.getStrategyDetails();
 

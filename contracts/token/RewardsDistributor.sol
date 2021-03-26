@@ -64,7 +64,6 @@ contract RewardsDistributor is Ownable {
     // BABL Token contract
     TimeLockedToken public babltoken;
 
-
     struct UserInfo {
         uint256 lastUserClaim;
         uint96 amount;
@@ -75,7 +74,7 @@ contract RewardsDistributor is Ownable {
         bool isStrategist;
         bool isSteward;
     }
-    
+
     mapping(address => mapping(address => UserInfo)) public userInfo;
 
     struct StrategyPoolInfo {
@@ -91,8 +90,8 @@ contract RewardsDistributor is Ownable {
         uint256 lastUpdate;
         address strategist;
     }
-    
-    mapping (address => StrategyPoolInfo) public strategyPoolInfo;
+
+    mapping(address => StrategyPoolInfo) public strategyPoolInfo;
 
     //StrategyPoolInfo[] public strategyPoolInfo;
     address[] public strategyList;
@@ -101,8 +100,6 @@ contract RewardsDistributor is Ownable {
     uint256 public totalAllocPoint = 0;
     uint256 public startBlock;
 
-
-     
     struct RewardsProtocol {
         uint256 protocolPrincipal;
         uint256 protocolDuration;
@@ -114,10 +111,9 @@ contract RewardsDistributor is Ownable {
     }
     mapping(uint256 => RewardsProtocol) public rewardsProtocol;
     mapping(address => bool) public strategyIncluded;
-    
 
     uint256 public EPOCH_DURATION = 90 days;
-    uint256 public START_TIME ;
+    uint256 public START_TIME;
 
     /* ============ Functions ============ */
 
@@ -146,19 +142,19 @@ contract RewardsDistributor is Ownable {
         totalAllocPoint = totalAllocPoint.add(_strategyPrincipal);
         StrategyPoolInfo storage newStrategyPoolInfo = strategyPoolInfo[address(_strategy)];
 
-        newStrategyPoolInfo.lpToken = _lpToken ; // Rolling Garden repsonsible of the strategy
+        newStrategyPoolInfo.lpToken = _lpToken; // Rolling Garden repsonsible of the strategy
         newStrategyPoolInfo.strategyProfit = int256(_strategy.capitalReturned().sub(_strategy.capitalAllocated()));
-        newStrategyPoolInfo.bablPerShare = uint96(0) ; // TODO - NEED TO BE UPDATED FOR REWARDS CALCULATION
-        newStrategyPoolInfo.lastRewardBlock = 0 ; // TODO - DEFINE HOW TO HANDLE REWARDS BASED ON BLOCKS
+        newStrategyPoolInfo.bablPerShare = uint96(0); // TODO - NEED TO BE UPDATED FOR REWARDS CALCULATION
+        newStrategyPoolInfo.lastRewardBlock = 0; // TODO - DEFINE HOW TO HANDLE REWARDS BASED ON BLOCKS
         newStrategyPoolInfo.strategyPrincipal = uint96(_strategy.capitalAllocated());
         newStrategyPoolInfo.strategyStart = _strategy.executedAt();
         newStrategyPoolInfo.strategyEnd = _strategy.exitedAt();
-        newStrategyPoolInfo.strategyDuration = newStrategyPoolInfo.strategyEnd.sub(
-                    newStrategyPoolInfo.strategyStart);
+        newStrategyPoolInfo.strategyDuration = newStrategyPoolInfo.strategyEnd.sub(newStrategyPoolInfo.strategyStart);
         newStrategyPoolInfo.lastUpdate = block.timestamp;
         newStrategyPoolInfo.strategist = _strategy.strategist();
-        newStrategyPoolInfo.strategyPower = uint96(newStrategyPoolInfo.strategyDuration.mul(newStrategyPoolInfo.strategyPrincipal));
-
+        newStrategyPoolInfo.strategyPower = uint96(
+            newStrategyPoolInfo.strategyDuration.mul(newStrategyPoolInfo.strategyPrincipal)
+        );
 
         // Include it to avoid gas cost on massive updating
         strategyIncluded[address(_strategy)] = true;
@@ -176,45 +172,40 @@ contract RewardsDistributor is Ownable {
             massUpdatePools(strategyPoolInfo[_address].lpToken);
         }
         // We also update Protocol Principal
-        totalAllocPoint = totalAllocPoint.sub(strategyPoolInfo[_address].strategyPrincipal).add(
-            _strategyPrincipal
-        );
+        totalAllocPoint = totalAllocPoint.sub(strategyPoolInfo[_address].strategyPrincipal).add(_strategyPrincipal);
         strategyPoolInfo[_address].strategyPrincipal = _strategyPrincipal;
     }
 
     // Return reward multiplier over the given _from to _to block.
-    function getSupplyForPeriod(uint256 _from, uint256 _to)
-        public
-        view
-        returns (uint[] memory)
-    {
+    function getSupplyForPeriod(uint256 _from, uint256 _to) public view returns (uint256[] memory) {
         // check number of quarters and what quarters are they
         uint256 quarters = _to.sub(_from).preciseDivCeil(EPOCH_DURATION);
         uint256 startingQuarter = _from.preciseDivCeil(EPOCH_DURATION);
         uint256 endingQuarter = startingQuarter.add(quarters);
-        uint[] memory supplyPerQuarter;
+        uint256[] memory supplyPerQuarter;
         if (quarters <= 1) {
             // Strategy Duration less than a quarter
-            supplyPerQuarter[0]= supplySchedule.tokenSupplyPerQuarter(endingQuarter);
+            supplyPerQuarter[0] = supplySchedule.tokenSupplyPerQuarter(endingQuarter);
             return supplyPerQuarter;
         } else if (quarters <= 2) {
             // Strategy Duration less or equal of 2 quarters - we assume that high % of strategies will have a duration <= 2 quarters avoiding the launch of a for loop
-            supplyPerQuarter[0]= supplySchedule.tokenSupplyPerQuarter(startingQuarter);
+            supplyPerQuarter[0] = supplySchedule.tokenSupplyPerQuarter(startingQuarter);
             supplyPerQuarter[1] = supplySchedule.tokenSupplyPerQuarter(endingQuarter);
             return supplyPerQuarter;
         } else {
-            for (uint i = 0; i <= quarters; i++){
-                supplyPerQuarter[i] = supplySchedule.tokenSupplyPerQuarter(startingQuarter+i);
+            for (uint256 i = 0; i <= quarters; i++) {
+                supplyPerQuarter[i] = supplySchedule.tokenSupplyPerQuarter(startingQuarter + i);
             }
             return supplyPerQuarter;
         }
     }
 
     /* ============ Getter Functions ============ */
-    
+
     function poolLength() external view returns (uint256) {
         return strategyList.length;
     }
+
     function getEpochRewards(uint256 epochs) public {
         uint256 timestamp = block.timestamp;
         for (uint256 i = 0; i <= epochs; i++) {
@@ -237,18 +228,22 @@ contract RewardsDistributor is Ownable {
                 strategiesCount++;
                 StrategyPoolInfo storage newFinalizedStrategy = strategyPoolInfo[address(updatingStrategy)];
                 newFinalizedStrategy.lpToken = _garden; // Rolling Garden repsonsible of the strategy
-                newFinalizedStrategy.strategyProfit = int256(updatingStrategy.capitalReturned().sub(updatingStrategy.capitalAllocated()));
-                newFinalizedStrategy.bablPerShare = uint96(0) ; // TODO - NEED TO BE UPDATED FOR REWARDS CALCULATION
-                newFinalizedStrategy.lastRewardBlock = 0 ; // TODO - DEFINE HOW TO HANDLE REWARDS BASED ON BLOCKS
+                newFinalizedStrategy.strategyProfit = int256(
+                    updatingStrategy.capitalReturned().sub(updatingStrategy.capitalAllocated())
+                );
+                newFinalizedStrategy.bablPerShare = uint96(0); // TODO - NEED TO BE UPDATED FOR REWARDS CALCULATION
+                newFinalizedStrategy.lastRewardBlock = 0; // TODO - DEFINE HOW TO HANDLE REWARDS BASED ON BLOCKS
                 newFinalizedStrategy.strategyPrincipal = uint96(updatingStrategy.capitalAllocated());
                 newFinalizedStrategy.strategyStart = updatingStrategy.executedAt();
                 newFinalizedStrategy.strategyEnd = updatingStrategy.exitedAt();
                 newFinalizedStrategy.strategyDuration = newFinalizedStrategy.strategyEnd.sub(
-                            newFinalizedStrategy.strategyStart);
+                    newFinalizedStrategy.strategyStart
+                );
                 newFinalizedStrategy.lastUpdate = block.timestamp;
                 newFinalizedStrategy.strategist = updatingStrategy.strategist();
-                newFinalizedStrategy.strategyPower = uint96(newFinalizedStrategy.strategyDuration.mul(newFinalizedStrategy.strategyPrincipal));
-
+                newFinalizedStrategy.strategyPower = uint96(
+                    newFinalizedStrategy.strategyDuration.mul(newFinalizedStrategy.strategyPrincipal)
+                );
 
                 // we include it in the mapping to use a filter for updates
                 strategyIncluded[address(updatingStrategy)] = true;
@@ -258,7 +253,9 @@ contract RewardsDistributor is Ownable {
                 // We only update Profit and Principal
                 IStrategy updatingStrategy = IStrategy(finalizedStrategies[i]);
                 StrategyPoolInfo storage newFinalizedStrategy = strategyPoolInfo[address(updatingStrategy)];
-                newFinalizedStrategy.strategyProfit = int256(updatingStrategy.capitalReturned().sub(updatingStrategy.capitalAllocated()));
+                newFinalizedStrategy.strategyProfit = int256(
+                    updatingStrategy.capitalReturned().sub(updatingStrategy.capitalAllocated())
+                );
                 newFinalizedStrategy.strategyPrincipal = uint96(updatingStrategy.capitalAllocated());
                 strategiesCount++;
             }
