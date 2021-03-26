@@ -130,7 +130,6 @@ contract RewardsDistributor is Ownable {
     // Add a new strategy to the pool. Can only be called by the owner / strategy // TODO CHECK.
     // XXX DO NOT add the same LP token more than once. Rewards will be messed up if you do.
     function add(
-        uint256 _strategyPrincipal,
         IRollingGarden _lpToken,
         IStrategy _strategy,
         bool _withUpdate
@@ -139,7 +138,6 @@ contract RewardsDistributor is Ownable {
             massUpdatePools(_lpToken);
         }
         //uint256 lastRewardBlock = block.number > startBlock ? block.number : startBlock;
-        totalAllocPoint = totalAllocPoint.add(_strategyPrincipal);
         StrategyPoolInfo storage newStrategyPoolInfo = strategyPoolInfo[address(_strategy)];
 
         newStrategyPoolInfo.lpToken = _lpToken; // Rolling Garden repsonsible of the strategy
@@ -160,10 +158,14 @@ contract RewardsDistributor is Ownable {
         strategyIncluded[address(_strategy)] = true;
         // For counting we also include it in the strategy array
         strategyList.push(address(_strategy));
+        
+        // We update the Total Allocation of the Protocol
+        totalAllocPoint = totalAllocPoint.add(newStrategyPoolInfo.strategyPrincipal);
+
     }
 
     // Update the given strategy its BABL allocation point. Can only be called by the owner.
-    function set(
+    function updateStrategy(
         address _address, // Address of the Strategy to be set / updated
         uint96 _strategyPrincipal,
         bool _withUpdate
@@ -171,9 +173,12 @@ contract RewardsDistributor is Ownable {
         if (_withUpdate) {
             massUpdatePools(strategyPoolInfo[_address].lpToken);
         }
-        // We also update Protocol Principal
-        totalAllocPoint = totalAllocPoint.sub(strategyPoolInfo[_address].strategyPrincipal).add(_strategyPrincipal);
-        strategyPoolInfo[_address].strategyPrincipal = _strategyPrincipal;
+        // If we introduce a value DIFFERENT FROM ZERO, as Owners, the strategy principal will be overrided so does the protocol be updated accordingly
+        if (_strategyPrincipal != 0) { 
+            // We also update Protocol Principal and the Strategy Principal with the new value
+            totalAllocPoint = totalAllocPoint.sub(strategyPoolInfo[_address].strategyPrincipal).add(_strategyPrincipal);
+            strategyPoolInfo[_address].strategyPrincipal = _strategyPrincipal;
+        }
     }
 
     // Return reward multiplier over the given _from to _to block.
