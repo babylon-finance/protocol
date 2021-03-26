@@ -15,12 +15,16 @@ describe('Strategy', function () {
   let signer1;
   let signer2;
   let signer3;
+  let garden1;
   let garden2;
   let strategy11;
   let strategy21;
+  let kyberTradeIntegration;
 
   beforeEach(async () => {
-    ({ signer1, garden2, strategy11, strategy21, signer2, signer3 } = await loadFixture(deployFolioFixture));
+    ({ signer1, garden1, garden2, strategy11, strategy21, signer2, signer3, kyberTradeIntegration } = await loadFixture(
+      deployFolioFixture,
+    ));
 
     strategyDataset = await ethers.getContractAt('Strategy', strategy11);
     strategyCandidate = await ethers.getContractAt('Strategy', strategy21);
@@ -87,7 +91,7 @@ describe('Strategy', function () {
 
       await strategyCandidate.executeInvestment(
         ethers.utils.parseEther('1'),
-        [signer2.getAddress(), signer3.getAddress()],
+        [signer1.getAddress(), signer2.getAddress()],
         [signer1Balance, signer2Balance],
         signer1Balance.add(signer2Balance).toString(),
         signer1Balance.add(signer2Balance).toString(),
@@ -100,6 +104,39 @@ describe('Strategy', function () {
 
       expect(absoluteTotalVotes).to.equal(ethers.utils.parseEther('9.1'));
       expect(totalVotes).to.equal(ethers.utils.parseEther('9.1'));
+
+      const [address, active, dataSet, finalized, executedAt, exitedAt] = await strategyCandidate.getStrategyState();
+
+      expect(address).to.equal(strategyCandidate.address);
+      expect(active).to.equal(true);
+      expect(dataSet).to.equal(true);
+      expect(finalized).to.equal(false);
+      expect(executedAt).to.equal(ethers.BigNumber.from(1614783309));
+      expect(exitedAt).to.equal(ethers.BigNumber.from(0));
+    });
+  });
+
+  describe.only('finalizeInvestment', async function () {
+    it('should finalize investemnet idea', async function () {
+      const strategyContract = await createStrategy(
+        'active',
+        [signer1, signer2, signer3],
+        kyberTradeIntegration,
+        garden1,
+      );
+
+      ethers.provider.send('evm_increaseTime', [ONE_DAY_IN_SECONDS * 90]);
+
+      await strategyContract.finalizeInvestment({ gasPrice: 0 });
+
+      const [address, active, dataSet, finalized, executedAt, exitedAt] = await strategyContract.getStrategyState();
+
+      expect(address).to.equal(strategyContract.address);
+      expect(active).to.equal(false);
+      expect(dataSet).to.equal(true);
+      expect(finalized).to.equal(true);
+      expect(executedAt).to.equal(ethers.BigNumber.from(1614783309));
+      expect(exitedAt).to.equal(ethers.BigNumber.from(1622559310));
     });
   });
 });
