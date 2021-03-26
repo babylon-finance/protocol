@@ -45,29 +45,33 @@ async function deposit(garden, signers) {
   });
 }
 
-async function executeStrategy(garden, strategy, signers) {
-  ethers.provider.send('evm_increaseTime', [ONE_DAY_IN_SECONDS * 2]);
-
+async function vote(garden, signers, strategy) {
   const [signer1, signer2] = signers;
 
   const signer1Balance = await garden.balanceOf(signer1.getAddress());
   const signer2Balance = await garden.balanceOf(signer2.getAddress());
 
-  await strategy.executeInvestment(
-    ethers.utils.parseEther('1'),
+  await strategy.resolveVoting(
     [signer1.getAddress(), signer1.getAddress()],
     [signer1Balance, signer2Balance],
     signer1Balance.add(signer2Balance).toString(),
     signer1Balance.add(signer2Balance).toString(),
-    {
-      gasPrice: 0,
-    },
+    0,
+    { gasPrice: 0 },
   );
 }
 
-async function finalizeStrategy(strategy) {
+async function execute(strategy) {
+  ethers.provider.send('evm_increaseTime', [ONE_DAY_IN_SECONDS * 2]);
+
+  await strategy.executeInvestment(ethers.utils.parseEther('1'), 0, {
+    gasPrice: 0,
+  });
+}
+
+async function finalize(strategy) {
   ethers.provider.send('evm_increaseTime', [ONE_DAY_IN_SECONDS * 90]);
-  await strategy.finalizeInvestment({ gasPrice: 0 });
+  await strategy.finalizeInvestment(0, { gasPrice: 0 });
 }
 
 async function createStrategy(kind, signers, kyberIntegration, garden) {
@@ -76,14 +80,18 @@ async function createStrategy(kind, signers, kyberIntegration, garden) {
     return strategy;
   }
   await deposit(garden, signers);
-  if (kind === 'candidate') {
+  if (kind === 'deposit') {
     return strategy;
   }
-  await executeStrategy(garden, strategy, signers);
+  await vote(garden, signers, strategy);
+  if (kind === 'vote') {
+    return strategy;
+  }
+  await execute(strategy);
   if (kind === 'active') {
     return strategy;
   }
-  await finalizeStrategy(strategy);
+  await finalize(strategy);
   return strategy;
 }
 

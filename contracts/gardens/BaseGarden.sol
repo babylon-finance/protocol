@@ -96,8 +96,9 @@ abstract contract BaseGarden is ERC20Upgradeable {
     /**
      * Throws if the sender is not a keeper in the protocol
      */
-    modifier onlyKeeper() {
+    modifier onlyKeeper(uint256 _fee) {
         require(IBabController(controller).isValidKeeper(msg.sender), 'Only a keeper can call this');
+        require(_fee < (gasleft() * 1000 gwei), 'Fee is too high');
         _;
     }
 
@@ -359,7 +360,7 @@ abstract contract BaseGarden is ERC20Upgradeable {
      * Rebalances available capital of the garden between the investment strategies that are active.
      * We enter into the investment and add it to the executed strategies array.
      */
-    function rebalanceInvestments() external onlyKeeper onlyActive {
+    function rebalanceInvestments(uint256 fee) external onlyKeeper(fee) onlyActive {
         uint256 liquidReserveAsset = ERC20Upgradeable(reserveAsset).balanceOf(address(this));
         for (uint256 i = 0; i < strategies.length; i++) {
             IStrategy strategy = IStrategy(strategies[i]);
@@ -369,7 +370,7 @@ abstract contract BaseGarden is ERC20Upgradeable {
                 toAllocate >= strategy.minRebalanceCapital() &&
                 toAllocate.add(strategy.capitalAllocated()) <= strategy.maxCapitalRequested()
             ) {
-                strategy.executeInvestment(toAllocate);
+                strategy.executeInvestment(toAllocate, 0);
             }
         }
     }

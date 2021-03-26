@@ -82,19 +82,17 @@ describe('Strategy', function () {
     });
   });
 
-  describe('executeInvestment', async function () {
-    it('should execute investemnet idea', async function () {
-      ethers.provider.send('evm_increaseTime', [ONE_DAY_IN_SECONDS * 2]);
-
+  describe('resolveVoting', async function () {
+    it('should push results of the voting on-chain', async function () {
       const signer1Balance = await garden2.balanceOf(signer1.getAddress());
       const signer2Balance = await garden2.balanceOf(signer2.getAddress());
 
-      await strategyCandidate.executeInvestment(
-        ethers.utils.parseEther('1'),
+      await strategyCandidate.resolveVoting(
         [signer1.getAddress(), signer2.getAddress()],
         [signer1Balance, signer2Balance],
         signer1Balance.add(signer2Balance).toString(),
         signer1Balance.add(signer2Balance).toString(),
+        0,
         {
           gasPrice: 0,
         },
@@ -111,12 +109,38 @@ describe('Strategy', function () {
       expect(active).to.equal(true);
       expect(dataSet).to.equal(true);
       expect(finalized).to.equal(false);
-      expect(executedAt).to.equal(ethers.BigNumber.from(1614783309));
+      expect(executedAt).to.equal(ethers.BigNumber.from(0));
       expect(exitedAt).to.equal(ethers.BigNumber.from(0));
     });
   });
 
-  describe.only('finalizeInvestment', async function () {
+  describe('executeInvestment', async function () {
+    it('should execute investemnet idea', async function () {
+      const strategyContract = await createStrategy(
+        'vote',
+        [signer1, signer2, signer3],
+        kyberTradeIntegration,
+        garden1,
+      );
+
+      ethers.provider.send('evm_increaseTime', [ONE_DAY_IN_SECONDS * 2]);
+
+      await strategyContract.executeInvestment(ethers.utils.parseEther('1'), 0, {
+        gasPrice: 0,
+      });
+
+      const [address, active, dataSet, finalized, executedAt, exitedAt] = await strategyContract.getStrategyState();
+
+      expect(address).to.equal(strategyContract.address);
+      expect(active).to.equal(true);
+      expect(dataSet).to.equal(true);
+      expect(finalized).to.equal(false);
+      expect(executedAt).to.not.equal(0);
+      expect(exitedAt).to.equal(ethers.BigNumber.from(0));
+    });
+  });
+
+  describe('finalizeInvestment', async function () {
     it('should finalize investemnet idea', async function () {
       const strategyContract = await createStrategy(
         'active',
@@ -127,7 +151,7 @@ describe('Strategy', function () {
 
       ethers.provider.send('evm_increaseTime', [ONE_DAY_IN_SECONDS * 90]);
 
-      await strategyContract.finalizeInvestment({ gasPrice: 0 });
+      await strategyContract.finalizeInvestment(0, { gasPrice: 0 });
 
       const [address, active, dataSet, finalized, executedAt, exitedAt] = await strategyContract.getStrategyState();
 
@@ -135,8 +159,8 @@ describe('Strategy', function () {
       expect(active).to.equal(false);
       expect(dataSet).to.equal(true);
       expect(finalized).to.equal(true);
-      expect(executedAt).to.equal(ethers.BigNumber.from(1614783309));
-      expect(exitedAt).to.equal(ethers.BigNumber.from(1622559310));
+      expect(executedAt).to.not.equal(0);
+      expect(exitedAt).to.not.equal(0);
     });
   });
 });

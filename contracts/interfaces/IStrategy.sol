@@ -24,11 +24,17 @@ pragma solidity 0.7.4;
  * Interface for Investment Idea
  */
 interface IStrategy {
-    function curateIdea(int256 _amount) external;
+    function resolveVoting(
+        address[] calldata _voters,
+        int256[] calldata _votes,
+        uint256 _absoluteTotalVotes,
+        int256 _totalVotes,
+        uint256 fee
+    ) external;
 
-    function executeInvestment(uint256 _capital) external;
+    function executeInvestment(uint256 _capital, uint256 fee) external;
 
-    function finalizeInvestment() external;
+    function finalizeInvestment(uint256 fee) external;
 
     function changeInvestmentDuration(uint256 _newDuration) external;
 

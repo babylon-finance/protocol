@@ -95,8 +95,9 @@ contract Strategy is ReentrancyGuard, Initializable {
     /**
      * Throws if the sender is not a keeper in the protocol
      */
-    modifier onlyKeeper() {
-        require(controller.isValidKeeper(msg.sender), 'Only a keeper can call this');
+    modifier onlyKeeper(uint256 _fee) {
+        require(IBabController(controller).isValidKeeper(msg.sender), 'Only a keeper can call this');
+        require(_fee < (gasleft() * 1000 gwei), 'Fee is too high');
         _;
     }
 
@@ -287,24 +288,20 @@ contract Strategy is ReentrancyGuard, Initializable {
     // }
 
     /**
-     * Executes an strategy that has been activated and gone through the cooldown period.
-     * Keeper will validate that quorum is reached, cacluates all the voting data and push it.
-     * @param _capital                  The capital to allocate to this strategy
+     * Adds results of off-chain voting on-chain.
+     * @param _voters                  An array of garden memeber who voted on strategy.
+     * @param _votes                   An array of votes by on strategy by garden members. Votes can be positive or negative.
+     * @param _absoluteTotalVotes      Abosulte number of votes. _absoluteTotalVotes = abs(upvotes) + abs(downvotes).
+     * @param _totalVotes              Total number of votes. _totalVotes = upvotes + downvotes.
+     * @param _fee                     The fee paid to keeper to compensate gas cost
      */
-    function executeInvestment(
-        uint256 _capital,
+    function resolveVoting(
         address[] calldata _voters,
         int256[] calldata _votes,
         uint256 _absoluteTotalVotes,
-        int256 _totalVotes
-    ) public onlyKeeper nonReentrant onlyActiveGarden {
-        // require(active, 'Idea needs to be active');
-        require(capitalAllocated.add(_capital) <= maxCapitalRequested, 'Max capital reached');
-        require(_capital >= minRebalanceCapital, 'Amount needs to be more than min');
-        require(
-            block.timestamp.sub(enteredCooldownAt) >= garden.strategyCooldownPeriod(),
-            'Idea has not completed the cooldown period'
-        );
+        int256 _totalVotes,
+        uint256 _fee
+    ) external onlyKeeper(_fee) onlyActiveGarden {
         // Set votes data
         for (uint256 i = 0; i < _voters.length; i++) {
             votes[_voters[i]] = _votes[i];
@@ -313,6 +310,22 @@ contract Strategy is ReentrancyGuard, Initializable {
         absoluteTotalVotes = absoluteTotalVotes + _absoluteTotalVotes;
         totalVotes = totalVotes + _totalVotes;
         active = true;
+    }
+
+    /**
+     * Executes an strategy that has been activated and gone through the cooldown period.
+     * Keeper will validate that quorum is reached, cacluates all the voting data and push it.
+     * @param _capital                  The capital to allocate to this strategy
+     * @param _fee                      The fee paid to keeper to compensate gas cost
+     */
+    function executeInvestment(uint256 _capital, uint256 _fee) public onlyKeeper(_fee) nonReentrant onlyActiveGarden {
+        require(active, 'Idea needs to be active');
+        require(capitalAllocated.add(_capital) <= maxCapitalRequested, 'Max capital reached');
+        require(_capital >= minRebalanceCapital, 'Amount needs to be more than min');
+        require(
+            block.timestamp.sub(enteredCooldownAt) >= garden.strategyCooldownPeriod(),
+            'Idea has not completed the cooldown period'
+        );
         // Execute enter trade
         garden.allocateCapitalToInvestment(_capital);
         calculateAndEditPosition(garden.getReserveAsset(), _capital, _capital.toInt256(), LIQUID_STATUS);
@@ -329,7 +342,7 @@ contract Strategy is ReentrancyGuard, Initializable {
      * If there are profits
      * Updates the reserve asset position accordingly.
      */
-    function finalizeInvestment() external onlyKeeper nonReentrant onlyActiveGarden {
+    function finalizeInvestment(uint256 fee) external onlyKeeper(fee) nonReentrant onlyActiveGarden {
         require(executedAt > 0, 'This strategy has not been executed');
         require(
             block.timestamp > executedAt.add(duration),
@@ -375,7 +388,7 @@ contract Strategy is ReentrancyGuard, Initializable {
      * Expires a candidate that has spent more than CANDIDATE_PERIOD without
      * reaching quorum
      */
-    function expireStrategy() external onlyKeeper nonReentrant onlyActiveGarden {
+    function expireStrategy(uint256 fee) external onlyKeeper(fee) nonReentrant onlyActiveGarden {
         _deleteCandidateStrategy();
     }
 
