@@ -4,6 +4,8 @@ require('chai').use(chaiAsPromised);
 
 const { ethers, waffle } = require('hardhat');
 
+const { parseEther } = ethers.utils;
+
 const { loadFixture } = waffle;
 
 const { createStrategy } = require('./fixtures/StrategyHelper.js');
@@ -15,6 +17,7 @@ const { deployFolioFixture } = require('./fixtures/ControllerFixture');
 describe('Strategy', function () {
   let strategyDataset;
   let strategyCandidate;
+  let owner;
   let signer1;
   let signer2;
   let signer3;
@@ -23,14 +26,25 @@ describe('Strategy', function () {
   let strategy11;
   let strategy21;
   let kyberTradeIntegration;
+  let wethToken;
 
   beforeEach(async () => {
-    ({ signer1, garden1, garden2, strategy11, strategy21, signer2, signer3, kyberTradeIntegration } = await loadFixture(
-      deployFolioFixture,
-    ));
+    ({
+      owner,
+      signer1,
+      garden1,
+      garden2,
+      strategy11,
+      strategy21,
+      signer2,
+      signer3,
+      kyberTradeIntegration,
+    } = await loadFixture(deployFolioFixture));
 
     strategyDataset = await ethers.getContractAt('Strategy', strategy11);
     strategyCandidate = await ethers.getContractAt('Strategy', strategy21);
+
+    wethToken = await ethers.getContractAt('IERC20', addresses.tokens.WETH);
   });
 
   describe('Strategy Deployment', async function () {
@@ -128,7 +142,7 @@ describe('Strategy', function () {
 
       ethers.provider.send('evm_increaseTime', [ONE_DAY_IN_SECONDS * 2]);
 
-      await strategyContract.executeInvestment(ethers.utils.parseEther('1'), 0, {
+      await strategyContract.executeInvestment(ethers.utils.parseEther('1'), 42, {
         gasPrice: 0,
       });
 
@@ -140,6 +154,9 @@ describe('Strategy', function () {
       expect(finalized).to.equal(false);
       expect(executedAt).to.not.equal(0);
       expect(exitedAt).to.equal(ethers.BigNumber.from(0));
+
+      // Keeper gets paid
+      expect(await wethToken.balanceOf(await owner.getAddress())).to.equal(42);
     });
 
     it('refuse to pay a high fee to the keeper', async function () {
@@ -152,7 +169,6 @@ describe('Strategy', function () {
 
       ethers.provider.send('evm_increaseTime', [ONE_DAY_IN_SECONDS * 2]);
 
-      // await expect(fetchItem(3)).to.be.rejected;
       await expect(
         strategyContract.executeInvestment(ethers.utils.parseEther('1'), ethers.utils.parseEther('100'), {
           gasPrice: 0,
