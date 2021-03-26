@@ -267,31 +267,6 @@ contract Strategy is ReentrancyGuard, Initializable {
     }
 
     /**
-     * Curates an investment strategy from the contenders array for this epoch.
-     * This can happen at any time. As long as there are investment strategies.
-     * @param _amount                   Amount to curate, positive to endorse, negative to downvote
-     * TODO: Meta Transaction
-     */
-    // function curateIdea(int256 _amount) external onlyContributor onlyActiveGarden {
-    //     require(_amount.toUint256() <= garden.balanceOf(msg.sender), 'Participant does not have enough balance');
-    //     if (votes[msg.sender] == 0) {
-    //         voters.push(msg.sender);
-    //     }
-    //     votes[msg.sender] = votes[msg.sender].add(_amount);
-    //     absoluteTotalVotes = absoluteTotalVotes.add(abs(_amount).toUint256());
-    //     totalVotes = totalVotes.add(_amount);
-    //     // TODO: Redo and move with signatures to execute
-    //     uint256 votingThreshold = garden.minVotersQuorum().preciseMul(garden.totalSupply());
-    //     if (_amount > 0 && voters.length >= MIN_VOTERS_TO_BECOME_ACTIVE && totalVotes.toUint256() >= votingThreshold) {
-    //         active = true;
-    //         enteredCooldownAt = block.timestamp;
-    //     }
-    //     if (_amount < 0 && totalVotes.toUint256() < votingThreshold && active && executedAt == 0) {
-    //         active = false;
-    //     }
-    // }
-
-    /**
      * Adds results of off-chain voting on-chain.
      * @param _voters                  An array of garden memeber who voted on strategy.
      * @param _votes                   An array of votes by on strategy by garden members. Votes can be positive or negative.
