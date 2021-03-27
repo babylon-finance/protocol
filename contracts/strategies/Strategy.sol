@@ -533,11 +533,7 @@ contract Strategy is ReentrancyGuard, Initializable {
      * Needs to be overriden in base class.
      *
      */
-    function _enterStrategy(
-    )
-        internal
-        virtual
-    {
+    function _enterStrategy() internal virtual {
         require(false, 'This needs to be overriden');
     }
 
@@ -546,10 +542,7 @@ contract Strategy is ReentrancyGuard, Initializable {
      * Needs to be overriden in base class.
      *
      */
-    function _exitStrategy()
-        internal
-        virtual
-    {
+    function _exitStrategy() internal virtual {
         require(false, 'This needs to be overriden');
     }
 
@@ -584,54 +577,53 @@ contract Strategy is ReentrancyGuard, Initializable {
         return _returnValue;
     }
 
-
     /**
      * Function that buys the assets required to enter the strategy
      */
     function _enterStrategyPositions() internal {
-      // Exchange the tokens needed
-      bytes memory _data;
-      for (uint256 i = 0; i < tokensNeeded.length; i++) {
-          if (tokensNeeded[i] != garden.getReserveAsset()) {
-              uint256 pricePerTokenUnit = _getPrice(garden.getReserveAsset(), tokensNeeded[i]);
-              uint256 slippageAllowed = 1e16; // 1%
-              uint256 exactAmount = tokenAmountsNeeded[i].preciseDiv(pricePerTokenUnit);
-              uint256 amountOfReserveAssetToAllow = exactAmount.add(exactAmount.preciseMul(slippageAllowed));
-              require(
-                  ERC20(garden.getReserveAsset()).balanceOf(address(this)) >= amountOfReserveAssetToAllow,
-                  'Need enough liquid reserve asset'
-              );
-              _trade(
-                  'kyber',
-                  garden.getReserveAsset(),
-                  amountOfReserveAssetToAllow,
-                  tokensNeeded[i],
-                  tokenAmountsNeeded[i],
-                  _data
-              );
-          }
-      }
+        // Exchange the tokens needed
+        bytes memory _data;
+        for (uint256 i = 0; i < tokensNeeded.length; i++) {
+            if (tokensNeeded[i] != garden.getReserveAsset()) {
+                uint256 pricePerTokenUnit = _getPrice(garden.getReserveAsset(), tokensNeeded[i]);
+                uint256 slippageAllowed = 1e16; // 1%
+                uint256 exactAmount = tokenAmountsNeeded[i].preciseDiv(pricePerTokenUnit);
+                uint256 amountOfReserveAssetToAllow = exactAmount.add(exactAmount.preciseMul(slippageAllowed));
+                require(
+                    ERC20(garden.getReserveAsset()).balanceOf(address(this)) >= amountOfReserveAssetToAllow,
+                    'Need enough liquid reserve asset'
+                );
+                _trade(
+                    'kyber',
+                    garden.getReserveAsset(),
+                    amountOfReserveAssetToAllow,
+                    tokensNeeded[i],
+                    tokenAmountsNeeded[i],
+                    _data
+                );
+            }
+        }
     }
 
     /**
      * Function that sells the strategy positions back to the reserve asset
      */
     function _exitStrategyPositions() internal {
-      // Exchange the positions back to the reserve asset
-      bytes memory _emptyTradeData;
-      address reserveAsset = garden.getReserveAsset();
-      for (uint256 i = 0; i < positions.length; i++) {
-          if (positions[i] != reserveAsset) {
-              _trade(
-                  'kyber',
-                  positions[i],
-                  ERC20(positions[i]).balanceOf(address(this)),
-                  reserveAsset,
-                  0, // no minimum. use onchain oracle?
-                  _emptyTradeData
-              );
-          }
-      }
+        // Exchange the positions back to the reserve asset
+        bytes memory _emptyTradeData;
+        address reserveAsset = garden.getReserveAsset();
+        for (uint256 i = 0; i < positions.length; i++) {
+            if (positions[i] != reserveAsset) {
+                _trade(
+                    'kyber',
+                    positions[i],
+                    ERC20(positions[i]).balanceOf(address(this)),
+                    reserveAsset,
+                    0, // no minimum. use onchain oracle?
+                    _emptyTradeData
+                );
+            }
+        }
     }
 
     /**

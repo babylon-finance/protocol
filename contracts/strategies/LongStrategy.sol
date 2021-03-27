@@ -50,33 +50,21 @@ contract LongStrategy is Strategy {
     using AddressArrayUtils for address[];
     using Address for address;
 
-    address sendToken;          // Asset to exchange
-    address receiveToken;       // Asset to receive
-    uint256 sentTokenQuantity;  // Quantity of send token to sell
+    address sendToken; // Asset to exchange
+    address receiveToken; // Asset to receive
+    uint256 sentTokenQuantity; // Quantity of send token to sell
     uint256 minReceiveQuantity; // Min quantity of receive token to receive
 
     /**
      * Enters the long strategy
      *
      */
-    function _enterStrategy(
-    )
-        internal
-        override
-    {
-
-    }
+    function _enterStrategy() internal override {}
 
     /**
      * Exits the long strategy. Virtual method.
      * Needs to be overriden in base class.
      *
      */
-    function _exitStrategy()
-        internal
-        override
-    {
-
-    }
-
+    function _exitStrategy() internal override {}
 }
