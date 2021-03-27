@@ -132,6 +132,35 @@ describe('Strategy', function () {
       // Keeper gets paid
       expect(await wethToken.balanceOf(await owner.getAddress())).to.equal(42);
     });
+
+    it("can't push voting results twice", async function () {
+      const signer1Balance = await garden2.balanceOf(signer1.getAddress());
+      const signer2Balance = await garden2.balanceOf(signer2.getAddress());
+
+      await strategyCandidate.resolveVoting(
+        [signer1.getAddress(), signer2.getAddress()],
+        [signer1Balance, signer2Balance],
+        signer1Balance.add(signer2Balance).toString(),
+        signer1Balance.add(signer2Balance).toString(),
+        42,
+        {
+          gasPrice: 0,
+        },
+      );
+
+      await expect(
+        strategyCandidate.resolveVoting(
+          [signer1.getAddress(), signer2.getAddress()],
+          [signer1Balance, signer2Balance],
+          signer1Balance.add(signer2Balance).toString(),
+          signer1Balance.add(signer2Balance).toString(),
+          42,
+          {
+            gasPrice: 0,
+          },
+        ),
+      ).to.be.revertedWith(/voting is already resolved/i);
+    });
   });
 
   describe('executeInvestment', async function () {
@@ -162,6 +191,25 @@ describe('Strategy', function () {
       expect(await wethToken.balanceOf(await owner.getAddress())).to.equal(42);
     });
 
+    it('can execute investment twice', async function () {
+      const strategyContract = await createStrategy(
+        'vote',
+        [signer1, signer2, signer3],
+        kyberTradeIntegration,
+        garden1,
+      );
+
+      ethers.provider.send('evm_increaseTime', [ONE_DAY_IN_SECONDS * 2]);
+
+      await strategyContract.executeInvestment(ethers.utils.parseEther('1'), 0, {
+        gasPrice: 0,
+      });
+
+      await strategyContract.executeInvestment(ethers.utils.parseEther('1'), 0, {
+        gasPrice: 0,
+      });
+    });
+
     it('refuse to pay a high fee to the keeper', async function () {
       const strategyContract = await createStrategy(
         'vote',
@@ -176,7 +224,7 @@ describe('Strategy', function () {
         strategyContract.executeInvestment(ethers.utils.parseEther('1'), ethers.utils.parseEther('100'), {
           gasPrice: 0,
         }),
-      ).to.be.rejectedWith(/fee is too high/i);
+      ).to.be.revertedWith(/fee is too high/i);
     });
   });
 
@@ -204,6 +252,23 @@ describe('Strategy', function () {
 
       // Keeper gets paid
       expect(await wethToken.balanceOf(await owner.getAddress())).to.equal(42);
+    });
+
+    it("can't finalize investment twice", async function () {
+      const strategyContract = await createStrategy(
+        'active',
+        [signer1, signer2, signer3],
+        kyberTradeIntegration,
+        garden1,
+      );
+
+      ethers.provider.send('evm_increaseTime', [ONE_DAY_IN_SECONDS * 90]);
+
+      await strategyContract.finalizeInvestment(42, { gasPrice: 0 });
+
+      await expect(strategyContract.finalizeInvestment(42, { gasPrice: 0 })).to.be.rejectedWith(
+        /this investment was already exited/i,
+      );
     });
   });
 });

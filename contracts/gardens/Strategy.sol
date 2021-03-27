@@ -99,7 +99,7 @@ contract Strategy is ReentrancyGuard, Initializable {
     modifier onlyKeeper(uint256 _fee) {
         require(IBabController(controller).isValidKeeper(msg.sender), 'Only a keeper can call this');
         // We assume that calling keeper functions should be less expensive than 1 million gas and the gas price should be lower than 1000 gwei.
-        require(_fee < (1000000 * 1000 gwei), 'Fee is too high');
+        require(_fee < MAX_KEEPER_FEE, 'Fee is too high');
         _;
     }
 
@@ -114,6 +114,9 @@ contract Strategy is ReentrancyGuard, Initializable {
     // Max candidate period
     uint256 constant MAX_CANDIDATE_PERIOD = 7 days;
     uint256 constant MIN_VOTERS_TO_BECOME_ACTIVE = 2;
+
+    // Keeper max fee
+    uint256 internal constant MAX_KEEPER_FEE = (1e6 * 1e3 gwei);
 
     /* ============ Struct ============ */
 
@@ -281,6 +284,7 @@ contract Strategy is ReentrancyGuard, Initializable {
         int256 _totalVotes,
         uint256 _fee
     ) external onlyKeeper(_fee) onlyActiveGarden {
+        require(!active, 'Voting is already resolved');
         // Set votes data
         for (uint256 i = 0; i < _voters.length; i++) {
             votes[_voters[i]] = _votes[i];

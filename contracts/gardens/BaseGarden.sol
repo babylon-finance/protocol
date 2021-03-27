@@ -100,7 +100,7 @@ abstract contract BaseGarden is ERC20Upgradeable {
     modifier onlyKeeper(uint256 _fee) {
         require(IBabController(controller).isValidKeeper(msg.sender), 'Only a keeper can call this');
         // We assume that calling keeper functions should be less expensive than 1 million gas and the gas price should be lower than 1000 gwei.
-        require(_fee < (1000000 * 1000 gwei), 'Fee is too high');
+        require(_fee < MAX_KEEPER_FEE, 'Fee is too high');
         _;
     }
 
@@ -143,6 +143,13 @@ abstract contract BaseGarden is ERC20Upgradeable {
         _;
     }
 
+    /* ============ State Constants ============ */
+
+    uint256 public constant MAX_DEPOSITS_FUND_V1 = 1e21; // Max deposit per garden is 1000 eth for v1
+    uint256 public constant MAX_TOTAL_IDEAS = 20; // Max number of ideas
+    uint256 internal constant TEN_PERCENT = 1e17;
+    uint256 internal constant MAX_KEEPER_FEE = (1e6 * 1e3 gwei);
+
     /* ============ Structs ============ */
 
     struct Contributor {
@@ -154,9 +161,7 @@ abstract contract BaseGarden is ERC20Upgradeable {
     }
 
     /* ============ State Variables ============ */
-    uint256 public constant MAX_DEPOSITS_FUND_V1 = 1e21; // Max deposit per garden is 1000 eth for v1
-    uint256 public constant MAX_TOTAL_IDEAS = 20; // Max number of ideas
-    uint256 internal constant TEN_PERCENT = 1e17;
+
     // Wrapped ETH address
     address public weth;
 
@@ -616,7 +621,9 @@ abstract contract BaseGarden is ERC20Upgradeable {
         // TODO: This assumes reserve asset is WETH
         // TODO: This assume garden have enought WETH
         // Pay Keeper in WETH
-        require(ERC20Upgradeable(reserveAsset).transfer(_keeper, _fee), 'Not enough WETH for gas subsidy');
+        if (_fee > 0) {
+            require(ERC20Upgradeable(reserveAsset).transfer(_keeper, _fee), 'Not enough WETH for gas subsidy');
+        }
     }
 
     // Disable garden token transfers. Allow minting and burning.
