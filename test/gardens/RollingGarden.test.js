@@ -3,9 +3,9 @@ const { ethers, waffle } = require('hardhat');
 
 const { loadFixture } = waffle;
 
-const addresses = require('../utils/addresses');
-const { ONE_DAY_IN_SECONDS, NOW, EMPTY_BYTES } = require('../utils/constants.js');
-const { deployFolioFixture } = require('./fixtures/ControllerFixture');
+const addresses = require('../../utils/addresses');
+const { ONE_DAY_IN_SECONDS, NOW, EMPTY_BYTES } = require('../../utils/constants.js');
+const { deployFolioFixture } = require('../fixtures/ControllerFixture');
 
 describe('Garden', function () {
   let babController;

@@ -8,11 +8,11 @@ const { parseEther } = ethers.utils;
 
 const { loadFixture } = waffle;
 
-const { createStrategy } = require('./fixtures/StrategyHelper.js');
+const { createStrategy } = require('../fixtures/StrategyHelper.js');
 
-const addresses = require('../utils/addresses');
-const { ONE_DAY_IN_SECONDS } = require('../utils/constants.js');
-const { deployFolioFixture } = require('./fixtures/ControllerFixture');
+const addresses = require('../../utils/addresses');
+const { ONE_DAY_IN_SECONDS } = require('../../utils/constants.js');
+const { deployFolioFixture } = require('../fixtures/ControllerFixture');
 
 describe('Strategy', function () {
   let strategyDataset;
