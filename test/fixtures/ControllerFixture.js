@@ -200,11 +200,7 @@ async function deployFolioFixture() {
 
   const testStrategy1 = await createStrategy('active', [signer1, signer2, signer3], kyberTradeIntegration, garden3);
   const testStrategy2 = await createStrategy('active', [signer1, signer2, signer3], kyberTradeIntegration, garden3);
-  const testStrategy3 = await createStrategy('active', [signer1, signer2, signer3], kyberTradeIntegration, garden3);
-
-  ethers.provider.send('evm_increaseTime', [ONE_DAY_IN_SECONDS * 90]);
-
-  await testStrategy3.finalizeInvestment(42, { gasPrice: 0 });
+  const testStrategy3 = await createStrategy('final', [signer1, signer2, signer3], kyberTradeIntegration, garden3);
 
   console.log('Created and started garden', garden1.address);
   console.log('Created manual testing garden', garden3.address);
