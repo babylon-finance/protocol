@@ -55,7 +55,10 @@ contract StrategyFactory {
         uint256 _stake,
         uint256 _investmentDuration,
         uint256 _expectedReturn,
-        uint256 _minRebalanceCapital
+        uint256 _minRebalanceCapital,
+        address _integration,
+        address[] calldata _tokensNeeded,
+        uint256[] calldata _tokenAmountsNeeded
     ) external returns (address) {
         address clone = Clones.clone(strategy);
         Strategy(clone).initialize(
@@ -66,7 +69,10 @@ contract StrategyFactory {
             _stake,
             _investmentDuration,
             _expectedReturn,
-            _minRebalanceCapital
+            _minRebalanceCapital,
+            _integration,
+            _tokensNeeded,
+            _tokenAmountsNeeded
         );
         return clone;
     }
