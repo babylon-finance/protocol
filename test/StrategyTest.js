@@ -54,6 +54,16 @@ describe('Strategy', function () {
     });
   });
 
+  describe.only('changeInvestmentDuration', function () {
+    it('strategist should be able to change the duration of an investment strategy', async function () {
+      await expect(strategyDataset.connect(signer1).changeInvestmentDuration(ONE_DAY_IN_SECONDS)).to.not.be.reverted;
+    });
+
+    it('other member should be able to change the duration of an investment strategy', async function () {
+      await expect(strategyDataset.connect(signer3).changeInvestmentDuration(ONE_DAY_IN_SECONDS)).to.be.reverted;
+    });
+  });
+
   describe('getStrategyDetails', async function () {
     it('should return the expected strategy properties', async function () {
       const [
