@@ -132,7 +132,7 @@ abstract contract PoolIntegration is BaseIntegration, ReentrancyGuard {
             _getExitPoolCalldata(_poolAddress, _poolTokensIn, _tokensOut, _minAmountsOut);
         poolInfo.strategy.invokeFromIntegration(targetPool, callValue, methodData);
         _validatePostExitPoolData(poolInfo);
-        uint256 protocolFee = _accrueProtocolFee(poolInfo, _tokensOut[0], _minAmountsOut[0]);
+        uint256 protocolFee = _accrueProtocolFee(address(poolInfo.strategy), _tokensOut[0], _minAmountsOut[0]);
 
         _updateGardenPositions(poolInfo, _tokensOut, false);
 
@@ -156,25 +156,6 @@ abstract contract PoolIntegration is BaseIntegration, ReentrancyGuard {
     }
 
     /* ============ Internal Functions ============ */
-
-    /**
-     * Retrieve fee from controller and calculate total protocol fee and send from strategy to protocol recipient
-     *
-     * @param _poolInfo                 Struct containing trade information used in internal functions
-     * @param _feeToken                 Address of the token to pay the fee with
-     * @return uint256                  Amount of receive token taken as protocol fee
-     */
-    function _accrueProtocolFee(
-        PoolInfo memory _poolInfo,
-        address _feeToken,
-        uint256 _exchangedQuantity
-    ) internal returns (uint256) {
-        uint256 protocolFeeTotal = getIntegrationFee(0, _exchangedQuantity);
-
-        payProtocolFeeFromIdea(address(_poolInfo.strategy), _feeToken, protocolFeeTotal);
-
-        return protocolFeeTotal;
-    }
 
     /**
      * Create and return PoolInfo struct

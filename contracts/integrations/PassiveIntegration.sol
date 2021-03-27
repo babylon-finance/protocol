@@ -145,7 +145,7 @@ abstract contract PassiveIntegration is BaseIntegration, ReentrancyGuard {
             _getExitInvestmentCalldata(_investmentAddress, _investmentTokenIn, _tokenOut, _minAmountOut);
         investmentInfo.strategy.invokeFromIntegration(targetInvestment, callValue, methodData);
         _validatePostExitInvestmentData(investmentInfo);
-        uint256 protocolFee = _accrueProtocolFee(investmentInfo, _tokenOut, _minAmountOut);
+        uint256 protocolFee = _accrueProtocolFee(address(investmentInfo.strategy), _tokenOut, _minAmountOut);
 
         _updateGardenPositions(investmentInfo, _tokenOut, false);
 
@@ -169,25 +169,6 @@ abstract contract PassiveIntegration is BaseIntegration, ReentrancyGuard {
     }
 
     /* ============ Internal Functions ============ */
-
-    /**
-     * Retrieve fee from controller and calculate total protocol fee and send from garden to protocol recipient
-     *
-     * @param _investmentInfo                 Struct containing trade information used in internal functions
-     * @param _feeToken                       Address of the token to pay the fee with
-     * @return uint256                        Amount of receive token taken as protocol fee
-     */
-    function _accrueProtocolFee(
-        InvestmentInfo memory _investmentInfo,
-        address _feeToken,
-        uint256 _exchangedQuantity
-    ) internal returns (uint256) {
-        uint256 protocolFeeTotal = getIntegrationFee(0, _exchangedQuantity);
-
-        payProtocolFeeFromIdea(address(_investmentInfo.garden), _feeToken, protocolFeeTotal);
-
-        return protocolFeeTotal;
-    }
 
     /**
      * Create and return InvestmentInfo struct

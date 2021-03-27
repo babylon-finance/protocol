@@ -107,7 +107,7 @@ abstract contract TradeIntegration is BaseIntegration, ReentrancyGuard {
         _validatePreTradeData(tradeInfo, _sendQuantity);
         _executeTrade(tradeInfo, _data);
         uint256 exchangedQuantity = _validatePostTrade(tradeInfo);
-        uint256 protocolFee = _accrueProtocolFee(tradeInfo, exchangedQuantity);
+        uint256 protocolFee = _accrueProtocolFee(address(tradeInfo.strategy), tradeInfo.receiveToken, exchangedQuantity);
         (uint256 netSendAmount, uint256 netReceiveAmount) = _updateGardenPositions(tradeInfo, exchangedQuantity);
         emit ComponentExchanged(
             tradeInfo.garden,
@@ -122,20 +122,6 @@ abstract contract TradeIntegration is BaseIntegration, ReentrancyGuard {
     }
 
     /* ============ Internal Functions ============ */
-
-    /**
-     * Retrieve fee from controller and calculate total protocol fee and send from strategy to protocol recipient
-     *
-     * @param _tradeInfo                Struct containing trade information used in internal functions
-     * @return uint256                  Amount of receive token taken as protocol fee
-     */
-    function _accrueProtocolFee(TradeInfo memory _tradeInfo, uint256 _exchangedQuantity) internal returns (uint256) {
-        uint256 protocolFeeTotal = getIntegrationFee(0, _exchangedQuantity);
-
-        payProtocolFeeFromIdea(address(_tradeInfo.strategy), _tradeInfo.receiveToken, protocolFeeTotal);
-
-        return protocolFeeTotal;
-    }
 
     /**
      * Create and return TradeInfo struct
