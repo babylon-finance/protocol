@@ -95,9 +95,12 @@ abstract contract BaseGarden is ERC20Upgradeable {
 
     /**
      * Throws if the sender is not a keeper in the protocol
+     * @param _fee                     The fee paid to keeper to compensate the gas cost
      */
-    modifier onlyKeeper() {
+    modifier onlyKeeper(uint256 _fee) {
         require(IBabController(controller).isValidKeeper(msg.sender), 'Only a keeper can call this');
+        // We assume that calling keeper functions should be less expensive than 1 million gas and the gas price should be lower than 1000 gwei.
+        require(_fee < MAX_KEEPER_FEE, 'Fee is too high');
         _;
     }
 
@@ -140,6 +143,13 @@ abstract contract BaseGarden is ERC20Upgradeable {
         _;
     }
 
+    /* ============ State Constants ============ */
+
+    uint256 public constant MAX_DEPOSITS_FUND_V1 = 1e21; // Max deposit per garden is 1000 eth for v1
+    uint256 public constant MAX_TOTAL_IDEAS = 20; // Max number of ideas
+    uint256 internal constant TEN_PERCENT = 1e17;
+    uint256 internal constant MAX_KEEPER_FEE = (1e6 * 1e3 gwei);
+
     /* ============ Structs ============ */
 
     struct Contributor {
@@ -151,9 +161,7 @@ abstract contract BaseGarden is ERC20Upgradeable {
     }
 
     /* ============ State Variables ============ */
-    uint256 public constant MAX_DEPOSITS_FUND_V1 = 1e21; // Max deposit per garden is 1000 eth for v1
-    uint256 public constant MAX_TOTAL_IDEAS = 20; // Max number of ideas
-    uint256 internal constant TEN_PERCENT = 1e17;
+
     // Wrapped ETH address
     address public weth;
 
@@ -358,8 +366,9 @@ abstract contract BaseGarden is ERC20Upgradeable {
     /**
      * Rebalances available capital of the garden between the investment strategies that are active.
      * We enter into the investment and add it to the executed strategies array.
+     * @param _fee                     The fee paid to keeper to compensate the gas cost
      */
-    function rebalanceInvestments() external onlyKeeper onlyActive {
+    function rebalanceInvestments(uint256 _fee) external onlyKeeper(_fee) onlyActive {
         uint256 liquidReserveAsset = ERC20Upgradeable(reserveAsset).balanceOf(address(this));
         for (uint256 i = 0; i < strategies.length; i++) {
             IStrategy strategy = IStrategy(strategies[i]);
@@ -369,9 +378,19 @@ abstract contract BaseGarden is ERC20Upgradeable {
                 toAllocate >= strategy.minRebalanceCapital() &&
                 toAllocate.add(strategy.capitalAllocated()) <= strategy.maxCapitalRequested()
             ) {
-                strategy.executeInvestment(toAllocate);
+                strategy.executeInvestment(toAllocate, 0);
             }
         }
+        _payKeeper(msg.sender, _fee);
+    }
+
+    /**
+     * Pays gas cost back to the keeper from executing a transaction
+     * @param _keeper             Keeper that executed the transaction
+     * @param _fee                The fee paid to keeper to compensate the gas cost
+     */
+    function payKeeper(address payable _keeper, uint256 _fee) external onlyStrategy onlyActive {
+        _payKeeper(_keeper, _fee);
     }
 
     /**
@@ -589,6 +608,22 @@ abstract contract BaseGarden is ERC20Upgradeable {
 
     function _validateOnlyContributor(address _caller) internal view {
         require(balanceOf(_caller) > 0, 'Only participant can withdraw');
+    }
+
+    /**
+     * Pays gas cost back to the keeper from executing a transaction
+     * @param _keeper             Keeper that executed the transaction
+     * @param _fee                The fee paid to keeper to compensate the gas cost
+     */
+    function _payKeeper(address payable _keeper, uint256 _fee) internal {
+        require(IBabController(controller).isValidKeeper(_keeper), 'Only a keeper can call this');
+        require(ERC20Upgradeable(reserveAsset).balanceOf(address(this)) >= _fee, 'Not enough WETH for gas subsidy');
+        // TODO: This assumes reserve asset is WETH
+        // TODO: This assume garden have enought WETH
+        // Pay Keeper in WETH
+        if (_fee > 0) {
+            require(ERC20Upgradeable(reserveAsset).transfer(_keeper, _fee), 'Not enough WETH for gas subsidy');
+        }
     }
 
     // Disable garden token transfers. Allow minting and burning.

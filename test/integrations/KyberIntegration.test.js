@@ -59,23 +59,27 @@ describe('KyberTradeIntegration', function () {
       const user2GardenBalance = await garden1.balanceOf(signer2.getAddress());
       const user3GardenBalance = await garden1.balanceOf(signer3.getAddress());
 
-      await strategyContract.executeInvestment(
-        ethers.utils.parseEther('1'),
+      await strategyContract.resolveVoting(
         [signer2.getAddress(), signer3.getAddress()],
         [user2GardenBalance, user3GardenBalance],
         user2GardenBalance.add(user3GardenBalance).toString(),
         user2GardenBalance.add(user3GardenBalance).toString(),
+        0,
         {
           gasPrice: 0,
         },
       );
+
+      await strategyContract.executeInvestment(ethers.utils.parseEther('1'), 0, {
+        gasPrice: 0,
+      });
 
       expect(await wethToken.balanceOf(strategyContract.address)).to.equal(ethers.utils.parseEther('0'));
       expect(await usdcToken.balanceOf(strategyContract.address)).to.be.gt(ethers.utils.parseEther('97') / 10 ** 12);
 
       ethers.provider.send('evm_increaseTime', [ONE_DAY_IN_SECONDS * 90]);
 
-      await strategyContract.finalizeInvestment({ gasPrice: 0 });
+      await strategyContract.finalizeInvestment(0, { gasPrice: 0 });
       expect(await usdcToken.balanceOf(strategyContract.address)).to.equal(0);
     });
   });

@@ -134,4 +134,6 @@ interface IGarden is IERC20 {
     ) external returns (bytes memory _returnValue);
 
     function updatePrincipal(uint256 _amount) external;
+
+    function payKeeper(address payable _keeper, uint256 _fee) external;
 }

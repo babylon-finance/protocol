@@ -172,17 +172,16 @@ async function deployFolioFixture() {
   );
 
   // Create strategies
-  await createStrategy('dataset', [signer1, signer2, signer3], kyberTradeIntegration, garden1);
-  await createStrategy('candidate', [signer1, signer2, signer3], kyberTradeIntegration, garden2);
+  const strategy11 = (await createStrategy('dataset', [signer1, signer2, signer3], kyberTradeIntegration, garden1))
+    .address;
+  const strategy21 = (await createStrategy('deposit', [signer1, signer2, signer3], kyberTradeIntegration, garden2))
+    .address;
   // await createStrategy('active', [signer1, signer2, signer3], kyberTradeIntegration, garden2);
   // await createStrategy('active', [signer1, signer2, signer3], kyberTradeIntegration, garden2);
   // await createStrategy('finalized', [signer1, signer2, signer3], kyberTradeIntegration, garden);
   // await createStrategy('finalized', [signer1, signer2, signer3], kyberTradeIntegration, garden);
 
   console.log('Created and started garden', garden1.address);
-
-  const [strategy11] = await garden1.getStrategies();
-  const [strategy21] = await garden2.getStrategies();
 
   return {
     babController,
