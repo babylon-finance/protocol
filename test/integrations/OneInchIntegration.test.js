@@ -1,10 +1,10 @@
 const { expect } = require('chai');
-const superagent = require('superagent');
+// const superagent = require('superagent');
 const { waffle, ethers } = require('hardhat');
 const { impersonateAddress } = require('../../utils/rpc');
 const { deployFolioFixture } = require('../fixtures/ControllerFixture');
 const addresses = require('../../utils/addresses');
-const { ZERO } = require('../../utils/constants');
+const { ONE_DAY_IN_SECONDS } = require('../../utils/constants');
 
 const { loadFixture } = waffle;
 
@@ -12,9 +12,17 @@ describe('OneInchTradeIntegration', function () {
   let oneInchTradeIntegration;
   let garden1;
   let babController;
+  let signer1;
+  let signer2;
+  let signer3;
+  let strategy11;
+  let strategyContract;
 
   beforeEach(async () => {
-    ({ babController, garden1, oneInchTradeIntegration } = await loadFixture(deployFolioFixture));
+    ({ babController, garden1, oneInchTradeIntegration, signer1, signer2, signer3 } = await loadFixture(
+      deployFolioFixture,
+    ));
+    strategyContract = await ethers.getContractAt('LongStrategy', strategy11);
   });
 
   describe('Deployment', function () {
@@ -29,15 +37,17 @@ describe('OneInchTradeIntegration', function () {
   describe('Trading', function () {
     let daiToken;
     let usdcToken;
+    let wethToken;
     let whaleSigner;
-    let oneInchExchange;
+    // let oneInchExchange;
     const daiWhaleAddress = '0x6B175474E89094C44Da98b954EedeAC495271d0F';
 
     beforeEach(async () => {
       whaleSigner = await impersonateAddress(daiWhaleAddress);
       daiToken = await ethers.getContractAt('IERC20', addresses.tokens.DAI);
+      wethToken = await ethers.getContractAt('IERC20', addresses.tokens.WETH);
       usdcToken = await ethers.getContractAt('IERC20', addresses.tokens.USDC);
-      oneInchExchange = await ethers.getContractAt('IOneInchExchange', addresses.oneinch.exchange);
+      // oneInchExchange = await ethers.getContractAt('IOneInchExchange', addresses.oneinch.exchange);
     });
 
     it('trade dai to usdc', async function () {
@@ -48,51 +58,49 @@ describe('OneInchTradeIntegration', function () {
       );
       expect(await daiToken.balanceOf(garden1.address)).to.equal(ethers.utils.parseEther('100'));
       // Get the quote
-      const quote = await superagent.get(`${addresses.api.oneinch}quote`).query({
-        fromTokenAddress: daiToken.address,
-        toTokenAddress: usdcToken.address,
-        amount: 100 * 10 ** 18,
+      // const quote = await superagent.get(`${addresses.api.oneinch}quote`).query({
+      //   fromTokenAddress: daiToken.address,
+      //   toTokenAddress: usdcToken.address,
+      //   amount: 100 * 10 ** 18,
+      // });
+      await garden1.connect(signer3).deposit(ethers.utils.parseEther('2'), 1, signer3.getAddress(), {
+        value: ethers.utils.parseEther('2'),
       });
-      // Get the parts
-      // const parts = await oneInchExchange.getExpectedReturn(
-      //   daiToken.address,
-      //   usdcToken.address,
-      //   ethers.utils.parseEther("100"),
-      //   1,
-      //   0
-      // );
-      //
-      // // Get call data
-      // const callData = oneInchExchange.interface.encodeFunctionData(
-      //   oneInchExchange.interface.functions[
-      //     "swap(address,address,uint256,uint256,uint256[],uint256)"
-      //   ],
-      //   [
-      //     daiToken.address, // Send token
-      //     usdcToken.address, // Receive token
-      //     ethers.utils.parseEther("100"), // Send quantity
-      //     quote.body.toTokenAmount, // Min receive quantity
-      //     parts.distribution,
-      //     0
-      //   ]
-      // );
-      //
-      // await garden.trade(
-      //   "1inch",
-      //   addresses.tokens.DAI,
-      //   ethers.utils.parseEther("100"),
-      //   usdcToken.address,
-      //   quote.body.toTokenAmount,
-      //   callData,
-      //   { gasPrice: 0 }
-      // );
-      // expect(await daiToken.balanceOf(garden.address)).to.equal(0);
-      // console.log(
-      //   ethers.utils.formatEther(await usdcToken.balanceOf(garden.address))
-      // );
-      // expect(await usdcToken.balanceOf(garden.address)).to.be.gt(
-      //   ethers.utils.parseEther("97") / 10 ** 12
-      // );
+      await garden1.connect(signer1).deposit(ethers.utils.parseEther('2'), 1, signer1.getAddress(), {
+        value: ethers.utils.parseEther('2'),
+      });
+      await garden1.connect(signer2).deposit(ethers.utils.parseEther('2'), 1, signer2.getAddress(), {
+        value: ethers.utils.parseEther('2'),
+      });
+      expect(await wethToken.balanceOf(garden1.address)).to.equal(ethers.utils.parseEther('6.1'));
+
+      ethers.provider.send('evm_increaseTime', [ONE_DAY_IN_SECONDS * 2]);
+
+      const user2GardenBalance = await garden1.balanceOf(signer2.getAddress());
+      const user3GardenBalance = await garden1.balanceOf(signer3.getAddress());
+
+      await strategyContract.resolveVoting(
+        [signer2.getAddress(), signer3.getAddress()],
+        [user2GardenBalance, user3GardenBalance],
+        user2GardenBalance.add(user3GardenBalance).toString(),
+        user2GardenBalance.add(user3GardenBalance).toString(),
+        0,
+        {
+          gasPrice: 0,
+        },
+      );
+
+      await strategyContract.executeInvestment(ethers.utils.parseEther('1'), 0, {
+        gasPrice: 0,
+      });
+
+      expect(await wethToken.balanceOf(strategyContract.address)).to.equal(ethers.utils.parseEther('0'));
+      expect(await usdcToken.balanceOf(strategyContract.address)).to.be.gt(ethers.utils.parseEther('97') / 10 ** 12);
+
+      ethers.provider.send('evm_increaseTime', [ONE_DAY_IN_SECONDS * 90]);
+
+      await strategyContract.finalizeInvestment(0, { gasPrice: 0 });
+      expect(await usdcToken.balanceOf(strategyContract.address)).to.equal(0);
     });
   });
 });

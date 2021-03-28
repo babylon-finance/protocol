@@ -30,8 +30,7 @@ interface ITradeIntegration is IIntegration {
         address _sendToken,
         uint256 _sendQuantity,
         address _receiveToken,
-        uint256 _minReceiveQuantity,
-        bytes memory _data
+        uint256 _minReceiveQuantity
     ) external;
 
     function getConversionRates(

@@ -24,6 +24,17 @@ pragma solidity 0.7.4;
  * Interface for Investment Idea
  */
 interface IStrategy {
+    function initialize(
+        address _strategist,
+        address _garden,
+        address _controller,
+        uint256 _maxCapitalRequested,
+        uint256 _stake,
+        uint256 _investmentDuration,
+        uint256 _expectedReturn,
+        uint256 _minRebalanceCapital
+    ) external;
+
     function resolveVoting(
         address[] calldata _voters,
         int256[] calldata _votes,

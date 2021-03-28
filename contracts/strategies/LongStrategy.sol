@@ -19,20 +19,11 @@
 pragma solidity 0.7.4;
 
 import 'hardhat/console.sol';
-import {Address} from '@openzeppelin/contracts/utils/Address.sol';
-import {ERC20} from '@openzeppelin/contracts/token/ERC20/ERC20.sol';
-import {ReentrancyGuard} from '@openzeppelin/contracts/utils/ReentrancyGuard.sol';
-import {SafeMath} from '@openzeppelin/contracts/math/SafeMath.sol';
-import {SignedSafeMath} from '@openzeppelin/contracts/math/SignedSafeMath.sol';
-import {SafeCast} from '@openzeppelin/contracts/utils/SafeCast.sol';
+import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import {Initializable} from '@openzeppelin/contracts/proxy/Initializable.sol';
-import {AddressArrayUtils} from '../lib/AddressArrayUtils.sol';
 import {Strategy} from './Strategy.sol';
-import {PreciseUnitMath} from '../lib/PreciseUnitMath.sol';
-import {IBabController} from '../interfaces/IBabController.sol';
 import {IGarden} from '../interfaces/IGarden.sol';
 import {ITradeIntegration} from '../interfaces/ITradeIntegration.sol';
-import {IPriceOracle} from '../interfaces/IPriceOracle.sol';
 
 /**
  * @title LongStrategy
@@ -40,31 +31,63 @@ import {IPriceOracle} from '../interfaces/IPriceOracle.sol';
  *
  * Holds the data for a long strategy
  */
-contract LongStrategy is Strategy {
-    using SignedSafeMath for int256;
-    using SafeMath for uint256;
-    using SafeCast for uint256;
-    using SafeCast for int256;
-    using PreciseUnitMath for int256;
-    using PreciseUnitMath for uint256;
-    using AddressArrayUtils for address[];
-    using Address for address;
+contract LongStrategy is Initializable, Strategy {
+    address public sendToken; // Asset to exchange
+    address public receiveToken; // Asset to receive
+    uint256 public sendTokenQuantity; // Quantity of send token to sell
+    uint256 public minReceiveQuantity; // Min quantity of receive token to receive
 
-    address sendToken; // Asset to exchange
-    address receiveToken; // Asset to receive
-    uint256 sentTokenQuantity; // Quantity of send token to sell
-    uint256 minReceiveQuantity; // Min quantity of receive token to receive
+    /**
+     * Sets integration data for the long strategy
+     *
+     * @param _integration                    Address of the integration
+     * @param _tokensNeeded                   Tokens that we need to acquire to enter this investment
+     * @param _tokenAmountsNeeded             Token amounts of these assets we need
+     * @param _sendToken                      Token to be exchanged
+     * @param _receiveToken                   Token to be bought
+     * @param _sendToken                      Amount of sendToken to sell
+     * @param _minReceiveQuantity             Min amount of receiveToken to get
+     */
+    function setLongData(
+        address _integration,
+        address[] memory _tokensNeeded,
+        uint256[] memory _tokenAmountsNeeded,
+        address _sendToken,
+        address _receiveToken,
+        uint256 _sendTokenQuantity,
+        uint256 _minReceiveQuantity
+    ) public onlyIdeator {
+        kind = 0;
+        super.setIntegrationData(_integration, _tokensNeeded, _tokenAmountsNeeded);
+        require(_minReceiveQuantity > 0, 'Must receive assets back');
+        require(_sendToken != _receiveToken, 'Receive token must be different');
+        sendToken = _sendToken;
+        receiveToken = _receiveToken;
+        sendTokenQuantity = _sendTokenQuantity;
+        minReceiveQuantity = _minReceiveQuantity;
+    }
 
     /**
      * Enters the long strategy
-     *
      */
-    function _enterStrategy() internal override {}
+    function _enterStrategy() internal override {
+        ITradeIntegration(integration).trade(
+            sendToken,
+            sendTokenQuantity,
+            receiveToken,
+            minReceiveQuantity // TODO: Can we trust the integration or check first with TWAP
+        );
+    }
 
     /**
-     * Exits the long strategy. Virtual method.
-     * Needs to be overriden in base class.
-     *
+     * Exits the long strategy.
      */
-    function _exitStrategy() internal override {}
+    function _exitStrategy() internal override {
+        ITradeIntegration(integration).trade(
+            receiveToken,
+            IERC20(receiveToken).balanceOf(msg.sender),
+            sendToken,
+            minReceiveQuantity // TODO: calculate this with oracle or 1inch
+        );
+    }
 }

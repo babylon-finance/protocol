@@ -331,14 +331,15 @@ abstract contract BaseGarden is ERC20Upgradeable {
     /* ============ Investment Idea Functions ============ */
     /**
      * Creates a new investment strategy calling the factory and adds it to the array
+     * @param _strategyKind                  Int representing kind of strategy
      * @param _maxCapitalRequested           Max Capital requested denominated in the reserve asset (0 to be unlimited)
      * @param _stake                         Stake with garden participations absolute amounts 1e18
      * @param _investmentDuration            Investment duration in seconds
      * @param _expectedReturn                Expected return
      * @param _minRebalanceCapital           Min capital that is worth it to deposit into this strategy
-     * TODO: Meta Transaction
      */
     function addStrategy(
+        uint8 _strategyKind,
         uint256 _maxCapitalRequested,
         uint256 _stake,
         uint256 _investmentDuration,
@@ -349,6 +350,7 @@ abstract contract BaseGarden is ERC20Upgradeable {
         IStrategyFactory strategyFactory = IStrategyFactory(IBabController(controller).getStrategyFactory());
         address strategy =
             strategyFactory.createStrategy(
+                _strategyKind,
                 msg.sender,
                 address(this),
                 controller,
@@ -554,14 +556,7 @@ abstract contract BaseGarden is ERC20Upgradeable {
         // Updates UniSwap TWAP
         IPriceOracle oracle = IPriceOracle(IBabController(controller).getPriceOracle());
         oracle.updateAdapters(_sendToken, _receiveToken);
-        return
-            ITradeIntegration(tradeIntegration).trade(
-                _sendToken,
-                _sendQuantity,
-                _receiveToken,
-                _minReceiveQuantity,
-                _data
-            );
+        return ITradeIntegration(tradeIntegration).trade(_sendToken, _sendQuantity, _receiveToken, _minReceiveQuantity);
     }
 
     /**

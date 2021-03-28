@@ -21,7 +21,7 @@ describe('KyberTradeIntegration', function () {
     ({ babController, garden1, strategy11, kyberTradeIntegration, signer1, signer2, signer3 } = await loadFixture(
       deployFolioFixture,
     ));
-    strategyContract = await ethers.getContractAt('Strategy', strategy11);
+    strategyContract = await ethers.getContractAt('LongStrategy', strategy11);
   });
 
   describe('Deployment', function () {

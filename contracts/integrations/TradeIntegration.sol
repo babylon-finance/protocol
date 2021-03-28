@@ -85,27 +85,34 @@ abstract contract TradeIntegration is BaseIntegration, ReentrancyGuard {
     /* ============ External Functions ============ */
 
     /**
-     * Executes a trade on a supported DEX. Only callable by the SetToken's manager.
-     * @dev Although the SetToken units are passed in for the send and receive quantities, the total quantity
-     * sent and received is the quantity of SetToken units multiplied by the SetToken totalSupply.
+     * Executes a trade on a supported DEX.
+     * @dev
      *
      * @param _sendToken            Address of the token to be sent to the exchange
-     * @param _sendQuantity         Units of token in SetToken sent to the exchange
+     * @param _sendQuantity         Units of reserve asset token sent to the exchange
      * @param _receiveToken         Address of the token that will be received from the exchange
-     * @param _minReceiveQuantity   Min units of token in SetToken to be received from the exchange
-     * @param _data                 Arbitrary bytes to be used to construct trade call data
+     * @param _minReceiveQuantity   Min units of wanted token to be received from the exchange
      */
     function trade(
         address _sendToken,
         uint256 _sendQuantity,
         address _receiveToken,
-        uint256 _minReceiveQuantity,
-        bytes memory _data
+        uint256 _minReceiveQuantity
     ) external nonReentrant onlyIdea {
         TradeInfo memory tradeInfo =
             _createTradeInfo(name, _sendToken, _receiveToken, _sendQuantity, _minReceiveQuantity);
         _validatePreTradeData(tradeInfo, _sendQuantity);
-        _executeTrade(tradeInfo, _data);
+
+        // Get spender address from exchange adapter and invoke approve for exact amount on sendToken
+        IERC20(_sendToken).approve(_getSpender(), 0);
+        IERC20(_sendToken).approve(_getSpender(), tradeInfo.totalSendQuantity);
+        _executeTrade(
+            tradeInfo.sendToken,
+            tradeInfo.totalSendQuantity,
+            tradeInfo.receiveToken,
+            tradeInfo.totalMinReceiveQuantity
+        );
+
         uint256 exchangedQuantity = _validatePostTrade(tradeInfo);
         uint256 protocolFee =
             _accrueProtocolFee(address(tradeInfo.strategy), tradeInfo.receiveToken, exchangedQuantity);
@@ -193,27 +200,6 @@ abstract contract TradeIntegration is BaseIntegration, ReentrancyGuard {
     }
 
     /**
-     * Invoke approve for strategy, get method data and invoke trade in the context of the strategy.
-     *
-     * @param _tradeInfo            Struct containing trade information used in internal functions
-     * @param _data                 Arbitrary bytes to be used to construct trade call data
-     */
-    function _executeTrade(TradeInfo memory _tradeInfo, bytes memory _data) internal {
-        // Get spender address from exchange adapter and invoke approve for exact amount on sendToken
-        _tradeInfo.strategy.invokeApprove(_getSpender(), _tradeInfo.sendToken, _tradeInfo.totalSendQuantity);
-        (address targetExchange, uint256 callValue, bytes memory methodData) =
-            _getTradeCalldata(
-                _tradeInfo.sendToken,
-                _tradeInfo.receiveToken,
-                address(_tradeInfo.strategy),
-                _tradeInfo.totalSendQuantity,
-                _tradeInfo.totalMinReceiveQuantity,
-                _data
-            );
-        _tradeInfo.strategy.invokeFromIntegration(targetExchange, callValue, methodData);
-    }
-
-    /**
      * Validate post trade data.
      *
      * @param _tradeInfo                Struct containing trade information used in internal functions
@@ -254,37 +240,23 @@ abstract contract TradeIntegration is BaseIntegration, ReentrancyGuard {
     }
 
     /**
-     * Return exchange calldata which is already generated from the exchange API
+     * Executes the trade. Virtual. Needs to be overriden
      *
-     * hparam  _sourceToken              Address of source token to be sold
-     * hparam  _destinationToken         Address of destination token to buy
-     * hparam  _sourceQuantity           Amount of source token to sell
-     * hparam  _minDestinationQuantity   Min amount of destination token to buy
-     * hparam  _data                    Arbitrage bytes containing trade call data
+     * hparam _sendToken            Address of the token to be sent to the exchange
+     * hparam _sendQuantity         Units of reserve asset token sent to the exchange
+     * hparam _receiveToken         Address of the token that will be received from the exchange
+     * hparam _minReceiveQuantity   Min units of wanted token to be received from the exchange
      *
-     * @return address                   Target contract address
-     * @return uint256                   Call value
-     * @return bytes                     Trade calldata
+     * @return _resultAmount        Amount of receive token
      */
-    function _getTradeCalldata(
-        address, /* _sourceToken */
-        address, /* _destinationToken */
-        address, /* _destinationAddress */
-        uint256, /* _sourceQuantity */
-        uint256, /* _minDestinationQuantity */
-        bytes memory /* _data */
-    )
-        internal
-        view
-        virtual
-        returns (
-            address,
-            uint256,
-            bytes memory
-        )
-    {
+    function _executeTrade(
+        address, /* _sendToken */
+        uint256, /*_sendQuantity */
+        address, /* _receiveToken */
+        uint256 /* _minReceiveQuantity */
+    ) internal virtual returns (uint256) {
         require(false, 'This needs to be overriden');
-        return (address(0), 0, bytes(''));
+        return 0;
     }
 
     /**

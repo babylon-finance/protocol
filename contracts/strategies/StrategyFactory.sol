@@ -20,6 +20,8 @@ pragma solidity 0.7.4;
 
 import 'hardhat/console.sol';
 import {Strategy} from './Strategy.sol';
+import {LongStrategy} from './LongStrategy.sol';
+import {IStrategy} from '../interfaces/IStrategy.sol';
 import {Clones} from '@openzeppelin/contracts/proxy/Clones.sol';
 
 /**
@@ -29,10 +31,10 @@ import {Clones} from '@openzeppelin/contracts/proxy/Clones.sol';
  * Factory to create investment strategy contracts
  */
 contract StrategyFactory {
-    address immutable strategy;
+    address immutable longStrategy;
 
     constructor() {
-        strategy = address(new Strategy());
+        longStrategy = address(new LongStrategy());
     }
 
     /**
@@ -48,6 +50,7 @@ contract StrategyFactory {
      * @param _minRebalanceCapital           Min capital that is worth it to deposit into this strategy
      */
     function createStrategy(
+        uint8 _strategyKind,
         address _strategist,
         address _garden,
         address _controller,
@@ -55,13 +58,13 @@ contract StrategyFactory {
         uint256 _stake,
         uint256 _investmentDuration,
         uint256 _expectedReturn,
-        uint256 _minRebalanceCapital,
-        address _integration,
-        address[] calldata _tokensNeeded,
-        uint256[] calldata _tokenAmountsNeeded
+        uint256 _minRebalanceCapital
     ) external returns (address) {
-        address clone = Clones.clone(strategy);
-        Strategy(clone).initialize(
+        address clone;
+        if (_strategyKind == 0) {
+            clone = Clones.clone(longStrategy);
+        }
+        IStrategy(clone).initialize(
             _strategist,
             _garden,
             _controller,
@@ -69,10 +72,7 @@ contract StrategyFactory {
             _stake,
             _investmentDuration,
             _expectedReturn,
-            _minRebalanceCapital,
-            _integration,
-            _tokensNeeded,
-            _tokenAmountsNeeded
+            _minRebalanceCapital
         );
         return clone;
     }

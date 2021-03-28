@@ -100,6 +100,7 @@ interface IGarden is IERC20 {
     function allocateCapitalToInvestment(uint256 _capital) external;
 
     function addStrategy(
+        uint8 _strategyKind,
         uint256 _maxCapitalRequested,
         uint256 _stake,
         uint256 _investmentDuration,

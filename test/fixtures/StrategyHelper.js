@@ -1,9 +1,10 @@
 const { ethers } = require('hardhat');
-const { ONE_DAY_IN_SECONDS, EMPTY_BYTES } = require('../../utils/constants.js');
+const { ONE_DAY_IN_SECONDS } = require('../../utils/constants.js');
 const addresses = require('../../utils/addresses');
 
-async function createKyberDummyStrategy(garden, kyberIntegration, signer) {
+async function createLongStrategy(garden, integration, signer) {
   await garden.connect(signer).addStrategy(
+    0, // Long Strategy
     ethers.utils.parseEther('10'),
     ethers.utils.parseEther('5'),
     ONE_DAY_IN_SECONDS * 30,
@@ -12,27 +13,23 @@ async function createKyberDummyStrategy(garden, kyberIntegration, signer) {
   );
   const strategies = await garden.getStrategies();
   const lastStrategyAddr = strategies[strategies.length - 1];
-  const kyberAbi = kyberIntegration.interface;
-  const dataEnter = kyberAbi.encodeFunctionData(kyberAbi.functions['trade(address,uint256,address,uint256,bytes)'], [
-    addresses.tokens.WETH,
-    ethers.utils.parseEther('1'),
-    addresses.tokens.USDC,
-    ethers.utils.parseEther('900') / 10 ** 12,
-    EMPTY_BYTES,
-  ]);
 
-  const dataExit = kyberAbi.encodeFunctionData(kyberAbi.functions['trade(address,uint256,address,uint256,bytes)'], [
-    addresses.tokens.USDC,
-    ethers.utils.parseEther('900') / 10 ** 12,
-    addresses.tokens.WETH,
-    ethers.utils.parseEther('0.1'),
-    EMPTY_BYTES,
-  ]);
+  const strategy = await ethers.getContractAt('LongStrategy', lastStrategyAddr);
+  await strategy
+    .connect(signer)
+    .setLongData(
+      integration,
+      [],
+      [],
+      addresses.tokens.WETH,
+      addresses.tokens.USDC,
+      ethers.utils.parseEther('1'),
+      ethers.utils.parseEther('900') / 10 ** 12,
+      {
+        gasPrice: 0,
+      },
+    );
 
-  const strategy = await ethers.getContractAt('Strategy', lastStrategyAddr);
-  await strategy.connect(signer).setIntegrationData(kyberIntegration.address, dataEnter, dataExit, [], [], {
-    gasPrice: 0,
-  });
   return strategy;
 }
 
@@ -74,21 +71,24 @@ async function finalize(strategy) {
   await strategy.finalizeInvestment(0, { gasPrice: 0 });
 }
 
-async function createStrategy(kind, signers, kyberIntegration, garden) {
-  const strategy = await createKyberDummyStrategy(garden, kyberIntegration, signers[0]);
-  if (kind === 'dataset') {
+async function createStrategy(state, kind, signers, integration, garden) {
+  let strategy;
+  if (kind === 0) {
+    strategy = await createLongStrategy(garden, integration, signers[0]);
+  }
+  if (state === 'dataset') {
     return strategy;
   }
   await deposit(garden, signers);
-  if (kind === 'deposit') {
+  if (state === 'deposit') {
     return strategy;
   }
   await vote(garden, signers, strategy);
-  if (kind === 'vote') {
+  if (state === 'vote') {
     return strategy;
   }
   await execute(strategy);
-  if (kind === 'active') {
+  if (state === 'active') {
     return strategy;
   }
   await finalize(strategy);
