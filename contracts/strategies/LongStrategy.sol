@@ -1,5 +1,5 @@
 /*
-    Copyright 2020 Babylon Finance.
+    Copyright 2021 Babylon Finance.
 
     Licensed under the Apache License, Version 2.0 (the "License");
     you may not use this file except in compliance with the License.
@@ -31,32 +31,28 @@ import {ITradeIntegration} from '../interfaces/ITradeIntegration.sol';
  * Holds the data for a long strategy
  */
 contract LongStrategy is Strategy {
-    address public sendToken; // Asset to exchange
     address public receiveToken; // Asset to receive
-    uint256 public sendTokenQuantity; // Quantity of send token to sell
+    uint256 public reserveAssetQuantity; // Quantity of reserve asset to sell
     uint256 public minReceiveQuantity; // Min quantity of receive token to receive
 
     /**
      * Sets integration data for the long strategy
      *
-     * @param _sendToken                      Token to be exchanged
      * @param _receiveToken                   Token to be bought
-     * @param _sendToken                      Amount of sendToken to sell
+     * @param _reserveAssetQuantity           Amount of reserve asset to sell
      * @param _minReceiveQuantity             Min amount of receiveToken to get
      */
     function setLongData(
-        address _sendToken,
         address _receiveToken,
-        uint256 _sendTokenQuantity,
+        uint256 _reserveAssetQuantity,
         uint256 _minReceiveQuantity
     ) public onlyIdeator {
         kind = 0;
         require(!dataSet, 'Data is set already');
         require(_minReceiveQuantity > 0, 'Must receive assets back');
-        require(_sendToken != _receiveToken, 'Receive token must be different');
-        sendToken = _sendToken;
+        require(garden.getReserveAsset() != _receiveToken, 'Receive token must be different');
         receiveToken = _receiveToken;
-        sendTokenQuantity = _sendTokenQuantity;
+        reserveAssetQuantity = _reserveAssetQuantity;
         minReceiveQuantity = _minReceiveQuantity;
         dataSet = true;
     }
@@ -65,9 +61,10 @@ contract LongStrategy is Strategy {
      * Enters the long strategy
      */
     function _enterStrategy() internal override {
+        // Call  _trade() instead?
         ITradeIntegration(integration).trade(
-            sendToken,
-            sendTokenQuantity,
+            garden.getReserveAsset(),
+            reserveAssetQuantity,
             receiveToken,
             minReceiveQuantity // TODO: Can we trust the integration or check first with TWAP
         );
@@ -80,7 +77,7 @@ contract LongStrategy is Strategy {
         ITradeIntegration(integration).trade(
             receiveToken,
             IERC20(receiveToken).balanceOf(address(this)),
-            sendToken,
+            garden.getReserveAsset(),
             minReceiveQuantity // TODO: calculate this with oracle or 1inch
         );
     }

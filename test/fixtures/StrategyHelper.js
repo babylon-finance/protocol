@@ -16,7 +16,6 @@ async function createLongStrategy(garden, integration, signer, params = DEFAULT_
   const lastStrategyAddr = strategies[strategies.length - 1];
 
   const passedLongParams = longParams || [
-    addresses.tokens.WETH,
     addresses.tokens.USDC,
     ethers.utils.parseEther('1'),
     ethers.utils.parseEther('900') / 10 ** 12,

@@ -1,5 +1,5 @@
 /*
-    Copyright 2020 Babylon Finance
+    Copyright 2021 Babylon Finance
 
     Licensed under the Apache License, Version 2.0 (the "License");
     you may not use this file except in compliance with the License.
@@ -24,6 +24,7 @@ import {SafeMath} from '@openzeppelin/contracts/math/SafeMath.sol';
 import {PoolIntegration} from './PoolIntegration.sol';
 import {PreciseUnitMath} from '../../lib/PreciseUnitMath.sol';
 import {IBFactory} from '../../interfaces/external/balancer/IBFactory.sol';
+import {IBPool} from '../../interfaces/external/balancer/IBPool.sol';
 
 /**
  * @title BalancerIntegration
@@ -55,6 +56,10 @@ contract BalancerIntegration is PoolIntegration {
         address _coreFactoryAddress
     ) PoolIntegration('balancer', _weth, _controller) {
         coreFactory = IBFactory(_coreFactoryAddress);
+    }
+
+    function getPoolTokens(address _poolAddress) external view override returns (address[] memory) {
+        return IBPool(_poolAddress).getCurrentTokens();
     }
 
     /* ============ Internal Functions ============ */

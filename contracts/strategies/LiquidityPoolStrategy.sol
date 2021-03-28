@@ -1,5 +1,5 @@
 /*
-    Copyright 2020 Babylon Finance.
+    Copyright 2021 Babylon Finance.
 
     Licensed under the Apache License, Version 2.0 (the "License");
     you may not use this file except in compliance with the License.
@@ -19,6 +19,7 @@
 pragma solidity 0.7.4;
 
 import 'hardhat/console.sol';
+import {SafeMath} from '@openzeppelin/contracts/math/SafeMath.sol';
 import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import {Strategy} from './Strategy.sol';
 import {IGarden} from '../interfaces/IGarden.sol';
@@ -31,46 +32,67 @@ import {IPoolIntegration} from '../interfaces/IPoolIntegration.sol';
  * Holds the data for a strategy that adds liquidity to a pool
  */
 contract LiquidityPoolStrategy is Strategy {
-    address public sendToken;           // Address of token to sell to buy the pool tokens
-    address public pool;                // Pool to add liquidity to
-    uint256 public sendTokenQuantity;   // Amount of send token to sell
-    uint256 public minReceiveQuantity;  // Min amount of pool tokens to receive
+    using SafeMath for uint256;
+
+    address public pool; // Pool to add liquidity to
+    uint256 public reserveAssetQuantity; // Min amount of pool tokens to receive
+    uint256 public minReceiveQuantity; // Min amount of pool tokens to receive
+    address[] public poolTokens; // List of pool tokens
 
     /**
      * Sets integration data for the pool strategy
      *
-     * @param _sendToken                      Address of token to sell
      * @param _pool                           Liquidity pool
-     * @param _sendTokenQuantity              Amount of sendToken to sell
+     * @param _reserveAssetQuantity           Amount of sendToken to sell
      * @param _minReceiveQuantity             Min amount of pool tokens to get
      */
     function setPoolData(
-        address _sendToken,
         address _pool,
-        uint256 _sendTokenQuantity,
+        uint256 _reserveAssetQuantity,
         uint256 _minReceiveQuantity
     ) public onlyIdeator {
         kind = 1;
         require(_minReceiveQuantity > 0, 'Must receive assets back');
-        require(pool != _sendToken, 'Pool token must be different');
-        // TODO: Validate pool
-        sendToken = _sendToken;
+        require(IPoolIntegration(integration).isPool(pool), 'Must be a valid pool of this protocol');
         pool = _pool;
-        sendTokenQuantity = _sendTokenQuantity;
+        reserveAssetQuantity = _reserveAssetQuantity;
         minReceiveQuantity = _minReceiveQuantity;
+        poolTokens = IPoolIntegration(integration).getPoolTokens(pool);
     }
 
     /**
      * Enters the pool strategy
      */
     function _enterStrategy() internal override {
-
+        address reserveAsset = garden.getReserveAsset();
+        uint256[] memory _maxAmountsIn = new uint256[](poolTokens.length);
+        // Get the tokens needed to enter the pool
+        for (uint256 i = 0; i < poolTokens.length; i++) {
+            if (poolTokens[i] != reserveAsset) {
+                _trade(reserveAsset, reserveAssetQuantity.div(poolTokens.length), poolTokens[i]);
+                _maxAmountsIn[i] = IERC20(poolTokens[i]).balanceOf(address(this));
+            }
+        }
+        IPoolIntegration(integration).joinPool(pool, minReceiveQuantity, poolTokens, _maxAmountsIn);
     }
 
     /**
      * Exits the pool strategy.
      */
     function _exitStrategy() internal override {
-
+        uint256[] memory _minAmountsOut = new uint256[](poolTokens.length);
+        IPoolIntegration(integration).exitPool(
+            pool,
+            IERC20(pool).balanceOf(address(this)), // Sell all pool tokens
+            poolTokens,
+            _minAmountsOut
+        );
+        // Exit Pool tokens
+        address reserveAsset = garden.getReserveAsset();
+        for (uint256 i = 0; i < positions.length; i++) {
+            if (poolTokens[i] != reserveAsset) {
+                _trade(poolTokens[i], IERC20(poolTokens[i]).balanceOf(address(this)), reserveAsset);
+            }
+        }
     }
 }

@@ -1,5 +1,5 @@
 /*
-    Copyright 2020 Babylon Finance
+    Copyright 2021 Babylon Finance
 
     Licensed under the Apache License, Version 2.0 (the "License");
     you may not use this file except in compliance with the License.
@@ -104,7 +104,7 @@ abstract contract PoolIntegration is BaseIntegration, ReentrancyGuard {
             _getJoinPoolCalldata(_poolAddress, _poolTokensOut, _tokensIn, _maxAmountsIn);
         poolInfo.strategy.invokeFromIntegration(targetPool, callValue, methodData);
         _validatePostJoinPoolData(poolInfo);
-        _updateGardenPositions(poolInfo, _tokensIn, true);
+        _updateGardenPositions(poolInfo, true);
 
         emit PoolEntered(address(poolInfo.strategy), address(poolInfo.garden), poolInfo.pool, _poolTokensOut);
     }
@@ -134,7 +134,7 @@ abstract contract PoolIntegration is BaseIntegration, ReentrancyGuard {
         _validatePostExitPoolData(poolInfo);
         uint256 protocolFee = _accrueProtocolFee(address(poolInfo.strategy), _tokensOut[0], _minAmountsOut[0]);
 
-        _updateGardenPositions(poolInfo, _tokensOut, false);
+        _updateGardenPositions(poolInfo, false);
 
         emit PoolExited(
             address(poolInfo.strategy),
@@ -153,6 +153,14 @@ abstract contract PoolIntegration is BaseIntegration, ReentrancyGuard {
      */
     function isPool(address _poolAddress) external view returns (bool) {
         return _isPool(_poolAddress);
+    }
+
+    function getPoolTokens(
+        address /* _poolAddress */
+    ) external view virtual returns (address[] memory) {
+        address[] memory poolTokens;
+        require(false, 'This needs to be overriden');
+        return poolTokens;
     }
 
     /* ============ Internal Functions ============ */
@@ -240,23 +248,7 @@ abstract contract PoolIntegration is BaseIntegration, ReentrancyGuard {
      *
      * @param _poolInfo                Struct containing pool information used in internal functions
      */
-    function _updateGardenPositions(
-        PoolInfo memory _poolInfo,
-        address[] calldata _poolTokens,
-        bool isDeposit
-    ) internal {
-        // balance pool individual component
-        // TODO: Grab actual min tokens on added and withdrawed on exit
-        for (uint256 i = 0; i < _poolTokens.length; i++) {
-            _updateStrategyPosition(
-                address(_poolInfo.strategy),
-                _poolTokens[i],
-                isDeposit
-                    ? int256(-_poolInfo.limitPoolTokenQuantities[i])
-                    : _poolInfo.limitPoolTokenQuantities[i].toInt256(),
-                isDeposit ? 2 : 0
-            );
-        }
+    function _updateGardenPositions(PoolInfo memory _poolInfo, bool isDeposit) internal {
         // balance pool token
         _updateStrategyPosition(
             address(_poolInfo.strategy),

@@ -1,5 +1,5 @@
 /*
-    Copyright 2020 Babylon Finance
+    Copyright 2021 Babylon Finance
 
     Licensed under the Apache License, Version 2.0 (the "License");
     you may not use this file except in compliance with the License.
@@ -57,6 +57,13 @@ contract UniswapPoolIntegration is PoolIntegration {
         address _uniswapRouterAddress
     ) PoolIntegration('uniswap_pool', _weth, _controller) {
         uniRouter = IUniswapV2Router(_uniswapRouterAddress);
+    }
+
+    function getPoolTokens(address _poolAddress) external view override returns (address[] memory) {
+        address[] memory result = new address[](2);
+        result[0] = IUniswapV2Pair(_poolAddress).token0();
+        result[1] = IUniswapV2Pair(_poolAddress).token1();
+        return result;
     }
 
     /* ============ Internal Functions ============ */

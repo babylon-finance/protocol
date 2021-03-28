@@ -1,5 +1,5 @@
 /*
-    Copyright 2020 Babylon Finance.
+    Copyright 2021 Babylon Finance.
 
     Licensed under the Apache License, Version 2.0 (the "License");
     you may not use this file except in compliance with the License.
@@ -290,7 +290,6 @@ contract Strategy is ReentrancyGuard, Initializable {
         garden.allocateCapitalToInvestment(_capital);
         calculateAndEditPosition(garden.getReserveAsset(), _capital, _capital.toInt256(), LIQUID_STATUS);
         capitalAllocated = capitalAllocated.add(_capital);
-        _enterStrategyPositions();
         _enterStrategy();
         // Sets the executed timestamp
         executedAt = block.timestamp;
@@ -314,7 +313,6 @@ contract Strategy is ReentrancyGuard, Initializable {
         uint256 reserveAssetBeforeExiting = garden.getPrincipal();
         // Execute exit trade
         _exitStrategy();
-        _exitStrategyPositions();
         capitalReturned = garden.getPrincipal().sub(reserveAssetBeforeExiting);
         // Mark as finalized
         finalized = true;
@@ -399,8 +397,7 @@ contract Strategy is ReentrancyGuard, Initializable {
         require(positionsByComponent[_token].balance == 0, 'Token is not one of the active positions');
         uint256 balance = ERC20(_token).balanceOf(address(this));
         require(balance > 0, 'Token balance > 0');
-        // TODO: probably use uniswap or 1inch. Don't go through TWAP
-        _trade('_kyber', _token, balance, garden.getReserveAsset(), 0);
+        _trade(_token, balance, garden.getReserveAsset());
     }
 
     function invokeApprove(
@@ -574,72 +571,26 @@ contract Strategy is ReentrancyGuard, Initializable {
     }
 
     /**
-     * Function that buys the assets required to enter the strategy
-     */
-    function _enterStrategyPositions() internal {
-        // Exchange the tokens needed
-        for (uint256 i = 0; i < tokensNeeded.length; i++) {
-            if (tokensNeeded[i] != garden.getReserveAsset()) {
-                uint256 pricePerTokenUnit = _getPrice(garden.getReserveAsset(), tokensNeeded[i]);
-                uint256 slippageAllowed = 1e16; // 1%
-                uint256 exactAmount = tokenAmountsNeeded[i].preciseDiv(pricePerTokenUnit);
-                uint256 amountOfReserveAssetToAllow = exactAmount.add(exactAmount.preciseMul(slippageAllowed));
-                require(
-                    ERC20(garden.getReserveAsset()).balanceOf(address(this)) >= amountOfReserveAssetToAllow,
-                    'Need enough liquid reserve asset'
-                );
-                _trade(
-                    'kyber',
-                    garden.getReserveAsset(),
-                    amountOfReserveAssetToAllow,
-                    tokensNeeded[i],
-                    tokenAmountsNeeded[i]
-                );
-            }
-        }
-    }
-
-    /**
-     * Function that sells the strategy positions back to the reserve asset
-     */
-    function _exitStrategyPositions() internal {
-        // Exchange the positions back to the reserve asset
-        address reserveAsset = garden.getReserveAsset();
-        for (uint256 i = 0; i < positions.length; i++) {
-            if (positions[i] != reserveAsset) {
-                _trade(
-                    'kyber',
-                    positions[i],
-                    ERC20(positions[i]).balanceOf(address(this)),
-                    reserveAsset,
-                    0 // TODO: currently no minimum. use onchain oracle?
-                );
-            }
-        }
-    }
-
-    /**
      * Function that calculates the price using the oracle and executes a trade.
      * Must call the exchange to get the price and pass minReceiveQuantity accordingly.
-     * @param _integrationName        Name of the integration to call
      * @param _sendToken              Token to exchange
      * @param _sendQuantity           Amount of tokens to send
      * @param _receiveToken           Token to receive
-     * @param _minReceiveQuantity     Min amount of tokens to receive
      */
     function _trade(
-        string memory _integrationName,
         address _sendToken,
         uint256 _sendQuantity,
-        address _receiveToken,
-        uint256 _minReceiveQuantity
-    ) internal {
-        address tradeIntegration = IBabController(controller).getIntegrationByName(_integrationName);
+        address _receiveToken
+    ) internal returns (uint256) {
+        address tradeIntegration = IBabController(controller).getIntegrationByName('1inch');
         require(garden.isValidIntegration(tradeIntegration), 'Integration is not valid');
-        // Updates UniSwap TWAP
-        IPriceOracle oracle = IPriceOracle(IBabController(controller).getPriceOracle());
-        oracle.updateAdapters(_sendToken, _receiveToken);
-        return ITradeIntegration(tradeIntegration).trade(_sendToken, _sendQuantity, _receiveToken, _minReceiveQuantity);
+        // Uses on chain oracle for all internal strategy operations to avoid attacks
+        uint256 pricePerTokenUnit = _getPrice(_sendToken, _receiveToken);
+        uint256 slippageAllowed = 1e16; // 1%
+        uint256 exactAmount = _sendQuantity.preciseMul(pricePerTokenUnit);
+        uint256 minAmountExpected = exactAmount.sub(exactAmount.preciseMul(slippageAllowed));
+        ITradeIntegration(tradeIntegration).trade(_sendToken, _sendQuantity, _receiveToken, minAmountExpected);
+        return minAmountExpected;
     }
 
     function _transferIdeaRewards() internal {
