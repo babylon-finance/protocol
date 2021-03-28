@@ -37,9 +37,6 @@ contract OneInchTradeIntegration is TradeIntegration {
     // Address of 1Inch exchange address
     address public oneInchExchangeAddress;
 
-    // Bytes to check 1Inch function signature
-    bytes4 public immutable oneInchFunctionSignature = bytes4(0xe2a7515e);
-
     /* ============ Constructor ============ */
 
     /**
@@ -87,17 +84,11 @@ contract OneInchTradeIntegration is TradeIntegration {
         )
     {
         (uint256 _returnAmount, uint256[] memory _distribution) =
-            IOneInchExchange(oneInchExchangeAddress).getExpectedReturn(
-                _sendToken,
-                _receiveToken,
-                _sendQuantity,
-                _sendQuantity.div(1e18),
-                0
-            );
+            IOneInchExchange(oneInchExchangeAddress).getExpectedReturn(_sendToken, _receiveToken, _sendQuantity, 1, 0);
 
         bytes memory methodData =
             abi.encodeWithSignature(
-                'swap(address,address,uint256,uint256,uint256,uint256)',
+                'swap(address,address,uint256,uint256,uint256[],uint256)',
                 _sendToken,
                 _receiveToken,
                 _sendQuantity,

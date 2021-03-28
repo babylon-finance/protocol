@@ -206,7 +206,6 @@ abstract contract TradeIntegration is BaseIntegration, ReentrancyGuard {
             IERC20(_tradeInfo.receiveToken).balanceOf(address(_tradeInfo.strategy)).sub(
                 _tradeInfo.preTradeReceiveTokenBalance
             );
-
         require(exchangedQuantity >= _tradeInfo.totalMinReceiveQuantity, 'Slippage greater than allowed');
 
         return exchangedQuantity;
