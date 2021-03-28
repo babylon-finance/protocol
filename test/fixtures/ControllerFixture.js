@@ -200,8 +200,8 @@ async function deployFolioFixture() {
   await createStrategy('deposit', 0, [signer1, signer2, signer3], kyberTradeIntegration.address, garden3);
   await createStrategy('dataset', 0, [signer1, signer2, signer3], kyberTradeIntegration.address, garden3);
 
-  // await createStrategy('active', 0, [signer1, signer2, signer3], kyberTradeIntegration.address, garden3);
-  // await createStrategy('active', 0, [signer1, signer2, signer3], kyberTradeIntegration.address, garden3);
+  await createStrategy('active', 0, [signer1, signer2, signer3], kyberTradeIntegration.address, garden3);
+  await createStrategy('active', 0, [signer1, signer2, signer3], kyberTradeIntegration.address, garden3);
   // await createStrategy('final', 0, [signer1, signer2, signer3], kyberTradeIntegration.address, garden3);
 
   console.log('Created and started garden', garden1.address);

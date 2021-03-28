@@ -73,12 +73,21 @@ contract OneInchTradeIntegration is TradeIntegration {
      * @param _receiveToken         Address of the token that will be received from the exchange
      * @param _minReceiveQuantity   Min units of wanted token to be received from the exchange
      */
-    function _executeTrade(
+    function _getTradeCallData(
         address _sendToken,
         uint256 _sendQuantity,
         address _receiveToken,
         uint256 _minReceiveQuantity
-    ) internal override returns (uint256) {
+    )
+        internal
+        view
+        override
+        returns (
+            address,
+            uint256,
+            bytes memory
+        )
+    {
         (uint256 _returnAmount, uint256[] memory _distribution) =
             IOneInchExchange(oneInchExchangeAddress).getExpectedReturn(
                 _sendToken,
@@ -87,8 +96,10 @@ contract OneInchTradeIntegration is TradeIntegration {
                 _sendQuantity.div(1e18),
                 0
             );
-        uint256 _resultAmount =
-            IOneInchExchange(oneInchExchangeAddress).swap(
+
+        bytes memory methodData =
+            abi.encodeWithSignature(
+                'swap(address,address,uint256,uint256,uint256,uint256)',
                 _sendToken,
                 _receiveToken,
                 _sendQuantity,
@@ -96,8 +107,7 @@ contract OneInchTradeIntegration is TradeIntegration {
                 _distribution,
                 0
             );
-        require(_resultAmount >= _minReceiveQuantity, '1Inch trade had more slippage than allowed');
-        return _resultAmount;
+        return (oneInchExchangeAddress, 0, methodData);
     }
 
     /**

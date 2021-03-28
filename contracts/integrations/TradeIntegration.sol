@@ -104,14 +104,15 @@ abstract contract TradeIntegration is BaseIntegration, ReentrancyGuard {
         _validatePreTradeData(tradeInfo, _sendQuantity);
 
         // Get spender address from exchange adapter and invoke approve for exact amount on sendToken
-        IERC20(_sendToken).approve(_getSpender(), 0);
-        IERC20(_sendToken).approve(_getSpender(), tradeInfo.totalSendQuantity);
-        _executeTrade(
-            tradeInfo.sendToken,
-            tradeInfo.totalSendQuantity,
-            tradeInfo.receiveToken,
-            tradeInfo.totalMinReceiveQuantity
-        );
+        tradeInfo.strategy.invokeApprove(_getSpender(), tradeInfo.sendToken, tradeInfo.totalSendQuantity);
+        (address targetExchange, uint256 callValue, bytes memory methodData) =
+            _getTradeCallData(
+                tradeInfo.sendToken,
+                tradeInfo.totalSendQuantity,
+                tradeInfo.receiveToken,
+                tradeInfo.totalMinReceiveQuantity
+            );
+        tradeInfo.strategy.invokeFromIntegration(targetExchange, callValue, methodData);
 
         uint256 exchangedQuantity = _validatePostTrade(tradeInfo);
         uint256 protocolFee =
@@ -240,23 +241,34 @@ abstract contract TradeIntegration is BaseIntegration, ReentrancyGuard {
     }
 
     /**
-     * Executes the trade. Virtual. Needs to be overriden
+     * Return exchange calldata which is already generated from the exchange API
      *
      * hparam _sendToken            Address of the token to be sent to the exchange
      * hparam _sendQuantity         Units of reserve asset token sent to the exchange
      * hparam _receiveToken         Address of the token that will be received from the exchange
      * hparam _minReceiveQuantity   Min units of wanted token to be received from the exchange
      *
-     * @return _resultAmount        Amount of receive token
+     * @return address                   Target contract address
+     * @return uint256                   Call value
+     * @return bytes                     Trade calldata
      */
-    function _executeTrade(
+    function _getTradeCallData(
         address, /* _sendToken */
         uint256, /*_sendQuantity */
         address, /* _receiveToken */
         uint256 /* _minReceiveQuantity */
-    ) internal virtual returns (uint256) {
+    )
+        internal
+        view
+        virtual
+        returns (
+            address,
+            uint256,
+            bytes memory
+        )
+    {
         require(false, 'This needs to be overriden');
-        return 0;
+        return (address(0), 0, bytes(''));
     }
 
     /**

@@ -87,35 +87,46 @@ contract KyberTradeIntegration is TradeIntegration {
     /* ============ Internal Functions ============ */
 
     /**
-     * Executes the trade through Kyber.
+     * Get calldata through Kyber.
      *
      * @param _sendToken            Address of the token to be sent to the exchange
      * @param _sendQuantity         Units of reserve asset token sent to the exchange
      * @param _receiveToken         Address of the token that will be received from the exchange
      * @param _minReceiveQuantity   Min units of wanted token to be received from the exchange
      */
-    function _executeTrade(
+    function _getTradeCallData(
         address _sendToken,
         uint256 _sendQuantity,
         address _receiveToken,
         uint256 _minReceiveQuantity
-    ) internal override returns (uint256) {
+    )
+        internal
+        view
+        override
+        returns (
+            address,
+            uint256,
+            bytes memory
+        )
+    {
         (, uint256 worstRate) =
             IKyberNetworkProxy(kyberNetworkProxyAddress).getExpectedRate(_sendToken, _receiveToken, _sendQuantity);
 
+        console.log('execute kyber');
         // Encode method data for TradeIntegration to invoke
-        uint256 resultAmount =
-            IKyberNetworkProxy(kyberNetworkProxyAddress).trade(
+        bytes memory methodData =
+            abi.encodeWithSignature(
+                'trade(address,uint256,address,address,uint256,uint256,address)',
                 _sendToken,
                 _sendQuantity,
                 _receiveToken,
                 msg.sender,
                 PreciseUnitMath.maxUint256(), // Sell entire amount of sourceToken
                 worstRate, // Trade with implied conversion rate
-                msg.sender // Strategy address
+                msg.sender // Garden address
             );
 
-        return resultAmount;
+        return (kyberNetworkProxyAddress, 0, methodData);
     }
 
     /**
