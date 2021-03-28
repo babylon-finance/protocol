@@ -32,27 +32,20 @@ import {ITradeIntegration} from '../interfaces/ITradeIntegration.sol';
  */
 contract LongStrategy is Strategy {
     address public receiveToken; // Asset to receive
-    uint256 public reserveAssetQuantity; // Quantity of reserve asset to sell
     uint256 public minReceiveQuantity; // Min quantity of receive token to receive
 
     /**
      * Sets integration data for the long strategy
      *
      * @param _receiveToken                   Token to be bought
-     * @param _reserveAssetQuantity           Amount of reserve asset to sell
      * @param _minReceiveQuantity             Min amount of receiveToken to get
      */
-    function setLongData(
-        address _receiveToken,
-        uint256 _reserveAssetQuantity,
-        uint256 _minReceiveQuantity
-    ) public onlyIdeator {
+    function setLongData(address _receiveToken, uint256 _minReceiveQuantity) public onlyIdeator {
         kind = 0;
         require(!dataSet, 'Data is set already');
         require(_minReceiveQuantity > 0, 'Must receive assets back');
         require(garden.getReserveAsset() != _receiveToken, 'Receive token must be different');
         receiveToken = _receiveToken;
-        reserveAssetQuantity = _reserveAssetQuantity;
         minReceiveQuantity = _minReceiveQuantity;
         dataSet = true;
     }
@@ -60,14 +53,9 @@ contract LongStrategy is Strategy {
     /**
      * Enters the long strategy
      */
-    function _enterStrategy() internal override {
-        // Call  _trade() instead?
-        ITradeIntegration(integration).trade(
-            garden.getReserveAsset(),
-            reserveAssetQuantity,
-            receiveToken,
-            minReceiveQuantity // TODO: Can we trust the integration or check first with TWAP
-        );
+    function _enterStrategy(uint256 _capital) internal override {
+        // Call _trade() instead? to check first with TWAP
+        ITradeIntegration(integration).trade(garden.getReserveAsset(), _capital, receiveToken, minReceiveQuantity);
     }
 
     /**

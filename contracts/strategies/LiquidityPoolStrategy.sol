@@ -35,7 +35,6 @@ contract LiquidityPoolStrategy is Strategy {
     using SafeMath for uint256;
 
     address public pool; // Pool to add liquidity to
-    uint256 public reserveAssetQuantity; // Min amount of pool tokens to receive
     uint256 public minReceiveQuantity; // Min amount of pool tokens to receive
     address[] public poolTokens; // List of pool tokens
 
@@ -43,19 +42,13 @@ contract LiquidityPoolStrategy is Strategy {
      * Sets integration data for the pool strategy
      *
      * @param _pool                           Liquidity pool
-     * @param _reserveAssetQuantity           Amount of sendToken to sell
      * @param _minReceiveQuantity             Min amount of pool tokens to get
      */
-    function setPoolData(
-        address _pool,
-        uint256 _reserveAssetQuantity,
-        uint256 _minReceiveQuantity
-    ) public onlyIdeator {
+    function setPoolData(address _pool, uint256 _minReceiveQuantity) public onlyIdeator {
         kind = 1;
         require(_minReceiveQuantity > 0, 'Must receive assets back');
         require(IPoolIntegration(integration).isPool(pool), 'Must be a valid pool of this protocol');
         pool = _pool;
-        reserveAssetQuantity = _reserveAssetQuantity;
         minReceiveQuantity = _minReceiveQuantity;
         poolTokens = IPoolIntegration(integration).getPoolTokens(pool);
     }
@@ -63,13 +56,14 @@ contract LiquidityPoolStrategy is Strategy {
     /**
      * Enters the pool strategy
      */
-    function _enterStrategy() internal override {
+    function _enterStrategy(uint256 _capital) internal override {
         address reserveAsset = garden.getReserveAsset();
         uint256[] memory _maxAmountsIn = new uint256[](poolTokens.length);
         // Get the tokens needed to enter the pool
         for (uint256 i = 0; i < poolTokens.length; i++) {
             if (poolTokens[i] != reserveAsset) {
-                _trade(reserveAsset, reserveAssetQuantity.div(poolTokens.length), poolTokens[i]);
+                // TODO: fix for pools that are not equally weighted
+                _trade(reserveAsset, _capital.div(poolTokens.length), poolTokens[i]);
                 _maxAmountsIn[i] = IERC20(poolTokens[i]).balanceOf(address(this));
             }
         }

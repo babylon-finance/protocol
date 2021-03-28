@@ -15,11 +15,7 @@ async function createLongStrategy(garden, integration, signer, params = DEFAULT_
   const strategies = await garden.getStrategies();
   const lastStrategyAddr = strategies[strategies.length - 1];
 
-  const passedLongParams = longParams || [
-    addresses.tokens.USDC,
-    ethers.utils.parseEther('1'),
-    ethers.utils.parseEther('900') / 10 ** 12,
-  ];
+  const passedLongParams = longParams || [addresses.tokens.USDC, ethers.utils.parseEther('900') / 10 ** 12];
 
   const strategy = await ethers.getContractAt('LongStrategy', lastStrategyAddr);
   await strategy.connect(signer).setLongData(...passedLongParams, {

@@ -290,7 +290,7 @@ contract Strategy is ReentrancyGuard, Initializable {
         garden.allocateCapitalToInvestment(_capital);
         calculateAndEditPosition(garden.getReserveAsset(), _capital, _capital.toInt256(), LIQUID_STATUS);
         capitalAllocated = capitalAllocated.add(_capital);
-        _enterStrategy();
+        _enterStrategy(_capital);
         // Sets the executed timestamp
         executedAt = block.timestamp;
         garden.payKeeper(msg.sender, _fee);
@@ -526,7 +526,7 @@ contract Strategy is ReentrancyGuard, Initializable {
      * Needs to be overriden in base class.
      *
      */
-    function _enterStrategy() internal virtual {
+    function _enterStrategy(uint256 _capital) internal virtual {
         require(false, 'This needs to be overriden');
     }
 
