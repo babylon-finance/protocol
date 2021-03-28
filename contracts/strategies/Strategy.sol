@@ -561,15 +561,6 @@ contract Strategy is ReentrancyGuard, Initializable {
     }
 
     /**
-     * Forcefully quits the strategy. Virtual method.
-     * Needs to be overriden in base class.
-     *
-     */
-    function _quitStrategy() internal virtual {
-        require(false, 'This needs to be overriden');
-    }
-
-    /**
      * Deletes this strategy and returns the stake to the strategist
      */
     function _deleteCandidateStrategy() internal {
