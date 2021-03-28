@@ -76,22 +76,24 @@ async function createStrategy(state, kind, signers, integration, garden) {
   if (kind === 0) {
     strategy = await createLongStrategy(garden, integration, signers[0]);
   }
-  if (state === 'dataset') {
-    return strategy;
+  if (strategy) {
+    if (state === 'dataset') {
+      return strategy;
+    }
+    await deposit(garden, signers);
+    if (state === 'deposit') {
+      return strategy;
+    }
+    await vote(garden, signers, strategy);
+    if (state === 'vote') {
+      return strategy;
+    }
+    await execute(strategy);
+    if (state === 'active') {
+      return strategy;
+    }
+    await finalize(strategy);
   }
-  await deposit(garden, signers);
-  if (state === 'deposit') {
-    return strategy;
-  }
-  await vote(garden, signers, strategy);
-  if (state === 'vote') {
-    return strategy;
-  }
-  await execute(strategy);
-  if (state === 'active') {
-    return strategy;
-  }
-  await finalize(strategy);
   return strategy;
 }
 

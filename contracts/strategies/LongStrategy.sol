@@ -20,7 +20,6 @@ pragma solidity 0.7.4;
 
 import 'hardhat/console.sol';
 import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
-import {Initializable} from '@openzeppelin/contracts/proxy/Initializable.sol';
 import {Strategy} from './Strategy.sol';
 import {IGarden} from '../interfaces/IGarden.sol';
 import {ITradeIntegration} from '../interfaces/ITradeIntegration.sol';
@@ -31,7 +30,7 @@ import {ITradeIntegration} from '../interfaces/ITradeIntegration.sol';
  *
  * Holds the data for a long strategy
  */
-contract LongStrategy is Initializable, Strategy {
+contract LongStrategy is Strategy {
     address public sendToken; // Asset to exchange
     address public receiveToken; // Asset to receive
     uint256 public sendTokenQuantity; // Quantity of send token to sell

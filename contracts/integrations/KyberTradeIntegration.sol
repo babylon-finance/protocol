@@ -112,7 +112,6 @@ contract KyberTradeIntegration is TradeIntegration {
         (, uint256 worstRate) =
             IKyberNetworkProxy(kyberNetworkProxyAddress).getExpectedRate(_sendToken, _receiveToken, _sendQuantity);
 
-        console.log('execute kyber');
         // Encode method data for TradeIntegration to invoke
         bytes memory methodData =
             abi.encodeWithSignature(
