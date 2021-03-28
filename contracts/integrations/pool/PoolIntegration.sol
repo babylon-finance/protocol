@@ -22,11 +22,11 @@ import 'hardhat/console.sol';
 import {SafeMath} from '@openzeppelin/contracts/math/SafeMath.sol';
 import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import {SafeCast} from '@openzeppelin/contracts/utils/SafeCast.sol';
-import {IGarden} from '../interfaces/IGarden.sol';
-import {IStrategy} from '../interfaces/IStrategy.sol';
 import {ReentrancyGuard} from '@openzeppelin/contracts/utils/ReentrancyGuard.sol';
-import {IBabController} from '../interfaces/IBabController.sol';
-import {BaseIntegration} from './BaseIntegration.sol';
+import {IGarden} from '../../interfaces/IGarden.sol';
+import {IStrategy} from '../../interfaces/IStrategy.sol';
+import {IBabController} from '../../interfaces/IBabController.sol';
+import {BaseIntegration} from '../BaseIntegration.sol';
 
 /**
  * @title PoolIntegration

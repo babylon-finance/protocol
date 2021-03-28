@@ -19,11 +19,11 @@
 pragma solidity 0.7.4;
 
 import 'hardhat/console.sol';
-import {TradeIntegration} from './TradeIntegration.sol';
 import {ERC20} from '@openzeppelin/contracts/token/ERC20/ERC20.sol';
 import {SafeMath} from '@openzeppelin/contracts/math/SafeMath.sol';
-import {PreciseUnitMath} from '../lib/PreciseUnitMath.sol';
-import {IKyberNetworkProxy} from '../interfaces/external/kyber/IKyberNetworkProxy.sol';
+import {TradeIntegration} from './TradeIntegration.sol';
+import {PreciseUnitMath} from '../../lib/PreciseUnitMath.sol';
+import {IKyberNetworkProxy} from '../../interfaces/external/kyber/IKyberNetworkProxy.sol';
 
 /**
  * @title KyberTradeIntegration
@@ -92,13 +92,11 @@ contract KyberTradeIntegration is TradeIntegration {
      * @param _sendToken            Address of the token to be sent to the exchange
      * @param _sendQuantity         Units of reserve asset token sent to the exchange
      * @param _receiveToken         Address of the token that will be received from the exchange
-     * @param _minReceiveQuantity   Min units of wanted token to be received from the exchange
      */
     function _getTradeCallData(
         address _sendToken,
         uint256 _sendQuantity,
-        address _receiveToken,
-        uint256 _minReceiveQuantity
+        address _receiveToken
     )
         internal
         view

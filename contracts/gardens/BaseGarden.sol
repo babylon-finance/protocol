@@ -422,7 +422,6 @@ abstract contract BaseGarden is ERC20Upgradeable {
         require(_token != reserveAsset, 'Token is not the reserve asset');
         uint256 balance = ERC20Upgradeable(_token).balanceOf(address(this));
         require(balance > 0, 'Token balance > 0');
-        bytes memory _emptyTradeData;
         ERC20Upgradeable(_token).transfer(msg.sender, balance);
     }
 
@@ -433,7 +432,7 @@ abstract contract BaseGarden is ERC20Upgradeable {
      */
     function moveStrategyToFinalized(int256 _returns, address _strategy) external onlyStrategy {
         absoluteReturns.add(_returns);
-        strategies.remove(_strategy);
+        strategies = strategies.remove(_strategy);
         finalizedStrategies.push(_strategy);
     }
 
@@ -442,7 +441,7 @@ abstract contract BaseGarden is ERC20Upgradeable {
      * @param _strategy      Strategy to remove
      */
     function expireCandidateStrategy(address _strategy) external onlyStrategy {
-        strategies.remove(_strategy);
+        strategies = strategies.remove(_strategy);
     }
 
     /* ============ External Getter Functions ============ */

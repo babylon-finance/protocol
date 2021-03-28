@@ -75,7 +75,7 @@ contract GardenValuer {
      * Note: There is a risk that the valuation is off if airdrops aren't retrieved or
      * debt builds up via interest and its not reflected in the position
      *
-     * @param _garden       Garden instance to get valuation
+     * @param _garden          Garden instance to get valuation
      * @param _quoteAsset      Address of token to quote valuation in
      *
      * @return                 Token valuation in terms of quote asset in precise units 1e18

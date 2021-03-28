@@ -21,13 +21,13 @@ pragma solidity 0.7.4;
 import 'hardhat/console.sol';
 import {SafeCast} from '@openzeppelin/contracts/utils/SafeCast.sol';
 import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
-import {IStrategy} from '../interfaces/IStrategy.sol';
-import {IGarden} from '../interfaces/IGarden.sol';
 import {ReentrancyGuard} from '@openzeppelin/contracts/utils/ReentrancyGuard.sol';
 import '@uniswap/v2-core/contracts/interfaces/IUniswapV2Pair.sol';
 import '@uniswap/v2-periphery/contracts/libraries/UniswapV2Library.sol';
-import {IBabController} from '../interfaces/IBabController.sol';
-import {BaseIntegration} from './BaseIntegration.sol';
+import {IStrategy} from '../../interfaces/IStrategy.sol';
+import {IGarden} from '../../interfaces/IGarden.sol';
+import {IBabController} from '../../interfaces/IBabController.sol';
+import {BaseIntegration} from '../BaseIntegration.sol';
 
 /**
  * @title BorrowIntetration
@@ -109,8 +109,7 @@ abstract contract TradeIntegration is BaseIntegration, ReentrancyGuard {
             _getTradeCallData(
                 tradeInfo.sendToken,
                 tradeInfo.totalSendQuantity,
-                tradeInfo.receiveToken,
-                tradeInfo.totalMinReceiveQuantity
+                tradeInfo.receiveToken
             );
         tradeInfo.strategy.invokeFromIntegration(targetExchange, callValue, methodData);
 
@@ -188,7 +187,7 @@ abstract contract TradeIntegration is BaseIntegration, ReentrancyGuard {
             );
         uint256 minLiquidity = _tradeInfo.garden.minLiquidityAsset();
         // Check that there is enough liquidity
-        (uint256 liquidity0, uint256 liquidity1, uint256 timestamp) = IUniswapV2Pair(pair).getReserves();
+        (uint256 liquidity0, uint256 liquidity1,) = IUniswapV2Pair(pair).getReserves();
         require(
             (IUniswapV2Pair(pair).token0() == weth && liquidity0 >= minLiquidity) ||
                 (IUniswapV2Pair(pair).token1() == weth && liquidity1 >= minLiquidity),
@@ -246,7 +245,6 @@ abstract contract TradeIntegration is BaseIntegration, ReentrancyGuard {
      * hparam _sendToken            Address of the token to be sent to the exchange
      * hparam _sendQuantity         Units of reserve asset token sent to the exchange
      * hparam _receiveToken         Address of the token that will be received from the exchange
-     * hparam _minReceiveQuantity   Min units of wanted token to be received from the exchange
      *
      * @return address                   Target contract address
      * @return uint256                   Call value
@@ -255,8 +253,7 @@ abstract contract TradeIntegration is BaseIntegration, ReentrancyGuard {
     function _getTradeCallData(
         address, /* _sendToken */
         uint256, /*_sendQuantity */
-        address, /* _receiveToken */
-        uint256 /* _minReceiveQuantity */
+        address /* _receiveToken */
     )
         internal
         view

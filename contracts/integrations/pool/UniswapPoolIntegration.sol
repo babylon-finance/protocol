@@ -19,12 +19,12 @@
 pragma solidity 0.7.4;
 
 import 'hardhat/console.sol';
-import {PoolIntegration} from './PoolIntegration.sol';
 import {ERC20} from '@openzeppelin/contracts/token/ERC20/ERC20.sol';
 import {SafeMath} from '@openzeppelin/contracts/math/SafeMath.sol';
-import {PreciseUnitMath} from '../lib/PreciseUnitMath.sol';
-import {IUniswapV2Router} from '../interfaces/external/uniswap/IUniswapV2Router.sol';
 import '@uniswap/v2-core/contracts/interfaces/IUniswapV2Pair.sol';
+import {PoolIntegration} from './PoolIntegration.sol';
+import {PreciseUnitMath} from '../../lib/PreciseUnitMath.sol';
+import {IUniswapV2Router} from '../../interfaces/external/uniswap/IUniswapV2Router.sol';
 
 /**
  * @title BalancerIntegration

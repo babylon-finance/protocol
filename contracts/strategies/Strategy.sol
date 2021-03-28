@@ -329,7 +329,6 @@ contract Strategy is ReentrancyGuard, Initializable {
             'Idea can only be finalized after the minimum period has elapsed'
         );
         require(!finalized, 'This investment was already exited');
-        address reserveAsset = garden.getReserveAsset();
         uint256 reserveAssetBeforeExiting = garden.getPrincipal();
         // Execute exit trade
         _exitStrategy();

@@ -19,11 +19,11 @@
 pragma solidity 0.7.4;
 
 import 'hardhat/console.sol';
-import {PoolIntegration} from './PoolIntegration.sol';
 import {ERC20} from '@openzeppelin/contracts/token/ERC20/ERC20.sol';
 import {SafeMath} from '@openzeppelin/contracts/math/SafeMath.sol';
-import {PreciseUnitMath} from '../lib/PreciseUnitMath.sol';
-import {IBFactory} from '../interfaces/external/balancer/IBFactory.sol';
+import {PoolIntegration} from './PoolIntegration.sol';
+import {PreciseUnitMath} from '../../lib/PreciseUnitMath.sol';
+import {IBFactory} from '../../interfaces/external/balancer/IBFactory.sol';
 
 /**
  * @title BalancerIntegration
