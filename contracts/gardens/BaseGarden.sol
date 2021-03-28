@@ -26,8 +26,6 @@ import {SignedSafeMath} from '@openzeppelin/contracts/math/SignedSafeMath.sol';
 import {AddressArrayUtils} from '../lib/AddressArrayUtils.sol';
 import {IBabController} from '../interfaces/IBabController.sol';
 import {IIntegration} from '../interfaces/IIntegration.sol';
-import {ITradeIntegration} from '../interfaces/ITradeIntegration.sol';
-import {IPriceOracle} from '../interfaces/IPriceOracle.sol';
 import {IGarden} from '../interfaces/IGarden.sol';
 import {IStrategyFactory} from '../interfaces/IStrategyFactory.sol';
 import {IStrategy} from '../interfaces/IStrategy.sol';
@@ -512,27 +510,6 @@ abstract contract BaseGarden is ERC20Upgradeable {
     /* ============ Internal Functions ============ */
 
     /**
-     * Updates the TWAP prices for the garden positions
-     *
-     */
-    function updatePositionTWAPPrices() public {
-        // Updates UniSwap TWAP
-        address oracle = IBabController(controller).getPriceOracle();
-        address[] memory strategiesC = getStrategies();
-        for (uint256 j = 0; j < strategiesC.length; j++) {
-            IStrategy strategy = IStrategy(strategiesC[j]);
-            address[] memory components = strategy.getPositions();
-            if (strategy.active()) {
-                for (uint256 i = 0; i < components.length; i++) {
-                    if (components[i] != reserveAsset) {
-                        IPriceOracle(oracle).updateAdapters(reserveAsset, components[i]);
-                    }
-                }
-            }
-        }
-    }
-
-    /**
      * Function that allows the reserve balance to be updated
      *
      * @param _amount             Amount of the reserve balance
@@ -549,11 +526,6 @@ abstract contract BaseGarden is ERC20Upgradeable {
         integrations.push(_integration);
 
         emit IntegrationAdded(_integration);
-    }
-
-    function _getPrice(address _assetOne, address _assetTwo) internal view returns (uint256) {
-        IPriceOracle oracle = IPriceOracle(IBabController(controller).getPriceOracle());
-        return oracle.getPrice(_assetOne, _assetTwo);
     }
 
     /**
