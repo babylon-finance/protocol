@@ -425,8 +425,7 @@ abstract contract BaseGarden is ERC20Upgradeable {
         uint256 balance = ERC20Upgradeable(_token).balanceOf(address(this));
         require(balance > 0, 'Token balance > 0');
         bytes memory _emptyTradeData;
-        // TODO: probably use uniswap or 1inch. Don't go through TWAP
-        _trade('_kyber', _token, balance, reserveAsset, 0, _emptyTradeData);
+        ERC20Upgradeable(_token).transfer(msg.sender, balance);
     }
 
     /*
@@ -531,32 +530,6 @@ abstract contract BaseGarden is ERC20Upgradeable {
                 }
             }
         }
-    }
-
-    /**
-     * Function that calculates the price using the oracle and executes a trade.
-     * Must call the exchange to get the price and pass minReceiveQuantity accordingly.
-     * @param _integrationName        Name of the integration to call
-     * @param _sendToken              Token to exchange
-     * @param _sendQuantity           Amount of tokens to send
-     * @param _receiveToken           Token to receive
-     * @param _minReceiveQuantity     Min amount of tokens to receive
-     * @param _data                   Bytes call data
-     */
-    function _trade(
-        string memory _integrationName,
-        address _sendToken,
-        uint256 _sendQuantity,
-        address _receiveToken,
-        uint256 _minReceiveQuantity,
-        bytes memory _data
-    ) internal {
-        address tradeIntegration = IBabController(controller).getIntegrationByName(_integrationName);
-        require(isValidIntegration(tradeIntegration), 'Integration needs to be added to the garden and controller');
-        // Updates UniSwap TWAP
-        IPriceOracle oracle = IPriceOracle(IBabController(controller).getPriceOracle());
-        oracle.updateAdapters(_sendToken, _receiveToken);
-        return ITradeIntegration(tradeIntegration).trade(_sendToken, _sendQuantity, _receiveToken, _minReceiveQuantity);
     }
 
     /**
