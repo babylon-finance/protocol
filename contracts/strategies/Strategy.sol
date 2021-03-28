@@ -532,11 +532,12 @@ contract Strategy is ReentrancyGuard, Initializable {
             address,
             bool,
             bool,
+            bool,
             uint256,
             uint256
         )
     {
-        return (address(this), active, finalized, executedAt, exitedAt);
+        return (address(this), active, dataSet, finalized, executedAt, exitedAt);
     }
 
     /* ============ Internal Functions ============ */

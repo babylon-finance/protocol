@@ -5,6 +5,7 @@ const { loadFixture } = waffle;
 
 const addresses = require('../../utils/addresses');
 const { ONE_DAY_IN_SECONDS, NOW, EMPTY_BYTES } = require('../../utils/constants.js');
+const { DEFAULT_STRATEGY_PARAMS } = require('../fixtures/StrategyHelper');
 const { deployFolioFixture } = require('../fixtures/ControllerFixture');
 
 describe('Garden', function () {
@@ -195,15 +196,7 @@ describe('Garden', function () {
         value: ethers.utils.parseEther('1'),
       });
 
-      await expect(
-        garden1.connect(signer3).addStrategy(
-          ethers.utils.parseEther('10'),
-          ethers.utils.parseEther('1'),
-          ONE_DAY_IN_SECONDS * 30,
-          ethers.utils.parseEther('0.05'), // 5%
-          ethers.utils.parseEther('1'),
-        ),
-      ).to.not.be.reverted;
+      await expect(garden1.connect(signer3).addStrategy(...DEFAULT_STRATEGY_PARAMS)).to.not.be.reverted;
     });
 
     it('a contributor should not be able to add an investment strategy with a small stake', async function () {
@@ -211,15 +204,7 @@ describe('Garden', function () {
         value: ethers.utils.parseEther('1'),
       });
 
-      await expect(
-        garden1.connect(signer3).addStrategy(
-          ethers.utils.parseEther('10'),
-          ethers.utils.parseEther('0.00001'),
-          ONE_DAY_IN_SECONDS * 30,
-          ethers.utils.parseEther('0.05'), // 5%
-          ethers.utils.parseEther('1'),
-        ),
-      ).to.be.reverted;
+      await expect(garden1.connect(signer3).addStrategy(DEFAULT_STRATEGY_PARAMS)).to.be.reverted;
     });
   });
 });

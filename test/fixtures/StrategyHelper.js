@@ -2,33 +2,34 @@ const { ethers } = require('hardhat');
 const { ONE_DAY_IN_SECONDS } = require('../../utils/constants.js');
 const addresses = require('../../utils/addresses');
 
-async function createLongStrategy(garden, integration, signer) {
-  await garden.connect(signer).addStrategy(
-    0, // Long Strategy
-    ethers.utils.parseEther('10'),
-    ethers.utils.parseEther('5'),
-    ONE_DAY_IN_SECONDS * 30,
-    ethers.utils.parseEther('0.05'), // 5%
-    ethers.utils.parseEther('1'),
-  );
+const DEFAULT_STRATEGY_PARAMS = [
+  0, // Long Strategy
+  ethers.utils.parseEther('10'),
+  ethers.utils.parseEther('5'),
+  ONE_DAY_IN_SECONDS * 30,
+  ethers.utils.parseEther('0.05'), // 5%
+  ethers.utils.parseEther('1'),
+];
+
+async function createLongStrategy(garden, integration, signer, params = DEFAULT_STRATEGY_PARAMS, longParams) {
+  await garden.connect(signer).addStrategy(...params);
   const strategies = await garden.getStrategies();
   const lastStrategyAddr = strategies[strategies.length - 1];
 
+  const passedLongParams = longParams || [
+    integration,
+    [],
+    [],
+    addresses.tokens.WETH,
+    addresses.tokens.USDC,
+    ethers.utils.parseEther('1'),
+    ethers.utils.parseEther('900') / 10 ** 12,
+  ];
+
   const strategy = await ethers.getContractAt('LongStrategy', lastStrategyAddr);
-  await strategy
-    .connect(signer)
-    .setLongData(
-      integration,
-      [],
-      [],
-      addresses.tokens.WETH,
-      addresses.tokens.USDC,
-      ethers.utils.parseEther('1'),
-      ethers.utils.parseEther('900') / 10 ** 12,
-      {
-        gasPrice: 0,
-      },
-    );
+  await strategy.connect(signer).setLongData(...passedLongParams, {
+    gasPrice: 0,
+  });
 
   return strategy;
 }
@@ -71,10 +72,18 @@ async function finalize(strategy) {
   await strategy.finalizeInvestment(0, { gasPrice: 0 });
 }
 
-async function createStrategy(state, kind, signers, integration, garden) {
+async function createStrategy(
+  kind,
+  state,
+  signers,
+  integration,
+  garden,
+  params = DEFAULT_STRATEGY_PARAMS,
+  specificParams,
+) {
   let strategy;
   if (kind === 0) {
-    strategy = await createLongStrategy(garden, integration, signers[0]);
+    strategy = await createLongStrategy(garden, integration, signers[0], params, specificParams);
   }
   if (strategy) {
     if (state === 'dataset') {
@@ -99,4 +108,5 @@ async function createStrategy(state, kind, signers, integration, garden) {
 
 module.exports = {
   createStrategy,
+  DEFAULT_STRATEGY_PARAMS,
 };

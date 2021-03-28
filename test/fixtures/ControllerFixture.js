@@ -191,18 +191,18 @@ async function deployFolioFixture() {
 
   // Create strategies
   const strategy11 = (
-    await createStrategy('dataset', 0, [signer1, signer2, signer3], kyberTradeIntegration.address, garden1)
+    await createStrategy(0, 'dataset', [signer1, signer2, signer3], kyberTradeIntegration.address, garden1)
   ).address;
   const strategy21 = (
-    await createStrategy('deposit', 0, [signer1, signer2, signer3], kyberTradeIntegration.address, garden2)
+    await createStrategy(0, 'deposit', [signer1, signer2, signer3], kyberTradeIntegration.address, garden2)
   ).address;
+  //
+  await createStrategy(0, 'deposit', [signer1, signer2, signer3], kyberTradeIntegration.address, garden3);
+  await createStrategy(0, 'dataset', [signer1, signer2, signer3], kyberTradeIntegration.address, garden3);
 
-  await createStrategy('deposit', 0, [signer1, signer2, signer3], kyberTradeIntegration.address, garden3);
-  await createStrategy('dataset', 0, [signer1, signer2, signer3], kyberTradeIntegration.address, garden3);
-
-  await createStrategy('active', 0, [signer1, signer2, signer3], kyberTradeIntegration.address, garden3);
-  await createStrategy('active', 0, [signer1, signer2, signer3], kyberTradeIntegration.address, garden3);
-  // await createStrategy('final', 0, [signer1, signer2, signer3], kyberTradeIntegration.address, garden3);
+  await createStrategy(0, 'active', [signer1, signer2, signer3], kyberTradeIntegration.address, garden3);
+  await createStrategy(0, 'active', [signer1, signer2, signer3], kyberTradeIntegration.address, garden3);
+  await createStrategy(0, 'final', [signer1, signer2, signer3], kyberTradeIntegration.address, garden3);
 
   console.log('Created and started garden', garden1.address);
   console.log('Created manual testing garden', garden3.address);

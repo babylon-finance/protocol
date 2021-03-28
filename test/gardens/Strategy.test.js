@@ -174,11 +174,12 @@ describe('Strategy', function () {
   });
 
   describe('executeInvestment', async function () {
-    it('should execute investemnet idea', async function () {
+    it('should execute investment idea', async function () {
       const strategyContract = await createStrategy(
+        0,
         'vote',
         [signer1, signer2, signer3],
-        kyberTradeIntegration,
+        kyberTradeIntegration.address,
         garden1,
       );
 
@@ -203,9 +204,10 @@ describe('Strategy', function () {
 
     it('can execute investment twice', async function () {
       const strategyContract = await createStrategy(
+        0,
         'vote',
         [signer1, signer2, signer3],
-        kyberTradeIntegration,
+        kyberTradeIntegration.address,
         garden1,
       );
 
@@ -222,9 +224,10 @@ describe('Strategy', function () {
 
     it('refuse to pay a high fee to the keeper', async function () {
       const strategyContract = await createStrategy(
+        0,
         'vote',
         [signer1, signer2, signer3],
-        kyberTradeIntegration,
+        kyberTradeIntegration.address,
         garden1,
       );
 
@@ -241,9 +244,10 @@ describe('Strategy', function () {
   describe('finalizeInvestment', async function () {
     it('should finalize investemnet idea', async function () {
       const strategyContract = await createStrategy(
+        0,
         'active',
         [signer1, signer2, signer3],
-        kyberTradeIntegration,
+        kyberTradeIntegration.address,
         garden1,
       );
 
@@ -266,9 +270,10 @@ describe('Strategy', function () {
 
     it("can't finalize investment twice", async function () {
       const strategyContract = await createStrategy(
+        0,
         'active',
         [signer1, signer2, signer3],
-        kyberTradeIntegration,
+        kyberTradeIntegration.address,
         garden1,
       );
 

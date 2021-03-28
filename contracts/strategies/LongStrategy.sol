@@ -84,7 +84,7 @@ contract LongStrategy is Strategy {
     function _exitStrategy() internal override {
         ITradeIntegration(integration).trade(
             receiveToken,
-            IERC20(receiveToken).balanceOf(msg.sender),
+            IERC20(receiveToken).balanceOf(address(this)),
             sendToken,
             minReceiveQuantity // TODO: calculate this with oracle or 1inch
         );
