@@ -62,10 +62,7 @@ interface IRollingGarden is IERC20, IGarden {
 
     function setDepositLimit(uint256 limit) external;
 
-    function getExpectedReserveWithdrawalQuantity(uint256 _gardenTokenQuantity)
-        external
-        view
-        returns (uint256);
+    function getExpectedReserveWithdrawalQuantity(uint256 _gardenTokenQuantity) external view returns (uint256);
 
     function isDepositValid(address _reserveAsset, uint256 _reserveAssetQuantity) external view returns (bool);
 
