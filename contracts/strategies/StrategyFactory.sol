@@ -40,9 +40,11 @@ contract StrategyFactory {
     /**
      * Creates a new investment strategy using minimal proxies
      *
-     * @param _strategist                       Address of the strategist
-     * @param _garden                     Address of the garden
+     * @param _strategyKind                  Kind of strategy
+     * @param _strategist                    Address of the strategist
+     * @param _garden                        Address of the garden
      * @param _controller                    Address of the controller
+     * @param _integration                   Address of the integration
      * @param _maxCapitalRequested           Max Capital requested denominated in the reserve asset (0 to be unlimited)
      * @param _stake                         Stake with garden participations absolute amounts 1e18
      * @param _investmentDuration            Investment duration in seconds
@@ -54,6 +56,7 @@ contract StrategyFactory {
         address _strategist,
         address _garden,
         address _controller,
+        address _integration,
         uint256 _maxCapitalRequested,
         uint256 _stake,
         uint256 _investmentDuration,
@@ -68,6 +71,7 @@ contract StrategyFactory {
             _strategist,
             _garden,
             _controller,
+            _integration,
             _maxCapitalRequested,
             _stake,
             _investmentDuration,

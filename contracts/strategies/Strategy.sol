@@ -205,6 +205,7 @@ contract Strategy is ReentrancyGuard, Initializable {
         address _strategist,
         address _garden,
         address _controller,
+        address _integration,
         uint256 _maxCapitalRequested,
         uint256 _stake,
         uint256 _investmentDuration,
@@ -213,6 +214,7 @@ contract Strategy is ReentrancyGuard, Initializable {
     ) public initializer {
         controller = IBabController(_controller);
         garden = IGarden(_garden);
+        require(garden.isValidIntegration(_integration), 'Integration must be valid');
         require(controller.isSystemContract(_garden), 'Must be a valid garden');
         require(ERC20(address(garden)).balanceOf(_strategist) > 0, 'Only someone with the garden token can withdraw');
         require(_stake > garden.totalSupply().div(100), 'Stake amount must be at least 1% of the garden');
@@ -237,31 +239,11 @@ contract Strategy is ReentrancyGuard, Initializable {
         maxCapitalRequested = _maxCapitalRequested;
         totalVotes = _stake.toInt256();
         absoluteTotalVotes = _stake;
+        integration = _integration;
         dataSet = false;
     }
 
     /* ============ External Functions ============ */
-
-    /**
-     * Sets integration data for the investment
-     *
-     * @param _integration                    Address of the integration
-     * @param _tokensNeeded                   Tokens that we need to acquire to enter this investment
-     * @param _tokenAmountsNeeded             Token amounts of these assets we need
-     */
-    function setIntegrationData(
-        address _integration,
-        address[] memory _tokensNeeded,
-        uint256[] memory _tokenAmountsNeeded
-    ) public onlyIdeator {
-        require(!dataSet, 'Data is set already');
-        require(garden.isValidIntegration(_integration), 'Integration must be valid');
-        require(_tokensNeeded.length == _tokenAmountsNeeded.length, 'Tokens and amounts must match');
-        integration = _integration;
-        tokensNeeded = _tokensNeeded;
-        tokenAmountsNeeded = _tokenAmountsNeeded;
-        dataSet = true;
-    }
 
     /**
      * Adds results of off-chain voting on-chain.

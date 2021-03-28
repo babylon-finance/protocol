@@ -31,6 +31,7 @@ interface IStrategyFactory {
         address _strategist,
         address _garden,
         address _controller,
+        address _integration,
         uint256 _maxCapitalRequested,
         uint256 _stake,
         uint256 _investmentDuration,

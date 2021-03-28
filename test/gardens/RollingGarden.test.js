@@ -167,27 +167,22 @@ describe('Garden', function () {
     });
   });
 
-  describe('Add Investment Idea', async function () {
+  describe('Add Strategy', async function () {
     it('should not be able to add an investment strategy unless there is a contributor', async function () {
       await expect(
-        garden1
-          .connect(signer2)
-          .addStrategy(
-            ethers.utils.parseEther('10'),
-            ethers.utils.parseEther('1'),
-            ONE_DAY_IN_SECONDS * 15,
-            EMPTY_BYTES,
-            EMPTY_BYTES,
-            balancerIntegration.address,
-            ethers.utils.parseEther('0.05'),
-            ethers.utils.parseEther('2'),
-            [addresses.tokens.DAI],
-            [ethers.utils.parseEther('100')],
-            {
-              gasLimit: 9500000,
-              gasPrice: 0,
-            },
-          ),
+        garden1.connect(signer2).addStrategy(
+          0,
+          balancerIntegration.address,
+          ethers.utils.parseEther('10'),
+          ethers.utils.parseEther('5'),
+          ONE_DAY_IN_SECONDS * 30,
+          ethers.utils.parseEther('0.05'), // 5%
+          ethers.utils.parseEther('1'),
+          {
+            gasLimit: 9500000,
+            gasPrice: 0,
+          },
+        ),
       ).to.be.reverted;
     });
 
@@ -196,7 +191,8 @@ describe('Garden', function () {
         value: ethers.utils.parseEther('1'),
       });
 
-      await expect(garden1.connect(signer3).addStrategy(...DEFAULT_STRATEGY_PARAMS)).to.not.be.reverted;
+      await expect(garden1.connect(signer3).addStrategy(0, balancerIntegration.address, ...DEFAULT_STRATEGY_PARAMS)).to
+        .not.be.reverted;
     });
 
     it('a contributor should not be able to add an investment strategy with a small stake', async function () {
@@ -204,7 +200,8 @@ describe('Garden', function () {
         value: ethers.utils.parseEther('1'),
       });
 
-      await expect(garden1.connect(signer3).addStrategy(DEFAULT_STRATEGY_PARAMS)).to.be.reverted;
+      await expect(garden1.connect(signer3).addStrategy(0, balancerIntegration.address, DEFAULT_STRATEGY_PARAMS)).to.be
+        .reverted;
     });
   });
 });

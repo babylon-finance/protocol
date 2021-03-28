@@ -3,7 +3,6 @@ const { ONE_DAY_IN_SECONDS } = require('../../utils/constants.js');
 const addresses = require('../../utils/addresses');
 
 const DEFAULT_STRATEGY_PARAMS = [
-  0, // Long Strategy
   ethers.utils.parseEther('10'),
   ethers.utils.parseEther('5'),
   ONE_DAY_IN_SECONDS * 30,
@@ -12,14 +11,11 @@ const DEFAULT_STRATEGY_PARAMS = [
 ];
 
 async function createLongStrategy(garden, integration, signer, params = DEFAULT_STRATEGY_PARAMS, longParams) {
-  await garden.connect(signer).addStrategy(...params);
+  await garden.connect(signer).addStrategy(0, integration, ...params);
   const strategies = await garden.getStrategies();
   const lastStrategyAddr = strategies[strategies.length - 1];
 
   const passedLongParams = longParams || [
-    integration,
-    [],
-    [],
     addresses.tokens.WETH,
     addresses.tokens.USDC,
     ethers.utils.parseEther('1'),

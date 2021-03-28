@@ -330,6 +330,7 @@ abstract contract BaseGarden is ERC20Upgradeable {
     /**
      * Creates a new investment strategy calling the factory and adds it to the array
      * @param _strategyKind                  Int representing kind of strategy
+     * @param _integration                   Address of the integration
      * @param _maxCapitalRequested           Max Capital requested denominated in the reserve asset (0 to be unlimited)
      * @param _stake                         Stake with garden participations absolute amounts 1e18
      * @param _investmentDuration            Investment duration in seconds
@@ -338,6 +339,7 @@ abstract contract BaseGarden is ERC20Upgradeable {
      */
     function addStrategy(
         uint8 _strategyKind,
+        address _integration,
         uint256 _maxCapitalRequested,
         uint256 _stake,
         uint256 _investmentDuration,
@@ -352,6 +354,7 @@ abstract contract BaseGarden is ERC20Upgradeable {
                 msg.sender,
                 address(this),
                 controller,
+                _integration,
                 _maxCapitalRequested,
                 _stake,
                 _investmentDuration,

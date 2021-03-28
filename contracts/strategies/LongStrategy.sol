@@ -39,31 +39,26 @@ contract LongStrategy is Strategy {
     /**
      * Sets integration data for the long strategy
      *
-     * @param _integration                    Address of the integration
-     * @param _tokensNeeded                   Tokens that we need to acquire to enter this investment
-     * @param _tokenAmountsNeeded             Token amounts of these assets we need
      * @param _sendToken                      Token to be exchanged
      * @param _receiveToken                   Token to be bought
      * @param _sendToken                      Amount of sendToken to sell
      * @param _minReceiveQuantity             Min amount of receiveToken to get
      */
     function setLongData(
-        address _integration,
-        address[] memory _tokensNeeded,
-        uint256[] memory _tokenAmountsNeeded,
         address _sendToken,
         address _receiveToken,
         uint256 _sendTokenQuantity,
         uint256 _minReceiveQuantity
     ) public onlyIdeator {
         kind = 0;
-        super.setIntegrationData(_integration, _tokensNeeded, _tokenAmountsNeeded);
+        require(!dataSet, 'Data is set already');
         require(_minReceiveQuantity > 0, 'Must receive assets back');
         require(_sendToken != _receiveToken, 'Receive token must be different');
         sendToken = _sendToken;
         receiveToken = _receiveToken;
         sendTokenQuantity = _sendTokenQuantity;
         minReceiveQuantity = _minReceiveQuantity;
+        dataSet = true;
     }
 
     /**

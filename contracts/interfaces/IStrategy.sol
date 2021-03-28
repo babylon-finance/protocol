@@ -28,6 +28,7 @@ interface IStrategy {
         address _strategist,
         address _garden,
         address _controller,
+        address _integration,
         uint256 _maxCapitalRequested,
         uint256 _stake,
         uint256 _investmentDuration,
@@ -48,14 +49,6 @@ interface IStrategy {
     function finalizeInvestment(uint256 fee) external;
 
     function changeInvestmentDuration(uint256 _newDuration) external;
-
-    function setIntegrationData(
-        address _integration,
-        bytes memory _enterData,
-        bytes memory _exitData,
-        address[] memory _enterTokensNeeded,
-        uint256[] memory _enterTokensAmounts
-    ) external;
 
     function invokeFromIntegration(
         address _target,
