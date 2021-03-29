@@ -47,7 +47,7 @@ describe('OneInchTradeIntegration', function () {
       // oneInchExchange = await ethers.getContractAt('IOneInchExchange', addresses.oneinch.exchange);
     });
 
-    it('trade dai to usdc', async function () {
+    it('trade WETH to USDC', async function () {
       expect(
         await daiToken.connect(whaleSigner).transfer(garden1.address, ethers.utils.parseEther('100'), {
           gasPrice: 0,
