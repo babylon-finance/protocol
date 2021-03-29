@@ -619,7 +619,7 @@ contract Strategy is ReentrancyGuard, Initializable {
             uint256 strategistProfits = garden.strategyCreatorProfitPercentage().preciseMul(profits);
             // Creator Bonus
             if (strategist == garden.creator()) {
-                strategistProfits = strategistProfits.mul(2);
+                strategistProfits = strategistProfits.mul(15).div(100);
             }
             require(
                 ERC20(reserveAsset).transferFrom(address(this), strategist, strategistProfits),
@@ -636,7 +636,7 @@ contract Strategy is ReentrancyGuard, Initializable {
                     uint256 voterProfits = votersProfits.mul(voterWeight.toUint256()).div(totalVotes.toUint256());
                     if (strategist == garden.creator()) {
                         // Creator Bonus
-                        voterProfits = voterProfits.mul(2);
+                        voterProfits = voterProfits.mul(15).div(100);
                     }
                     require(
                         ERC20(reserveAsset).transferFrom(address(this), voters[i], voterProfits),
