@@ -42,7 +42,6 @@ async function deployFolioFixture() {
 
   // Deployment of BABL Rewards Distributor
   const RewardsDistributor = await ethers.getContractFactory('RewardsDistributor', owner);
-  const rewardsDistributor = await RewardsDistributor.deploy(rewardsSupplySchedule.address, bablToken.address);
 
   const GardenValuer = await ethers.getContractFactory('GardenValuer', owner);
   const PriceOracle = await ethers.getContractFactory('PriceOracle', owner);
@@ -53,6 +52,7 @@ async function deployFolioFixture() {
   const LongStrategyFactory = await ethers.getContractFactory('LongStrategyFactory', owner);
   const LiquidityPoolStrategyFactory = await ethers.getContractFactory('LiquidityPoolStrategyFactory', owner);
   const gardenValuer = await GardenValuer.deploy(babController.address);
+  const rewardsDistributor = await RewardsDistributor.deploy(rewardsSupplySchedule.address, bablToken.address);
   const reservePool = await ReservePool.deploy(babController.address);
   const treasury = await Treasury.deploy(babController.address);
   const gardenFactory = await GardenFactory.deploy();
@@ -72,6 +72,7 @@ async function deployFolioFixture() {
   babController.editPriceOracle(priceOracle.address);
   babController.editTreasury(treasury.address);
   babController.editGardenValuer(gardenValuer.address);
+  babController.editRewardsDistributor(rewardsDistributor.address);
   babController.editReservePool(reservePool.address);
   babController.editGardenFactory(gardenFactory.address);
   babController.editStrategyFactory(0, longStrategyFactory.address);

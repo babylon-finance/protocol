@@ -156,6 +156,7 @@ abstract contract BaseGarden is ERC20Upgradeable {
         uint256 claimedAt;
         uint256 numberOfOps;
         uint256 gardenAverageOwnership;
+        uint256 claimedBABL;
     }
 
     /* ============ State Variables ============ */

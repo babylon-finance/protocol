@@ -49,6 +49,8 @@ interface IBabController {
 
     function editGardenValuer(address _gardenValuer) external;
 
+    function editRewardsDistributor(address _rewardsDistributor) external;
+
     function editTreasury(address _newTreasury) external;
 
     function editGardenFactory(address _newGardenFactory) external;

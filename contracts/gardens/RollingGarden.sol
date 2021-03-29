@@ -331,33 +331,76 @@ contract RollingGarden is ReentrancyGuard, BaseGarden {
      * User can claim the profits from the strategies that his principal
      * was invested in.
      */
-    function claimReturns() external nonReentrant onlyContributor {
-        Contributor memory contributor = contributors[msg.sender];
-        require(contributor.lastDepositAt > contributor.claimedAt, 'Nothing new to claim');
-        uint256 totalProfits = 0;
-        for (uint256 i = 0; i < finalizedStrategies.length; i++) {
-            IStrategy strategy = IStrategy(finalizedStrategies[i]);
-            // Positive strategies not yet claimed
-            if (
-                strategy.exitedAt() > contributor.claimedAt &&
-                strategy.enteredAt() >= contributor.initialDepositAt &&
-                strategy.capitalReturned() > strategy.capitalAllocated()
-            ) {
-                // (User percentage * strategy profits) / (strategy capital)
-                totalProfits = totalProfits.add(
-                    contributor
-                        .gardenAverageOwnership
-                        .mul(strategy.capitalReturned().sub(strategy.capitalAllocated()))
-                        .div(strategy.capitalAllocated())
-                );
-            }
-        }
+    // Raul Review
+    function claimReturns(address[] calldata _finalizedStrategies) external nonReentrant onlyContributor {
+        (uint256 totalProfits, uint256 bablRewards) = _getProfitsAndBabl(_finalizedStrategies);
         if (totalProfits > 0 && address(this).balance > 0) {
             // Send eth
             (bool sent, ) = msg.sender.call{value: totalProfits}('');
             require(sent, 'Failed to send Ether');
             contributor.claimedAt = block.timestamp;
         }
+        if (bablRewards) {
+            // Raul RewardDistributor.sendTokensToContributor(msg.sender,  bablRewards);
+        }
+    }
+
+    // Raul Review
+    function _getProfitsAndBabl(address[] calldata _finalizedStrategies)
+        external
+        view
+        onlyContributor
+        returns (uint256, uint256)
+    {
+        Contributor memory contributor = contributors[msg.sender];
+        require(contributor.lastDepositAt > contributor.claimedAt, 'Nothing new to claim');
+        uint256 totalProfits = 0;
+        for (uint256 i = 0; i < _finalizedStrategies.length; i++) {
+            IStrategy strategy = IStrategy(_finalizedStrategies[i]);
+            // Positive strategies not yet claimed
+            if (
+                strategy.exitedAt() > contributor.claimedAt && strategy.enteredAt() >= contributor.initialDepositAt // TODO: may need to remove because of rebalance
+            ) {
+                // If strategy returned money we give out the profits
+                if (strategy.capitalReturned() > strategy.capitalAllocated()) {
+                    // (User percentage * strategy profits) / (strategy capital)
+                    totalProfits = totalProfits.add(
+                        contributor
+                            .gardenAverageOwnership
+                            .mul(strategy.capitalReturned().sub(strategy.capitalAllocated()))
+                            .div(strategy.capitalAllocated())
+                    );
+                }
+                // Give out BABL
+                uint256 creatorBonus = msg.sender == creator ? 15e16 : 0;
+                bool isStrategist = msg.sender == strategy.strategist();
+                bool isVoter = strategy.votes[msg.sender] != 0;
+                uint256 totalAbsoluteVotes = strategy.absoluteTotalVotes();
+                uint256 userPrincipal = contributor.gardenAverageOwnership.mul(strategy.capitalAllocated()); // pending
+                uint256 strategyRewards = strategy.strategyRewards();
+
+                uint256 bablRewards = 0;
+                if (isStrategist) {
+                    bablRewards = bablRewards.add(strategyRewards.preciseMul(8e16));
+                }
+                if (isVoter) {
+                    bablRewards = bablRewards.add(
+                        strategyRewards.preciseMul(17e16).mul(strategy.votes[msg.sender]).div(totalAbsoluteVotes)
+                    );
+                }
+
+                bablRewards = bablRewards.add(
+                    strategyRewards.preciseMul(75e16).mul(userPrincipal).div(strategy.capitalAllocated())
+                );
+
+                if (creatorBonus > 0) {
+                    bablRewards = bablRewards.add(bablRewards.preciseMul(creatorBonus));
+                }
+
+                contributor[claimedBABL] = contributor[claimedBABL].add(bablRewards);
+            }
+        }
+        return (totalProfits, bablRewards);
     }
 
     /**

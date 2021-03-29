@@ -180,6 +180,9 @@ contract Strategy is ReentrancyGuard, Initializable {
     address[] public tokensNeeded; // Positions that need to be taken prior to enter trade
     uint256[] public tokenAmountsNeeded; // Amount of these positions
 
+    // Raul Review
+    uint256 public strategyRewards; // Rewards allocated for this strategy on finalized
+
     // Voters mapped to their votes.
     mapping(address => int256) public votes;
 
@@ -294,6 +297,11 @@ contract Strategy is ReentrancyGuard, Initializable {
         // Sets the executed timestamp
         executedAt = block.timestamp;
         garden.payKeeper(msg.sender, _fee);
+
+        // // Raul Review
+        // Añadir al protocol principal
+        // IRewardsDistributor rewardsDistributor = IRewardsDistributor(IBabController(controller).getRewardsDistributor());
+        // rewardsDistributor.addProtocolPrincipalAndDuration(_capital);
     }
 
     /**
@@ -320,6 +328,15 @@ contract Strategy is ReentrancyGuard, Initializable {
         exitedAt = block.timestamp;
         // Transfer rewards and update positions
         _transferIdeaRewards();
+
+        // // Raul Review
+        // TBD Calculate
+        // Utilizar profit for discounting if negative. capitalReturned - capitalAllocated
+        // strategyRewards = calculate using supply schedule
+        // RewardsDistributor.getStrategyRewards(address(this));
+
+        // Substract rewardsDistributor.substractProtocolPrincipalAndDuration(_capital);
+
         // Moves strategy to finalized
         IGarden(garden).moveStrategyToFinalized(
             capitalReturned.toInt256().sub(capitalAllocated.toInt256()),
