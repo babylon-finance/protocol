@@ -71,7 +71,7 @@ async function main() {
     publishAndPushContract(file, 'integrations/');
   });
   // Factory Contracts
-  const factories = ['StrategyFactory.sol', 'GardenFactory.sol'];
+  const factories = ['LongStrategyFactory.sol', 'LiquidityPoolStrategyFactory', 'GardenFactory.sol'];
   factories.forEach((file) => {
     publishAndPushContract(file, 'gardens/');
   });
