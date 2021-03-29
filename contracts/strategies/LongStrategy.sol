@@ -32,21 +32,17 @@ import {ITradeIntegration} from '../interfaces/ITradeIntegration.sol';
  */
 contract LongStrategy is Strategy {
     address public receiveToken; // Asset to receive
-    uint256 public minReceiveQuantity; // Min quantity of receive token to receive
 
     /**
      * Sets integration data for the long strategy
      *
      * @param _receiveToken                   Token to be bought
-     * @param _minReceiveQuantity             Min amount of receiveToken to get
      */
-    function setLongData(address _receiveToken, uint256 _minReceiveQuantity) public onlyIdeator {
+    function setLongData(address _receiveToken) public onlyIdeator {
         kind = 0;
         require(!dataSet, 'Data is set already');
-        require(_minReceiveQuantity > 0, 'Must receive assets back');
         require(garden.getReserveAsset() != _receiveToken, 'Receive token must be different');
         receiveToken = _receiveToken;
-        minReceiveQuantity = _minReceiveQuantity;
         dataSet = true;
     }
 
@@ -54,19 +50,13 @@ contract LongStrategy is Strategy {
      * Enters the long strategy
      */
     function _enterStrategy(uint256 _capital) internal override {
-        // Call _trade() instead? to check first with TWAP
-        ITradeIntegration(integration).trade(garden.getReserveAsset(), _capital, receiveToken, minReceiveQuantity);
+        _trade(garden.getReserveAsset(), _capital, receiveToken);
     }
 
     /**
      * Exits the long strategy.
      */
     function _exitStrategy() internal override {
-        ITradeIntegration(integration).trade(
-            receiveToken,
-            IERC20(receiveToken).balanceOf(address(this)),
-            garden.getReserveAsset(),
-            minReceiveQuantity // TODO: calculate this with oracle or 1inch
-        );
+        _trade(receiveToken, IERC20(receiveToken).balanceOf(address(this)), garden.getReserveAsset());
     }
 }

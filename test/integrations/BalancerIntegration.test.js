@@ -2,6 +2,7 @@ const { expect } = require('chai');
 const { waffle, ethers } = require('hardhat');
 const { impersonateAddress } = require('../../utils/rpc');
 const { deployFolioFixture } = require('../fixtures/ControllerFixture');
+const { createStrategy } = require('../fixtures/StrategyHelper');
 const addresses = require('../../utils/addresses');
 const { ADDRESS_ZERO, ONE_DAY_IN_SECONDS } = require('../../utils/constants');
 
@@ -10,9 +11,13 @@ const { loadFixture } = waffle;
 describe('BalancerIntegrationTest', function () {
   let balancerIntegration;
   let babController;
+  let signer1;
+  let signer2;
+  let signer3;
+  let garden1;
 
   beforeEach(async () => {
-    ({ balancerIntegration, babController } = await loadFixture(deployFolioFixture));
+    ({ balancerIntegration, babController, garden1, signer1, signer2, signer3 } = await loadFixture(deployFolioFixture));
   });
 
   describe('Deployment', function () {
@@ -47,78 +52,25 @@ describe('BalancerIntegrationTest', function () {
       expect(await balancerIntegration.isPool(ADDRESS_ZERO)).to.equal(false);
     });
 
-    //   it('can enter and exit the weth dai pool', async function () {
-    //     // expect(
-    //     //   await daiToken
-    //     //     .connect(whaleSigner)
-    //     //     .transfer(garden.address, ethers.utils.parseEther("1000"), {
-    //     //       gasPrice: 0
-    //     //     })
-    //     // );
-    //
-    //     await garden.connect(userSigner1).deposit(ethers.utils.parseEther('3'), 1, userSigner3.getAddress(), {
-    //       value: ethers.utils.parseEther('3'),
-    //     });
-    //     await garden.connect(userSigner3).deposit(ethers.utils.parseEther('3'), 1, userSigner3.getAddress(), {
-    //       value: ethers.utils.parseEther('3'),
-    //     });
-    //
-    //     const dataEnter = balancerAbi.encodeFunctionData(
-    //       balancerAbi.functions['joinPool(address,uint256,address[],uint256[])'],
-    //       [
-    //         addresses.balancer.pools.wethdai,
-    //         ethers.utils.parseEther('0.0001'),
-    //         await daiWethPool.getFinalTokens(),
-    //         [ethers.utils.parseEther('1000'), ethers.utils.parseEther('2')],
-    //       ],
-    //     );
-    //
-    //     const dataExit = balancerAbi.encodeFunctionData(
-    //       balancerAbi.functions['exitPool(address,uint256,address[],uint256[])'],
-    //       [
-    //         addresses.balancer.pools.wethdai,
-    //         ethers.utils.parseEther('0.0001'),
-    //         await daiWethPool.getFinalTokens(),
-    //         [ethers.utils.parseEther('100'), ethers.utils.parseEther('0.1')],
-    //       ],
-    //     );
-    //
-    //     await strategy
-    //       .connect(userSigner1)
-    //       .setIntegrationData(
-    //         balancerIntegration.address,
-    //         dataEnter,
-    //         dataExit,
-    //         [daiToken.address],
-    //         [ethers.utils.parseEther('1000')],
-    //         {
-    //           gasPrice: 0,
-    //         },
-    //       );
-    //
-    //     await strategy.connect(userSigner3).curateIdea(await garden.balanceOf(userSigner3.getAddress()));
-    //
-    //     ethers.provider.send('evm_increaseTime', [ONE_DAY_IN_SECONDS * 2]);
-    //
-    //     // await strategy.executeInvestment(ethers.utils.parseEther("1"), {
-    //     //   gasPrice: 0
-    //     // });
-    //     //
-    //     // expect(await daiWethPool.balanceOf(strategy.address)).to.be.eq(
-    //     //   ethers.utils.parseEther("0.001")
-    //     // );
-    //     //
-    //     // ethers.provider.send("evm_increaseTime", [ONE_DAY_IN_SECONDS * 90]);
-    //     //
-    //     // await strategy.finalizeInvestment({ gasPrice: 0 });
-    //     //
-    //     // expect(await daiWethPool.balanceOf(strategy.address)).to.equal(0);
-    //     // expect(await daiToken.balanceOf(strategy.address)).to.be.gt(
-    //     //   ethers.utils.parseEther("0")
-    //     // );
-    //     // expect(await wethToken.balanceOf(strategy.address)).to.be.gt(
-    //     //   ethers.utils.parseEther("4.00")
-    //     // );
-    //   });
+    it('can enter and exit the weth dai pool', async function () {
+      const strategyContract = await createStrategy(
+        1,
+        'vote',
+        [signer1, signer2, signer3],
+        balancerIntegration.address,
+        garden1,
+      );
+
+      ethers.provider.send('evm_increaseTime', [ONE_DAY_IN_SECONDS * 2]);
+
+      await strategyContract.executeInvestment(ethers.utils.parseEther('1'), 0, {
+        gasPrice: 0,
+      });
+      expect(await daiWethPool.balanceOf(strategyContract.address)).to.be.greater(0);
+
+      ethers.provider.send('evm_increaseTime', [ONE_DAY_IN_SECONDS * 90]);
+      await strategyContract.finalizeInvestment(0, { gasPrice: 0 });
+      expect(await daiWethPool.balanceOf(strategyContract.address)).to.equal(0);
+    });
   });
 });

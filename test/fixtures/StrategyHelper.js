@@ -1,5 +1,6 @@
 const { ethers } = require('hardhat');
 const { ONE_DAY_IN_SECONDS } = require('../../utils/constants.js');
+const { TWAP_ORACLE_WINDOW, TWAP_ORACLE_GRANULARITY } = require('../../utils/system.js');
 const addresses = require('../../utils/addresses');
 
 const DEFAULT_STRATEGY_PARAMS = [
@@ -10,15 +11,46 @@ const DEFAULT_STRATEGY_PARAMS = [
   ethers.utils.parseEther('1'),
 ];
 
+async function updateTWAPs(garden) {
+  const controller = await ethers.getContractAt('BabController', await garden.controller());
+  const priceOracle = await ethers.getContractAt('PriceOracle', await controller.getPriceOracle());
+  const adapterAddress = (await priceOracle.getAdapters())[0];
+  const adapter = await ethers.getContractAt('UniswapTWAP', adapterAddress);
+  for (let i = 0; i < TWAP_ORACLE_GRANULARITY; i += 1) {
+    await adapter.update(addresses.tokens.WETH, addresses.tokens.USDC);
+    await adapter.update(addresses.tokens.WETH, addresses.tokens.DAI);
+    // await adapter.update(addresses.tokens.WETH, addresses.tokens.WBTC);
+    // await adapter.update(addresses.tokens.WETH, addresses.tokens.UNI);
+    // await adapter.update(addresses.tokens.WETH, addresses.tokens.BAL);
+    // await adapter.update(addresses.tokens.WETH, addresses.tokens.COMP);
+    ethers.provider.send('evm_increaseTime', [TWAP_ORACLE_WINDOW / TWAP_ORACLE_GRANULARITY]);
+  }
+}
+
 async function createLongStrategy(garden, integration, signer, params = DEFAULT_STRATEGY_PARAMS, longParams) {
   await garden.connect(signer).addStrategy(0, integration, ...params);
   const strategies = await garden.getStrategies();
   const lastStrategyAddr = strategies[strategies.length - 1];
 
-  const passedLongParams = longParams || [addresses.tokens.USDC, ethers.utils.parseEther('900') / 10 ** 12];
+  const passedLongParams = longParams || [addresses.tokens.USDC];
 
   const strategy = await ethers.getContractAt('LongStrategy', lastStrategyAddr);
   await strategy.connect(signer).setLongData(...passedLongParams, {
+    gasPrice: 0,
+  });
+
+  return strategy;
+}
+
+async function createPoolStrategy(garden, integration, signer, params = DEFAULT_STRATEGY_PARAMS, poolParams) {
+  await garden.connect(signer).addStrategy(0, integration, ...params);
+  const strategies = await garden.getStrategies();
+  const lastStrategyAddr = strategies[strategies.length - 1];
+
+  const passedPoolParams = poolParams || [addresses.balancer.pools.wethdai];
+
+  const strategy = await ethers.getContractAt('LiquidityPoolStrategy', lastStrategyAddr);
+  await strategy.connect(signer).setPoolData(...passedPoolParams, {
     gasPrice: 0,
   });
 
@@ -50,16 +82,17 @@ async function vote(garden, signers, strategy) {
   );
 }
 
-async function execute(strategy) {
+async function execute(garden, strategy) {
   ethers.provider.send('evm_increaseTime', [ONE_DAY_IN_SECONDS * 2]);
-
+  await updateTWAPs(garden);
   await strategy.executeInvestment(ethers.utils.parseEther('1'), 0, {
     gasPrice: 0,
   });
 }
 
-async function finalize(strategy) {
+async function finalize(garden, strategy) {
   ethers.provider.send('evm_increaseTime', [ONE_DAY_IN_SECONDS * 90]);
+  await updateTWAPs(garden);
   await strategy.finalizeInvestment(0, { gasPrice: 0 });
 }
 
@@ -76,6 +109,9 @@ async function createStrategy(
   if (kind === 0) {
     strategy = await createLongStrategy(garden, integration, signers[0], params, specificParams);
   }
+  if (kind === 1) {
+    strategy = await createPoolStrategy(garden, integration, signers[0], params, specificParams);
+  }
   if (strategy) {
     if (state === 'dataset') {
       return strategy;
@@ -88,11 +124,11 @@ async function createStrategy(
     if (state === 'vote') {
       return strategy;
     }
-    await execute(strategy);
+    await execute(garden, strategy);
     if (state === 'active') {
       return strategy;
     }
-    await finalize(strategy);
+    await finalize(garden, strategy);
   }
   return strategy;
 }

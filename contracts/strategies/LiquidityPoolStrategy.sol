@@ -35,21 +35,17 @@ contract LiquidityPoolStrategy is Strategy {
     using SafeMath for uint256;
 
     address public pool; // Pool to add liquidity to
-    uint256 public minReceiveQuantity; // Min amount of pool tokens to receive
     address[] public poolTokens; // List of pool tokens
 
     /**
      * Sets integration data for the pool strategy
      *
      * @param _pool                           Liquidity pool
-     * @param _minReceiveQuantity             Min amount of pool tokens to get
      */
-    function setPoolData(address _pool, uint256 _minReceiveQuantity) public onlyIdeator {
+    function setPoolData(address _pool) public onlyIdeator {
         kind = 1;
-        require(_minReceiveQuantity > 0, 'Must receive assets back');
         require(IPoolIntegration(integration).isPool(pool), 'Must be a valid pool of this protocol');
         pool = _pool;
-        minReceiveQuantity = _minReceiveQuantity;
         poolTokens = IPoolIntegration(integration).getPoolTokens(pool);
     }
 
@@ -67,7 +63,8 @@ contract LiquidityPoolStrategy is Strategy {
                 _maxAmountsIn[i] = IERC20(poolTokens[i]).balanceOf(address(this));
             }
         }
-        IPoolIntegration(integration).joinPool(pool, minReceiveQuantity, poolTokens, _maxAmountsIn);
+        // TODO: calculate minReceiveQuantity instead of 0
+        IPoolIntegration(integration).joinPool(pool, 0, poolTokens, _maxAmountsIn);
     }
 
     /**
