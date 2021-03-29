@@ -170,7 +170,7 @@ contract RewardsDistributor is Ownable {
         protocolDuration = protocolDuration.add(newStrategyPoolInfo.strategyDuration);
     }
     
-    // Set a TEST STRATEGY
+    // Set a TEST USER FOR A STRATEGY
     function setTestUser(address _pid) public {
         require(strategyIncluded[_pid], 'RewardsDistributor::add: strategy not yet included');
 
