@@ -27,7 +27,7 @@ describe('BabController', function () {
   describe('Interacting with Communities', function () {
     it('should start with 3 gardens', async function () {
       const gardens = await babController.getGardens();
-      expect(gardens.length).to.equal(3);
+      expect(gardens.length).to.equal(4);
     });
 
     it('should set the protocol manager address', async function () {
@@ -40,11 +40,6 @@ describe('BabController', function () {
       expect(!!garden3).to.equal(true);
     });
 
-    it('can create gardens and retrieve all addresses', async function () {
-      const gardens = await babController.getGardens();
-      expect(gardens.length).to.equal(3);
-    });
-
     it('cannot disable an inactive garden', async function () {
       const initialCommunities = await babController.getGardens();
 
@@ -54,12 +49,12 @@ describe('BabController', function () {
 
     it('can remove a disabled garden', async function () {
       const initialCommunities = await babController.getGardens();
-      expect(initialCommunities.length).to.equal(3);
+      expect(initialCommunities.length).to.equal(4);
       await expect(babController.disableGarden(initialCommunities[0])).to.not.be.reverted;
       await babController.removeGarden(initialCommunities[0]);
 
       const updatedCommunities = await babController.getGardens();
-      expect(updatedCommunities.length).to.equal(2);
+      expect(updatedCommunities.length).to.equal(3);
     });
 
     it('can enable and disable a garden', async function () {

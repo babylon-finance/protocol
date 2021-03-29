@@ -1,5 +1,5 @@
 /*
-    Copyright 2020 Babylon Finance
+    Copyright 2021 Babylon Finance
 
     Licensed under the Apache License, Version 2.0 (the "License");
     you may not use this file except in compliance with the License.
@@ -22,11 +22,11 @@ import 'hardhat/console.sol';
 import {SafeMath} from '@openzeppelin/contracts/math/SafeMath.sol';
 import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import {SafeCast} from '@openzeppelin/contracts/utils/SafeCast.sol';
-import {IGarden} from '../interfaces/IGarden.sol';
-import {IStrategy} from '../interfaces/IStrategy.sol';
 import {ReentrancyGuard} from '@openzeppelin/contracts/utils/ReentrancyGuard.sol';
-import {IBabController} from '../interfaces/IBabController.sol';
-import {BaseIntegration} from './BaseIntegration.sol';
+import {IGarden} from '../../interfaces/IGarden.sol';
+import {IStrategy} from '../../interfaces/IStrategy.sol';
+import {IBabController} from '../../interfaces/IBabController.sol';
+import {BaseIntegration} from '../BaseIntegration.sol';
 
 /**
  * @title PoolIntegration
@@ -46,7 +46,7 @@ abstract contract PoolIntegration is BaseIntegration, ReentrancyGuard {
         address pool; // Pool address
         uint256 totalSupply; // Total Supply of the pool
         uint256 poolTokensInTransaction; // Pool tokens affected by this transaction
-        uint256 poolTokensInIdea; // Pool tokens strategy balance
+        uint256 poolTokensInStrategy; // Pool tokens strategy balance
         uint256[] limitPoolTokenQuantities;
     }
 
@@ -99,12 +99,11 @@ abstract contract PoolIntegration is BaseIntegration, ReentrancyGuard {
         for (uint256 i = 0; i < _tokensIn.length; i++) {
             poolInfo.strategy.invokeApprove(_getSpender(_poolAddress), _tokensIn[i], _maxAmountsIn[i]);
         }
-
         (address targetPool, uint256 callValue, bytes memory methodData) =
             _getJoinPoolCalldata(_poolAddress, _poolTokensOut, _tokensIn, _maxAmountsIn);
         poolInfo.strategy.invokeFromIntegration(targetPool, callValue, methodData);
         _validatePostJoinPoolData(poolInfo);
-        _updateGardenPositions(poolInfo, _tokensIn, true);
+        _updateGardenPositions(poolInfo, true);
 
         emit PoolEntered(address(poolInfo.strategy), address(poolInfo.garden), poolInfo.pool, _poolTokensOut);
     }
@@ -132,9 +131,9 @@ abstract contract PoolIntegration is BaseIntegration, ReentrancyGuard {
             _getExitPoolCalldata(_poolAddress, _poolTokensIn, _tokensOut, _minAmountsOut);
         poolInfo.strategy.invokeFromIntegration(targetPool, callValue, methodData);
         _validatePostExitPoolData(poolInfo);
-        uint256 protocolFee = _accrueProtocolFee(poolInfo, _tokensOut[0], _minAmountsOut[0]);
+        uint256 protocolFee = _accrueProtocolFee(address(poolInfo.strategy), _tokensOut[0], _minAmountsOut[0]);
 
-        _updateGardenPositions(poolInfo, _tokensOut, false);
+        _updateGardenPositions(poolInfo, false);
 
         emit PoolExited(
             address(poolInfo.strategy),
@@ -155,26 +154,15 @@ abstract contract PoolIntegration is BaseIntegration, ReentrancyGuard {
         return _isPool(_poolAddress);
     }
 
-    /* ============ Internal Functions ============ */
-
-    /**
-     * Retrieve fee from controller and calculate total protocol fee and send from strategy to protocol recipient
-     *
-     * @param _poolInfo                 Struct containing trade information used in internal functions
-     * @param _feeToken                 Address of the token to pay the fee with
-     * @return uint256                  Amount of receive token taken as protocol fee
-     */
-    function _accrueProtocolFee(
-        PoolInfo memory _poolInfo,
-        address _feeToken,
-        uint256 _exchangedQuantity
-    ) internal returns (uint256) {
-        uint256 protocolFeeTotal = getIntegrationFee(0, _exchangedQuantity);
-
-        payProtocolFeeFromIdea(address(_poolInfo.strategy), _feeToken, protocolFeeTotal);
-
-        return protocolFeeTotal;
+    function getPoolTokens(
+        address /* _poolAddress */
+    ) external view virtual returns (address[] memory) {
+        address[] memory poolTokens;
+        require(false, 'This needs to be overriden');
+        return poolTokens;
     }
+
+    /* ============ Internal Functions ============ */
 
     /**
      * Create and return PoolInfo struct
@@ -197,7 +185,7 @@ abstract contract PoolIntegration is BaseIntegration, ReentrancyGuard {
         poolInfo.garden = IGarden(poolInfo.strategy.garden());
         poolInfo.pool = _pool;
         poolInfo.totalSupply = IERC20(_pool).totalSupply();
-        poolInfo.poolTokensInIdea = IERC20(_pool).balanceOf(address(msg.sender));
+        poolInfo.poolTokensInStrategy = IERC20(_pool).balanceOf(address(msg.sender));
         poolInfo.poolTokensInTransaction = _poolTokensInTransaction;
         poolInfo.limitPoolTokenQuantities = _limitPoolTokenQuantities;
 
@@ -223,7 +211,7 @@ abstract contract PoolIntegration is BaseIntegration, ReentrancyGuard {
         require(_isPool(_poolInfo.pool), 'The pool address is not valid');
         require(_poolInfo.poolTokensInTransaction > 0, 'Pool tokens to exchange must be greater than 0');
         require(
-            _poolInfo.poolTokensInIdea >= _poolInfo.poolTokensInTransaction,
+            _poolInfo.poolTokensInStrategy >= _poolInfo.poolTokensInTransaction,
             'The strategy does not have enough pool tokens'
         );
     }
@@ -235,7 +223,7 @@ abstract contract PoolIntegration is BaseIntegration, ReentrancyGuard {
      */
     function _validatePostJoinPoolData(PoolInfo memory _poolInfo) internal view {
         require(
-            (IERC20(_poolInfo.pool).balanceOf(address(_poolInfo.strategy)) > _poolInfo.poolTokensInIdea),
+            (IERC20(_poolInfo.pool).balanceOf(address(_poolInfo.strategy)) > _poolInfo.poolTokensInStrategy),
             'The strategy did not receive the pool tokens'
         );
     }
@@ -248,7 +236,7 @@ abstract contract PoolIntegration is BaseIntegration, ReentrancyGuard {
     function _validatePostExitPoolData(PoolInfo memory _poolInfo) internal view {
         require(
             IERC20(_poolInfo.pool).balanceOf(address(_poolInfo.strategy)) ==
-                _poolInfo.poolTokensInIdea - _poolInfo.poolTokensInTransaction,
+                _poolInfo.poolTokensInStrategy - _poolInfo.poolTokensInTransaction,
             'The strategy did not return the pool tokens'
         );
         // TODO: validate individual tokens received
@@ -259,23 +247,7 @@ abstract contract PoolIntegration is BaseIntegration, ReentrancyGuard {
      *
      * @param _poolInfo                Struct containing pool information used in internal functions
      */
-    function _updateGardenPositions(
-        PoolInfo memory _poolInfo,
-        address[] calldata _poolTokens,
-        bool isDeposit
-    ) internal {
-        // balance pool individual component
-        // TODO: Grab actual min tokens on added and withdrawed on exit
-        for (uint256 i = 0; i < _poolTokens.length; i++) {
-            _updateStrategyPosition(
-                address(_poolInfo.strategy),
-                _poolTokens[i],
-                isDeposit
-                    ? int256(-_poolInfo.limitPoolTokenQuantities[i])
-                    : _poolInfo.limitPoolTokenQuantities[i].toInt256(),
-                isDeposit ? 2 : 0
-            );
-        }
+    function _updateGardenPositions(PoolInfo memory _poolInfo, bool isDeposit) internal {
         // balance pool token
         _updateStrategyPosition(
             address(_poolInfo.strategy),

@@ -1,5 +1,5 @@
 /*
-    Copyright 2020 Babylon Finance
+    Copyright 2021 Babylon Finance
 
     Licensed under the Apache License, Version 2.0 (the "License");
     you may not use this file except in compliance with the License.
@@ -30,6 +30,7 @@ interface IStrategyFactory {
         address _strategist,
         address _garden,
         address _controller,
+        address _integration,
         uint256 _maxCapitalRequested,
         uint256 _stake,
         uint256 _investmentDuration,

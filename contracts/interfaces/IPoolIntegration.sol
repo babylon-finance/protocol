@@ -1,5 +1,5 @@
 /*
-    Copyright 2020 Babylon Finance
+    Copyright 2021 Babylon Finance
 
     Licensed under the Apache License, Version 2.0 (the "License");
     you may not use this file except in compliance with the License.
@@ -39,6 +39,8 @@ interface IPoolIntegration is IIntegration {
         address[] calldata _tokensOut,
         uint256[] calldata _minAmountsOut
     ) external;
+
+    function getPoolTokens(address _poolAddress) external view returns (address[] memory);
 
     function isPool(address _poolAddress) external view returns (bool);
 }

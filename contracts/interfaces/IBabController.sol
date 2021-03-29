@@ -1,5 +1,5 @@
 /*
-    Copyright 2020 Babylon Finance.
+    Copyright 2021 Babylon Finance.
 
     Licensed under the Apache License, Version 2.0 (the "License");
     you may not use this file except in compliance with the License.
@@ -53,7 +53,7 @@ interface IBabController {
 
     function editGardenFactory(address _newGardenFactory) external;
 
-    function editStrategyFactory(address _newStrategyFactory) external;
+    function editStrategyFactory(uint8 _strategyKind, address _newStrategyFactory) external;
 
     function addIntegration(string memory _name, address _integration) external;
 
@@ -86,7 +86,7 @@ interface IBabController {
 
     function getTreasury() external view returns (address);
 
-    function getStrategyFactory() external view returns (address);
+    function getStrategyFactory(uint8 _strategyKind) external view returns (address);
 
     function getGardenFactory() external view returns (address);
 

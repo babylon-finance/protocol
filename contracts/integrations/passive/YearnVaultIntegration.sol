@@ -1,5 +1,5 @@
 /*
-    Copyright 2020 Babylon Finance
+    Copyright 2021 Babylon Finance
 
     Licensed under the Apache License, Version 2.0 (the "License");
     you may not use this file except in compliance with the License.
@@ -19,11 +19,10 @@
 pragma solidity 0.7.4;
 
 import 'hardhat/console.sol';
-import {PassiveIntegration} from './PassiveIntegration.sol';
 import {ERC20} from '@openzeppelin/contracts/token/ERC20/ERC20.sol';
 import {SafeMath} from '@openzeppelin/contracts/math/SafeMath.sol';
-import {PreciseUnitMath} from '../lib/PreciseUnitMath.sol';
-import {YRegistry} from '../interfaces/external/yearn/YRegistry.sol';
+import {PassiveIntegration} from './PassiveIntegration.sol';
+import {YRegistry} from '../../interfaces/external/yearn/YRegistry.sol';
 
 /**
  * @title YearnIntegration
@@ -33,7 +32,6 @@ import {YRegistry} from '../interfaces/external/yearn/YRegistry.sol';
  */
 contract YearnVaultIntegration is PassiveIntegration {
     using SafeMath for uint256;
-    using PreciseUnitMath for uint256;
 
     /* ============ State Variables ============ */
 

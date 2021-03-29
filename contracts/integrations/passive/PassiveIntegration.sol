@@ -1,5 +1,5 @@
 /*
-    Copyright 2020 Babylon Finance
+    Copyright 2021 Babylon Finance
 
     Licensed under the Apache License, Version 2.0 (the "License");
     you may not use this file except in compliance with the License.
@@ -22,11 +22,11 @@ import 'hardhat/console.sol';
 import {SafeMath} from '@openzeppelin/contracts/math/SafeMath.sol';
 import {SafeCast} from '@openzeppelin/contracts/utils/SafeCast.sol';
 import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
-import {IGarden} from '../interfaces/IGarden.sol';
-import {IStrategy} from '../interfaces/IStrategy.sol';
 import {ReentrancyGuard} from '@openzeppelin/contracts/utils/ReentrancyGuard.sol';
-import {IBabController} from '../interfaces/IBabController.sol';
-import {BaseIntegration} from './BaseIntegration.sol';
+import {IGarden} from '../../interfaces/IGarden.sol';
+import {IStrategy} from '../../interfaces/IStrategy.sol';
+import {IBabController} from '../../interfaces/IBabController.sol';
+import {BaseIntegration} from '../BaseIntegration.sol';
 
 /**
  * @title PassiveIntegration
@@ -145,7 +145,7 @@ abstract contract PassiveIntegration is BaseIntegration, ReentrancyGuard {
             _getExitInvestmentCalldata(_investmentAddress, _investmentTokenIn, _tokenOut, _minAmountOut);
         investmentInfo.strategy.invokeFromIntegration(targetInvestment, callValue, methodData);
         _validatePostExitInvestmentData(investmentInfo);
-        uint256 protocolFee = _accrueProtocolFee(investmentInfo, _tokenOut, _minAmountOut);
+        uint256 protocolFee = _accrueProtocolFee(address(investmentInfo.strategy), _tokenOut, _minAmountOut);
 
         _updateGardenPositions(investmentInfo, _tokenOut, false);
 
@@ -169,25 +169,6 @@ abstract contract PassiveIntegration is BaseIntegration, ReentrancyGuard {
     }
 
     /* ============ Internal Functions ============ */
-
-    /**
-     * Retrieve fee from controller and calculate total protocol fee and send from garden to protocol recipient
-     *
-     * @param _investmentInfo                 Struct containing trade information used in internal functions
-     * @param _feeToken                       Address of the token to pay the fee with
-     * @return uint256                        Amount of receive token taken as protocol fee
-     */
-    function _accrueProtocolFee(
-        InvestmentInfo memory _investmentInfo,
-        address _feeToken,
-        uint256 _exchangedQuantity
-    ) internal returns (uint256) {
-        uint256 protocolFeeTotal = getIntegrationFee(0, _exchangedQuantity);
-
-        payProtocolFeeFromIdea(address(_investmentInfo.garden), _feeToken, protocolFeeTotal);
-
-        return protocolFeeTotal;
-    }
 
     /**
      * Create and return InvestmentInfo struct

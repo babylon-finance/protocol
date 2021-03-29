@@ -2,6 +2,7 @@ const { expect } = require('chai');
 const { waffle, ethers } = require('hardhat');
 // const { impersonateAddress } = require("../../utils/rpc");
 const { deployFolioFixture } = require('../fixtures/ControllerFixture');
+const { executeStrategy, finalizeStrategy } = require('../fixtures/StrategyHelper');
 const addresses = require('../../utils/addresses');
 const { ONE_DAY_IN_SECONDS } = require('../../utils/constants');
 
@@ -21,7 +22,7 @@ describe('KyberTradeIntegration', function () {
     ({ babController, garden1, strategy11, kyberTradeIntegration, signer1, signer2, signer3 } = await loadFixture(
       deployFolioFixture,
     ));
-    strategyContract = await ethers.getContractAt('Strategy', strategy11);
+    strategyContract = await ethers.getContractAt('LongStrategy', strategy11);
   });
 
   describe('Deployment', function () {
@@ -70,16 +71,12 @@ describe('KyberTradeIntegration', function () {
         },
       );
 
-      await strategyContract.executeInvestment(ethers.utils.parseEther('1'), 0, {
-        gasPrice: 0,
-      });
+      await executeStrategy(garden1, strategyContract, 0);
 
       expect(await wethToken.balanceOf(strategyContract.address)).to.equal(ethers.utils.parseEther('0'));
       expect(await usdcToken.balanceOf(strategyContract.address)).to.be.gt(ethers.utils.parseEther('97') / 10 ** 12);
 
-      ethers.provider.send('evm_increaseTime', [ONE_DAY_IN_SECONDS * 90]);
-
-      await strategyContract.finalizeInvestment(0, { gasPrice: 0 });
+      await finalizeStrategy(garden1, strategyContract, 0);
       expect(await usdcToken.balanceOf(strategyContract.address)).to.equal(0);
     });
   });

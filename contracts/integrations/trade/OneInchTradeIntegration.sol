@@ -1,5 +1,5 @@
 /*
-    Copyright 2020 Babylon Finance
+    Copyright 2021 Babylon Finance
 
     Licensed under the Apache License, Version 2.0 (the "License");
     you may not use this file except in compliance with the License.
@@ -19,6 +19,8 @@
 pragma solidity 0.7.4;
 
 import 'hardhat/console.sol';
+import {SafeMath} from '@openzeppelin/contracts/math/SafeMath.sol';
+import {IOneInchExchange} from '../../interfaces/external/1inch/IOneInchExchange.sol';
 import {TradeIntegration} from './TradeIntegration.sol';
 
 /**
@@ -28,13 +30,12 @@ import {TradeIntegration} from './TradeIntegration.sol';
  * 1Inch protocol trade integration
  */
 contract OneInchTradeIntegration is TradeIntegration {
+    using SafeMath for uint256;
+
     /* ============ State Variables ============ */
 
     // Address of 1Inch exchange address
     address public oneInchExchangeAddress;
-
-    // Bytes to check 1Inch function signature
-    bytes4 public immutable oneInchFunctionSignature = bytes4(0xe2a7515e);
 
     /* ============ Constructor ============ */
 
@@ -62,25 +63,16 @@ contract OneInchTradeIntegration is TradeIntegration {
     /* ============ Internal Functions ============ */
 
     /**
-     * Return 1inch calldata which is already generated from the 1inch API
+     * Executes the trade through 1Inch.
      *
-     * @param  _sourceToken              Address of source token to be sold
-     * @param  _destinationToken         Address of destination token to buy
-     * @param  _sourceQuantity           Amount of source token to sell
-     * @param  _minDestinationQuantity   Min amount of destination token to buy
-     * @param  _data                     Arbitrage bytes containing trade call data
-     *
-     * @return address                   Target contract address
-     * @return uint256                   Call value
-     * @return bytes                     Trade calldata
+     * @param _sendToken            Address of the token to be sent to the exchange
+     * @param _sendQuantity         Units of reserve asset token sent to the exchange
+     * @param _receiveToken         Address of the token that will be received from the exchange
      */
-    function _getTradeCalldata(
-        address _sourceToken,
-        address _destinationToken,
-        address, /* _destinationAddress */
-        uint256 _sourceQuantity,
-        uint256 _minDestinationQuantity,
-        bytes memory _data
+    function _getTradeCallData(
+        address _sendToken,
+        uint256 _sendQuantity,
+        address _receiveToken
     )
         internal
         view
@@ -91,33 +83,20 @@ contract OneInchTradeIntegration is TradeIntegration {
             bytes memory
         )
     {
-        bytes4 signature;
-        address fromToken;
-        address toToken;
-        uint256 fromTokenAmount;
-        uint256 minReturnAmount;
+        (uint256 _returnAmount, uint256[] memory _distribution) =
+            IOneInchExchange(oneInchExchangeAddress).getExpectedReturn(_sendToken, _receiveToken, _sendQuantity, 1, 0);
 
-        // Parse 1inch calldata and validate parameters match expected inputs
-        // solium-disable-next-line security/no-inline-assembly
-        assembly {
-            signature := mload(add(_data, 32))
-            fromToken := mload(add(_data, 36))
-            toToken := mload(add(_data, 68))
-            fromTokenAmount := mload(add(_data, 100))
-            minReturnAmount := mload(add(_data, 132))
-        }
-
-        require(signature == oneInchFunctionSignature, 'Not One Inch Swap Function');
-
-        require(fromToken == _sourceToken, 'Invalid send token');
-
-        require(toToken == _destinationToken, 'Invalid receive token');
-
-        require(fromTokenAmount == _sourceQuantity, 'Source quantity mismatch');
-
-        require(minReturnAmount >= _minDestinationQuantity, 'Min destination quantity mismatch');
-
-        return (oneInchExchangeAddress, 0, _data);
+        bytes memory methodData =
+            abi.encodeWithSignature(
+                'swap(address,address,uint256,uint256,uint256[],uint256)',
+                _sendToken,
+                _receiveToken,
+                _sendQuantity,
+                _returnAmount,
+                _distribution,
+                0
+            );
+        return (oneInchExchangeAddress, 0, methodData);
     }
 
     /**

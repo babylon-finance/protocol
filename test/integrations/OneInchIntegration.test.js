@@ -1,10 +1,10 @@
 const { expect } = require('chai');
-const superagent = require('superagent');
+// const superagent = require('superagent');
 const { waffle, ethers } = require('hardhat');
 const { impersonateAddress } = require('../../utils/rpc');
 const { deployFolioFixture } = require('../fixtures/ControllerFixture');
+const { createStrategy, executeStrategy, finalizeStrategy } = require('../fixtures/StrategyHelper');
 const addresses = require('../../utils/addresses');
-const { ZERO } = require('../../utils/constants');
 
 const { loadFixture } = waffle;
 
@@ -12,35 +12,42 @@ describe('OneInchTradeIntegration', function () {
   let oneInchTradeIntegration;
   let garden1;
   let babController;
+  let signer1;
+  let signer2;
+  let signer3;
 
   beforeEach(async () => {
-    ({ babController, garden1, oneInchTradeIntegration } = await loadFixture(deployFolioFixture));
+    ({ babController, garden1, oneInchTradeIntegration, signer1, signer2, signer3 } = await loadFixture(
+      deployFolioFixture,
+    ));
   });
 
   describe('Deployment', function () {
     it('should successfully deploy the contract', async function () {
       const deployed = await babController.deployed();
-      const deployedKyber = await oneInchTradeIntegration.deployed();
+      const deployedOne = await oneInchTradeIntegration.deployed();
       expect(!!deployed).to.equal(true);
-      expect(!!deployedKyber).to.equal(true);
+      expect(!!deployedOne).to.equal(true);
     });
   });
 
   describe('Trading', function () {
     let daiToken;
     let usdcToken;
+    let wethToken;
     let whaleSigner;
-    let oneInchExchange;
+    // let oneInchExchange;
     const daiWhaleAddress = '0x6B175474E89094C44Da98b954EedeAC495271d0F';
 
     beforeEach(async () => {
       whaleSigner = await impersonateAddress(daiWhaleAddress);
       daiToken = await ethers.getContractAt('IERC20', addresses.tokens.DAI);
+      wethToken = await ethers.getContractAt('IERC20', addresses.tokens.WETH);
       usdcToken = await ethers.getContractAt('IERC20', addresses.tokens.USDC);
-      oneInchExchange = await ethers.getContractAt('IOneInchExchange', addresses.oneinch.exchange);
+      // oneInchExchange = await ethers.getContractAt('IOneInchExchange', addresses.oneinch.exchange);
     });
 
-    it('trade dai to usdc', async function () {
+    it('trade WETH to USDC', async function () {
       expect(
         await daiToken.connect(whaleSigner).transfer(garden1.address, ethers.utils.parseEther('100'), {
           gasPrice: 0,
@@ -48,51 +55,25 @@ describe('OneInchTradeIntegration', function () {
       );
       expect(await daiToken.balanceOf(garden1.address)).to.equal(ethers.utils.parseEther('100'));
       // Get the quote
-      const quote = await superagent.get(`${addresses.api.oneinch}quote`).query({
-        fromTokenAddress: daiToken.address,
-        toTokenAddress: usdcToken.address,
-        amount: 100 * 10 ** 18,
-      });
-      // Get the parts
-      // const parts = await oneInchExchange.getExpectedReturn(
-      //   daiToken.address,
-      //   usdcToken.address,
-      //   ethers.utils.parseEther("100"),
-      //   1,
-      //   0
-      // );
-      //
-      // // Get call data
-      // const callData = oneInchExchange.interface.encodeFunctionData(
-      //   oneInchExchange.interface.functions[
-      //     "swap(address,address,uint256,uint256,uint256[],uint256)"
-      //   ],
-      //   [
-      //     daiToken.address, // Send token
-      //     usdcToken.address, // Receive token
-      //     ethers.utils.parseEther("100"), // Send quantity
-      //     quote.body.toTokenAmount, // Min receive quantity
-      //     parts.distribution,
-      //     0
-      //   ]
-      // );
-      //
-      // await garden.trade(
-      //   "1inch",
-      //   addresses.tokens.DAI,
-      //   ethers.utils.parseEther("100"),
-      //   usdcToken.address,
-      //   quote.body.toTokenAmount,
-      //   callData,
-      //   { gasPrice: 0 }
-      // );
-      // expect(await daiToken.balanceOf(garden.address)).to.equal(0);
-      // console.log(
-      //   ethers.utils.formatEther(await usdcToken.balanceOf(garden.address))
-      // );
-      // expect(await usdcToken.balanceOf(garden.address)).to.be.gt(
-      //   ethers.utils.parseEther("97") / 10 ** 12
-      // );
+      // const quote = await superagent.get(`${addresses.api.oneinch}quote`).query({
+      //   fromTokenAddress: daiToken.address,
+      //   toTokenAddress: usdcToken.address,
+      //   amount: 100 * 10 ** 18,
+      // });
+      const strategyContract = await createStrategy(
+        0,
+        'vote',
+        [signer1, signer2, signer3],
+        oneInchTradeIntegration.address,
+        garden1,
+      );
+
+      await executeStrategy(garden1, strategyContract, 0);
+      expect(await wethToken.balanceOf(strategyContract.address)).to.equal(ethers.utils.parseEther('0'));
+      expect(await usdcToken.balanceOf(strategyContract.address)).to.be.gt(ethers.utils.parseEther('900') / 10 ** 12);
+
+      await finalizeStrategy(garden1, strategyContract, 0);
+      expect(await usdcToken.balanceOf(strategyContract.address)).to.equal(0);
     });
   });
 });

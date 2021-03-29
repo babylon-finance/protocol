@@ -1,5 +1,5 @@
 /*
-    Copyright 2020 Babylon Finance.
+    Copyright 2021 Babylon Finance.
 
     Licensed under the Apache License, Version 2.0 (the "License");
     you may not use this file except in compliance with the License.
@@ -193,8 +193,6 @@ contract RollingGarden is ReentrancyGuard, BaseGarden {
             require(principal.add(msg.value) <= maxDepositLimit, 'Max Deposit Limit');
         }
         require(msg.value == _reserveAssetQuantity, 'ETH does not match');
-        // Oracle maintenance
-        updatePositionTWAPPrices();
         // Always wrap to WETH
         IWETH(weth).deposit{value: msg.value}();
         // Check this here to avoid having relayers
@@ -202,7 +200,7 @@ contract RollingGarden is ReentrancyGuard, BaseGarden {
 
         _validateReserveAsset(reserveAsset, _reserveAssetQuantity);
 
-        ActionInfo memory depositInfo = _createIssuanceInfo(reserveAsset, _reserveAssetQuantity);
+        ActionInfo memory depositInfo = _createIssuanceInfo(_reserveAssetQuantity);
 
         // Check that total supply is greater than min supply needed for issuance
         // Note: A min supply amount is needed to avoid division by 0 when Garden token supply is 0
@@ -247,7 +245,7 @@ contract RollingGarden is ReentrancyGuard, BaseGarden {
         );
         // Check this here to avoid having relayers
         reenableEthForInvestments();
-        ActionInfo memory withdrawalInfo = _createRedemptionInfo(reserveAsset, _gardenTokenQuantity);
+        ActionInfo memory withdrawalInfo = _createRedemptionInfo(_gardenTokenQuantity);
 
         _validateReserveAsset(reserveAsset, withdrawalInfo.netFlowQuantity);
 
@@ -305,7 +303,7 @@ contract RollingGarden is ReentrancyGuard, BaseGarden {
         IReservePool reservePool = IReservePool(IBabController(controller).getReservePool());
         require(reservePool.isReservePoolAllowedToBuy(address(this), _gardenTokenQuantity), 'Reserve Pool not active');
 
-        ActionInfo memory withdrawalInfo = _createRedemptionInfo(reserveAsset, _gardenTokenQuantity);
+        ActionInfo memory withdrawalInfo = _createRedemptionInfo(_gardenTokenQuantity);
 
         _validateReserveAsset(reserveAsset, withdrawalInfo.netFlowQuantity);
         // If normal redemption is available, don't use the reserve pool
@@ -453,19 +451,12 @@ contract RollingGarden is ReentrancyGuard, BaseGarden {
     /**
      * Get the expected reserve asset to be withdrawaled
      *
-     * @param _reserveAsset                 Address of the reserve asset
      * @param _gardenTokenQuantity             Quantity of Garden tokens to withdrawal
      *
      * @return  uint256                     Expected reserve asset quantity withdrawaled
      */
-    function getExpectedReserveWithdrawalQuantity(address _reserveAsset, uint256 _gardenTokenQuantity)
-        external
-        view
-        returns (uint256)
-    {
-        uint256 preFeeReserveQuantity = _gardenTokenQuantity;
-
-        (, uint256 netReserveFlows) = _getFees(preFeeReserveQuantity, false, _gardenTokenQuantity);
+    function getExpectedReserveWithdrawalQuantity(uint256 _gardenTokenQuantity) external view returns (uint256) {
+        (, uint256 netReserveFlows) = _getFees(_gardenTokenQuantity, false);
 
         return netReserveFlows;
     }
@@ -503,7 +494,7 @@ contract RollingGarden is ReentrancyGuard, BaseGarden {
         } else {
             uint256 totalWithdrawalValue = _gardenTokenQuantity;
 
-            (, uint256 expectedWithdrawalQuantity) = _getFees(totalWithdrawalValue, false, _gardenTokenQuantity);
+            (, uint256 expectedWithdrawalQuantity) = _getFees(totalWithdrawalValue, false);
 
             return principal >= expectedWithdrawalQuantity;
         }
@@ -530,16 +521,12 @@ contract RollingGarden is ReentrancyGuard, BaseGarden {
         require(_withdrawalInfo.netFlowQuantity >= _minReserveReceiveQuantity, 'Must be > than min receive');
     }
 
-    function _createIssuanceInfo(address _reserveAsset, uint256 _reserveAssetQuantity)
-        internal
-        view
-        returns (ActionInfo memory)
-    {
+    function _createIssuanceInfo(uint256 _reserveAssetQuantity) internal view returns (ActionInfo memory) {
         ActionInfo memory depositInfo;
         depositInfo.previousGardenTokenSupply = totalSupply();
         depositInfo.preFeeReserveQuantity = _reserveAssetQuantity;
 
-        (depositInfo.protocolFees, depositInfo.netFlowQuantity) = _getFees(depositInfo.preFeeReserveQuantity, true, 0);
+        (depositInfo.protocolFees, depositInfo.netFlowQuantity) = _getFees(depositInfo.preFeeReserveQuantity, true);
 
         depositInfo.gardenTokenQuantity = depositInfo.netFlowQuantity;
 
@@ -551,11 +538,7 @@ contract RollingGarden is ReentrancyGuard, BaseGarden {
         return depositInfo;
     }
 
-    function _createRedemptionInfo(address _reserveAsset, uint256 _gardenTokenQuantity)
-        internal
-        view
-        returns (ActionInfo memory)
-    {
+    function _createRedemptionInfo(uint256 _gardenTokenQuantity) internal view returns (ActionInfo memory) {
         ActionInfo memory withdrawalInfo;
 
         withdrawalInfo.gardenTokenQuantity = _gardenTokenQuantity;
@@ -564,8 +547,7 @@ contract RollingGarden is ReentrancyGuard, BaseGarden {
 
         (withdrawalInfo.protocolFees, withdrawalInfo.netFlowQuantity) = _getFees(
             withdrawalInfo.preFeeReserveQuantity,
-            false,
-            _gardenTokenQuantity
+            false
         );
 
         withdrawalInfo.previousGardenTokenSupply = totalSupply();
@@ -589,16 +571,11 @@ contract RollingGarden is ReentrancyGuard, BaseGarden {
      *
      * @param _reserveAssetQuantity         Quantity of reserve asset to calculate fees from
      * @param _isDeposit                    Boolean that is true when it is a deposit
-     * @param _gardenTokenQuantity            Number of garden tokens involved in the operation
      *
      * @return  uint256                     Fees paid to the protocol in reserve asset
      * @return  uint256                     Net reserve to user net of fees
      */
-    function _getFees(
-        uint256 _reserveAssetQuantity,
-        bool _isDeposit,
-        uint256 _gardenTokenQuantity
-    ) internal view returns (uint256, uint256) {
+    function _getFees(uint256 _reserveAssetQuantity, bool _isDeposit) internal view returns (uint256, uint256) {
         // Get protocol fee percentages
         uint256 protocolFeePercentage =
             _isDeposit
@@ -639,7 +616,9 @@ contract RollingGarden is ReentrancyGuard, BaseGarden {
     /**
      * Updates the contributor info in the array
      */
-    function _updateContributorWithdrawalInfo(uint256 amount) internal {
+    function _updateContributorWithdrawalInfo(
+        uint256 /*amount*/
+    ) internal {
         Contributor storage contributor = contributors[msg.sender];
         // If sold everything
         if (balanceOf(msg.sender) == 0) {

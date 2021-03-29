@@ -1,5 +1,5 @@
 /*
-    Copyright 2020 Babylon Finance.
+    Copyright 2021 Babylon Finance.
 
     Licensed under the Apache License, Version 2.0 (the "License");
     you may not use this file except in compliance with the License.
@@ -19,15 +19,13 @@
 pragma solidity >=0.7.0 <0.9.0;
 
 import 'hardhat/console.sol';
-import {ILendingPool} from '../interfaces/external/aave/ILendingPool.sol';
-import {IProtocolDataProvider} from '../interfaces/external/aave/IProtocolDataProvider.sol';
 import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import {SafeERC20} from '@openzeppelin/contracts/token/ERC20/SafeERC20.sol';
-import {IWETH} from '../interfaces/external/weth/IWETH.sol';
-
+import {ILendingPool} from '../../interfaces/external/aave/ILendingPool.sol';
+import {IProtocolDataProvider} from '../../interfaces/external/aave/IProtocolDataProvider.sol';
+import {IWETH} from '../../interfaces/external/weth/IWETH.sol';
+import {IBabController} from '../../interfaces/IBabController.sol';
 import {BorrowIntegration} from './BorrowIntegration.sol';
-import {IBabController} from '../interfaces/IBabController.sol';
-import {BaseIntegration} from './BaseIntegration.sol';
 
 /**
  * @title AaveIntegration

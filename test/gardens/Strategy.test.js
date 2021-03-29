@@ -8,7 +8,7 @@ const { parseEther } = ethers.utils;
 
 const { loadFixture } = waffle;
 
-const { createStrategy } = require('../fixtures/StrategyHelper.js');
+const { createStrategy, executeStrategy, finalizeStrategy } = require('../fixtures/StrategyHelper.js');
 
 const addresses = require('../../utils/addresses');
 const { ONE_DAY_IN_SECONDS } = require('../../utils/constants.js');
@@ -174,19 +174,16 @@ describe('Strategy', function () {
   });
 
   describe('executeInvestment', async function () {
-    it('should execute investemnet idea', async function () {
+    it('should execute investment idea', async function () {
       const strategyContract = await createStrategy(
+        0,
         'vote',
         [signer1, signer2, signer3],
-        kyberTradeIntegration,
+        kyberTradeIntegration.address,
         garden1,
       );
 
-      ethers.provider.send('evm_increaseTime', [ONE_DAY_IN_SECONDS * 2]);
-
-      await strategyContract.executeInvestment(ethers.utils.parseEther('1'), 42, {
-        gasPrice: 0,
-      });
+      await executeStrategy(garden1, strategyContract, 42);
 
       const [address, active, dataSet, finalized, executedAt, exitedAt] = await strategyContract.getStrategyState();
 
@@ -203,28 +200,22 @@ describe('Strategy', function () {
 
     it('can execute investment twice', async function () {
       const strategyContract = await createStrategy(
-        'vote',
+        0,
+        'active',
         [signer1, signer2, signer3],
-        kyberTradeIntegration,
+        kyberTradeIntegration.address,
         garden1,
       );
 
-      ethers.provider.send('evm_increaseTime', [ONE_DAY_IN_SECONDS * 2]);
-
-      await strategyContract.executeInvestment(ethers.utils.parseEther('1'), 0, {
-        gasPrice: 0,
-      });
-
-      await strategyContract.executeInvestment(ethers.utils.parseEther('1'), 0, {
-        gasPrice: 0,
-      });
+      await executeStrategy(garden1, strategyContract);
     });
 
     it('refuse to pay a high fee to the keeper', async function () {
       const strategyContract = await createStrategy(
+        0,
         'vote',
         [signer1, signer2, signer3],
-        kyberTradeIntegration,
+        kyberTradeIntegration.address,
         garden1,
       );
 
@@ -241,15 +232,14 @@ describe('Strategy', function () {
   describe('finalizeInvestment', async function () {
     it('should finalize investemnet idea', async function () {
       const strategyContract = await createStrategy(
+        0,
         'active',
         [signer1, signer2, signer3],
-        kyberTradeIntegration,
+        kyberTradeIntegration.address,
         garden1,
       );
 
-      ethers.provider.send('evm_increaseTime', [ONE_DAY_IN_SECONDS * 90]);
-
-      await strategyContract.finalizeInvestment(42, { gasPrice: 0 });
+      await finalizeStrategy(garden1, strategyContract, 42);
 
       const [address, active, dataSet, finalized, executedAt, exitedAt] = await strategyContract.getStrategyState();
 
@@ -266,15 +256,14 @@ describe('Strategy', function () {
 
     it("can't finalize investment twice", async function () {
       const strategyContract = await createStrategy(
+        0,
         'active',
         [signer1, signer2, signer3],
-        kyberTradeIntegration,
+        kyberTradeIntegration.address,
         garden1,
       );
 
-      ethers.provider.send('evm_increaseTime', [ONE_DAY_IN_SECONDS * 90]);
-
-      await strategyContract.finalizeInvestment(42, { gasPrice: 0 });
+      await finalizeStrategy(garden1, strategyContract, 42);
 
       await expect(strategyContract.finalizeInvestment(42, { gasPrice: 0 })).to.be.rejectedWith(
         /this investment was already exited/i,

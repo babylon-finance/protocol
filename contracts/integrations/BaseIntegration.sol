@@ -1,5 +1,5 @@
 /*
-    Copyright 2020 Babylon Finance.
+    Copyright 2021 Babylon Finance.
 
     Licensed under the Apache License, Version 2.0 (the "License");
     you may not use this file except in compliance with the License.
@@ -166,6 +166,26 @@ abstract contract BaseIntegration {
         if (_feeQuantity > 0) {
             ERC20(_token).transferFrom(_strategy, IBabController(controller).getTreasury(), _feeQuantity);
         }
+    }
+
+    /**
+     * Retrieve fee from controller and calculate total protocol fee and send from strategy to protocol recipient
+     *
+     * @param _strategy                           Address of the strategy
+     * @param _token                              Address of the token to pay it with
+     * @param _exchangedQuantity                  Amount of reserve asset that the integration handled
+     * @return uint256                            Amount of receive token taken as protocol fee
+     */
+    function _accrueProtocolFee(
+        address _strategy,
+        address _token,
+        uint256 _exchangedQuantity
+    ) internal returns (uint256) {
+        uint256 protocolFeeTotal = getIntegrationFee(0, _exchangedQuantity);
+
+        payProtocolFeeFromIdea(_strategy, _token, protocolFeeTotal);
+
+        return protocolFeeTotal;
     }
 
     /**
