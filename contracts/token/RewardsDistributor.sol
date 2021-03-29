@@ -132,7 +132,9 @@ contract RewardsDistributor is Ownable {
     constructor(RewardsSupplySchedule _supply, TimeLockedToken _bablToken) {
         supplySchedule = _supply;
         babltoken = _bablToken;
-        START_TIME = block.timestamp;
+        //START_TIME = block.timestamp; // TODO RECOVER FOR PRODUCTION
+        START_TIME = 1614618000; // March the 1st for TESTING PURPOSES ONLY
+
     }
 
     /* ============ External Functions ============ */
@@ -193,17 +195,23 @@ contract RewardsDistributor is Ownable {
         uint256 strategyLength = strategyList.length;
         for (uint i=0; i<= strategyLength-1;i++){
             StrategyPoolInfo storage pool = strategyPoolInfo[strategyList[i]];
-            uint96[] memory quarters = getSupplyForPeriod(pool.strategyStart, pool.strategyEnd) ;
+             // check number of quarters and what quarters are they
+            (uint256 numQuarters, uint256 startingQuarter,uint256 endingQuarter) = getRewardsWindow(pool.strategyStart,pool.strategyEnd);
+            uint96[] memory quarters = new uint96[](numQuarters);
             uint256 percentage = uint256(pool.strategyPower).div(protocolPrincipal.mul(protocolDuration));
             uint96 rewards = 0;
-            for (uint j=0; j<= quarters.length-1;j++){
+            uint counter = 0;
+            for (uint j=0; j<= numQuarters.sub(1);j++){
+                quarters[j] = Safe3296.safe96(supplySchedule.tokenSupplyPerQuarter(startingQuarter.add(1)),'overflow 96 bits');
                 rewards = Safe3296.safe96(uint256(rewards).add(percentage.mul(quarters[j])), 'overflow 96 bits');
+                counter++;
                 
                 //user.amount = Safe3296.safe96(uint256(user.amount).sub(_amount), 'overflow of 96 bits'); // TODO - CHECK DECIMALS
                 //user.rewardDebt = Safe3296.safe96(uint256(user.amount).mul(pool.bablPerShare), 'overflow of 96 bits'); // TODO - CHECK DECIMALS
                 //safeBABLTransfer(msg.sender, pending);
                 //emit ClaimMyRewards(msg.sender, _pid, _amount);
             }
+            require(endingQuarter == startingQuarter.add(counter).sub(1),'reward window mismatch');
             pool.strategyRewards = rewards;
         }
         
@@ -378,25 +386,31 @@ contract RewardsDistributor is Ownable {
     function finalizedStrategiesinGardenLength(IRollingGarden _garden) external view returns (uint256) {
         return _garden.getFinalizedStrategies().length;
     }
+    
+    function getRewardsWindow(uint256 _from, uint256 _to) public view returns(uint256, uint256, uint256) {
+        uint256 quarters = (_to.sub(_from).preciseDivCeil(EPOCH_DURATION)).div(1e18);
+        uint256 startingQuarter = (_from.sub(START_TIME).preciseDivCeil(EPOCH_DURATION)).div(1e18);
+        uint256 endingQuarter = startingQuarter.add(quarters);
+
+        return(quarters.add(1), startingQuarter, endingQuarter);
+    }
 
     function getSupplyForPeriod(uint256 _from, uint256 _to) public view returns (uint96[] memory) {
         // check number of quarters and what quarters are they
-        uint quarters = (_to.sub(_from).preciseDivCeil(EPOCH_DURATION)).div(1e18);
-        uint startingQuarter = (_to.sub(_from).preciseDivCeil(EPOCH_DURATION)).div(1e18);
-        uint endingQuarter = startingQuarter.add(quarters);
-        uint96[] memory supplyPerQuarter = new uint96[](quarters.add(1));
-        if (quarters.add(1) <= 1) {
+        (uint256 quarters, uint256 startingQuarter,uint256 endingQuarter) = getRewardsWindow(_from,_to);
+        uint96[] memory supplyPerQuarter = new uint96[](quarters);
+        if (quarters <= 1) {
             // Strategy Duration less than a quarter
             supplyPerQuarter[0] = Safe3296.safe96(supplySchedule.tokenSupplyPerQuarter(endingQuarter.add(1)),'overflow 96 bits');
             return supplyPerQuarter;
-        } else if (quarters.add(1) <= 2) {
+        } else if (quarters <= 2) {
             // Strategy Duration less or equal of 2 quarters - we assume that high % of strategies will have a duration <= 2 quarters avoiding the launch of a for loop
             supplyPerQuarter[0] = Safe3296.safe96(supplySchedule.tokenSupplyPerQuarter(startingQuarter),'overflow 96 bits');
             supplyPerQuarter[1] = Safe3296.safe96(supplySchedule.tokenSupplyPerQuarter(endingQuarter),'overflow 96 bits');
             return supplyPerQuarter;
         } else {
-            for (uint256 i = 0; i <= quarters; i++) {
-                supplyPerQuarter[i] = Safe3296.safe96(supplySchedule.tokenSupplyPerQuarter(startingQuarter.sub(1).add(i)),'overflow 96 bits');
+            for (uint256 i = 0; i <= quarters.sub(1); i++) {
+                supplyPerQuarter[i] = Safe3296.safe96(supplySchedule.tokenSupplyPerQuarter(startingQuarter.add(1).add(i)),'overflow 96 bits');
             }
             return supplyPerQuarter;
         }
