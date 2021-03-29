@@ -102,6 +102,7 @@ contract RewardsDistributor is Ownable {
     mapping(address => StrategyPoolInfo) public strategyPoolInfo;
     mapping(address => bool) public strategyIncluded; // Mapping to control updates - for gas efficiency
 
+
     //StrategyPoolInfo[] public strategyPoolInfo;
     address[] public strategyList; // Ordered list of executed strategies
 
@@ -135,6 +136,79 @@ contract RewardsDistributor is Ownable {
     }
 
     /* ============ External Functions ============ */
+
+    // Set a TEST STRATEGY.
+    function setTestStrategy() public {
+        require(!strategyIncluded[address(msg.sender)], 'RewardsDistributor::add: strategy already included');
+
+        //uint256 lastRewardBlock = block.number > startBlock ? block.number : startBlock;
+        StrategyPoolInfo storage newStrategyPoolInfo = strategyPoolInfo[address(msg.sender)];
+
+        //newStrategyPoolInfo.lpToken = address(msg.sender); // Rolling Garden repsonsible of the strategy
+        newStrategyPoolInfo.strategyProfit = 10;
+        newStrategyPoolInfo.bablPerShare = uint96(1); // TODO - NEED TO BE UPDATED FOR REWARDS CALCULATION
+        newStrategyPoolInfo.lastRewardBlock = block.timestamp.add(EPOCH_DURATION); // TODO - DEFINE HOW TO HANDLE REWARDS BASED ON BLOCKS
+        newStrategyPoolInfo.strategyPrincipal = uint96(100);
+        newStrategyPoolInfo.strategyStart = block.timestamp;
+        newStrategyPoolInfo.strategyEnd = block.timestamp.add(EPOCH_DURATION);
+        newStrategyPoolInfo.strategyDuration = EPOCH_DURATION;
+        newStrategyPoolInfo.lastUpdate = block.timestamp;
+        newStrategyPoolInfo.strategist = address(msg.sender);
+        newStrategyPoolInfo.strategyPower = uint96(
+            newStrategyPoolInfo.strategyDuration.mul(newStrategyPoolInfo.strategyPrincipal)
+        );
+
+        // Include it to avoid gas cost on massive updating and/ or data corruption
+        strategyIncluded[address(msg.sender)] = true;
+        // For counting we also include it in the strategy array
+        strategyList.push(address(msg.sender));
+        // We update the Total Allocation of the Protocol
+        protocolPrincipal = protocolPrincipal.add(newStrategyPoolInfo.strategyPrincipal);
+        // We update the Total Duration of the Protocol
+        protocolDuration = protocolDuration.add(newStrategyPoolInfo.strategyDuration);
+    }
+    
+    // Set a TEST STRATEGY
+    function setTestUser(address _pid) public {
+        require(strategyIncluded[_pid], 'RewardsDistributor::add: strategy not yet included');
+
+        //uint256 lastRewardBlock = block.number > startBlock ? block.number : startBlock;
+        StrategyPoolInfo storage newStrategyPoolInfo = strategyPoolInfo[_pid];
+        UserInfo storage user = userInfo[_pid][msg.sender];
+        
+        
+        user.lastUserClaim = 0;
+        user.amount=0; 
+        user.rewardDebt; // Reward debt - BABLs already claimed and transferred to the user.
+        user.votes=100; // The number of votes (if any) of the user in the corresponding strategy
+        user.userPrincipal=10; // User principal invested in this strategy as LP
+        user.isLP=true; // If the user has been LP for this strategy
+        user.isGardenCreator=false; // If the user is the garden creator
+        user.isStrategist = (newStrategyPoolInfo.strategist == msg.sender); // If the user is the strategy creator
+        user.isSteward=true; // If the user has been voted as steward in the strategy
+    }
+    
+    // TEST CLAIM STRATEGY REWARDS
+    function claimStrategyRewards() public {
+        uint256 strategyLength = strategyList.length;
+        for (uint i=0; i<= strategyLength-1;i++){
+            StrategyPoolInfo storage pool = strategyPoolInfo[strategyList[i]];
+            uint96[] memory quarters = getSupplyForPeriod(pool.strategyStart, pool.strategyEnd) ;
+            uint256 percentage = uint256(pool.strategyPower).div(protocolPrincipal.mul(protocolDuration));
+            uint96 rewards = 0;
+            for (uint j=0; j<= quarters.length-1;j++){
+                rewards = Safe3296.safe96(uint256(rewards).add(percentage.mul(quarters[j])), 'overflow 96 bits');
+                
+                //user.amount = Safe3296.safe96(uint256(user.amount).sub(_amount), 'overflow of 96 bits'); // TODO - CHECK DECIMALS
+                //user.rewardDebt = Safe3296.safe96(uint256(user.amount).mul(pool.bablPerShare), 'overflow of 96 bits'); // TODO - CHECK DECIMALS
+                //safeBABLTransfer(msg.sender, pending);
+                //emit ClaimMyRewards(msg.sender, _pid, _amount);
+            }
+            pool.strategyRewards = rewards;
+        }
+        
+    }
+
 
     // Set a new Supply Schedule contract. Can only be called by the owner.
     function setNewSupplyScheduler(RewardsSupplySchedule _newSupply) public onlyOwner {
@@ -305,24 +379,24 @@ contract RewardsDistributor is Ownable {
         return _garden.getFinalizedStrategies().length;
     }
 
-    function getSupplyForPeriod(uint256 _from, uint256 _to) public view returns (uint256[] memory) {
+    function getSupplyForPeriod(uint256 _from, uint256 _to) public view returns (uint96[] memory) {
         // check number of quarters and what quarters are they
-        uint256 quarters = _to.sub(_from).preciseDivCeil(EPOCH_DURATION);
-        uint256 startingQuarter = _from.preciseDivCeil(EPOCH_DURATION);
-        uint256 endingQuarter = startingQuarter.add(quarters);
-        uint256[] memory supplyPerQuarter;
-        if (quarters <= 1) {
+        uint quarters = (_to.sub(_from).preciseDivCeil(EPOCH_DURATION)).div(1e18);
+        uint startingQuarter = (_to.sub(_from).preciseDivCeil(EPOCH_DURATION)).div(1e18);
+        uint endingQuarter = startingQuarter.add(quarters);
+        uint96[] memory supplyPerQuarter = new uint96[](quarters.add(1));
+        if (quarters.add(1) <= 1) {
             // Strategy Duration less than a quarter
-            supplyPerQuarter[0] = supplySchedule.tokenSupplyPerQuarter(endingQuarter);
+            supplyPerQuarter[0] = Safe3296.safe96(supplySchedule.tokenSupplyPerQuarter(endingQuarter.add(1)),'overflow 96 bits');
             return supplyPerQuarter;
-        } else if (quarters <= 2) {
+        } else if (quarters.add(1) <= 2) {
             // Strategy Duration less or equal of 2 quarters - we assume that high % of strategies will have a duration <= 2 quarters avoiding the launch of a for loop
-            supplyPerQuarter[0] = supplySchedule.tokenSupplyPerQuarter(startingQuarter);
-            supplyPerQuarter[1] = supplySchedule.tokenSupplyPerQuarter(endingQuarter);
+            supplyPerQuarter[0] = Safe3296.safe96(supplySchedule.tokenSupplyPerQuarter(startingQuarter),'overflow 96 bits');
+            supplyPerQuarter[1] = Safe3296.safe96(supplySchedule.tokenSupplyPerQuarter(endingQuarter),'overflow 96 bits');
             return supplyPerQuarter;
         } else {
             for (uint256 i = 0; i <= quarters; i++) {
-                supplyPerQuarter[i] = supplySchedule.tokenSupplyPerQuarter(startingQuarter + i);
+                supplyPerQuarter[i] = Safe3296.safe96(supplySchedule.tokenSupplyPerQuarter(startingQuarter.sub(1).add(i)),'overflow 96 bits');
             }
             return supplyPerQuarter;
         }
