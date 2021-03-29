@@ -47,11 +47,7 @@ abstract contract BaseGarden is ERC20Upgradeable {
     using AddressArrayUtils for address[];
 
     /* ============ Events ============ */
-    event IntegrationAdded(address indexed _integration);
-    event IntegrationRemoved(address indexed _integration);
-    event IntegrationInitialized(address indexed _integration);
-    event PendingIntegrationRemoved(address indexed _integration);
-    event ReserveAssetChanged(address indexed _integration);
+    event ReserveAssetChanged(address indexed _reserveAsset);
     event PrincipalChanged(uint256 _newAmount, uint256 _oldAmount);
     event GardenTokenDeposited(
         address indexed _to,
@@ -173,9 +169,6 @@ abstract contract BaseGarden is ERC20Upgradeable {
     // Whether the garden is currently active or not
     bool public active;
 
-    // List of initialized Integrations; Integrations connect with other money legos
-    address[] public integrations;
-
     // Keeps track of the reserve balance. In case we receive some through other means
     uint256 principal;
     int256 absoluteReturns; // Total profits or losses of this garden
@@ -216,7 +209,6 @@ abstract contract BaseGarden is ERC20Upgradeable {
      * All parameter validations are on the BabController contract. Validations are performed already on the
      * BabController.
      *
-     * @param _integrations           List of integrations to enable. All integrations must be approved by the Controller
      * @param _weth                   Address of the WETH ERC20
      * @param _reserveAsset           Address of the reserve asset ERC20
      * @param _controller             Address of the controller
@@ -225,7 +217,6 @@ abstract contract BaseGarden is ERC20Upgradeable {
      * @param _symbol                 Symbol of the Garden
      */
     function initialize(
-        address[] memory _integrations,
         address _weth,
         address _reserveAsset,
         address _controller,
@@ -242,10 +233,6 @@ abstract contract BaseGarden is ERC20Upgradeable {
         weth = _weth;
         reserveAsset = _reserveAsset;
         creator = _creator;
-
-        for (uint256 i = 0; i < _integrations.length; i++) {
-            _addIntegration(_integrations[i]);
-        }
         principal = 0;
         active = false;
     }
@@ -305,7 +292,7 @@ abstract contract BaseGarden is ERC20Upgradeable {
      * PRIVILEGED Manager, protocol FUNCTION. When a Garden is disabled, deposits are disabled.
      */
     function setActive() external onlyProtocol {
-        require(!active && integrations.length > 0, 'Must have active integrations to enable a garden');
+        require(!active, 'Garden already active');
         active = true;
     }
 
@@ -471,23 +458,6 @@ abstract contract BaseGarden is ERC20Upgradeable {
         return reserveAsset;
     }
 
-    function getIntegrations() external view returns (address[] memory) {
-        return integrations;
-    }
-
-    /**
-     * Check if this garden has this integration
-     */
-    function hasIntegration(address _integration) external view returns (bool) {
-        return integrations.contains(_integration);
-    }
-
-    function isValidIntegration(address _integration) public view returns (bool) {
-        return
-            integrations.contains(_integration) &&
-            IBabController(controller).isValidIntegration(IIntegration(_integration).getName(), _integration);
-    }
-
     function getContributor(address _contributor)
         public
         view
@@ -520,14 +490,6 @@ abstract contract BaseGarden is ERC20Upgradeable {
         uint256 oldAmount = principal;
         principal = _amount;
         emit PrincipalChanged(_amount, oldAmount);
-    }
-
-    function _addIntegration(address _integration) internal {
-        require(!integrations.contains(_integration), 'Integration already added');
-
-        integrations.push(_integration);
-
-        emit IntegrationAdded(_integration);
     }
 
     /**

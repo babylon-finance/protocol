@@ -32,6 +32,7 @@ import {PreciseUnitMath} from '../lib/PreciseUnitMath.sol';
 import {IBabController} from '../interfaces/IBabController.sol';
 import {IGarden} from '../interfaces/IGarden.sol';
 import {ITradeIntegration} from '../interfaces/ITradeIntegration.sol';
+import {ITradeIntegration} from '../interfaces/ITradeIntegration.sol';
 import {IPriceOracle} from '../interfaces/IPriceOracle.sol';
 
 /**
@@ -80,7 +81,7 @@ contract Strategy is ReentrancyGuard, Initializable {
      */
     modifier onlyIntegration() {
         // Internal function used to reduce bytecode size
-        require(garden.isValidIntegration(msg.sender), 'Integration must be valid');
+        require(controller.isValidIntegration(ITradeIntegration(msg.sender).getName(), msg.sender), 'Integration must be valid');
         _;
     }
 
@@ -97,7 +98,7 @@ contract Strategy is ReentrancyGuard, Initializable {
      * @param _fee                     The fee paid to keeper to compensate the gas cost
      */
     modifier onlyKeeper(uint256 _fee) {
-        require(IBabController(controller).isValidKeeper(msg.sender), 'Only a keeper can call this');
+        require(controller.isValidKeeper(msg.sender), 'Only a keeper can call this');
         // We assume that calling keeper functions should be less expensive than 1 million gas and the gas price should be lower than 1000 gwei.
         require(_fee < MAX_KEEPER_FEE, 'Fee is too high');
         _;
@@ -214,7 +215,7 @@ contract Strategy is ReentrancyGuard, Initializable {
     ) public initializer {
         controller = IBabController(_controller);
         garden = IGarden(_garden);
-        require(garden.isValidIntegration(_integration), 'Integration must be valid');
+        require(controller.isValidIntegration(ITradeIntegration(_integration).getName(), _integration), 'Integration must be valid');
         require(controller.isSystemContract(_garden), 'Must be a valid garden');
         require(ERC20(address(garden)).balanceOf(_strategist) > 0, 'Only someone with the garden token can withdraw');
         require(_stake > garden.totalSupply().div(100), 'Stake amount must be at least 1% of the garden');
@@ -585,7 +586,6 @@ contract Strategy is ReentrancyGuard, Initializable {
         address _receiveToken
     ) internal returns (uint256) {
         address tradeIntegration = IBabController(controller).getIntegrationByName('1inch');
-        require(garden.isValidIntegration(tradeIntegration), 'Integration is not valid');
         // Uses on chain oracle for all internal strategy operations to avoid attacks
         uint256 pricePerTokenUnit = _getPrice(_sendToken, _receiveToken);
         uint256 slippageAllowed = 1e16; // 1%

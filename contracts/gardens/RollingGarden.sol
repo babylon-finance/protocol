@@ -76,7 +76,6 @@ contract RollingGarden is ReentrancyGuard, BaseGarden {
      * All parameter validations are on the BabController contract. Validations are performed already on the
      * BabController.
      *
-     * @param _integrations           List of integrations to enable. All integrations must be approved by the Controller
      * @param _weth                   Address of the WETH ERC20
      * @param _controller             Address of the controller
      * @param _creator                Address of the creator
@@ -85,14 +84,13 @@ contract RollingGarden is ReentrancyGuard, BaseGarden {
      */
 
     function initialize(
-        address[] memory _integrations,
         address _weth,
         address _controller,
         address _creator,
         string memory _name,
         string memory _symbol
     ) public {
-        super.initialize(_integrations, _weth, _weth, _controller, _creator, _name, _symbol);
+        super.initialize(_weth, _weth, _controller, _creator, _name, _symbol);
         totalContributors = 0;
     }
 
