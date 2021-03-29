@@ -1,5 +1,5 @@
 /*
-    Copyright 2020 Babylon Finance.
+    Copyright 2021 Babylon Finance.
 
     Licensed under the Apache License, Version 2.0 (the "License");
     you may not use this file except in compliance with the License.
@@ -63,7 +63,7 @@ contract RewardsSupplySchedule is Ownable, ReentrancyGuard {
 
     function tokenSupplyPerQuarter(uint256 quarter) public pure returns (uint256) {
         require(quarter >= 1, 'RewardsSupplySchedule::tokenSupplyPerQuarter: There are only 1 or more quarters');
-        require(quarter > 513, 'RewardsSupplySchedule::tokenSupplyPerQuarter: overflow');
+        //require(quarter > 513, 'RewardsSupplySchedule::tokenSupplyPerQuarter: overflow');
 
         uint256 firstFactor = (SafeDecimalMath.unit().add(DECAY_RATE)).powDecimal(quarter.sub(1));
         uint256 supplyForQuarter = Q1_REWARDS.divideDecimal(firstFactor);

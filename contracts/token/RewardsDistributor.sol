@@ -1,5 +1,5 @@
 /*
-    Copyright 2020 Babylon Finance.
+    Copyright 2021 Babylon Finance.
 
     Licensed under the Apache License, Version 2.0 (the "License");
     you may not use this file except in compliance with the License.
@@ -35,18 +35,25 @@ import {SafeDecimalMath} from '../lib/SafeDecimalMath.sol';
 import {SafeMath} from '@openzeppelin/contracts/math/SafeMath.sol';
 import {PreciseUnitMath} from '../lib/PreciseUnitMath.sol';
 import {Math} from '../lib/Math.sol';
+import {Safe3296} from '../lib/Safe3296.sol';
 
 contract RewardsDistributor is Ownable {
     using SafeMath for uint256;
-    using SafeMath for uint256;
+    using SafeMath for int256;
     using PreciseUnitMath for uint256;
-    using PreciseUnitMath for uint256;
+    using PreciseUnitMath for int256;
     using SafeDecimalMath for uint256;
-    using SafeDecimalMath for uint256;
+    using SafeDecimalMath for int256;
     using Math for uint256;
-    using Math for uint256;
+    using Math for int256;
+    using Safe3296 for uint256;
+    using Safe3296 for int256;
+    using Safe3296 for uint96;
+    using Safe3296 for uint32;
 
     /* ========== Events ========== */
+    event ClaimMyRewards(address indexed user, IRollingGarden indexed pid, uint256 indexed amount);
+
 
     /* ============ Modifiers ============ */
 
@@ -65,55 +72,59 @@ contract RewardsDistributor is Ownable {
     TimeLockedToken public babltoken;
 
     struct UserInfo {
-        uint256 lastUserClaim;
-        uint96 amount;
-        uint96 rewardDebt;
-        int256 votes;
-        bool isLP;
-        bool isGardenCreator;
-        bool isStrategist;
-        bool isSteward;
+        uint256 lastUserClaim; // Last claim (tx) when amount equals rewardDebt
+        uint96 amount; // How many BABL rewards the user has been granted.
+        uint96 rewardDebt; // Reward debt - BABLs already claimed and transferred to the user.
+        int256 votes; // The number of votes (if any) of the user in the corresponding strategy
+        uint96 userPrincipal; // User principal invested in this strategy as LP
+        bool isLP; // If the user has been LP for this strategy
+        bool isGardenCreator; // If the user is the garden creator
+        bool isStrategist; // If the user is the strategy creator
+        bool isSteward; // If the user has been voted as steward in the strategy
     }
 
     mapping(address => mapping(address => UserInfo)) public userInfo;
 
     struct StrategyPoolInfo {
-        IRollingGarden lpToken;
-        uint96 strategyPower;
-        int256 strategyProfit;
-        uint96 bablPerShare;
-        uint256 lastRewardBlock;
-        uint96 strategyPrincipal;
-        uint256 strategyStart;
-        uint256 strategyEnd;
-        uint256 strategyDuration;
-        uint256 lastUpdate;
-        address strategist;
+        IRollingGarden lpToken; // Address of the Garden token contract that the strategy belong to
+        uint96 strategyRewards; // How many BABL rewards are allocated to this strategy
+        uint96 strategyPower; // The strategy power (Duration * Principal)
+        int256 strategyProfit; // The final profit of the strategy to be user in case of negative profit
+        uint96 bablPerShare; // Accumulated BABL per share of the Garden associated to this strategy
+        uint96 strategyPrincipal; // How many allocation points assigned to this pool. Used when BABLs are distributed per block.
+        uint256 strategyStart; // Timestamp when the strategy started its execution
+        uint256 strategyEnd; // Timestamp when the strategy ended its execution
+        uint256 strategyDuration; // Total number of blocks the strategy was active
+        uint256 lastRewardBlock; // Last block number that BABLs distribution occurs //TODO CHECK vs. strategyEnds
+        uint256 lastUpdate; // Last update of this information
+        address strategist; // Who is the strategist of this strategy
     }
 
     mapping(address => StrategyPoolInfo) public strategyPoolInfo;
+    mapping(address => bool) public strategyIncluded; // Mapping to control updates - for gas efficiency
+
 
     //StrategyPoolInfo[] public strategyPoolInfo;
-    address[] public strategyList;
+    address[] public strategyList; // Ordered list of executed strategies
 
-    uint256 public bablPerBlock;
-    uint256 public totalAllocPoint = 0;
-    uint256 public startBlock;
+    uint256 public bablPerBlock; // Rewards per block // TODO CHECK ARRAY TO CONTROL THE CHANGE OF SUPPLY ALONG THE TIME
+    uint256 public protocolPrincipal = 0; // Total allocation points. Must be the sum of all allocation points (strategyPrincipal) in all strategy pools.
+    uint256 public startBlock; // Starting block of the Rewards Distribution (set-up during construction)
+    uint256 public protocolDuration; // Total Duration of the procotol (total execution blocks of all strategies in the pool)
+    uint256 public lastProtocolUpdate; // Last update of the protocol global variables
 
-    struct RewardsProtocol {
-        uint256 protocolPrincipal;
-        uint256 protocolDuration;
+
+    struct QuarterRewards { // TODO CHECK its final usage for controlling EPOCH changes on the supply and evolution of the Distribution Rewards
         uint256 quarterStart;
         uint256 quarterEnd;
-        uint96 potentialProtocolTokenRewards;
-        uint96 availableProtocolTokenRewards;
+        uint96 potentialQuarterTokenRewards;
+        uint96 availableQuarterTokenRewards;
         uint256 lastUpdate;
     }
-    mapping(uint256 => RewardsProtocol) public rewardsProtocol;
-    mapping(address => bool) public strategyIncluded;
+    mapping(uint256 => QuarterRewards) public quarterRewards;
 
-    uint256 public EPOCH_DURATION = 90 days;
-    uint256 public START_TIME;
+    uint256 public EPOCH_DURATION = 90 days; // Duration of its EPOCH in days
+    uint256 public START_TIME; // Starting time of the rewards distribution
 
     /* ============ Functions ============ */
 
@@ -127,16 +138,18 @@ contract RewardsDistributor is Ownable {
 
     /* ============ External Functions ============ */
 
+    // Set a new Supply Schedule contract. Can only be called by the owner.
+    function setNewSupplyScheduler(RewardsSupplySchedule _newSupply) public onlyOwner {
+        supplySchedule = _newSupply;
+    }
+
     // Add a new strategy to the pool. Can only be called by the owner / strategy // TODO CHECK.
-    // XXX DO NOT add the same LP token more than once. Rewards will be messed up if you do.
     function add(
         IRollingGarden _lpToken,
         IStrategy _strategy,
-        bool _withUpdate
     ) public onlyOwner {
-        if (_withUpdate) {
-            massUpdatePools(_lpToken);
-        }
+        require(!strategyIncluded[address(_strategy)], "RewardsDistributor::add: strategy already included");
+
         //uint256 lastRewardBlock = block.number > startBlock ? block.number : startBlock;
         StrategyPoolInfo storage newStrategyPoolInfo = strategyPoolInfo[address(_strategy)];
 
@@ -154,13 +167,12 @@ contract RewardsDistributor is Ownable {
             newStrategyPoolInfo.strategyDuration.mul(newStrategyPoolInfo.strategyPrincipal)
         );
 
-        // Include it to avoid gas cost on massive updating
+        // Include it to avoid gas cost on massive updating and/ or data corruption
         strategyIncluded[address(_strategy)] = true;
         // For counting we also include it in the strategy array
-        strategyList.push(address(_strategy));
-        
+        strategyList.push(address(_strategy));       
         // We update the Total Allocation of the Protocol
-        totalAllocPoint = totalAllocPoint.add(newStrategyPoolInfo.strategyPrincipal);
+        protocolPrincipal = protocolPrincipal.add(newStrategyPoolInfo.strategyPrincipal);
 
     }
 
@@ -168,59 +180,22 @@ contract RewardsDistributor is Ownable {
     function updateStrategy(
         address _address, // Address of the Strategy to be set / updated
         uint96 _strategyPrincipal,
-        bool _withUpdate
+        bool _withMassGardenUpdate
     ) public onlyOwner {
-        if (_withUpdate) {
+        if (_withMassGardenUpdate) {
             massUpdatePools(strategyPoolInfo[_address].lpToken);
         }
-        // If we introduce a value DIFFERENT FROM ZERO, as Owners, the strategy principal will be overrided so does the protocol be updated accordingly
+        // If we introduce a value DIFFERENT FROM ZERO, as Owners, the strategy principal will be overrided as well as the protocol (USE IT SAFE TO AVOID DIFFERENT DATA in the STRATEGY AND THE REWARDS)
         if (_strategyPrincipal != 0) { 
             // We also update Protocol Principal and the Strategy Principal with the new value
-            totalAllocPoint = totalAllocPoint.sub(strategyPoolInfo[_address].strategyPrincipal).add(_strategyPrincipal);
+            protocolPrincipal = protocolPrincipal.sub(strategyPoolInfo[_address].strategyPrincipal).add(_strategyPrincipal);
             strategyPoolInfo[_address].strategyPrincipal = _strategyPrincipal;
-        }
-    }
-
-    // Return reward multiplier over the given _from to _to block.
-    function getSupplyForPeriod(uint256 _from, uint256 _to) public view returns (uint256[] memory) {
-        // check number of quarters and what quarters are they
-        uint256 quarters = _to.sub(_from).preciseDivCeil(EPOCH_DURATION);
-        uint256 startingQuarter = _from.preciseDivCeil(EPOCH_DURATION);
-        uint256 endingQuarter = startingQuarter.add(quarters);
-        uint256[] memory supplyPerQuarter;
-        if (quarters <= 1) {
-            // Strategy Duration less than a quarter
-            supplyPerQuarter[0] = supplySchedule.tokenSupplyPerQuarter(endingQuarter);
-            return supplyPerQuarter;
-        } else if (quarters <= 2) {
-            // Strategy Duration less or equal of 2 quarters - we assume that high % of strategies will have a duration <= 2 quarters avoiding the launch of a for loop
-            supplyPerQuarter[0] = supplySchedule.tokenSupplyPerQuarter(startingQuarter);
-            supplyPerQuarter[1] = supplySchedule.tokenSupplyPerQuarter(endingQuarter);
-            return supplyPerQuarter;
-        } else {
-            for (uint256 i = 0; i <= quarters; i++) {
-                supplyPerQuarter[i] = supplySchedule.tokenSupplyPerQuarter(startingQuarter + i);
-            }
-            return supplyPerQuarter;
-        }
-    }
-
-    /* ============ Getter Functions ============ */
-
-    function poolLength() external view returns (uint256) {
-        return strategyList.length;
-    }
-
-    function getEpochRewards(uint256 epochs) public {
-        uint256 timestamp = block.timestamp;
-        for (uint256 i = 0; i <= epochs; i++) {
-            rewardsProtocol[i].potentialProtocolTokenRewards = uint96(supplySchedule.tokenSupplyPerQuarter(i.add(1)));
-            rewardsProtocol[i].lastUpdate = timestamp;
         }
     }
 
     function massUpdatePools(IRollingGarden _garden) public returns (uint256) {
         // TODO CHECK GAS REDUCTION IT UPDATES ALL FINALIZED STRATEGIES WITHIN A GARDEN
+        // SPLIT A MASS UPDATE FROM A SINGLE UPDATEPOOL
 
         address[] memory finalizedStrategies = _garden.getFinalizedStrategies();
         uint256 strategiesCount = 0;
@@ -268,13 +243,104 @@ contract RewardsDistributor is Ownable {
 
         return strategiesCount; // Returns the number of strategies updated
     }
+    
+    function updateEpochRewards(uint256 epochs) public onlyOwner {
+        uint256 timestamp = block.timestamp;
+        for (uint256 i = 0; i <= epochs; i++) {
+            quarterRewards[i].potentialQuarterTokenRewards = uint96(supplySchedule.tokenSupplyPerQuarter(i.add(1)));
+            quarterRewards[i].lastUpdate = timestamp;
+        }
+    }
 
+    // Claim BABL from Rewards Distributor
+    function claimMyRewards(IRollingGarden _pid, uint256 _amount) public {
+        StrategyPoolInfo storage pool = strategyPoolInfo[address(_pid)];
+        UserInfo storage user = userInfo[address(_pid)][msg.sender];
+        require(user.amount >= _amount, "withdraw: not good");
+        massUpdatePools(_pid);
+        uint96 pending =
+            Safe3296.safe96(uint256(user.amount).mul(pool.bablPerShare).sub(
+                user.rewardDebt),'overflow of 96 bits'
+            );
+        user.amount = Safe3296.safe96(uint256(user.amount).sub(_amount),'overflow of 96 bits'); // TODO - CHECK DECIMALS
+        user.rewardDebt = Safe3296.safe96(uint256(user.amount).mul(pool.bablPerShare),'overflow of 96 bits'); // TODO - CHECK DECIMALS
+        safeBABLTransfer(msg.sender, pending);
+        emit ClaimMyRewards(msg.sender, _pid, _amount);
+    }
+
+    /* ============ Getter Functions ============ */
     /* ========== View functions ========== */
+
+    // View function to see pending BABL on frontend.
+    function pendingRewards(address _pid, address _user) // TODO - Remove babl per share (OR USE IT RIGHT), add real tokens (voting, strategist, etc)
+        external
+        view
+        returns (uint96)
+    {
+        StrategyPoolInfo storage pool = strategyPoolInfo[_pid];
+        UserInfo storage user = userInfo[_pid][_user];
+        uint96 bablPerShare = pool.bablPerShare;
+        uint96 bablPerStrategy = pool.strategyRewards;
+        //require(pool.lpToken.balanceOf(_user) > 0,'The user must have Garden Tokens');
+        uint96 lpSupply = Safe3296.safe96(babltoken.balanceOf(address(this)), 'overflow of 96 bits'); // Distributor must have available tokens to allocate
+        if (block.number > pool.lastRewardBlock && lpSupply != 0) {
+            uint256 bablPercentPerBlock = (bablPerBlock.mul(pool.strategyPrincipal).div(protocolPrincipal)); // TODO - Mul by number of blocks since last claim and reconsider the whole calculation
+            bablPerShare = Safe3296.safe96(uint256(bablPerShare).add(bablPercentPerBlock.div(bablPerStrategy)),'overflow 96 bits');
+        }
+        return Safe3296.safe96(uint256(user.amount).mul(bablPerShare).sub(user.rewardDebt),'overflow 96 bits');
+    }
+
+    function poolLength() external view returns (uint256) {
+        return strategyList.length;
+    }
+
+    function getEpochRewards(uint256 epochs) public view returns (uint96[] memory) {
+        uint96[] memory tokensPerEpoch = new uint96[](epochs);
+        for (uint i = 0; i <= epochs-1; i++) {
+            tokensPerEpoch[i] = (uint96(supplySchedule.tokenSupplyPerQuarter(i.add(1))));
+        }
+        return tokensPerEpoch;
+    }
 
     /**
      * @notice Retrieve the length of the finalized strategies in a garden array
      */
     function finalizedStrategiesinGardenLength(IRollingGarden _garden) external view returns (uint256) {
         return _garden.getFinalizedStrategies().length;
+    }
+
+    function getSupplyForPeriod(uint256 _from, uint256 _to) public view returns (uint256[] memory) {
+        // check number of quarters and what quarters are they
+        uint256 quarters = _to.sub(_from).preciseDivCeil(EPOCH_DURATION);
+        uint256 startingQuarter = _from.preciseDivCeil(EPOCH_DURATION);
+        uint256 endingQuarter = startingQuarter.add(quarters);
+        uint256[] memory supplyPerQuarter;
+        if (quarters <= 1) {
+            // Strategy Duration less than a quarter
+            supplyPerQuarter[0] = supplySchedule.tokenSupplyPerQuarter(endingQuarter);
+            return supplyPerQuarter;
+        } else if (quarters <= 2) {
+            // Strategy Duration less or equal of 2 quarters - we assume that high % of strategies will have a duration <= 2 quarters avoiding the launch of a for loop
+            supplyPerQuarter[0] = supplySchedule.tokenSupplyPerQuarter(startingQuarter);
+            supplyPerQuarter[1] = supplySchedule.tokenSupplyPerQuarter(endingQuarter);
+            return supplyPerQuarter;
+        } else {
+            for (uint256 i = 0; i <= quarters; i++) {
+                supplyPerQuarter[i] = supplySchedule.tokenSupplyPerQuarter(startingQuarter + i);
+            }
+            return supplyPerQuarter;
+        }
+    }
+
+    /* ============ Internal Functions ============ */
+
+    // Safe BABL transfer function, just in case if rounding error causes DistributorRewards to not have enough BABL.
+    function safeBABLTransfer(address _to, uint256 _amount) internal {
+        uint256 bablBal = babltoken.balanceOf(address(this));
+        if (_amount > bablBal) {
+            babltoken.transfer(_to, bablBal);
+        } else {
+            babltoken.transfer(_to, _amount);
+        }
     }
 }
