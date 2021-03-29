@@ -132,6 +132,10 @@ async function deployFolioFixture() {
     .connect(signer1)
     .createRollingGarden(integrationsAddressList, addresses.tokens.WETH, 'ETH Yield Farm [b]', 'EYFG');
 
+  await babController
+    .connect(signer1)
+    .createRollingGarden(integrationsAddressList, addresses.tokens.WETH, 'ETH Yield Farm [d]', 'EYFG');
+
   const gardens = await babController.getGardens();
 
   const garden1 = await ethers.getContractAt('RollingGarden', gardens[0]);
@@ -139,6 +143,8 @@ async function deployFolioFixture() {
   const garden2 = await ethers.getContractAt('RollingGarden', gardens[1]);
 
   const garden3 = await ethers.getContractAt('RollingGarden', gardens[2]);
+
+  const garden4 = await ethers.getContractAt('RollingGarden', gardens[3]);
 
   // Initial deposit
   await garden1.connect(signer1).start(
@@ -228,6 +234,7 @@ async function deployFolioFixture() {
     garden1,
     garden2,
     garden3,
+    garden4,
 
     strategy11,
     strategy21,
