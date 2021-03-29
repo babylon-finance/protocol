@@ -3,12 +3,12 @@
 const { expect } = require('chai');
 const { ethers, waffle } = require('hardhat');
 
-const { EMPTY_BYTES, ONE_DAY_IN_SECONDS } = require('../utils/constants');
+const { EMPTY_BYTES, ONE_DAY_IN_SECONDS } = require('../../utils/constants');
 
 const { loadFixture } = waffle;
 
-const addresses = require('../utils/addresses');
-const { deployFolioFixture } = require('./fixtures/ControllerFixture');
+const addresses = require('../../utils/addresses');
+const { deployFolioFixture } = require('../fixtures/ControllerFixture');
 const { BigNumber } = require('@ethersproject/bignumber');
 
 // `describe` is a Mocha function that allows you to organize your tests. It's

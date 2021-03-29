@@ -1,5 +1,5 @@
 /*
-    Copyright 2020 Babylon Finance.
+    Copyright 2021 Babylon Finance.
 
     Licensed under the Apache License, Version 2.0 (the "License");
     you may not use this file except in compliance with the License.
@@ -19,19 +19,17 @@
 pragma solidity >=0.7.0 <0.9.0;
 
 import 'hardhat/console.sol';
-import {ICToken} from '../interfaces/external/compound/ICToken.sol';
-import {ICEther} from '../interfaces/external/compound/ICEther.sol';
-import {ICompoundPriceOracle} from '../interfaces/external/compound/ICompoundPriceOracle.sol';
-import {IComptroller} from '../interfaces/external/compound/IComptroller.sol';
 import {SafeMath} from '@openzeppelin/contracts/math/SafeMath.sol';
 import {ERC20} from '@openzeppelin/contracts/token/ERC20/ERC20.sol';
 import {SafeERC20} from '@openzeppelin/contracts/token/ERC20/SafeERC20.sol';
-import {IWETH} from '../interfaces/external/weth/IWETH.sol';
-
+import {ICToken} from '../../interfaces/external/compound/ICToken.sol';
+import {ICEther} from '../../interfaces/external/compound/ICEther.sol';
+import {ICompoundPriceOracle} from '../../interfaces/external/compound/ICompoundPriceOracle.sol';
+import {IComptroller} from '../../interfaces/external/compound/IComptroller.sol';
+import {IWETH} from '../../interfaces/external/weth/IWETH.sol';
 import {BorrowIntegration} from './BorrowIntegration.sol';
-import {IBabController} from '../interfaces/IBabController.sol';
-import {IGarden} from '../interfaces/IGarden.sol';
-import {BaseIntegration} from './BaseIntegration.sol';
+import {IBabController} from '../../interfaces/IBabController.sol';
+import {IGarden} from '../../interfaces/IGarden.sol';
 
 /**
  * @title CompoundIntegration

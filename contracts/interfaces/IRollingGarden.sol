@@ -1,5 +1,5 @@
 /*
-    Copyright 2020 Babylon Finance
+    Copyright 2021 Babylon Finance
 
     Licensed under the Apache License, Version 2.0 (the "License");
     you may not use this file except in compliance with the License.
@@ -62,10 +62,7 @@ interface IRollingGarden is IERC20, IGarden {
 
     function setDepositLimit(uint256 limit) external;
 
-    function getExpectedReserveWithdrawalQuantity(address _reserveAsset, uint256 _gardenTokenQuantity)
-        external
-        view
-        returns (uint256);
+    function getExpectedReserveWithdrawalQuantity(uint256 _gardenTokenQuantity) external view returns (uint256);
 
     function isDepositValid(address _reserveAsset, uint256 _reserveAssetQuantity) external view returns (bool);
 

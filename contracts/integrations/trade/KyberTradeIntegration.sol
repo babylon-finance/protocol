@@ -1,5 +1,5 @@
 /*
-    Copyright 2020 Babylon Finance
+    Copyright 2021 Babylon Finance
 
     Licensed under the Apache License, Version 2.0 (the "License");
     you may not use this file except in compliance with the License.
@@ -19,11 +19,11 @@
 pragma solidity 0.7.4;
 
 import 'hardhat/console.sol';
-import {TradeIntegration} from './TradeIntegration.sol';
 import {ERC20} from '@openzeppelin/contracts/token/ERC20/ERC20.sol';
 import {SafeMath} from '@openzeppelin/contracts/math/SafeMath.sol';
-import {PreciseUnitMath} from '../lib/PreciseUnitMath.sol';
-import {IKyberNetworkProxy} from '../interfaces/external/kyber/IKyberNetworkProxy.sol';
+import {TradeIntegration} from './TradeIntegration.sol';
+import {PreciseUnitMath} from '../../lib/PreciseUnitMath.sol';
+import {IKyberNetworkProxy} from '../../interfaces/external/kyber/IKyberNetworkProxy.sol';
 
 /**
  * @title KyberTradeIntegration
@@ -34,17 +34,6 @@ import {IKyberNetworkProxy} from '../interfaces/external/kyber/IKyberNetworkProx
 contract KyberTradeIntegration is TradeIntegration {
     using SafeMath for uint256;
     using PreciseUnitMath for uint256;
-
-    /* ============ Structs ============ */
-
-    /**
-     * Struct containing information for trade function
-     */
-    struct KyberTradeInfo {
-        uint8 sourceTokenDecimals; // Decimals of the token to send
-        uint8 destinationTokenDecimals; // Decimals of the token to receive
-        uint256 conversionRate; // Derived conversion rate from min receive quantity
-    }
 
     /* ============ State Variables ============ */
 
@@ -98,26 +87,16 @@ contract KyberTradeIntegration is TradeIntegration {
     /* ============ Internal Functions ============ */
 
     /**
-     * Calculate Kyber trade encoded calldata. To be invoked on the SetToken.
+     * Get calldata through Kyber.
      *
-     * @param  _sourceToken              Address of source token to be sold
-     * @param  _destinationToken         Address of destination token to buy
-     * @param  _destinationAddress       Address to receive traded tokens
-     * @param  _sourceQuantity           Amount of source token to sell
-     * hparam  _minDestinationQuantity   Min amount of destination token to buy
-     * hparam  _data                     Calldata
-     *
-     * @return address                   Target address
-     * @return uint256                   Call value
-     * @return bytes                     Trade calldata
+     * @param _sendToken            Address of the token to be sent to the exchange
+     * @param _sendQuantity         Units of reserve asset token sent to the exchange
+     * @param _receiveToken         Address of the token that will be received from the exchange
      */
-    function _getTradeCalldata(
-        address _sourceToken,
-        address _destinationToken,
-        address _destinationAddress,
-        uint256 _sourceQuantity,
-        uint256, /* _minDestinationQuantity */
-        bytes memory /* _data */
+    function _getTradeCallData(
+        address _sendToken,
+        uint256 _sendQuantity,
+        address _receiveToken
     )
         internal
         view
@@ -128,30 +107,19 @@ contract KyberTradeIntegration is TradeIntegration {
             bytes memory
         )
     {
-        KyberTradeInfo memory kyberTradeInfo;
-
-        kyberTradeInfo.sourceTokenDecimals = ERC20(_sourceToken).decimals();
-        kyberTradeInfo.destinationTokenDecimals = ERC20(_destinationToken).decimals();
-
         (, uint256 worstRate) =
-            IKyberNetworkProxy(kyberNetworkProxyAddress).getExpectedRate(
-                _sourceToken,
-                _destinationToken,
-                _sourceQuantity
-            );
-
-        kyberTradeInfo.conversionRate = worstRate;
+            IKyberNetworkProxy(kyberNetworkProxyAddress).getExpectedRate(_sendToken, _receiveToken, _sendQuantity);
 
         // Encode method data for TradeIntegration to invoke
         bytes memory methodData =
             abi.encodeWithSignature(
                 'trade(address,uint256,address,address,uint256,uint256,address)',
-                _sourceToken,
-                _sourceQuantity,
-                _destinationToken,
-                _destinationAddress,
+                _sendToken,
+                _sendQuantity,
+                _receiveToken,
+                msg.sender,
                 PreciseUnitMath.maxUint256(), // Sell entire amount of sourceToken
-                kyberTradeInfo.conversionRate, // Trade with implied conversion rate
+                worstRate, // Trade with implied conversion rate
                 msg.sender // Garden address
             );
 

@@ -1,5 +1,5 @@
 /*
-    Copyright 2020 Babylon Finance.
+    Copyright 2021 Babylon Finance.
 
     Licensed under the Apache License, Version 2.0 (the "License");
     you may not use this file except in compliance with the License.
@@ -26,8 +26,6 @@ import {SignedSafeMath} from '@openzeppelin/contracts/math/SignedSafeMath.sol';
 import {AddressArrayUtils} from '../lib/AddressArrayUtils.sol';
 import {IBabController} from '../interfaces/IBabController.sol';
 import {IIntegration} from '../interfaces/IIntegration.sol';
-import {ITradeIntegration} from '../interfaces/ITradeIntegration.sol';
-import {IPriceOracle} from '../interfaces/IPriceOracle.sol';
 import {IGarden} from '../interfaces/IGarden.sol';
 import {IStrategyFactory} from '../interfaces/IStrategyFactory.sol';
 import {IStrategy} from '../interfaces/IStrategy.sol';
@@ -95,9 +93,12 @@ abstract contract BaseGarden is ERC20Upgradeable {
 
     /**
      * Throws if the sender is not a keeper in the protocol
+     * @param _fee                     The fee paid to keeper to compensate the gas cost
      */
-    modifier onlyKeeper() {
+    modifier onlyKeeper(uint256 _fee) {
         require(IBabController(controller).isValidKeeper(msg.sender), 'Only a keeper can call this');
+        // We assume that calling keeper functions should be less expensive than 1 million gas and the gas price should be lower than 1000 gwei.
+        require(_fee < MAX_KEEPER_FEE, 'Fee is too high');
         _;
     }
 
@@ -140,6 +141,13 @@ abstract contract BaseGarden is ERC20Upgradeable {
         _;
     }
 
+    /* ============ State Constants ============ */
+
+    uint256 public constant MAX_DEPOSITS_FUND_V1 = 1e21; // Max deposit per garden is 1000 eth for v1
+    uint256 public constant MAX_TOTAL_IDEAS = 20; // Max number of ideas
+    uint256 internal constant TEN_PERCENT = 1e17;
+    uint256 internal constant MAX_KEEPER_FEE = (1e6 * 1e3 gwei);
+
     /* ============ Structs ============ */
 
     struct Contributor {
@@ -151,9 +159,7 @@ abstract contract BaseGarden is ERC20Upgradeable {
     }
 
     /* ============ State Variables ============ */
-    uint256 public constant MAX_DEPOSITS_FUND_V1 = 1e21; // Max deposit per garden is 1000 eth for v1
-    uint256 public constant MAX_TOTAL_IDEAS = 20; // Max number of ideas
-    uint256 internal constant TEN_PERCENT = 1e17;
+
     // Wrapped ETH address
     address public weth;
 
@@ -323,14 +329,17 @@ abstract contract BaseGarden is ERC20Upgradeable {
     /* ============ Investment Idea Functions ============ */
     /**
      * Creates a new investment strategy calling the factory and adds it to the array
+     * @param _strategyKind                  Int representing kind of strategy
+     * @param _integration                   Address of the integration
      * @param _maxCapitalRequested           Max Capital requested denominated in the reserve asset (0 to be unlimited)
      * @param _stake                         Stake with garden participations absolute amounts 1e18
      * @param _investmentDuration            Investment duration in seconds
      * @param _expectedReturn                Expected return
      * @param _minRebalanceCapital           Min capital that is worth it to deposit into this strategy
-     * TODO: Meta Transaction
      */
     function addStrategy(
+        uint8 _strategyKind,
+        address _integration,
         uint256 _maxCapitalRequested,
         uint256 _stake,
         uint256 _investmentDuration,
@@ -338,12 +347,14 @@ abstract contract BaseGarden is ERC20Upgradeable {
         uint256 _minRebalanceCapital
     ) external onlyContributor onlyActive {
         require(strategies.length < MAX_TOTAL_IDEAS, 'Reached the limit of strategies');
-        IStrategyFactory strategyFactory = IStrategyFactory(IBabController(controller).getStrategyFactory());
+        IStrategyFactory strategyFactory =
+            IStrategyFactory(IBabController(controller).getStrategyFactory(_strategyKind));
         address strategy =
             strategyFactory.createStrategy(
                 msg.sender,
                 address(this),
                 controller,
+                _integration,
                 _maxCapitalRequested,
                 _stake,
                 _investmentDuration,
@@ -358,8 +369,9 @@ abstract contract BaseGarden is ERC20Upgradeable {
     /**
      * Rebalances available capital of the garden between the investment strategies that are active.
      * We enter into the investment and add it to the executed strategies array.
+     * @param _fee                     The fee paid to keeper to compensate the gas cost
      */
-    function rebalanceInvestments() external onlyKeeper onlyActive {
+    function rebalanceInvestments(uint256 _fee) external onlyKeeper(_fee) onlyActive {
         uint256 liquidReserveAsset = ERC20Upgradeable(reserveAsset).balanceOf(address(this));
         for (uint256 i = 0; i < strategies.length; i++) {
             IStrategy strategy = IStrategy(strategies[i]);
@@ -369,9 +381,19 @@ abstract contract BaseGarden is ERC20Upgradeable {
                 toAllocate >= strategy.minRebalanceCapital() &&
                 toAllocate.add(strategy.capitalAllocated()) <= strategy.maxCapitalRequested()
             ) {
-                strategy.executeInvestment(toAllocate);
+                strategy.executeInvestment(toAllocate, 0);
             }
         }
+        _payKeeper(msg.sender, _fee);
+    }
+
+    /**
+     * Pays gas cost back to the keeper from executing a transaction
+     * @param _keeper             Keeper that executed the transaction
+     * @param _fee                The fee paid to keeper to compensate the gas cost
+     */
+    function payKeeper(address payable _keeper, uint256 _fee) external onlyStrategy onlyActive {
+        _payKeeper(_keeper, _fee);
     }
 
     /**
@@ -403,9 +425,7 @@ abstract contract BaseGarden is ERC20Upgradeable {
         require(_token != reserveAsset, 'Token is not the reserve asset');
         uint256 balance = ERC20Upgradeable(_token).balanceOf(address(this));
         require(balance > 0, 'Token balance > 0');
-        bytes memory _emptyTradeData;
-        // TODO: probably use uniswap or 1inch. Don't go through TWAP
-        _trade('_kyber', _token, balance, reserveAsset, 0, _emptyTradeData);
+        ERC20Upgradeable(_token).transfer(msg.sender, balance);
     }
 
     /*
@@ -415,7 +435,7 @@ abstract contract BaseGarden is ERC20Upgradeable {
      */
     function moveStrategyToFinalized(int256 _returns, address _strategy) external onlyStrategy {
         absoluteReturns.add(_returns);
-        strategies.remove(_strategy);
+        strategies = strategies.remove(_strategy);
         finalizedStrategies.push(_strategy);
     }
 
@@ -424,7 +444,7 @@ abstract contract BaseGarden is ERC20Upgradeable {
      * @param _strategy      Strategy to remove
      */
     function expireCandidateStrategy(address _strategy) external onlyStrategy {
-        strategies.remove(_strategy);
+        strategies = strategies.remove(_strategy);
     }
 
     /* ============ External Getter Functions ============ */
@@ -467,7 +487,9 @@ abstract contract BaseGarden is ERC20Upgradeable {
     }
 
     function isValidIntegration(address _integration) public view returns (bool) {
-        return integrations.contains(_integration); //IBabController(controller).isValidIntegration(IIntegration(_integration).getName(), _integration);
+        return
+            integrations.contains(_integration) &&
+            IBabController(controller).isValidIntegration(IIntegration(_integration).getName(), _integration);
     }
 
     function getContributor(address _contributor)
@@ -494,60 +516,6 @@ abstract contract BaseGarden is ERC20Upgradeable {
     /* ============ Internal Functions ============ */
 
     /**
-     * Updates the TWAP prices for the garden positions
-     *
-     */
-    function updatePositionTWAPPrices() public {
-        // Updates UniSwap TWAP
-        address oracle = IBabController(controller).getPriceOracle();
-        address[] memory strategiesC = getStrategies();
-        for (uint256 j = 0; j < strategiesC.length; j++) {
-            IStrategy strategy = IStrategy(strategiesC[j]);
-            address[] memory components = strategy.getPositions();
-            if (strategy.active()) {
-                for (uint256 i = 0; i < components.length; i++) {
-                    if (components[i] != reserveAsset) {
-                        IPriceOracle(oracle).updateAdapters(reserveAsset, components[i]);
-                    }
-                }
-            }
-        }
-    }
-
-    /**
-     * Function that calculates the price using the oracle and executes a trade.
-     * Must call the exchange to get the price and pass minReceiveQuantity accordingly.
-     * @param _integrationName        Name of the integration to call
-     * @param _sendToken              Token to exchange
-     * @param _sendQuantity           Amount of tokens to send
-     * @param _receiveToken           Token to receive
-     * @param _minReceiveQuantity     Min amount of tokens to receive
-     * @param _data                   Bytes call data
-     */
-    function _trade(
-        string memory _integrationName,
-        address _sendToken,
-        uint256 _sendQuantity,
-        address _receiveToken,
-        uint256 _minReceiveQuantity,
-        bytes memory _data
-    ) internal {
-        address tradeIntegration = IBabController(controller).getIntegrationByName(_integrationName);
-        require(isValidIntegration(tradeIntegration), 'Integration needs to be added to the garden and controller');
-        // Updates UniSwap TWAP
-        IPriceOracle oracle = IPriceOracle(IBabController(controller).getPriceOracle());
-        oracle.updateAdapters(_sendToken, _receiveToken);
-        return
-            ITradeIntegration(tradeIntegration).trade(
-                _sendToken,
-                _sendQuantity,
-                _receiveToken,
-                _minReceiveQuantity,
-                _data
-            );
-    }
-
-    /**
      * Function that allows the reserve balance to be updated
      *
      * @param _amount             Amount of the reserve balance
@@ -564,11 +532,6 @@ abstract contract BaseGarden is ERC20Upgradeable {
         integrations.push(_integration);
 
         emit IntegrationAdded(_integration);
-    }
-
-    function _getPrice(address _assetOne, address _assetTwo) internal view returns (uint256) {
-        IPriceOracle oracle = IPriceOracle(IBabController(controller).getPriceOracle());
-        return oracle.getPrice(_assetOne, _assetTwo);
     }
 
     /**
@@ -593,6 +556,22 @@ abstract contract BaseGarden is ERC20Upgradeable {
 
     function _validateOnlyContributor(address _caller) internal view {
         require(balanceOf(_caller) > 0, 'Only participant can withdraw');
+    }
+
+    /**
+     * Pays gas cost back to the keeper from executing a transaction
+     * @param _keeper             Keeper that executed the transaction
+     * @param _fee                The fee paid to keeper to compensate the gas cost
+     */
+    function _payKeeper(address payable _keeper, uint256 _fee) internal {
+        require(IBabController(controller).isValidKeeper(_keeper), 'Only a keeper can call this');
+        require(ERC20Upgradeable(reserveAsset).balanceOf(address(this)) >= _fee, 'Not enough WETH for gas subsidy');
+        // TODO: This assumes reserve asset is WETH
+        // TODO: This assume garden have enought WETH
+        // Pay Keeper in WETH
+        if (_fee > 0) {
+            require(ERC20Upgradeable(reserveAsset).transfer(_keeper, _fee), 'Not enough WETH for gas subsidy');
+        }
     }
 
     // Disable garden token transfers. Allow minting and burning.

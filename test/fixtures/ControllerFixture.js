@@ -50,12 +50,14 @@ async function deployFolioFixture() {
   const Treasury = await ethers.getContractFactory('Treasury', owner);
   const UniswapTWAP = await ethers.getContractFactory('UniswapTWAP', owner);
   const GardenFactory = await ethers.getContractFactory('GardenFactory', owner);
-  const StrategyFactory = await ethers.getContractFactory('StrategyFactory', owner);
+  const LongStrategyFactory = await ethers.getContractFactory('LongStrategyFactory', owner);
+  const LiquidityPoolStrategyFactory = await ethers.getContractFactory('LiquidityPoolStrategyFactory', owner);
   const gardenValuer = await GardenValuer.deploy(babController.address);
   const reservePool = await ReservePool.deploy(babController.address);
   const treasury = await Treasury.deploy(babController.address);
   const gardenFactory = await GardenFactory.deploy();
-  const strategyFactory = await StrategyFactory.deploy();
+  const longStrategyFactory = await LongStrategyFactory.deploy();
+  const liquidityPoolStrategyFactory = await LiquidityPoolStrategyFactory.deploy();
 
   const uniswapTWAPAdapter = await UniswapTWAP.deploy(
     babController.address,
@@ -72,7 +74,8 @@ async function deployFolioFixture() {
   babController.editGardenValuer(gardenValuer.address);
   babController.editReservePool(reservePool.address);
   babController.editGardenFactory(gardenFactory.address);
-  babController.editStrategyFactory(strategyFactory.address);
+  babController.editStrategyFactory(0, longStrategyFactory.address);
+  babController.editStrategyFactory(1, liquidityPoolStrategyFactory.address);
 
   const AaveIntegration = await ethers.getContractFactory('AaveIntegration', owner);
   const aaveIntegration = await AaveIntegration.deploy(babController.address, addresses.tokens.WETH, 50);
@@ -145,6 +148,10 @@ async function deployFolioFixture() {
     .connect(signer1)
     .createRollingGarden(integrationsAddressList, addresses.tokens.WETH, 'ETH Yield Farm [b]', 'EYFG');
 
+  await babController
+    .connect(signer1)
+    .createRollingGarden(integrationsAddressList, addresses.tokens.WETH, 'ETH Yield Farm [d]', 'EYFG');
+
   const gardens = await babController.getGardens();
 
   const garden1 = await ethers.getContractAt('RollingGarden', gardens[0]);
@@ -152,6 +159,8 @@ async function deployFolioFixture() {
   const garden2 = await ethers.getContractAt('RollingGarden', gardens[1]);
 
   const garden3 = await ethers.getContractAt('RollingGarden', gardens[2]);
+
+  const garden4 = await ethers.getContractAt('RollingGarden', gardens[3]);
 
   // Initial deposit
   await garden1.connect(signer1).start(
@@ -187,18 +196,41 @@ async function deployFolioFixture() {
     { value: ethers.utils.parseEther('0.1') },
   );
 
+  // NOTE: Use this garden for manual testing in the dApp
+  // Initial deposit
+  await garden3.connect(signer1).start(
+    ethers.utils.parseEther('20'),
+    1,
+    ethers.utils.parseEther('1000'),
+    2,
+    ethers.utils.parseEther('0.01'),
+    ONE_DAY_IN_SECONDS,
+    ethers.utils.parseEther('0.13'), // 13% Ideator
+    ethers.utils.parseEther('0.05'), // 5% Voters
+    ethers.utils.parseEther('0.02'), // 2% garden creator
+    ethers.utils.parseEther('0.10'), // 10% quorum
+    ONE_DAY_IN_SECONDS * 3,
+    ONE_DAY_IN_SECONDS * 365,
+    { value: ethers.utils.parseEther('0.1') },
+  );
+
   // Create strategies
-  await createStrategy('dataset', [signer1, signer2, signer3], kyberTradeIntegration, garden1);
-  await createStrategy('candidate', [signer1, signer2, signer3], kyberTradeIntegration, garden2);
-  // await createStrategy('active', [signer1, signer2, signer3], kyberTradeIntegration, garden2);
-  // await createStrategy('active', [signer1, signer2, signer3], kyberTradeIntegration, garden2);
-  // await createStrategy('finalized', [signer1, signer2, signer3], kyberTradeIntegration, garden);
-  // await createStrategy('finalized', [signer1, signer2, signer3], kyberTradeIntegration, garden);
+  const strategy11 = (
+    await createStrategy(0, 'dataset', [signer1, signer2, signer3], kyberTradeIntegration.address, garden1)
+  ).address;
+  const strategy21 = (
+    await createStrategy(0, 'deposit', [signer1, signer2, signer3], kyberTradeIntegration.address, garden2)
+  ).address;
+
+  await createStrategy(0, 'deposit', [signer1, signer2, signer3], kyberTradeIntegration.address, garden3);
+  await createStrategy(0, 'dataset', [signer1, signer2, signer3], kyberTradeIntegration.address, garden3);
+
+  await createStrategy(0, 'active', [signer1, signer2, signer3], kyberTradeIntegration.address, garden3);
+  await createStrategy(0, 'active', [signer1, signer2, signer3], kyberTradeIntegration.address, garden3);
+  await createStrategy(0, 'final', [signer1, signer2, signer3], kyberTradeIntegration.address, garden3);
 
   console.log('Created and started garden', garden1.address);
-
-  const [strategy11] = await garden1.getStrategies();
-  const [strategy21] = await garden2.getStrategies();
+  console.log('Created manual testing garden', garden3.address);
 
   return {
     babController,
@@ -219,6 +251,7 @@ async function deployFolioFixture() {
     garden1,
     garden2,
     garden3,
+    garden4,
 
     strategy11,
     strategy21,
@@ -235,9 +268,9 @@ async function deployFolioFixture() {
       { name: 'BabController', contract: babController },
       { name: 'BABLToken', contract: bablToken },
       { name: 'TimeLockRegistry', contract: timeLockRegistry },
+      { name: 'LongStrategyFactory', contract: longStrategyFactory },
       { name: 'RewardsSupplySchedule', contract: rewardsSupplySchedule },
       { name: 'RewardsDistributor', contract: rewardsDistributor },
-      { name: 'StrategyFactory', contract: strategyFactory },
       { name: 'KyberTradeIntegration', contract: kyberTradeIntegration },
       { name: 'BalancerIntegration', contract: balancerIntegration },
       { name: 'YearnVaultIntegration', contract: yearnVaultIntegration },

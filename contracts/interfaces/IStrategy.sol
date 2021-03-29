@@ -1,5 +1,5 @@
 /*
-    Copyright 2020 Babylon Finance
+    Copyright 2021 Babylon Finance
 
     Licensed under the Apache License, Version 2.0 (the "License");
     you may not use this file except in compliance with the License.
@@ -24,21 +24,31 @@ pragma solidity 0.7.4;
  * Interface for Investment Idea
  */
 interface IStrategy {
-    function curateIdea(int256 _amount) external;
+    function initialize(
+        address _strategist,
+        address _garden,
+        address _controller,
+        address _integration,
+        uint256 _maxCapitalRequested,
+        uint256 _stake,
+        uint256 _investmentDuration,
+        uint256 _expectedReturn,
+        uint256 _minRebalanceCapital
+    ) external;
 
-    function executeInvestment(uint256 _capital) external;
+    function resolveVoting(
+        address[] calldata _voters,
+        int256[] calldata _votes,
+        uint256 _absoluteTotalVotes,
+        int256 _totalVotes,
+        uint256 fee
+    ) external;
 
-    function finalizeInvestment() external;
+    function executeInvestment(uint256 _capital, uint256 fee) external;
+
+    function finalizeInvestment(uint256 fee) external;
 
     function changeInvestmentDuration(uint256 _newDuration) external;
-
-    function setIntegrationData(
-        address _integration,
-        bytes memory _enterData,
-        bytes memory _exitData,
-        address[] memory _enterTokensNeeded,
-        uint256[] memory _enterTokensAmounts
-    ) external;
 
     function invokeFromIntegration(
         address _target,

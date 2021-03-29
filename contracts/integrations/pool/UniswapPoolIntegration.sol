@@ -1,5 +1,5 @@
 /*
-    Copyright 2020 Babylon Finance
+    Copyright 2021 Babylon Finance
 
     Licensed under the Apache License, Version 2.0 (the "License");
     you may not use this file except in compliance with the License.
@@ -19,12 +19,12 @@
 pragma solidity 0.7.4;
 
 import 'hardhat/console.sol';
-import {PoolIntegration} from './PoolIntegration.sol';
 import {ERC20} from '@openzeppelin/contracts/token/ERC20/ERC20.sol';
 import {SafeMath} from '@openzeppelin/contracts/math/SafeMath.sol';
-import {PreciseUnitMath} from '../lib/PreciseUnitMath.sol';
-import {IUniswapV2Router} from '../interfaces/external/uniswap/IUniswapV2Router.sol';
 import '@uniswap/v2-core/contracts/interfaces/IUniswapV2Pair.sol';
+import {PoolIntegration} from './PoolIntegration.sol';
+import {PreciseUnitMath} from '../../lib/PreciseUnitMath.sol';
+import {IUniswapV2Router} from '../../interfaces/external/uniswap/IUniswapV2Router.sol';
 
 /**
  * @title BalancerIntegration
@@ -57,6 +57,13 @@ contract UniswapPoolIntegration is PoolIntegration {
         address _uniswapRouterAddress
     ) PoolIntegration('uniswap_pool', _weth, _controller) {
         uniRouter = IUniswapV2Router(_uniswapRouterAddress);
+    }
+
+    function getPoolTokens(address _poolAddress) external view override returns (address[] memory) {
+        address[] memory result = new address[](2);
+        result[0] = IUniswapV2Pair(_poolAddress).token0();
+        result[1] = IUniswapV2Pair(_poolAddress).token1();
+        return result;
     }
 
     /* ============ Internal Functions ============ */

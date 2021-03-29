@@ -1,5 +1,5 @@
 /*
-    Copyright 2020 Babylon Finance
+    Copyright 2021 Babylon Finance
 
     Licensed under the Apache License, Version 2.0 (the "License");
     you may not use this file except in compliance with the License.
@@ -21,13 +21,13 @@ pragma solidity 0.7.4;
 import 'hardhat/console.sol';
 import {SafeCast} from '@openzeppelin/contracts/utils/SafeCast.sol';
 import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
-import {IStrategy} from '../interfaces/IStrategy.sol';
-import {IGarden} from '../interfaces/IGarden.sol';
 import {ReentrancyGuard} from '@openzeppelin/contracts/utils/ReentrancyGuard.sol';
 import '@uniswap/v2-core/contracts/interfaces/IUniswapV2Pair.sol';
 import '@uniswap/v2-periphery/contracts/libraries/UniswapV2Library.sol';
-import {IBabController} from '../interfaces/IBabController.sol';
-import {BaseIntegration} from './BaseIntegration.sol';
+import {IStrategy} from '../../interfaces/IStrategy.sol';
+import {IGarden} from '../../interfaces/IGarden.sol';
+import {IBabController} from '../../interfaces/IBabController.sol';
+import {BaseIntegration} from '../BaseIntegration.sol';
 
 /**
  * @title BorrowIntetration
@@ -85,29 +85,33 @@ abstract contract TradeIntegration is BaseIntegration, ReentrancyGuard {
     /* ============ External Functions ============ */
 
     /**
-     * Executes a trade on a supported DEX. Only callable by the SetToken's manager.
-     * @dev Although the SetToken units are passed in for the send and receive quantities, the total quantity
-     * sent and received is the quantity of SetToken units multiplied by the SetToken totalSupply.
+     * Executes a trade on a supported DEX.
+     * @dev
      *
      * @param _sendToken            Address of the token to be sent to the exchange
-     * @param _sendQuantity         Units of token in SetToken sent to the exchange
+     * @param _sendQuantity         Units of reserve asset token sent to the exchange
      * @param _receiveToken         Address of the token that will be received from the exchange
-     * @param _minReceiveQuantity   Min units of token in SetToken to be received from the exchange
-     * @param _data                 Arbitrary bytes to be used to construct trade call data
+     * @param _minReceiveQuantity   Min units of wanted token to be received from the exchange
      */
     function trade(
         address _sendToken,
         uint256 _sendQuantity,
         address _receiveToken,
-        uint256 _minReceiveQuantity,
-        bytes memory _data
+        uint256 _minReceiveQuantity
     ) external nonReentrant onlyIdea {
         TradeInfo memory tradeInfo =
             _createTradeInfo(name, _sendToken, _receiveToken, _sendQuantity, _minReceiveQuantity);
         _validatePreTradeData(tradeInfo, _sendQuantity);
-        _executeTrade(tradeInfo, _data);
+
+        // Get spender address from exchange adapter and invoke approve for exact amount on sendToken
+        tradeInfo.strategy.invokeApprove(_getSpender(), tradeInfo.sendToken, tradeInfo.totalSendQuantity);
+        (address targetExchange, uint256 callValue, bytes memory methodData) =
+            _getTradeCallData(tradeInfo.sendToken, tradeInfo.totalSendQuantity, tradeInfo.receiveToken);
+        tradeInfo.strategy.invokeFromIntegration(targetExchange, callValue, methodData);
+
         uint256 exchangedQuantity = _validatePostTrade(tradeInfo);
-        uint256 protocolFee = _accrueProtocolFee(tradeInfo, exchangedQuantity);
+        uint256 protocolFee =
+            _accrueProtocolFee(address(tradeInfo.strategy), tradeInfo.receiveToken, exchangedQuantity);
         (uint256 netSendAmount, uint256 netReceiveAmount) = _updateGardenPositions(tradeInfo, exchangedQuantity);
         emit ComponentExchanged(
             tradeInfo.garden,
@@ -122,20 +126,6 @@ abstract contract TradeIntegration is BaseIntegration, ReentrancyGuard {
     }
 
     /* ============ Internal Functions ============ */
-
-    /**
-     * Retrieve fee from controller and calculate total protocol fee and send from strategy to protocol recipient
-     *
-     * @param _tradeInfo                Struct containing trade information used in internal functions
-     * @return uint256                  Amount of receive token taken as protocol fee
-     */
-    function _accrueProtocolFee(TradeInfo memory _tradeInfo, uint256 _exchangedQuantity) internal returns (uint256) {
-        uint256 protocolFeeTotal = getIntegrationFee(0, _exchangedQuantity);
-
-        payProtocolFeeFromIdea(address(_tradeInfo.strategy), _tradeInfo.receiveToken, protocolFeeTotal);
-
-        return protocolFeeTotal;
-    }
 
     /**
      * Create and return TradeInfo struct
@@ -193,7 +183,7 @@ abstract contract TradeIntegration is BaseIntegration, ReentrancyGuard {
             );
         uint256 minLiquidity = _tradeInfo.garden.minLiquidityAsset();
         // Check that there is enough liquidity
-        (uint256 liquidity0, uint256 liquidity1, uint256 timestamp) = IUniswapV2Pair(pair).getReserves();
+        (uint256 liquidity0, uint256 liquidity1, ) = IUniswapV2Pair(pair).getReserves();
         require(
             (IUniswapV2Pair(pair).token0() == weth && liquidity0 >= minLiquidity) ||
                 (IUniswapV2Pair(pair).token1() == weth && liquidity1 >= minLiquidity),
@@ -203,27 +193,6 @@ abstract contract TradeIntegration is BaseIntegration, ReentrancyGuard {
             IERC20(_tradeInfo.sendToken).balanceOf(msg.sender) >= _sendQuantity,
             'Garden needs to have enough liquid tokens'
         );
-    }
-
-    /**
-     * Invoke approve for strategy, get method data and invoke trade in the context of the strategy.
-     *
-     * @param _tradeInfo            Struct containing trade information used in internal functions
-     * @param _data                 Arbitrary bytes to be used to construct trade call data
-     */
-    function _executeTrade(TradeInfo memory _tradeInfo, bytes memory _data) internal {
-        // Get spender address from exchange adapter and invoke approve for exact amount on sendToken
-        _tradeInfo.strategy.invokeApprove(_getSpender(), _tradeInfo.sendToken, _tradeInfo.totalSendQuantity);
-        (address targetExchange, uint256 callValue, bytes memory methodData) =
-            _getTradeCalldata(
-                _tradeInfo.sendToken,
-                _tradeInfo.receiveToken,
-                address(_tradeInfo.strategy),
-                _tradeInfo.totalSendQuantity,
-                _tradeInfo.totalMinReceiveQuantity,
-                _data
-            );
-        _tradeInfo.strategy.invokeFromIntegration(targetExchange, callValue, methodData);
     }
 
     /**
@@ -237,7 +206,6 @@ abstract contract TradeIntegration is BaseIntegration, ReentrancyGuard {
             IERC20(_tradeInfo.receiveToken).balanceOf(address(_tradeInfo.strategy)).sub(
                 _tradeInfo.preTradeReceiveTokenBalance
             );
-
         require(exchangedQuantity >= _tradeInfo.totalMinReceiveQuantity, 'Slippage greater than allowed');
 
         return exchangedQuantity;
@@ -269,23 +237,18 @@ abstract contract TradeIntegration is BaseIntegration, ReentrancyGuard {
     /**
      * Return exchange calldata which is already generated from the exchange API
      *
-     * hparam  _sourceToken              Address of source token to be sold
-     * hparam  _destinationToken         Address of destination token to buy
-     * hparam  _sourceQuantity           Amount of source token to sell
-     * hparam  _minDestinationQuantity   Min amount of destination token to buy
-     * hparam  _data                    Arbitrage bytes containing trade call data
+     * hparam _sendToken            Address of the token to be sent to the exchange
+     * hparam _sendQuantity         Units of reserve asset token sent to the exchange
+     * hparam _receiveToken         Address of the token that will be received from the exchange
      *
      * @return address                   Target contract address
      * @return uint256                   Call value
      * @return bytes                     Trade calldata
      */
-    function _getTradeCalldata(
-        address, /* _sourceToken */
-        address, /* _destinationToken */
-        address, /* _destinationAddress */
-        uint256, /* _sourceQuantity */
-        uint256, /* _minDestinationQuantity */
-        bytes memory /* _data */
+    function _getTradeCallData(
+        address, /* _sendToken */
+        uint256, /*_sendQuantity */
+        address /* _receiveToken */
     )
         internal
         view

@@ -1,5 +1,5 @@
 /*
-    Copyright 2020 Babylon Finance.
+    Copyright 2021 Babylon Finance.
 
     Licensed under the Apache License, Version 2.0 (the "License");
     you may not use this file except in compliance with the License.
@@ -126,7 +126,7 @@ abstract contract TimeLockedToken is VoteToken {
      */
     function setTimeLockRegistry(TimeLockRegistry newTimeLockRegistry) external onlyOwner returns (bool) {
         //TODO - REMOVE AFTER USING CREATE2 DURING DEPLOYMENT TO ASSIGN ITS ADDRESS AS A CONSTANT FOREVER - NOT ABLE TO BE CHANGED BY OWNER
-        //console.log(" %s is the new timelockRegistry", newTimeLockRegistry);
+        // console.log(" %s is the new timelockRegistry", newTimeLockRegistry);
         //console.log(" %s is the old timelockRegistry", timeLockRegistry);
 
         require(address(newTimeLockRegistry) != address(0), 'cannot be zero address');

@@ -1,5 +1,5 @@
 /*
-    Copyright 2020 Babylon Finance
+    Copyright 2021 Babylon Finance
 
     Licensed under the Apache License, Version 2.0 (the "License");
     you may not use this file except in compliance with the License.
@@ -102,6 +102,8 @@ interface IGarden is IERC20 {
     function allocateCapitalToInvestment(uint256 _capital) external;
 
     function addStrategy(
+        uint8 _strategyKind,
+        address _integration,
         uint256 _maxCapitalRequested,
         uint256 _stake,
         uint256 _investmentDuration,
@@ -136,4 +138,6 @@ interface IGarden is IERC20 {
     ) external returns (bytes memory _returnValue);
 
     function updatePrincipal(uint256 _amount) external;
+
+    function payKeeper(address payable _keeper, uint256 _fee) external;
 }

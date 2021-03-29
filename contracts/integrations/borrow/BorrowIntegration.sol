@@ -1,5 +1,5 @@
 /*
-    Copyright 2020 Babylon Finance
+    Copyright 2021 Babylon Finance
 
     Licensed under the Apache License, Version 2.0 (the "License");
     you may not use this file except in compliance with the License.
@@ -21,10 +21,10 @@ pragma solidity 0.7.4;
 import 'hardhat/console.sol';
 import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import {SafeMath} from '@openzeppelin/contracts/math/SafeMath.sol';
-import {BaseIntegration} from './BaseIntegration.sol';
-import {IGarden} from '../interfaces/IGarden.sol';
-import {IStrategy} from '../interfaces/IStrategy.sol';
 import {ReentrancyGuard} from '@openzeppelin/contracts/utils/ReentrancyGuard.sol';
+import {BaseIntegration} from '../BaseIntegration.sol';
+import {IGarden} from '../../interfaces/IGarden.sol';
+import {IStrategy} from '../../interfaces/IStrategy.sol';
 
 /**
  * @title BorrowIntetration
@@ -148,7 +148,7 @@ abstract contract BorrowIntegration is BaseIntegration, ReentrancyGuard {
         // Validate deposit
         _validatePostDeposit(debtInfo);
         // Protocol Fee
-        uint256 protocolFee = _accrueProtocolFee(debtInfo, assetToDeposit, amount, BORROW_OPERATION_DEPOSIT);
+        uint256 protocolFee = _accrueProtocolFee(address(debtInfo.strategy), assetToDeposit, amount);
         _updateStrategyPosition(msg.sender, asset, 0, 1); // Mark as locked
 
         emit CollateralDeposited(debtInfo.strategy, debtInfo.garden, asset, amount, protocolFee);
@@ -186,7 +186,7 @@ abstract contract BorrowIntegration is BaseIntegration, ReentrancyGuard {
         // Validate deposit
         _validatePostRemoval(debtInfo);
         // Protocol Fee
-        uint256 protocolFee = _accrueProtocolFee(debtInfo, assetToDeposit, amount, BORROW_OPERATION_REMOVAL);
+        uint256 protocolFee = _accrueProtocolFee(address(debtInfo.strategy), assetToDeposit, amount);
         _updateStrategyPosition(msg.sender, asset, 0, 0); // Back to liquid
 
         emit CollateralRemoved(debtInfo.strategy, debtInfo.garden, asset, amount, protocolFee);
@@ -220,7 +220,7 @@ abstract contract BorrowIntegration is BaseIntegration, ReentrancyGuard {
         _validatePostBorrow(debtInfo);
 
         // Protocol Fee
-        uint256 protocolFee = _accrueProtocolFee(debtInfo, asset, amount, BORROW_OPERATION_BORROW);
+        uint256 protocolFee = _accrueProtocolFee(address(debtInfo.strategy), asset, amount);
 
         _updateStrategyPosition(msg.sender, asset, int256(-amount), 3);
 
@@ -255,33 +255,13 @@ abstract contract BorrowIntegration is BaseIntegration, ReentrancyGuard {
         // Validate borrow
         _validatePostRepay(debtInfo);
         // Protocol Fee
-        uint256 protocolFee = _accrueProtocolFee(debtInfo, asset, amount, BORROW_OPERATION_REPAY);
+        uint256 protocolFee = _accrueProtocolFee(address(debtInfo.strategy), asset, amount);
         _updateStrategyPosition(msg.sender, asset, 0, 0);
 
         emit AmountRepaid(debtInfo.strategy, debtInfo.garden, asset, amount, protocolFee);
     }
 
     /* ============ Internal Functions ============ */
-
-    /**
-     * Retrieve fee from controller and calculate total protocol fee and send from garden to protocol recipient
-     *
-     * @param _debtInfo                 Struct containing trade information used in internal functions
-     * @param _feeToken                 Address of the token to pay the fee with
-     * @param _exchangedQuantity        Amount of exchanged amounts
-     * hparam _borrowOp                 Type of borrow operation
-     * @return uint256                  Amount of receive token taken as protocol fee
-     */
-    function _accrueProtocolFee(
-        DebtInfo memory _debtInfo,
-        address _feeToken,
-        uint256 _exchangedQuantity,
-        uint8 /* _borrowOp */
-    ) internal returns (uint256) {
-        uint256 protocolFeeTotal = getIntegrationFee(0, _exchangedQuantity);
-        payProtocolFeeFromIdea(address(_debtInfo.garden), _feeToken, protocolFeeTotal);
-        return protocolFeeTotal;
-    }
 
     /**
      * Create and return DebtInfo struct
