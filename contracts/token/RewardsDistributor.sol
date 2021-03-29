@@ -54,7 +54,6 @@ contract RewardsDistributor is Ownable {
     /* ========== Events ========== */
     event ClaimMyRewards(address indexed user, IRollingGarden indexed pid, uint256 indexed amount);
 
-
     /* ============ Modifiers ============ */
 
     /* ============ State Variables ============ */
@@ -103,7 +102,6 @@ contract RewardsDistributor is Ownable {
     mapping(address => StrategyPoolInfo) public strategyPoolInfo;
     mapping(address => bool) public strategyIncluded; // Mapping to control updates - for gas efficiency
 
-
     //StrategyPoolInfo[] public strategyPoolInfo;
     address[] public strategyList; // Ordered list of executed strategies
 
@@ -113,8 +111,8 @@ contract RewardsDistributor is Ownable {
     uint256 public protocolDuration; // Total Duration of the procotol (total execution blocks of all strategies in the pool)
     uint256 public lastProtocolUpdate; // Last update of the protocol global variables
 
-
-    struct QuarterRewards { // TODO CHECK its final usage for controlling EPOCH changes on the supply and evolution of the Distribution Rewards
+    struct QuarterRewards {
+        // TODO CHECK its final usage for controlling EPOCH changes on the supply and evolution of the Distribution Rewards
         uint256 quarterStart;
         uint256 quarterEnd;
         uint96 potentialQuarterTokenRewards;
@@ -144,11 +142,8 @@ contract RewardsDistributor is Ownable {
     }
 
     // Add a new strategy to the pool. Can only be called by the owner / strategy // TODO CHECK.
-    function add(
-        IRollingGarden _lpToken,
-        IStrategy _strategy,
-    ) public onlyOwner {
-        require(!strategyIncluded[address(_strategy)], "RewardsDistributor::add: strategy already included");
+    function add(IRollingGarden _lpToken, IStrategy _strategy) public onlyOwner {
+        require(!strategyIncluded[address(_strategy)], 'RewardsDistributor::add: strategy already included');
 
         //uint256 lastRewardBlock = block.number > startBlock ? block.number : startBlock;
         StrategyPoolInfo storage newStrategyPoolInfo = strategyPoolInfo[address(_strategy)];
@@ -170,10 +165,9 @@ contract RewardsDistributor is Ownable {
         // Include it to avoid gas cost on massive updating and/ or data corruption
         strategyIncluded[address(_strategy)] = true;
         // For counting we also include it in the strategy array
-        strategyList.push(address(_strategy));       
+        strategyList.push(address(_strategy));
         // We update the Total Allocation of the Protocol
         protocolPrincipal = protocolPrincipal.add(newStrategyPoolInfo.strategyPrincipal);
-
     }
 
     // Update the given strategy its BABL allocation point. Can only be called by the owner.
@@ -186,9 +180,11 @@ contract RewardsDistributor is Ownable {
             massUpdatePools(strategyPoolInfo[_address].lpToken);
         }
         // If we introduce a value DIFFERENT FROM ZERO, as Owners, the strategy principal will be overrided as well as the protocol (USE IT SAFE TO AVOID DIFFERENT DATA in the STRATEGY AND THE REWARDS)
-        if (_strategyPrincipal != 0) { 
+        if (_strategyPrincipal != 0) {
             // We also update Protocol Principal and the Strategy Principal with the new value
-            protocolPrincipal = protocolPrincipal.sub(strategyPoolInfo[_address].strategyPrincipal).add(_strategyPrincipal);
+            protocolPrincipal = protocolPrincipal.sub(strategyPoolInfo[_address].strategyPrincipal).add(
+                _strategyPrincipal
+            );
             strategyPoolInfo[_address].strategyPrincipal = _strategyPrincipal;
         }
     }
@@ -243,7 +239,7 @@ contract RewardsDistributor is Ownable {
 
         return strategiesCount; // Returns the number of strategies updated
     }
-    
+
     function updateEpochRewards(uint256 epochs) public onlyOwner {
         uint256 timestamp = block.timestamp;
         for (uint256 i = 0; i <= epochs; i++) {
@@ -256,14 +252,12 @@ contract RewardsDistributor is Ownable {
     function claimMyRewards(IRollingGarden _pid, uint256 _amount) public {
         StrategyPoolInfo storage pool = strategyPoolInfo[address(_pid)];
         UserInfo storage user = userInfo[address(_pid)][msg.sender];
-        require(user.amount >= _amount, "withdraw: not good");
+        require(user.amount >= _amount, 'withdraw: not good');
         massUpdatePools(_pid);
         uint96 pending =
-            Safe3296.safe96(uint256(user.amount).mul(pool.bablPerShare).sub(
-                user.rewardDebt),'overflow of 96 bits'
-            );
-        user.amount = Safe3296.safe96(uint256(user.amount).sub(_amount),'overflow of 96 bits'); // TODO - CHECK DECIMALS
-        user.rewardDebt = Safe3296.safe96(uint256(user.amount).mul(pool.bablPerShare),'overflow of 96 bits'); // TODO - CHECK DECIMALS
+            Safe3296.safe96(uint256(user.amount).mul(pool.bablPerShare).sub(user.rewardDebt), 'overflow of 96 bits');
+        user.amount = Safe3296.safe96(uint256(user.amount).sub(_amount), 'overflow of 96 bits'); // TODO - CHECK DECIMALS
+        user.rewardDebt = Safe3296.safe96(uint256(user.amount).mul(pool.bablPerShare), 'overflow of 96 bits'); // TODO - CHECK DECIMALS
         safeBABLTransfer(msg.sender, pending);
         emit ClaimMyRewards(msg.sender, _pid, _amount);
     }
@@ -272,11 +266,10 @@ contract RewardsDistributor is Ownable {
     /* ========== View functions ========== */
 
     // View function to see pending BABL on frontend.
-    function pendingRewards(address _pid, address _user) // TODO - Remove babl per share (OR USE IT RIGHT), add real tokens (voting, strategist, etc)
-        external
-        view
-        returns (uint96)
-    {
+    function pendingRewards(
+        address _pid,
+        address _user // TODO - Remove babl per share (OR USE IT RIGHT), add real tokens (voting, strategist, etc)
+    ) external view returns (uint96) {
         StrategyPoolInfo storage pool = strategyPoolInfo[_pid];
         UserInfo storage user = userInfo[_pid][_user];
         uint96 bablPerShare = pool.bablPerShare;
@@ -285,9 +278,12 @@ contract RewardsDistributor is Ownable {
         uint96 lpSupply = Safe3296.safe96(babltoken.balanceOf(address(this)), 'overflow of 96 bits'); // Distributor must have available tokens to allocate
         if (block.number > pool.lastRewardBlock && lpSupply != 0) {
             uint256 bablPercentPerBlock = (bablPerBlock.mul(pool.strategyPrincipal).div(protocolPrincipal)); // TODO - Mul by number of blocks since last claim and reconsider the whole calculation
-            bablPerShare = Safe3296.safe96(uint256(bablPerShare).add(bablPercentPerBlock.div(bablPerStrategy)),'overflow 96 bits');
+            bablPerShare = Safe3296.safe96(
+                uint256(bablPerShare).add(bablPercentPerBlock.div(bablPerStrategy)),
+                'overflow 96 bits'
+            );
         }
-        return Safe3296.safe96(uint256(user.amount).mul(bablPerShare).sub(user.rewardDebt),'overflow 96 bits');
+        return Safe3296.safe96(uint256(user.amount).mul(bablPerShare).sub(user.rewardDebt), 'overflow 96 bits');
     }
 
     function poolLength() external view returns (uint256) {
@@ -296,7 +292,7 @@ contract RewardsDistributor is Ownable {
 
     function getEpochRewards(uint256 epochs) public view returns (uint96[] memory) {
         uint96[] memory tokensPerEpoch = new uint96[](epochs);
-        for (uint i = 0; i <= epochs-1; i++) {
+        for (uint256 i = 0; i <= epochs - 1; i++) {
             tokensPerEpoch[i] = (uint96(supplySchedule.tokenSupplyPerQuarter(i.add(1))));
         }
         return tokensPerEpoch;
