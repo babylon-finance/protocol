@@ -34,12 +34,14 @@ async function deployFolioFixture() {
   const Treasury = await ethers.getContractFactory('Treasury', owner);
   const UniswapTWAP = await ethers.getContractFactory('UniswapTWAP', owner);
   const GardenFactory = await ethers.getContractFactory('GardenFactory', owner);
-  const StrategyFactory = await ethers.getContractFactory('StrategyFactory', owner);
+  const LongStrategyFactory = await ethers.getContractFactory('LongStrategyFactory', owner);
+  const LiquidityPoolStrategyFactory = await ethers.getContractFactory('LiquidityPoolStrategyFactory', owner);
   const gardenValuer = await GardenValuer.deploy(babController.address);
   const reservePool = await ReservePool.deploy(babController.address);
   const treasury = await Treasury.deploy(babController.address);
   const gardenFactory = await GardenFactory.deploy();
-  const strategyFactory = await StrategyFactory.deploy();
+  const longStrategyFactory = await LongStrategyFactory.deploy();
+  const liquidityPoolStrategyFactory = await LiquidityPoolStrategyFactory.deploy();
 
   const uniswapTWAPAdapter = await UniswapTWAP.deploy(
     babController.address,
@@ -56,7 +58,8 @@ async function deployFolioFixture() {
   babController.editGardenValuer(gardenValuer.address);
   babController.editReservePool(reservePool.address);
   babController.editGardenFactory(gardenFactory.address);
-  babController.editStrategyFactory(strategyFactory.address);
+  babController.editStrategyFactory(0, longStrategyFactory.address);
+  babController.editStrategyFactory(1, liquidityPoolStrategyFactory.address);
 
   const AaveIntegration = await ethers.getContractFactory('AaveIntegration', owner);
   const aaveIntegration = await AaveIntegration.deploy(babController.address, addresses.tokens.WETH, 50);
@@ -241,7 +244,7 @@ async function deployFolioFixture() {
       { name: 'BabController', contract: babController },
       { name: 'BABLToken', contract: bablToken },
       { name: 'TimeLockRegistry', contract: timeLockRegistry },
-      { name: 'StrategyFactory', contract: strategyFactory },
+      { name: 'LongStrategyFactory', contract: longStrategyFactory },
       { name: 'KyberTradeIntegration', contract: kyberTradeIntegration },
       { name: 'BalancerIntegration', contract: balancerIntegration },
       { name: 'YearnVaultIntegration', contract: yearnVaultIntegration },

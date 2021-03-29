@@ -526,7 +526,9 @@ contract Strategy is ReentrancyGuard, Initializable {
      * Needs to be overriden in base class.
      *
      */
-    function _enterStrategy(uint256 _capital) internal virtual {
+    function _enterStrategy(
+        uint256 /*_capital*/
+    ) internal virtual {
         require(false, 'This needs to be overriden');
     }
 

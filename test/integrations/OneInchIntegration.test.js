@@ -3,9 +3,8 @@ const { expect } = require('chai');
 const { waffle, ethers } = require('hardhat');
 const { impersonateAddress } = require('../../utils/rpc');
 const { deployFolioFixture } = require('../fixtures/ControllerFixture');
-const { createStrategy } = require('../fixtures/StrategyHelper');
+const { createStrategy, executeStrategy, finalizeStrategy } = require('../fixtures/StrategyHelper');
 const addresses = require('../../utils/addresses');
-const { ONE_DAY_IN_SECONDS } = require('../../utils/constants');
 
 const { loadFixture } = waffle;
 
@@ -69,14 +68,11 @@ describe('OneInchTradeIntegration', function () {
         garden1,
       );
 
-      await strategyContract.executeInvestment(ethers.utils.parseEther('1'), 0, {
-        gasPrice: 0,
-      });
+      await executeStrategy(garden1, strategyContract, 0);
       expect(await wethToken.balanceOf(strategyContract.address)).to.equal(ethers.utils.parseEther('0'));
       expect(await usdcToken.balanceOf(strategyContract.address)).to.be.gt(ethers.utils.parseEther('900') / 10 ** 12);
 
-      ethers.provider.send('evm_increaseTime', [ONE_DAY_IN_SECONDS * 90]);
-      await strategyContract.finalizeInvestment(0, { gasPrice: 0 });
+      await finalizeStrategy(garden1, strategyContract, 0);
       expect(await usdcToken.balanceOf(strategyContract.address)).to.equal(0);
     });
   });

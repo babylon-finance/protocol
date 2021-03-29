@@ -2,9 +2,9 @@ const { expect } = require('chai');
 const { waffle, ethers } = require('hardhat');
 const { impersonateAddress } = require('../../utils/rpc');
 const { deployFolioFixture } = require('../fixtures/ControllerFixture');
-const { createStrategy } = require('../fixtures/StrategyHelper');
+const { createStrategy, executeStrategy, finalizeStrategy } = require('../fixtures/StrategyHelper');
 const addresses = require('../../utils/addresses');
-const { ADDRESS_ZERO, ONE_DAY_IN_SECONDS } = require('../../utils/constants');
+const { ADDRESS_ZERO } = require('../../utils/constants');
 
 const { loadFixture } = waffle;
 
@@ -17,7 +17,9 @@ describe('BalancerIntegrationTest', function () {
   let garden1;
 
   beforeEach(async () => {
-    ({ balancerIntegration, babController, garden1, signer1, signer2, signer3 } = await loadFixture(deployFolioFixture));
+    ({ balancerIntegration, babController, garden1, signer1, signer2, signer3 } = await loadFixture(
+      deployFolioFixture,
+    ));
   });
 
   describe('Deployment', function () {
@@ -61,15 +63,10 @@ describe('BalancerIntegrationTest', function () {
         garden1,
       );
 
-      ethers.provider.send('evm_increaseTime', [ONE_DAY_IN_SECONDS * 2]);
+      await executeStrategy(garden1, strategyContract, 0);
+      expect(await daiWethPool.balanceOf(strategyContract.address)).to.be.gt(0);
 
-      await strategyContract.executeInvestment(ethers.utils.parseEther('1'), 0, {
-        gasPrice: 0,
-      });
-      expect(await daiWethPool.balanceOf(strategyContract.address)).to.be.greater(0);
-
-      ethers.provider.send('evm_increaseTime', [ONE_DAY_IN_SECONDS * 90]);
-      await strategyContract.finalizeInvestment(0, { gasPrice: 0 });
+      await finalizeStrategy(garden1, strategyContract, 0);
       expect(await daiWethPool.balanceOf(strategyContract.address)).to.equal(0);
     });
   });

@@ -30,7 +30,7 @@ import {Clones} from '@openzeppelin/contracts/proxy/Clones.sol';
  *
  * Factory to create investment strategy contracts
  */
-contract StrategyFactory {
+contract LongStrategyFactory {
     address immutable longStrategy;
 
     constructor() {
@@ -40,7 +40,6 @@ contract StrategyFactory {
     /**
      * Creates a new investment strategy using minimal proxies
      *
-     * @param _strategyKind                  Kind of strategy
      * @param _strategist                    Address of the strategist
      * @param _garden                        Address of the garden
      * @param _controller                    Address of the controller
@@ -52,7 +51,6 @@ contract StrategyFactory {
      * @param _minRebalanceCapital           Min capital that is worth it to deposit into this strategy
      */
     function createStrategy(
-        uint8 _strategyKind,
         address _strategist,
         address _garden,
         address _controller,
@@ -63,10 +61,7 @@ contract StrategyFactory {
         uint256 _expectedReturn,
         uint256 _minRebalanceCapital
     ) external returns (address) {
-        address clone;
-        if (_strategyKind == 0) {
-            clone = Clones.clone(longStrategy);
-        }
+        address clone = Clones.clone(longStrategy);
         IStrategy(clone).initialize(
             _strategist,
             _garden,

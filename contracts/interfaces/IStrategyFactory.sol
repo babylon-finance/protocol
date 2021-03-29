@@ -27,7 +27,6 @@ import {IIntegration} from './IIntegration.sol';
  */
 interface IStrategyFactory {
     function createStrategy(
-        uint8 _strategyKind,
         address _strategist,
         address _garden,
         address _controller,

@@ -43,7 +43,7 @@ async function createLongStrategy(garden, integration, signer, params = DEFAULT_
 }
 
 async function createPoolStrategy(garden, integration, signer, params = DEFAULT_STRATEGY_PARAMS, poolParams) {
-  await garden.connect(signer).addStrategy(0, integration, ...params);
+  await garden.connect(signer).addStrategy(1, integration, ...params);
   const strategies = await garden.getStrategies();
   const lastStrategyAddr = strategies[strategies.length - 1];
 
@@ -72,7 +72,7 @@ async function vote(garden, signers, strategy) {
   const signer1Balance = await garden.balanceOf(signer1.getAddress());
   const signer2Balance = await garden.balanceOf(signer2.getAddress());
 
-  await strategy.resolveVoting(
+  return strategy.resolveVoting(
     [signer1.getAddress(), signer1.getAddress()],
     [signer1Balance, signer2Balance],
     signer1Balance.add(signer2Balance).toString(),
@@ -82,18 +82,18 @@ async function vote(garden, signers, strategy) {
   );
 }
 
-async function execute(garden, strategy) {
+async function executeStrategy(garden, strategy, fee = 0) {
   ethers.provider.send('evm_increaseTime', [ONE_DAY_IN_SECONDS * 2]);
   await updateTWAPs(garden);
-  await strategy.executeInvestment(ethers.utils.parseEther('1'), 0, {
+  return strategy.executeInvestment(ethers.utils.parseEther('1'), fee, {
     gasPrice: 0,
   });
 }
 
-async function finalize(garden, strategy) {
+async function finalizeStrategy(garden, strategy, fee = 0) {
   ethers.provider.send('evm_increaseTime', [ONE_DAY_IN_SECONDS * 90]);
   await updateTWAPs(garden);
-  await strategy.finalizeInvestment(0, { gasPrice: 0 });
+  return strategy.finalizeInvestment(fee, { gasPrice: 0 });
 }
 
 async function createStrategy(
@@ -124,11 +124,11 @@ async function createStrategy(
     if (state === 'vote') {
       return strategy;
     }
-    await execute(garden, strategy);
+    await executeStrategy(garden, strategy);
     if (state === 'active') {
       return strategy;
     }
-    await finalize(garden, strategy);
+    await finalizeStrategy(garden, strategy);
   }
   return strategy;
 }
@@ -136,4 +136,6 @@ async function createStrategy(
 module.exports = {
   createStrategy,
   DEFAULT_STRATEGY_PARAMS,
+  executeStrategy,
+  finalizeStrategy,
 };

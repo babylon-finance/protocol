@@ -347,10 +347,10 @@ abstract contract BaseGarden is ERC20Upgradeable {
         uint256 _minRebalanceCapital
     ) external onlyContributor onlyActive {
         require(strategies.length < MAX_TOTAL_IDEAS, 'Reached the limit of strategies');
-        IStrategyFactory strategyFactory = IStrategyFactory(IBabController(controller).getStrategyFactory());
+        IStrategyFactory strategyFactory =
+            IStrategyFactory(IBabController(controller).getStrategyFactory(_strategyKind));
         address strategy =
             strategyFactory.createStrategy(
-                _strategyKind,
                 msg.sender,
                 address(this),
                 controller,

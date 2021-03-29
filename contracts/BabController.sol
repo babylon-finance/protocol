@@ -62,7 +62,11 @@ contract BabController is Ownable {
     event TreasuryChanged(address _newTreasury, address _oldTreasury);
     event GardenValuerChanged(address indexed _gardenValuer, address _oldGardenValuer);
     event GardenFactoryChanged(address indexed _gardenFactory, address _oldGardenFactory);
-    event StrategyFactoryChanged(address indexed _strategyFactory, address _oldStrategyFactory);
+    event StrategyFactoryEdited(
+        uint8 indexed _strategyKind,
+        address indexed _strategyFactory,
+        address _oldStrategyFactory
+    );
 
     /* ============ Modifiers ============ */
 
@@ -77,7 +81,7 @@ contract BabController is Ownable {
     address public priceOracle;
     address public reservePool;
     address public gardenFactory;
-    address public strategyFactory;
+    mapping(uint8 => address) public strategyFactory;
     // Mapping of garden => integration identifier => integration address
     mapping(bytes32 => address) private integrations;
 
@@ -120,22 +124,19 @@ contract BabController is Ownable {
      * @param _priceOracle                 Address of the initial priceOracle
      * @param _reservePool                 Address of the initial reservePool
      * @param _gardenFactory            Address of the initial garden factory
-     * @param _strategyFactory                 Address of the initial strategy factory
      */
     constructor(
         address _treasury,
         address _gardenValuer,
         address _priceOracle,
         address _reservePool,
-        address _gardenFactory,
-        address _strategyFactory
+        address _gardenFactory
     ) {
         treasury = _treasury;
         gardenValuer = _gardenValuer;
         priceOracle = _priceOracle;
         reservePool = _reservePool;
         gardenFactory = _gardenFactory;
-        strategyFactory = _strategyFactory;
     }
 
     /* ============ External Functions ============ */
@@ -358,15 +359,16 @@ contract BabController is Ownable {
     /**
      * PRIVILEGED GOVERNANCE FUNCTION. Allows governance to edit the protocol strategy factory
      *
+     * @param _strategyKind            Type of the strategy
      * @param _newStrategyFactory      Address of the new strategy factory
      */
-    function editStrategyFactory(address _newStrategyFactory) external onlyOwner {
+    function editStrategyFactory(uint8 _strategyKind, address _newStrategyFactory) external onlyOwner {
         require(_newStrategyFactory != address(0), 'Address must not be 0');
 
-        address oldStrategyFactory = strategyFactory;
-        strategyFactory = _newStrategyFactory;
+        address oldStrategyFactory = strategyFactory[_strategyKind];
+        strategyFactory[_strategyKind] = _newStrategyFactory;
 
-        emit StrategyFactoryChanged(_newStrategyFactory, oldStrategyFactory);
+        emit StrategyFactoryEdited(_strategyKind, _newStrategyFactory, oldStrategyFactory);
     }
 
     /**
@@ -451,8 +453,8 @@ contract BabController is Ownable {
         return gardenFactory;
     }
 
-    function getStrategyFactory() external view returns (address) {
-        return strategyFactory;
+    function getStrategyFactory(uint8 _strategyKind) external view returns (address) {
+        return strategyFactory[_strategyKind];
     }
 
     function getGardens() external view returns (address[] memory) {

@@ -44,7 +44,7 @@ contract LiquidityPoolStrategy is Strategy {
      */
     function setPoolData(address _pool) public onlyIdeator {
         kind = 1;
-        require(IPoolIntegration(integration).isPool(pool), 'Must be a valid pool of this protocol');
+        require(IPoolIntegration(integration).isPool(_pool), 'Must be a valid pool of this protocol');
         pool = _pool;
         poolTokens = IPoolIntegration(integration).getPoolTokens(pool);
     }
@@ -57,14 +57,16 @@ contract LiquidityPoolStrategy is Strategy {
         uint256[] memory _maxAmountsIn = new uint256[](poolTokens.length);
         // Get the tokens needed to enter the pool
         for (uint256 i = 0; i < poolTokens.length; i++) {
+            // TODO: fix for pools that are not equally weighted
             if (poolTokens[i] != reserveAsset) {
-                // TODO: fix for pools that are not equally weighted
                 _trade(reserveAsset, _capital.div(poolTokens.length), poolTokens[i]);
                 _maxAmountsIn[i] = IERC20(poolTokens[i]).balanceOf(address(this));
+            } else {
+                _maxAmountsIn[i] = _capital.div(poolTokens.length);
             }
         }
-        // TODO: calculate minReceiveQuantity instead of 0
-        IPoolIntegration(integration).joinPool(pool, 0, poolTokens, _maxAmountsIn);
+        // TODO: calculate minReceiveQuantity instead of 1
+        IPoolIntegration(integration).joinPool(pool, 1, poolTokens, _maxAmountsIn);
     }
 
     /**
