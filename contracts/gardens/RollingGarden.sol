@@ -181,7 +181,7 @@ contract RollingGarden is ReentrancyGuard, BaseGarden {
         uint256 _minGardenTokenReceiveQuantity,
         address _to
     ) public payable nonReentrant onlyActive {
-        require(msg.value >= minContribution, 'R09');// >= minContribution
+        require(msg.value >= minContribution, 'R09'); // >= minContribution
         // if deposit limit is 0, then there is no deposit limit
         if (maxDepositLimit > 0) {
             require(principal.add(msg.value) <= maxDepositLimit, 'R10'); // Max Deposit Limit
