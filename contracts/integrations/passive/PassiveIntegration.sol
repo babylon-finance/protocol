@@ -168,6 +168,27 @@ abstract contract PassiveIntegration is BaseIntegration, ReentrancyGuard {
         return _isInvestment(_investmentAddress);
     }
 
+    /**
+     * Gets the amount of shares expected to get after depositing _ethAmount
+     *
+     * @param _investmentAddress                 Investment address to check
+     * @param _ethAmount                         Amount of eth to invest
+     * @return uint256                           Amount of investment shares to receive
+     */
+    function getExpectedShares(address _investmentAddress, uint256 _ethAmount) external view returns (uint256) {
+        return _getExpectedShares(_investmentAddress, _ethAmount);
+    }
+
+    /**
+     * Gets how much eth one unit of the investment is worth
+     *
+     * @param _investmentAddress                 Investment address to check
+     * @return uint256                           Returns the price in ETH of an investment share
+     */
+    function getPricePerShare(address _investmentAddress) external view returns (uint256) {
+        return _getPricePerShare(_investmentAddress);
+    }
+
     /* ============ Internal Functions ============ */
 
     /**
@@ -345,6 +366,21 @@ abstract contract PassiveIntegration is BaseIntegration, ReentrancyGuard {
     ) internal view virtual returns (bool) {
         require(false, 'This needs to be overriden');
         return false;
+    }
+
+    function _getExpectedShares(
+        address, //_investmentAddress
+        uint256 // _ethAmount
+    ) internal view virtual returns (uint256) {
+        require(false, 'This needs to be overriden');
+        return 0;
+    }
+
+    function _getPricePerShare(
+        address //_investmentAddress
+    ) internal view virtual returns (uint256) {
+        require(false, 'This needs to be overriden');
+        return 0;
     }
 
     function _getSpender(

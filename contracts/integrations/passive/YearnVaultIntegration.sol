@@ -23,6 +23,7 @@ import {ERC20} from '@openzeppelin/contracts/token/ERC20/ERC20.sol';
 import {SafeMath} from '@openzeppelin/contracts/math/SafeMath.sol';
 import {PassiveIntegration} from './PassiveIntegration.sol';
 import {YRegistry} from '../../interfaces/external/yearn/YRegistry.sol';
+import {IVault} from '../../interfaces/external/yearn/IVault.sol';
 
 /**
  * @title YearnIntegration
@@ -64,6 +65,19 @@ contract YearnVaultIntegration is PassiveIntegration {
 
     function _getSpender(address _investmentAddress) internal pure override returns (address) {
         return _investmentAddress;
+    }
+
+    function _getExpectedShares(address _investmentAddress, uint256 _ethAmount)
+        internal
+        view
+        override
+        returns (uint256)
+    {
+        return _ethAmount.div(IVault(_investmentAddress).getPricePerFullShare());
+    }
+
+    function _getPricePerShare(address _investmentAddress) internal view override returns (uint256) {
+        return IVault(_investmentAddress).getPricePerFullShare();
     }
 
     /**
