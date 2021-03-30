@@ -33,10 +33,12 @@ describe('YearnVaultIntegrationTest', function () {
   describe('Yearn Vaults', function () {
     let daiToken;
     let yearnDaiVault;
+    let WETH;
 
     beforeEach(async () => {
       daiToken = await ethers.getContractAt('IERC20', addresses.tokens.DAI);
       yearnDaiVault = await ethers.getContractAt('IVault', addresses.yearn.vaults.ydai);
+      WETH = await ethers.getContractAt('IERC20', addresses.tokens.WETH);
     });
 
     it('check that a valid yearn vault is valid', async function () {
@@ -48,15 +50,6 @@ describe('YearnVaultIntegrationTest', function () {
     });
 
     it('can enter and exit the yearn dai vault', async function () {
-      // Keep this comment to have an example of impersonation
-      // whaleSigner = await impersonateAddress(addresses.holders.DAI);
-      // expect(
-      //   await daiToken
-      //     .connect(whaleSigner)
-      //     .transfer(garden.address, ethers.utils.parseEther("1000"), {
-      //       gasPrice: 0
-      //     })
-      // );
       const amountToDeposit = ethers.utils.parseEther('1');
       const sharePrice = await yearnDaiVault.getPricePerFullShare();
       const expectedShares = await yearnVaultIntegration.getExpectedShares(yearnDaiVault.address, amountToDeposit);
@@ -73,13 +66,12 @@ describe('YearnVaultIntegrationTest', function () {
       );
 
       await executeStrategy(garden1, strategyContract, 0);
-      // console.log('price', ethers.utils.formatEther(sharePrice));
-      // console.log('yshares to receive', expectedShares.toString());
       expect(await yearnDaiVault.balanceOf(strategyContract.address)).to.be.gte(expectedShares);
 
       await finalizeStrategy(garden1, strategyContract, 0);
       expect(await yearnDaiVault.balanceOf(strategyContract.address)).to.equal(0);
       expect(await daiToken.balanceOf(strategyContract.address)).to.equal(0);
+      expect(await WETH.balanceOf(strategyContract.address)).to.equal(ethers.BigNumber.from('995973117600718893'));
     });
   });
 });
