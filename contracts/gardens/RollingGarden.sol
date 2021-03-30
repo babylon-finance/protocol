@@ -45,7 +45,6 @@ contract RollingGarden is ReentrancyGuard, BaseGarden {
     /* ============ State Variables ============ */
 
     struct ActionInfo {
-        uint256 preFeeReserveQuantity; // Reserve value before fees; During issuance, represents raw quantity
         // During withdrawal, represents post-premium value
         uint256 protocolFees; // Total protocol fees (direct + manager revenue share)
         uint256 netFlowQuantity; // When issuing, quantity of reserve asset sent to Garden
@@ -53,7 +52,6 @@ contract RollingGarden is ReentrancyGuard, BaseGarden {
         uint256 gardenTokenQuantity; // When issuing, quantity of Garden tokens minted to mintee
         // When withdrawaling, quantity of Garden tokens withdrawaled
         uint256 newGardenTokenSupply; // Garden token supply after deposit/withdrawal action
-        uint256 newReservePositionBalance; // Garden token reserve asset position balance after deposit/withdrawal
     }
 
     uint256 public depositHardlock; // Window of time after deposits when withdraws are disabled for that user
@@ -208,7 +206,7 @@ contract RollingGarden is ReentrancyGuard, BaseGarden {
         uint256 previousBalance = balanceOf(msg.sender);
         _mint(_to, depositInfo.gardenTokenQuantity);
         _updateContributorDepositInfo(previousBalance, msg.value);
-        _updatePrincipal(depositInfo.newReservePositionBalance);
+        _updatePrincipal(principal.add(depositInfo.netFlowQuantity));
         emit GardenTokenDeposited(
             _to,
             msg.value,
@@ -261,7 +259,11 @@ contract RollingGarden is ReentrancyGuard, BaseGarden {
         redemptionRequests[msg.sender] = 0;
         payProtocolFeeFromGarden(reserveAsset, withdrawalInfo.protocolFees);
 
-        _updatePrincipal(withdrawalInfo.newReservePositionBalance);
+        uint256 outflow = withdrawalInfo.netFlowQuantity.add(withdrawalInfo.protocolFees);
+
+        // Require withdrawable quantity is greater than existing collateral
+        require(principal >= outflow, 'R27'); // Must have enough balance
+        _updatePrincipal(principal.sub(outflow));
 
         emit GardenTokenWithdrawn(
             msg.sender,
@@ -308,7 +310,7 @@ contract RollingGarden is ReentrancyGuard, BaseGarden {
     //
     //     payProtocolFeeFromGarden(reserveAsset, withdrawalInfo.protocolFees);
     //
-    //     _updatePrincipal(withdrawalInfo.newReservePositionBalance);
+    //     _updatePrincipal(principal.sub(outflow));
     //
     //     emit GardenTokenWithdrawn(
     //         msg.sender,
@@ -516,16 +518,13 @@ contract RollingGarden is ReentrancyGuard, BaseGarden {
 
     function _createIssuanceInfo(uint256 _reserveAssetQuantity) internal view returns (ActionInfo memory) {
         ActionInfo memory depositInfo;
-        depositInfo.preFeeReserveQuantity = _reserveAssetQuantity;
 
-        (depositInfo.protocolFees, depositInfo.netFlowQuantity) = _getFees(depositInfo.preFeeReserveQuantity, true);
+        (depositInfo.protocolFees, depositInfo.netFlowQuantity) = _getFees(_reserveAssetQuantity, true);
 
         depositInfo.gardenTokenQuantity = depositInfo.netFlowQuantity;
 
         // Calculate inflation and new position multiplier. Note: Round inflation up in order to round position multiplier down
         depositInfo.newGardenTokenSupply = depositInfo.gardenTokenQuantity.add(totalSupply());
-
-        depositInfo.newReservePositionBalance = principal.add(depositInfo.netFlowQuantity);
 
         return depositInfo;
     }
@@ -535,21 +534,12 @@ contract RollingGarden is ReentrancyGuard, BaseGarden {
 
         withdrawalInfo.gardenTokenQuantity = _gardenTokenQuantity;
 
-        withdrawalInfo.preFeeReserveQuantity = _gardenTokenQuantity;
-
         (withdrawalInfo.protocolFees, withdrawalInfo.netFlowQuantity) = _getFees(
-            withdrawalInfo.preFeeReserveQuantity,
+            _gardenTokenQuantity,
             false
         );
 
         withdrawalInfo.newGardenTokenSupply = totalSupply().sub(_gardenTokenQuantity);
-
-        uint256 outflow = withdrawalInfo.netFlowQuantity.add(withdrawalInfo.protocolFees);
-
-        // Require withdrawable quantity is greater than existing collateral
-        require(principal >= outflow, 'R27'); // Must have enough balance
-
-        withdrawalInfo.newReservePositionBalance = principal.sub(outflow);
 
         return withdrawalInfo;
     }
