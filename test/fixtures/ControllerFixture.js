@@ -36,12 +36,14 @@ async function deployFolioFixture() {
   const GardenFactory = await ethers.getContractFactory('GardenFactory', owner);
   const LongStrategyFactory = await ethers.getContractFactory('LongStrategyFactory', owner);
   const LiquidityPoolStrategyFactory = await ethers.getContractFactory('LiquidityPoolStrategyFactory', owner);
+  const YieldFarmingStrategyFactory = await ethers.getContractFactory('YieldFarmingStrategyFactory', owner);
   const gardenValuer = await GardenValuer.deploy(babController.address);
   const reservePool = await ReservePool.deploy(babController.address);
   const treasury = await Treasury.deploy(babController.address);
   const gardenFactory = await GardenFactory.deploy();
   const longStrategyFactory = await LongStrategyFactory.deploy();
   const liquidityPoolStrategyFactory = await LiquidityPoolStrategyFactory.deploy();
+  const yieldFarmingStrategyFactory = await YieldFarmingStrategyFactory.deploy();
 
   const uniswapTWAPAdapter = await UniswapTWAP.deploy(
     babController.address,
@@ -60,6 +62,7 @@ async function deployFolioFixture() {
   babController.editGardenFactory(gardenFactory.address);
   babController.editStrategyFactory(0, longStrategyFactory.address);
   babController.editStrategyFactory(1, liquidityPoolStrategyFactory.address);
+  babController.editStrategyFactory(2, yieldFarmingStrategyFactory.address);
 
   const AaveIntegration = await ethers.getContractFactory('AaveIntegration', owner);
   const aaveIntegration = await AaveIntegration.deploy(babController.address, addresses.tokens.WETH, 50);
