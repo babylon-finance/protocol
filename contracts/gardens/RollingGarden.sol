@@ -534,10 +534,7 @@ contract RollingGarden is ReentrancyGuard, BaseGarden {
 
         withdrawalInfo.gardenTokenQuantity = _gardenTokenQuantity;
 
-        (withdrawalInfo.protocolFees, withdrawalInfo.netFlowQuantity) = _getFees(
-            _gardenTokenQuantity,
-            false
-        );
+        (withdrawalInfo.protocolFees, withdrawalInfo.netFlowQuantity) = _getFees(_gardenTokenQuantity, false);
 
         withdrawalInfo.newGardenTokenSupply = totalSupply().sub(_gardenTokenQuantity);
 
