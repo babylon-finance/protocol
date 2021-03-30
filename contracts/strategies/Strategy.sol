@@ -81,7 +81,10 @@ contract Strategy is ReentrancyGuard, Initializable {
      */
     modifier onlyIntegration() {
         // Internal function used to reduce bytecode size
-        require(controller.isValidIntegration(ITradeIntegration(msg.sender).getName(), msg.sender), 'Integration must be valid');
+        require(
+            controller.isValidIntegration(ITradeIntegration(msg.sender).getName(), msg.sender),
+            'Integration must be valid'
+        );
         _;
     }
 
@@ -215,7 +218,10 @@ contract Strategy is ReentrancyGuard, Initializable {
     ) public initializer {
         controller = IBabController(_controller);
         garden = IGarden(_garden);
-        require(controller.isValidIntegration(ITradeIntegration(_integration).getName(), _integration), 'Integration must be valid');
+        require(
+            controller.isValidIntegration(ITradeIntegration(_integration).getName(), _integration),
+            'Integration must be valid'
+        );
         require(controller.isSystemContract(_garden), 'Must be a valid garden');
         require(ERC20(address(garden)).balanceOf(_strategist) > 0, 'Only someone with the garden token can withdraw');
         require(_stake > garden.totalSupply().div(100), 'Stake amount must be at least 1% of the garden');

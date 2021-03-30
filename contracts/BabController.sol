@@ -155,13 +155,7 @@ contract BabController is Ownable {
         string memory _symbol
     ) external returns (address) {
         address newGarden =
-            IGardenFactory(gardenFactory).createRollingGarden(
-                _weth,
-                address(this),
-                msg.sender,
-                _name,
-                _symbol
-            );
+            IGardenFactory(gardenFactory).createRollingGarden(_weth, address(this), msg.sender, _name, _symbol);
         _addGarden(newGarden);
         return newGarden;
     }

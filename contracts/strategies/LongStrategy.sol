@@ -31,18 +31,18 @@ import {ITradeIntegration} from '../interfaces/ITradeIntegration.sol';
  * Holds the data for a long strategy
  */
 contract LongStrategy is Strategy {
-    address public receiveToken; // Asset to receive
+    address public longToken; // Asset to receive
 
     /**
      * Sets integration data for the long strategy
      *
-     * @param _receiveToken                   Token to be bought
+     * @param _longToken                   Token to be bought
      */
-    function setLongData(address _receiveToken) public onlyIdeator {
+    function setLongData(address _longToken) public onlyIdeator {
         kind = 0;
         require(!dataSet, 'Data is set already');
-        require(garden.getReserveAsset() != _receiveToken, 'Receive token must be different');
-        receiveToken = _receiveToken;
+        require(garden.getReserveAsset() != _longToken, 'Receive token must be different');
+        longToken = _longToken;
         dataSet = true;
     }
 
@@ -50,13 +50,13 @@ contract LongStrategy is Strategy {
      * Enters the long strategy
      */
     function _enterStrategy(uint256 _capital) internal override {
-        _trade(garden.getReserveAsset(), _capital, receiveToken);
+        _trade(garden.getReserveAsset(), _capital, longToken);
     }
 
     /**
      * Exits the long strategy.
      */
     function _exitStrategy() internal override {
-        _trade(receiveToken, IERC20(receiveToken).balanceOf(address(this)), garden.getReserveAsset());
+        _trade(longToken, IERC20(longToken).balanceOf(address(this)), garden.getReserveAsset());
     }
 }
