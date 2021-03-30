@@ -1,6 +1,5 @@
 const { expect } = require('chai');
 const { waffle, ethers } = require('hardhat');
-const { impersonateAddress } = require('../../utils/rpc');
 const { deployFolioFixture } = require('../fixtures/ControllerFixture');
 const { createStrategy, executeStrategy, finalizeStrategy } = require('../fixtures/StrategyHelper');
 const addresses = require('../../utils/addresses');
@@ -32,17 +31,9 @@ describe('BalancerIntegrationTest', function () {
   });
 
   describe('Liquidity Pools', function () {
-    let daiToken;
-    let wethToken;
-    let whaleSigner;
-    let whaleWeth;
     let daiWethPool;
 
     beforeEach(async () => {
-      whaleSigner = await impersonateAddress(addresses.holders.DAI);
-      whaleWeth = await impersonateAddress(addresses.holders.WETH);
-      daiToken = await ethers.getContractAt('IERC20', addresses.tokens.DAI);
-      wethToken = await ethers.getContractAt('IERC20', addresses.tokens.WETH);
       daiWethPool = await ethers.getContractAt('IBPool', addresses.balancer.pools.wethdai);
     });
 

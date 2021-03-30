@@ -145,30 +145,17 @@ contract BabController is Ownable {
     /**
      * Creates a Garden smart contract and registers the Garden with the controller.
      *
-     * @param _integrations           List of integrations to enable. All integrations must be approved by the Controller
      * @param _weth                   Address of the WETH ERC20
      * @param _name                   Name of the Garden
      * @param _symbol                 Symbol of the Garden
      */
     function createRollingGarden(
-        address[] memory _integrations,
         address _weth,
         string memory _name,
         string memory _symbol
     ) external returns (address) {
-        require(_integrations.length > 0, 'Garden requires at least one integration');
-        for (uint256 i = 0; i < _integrations.length; i++) {
-            require(_integrations[i] != address(0), 'Integration must not be null address');
-        }
         address newGarden =
-            IGardenFactory(gardenFactory).createRollingGarden(
-                _integrations,
-                _weth,
-                address(this),
-                msg.sender,
-                _name,
-                _symbol
-            );
+            IGardenFactory(gardenFactory).createRollingGarden(_weth, address(this), msg.sender, _name, _symbol);
         _addGarden(newGarden);
         return newGarden;
     }

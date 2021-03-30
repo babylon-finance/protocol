@@ -27,7 +27,6 @@ interface IBabController {
     /* ============ Functions ============ */
 
     function createRollingGarden(
-        address[] memory _integrations,
         address _weth,
         string memory _name,
         string memory _symbol

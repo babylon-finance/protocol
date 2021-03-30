@@ -117,24 +117,15 @@ async function deployFolioFixture() {
     babController.addIntegration(await integration.getName(), integration.address);
   });
 
-  const integrationsAddressList = integrationsList.map((iter) => iter.address);
   // Creates a new Garden instance
 
-  await babController
-    .connect(signer1)
-    .createRollingGarden(integrationsAddressList, addresses.tokens.WETH, 'Absolute ETH Return [beta]', 'EYFA');
+  await babController.connect(signer1).createRollingGarden(addresses.tokens.WETH, 'Absolute ETH Return [beta]', 'EYFA');
 
-  await babController
-    .connect(signer1)
-    .createRollingGarden(integrationsAddressList, addresses.tokens.WETH, 'ETH Yield Farm [a]', 'EYFB');
+  await babController.connect(signer1).createRollingGarden(addresses.tokens.WETH, 'ETH Yield Farm [a]', 'EYFB');
 
-  await babController
-    .connect(signer1)
-    .createRollingGarden(integrationsAddressList, addresses.tokens.WETH, 'ETH Yield Farm [b]', 'EYFG');
+  await babController.connect(signer1).createRollingGarden(addresses.tokens.WETH, 'ETH Yield Farm [b]', 'EYFG');
 
-  await babController
-    .connect(signer1)
-    .createRollingGarden(integrationsAddressList, addresses.tokens.WETH, 'ETH Yield Farm [d]', 'EYFG');
+  await babController.connect(signer1).createRollingGarden(addresses.tokens.WETH, 'ETH Yield Farm [d]', 'EYFG');
 
   const gardens = await babController.getGardens();
 

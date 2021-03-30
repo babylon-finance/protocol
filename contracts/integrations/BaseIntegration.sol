@@ -56,7 +56,7 @@ abstract contract BaseIntegration {
         IStrategy strategy = IStrategy(msg.sender);
         address garden = strategy.garden();
         require(IBabController(controller).isSystemContract(garden), 'Only a garden can call this');
-        require(IGarden(garden).isStrategy(msg.sender), 'Sender myst be an investment strategy from the garden');
+        require(IGarden(garden).isStrategy(msg.sender), 'Sender must be an investment strategy from the garden');
         _;
     }
 

@@ -55,10 +55,6 @@ interface IGarden is IERC20 {
 
     function getReserveAsset() external view returns (address);
 
-    function hasIntegration(address _integration) external view returns (bool);
-
-    function isValidIntegration(address _integration) external returns (bool);
-
     function name() external view returns (string memory);
 
     function totalContributors() external view returns (uint256);
@@ -111,29 +107,9 @@ interface IGarden is IERC20 {
 
     function rebalanceInvestments() external;
 
-    function callIntegration(
-        address _integration,
-        uint256 _value,
-        bytes calldata _data,
-        address[] memory _tokensNeeded,
-        uint256[] memory _tokenAmountsNeeded
-    ) external returns (bytes memory _returnValue);
-
-    function invokeApprove(
-        address _spender,
-        address _asset,
-        uint256 _quantity
-    ) external;
-
     function moveStrategyToFinalized(int256 _returns, address _strategy) external;
 
     function expireCandidateStrategy(address _strategy) external;
-
-    function invokeFromIntegration(
-        address _target,
-        uint256 _value,
-        bytes calldata _data
-    ) external returns (bytes memory _returnValue);
 
     function updatePrincipal(uint256 _amount) external;
 
