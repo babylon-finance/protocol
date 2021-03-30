@@ -17,7 +17,7 @@
 
 pragma solidity 0.7.4;
 
-import 'hardhat/console.sol';
+// import 'hardhat/console.sol';
 import {Address} from '@openzeppelin/contracts/utils/Address.sol';
 import {ERC20Upgradeable} from '@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol';
 import {SafeMath} from '@openzeppelin/contracts/math/SafeMath.sol';
@@ -25,8 +25,6 @@ import {SafeCast} from '@openzeppelin/contracts/utils/SafeCast.sol';
 import {SignedSafeMath} from '@openzeppelin/contracts/math/SignedSafeMath.sol';
 import {AddressArrayUtils} from '../lib/AddressArrayUtils.sol';
 import {IBabController} from '../interfaces/IBabController.sol';
-import {IIntegration} from '../interfaces/IIntegration.sol';
-import {IGarden} from '../interfaces/IGarden.sol';
 import {IStrategyFactory} from '../interfaces/IStrategyFactory.sol';
 import {IStrategy} from '../interfaces/IStrategy.sol';
 import {PreciseUnitMath} from '../lib/PreciseUnitMath.sol';
@@ -67,7 +65,7 @@ abstract contract BaseGarden is ERC20Upgradeable {
 
     /* ============ Modifiers ============ */
     modifier onlyContributor {
-        _validateOnlyContributor(msg.sender);
+        require(balanceOf(msg.sender) > 0, 'G01'); // Only Contributor
         _;
     }
 
@@ -75,7 +73,7 @@ abstract contract BaseGarden is ERC20Upgradeable {
      * Throws if the sender is not the protocol
      */
     modifier onlyProtocol() {
-        require(msg.sender == controller, 'Only the controller can call this');
+        require(msg.sender == controller, 'G02'); // Only controller
         _;
     }
 
@@ -83,7 +81,7 @@ abstract contract BaseGarden is ERC20Upgradeable {
      * Throws if the sender is not the garden creator
      */
     modifier onlyCreator() {
-        require(msg.sender == creator, 'Only the creator can call this');
+        require(msg.sender == creator, 'G03'); // Only creator
         _;
     }
 
@@ -92,9 +90,9 @@ abstract contract BaseGarden is ERC20Upgradeable {
      * @param _fee                     The fee paid to keeper to compensate the gas cost
      */
     modifier onlyKeeper(uint256 _fee) {
-        require(IBabController(controller).isValidKeeper(msg.sender), 'Only a keeper can call this');
+        require(IBabController(controller).isValidKeeper(msg.sender), 'G04'); // Only keeper
         // We assume that calling keeper functions should be less expensive than 1 million gas and the gas price should be lower than 1000 gwei.
-        require(_fee < MAX_KEEPER_FEE, 'Fee is too high');
+        require(_fee < MAX_KEEPER_FEE, 'G05'); // Fee is too high
         _;
     }
 
@@ -104,7 +102,7 @@ abstract contract BaseGarden is ERC20Upgradeable {
     modifier onlyStrategy() {
         require(
             strategyMapping[msg.sender] && IStrategy(msg.sender).garden() == address(this),
-            'Only a strategy of this community'
+            'G06' // Only a strategy of this garden
         );
         _;
     }
@@ -116,7 +114,7 @@ abstract contract BaseGarden is ERC20Upgradeable {
         require(
             (strategyMapping[msg.sender] && IStrategy(msg.sender).garden() == address(this)) ||
                 msg.sender == controller,
-            'Only the garden strategies or owner can call this'
+            'G07' // Only the strategy or the protocol
         );
         _;
     }
@@ -125,7 +123,7 @@ abstract contract BaseGarden is ERC20Upgradeable {
      * Throws if the garden is not active
      */
     modifier onlyActive() {
-        _validateOnlyActive();
+        require(active == true, 'G08'); // Only active garden
         _;
     }
 
@@ -133,7 +131,7 @@ abstract contract BaseGarden is ERC20Upgradeable {
      * Throws if the garden is not disabled
      */
     modifier onlyInactive() {
-        _validateOnlyInactive();
+        require(active == false, 'G09'); // Only inactive garden
         _;
     }
 
@@ -224,9 +222,9 @@ abstract contract BaseGarden is ERC20Upgradeable {
         string memory _name,
         string memory _symbol
     ) public virtual initializer {
-        require(_creator != address(0), 'Creator must not be empty');
-        require(_controller != address(0), 'Controller must not be empty');
-        require(_reserveAsset != address(0), 'Reserve asset must exist');
+        require(_creator != address(0), 'G10');
+        require(_controller != address(0), 'G11');
+        require(_reserveAsset != address(0), 'G12');
         __ERC20_init(_name, _symbol);
 
         controller = _controller;
@@ -262,9 +260,9 @@ abstract contract BaseGarden is ERC20Upgradeable {
         require(
             _strategyCooldownPeriod <= IBabController(controller).getMaxCooldownPeriod() &&
                 _strategyCooldownPeriod >= IBabController(controller).getMinCooldownPeriod(),
-            'Garden cooldown must be within the range allowed by the protocol'
+            'G13' // Garden cooldown not within range
         );
-        require(_minVotersQuorum >= TEN_PERCENT, 'You need at least 10% votes');
+        require(_minVotersQuorum >= TEN_PERCENT, 'G14'); // You need at least 10%
         minContribution = _minContribution;
         strategyCreatorProfitPercentage = _strategyCreatorProfitPercentage;
         strategyVotersProfitPercentage = _strategyVotersProfitPercentage;
@@ -292,7 +290,7 @@ abstract contract BaseGarden is ERC20Upgradeable {
      * PRIVILEGED Manager, protocol FUNCTION. When a Garden is disabled, deposits are disabled.
      */
     function setActive() external onlyProtocol {
-        require(!active, 'Garden already active');
+        require(!active, 'G15'); // Garden already active
         active = true;
     }
 
@@ -300,7 +298,7 @@ abstract contract BaseGarden is ERC20Upgradeable {
      * PRIVILEGED Manager, protocol FUNCTION. When a Garden is disabled, deposits are disabled.
      */
     function setDisabled() external onlyProtocol {
-        require(active, 'The garden must be active');
+        require(active, 'G16'); // Garden is not active
         active = false;
     }
 
@@ -333,7 +331,7 @@ abstract contract BaseGarden is ERC20Upgradeable {
         uint256 _expectedReturn,
         uint256 _minRebalanceCapital
     ) external onlyContributor onlyActive {
-        require(strategies.length < MAX_TOTAL_IDEAS, 'Reached the limit of strategies');
+        require(strategies.length < MAX_TOTAL_IDEAS, 'G17'); // reached limit of strategies
         IStrategyFactory strategyFactory =
             IStrategyFactory(IBabController(controller).getStrategyFactory(_strategyKind));
         address strategy =
@@ -391,27 +389,27 @@ abstract contract BaseGarden is ERC20Upgradeable {
     function allocateCapitalToInvestment(uint256 _capital) external onlyStrategy onlyActive {
         uint256 liquidReserveAsset = ERC20Upgradeable(reserveAsset).balanceOf(address(this));
         uint256 protocolMgmtFee = IBabController(controller).getProtocolManagementFee().preciseMul(_capital);
-        require(_capital.add(protocolMgmtFee) <= liquidReserveAsset, 'Not enough capital');
+        require(_capital.add(protocolMgmtFee) <= liquidReserveAsset, 'G18'); // not enough capital
 
         // Take protocol mgmt fee
         require(
             ERC20Upgradeable(reserveAsset).transfer(IBabController(controller).getTreasury(), protocolMgmtFee),
-            'Protocol Mgmt fee failed'
+            'G19' // failed to pay mgmt fee
         );
 
         // Send Capital to strategy
         require(
             ERC20Upgradeable(reserveAsset).transfer(msg.sender, _capital),
-            'Failed to allocate capital to the investment'
+            'G20' // fail to allocate capital to strategy
         );
     }
 
     // Any tokens (other than the target) that are sent here by mistake are recoverable by contributors
     // Exchange for WETH
     function sweep(address _token) external onlyContributor {
-        require(_token != reserveAsset, 'Token is not the reserve asset');
+        require(_token != reserveAsset, 'G21'); // token is reserve asset
         uint256 balance = ERC20Upgradeable(_token).balanceOf(address(this));
-        require(balance > 0, 'Token balance > 0');
+        require(balance > 0, 'G26'); // nothing to sweep
         ERC20Upgradeable(_token).transfer(msg.sender, balance);
     }
 
@@ -499,21 +497,9 @@ abstract contract BaseGarden is ERC20Upgradeable {
         if (_feeQuantity > 0) {
             require(
                 ERC20Upgradeable(_token).transfer(IBabController(controller).getTreasury(), _feeQuantity),
-                'Protocol fee failed'
+                'G22' // Failed to pay protocol fee
             );
         }
-    }
-
-    function _validateOnlyActive() internal view {
-        require(active == true, 'Garden must be active');
-    }
-
-    function _validateOnlyInactive() internal view {
-        require(active == false, 'Garden must be disabled');
-    }
-
-    function _validateOnlyContributor(address _caller) internal view {
-        require(balanceOf(_caller) > 0, 'Only participant can withdraw');
     }
 
     /**
@@ -522,13 +508,13 @@ abstract contract BaseGarden is ERC20Upgradeable {
      * @param _fee                The fee paid to keeper to compensate the gas cost
      */
     function _payKeeper(address payable _keeper, uint256 _fee) internal {
-        require(IBabController(controller).isValidKeeper(_keeper), 'Only a keeper can call this');
-        require(ERC20Upgradeable(reserveAsset).balanceOf(address(this)) >= _fee, 'Not enough WETH for gas subsidy');
+        require(IBabController(controller).isValidKeeper(_keeper), 'G23'); // Only keeper
+        require(ERC20Upgradeable(reserveAsset).balanceOf(address(this)) >= _fee, 'G24'); // not enough weth for gas subsidy
         // TODO: This assumes reserve asset is WETH
         // TODO: This assume garden have enought WETH
         // Pay Keeper in WETH
         if (_fee > 0) {
-            require(ERC20Upgradeable(reserveAsset).transfer(_keeper, _fee), 'Not enough WETH for gas subsidy');
+            require(ERC20Upgradeable(reserveAsset).transfer(_keeper, _fee), 'G25'); // not enough weth for gas subsidy
         }
     }
 
@@ -540,11 +526,7 @@ abstract contract BaseGarden is ERC20Upgradeable {
     ) internal view override {
         require(
             from == address(0) || to == address(0) || IBabController(controller).gardenTokensTransfersEnabled(),
-            'Garden token transfers are disabled'
+            'G26' // garden transfers are disabled
         );
-    }
-
-    function abs(int256 x) private pure returns (int256) {
-        return x >= 0 ? x : -x;
     }
 }
