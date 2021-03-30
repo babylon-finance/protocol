@@ -603,7 +603,7 @@ contract Strategy is ReentrancyGuard, Initializable {
 
     function _transferIdeaRewards() internal {
         address reserveAsset = garden.getReserveAsset();
-        int256 reserveAssetDelta = 0;
+        int256 reserveAssetDelta = capitalReturned.toInt256();
 
         // Idea returns were positive
         if (capitalReturned > capitalAllocated) {
@@ -620,61 +620,10 @@ contract Strategy is ReentrancyGuard, Initializable {
                 'Protocol perf fee failed'
             );
             reserveAssetDelta.add(int256(-protocolProfits));
-
-            // Send weth rewards to the strategist
-            uint256 strategistProfits = garden.strategyCreatorProfitPercentage().preciseMul(profits);
-            // Creator Bonus
-            if (strategist == garden.creator()) {
-                strategistProfits = strategistProfits.mul(15).div(100);
-            }
-            require(
-                ERC20(reserveAsset).transferFrom(address(this), strategist, strategistProfits),
-                'Ideator perf fee failed'
-            );
-            reserveAssetDelta.add(int256(-strategistProfits));
-
-            // Send weth rewards to voters that voted in favor
-            uint256 votersProfits = garden.strategyVotersProfitPercentage().preciseMul(profits);
-            // TODO: Pull rewards
-            for (uint256 i = 0; i < voters.length; i++) {
-                int256 voterWeight = votes[voters[i]];
-                if (voterWeight > 0) {
-                    uint256 voterProfits = votersProfits.mul(voterWeight.toUint256()).div(totalVotes.toUint256());
-                    if (strategist == garden.creator()) {
-                        // Creator Bonus
-                        voterProfits = voterProfits.mul(15).div(100);
-                    }
-                    require(
-                        ERC20(reserveAsset).transferFrom(address(this), voters[i], voterProfits),
-                        'Voter perf fee failed'
-                    );
-                }
-            }
-            reserveAssetDelta.add(int256(-votersProfits));
         } else {
             // Returns were negative
-            uint256 stakeToSlash = stake;
-            if (capitalReturned.add(stake) > capitalAllocated) {
-                stakeToSlash = capitalReturned.add(stake).sub(capitalAllocated);
-            }
-            // We slash and add to the garden the stake from the creator
-            uint256 votersRewards = garden.strategyVotersProfitPercentage().preciseMul(stakeToSlash);
-            // Send weth rewards to voters that voted against
-            // TODO: Pull rewards
-            for (uint256 i = 0; i < voters.length; i++) {
-                int256 voterWeight = votes[voters[i]];
-                if (voterWeight < 0) {
-                    require(
-                        ERC20(reserveAsset).transferFrom(
-                            address(this),
-                            voters[i],
-                            votersRewards.mul(voterWeight.toUint256()).div(totalVotes.toUint256())
-                        ),
-                        'Voter perf fee failed'
-                    );
-                }
-            }
-            reserveAssetDelta.add(int256(-stakeToSlash));
+            // TODO: Transform BABL to reserve asset and add
+            // reserveAssetDelta.add(int256(stake));
         }
         // Return the balance back to the garden
         require(
