@@ -52,7 +52,6 @@ contract RollingGarden is ReentrancyGuard, BaseGarden {
         // When withdrawaling, quantity of reserve asset sent to withdrawaler
         uint256 gardenTokenQuantity; // When issuing, quantity of Garden tokens minted to mintee
         // When withdrawaling, quantity of Garden tokens withdrawaled
-        uint256 previousGardenTokenSupply; // Garden token supply prior to deposit/withdrawal action
         uint256 newGardenTokenSupply; // Garden token supply after deposit/withdrawal action
         uint256 newReservePositionBalance; // Garden token reserve asset position balance after deposit/withdrawal
     }
@@ -198,7 +197,7 @@ contract RollingGarden is ReentrancyGuard, BaseGarden {
 
         // Check that total supply is greater than min supply needed for issuance
         // Note: A min supply amount is needed to avoid division by 0 when Garden token supply is 0
-        require(depositInfo.previousGardenTokenSupply >= minGardenTokenSupply, 'R12'); // ETH does not match
+        require(totalSupply() >= minGardenTokenSupply, 'R12'); // ETH does not match
 
         require(depositInfo.gardenTokenQuantity >= _minGardenTokenReceiveQuantity, 'R13'); // Must be > min Garden token
 
@@ -517,7 +516,6 @@ contract RollingGarden is ReentrancyGuard, BaseGarden {
 
     function _createIssuanceInfo(uint256 _reserveAssetQuantity) internal view returns (ActionInfo memory) {
         ActionInfo memory depositInfo;
-        depositInfo.previousGardenTokenSupply = totalSupply();
         depositInfo.preFeeReserveQuantity = _reserveAssetQuantity;
 
         (depositInfo.protocolFees, depositInfo.netFlowQuantity) = _getFees(depositInfo.preFeeReserveQuantity, true);
@@ -525,7 +523,7 @@ contract RollingGarden is ReentrancyGuard, BaseGarden {
         depositInfo.gardenTokenQuantity = depositInfo.netFlowQuantity;
 
         // Calculate inflation and new position multiplier. Note: Round inflation up in order to round position multiplier down
-        depositInfo.newGardenTokenSupply = depositInfo.gardenTokenQuantity.add(depositInfo.previousGardenTokenSupply);
+        depositInfo.newGardenTokenSupply = depositInfo.gardenTokenQuantity.add(totalSupply());
 
         depositInfo.newReservePositionBalance = principal.add(depositInfo.netFlowQuantity);
 
@@ -544,9 +542,7 @@ contract RollingGarden is ReentrancyGuard, BaseGarden {
             false
         );
 
-        withdrawalInfo.previousGardenTokenSupply = totalSupply();
-
-        withdrawalInfo.newGardenTokenSupply = withdrawalInfo.previousGardenTokenSupply.sub(_gardenTokenQuantity);
+        withdrawalInfo.newGardenTokenSupply = totalSupply().sub(_gardenTokenQuantity);
 
         uint256 outflow = withdrawalInfo.netFlowQuantity.add(withdrawalInfo.protocolFees);
 
