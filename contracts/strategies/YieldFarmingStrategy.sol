@@ -43,14 +43,13 @@ contract YieldFarmingStrategy is Strategy {
      * Sets integration data for the long strategy
      *
      * @param _yieldVault                   Yield vault to enter
-     * @param _vaultAsset                   Yield vault asset to acquire
      */
-    function setYieldFarmingData(address _yieldVault, address _vaultAsset) public onlyIdeator {
+    function setYieldFarmingData(address _yieldVault) public onlyIdeator {
         kind = 2;
         require(IPassiveIntegration(integration).isInvestment(_yieldVault), 'Must be a valid yield vault');
         require(!dataSet, 'Data is set already');
         yieldVault = _yieldVault;
-        vaultAsset = _vaultAsset;
+        vaultAsset = IPassiveIntegration(integration).getInvestmentAsset(_yieldVault);
         dataSet = true;
     }
 
@@ -58,7 +57,9 @@ contract YieldFarmingStrategy is Strategy {
      * Enters the long strategy
      */
     function _enterStrategy(uint256 _capital) internal override {
-        _trade(garden.getReserveAsset(), _capital, vaultAsset);
+        if (vaultAsset != garden.getReserveAsset()) {
+          _trade(garden.getReserveAsset(), _capital, vaultAsset);
+        }
         uint256 exactAmount = IPassiveIntegration(integration).getExpectedShares(yieldVault, _capital);
         uint256 minAmountExpected = exactAmount.sub(exactAmount.preciseMul(SLIPPAGE_ALLOWED));
         IPassiveIntegration(integration).enterInvestment(
@@ -73,15 +74,17 @@ contract YieldFarmingStrategy is Strategy {
      * Exits the long strategy.
      */
     function _exitStrategy() internal override {
-        uint256 amount = IERC20(vaultAsset).balanceOf(address(this));
+        uint256 amountVault = IERC20(yieldVault).balanceOf(address(this));
         IPassiveIntegration(integration).exitInvestment(
             yieldVault,
-            amount,
+            amountVault,
             vaultAsset,
             IPassiveIntegration(integration).getPricePerShare(yieldVault).mul(
-                amount.sub(amount.preciseMul(SLIPPAGE_ALLOWED))
+                amountVault.sub(amountVault.preciseMul(SLIPPAGE_ALLOWED))
             )
         );
-        _trade(vaultAsset, IERC20(vaultAsset).balanceOf(address(this)), garden.getReserveAsset());
+        if (vaultAsset != garden.getReserveAsset()) {
+          _trade(vaultAsset, IERC20(vaultAsset).balanceOf(address(this)), garden.getReserveAsset());
+        }
     }
 }

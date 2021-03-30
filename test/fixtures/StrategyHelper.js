@@ -58,12 +58,11 @@ async function createPoolStrategy(garden, integration, signer, params = DEFAULT_
 }
 
 async function createYieldStrategy(garden, integration, signer, params = DEFAULT_STRATEGY_PARAMS, yieldParams) {
-  await garden.connect(signer).addStrategy(1, integration, ...params);
+  await garden.connect(signer).addStrategy(2, integration, ...params);
   const strategies = await garden.getStrategies();
   const lastStrategyAddr = strategies[strategies.length - 1];
 
   const passedYieldParams = yieldParams || [addresses.yearn.vaults.ydai];
-
   const strategy = await ethers.getContractAt('YieldFarmingStrategy', lastStrategyAddr);
   await strategy.connect(signer).setYieldFarmingData(...passedYieldParams, {
     gasPrice: 0,

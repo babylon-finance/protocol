@@ -57,16 +57,12 @@ describe('YearnVaultIntegrationTest', function () {
       //       gasPrice: 0
       //     })
       // );
-      await garden1.connect(signer3).deposit(ethers.utils.parseEther('1'), 1, signer3.getAddress(), {
-        value: ethers.utils.parseEther('1'),
-      });
-      const amountToDeposit = ethers.utils.parseEther('1000');
+      const amountToDeposit = ethers.utils.parseEther('1');
       const sharePrice = await yearnDaiVault.getPricePerFullShare();
-      const expectedYShares = amountToDeposit.div(sharePrice);
-
-      const expectedShares2 = await yearnVaultIntegration.getExpectedShares(yearnDaiVault.address, amountToDeposit);
-      expect(expectedShares2).to.equal(expectedYShares);
+      const expectedShares = await yearnVaultIntegration.getExpectedShares(yearnDaiVault.address, amountToDeposit);
+      const vaultAsset = await yearnVaultIntegration.getInvestmentAsset(yearnDaiVault.address);
       expect(await yearnVaultIntegration.getPricePerShare(yearnDaiVault.address)).to.equal(sharePrice);
+      expect(vaultAsset).to.equal(addresses.tokens.DAI);
 
       const strategyContract = await createStrategy(
         2,
@@ -77,13 +73,13 @@ describe('YearnVaultIntegrationTest', function () {
       );
 
       await executeStrategy(garden1, strategyContract, 0);
-      console.log('price', ethers.utils.formatEther(sharePrice));
-      console.log('yshares to receive', expectedYShares.toString());
-      expect(await yearnDaiVault.balanceOf(garden1.address)).to.be.gte(expectedYShares);
+      // console.log('price', ethers.utils.formatEther(sharePrice));
+      // console.log('yshares to receive', expectedShares.toString());
+      expect(await yearnDaiVault.balanceOf(strategyContract.address)).to.be.gte(expectedShares);
 
       await finalizeStrategy(garden1, strategyContract, 0);
-      expect(await yearnDaiVault.balanceOf(garden1.address)).to.equal(0);
-      expect(await daiToken.balanceOf(garden1.address)).to.equal(0);
+      expect(await yearnDaiVault.balanceOf(strategyContract.address)).to.equal(0);
+      expect(await daiToken.balanceOf(strategyContract.address)).to.equal(0);
     });
   });
 });
