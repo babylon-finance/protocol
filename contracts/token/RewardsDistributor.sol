@@ -141,7 +141,9 @@ contract RewardsDistributor is Ownable {
         if (numQuarters <= 1) {
             uint256 counterOfPower = 0;
             uint256 strategyPower =
-                IStrategy(_strategy).capitalAllocated().mul(IStrategy(_strategy).exitedAt().sub(IStrategy(_strategy).executedAt()));
+                IStrategy(_strategy).capitalAllocated().mul(
+                    IStrategy(_strategy).exitedAt().sub(IStrategy(_strategy).executedAt())
+                );
             while (principalPerTimestamp[counterOfTime].time < IStrategy(_strategy).exitedAt()) {
                 counterOfPrincipal = principalPerTimestamp[counterOfTime].principal;
                 indexCounter = principalPerTimestamp[counterOfTime].timeListPointer;
@@ -188,7 +190,8 @@ contract RewardsDistributor is Ownable {
                     );
                     strategyDuration = counterSlotLimit.sub(IStrategy(_strategy).executedAt());
                 } else if (
-                    IStrategy(_strategy).executedAt() < counterSlotStarting && counterSlotLimit < IStrategy(_strategy).exitedAt()
+                    IStrategy(_strategy).executedAt() < counterSlotStarting &&
+                    counterSlotLimit < IStrategy(_strategy).exitedAt()
                 ) {
                     // If we are in an intermediate quarter
                     strategyPower[i] = IStrategy(_strategy).capitalAllocated().mul(
