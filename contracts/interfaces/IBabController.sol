@@ -84,6 +84,8 @@ interface IBabController {
 
     function getReservePool() external view returns (address);
 
+    function getRewardsDistributor() external view returns (address);
+    
     function getGardenValuer() external view returns (address);
 
     function getTreasury() external view returns (address);

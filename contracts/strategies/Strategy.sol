@@ -33,6 +33,7 @@ import {IBabController} from '../interfaces/IBabController.sol';
 import {IGarden} from '../interfaces/IGarden.sol';
 import {ITradeIntegration} from '../interfaces/ITradeIntegration.sol';
 import {IPriceOracle} from '../interfaces/IPriceOracle.sol';
+import {IRewardsDistributor} from '../interfaces/IRewardsDistributor.sol';
 
 /**
  * @title Strategy
@@ -298,10 +299,10 @@ contract Strategy is ReentrancyGuard, Initializable {
         executedAt = block.timestamp;
         garden.payKeeper(msg.sender, _fee);
 
-        // // Raul Review
-        // Añadir al protocol principal
-        // IRewardsDistributor rewardsDistributor = IRewardsDistributor(IBabController(controller).getRewardsDistributor());
-        // rewardsDistributor.addProtocolPrincipalAndDuration(_capital);
+        // Raul Review
+        // Add to Rewards Distributor an update of the Protocol Principal BABL Mining Rewards calculations
+        IRewardsDistributor rewardsDistributor = IRewardsDistributor(IBabController(controller).getRewardsDistributor());
+        rewardsDistributor.addProtocolPrincipal(_capital);
     }
 
     /**
@@ -329,13 +330,20 @@ contract Strategy is ReentrancyGuard, Initializable {
         // Transfer rewards and update positions
         _transferIdeaRewards();
 
-        // // Raul Review
-        // TBD Calculate
-        // Utilizar profit for discounting if negative. capitalReturned - capitalAllocated
+        // Raul Review
+        // Use profit for discounting if negative. capitalReturned - capitalAllocated
+        IRewardsDistributor rewardsDistributor = IRewardsDistributor(IBabController(controller).getRewardsDistributor());
+  
         // strategyRewards = calculate using supply schedule
-        // RewardsDistributor.getStrategyRewards(address(this));
+        strategyRewards = rewardsDistributor.getStrategyRewards(address(this));
+        
+        if (capitalReturned.sub(capitalAllocated) < 0) { // Negative profit
+            strategyRewards = strategyRewards.add(strategyRewards.mul(capitalReturned.sub(capitalAllocated)));
+        }
 
         // Substract rewardsDistributor.substractProtocolPrincipalAndDuration(_capital);
+        rewardsDistributor.substractProtocolPrincipal(capitalAllocated); // TODO CHECK _capital vs. capitalAllocated
+
 
         // Moves strategy to finalized
         IGarden(garden).moveStrategyToFinalized(

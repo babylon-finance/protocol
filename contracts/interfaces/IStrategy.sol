@@ -24,6 +24,7 @@ pragma solidity 0.7.4;
  * Interface for Investment Idea
  */
 interface IStrategy {
+    
     function initialize(
         address _strategist,
         address _garden,
@@ -127,6 +128,8 @@ interface IStrategy {
     function exitedAt() external pure returns (uint256);
 
     function stake() external pure returns (uint256);
+
+    function strategyRewards() external pure returns (uint96);
 
     function maxCapitalRequested() external pure returns (uint256);
 

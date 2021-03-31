@@ -350,7 +350,7 @@ contract BabController is Ownable {
     /**
      * PRIVILEGED GOVERNANCE FUNCTION. Allows governance to edit the protocol fee recipient
      *
-     * @param _newTreasury      Address of the new protocol fee recipient
+     * @param _newRewardsDistributor      Address of the new protocol fee recipient
      */
     function editRewardsDistributor(address _newRewardsDistributor) external onlyOwner {
         require(_newRewardsDistributor != address(0), 'Address must not be 0');
@@ -508,6 +508,10 @@ contract BabController is Ownable {
         return protocolWithdrawalGardenTokenFee;
     }
 
+    function getRewardsDistributor() external view returns (address) {
+        return rewardsDistributor;
+    }
+    
     function getTreasury() external view returns (address) {
         return treasury;
     }

@@ -30,6 +30,7 @@ import {IBabController} from '../interfaces/IBabController.sol';
 import {IReservePool} from '../interfaces/IReservePool.sol';
 import {IPriceOracle} from '../interfaces/IPriceOracle.sol';
 import {IStrategy} from '../interfaces/IStrategy.sol';
+import {IRewardsDistributor} from '../interfaces/IRewardsDistributor.sol';
 import {BaseGarden} from './BaseGarden.sol';
 
 /**
@@ -333,15 +334,18 @@ contract RollingGarden is ReentrancyGuard, BaseGarden {
      */
     // Raul Review
     function claimReturns(address[] calldata _finalizedStrategies) external nonReentrant onlyContributor {
-        (uint256 totalProfits, uint256 bablRewards) = _getProfitsAndBabl(_finalizedStrategies);
+        Contributor memory contributor = contributors[msg.sender];
+        (uint256 totalProfits, uint256 bablRewards) = this._getProfitsAndBabl(_finalizedStrategies);
         if (totalProfits > 0 && address(this).balance > 0) {
             // Send eth
             (bool sent, ) = msg.sender.call{value: totalProfits}('');
             require(sent, 'Failed to send Ether');
             contributor.claimedAt = block.timestamp;
         }
-        if (bablRewards) {
+        if (bablRewards > 0) {
             // Raul RewardDistributor.sendTokensToContributor(msg.sender,  bablRewards);
+            IRewardsDistributor rewardsDistributor = IRewardsDistributor(IBabController(controller).getRewardsDistributor());
+            rewardsDistributor.sendTokensToContributor(msg.sender, bablRewards);
         }
     }
 
@@ -355,6 +359,7 @@ contract RollingGarden is ReentrancyGuard, BaseGarden {
         Contributor memory contributor = contributors[msg.sender];
         require(contributor.lastDepositAt > contributor.claimedAt, 'Nothing new to claim');
         uint256 totalProfits = 0;
+        uint96 bablTotalRewards = 0;
         for (uint256 i = 0; i < _finalizedStrategies.length; i++) {
             IStrategy strategy = IStrategy(_finalizedStrategies[i]);
             // Positive strategies not yet claimed
@@ -379,7 +384,8 @@ contract RollingGarden is ReentrancyGuard, BaseGarden {
                 uint256 userPrincipal = contributor.gardenAverageOwnership.mul(strategy.capitalAllocated()); // pending
                 uint256 strategyRewards = strategy.strategyRewards();
 
-                uint256 bablRewards = 0;
+                uint96 bablRewards = 0;
+
                 if (isStrategist) {
                     bablRewards = bablRewards.add(strategyRewards.preciseMul(8e16));
                 }
@@ -397,10 +403,11 @@ contract RollingGarden is ReentrancyGuard, BaseGarden {
                     bablRewards = bablRewards.add(bablRewards.preciseMul(creatorBonus));
                 }
 
-                contributor[claimedBABL] = contributor[claimedBABL].add(bablRewards);
+                contributors.claimedBABL = contributors.claimedBABL.add(bablRewards);
+                bablTotalRewards = bablTotalRewards.add(bablRewards);
             }
         }
-        return (totalProfits, bablRewards);
+        return (totalProfits, bablTotalRewards);
     }
 
     /**

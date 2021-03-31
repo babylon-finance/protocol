@@ -17,20 +17,52 @@
 
 pragma solidity 0.7.4;
 
+import {IRewardsSupplySchedule} from './IRewardsSupplySchedule.sol';
+
+/**
+ * @title IRewardsDistributor
+ * @author Babylon Finance
+ *
+ * Interface for the distribute rewards of the BABL Mining Program.
+ */
+
 interface IRewardsDistributor {
-    // Structs
-    struct DistributionData {
-        address destination;
-        uint256 amount;
+    
+    // Structs 
+    struct PrincipalPerTimestamp { 
+        uint256 principal;
+        uint256 time;
+        uint256 timeListPointer; 
     }
 
-    // Views
-    function authority() external view returns (address);
+    function protocolPrincipal() external pure returns (uint256);
 
-    function distributions(uint256 index) external view returns (address destination, uint256 amount); // DistributionData
+    function protocolDuration() external pure returns (uint256);
 
-    function distributionsLength() external view returns (uint256);
+    function timeList() external pure returns (uint256[] memory);
 
-    // Mutative Functions
-    function distributeRewards(uint256 amount) external returns (bool);
+    function getCheckpoints() external pure returns (uint256);
+
+    function START_TIME() external pure returns (uint256);
+    
+    function addProtocolPrincipal(uint256 _capital) external;
+    
+    function substractProtocolPrincipal(uint256 _capital) external;
+
+    function getProtocolPrincipalByTimestamp(uint256 _timestamp) external view returns(uint256);
+
+    function getProtocolDurationByTimestamp(uint256 _timestamp) external view returns(uint256);
+
+    function getStrategyRewards(address _strategy) external returns (uint96);
+
+    function sendTokensToContributor(address _to, uint256 _amount) external;
+
+    function setNewSupplyScheduler(IRewardsSupplySchedule _newSupply) external ;
+    
+    function getEpochRewards(uint256 epochs) external view returns (uint96[] memory);
+
+    function getRewardsWindow(uint256 _from, uint256 _to) external view returns (uint256,uint256,uint256);
+
+    function getSupplyForPeriod(uint256 _from, uint256 _to) external view returns (uint96[] memory);
+
 }
