@@ -389,7 +389,7 @@ contract RollingGarden is ReentrancyGuard, BaseGarden {
                 // Give out BABL
                 uint256 creatorBonus = msg.sender == creator ? CREATOR_BONUS : 0;
                 bool isStrategist = msg.sender == strategy.strategist();
-                bool isVoter =   strategy.getUserVotes(msg.sender) != 0;
+                bool isVoter = strategy.getUserVotes(msg.sender) != 0;
                 uint256 totalAbsoluteVotes = strategy.absoluteTotalVotes();
                 uint256 userPrincipal = contributor.gardenAverageOwnership.mul(strategy.capitalAllocated()); // pending
                 uint256 strategyRewards = strategy.strategyRewards();
@@ -406,9 +406,10 @@ contract RollingGarden is ReentrancyGuard, BaseGarden {
                 // Get proportional voter (stewards) rewards in case the contributor was also a steward of the strategy
                 if (isVoter) {
                     bablRewards = bablRewards.add(
-                        strategyRewards.preciseMul(BABL_STEWARD_SHARE).mul(uint256(strategy.getUserVotes(msg.sender))).div(
-                            totalAbsoluteVotes
-                        )
+                        strategyRewards
+                            .preciseMul(BABL_STEWARD_SHARE)
+                            .mul(uint256(strategy.getUserVotes(msg.sender)))
+                            .div(totalAbsoluteVotes)
                     );
                     contributorProfits = contributorProfits.add(
                         totalProfits
