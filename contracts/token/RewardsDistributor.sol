@@ -129,12 +129,11 @@ contract RewardsDistributor is Ownable {
     */
 
     function getStrategyRewards(address _strategy) public onlyOwner returns (uint96) {
-        IStrategy strategyToCheck = IStrategy(_strategy);
         (uint256 numQuarters, uint256 startingQuarter, uint256 endingQuarter) =
-            getRewardsWindow(strategyToCheck.executedAt(), strategyToCheck.exitedAt());
+            getRewardsWindow(IStrategy(_strategy).executedAt(), IStrategy(_strategy).exitedAt());
         uint96[] memory quarters = new uint96[](numQuarters); // Array to allocate the corresponding BABL rewards per quarter
         uint96 rewards = 0; // Total Strategy Rewards
-        uint256 counterOfTime = strategyToCheck.executedAt(); // Timestamp counter to move along the Protocol Principal changes during the strategy duration
+        uint256 counterOfTime = IStrategy(_strategy).executedAt(); // Timestamp counter to move along the Protocol Principal changes during the strategy duration
         uint256 indexCounter = 0; // Counter to iterate over the timeList of timestamps that will be used to iterate the mapping
         uint256 counterOfPrincipal = 0; // Counter to calculate the Principal of the Protocol in the period of the strategy
         uint256 endOfSlotTime = 0;
@@ -142,8 +141,8 @@ contract RewardsDistributor is Ownable {
         if (numQuarters <= 1) {
             uint256 counterOfPower = 0;
             uint256 strategyPower =
-                strategyToCheck.capitalAllocated().mul(strategyToCheck.exitedAt().sub(strategyToCheck.executedAt()));
-            while (principalPerTimestamp[counterOfTime].time < strategyToCheck.exitedAt()) {
+                IStrategy(_strategy).capitalAllocated().mul(IStrategy(_strategy).exitedAt().sub(IStrategy(_strategy).executedAt()));
+            while (principalPerTimestamp[counterOfTime].time < IStrategy(_strategy).exitedAt()) {
                 counterOfPrincipal = principalPerTimestamp[counterOfTime].principal;
                 indexCounter = principalPerTimestamp[counterOfTime].timeListPointer;
                 indexCounter++;
@@ -159,7 +158,7 @@ contract RewardsDistributor is Ownable {
             quarters[0] = Safe3296.safe96(tokenSupplyPerQuarter(startingQuarter.add(1)), 'overflow 96 bits');
             uint256 powerRatio = strategyPower.div(counterOfPower); // Strategy Power vs. Protocol Power during the strategy time (not the epoch)
             uint256 percentageOfQuarter =
-                strategyToCheck.exitedAt().sub(strategyToCheck.executedAt()).div(EPOCH_DURATION); // % of time within the epoch
+                IStrategy(_strategy).exitedAt().sub(IStrategy(_strategy).executedAt()).div(EPOCH_DURATION); // % of time within the epoch
             rewards = Safe3296.safe96(
                 uint256(quarters[0]).mul(powerRatio).mul(percentageOfQuarter),
                 'overflow 96 bits'
@@ -182,31 +181,31 @@ contract RewardsDistributor is Ownable {
                 uint256 counterSlotLimit = counterEpoch * EPOCH_DURATION; // Initialization timestamp of the end of the slot
                 uint256 counterSlotStarting = counterSlotLimit.sub(EPOCH_DURATION); // Initialization timestamp of the beginning of the slot
                 uint256 strategyDuration = 0;
-                if (strategyToCheck.executedAt().add(EPOCH_DURATION) < counterSlotLimit) {
+                if (IStrategy(_strategy).executedAt().add(EPOCH_DURATION) < counterSlotLimit) {
                     // We are in the first epoch of the strategy
-                    strategyPower[i] = strategyToCheck.capitalAllocated().mul(
-                        counterSlotLimit.sub(strategyToCheck.executedAt())
+                    strategyPower[i] = IStrategy(_strategy).capitalAllocated().mul(
+                        counterSlotLimit.sub(IStrategy(_strategy).executedAt())
                     );
-                    strategyDuration = counterSlotLimit.sub(strategyToCheck.executedAt());
+                    strategyDuration = counterSlotLimit.sub(IStrategy(_strategy).executedAt());
                 } else if (
-                    strategyToCheck.executedAt() < counterSlotStarting && counterSlotLimit < strategyToCheck.exitedAt()
+                    IStrategy(_strategy).executedAt() < counterSlotStarting && counterSlotLimit < IStrategy(_strategy).exitedAt()
                 ) {
                     // If we are in an intermediate quarter
-                    strategyPower[i] = strategyToCheck.capitalAllocated().mul(
+                    strategyPower[i] = IStrategy(_strategy).capitalAllocated().mul(
                         counterSlotLimit.sub(counterSlotStarting)
                     );
                     strategyDuration = EPOCH_DURATION; // The strategy is ongoing during a complete epoch
                 } else {
                     // It is the last slot
-                    strategyPower[i] = strategyToCheck.capitalAllocated().mul(
-                        strategyToCheck.exitedAt().sub(counterSlotStarting)
+                    strategyPower[i] = IStrategy(_strategy).capitalAllocated().mul(
+                        IStrategy(_strategy).exitedAt().sub(counterSlotStarting)
                     );
-                    strategyDuration = strategyToCheck.exitedAt().sub(counterSlotStarting);
+                    strategyDuration = IStrategy(_strategy).exitedAt().sub(counterSlotStarting);
                 }
 
                 while (
                     principalPerTimestamp[counterOfTime].time < counterSlotLimit &&
-                    principalPerTimestamp[counterOfTime].time < strategyToCheck.exitedAt()
+                    principalPerTimestamp[counterOfTime].time < IStrategy(_strategy).exitedAt()
                 ) {
                     // Recurring calculations within the same Epoch per all the slots where there was a new or finished strategy
                     counterOfPrincipal = principalPerTimestamp[counterOfTime].principal; // Check principal amount in specific time stamp

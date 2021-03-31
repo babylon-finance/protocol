@@ -368,16 +368,15 @@ contract RollingGarden is ReentrancyGuard, BaseGarden {
         onlyContributor
         returns (uint256, uint256)
     {
-        Contributor memory contributor = contributors[msg.sender];
-        require(contributor.lastDepositAt > contributor.claimedAt, 'Nothing new to claim');
-        uint256 totalProfits = 0;
+        require(contributors[msg.sender].lastDepositAt > contributors[msg.sender].claimedAt, 'Nothing new to claim');
         uint256 contributorProfits = 0;
         uint256 bablTotalRewards = 0;
         for (uint256 i = 0; i < _finalizedStrategies.length; i++) {
             IStrategy strategy = IStrategy(_finalizedStrategies[i]);
+            uint256 totalProfits = 0; // Total Profits of each finalized strategy
             // Positive strategies not yet claimed
             if (
-                strategy.exitedAt() > contributor.claimedAt && strategy.enteredAt() >= contributor.initialDepositAt // TODO: may need to remove because of rebalance
+                strategy.exitedAt() > contributors[msg.sender].claimedAt && strategy.enteredAt() >= contributors[msg.sender].initialDepositAt // TODO: may need to remove because of rebalance
             ) {
                 // If strategy returned money we give out the profits
                 if (strategy.capitalReturned() > strategy.capitalAllocated()) {
@@ -390,8 +389,7 @@ contract RollingGarden is ReentrancyGuard, BaseGarden {
                 uint256 creatorBonus = msg.sender == creator ? CREATOR_BONUS : 0;
                 bool isStrategist = msg.sender == strategy.strategist();
                 bool isVoter = strategy.getUserVotes(msg.sender) != 0;
-                uint256 totalAbsoluteVotes = strategy.absoluteTotalVotes();
-                uint256 userPrincipal = contributor.gardenAverageOwnership.mul(strategy.capitalAllocated()); // pending
+                // pending userPrincipal improvement to have more accurate calculations
                 uint256 strategyRewards = strategy.strategyRewards();
                 uint256 bablRewards = 0;
 
@@ -409,23 +407,23 @@ contract RollingGarden is ReentrancyGuard, BaseGarden {
                         strategyRewards
                             .preciseMul(BABL_STEWARD_SHARE)
                             .mul(uint256(strategy.getUserVotes(msg.sender)))
-                            .div(totalAbsoluteVotes)
+                            .div(strategy.absoluteTotalVotes())
                     );
                     contributorProfits = contributorProfits.add(
                         totalProfits
                             .preciseMul(PROFIT_STEWARD_SHARE)
                             .div(strategy.capitalAllocated())
                             .mul(uint256(strategy.getUserVotes(msg.sender)))
-                            .div(totalAbsoluteVotes)
+                            .div(strategy.absoluteTotalVotes())
                     );
                 }
 
                 // Get proportional LP rewards as every active contributor of the garden is a LP of their strategies
                 bablRewards = bablRewards.add(
-                    strategyRewards.preciseMul(BABL_LP_SHARE).mul(userPrincipal).div(strategy.capitalAllocated())
+                    strategyRewards.preciseMul(BABL_LP_SHARE).mul(contributors[msg.sender].gardenAverageOwnership)
                 );
                 contributorProfits = contributorProfits.add(
-                    contributor.gardenAverageOwnership.mul(totalProfits).preciseMul(PROFIT_LP_SHARE).div(
+                    contributors[msg.sender].gardenAverageOwnership.mul(totalProfits).preciseMul(PROFIT_LP_SHARE).div(
                         strategy.capitalAllocated()
                     )
                 );
@@ -435,7 +433,7 @@ contract RollingGarden is ReentrancyGuard, BaseGarden {
                     bablRewards = bablRewards.add(bablRewards.preciseMul(creatorBonus));
                 }
 
-                contributor.claimedBABL = contributor.claimedBABL.add(bablRewards);
+                contributors[msg.sender].claimedBABL = contributors[msg.sender].claimedBABL.add(bablRewards);
                 bablTotalRewards = bablTotalRewards.add(bablRewards);
             }
         }
