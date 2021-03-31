@@ -99,6 +99,8 @@ interface IStrategy {
 
     function getPositions() external view returns (address[] memory);
 
+    function getUserVotes (address _address) external view returns(int256);
+
     function hasSufficientBalance(address _component, uint256 _balance) external view returns (bool);
 
     function getPositionBalance(address _component) external view returns (int256);
@@ -146,7 +148,7 @@ interface IStrategy {
 
     function totalVotes() external pure returns (int256);
 
-    function absoluteTotalVotes() external pure returns (int256);
+    function absoluteTotalVotes() external pure returns (uint256);
 
     function totalVoters() external pure returns (int256);
 

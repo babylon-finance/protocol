@@ -542,6 +542,9 @@ contract Strategy is ReentrancyGuard, Initializable {
         return (address(this), active, dataSet, finalized, executedAt, exitedAt);
     }
 
+    function getUserVotes (address _address) external view returns(int256) {
+        return votes[_address];
+    }
     /* ============ Internal Functions ============ */
 
     /**

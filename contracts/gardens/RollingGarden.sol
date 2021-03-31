@@ -32,6 +32,7 @@ import {IPriceOracle} from '../interfaces/IPriceOracle.sol';
 import {IStrategy} from '../interfaces/IStrategy.sol';
 import {IRewardsDistributor} from '../interfaces/IRewardsDistributor.sol';
 import {BaseGarden} from './BaseGarden.sol';
+import {Safe3296} from '../lib/Safe3296.sol';
 
 /**
  * @title RollingGarden
@@ -364,7 +365,6 @@ contract RollingGarden is ReentrancyGuard, BaseGarden {
     // Raul Review
     function _getProfitsAndBabl(address[] calldata _finalizedStrategies)
         external
-        view
         onlyContributor
         returns (uint256, uint256)
     {
@@ -372,7 +372,7 @@ contract RollingGarden is ReentrancyGuard, BaseGarden {
         require(contributor.lastDepositAt > contributor.claimedAt, 'Nothing new to claim');
         uint256 totalProfits = 0;
         uint256 contributorProfits = 0;
-        uint96 bablTotalRewards = 0;
+        uint256 bablTotalRewards = 0;
         for (uint256 i = 0; i < _finalizedStrategies.length; i++) {
             IStrategy strategy = IStrategy(_finalizedStrategies[i]);
             // Positive strategies not yet claimed
@@ -389,11 +389,11 @@ contract RollingGarden is ReentrancyGuard, BaseGarden {
                 // Give out BABL
                 uint256 creatorBonus = msg.sender == creator ? CREATOR_BONUS : 0;
                 bool isStrategist = msg.sender == strategy.strategist();
-                bool isVoter = strategy.votes[msg.sender] != 0;
+                bool isVoter =   strategy.getUserVotes(msg.sender) != 0;
                 uint256 totalAbsoluteVotes = strategy.absoluteTotalVotes();
                 uint256 userPrincipal = contributor.gardenAverageOwnership.mul(strategy.capitalAllocated()); // pending
                 uint256 strategyRewards = strategy.strategyRewards();
-                uint96 bablRewards = 0;
+                uint256 bablRewards = 0;
 
                 // Get strategist rewards in case the contributor is also the strategist of the strategy
                 if (isStrategist) {
@@ -406,7 +406,7 @@ contract RollingGarden is ReentrancyGuard, BaseGarden {
                 // Get proportional voter (stewards) rewards in case the contributor was also a steward of the strategy
                 if (isVoter) {
                     bablRewards = bablRewards.add(
-                        strategyRewards.preciseMul(BABL_STEWARD_SHARE).mul(strategy.votes[msg.sender]).div(
+                        strategyRewards.preciseMul(BABL_STEWARD_SHARE).mul(uint256(strategy.getUserVotes(msg.sender))).div(
                             totalAbsoluteVotes
                         )
                     );
@@ -414,7 +414,7 @@ contract RollingGarden is ReentrancyGuard, BaseGarden {
                         totalProfits
                             .preciseMul(PROFIT_STEWARD_SHARE)
                             .div(strategy.capitalAllocated())
-                            .mul(strategy.votes[msg.sender])
+                            .mul(uint256(strategy.getUserVotes(msg.sender)))
                             .div(totalAbsoluteVotes)
                     );
                 }
@@ -434,11 +434,11 @@ contract RollingGarden is ReentrancyGuard, BaseGarden {
                     bablRewards = bablRewards.add(bablRewards.preciseMul(creatorBonus));
                 }
 
-                contributors.claimedBABL = contributors.claimedBABL.add(bablRewards);
+                contributor.claimedBABL = contributor.claimedBABL.add(bablRewards);
                 bablTotalRewards = bablTotalRewards.add(bablRewards);
             }
         }
-        return (contributorProfits, bablTotalRewards);
+        return (contributorProfits, Safe3296.safe96(bablTotalRewards, 'overflow 96 bits'));
     }
 
     /**
