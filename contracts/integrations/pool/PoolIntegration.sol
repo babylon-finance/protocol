@@ -23,6 +23,7 @@ import {SafeMath} from '@openzeppelin/contracts/math/SafeMath.sol';
 import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import {SafeCast} from '@openzeppelin/contracts/utils/SafeCast.sol';
 import {ReentrancyGuard} from '@openzeppelin/contracts/utils/ReentrancyGuard.sol';
+import {IPoolIntegration} from '../../interfaces/IPoolIntegration.sol';
 import {IGarden} from '../../interfaces/IGarden.sol';
 import {IStrategy} from '../../interfaces/IStrategy.sol';
 import {IBabController} from '../../interfaces/IBabController.sol';

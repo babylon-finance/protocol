@@ -19,6 +19,7 @@
 pragma solidity 0.7.4;
 
 import 'hardhat/console.sol';
+
 import {Address} from '@openzeppelin/contracts/utils/Address.sol';
 import {ERC20} from '@openzeppelin/contracts/token/ERC20/ERC20.sol';
 import {ReentrancyGuard} from '@openzeppelin/contracts/utils/ReentrancyGuard.sol';
@@ -26,14 +27,16 @@ import {SafeMath} from '@openzeppelin/contracts/math/SafeMath.sol';
 import {SignedSafeMath} from '@openzeppelin/contracts/math/SignedSafeMath.sol';
 import {SafeCast} from '@openzeppelin/contracts/utils/SafeCast.sol';
 import {Initializable} from '@openzeppelin/contracts/proxy/Initializable.sol';
+
 import {AddressArrayUtils} from '../lib/AddressArrayUtils.sol';
-import {IWETH} from '../interfaces/external/weth/IWETH.sol';
 import {PreciseUnitMath} from '../lib/PreciseUnitMath.sol';
+
+import {IWETH} from '../interfaces/external/weth/IWETH.sol';
 import {IBabController} from '../interfaces/IBabController.sol';
 import {IGarden} from '../interfaces/IGarden.sol';
 import {ITradeIntegration} from '../interfaces/ITradeIntegration.sol';
-import {ITradeIntegration} from '../interfaces/ITradeIntegration.sol';
 import {IPriceOracle} from '../interfaces/IPriceOracle.sol';
+import {IStrategy} from '../interfaces/IStrategy.sol';
 
 /**
  * @title Strategy
@@ -77,7 +80,7 @@ contract Strategy is ReentrancyGuard, Initializable {
     }
 
     /**
-     * Throws if the sender is not a Communities's integration or integration not enabled
+     * Throws if the sender is not a Garden's integration or integration not enabled
      */
     modifier onlyIntegration() {
         // Internal function used to reduce bytecode size
