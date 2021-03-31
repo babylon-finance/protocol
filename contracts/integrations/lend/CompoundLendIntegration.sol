@@ -47,18 +47,13 @@ contract CompoundLendIntegration is LendIntegration {
     /**
      * Creates the integration
      *
-     * @param _name                   Name of the integration
      * @param _weth                   Address of the WETH ERC20
      * @param _controller             Address of the controller
      */
-    constructor(
-        string memory _name,
-        address _weth,
-        address _controller
-    ) LendIntegration(_name, _weth, _controller) {}
+    constructor(address _controller, address _weth) LendIntegration('compoundlend', _weth, _controller) {}
 
     /* ============ External Functions ============ */
-    function supply() external override {}
+    // function supply() external override {}
 
-    function redeem() external override {}
+    // function redeem() external override {}
 }

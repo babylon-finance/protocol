@@ -160,7 +160,12 @@ contract Strategy is ReentrancyGuard, Initializable {
     // Babylon Controller Address
     IBabController public controller;
 
-    uint8 public kind; //Type of strategy. 0 = long, 1 = pool...
+    //Type of strategy.
+    // 0 = LongStrategy
+    // 1 = LiquidityPoolStrategy
+    // 2 = YieldFarmingStrategy
+    // 3 = LendStrategy
+    uint8 public kind;
 
     // Garden that these strategies belong to
     IGarden public garden;

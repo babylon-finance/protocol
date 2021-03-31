@@ -42,6 +42,11 @@ abstract contract LendIntegration is BaseIntegration, ReentrancyGuard {
     using SafeCast for uint256;
 
     /* ============ Struct ============ */
+    struct InvestmentInfo {
+        IStrategy strategy; // Idea address
+        IGarden garden; // Garden address
+        address investment; // Investment address
+    }
 
     /* ============ Events ============ */
 
@@ -61,7 +66,79 @@ abstract contract LendIntegration is BaseIntegration, ReentrancyGuard {
     ) BaseIntegration(_name, _weth, _controller) {}
 
     /* ============ External Functions ============ */
-    function supply() external {}
+    function supplyTokens(address _tokenAddress) external {
+        InvestmentInfo memory investmentInfo = _createInvestmentInfo(_tokenAddress);
+        (address targetInvestment, uint256 callValue, bytes memory methodData) = _getSupplyCalldata(_tokenAddress);
+        investmentInfo.strategy.invokeFromIntegration(targetInvestment, callValue, methodData);
+    }
 
-    function redeem() external {}
+    function redeemTokens() external {}
+
+    /* ============ Internal Functions ============ */
+
+    /**
+     * Create and return InvestmentInfo struct
+     *
+     * @param _tokenAddress                             Address of the investment
+     *
+     * return InvestmentInfo                            Struct containing data for the investment
+     */
+    function _createInvestmentInfo(address _tokenAddress) internal view returns (InvestmentInfo memory) {
+        InvestmentInfo memory investmentInfo;
+        investmentInfo.strategy = IStrategy(msg.sender);
+        investmentInfo.garden = IGarden(investmentInfo.strategy.garden());
+        investmentInfo.investment = _tokenAddress;
+
+        return investmentInfo;
+    }
+
+    /**
+     * Returns calldata for supplying tokens.
+     *
+     * hparam  _tokenAddress              Address of the token
+     *
+     * @return address                         Target contract address
+     * @return uint256                         Call value
+     * @return bytes                           Trade calldata
+     */
+    function _getSupplyCalldata(
+        address /* _tokenAddress */
+    )
+        internal
+        view
+        virtual
+        returns (
+            address,
+            uint256,
+            bytes memory
+        )
+    {
+        require(false, 'This needs to be overriden');
+        return (address(0), 0, bytes(''));
+    }
+
+    /**
+     * Returns calldata to redeem tokens.
+     *
+     * hparam  _tokenAddress              Address of the token
+     *
+     * @return address                         Target contract address
+     * @return uint256                         Call value
+     * @return bytes                           Trade calldata
+     */
+    function _getExitInvestmentCalldata(
+        address /*_tokenAddress */
+    )
+        internal
+        view
+        virtual
+        returns (
+            address,
+            uint256,
+            bytes memory
+        )
+    {
+        require(false, 'This needs to be overriden');
+        return (address(0), 0, bytes(''));
+    }
 }

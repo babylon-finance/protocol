@@ -26,7 +26,7 @@ import {IIntegration} from './IIntegration.sol';
  * Interface for lending integrations such as Compound, Aave.
  */
 interface ILendIntegration is IIntegration {
-    function supply() external;
+    function supplyTokens() external;
 
-    function redeem() external;
+    function redeemTokens() external;
 }

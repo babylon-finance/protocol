@@ -105,6 +105,9 @@ async function deployFolioFixture() {
     addresses.yearn.vaultRegistry,
   );
 
+  const CompoundLendIntegration = await ethers.getContractFactory('CompoundLendIntegration', owner);
+  const compoundLendIntegration = await CompoundLendIntegration.deploy(babController.address, addresses.tokens.WETH);
+
   const integrationsList = [
     aaveIntegration,
     compoundIntegration,
@@ -113,6 +116,7 @@ async function deployFolioFixture() {
     balancerIntegration,
     uniswapPoolIntegration,
     yearnVaultIntegration,
+    compoundLendIntegration,
   ];
 
   // Adding integrations
@@ -224,6 +228,7 @@ async function deployFolioFixture() {
     balancerIntegration,
     uniswapPoolIntegration,
     yearnVaultIntegration,
+    compoundLendIntegration,
 
     garden1,
     garden2,

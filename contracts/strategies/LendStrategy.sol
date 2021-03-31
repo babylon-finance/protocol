@@ -36,16 +36,30 @@ contract LendStrategy is Strategy {
     using SafeMath for uint256;
 
     /**
+     * Sets integration data for the long strategy
+     *
+     * @param _lendToken                  
+     */
+    function setYieldFarmingData(address _yieldVault) public onlyIdeator {
+        kind = 3;
+        // require(IPassiveIntegration(integration).isInvestment(_yieldVault), 'Must be a valid yield vault');
+        require(!dataSet, 'Data is set already');
+        yieldVault = _yieldVault;
+        vaultAsset = IPassiveIntegration(integration).getInvestmentAsset(_yieldVault);
+        dataSet = true;
+    }
+
+    /**
      * Enters the long strategy
      */
     function _enterStrategy(uint256 _capital) internal override {
-        ILendIntegration(integration).supply();
+        ILendIntegration(integration).supplyTokens();
     }
 
     /**
      * Exits the long strategy.
      */
     function _exitStrategy() internal override {
-        ILendIntegration(integration).redeem();
+        ILendIntegration(integration).redeemTokens();
     }
 }
