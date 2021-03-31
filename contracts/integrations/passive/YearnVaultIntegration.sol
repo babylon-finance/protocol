@@ -21,8 +21,10 @@ pragma solidity 0.7.4;
 import 'hardhat/console.sol';
 import {ERC20} from '@openzeppelin/contracts/token/ERC20/ERC20.sol';
 import {SafeMath} from '@openzeppelin/contracts/math/SafeMath.sol';
+import {PreciseUnitMath} from '../../lib/PreciseUnitMath.sol';
 import {PassiveIntegration} from './PassiveIntegration.sol';
 import {YRegistry} from '../../interfaces/external/yearn/YRegistry.sol';
+import {IVault} from '../../interfaces/external/yearn/IVault.sol';
 
 /**
  * @title YearnIntegration
@@ -32,6 +34,7 @@ import {YRegistry} from '../../interfaces/external/yearn/YRegistry.sol';
  */
 contract YearnVaultIntegration is PassiveIntegration {
     using SafeMath for uint256;
+    using PreciseUnitMath for uint256;
 
     /* ============ State Variables ============ */
 
@@ -64,6 +67,23 @@ contract YearnVaultIntegration is PassiveIntegration {
 
     function _getSpender(address _investmentAddress) internal pure override returns (address) {
         return _investmentAddress;
+    }
+
+    function _getExpectedShares(address _investmentAddress, uint256 _ethAmount)
+        internal
+        view
+        override
+        returns (uint256)
+    {
+        return _ethAmount.preciseDiv(IVault(_investmentAddress).getPricePerFullShare());
+    }
+
+    function _getPricePerShare(address _investmentAddress) internal view override returns (uint256) {
+        return IVault(_investmentAddress).getPricePerFullShare();
+    }
+
+    function _getInvestmentAsset(address _investmentAddress) internal view override returns (address) {
+        return IVault(_investmentAddress).token();
     }
 
     /**

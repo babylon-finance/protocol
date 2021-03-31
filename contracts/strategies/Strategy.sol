@@ -118,7 +118,7 @@ contract Strategy is ReentrancyGuard, Initializable {
     uint8 constant IN_INVESTMENT_STATUS = 2;
     uint8 constant BORROWED_STATUS = 3;
 
-    // Max candidate period
+    uint256 constant SLIPPAGE_ALLOWED = 1e16; // 1%
     uint256 constant MAX_CANDIDATE_PERIOD = 7 days;
     uint256 constant MIN_VOTERS_TO_BECOME_ACTIVE = 2;
 
@@ -597,9 +597,8 @@ contract Strategy is ReentrancyGuard, Initializable {
         address tradeIntegration = IBabController(controller).getIntegrationByName('1inch');
         // Uses on chain oracle for all internal strategy operations to avoid attacks
         uint256 pricePerTokenUnit = _getPrice(_sendToken, _receiveToken);
-        uint256 slippageAllowed = 1e16; // 1%
         uint256 exactAmount = _sendQuantity.preciseMul(pricePerTokenUnit);
-        uint256 minAmountExpected = exactAmount.sub(exactAmount.preciseMul(slippageAllowed));
+        uint256 minAmountExpected = exactAmount.sub(exactAmount.preciseMul(SLIPPAGE_ALLOWED));
         ITradeIntegration(tradeIntegration).trade(_sendToken, _sendQuantity, _receiveToken, minAmountExpected);
         return minAmountExpected;
     }
