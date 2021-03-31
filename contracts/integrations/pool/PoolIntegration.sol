@@ -164,6 +164,14 @@ abstract contract PoolIntegration is BaseIntegration, ReentrancyGuard {
         return poolTokens;
     }
 
+    function getPoolWeights(
+        address /*_poolAddress */
+    ) external view virtual returns (uint256[] memory) {
+        uint256[] memory poolWeights;
+        require(false, 'This needs to be overriden');
+        return poolWeights;
+    }
+
     /* ============ Internal Functions ============ */
 
     /**
