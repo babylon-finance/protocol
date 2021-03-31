@@ -276,7 +276,7 @@ contract Strategy is ReentrancyGuard, Initializable {
         absoluteTotalVotes = absoluteTotalVotes + _absoluteTotalVotes;
         totalVotes = totalVotes + _totalVotes;
         active = true;
-        garden.payKeeper(msg.sender, _fee);
+        _payKeeper(msg.sender, _fee);
     }
 
     /**
@@ -294,13 +294,14 @@ contract Strategy is ReentrancyGuard, Initializable {
             'Idea has not completed the cooldown period'
         );
         // Execute enter trade
-        garden.allocateCapitalToInvestment(_capital);
-        calculateAndEditPosition(garden.getReserveAsset(), _capital, _capital.toInt256(), LIQUID_STATUS);
-        capitalAllocated = capitalAllocated.add(_capital);
+        uint256 capitalPlusKeeperFees = _capital.add(2e18); // 2ETH max
+        garden.allocateCapitalToInvestment(capitalPlusKeeperFees);
+        calculateAndEditPosition(garden.getReserveAsset(), capitalPlusKeeperFees, _capital.toInt256(), LIQUID_STATUS);
+        capitalAllocated = capitalAllocated.add(capitalPlusKeeperFees);
         _enterStrategy(_capital);
         // Sets the executed timestamp
         executedAt = block.timestamp;
-        garden.payKeeper(msg.sender, _fee);
+        _payKeeper(msg.sender, _fee);
     }
 
     /**
@@ -320,7 +321,7 @@ contract Strategy is ReentrancyGuard, Initializable {
         uint256 reserveAssetBeforeExiting = garden.getPrincipal();
         // Execute exit trade
         _exitStrategy();
-        capitalReturned = garden.getPrincipal().sub(reserveAssetBeforeExiting);
+        capitalReturned = garden.getPrincipal().sub(reserveAssetBeforeExiting).sub(_fee);
         // Mark as finalized
         finalized = true;
         active = false;
@@ -332,7 +333,7 @@ contract Strategy is ReentrancyGuard, Initializable {
             capitalReturned.toInt256().sub(capitalAllocated.toInt256()),
             address(this)
         );
-        garden.payKeeper(msg.sender, _fee);
+        _payKeeper(msg.sender, _fee);
     }
 
     /**
@@ -341,7 +342,7 @@ contract Strategy is ReentrancyGuard, Initializable {
      */
     function expireStrategy(uint256 _fee) external onlyKeeper(_fee) nonReentrant onlyActiveGarden {
         _deleteCandidateStrategy();
-        garden.payKeeper(msg.sender, _fee);
+        _payKeeper(msg.sender, _fee);
     }
 
     /**
@@ -529,6 +530,20 @@ contract Strategy is ReentrancyGuard, Initializable {
     /* ============ Internal Functions ============ */
 
     /**
+     * Pays gas cost back to the keeper from executing a transaction
+     * @param _keeper             Keeper that executed the transaction
+     * @param _fee                The fee paid to keeper to compensate the gas cost
+     */
+    function _payKeeper(address payable _keeper, uint256 _fee) internal {
+        require(IBabController(controller).isValidKeeper(_keeper), 'G23'); // Only keeper
+        require(ERC20(garden.getReserveAsset()).balanceOf(address(this)) >= _fee, 'G24'); // not enough weth for gas subsidy
+        // Pay Keeper in WETH
+        if (_fee > 0) {
+            require(ERC20(garden.getReserveAsset()).transfer(_keeper, _fee), 'G25'); // not enough weth for gas subsidy
+        }
+    }
+
+    /**
      * Enters the strategy. Virtual method.
      * Needs to be overriden in base class.
      *
@@ -633,7 +648,7 @@ contract Strategy is ReentrancyGuard, Initializable {
         // Updates strategy posiiton
         calculateAndEditPosition(
             reserveAsset,
-            ERC20(reserveAsset).balanceOf(address(this)),
+            0, // Strategy should end at 0
             int256(-capitalReturned),
             LIQUID_STATUS
         );
