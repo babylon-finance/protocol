@@ -66,6 +66,13 @@ contract UniswapPoolIntegration is PoolIntegration {
         return result;
     }
 
+    function getPoolWeights(address _poolAddress) external view override returns (uint256[] memory) {
+        uint256[] memory result = new uint256[](2);
+        result[0] = 5e17; // 50%
+        result[1] = 5e17; // 50%
+        return result;
+    }
+
     /* ============ Internal Functions ============ */
 
     function _isPool(address _poolAddress) internal pure override returns (bool) {

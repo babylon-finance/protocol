@@ -97,6 +97,12 @@ async function deployFolioFixture() {
     addresses.tokens.WETH,
     addresses.uniswap.router,
   );
+  const SushiswapPoolIntegration = await ethers.getContractFactory('SushiswapPoolIntegration', owner);
+  const sushiswapPoolIntegration = await SushiswapPoolIntegration.deploy(
+    babController.address,
+    addresses.tokens.WETH,
+    addresses.sushiswap.router,
+  );
 
   const YearnVaultIntegration = await ethers.getContractFactory('YearnVaultIntegration', owner);
   const yearnVaultIntegration = await YearnVaultIntegration.deploy(
@@ -113,6 +119,7 @@ async function deployFolioFixture() {
     balancerIntegration,
     uniswapPoolIntegration,
     yearnVaultIntegration,
+    sushiswapPoolIntegration,
   ];
 
   // Adding integrations
@@ -224,6 +231,7 @@ async function deployFolioFixture() {
     balancerIntegration,
     uniswapPoolIntegration,
     yearnVaultIntegration,
+    sushiswapPoolIntegration,
 
     garden1,
     garden2,
@@ -250,6 +258,7 @@ async function deployFolioFixture() {
       { name: 'BalancerIntegration', contract: balancerIntegration },
       { name: 'YearnVaultIntegration', contract: yearnVaultIntegration },
       { name: 'UniswapPoolIntegration', contract: uniswapPoolIntegration },
+      { name: 'SushiswapPoolIntegration', contract: sushiswapPoolIntegration },
     ],
   };
 }

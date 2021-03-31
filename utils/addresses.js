@@ -34,6 +34,13 @@ module.exports = {
       wethdai: '0xa478c2975ab1ea89e8196811f51a7b7ade33eb11',
     },
   },
+  sushiswap: {
+    router: '0xd9e1cE17f2641f24aE83637ab66a2cca9C378B9F',
+    factory: '0xC0AEe478e3658e2610c5F7A4A2E1777cE9e4f2Ac',
+    pairs: {
+      wethdai: '0xC3D03e4F041Fd4cD388c549Ee2A29a9E5075882f',
+    },
+  },
   yearn: {
     vaultRegistry: '0x3eE41C098f9666ed2eA246f4D2558010e59d63A0',
     vaults: {
