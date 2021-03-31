@@ -350,7 +350,7 @@ contract BabController is Ownable {
     /**
      * PRIVILEGED GOVERNANCE FUNCTION. Allows governance to edit the protocol fee recipient
      *
-     * @param _newRewardsDistributor      Address of the new protocol fee recipient
+     * @param _newRewardsDistributor      Address of the new rewards distributor
      */
     function editRewardsDistributor(address _newRewardsDistributor) external onlyOwner {
         require(_newRewardsDistributor != address(0), 'Address must not be 0');
