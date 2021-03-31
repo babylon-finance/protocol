@@ -42,5 +42,7 @@ interface IPoolIntegration is IIntegration {
 
     function getPoolTokens(address _poolAddress) external view returns (address[] memory);
 
+    function getPoolWeights(address _poolAddress) external view returns (uint256[] memory);
+
     function isPool(address _poolAddress) external view returns (bool);
 }
