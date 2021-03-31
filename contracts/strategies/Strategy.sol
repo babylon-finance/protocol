@@ -299,9 +299,9 @@ contract Strategy is ReentrancyGuard, Initializable {
         executedAt = block.timestamp;
         garden.payKeeper(msg.sender, _fee);
 
-        // Raul Review
-        // Add to Rewards Distributor an update of the Protocol Principal BABL Mining Rewards calculations
-        IRewardsDistributor rewardsDistributor = IRewardsDistributor(IBabController(controller).getRewardsDistributor());
+        // Add to Rewards Distributor an update of the Protocol Principal for BABL Mining Rewards calculations
+        IRewardsDistributor rewardsDistributor =
+            IRewardsDistributor(IBabController(controller).getRewardsDistributor());
         rewardsDistributor.addProtocolPrincipal(_capital);
     }
 
@@ -330,20 +330,18 @@ contract Strategy is ReentrancyGuard, Initializable {
         // Transfer rewards and update positions
         _transferIdeaRewards();
 
-        // Raul Review
-        // Use profit for discounting if negative. capitalReturned - capitalAllocated
-        IRewardsDistributor rewardsDistributor = IRewardsDistributor(IBabController(controller).getRewardsDistributor());
-  
+        IRewardsDistributor rewardsDistributor =
+            IRewardsDistributor(IBabController(controller).getRewardsDistributor());
+
         // strategyRewards = calculate using supply schedule
         strategyRewards = rewardsDistributor.getStrategyRewards(address(this));
-        
-        if (capitalReturned.sub(capitalAllocated) < 0) { // Negative profit
+
+        if (capitalReturned.sub(capitalAllocated) < 0) {
+            // Negative profit strategies get also BABL rewards with a proportional reduction
             strategyRewards = strategyRewards.add(strategyRewards.mul(capitalReturned.sub(capitalAllocated)));
         }
-
-        // Substract rewardsDistributor.substractProtocolPrincipalAndDuration(_capital);
-        rewardsDistributor.substractProtocolPrincipal(capitalAllocated); // TODO CHECK _capital vs. capitalAllocated
-
+        // Substract the Principal in the Rewards Distributor to update the Protocol power value
+        rewardsDistributor.substractProtocolPrincipal(capitalAllocated);
 
         // Moves strategy to finalized
         IGarden(garden).moveStrategyToFinalized(

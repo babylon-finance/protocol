@@ -126,7 +126,7 @@ contract BabController is Ownable {
      * @param _priceOracle                  Address of the initial priceOracle
      * @param _reservePool                  Address of the initial reservePool
      * @param _gardenFactory                Address of the initial garden factory
-     * @param _rewardsDistributor           Address of the initial garden factory
+     * @param _rewardsDistributor           Address of the initial garden distributor
      */
     constructor(
         address _treasury,
@@ -511,7 +511,7 @@ contract BabController is Ownable {
     function getRewardsDistributor() external view returns (address) {
         return rewardsDistributor;
     }
-    
+
     function getTreasury() external view returns (address) {
         return treasury;
     }

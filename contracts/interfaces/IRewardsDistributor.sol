@@ -17,8 +17,6 @@
 
 pragma solidity 0.7.4;
 
-import {IRewardsSupplySchedule} from './IRewardsSupplySchedule.sol';
-
 /**
  * @title IRewardsDistributor
  * @author Babylon Finance
@@ -27,12 +25,11 @@ import {IRewardsSupplySchedule} from './IRewardsSupplySchedule.sol';
  */
 
 interface IRewardsDistributor {
-    
-    // Structs 
-    struct PrincipalPerTimestamp { 
+    // Structs
+    struct PrincipalPerTimestamp {
         uint256 principal;
         uint256 time;
-        uint256 timeListPointer; 
+        uint256 timeListPointer;
     }
 
     function protocolPrincipal() external pure returns (uint256);
@@ -44,25 +41,31 @@ interface IRewardsDistributor {
     function getCheckpoints() external pure returns (uint256);
 
     function START_TIME() external pure returns (uint256);
-    
+
     function addProtocolPrincipal(uint256 _capital) external;
-    
+
     function substractProtocolPrincipal(uint256 _capital) external;
 
-    function getProtocolPrincipalByTimestamp(uint256 _timestamp) external view returns(uint256);
+    function getProtocolPrincipalByTimestamp(uint256 _timestamp) external view returns (uint256);
 
-    function getProtocolDurationByTimestamp(uint256 _timestamp) external view returns(uint256);
+    function getProtocolDurationByTimestamp(uint256 _timestamp) external view returns (uint256);
 
     function getStrategyRewards(address _strategy) external returns (uint96);
 
     function sendTokensToContributor(address _to, uint256 _amount) external;
 
-    function setNewSupplyScheduler(IRewardsSupplySchedule _newSupply) external ;
-    
     function getEpochRewards(uint256 epochs) external view returns (uint96[] memory);
 
-    function getRewardsWindow(uint256 _from, uint256 _to) external view returns (uint256,uint256,uint256);
+    function getRewardsWindow(uint256 _from, uint256 _to)
+        external
+        view
+        returns (
+            uint256,
+            uint256,
+            uint256
+        );
 
     function getSupplyForPeriod(uint256 _from, uint256 _to) external view returns (uint96[] memory);
 
+    function tokenSupplyPerQuarter(uint256 quarter) external pure returns (uint256);
 }
