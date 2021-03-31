@@ -12,7 +12,7 @@ const { ADDRESS_ZERO } = require('../../utils/constants');
 
 const { loadFixture } = waffle;
 
-describe('UniswapPoolIntegrationTest', function () {
+describe('SushiswapPoolIntegrationTest', function () {
   let sushiswapPoolIntegration;
   let garden1;
   let signer1;
@@ -68,8 +68,8 @@ describe('UniswapPoolIntegrationTest', function () {
       await executeStrategy(garden1, strategyContract, 0);
       expect(await daiWethPair.balanceOf(strategyContract.address)).to.be.gt(0);
 
-      // await finalizeStrategy(garden1, strategyContract, 0);
-      // expect(await daiWethPair.balanceOf(strategyContract.address)).to.equal(0);
+      await finalizeStrategy(garden1, strategyContract, 0);
+      expect(await daiWethPair.balanceOf(strategyContract.address)).to.equal(0);
     });
   });
 });

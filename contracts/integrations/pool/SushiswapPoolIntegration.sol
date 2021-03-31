@@ -28,7 +28,6 @@ import {UniswapPoolIntegration} from './UniswapPoolIntegration.sol';
  * Sushiswap Protocol pool integration
  */
 contract SushiswapPoolIntegration is UniswapPoolIntegration {
-
     /* ============ Constructor ============ */
 
     /**
@@ -43,6 +42,6 @@ contract SushiswapPoolIntegration is UniswapPoolIntegration {
         address _weth,
         address _sushiswapRouterAddress
     ) UniswapPoolIntegration(_controller, _weth, _sushiswapRouterAddress) {
-        name = "sushiswap_pool";
+        name = 'sushiswap_pool';
     }
 }
