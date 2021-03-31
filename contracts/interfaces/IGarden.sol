@@ -114,4 +114,6 @@ interface IGarden is IERC20 {
     function updatePrincipal(uint256 _amount) external;
 
     function payKeeper(address payable _keeper, uint256 _fee) external;
+
+    function burnStrategistStake(address _strategist, uint256 _amount) external;
 }

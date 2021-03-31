@@ -432,6 +432,10 @@ abstract contract BaseGarden is ERC20Upgradeable {
         strategies = strategies.remove(_strategy);
     }
 
+    function burnStrategistStake(address _strategist, uint256 _amount) external onlyStrategy {
+        _burn(_strategist, _amount);
+    }
+
     /* ============ External Getter Functions ============ */
 
     /**

@@ -605,7 +605,7 @@ contract Strategy is ReentrancyGuard, Initializable {
         int256 reserveAssetDelta = capitalReturned.toInt256();
 
         // Idea returns were positive
-        if (capitalReturned > capitalAllocated) {
+        if (capitalReturned >= capitalAllocated) {
             uint256 profits = capitalReturned - capitalAllocated; // in reserve asset (weth)
             _returnStake();
             // Send weth performance fee to the protocol
@@ -621,8 +621,9 @@ contract Strategy is ReentrancyGuard, Initializable {
             reserveAssetDelta.add(int256(-protocolProfits));
         } else {
             // Returns were negative
-            // TODO: Transform BABL to reserve asset and add
-            // reserveAssetDelta.add(int256(stake));
+            // Burn strategist stake and add the amount to the garden
+            garden.burnStrategistStake(strategist, capitalReturned.preciseDiv(capitalAllocated).preciseMul(stake));
+            reserveAssetDelta.add(int256(stake));
         }
         // Return the balance back to the garden
         require(
