@@ -3,10 +3,12 @@ const { ONE_DAY_IN_SECONDS } = require('../../utils/constants.js');
 const { TWAP_ORACLE_WINDOW, TWAP_ORACLE_GRANULARITY } = require('../../utils/system.js');
 const addresses = require('../../utils/addresses');
 
+const DEFAULT_FINALIZATION_TIME = ONE_DAY_IN_SECONDS * 90;
+
 const DEFAULT_STRATEGY_PARAMS = [
   ethers.utils.parseEther('10'),
   ethers.utils.parseEther('5'),
-  ONE_DAY_IN_SECONDS * 30,
+  DEFAULT_FINALIZATION_TIME,
   ethers.utils.parseEther('0.05'), // 5%
   ethers.utils.parseEther('1'),
 ];
@@ -104,8 +106,8 @@ async function executeStrategy(garden, strategy, fee = 0) {
   });
 }
 
-async function finalizeStrategy(garden, strategy, fee = 0) {
-  ethers.provider.send('evm_increaseTime', [ONE_DAY_IN_SECONDS * 90]);
+async function finalizeStrategy(garden, strategy, fee = 0, timeElapsed = DEFAULT_FINALIZATION_TIME) {
+  ethers.provider.send('evm_increaseTime', [timeElapsed]);
   await updateTWAPs(garden);
   return strategy.finalizeInvestment(fee, { gasPrice: 0 });
 }
