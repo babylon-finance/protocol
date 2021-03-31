@@ -122,134 +122,135 @@ contract RewardsDistributor is Ownable {
         return principalPerTimestamp[_timestamp].principal;
     }
 
-    /** 
+    /**
     function getProtocolDurationByTimestamp(uint256 _timestamp) public view onlyOwner returns(uint256){
         return durationPerTimestamp[_timestamp];
     }
     */
 
     function getStrategyRewards(address _strategy) public onlyOwner returns (uint96) {
-        (uint256 numQuarters, uint256 startingQuarter, uint256 endingQuarter) =
-            getRewardsWindow(IStrategy(_strategy).executedAt(), IStrategy(_strategy).exitedAt());
-        uint96[] memory quarters = new uint96[](numQuarters); // Array to allocate the corresponding BABL rewards per quarter
-        uint96 rewards = 0; // Total Strategy Rewards
-        uint256 counterOfTime = IStrategy(_strategy).executedAt(); // Timestamp counter to move along the Protocol Principal changes during the strategy duration
-        uint256 indexCounter = 0; // Counter to iterate over the timeList of timestamps that will be used to iterate the mapping
-        uint256 counterOfPrincipal = 0; // Counter to calculate the Principal of the Protocol in the period of the strategy
-        uint256 endOfSlotTime = 0;
-        // Check if the strategy duration is within an epoch, all calculations are simplified in that case
-        if (numQuarters <= 1) {
-            uint256 counterOfPower = 0;
-            uint256 strategyPower =
-                IStrategy(_strategy).capitalAllocated().mul(
-                    IStrategy(_strategy).exitedAt().sub(IStrategy(_strategy).executedAt())
-                );
-            while (principalPerTimestamp[counterOfTime].time < IStrategy(_strategy).exitedAt()) {
-                counterOfPrincipal = principalPerTimestamp[counterOfTime].principal;
-                indexCounter = principalPerTimestamp[counterOfTime].timeListPointer;
-                indexCounter++;
-                endOfSlotTime = timeList[indexCounter]; // The following timestamp / it could be the ending timestamp
-                require(endOfSlotTime == principalPerTimestamp[endOfSlotTime].time, 'time slot mismatch');
-                counterOfPower = counterOfPower.add(
-                    counterOfPrincipal.mul(
-                        principalPerTimestamp[endOfSlotTime].time.sub(principalPerTimestamp[counterOfTime].time)
-                    )
-                ); // Time difference for the slot
-                counterOfTime = endOfSlotTime;
-            }
-            quarters[0] = Safe3296.safe96(tokenSupplyPerQuarter(startingQuarter.add(1)), 'overflow 96 bits');
-            uint256 powerRatio = strategyPower.div(counterOfPower); // Strategy Power vs. Protocol Power during the strategy time (not the epoch)
-            uint256 percentageOfQuarter =
-                IStrategy(_strategy).exitedAt().sub(IStrategy(_strategy).executedAt()).div(EPOCH_DURATION); // % of time within the epoch
-            rewards = Safe3296.safe96(
-                uint256(quarters[0]).mul(powerRatio).mul(percentageOfQuarter),
-                'overflow 96 bits'
-            );
-            return rewards;
-        } else {
-            uint256[] memory powerRatio = new uint256[](numQuarters); // Power ratio in each Epoch
-            uint256[] memory percentageOfQuarter = new uint256[](numQuarters); // percentage of Quarter in each Epoch (starting and ending slots could not be 100% but intermediate slots should be equalt to its Epoch duration)
-            uint256[] memory strategyPower = new uint256[](numQuarters); // Strategy power in each Epoch
-            uint256[] memory counterOfPower = new uint256[](numQuarters); // Protocol power in each Epoch
-            uint256 counterEpoch = 0; // Counter of epoch under calculations
-            bool flag = false; // flag to control whether we are changing Epoch in the middle of timestamps
-            uint256 tempPower = 0; // Used with the flag to add manage unchanged power between epochs, once it passes it is restored with the flag into zero.
-
-            for (uint256 i = 0; i <= quarters.length - 1; i++) {
-                powerRatio[i] = 0; //Initialization
-                percentageOfQuarter[i] = 0; //Initialization
-                counterOfPower[i] = 0; //Initialization
-                counterEpoch = startingQuarter.add(i); //Initialization # of the slot
-                uint256 counterSlotLimit = counterEpoch * EPOCH_DURATION; // Initialization timestamp of the end of the slot
-                uint256 counterSlotStarting = counterSlotLimit.sub(EPOCH_DURATION); // Initialization timestamp of the beginning of the slot
-                uint256 strategyDuration = 0;
-                if (IStrategy(_strategy).executedAt().add(EPOCH_DURATION) < counterSlotLimit) {
-                    // We are in the first epoch of the strategy
-                    strategyPower[i] = IStrategy(_strategy).capitalAllocated().mul(
-                        counterSlotLimit.sub(IStrategy(_strategy).executedAt())
-                    );
-                    strategyDuration = counterSlotLimit.sub(IStrategy(_strategy).executedAt());
-                } else if (
-                    IStrategy(_strategy).executedAt() < counterSlotStarting &&
-                    counterSlotLimit < IStrategy(_strategy).exitedAt()
-                ) {
-                    // If we are in an intermediate quarter
-                    strategyPower[i] = IStrategy(_strategy).capitalAllocated().mul(
-                        counterSlotLimit.sub(counterSlotStarting)
-                    );
-                    strategyDuration = EPOCH_DURATION; // The strategy is ongoing during a complete epoch
-                } else {
-                    // It is the last slot
-                    strategyPower[i] = IStrategy(_strategy).capitalAllocated().mul(
-                        IStrategy(_strategy).exitedAt().sub(counterSlotStarting)
-                    );
-                    strategyDuration = IStrategy(_strategy).exitedAt().sub(counterSlotStarting);
-                }
-
-                while (
-                    principalPerTimestamp[counterOfTime].time < counterSlotLimit &&
-                    principalPerTimestamp[counterOfTime].time < IStrategy(_strategy).exitedAt()
-                ) {
-                    // Recurring calculations within the same Epoch per all the slots where there was a new or finished strategy
-                    counterOfPrincipal = principalPerTimestamp[counterOfTime].principal; // Check principal amount in specific time stamp
-                    indexCounter = principalPerTimestamp[counterOfTime].timeListPointer;
-                    indexCounter++;
-
-                    // TODO CHECK OUT OF BOUNDS IF IT IS THE LAST STRATEGY BEING FINISHED
-
-                    endOfSlotTime = timeList[indexCounter]; // The following timestamp / it could be the ending timestamp
-                    require(endOfSlotTime == principalPerTimestamp[endOfSlotTime].time, 'time slot mismatch');
-                    if (counterSlotLimit < endOfSlotTime) {
-                        // Situation where We are changing Epoch but we have to give to each epoch the real duration of the strategy
-                        flag = true;
-                        tempPower = counterOfPower[i].add(
-                            counterOfPrincipal.mul(endOfSlotTime.sub(principalPerTimestamp[counterSlotLimit].time))
-                        ); // Partial power entering into the new epoch
-                        counterOfPower[i] = counterOfPower[i].add(
-                            counterOfPrincipal.mul(counterSlotLimit.sub(principalPerTimestamp[counterOfTime].time))
-                        ); // Partial power inside the current epoch
-                    } else {
-                        flag = false; // reset (if any) the flag which is only activated when there is a change of epoch between two time stamps.
-                        // In case of a change between epoch between two protocol principal changes (time stamps) we recover
-                        counterOfPower[i] = tempPower.add(counterOfPower[i]).add(
-                            counterOfPrincipal.mul(principalPerTimestamp[endOfSlotTime].time).sub(
-                                principalPerTimestamp[counterOfTime].time
-                            )
-                        ); // Time difference for the slot
-                        tempPower = 0; // Reset the flag that is only used when changing between epochs.
-                    }
-                    counterOfTime = endOfSlotTime;
-                }
-                quarters[i] = Safe3296.safe96(tokenSupplyPerQuarter(counterEpoch.add(1)), 'overflow 96 bits'); // MAX BABL Rewards for each quarter/epoch
-                powerRatio[i] = strategyPower[i].div(counterOfPower[i]); // Strategy Power vs. Protocol Power during the epoch under calculation
-                percentageOfQuarter[i] = strategyDuration.div(EPOCH_DURATION); // % Used to provide the MAX BABL rewards depending on the exact execution blocks
-                rewards = Safe3296.safe96(
-                    uint256(rewards).add(quarters[i]).mul(powerRatio[i]).mul(percentageOfQuarter[i]),
-                    'overflow 96 bits'
-                );
-            }
-        }
-        return rewards;
+        // (uint256 numQuarters, uint256 startingQuarter, uint256 endingQuarter) =
+        //     getRewardsWindow(IStrategy(_strategy).executedAt(), IStrategy(_strategy).exitedAt());
+        // uint96[] memory quarters = new uint96[](numQuarters); // Array to allocate the corresponding BABL rewards per quarter
+        // uint96 rewards = 0; // Total Strategy Rewards
+        // uint256 counterOfTime = IStrategy(_strategy).executedAt(); // Timestamp counter to move along the Protocol Principal changes during the strategy duration
+        // uint256 indexCounter = 0; // Counter to iterate over the timeList of timestamps that will be used to iterate the mapping
+        // uint256 counterOfPrincipal = 0; // Counter to calculate the Principal of the Protocol in the period of the strategy
+        // uint256 endOfSlotTime = 0;
+        // // Check if the strategy duration is within an epoch, all calculations are simplified in that case
+        // if (numQuarters <= 1) {
+        //     uint256 counterOfPower = 0;
+        //     uint256 strategyPower =
+        //         IStrategy(_strategy).capitalAllocated().mul(
+        //             IStrategy(_strategy).exitedAt().sub(IStrategy(_strategy).executedAt())
+        //         );
+        //     while (principalPerTimestamp[counterOfTime].time < IStrategy(_strategy).exitedAt()) {
+        //         counterOfPrincipal = principalPerTimestamp[counterOfTime].principal;
+        //         indexCounter = principalPerTimestamp[counterOfTime].timeListPointer;
+        //         indexCounter++;
+        //         endOfSlotTime = timeList[indexCounter]; // The following timestamp / it could be the ending timestamp
+        //         require(endOfSlotTime == principalPerTimestamp[endOfSlotTime].time, 'time slot mismatch');
+        //         counterOfPower = counterOfPower.add(
+        //             counterOfPrincipal.mul(
+        //                 principalPerTimestamp[endOfSlotTime].time.sub(principalPerTimestamp[counterOfTime].time)
+        //             )
+        //         ); // Time difference for the slot
+        //         counterOfTime = endOfSlotTime;
+        //     }
+        //     quarters[0] = Safe3296.safe96(tokenSupplyPerQuarter(startingQuarter.add(1)), 'overflow 96 bits');
+        //     uint256 powerRatio = strategyPower.div(counterOfPower); // Strategy Power vs. Protocol Power during the strategy time (not the epoch)
+        //     uint256 percentageOfQuarter =
+        //         IStrategy(_strategy).exitedAt().sub(IStrategy(_strategy).executedAt()).div(EPOCH_DURATION); // % of time within the epoch
+        //     rewards = Safe3296.safe96(
+        //         uint256(quarters[0]).mul(powerRatio).mul(percentageOfQuarter),
+        //         'overflow 96 bits'
+        //     );
+        //     return rewards;
+        // } else {
+        //     uint256[] memory powerRatio = new uint256[](numQuarters); // Power ratio in each Epoch
+        //     uint256[] memory percentageOfQuarter = new uint256[](numQuarters); // percentage of Quarter in each Epoch (starting and ending slots could not be 100% but intermediate slots should be equalt to its Epoch duration)
+        //     uint256[] memory strategyPower = new uint256[](numQuarters); // Strategy power in each Epoch
+        //     uint256[] memory counterOfPower = new uint256[](numQuarters); // Protocol power in each Epoch
+        //     uint256 counterEpoch = 0; // Counter of epoch under calculations
+        //     bool flag = false; // flag to control whether we are changing Epoch in the middle of timestamps
+        //     uint256 tempPower = 0; // Used with the flag to add manage unchanged power between epochs, once it passes it is restored with the flag into zero.
+        //
+        //     for (uint256 i = 0; i <= quarters.length - 1; i++) {
+        //         powerRatio[i] = 0; //Initialization
+        //         percentageOfQuarter[i] = 0; //Initialization
+        //         counterOfPower[i] = 0; //Initialization
+        //         counterEpoch = startingQuarter.add(i); //Initialization # of the slot
+        //         uint256 counterSlotLimit = counterEpoch * EPOCH_DURATION; // Initialization timestamp of the end of the slot
+        //         uint256 counterSlotStarting = counterSlotLimit.sub(EPOCH_DURATION); // Initialization timestamp of the beginning of the slot
+        //         uint256 strategyDuration = 0;
+        //         if (IStrategy(_strategy).executedAt().add(EPOCH_DURATION) < counterSlotLimit) {
+        //             // We are in the first epoch of the strategy
+        //             strategyPower[i] = IStrategy(_strategy).capitalAllocated().mul(
+        //                 counterSlotLimit.sub(IStrategy(_strategy).executedAt())
+        //             );
+        //             strategyDuration = counterSlotLimit.sub(IStrategy(_strategy).executedAt());
+        //         } else if (
+        //             IStrategy(_strategy).executedAt() < counterSlotStarting &&
+        //             counterSlotLimit < IStrategy(_strategy).exitedAt()
+        //         ) {
+        //             // If we are in an intermediate quarter
+        //             strategyPower[i] = IStrategy(_strategy).capitalAllocated().mul(
+        //                 counterSlotLimit.sub(counterSlotStarting)
+        //             );
+        //             strategyDuration = EPOCH_DURATION; // The strategy is ongoing during a complete epoch
+        //         } else {
+        //             // It is the last slot
+        //             strategyPower[i] = IStrategy(_strategy).capitalAllocated().mul(
+        //                 IStrategy(_strategy).exitedAt().sub(counterSlotStarting)
+        //             );
+        //             strategyDuration = IStrategy(_strategy).exitedAt().sub(counterSlotStarting);
+        //         }
+        //
+        //         while (
+        //             principalPerTimestamp[counterOfTime].time < counterSlotLimit &&
+        //             principalPerTimestamp[counterOfTime].time < IStrategy(_strategy).exitedAt()
+        //         ) {
+        //             // Recurring calculations within the same Epoch per all the slots where there was a new or finished strategy
+        //             counterOfPrincipal = principalPerTimestamp[counterOfTime].principal; // Check principal amount in specific time stamp
+        //             indexCounter = principalPerTimestamp[counterOfTime].timeListPointer;
+        //             indexCounter++;
+        //
+        //             // TODO CHECK OUT OF BOUNDS IF IT IS THE LAST STRATEGY BEING FINISHED
+        //
+        //             endOfSlotTime = timeList[indexCounter]; // The following timestamp / it could be the ending timestamp
+        //             require(endOfSlotTime == principalPerTimestamp[endOfSlotTime].time, 'time slot mismatch');
+        //             if (counterSlotLimit < endOfSlotTime) {
+        //                 // Situation where We are changing Epoch but we have to give to each epoch the real duration of the strategy
+        //                 flag = true;
+        //                 tempPower = counterOfPower[i].add(
+        //                     counterOfPrincipal.mul(endOfSlotTime.sub(principalPerTimestamp[counterSlotLimit].time))
+        //                 ); // Partial power entering into the new epoch
+        //                 counterOfPower[i] = counterOfPower[i].add(
+        //                     counterOfPrincipal.mul(counterSlotLimit.sub(principalPerTimestamp[counterOfTime].time))
+        //                 ); // Partial power inside the current epoch
+        //             } else {
+        //                 flag = false; // reset (if any) the flag which is only activated when there is a change of epoch between two time stamps.
+        //                 // In case of a change between epoch between two protocol principal changes (time stamps) we recover
+        //                 counterOfPower[i] = tempPower.add(counterOfPower[i]).add(
+        //                     counterOfPrincipal.mul(principalPerTimestamp[endOfSlotTime].time).sub(
+        //                         principalPerTimestamp[counterOfTime].time
+        //                     )
+        //                 ); // Time difference for the slot
+        //                 tempPower = 0; // Reset the flag that is only used when changing between epochs.
+        //             }
+        //             counterOfTime = endOfSlotTime;
+        //         }
+        //         quarters[i] = Safe3296.safe96(tokenSupplyPerQuarter(counterEpoch.add(1)), 'overflow 96 bits'); // MAX BABL Rewards for each quarter/epoch
+        //         powerRatio[i] = strategyPower[i].div(counterOfPower[i]); // Strategy Power vs. Protocol Power during the epoch under calculation
+        //         percentageOfQuarter[i] = strategyDuration.div(EPOCH_DURATION); // % Used to provide the MAX BABL rewards depending on the exact execution blocks
+        //         rewards = Safe3296.safe96(
+        //             uint256(rewards).add(quarters[i]).mul(powerRatio[i]).mul(percentageOfQuarter[i]),
+        //             'overflow 96 bits'
+        //         );
+        //     }
+        // }
+        // return rewards;
+        return 0;
     }
 
     function sendTokensToContributor(address _to, uint256 _amount) public onlyOwner {

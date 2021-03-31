@@ -62,6 +62,15 @@ contract BalancerIntegration is PoolIntegration {
         return IBPool(_poolAddress).getCurrentTokens();
     }
 
+    function getPoolWeights(address _poolAddress) external view override returns (uint256[] memory) {
+        address[] memory poolTokens = IBPool(_poolAddress).getCurrentTokens();
+        uint256[] memory result = new uint256[](poolTokens.length);
+        for (uint8 i = 0; i < poolTokens.length; i++) {
+            result[i] = IBPool(_poolAddress).getNormalizedWeight(poolTokens[i]);
+        }
+        return result;
+    }
+
     /* ============ Internal Functions ============ */
 
     function _isPool(address _poolAddress) internal view override returns (bool) {

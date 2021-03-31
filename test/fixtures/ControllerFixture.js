@@ -51,6 +51,7 @@ async function deployFolioFixture() {
   const GardenFactory = await ethers.getContractFactory('GardenFactory', owner);
   const LongStrategyFactory = await ethers.getContractFactory('LongStrategyFactory', owner);
   const LiquidityPoolStrategyFactory = await ethers.getContractFactory('LiquidityPoolStrategyFactory', owner);
+  const YieldFarmingStrategyFactory = await ethers.getContractFactory('YieldFarmingStrategyFactory', owner);
   const gardenValuer = await GardenValuer.deploy(babController.address);
   const rewardsDistributor = await RewardsDistributor.deploy(rewardsSupplySchedule.address, bablToken.address);
   const reservePool = await ReservePool.deploy(babController.address);
@@ -58,6 +59,7 @@ async function deployFolioFixture() {
   const gardenFactory = await GardenFactory.deploy();
   const longStrategyFactory = await LongStrategyFactory.deploy();
   const liquidityPoolStrategyFactory = await LiquidityPoolStrategyFactory.deploy();
+  const yieldFarmingStrategyFactory = await YieldFarmingStrategyFactory.deploy();
 
   const uniswapTWAPAdapter = await UniswapTWAP.deploy(
     babController.address,
@@ -77,6 +79,7 @@ async function deployFolioFixture() {
   babController.editGardenFactory(gardenFactory.address);
   babController.editStrategyFactory(0, longStrategyFactory.address);
   babController.editStrategyFactory(1, liquidityPoolStrategyFactory.address);
+  babController.editStrategyFactory(2, yieldFarmingStrategyFactory.address);
 
   const AaveIntegration = await ethers.getContractFactory('AaveIntegration', owner);
   const aaveIntegration = await AaveIntegration.deploy(babController.address, addresses.tokens.WETH, 50);
@@ -111,6 +114,12 @@ async function deployFolioFixture() {
     addresses.tokens.WETH,
     addresses.uniswap.router,
   );
+  const SushiswapPoolIntegration = await ethers.getContractFactory('SushiswapPoolIntegration', owner);
+  const sushiswapPoolIntegration = await SushiswapPoolIntegration.deploy(
+    babController.address,
+    addresses.tokens.WETH,
+    addresses.sushiswap.router,
+  );
 
   const YearnVaultIntegration = await ethers.getContractFactory('YearnVaultIntegration', owner);
   const yearnVaultIntegration = await YearnVaultIntegration.deploy(
@@ -127,6 +136,7 @@ async function deployFolioFixture() {
     balancerIntegration,
     uniswapPoolIntegration,
     yearnVaultIntegration,
+    sushiswapPoolIntegration,
   ];
 
   // Adding integrations
@@ -134,24 +144,15 @@ async function deployFolioFixture() {
     babController.addIntegration(await integration.getName(), integration.address);
   });
 
-  const integrationsAddressList = integrationsList.map((iter) => iter.address);
   // Creates a new Garden instance
 
-  await babController
-    .connect(signer1)
-    .createRollingGarden(integrationsAddressList, addresses.tokens.WETH, 'Absolute ETH Return [beta]', 'EYFA');
+  await babController.connect(signer1).createRollingGarden(addresses.tokens.WETH, 'Absolute ETH Return [beta]', 'EYFA');
 
-  await babController
-    .connect(signer1)
-    .createRollingGarden(integrationsAddressList, addresses.tokens.WETH, 'ETH Yield Farm [a]', 'EYFB');
+  await babController.connect(signer1).createRollingGarden(addresses.tokens.WETH, 'ETH Yield Farm [a]', 'EYFB');
 
-  await babController
-    .connect(signer1)
-    .createRollingGarden(integrationsAddressList, addresses.tokens.WETH, 'ETH Yield Farm [b]', 'EYFG');
+  await babController.connect(signer1).createRollingGarden(addresses.tokens.WETH, 'ETH Yield Farm [b]', 'EYFG');
 
-  await babController
-    .connect(signer1)
-    .createRollingGarden(integrationsAddressList, addresses.tokens.WETH, 'ETH Yield Farm [d]', 'EYFG');
+  await babController.connect(signer1).createRollingGarden(addresses.tokens.WETH, 'ETH Yield Farm [d]', 'EYFG');
 
   const gardens = await babController.getGardens();
 
@@ -248,6 +249,7 @@ async function deployFolioFixture() {
     balancerIntegration,
     uniswapPoolIntegration,
     yearnVaultIntegration,
+    sushiswapPoolIntegration,
 
     garden1,
     garden2,
@@ -276,6 +278,7 @@ async function deployFolioFixture() {
       { name: 'BalancerIntegration', contract: balancerIntegration },
       { name: 'YearnVaultIntegration', contract: yearnVaultIntegration },
       { name: 'UniswapPoolIntegration', contract: uniswapPoolIntegration },
+      { name: 'SushiswapPoolIntegration', contract: sushiswapPoolIntegration },
     ],
   };
 }

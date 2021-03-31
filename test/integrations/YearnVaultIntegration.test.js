@@ -1,6 +1,6 @@
 const { expect } = require('chai');
 const { waffle, ethers } = require('hardhat');
-const { impersonateAddress } = require('../../utils/rpc');
+const { createStrategy, executeStrategy, finalizeStrategy } = require('../fixtures/StrategyHelper');
 const { deployFolioFixture } = require('../fixtures/ControllerFixture');
 const addresses = require('../../utils/addresses');
 const { ADDRESS_ZERO } = require('../../utils/constants');
@@ -10,11 +10,15 @@ const { loadFixture } = waffle;
 describe('YearnVaultIntegrationTest', function () {
   let yearnVaultIntegration;
   let garden1;
+  let signer1;
+  let signer2;
   let signer3;
   let babController;
 
   beforeEach(async () => {
-    ({ garden1, babController, yearnVaultIntegration, signer3 } = await loadFixture(deployFolioFixture));
+    ({ garden1, babController, yearnVaultIntegration, signer1, signer2, signer3 } = await loadFixture(
+      deployFolioFixture,
+    ));
   });
 
   describe('Deployment', function () {
@@ -28,17 +32,13 @@ describe('YearnVaultIntegrationTest', function () {
 
   describe('Yearn Vaults', function () {
     let daiToken;
-    let wethToken;
-    let whaleSigner;
-    let whaleWeth;
     let yearnDaiVault;
+    let WETH;
 
     beforeEach(async () => {
-      whaleSigner = await impersonateAddress(addresses.holders.DAI);
-      whaleWeth = await impersonateAddress(addresses.holders.WETH);
       daiToken = await ethers.getContractAt('IERC20', addresses.tokens.DAI);
-      wethToken = await ethers.getContractAt('IERC20', addresses.tokens.WETH);
       yearnDaiVault = await ethers.getContractAt('IVault', addresses.yearn.vaults.ydai);
+      WETH = await ethers.getContractAt('IERC20', addresses.tokens.WETH);
     });
 
     it('check that a valid yearn vault is valid', async function () {
@@ -50,77 +50,28 @@ describe('YearnVaultIntegrationTest', function () {
     });
 
     it('can enter and exit the yearn dai vault', async function () {
-      // expect(
-      //   await daiToken
-      //     .connect(whaleSigner)
-      //     .transfer(garden.address, ethers.utils.parseEther("1000"), {
-      //       gasPrice: 0
-      //     })
-      // );
-      // expect(await daiToken.balanceOf(garden.address)).to.equal(
-      //   ethers.utils.parseEther("1000")
-      // );
-      await garden1.connect(signer3).deposit(ethers.utils.parseEther('1'), 1, signer3.getAddress(), {
-        value: ethers.utils.parseEther('1'),
-      });
-      const amountToDeposit = ethers.utils.parseEther('1000');
+      const amountToDeposit = ethers.utils.parseEther('1');
       const sharePrice = await yearnDaiVault.getPricePerFullShare();
-      const expectedYShares = amountToDeposit.div(sharePrice);
+      const expectedShares = await yearnVaultIntegration.getExpectedShares(yearnDaiVault.address, amountToDeposit);
+      const vaultAsset = await yearnVaultIntegration.getInvestmentAsset(yearnDaiVault.address);
+      expect(await yearnVaultIntegration.getPricePerShare(yearnDaiVault.address)).to.equal(sharePrice);
+      expect(vaultAsset).to.equal(addresses.tokens.DAI);
 
-      const yearnAbi = yearnVaultIntegration.interface;
-      const data = yearnAbi.encodeFunctionData(yearnAbi.functions['enterInvestment(address,uint256,address,uint256)'], [
-        yearnDaiVault.address,
-        expectedYShares,
-        daiToken.address,
-        ethers.utils.parseEther('100'),
-      ]);
+      const strategyContract = await createStrategy(
+        2,
+        'vote',
+        [signer1, signer2, signer3],
+        yearnVaultIntegration.address,
+        garden1,
+      );
 
-      // await garden.callIntegration(
-      //   yearnVaultIntegration.address,
-      //   ethers.utils.parseEther("0"),
-      //   data,
-      //   [daiToken.address],
-      //   [ethers.utils.parseEther("100")],
-      //   {
-      //     gasPrice: 0
-      //   }
-      // );
-      //
-      // console.log("price", ethers.utils.formatEther(sharePrice));
-      // console.log(
-      //   "balance",
-      //   ethers.utils.formatEther(await yearnDaiVault.balanceOf(garden.address))
-      // );
-      // console.log("yshares to receive", expectedYShares.toString());
-      // expect(await yearnDaiVault.balanceOf(garden.address)).to.be.gte(
-      //   expectedYShares
-      // );
-      //
-      // const dataExit = yearnAbi.encodeFunctionData(
-      //   yearnAbi.functions["exitInvestment(address,uint256,address,uint256)"],
-      //   [
-      //     yearnDaiVault.address,
-      //     await yearnDaiVault.balanceOf(garden.address),
-      //     daiToken.address,
-      //     ethers.utils.parseEther("99")
-      //   ]
-      // );
-      //
-      // await garden.callIntegration(
-      //   yearnVaultIntegration.address,
-      //   ethers.utils.parseEther("0"),
-      //   dataExit,
-      //   [],
-      //   [],
-      //   {
-      //     gasPrice: 0
-      //   }
-      // );
-      //
-      // expect(await yearnDaiVault.balanceOf(garden.address)).to.equal(0);
-      // expect(await daiToken.balanceOf(garden.address)).to.be.gt(
-      //   ethers.utils.parseEther("99")
-      // );
+      await executeStrategy(garden1, strategyContract, 0);
+      expect(await yearnDaiVault.balanceOf(strategyContract.address)).to.be.gte(expectedShares);
+
+      await finalizeStrategy(garden1, strategyContract, 0);
+      expect(await yearnDaiVault.balanceOf(strategyContract.address)).to.equal(0);
+      expect(await daiToken.balanceOf(strategyContract.address)).to.equal(0);
+      expect(await WETH.balanceOf(strategyContract.address)).to.equal(ethers.BigNumber.from('995973117600718893'));
     });
   });
 });
