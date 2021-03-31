@@ -69,7 +69,6 @@ describe('OneInchTradeIntegration', function () {
       );
 
       await executeStrategy(garden1, strategyContract, 0);
-      expect(await wethToken.balanceOf(strategyContract.address)).to.equal(ethers.utils.parseEther('0'));
       expect(await usdcToken.balanceOf(strategyContract.address)).to.be.gt(ethers.utils.parseEther('900') / 10 ** 12);
 
       await finalizeStrategy(garden1, strategyContract, 0);

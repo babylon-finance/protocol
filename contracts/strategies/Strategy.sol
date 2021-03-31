@@ -121,6 +121,7 @@ contract Strategy is ReentrancyGuard, Initializable {
 
     // Keeper max fee
     uint256 internal constant MAX_KEEPER_FEE = (1e6 * 1e3 gwei);
+    uint256 internal constant MAX_STRATEGY_KEEPER_FEES = 2 * MAX_KEEPER_FEE;
 
     /* ============ Struct ============ */
 
@@ -276,6 +277,12 @@ contract Strategy is ReentrancyGuard, Initializable {
         absoluteTotalVotes = absoluteTotalVotes + _absoluteTotalVotes;
         totalVotes = totalVotes + _totalVotes;
         active = true;
+
+        // Get Keeper Fees allocated
+        garden.allocateCapitalToInvestment(MAX_STRATEGY_KEEPER_FEES);
+        calculateAndEditPosition(garden.getReserveAsset(), MAX_STRATEGY_KEEPER_FEES, MAX_STRATEGY_KEEPER_FEES.toInt256(), LIQUID_STATUS);
+        capitalAllocated = capitalAllocated.add(MAX_STRATEGY_KEEPER_FEES);
+
         _payKeeper(msg.sender, _fee);
     }
 
@@ -294,10 +301,9 @@ contract Strategy is ReentrancyGuard, Initializable {
             'Idea has not completed the cooldown period'
         );
         // Execute enter trade
-        uint256 capitalPlusKeeperFees = _capital.add(2e18); // 2ETH max
-        garden.allocateCapitalToInvestment(capitalPlusKeeperFees);
-        calculateAndEditPosition(garden.getReserveAsset(), capitalPlusKeeperFees, _capital.toInt256(), LIQUID_STATUS);
-        capitalAllocated = capitalAllocated.add(capitalPlusKeeperFees);
+        garden.allocateCapitalToInvestment(_capital);
+        calculateAndEditPosition(garden.getReserveAsset(), _capital, _capital.toInt256(), LIQUID_STATUS);
+        capitalAllocated = capitalAllocated.add(_capital);
         _enterStrategy(_capital);
         // Sets the executed timestamp
         executedAt = block.timestamp;
@@ -318,10 +324,10 @@ contract Strategy is ReentrancyGuard, Initializable {
             'Idea can only be finalized after the minimum period has elapsed'
         );
         require(!finalized, 'This investment was already exited');
-        uint256 reserveAssetBeforeExiting = garden.getPrincipal();
+        uint256 reserveAssetBeforeExiting = ERC20(garden.getReserveAsset()).balanceOf(address(this));
         // Execute exit trade
         _exitStrategy();
-        capitalReturned = garden.getPrincipal().sub(reserveAssetBeforeExiting).sub(_fee);
+        capitalReturned = ERC20(garden.getReserveAsset()).balanceOf(address(this)).sub(_fee);
         // Mark as finalized
         finalized = true;
         active = false;
@@ -333,7 +339,10 @@ contract Strategy is ReentrancyGuard, Initializable {
             capitalReturned.toInt256().sub(capitalAllocated.toInt256()),
             address(this)
         );
+        uint256 remainingReserve = ERC20(garden.getReserveAsset()).balanceOf(address(this));
         _payKeeper(msg.sender, _fee);
+
+        require(ERC20(garden.getReserveAsset()).transfer(address(garden), remainingReserve), "Ensure capital does not get stuck");
     }
 
     /**
@@ -535,11 +544,14 @@ contract Strategy is ReentrancyGuard, Initializable {
      * @param _fee                The fee paid to keeper to compensate the gas cost
      */
     function _payKeeper(address payable _keeper, uint256 _fee) internal {
-        require(IBabController(controller).isValidKeeper(_keeper), 'G23'); // Only keeper
-        require(ERC20(garden.getReserveAsset()).balanceOf(address(this)) >= _fee, 'G24'); // not enough weth for gas subsidy
+        require(IBabController(controller).isValidKeeper(_keeper), 'Only Keeper'); // Only keeper
+        console.log('balance');
+        console.log(_fee);
+        console.log(ERC20(garden.getReserveAsset()).balanceOf(address(this)));
+        require(ERC20(garden.getReserveAsset()).balanceOf(address(this)) >= _fee, 'Not enough weth to pay keeper'); // not enough weth for gas subsidy
         // Pay Keeper in WETH
         if (_fee > 0) {
-            require(ERC20(garden.getReserveAsset()).transfer(_keeper, _fee), 'G25'); // not enough weth for gas subsidy
+            require(ERC20(garden.getReserveAsset()).transfer(_keeper, _fee), 'Not enough weth to pay keeper'); // not enough weth for gas subsidy
         }
     }
 
