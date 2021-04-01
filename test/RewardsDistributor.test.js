@@ -24,6 +24,7 @@ describe('BABL Rewards Distributor', function () {
   let rewardsDistributor;
   let strategyDataset;
   let strategyCandidate;
+  let owner;
   let signer1;
   let signer2;
   let signer3;
@@ -39,6 +40,7 @@ describe('BABL Rewards Distributor', function () {
     ({
       babController,
       bablToken,
+      owner,
       signer1,
       garden1,
       garden2,
