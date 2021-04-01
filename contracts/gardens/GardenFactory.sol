@@ -36,7 +36,6 @@ contract GardenFactory {
     }
 
     function createRollingGarden(
-        address[] memory _integrations,
         address _weth,
         address _controller,
         address _creator,
@@ -44,7 +43,7 @@ contract GardenFactory {
         string memory _symbol
     ) external returns (address) {
         address payable clone = payable(Clones.clone(rollingGarden));
-        RollingGarden(clone).initialize(_integrations, _weth, _controller, _creator, _name, _symbol);
+        RollingGarden(clone).initialize(_weth, _controller, _creator, _name, _symbol);
         return clone;
     }
 }

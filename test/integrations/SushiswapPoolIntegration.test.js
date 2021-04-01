@@ -12,8 +12,8 @@ const { ADDRESS_ZERO } = require('../../utils/constants');
 
 const { loadFixture } = waffle;
 
-describe('UniswapPoolIntegrationTest', function () {
-  let uniswapPoolIntegration;
+describe('SushiswapPoolIntegrationTest', function () {
+  let sushiswapPoolIntegration;
   let garden1;
   let signer1;
   let signer2;
@@ -21,7 +21,7 @@ describe('UniswapPoolIntegrationTest', function () {
   let babController;
 
   beforeEach(async () => {
-    ({ babController, garden1, uniswapPoolIntegration, signer1, signer2, signer3 } = await loadFixture(
+    ({ babController, garden1, sushiswapPoolIntegration, signer1, signer2, signer3 } = await loadFixture(
       deployFolioFixture,
     ));
   });
@@ -29,9 +29,14 @@ describe('UniswapPoolIntegrationTest', function () {
   describe('Deployment', function () {
     it('should successfully deploy the contract', async function () {
       const deployed = await babController.deployed();
-      const deployedUni = await uniswapPoolIntegration.deployed();
+      const deployedUni = await sushiswapPoolIntegration.deployed();
       expect(!!deployed).to.equal(true);
       expect(!!deployedUni).to.equal(true);
+    });
+
+    it('overrides the name', async function () {
+      const name = await sushiswapPoolIntegration.name();
+      expect(name).to.equal('sushiswap_pool');
     });
   });
 
@@ -39,15 +44,15 @@ describe('UniswapPoolIntegrationTest', function () {
     let daiWethPair;
 
     beforeEach(async () => {
-      daiWethPair = await ethers.getContractAt('IUniswapV2PairB', addresses.uniswap.pairs.wethdai);
+      daiWethPair = await ethers.getContractAt('IUniswapV2PairB', addresses.sushiswap.pairs.wethdai);
     });
 
     it('check that a valid pool is valid', async function () {
-      expect(await uniswapPoolIntegration.isPool(addresses.uniswap.pairs.wethdai)).to.equal(true);
+      expect(await sushiswapPoolIntegration.isPool(addresses.sushiswap.pairs.wethdai)).to.equal(true);
     });
 
     it('check that an invalid pool is not valid', async function () {
-      await expect(uniswapPoolIntegration.isPool(ADDRESS_ZERO)).to.be.reverted;
+      await expect(sushiswapPoolIntegration.isPool(ADDRESS_ZERO)).to.be.reverted;
     });
 
     it('can enter and exit the weth dai pool', async function () {
@@ -55,7 +60,7 @@ describe('UniswapPoolIntegrationTest', function () {
         1,
         'vote',
         [signer1, signer2, signer3],
-        uniswapPoolIntegration.address,
+        sushiswapPoolIntegration.address,
         garden1,
         DEFAULT_STRATEGY_PARAMS,
         [daiWethPair.address],

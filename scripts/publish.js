@@ -61,22 +61,41 @@ async function main() {
   }
 
   // Internal Integrations
-  const integrations = [
-    'BalancerIntegration.sol',
-    'YearnVaultIntegration.sol',
-    'KyberTradeIntegration.sol',
-    'UniswapPoolIntegration.sol',
-  ];
-  integrations.forEach((file) => {
-    publishAndPushContract(file, 'integrations/');
+  const borrow = ['AaveIntegration.sol', 'CompoundIntegration.sol'];
+  const passive = ['YearnVaultIntegration.sol'];
+  const pool = ['BalancerIntegration.sol', 'UniswapPoolIntegration.sol'];
+  const trade = ['OneInchTradeIntegration.sol', 'KyberTradeIntegration.sol'];
+
+  borrow.forEach((file) => {
+    publishAndPushContract(file, 'integrations/borrow/');
   });
-  // Factory Contracts
-  const factories = ['LongStrategyFactory.sol', 'LiquidityPoolStrategyFactory', 'GardenFactory.sol'];
+
+  passive.forEach((file) => {
+    publishAndPushContract(file, 'integrations/passive/');
+  });
+
+  pool.forEach((file) => {
+    publishAndPushContract(file, 'integrations/pool/');
+  });
+
+  trade.forEach((file) => {
+    publishAndPushContract(file, 'integrations/trade/');
+  });
+
+  // Garden Factory Contracts
+  const factories = ['GardenFactory.sol'];
   factories.forEach((file) => {
     publishAndPushContract(file, 'gardens/');
   });
+
+  // Strategy Factory Contracts
+  const strategies = ['LongStrategyFactory.sol', 'LiquidityPoolStrategyFactory'];
+  strategies.forEach((file) => {
+    publishAndPushContract(file, 'strategies/');
+  });
+
   // Internal Interfaces
-  const interfaces = ['IGarden.sol', 'IRollingGarden.sol', 'IIntegration.sol', 'IStrategy.sol'];
+  const interfaces = ['IBabController.sol', 'IGarden.sol', 'IRollingGarden.sol', 'IIntegration.sol', 'IStrategy.sol'];
 
   interfaces.forEach((file) => {
     publishAndPushContract(file, 'interfaces/');
@@ -99,6 +118,7 @@ async function main() {
   externalInterfaces.forEach((interfaceC) => {
     publishAndPushContract(interfaceC.name, interfaceC.path);
   });
+
   // Publish addresses
   fs.copyFileSync('utils/addresses.js', `${publishDir}/addresses.js`);
   fs.copyFileSync('utils/constants.js', `${publishDir}/constants.js`);

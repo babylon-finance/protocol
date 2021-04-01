@@ -32,6 +32,7 @@ import {PreciseUnitMath} from '../lib/PreciseUnitMath.sol';
 import {IBabController} from '../interfaces/IBabController.sol';
 import {IGarden} from '../interfaces/IGarden.sol';
 import {ITradeIntegration} from '../interfaces/ITradeIntegration.sol';
+import {ITradeIntegration} from '../interfaces/ITradeIntegration.sol';
 import {IPriceOracle} from '../interfaces/IPriceOracle.sol';
 import {IRewardsDistributor} from '../interfaces/IRewardsDistributor.sol';
 
@@ -81,7 +82,10 @@ contract Strategy is ReentrancyGuard, Initializable {
      */
     modifier onlyIntegration() {
         // Internal function used to reduce bytecode size
-        require(garden.isValidIntegration(msg.sender), 'Integration must be valid');
+        require(
+            controller.isValidIntegration(ITradeIntegration(msg.sender).getName(), msg.sender),
+            'Integration must be valid'
+        );
         _;
     }
 
@@ -98,7 +102,7 @@ contract Strategy is ReentrancyGuard, Initializable {
      * @param _fee                     The fee paid to keeper to compensate the gas cost
      */
     modifier onlyKeeper(uint256 _fee) {
-        require(IBabController(controller).isValidKeeper(msg.sender), 'Only a keeper can call this');
+        require(controller.isValidKeeper(msg.sender), 'Only a keeper can call this');
         // We assume that calling keeper functions should be less expensive than 1 million gas and the gas price should be lower than 1000 gwei.
         require(_fee < MAX_KEEPER_FEE, 'Fee is too high');
         _;
@@ -112,7 +116,7 @@ contract Strategy is ReentrancyGuard, Initializable {
     uint8 constant IN_INVESTMENT_STATUS = 2;
     uint8 constant BORROWED_STATUS = 3;
 
-    // Max candidate period
+    uint256 constant SLIPPAGE_ALLOWED = 1e16; // 1%
     uint256 constant MAX_CANDIDATE_PERIOD = 7 days;
     uint256 constant MIN_VOTERS_TO_BECOME_ACTIVE = 2;
 
@@ -218,7 +222,10 @@ contract Strategy is ReentrancyGuard, Initializable {
     ) public initializer {
         controller = IBabController(_controller);
         garden = IGarden(_garden);
-        require(garden.isValidIntegration(_integration), 'Integration must be valid');
+        require(
+            controller.isValidIntegration(ITradeIntegration(_integration).getName(), _integration),
+            'Integration must be valid'
+        );
         require(controller.isSystemContract(_garden), 'Must be a valid garden');
         require(ERC20(address(garden)).balanceOf(_strategist) > 0, 'Only someone with the garden token can withdraw');
         require(_stake > garden.totalSupply().div(100), 'Stake amount must be at least 1% of the garden');
@@ -616,19 +623,17 @@ contract Strategy is ReentrancyGuard, Initializable {
         address _receiveToken
     ) internal returns (uint256) {
         address tradeIntegration = IBabController(controller).getIntegrationByName('1inch');
-        require(garden.isValidIntegration(tradeIntegration), 'Integration is not valid');
         // Uses on chain oracle for all internal strategy operations to avoid attacks
         uint256 pricePerTokenUnit = _getPrice(_sendToken, _receiveToken);
-        uint256 slippageAllowed = 1e16; // 1%
         uint256 exactAmount = _sendQuantity.preciseMul(pricePerTokenUnit);
-        uint256 minAmountExpected = exactAmount.sub(exactAmount.preciseMul(slippageAllowed));
+        uint256 minAmountExpected = exactAmount.sub(exactAmount.preciseMul(SLIPPAGE_ALLOWED));
         ITradeIntegration(tradeIntegration).trade(_sendToken, _sendQuantity, _receiveToken, minAmountExpected);
         return minAmountExpected;
     }
 
     function _transferIdeaRewards() internal {
         address reserveAsset = garden.getReserveAsset();
-        int256 reserveAssetDelta = 0;
+        int256 reserveAssetDelta = capitalReturned.toInt256();
 
         // Idea returns were positive
         if (capitalReturned > capitalAllocated) {
@@ -645,61 +650,10 @@ contract Strategy is ReentrancyGuard, Initializable {
                 'Protocol perf fee failed'
             );
             reserveAssetDelta.add(int256(-protocolProfits));
-
-            // Send weth rewards to the strategist
-            uint256 strategistProfits = garden.strategyCreatorProfitPercentage().preciseMul(profits);
-            // Creator Bonus
-            if (strategist == garden.creator()) {
-                strategistProfits = strategistProfits.mul(15).div(100);
-            }
-            require(
-                ERC20(reserveAsset).transferFrom(address(this), strategist, strategistProfits),
-                'Ideator perf fee failed'
-            );
-            reserveAssetDelta.add(int256(-strategistProfits));
-
-            // Send weth rewards to voters that voted in favor
-            uint256 votersProfits = garden.strategyVotersProfitPercentage().preciseMul(profits);
-            // TODO: Pull rewards
-            for (uint256 i = 0; i < voters.length; i++) {
-                int256 voterWeight = votes[voters[i]];
-                if (voterWeight > 0) {
-                    uint256 voterProfits = votersProfits.mul(voterWeight.toUint256()).div(totalVotes.toUint256());
-                    if (strategist == garden.creator()) {
-                        // Creator Bonus
-                        voterProfits = voterProfits.mul(15).div(100);
-                    }
-                    require(
-                        ERC20(reserveAsset).transferFrom(address(this), voters[i], voterProfits),
-                        'Voter perf fee failed'
-                    );
-                }
-            }
-            reserveAssetDelta.add(int256(-votersProfits));
         } else {
             // Returns were negative
-            uint256 stakeToSlash = stake;
-            if (capitalReturned.add(stake) > capitalAllocated) {
-                stakeToSlash = capitalReturned.add(stake).sub(capitalAllocated);
-            }
-            // We slash and add to the garden the stake from the creator
-            uint256 votersRewards = garden.strategyVotersProfitPercentage().preciseMul(stakeToSlash);
-            // Send weth rewards to voters that voted against
-            // TODO: Pull rewards
-            for (uint256 i = 0; i < voters.length; i++) {
-                int256 voterWeight = votes[voters[i]];
-                if (voterWeight < 0) {
-                    require(
-                        ERC20(reserveAsset).transferFrom(
-                            address(this),
-                            voters[i],
-                            votersRewards.mul(voterWeight.toUint256()).div(totalVotes.toUint256())
-                        ),
-                        'Voter perf fee failed'
-                    );
-                }
-            }
-            reserveAssetDelta.add(int256(-stakeToSlash));
+            // TODO: Transform BABL to reserve asset and add
+            // reserveAssetDelta.add(int256(stake));
         }
         // Return the balance back to the garden
         require(

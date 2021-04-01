@@ -20,6 +20,7 @@ pragma solidity 0.7.4;
 
 import 'hardhat/console.sol';
 import {SafeMath} from '@openzeppelin/contracts/math/SafeMath.sol';
+import {PreciseUnitMath} from '../lib/PreciseUnitMath.sol';
 import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import {Strategy} from './Strategy.sol';
 import {IGarden} from '../interfaces/IGarden.sol';
@@ -33,6 +34,7 @@ import {IPoolIntegration} from '../interfaces/IPoolIntegration.sol';
  */
 contract LiquidityPoolStrategy is Strategy {
     using SafeMath for uint256;
+    using PreciseUnitMath for uint256;
 
     address public pool; // Pool to add liquidity to
     address[] public poolTokens; // List of pool tokens
@@ -55,14 +57,15 @@ contract LiquidityPoolStrategy is Strategy {
     function _enterStrategy(uint256 _capital) internal override {
         address reserveAsset = garden.getReserveAsset();
         uint256[] memory _maxAmountsIn = new uint256[](poolTokens.length);
+        uint256[] memory _poolWeights = IPoolIntegration(integration).getPoolWeights(pool);
         // Get the tokens needed to enter the pool
         for (uint256 i = 0; i < poolTokens.length; i++) {
-            // TODO: fix for pools that are not equally weighted
+            uint256 normalizedAmount = _capital.preciseMul(_poolWeights[i]);
             if (poolTokens[i] != reserveAsset) {
-                _trade(reserveAsset, _capital.div(poolTokens.length), poolTokens[i]);
+                _trade(reserveAsset, normalizedAmount, poolTokens[i]);
                 _maxAmountsIn[i] = IERC20(poolTokens[i]).balanceOf(address(this));
             } else {
-                _maxAmountsIn[i] = _capital.div(poolTokens.length);
+                _maxAmountsIn[i] = normalizedAmount;
             }
         }
         // TODO: calculate minReceiveQuantity instead of 1
@@ -74,6 +77,10 @@ contract LiquidityPoolStrategy is Strategy {
      */
     function _exitStrategy() internal override {
         uint256[] memory _minAmountsOut = new uint256[](poolTokens.length);
+        for (uint256 i = 0; i < poolTokens.length; i++) {
+            // TODO: calculate minReceiveQuantity instead of 1
+            _minAmountsOut[i] = 1;
+        }
         IPoolIntegration(integration).exitPool(
             pool,
             IERC20(pool).balanceOf(address(this)), // Sell all pool tokens
