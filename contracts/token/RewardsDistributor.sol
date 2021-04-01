@@ -254,14 +254,14 @@ contract RewardsDistributor is Ownable {
 
     function getQuarter(uint256 _now) public view returns (uint256) {
         uint256 quarter = (_now.sub(START_TIME).preciseDivCeil(EPOCH_DURATION)).div(1e18);
-        return quarter;
+        return quarter.add(1);
     }
 
     function getRewardsWindow(uint256 _from, uint256 _to) public view returns (uint256, uint256) {
         uint256 quarters = (_to.sub(_from).preciseDivCeil(EPOCH_DURATION)).div(1e18);
         uint256 startingQuarter = (_from.sub(START_TIME).preciseDivCeil(EPOCH_DURATION)).div(1e18);
 
-        return (quarters.add(1), startingQuarter);
+        return (quarters.add(1), startingQuarter.add(1));
     }
 
     function getSupplyForPeriod(uint256 _from, uint256 _to) public view returns (uint96[] memory) {

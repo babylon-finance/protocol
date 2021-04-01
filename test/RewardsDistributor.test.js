@@ -19,38 +19,26 @@ const { BigNumber } = require('@ethersproject/bignumber');
 // an async function.
 
 describe('BABL Rewards Distributor', function () {
+  let owner;
+  let signer1;
+  let signer2;
+  let signer3;
   let babController;
   let bablToken;
   let rewardsDistributor;
   let strategyDataset;
   let strategyCandidate;
-  let owner;
-  let signer1;
-  let signer2;
-  let signer3;
-  let garden1;
-  let garden2;
-  let garden3;
   let weth;
-  let strategy11;
-  let strategy21;
-  let balancerIntegration;
 
   beforeEach(async () => {
     ({
-      babController,
-      bablToken,
       owner,
       signer1,
-      garden1,
-      garden2,
-      garden3,
-      strategy11,
-      strategy21,
       signer2,
       signer3,
-      balancerIntegration,
-      rewardsDistributor,
+      babController,
+      bablToken,
+      rewardsDistributor
     } = await loadFixture(deployFolioFixture));
 
     weth = await ethers.getContractAt('IERC20', addresses.tokens.WETH);
