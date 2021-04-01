@@ -282,9 +282,9 @@ abstract contract TimeLockedToken is VoteToken {
         ) {
             return lockedAmount;
         }
-        
+
         // Investors have no cliff at all but they cannot transfer tokens in the first year
-        if (vestedToken[account].vestingBegin.add(365 days) > block.timestamp){
+        if (vestedToken[account].vestingBegin.add(365 days) > block.timestamp) {
             return lockedAmount;
         }
 

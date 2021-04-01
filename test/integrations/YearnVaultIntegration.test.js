@@ -71,7 +71,7 @@ describe('YearnVaultIntegrationTest', function () {
       await finalizeStrategy(garden1, strategyContract, 0);
       expect(await yearnDaiVault.balanceOf(strategyContract.address)).to.equal(0);
       expect(await daiToken.balanceOf(strategyContract.address)).to.equal(0);
-      expect(await WETH.balanceOf(strategyContract.address)).to.equal(ethers.BigNumber.from('995973117600718893'));
+      expect(await WETH.balanceOf(strategyContract.address)).to.equal(0);
     });
   });
 });

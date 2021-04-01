@@ -5,7 +5,7 @@ const addresses = require('../../utils/addresses');
 
 const DEFAULT_STRATEGY_PARAMS = [
   ethers.utils.parseEther('10'),
-  ethers.utils.parseEther('5'),
+  ethers.utils.parseEther('1'),
   ONE_DAY_IN_SECONDS * 30,
   ethers.utils.parseEther('0.05'), // 5%
   ethers.utils.parseEther('1'),

@@ -61,7 +61,7 @@ describe('CompoundLendIntegrationTest', function () {
       await finalizeStrategy(garden1, strategyContract);
       expect(await USDC.balanceOf(strategyContract.address)).to.equal(0);
       expect(await CUSDC.balanceOf(strategyContract.address)).to.be.equal(0);
-      expect(await WETH.balanceOf(strategyContract.address)).to.equal(ethers.BigNumber.from('994009508415973094'));
+      expect(await WETH.balanceOf(strategyContract.address)).to.equal(0);
     });
 
     // TODO: test supply/borrow for WETH

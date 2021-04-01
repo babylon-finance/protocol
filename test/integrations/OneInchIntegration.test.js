@@ -36,7 +36,6 @@ describe('OneInchTradeIntegration', function () {
     let usdcToken;
     let wethToken;
     let whaleSigner;
-    // let oneInchExchange;
     const daiWhaleAddress = '0x6B175474E89094C44Da98b954EedeAC495271d0F';
 
     beforeEach(async () => {
@@ -44,7 +43,6 @@ describe('OneInchTradeIntegration', function () {
       daiToken = await ethers.getContractAt('IERC20', addresses.tokens.DAI);
       wethToken = await ethers.getContractAt('IERC20', addresses.tokens.WETH);
       usdcToken = await ethers.getContractAt('IERC20', addresses.tokens.USDC);
-      // oneInchExchange = await ethers.getContractAt('IOneInchExchange', addresses.oneinch.exchange);
     });
 
     it('trade WETH to USDC', async function () {
@@ -54,12 +52,6 @@ describe('OneInchTradeIntegration', function () {
         }),
       );
       expect(await daiToken.balanceOf(garden1.address)).to.equal(ethers.utils.parseEther('100'));
-      // Get the quote
-      // const quote = await superagent.get(`${addresses.api.oneinch}quote`).query({
-      //   fromTokenAddress: daiToken.address,
-      //   toTokenAddress: usdcToken.address,
-      //   amount: 100 * 10 ** 18,
-      // });
       const strategyContract = await createStrategy(
         0,
         'vote',
@@ -69,11 +61,11 @@ describe('OneInchTradeIntegration', function () {
       );
 
       await executeStrategy(garden1, strategyContract);
-      expect(await wethToken.balanceOf(strategyContract.address)).to.equal(ethers.utils.parseEther('0'));
       expect(await usdcToken.balanceOf(strategyContract.address)).to.be.gt(ethers.utils.parseEther('900') / 10 ** 12);
 
       await finalizeStrategy(garden1, strategyContract, 0);
       expect(await usdcToken.balanceOf(strategyContract.address)).to.equal(0);
+      expect(await wethToken.balanceOf(garden1.address)).to.equal('1085000000000000000'); // 1.085 ETH
     });
   });
 });

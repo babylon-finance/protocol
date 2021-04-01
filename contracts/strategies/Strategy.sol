@@ -124,6 +124,7 @@ contract Strategy is ReentrancyGuard, Initializable {
 
     // Keeper max fee
     uint256 internal constant MAX_KEEPER_FEE = (1e6 * 1e3 gwei);
+    uint256 internal constant MAX_STRATEGY_KEEPER_FEES = 2 * MAX_KEEPER_FEE;
 
     /* ============ Struct ============ */
 
@@ -284,7 +285,18 @@ contract Strategy is ReentrancyGuard, Initializable {
         absoluteTotalVotes = absoluteTotalVotes + _absoluteTotalVotes;
         totalVotes = totalVotes + _totalVotes;
         active = true;
-        garden.payKeeper(msg.sender, _fee);
+
+        // Get Keeper Fees allocated
+        garden.allocateCapitalToInvestment(MAX_STRATEGY_KEEPER_FEES);
+        calculateAndEditPosition(
+            garden.getReserveAsset(),
+            MAX_STRATEGY_KEEPER_FEES,
+            MAX_STRATEGY_KEEPER_FEES.toInt256(),
+            LIQUID_STATUS
+        );
+        capitalAllocated = capitalAllocated.add(MAX_STRATEGY_KEEPER_FEES);
+
+        _payKeeper(msg.sender, _fee);
     }
 
     /**
@@ -308,7 +320,7 @@ contract Strategy is ReentrancyGuard, Initializable {
         _enterStrategy(_capital);
         // Sets the executed timestamp
         executedAt = block.timestamp;
-        garden.payKeeper(msg.sender, _fee);
+        _payKeeper(msg.sender, _fee);
     }
 
     /**
@@ -325,22 +337,27 @@ contract Strategy is ReentrancyGuard, Initializable {
             'Idea can only be finalized after the minimum period has elapsed'
         );
         require(!finalized, 'This investment was already exited');
-        uint256 reserveAssetBeforeExiting = garden.getPrincipal();
+        uint256 reserveAssetBeforeExiting = ERC20(garden.getReserveAsset()).balanceOf(address(this));
         // Execute exit trade
         _exitStrategy();
-        capitalReturned = garden.getPrincipal().sub(reserveAssetBeforeExiting);
+        capitalReturned = ERC20(garden.getReserveAsset()).balanceOf(address(this)).sub(_fee);
         // Mark as finalized
         finalized = true;
         active = false;
         exitedAt = block.timestamp;
         // Transfer rewards and update positions
-        _transferIdeaRewards();
+        _transferStrategyRewards();
         // Moves strategy to finalized
         IGarden(garden).moveStrategyToFinalized(
             capitalReturned.toInt256().sub(capitalAllocated.toInt256()),
             address(this)
         );
-        garden.payKeeper(msg.sender, _fee);
+        _payKeeper(msg.sender, _fee);
+        uint256 remainingReserve = ERC20(garden.getReserveAsset()).balanceOf(address(this));
+        require(
+            ERC20(garden.getReserveAsset()).transfer(address(garden), remainingReserve),
+            'Ensure capital does not get stuck'
+        );
     }
 
     /**
@@ -349,7 +366,7 @@ contract Strategy is ReentrancyGuard, Initializable {
      */
     function expireStrategy(uint256 _fee) external onlyKeeper(_fee) nonReentrant onlyActiveGarden {
         _deleteCandidateStrategy();
-        garden.payKeeper(msg.sender, _fee);
+        _payKeeper(msg.sender, _fee);
     }
 
     /**
@@ -537,6 +554,20 @@ contract Strategy is ReentrancyGuard, Initializable {
     /* ============ Internal Functions ============ */
 
     /**
+     * Pays gas cost back to the keeper from executing a transaction
+     * @param _keeper             Keeper that executed the transaction
+     * @param _fee                The fee paid to keeper to compensate the gas cost
+     */
+    function _payKeeper(address payable _keeper, uint256 _fee) internal {
+        require(IBabController(controller).isValidKeeper(_keeper), 'Only Keeper'); // Only keeper
+        // Pay Keeper in WETH
+        if (_fee > 0) {
+            require(ERC20(garden.getReserveAsset()).balanceOf(address(this)) >= _fee, 'Not enough weth to pay keeper'); // not enough weth for gas subsidy
+            require(ERC20(garden.getReserveAsset()).transfer(_keeper, _fee), 'Not enough weth to pay keeper'); // not enough weth for gas subsidy
+        }
+    }
+
+    /**
      * Enters the strategy. Virtual method.
      * Needs to be overriden in base class.
      *
@@ -590,9 +621,9 @@ contract Strategy is ReentrancyGuard, Initializable {
     /**
      * Function that calculates the price using the oracle and executes a trade.
      * Must call the exchange to get the price and pass minReceiveQuantity accordingly.
-     * @param _sendToken              Token to exchange
-     * @param _sendQuantity           Amount of tokens to send
-     * @param _receiveToken           Token to receive
+     * @param _sendToken                    Token to exchange
+     * @param _sendQuantity                 Amount of tokens to send
+     * @param _receiveToken                 Token to receive
      */
     function _trade(
         address _sendToken,
@@ -608,12 +639,12 @@ contract Strategy is ReentrancyGuard, Initializable {
         return minAmountExpected;
     }
 
-    function _transferIdeaRewards() internal {
+    function _transferStrategyRewards() internal {
         address reserveAsset = garden.getReserveAsset();
         int256 reserveAssetDelta = capitalReturned.toInt256();
 
         // Idea returns were positive
-        if (capitalReturned > capitalAllocated) {
+        if (capitalReturned >= capitalAllocated) {
             uint256 profits = capitalReturned - capitalAllocated; // in reserve asset (weth)
             _returnStake();
             // Send weth performance fee to the protocol
@@ -629,8 +660,9 @@ contract Strategy is ReentrancyGuard, Initializable {
             reserveAssetDelta.add(int256(-protocolProfits));
         } else {
             // Returns were negative
-            // TODO: Transform BABL to reserve asset and add
-            // reserveAssetDelta.add(int256(stake));
+            // Burn strategist stake and add the amount to the garden
+            garden.burnStrategistStake(strategist, capitalReturned.preciseDiv(capitalAllocated).preciseMul(stake));
+            reserveAssetDelta.add(int256(stake));
         }
         // Return the balance back to the garden
         require(
@@ -640,7 +672,7 @@ contract Strategy is ReentrancyGuard, Initializable {
         // Updates strategy posiiton
         calculateAndEditPosition(
             reserveAsset,
-            ERC20(reserveAsset).balanceOf(address(this)),
+            0, // Strategy should end at 0
             int256(-capitalReturned),
             LIQUID_STATUS
         );
