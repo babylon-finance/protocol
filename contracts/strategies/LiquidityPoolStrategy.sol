@@ -78,8 +78,9 @@ contract LiquidityPoolStrategy is Strategy {
                 _maxAmountsIn[i] = normalizedAmount;
             }
         }
+        console.log('joining');
         // TODO: calculate minReceiveQuantity instead of 1
-        IPoolIntegration(integration).joinPool{value: ethValue}(pool, 1, poolTokens, _maxAmountsIn);
+        IPoolIntegration(integration).joinPool(pool, 1, poolTokens, _maxAmountsIn);
     }
 
     /**
