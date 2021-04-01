@@ -43,11 +43,11 @@ describe('OneInchPoolIntegrationTest', function () {
     });
 
     it('check that a valid pool is valid', async function () {
-      expect(await oneInchPoolIntegration.isPool(addresses.uniswap.pairs.wethdai)).to.equal(true);
+      expect(await oneInchPoolIntegration.isPool(addresses.oneinch.pools.wethdai)).to.equal(true);
     });
 
     it('check that an invalid pool is not valid', async function () {
-      await expect(oneInchPoolIntegration.isPool(ADDRESS_ZERO)).to.be.reverted;
+      expect(await oneInchPoolIntegration.isPool(ADDRESS_ZERO)).to.equal(false);
     });
 
     it('can enter and exit the weth dai pool', async function () {

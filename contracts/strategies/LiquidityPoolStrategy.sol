@@ -61,10 +61,14 @@ contract LiquidityPoolStrategy is Strategy {
         // Get the tokens needed to enter the pool
         for (uint256 i = 0; i < poolTokens.length; i++) {
             uint256 normalizedAmount = _capital.preciseMul(_poolWeights[i]);
-            if (poolTokens[i] != reserveAsset) {
+            if (poolTokens[i] != reserveAsset && poolTokens[i] != address(0)) {
                 _trade(reserveAsset, normalizedAmount, poolTokens[i]);
                 _maxAmountsIn[i] = IERC20(poolTokens[i]).balanceOf(address(this));
             } else {
+                if (poolTokens[i] == address(0)) {
+                    // Convert WETH to ETH
+                    // TODO: payable to enter 1inch and convert to ETH
+                }
                 _maxAmountsIn[i] = normalizedAmount;
             }
         }
