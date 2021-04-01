@@ -67,5 +67,5 @@ describe('BABL Rewards Distributor', function () {
       const deployedc = await rewardsDistributor.deployed(bablToken.address, babController.address);
       expect(!!deployedc).to.equal(true);
     });
-  });  
+  });
 });

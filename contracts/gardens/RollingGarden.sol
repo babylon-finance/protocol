@@ -376,7 +376,8 @@ contract RollingGarden is ReentrancyGuard, BaseGarden {
             uint256 totalProfits = 0; // Total Profits of each finalized strategy
             // Positive strategies not yet claimed
             if (
-                strategy.exitedAt() > contributors[msg.sender].claimedAt && strategy.enteredAt() >= contributors[msg.sender].initialDepositAt // TODO: may need to remove because of rebalance
+                strategy.exitedAt() > contributors[msg.sender].claimedAt &&
+                strategy.enteredAt() >= contributors[msg.sender].initialDepositAt // TODO: may need to remove because of rebalance
             ) {
                 // If strategy returned money we give out the profits
                 if (strategy.capitalReturned() > strategy.capitalAllocated()) {

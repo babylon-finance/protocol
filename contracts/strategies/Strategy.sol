@@ -333,13 +333,6 @@ contract Strategy is ReentrancyGuard, Initializable {
         IRewardsDistributor rewardsDistributor =
             IRewardsDistributor(IBabController(controller).getRewardsDistributor());
 
-        // strategyRewards = calculate using supply schedule
-        strategyRewards = rewardsDistributor.getStrategyRewards(address(this));
-
-        if (capitalReturned.sub(capitalAllocated) < 0) {
-            // Negative profit strategies get also BABL rewards with a proportional reduction
-            strategyRewards = strategyRewards.add(strategyRewards.mul(capitalReturned.sub(capitalAllocated)));
-        }
         // Substract the Principal in the Rewards Distributor to update the Protocol power value
         rewardsDistributor.substractProtocolPrincipal(capitalAllocated);
 
@@ -348,6 +341,17 @@ contract Strategy is ReentrancyGuard, Initializable {
             capitalReturned.toInt256().sub(capitalAllocated.toInt256()),
             address(this)
         );
+
+        // strategyRewards = calculate using RewardsDistributor
+        strategyRewards = rewardsDistributor.getStrategyRewards(address(this));
+
+        // Positive profit strategies get also BABL rewards with a proportional increment
+        // Negative profit strategies get also BABL rewards with a proportional reduction
+
+        strategyRewards = strategyRewards.add(
+            strategyRewards.mul(capitalReturned.sub(capitalAllocated).div(capitalAllocated))
+        );
+
         garden.payKeeper(msg.sender, _fee);
     }
 

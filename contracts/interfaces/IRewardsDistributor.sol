@@ -64,13 +64,7 @@ interface IRewardsDistributor {
 
     function getCheckpoints() external view returns (uint256);
 
-    function getRewardsWindow(uint256 _from, uint256 _to)
-        external
-        view
-        returns (
-            uint256,
-            uint256
-        );
+    function getRewardsWindow(uint256 _from, uint256 _to) external view returns (uint256, uint256);
 
     function getSupplyForPeriod(uint256 _from, uint256 _to) external view returns (uint96[] memory);
 

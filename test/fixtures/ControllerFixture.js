@@ -19,7 +19,7 @@ async function deployFolioFixture() {
 
   // Deployment of BABL Token contract
   const BABLToken = await ethers.getContractFactory('BABLToken', owner);
-  const bablToken = await BABLToken.deploy();
+  const bablToken = await BABLToken.connect(owner).deploy();
 
   // Deployment of Time Lock Registry contract
   const TimeLockRegistry = await ethers.getContractFactory('TimeLockRegistry', owner);
