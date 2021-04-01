@@ -333,15 +333,14 @@ contract Strategy is ReentrancyGuard, Initializable {
         active = false;
         exitedAt = block.timestamp;
         // Transfer rewards and update positions
-        _transferIdeaRewards();
+        _transferStrategyRewards();
         // Moves strategy to finalized
         IGarden(garden).moveStrategyToFinalized(
             capitalReturned.toInt256().sub(capitalAllocated.toInt256()),
             address(this)
         );
-        uint256 remainingReserve = ERC20(garden.getReserveAsset()).balanceOf(address(this));
         _payKeeper(msg.sender, _fee);
-
+        uint256 remainingReserve = ERC20(garden.getReserveAsset()).balanceOf(address(this));
         require(ERC20(garden.getReserveAsset()).transfer(address(garden), remainingReserve), "Ensure capital does not get stuck");
     }
 
@@ -545,12 +544,9 @@ contract Strategy is ReentrancyGuard, Initializable {
      */
     function _payKeeper(address payable _keeper, uint256 _fee) internal {
         require(IBabController(controller).isValidKeeper(_keeper), 'Only Keeper'); // Only keeper
-        console.log('balance');
-        console.log(_fee);
-        console.log(ERC20(garden.getReserveAsset()).balanceOf(address(this)));
-        require(ERC20(garden.getReserveAsset()).balanceOf(address(this)) >= _fee, 'Not enough weth to pay keeper'); // not enough weth for gas subsidy
         // Pay Keeper in WETH
         if (_fee > 0) {
+            require(ERC20(garden.getReserveAsset()).balanceOf(address(this)) >= _fee, 'Not enough weth to pay keeper'); // not enough weth for gas subsidy
             require(ERC20(garden.getReserveAsset()).transfer(_keeper, _fee), 'Not enough weth to pay keeper'); // not enough weth for gas subsidy
         }
     }
@@ -609,9 +605,9 @@ contract Strategy is ReentrancyGuard, Initializable {
     /**
      * Function that calculates the price using the oracle and executes a trade.
      * Must call the exchange to get the price and pass minReceiveQuantity accordingly.
-     * @param _sendToken              Token to exchange
-     * @param _sendQuantity           Amount of tokens to send
-     * @param _receiveToken           Token to receive
+     * @param _sendToken                    Token to exchange
+     * @param _sendQuantity                 Amount of tokens to send
+     * @param _receiveToken                 Token to receive
      */
     function _trade(
         address _sendToken,
@@ -627,7 +623,7 @@ contract Strategy is ReentrancyGuard, Initializable {
         return minAmountExpected;
     }
 
-    function _transferIdeaRewards() internal {
+    function _transferStrategyRewards() internal {
         address reserveAsset = garden.getReserveAsset();
         int256 reserveAssetDelta = capitalReturned.toInt256();
 

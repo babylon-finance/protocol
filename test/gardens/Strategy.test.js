@@ -230,7 +230,7 @@ describe('Strategy', function () {
   });
 
   describe('finalizeInvestment', async function () {
-    it.only('should finalize investment idea', async function () {
+    it('should finalize investment idea', async function () {
       const strategyContract = await createStrategy(
         0,
         'active',
@@ -266,7 +266,7 @@ describe('Strategy', function () {
       await finalizeStrategy(garden1, strategyContract, 42);
 
       await expect(strategyContract.finalizeInvestment(42, { gasPrice: 0 })).to.be.rejectedWith(
-        /this investment was already exited/i,
+        /This investment was already exited/i,
       );
     });
   });
