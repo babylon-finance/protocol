@@ -26,7 +26,21 @@ import {IIntegration} from './IIntegration.sol';
  * Interface for lending integrations such as Compound, Aave.
  */
 interface ILendIntegration is IIntegration {
-    function supplyTokens() external;
+    function supplyTokens(
+        address _assetToken,
+        uint256 _numTokensToSupply,
+        uint256 _minAmountExpected
+    ) external;
 
-    function redeemTokens() external;
+    function redeemTokens(
+        address _assetToken,
+        uint256 _numTokensToRedeem,
+        uint256 _minAmountExpected
+    ) external;
+
+    function getExpectedShares(address _assetToken, uint256 _numTokensToSupply) external view returns (uint256);
+
+    function getExchangeRatePerToken(address _assetToken) external view returns (uint256);
+
+    function getInvestmentToken(address _assetToken) external view returns (address);
 }

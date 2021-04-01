@@ -14,14 +14,20 @@ describe('CompoundLendIntegrationTest', function () {
   let signer2;
   let signer3;
   let babController;
+  let USDC;
+  let CUSDC;
+  let WETH;
 
   beforeEach(async () => {
     ({ garden1, babController, compoundLendIntegration, signer1, signer2, signer3 } = await loadFixture(
       deployFolioFixture,
     ));
+    USDC = await ethers.getContractAt('IERC20', addresses.tokens.USDC);
+    CUSDC = await ethers.getContractAt('IERC20', addresses.tokens.CUSDC);
+    WETH = await ethers.getContractAt('IERC20', addresses.tokens.WETH);
   });
 
-  describe.only('Deployment', function () {
+  describe('Deployment', function () {
     it('should successfully deploy the contract', async function () {
       const babControlerDeployed = await babController.deployed();
       const compoundLendDeployed = await compoundLendIntegration.deployed();
@@ -31,38 +37,33 @@ describe('CompoundLendIntegrationTest', function () {
   });
 
   describe('Compound Lend', function () {
-    let daiToken;
-    let yearnDaiVault;
-    let WETH;
+    it('can supply to valid cToken', async function () {
+      expect(await compoundLendIntegration.isInvestment(addresses.tokens.USDC)).to.equal(true);
+    });
 
-    beforeEach(async () => {
-      daiToken = await ethers.getContractAt('IERC20', addresses.tokens.DAI);
-      WETH = await ethers.getContractAt('IERC20', addresses.tokens.WETH);
+    it('fails to suplly to invlaid address', async function () {
+      expect(await compoundLendIntegration.isInvestment(ADDRESS_ZERO)).to.equal(false);
     });
 
     it('can supply and redeem tokens from Compound', async function () {
-      const amountToDeposit = ethers.utils.parseEther('1');
-      const sharePrice = await yearnDaiVault.getPricePerFullShare();
-      const expectedShares = await compoundVaultIntegration.getExpectedShares(yearnDaiVault.address, amountToDeposit);
-      const vaultAsset = await compoundVaultIntegration.getInvestmentAsset(yearnDaiVault.address);
-      expect(await compoundVaultIntegration.getPricePerShare(yearnDaiVault.address)).to.equal(sharePrice);
-      expect(vaultAsset).to.equal(addresses.tokens.DAI);
-
       const strategyContract = await createStrategy(
-        2,
+        3,
         'vote',
         [signer1, signer2, signer3],
         compoundLendIntegration.address,
         garden1,
       );
 
-      await executeStrategy(garden1, strategyContract, 0);
-      expect(await yearnDaiVault.balanceOf(strategyContract.address)).to.be.gte(expectedShares);
+      await executeStrategy(garden1, strategyContract);
+      expect(await USDC.balanceOf(strategyContract.address)).to.be.equal(0);
+      expect(await CUSDC.balanceOf(strategyContract.address)).to.be.gte(0);
 
-      await finalizeStrategy(garden1, strategyContract, 0);
-      expect(await yearnDaiVault.balanceOf(strategyContract.address)).to.equal(0);
-      expect(await daiToken.balanceOf(strategyContract.address)).to.equal(0);
-      expect(await WETH.balanceOf(strategyContract.address)).to.equal(ethers.BigNumber.from('995973117600718893'));
+      await finalizeStrategy(garden1, strategyContract);
+      expect(await USDC.balanceOf(strategyContract.address)).to.equal(0);
+      expect(await CUSDC.balanceOf(strategyContract.address)).to.be.equal(0);
+      expect(await WETH.balanceOf(strategyContract.address)).to.equal(ethers.BigNumber.from('994009508415973094'));
     });
+
+    // TODO: test supply/borrow for WETH
   });
 });

@@ -72,11 +72,11 @@ async function createYieldStrategy(garden, integration, signer, params = DEFAULT
 }
 
 async function createLendStrategy(garden, integration, signer, params = DEFAULT_STRATEGY_PARAMS, lendParams) {
-  await garden.connect(signer).addStrategy(2, integration, ...params);
+  await garden.connect(signer).addStrategy(3, integration, ...params);
   const strategies = await garden.getStrategies();
   const lastStrategyAddr = strategies[strategies.length - 1];
 
-  const passedLendParams = lendParams || [addresses.tokens.cusdc];
+  const passedLendParams = lendParams || [addresses.tokens.USDC];
   const strategy = await ethers.getContractAt('LendStrategy', lastStrategyAddr);
   await strategy.connect(signer).setLendData(...passedLendParams, {
     gasPrice: 0,
@@ -110,10 +110,10 @@ async function vote(garden, signers, strategy) {
   );
 }
 
-async function executeStrategy(garden, strategy, fee = 0) {
+async function executeStrategy(garden, strategy, amount = ethers.utils.parseEther('1'), fee = 0) {
   ethers.provider.send('evm_increaseTime', [ONE_DAY_IN_SECONDS * 2]);
   await updateTWAPs(garden);
-  return strategy.executeInvestment(ethers.utils.parseEther('1'), fee, {
+  return strategy.executeInvestment(amount, fee, {
     gasPrice: 0,
   });
 }

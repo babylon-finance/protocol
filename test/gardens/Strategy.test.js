@@ -183,7 +183,7 @@ describe('Strategy', function () {
         garden1,
       );
 
-      await executeStrategy(garden1, strategyContract, 42);
+      await executeStrategy(garden1, strategyContract, ethers.utils.parseEther('1'), 42);
 
       const [address, active, dataSet, finalized, executedAt, exitedAt] = await strategyContract.getStrategyState();
 

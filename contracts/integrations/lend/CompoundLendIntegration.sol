@@ -19,10 +19,12 @@
 pragma solidity 0.7.4;
 
 import 'hardhat/console.sol';
+import {ERC20} from '@openzeppelin/contracts/token/ERC20/ERC20.sol';
 import {SafeMath} from '@openzeppelin/contracts/math/SafeMath.sol';
 import {SafeCast} from '@openzeppelin/contracts/utils/SafeCast.sol';
 import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import {ReentrancyGuard} from '@openzeppelin/contracts/utils/ReentrancyGuard.sol';
+import {ICToken} from '../../interfaces/external/compound/ICToken.sol';
 import {IGarden} from '../../interfaces/IGarden.sol';
 import {IStrategy} from '../../interfaces/IStrategy.sol';
 import {IBabController} from '../../interfaces/IBabController.sol';
@@ -38,6 +40,12 @@ contract CompoundLendIntegration is LendIntegration {
     using SafeMath for uint256;
     using SafeCast for uint256;
 
+    /* ============ Constant ============ */
+
+    address constant cETH = 0x4Ddc2D193948926D02f9B1fE9e1daa0718270ED5;
+    // Mapping of asset addresses to cToken addresses
+    mapping(address => address) public assetToCToken;
+
     /* ============ Struct ============ */
 
     /* ============ Events ============ */
@@ -50,10 +58,105 @@ contract CompoundLendIntegration is LendIntegration {
      * @param _weth                   Address of the WETH ERC20
      * @param _controller             Address of the controller
      */
-    constructor(address _controller, address _weth) LendIntegration('compoundlend', _weth, _controller) {}
+    constructor(address _controller, address _weth) LendIntegration('compoundlend', _weth, _controller) {
+        assetToCToken[0x6B175474E89094C44Da98b954EedeAC495271d0F] = 0x5d3a536E4D6DbD6114cc1Ead35777bAB948E3643; // DAI
+        assetToCToken[0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2] = 0x4Ddc2D193948926D02f9B1fE9e1daa0718270ED5; // WETH
+        assetToCToken[0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48] = 0x39AA39c021dfbaE8faC545936693aC917d5E7563; // USDC
+        assetToCToken[0xdAC17F958D2ee523a2206206994597C13D831ec7] = 0xf650C3d88D12dB855b8bf7D11Be6C55A4e07dCC9; // USDT
+        assetToCToken[0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599] = 0xC11b1268C1A384e55C48c2391d8d480264A3A7F4; // WBTC
+        assetToCToken[0xc00e94Cb662C3520282E6f5717214004A7f26888] = 0x70e36f6BF80a52b3B46b3aF8e106CC0ed743E8e4; // COMP
+    }
 
     /* ============ External Functions ============ */
-    // function supply() external override {}
 
-    // function redeem() external override {}
+    // Governance function
+    function updateCTokenMapping(address _assetAddress, address _cTokenAddress) external onlyProtocol {
+        assetToCToken[_assetAddress] = _cTokenAddress;
+    }
+
+    /* ============ Internal Functions ============ */
+
+    function _isInvestment(address _investmentAddress) internal view override returns (bool) {
+        return assetToCToken[_investmentAddress] != address(0);
+    }
+
+    /**
+     * Create and return InvestmentInfo struct
+     *
+     * @param _tokenAddress                             Address of the investment
+     *
+     * return InvestmentInfo                            Struct containing data for the investment
+     */
+    function _createInvestmentInfo(address _tokenAddress) internal view returns (InvestmentInfo memory) {
+        InvestmentInfo memory investmentInfo;
+        investmentInfo.strategy = IStrategy(msg.sender);
+        investmentInfo.garden = IGarden(investmentInfo.strategy.garden());
+        investmentInfo.investment = _tokenAddress;
+
+        return investmentInfo;
+    }
+
+    function _getExpectedShares(address _assetToken, uint256 _numTokensToSupply) internal override returns (uint256) {
+        uint256 oneCTokenInUderlying = _getExchangeRatePerToken(_assetToken);
+        return oneCTokenInUderlying.mul(_numTokensToSupply).div(10**18);
+    }
+
+    function _getExchangeRatePerToken(address _assetToken) internal override returns (uint256) {
+        address cToken = assetToCToken[_assetToken];
+        uint256 exchangeRateCurrent = ICToken(cToken).exchangeRateStored();
+        // TODO: exchangeRateCurrent reverts wit no reason. Super strange.
+        // uint256 exchangeRateCurrent = ICToken(cToken).exchangeRateCurrent();
+        uint8 assetDecimals = ERC20(_assetToken).decimals();
+        // cTokens always have 8 decimals.
+        if (assetDecimals < 8) {
+            uint256 mantissa = 8 - assetDecimals;
+            return exchangeRateCurrent.mul(10**mantissa);
+        } else {
+            uint256 mantissa = assetDecimals - 8;
+            return exchangeRateCurrent.div(10**mantissa);
+        }
+    }
+
+    function _getRedeemCalldata(address _assetToken, uint256 _numTokensToSupply)
+        internal
+        view
+        override
+        returns (
+            address,
+            uint256,
+            bytes memory
+        )
+    {
+        // Encode method data for Garden to invoke
+        bytes memory methodData = abi.encodeWithSignature('redeem(uint256)', _numTokensToSupply);
+
+        return (assetToCToken[_assetToken], 0, methodData);
+    }
+
+    /**
+     * Returns calldata for supplying tokens.
+     *
+     * @return address                         Target contract address
+     * @return uint256                         Call value
+     * @return bytes                           Trade calldata
+     */
+    function _getSupplyCalldata(address _assetToken, uint256 _numTokensToSupply)
+        internal
+        view
+        override
+        returns (
+            address,
+            uint256,
+            bytes memory
+        )
+    {
+        // Encode method data for Garden to invoke
+        bytes memory methodData = abi.encodeWithSignature('mint(uint256)', _numTokensToSupply);
+        // If it is ETH, send the value
+        return (assetToCToken[_assetToken], assetToCToken[_assetToken] == cETH ? _numTokensToSupply : 0, methodData);
+    }
+
+    function _getSpender(address _investmentAddress) internal view override returns (address) {
+        return assetToCToken[_investmentAddress];
+    }
 }
