@@ -35,6 +35,8 @@ async function createLongStrategy(garden, integration, signer, params = DEFAULT_
   const passedLongParams = longParams || [addresses.tokens.USDC];
 
   const strategy = await ethers.getContractAt('LongStrategy', lastStrategyAddr);
+  console.log('timestamp js', new Date().getTime());
+  console.log('timestamp', (await strategy.enteredAt()).toString());
   await strategy.connect(signer).setLongData(...passedLongParams, {
     gasPrice: 0,
   });
@@ -99,9 +101,11 @@ async function vote(garden, signers, strategy) {
 async function executeStrategy(garden, strategy, fee = 0) {
   ethers.provider.send('evm_increaseTime', [ONE_DAY_IN_SECONDS * 2]);
   await updateTWAPs(garden);
-  return strategy.executeInvestment(ethers.utils.parseEther('1'), fee, {
+  await strategy.executeInvestment(ethers.utils.parseEther('1'), fee, {
     gasPrice: 0,
   });
+  console.log('timestamp js', new Date().getTime());
+  console.log('timestamp', (await strategy.executedAt()).toString());
 }
 
 async function finalizeStrategy(garden, strategy, fee = 0) {
