@@ -45,9 +45,10 @@ contract YieldFarmingStrategy is Strategy {
      * @param _yieldVault                   Yield vault to enter
      */
     function setYieldFarmingData(address _yieldVault) public onlyIdeator {
-        kind = 2;
-        require(IPassiveIntegration(integration).isInvestment(_yieldVault), 'Must be a valid yield vault');
         require(!dataSet, 'Data is set already');
+        require(IPassiveIntegration(integration).isInvestment(_yieldVault), 'Must be a valid yield vault');
+
+        kind = 2;
         yieldVault = _yieldVault;
         vaultAsset = IPassiveIntegration(integration).getInvestmentAsset(_yieldVault);
         dataSet = true;

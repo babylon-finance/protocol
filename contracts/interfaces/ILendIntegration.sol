@@ -20,29 +20,27 @@ pragma solidity 0.7.4;
 import {IIntegration} from './IIntegration.sol';
 
 /**
- * @title IPoolIntegration
+ * @title ILendIntegration
  * @author Babylon Finance
  *
- * Interface for liquiditypool protocol integrations
+ * Interface for lending integrations such as Compound, Aave.
  */
-interface IPoolIntegration is IIntegration {
-    function joinPool(
-        address _poolAddress,
-        uint256 _poolTokensOut,
-        address[] calldata _tokensIn,
-        uint256[] calldata _maxAmountsIn
+interface ILendIntegration is IIntegration {
+    function supplyTokens(
+        address _assetToken,
+        uint256 _numTokensToSupply,
+        uint256 _minAmountExpected
     ) external;
 
-    function exitPool(
-        address _poolAddress,
-        uint256 _poolTokensIn,
-        address[] calldata _tokensOut,
-        uint256[] calldata _minAmountsOut
+    function redeemTokens(
+        address _assetToken,
+        uint256 _numTokensToRedeem,
+        uint256 _minAmountExpected
     ) external;
 
-    function getPoolTokens(address _poolAddress) external view returns (address[] memory);
+    function getExpectedShares(address _assetToken, uint256 _numTokensToSupply) external view returns (uint256);
 
-    function getPoolWeights(address _poolAddress) external view returns (uint256[] memory);
+    function getExchangeRatePerToken(address _assetToken) external view returns (uint256);
 
-    function isPool(address _poolAddress) external view returns (bool);
+    function getInvestmentToken(address _assetToken) external view returns (address);
 }
