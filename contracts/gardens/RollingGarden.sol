@@ -393,7 +393,7 @@ contract RollingGarden is ReentrancyGuard, BaseGarden {
                 if (isStrategist) {
                     bablRewards = bablRewards.add(strategyRewards.preciseMul(BABL_STRATEGIST_SHARE));
                     contributorProfits = contributorProfits.add(
-                        totalProfits.preciseMul(PROFIT_STRATEGIST_SHARE))
+                        totalProfits.preciseMul(PROFIT_STRATEGIST_SHARE)
                     );
                 }
 
