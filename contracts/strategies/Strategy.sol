@@ -280,7 +280,12 @@ contract Strategy is ReentrancyGuard, Initializable {
 
         // Get Keeper Fees allocated
         garden.allocateCapitalToInvestment(MAX_STRATEGY_KEEPER_FEES);
-        calculateAndEditPosition(garden.getReserveAsset(), MAX_STRATEGY_KEEPER_FEES, MAX_STRATEGY_KEEPER_FEES.toInt256(), LIQUID_STATUS);
+        calculateAndEditPosition(
+            garden.getReserveAsset(),
+            MAX_STRATEGY_KEEPER_FEES,
+            MAX_STRATEGY_KEEPER_FEES.toInt256(),
+            LIQUID_STATUS
+        );
         capitalAllocated = capitalAllocated.add(MAX_STRATEGY_KEEPER_FEES);
 
         _payKeeper(msg.sender, _fee);
@@ -341,7 +346,10 @@ contract Strategy is ReentrancyGuard, Initializable {
         );
         _payKeeper(msg.sender, _fee);
         uint256 remainingReserve = ERC20(garden.getReserveAsset()).balanceOf(address(this));
-        require(ERC20(garden.getReserveAsset()).transfer(address(garden), remainingReserve), "Ensure capital does not get stuck");
+        require(
+            ERC20(garden.getReserveAsset()).transfer(address(garden), remainingReserve),
+            'Ensure capital does not get stuck'
+        );
     }
 
     /**
