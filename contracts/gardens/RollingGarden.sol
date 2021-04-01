@@ -418,7 +418,7 @@ contract RollingGarden is ReentrancyGuard, BaseGarden {
                     strategyRewards.preciseMul(BABL_LP_SHARE).mul(contributors[msg.sender].gardenAverageOwnership)
                 );
                 contributorProfits = contributorProfits.add(
-                    contributors[msg.sender].gardenAverageOwnership.mul(totalProfits).preciseMul(PROFIT_LP_SHARE))
+                    contributors[msg.sender].gardenAverageOwnership.mul(totalProfits).preciseMul(PROFIT_LP_SHARE)
                 );
 
                 // Get a multiplier bonus in case the contributor is the garden creator
