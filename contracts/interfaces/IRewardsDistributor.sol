@@ -38,8 +38,6 @@ interface IRewardsDistributor {
 
     function timeList() external pure returns (uint256[] memory);
 
-    function getCheckpoints() external pure returns (uint256);
-
     function START_TIME() external pure returns (uint256);
 
     function addProtocolPrincipal(uint256 _capital) external;
@@ -47,6 +45,12 @@ interface IRewardsDistributor {
     function substractProtocolPrincipal(uint256 _capital) external;
 
     function getProtocolPrincipalByTimestamp(uint256 _timestamp) external view returns (uint256);
+
+    function getProtocolPowerPerQuarterByTimestamp(uint256 _timestamp) external view returns (uint256);
+
+    function getProtocolPowerPerQuarterById(uint256 _id) external view returns (uint256);
+
+    function getProtocolSupplyPerQuarterByTimestamp(uint256 _timestamp) external view returns (uint256);
 
     function getProtocolDurationByTimestamp(uint256 _timestamp) external view returns (uint256);
 
@@ -58,16 +62,17 @@ interface IRewardsDistributor {
 
     function getQuarter(uint256 _now) external view returns (uint256);
 
+    function getCheckpoints() external view returns (uint256);
+
     function getRewardsWindow(uint256 _from, uint256 _to)
         external
         view
         returns (
-            uint256,
             uint256,
             uint256
         );
 
     function getSupplyForPeriod(uint256 _from, uint256 _to) external view returns (uint96[] memory);
 
-    function tokenSupplyPerQuarter(uint256 quarter) external pure returns (uint256);
+    function tokenSupplyPerQuarter(uint256 quarter) external pure returns (uint96);
 }

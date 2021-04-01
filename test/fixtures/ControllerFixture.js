@@ -31,17 +31,14 @@ async function deployFolioFixture() {
   // Approve Time Lock Registry to handle 31% of the Tokens for vesting (Team, Advisors, Investors)
   await bablToken.approve(timeLockRegistry.address, ethers.utils.parseEther('310000'));
 
-  // Deployment of BABL Rewards Supply Schedule
-  const RewardsSupplySchedule = await ethers.getContractFactory('RewardsSupplySchedule', {
+  // Deployment of BABL Rewards Distributor
+  const RewardsDistributor = await ethers.getContractFactory('RewardsDistributor', {
     libraries: {
       SafeDecimalMath: SafeDecimalMath.address,
     },
     signer: owner,
   });
-  const rewardsSupplySchedule = await RewardsSupplySchedule.deploy();
-
-  // Deployment of BABL Rewards Distributor
-  const RewardsDistributor = await ethers.getContractFactory('RewardsDistributor', owner);
+  const rewardsDistributor = await RewardsDistributor.deploy(bablToken.address, babController.address);
 
   const GardenValuer = await ethers.getContractFactory('GardenValuer', owner);
   const PriceOracle = await ethers.getContractFactory('PriceOracle', owner);
@@ -52,7 +49,6 @@ async function deployFolioFixture() {
   const LongStrategyFactory = await ethers.getContractFactory('LongStrategyFactory', owner);
   const LiquidityPoolStrategyFactory = await ethers.getContractFactory('LiquidityPoolStrategyFactory', owner);
   const gardenValuer = await GardenValuer.deploy(babController.address);
-  const rewardsDistributor = await RewardsDistributor.deploy(rewardsSupplySchedule.address, bablToken.address);
   const reservePool = await ReservePool.deploy(babController.address);
   const treasury = await Treasury.deploy(babController.address);
   const gardenFactory = await GardenFactory.deploy();
@@ -239,7 +235,6 @@ async function deployFolioFixture() {
     timeLockRegistry,
     reservePool,
     treasury,
-    rewardsSupplySchedule,
     rewardsDistributor,
     aaveIntegration,
     compoundIntegration,
@@ -270,7 +265,6 @@ async function deployFolioFixture() {
       { name: 'BABLToken', contract: bablToken },
       { name: 'TimeLockRegistry', contract: timeLockRegistry },
       { name: 'LongStrategyFactory', contract: longStrategyFactory },
-      { name: 'RewardsSupplySchedule', contract: rewardsSupplySchedule },
       { name: 'RewardsDistributor', contract: rewardsDistributor },
       { name: 'KyberTradeIntegration', contract: kyberTradeIntegration },
       { name: 'BalancerIntegration', contract: balancerIntegration },
