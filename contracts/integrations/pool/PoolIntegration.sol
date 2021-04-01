@@ -92,7 +92,7 @@ abstract contract PoolIntegration is BaseIntegration, ReentrancyGuard {
         uint256 _poolTokensOut,
         address[] calldata _tokensIn,
         uint256[] calldata _maxAmountsIn
-    ) external nonReentrant onlyIdea {
+    ) external payable nonReentrant onlyIdea {
         PoolInfo memory poolInfo = _createPoolInfo(_poolAddress, _poolTokensOut, _tokensIn, _maxAmountsIn);
         _validatePreJoinPoolData(poolInfo);
         // Approve spending of the tokens

@@ -31,7 +31,7 @@ interface IPoolIntegration is IIntegration {
         uint256 _poolTokensOut,
         address[] calldata _tokensIn,
         uint256[] calldata _maxAmountsIn
-    ) external;
+    ) external payable;
 
     function exitPool(
         address _poolAddress,

@@ -119,8 +119,16 @@ contract OneInchPoolIntegration is PoolIntegration {
                 _maxAmountsIn,
                 minAmounts // TODO: tighten this up
             );
+        uint256 value = 0;
+        // Add ETH if one of the tokens
+        if (_tokensIn[0] == address(0)) {
+            value = _maxAmountsIn[0];
+        }
+        if (_tokensIn[1] == address(0)) {
+            value = _maxAmountsIn[1];
+        }
 
-        return (address(_poolAddress), 0, methodData);
+        return (address(_poolAddress), value, methodData);
     }
 
     /**

@@ -23,6 +23,7 @@ import {SafeMath} from '@openzeppelin/contracts/math/SafeMath.sol';
 import {PreciseUnitMath} from '../lib/PreciseUnitMath.sol';
 import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import {Strategy} from './Strategy.sol';
+import {IWETH} from '../interfaces/external/weth/IWETH.sol';
 import {IGarden} from '../interfaces/IGarden.sol';
 import {IPoolIntegration} from '../interfaces/IPoolIntegration.sol';
 
@@ -59,6 +60,7 @@ contract LiquidityPoolStrategy is Strategy {
         uint256[] memory _maxAmountsIn = new uint256[](poolTokens.length);
         uint256[] memory _poolWeights = IPoolIntegration(integration).getPoolWeights(pool);
         // Get the tokens needed to enter the pool
+        uint256 ethValue = 0;
         for (uint256 i = 0; i < poolTokens.length; i++) {
             uint256 normalizedAmount = _capital.preciseMul(_poolWeights[i]);
             if (poolTokens[i] != reserveAsset && poolTokens[i] != address(0)) {
@@ -66,14 +68,18 @@ contract LiquidityPoolStrategy is Strategy {
                 _maxAmountsIn[i] = IERC20(poolTokens[i]).balanceOf(address(this));
             } else {
                 if (poolTokens[i] == address(0)) {
+                    if (reserveAsset != garden.weth()) {
+                        _trade(reserveAsset, normalizedAmount, garden.weth());
+                    }
                     // Convert WETH to ETH
-                    // TODO: payable to enter 1inch and convert to ETH
+                    IWETH(garden.weth()).withdraw(normalizedAmount);
+                    ethValue = normalizedAmount;
                 }
                 _maxAmountsIn[i] = normalizedAmount;
             }
         }
         // TODO: calculate minReceiveQuantity instead of 1
-        IPoolIntegration(integration).joinPool(pool, 1, poolTokens, _maxAmountsIn);
+        IPoolIntegration(integration).joinPool{value: ethValue}(pool, 1, poolTokens, _maxAmountsIn);
     }
 
     /**
