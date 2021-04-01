@@ -71,7 +71,7 @@ describe('KyberTradeIntegration', function () {
         },
       );
 
-      await executeStrategy(garden1, strategyContract, 0);
+      await executeStrategy(garden1, strategyContract);
 
       expect(await usdcToken.balanceOf(strategyContract.address)).to.be.gt(ethers.utils.parseEther('97') / 10 ** 12);
 

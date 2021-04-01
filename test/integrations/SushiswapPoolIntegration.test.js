@@ -65,7 +65,7 @@ describe('SushiswapPoolIntegrationTest', function () {
         DEFAULT_STRATEGY_PARAMS,
         [daiWethPair.address],
       );
-      await executeStrategy(garden1, strategyContract, 0);
+      await executeStrategy(garden1, strategyContract);
       expect(await daiWethPair.balanceOf(strategyContract.address)).to.be.gt(0);
 
       await finalizeStrategy(garden1, strategyContract, 0);

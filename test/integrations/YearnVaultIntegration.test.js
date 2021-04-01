@@ -65,7 +65,7 @@ describe('YearnVaultIntegrationTest', function () {
         garden1,
       );
 
-      await executeStrategy(garden1, strategyContract, 0);
+      await executeStrategy(garden1, strategyContract);
       expect(await yearnDaiVault.balanceOf(strategyContract.address)).to.be.gte(expectedShares);
 
       await finalizeStrategy(garden1, strategyContract, 0);
