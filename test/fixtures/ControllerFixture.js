@@ -30,17 +30,14 @@ async function deployFolioFixture() {
 
   // Approve Time Lock Registry to handle 31% of the Tokens for vesting (Team, Advisors, Investors)
   await bablToken.approve(timeLockRegistry.address, ethers.utils.parseEther('310000'));
-    
-  // Deployment of BABL Rewards Distributor
-  //const RewardsDistributor = await ethers.getContractFactory('RewardsDistributor', owner);
-  
+
   const RewardsDistributor = await ethers.getContractFactory('RewardsDistributor', {
     libraries: {
       SafeDecimalMath: SafeDecimalMath.address,
     },
     signer: owner,
   });
-  
+
   const rewardsDistributor = await RewardsDistributor.deploy(bablToken.address, babController.address);
 
   const GardenValuer = await ethers.getContractFactory('GardenValuer', owner);
@@ -222,6 +219,7 @@ async function deployFolioFixture() {
   const strategy21 = (
     await createStrategy(0, 'deposit', [signer1, signer2, signer3], kyberTradeIntegration.address, garden2)
   ).address;
+
 
   await createStrategy(0, 'deposit', [signer1, signer2, signer3], kyberTradeIntegration.address, garden3);
   await createStrategy(0, 'dataset', [signer1, signer2, signer3], kyberTradeIntegration.address, garden3);

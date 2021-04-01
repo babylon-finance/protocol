@@ -393,7 +393,7 @@ contract RollingGarden is ReentrancyGuard, BaseGarden {
                 if (isStrategist) {
                     bablRewards = bablRewards.add(strategyRewards.preciseMul(BABL_STRATEGIST_SHARE));
                     contributorProfits = contributorProfits.add(
-                        totalProfits.preciseMul(PROFIT_STRATEGIST_SHARE).div(strategy.capitalAllocated())
+                        totalProfits.preciseMul(PROFIT_STRATEGIST_SHARE))
                     );
                 }
 
@@ -408,7 +408,6 @@ contract RollingGarden is ReentrancyGuard, BaseGarden {
                     contributorProfits = contributorProfits.add(
                         totalProfits
                             .preciseMul(PROFIT_STEWARD_SHARE)
-                            .div(strategy.capitalAllocated())
                             .mul(uint256(strategy.getUserVotes(msg.sender)))
                             .div(strategy.absoluteTotalVotes())
                     );
@@ -419,9 +418,7 @@ contract RollingGarden is ReentrancyGuard, BaseGarden {
                     strategyRewards.preciseMul(BABL_LP_SHARE).mul(contributors[msg.sender].gardenAverageOwnership)
                 );
                 contributorProfits = contributorProfits.add(
-                    contributors[msg.sender].gardenAverageOwnership.mul(totalProfits).preciseMul(PROFIT_LP_SHARE).div(
-                        strategy.capitalAllocated()
-                    )
+                    contributors[msg.sender].gardenAverageOwnership.mul(totalProfits).preciseMul(PROFIT_LP_SHARE))
                 );
 
                 // Get a multiplier bonus in case the contributor is the garden creator
