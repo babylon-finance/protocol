@@ -65,17 +65,29 @@ contract RewardsDistributor is Ownable {
     // BABL Token contract
     TimeLockedToken public babltoken;
 
-    struct PrincipalPerTimestamp {
+    struct ProtocolPerTimestamp {
         // Allocation points per timestamp along the time
         uint256 principal;
         uint256 time;
+        uint256 quarterBelonging; // Checkpoint quarter
         uint256 timeListPointer; // Pointer to the array of times in order to enable the possibility of iteration
+        uint256 power; // Protocol power checkpoint
     }
 
     uint256 public protocolPrincipal = 0; // Total allocation points. Must be the sum of all allocation points (strategyPrincipal) in all strategy pools.
-    mapping(uint256 => PrincipalPerTimestamp) principalPerTimestamp; // Total allocation points. Must be the sum of all allocation points (strategyPrincipal) in all strategy pools.
+    mapping(uint256 => ProtocolPerTimestamp) protocolPerTimestamp; // Total allocation points. Must be the sum of all allocation points (strategyPrincipal) in all strategy pools.
     uint256[] public timeList; // TODO needs to be updated anytime there is a checkpoint of new strategy changing
     uint256 public pid = 0; // Initialization of the ID assigning timeListPointer to the checkpoint number
+
+    struct ProtocolPerQuarter{
+        // Allocation points per timestamp along the time
+        uint256 quarterPrincipal; //
+        uint256 quarterNumber; // # Quarter since START_TIME
+        uint256 quarterPower; // Protocol power checkpoint
+        uint96 supplyPerQuarter; // Supply per quarter
+    }
+    mapping(uint256 => ProtocolPerQuarter) protocolPerQuarter; //
+    mapping(uint256 => bool) isProtocolPerQuarter; // Check if the protocol per quarter data has been initialized
 
     //uint256 public protocolDuration = 0; // Total Duration of the procotol (total execution blocks of all strategies in the pool)
     // mapping(uint256 => uint256) durationPerTimestamp; // Total allocation points. Must be the sum of all allocation points (strategyPrincipal) in all strategy pools.
@@ -102,24 +114,57 @@ contract RewardsDistributor is Ownable {
 
     function addProtocolPrincipal(uint256 _capital) public onlyOwner {
         protocolPrincipal = protocolPrincipal.add(_capital);
-        principalPerTimestamp[block.timestamp].principal = protocolPrincipal;
-        principalPerTimestamp[block.timestamp].time = block.timestamp;
-        principalPerTimestamp[block.timestamp].timeListPointer = pid;
-        timeList[pid] = block.timestamp;
-        pid++;
+        protocolPerTimestamp[block.timestamp].principal = protocolPrincipal;
+        protocolPerTimestamp[block.timestamp].time = block.timestamp;
+        protocolPerTimestamp[block.timestamp].quarterBelonging = getQuarter(block.timestamp);
+        protocolPerTimestamp[block.timestamp].timeListPointer = pid;
+        if (pid !=0) { // Not the very first strategy
+            protocolPerTimestamp[block.timestamp].power =  protocolPerTimestamp[timeList[pid.sub(1)]].power.add((block.timestamp).sub(protocolPerTimestamp[timeList[pid.sub(1)]])).mul(protocolPerTimestamp[timeList[pid.sub(1)]].principal);
+        } else { // The very first strategy
+            protocolPerTimestamp[block.timestamp].power =  0;
+        }
+        timeList[pid] = block.timestamp;  
+        // Create the quarter checkpoint in case the checkpoint is the first in the epoch
+        if (!isProtocolPerQuarter[getQuarter(block.timestamp).sub(1)]) {
+            protocolPerQuarter[getQuarter(block.timestamp)].quarterNumber = getQuarter(block.timestamp);
+            if (pid == 0) { // The first strategy added in the first epoch
+                protocolPerQuarter[getQuarter(block.timestamp)].quarterPower = 0;
+            } else {
+                protocolPerQuarter[getQuarter(block.timestamp)].quarterPower = protocolPerTimestamp[block.timestamp].power.mul(block.timestamp.sub(getQuarter(block.timestamp).mul(EPOCH_DURATION).sub(EPOCH_DURATION))).div(block.timestamp.sub(protocolPerTimestamp[timeList[pid.sub(1)]]));
+            }
+            protocolPerQuarter[getQuarter(block.timestamp)].supplyPerQuarter = tokenSupplyPerQuarter(getQuarter(block.timestamp));
+            isProtocolPerQuarter[getQuarter(block.timestamp).sub(1)] = true;
+
+        } else { // Already created
+            protocolPerQuarter[getQuarter(block.timestamp)].quarterPower = protocolPerQuarter[getQuarter(block.timestamp)].quarterPower.add(protocolPerTimestamp[block.timestamp].power.mul(block.timestamp.sub(getQuarter(block.timestamp).mul(EPOCH_DURATION).sub(EPOCH_DURATION))).div(block.timestamp.sub(protocolPerTimestamp[timeList[pid.sub(1)]])));
+        }
+        protocolPerQuarter[getQuarter(block.timestamp)].quarterPrincipal = protocolPrincipal;
+         pid++;
     }
 
     function substractProtocolPrincipal(uint256 _capital) public onlyOwner {
         protocolPrincipal = protocolPrincipal.sub(_capital);
-        principalPerTimestamp[block.timestamp].principal = protocolPrincipal;
-        principalPerTimestamp[block.timestamp].time = block.timestamp;
-        principalPerTimestamp[block.timestamp].timeListPointer = pid;
-        timeList[pid] = block.timestamp;
+       protocolPerTimestamp[block.timestamp].principal = protocolPrincipal;
+        protocolPerTimestamp[block.timestamp].time = block.timestamp;
+        protocolPerTimestamp[block.timestamp].quarterBelonging = getQuarter(block.timestamp);
+        protocolPerTimestamp[block.timestamp].timeListPointer = pid;
+        protocolPerTimestamp[block.timestamp].power =  protocolPerTimestamp[timeList[pid.sub(1)]].power.add(block.timestamp.sub(protocolPerTimestamp[timeList[pid.sub(1)]])).mul(protocolPerTimestamp[timeList[pid.sub(1)]].principal);
+        timeList[pid] = block.timestamp;  
+        // Create the quarter checkpoint in case the checkpoint is the first in the epoch
+        if (!isProtocolPerQuarter[getQuarter(block.timestamp).sub(1)]) {
+            protocolPerQuarter[getQuarter(block.timestamp)].quarterNumber = getQuarter(block.timestamp);
+            protocolPerQuarter[getQuarter(block.timestamp)].quarterPower = protocolPerTimestamp[block.timestamp].power.mul(block.timestamp.sub(getQuarter(block.timestamp).mul(EPOCH_DURATION).sub(EPOCH_DURATION))).div(block.timestamp.sub(protocolPerTimestamp[timeList[pid.sub(1)]]));
+            protocolPerQuarter[getQuarter(block.timestamp)].supplyPerQuarter = tokenSupplyPerQuarter(getQuarter(block.timestamp));
+            isProtocolPerQuarter[getQuarter(block.timestamp).sub(1)] = true;
+        } else { // Already created
+            protocolPerQuarter[getQuarter(block.timestamp)].quarterPower = protocolPerQuarter[getQuarter(block.timestamp)].quarterPower.add(protocolPerTimestamp[block.timestamp].power.mul(block.timestamp.sub(getQuarter(block.timestamp).mul(EPOCH_DURATION).sub(EPOCH_DURATION))).div(block.timestamp.sub(protocolPerTimestamp[timeList[pid.sub(1)]])));
+        }
+        protocolPerQuarter[getQuarter(block.timestamp)].quarterPrincipal = protocolPrincipal;
         pid++;
     }
 
     function getProtocolPrincipalByTimestamp(uint256 _timestamp) public view onlyOwner returns (uint256) {
-        return principalPerTimestamp[_timestamp].principal;
+        return protocolPerTimestamp[_timestamp].principal;
     }
 
     /** 
@@ -142,15 +187,15 @@ contract RewardsDistributor is Ownable {
             uint256 counterOfPower = 0;
             uint256 strategyPower =
                 IStrategy(_strategy).capitalAllocated().mul(IStrategy(_strategy).exitedAt().sub(IStrategy(_strategy).executedAt()));
-            while (principalPerTimestamp[counterOfTime].time < IStrategy(_strategy).exitedAt()) {
-                counterOfPrincipal = principalPerTimestamp[counterOfTime].principal;
-                indexCounter = principalPerTimestamp[counterOfTime].timeListPointer;
+            while (protocolPerTimestamp[counterOfTime].time < IStrategy(_strategy).exitedAt()) {
+                counterOfPrincipal = protocolPerTimestamp[counterOfTime].principal;
+                indexCounter = protocolPerTimestamp[counterOfTime].timeListPointer;
                 indexCounter++;
                 endOfSlotTime = timeList[indexCounter]; // The following timestamp / it could be the ending timestamp
-                require(endOfSlotTime == principalPerTimestamp[endOfSlotTime].time, 'time slot mismatch');
+                require(endOfSlotTime == protocolPerTimestamp[endOfSlotTime].time, 'time slot mismatch');
                 counterOfPower = counterOfPower.add(
                     counterOfPrincipal.mul(
-                        principalPerTimestamp[endOfSlotTime].time.sub(principalPerTimestamp[counterOfTime].time)
+                        protocolPerTimestamp[endOfSlotTime].time.sub(protocolPerTimestamp[counterOfTime].time)
                     )
                 ); // Time difference for the slot
                 counterOfTime = endOfSlotTime;
@@ -204,33 +249,33 @@ contract RewardsDistributor is Ownable {
                 }
 
                 while (
-                    principalPerTimestamp[counterOfTime].time < counterSlotLimit &&
-                    principalPerTimestamp[counterOfTime].time < IStrategy(_strategy).exitedAt()
+                    protocolPerTimestamp[counterOfTime].time < counterSlotLimit &&
+                    protocolPerTimestamp[counterOfTime].time < IStrategy(_strategy).exitedAt()
                 ) {
                     // Recurring calculations within the same Epoch per all the slots where there was a new or finished strategy
-                    counterOfPrincipal = principalPerTimestamp[counterOfTime].principal; // Check principal amount in specific time stamp
-                    indexCounter = principalPerTimestamp[counterOfTime].timeListPointer;
+                    counterOfPrincipal = protocolPerTimestamp[counterOfTime].principal; // Check principal amount in specific time stamp
+                    indexCounter = protocolPerTimestamp[counterOfTime].timeListPointer;
                     indexCounter++;
 
                     // TODO CHECK OUT OF BOUNDS IF IT IS THE LAST STRATEGY BEING FINISHED
 
                     endOfSlotTime = timeList[indexCounter]; // The following timestamp / it could be the ending timestamp
-                    require(endOfSlotTime == principalPerTimestamp[endOfSlotTime].time, 'time slot mismatch');
+                    require(endOfSlotTime == protocolPerTimestamp[endOfSlotTime].time, 'time slot mismatch');
                     if (counterSlotLimit < endOfSlotTime) {
                         // Situation where We are changing Epoch but we have to give to each epoch the real duration of the strategy
                         flag = true;
                         tempPower = counterOfPower[i].add(
-                            counterOfPrincipal.mul(endOfSlotTime.sub(principalPerTimestamp[counterSlotLimit].time))
+                            counterOfPrincipal.mul(endOfSlotTime.sub(protocolPerTimestamp[counterSlotLimit].time))
                         ); // Partial power entering into the new epoch
                         counterOfPower[i] = counterOfPower[i].add(
-                            counterOfPrincipal.mul(counterSlotLimit.sub(principalPerTimestamp[counterOfTime].time))
+                            counterOfPrincipal.mul(counterSlotLimit.sub(protocolPerTimestamp[counterOfTime].time))
                         ); // Partial power inside the current epoch
                     } else {
                         flag = false; // reset (if any) the flag which is only activated when there is a change of epoch between two time stamps.
                         // In case of a change between epoch between two protocol principal changes (time stamps) we recover
                         counterOfPower[i] = tempPower.add(counterOfPower[i]).add(
-                            counterOfPrincipal.mul(principalPerTimestamp[endOfSlotTime].time).sub(
-                                principalPerTimestamp[counterOfTime].time
+                            counterOfPrincipal.mul(protocolPerTimestamp[endOfSlotTime].time).sub(
+                                protocolPerTimestamp[counterOfTime].time
                             )
                         ); // Time difference for the slot
                         tempPower = 0; // Reset the flag that is only used when changing between epochs.
@@ -269,6 +314,11 @@ contract RewardsDistributor is Ownable {
         return pid;
     }
 
+    function getQuarter(uint256 _now) public view returns (uint256){
+        uint256 quarter = (_now.sub(START_TIME).preciseDivCeil(EPOCH_DURATION)).div(1e18);
+        return quarter;
+    }
+    
     function getRewardsWindow(uint256 _from, uint256 _to)
         public
         view

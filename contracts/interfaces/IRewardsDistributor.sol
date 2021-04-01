@@ -56,6 +56,8 @@ interface IRewardsDistributor {
 
     function getEpochRewards(uint256 epochs) external view returns (uint96[] memory);
 
+    function getQuarter(uint256 _now) external view returns (uint256);
+
     function getRewardsWindow(uint256 _from, uint256 _to)
         external
         view
