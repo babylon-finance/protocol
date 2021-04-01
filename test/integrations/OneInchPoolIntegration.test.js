@@ -67,7 +67,7 @@ describe('OneInchPoolIntegrationTest', function () {
       // expect(await daiWethPair.balanceOf(strategyContract.address)).to.equal(0);
     });
 
-    it('can enter and exit the weth dai pool', async function () {
+    it('can enter and exit the eth dai pool', async function () {
       const strategyContract = await createStrategy(
         1,
         'vote',
