@@ -17,6 +17,7 @@
 
 pragma solidity 0.7.4;
 
+import 'hardhat/console.sol';
 import {TimeLockedToken} from './TimeLockedToken.sol';
 
 import {Ownable} from '@openzeppelin/contracts/access/Ownable.sol';
@@ -53,6 +54,12 @@ contract RewardsDistributor is Ownable {
     /* ========== Events ========== */
 
     /* ============ Modifiers ============ */
+
+    modifier onlyStrategy {
+        address garden = IStrategy(msg.sender).garden();
+        require(controller.isSystemContract(garden));
+        _;
+    }
 
     /* ============ State Variables ============ */
 
@@ -112,7 +119,7 @@ contract RewardsDistributor is Ownable {
 
     /* ============ External Functions ============ */
 
-    function addProtocolPrincipal(uint256 _capital) public onlyOwner {
+    function addProtocolPrincipal(uint256 _capital) public onlyStrategy {
         protocolPrincipal = protocolPrincipal.add(_capital);
         protocolPerTimestamp[block.timestamp].principal = protocolPrincipal;
         protocolPerTimestamp[block.timestamp].time = block.timestamp;
@@ -129,14 +136,16 @@ contract RewardsDistributor is Ownable {
                 )
             );
         }
-        timeList[pid] = block.timestamp; // Register of added strategies timestamps in the array for iteration
+        console.log('pid');
+        console.log(pid);
+        timeList.push(block.timestamp); // Register of added strategies timestamps in the array for iteration
         // Here we control the accumulated protocol power per each quarter
         // Create the quarter checkpoint in case the checkpoint is the first in the epoch
-        addProtocolPerQuarter(block.timestamp);
+        // addProtocolPerQuarter(block.timestamp);
         pid++;
     }
 
-    function substractProtocolPrincipal(uint256 _capital) public onlyOwner {
+    function substractProtocolPrincipal(uint256 _capital) public onlyStrategy {
         protocolPrincipal = protocolPrincipal.sub(_capital);
         protocolPerTimestamp[block.timestamp].principal = protocolPrincipal;
         protocolPerTimestamp[block.timestamp].time = block.timestamp;
@@ -148,14 +157,14 @@ contract RewardsDistributor is Ownable {
             )
         );
 
-        timeList[pid] = block.timestamp;
+        timeList.push(block.timestamp);
         // Here we control the accumulated protocol power per each quarter
         // Create the quarter checkpoint in case the checkpoint is the first in the epoch
-        addProtocolPerQuarter(block.timestamp);
+        // addProtocolPerQuarter(block.timestamp);
         pid++;
     }
 
-    /** 
+    /**
     function getProtocolDurationByTimestamp(uint256 _timestamp) public view onlyOwner returns(uint256){
         return durationPerTimestamp[_timestamp];
     }
@@ -207,7 +216,7 @@ contract RewardsDistributor is Ownable {
         return Safe3296.safe96(bablRewards, 'overflow 96 bits');
     }
 
-    function sendTokensToContributor(address _to, uint256 _amount) public onlyOwner {
+    function sendTokensToContributor(address _to, uint256 _amount) public onlyStrategy {
         require(controller.isSystemContract(msg.sender));
         safeBABLTransfer(_to, _amount);
     }
