@@ -31,15 +31,9 @@ describe('BABL Rewards Distributor', function () {
   let weth;
 
   beforeEach(async () => {
-    ({
-      owner,
-      signer1,
-      signer2,
-      signer3,
-      babController,
-      bablToken,
-      rewardsDistributor
-    } = await loadFixture(deployFolioFixture));
+    ({ owner, signer1, signer2, signer3, babController, bablToken, rewardsDistributor } = await loadFixture(
+      deployFolioFixture,
+    ));
 
     weth = await ethers.getContractAt('IERC20', addresses.tokens.WETH);
     strategyDataset = await ethers.getContractAt('Strategy', strategy11);

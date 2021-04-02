@@ -186,7 +186,7 @@ contract Strategy is ReentrancyGuard, Initializable {
     uint256[] public tokenAmountsNeeded; // Amount of these positions
 
     // Raul Review
-    uint256 public strategyRewards; // Rewards allocated for this strategy on finalized
+    uint256 public strategyRewards = 0; // Initialization. Rewards allocated for this strategy updated on finalized
 
     // Voters mapped to their votes.
     mapping(address => int256) public votes;
@@ -336,7 +336,7 @@ contract Strategy is ReentrancyGuard, Initializable {
         exitedAt = block.timestamp;
         // Transfer rewards and update positions
         _transferIdeaRewards();
-
+        //console.log('after _transferIdeaRewards');
         IRewardsDistributor rewardsDistributor =
             IRewardsDistributor(IBabController(controller).getRewardsDistributor());
 
@@ -348,9 +348,11 @@ contract Strategy is ReentrancyGuard, Initializable {
             capitalReturned.toInt256().sub(capitalAllocated.toInt256()),
             address(this)
         );
-
+        //console.log('fee is',_fee);
+        //console.log('Strategyrewards finishing strategy before executing',strategyRewards);
         // strategyRewards = calculate using RewardsDistributor
         strategyRewards = rewardsDistributor.getStrategyRewards(address(this));
+        //console.log('Strategyrewards finishing strategy before executing',strategyRewards);
 
         // Positive profit strategies get also BABL rewards with a proportional increment
         // Negative profit strategies get also BABL rewards with a proportional reduction
@@ -668,10 +670,12 @@ contract Strategy is ReentrancyGuard, Initializable {
             LIQUID_STATUS
         );
         // Updates reserve asset position in the garden
+
         uint256 _newTotal = garden.getPrincipal().toInt256().add(reserveAssetDelta).toUint256();
         garden.updatePrincipal(_newTotal);
         // Start a redemption window in the garden with this capital
         garden.startRedemptionWindow(capitalReturned);
+        //console.log('finishes _transferIdeaRewards()');
     }
 
     function _returnStake() internal {

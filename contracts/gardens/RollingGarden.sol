@@ -392,9 +392,7 @@ contract RollingGarden is ReentrancyGuard, BaseGarden {
                 // Get strategist rewards in case the contributor is also the strategist of the strategy
                 if (isStrategist) {
                     bablRewards = bablRewards.add(strategyRewards.preciseMul(BABL_STRATEGIST_SHARE));
-                    contributorProfits = contributorProfits.add(
-                        totalProfits.preciseMul(PROFIT_STRATEGIST_SHARE)
-                    );
+                    contributorProfits = contributorProfits.add(totalProfits.preciseMul(PROFIT_STRATEGIST_SHARE));
                 }
 
                 // Get proportional voter (stewards) rewards in case the contributor was also a steward of the strategy

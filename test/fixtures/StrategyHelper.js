@@ -35,8 +35,8 @@ async function createLongStrategy(garden, integration, signer, params = DEFAULT_
   const passedLongParams = longParams || [addresses.tokens.USDC];
 
   const strategy = await ethers.getContractAt('LongStrategy', lastStrategyAddr);
-  console.log('timestamp js', new Date().getTime());
-  console.log('timestamp', (await strategy.enteredAt()).toString());
+  //console.log('timestamp js', new Date().getTime());
+  //console.log('timestamp', (await strategy.enteredAt()).toString());
   await strategy.connect(signer).setLongData(...passedLongParams, {
     gasPrice: 0,
   });
@@ -104,16 +104,16 @@ async function executeStrategy(garden, strategy, fee = 0) {
   await strategy.executeInvestment(ethers.utils.parseEther('1'), fee, {
     gasPrice: 0,
   });
-  console.log('timestamp js', new Date().getTime());
-  console.log('timestamp', (await strategy.executedAt()).toString());
+  //console.log('timestamp js', new Date().getTime());
+  //console.log('timestamp', (await strategy.executedAt()).toString());
 }
-
+console.log('TRYING TO FINALIZE A STRATEGY....');
 async function finalizeStrategy(garden, strategy, fee = 0) {
   ethers.provider.send('evm_increaseTime', [ONE_DAY_IN_SECONDS * 90]);
   await updateTWAPs(garden);
   return strategy.finalizeInvestment(fee, { gasPrice: 0 });
 }
-
+console.log('FINALIZED THE STRATEGY');
 async function createStrategy(
   kind,
   state,

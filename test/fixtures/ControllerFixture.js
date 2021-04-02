@@ -220,16 +220,15 @@ async function deployFolioFixture() {
     await createStrategy(0, 'deposit', [signer1, signer2, signer3], kyberTradeIntegration.address, garden2)
   ).address;
 
-
   await createStrategy(0, 'deposit', [signer1, signer2, signer3], kyberTradeIntegration.address, garden3);
-  await createStrategy(0, 'dataset', [signer1, signer2, signer3], kyberTradeIntegration.address, garden3);
+  //await createStrategy(0, 'dataset', [signer1, signer2, signer3], kyberTradeIntegration.address, garden3);
 
   await createStrategy(0, 'active', [signer1, signer2, signer3], kyberTradeIntegration.address, garden3);
-  await createStrategy(0, 'active', [signer1, signer2, signer3], kyberTradeIntegration.address, garden3);
+  //await createStrategy(0, 'active', [signer1, signer2, signer3], kyberTradeIntegration.address, garden3);
   await createStrategy(0, 'final', [signer1, signer2, signer3], kyberTradeIntegration.address, garden3);
 
-  console.log('Created and started garden', garden1.address);
-  console.log('Created manual testing garden', garden3.address);
+  //console.log('Created and started garden', garden1.address);
+  //console.log('Created manual testing garden', garden3.address);
 
   return {
     babController,
