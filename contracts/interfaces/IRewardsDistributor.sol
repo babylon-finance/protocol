@@ -66,5 +66,7 @@ interface IRewardsDistributor {
 
     function getSupplyForPeriod(uint256 _from, uint256 _to) external view returns (uint96[] memory);
 
+    function checkProtocol(uint256 _time) external view returns (uint256 principal, uint256 time, uint256 quarterBelonging, uint256 timeListPointer, uint256 power);
+
     function tokenSupplyPerQuarter(uint256 quarter) external pure returns (uint96);
 }

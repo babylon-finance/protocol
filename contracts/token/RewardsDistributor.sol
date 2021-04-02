@@ -120,7 +120,9 @@ contract RewardsDistributor is Ownable {
     constructor(TimeLockedToken _bablToken, IBabController _controller) {
         babltoken = _bablToken;
         controller = _controller;
-        START_TIME = block.timestamp;
+        //START_TIME = block.timestamp;
+        START_TIME = 1614618000; // TODO return to block.timestamp JUST FOR TESTING PURPOSES 2021 MARCH 1 18H CET
+
     }
 
     /* ============ External Functions ============ */
@@ -303,6 +305,26 @@ contract RewardsDistributor is Ownable {
         uint256 supplyForQuarter = Q1_REWARDS.divideDecimal(firstFactor);
 
         return Safe3296.safe96(supplyForQuarter, 'overflow 96 bits');
+    }
+
+    function checkProtocol(uint256 _time)
+        public
+        view
+        returns (
+        uint256 principal,
+        uint256 time,
+        uint256 quarterBelonging, 
+        uint256 timeListPointer,
+        uint256 power
+        )
+    {
+        return (
+            protocolPerTimestamp[_time].principal,
+            protocolPerTimestamp[_time].time,
+            protocolPerTimestamp[_time].quarterBelonging,
+            protocolPerTimestamp[_time].timeListPointer,
+            protocolPerTimestamp[_time].power
+        );
     }
 
     /* ============ Internal Functions ============ */
