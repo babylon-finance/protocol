@@ -26,18 +26,28 @@ describe('BABL Rewards Distributor', function () {
   let babController;
   let bablToken;
   let rewardsDistributor;
-  let strategyDataset;
-  let strategyCandidate;
+  let strategy11;
+  let strategy11Contract;
+  let strategy21;
+  let strategy21Contract;
   let weth;
 
   beforeEach(async () => {
-    ({ owner, signer1, signer2, signer3, babController, bablToken, rewardsDistributor } = await loadFixture(
-      deployFolioFixture,
-    ));
+    ({
+      owner,
+      signer1,
+      signer2,
+      signer3,
+      strategy11,
+      strategy21,
+      babController,
+      bablToken,
+      rewardsDistributor,
+    } = await loadFixture(deployFolioFixture));
 
     weth = await ethers.getContractAt('IERC20', addresses.tokens.WETH);
-    strategyDataset = await ethers.getContractAt('Strategy', strategy11);
-    strategyCandidate = await ethers.getContractAt('Strategy', strategy21);
+    strategy11Contract = await ethers.getContractAt('Strategy', strategy11);
+    strategy21Contract = await ethers.getContractAt('Strategy', strategy21);
   });
 
   // You can nest describe calls to create subsections.

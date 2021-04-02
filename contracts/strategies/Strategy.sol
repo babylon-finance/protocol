@@ -336,7 +336,6 @@ contract Strategy is ReentrancyGuard, Initializable {
         exitedAt = block.timestamp;
         // Transfer rewards and update positions
         _transferIdeaRewards();
-        //console.log('after _transferIdeaRewards');
         IRewardsDistributor rewardsDistributor =
             IRewardsDistributor(IBabController(controller).getRewardsDistributor());
 
@@ -348,19 +347,8 @@ contract Strategy is ReentrancyGuard, Initializable {
             capitalReturned.toInt256().sub(capitalAllocated.toInt256()),
             address(this)
         );
-        //console.log('fee is',_fee);
-        //console.log('Strategyrewards finishing strategy before executing',strategyRewards);
-        // strategyRewards = calculate using RewardsDistributor
+
         strategyRewards = rewardsDistributor.getStrategyRewards(address(this));
-        //console.log('Strategyrewards finishing strategy before executing',strategyRewards);
-
-        // Positive profit strategies get also BABL rewards with a proportional increment
-        // Negative profit strategies get also BABL rewards with a proportional reduction
-
-        strategyRewards = strategyRewards.add(
-            strategyRewards.mul(capitalReturned.sub(capitalAllocated).div(capitalAllocated))
-        );
-
         garden.payKeeper(msg.sender, _fee);
     }
 
@@ -675,7 +663,6 @@ contract Strategy is ReentrancyGuard, Initializable {
         garden.updatePrincipal(_newTotal);
         // Start a redemption window in the garden with this capital
         garden.startRedemptionWindow(capitalReturned);
-        //console.log('finishes _transferIdeaRewards()');
     }
 
     function _returnStake() internal {
