@@ -112,12 +112,6 @@ contract Strategy is ReentrancyGuard, Initializable {
 
     /* ============ Constants ============ */
 
-    // Subposition constants
-    uint8 constant LIQUID_STATUS = 0;
-    uint8 constant LOCKED_AS_COLLATERAL_STATUS = 1;
-    uint8 constant IN_INVESTMENT_STATUS = 2;
-    uint8 constant BORROWED_STATUS = 3;
-
     uint256 constant SLIPPAGE_ALLOWED = 1e16; // 1%
     uint256 constant MAX_CANDIDATE_PERIOD = 7 days;
     uint256 constant MIN_VOTERS_TO_BECOME_ACTIVE = 2;
@@ -125,36 +119,6 @@ contract Strategy is ReentrancyGuard, Initializable {
     // Keeper max fee
     uint256 internal constant MAX_KEEPER_FEE = (1e6 * 1e3 gwei);
     uint256 internal constant MAX_STRATEGY_KEEPER_FEES = 2 * MAX_KEEPER_FEE;
-
-    /* ============ Struct ============ */
-
-    struct SubPosition {
-        address integration;
-        int256 balance;
-        uint8 status;
-    }
-
-    /**
-     * A struct that stores a component's cash position details and external positions
-     * This data structure allows O(1) access to a component's cash position units and
-     * virtual units.
-     *
-     * @param component           Address of token in the Position
-     * @param balance             Balance of this component
-     * @param enteredAt           Timestamp when this position was entered
-     * @param exitedAt            Timestamp when this position was exited
-     * @param updatedAt           Timestamp when this position was updated
-     */
-    struct Position {
-        address component;
-        uint8 positionState;
-        int256 balance;
-        SubPosition[] subpositions;
-        uint8 subpositionsCount;
-        uint256 enteredAt;
-        uint256 exitedAt;
-        uint256[] updatedAt;
-    }
 
     /* ============ State Variables ============ */
 
@@ -195,10 +159,6 @@ contract Strategy is ReentrancyGuard, Initializable {
 
     // Voters mapped to their votes.
     mapping(address => int256) public votes;
-
-    // List of positions
-    address[] public positions;
-    mapping(address => Position) public positionsByComponent;
 
     /* ============ Constructor ============ */
 
@@ -288,12 +248,6 @@ contract Strategy is ReentrancyGuard, Initializable {
 
         // Get Keeper Fees allocated
         garden.allocateCapitalToInvestment(MAX_STRATEGY_KEEPER_FEES);
-        calculateAndEditPosition(
-            garden.getReserveAsset(),
-            MAX_STRATEGY_KEEPER_FEES,
-            MAX_STRATEGY_KEEPER_FEES.toInt256(),
-            LIQUID_STATUS
-        );
         capitalAllocated = capitalAllocated.add(MAX_STRATEGY_KEEPER_FEES);
 
         _payKeeper(msg.sender, _fee);
@@ -315,7 +269,6 @@ contract Strategy is ReentrancyGuard, Initializable {
         );
         // Execute enter trade
         garden.allocateCapitalToInvestment(_capital);
-        calculateAndEditPosition(garden.getReserveAsset(), _capital, _capital.toInt256(), LIQUID_STATUS);
         capitalAllocated = capitalAllocated.add(_capital);
         _enterStrategy(_capital);
         // Sets the executed timestamp
@@ -347,7 +300,7 @@ contract Strategy is ReentrancyGuard, Initializable {
         finalized = true;
         active = false;
         exitedAt = block.timestamp;
-        // Transfer rewards and update positions
+        // Transfer rewards
         _transferStrategyRewards();
         // Moves strategy to finalized
         IGarden(garden).moveStrategyToFinalized(
@@ -388,47 +341,11 @@ contract Strategy is ReentrancyGuard, Initializable {
         duration = _newDuration;
     }
 
-    /**
-     * Calculates the new  position balance and performs the edit with new balance
-     *
-     * @param _component                Address of the component
-     * @param _newBalance               Current balance of the component
-     * @param _deltaBalance             Delta applied on this op
-     * @param _subpositionStatus        Status of the position
-     * @return                          Current component balance
-     * @return                          Previous position balance
-     * @return                          New position balance
-     */
-    function calculateAndEditPosition(
-        address _component,
-        uint256 _newBalance,
-        int256 _deltaBalance,
-        uint8 _subpositionStatus
-    )
-        public
-        returns (
-            uint256,
-            uint256,
-            uint256
-        )
-    {
-        uint256 positionBalance = _getPositionBalance(_component).toUint256();
-
-        bool isPositionFound = _hasPosition(_component);
-        if (!isPositionFound && _newBalance > 0) {
-            _addPosition(_component, msg.sender);
-        } else if (isPositionFound && _newBalance == 0) {
-            _removePosition(_component);
-        }
-        _editPositionBalance(_component, _newBalance.toInt256(), msg.sender, _deltaBalance, _subpositionStatus);
-
-        return (_newBalance, positionBalance, _newBalance);
-    }
-
     // Any tokens (other than the target) that are sent here by mistake are recoverable by contributors
     // Exchange for WETH
     function sweep(address _token) external onlyContributor {
-        require(positionsByComponent[_token].balance == 0, 'Token is not one of the active positions');
+        // TODO: check that is not any of the strategy tokens
+        require(_token != garden.getReserveAsset(), 'Cannot sweep reserve asset');
         uint256 balance = ERC20(_token).balanceOf(address(this));
         require(balance > 0, 'Token balance > 0');
         _trade(_token, balance, garden.getReserveAsset());
@@ -458,42 +375,6 @@ contract Strategy is ReentrancyGuard, Initializable {
      */
     function isIdeaActive() external view returns (bool) {
         return executedAt > 0 && exitedAt == 0;
-    }
-
-    function isPosition(address _component) external view returns (bool) {
-        return positions.contains(_component);
-    }
-
-    /**
-     * Gets the total number of positions
-     */
-    function getPositionCount() external view returns (uint256) {
-        return positions.length;
-    }
-
-    /**
-     * Returns a list of Positions, through traversing the components.
-     * balances are converted to real balances. This function is typically used off-chain for data presentation purposes.
-     */
-    function getPositions() external view returns (address[] memory) {
-        return positions;
-    }
-
-    /**
-     * Returns whether the garden component  position real balance is greater than or equal to balances passed in.
-     */
-    function hasSufficientBalance(address _component, uint256 _balance) external view returns (bool) {
-        return _getPositionBalance(_component).toUint256() >= _balance;
-    }
-
-    /**
-     * Get the position of a component
-     *
-     * @param _component          Address of the component
-     * @return                    Balance
-     */
-    function getPositionBalance(address _component) external view returns (int256) {
-        return _getPositionBalance(_component);
     }
 
     /**
@@ -671,14 +552,7 @@ contract Strategy is ReentrancyGuard, Initializable {
             ERC20(reserveAsset).transferFrom(address(this), address(garden), capitalReturned),
             'Idea capital return failed'
         );
-        // Updates strategy posiiton
-        calculateAndEditPosition(
-            reserveAsset,
-            0, // Strategy should end at 0
-            int256(-capitalReturned),
-            LIQUID_STATUS
-        );
-        // Updates reserve asset position in the garden
+        // Updates reserve asset
         uint256 _newTotal = garden.getPrincipal().toInt256().add(reserveAssetDelta).toUint256();
         garden.updatePrincipal(_newTotal);
         // Start a redemption window in the garden with this capital
@@ -688,81 +562,6 @@ contract Strategy is ReentrancyGuard, Initializable {
     function _returnStake() internal {
         // Send stake back to the strategist
         require(ERC20(address(garden)).transferFrom(address(this), strategist, stake), 'Ideator stake return failed');
-    }
-
-    /**
-     * Internal MODULE FUNCTION. Low level function that adds a component to the positions array.
-     */
-    function _addPosition(address _component, address _integration) internal {
-        Position storage position = positionsByComponent[_component];
-
-        position.subpositions.push(SubPosition({integration: _integration, balance: 0, status: 0}));
-        position.subpositionsCount++;
-        position.enteredAt = block.timestamp;
-
-        positions.push(_component);
-        emit PositionAdded(_component);
-    }
-
-    /**
-     * Internal MODULE FUNCTION. Low level function that removes a component from the positions array.
-     */
-    function _removePosition(address _component) internal {
-        Position storage position = positionsByComponent[_component];
-        positions = positions.remove(_component);
-        position.exitedAt = block.timestamp;
-        emit PositionRemoved(_component);
-    }
-
-    /**
-     * Internal MODULE FUNCTION. Low level function that edits a component's position
-     */
-    function _editPositionBalance(
-        address _component,
-        int256 _amount,
-        address _integration,
-        int256 _deltaBalance,
-        uint8 _subpositionStatus
-    ) internal {
-        Position storage position = positionsByComponent[_component];
-        position.balance = _amount;
-        position.updatedAt.push(block.timestamp);
-        int256 subpositionIndex = _getSubpositionIndex(_component, _integration);
-        if (subpositionIndex == -1) {
-            position.subpositions.push(
-                SubPosition({integration: _integration, balance: _deltaBalance, status: _subpositionStatus})
-            );
-        } else {
-            position.subpositions[subpositionIndex.toUint256()].balance = _deltaBalance;
-            position.subpositions[subpositionIndex.toUint256()].status = _subpositionStatus;
-        }
-
-        emit PositionBalanceEdited(_component, _amount);
-    }
-
-    function _getSubpositionIndex(address _component, address _integration) internal view returns (int256) {
-        Position storage position = positionsByComponent[_component];
-        for (uint8 i = 0; i < position.subpositionsCount; i++) {
-            if (position.subpositions[i].integration == _integration) {
-                return i;
-            }
-        }
-        return -1;
-    }
-
-    /**
-     * Returns whether the garden has a position for a given component (if the real balance is > 0)
-     */
-    function _hasPosition(address _component) internal view returns (bool) {
-        return _getPositionBalance(_component) > 0;
-    }
-
-    function _getPositionBalance(address _component) internal view returns (int256) {
-        return positionsByComponent[_component].balance;
-    }
-
-    function abs(int256 x) private pure returns (int256) {
-        return x >= 0 ? x : -x;
     }
 
     function _getPrice(address _assetOne, address _assetTwo) internal returns (uint256) {

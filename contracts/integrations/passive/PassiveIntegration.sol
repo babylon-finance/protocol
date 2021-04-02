@@ -110,8 +110,6 @@ abstract contract PassiveIntegration is BaseIntegration, ReentrancyGuard {
         investmentInfo.strategy.invokeFromIntegration(targetInvestment, callValue, methodData);
         _validatePostEnterInvestmentData(investmentInfo);
 
-        _updateGardenPositions(investmentInfo, _tokenIn, true);
-
         emit InvestmentEntered(
             address(investmentInfo.garden),
             address(investmentInfo.strategy),
@@ -146,8 +144,6 @@ abstract contract PassiveIntegration is BaseIntegration, ReentrancyGuard {
         investmentInfo.strategy.invokeFromIntegration(targetInvestment, callValue, methodData);
         _validatePostExitInvestmentData(investmentInfo);
         uint256 protocolFee = _accrueProtocolFee(address(investmentInfo.strategy), _tokenOut, _minAmountOut);
-
-        _updateGardenPositions(investmentInfo, _tokenOut, false);
 
         emit InvestmentExited(
             address(investmentInfo.garden),
@@ -282,30 +278,6 @@ abstract contract PassiveIntegration is BaseIntegration, ReentrancyGuard {
                 _investmentInfo.investmentTokensInGarden - _investmentInfo.investmentTokensInTransaction,
             'The garden did not return the investment tokens'
         );
-    }
-
-    /**
-     * Update Garden positions
-     *
-     * @param _investmentInfo                Struct containing investment information used in internal functions
-     */
-    function _updateGardenPositions(
-        InvestmentInfo memory _investmentInfo,
-        address _depositToken,
-        bool isDeposit
-    ) internal {
-        int256 depositTokenDelta =
-            isDeposit
-                ? int256(-_investmentInfo.limitDepositTokenQuantity)
-                : _investmentInfo.limitDepositTokenQuantity.toInt256();
-        int256 investmentTokenDelta =
-            isDeposit
-                ? _investmentInfo.investmentTokensInTransaction.toInt256()
-                : _investmentInfo.investmentTokensInTransaction.toInt256();
-        // balance deposit/withdrawal token
-        _updateStrategyPosition(address(_investmentInfo.strategy), _depositToken, depositTokenDelta, isDeposit ? 2 : 0);
-        // balance investment token
-        _updateStrategyPosition(address(_investmentInfo.strategy), _investmentInfo.investment, investmentTokenDelta, 0);
     }
 
     /**

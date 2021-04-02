@@ -21,7 +21,7 @@ describe('Position testing', function () {
   });
 
   describe('Initial Positions', async function () {
-    it('when creating a garden the positions are at 0', async function () {
+    it('when creating a garden the variables are at 0', async function () {
       expect(await garden4.totalContributors()).to.equal(0);
       expect(await garden4.getPrincipal()).to.equal(ethers.utils.parseEther('0'));
       const wethPosition = await garden4.getPrincipal();
@@ -29,7 +29,7 @@ describe('Position testing', function () {
       expect(await garden4.totalSupply()).to.equal(ethers.utils.parseEther('0'));
     });
 
-    it('updates weth position accordingly when initializing the garden', async function () {
+    it('updates weth balance accordingly when initializing the garden', async function () {
       expect(await garden1.totalContributors()).to.equal(1);
       expect(await garden1.getPrincipal()).to.equal(ethers.utils.parseEther('0.1'));
       const wethPosition = await garden1.getPrincipal();
@@ -42,7 +42,7 @@ describe('Position testing', function () {
   });
 
   describe('On deposit/ withdrawal', async function () {
-    it('supply and positions update accordingly after deposits', async function () {
+    it('supply and balances update accordingly after deposits', async function () {
       const gardenBalance = await weth.balanceOf(garden1.address);
       const supplyBefore = await garden1.totalSupply();
       const wethPositionBefore = await garden1.getPrincipal();
@@ -77,7 +77,7 @@ describe('Position testing', function () {
       expect(contributor[4]).to.be.gt(oldAverage);
     });
 
-    it('supply and positions update accordingly after deposits & withdraws', async function () {
+    it('supply and balances update accordingly after deposits & withdraws', async function () {
       await garden1.connect(signer3).deposit(ethers.utils.parseEther('1'), 1, signer3.getAddress(), {
         value: ethers.utils.parseEther('1'),
       });
