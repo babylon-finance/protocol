@@ -93,30 +93,7 @@ interface IStrategy {
 
     function isIdeaActive() external pure returns (bool);
 
-    function isPosition(address _component) external view returns (bool);
-
-    function getPositionCount() external view returns (uint256);
-
-    function getPositions() external view returns (address[] memory);
-
     function getUserVotes(address _address) external view returns (int256);
-
-    function hasSufficientBalance(address _component, uint256 _balance) external view returns (bool);
-
-    function getPositionBalance(address _component) external view returns (int256);
-
-    function calculateAndEditPosition(
-        address _component,
-        uint256 _newBalance,
-        int256 _deltaBalance,
-        uint8 _subpositionStatus
-    )
-        external
-        returns (
-            uint256,
-            uint256,
-            uint256
-        );
 
     function strategist() external pure returns (address);
 

@@ -179,7 +179,7 @@ contract RollingGarden is ReentrancyGuard, BaseGarden {
     }
 
     /**
-     * Deposits the Garden's position components into the garden and mints the Garden token of the given quantity
+     * Deposits the reserve asset into the garden and mints the Garden token of the given quantity
      * to the specified _to address.
      *
      * @param _reserveAssetQuantity  Quantity of the reserve asset that are received
@@ -599,7 +599,6 @@ contract RollingGarden is ReentrancyGuard, BaseGarden {
 
         depositInfo.gardenTokenQuantity = depositInfo.netFlowQuantity;
 
-        // Calculate inflation and new position multiplier. Note: Round inflation up in order to round position multiplier down
         depositInfo.newGardenTokenSupply = depositInfo.gardenTokenQuantity.add(totalSupply());
 
         return depositInfo;

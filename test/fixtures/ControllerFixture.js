@@ -81,12 +81,6 @@ async function deployFolioFixture() {
   babController.editStrategyFactory(2, yieldFarmingStrategyFactory.address);
   babController.editStrategyFactory(3, lendStrategyFactory.address);
 
-  const AaveIntegration = await ethers.getContractFactory('AaveIntegration', owner);
-  const aaveIntegration = await AaveIntegration.deploy(babController.address, addresses.tokens.WETH, 50);
-
-  const CompoundIntegration = await ethers.getContractFactory('CompoundIntegration', owner);
-  const compoundIntegration = await CompoundIntegration.deploy(babController.address, addresses.tokens.WETH, 50);
-
   const KyberTradeIntegration = await ethers.getContractFactory('KyberTradeIntegration', owner);
   const kyberTradeIntegration = await KyberTradeIntegration.deploy(
     babController.address,
@@ -132,8 +126,6 @@ async function deployFolioFixture() {
   const compoundLendIntegration = await CompoundLendIntegration.deploy(babController.address, addresses.tokens.WETH);
 
   const integrationsList = [
-    aaveIntegration,
-    compoundIntegration,
     kyberTradeIntegration,
     oneInchTradeIntegration,
     balancerIntegration,
@@ -245,8 +237,6 @@ async function deployFolioFixture() {
     reservePool,
     treasury,
     rewardsDistributor,
-    aaveIntegration,
-    compoundIntegration,
     kyberTradeIntegration,
     oneInchTradeIntegration,
     balancerIntegration,
