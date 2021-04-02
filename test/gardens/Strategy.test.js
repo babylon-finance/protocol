@@ -184,7 +184,6 @@ describe('Strategy', function () {
       );
 
       await executeStrategy(garden1, strategyContract, ethers.utils.parseEther('1'), 42);
-
       const [address, active, dataSet, finalized, executedAt, exitedAt] = await strategyContract.getStrategyState();
 
       expect(address).to.equal(strategyContract.address);
@@ -206,7 +205,6 @@ describe('Strategy', function () {
         kyberTradeIntegration.address,
         garden1,
       );
-
       await executeStrategy(garden1, strategyContract);
     });
 
@@ -240,7 +238,6 @@ describe('Strategy', function () {
       );
 
       await finalizeStrategy(garden1, strategyContract, 42);
-
       const [address, active, dataSet, finalized, executedAt, exitedAt] = await strategyContract.getStrategyState();
 
       expect(address).to.equal(strategyContract.address);

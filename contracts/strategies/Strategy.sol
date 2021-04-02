@@ -324,12 +324,11 @@ contract Strategy is ReentrancyGuard, Initializable {
         // Sets the executed timestamp
         executedAt = block.timestamp;
 
-
         // Add to Rewards Distributor an update of the Protocol Principal for BABL Mining Rewards calculations
         IRewardsDistributor rewardsDistributor =
             IRewardsDistributor(IBabController(controller).getRewardsDistributor());
         rewardsDistributor.addProtocolPrincipal(_capital);
-
+        _payKeeper(msg.sender, _fee);
     }
 
     /**
@@ -355,22 +354,19 @@ contract Strategy is ReentrancyGuard, Initializable {
         active = false;
         exitedAt = block.timestamp;
         // Transfer rewards and update positions
-
         _transferStrategyRewards();
-        IRewardsDistributor rewardsDistributor =
-            IRewardsDistributor(IBabController(controller).getRewardsDistributor());
-
-        // Substract the Principal in the Rewards Distributor to update the Protocol power value
-        rewardsDistributor.substractProtocolPrincipal(capitalAllocated);
-
         // Moves strategy to finalized
         IGarden(garden).moveStrategyToFinalized(
             capitalReturned.toInt256().sub(capitalAllocated.toInt256()),
             address(this)
         );
+        IRewardsDistributor rewardsDistributor =
+            IRewardsDistributor(IBabController(controller).getRewardsDistributor());
+        // Substract the Principal in the Rewards Distributor to update the Protocol power value
+        rewardsDistributor.substractProtocolPrincipal(capitalAllocated.sub(MAX_STRATEGY_KEEPER_FEES));
         strategyRewards = rewardsDistributor.getStrategyRewards(address(this));
-        uint256 remainingReserve = ERC20(garden.getReserveAsset()).balanceOf(address(this));
         _payKeeper(msg.sender, _fee);
+        uint256 remainingReserve = ERC20(garden.getReserveAsset()).balanceOf(address(this));
         require(
             ERC20(garden.getReserveAsset()).transfer(address(garden), remainingReserve),
             'Ensure capital does not get stuck'

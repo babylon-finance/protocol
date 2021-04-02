@@ -155,7 +155,6 @@ contract RewardsDistributor is Ownable {
                 protocolPerTimestamp[timeList[pid.sub(1)]].principal
             )
         );
-
         timeList.push(block.timestamp);
         // Here we control the accumulated protocol power per each quarter
         // Create the quarter checkpoint in case the checkpoint is the first in the epoch
