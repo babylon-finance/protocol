@@ -7,7 +7,7 @@ const { ADDRESS_ZERO } = require('../../utils/constants');
 
 const { loadFixture } = waffle;
 
-describe.only('AaveLendIntegrationTest', function () {
+describe('AaveLendIntegrationTest', function () {
   let aaveLendIntegration;
   let garden1;
   let signer1;
@@ -25,7 +25,6 @@ describe.only('AaveLendIntegrationTest', function () {
     USDC = await ethers.getContractAt('IERC20', addresses.tokens.USDC);
     CUSDC = await ethers.getContractAt('IERC20', addresses.tokens.CUSDC);
     WETH = await ethers.getContractAt('IERC20', addresses.tokens.WETH);
-    console.log('aaveLendIntegration', aaveLendIntegration.address);
   });
 
   describe('Deployment', function () {
