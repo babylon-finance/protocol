@@ -340,7 +340,9 @@ contract Strategy is ReentrancyGuard, Initializable {
         uint256 reserveAssetBeforeExiting = ERC20(garden.getReserveAsset()).balanceOf(address(this));
         // Execute exit trade
         _exitStrategy();
-        capitalReturned = ERC20(garden.getReserveAsset()).balanceOf(address(this)).sub(_fee);
+        capitalReturned = ERC20(garden.getReserveAsset()).balanceOf(address(this)).sub(reserveAssetBeforeExiting).sub(
+            _fee
+        );
         // Mark as finalized
         finalized = true;
         active = false;
