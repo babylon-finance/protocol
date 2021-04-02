@@ -112,15 +112,15 @@ abstract contract TradeIntegration is BaseIntegration, ReentrancyGuard {
         uint256 exchangedQuantity = _validatePostTrade(tradeInfo);
         uint256 protocolFee =
             _accrueProtocolFee(address(tradeInfo.strategy), tradeInfo.receiveToken, exchangedQuantity);
-        (uint256 netSendAmount, uint256 netReceiveAmount) = _updateGardenPositions(tradeInfo, exchangedQuantity);
+
         emit ComponentExchanged(
             tradeInfo.garden,
             tradeInfo.strategy,
             _sendToken,
             _receiveToken,
             tradeInfo.exchangeName,
-            netSendAmount,
-            netReceiveAmount,
+            0,
+            0,
             protocolFee
         );
     }

@@ -182,7 +182,6 @@ abstract contract BaseIntegration {
         uint256 _exchangedQuantity
     ) internal returns (uint256) {
         uint256 protocolFeeTotal = getIntegrationFee(0, _exchangedQuantity);
-
         payProtocolFeeFromIdea(_strategy, _token, protocolFeeTotal);
 
         return protocolFeeTotal;
