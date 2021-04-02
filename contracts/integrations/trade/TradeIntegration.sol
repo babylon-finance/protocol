@@ -112,15 +112,16 @@ abstract contract TradeIntegration is BaseIntegration, ReentrancyGuard {
         uint256 exchangedQuantity = _validatePostTrade(tradeInfo);
         uint256 protocolFee =
             _accrueProtocolFee(address(tradeInfo.strategy), tradeInfo.receiveToken, exchangedQuantity);
-
+        uint256 newAmountSendTokens = tradeInfo.preTradeSendTokenBalance.sub(tradeInfo.totalSendQuantity);
+        uint256 newAmountReceiveTokens = tradeInfo.preTradeReceiveTokenBalance.add(exchangedQuantity);
         emit ComponentExchanged(
             tradeInfo.garden,
             tradeInfo.strategy,
             _sendToken,
             _receiveToken,
             tradeInfo.exchangeName,
-            0,
-            0,
+            newAmountSendTokens,
+            newAmountReceiveTokens,
             protocolFee
         );
     }
@@ -209,29 +210,6 @@ abstract contract TradeIntegration is BaseIntegration, ReentrancyGuard {
         require(exchangedQuantity >= _tradeInfo.totalMinReceiveQuantity, 'Slippage greater than allowed');
 
         return exchangedQuantity;
-    }
-
-    /**
-     * Update Garden positions
-     *
-     * @param _tradeInfo                Struct containing trade information used in internal functions
-     * @return uint256                  Amount of sendTokens used in the trade
-     * @return uint256                  Amount of receiveTokens received in the trade (net of fees)
-     */
-    function _updateGardenPositions(TradeInfo memory _tradeInfo, uint256 exchangedQuantity)
-        internal
-        returns (uint256, uint256)
-    {
-        uint256 newAmountSendTokens = _tradeInfo.preTradeSendTokenBalance.sub(_tradeInfo.totalSendQuantity);
-        uint256 newAmountReceiveTokens = _tradeInfo.preTradeReceiveTokenBalance.add(exchangedQuantity);
-        _updateStrategyPosition(
-            address(_tradeInfo.strategy),
-            _tradeInfo.sendToken,
-            int256(-_tradeInfo.totalSendQuantity),
-            0
-        );
-        _updateStrategyPosition(address(_tradeInfo.strategy), _tradeInfo.receiveToken, exchangedQuantity.toInt256(), 0);
-        return (newAmountSendTokens, newAmountReceiveTokens);
     }
 
     /**
