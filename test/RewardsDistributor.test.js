@@ -75,7 +75,7 @@ describe('BABL Rewards Distributor', function () {
       const time = new Date();
       console.log('timestamp js', time.getTime());
       //console.log('timestamp', (await strategy.enteredAt()).toString());
-    
+
       const initialProtocol = await rewardsDistributor.checkProtocol(time.getTime());
       const initialProtocolPrincipal = initialProtocol[0];
       const initialProtocolPower = initialProtocol[4];
