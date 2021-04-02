@@ -118,8 +118,6 @@ abstract contract LendIntegration is BaseIntegration, ReentrancyGuard {
 
         _validatePostEnterInvestmentData(investmentInfo);
 
-        _updateGardenPositions(investmentInfo, _assetToken, true);
-
         emit TokensSupplied(
             address(investmentInfo.garden),
             address(investmentInfo.strategy),
@@ -146,8 +144,6 @@ abstract contract LendIntegration is BaseIntegration, ReentrancyGuard {
         uint256 protocolFee = _accrueProtocolFee(address(investmentInfo.strategy), _assetToken, _numTokensToRedeem);
 
         _validatePostExitInvestmentData(investmentInfo);
-
-        _updateGardenPositions(investmentInfo, _assetToken, false);
 
         emit TokensSupplied(
             address(investmentInfo.garden),
@@ -234,30 +230,6 @@ abstract contract LendIntegration is BaseIntegration, ReentrancyGuard {
     ) internal view virtual returns (bool) {
         require(false, 'This needs to be overriden');
         return false;
-    }
-
-    /**
-     * Update Garden positions
-     *
-     * @param _investmentInfo                Struct containing investment information used in internal functions
-     */
-    function _updateGardenPositions(
-        InvestmentInfo memory _investmentInfo,
-        address _depositToken,
-        bool isDeposit
-    ) internal {
-        int256 depositTokenDelta =
-            isDeposit
-                ? int256(-_investmentInfo.limitDepositTokenQuantity)
-                : _investmentInfo.limitDepositTokenQuantity.toInt256();
-        int256 investmentTokenDelta =
-            isDeposit
-                ? _investmentInfo.investmentTokensInTransaction.toInt256()
-                : _investmentInfo.investmentTokensInTransaction.toInt256();
-        // balance deposit/withdrawal token
-        _updateStrategyPosition(address(_investmentInfo.strategy), _depositToken, depositTokenDelta, isDeposit ? 2 : 0);
-        // balance investment token
-        _updateStrategyPosition(address(_investmentInfo.strategy), _investmentInfo.investment, investmentTokenDelta, 0);
     }
 
     /**
