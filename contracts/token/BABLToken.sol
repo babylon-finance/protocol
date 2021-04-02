@@ -25,7 +25,6 @@ import {ReentrancyGuard} from '@openzeppelin/contracts/utils/ReentrancyGuard.sol
 
 /**
  * @title BABL Token
- * @author Babylon Finance
  * @dev The BABLToken contract is ERC20 using 18 decimals as a standard
  * Is Ownable to transfer ownership to Governor Alpha for Decentralized Governance
  * It overrides the mint and maximum supply to control the timing and maximum cap allowed along the time.
