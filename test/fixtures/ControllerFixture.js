@@ -49,6 +49,8 @@ async function deployFolioFixture() {
   const LongStrategyFactory = await ethers.getContractFactory('LongStrategyFactory', owner);
   const LiquidityPoolStrategyFactory = await ethers.getContractFactory('LiquidityPoolStrategyFactory', owner);
   const YieldFarmingStrategyFactory = await ethers.getContractFactory('YieldFarmingStrategyFactory', owner);
+  const LendStrategyFactory = await ethers.getContractFactory('LendStrategyFactory', owner);
+
   const gardenValuer = await GardenValuer.deploy(babController.address);
   const reservePool = await ReservePool.deploy(babController.address);
   const treasury = await Treasury.deploy(babController.address);
@@ -56,6 +58,7 @@ async function deployFolioFixture() {
   const longStrategyFactory = await LongStrategyFactory.deploy();
   const liquidityPoolStrategyFactory = await LiquidityPoolStrategyFactory.deploy();
   const yieldFarmingStrategyFactory = await YieldFarmingStrategyFactory.deploy();
+  const lendStrategyFactory = await LendStrategyFactory.deploy();
 
   const uniswapTWAPAdapter = await UniswapTWAP.deploy(
     babController.address,
@@ -76,6 +79,7 @@ async function deployFolioFixture() {
   babController.editStrategyFactory(0, longStrategyFactory.address);
   babController.editStrategyFactory(1, liquidityPoolStrategyFactory.address);
   babController.editStrategyFactory(2, yieldFarmingStrategyFactory.address);
+  babController.editStrategyFactory(3, lendStrategyFactory.address);
 
   const AaveIntegration = await ethers.getContractFactory('AaveIntegration', owner);
   const aaveIntegration = await AaveIntegration.deploy(babController.address, addresses.tokens.WETH, 50);
@@ -124,6 +128,9 @@ async function deployFolioFixture() {
     addresses.yearn.vaultRegistry,
   );
 
+  const CompoundLendIntegration = await ethers.getContractFactory('CompoundLendIntegration', owner);
+  const compoundLendIntegration = await CompoundLendIntegration.deploy(babController.address, addresses.tokens.WETH);
+
   const integrationsList = [
     aaveIntegration,
     compoundIntegration,
@@ -132,6 +139,7 @@ async function deployFolioFixture() {
     balancerIntegration,
     uniswapPoolIntegration,
     yearnVaultIntegration,
+    compoundLendIntegration,
     sushiswapPoolIntegration,
   ];
 
@@ -245,6 +253,7 @@ async function deployFolioFixture() {
     uniswapPoolIntegration,
     yearnVaultIntegration,
     sushiswapPoolIntegration,
+    compoundLendIntegration,
 
     garden1,
     garden2,
@@ -273,6 +282,7 @@ async function deployFolioFixture() {
       { name: 'YearnVaultIntegration', contract: yearnVaultIntegration },
       { name: 'UniswapPoolIntegration', contract: uniswapPoolIntegration },
       { name: 'SushiswapPoolIntegration', contract: sushiswapPoolIntegration },
+      { name: 'CompoundLendIntegration', contract: compoundLendIntegration },
     ],
   };
 }

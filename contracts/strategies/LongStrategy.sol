@@ -39,9 +39,10 @@ contract LongStrategy is Strategy {
      * @param _longToken                   Token to be bought
      */
     function setLongData(address _longToken) public onlyIdeator {
-        kind = 0;
         require(!dataSet, 'Data is set already');
         require(garden.getReserveAsset() != _longToken, 'Receive token must be different');
+
+        kind = 0;
         longToken = _longToken;
         dataSet = true;
     }

@@ -355,7 +355,7 @@ abstract contract BaseGarden is ERC20Upgradeable {
     /**
      * Rebalances available capital of the garden between the investment strategies that are active.
      * We enter into the investment and add it to the executed strategies array.
-     * @param _fee                     The fee paid to keeper to compensate the gas cost
+     * @param _fee                     The fee paid to keeper to compensate the gas cost for each strategy executed
      */
     function rebalanceInvestments(uint256 _fee) external onlyKeeper(_fee) onlyActive {
         uint256 liquidReserveAsset = ERC20Upgradeable(reserveAsset).balanceOf(address(this));
@@ -367,19 +367,9 @@ abstract contract BaseGarden is ERC20Upgradeable {
                 toAllocate >= strategy.minRebalanceCapital() &&
                 toAllocate.add(strategy.capitalAllocated()) <= strategy.maxCapitalRequested()
             ) {
-                strategy.executeInvestment(toAllocate, 0);
+                strategy.executeInvestment(toAllocate, _fee);
             }
         }
-        _payKeeper(msg.sender, _fee);
-    }
-
-    /**
-     * Pays gas cost back to the keeper from executing a transaction
-     * @param _keeper             Keeper that executed the transaction
-     * @param _fee                The fee paid to keeper to compensate the gas cost
-     */
-    function payKeeper(address payable _keeper, uint256 _fee) external onlyStrategy onlyActive {
-        _payKeeper(_keeper, _fee);
     }
 
     /**
@@ -431,6 +421,10 @@ abstract contract BaseGarden is ERC20Upgradeable {
      */
     function expireCandidateStrategy(address _strategy) external onlyStrategy {
         strategies = strategies.remove(_strategy);
+    }
+
+    function burnStrategistStake(address _strategist, uint256 _amount) external onlyStrategy {
+        _burn(_strategist, _amount);
     }
 
     /* ============ External Getter Functions ============ */
@@ -500,22 +494,6 @@ abstract contract BaseGarden is ERC20Upgradeable {
                 ERC20Upgradeable(_token).transfer(IBabController(controller).getTreasury(), _feeQuantity),
                 'G22' // Failed to pay protocol fee
             );
-        }
-    }
-
-    /**
-     * Pays gas cost back to the keeper from executing a transaction
-     * @param _keeper             Keeper that executed the transaction
-     * @param _fee                The fee paid to keeper to compensate the gas cost
-     */
-    function _payKeeper(address payable _keeper, uint256 _fee) internal {
-        require(IBabController(controller).isValidKeeper(_keeper), 'G23'); // Only keeper
-        require(ERC20Upgradeable(reserveAsset).balanceOf(address(this)) >= _fee, 'G24'); // not enough weth for gas subsidy
-        // TODO: This assumes reserve asset is WETH
-        // TODO: This assume garden have enought WETH
-        // Pay Keeper in WETH
-        if (_fee > 0) {
-            require(ERC20Upgradeable(reserveAsset).transfer(_keeper, _fee), 'G25'); // not enough weth for gas subsidy
         }
     }
 
