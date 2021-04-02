@@ -46,10 +46,13 @@ contract LiquidityPoolStrategy is Strategy {
      * @param _pool                           Liquidity pool
      */
     function setPoolData(address _pool) public onlyIdeator {
-        kind = 1;
+        require(!dataSet, 'Data is set already');
         require(IPoolIntegration(integration).isPool(_pool), 'Must be a valid pool of this protocol');
+
+        kind = 1;
         pool = _pool;
         poolTokens = IPoolIntegration(integration).getPoolTokens(pool);
+        dataSet = true;
     }
 
     /**

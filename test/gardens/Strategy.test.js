@@ -84,9 +84,9 @@ describe('Strategy', function () {
       expect(address).to.equal(strategyDataset.address);
       expect(strategist).to.equal(signer1.address);
       expect(integration).to.not.equal(addresses.zero);
-      expect(stake).to.equal(ethers.utils.parseEther('5'));
-      expect(absoluteTotalVotes).to.equal(ethers.utils.parseEther('5'));
-      expect(totalVotes).to.equal(ethers.utils.parseEther('5'));
+      expect(stake).to.equal(ethers.utils.parseEther('1'));
+      expect(absoluteTotalVotes).to.equal(ethers.utils.parseEther('1'));
+      expect(totalVotes).to.equal(ethers.utils.parseEther('1'));
       expect(capitalAllocated).to.equal(ethers.BigNumber.from(0));
       expect(duration).to.equal(ethers.BigNumber.from(ONE_DAY_IN_SECONDS * 30));
       expect(expectedReturn).to.equal(ethers.utils.parseEther('0.05'));
@@ -127,8 +127,8 @@ describe('Strategy', function () {
 
       const [, , , , absoluteTotalVotes, totalVotes] = await strategyCandidate.getStrategyDetails();
 
-      expect(absoluteTotalVotes).to.equal(ethers.utils.parseEther('9.1'));
-      expect(totalVotes).to.equal(ethers.utils.parseEther('9.1'));
+      expect(absoluteTotalVotes).to.equal(ethers.utils.parseEther('5.1'));
+      expect(totalVotes).to.equal(ethers.utils.parseEther('5.1'));
 
       const [address, active, dataSet, finalized, executedAt, exitedAt] = await strategyCandidate.getStrategyState();
 
@@ -183,7 +183,7 @@ describe('Strategy', function () {
         garden1,
       );
 
-      await executeStrategy(garden1, strategyContract, 42);
+      await executeStrategy(garden1, strategyContract, ethers.utils.parseEther('1'), 42);
 
       const [address, active, dataSet, finalized, executedAt, exitedAt] = await strategyContract.getStrategyState();
 
@@ -230,7 +230,7 @@ describe('Strategy', function () {
   });
 
   describe('finalizeInvestment', async function () {
-    it('should finalize investemnet idea', async function () {
+    it('should finalize investment idea', async function () {
       const strategyContract = await createStrategy(
         0,
         'active',
@@ -265,9 +265,7 @@ describe('Strategy', function () {
 
       await finalizeStrategy(garden1, strategyContract, 42);
 
-      await expect(strategyContract.finalizeInvestment(42, { gasPrice: 0 })).to.be.rejectedWith(
-        /this investment was already exited/i,
-      );
+      await expect(strategyContract.finalizeInvestment(42, { gasPrice: 0 })).to.be.reverted;
     });
   });
 });
