@@ -37,7 +37,6 @@ describe('BABL Rewards Distributor', function () {
   let weth;
   let kyberTradeIntegration;
 
-
   beforeEach(async () => {
     ({
       owner,
@@ -72,17 +71,9 @@ describe('BABL Rewards Distributor', function () {
 
   describe('Calculating BABL Rewards', async function () {
     it('should calculate correct BABL in case of strategy in less than a quarter', async function () {
-      const time = new Date();
-      console.log('timestamp js', time.getTime());
-      //console.log('timestamp', (await strategy.enteredAt()).toString());
-
-      const initialProtocol = await rewardsDistributor.checkProtocol(time.getTime());
+      const initialProtocol = await rewardsDistributor.checkProtocol(new Date().getTime());
       const initialProtocolPrincipal = initialProtocol[0];
       const initialProtocolPower = initialProtocol[4];
-
-      console.log('INIT PROTOCOL PPAL', initialProtocolPrincipal.toString());
-      console.log('INIT PROTOCOL POWER', initialProtocolPower.toString());
-
 
       const strategyContract = await createStrategy(
         0,
@@ -112,16 +103,18 @@ describe('BABL Rewards Distributor', function () {
       const protocolquarterBelonging2 = protocol2[2];
       const protocolTimeListPointer2 = protocol2[3];
       const protocolPower2 = protocol2[4];
-      //console.log('AFTER EXECUTING This is the protocolPrincipal',protocolPrincipal2.toString());
-      //console.log('AFTER EXECUTING This is the protocolTime',protocolTime2.toString());
-      //console.log('AFTER EXECUTING This is the protocolquarterBelonging',protocolquarterBelonging2.toString());
-      //console.log('AFTER EXECUTINGThis is the protocolTimeListPointer',protocolTimeListPointer2.toString());
-      //console.log('AFTER EXECUTING This is the protocolPower',protocolPower2.toString());
 
       ethers.provider.send('evm_increaseTime', [ONE_DAY_IN_SECONDS * 2]);
 
       await finalizeStrategy(garden1, strategyContract, 42);
-      const [address2, active2, dataSet2, finalized2, executedAt2, exitedAt2] = await strategyContract.getStrategyState();
+      const [
+        address2,
+        active2,
+        dataSet2,
+        finalized2,
+        executedAt2,
+        exitedAt2,
+      ] = await strategyContract.getStrategyState();
 
       expect(address2).to.equal(strategyContract.address);
       expect(active2).to.equal(false);
@@ -137,15 +130,6 @@ describe('BABL Rewards Distributor', function () {
       const protocolquarterBelonging3 = protocol3[2];
       const protocolTimeListPointer3 = protocol3[3];
       const protocolPower3 = protocol3[4];
-      //console.log('AFTER FINALIZING This is the protocolPrincipal',protocolPrincipal3.toString());
-      //console.log('AFTER This is the protocolTime',protocolTime2.toString());
-      //console.log('AFTER This is the protocolquarterBelonging',protocolquarterBelonging2.toString());
-      //console.log('AFTER This is the protocolTimeListPointer',protocolTimeListPointer2.toString());
-      //console.log('AFTER FINALIZING is the protocolPower',protocolPower3.toString());
-
-
     });
-
   });
-
 });
