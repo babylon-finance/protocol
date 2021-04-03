@@ -48,6 +48,8 @@ interface IBabController {
 
     function editGardenValuer(address _gardenValuer) external;
 
+    function editRewardsDistributor(address _rewardsDistributor) external;
+
     function editTreasury(address _newTreasury) external;
 
     function editGardenFactory(address _newGardenFactory) external;
@@ -80,6 +82,8 @@ interface IBabController {
     function getPriceOracle() external view returns (address);
 
     function getReservePool() external view returns (address);
+
+    function getRewardsDistributor() external view returns (address);
 
     function getGardenValuer() external view returns (address);
 

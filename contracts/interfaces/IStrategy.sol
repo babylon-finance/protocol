@@ -93,6 +93,8 @@ interface IStrategy {
 
     function isIdeaActive() external pure returns (bool);
 
+    function getUserVotes(address _address) external view returns (int256);
+
     function strategist() external pure returns (address);
 
     function enteredAt() external pure returns (uint256);
@@ -104,6 +106,8 @@ interface IStrategy {
     function exitedAt() external pure returns (uint256);
 
     function stake() external pure returns (uint256);
+
+    function strategyRewards() external pure returns (uint96);
 
     function maxCapitalRequested() external pure returns (uint256);
 
@@ -121,7 +125,7 @@ interface IStrategy {
 
     function totalVotes() external pure returns (int256);
 
-    function absoluteTotalVotes() external pure returns (int256);
+    function absoluteTotalVotes() external pure returns (uint256);
 
     function totalVoters() external pure returns (int256);
 

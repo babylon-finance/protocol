@@ -36,7 +36,7 @@ import {IBabController} from '../interfaces/IBabController.sol';
 import {IGarden} from '../interfaces/IGarden.sol';
 import {ITradeIntegration} from '../interfaces/ITradeIntegration.sol';
 import {IPriceOracle} from '../interfaces/IPriceOracle.sol';
-import {IStrategy} from '../interfaces/IStrategy.sol';
+import {IRewardsDistributor} from '../interfaces/IRewardsDistributor.sol';
 
 /**
  * @title Strategy
@@ -157,6 +157,9 @@ contract Strategy is ReentrancyGuard, Initializable {
     address[] public tokensNeeded; // Positions that need to be taken prior to enter trade
     uint256[] public tokenAmountsNeeded; // Amount of these positions
 
+    // Raul Review
+    uint256 public strategyRewards = 0; // Initialization. Rewards allocated for this strategy updated on finalized
+
     // Voters mapped to their votes.
     mapping(address => int256) public votes;
 
@@ -273,6 +276,11 @@ contract Strategy is ReentrancyGuard, Initializable {
         _enterStrategy(_capital);
         // Sets the executed timestamp
         executedAt = block.timestamp;
+
+        // Add to Rewards Distributor an update of the Protocol Principal for BABL Mining Rewards calculations
+        IRewardsDistributor rewardsDistributor =
+            IRewardsDistributor(IBabController(controller).getRewardsDistributor());
+        rewardsDistributor.addProtocolPrincipal(_capital);
         _payKeeper(msg.sender, _fee);
     }
 
@@ -307,6 +315,11 @@ contract Strategy is ReentrancyGuard, Initializable {
             capitalReturned.toInt256().sub(capitalAllocated.toInt256()),
             address(this)
         );
+        IRewardsDistributor rewardsDistributor =
+            IRewardsDistributor(IBabController(controller).getRewardsDistributor());
+        // Substract the Principal in the Rewards Distributor to update the Protocol power value
+        rewardsDistributor.substractProtocolPrincipal(capitalAllocated.sub(MAX_STRATEGY_KEEPER_FEES));
+        strategyRewards = rewardsDistributor.getStrategyRewards(address(this));
         _payKeeper(msg.sender, _fee);
         uint256 remainingReserve = ERC20(garden.getReserveAsset()).balanceOf(address(this));
         require(
@@ -432,6 +445,10 @@ contract Strategy is ReentrancyGuard, Initializable {
         )
     {
         return (address(this), active, dataSet, finalized, executedAt, exitedAt);
+    }
+
+    function getUserVotes(address _address) external view returns (int256) {
+        return votes[_address];
     }
 
     /* ============ Internal Functions ============ */
