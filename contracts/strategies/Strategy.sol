@@ -148,7 +148,7 @@ contract Strategy is ReentrancyGuard, Initializable {
     bool public dataSet;
 
     uint256 public duration; // Duration of the bet
-    uint256 public stake; // Amount of stake by the strategist (in reserve asset) Neds to be positive
+    uint256 public stake; // Amount of stake by the strategist (in reserve asset) needs to be positive
     uint256 public maxCapitalRequested; // Amount of max capital to allocate
     uint256 public capitalAllocated; // Current amount of capital allocated
     uint256 public expectedReturn; // Expect return by this investment strategy
@@ -561,7 +561,8 @@ contract Strategy is ReentrancyGuard, Initializable {
 
     function _returnStake() internal {
         // Send stake back to the strategist
-        require(ERC20(address(garden)).transferFrom(address(this), strategist, stake), 'Ideator stake return failed');
+        // Stake is never sent to garden/strategy
+        // require(ERC20(address(garden)).transferFrom(address(this), strategist, stake), 'Ideator stake return failed');
     }
 
     function _getPrice(address _assetOne, address _assetTwo) internal returns (uint256) {

@@ -86,7 +86,7 @@ abstract contract LendIntegration is BaseIntegration, ReentrancyGuard {
 
     /* ============ External Functions ============ */
     function getInvestmentToken(address _assetToken) external view returns (address) {
-        return _getSpender(_assetToken);
+        return _getInvestmentToken(_assetToken);
     }
 
     /**
@@ -105,7 +105,12 @@ abstract contract LendIntegration is BaseIntegration, ReentrancyGuard {
         uint256 _minAmountExpected
     ) external {
         InvestmentInfo memory investmentInfo =
-            _createInvestmentInfo(_assetToken, _getSpender(_assetToken), _numTokensToSupply, _minAmountExpected);
+            _createInvestmentInfo(
+                _assetToken,
+                _getInvestmentToken(_assetToken),
+                _numTokensToSupply,
+                _minAmountExpected
+            );
 
         _validatePreJoinInvestmentData(investmentInfo);
 
@@ -132,7 +137,12 @@ abstract contract LendIntegration is BaseIntegration, ReentrancyGuard {
         uint256 _minAmountExpected
     ) external {
         InvestmentInfo memory investmentInfo =
-            _createInvestmentInfo(_assetToken, _getSpender(_assetToken), _numTokensToRedeem, _minAmountExpected);
+            _createInvestmentInfo(
+                _assetToken,
+                _getInvestmentToken(_assetToken),
+                _numTokensToRedeem,
+                _minAmountExpected
+            );
 
         _validatePreExitInvestmentData(investmentInfo);
 
@@ -330,6 +340,13 @@ abstract contract LendIntegration is BaseIntegration, ReentrancyGuard {
     }
 
     function _getSpender(
+        address //_investmentAddress
+    ) internal view virtual returns (address) {
+        require(false, 'This must be overriden');
+        return address(0);
+    }
+
+    function _getInvestmentToken(
         address //_investmentAddress
     ) internal view virtual returns (address) {
         require(false, 'This must be overriden');

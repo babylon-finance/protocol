@@ -112,6 +112,9 @@ async function deployFolioFixture() {
   const CompoundLendIntegration = await ethers.getContractFactory('CompoundLendIntegration', owner);
   const compoundLendIntegration = await CompoundLendIntegration.deploy(babController.address, addresses.tokens.WETH);
 
+  const AaveLendIntegration = await ethers.getContractFactory('AaveLendIntegration', owner);
+  const aaveLendIntegration = await AaveLendIntegration.deploy(babController.address, addresses.tokens.WETH);
+
   const integrationsList = [
     kyberTradeIntegration,
     oneInchTradeIntegration,
@@ -119,6 +122,7 @@ async function deployFolioFixture() {
     uniswapPoolIntegration,
     yearnVaultIntegration,
     compoundLendIntegration,
+    aaveLendIntegration,
     sushiswapPoolIntegration,
   ];
 
@@ -231,6 +235,7 @@ async function deployFolioFixture() {
     yearnVaultIntegration,
     sushiswapPoolIntegration,
     compoundLendIntegration,
+    aaveLendIntegration,
 
     garden1,
     garden2,
@@ -259,6 +264,7 @@ async function deployFolioFixture() {
       { name: 'UniswapPoolIntegration', contract: uniswapPoolIntegration },
       { name: 'SushiswapPoolIntegration', contract: sushiswapPoolIntegration },
       { name: 'CompoundLendIntegration', contract: compoundLendIntegration },
+      { name: 'AaveLendIntegration', contract: aaveLendIntegration },
     ],
   };
 }
