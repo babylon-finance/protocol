@@ -117,10 +117,15 @@ contract OneInchPoolIntegration is PoolIntegration {
         // 5% slippage
         minAmounts[0] = 0;
         minAmounts[1] = _maxAmountsIn[1].sub(_maxAmountsIn[1].preciseMul(SLIPPAGE_MIN_AMOUNTS));
-        bytes memory methodData = abi.encodeWithSignature('deposit(uint256[2],uint256[2])', _maxAmountsIn, minAmounts);
+        bytes memory methodData =
+            abi.encodeWithSignature(
+                'deposit(uint256[2],uint256[2])',
+                _maxAmountsIn[0],
+                _maxAmountsIn[1],
+                minAmounts[0],
+                minAmounts[1]
+            );
         uint256 value = 0;
-        console.log('max amounts', _maxAmountsIn[0], _maxAmountsIn[1]);
-        console.log('min amounts', minAmounts[0], minAmounts[1]);
         // Add ETH if one of the tokens
         if (_tokensIn[0] == address(0)) {
             value = _maxAmountsIn[0];

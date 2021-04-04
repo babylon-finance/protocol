@@ -81,7 +81,6 @@ contract LiquidityPoolStrategy is Strategy {
                 _maxAmountsIn[i] = normalizedAmount;
             }
         }
-        console.log('joining');
         // TODO: calculate minReceiveQuantity instead of 1
         IPoolIntegration(integration).joinPool(pool, 1, poolTokens, _maxAmountsIn);
     }
@@ -105,7 +104,11 @@ contract LiquidityPoolStrategy is Strategy {
         address reserveAsset = garden.getReserveAsset();
         for (uint256 i = 0; i < poolTokens.length; i++) {
             if (poolTokens[i] != reserveAsset) {
-                _trade(poolTokens[i], IERC20(poolTokens[i]).balanceOf(address(this)), reserveAsset);
+                if (poolTokens[i] == address(0)) {
+                    IWETH(garden.weth()).deposit{value: address(this).balance}();
+                } else {
+                    _trade(poolTokens[i], IERC20(poolTokens[i]).balanceOf(address(this)), reserveAsset);
+                }
             }
         }
     }

@@ -105,12 +105,10 @@ abstract contract PoolIntegration is BaseIntegration, ReentrancyGuard {
         }
         (address targetPool, uint256 callValue, bytes memory methodData) =
             _getJoinPoolCalldata(_poolAddress, _poolTokensOut, _tokensIn, _maxAmountsIn);
-        console.log('before invoking');
         poolInfo.strategy.invokeFromIntegration(targetPool, callValue, methodData);
         poolInfo.poolTokensInTransaction = IERC20(poolInfo.pool).balanceOf(address(poolInfo.strategy)).sub(
             poolInfo.poolTokensInStrategy
         );
-        console.log('after joining');
         _validatePostJoinPoolData(poolInfo);
 
         emit PoolEntered(address(poolInfo.strategy), address(poolInfo.garden), poolInfo.pool, _poolTokensOut);
