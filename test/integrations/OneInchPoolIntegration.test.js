@@ -65,12 +65,6 @@ describe('OneInchPoolIntegrationTest', function () {
 
       // Approve
       await daiToken.connect(signer1).approve(daiWethPair.address, ethers.utils.parseEther('500'));
-      await daiToken
-        .connect(signer1)
-        .approve('0xbaf9a5d4b0052359326a6cdab54babaa3a3a9643', ethers.utils.parseEther('500'));
-      await daiToken
-        .connect(signer1)
-        .approve('0x2eea44e40930b1984f42078e836c659a12301e40', ethers.utils.parseEther('500'));
       // Deposit
       await daiWethPair
         .connect(signer1)

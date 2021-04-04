@@ -100,7 +100,7 @@ abstract contract PoolIntegration is BaseIntegration, ReentrancyGuard {
         for (uint256 i = 0; i < _tokensIn.length; i++) {
             // No need to approve ETH
             if (_tokensIn[i] != address(0)) {
-              poolInfo.strategy.invokeApprove(_getSpender(_poolAddress), _tokensIn[i], _maxAmountsIn[i]);
+                poolInfo.strategy.invokeApprove(_getSpender(_poolAddress), _tokensIn[i], _maxAmountsIn[i]);
             }
         }
         (address targetPool, uint256 callValue, bytes memory methodData) =

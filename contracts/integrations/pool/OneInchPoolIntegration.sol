@@ -117,12 +117,7 @@ contract OneInchPoolIntegration is PoolIntegration {
         // 5% slippage
         minAmounts[0] = 0;
         minAmounts[1] = _maxAmountsIn[1].sub(_maxAmountsIn[1].preciseMul(SLIPPAGE_MIN_AMOUNTS));
-        bytes memory methodData =
-            abi.encodeWithSignature(
-                'deposit(uint256[2],uint256[2])',
-                _maxAmountsIn,
-                minAmounts
-            );
+        bytes memory methodData = abi.encodeWithSignature('deposit(uint256[2],uint256[2])', _maxAmountsIn, minAmounts);
         uint256 value = 0;
         console.log('max amounts', _maxAmountsIn[0], _maxAmountsIn[1]);
         console.log('min amounts', minAmounts[0], minAmounts[1]);
@@ -167,8 +162,7 @@ contract OneInchPoolIntegration is PoolIntegration {
         require(_tokensOut.length == 2, 'Removing liquidity from a mooniswap pool requires exactly two tokens');
         require(_minAmountsOut.length == 2, 'Removing liquidity from a mooniswap pool requires exactly two tokens');
         // Encode method data for Garden to invoke
-        bytes memory methodData =
-            abi.encodeWithSignature('withdraw(uint256,uint256[])', _poolTokensIn, _minAmountsOut);
+        bytes memory methodData = abi.encodeWithSignature('withdraw(uint256,uint256[])', _poolTokensIn, _minAmountsOut);
 
         return (address(_poolAddress), 0, methodData);
     }
