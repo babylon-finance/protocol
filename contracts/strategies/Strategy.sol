@@ -251,7 +251,6 @@ contract Strategy is ReentrancyGuard, Initializable {
 
         // Get Keeper Fees allocated
         garden.allocateCapitalToInvestment(MAX_STRATEGY_KEEPER_FEES);
-        capitalAllocated = capitalAllocated.add(MAX_STRATEGY_KEEPER_FEES);
 
         _payKeeper(msg.sender, _fee);
     }
@@ -298,30 +297,18 @@ contract Strategy is ReentrancyGuard, Initializable {
             'Idea can only be finalized after the minimum period has elapsed'
         );
         require(!finalized, 'This investment was already exited');
-        uint256 reserveAssetBeforeExiting = ERC20(garden.reserveAsset()).balanceOf(address(this));
         // Execute exit trade
         _exitStrategy();
-        capitalReturned = ERC20(garden.reserveAsset()).balanceOf(address(this)).sub(reserveAssetBeforeExiting).sub(
-            _fee
-        );
         // Mark as finalized
         finalized = true;
         active = false;
         exitedAt = block.timestamp;
         // Transfer rewards
-        _transferStrategyRewards();
-        // Moves strategy to finalized
-        IGarden(garden).moveStrategyToFinalized(
-            capitalReturned.toInt256().sub(capitalAllocated.toInt256()),
-            address(this)
-        );
-        IRewardsDistributor rewardsDistributor =
-            IRewardsDistributor(IBabController(controller).getRewardsDistributor());
-        // Substract the Principal in the Rewards Distributor to update the Protocol power value
-        rewardsDistributor.substractProtocolPrincipal(capitalAllocated.sub(MAX_STRATEGY_KEEPER_FEES));
-        strategyRewards = rewardsDistributor.getStrategyRewards(address(this));
+        _transferStrategyRewards(_fee);
+        // Pay Keeper Fee
         _payKeeper(msg.sender, _fee);
         uint256 remainingReserve = ERC20(garden.reserveAsset()).balanceOf(address(this));
+        // Sends the rest back if any
         require(
             ERC20(garden.reserveAsset()).transfer(address(garden), remainingReserve),
             'Ensure capital does not get stuck'
@@ -538,15 +525,16 @@ contract Strategy is ReentrancyGuard, Initializable {
         return minAmountExpected;
     }
 
-    function _transferStrategyRewards() internal {
+    function _transferStrategyRewards(uint256 _fee) internal {
+        capitalReturned = ERC20(garden.reserveAsset()).balanceOf(address(this)).sub(_fee).sub(MAX_STRATEGY_KEEPER_FEES);
         address reserveAsset = garden.reserveAsset();
-        int256 reserveAssetDelta = capitalReturned.toInt256();
-
+        int256 reserveAssetDelta = capitalReturned.toInt256().sub(capitalAllocated.toInt256());
+        uint256 protocolProfits = 0;
         // Idea returns were positive
         if (capitalReturned >= capitalAllocated) {
             uint256 profits = capitalReturned - capitalAllocated; // in reserve asset (weth)
             // Send weth performance fee to the protocol
-            uint256 protocolProfits = IBabController(controller).getProtocolPerformanceFee().preciseMul(profits);
+            protocolProfits = IBabController(controller).getProtocolPerformanceFee().preciseMul(profits);
             require(
                 ERC20(reserveAsset).transferFrom(
                     address(this),
@@ -556,6 +544,7 @@ contract Strategy is ReentrancyGuard, Initializable {
                 'Protocol perf fee failed'
             );
             reserveAssetDelta.add(int256(-protocolProfits));
+            capitalReturned = capitalReturned.sub(protocolProfits);
         } else {
             // Returns were negative
             // Burn strategist stake and add the amount to the garden
@@ -567,11 +556,20 @@ contract Strategy is ReentrancyGuard, Initializable {
             ERC20(reserveAsset).transferFrom(address(this), address(garden), capitalReturned),
             'Idea capital return failed'
         );
+
         // Updates reserve asset
         uint256 _newTotal = garden.principal().toInt256().add(reserveAssetDelta).toUint256();
         garden.updatePrincipal(_newTotal);
         // Start a redemption window in the garden with this capital
         garden.startRedemptionWindow(capitalReturned);
+
+        // Moves strategy to finalized
+        IGarden(garden).moveStrategyToFinalized(reserveAssetDelta, address(this));
+        IRewardsDistributor rewardsDistributor =
+            IRewardsDistributor(IBabController(controller).getRewardsDistributor());
+        // Substract the Principal in the Rewards Distributor to update the Protocol power value
+        rewardsDistributor.substractProtocolPrincipal(capitalAllocated);
+        strategyRewards = rewardsDistributor.getStrategyRewards(address(this));
     }
 
     function _getPrice(address _assetOne, address _assetTwo) internal returns (uint256) {

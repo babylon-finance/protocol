@@ -1,6 +1,7 @@
 const { ethers } = require('hardhat');
 const { ONE_DAY_IN_SECONDS } = require('../../utils/constants.js');
 const { TWAP_ORACLE_WINDOW, TWAP_ORACLE_GRANULARITY } = require('../../utils/system.js');
+const { impersonateAddress } = require('../../utils/rpc');
 const addresses = require('../../utils/addresses');
 
 const DEFAULT_STRATEGY_PARAMS = [
@@ -32,7 +33,7 @@ async function createLongStrategy(garden, integration, signer, params = DEFAULT_
   const strategies = await garden.getStrategies();
   const lastStrategyAddr = strategies[strategies.length - 1];
 
-  const passedLongParams = longParams || [addresses.tokens.USDC];
+  const passedLongParams = longParams || [addresses.tokens.DAI];
 
   const strategy = await ethers.getContractAt('LongStrategy', lastStrategyAddr);
   await strategy.connect(signer).setLongData(...passedLongParams, {
@@ -124,6 +125,34 @@ async function finalizeStrategy(garden, strategy, fee = 0) {
   return strategy.finalizeInvestment(fee, { gasPrice: 0 });
 }
 
+async function injectFakeProfits(strategy, amount) {
+  const kind = await strategy.kind();
+  if (kind === 0) {
+    const asset = await ethers.getContractAt('IERC20', await strategy.longToken());
+    const whaleAddress = '0x6B175474E89094C44Da98b954EedeAC495271d0F'; // Has DAI
+    const whaleSigner = await impersonateAddress(whaleAddress);
+    await asset.connect(whaleSigner).transfer(strategy.address, amount, {
+      gasPrice: 0,
+    });
+  }
+  if (kind === 1) {
+    const asset = await ethers.getContractAt('IERC20', await strategy.pool());
+    const whaleAddress = await strategy.pool();
+    const whaleSigner = await impersonateAddress(whaleAddress);
+    await asset.connect(whaleSigner).transfer(strategy.address, amount, {
+      gasPrice: 0,
+    });
+  }
+  if (kind === 2) {
+    const asset = await ethers.getContractAt('IERC20', await strategy.yieldVault());
+    const whaleAddress = await strategy.yieldVault();
+    const whaleSigner = await impersonateAddress(whaleAddress);
+    await asset.connect(whaleSigner).transfer(strategy.address, amount, {
+      gasPrice: 0,
+    });
+  }
+}
+
 async function createStrategy(
   kind,
   state,
@@ -172,4 +201,5 @@ module.exports = {
   DEFAULT_STRATEGY_PARAMS,
   executeStrategy,
   finalizeStrategy,
+  injectFakeProfits,
 };

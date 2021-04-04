@@ -36,14 +36,14 @@ describe('KyberTradeIntegration', function () {
 
   describe('Trading', function () {
     let wethToken;
-    let usdcToken;
+    let daiToken;
 
     beforeEach(async () => {
       wethToken = await ethers.getContractAt('IERC20', addresses.tokens.WETH);
-      usdcToken = await ethers.getContractAt('IERC20', addresses.tokens.USDC);
+      daiToken = await ethers.getContractAt('IERC20', addresses.tokens.DAI);
     });
 
-    it('trade weth to usdc', async function () {
+    it('trade weth to dai', async function () {
       await garden1.connect(signer3).deposit(ethers.utils.parseEther('2'), 1, signer3.getAddress(), {
         value: ethers.utils.parseEther('2'),
       });
@@ -73,10 +73,10 @@ describe('KyberTradeIntegration', function () {
 
       await executeStrategy(garden1, strategyContract);
 
-      expect(await usdcToken.balanceOf(strategyContract.address)).to.be.gt(ethers.utils.parseEther('97') / 10 ** 12);
+      expect(await daiToken.balanceOf(strategyContract.address)).to.be.gt(ethers.utils.parseEther('97') / 10 ** 12);
 
       await finalizeStrategy(garden1, strategyContract, 0);
-      expect(await usdcToken.balanceOf(strategyContract.address)).to.equal(0);
+      expect(await daiToken.balanceOf(strategyContract.address)).to.equal(0);
     });
   });
 });

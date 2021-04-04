@@ -372,7 +372,7 @@ contract RollingGarden is ReentrancyGuard, BaseGarden {
             // Positive strategies not yet claimed
             if (
                 strategy.exitedAt() > contributors[msg.sender].claimedAt &&
-                strategy.enteredAt() >= contributors[msg.sender].initialDepositAt // TODO: may need to remove because of rebalance
+                strategy.executedAt() >= contributors[msg.sender].initialDepositAt
             ) {
                 // If strategy returned money we give out the profits
                 if (strategy.capitalReturned() > strategy.capitalAllocated()) {
@@ -425,6 +425,9 @@ contract RollingGarden is ReentrancyGuard, BaseGarden {
                 }
 
                 contributors[msg.sender].claimedBABL = contributors[msg.sender].claimedBABL.add(bablRewards);
+                contributors[msg.sender].claimedProfits = contributors[msg.sender].claimedProfits.add(
+                    contributorProfits
+                );
                 bablTotalRewards = bablTotalRewards.add(bablRewards);
             }
         }
