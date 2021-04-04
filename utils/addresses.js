@@ -20,6 +20,10 @@ module.exports = {
   },
   oneinch: {
     exchange: '0xC586BeF4a0992C495Cf22e1aeEE4E446CECDee0E',
+    factory: '0xbAF9A5d4b0052359326A6CDAb54BABAa3a3A9643',
+    pools: {
+      wethdai: '0x7566126f2fd0f2dddae01bb8a6ea49b760383d5a',
+    },
   },
   balancer: {
     factory: '0x9424B1412450D0f8Fc2255FAf6046b98213B76Bd',

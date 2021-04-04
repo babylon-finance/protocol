@@ -24,7 +24,8 @@ import {SafeMath} from '@openzeppelin/contracts/math/SafeMath.sol';
 import '@uniswap/v2-core/contracts/interfaces/IUniswapV2Pair.sol';
 import {PoolIntegration} from './PoolIntegration.sol';
 import {PreciseUnitMath} from '../../lib/PreciseUnitMath.sol';
-import {IUniswapV2Router} from '../../interfaces/external/uniswap/IUniswapV2Router.sol';
+import {IMooniswapFactory} from '../../interfaces/external/1inch/IMooniswapFactory.sol';
+import {IMooniswap} from '../../interfaces/external/1inch/IMooniswap.sol';
 
 /**
  * @title BalancerIntegration
@@ -32,38 +33,35 @@ import {IUniswapV2Router} from '../../interfaces/external/uniswap/IUniswapV2Rout
  *
  * Kyber protocol trade integration
  */
-contract UniswapPoolIntegration is PoolIntegration {
+contract OneInchPoolIntegration is PoolIntegration {
     using SafeMath for uint256;
     using PreciseUnitMath for uint256;
 
     /* ============ State Variables ============ */
 
     // Address of Uniswap V2 Router
-    IUniswapV2Router public uniRouter;
-    uint8 immutable MAX_DELTA_BLOCKS = 5;
+    IMooniswapFactory public mooniswapFactory;
 
     /* ============ Constructor ============ */
+    uint256 public constant SLIPPAGE_MIN_AMOUNTS = 5e16;
 
     /**
      * Creates the integration
      *
      * @param _controller                   Address of the controller
      * @param _weth                         Address of the WETH ERC20
-     * @param _uniswapRouterAddress         Address of Uniswap router
+     * @param _mooniswapFactoryAddress         Address of the Mooniswap factory
      */
     constructor(
         address _controller,
         address _weth,
-        address _uniswapRouterAddress
-    ) PoolIntegration('uniswap_pool', _weth, _controller) {
-        uniRouter = IUniswapV2Router(_uniswapRouterAddress);
+        address _mooniswapFactoryAddress
+    ) PoolIntegration('oneinch_pool', _weth, _controller) {
+        mooniswapFactory = IMooniswapFactory(_mooniswapFactoryAddress);
     }
 
     function getPoolTokens(address _poolAddress) external view override returns (address[] memory) {
-        address[] memory result = new address[](2);
-        result[0] = IUniswapV2Pair(_poolAddress).token0();
-        result[1] = IUniswapV2Pair(_poolAddress).token1();
-        return result;
+        return IMooniswap(_poolAddress).getTokens();
     }
 
     function getPoolWeights(
@@ -77,14 +75,12 @@ contract UniswapPoolIntegration is PoolIntegration {
 
     /* ============ Internal Functions ============ */
 
-    function _isPool(address _poolAddress) internal pure override returns (bool) {
-        return IUniswapV2Pair(_poolAddress).MINIMUM_LIQUIDITY() > 0;
+    function _isPool(address _poolAddress) internal view override returns (bool) {
+        return IMooniswapFactory(mooniswapFactory).isPool(IMooniswap(_poolAddress));
     }
 
-    function _getSpender(
-        address //_poolAddress
-    ) internal view override returns (address) {
-        return address(uniRouter);
+    function _getSpender(address _poolAddress) internal pure override returns (address) {
+        return _poolAddress;
     }
 
     /**
@@ -100,13 +96,13 @@ contract UniswapPoolIntegration is PoolIntegration {
      * @return bytes                     Trade calldata
      */
     function _getJoinPoolCalldata(
-        address, /* _poolAddress */
+        address _poolAddress,
         uint256, /* _poolTokensOut */
         address[] calldata _tokensIn,
         uint256[] calldata _maxAmountsIn
     )
         internal
-        view
+        pure
         override
         returns (
             address,
@@ -115,22 +111,30 @@ contract UniswapPoolIntegration is PoolIntegration {
         )
     {
         // Encode method data for Garden to invoke
-        require(_tokensIn.length == 2, 'Adding liquidity to a uniswap pool requires exactly two tokens');
-        require(_maxAmountsIn.length == 2, 'Adding liquidity to a uniswap pool requires exactly two tokens');
+        require(_tokensIn.length == 2, 'Adding liquidity to a mooniswap pool requires exactly two tokens');
+        require(_maxAmountsIn.length == 2, 'Adding liquidity to a mooniswap pool requires exactly two tokens');
+        uint256[] memory minAmounts = new uint256[](2);
+        // 5% slippage
+        minAmounts[0] = 0;
+        minAmounts[1] = _maxAmountsIn[1].sub(_maxAmountsIn[1].preciseMul(SLIPPAGE_MIN_AMOUNTS));
         bytes memory methodData =
             abi.encodeWithSignature(
-                'addLiquidity(address,address,uint256,uint256,uint256,uint256,address,uint256)',
-                _tokensIn[0],
-                _tokensIn[1],
+                'deposit(uint256[2],uint256[2])',
                 _maxAmountsIn[0],
                 _maxAmountsIn[1],
-                _maxAmountsIn[0] - 10000000,
-                0, // TODO: tighten this up
-                msg.sender,
-                block.timestamp.add(MAX_DELTA_BLOCKS)
+                minAmounts[0],
+                minAmounts[1]
             );
+        uint256 value = 0;
+        // Add ETH if one of the tokens
+        if (_tokensIn[0] == address(0)) {
+            value = _maxAmountsIn[0];
+        }
+        if (_tokensIn[1] == address(0)) {
+            value = _maxAmountsIn[1];
+        }
 
-        return (address(uniRouter), 0, methodData);
+        return (address(_poolAddress), value, methodData);
     }
 
     /**
@@ -146,13 +150,13 @@ contract UniswapPoolIntegration is PoolIntegration {
      * @return bytes                     Trade calldata
      */
     function _getExitPoolCalldata(
-        address, /* _poolAddress */
+        address _poolAddress,
         uint256 _poolTokensIn,
         address[] calldata _tokensOut,
         uint256[] calldata _minAmountsOut
     )
         internal
-        view
+        pure
         override
         returns (
             address,
@@ -160,21 +164,11 @@ contract UniswapPoolIntegration is PoolIntegration {
             bytes memory
         )
     {
-        require(_tokensOut.length == 2, 'Removing liquidity from a uniswap pool requires exactly two tokens');
-        require(_minAmountsOut.length == 2, 'Removing liquidity from a uniswap pool requires exactly two tokens');
+        require(_tokensOut.length == 2, 'Removing liquidity from a mooniswap pool requires exactly two tokens');
+        require(_minAmountsOut.length == 2, 'Removing liquidity from a mooniswap pool requires exactly two tokens');
         // Encode method data for Garden to invoke
-        bytes memory methodData =
-            abi.encodeWithSignature(
-                'removeLiquidity(address,address,uint256,uint256,uint256,address,uint256)',
-                _tokensOut[0],
-                _tokensOut[1],
-                _poolTokensIn,
-                _minAmountsOut[0],
-                _minAmountsOut[1],
-                msg.sender,
-                block.timestamp.add(MAX_DELTA_BLOCKS)
-            );
+        bytes memory methodData = abi.encodeWithSignature('withdraw(uint256,uint256[])', _poolTokensIn, _minAmountsOut);
 
-        return (address(uniRouter), 0, methodData);
+        return (address(_poolAddress), 0, methodData);
     }
 }

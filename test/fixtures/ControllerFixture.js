@@ -115,6 +115,13 @@ async function deployFolioFixture() {
     addresses.sushiswap.router,
   );
 
+  const OneInchPoolIntegration = await ethers.getContractFactory('OneInchPoolIntegration', owner);
+  const oneInchPoolIntegration = await OneInchPoolIntegration.deploy(
+    babController.address,
+    addresses.tokens.WETH,
+    addresses.oneinch.factory,
+  );
+
   const YearnVaultIntegration = await ethers.getContractFactory('YearnVaultIntegration', owner);
   const yearnVaultIntegration = await YearnVaultIntegration.deploy(
     babController.address,
@@ -137,6 +144,7 @@ async function deployFolioFixture() {
     compoundLendIntegration,
     aaveLendIntegration,
     sushiswapPoolIntegration,
+    oneInchPoolIntegration,
   ];
 
   // Adding integrations
@@ -243,6 +251,7 @@ async function deployFolioFixture() {
     uniswapPoolIntegration,
     yearnVaultIntegration,
     sushiswapPoolIntegration,
+    oneInchPoolIntegration,
     compoundLendIntegration,
     aaveLendIntegration,
 
@@ -273,6 +282,7 @@ async function deployFolioFixture() {
       { name: 'YearnVaultIntegration', contract: yearnVaultIntegration },
       { name: 'UniswapPoolIntegration', contract: uniswapPoolIntegration },
       { name: 'SushiswapPoolIntegration', contract: sushiswapPoolIntegration },
+      { name: 'OneInchPoolIntegration', contract: oneInchPoolIntegration },
       { name: 'CompoundLendIntegration', contract: compoundLendIntegration },
       { name: 'AaveLendIntegration', contract: aaveLendIntegration },
     ],

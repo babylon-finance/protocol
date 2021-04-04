@@ -31,7 +31,7 @@ import {Clones} from '@openzeppelin/contracts/proxy/Clones.sol';
  * Factory to create investment strategy contracts
  */
 contract LongStrategyFactory {
-    address immutable longStrategy;
+    address payable immutable longStrategy;
 
     constructor() {
         longStrategy = address(new LongStrategy());
@@ -61,7 +61,7 @@ contract LongStrategyFactory {
         uint256 _expectedReturn,
         uint256 _minRebalanceCapital
     ) external returns (address) {
-        address clone = Clones.clone(longStrategy);
+        address payable clone = payable(Clones.clone(longStrategy));
         IStrategy(clone).initialize(
             _strategist,
             _garden,

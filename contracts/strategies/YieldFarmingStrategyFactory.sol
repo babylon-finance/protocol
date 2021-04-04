@@ -30,7 +30,7 @@ import {Clones} from '@openzeppelin/contracts/proxy/Clones.sol';
  * Factory to create yield farming strategies
  */
 contract YieldFarmingStrategyFactory {
-    address immutable yieldFarmingStrategy;
+    address payable immutable yieldFarmingStrategy;
 
     constructor() {
         yieldFarmingStrategy = address(new YieldFarmingStrategy());
@@ -60,7 +60,7 @@ contract YieldFarmingStrategyFactory {
         uint256 _expectedReturn,
         uint256 _minRebalanceCapital
     ) external returns (address) {
-        address clone = Clones.clone(yieldFarmingStrategy);
+        address payable clone = payable(Clones.clone(yieldFarmingStrategy));
         YieldFarmingStrategy(clone).initialize(
             _strategist,
             _garden,

@@ -494,7 +494,6 @@ contract Strategy is ReentrancyGuard, Initializable {
         require(block.timestamp.sub(enteredAt) > MAX_CANDIDATE_PERIOD, 'Voters still have time');
         require(executedAt == 0, 'This strategy has executed');
         require(!finalized, 'This strategy already exited');
-        _returnStake();
         IGarden(garden).expireCandidateStrategy(address(this));
         // TODO: Call selfdestruct??
     }
@@ -546,7 +545,6 @@ contract Strategy is ReentrancyGuard, Initializable {
         // Idea returns were positive
         if (capitalReturned >= capitalAllocated) {
             uint256 profits = capitalReturned - capitalAllocated; // in reserve asset (weth)
-            _returnStake();
             // Send weth performance fee to the protocol
             uint256 protocolProfits = IBabController(controller).getProtocolPerformanceFee().preciseMul(profits);
             require(
@@ -576,16 +574,12 @@ contract Strategy is ReentrancyGuard, Initializable {
         garden.startRedemptionWindow(capitalReturned);
     }
 
-    function _returnStake() internal {
-        // Send stake back to the strategist
-        // Stake is never sent to garden/strategy
-        // require(ERC20(address(garden)).transferFrom(address(this), strategist, stake), 'Ideator stake return failed');
-    }
-
     function _getPrice(address _assetOne, address _assetTwo) internal returns (uint256) {
         IPriceOracle oracle = IPriceOracle(IBabController(controller).getPriceOracle());
         // Updates UniSwap TWAP
         oracle.updateAdapters(_assetOne, _assetTwo);
         return oracle.getPrice(_assetOne, _assetTwo);
     }
+
+    receive() external payable {} // solium-disable-line quotes
 }

@@ -60,7 +60,7 @@ module.exports = {
       allowUnlimitedContractSize: true,
       forking: {
         url: 'https://eth-mainnet.alchemyapi.io/v2/sncj01nDcsAQr_QWyhYWNkg3qzW2o9kt',
-        blockNumber: 11953004,
+        blockNumber: 12160000,
       },
     },
     rinkeby: {
