@@ -1,5 +1,6 @@
 const { expect } = require('chai');
 const { waffle, ethers } = require('hardhat');
+const { impersonateAddress } = require('../../utils/rpc');
 const { deployFolioFixture } = require('../fixtures/ControllerFixture');
 const {
   DEFAULT_STRATEGY_PARAMS,
@@ -37,9 +38,14 @@ describe('OneInchPoolIntegrationTest', function () {
 
   describe('Liquidity Pools', function () {
     let daiWethPair;
+    let daiToken;
+    let whaleSigner;
+    const daiWhaleAddress = '0x6B175474E89094C44Da98b954EedeAC495271d0F';
 
     beforeEach(async () => {
+      whaleSigner = await impersonateAddress(daiWhaleAddress);
       daiWethPair = await ethers.getContractAt('IMooniswap', addresses.oneinch.pools.wethdai);
+      daiToken = await ethers.getContractAt('IERC20', addresses.tokens.DAI);
     });
 
     it('check that a valid pool is valid', async function () {
@@ -50,21 +56,33 @@ describe('OneInchPoolIntegrationTest', function () {
       expect(await oneInchPoolIntegration.isPool(ADDRESS_ZERO)).to.equal(false);
     });
 
-    it('can enter and exit the weth wbtc pool', async function () {
-      // const strategyContract = await createStrategy(
-      //   1,
-      //   'vote',
-      //   [signer1, signer2, signer3],
-      //   oneInchPoolIntegration.address,
-      //   garden1,
-      //   DEFAULT_STRATEGY_PARAMS,
-      //   [daiWethPair.address],
-      // );
-      // await executeStrategy(garden1, strategyContract, 0);
-      // expect(await daiWethPair.balanceOf(strategyContract.address)).to.be.gt(0);
-      //
-      // await finalizeStrategy(garden1, strategyContract, 0);
-      // expect(await daiWethPair.balanceOf(strategyContract.address)).to.equal(0);
+    it('tests mooniswap directly', async function () {
+      expect(
+        await daiToken.connect(whaleSigner).transfer(signer1.address, ethers.utils.parseEther('500'), {
+          gasPrice: 0,
+        }),
+      );
+
+      // Approve
+      await daiToken.connect(signer1).approve(daiWethPair.address, ethers.utils.parseEther('500'));
+      await daiToken
+        .connect(signer1)
+        .approve('0xbaf9a5d4b0052359326a6cdab54babaa3a3a9643', ethers.utils.parseEther('500'));
+      await daiToken
+        .connect(signer1)
+        .approve('0x2eea44e40930b1984f42078e836c659a12301e40', ethers.utils.parseEther('500'));
+      // Deposit
+      await daiWethPair
+        .connect(signer1)
+        .deposit(
+          [ethers.utils.parseEther('0.1'), ethers.utils.parseEther('100')],
+          [ethers.utils.parseEther('0'), ethers.utils.parseEther('95')],
+          {
+            value: ethers.utils.parseEther('0.1'),
+          },
+        );
+      // console.log('balance', ethers.utils.formatEther(await daiWethPair.balanceOf(signer1.address)));
+      expect(await daiWethPair.balanceOf(signer1.address)).to.be.gt(0);
     });
 
     it('can enter and exit the eth dai pool', async function () {
@@ -77,7 +95,8 @@ describe('OneInchPoolIntegrationTest', function () {
         DEFAULT_STRATEGY_PARAMS,
         [daiWethPair.address],
       );
-      await executeStrategy(garden1, strategyContract, 0);
+
+      await executeStrategy(garden1, strategyContract, ethers.utils.parseEther('1'));
       expect(await daiWethPair.balanceOf(strategyContract.address)).to.be.gt(0);
 
       await finalizeStrategy(garden1, strategyContract, 0);

@@ -43,6 +43,7 @@ contract OneInchPoolIntegration is PoolIntegration {
     IMooniswapFactory public mooniswapFactory;
 
     /* ============ Constructor ============ */
+    uint256 public constant SLIPPAGE_MIN_AMOUNTS = 5e16;
 
     /**
      * Creates the integration
@@ -113,13 +114,18 @@ contract OneInchPoolIntegration is PoolIntegration {
         require(_tokensIn.length == 2, 'Adding liquidity to a mooniswap pool requires exactly two tokens');
         require(_maxAmountsIn.length == 2, 'Adding liquidity to a mooniswap pool requires exactly two tokens');
         uint256[] memory minAmounts = new uint256[](2);
+        // 5% slippage
+        minAmounts[0] = 0;
+        minAmounts[1] = _maxAmountsIn[1].sub(_maxAmountsIn[1].preciseMul(SLIPPAGE_MIN_AMOUNTS));
         bytes memory methodData =
             abi.encodeWithSignature(
-                'deposit(uint256[] calldata amounts, uint256[] calldata minAmounts)',
+                'deposit(uint256[2],uint256[2])',
                 _maxAmountsIn,
-                minAmounts // TODO: tighten this up
+                minAmounts
             );
         uint256 value = 0;
+        console.log('max amounts', _maxAmountsIn[0], _maxAmountsIn[1]);
+        console.log('min amounts', minAmounts[0], minAmounts[1]);
         // Add ETH if one of the tokens
         if (_tokensIn[0] == address(0)) {
             value = _maxAmountsIn[0];
@@ -162,7 +168,7 @@ contract OneInchPoolIntegration is PoolIntegration {
         require(_minAmountsOut.length == 2, 'Removing liquidity from a mooniswap pool requires exactly two tokens');
         // Encode method data for Garden to invoke
         bytes memory methodData =
-            abi.encodeWithSignature('uint256 amount, uint256[] memory minReturns', _poolTokensIn, _minAmountsOut);
+            abi.encodeWithSignature('withdraw(uint256,uint256[])', _poolTokensIn, _minAmountsOut);
 
         return (address(_poolAddress), 0, methodData);
     }
