@@ -81,12 +81,12 @@ contract CompoundLendIntegration is LendIntegration {
         return assetToCToken[_assetToken] != address(0);
     }
 
-    function _getExpectedShares(address _assetToken, uint256 _numTokensToSupply) internal override returns (uint256) {
+    function _getExpectedShares(address _assetToken, uint256 _numTokensToSupply) internal view override returns (uint256) {
         uint256 oneCTokenInUderlying = _getExchangeRatePerToken(_assetToken);
         return oneCTokenInUderlying.mul(_numTokensToSupply).div(10**18);
     }
 
-    function _getExchangeRatePerToken(address _assetToken) internal override returns (uint256) {
+    function _getExchangeRatePerToken(address _assetToken) internal view override returns (uint256) {
         address cToken = assetToCToken[_assetToken];
         uint256 exchangeRateCurrent = ICToken(cToken).exchangeRateStored();
         // TODO: exchangeRateCurrent reverts wit no reason. Super strange.
