@@ -61,13 +61,13 @@ async function main() {
   }
 
   // Internal Integrations
-  const borrow = ['AaveIntegration.sol', 'CompoundIntegration.sol'];
+  const lend = ['AaveLendIntegration.sol', 'CompoundLendIntegration.sol'];
   const passive = ['YearnVaultIntegration.sol'];
   const pool = ['BalancerIntegration.sol', 'UniswapPoolIntegration.sol'];
   const trade = ['OneInchTradeIntegration.sol', 'KyberTradeIntegration.sol'];
 
-  borrow.forEach((file) => {
-    publishAndPushContract(file, 'integrations/borrow/');
+  lend.forEach((file) => {
+    publishAndPushContract(file, 'integrations/lend/');
   });
 
   passive.forEach((file) => {
