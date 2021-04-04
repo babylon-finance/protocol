@@ -34,15 +34,25 @@ interface IRewardsDistributor {
 
     function protocolPrincipal() external pure returns (uint256);
 
-    function protocolDuration() external pure returns (uint256);
-
     function timeList() external pure returns (uint256[] memory);
 
+    function pid() external pure returns (uint256);
+
+    function EPOCH_DURATION() external pure returns (uint256);
+
     function START_TIME() external pure returns (uint256);
+
+    function Q1_REWARDS() external pure returns (uint256);
+
+    function DECAY_RATE() external pure returns (uint256);
 
     function addProtocolPrincipal(uint256 _capital) external;
 
     function substractProtocolPrincipal(uint256 _capital) external;
+
+    function getStrategyRewards(address _strategy) external returns (uint96);
+
+    function sendTokensToContributor(address _to, uint256 _amount) external;
 
     function getProtocolPrincipalByTimestamp(uint256 _timestamp) external view returns (uint256);
 
@@ -52,19 +62,17 @@ interface IRewardsDistributor {
 
     function getProtocolSupplyPerQuarterByTimestamp(uint256 _timestamp) external view returns (uint256);
 
-    function getStrategyRewards(address _strategy) external returns (uint96);
-
-    function sendTokensToContributor(address _to, uint256 _amount) external;
-
     function getEpochRewards(uint256 epochs) external view returns (uint96[] memory);
 
-    function getQuarter(uint256 _now) external view returns (uint256);
-
     function getCheckpoints() external view returns (uint256);
+
+    function getQuarter(uint256 _now) external view returns (uint256);
 
     function getRewardsWindow(uint256 _from, uint256 _to) external view returns (uint256, uint256);
 
     function getSupplyForPeriod(uint256 _from, uint256 _to) external view returns (uint96[] memory);
+
+    function tokenSupplyPerQuarter(uint256 quarter) external pure returns (uint96);
 
     function checkProtocol(uint256 _time)
         external
@@ -77,5 +85,4 @@ interface IRewardsDistributor {
             uint256 power
         );
 
-    function tokenSupplyPerQuarter(uint256 quarter) external pure returns (uint96);
 }

@@ -339,7 +339,6 @@ contract RollingGarden is ReentrancyGuard, BaseGarden {
      * User can claim the profits from the strategies that his principal
      * was invested in.
      */
-    // Raul Review
     function claimReturns(address[] calldata _finalizedStrategies) external nonReentrant onlyContributor {
         Contributor memory contributor = contributors[msg.sender];
         (uint256 totalProfits, uint256 bablRewards) = this._getProfitsAndBabl(_finalizedStrategies);
@@ -357,7 +356,6 @@ contract RollingGarden is ReentrancyGuard, BaseGarden {
         }
     }
 
-    // Raul Review
     function _getProfitsAndBabl(address[] calldata _finalizedStrategies)
         external
         onlyContributor

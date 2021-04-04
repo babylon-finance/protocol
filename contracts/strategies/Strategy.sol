@@ -157,7 +157,6 @@ contract Strategy is ReentrancyGuard, Initializable {
     address[] public tokensNeeded; // Positions that need to be taken prior to enter trade
     uint256[] public tokenAmountsNeeded; // Amount of these positions
 
-    // Raul Review
     uint256 public strategyRewards = 0; // Initialization. Rewards allocated for this strategy updated on finalized
 
     // Voters mapped to their votes.
