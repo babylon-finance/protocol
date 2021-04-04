@@ -18,7 +18,7 @@
 
 pragma solidity 0.7.4;
 
-import 'hardhat/console.sol';
+// import 'hardhat/console.sol';
 import {ERC20} from '@openzeppelin/contracts/token/ERC20/ERC20.sol';
 import {ReentrancyGuard} from '@openzeppelin/contracts/utils/ReentrancyGuard.sol';
 import {SafeMath} from '@openzeppelin/contracts/math/SafeMath.sol';
@@ -363,7 +363,7 @@ contract RollingGarden is ReentrancyGuard, BaseGarden {
         onlyContributor
         returns (uint256, uint256)
     {
-        require(contributors[msg.sender].lastDepositAt > contributors[msg.sender].claimedAt, 'Nothing new to claim');
+        require(contributors[msg.sender].lastDepositAt > contributors[msg.sender].claimedAt, 'R27');
         uint256 contributorProfits = 0;
         uint256 bablTotalRewards = 0;
         for (uint256 i = 0; i < _finalizedStrategies.length; i++) {
@@ -428,7 +428,7 @@ contract RollingGarden is ReentrancyGuard, BaseGarden {
                 bablTotalRewards = bablTotalRewards.add(bablRewards);
             }
         }
-        return (contributorProfits, Safe3296.safe96(bablTotalRewards, 'overflow 96 bits'));
+        return (contributorProfits, Safe3296.safe96(bablTotalRewards, 'R28'));
     }
 
     /**

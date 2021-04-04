@@ -101,9 +101,9 @@ contract GardenValuer {
             valuation = valuation.preciseDiv(quoteToMaster.toInt256());
         }
         // Get component price from price oracle. If price does not exist, revert.
-        uint256 reservePrice = priceOracle.getPrice(_garden.getReserveAsset(), masterQuoteAsset);
+        uint256 reservePrice = priceOracle.getPrice(_garden.reserveAsset(), masterQuoteAsset);
         valuation = valuation.add(
-            ERC20(_garden.getReserveAsset()).balanceOf(address(_garden)).toInt256().preciseMul(reservePrice.toInt256())
+            ERC20(_garden.reserveAsset()).balanceOf(address(_garden)).toInt256().preciseMul(reservePrice.toInt256())
         );
         // Adds ETH set aside
         valuation = valuation.add(address(_garden).balance.toInt256());

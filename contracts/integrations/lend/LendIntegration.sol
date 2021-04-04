@@ -275,7 +275,10 @@ abstract contract LendIntegration is BaseIntegration, ReentrancyGuard {
         return 0;
     }
 
-    function _getRedeemCalldata(address /* _assetToken */, uint256 /* _numTokensToSupply */)
+    function _getRedeemCalldata(
+        address, /* _assetToken */
+        uint256 /* _numTokensToSupply */
+    )
         internal
         view
         virtual

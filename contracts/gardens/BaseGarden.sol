@@ -169,8 +169,8 @@ abstract contract BaseGarden is ERC20Upgradeable {
     bool public active;
 
     // Keeps track of the reserve balance. In case we receive some through other means
-    uint256 principal;
-    int256 absoluteReturns; // Total profits or losses of this garden
+    uint256 public principal;
+    int256 public absoluteReturns; // Total profits or losses of this garden
 
     // Indicates the minimum liquidity the asset needs to have to be tradable by this garden
     uint256 public minLiquidityAsset;
@@ -193,8 +193,8 @@ abstract contract BaseGarden is ERC20Upgradeable {
     uint256 public maxIdeaDuration; // Max duration for an investment strategy
     uint256 public strategyCooldownPeriod; // Window for the strategy to cooldown after approval before receiving capital
 
-    address[] strategies; // Strategies that are either in candidate or active state
-    address[] finalizedStrategies; // Strategies that have finalized execution
+    address[] public strategies; // Strategies that are either in candidate or active state
+    address[] public finalizedStrategies; // Strategies that have finalized execution
     mapping(address => bool) public strategyMapping;
 
     uint256 public strategyCreatorProfitPercentage = 13e16; // (0.01% = 1e14, 1% = 1e16)
@@ -441,14 +441,6 @@ abstract contract BaseGarden is ERC20Upgradeable {
 
     function isStrategy(address _strategy) external view returns (bool) {
         return strategyMapping[_strategy];
-    }
-
-    function getPrincipal() external view returns (uint256) {
-        return principal;
-    }
-
-    function getReserveAsset() external view returns (address) {
-        return reserveAsset;
     }
 
     function getContributor(address _contributor)

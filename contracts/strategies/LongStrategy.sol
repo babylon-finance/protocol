@@ -40,7 +40,7 @@ contract LongStrategy is Strategy {
      */
     function setLongData(address _longToken) public onlyIdeator {
         require(!dataSet, 'Data is set already');
-        require(garden.getReserveAsset() != _longToken, 'Receive token must be different');
+        require(garden.reserveAsset() != _longToken, 'Receive token must be different');
 
         kind = 0;
         longToken = _longToken;
@@ -51,13 +51,13 @@ contract LongStrategy is Strategy {
      * Enters the long strategy
      */
     function _enterStrategy(uint256 _capital) internal override {
-        _trade(garden.getReserveAsset(), _capital, longToken);
+        _trade(garden.reserveAsset(), _capital, longToken);
     }
 
     /**
      * Exits the long strategy.
      */
     function _exitStrategy() internal override {
-        _trade(longToken, IERC20(longToken).balanceOf(address(this)), garden.getReserveAsset());
+        _trade(longToken, IERC20(longToken).balanceOf(address(this)), garden.reserveAsset());
     }
 }
