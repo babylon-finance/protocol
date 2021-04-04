@@ -103,31 +103,6 @@ abstract contract BaseIntegration {
     /* ============ Internal Functions ============ */
 
     /**
-     * Updates the position in the garden with the new units
-     *
-     * @param _strategy           Address of the investment strategy
-     * @param _component                Address of the ERC20
-     * @param _deltaOperation           Delta balance of the operation
-     */
-    function _updateStrategyPosition(
-        address _strategy,
-        address _component,
-        int256 _deltaOperation,
-        uint8 _subpositionStatus
-    )
-        internal
-        returns (
-            uint256,
-            uint256,
-            uint256
-        )
-    {
-        uint256 _newTotal = IStrategy(_strategy).getPositionBalance(_component).add(_deltaOperation).toUint256();
-        return
-            IStrategy(_strategy).calculateAndEditPosition(_component, _newTotal, _deltaOperation, _subpositionStatus);
-    }
-
-    /**
      * Transfers tokens from an address (that has set allowance on the module).
      *
      * @param  _token          The address of the ERC20 token
@@ -182,7 +157,6 @@ abstract contract BaseIntegration {
         uint256 _exchangedQuantity
     ) internal returns (uint256) {
         uint256 protocolFeeTotal = getIntegrationFee(0, _exchangedQuantity);
-
         payProtocolFeeFromIdea(_strategy, _token, protocolFeeTotal);
 
         return protocolFeeTotal;

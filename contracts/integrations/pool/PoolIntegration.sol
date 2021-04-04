@@ -112,7 +112,6 @@ abstract contract PoolIntegration is BaseIntegration, ReentrancyGuard {
         );
         console.log('after joining');
         _validatePostJoinPoolData(poolInfo);
-        _updateStrategyPositions(poolInfo, true);
 
         emit PoolEntered(address(poolInfo.strategy), address(poolInfo.garden), poolInfo.pool, _poolTokensOut);
     }
@@ -141,7 +140,6 @@ abstract contract PoolIntegration is BaseIntegration, ReentrancyGuard {
         poolInfo.strategy.invokeFromIntegration(targetPool, callValue, methodData);
         _validatePostExitPoolData(poolInfo);
         uint256 protocolFee = _accrueProtocolFee(address(poolInfo.strategy), _tokensOut[0], _minAmountsOut[0]);
-        _updateStrategyPositions(poolInfo, false);
 
         emit PoolExited(
             address(poolInfo.strategy),
@@ -256,20 +254,6 @@ abstract contract PoolIntegration is BaseIntegration, ReentrancyGuard {
             'The strategy did not return the pool tokens'
         );
         // TODO: validate individual tokens received
-    }
-
-    /**
-     * Update Strategy positions
-     *
-     * @param _poolInfo                Struct containing pool information used in internal functions
-     */
-    function _updateStrategyPositions(PoolInfo memory _poolInfo, bool isDeposit) internal {
-        _updateStrategyPosition(
-            address(_poolInfo.strategy),
-            _poolInfo.pool,
-            isDeposit ? _poolInfo.poolTokensInTransaction.toInt256() : int256(-_poolInfo.poolTokensInTransaction),
-            0
-        );
     }
 
     /**

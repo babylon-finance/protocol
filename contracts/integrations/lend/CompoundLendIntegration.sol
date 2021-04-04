@@ -60,6 +60,7 @@ contract CompoundLendIntegration is LendIntegration {
      */
     constructor(address _controller, address _weth) LendIntegration('compoundlend', _weth, _controller) {
         assetToCToken[0x6B175474E89094C44Da98b954EedeAC495271d0F] = 0x5d3a536E4D6DbD6114cc1Ead35777bAB948E3643; // DAI
+        assetToCToken[0x1f9840a85d5aF5bf1D1762F925BDADdC4201F984] = 0x35A18000230DA775CAc24873d00Ff85BccdeD550; // UNI
         assetToCToken[0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2] = 0x4Ddc2D193948926D02f9B1fE9e1daa0718270ED5; // WETH
         assetToCToken[0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48] = 0x39AA39c021dfbaE8faC545936693aC917d5E7563; // USDC
         assetToCToken[0xdAC17F958D2ee523a2206206994597C13D831ec7] = 0xf650C3d88D12dB855b8bf7D11Be6C55A4e07dCC9; // USDT
@@ -76,24 +77,8 @@ contract CompoundLendIntegration is LendIntegration {
 
     /* ============ Internal Functions ============ */
 
-    function _isInvestment(address _investmentAddress) internal view override returns (bool) {
-        return assetToCToken[_investmentAddress] != address(0);
-    }
-
-    /**
-     * Create and return InvestmentInfo struct
-     *
-     * @param _tokenAddress                             Address of the investment
-     *
-     * return InvestmentInfo                            Struct containing data for the investment
-     */
-    function _createInvestmentInfo(address _tokenAddress) internal view returns (InvestmentInfo memory) {
-        InvestmentInfo memory investmentInfo;
-        investmentInfo.strategy = IStrategy(msg.sender);
-        investmentInfo.garden = IGarden(investmentInfo.strategy.garden());
-        investmentInfo.investment = _tokenAddress;
-
-        return investmentInfo;
+    function _isInvestment(address _assetToken) internal view override returns (bool) {
+        return assetToCToken[_assetToken] != address(0);
     }
 
     function _getExpectedShares(address _assetToken, uint256 _numTokensToSupply) internal override returns (uint256) {
@@ -156,7 +141,11 @@ contract CompoundLendIntegration is LendIntegration {
         return (assetToCToken[_assetToken], assetToCToken[_assetToken] == cETH ? _numTokensToSupply : 0, methodData);
     }
 
-    function _getSpender(address _investmentAddress) internal view override returns (address) {
-        return assetToCToken[_investmentAddress];
+    function _getSpender(address _assetToken) internal view override returns (address) {
+        return assetToCToken[_assetToken];
+    }
+
+    function _getInvestmentToken(address _assetToken) internal view override returns (address) {
+        return assetToCToken[_assetToken];
     }
 }

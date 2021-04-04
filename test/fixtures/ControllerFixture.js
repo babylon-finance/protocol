@@ -8,6 +8,9 @@ const { createStrategy } = require('./StrategyHelper.js');
 async function deployFolioFixture() {
   const [owner, signer1, signer2, signer3] = await ethers.getSigners();
 
+  const SafeDecimalMathFactory = await ethers.getContractFactory('SafeDecimalMath');
+  const SafeDecimalMath = await SafeDecimalMathFactory.deploy();
+
   const BabController = await ethers.getContractFactory('BabController', owner);
   const babController = await BabController.deploy(...argsUtil.readArgumentsFile('BabController'));
 
@@ -16,7 +19,7 @@ async function deployFolioFixture() {
 
   // Deployment of BABL Token contract
   const BABLToken = await ethers.getContractFactory('BABLToken', owner);
-  const bablToken = await BABLToken.deploy();
+  const bablToken = await BABLToken.connect(owner).deploy();
 
   // Deployment of Time Lock Registry contract
   const TimeLockRegistry = await ethers.getContractFactory('TimeLockRegistry', owner);
@@ -27,6 +30,15 @@ async function deployFolioFixture() {
 
   // Approve Time Lock Registry to handle 31% of the Tokens for vesting (Team, Advisors, Investors)
   await bablToken.approve(timeLockRegistry.address, ethers.utils.parseEther('310000'));
+
+  const RewardsDistributor = await ethers.getContractFactory('RewardsDistributor', {
+    libraries: {
+      SafeDecimalMath: SafeDecimalMath.address,
+    },
+    signer: owner,
+  });
+
+  const rewardsDistributor = await RewardsDistributor.deploy(bablToken.address, babController.address);
 
   const GardenValuer = await ethers.getContractFactory('GardenValuer', owner);
   const PriceOracle = await ethers.getContractFactory('PriceOracle', owner);
@@ -61,18 +73,13 @@ async function deployFolioFixture() {
   babController.editPriceOracle(priceOracle.address);
   babController.editTreasury(treasury.address);
   babController.editGardenValuer(gardenValuer.address);
+  babController.editRewardsDistributor(rewardsDistributor.address);
   babController.editReservePool(reservePool.address);
   babController.editGardenFactory(gardenFactory.address);
   babController.editStrategyFactory(0, longStrategyFactory.address);
   babController.editStrategyFactory(1, liquidityPoolStrategyFactory.address);
   babController.editStrategyFactory(2, yieldFarmingStrategyFactory.address);
   babController.editStrategyFactory(3, lendStrategyFactory.address);
-
-  const AaveIntegration = await ethers.getContractFactory('AaveIntegration', owner);
-  const aaveIntegration = await AaveIntegration.deploy(babController.address, addresses.tokens.WETH, 50);
-
-  const CompoundIntegration = await ethers.getContractFactory('CompoundIntegration', owner);
-  const compoundIntegration = await CompoundIntegration.deploy(babController.address, addresses.tokens.WETH, 50);
 
   const KyberTradeIntegration = await ethers.getContractFactory('KyberTradeIntegration', owner);
   const kyberTradeIntegration = await KyberTradeIntegration.deploy(
@@ -125,15 +132,17 @@ async function deployFolioFixture() {
   const CompoundLendIntegration = await ethers.getContractFactory('CompoundLendIntegration', owner);
   const compoundLendIntegration = await CompoundLendIntegration.deploy(babController.address, addresses.tokens.WETH);
 
+  const AaveLendIntegration = await ethers.getContractFactory('AaveLendIntegration', owner);
+  const aaveLendIntegration = await AaveLendIntegration.deploy(babController.address, addresses.tokens.WETH);
+
   const integrationsList = [
-    aaveIntegration,
-    compoundIntegration,
     kyberTradeIntegration,
     oneInchTradeIntegration,
     balancerIntegration,
     uniswapPoolIntegration,
     yearnVaultIntegration,
     compoundLendIntegration,
+    aaveLendIntegration,
     sushiswapPoolIntegration,
     oneInchPoolIntegration,
   ];
@@ -226,10 +235,6 @@ async function deployFolioFixture() {
   await createStrategy(0, 'deposit', [signer1, signer2, signer3], kyberTradeIntegration.address, garden3);
   await createStrategy(0, 'dataset', [signer1, signer2, signer3], kyberTradeIntegration.address, garden3);
 
-  await createStrategy(0, 'active', [signer1, signer2, signer3], kyberTradeIntegration.address, garden3);
-  await createStrategy(0, 'active', [signer1, signer2, signer3], kyberTradeIntegration.address, garden3);
-  await createStrategy(0, 'final', [signer1, signer2, signer3], kyberTradeIntegration.address, garden3);
-
   console.log('Created and started garden', garden1.address);
   console.log('Created manual testing garden', garden3.address);
 
@@ -239,9 +244,7 @@ async function deployFolioFixture() {
     timeLockRegistry,
     reservePool,
     treasury,
-
-    aaveIntegration,
-    compoundIntegration,
+    rewardsDistributor,
     kyberTradeIntegration,
     oneInchTradeIntegration,
     balancerIntegration,
@@ -250,6 +253,7 @@ async function deployFolioFixture() {
     sushiswapPoolIntegration,
     oneInchPoolIntegration,
     compoundLendIntegration,
+    aaveLendIntegration,
 
     garden1,
     garden2,
@@ -272,6 +276,7 @@ async function deployFolioFixture() {
       { name: 'BABLToken', contract: bablToken },
       { name: 'TimeLockRegistry', contract: timeLockRegistry },
       { name: 'LongStrategyFactory', contract: longStrategyFactory },
+      { name: 'RewardsDistributor', contract: rewardsDistributor },
       { name: 'KyberTradeIntegration', contract: kyberTradeIntegration },
       { name: 'BalancerIntegration', contract: balancerIntegration },
       { name: 'YearnVaultIntegration', contract: yearnVaultIntegration },
@@ -279,6 +284,7 @@ async function deployFolioFixture() {
       { name: 'SushiswapPoolIntegration', contract: sushiswapPoolIntegration },
       { name: 'OneInchPoolIntegration', contract: oneInchPoolIntegration },
       { name: 'CompoundLendIntegration', contract: compoundLendIntegration },
+      { name: 'AaveLendIntegration', contract: aaveLendIntegration },
     ],
   };
 }

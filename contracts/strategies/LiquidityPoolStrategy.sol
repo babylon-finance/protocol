@@ -103,7 +103,7 @@ contract LiquidityPoolStrategy is Strategy {
         );
         // Exit Pool tokens
         address reserveAsset = garden.getReserveAsset();
-        for (uint256 i = 0; i < positions.length; i++) {
+        for (uint256 i = 0; i < poolTokens.length; i++) {
             if (poolTokens[i] != reserveAsset) {
                 _trade(poolTokens[i], IERC20(poolTokens[i]).balanceOf(address(this)), reserveAsset);
             }
