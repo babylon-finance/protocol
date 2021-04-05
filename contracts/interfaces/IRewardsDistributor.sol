@@ -84,5 +84,15 @@ interface IRewardsDistributor {
             uint256 timeListPointer,
             uint256 power
         );
+    
+    function checkQuarter(uint256 _num)
+        external
+        view
+        returns (
+            uint256 quarterPrincipal,
+            uint256 quarterNumber,
+            uint256 quarterPower,
+            uint96 supplyPerQuarter
+        );
 
 }
