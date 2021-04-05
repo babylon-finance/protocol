@@ -28,6 +28,12 @@ async function finishStrategyQ1(garden, strategy, fee = 0) {
   return strategy.finalizeInvestment(fee, { gasPrice: 0 });
 }
 
+async function finishStrategyQ1_noIncreaseTime(garden, strategy, fee = 0) {
+  //ethers.provider.send('evm_increaseTime', [ONE_DAY_IN_SECONDS * 30]); // TO HAVE STRATEGIES WITHIN THE SAME EPOCH
+  await updateTWAPs(garden);
+  return strategy.finalizeInvestment(fee, { gasPrice: 0 });
+}
+
 async function finishStrategy2Q(garden, strategy, fee = 0) {
   ethers.provider.send('evm_increaseTime', [ONE_DAY_IN_SECONDS * 90]); // TO HAVE STRATEGIES OF 2 EPOCH DURATION
   await updateTWAPs(garden);
@@ -106,8 +112,8 @@ describe('BABL Rewards Distributor', function () {
     });
   });
 
-  describe('Calculating BABL Rewards', async function () {
-    it('should calculate correct BABL in case of 1 strategy with total duration of less than 1 quarter', async function () {
+  describe('Strategy BABL Mining Rewards Calculation', async function () {
+    it('should calculate correct BABL in case of 1 strategy with total duration of 1 quarter', async function () {
    
       const initialProtocol = await rewardsDistributor.checkProtocol(new Date().getTime());
       const initialProtocolPrincipal = initialProtocol[0];
@@ -217,6 +223,335 @@ describe('BABL Rewards Distributor', function () {
 
     });
 
+    it('should calculate correct BABL in case of 2 strategies with total duration of 1 quarter', async function () {
+
+      
+      // Create strategy 1
+
+      const strategyContract = await createStrategy(
+        0,
+        'vote',
+        [signer1, signer2, signer3],
+        kyberTradeIntegration.address,
+        garden1,
+      );
+
+      // Create strategy 2
+
+      const strategyContract2 = await createStrategy(
+        0,
+        'vote',
+        [signer1, signer2, signer3],
+        kyberTradeIntegration.address,
+        garden1,
+      );
+
+      // Execute strategy 1
+      await executeStrategy(garden1, strategyContract, ethers.utils.parseEther('1'), 42); // Strategy 1
+
+      const [address, active, dataSet, finalized, executedAt, exitedAt] = await strategyContract.getStrategyState();
+      
+      // Should be active
+      expect(address).to.equal(strategyContract.address);
+      expect(active).to.equal(true);
+      expect(dataSet).to.equal(true);
+      expect(finalized).to.equal(false);
+      expect(executedAt).to.not.equal(0);
+      expect(exitedAt).to.equal(ethers.BigNumber.from(0));
+
+      // Keeper gets paid
+      expect(await wethToken.balanceOf(await owner.getAddress())).to.equal(42);
+
+      ethers.provider.send('evm_increaseTime', [ONE_DAY_IN_SECONDS * 2]);
+      
+      // Execute strategy 2, 2 days later
+
+      await executeStrategy(garden1, strategyContract2, ethers.utils.parseEther('2'), 42); // Strategy 2
+
+      const [address2, active2, dataSet2, finalized2, executedAt2, exitedAt2] = await strategyContract2.getStrategyState();
+      expect(active2).to.equal(true);
+      expect(dataSet2).to.equal(true);
+      expect(finalized2).to.equal(false);
+      expect(executedAt2).to.not.equal(0);
+      expect(exitedAt2).to.equal(ethers.BigNumber.from(0));
+
+      // Protocol principal should be incremented accordingly
+      const protocol = await rewardsDistributor.checkProtocol(executedAt2);
+      const protocolPrincipal = protocol[0];
+      const protocolTime = protocol[1];
+      const protocolquarterBelonging = protocol[2];
+      const protocolTimeListPointer = protocol[3];
+      const protocolPower = protocol[4];
+      
+      expect(protocolPrincipal).to.equal(ethers.utils.parseEther('3')); // It is vote state strategy
+      expect(protocolTime).to.equal(executedAt2);
+      expect(protocolquarterBelonging).to.equal(1);
+      expect(protocolTimeListPointer).to.equal(1); // pid starting by zero, second strategy
+      expect(protocolPower).to.not.equal(0); // TODO Check exact numbers
+
+      const protocolQuarter = await rewardsDistributor.checkQuarter(protocolquarterBelonging);
+      const quarterPrincipal = protocolQuarter[0];
+      const quarterNumber = protocolQuarter[1];
+      const quarterPower = protocolQuarter[2];
+      const quarterSupply = protocolQuarter[3];
+
+      expect(quarterPrincipal).to.equal(ethers.utils.parseEther('3'));
+      expect(quarterNumber).to.equal(1);
+      expect(quarterPower).to.equal(protocolPower); 
+      expect(quarterSupply).to.not.equal(0);
+
+      ethers.provider.send('evm_increaseTime', [ONE_DAY_IN_SECONDS * 2]);
+            
+      await finishStrategyQ1(garden1, strategyContract, 42);
+      const [
+        address3,
+        active3,
+        dataSet3,
+        finalized3,
+        executedAt3,
+        exitedAt3,
+      ] = await strategyContract.getStrategyState();
+
+
+      expect(address3).to.equal(strategyContract.address);
+      expect(active3).to.equal(false);
+      expect(dataSet3).to.equal(true);
+      expect(finalized3).to.equal(true);
+      expect(executedAt3).to.not.equal(0);
+      expect(exitedAt3).to.not.equal(0);
+
+      // Protocol principal should be reduced accordingly
+      const protocol2 = await rewardsDistributor.checkProtocol(exitedAt3);
+      const protocolPrincipal2 = protocol2[0];
+      const protocolTime2 = protocol2[1];
+      const protocolquarterBelonging2 = protocol2[2];
+      const protocolTimeListPointer2 = protocol2[3];
+      const protocolPower2 = protocol2[4];
+      
+      expect(protocolPrincipal2).to.equal(ethers.utils.parseEther('2'));
+      expect(protocolquarterBelonging2).to.equal(1);
+      expect(protocolPower2).to.not.equal(0); // TODO CHECK EXACT AMOUNT
+      expect(protocolTime2).to.equal(exitedAt3);
+      expect(protocolTimeListPointer2).to.equal(2); // pid starting by zero, 3rd checkpoint
+      expect(protocolPower).to.not.equal(0); // TODO Check exact numbers
+
+      const protocolQuarter2 = await rewardsDistributor.checkQuarter(protocolquarterBelonging2);
+      const quarterPrincipal2 = protocolQuarter2[0];
+      const quarterNumber2 = protocolQuarter2[1];
+      const quarterPower2 = protocolQuarter2[2];
+      const quarterSupply2 = protocolQuarter2[3];
+
+      expect(quarterPrincipal2).to.equal(protocolPrincipal2); // It is a voter strategy
+      expect(quarterNumber2).to.equal(1);
+      expect(quarterPower2).to.equal(protocolPower2);
+      expect(quarterSupply2).to.equal(await rewardsDistributor.tokenSupplyPerQuarter(1));
+
+      ethers.provider.send('evm_increaseTime', [ONE_DAY_IN_SECONDS * 2]);
+      
+      await finishStrategyQ1(garden1, strategyContract2, 42);
+      const [
+        address4,
+        active4,
+        dataSet4,
+        finalized4,
+        executedAt4,
+        exitedAt4,
+      ] = await strategyContract2.getStrategyState();
+
+      expect(address4).to.equal(strategyContract2.address);
+      expect(active4).to.equal(false);
+      expect(dataSet4).to.equal(true);
+      expect(finalized4).to.equal(true);
+      expect(executedAt4).to.not.equal(0);
+      expect(exitedAt4).to.not.equal(0);
+
+      // Protocol principal should be reduced accordingly
+      const protocol3 = await rewardsDistributor.checkProtocol(exitedAt4);
+      const protocolPrincipal3 = protocol3[0];
+      const protocolTime3 = protocol3[1];
+      const protocolquarterBelonging3 = protocol3[2];
+      const protocolTimeListPointer3 = protocol3[3];
+      const protocolPower3 = protocol3[4];
+      
+      expect(protocolPrincipal3).to.equal(0);
+      expect(protocolquarterBelonging3).to.equal(1);
+      expect(protocolPower3).to.not.equal(0); // TODO CHECK EXACT AMOUNT
+      console.log('BEFORE');
+      expect(protocolTime3).to.equal(exitedAt4);
+      console.log('AFTER');
+      expect(protocolTimeListPointer3).to.equal(3);
+
+      const protocolQuarter3 = await rewardsDistributor.checkQuarter(protocolquarterBelonging3);
+      const quarterPrincipal3 = protocolQuarter3[0];
+      const quarterNumber3 = protocolQuarter3[1];
+      const quarterPower3 = protocolQuarter3[2];
+      const quarterSupply3 = protocolQuarter3[3];
+
+      expect(quarterPrincipal3).to.equal(protocolPrincipal3); 
+      expect(quarterNumber3).to.equal(1);
+      expect(quarterPower3).to.equal(protocolPower3);
+      expect(quarterSupply3).to.equal(await rewardsDistributor.tokenSupplyPerQuarter(1));
+
+      const bablRewards1 = await strategyContract.strategyRewards();
+      const bablRewards2 = await strategyContract2.strategyRewards();
+
+      console.log('BABL Rewards of Strategy 1', bablRewards1.toString());
+      console.log('BABL Rewards of Strategy 2', bablRewards2.toString()); 
+
+    });
+
+    it('should calculate correct BABL in case of 3 strategies with total duration of 1 quarter', async function () {
+
+      
+      // Create strategy 1
+
+      const strategyContract1 = await createStrategy(
+        0,
+        'active',
+        [signer1, signer2, signer3],
+        kyberTradeIntegration.address,
+        garden1,
+      );
+
+      // Create strategy 2
+
+      const strategyContract2 = await createStrategy(
+        0,
+        'active',
+        [signer1, signer2, signer3],
+        kyberTradeIntegration.address,
+        garden1,
+      );
+
+      // Create strategy 3
+
+      const strategyContract3 = await createStrategy(
+        0,
+        'active',
+        [signer1, signer2, signer3],
+        kyberTradeIntegration.address,
+        garden1,
+      );
+
+
+      // Execute strategy 1
+      await executeStrategy(garden1, strategyContract1, ethers.utils.parseEther('1'), 42); // Strategy 1
+
+      const [address, active, dataSet, finalized, executedAt, exitedAt] = await strategyContract1.getStrategyState();
+      
+      // Should be active
+      expect(address).to.equal(strategyContract1.address);
+      expect(active).to.equal(true);
+      expect(dataSet).to.equal(true);
+      expect(finalized).to.equal(false);
+      expect(executedAt).to.not.equal(0);
+      expect(exitedAt).to.equal(ethers.BigNumber.from(0));
+
+      // Keeper gets paid
+      expect(await wethToken.balanceOf(await owner.getAddress())).to.equal(42);
+
+      ethers.provider.send('evm_increaseTime', [ONE_DAY_IN_SECONDS * 2]);
+     // Execute strategy 2
+     await executeStrategy(garden1, strategyContract2, ethers.utils.parseEther('1'), 42); // Strategy 2
+     // Execute strategy 3
+     await executeStrategy(garden1, strategyContract3, ethers.utils.parseEther('1'), 42); // Strategy 3
+
+
+
+      const [address2, active2, dataSet2, finalized2, executedAt2, exitedAt2] = await strategyContract3.getStrategyState();
+      expect(active2).to.equal(true);
+      expect(dataSet2).to.equal(true);
+      expect(finalized2).to.equal(false);
+      expect(executedAt2).to.not.equal(0);
+      expect(exitedAt2).to.equal(ethers.BigNumber.from(0));
+
+      // Protocol principal should be incremented accordingly
+      const protocol = await rewardsDistributor.checkProtocol(executedAt2);
+      const protocolPrincipal = protocol[0];
+      const protocolTime = protocol[1];
+      const protocolquarterBelonging = protocol[2];
+      const protocolTimeListPointer = protocol[3];
+      const protocolPower = protocol[4];
+      
+      expect(protocolPrincipal).to.equal(ethers.utils.parseEther('6')); // All are ADCTIVE state strategies (add 1ETH each)
+      expect(protocolTime).to.equal(executedAt2);
+      expect(protocolquarterBelonging).to.equal(1);
+      expect(protocolTimeListPointer).to.equal(5); // pid starting by zero, 3 strategies launched with 1 additional addinvestment each
+      expect(protocolPower).to.not.equal(0); // TODO Check exact numbers
+
+      const protocolQuarter = await rewardsDistributor.checkQuarter(protocolquarterBelonging);
+      const quarterPrincipal = protocolQuarter[0];
+      const quarterNumber = protocolQuarter[1];
+      const quarterPower = protocolQuarter[2];
+      const quarterSupply = protocolQuarter[3];
+
+      expect(quarterPrincipal).to.equal(ethers.utils.parseEther('6'));
+      expect(quarterNumber).to.equal(1);
+      expect(quarterPower).to.equal(protocolPower); 
+      expect(quarterSupply).to.not.equal(0);
+
+      ethers.provider.send('evm_increaseTime', [ONE_DAY_IN_SECONDS * 30]);
+            
+      await finishStrategyQ1_noIncreaseTime(garden1, strategyContract1, 42);
+      await finishStrategyQ1_noIncreaseTime(garden1, strategyContract2, 42);
+      await finishStrategyQ1_noIncreaseTime(garden1, strategyContract3, 42);
+
+      const [
+        address3,
+        active3,
+        dataSet3,
+        finalized3,
+        executedAt3,
+        exitedAt3,
+      ] = await strategyContract3.getStrategyState();
+
+
+      expect(address3).to.equal(strategyContract3.address);
+      expect(active3).to.equal(false);
+      expect(dataSet3).to.equal(true);
+      expect(finalized3).to.equal(true);
+      expect(executedAt3).to.not.equal(0);
+      expect(exitedAt3).to.not.equal(0);
+
+      // Protocol principal should be reduced accordingly
+      const protocol2 = await rewardsDistributor.checkProtocol(exitedAt3);
+      const protocolPrincipal2 = protocol2[0];
+      const protocolTime2 = protocol2[1];
+      const protocolquarterBelonging2 = protocol2[2];
+      const protocolTimeListPointer2 = protocol2[3];
+      const protocolPower2 = protocol2[4];
+      
+      expect(protocolPrincipal2).to.equal(ethers.utils.parseEther('0'));
+      expect(protocolquarterBelonging2).to.equal(1);
+      expect(protocolPower2).to.not.equal(0); // TODO CHECK EXACT AMOUNT
+      expect(protocolTime2).to.equal(exitedAt3);
+      expect(protocolTimeListPointer2).to.equal(8); // pid starting by zero, 8th checkpoint (3 new strategies executing with 3 adding capitals + 3 finalize investments)
+      expect(protocolPower).to.not.equal(0); // TODO Check exact numbers
+
+      const protocolQuarter2 = await rewardsDistributor.checkQuarter(protocolquarterBelonging2);
+      const quarterPrincipal2 = protocolQuarter2[0];
+      const quarterNumber2 = protocolQuarter2[1];
+      const quarterPower2 = protocolQuarter2[2];
+      const quarterSupply2 = protocolQuarter2[3];
+
+      expect(quarterPrincipal2).to.equal(protocolPrincipal2); // All are voter strategies
+      expect(quarterNumber2).to.equal(1);
+      expect(quarterPower2).to.equal(protocolPower2);
+      expect(quarterSupply2).to.equal(await rewardsDistributor.tokenSupplyPerQuarter(1));
+
+      
+      const bablRewards1 = await strategyContract1.strategyRewards();
+      const bablRewards2 = await strategyContract2.strategyRewards();
+      const bablRewards3 = await strategyContract3.strategyRewards();
+
+
+      console.log('BABL Rewards of Strategy 1', bablRewards1.toString());
+      console.log('BABL Rewards of Strategy 2', bablRewards2.toString()); 
+      console.log('BABL Rewards of Strategy 3', bablRewards3.toString()); 
+
+
+    });
+    /**
     it('should calculate correct BABL in case of 2 strategies with total duration of less than 1 quarter', async function () {
 
       
@@ -390,12 +725,294 @@ describe('BABL Rewards Distributor', function () {
       const bablRewards2 = await strategyContract2.strategyRewards();
 
       console.log('BABL Rewards of Strategy 1', bablRewards1.toString());
-      console.log('BABL Rewards of Strategy 2', bablRewards2.toString());
-
-
-    
+      console.log('BABL Rewards of Strategy 2', bablRewards2.toString()); 
 
     });
+
+    it('should calculate correct BABL in case of 5 strategies with total duration of less than 1 quarter', async function () {
+
+      
+      // Create strategy 1
+
+      const strategyContract = await createStrategy(
+        0,
+        'vote',
+        [signer1, signer2, signer3],
+        kyberTradeIntegration.address,
+        garden1,
+      );
+
+      // Create strategy 2
+
+      const strategyContract2 = await createStrategy(
+        0,
+        'vote',
+        [signer1, signer2, signer3],
+        kyberTradeIntegration.address,
+        garden1,
+      );
+
+      // Create strategy 3
+
+      const strategyContract3 = await createStrategy(
+        0,
+        'vote',
+        [signer1, signer2, signer3],
+        kyberTradeIntegration.address,
+        garden1,
+      );
+
+      // Create strategy 4
+
+      const strategyContract4 = await createStrategy(
+        0,
+        'vote',
+        [signer1, signer2, signer3],
+        kyberTradeIntegration.address,
+        garden1,
+      );
+      // Create strategy 5
+
+      const strategyContract5 = await createStrategy(
+        0,
+        'vote',
+        [signer1, signer2, signer3],
+        kyberTradeIntegration.address,
+        garden1,
+      );
+      // Execute strategy 1
+      await executeStrategy(garden1, strategyContract1, ethers.utils.parseEther('1'), 42); // Strategy 1
+
+      const [address, active, dataSet, finalized, executedAt, exitedAt] = await strategyContract1.getStrategyState();
+      
+      // Should be active
+      expect(address).to.equal(strategyContract1.address);
+      expect(active).to.equal(true);
+      expect(dataSet).to.equal(true);
+      expect(finalized).to.equal(false);
+      expect(executedAt).to.not.equal(0);
+      expect(exitedAt).to.equal(ethers.BigNumber.from(0));
+
+      // Keeper gets paid
+      expect(await wethToken.balanceOf(await owner.getAddress())).to.equal(42);
+
+      ethers.provider.send('evm_increaseTime', [ONE_DAY_IN_SECONDS * 2]);
+     // Execute strategy 2
+     await executeStrategy(garden1, strategyContract2, ethers.utils.parseEther('1'), 42); // Strategy 2
+     // Execute strategy 3
+     await executeStrategy(garden1, strategyContract3, ethers.utils.parseEther('1'), 42); // Strategy 3
+
+     ethers.provider.send('evm_increaseTime', [ONE_DAY_IN_SECONDS * 2]);
+     // Execute strategy 4
+     await executeStrategy(garden1, strategyContract4, ethers.utils.parseEther('1'), 42); // Strategy 4
+     // Execute strategy 5
+     await executeStrategy(garden1, strategyContract5, ethers.utils.parseEther('1'), 42); // Strategy 5
+
+      
+
+
+      const [address2, active2, dataSet2, finalized2, executedAt2, exitedAt2] = await strategyContract5.getStrategyState();
+      expect(active2).to.equal(true);
+      expect(dataSet2).to.equal(true);
+      expect(finalized2).to.equal(false);
+      expect(executedAt2).to.not.equal(0);
+      expect(exitedAt2).to.equal(ethers.BigNumber.from(0));
+
+      // Protocol principal should be incremented accordingly
+      const protocol = await rewardsDistributor.checkProtocol(executedAt2);
+      const protocolPrincipal = protocol[0];
+      const protocolTime = protocol[1];
+      const protocolquarterBelonging = protocol[2];
+      const protocolTimeListPointer = protocol[3];
+      const protocolPower = protocol[4];
+      
+      expect(protocolPrincipal).to.equal(ethers.utils.parseEther('5')); // All are vote state strategies
+      expect(protocolTime).to.equal(executedAt2);
+      expect(protocolquarterBelonging).to.equal(1);
+      expect(protocolTimeListPointer).to.equal(4); // pid starting by zero, 5 strategies launched
+      expect(protocolPower).to.not.equal(0); // TODO Check exact numbers
+
+      const protocolQuarter = await rewardsDistributor.checkQuarter(protocolquarterBelonging);
+      const quarterPrincipal = protocolQuarter[0];
+      const quarterNumber = protocolQuarter[1];
+      const quarterPower = protocolQuarter[2];
+      const quarterSupply = protocolQuarter[3];
+
+      expect(quarterPrincipal).to.equal(ethers.utils.parseEther('5'));
+      expect(quarterNumber).to.equal(1);
+      expect(quarterPower).to.equal(protocolPower); 
+      expect(quarterSupply).to.not.equal(0);
+
+      ethers.provider.send('evm_increaseTime', [ONE_DAY_IN_SECONDS * 30]);
+            
+      await finishStrategyQ1_noIncreaseTime(garden1, strategyContract1, 42);
+      await finishStrategyQ1_noIncreaseTime(garden1, strategyContract2, 42);
+      await finishStrategyQ1_noIncreaseTime(garden1, strategyContract3, 42);
+      await finishStrategyQ1_noIncreaseTime(garden1, strategyContract4, 42);
+      await finishStrategyQ1_noIncreaseTime(garden1, strategyContract5, 42);
+      const [
+        address3,
+        active3,
+        dataSet3,
+        finalized3,
+        executedAt3,
+        exitedAt3,
+      ] = await strategyContract5.getStrategyState();
+
+
+      expect(address3).to.equal(strategyContract5.address);
+      expect(active3).to.equal(false);
+      expect(dataSet3).to.equal(true);
+      expect(finalized3).to.equal(true);
+      expect(executedAt3).to.not.equal(0);
+      expect(exitedAt3).to.not.equal(0);
+
+      // Protocol principal should be reduced accordingly
+      const protocol2 = await rewardsDistributor.checkProtocol(exitedAt3);
+      const protocolPrincipal2 = protocol2[0];
+      const protocolTime2 = protocol2[1];
+      const protocolquarterBelonging2 = protocol2[2];
+      const protocolTimeListPointer2 = protocol2[3];
+      const protocolPower2 = protocol2[4];
+      
+      expect(protocolPrincipal2).to.equal(ethers.utils.parseEther('0'));
+      expect(protocolquarterBelonging2).to.equal(1);
+      expect(protocolPower2).to.not.equal(0); // TODO CHECK EXACT AMOUNT
+      expect(protocolTime2).to.equal(exitedAt3);
+      expect(protocolTimeListPointer2).to.equal(9); // pid starting by zero, 9th checkpoint
+      expect(protocolPower).to.not.equal(0); // TODO Check exact numbers
+
+      const protocolQuarter2 = await rewardsDistributor.checkQuarter(protocolquarterBelonging2);
+      const quarterPrincipal2 = protocolQuarter2[0];
+      const quarterNumber2 = protocolQuarter2[1];
+      const quarterPower2 = protocolQuarter2[2];
+      const quarterSupply2 = protocolQuarter2[3];
+
+      expect(quarterPrincipal2).to.equal(protocolPrincipal2); // All are voter strategies
+      expect(quarterNumber2).to.equal(1);
+      expect(quarterPower2).to.equal(protocolPower2);
+      expect(quarterSupply2).to.equal(await rewardsDistributor.tokenSupplyPerQuarter(1));
+
+      
+      const bablRewards1 = await strategyContract1.strategyRewards();
+      const bablRewards2 = await strategyContract2.strategyRewards();
+      const bablRewards3 = await strategyContract3.strategyRewards();
+      const bablRewards4 = await strategyContract4.strategyRewards();
+      const bablRewards5 = await strategyContract5.strategyRewards();
+
+      console.log('BABL Rewards of Strategy 1', bablRewards1.toString());
+      console.log('BABL Rewards of Strategy 2', bablRewards2.toString()); 
+      console.log('BABL Rewards of Strategy 3', bablRewards3.toString()); 
+      console.log('BABL Rewards of Strategy 4', bablRewards4.toString()); 
+      console.log('BABL Rewards of Strategy 5', bablRewards5.toString()); 
+
+
+    });
+    */
+    it.only('should calculate correct BABL in case of 1 strategy with total duration of 2 quarters', async function () {
+
+      
+      // Create strategy 1
+
+      const strategyContract1 = await createStrategy(
+        0,
+        'active',
+        [signer1, signer2, signer3],
+        kyberTradeIntegration.address,
+        garden1,
+      );
+
+      // Execute strategy 1
+      await executeStrategy(garden1, strategyContract1, ethers.utils.parseEther('1'), 42); // Strategy 1
+
+      const [address, active, dataSet, finalized, executedAt, exitedAt] = await strategyContract1.getStrategyState();
+
+      // Should be active
+      expect(address).to.equal(strategyContract1.address);
+      expect(active).to.equal(true);
+      expect(dataSet).to.equal(true);
+      expect(finalized).to.equal(false);
+      expect(executedAt).to.not.equal(0);
+      expect(exitedAt).to.equal(ethers.BigNumber.from(0));
+
+      // Protocol principal should be increased accordingly
+      const protocol = await rewardsDistributor.checkProtocol(executedAt);
+      const protocolPrincipal = protocol[0];
+      const protocolTime = protocol[1];
+      const protocolquarterBelonging = protocol[2];
+      const protocolTimeListPointer = protocol[3];
+      const protocolPower = protocol[4];
+
+      const protocolQuarter = await rewardsDistributor.checkQuarter(protocolquarterBelonging);
+      const quarterPrincipal = protocolQuarter[0];
+      const quarterNumber = protocolQuarter[1];
+      const quarterPower = protocolQuarter[2];
+      const quarterSupply = protocolQuarter[3];
+      
+      // Keeper gets paid
+      expect(await wethToken.balanceOf(await owner.getAddress())).to.equal(42);
+     
+      ethers.provider.send('evm_increaseTime', [ONE_DAY_IN_SECONDS * 30]);
+            
+      await finishStrategy2Q(garden1, strategyContract1, 42);
+
+      const [
+        address3,
+        active3,
+        dataSet3,
+        finalized3,
+        executedAt3,
+        exitedAt3,
+      ] = await strategyContract1.getStrategyState();
+
+
+      console.log('Exited at',exitedAt3.toString());
+
+      expect(address3).to.equal(strategyContract1.address);
+      expect(active3).to.equal(false);
+      expect(dataSet3).to.equal(true);
+      expect(finalized3).to.equal(true);
+      expect(executedAt3).to.not.equal(0);
+      expect(exitedAt3).to.not.equal(0);
+
+      // Protocol principal should be reduced accordingly
+      const protocol2 = await rewardsDistributor.checkProtocol(exitedAt3);
+      const protocolPrincipal2 = protocol2[0];
+      const protocolTime2 = protocol2[1];
+      const protocolquarterBelonging2 = protocol2[2];
+      const protocolTimeListPointer2 = protocol2[3];
+      const protocolPower2 = protocol2[4];
+      
+      expect(protocolPrincipal2).to.equal(ethers.utils.parseEther('0'));
+      expect(protocolquarterBelonging2).to.equal(2);
+      expect(protocolPower2).to.not.equal(0); // TODO CHECK EXACT AMOUNT
+      expect(protocolTime2).to.equal(exitedAt3);
+      expect(protocolTimeListPointer2).to.equal(2); // pid starting by zero, 1 new strategy, 1 finalized pid++ = 2
+      expect(protocolPower2).to.not.equal(0); // TODO Check exact numbers
+
+      const protocolQuarter2 = await rewardsDistributor.checkQuarter(protocolquarterBelonging2);
+      const quarterPrincipal2 = protocolQuarter2[0];
+      const quarterNumber2 = protocolQuarter2[1];
+      const quarterPower2 = protocolQuarter2[2];
+      const quarterSupply2 = protocolQuarter2[3];
+
+      expect(quarterPrincipal2).to.equal(protocolPrincipal2); // All are voter strategies
+      expect(quarterNumber2).to.equal(2);
+  
+
+      expect(protocolPower2).to.gt(quarterPower2);
+      expect(quarterSupply2).to.equal(await rewardsDistributor.tokenSupplyPerQuarter(2));
+
+      
+      const bablRewards1 = await strategyContract1.strategyRewards();
+
+      console.log('BABL Rewards of Strategy 1', bablRewards1.toString());
+
+
+
+    });
+    
+
 
   });
 

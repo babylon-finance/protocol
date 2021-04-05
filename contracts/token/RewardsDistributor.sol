@@ -200,9 +200,10 @@ contract RewardsDistributor is Ownable {
             uint256[] memory protocolPower = new uint256[](numQuarters); // Protocol power in each Epoch
             for (uint256 i = 0; i <= numQuarters.sub(1); i++) {
                 uint256 slotEnding = START_TIME.add(startingQuarter.add(i).mul(EPOCH_DURATION)); // Initialization timestamp at the end of the first slot where the strategy starts its execution
-                console.log('Star time is %s', START_TIME);
+                console.log('Start time is %s', START_TIME);
                 console.log('startinQuarter is %s', startingQuarter);
                 console.log('slotEnding is %s', slotEnding);
+                console.log('slotStarting is %s', START_TIME.add(startingQuarter.add(i).mul(EPOCH_DURATION).sub(EPOCH_DURATION)));
                 console.log('Capital allocated is %s',strategy.capitalAllocated());
 
                 // We iterate all the quarters where the strategy was active
@@ -260,6 +261,8 @@ contract RewardsDistributor is Ownable {
                         .preciseMul(uint256(protocolPerQuarter[startingQuarter.add(i)].supplyPerQuarter))
                         .preciseMul(percentage)
                 );
+                console.log('BABL Rewards %s in epoch i %s', bablRewards, i);
+
             }
         }
 
