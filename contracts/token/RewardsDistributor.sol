@@ -174,27 +174,33 @@ contract RewardsDistributor is Ownable {
         strategy = IStrategy(_strategy);
         (uint256 numQuarters, uint256 startingQuarter) = getRewardsWindow(strategy.executedAt(), strategy.exitedAt());
         uint256 bablRewards = 0;
+        console.log('NumQuarters', numQuarters);
         if (numQuarters <= 1) {
             bablRewards = (
                 (strategy.capitalAllocated().preciseMul(strategy.exitedAt().sub(strategy.executedAt()))).div(
                     protocolPerQuarter[startingQuarter].quarterPower
                 )
             )
-                .mul(protocolPerQuarter[startingQuarter].supplyPerQuarter);
+                .mul(protocolPerQuarter[startingQuarter].supplyPerQuarter).preciseMul(strategy.exitedAt().sub(startingQuarter)).preciseDiv(block.timestamp.sub(startingQuarter)); // Proportional supply till that moment within the same epoch
         } else {
             // The strategy takes longer than one quarter / epoch
             // We need to calculate the strategy vs. protocol power ratio per each quarter
             uint256[] memory strategyPower = new uint256[](numQuarters); // Strategy power in each Epoch
             uint256[] memory protocolPower = new uint256[](numQuarters); // Protocol power in each Epoch
             for (uint256 i = 0; i <= numQuarters.sub(1); i++) {
-                uint256 slotEnding = START_TIME.add(startingQuarter.add(i) * EPOCH_DURATION); // Initialization timestamp at the end of the first slot where the strategy starts its execution
+                uint256 slotEnding = START_TIME.add(startingQuarter.add(i).mul(EPOCH_DURATION)); // Initialization timestamp at the end of the first slot where the strategy starts its execution
+                console.log('Star time is %s', START_TIME);
+                console.log('startinQuarter is %s', startingQuarter);
+                console.log('slotEnding is %s', slotEnding);
+                console.log('Capital allocated is %s',strategy.capitalAllocated());
 
                 // We iterate all the quarters where the strategy was active
-                uint256 percentage = 1000000000000000000;
+                uint256 percentage = 1e18;
                 if (strategy.executedAt().add(EPOCH_DURATION) > slotEnding) {
                     // We are in the first quarter of the strategy
 
                     strategyPower[i] = strategy.capitalAllocated().mul(slotEnding.sub(strategy.executedAt()));
+                    console.log('eo');
                 } else if (strategy.executedAt() < slotEnding.sub(EPOCH_DURATION) && slotEnding < strategy.exitedAt()) {
                     // We are in an intermediate quarter different from starting or ending quarters
                     strategyPower[i] = strategy.capitalAllocated().mul(slotEnding.sub(slotEnding.sub(EPOCH_DURATION)));
@@ -209,6 +215,11 @@ contract RewardsDistributor is Ownable {
                     );
                 }
                 protocolPower[i] = protocolPerQuarter[startingQuarter.add(i)].quarterPower;
+                console.log('Str Power of i ', strategyPower[i], i);
+                console.log('Protocol Power of i ', protocolPower[i], i);
+
+                require(strategyPower[i]<= protocolPower[i],'overflow str over protocol in a epoch');
+                // TODO DOWNSIDE 96 bits into XX K BABLS 
                 // TODO CHECK INITIALIZATION
                 if (protocolPower[i] == 0) {
                     protocolPower[i] = protocolPower[i].add(strategyPower[i]);
@@ -340,18 +351,24 @@ contract RewardsDistributor is Ownable {
                 protocolCheckpoint.quarterPower = 0;
             } else {
                 // Each time a new epoch starts with either a new strategy execution or finalization
-                // We just take the proportional power for this quarter from previous quarter
-                // TODO REVIEW FORMULA AND ADDING POWER TO THE PREVIOUS EPOCH
-                protocolCheckpoint.quarterPower = protocolPerTimestamp[_time]
-                    .power
-                    .mul(_time.sub(getQuarter(_time).mul(EPOCH_DURATION).sub(EPOCH_DURATION)))
+                // We just take the proportional power for this quarter from previous checkpoint
+                uint256 powerToSplit = protocolPerTimestamp[_time]
+                    .power.sub(protocolPerTimestamp[timeList[pid.sub(1)]].power);
+                
+                // We re-initialize the protocol power counting for this new quarter
+                protocolCheckpoint.quarterPower = powerToSplit
+                    .mul(_time.sub(START_TIME.add(getQuarter(_time).mul(EPOCH_DURATION).sub(EPOCH_DURATION))))
                     .div(_time.sub(protocolPerTimestamp[timeList[pid.sub(1)]].time));
+
+                // We update the previous quarter
+                protocolPerQuarter[getQuarter(_time).sub(1)].quarterPower = protocolPerQuarter[getQuarter(_time).sub(1)].quarterPower.add(powerToSplit.sub(protocolCheckpoint.quarterPower));
             }
             protocolCheckpoint.supplyPerQuarter = tokenSupplyPerQuarter(getQuarter(_time));
             isProtocolPerQuarter[getQuarter(_time).sub(1)] = true;
         } else {
             // Quarter checkpoint already created, it must have been filled with general info
-            protocolCheckpoint.quarterPower = protocolCheckpoint.quarterPower.add(protocolPerTimestamp[_time].power);
+            // We update the power of the quarter by adding the new difference between last quarter checkpoint and this checkpoint
+            protocolCheckpoint.quarterPower = protocolCheckpoint.quarterPower.add(protocolPerTimestamp[_time].power.sub(protocolPerTimestamp[timeList[pid.sub(1)]].power));
         }
         protocolCheckpoint.quarterPrincipal = protocolPrincipal;
     }

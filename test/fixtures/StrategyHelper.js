@@ -119,7 +119,8 @@ async function executeStrategy(garden, strategy, amount = ethers.utils.parseEthe
 }
 
 async function finalizeStrategy(garden, strategy, fee = 0) {
-  ethers.provider.send('evm_increaseTime', [ONE_DAY_IN_SECONDS * 90]);
+  //ethers.provider.send('evm_increaseTime', [ONE_DAY_IN_SECONDS * 90]);
+  ethers.provider.send('evm_increaseTime', [ONE_DAY_IN_SECONDS * 20]); // TO HAVE STRATEGIES WITHIN THE SAME EPOCH
   await updateTWAPs(garden);
   return strategy.finalizeInvestment(fee, { gasPrice: 0 });
 }
