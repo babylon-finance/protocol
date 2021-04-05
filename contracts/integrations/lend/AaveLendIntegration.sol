@@ -71,17 +71,21 @@ contract AaveLendIntegration is LendIntegration {
     /* ============ Internal Functions ============ */
 
     function _isInvestment(address _assetToken) internal view override returns (bool) {
-        (address aTokenAddress, address stableDebtTokenAddress, address variableDebtTokenAddress) =
-            dataProvider.getReserveTokensAddresses(_assetToken);
+        (address aTokenAddress, , ) = dataProvider.getReserveTokensAddresses(_assetToken);
         return aTokenAddress != address(0);
     }
 
-    function _getExpectedShares(address _assetToken, uint256 _numTokensToSupply) internal override returns (uint256) {
+    function _getExpectedShares(
+        address, /* _assetToken */
+        uint256 _numTokensToSupply
+    ) internal pure override returns (uint256) {
         // love it 😍
         return _numTokensToSupply;
     }
 
-    function _getExchangeRatePerToken(address _assetToken) internal override returns (uint256) {
+    function _getExchangeRatePerToken(
+        address /* _assetToken */
+    ) internal pure override returns (uint256) {
         // love it 😍
         return 1;
     }
@@ -131,13 +135,14 @@ contract AaveLendIntegration is LendIntegration {
         return (address(lendingPool), 0, methodData);
     }
 
-    function _getSpender(address _investmentAddress) internal view override returns (address) {
+    function _getSpender(
+        address /* _investmentAddress */
+    ) internal pure override returns (address) {
         return address(lendingPool);
     }
 
     function _getInvestmentToken(address _assetToken) internal view override returns (address) {
-        (address aTokenAddress, address stableDebtTokenAddress, address variableDebtTokenAddress) =
-            dataProvider.getReserveTokensAddresses(_assetToken);
+        (address aTokenAddress, , ) = dataProvider.getReserveTokensAddresses(_assetToken);
         return aTokenAddress;
     }
 }

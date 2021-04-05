@@ -58,8 +58,8 @@ contract YieldFarmingStrategy is Strategy {
      * Enters the long strategy
      */
     function _enterStrategy(uint256 _capital) internal override {
-        if (vaultAsset != garden.getReserveAsset()) {
-            _trade(garden.getReserveAsset(), _capital, vaultAsset);
+        if (vaultAsset != garden.reserveAsset()) {
+            _trade(garden.reserveAsset(), _capital, vaultAsset);
         }
         uint256 exactAmount = IPassiveIntegration(integration).getExpectedShares(yieldVault, _capital);
         uint256 minAmountExpected = exactAmount.sub(exactAmount.preciseMul(SLIPPAGE_ALLOWED));
@@ -84,8 +84,8 @@ contract YieldFarmingStrategy is Strategy {
                 amountVault.sub(amountVault.preciseMul(SLIPPAGE_ALLOWED))
             )
         );
-        if (vaultAsset != garden.getReserveAsset()) {
-            _trade(vaultAsset, IERC20(vaultAsset).balanceOf(address(this)), garden.getReserveAsset());
+        if (vaultAsset != garden.reserveAsset()) {
+            _trade(vaultAsset, IERC20(vaultAsset).balanceOf(address(this)), garden.reserveAsset());
         }
     }
 }

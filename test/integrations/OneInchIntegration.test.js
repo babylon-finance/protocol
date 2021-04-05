@@ -33,25 +33,14 @@ describe('OneInchTradeIntegration', function () {
 
   describe('Trading', function () {
     let daiToken;
-    let usdcToken;
     let wethToken;
-    let whaleSigner;
-    const daiWhaleAddress = '0x6B175474E89094C44Da98b954EedeAC495271d0F';
 
     beforeEach(async () => {
-      whaleSigner = await impersonateAddress(daiWhaleAddress);
       daiToken = await ethers.getContractAt('IERC20', addresses.tokens.DAI);
       wethToken = await ethers.getContractAt('IERC20', addresses.tokens.WETH);
-      usdcToken = await ethers.getContractAt('IERC20', addresses.tokens.USDC);
     });
 
-    it('trade WETH to USDC', async function () {
-      expect(
-        await daiToken.connect(whaleSigner).transfer(garden1.address, ethers.utils.parseEther('100'), {
-          gasPrice: 0,
-        }),
-      );
-      expect(await daiToken.balanceOf(garden1.address)).to.equal(ethers.utils.parseEther('100'));
+    it('trade WETH to DAI', async function () {
       const strategyContract = await createStrategy(
         0,
         'vote',
@@ -61,10 +50,10 @@ describe('OneInchTradeIntegration', function () {
       );
 
       await executeStrategy(garden1, strategyContract);
-      expect(await usdcToken.balanceOf(strategyContract.address)).to.be.gt(ethers.utils.parseEther('900') / 10 ** 12);
+      expect(await daiToken.balanceOf(strategyContract.address)).to.be.gt(ethers.utils.parseEther('900') / 10 ** 12);
 
       await finalizeStrategy(garden1, strategyContract, 0);
-      expect(await usdcToken.balanceOf(strategyContract.address)).to.equal(0);
+      expect(await daiToken.balanceOf(strategyContract.address)).to.equal(0);
       expect(await wethToken.balanceOf(garden1.address)).to.equal('3085000000000000000'); // 1.085 ETH
     });
   });

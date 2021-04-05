@@ -1,14 +1,16 @@
 const { expect } = require('chai');
 const chaiAsPromised = require('chai-as-promised');
-require('chai').use(chaiAsPromised);
-
 const { ethers, waffle } = require('hardhat');
 
-const { parseEther } = ethers.utils;
-
 const { loadFixture } = waffle;
+require('chai').use(chaiAsPromised);
 
-const { createStrategy, executeStrategy, finalizeStrategy } = require('../fixtures/StrategyHelper.js');
+const {
+  createStrategy,
+  executeStrategy,
+  finalizeStrategy,
+  injectFakeProfits,
+} = require('../fixtures/StrategyHelper.js');
 
 const addresses = require('../../utils/addresses');
 const { ONE_DAY_IN_SECONDS } = require('../../utils/constants.js');
@@ -228,7 +230,7 @@ describe('Strategy', function () {
   });
 
   describe('finalizeInvestment', async function () {
-    it('should finalize investment idea', async function () {
+    it('should finalize investment idea with negative profits', async function () {
       const strategyContract = await createStrategy(
         0,
         'active',
@@ -249,6 +251,27 @@ describe('Strategy', function () {
 
       // Keeper gets paid
       expect(await wethToken.balanceOf(await owner.getAddress())).to.equal(42);
+
+      const capitalAllocated = await strategyContract.capitalAllocated();
+      const capitalReturned = await strategyContract.capitalReturned();
+      expect(capitalReturned).to.be.lt(capitalAllocated);
+    });
+
+    it('should finalize investment idea with profits', async function () {
+      const strategyContract = await createStrategy(
+        0,
+        'active',
+        [signer1, signer2, signer3],
+        kyberTradeIntegration.address,
+        garden1,
+      );
+
+      await injectFakeProfits(strategyContract, ethers.utils.parseEther('1000'));
+      await finalizeStrategy(garden1, strategyContract, 42);
+      const capitalAllocated = await strategyContract.capitalAllocated();
+      const capitalReturned = await strategyContract.capitalReturned();
+
+      expect(capitalReturned).to.be.gt(capitalAllocated);
     });
 
     it("can't finalize investment twice", async function () {

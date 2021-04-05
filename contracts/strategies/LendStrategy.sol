@@ -59,8 +59,8 @@ contract LendStrategy is Strategy {
      * Enters the lend strategy
      */
     function _enterStrategy(uint256 _capital) internal override {
-        if (assetToken != garden.getReserveAsset()) {
-            _trade(garden.getReserveAsset(), _capital, assetToken);
+        if (assetToken != garden.reserveAsset()) {
+            _trade(garden.reserveAsset(), _capital, assetToken);
         }
         uint256 numTokensToSupply = IERC20(assetToken).balanceOf(address(this));
         uint256 exactAmount = ILendIntegration(integration).getExpectedShares(assetToken, numTokensToSupply);
@@ -81,8 +81,8 @@ contract LendStrategy is Strategy {
                 numTokensToRedeem.sub(numTokensToRedeem.preciseMul(SLIPPAGE_ALLOWED))
             )
         );
-        if (assetToken != garden.getReserveAsset()) {
-            _trade(assetToken, IERC20(assetToken).balanceOf(address(this)), garden.getReserveAsset());
+        if (assetToken != garden.reserveAsset()) {
+            _trade(assetToken, IERC20(assetToken).balanceOf(address(this)), garden.reserveAsset());
         }
     }
 }

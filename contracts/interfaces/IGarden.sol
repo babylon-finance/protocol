@@ -39,8 +39,6 @@ interface IGarden is IERC20 {
 
     function gardenEndsBy() external view returns (uint256);
 
-    function gardenIdeas() external view returns (address);
-
     function getContributor(address _contributor)
         external
         view
@@ -51,9 +49,7 @@ interface IGarden is IERC20 {
             uint256
         );
 
-    function getIntegrations() external view returns (address[] memory);
-
-    function getReserveAsset() external view returns (address);
+    function reserveAsset() external view returns (address);
 
     function name() external view returns (string memory);
 
@@ -65,7 +61,7 @@ interface IGarden is IERC20 {
 
     function minLiquidityAsset() external view returns (uint256);
 
-    function getPrincipal() external view returns (uint256);
+    function principal() external view returns (uint256);
 
     function absoluteReturns() external view returns (int256);
 
@@ -89,6 +85,8 @@ interface IGarden is IERC20 {
 
     function getStrategies() external view returns (address[] memory);
 
+    function strategies(uint256 _index) external view returns (address);
+
     function isStrategy(address _strategy) external view returns (bool);
 
     function startRedemptionWindow(uint256 _amount) external;
@@ -105,7 +103,7 @@ interface IGarden is IERC20 {
         uint256 _minRebalanceCapital
     ) external;
 
-    function rebalanceInvestments() external;
+    function rebalanceInvestments(uint256 _fee) external;
 
     function moveStrategyToFinalized(int256 _returns, address _strategy) external;
 

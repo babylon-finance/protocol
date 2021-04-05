@@ -59,7 +59,7 @@ contract LiquidityPoolStrategy is Strategy {
      * Enters the pool strategy
      */
     function _enterStrategy(uint256 _capital) internal override {
-        address reserveAsset = garden.getReserveAsset();
+        address reserveAsset = garden.reserveAsset();
         uint256[] memory _maxAmountsIn = new uint256[](poolTokens.length);
         uint256[] memory _poolWeights = IPoolIntegration(integration).getPoolWeights(pool);
         // Get the tokens needed to enter the pool
@@ -101,7 +101,7 @@ contract LiquidityPoolStrategy is Strategy {
             _minAmountsOut
         );
         // Exit Pool tokens
-        address reserveAsset = garden.getReserveAsset();
+        address reserveAsset = garden.reserveAsset();
         for (uint256 i = 0; i < poolTokens.length; i++) {
             if (poolTokens[i] != reserveAsset) {
                 if (poolTokens[i] == address(0)) {
