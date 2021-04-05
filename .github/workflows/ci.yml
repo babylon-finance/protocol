@@ -43,8 +43,8 @@ jobs:
       - name: Run tests
         run: yarn test
 
-  prettier:
-    name: Prettier
+  lint:
+    name: Lint
     runs-on: ubuntu-latest
     timeout-minutes: 20
 
@@ -58,5 +58,8 @@ jobs:
       - name: Install dependencies
         run: yarn --frozen-lockfile
 
-      - name: Run prettier
+      - name: Run Prettier
         run: yarn prettier:check
+
+      - name: Run Solhint
+        run: yarn lint:contracts
