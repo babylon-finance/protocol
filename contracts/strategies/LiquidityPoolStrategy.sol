@@ -82,7 +82,7 @@ contract LiquidityPoolStrategy is Strategy {
             }
         }
         // TODO: calculate minReceiveQuantity instead of 1
-        IPoolIntegration(integration).joinPool(pool, 1, poolTokens, _maxAmountsIn);
+        IPoolIntegration(integration).joinPool(pool, 1000, poolTokens, _maxAmountsIn);
     }
 
     /**

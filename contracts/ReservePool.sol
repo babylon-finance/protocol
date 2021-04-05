@@ -209,7 +209,8 @@ contract ReservePool is ERC20, ReentrancyGuard, Ownable {
         require(IWETH(weth).transfer(IBabController(controller).getTreasury(), protocolFee), 'Protocol fee failed');
     }
 
-    receive() external payable {} // solium-disable-line quotes
+    // solhint-disable-next-line
+    receive() external payable {}
 
     /* ============ Public View Functions ============ */
 
