@@ -23,6 +23,7 @@ import {SafeMath} from '@openzeppelin/contracts/math/SafeMath.sol';
 import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import {SafeCast} from '@openzeppelin/contracts/utils/SafeCast.sol';
 import {ReentrancyGuard} from '@openzeppelin/contracts/utils/ReentrancyGuard.sol';
+import {IPoolIntegration} from '../../interfaces/IPoolIntegration.sol';
 import {IGarden} from '../../interfaces/IGarden.sol';
 import {IStrategy} from '../../interfaces/IStrategy.sol';
 import {IBabController} from '../../interfaces/IBabController.sol';
@@ -97,13 +98,18 @@ abstract contract PoolIntegration is BaseIntegration, ReentrancyGuard {
         _validatePreJoinPoolData(poolInfo);
         // Approve spending of the tokens
         for (uint256 i = 0; i < _tokensIn.length; i++) {
-            poolInfo.strategy.invokeApprove(_getSpender(_poolAddress), _tokensIn[i], _maxAmountsIn[i]);
+            // No need to approve ETH
+            if (_tokensIn[i] != address(0)) {
+                poolInfo.strategy.invokeApprove(_getSpender(_poolAddress), _tokensIn[i], _maxAmountsIn[i]);
+            }
         }
         (address targetPool, uint256 callValue, bytes memory methodData) =
             _getJoinPoolCalldata(_poolAddress, _poolTokensOut, _tokensIn, _maxAmountsIn);
         poolInfo.strategy.invokeFromIntegration(targetPool, callValue, methodData);
+        poolInfo.poolTokensInTransaction = IERC20(poolInfo.pool).balanceOf(address(poolInfo.strategy)).sub(
+            poolInfo.poolTokensInStrategy
+        );
         _validatePostJoinPoolData(poolInfo);
-        _updateGardenPositions(poolInfo, true);
 
         emit PoolEntered(address(poolInfo.strategy), address(poolInfo.garden), poolInfo.pool, _poolTokensOut);
     }
@@ -133,8 +139,6 @@ abstract contract PoolIntegration is BaseIntegration, ReentrancyGuard {
         _validatePostExitPoolData(poolInfo);
         uint256 protocolFee = _accrueProtocolFee(address(poolInfo.strategy), _tokensOut[0], _minAmountsOut[0]);
 
-        _updateGardenPositions(poolInfo, false);
-
         emit PoolExited(
             address(poolInfo.strategy),
             address(poolInfo.garden),
@@ -160,6 +164,14 @@ abstract contract PoolIntegration is BaseIntegration, ReentrancyGuard {
         address[] memory poolTokens;
         require(false, 'This needs to be overriden');
         return poolTokens;
+    }
+
+    function getPoolWeights(
+        address /*_poolAddress */
+    ) external view virtual returns (uint256[] memory) {
+        uint256[] memory poolWeights;
+        require(false, 'This needs to be overriden');
+        return poolWeights;
     }
 
     /* ============ Internal Functions ============ */
@@ -240,21 +252,6 @@ abstract contract PoolIntegration is BaseIntegration, ReentrancyGuard {
             'The strategy did not return the pool tokens'
         );
         // TODO: validate individual tokens received
-    }
-
-    /**
-     * Update Garden positions
-     *
-     * @param _poolInfo                Struct containing pool information used in internal functions
-     */
-    function _updateGardenPositions(PoolInfo memory _poolInfo, bool isDeposit) internal {
-        // balance pool token
-        _updateStrategyPosition(
-            address(_poolInfo.strategy),
-            _poolInfo.pool,
-            isDeposit ? _poolInfo.poolTokensInTransaction.toInt256() : int256(-_poolInfo.poolTokensInTransaction),
-            0
-        );
     }
 
     /**

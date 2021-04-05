@@ -45,9 +45,10 @@ contract YieldFarmingStrategy is Strategy {
      * @param _yieldVault                   Yield vault to enter
      */
     function setYieldFarmingData(address _yieldVault) public onlyIdeator {
-        kind = 2;
-        require(IPassiveIntegration(integration).isInvestment(_yieldVault), 'Must be a valid yield vault');
         require(!dataSet, 'Data is set already');
+        require(IPassiveIntegration(integration).isInvestment(_yieldVault), 'Must be a valid yield vault');
+
+        kind = 2;
         yieldVault = _yieldVault;
         vaultAsset = IPassiveIntegration(integration).getInvestmentAsset(_yieldVault);
         dataSet = true;
@@ -57,8 +58,8 @@ contract YieldFarmingStrategy is Strategy {
      * Enters the long strategy
      */
     function _enterStrategy(uint256 _capital) internal override {
-        if (vaultAsset != garden.getReserveAsset()) {
-            _trade(garden.getReserveAsset(), _capital, vaultAsset);
+        if (vaultAsset != garden.reserveAsset()) {
+            _trade(garden.reserveAsset(), _capital, vaultAsset);
         }
         uint256 exactAmount = IPassiveIntegration(integration).getExpectedShares(yieldVault, _capital);
         uint256 minAmountExpected = exactAmount.sub(exactAmount.preciseMul(SLIPPAGE_ALLOWED));
@@ -83,8 +84,8 @@ contract YieldFarmingStrategy is Strategy {
                 amountVault.sub(amountVault.preciseMul(SLIPPAGE_ALLOWED))
             )
         );
-        if (vaultAsset != garden.getReserveAsset()) {
-            _trade(vaultAsset, IERC20(vaultAsset).balanceOf(address(this)), garden.getReserveAsset());
+        if (vaultAsset != garden.reserveAsset()) {
+            _trade(vaultAsset, IERC20(vaultAsset).balanceOf(address(this)), garden.reserveAsset());
         }
     }
 }

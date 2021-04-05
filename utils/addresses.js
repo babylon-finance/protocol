@@ -20,6 +20,10 @@ module.exports = {
   },
   oneinch: {
     exchange: '0xC586BeF4a0992C495Cf22e1aeEE4E446CECDee0E',
+    factory: '0xbAF9A5d4b0052359326A6CDAb54BABAa3a3A9643',
+    pools: {
+      wethdai: '0x7566126f2fd0f2dddae01bb8a6ea49b760383d5a',
+    },
   },
   balancer: {
     factory: '0x9424B1412450D0f8Fc2255FAf6046b98213B76Bd',
@@ -32,6 +36,13 @@ module.exports = {
     factory: '0x5C69bEe701ef814a2B6a3EDD4B1652CB9cc5aA6f',
     pairs: {
       wethdai: '0xa478c2975ab1ea89e8196811f51a7b7ade33eb11',
+    },
+  },
+  sushiswap: {
+    router: '0xd9e1cE17f2641f24aE83637ab66a2cca9C378B9F',
+    factory: '0xC0AEe478e3658e2610c5F7A4A2E1777cE9e4f2Ac',
+    pairs: {
+      wethdai: '0xC3D03e4F041Fd4cD388c549Ee2A29a9E5075882f',
     },
   },
   yearn: {

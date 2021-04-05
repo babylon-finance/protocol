@@ -20,8 +20,10 @@ pragma solidity 0.7.4;
 
 import 'hardhat/console.sol';
 import {SafeMath} from '@openzeppelin/contracts/math/SafeMath.sol';
+import {PreciseUnitMath} from '../lib/PreciseUnitMath.sol';
 import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import {Strategy} from './Strategy.sol';
+import {IWETH} from '../interfaces/external/weth/IWETH.sol';
 import {IGarden} from '../interfaces/IGarden.sol';
 import {IPoolIntegration} from '../interfaces/IPoolIntegration.sol';
 
@@ -33,6 +35,7 @@ import {IPoolIntegration} from '../interfaces/IPoolIntegration.sol';
  */
 contract LiquidityPoolStrategy is Strategy {
     using SafeMath for uint256;
+    using PreciseUnitMath for uint256;
 
     address public pool; // Pool to add liquidity to
     address[] public poolTokens; // List of pool tokens
@@ -43,26 +46,39 @@ contract LiquidityPoolStrategy is Strategy {
      * @param _pool                           Liquidity pool
      */
     function setPoolData(address _pool) public onlyIdeator {
-        kind = 1;
+        require(!dataSet, 'Data is set already');
         require(IPoolIntegration(integration).isPool(_pool), 'Must be a valid pool of this protocol');
+
+        kind = 1;
         pool = _pool;
         poolTokens = IPoolIntegration(integration).getPoolTokens(pool);
+        dataSet = true;
     }
 
     /**
      * Enters the pool strategy
      */
     function _enterStrategy(uint256 _capital) internal override {
-        address reserveAsset = garden.getReserveAsset();
+        address reserveAsset = garden.reserveAsset();
         uint256[] memory _maxAmountsIn = new uint256[](poolTokens.length);
+        uint256[] memory _poolWeights = IPoolIntegration(integration).getPoolWeights(pool);
         // Get the tokens needed to enter the pool
+        uint256 ethValue = 0;
         for (uint256 i = 0; i < poolTokens.length; i++) {
-            // TODO: fix for pools that are not equally weighted
-            if (poolTokens[i] != reserveAsset) {
-                _trade(reserveAsset, _capital.div(poolTokens.length), poolTokens[i]);
+            uint256 normalizedAmount = _capital.preciseMul(_poolWeights[i]);
+            if (poolTokens[i] != reserveAsset && poolTokens[i] != address(0)) {
+                _trade(reserveAsset, normalizedAmount, poolTokens[i]);
                 _maxAmountsIn[i] = IERC20(poolTokens[i]).balanceOf(address(this));
             } else {
-                _maxAmountsIn[i] = _capital.div(poolTokens.length);
+                if (poolTokens[i] == address(0)) {
+                    if (reserveAsset != garden.weth()) {
+                        _trade(reserveAsset, normalizedAmount, garden.weth());
+                    }
+                    // Convert WETH to ETH
+                    IWETH(garden.weth()).withdraw(normalizedAmount);
+                    ethValue = normalizedAmount;
+                }
+                _maxAmountsIn[i] = normalizedAmount;
             }
         }
         // TODO: calculate minReceiveQuantity instead of 1
@@ -85,10 +101,14 @@ contract LiquidityPoolStrategy is Strategy {
             _minAmountsOut
         );
         // Exit Pool tokens
-        address reserveAsset = garden.getReserveAsset();
-        for (uint256 i = 0; i < positions.length; i++) {
+        address reserveAsset = garden.reserveAsset();
+        for (uint256 i = 0; i < poolTokens.length; i++) {
             if (poolTokens[i] != reserveAsset) {
-                _trade(poolTokens[i], IERC20(poolTokens[i]).balanceOf(address(this)), reserveAsset);
+                if (poolTokens[i] == address(0)) {
+                    IWETH(garden.weth()).deposit{value: address(this).balance}();
+                } else {
+                    _trade(poolTokens[i], IERC20(poolTokens[i]).balanceOf(address(this)), reserveAsset);
+                }
             }
         }
     }

@@ -177,57 +177,49 @@ describe('BABLToken contract', function () {
       const allowSigner1 = await bablToken.allowance(owner.address, timeLockRegistry.address);
       expect(allowSigner1).to.equal(ethers.utils.parseEther('310000'));
 
-      // Register 1 Team Member with 26_000 BABL 1Y cliff and 4Y of Vesting
+      // Register 1 Team Member with 26_000 BABL 4Y of Vesting
       // Vesting starting date 1 March 2021 9h PST Unix Time 1614618000
       await timeLockRegistry.register(signer1.address, ethers.utils.parseEther('26000'), true, 1614618000);
       const userSigner1Registered = await timeLockRegistry.checkVesting(signer1.address);
       const userSigner1RegisteredTeam = userSigner1Registered[0];
-      const userSigner1RegisteredCliff = userSigner1Registered[1];
-      const userSigner1RegisteredVestingBegin = userSigner1Registered[2];
-      const userSigner1RegisteredVestingEnd = userSigner1Registered[3];
+      const userSigner1RegisteredVestingBegin = userSigner1Registered[1];
+      const userSigner1RegisteredVestingEnd = userSigner1Registered[2];
       expect(userSigner1RegisteredTeam).to.equal(true);
-      expect(userSigner1RegisteredCliff).to.equal(true);
       expect(userSigner1RegisteredVestingBegin).to.equal(1614618000);
       expect(userSigner1RegisteredVestingEnd).to.equal(1614618000 + ONE_DAY_IN_SECONDS * 365 * 4);
 
-      // Register 1 Advisor with 2_000 BABL 1Y cliff and 4Y of Vesting
+      // Register 1 Advisor with 2_000 BABL 1Y 4Y of Vesting
       // Vesting starting date 1 March 2021 9h PST Unix Time 1614618000
       await timeLockRegistry.register(signer2.address, ethers.utils.parseEther('2000'), true, 1614618000);
       const userSigner2Registered = await timeLockRegistry.checkVesting(signer2.address);
       const userSigner2RegisteredTeam = userSigner2Registered[0];
-      const userSigner2RegisteredCliff = userSigner2Registered[1];
-      const userSigner2RegisteredVestingBegin = userSigner2Registered[2];
-      const userSigner2RegisteredVestingEnd = userSigner2Registered[3];
+      const userSigner2RegisteredVestingBegin = userSigner2Registered[1];
+      const userSigner2RegisteredVestingEnd = userSigner2Registered[2];
       expect(userSigner2RegisteredTeam).to.equal(true);
-      expect(userSigner2RegisteredCliff).to.equal(true);
       expect(userSigner2RegisteredVestingBegin).to.equal(1614618000);
       expect(userSigner2RegisteredVestingEnd).to.equal(1614618000 + ONE_DAY_IN_SECONDS * 365 * 4);
 
-      // Register 1 Investor with 10_000 BABL no Cliff and 3Y of Vesting
+      // Register 1 Investor with 10_000 BABL and 3Y of Vesting
       // Vesting starting date 1 March 2021 9h PST Unix Time 1614618000
       await timeLockRegistry.register(signer3.address, ethers.utils.parseEther('10000'), false, 1614618000);
       const userSigner3Registered = await timeLockRegistry.checkVesting(signer3.address);
       const userSigner3RegisteredTeam = userSigner3Registered[0];
-      const userSigner3RegisteredCliff = userSigner3Registered[1];
-      const userSigner3RegisteredVestingBegin = userSigner3Registered[2];
-      const userSigner3RegisteredVestingEnd = userSigner3Registered[3];
+      const userSigner3RegisteredVestingBegin = userSigner3Registered[1];
+      const userSigner3RegisteredVestingEnd = userSigner3Registered[2];
       expect(userSigner3RegisteredTeam).to.equal(false);
-      expect(userSigner3RegisteredCliff).to.equal(false);
       expect(userSigner3RegisteredVestingBegin).to.equal(1614618000);
       expect(userSigner3RegisteredVestingEnd).to.equal(1614618000 + ONE_DAY_IN_SECONDS * 365 * 3);
     });
 
     it('Should cancel a registration of an Advisor before tokens are claimed', async function () {
-      // Register 1 Advisor with 2_000 BABL 1Y cliff and 4Y of Vesting
+      // Register 1 Advisor with 2_000 BABL 4Y of Vesting
       // Vesting starting date 1 March 2021 9h PST Unix Time 1614618000
       await timeLockRegistry.register(signer2.address, ethers.utils.parseEther('2000'), true, 1614618000);
       const userSigner2Registered = await timeLockRegistry.checkVesting(signer2.address);
       const userSigner2RegisteredTeam = userSigner2Registered[0];
-      const userSigner2RegisteredCliff = userSigner2Registered[1];
-      const userSigner2RegisteredVestingBegin = userSigner2Registered[2];
-      const userSigner2RegisteredVestingEnd = userSigner2Registered[3];
+      const userSigner2RegisteredVestingBegin = userSigner2Registered[1];
+      const userSigner2RegisteredVestingEnd = userSigner2Registered[2];
       expect(userSigner2RegisteredTeam).to.equal(true);
-      expect(userSigner2RegisteredCliff).to.equal(true);
       expect(userSigner2RegisteredVestingBegin).to.equal(1614618000);
       expect(userSigner2RegisteredVestingEnd).to.equal(1614618000 + ONE_DAY_IN_SECONDS * 365 * 4);
 
@@ -243,17 +235,15 @@ describe('BABLToken contract', function () {
       await expect(timeLockRegistry.cancelRegistration(signer2.address)).to.be.revertedWith('Not registered');
     });
 
-    it('Should cancel all delivered tokens after a Team Member left before cliff', async function () {
-      // Register 1 Team Member with 26_000 BABL 1Y cliff and 4Y of Vesting
+    it('Should cancel all delivered tokens after a Team Member left', async function () {
+      // Register 1 Team Member with 26_000 BABL 4Y of Vesting
       // Vesting starting date 1 March 2021 9h PST Unix Time 1614618000
       await timeLockRegistry.register(signer1.address, ethers.utils.parseEther('26000'), true, 1614618000);
       const userSigner1Registered = await timeLockRegistry.checkVesting(signer1.address);
       const userSigner1RegisteredTeam = userSigner1Registered[0];
-      const userSigner1RegisteredCliff = userSigner1Registered[1];
-      const userSigner1RegisteredVestingBegin = userSigner1Registered[2];
-      const userSigner1RegisteredVestingEnd = userSigner1Registered[3];
+      const userSigner1RegisteredVestingBegin = userSigner1Registered[1];
+      const userSigner1RegisteredVestingEnd = userSigner1Registered[2];
       expect(userSigner1RegisteredTeam).to.equal(true);
-      expect(userSigner1RegisteredCliff).to.equal(true);
       expect(userSigner1RegisteredVestingBegin).to.equal(1614618000);
       expect(userSigner1RegisteredVestingEnd).to.equal(1614618000 + ONE_DAY_IN_SECONDS * 365 * 4);
 
@@ -267,7 +257,7 @@ describe('BABLToken contract', function () {
       expect(userSigner1Balance).to.equal(ethers.utils.parseEther('26000'));
       await expect(timeLockRegistry.cancelRegistration(signer2.address)).to.be.revertedWith('Not registered');
 
-      // Cancel the registration of above registered Team Member before the cliff is passed
+      // Cancel the registration of above registered Team Member
 
       const registryBalance = await bablToken.balanceOf(timeLockRegistry.address);
 

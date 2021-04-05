@@ -91,22 +91,9 @@ contract GardenValuer {
         int256 valuation;
         for (uint256 j = 0; j < strategies.length; j++) {
             IStrategy strategy = IStrategy(strategies[j]);
-            address[] memory positions = strategy.getPositions();
-
-            for (uint256 i = 0; i < positions.length; i++) {
-                address component = positions[i];
-
-                // Get component price from price oracle. If price does not exist, revert.
-                uint256 componentPrice = priceOracle.getPrice(component, masterQuoteAsset);
-                int256 aggregateUnits = strategy.getPositionBalance(component);
-                // Normalize each position unit to preciseUnits 1e18 and cast to signed int
-                uint8 unitDecimals = ERC20(component).decimals();
-                uint256 baseUnits = 10**unitDecimals;
-
-                int256 normalizedUnits = aggregateUnits.preciseDiv(baseUnits.toInt256());
-                // Calculate valuation of the component. Debt positions are effectively subtracted
-                valuation = normalizedUnits.preciseMul(componentPrice.toInt256()).add(valuation);
-            }
+            // TODO: Calculate valuation of the strategy
+            int256 strategyValuation = 0;
+            valuation = valuation.add(strategyValuation);
         }
 
         if (masterQuoteAsset != _quoteAsset && valuation > 0) {
@@ -114,9 +101,9 @@ contract GardenValuer {
             valuation = valuation.preciseDiv(quoteToMaster.toInt256());
         }
         // Get component price from price oracle. If price does not exist, revert.
-        uint256 reservePrice = priceOracle.getPrice(_garden.getReserveAsset(), masterQuoteAsset);
+        uint256 reservePrice = priceOracle.getPrice(_garden.reserveAsset(), masterQuoteAsset);
         valuation = valuation.add(
-            ERC20(_garden.getReserveAsset()).balanceOf(address(_garden)).toInt256().preciseMul(reservePrice.toInt256())
+            ERC20(_garden.reserveAsset()).balanceOf(address(_garden)).toInt256().preciseMul(reservePrice.toInt256())
         );
         // Adds ETH set aside
         valuation = valuation.add(address(_garden).balance.toInt256());

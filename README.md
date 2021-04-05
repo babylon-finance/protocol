@@ -58,6 +58,18 @@ yarn coverage
 yarn prettier
 ```
 
+💪 Solhint
+
+```bash
+yarn lint:contracts
+```
+
+📏 Contract Size
+
+```bash
+yarn estimate-size
+```
+
 🧪 Test
 
 ```bash

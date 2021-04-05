@@ -58,6 +58,7 @@ contract BabController is Ownable {
     event ModuleRemoved(address indexed _module);
 
     event PriceOracleChanged(address indexed _priceOracle, address _oldPriceOracle);
+    event RewardsDistributorChanged(address indexed _rewardsDistributor, address _oldRewardsDistributor);
     event ReservePoolChanged(address indexed _reservePool, address _oldReservePool);
     event TreasuryChanged(address _newTreasury, address _oldTreasury);
     event GardenValuerChanged(address indexed _gardenValuer, address _oldGardenValuer);
@@ -81,6 +82,7 @@ contract BabController is Ownable {
     address public priceOracle;
     address public reservePool;
     address public gardenFactory;
+    address public rewardsDistributor;
     mapping(uint8 => address) public strategyFactory;
     // Mapping of garden => integration identifier => integration address
     mapping(bytes32 => address) private integrations;
@@ -103,10 +105,12 @@ contract BabController is Ownable {
     uint256 public maxCooldownPeriod = 7 days;
 
     // Assets
-    uint256 public minRiskyPairLiquidityEth = 1000 * 1e18; // Absolute Min liquidity of assets for risky gardens 1000 ETH
+    // Absolute Min liquidity of assets for risky gardens 1000 ETH
+    uint256 public minRiskyPairLiquidityEth = 1000 * 1e18;
 
     // Enable Transfer of ERC20 gardenTokens
-    bool public gardenTokensTransfersEnabled = false; // Only members can transfer tokens until the protocol is fully decentralized
+    // Only members can transfer tokens until the protocol is fully decentralized
+    bool public gardenTokensTransfersEnabled = false;
 
     uint256 public protocolPerformanceFee = 5e16; // 5% (0.01% = 1e14, 1% = 1e16) on profits
     uint256 public protocolManagementFee = 5e15; // 0.5% (0.01% = 1e14, 1% = 1e16)
@@ -119,24 +123,27 @@ contract BabController is Ownable {
     /**
      * Initializes the initial fee recipient on deployment.
      *
-     * @param _treasury                    Address of the initial protocol fee recipient
-     * @param _gardenValuer             Address of the initial gardenValuer
-     * @param _priceOracle                 Address of the initial priceOracle
-     * @param _reservePool                 Address of the initial reservePool
-     * @param _gardenFactory            Address of the initial garden factory
+     * @param _treasury                     Address of the initial protocol fee recipient
+     * @param _gardenValuer                 Address of the initial gardenValuer
+     * @param _priceOracle                  Address of the initial priceOracle
+     * @param _reservePool                  Address of the initial reservePool
+     * @param _gardenFactory                Address of the initial garden factory
+     * @param _rewardsDistributor           Address of the initial garden distributor
      */
     constructor(
         address _treasury,
         address _gardenValuer,
         address _priceOracle,
         address _reservePool,
-        address _gardenFactory
+        address _gardenFactory,
+        address _rewardsDistributor
     ) {
         treasury = _treasury;
         gardenValuer = _gardenValuer;
         priceOracle = _priceOracle;
         reservePool = _reservePool;
         gardenFactory = _gardenFactory;
+        rewardsDistributor = _rewardsDistributor;
     }
 
     /* ============ External Functions ============ */
@@ -204,7 +211,8 @@ contract BabController is Ownable {
      * Can only happen after 2021 is finished.
      */
     function enableGardenTokensTransfers() external onlyOwner {
-        require(block.timestamp > 1641024000000, 'Transfers cannot be enabled yet'); // TODO: Check timestamp. January 1 2022
+        // TODO: Check timestamp. January 1 2022
+        require(block.timestamp > 1641024000000, 'Transfers cannot be enabled yet');
         gardenTokensTransfersEnabled = true;
     }
 
@@ -330,6 +338,20 @@ contract BabController is Ownable {
     }
 
     /**
+     * PRIVILEGED GOVERNANCE FUNCTION. Allows governance to edit the protocol fee recipient
+     *
+     * @param _newRewardsDistributor      Address of the new rewards distributor
+     */
+    function editRewardsDistributor(address _newRewardsDistributor) external onlyOwner {
+        require(_newRewardsDistributor != address(0), 'Address must not be 0');
+
+        address oldRewardsDistributor = rewardsDistributor;
+        rewardsDistributor = _newRewardsDistributor;
+
+        emit RewardsDistributorChanged(_newRewardsDistributor, oldRewardsDistributor);
+    }
+
+    /**
      * PRIVILEGED GOVERNANCE FUNCTION. Allows governance to edit the protocol garden factory
      *
      * @param _newGardenFactory      Address of the new garden factory
@@ -412,7 +434,7 @@ contract BabController is Ownable {
      * @param  _minRiskyPairLiquidityEth       Absolute min liquidity of an asset to grab price
      */
     function editLiquidityMinimum(uint256 _minRiskyPairLiquidityEth) public onlyOwner {
-        require(_minRiskyPairLiquidityEth > 0);
+        require(_minRiskyPairLiquidityEth > 0, '_minRiskyPairLiquidityEth > 0');
         minRiskyPairLiquidityEth = _minRiskyPairLiquidityEth;
 
         emit LiquidityMinimumEdited(_minRiskyPairLiquidityEth);
@@ -474,6 +496,10 @@ contract BabController is Ownable {
 
     function getProtocolWithdrawalGardenTokenFee() external view returns (uint256) {
         return protocolWithdrawalGardenTokenFee;
+    }
+
+    function getRewardsDistributor() external view returns (address) {
+        return rewardsDistributor;
     }
 
     function getTreasury() external view returns (address) {

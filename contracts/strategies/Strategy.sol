@@ -19,6 +19,7 @@
 pragma solidity 0.7.4;
 
 import 'hardhat/console.sol';
+
 import {Address} from '@openzeppelin/contracts/utils/Address.sol';
 import {ERC20} from '@openzeppelin/contracts/token/ERC20/ERC20.sol';
 import {ReentrancyGuard} from '@openzeppelin/contracts/utils/ReentrancyGuard.sol';
@@ -26,14 +27,16 @@ import {SafeMath} from '@openzeppelin/contracts/math/SafeMath.sol';
 import {SignedSafeMath} from '@openzeppelin/contracts/math/SignedSafeMath.sol';
 import {SafeCast} from '@openzeppelin/contracts/utils/SafeCast.sol';
 import {Initializable} from '@openzeppelin/contracts/proxy/Initializable.sol';
+
 import {AddressArrayUtils} from '../lib/AddressArrayUtils.sol';
-import {IWETH} from '../interfaces/external/weth/IWETH.sol';
 import {PreciseUnitMath} from '../lib/PreciseUnitMath.sol';
+
+import {IWETH} from '../interfaces/external/weth/IWETH.sol';
 import {IBabController} from '../interfaces/IBabController.sol';
 import {IGarden} from '../interfaces/IGarden.sol';
 import {ITradeIntegration} from '../interfaces/ITradeIntegration.sol';
-import {ITradeIntegration} from '../interfaces/ITradeIntegration.sol';
 import {IPriceOracle} from '../interfaces/IPriceOracle.sol';
+import {IRewardsDistributor} from '../interfaces/IRewardsDistributor.sol';
 
 /**
  * @title Strategy
@@ -77,7 +80,7 @@ contract Strategy is ReentrancyGuard, Initializable {
     }
 
     /**
-     * Throws if the sender is not a Communities's integration or integration not enabled
+     * Throws if the sender is not a Garden's integration or integration not enabled
      */
     modifier onlyIntegration() {
         // Internal function used to reduce bytecode size
@@ -109,55 +112,25 @@ contract Strategy is ReentrancyGuard, Initializable {
 
     /* ============ Constants ============ */
 
-    // Subposition constants
-    uint8 constant LIQUID_STATUS = 0;
-    uint8 constant LOCKED_AS_COLLATERAL_STATUS = 1;
-    uint8 constant IN_INVESTMENT_STATUS = 2;
-    uint8 constant BORROWED_STATUS = 3;
-
     uint256 constant SLIPPAGE_ALLOWED = 1e16; // 1%
     uint256 constant MAX_CANDIDATE_PERIOD = 7 days;
     uint256 constant MIN_VOTERS_TO_BECOME_ACTIVE = 2;
 
     // Keeper max fee
     uint256 internal constant MAX_KEEPER_FEE = (1e6 * 1e3 gwei);
-
-    /* ============ Struct ============ */
-
-    struct SubPosition {
-        address integration;
-        int256 balance;
-        uint8 status;
-    }
-
-    /**
-     * A struct that stores a component's cash position details and external positions
-     * This data structure allows O(1) access to a component's cash position units and
-     * virtual units.
-     *
-     * @param component           Address of token in the Position
-     * @param balance             Balance of this component
-     * @param enteredAt           Timestamp when this position was entered
-     * @param exitedAt            Timestamp when this position was exited
-     * @param updatedAt           Timestamp when this position was updated
-     */
-    struct Position {
-        address component;
-        uint8 positionState;
-        int256 balance;
-        SubPosition[] subpositions;
-        uint8 subpositionsCount;
-        uint256 enteredAt;
-        uint256 exitedAt;
-        uint256[] updatedAt;
-    }
+    uint256 internal constant MAX_STRATEGY_KEEPER_FEES = 2 * MAX_KEEPER_FEE;
 
     /* ============ State Variables ============ */
 
     // Babylon Controller Address
     IBabController public controller;
 
-    uint8 public kind; //Type of strategy. 0 = long, 1 = pool...
+    //Type of strategy.
+    // 0 = LongStrategy
+    // 1 = LiquidityPoolStrategy
+    // 2 = YieldFarmingStrategy
+    // 3 = LendStrategy
+    uint8 public kind;
 
     // Garden that these strategies belong to
     IGarden public garden;
@@ -175,7 +148,7 @@ contract Strategy is ReentrancyGuard, Initializable {
     bool public dataSet;
 
     uint256 public duration; // Duration of the bet
-    uint256 public stake; // Amount of stake by the strategist (in reserve asset) Neds to be positive
+    uint256 public stake; // Amount of stake by the strategist (in reserve asset) needs to be positive
     uint256 public maxCapitalRequested; // Amount of max capital to allocate
     uint256 public capitalAllocated; // Current amount of capital allocated
     uint256 public expectedReturn; // Expect return by this investment strategy
@@ -184,12 +157,11 @@ contract Strategy is ReentrancyGuard, Initializable {
     address[] public tokensNeeded; // Positions that need to be taken prior to enter trade
     uint256[] public tokenAmountsNeeded; // Amount of these positions
 
+    // Raul Review
+    uint256 public strategyRewards = 0; // Initialization. Rewards allocated for this strategy updated on finalized
+
     // Voters mapped to their votes.
     mapping(address => int256) public votes;
-
-    // List of positions
-    address[] public positions;
-    mapping(address => Position) public positionsByComponent;
 
     /* ============ Constructor ============ */
 
@@ -276,7 +248,11 @@ contract Strategy is ReentrancyGuard, Initializable {
         absoluteTotalVotes = absoluteTotalVotes + _absoluteTotalVotes;
         totalVotes = totalVotes + _totalVotes;
         active = true;
-        garden.payKeeper(msg.sender, _fee);
+
+        // Get Keeper Fees allocated
+        garden.allocateCapitalToInvestment(MAX_STRATEGY_KEEPER_FEES);
+
+        _payKeeper(msg.sender, _fee);
     }
 
     /**
@@ -295,12 +271,16 @@ contract Strategy is ReentrancyGuard, Initializable {
         );
         // Execute enter trade
         garden.allocateCapitalToInvestment(_capital);
-        calculateAndEditPosition(garden.getReserveAsset(), _capital, _capital.toInt256(), LIQUID_STATUS);
         capitalAllocated = capitalAllocated.add(_capital);
         _enterStrategy(_capital);
         // Sets the executed timestamp
         executedAt = block.timestamp;
-        garden.payKeeper(msg.sender, _fee);
+
+        // Add to Rewards Distributor an update of the Protocol Principal for BABL Mining Rewards calculations
+        IRewardsDistributor rewardsDistributor =
+            IRewardsDistributor(IBabController(controller).getRewardsDistributor());
+        rewardsDistributor.addProtocolPrincipal(_capital);
+        _payKeeper(msg.sender, _fee);
     }
 
     /**
@@ -317,22 +297,22 @@ contract Strategy is ReentrancyGuard, Initializable {
             'Idea can only be finalized after the minimum period has elapsed'
         );
         require(!finalized, 'This investment was already exited');
-        uint256 reserveAssetBeforeExiting = garden.getPrincipal();
         // Execute exit trade
         _exitStrategy();
-        capitalReturned = garden.getPrincipal().sub(reserveAssetBeforeExiting);
         // Mark as finalized
         finalized = true;
         active = false;
         exitedAt = block.timestamp;
-        // Transfer rewards and update positions
-        _transferIdeaRewards();
-        // Moves strategy to finalized
-        IGarden(garden).moveStrategyToFinalized(
-            capitalReturned.toInt256().sub(capitalAllocated.toInt256()),
-            address(this)
+        // Transfer rewards
+        _transferStrategyRewards(_fee);
+        // Pay Keeper Fee
+        _payKeeper(msg.sender, _fee);
+        uint256 remainingReserve = ERC20(garden.reserveAsset()).balanceOf(address(this));
+        // Sends the rest back if any
+        require(
+            ERC20(garden.reserveAsset()).transfer(address(garden), remainingReserve),
+            'Ensure capital does not get stuck'
         );
-        garden.payKeeper(msg.sender, _fee);
     }
 
     /**
@@ -341,7 +321,7 @@ contract Strategy is ReentrancyGuard, Initializable {
      */
     function expireStrategy(uint256 _fee) external onlyKeeper(_fee) nonReentrant onlyActiveGarden {
         _deleteCandidateStrategy();
-        garden.payKeeper(msg.sender, _fee);
+        _payKeeper(msg.sender, _fee);
     }
 
     /**
@@ -361,50 +341,14 @@ contract Strategy is ReentrancyGuard, Initializable {
         duration = _newDuration;
     }
 
-    /**
-     * Calculates the new  position balance and performs the edit with new balance
-     *
-     * @param _component                Address of the component
-     * @param _newBalance               Current balance of the component
-     * @param _deltaBalance             Delta applied on this op
-     * @param _subpositionStatus        Status of the position
-     * @return                          Current component balance
-     * @return                          Previous position balance
-     * @return                          New position balance
-     */
-    function calculateAndEditPosition(
-        address _component,
-        uint256 _newBalance,
-        int256 _deltaBalance,
-        uint8 _subpositionStatus
-    )
-        public
-        returns (
-            uint256,
-            uint256,
-            uint256
-        )
-    {
-        uint256 positionBalance = _getPositionBalance(_component).toUint256();
-
-        bool isPositionFound = _hasPosition(_component);
-        if (!isPositionFound && _newBalance > 0) {
-            _addPosition(_component, msg.sender);
-        } else if (isPositionFound && _newBalance == 0) {
-            _removePosition(_component);
-        }
-        _editPositionBalance(_component, _newBalance.toInt256(), msg.sender, _deltaBalance, _subpositionStatus);
-
-        return (_newBalance, positionBalance, _newBalance);
-    }
-
     // Any tokens (other than the target) that are sent here by mistake are recoverable by contributors
     // Exchange for WETH
     function sweep(address _token) external onlyContributor {
-        require(positionsByComponent[_token].balance == 0, 'Token is not one of the active positions');
+        // TODO: check that is not any of the strategy tokens
+        require(_token != garden.reserveAsset(), 'Cannot sweep reserve asset');
         uint256 balance = ERC20(_token).balanceOf(address(this));
         require(balance > 0, 'Token balance > 0');
-        _trade(_token, balance, garden.getReserveAsset());
+        _trade(_token, balance, garden.reserveAsset());
     }
 
     function invokeApprove(
@@ -431,42 +375,6 @@ contract Strategy is ReentrancyGuard, Initializable {
      */
     function isIdeaActive() external view returns (bool) {
         return executedAt > 0 && exitedAt == 0;
-    }
-
-    function isPosition(address _component) external view returns (bool) {
-        return positions.contains(_component);
-    }
-
-    /**
-     * Gets the total number of positions
-     */
-    function getPositionCount() external view returns (uint256) {
-        return positions.length;
-    }
-
-    /**
-     * Returns a list of Positions, through traversing the components.
-     * balances are converted to real balances. This function is typically used off-chain for data presentation purposes.
-     */
-    function getPositions() external view returns (address[] memory) {
-        return positions;
-    }
-
-    /**
-     * Returns whether the garden component  position real balance is greater than or equal to balances passed in.
-     */
-    function hasSufficientBalance(address _component, uint256 _balance) external view returns (bool) {
-        return _getPositionBalance(_component).toUint256() >= _balance;
-    }
-
-    /**
-     * Get the position of a component
-     *
-     * @param _component          Address of the component
-     * @return                    Balance
-     */
-    function getPositionBalance(address _component) external view returns (int256) {
-        return _getPositionBalance(_component);
     }
 
     /**
@@ -526,7 +434,25 @@ contract Strategy is ReentrancyGuard, Initializable {
         return (address(this), active, dataSet, finalized, executedAt, exitedAt);
     }
 
+    function getUserVotes(address _address) external view returns (int256) {
+        return votes[_address];
+    }
+
     /* ============ Internal Functions ============ */
+
+    /**
+     * Pays gas cost back to the keeper from executing a transaction
+     * @param _keeper             Keeper that executed the transaction
+     * @param _fee                The fee paid to keeper to compensate the gas cost
+     */
+    function _payKeeper(address payable _keeper, uint256 _fee) internal {
+        require(IBabController(controller).isValidKeeper(_keeper), 'Only Keeper'); // Only keeper
+        // Pay Keeper in WETH
+        if (_fee > 0) {
+            require(ERC20(garden.reserveAsset()).balanceOf(address(this)) >= _fee, 'Not enough weth to pay keeper'); // not enough weth for gas subsidy
+            require(ERC20(garden.reserveAsset()).transfer(_keeper, _fee), 'Not enough weth to pay keeper'); // not enough weth for gas subsidy
+        }
+    }
 
     /**
      * Enters the strategy. Virtual method.
@@ -555,7 +481,6 @@ contract Strategy is ReentrancyGuard, Initializable {
         require(block.timestamp.sub(enteredAt) > MAX_CANDIDATE_PERIOD, 'Voters still have time');
         require(executedAt == 0, 'This strategy has executed');
         require(!finalized, 'This strategy already exited');
-        _returnStake();
         IGarden(garden).expireCandidateStrategy(address(this));
         // TODO: Call selfdestruct??
     }
@@ -582,9 +507,9 @@ contract Strategy is ReentrancyGuard, Initializable {
     /**
      * Function that calculates the price using the oracle and executes a trade.
      * Must call the exchange to get the price and pass minReceiveQuantity accordingly.
-     * @param _sendToken              Token to exchange
-     * @param _sendQuantity           Amount of tokens to send
-     * @param _receiveToken           Token to receive
+     * @param _sendToken                    Token to exchange
+     * @param _sendQuantity                 Amount of tokens to send
+     * @param _receiveToken                 Token to receive
      */
     function _trade(
         address _sendToken,
@@ -600,16 +525,16 @@ contract Strategy is ReentrancyGuard, Initializable {
         return minAmountExpected;
     }
 
-    function _transferIdeaRewards() internal {
-        address reserveAsset = garden.getReserveAsset();
-        int256 reserveAssetDelta = capitalReturned.toInt256();
-
+    function _transferStrategyRewards(uint256 _fee) internal {
+        capitalReturned = ERC20(garden.reserveAsset()).balanceOf(address(this)).sub(_fee).sub(MAX_STRATEGY_KEEPER_FEES);
+        address reserveAsset = garden.reserveAsset();
+        int256 reserveAssetDelta = capitalReturned.toInt256().sub(capitalAllocated.toInt256());
+        uint256 protocolProfits = 0;
         // Idea returns were positive
-        if (capitalReturned > capitalAllocated) {
+        if (capitalReturned >= capitalAllocated) {
             uint256 profits = capitalReturned - capitalAllocated; // in reserve asset (weth)
-            _returnStake();
             // Send weth performance fee to the protocol
-            uint256 protocolProfits = IBabController(controller).getProtocolPerformanceFee().preciseMul(profits);
+            protocolProfits = IBabController(controller).getProtocolPerformanceFee().preciseMul(profits);
             require(
                 ERC20(reserveAsset).transferFrom(
                     address(this),
@@ -619,108 +544,32 @@ contract Strategy is ReentrancyGuard, Initializable {
                 'Protocol perf fee failed'
             );
             reserveAssetDelta.add(int256(-protocolProfits));
+            capitalReturned = capitalReturned.sub(protocolProfits);
         } else {
             // Returns were negative
-            // TODO: Transform BABL to reserve asset and add
-            // reserveAssetDelta.add(int256(stake));
+            // Burn strategist stake and add the amount to the garden
+            garden.burnStrategistStake(strategist, capitalReturned.preciseDiv(capitalAllocated).preciseMul(stake));
+            reserveAssetDelta.add(int256(stake));
         }
         // Return the balance back to the garden
         require(
             ERC20(reserveAsset).transferFrom(address(this), address(garden), capitalReturned),
             'Idea capital return failed'
         );
-        // Updates strategy posiiton
-        calculateAndEditPosition(
-            reserveAsset,
-            ERC20(reserveAsset).balanceOf(address(this)),
-            int256(-capitalReturned),
-            LIQUID_STATUS
-        );
-        // Updates reserve asset position in the garden
-        uint256 _newTotal = garden.getPrincipal().toInt256().add(reserveAssetDelta).toUint256();
+
+        // Updates reserve asset
+        uint256 _newTotal = garden.principal().toInt256().add(reserveAssetDelta).toUint256();
         garden.updatePrincipal(_newTotal);
         // Start a redemption window in the garden with this capital
         garden.startRedemptionWindow(capitalReturned);
-    }
 
-    function _returnStake() internal {
-        // Send stake back to the strategist
-        require(ERC20(address(garden)).transferFrom(address(this), strategist, stake), 'Ideator stake return failed');
-    }
-
-    /**
-     * Internal MODULE FUNCTION. Low level function that adds a component to the positions array.
-     */
-    function _addPosition(address _component, address _integration) internal {
-        Position storage position = positionsByComponent[_component];
-
-        position.subpositions.push(SubPosition({integration: _integration, balance: 0, status: 0}));
-        position.subpositionsCount++;
-        position.enteredAt = block.timestamp;
-
-        positions.push(_component);
-        emit PositionAdded(_component);
-    }
-
-    /**
-     * Internal MODULE FUNCTION. Low level function that removes a component from the positions array.
-     */
-    function _removePosition(address _component) internal {
-        Position storage position = positionsByComponent[_component];
-        positions = positions.remove(_component);
-        position.exitedAt = block.timestamp;
-        emit PositionRemoved(_component);
-    }
-
-    /**
-     * Internal MODULE FUNCTION. Low level function that edits a component's position
-     */
-    function _editPositionBalance(
-        address _component,
-        int256 _amount,
-        address _integration,
-        int256 _deltaBalance,
-        uint8 _subpositionStatus
-    ) internal {
-        Position storage position = positionsByComponent[_component];
-        position.balance = _amount;
-        position.updatedAt.push(block.timestamp);
-        int256 subpositionIndex = _getSubpositionIndex(_component, _integration);
-        if (subpositionIndex == -1) {
-            position.subpositions.push(
-                SubPosition({integration: _integration, balance: _deltaBalance, status: _subpositionStatus})
-            );
-        } else {
-            position.subpositions[subpositionIndex.toUint256()].balance = _deltaBalance;
-            position.subpositions[subpositionIndex.toUint256()].status = _subpositionStatus;
-        }
-
-        emit PositionBalanceEdited(_component, _amount);
-    }
-
-    function _getSubpositionIndex(address _component, address _integration) internal view returns (int256) {
-        Position storage position = positionsByComponent[_component];
-        for (uint8 i = 0; i < position.subpositionsCount; i++) {
-            if (position.subpositions[i].integration == _integration) {
-                return i;
-            }
-        }
-        return -1;
-    }
-
-    /**
-     * Returns whether the garden has a position for a given component (if the real balance is > 0)
-     */
-    function _hasPosition(address _component) internal view returns (bool) {
-        return _getPositionBalance(_component) > 0;
-    }
-
-    function _getPositionBalance(address _component) internal view returns (int256) {
-        return positionsByComponent[_component].balance;
-    }
-
-    function abs(int256 x) private pure returns (int256) {
-        return x >= 0 ? x : -x;
+        // Moves strategy to finalized
+        IGarden(garden).moveStrategyToFinalized(reserveAssetDelta, address(this));
+        IRewardsDistributor rewardsDistributor =
+            IRewardsDistributor(IBabController(controller).getRewardsDistributor());
+        // Substract the Principal in the Rewards Distributor to update the Protocol power value
+        rewardsDistributor.substractProtocolPrincipal(capitalAllocated);
+        strategyRewards = rewardsDistributor.getStrategyRewards(address(this));
     }
 
     function _getPrice(address _assetOne, address _assetTwo) internal returns (uint256) {
@@ -729,4 +578,6 @@ contract Strategy is ReentrancyGuard, Initializable {
         oracle.updateAdapters(_assetOne, _assetTwo);
         return oracle.getPrice(_assetOne, _assetTwo);
     }
+
+    receive() external payable {} // solium-disable-line quotes
 }

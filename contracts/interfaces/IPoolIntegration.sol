@@ -20,7 +20,7 @@ pragma solidity 0.7.4;
 import {IIntegration} from './IIntegration.sol';
 
 /**
- * @title IIntegration
+ * @title IPoolIntegration
  * @author Babylon Finance
  *
  * Interface for liquiditypool protocol integrations
@@ -41,6 +41,8 @@ interface IPoolIntegration is IIntegration {
     ) external;
 
     function getPoolTokens(address _poolAddress) external view returns (address[] memory);
+
+    function getPoolWeights(address _poolAddress) external view returns (uint256[] memory);
 
     function isPool(address _poolAddress) external view returns (bool);
 }

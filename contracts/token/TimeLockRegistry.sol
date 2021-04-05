@@ -135,12 +135,8 @@ contract TimeLockRegistry is Ownable {
 
         if (newTokenVested.team == true) {
             newTokenVested.vestingEnd = vestingStartingDate.add(teamVesting);
-            // Team members & advisors have Cliff of 1 year
-            newTokenVested.cliff = true;
         } else {
             newTokenVested.vestingEnd = vestingStartingDate.add(investorVesting);
-            // Investors has not Cliff
-            newTokenVested.cliff = false;
         }
         newTokenVested.lastClaim = vestingStartingDate;
 
@@ -225,7 +221,6 @@ contract TimeLockRegistry is Ownable {
             _receiver,
             amount,
             tokenVested[_receiver].team,
-            tokenVested[_receiver].cliff,
             tokenVested[_receiver].vestingBegin,
             tokenVested[_receiver].vestingEnd,
             tokenVested[_receiver].lastClaim
@@ -245,7 +240,6 @@ contract TimeLockRegistry is Ownable {
         view
         returns (
             bool team,
-            bool cliff,
             uint256 start,
             uint256 end,
             uint256 last
@@ -253,7 +247,6 @@ contract TimeLockRegistry is Ownable {
     {
         return (
             tokenVested[address_].team,
-            tokenVested[address_].cliff,
             tokenVested[address_].vestingBegin,
             tokenVested[address_].vestingEnd,
             tokenVested[address_].lastClaim

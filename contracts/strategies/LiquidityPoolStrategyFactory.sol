@@ -31,7 +31,7 @@ import {Clones} from '@openzeppelin/contracts/proxy/Clones.sol';
  * Factory to create liquidity pool strategy contracts
  */
 contract LiquidityPoolStrategyFactory {
-    address immutable liquidityPoolStrategy;
+    address payable immutable liquidityPoolStrategy;
 
     constructor() {
         liquidityPoolStrategy = address(new LiquidityPoolStrategy());
@@ -61,7 +61,7 @@ contract LiquidityPoolStrategyFactory {
         uint256 _expectedReturn,
         uint256 _minRebalanceCapital
     ) external returns (address) {
-        address clone = Clones.clone(liquidityPoolStrategy);
+        address payable clone = payable(Clones.clone(liquidityPoolStrategy));
         IStrategy(clone).initialize(
             _strategist,
             _garden,

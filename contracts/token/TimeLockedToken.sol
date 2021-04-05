@@ -80,14 +80,12 @@ abstract contract TimeLockedToken is VoteToken {
     /// @notice The profile of each token owner under its particular vesting conditions
     /**
      * @param team Indicates whether or not is a Team member or Advisor (true = team member/advisor, false = private investor)
-     * @param cliff Indicates whether or not is under cliff agreement of 1 year
      * @param vestingBegin When the vesting begins for such token owner
      * @param vestingEnd When the vesting ends for such token owner
      * @param lastClaim When the last claim was done
      */
     struct VestedToken {
         bool teamOrAdvisor;
-        bool cliff;
         uint256 vestingBegin;
         uint256 vestingEnd;
         uint256 lastClaim;
@@ -149,7 +147,6 @@ abstract contract TimeLockedToken is VoteToken {
      * @param _receiver Address to receive the tokens
      * @param _amount Tokens to be transferred
      * @param _profile True if is a Team Member or Advisor
-     * @param _cliff True if is a Team Member or Advisor under cliff clause
      * @param _vestingBegin Unix Time when the vesting for that particular address
      * @param _vestingEnd Unix Time when the vesting for that particular address
      * @param _lastClaim Unix Time when the claim was done from that particular address
@@ -159,7 +156,6 @@ abstract contract TimeLockedToken is VoteToken {
         address _receiver,
         uint256 _amount,
         bool _profile,
-        bool _cliff,
         uint256 _vestingBegin,
         uint256 _vestingEnd,
         uint256 _lastClaim
@@ -176,7 +172,6 @@ abstract contract TimeLockedToken is VoteToken {
         VestedToken storage newVestedToken = vestedToken[_receiver];
 
         newVestedToken.teamOrAdvisor = _profile;
-        newVestedToken.cliff = _cliff;
         newVestedToken.vestingBegin = _vestingBegin;
         newVestedToken.vestingEnd = _vestingEnd;
         newVestedToken.lastClaim = _lastClaim;
@@ -191,11 +186,11 @@ abstract contract TimeLockedToken is VoteToken {
     }
 
     /**
-     * PRIVILEGED GOVERNANCE FUNCTION. Cancel and remove locked tokens due to non-completion of cliff or vesting period
+     * PRIVILEGED GOVERNANCE FUNCTION. Cancel and remove locked tokens due to non-completion of  vesting period
      * applied only by Time Lock Registry and specifically to Team or Advisors
      *
      * @dev Cancel distribution registration
-     * @param lockedAccount that should have its still locked distribution removed due to non-completion of its cliff or vesting period
+     * @param lockedAccount that should have its still locked distribution removed due to non-completion of its vesting period
      */
     function cancelTokens(address lockedAccount) public onlyTimeLockRegistry returns (uint256) {
         require(distribution[lockedAccount] != 0, 'TimeLockedToken::cancelTokens:Not registered');
@@ -239,7 +234,7 @@ abstract contract TimeLockedToken is VoteToken {
         require(amount > 0, 'No tokens to claim');
 
         // After a proper claim, locked tokens of Team and Advisors profiles are under restricted special vesting conditions so they automatic grant
-        // rights to the Time Lock Registry to only retire locked tokens if non-compliance vesting conditions take places along the cliff and vesting periods.
+        // rights to the Time Lock Registry to only retire locked tokens if non-compliance vesting conditions take places along the vesting periods.
         // It does not apply to Investors under vesting (their locked tokens cannot be removed).
         if (vestedToken[msg.sender].teamOrAdvisor == true) {
             approve(address(timeLockRegistry), amount);
@@ -275,11 +270,8 @@ abstract contract TimeLockedToken is VoteToken {
         uint256 amount = distribution[account];
         uint256 lockedAmount = amount;
 
-        // in case of restriction under cliff, all tokens will be locked until first year
-        if (
-            vestedToken[account].cliff == true &&
-            (block.timestamp < vestedToken[account].vestingBegin.add(vestingCliff))
-        ) {
+        // Team and investors cannot transfer tokens in the first year
+        if (vestedToken[account].vestingBegin.add(365 days) > block.timestamp) {
             return lockedAmount;
         }
 
