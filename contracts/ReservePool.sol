@@ -60,13 +60,17 @@ contract ReservePool is ERC20, ReentrancyGuard, Ownable {
 
     /* ============ State Variables ============ */
 
-    string constant NAME = 'Babylon Reserve Token';
-    string constant SYMBOL = 'RBABL';
+    string public constant NAME = 'Babylon Reserve Token';
+    string public constant SYMBOL = 'RBABL';
 
-    uint256 constant MIN_DEPOSIT = 1e17; // Min Deposit
-    uint256 constant LOCK_WINDOW = 7 days; // How long your deposit will be locked
-    uint256 constant MAX_OWNERSHIP = 5e17; // 20% is the actual max ownership of the reserve pool allowed per garden
-    uint256 constant MIN_NAV = 100 * 1e18; // Absolute min NAV of the garden in WETH. 500
+    // Min Deposit
+    uint256 public constant MIN_DEPOSIT = 1e17;
+    // How long your deposit will be locked
+    uint256 public constant LOCK_WINDOW = 7 days;
+    // 20% is the actual max ownership of the reserve pool allowed per garden
+    uint256 public constant MAX_OWNERSHIP = 5e17;
+    // Absolute min NAV of the garden in WETH. 500
+    uint256 public constant MIN_NAV = 100 * 1e18;
 
     // Instance of the Controller contract
     address public controller;

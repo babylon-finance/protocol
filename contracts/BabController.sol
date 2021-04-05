@@ -105,10 +105,12 @@ contract BabController is Ownable {
     uint256 public maxCooldownPeriod = 7 days;
 
     // Assets
-    uint256 public minRiskyPairLiquidityEth = 1000 * 1e18; // Absolute Min liquidity of assets for risky gardens 1000 ETH
+    // Absolute Min liquidity of assets for risky gardens 1000 ETH
+    uint256 public minRiskyPairLiquidityEth = 1000 * 1e18;
 
     // Enable Transfer of ERC20 gardenTokens
-    bool public gardenTokensTransfersEnabled = false; // Only members can transfer tokens until the protocol is fully decentralized
+    // Only members can transfer tokens until the protocol is fully decentralized
+    bool public gardenTokensTransfersEnabled = false;
 
     uint256 public protocolPerformanceFee = 5e16; // 5% (0.01% = 1e14, 1% = 1e16) on profits
     uint256 public protocolManagementFee = 5e15; // 0.5% (0.01% = 1e14, 1% = 1e16)
@@ -209,7 +211,8 @@ contract BabController is Ownable {
      * Can only happen after 2021 is finished.
      */
     function enableGardenTokensTransfers() external onlyOwner {
-        require(block.timestamp > 1641024000000, 'Transfers cannot be enabled yet'); // TODO: Check timestamp. January 1 2022
+        // TODO: Check timestamp. January 1 2022
+        require(block.timestamp > 1641024000000, 'Transfers cannot be enabled yet');
         gardenTokensTransfersEnabled = true;
     }
 
@@ -431,7 +434,7 @@ contract BabController is Ownable {
      * @param  _minRiskyPairLiquidityEth       Absolute min liquidity of an asset to grab price
      */
     function editLiquidityMinimum(uint256 _minRiskyPairLiquidityEth) public onlyOwner {
-        require(_minRiskyPairLiquidityEth > 0);
+        require(_minRiskyPairLiquidityEth > 0, '_minRiskyPairLiquidityEth > 0');
         minRiskyPairLiquidityEth = _minRiskyPairLiquidityEth;
 
         emit LiquidityMinimumEdited(_minRiskyPairLiquidityEth);
