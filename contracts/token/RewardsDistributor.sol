@@ -441,8 +441,10 @@ contract RewardsDistributor is Ownable {
                             } else if (i < getQuarter(_time).sub(protocolPerTimestamp[timeList[pid.sub(1)]].quarterBelonging)) {
                                 // We are in an intermediate quarter
                                 newCheckpoint.quarterPower = powerToSplit.mul(EPOCH_DURATION).div(_time.sub(protocolPerTimestamp[timeList[pid.sub(1)]].time));
-                                protocolCheckpoint.supplyPerQuarter = tokenSupplyPerQuarter(protocolPerTimestamp[timeList[pid.sub(1)]].quarterBelonging.add(i));
+                                newCheckpoint.supplyPerQuarter = tokenSupplyPerQuarter(protocolPerTimestamp[timeList[pid.sub(1)]].quarterBelonging.add(i));
                                 console.log('UPDATING INTERMEDIATE QUARTERS RETROSPECTIVELY',newCheckpoint.quarterPower);
+                                //TODO ADD QUARTER SUPPLY!!!! newCheckpoint.quarterSupply =  tokenSupplyPerQuarter(getQuarter(_time));
+
                             } else {
                                 // We are in the last quarter of the strategy   
                                 protocolCheckpoint.quarterPower = powerToSplit
