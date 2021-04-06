@@ -250,11 +250,9 @@ contract RewardsDistributor is Ownable {
                 console.log('Supply per quarter',protocolPerQuarter[startingQuarter.add(i)].supplyPerQuarter);
 
                 require(strategyPower[i]<= protocolPower[i],'overflow str over protocol in an epoch');
+
                 // TODO DOWNSIDE 96 bits into XX K BABLS 
-                // TODO CHECK INITIALIZATION
-                //if (protocolPower[i] == 0) {
-                //    protocolPower[i] = protocolPower[i].add(strategyPower[i]);
-                //}
+
                 bablRewards = bablRewards.add(
                     strategyPower[i]
                         .preciseDiv(protocolPower[i])
@@ -395,6 +393,10 @@ contract RewardsDistributor is Ownable {
 
     function _addProtocolPerQuarter(uint256 _time) internal {
         ProtocolPerQuarter storage protocolCheckpoint = protocolPerQuarter[getQuarter(_time)];
+        console.log('Quarter PID is %s',pid);
+        console.log('Quarter Time is %s',_time);
+        console.log('Quarter Check', isProtocolPerQuarter[getQuarter(_time).sub(1)]);
+
         if (!isProtocolPerQuarter[getQuarter(_time).sub(1)]) {
             // The quarter is not yet initialized then we create it
             protocolCheckpoint.quarterNumber = getQuarter(_time);
@@ -407,6 +409,7 @@ contract RewardsDistributor is Ownable {
                 // We just take the proportional power for this quarter from previous checkpoint
                 uint256 powerToSplit = protocolPerTimestamp[_time]
                     .power.sub(protocolPerTimestamp[timeList[pid.sub(1)]].power);
+                console.log('POWER TO SPLIT',powerToSplit);
                 
                 if (protocolPerTimestamp[timeList[pid.sub(1)]].quarterBelonging == getQuarter(_time).sub(1)) {
                     // There were no intermediate epochs without checkpoints
@@ -420,29 +423,34 @@ contract RewardsDistributor is Ownable {
                     protocolPerQuarter[getQuarter(_time).sub(1)].quarterPower = protocolPerQuarter[getQuarter(_time).sub(1)].quarterPower.add(powerToSplit.sub(protocolCheckpoint.quarterPower));
                 } else {
                     console.log('PID is %s',pid);
+                    console.log('%s QUARTERS WITHOUT CHECKPOINTS BETWEEN THIS AND PREVIOUS CHECKPOINT, THIS QUARTER %s, PREVIOUS QUARTER', getQuarter(_time).sub(protocolPerTimestamp[timeList[pid.sub(1)]].quarterBelonging), getQuarter(_time), protocolPerTimestamp[timeList[pid.sub(1)]].quarterBelonging);
+
                     // There were intermediate epochs without checkpoints - we need to create their protocolPerQuarter's and update the last one
                     // We have to update all the quarters including where the previous checkpoint is and the one were we are now
-                    for (uint i = 0; i < getQuarter(_time).sub(protocolPerTimestamp[timeList[pid.sub(1)]].quarterBelonging); i++){
+                    for (uint i = 0; i <= getQuarter(_time).sub(protocolPerTimestamp[timeList[pid.sub(1)]].quarterBelonging); i++){
+                        console.log('i %s AND COMPARISON', i, getQuarter(_time).sub(protocolPerTimestamp[timeList[pid.sub(1)]].quarterBelonging));
                         ProtocolPerQuarter storage newCheckpoint = protocolPerQuarter[protocolPerTimestamp[timeList[pid.sub(1)]].quarterBelonging.add(i)];
                         uint256 slotEnding = START_TIME.add(protocolPerTimestamp[timeList[pid.sub(1)]].quarterBelonging.add(i).mul(EPOCH_DURATION)); 
                             if (i == 0) {
                                 // We are in the first quarter to update, we add the corresponding part
-                                console.log('Initial quarter',protocolPerTimestamp[timeList[pid.sub(1)]].quarterBelonging);
                                 console.log('Timestamp of previous checkpoint',protocolPerTimestamp[timeList[pid.sub(1)]].time);
 
-                                newCheckpoint.quarterPower = newCheckpoint.quarterPower.add(powerToSplit.mul(slotEnding.sub(protocolPerTimestamp[timeList[pid.sub(1)]].time).div(_time.sub(protocolPerTimestamp[timeList[pid.sub(1)]].time))));
+                                newCheckpoint.quarterPower = newCheckpoint.quarterPower.add(powerToSplit.mul(slotEnding.sub(protocolPerTimestamp[timeList[pid.sub(1)]].time)).div(_time.sub(protocolPerTimestamp[timeList[pid.sub(1)]].time)));
+                                console.log('UPDATING INITIAL QUARTER RETROSPECTIVELY OLD %s NEW %s',protocolPerTimestamp[timeList[pid.sub(1)]].quarterBelonging, newCheckpoint.quarterPower);
 
-                            } else if (i < getQuarter(_time).sub(protocolPerTimestamp[timeList[pid.sub(1)]].quarterBelonging).sub(1)){
+                            } else if (i < getQuarter(_time).sub(protocolPerTimestamp[timeList[pid.sub(1)]].quarterBelonging)) {
                                 // We are in an intermediate quarter
                                 newCheckpoint.quarterPower = powerToSplit.mul(EPOCH_DURATION).div(_time.sub(protocolPerTimestamp[timeList[pid.sub(1)]].time));
                                 protocolCheckpoint.supplyPerQuarter = tokenSupplyPerQuarter(protocolPerTimestamp[timeList[pid.sub(1)]].quarterBelonging.add(i));
-                                console.log('Intermediate checkpoint',newCheckpoint.quarterPower);
+                                console.log('UPDATING INTERMEDIATE QUARTERS RETROSPECTIVELY',newCheckpoint.quarterPower);
                             } else {
                                 // We are in the last quarter of the strategy   
                                 protocolCheckpoint.quarterPower = powerToSplit
                                 .mul(_time.sub(START_TIME.add(getQuarter(_time).mul(EPOCH_DURATION).sub(EPOCH_DURATION))))
                                 .div(_time.sub(protocolPerTimestamp[timeList[pid.sub(1)]].time));
                                 protocolCheckpoint.supplyPerQuarter = tokenSupplyPerQuarter(getQuarter(_time));
+                                console.log('UPDATING FINAL QUARTER RETROSPECTIVELY',newCheckpoint.quarterPower);
+
                             }
                     }
                 }
@@ -452,7 +460,10 @@ contract RewardsDistributor is Ownable {
         } else {
             // Quarter checkpoint already created, it must have been filled with general info
             // We update the power of the quarter by adding the new difference between last quarter checkpoint and this checkpoint
+            console.log('PREVIOUS QUARTER UPDATE WITHIN THE QUARTER',protocolCheckpoint.quarterPower);
             protocolCheckpoint.quarterPower = protocolCheckpoint.quarterPower.add(protocolPerTimestamp[_time].power.sub(protocolPerTimestamp[timeList[pid.sub(1)]].power));
+            console.log('AFTER QUARTER UPDATE WITHIN THE QUARTER',protocolCheckpoint.quarterPower);
+
         }
         protocolCheckpoint.quarterPrincipal = protocolPrincipal;
     }
