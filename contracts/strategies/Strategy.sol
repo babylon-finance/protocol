@@ -273,8 +273,10 @@ contract Strategy is ReentrancyGuard, Initializable {
         garden.allocateCapitalToInvestment(_capital);
         capitalAllocated = capitalAllocated.add(_capital);
         _enterStrategy(_capital);
-        // Sets the executed timestamp
-        executedAt = block.timestamp;
+        // Sets the executed timestamp on first execution
+        if (executedAt == 0) {
+            executedAt = block.timestamp;
+        }
 
         // Add to Rewards Distributor an update of the Protocol Principal for BABL Mining Rewards calculations
         IRewardsDistributor rewardsDistributor =
