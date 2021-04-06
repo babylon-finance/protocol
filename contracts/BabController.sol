@@ -59,7 +59,6 @@ contract BabController is Ownable {
 
     event PriceOracleChanged(address indexed _priceOracle, address _oldPriceOracle);
     event RewardsDistributorChanged(address indexed _rewardsDistributor, address _oldRewardsDistributor);
-    event ReservePoolChanged(address indexed _reservePool, address _oldReservePool);
     event TreasuryChanged(address _newTreasury, address _oldTreasury);
     event GardenValuerChanged(address indexed _gardenValuer, address _oldGardenValuer);
     event GardenFactoryChanged(address indexed _gardenFactory, address _oldGardenFactory);
@@ -293,22 +292,6 @@ contract BabController is Ownable {
     }
 
     /**
-     * PRIVILEGED GOVERNANCE FUNCTION. Allows governance to change the reserve pool
-     *
-     * @param _reservePool               Address of the new reserve pool
-     */
-    function editReservePool(address _reservePool) external onlyOwner {
-        require(_reservePool != reservePool, 'Reserve Pool already exists');
-
-        require(_reservePool != address(0), 'Reserve pool must exist');
-
-        address oldReservePool = reservePool;
-        reservePool = _reservePool;
-
-        emit ReservePoolChanged(_reservePool, oldReservePool);
-    }
-
-    /**
      * PRIVILEGED GOVERNANCE FUNCTION. Allows governance to change the integration registry
      *
      * @param _gardenValuer Address of the new price oracle
@@ -449,10 +432,6 @@ contract BabController is Ownable {
 
     function getPriceOracle() external view returns (address) {
         return priceOracle;
-    }
-
-    function getReservePool() external view returns (address) {
-        return reservePool;
     }
 
     function getGardenValuer() external view returns (address) {

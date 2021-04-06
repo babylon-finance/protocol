@@ -44,8 +44,6 @@ interface IBabController {
 
     function editPriceOracle(address _priceOracle) external;
 
-    function editReservePool(address _reservePool) external;
-
     function editGardenValuer(address _gardenValuer) external;
 
     function editRewardsDistributor(address _rewardsDistributor) external;
@@ -77,11 +75,7 @@ interface IBabController {
 
     function gardenTokensTransfersEnabled() external view returns (bool);
 
-    function protocolReservePoolDiscount() external view returns (uint256);
-
     function getPriceOracle() external view returns (address);
-
-    function getReservePool() external view returns (address);
 
     function getRewardsDistributor() external view returns (address);
 
