@@ -75,10 +75,11 @@ typings/
 # dependencies
 **/mnemonic.txt
 **/package-lock.json
+
 #mnemonic
 *.txt
-cache/*
-artifacts/*
+cache
+artifacts
 
 
 .DS_Store
