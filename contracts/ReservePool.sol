@@ -74,7 +74,7 @@ contract ReservePool is ERC20, ReentrancyGuard, Ownable {
 
     // Instance of the Controller contract
     address public controller;
-    address public constant weth = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
+    address public constant WETH = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
 
     mapping(address => uint256) public userTimelock; // Balances of timelock per user
 
@@ -131,13 +131,13 @@ contract ReservePool is ERC20, ReentrancyGuard, Ownable {
     function deposit() external payable nonReentrant {
         require(msg.value >= MIN_DEPOSIT, 'Send at least 0.1 eth');
         _mint(msg.sender, msg.value);
-        IWETH(weth).deposit{value: msg.value}();
+        IWETH(WETH).deposit{value: msg.value}();
         userTimelock[msg.sender] = block.timestamp; // Window resets with every deposit
         emit ReservePoolDeposit(msg.sender, msg.value, block.timestamp);
     }
 
     /**
-     * Exchanges the reserve pool tokens for the underlying amount of weth.
+     * Exchanges the reserve pool tokens for the underlying amount of WETH.
      *
      * @param _amount               Quantity of the reserve token to exchange
      * @param _to                   Address to send component assets to
@@ -146,34 +146,34 @@ contract ReservePool is ERC20, ReentrancyGuard, Ownable {
         require(_amount <= balanceOf(msg.sender), 'Insufficient balance');
         require(block.timestamp.sub(userTimelock[msg.sender]) > LOCK_WINDOW, 'The principal is still locked');
         uint256 ethAmount = _amount.preciseDiv(totalSupply()).preciseMul(getReservePoolValuation());
-        require(IWETH(weth).balanceOf(address(this)) >= ethAmount, 'Not enough liquidity in the reserve pool');
+        require(IWETH(WETH).balanceOf(address(this)) >= ethAmount, 'Not enough liquidity');
         _burn(msg.sender, _amount);
-        IWETH(weth).withdraw(ethAmount);
+        IWETH(WETH).withdraw(ethAmount);
         _to.transfer(ethAmount);
         emit ReservePoolClaim(msg.sender, _amount, ethAmount, block.timestamp);
     }
 
     /**
-     * Exchanges the reserve pool tokens for the underlying amount of weth.
+     * Exchanges the reserve pool tokens for the underlying amount of WETH.
      * Only a garden or the owner can call this
      * @param _garden               Garden that the sender wants to sell tokens of
      * @param _amount                  Quantity of the garden tokens that sender wants to sell
      */
     function sellTokensToLiquidityPool(address _garden, uint256 _amount) external nonReentrant returns (uint256) {
         require(IBabController(controller).isSystemContract(_garden), 'Only valid gardens');
-        require(IRollingGarden(_garden).balanceOf(msg.sender) >= _amount, 'Sender does not have enough tokens');
+        require(IRollingGarden(_garden).balanceOf(msg.sender) >= _amount, 'Sender have no tokens');
         require(isReservePoolAllowedToBuy(_garden, _amount), 'Check if the buy is allowed');
         // TODO: Make dynamic
         uint256 discount = 1e17;
         // Get valuation of the Garden with the quote asset as the reserve asset.
         uint256 gardenValuation =
-            IGardenValuer(IBabController(controller).getGardenValuer()).calculateGardenValuation(_garden, weth);
+            IGardenValuer(IBabController(controller).getGardenValuer()).calculateGardenValuation(_garden, WETH);
         uint256 amountValue = gardenValuation.preciseMul(_amount);
         uint256 amountDiscounted = amountValue - amountValue.preciseMul(discount);
-        require(IWETH(weth).balanceOf(address(this)) >= amountDiscounted, 'There needs to be enough WETH');
+        require(IWETH(WETH).balanceOf(address(this)) >= amountDiscounted, 'There needs to be enough WETH');
         // Mints tokens to the reserve pool
         IRollingGarden(_garden).burnAssetsFromSenderAndMintToReserve(msg.sender, _amount);
-        require(IWETH(weth).transfer(msg.sender, amountDiscounted), 'WETH transfer failed');
+        require(IWETH(WETH).transfer(msg.sender, amountDiscounted), 'WETH transfer failed');
         return amountDiscounted;
     }
 
@@ -186,27 +186,24 @@ contract ReservePool is ERC20, ReentrancyGuard, Ownable {
     function redeemETHFromGardenTokens(address _garden, uint256 _amount) external nonReentrant {
         bool isValidKeeper = IBabController(controller).isValidKeeper(msg.sender);
         IRollingGarden garden = IRollingGarden(_garden);
-        require(
-            isValidKeeper || msg.sender == IBabController(controller).owner(),
-            'Only owner or keeper can call this'
-        );
-        require(_amount > 0, 'There needs to be tokens to redeem');
+        require(isValidKeeper || msg.sender == IBabController(controller).owner(), 'Only owner allowed');
+        require(_amount > 0, 'No tokens to redeem');
         require(garden.active(), 'Garden must be active');
         // Get valuation of the Garden with the quote asset as the reserve asset.
         uint256 gardenValuation =
-            IGardenValuer(IBabController(controller).getGardenValuer()).calculateGardenValuation(_garden, weth);
-        require(gardenValuation > 0, 'Garden must be worth something');
+            IGardenValuer(IBabController(controller).getGardenValuer()).calculateGardenValuation(_garden, WETH);
+        require(gardenValuation > 0, 'Garden has no worth');
         // Check that the garden has normal liquidity
         uint256 minReceive = gardenValuation.preciseMul(garden.totalSupply()).preciseDiv(_amount);
         require(garden.canWithdrawEthAmount(minReceive), 'Not enough liquidity in the fund');
         uint256 rewards = address(this).balance;
         garden.withdraw(_amount, minReceive.mul(95).div(100), msg.sender);
         rewards = address(this).balance.sub(rewards);
-        IWETH(weth).deposit{value: rewards}();
+        IWETH(WETH).deposit{value: rewards}();
         // TODO: Create a new fee in protocol
         uint256 protocolFee = IBabController(controller).getProtocolWithdrawalGardenTokenFee().preciseMul(rewards);
         // Send to the treasury the protocol fee
-        require(IWETH(weth).transfer(IBabController(controller).getTreasury(), protocolFee), 'Protocol fee failed');
+        require(IWETH(WETH).transfer(IBabController(controller).getTreasury(), protocolFee), 'Protocol fee failed');
     }
 
     // solhint-disable-next-line
@@ -223,12 +220,12 @@ contract ReservePool is ERC20, ReentrancyGuard, Ownable {
                 uint256 gardenValuation =
                     IGardenValuer(IBabController(controller).getGardenValuer()).calculateGardenValuation(
                         _gardens[i],
-                        weth
+                        WETH
                     );
                 total = total.add(gardenValuation.preciseMul(gardenBalance));
             }
         }
-        return total.add(IWETH(weth).balanceOf(address(this)));
+        return total.add(IWETH(WETH).balanceOf(address(this)));
     }
 
     /**
@@ -241,7 +238,7 @@ contract ReservePool is ERC20, ReentrancyGuard, Ownable {
         // TODO: Check only RollingGarden not ClosedGarden
         uint256 totalNav =
             IGardenValuer(IBabController(controller).getGardenValuer())
-                .calculateGardenValuation(_garden, weth)
+                .calculateGardenValuation(_garden, WETH)
                 .preciseMul(ERC20(_garden).totalSupply());
         if (totalNav < minGardenNAV) {
             return false;

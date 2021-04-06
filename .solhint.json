@@ -1,13 +1,11 @@
 {
   "extends": "solhint:recommended",
   "rules": {
+    "max-states-count": ["off", 15],
     "compiler-version": ["error", "^0.7.4"],
     "not-rely-on-time": "off",
     "func-visibility": ["warn", { "ignoreConstructors": true }],
     "quotes": ["error", "single"],
-    "mark-callable-contracts": "off",
-    "event-name-camelcase": "off",
-    "const-name-snakecase": "off",
     "max-line-length": ["warn", 120]
   }
 }
