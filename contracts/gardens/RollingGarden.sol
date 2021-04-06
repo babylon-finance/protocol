@@ -366,6 +366,7 @@ contract RollingGarden is ReentrancyGuard, BaseGarden {
         require(contributors[msg.sender].lastDepositAt > contributors[msg.sender].claimedAt, 'R27');
         uint256 contributorProfits = 0;
         uint256 bablTotalRewards = 0;
+        // TODO: This will grow endlessly. We have to either to remove finalized strategies or batch it.
         for (uint256 i = 0; i < _finalizedStrategies.length; i++) {
             IStrategy strategy = IStrategy(_finalizedStrategies[i]);
             uint256 totalProfits = 0; // Total Profits of each finalized strategy

@@ -212,6 +212,7 @@ contract BabController is Ownable {
      */
     function enableGardenTokensTransfers() external onlyOwner {
         // TODO: Check timestamp. January 1 2022
+        // Seems correct.
         require(block.timestamp > 1641024000000, 'Transfers cannot be enabled yet');
         gardenTokensTransfersEnabled = true;
     }

@@ -50,7 +50,7 @@
     "clean": "rm -rf cache/* && rm -rf artifacts/* && rm -rf ./publish/contracts/*",
     "prettier": "prettier --write .",
     "prettier:check": "prettier --check .",
-    "lint:contracts": "solhint contracts/*.sol",
+    "lint:contracts": "solhint contracts/**/*.sol",
     "compile": "hardhat compile --no-typechain",
     "typechain": "hardhat compile",
     "publish": "hardhat run scripts/publish.js",
