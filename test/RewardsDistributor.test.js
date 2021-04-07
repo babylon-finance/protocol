@@ -172,7 +172,12 @@ describe('BABL Rewards Distributor', function () {
       const initialProtocolPrincipal = initialProtocol[0];
       const initialProtocolPower = initialProtocol[4];
 
-      await garden1.connect(signer1).deposit(ethers.utils.parseEther('10'), 1, signer1.getAddress(), {
+      await garden1.connect(signer1).deposit(ethers.utils.parseEther('1'), 1, signer1.getAddress(), {
+        value: ethers.utils.parseEther('1'),
+        gasPrice: 0,
+      });
+
+      await garden1.connect(signer2).deposit(ethers.utils.parseEther('10'), 1, signer2.getAddress(), {
         value: ethers.utils.parseEther('10'),
         gasPrice: 0,
       });
