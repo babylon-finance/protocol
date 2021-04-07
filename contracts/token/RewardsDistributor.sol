@@ -170,8 +170,9 @@ contract RewardsDistributor is Ownable {
         pid++;
     }
 
-    function getStrategyRewards(address _strategy) public onlyStrategy returns (uint96) {
+    function getStrategyRewards(address _strategy) public returns (uint96) {
         strategy = IStrategy(_strategy);
+        require(strategy.exitedAt() != 0, 'The strategy has to be finished before calculations');
         (uint256 numQuarters, uint256 startingQuarter) = getRewardsWindow(strategy.executedAt(), strategy.exitedAt());
         uint256 bablRewards = 0;
         console.log('NumQuarters', numQuarters);
