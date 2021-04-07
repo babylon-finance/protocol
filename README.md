@@ -76,4 +76,26 @@ yarn estimate-size
 yarn test
 ```
 
+## Publish
+
+Login to GitHub Pacakges with your personal access token
+
+```bash
+npm login --scope=@babylon-finance --registry=https://npm.pkg.github.com
+```
+
+Deploy and export on the correct network
+
+```bash
+yarn deploy && yarn export
+```
+
+Publish
+
+```bash
+npm publish
+```
+
+Keep in mind that addresses are per network and packages for mainnet/testnet are different.
+
 ## Deploy

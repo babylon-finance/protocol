@@ -279,6 +279,7 @@ async function deployFolioFixture() {
       { name: 'UniswapPoolIntegration', contract: uniswapPoolIntegration },
       { name: 'SushiswapPoolIntegration', contract: sushiswapPoolIntegration },
       { name: 'OneInchPoolIntegration', contract: oneInchPoolIntegration },
+      { name: 'OneInchTradeIntegration', contract: oneInchTradeIntegration },
       { name: 'CompoundLendIntegration', contract: compoundLendIntegration },
       { name: 'AaveLendIntegration', contract: aaveLendIntegration },
     ],

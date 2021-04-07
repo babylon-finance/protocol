@@ -4,18 +4,18 @@ const fs = require('fs-extra');
 
 const chalk = require('chalk');
 
-const publishDir = './publish/contracts';
+const exportDir = './export/contracts';
 
-fs.ensureDirSync(publishDir);
+fs.ensureDirSync(exportDir);
 
 const isSolidity = (fileName) => fileName.indexOf('.sol') >= 0 && fileName.indexOf('.swp') < 0;
 
 function buildAddress(contractName, address) {
-  fs.writeFileSync(`${publishDir}/${contractName}.address.js`, `module.exports = "${address}";`);
+  fs.writeFileSync(`${exportDir}/${contractName}.address.js`, `module.exports = "${address}";`);
 }
 
-function publishContract(contractName, path) {
-  console.log('Publishing', chalk.cyan(contractName), 'to', chalk.yellow(publishDir));
+function exportContract(contractName, path) {
+  console.log('Exporting', chalk.cyan(contractName), 'to', chalk.yellow(exportDir));
   try {
     const contractFile = fs
       .readFileSync(`${config.paths.artifacts}/contracts/${path}${contractName}.sol/${contractName}.json`)
@@ -29,10 +29,10 @@ function publishContract(contractName, path) {
     }
     const contract = JSON.parse(contractFile);
     fs.writeFileSync(
-      `${publishDir}/${contractName}.abi.js`,
+      `${exportDir}/${contractName}.abi.js`,
       `module.exports = ${JSON.stringify(contract.abi, null, 2)};`,
     );
-    fs.writeFileSync(`${publishDir}/${contractName}.bytecode.js`, `module.exports = "${contract.bytecode}";`);
+    fs.writeFileSync(`${exportDir}/${contractName}.bytecode.js`, `module.exports = "${contract.bytecode}";`);
     if (address) {
       buildAddress(contractName, address);
       return true;
@@ -46,18 +46,18 @@ function publishContract(contractName, path) {
 
 async function main() {
   const finalContractList = [];
-  const publishAndPushContract = (file, path = '') => {
+  const exportAndPushContract = (file, path = '') => {
     if (file.indexOf('.sol') >= 0) {
       const contractName = file.replace('.sol', '');
-      // Add contract to list if publishing is successful
-      if (publishContract(contractName, path)) {
+      // Add contract to list if exporting is successful
+      if (exportContract(contractName, path)) {
         finalContractList.push(contractName);
       }
     }
   };
 
-  if (!fs.existsSync(publishDir)) {
-    fs.mkdirSync(publishDir);
+  if (!fs.existsSync(exportDir)) {
+    fs.mkdirSync(exportDir);
   }
 
   // Internal Integrations
@@ -67,44 +67,44 @@ async function main() {
   const trade = ['OneInchTradeIntegration.sol', 'KyberTradeIntegration.sol'];
 
   lend.forEach((file) => {
-    publishAndPushContract(file, 'integrations/lend/');
+    exportAndPushContract(file, 'integrations/lend/');
   });
 
   passive.forEach((file) => {
-    publishAndPushContract(file, 'integrations/passive/');
+    exportAndPushContract(file, 'integrations/passive/');
   });
 
   pool.forEach((file) => {
-    publishAndPushContract(file, 'integrations/pool/');
+    exportAndPushContract(file, 'integrations/pool/');
   });
 
   trade.forEach((file) => {
-    publishAndPushContract(file, 'integrations/trade/');
+    exportAndPushContract(file, 'integrations/trade/');
   });
 
   // Garden Factory Contracts
   const factories = ['GardenFactory.sol'];
   factories.forEach((file) => {
-    publishAndPushContract(file, 'gardens/');
+    exportAndPushContract(file, 'gardens/');
   });
 
   // Strategy Factory Contracts
   const strategies = ['LongStrategyFactory.sol', 'LiquidityPoolStrategyFactory'];
   strategies.forEach((file) => {
-    publishAndPushContract(file, 'strategies/');
+    exportAndPushContract(file, 'strategies/');
   });
 
   // Internal Interfaces
   const interfaces = ['IBabController.sol', 'IGarden.sol', 'IRollingGarden.sol', 'IIntegration.sol', 'IStrategy.sol'];
 
   interfaces.forEach((file) => {
-    publishAndPushContract(file, 'interfaces/');
+    exportAndPushContract(file, 'interfaces/');
   });
 
   const contractList = fs.readdirSync(config.paths.sources).filter((fileName) => isSolidity(fileName));
 
   contractList.forEach((file) => {
-    publishAndPushContract(file);
+    exportAndPushContract(file);
   });
 
   // External interfaces
@@ -116,13 +116,13 @@ async function main() {
   ];
 
   externalInterfaces.forEach((interfaceC) => {
-    publishAndPushContract(interfaceC.name, interfaceC.path);
+    exportAndPushContract(interfaceC.name, interfaceC.path);
   });
 
-  // Publish addresses
-  fs.copyFileSync('utils/addresses.js', `${publishDir}/addresses.js`);
-  fs.copyFileSync('utils/constants.js', `${publishDir}/constants.js`);
-  fs.writeFileSync(`${publishDir}/contracts.js`, `module.exports = ${JSON.stringify(finalContractList)};`);
+  // Export addresses
+  fs.copyFileSync('utils/addresses.js', `${exportDir}/addresses.js`);
+  fs.copyFileSync('utils/constants.js', `${exportDir}/constants.js`);
+  fs.writeFileSync(`${exportDir}/contracts.js`, `module.exports = ${JSON.stringify(finalContractList)};`);
 }
 
 main()
