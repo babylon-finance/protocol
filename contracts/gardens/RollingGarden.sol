@@ -294,7 +294,7 @@ contract RollingGarden is ReentrancyGuard, BaseGarden {
     // Raul Review
     function claimReturns(address[] calldata _finalizedStrategies) external nonReentrant onlyContributor {
         Contributor memory contributor = contributors[msg.sender];
-        (uint256 totalProfits, uint256 bablRewards) = this._getProfitsAndBabl(_finalizedStrategies);
+        (uint256 totalProfits, uint256 bablRewards) = this.getProfitsAndBabl(_finalizedStrategies);
         if (totalProfits > 0 && address(this).balance > 0) {
             // Send eth
             (bool sent, ) = msg.sender.call{value: totalProfits}('');
@@ -310,7 +310,7 @@ contract RollingGarden is ReentrancyGuard, BaseGarden {
     }
 
     // Raul Review
-    function _getProfitsAndBabl(address[] calldata _finalizedStrategies)
+    function getProfitsAndBabl(address[] calldata _finalizedStrategies)
         external
         onlyContributor
         returns (uint256, uint256)
