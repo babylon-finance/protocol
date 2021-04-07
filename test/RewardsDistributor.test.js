@@ -145,7 +145,7 @@ describe('BABL Rewards Distributor', function () {
   });
 
   describe('Strategy BABL Mining Rewards Calculation', async function () {
-    it.only('should fail trying to calculate rewards of a strategy that has not ended yet', async function () {
+    it('should fail trying to calculate rewards of a strategy that has not ended yet', async function () {
       const initialProtocol = await rewardsDistributor.checkProtocol(new Date().getTime());
       const initialProtocolPrincipal = initialProtocol[0];
       const initialProtocolPower = initialProtocol[4];
@@ -167,11 +167,18 @@ describe('BABL Rewards Distributor', function () {
     });
 
 
-    it('should calculate correct BABL in case of 1 strategy with negative profit and total duration of 1 quarter', async function () {
+    it.only('should calculate correct BABL in case of 1 strategy with negative profit and total duration of 1 quarter', async function () {
       const initialProtocol = await rewardsDistributor.checkProtocol(new Date().getTime());
       const initialProtocolPrincipal = initialProtocol[0];
       const initialProtocolPower = initialProtocol[4];
 
+      await garden1.connect(signer1).deposit(ethers.utils.parseEther('10'), 1, signer1.getAddress(), {
+        value: ethers.utils.parseEther('10'),
+        gasPrice: 0,
+      });
+      
+      const balanceSignerT1 = await garden1.balanceOf(signer1.address).toString();
+      console.log('Balance of signer 1 in T1', balanceSignerT1);
       const strategyContract = await createStrategy(
         0,
         'vote',
@@ -179,9 +186,12 @@ describe('BABL Rewards Distributor', function () {
         kyberTradeIntegration.address,
         garden1,
       );
+
       // It is executed
       await executeStrategy(garden1, strategyContract, ethers.utils.parseEther('1'), 42);
-      
+      const balanceSignerT2 = await garden1.balanceOf(signer1.address).toString();
+      console.log('Balance of signer 1 in T2', balanceSignerT2);
+
       const [address, active, dataSet, finalized, executedAt, exitedAt] = await checkStrategyStateExecuting(strategyContract);
       
       // Keeper gets paid
@@ -253,6 +263,9 @@ describe('BABL Rewards Distributor', function () {
 
       const bablRewards1 = await strategyContract.strategyRewards();
       console.log('BABL Rewards of Strategy 1', bablRewards1.toString());
+      console.log('Balance of signer 1', (await garden1.balanceOf(signer1.address)).toString());
+
+      await garden1.connect(signer1).claimReturns([strategyContract.address]); // BABL Rewards and Profit claim
     });
 
     it('should calculate correct BABL in case of 1 strategy with positive profit and with total duration of 1 quarter', async function () {
@@ -1546,6 +1559,161 @@ describe('BABL Rewards Distributor', function () {
       console.log('BABL Rewards of Strategy 3', bablRewards3.toString());
       console.log('BABL Rewards of Strategy 4', bablRewards4.toString());
       console.log('BABL Rewards of Strategy 5', bablRewards5.toString());
+    });
+
+    it('should claim Signer 1 its BABL irewards as contributor of 5 strategies (4 with positive profits) of 2 different Gardens with different timings along 3 Years', async function () {
+      // Create strategy 1
+
+      const strategyContract1 = await createStrategy(
+        0,
+        'vote',
+        [signer1, signer2, signer3],
+        kyberTradeIntegration.address,
+        garden1,
+      );
+
+      // Create strategy 2
+
+      const strategyContract2 = await createStrategy(
+        0,
+        'vote',
+        [signer1, signer2, signer3],
+        kyberTradeIntegration.address,
+        garden1,
+      );
+
+      // Create strategy 3
+
+      const strategyContract3 = await createStrategy(
+        0,
+        'vote',
+        [signer1, signer2, signer3],
+        kyberTradeIntegration.address,
+        garden2,
+      );
+
+      // Create strategy 4
+
+      const strategyContract4 = await createStrategy(
+        0,
+        'vote',
+        [signer1, signer2, signer3],
+        kyberTradeIntegration.address,
+        garden2,
+      );
+      // Create strategy 5
+
+      const strategyContract5 = await createStrategy(
+        0,
+        'vote',
+        [signer1, signer2, signer3],
+        kyberTradeIntegration.address,
+        garden2,
+      );
+      // Execute strategy 1
+      await executeStrategy(garden1, strategyContract1, ethers.utils.parseEther('1'), 42); // Strategy 1
+
+      const [address, active, dataSet, finalized, executedAt, exitedAt] = await checkStrategyStateExecuting(strategyContract1);
+
+      // Keeper gets paid
+      expect(await wethToken.balanceOf(await owner.getAddress())).to.equal(42);
+
+      ethers.provider.send('evm_increaseTime', [ONE_DAY_IN_SECONDS * 2]);
+      // Execute strategy 2
+      await executeStrategy(garden1, strategyContract2, ethers.utils.parseEther('1'), 42); // Strategy 2
+      // Execute strategy 3
+      await executeStrategy(garden2, strategyContract3, ethers.utils.parseEther('1'), 42); // Strategy 3
+
+      ethers.provider.send('evm_increaseTime', [ONE_DAY_IN_SECONDS * 2]);
+      // Execute strategy 4
+      await executeStrategy(garden2, strategyContract4, ethers.utils.parseEther('1'), 42); // Strategy 4
+      // Execute strategy 5
+      await executeStrategy(garden2, strategyContract5, ethers.utils.parseEther('1'), 42); // Strategy 5
+
+      const [address2, active2, dataSet2, finalized2, executedAt2, exitedAt2] = await checkStrategyStateExecuting(strategyContract5);
+
+      // Protocol principal should be incremented accordingly
+      const protocol = await rewardsDistributor.checkProtocol(executedAt2);
+      const protocolPrincipal = protocol[0];
+      const protocolTime = protocol[1];
+      const protocolquarterBelonging = protocol[2];
+      const protocolTimeListPointer = protocol[3];
+      const protocolPower = protocol[4];
+
+      expect(protocolPrincipal).to.equal(ethers.utils.parseEther('5')); // All are vote state strategies
+      expect(protocolTime).to.equal(executedAt2);
+      expect(protocolquarterBelonging).to.equal(1);
+      expect(protocolTimeListPointer).to.equal(4); // pid starting by zero, 5 strategies launched
+      expect(protocolPower).to.not.equal(0); // TODO Check exact numbers
+
+      const protocolQuarter = await rewardsDistributor.checkQuarter(protocolquarterBelonging);
+      const quarterPrincipal = protocolQuarter[0];
+      const quarterNumber = protocolQuarter[1];
+      const quarterPower = protocolQuarter[2];
+      const quarterSupply = protocolQuarter[3];
+
+      expect(quarterPrincipal).to.equal(ethers.utils.parseEther('5'));
+      expect(quarterNumber).to.equal(1);
+      expect(quarterPower).to.equal(protocolPower);
+      expect(quarterSupply).to.not.equal(0);
+
+      ethers.provider.send('evm_increaseTime', [ONE_DAY_IN_SECONDS * 30]);
+
+      await injectFakeProfits(strategyContract1, ethers.utils.parseEther('200'));
+      await finishStrategyQ1_noIncreaseTime(garden1, strategyContract1, 42);
+
+      await finishStrategy2Q(garden1, strategyContract2, 42);
+ 
+      await injectFakeProfits(strategyContract3, ethers.utils.parseEther('200'));
+      await finishStrategy2Y(garden2, strategyContract3, 42); // Increase time 2 years
+
+      await injectFakeProfits(strategyContract4, ethers.utils.parseEther('222'));
+      await finishStrategy2Q(garden2, strategyContract4, 42);
+
+      await injectFakeProfits(strategyContract5, ethers.utils.parseEther('222'));
+      await finishStrategy3Q(garden2, strategyContract5, 42);
+      const [address3, active3, dataSet3, finalized3, executedAt3, exitedAt3] = await checkStrategyStateFinalized(strategyContract5);
+
+      // Protocol principal should be reduced accordingly
+      const protocol2 = await rewardsDistributor.checkProtocol(exitedAt3);
+      const protocolPrincipal2 = protocol2[0];
+      const protocolTime2 = protocol2[1];
+      const protocolquarterBelonging2 = protocol2[2];
+      const protocolTimeListPointer2 = protocol2[3];
+      const protocolPower2 = protocol2[4];
+
+      expect(protocolPrincipal2).to.equal(ethers.utils.parseEther('0'));
+      expect(protocolquarterBelonging2).to.equal(13);
+      expect(protocolPower2).to.not.equal(0); // TODO CHECK EXACT AMOUNT
+      expect(protocolTime2).to.equal(exitedAt3);
+      expect(protocolTimeListPointer2).to.equal(9); // pid starting by zero, 9th checkpoint
+      expect(protocolPower).to.not.equal(0); // TODO Check exact numbers
+
+      const protocolQuarter2 = await rewardsDistributor.checkQuarter(protocolquarterBelonging2);
+      const quarterPrincipal2 = protocolQuarter2[0];
+      const quarterNumber2 = protocolQuarter2[1];
+      const quarterPower2 = protocolQuarter2[2];
+      const quarterSupply2 = protocolQuarter2[3];
+
+      expect(quarterPrincipal2).to.equal(protocolPrincipal2); // All are voter strategies
+      expect(quarterNumber2).to.equal(13);
+      expect(quarterSupply2).to.equal(await rewardsDistributor.tokenSupplyPerQuarter(13));
+
+      const bablRewards1 = await strategyContract1.strategyRewards();
+      const bablRewards2 = await strategyContract2.strategyRewards();
+      const bablRewards3 = await strategyContract3.strategyRewards();
+      const bablRewards4 = await strategyContract4.strategyRewards();
+      const bablRewards5 = await strategyContract5.strategyRewards();
+
+      console.log('BABL Rewards of Strategy 1', bablRewards1.toString());
+      console.log('BABL Rewards of Strategy 2', bablRewards2.toString());
+      console.log('BABL Rewards of Strategy 3', bablRewards3.toString());
+      console.log('BABL Rewards of Strategy 4', bablRewards4.toString());
+      console.log('BABL Rewards of Strategy 5', bablRewards5.toString());
+      
+      //await garden1.connect(signer1).claimReturns([strategyContract1, strategyContract2]);
+      //await garden2.connect(signer1).claimReturns([strategyContract3, strategyContract4, strategyContract5]);
+
     });
   });
 });
