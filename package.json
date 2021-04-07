@@ -1,8 +1,19 @@
 {
   "name": "@babylon-finance/protocol",
-  "version": "1.0.0",
+  "version": "0.1.0",
   "main": "index.js",
   "license": "MIT",
+  "repository": "git://github.com/babylon-finance/protocol",
+  "files": [
+    "contracts",
+    "artifacts",
+    "typechain",
+    "export"
+  ],
+  "publishConfig": {
+    "cache": "cache/.npm",
+    "registry": "https://npm.pkg.github.com"
+  },
   "devDependencies": {
     "@nomiclabs/hardhat-ethers": "^2.0.1",
     "@nomiclabs/hardhat-waffle": "^2.0.1",
@@ -47,15 +58,15 @@
     "superagent": "^6.1.0"
   },
   "scripts": {
-    "clean": "rm -rf cache/* && rm -rf artifacts/* && rm -rf ./publish/contracts/*",
+    "clean": "rm -rf cache/* && rm -rf artifacts/* && rm -rf ./export/*",
     "prettier": "prettier --write .",
     "prettier:check": "prettier --check .",
     "lint:contracts": "solhint contracts/**/*.sol",
     "compile": "hardhat compile --no-typechain",
     "typechain": "hardhat compile",
-    "publish": "hardhat run scripts/publish.js",
-    "deploy": "hardhat run scripts/deploy.js --network localhost && hardhat run scripts/publish.js",
-    "deploy-mainnet": "hardhat run scripts/deploy.js --network mainnet && hardhat run scripts/publish.js",
+    "export": "hardhat run scripts/export.js",
+    "deploy": "hardhat run scripts/deploy.js --network localhost",
+    "deploy:mainnet": "hardhat run scripts/deploy.js --network mainnet",
     "watch": "node scripts/watch.js",
     "chain": "hardhat node",
     "accounts": "hardhat accounts",

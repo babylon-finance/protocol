@@ -36,10 +36,10 @@ async function main() {
   const { contractsToPublish } = await deployFolioFixture();
 
   console.log('Contracts deployed...');
-  console.log('Syncing artifacts for publish...');
+  console.log('Syncing artifacts for export...');
 
   // Let the fixture response determine which contracts to write address
-  // files for and publish accordingly in contracts.js.
+  // files for and export accordingly in contracts.js.
   contractsToPublish.forEach((contractObj) => {
     const name = contractObj.name;
     const address = contractObj.contract.address;
