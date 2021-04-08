@@ -312,6 +312,7 @@ contract RollingGarden is ReentrancyGuard, BaseGarden {
     // Raul Review
     function getProfitsAndBabl(address[] calldata _finalizedStrategies)
         external
+        view
         onlyContributor
         returns (uint256, uint256)
     {
