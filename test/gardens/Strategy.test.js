@@ -10,6 +10,7 @@ const {
   executeStrategy,
   finalizeStrategy,
   injectFakeProfits,
+  deposit,
 } = require('../fixtures/StrategyHelper.js');
 
 const addresses = require('../../utils/addresses');
@@ -207,7 +208,19 @@ describe('Strategy', function () {
         kyberTradeIntegration.address,
         garden1,
       );
+
+      deposit(garden1, [signer1, signer2]);
+
       await executeStrategy(garden1, strategyContract);
+
+      const [, , , , executedAt] = await strategyContract.getStrategyState();
+
+      await executeStrategy(garden1, strategyContract);
+
+      const [, , , , newExecutedAt] = await strategyContract.getStrategyState();
+
+      // doesn't update executedAt
+      expect(executedAt).to.be.equal(newExecutedAt);
     });
 
     it('refuse to pay a high fee to the keeper', async function () {

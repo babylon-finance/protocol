@@ -60,6 +60,8 @@ contract OneInchPoolIntegration is PoolIntegration {
         mooniswapFactory = IMooniswapFactory(_mooniswapFactoryAddress);
     }
 
+    /* ============ External Functions ============ */
+
     function getPoolTokens(address _poolAddress) external view override returns (address[] memory) {
         return IMooniswap(_poolAddress).getTokens();
     }
@@ -71,6 +73,15 @@ contract OneInchPoolIntegration is PoolIntegration {
         result[0] = 5e17; // 50%
         result[1] = 5e17; // 50%
         return result;
+    }
+
+    function calcPoolOut(
+        address, /* _poolAddress */
+        address, /* _poolToken */
+        uint256 /* _maxAmountsIn */
+    ) external view returns (uint256) {
+        // return 1 since _poolTokensOut are not used in OneInchPoolIntegration
+        return 1;
     }
 
     /* ============ Internal Functions ============ */

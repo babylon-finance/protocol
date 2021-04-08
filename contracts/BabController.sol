@@ -59,7 +59,6 @@ contract BabController is Ownable {
 
     event PriceOracleChanged(address indexed _priceOracle, address _oldPriceOracle);
     event RewardsDistributorChanged(address indexed _rewardsDistributor, address _oldRewardsDistributor);
-    event ReservePoolChanged(address indexed _reservePool, address _oldReservePool);
     event TreasuryChanged(address _newTreasury, address _oldTreasury);
     event GardenValuerChanged(address indexed _gardenValuer, address _oldGardenValuer);
     event GardenFactoryChanged(address indexed _gardenFactory, address _oldGardenFactory);
@@ -105,10 +104,12 @@ contract BabController is Ownable {
     uint256 public maxCooldownPeriod = 7 days;
 
     // Assets
-    uint256 public minRiskyPairLiquidityEth = 1000 * 1e18; // Absolute Min liquidity of assets for risky gardens 1000 ETH
+    // Absolute Min liquidity of assets for risky gardens 1000 ETH
+    uint256 public minRiskyPairLiquidityEth = 1000 * 1e18;
 
     // Enable Transfer of ERC20 gardenTokens
-    bool public gardenTokensTransfersEnabled = false; // Only members can transfer tokens until the protocol is fully decentralized
+    // Only members can transfer tokens until the protocol is fully decentralized
+    bool public gardenTokensTransfersEnabled = false;
 
     uint256 public protocolPerformanceFee = 5e16; // 5% (0.01% = 1e14, 1% = 1e16) on profits
     uint256 public protocolManagementFee = 5e15; // 0.5% (0.01% = 1e14, 1% = 1e16)
@@ -209,7 +210,9 @@ contract BabController is Ownable {
      * Can only happen after 2021 is finished.
      */
     function enableGardenTokensTransfers() external onlyOwner {
-        require(block.timestamp > 1641024000000, 'Transfers cannot be enabled yet'); // TODO: Check timestamp. January 1 2022
+        // TODO: Check timestamp. January 1 2022
+        // Seems correct.
+        require(block.timestamp > 1641024000000, 'Transfers cannot be enabled yet');
         gardenTokensTransfersEnabled = true;
     }
 
@@ -286,22 +289,6 @@ contract BabController is Ownable {
         priceOracle = _priceOracle;
 
         emit PriceOracleChanged(_priceOracle, oldPriceOracle);
-    }
-
-    /**
-     * PRIVILEGED GOVERNANCE FUNCTION. Allows governance to change the reserve pool
-     *
-     * @param _reservePool               Address of the new reserve pool
-     */
-    function editReservePool(address _reservePool) external onlyOwner {
-        require(_reservePool != reservePool, 'Reserve Pool already exists');
-
-        require(_reservePool != address(0), 'Reserve pool must exist');
-
-        address oldReservePool = reservePool;
-        reservePool = _reservePool;
-
-        emit ReservePoolChanged(_reservePool, oldReservePool);
     }
 
     /**
@@ -431,7 +418,7 @@ contract BabController is Ownable {
      * @param  _minRiskyPairLiquidityEth       Absolute min liquidity of an asset to grab price
      */
     function editLiquidityMinimum(uint256 _minRiskyPairLiquidityEth) public onlyOwner {
-        require(_minRiskyPairLiquidityEth > 0);
+        require(_minRiskyPairLiquidityEth > 0, '_minRiskyPairLiquidityEth > 0');
         minRiskyPairLiquidityEth = _minRiskyPairLiquidityEth;
 
         emit LiquidityMinimumEdited(_minRiskyPairLiquidityEth);
@@ -445,10 +432,6 @@ contract BabController is Ownable {
 
     function getPriceOracle() external view returns (address) {
         return priceOracle;
-    }
-
-    function getReservePool() external view returns (address) {
-        return reservePool;
     }
 
     function getGardenValuer() external view returns (address) {

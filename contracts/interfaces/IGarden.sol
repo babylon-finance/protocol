@@ -53,7 +53,11 @@ interface IGarden is IERC20 {
 
     function name() external view returns (string memory);
 
+    function symbol() external view returns (string memory);
+
     function totalContributors() external view returns (uint256);
+
+    function minContribution() external view returns (uint256);
 
     function totalCommunitiesDeposited() external view returns (uint256);
 
@@ -84,6 +88,8 @@ interface IGarden is IERC20 {
     function gardenCreatorProfitPercentage() external pure returns (uint256);
 
     function getStrategies() external view returns (address[] memory);
+
+    function getFinalizedStrategies() external view returns (address[] memory);
 
     function strategies(uint256 _index) external view returns (address);
 

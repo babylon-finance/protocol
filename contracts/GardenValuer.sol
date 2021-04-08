@@ -90,8 +90,9 @@ contract GardenValuer {
         address[] memory strategies = _garden.getStrategies();
         int256 valuation;
         for (uint256 j = 0; j < strategies.length; j++) {
-            IStrategy strategy = IStrategy(strategies[j]);
             // TODO: Calculate valuation of the strategy
+            // solhint-disable-next-line
+            IStrategy strategy = IStrategy(strategies[j]);
             int256 strategyValuation = 0;
             valuation = valuation.add(strategyValuation);
         }
