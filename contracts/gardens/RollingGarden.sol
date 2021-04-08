@@ -135,11 +135,11 @@ contract RollingGarden is ReentrancyGuard, BaseGarden {
         require(_maxDepositLimit < MAX_DEPOSITS_FUND_V1, 'R01'); // Max deposit limit needs to be under the limit
 
         require(msg.value >= minContribution, 'R02'); // Creator needs to deposit
-        IBabController ifcontroller = IBabController(controller);
+        IBabController babController = IBabController(controller);
         require(_minGardenTokenSupply > 0, 'R03'); // Min Garden token supply >= 0
         require(_depositHardlock > 0, 'R04'); // Deposit hardlock needs to be at least 1 block
         require(
-            _minLiquidityAsset >= ifcontroller.minRiskyPairLiquidityEth(),
+            _minLiquidityAsset >= babController.minRiskyPairLiquidityEth(),
             'R05' // Needs to be at least the minimum set by protocol
         );
         // make initial deposit
