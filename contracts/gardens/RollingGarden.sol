@@ -302,6 +302,8 @@ contract RollingGarden is ReentrancyGuard, BaseGarden {
             contributor.claimedAt = block.timestamp;
         }
         if (bablRewards > 0) {
+            contributors[msg.sender].claimedBABL = contributors[msg.sender].claimedBABL.add(bablRewards);
+            contributors[msg.sender].claimedProfits = contributors[msg.sender].claimedProfits.add(totalProfits);
             // Send BABL rewards
             IRewardsDistributor rewardsDistributor =
                 IRewardsDistributor(IBabController(controller).getRewardsDistributor());
@@ -378,10 +380,6 @@ contract RollingGarden is ReentrancyGuard, BaseGarden {
                     bablRewards = bablRewards.add(bablRewards.preciseMul(creatorBonus));
                 }
 
-                contributors[msg.sender].claimedBABL = contributors[msg.sender].claimedBABL.add(bablRewards);
-                contributors[msg.sender].claimedProfits = contributors[msg.sender].claimedProfits.add(
-                    contributorProfits
-                );
                 bablTotalRewards = bablTotalRewards.add(bablRewards);
             }
         }

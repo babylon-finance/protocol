@@ -135,9 +135,9 @@ interface IStrategy {
 
     function exitPayload() external pure returns (bytes memory);
 
-    function capitalReturned() external returns (uint256);
+    function capitalReturned() external pure returns (uint256);
 
-    function capitalAllocated() external returns (uint256);
+    function capitalAllocated() external pure returns (uint256);
 
     function finalized() external pure returns (bool);
 
