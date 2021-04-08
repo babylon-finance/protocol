@@ -153,9 +153,9 @@ contract Timelock {
         require(msg.sender == admin, 'Timelock::executeTransaction: Call must come from admin.');
 
         bytes32 txHash = keccak256(abi.encode(target, value, signature, data, eta));
-        require(queuedTransactions[txHash], "Timelock::executeTransaction: Transaction hasn't been queued.");
-        require(getBlockTimestamp() >= eta, "Timelock::executeTransaction: Transaction hasn't surpassed time lock.");
-        require(getBlockTimestamp() <= eta.add(GRACE_PERIOD), 'Timelock::executeTransaction: Transaction is stale.');
+        require(queuedTransactions[txHash], 'Transaction is not queued');
+        require(getBlockTimestamp() >= eta, 'Transaction is too young');
+        require(getBlockTimestamp() <= eta.add(GRACE_PERIOD), 'Transaction is stale');
 
         queuedTransactions[txHash] = false;
 

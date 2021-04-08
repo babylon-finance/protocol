@@ -5,11 +5,11 @@ const { impersonateAddress } = require('../../utils/rpc');
 const addresses = require('../../utils/addresses');
 
 const DEFAULT_STRATEGY_PARAMS = [
-  ethers.utils.parseEther('10'),
-  ethers.utils.parseEther('1'),
-  ONE_DAY_IN_SECONDS * 30,
-  ethers.utils.parseEther('0.05'), // 5%
-  ethers.utils.parseEther('1'),
+  ethers.utils.parseEther('10'), // _maxCapitalRequested
+  ethers.utils.parseEther('1'), // _stake
+  ONE_DAY_IN_SECONDS * 30, // _investmentDuration
+  ethers.utils.parseEther('0.05'), // 5% _expectedReturn
+  ethers.utils.parseEther('1'), // _minRebalanceCapital
 ];
 
 async function updateTWAPs(garden) {
@@ -204,4 +204,5 @@ module.exports = {
   executeStrategy,
   finalizeStrategy,
   injectFakeProfits,
+  deposit,
 };

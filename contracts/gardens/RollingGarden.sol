@@ -27,7 +27,6 @@ import {PreciseUnitMath} from '../lib/PreciseUnitMath.sol';
 import {SafeDecimalMath} from '../lib/SafeDecimalMath.sol';
 import {IWETH} from '../interfaces/external/weth/IWETH.sol';
 import {IBabController} from '../interfaces/IBabController.sol';
-// import {IReservePool} from '../interfaces/IReservePool.sol';
 import {IStrategy} from '../interfaces/IStrategy.sol';
 import {IRewardsDistributor} from '../interfaces/IRewardsDistributor.sol';
 import {BaseGarden} from './BaseGarden.sol';
@@ -157,11 +156,11 @@ contract RollingGarden is ReentrancyGuard, BaseGarden {
         require(_maxDepositLimit < MAX_DEPOSITS_FUND_V1, 'R01'); // Max deposit limit needs to be under the limit
 
         require(msg.value >= minContribution, 'R02'); // Creator needs to deposit
-        IBabController ifcontroller = IBabController(controller);
+        IBabController babController = IBabController(controller);
         require(_minGardenTokenSupply > 0, 'R03'); // Min Garden token supply >= 0
         require(_depositHardlock > 0, 'R04'); // Deposit hardlock needs to be at least 1 block
         require(
-            _minLiquidityAsset >= ifcontroller.minRiskyPairLiquidityEth(),
+            _minLiquidityAsset >= babController.minRiskyPairLiquidityEth(),
             'R05' // Needs to be at least the minimum set by protocol
         );
         // make initial deposit
@@ -310,53 +309,6 @@ contract RollingGarden is ReentrancyGuard, BaseGarden {
     }
 
     /**
-     * Sender is selling his tokens to the reserve pool at a discount.
-     * Reserve pool will receive the tokens.
-     *
-     * @param _gardenTokenQuantity        Quantity of the garden token to withdrawal
-     * @param _minReserveReceiveQuantity     Min quantity of reserve asset to receive
-     * @param _to                            Address to send component assets to
-     */
-    // function withdrawToReservePool(
-    //     uint256 _gardenTokenQuantity,
-    //     uint256 _minReserveReceiveQuantity,
-    //     address payable _to
-    // ) external nonReentrant onlyContributor onlyActive {
-    //     require(_gardenTokenQuantity <= balanceOf(msg.sender), 'Withdrawal amount <= to deposited amount');
-    //     // Flashloan protection
-    //     require(
-    //         block.timestamp.sub(contributors[msg.sender].lastDepositAt) >= depositHardlock,
-    //         'Cannot withdraw. Hardlock'
-    //     );
-    //
-    //     IReservePool reservePool = IReservePool(IBabController(controller).getReservePool());
-    //     require(reservePool.isReservePoolAllowedToBuy(address(this), _gardenTokenQuantity), 'Reserve Pool not active');
-    //
-    //     ActionInfo memory withdrawalInfo = _createRedemptionInfo(_gardenTokenQuantity);
-    //
-    //     _validateReserveAsset(reserveAsset, withdrawalInfo.netFlowQuantity);
-    //     // If normal redemption is available, don't use the reserve pool
-    //     require(!canWithdrawEthAmount(msg.sender, withdrawalInfo.netFlowQuantity), 'Not enough liquidity in the fund');
-    //     _validateRedemptionInfo(_minReserveReceiveQuantity, _gardenTokenQuantity, withdrawalInfo);
-    //
-    //     withdrawalInfo.netFlowQuantity = reservePool.sellTokensToLiquidityPool(address(this), _gardenTokenQuantity);
-    //     _updateContributorWithdrawalInfo(withdrawalInfo.netFlowQuantity);
-    //
-    //     payProtocolFeeFromGarden(reserveAsset, withdrawalInfo.protocolFees);
-    //
-    //     _updatePrincipal(principal.sub(outflow));
-    //
-    //     emit GardenTokenWithdrawn(
-    //         msg.sender,
-    //         _to,
-    //         withdrawalInfo.netFlowQuantity,
-    //         withdrawalInfo.gardenTokenQuantity,
-    //         withdrawalInfo.protocolFees,
-    //         block.timestamp
-    //     );
-    // }
-
-    /**
      * User can claim the profits from the strategies that his principal
      * was invested in.
      */
@@ -364,6 +316,7 @@ contract RollingGarden is ReentrancyGuard, BaseGarden {
         //function claimReturns(address[] calldata _finalizedStrategies) external nonReentrant  {
         Contributor memory contributor = contributors[msg.sender];
         (uint256 totalProfits, uint256 bablRewards) = _getProfitsAndBabl(_finalizedStrategies); // TODO CHECK POTENTIAL ISSUES WITH MSG.SENDER VS. getProfitsAndBabl onlyContributor modifier
+
         if (totalProfits > 0 && address(this).balance > 0) {
             // Send eth
             (bool sent, ) = msg.sender.call{value: totalProfits}('');
@@ -438,18 +391,6 @@ contract RollingGarden is ReentrancyGuard, BaseGarden {
         redemptionRequests[msg.sender] = _amount;
         totalRequestsAmountInWindow.add(_amount);
     }
-
-    /**
-     * Burns seller garden tokens and mints them to the reserve pool
-     *  @param _contributor           Contributor that is selling the tokens
-     *  @param _quantity              Amount of tokens being sold to the reserve pool
-     */
-    // function burnAssetsFromSenderAndMintToReserve(address _contributor, uint256 _quantity) external {
-    //     address reservePool = IBabController(controller).getReservePool();
-    //     require(msg.sender == reservePool, 'Only reserve pool can call this');
-    //     _burn(_contributor, _quantity);
-    //     _mint(reservePool, _quantity);
-    // }
 
     /* ============ External Getter Functions ============ */
 

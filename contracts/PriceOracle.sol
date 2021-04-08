@@ -51,7 +51,7 @@ contract PriceOracle is Ownable {
     // Address of the Controller contract
     IBabController public controller;
 
-    address immutable weth = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
+    address public immutable weth = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
 
     address public masterQuoteAsset = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
 
@@ -98,7 +98,7 @@ contract PriceOracle is Ownable {
     function getPrice(address _assetOne, address _assetTwo) external view returns (uint256) {
         require(
             controller.isSystemContract(msg.sender) || msg.sender == owner() || true, // TODO: check is an strategy
-            'PriceOracle.getPrice: Caller must be system contract.'
+            'Caller must be system contract'
         );
         // Same asset. Returns base unit
         if (_assetOne == _assetTwo) {
@@ -113,7 +113,7 @@ contract PriceOracle is Ownable {
             (priceFound, price) = _getPriceFromAdapters(_assetOne, _assetTwo);
         }
 
-        require(priceFound, 'PriceOracle.getPrice: Price not found.');
+        require(priceFound, 'Price not found');
         return price;
     }
 
@@ -123,7 +123,7 @@ contract PriceOracle is Ownable {
      * @param _adapter         Address of new adapter
      */
     function addAdapter(address _adapter) external onlyOwner {
-        require(!adapters.contains(_adapter), 'PriceOracle.addAdapter: Adapter already exists.');
+        require(!adapters.contains(_adapter), 'Adapter already exists');
         adapters.push(_adapter);
 
         emit AdapterAdded(_adapter);
@@ -135,7 +135,7 @@ contract PriceOracle is Ownable {
      * @param _adapter         Address of  adapter to remove
      */
     function removeAdapter(address _adapter) external onlyOwner {
-        require(adapters.contains(_adapter), 'PriceOracle.removeAdapter: Adapter does not exist.');
+        require(adapters.contains(_adapter), 'Adapter does not exist');
         adapters = adapters.remove(_adapter);
 
         emit AdapterRemoved(_adapter);

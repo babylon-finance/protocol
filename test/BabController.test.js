@@ -127,7 +127,7 @@ describe('BabController', function () {
       await babController.editTreasury(addresses.users.hardhat3);
 
       const recipient = await babController.getTreasury();
-      // TODO(tylerm): Look into why this toLowerCase is needed here.
+      // TODO(tylerm): Use checksumed addresses
       expect(recipient.toLowerCase()).to.equal(addresses.users.hardhat3);
     });
   });

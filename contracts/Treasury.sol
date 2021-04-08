@@ -75,5 +75,6 @@ contract Treasury is Ownable {
     }
 
     // Can receive ETH
-    receive() external payable {} // solium-disable-line quotes
+    // solhint-disable-next-line
+    receive() external payable {}
 }
