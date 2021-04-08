@@ -47,7 +47,7 @@ contract LiquidityPoolStrategy is Strategy {
      */
     function setPoolData(address _pool) public onlyIdeator {
         require(!dataSet, 'Data is set already');
-        require(IPoolIntegration(integration).isPool(_pool), 'Must be a valid pool of this protocol');
+        require(IPoolIntegration(integration).isPool(_pool), 'Not a valid pool');
 
         kind = 1;
         pool = _pool;
@@ -66,6 +66,7 @@ contract LiquidityPoolStrategy is Strategy {
         uint256 ethValue = 0;
         for (uint256 i = 0; i < poolTokens.length; i++) {
             uint256 normalizedAmount = _capital.preciseMul(_poolWeights[i]);
+            console.log('normalizedAmount', normalizedAmount);
             if (poolTokens[i] != reserveAsset && poolTokens[i] != address(0)) {
                 _trade(reserveAsset, normalizedAmount, poolTokens[i]);
                 _maxAmountsIn[i] = IERC20(poolTokens[i]).balanceOf(address(this));
@@ -81,8 +82,14 @@ contract LiquidityPoolStrategy is Strategy {
                 _maxAmountsIn[i] = normalizedAmount;
             }
         }
-        // TODO: calculate minReceiveQuantity instead of 1
-        IPoolIntegration(integration).joinPool(pool, 1000, poolTokens, _maxAmountsIn);
+        uint256 poolTokensOut = IPoolIntegration(integration).calcPoolOut(pool, poolTokens[0], _maxAmountsIn[0]);
+        console.log('poolTokensOut', poolTokensOut);
+        IPoolIntegration(integration).joinPool(
+            pool,
+            poolTokensOut.sub(poolTokensOut.preciseMul(SLIPPAGE_ALLOWED)),
+            poolTokens,
+            _maxAmountsIn
+        );
     }
 
     /**

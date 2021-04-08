@@ -71,6 +71,18 @@ contract BalancerIntegration is PoolIntegration {
         return result;
     }
 
+    function calcPoolOut(
+        address _poolAddress,
+        address _poolToken,
+        uint256 _maxAmountsIn
+    ) external view returns (uint256) {
+        console.log('_poolToken', _poolToken);
+        console.log('_maxAmountsIn', _maxAmountsIn);
+        uint256 tokenBalance = IBPool(_poolAddress).getBalance(_poolToken);
+        console.log('tokenBalance', tokenBalance);
+        return IBPool(_poolAddress).totalSupply().preciseMul(_maxAmountsIn.preciseDiv(tokenBalance));
+    }
+
     /* ============ Internal Functions ============ */
 
     function _isPool(address _poolAddress) internal view override returns (bool) {
