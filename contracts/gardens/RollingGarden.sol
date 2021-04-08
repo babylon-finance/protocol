@@ -52,18 +52,18 @@ contract RollingGarden is ReentrancyGuard, BaseGarden {
     event ProfitAsVoter(address indexed _contributor, address indexed _strategy, uint256 indexed _amount);
     event ProfitAsLP(address indexed _contributor, address indexed _strategy, uint256 indexed _amount);
 
-
     event BABLRewardsAsStrategist(address indexed _contributor, address indexed _strategy, uint96 _rewards);
     event BABLRewardsAsVoter(address indexed _contributor, address indexed _strategy, uint96 _rewards);
     event BABLRewardsAsLP(address indexed _contributor, address indexed _strategy, uint96 _rewards);
     event BABLRewardsAsCreator(address indexed _contributor, address indexed _strategy, uint96 _rewards);
-    
-    event ProfitAndBABLRewardsPerStrategy(address indexed _contributor, address indexed _strategy, uint256 indexed _amount, uint96 _rewards);
+
+    event ProfitAndBABLRewardsPerStrategy(
+        address indexed _contributor,
+        address indexed _strategy,
+        uint256 indexed _amount,
+        uint96 _rewards
+    );
     event TotalClaimedProfitAndBABLRewards(address indexed _contributor, uint256 indexed _amount, uint96 _rewards);
-
-
-
-
 
     /* ============ State Variables ============ */
 
@@ -361,7 +361,7 @@ contract RollingGarden is ReentrancyGuard, BaseGarden {
      * was invested in.
      */
     function claimReturns(address[] calldata _finalizedStrategies) external nonReentrant onlyContributor {
-    //function claimReturns(address[] calldata _finalizedStrategies) external nonReentrant  {
+        //function claimReturns(address[] calldata _finalizedStrategies) external nonReentrant  {
         Contributor memory contributor = contributors[msg.sender];
         (uint256 totalProfits, uint256 bablRewards) = _getProfitsAndBabl(_finalizedStrategies); // TODO CHECK POTENTIAL ISSUES WITH MSG.SENDER VS. getProfitsAndBabl onlyContributor modifier
         if (totalProfits > 0 && address(this).balance > 0) {
@@ -374,7 +374,6 @@ contract RollingGarden is ReentrancyGuard, BaseGarden {
             IRewardsDistributor rewardsDistributor =
                 IRewardsDistributor(IBabController(controller).getRewardsDistributor());
             rewardsDistributor.sendTokensToContributor(msg.sender, uint96(bablRewards));
-
         }
         contributor.claimedAt = block.timestamp; // Checkpoint wether or not the contributor has claimed
         contributor.claimedBABL = contributor.claimedBABL.add(bablRewards); // TODO Check this movement from _getProfitsAndBabl since that internal function will serve also for updating UI several times
@@ -383,16 +382,19 @@ contract RollingGarden is ReentrancyGuard, BaseGarden {
 
     /**
      * When an investment strategy finishes execution, contributors might want to know the profits and BABL rewards for their participation in the different strategies
-     * 
+     *
      *
      * @param _finalizedStrategies       Array of the finalized strategies
      */
 
-    function getProfitsAndBabl(address[] calldata _finalizedStrategies) external onlyContributor returns (uint256, uint96) {
+    function getProfitsAndBabl(address[] calldata _finalizedStrategies)
+        external
+        onlyContributor
+        returns (uint256, uint96)
+    {
         return _getProfitsAndBabl(_finalizedStrategies);
-        
     }
-    
+
     /**
      * When an investment strategy finishes execution, we want to make that eth available for withdrawals
      * from members of the garden.
@@ -570,11 +572,14 @@ contract RollingGarden is ReentrancyGuard, BaseGarden {
                 // Get strategist rewards in case the contributor is also the strategist of the strategy
                 if (isStrategist) {
                     bablRewards = bablRewards.add(strategyRewards.multiplyDecimal(BABL_STRATEGIST_SHARE));
-                    emit BABLRewardsAsStrategist(msg.sender, address(strategy), Safe3296.safe96(bablRewards, 'overflow 96 bits'));
+                    emit BABLRewardsAsStrategist(
+                        msg.sender,
+                        address(strategy),
+                        Safe3296.safe96(bablRewards, 'overflow 96 bits')
+                    );
 
                     contributorProfits = contributorProfits.add(totalProfits.multiplyDecimal(PROFIT_STRATEGIST_SHARE));
                     emit ProfitAsStrategist(msg.sender, address(strategy), contributorProfits);
-
                 }
 
                 // Get proportional voter (stewards) rewards in case the contributor was also a steward of the strategy
@@ -585,9 +590,13 @@ contract RollingGarden is ReentrancyGuard, BaseGarden {
                             uint256(strategy.getUserVotes(msg.sender)).preciseDiv(strategy.absoluteTotalVotes())
                         )
                     );
-                    emit BABLRewardsAsVoter(msg.sender, address(strategy), Safe3296.safe96(bablRewards.sub(tempForEvents), 'overflow 96 bits'));
+                    emit BABLRewardsAsVoter(
+                        msg.sender,
+                        address(strategy),
+                        Safe3296.safe96(bablRewards.sub(tempForEvents), 'overflow 96 bits')
+                    );
                     tempForEvents = contributorProfits;
-                    
+
                     contributorProfits = contributorProfits.add(
                         totalProfits
                             .multiplyDecimal(PROFIT_STEWARD_SHARE)
@@ -595,7 +604,6 @@ contract RollingGarden is ReentrancyGuard, BaseGarden {
                             .preciseDiv(strategy.absoluteTotalVotes())
                     );
                     emit ProfitAsVoter(msg.sender, address(strategy), contributorProfits.sub(tempForEvents));
-
                 }
 
                 // Get proportional LP rewards as every active contributor of the garden is a LP of their strategies
@@ -605,9 +613,12 @@ contract RollingGarden is ReentrancyGuard, BaseGarden {
                         contributors[msg.sender].gardenAverageOwnership.preciseDiv(strategy.capitalAllocated())
                     )
                 );
-                emit BABLRewardsAsLP(msg.sender, address(strategy), Safe3296.safe96(bablRewards.sub(tempForEvents), 'overflow 96 bits'));
+                emit BABLRewardsAsLP(
+                    msg.sender,
+                    address(strategy),
+                    Safe3296.safe96(bablRewards.sub(tempForEvents), 'overflow 96 bits')
+                );
                 tempForEvents = contributorProfits;
-
 
                 contributorProfits = contributorProfits.add(
                     contributors[msg.sender].gardenAverageOwnership.preciseMul(totalProfits).multiplyDecimal(
@@ -616,24 +627,34 @@ contract RollingGarden is ReentrancyGuard, BaseGarden {
                 );
                 emit ProfitAsVoter(msg.sender, address(strategy), contributorProfits.sub(tempForEvents));
 
-
                 // Get a multiplier bonus in case the contributor is the garden creator
                 if (creatorBonus > 0) {
                     tempForEvents = bablRewards;
                     bablRewards = bablRewards.add(bablRewards.multiplyDecimal(creatorBonus));
-                    emit BABLRewardsAsCreator(msg.sender, address(strategy), Safe3296.safe96(bablRewards.sub(tempForEvents), 'overflow 96 bits'));
-
+                    emit BABLRewardsAsCreator(
+                        msg.sender,
+                        address(strategy),
+                        Safe3296.safe96(bablRewards.sub(tempForEvents), 'overflow 96 bits')
+                    );
                 }
 
                 bablTotalRewards = bablTotalRewards.add(bablRewards);
                 contributorTotalProfits = contributorTotalProfits.add(contributorProfits);
-                emit ProfitAndBABLRewardsPerStrategy(msg.sender, address(strategy), contributorProfits, Safe3296.safe96(bablRewards, 'overflow 96 bits'));
+                emit ProfitAndBABLRewardsPerStrategy(
+                    msg.sender,
+                    address(strategy),
+                    contributorProfits,
+                    Safe3296.safe96(bablRewards, 'overflow 96 bits')
+                );
             }
         }
-        emit TotalClaimedProfitAndBABLRewards(msg.sender, contributorTotalProfits, Safe3296.safe96(bablTotalRewards, 'overflow 96 bits'));
+        emit TotalClaimedProfitAndBABLRewards(
+            msg.sender,
+            contributorTotalProfits,
+            Safe3296.safe96(bablTotalRewards, 'overflow 96 bits')
+        );
         return (contributorTotalProfits, Safe3296.safe96(bablTotalRewards, 'R28'));
     }
-
 
     function _validateReserveAsset(address _reserveAsset, uint256 _quantity) internal view {
         require(_quantity > 0, 'Quantity > 0');

@@ -173,11 +173,10 @@ contract RewardsDistributor is Ownable {
     function getStrategyRewards(address _strategy) public returns (uint96) {
         strategy = IStrategy(_strategy);
         require(strategy.exitedAt() != 0, 'The strategy has to be finished before calculations');
-        if (strategy.strategyRewards() != 0) return strategy.strategyRewards();  // We avoid gas consuming once a strategy got its BABL rewards during its finalization
-        
+        if (strategy.strategyRewards() != 0) return strategy.strategyRewards(); // We avoid gas consuming once a strategy got its BABL rewards during its finalization
+
         // If the calculation was not done earlier we go for it
-        (uint256 numQuarters, uint256 startingQuarter) =
-            getRewardsWindow(strategy.executedAt(), strategy.exitedAt());
+        (uint256 numQuarters, uint256 startingQuarter) = getRewardsWindow(strategy.executedAt(), strategy.exitedAt());
         uint256 bablRewards = 0;
         if (numQuarters <= 1) {
             bablRewards = (
@@ -187,7 +186,7 @@ contract RewardsDistributor is Ownable {
             )
                 .preciseMul(uint256(protocolPerQuarter[startingQuarter].supplyPerQuarter))
                 .mul(strategy.exitedAt().sub(startingQuarter))
-                .div(block.timestamp.sub(startingQuarter)); // Proportional supply till that moment within the same epoch    
+                .div(block.timestamp.sub(startingQuarter)); // Proportional supply till that moment within the same epoch
             require(bablRewards <= protocolPerQuarter[startingQuarter].supplyPerQuarter, 'overflow in supply');
             require(
                 strategy.capitalAllocated().mul(strategy.exitedAt().sub(strategy.executedAt())) <=
@@ -208,13 +207,9 @@ contract RewardsDistributor is Ownable {
                     // We are in the first quarter of the strategy
 
                     strategyPower[i] = strategy.capitalAllocated().mul(slotEnding.sub(strategy.executedAt()));
-                } else if (
-                    strategy.executedAt() < slotEnding.sub(EPOCH_DURATION) && slotEnding < strategy.exitedAt()
-                ) {
+                } else if (strategy.executedAt() < slotEnding.sub(EPOCH_DURATION) && slotEnding < strategy.exitedAt()) {
                     // We are in an intermediate quarter different from starting or ending quarters
-                    strategyPower[i] = strategy.capitalAllocated().mul(
-                        slotEnding.sub(slotEnding.sub(EPOCH_DURATION))
-                    );
+                    strategyPower[i] = strategy.capitalAllocated().mul(slotEnding.sub(slotEnding.sub(EPOCH_DURATION)));
                 } else {
                     // We are in the last quarter of the strategy
                     percentage = block.timestamp.sub(slotEnding.sub(EPOCH_DURATION)).preciseDiv(
@@ -242,12 +237,10 @@ contract RewardsDistributor is Ownable {
         uint256 percentageMul = strategy.capitalReturned().preciseDiv(strategy.capitalAllocated());
         bablRewards = bablRewards.preciseMul(percentageMul);
         return Safe3296.safe96(bablRewards, 'overflow 96 bits');
-        
     }
 
     //function sendTokensToContributor(address _to, uint96 _amount) public onlyStrategy {
-    function sendTokensToContributor(address _to, uint96 _amount) external  {
-
+    function sendTokensToContributor(address _to, uint96 _amount) external {
         require(controller.isSystemContract(msg.sender), 'The caller is not a system contract');
         _safeBABLTransfer(_to, _amount);
     }
@@ -460,7 +453,6 @@ contract RewardsDistributor is Ownable {
 
     // Safe BABL transfer function, just in case if rounding error causes DistributorRewards to not have enough BABL.
     function _safeBABLTransfer(address _to, uint96 _amount) internal {
-
         uint256 bablBal = babltoken.balanceOf(address(this));
         if (_amount > bablBal) {
             babltoken.transfer(_to, bablBal);

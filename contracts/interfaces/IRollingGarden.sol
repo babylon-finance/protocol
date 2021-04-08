@@ -60,7 +60,7 @@ interface IRollingGarden is IERC20, IGarden {
         address payable _to
     ) external;
 
-    function claimReturns(address[] calldata _finalizedStrategies) external ;
+    function claimReturns(address[] calldata _finalizedStrategies) external;
 
     function getProfitsAndBabl(address[] calldata _finalizedStrategies) external returns (uint256, uint96);
 
