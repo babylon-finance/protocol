@@ -135,11 +135,11 @@ contract RollingGarden is ReentrancyGuard, BaseGarden {
         require(_maxDepositLimit < MAX_DEPOSITS_FUND_V1, 'R01'); // Max deposit limit needs to be under the limit
 
         require(msg.value >= minContribution, 'R02'); // Creator needs to deposit
-        IBabController ifcontroller = IBabController(controller);
+        IBabController babController = IBabController(controller);
         require(_minGardenTokenSupply > 0, 'R03'); // Min Garden token supply >= 0
         require(_depositHardlock > 0, 'R04'); // Deposit hardlock needs to be at least 1 block
         require(
-            _minLiquidityAsset >= ifcontroller.minRiskyPairLiquidityEth(),
+            _minLiquidityAsset >= babController.minRiskyPairLiquidityEth(),
             'R05' // Needs to be at least the minimum set by protocol
         );
         // make initial deposit
@@ -294,7 +294,7 @@ contract RollingGarden is ReentrancyGuard, BaseGarden {
     // Raul Review
     function claimReturns(address[] calldata _finalizedStrategies) external nonReentrant onlyContributor {
         Contributor memory contributor = contributors[msg.sender];
-        (uint256 totalProfits, uint256 bablRewards) = this._getProfitsAndBabl(_finalizedStrategies);
+        (uint256 totalProfits, uint256 bablRewards) = this.getProfitsAndBabl(_finalizedStrategies);
         if (totalProfits > 0 && address(this).balance > 0) {
             // Send eth
             (bool sent, ) = msg.sender.call{value: totalProfits}('');
@@ -310,7 +310,7 @@ contract RollingGarden is ReentrancyGuard, BaseGarden {
     }
 
     // Raul Review
-    function _getProfitsAndBabl(address[] calldata _finalizedStrategies)
+    function getProfitsAndBabl(address[] calldata _finalizedStrategies)
         external
         onlyContributor
         returns (uint256, uint256)

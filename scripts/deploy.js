@@ -1,6 +1,13 @@
 const { ethers } = require('hardhat');
 const fs = require('fs');
 const chalk = require('chalk');
+const {
+  createStrategy,
+  executeStrategy,
+  finalizeStrategy,
+  injectFakeProfits,
+} = require('../test/fixtures/StrategyHelper');
+const { ONE_DAY_IN_SECONDS } = require('../utils/constants.js');
 const { deployFolioFixture } = require('../test/fixtures/ControllerFixture');
 
 async function deploy(name, _args) {
@@ -33,11 +40,23 @@ async function autoDeploy() {
 }
 
 async function main() {
-  const { contractsToPublish } = await deployFolioFixture();
-
+  const { contractsToPublish, garden3, signer1, signer2, signer3, kyberTradeIntegration } = await deployFolioFixture();
   console.log('Contracts deployed...');
-  console.log('Syncing artifacts for export...');
 
+  console.log('Deploying test strategies...');
+  const strategy1 = await createStrategy(
+    0,
+    'vote',
+    [signer1, signer2, signer3],
+    kyberTradeIntegration.address,
+    garden3,
+  );
+  await executeStrategy(garden3, strategy1);
+  await injectFakeProfits(strategy1, ethers.utils.parseEther('1'));
+  await finalizeStrategy(garden3, strategy1);
+  console.log('Test strategies deployed...');
+
+  console.log('Syncing artifacts for export...');
   // Let the fixture response determine which contracts to write address
   // files for and export accordingly in contracts.js.
   contractsToPublish.forEach((contractObj) => {

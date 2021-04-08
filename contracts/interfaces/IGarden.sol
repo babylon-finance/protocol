@@ -89,6 +89,8 @@ interface IGarden is IERC20 {
 
     function getStrategies() external view returns (address[] memory);
 
+    function getFinalizedStrategies() external view returns (address[] memory);
+
     function strategies(uint256 _index) external view returns (address);
 
     function isStrategy(address _strategy) external view returns (bool);

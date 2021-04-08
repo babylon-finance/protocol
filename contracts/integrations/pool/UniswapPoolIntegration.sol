@@ -59,6 +59,8 @@ contract UniswapPoolIntegration is PoolIntegration {
         uniRouter = IUniswapV2Router(_uniswapRouterAddress);
     }
 
+    /* ============ External Functions ============ */
+
     function getPoolTokens(address _poolAddress) external view override returns (address[] memory) {
         address[] memory result = new address[](2);
         result[0] = IUniswapV2Pair(_poolAddress).token0();
@@ -73,6 +75,15 @@ contract UniswapPoolIntegration is PoolIntegration {
         result[0] = 5e17; // 50%
         result[1] = 5e17; // 50%
         return result;
+    }
+
+    function calcPoolOut(
+        address, /* _poolAddress */
+        address, /* _poolToken */
+        uint256 /* _maxAmountsIn */
+    ) external view returns (uint256) {
+        // return 1 since _poolTokensOut are not used in OneInchPoolIntegration
+        return 1;
     }
 
     /* ============ Internal Functions ============ */
@@ -115,8 +126,8 @@ contract UniswapPoolIntegration is PoolIntegration {
         )
     {
         // Encode method data for Garden to invoke
-        require(_tokensIn.length == 2, 'Adding liquidity to a uniswap pool requires exactly two tokens');
-        require(_maxAmountsIn.length == 2, 'Adding liquidity to a uniswap pool requires exactly two tokens');
+        require(_tokensIn.length == 2, 'Two tokens required');
+        require(_maxAmountsIn.length == 2, 'Two tokens require');
         bytes memory methodData =
             abi.encodeWithSignature(
                 'addLiquidity(address,address,uint256,uint256,uint256,uint256,address,uint256)',
@@ -160,8 +171,8 @@ contract UniswapPoolIntegration is PoolIntegration {
             bytes memory
         )
     {
-        require(_tokensOut.length == 2, 'Removing liquidity from a uniswap pool requires exactly two tokens');
-        require(_minAmountsOut.length == 2, 'Removing liquidity from a uniswap pool requires exactly two tokens');
+        require(_tokensOut.length == 2, 'Two tokens required');
+        require(_minAmountsOut.length == 2, 'Two tokens required');
         // Encode method data for Garden to invoke
         bytes memory methodData =
             abi.encodeWithSignature(

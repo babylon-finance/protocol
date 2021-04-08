@@ -440,6 +440,16 @@ abstract contract BaseGarden is ERC20Upgradeable {
         return strategies;
     }
 
+    /**
+     * Gets finalized investment strategies
+     *
+     * @return  address[]        Returns list of addresses
+     */
+
+    function getFinalizedStrategies() public view returns (address[] memory) {
+        return finalizedStrategies;
+    }
+
     function isStrategy(address _strategy) external view returns (bool) {
         return strategyMapping[_strategy];
     }
