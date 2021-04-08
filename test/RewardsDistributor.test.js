@@ -84,6 +84,24 @@ async function checkStrategyStateFinalized(strategyContract) {
   return [address, active, dataSet, finalized, executedAt, exitedAt];
 }
 
+async function checkProtocolWithParams(_protocol, _principal, _executedAt, _quarter, _timeListPointer, _power) {
+
+  expect(_protocol[0]).to.equal(_principal); 
+  expect(_protocol[1]).to.equal(_executedAt);
+  expect(_protocol[2]).to.equal(_quarter);
+  expect(_protocol[3]).to.equal(_timeListPointer); 
+  expect(_protocol[4]).to.equal(_power);
+
+}
+
+async function checkQuarterWithParams(_quarter0, _quarter1, _quarter2, _quarter3, _principal, _quarter, _power, _supply){
+
+  expect(_quarter0).to.equal(_principal);
+  expect(_quarter1).to.equal(_quarter);
+  expect(_quarter2).to.equal(_power);
+  expect(_quarter3).to.equal(_supply);
+}
+
 async function updateTWAPs(garden) {
   const controller = await ethers.getContractAt('BabController', await garden.controller());
   const priceOracle = await ethers.getContractAt('PriceOracle', await controller.getPriceOracle());
@@ -189,32 +207,14 @@ describe('BABL Rewards Distributor', function () {
       // Keeper gets paid
       expect(await wethToken.balanceOf(await owner.getAddress())).to.equal(42);
 
-      // Protocol principal should be incremented accordingly
+      // Check protocol
       const protocol = await rewardsDistributor.checkProtocol(executedAt);
-      const protocolPrincipal = protocol[0];
-      const protocolTime = protocol[1];
-      const protocolquarterBelonging = protocol[2];
-      const protocolTimeListPointer = protocol[3];
-      const protocolPower = protocol[4];
+      await checkProtocolWithParams(protocol, ethers.utils.parseEther('1'), executedAt, 1, 0, 0);
 
-      expect(protocolPrincipal).to.equal(ethers.utils.parseEther('1')); // It is vote state strategy
-      expect(protocolTime).to.equal(executedAt);
-      expect(protocolquarterBelonging).to.equal(1);
-      expect(protocolTimeListPointer).to.equal(0); // pid starting by zero
-      expect(protocolPower).to.equal(0);
+      const protocolQuarter = await rewardsDistributor.checkQuarter(protocol[2]);
+      const [quarterPrincipal, quarterNumber, quarterPower, quarterSupply ] = protocolQuarter;
+      await checkQuarterWithParams(quarterPrincipal, quarterNumber, quarterPower, quarterSupply, ethers.utils.parseEther('1'), 1, 0, await rewardsDistributor.tokenSupplyPerQuarter(1) );
 
-      const protocolQuarter = await rewardsDistributor.checkQuarter(protocolquarterBelonging);
-      const quarterPrincipal = protocolQuarter[0];
-      const quarterNumber = protocolQuarter[1];
-      const quarterPower = protocolQuarter[2];
-      const quarterSupply = protocolQuarter[3];
-
-      expect(quarterPrincipal).to.equal(ethers.utils.parseEther('1'));
-      expect(quarterNumber).to.equal(1);
-      expect(quarterPower).to.equal(0);
-      expect(quarterSupply).to.not.equal(0);
-
-      expect(protocolPrincipal).to.equal(ethers.utils.parseEther('1')); // It is vote state strategy
       expect(active).to.equal(true);
       expect(dataSet).to.equal(true);
       expect(finalized).to.equal(false);
@@ -229,31 +229,25 @@ describe('BABL Rewards Distributor', function () {
         strategyContract,
       );
 
-      // Protocol principal should be reduced accordingly
-      const protocol2 = await rewardsDistributor.checkProtocol(exitedAt2);
-      const protocolPrincipal2 = protocol2[0];
-      const protocolTime2 = protocol2[1];
-      const protocolquarterBelonging2 = protocol2[2];
-      const protocolTimeListPointer2 = protocol2[3];
-      const protocolPower2 = protocol2[4];
-
-      expect(protocolPrincipal2).to.equal(0);
-      expect(protocolquarterBelonging2).to.equal(1);
-      expect(protocolPower2).to.not.equal(0); // TODO CHECK EXACT AMOUNT
+      // Check strategy
       expect(finalized2).to.equal(true);
       expect(executedAt2).to.not.equal(0);
       expect(exitedAt2).to.not.equal(0);
 
-      const protocolQuarter2 = await rewardsDistributor.checkQuarter(protocolquarterBelonging2);
-      const quarterPrincipal2 = protocolQuarter2[0];
-      const quarterNumber2 = protocolQuarter2[1];
-      const quarterPower2 = protocolQuarter2[2];
-      const quarterSupply2 = protocolQuarter2[3];
+      // Check protocol update
 
-      expect(quarterPrincipal2).to.equal(protocolPrincipal2); // It is a voter strategy
-      expect(quarterNumber2).to.equal(1);
-      expect(quarterPower2).to.equal(protocolPower2);
-      expect(quarterSupply2).to.equal(await rewardsDistributor.tokenSupplyPerQuarter(1));
+      const protocol2 = await rewardsDistributor.checkProtocol(exitedAt2);
+      const [protocolPrincipal2, protocolTime2, protocolquarterBelonging2, protocolTimeListPointer2, protocolPower2 ] = protocol2;
+
+      expect(protocolPrincipal2).to.equal(0);
+      expect(protocolquarterBelonging2).to.equal(1);
+      expect(protocolPower2).to.not.equal(0); // TODO CHECK EXACT AMOUNT
+      
+
+      const protocolQuarter2 = await rewardsDistributor.checkQuarter(protocol2[2]);
+      const [quarterPrincipal2, quarterNumber2, quarterPower2, quarterSupply2 ] = protocolQuarter2;
+      await checkQuarterWithParams(quarterPrincipal2, quarterNumber2, quarterPower2, quarterSupply2, protocolPrincipal2, 1, protocolPower2, await rewardsDistributor.tokenSupplyPerQuarter(1) );
+
 
       const bablRewards1 = await strategyContract.strategyRewards();
     });
@@ -371,41 +365,23 @@ describe('BABL Rewards Distributor', function () {
       const [address, active, dataSet, finalized, executedAt, exitedAt] = await checkStrategyStateExecuting(
         strategyContract,
       );
-
-      // Keeper gets paid
-      expect(await wethToken.balanceOf(await owner.getAddress())).to.equal(42);
-
-      // Protocol principal should be incremented accordingly
-      const protocol = await rewardsDistributor.checkProtocol(executedAt);
-      const protocolPrincipal = protocol[0];
-      const protocolTime = protocol[1];
-      const protocolquarterBelonging = protocol[2];
-      const protocolTimeListPointer = protocol[3];
-      const protocolPower = protocol[4];
-
-      expect(protocolPrincipal).to.equal(ethers.utils.parseEther('1')); // It is vote state strategy
-      expect(protocolTime).to.equal(executedAt);
-      expect(protocolquarterBelonging).to.equal(1);
-      expect(protocolTimeListPointer).to.equal(0); // pid starting by zero
-      expect(protocolPower).to.equal(0);
-
-      const protocolQuarter = await rewardsDistributor.checkQuarter(protocolquarterBelonging);
-      const quarterPrincipal = protocolQuarter[0];
-      const quarterNumber = protocolQuarter[1];
-      const quarterPower = protocolQuarter[2];
-      const quarterSupply = protocolQuarter[3];
-
-      expect(quarterPrincipal).to.equal(ethers.utils.parseEther('1'));
-      expect(quarterNumber).to.equal(1);
-      expect(quarterPower).to.equal(0);
-      expect(quarterSupply).to.not.equal(0);
-
-      expect(protocolPrincipal).to.equal(ethers.utils.parseEther('1')); // It is vote state strategy
+      // Check strategy
       expect(active).to.equal(true);
       expect(dataSet).to.equal(true);
       expect(finalized).to.equal(false);
       expect(executedAt).to.not.equal(0);
       expect(exitedAt).to.equal(ethers.BigNumber.from(0));
+
+      // Keeper gets paid
+      expect(await wethToken.balanceOf(await owner.getAddress())).to.equal(42);
+
+      // Check protocol
+      const protocol = await rewardsDistributor.checkProtocol(executedAt);
+      await checkProtocolWithParams(protocol, ethers.utils.parseEther('1'), executedAt, 1, 0, 0);
+
+      const protocolQuarter = await rewardsDistributor.checkQuarter(protocol[2]);
+      const [quarterPrincipal, quarterNumber, quarterPower, quarterSupply ] = protocolQuarter;
+      await checkQuarterWithParams(quarterPrincipal, quarterNumber, quarterPower, quarterSupply, ethers.utils.parseEther('1'), 1, 0, await rewardsDistributor.tokenSupplyPerQuarter(1) );
 
       ethers.provider.send('evm_increaseTime', [ONE_DAY_IN_SECONDS * 2]);
 
@@ -416,32 +392,24 @@ describe('BABL Rewards Distributor', function () {
       const [address2, active2, dataSet2, finalized2, executedAt2, exitedAt2] = await checkStrategyStateFinalized(
         strategyContract,
       );
-
-      // Protocol principal should be reduced accordingly
-      const protocol2 = await rewardsDistributor.checkProtocol(exitedAt2);
-      const protocolPrincipal2 = protocol2[0];
-      const protocolTime2 = protocol2[1];
-      const protocolquarterBelonging2 = protocol2[2];
-      const protocolTimeListPointer2 = protocol2[3];
-      const protocolPower2 = protocol2[4];
-
-      expect(protocolPrincipal2).to.equal(0);
-      expect(protocolquarterBelonging2).to.equal(1);
-      expect(protocolPower2).to.not.equal(0); // TODO CHECK EXACT AMOUNT
+      // Check strategy
       expect(finalized2).to.equal(true);
       expect(executedAt2).to.not.equal(0);
       expect(exitedAt2).to.not.equal(0);
 
-      const protocolQuarter2 = await rewardsDistributor.checkQuarter(protocolquarterBelonging2);
-      const quarterPrincipal2 = protocolQuarter2[0];
-      const quarterNumber2 = protocolQuarter2[1];
-      const quarterPower2 = protocolQuarter2[2];
-      const quarterSupply2 = protocolQuarter2[3];
+      // Check protocol update
 
-      expect(quarterPrincipal2).to.equal(protocolPrincipal2); // It is a voter strategy
-      expect(quarterNumber2).to.equal(1);
-      expect(quarterPower2).to.equal(protocolPower2);
-      expect(quarterSupply2).to.equal(await rewardsDistributor.tokenSupplyPerQuarter(1));
+      const protocol2 = await rewardsDistributor.checkProtocol(exitedAt2);
+      const [protocolPrincipal2, protocolTime2, protocolquarterBelonging2, protocolTimeListPointer2, protocolPower2 ] = protocol2;
+
+      expect(protocolPrincipal2).to.equal(0);
+      expect(protocolquarterBelonging2).to.equal(1);
+      expect(protocolPower2).to.not.equal(0); // TODO CHECK EXACT AMOUNT
+      
+
+      const protocolQuarter2 = await rewardsDistributor.checkQuarter(protocol2[2]);
+      const [quarterPrincipal2, quarterNumber2, quarterPower2, quarterSupply2 ] = protocolQuarter2;
+      await checkQuarterWithParams(quarterPrincipal2, quarterNumber2, quarterPower2, quarterSupply2, protocolPrincipal2, 1, protocolPower2, await rewardsDistributor.tokenSupplyPerQuarter(1) );
 
       const bablRewards1 = await strategyContract.strategyRewards();
     });
@@ -487,30 +455,13 @@ describe('BABL Rewards Distributor', function () {
         strategyContract2,
       );
 
-      // Protocol principal should be incremented accordingly
+      // Check protocol
       const protocol = await rewardsDistributor.checkProtocol(executedAt2);
-      const protocolPrincipal = protocol[0];
-      const protocolTime = protocol[1];
-      const protocolquarterBelonging = protocol[2];
-      const protocolTimeListPointer = protocol[3];
-      const protocolPower = protocol[4];
+      await checkProtocolWithParams(protocol, ethers.utils.parseEther('3'), executedAt2, 1, 1, protocol[4]);
 
-      expect(protocolPrincipal).to.equal(ethers.utils.parseEther('3')); // It is vote state strategy
-      expect(protocolTime).to.equal(executedAt2);
-      expect(protocolquarterBelonging).to.equal(1);
-      expect(protocolTimeListPointer).to.equal(1); // pid starting by zero, second strategy
-      expect(protocolPower).to.not.equal(0); // TODO Check exact numbers
-
-      const protocolQuarter = await rewardsDistributor.checkQuarter(protocolquarterBelonging);
-      const quarterPrincipal = protocolQuarter[0];
-      const quarterNumber = protocolQuarter[1];
-      const quarterPower = protocolQuarter[2];
-      const quarterSupply = protocolQuarter[3];
-
-      expect(quarterPrincipal).to.equal(ethers.utils.parseEther('3'));
-      expect(quarterNumber).to.equal(1);
-      expect(quarterPower).to.equal(protocolPower);
-      expect(quarterSupply).to.not.equal(0);
+      const protocolQuarter = await rewardsDistributor.checkQuarter(protocol[2]);
+      const [quarterPrincipal, quarterNumber, quarterPower, quarterSupply ] = protocolQuarter;
+      await checkQuarterWithParams(quarterPrincipal, quarterNumber, quarterPower, quarterSupply, ethers.utils.parseEther('3'), 1, protocol[4], await rewardsDistributor.tokenSupplyPerQuarter(1) );
 
       ethers.provider.send('evm_increaseTime', [ONE_DAY_IN_SECONDS * 2]);
 
@@ -520,31 +471,15 @@ describe('BABL Rewards Distributor', function () {
         strategyContract,
       );
 
-      // Protocol principal should be reduced accordingly
+      // Check protocol
       const protocol2 = await rewardsDistributor.checkProtocol(exitedAt3);
-      const protocolPrincipal2 = protocol2[0];
-      const protocolTime2 = protocol2[1];
-      const protocolquarterBelonging2 = protocol2[2];
-      const protocolTimeListPointer2 = protocol2[3];
-      const protocolPower2 = protocol2[4];
+      await checkProtocolWithParams(protocol2, ethers.utils.parseEther('2'), exitedAt3, 1, 2, protocol2[4]);      // TODO CHECK EXACT AMOUNT
 
-      expect(protocolPrincipal2).to.equal(ethers.utils.parseEther('2'));
-      expect(protocolquarterBelonging2).to.equal(1);
-      expect(protocolPower2).to.not.equal(0); // TODO CHECK EXACT AMOUNT
-      expect(protocolTime2).to.equal(exitedAt3);
-      expect(protocolTimeListPointer2).to.equal(2); // pid starting by zero, 3rd checkpoint
-      expect(protocolPower).to.not.equal(0); // TODO Check exact numbers
+      expect(protocol2[4]).to.not.equal(0); // TODO Check exact numbers
 
-      const protocolQuarter2 = await rewardsDistributor.checkQuarter(protocolquarterBelonging2);
-      const quarterPrincipal2 = protocolQuarter2[0];
-      const quarterNumber2 = protocolQuarter2[1];
-      const quarterPower2 = protocolQuarter2[2];
-      const quarterSupply2 = protocolQuarter2[3];
-
-      expect(quarterPrincipal2).to.equal(protocolPrincipal2); // It is a voter strategy
-      expect(quarterNumber2).to.equal(1);
-      expect(quarterPower2).to.equal(protocolPower2);
-      expect(quarterSupply2).to.equal(await rewardsDistributor.tokenSupplyPerQuarter(1));
+      const protocolQuarter2 = await rewardsDistributor.checkQuarter(protocol2[2]);
+      const [quarterPrincipal2, quarterNumber2, quarterPower2, quarterSupply2] = protocolQuarter2;
+      await checkQuarterWithParams(quarterPrincipal2, quarterNumber2, quarterPower2, quarterSupply2, protocol2[0], 1, protocol2[4], await rewardsDistributor.tokenSupplyPerQuarter(1) );
 
       ethers.provider.send('evm_increaseTime', [ONE_DAY_IN_SECONDS * 2]);
 
@@ -553,30 +488,16 @@ describe('BABL Rewards Distributor', function () {
         strategyContract2,
       );
 
-      // Protocol principal should be reduced accordingly
+      
+      // Check protocol
       const protocol3 = await rewardsDistributor.checkProtocol(exitedAt4);
-      const protocolPrincipal3 = protocol3[0];
-      const protocolTime3 = protocol3[1];
-      const protocolquarterBelonging3 = protocol3[2];
-      const protocolTimeListPointer3 = protocol3[3];
-      const protocolPower3 = protocol3[4];
+      await checkProtocolWithParams(protocol3, ethers.utils.parseEther('0'), exitedAt4, 1, 3, protocol3[4]);      // TODO CHECK EXACT AMOUNT
 
-      expect(protocolPrincipal3).to.equal(0);
-      expect(protocolquarterBelonging3).to.equal(1);
-      expect(protocolPower3).to.not.equal(0); // TODO CHECK EXACT AMOUNT
-      expect(protocolTime3).to.equal(exitedAt4);
-      expect(protocolTimeListPointer3).to.equal(3);
+      expect(protocol3[4]).to.not.equal(0); // TODO CHECK EXACT AMOUNT
 
-      const protocolQuarter3 = await rewardsDistributor.checkQuarter(protocolquarterBelonging3);
-      const quarterPrincipal3 = protocolQuarter3[0];
-      const quarterNumber3 = protocolQuarter3[1];
-      const quarterPower3 = protocolQuarter3[2];
-      const quarterSupply3 = protocolQuarter3[3];
-
-      expect(quarterPrincipal3).to.equal(protocolPrincipal3);
-      expect(quarterNumber3).to.equal(1);
-      expect(quarterPower3).to.equal(protocolPower3);
-      expect(quarterSupply3).to.equal(await rewardsDistributor.tokenSupplyPerQuarter(1));
+      const protocolQuarter3 = await rewardsDistributor.checkQuarter(protocol3[2]);
+      const [quarterPrincipal3, quarterNumber3, quarterPower3, quarterSupply3] = protocolQuarter3;
+      await checkQuarterWithParams(quarterPrincipal3, quarterNumber3, quarterPower3, quarterSupply3, protocol3[0], 1, protocol3[4], await rewardsDistributor.tokenSupplyPerQuarter(1) );
 
       const bablRewards1 = await strategyContract.strategyRewards();
       const bablRewards2 = await strategyContract2.strategyRewards();
@@ -633,30 +554,13 @@ describe('BABL Rewards Distributor', function () {
         strategyContract3,
       );
 
-      // Protocol principal should be incremented accordingly
+      // Check protocol
       const protocol = await rewardsDistributor.checkProtocol(executedAt2);
-      const protocolPrincipal = protocol[0];
-      const protocolTime = protocol[1];
-      const protocolquarterBelonging = protocol[2];
-      const protocolTimeListPointer = protocol[3];
-      const protocolPower = protocol[4];
+      await checkProtocolWithParams(protocol, ethers.utils.parseEther('6'), executedAt2, 1, 5, protocol[4]);
 
-      expect(protocolPrincipal).to.equal(ethers.utils.parseEther('6')); // All are ADCTIVE state strategies (add 1ETH each)
-      expect(protocolTime).to.equal(executedAt2);
-      expect(protocolquarterBelonging).to.equal(1);
-      expect(protocolTimeListPointer).to.equal(5); // pid starting by zero, 3 strategies launched with 1 additional addinvestment each
-      expect(protocolPower).to.not.equal(0); // TODO Check exact numbers
-
-      const protocolQuarter = await rewardsDistributor.checkQuarter(protocolquarterBelonging);
-      const quarterPrincipal = protocolQuarter[0];
-      const quarterNumber = protocolQuarter[1];
-      const quarterPower = protocolQuarter[2];
-      const quarterSupply = protocolQuarter[3];
-
-      expect(quarterPrincipal).to.equal(ethers.utils.parseEther('6'));
-      expect(quarterNumber).to.equal(1);
-      expect(quarterPower).to.equal(protocolPower);
-      expect(quarterSupply).to.not.equal(0);
+      const protocolQuarter = await rewardsDistributor.checkQuarter(protocol[2]);
+      const [quarterPrincipal, quarterNumber, quarterPower, quarterSupply ] = protocolQuarter;
+      await checkQuarterWithParams(quarterPrincipal, quarterNumber, quarterPower, quarterSupply, ethers.utils.parseEther('6'), 1, protocol[4], await rewardsDistributor.tokenSupplyPerQuarter(1) );
 
       ethers.provider.send('evm_increaseTime', [ONE_DAY_IN_SECONDS * 30]);
 
@@ -668,31 +572,15 @@ describe('BABL Rewards Distributor', function () {
         strategyContract3,
       );
 
-      // Protocol principal should be reduced accordingly
+      // Check protocol
       const protocol2 = await rewardsDistributor.checkProtocol(exitedAt3);
-      const protocolPrincipal2 = protocol2[0];
-      const protocolTime2 = protocol2[1];
-      const protocolquarterBelonging2 = protocol2[2];
-      const protocolTimeListPointer2 = protocol2[3];
-      const protocolPower2 = protocol2[4];
+      await checkProtocolWithParams(protocol2, ethers.utils.parseEther('0'), exitedAt3, 1, 8, protocol2[4]);      // TODO CHECK EXACT AMOUNT
 
-      expect(protocolPrincipal2).to.equal(ethers.utils.parseEther('0'));
-      expect(protocolquarterBelonging2).to.equal(1);
-      expect(protocolPower2).to.not.equal(0); // TODO CHECK EXACT AMOUNT
-      expect(protocolTime2).to.equal(exitedAt3);
-      expect(protocolTimeListPointer2).to.equal(8); // pid starting by zero, 8th checkpoint (3 new strategies executing with 3 adding capitals + 3 finalize investments)
-      expect(protocolPower).to.not.equal(0); // TODO Check exact numbers
+      expect(protocol2[4]).to.not.equal(0); // TODO Check exact numbers
 
-      const protocolQuarter2 = await rewardsDistributor.checkQuarter(protocolquarterBelonging2);
-      const quarterPrincipal2 = protocolQuarter2[0];
-      const quarterNumber2 = protocolQuarter2[1];
-      const quarterPower2 = protocolQuarter2[2];
-      const quarterSupply2 = protocolQuarter2[3];
-
-      expect(quarterPrincipal2).to.equal(protocolPrincipal2); // All are voter strategies
-      expect(quarterNumber2).to.equal(1);
-      expect(quarterPower2).to.equal(protocolPower2);
-      expect(quarterSupply2).to.equal(await rewardsDistributor.tokenSupplyPerQuarter(1));
+      const protocolQuarter2 = await rewardsDistributor.checkQuarter(protocol2[2]);
+      const [quarterPrincipal2, quarterNumber2, quarterPower2, quarterSupply2] = protocolQuarter2;
+      await checkQuarterWithParams(quarterPrincipal2, quarterNumber2, quarterPower2, quarterSupply2, protocol2[0], 1, protocol2[4], await rewardsDistributor.tokenSupplyPerQuarter(1) );
 
       const bablRewards1 = await strategyContract1.strategyRewards();
       const bablRewards2 = await strategyContract2.strategyRewards();
@@ -774,30 +662,13 @@ describe('BABL Rewards Distributor', function () {
         strategyContract5,
       );
 
-      // Protocol principal should be incremented accordingly
+      // Check protocol
       const protocol = await rewardsDistributor.checkProtocol(executedAt2);
-      const protocolPrincipal = protocol[0];
-      const protocolTime = protocol[1];
-      const protocolquarterBelonging = protocol[2];
-      const protocolTimeListPointer = protocol[3];
-      const protocolPower = protocol[4];
+      await checkProtocolWithParams(protocol, ethers.utils.parseEther('5'), executedAt2, 1, 4, protocol[4]);
 
-      expect(protocolPrincipal).to.equal(ethers.utils.parseEther('5')); // All are vote state strategies
-      expect(protocolTime).to.equal(executedAt2);
-      expect(protocolquarterBelonging).to.equal(1);
-      expect(protocolTimeListPointer).to.equal(4); // pid starting by zero, 5 strategies launched
-      expect(protocolPower).to.not.equal(0); // TODO Check exact numbers
-
-      const protocolQuarter = await rewardsDistributor.checkQuarter(protocolquarterBelonging);
-      const quarterPrincipal = protocolQuarter[0];
-      const quarterNumber = protocolQuarter[1];
-      const quarterPower = protocolQuarter[2];
-      const quarterSupply = protocolQuarter[3];
-
-      expect(quarterPrincipal).to.equal(ethers.utils.parseEther('5'));
-      expect(quarterNumber).to.equal(1);
-      expect(quarterPower).to.equal(protocolPower);
-      expect(quarterSupply).to.not.equal(0);
+      const protocolQuarter = await rewardsDistributor.checkQuarter(protocol[2]);
+      const [quarterPrincipal, quarterNumber, quarterPower, quarterSupply ] = protocolQuarter;
+      await checkQuarterWithParams(quarterPrincipal, quarterNumber, quarterPower, quarterSupply, ethers.utils.parseEther('5'), 1, protocol[4], await rewardsDistributor.tokenSupplyPerQuarter(1) );
 
       ethers.provider.send('evm_increaseTime', [ONE_DAY_IN_SECONDS * 30]);
 
@@ -811,31 +682,15 @@ describe('BABL Rewards Distributor', function () {
         strategyContract5,
       );
 
-      // Protocol principal should be reduced accordingly
+      // Check protocol
       const protocol2 = await rewardsDistributor.checkProtocol(exitedAt3);
-      const protocolPrincipal2 = protocol2[0];
-      const protocolTime2 = protocol2[1];
-      const protocolquarterBelonging2 = protocol2[2];
-      const protocolTimeListPointer2 = protocol2[3];
-      const protocolPower2 = protocol2[4];
+      await checkProtocolWithParams(protocol2, ethers.utils.parseEther('0'), exitedAt3, 1, 9, protocol2[4]);      // TODO CHECK EXACT AMOUNT
 
-      expect(protocolPrincipal2).to.equal(ethers.utils.parseEther('0'));
-      expect(protocolquarterBelonging2).to.equal(1);
-      expect(protocolPower2).to.not.equal(0); // TODO CHECK EXACT AMOUNT
-      expect(protocolTime2).to.equal(exitedAt3);
-      expect(protocolTimeListPointer2).to.equal(9); // pid starting by zero, 9th checkpoint
-      expect(protocolPower).to.not.equal(0); // TODO Check exact numbers
+      expect(protocol2[4]).to.not.equal(0); // TODO Check exact numbers
 
-      const protocolQuarter2 = await rewardsDistributor.checkQuarter(protocolquarterBelonging2);
-      const quarterPrincipal2 = protocolQuarter2[0];
-      const quarterNumber2 = protocolQuarter2[1];
-      const quarterPower2 = protocolQuarter2[2];
-      const quarterSupply2 = protocolQuarter2[3];
-
-      expect(quarterPrincipal2).to.equal(protocolPrincipal2); // All are voter strategies
-      expect(quarterNumber2).to.equal(1);
-      expect(quarterPower2).to.equal(protocolPower2);
-      expect(quarterSupply2).to.equal(await rewardsDistributor.tokenSupplyPerQuarter(1));
+      const protocolQuarter2 = await rewardsDistributor.checkQuarter(protocol2[2]);
+      const [quarterPrincipal2, quarterNumber2, quarterPower2, quarterSupply2] = protocolQuarter2;
+      await checkQuarterWithParams(quarterPrincipal2, quarterNumber2, quarterPower2, quarterSupply2, protocol2[0], 1, protocol2[4], await rewardsDistributor.tokenSupplyPerQuarter(1) );
 
       const bablRewards1 = await strategyContract1.strategyRewards();
       const bablRewards2 = await strategyContract2.strategyRewards();
@@ -862,19 +717,13 @@ describe('BABL Rewards Distributor', function () {
         strategyContract1,
       );
 
-      // Protocol principal should be increased accordingly
+      // Check protocol
       const protocol = await rewardsDistributor.checkProtocol(executedAt);
-      const protocolPrincipal = protocol[0];
-      const protocolTime = protocol[1];
-      const protocolquarterBelonging = protocol[2];
-      const protocolTimeListPointer = protocol[3];
-      const protocolPower = protocol[4];
+      await checkProtocolWithParams(protocol, ethers.utils.parseEther('2'), executedAt, 1, 1, protocol[4]);
 
-      const protocolQuarter = await rewardsDistributor.checkQuarter(protocolquarterBelonging);
-      const quarterPrincipal = protocolQuarter[0];
-      const quarterNumber = protocolQuarter[1];
-      const quarterPower = protocolQuarter[2];
-      const quarterSupply = protocolQuarter[3];
+      const protocolQuarter = await rewardsDistributor.checkQuarter(protocol[2]);
+      const [quarterPrincipal, quarterNumber, quarterPower, quarterSupply ] = protocolQuarter;
+      await checkQuarterWithParams(quarterPrincipal, quarterNumber, quarterPower, quarterSupply, ethers.utils.parseEther('2'), 1, protocol[4], await rewardsDistributor.tokenSupplyPerQuarter(1) );
 
       // Keeper gets paid
       expect(await wethToken.balanceOf(await owner.getAddress())).to.equal(42);
@@ -886,33 +735,18 @@ describe('BABL Rewards Distributor', function () {
       const [address3, active3, dataSet3, finalized3, executedAt3, exitedAt3] = await checkStrategyStateFinalized(
         strategyContract1,
       );
-
-      // Protocol principal should be reduced accordingly
+      
+      // Check protocol
       const protocol2 = await rewardsDistributor.checkProtocol(exitedAt3);
-      const protocolPrincipal2 = protocol2[0];
-      const protocolTime2 = protocol2[1];
-      const protocolquarterBelonging2 = protocol2[2];
-      const protocolTimeListPointer2 = protocol2[3];
-      const protocolPower2 = protocol2[4];
+      await checkProtocolWithParams(protocol2, ethers.utils.parseEther('0'), exitedAt3, 2, 2, protocol2[4]);      // TODO CHECK EXACT AMOUNT
 
-      expect(protocolPrincipal2).to.equal(ethers.utils.parseEther('0'));
-      expect(protocolquarterBelonging2).to.equal(2);
-      expect(protocolPower2).to.not.equal(0); // TODO CHECK EXACT AMOUNT
-      expect(protocolTime2).to.equal(exitedAt3);
-      expect(protocolTimeListPointer2).to.equal(2); // pid starting by zero, 1 new strategy, 1 finalized pid++ = 2
-      expect(protocolPower2).to.not.equal(0); // TODO Check exact numbers
+      expect(protocol2[4]).to.not.equal(0); // TODO Check exact numbers
 
-      const protocolQuarter2 = await rewardsDistributor.checkQuarter(protocolquarterBelonging2);
-      const quarterPrincipal2 = protocolQuarter2[0];
-      const quarterNumber2 = protocolQuarter2[1];
-      const quarterPower2 = protocolQuarter2[2];
-      const quarterSupply2 = protocolQuarter2[3];
+      const protocolQuarter2 = await rewardsDistributor.checkQuarter(protocol2[2]);
+      const [quarterPrincipal2, quarterNumber2, quarterPower2, quarterSupply2] = protocolQuarter2;
+      await checkQuarterWithParams(quarterPrincipal2, quarterNumber2, quarterPower2, quarterSupply2, protocol2[0], 2, quarterPower2, await rewardsDistributor.tokenSupplyPerQuarter(2) );
 
-      expect(quarterPrincipal2).to.equal(protocolPrincipal2); // All are voter strategies
-      expect(quarterNumber2).to.equal(2);
-
-      expect(protocolPower2).to.gt(quarterPower2);
-      expect(quarterSupply2).to.equal(await rewardsDistributor.tokenSupplyPerQuarter(2));
+      expect(protocol2[4]).to.gt(quarterPower2);
 
       const bablRewards1 = await strategyContract1.strategyRewards();
     });
@@ -938,20 +772,6 @@ describe('BABL Rewards Distributor', function () {
         strategyContract1,
       );
 
-      // Protocol principal should be increased accordingly
-      const protocol = await rewardsDistributor.checkProtocol(executedAt);
-      const protocolPrincipal = protocol[0];
-      const protocolTime = protocol[1];
-      const protocolquarterBelonging = protocol[2];
-      const protocolTimeListPointer = protocol[3];
-      const protocolPower = protocol[4];
-
-      const protocolQuarter = await rewardsDistributor.checkQuarter(protocolquarterBelonging);
-      const quarterPrincipal = protocolQuarter[0];
-      const quarterNumber = protocolQuarter[1];
-      const quarterPower = protocolQuarter[2];
-      const quarterSupply = protocolQuarter[3];
-
       // Keeper gets paid
       expect(await wethToken.balanceOf(await owner.getAddress())).to.equal(42);
 
@@ -963,32 +783,19 @@ describe('BABL Rewards Distributor', function () {
         strategyContract1,
       );
 
-      // Protocol principal should be reduced accordingly
+      // Check protocol
       const protocol2 = await rewardsDistributor.checkProtocol(exitedAt3);
-      const protocolPrincipal2 = protocol2[0];
-      const protocolTime2 = protocol2[1];
-      const protocolquarterBelonging2 = protocol2[2];
-      const protocolTimeListPointer2 = protocol2[3];
-      const protocolPower2 = protocol2[4];
+      await checkProtocolWithParams(protocol2, ethers.utils.parseEther('0'), exitedAt3, 42, 2, protocol2[4]);      // TODO CHECK EXACT AMOUNT
+      // PARAMS checkProtocolWithParams(_protocol, _principal, _timestamp, _quarter, _timeListPointer, _power)
 
-      expect(protocolPrincipal2).to.equal(ethers.utils.parseEther('0'));
-      expect(protocolquarterBelonging2).to.equal(42);
-      expect(protocolPower2).to.not.equal(0); // TODO CHECK EXACT AMOUNT
-      expect(protocolTime2).to.equal(exitedAt3);
-      expect(protocolTimeListPointer2).to.equal(2); // pid starting by zero, 1 new strategy, 1 finalized pid++ = 2
-      expect(protocolPower2).to.not.equal(0); // TODO Check exact numbers
+      expect(protocol2[4]).to.not.equal(0); // TODO Check exact numbers
 
-      const protocolQuarter2 = await rewardsDistributor.checkQuarter(protocolquarterBelonging2);
-      const quarterPrincipal2 = protocolQuarter2[0];
-      const quarterNumber2 = protocolQuarter2[1];
-      const quarterPower2 = protocolQuarter2[2];
-      const quarterSupply2 = protocolQuarter2[3];
+      const protocolQuarter2 = await rewardsDistributor.checkQuarter(protocol2[2]);
+      const [quarterPrincipal2, quarterNumber2, quarterPower2, quarterSupply2] = protocolQuarter2;
+      await checkQuarterWithParams(quarterPrincipal2, quarterNumber2, quarterPower2, quarterSupply2, protocol2[0], 42, quarterPower2, await rewardsDistributor.tokenSupplyPerQuarter(42) );
+      // PARAMS checkQuarterWithParams(_quarter0, _quarter1, _quarter2, _quarter3, _principal, _quarter, _power, _supply)
 
-      expect(quarterPrincipal2).to.equal(protocolPrincipal2); // All are voter strategies
-      expect(quarterNumber2).to.equal(42);
-
-      expect(protocolPower2).to.gt(quarterPower2);
-      expect(quarterSupply2).to.equal(await rewardsDistributor.tokenSupplyPerQuarter(42)); // Epoch number 42
+      expect(protocol2[4]).to.gt(quarterPower2);
 
       const bablRewards1 = await strategyContract1.strategyRewards();
     });
@@ -1010,20 +817,15 @@ describe('BABL Rewards Distributor', function () {
       const [address, active, dataSet, finalized, executedAt, exitedAt] = await checkStrategyStateExecuting(
         strategyContract1,
       );
-
-      // Protocol principal should be increased accordingly
+      // Check protocol
       const protocol = await rewardsDistributor.checkProtocol(executedAt);
-      const protocolPrincipal = protocol[0];
-      const protocolTime = protocol[1];
-      const protocolquarterBelonging = protocol[2];
-      const protocolTimeListPointer = protocol[3];
-      const protocolPower = protocol[4];
+      await checkProtocolWithParams(protocol, ethers.utils.parseEther('2'), executedAt, 1, 1, protocol[4]);
+      // PARAMS checkProtocolWithParams(_protocol, _principal, _timestamp, _quarter, _timeListPointer, _power)
 
-      const protocolQuarter = await rewardsDistributor.checkQuarter(protocolquarterBelonging);
-      const quarterPrincipal = protocolQuarter[0];
-      const quarterNumber = protocolQuarter[1];
-      const quarterPower = protocolQuarter[2];
-      const quarterSupply = protocolQuarter[3];
+      const protocolQuarter = await rewardsDistributor.checkQuarter(protocol[2]);
+      const [quarterPrincipal, quarterNumber, quarterPower, quarterSupply ] = protocolQuarter;
+      await checkQuarterWithParams(quarterPrincipal, quarterNumber, quarterPower, quarterSupply, ethers.utils.parseEther('2'), 1, protocol[4], await rewardsDistributor.tokenSupplyPerQuarter(1) );
+      // PARAMS checkQuarterWithParams(_quarter0, _quarter1, _quarter2, _quarter3, _principal, _quarter, _power, _supply)
 
       // Keeper gets paid
       expect(await wethToken.balanceOf(await owner.getAddress())).to.equal(42);
@@ -1036,32 +838,22 @@ describe('BABL Rewards Distributor', function () {
         strategyContract1,
       );
 
-      // Protocol principal should be reduced accordingly
+      // Check protocol
       const protocol2 = await rewardsDistributor.checkProtocol(exitedAt3);
-      const protocolPrincipal2 = protocol2[0];
-      const protocolTime2 = protocol2[1];
-      const protocolquarterBelonging2 = protocol2[2];
-      const protocolTimeListPointer2 = protocol2[3];
-      const protocolPower2 = protocol2[4];
+      await checkProtocolWithParams(protocol2, ethers.utils.parseEther('0'), exitedAt3, 3, 2, protocol2[4]);      // TODO CHECK EXACT AMOUNT
+      // PARAMS checkProtocolWithParams(_protocol, _principal, _timestamp, _quarter, _timeListPointer, _power)
 
-      expect(protocolPrincipal2).to.equal(ethers.utils.parseEther('0'));
-      expect(protocolquarterBelonging2).to.equal(3);
-      expect(protocolPower2).to.not.equal(0); // TODO CHECK EXACT AMOUNT
-      expect(protocolTime2).to.equal(exitedAt3);
-      expect(protocolTimeListPointer2).to.equal(2); // pid starting by zero, 1 new strategy, 1 finalized pid++ = 2
-      expect(protocolPower2).to.not.equal(0); // TODO Check exact numbers
+      expect(protocol2[4]).to.not.equal(0); // TODO Check exact numbers
 
-      const protocolQuarter2 = await rewardsDistributor.checkQuarter(protocolquarterBelonging2);
-      const quarterPrincipal2 = protocolQuarter2[0];
-      const quarterNumber2 = protocolQuarter2[1];
-      const quarterPower2 = protocolQuarter2[2];
-      const quarterSupply2 = protocolQuarter2[3];
+      const protocolQuarter2 = await rewardsDistributor.checkQuarter(protocol2[2]);
+      const [quarterPrincipal2, quarterNumber2, quarterPower2, quarterSupply2] = protocolQuarter2;
+      await checkQuarterWithParams(quarterPrincipal2, quarterNumber2, quarterPower2, quarterSupply2, protocol2[0], 3, quarterPower2, await rewardsDistributor.tokenSupplyPerQuarter(3) );
+      // PARAMS checkQuarterWithParams(_quarter0, _quarter1, _quarter2, _quarter3, _principal, _quarter, _power, _supply)
 
-      expect(quarterPrincipal2).to.equal(protocolPrincipal2); // All are voter strategies
-      expect(quarterNumber2).to.equal(3);
+      
+      expect(protocol2[4]).to.gt(quarterPower2);
 
-      expect(protocolPower2).to.gt(quarterPower2);
-      expect(quarterSupply2).to.equal(await rewardsDistributor.tokenSupplyPerQuarter(3)); // Epoch number 42
+      expect(quarterPrincipal2).to.equal(protocol2[0]); // All are voter strategies
 
       const bablRewards1 = await strategyContract1.strategyRewards();
     });
@@ -1140,31 +932,16 @@ describe('BABL Rewards Distributor', function () {
       const [address2, active2, dataSet2, finalized2, executedAt2, exitedAt2] = await checkStrategyStateExecuting(
         strategyContract5,
       );
-
-      // Protocol principal should be incremented accordingly
+      
+      // Check protocol
       const protocol = await rewardsDistributor.checkProtocol(executedAt2);
-      const protocolPrincipal = protocol[0];
-      const protocolTime = protocol[1];
-      const protocolquarterBelonging = protocol[2];
-      const protocolTimeListPointer = protocol[3];
-      const protocolPower = protocol[4];
+      await checkProtocolWithParams(protocol, ethers.utils.parseEther('5'), executedAt2, 1, 4, protocol[4]);
+      // PARAMS checkProtocolWithParams(_protocol, _principal, _timestamp, _quarter, _timeListPointer, _power)
 
-      expect(protocolPrincipal).to.equal(ethers.utils.parseEther('5')); // All are vote state strategies
-      expect(protocolTime).to.equal(executedAt2);
-      expect(protocolquarterBelonging).to.equal(1);
-      expect(protocolTimeListPointer).to.equal(4); // pid starting by zero, 5 strategies launched
-      expect(protocolPower).to.not.equal(0); // TODO Check exact numbers
-
-      const protocolQuarter = await rewardsDistributor.checkQuarter(protocolquarterBelonging);
-      const quarterPrincipal = protocolQuarter[0];
-      const quarterNumber = protocolQuarter[1];
-      const quarterPower = protocolQuarter[2];
-      const quarterSupply = protocolQuarter[3];
-
-      expect(quarterPrincipal).to.equal(ethers.utils.parseEther('5'));
-      expect(quarterNumber).to.equal(1);
-      expect(quarterPower).to.equal(protocolPower);
-      expect(quarterSupply).to.not.equal(0);
+      const protocolQuarter = await rewardsDistributor.checkQuarter(protocol[2]);
+      const [quarterPrincipal, quarterNumber, quarterPower, quarterSupply ] = protocolQuarter;
+      await checkQuarterWithParams(quarterPrincipal, quarterNumber, quarterPower, quarterSupply, ethers.utils.parseEther('5'), 1, protocol[4], await rewardsDistributor.tokenSupplyPerQuarter(1) );
+      // PARAMS checkQuarterWithParams(_quarter0, _quarter1, _quarter2, _quarter3, _principal, _quarter, _power, _supply)
 
       ethers.provider.send('evm_increaseTime', [ONE_DAY_IN_SECONDS * 30]);
 
@@ -1176,31 +953,16 @@ describe('BABL Rewards Distributor', function () {
       const [address3, active3, dataSet3, finalized3, executedAt3, exitedAt3] = await checkStrategyStateFinalized(
         strategyContract5,
       );
-
-      // Protocol principal should be reduced accordingly
+     
+      // Check protocol
       const protocol2 = await rewardsDistributor.checkProtocol(exitedAt3);
-      const protocolPrincipal2 = protocol2[0];
-      const protocolTime2 = protocol2[1];
-      const protocolquarterBelonging2 = protocol2[2];
-      const protocolTimeListPointer2 = protocol2[3];
-      const protocolPower2 = protocol2[4];
-
-      expect(protocolPrincipal2).to.equal(ethers.utils.parseEther('0'));
-      expect(protocolquarterBelonging2).to.equal(5);
-      expect(protocolPower2).to.not.equal(0); // TODO CHECK EXACT AMOUNT
-      expect(protocolTime2).to.equal(exitedAt3);
-      expect(protocolTimeListPointer2).to.equal(9); // pid starting by zero, 9th checkpoint
-      expect(protocolPower).to.not.equal(0); // TODO Check exact numbers
-
-      const protocolQuarter2 = await rewardsDistributor.checkQuarter(protocolquarterBelonging2);
-      const quarterPrincipal2 = protocolQuarter2[0];
-      const quarterNumber2 = protocolQuarter2[1];
-      const quarterPower2 = protocolQuarter2[2];
-      const quarterSupply2 = protocolQuarter2[3];
-
-      expect(quarterPrincipal2).to.equal(protocolPrincipal2); // All are voter strategies
-      expect(quarterNumber2).to.equal(5);
-      expect(quarterSupply2).to.equal(await rewardsDistributor.tokenSupplyPerQuarter(5));
+      await checkProtocolWithParams(protocol2, ethers.utils.parseEther('0'), exitedAt3, 5, 9, protocol2[4]);      // TODO CHECK EXACT AMOUNT
+      // PARAMS checkProtocolWithParams(_protocol, _principal, _timestamp, _quarter, _timeListPointer, _power)
+      
+      const protocolQuarter2 = await rewardsDistributor.checkQuarter(protocol2[2]);
+      const [quarterPrincipal2, quarterNumber2, quarterPower2, quarterSupply2] = protocolQuarter2;
+      await checkQuarterWithParams(quarterPrincipal2, quarterNumber2, quarterPower2, quarterSupply2, protocol2[0], 5, quarterPower2, await rewardsDistributor.tokenSupplyPerQuarter(5) );
+      // PARAMS checkQuarterWithParams(_quarter0, _quarter1, _quarter2, _quarter3, _principal, _quarter, _power, _supply)
 
       const bablRewards1 = await strategyContract1.strategyRewards();
       const bablRewards2 = await strategyContract2.strategyRewards();
@@ -1285,31 +1047,15 @@ describe('BABL Rewards Distributor', function () {
       const [address2, active2, dataSet2, finalized2, executedAt2, exitedAt2] = await checkStrategyStateExecuting(
         strategyContract5,
       );
-
-      // Protocol principal should be incremented accordingly
+      // Check protocol
       const protocol = await rewardsDistributor.checkProtocol(executedAt2);
-      const protocolPrincipal = protocol[0];
-      const protocolTime = protocol[1];
-      const protocolquarterBelonging = protocol[2];
-      const protocolTimeListPointer = protocol[3];
-      const protocolPower = protocol[4];
+      await checkProtocolWithParams(protocol, ethers.utils.parseEther('5'), executedAt2, 41, 4, protocol[4]);
+      // PARAMS checkProtocolWithParams(_protocol, _principal, _timestamp, _quarter, _timeListPointer, _power)
 
-      expect(protocolPrincipal).to.equal(ethers.utils.parseEther('5')); // All are vote state strategies
-      expect(protocolTime).to.equal(executedAt2);
-      expect(protocolquarterBelonging).to.equal(41);
-      expect(protocolTimeListPointer).to.equal(4); // pid starting by zero, 5 strategies launched
-      expect(protocolPower).to.not.equal(0); // TODO Check exact numbers
-
-      const protocolQuarter = await rewardsDistributor.checkQuarter(protocolquarterBelonging);
-      const quarterPrincipal = protocolQuarter[0];
-      const quarterNumber = protocolQuarter[1];
-      const quarterPower = protocolQuarter[2];
-      const quarterSupply = protocolQuarter[3];
-
-      expect(quarterPrincipal).to.equal(ethers.utils.parseEther('5'));
-      expect(quarterNumber).to.equal(41);
-      expect(quarterPower).to.equal(protocolPower);
-      expect(quarterSupply).to.not.equal(0);
+      const protocolQuarter = await rewardsDistributor.checkQuarter(protocol[2]);
+      const [quarterPrincipal, quarterNumber, quarterPower, quarterSupply ] = protocolQuarter;
+      await checkQuarterWithParams(quarterPrincipal, quarterNumber, quarterPower, quarterSupply, ethers.utils.parseEther('5'), 41, protocol[4], await rewardsDistributor.tokenSupplyPerQuarter(41) );
+      // PARAMS checkQuarterWithParams(_quarter0, _quarter1, _quarter2, _quarter3, _principal, _quarter, _power, _supply)
 
       ethers.provider.send('evm_increaseTime', [ONE_DAY_IN_SECONDS * 30]);
 
@@ -1322,30 +1068,18 @@ describe('BABL Rewards Distributor', function () {
         strategyContract5,
       );
 
-      // Protocol principal should be reduced accordingly
+      // Check protocol
       const protocol2 = await rewardsDistributor.checkProtocol(exitedAt3);
-      const protocolPrincipal2 = protocol2[0];
-      const protocolTime2 = protocol2[1];
-      const protocolquarterBelonging2 = protocol2[2];
-      const protocolTimeListPointer2 = protocol2[3];
-      const protocolPower2 = protocol2[4];
+      await checkProtocolWithParams(protocol2, ethers.utils.parseEther('0'), exitedAt3, 46, 9, protocol2[4]);      // TODO CHECK EXACT AMOUNT
+      // PARAMS checkProtocolWithParams(_protocol, _principal, _timestamp, _quarter, _timeListPointer, _power)
+      
+      const protocolQuarter2 = await rewardsDistributor.checkQuarter(protocol2[2]);
+      const [quarterPrincipal2, quarterNumber2, quarterPower2, quarterSupply2] = protocolQuarter2;
+      await checkQuarterWithParams(quarterPrincipal2, quarterNumber2, quarterPower2, quarterSupply2, protocol2[0], 46, quarterPower2, await rewardsDistributor.tokenSupplyPerQuarter(46) );
+      // PARAMS checkQuarterWithParams(_quarter0, _quarter1, _quarter2, _quarter3, _principal, _quarter, _power, _supply)
 
-      expect(protocolPrincipal2).to.equal(ethers.utils.parseEther('0'));
-      expect(protocolquarterBelonging2).to.equal(46);
-      expect(protocolPower2).to.not.equal(0); // TODO CHECK EXACT AMOUNT
-      expect(protocolTime2).to.equal(exitedAt3);
-      expect(protocolTimeListPointer2).to.equal(9); // pid starting by zero, 9th checkpoint
-      expect(protocolPower).to.not.equal(0); // TODO Check exact numbers
+      expect(quarterPrincipal2).to.equal(protocol2[0]); 
 
-      const protocolQuarter2 = await rewardsDistributor.checkQuarter(protocolquarterBelonging2);
-      const quarterPrincipal2 = protocolQuarter2[0];
-      const quarterNumber2 = protocolQuarter2[1];
-      const quarterPower2 = protocolQuarter2[2];
-      const quarterSupply2 = protocolQuarter2[3];
-
-      expect(quarterPrincipal2).to.equal(protocolPrincipal2); // All are voter strategies
-      expect(quarterNumber2).to.equal(46);
-      expect(quarterSupply2).to.equal(await rewardsDistributor.tokenSupplyPerQuarter(46));
 
       const bablRewards1 = await strategyContract1.strategyRewards();
       const bablRewards2 = await strategyContract2.strategyRewards();
@@ -1428,31 +1162,16 @@ describe('BABL Rewards Distributor', function () {
       const [address2, active2, dataSet2, finalized2, executedAt2, exitedAt2] = await checkStrategyStateExecuting(
         strategyContract5,
       );
-
-      // Protocol principal should be incremented accordingly
+      
+      // Check protocol
       const protocol = await rewardsDistributor.checkProtocol(executedAt2);
-      const protocolPrincipal = protocol[0];
-      const protocolTime = protocol[1];
-      const protocolquarterBelonging = protocol[2];
-      const protocolTimeListPointer = protocol[3];
-      const protocolPower = protocol[4];
-
-      expect(protocolPrincipal).to.equal(ethers.utils.parseEther('5')); // All are vote state strategies
-      expect(protocolTime).to.equal(executedAt2);
-      expect(protocolquarterBelonging).to.equal(1);
-      expect(protocolTimeListPointer).to.equal(4); // pid starting by zero, 5 strategies launched
-      expect(protocolPower).to.not.equal(0); // TODO Check exact numbers
-
-      const protocolQuarter = await rewardsDistributor.checkQuarter(protocolquarterBelonging);
-      const quarterPrincipal = protocolQuarter[0];
-      const quarterNumber = protocolQuarter[1];
-      const quarterPower = protocolQuarter[2];
-      const quarterSupply = protocolQuarter[3];
-
-      expect(quarterPrincipal).to.equal(ethers.utils.parseEther('5'));
-      expect(quarterNumber).to.equal(1);
-      expect(quarterPower).to.equal(protocolPower);
-      expect(quarterSupply).to.not.equal(0);
+      await checkProtocolWithParams(protocol, ethers.utils.parseEther('5'), executedAt2, 1, 4, protocol[4]);
+      // PARAMS checkProtocolWithParams(_protocol, _principal, _timestamp, _quarter, _timeListPointer, _power)
+      
+      const protocolQuarter = await rewardsDistributor.checkQuarter(protocol[2]);
+      const [quarterPrincipal, quarterNumber, quarterPower, quarterSupply ] = protocolQuarter;
+      await checkQuarterWithParams(quarterPrincipal, quarterNumber, quarterPower, quarterSupply, ethers.utils.parseEther('5'), 1, protocol[4], await rewardsDistributor.tokenSupplyPerQuarter(1) );
+      // PARAMS checkQuarterWithParams(_quarter0, _quarter1, _quarter2, _quarter3, _principal, _quarter, _power, _supply)
 
       ethers.provider.send('evm_increaseTime', [ONE_DAY_IN_SECONDS * 30]);
 
@@ -1465,30 +1184,17 @@ describe('BABL Rewards Distributor', function () {
         strategyContract5,
       );
 
-      // Protocol principal should be reduced accordingly
+      // Check protocol
       const protocol2 = await rewardsDistributor.checkProtocol(exitedAt3);
-      const protocolPrincipal2 = protocol2[0];
-      const protocolTime2 = protocol2[1];
-      const protocolquarterBelonging2 = protocol2[2];
-      const protocolTimeListPointer2 = protocol2[3];
-      const protocolPower2 = protocol2[4];
+      await checkProtocolWithParams(protocol2, ethers.utils.parseEther('0'), exitedAt3, 13, 9, protocol2[4]);      // TODO CHECK EXACT AMOUNT
+      // PARAMS checkProtocolWithParams(_protocol, _principal, _timestamp, _quarter, _timeListPointer, _power)
 
-      expect(protocolPrincipal2).to.equal(ethers.utils.parseEther('0'));
-      expect(protocolquarterBelonging2).to.equal(13);
-      expect(protocolPower2).to.not.equal(0); // TODO CHECK EXACT AMOUNT
-      expect(protocolTime2).to.equal(exitedAt3);
-      expect(protocolTimeListPointer2).to.equal(9); // pid starting by zero, 9th checkpoint
-      expect(protocolPower).to.not.equal(0); // TODO Check exact numbers
+      const protocolQuarter2 = await rewardsDistributor.checkQuarter(protocol2[2]);
+      const [quarterPrincipal2, quarterNumber2, quarterPower2, quarterSupply2] = protocolQuarter2;
+      await checkQuarterWithParams(quarterPrincipal2, quarterNumber2, quarterPower2, quarterSupply2, protocol2[0], 13, quarterPower2, await rewardsDistributor.tokenSupplyPerQuarter(13) );
+      // PARAMS checkQuarterWithParams(_quarter0, _quarter1, _quarter2, _quarter3, _principal, _quarter, _power, _supply)
 
-      const protocolQuarter2 = await rewardsDistributor.checkQuarter(protocolquarterBelonging2);
-      const quarterPrincipal2 = protocolQuarter2[0];
-      const quarterNumber2 = protocolQuarter2[1];
-      const quarterPower2 = protocolQuarter2[2];
-      const quarterSupply2 = protocolQuarter2[3];
-
-      expect(quarterPrincipal2).to.equal(protocolPrincipal2); // All are voter strategies
-      expect(quarterNumber2).to.equal(13);
-      expect(quarterSupply2).to.equal(await rewardsDistributor.tokenSupplyPerQuarter(13));
+      expect(quarterPrincipal2).to.equal(protocol2[0]); 
 
       const bablRewards1 = await strategyContract1.strategyRewards();
       const bablRewards2 = await strategyContract2.strategyRewards();
@@ -1572,30 +1278,15 @@ describe('BABL Rewards Distributor', function () {
         strategyContract5,
       );
 
-      // Protocol principal should be incremented accordingly
+      // Check protocol
       const protocol = await rewardsDistributor.checkProtocol(executedAt2);
-      const protocolPrincipal = protocol[0];
-      const protocolTime = protocol[1];
-      const protocolquarterBelonging = protocol[2];
-      const protocolTimeListPointer = protocol[3];
-      const protocolPower = protocol[4];
+      await checkProtocolWithParams(protocol, ethers.utils.parseEther('5'), executedAt2, 1, 4, protocol[4]);
+      // PARAMS checkProtocolWithParams(_protocol, _principal, _timestamp, _quarter, _timeListPointer, _power)
 
-      expect(protocolPrincipal).to.equal(ethers.utils.parseEther('5')); // All are vote state strategies
-      expect(protocolTime).to.equal(executedAt2);
-      expect(protocolquarterBelonging).to.equal(1);
-      expect(protocolTimeListPointer).to.equal(4); // pid starting by zero, 5 strategies launched
-      expect(protocolPower).to.not.equal(0); // TODO Check exact numbers
-
-      const protocolQuarter = await rewardsDistributor.checkQuarter(protocolquarterBelonging);
-      const quarterPrincipal = protocolQuarter[0];
-      const quarterNumber = protocolQuarter[1];
-      const quarterPower = protocolQuarter[2];
-      const quarterSupply = protocolQuarter[3];
-
-      expect(quarterPrincipal).to.equal(ethers.utils.parseEther('5'));
-      expect(quarterNumber).to.equal(1);
-      expect(quarterPower).to.equal(protocolPower);
-      expect(quarterSupply).to.not.equal(0);
+      const protocolQuarter = await rewardsDistributor.checkQuarter(protocol[2]);
+      const [quarterPrincipal, quarterNumber, quarterPower, quarterSupply ] = protocolQuarter;
+      await checkQuarterWithParams(quarterPrincipal, quarterNumber, quarterPower, quarterSupply, ethers.utils.parseEther('5'), 1, protocol[4], await rewardsDistributor.tokenSupplyPerQuarter(1) );
+      // PARAMS checkQuarterWithParams(_quarter0, _quarter1, _quarter2, _quarter3, _principal, _quarter, _power, _supply)
 
       ethers.provider.send('evm_increaseTime', [ONE_DAY_IN_SECONDS * 30]);
 
@@ -1616,30 +1307,15 @@ describe('BABL Rewards Distributor', function () {
         strategyContract5,
       );
 
-      // Protocol principal should be reduced accordingly
+      // Check protocol
       const protocol2 = await rewardsDistributor.checkProtocol(exitedAt3);
-      const protocolPrincipal2 = protocol2[0];
-      const protocolTime2 = protocol2[1];
-      const protocolquarterBelonging2 = protocol2[2];
-      const protocolTimeListPointer2 = protocol2[3];
-      const protocolPower2 = protocol2[4];
+      await checkProtocolWithParams(protocol2, ethers.utils.parseEther('0'), exitedAt3, 13, 9, protocol2[4]);      // TODO CHECK EXACT AMOUNT
+      // PARAMS checkProtocolWithParams(_protocol, _principal, _timestamp, _quarter, _timeListPointer, _power)
 
-      expect(protocolPrincipal2).to.equal(ethers.utils.parseEther('0'));
-      expect(protocolquarterBelonging2).to.equal(13);
-      expect(protocolPower2).to.not.equal(0); // TODO CHECK EXACT AMOUNT
-      expect(protocolTime2).to.equal(exitedAt3);
-      expect(protocolTimeListPointer2).to.equal(9); // pid starting by zero, 9th checkpoint
-      expect(protocolPower).to.not.equal(0); // TODO Check exact numbers
-
-      const protocolQuarter2 = await rewardsDistributor.checkQuarter(protocolquarterBelonging2);
-      const quarterPrincipal2 = protocolQuarter2[0];
-      const quarterNumber2 = protocolQuarter2[1];
-      const quarterPower2 = protocolQuarter2[2];
-      const quarterSupply2 = protocolQuarter2[3];
-
-      expect(quarterPrincipal2).to.equal(protocolPrincipal2); // All are voter strategies
-      expect(quarterNumber2).to.equal(13);
-      expect(quarterSupply2).to.equal(await rewardsDistributor.tokenSupplyPerQuarter(13));
+      const protocolQuarter2 = await rewardsDistributor.checkQuarter(protocol2[2]);
+      const [quarterPrincipal2, quarterNumber2, quarterPower2, quarterSupply2] = protocolQuarter2;
+      await checkQuarterWithParams(quarterPrincipal2, quarterNumber2, quarterPower2, quarterSupply2, protocol2[0], 13, quarterPower2, await rewardsDistributor.tokenSupplyPerQuarter(13) );
+      // PARAMS checkQuarterWithParams(_quarter0, _quarter1, _quarter2, _quarter3, _principal, _quarter, _power, _supply)
 
       const bablRewards1 = await strategyContract1.strategyRewards();
       const bablRewards2 = await strategyContract2.strategyRewards();
@@ -1647,8 +1323,10 @@ describe('BABL Rewards Distributor', function () {
       const bablRewards4 = await strategyContract4.strategyRewards();
       const bablRewards5 = await strategyContract5.strategyRewards();
     });
+  
+    describe('Claiming Profits and BABL Rewards', function () {
 
-    it('should claim Signer 1 its BABL rewards as contributor of 5 strategies (4 with positive profits) of 2 different Gardens with different timings along 3 Years', async function () {
+    it('should claim and update balances of Signer 1 either Garden tokens or BABL rewards as contributor of 5 strategies (4 with positive profits) of 2 different Gardens with different timings along 3 Years', async function () {
       // Create strategy 1
 
       const strategyContract1 = await createStrategy(
@@ -1722,31 +1400,16 @@ describe('BABL Rewards Distributor', function () {
       const [address2, active2, dataSet2, finalized2, executedAt2, exitedAt2] = await checkStrategyStateExecuting(
         strategyContract5,
       );
-
-      // Protocol principal should be incremented accordingly
+      
+      // Check protocol
       const protocol = await rewardsDistributor.checkProtocol(executedAt2);
-      const protocolPrincipal = protocol[0];
-      const protocolTime = protocol[1];
-      const protocolquarterBelonging = protocol[2];
-      const protocolTimeListPointer = protocol[3];
-      const protocolPower = protocol[4];
+      await checkProtocolWithParams(protocol, ethers.utils.parseEther('5'), executedAt2, 1, 4, protocol[4]);
+      // PARAMS checkProtocolWithParams(_protocol, _principal, _timestamp, _quarter, _timeListPointer, _power)
 
-      expect(protocolPrincipal).to.equal(ethers.utils.parseEther('5')); // All are vote state strategies
-      expect(protocolTime).to.equal(executedAt2);
-      expect(protocolquarterBelonging).to.equal(1);
-      expect(protocolTimeListPointer).to.equal(4); // pid starting by zero, 5 strategies launched
-      expect(protocolPower).to.not.equal(0); // TODO Check exact numbers
-
-      const protocolQuarter = await rewardsDistributor.checkQuarter(protocolquarterBelonging);
-      const quarterPrincipal = protocolQuarter[0];
-      const quarterNumber = protocolQuarter[1];
-      const quarterPower = protocolQuarter[2];
-      const quarterSupply = protocolQuarter[3];
-
-      expect(quarterPrincipal).to.equal(ethers.utils.parseEther('5'));
-      expect(quarterNumber).to.equal(1);
-      expect(quarterPower).to.equal(protocolPower);
-      expect(quarterSupply).to.not.equal(0);
+      const protocolQuarter = await rewardsDistributor.checkQuarter(protocol[2]);
+      const [quarterPrincipal, quarterNumber, quarterPower, quarterSupply ] = protocolQuarter;
+      await checkQuarterWithParams(quarterPrincipal, quarterNumber, quarterPower, quarterSupply, ethers.utils.parseEther('5'), 1, protocol[4], await rewardsDistributor.tokenSupplyPerQuarter(1) );
+      // PARAMS checkQuarterWithParams(_quarter0, _quarter1, _quarter2, _quarter3, _principal, _quarter, _power, _supply)
 
       ethers.provider.send('evm_increaseTime', [ONE_DAY_IN_SECONDS * 30]);
 
@@ -1767,30 +1430,15 @@ describe('BABL Rewards Distributor', function () {
         strategyContract5,
       );
 
-      // Protocol principal should be reduced accordingly
+      // Check protocol
       const protocol2 = await rewardsDistributor.checkProtocol(exitedAt3);
-      const protocolPrincipal2 = protocol2[0];
-      const protocolTime2 = protocol2[1];
-      const protocolquarterBelonging2 = protocol2[2];
-      const protocolTimeListPointer2 = protocol2[3];
-      const protocolPower2 = protocol2[4];
+      await checkProtocolWithParams(protocol2, ethers.utils.parseEther('0'), exitedAt3, 13, 9, protocol2[4]);      // TODO CHECK EXACT AMOUNT
+      // PARAMS checkProtocolWithParams(_protocol, _principal, _timestamp, _quarter, _timeListPointer, _power)
 
-      expect(protocolPrincipal2).to.equal(ethers.utils.parseEther('0'));
-      expect(protocolquarterBelonging2).to.equal(13);
-      expect(protocolPower2).to.not.equal(0); // TODO CHECK EXACT AMOUNT
-      expect(protocolTime2).to.equal(exitedAt3);
-      expect(protocolTimeListPointer2).to.equal(9); // pid starting by zero, 9th checkpoint
-      expect(protocolPower).to.not.equal(0); // TODO Check exact numbers
-
-      const protocolQuarter2 = await rewardsDistributor.checkQuarter(protocolquarterBelonging2);
-      const quarterPrincipal2 = protocolQuarter2[0];
-      const quarterNumber2 = protocolQuarter2[1];
-      const quarterPower2 = protocolQuarter2[2];
-      const quarterSupply2 = protocolQuarter2[3];
-
-      expect(quarterPrincipal2).to.equal(protocolPrincipal2); // All are voter strategies
-      expect(quarterNumber2).to.equal(13);
-      expect(quarterSupply2).to.equal(await rewardsDistributor.tokenSupplyPerQuarter(13));
+      const protocolQuarter2 = await rewardsDistributor.checkQuarter(protocol2[2]);
+      const [quarterPrincipal2, quarterNumber2, quarterPower2, quarterSupply2] = protocolQuarter2;
+      await checkQuarterWithParams(quarterPrincipal2, quarterNumber2, quarterPower2, quarterSupply2, protocol2[0], 13, quarterPower2, await rewardsDistributor.tokenSupplyPerQuarter(13) );
+      // PARAMS checkQuarterWithParams(_quarter0, _quarter1, _quarter2, _quarter3, _principal, _quarter, _power, _supply)
 
       const bablRewards1 = await strategyContract1.strategyRewards();
       const bablRewards2 = await strategyContract2.strategyRewards();
@@ -1798,8 +1446,30 @@ describe('BABL Rewards Distributor', function () {
       const bablRewards4 = await strategyContract4.strategyRewards();
       const bablRewards5 = await strategyContract5.strategyRewards();
 
-      //await garden1.connect(signer1).claimReturns([strategyContract1, strategyContract2]);
-      //await garden2.connect(signer1).claimReturns([strategyContract3, strategyContract4, strategyContract5]);
+      // Transfer 500_000e18 tokens from owner to rewardsDistributor for BABL Mining Program
+      const value = ethers.utils.parseEther('500000');
+      await bablToken.connect(owner).transfer(rewardsDistributor.address, value);
+      
+      // Check Balances
+      const ownerBalance = await bablToken.balanceOf(owner.address);
+      const rewardsDistributorBalance = await bablToken.balanceOf(rewardsDistributor.address);
+
+      expect(await bablToken.totalSupply()).to.equal(BigInt(ownerBalance) + BigInt(rewardsDistributorBalance));
+
+      // We claim our tokens and check that they are received properly
+      await garden1.connect(signer1).claimReturns([strategyContract1.address, strategyContract2.address]);
+      const signer1Balance1 = await bablToken.balanceOf(signer1.address);
+      const signer1Profit1 = await garden1.balanceOf(signer1.address);
+
+      await garden2.connect(signer1).claimReturns([strategyContract3.address, strategyContract4.address, strategyContract5.address]);
+      const signer1Balance2 = await bablToken.balanceOf(signer1.address);
+      const signer1Profit2 = await garden2.balanceOf(signer1.address);
+
+      expect(signer1Balance2.toString()).to.gt(ethers.utils.parseEther('357000')); 
+      expect(signer1Profit1.toString()).to.gt(ethers.utils.parseEther('3')); 
+      expect(signer1Profit2.toString()).to.gt(ethers.utils.parseEther('8')); 
+
     });
   });
+});
 });

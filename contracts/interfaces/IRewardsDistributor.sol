@@ -52,7 +52,7 @@ interface IRewardsDistributor {
 
     function getStrategyRewards(address _strategy) external returns (uint96);
 
-    function sendTokensToContributor(address _to, uint256 _amount) external;
+    function sendTokensToContributor(address _to, uint96 _amount) external;
 
     function getProtocolPrincipalByTimestamp(uint256 _timestamp) external view returns (uint256);
 
@@ -89,6 +89,7 @@ interface IRewardsDistributor {
         external
         view
         returns (
+            uint256 quarterPrincipal,
             uint256 quarterNumber,
             uint256 quarterPower,
             uint96 supplyPerQuarter

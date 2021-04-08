@@ -173,83 +173,82 @@ contract RewardsDistributor is Ownable {
     function getStrategyRewards(address _strategy) public returns (uint96) {
         strategy = IStrategy(_strategy);
         require(strategy.exitedAt() != 0, 'The strategy has to be finished before calculations');
-        if (strategy.strategyRewards() != 0) {
-            // We avoid gas consuming once a strategy got its BABL rewards during its finalization
-            return strategy.strategyRewards();
-        } else {
-            (uint256 numQuarters, uint256 startingQuarter) =
-                getRewardsWindow(strategy.executedAt(), strategy.exitedAt());
-            uint256 bablRewards = 0;
-            if (numQuarters <= 1) {
-                bablRewards = (
-                    (strategy.capitalAllocated().mul(strategy.exitedAt().sub(strategy.executedAt()))).preciseDiv(
-                        protocolPerQuarter[startingQuarter].quarterPower
-                    )
+        if (strategy.strategyRewards() != 0) return strategy.strategyRewards();  // We avoid gas consuming once a strategy got its BABL rewards during its finalization
+        
+        // If the calculation was not done earlier we go for it
+        (uint256 numQuarters, uint256 startingQuarter) =
+            getRewardsWindow(strategy.executedAt(), strategy.exitedAt());
+        uint256 bablRewards = 0;
+        if (numQuarters <= 1) {
+            bablRewards = (
+                (strategy.capitalAllocated().mul(strategy.exitedAt().sub(strategy.executedAt()))).preciseDiv(
+                    protocolPerQuarter[startingQuarter].quarterPower
                 )
-                    .preciseMul(uint256(protocolPerQuarter[startingQuarter].supplyPerQuarter))
-                    .mul(strategy.exitedAt().sub(startingQuarter))
-                    .div(block.timestamp.sub(startingQuarter)); // Proportional supply till that moment within the same epoch
-                require(bablRewards <= protocolPerQuarter[startingQuarter].supplyPerQuarter, 'overflow in supply');
-                require(
-                    strategy.capitalAllocated().mul(strategy.exitedAt().sub(strategy.executedAt())) <=
-                        protocolPerQuarter[startingQuarter].quarterPower,
-                    'overflow in power'
-                );
-            } else {
-                // The strategy takes longer than one quarter / epoch
-                // We need to calculate the strategy vs. protocol power ratio per each quarter
-                uint256[] memory strategyPower = new uint256[](numQuarters); // Strategy power in each Epoch
-                uint256[] memory protocolPower = new uint256[](numQuarters); // Protocol power in each Epoch
-                for (uint256 i = 0; i <= numQuarters.sub(1); i++) {
-                    uint256 slotEnding = START_TIME.add(startingQuarter.add(i).mul(EPOCH_DURATION)); // Initialization timestamp at the end of the first slot where the strategy starts its execution
+            )
+                .preciseMul(uint256(protocolPerQuarter[startingQuarter].supplyPerQuarter))
+                .mul(strategy.exitedAt().sub(startingQuarter))
+                .div(block.timestamp.sub(startingQuarter)); // Proportional supply till that moment within the same epoch    
+            require(bablRewards <= protocolPerQuarter[startingQuarter].supplyPerQuarter, 'overflow in supply');
+            require(
+                strategy.capitalAllocated().mul(strategy.exitedAt().sub(strategy.executedAt())) <=
+                    protocolPerQuarter[startingQuarter].quarterPower,
+                'overflow in power'
+            );
+        } else {
+            // The strategy takes longer than one quarter / epoch
+            // We need to calculate the strategy vs. protocol power ratio per each quarter
+            uint256[] memory strategyPower = new uint256[](numQuarters); // Strategy power in each Epoch
+            uint256[] memory protocolPower = new uint256[](numQuarters); // Protocol power in each Epoch
+            for (uint256 i = 0; i <= numQuarters.sub(1); i++) {
+                uint256 slotEnding = START_TIME.add(startingQuarter.add(i).mul(EPOCH_DURATION)); // Initialization timestamp at the end of the first slot where the strategy starts its execution
 
-                    // We iterate all the quarters where the strategy was active
-                    uint256 percentage = 1e18;
-                    if (strategy.executedAt().add(EPOCH_DURATION) > slotEnding) {
-                        // We are in the first quarter of the strategy
+                // We iterate all the quarters where the strategy was active
+                uint256 percentage = 1e18;
+                if (strategy.executedAt().add(EPOCH_DURATION) > slotEnding) {
+                    // We are in the first quarter of the strategy
 
-                        strategyPower[i] = strategy.capitalAllocated().mul(slotEnding.sub(strategy.executedAt()));
-                    } else if (
-                        strategy.executedAt() < slotEnding.sub(EPOCH_DURATION) && slotEnding < strategy.exitedAt()
-                    ) {
-                        // We are in an intermediate quarter different from starting or ending quarters
-                        strategyPower[i] = strategy.capitalAllocated().mul(
-                            slotEnding.sub(slotEnding.sub(EPOCH_DURATION))
-                        );
-                    } else {
-                        // We are in the last quarter of the strategy
-                        percentage = block.timestamp.sub(slotEnding.sub(EPOCH_DURATION)).preciseDiv(
-                            slotEnding.sub(slotEnding.sub(EPOCH_DURATION))
-                        );
+                    strategyPower[i] = strategy.capitalAllocated().mul(slotEnding.sub(strategy.executedAt()));
+                } else if (
+                    strategy.executedAt() < slotEnding.sub(EPOCH_DURATION) && slotEnding < strategy.exitedAt()
+                ) {
+                    // We are in an intermediate quarter different from starting or ending quarters
+                    strategyPower[i] = strategy.capitalAllocated().mul(
+                        slotEnding.sub(slotEnding.sub(EPOCH_DURATION))
+                    );
+                } else {
+                    // We are in the last quarter of the strategy
+                    percentage = block.timestamp.sub(slotEnding.sub(EPOCH_DURATION)).preciseDiv(
+                        slotEnding.sub(slotEnding.sub(EPOCH_DURATION))
+                    );
 
-                        strategyPower[i] = strategy.capitalAllocated().mul(
-                            strategy.exitedAt().sub(slotEnding.sub(EPOCH_DURATION))
-                        );
-                    }
-                    protocolPower[i] = protocolPerQuarter[startingQuarter.add(i)].quarterPower;
-
-                    require(strategyPower[i] <= protocolPower[i], 'overflow str over protocol in an epoch');
-
-                    // TODO DOWNSIDE 96 bits into XX K BABLS
-
-                    bablRewards = bablRewards.add(
-                        strategyPower[i]
-                            .preciseDiv(protocolPower[i])
-                            .preciseMul(uint256(protocolPerQuarter[startingQuarter.add(i)].supplyPerQuarter))
-                            .preciseMul(percentage)
+                    strategyPower[i] = strategy.capitalAllocated().mul(
+                        strategy.exitedAt().sub(slotEnding.sub(EPOCH_DURATION))
                     );
                 }
-            }
+                protocolPower[i] = protocolPerQuarter[startingQuarter.add(i)].quarterPower;
 
-            // Babl rewards will be proportional to the total return (profit)
-            uint256 percentageMul = strategy.capitalReturned().preciseDiv(strategy.capitalAllocated());
-            bablRewards = bablRewards.preciseMul(percentageMul);
-            return Safe3296.safe96(bablRewards, 'overflow 96 bits');
+                require(strategyPower[i] <= protocolPower[i], 'overflow str over protocol in an epoch');
+
+                bablRewards = bablRewards.add(
+                    strategyPower[i]
+                        .preciseDiv(protocolPower[i])
+                        .preciseMul(uint256(protocolPerQuarter[startingQuarter.add(i)].supplyPerQuarter))
+                        .preciseMul(percentage)
+                );
+            }
         }
+
+        // Babl rewards will be proportional to the total return (profit)
+        uint256 percentageMul = strategy.capitalReturned().preciseDiv(strategy.capitalAllocated());
+        bablRewards = bablRewards.preciseMul(percentageMul);
+        return Safe3296.safe96(bablRewards, 'overflow 96 bits');
+        
     }
 
-    function sendTokensToContributor(address _to, uint256 _amount) public onlyStrategy {
-        require(controller.isSystemContract(msg.sender));
+    //function sendTokensToContributor(address _to, uint96 _amount) public onlyStrategy {
+    function sendTokensToContributor(address _to, uint96 _amount) external  {
+
+        require(controller.isSystemContract(msg.sender), 'The caller is not a system contract');
         _safeBABLTransfer(_to, _amount);
     }
 
@@ -460,7 +459,8 @@ contract RewardsDistributor is Ownable {
     }
 
     // Safe BABL transfer function, just in case if rounding error causes DistributorRewards to not have enough BABL.
-    function _safeBABLTransfer(address _to, uint256 _amount) internal {
+    function _safeBABLTransfer(address _to, uint96 _amount) internal {
+
         uint256 bablBal = babltoken.balanceOf(address(this));
         if (_amount > bablBal) {
             babltoken.transfer(_to, bablBal);
