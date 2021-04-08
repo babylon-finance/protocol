@@ -58,6 +58,8 @@ contract BalancerIntegration is PoolIntegration {
         coreFactory = IBFactory(_coreFactoryAddress);
     }
 
+    /* ============ External Functions ============ */
+
     function getPoolTokens(address _poolAddress) external view override returns (address[] memory) {
         return IBPool(_poolAddress).getCurrentTokens();
     }
@@ -76,10 +78,7 @@ contract BalancerIntegration is PoolIntegration {
         address _poolToken,
         uint256 _maxAmountsIn
     ) external view returns (uint256) {
-        console.log('_poolToken', _poolToken);
-        console.log('_maxAmountsIn', _maxAmountsIn);
         uint256 tokenBalance = IBPool(_poolAddress).getBalance(_poolToken);
-        console.log('tokenBalance', tokenBalance);
         return IBPool(_poolAddress).totalSupply().preciseMul(_maxAmountsIn.preciseDiv(tokenBalance));
     }
 

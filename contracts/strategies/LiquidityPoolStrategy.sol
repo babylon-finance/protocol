@@ -66,7 +66,6 @@ contract LiquidityPoolStrategy is Strategy {
         uint256 ethValue = 0;
         for (uint256 i = 0; i < poolTokens.length; i++) {
             uint256 normalizedAmount = _capital.preciseMul(_poolWeights[i]);
-            console.log('normalizedAmount', normalizedAmount);
             if (poolTokens[i] != reserveAsset && poolTokens[i] != address(0)) {
                 _trade(reserveAsset, normalizedAmount, poolTokens[i]);
                 _maxAmountsIn[i] = IERC20(poolTokens[i]).balanceOf(address(this));
@@ -83,7 +82,6 @@ contract LiquidityPoolStrategy is Strategy {
             }
         }
         uint256 poolTokensOut = IPoolIntegration(integration).calcPoolOut(pool, poolTokens[0], _maxAmountsIn[0]);
-        console.log('poolTokensOut', poolTokensOut);
         IPoolIntegration(integration).joinPool(
             pool,
             poolTokensOut.sub(poolTokensOut.preciseMul(SLIPPAGE_ALLOWED)),
