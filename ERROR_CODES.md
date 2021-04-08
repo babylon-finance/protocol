@@ -1,0 +1,25 @@
+# ERROR CODES
+
+- BABL001: Max deposit limit needs to be under the limit
+- BABL002: Creator needs to deposit
+- BABL003: Min Garden token supply >= 0
+- BABL004: Deposit hardlock needs to be longer than one block
+- BABL005: Needs to be at least the minimum set by protocol
+- BABL006: Garden must receive an initial deposit
+- BABL007: msg.value has to be at least minContribution
+- BABL008: Hit maxDepositLimit
+- BABL009: reserveAssetQuantity is not equal to msg.value
+- BABL010: Not enough Garden tokens to issue
+- BABL011: gardenTokenQuantity has to be at least minGardenTokenReceiveQuantity
+- BABL012: Withdrawal amount has to be equal or less than msg.sender balance
+- BABL013: Tokens are timelocked
+- BABL014: Not enough liquidity in the garden
+- BABL015: Failed to send Ether
+- BABL016: Required withdrawable quantity is greater than existing collateral
+- BABL017:
+- BABL018:
+- BABL019:
+- BABL020:
+- BABL021:
+- BABL022:
+- BABL023:
