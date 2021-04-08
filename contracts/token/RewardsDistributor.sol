@@ -173,113 +173,79 @@ contract RewardsDistributor is Ownable {
     function getStrategyRewards(address _strategy) public returns (uint96) {
         strategy = IStrategy(_strategy);
         require(strategy.exitedAt() != 0, 'The strategy has to be finished before calculations');
-        (uint256 numQuarters, uint256 startingQuarter) = getRewardsWindow(strategy.executedAt(), strategy.exitedAt());
-        uint256 bablRewards = 0;
-        console.log('NumQuarters', numQuarters);
-        if (numQuarters <= 1) {
-            bablRewards = (
-                (strategy.capitalAllocated().mul(strategy.exitedAt().sub(strategy.executedAt()))).preciseDiv(
-                    protocolPerQuarter[startingQuarter].quarterPower
-                )
-            )
-                .preciseMul(uint256(protocolPerQuarter[startingQuarter].supplyPerQuarter))
-                .mul(strategy.exitedAt().sub(startingQuarter))
-                .div(block.timestamp.sub(startingQuarter)); // Proportional supply till that moment within the same epoch
-            console.log('Capital allocated', strategy.capitalAllocated());
-            console.log('Time Difference', strategy.exitedAt().sub(strategy.executedAt()));
-            console.log(
-                'Str Power of i ',
-                strategy.capitalAllocated().mul(strategy.exitedAt().sub(strategy.executedAt()))
-            );
-            console.log('Protocol Power of i ', protocolPerQuarter[startingQuarter].quarterPower);
-            console.log(
-                'Supply reduction',
-                uint256(protocolPerQuarter[startingQuarter].supplyPerQuarter)
-                    .preciseMul(strategy.exitedAt().sub(startingQuarter))
-                    .preciseDiv(block.timestamp.sub(startingQuarter))
-            );
-            console.log('BABL Rewards only 1 quarter', bablRewards);
-            require(bablRewards <= protocolPerQuarter[startingQuarter].supplyPerQuarter, 'overflow in supply');
-            require(
-                strategy.capitalAllocated().mul(strategy.exitedAt().sub(strategy.executedAt())) <=
-                    protocolPerQuarter[startingQuarter].quarterPower,
-                'overflow in power'
-            );
+        if (strategy.strategyRewards() != 0) {
+            // We avoid gas consuming once a strategy got its BABL rewards during its finalization
+            return strategy.strategyRewards();
         } else {
-            // The strategy takes longer than one quarter / epoch
-            // We need to calculate the strategy vs. protocol power ratio per each quarter
-            uint256[] memory strategyPower = new uint256[](numQuarters); // Strategy power in each Epoch
-            uint256[] memory protocolPower = new uint256[](numQuarters); // Protocol power in each Epoch
-            for (uint256 i = 0; i <= numQuarters.sub(1); i++) {
-                uint256 slotEnding = START_TIME.add(startingQuarter.add(i).mul(EPOCH_DURATION)); // Initialization timestamp at the end of the first slot where the strategy starts its execution
-                console.log('Start time is %s', START_TIME);
-                console.log('startinQuarter is %s', startingQuarter);
-                console.log('slotEnding is %s', slotEnding);
-                console.log(
-                    'slotStarting is %s',
-                    START_TIME.add(startingQuarter.add(i).mul(EPOCH_DURATION).sub(EPOCH_DURATION))
+            (uint256 numQuarters, uint256 startingQuarter) =
+                getRewardsWindow(strategy.executedAt(), strategy.exitedAt());
+            uint256 bablRewards = 0;
+            if (numQuarters <= 1) {
+                bablRewards = (
+                    (strategy.capitalAllocated().mul(strategy.exitedAt().sub(strategy.executedAt()))).preciseDiv(
+                        protocolPerQuarter[startingQuarter].quarterPower
+                    )
+                )
+                    .preciseMul(uint256(protocolPerQuarter[startingQuarter].supplyPerQuarter))
+                    .mul(strategy.exitedAt().sub(startingQuarter))
+                    .div(block.timestamp.sub(startingQuarter)); // Proportional supply till that moment within the same epoch
+                require(bablRewards <= protocolPerQuarter[startingQuarter].supplyPerQuarter, 'overflow in supply');
+                require(
+                    strategy.capitalAllocated().mul(strategy.exitedAt().sub(strategy.executedAt())) <=
+                        protocolPerQuarter[startingQuarter].quarterPower,
+                    'overflow in power'
                 );
-                console.log('Capital allocated is %s', strategy.capitalAllocated());
+            } else {
+                // The strategy takes longer than one quarter / epoch
+                // We need to calculate the strategy vs. protocol power ratio per each quarter
+                uint256[] memory strategyPower = new uint256[](numQuarters); // Strategy power in each Epoch
+                uint256[] memory protocolPower = new uint256[](numQuarters); // Protocol power in each Epoch
+                for (uint256 i = 0; i <= numQuarters.sub(1); i++) {
+                    uint256 slotEnding = START_TIME.add(startingQuarter.add(i).mul(EPOCH_DURATION)); // Initialization timestamp at the end of the first slot where the strategy starts its execution
 
-                // We iterate all the quarters where the strategy was active
-                uint256 percentage = 1e18;
-                if (strategy.executedAt().add(EPOCH_DURATION) > slotEnding) {
-                    // We are in the first quarter of the strategy
+                    // We iterate all the quarters where the strategy was active
+                    uint256 percentage = 1e18;
+                    if (strategy.executedAt().add(EPOCH_DURATION) > slotEnding) {
+                        // We are in the first quarter of the strategy
 
-                    strategyPower[i] = strategy.capitalAllocated().mul(slotEnding.sub(strategy.executedAt()));
-                    console.log('FIRST EPOCH Strategy is %s', strategyPower[i]);
-                    console.log('FIRST EPOCH percentage is %s', percentage);
-                    console.log('FIRST EPOCH capital allocated', strategy.capitalAllocated());
-                    console.log('FIRST EPOCH slot ending', slotEnding);
-                    console.log('FIRST EPOCH executedAt', strategy.executedAt());
-                    console.log('FIRST EPOCH difference on time', slotEnding.sub(strategy.executedAt()));
-                } else if (strategy.executedAt() < slotEnding.sub(EPOCH_DURATION) && slotEnding < strategy.exitedAt()) {
-                    // We are in an intermediate quarter different from starting or ending quarters
-                    strategyPower[i] = strategy.capitalAllocated().mul(slotEnding.sub(slotEnding.sub(EPOCH_DURATION)));
-                    console.log('INTERMEDIATE EPOCH Strategy is %s', strategyPower[i]);
-                    console.log('INTERMEDIATE EPOCH percentage is %s', percentage);
-                    console.log('INTERMEDIATE EPOCH capital allocated', strategy.capitalAllocated());
-                    console.log('INTERMEDIATE EPOCH slot ending', slotEnding);
-                    console.log('INTERMEDIATE EPOCH executedAt', strategy.executedAt());
-                    console.log('INTERMEDIATE EPOCH difference on time', slotEnding.sub(strategy.executedAt()));
-                } else {
-                    // We are in the last quarter of the strategy
-                    percentage = block.timestamp.sub(slotEnding.sub(EPOCH_DURATION)).preciseDiv(
-                        slotEnding.sub(slotEnding.sub(EPOCH_DURATION))
+                        strategyPower[i] = strategy.capitalAllocated().mul(slotEnding.sub(strategy.executedAt()));
+                    } else if (
+                        strategy.executedAt() < slotEnding.sub(EPOCH_DURATION) && slotEnding < strategy.exitedAt()
+                    ) {
+                        // We are in an intermediate quarter different from starting or ending quarters
+                        strategyPower[i] = strategy.capitalAllocated().mul(
+                            slotEnding.sub(slotEnding.sub(EPOCH_DURATION))
+                        );
+                    } else {
+                        // We are in the last quarter of the strategy
+                        percentage = block.timestamp.sub(slotEnding.sub(EPOCH_DURATION)).preciseDiv(
+                            slotEnding.sub(slotEnding.sub(EPOCH_DURATION))
+                        );
+
+                        strategyPower[i] = strategy.capitalAllocated().mul(
+                            strategy.exitedAt().sub(slotEnding.sub(EPOCH_DURATION))
+                        );
+                    }
+                    protocolPower[i] = protocolPerQuarter[startingQuarter.add(i)].quarterPower;
+
+                    require(strategyPower[i] <= protocolPower[i], 'overflow str over protocol in an epoch');
+
+                    // TODO DOWNSIDE 96 bits into XX K BABLS
+
+                    bablRewards = bablRewards.add(
+                        strategyPower[i]
+                            .preciseDiv(protocolPower[i])
+                            .preciseMul(uint256(protocolPerQuarter[startingQuarter.add(i)].supplyPerQuarter))
+                            .preciseMul(percentage)
                     );
-
-                    strategyPower[i] = strategy.capitalAllocated().mul(
-                        strategy.exitedAt().sub(slotEnding.sub(EPOCH_DURATION))
-                    );
-                    console.log('LAST EPOCH Strategy is %s', strategyPower[i]);
-                    console.log('LAST EPOCH percentage is %s', percentage);
                 }
-                protocolPower[i] = protocolPerQuarter[startingQuarter.add(i)].quarterPower;
-                console.log('Str Power of i ', strategyPower[i], i);
-                console.log('Protocol Power of i ', protocolPower[i], i);
-                console.log('Supply per quarter', protocolPerQuarter[startingQuarter.add(i)].supplyPerQuarter);
-
-                require(strategyPower[i] <= protocolPower[i], 'overflow str over protocol in an epoch');
-
-                // TODO DOWNSIDE 96 bits into XX K BABLS
-
-                bablRewards = bablRewards.add(
-                    strategyPower[i]
-                        .preciseDiv(protocolPower[i])
-                        .preciseMul(uint256(protocolPerQuarter[startingQuarter.add(i)].supplyPerQuarter))
-                        .preciseMul(percentage)
-                );
-                console.log('BABL Rewards %s in epoch i %s', bablRewards, i);
             }
-        }
 
-        // Babl rewards will be proportional to the total return (profit)
-        uint256 percentageMul = strategy.capitalReturned().preciseDiv(strategy.capitalAllocated());
-        console.log('PercentageMul is', percentageMul);
-        console.log('Max rewarded BABL', bablRewards);
-        bablRewards = bablRewards.preciseMul(percentageMul);
-        console.log('Real rewarded BABL', bablRewards);
-        return Safe3296.safe96(bablRewards, 'overflow 96 bits');
+            // Babl rewards will be proportional to the total return (profit)
+            uint256 percentageMul = strategy.capitalReturned().preciseDiv(strategy.capitalAllocated());
+            bablRewards = bablRewards.preciseMul(percentageMul);
+            return Safe3296.safe96(bablRewards, 'overflow 96 bits');
+        }
     }
 
     function sendTokensToContributor(address _to, uint256 _amount) public onlyStrategy {
@@ -403,9 +369,6 @@ contract RewardsDistributor is Ownable {
 
     function _addProtocolPerQuarter(uint256 _time) internal {
         ProtocolPerQuarter storage protocolCheckpoint = protocolPerQuarter[getQuarter(_time)];
-        console.log('Quarter PID is %s', pid);
-        console.log('Quarter Time is %s', _time);
-        console.log('Quarter Check', isProtocolPerQuarter[getQuarter(_time).sub(1)]);
 
         if (!isProtocolPerQuarter[getQuarter(_time).sub(1)]) {
             // The quarter is not yet initialized then we create it
@@ -419,7 +382,6 @@ contract RewardsDistributor is Ownable {
                 // We just take the proportional power for this quarter from previous checkpoint
                 uint256 powerToSplit =
                     protocolPerTimestamp[_time].power.sub(protocolPerTimestamp[timeList[pid.sub(1)]].power);
-                console.log('POWER TO SPLIT', powerToSplit);
 
                 if (protocolPerTimestamp[timeList[pid.sub(1)]].quarterBelonging == getQuarter(_time).sub(1)) {
                     // There were no intermediate epochs without checkpoints
@@ -436,14 +398,6 @@ contract RewardsDistributor is Ownable {
                         .quarterPower
                         .add(powerToSplit.sub(protocolCheckpoint.quarterPower));
                 } else {
-                    console.log('PID is %s', pid);
-                    console.log(
-                        '%s QUARTERS WITHOUT CHECKPOINTS BETWEEN THIS AND PREVIOUS CHECKPOINT, THIS QUARTER %s, PREVIOUS QUARTER',
-                        getQuarter(_time).sub(protocolPerTimestamp[timeList[pid.sub(1)]].quarterBelonging),
-                        getQuarter(_time),
-                        protocolPerTimestamp[timeList[pid.sub(1)]].quarterBelonging
-                    );
-
                     // There were intermediate epochs without checkpoints - we need to create their protocolPerQuarter's and update the last one
                     // We have to update all the quarters including where the previous checkpoint is and the one were we are now
                     for (
@@ -451,11 +405,6 @@ contract RewardsDistributor is Ownable {
                         i <= getQuarter(_time).sub(protocolPerTimestamp[timeList[pid.sub(1)]].quarterBelonging);
                         i++
                     ) {
-                        console.log(
-                            'i %s AND COMPARISON',
-                            i,
-                            getQuarter(_time).sub(protocolPerTimestamp[timeList[pid.sub(1)]].quarterBelonging)
-                        );
                         ProtocolPerQuarter storage newCheckpoint =
                             protocolPerQuarter[protocolPerTimestamp[timeList[pid.sub(1)]].quarterBelonging.add(i)];
                         uint256 slotEnding =
@@ -464,10 +413,6 @@ contract RewardsDistributor is Ownable {
                             );
                         if (i == 0) {
                             // We are in the first quarter to update, we add the corresponding part
-                            console.log(
-                                'Timestamp of previous checkpoint',
-                                protocolPerTimestamp[timeList[pid.sub(1)]].time
-                            );
 
                             newCheckpoint.quarterPower = newCheckpoint.quarterPower.add(
                                 powerToSplit.mul(slotEnding.sub(protocolPerTimestamp[timeList[pid.sub(1)]].time)).div(
@@ -475,12 +420,6 @@ contract RewardsDistributor is Ownable {
                                 )
                             );
                             newCheckpoint.quarterPrincipal = protocolPerTimestamp[timeList[pid.sub(1)]].principal;
-
-                            console.log(
-                                'UPDATING INITIAL QUARTER RETROSPECTIVELY OLD %s NEW %s',
-                                protocolPerTimestamp[timeList[pid.sub(1)]].quarterBelonging,
-                                newCheckpoint.quarterPower
-                            );
                         } else if (
                             i < getQuarter(_time).sub(protocolPerTimestamp[timeList[pid.sub(1)]].quarterBelonging)
                         ) {
@@ -494,9 +433,7 @@ contract RewardsDistributor is Ownable {
                             newCheckpoint.quarterNumber = protocolPerTimestamp[timeList[pid.sub(1)]]
                                 .quarterBelonging
                                 .add(i);
-                            console.log('UPDATING INTERMEDIATE QUARTER NUMBER WITH', newCheckpoint.quarterNumber);
                             newCheckpoint.quarterPrincipal = protocolPerTimestamp[timeList[pid.sub(1)]].principal;
-                            console.log('UPDATING INTERMEDIATE QUARTERS RETROSPECTIVELY', newCheckpoint.quarterPower);
                         } else {
                             // We are in the last quarter of the strategy
                             protocolCheckpoint.quarterPower = powerToSplit
@@ -507,7 +444,6 @@ contract RewardsDistributor is Ownable {
                             protocolCheckpoint.supplyPerQuarter = tokenSupplyPerQuarter(getQuarter(_time));
                             protocolCheckpoint.quarterNumber = getQuarter(_time);
                             protocolCheckpoint.quarterPrincipal = protocolPrincipal;
-                            console.log('UPDATING FINAL QUARTER RETROSPECTIVELY', newCheckpoint.quarterPower);
                         }
                     }
                 }
@@ -516,11 +452,9 @@ contract RewardsDistributor is Ownable {
         } else {
             // Quarter checkpoint already created, it must have been filled with general info
             // We update the power of the quarter by adding the new difference between last quarter checkpoint and this checkpoint
-            console.log('PREVIOUS QUARTER UPDATE WITHIN THE QUARTER', protocolCheckpoint.quarterPower);
             protocolCheckpoint.quarterPower = protocolCheckpoint.quarterPower.add(
                 protocolPerTimestamp[_time].power.sub(protocolPerTimestamp[timeList[pid.sub(1)]].power)
             );
-            console.log('AFTER QUARTER UPDATE WITHIN THE QUARTER', protocolCheckpoint.quarterPower);
         }
         protocolCheckpoint.quarterPrincipal = protocolPrincipal;
     }

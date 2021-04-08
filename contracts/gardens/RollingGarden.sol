@@ -349,7 +349,6 @@ contract RollingGarden is ReentrancyGuard, BaseGarden {
             // Send eth
             (bool sent, ) = msg.sender.call{value: totalProfits}('');
             require(sent, 'R19'); // Failed to send Ether
-            contributor.claimedAt = block.timestamp;
         }
         if (bablRewards > 0) {
             // Send BABL rewards
@@ -358,112 +357,6 @@ contract RollingGarden is ReentrancyGuard, BaseGarden {
             rewardsDistributor.sendTokensToContributor(msg.sender, bablRewards);
         }
         contributor.claimedAt = block.timestamp; // Checkpoint wether or not the contributor has claimed
-    }
-
-    function _getProfitsAndBabl(address[] calldata _finalizedStrategies)
-        internal
-        onlyContributor
-        returns (uint256, uint256)
-    {
-        require(contributors[msg.sender].lastDepositAt > contributors[msg.sender].claimedAt, 'R27');
-        uint256 contributorProfits = 0;
-        uint256 bablTotalRewards = 0;
-        for (uint256 i = 0; i < _finalizedStrategies.length; i++) {
-            IStrategy strategy = IStrategy(_finalizedStrategies[i]);
-            console.log('Strategy under claim', address(strategy));
-            uint256 totalProfits = 0; // Total Profits of each finalized strategy
-            // Positive strategies not yet claimed
-            if (
-                strategy.exitedAt() > contributors[msg.sender].claimedAt &&
-                strategy.executedAt() >= contributors[msg.sender].initialDepositAt
-            ) {
-                // If strategy returned money we give out the profits
-                if (strategy.capitalReturned() > strategy.capitalAllocated()) {
-                    // (User percentage * strategy profits) / (strategy capital)
-                    totalProfits = totalProfits.add(strategy.capitalReturned().sub(strategy.capitalAllocated()));
-                    // We reserve 5% of profits for performance fees
-                    totalProfits = totalProfits.sub(totalProfits.mul(PROFIT_PROTOCOL_FEE));
-                }
-                // Give out BABL
-                uint256 creatorBonus = msg.sender == creator ? CREATOR_BONUS : 0;
-                bool isStrategist = msg.sender == strategy.strategist();
-                bool isVoter = strategy.getUserVotes(msg.sender) != 0;
-                // pending userPrincipal improvement to have more accurate calculations
-                uint256 strategyRewards = strategy.strategyRewards();
-                console.log('Strategy Rewards during CLAIM', strategyRewards);
-                uint256 bablRewards = 0;
-
-                // Get strategist rewards in case the contributor is also the strategist of the strategy
-                if (isStrategist) {
-                    bablRewards = bablRewards.add(strategyRewards.multiplyDecimal(BABL_STRATEGIST_SHARE));
-                    console.log('BABL for STRATEGIST', strategyRewards.multiplyDecimal(BABL_STRATEGIST_SHARE));
-                    console.log('Strategist BABL Rewards',bablRewards);
-                    contributorProfits = contributorProfits.add(totalProfits.multiplyDecimal(PROFIT_STRATEGIST_SHARE));
-                    console.log('PROFITS STRATEGIST', contributorProfits);
-                }
-
-                // Get proportional voter (stewards) rewards in case the contributor was also a steward of the strategy
-                if (isVoter) {
-                    console.log('BABL for VOTERS', strategyRewards
-                            .multiplyDecimal(BABL_STEWARD_SHARE)
-                            .preciseMul(uint256(strategy.getUserVotes(msg.sender))
-                            .preciseDiv(strategy.absoluteTotalVotes())));
-                    console.log('ABSOLUTE VOTES', strategy.absoluteTotalVotes());
-                    console.log('CONTRIBUTOR VOTES', uint256(strategy.getUserVotes(msg.sender)));
-                    console.log('RATIO VOTES VS ABSOLUTE VOTES', uint256(strategy.getUserVotes(msg.sender)).preciseDiv(strategy.absoluteTotalVotes()));
-
-
-                    bablRewards = bablRewards.add(
-                        strategyRewards
-                            .multiplyDecimal(BABL_STEWARD_SHARE)
-                            .preciseMul(uint256(strategy.getUserVotes(msg.sender))
-                            .preciseDiv(strategy.absoluteTotalVotes()))
-                    );
-                    console.log('Adding BABL Rewards for Voter',bablRewards);
-                    contributorProfits = contributorProfits.add(
-                        totalProfits
-                            .preciseMul(PROFIT_STEWARD_SHARE)
-                            .mul(uint256(strategy.getUserVotes(msg.sender)))
-                            .div(strategy.absoluteTotalVotes())
-                    );
-                    console.log('PROFITS VOTER', contributorProfits);
-
-                }
-
-                // Get proportional LP rewards as every active contributor of the garden is a LP of their strategies
-                console.log('contributors[msg.sender].gardenAverageOwnership', contributors[msg.sender].gardenAverageOwnership);
-                console.log('Total Capital Allocated in the strategy', strategy.capitalAllocated());
-                console.log('percentage gardenAverage vs capital allocated',contributors[msg.sender].gardenAverageOwnership.preciseDiv(strategy.capitalAllocated()));
-                bablRewards = bablRewards.add(
-                    strategyRewards.multiplyDecimal(BABL_LP_SHARE).preciseMul(contributors[msg.sender].gardenAverageOwnership.preciseDiv(strategy.capitalAllocated()))
-                );
-                console.log('Adding BABL Rewards as LP',bablRewards);
-
-                contributorProfits = contributorProfits.add(
-                    contributors[msg.sender].gardenAverageOwnership.mul(totalProfits).mul(PROFIT_LP_SHARE)
-                );
-                console.log('PROFITS LP', contributorProfits);
-
-
-                // Get a multiplier bonus in case the contributor is the garden creator
-                if (creatorBonus > 0) {
-                    bablRewards = bablRewards.add(bablRewards.multiplyDecimal(creatorBonus));
-                    console.log('Adding BABL Rewards as CREATOR', bablRewards);
-
-                }
-
-                console.log('MSG SENDER', msg.sender);
-                contributors[msg.sender].claimedBABL = contributors[msg.sender].claimedBABL.add(bablRewards);
-                contributors[msg.sender].claimedProfits = contributors[msg.sender].claimedProfits.add(
-                    contributorProfits
-                );
-                bablTotalRewards = bablTotalRewards.add(bablRewards);
-                console.log('Total BABL Rewards BEFORE safe96', bablRewards);
-                console.log('Total BABL Rewards AFTER safe96', Safe3296.safe96(bablTotalRewards, 'R28'));
-
-            }
-        }
-        return (contributorProfits, Safe3296.safe96(bablTotalRewards, 'R28'));
     }
 
     /**
@@ -609,6 +502,90 @@ contract RollingGarden is ReentrancyGuard, BaseGarden {
     receive() external payable {} // solium-disable-line quotes
 
     /* ============ Internal Functions ============ */
+
+    function _getProfitsAndBabl(address[] calldata _finalizedStrategies)
+        internal
+        onlyContributor
+        returns (uint256, uint256)
+    {
+        require(contributors[msg.sender].lastDepositAt > contributors[msg.sender].claimedAt, 'R27');
+        uint256 contributorProfits = 0;
+        uint256 bablTotalRewards = 0;
+        for (uint256 i = 0; i < _finalizedStrategies.length; i++) {
+            IStrategy strategy = IStrategy(_finalizedStrategies[i]);
+            uint256 totalProfits = 0; // Total Profits of each finalized strategy
+            // Positive strategies not yet claimed
+            if (
+                strategy.exitedAt() > contributors[msg.sender].claimedAt &&
+                strategy.executedAt() >= contributors[msg.sender].initialDepositAt
+            ) {
+                // If strategy returned money we give out the profits
+                if (strategy.capitalReturned() > strategy.capitalAllocated()) {
+                    // (User percentage * strategy profits) / (strategy capital)
+                    totalProfits = totalProfits.add(strategy.capitalReturned().sub(strategy.capitalAllocated()));
+                    // We reserve 5% of profits for performance fees
+
+                    totalProfits = totalProfits.sub(totalProfits.multiplyDecimal(PROFIT_PROTOCOL_FEE));
+                }
+                // Give out BABL
+                uint256 creatorBonus = msg.sender == creator ? CREATOR_BONUS : 0;
+                bool isStrategist = msg.sender == strategy.strategist();
+                bool isVoter = strategy.getUserVotes(msg.sender) != 0;
+                // pending userPrincipal improvement to have more accurate calculations
+                uint256 strategyRewards = strategy.strategyRewards();
+                uint256 bablRewards = 0;
+
+                // Get strategist rewards in case the contributor is also the strategist of the strategy
+                if (isStrategist) {
+                    bablRewards = bablRewards.add(strategyRewards.multiplyDecimal(BABL_STRATEGIST_SHARE));
+
+                    contributorProfits = contributorProfits.add(totalProfits.multiplyDecimal(PROFIT_STRATEGIST_SHARE));
+                }
+
+                // Get proportional voter (stewards) rewards in case the contributor was also a steward of the strategy
+                if (isVoter) {
+                    bablRewards = bablRewards.add(
+                        strategyRewards.multiplyDecimal(BABL_STEWARD_SHARE).preciseMul(
+                            uint256(strategy.getUserVotes(msg.sender)).preciseDiv(strategy.absoluteTotalVotes())
+                        )
+                    );
+                    contributorProfits = contributorProfits.add(
+                        totalProfits
+                            .multiplyDecimal(PROFIT_STEWARD_SHARE)
+                            .preciseMul(uint256(strategy.getUserVotes(msg.sender)))
+                            .preciseDiv(strategy.absoluteTotalVotes())
+                    );
+                }
+
+                // Get proportional LP rewards as every active contributor of the garden is a LP of their strategies
+
+                bablRewards = bablRewards.add(
+                    strategyRewards.multiplyDecimal(BABL_LP_SHARE).preciseMul(
+                        contributors[msg.sender].gardenAverageOwnership.preciseDiv(strategy.capitalAllocated())
+                    )
+                );
+
+                contributorProfits = contributorProfits.add(
+                    contributors[msg.sender].gardenAverageOwnership.preciseMul(totalProfits).multiplyDecimal(
+                        PROFIT_LP_SHARE
+                    )
+                );
+
+                // Get a multiplier bonus in case the contributor is the garden creator
+                if (creatorBonus > 0) {
+                    bablRewards = bablRewards.add(bablRewards.multiplyDecimal(creatorBonus));
+                }
+
+                contributors[msg.sender].claimedBABL = contributors[msg.sender].claimedBABL.add(bablRewards);
+                contributors[msg.sender].claimedProfits = contributors[msg.sender].claimedProfits.add(
+                    contributorProfits
+                );
+
+                bablTotalRewards = bablTotalRewards.add(bablRewards);
+            }
+        }
+        return (contributorProfits, Safe3296.safe96(bablTotalRewards, 'R28'));
+    }
 
     function _validateReserveAsset(address _reserveAsset, uint256 _quantity) internal view {
         require(_quantity > 0, 'Quantity > 0');
