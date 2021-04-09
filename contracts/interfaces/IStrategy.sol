@@ -88,6 +88,7 @@ interface IStrategy {
             bool,
             bool,
             uint256,
+            uint256,
             uint256
         );
 
@@ -103,11 +104,15 @@ interface IStrategy {
 
     function executedAt() external pure returns (uint256);
 
+    function updatedAt() external pure returns (uint256);
+
     function exitedAt() external pure returns (uint256);
 
     function stake() external pure returns (uint256);
 
     function strategyRewards() external pure returns (uint96);
+
+    function rewardsTotalOverhead() external pure returns (uint256);
 
     function maxCapitalRequested() external pure returns (uint256);
 

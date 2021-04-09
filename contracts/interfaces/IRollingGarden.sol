@@ -85,8 +85,4 @@ interface IRollingGarden is IERC20, IGarden {
     function getCurrentTopStrategy() external view returns (uint8);
 
     function canWithdrawEthAmount(uint256 _amount) external view returns (bool);
-
-    function claimReturns(address[] calldata _finalizedStrategies) external;
-
-    function getProfitsAndBabl(address[] calldata _finalizedStrategies) external view returns (uint256, uint256);
 }

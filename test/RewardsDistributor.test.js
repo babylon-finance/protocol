@@ -57,7 +57,15 @@ async function finishStrategy2Y(garden, strategy, fee = 0) {
 }
 
 async function checkStrategyStateExecuting(strategyContract) {
-  const [address, active, dataSet, finalized, executedAt, exitedAt] = await strategyContract.getStrategyState();
+  const [
+    address,
+    active,
+    dataSet,
+    finalized,
+    executedAt,
+    exitedAt,
+    updatedAt,
+  ] = await strategyContract.getStrategyState();
 
   // Should be active
   expect(address).to.equal(strategyContract.address);
@@ -67,11 +75,19 @@ async function checkStrategyStateExecuting(strategyContract) {
   expect(executedAt).to.not.equal(0);
   expect(exitedAt).to.equal(ethers.BigNumber.from(0));
 
-  return [address, active, dataSet, finalized, executedAt, exitedAt];
+  return [address, active, dataSet, finalized, executedAt, exitedAt, updatedAt];
 }
 
 async function checkStrategyStateFinalized(strategyContract) {
-  const [address, active, dataSet, finalized, executedAt, exitedAt] = await strategyContract.getStrategyState();
+  const [
+    address,
+    active,
+    dataSet,
+    finalized,
+    executedAt,
+    exitedAt,
+    updatedAt,
+  ] = await strategyContract.getStrategyState();
 
   // Should be active
   expect(address).to.equal(strategyContract.address);
@@ -81,7 +97,7 @@ async function checkStrategyStateFinalized(strategyContract) {
   expect(executedAt).to.not.equal(0);
   expect(exitedAt).to.not.equal(0);
 
-  return [address, active, dataSet, finalized, executedAt, exitedAt];
+  return [address, active, dataSet, finalized, executedAt, exitedAt, updatedAt];
 }
 
 async function checkProtocolWithParams(_protocol, _principal, _executedAt, _quarter, _timeListPointer, _power) {
@@ -185,7 +201,7 @@ describe('BABL Rewards Distributor', function () {
       // It is executed
       await executeStrategy(garden1, strategyContract, ethers.utils.parseEther('1'), 42);
 
-      const [address, active, dataSet, finalized, executedAt, exitedAt] = await checkStrategyStateExecuting(
+      const [address, active, dataSet, finalized, executedAt, exitedAt, updatedAt] = await checkStrategyStateExecuting(
         strategyContract,
       );
 
@@ -206,13 +222,13 @@ describe('BABL Rewards Distributor', function () {
       // It is executed
       await executeStrategy(garden1, strategyContract, ethers.utils.parseEther('1'), 42);
 
-      const [address, active, dataSet, finalized, executedAt, exitedAt] = await checkStrategyStateExecuting(
+      const [address, active, dataSet, finalized, executedAt, exitedAt, updatedAt] = await checkStrategyStateExecuting(
         strategyContract,
       );
 
       // Check protocol
-      const protocol = await rewardsDistributor.checkProtocol(executedAt);
-      await checkProtocolWithParams(protocol, ethers.utils.parseEther('1'), executedAt, 1, 0, 0);
+      const protocol = await rewardsDistributor.checkProtocol(updatedAt);
+      await checkProtocolWithParams(protocol, ethers.utils.parseEther('1'), updatedAt, 1, 0, 0);
 
       const protocolQuarter = await rewardsDistributor.checkQuarter(protocol[2]);
       const [quarterPrincipal, quarterNumber, quarterPower, quarterSupply] = protocolQuarter;
@@ -237,9 +253,15 @@ describe('BABL Rewards Distributor', function () {
 
       await finishStrategyQ1(garden1, strategyContract, 42);
 
-      const [address2, active2, dataSet2, finalized2, executedAt2, exitedAt2] = await checkStrategyStateFinalized(
-        strategyContract,
-      );
+      const [
+        address2,
+        active2,
+        dataSet2,
+        finalized2,
+        executedAt2,
+        exitedAt2,
+        updatedAt2,
+      ] = await checkStrategyStateFinalized(strategyContract);
 
       // Check strategy
       expect(finalized2).to.equal(true);
@@ -288,7 +310,7 @@ describe('BABL Rewards Distributor', function () {
       // It is executed
       await executeStrategy(garden1, strategyContract, ethers.utils.parseEther('1'), 42);
 
-      const [address, active, dataSet, finalized, executedAt, exitedAt] = await checkStrategyStateExecuting(
+      const [address, active, dataSet, finalized, executedAt, exitedAt, updatedAt] = await checkStrategyStateExecuting(
         strategyContract,
       );
       // Check strategy
@@ -299,8 +321,8 @@ describe('BABL Rewards Distributor', function () {
       expect(exitedAt).to.equal(ethers.BigNumber.from(0));
 
       // Check protocol
-      const protocol = await rewardsDistributor.checkProtocol(executedAt);
-      await checkProtocolWithParams(protocol, ethers.utils.parseEther('1'), executedAt, 1, 0, 0);
+      const protocol = await rewardsDistributor.checkProtocol(updatedAt);
+      await checkProtocolWithParams(protocol, ethers.utils.parseEther('1'), updatedAt, 1, 0, 0);
 
       const protocolQuarter = await rewardsDistributor.checkQuarter(protocol[2]);
       const [quarterPrincipal, quarterNumber, quarterPower, quarterSupply] = protocolQuarter;
@@ -321,9 +343,15 @@ describe('BABL Rewards Distributor', function () {
 
       await finishStrategyQ1(garden1, strategyContract, 42);
 
-      const [address2, active2, dataSet2, finalized2, executedAt2, exitedAt2] = await checkStrategyStateFinalized(
-        strategyContract,
-      );
+      const [
+        address2,
+        active2,
+        dataSet2,
+        finalized2,
+        executedAt2,
+        exitedAt2,
+        updatedAt2,
+      ] = await checkStrategyStateFinalized(strategyContract);
       // Check strategy
       expect(finalized2).to.equal(true);
       expect(executedAt2).to.not.equal(0);
@@ -384,7 +412,7 @@ describe('BABL Rewards Distributor', function () {
       // Execute strategy 1
       await executeStrategy(garden1, strategyContract, ethers.utils.parseEther('1'), 42); // Strategy 1
 
-      const [address, active, dataSet, finalized, executedAt, exitedAt] = await checkStrategyStateExecuting(
+      const [address, active, dataSet, finalized, executedAt, exitedAt, updatedAt] = await checkStrategyStateExecuting(
         strategyContract,
       );
 
@@ -394,13 +422,19 @@ describe('BABL Rewards Distributor', function () {
 
       await executeStrategy(garden1, strategyContract2, ethers.utils.parseEther('2'), 42); // Strategy 2
 
-      const [address2, active2, dataSet2, finalized2, executedAt2, exitedAt2] = await checkStrategyStateExecuting(
-        strategyContract2,
-      );
+      const [
+        address2,
+        active2,
+        dataSet2,
+        finalized2,
+        executedAt2,
+        exitedAt2,
+        updatedAt2,
+      ] = await checkStrategyStateExecuting(strategyContract2);
 
       // Check protocol
-      const protocol = await rewardsDistributor.checkProtocol(executedAt2);
-      await checkProtocolWithParams(protocol, ethers.utils.parseEther('3'), executedAt2, 1, 1, protocol[4]);
+      const protocol = await rewardsDistributor.checkProtocol(updatedAt2);
+      await checkProtocolWithParams(protocol, ethers.utils.parseEther('3'), updatedAt2, 1, 1, protocol[4]);
 
       const protocolQuarter = await rewardsDistributor.checkQuarter(protocol[2]);
       const [quarterPrincipal, quarterNumber, quarterPower, quarterSupply] = protocolQuarter;
@@ -419,12 +453,18 @@ describe('BABL Rewards Distributor', function () {
 
       await finishStrategyQ1(garden1, strategyContract, 42);
 
-      const [address3, active3, dataSet3, finalized3, executedAt3, exitedAt3] = await checkStrategyStateFinalized(
-        strategyContract,
-      );
+      const [
+        address3,
+        active3,
+        dataSet3,
+        finalized3,
+        executedAt3,
+        exitedAt3,
+        updatedAt3,
+      ] = await checkStrategyStateFinalized(strategyContract);
 
       // Check protocol
-      const protocol2 = await rewardsDistributor.checkProtocol(exitedAt3);
+      const protocol2 = await rewardsDistributor.checkProtocol(updatedAt3);
       await checkProtocolWithParams(protocol2, ethers.utils.parseEther('2'), exitedAt3, 1, 2, protocol2[4]); // TODO CHECK EXACT AMOUNT
 
       expect(protocol2[4]).to.not.equal(0); // TODO Check exact numbers
@@ -506,7 +546,7 @@ describe('BABL Rewards Distributor', function () {
       // Execute strategy 1
       await executeStrategy(garden1, strategyContract1, ethers.utils.parseEther('1'), 42); // Strategy 1
 
-      const [address, active, dataSet, finalized, executedAt, exitedAt] = await checkStrategyStateExecuting(
+      const [address, active, dataSet, finalized, executedAt, exitedAt, updatedAt] = await checkStrategyStateExecuting(
         strategyContract1,
       );
 
@@ -516,13 +556,19 @@ describe('BABL Rewards Distributor', function () {
       // Execute strategy 3
       await executeStrategy(garden1, strategyContract3, ethers.utils.parseEther('1'), 42); // Strategy 3
 
-      const [address2, active2, dataSet2, finalized2, executedAt2, exitedAt2] = await checkStrategyStateExecuting(
-        strategyContract3,
-      );
+      const [
+        address2,
+        active2,
+        dataSet2,
+        finalized2,
+        executedAt2,
+        exitedAt2,
+        updatedAt2,
+      ] = await checkStrategyStateExecuting(strategyContract3);
 
       // Check protocol
-      const protocol = await rewardsDistributor.checkProtocol(executedAt2);
-      await checkProtocolWithParams(protocol, ethers.utils.parseEther('6'), executedAt2, 1, 5, protocol[4]);
+      const protocol = await rewardsDistributor.checkProtocol(updatedAt2);
+      await checkProtocolWithParams(protocol, ethers.utils.parseEther('6'), updatedAt2, 1, 5, protocol[4]);
 
       const protocolQuarter = await rewardsDistributor.checkQuarter(protocol[2]);
       const [quarterPrincipal, quarterNumber, quarterPower, quarterSupply] = protocolQuarter;
@@ -543,12 +589,18 @@ describe('BABL Rewards Distributor', function () {
       await finishStrategyQ1_noIncreaseTime(garden1, strategyContract2, 42);
       await finishStrategyQ1_noIncreaseTime(garden1, strategyContract3, 42);
 
-      const [address3, active3, dataSet3, finalized3, executedAt3, exitedAt3] = await checkStrategyStateFinalized(
-        strategyContract3,
-      );
+      const [
+        address3,
+        active3,
+        dataSet3,
+        finalized3,
+        executedAt3,
+        exitedAt3,
+        updatedAt3,
+      ] = await checkStrategyStateFinalized(strategyContract3);
 
       // Check protocol
-      const protocol2 = await rewardsDistributor.checkProtocol(exitedAt3);
+      const protocol2 = await rewardsDistributor.checkProtocol(updatedAt3);
       await checkProtocolWithParams(protocol2, ethers.utils.parseEther('0'), exitedAt3, 1, 8, protocol2[4]); // TODO CHECK EXACT AMOUNT
 
       expect(protocol2[4]).to.not.equal(0); // TODO Check exact numbers
@@ -623,7 +675,7 @@ describe('BABL Rewards Distributor', function () {
       // Execute strategy 1
       await executeStrategy(garden1, strategyContract1, ethers.utils.parseEther('1'), 42); // Strategy 1
 
-      const [address, active, dataSet, finalized, executedAt, exitedAt] = await checkStrategyStateExecuting(
+      const [address, active, dataSet, finalized, executedAt, exitedAt, updatedAt] = await checkStrategyStateExecuting(
         strategyContract1,
       );
 
@@ -639,12 +691,18 @@ describe('BABL Rewards Distributor', function () {
       // Execute strategy 5
       await executeStrategy(garden2, strategyContract5, ethers.utils.parseEther('1'), 42); // Strategy 5
 
-      const [address2, active2, dataSet2, finalized2, executedAt2, exitedAt2] = await checkStrategyStateExecuting(
-        strategyContract5,
-      );
+      const [
+        address2,
+        active2,
+        dataSet2,
+        finalized2,
+        executedAt2,
+        exitedAt2,
+        updatedAt2,
+      ] = await checkStrategyStateExecuting(strategyContract5);
 
       // Check protocol
-      const protocol = await rewardsDistributor.checkProtocol(executedAt2);
+      const protocol = await rewardsDistributor.checkProtocol(updatedAt2);
       await checkProtocolWithParams(protocol, ethers.utils.parseEther('5'), executedAt2, 1, 4, protocol[4]);
 
       const protocolQuarter = await rewardsDistributor.checkQuarter(protocol[2]);
@@ -668,12 +726,18 @@ describe('BABL Rewards Distributor', function () {
       await finishStrategyQ1_noIncreaseTime(garden2, strategyContract4, 42);
       await finishStrategyQ1_noIncreaseTime(garden2, strategyContract5, 42);
 
-      const [address3, active3, dataSet3, finalized3, executedAt3, exitedAt3] = await checkStrategyStateFinalized(
-        strategyContract5,
-      );
+      const [
+        address3,
+        active3,
+        dataSet3,
+        finalized3,
+        executedAt3,
+        exitedAt3,
+        updatedAt3,
+      ] = await checkStrategyStateFinalized(strategyContract5);
 
       // Check protocol
-      const protocol2 = await rewardsDistributor.checkProtocol(exitedAt3);
+      const protocol2 = await rewardsDistributor.checkProtocol(updatedAt3);
       await checkProtocolWithParams(protocol2, ethers.utils.parseEther('0'), exitedAt3, 1, 9, protocol2[4]); // TODO CHECK EXACT AMOUNT
 
       expect(protocol2[4]).to.not.equal(0); // TODO Check exact numbers
@@ -712,15 +776,16 @@ describe('BABL Rewards Distributor', function () {
       // Execute strategy 1
       await executeStrategy(garden1, strategyContract1, ethers.utils.parseEther('1'), 42); // Strategy 1
 
-      const [address, active, dataSet, finalized, executedAt, exitedAt] = await checkStrategyStateExecuting(
+      const [address, active, dataSet, finalized, executedAt, exitedAt, updatedAt] = await checkStrategyStateExecuting(
         strategyContract1,
       );
 
       // Check protocol
-      const protocol = await rewardsDistributor.checkProtocol(executedAt);
-      await checkProtocolWithParams(protocol, ethers.utils.parseEther('2'), executedAt, 1, 1, protocol[4]);
+      const protocol = await rewardsDistributor.checkProtocol(updatedAt);
+      await checkProtocolWithParams(protocol, ethers.utils.parseEther('2'), updatedAt, 1, 1, protocol[4]);
 
       const protocolQuarter = await rewardsDistributor.checkQuarter(protocol[2]);
+
       const [quarterPrincipal, quarterNumber, quarterPower, quarterSupply] = protocolQuarter;
       await checkQuarterWithParams(
         quarterPrincipal,
@@ -737,12 +802,18 @@ describe('BABL Rewards Distributor', function () {
 
       await finishStrategy2Q(garden1, strategyContract1, 42);
 
-      const [address3, active3, dataSet3, finalized3, executedAt3, exitedAt3] = await checkStrategyStateFinalized(
-        strategyContract1,
-      );
+      const [
+        address3,
+        active3,
+        dataSet3,
+        finalized3,
+        executedAt3,
+        exitedAt3,
+        updatedAt3,
+      ] = await checkStrategyStateFinalized(strategyContract1);
 
       // Check protocol
-      const protocol2 = await rewardsDistributor.checkProtocol(exitedAt3);
+      const protocol2 = await rewardsDistributor.checkProtocol(updatedAt3);
       await checkProtocolWithParams(protocol2, ethers.utils.parseEther('0'), exitedAt3, 2, 2, protocol2[4]); // TODO CHECK EXACT AMOUNT
 
       expect(protocol2[4]).to.not.equal(0); // TODO Check exact numbers
@@ -782,7 +853,7 @@ describe('BABL Rewards Distributor', function () {
       // Execute strategy 1
       await executeStrategy(garden1, strategyContract1, ethers.utils.parseEther('1'), 42); // Strategy 1
 
-      const [address, active, dataSet, finalized, executedAt, exitedAt] = await checkStrategyStateExecuting(
+      const [address, active, dataSet, finalized, executedAt, exitedAt, updatedAt] = await checkStrategyStateExecuting(
         strategyContract1,
       );
 
@@ -790,12 +861,18 @@ describe('BABL Rewards Distributor', function () {
 
       await finishStrategy2Q(garden1, strategyContract1, 42);
 
-      const [address3, active3, dataSet3, finalized3, executedAt3, exitedAt3] = await checkStrategyStateFinalized(
-        strategyContract1,
-      );
+      const [
+        address3,
+        active3,
+        dataSet3,
+        finalized3,
+        executedAt3,
+        exitedAt3,
+        updatedAt3,
+      ] = await checkStrategyStateFinalized(strategyContract1);
 
       // Check protocol
-      const protocol2 = await rewardsDistributor.checkProtocol(exitedAt3);
+      const protocol2 = await rewardsDistributor.checkProtocol(updatedAt3);
       await checkProtocolWithParams(protocol2, ethers.utils.parseEther('0'), exitedAt3, 42, 2, protocol2[4]); // TODO CHECK EXACT AMOUNT
       // PARAMS checkProtocolWithParams(_protocol, _principal, _timestamp, _quarter, _timeListPointer, _power)
 
@@ -834,12 +911,12 @@ describe('BABL Rewards Distributor', function () {
       // Execute strategy 1
       await executeStrategy(garden1, strategyContract1, ethers.utils.parseEther('1'), 42); // Strategy 1
 
-      const [address, active, dataSet, finalized, executedAt, exitedAt] = await checkStrategyStateExecuting(
+      const [address, active, dataSet, finalized, executedAt, exitedAt, updatedAt] = await checkStrategyStateExecuting(
         strategyContract1,
       );
       // Check protocol
-      const protocol = await rewardsDistributor.checkProtocol(executedAt);
-      await checkProtocolWithParams(protocol, ethers.utils.parseEther('2'), executedAt, 1, 1, protocol[4]);
+      const protocol = await rewardsDistributor.checkProtocol(updatedAt);
+      await checkProtocolWithParams(protocol, ethers.utils.parseEther('2'), updatedAt, 1, 1, protocol[4]);
       // PARAMS checkProtocolWithParams(_protocol, _principal, _timestamp, _quarter, _timeListPointer, _power)
 
       const protocolQuarter = await rewardsDistributor.checkQuarter(protocol[2]);
@@ -860,12 +937,18 @@ describe('BABL Rewards Distributor', function () {
 
       await finishStrategy3Q(garden1, strategyContract1, 42);
 
-      const [address3, active3, dataSet3, finalized3, executedAt3, exitedAt3] = await checkStrategyStateFinalized(
-        strategyContract1,
-      );
+      const [
+        address3,
+        active3,
+        dataSet3,
+        finalized3,
+        executedAt3,
+        exitedAt3,
+        updatedAt3,
+      ] = await checkStrategyStateFinalized(strategyContract1);
 
       // Check protocol
-      const protocol2 = await rewardsDistributor.checkProtocol(exitedAt3);
+      const protocol2 = await rewardsDistributor.checkProtocol(updatedAt3);
       await checkProtocolWithParams(protocol2, ethers.utils.parseEther('0'), exitedAt3, 3, 2, protocol2[4]); // TODO CHECK EXACT AMOUNT
       // PARAMS checkProtocolWithParams(_protocol, _principal, _timestamp, _quarter, _timeListPointer, _power)
 
@@ -944,7 +1027,7 @@ describe('BABL Rewards Distributor', function () {
       // Execute strategy 1
       await executeStrategy(garden1, strategyContract1, ethers.utils.parseEther('1'), 42); // Strategy 1
 
-      const [address, active, dataSet, finalized, executedAt, exitedAt] = await checkStrategyStateExecuting(
+      const [address, active, dataSet, finalized, executedAt, exitedAt, updatedAt] = await checkStrategyStateExecuting(
         strategyContract1,
       );
 
@@ -960,12 +1043,18 @@ describe('BABL Rewards Distributor', function () {
       // Execute strategy 5
       await executeStrategy(garden2, strategyContract5, ethers.utils.parseEther('1'), 42); // Strategy 5
 
-      const [address2, active2, dataSet2, finalized2, executedAt2, exitedAt2] = await checkStrategyStateExecuting(
-        strategyContract5,
-      );
+      const [
+        address2,
+        active2,
+        dataSet2,
+        finalized2,
+        executedAt2,
+        exitedAt2,
+        updatedAt2,
+      ] = await checkStrategyStateExecuting(strategyContract5);
 
       // Check protocol
-      const protocol = await rewardsDistributor.checkProtocol(executedAt2);
+      const protocol = await rewardsDistributor.checkProtocol(updatedAt2);
       await checkProtocolWithParams(protocol, ethers.utils.parseEther('5'), executedAt2, 1, 4, protocol[4]);
       // PARAMS checkProtocolWithParams(_protocol, _principal, _timestamp, _quarter, _timeListPointer, _power)
 
@@ -990,12 +1079,18 @@ describe('BABL Rewards Distributor', function () {
       await finishStrategyQ1_noIncreaseTime(garden2, strategyContract3, 42);
       await finishStrategy2Q(garden2, strategyContract4, 42);
       await finishStrategy3Q(garden2, strategyContract5, 42);
-      const [address3, active3, dataSet3, finalized3, executedAt3, exitedAt3] = await checkStrategyStateFinalized(
-        strategyContract5,
-      );
+      const [
+        address3,
+        active3,
+        dataSet3,
+        finalized3,
+        executedAt3,
+        exitedAt3,
+        updatedAt3,
+      ] = await checkStrategyStateFinalized(strategyContract5);
 
       // Check protocol
-      const protocol2 = await rewardsDistributor.checkProtocol(exitedAt3);
+      const protocol2 = await rewardsDistributor.checkProtocol(updatedAt3);
       await checkProtocolWithParams(protocol2, ethers.utils.parseEther('0'), exitedAt3, 5, 9, protocol2[4]); // TODO CHECK EXACT AMOUNT
       // PARAMS checkProtocolWithParams(_protocol, _principal, _timestamp, _quarter, _timeListPointer, _power)
 
@@ -1074,7 +1169,7 @@ describe('BABL Rewards Distributor', function () {
       // Execute strategy 1
       await executeStrategy(garden1, strategyContract1, ethers.utils.parseEther('1'), 42); // Strategy 1
 
-      const [address, active, dataSet, finalized, executedAt, exitedAt] = await checkStrategyStateExecuting(
+      const [address, active, dataSet, finalized, executedAt, exitedAt, updatedAt] = await checkStrategyStateExecuting(
         strategyContract1,
       );
 
@@ -1090,11 +1185,17 @@ describe('BABL Rewards Distributor', function () {
       // Execute strategy 5
       await executeStrategy(garden2, strategyContract5, ethers.utils.parseEther('1'), 42); // Strategy 5
 
-      const [address2, active2, dataSet2, finalized2, executedAt2, exitedAt2] = await checkStrategyStateExecuting(
-        strategyContract5,
-      );
+      const [
+        address2,
+        active2,
+        dataSet2,
+        finalized2,
+        executedAt2,
+        exitedAt2,
+        updatedAt2,
+      ] = await checkStrategyStateExecuting(strategyContract5);
       // Check protocol
-      const protocol = await rewardsDistributor.checkProtocol(executedAt2);
+      const protocol = await rewardsDistributor.checkProtocol(updatedAt2);
       await checkProtocolWithParams(protocol, ethers.utils.parseEther('5'), executedAt2, 41, 4, protocol[4]);
       // PARAMS checkProtocolWithParams(_protocol, _principal, _timestamp, _quarter, _timeListPointer, _power)
 
@@ -1119,12 +1220,18 @@ describe('BABL Rewards Distributor', function () {
       await finishStrategyQ1_noIncreaseTime(garden2, strategyContract3, 42);
       await finishStrategy2Q(garden2, strategyContract4, 42);
       await finishStrategy3Q(garden2, strategyContract5, 42);
-      const [address3, active3, dataSet3, finalized3, executedAt3, exitedAt3] = await checkStrategyStateFinalized(
-        strategyContract5,
-      );
+      const [
+        address3,
+        active3,
+        dataSet3,
+        finalized3,
+        executedAt3,
+        exitedAt3,
+        updatedAt3,
+      ] = await checkStrategyStateFinalized(strategyContract5);
 
       // Check protocol
-      const protocol2 = await rewardsDistributor.checkProtocol(exitedAt3);
+      const protocol2 = await rewardsDistributor.checkProtocol(updatedAt3);
       await checkProtocolWithParams(protocol2, ethers.utils.parseEther('0'), exitedAt3, 46, 9, protocol2[4]); // TODO CHECK EXACT AMOUNT
       // PARAMS checkProtocolWithParams(_protocol, _principal, _timestamp, _quarter, _timeListPointer, _power)
 
@@ -1203,7 +1310,7 @@ describe('BABL Rewards Distributor', function () {
       // Execute strategy 1
       await executeStrategy(garden1, strategyContract1, ethers.utils.parseEther('1'), 42); // Strategy 1
 
-      const [address, active, dataSet, finalized, executedAt, exitedAt] = await checkStrategyStateExecuting(
+      const [address, active, dataSet, finalized, executedAt, exitedAt, updatedAt] = await checkStrategyStateExecuting(
         strategyContract1,
       );
 
@@ -1219,12 +1326,18 @@ describe('BABL Rewards Distributor', function () {
       // Execute strategy 5
       await executeStrategy(garden2, strategyContract5, ethers.utils.parseEther('1'), 42); // Strategy 5
 
-      const [address2, active2, dataSet2, finalized2, executedAt2, exitedAt2] = await checkStrategyStateExecuting(
-        strategyContract5,
-      );
+      const [
+        address2,
+        active2,
+        dataSet2,
+        finalized2,
+        executedAt2,
+        exitedAt2,
+        updatedAt2,
+      ] = await checkStrategyStateExecuting(strategyContract5);
 
       // Check protocol
-      const protocol = await rewardsDistributor.checkProtocol(executedAt2);
+      const protocol = await rewardsDistributor.checkProtocol(updatedAt2);
       await checkProtocolWithParams(protocol, ethers.utils.parseEther('5'), executedAt2, 1, 4, protocol[4]);
       // PARAMS checkProtocolWithParams(_protocol, _principal, _timestamp, _quarter, _timeListPointer, _power)
 
@@ -1249,12 +1362,18 @@ describe('BABL Rewards Distributor', function () {
       await finishStrategy2Y(garden2, strategyContract3, 42); // Increase time 2 years
       await finishStrategy2Q(garden2, strategyContract4, 42);
       await finishStrategy3Q(garden2, strategyContract5, 42);
-      const [address3, active3, dataSet3, finalized3, executedAt3, exitedAt3] = await checkStrategyStateFinalized(
-        strategyContract5,
-      );
+      const [
+        address3,
+        active3,
+        dataSet3,
+        finalized3,
+        executedAt3,
+        exitedAt3,
+        updatedAt3,
+      ] = await checkStrategyStateFinalized(strategyContract5);
 
       // Check protocol
-      const protocol2 = await rewardsDistributor.checkProtocol(exitedAt3);
+      const protocol2 = await rewardsDistributor.checkProtocol(updatedAt3);
       await checkProtocolWithParams(protocol2, ethers.utils.parseEther('0'), exitedAt3, 13, 9, protocol2[4]); // TODO CHECK EXACT AMOUNT
       // PARAMS checkProtocolWithParams(_protocol, _principal, _timestamp, _quarter, _timeListPointer, _power)
 
@@ -1333,7 +1452,7 @@ describe('BABL Rewards Distributor', function () {
       // Execute strategy 1
       await executeStrategy(garden1, strategyContract1, ethers.utils.parseEther('1'), 42); // Strategy 1
 
-      const [address, active, dataSet, finalized, executedAt, exitedAt] = await checkStrategyStateExecuting(
+      const [address, active, dataSet, finalized, executedAt, exitedAt, updatedAt] = await checkStrategyStateExecuting(
         strategyContract1,
       );
 
@@ -1349,12 +1468,18 @@ describe('BABL Rewards Distributor', function () {
       // Execute strategy 5
       await executeStrategy(garden2, strategyContract5, ethers.utils.parseEther('1'), 42); // Strategy 5
 
-      const [address2, active2, dataSet2, finalized2, executedAt2, exitedAt2] = await checkStrategyStateExecuting(
-        strategyContract5,
-      );
+      const [
+        address2,
+        active2,
+        dataSet2,
+        finalized2,
+        executedAt2,
+        exitedAt2,
+        updatedAt2,
+      ] = await checkStrategyStateExecuting(strategyContract5);
 
       // Check protocol
-      const protocol = await rewardsDistributor.checkProtocol(executedAt2);
+      const protocol = await rewardsDistributor.checkProtocol(updatedAt2);
       await checkProtocolWithParams(protocol, ethers.utils.parseEther('5'), executedAt2, 1, 4, protocol[4]);
       // PARAMS checkProtocolWithParams(_protocol, _principal, _timestamp, _quarter, _timeListPointer, _power)
 
@@ -1387,12 +1512,18 @@ describe('BABL Rewards Distributor', function () {
 
       await injectFakeProfits(strategyContract5, ethers.utils.parseEther('222'));
       await finishStrategy3Q(garden2, strategyContract5, 42);
-      const [address3, active3, dataSet3, finalized3, executedAt3, exitedAt3] = await checkStrategyStateFinalized(
-        strategyContract5,
-      );
+      const [
+        address3,
+        active3,
+        dataSet3,
+        finalized3,
+        executedAt3,
+        exitedAt3,
+        updatedAt3,
+      ] = await checkStrategyStateFinalized(strategyContract5);
 
       // Check protocol
-      const protocol2 = await rewardsDistributor.checkProtocol(exitedAt3);
+      const protocol2 = await rewardsDistributor.checkProtocol(updatedAt3);
       await checkProtocolWithParams(protocol2, ethers.utils.parseEther('0'), exitedAt3, 13, 9, protocol2[4]); // TODO CHECK EXACT AMOUNT
       // PARAMS checkProtocolWithParams(_protocol, _principal, _timestamp, _quarter, _timeListPointer, _power)
 
@@ -1442,9 +1573,15 @@ describe('BABL Rewards Distributor', function () {
         // Execute strategy 1
         await executeStrategy(garden1, strategyContract, ethers.utils.parseEther('1'), 42); // Strategy 1
 
-        const [address, active, dataSet, finalized, executedAt, exitedAt] = await checkStrategyStateExecuting(
-          strategyContract,
-        );
+        const [
+          address,
+          active,
+          dataSet,
+          finalized,
+          executedAt,
+          exitedAt,
+          updatedAt,
+        ] = await checkStrategyStateExecuting(strategyContract);
 
         ethers.provider.send('evm_increaseTime', [ONE_DAY_IN_SECONDS * 2]);
 
@@ -1452,12 +1589,18 @@ describe('BABL Rewards Distributor', function () {
 
         await executeStrategy(garden1, strategyContract2, ethers.utils.parseEther('2'), 42); // Strategy 2
 
-        const [address2, active2, dataSet2, finalized2, executedAt2, exitedAt2] = await checkStrategyStateExecuting(
-          strategyContract2,
-        );
+        const [
+          address2,
+          active2,
+          dataSet2,
+          finalized2,
+          executedAt2,
+          exitedAt2,
+          updatedAt2,
+        ] = await checkStrategyStateExecuting(strategyContract2);
 
         // Check protocol
-        const protocol = await rewardsDistributor.checkProtocol(executedAt2);
+        const protocol = await rewardsDistributor.checkProtocol(updatedAt2);
         await checkProtocolWithParams(protocol, ethers.utils.parseEther('3'), executedAt2, 1, 1, protocol[4]);
 
         const protocolQuarter = await rewardsDistributor.checkQuarter(protocol[2]);
@@ -1478,12 +1621,18 @@ describe('BABL Rewards Distributor', function () {
         await injectFakeProfits(strategyContract, ethers.utils.parseEther('200'));
         await finishStrategyQ1(garden1, strategyContract, 42);
 
-        const [address3, active3, dataSet3, finalized3, executedAt3, exitedAt3] = await checkStrategyStateFinalized(
-          strategyContract,
-        );
+        const [
+          address3,
+          active3,
+          dataSet3,
+          finalized3,
+          executedAt3,
+          exitedAt3,
+          updatedAt3,
+        ] = await checkStrategyStateFinalized(strategyContract);
 
         // Check protocol
-        const protocol2 = await rewardsDistributor.checkProtocol(exitedAt3);
+        const protocol2 = await rewardsDistributor.checkProtocol(updatedAt3);
         await checkProtocolWithParams(protocol2, ethers.utils.parseEther('2'), exitedAt3, 1, 2, protocol2[4]); // TODO CHECK EXACT AMOUNT
 
         expect(protocol2[4]).to.not.equal(0); // TODO Check exact numbers
@@ -1601,9 +1750,15 @@ describe('BABL Rewards Distributor', function () {
         // Execute strategy 1
         await executeStrategy(garden1, strategyContract1, ethers.utils.parseEther('1'), 42); // Strategy 1
 
-        const [address, active, dataSet, finalized, executedAt, exitedAt] = await checkStrategyStateExecuting(
-          strategyContract1,
-        );
+        const [
+          address,
+          active,
+          dataSet,
+          finalized,
+          executedAt,
+          exitedAt,
+          updatedAt,
+        ] = await checkStrategyStateExecuting(strategyContract1);
 
         ethers.provider.send('evm_increaseTime', [ONE_DAY_IN_SECONDS * 2]);
         // Execute strategy 2
@@ -1617,12 +1772,18 @@ describe('BABL Rewards Distributor', function () {
         // Execute strategy 5
         await executeStrategy(garden2, strategyContract5, ethers.utils.parseEther('1'), 42); // Strategy 5
 
-        const [address2, active2, dataSet2, finalized2, executedAt2, exitedAt2] = await checkStrategyStateExecuting(
-          strategyContract5,
-        );
+        const [
+          address2,
+          active2,
+          dataSet2,
+          finalized2,
+          executedAt2,
+          exitedAt2,
+          updatedAt2,
+        ] = await checkStrategyStateExecuting(strategyContract5);
 
         // Check protocol
-        const protocol = await rewardsDistributor.checkProtocol(executedAt2);
+        const protocol = await rewardsDistributor.checkProtocol(updatedAt2);
         await checkProtocolWithParams(protocol, ethers.utils.parseEther('5'), executedAt2, 1, 4, protocol[4]);
         // PARAMS checkProtocolWithParams(_protocol, _principal, _timestamp, _quarter, _timeListPointer, _power)
 
@@ -1655,12 +1816,18 @@ describe('BABL Rewards Distributor', function () {
 
         await injectFakeProfits(strategyContract5, ethers.utils.parseEther('222'));
         await finishStrategy3Q(garden2, strategyContract5, 42);
-        const [address3, active3, dataSet3, finalized3, executedAt3, exitedAt3] = await checkStrategyStateFinalized(
-          strategyContract5,
-        );
+        const [
+          address3,
+          active3,
+          dataSet3,
+          finalized3,
+          executedAt3,
+          exitedAt3,
+          updatedAt3,
+        ] = await checkStrategyStateFinalized(strategyContract5);
 
         // Check protocol
-        const protocol2 = await rewardsDistributor.checkProtocol(exitedAt3);
+        const protocol2 = await rewardsDistributor.checkProtocol(updatedAt3);
         await checkProtocolWithParams(protocol2, ethers.utils.parseEther('0'), exitedAt3, 13, 9, protocol2[4]); // TODO CHECK EXACT AMOUNT
         // PARAMS checkProtocolWithParams(_protocol, _principal, _timestamp, _quarter, _timeListPointer, _power)
 

@@ -106,6 +106,8 @@ contract RewardsDistributor is Ownable {
     mapping(uint256 => ProtocolPerQuarter) protocolPerQuarter; //
     mapping(uint256 => bool) isProtocolPerQuarter; // Check if the protocol per quarter data has been initialized
 
+    mapping(address => mapping(uint256 => uint256)) rewardsPowerOverhead; // Only used if each strategy has power overhead due to changes overtime
+
     uint256 public EPOCH_DURATION = 90 days; // Duration of its EPOCH in days
     uint256 public START_TIME; // Starting time of the rewards distribution
 
@@ -126,6 +128,7 @@ contract RewardsDistributor is Ownable {
     /* ============ External Functions ============ */
 
     function addProtocolPrincipal(uint256 _capital) public onlyStrategy {
+        strategy = IStrategy(msg.sender);
         protocolPrincipal = protocolPrincipal.add(_capital);
         ProtocolPerTimestamp storage protocolCheckpoint = protocolPerTimestamp[block.timestamp];
         protocolCheckpoint.principal = protocolPrincipal;
@@ -148,6 +151,9 @@ contract RewardsDistributor is Ownable {
         // Here we control the accumulated protocol power per each quarter
         // Create the quarter checkpoint in case the checkpoint is the first in the epoch
         _addProtocolPerQuarter(block.timestamp);
+        // We update the rewards overhead if any
+        //rewardsPowerOverhead[address(strategy)][getQuarter(block.timestamp)] = rewardsPowerOverhead[address(strategy)][getQuarter(block.timestamp)].add(_capital.mul(block.timestamp.sub(strategy.updatedAt())));
+        _updatePowerOverhead(strategy, _capital);
         pid++;
     }
 
@@ -180,17 +186,21 @@ contract RewardsDistributor is Ownable {
         uint256 bablRewards = 0;
         if (numQuarters <= 1) {
             bablRewards = (
-                (strategy.capitalAllocated().mul(strategy.exitedAt().sub(strategy.executedAt()))).preciseDiv(
-                    protocolPerQuarter[startingQuarter].quarterPower
+                (
+                    strategy.capitalAllocated().mul(strategy.exitedAt().sub(strategy.executedAt())).sub(
+                        strategy.rewardsTotalOverhead()
+                    )
                 )
+                    .preciseDiv(protocolPerQuarter[startingQuarter].quarterPower)
             )
                 .preciseMul(uint256(protocolPerQuarter[startingQuarter].supplyPerQuarter))
                 .mul(strategy.exitedAt().sub(startingQuarter))
                 .div(block.timestamp.sub(startingQuarter)); // Proportional supply till that moment within the same epoch
             require(bablRewards <= protocolPerQuarter[startingQuarter].supplyPerQuarter, 'overflow in supply');
             require(
-                strategy.capitalAllocated().mul(strategy.exitedAt().sub(strategy.executedAt())) <=
-                    protocolPerQuarter[startingQuarter].quarterPower,
+                strategy.capitalAllocated().mul(strategy.exitedAt().sub(strategy.executedAt())).sub(
+                    strategy.rewardsTotalOverhead()
+                ) <= protocolPerQuarter[startingQuarter].quarterPower,
                 'overflow in power'
             );
         } else {
@@ -206,19 +216,25 @@ contract RewardsDistributor is Ownable {
                 if (strategy.executedAt().add(EPOCH_DURATION) > slotEnding) {
                     // We are in the first quarter of the strategy
 
-                    strategyPower[i] = strategy.capitalAllocated().mul(slotEnding.sub(strategy.executedAt()));
+                    strategyPower[i] = strategy.capitalAllocated().mul(slotEnding.sub(strategy.executedAt())).sub(
+                        rewardsPowerOverhead[address(strategy)][getQuarter(strategy.executedAt())]
+                    );
                 } else if (strategy.executedAt() < slotEnding.sub(EPOCH_DURATION) && slotEnding < strategy.exitedAt()) {
                     // We are in an intermediate quarter different from starting or ending quarters
-                    strategyPower[i] = strategy.capitalAllocated().mul(slotEnding.sub(slotEnding.sub(EPOCH_DURATION)));
+                    strategyPower[i] = strategy
+                        .capitalAllocated()
+                        .mul(slotEnding.sub(slotEnding.sub(EPOCH_DURATION)))
+                        .sub(rewardsPowerOverhead[address(strategy)][getQuarter(slotEnding.sub(45 days))]);
                 } else {
                     // We are in the last quarter of the strategy
                     percentage = block.timestamp.sub(slotEnding.sub(EPOCH_DURATION)).preciseDiv(
                         slotEnding.sub(slotEnding.sub(EPOCH_DURATION))
                     );
 
-                    strategyPower[i] = strategy.capitalAllocated().mul(
-                        strategy.exitedAt().sub(slotEnding.sub(EPOCH_DURATION))
-                    );
+                    strategyPower[i] = strategy
+                        .capitalAllocated()
+                        .mul(strategy.exitedAt().sub(slotEnding.sub(EPOCH_DURATION)))
+                        .sub(rewardsPowerOverhead[address(strategy)][getQuarter(strategy.exitedAt())]);
                 }
                 protocolPower[i] = protocolPerQuarter[startingQuarter.add(i)].quarterPower;
 
@@ -374,7 +390,6 @@ contract RewardsDistributor is Ownable {
                 // We just take the proportional power for this quarter from previous checkpoint
                 uint256 powerToSplit =
                     protocolPerTimestamp[_time].power.sub(protocolPerTimestamp[timeList[pid.sub(1)]].power);
-
                 if (protocolPerTimestamp[timeList[pid.sub(1)]].quarterBelonging == getQuarter(_time).sub(1)) {
                     // There were no intermediate epochs without checkpoints
                     // We re-initialize the protocol power counting for this new quarter
@@ -383,7 +398,6 @@ contract RewardsDistributor is Ownable {
                         .div(_time.sub(protocolPerTimestamp[timeList[pid.sub(1)]].time));
                     protocolCheckpoint.supplyPerQuarter = tokenSupplyPerQuarter(getQuarter(_time));
 
-                    // We update the previous quarter/s considering that there were not intermediate epochs without checkpoints
                     protocolPerQuarter[getQuarter(_time).sub(1)].quarterPower = protocolPerQuarter[
                         getQuarter(_time).sub(1)
                     ]
@@ -449,6 +463,14 @@ contract RewardsDistributor is Ownable {
             );
         }
         protocolCheckpoint.quarterPrincipal = protocolPrincipal;
+    }
+
+    function _updatePowerOverhead(IStrategy _strategy, uint256 _capital) internal {
+        // TODO Make it be more accurate per Epoch (uint256 numQuarters, uint256 startingQuarter) = getRewardsWindow(strategy.updatedAt(), block.timestamp);
+        rewardsPowerOverhead[address(strategy)][getQuarter(block.timestamp)] = rewardsPowerOverhead[address(strategy)][
+            getQuarter(block.timestamp)
+        ]
+            .add(_capital.mul(block.timestamp.sub(strategy.updatedAt())));
     }
 
     // Safe BABL transfer function, just in case if rounding error causes DistributorRewards to not have enough BABL.

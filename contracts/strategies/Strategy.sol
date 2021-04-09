@@ -139,6 +139,7 @@ contract Strategy is ReentrancyGuard, Initializable {
     uint256 public enteredAt; // Timestamp when the strategy was submitted
     uint256 public enteredCooldownAt; // Timestamp when the strategy reached quorum
     uint256 public executedAt; // Timestamp when the strategy was executed
+    uint256 public updatedAt; // Timestamp of last capital allocation update
     uint256 public exitedAt; // Timestamp when the strategy was submitted
     address[] public voters; // Addresses with the voters
     int256 public totalVotes; // Total votes staked
@@ -158,6 +159,7 @@ contract Strategy is ReentrancyGuard, Initializable {
     uint256[] public tokenAmountsNeeded; // Amount of these positions
 
     uint256 public strategyRewards = 0; // Initialization. Rewards allocated for this strategy updated on finalized
+    uint256 public rewardsTotalOverhead = 0;
 
     // Voters mapped to their votes.
     mapping(address => int256) public votes;
@@ -268,13 +270,21 @@ contract Strategy is ReentrancyGuard, Initializable {
             block.timestamp.sub(enteredCooldownAt) >= garden.strategyCooldownPeriod(),
             'Idea has not completed the cooldown period'
         );
+
         // Execute enter trade
         garden.allocateCapitalToInvestment(_capital);
         capitalAllocated = capitalAllocated.add(_capital);
         _enterStrategy(_capital);
+
         // Sets the executed timestamp on first execution
         if (executedAt == 0) {
             executedAt = block.timestamp;
+            updatedAt = executedAt;
+        } else {
+            // Updating allocation - we need to consider the difference for the calculation
+            // We control the potential overhead in BABL Rewards calculations to keep control and avoid distributing a wrong number (e.g. flash loans)
+            uint256 rewardsTotalOverhead = rewardsTotalOverhead.add(_capital.mul(block.timestamp.sub(updatedAt)));
+            //updatedAt = block.timestamp;
         }
 
         // Add to Rewards Distributor an update of the Protocol Principal for BABL Mining Rewards calculations
@@ -282,6 +292,7 @@ contract Strategy is ReentrancyGuard, Initializable {
             IRewardsDistributor(IBabController(controller).getRewardsDistributor());
         rewardsDistributor.addProtocolPrincipal(_capital);
         _payKeeper(msg.sender, _fee);
+        updatedAt = block.timestamp;
     }
 
     /**
@@ -304,6 +315,7 @@ contract Strategy is ReentrancyGuard, Initializable {
         finalized = true;
         active = false;
         exitedAt = block.timestamp;
+        updatedAt = exitedAt;
         // Transfer rewards
         _transferStrategyRewards(_fee);
         // Pay Keeper Fee
@@ -429,10 +441,11 @@ contract Strategy is ReentrancyGuard, Initializable {
             bool,
             bool,
             uint256,
+            uint256,
             uint256
         )
     {
-        return (address(this), active, dataSet, finalized, executedAt, exitedAt);
+        return (address(this), active, dataSet, finalized, executedAt, exitedAt, updatedAt);
     }
 
     function getUserVotes(address _address) external view returns (int256) {
