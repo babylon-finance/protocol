@@ -23,6 +23,7 @@ pragma solidity 0.7.4;
 import 'hardhat/console.sol';
 import {Ownable} from '@openzeppelin/contracts/access/Ownable.sol';
 import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
+import {SafeERC20} from '@openzeppelin/contracts/token/ERC20/SafeERC20.sol';
 import {IBabController} from './interfaces/IBabController.sol';
 
 /**
@@ -33,6 +34,7 @@ import {IBabController} from './interfaces/IBabController.sol';
  * Governance will be able to send funds from the treasury.
  */
 contract Treasury is Ownable {
+    using SafeERC20 for IERC20;
     /* ============ Events ============ */
 
     event TreasuryFundsSent(address _asset, uint256 _amount, address _to);
@@ -70,7 +72,7 @@ contract Treasury is Ownable {
         require(_asset != address(0), 'Asset must exist');
         require(_to != address(0), 'Target address must exist');
         require(IERC20(_asset).balanceOf(address(this)) >= _amount, 'Not enough funds in treasury');
-        require(IERC20(_asset).transferFrom(address(this), _to, _amount), 'Failed to send funds');
+        IERC20(_asset).safeTransferFrom(address(this), _to, _amount);
         emit TreasuryFundsSent(_asset, _amount, _to);
     }
 
