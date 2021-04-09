@@ -106,8 +106,6 @@ contract UniswapPoolIntegration is PoolIntegration {
             .mul(_liquidity)
             .div(totalSupply)
             .preciseMul(1e18 - SLIPPAGE_ALLOWED);
-        console.log('_minAmountsOut[0]', result[0]);
-        console.log('_minAmountsOut[1]', result[1]);
         return result;
     }
 

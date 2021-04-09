@@ -91,19 +91,14 @@ contract OneInchPoolIntegration is PoolIntegration {
         returns (uint256[] memory _minAmountsOut)
     {
         address[] memory tokens = IMooniswap(_poolAddress).getTokens();
-        console.log('token0', tokens[0]);
-        console.log('token1', tokens[1]);
         uint256 totalSupply = IMooniswap(_poolAddress).totalSupply();
         uint256[] memory result = new uint256[](2);
         uint256 token0Balance =
             (tokens[0] != address(0) ? IERC20(tokens[0]).balanceOf(_poolAddress) : _poolAddress.balance);
         uint256 token1Balance =
             (tokens[1] != address(0) ? IERC20(tokens[1]).balanceOf(_poolAddress) : _poolAddress.balance);
-        console.log('token0Balance', token0Balance);
         result[0] = token0Balance.mul(_liquidity).div(totalSupply).preciseMul(1e18 - SLIPPAGE_ALLOWED);
         result[1] = token1Balance.mul(_liquidity).div(totalSupply).preciseMul(1e18 - SLIPPAGE_ALLOWED);
-        console.log('_minAmountsOut[0]', result[0]);
-        console.log('_minAmountsOut[1]', result[1]);
         return result;
     }
 
@@ -194,9 +189,6 @@ contract OneInchPoolIntegration is PoolIntegration {
             bytes memory
         )
     {
-        console.log('_poolTokensIn', _poolTokensIn);
-        console.log('_minAmountsOut0', _minAmountsOut[0]);
-        console.log('_minAmountsOut1', _minAmountsOut[1]);
         require(_tokensOut.length == 2, 'Two tokens required');
         require(_minAmountsOut.length == 2, 'Two amounts required');
         // Encode method data for Garden to invoke

@@ -96,7 +96,6 @@ contract BalancerIntegration is PoolIntegration {
                 .mul(_liquidity)
                 .div(lpTokensTotalSupply)
                 .preciseMul(1e18 - SLIPPAGE_ALLOWED);
-            console.log('_minAmountsOut[i]', result[i]);
         }
         return result;
     }
@@ -171,9 +170,6 @@ contract BalancerIntegration is PoolIntegration {
             bytes memory
         )
     {
-        console.log('_poolTokensIn', _poolTokensIn);
-        console.log('_minAmountsOut0', _minAmountsOut[0]);
-        console.log('_minAmountsOut1', _minAmountsOut[1]);
         require(_poolTokensIn > 0, '_poolTokensIn has to not 0');
         require(_minAmountsOut.length > 1, 'Has to provide _minAmountsOut');
         // Encode method data for Garden to invoke

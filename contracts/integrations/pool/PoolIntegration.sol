@@ -137,7 +137,6 @@ abstract contract PoolIntegration is BaseIntegration, ReentrancyGuard {
         // Approve spending of the pool token
         poolInfo.strategy.invokeApprove(_getSpender(_poolAddress), _poolAddress, _poolTokensIn);
 
-        console.log('poolTokensIn', _poolTokensIn);
         (address targetPool, uint256 callValue, bytes memory methodData) =
             _getExitPoolCalldata(_poolAddress, _poolTokensIn, _tokensOut, _minAmountsOut);
         poolInfo.strategy.invokeFromIntegration(targetPool, callValue, methodData);

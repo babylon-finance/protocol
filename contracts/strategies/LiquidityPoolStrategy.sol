@@ -95,9 +95,6 @@ contract LiquidityPoolStrategy is Strategy {
      */
     function _exitStrategy() internal override {
         uint256 lpTokens = IERC20(pool).balanceOf(address(this)); // Sell all pool tokens
-        console.log('lpTokens', lpTokens);
-        console.log('poolTokens0', poolTokens[0]);
-        console.log('poolTokens1', poolTokens[1]);
         uint256[] memory _minAmountsOut = IPoolIntegration(integration).getPoolMinAmountsOut(pool, lpTokens);
         IPoolIntegration(integration).exitPool(
             pool,
