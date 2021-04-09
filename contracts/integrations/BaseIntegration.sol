@@ -44,14 +44,6 @@ abstract contract BaseIntegration {
 
     /* ============ Modifiers ============ */
 
-    /**
-     * Throws if the sender is not the protocol
-     */
-    modifier onlyProtocol() {
-        require(msg.sender == controller, 'Only controller can call this');
-        _;
-    }
-
     modifier onlyIdea() {
         IStrategy strategy = IStrategy(msg.sender);
         address garden = strategy.garden();
