@@ -315,7 +315,8 @@ contract RollingGarden is ReentrancyGuard, BaseGarden {
     function claimReturns(address[] calldata _finalizedStrategies) external nonReentrant onlyContributor {
         //function claimReturns(address[] calldata _finalizedStrategies) external nonReentrant  {
         Contributor memory contributor = contributors[msg.sender];
-        (uint256 totalProfits, uint256 bablRewards) = _getProfitsAndBabl(_finalizedStrategies); // TODO CHECK POTENTIAL ISSUES WITH MSG.SENDER VS. getProfitsAndBabl onlyContributor modifier
+
+        (uint256 totalProfits, uint256 bablRewards) = getProfitsAndBabl(_finalizedStrategies);
 
         if (totalProfits > 0 && address(this).balance > 0) {
             // Send eth
@@ -323,6 +324,8 @@ contract RollingGarden is ReentrancyGuard, BaseGarden {
             require(sent, 'R19'); // Failed to send Ether
         }
         if (bablRewards > 0) {
+            contributors[msg.sender].claimedBABL = contributors[msg.sender].claimedBABL.add(bablRewards);
+            contributors[msg.sender].claimedProfits = contributors[msg.sender].claimedProfits.add(totalProfits);
             // Send BABL rewards
             IRewardsDistributor rewardsDistributor =
                 IRewardsDistributor(IBabController(controller).getRewardsDistributor());
@@ -341,11 +344,13 @@ contract RollingGarden is ReentrancyGuard, BaseGarden {
      */
 
     function getProfitsAndBabl(address[] calldata _finalizedStrategies)
-        external
+        public
+        view
         onlyContributor
         returns (uint256, uint96)
     {
         return _getProfitsAndBabl(_finalizedStrategies);
+
     }
 
     /**

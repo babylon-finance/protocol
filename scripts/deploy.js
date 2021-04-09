@@ -52,7 +52,7 @@ async function main() {
     garden3,
   );
   await executeStrategy(garden3, strategy1);
-  await injectFakeProfits(strategy1, ethers.utils.parseEther('1'));
+  await injectFakeProfits(strategy1, ethers.utils.parseEther('5000'));
   await finalizeStrategy(garden3, strategy1);
   console.log('Test strategies deployed...');
 
