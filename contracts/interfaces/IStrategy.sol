@@ -76,6 +76,7 @@ interface IStrategy {
             uint256,
             uint256,
             uint256,
+            uint256,
             uint256
         );
 
