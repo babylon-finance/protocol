@@ -467,10 +467,10 @@ contract RewardsDistributor is Ownable {
 
     function _updatePowerOverhead(IStrategy _strategy, uint256 _capital) internal {
         // TODO Make it be more accurate per Epoch (uint256 numQuarters, uint256 startingQuarter) = getRewardsWindow(strategy.updatedAt(), block.timestamp);
-        rewardsPowerOverhead[address(strategy)][getQuarter(block.timestamp)] = rewardsPowerOverhead[address(strategy)][
+        rewardsPowerOverhead[address(_strategy)][getQuarter(block.timestamp)] = rewardsPowerOverhead[address(_strategy)][
             getQuarter(block.timestamp)
         ]
-            .add(_capital.mul(block.timestamp.sub(strategy.updatedAt())));
+            .add(_capital.mul(block.timestamp.sub(_strategy.updatedAt())));
     }
 
     // Safe BABL transfer function, just in case if rounding error causes DistributorRewards to not have enough BABL.
