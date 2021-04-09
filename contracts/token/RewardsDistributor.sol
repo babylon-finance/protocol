@@ -443,9 +443,7 @@ contract RewardsDistributor is Ownable {
                         } else {
                             // We are in the last quarter of the strategy
                             protocolCheckpoint.quarterPower = powerToSplit
-                                .mul(
-                                _time.sub(startTime.add(getQuarter(_time).mul(epochDuration).sub(epochDuration)))
-                            )
+                                .mul(_time.sub(startTime.add(getQuarter(_time).mul(epochDuration).sub(epochDuration))))
                                 .div(_time.sub(protocolPerTimestamp[timeList[pid.sub(1)]].time));
                             protocolCheckpoint.supplyPerQuarter = tokenSupplyPerQuarter(getQuarter(_time));
                             protocolCheckpoint.quarterNumber = getQuarter(_time);

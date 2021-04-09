@@ -47,10 +47,19 @@ contract RollingGarden is ReentrancyGuard, BaseGarden {
     using SafeDecimalMath for uint256;
 
     /* ============ Events ============ */
-    event ProfitsForContributor(address indexed _contributor, address indexed _strategy, uint256 indexed _amount, string _type);
+    event ProfitsForContributor(
+        address indexed _contributor,
+        address indexed _strategy,
+        uint256 indexed _amount,
+        string _type
+    );
 
-
-    event BABLRewardsForContributor(address indexed _contributor, address indexed _strategy, uint96 _rewards, string _type);
+    event BABLRewardsForContributor(
+        address indexed _contributor,
+        address indexed _strategy,
+        uint96 _rewards,
+        string _type
+    );
 
     event ProfitAndBABLRewardsPerStrategy(
         address indexed _contributor,
@@ -318,7 +327,6 @@ contract RollingGarden is ReentrancyGuard, BaseGarden {
             (bool sent, ) = msg.sender.call{value: totalProfits}('');
             require(sent, 'R19'); // Failed to send Ether
             contributor.claimedProfits = contributor.claimedProfits.add(totalProfits); // Profits claimed properly
-
         }
         if (bablRewards > 0) {
             // Send BABL rewards
@@ -513,7 +521,7 @@ contract RollingGarden is ReentrancyGuard, BaseGarden {
                     emit BABLRewardsForContributor(
                         msg.sender,
                         address(strategy),
-                        Safe3296.safe96(bablRewards, 'overflow 96 bits'), 
+                        Safe3296.safe96(bablRewards, 'overflow 96 bits'),
                         'strategist'
                     );
 
@@ -543,7 +551,12 @@ contract RollingGarden is ReentrancyGuard, BaseGarden {
                             .preciseMul(uint256(strategy.getUserVotes(msg.sender)))
                             .preciseDiv(strategy.absoluteTotalVotes())
                     );
-                    emit ProfitsForContributor(msg.sender, address(strategy), contributorProfits.sub(tempForEvents), 'voter');
+                    emit ProfitsForContributor(
+                        msg.sender,
+                        address(strategy),
+                        contributorProfits.sub(tempForEvents),
+                        'voter'
+                    );
                 }
 
                 // Get proportional LP rewards as every active contributor of the garden is a LP of their strategies
@@ -566,7 +579,7 @@ contract RollingGarden is ReentrancyGuard, BaseGarden {
                         PROFIT_LP_SHARE
                     )
                 );
-                emit ProfitsForContributor(msg.sender, address(strategy), contributorProfits.sub(tempForEvents),'lp');
+                emit ProfitsForContributor(msg.sender, address(strategy), contributorProfits.sub(tempForEvents), 'lp');
 
                 // Get a multiplier bonus in case the contributor is the garden creator
                 if (creatorBonus > 0) {
