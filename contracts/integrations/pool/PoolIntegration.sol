@@ -63,6 +63,10 @@ abstract contract PoolIntegration is BaseIntegration, ReentrancyGuard {
         uint256 _protocolFee
     );
 
+    /* ============ Constants ============ */
+
+    uint256 internal constant SLIPPAGE_ALLOWED = 1e16; // 1%
+
     /* ============ Constructor ============ */
 
     /**

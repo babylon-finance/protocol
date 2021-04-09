@@ -112,9 +112,9 @@ contract Strategy is ReentrancyGuard, Initializable {
 
     /* ============ Constants ============ */
 
-    uint256 constant SLIPPAGE_ALLOWED = 1e16; // 1%
-    uint256 constant MAX_CANDIDATE_PERIOD = 7 days;
-    uint256 constant MIN_VOTERS_TO_BECOME_ACTIVE = 2;
+    uint256 internal constant SLIPPAGE_ALLOWED = 1e16; // 1%
+    uint256 internal constant MAX_CANDIDATE_PERIOD = 7 days;
+    uint256 internal constant MIN_VOTERS_TO_BECOME_ACTIVE = 2;
 
     // Keeper max fee
     uint256 internal constant MAX_KEEPER_FEE = (1e6 * 1e3 gwei);

@@ -19,7 +19,7 @@
 pragma solidity 0.7.4;
 
 import 'hardhat/console.sol';
-import {ERC20} from '@openzeppelin/contracts/token/ERC20/ERC20.sol';
+import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import {SafeMath} from '@openzeppelin/contracts/math/SafeMath.sol';
 import {PoolIntegration} from './PoolIntegration.sol';
 import {PreciseUnitMath} from '../../lib/PreciseUnitMath.sol';
@@ -73,13 +73,31 @@ contract BalancerIntegration is PoolIntegration {
         return result;
     }
 
-    function calcPoolOut(
+    function getPoolTokensOut(
         address _poolAddress,
         address _poolToken,
         uint256 _maxAmountsIn
     ) external view returns (uint256) {
         uint256 tokenBalance = IBPool(_poolAddress).getBalance(_poolToken);
         return IBPool(_poolAddress).totalSupply().preciseMul(_maxAmountsIn.preciseDiv(tokenBalance));
+    }
+
+    function getPoolMinAmountsOut(address _poolAddress, uint256 _liquidity)
+        external
+        view
+        returns (uint256[] memory _minAmountsOut)
+    {
+        uint256 lpTokensTotalSupply = IBPool(_poolAddress).totalSupply();
+        address[] memory poolTokens = IBPool(_poolAddress).getCurrentTokens();
+        uint256[] memory result = new uint256[](poolTokens.length);
+        for (uint256 i = 0; i < poolTokens.length; i++) {
+            result[i] = IERC20(poolTokens[i])
+                .balanceOf(_poolAddress)
+                .mul(_liquidity)
+                .div(lpTokensTotalSupply)
+                .preciseMul(1e18 - SLIPPAGE_ALLOWED);
+        }
+        return result;
     }
 
     /* ============ Internal Functions ============ */
@@ -144,7 +162,7 @@ contract BalancerIntegration is PoolIntegration {
         uint256[] calldata _minAmountsOut
     )
         internal
-        pure
+        view
         override
         returns (
             address,
@@ -152,6 +170,8 @@ contract BalancerIntegration is PoolIntegration {
             bytes memory
         )
     {
+        require(_poolTokensIn > 0, '_poolTokensIn has to not 0');
+        require(_minAmountsOut.length > 1, 'Has to provide _minAmountsOut');
         // Encode method data for Garden to invoke
         bytes memory methodData = abi.encodeWithSignature('exitPool(uint256,uint256[])', _poolTokensIn, _minAmountsOut);
 

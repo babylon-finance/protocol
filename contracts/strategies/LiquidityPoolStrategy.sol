@@ -81,7 +81,7 @@ contract LiquidityPoolStrategy is Strategy {
                 _maxAmountsIn[i] = normalizedAmount;
             }
         }
-        uint256 poolTokensOut = IPoolIntegration(integration).calcPoolOut(pool, poolTokens[0], _maxAmountsIn[0]);
+        uint256 poolTokensOut = IPoolIntegration(integration).getPoolTokensOut(pool, poolTokens[0], _maxAmountsIn[0]);
         IPoolIntegration(integration).joinPool(
             pool,
             poolTokensOut.sub(poolTokensOut.preciseMul(SLIPPAGE_ALLOWED)),
@@ -94,14 +94,11 @@ contract LiquidityPoolStrategy is Strategy {
      * Exits the pool strategy.
      */
     function _exitStrategy() internal override {
-        uint256[] memory _minAmountsOut = new uint256[](poolTokens.length);
-        for (uint256 i = 0; i < poolTokens.length; i++) {
-            // TODO: calculate minReceiveQuantity instead of 1
-            _minAmountsOut[i] = 1;
-        }
+        uint256 lpTokens = IERC20(pool).balanceOf(address(this)); // Sell all pool tokens
+        uint256[] memory _minAmountsOut = IPoolIntegration(integration).getPoolMinAmountsOut(pool, lpTokens);
         IPoolIntegration(integration).exitPool(
             pool,
-            IERC20(pool).balanceOf(address(this)), // Sell all pool tokens
+            lpTokens, // Sell all pool tokens
             poolTokens,
             _minAmountsOut
         );
