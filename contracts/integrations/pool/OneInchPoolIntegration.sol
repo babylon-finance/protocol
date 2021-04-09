@@ -147,8 +147,8 @@ contract OneInchPoolIntegration is PoolIntegration {
                 'deposit(uint256[2],uint256[2])',
                 _maxAmountsIn[0],
                 _maxAmountsIn[1],
-                _maxAmountsIn[0].sub(_maxAmountsIn[0].preciseMul(SLIPPAGE_ALLOWED * 5)),
-                _maxAmountsIn[1].sub(_maxAmountsIn[1].preciseMul(SLIPPAGE_ALLOWED * 5))
+                _maxAmountsIn[0].sub(_maxAmountsIn[0].preciseMul(SLIPPAGE_ALLOWED * 2)),
+                _maxAmountsIn[1].sub(_maxAmountsIn[1].preciseMul(SLIPPAGE_ALLOWED * 2))
             );
         uint256 value = 0;
         // Add ETH if one of the tokens
