@@ -99,7 +99,7 @@ contract RewardsDistributor is Ownable {
     struct ProtocolPerQuarter {
         // Allocation points per timestamp along the time
         uint256 quarterPrincipal; //
-        uint256 quarterNumber; // # Quarter since START_TIME
+        uint256 quarterNumber; // # Quarter since startTime
         uint256 quarterPower; // Protocol power checkpoint
         uint96 supplyPerQuarter; // Supply per quarter
     }
@@ -108,12 +108,12 @@ contract RewardsDistributor is Ownable {
 
     mapping(address => mapping(uint256 => uint256)) rewardsPowerOverhead; // Only used if each strategy has power overhead due to changes overtime
 
-    uint256 public EPOCH_DURATION = 90 days; // Duration of its EPOCH in days
-    uint256 public START_TIME; // Starting time of the rewards distribution
+    uint256 public epochDuration = 90 days; // Duration of its EPOCH in days
+    uint256 public startTime; // Starting time of the rewards distribution
 
-    // 500K BABL allocated to this BABL Mining Program, the first quarter is Q1_REWARDD and the following quarters will follow the supply curve using a decay rate
-    uint256 public constant Q1_REWARDS = 53_571_428_571_428_600e6; // First quarter (epoch) BABL rewards
-    uint256 public constant DECAY_RATE = 120000000000000000; // 12% quarterly decay rate (each 90 days) (Rewards on Q1 = 1,12 * Rewards on Q2) being Q1= Quarter 1, Q2 = Quarter 2
+    // 500K BABL allocated to this BABL Mining Program, the first quarter is q1Rewards and the following quarters will follow the supply curve using a decay rate
+    uint256 public constant q1Rewards = 53_571_428_571_428_600e6; // First quarter (epoch) BABL rewards
+    uint256 public constant decayRate = 120000000000000000; // 12% quarterly decay rate (each 90 days) (Rewards on Q1 = 1,12 * Rewards on Q2) being Q1= Quarter 1, Q2 = Quarter 2
 
     /* ============ Functions ============ */
 
@@ -122,7 +122,7 @@ contract RewardsDistributor is Ownable {
     constructor(TimeLockedToken _bablToken, IBabController _controller) {
         babltoken = _bablToken;
         controller = _controller;
-        START_TIME = block.timestamp;
+        startTime = block.timestamp;
     }
 
     /* ============ External Functions ============ */
@@ -209,31 +209,31 @@ contract RewardsDistributor is Ownable {
             uint256[] memory strategyPower = new uint256[](numQuarters); // Strategy power in each Epoch
             uint256[] memory protocolPower = new uint256[](numQuarters); // Protocol power in each Epoch
             for (uint256 i = 0; i <= numQuarters.sub(1); i++) {
-                uint256 slotEnding = START_TIME.add(startingQuarter.add(i).mul(EPOCH_DURATION)); // Initialization timestamp at the end of the first slot where the strategy starts its execution
+                uint256 slotEnding = startTime.add(startingQuarter.add(i).mul(epochDuration)); // Initialization timestamp at the end of the first slot where the strategy starts its execution
 
                 // We iterate all the quarters where the strategy was active
                 uint256 percentage = 1e18;
-                if (strategy.executedAt().add(EPOCH_DURATION) > slotEnding) {
+                if (strategy.executedAt().add(epochDuration) > slotEnding) {
                     // We are in the first quarter of the strategy
 
                     strategyPower[i] = strategy.capitalAllocated().mul(slotEnding.sub(strategy.executedAt())).sub(
                         rewardsPowerOverhead[address(strategy)][getQuarter(strategy.executedAt())]
                     );
-                } else if (strategy.executedAt() < slotEnding.sub(EPOCH_DURATION) && slotEnding < strategy.exitedAt()) {
+                } else if (strategy.executedAt() < slotEnding.sub(epochDuration) && slotEnding < strategy.exitedAt()) {
                     // We are in an intermediate quarter different from starting or ending quarters
                     strategyPower[i] = strategy
                         .capitalAllocated()
-                        .mul(slotEnding.sub(slotEnding.sub(EPOCH_DURATION)))
+                        .mul(slotEnding.sub(slotEnding.sub(epochDuration)))
                         .sub(rewardsPowerOverhead[address(strategy)][getQuarter(slotEnding.sub(45 days))]);
                 } else {
                     // We are in the last quarter of the strategy
-                    percentage = block.timestamp.sub(slotEnding.sub(EPOCH_DURATION)).preciseDiv(
-                        slotEnding.sub(slotEnding.sub(EPOCH_DURATION))
+                    percentage = block.timestamp.sub(slotEnding.sub(epochDuration)).preciseDiv(
+                        slotEnding.sub(slotEnding.sub(epochDuration))
                     );
 
                     strategyPower[i] = strategy
                         .capitalAllocated()
-                        .mul(strategy.exitedAt().sub(slotEnding.sub(EPOCH_DURATION)))
+                        .mul(strategy.exitedAt().sub(slotEnding.sub(epochDuration)))
                         .sub(rewardsPowerOverhead[address(strategy)][getQuarter(strategy.exitedAt())]);
                 }
                 protocolPower[i] = protocolPerQuarter[startingQuarter.add(i)].quarterPower;
@@ -292,13 +292,13 @@ contract RewardsDistributor is Ownable {
     }
 
     function getQuarter(uint256 _now) public view returns (uint256) {
-        uint256 quarter = (_now.sub(START_TIME).preciseDivCeil(EPOCH_DURATION)).div(1e18);
+        uint256 quarter = (_now.sub(startTime).preciseDivCeil(epochDuration)).div(1e18);
         return quarter.add(1);
     }
 
     function getRewardsWindow(uint256 _from, uint256 _to) public view returns (uint256, uint256) {
-        uint256 quarters = (_to.sub(_from).preciseDivCeil(EPOCH_DURATION)).div(1e18);
-        uint256 startingQuarter = (_from.sub(START_TIME).preciseDivCeil(EPOCH_DURATION)).div(1e18);
+        uint256 quarters = (_to.sub(_from).preciseDivCeil(epochDuration)).div(1e18);
+        uint256 startingQuarter = (_from.sub(startTime).preciseDivCeil(epochDuration)).div(1e18);
         return (quarters.add(1), startingQuarter.add(1));
     }
 
@@ -329,8 +329,8 @@ contract RewardsDistributor is Ownable {
     function tokenSupplyPerQuarter(uint256 quarter) public pure returns (uint96) {
         require(quarter >= 1, 'There are only 1 or more quarters');
         //require(quarter < 513, 'overflow'); // TODO CHECK FUTURE MAX PROJECTION
-        uint256 firstFactor = (SafeDecimalMath.unit().add(DECAY_RATE)).powDecimal(quarter.sub(1));
-        uint256 supplyForQuarter = Q1_REWARDS.divideDecimal(firstFactor);
+        uint256 firstFactor = (SafeDecimalMath.unit().add(decayRate)).powDecimal(quarter.sub(1));
+        uint256 supplyForQuarter = q1Rewards.divideDecimal(firstFactor);
 
         return Safe3296.safe96(supplyForQuarter, 'overflow 96 bits');
     }
@@ -394,7 +394,7 @@ contract RewardsDistributor is Ownable {
                     // There were no intermediate epochs without checkpoints
                     // We re-initialize the protocol power counting for this new quarter
                     protocolCheckpoint.quarterPower = powerToSplit
-                        .mul(_time.sub(START_TIME.add(getQuarter(_time).mul(EPOCH_DURATION).sub(EPOCH_DURATION))))
+                        .mul(_time.sub(startTime.add(getQuarter(_time).mul(epochDuration).sub(epochDuration))))
                         .div(_time.sub(protocolPerTimestamp[timeList[pid.sub(1)]].time));
                     protocolCheckpoint.supplyPerQuarter = tokenSupplyPerQuarter(getQuarter(_time));
 
@@ -414,8 +414,8 @@ contract RewardsDistributor is Ownable {
                         ProtocolPerQuarter storage newCheckpoint =
                             protocolPerQuarter[protocolPerTimestamp[timeList[pid.sub(1)]].quarterBelonging.add(i)];
                         uint256 slotEnding =
-                            START_TIME.add(
-                                protocolPerTimestamp[timeList[pid.sub(1)]].quarterBelonging.add(i).mul(EPOCH_DURATION)
+                            startTime.add(
+                                protocolPerTimestamp[timeList[pid.sub(1)]].quarterBelonging.add(i).mul(epochDuration)
                             );
                         if (i == 0) {
                             // We are in the first quarter to update, we add the corresponding part
@@ -430,7 +430,7 @@ contract RewardsDistributor is Ownable {
                             i < getQuarter(_time).sub(protocolPerTimestamp[timeList[pid.sub(1)]].quarterBelonging)
                         ) {
                             // We are in an intermediate quarter
-                            newCheckpoint.quarterPower = powerToSplit.mul(EPOCH_DURATION).div(
+                            newCheckpoint.quarterPower = powerToSplit.mul(epochDuration).div(
                                 _time.sub(protocolPerTimestamp[timeList[pid.sub(1)]].time)
                             );
                             newCheckpoint.supplyPerQuarter = tokenSupplyPerQuarter(
@@ -443,9 +443,7 @@ contract RewardsDistributor is Ownable {
                         } else {
                             // We are in the last quarter of the strategy
                             protocolCheckpoint.quarterPower = powerToSplit
-                                .mul(
-                                _time.sub(START_TIME.add(getQuarter(_time).mul(EPOCH_DURATION).sub(EPOCH_DURATION)))
-                            )
+                                .mul(_time.sub(startTime.add(getQuarter(_time).mul(epochDuration).sub(epochDuration))))
                                 .div(_time.sub(protocolPerTimestamp[timeList[pid.sub(1)]].time));
                             protocolCheckpoint.supplyPerQuarter = tokenSupplyPerQuarter(getQuarter(_time));
                             protocolCheckpoint.quarterNumber = getQuarter(_time);
