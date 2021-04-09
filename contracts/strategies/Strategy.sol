@@ -284,7 +284,6 @@ contract Strategy is ReentrancyGuard, Initializable {
             // Updating allocation - we need to consider the difference for the calculation
             // We control the potential overhead in BABL Rewards calculations to keep control and avoid distributing a wrong number (e.g. flash loans)
             rewardsTotalOverhead = rewardsTotalOverhead.add(_capital.mul(block.timestamp.sub(updatedAt)));
-            //updatedAt = block.timestamp;
         }
 
         // Add to Rewards Distributor an update of the Protocol Principal for BABL Mining Rewards calculations

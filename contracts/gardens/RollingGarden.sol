@@ -345,12 +345,10 @@ contract RollingGarden is ReentrancyGuard, BaseGarden {
 
     function getProfitsAndBabl(address[] calldata _finalizedStrategies)
         public
-        view
         onlyContributor
         returns (uint256, uint96)
     {
         return _getProfitsAndBabl(_finalizedStrategies);
-
     }
 
     /**
