@@ -32,6 +32,16 @@ import {TradeIntegration} from './TradeIntegration.sol';
 contract OneInchTradeIntegration is TradeIntegration {
     using SafeMath for uint256;
 
+    /* ============ Modifiers ============ */
+
+    /**
+     * Throws if the sender is not the protocol
+     */
+    modifier onlyProtocol() {
+        require(msg.sender == controller, 'Only controller can call this');
+        _;
+    }
+
     /* ============ State Variables ============ */
 
     // Address of 1Inch exchange address

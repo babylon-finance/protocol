@@ -593,5 +593,6 @@ contract Strategy is ReentrancyGuard, Initializable {
         return oracle.getPrice(_assetOne, _assetTwo);
     }
 
-    receive() external payable {} // solium-disable-line quotes
+    // solhint-disable-next-line
+    receive() external payable {}
 }

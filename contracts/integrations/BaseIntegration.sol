@@ -44,6 +44,7 @@ abstract contract BaseIntegration {
 
     /* ============ Modifiers ============ */
 
+
     modifier onlyIdea() {
         IStrategy strategy = IStrategy(msg.sender);
         address garden = strategy.garden();
