@@ -33,7 +33,6 @@ async function finishStrategyQ1(garden, strategy, fee = 0) {
 }
 
 async function finishStrategyQ1_noIncreaseTime(garden, strategy, fee = 0) {
-  //ethers.provider.send('evm_increaseTime', [ONE_DAY_IN_SECONDS * 30]); // TO HAVE STRATEGIES WITHIN THE SAME EPOCH
   await updateTWAPs(garden);
   return strategy.finalizeInvestment(fee, { gasPrice: 0 });
 }

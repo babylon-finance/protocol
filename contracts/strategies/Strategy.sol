@@ -158,8 +158,8 @@ contract Strategy is ReentrancyGuard, Initializable {
     address[] public tokensNeeded; // Positions that need to be taken prior to enter trade
     uint256[] public tokenAmountsNeeded; // Amount of these positions
 
-    uint256 public strategyRewards = 0; // Initialization. Rewards allocated for this strategy updated on finalized
-    uint256 public rewardsTotalOverhead = 0;
+    uint256 public strategyRewards; // Rewards allocated for this strategy updated on finalized
+    uint256 public rewardsTotalOverhead;
 
     // Voters mapped to their votes.
     mapping(address => int256) public votes;
