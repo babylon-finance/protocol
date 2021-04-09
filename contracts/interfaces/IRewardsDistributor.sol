@@ -38,13 +38,13 @@ interface IRewardsDistributor {
 
     function pid() external pure returns (uint256);
 
-    function epochDuration() external pure returns (uint256);
+    function EPOCH_DURATION() external pure returns (uint256);
 
-    function startTime() external pure returns (uint256);
+    function START_TIME() external pure returns (uint256);
 
-    function q1Rewards() external pure returns (uint256);
+    function Q1_REWARDS() external pure returns (uint256);
 
-    function decayRate() external pure returns (uint256);
+    function DECAY_RATE() external pure returns (uint256);
 
     function addProtocolPrincipal(uint256 _capital) external;
 

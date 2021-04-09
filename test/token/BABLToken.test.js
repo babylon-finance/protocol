@@ -374,5 +374,22 @@ describe('BABLToken contract', function () {
       // MAX_SUPPLY shouldn't have changed.
       expect(OLD_MAX_SUPPLY).to.equal(value2);
     });
+    it('Should fail a try of changing MAX_SUPPLY allowed after in less than a year from this moment', async function () {
+      const OLD_MAX_SUPPLY = await bablToken.maxSupply();
+
+      // Try to change MAX_SUPPLY by a new number after 8 years by a lower amount
+      // `require` will evaluate false and revert the transaction if the new value is above the cap (5%) the current MAX_SUPPLY.
+      const NEW_MAX_SUPPLY = ethers.utils.parseEther('1050000'); // 1_150_000e18
+      // Traveling on time >8 years ahead
+      ethers.provider.send('evm_increaseTime', [ONE_DAY_IN_SECONDS * 365 * 8]);
+      await expect(bablToken.changeMaxSupply(NEW_MAX_SUPPLY, 251596800)).to.be.revertedWith(
+        'BABLToken::changeMaxSupply: the newMaxSupplyAllowedAfter should be at least 1 year in the future',
+      );
+
+      const value2 = await bablToken.maxSupply();
+
+      // MAX_SUPPLY shouldn't have changed.
+      expect(OLD_MAX_SUPPLY).to.equal(value2);
+    });
   });
 });
