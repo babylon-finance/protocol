@@ -506,19 +506,6 @@ contract BabController is Ownable {
     }
 
     /**
-     * Get integration integration address associated with passed human readable name
-     *
-     * hparam  _integration         Address of the integration
-     *
-     * @return                  Integration fee
-     */
-    function getIntegrationFee(
-        address /* _integration */
-    ) external pure returns (uint256) {
-        return 0;
-    }
-
-    /**
      * Get integration integration address associated with passed hashed name
      *
      * @param  _nameHashP     Hash of human readable integration name
