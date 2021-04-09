@@ -408,6 +408,7 @@ contract Strategy is ReentrancyGuard, Initializable {
             uint256,
             uint256,
             uint256,
+            uint256,
             uint256
         )
     {
@@ -419,6 +420,7 @@ contract Strategy is ReentrancyGuard, Initializable {
             absoluteTotalVotes,
             totalVotes,
             capitalAllocated,
+            capitalReturned,
             duration,
             expectedReturn,
             maxCapitalRequested,
