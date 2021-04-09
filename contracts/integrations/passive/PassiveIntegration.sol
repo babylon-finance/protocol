@@ -64,8 +64,7 @@ abstract contract PassiveIntegration is BaseIntegration, ReentrancyGuard {
         address indexed garden,
         address indexed strategy,
         address indexed investment,
-        uint256 investmentTokensOut,
-        uint256 protocolFee
+        uint256 investmentTokensOut
     );
 
     /* ============ Constructor ============ */
@@ -143,14 +142,12 @@ abstract contract PassiveIntegration is BaseIntegration, ReentrancyGuard {
             _getExitInvestmentCalldata(_investmentAddress, _investmentTokenIn, _tokenOut, _minAmountOut);
         investmentInfo.strategy.invokeFromIntegration(targetInvestment, callValue, methodData);
         _validatePostExitInvestmentData(investmentInfo);
-        uint256 protocolFee = _accrueProtocolFee(address(investmentInfo.strategy), _tokenOut, _minAmountOut);
 
         emit InvestmentExited(
             address(investmentInfo.garden),
             address(investmentInfo.strategy),
             investmentInfo.investment,
-            _investmentTokenIn,
-            protocolFee
+            _investmentTokenIn
         );
     }
 

@@ -368,7 +368,6 @@ contract Strategy is ReentrancyGuard, Initializable {
         address _asset,
         uint256 _quantity
     ) external onlyIntegration {
-        ERC20(_asset).approve(_spender, 0);
         ERC20(_asset).approve(_spender, _quantity);
     }
 
@@ -408,6 +407,7 @@ contract Strategy is ReentrancyGuard, Initializable {
             uint256,
             uint256,
             uint256,
+            uint256,
             uint256
         )
     {
@@ -419,6 +419,7 @@ contract Strategy is ReentrancyGuard, Initializable {
             absoluteTotalVotes,
             totalVotes,
             capitalAllocated,
+            capitalReturned,
             duration,
             expectedReturn,
             maxCapitalRequested,
@@ -592,5 +593,6 @@ contract Strategy is ReentrancyGuard, Initializable {
         return oracle.getPrice(_assetOne, _assetTwo);
     }
 
-    receive() external payable {} // solium-disable-line quotes
+    // solhint-disable-next-line
+    receive() external payable {}
 }

@@ -77,6 +77,7 @@ describe('Strategy', function () {
         absoluteTotalVotes,
         totalVotes,
         capitalAllocated,
+        capitalReturned,
         duration,
         expectedReturn,
         maxCapitalRequested,
@@ -91,6 +92,7 @@ describe('Strategy', function () {
       expect(absoluteTotalVotes).to.equal(ethers.utils.parseEther('1'));
       expect(totalVotes).to.equal(ethers.utils.parseEther('1'));
       expect(capitalAllocated).to.equal(ethers.BigNumber.from(0));
+      expect(capitalReturned).to.equal(ethers.BigNumber.from(0));
       expect(duration).to.equal(ethers.BigNumber.from(ONE_DAY_IN_SECONDS * 30));
       expect(expectedReturn).to.equal(ethers.utils.parseEther('0.05'));
       expect(maxCapitalRequested).to.equal(ethers.utils.parseEther('10'));

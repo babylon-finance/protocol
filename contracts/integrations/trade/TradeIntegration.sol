@@ -63,8 +63,7 @@ abstract contract TradeIntegration is BaseIntegration, ReentrancyGuard {
         address _receiveToken,
         string _exchangeName,
         uint256 _totalSendAmount,
-        uint256 _totalReceiveAmount,
-        uint256 _protocolFee
+        uint256 _totalReceiveAmount
     );
 
     /* ============ Constructor ============ */
@@ -110,8 +109,6 @@ abstract contract TradeIntegration is BaseIntegration, ReentrancyGuard {
         tradeInfo.strategy.invokeFromIntegration(targetExchange, callValue, methodData);
 
         uint256 exchangedQuantity = _validatePostTrade(tradeInfo);
-        uint256 protocolFee =
-            _accrueProtocolFee(address(tradeInfo.strategy), tradeInfo.receiveToken, exchangedQuantity);
         uint256 newAmountSendTokens = tradeInfo.preTradeSendTokenBalance.sub(tradeInfo.totalSendQuantity);
         uint256 newAmountReceiveTokens = tradeInfo.preTradeReceiveTokenBalance.add(exchangedQuantity);
         emit ComponentExchanged(
@@ -121,8 +118,7 @@ abstract contract TradeIntegration is BaseIntegration, ReentrancyGuard {
             _receiveToken,
             tradeInfo.exchangeName,
             newAmountSendTokens,
-            newAmountReceiveTokens,
-            protocolFee
+            newAmountReceiveTokens
         );
     }
 

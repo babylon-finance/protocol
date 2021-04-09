@@ -40,9 +40,19 @@ contract CompoundLendIntegration is LendIntegration {
     using SafeMath for uint256;
     using SafeCast for uint256;
 
+    /* ============ Modifiers ============ */
+
+    /**
+     * Throws if the sender is not the protocol
+     */
+    modifier onlyProtocol() {
+        require(msg.sender == controller, 'Only controller can call this');
+        _;
+    }
+
     /* ============ Constant ============ */
 
-    address constant cETH = 0x4Ddc2D193948926D02f9B1fE9e1daa0718270ED5;
+    address internal constant cETH = 0x4Ddc2D193948926D02f9B1fE9e1daa0718270ED5;
     // Mapping of asset addresses to cToken addresses
     mapping(address => address) public assetToCToken;
 

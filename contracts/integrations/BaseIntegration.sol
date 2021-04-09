@@ -44,19 +44,12 @@ abstract contract BaseIntegration {
 
     /* ============ Modifiers ============ */
 
-    /**
-     * Throws if the sender is not the protocol
-     */
-    modifier onlyProtocol() {
-        require(msg.sender == controller, 'Only controller can call this');
-        _;
-    }
 
     modifier onlyIdea() {
         IStrategy strategy = IStrategy(msg.sender);
         address garden = strategy.garden();
         require(IBabController(controller).isSystemContract(garden), 'Only a garden can call this');
-        require(IGarden(garden).isStrategy(msg.sender), 'Sender must be an investment strategy from the garden');
+        require(IGarden(garden).isStrategy(msg.sender), 'Sender must be a strategy');
         _;
     }
 
@@ -85,7 +78,7 @@ abstract contract BaseIntegration {
         address _weth,
         address _controller
     ) {
-        require(_controller != address(0), 'Controller must be non-zero address.');
+        require(_controller != address(0), 'Controller must be defined');
         name = _name;
         controller = _controller;
         weth = _weth;
@@ -98,82 +91,5 @@ abstract contract BaseIntegration {
      */
     function getName() external view returns (string memory) {
         return name;
-    }
-
-    /* ============ Internal Functions ============ */
-
-    /**
-     * Transfers tokens from an address (that has set allowance on the module).
-     *
-     * @param  _token          The address of the ERC20 token
-     * @param  _from           The address to transfer from
-     * @param  _to             The address to transfer to
-     * @param  _quantity       The number of tokens to transfer
-     */
-    function transferFrom(
-        ERC20 _token,
-        address _from,
-        address _to,
-        uint256 _quantity
-    ) internal {
-        require(ERC20(_token).transferFrom(_from, _to, _quantity), 'Integration transfer failed');
-    }
-
-    /**
-     * Gets the total fee for this integration of the passed in index (fee % * quantity)
-     */
-    function getIntegrationFee(
-        uint256, /* _feeIndex */
-        uint256 _quantity
-    ) internal view returns (uint256) {
-        uint256 feePercentage = IBabController(controller).getIntegrationFee(address(this));
-        return _quantity.preciseMul(feePercentage);
-    }
-
-    /**
-     * Pays the _feeQuantity from the garden denominated in _token to the protocol fee recipient
-     */
-    function payProtocolFeeFromIdea(
-        address _strategy,
-        address _token,
-        uint256 _feeQuantity
-    ) internal {
-        if (_feeQuantity > 0) {
-            ERC20(_token).transferFrom(_strategy, IBabController(controller).getTreasury(), _feeQuantity);
-        }
-    }
-
-    /**
-     * Retrieve fee from controller and calculate total protocol fee and send from strategy to protocol recipient
-     *
-     * @param _strategy                           Address of the strategy
-     * @param _token                              Address of the token to pay it with
-     * @param _exchangedQuantity                  Amount of reserve asset that the integration handled
-     * @return uint256                            Amount of receive token taken as protocol fee
-     */
-    function _accrueProtocolFee(
-        address _strategy,
-        address _token,
-        uint256 _exchangedQuantity
-    ) internal returns (uint256) {
-        uint256 protocolFeeTotal = getIntegrationFee(0, _exchangedQuantity);
-        payProtocolFeeFromIdea(_strategy, _token, protocolFeeTotal);
-
-        return protocolFeeTotal;
-    }
-
-    /**
-      Normalize all the amounts of all tokens so all can be called with 10^18.
-      e.g Call functions like borrow, supply with parseEther
-    */
-    function normalizeAmountWithDecimals(address _asset, uint256 _amount) internal view returns (uint256) {
-        // USDC and USDT have only 6 decimals
-        uint256 newAmount = _amount;
-        // TODO: try/catch
-        uint8 decimalsAsset = ERC20(_asset).decimals();
-        if (decimalsAsset < 18) {
-            newAmount = _amount.div(10**(18 - decimalsAsset));
-        }
-        return newAmount;
     }
 }
