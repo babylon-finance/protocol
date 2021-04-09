@@ -50,7 +50,7 @@ describe('UniswapPoolIntegrationTest', function () {
       await expect(uniswapPoolIntegration.isPool(ADDRESS_ZERO)).to.be.reverted;
     });
 
-    it('can enter and exit the weth dai pool', async function () {
+    it.only('can enter and exit the weth dai pool', async function () {
       const strategyContract = await createStrategy(
         1,
         'vote',

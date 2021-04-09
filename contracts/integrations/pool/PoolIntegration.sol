@@ -63,6 +63,10 @@ abstract contract PoolIntegration is BaseIntegration, ReentrancyGuard {
         uint256 _protocolFee
     );
 
+    /* ============ Constants ============ */
+
+    uint256 internal constant SLIPPAGE_ALLOWED = 1e16; // 1%
+
     /* ============ Constructor ============ */
 
     /**
@@ -133,6 +137,7 @@ abstract contract PoolIntegration is BaseIntegration, ReentrancyGuard {
         // Approve spending of the pool token
         poolInfo.strategy.invokeApprove(_getSpender(_poolAddress), _poolAddress, _poolTokensIn);
 
+        console.log('poolTokensIn', _poolTokensIn);
         (address targetPool, uint256 callValue, bytes memory methodData) =
             _getExitPoolCalldata(_poolAddress, _poolTokensIn, _tokensOut, _minAmountsOut);
         poolInfo.strategy.invokeFromIntegration(targetPool, callValue, methodData);

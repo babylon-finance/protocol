@@ -19,6 +19,7 @@ import {Ownable} from '@openzeppelin/contracts/access/Ownable.sol';
 import {ITimelock} from '../interfaces/ITimelock.sol';
 import {IVoteToken} from '../interfaces/IVoteToken.sol';
 
+// TODO: Do a diff to check for changes
 contract GovernorAlpha is Ownable {
     /* ============ Events ============ */
 

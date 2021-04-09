@@ -45,7 +45,7 @@ describe('BalancerIntegrationTest', function () {
       expect(await balancerIntegration.isPool(ADDRESS_ZERO)).to.equal(false);
     });
 
-    it('can enter and exit the weth dai pool', async function () {
+    it.only('can enter and exit the weth dai pool', async function () {
       const strategyContract = await createStrategy(
         1,
         'vote',

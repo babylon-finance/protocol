@@ -19,7 +19,7 @@
 pragma solidity 0.7.4;
 
 import 'hardhat/console.sol';
-import {ERC20} from '@openzeppelin/contracts/token/ERC20/ERC20.sol';
+import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import {SafeMath} from '@openzeppelin/contracts/math/SafeMath.sol';
 import '@uniswap/v2-core/contracts/interfaces/IUniswapV2Pair.sol';
 import {PoolIntegration} from './PoolIntegration.sol';
@@ -40,6 +40,9 @@ contract UniswapPoolIntegration is PoolIntegration {
 
     // Address of Uniswap V2 Router
     IUniswapV2Router public uniRouter;
+
+    /* ============ Constants ============ */
+
     uint8 immutable MAX_DELTA_BLOCKS = 5;
 
     /* ============ Constructor ============ */
@@ -77,13 +80,35 @@ contract UniswapPoolIntegration is PoolIntegration {
         return result;
     }
 
-    function calcPoolOut(
+    function getPoolTokensOut(
         address, /* _poolAddress */
         address, /* _poolToken */
         uint256 /* _maxAmountsIn */
     ) external view returns (uint256) {
-        // return 1 since _poolTokensOut are not used in OneInchPoolIntegration
+        // return 1 since _poolTokensOut are not used
         return 1;
+    }
+
+    function getPoolMinAmountsOut(address _poolAddress, uint256 _liquidity)
+        external
+        view
+        returns (uint256[] memory _minAmountsOut)
+    {
+        uint256 totalSupply = IUniswapV2Pair(_poolAddress).totalSupply();
+        uint256[] memory result = new uint256[](2);
+        result[0] = IERC20(IUniswapV2Pair(_poolAddress).token0())
+            .balanceOf(_poolAddress)
+            .mul(_liquidity)
+            .div(totalSupply)
+            .preciseMul(1e18 - SLIPPAGE_ALLOWED);
+        result[1] = IERC20(IUniswapV2Pair(_poolAddress).token1())
+            .balanceOf(_poolAddress)
+            .mul(_liquidity)
+            .div(totalSupply)
+            .preciseMul(1e18 - SLIPPAGE_ALLOWED);
+        console.log('_minAmountsOut[0]', result[0]);
+        console.log('_minAmountsOut[1]', result[1]);
+        return result;
     }
 
     /* ============ Internal Functions ============ */
@@ -127,7 +152,7 @@ contract UniswapPoolIntegration is PoolIntegration {
     {
         // Encode method data for Garden to invoke
         require(_tokensIn.length == 2, 'Two tokens required');
-        require(_maxAmountsIn.length == 2, 'Two tokens require');
+        require(_maxAmountsIn.length == 2, 'Two amounts required');
         bytes memory methodData =
             abi.encodeWithSignature(
                 'addLiquidity(address,address,uint256,uint256,uint256,uint256,address,uint256)',
@@ -135,8 +160,8 @@ contract UniswapPoolIntegration is PoolIntegration {
                 _tokensIn[1],
                 _maxAmountsIn[0],
                 _maxAmountsIn[1],
-                _maxAmountsIn[0] - 10000000,
-                0, // TODO: tighten this up
+                _maxAmountsIn[0].sub(_maxAmountsIn[0].preciseMul(SLIPPAGE_ALLOWED)),
+                _maxAmountsIn[1].sub(_maxAmountsIn[1].preciseMul(SLIPPAGE_ALLOWED)),
                 msg.sender,
                 block.timestamp.add(MAX_DELTA_BLOCKS)
             );
@@ -148,9 +173,9 @@ contract UniswapPoolIntegration is PoolIntegration {
      * Return exit pool calldata which is already generated from the pool API
      *
      * hparam  _poolAddress              Address of the pool
-     * @param  _poolTokensIn             Amount of pool tokens to receive
+     * @param  _poolTokensIn             Amount of pool tokens to liquidate
      * @param  _tokensOut                Addresses of tokens to receive
-     * @param  _minAmountsOut            Amounts of pool tokens to receive
+     * @param  _minAmountsOut            Amounts of tokens to receive
      *
      * @return address                   Target contract address
      * @return uint256                   Call value
@@ -172,7 +197,7 @@ contract UniswapPoolIntegration is PoolIntegration {
         )
     {
         require(_tokensOut.length == 2, 'Two tokens required');
-        require(_minAmountsOut.length == 2, 'Two tokens required');
+        require(_minAmountsOut.length == 2, 'Two amounts required');
         // Encode method data for Garden to invoke
         bytes memory methodData =
             abi.encodeWithSignature(
