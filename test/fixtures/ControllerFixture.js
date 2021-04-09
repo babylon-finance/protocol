@@ -3,6 +3,7 @@ const { ONE_DAY_IN_SECONDS } = require('../../utils/constants.js');
 const { TWAP_ORACLE_WINDOW, TWAP_ORACLE_GRANULARITY } = require('../../utils/system.js');
 const addresses = require('../../utils/addresses');
 const argsUtil = require('../../utils/arguments.js');
+const { impersonateAddress } = require('../../utils/rpc');
 const { createStrategy } = require('./StrategyHelper.js');
 
 async function deployFolioFixture() {
@@ -235,6 +236,9 @@ async function deployFolioFixture() {
   console.log('Created and started garden', garden1.address);
   console.log('Created manual testing garden', garden3.address);
 
+  const daiWhaleSigner = await impersonateAddress('0x6B175474E89094C44Da98b954EedeAC495271d0F');
+  const wethWhaleSigner = await impersonateAddress('0xC8dDA504356195ba5344E5a9826Ce07DfEaA97b6');
+
   return {
     babController,
     bablToken,
@@ -266,6 +270,8 @@ async function deployFolioFixture() {
     signer1,
     signer2,
     signer3,
+    daiWhaleSigner,
+    wethWhaleSigner,
 
     contractsToPublish: [
       { name: 'BabController', contract: babController },

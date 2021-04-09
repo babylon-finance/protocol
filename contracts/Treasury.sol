@@ -70,7 +70,7 @@ contract Treasury is Ownable {
         require(_asset != address(0), 'Asset must exist');
         require(_to != address(0), 'Target address must exist');
         require(IERC20(_asset).balanceOf(address(this)) >= _amount, 'Not enough funds in treasury');
-        require(IERC20(_asset).transferFrom(address(this), _to, _amount), 'Ideator perf fee failed');
+        require(IERC20(_asset).transferFrom(address(this), _to, _amount), 'Failed to send funds');
         emit TreasuryFundsSent(_asset, _amount, _to);
     }
 

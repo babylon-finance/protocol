@@ -13,7 +13,7 @@ const impersonateAddress = async (address) => {
 };
 
 const takeSnapshot = async () => {
-  return await hre.network.provider.request({
+  return hre.network.provider.request({
     method: 'evm_snapshot',
     params: [],
   });
