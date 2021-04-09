@@ -17,7 +17,7 @@
 
 pragma solidity 0.7.4;
 
-// import 'hardhat/console.sol';
+import 'hardhat/console.sol';
 import {Address} from '@openzeppelin/contracts/utils/Address.sol';
 import {ERC20Upgradeable} from '@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol';
 import {SafeMath} from '@openzeppelin/contracts/math/SafeMath.sol';
@@ -438,6 +438,16 @@ abstract contract BaseGarden is ERC20Upgradeable {
 
     function getStrategies() public view returns (address[] memory) {
         return strategies;
+    }
+
+    /**
+     * Gets finalized investment strategies
+     *
+     * @return  address[]        Returns list of addresses
+     */
+
+    function getFinalizedStrategies() public view returns (address[] memory) {
+        return finalizedStrategies;
     }
 
     function isStrategy(address _strategy) external view returns (bool) {
