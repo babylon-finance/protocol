@@ -313,13 +313,13 @@ contract RollingGarden is ReentrancyGuard, BaseGarden {
         }
         if (bablRewards > 0) {
             contributor.claimedBABL = contributor.claimedBABL.add(bablRewards); // BABL Rewards claimed properly
+            contributor.claimedAt = block.timestamp; // Checkpoint of this claim
             // Send BABL rewards
             IRewardsDistributor rewardsDistributor =
                 IRewardsDistributor(IBabController(controller).getRewardsDistributor());
             rewardsDistributor.sendTokensToContributor(msg.sender, uint96(bablRewards));
             emit BABLRewardsForContributor(msg.sender, uint96(bablRewards));
         }
-        contributor.claimedAt = block.timestamp; // Checkpoint wether or not the contributor has executed this claim function
     }
 
     /**
