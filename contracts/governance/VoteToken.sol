@@ -218,8 +218,9 @@ abstract contract VoteToken is Context, ERC20, Ownable, IVoteToken, ReentrancyGu
         address dstRep,
         uint96 amount
     ) internal {
-        if (srcRep != dstRep && amount > 0) { // It must not revert but do nothing in cases of address(0) being part of the
-            // Sub voting amount to source in case it is not the zero address (e.g. transfers)          
+        if (srcRep != dstRep && amount > 0) {
+            // It must not revert but do nothing in cases of address(0) being part of the
+            // Sub voting amount to source in case it is not the zero address (e.g. transfers)
             if (srcRep != address(0)) {
                 uint32 srcRepNum = numCheckpoints[srcRep];
                 uint96 srcRepOld = srcRepNum > 0 ? checkpoints[srcRep][srcRepNum - 1].votes : 0;
@@ -227,13 +228,13 @@ abstract contract VoteToken is Context, ERC20, Ownable, IVoteToken, ReentrancyGu
                 _writeCheckpoint(srcRep, srcRepNum, srcRepOld, srcRepNew);
             }
             if (dstRep != address(0)) {
-            // Add it to destination in case it is not the zero address (e.g. any transfer of tokens or delegations except a first mint to a specific address)
-            uint32 dstRepNum = numCheckpoints[dstRep];
-            uint96 dstRepOld = dstRepNum > 0 ? checkpoints[dstRep][dstRepNum - 1].votes : 0;
-            uint96 dstRepNew = add96(dstRepOld, amount, 'VoteToken::_moveDelegates: vote amount overflows');
-            _writeCheckpoint(dstRep, dstRepNum, dstRepOld, dstRepNew);
+                // Add it to destination in case it is not the zero address (e.g. any transfer of tokens or delegations except a first mint to a specific address)
+                uint32 dstRepNum = numCheckpoints[dstRep];
+                uint96 dstRepOld = dstRepNum > 0 ? checkpoints[dstRep][dstRepNum - 1].votes : 0;
+                uint96 dstRepNew = add96(dstRepOld, amount, 'VoteToken::_moveDelegates: vote amount overflows');
+                _writeCheckpoint(dstRep, dstRepNum, dstRepOld, dstRepNew);
             }
-        }    
+        }
     }
 
     /**
