@@ -292,6 +292,20 @@ describe('BABLToken contract', function () {
       }
     });
 
+    it('Should fail when trying to mint new tokens beyond MAX_SUPPLY', async function () {
+      const maxSupply = await bablToken.maxSupply();
+      const totalSupply = await bablToken.totalSupply();
+
+      // We define the the limit + 1 to overflow the mint beyond maxSupply
+      const value = BigInt(maxSupply[0]) - BigInt(totalSupply) + ethers.utils.parseEther('1');
+
+      await expect(bablToken.mint(signer1.address, value)).to.be.revertedWith('BABLToken::mint: max supply exceeded');
+      // console.log(`%s is total supply, which is equal to the max supply %s`,totalSupply , maxSupply);
+
+      // Total_Supply shouldn't have changed.
+      expect(totalSupply).to.equal(await bablToken.totalSupply());
+    });
+
     it('Should fail when trying to mint new tokens before the first epoch (8 years)', async function () {
       const maxSupply = await bablToken.maxSupply();
       const totalSupply = await bablToken.totalSupply();
@@ -307,6 +321,18 @@ describe('BABLToken contract', function () {
       await expect(bablToken.mint(signer1.address, 0)).to.be.revertedWith(
         'BABLToken::mint: mint should be higher than zero',
       );
+    });
+    it('Should fail when trying to mint before mintingAllowedAfter', async function () {
+      const NEW_MAX_SUPPLY = ethers.utils.parseEther('1050000'); // 1_150_000e18
+      //Traveling on time >8 years ahead
+      ethers.provider.send('evm_increaseTime', [ONE_DAY_IN_SECONDS * 365 * 8]);
+      await expect(bablToken.changeMaxSupply(NEW_MAX_SUPPLY, 1906560000)); // June 2030 the 1st
+
+      await expect(bablToken.mint(signer1.address, 1)).to.be.not.reverted;
+      await expect(bablToken.mint(signer1.address, 1)).to.be.revertedWith(
+        'BABLToken::mint: minting not allowed yet because mintingAllowedAfter',
+      );
+
     });
 
     it('Should fail when trying to mint to the 0 (zero) address', async function () {
@@ -331,28 +357,24 @@ describe('BABLToken contract', function () {
       );
     });
 
-    //it.only('Should fail when trying to mint above Cap limit of 2%', async function () {
-    //  const NEW_MAX_SUPPLY = ethers.utils.parseEther('1050000'); // 1_150_000e18
-    // Traveling on time >8 years ahead
-    //  ethers.provider.send('evm_increaseTime', [ONE_DAY_IN_SECONDS * 365 * 8]);
-    //  await expect(bablToken.changeMaxSupply(NEW_MAX_SUPPLY, 1906560000)); // June 2030 the 1st
+    it('Should fail when trying to mint above Cap limit of 2%', async function () {
+      const NEW_MAX_SUPPLY = ethers.utils.parseEther('1050000'); // 1_150_000e18
+      //Traveling on time >8 years ahead
+      ethers.provider.send('evm_increaseTime', [ONE_DAY_IN_SECONDS * 365 * 8]);
+      await expect(bablToken.changeMaxSupply(NEW_MAX_SUPPLY, 1906560000)); // June 2030 the 1st
 
-    // await expect(bablToken.mint(signer2.address, ethers.utils.parseEther('1000'))).to.be.revertedWith('BABLToken::mint: exceeded mint cap of 2% of total supply');
+      await expect(bablToken.mint(signer1.address, ethers.utils.parseEther('21000'))).to.be.revertedWith('BABLToken::mint: exceeded mint cap of 2% of total supply');
 
-    //});
+    });
+    it('Should mint new tokens after 8 years equals to the Cap limit of 2%', async function () {
+      const NEW_MAX_SUPPLY = ethers.utils.parseEther('1050000'); // 1_150_000e18
+      //Traveling on time >8 years ahead
+      ethers.provider.send('evm_increaseTime', [ONE_DAY_IN_SECONDS * 365 * 8]);
+      await expect(bablToken.changeMaxSupply(NEW_MAX_SUPPLY, 1906560000)); // June 2030 the 1st
 
-    it('Should fail when trying to mint new tokens beyond MAX_SUPPLY', async function () {
-      const maxSupply = await bablToken.maxSupply();
-      const totalSupply = await bablToken.totalSupply();
-
-      // We define the the limit + 1 to overflow the mint beyond maxSupply
-      const value = BigInt(maxSupply[0]) - BigInt(totalSupply) + ethers.utils.parseEther('1');
-
-      await expect(bablToken.mint(signer1.address, value)).to.be.revertedWith('BABLToken::mint: max supply exceeded');
-      // console.log(`%s is total supply, which is equal to the max supply %s`,totalSupply , maxSupply);
-
-      // Total_Supply shouldn't have changed.
-      expect(totalSupply).to.equal(await bablToken.totalSupply());
+      await expect(bablToken.mint(signer1.address, ethers.utils.parseEther('20000'))).to.be.not.reverted;
+      const signer1Balance = await bablToken.balanceOf(signer1.address);
+      expect(signer1Balance).to.equal(ethers.utils.parseEther('20000'));
     });
   });
 
@@ -387,6 +409,19 @@ describe('BABLToken contract', function () {
 
       // MAX_SUPPLY shouldn't have changed.
       expect(OLD_MAX_SUPPLY[0]).to.equal(value2);
+    });
+    it('Should fail a try of changing MAX_SUPPLY before MaxSupplyAllowedAfter', async function () {
+      const OLD_MAX_SUPPLY = await bablToken.maxSupply();
+
+      // Try to change MAX_SUPPLY by a new number after 8 years by a lower amount
+      const NEW_MAX_SUPPLY = ethers.utils.parseEther('1050000'); // 1_150_000e18
+      // Traveling on time >8 years ahead
+      ethers.provider.send('evm_increaseTime', [ONE_DAY_IN_SECONDS * 365 * 8]);
+      await expect(bablToken.changeMaxSupply(NEW_MAX_SUPPLY, 1906560000)); // June 2030 the 1st
+
+      await expect(bablToken.changeMaxSupply(NEW_MAX_SUPPLY+100, 1906560010)).to.be.revertedWith(
+        'BABLToken::changeMaxSupply: a change on maxSupplyAllowed not allowed yet'
+        );
     });
 
     it('Should fail a try of changing MAX_SUPPLY after 8 years by an amount below the current MAX_SUPPLY', async function () {

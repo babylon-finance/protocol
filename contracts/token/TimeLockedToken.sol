@@ -424,5 +424,7 @@ abstract contract TimeLockedToken is VoteToken {
         // check if enough unlocked balance to transfer
         require(unlockedBalance(_from) >= _value, 'TimeLockedToken:: _transfer: attempting to transfer locked funds');
         super._transfer(_from, _to, _value);
+        // voting power
+        _moveDelegates(delegates[_from], delegates[_to], safe96(_value, 'TimeLockedToken:: _transfer: uint96 overflow'));
     }
 }

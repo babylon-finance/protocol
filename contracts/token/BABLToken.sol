@@ -145,8 +145,8 @@ contract BABLToken is TimeLockedToken {
 
         emit MintedNewTokens(_to, amount);
 
-        // move delegates
-        _moveDelegates(address(0), delegates[_to], amount); // TODO - CHECK IF IT IS FINALLY NEEDED FOR VOTING POWER
+        // move delegates to add voting power to the destination
+        _moveDelegates(address(0), delegates[_to], amount);
 
         return true;
     }
