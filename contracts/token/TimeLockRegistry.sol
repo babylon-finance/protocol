@@ -14,6 +14,7 @@
 
 pragma solidity 0.7.4;
 
+import 'hardhat/console.sol';
 import {TimeLockedToken} from './TimeLockedToken.sol';
 import {Ownable} from '@openzeppelin/contracts/access/Ownable.sol';
 import {SafeMath} from '@openzeppelin/contracts/math/SafeMath.sol';
@@ -141,7 +142,7 @@ contract TimeLockRegistry is Ownable {
         newTokenVested.lastClaim = vestingStartingDate;
 
         tokenVested[receiver] = newTokenVested;
-
+        // TODO CHECK IF ALLOWANCE AS OF TODAY IS THE FINAL MODEL. IN CASE OF A DIRECT MINT TO TIME LOCK REGISTRY ADDRESS THE TOKEN TRANSFER MIGHT BE UPDATED
         // transfer tokens from owner who might have enough allowance of tokens by BABL Token owner
         require(token.transferFrom(msg.sender, address(this), distribution), 'Transfer failed');
 
@@ -171,6 +172,7 @@ contract TimeLockRegistry is Ownable {
         // set tokenVested mapping to 0
         delete tokenVested[receiver];
 
+        // TODO CHECK THE PROCESS ADDRESS(THIS) VS. OWNER
         // transfer tokens back to owner
         require(token.transfer(msg.sender, amount), 'Transfer failed');
 
@@ -185,14 +187,26 @@ contract TimeLockRegistry is Ownable {
      *
      * @notice Cancel already delivered tokens. It might only apply when non-completion of vesting period of Team members or Advisors
      * @dev An automatic override allowance is granted during the claim process
-     * @param receiver Address that should have it's distribution removed
+     * @param account Address that should have it's distribution removed
      * @return Whether or not it succeeded
      */
-    function cancelDeliveredTokens(address receiver) external onlyOwner returns (bool) {
-        uint256 loosingAmount = token.cancelTokens(receiver);
+    function cancelDeliveredTokens(address account) public onlyOwner returns (bool) {
+        uint256 loosingAmount = token.cancelVestedTokens(account);
 
         // emit cancel event
-        emit Cancel(receiver, loosingAmount);
+        emit Cancel(account, loosingAmount);
+        return true;
+    }
+
+    /**
+     * PRIVILEGED GOVERNANCE FUNCTION. Recover tokens in Time Lock Registry smartcontract address by the owner
+     *
+     * @notice Send tokens from smartcontract address to the owner. It might only apply after a cancellation of vested tokens
+     * @param amount Amount to be recovered by the owner of the Time Lock Registry smartcontract from its balance
+     * @return Whether or not it succeeded
+     */
+    function transferToOwner(uint256 amount) public onlyOwner returns (bool) {
+        require(token.transfer(msg.sender, amount), 'Transfer failed');
         return true;
     }
 
@@ -235,6 +249,8 @@ contract TimeLockRegistry is Ownable {
         return amount;
     }
 
+    /* ============ Getter Functions ============ */
+
     function checkVesting(address address_)
         public
         view
@@ -251,5 +267,9 @@ contract TimeLockRegistry is Ownable {
             tokenVested[address_].vestingEnd,
             tokenVested[address_].lastClaim
         );
+    }
+
+    function checkRegisteredDistribution(address address_) public view returns (uint256 amount) {
+        return registeredDistributions[address_];
     }
 }
