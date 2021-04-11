@@ -315,7 +315,7 @@ abstract contract BaseGarden is ERC20Upgradeable {
     }
 
     /**
-     * Function that locked certain stake from contributor balances when invested in active strategies
+     * Function that locks certain stake from contributor balances when invested in active strategies
      *
      * @param _amount             Amount of the reserve balance
      */
@@ -326,7 +326,7 @@ abstract contract BaseGarden is ERC20Upgradeable {
     }
 
     /**
-     * Function that locked certain stake from contributor balances when invested in active strategies
+     * Function that unlocks certain stake from contributor balances when invested in active strategies
      *
      * @param _amount             Amount of the reserve balance
      */
