@@ -19,10 +19,10 @@
 pragma solidity 0.7.4;
 
 import 'hardhat/console.sol';
+import {OwnableUpgradeable} from '@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol';
+import {AddressUpgradeable} from '@openzeppelin/contracts-upgradeable/utils/AddressUpgradeable.sol';
 import {SafeMath} from '@openzeppelin/contracts/math/SafeMath.sol';
 import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
-import {Ownable} from '@openzeppelin/contracts/access/Ownable.sol';
-import {Address} from '@openzeppelin/contracts/utils/Address.sol';
 import {IGarden} from './interfaces/IGarden.sol';
 import {IRollingGarden} from './interfaces/IRollingGarden.sol';
 import {IGardenFactory} from './interfaces/IGardenFactory.sol';
@@ -36,10 +36,10 @@ import {AddressArrayUtils} from './lib/AddressArrayUtils.sol';
  * BabController is a smart contract used to deploy new gardens contracts and house the
  * integrations and resources of the system.
  */
-contract BabController is Ownable {
+contract BabController is OwnableUpgradeable {
     using AddressArrayUtils for address[];
+    using AddressUpgradeable for address;
     using SafeMath for uint256;
-    using Address for address;
 
     /* ============ Events ============ */
     event GardenAdded(address indexed _garden, address indexed _factory);
@@ -100,24 +100,24 @@ contract BabController is Ownable {
     address public treasury;
 
     // Idea cooldown period
-    uint256 public minCooldownPeriod = 6 hours;
-    uint256 public maxCooldownPeriod = 7 days;
+    uint256 public constant MIN_COOLDOWN_PERIOD = 6 hours;
+    uint256 public constant MAX_COOLDOWN_PERIOD = 7 days;
 
     // Assets
     // Absolute Min liquidity of assets for risky gardens 1000 ETH
-    uint256 public minRiskyPairLiquidityEth = 1000 * 1e18;
+    uint256 public minRiskyPairLiquidityEth;
 
     // Enable Transfer of ERC20 gardenTokens
     // Only members can transfer tokens until the protocol is fully decentralized
-    bool public gardenTokensTransfersEnabled = false;
+    bool public gardenTokensTransfersEnabled;
 
-    uint256 public protocolPerformanceFee = 5e16; // 5% (0.01% = 1e14, 1% = 1e16) on profits
-    uint256 public protocolManagementFee = 5e15; // 0.5% (0.01% = 1e14, 1% = 1e16)
-    uint256 public protocolGardenCreationFee = 0; // (0.01% = 1e14, 1% = 1e16)
-    uint256 public protocolDepositGardenTokenFee = 0; // (0.01% = 1e14, 1% = 1e16)
-    uint256 public protocolWithdrawalGardenTokenFee = 0; // (0.01% = 1e14, 1% = 1e16)
+    uint256 public protocolPerformanceFee; // 5% (0.01% = 1e14, 1% = 1e16) on profits
+    uint256 public protocolManagementFee; // 0.5% (0.01% = 1e14, 1% = 1e16)
+    uint256 public protocolGardenCreationFee; // (0.01% = 1e14, 1% = 1e16)
+    uint256 public protocolDepositGardenTokenFee; // (0.01% = 1e14, 1% = 1e16)
+    uint256 public protocolWithdrawalGardenTokenFee; // (0.01% = 1e14, 1% = 1e16)
 
-    /* ============ Functions ============ */
+    /* ============ Constructor ============ */
 
     /**
      * Initializes the initial fee recipient on deployment.
@@ -129,14 +129,22 @@ contract BabController is Ownable {
      * @param _gardenFactory                Address of the initial garden factory
      * @param _rewardsDistributor           Address of the initial garden distributor
      */
-    constructor(
+    function initialize(
         address _treasury,
         address _gardenValuer,
         address _priceOracle,
         address _reservePool,
         address _gardenFactory,
         address _rewardsDistributor
-    ) {
+    ) public {
+        OwnableUpgradeable.__Ownable_init();
+
+        // vars init values has to be set in initialize due to how upgrade proxy pattern works
+        protocolManagementFee = 5e15; // 0.5% (0.01% = 1e14, 1% = 1e16)
+        protocolPerformanceFee = 5e16; // 5% (0.01% = 1e14, 1% = 1e16) on profits
+        gardenTokensTransfersEnabled = false;
+        minRiskyPairLiquidityEth = 1000 * 1e18;
+
         treasury = _treasury;
         gardenValuer = _gardenValuer;
         priceOracle = _priceOracle;
@@ -455,11 +463,11 @@ contract BabController is Ownable {
     }
 
     function getMinCooldownPeriod() external view returns (uint256) {
-        return minCooldownPeriod;
+        return MIN_COOLDOWN_PERIOD;
     }
 
     function getMaxCooldownPeriod() external view returns (uint256) {
-        return maxCooldownPeriod;
+        return MAX_COOLDOWN_PERIOD;
     }
 
     function getProtocolDepositGardenTokenFee() external view returns (uint256) {

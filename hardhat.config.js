@@ -1,4 +1,5 @@
 require('@nomiclabs/hardhat-ethers');
+require('@openzeppelin/hardhat-upgrades');
 require('@nomiclabs/hardhat-waffle');
 require('hardhat-deploy-ethers');
 require('hardhat-contract-sizer');
