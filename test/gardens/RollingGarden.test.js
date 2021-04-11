@@ -5,7 +5,7 @@ const { loadFixture } = waffle;
 
 const addresses = require('../../utils/addresses');
 const { ONE_DAY_IN_SECONDS, NOW, EMPTY_BYTES } = require('../../utils/constants.js');
-const { DEFAULT_STRATEGY_PARAMS } = require('../fixtures/StrategyHelper');
+const { DEFAULT_STRATEGY_PARAMS, createStrategy, executeStrategy, finalizeStrategy, injectFakeProfits } = require('../fixtures/StrategyHelper');
 const { deployFolioFixture } = require('../fixtures/ControllerFixture');
 
 describe('Garden', function () {
@@ -16,11 +16,19 @@ describe('Garden', function () {
   let garden1;
   let weth;
   let balancerIntegration;
+  let kyberTradeIntegration;
+  let strategy11;
+  let strategy21;
+
+
 
   beforeEach(async () => {
-    ({ babController, signer1, signer2, signer3, garden1, balancerIntegration } = await loadFixture(
+    ({ babController, signer1, signer2, signer3, garden1, balancerIntegration, kyberTradeIntegration, strategy11, strategy21 } = await loadFixture(
       deployFolioFixture,
     ));
+
+    strategyDataset = await ethers.getContractAt('Strategy', strategy11);
+    strategyCandidate = await ethers.getContractAt('Strategy', strategy21);
 
     weth = await ethers.getContractAt('IERC20', addresses.tokens.WETH);
   });
@@ -164,6 +172,86 @@ describe('Garden', function () {
         .reverted;
       await expect(garden1.connect(signer3).withdraw(ethers.utils.parseEther('20'), 2, signer3.getAddress())).to.be
         .reverted;
+    });
+    it.only('a contributor cannot withdraw more comunity tokens than they have locked in active strategies', async function () {
+      const strategyContract = await createStrategy(
+        0,
+        'vote',
+        [signer1, signer2, signer3],
+        kyberTradeIntegration.address,
+        garden1,
+      );
+
+
+      // It is executed
+      await executeStrategy(garden1, strategyContract, ethers.utils.parseEther('1'), 42);
+
+      const [
+        address,
+        strategist,
+        integration,
+        stake,
+        absoluteTotalVotes,
+        totalVotes,
+        capitalAllocated,
+        capitalReturned,
+        duration,
+        expectedReturn,
+        maxCapitalRequested,
+        minRebalanceCapital,
+        enteredAt,
+      ] = await strategyDataset.getStrategyDetails();
+      const [address2, active2, dataSet2, finalized2, executedAt2, exitedAt2] = await strategyContract.getStrategyState();
+
+      expect(address2).to.equal(strategyContract.address);
+      expect(active2).to.equal(true);
+
+      expect(strategist).to.equal(signer1.address);
+      expect(stake).to.equal(ethers.utils.parseEther('1'));
+
+      // Cannot withdraw locked stake amount
+      await expect(garden1.connect(signer1).withdraw(90909, 1, signer1.getAddress())).to.be.revertedWith('R18');
+
+    });
+    it.only('a contributor can withdraw comunity tokens than they have unlocked after finishing active strategies where it was participating', async function () {
+      const strategyContract = await createStrategy(
+        0,
+        'vote',
+        [signer1, signer2, signer3],
+        kyberTradeIntegration.address,
+        garden1,
+      );
+      // It is executed
+      await executeStrategy(garden1, strategyContract, ethers.utils.parseEther('1'), 42);
+
+      const [
+        address,
+        strategist,
+        integration,
+        stake,
+        absoluteTotalVotes,
+        totalVotes,
+        capitalAllocated,
+        capitalReturned,
+        duration,
+        expectedReturn,
+        maxCapitalRequested,
+        minRebalanceCapital,
+        enteredAt,
+      ] = await strategyDataset.getStrategyDetails();
+      const [address2, active2, dataSet2, finalized2, executedAt2, exitedAt2] = await strategyContract.getStrategyState();
+
+
+      expect(address2).to.equal(strategyContract.address);
+      expect(active2).to.equal(true);
+
+      expect(strategist).to.equal(signer1.address);
+      expect(stake).to.equal(ethers.utils.parseEther('1'));
+
+      await finalizeStrategy(garden1, strategyContract, 42);
+      
+      // Can now withdraw stake amount as it is again unlocked
+      await expect(garden1.connect(signer1).withdraw(90909, 1, signer1.getAddress())).not.to.be.reverted;
     });
   });
 
