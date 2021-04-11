@@ -57,7 +57,6 @@ module.exports = {
   networks: {
     // Local Hardhat network using alchemy for pinned block
     hardhat: {
-      chainId: 1,
       allowUnlimitedContractSize: true,
       forking: {
         url: 'https://eth-mainnet.alchemyapi.io/v2/sncj01nDcsAQr_QWyhYWNkg3qzW2o9kt',
@@ -65,13 +64,13 @@ module.exports = {
       },
     },
     rinkeby: {
-      url: 'https://rinkeby.infura.io/v3/c954231486fa42ccb6d132b406483d14', // <---- YOUR INFURA ID! (or it won't work)
+      url: 'https://rinkeby.infura.io/v3/c954231486fa42ccb6d132b406483d14',
       accounts: {
         mnemonic: mnemonic(),
       },
     },
     mainnet: {
-      url: 'https://mainnet.infura.io/v3/c954231486fa42ccb6d132b406483d14', // <---- YOUR INFURA ID! (or it won't work)
+      url: 'https://mainnet.infura.io/v3/c954231486fa42ccb6d132b406483d14',
       accounts: {
         mnemonic: mnemonic(),
       },
