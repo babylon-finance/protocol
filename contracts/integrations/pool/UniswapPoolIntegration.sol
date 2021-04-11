@@ -84,7 +84,7 @@ contract UniswapPoolIntegration is PoolIntegration {
         address, /* _poolAddress */
         address, /* _poolToken */
         uint256 /* _maxAmountsIn */
-    ) external view returns (uint256) {
+    ) external pure returns (uint256) {
         // return 1 since _poolTokensOut are not used
         return 1;
     }
