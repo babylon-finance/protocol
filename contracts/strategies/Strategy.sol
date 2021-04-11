@@ -288,12 +288,11 @@ contract Strategy is ReentrancyGuard, Initializable {
         if (executedAt == 0) {
             executedAt = block.timestamp;
             updatedAt = executedAt;
-            // We temporarily lock the amount deposited by strategist and voters in the strategy from withdrawals until the strategy ends 
-            for (uint i = 0; i < voters.length.sub(1); i++) {
+            // We temporarily lock the amount deposited by strategist and voters in the strategy from withdrawals until the strategy ends
+            for (uint256 i = 0; i < voters.length.sub(1); i++) {
                 garden.lockContributorStake(voters[i], abs(votes[voters[i]]).toUint256());
             }
             garden.lockContributorStake(strategist, stake);
-
         } else {
             // Updating allocation - we need to consider the difference for the calculation
             // We control the potential overhead in BABL Rewards calculations to keep control and avoid distributing a wrong number (e.g. flash loans)
@@ -340,8 +339,8 @@ contract Strategy is ReentrancyGuard, Initializable {
             'Ensure capital does not get stuck'
         );
         // We remove voters and strategist from the temporal block for withdrawals (while being part of active strategies)
-        // We temporarily lock the amount deposited by strategist and voters in the strategy from withdrawals until the strategy ends 
-        for (uint i = 0; i < voters.length.sub(1); i++) {
+        // We temporarily lock the amount deposited by strategist and voters in the strategy from withdrawals until the strategy ends
+        for (uint256 i = 0; i < voters.length.sub(1); i++) {
             garden.unlockContributorStake(voters[i], abs(votes[voters[i]]).toUint256());
         }
         garden.unlockContributorStake(strategist, stake);
@@ -612,7 +611,7 @@ contract Strategy is ReentrancyGuard, Initializable {
         oracle.updateAdapters(_assetOne, _assetTwo);
         return oracle.getPrice(_assetOne, _assetTwo);
     }
-    
+
     function abs(int256 x) private pure returns (int256) {
         return x >= 0 ? x : -x;
     }

@@ -320,16 +320,20 @@ abstract contract BaseGarden is ERC20Upgradeable {
      * @param _amount             Amount of the reserve balance
      */
     function lockContributorStake(address _contributor, uint256 _amount) external onlyStrategy {
-        contributors[_contributor].lockedInActiveStrategies = contributors[_contributor].lockedInActiveStrategies.add(_amount);
+        contributors[_contributor].lockedInActiveStrategies = contributors[_contributor].lockedInActiveStrategies.add(
+            _amount
+        );
     }
 
-     /**
+    /**
      * Function that locked certain stake from contributor balances when invested in active strategies
      *
      * @param _amount             Amount of the reserve balance
      */
     function unlockContributorStake(address _contributor, uint256 _amount) external onlyStrategy {
-        contributors[_contributor].lockedInActiveStrategies = contributors[_contributor].lockedInActiveStrategies.sub(_amount);
+        contributors[_contributor].lockedInActiveStrategies = contributors[_contributor].lockedInActiveStrategies.sub(
+            _amount
+        );
     }
 
     /* ============ Investment Idea Functions ============ */

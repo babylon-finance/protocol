@@ -254,8 +254,11 @@ contract RollingGarden is ReentrancyGuard, BaseGarden {
             block.timestamp.sub(contributors[msg.sender].lastDepositAt) >= depositHardlock,
             'R15' // Cannot withdraw. Hardlock
         );
-        require(balanceOf(msg.sender).sub(_gardenTokenQuantity) >= contributors[msg.sender].lockedInActiveStrategies, 'R18'); // Strategists and Voters cannot withdraw locked stake while in active strategies
-     
+        require(
+            balanceOf(msg.sender).sub(_gardenTokenQuantity) >= contributors[msg.sender].lockedInActiveStrategies,
+            'R18'
+        ); // Strategists and Voters cannot withdraw locked stake while in active strategies
+
         // Check this here to avoid having relayers
         reenableEthForInvestments();
         ActionInfo memory withdrawalInfo = _createRedemptionInfo(_gardenTokenQuantity);
