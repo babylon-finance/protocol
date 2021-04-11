@@ -80,7 +80,7 @@ contract OneInchPoolIntegration is PoolIntegration {
         address, /* _poolAddress */
         address, /* _poolToken */
         uint256 /* _maxAmountsIn */
-    ) external view returns (uint256) {
+    ) external pure returns (uint256) {
         // return 1 since _poolTokensOut are not used
         return 1;
     }
@@ -181,7 +181,7 @@ contract OneInchPoolIntegration is PoolIntegration {
         uint256[] calldata _minAmountsOut
     )
         internal
-        view
+        pure
         override
         returns (
             address,

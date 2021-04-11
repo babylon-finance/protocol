@@ -106,7 +106,8 @@ interface IGarden is IERC20 {
         uint256 _stake,
         uint256 _investmentDuration,
         uint256 _expectedReturn,
-        uint256 _minRebalanceCapital
+        uint256 _minRebalanceCapital,
+        address _strategyData
     ) external;
 
     function rebalanceInvestments(uint256 _fee) external;

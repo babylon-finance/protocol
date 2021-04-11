@@ -241,10 +241,10 @@ abstract contract BaseGarden is ERC20Upgradeable {
      * Virtual function that assigns several garden params. Must be overriden
      *
      * @param _minContribution                  Min contribution to participate in this garden
-     * @param _strategyCooldownPeriod               How long after the strategy has been activated, will it be ready to be executed
-     * @param _strategyCreatorProfitPercentage      What percentage of the profits go to the strategy creator
-     * @param _strategyVotersProfitPercentage       What percentage of the profits go to the strategy curators
-     * @param _gardenCreatorProfitPercentage What percentage of the profits go to the creator of the garden
+     * @param _strategyCooldownPeriod           How long after the strategy has been activated, will it be ready to be executed
+     * @param _strategyCreatorProfitPercentage  What percentage of the profits go to the strategy creator
+     * @param _strategyVotersProfitPercentage   What percentage of the profits go to the strategy curators
+     * @param _gardenCreatorProfitPercentage    What percentage of the profits go to the creator of the garden
      * @param _minVotersQuorum                  Percentage of votes needed to activate an investment strategy (0.01% = 1e14, 1% = 1e16)
      * @param _minIdeaDuration                  Min duration of an investment strategy
      * @param _maxIdeaDuration                  Max duration of an investment strategy
@@ -323,6 +323,7 @@ abstract contract BaseGarden is ERC20Upgradeable {
      * @param _investmentDuration            Investment duration in seconds
      * @param _expectedReturn                Expected return
      * @param _minRebalanceCapital           Min capital that is worth it to deposit into this strategy
+     * @param _strategyData                  Param of strategy to add
      */
     function addStrategy(
         uint8 _strategyKind,
@@ -331,7 +332,8 @@ abstract contract BaseGarden is ERC20Upgradeable {
         uint256 _stake,
         uint256 _investmentDuration,
         uint256 _expectedReturn,
-        uint256 _minRebalanceCapital
+        uint256 _minRebalanceCapital,
+        address _strategyData
     ) external onlyContributor onlyActive {
         require(strategies.length < MAX_TOTAL_IDEAS, 'G17'); // reached limit of strategies
         IStrategyFactory strategyFactory =
@@ -351,6 +353,7 @@ abstract contract BaseGarden is ERC20Upgradeable {
         strategyMapping[strategy] = true;
         totalStake = totalStake.add(_stake);
         strategies.push(strategy);
+        IStrategy(strategy).setData(_strategyData);
     }
 
     /**

@@ -92,6 +92,14 @@ contract Strategy is ReentrancyGuard, Initializable {
     }
 
     /**
+     * Throws if the garden is not the caller or data is already set
+     */
+    modifier onlyGardenAndNotSet() {
+        require(msg.sender == address(garden) && !dataSet, 'Data Already Set');
+        _;
+    }
+
+    /**
      * Throws if the garden is not active
      */
     modifier onlyActiveGarden() {

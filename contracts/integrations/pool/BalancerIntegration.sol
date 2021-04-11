@@ -162,7 +162,7 @@ contract BalancerIntegration is PoolIntegration {
         uint256[] calldata _minAmountsOut
     )
         internal
-        view
+        pure
         override
         returns (
             address,

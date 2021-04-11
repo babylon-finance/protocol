@@ -45,7 +45,7 @@ contract LiquidityPoolStrategy is Strategy {
      *
      * @param _pool                           Liquidity pool
      */
-    function setPoolData(address _pool) public onlyIdeator {
+    function setData(address _pool) public onlyGardenAndNotSet {
         require(!dataSet, 'Data is set already');
         require(IPoolIntegration(integration).isPool(_pool), 'Not a valid pool');
 

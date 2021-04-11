@@ -44,6 +44,8 @@ interface IStrategy {
         uint256 fee
     ) external;
 
+    function setData(address _data) external;
+
     function executeInvestment(uint256 _capital, uint256 fee) external;
 
     function finalizeInvestment(uint256 fee) external;
