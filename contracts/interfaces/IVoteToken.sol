@@ -34,6 +34,14 @@ interface IVoteToken {
     function getCurrentVotes(address account) external view returns (uint96);
 
     function getPriorVotes(address account, uint256 blockNumber) external view returns (uint96);
+
+    function getMyDelegatee() external view returns (address);
+
+    function getDelegatee(address account) external view returns (address);
+
+    function getCheckpoints(address account, uint32 id) external view returns (uint32 fromBlock, uint96 votes);
+
+    function getNumberOfCheckpoints(address account) external view returns (uint32);
 }
 
 interface IVoteTokenWithERC20 is IVoteToken, IERC20 {}

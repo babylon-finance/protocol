@@ -181,6 +181,23 @@ abstract contract VoteToken is Context, ERC20, Ownable, IVoteToken, ReentrancyGu
         return checkpoints[account][lower].votes;
     }
 
+    function getMyDelegatee() public view override returns (address) {
+        return delegates[msg.sender];
+    }
+
+    function getDelegatee(address account) public view override returns (address) {
+        return delegates[account];
+    }
+
+    function getCheckpoints(address account, uint32 id) public view override returns (uint32 fromBlock, uint96 votes) {
+        Checkpoint storage getCheckpoint = checkpoints[account][id];
+        return (getCheckpoint.fromBlock, getCheckpoint.votes);
+    }
+
+    function getNumberOfCheckpoints(address account) public view override returns (uint32) {
+        return numCheckpoints[account];
+    }
+
     /* ============ Internal Only Function ============ */
 
     /**
@@ -219,7 +236,7 @@ abstract contract VoteToken is Context, ERC20, Ownable, IVoteToken, ReentrancyGu
         uint96 amount
     ) internal {
         if (srcRep != dstRep && amount > 0) {
-            // It must not revert but do nothing in cases of address(0) being part of the
+            // It must not revert but do nothing in cases of address(0) being part of the move
             // Sub voting amount to source in case it is not the zero address (e.g. transfers)
             if (srcRep != address(0)) {
                 uint32 srcRepNum = numCheckpoints[srcRep];
