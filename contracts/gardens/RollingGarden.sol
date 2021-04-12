@@ -21,8 +21,10 @@ pragma solidity 0.7.4;
 import 'hardhat/console.sol';
 import {ERC20} from '@openzeppelin/contracts/token/ERC20/ERC20.sol';
 import {ReentrancyGuard} from '@openzeppelin/contracts/utils/ReentrancyGuard.sol';
+import {Address} from '@openzeppelin/contracts/utils/Address.sol';
 import {SafeMath} from '@openzeppelin/contracts/math/SafeMath.sol';
 import {SignedSafeMath} from '@openzeppelin/contracts/math/SignedSafeMath.sol';
+
 import {PreciseUnitMath} from '../lib/PreciseUnitMath.sol';
 import {SafeDecimalMath} from '../lib/SafeDecimalMath.sol';
 import {IWETH} from '../interfaces/external/weth/IWETH.sol';
@@ -45,6 +47,7 @@ contract RollingGarden is ReentrancyGuard, BaseGarden {
     using PreciseUnitMath for uint256;
     using SafeDecimalMath for int256;
     using SafeDecimalMath for uint256;
+    using Address for address;
 
     /* ============ Events ============ */
     event ProfitsForContributor(address indexed _contributor, uint256 indexed _amount);
@@ -266,16 +269,17 @@ contract RollingGarden is ReentrancyGuard, BaseGarden {
         _updateContributorWithdrawalInfo(withdrawalInfo.netFlowQuantity);
 
         // Check that the redemption is possible
-        require(canWithdrawEthAmount(msg.sender, withdrawalInfo.netFlowQuantity), 'R16'); // Not enough liquidity in the fund
-        if (address(this).balance >= withdrawalInfo.netFlowQuantity) {
-            // Send eth
-            (bool sent, ) = _to.call{value: withdrawalInfo.netFlowQuantity}('');
-            require(sent, 'R17'); // Failed to send Ether
-        } else {
-            // Send liquid weth balance
+        require(
+            canWithdrawEthAmount(msg.sender, withdrawalInfo.netFlowQuantity),
+            // Not enough liquidity in the fund
+            'R16'
+        );
+        // Unwrap WETH if ETH balance lower than netFlowQuantity
+        if (address(this).balance < withdrawalInfo.netFlowQuantity) {
             IWETH(weth).withdraw(withdrawalInfo.netFlowQuantity);
-            _to.transfer(withdrawalInfo.netFlowQuantity);
         }
+        // Send ETH
+        Address.sendValue(_to, withdrawalInfo.netFlowQuantity);
         redemptionRequests[msg.sender] = 0;
         payProtocolFeeFromGarden(reserveAsset, withdrawalInfo.protocolFees);
 

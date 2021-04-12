@@ -7,5 +7,6 @@ module.exports = {
     'lib/Math.sol',
     'governance/GovernorAlpha.sol',
     'governance/TimeLock.sol',
+    'mocks/BabControllerV2Mock.sol',
   ],
 };

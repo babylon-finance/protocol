@@ -20,6 +20,8 @@ pragma solidity 0.7.4;
 import 'hardhat/console.sol';
 import {Address} from '@openzeppelin/contracts/utils/Address.sol';
 import {ERC20Upgradeable} from '@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol';
+import {IERC20Upgradeable} from '@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol';
+import {SafeERC20Upgradeable} from '@openzeppelin/contracts-upgradeable/token/ERC20/SafeERC20Upgradeable.sol';
 import {SafeMath} from '@openzeppelin/contracts/math/SafeMath.sol';
 import {SafeCast} from '@openzeppelin/contracts/utils/SafeCast.sol';
 import {SignedSafeMath} from '@openzeppelin/contracts/math/SignedSafeMath.sol';
@@ -43,6 +45,7 @@ abstract contract BaseGarden is ERC20Upgradeable {
     using PreciseUnitMath for uint256;
     using Address for address;
     using AddressArrayUtils for address[];
+    using SafeERC20Upgradeable for IERC20Upgradeable;
 
     /* ============ Events ============ */
     event ReserveAssetChanged(address indexed _reserveAsset);
@@ -387,25 +390,19 @@ abstract contract BaseGarden is ERC20Upgradeable {
         require(_capital.add(protocolMgmtFee) <= liquidReserveAsset, 'G18'); // not enough capital
 
         // Take protocol mgmt fee
-        require(
-            ERC20Upgradeable(reserveAsset).transfer(IBabController(controller).getTreasury(), protocolMgmtFee),
-            'G19' // failed to pay mgmt fee
-        );
+        IERC20Upgradeable(reserveAsset).safeTransfer(IBabController(controller).getTreasury(), protocolMgmtFee);
 
         // Send Capital to strategy
-        require(
-            ERC20Upgradeable(reserveAsset).transfer(msg.sender, _capital),
-            'G20' // fail to allocate capital to strategy
-        );
+        IERC20Upgradeable(reserveAsset).safeTransfer(msg.sender, _capital);
     }
 
     // Any tokens (other than the target) that are sent here by mistake are recoverable by contributors
     // Exchange for WETH
     function sweep(address _token) external onlyContributor {
         require(_token != reserveAsset, 'G21'); // token is reserve asset
-        uint256 balance = ERC20Upgradeable(_token).balanceOf(address(this));
+        uint256 balance = IERC20Upgradeable(_token).balanceOf(address(this));
         require(balance > 0, 'G26'); // nothing to sweep
-        ERC20Upgradeable(_token).transfer(msg.sender, balance);
+        IERC20Upgradeable(_token).safeTransfer(msg.sender, balance);
     }
 
     /*
@@ -496,10 +493,7 @@ abstract contract BaseGarden is ERC20Upgradeable {
      */
     function payProtocolFeeFromGarden(address _token, uint256 _feeQuantity) internal {
         if (_feeQuantity > 0) {
-            require(
-                ERC20Upgradeable(_token).transfer(IBabController(controller).getTreasury(), _feeQuantity),
-                'G22' // Failed to pay protocol fee
-            );
+            IERC20Upgradeable(_token).safeTransfer(IBabController(controller).getTreasury(), _feeQuantity);
         }
     }
 

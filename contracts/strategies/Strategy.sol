@@ -21,7 +21,8 @@ pragma solidity 0.7.4;
 import 'hardhat/console.sol';
 
 import {Address} from '@openzeppelin/contracts/utils/Address.sol';
-import {ERC20} from '@openzeppelin/contracts/token/ERC20/ERC20.sol';
+import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
+import {SafeERC20} from '@openzeppelin/contracts/token/ERC20/SafeERC20.sol';
 import {ReentrancyGuard} from '@openzeppelin/contracts/utils/ReentrancyGuard.sol';
 import {SafeMath} from '@openzeppelin/contracts/math/SafeMath.sol';
 import {SignedSafeMath} from '@openzeppelin/contracts/math/SignedSafeMath.sol';
@@ -53,6 +54,7 @@ contract Strategy is ReentrancyGuard, Initializable {
     using PreciseUnitMath for uint256;
     using AddressArrayUtils for address[];
     using Address for address;
+    using SafeERC20 for IERC20;
 
     /* ============ Events ============ */
     event Invoked(address indexed _target, uint256 indexed _value, bytes _data, bytes _returnValue);
@@ -75,7 +77,7 @@ contract Strategy is ReentrancyGuard, Initializable {
     }
 
     modifier onlyContributor {
-        require(ERC20(address(garden)).balanceOf(msg.sender) > 0, 'Only someone with the garden token can withdraw');
+        require(IERC20(address(garden)).balanceOf(msg.sender) > 0, 'Only someone with the garden token can withdraw');
         _;
     }
 
@@ -204,18 +206,14 @@ contract Strategy is ReentrancyGuard, Initializable {
             'Integration must be valid'
         );
         require(controller.isSystemContract(_garden), 'Must be a valid garden');
-        require(ERC20(address(garden)).balanceOf(_strategist) > 0, 'Only someone with the garden token can withdraw');
-        require(_stake > garden.totalSupply().div(100), 'Stake amount must be at least 1% of the garden');
+        require(IERC20(address(garden)).balanceOf(_strategist) > 0, 'Strategist mush have a stake');
+        require(_stake > garden.totalSupply().div(100), 'Stake amount must be at least 1%');
         require(
             _investmentDuration >= garden.minIdeaDuration() && _investmentDuration <= garden.maxIdeaDuration(),
-            'Investment duration must be in range'
+            'Duration must be in range'
         );
-        require(_stake > 0, 'Stake amount must be greater than 0');
-        require(_minRebalanceCapital > 0, 'Min Capital requested amount must be greater than 0');
-        require(
-            _maxCapitalRequested >= _minRebalanceCapital,
-            'The max amount of capital must be greater than one chunk'
-        );
+        require(_minRebalanceCapital > 0, 'Min capital be greater than 0');
+        require(_maxCapitalRequested >= _minRebalanceCapital, 'The max amount >= one chunk');
         // Check than enter and exit data call integrations
         strategist = _strategist;
         enteredAt = block.timestamp;
@@ -327,12 +325,9 @@ contract Strategy is ReentrancyGuard, Initializable {
         _transferStrategyRewards(_fee);
         // Pay Keeper Fee
         _payKeeper(msg.sender, _fee);
-        uint256 remainingReserve = ERC20(garden.reserveAsset()).balanceOf(address(this));
+        uint256 remainingReserve = IERC20(garden.reserveAsset()).balanceOf(address(this));
         // Sends the rest back if any
-        require(
-            ERC20(garden.reserveAsset()).transfer(address(garden), remainingReserve),
-            'Ensure capital does not get stuck'
-        );
+        IERC20(garden.reserveAsset()).safeTransfer(address(garden), remainingReserve);
     }
 
     /**
@@ -366,7 +361,7 @@ contract Strategy is ReentrancyGuard, Initializable {
     function sweep(address _token) external onlyContributor {
         // TODO: check that is not any of the strategy tokens
         require(_token != garden.reserveAsset(), 'Cannot sweep reserve asset');
-        uint256 balance = ERC20(_token).balanceOf(address(this));
+        uint256 balance = IERC20(_token).balanceOf(address(this));
         require(balance > 0, 'Token balance > 0');
         _trade(_token, balance, garden.reserveAsset());
     }
@@ -376,7 +371,7 @@ contract Strategy is ReentrancyGuard, Initializable {
         address _asset,
         uint256 _quantity
     ) external onlyIntegration {
-        ERC20(_asset).approve(_spender, _quantity);
+        IERC20(_asset).approve(_spender, _quantity);
     }
 
     function invokeFromIntegration(
@@ -471,8 +466,8 @@ contract Strategy is ReentrancyGuard, Initializable {
         require(IBabController(controller).isValidKeeper(_keeper), 'Only Keeper'); // Only keeper
         // Pay Keeper in WETH
         if (_fee > 0) {
-            require(ERC20(garden.reserveAsset()).balanceOf(address(this)) >= _fee, 'Not enough weth to pay keeper'); // not enough weth for gas subsidy
-            require(ERC20(garden.reserveAsset()).transfer(_keeper, _fee), 'Not enough weth to pay keeper'); // not enough weth for gas subsidy
+            require(IERC20(garden.reserveAsset()).balanceOf(address(this)) >= _fee, 'Not enough weth to pay keeper');
+            IERC20(garden.reserveAsset()).safeTransfer(_keeper, _fee);
         }
     }
 
@@ -548,7 +543,9 @@ contract Strategy is ReentrancyGuard, Initializable {
     }
 
     function _transferStrategyRewards(uint256 _fee) internal {
-        capitalReturned = ERC20(garden.reserveAsset()).balanceOf(address(this)).sub(_fee).sub(MAX_STRATEGY_KEEPER_FEES);
+        capitalReturned = IERC20(garden.reserveAsset()).balanceOf(address(this)).sub(_fee).sub(
+            MAX_STRATEGY_KEEPER_FEES
+        );
         address reserveAsset = garden.reserveAsset();
         int256 reserveAssetDelta = capitalReturned.toInt256().sub(capitalAllocated.toInt256());
         uint256 protocolProfits = 0;
@@ -557,13 +554,10 @@ contract Strategy is ReentrancyGuard, Initializable {
             uint256 profits = capitalReturned - capitalAllocated; // in reserve asset (weth)
             // Send weth performance fee to the protocol
             protocolProfits = IBabController(controller).getProtocolPerformanceFee().preciseMul(profits);
-            require(
-                ERC20(reserveAsset).transferFrom(
-                    address(this),
-                    IBabController(controller).getTreasury(),
-                    protocolProfits
-                ),
-                'Protocol perf fee failed'
+            IERC20(reserveAsset).safeTransferFrom(
+                address(this),
+                IBabController(controller).getTreasury(),
+                protocolProfits
             );
             reserveAssetDelta.add(int256(-protocolProfits));
             capitalReturned = capitalReturned.sub(protocolProfits);
@@ -574,11 +568,7 @@ contract Strategy is ReentrancyGuard, Initializable {
             reserveAssetDelta.add(int256(stake));
         }
         // Return the balance back to the garden
-        require(
-            ERC20(reserveAsset).transferFrom(address(this), address(garden), capitalReturned),
-            'Idea capital return failed'
-        );
-
+        IERC20(reserveAsset).safeTransferFrom(address(this), address(garden), capitalReturned);
         // Updates reserve asset
         uint256 _newTotal = garden.principal().toInt256().add(reserveAssetDelta).toUint256();
         garden.updatePrincipal(_newTotal);
