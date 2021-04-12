@@ -42,8 +42,8 @@ describe('Garden', function () {
   });
 
   describe('Garden state', async function () {
-    it.only('only the protocol should be able to update active state', async function () {
-      await expect(garden1.connect(owner).setActive()).to.be.revertedWith('revert BAL#016');
+    it('only the protocol should be able to update active state', async function () {
+      await expect(garden1.connect(signer1).setActive()).to.be.revertedWith('revert BAL#016');
     });
 
     it('the initial deposit must be correct', async function () {
