@@ -146,11 +146,13 @@ contract Strategy is ReentrancyGuard, Initializable {
     IGarden public garden;
     address public integration; // Address of the integration
     address public strategist; // Address of the strategist that submitted the bet
+
     uint256 public enteredAt; // Timestamp when the strategy was submitted
     uint256 public enteredCooldownAt; // Timestamp when the strategy reached quorum
     uint256 public executedAt; // Timestamp when the strategy was executed
     uint256 public updatedAt; // Timestamp of last capital allocation update
     uint256 public exitedAt; // Timestamp when the strategy was submitted
+
     address[] public voters; // Addresses with the voters
     int256 public totalVotes; // Total votes staked
     uint256 public absoluteTotalVotes; // Absolute number of votes staked

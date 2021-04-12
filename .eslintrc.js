@@ -3,7 +3,7 @@ module.exports = {
     mocha: true,
   },
   extends: ['airbnb', 'airbnb/hooks', 'plugin:prettier/recommended'],
-  plugins: ['babel'],
+  plugins: ['babel', 'no-only-tests'],
   rules: {
     'prettier/prettier': ['error'],
     'import/extensions': [
@@ -19,5 +19,6 @@ module.exports = {
     'prefer-template': 'off',
     'no-console': 'off',
     'func-names': 'off',
+    'no-only-tests/no-only-tests': 'error',
   },
 };
