@@ -158,7 +158,7 @@ contract RollingGarden is ReentrancyGuard, BaseGarden {
         // make initial deposit
         uint256 initialDepositAmount = msg.value;
         uint256 initialTokens = initialDepositAmount;
-        _require(initialTokens >= minGardenTokenSupply, Errors.MIN_LIQUIDITY);
+        _require(initialTokens >= _minGardenTokenSupply, Errors.MIN_LIQUIDITY);
         minGardenTokenSupply = _minGardenTokenSupply;
         maxDepositLimit = _maxDepositLimit;
         gardenInitializedAt = block.timestamp;
