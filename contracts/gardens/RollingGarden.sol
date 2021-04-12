@@ -310,9 +310,8 @@ contract RollingGarden is ReentrancyGuard, BaseGarden {
 
         if (totalProfits > 0 && address(this).balance > 0) {
             contributor.claimedProfits = contributor.claimedProfits.add(totalProfits); // Profits claimed properly
-            // Send eth
-            (bool sent, ) = msg.sender.call{value: totalProfits}('');
-            require(sent, 'R19'); // Failed to send Ether
+            // Send ETH
+            Address.sendValue(msg.sender, totalProfits);
             emit ProfitsForContributor(msg.sender, totalProfits);
         }
         if (bablRewards > 0) {
@@ -327,7 +326,8 @@ contract RollingGarden is ReentrancyGuard, BaseGarden {
     }
 
     /**
-     * When an investment strategy finishes execution, contributors might want to know the profits and BABL rewards for their participation in the different strategies
+     * When an investment strategy finishes execution, contributors might want
+     * to know the profits and BABL rewards for their participation in the different strategies
      *
      *
      * @param _finalizedStrategies       Array of the finalized strategies
