@@ -142,6 +142,7 @@ contract Strategy is ReentrancyGuard, Initializable {
 
     // Garden that these strategies belong to
     IGarden public garden;
+
     address public integration; // Address of the integration
     address public strategist; // Address of the strategist that submitted the bet
     uint256 public enteredAt; // Timestamp when the strategy was submitted
@@ -204,7 +205,12 @@ contract Strategy is ReentrancyGuard, Initializable {
             'Integration must be valid'
         );
         require(controller.isSystemContract(_garden), 'Must be a valid garden');
-        require(ERC20(address(garden)).balanceOf(_strategist) > 0, 'Only someone with the garden token can withdraw');
+        require(
+            ERC20(address(garden)).balanceOf(_strategist) > 0,
+            'Only someone with positive balance of the garden token can withdraw'
+        );
+        //TODO Disable reusing stake while locked balance -> require(garden.balanceOf(_strategist).sub(garden.getLockedBalance(_strategist)) >= _stake, 'Only someone with enough unlocked balance of the garden token can withdraw');
+
         require(_stake > garden.totalSupply().div(100), 'Stake amount must be at least 1% of the garden');
         require(
             _investmentDuration >= garden.minIdeaDuration() && _investmentDuration <= garden.maxIdeaDuration(),

@@ -254,7 +254,7 @@ contract RollingGarden is ReentrancyGuard, BaseGarden {
             block.timestamp.sub(contributors[msg.sender].lastDepositAt) >= depositHardlock,
             'R15' // Cannot withdraw. Hardlock
         );
-        require(_gardenTokenQuantity <= balanceOf(msg.sender).sub(_lockedAmount(msg.sender)), 'R18'); // Strategists and Voters cannot withdraw locked stake while in active strategies
+        require(_gardenTokenQuantity <= balanceOf(msg.sender).sub(this.getLockedBalance(msg.sender)), 'Errors.R18'); // Strategists and Voters cannot withdraw locked stake while in active strategies
 
         // Check this here to avoid having relayers
         reenableEthForInvestments();
@@ -468,6 +468,29 @@ contract RollingGarden is ReentrancyGuard, BaseGarden {
         }
     }
 
+    /**
+     * Checks balance locked for strategists and voters in active strategies
+     *
+     * @param _contributor                 Address of the account
+     *
+     * @return  uint256                    Returns the amount of locked garden tokens for the account
+     */
+    function getLockedBalance(address _contributor) external view returns (uint256) {
+        uint256 lockedAmount;
+        for (uint256 i = 0; i <= strategies.length - 1; i++) {
+            IStrategy strategy = IStrategy(strategies[i]);
+            uint256 votes = uint256(abs(strategy.getUserVotes(_contributor)));
+            if (votes > 0) {
+                lockedAmount += votes;
+            }
+            if (_contributor == strategy.strategist()) {
+                lockedAmount += strategy.stake();
+            }
+        }
+        if (balanceOf(_contributor) < lockedAmount) lockedAmount = balanceOf(_contributor); // TODO Remove when implementing locked stake in voting and strategy creation - Now this avoid overflows
+        return lockedAmount;
+    }
+
     receive() external payable {} // solium-disable-line quotes
 
     /* ============ Internal Functions ============ */
@@ -670,20 +693,6 @@ contract RollingGarden is ReentrancyGuard, BaseGarden {
                 .div(contributor.numberOfOps.add(1));
             contributor.numberOfOps = contributor.numberOfOps.add(1);
         }
-    }
-
-    function _lockedAmount(address _contributor) internal returns (uint256) {
-        uint256 lockedAmount;
-        for (uint256 i = 0; i < strategies.length.sub(1); i++) {
-            IStrategy strategy = IStrategy(strategies[i]);
-            if (strategy.getUserVotes(_contributor) != 0) {
-                lockedAmount += uint256(abs(strategy.getUserVotes(_contributor)));
-            }
-            if (_contributor == strategy.strategist()) {
-                lockedAmount += strategy.stake();
-            }
-        }
-        return lockedAmount;
     }
 
     function abs(int256 x) private pure returns (int256) {

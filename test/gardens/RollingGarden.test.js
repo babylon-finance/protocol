@@ -186,6 +186,10 @@ describe('Garden', function () {
         .reverted;
     });
     it('strategist or voters cannot withdraw more comunity tokens than they have locked in active strategies', async function () {
+      const strategies0 = await garden1.getStrategies();
+
+      strategy = await ethers.getContractAt('Strategy', strategies0[0]);
+
       const strategyContract = await createStrategy(
         0,
         'vote',
@@ -230,6 +234,10 @@ describe('Garden', function () {
       // Cannot withdraw locked stake amount
       await expect(
         garden1.connect(signer1).withdraw(ethers.utils.parseEther('1.2'), 1, signer1.getAddress()),
+      ).to.be.revertedWith('R18');
+      // Cannot withdraw locked stake amount
+      await expect(
+        garden1.connect(signer2).withdraw(ethers.utils.parseEther('1.2'), 1, signer1.getAddress()),
       ).to.be.revertedWith('R18');
     });
     it('strategist or voters can withdraw comunity tokens that were locked during strategy execution once they are unlocked after finishing active strategies', async function () {
@@ -276,7 +284,9 @@ describe('Garden', function () {
       await finalizeStrategy(garden1, strategyContract, 42);
 
       // Can now withdraw stake amount as it is again unlocked
-      await expect(garden1.connect(signer1).withdraw(ethers.utils.parseEther('1.1'), 1, signer1.getAddress())).not.to.be
+      await expect(garden1.connect(signer1).withdraw(ethers.utils.parseEther('0.1'), 1, signer1.getAddress())).not.to.be
+        .reverted;
+      await expect(garden1.connect(signer2).withdraw(ethers.utils.parseEther('1.1'), 1, signer2.getAddress())).not.to.be
         .reverted;
     });
 
@@ -321,9 +331,16 @@ describe('Garden', function () {
       expect(strategist).to.equal(signer1.address);
       expect(stake).to.equal(ethers.utils.parseEther('1'));
 
-      // Can now withdraw stake amount as it is again unlocked
-      await expect(garden1.connect(signer1).withdraw(ethers.utils.parseEther('0.9'), 1, signer1.getAddress())).not.to.be
-        .reverted;
+      await garden1.connect(signer2).deposit(ethers.utils.parseEther('5'), 1, signer2.getAddress(), {
+        value: ethers.utils.parseEther('5'),
+      });
+
+      ethers.provider.send('evm_increaseTime', [ONE_DAY_IN_SECONDS * 5]); // to bypass hardlock
+
+      await expect(garden1.connect(signer2).withdraw(ethers.utils.parseEther('5'), 1, signer2.getAddress()));
+
+      const WITHDRAWsigner2Balance = await garden1.balanceOf(signer2.address);
+      await expect(WITHDRAWsigner2Balance).to.be.equal(ethers.utils.parseEther('2'));
     });
   });
 
