@@ -79,7 +79,6 @@ contract BabController is OwnableUpgradeable {
     address[] public reserveAssets;
     address public gardenValuer;
     address public priceOracle;
-    address public reservePool;
     address public gardenFactory;
     address public rewardsDistributor;
     mapping(uint8 => address) public strategyFactory;
@@ -121,22 +120,8 @@ contract BabController is OwnableUpgradeable {
 
     /**
      * Initializes the initial fee recipient on deployment.
-     *
-     * @param _treasury                     Address of the initial protocol fee recipient
-     * @param _gardenValuer                 Address of the initial gardenValuer
-     * @param _priceOracle                  Address of the initial priceOracle
-     * @param _reservePool                  Address of the initial reservePool
-     * @param _gardenFactory                Address of the initial garden factory
-     * @param _rewardsDistributor           Address of the initial garden distributor
      */
-    function initialize(
-        address _treasury,
-        address _gardenValuer,
-        address _priceOracle,
-        address _reservePool,
-        address _gardenFactory,
-        address _rewardsDistributor
-    ) public {
+    function initialize() public {
         OwnableUpgradeable.__Ownable_init();
 
         // vars init values has to be set in initialize due to how upgrade proxy pattern works
@@ -144,13 +129,6 @@ contract BabController is OwnableUpgradeable {
         protocolPerformanceFee = 5e16; // 5% (0.01% = 1e14, 1% = 1e16) on profits
         gardenTokensTransfersEnabled = false;
         minRiskyPairLiquidityEth = 1000 * 1e18;
-
-        treasury = _treasury;
-        gardenValuer = _gardenValuer;
-        priceOracle = _priceOracle;
-        reservePool = _reservePool;
-        gardenFactory = _gardenFactory;
-        rewardsDistributor = _rewardsDistributor;
     }
 
     /* ============ External Functions ============ */
@@ -544,7 +522,6 @@ contract BabController is OwnableUpgradeable {
         return (isGarden[_contractAddress] ||
             gardenValuer == _contractAddress ||
             priceOracle == _contractAddress ||
-            reservePool == _contractAddress ||
             _contractAddress == address(this));
     }
 

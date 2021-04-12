@@ -2,7 +2,6 @@ const { ethers, upgrades } = require('hardhat');
 const { ONE_DAY_IN_SECONDS } = require('../../utils/constants.js');
 const { TWAP_ORACLE_WINDOW, TWAP_ORACLE_GRANULARITY } = require('../../utils/system.js');
 const addresses = require('../../utils/addresses');
-const argsUtil = require('../../utils/arguments.js');
 const { impersonateAddress } = require('../../utils/rpc');
 const { createStrategy } = require('./StrategyHelper.js');
 
@@ -14,7 +13,7 @@ async function deployFolioFixture() {
 
   const BabController = await ethers.getContractFactory('BabController', owner);
   // the deployer is an proxy admin
-  const babController = await upgrades.deployProxy(BabController, argsUtil.readArgumentsFile('BabController'));
+  const babController = await upgrades.deployProxy(BabController, []);
 
   await babController.addReserveAsset(addresses.tokens.WETH);
   await babController.addKeepers(Object.values(addresses.users));
