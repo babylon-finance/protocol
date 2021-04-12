@@ -2,7 +2,7 @@ module.exports = {
   env: {
     mocha: true,
   },
-  extends: ['airbnb', 'airbnb/hooks', 'plugin:prettier/recommended'],
+  extends: ['airbnb', 'plugin:prettier/recommended'],
   plugins: ['babel', 'no-only-tests'],
   rules: {
     'prettier/prettier': ['error'],
