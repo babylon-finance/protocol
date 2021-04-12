@@ -3,13 +3,14 @@
 const { expect } = require('chai');
 const { ethers, waffle } = require('hardhat');
 
-const { EMPTY_BYTES, ONE_DAY_IN_SECONDS } = require('../../utils/constants');
+const { ADDRESS_ZERO, ONE_DAY_IN_SECONDS } = require('../../utils/constants');
 
 const { loadFixture } = waffle;
 
 const addresses = require('../../utils/addresses');
 const { deployFolioFixture } = require('../fixtures/ControllerFixture');
 const { BigNumber } = require('@ethersproject/bignumber');
+const { isExportDeclaration } = require('typescript');
 
 // `describe` is a Mocha function that allows you to organize your tests. It's
 // not actually needed, but having your tests organized makes debugging them
@@ -40,16 +41,6 @@ describe('BABLToken contract', function () {
 
   beforeEach(async () => {
     ({ owner, bablToken, timeLockRegistry, signer1, signer2, signer3 } = await loadFixture(deployFolioFixture));
-
-    // console.log(
-    //   "Config:",
-    //   oracle,
-    //   valuer,
-    //   ownerSigner,
-    //   userSigner1,
-    //   userSigner2,
-    //   userSigner3
-    // );
   });
 
   // You can nest describe calls to create subsections.
@@ -151,10 +142,6 @@ describe('BABLToken contract', function () {
       const addr2Balance = await bablToken.balanceOf(signer2.address);
       expect(addr2Balance).to.equal(value2);
     });
-  });
-
-  describe('Vesting', function () {
-    // TODO CHECK ALLOWANCE FLOW WHICH IS FINALLY NEEDED TO DISPOSE/REGISTER BABL TOKENS ON BEHALF OF TOKEN.OWNER()
     it('Owner Should approve the allowance of 31% of 1M tokens to Time Lock Registry for vesting but keep balance without change', async function () {
       // Approve 310_000e18 tokens from owner to Time Lock Registry
       await bablToken.approve(timeLockRegistry.address, ethers.utils.parseEther('310000'));
@@ -165,7 +152,182 @@ describe('BABLToken contract', function () {
       const allowSigner1 = await bablToken.allowance(owner.address, timeLockRegistry.address);
       expect(allowSigner1).to.equal(ethers.utils.parseEther('310000'));
     });
+    it('Should fail it trying to approve the zero address', async function () {
+      await expect(bablToken.approve(ADDRESS_ZERO, ethers.utils.parseEther('310000'))).to.be.revertedWith(
+        'TimeLockedToken::approve: spender cannot be zero address',
+      );
+    });
+    it('Should fail it trying to approve itself', async function () {
+      await expect(bablToken.approve(owner.address, ethers.utils.parseEther('310000'))).to.be.revertedWith(
+        'TimeLockedToken::approve: spender cannot be the msg.sender',
+      );
+    });
+    it('Should fail if trying to increase allowance to an address above the unlocked balance', async function () {
+      await expect(
+        bablToken.connect(signer1).increaseAllowance(signer2.address, ethers.utils.parseEther('310000')),
+      ).to.be.revertedWith('TimeLockedToken::increaseAllowance:Not enough unlocked tokens');
+    });
+    it('Should fail if trying to increase allowance to the zero address', async function () {
+      await expect(bablToken.increaseAllowance(ADDRESS_ZERO, ethers.utils.parseEther('310000'))).to.be.revertedWith(
+        'TimeLockedToken::increaseAllowance:Spender cannot be zero address',
+      );
+    });
+    it('Should fail if trying to increase allowance to itself', async function () {
+      await expect(bablToken.increaseAllowance(owner.address, ethers.utils.parseEther('310000'))).to.be.revertedWith(
+        'TimeLockedToken::increaseAllowance:Spender cannot be the msg.sender',
+      );
+    });
+    it('Should increase allowance properly', async function () {
+      await bablToken.increaseAllowance(signer1.address, ethers.utils.parseEther('310000'));
+      // Check allowance has been done
+      const allowSigner1 = await bablToken.allowance(owner.address, signer1.address);
+      expect(allowSigner1).to.equal(ethers.utils.parseEther('310000'));
+    });
+    it('Should fail if trying to decrease allowance to the zero address', async function () {
+      await expect(bablToken.decreaseAllowance(ADDRESS_ZERO, ethers.utils.parseEther('310000'))).to.be.revertedWith(
+        'TimeLockedToken::decreaseAllowance:Spender cannot be zero address',
+      );
+    });
+    it('Should fail if trying to decrease allowance below 0 (underflow condition)', async function () {
+      await bablToken.increaseAllowance(signer1.address, ethers.utils.parseEther('310000'));
+      await expect(bablToken.decreaseAllowance(signer1.address, ethers.utils.parseEther('310001'))).to.be.revertedWith(
+        'TimeLockedToken::decreaseAllowance:Underflow condition',
+      );
+    });
+    it('Should fail if trying to decrease allowance to itself', async function () {
+      await bablToken.increaseAllowance(signer1.address, ethers.utils.parseEther('310000'));
+      await expect(
+        bablToken.connect(signer1).decreaseAllowance(signer1.address, ethers.utils.parseEther('310000')),
+      ).to.be.revertedWith('TimeLockedToken::decreaseAllowance:Spender cannot be the msg.sender');
+    });
+    it('Should fail if trying to decrease allowance to Time Lock Registry', async function () {
+      await bablToken.increaseAllowance(timeLockRegistry.address, ethers.utils.parseEther('310000'));
+      await expect(
+        bablToken.decreaseAllowance(timeLockRegistry.address, ethers.utils.parseEther('310000')),
+      ).to.be.revertedWith('TimeLockedToken::decreaseAllowance:cannot decrease allowance to timeLockRegistry');
+    });
+    it('Should properly decrease allowance to an address allowed earlier which is not timelockregistry', async function () {
+      await bablToken.increaseAllowance(signer1.address, ethers.utils.parseEther('310000'));
+      const allowSigner1 = await bablToken.allowance(owner.address, signer1.address);
+      expect(allowSigner1).to.equal(ethers.utils.parseEther('310000'));
+      await bablToken.decreaseAllowance(signer1.address, ethers.utils.parseEther('310000'));
+      const allowSigner2 = await bablToken.allowance(owner.address, signer1.address);
+      expect(allowSigner2).to.equal(ethers.utils.parseEther('0'));
+    });
+    it('Should fail a transfer to the zero address', async function () {
+      await expect(bablToken.transfer(ADDRESS_ZERO, ethers.utils.parseEther('1'))).to.be.revertedWith(
+        'TimeLockedToken:: _transfer: cannot transfer to the zero address',
+      );
+    });
+    it('Should fail a transfer to the BABL Smartcontract itself', async function () {
+      await expect(bablToken.transfer(bablToken.address, ethers.utils.parseEther('1'))).to.be.revertedWith(
+        'TimeLockedToken:: _transfer: do not transfer tokens to the token contract itself',
+      );
+    });
+    it('Should fail a transfer without enough balance', async function () {
+      await expect(bablToken.transfer(signer1.address, ethers.utils.parseEther('1000001'))).to.be.revertedWith(
+        'TimeLockedToken:: _transfer: insufficient balance',
+      );
+    });
+    it('Should fail a transfer without enough unlocked balance', async function () {
+      await timeLockRegistry.register(signer1.address, ethers.utils.parseEther('26000'), true, 1614618000);
+      await bablToken.connect(signer1).claimMyTokens();
+      await expect(
+        bablToken.connect(signer1).transfer(signer2.address, ethers.utils.parseEther('1000')),
+      ).to.be.revertedWith('TimeLockedToken:: _transfer: attempting to transfer locked funds');
+    });
+  });
 
+  describe('Voting Power for Governance', function () {
+    it('Should get voting power equivalent to its balance if it delegates in itself', async function () {
+      await bablToken.transfer(signer1.address, ethers.utils.parseEther('26000'));
+
+      await bablToken.connect(signer1).delegate(signer1.address); // Own delegation
+
+      //await bablToken.transfer(signer1.address, ethers.utils.parseEther('26000'));
+      const signer1Balance = await bablToken.balanceOf(signer1.address);
+
+      const votesSigner1 = await bablToken.getCurrentVotes(signer1.address);
+
+      await expect(signer1Balance).to.be.equal(votesSigner1);
+    });
+    it('Should update voting power when transferring tokens between accounts', async function () {
+      await bablToken.connect(signer1).delegate(signer1.address); // Own delegation
+      await bablToken.connect(signer2).delegate(signer2.address); // Own delegation
+
+      await bablToken.transfer(signer1.address, ethers.utils.parseEther('26000'));
+      const signer1Balance = await bablToken.balanceOf(signer1.address);
+      const votesSigner1 = await bablToken.getCurrentVotes(signer1.address);
+
+      expect(signer1Balance).to.equal(votesSigner1.toString());
+      await bablToken.connect(signer1).transfer(signer2.address, ethers.utils.parseEther('20000'));
+      const votesSigner12 = await bablToken.getCurrentVotes(signer1.address);
+      await expect(votesSigner12).to.equal(BigInt(votesSigner1) - BigInt(ethers.utils.parseEther('20000')));
+      const signer2Balance = await bablToken.balanceOf(signer2.address);
+      const votesSigner2 = await bablToken.getCurrentVotes(signer2.address);
+      expect(signer2Balance).to.equal(votesSigner2);
+      expect(signer2Balance).to.equal(ethers.utils.parseEther('20000'));
+    });
+  });
+
+  describe('Time Lock Registry for Vesting', function () {
+    it('Should fail as Time Lock Registry cannot registry the zero address', async function () {
+      // Try to register de zero address
+      await expect(
+        timeLockRegistry.register(ADDRESS_ZERO, ethers.utils.parseEther('26000'), true, 1614618000),
+      ).to.be.revertedWith('TimeLockRegistry::register: cannot register the zero address');
+    });
+    it('Should fail as Time Lock Registry contract address cannot be registered itself', async function () {
+      await expect(
+        timeLockRegistry.register(timeLockRegistry.address, ethers.utils.parseEther('26000'), true, 1614618000),
+      ).to.be.revertedWith('TimeLockRegistry::register: Time Lock Registry contract cannot be an investor');
+    });
+    it('should fail if the distribution amount to register equals 0', async function () {
+      await expect(
+        timeLockRegistry.register(signer1.address, ethers.utils.parseEther('0'), true, 1614618000),
+      ).to.be.revertedWith('TimeLockRegistry::register: Distribution = 0');
+    });
+    it('should fail if the account is already registered', async function () {
+      const registeredDistribution = await timeLockRegistry.checkRegisteredDistribution(signer1.address);
+      expect(registeredDistribution.toString()).to.equal(ethers.utils.parseEther('0'));
+      await timeLockRegistry.register(signer1.address, ethers.utils.parseEther('26000'), true, 1614618000);
+
+      await expect(
+        timeLockRegistry.register(signer1.address, ethers.utils.parseEther('26000'), true, 1614618000),
+      ).to.be.revertedWith('TimeLockRegistry::register:Distribution for this address is already registered');
+    });
+    it('should fail if the transfer fails', async function () {
+      await timeLockRegistry.register(signer1.address, ethers.utils.parseEther('26000'), true, 1614618000);
+
+      await expect(
+        timeLockRegistry.register(signer1.address, ethers.utils.parseEther('1000001'), true, 1614618000),
+      ).to.be.revertedWith('TimeLockRegistry::register:Distribution for this address is already registered');
+    });
+    it('Should fail when trying to cancel a registration that is not registered', async function () {
+      await expect(timeLockRegistry.cancelRegistration(signer2.address)).to.be.revertedWith('Not registered');
+    });
+    it('Should cancel a registration of an Advisor before tokens are claimed', async function () {
+      // Register 1 Advisor with 2_000 BABL 4Y of Vesting
+      // Vesting starting date 1 March 2021 9h PST Unix Time 1614618000
+      await timeLockRegistry.register(signer2.address, ethers.utils.parseEther('2000'), true, 1614618000);
+      const userSigner2Registered = await timeLockRegistry.checkVesting(signer2.address);
+      const userSigner2RegisteredTeam = userSigner2Registered[0];
+      const userSigner2RegisteredVestingBegin = userSigner2Registered[1];
+      const userSigner2RegisteredVestingEnd = userSigner2Registered[2];
+      expect(userSigner2RegisteredTeam).to.equal(true);
+      expect(userSigner2RegisteredVestingBegin).to.equal(1614618000);
+      expect(userSigner2RegisteredVestingEnd).to.equal(1614618000 + ONE_DAY_IN_SECONDS * 365 * 4);
+
+      // Cancel the registration of above registered Advisor before the claim is done
+      const ownerSignerBalance = await bablToken.balanceOf(owner.address);
+      const registryBalance = await bablToken.balanceOf(timeLockRegistry.address);
+      const newOwnerSignerBalance = BigInt(ownerSignerBalance) + BigInt(registryBalance);
+
+      await timeLockRegistry.cancelRegistration(signer2.address);
+
+      expect(newOwnerSignerBalance).to.equal(await bablToken.balanceOf(owner.address));
+      expect(await bablToken.balanceOf(timeLockRegistry.address)).to.equal(0);
+    });
     it('Time Lock Registry should properly register 1 Team Member, 1 Advisor and 1 Investor with its own vesting conditions', async function () {
       // First of all there should be an allowance from BABL Token Owner into the Registry
       // Approve 310_000e18 tokens from owner to Time Lock Registry
@@ -211,68 +373,87 @@ describe('BABLToken contract', function () {
       expect(userSigner3RegisteredVestingEnd).to.equal(1614618000 + ONE_DAY_IN_SECONDS * 365 * 3);
     });
 
-    it('Should cancel a registration of an Advisor before tokens are claimed', async function () {
-      // Register 1 Advisor with 2_000 BABL 4Y of Vesting
-      // Vesting starting date 1 March 2021 9h PST Unix Time 1614618000
-      await timeLockRegistry.register(signer2.address, ethers.utils.parseEther('2000'), true, 1614618000);
-      const userSigner2Registered = await timeLockRegistry.checkVesting(signer2.address);
-      const userSigner2RegisteredTeam = userSigner2Registered[0];
-      const userSigner2RegisteredVestingBegin = userSigner2Registered[1];
-      const userSigner2RegisteredVestingEnd = userSigner2Registered[2];
-      expect(userSigner2RegisteredTeam).to.equal(true);
-      expect(userSigner2RegisteredVestingBegin).to.equal(1614618000);
-      expect(userSigner2RegisteredVestingEnd).to.equal(1614618000 + ONE_DAY_IN_SECONDS * 365 * 4);
-
-      // Cancel the registration of above registered Advisor before the claim is done
-      const ownerSignerBalance = await bablToken.balanceOf(owner.address);
-      const registryBalance = await bablToken.balanceOf(timeLockRegistry.address);
-      const newOwnerSignerBalance = BigInt(ownerSignerBalance) + BigInt(registryBalance);
-
-      await timeLockRegistry.cancelRegistration(signer2.address);
-
-      expect(newOwnerSignerBalance).to.equal(await bablToken.balanceOf(owner.address));
-      expect(await bablToken.balanceOf(timeLockRegistry.address)).to.equal(0);
-      await expect(timeLockRegistry.cancelRegistration(signer2.address)).to.be.revertedWith('Not registered');
-    });
-
     it('Should cancel all delivered tokens after a Team Member left', async function () {
       // Register 1 Team Member with 26_000 BABL 4Y of Vesting
       // Vesting starting date 1 March 2021 9h PST Unix Time 1614618000
       await timeLockRegistry.register(signer1.address, ethers.utils.parseEther('26000'), true, 1614618000);
-      const userSigner1Registered = await timeLockRegistry.checkVesting(signer1.address);
-      const userSigner1RegisteredTeam = userSigner1Registered[0];
-      const userSigner1RegisteredVestingBegin = userSigner1Registered[1];
-      const userSigner1RegisteredVestingEnd = userSigner1Registered[2];
-      expect(userSigner1RegisteredTeam).to.equal(true);
-      expect(userSigner1RegisteredVestingBegin).to.equal(1614618000);
-      expect(userSigner1RegisteredVestingEnd).to.equal(1614618000 + ONE_DAY_IN_SECONDS * 365 * 4);
 
       // Tokens are claimed by the Team Member and the registration is deleted in Time Lock Registry
       await bablToken.connect(signer1).claimMyTokens();
       // We move ahead 30 days
       ethers.provider.send('evm_increaseTime', [ONE_DAY_IN_SECONDS * 30]);
 
-      const userSigner1Balance = await bablToken.balanceOf(signer1.address);
       const userSigner1LockedBalance = await bablToken.viewLockedBalance(signer1.address);
-      expect(userSigner1Balance).to.equal(ethers.utils.parseEther('26000'));
-      await expect(timeLockRegistry.cancelRegistration(signer2.address)).to.be.revertedWith('Not registered');
+
+      expect(userSigner1LockedBalance).to.equal(ethers.utils.parseEther('26000'));
 
       // Cancel the registration of above registered Team Member
-
-      const registryBalance = await bablToken.balanceOf(timeLockRegistry.address);
-
-      const newRegistrySignerBalance = registryBalance.add(userSigner1LockedBalance);
-      const newUserSigner1Balance = userSigner1Balance.sub(userSigner1LockedBalance);
-
       await timeLockRegistry.cancelDeliveredTokens(signer1.address);
 
-      // console.log(`%s is the new balance of the registry, %s is the old balance`, newRegistrySignerBalance, registryBalance);
-      // console.log(`%s is the new balance of the signer user1, %s is its old balance`, newUserSigner1Balance, userSigner1Balance);
+      expect(await bablToken.balanceOf(timeLockRegistry.address)).to.equal(ethers.utils.parseEther('26000'));
+      expect(await bablToken.balanceOf(signer1.address)).to.equal(0);
 
-      expect(await bablToken.balanceOf(timeLockRegistry.address)).to.equal(newRegistrySignerBalance);
-      expect(await bablToken.balanceOf(signer1.address)).to.equal(newUserSigner1Balance);
+      await timeLockRegistry.transferToOwner(ethers.utils.parseEther('26000'));
+      expect(await bablToken.balanceOf(owner.address)).to.equal(ethers.utils.parseEther('1000000'));
+      expect(await bablToken.balanceOf(timeLockRegistry.address)).to.equal(ethers.utils.parseEther('0'));
+    });
+    it('Should fail trying to cancel delivered tokens to an investor', async function () {
+      // Register 1 Investor with 26_000 BABL 4Y of Vesting
+      // Vesting starting date 1 March 2021 9h PST Unix Time 1614618000
+      await timeLockRegistry.register(signer1.address, ethers.utils.parseEther('26000'), false, 1614618000);
 
-      await expect(timeLockRegistry.cancelRegistration(signer1.address)).to.be.revertedWith('Not registered');
+      // Tokens are claimed by the Team Member and the registration is deleted in Time Lock Registry
+      await bablToken.connect(signer1).claimMyTokens();
+      // We move ahead 30 days
+      ethers.provider.send('evm_increaseTime', [ONE_DAY_IN_SECONDS * 30]);
+
+      const userSigner1LockedBalance = await bablToken.viewLockedBalance(signer1.address);
+
+      expect(userSigner1LockedBalance).to.equal(ethers.utils.parseEther('26000'));
+
+      // Try to cancel the registration of above registered Investor
+      await expect(timeLockRegistry.cancelDeliveredTokens(signer1.address)).to.be.revertedWith(
+        'TimeLockedToken::cancelTokens:cannot cancel locked tokens to Investors',
+      );
+    });
+    it('Should fail if a cancel on delivered tokens is from the owner', async function () {
+      // Register 1 Team Member with 26_000 BABL 4Y of Vesting
+      // Vesting starting date 1 March 2021 9h PST Unix Time 1614618000
+      await timeLockRegistry.register(signer1.address, ethers.utils.parseEther('26000'), true, 1614618000);
+
+      // Tokens are claimed by the Team Member and the registration is deleted in Time Lock Registry
+      await bablToken.connect(signer1).claimMyTokens();
+      // We move ahead 30 days
+      ethers.provider.send('evm_increaseTime', [ONE_DAY_IN_SECONDS * 30]);
+
+      const userSigner1LockedBalance = await bablToken.viewLockedBalance(signer1.address);
+
+      expect(userSigner1LockedBalance).to.equal(ethers.utils.parseEther('26000'));
+
+      // Cancel the registration of above registered Team Member
+      await expect(bablToken.cancelVestedTokens(signer1.address)).to.be.revertedWith(
+        'TimeLockedToken:: onlyTimeLockRegistry: can only be executed by TimeLockRegistry',
+      );
+    });
+
+    it('Should fail if a cancel on delivered tokens is from a malicious address', async function () {
+      // Register 1 Team Member with 26_000 BABL 4Y of Vesting
+      // Vesting starting date 1 March 2021 9h PST Unix Time 1614618000
+      await timeLockRegistry.register(signer1.address, ethers.utils.parseEther('26000'), true, 1614618000);
+
+      // Tokens are claimed by the Team Member and the registration is deleted in Time Lock Registry
+      await bablToken.connect(signer1).claimMyTokens();
+      // We move ahead 30 days
+      ethers.provider.send('evm_increaseTime', [ONE_DAY_IN_SECONDS * 30]);
+
+      const userSigner1LockedBalance = await bablToken.viewLockedBalance(signer1.address);
+
+      expect(userSigner1LockedBalance).to.equal(ethers.utils.parseEther('26000'));
+
+      // Cancel the registration of above registered Team Member
+      await expect(bablToken.connect(signer2).cancelVestedTokens(signer1.address)).to.be.revertedWith(
+        'TimeLockedToken:: onlyTimeLockRegistry: can only be executed by TimeLockRegistry',
+      );
     });
   });
 
@@ -297,13 +478,83 @@ describe('BABLToken contract', function () {
       const totalSupply = await bablToken.totalSupply();
 
       // We define the the limit + 1 to overflow the mint beyond maxSupply
-      const value = BigInt(maxSupply) - BigInt(totalSupply) + ethers.utils.parseEther('1');
+      const value = BigInt(maxSupply[0]) - BigInt(totalSupply) + ethers.utils.parseEther('1');
 
       await expect(bablToken.mint(signer1.address, value)).to.be.revertedWith('BABLToken::mint: max supply exceeded');
-      // console.log(`%s is total supply, which is equal to the max supply %s`,totalSupply , maxSupply);
 
       // Total_Supply shouldn't have changed.
       expect(totalSupply).to.equal(await bablToken.totalSupply());
+    });
+
+    it('Should fail when trying to mint new tokens before the first epoch (8 years)', async function () {
+      const maxSupply = await bablToken.maxSupply();
+      const totalSupply = await bablToken.totalSupply();
+
+      await expect(bablToken.mint(signer1.address, 0)).to.be.revertedWith(
+        'BABLToken::mint: minting not allowed after the FIRST_EPOCH_MINT has passed >= 8 years',
+      );
+    });
+
+    it('Should fail when trying to mint 0 tokens', async function () {
+      ethers.provider.send('evm_increaseTime', [ONE_DAY_IN_SECONDS * 365 * 8]);
+
+      await expect(bablToken.mint(signer1.address, 0)).to.be.revertedWith(
+        'BABLToken::mint: mint should be higher than zero',
+      );
+    });
+    it('Should fail when trying to mint before mintingAllowedAfter', async function () {
+      const NEW_MAX_SUPPLY = ethers.utils.parseEther('1050000'); // 1_150_000e18
+      //Traveling on time >8 years ahead
+      ethers.provider.send('evm_increaseTime', [ONE_DAY_IN_SECONDS * 365 * 8]);
+      await expect(bablToken.changeMaxSupply(NEW_MAX_SUPPLY, 1906560000)); // June 2030 the 1st
+
+      await expect(bablToken.mint(signer1.address, 1)).to.be.not.reverted;
+      await expect(bablToken.mint(signer1.address, 1)).to.be.revertedWith(
+        'BABLToken::mint: minting not allowed yet because mintingAllowedAfter',
+      );
+    });
+
+    it('Should fail when trying to mint to the 0 (zero) address', async function () {
+      const NEW_MAX_SUPPLY = ethers.utils.parseEther('1050000'); // 1_150_000e18
+      // Traveling on time >8 years ahead
+      ethers.provider.send('evm_increaseTime', [ONE_DAY_IN_SECONDS * 365 * 8]);
+      await expect(bablToken.changeMaxSupply(NEW_MAX_SUPPLY, 1906560000)); // June 2030 the 1st
+
+      await expect(bablToken.mint(ADDRESS_ZERO, ethers.utils.parseEther('1'))).to.be.revertedWith(
+        'BABLToken::mint: cannot transfer to the zero address',
+      );
+    });
+
+    it('Should fail when trying to mint to the address of the own BABL Token smartcontract', async function () {
+      const NEW_MAX_SUPPLY = ethers.utils.parseEther('1050000'); // 1_150_000e18
+      // Traveling on time >8 years ahead
+      ethers.provider.send('evm_increaseTime', [ONE_DAY_IN_SECONDS * 365 * 8]);
+      await expect(bablToken.changeMaxSupply(NEW_MAX_SUPPLY, 1906560000)); // June 2030 the 1st
+
+      await expect(bablToken.mint(bablToken.address, ethers.utils.parseEther('1'))).to.be.revertedWith(
+        'BABLToken::mint: cannot mint to the address of this contract',
+      );
+    });
+
+    it('Should fail when trying to mint above Cap limit of 2%', async function () {
+      const NEW_MAX_SUPPLY = ethers.utils.parseEther('1050000'); // 1_150_000e18
+      //Traveling on time >8 years ahead
+      ethers.provider.send('evm_increaseTime', [ONE_DAY_IN_SECONDS * 365 * 8]);
+      await expect(bablToken.changeMaxSupply(NEW_MAX_SUPPLY, 1906560000)); // June 2030 the 1st
+
+      await expect(bablToken.mint(signer1.address, ethers.utils.parseEther('21000'))).to.be.revertedWith(
+        'BABLToken::mint: exceeded mint cap of 2% of total supply',
+      );
+    });
+    it('Should mint new tokens after 8 years equals to the Cap limit of 2%', async function () {
+      const NEW_MAX_SUPPLY = ethers.utils.parseEther('1050000'); // 1_150_000e18
+      //Traveling on time >8 years ahead
+      ethers.provider.send('evm_increaseTime', [ONE_DAY_IN_SECONDS * 365 * 8]);
+      await expect(bablToken.changeMaxSupply(NEW_MAX_SUPPLY, 1906560000)); // June 2030 the 1st
+
+      await expect(bablToken.mint(signer1.address, ethers.utils.parseEther('20000'))).to.be.not.reverted;
+      const signer1Balance = await bablToken.balanceOf(signer1.address);
+      expect(signer1Balance).to.equal(ethers.utils.parseEther('20000'));
     });
   });
 
@@ -333,11 +584,24 @@ describe('BABLToken contract', function () {
       const NEW_MAX_SUPPLY = ethers.utils.parseEther('1100000');
       const value2 = ethers.utils.parseEther('1000000');
       await expect(bablToken.changeMaxSupply(NEW_MAX_SUPPLY, 251596800)).to.be.revertedWith(
-        'BABLToken::changeMaxSupply: a change on MAX_SUPPLY not allowed until 8 years after deployment',
+        'BABLToken::changeMaxSupply: a change on maxSupplyAllowed not allowed until 8 years after deployment',
       );
 
       // MAX_SUPPLY shouldn't have changed.
-      expect(OLD_MAX_SUPPLY).to.equal(value2);
+      expect(OLD_MAX_SUPPLY[0]).to.equal(value2);
+    });
+    it('Should fail a try of changing MAX_SUPPLY before MaxSupplyAllowedAfter', async function () {
+      const OLD_MAX_SUPPLY = await bablToken.maxSupply();
+
+      // Try to change MAX_SUPPLY by a new number after 8 years by a lower amount
+      const NEW_MAX_SUPPLY = ethers.utils.parseEther('1050000'); // 1_150_000e18
+      // Traveling on time >8 years ahead
+      ethers.provider.send('evm_increaseTime', [ONE_DAY_IN_SECONDS * 365 * 8]);
+      await expect(bablToken.changeMaxSupply(NEW_MAX_SUPPLY, 1906560000)); // June 2030 the 1st
+
+      await expect(bablToken.changeMaxSupply(NEW_MAX_SUPPLY + 100, 1906560010)).to.be.revertedWith(
+        'BABLToken::changeMaxSupply: a change on maxSupplyAllowed not allowed yet',
+      );
     });
 
     it('Should fail a try of changing MAX_SUPPLY after 8 years by an amount below the current MAX_SUPPLY', async function () {
@@ -354,7 +618,7 @@ describe('BABLToken contract', function () {
       );
 
       // MAX_SUPPLY shouldn't have changed.
-      expect(OLD_MAX_SUPPLY).to.equal(value2);
+      expect(OLD_MAX_SUPPLY[0]).to.equal(value2);
     });
 
     it('Should fail a try of changing MAX_SUPPLY after 8 years by an amount above the cap of 5%', async function () {
@@ -372,7 +636,53 @@ describe('BABLToken contract', function () {
       const value2 = await bablToken.maxSupply();
 
       // MAX_SUPPLY shouldn't have changed.
-      expect(OLD_MAX_SUPPLY).to.equal(value2);
+      expect(OLD_MAX_SUPPLY[0]).to.equal(value2[0]);
+    });
+    it('Should fail a try of changing MAX_SUPPLY allowed after in less than a year from this moment', async function () {
+      const OLD_MAX_SUPPLY = await bablToken.maxSupply();
+
+      // Try to change MAX_SUPPLY by a new number after 8 years by a lower amount
+      // `require` will evaluate false and revert the transaction if the new value is above the cap (5%) the current MAX_SUPPLY.
+      const NEW_MAX_SUPPLY = ethers.utils.parseEther('1050000'); // 1_150_000e18
+      // Traveling on time >8 years ahead
+      ethers.provider.send('evm_increaseTime', [ONE_DAY_IN_SECONDS * 365 * 8]);
+      await expect(bablToken.changeMaxSupply(NEW_MAX_SUPPLY, 1617292800)).to.be.revertedWith(
+        'BABLToken::changeMaxSupply: the newMaxSupplyAllowedAfter should be at least 1 year in the future',
+      );
+
+      const value2 = await bablToken.maxSupply();
+
+      // MAX_SUPPLY shouldn't have changed.
+      expect(OLD_MAX_SUPPLY[0]).to.equal(value2[0]);
+    });
+
+    it('Should change MAX_SUPPLY allowed and set-up a newMaxSupplyAllowedAfter', async function () {
+      const OLD_MAX_SUPPLY = await bablToken.maxSupply();
+
+      // Try to change MAX_SUPPLY by a new number after 8 years by a lower amount
+      const NEW_MAX_SUPPLY = ethers.utils.parseEther('1050000'); // 1_150_000e18
+      // Traveling on time >8 years ahead
+      ethers.provider.send('evm_increaseTime', [ONE_DAY_IN_SECONDS * 365 * 8]);
+      await expect(bablToken.changeMaxSupply(NEW_MAX_SUPPLY, 1906560000)); // June 2030 the 1st
+
+      const value = await bablToken.maxSupply();
+
+      // MAX_SUPPLY should have changed and its newMaxSupplyAllowedAfter accordingly.
+      expect(value[0].toString()).to.equal(ethers.utils.parseEther('1050000'));
+      expect(value[1].toString()).to.equal('1906560000');
+    });
+    it('Should fail when trying to change the MAX_SUPPLY after the FIRST EPOCH 8 years but before allowed after', async function () {
+      // Traveling on time >8 years ahead
+      ethers.provider.send('evm_increaseTime', [ONE_DAY_IN_SECONDS * 365 * 8]);
+
+      const OLD_MAX_SUPPLY = await bablToken.maxSupply();
+
+      // Try to change MAX_SUPPLY by a new number after 8 years by a lower amount
+      const NEW_MAX_SUPPLY = ethers.utils.parseEther('1050000'); // 1_150_000e18
+      await expect(bablToken.changeMaxSupply(NEW_MAX_SUPPLY, 1906560000)); // June 2030 the 1st
+      await expect(bablToken.changeMaxSupply(NEW_MAX_SUPPLY, 1906560001)).to.be.revertedWith(
+        'BABLToken::changeMaxSupply: a change on maxSupplyAllowed not allowed yet',
+      );
     });
   });
 });

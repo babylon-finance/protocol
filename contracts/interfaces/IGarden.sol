@@ -89,6 +89,8 @@ interface IGarden is IERC20 {
 
     function getStrategies() external view returns (address[] memory);
 
+    function getFinalizedStrategies() external view returns (address[] memory);
+
     function strategies(uint256 _index) external view returns (address);
 
     function isStrategy(address _strategy) external view returns (bool);
@@ -104,7 +106,8 @@ interface IGarden is IERC20 {
         uint256 _stake,
         uint256 _investmentDuration,
         uint256 _expectedReturn,
-        uint256 _minRebalanceCapital
+        uint256 _minRebalanceCapital,
+        address _strategyData
     ) external;
 
     function rebalanceInvestments(uint256 _fee) external;

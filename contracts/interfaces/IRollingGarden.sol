@@ -54,6 +54,16 @@ interface IRollingGarden is IERC20, IGarden {
         address payable _to
     ) external;
 
+    function withdrawToReservePool(
+        uint256 _gardenTokenQuantity,
+        uint256 _minReserveReceiveQuantity,
+        address payable _to
+    ) external;
+
+    function claimReturns(address[] calldata _finalizedStrategies) external;
+
+    function getProfitsAndBabl(address[] calldata _finalizedStrategies) external view returns (uint256, uint96);
+
     function setDepositLimit(uint256 limit) external;
 
     function getExpectedReserveWithdrawalQuantity(uint256 _gardenTokenQuantity) external view returns (uint256);
@@ -75,8 +85,4 @@ interface IRollingGarden is IERC20, IGarden {
     function getCurrentTopStrategy() external view returns (uint8);
 
     function canWithdrawEthAmount(uint256 _amount) external view returns (bool);
-
-    function claimReturns(address[] calldata _finalizedStrategies) external;
-
-    function getProfitsAndBabl(address[] calldata _finalizedStrategies) external view returns (uint256, uint256);
 }

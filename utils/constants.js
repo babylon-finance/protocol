@@ -28,6 +28,8 @@ const ONE_DAY_IN_SECONDS = ethers.BigNumber.from(60 * 60 * 24);
 const ONE_HOUR_IN_SECONDS = ethers.BigNumber.from(60 * 60);
 const ONE_YEAR_IN_SECONDS = ethers.BigNumber.from(31557600);
 const PRECISE_UNIT = WeiPerEther;
+const ONE_ETH = WeiPerEther;
+const MINUS_ONE_ETH = WeiPerEther.mul(-1);
 
 const STRATEGY_TYPES = {
   LONG: 0,
@@ -53,4 +55,6 @@ module.exports = {
   THREE,
   TWO,
   ZERO,
+  ONE_ETH,
+  MINUS_ONE_ETH,
 };

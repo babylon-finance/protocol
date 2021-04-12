@@ -29,59 +29,45 @@ async function updateTWAPs(garden) {
 }
 
 async function createLongStrategy(garden, integration, signer, params = DEFAULT_STRATEGY_PARAMS, longParams) {
-  await garden.connect(signer).addStrategy(0, integration, ...params);
+  const passedLongParams = longParams || [addresses.tokens.DAI];
+  await garden.connect(signer).addStrategy(0, integration, ...params, ...passedLongParams);
   const strategies = await garden.getStrategies();
   const lastStrategyAddr = strategies[strategies.length - 1];
 
-  const passedLongParams = longParams || [addresses.tokens.DAI];
-
   const strategy = await ethers.getContractAt('LongStrategy', lastStrategyAddr);
-  await strategy.connect(signer).setLongData(...passedLongParams, {
-    gasPrice: 0,
-  });
 
   return strategy;
 }
 
 async function createPoolStrategy(garden, integration, signer, params = DEFAULT_STRATEGY_PARAMS, poolParams) {
-  await garden.connect(signer).addStrategy(1, integration, ...params);
+  const passedPoolParams = poolParams || [addresses.balancer.pools.wethdai];
+  await garden.connect(signer).addStrategy(1, integration, ...params, ...passedPoolParams);
   const strategies = await garden.getStrategies();
   const lastStrategyAddr = strategies[strategies.length - 1];
 
-  const passedPoolParams = poolParams || [addresses.balancer.pools.wethdai];
-
   const strategy = await ethers.getContractAt('LiquidityPoolStrategy', lastStrategyAddr);
-  await strategy.connect(signer).setPoolData(...passedPoolParams, {
-    gasPrice: 0,
-  });
 
   return strategy;
 }
 
 async function createYieldStrategy(garden, integration, signer, params = DEFAULT_STRATEGY_PARAMS, yieldParams) {
-  await garden.connect(signer).addStrategy(2, integration, ...params);
+  const passedYieldParams = yieldParams || [addresses.yearn.vaults.ydai];
+  await garden.connect(signer).addStrategy(2, integration, ...params, ...passedYieldParams);
   const strategies = await garden.getStrategies();
   const lastStrategyAddr = strategies[strategies.length - 1];
 
-  const passedYieldParams = yieldParams || [addresses.yearn.vaults.ydai];
   const strategy = await ethers.getContractAt('YieldFarmingStrategy', lastStrategyAddr);
-  await strategy.connect(signer).setYieldFarmingData(...passedYieldParams, {
-    gasPrice: 0,
-  });
 
   return strategy;
 }
 
 async function createLendStrategy(garden, integration, signer, params = DEFAULT_STRATEGY_PARAMS, lendParams) {
-  await garden.connect(signer).addStrategy(3, integration, ...params);
+  const passedLendParams = lendParams || [addresses.tokens.USDC];
+  await garden.connect(signer).addStrategy(3, integration, ...params, ...passedLendParams);
   const strategies = await garden.getStrategies();
   const lastStrategyAddr = strategies[strategies.length - 1];
 
-  const passedLendParams = lendParams || [addresses.tokens.USDC];
   const strategy = await ethers.getContractAt('LendStrategy', lastStrategyAddr);
-  await strategy.connect(signer).setLendData(...passedLendParams, {
-    gasPrice: 0,
-  });
 
   return strategy;
 }

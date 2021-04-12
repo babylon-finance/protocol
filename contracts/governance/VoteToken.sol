@@ -181,6 +181,23 @@ abstract contract VoteToken is Context, ERC20, Ownable, IVoteToken, ReentrancyGu
         return checkpoints[account][lower].votes;
     }
 
+    function getMyDelegatee() public view override returns (address) {
+        return delegates[msg.sender];
+    }
+
+    function getDelegatee(address account) public view override returns (address) {
+        return delegates[account];
+    }
+
+    function getCheckpoints(address account, uint32 id) public view override returns (uint32 fromBlock, uint96 votes) {
+        Checkpoint storage getCheckpoint = checkpoints[account][id];
+        return (getCheckpoint.fromBlock, getCheckpoint.votes);
+    }
+
+    function getNumberOfCheckpoints(address account) public view override returns (uint32) {
+        return numCheckpoints[account];
+    }
+
     /* ============ Internal Only Function ============ */
 
     /**
@@ -218,23 +235,23 @@ abstract contract VoteToken is Context, ERC20, Ownable, IVoteToken, ReentrancyGu
         address dstRep,
         uint96 amount
     ) internal {
-        require(srcRep != dstRep, 'VoteToken::_moveDelegates: srcRep and dstRep should be different');
-        require(amount > 0, 'VoteToken::_moveDelegates: amount must be >0');
-        require(srcRep != address(0), 'VoteToken::_moveDelegates: srcRep cannot be the Zero address');
-        require(dstRep != address(0), 'VoteToken::_moveDelegates: dstRep cannot be the Zero address');
-
-        // Sub voting amount to source
-        uint32 srcRepNum = numCheckpoints[srcRep];
-        uint96 srcRepOld = srcRepNum > 0 ? checkpoints[srcRep][srcRepNum - 1].votes : 0;
-        uint96 srcRepNew = sub96(srcRepOld, amount, 'VoteToken::_moveDelegates: vote amount underflows');
-        _writeCheckpoint(srcRep, srcRepNum, srcRepOld, srcRepNew);
-
-        // Add it to destination
-
-        uint32 dstRepNum = numCheckpoints[dstRep];
-        uint96 dstRepOld = dstRepNum > 0 ? checkpoints[dstRep][dstRepNum - 1].votes : 0;
-        uint96 dstRepNew = add96(dstRepOld, amount, 'VoteToken::_moveDelegates: vote amount overflows');
-        _writeCheckpoint(dstRep, dstRepNum, dstRepOld, dstRepNew);
+        if (srcRep != dstRep && amount > 0) {
+            // It must not revert but do nothing in cases of address(0) being part of the move
+            // Sub voting amount to source in case it is not the zero address (e.g. transfers)
+            if (srcRep != address(0)) {
+                uint32 srcRepNum = numCheckpoints[srcRep];
+                uint96 srcRepOld = srcRepNum > 0 ? checkpoints[srcRep][srcRepNum - 1].votes : 0;
+                uint96 srcRepNew = sub96(srcRepOld, amount, 'VoteToken::_moveDelegates: vote amount underflows');
+                _writeCheckpoint(srcRep, srcRepNum, srcRepOld, srcRepNew);
+            }
+            if (dstRep != address(0)) {
+                // Add it to destination in case it is not the zero address (e.g. any transfer of tokens or delegations except a first mint to a specific address)
+                uint32 dstRepNum = numCheckpoints[dstRep];
+                uint96 dstRepOld = dstRepNum > 0 ? checkpoints[dstRep][dstRepNum - 1].votes : 0;
+                uint96 dstRepNew = add96(dstRepOld, amount, 'VoteToken::_moveDelegates: vote amount overflows');
+                _writeCheckpoint(dstRep, dstRepNum, dstRepOld, dstRepNew);
+            }
+        }
     }
 
     /**

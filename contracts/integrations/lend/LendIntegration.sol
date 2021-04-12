@@ -151,8 +151,6 @@ abstract contract LendIntegration is BaseIntegration, ReentrancyGuard {
 
         investmentInfo.strategy.invokeFromIntegration(targetInvestment, callValue, methodData);
 
-        _accrueProtocolFee(address(investmentInfo.strategy), _assetToken, _numTokensToRedeem);
-
         _validatePostExitInvestmentData(investmentInfo);
 
         emit TokensSupplied(

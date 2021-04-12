@@ -14,10 +14,14 @@
 
 pragma solidity 0.7.4;
 
-import {TimeLockedToken} from './TimeLockedToken.sol';
+import 'hardhat/console.sol';
 import {Ownable} from '@openzeppelin/contracts/access/Ownable.sol';
 import {SafeMath} from '@openzeppelin/contracts/math/SafeMath.sol';
 import {Address} from '@openzeppelin/contracts/utils/Address.sol';
+import {SafeERC20} from '@openzeppelin/contracts/token/ERC20/SafeERC20.sol';
+import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
+
+import {TimeLockedToken} from './TimeLockedToken.sol';
 
 /**
  * @title TimeLockRegistry
@@ -26,10 +30,12 @@ import {Address} from '@openzeppelin/contracts/utils/Address.sol';
  * @dev This contract allows owner to register distributions for a TimeLockedToken
  *
  * To register a distribution, register method should be called by the owner.
- * claim() should be called only by the BABL Token smartcontract (modifier onlyBABLToken) when any account registered to receive tokens make its own claim
+ * claim() should be called only by the BABL Token smartcontract (modifier onlyBABLToken)
+ *  when any account registered to receive tokens make its own claim
  * If case of a mistake, owner can cancel registration before the claim is done by the account
  *
- * Note this contract address must be setup in the TimeLockedToken's contract pointing to interact with (e.g. setTimeLockRegistry() function)
+ * Note this contract address must be setup in the TimeLockedToken's contract pointing
+ * to interact with (e.g. setTimeLockRegistry() function)
  */
 
 contract TimeLockRegistry is Ownable {
@@ -141,9 +147,10 @@ contract TimeLockRegistry is Ownable {
         newTokenVested.lastClaim = vestingStartingDate;
 
         tokenVested[receiver] = newTokenVested;
-
+        // TODO CHECK IF ALLOWANCE AS OF TODAY IS THE FINAL MODEL
+        // IN CASE OF A DIRECT MINT TO TIME LOCK REGISTRY ADDRESS THE TOKEN TRANSFER MIGHT BE UPDATED
         // transfer tokens from owner who might have enough allowance of tokens by BABL Token owner
-        require(token.transferFrom(msg.sender, address(this), distribution), 'Transfer failed');
+        SafeERC20.safeTransferFrom(token, msg.sender, address(this), distribution);
 
         // emit register event
         emit Register(receiver, distribution);
@@ -171,8 +178,9 @@ contract TimeLockRegistry is Ownable {
         // set tokenVested mapping to 0
         delete tokenVested[receiver];
 
+        // TODO CHECK THE PROCESS ADDRESS(THIS) VS. OWNER
         // transfer tokens back to owner
-        require(token.transfer(msg.sender, amount), 'Transfer failed');
+        SafeERC20.safeTransfer(token, msg.sender, amount);
 
         // emit cancel event
         emit Cancel(receiver, amount);
@@ -185,14 +193,27 @@ contract TimeLockRegistry is Ownable {
      *
      * @notice Cancel already delivered tokens. It might only apply when non-completion of vesting period of Team members or Advisors
      * @dev An automatic override allowance is granted during the claim process
-     * @param receiver Address that should have it's distribution removed
+     * @param account Address that should have it's distribution removed
      * @return Whether or not it succeeded
      */
-    function cancelDeliveredTokens(address receiver) external onlyOwner returns (bool) {
-        uint256 loosingAmount = token.cancelTokens(receiver);
+    function cancelDeliveredTokens(address account) public onlyOwner returns (bool) {
+        uint256 loosingAmount = token.cancelVestedTokens(account);
 
         // emit cancel event
-        emit Cancel(receiver, loosingAmount);
+        emit Cancel(account, loosingAmount);
+        return true;
+    }
+
+    /**
+     * PRIVILEGED GOVERNANCE FUNCTION. Recover tokens in Time Lock Registry smartcontract address by the owner
+     *
+     * @notice Send tokens from smartcontract address to the owner.
+     * It might only apply after a cancellation of vested tokens
+     * @param amount Amount to be recovered by the owner of the Time Lock Registry smartcontract from its balance
+     * @return Whether or not it succeeded
+     */
+    function transferToOwner(uint256 amount) public onlyOwner returns (bool) {
+        SafeERC20.safeTransfer(token, msg.sender, amount);
         return true;
     }
 
@@ -235,6 +256,8 @@ contract TimeLockRegistry is Ownable {
         return amount;
     }
 
+    /* ============ Getter Functions ============ */
+
     function checkVesting(address address_)
         public
         view
@@ -251,5 +274,9 @@ contract TimeLockRegistry is Ownable {
             tokenVested[address_].vestingEnd,
             tokenVested[address_].lastClaim
         );
+    }
+
+    function checkRegisteredDistribution(address address_) public view returns (uint256 amount) {
+        return registeredDistributions[address_];
     }
 }

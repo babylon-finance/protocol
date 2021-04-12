@@ -29,20 +29,31 @@ interface IPoolIntegration is IIntegration {
     function joinPool(
         address _poolAddress,
         uint256 _poolTokensOut,
-        address[] calldata _tokensIn,
-        uint256[] calldata _maxAmountsIn
+        address[] memory _poolTokens,
+        uint256[] memory _maxAmountsIn
     ) external;
 
     function exitPool(
         address _poolAddress,
         uint256 _poolTokensIn,
-        address[] calldata _tokensOut,
-        uint256[] calldata _minAmountsOut
+        address[] memory _poolTokens,
+        uint256[] memory _minAmountsOut
     ) external;
 
     function getPoolTokens(address _poolAddress) external view returns (address[] memory);
 
     function getPoolWeights(address _poolAddress) external view returns (uint256[] memory);
+
+    function getPoolTokensOut(
+        address _poolAdress,
+        address _tokenAddress,
+        uint256 _maxAmountsIn
+    ) external view returns (uint256);
+
+    function getPoolMinAmountsOut(address _poolAddress, uint256 _poolTokenAmount)
+        external
+        view
+        returns (uint256[] memory _minAmountsOut);
 
     function isPool(address _poolAddress) external view returns (bool);
 }

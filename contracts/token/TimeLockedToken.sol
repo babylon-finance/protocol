@@ -123,9 +123,7 @@ abstract contract TimeLockedToken is VoteToken {
      * @param newTimeLockRegistry Address of TimeLockRegistry contract
      */
     function setTimeLockRegistry(TimeLockRegistry newTimeLockRegistry) external onlyOwner returns (bool) {
-        //TODO - REMOVE AFTER USING CREATE2 DURING DEPLOYMENT TO ASSIGN ITS ADDRESS AS A CONSTANT FOREVER - NOT ABLE TO BE CHANGED BY OWNER
-        // console.log(" %s is the new timelockRegistry", newTimeLockRegistry);
-        //console.log(" %s is the old timelockRegistry", timeLockRegistry);
+        //TODO - REMOVE THIS FUNCTION - TIMELOCKREGISTRY ADDRESS MUST NOT BE CHANGED SINCE DEPLOYMENT - AFTER USING CREATE2 DURING DEPLOYMENT TO ASSIGN ITS ADDRESS AS A CONSTANT FOREVER - NOT ABLE TO BE CHANGED BY OWNER
 
         require(address(newTimeLockRegistry) != address(0), 'cannot be zero address');
         require(address(newTimeLockRegistry) != address(this), 'cannot be this contract');
@@ -186,40 +184,14 @@ abstract contract TimeLockedToken is VoteToken {
     }
 
     /**
-     * PRIVILEGED GOVERNANCE FUNCTION. Cancel and remove locked tokens due to non-completion of  vesting period
-     * applied only by Time Lock Registry and specifically to Team or Advisors
+     * PRIVILEGED GOVERNANCE FUNCTION. Cancel and remove locked tokens due to non-completion of vesting period
+     * applied only by Time Lock Registry and specifically to Team or Advisors as it does not apply to investors.
      *
      * @dev Cancel distribution registration
      * @param lockedAccount that should have its still locked distribution removed due to non-completion of its vesting period
      */
-    function cancelTokens(address lockedAccount) public onlyTimeLockRegistry returns (uint256) {
-        require(distribution[lockedAccount] != 0, 'TimeLockedToken::cancelTokens:Not registered');
-
-        // get an update on locked amount from distributions at this precise moment
-        uint256 loosingAmount = lockedBalance(lockedAccount);
-
-        require(loosingAmount > 0, 'TimeLockedToken::cancelTokens:There are no more locked tokens');
-        require(
-            vestedToken[lockedAccount].teamOrAdvisor == true,
-            'TimeLockedToken::cancelTokens:cannot cancel locked tokens to Investors'
-        );
-
-        // set distribution mapping to 0
-        delete distribution[lockedAccount];
-
-        // set tokenVested mapping to 0
-        delete vestedToken[lockedAccount];
-
-        // transfer only locked tokens back to TimeLockRegistry
-        require(
-            transferFrom(lockedAccount, address(timeLockRegistry), loosingAmount),
-            'TimeLockedToken::cancelTokens:Transfer failed'
-        );
-
-        // emit cancel event
-        emit Cancel(lockedAccount, loosingAmount);
-
-        return loosingAmount;
+    function cancelVestedTokens(address lockedAccount) external onlyTimeLockRegistry returns (uint256) {
+        return _cancelVestedTokensFromTimeLock(lockedAccount);
     }
 
     /**
@@ -230,9 +202,6 @@ abstract contract TimeLockedToken is VoteToken {
     function claimMyTokens() public {
         // claim msg.sender tokens from timeLockRegistry
         uint256 amount = timeLockRegistry.claim(msg.sender);
-
-        require(amount > 0, 'No tokens to claim');
-
         // After a proper claim, locked tokens of Team and Advisors profiles are under restricted special vesting conditions so they automatic grant
         // rights to the Time Lock Registry to only retire locked tokens if non-compliance vesting conditions take places along the vesting periods.
         // It does not apply to Investors under vesting (their locked tokens cannot be removed).
@@ -361,10 +330,13 @@ abstract contract TimeLockedToken is VoteToken {
      * @return Whether or not the increaseAllowance succeeded
      */
     function increaseAllowance(address spender, uint256 addedValue) public override nonReentrant returns (bool) {
-        require(unlockedBalance(msg.sender) >= addedValue, 'Not enough unlocked tokens');
-        require(spender != address(0), 'Spender cannot be zero address');
-        require(spender != msg.sender, 'Spender cannot be the msg.sender');
-        approve(spender, allowance(msg.sender, spender).add(addedValue));
+        require(
+            unlockedBalance(msg.sender) >= addedValue,
+            'TimeLockedToken::increaseAllowance:Not enough unlocked tokens'
+        );
+        require(spender != address(0), 'TimeLockedToken::increaseAllowance:Spender cannot be zero address');
+        require(spender != msg.sender, 'TimeLockedToken::increaseAllowance:Spender cannot be the msg.sender');
+        _approve(msg.sender, spender, allowance(msg.sender, spender).add(addedValue));
         return true;
     }
 
@@ -380,19 +352,23 @@ abstract contract TimeLockedToken is VoteToken {
      */
     function decreaseAllowance(address spender, uint256 subtractedValue) public override nonReentrant returns (bool) {
         require(spender != address(0), 'TimeLockedToken::decreaseAllowance:Spender cannot be zero address');
+        require(spender != msg.sender, 'TimeLockedToken::decreaseAllowance:Spender cannot be the msg.sender');
         require(
             allowance(msg.sender, spender) >= subtractedValue,
             'TimeLockedToken::decreaseAllowance:Underflow condition'
         );
-        require(spender != msg.sender, 'TimeLockedToken::decreaseAllowance:Spender cannot be the msg.sender');
 
         // There is no option to decreaseAllowance to timeLockRegistry in case of vested tokens
         require(
             address(spender) != address(timeLockRegistry),
-            'TimeLockedToken::decreaseAllowance: cannot decrease allowance to timeLockRegistry'
+            'TimeLockedToken::decreaseAllowance:cannot decrease allowance to timeLockRegistry'
         );
 
-        approve(spender, allowance(msg.sender, spender).sub(subtractedValue));
+        _approve(
+            msg.sender,
+            spender,
+            allowance(msg.sender, spender).sub(subtractedValue, 'ERC20: decreased allowance below zero')
+        );
         return true;
     }
 
@@ -426,5 +402,48 @@ abstract contract TimeLockedToken is VoteToken {
         // check if enough unlocked balance to transfer
         require(unlockedBalance(_from) >= _value, 'TimeLockedToken:: _transfer: attempting to transfer locked funds');
         super._transfer(_from, _to, _value);
+        // voting power
+        _moveDelegates(
+            delegates[_from],
+            delegates[_to],
+            safe96(_value, 'TimeLockedToken:: _transfer: uint96 overflow')
+        );
+    }
+
+    /**
+     * PRIVILEGED GOVERNANCE FUNCTION. Cancel and remove locked tokens due to non-completion of  vesting period
+     * applied only by Time Lock Registry and specifically to Team or Advisors
+     *
+     * @dev Cancel distribution registration
+     * @param lockedAccount that should have its still locked distribution removed due to non-completion of its vesting period
+     */
+    function _cancelVestedTokensFromTimeLock(address lockedAccount) internal onlyTimeLockRegistry returns (uint256) {
+        require(distribution[lockedAccount] != 0, 'TimeLockedToken::cancelTokens:Not registered');
+
+        // get an update on locked amount from distributions at this precise moment
+        uint256 loosingAmount = lockedBalance(lockedAccount);
+
+        require(loosingAmount > 0, 'TimeLockedToken::cancelTokens:There are no more locked tokens');
+        require(
+            vestedToken[lockedAccount].teamOrAdvisor == true,
+            'TimeLockedToken::cancelTokens:cannot cancel locked tokens to Investors'
+        );
+
+        // set distribution mapping to 0
+        delete distribution[lockedAccount];
+
+        // set tokenVested mapping to 0
+        delete vestedToken[lockedAccount];
+
+        // transfer only locked tokens back to TimeLockRegistry Owner (msg.sender)
+        require(
+            transferFrom(lockedAccount, address(timeLockRegistry), loosingAmount),
+            'TimeLockedToken::cancelTokens:Transfer failed'
+        );
+
+        // emit cancel event
+        emit Cancel(lockedAccount, loosingAmount);
+
+        return loosingAmount;
     }
 }

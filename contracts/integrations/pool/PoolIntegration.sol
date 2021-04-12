@@ -55,13 +55,11 @@ abstract contract PoolIntegration is BaseIntegration, ReentrancyGuard {
 
     event PoolEntered(address indexed _strategy, address indexed _garden, address _pool, uint256 _poolTokensOut);
 
-    event PoolExited(
-        address indexed _strategy,
-        address indexed _garden,
-        address _pool,
-        uint256 _poolTokensIn,
-        uint256 _protocolFee
-    );
+    event PoolExited(address indexed _strategy, address indexed _garden, address _pool, uint256 _poolTokensIn);
+
+    /* ============ Constants ============ */
+
+    uint256 internal constant SLIPPAGE_ALLOWED = 1e16; // 1%
 
     /* ============ Constructor ============ */
 
@@ -137,15 +135,8 @@ abstract contract PoolIntegration is BaseIntegration, ReentrancyGuard {
             _getExitPoolCalldata(_poolAddress, _poolTokensIn, _tokensOut, _minAmountsOut);
         poolInfo.strategy.invokeFromIntegration(targetPool, callValue, methodData);
         _validatePostExitPoolData(poolInfo);
-        uint256 protocolFee = _accrueProtocolFee(address(poolInfo.strategy), _tokensOut[0], _minAmountsOut[0]);
 
-        emit PoolExited(
-            address(poolInfo.strategy),
-            address(poolInfo.garden),
-            poolInfo.pool,
-            _poolTokensIn,
-            protocolFee
-        );
+        emit PoolExited(address(poolInfo.strategy), address(poolInfo.garden), poolInfo.pool, _poolTokensIn);
     }
 
     /**

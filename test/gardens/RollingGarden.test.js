@@ -191,8 +191,11 @@ describe('Garden', function () {
         value: ethers.utils.parseEther('1'),
       });
 
-      await expect(garden1.connect(signer3).addStrategy(0, balancerIntegration.address, ...DEFAULT_STRATEGY_PARAMS)).to
-        .not.be.reverted;
+      await expect(
+        garden1
+          .connect(signer3)
+          .addStrategy(0, balancerIntegration.address, ...DEFAULT_STRATEGY_PARAMS, addresses.balancer.pools.wethdai),
+      ).to.not.be.reverted;
     });
 
     it('a contributor should not be able to add an investment strategy with a small stake', async function () {

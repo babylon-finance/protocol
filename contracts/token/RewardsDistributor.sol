@@ -33,19 +33,18 @@ import {TimeLockedToken} from './TimeLockedToken.sol';
 import {Ownable} from '@openzeppelin/contracts/access/Ownable.sol';
 import {SafeMath} from '@openzeppelin/contracts/math/SafeMath.sol';
 import {Address} from '@openzeppelin/contracts/utils/Address.sol';
+import {SafeERC20} from '@openzeppelin/contracts/token/ERC20/SafeERC20.sol';
+
+import {SafeDecimalMath} from '../lib/SafeDecimalMath.sol';
+import {PreciseUnitMath} from '../lib/PreciseUnitMath.sol';
+import {Math} from '../lib/Math.sol';
+import {Safe3296} from '../lib/Safe3296.sol';
 
 import {IBabController} from '../interfaces/IBabController.sol';
 import {IRollingGarden} from '../interfaces/IRollingGarden.sol';
 import {IStrategy} from '../interfaces/IStrategy.sol';
 import {TimeLockedToken} from './TimeLockedToken.sol';
-
 import {IRewardsDistributor} from '../interfaces/IRewardsDistributor.sol';
-
-import {SafeDecimalMath} from '../lib/SafeDecimalMath.sol';
-import {SafeMath} from '@openzeppelin/contracts/math/SafeMath.sol';
-import {PreciseUnitMath} from '../lib/PreciseUnitMath.sol';
-import {Math} from '../lib/Math.sol';
-import {Safe3296} from '../lib/Safe3296.sol';
 
 contract RewardsDistributor is Ownable {
     using SafeMath for uint256;
@@ -106,10 +105,12 @@ contract RewardsDistributor is Ownable {
     mapping(uint256 => ProtocolPerQuarter) protocolPerQuarter; //
     mapping(uint256 => bool) isProtocolPerQuarter; // Check if the protocol per quarter data has been initialized
 
-    uint256 public EPOCH_DURATION = 90 days; // Duration of its EPOCH in days
+    mapping(address => mapping(uint256 => uint256)) rewardsPowerOverhead; // Only used if each strategy has power overhead due to changes overtime
+
+    uint256 public constant EPOCH_DURATION = 90 days; // Duration of its EPOCH in days
     uint256 public START_TIME; // Starting time of the rewards distribution
 
-    // 500K BABL allocated to this BABL Mining Program, the first quarter is Q1_REWARDD and the following quarters will follow the supply curve using a decay rate
+    // 500K BABL allocated to this BABL Mining Program, the first quarter is Q1_REWARDS and the following quarters will follow the supply curve using a decay rate
     uint256 public constant Q1_REWARDS = 53_571_428_571_428_600e6; // First quarter (epoch) BABL rewards
     uint256 public constant DECAY_RATE = 120000000000000000; // 12% quarterly decay rate (each 90 days) (Rewards on Q1 = 1,12 * Rewards on Q2) being Q1= Quarter 1, Q2 = Quarter 2
 
@@ -126,6 +127,7 @@ contract RewardsDistributor is Ownable {
     /* ============ External Functions ============ */
 
     function addProtocolPrincipal(uint256 _capital) public onlyStrategy {
+        strategy = IStrategy(msg.sender);
         protocolPrincipal = protocolPrincipal.add(_capital);
         ProtocolPerTimestamp storage protocolCheckpoint = protocolPerTimestamp[block.timestamp];
         protocolCheckpoint.principal = protocolPrincipal;
@@ -148,6 +150,9 @@ contract RewardsDistributor is Ownable {
         // Here we control the accumulated protocol power per each quarter
         // Create the quarter checkpoint in case the checkpoint is the first in the epoch
         _addProtocolPerQuarter(block.timestamp);
+        // We update the rewards overhead if any
+        //rewardsPowerOverhead[address(strategy)][getQuarter(block.timestamp)] = rewardsPowerOverhead[address(strategy)][getQuarter(block.timestamp)].add(_capital.mul(block.timestamp.sub(strategy.updatedAt())));
+        _updatePowerOverhead(strategy, _capital);
         pid++;
     }
 
@@ -165,58 +170,79 @@ contract RewardsDistributor is Ownable {
         );
         timeList.push(block.timestamp);
         // Here we control the accumulated protocol power per each quarter
-        // Create the quarter checkpoint in case the checkpoint is the first in the epoch
+        // Create the quarter checkpoint in case the checkpoint is the first in the epoch or there were epochs without checkpoints
         _addProtocolPerQuarter(block.timestamp);
         pid++;
     }
 
     function getStrategyRewards(address _strategy) public returns (uint96) {
         strategy = IStrategy(_strategy);
+        require(strategy.exitedAt() != 0, 'The strategy has to be finished before calculations');
+        if (strategy.strategyRewards() != 0) return strategy.strategyRewards(); // We avoid gas consuming once a strategy got its BABL rewards during its finalization
+
+        // If the calculation was not done earlier we go for it
         (uint256 numQuarters, uint256 startingQuarter) = getRewardsWindow(strategy.executedAt(), strategy.exitedAt());
         uint256 bablRewards = 0;
         if (numQuarters <= 1) {
             bablRewards = (
-                (strategy.capitalAllocated().preciseMul(strategy.exitedAt().sub(strategy.executedAt()))).div(
-                    protocolPerQuarter[startingQuarter].quarterPower
+                (
+                    strategy.capitalAllocated().mul(strategy.exitedAt().sub(strategy.executedAt())).sub(
+                        strategy.rewardsTotalOverhead()
+                    )
                 )
+                    .preciseDiv(protocolPerQuarter[startingQuarter].quarterPower)
             )
-                .mul(protocolPerQuarter[startingQuarter].supplyPerQuarter);
+                .preciseMul(uint256(protocolPerQuarter[startingQuarter].supplyPerQuarter))
+                .mul(strategy.exitedAt().sub(startingQuarter))
+                .div(block.timestamp.sub(startingQuarter)); // Proportional supply till that moment within the same epoch
+            require(bablRewards <= protocolPerQuarter[startingQuarter].supplyPerQuarter, 'overflow in supply');
+            require(
+                strategy.capitalAllocated().mul(strategy.exitedAt().sub(strategy.executedAt())).sub(
+                    strategy.rewardsTotalOverhead()
+                ) <= protocolPerQuarter[startingQuarter].quarterPower,
+                'overflow in power'
+            );
         } else {
             // The strategy takes longer than one quarter / epoch
             // We need to calculate the strategy vs. protocol power ratio per each quarter
             uint256[] memory strategyPower = new uint256[](numQuarters); // Strategy power in each Epoch
             uint256[] memory protocolPower = new uint256[](numQuarters); // Protocol power in each Epoch
             for (uint256 i = 0; i <= numQuarters.sub(1); i++) {
-                uint256 slotEnding = START_TIME.add(startingQuarter.add(i) * EPOCH_DURATION); // Initialization timestamp at the end of the first slot where the strategy starts its execution
+                uint256 slotEnding = START_TIME.add(startingQuarter.add(i).mul(EPOCH_DURATION)); // Initialization timestamp at the end of the first slot where the strategy starts its execution
 
                 // We iterate all the quarters where the strategy was active
-                uint256 percentage = 1000000000000000000;
+                uint256 percentage = 1e18;
                 if (strategy.executedAt().add(EPOCH_DURATION) > slotEnding) {
                     // We are in the first quarter of the strategy
 
-                    strategyPower[i] = strategy.capitalAllocated().mul(slotEnding.sub(strategy.executedAt()));
+                    strategyPower[i] = strategy.capitalAllocated().mul(slotEnding.sub(strategy.executedAt())).sub(
+                        rewardsPowerOverhead[address(strategy)][getQuarter(strategy.executedAt())]
+                    );
                 } else if (strategy.executedAt() < slotEnding.sub(EPOCH_DURATION) && slotEnding < strategy.exitedAt()) {
                     // We are in an intermediate quarter different from starting or ending quarters
-                    strategyPower[i] = strategy.capitalAllocated().mul(slotEnding.sub(slotEnding.sub(EPOCH_DURATION)));
+                    strategyPower[i] = strategy
+                        .capitalAllocated()
+                        .mul(slotEnding.sub(slotEnding.sub(EPOCH_DURATION)))
+                        .sub(rewardsPowerOverhead[address(strategy)][getQuarter(slotEnding.sub(45 days))]);
                 } else {
                     // We are in the last quarter of the strategy
                     percentage = block.timestamp.sub(slotEnding.sub(EPOCH_DURATION)).preciseDiv(
                         slotEnding.sub(slotEnding.sub(EPOCH_DURATION))
                     );
 
-                    strategyPower[i] = strategy.capitalAllocated().mul(
-                        strategy.exitedAt().sub(slotEnding.sub(EPOCH_DURATION))
-                    );
+                    strategyPower[i] = strategy
+                        .capitalAllocated()
+                        .mul(strategy.exitedAt().sub(slotEnding.sub(EPOCH_DURATION)))
+                        .sub(rewardsPowerOverhead[address(strategy)][getQuarter(strategy.exitedAt())]);
                 }
                 protocolPower[i] = protocolPerQuarter[startingQuarter.add(i)].quarterPower;
-                // TODO CHECK INITIALIZATION
-                if (protocolPower[i] == 0) {
-                    protocolPower[i] = protocolPower[i].add(strategyPower[i]);
-                }
+
+                require(strategyPower[i] <= protocolPower[i], 'overflow str over protocol in an epoch');
+
                 bablRewards = bablRewards.add(
                     strategyPower[i]
                         .preciseDiv(protocolPower[i])
-                        .preciseMul(protocolPerQuarter[startingQuarter.add(i)].supplyPerQuarter)
+                        .preciseMul(uint256(protocolPerQuarter[startingQuarter.add(i)].supplyPerQuarter))
                         .preciseMul(percentage)
                 );
             }
@@ -224,13 +250,13 @@ contract RewardsDistributor is Ownable {
 
         // Babl rewards will be proportional to the total return (profit)
         uint256 percentageMul = strategy.capitalReturned().preciseDiv(strategy.capitalAllocated());
-
         bablRewards = bablRewards.preciseMul(percentageMul);
         return Safe3296.safe96(bablRewards, 'overflow 96 bits');
     }
 
-    function sendTokensToContributor(address _to, uint256 _amount) public onlyStrategy {
-        require(controller.isSystemContract(msg.sender));
+    //function sendTokensToContributor(address _to, uint96 _amount) public onlyStrategy {
+    function sendTokensToContributor(address _to, uint96 _amount) external {
+        require(controller.isSystemContract(msg.sender), 'The caller is not a system contract');
         _safeBABLTransfer(_to, _amount);
     }
 
@@ -328,41 +354,131 @@ contract RewardsDistributor is Ownable {
         );
     }
 
+    function checkQuarter(uint256 _num)
+        public
+        view
+        returns (
+            uint256 quarterPrincipal,
+            uint256 quarterNumber,
+            uint256 quarterPower,
+            uint96 supplyPerQuarter
+        )
+    {
+        return (
+            protocolPerQuarter[_num].quarterPrincipal,
+            protocolPerQuarter[_num].quarterNumber,
+            protocolPerQuarter[_num].quarterPower,
+            protocolPerQuarter[_num].supplyPerQuarter
+        );
+    }
+
     /* ============ Internal Functions ============ */
 
     function _addProtocolPerQuarter(uint256 _time) internal {
         ProtocolPerQuarter storage protocolCheckpoint = protocolPerQuarter[getQuarter(_time)];
+
         if (!isProtocolPerQuarter[getQuarter(_time).sub(1)]) {
             // The quarter is not yet initialized then we create it
             protocolCheckpoint.quarterNumber = getQuarter(_time);
             if (pid == 0) {
                 // The first strategy added in the first epoch
                 protocolCheckpoint.quarterPower = 0;
+                protocolCheckpoint.supplyPerQuarter = tokenSupplyPerQuarter(getQuarter(_time));
             } else {
                 // Each time a new epoch starts with either a new strategy execution or finalization
-                // We just take the proportional power for this quarter from previous quarter
-                // TODO REVIEW FORMULA AND ADDING POWER TO THE PREVIOUS EPOCH
-                protocolCheckpoint.quarterPower = protocolPerTimestamp[_time]
-                    .power
-                    .mul(_time.sub(getQuarter(_time).mul(EPOCH_DURATION).sub(EPOCH_DURATION)))
-                    .div(_time.sub(protocolPerTimestamp[timeList[pid.sub(1)]].time));
+                // We just take the proportional power for this quarter from previous checkpoint
+                uint256 powerToSplit =
+                    protocolPerTimestamp[_time].power.sub(protocolPerTimestamp[timeList[pid.sub(1)]].power);
+                if (protocolPerTimestamp[timeList[pid.sub(1)]].quarterBelonging == getQuarter(_time).sub(1)) {
+                    // There were no intermediate epochs without checkpoints
+                    // We re-initialize the protocol power counting for this new quarter
+                    protocolCheckpoint.quarterPower = powerToSplit
+                        .mul(_time.sub(START_TIME.add(getQuarter(_time).mul(EPOCH_DURATION).sub(EPOCH_DURATION))))
+                        .div(_time.sub(protocolPerTimestamp[timeList[pid.sub(1)]].time));
+                    protocolCheckpoint.supplyPerQuarter = tokenSupplyPerQuarter(getQuarter(_time));
+
+                    protocolPerQuarter[getQuarter(_time).sub(1)].quarterPower = protocolPerQuarter[
+                        getQuarter(_time).sub(1)
+                    ]
+                        .quarterPower
+                        .add(powerToSplit.sub(protocolCheckpoint.quarterPower));
+                } else {
+                    // There were intermediate epochs without checkpoints - we need to create their protocolPerQuarter's and update the last one
+                    // We have to update all the quarters including where the previous checkpoint is and the one were we are now
+                    for (
+                        uint256 i = 0;
+                        i <= getQuarter(_time).sub(protocolPerTimestamp[timeList[pid.sub(1)]].quarterBelonging);
+                        i++
+                    ) {
+                        ProtocolPerQuarter storage newCheckpoint =
+                            protocolPerQuarter[protocolPerTimestamp[timeList[pid.sub(1)]].quarterBelonging.add(i)];
+                        uint256 slotEnding =
+                            START_TIME.add(
+                                protocolPerTimestamp[timeList[pid.sub(1)]].quarterBelonging.add(i).mul(EPOCH_DURATION)
+                            );
+                        if (i == 0) {
+                            // We are in the first quarter to update, we add the corresponding part
+
+                            newCheckpoint.quarterPower = newCheckpoint.quarterPower.add(
+                                powerToSplit.mul(slotEnding.sub(protocolPerTimestamp[timeList[pid.sub(1)]].time)).div(
+                                    _time.sub(protocolPerTimestamp[timeList[pid.sub(1)]].time)
+                                )
+                            );
+                            newCheckpoint.quarterPrincipal = protocolPerTimestamp[timeList[pid.sub(1)]].principal;
+                        } else if (
+                            i < getQuarter(_time).sub(protocolPerTimestamp[timeList[pid.sub(1)]].quarterBelonging)
+                        ) {
+                            // We are in an intermediate quarter
+                            newCheckpoint.quarterPower = powerToSplit.mul(EPOCH_DURATION).div(
+                                _time.sub(protocolPerTimestamp[timeList[pid.sub(1)]].time)
+                            );
+                            newCheckpoint.supplyPerQuarter = tokenSupplyPerQuarter(
+                                protocolPerTimestamp[timeList[pid.sub(1)]].quarterBelonging.add(i)
+                            );
+                            newCheckpoint.quarterNumber = protocolPerTimestamp[timeList[pid.sub(1)]]
+                                .quarterBelonging
+                                .add(i);
+                            newCheckpoint.quarterPrincipal = protocolPerTimestamp[timeList[pid.sub(1)]].principal;
+                        } else {
+                            // We are in the last quarter of the strategy
+                            protocolCheckpoint.quarterPower = powerToSplit
+                                .mul(
+                                _time.sub(START_TIME.add(getQuarter(_time).mul(EPOCH_DURATION).sub(EPOCH_DURATION)))
+                            )
+                                .div(_time.sub(protocolPerTimestamp[timeList[pid.sub(1)]].time));
+                            protocolCheckpoint.supplyPerQuarter = tokenSupplyPerQuarter(getQuarter(_time));
+                            protocolCheckpoint.quarterNumber = getQuarter(_time);
+                            protocolCheckpoint.quarterPrincipal = protocolPrincipal;
+                        }
+                    }
+                }
             }
-            protocolCheckpoint.supplyPerQuarter = tokenSupplyPerQuarter(getQuarter(_time));
             isProtocolPerQuarter[getQuarter(_time).sub(1)] = true;
         } else {
             // Quarter checkpoint already created, it must have been filled with general info
-            protocolCheckpoint.quarterPower = protocolCheckpoint.quarterPower.add(protocolPerTimestamp[_time].power);
+            // We update the power of the quarter by adding the new difference between last quarter checkpoint and this checkpoint
+            protocolCheckpoint.quarterPower = protocolCheckpoint.quarterPower.add(
+                protocolPerTimestamp[_time].power.sub(protocolPerTimestamp[timeList[pid.sub(1)]].power)
+            );
         }
         protocolCheckpoint.quarterPrincipal = protocolPrincipal;
     }
 
+    function _updatePowerOverhead(IStrategy _strategy, uint256 _capital) internal {
+        // TODO Make it be more accurate per Epoch (uint256 numQuarters, uint256 startingQuarter) = getRewardsWindow(strategy.updatedAt(), block.timestamp);
+        rewardsPowerOverhead[address(_strategy)][getQuarter(block.timestamp)] = rewardsPowerOverhead[
+            address(_strategy)
+        ][getQuarter(block.timestamp)]
+            .add(_capital.mul(block.timestamp.sub(_strategy.updatedAt())));
+    }
+
     // Safe BABL transfer function, just in case if rounding error causes DistributorRewards to not have enough BABL.
-    function _safeBABLTransfer(address _to, uint256 _amount) internal {
+    function _safeBABLTransfer(address _to, uint96 _amount) internal {
         uint256 bablBal = babltoken.balanceOf(address(this));
         if (_amount > bablBal) {
-            babltoken.transfer(_to, bablBal);
+            SafeERC20.safeTransfer(babltoken, _to, bablBal);
         } else {
-            babltoken.transfer(_to, _amount);
+            SafeERC20.safeTransfer(babltoken, _to, _amount);
         }
     }
 }

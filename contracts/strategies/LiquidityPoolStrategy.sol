@@ -45,9 +45,9 @@ contract LiquidityPoolStrategy is Strategy {
      *
      * @param _pool                           Liquidity pool
      */
-    function setPoolData(address _pool) public onlyIdeator {
+    function setData(address _pool) public onlyGardenAndNotSet {
         require(!dataSet, 'Data is set already');
-        require(IPoolIntegration(integration).isPool(_pool), 'Must be a valid pool of this protocol');
+        require(IPoolIntegration(integration).isPool(_pool), 'Not a valid pool');
 
         kind = 1;
         pool = _pool;
@@ -81,22 +81,24 @@ contract LiquidityPoolStrategy is Strategy {
                 _maxAmountsIn[i] = normalizedAmount;
             }
         }
-        // TODO: calculate minReceiveQuantity instead of 1
-        IPoolIntegration(integration).joinPool(pool, 1000, poolTokens, _maxAmountsIn);
+        uint256 poolTokensOut = IPoolIntegration(integration).getPoolTokensOut(pool, poolTokens[0], _maxAmountsIn[0]);
+        IPoolIntegration(integration).joinPool(
+            pool,
+            poolTokensOut.sub(poolTokensOut.preciseMul(SLIPPAGE_ALLOWED)),
+            poolTokens,
+            _maxAmountsIn
+        );
     }
 
     /**
      * Exits the pool strategy.
      */
     function _exitStrategy() internal override {
-        uint256[] memory _minAmountsOut = new uint256[](poolTokens.length);
-        for (uint256 i = 0; i < poolTokens.length; i++) {
-            // TODO: calculate minReceiveQuantity instead of 1
-            _minAmountsOut[i] = 1;
-        }
+        uint256 lpTokens = IERC20(pool).balanceOf(address(this)); // Sell all pool tokens
+        uint256[] memory _minAmountsOut = IPoolIntegration(integration).getPoolMinAmountsOut(pool, lpTokens);
         IPoolIntegration(integration).exitPool(
             pool,
-            IERC20(pool).balanceOf(address(this)), // Sell all pool tokens
+            lpTokens, // Sell all pool tokens
             poolTokens,
             _minAmountsOut
         );

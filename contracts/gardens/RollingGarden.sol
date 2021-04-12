@@ -18,18 +18,25 @@
 
 pragma solidity 0.7.4;
 
-// import 'hardhat/console.sol';
+import 'hardhat/console.sol';
 import {ERC20} from '@openzeppelin/contracts/token/ERC20/ERC20.sol';
 import {ReentrancyGuard} from '@openzeppelin/contracts/utils/ReentrancyGuard.sol';
+import {Address} from '@openzeppelin/contracts/utils/Address.sol';
 import {SafeMath} from '@openzeppelin/contracts/math/SafeMath.sol';
 import {SignedSafeMath} from '@openzeppelin/contracts/math/SignedSafeMath.sol';
+
 import {PreciseUnitMath} from '../lib/PreciseUnitMath.sol';
+import {SafeDecimalMath} from '../lib/SafeDecimalMath.sol';
+import {Safe3296} from '../lib/Safe3296.sol';
+import {Errors, _require} from '../lib/BabylonErrors.sol';
+
 import {IWETH} from '../interfaces/external/weth/IWETH.sol';
 import {IBabController} from '../interfaces/IBabController.sol';
 import {IStrategy} from '../interfaces/IStrategy.sol';
 import {IRewardsDistributor} from '../interfaces/IRewardsDistributor.sol';
 import {BaseGarden} from './BaseGarden.sol';
-import {Safe3296} from '../lib/Safe3296.sol';
+
+/* solhint-disable private-vars-leading-underscore */
 
 /**
  * @title RollingGarden
@@ -42,6 +49,14 @@ contract RollingGarden is ReentrancyGuard, BaseGarden {
     using SignedSafeMath for int256;
     using PreciseUnitMath for int256;
     using PreciseUnitMath for uint256;
+    using SafeDecimalMath for int256;
+    using SafeDecimalMath for uint256;
+    using Address for address;
+
+    /* ============ Events ============ */
+    event ProfitsForContributor(address indexed _contributor, uint256 indexed _amount);
+
+    event BABLRewardsForContributor(address indexed _contributor, uint96 _rewards);
 
     /* ============ State Variables ============ */
 
@@ -133,20 +148,17 @@ contract RollingGarden is ReentrancyGuard, BaseGarden {
         uint256 _minIdeaDuration,
         uint256 _maxIdeaDuration
     ) external payable onlyCreator onlyInactive {
-        require(_maxDepositLimit < MAX_DEPOSITS_FUND_V1, 'BABL001'); // Max deposit limit needs to be under the limit
+        _require(_maxDepositLimit < MAX_DEPOSITS_FUND_V1, Errors.MAX_DEPOSIT_LIMIT);
 
-        require(msg.value >= minContribution, 'BABL002'); // Creator needs to deposit
-        IBabController controller = IBabController(controller);
-        require(_minGardenTokenSupply > 0, 'BABL003'); // Min Garden token supply >= 0
-        require(_depositHardlock > 1, 'BABL004'); // Deposit hardlock needs to be longer than one block
-        require(
-            _minLiquidityAsset >= controller.minRiskyPairLiquidityEth(),
-            'BABL005' // Needs to be at least the minimum set by protocol
-        );
+        _require(msg.value >= minContribution, Errors.MIN_CONTRIBUTION);
+        IBabController babController = IBabController(controller);
+        _require(_minGardenTokenSupply > 0, Errors.MIN_TOKEN_SUPPLY);
+        _require(_depositHardlock > 0, Errors.DEPOSIT_HARDLOCK);
+        _require(_minLiquidityAsset >= babController.minRiskyPairLiquidityEth(), Errors.MIN_LIQUIDITY);
         // make initial deposit
         uint256 initialDepositAmount = msg.value;
         uint256 initialTokens = initialDepositAmount;
-        require(initialTokens >= minGardenTokenSupply, 'BABL005'); // Needs to be at least the minimum set by protocol
+        _require(initialTokens >= minGardenTokenSupply, Errors.MIN_LIQUIDITY);
         minGardenTokenSupply = _minGardenTokenSupply;
         maxDepositLimit = _maxDepositLimit;
         gardenInitializedAt = block.timestamp;
@@ -172,7 +184,7 @@ contract RollingGarden is ReentrancyGuard, BaseGarden {
         _updateContributorDepositInfo(previousBalance, initialDepositAmount);
         _updatePrincipal(initialDepositAmount);
 
-        require(totalSupply() > 0, 'BABL006'); // Garden must receive an initial deposit
+        _require(totalSupply() > 0, Errors.MIN_LIQUIDITY);
         active = true;
         emit GardenTokenDeposited(msg.sender, msg.value, initialTokens, 0, block.timestamp);
     }
@@ -190,12 +202,12 @@ contract RollingGarden is ReentrancyGuard, BaseGarden {
         uint256 _minGardenTokenReceiveQuantity,
         address _to
     ) public payable nonReentrant onlyActive {
-        require(msg.value >= minContribution, 'BABL007'); // msg.value has to be at least minContribution
+        _require(msg.value >= minContribution, Errors.MIN_CONTRIBUTION);
         // if deposit limit is 0, then there is no deposit limit
         if (maxDepositLimit > 0) {
-            require(principal.add(msg.value) <= maxDepositLimit, 'BABL008'); // Hit maxDepositLimit
+            _require(principal.add(msg.value) <= maxDepositLimit, Errors.MAX_DEPOSIT_LIMIT);
         }
-        require(msg.value == _reserveAssetQuantity, 'BABL009'); // _reserveAssetQuantity is not equal to msg.value
+        _require(msg.value == _reserveAssetQuantity, Errors.MSG_VALUE_DO_NOT_MATCH);
         // Always wrap to WETH
         IWETH(weth).deposit{value: msg.value}();
         // Check this here to avoid having relayers
@@ -207,10 +219,10 @@ contract RollingGarden is ReentrancyGuard, BaseGarden {
 
         // Check that total supply is greater than min supply needed for issuance
         // TODO: A min supply amount is needed to avoid division by 0 when Garden token supply is 0
-        require(totalSupply() >= minGardenTokenSupply, 'BABL010'); // Not enough Garden tokens to issue
+        _require(totalSupply() >= minGardenTokenSupply, Errors.MIN_TOKEN_SUPPLY);
 
         // gardenTokenQuantity has to be at least _minGardenTokenReceiveQuantity
-        require(depositInfo.gardenTokenQuantity >= _minGardenTokenReceiveQuantity, 'BABL011');
+        _require(depositInfo.gardenTokenQuantity >= _minGardenTokenReceiveQuantity, Errors.MIN_TOKEN_SUPPLY);
 
         // Send Protocol Fee
         payProtocolFeeFromGarden(reserveAsset, depositInfo.protocolFees);
@@ -242,11 +254,11 @@ contract RollingGarden is ReentrancyGuard, BaseGarden {
         address payable _to
     ) external nonReentrant onlyContributor {
         // Withdrawal amount has to be equal or less than msg.sender balance
-        require(_gardenTokenQuantity <= balanceOf(msg.sender), 'BABL012');
+        _require(_gardenTokenQuantity <= balanceOf(msg.sender), Errors.MSG_SENDER_TOKENS_DO_NOT_MATCH);
         // Flashloan protection
-        require(
+        _require(
             block.timestamp.sub(contributors[msg.sender].lastDepositAt) >= depositHardlock,
-            'BABL013' // Tokens are timelocked
+            Errors.TOKENS_TIMELOCKED
         );
         // Check this here to avoid having relayers
         reenableEthForInvestments();
@@ -260,24 +272,20 @@ contract RollingGarden is ReentrancyGuard, BaseGarden {
         _updateContributorWithdrawalInfo(withdrawalInfo.netFlowQuantity);
 
         // Check that the redemption is possible
-        // Not enough liquidity in the garden
-        require(canWithdrawEthAmount(msg.sender, withdrawalInfo.netFlowQuantity), 'BABL014');
-        if (address(this).balance >= withdrawalInfo.netFlowQuantity) {
-            // Send eth
-            (bool sent, ) = _to.call{value: withdrawalInfo.netFlowQuantity}('');
-            require(sent, 'BABL015'); // Failed to send Ether
-        } else {
-            // Send liquid weth balance
+        _require(canWithdrawEthAmount(msg.sender, withdrawalInfo.netFlowQuantity), Errors.MIN_LIQUIDITY);
+        // Unwrap WETH if ETH balance lower than netFlowQuantity
+        if (address(this).balance < withdrawalInfo.netFlowQuantity) {
             IWETH(weth).withdraw(withdrawalInfo.netFlowQuantity);
-            _to.transfer(withdrawalInfo.netFlowQuantity);
         }
+        // Send ETH
+        Address.sendValue(_to, withdrawalInfo.netFlowQuantity);
         redemptionRequests[msg.sender] = 0;
         payProtocolFeeFromGarden(reserveAsset, withdrawalInfo.protocolFees);
 
         uint256 outflow = withdrawalInfo.netFlowQuantity.add(withdrawalInfo.protocolFees);
 
         // Required withdrawable quantity is greater than existing collateral
-        require(principal >= outflow, 'BABL016'); // Must have enough balance
+        _require(principal >= outflow, Errors.BALANCE_TOO_LOW);
         _updatePrincipal(principal.sub(outflow));
 
         emit GardenTokenWithdrawn(
@@ -294,100 +302,43 @@ contract RollingGarden is ReentrancyGuard, BaseGarden {
      * User can claim the profits from the strategies that his principal
      * was invested in.
      */
-    // Raul Review
     function claimReturns(address[] calldata _finalizedStrategies) external nonReentrant onlyContributor {
         Contributor memory contributor = contributors[msg.sender];
-        (uint256 totalProfits, uint256 bablRewards) = this.getProfitsAndBabl(_finalizedStrategies);
+
+        (uint256 totalProfits, uint256 bablRewards) = _getProfitsAndBabl(_finalizedStrategies);
+
         if (totalProfits > 0 && address(this).balance > 0) {
-            // Send eth
-            (bool sent, ) = msg.sender.call{value: totalProfits}('');
-            require(sent, 'BABL015'); // Failed to send Ether
-            contributor.claimedAt = block.timestamp;
+            contributor.claimedProfits = contributor.claimedProfits.add(totalProfits); // Profits claimed properly
+            // Send ETH
+            Address.sendValue(msg.sender, totalProfits);
+            emit ProfitsForContributor(msg.sender, totalProfits);
         }
         if (bablRewards > 0) {
+            contributor.claimedBABL = contributor.claimedBABL.add(bablRewards); // BABL Rewards claimed properly
+            contributor.claimedAt = block.timestamp; // Checkpoint of this claim
             // Send BABL rewards
             IRewardsDistributor rewardsDistributor =
                 IRewardsDistributor(IBabController(controller).getRewardsDistributor());
-            rewardsDistributor.sendTokensToContributor(msg.sender, bablRewards);
+            rewardsDistributor.sendTokensToContributor(msg.sender, uint96(bablRewards));
+            emit BABLRewardsForContributor(msg.sender, uint96(bablRewards));
         }
     }
 
-    // Raul Review
+    /**
+     * When an investment strategy finishes execution, contributors might want
+     * to know the profits and BABL rewards for their participation in the different strategies
+     *
+     *
+     * @param _finalizedStrategies       Array of the finalized strategies
+     */
+
     function getProfitsAndBabl(address[] calldata _finalizedStrategies)
-        external
+        public
+        view
         onlyContributor
-        returns (uint256, uint256)
+        returns (uint256, uint96)
     {
-        require(contributors[msg.sender].lastDepositAt > contributors[msg.sender].claimedAt, 'BABL016');
-        uint256 contributorProfits = 0;
-        uint256 bablTotalRewards = 0;
-        // TODO: This will grow endlessly. We have to either to remove finalized strategies or batch it.
-        for (uint256 i = 0; i < _finalizedStrategies.length; i++) {
-            IStrategy strategy = IStrategy(_finalizedStrategies[i]);
-            uint256 totalProfits = 0; // Total Profits of each finalized strategy
-            // Positive strategies not yet claimed
-            if (
-                strategy.exitedAt() > contributors[msg.sender].claimedAt &&
-                strategy.executedAt() >= contributors[msg.sender].initialDepositAt
-            ) {
-                // If strategy returned money we give out the profits
-                if (strategy.capitalReturned() > strategy.capitalAllocated()) {
-                    // (User percentage * strategy profits) / (strategy capital)
-                    totalProfits = totalProfits.add(strategy.capitalReturned().sub(strategy.capitalAllocated()));
-                    // We reserve 5% of profits for performance fees
-                    totalProfits = totalProfits.sub(totalProfits.mul(PROFIT_PROTOCOL_FEE));
-                }
-                // Give out BABL
-                uint256 creatorBonus = msg.sender == creator ? CREATOR_BONUS : 0;
-                bool isStrategist = msg.sender == strategy.strategist();
-                bool isVoter = strategy.getUserVotes(msg.sender) != 0;
-                // pending userPrincipal improvement to have more accurate calculations
-                uint256 strategyRewards = strategy.strategyRewards();
-                uint256 bablRewards = 0;
-
-                // Get strategist rewards in case the contributor is also the strategist of the strategy
-                if (isStrategist) {
-                    bablRewards = bablRewards.add(strategyRewards.preciseMul(BABL_STRATEGIST_SHARE));
-                    contributorProfits = contributorProfits.add(totalProfits.preciseMul(PROFIT_STRATEGIST_SHARE));
-                }
-
-                // Get proportional voter (stewards) rewards in case the contributor was also a steward of the strategy
-                if (isVoter) {
-                    bablRewards = bablRewards.add(
-                        strategyRewards
-                            .preciseMul(BABL_STEWARD_SHARE)
-                            .mul(uint256(strategy.getUserVotes(msg.sender)))
-                            .div(strategy.absoluteTotalVotes())
-                    );
-                    contributorProfits = contributorProfits.add(
-                        totalProfits
-                            .preciseMul(PROFIT_STEWARD_SHARE)
-                            .mul(uint256(strategy.getUserVotes(msg.sender)))
-                            .div(strategy.absoluteTotalVotes())
-                    );
-                }
-
-                // Get proportional LP rewards as every active contributor of the garden is a LP of their strategies
-                bablRewards = bablRewards.add(
-                    strategyRewards.preciseMul(BABL_LP_SHARE).mul(contributors[msg.sender].gardenAverageOwnership)
-                );
-                contributorProfits = contributorProfits.add(
-                    contributors[msg.sender].gardenAverageOwnership.mul(totalProfits).preciseMul(PROFIT_LP_SHARE)
-                );
-
-                // Get a multiplier bonus in case the contributor is the garden creator
-                if (creatorBonus > 0) {
-                    bablRewards = bablRewards.add(bablRewards.preciseMul(creatorBonus));
-                }
-
-                contributors[msg.sender].claimedBABL = contributors[msg.sender].claimedBABL.add(bablRewards);
-                contributors[msg.sender].claimedProfits = contributors[msg.sender].claimedProfits.add(
-                    contributorProfits
-                );
-                bablTotalRewards = bablTotalRewards.add(bablRewards);
-            }
-        }
-        return (contributorProfits, Safe3296.safe96(bablTotalRewards, 'R28'));
+        return _getProfitsAndBabl(_finalizedStrategies);
     }
 
     /**
@@ -396,7 +347,7 @@ contract RollingGarden is ReentrancyGuard, BaseGarden {
      *
      * @param _amount                        Amount of WETH to convert to ETH to set aside
      */
-    function startRedemptionWindow(uint256 _amount) external onlyStrategyOrOwner {
+    function startRedemptionWindow(uint256 _amount) external onlyStrategy onlyProtocol {
         redemptionsOpenUntil = block.timestamp.add(redemptionWindowAfterInvestmentCompletes);
         reserveAvailableForRedemptionsInWindow.add(_amount);
         IWETH(weth).withdraw(_amount);
@@ -422,14 +373,14 @@ contract RollingGarden is ReentrancyGuard, BaseGarden {
      * @param _amount Amount to request a redemption in next window
      */
     function requestRedemptionAmount(uint256 _amount) public {
-        require(_amount <= balanceOf(msg.sender), 'R20'); // Withdrawal amount <= to deposited amount
+        _require(_amount <= balanceOf(msg.sender), Errors.MSG_SENDER_TOKENS_TOO_LOW);
         // Flashloan protection
-        require(
+        _require(
             block.timestamp.sub(contributors[msg.sender].lastDepositAt) >= depositHardlock,
-            'R21' // Cannot withdraw. Hardlock
+            Errors.TOKENS_TIMELOCKED
         );
-        require(redemptionsOpenUntil == 0, 'R22'); // There is an open redemption window already
-        require(redemptionRequests[msg.sender] == 0, 'R23'); // Cannot request twice in the same window
+        _require(redemptionsOpenUntil == 0, Errors.REDEMPTION_OPENED_ALREADY);
+        _require(redemptionRequests[msg.sender] == 0, Errors.ALREADY_REQUESTED);
         redemptionRequests[msg.sender] = _amount;
         totalRequestsAmountInWindow.add(_amount);
     }
@@ -523,9 +474,95 @@ contract RollingGarden is ReentrancyGuard, BaseGarden {
 
     /* ============ Internal Functions ============ */
 
+    function _getProfitsAndBabl(address[] calldata _finalizedStrategies) internal view returns (uint256, uint96) {
+        _require(contributors[msg.sender].lastDepositAt > contributors[msg.sender].claimedAt, Errors.ALREADY_CLAIMED);
+        uint256 contributorTotalProfits = 0;
+        uint256 bablTotalRewards = 0;
+        for (uint256 i = 0; i < _finalizedStrategies.length; i++) {
+            IStrategy strategy = IStrategy(_finalizedStrategies[i]);
+            uint256 totalProfits = 0; // Total Profits of each finalized strategy
+            // Positive strategies not yet claimed
+            if (
+                strategy.exitedAt() > contributors[msg.sender].claimedAt &&
+                strategy.executedAt() >= contributors[msg.sender].initialDepositAt
+            ) {
+                // If strategy returned money we give out the profits
+                if (strategy.capitalReturned() > strategy.capitalAllocated()) {
+                    // (User percentage * strategy profits) / (strategy capital)
+                    totalProfits = totalProfits.add(strategy.capitalReturned().sub(strategy.capitalAllocated()));
+                    // We reserve 5% of profits for performance fees
+
+                    totalProfits = totalProfits.sub(totalProfits.multiplyDecimal(PROFIT_PROTOCOL_FEE));
+                }
+                // Give out BABL
+                uint256 creatorBonus = msg.sender == creator ? CREATOR_BONUS : 0;
+                bool isStrategist = msg.sender == strategy.strategist();
+                bool isVoter = strategy.getUserVotes(msg.sender) != 0;
+                // pending userPrincipal improvement to have more accurate calculations
+                uint256 strategyRewards = strategy.strategyRewards();
+                uint256 contributorProfits = 0;
+                uint256 bablRewards = 0;
+                uint256 tempForEvents = 0;
+
+                // Get strategist rewards in case the contributor is also the strategist of the strategy
+                if (isStrategist) {
+                    bablRewards = bablRewards.add(strategyRewards.multiplyDecimal(BABL_STRATEGIST_SHARE));
+
+                    contributorProfits = contributorProfits.add(totalProfits.multiplyDecimal(PROFIT_STRATEGIST_SHARE));
+                }
+
+                // Get proportional voter (stewards) rewards in case the contributor was also a steward of the strategy
+                if (isVoter) {
+                    tempForEvents = bablRewards;
+                    bablRewards = bablRewards.add(
+                        strategyRewards.multiplyDecimal(BABL_STEWARD_SHARE).preciseMul(
+                            uint256(strategy.getUserVotes(msg.sender)).preciseDiv(strategy.absoluteTotalVotes())
+                        )
+                    );
+
+                    tempForEvents = contributorProfits;
+
+                    contributorProfits = contributorProfits.add(
+                        totalProfits
+                            .multiplyDecimal(PROFIT_STEWARD_SHARE)
+                            .preciseMul(uint256(strategy.getUserVotes(msg.sender)))
+                            .preciseDiv(strategy.absoluteTotalVotes())
+                    );
+                }
+
+                // Get proportional LP rewards as every active contributor of the garden is a LP of their strategies
+                tempForEvents = bablRewards;
+                bablRewards = bablRewards.add(
+                    strategyRewards.multiplyDecimal(BABL_LP_SHARE).preciseMul(
+                        contributors[msg.sender].gardenAverageOwnership.preciseDiv(strategy.capitalAllocated())
+                    )
+                );
+
+                tempForEvents = contributorProfits;
+
+                contributorProfits = contributorProfits.add(
+                    contributors[msg.sender].gardenAverageOwnership.preciseMul(totalProfits).multiplyDecimal(
+                        PROFIT_LP_SHARE
+                    )
+                );
+
+                // Get a multiplier bonus in case the contributor is the garden creator
+                if (creatorBonus > 0) {
+                    tempForEvents = bablRewards;
+                    bablRewards = bablRewards.add(bablRewards.multiplyDecimal(creatorBonus));
+                }
+
+                bablTotalRewards = bablTotalRewards.add(bablRewards);
+                contributorTotalProfits = contributorTotalProfits.add(contributorProfits);
+            }
+        }
+
+        return (contributorTotalProfits, Safe3296.safe96(bablTotalRewards, 'R28'));
+    }
+
     function _validateReserveAsset(address _reserveAsset, uint256 _quantity) internal view {
-        require(_quantity > 0, '');
-        require(IBabController(controller).isValidReserveAsset(_reserveAsset), 'R24'); // Must be reserve asset
+        _require(_quantity > 0, Errors.GREATER_THAN_ZERO);
+        _require(IBabController(controller).isValidReserveAsset(_reserveAsset), Errors.MUST_BE_RESERVE_ASSET);
     }
 
     function _validateRedemptionInfo(
@@ -535,9 +572,9 @@ contract RollingGarden is ReentrancyGuard, BaseGarden {
     ) internal view {
         // Check that new supply is more than min supply needed for redemption
         // Note: A min supply amount is needed to avoid division by 0 when withdrawaling garden token to 0
-        require(_withdrawalInfo.newGardenTokenSupply >= minGardenTokenSupply, 'R25'); // Supply must be > than minimum
+        _require(_withdrawalInfo.newGardenTokenSupply >= minGardenTokenSupply, Errors.MIN_TOKEN_SUPPLY);
 
-        require(_withdrawalInfo.netFlowQuantity >= _minReserveReceiveQuantity, 'R26'); // Must be > than min receive
+        _require(_withdrawalInfo.netFlowQuantity >= _minReserveReceiveQuantity, Errors.MIN_TOKEN_SUPPLY);
     }
 
     function _createIssuanceInfo(uint256 _reserveAssetQuantity) internal view returns (ActionInfo memory) {
