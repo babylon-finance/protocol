@@ -107,7 +107,19 @@ abstract contract BaseGarden is ERC20Upgradeable {
      * Throws if the sender is not an investment strategy of this garden
      */
     modifier onlyStrategy() {
-        _require(strategyMapping[msg.sender] && IStrategy(msg.sender).garden() == address(this), Errors.ONLY_STRATEGY);
+        _require(strategyMapping[msg.sender], Errors.ONLY_STRATEGY);
+        _;
+    }
+
+    /**
+     * Throws if the sender is not an investment strategy or the protocol
+     */
+    modifier onlyStrategyOrProtocol() {
+        _require(
+            (strategyMapping[msg.sender] && IStrategy(msg.sender).garden() == address(this)) ||
+                msg.sender == controller,
+            Errors.ONLY_STRATEGY_OR_CONTROLLER
+        );
         _;
     }
 

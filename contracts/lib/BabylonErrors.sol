@@ -23,6 +23,7 @@ pragma solidity 0.7.4;
 // solhint-disable
 
 /**
+ * @notice Forked from https://github.com/balancer-labs/balancer-core-v2/blob/master/contracts/lib/helpers/BalancerErrors.sol
  * @dev Reverts if `condition` is false, with a revert reason containing `errorCode`. Only codes up to 999 are
  * supported.
  */
@@ -35,7 +36,7 @@ function _require(bool condition, uint256 errorCode) pure {
  */
 function _revert(uint256 errorCode) pure {
     // We're going to dynamically create a revert string based on the error code, with the following format:
-    // 'BAL#{errorCode}'
+    // 'BAB#{errorCode}'
     // where the code is left-padded with zeroes to three digits (so they range from 000 to 999).
     //
     // We don't have revert strings embedded in the contract to save bytecode size: it takes much less space to store a
@@ -57,8 +58,8 @@ function _revert(uint256 errorCode) pure {
         errorCode := div(errorCode, 10)
         let hundreds := add(mod(errorCode, 10), 0x30)
 
-        // With the individual characters, we can now construct the full string. The "BAL#" part is a known constant
-        // (0x42414c23): we simply shift this by 24 (to provide space for the 3 bytes of the error code), and add the
+        // With the individual characters, we can now construct the full string. The "BAB#" part is a known constant
+        // (0x42416223): we simply shift this by 24 (to provide space for the 3 bytes of the error code), and add the
         // characters to it, each shifted by a multiple of 8.
         // The revert reason is then shifted left by 200 bits (256 minus the length of the string, 7 characters * 8 bits
         // per character = 56) to locate it in the most significant part of the 256 slot (the beginning of a byte
@@ -141,4 +142,6 @@ library Errors {
     uint256 internal constant VALUE_TOO_LOW = 25;
     // Value is too high
     uint256 internal constant VALUE_TOO_HIGH = 26;
+    // Only strategy or protcol allowed
+    uint256 internal constant ONLY_STRATEGY_OR_CONTROLLER = 27;
 }
