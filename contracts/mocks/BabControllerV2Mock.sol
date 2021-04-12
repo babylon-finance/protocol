@@ -53,7 +53,6 @@ contract BabControllerV2Mock is OwnableUpgradeable {
     address[] public reserveAssets;
     address public gardenValuer;
     address public priceOracle;
-    address public reservePool;
     address public gardenFactory;
     address public rewardsDistributor;
     mapping(uint8 => address) public strategyFactory;
