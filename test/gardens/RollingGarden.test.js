@@ -185,7 +185,7 @@ describe('Garden', function () {
       await expect(garden1.connect(signer3).withdraw(ethers.utils.parseEther('20'), 2, signer3.getAddress())).to.be
         .reverted;
     });
-    it('a contributor cannot withdraw more comunity tokens than they have locked in active strategies', async function () {
+    it('strategist or voters cannot withdraw more comunity tokens than they have locked in active strategies', async function () {
       const strategyContract = await createStrategy(
         0,
         'vote',
@@ -228,9 +228,11 @@ describe('Garden', function () {
       expect(stake).to.equal(ethers.utils.parseEther('1'));
 
       // Cannot withdraw locked stake amount
-      await expect(garden1.connect(signer1).withdraw(90909, 1, signer1.getAddress())).to.be.revertedWith('R18');
+      await expect(
+        garden1.connect(signer1).withdraw(ethers.utils.parseEther('1.2'), 1, signer1.getAddress()),
+      ).to.be.revertedWith('R18');
     });
-    it('a contributor can withdraw comunity tokens than they have unlocked after finishing active strategies where it was participating', async function () {
+    it('strategist or voters can withdraw comunity tokens that were locked during strategy execution once they are unlocked after finishing active strategies', async function () {
       const strategyContract = await createStrategy(
         0,
         'vote',
@@ -274,7 +276,54 @@ describe('Garden', function () {
       await finalizeStrategy(garden1, strategyContract, 42);
 
       // Can now withdraw stake amount as it is again unlocked
-      await expect(garden1.connect(signer1).withdraw(90909, 1, signer1.getAddress())).not.to.be.reverted;
+      await expect(garden1.connect(signer1).withdraw(ethers.utils.parseEther('1.1'), 1, signer1.getAddress())).not.to.be
+        .reverted;
+    });
+
+    it('strategist or voters can withdraw comunity tokens during strategy execution if they have enough unlocked amount in their balance', async function () {
+      const strategyContract = await createStrategy(
+        0,
+        'vote',
+        [signer1, signer2, signer3],
+        kyberTradeIntegration.address,
+        garden1,
+      );
+      // It is executed
+      await executeStrategy(garden1, strategyContract, ethers.utils.parseEther('1'), 42);
+
+      const [
+        address,
+        strategist,
+        integration,
+        stake,
+        absoluteTotalVotes,
+        totalVotes,
+        capitalAllocated,
+        capitalReturned,
+        duration,
+        expectedReturn,
+        maxCapitalRequested,
+        minRebalanceCapital,
+        enteredAt,
+      ] = await strategyDataset.getStrategyDetails();
+      const [
+        address2,
+        active2,
+        dataSet2,
+        finalized2,
+        executedAt2,
+        exitedAt2,
+      ] = await strategyContract.getStrategyState();
+
+      expect(address2).to.equal(strategyContract.address);
+      expect(active2).to.equal(true);
+
+      expect(strategist).to.equal(signer1.address);
+      expect(stake).to.equal(ethers.utils.parseEther('1'));
+
+      // Can now withdraw stake amount as it is again unlocked
+      await expect(garden1.connect(signer1).withdraw(ethers.utils.parseEther('0.9'), 1, signer1.getAddress())).not.to.be
+        .reverted;
     });
   });
 
