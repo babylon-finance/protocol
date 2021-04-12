@@ -10,6 +10,7 @@ const { deployFolioFixture } = require('../fixtures/ControllerFixture');
 
 describe('Garden', function () {
   let babController;
+  let owner;
   let signer1;
   let signer2;
   let signer3;
@@ -18,7 +19,7 @@ describe('Garden', function () {
   let balancerIntegration;
 
   beforeEach(async () => {
-    ({ babController, signer1, signer2, signer3, garden1, balancerIntegration } = await loadFixture(
+    ({ babController, owner, signer1, signer2, signer3, garden1, balancerIntegration } = await loadFixture(
       deployFolioFixture,
     ));
 
@@ -42,7 +43,7 @@ describe('Garden', function () {
 
   describe('Garden state', async function () {
     it('only the protocol should be able to update active state', async function () {
-      await expect(garden1.connect(signer1).setActive(true)).to.be.reverted;
+      await expect(garden1.connect(signer1).setActive()).to.be.revertedWith('revert BAL#016');
     });
 
     it('the initial deposit must be correct', async function () {
