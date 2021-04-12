@@ -2,8 +2,20 @@ module.exports = {
   env: {
     mocha: true,
   },
-  extends: ['airbnb', 'plugin:prettier/recommended'],
-  plugins: ['babel', 'no-only-tests'],
+  extends: ['standard', 'plugin:promise/recommended', 'plugin:prettier/recommended'],
+  plugins: ['promise', 'babel', 'no-only-tests'],
+  env: {
+    browser: true,
+    node: true,
+    mocha: true,
+    jest: true,
+  },
+  globals: {
+    artifacts: false,
+    contract: false,
+    assert: false,
+    web3: false,
+  },
   rules: {
     'prettier/prettier': ['error'],
     'import/extensions': [

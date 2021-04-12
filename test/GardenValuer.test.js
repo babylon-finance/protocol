@@ -28,7 +28,7 @@ describe('GardenValuer', function () {
 
   describe('Calls GardenValuer', function () {
     it('should return 0.1 for garden1', async function () {
-      const wethInGarden = await weth.balanceOf(garden1.address);
+      // const wethInGarden = await weth.balanceOf(garden1.address);
       // const priceOfWeth = await garden.getPrice(
       //   addresses.tokens.WETH,
       //   addresses.tokens.DAI
