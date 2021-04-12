@@ -148,7 +148,7 @@ contract RollingGarden is ReentrancyGuard, BaseGarden {
         uint256 _minIdeaDuration,
         uint256 _maxIdeaDuration
     ) external payable onlyCreator onlyInactive {
-        _require(_maxDepositLimit < MAX_DEPOSITS_FUND_V1, Errors.MAX_DEPOSIT_LIMIT);
+        _require(_maxDepositLimit <= MAX_DEPOSITS_FUND_V1, Errors.MAX_DEPOSIT_LIMIT);
 
         _require(msg.value >= minContribution, Errors.MIN_CONTRIBUTION);
         IBabController babController = IBabController(controller);
@@ -156,9 +156,8 @@ contract RollingGarden is ReentrancyGuard, BaseGarden {
         _require(_depositHardlock > 0, Errors.DEPOSIT_HARDLOCK);
         _require(_minLiquidityAsset >= babController.minRiskyPairLiquidityEth(), Errors.MIN_LIQUIDITY);
         // make initial deposit
-        uint256 initialDepositAmount = msg.value;
-        uint256 initialTokens = initialDepositAmount;
-        _require(initialTokens >= _minGardenTokenSupply, Errors.MIN_LIQUIDITY);
+        _require(msg.value >= _minGardenTokenSupply, Errors.MIN_LIQUIDITY);
+        _require(msg.value <= _maxDepositLimit, Errors.MAX_DEPOSIT_LIMIT);
         minGardenTokenSupply = _minGardenTokenSupply;
         maxDepositLimit = _maxDepositLimit;
         gardenInitializedAt = block.timestamp;
@@ -177,16 +176,16 @@ contract RollingGarden is ReentrancyGuard, BaseGarden {
         );
 
         // Deposit
-        IWETH(weth).deposit{value: initialDepositAmount}();
+        IWETH(weth).deposit{value: msg.value}();
 
         uint256 previousBalance = balanceOf(msg.sender);
-        _mint(creator, initialTokens);
-        _updateContributorDepositInfo(previousBalance, initialDepositAmount);
-        _updatePrincipal(initialDepositAmount);
+        _mint(creator, msg.value);
+        _updateContributorDepositInfo(previousBalance);
+        _updatePrincipal(msg.value);
 
         _require(totalSupply() > 0, Errors.MIN_LIQUIDITY);
         active = true;
-        emit GardenTokenDeposited(msg.sender, msg.value, initialTokens, 0, block.timestamp);
+        emit GardenTokenDeposited(msg.sender, msg.value, msg.value, 0, block.timestamp);
     }
 
     /**
@@ -230,7 +229,7 @@ contract RollingGarden is ReentrancyGuard, BaseGarden {
         // Updates Reserve Balance and Mint
         uint256 previousBalance = balanceOf(msg.sender);
         _mint(_to, depositInfo.gardenTokenQuantity);
-        _updateContributorDepositInfo(previousBalance, msg.value);
+        _updateContributorDepositInfo(previousBalance);
         _updatePrincipal(principal.add(depositInfo.netFlowQuantity));
         emit GardenTokenDeposited(
             _to,
@@ -630,12 +629,12 @@ contract RollingGarden is ReentrancyGuard, BaseGarden {
     /**
      * Updates the contributor info in the array
      */
-    function _updateContributorDepositInfo(uint256 previousBalance, uint256 amount) internal {
+    function _updateContributorDepositInfo(uint256 previousBalance) internal {
         Contributor storage contributor = contributors[msg.sender];
         // If new contributor, create one, increment count, and set the current TS
         if (previousBalance == 0) {
             totalContributors = totalContributors.add(1);
-            contributor.gardenAverageOwnership = amount.preciseDiv(totalSupply());
+            contributor.gardenAverageOwnership = balanceOf(msg.sender).preciseDiv(totalSupply());
             contributor.initialDepositAt = block.timestamp;
         } else {
             // Cumulative moving average

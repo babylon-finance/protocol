@@ -127,7 +127,7 @@ abstract contract BaseGarden is ERC20Upgradeable {
      * Throws if the garden is not active
      */
     modifier onlyActive() {
-        _require(active == true, Errors.ONLY_ACTIVE);
+        _require(active, Errors.ONLY_ACTIVE);
         _;
     }
 
@@ -135,7 +135,7 @@ abstract contract BaseGarden is ERC20Upgradeable {
      * Throws if the garden is not disabled
      */
     modifier onlyInactive() {
-        _require(active == false, Errors.ONLY_INACTIVE);
+        _require(!active, Errors.ONLY_INACTIVE);
         _;
     }
 
