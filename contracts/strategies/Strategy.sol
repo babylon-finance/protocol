@@ -327,9 +327,8 @@ contract Strategy is ReentrancyGuard, Initializable {
         _transferStrategyRewards(_fee);
         // Pay Keeper Fee
         _payKeeper(msg.sender, _fee);
-        uint256 remainingReserve = IERC20(garden.reserveAsset()).balanceOf(address(this));
-        // Sends the rest back if any
-        IERC20(garden.reserveAsset()).safeTransfer(address(garden), remainingReserve);
+        // Send rest to garden if any
+        _sendReserveAssetToGarden();
     }
 
     /**
@@ -361,11 +360,13 @@ contract Strategy is ReentrancyGuard, Initializable {
     // Any tokens (other than the target) that are sent here by mistake are recoverable by contributors
     // Exchange for WETH
     function sweep(address _token) external onlyContributor {
-        // TODO: check that is not any of the strategy tokens
         require(_token != garden.reserveAsset(), 'Cannot sweep reserve asset');
         uint256 balance = IERC20(_token).balanceOf(address(this));
+        require(!active, "Do not sweep tokens of active strategies");
         require(balance > 0, 'Token balance > 0');
         _trade(_token, balance, garden.reserveAsset());
+        // Send WETH to garden
+        _sendReserveAssetToGarden();
     }
 
     function invokeApprove(
@@ -521,6 +522,12 @@ contract Strategy is ReentrancyGuard, Initializable {
         _returnValue = _target.functionCallWithValue(_data, _value);
         emit Invoked(_target, _value, _data, _returnValue);
         return _returnValue;
+    }
+
+    function _sendReserveAssetToGarden() private {
+      uint256 remainingReserve = IERC20(garden.reserveAsset()).balanceOf(address(this));
+      // Sends the rest back if any
+      IERC20(garden.reserveAsset()).safeTransfer(address(garden), remainingReserve);
     }
 
     /**
