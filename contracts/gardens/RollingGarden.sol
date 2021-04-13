@@ -307,7 +307,8 @@ contract RollingGarden is ReentrancyGuard, BaseGarden {
      * was invested in.
      */
     function claimReturns(address[] calldata _finalizedStrategies) external nonReentrant onlyContributor {
-        Contributor memory contributor = contributors[msg.sender];
+        Contributor storage contributor = contributors[msg.sender];
+        _require(block.timestamp > contributor.claimedAt, Errors.ALREADY_CLAIMED); // race condition check
 
         (uint256 totalProfits, uint256 bablRewards) = _getProfitsAndBabl(_finalizedStrategies);
 
@@ -502,7 +503,6 @@ contract RollingGarden is ReentrancyGuard, BaseGarden {
     /* ============ Internal Functions ============ */
 
     function _getProfitsAndBabl(address[] calldata _finalizedStrategies) internal view returns (uint256, uint96) {
-        _require(contributors[msg.sender].lastDepositAt > contributors[msg.sender].claimedAt, Errors.ALREADY_CLAIMED);
         uint256 contributorTotalProfits = 0;
         uint256 bablTotalRewards = 0;
         for (uint256 i = 0; i < _finalizedStrategies.length; i++) {
@@ -521,6 +521,7 @@ contract RollingGarden is ReentrancyGuard, BaseGarden {
 
                     totalProfits = totalProfits.sub(totalProfits.multiplyDecimal(PROFIT_PROTOCOL_FEE));
                 }
+
                 // Give out BABL
                 uint256 creatorBonus = msg.sender == creator ? CREATOR_BONUS : 0;
                 bool isStrategist = msg.sender == strategy.strategist();

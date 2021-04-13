@@ -465,6 +465,8 @@ abstract contract BaseGarden is ERC20Upgradeable {
             uint256,
             uint256,
             uint256,
+            uint256,
+            uint256,
             uint256
         )
     {
@@ -474,7 +476,9 @@ abstract contract BaseGarden is ERC20Upgradeable {
             contributor.initialDepositAt,
             contributor.claimedAt,
             contributor.numberOfOps,
-            contributor.gardenAverageOwnership
+            contributor.gardenAverageOwnership,
+            contributor.claimedBABL,
+            contributor.claimedProfits
         );
     }
 
