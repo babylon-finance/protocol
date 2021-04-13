@@ -21,7 +21,7 @@ pragma solidity 0.7.4;
  * @title IStrategy
  * @author Babylon Finance
  *
- * Interface for Investment Idea
+ * Interface for strategy
  */
 interface IStrategy {
     function initialize(
@@ -31,7 +31,7 @@ interface IStrategy {
         address _integration,
         uint256 _maxCapitalRequested,
         uint256 _stake,
-        uint256 _investmentDuration,
+        uint256 _strategyDuration,
         uint256 _expectedReturn,
         uint256 _minRebalanceCapital
     ) external;
@@ -46,13 +46,13 @@ interface IStrategy {
 
     function setData(address _data) external;
 
-    function executeInvestment(uint256 _capital, uint256 fee) external;
+    function executeStrategy(uint256 _capital, uint256 fee) external;
 
     function getNAV() external view returns (uint256);
 
-    function finalizeInvestment(uint256 fee) external;
+    function finalizeStrategy(uint256 fee) external;
 
-    function changeInvestmentDuration(uint256 _newDuration) external;
+    function changeStrategyDuration(uint256 _newDuration) external;
 
     function invokeFromIntegration(
         address _target,

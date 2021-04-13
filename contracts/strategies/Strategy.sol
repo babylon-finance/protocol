@@ -43,7 +43,7 @@ import {IRewardsDistributor} from '../interfaces/IRewardsDistributor.sol';
  * @title Strategy
  * @author Babylon Finance
  *
- * Holds the data for an investment strategy
+ * Holds the data for a strategy
  */
 abstract contract Strategy is ReentrancyGuard, Initializable {
     using SignedSafeMath for int256;
@@ -165,8 +165,8 @@ abstract contract Strategy is ReentrancyGuard, Initializable {
     uint256 public stake; // Amount of stake by the strategist (in reserve asset) needs to be positive
     uint256 public maxCapitalRequested; // Amount of max capital to allocate
     uint256 public capitalAllocated; // Current amount of capital allocated
-    uint256 public expectedReturn; // Expect return by this investment strategy
-    uint256 public capitalReturned; // Actual return by this investment strategy
+    uint256 public expectedReturn; // Expect return by this strategy
+    uint256 public capitalReturned; // Actual return by this strategy
     uint256 public minRebalanceCapital; // Min amount of capital so that it is worth to rebalance the capital here
     address[] public tokensNeeded; // Positions that need to be taken prior to enter trade
     uint256[] public tokenAmountsNeeded; // Amount of these positions
@@ -187,7 +187,7 @@ abstract contract Strategy is ReentrancyGuard, Initializable {
      * @param _controller                    Address of the controller
      * @param _maxCapitalRequested           Max Capital requested denominated in the reserve asset (0 to be unlimited)
      * @param _stake                         Stake with garden participations absolute amounts 1e18
-     * @param _investmentDuration            Investment duration in seconds
+     * @param _strategyDuration              Strategy duration in seconds
      * @param _expectedReturn                Expected return
      * @param _minRebalanceCapital           Min capital that is worth it to deposit into this strategy
      */
@@ -198,7 +198,7 @@ abstract contract Strategy is ReentrancyGuard, Initializable {
         address _integration,
         uint256 _maxCapitalRequested,
         uint256 _stake,
-        uint256 _investmentDuration,
+        uint256 _strategyDuration,
         uint256 _expectedReturn,
         uint256 _minRebalanceCapital
     ) public initializer {
@@ -213,7 +213,7 @@ abstract contract Strategy is ReentrancyGuard, Initializable {
         require(IERC20(address(garden)).balanceOf(_strategist) > 0, 'Strategist mush have a stake');
         require(_stake > garden.totalSupply().div(100), 'Stake amount must be at least 1%');
         require(
-            _investmentDuration >= garden.minIdeaDuration() && _investmentDuration <= garden.maxIdeaDuration(),
+            _strategyDuration >= garden.minIdeaDuration() && _strategyDuration <= garden.maxIdeaDuration(),
             'Duration must be in range'
         );
         require(_minRebalanceCapital > 0, 'Min capital be greater than 0');
@@ -222,7 +222,7 @@ abstract contract Strategy is ReentrancyGuard, Initializable {
         strategist = _strategist;
         enteredAt = block.timestamp;
         stake = _stake;
-        duration = _investmentDuration;
+        duration = _strategyDuration;
         expectedReturn = _expectedReturn;
         capitalAllocated = 0;
         minRebalanceCapital = _minRebalanceCapital;
@@ -264,7 +264,7 @@ abstract contract Strategy is ReentrancyGuard, Initializable {
         totalVotes = totalVotes + _totalVotes;
 
         // Get Keeper Fees allocated
-        garden.allocateCapitalToInvestment(MAX_STRATEGY_KEEPER_FEES);
+        garden.allocateCapitalToStrategy(MAX_STRATEGY_KEEPER_FEES);
 
         _payKeeper(msg.sender, _fee);
     }
@@ -275,7 +275,7 @@ abstract contract Strategy is ReentrancyGuard, Initializable {
      * @param _capital                  The capital to allocate to this strategy.
      * @param _fee                      The fee paid to keeper to compensate the gas cost.
      */
-    function executeInvestment(uint256 _capital, uint256 _fee) public onlyKeeper(_fee) nonReentrant onlyActiveGarden {
+    function executeStrategy(uint256 _capital, uint256 _fee) public onlyKeeper(_fee) nonReentrant onlyActiveGarden {
         require(active, 'Idea needs to be active');
         require(capitalAllocated.add(_capital) <= maxCapitalRequested, 'Max capital reached');
         require(_capital >= minRebalanceCapital, 'Amount needs to be more than min');
@@ -285,7 +285,7 @@ abstract contract Strategy is ReentrancyGuard, Initializable {
         );
 
         // Execute enter trade
-        garden.allocateCapitalToInvestment(_capital);
+        garden.allocateCapitalToStrategy(_capital);
         capitalAllocated = capitalAllocated.add(_capital);
         _enterStrategy(_capital);
 
@@ -308,19 +308,19 @@ abstract contract Strategy is ReentrancyGuard, Initializable {
     }
 
     /**
-     * Exits from an executed investment.
+     * Exits from an executed strategy.
      * Sends rewards to the person that created the strategy, the voters, and the rest to the garden.
      * If there are profits
      * Updates the reserve asset position accordingly.
      * @param _fee                     The fee paid to keeper to compensate the gas cost
      */
-    function finalizeInvestment(uint256 _fee) external onlyKeeper(_fee) nonReentrant onlyActiveGarden {
+    function finalizeStrategy(uint256 _fee) external onlyKeeper(_fee) nonReentrant onlyActiveGarden {
         require(executedAt > 0, 'This strategy has not been executed');
         require(
             block.timestamp > executedAt.add(duration),
             'Idea can only be finalized after the minimum period has elapsed'
         );
-        require(!finalized, 'This investment was already exited');
+        require(!finalized, 'This strategy was already exited');
         // Execute exit trade
         _exitStrategy();
         // Mark as finalized
@@ -353,11 +353,11 @@ abstract contract Strategy is ReentrancyGuard, Initializable {
     }
 
     /**
-     * Lets the strategist change the duration of the investment
+     * Lets the strategist change the duration of the strategy
      * @param _newDuration            New duration of the strategy
      */
-    function changeInvestmentDuration(uint256 _newDuration) external onlyIdeator {
-        require(!finalized, 'This investment was already exited');
+    function changeStrategyDuration(uint256 _newDuration) external onlyIdeator {
+        require(!finalized, 'This strategy was already exited');
         require(_newDuration < duration, 'Duration needs to be less than the old duration');
         duration = _newDuration;
     }

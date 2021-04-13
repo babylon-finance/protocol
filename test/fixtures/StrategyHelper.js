@@ -7,7 +7,7 @@ const addresses = require('../../utils/addresses');
 const DEFAULT_STRATEGY_PARAMS = [
   ethers.utils.parseEther('10'), // _maxCapitalRequested
   ethers.utils.parseEther('1'), // _stake
-  ONE_DAY_IN_SECONDS * 30, // _investmentDuration
+  ONE_DAY_IN_SECONDS * 30, // _strategyDuration
   ethers.utils.parseEther('0.05'), // 5% _expectedReturn
   ethers.utils.parseEther('1'), // _minRebalanceCapital
 ];
@@ -100,7 +100,7 @@ async function vote(garden, signers, strategy) {
 async function executeStrategy(garden, strategy, amount = ethers.utils.parseEther('1'), fee = 0) {
   ethers.provider.send('evm_increaseTime', [ONE_DAY_IN_SECONDS * 2]);
   await updateTWAPs(garden);
-  return strategy.executeInvestment(amount, fee, {
+  return strategy.executeStrategy(amount, fee, {
     gasPrice: 0,
   });
 }
@@ -108,7 +108,7 @@ async function executeStrategy(garden, strategy, amount = ethers.utils.parseEthe
 async function finalizeStrategy(garden, strategy, fee = 0) {
   ethers.provider.send('evm_increaseTime', [ONE_DAY_IN_SECONDS * 90]);
   await updateTWAPs(garden);
-  return strategy.finalizeInvestment(fee, { gasPrice: 0 });
+  return strategy.finalizeStrategy(fee, { gasPrice: 0 });
 }
 
 async function injectFakeProfits(strategy, amount) {

@@ -71,8 +71,8 @@ contract RollingGarden is ReentrancyGuard, BaseGarden {
     }
 
     uint256 public depositHardlock; // Window of time after deposits when withdraws are disabled for that user
-    // Window of time after an investment strategy finishes when the capital is available for withdrawals
-    uint256 public redemptionWindowAfterInvestmentCompletes;
+    // Window of time after an strategy finishes when the capital is available for withdrawals
+    uint256 public redemptionWindowAfterStrategyCompletes;
     uint256 public redemptionsOpenUntil; // Indicates until when the redemptions are open and the ETH is set aside
 
     mapping(address => uint256) public redemptionRequests; // Current redemption requests for this window
@@ -93,7 +93,7 @@ contract RollingGarden is ReentrancyGuard, BaseGarden {
     /* ============ Constructor ============ */
 
     /**
-     * When a new Garden is created, initializes Investments are set to empty.
+     * When a new Garden is created, initializes strategies are set to empty.
      * All parameter validations are on the BabController contract. Validations are performed already on the
      * BabController.
      *
@@ -130,9 +130,9 @@ contract RollingGarden is ReentrancyGuard, BaseGarden {
      * @param _strategyCreatorProfitPercentage      What percentage of the profits go to the strategy creator
      * @param _strategyVotersProfitPercentage       What percentage of the profits go to the strategy curators
      * @param _gardenCreatorProfitPercentage What percentage of the profits go to the creator of the garden
-     * @param _minVotersQuorum                  Percentage of votes needed to activate an investment strategy (0.01% = 1e14, 1% = 1e16)
-     * @param _minIdeaDuration                  Min duration of an investment strategy
-     * @param _maxIdeaDuration                  Max duration of an investment strategy
+     * @param _minVotersQuorum                  Percentage of votes needed to activate an strategy (0.01% = 1e14, 1% = 1e16)
+     * @param _minIdeaDuration                  Min duration of an strategy
+     * @param _maxIdeaDuration                  Max duration of an strategy
      */
     function start(
         uint256 _maxDepositLimit,
@@ -163,7 +163,7 @@ contract RollingGarden is ReentrancyGuard, BaseGarden {
         gardenInitializedAt = block.timestamp;
         minLiquidityAsset = _minLiquidityAsset;
         depositHardlock = _depositHardlock;
-        redemptionWindowAfterInvestmentCompletes = 7 days;
+        redemptionWindowAfterStrategyCompletes = 7 days;
         startCommon(
             _minContribution,
             _strategyCooldownPeriod,
@@ -210,7 +210,7 @@ contract RollingGarden is ReentrancyGuard, BaseGarden {
         // Always wrap to WETH
         IWETH(weth).deposit{value: msg.value}();
         // Check this here to avoid having relayers
-        reenableEthForInvestments();
+        reenableEthForStrategies();
 
         _validateReserveAsset(reserveAsset, _reserveAssetQuantity);
 
@@ -265,7 +265,7 @@ contract RollingGarden is ReentrancyGuard, BaseGarden {
         ); // Strategists and Voters cannot withdraw locked stake while in active strategies
 
         // Check this here to avoid having relayers
-        reenableEthForInvestments();
+        reenableEthForStrategies();
         ActionInfo memory withdrawalInfo = _createRedemptionInfo(_gardenTokenQuantity);
 
         _validateReserveAsset(reserveAsset, withdrawalInfo.netFlowQuantity);
@@ -329,7 +329,7 @@ contract RollingGarden is ReentrancyGuard, BaseGarden {
     }
 
     /**
-     * When an investment strategy finishes execution, contributors might want
+     * When an strategy finishes execution, contributors might want
      * to know the profits and BABL rewards for their participation in the different strategies
      *
      *
@@ -346,22 +346,22 @@ contract RollingGarden is ReentrancyGuard, BaseGarden {
     }
 
     /**
-     * When an investment strategy finishes execution, we want to make that eth available for withdrawals
+     * When an strategy finishes execution, we want to make that eth available for withdrawals
      * from members of the garden.
      *
      * @param _amount                        Amount of WETH to convert to ETH to set aside
      */
     function startRedemptionWindow(uint256 _amount) external onlyStrategyOrProtocol {
-        redemptionsOpenUntil = block.timestamp.add(redemptionWindowAfterInvestmentCompletes);
+        redemptionsOpenUntil = block.timestamp.add(redemptionWindowAfterStrategyCompletes);
         reserveAvailableForRedemptionsInWindow.add(_amount);
         IWETH(weth).withdraw(_amount);
     }
 
     /**
-     * When the window of redemptions finishes, we need to make the capital available again for investments
+     * When the window of redemptions finishes, we need to make the capital available again for strategies
      *
      */
-    function reenableEthForInvestments() public {
+    function reenableEthForStrategies() public {
         if (block.timestamp >= redemptionsOpenUntil && address(this).balance > minContribution) {
             // Always wrap to WETH
             totalRequestsAmountInWindow = 0;

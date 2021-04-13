@@ -97,20 +97,20 @@ interface IGarden is IERC20 {
 
     function startRedemptionWindow(uint256 _amount) external;
 
-    function allocateCapitalToInvestment(uint256 _capital) external;
+    function allocateCapitalToStrategy(uint256 _capital) external;
 
     function addStrategy(
         uint8 _strategyKind,
         address _integration,
         uint256 _maxCapitalRequested,
         uint256 _stake,
-        uint256 _investmentDuration,
+        uint256 _strategyDuration,
         uint256 _expectedReturn,
         uint256 _minRebalanceCapital,
         address _strategyData
     ) external;
 
-    function rebalanceInvestments(uint256 _fee) external;
+    function rebalanceStrategies(uint256 _fee) external;
 
     function moveStrategyToFinalized(int256 _returns, address _strategy) external;
 

@@ -473,7 +473,7 @@ describe('Garden', function () {
   });
 
   describe('Add Strategy', async function () {
-    it('should not be able to add an investment strategy unless there is a contributor', async function () {
+    it('should not be able to add an strategy unless there is a contributor', async function () {
       await expect(
         garden1.connect(signer2).addStrategy(
           0,
@@ -491,7 +491,7 @@ describe('Garden', function () {
       ).to.be.reverted;
     });
 
-    it('a contributor should be able to add an investment strategy', async function () {
+    it('a contributor should be able to add an strategy', async function () {
       await garden1.connect(signer3).deposit(ethers.utils.parseEther('1'), 1, signer3.getAddress(), {
         value: ethers.utils.parseEther('1'),
       });
@@ -503,7 +503,7 @@ describe('Garden', function () {
       ).to.not.be.reverted;
     });
 
-    it('a contributor should not be able to add an investment strategy with a small stake', async function () {
+    it('a contributor should not be able to add an strategy with a small stake', async function () {
       await garden1.connect(signer3).deposit(ethers.utils.parseEther('1'), 1, signer3.getAddress(), {
         value: ethers.utils.parseEther('1'),
       });
