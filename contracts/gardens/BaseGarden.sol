@@ -397,13 +397,13 @@ abstract contract BaseGarden is ERC20Upgradeable {
         IERC20Upgradeable(reserveAsset).safeTransfer(msg.sender, _capital);
     }
 
-    // Any tokens (other than the target) that are sent here by mistake are recoverable by contributors
+    // Any tokens (other than the target) that are sent here by mistake are recoverable by the protocol
     // Exchange for WETH
     function sweep(address _token) external onlyContributor {
         _require(_token != reserveAsset, Errors.MUST_BE_RESERVE_ASSET);
         uint256 balance = IERC20Upgradeable(_token).balanceOf(address(this));
         _require(balance > 0, Errors.BALANCE_TOO_LOW);
-        IERC20Upgradeable(_token).safeTransfer(msg.sender, balance);
+        IERC20Upgradeable(_token).safeTransfer(IBabController(controller).getTreasury(), balance);
     }
 
     /*
