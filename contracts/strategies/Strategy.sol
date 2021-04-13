@@ -362,7 +362,7 @@ contract Strategy is ReentrancyGuard, Initializable {
     function sweep(address _token) external onlyContributor {
         require(_token != garden.reserveAsset(), 'Cannot sweep reserve asset');
         uint256 balance = IERC20(_token).balanceOf(address(this));
-        require(!active, "Do not sweep tokens of active strategies");
+        require(!active, 'Do not sweep tokens of active strategies');
         require(balance > 0, 'Token balance > 0');
         _trade(_token, balance, garden.reserveAsset());
         // Send WETH to garden
@@ -525,9 +525,9 @@ contract Strategy is ReentrancyGuard, Initializable {
     }
 
     function _sendReserveAssetToGarden() private {
-      uint256 remainingReserve = IERC20(garden.reserveAsset()).balanceOf(address(this));
-      // Sends the rest back if any
-      IERC20(garden.reserveAsset()).safeTransfer(address(garden), remainingReserve);
+        uint256 remainingReserve = IERC20(garden.reserveAsset()).balanceOf(address(this));
+        // Sends the rest back if any
+        IERC20(garden.reserveAsset()).safeTransfer(address(garden), remainingReserve);
     }
 
     /**
