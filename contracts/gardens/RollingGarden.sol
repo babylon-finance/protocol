@@ -75,8 +75,6 @@ contract RollingGarden is ReentrancyGuard, BaseGarden {
     uint256 public redemptionWindowAfterInvestmentCompletes;
     uint256 public redemptionsOpenUntil; // Indicates until when the redemptions are open and the ETH is set aside
 
-    mapping(address => uint256) public redemptionRequests; // Current redemption requests for this window
-    uint256 public totalRequestsAmountInWindow; // Total Redemption Request Amount
     uint256 public reserveAvailableForRedemptionsInWindow; // Total available for redemptions in this window
 
     uint256 public constant BABL_STRATEGIST_SHARE = 8e16;
@@ -278,7 +276,6 @@ contract RollingGarden is ReentrancyGuard, BaseGarden {
         }
         // Send ETH
         Address.sendValue(_to, withdrawalInfo.netFlowQuantity);
-        redemptionRequests[msg.sender] = 0;
         payProtocolFeeFromGarden(reserveAsset, withdrawalInfo.protocolFees);
 
         uint256 outflow = withdrawalInfo.netFlowQuantity.add(withdrawalInfo.protocolFees);
@@ -359,29 +356,10 @@ contract RollingGarden is ReentrancyGuard, BaseGarden {
     function reenableEthForInvestments() public {
         if (block.timestamp >= redemptionsOpenUntil && address(this).balance > minContribution) {
             // Always wrap to WETH
-            totalRequestsAmountInWindow = 0;
             reserveAvailableForRedemptionsInWindow = 0;
             redemptionsOpenUntil = 0;
             IWETH(weth).deposit{value: address(this).balance}();
         }
-    }
-
-    /**
-     * When the window of redemptions is open, signal your intention to redeem.
-     *
-     * @param _amount Amount to request a redemption in next window
-     */
-    function requestRedemptionAmount(uint256 _amount) public {
-        _require(_amount <= balanceOf(msg.sender), Errors.MSG_SENDER_TOKENS_TOO_LOW);
-        // Flashloan protection
-        _require(
-            block.timestamp.sub(contributors[msg.sender].lastDepositAt) >= depositHardlock,
-            Errors.TOKENS_TIMELOCKED
-        );
-        _require(redemptionsOpenUntil == 0, Errors.REDEMPTION_OPENED_ALREADY);
-        _require(redemptionRequests[msg.sender] == 0, Errors.ALREADY_REQUESTED);
-        redemptionRequests[msg.sender] = _amount;
-        totalRequestsAmountInWindow.add(_amount);
     }
 
     /* ============ External Getter Functions ============ */
@@ -403,13 +381,7 @@ contract RollingGarden is ReentrancyGuard, BaseGarden {
 
         // Redemptions open
         if (block.timestamp <= redemptionsOpenUntil) {
-            // Requested a redemption
-            if (redemptionRequests[_contributor] > 0) {
-                return
-                    redemptionRequests[_contributor].div(totalRequestsAmountInWindow).mul(
-                        reserveAvailableForRedemptionsInWindow
-                    ) >= _amount;
-            }
+            // todo: check pro rata
             // Didn't request a redemption
             return ethAsideBalance.sub(reserveAvailableForRedemptionsInWindow) >= _amount;
         }
