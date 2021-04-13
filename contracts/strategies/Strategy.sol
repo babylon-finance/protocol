@@ -395,7 +395,7 @@ abstract contract Strategy is ReentrancyGuard, Initializable {
     /**
      * Returns whether this strategy is currently active or not
      */
-    function isIdeaActive() external view returns (bool) {
+    function isIdeaActive() public view returns (bool) {
         return executedAt > 0 && exitedAt == 0;
     }
 
@@ -465,7 +465,7 @@ abstract contract Strategy is ReentrancyGuard, Initializable {
      *
      * @return _nav           NAV of the strategy
      */
-    function getNAV() external view virtual returns (uint256);
+    function getNAV() public view virtual returns (uint256);
 
     function getUserVotes(address _address) external view returns (int256) {
         return votes[_address];
@@ -539,6 +539,20 @@ abstract contract Strategy is ReentrancyGuard, Initializable {
         IERC20(garden.reserveAsset()).safeTransfer(address(garden), remainingReserve);
     }
 
+    function getLossesStrategy() external view onlyActiveGarden returns (uint256) {
+        if (isIdeaActive()) {
+            uint256 navStrategy = getNAV();
+            // If strategy is currently experiencing losses, we add them
+            if (navStrategy < capitalAllocated) {
+                return capitalAllocated.sub(navStrategy);
+            }
+        }
+        if (finalized && capitalAllocated > capitalReturned) {
+            return capitalAllocated.sub(capitalReturned);
+        }
+        return 0;
+    }
+
     /**
      * Function that calculates the price using the oracle and executes a trade.
      * Must call the exchange to get the price and pass minReceiveQuantity accordingly.
@@ -596,7 +610,7 @@ abstract contract Strategy is ReentrancyGuard, Initializable {
         uint256 _newTotal = garden.principal().toInt256().add(reserveAssetDelta).toUint256();
         garden.updatePrincipal(_newTotal);
         // Start a redemption window in the garden with this capital
-        garden.startRedemptionWindow(capitalReturned);
+        garden.startWithdrawalWindow(capitalReturned);
 
         // Moves strategy to finalized
         IGarden(garden).moveStrategyToFinalized(reserveAssetDelta, address(this));
