@@ -48,6 +48,8 @@ interface IStrategy {
 
     function executeInvestment(uint256 _capital, uint256 fee) external;
 
+    function getNAV() external view returns (uint256);
+
     function finalizeInvestment(uint256 fee) external;
 
     function changeInvestmentDuration(uint256 _newDuration) external;

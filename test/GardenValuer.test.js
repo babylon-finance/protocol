@@ -38,5 +38,7 @@ describe('GardenValuer', function () {
       const tokens = await garden1.totalSupply();
       expect(pricePerGardenToken.mul(tokens / 1000).div(10 ** 15)).to.equal(ethers.utils.parseEther('0.1'));
     });
+
+    // TODO: check gardens with active strategies
   });
 });

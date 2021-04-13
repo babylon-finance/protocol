@@ -454,6 +454,17 @@ contract Strategy is ReentrancyGuard, Initializable {
         return (address(this), active, dataSet, finalized, executedAt, exitedAt, updatedAt);
     }
 
+    /**
+     * Gets the NAV of assets under management. Virtual method.
+     * Needs to be overriden in base class.
+     *
+     * @return _nav           NAV of the strategy
+     */
+    function getNAV() external view virtual returns (uint256) {
+        require(false, 'This needs to be overriden');
+        return 0;
+    }
+
     function getUserVotes(address _address) external view returns (int256) {
         return votes[_address];
     }
@@ -543,8 +554,10 @@ contract Strategy is ReentrancyGuard, Initializable {
         address _receiveToken
     ) internal returns (uint256) {
         address tradeIntegration = IBabController(controller).getIntegrationByName('1inch');
-        // Uses on chain oracle for all internal strategy operations to avoid attacks
-        uint256 pricePerTokenUnit = _getPrice(_sendToken, _receiveToken);
+        // Uses on chain oracle for all internal strategy operations to avoid attacks        // Updates UniSwap TWAP
+        IPriceOracle oracle = IPriceOracle(IBabController(controller).getPriceOracle());
+        oracle.updateAdapters(_sendToken, _receiveToken);
+        uint256 pricePerTokenUnit = oracle.getPrice(_sendToken, _receiveToken);
         uint256 exactAmount = _sendQuantity.preciseMul(pricePerTokenUnit);
         uint256 minAmountExpected = exactAmount.sub(exactAmount.preciseMul(SLIPPAGE_ALLOWED));
         ITradeIntegration(tradeIntegration).trade(_sendToken, _sendQuantity, _receiveToken, minAmountExpected);
@@ -593,10 +606,8 @@ contract Strategy is ReentrancyGuard, Initializable {
         strategyRewards = rewardsDistributor.getStrategyRewards(address(this));
     }
 
-    function _getPrice(address _assetOne, address _assetTwo) internal returns (uint256) {
+    function _getPrice(address _assetOne, address _assetTwo) internal view returns (uint256) {
         IPriceOracle oracle = IPriceOracle(IBabController(controller).getPriceOracle());
-        // Updates UniSwap TWAP
-        oracle.updateAdapters(_assetOne, _assetTwo);
         return oracle.getPrice(_assetOne, _assetTwo);
     }
 

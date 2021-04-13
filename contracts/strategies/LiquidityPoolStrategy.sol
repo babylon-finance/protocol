@@ -55,6 +55,19 @@ contract LiquidityPoolStrategy is Strategy {
     }
 
     /**
+     * Gets the NAV of the liquidity pool asset in ETH
+     *
+     * @return _nav           NAV of the strategy
+     */
+    function getNAV() external view override returns (uint256) {
+        if (!active || finalized) {
+            return 0;
+        }
+        // TODO
+        return 0;
+    }
+
+    /**
      * Enters the pool strategy
      */
     function _enterStrategy(uint256 _capital) internal override {
