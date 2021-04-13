@@ -415,6 +415,7 @@ abstract contract BaseGarden is ERC20Upgradeable {
         absoluteReturns.add(_returns);
         strategies = strategies.remove(_strategy);
         finalizedStrategies.push(_strategy);
+        strategyMapping[_strategy] = false;
     }
 
     /*
