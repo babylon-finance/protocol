@@ -45,13 +45,25 @@ contract YieldFarmingStrategy is Strategy {
      * @param _yieldVault                   Yield vault to enter
      */
     function setData(address _yieldVault) public onlyGardenAndNotSet {
-        require(!dataSet, 'Data is set already');
         require(IPassiveIntegration(integration).isInvestment(_yieldVault), 'Must be a valid yield vault');
 
         kind = 2;
         yieldVault = _yieldVault;
         vaultAsset = IPassiveIntegration(integration).getInvestmentAsset(_yieldVault);
         dataSet = true;
+    }
+
+    /**
+     * Gets the NAV of the liquidity pool asset in ETH
+     *
+     * @return _nav           NAV of the strategy
+     */
+    function getNAV() external view override returns (uint256) {
+        if (!active || finalized) {
+            return 0;
+        }
+        // TODO
+        return 0;
     }
 
     /**

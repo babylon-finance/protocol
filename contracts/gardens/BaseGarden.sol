@@ -20,14 +20,19 @@ pragma solidity 0.7.4;
 import 'hardhat/console.sol';
 import {Address} from '@openzeppelin/contracts/utils/Address.sol';
 import {ERC20Upgradeable} from '@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol';
+import {IERC20Upgradeable} from '@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol';
+import {SafeERC20Upgradeable} from '@openzeppelin/contracts-upgradeable/token/ERC20/SafeERC20Upgradeable.sol';
 import {SafeMath} from '@openzeppelin/contracts/math/SafeMath.sol';
 import {SafeCast} from '@openzeppelin/contracts/utils/SafeCast.sol';
 import {SignedSafeMath} from '@openzeppelin/contracts/math/SignedSafeMath.sol';
+
+import {Errors, _require} from '../lib/BabylonErrors.sol';
 import {AddressArrayUtils} from '../lib/AddressArrayUtils.sol';
+import {PreciseUnitMath} from '../lib/PreciseUnitMath.sol';
+
 import {IBabController} from '../interfaces/IBabController.sol';
 import {IStrategyFactory} from '../interfaces/IStrategyFactory.sol';
 import {IStrategy} from '../interfaces/IStrategy.sol';
-import {PreciseUnitMath} from '../lib/PreciseUnitMath.sol';
 
 /**
  * @title BaseGarden
@@ -43,6 +48,7 @@ abstract contract BaseGarden is ERC20Upgradeable {
     using PreciseUnitMath for uint256;
     using Address for address;
     using AddressArrayUtils for address[];
+    using SafeERC20Upgradeable for IERC20Upgradeable;
 
     /* ============ Events ============ */
     event ReserveAssetChanged(address indexed _reserveAsset);
@@ -65,7 +71,7 @@ abstract contract BaseGarden is ERC20Upgradeable {
 
     /* ============ Modifiers ============ */
     modifier onlyContributor {
-        require(balanceOf(msg.sender) > 0, 'G01'); // Only Contributor
+        _require(balanceOf(msg.sender) > 0, Errors.ONLY_CONTRIBUTOR);
         _;
     }
 
@@ -73,7 +79,7 @@ abstract contract BaseGarden is ERC20Upgradeable {
      * Throws if the sender is not the protocol
      */
     modifier onlyProtocol() {
-        require(msg.sender == controller, 'G02'); // Only controller
+        _require(msg.sender == controller, Errors.ONLY_CONTROLLER);
         _;
     }
 
@@ -81,7 +87,7 @@ abstract contract BaseGarden is ERC20Upgradeable {
      * Throws if the sender is not the garden creator
      */
     modifier onlyCreator() {
-        require(msg.sender == creator, 'G03'); // Only creator
+        _require(msg.sender == creator, Errors.ONLY_CREATOR);
         _;
     }
 
@@ -90,9 +96,10 @@ abstract contract BaseGarden is ERC20Upgradeable {
      * @param _fee                     The fee paid to keeper to compensate the gas cost
      */
     modifier onlyKeeper(uint256 _fee) {
-        require(IBabController(controller).isValidKeeper(msg.sender), 'G04'); // Only keeper
-        // We assume that calling keeper functions should be less expensive than 1 million gas and the gas price should be lower than 1000 gwei.
-        require(_fee < MAX_KEEPER_FEE, 'G05'); // Fee is too high
+        _require(IBabController(controller).isValidKeeper(msg.sender), Errors.ONLY_KEEPER);
+        // We assume that calling keeper functions should be less expensive
+        // than 1 million gas and the gas price should be lower than 1000 gwei.
+        _require(_fee < MAX_KEEPER_FEE, Errors.FEE_TOO_HIGH);
         _;
     }
 
@@ -100,21 +107,18 @@ abstract contract BaseGarden is ERC20Upgradeable {
      * Throws if the sender is not an investment strategy of this garden
      */
     modifier onlyStrategy() {
-        require(
-            strategyMapping[msg.sender] && IStrategy(msg.sender).garden() == address(this),
-            'G06' // Only a strategy of this garden
-        );
+        _require(strategyMapping[msg.sender], Errors.ONLY_STRATEGY);
         _;
     }
 
     /**
      * Throws if the sender is not an investment strategy or the protocol
      */
-    modifier onlyStrategyOrOwner() {
-        require(
+    modifier onlyStrategyOrProtocol() {
+        _require(
             (strategyMapping[msg.sender] && IStrategy(msg.sender).garden() == address(this)) ||
                 msg.sender == controller,
-            'G07' // Only the strategy or the protocol
+            Errors.ONLY_STRATEGY_OR_CONTROLLER
         );
         _;
     }
@@ -123,7 +127,7 @@ abstract contract BaseGarden is ERC20Upgradeable {
      * Throws if the garden is not active
      */
     modifier onlyActive() {
-        require(active == true, 'G08'); // Only active garden
+        _require(active, Errors.ONLY_ACTIVE);
         _;
     }
 
@@ -131,14 +135,14 @@ abstract contract BaseGarden is ERC20Upgradeable {
      * Throws if the garden is not disabled
      */
     modifier onlyInactive() {
-        require(active == false, 'G09'); // Only inactive garden
+        _require(!active, Errors.ONLY_INACTIVE);
         _;
     }
 
     /* ============ State Constants ============ */
 
     uint256 public constant MAX_DEPOSITS_FUND_V1 = 1e21; // Max deposit per garden is 1000 eth for v1
-    uint256 public constant MAX_TOTAL_IDEAS = 20; // Max number of ideas
+    uint256 public constant MAX_TOTAL_STRATEGIES = 20; // Max number of strategies
     uint256 internal constant TEN_PERCENT = 1e17;
     uint256 internal constant MAX_KEEPER_FEE = (1e6 * 1e3 gwei);
 
@@ -224,9 +228,9 @@ abstract contract BaseGarden is ERC20Upgradeable {
         string memory _name,
         string memory _symbol
     ) public virtual initializer {
-        require(_creator != address(0), 'G10');
-        require(_controller != address(0), 'G11');
-        require(_reserveAsset != address(0), 'G12');
+        _require(_creator != address(0), Errors.ADDRESS_IS_ZERO);
+        _require(_controller != address(0), Errors.ADDRESS_IS_ZERO);
+        _require(_reserveAsset != address(0), Errors.ADDRESS_IS_ZERO);
         __ERC20_init(_name, _symbol);
 
         controller = _controller;
@@ -259,12 +263,12 @@ abstract contract BaseGarden is ERC20Upgradeable {
         uint256 _minIdeaDuration,
         uint256 _maxIdeaDuration
     ) internal {
-        require(
+        _require(
             _strategyCooldownPeriod <= IBabController(controller).getMaxCooldownPeriod() &&
                 _strategyCooldownPeriod >= IBabController(controller).getMinCooldownPeriod(),
-            'G13' // Garden cooldown not within range
+            Errors.NOT_IN_RANGE
         );
-        require(_minVotersQuorum >= TEN_PERCENT, 'G14'); // You need at least 10%
+        _require(_minVotersQuorum >= TEN_PERCENT, Errors.VALUE_TOO_LOW);
         minContribution = _minContribution;
         strategyCreatorProfitPercentage = _strategyCreatorProfitPercentage;
         strategyVotersProfitPercentage = _strategyVotersProfitPercentage;
@@ -292,7 +296,7 @@ abstract contract BaseGarden is ERC20Upgradeable {
      * PRIVILEGED Manager, protocol FUNCTION. When a Garden is disabled, deposits are disabled.
      */
     function setActive() external onlyProtocol {
-        require(!active, 'G15'); // Garden already active
+        _require(!active, Errors.ONLY_INACTIVE);
         active = true;
     }
 
@@ -300,7 +304,7 @@ abstract contract BaseGarden is ERC20Upgradeable {
      * PRIVILEGED Manager, protocol FUNCTION. When a Garden is disabled, deposits are disabled.
      */
     function setDisabled() external onlyProtocol {
-        require(active, 'G16'); // Garden is not active
+        _require(active, Errors.ONLY_ACTIVE);
         active = false;
     }
 
@@ -335,7 +339,7 @@ abstract contract BaseGarden is ERC20Upgradeable {
         uint256 _minRebalanceCapital,
         address _strategyData
     ) external onlyContributor onlyActive {
-        require(strategies.length < MAX_TOTAL_IDEAS, 'G17'); // reached limit of strategies
+        _require(strategies.length < MAX_TOTAL_STRATEGIES, Errors.VALUE_TOO_HIGH);
         IStrategyFactory strategyFactory =
             IStrategyFactory(IBabController(controller).getStrategyFactory(_strategyKind));
         address strategy =
@@ -384,28 +388,22 @@ abstract contract BaseGarden is ERC20Upgradeable {
     function allocateCapitalToInvestment(uint256 _capital) external onlyStrategy onlyActive {
         uint256 liquidReserveAsset = ERC20Upgradeable(reserveAsset).balanceOf(address(this));
         uint256 protocolMgmtFee = IBabController(controller).getProtocolManagementFee().preciseMul(_capital);
-        require(_capital.add(protocolMgmtFee) <= liquidReserveAsset, 'G18'); // not enough capital
+        _require(_capital.add(protocolMgmtFee) <= liquidReserveAsset, Errors.MIN_LIQUIDITY);
 
         // Take protocol mgmt fee
-        require(
-            ERC20Upgradeable(reserveAsset).transfer(IBabController(controller).getTreasury(), protocolMgmtFee),
-            'G19' // failed to pay mgmt fee
-        );
+        IERC20Upgradeable(reserveAsset).safeTransfer(IBabController(controller).getTreasury(), protocolMgmtFee);
 
         // Send Capital to strategy
-        require(
-            ERC20Upgradeable(reserveAsset).transfer(msg.sender, _capital),
-            'G20' // fail to allocate capital to strategy
-        );
+        IERC20Upgradeable(reserveAsset).safeTransfer(msg.sender, _capital);
     }
 
-    // Any tokens (other than the target) that are sent here by mistake are recoverable by contributors
+    // Any tokens (other than the target) that are sent here by mistake are recoverable by the protocol
     // Exchange for WETH
     function sweep(address _token) external onlyContributor {
-        require(_token != reserveAsset, 'G21'); // token is reserve asset
-        uint256 balance = ERC20Upgradeable(_token).balanceOf(address(this));
-        require(balance > 0, 'G26'); // nothing to sweep
-        ERC20Upgradeable(_token).transfer(msg.sender, balance);
+        _require(_token != reserveAsset, Errors.MUST_BE_RESERVE_ASSET);
+        uint256 balance = IERC20Upgradeable(_token).balanceOf(address(this));
+        _require(balance > 0, Errors.BALANCE_TOO_LOW);
+        IERC20Upgradeable(_token).safeTransfer(IBabController(controller).getTreasury(), balance);
     }
 
     /*
@@ -417,6 +415,7 @@ abstract contract BaseGarden is ERC20Upgradeable {
         absoluteReturns.add(_returns);
         strategies = strategies.remove(_strategy);
         finalizedStrategies.push(_strategy);
+        strategyMapping[_strategy] = false;
     }
 
     /*
@@ -496,10 +495,7 @@ abstract contract BaseGarden is ERC20Upgradeable {
      */
     function payProtocolFeeFromGarden(address _token, uint256 _feeQuantity) internal {
         if (_feeQuantity > 0) {
-            require(
-                ERC20Upgradeable(_token).transfer(IBabController(controller).getTreasury(), _feeQuantity),
-                'G22' // Failed to pay protocol fee
-            );
+            IERC20Upgradeable(_token).safeTransfer(IBabController(controller).getTreasury(), _feeQuantity);
         }
     }
 
@@ -509,9 +505,9 @@ abstract contract BaseGarden is ERC20Upgradeable {
         address to,
         uint256 /* amount */
     ) internal view override {
-        require(
+        _require(
             from == address(0) || to == address(0) || IBabController(controller).gardenTokensTransfersEnabled(),
-            'G26' // garden transfers are disabled
+            Errors.TOKENS_TIMELOCKED
         );
     }
 }

@@ -46,13 +46,23 @@ contract LendStrategy is Strategy {
      * @param _assetToken                  ERC20 Token to supply.
      */
     function setData(address _assetToken) public onlyGardenAndNotSet {
-        // require(IPassiveIntegration(integration).isInvestment(_yieldVault), 'Must be a valid yield vault');
-        require(!dataSet, 'Data is set already');
-
         kind = 3;
         assetToken = _assetToken;
 
         dataSet = true;
+    }
+
+    /**
+     * Gets the NAV of the lend asset in ETH
+     *
+     * @return _nav           NAV of the strategy
+     */
+    function getNAV() external view override returns (uint256) {
+        if (!active || finalized) {
+            return 0;
+        }
+        // TODO
+        return 0;
     }
 
     /**

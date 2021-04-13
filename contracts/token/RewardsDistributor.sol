@@ -33,19 +33,18 @@ import {TimeLockedToken} from './TimeLockedToken.sol';
 import {Ownable} from '@openzeppelin/contracts/access/Ownable.sol';
 import {SafeMath} from '@openzeppelin/contracts/math/SafeMath.sol';
 import {Address} from '@openzeppelin/contracts/utils/Address.sol';
+import {SafeERC20} from '@openzeppelin/contracts/token/ERC20/SafeERC20.sol';
+
+import {SafeDecimalMath} from '../lib/SafeDecimalMath.sol';
+import {PreciseUnitMath} from '../lib/PreciseUnitMath.sol';
+import {Math} from '../lib/Math.sol';
+import {Safe3296} from '../lib/Safe3296.sol';
 
 import {IBabController} from '../interfaces/IBabController.sol';
 import {IRollingGarden} from '../interfaces/IRollingGarden.sol';
 import {IStrategy} from '../interfaces/IStrategy.sol';
 import {TimeLockedToken} from './TimeLockedToken.sol';
-
 import {IRewardsDistributor} from '../interfaces/IRewardsDistributor.sol';
-
-import {SafeDecimalMath} from '../lib/SafeDecimalMath.sol';
-import {SafeMath} from '@openzeppelin/contracts/math/SafeMath.sol';
-import {PreciseUnitMath} from '../lib/PreciseUnitMath.sol';
-import {Math} from '../lib/Math.sol';
-import {Safe3296} from '../lib/Safe3296.sol';
 
 contract RewardsDistributor is Ownable {
     using SafeMath for uint256;
@@ -477,9 +476,9 @@ contract RewardsDistributor is Ownable {
     function _safeBABLTransfer(address _to, uint96 _amount) internal {
         uint256 bablBal = babltoken.balanceOf(address(this));
         if (_amount > bablBal) {
-            babltoken.transfer(_to, bablBal);
+            SafeERC20.safeTransfer(babltoken, _to, bablBal);
         } else {
-            babltoken.transfer(_to, _amount);
+            SafeERC20.safeTransfer(babltoken, _to, _amount);
         }
     }
 }
