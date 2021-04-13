@@ -1,7 +1,4 @@
 module.exports = {
-  env: {
-    mocha: true,
-  },
   extends: ['standard', 'plugin:promise/recommended', 'plugin:prettier/recommended'],
   plugins: ['promise', 'babel', 'no-only-tests'],
   env: {
@@ -31,6 +28,6 @@ module.exports = {
     'prefer-template': 'off',
     'no-console': 'off',
     'func-names': 'off',
-    'no-only-tests/no-only-tests': 'error',
+    // 'no-only-tests/no-only-tests': 'error',
   },
 };
