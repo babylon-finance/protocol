@@ -142,7 +142,7 @@ abstract contract BaseGarden is ERC20Upgradeable {
     /* ============ State Constants ============ */
 
     uint256 public constant MAX_DEPOSITS_FUND_V1 = 1e21; // Max deposit per garden is 1000 eth for v1
-    uint256 public constant MAX_TOTAL_IDEAS = 20; // Max number of ideas
+    uint256 public constant MAX_TOTAL_STRATEGIES = 20; // Max number of strategies
     uint256 internal constant TEN_PERCENT = 1e17;
     uint256 internal constant MAX_KEEPER_FEE = (1e6 * 1e3 gwei);
 
@@ -339,7 +339,7 @@ abstract contract BaseGarden is ERC20Upgradeable {
         uint256 _minRebalanceCapital,
         address _strategyData
     ) external onlyContributor onlyActive {
-        _require(strategies.length < MAX_TOTAL_IDEAS, Errors.VALUE_TOO_HIGH);
+        _require(strategies.length < MAX_TOTAL_STRATEGIES, Errors.VALUE_TOO_HIGH);
         IStrategyFactory strategyFactory =
             IStrategyFactory(IBabController(controller).getStrategyFactory(_strategyKind));
         address strategy =
