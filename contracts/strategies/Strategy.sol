@@ -570,8 +570,11 @@ contract Strategy is ReentrancyGuard, Initializable {
         } else {
             // Returns were negative
             // Burn strategist stake and add the amount to the garden
-            garden.burnStrategistStake(strategist, capitalReturned.preciseDiv(capitalAllocated).preciseMul(stake));
-            reserveAssetDelta.add(int256(stake));
+            garden.burnStrategistStake(
+                strategist,
+                stake.sub(capitalReturned.preciseDiv(capitalAllocated).preciseMul(stake))
+            );
+            reserveAssetDelta.add(int256(stake)); // TODO CHECK IF WE SHOULD RETURN THE REDUCED VERSION OF THE STAKE INSTEAD OF THE TOTAL
         }
         // Return the balance back to the garden
         require(

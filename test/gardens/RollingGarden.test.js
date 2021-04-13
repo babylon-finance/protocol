@@ -5,7 +5,12 @@ const { loadFixture } = waffle;
 
 const addresses = require('../../utils/addresses');
 const { ONE_DAY_IN_SECONDS, NOW, EMPTY_BYTES } = require('../../utils/constants.js');
-const { DEFAULT_STRATEGY_PARAMS } = require('../fixtures/StrategyHelper');
+const {
+  DEFAULT_STRATEGY_PARAMS,
+  createStrategy,
+  executeStrategy,
+  finalizeStrategy,
+} = require('../fixtures/StrategyHelper');
 const { deployFolioFixture } = require('../fixtures/ControllerFixture');
 
 describe('Garden', function () {
@@ -16,11 +21,18 @@ describe('Garden', function () {
   let garden1;
   let weth;
   let balancerIntegration;
+  let kyberTradeIntegration;
 
   beforeEach(async () => {
-    ({ babController, signer1, signer2, signer3, garden1, balancerIntegration } = await loadFixture(
-      deployFolioFixture,
-    ));
+    ({
+      babController,
+      signer1,
+      signer2,
+      signer3,
+      garden1,
+      balancerIntegration,
+      kyberTradeIntegration,
+    } = await loadFixture(deployFolioFixture));
 
     weth = await ethers.getContractAt('IERC20', addresses.tokens.WETH);
   });
@@ -164,6 +176,76 @@ describe('Garden', function () {
         .reverted;
       await expect(garden1.connect(signer3).withdraw(ethers.utils.parseEther('20'), 2, signer3.getAddress())).to.be
         .reverted;
+    });
+    it('strategist is taken the exact amount of stake after a negative profit strategy with negative results', async function () {
+      const strategyContract = await createStrategy(
+        0,
+        'vote',
+        [signer1, signer2, signer3],
+        kyberTradeIntegration.address,
+        garden1,
+      );
+
+      // It is executed
+      await executeStrategy(garden1, strategyContract, ethers.utils.parseEther('1'), 42);
+
+      const [
+        address,
+        strategist,
+        integration,
+        stake,
+        absoluteTotalVotes,
+        totalVotes,
+        capitalAllocated,
+        capitalReturned,
+        duration,
+        expectedReturn,
+        maxCapitalRequested,
+        minRebalanceCapital,
+        enteredAt,
+      ] = await strategyContract.getStrategyDetails();
+      const [
+        address2,
+        active2,
+        dataSet2,
+        finalized2,
+        executedAt2,
+        exitedAt2,
+      ] = await strategyContract.getStrategyState();
+
+      expect(address2).to.equal(strategyContract.address);
+      expect(active2).to.equal(true);
+
+      expect(strategist).to.equal(signer1.address);
+      expect(stake).to.equal(ethers.utils.parseEther('1'));
+
+      await finalizeStrategy(garden1, strategyContract, 42);
+
+      const [
+        address3,
+        strategist3,
+        integration3,
+        stake3,
+        absoluteTotalVotes3,
+        totalVotes3,
+        capitalAllocated3,
+        capitalReturned3,
+        duration3,
+        expectedReturn3,
+        maxCapitalRequested3,
+        minRebalanceCapital3,
+        enteredAt3,
+      ] = await strategyContract.getStrategyDetails();
+
+      // Being a negative profit strategy, the corresponding % of the loss is reduced (burned) from the strategists stake
+      const value =
+        (ethers.BigNumber.from(capitalReturned3) / ethers.BigNumber.from(capitalAllocated3)) *
+        ethers.BigNumber.from(stake3);
+
+      const finalStrategistBalance = await garden1.balanceOf(signer1.address);
+      const finalReducedStrategistBalance = finalStrategistBalance - ethers.utils.parseEther('1.1');
+
+      await expect(finalReducedStrategistBalance).to.be.closeTo(value, 100);
     });
   });
 
