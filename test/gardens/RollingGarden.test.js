@@ -11,6 +11,7 @@ const {
   executeStrategy,
   finalizeStrategy,
   injectFakeProfits,
+
 } = require('../fixtures/StrategyHelper');
 const { deployFolioFixture } = require('../fixtures/ControllerFixture');
 
@@ -27,6 +28,7 @@ describe('Garden', function () {
   let strategy11;
   let strategy21;
 
+
   beforeEach(async () => {
     ({
       babController,
@@ -42,6 +44,7 @@ describe('Garden', function () {
     } = await loadFixture(deployFolioFixture));
     strategyDataset = await ethers.getContractAt('Strategy', strategy11);
     strategyCandidate = await ethers.getContractAt('Strategy', strategy21);
+
     weth = await ethers.getContractAt('IERC20', addresses.tokens.WETH);
   });
 
@@ -469,6 +472,7 @@ describe('Garden', function () {
       const WITHDRAWsigner2Balance = await garden1.balanceOf(signer2.address);
       await expect(WITHDRAWsigner2Balance).to.be.equal(ethers.utils.parseEther('2'));
     });
+
   });
 
   describe('Add Strategy', async function () {

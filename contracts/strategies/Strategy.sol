@@ -238,7 +238,8 @@ contract Strategy is ReentrancyGuard, Initializable {
     /**
      * Adds results of off-chain voting on-chain.
      * @param _voters                  An array of garden memeber who voted on strategy.
-     * @param _votes                   An array of votes by on strategy by garden members. Votes can be positive or negative.
+     * @param _votes                   An array of votes by on strategy by garden members.
+     *                                 Votes can be positive or negative.
      * @param _absoluteTotalVotes      Abosulte number of votes. _absoluteTotalVotes = abs(upvotes) + abs(downvotes).
      * @param _totalVotes              Total number of votes. _totalVotes = upvotes + downvotes.
      * @param _fee                     The fee paid to keeper to compensate the gas cost
@@ -251,6 +252,9 @@ contract Strategy is ReentrancyGuard, Initializable {
         uint256 _fee
     ) external onlyKeeper(_fee) onlyActiveGarden {
         require(!active, 'Voting is already resolved');
+        require(block.timestamp.sub(enteredAt) <= MAX_CANDIDATE_PERIOD, 'Voting window is closed');
+        active = true;
+
         // Set votes data
         for (uint256 i = 0; i < _voters.length; i++) {
             votes[_voters[i]] = _votes[i];
@@ -258,7 +262,6 @@ contract Strategy is ReentrancyGuard, Initializable {
         voters = _voters;
         absoluteTotalVotes = absoluteTotalVotes + _absoluteTotalVotes;
         totalVotes = totalVotes + _totalVotes;
-        active = true;
 
         // Get Keeper Fees allocated
         garden.allocateCapitalToInvestment(MAX_STRATEGY_KEEPER_FEES);
