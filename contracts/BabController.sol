@@ -440,11 +440,11 @@ contract BabController is OwnableUpgradeable {
         return reserveAssets;
     }
 
-    function getMinCooldownPeriod() external view returns (uint256) {
+    function getMinCooldownPeriod() external pure returns (uint256) {
         return MIN_COOLDOWN_PERIOD;
     }
 
-    function getMaxCooldownPeriod() external view returns (uint256) {
+    function getMaxCooldownPeriod() external pure returns (uint256) {
         return MAX_COOLDOWN_PERIOD;
     }
 
