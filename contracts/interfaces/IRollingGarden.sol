@@ -62,11 +62,13 @@ interface IRollingGarden is IERC20, IGarden {
 
     function getExpectedReserveWithdrawalQuantity(uint256 _gardenTokenQuantity) external view returns (uint256);
 
+    function getLockedBalance(address _contributor) external view returns (uint256);
+
     function isDepositValid(address _reserveAsset, uint256 _reserveAssetQuantity) external view returns (bool);
 
     function isWithdrawalValid(address _reserveAsset, uint256 _gardenTokenQuantity) external view returns (bool);
 
-    function reenableEthForInvestments() external;
+    function reenableEthForStrategies() external;
 
     function burnAssetsFromSenderAndMintToReserve(address _contributor, uint256 _quantity) external;
 

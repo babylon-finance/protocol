@@ -235,10 +235,7 @@ abstract contract LendIntegration is BaseIntegration, ReentrancyGuard {
 
     function _isInvestment(
         address //_investmentAddress
-    ) internal view virtual returns (bool) {
-        require(false, 'This needs to be overriden');
-        return false;
-    }
+    ) internal view virtual returns (bool);
 
     /**
      * Create and return InvestmentInfo struct
@@ -263,15 +260,9 @@ abstract contract LendIntegration is BaseIntegration, ReentrancyGuard {
         return investmentInfo;
     }
 
-    function _getExpectedShares(address, uint256) internal virtual returns (uint256) {
-        require(false, 'This needs to be overriden');
-        return 0;
-    }
+    function _getExpectedShares(address, uint256) internal virtual returns (uint256);
 
-    function _getExchangeRatePerToken(address) internal virtual returns (uint256) {
-        require(false, 'This needs to be overriden');
-        return 0;
-    }
+    function _getExchangeRatePerToken(address) internal virtual returns (uint256);
 
     function _getRedeemCalldata(
         address, /* _assetToken */
@@ -284,11 +275,7 @@ abstract contract LendIntegration is BaseIntegration, ReentrancyGuard {
             address,
             uint256,
             bytes memory
-        )
-    {
-        require(false, 'This needs to be overriden');
-        return (address(0), 0, bytes(''));
-    }
+        );
 
     /**
      * Returns calldata for supplying tokens.
@@ -310,47 +297,13 @@ abstract contract LendIntegration is BaseIntegration, ReentrancyGuard {
             address,
             uint256,
             bytes memory
-        )
-    {
-        require(false, 'This needs to be overriden');
-        return (address(0), 0, bytes(''));
-    }
-
-    /**
-     * Returns calldata to redeem tokens.
-     *
-     * @return address                         Target contract address
-     * @return uint256                         Call value
-     * @return bytes                           Trade calldata
-     */
-    function _getExitInvestmentCalldata(
-        address, /*_assetToken */
-        uint256 /*_capital */
-    )
-        internal
-        view
-        virtual
-        returns (
-            address,
-            uint256,
-            bytes memory
-        )
-    {
-        require(false, 'This needs to be overriden');
-        return (address(0), 0, bytes(''));
-    }
+        );
 
     function _getSpender(
         address //_investmentAddress
-    ) internal view virtual returns (address) {
-        require(false, 'This must be overriden');
-        return address(0);
-    }
+    ) internal view virtual returns (address);
 
     function _getInvestmentToken(
         address //_investmentAddress
-    ) internal view virtual returns (address) {
-        require(false, 'This must be overriden');
-        return address(0);
-    }
+    ) internal view virtual returns (address);
 }

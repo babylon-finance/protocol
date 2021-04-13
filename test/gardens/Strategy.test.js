@@ -12,6 +12,7 @@ const {
   injectFakeProfits,
   deposit,
 } = require('../fixtures/StrategyHelper.js');
+const { increaseTime } = require('../utils/test-helpers');
 
 const addresses = require('../../utils/addresses');
 const { ONE_DAY_IN_SECONDS } = require('../../utils/constants.js');
@@ -59,13 +60,13 @@ describe('Strategy', function () {
     });
   });
 
-  describe('changeInvestmentDuration', function () {
-    it('strategist should be able to change the duration of an investment strategy', async function () {
-      await expect(strategyDataset.connect(signer1).changeInvestmentDuration(ONE_DAY_IN_SECONDS)).to.not.be.reverted;
+  describe('changeStrategyDuration', function () {
+    it('strategist should be able to change the duration of an strategy strategy', async function () {
+      await expect(strategyDataset.connect(signer1).changeStrategyDuration(ONE_DAY_IN_SECONDS)).to.not.be.reverted;
     });
 
-    it('other member should be able to change the duration of an investment strategy', async function () {
-      await expect(strategyDataset.connect(signer3).changeInvestmentDuration(ONE_DAY_IN_SECONDS)).to.be.reverted;
+    it('other member should be able to change the duration of an strategy', async function () {
+      await expect(strategyDataset.connect(signer3).changeStrategyDuration(ONE_DAY_IN_SECONDS)).to.be.reverted;
     });
   });
 
@@ -132,6 +133,9 @@ describe('Strategy', function () {
         },
       );
 
+      expect(await strategyCandidate.getUserVotes(signer1.getAddress())).to.equal(signer1Balance);
+      expect(await strategyCandidate.getUserVotes(signer2.getAddress())).to.equal(signer2Balance);
+
       const [, , , , absoluteTotalVotes, totalVotes] = await strategyCandidate.getStrategyDetails();
 
       expect(absoluteTotalVotes).to.equal(ethers.utils.parseEther('5.1'));
@@ -148,6 +152,26 @@ describe('Strategy', function () {
 
       // Keeper gets paid
       expect(await wethToken.balanceOf(await owner.getAddress())).to.equal(42);
+    });
+
+    it("can't vote if voting window is closed", async function () {
+      const signer1Balance = await garden2.balanceOf(signer1.getAddress());
+      const signer2Balance = await garden2.balanceOf(signer2.getAddress());
+
+      increaseTime(ONE_DAY_IN_SECONDS * 7);
+
+      await expect(
+        strategyCandidate.resolveVoting(
+          [signer1.getAddress(), signer2.getAddress()],
+          [signer1Balance, signer2Balance],
+          signer1Balance.add(signer2Balance).toString(),
+          signer1Balance.add(signer2Balance).toString(),
+          42,
+          {
+            gasPrice: 0,
+          },
+        ),
+      ).to.be.revertedWith(/voting window is closed/i);
     });
 
     it("can't push voting results twice", async function () {
@@ -180,8 +204,8 @@ describe('Strategy', function () {
     });
   });
 
-  describe('executeInvestment', async function () {
-    it('should execute investment idea', async function () {
+  describe('executeStrategy', async function () {
+    it('should execute strategy', async function () {
       const strategyContract = await createStrategy(
         0,
         'vote',
@@ -204,7 +228,7 @@ describe('Strategy', function () {
       expect(await wethToken.balanceOf(await owner.getAddress())).to.equal(42);
     });
 
-    it('can execute investment twice', async function () {
+    it('can execute strategy twice', async function () {
       const strategyContract = await createStrategy(
         0,
         'active',
@@ -239,15 +263,15 @@ describe('Strategy', function () {
       ethers.provider.send('evm_increaseTime', [ONE_DAY_IN_SECONDS * 2]);
 
       await expect(
-        strategyContract.executeInvestment(ethers.utils.parseEther('1'), ethers.utils.parseEther('100'), {
+        strategyContract.executeStrategy(ethers.utils.parseEther('1'), ethers.utils.parseEther('100'), {
           gasPrice: 0,
         }),
       ).to.be.revertedWith(/fee is too high/i);
     });
   });
 
-  describe('finalizeInvestment', async function () {
-    it('should finalize investment idea with negative profits', async function () {
+  describe('finalizeStrategy', async function () {
+    it('should finalize strategy with negative profits', async function () {
       const strategyContract = await createStrategy(
         0,
         'active',
@@ -274,7 +298,7 @@ describe('Strategy', function () {
       expect(capitalReturned).to.be.lt(capitalAllocated);
     });
 
-    it('should finalize investment idea with profits', async function () {
+    it('should finalize strategy with profits', async function () {
       const strategyContract = await createStrategy(
         0,
         'active',
@@ -304,7 +328,7 @@ describe('Strategy', function () {
       expect(nav).to.be.gt(ethers.utils.parseEther('0.99'));
     });
 
-    it("can't finalize investment twice", async function () {
+    it("can't finalize strategy twice", async function () {
       const strategyContract = await createStrategy(
         0,
         'active',
@@ -315,7 +339,7 @@ describe('Strategy', function () {
 
       await finalizeStrategy(garden1, strategyContract, 42);
 
-      await expect(strategyContract.finalizeInvestment(42, { gasPrice: 0 })).to.be.reverted;
+      await expect(strategyContract.finalizeStrategy(42, { gasPrice: 0 })).to.be.reverted;
     });
   });
 });

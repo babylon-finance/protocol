@@ -72,7 +72,7 @@ contract RollingGarden is ReentrancyGuard, BaseGarden {
 
     uint256 public depositHardlock; // Window of time after deposits when withdraws are disabled for that user
     // Window of time after an investment strategy finishes when the capital is available for withdrawals
-    uint256 public withdrawalWindowAfterInvestmentCompletes;
+    uint256 public withdrawalWindowAfterStrategyCompletes;
     uint256 public withdrawalsOpenUntil; // Indicates until when the withdrawals are open and the ETH is set aside
 
     uint256 public constant BABL_STRATEGIST_SHARE = 8e16;
@@ -89,7 +89,7 @@ contract RollingGarden is ReentrancyGuard, BaseGarden {
     /* ============ Constructor ============ */
 
     /**
-     * When a new Garden is created, initializes Investments are set to empty.
+     * When a new Garden is created, initializes strategies are set to empty.
      * All parameter validations are on the BabController contract. Validations are performed already on the
      * BabController.
      *
@@ -126,9 +126,9 @@ contract RollingGarden is ReentrancyGuard, BaseGarden {
      * @param _strategyCreatorProfitPercentage      What percentage of the profits go to the strategy creator
      * @param _strategyVotersProfitPercentage       What percentage of the profits go to the strategy curators
      * @param _gardenCreatorProfitPercentage What percentage of the profits go to the creator of the garden
-     * @param _minVotersQuorum                  Percentage of votes needed to activate an investment strategy (0.01% = 1e14, 1% = 1e16)
-     * @param _minIdeaDuration                  Min duration of an investment strategy
-     * @param _maxIdeaDuration                  Max duration of an investment strategy
+     * @param _minVotersQuorum                  Percentage of votes needed to activate an strategy (0.01% = 1e14, 1% = 1e16)
+     * @param _minIdeaDuration                  Min duration of an strategy
+     * @param _maxIdeaDuration                  Max duration of an strategy
      */
     function start(
         uint256 _maxDepositLimit,
@@ -159,7 +159,7 @@ contract RollingGarden is ReentrancyGuard, BaseGarden {
         gardenInitializedAt = block.timestamp;
         minLiquidityAsset = _minLiquidityAsset;
         depositHardlock = _depositHardlock;
-        withdrawalWindowAfterInvestmentCompletes = 7 days;
+        withdrawalWindowAfterStrategyCompletes = 7 days;
         startCommon(
             _minContribution,
             _strategyCooldownPeriod,
@@ -206,7 +206,7 @@ contract RollingGarden is ReentrancyGuard, BaseGarden {
         // Always wrap to WETH
         IWETH(weth).deposit{value: msg.value}();
         // Check this here to avoid having relayers
-        reenableEthForInvestments();
+        reenableEthForStrategies();
 
         _validateReserveAsset(reserveAsset, _reserveAssetQuantity);
 
@@ -255,8 +255,13 @@ contract RollingGarden is ReentrancyGuard, BaseGarden {
             block.timestamp.sub(contributors[msg.sender].lastDepositAt) >= depositHardlock,
             Errors.TOKENS_TIMELOCKED
         );
+        _require(
+            _gardenTokenQuantity <= balanceOf(msg.sender).sub(this.getLockedBalance(msg.sender)),
+            Errors.TOKENS_TIMELOCKED
+        ); // Strategists and Voters cannot withdraw locked stake while in active strategies
+
         // Check this here to avoid having relayers
-        reenableEthForInvestments();
+        reenableEthForStrategies();
         ActionInfo memory withdrawalInfo = _createRedemptionInfo(_gardenTokenQuantity);
 
         _validateReserveAsset(reserveAsset, withdrawalInfo.netFlowQuantity);
@@ -319,7 +324,7 @@ contract RollingGarden is ReentrancyGuard, BaseGarden {
     }
 
     /**
-     * When an investment strategy finishes execution, contributors might want
+     * When an strategy finishes execution, contributors might want
      * to know the profits and BABL rewards for their participation in the different strategies
      *
      *
@@ -336,13 +341,13 @@ contract RollingGarden is ReentrancyGuard, BaseGarden {
     }
 
     /**
-     * When an investment strategy finishes execution, we want to make that eth available for withdrawals
+     * When an strategy finishes execution, we want to make that eth available for withdrawals
      * from members of the garden.
      *
      * @param _amount                        Amount of WETH to convert to ETH to set aside
      */
     function startWithdrawalWindow(uint256 _amount) external onlyStrategyOrProtocol {
-        withdrawalsOpenUntil = block.timestamp.add(withdrawalWindowAfterInvestmentCompletes);
+        withdrawalsOpenUntil = block.timestamp.add(withdrawalWindowAfterStrategyCompletes);
         IWETH(weth).withdraw(_amount);
     }
 
@@ -350,7 +355,7 @@ contract RollingGarden is ReentrancyGuard, BaseGarden {
      * When the window of withdrawals finishes, we need to make the capital available again for investments
      *
      */
-    function reenableEthForInvestments() public {
+    function reenableEthForStrategies() public {
         if (block.timestamp >= withdrawalsOpenUntil && address(this).balance > minContribution) {
             withdrawalsOpenUntil = 0;
             IWETH(weth).deposit{value: address(this).balance}();
@@ -432,6 +437,29 @@ contract RollingGarden is ReentrancyGuard, BaseGarden {
 
             return principal >= expectedWithdrawalQuantity;
         }
+    }
+
+    /**
+     * Checks balance locked for strategists and voters in active strategies
+     *
+     * @param _contributor                 Address of the account
+     *
+     * @return  uint256                    Returns the amount of locked garden tokens for the account
+     */
+    function getLockedBalance(address _contributor) external view returns (uint256) {
+        uint256 lockedAmount;
+        for (uint256 i = 0; i <= strategies.length - 1; i++) {
+            IStrategy strategy = IStrategy(strategies[i]);
+            uint256 votes = uint256(abs(strategy.getUserVotes(_contributor)));
+            if (votes > 0) {
+                lockedAmount += votes;
+            }
+            if (_contributor == strategy.strategist()) {
+                lockedAmount += strategy.stake();
+            }
+        }
+        if (balanceOf(_contributor) < lockedAmount) lockedAmount = balanceOf(_contributor); // TODO Remove when implementing locked stake in voting and strategy creation - Now this avoid overflows
+        return lockedAmount;
     }
 
     // solhint-disable-next-line
@@ -672,5 +700,9 @@ contract RollingGarden is ReentrancyGuard, BaseGarden {
                 .div(contributor.numberOfOps.add(1));
             contributor.numberOfOps = contributor.numberOfOps.add(1);
         }
+    }
+
+    function abs(int256 x) private pure returns (int256) {
+        return x >= 0 ? x : -x;
     }
 }

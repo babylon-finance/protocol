@@ -151,19 +151,11 @@ abstract contract PoolIntegration is BaseIntegration, ReentrancyGuard {
 
     function getPoolTokens(
         address /* _poolAddress */
-    ) external view virtual returns (address[] memory) {
-        address[] memory poolTokens;
-        require(false, 'This needs to be overriden');
-        return poolTokens;
-    }
+    ) external view virtual returns (address[] memory);
 
     function getPoolWeights(
         address /*_poolAddress */
-    ) external view virtual returns (uint256[] memory) {
-        uint256[] memory poolWeights;
-        require(false, 'This needs to be overriden');
-        return poolWeights;
-    }
+    ) external view virtual returns (uint256[] memory);
 
     /* ============ Internal Functions ============ */
 
@@ -270,11 +262,7 @@ abstract contract PoolIntegration is BaseIntegration, ReentrancyGuard {
             address,
             uint256,
             bytes memory
-        )
-    {
-        require(false, 'This needs to be overriden');
-        return (address(0), 0, bytes(''));
-    }
+        );
 
     /**
      * Return exit pool calldata which is already generated from the pool API
@@ -301,23 +289,13 @@ abstract contract PoolIntegration is BaseIntegration, ReentrancyGuard {
             address,
             uint256,
             bytes memory
-        )
-    {
-        require(false, 'This needs to be overriden');
-        return (address(0), 0, bytes(''));
-    }
+        );
 
     function _isPool(
         address /* _poolAddress */
-    ) internal view virtual returns (bool) {
-        require(false, 'This needs to be overriden');
-        return false;
-    }
+    ) internal view virtual returns (bool);
 
     function _getSpender(
         address /* _poolAddress */
-    ) internal view virtual returns (address) {
-        require(false, 'This must be overriden');
-        return address(0);
-    }
+    ) internal view virtual returns (address);
 }

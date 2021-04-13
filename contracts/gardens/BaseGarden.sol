@@ -104,7 +104,7 @@ abstract contract BaseGarden is ERC20Upgradeable {
     }
 
     /**
-     * Throws if the sender is not an investment strategy of this garden
+     * Throws if the sender is not an strategy of this garden
      */
     modifier onlyStrategy() {
         _require(strategyMapping[msg.sender], Errors.ONLY_STRATEGY);
@@ -112,7 +112,7 @@ abstract contract BaseGarden is ERC20Upgradeable {
     }
 
     /**
-     * Throws if the sender is not an investment strategy or the protocol
+     * Throws if the sender is not an strategy or the protocol
      */
     modifier onlyStrategyOrProtocol() {
         _require(
@@ -191,11 +191,11 @@ abstract contract BaseGarden is ERC20Upgradeable {
     uint256 public minContribution = 1e18; //wei
     uint256 public minGardenTokenSupply;
 
-    // Investment strategies variables
+    // Strategies variables
     uint256 public totalStake = 0;
     uint256 public minVotersQuorum = TEN_PERCENT; // 10%. (0.01% = 1e14, 1% = 1e16)
-    uint256 public minIdeaDuration; // Min duration for an investment Idea
-    uint256 public maxIdeaDuration; // Max duration for an investment strategy
+    uint256 public minIdeaDuration; // Min duration for an strategy
+    uint256 public maxIdeaDuration; // Max duration for an strategy
     uint256 public strategyCooldownPeriod; // Window for the strategy to cooldown after approval before receiving capital
 
     address[] public strategies; // Strategies that are either in candidate or active state
@@ -249,9 +249,9 @@ abstract contract BaseGarden is ERC20Upgradeable {
      * @param _strategyCreatorProfitPercentage  What percentage of the profits go to the strategy creator
      * @param _strategyVotersProfitPercentage   What percentage of the profits go to the strategy curators
      * @param _gardenCreatorProfitPercentage    What percentage of the profits go to the creator of the garden
-     * @param _minVotersQuorum                  Percentage of votes needed to activate an investment strategy (0.01% = 1e14, 1% = 1e16)
-     * @param _minIdeaDuration                  Min duration of an investment strategy
-     * @param _maxIdeaDuration                  Max duration of an investment strategy
+     * @param _minVotersQuorum                  Percentage of votes needed to activate an strategy (0.01% = 1e14, 1% = 1e16)
+     * @param _minIdeaDuration                  Min duration of an strategy
+     * @param _maxIdeaDuration                  Max duration of an strategy
      */
     function startCommon(
         uint256 _minContribution,
@@ -317,14 +317,14 @@ abstract contract BaseGarden is ERC20Upgradeable {
         _updatePrincipal(_amount);
     }
 
-    /* ============ Investment Idea Functions ============ */
+    /* ============ Strategy Functions ============ */
     /**
-     * Creates a new investment strategy calling the factory and adds it to the array
+     * Creates a new strategy calling the factory and adds it to the array
      * @param _strategyKind                  Int representing kind of strategy
      * @param _integration                   Address of the integration
      * @param _maxCapitalRequested           Max Capital requested denominated in the reserve asset (0 to be unlimited)
      * @param _stake                         Stake with garden participations absolute amounts 1e18
-     * @param _investmentDuration            Investment duration in seconds
+     * @param _strategyDuration              Strategy duration in seconds
      * @param _expectedReturn                Expected return
      * @param _minRebalanceCapital           Min capital that is worth it to deposit into this strategy
      * @param _strategyData                  Param of strategy to add
@@ -334,7 +334,7 @@ abstract contract BaseGarden is ERC20Upgradeable {
         address _integration,
         uint256 _maxCapitalRequested,
         uint256 _stake,
-        uint256 _investmentDuration,
+        uint256 _strategyDuration,
         uint256 _expectedReturn,
         uint256 _minRebalanceCapital,
         address _strategyData
@@ -350,7 +350,7 @@ abstract contract BaseGarden is ERC20Upgradeable {
                 _integration,
                 _maxCapitalRequested,
                 _stake,
-                _investmentDuration,
+                _strategyDuration,
                 _expectedReturn,
                 _minRebalanceCapital
             );
@@ -361,11 +361,11 @@ abstract contract BaseGarden is ERC20Upgradeable {
     }
 
     /**
-     * Rebalances available capital of the garden between the investment strategies that are active.
-     * We enter into the investment and add it to the executed strategies array.
+     * Rebalances available capital of the garden between the strategies that are active.
+     * We enter into the strategy and add it to the executed strategies array.
      * @param _fee                     The fee paid to keeper to compensate the gas cost for each strategy executed
      */
-    function rebalanceInvestments(uint256 _fee) external onlyKeeper(_fee) onlyActive {
+    function rebalanceStrategies(uint256 _fee) external onlyKeeper(_fee) onlyActive {
         uint256 liquidReserveAsset = ERC20Upgradeable(reserveAsset).balanceOf(address(this));
         for (uint256 i = 0; i < strategies.length; i++) {
             IStrategy strategy = IStrategy(strategies[i]);
@@ -375,17 +375,17 @@ abstract contract BaseGarden is ERC20Upgradeable {
                 toAllocate >= strategy.minRebalanceCapital() &&
                 toAllocate.add(strategy.capitalAllocated()) <= strategy.maxCapitalRequested()
             ) {
-                strategy.executeInvestment(toAllocate, _fee);
+                strategy.executeStrategy(toAllocate, _fee);
             }
         }
     }
 
     /**
-     * Allocates garden capital to an investment
+     * Allocates garden capital to an strategy
      *
-     * @param _capital        Amount of capital to allocate to the investment
+     * @param _capital        Amount of capital to allocate to the strategy
      */
-    function allocateCapitalToInvestment(uint256 _capital) external onlyStrategy onlyActive {
+    function allocateCapitalToStrategy(uint256 _capital) external onlyStrategy onlyActive {
         uint256 liquidReserveAsset = ERC20Upgradeable(reserveAsset).balanceOf(address(this));
         uint256 protocolMgmtFee = IBabController(controller).getProtocolManagementFee().preciseMul(_capital);
         _require(_capital.add(protocolMgmtFee) <= liquidReserveAsset, Errors.MIN_LIQUIDITY);
@@ -424,6 +424,7 @@ abstract contract BaseGarden is ERC20Upgradeable {
      */
     function expireCandidateStrategy(address _strategy) external onlyStrategy {
         strategies = strategies.remove(_strategy);
+        strategyMapping[_strategy] = false;
     }
 
     function burnStrategistStake(address _strategist, uint256 _amount) external onlyStrategy {
@@ -433,7 +434,7 @@ abstract contract BaseGarden is ERC20Upgradeable {
     /* ============ External Getter Functions ============ */
 
     /**
-     * Gets current investment strategies
+     * Gets current strategies
      *
      * @return  address[]        Returns list of addresses
      */
@@ -443,7 +444,7 @@ abstract contract BaseGarden is ERC20Upgradeable {
     }
 
     /**
-     * Gets finalized investment strategies
+     * Gets finalized strategies
      *
      * @return  address[]        Returns list of addresses
      */
