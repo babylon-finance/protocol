@@ -28,7 +28,7 @@ describe('GardenValuer', function () {
 
   describe('Calls GardenValuer', function () {
     it('should return 0.1 for garden1', async function () {
-      const wethInGarden = await weth.balanceOf(garden1.address);
+      // const wethInGarden = await weth.balanceOf(garden1.address);
       // const priceOfWeth = await garden.getPrice(
       //   addresses.tokens.WETH,
       //   addresses.tokens.DAI
@@ -38,5 +38,7 @@ describe('GardenValuer', function () {
       const tokens = await garden1.totalSupply();
       expect(pricePerGardenToken.mul(tokens / 1000).div(10 ** 15)).to.equal(ethers.utils.parseEther('0.1'));
     });
+
+    // TODO: check gardens with active strategies
   });
 });

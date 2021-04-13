@@ -22,6 +22,7 @@ import 'hardhat/console.sol';
 import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import {Strategy} from './Strategy.sol';
 import {IGarden} from '../interfaces/IGarden.sol';
+import {PreciseUnitMath} from '../lib/PreciseUnitMath.sol';
 import {ITradeIntegration} from '../interfaces/ITradeIntegration.sol';
 
 /**
@@ -31,6 +32,8 @@ import {ITradeIntegration} from '../interfaces/ITradeIntegration.sol';
  * Holds the data for a long strategy
  */
 contract LongStrategy is Strategy {
+    using PreciseUnitMath for uint256;
+
     address public longToken; // Asset to receive
 
     /**
@@ -39,12 +42,24 @@ contract LongStrategy is Strategy {
      * @param _longToken                   Token to be bought
      */
     function setData(address _longToken) public onlyGardenAndNotSet {
-        require(!dataSet, 'Data is set already');
         require(garden.reserveAsset() != _longToken, 'Receive token must be different');
 
         kind = 0;
         longToken = _longToken;
         dataSet = true;
+    }
+
+    /**
+     * Gets the NAV of the long asset in ETH
+     *
+     * @return _nav           NAV of the strategy
+     */
+    function getNAV() external view override returns (uint256) {
+        if (!active || finalized) {
+            return 0;
+        }
+        uint256 price = _getPrice(garden.reserveAsset(), longToken);
+        return IERC20(longToken).balanceOf(address(this)).preciseDiv(price);
     }
 
     /**

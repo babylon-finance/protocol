@@ -21,7 +21,8 @@ pragma solidity 0.7.4;
 import 'hardhat/console.sol';
 
 import {Address} from '@openzeppelin/contracts/utils/Address.sol';
-import {ERC20} from '@openzeppelin/contracts/token/ERC20/ERC20.sol';
+import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
+import {SafeERC20} from '@openzeppelin/contracts/token/ERC20/SafeERC20.sol';
 import {ReentrancyGuard} from '@openzeppelin/contracts/utils/ReentrancyGuard.sol';
 import {SafeMath} from '@openzeppelin/contracts/math/SafeMath.sol';
 import {SignedSafeMath} from '@openzeppelin/contracts/math/SignedSafeMath.sol';
@@ -53,6 +54,7 @@ contract Strategy is ReentrancyGuard, Initializable {
     using PreciseUnitMath for uint256;
     using AddressArrayUtils for address[];
     using Address for address;
+    using SafeERC20 for IERC20;
 
     /* ============ Events ============ */
     event Invoked(address indexed _target, uint256 indexed _value, bytes _data, bytes _returnValue);
@@ -75,7 +77,7 @@ contract Strategy is ReentrancyGuard, Initializable {
     }
 
     modifier onlyContributor {
-        require(ERC20(address(garden)).balanceOf(msg.sender) > 0, 'Only someone with the garden token can withdraw');
+        require(IERC20(address(garden)).balanceOf(msg.sender) > 0, 'Only someone with the garden token can withdraw');
         _;
     }
 
@@ -144,11 +146,13 @@ contract Strategy is ReentrancyGuard, Initializable {
     IGarden public garden;
     address public integration; // Address of the integration
     address public strategist; // Address of the strategist that submitted the bet
+
     uint256 public enteredAt; // Timestamp when the strategy was submitted
     uint256 public enteredCooldownAt; // Timestamp when the strategy reached quorum
     uint256 public executedAt; // Timestamp when the strategy was executed
     uint256 public updatedAt; // Timestamp of last capital allocation update
     uint256 public exitedAt; // Timestamp when the strategy was submitted
+
     address[] public voters; // Addresses with the voters
     int256 public totalVotes; // Total votes staked
     uint256 public absoluteTotalVotes; // Absolute number of votes staked
@@ -204,18 +208,14 @@ contract Strategy is ReentrancyGuard, Initializable {
             'Integration must be valid'
         );
         require(controller.isSystemContract(_garden), 'Must be a valid garden');
-        require(ERC20(address(garden)).balanceOf(_strategist) > 0, 'Only someone with the garden token can withdraw');
-        require(_stake > garden.totalSupply().div(100), 'Stake amount must be at least 1% of the garden');
+        require(IERC20(address(garden)).balanceOf(_strategist) > 0, 'Strategist mush have a stake');
+        require(_stake > garden.totalSupply().div(100), 'Stake amount must be at least 1%');
         require(
             _investmentDuration >= garden.minIdeaDuration() && _investmentDuration <= garden.maxIdeaDuration(),
-            'Investment duration must be in range'
+            'Duration must be in range'
         );
-        require(_stake > 0, 'Stake amount must be greater than 0');
-        require(_minRebalanceCapital > 0, 'Min Capital requested amount must be greater than 0');
-        require(
-            _maxCapitalRequested >= _minRebalanceCapital,
-            'The max amount of capital must be greater than one chunk'
-        );
+        require(_minRebalanceCapital > 0, 'Min capital be greater than 0');
+        require(_maxCapitalRequested >= _minRebalanceCapital, 'The max amount >= one chunk');
         // Check than enter and exit data call integrations
         strategist = _strategist;
         enteredAt = block.timestamp;
@@ -236,7 +236,8 @@ contract Strategy is ReentrancyGuard, Initializable {
     /**
      * Adds results of off-chain voting on-chain.
      * @param _voters                  An array of garden memeber who voted on strategy.
-     * @param _votes                   An array of votes by on strategy by garden members. Votes can be positive or negative.
+     * @param _votes                   An array of votes by on strategy by garden members.
+     *                                 Votes can be positive or negative.
      * @param _absoluteTotalVotes      Abosulte number of votes. _absoluteTotalVotes = abs(upvotes) + abs(downvotes).
      * @param _totalVotes              Total number of votes. _totalVotes = upvotes + downvotes.
      * @param _fee                     The fee paid to keeper to compensate the gas cost
@@ -249,6 +250,9 @@ contract Strategy is ReentrancyGuard, Initializable {
         uint256 _fee
     ) external onlyKeeper(_fee) onlyActiveGarden {
         require(!active, 'Voting is already resolved');
+        require(block.timestamp.sub(enteredAt) <= MAX_CANDIDATE_PERIOD, 'Voting window is closed');
+        active = true;
+
         // Set votes data
         for (uint256 i = 0; i < _voters.length; i++) {
             votes[_voters[i]] = _votes[i];
@@ -256,7 +260,6 @@ contract Strategy is ReentrancyGuard, Initializable {
         voters = _voters;
         absoluteTotalVotes = absoluteTotalVotes + _absoluteTotalVotes;
         totalVotes = totalVotes + _totalVotes;
-        active = true;
 
         // Get Keeper Fees allocated
         garden.allocateCapitalToInvestment(MAX_STRATEGY_KEEPER_FEES);
@@ -327,12 +330,8 @@ contract Strategy is ReentrancyGuard, Initializable {
         _transferStrategyRewards(_fee);
         // Pay Keeper Fee
         _payKeeper(msg.sender, _fee);
-        uint256 remainingReserve = ERC20(garden.reserveAsset()).balanceOf(address(this));
-        // Sends the rest back if any
-        require(
-            ERC20(garden.reserveAsset()).transfer(address(garden), remainingReserve),
-            'Ensure capital does not get stuck'
-        );
+        // Send rest to garden if any
+        _sendReserveAssetToGarden();
     }
 
     /**
@@ -364,11 +363,13 @@ contract Strategy is ReentrancyGuard, Initializable {
     // Any tokens (other than the target) that are sent here by mistake are recoverable by contributors
     // Exchange for WETH
     function sweep(address _token) external onlyContributor {
-        // TODO: check that is not any of the strategy tokens
         require(_token != garden.reserveAsset(), 'Cannot sweep reserve asset');
-        uint256 balance = ERC20(_token).balanceOf(address(this));
+        uint256 balance = IERC20(_token).balanceOf(address(this));
+        require(!active, 'Do not sweep tokens of active strategies');
         require(balance > 0, 'Token balance > 0');
         _trade(_token, balance, garden.reserveAsset());
+        // Send WETH to garden
+        _sendReserveAssetToGarden();
     }
 
     function invokeApprove(
@@ -376,7 +377,7 @@ contract Strategy is ReentrancyGuard, Initializable {
         address _asset,
         uint256 _quantity
     ) external onlyIntegration {
-        ERC20(_asset).approve(_spender, _quantity);
+        IERC20(_asset).approve(_spender, _quantity);
     }
 
     function invokeFromIntegration(
@@ -456,6 +457,17 @@ contract Strategy is ReentrancyGuard, Initializable {
         return (address(this), active, dataSet, finalized, executedAt, exitedAt, updatedAt);
     }
 
+    /**
+     * Gets the NAV of assets under management. Virtual method.
+     * Needs to be overriden in base class.
+     *
+     * @return _nav           NAV of the strategy
+     */
+    function getNAV() external view virtual returns (uint256) {
+        require(false, 'This needs to be overriden');
+        return 0;
+    }
+
     function getUserVotes(address _address) external view returns (int256) {
         return votes[_address];
     }
@@ -471,8 +483,8 @@ contract Strategy is ReentrancyGuard, Initializable {
         require(IBabController(controller).isValidKeeper(_keeper), 'Only Keeper'); // Only keeper
         // Pay Keeper in WETH
         if (_fee > 0) {
-            require(ERC20(garden.reserveAsset()).balanceOf(address(this)) >= _fee, 'Not enough weth to pay keeper'); // not enough weth for gas subsidy
-            require(ERC20(garden.reserveAsset()).transfer(_keeper, _fee), 'Not enough weth to pay keeper'); // not enough weth for gas subsidy
+            require(IERC20(garden.reserveAsset()).balanceOf(address(this)) >= _fee, 'Not enough weth to pay keeper');
+            IERC20(garden.reserveAsset()).safeTransfer(_keeper, _fee);
         }
     }
 
@@ -526,6 +538,12 @@ contract Strategy is ReentrancyGuard, Initializable {
         return _returnValue;
     }
 
+    function _sendReserveAssetToGarden() private {
+        uint256 remainingReserve = IERC20(garden.reserveAsset()).balanceOf(address(this));
+        // Sends the rest back if any
+        IERC20(garden.reserveAsset()).safeTransfer(address(garden), remainingReserve);
+    }
+
     /**
      * Function that calculates the price using the oracle and executes a trade.
      * Must call the exchange to get the price and pass minReceiveQuantity accordingly.
@@ -539,8 +557,10 @@ contract Strategy is ReentrancyGuard, Initializable {
         address _receiveToken
     ) internal returns (uint256) {
         address tradeIntegration = IBabController(controller).getIntegrationByName('1inch');
-        // Uses on chain oracle for all internal strategy operations to avoid attacks
-        uint256 pricePerTokenUnit = _getPrice(_sendToken, _receiveToken);
+        // Uses on chain oracle for all internal strategy operations to avoid attacks        // Updates UniSwap TWAP
+        IPriceOracle oracle = IPriceOracle(IBabController(controller).getPriceOracle());
+        oracle.updateAdapters(_sendToken, _receiveToken);
+        uint256 pricePerTokenUnit = oracle.getPrice(_sendToken, _receiveToken);
         uint256 exactAmount = _sendQuantity.preciseMul(pricePerTokenUnit);
         uint256 minAmountExpected = exactAmount.sub(exactAmount.preciseMul(SLIPPAGE_ALLOWED));
         ITradeIntegration(tradeIntegration).trade(_sendToken, _sendQuantity, _receiveToken, minAmountExpected);
@@ -548,7 +568,9 @@ contract Strategy is ReentrancyGuard, Initializable {
     }
 
     function _transferStrategyRewards(uint256 _fee) internal {
-        capitalReturned = ERC20(garden.reserveAsset()).balanceOf(address(this)).sub(_fee).sub(MAX_STRATEGY_KEEPER_FEES);
+        capitalReturned = IERC20(garden.reserveAsset()).balanceOf(address(this)).sub(_fee).sub(
+            MAX_STRATEGY_KEEPER_FEES
+        );
         address reserveAsset = garden.reserveAsset();
         int256 reserveAssetDelta = capitalReturned.toInt256().sub(capitalAllocated.toInt256());
         uint256 protocolProfits = 0;
@@ -557,13 +579,10 @@ contract Strategy is ReentrancyGuard, Initializable {
             uint256 profits = capitalReturned - capitalAllocated; // in reserve asset (weth)
             // Send weth performance fee to the protocol
             protocolProfits = IBabController(controller).getProtocolPerformanceFee().preciseMul(profits);
-            require(
-                ERC20(reserveAsset).transferFrom(
-                    address(this),
-                    IBabController(controller).getTreasury(),
-                    protocolProfits
-                ),
-                'Protocol perf fee failed'
+            IERC20(reserveAsset).safeTransferFrom(
+                address(this),
+                IBabController(controller).getTreasury(),
+                protocolProfits
             );
             reserveAssetDelta.add(int256(-protocolProfits));
             capitalReturned = capitalReturned.sub(protocolProfits);
@@ -577,11 +596,7 @@ contract Strategy is ReentrancyGuard, Initializable {
             reserveAssetDelta.add(int256(stake)); // TODO CHECK IF WE SHOULD RETURN THE REDUCED VERSION OF THE STAKE INSTEAD OF THE TOTAL
         }
         // Return the balance back to the garden
-        require(
-            ERC20(reserveAsset).transferFrom(address(this), address(garden), capitalReturned),
-            'Idea capital return failed'
-        );
-
+        IERC20(reserveAsset).safeTransferFrom(address(this), address(garden), capitalReturned);
         // Updates reserve asset
         uint256 _newTotal = garden.principal().toInt256().add(reserveAssetDelta).toUint256();
         garden.updatePrincipal(_newTotal);
@@ -597,10 +612,8 @@ contract Strategy is ReentrancyGuard, Initializable {
         strategyRewards = rewardsDistributor.getStrategyRewards(address(this));
     }
 
-    function _getPrice(address _assetOne, address _assetTwo) internal returns (uint256) {
+    function _getPrice(address _assetOne, address _assetTwo) internal view returns (uint256) {
         IPriceOracle oracle = IPriceOracle(IBabController(controller).getPriceOracle());
-        // Updates UniSwap TWAP
-        oracle.updateAdapters(_assetOne, _assetTwo);
         return oracle.getPrice(_assetOne, _assetTwo);
     }
 

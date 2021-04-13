@@ -302,11 +302,7 @@ abstract contract PassiveIntegration is BaseIntegration, ReentrancyGuard {
             address,
             uint256,
             bytes memory
-        )
-    {
-        require(false, 'This needs to be overriden');
-        return (address(0), 0, bytes(''));
-    }
+        );
 
     /**
      * Return exit investment calldata which is already generated from the investment API
@@ -333,26 +329,16 @@ abstract contract PassiveIntegration is BaseIntegration, ReentrancyGuard {
             address,
             uint256,
             bytes memory
-        )
-    {
-        require(false, 'This needs to be overriden');
-        return (address(0), 0, bytes(''));
-    }
+        );
 
     function _isInvestment(
         address //_investmentAddress
-    ) internal view virtual returns (bool) {
-        require(false, 'This needs to be overriden');
-        return false;
-    }
+    ) internal view virtual returns (bool);
 
     function _getExpectedShares(
         address, //_investmentAddress
         uint256 // _ethAmount
-    ) internal view virtual returns (uint256) {
-        require(false, 'This needs to be overriden');
-        return 0;
-    }
+    ) internal view virtual returns (uint256);
 
     function _getPricePerShare(
         address //_investmentAddress
@@ -363,15 +349,9 @@ abstract contract PassiveIntegration is BaseIntegration, ReentrancyGuard {
 
     function _getInvestmentAsset(
         address //_investmentAddress
-    ) internal view virtual returns (address) {
-        require(false, 'This needs to be overriden');
-        return address(0);
-    }
+    ) internal view virtual returns (address);
 
     function _getSpender(
         address //_investmentAddress
-    ) internal view virtual returns (address) {
-        require(false, 'This must be overriden');
-        return address(0);
-    }
+    ) internal view virtual returns (address);
 }

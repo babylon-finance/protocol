@@ -12,6 +12,7 @@ const {
   injectFakeProfits,
   deposit,
 } = require('../fixtures/StrategyHelper.js');
+const { increaseTime } = require('../utils/test-helpers');
 
 const addresses = require('../../utils/addresses');
 const { ONE_DAY_IN_SECONDS } = require('../../utils/constants.js');
@@ -30,6 +31,7 @@ describe('Strategy', function () {
   let strategy21;
   let kyberTradeIntegration;
   let wethToken;
+  let priceOracle;
 
   beforeEach(async () => {
     ({
@@ -41,6 +43,7 @@ describe('Strategy', function () {
       strategy21,
       signer2,
       signer3,
+      priceOracle,
       kyberTradeIntegration,
     } = await loadFixture(deployFolioFixture));
 
@@ -130,6 +133,9 @@ describe('Strategy', function () {
         },
       );
 
+      expect(await strategyCandidate.getUserVotes(signer1.getAddress())).to.equal(signer1Balance);
+      expect(await strategyCandidate.getUserVotes(signer2.getAddress())).to.equal(signer2Balance);
+
       const [, , , , absoluteTotalVotes, totalVotes] = await strategyCandidate.getStrategyDetails();
 
       expect(absoluteTotalVotes).to.equal(ethers.utils.parseEther('5.1'));
@@ -146,6 +152,26 @@ describe('Strategy', function () {
 
       // Keeper gets paid
       expect(await wethToken.balanceOf(await owner.getAddress())).to.equal(42);
+    });
+
+    it("can't vote if voting window is closed", async function () {
+      const signer1Balance = await garden2.balanceOf(signer1.getAddress());
+      const signer2Balance = await garden2.balanceOf(signer2.getAddress());
+
+      increaseTime(ONE_DAY_IN_SECONDS * 7);
+
+      await expect(
+        strategyCandidate.resolveVoting(
+          [signer1.getAddress(), signer2.getAddress()],
+          [signer1Balance, signer2Balance],
+          signer1Balance.add(signer2Balance).toString(),
+          signer1Balance.add(signer2Balance).toString(),
+          42,
+          {
+            gasPrice: 0,
+          },
+        ),
+      ).to.be.revertedWith(/voting window is closed/i);
     });
 
     it("can't push voting results twice", async function () {
@@ -287,6 +313,19 @@ describe('Strategy', function () {
       const capitalReturned = await strategyContract.capitalReturned();
 
       expect(capitalReturned).to.be.gt(capitalAllocated);
+    });
+
+    it('should get the NAV value of a long asset', async function () {
+      const strategyContract = await createStrategy(
+        0,
+        'active',
+        [signer1, signer2, signer3],
+        kyberTradeIntegration.address,
+        garden1,
+      );
+      const nav = await strategyContract.getNAV();
+      expect(await strategyContract.capitalAllocated()).to.equal(ethers.utils.parseEther('1'));
+      expect(nav).to.be.gt(ethers.utils.parseEther('0.99'));
     });
 
     it("can't finalize investment twice", async function () {
