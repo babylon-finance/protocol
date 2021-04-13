@@ -45,7 +45,7 @@ import {IRewardsDistributor} from '../interfaces/IRewardsDistributor.sol';
  *
  * Holds the data for an investment strategy
  */
-contract Strategy is ReentrancyGuard, Initializable {
+abstract contract Strategy is ReentrancyGuard, Initializable {
     using SignedSafeMath for int256;
     using SafeMath for uint256;
     using SafeCast for uint256;
