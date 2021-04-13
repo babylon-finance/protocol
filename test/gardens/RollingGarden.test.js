@@ -28,10 +28,18 @@ describe('Garden', function () {
   let strategy21;
 
   beforeEach(async () => {
-
-    ({ babController, owner, signer1, signer2, signer3, garden1, balancerIntegration, strategy11, strategy21 } = await loadFixture(
-      deployFolioFixture,
-    ));
+    ({
+      babController,
+      owner,
+      signer1,
+      signer2,
+      signer3,
+      garden1,
+      balancerIntegration,
+      kyberTradeIntegration,
+      strategy11,
+      strategy21,
+    } = await loadFixture(deployFolioFixture));
     strategyDataset = await ethers.getContractAt('Strategy', strategy11);
     strategyCandidate = await ethers.getContractAt('Strategy', strategy21);
     weth = await ethers.getContractAt('IERC20', addresses.tokens.WETH);
@@ -178,10 +186,6 @@ describe('Garden', function () {
         .reverted;
     });
     it('strategist or voters cannot withdraw more comunity tokens than they have locked in active strategies', async function () {
-      const strategies0 = await garden1.getStrategies();
-
-      strategy = await ethers.getContractAt('Strategy', strategies0[0]);
-
       const strategyContract = await createStrategy(
         0,
         'vote',
@@ -226,13 +230,13 @@ describe('Garden', function () {
       // Cannot withdraw locked stake amount
       await expect(
         garden1.connect(signer1).withdraw(ethers.utils.parseEther('1.2'), 1, signer1.getAddress()),
-      ).to.be.revertedWith('R18');
+      ).to.be.revertedWith('revert BAL#007');
       // Cannot withdraw locked stake amount
       await expect(
         garden1.connect(signer2).withdraw(ethers.utils.parseEther('1.2'), 1, signer1.getAddress()),
-      ).to.be.revertedWith('R18');
+      ).to.be.revertedWith('revert BAL#007');
     });
-    it('strategist or voters can withdraw comunity tokens that were locked during strategy execution once they are unlocked after finishing active strategies', async function () {
+    it('strategist or voters can withdraw comunity tokens that were locked during strategy execution (negative profits) once they are unlocked after finishing active strategies', async function () {
       const strategyContract = await createStrategy(
         0,
         'vote',
@@ -240,6 +244,7 @@ describe('Garden', function () {
         kyberTradeIntegration.address,
         garden1,
       );
+
       // It is executed
       await executeStrategy(garden1, strategyContract, ethers.utils.parseEther('1'), 42);
 
@@ -257,7 +262,7 @@ describe('Garden', function () {
         maxCapitalRequested,
         minRebalanceCapital,
         enteredAt,
-      ] = await strategyDataset.getStrategyDetails();
+      ] = await strategyContract.getStrategyDetails();
       const [
         address2,
         active2,
@@ -280,6 +285,136 @@ describe('Garden', function () {
         .reverted;
       await expect(garden1.connect(signer2).withdraw(ethers.utils.parseEther('1.1'), 1, signer2.getAddress())).not.to.be
         .reverted;
+
+      const WITHDRAWsigner2Balance = await garden1.balanceOf(signer2.address);
+      await expect(WITHDRAWsigner2Balance).to.be.equal(ethers.utils.parseEther('0.9'));
+    });
+
+    it('strategist or voters can withdraw comunity tokens that were locked during strategy execution (positive profits) once they are unlocked after finishing active strategies', async function () {
+      const strategyContract = await createStrategy(
+        0,
+        'vote',
+        [signer1, signer2, signer3],
+        kyberTradeIntegration.address,
+        garden1,
+      );
+
+      // It is executed
+      await executeStrategy(garden1, strategyContract, ethers.utils.parseEther('1'), 42);
+
+      const [
+        address,
+        strategist,
+        integration,
+        stake,
+        absoluteTotalVotes,
+        totalVotes,
+        capitalAllocated,
+        capitalReturned,
+        duration,
+        expectedReturn,
+        maxCapitalRequested,
+        minRebalanceCapital,
+        enteredAt,
+      ] = await strategyContract.getStrategyDetails();
+      const [
+        address2,
+        active2,
+        dataSet2,
+        finalized2,
+        executedAt2,
+        exitedAt2,
+      ] = await strategyContract.getStrategyState();
+
+      expect(address2).to.equal(strategyContract.address);
+      expect(active2).to.equal(true);
+
+      expect(strategist).to.equal(signer1.address);
+      expect(stake).to.equal(ethers.utils.parseEther('1'));
+
+      await injectFakeProfits(strategyContract, ethers.utils.parseEther('200')); // We inject positive profits
+
+      await finalizeStrategy(garden1, strategyContract, 42);
+
+      // Can now withdraw stake amount as it is again unlocked
+      await expect(garden1.connect(signer1).withdraw(ethers.utils.parseEther('0.1'), 1, signer1.getAddress())).not.to.be
+        .reverted;
+      await expect(garden1.connect(signer2).withdraw(ethers.utils.parseEther('1.1'), 1, signer2.getAddress())).not.to.be
+        .reverted;
+
+      const WITHDRAWsigner2Balance = await garden1.balanceOf(signer2.address);
+      await expect(WITHDRAWsigner2Balance).to.be.equal(ethers.utils.parseEther('0.9'));
+    });
+
+    it('strategist is taken the exact amount of stake after a negative profit strategy with negative results', async function () {
+      const strategyContract = await createStrategy(
+        0,
+        'vote',
+        [signer1, signer2, signer3],
+        kyberTradeIntegration.address,
+        garden1,
+      );
+
+      // It is executed
+      await executeStrategy(garden1, strategyContract, ethers.utils.parseEther('1'), 42);
+
+      const [
+        address,
+        strategist,
+        integration,
+        stake,
+        absoluteTotalVotes,
+        totalVotes,
+        capitalAllocated,
+        capitalReturned,
+        duration,
+        expectedReturn,
+        maxCapitalRequested,
+        minRebalanceCapital,
+        enteredAt,
+      ] = await strategyContract.getStrategyDetails();
+      const [
+        address2,
+        active2,
+        dataSet2,
+        finalized2,
+        executedAt2,
+        exitedAt2,
+      ] = await strategyContract.getStrategyState();
+
+      expect(address2).to.equal(strategyContract.address);
+      expect(active2).to.equal(true);
+
+      expect(strategist).to.equal(signer1.address);
+      expect(stake).to.equal(ethers.utils.parseEther('1'));
+
+      await finalizeStrategy(garden1, strategyContract, 42);
+
+      const [
+        address3,
+        strategist3,
+        integration3,
+        stake3,
+        absoluteTotalVotes3,
+        totalVotes3,
+        capitalAllocated3,
+        capitalReturned3,
+        duration3,
+        expectedReturn3,
+        maxCapitalRequested3,
+        minRebalanceCapital3,
+        enteredAt3,
+      ] = await strategyContract.getStrategyDetails();
+
+      // Being a negative profit strategy, the corresponding % of the loss is reduced (burned) from the strategists stake
+      const value =
+        (ethers.BigNumber.from(capitalReturned3) / ethers.BigNumber.from(capitalAllocated3)) *
+        ethers.BigNumber.from(stake3);
+
+      const finalStrategistBalance = await garden1.balanceOf(signer1.address);
+      const finalReducedStrategistBalance = finalStrategistBalance - ethers.utils.parseEther('1.1');
+
+      await expect(finalReducedStrategistBalance).to.be.closeTo(value, 100);
     });
 
     it('strategist or voters can withdraw comunity tokens during strategy execution if they have enough unlocked amount in their balance', async function () {

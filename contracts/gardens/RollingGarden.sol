@@ -259,7 +259,10 @@ contract RollingGarden is ReentrancyGuard, BaseGarden {
             block.timestamp.sub(contributors[msg.sender].lastDepositAt) >= depositHardlock,
             Errors.TOKENS_TIMELOCKED
         );
-        require(_gardenTokenQuantity <= balanceOf(msg.sender).sub(this.getLockedBalance(msg.sender)), 'Errors.R18'); // Strategists and Voters cannot withdraw locked stake while in active strategies
+        _require(
+            _gardenTokenQuantity <= balanceOf(msg.sender).sub(this.getLockedBalance(msg.sender)),
+            Errors.TOKENS_TIMELOCKED
+        ); // Strategists and Voters cannot withdraw locked stake while in active strategies
 
         // Check this here to avoid having relayers
         reenableEthForInvestments();
@@ -492,7 +495,6 @@ contract RollingGarden is ReentrancyGuard, BaseGarden {
         if (balanceOf(_contributor) < lockedAmount) lockedAmount = balanceOf(_contributor); // TODO Remove when implementing locked stake in voting and strategy creation - Now this avoid overflows
         return lockedAmount;
     }
-
 
     // solhint-disable-next-line
     receive() external payable {}
