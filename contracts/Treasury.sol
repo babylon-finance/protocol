@@ -21,6 +21,7 @@
 pragma solidity 0.7.4;
 
 import 'hardhat/console.sol';
+import {Address} from '@openzeppelin/contracts/utils/Address.sol';
 import {Ownable} from '@openzeppelin/contracts/access/Ownable.sol';
 import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import {SafeERC20} from '@openzeppelin/contracts/token/ERC20/SafeERC20.sol';
@@ -35,6 +36,7 @@ import {IBabController} from './interfaces/IBabController.sol';
  */
 contract Treasury is Ownable {
     using SafeERC20 for IERC20;
+    using Address for address;
     /* ============ Events ============ */
 
     event TreasuryFundsSent(address _asset, uint256 _amount, address _to);
@@ -74,6 +76,19 @@ contract Treasury is Ownable {
         require(IERC20(_asset).balanceOf(address(this)) >= _amount, 'Not enough funds in treasury');
         IERC20(_asset).safeTransferFrom(address(this), _to, _amount);
         emit TreasuryFundsSent(_asset, _amount, _to);
+    }
+
+    /**
+     * GOVERNANCE FUNCTION: Send an ETH amount to an address
+     *
+     * @param _amount           Amount to send of the asset
+     * @param _to               Address to send the assets to
+     */
+    function sendTreasuryETH(uint256 _amount, address payable _to) external onlyOwner {
+        require(_to != address(0), 'Target address must exist');
+        require(address(this).balance >= _amount, 'Not enough funds in treasury');
+        Address.sendValue(_to, _amount);
+        emit TreasuryFundsSent(address(0), _amount, _to);
     }
 
     // Can receive ETH
