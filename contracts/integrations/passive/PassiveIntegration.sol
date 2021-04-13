@@ -342,10 +342,7 @@ abstract contract PassiveIntegration is BaseIntegration, ReentrancyGuard {
 
     function _getPricePerShare(
         address //_investmentAddress
-    ) internal view virtual returns (uint256) {
-        require(false, 'This needs to be overriden');
-        return 0;
-    }
+    ) internal view virtual returns (uint256);
 
     function _getInvestmentAsset(
         address //_investmentAddress

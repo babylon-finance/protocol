@@ -235,10 +235,7 @@ abstract contract LendIntegration is BaseIntegration, ReentrancyGuard {
 
     function _isInvestment(
         address //_investmentAddress
-    ) internal view virtual returns (bool) {
-        require(false, 'This needs to be overriden');
-        return false;
-    }
+    ) internal view virtual returns (bool);
 
     /**
      * Create and return InvestmentInfo struct

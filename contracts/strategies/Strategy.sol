@@ -465,10 +465,7 @@ abstract contract Strategy is ReentrancyGuard, Initializable {
      *
      * @return _nav           NAV of the strategy
      */
-    function getNAV() external view virtual returns (uint256) {
-        require(false, 'This needs to be overriden');
-        return 0;
-    }
+    function getNAV() external view virtual returns (uint256);
 
     function getUserVotes(address _address) external view returns (int256) {
         return votes[_address];
@@ -497,18 +494,14 @@ abstract contract Strategy is ReentrancyGuard, Initializable {
      */
     function _enterStrategy(
         uint256 /*_capital*/
-    ) internal virtual {
-        require(false, 'This needs to be overriden');
-    }
+    ) internal virtual;
 
     /**
      * Exits the strategy. Virtual method.
      * Needs to be overriden in base class.
      *
      */
-    function _exitStrategy() internal virtual {
-        require(false, 'This needs to be overriden');
-    }
+    function _exitStrategy() internal virtual;
 
     /**
      * Deletes this strategy and returns the stake to the strategist
