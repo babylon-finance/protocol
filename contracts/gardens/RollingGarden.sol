@@ -72,10 +72,8 @@ contract RollingGarden is ReentrancyGuard, BaseGarden {
 
     uint256 public depositHardlock; // Window of time after deposits when withdraws are disabled for that user
     // Window of time after an investment strategy finishes when the capital is available for withdrawals
-    uint256 public redemptionWindowAfterInvestmentCompletes;
-    uint256 public redemptionsOpenUntil; // Indicates until when the redemptions are open and the ETH is set aside
-
-    uint256 public reserveAvailableForRedemptionsInWindow; // Total available for redemptions in this window
+    uint256 public withdrawalWindowAfterInvestmentCompletes;
+    uint256 public withdrawalsOpenUntil; // Indicates until when the withdrawals are open and the ETH is set aside
 
     uint256 public constant BABL_STRATEGIST_SHARE = 8e16;
     uint256 public constant BABL_STEWARD_SHARE = 17e16;
@@ -161,7 +159,7 @@ contract RollingGarden is ReentrancyGuard, BaseGarden {
         gardenInitializedAt = block.timestamp;
         minLiquidityAsset = _minLiquidityAsset;
         depositHardlock = _depositHardlock;
-        redemptionWindowAfterInvestmentCompletes = 7 days;
+        withdrawalWindowAfterInvestmentCompletes = 7 days;
         startCommon(
             _minContribution,
             _strategyCooldownPeriod,
@@ -268,7 +266,7 @@ contract RollingGarden is ReentrancyGuard, BaseGarden {
         _burn(msg.sender, _gardenTokenQuantity);
         _updateContributorWithdrawalInfo(withdrawalInfo.netFlowQuantity);
 
-        // Check that the redemption is possible
+        // Check that the withdrawal is possible
         _require(canWithdrawEthAmount(msg.sender, withdrawalInfo.netFlowQuantity), Errors.MIN_LIQUIDITY);
         // Unwrap WETH if ETH balance lower than netFlowQuantity
         if (address(this).balance < withdrawalInfo.netFlowQuantity) {
@@ -344,20 +342,17 @@ contract RollingGarden is ReentrancyGuard, BaseGarden {
      * @param _amount                        Amount of WETH to convert to ETH to set aside
      */
     function startWithdrawalWindow(uint256 _amount) external onlyStrategyOrProtocol {
-        redemptionsOpenUntil = block.timestamp.add(redemptionWindowAfterInvestmentCompletes);
-        reserveAvailableForRedemptionsInWindow.add(_amount);
+        withdrawalsOpenUntil = block.timestamp.add(withdrawalWindowAfterInvestmentCompletes);
         IWETH(weth).withdraw(_amount);
     }
 
     /**
-     * When the window of redemptions finishes, we need to make the capital available again for investments
+     * When the window of withdrawals finishes, we need to make the capital available again for investments
      *
      */
     function reenableEthForInvestments() public {
-        if (block.timestamp >= redemptionsOpenUntil && address(this).balance > minContribution) {
-            // Always wrap to WETH
-            reserveAvailableForRedemptionsInWindow = 0;
-            redemptionsOpenUntil = 0;
+        if (block.timestamp >= withdrawalsOpenUntil && address(this).balance > minContribution) {
+            withdrawalsOpenUntil = 0;
             IWETH(weth).deposit{value: address(this).balance}();
         }
     }
@@ -379,11 +374,10 @@ contract RollingGarden is ReentrancyGuard, BaseGarden {
             return true;
         }
 
-        // Redemptions open
-        if (block.timestamp <= redemptionsOpenUntil) {
-            // todo: check pro rata
-            // Didn't request a redemption
-            return ethAsideBalance.sub(reserveAvailableForRedemptionsInWindow) >= _amount;
+        // Withdrawal open
+        if (block.timestamp <= withdrawalsOpenUntil) {
+            // Pro rata withdrawals
+            return ethAsideBalance.preciseMul(contributors[msg.sender].gardenAverageOwnership) >= _amount;
         }
         return false;
     }
@@ -531,6 +525,30 @@ contract RollingGarden is ReentrancyGuard, BaseGarden {
         return (contributorTotalProfits, Safe3296.safe96(bablTotalRewards, 'R28'));
     }
 
+    function _getLossesGarden(uint256 _since) private view returns (uint256) {
+        uint256 totalLosses = 0;
+        for (uint256 i = 0; i < finalizedStrategies.length; i++) {
+            IStrategy strategy = IStrategy(finalizedStrategies[i]);
+            if (strategy.executedAt() >= _since) {
+                // If strategy suffered losses we add them
+                if (strategy.capitalReturned() < strategy.capitalAllocated()) {
+                    totalLosses = totalLosses.add(strategy.capitalAllocated().sub(strategy.capitalReturned()));
+                }
+            }
+        }
+        for (uint256 i = 0; i < strategies.length; i++) {
+            IStrategy strategy = IStrategy(strategies[i]);
+            if (strategy.active() && strategy.executedAt() >= _since) {
+                // If strategy is currently experiencing losses, we add them
+                if (strategy.getNAV() < strategy.capitalAllocated()) {
+                    totalLosses = totalLosses.add(strategy.capitalAllocated().sub(strategy.getNAV()));
+                }
+            }
+        }
+
+        return totalLosses;
+    }
+
     function _validateReserveAsset(address _reserveAsset, uint256 _quantity) internal view {
         _require(_quantity > 0, Errors.GREATER_THAN_ZERO);
         _require(IBabController(controller).isValidReserveAsset(_reserveAsset), Errors.MUST_BE_RESERVE_ASSET);
@@ -541,7 +559,7 @@ contract RollingGarden is ReentrancyGuard, BaseGarden {
         uint256, /* _gardenTokenQuantity */
         ActionInfo memory _withdrawalInfo
     ) internal view {
-        // Check that new supply is more than min supply needed for redemption
+        // Check that new supply is more than min supply needed for withdrawal
         // Note: A min supply amount is needed to avoid division by 0 when withdrawaling garden token to 0
         _require(_withdrawalInfo.newGardenTokenSupply >= minGardenTokenSupply, Errors.MIN_TOKEN_SUPPLY);
 
@@ -590,10 +608,21 @@ contract RollingGarden is ReentrancyGuard, BaseGarden {
                 ? IBabController(controller).getProtocolDepositGardenTokenFee()
                 : IBabController(controller).getProtocolWithdrawalGardenTokenFee();
 
+        uint256 reserveAssetReal = _reserveAssetQuantity;
+        // If there is a withdrawal, we adjust for losses
+        if (!_isDeposit) {
+            uint256 losses = _getLossesGarden(contributors[msg.sender].initialDepositAt);
+            // If there are losses we need to adjust them down
+            if (losses > 0) {
+                reserveAssetReal = reserveAssetReal.sub(
+                    losses.preciseMul(contributors[msg.sender].gardenAverageOwnership)
+                );
+            }
+        }
         // Calculate total notional fees
-        uint256 protocolFees = protocolFeePercentage.preciseMul(_reserveAssetQuantity);
+        uint256 protocolFees = protocolFeePercentage.preciseMul(reserveAssetReal);
 
-        uint256 netReserveFlow = _reserveAssetQuantity.sub(protocolFees);
+        uint256 netReserveFlow = reserveAssetReal.sub(protocolFees);
 
         return (protocolFees, netReserveFlow);
     }
