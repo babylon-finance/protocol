@@ -595,7 +595,7 @@ contract Strategy is ReentrancyGuard, Initializable {
         uint256 _newTotal = garden.principal().toInt256().add(reserveAssetDelta).toUint256();
         garden.updatePrincipal(_newTotal);
         // Start a redemption window in the garden with this capital
-        garden.startRedemptionWindow(capitalReturned);
+        garden.startWithdrawalWindow(capitalReturned);
 
         // Moves strategy to finalized
         IGarden(garden).moveStrategyToFinalized(reserveAssetDelta, address(this));

@@ -95,7 +95,7 @@ interface IGarden is IERC20 {
 
     function isStrategy(address _strategy) external view returns (bool);
 
-    function startRedemptionWindow(uint256 _amount) external;
+    function startWithdrawalWindow(uint256 _amount) external;
 
     function allocateCapitalToInvestment(uint256 _capital) external;
 

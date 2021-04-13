@@ -343,7 +343,7 @@ contract RollingGarden is ReentrancyGuard, BaseGarden {
      *
      * @param _amount                        Amount of WETH to convert to ETH to set aside
      */
-    function startRedemptionWindow(uint256 _amount) external onlyStrategyOrProtocol {
+    function startWithdrawalWindow(uint256 _amount) external onlyStrategyOrProtocol {
         redemptionsOpenUntil = block.timestamp.add(redemptionWindowAfterInvestmentCompletes);
         reserveAvailableForRedemptionsInWindow.add(_amount);
         IWETH(weth).withdraw(_amount);
