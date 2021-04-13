@@ -88,7 +88,7 @@ async function vote(garden, signers, strategy) {
   const signer2Balance = await garden.balanceOf(signer2.getAddress());
 
   return strategy.resolveVoting(
-    [signer1.getAddress(), signer1.getAddress()],
+    [signer1.getAddress(), signer2.getAddress()],
     [signer1Balance, signer2Balance],
     signer1Balance.add(signer2Balance).toString(),
     signer1Balance.add(signer2Balance).toString(),

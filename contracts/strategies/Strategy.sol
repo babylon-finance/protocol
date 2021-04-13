@@ -144,6 +144,7 @@ contract Strategy is ReentrancyGuard, Initializable {
 
     // Garden that these strategies belong to
     IGarden public garden;
+
     address public integration; // Address of the integration
     address public strategist; // Address of the strategist that submitted the bet
 
@@ -208,6 +209,7 @@ contract Strategy is ReentrancyGuard, Initializable {
             'Integration must be valid'
         );
         require(controller.isSystemContract(_garden), 'Must be a valid garden');
+
         require(IERC20(address(garden)).balanceOf(_strategist) > 0, 'Strategist mush have a stake');
         require(_stake > garden.totalSupply().div(100), 'Stake amount must be at least 1%');
         require(
@@ -589,8 +591,11 @@ contract Strategy is ReentrancyGuard, Initializable {
         } else {
             // Returns were negative
             // Burn strategist stake and add the amount to the garden
-            garden.burnStrategistStake(strategist, capitalReturned.preciseDiv(capitalAllocated).preciseMul(stake));
-            reserveAssetDelta.add(int256(stake));
+            garden.burnStrategistStake(
+                strategist,
+                stake.sub(capitalReturned.preciseDiv(capitalAllocated).preciseMul(stake))
+            );
+            reserveAssetDelta.add(int256(stake)); // TODO CHECK IF WE SHOULD RETURN THE REDUCED VERSION OF THE STAKE INSTEAD OF THE TOTAL
         }
         // Return the balance back to the garden
         IERC20(reserveAsset).safeTransferFrom(address(this), address(garden), capitalReturned);

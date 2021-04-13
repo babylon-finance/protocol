@@ -259,6 +259,11 @@ contract RollingGarden is ReentrancyGuard, BaseGarden {
             block.timestamp.sub(contributors[msg.sender].lastDepositAt) >= depositHardlock,
             Errors.TOKENS_TIMELOCKED
         );
+        _require(
+            _gardenTokenQuantity <= balanceOf(msg.sender).sub(this.getLockedBalance(msg.sender)),
+            Errors.TOKENS_TIMELOCKED
+        ); // Strategists and Voters cannot withdraw locked stake while in active strategies
+
         // Check this here to avoid having relayers
         reenableEthForInvestments();
         ActionInfo memory withdrawalInfo = _createRedemptionInfo(_gardenTokenQuantity);
@@ -468,6 +473,29 @@ contract RollingGarden is ReentrancyGuard, BaseGarden {
         }
     }
 
+    /**
+     * Checks balance locked for strategists and voters in active strategies
+     *
+     * @param _contributor                 Address of the account
+     *
+     * @return  uint256                    Returns the amount of locked garden tokens for the account
+     */
+    function getLockedBalance(address _contributor) external view returns (uint256) {
+        uint256 lockedAmount;
+        for (uint256 i = 0; i <= strategies.length - 1; i++) {
+            IStrategy strategy = IStrategy(strategies[i]);
+            uint256 votes = uint256(abs(strategy.getUserVotes(_contributor)));
+            if (votes > 0) {
+                lockedAmount += votes;
+            }
+            if (_contributor == strategy.strategist()) {
+                lockedAmount += strategy.stake();
+            }
+        }
+        if (balanceOf(_contributor) < lockedAmount) lockedAmount = balanceOf(_contributor); // TODO Remove when implementing locked stake in voting and strategy creation - Now this avoid overflows
+        return lockedAmount;
+    }
+
     // solhint-disable-next-line
     receive() external payable {}
 
@@ -671,5 +699,9 @@ contract RollingGarden is ReentrancyGuard, BaseGarden {
                 .div(contributor.numberOfOps.add(1));
             contributor.numberOfOps = contributor.numberOfOps.add(1);
         }
+    }
+
+    function abs(int256 x) private pure returns (int256) {
+        return x >= 0 ? x : -x;
     }
 }
