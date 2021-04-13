@@ -11,7 +11,6 @@ const {
   executeStrategy,
   finalizeStrategy,
   injectFakeProfits,
-
 } = require('../fixtures/StrategyHelper');
 const { deployFolioFixture } = require('../fixtures/ControllerFixture');
 
@@ -27,7 +26,6 @@ describe('Garden', function () {
   let kyberTradeIntegration;
   let strategy11;
   let strategy21;
-
 
   beforeEach(async () => {
     ({
@@ -472,7 +470,6 @@ describe('Garden', function () {
       const WITHDRAWsigner2Balance = await garden1.balanceOf(signer2.address);
       await expect(WITHDRAWsigner2Balance).to.be.equal(ethers.utils.parseEther('2'));
     });
-
   });
 
   describe('Add Strategy', async function () {
