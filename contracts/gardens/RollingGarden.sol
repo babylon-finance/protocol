@@ -553,24 +553,22 @@ contract RollingGarden is ReentrancyGuard, BaseGarden {
         return (contributorTotalProfits, Safe3296.safe96(bablTotalRewards, 'R28'));
     }
 
+    /**
+     * Returns the losses of a garden since a timestamp
+     *
+     * @param _since                        Timestamp since when we should calculate the losses
+     * @return  uint256                     Losses of a garden since a timestamp
+     */
     function _getLossesGarden(uint256 _since) private view returns (uint256) {
         uint256 totalLosses = 0;
         for (uint256 i = 0; i < finalizedStrategies.length; i++) {
-            IStrategy strategy = IStrategy(finalizedStrategies[i]);
-            if (strategy.executedAt() >= _since) {
-                // If strategy suffered losses we add them
-                if (strategy.capitalReturned() < strategy.capitalAllocated()) {
-                    totalLosses = totalLosses.add(strategy.capitalAllocated().sub(strategy.capitalReturned()));
-                }
+            if (IStrategy(finalizedStrategies[i]).executedAt() >= _since) {
+                totalLosses = totalLosses.add(IStrategy(finalizedStrategies[i]).getLossesStrategy());
             }
         }
         for (uint256 i = 0; i < strategies.length; i++) {
-            IStrategy strategy = IStrategy(strategies[i]);
-            if (strategy.active() && strategy.executedAt() >= _since) {
-                // If strategy is currently experiencing losses, we add them
-                if (strategy.getNAV() < strategy.capitalAllocated()) {
-                    totalLosses = totalLosses.add(strategy.capitalAllocated().sub(strategy.getNAV()));
-                }
+            if (IStrategy(strategies[i]).executedAt() >= _since) {
+                totalLosses = totalLosses.add(IStrategy(strategies[i]).getLossesStrategy());
             }
         }
 
@@ -640,7 +638,7 @@ contract RollingGarden is ReentrancyGuard, BaseGarden {
         // If there is a withdrawal, we adjust for losses
         if (!_isDeposit) {
             uint256 losses = _getLossesGarden(contributors[msg.sender].initialDepositAt);
-            // If there are losses we need to adjust them down
+            // // If there are losses we need to adjust them down
             if (losses > 0) {
                 reserveAssetReal = reserveAssetReal.sub(
                     losses.preciseMul(contributors[msg.sender].gardenAverageOwnership)

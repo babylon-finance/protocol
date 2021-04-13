@@ -395,7 +395,7 @@ abstract contract Strategy is ReentrancyGuard, Initializable {
     /**
      * Returns whether this strategy is currently active or not
      */
-    function isIdeaActive() external view returns (bool) {
+    function isIdeaActive() public view returns (bool) {
         return executedAt > 0 && exitedAt == 0;
     }
 
@@ -465,7 +465,7 @@ abstract contract Strategy is ReentrancyGuard, Initializable {
      *
      * @return _nav           NAV of the strategy
      */
-    function getNAV() external view virtual returns (uint256);
+    function getNAV() public view virtual returns (uint256);
 
     function getUserVotes(address _address) external view returns (int256) {
         return votes[_address];
@@ -537,6 +537,20 @@ abstract contract Strategy is ReentrancyGuard, Initializable {
         uint256 remainingReserve = IERC20(garden.reserveAsset()).balanceOf(address(this));
         // Sends the rest back if any
         IERC20(garden.reserveAsset()).safeTransfer(address(garden), remainingReserve);
+    }
+
+    function getLossesStrategy() external view onlyActiveGarden returns (uint256) {
+        if (isIdeaActive()) {
+            uint256 navStrategy = getNAV();
+            // If strategy is currently experiencing losses, we add them
+            if (navStrategy < capitalAllocated) {
+                return capitalAllocated.sub(navStrategy);
+            }
+        }
+        if (finalized && capitalAllocated > capitalReturned) {
+            return capitalAllocated.sub(capitalReturned);
+        }
+        return 0;
     }
 
     /**

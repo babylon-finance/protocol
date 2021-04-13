@@ -50,6 +50,8 @@ interface IStrategy {
 
     function getNAV() external view returns (uint256);
 
+    function getLossesStrategy() external view returns (uint256);
+
     function finalizeStrategy(uint256 fee) external;
 
     function changeStrategyDuration(uint256 _newDuration) external;
