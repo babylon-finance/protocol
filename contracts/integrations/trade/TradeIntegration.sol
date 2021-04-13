@@ -231,19 +231,12 @@ abstract contract TradeIntegration is BaseIntegration, ReentrancyGuard {
             address,
             uint256,
             bytes memory
-        )
-    {
-        require(false, 'This needs to be overriden');
-        return (address(0), 0, bytes(''));
-    }
+        );
 
     /**
      * Returns the address to approve source tokens to for trading. This is the TokenTaker address
      *
      * @return address     Address of the contract to approve tokens to
      */
-    function _getSpender() internal view virtual returns (address) {
-        require(false, 'This needs to be overriden');
-        return address(0);
-    }
+    function _getSpender() internal view virtual returns (address);
 }
