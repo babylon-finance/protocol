@@ -30,9 +30,14 @@ describe('Strategy', function () {
   let garden2;
   let strategy11;
   let strategy21;
-  let kyberTradeIntegration;
   let wethToken;
+  let daiWethPair;
   let aaveLendIntegration;
+  let kyberTradeIntegration;
+  let uniswapPoolIntegration;
+  let balancerIntegration;
+  let oneInchPoolIntegration;
+  let yearnVaultIntegration;
 
   beforeEach(async () => {
     ({
@@ -46,12 +51,17 @@ describe('Strategy', function () {
       signer3,
       aaveLendIntegration,
       kyberTradeIntegration,
+      uniswapPoolIntegration,
+      balancerIntegration,
+      oneInchPoolIntegration,
+      yearnVaultIntegration,
     } = await loadFixture(deployFolioFixture));
 
     strategyDataset = await ethers.getContractAt('Strategy', strategy11);
     strategyCandidate = await ethers.getContractAt('Strategy', strategy21);
 
     wethToken = await ethers.getContractAt('IERC20', addresses.tokens.WETH);
+    daiWethPair = await ethers.getContractAt('IUniswapV2PairB', addresses.uniswap.pairs.wethdai);
   });
 
   describe('Strategy Deployment', async function () {
@@ -313,6 +323,97 @@ describe('Strategy', function () {
     });
   });
 
+  describe('getNAV', async function () {
+    it('should get the NAV value of a long strategy', async function () {
+      const strategyContract = await createStrategy(
+        0,
+        'active',
+        [signer1, signer2, signer3],
+        kyberTradeIntegration.address,
+        garden1,
+      );
+      const nav = await strategyContract.getNAV();
+      expect(await strategyContract.capitalAllocated()).to.equal(ONE_ETH);
+      expect(nav).to.be.closeTo(ONE_ETH, ONE_ETH.div(500));
+    });
+
+    it('should get the NAV value of a Yearn Farming strategy', async function () {
+      const strategyContract = await createStrategy(
+        2,
+        'active',
+        [signer1, signer2, signer3],
+        yearnVaultIntegration.address,
+        garden1,
+      );
+      const nav = await strategyContract.getNAV();
+      expect(await strategyContract.capitalAllocated()).to.equal(ONE_ETH);
+      expect(nav).to.be.closeTo(ONE_ETH, ONE_ETH.div(500));
+    });
+
+    it('should get the NAV value of a lend strategy', async function () {
+      const strategyContract = await createStrategy(
+        3,
+        'active',
+        [signer1, signer2, signer3],
+        aaveLendIntegration.address,
+        garden1,
+        DEFAULT_STRATEGY_PARAMS,
+        [addresses.tokens.DAI],
+      );
+      const nav = await strategyContract.getNAV();
+      expect(await strategyContract.capitalAllocated()).to.equal(ONE_ETH);
+      expect(nav).to.be.closeTo(ONE_ETH, ONE_ETH.div(500));
+    });
+
+    it('should get the NAV value of a BalancerPool strategy', async function () {
+      const strategyContract = await createStrategy(
+        1,
+        'active',
+        [signer1, signer2, signer3],
+        balancerIntegration.address,
+        garden1,
+      );
+
+      const nav = await strategyContract.getNAV();
+      expect(await strategyContract.capitalAllocated()).to.equal(ONE_ETH);
+      // So much slipage at Balancer 😭
+      expect(nav).to.be.closeTo(ONE_ETH, ONE_ETH.div(50));
+    });
+
+    it('should get the NAV value of a OneInchPool strategy', async function () {
+      const daiWethOneInchPair = await ethers.getContractAt('IMooniswap', addresses.oneinch.pools.wethdai);
+      console.log('address', daiWethOneInchPair.address);
+      const strategyContract = await createStrategy(
+        1,
+        'active',
+        [signer1, signer2, signer3],
+        oneInchPoolIntegration.address,
+        garden1,
+        DEFAULT_STRATEGY_PARAMS,
+        [daiWethOneInchPair.address],
+      );
+
+      const nav = await strategyContract.getNAV();
+      expect(await strategyContract.capitalAllocated()).to.equal(ONE_ETH);
+      expect(nav).to.be.closeTo(ONE_ETH, ONE_ETH.div(100));
+    });
+
+    it('should get the NAV value of a UniswapPool strategy', async function () {
+      const strategyContract = await createStrategy(
+        1,
+        'active',
+        [signer1, signer2, signer3],
+        uniswapPoolIntegration.address,
+        garden1,
+        DEFAULT_STRATEGY_PARAMS,
+        [daiWethPair.address],
+      );
+      const nav = await strategyContract.getNAV();
+      expect(await strategyContract.capitalAllocated()).to.equal(ONE_ETH);
+      expect(nav).to.be.closeTo(ONE_ETH, ONE_ETH.div(400));
+    });
+  });
+
   describe('finalizeStrategy', async function () {
     it('should finalize strategy with negative profits', async function () {
       const strategyContract = await createStrategy(
@@ -356,35 +457,6 @@ describe('Strategy', function () {
       const capitalReturned = await strategyContract.capitalReturned();
 
       expect(capitalReturned).to.be.gt(capitalAllocated);
-    });
-
-    it('should get the NAV value of a long strategy', async function () {
-      const strategyContract = await createStrategy(
-        0,
-        'active',
-        [signer1, signer2, signer3],
-        kyberTradeIntegration.address,
-        garden1,
-      );
-      const nav = await strategyContract.getNAV();
-      expect(await strategyContract.capitalAllocated()).to.equal(ONE_ETH);
-      expect(nav).to.be.closeTo(ONE_ETH, ONE_ETH.div(500));
-    });
-
-    it('should get the NAV value of a lend strategy', async function () {
-      console.log('before createStrategy');
-      const strategyContract = await createStrategy(
-        3,
-        'active',
-        [signer1, signer2, signer3],
-        aaveLendIntegration.address,
-        garden1,
-        DEFAULT_STRATEGY_PARAMS,
-        [addresses.tokens.DAI],
-      );
-      const nav = await strategyContract.getNAV();
-      expect(await strategyContract.capitalAllocated()).to.equal(ONE_ETH);
-      expect(nav).to.be.closeTo(ONE_ETH, ONE_ETH.div(500));
     });
 
     it("can't finalize strategy twice", async function () {

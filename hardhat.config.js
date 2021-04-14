@@ -30,13 +30,7 @@ const defaultNetwork = 'hardhat';
 function mnemonic() {
   try {
     return fs.readFileSync('./mnemonic.txt').toString().trim();
-  } catch (e) {
-    if (defaultNetwork !== 'localhost') {
-      console.log(
-        '☢️ WARNING: No mnemonic file created for a deploy account. Try `yarn run generate` and then `yarn run account`.',
-      );
-    }
-  }
+  } catch (e) {}
   return '';
 }
 
@@ -57,6 +51,8 @@ module.exports = {
   networks: {
     // Local Hardhat network using alchemy for pinned block
     hardhat: {
+      blockGasLimit: 0x1fffffffffffff,
+      allowUnlimitedContractSize: true,
       forking: {
         url: 'https://eth-mainnet.alchemyapi.io/v2/sncj01nDcsAQr_QWyhYWNkg3qzW2o9kt',
         blockNumber: 12160000,
