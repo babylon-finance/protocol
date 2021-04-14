@@ -66,8 +66,11 @@ abstract contract Strategy is ReentrancyGuard, Initializable {
     /**
      * Throws if the sender is not the creator of the strategy
      */
-    modifier onlyController {
-        require(msg.sender == address(controller), 'Only Controller can access this');
+    modifier onlyProtocolOrGarden {
+        require(
+            msg.sender == address(garden) || msg.sender == controller.owner(),
+            'Only Protocol or garden can access this'
+        );
         _;
     }
 
@@ -341,17 +344,19 @@ abstract contract Strategy is ReentrancyGuard, Initializable {
      * Triggered from an immediate withdraw in the Garden.
      * @param _amountToUnwind              The amount of capital to unwind
      */
-    function unwindStrategy(uint256 _amountToUnwind) external onlyActiveGarden nonReentrant {
-      require(_amountToUnwind <= capitalAllocated.sub(minRebalanceCapital), 'Not enough liquidity to unwind');
-      // Exits and enters the strategy
-      _exitStrategy(_amountToUnwind.preciseDiv(capitalAllocated));
-      updatedAt = block.timestamp;
-      // Removes protocol principal for the calculation of rewards
-      IRewardsDistributor rewardsDistributor =
-          IRewardsDistributor(IBabController(controller).getRewardsDistributor());
-      rewardsDistributor.substractProtocolPrincipal(_amountToUnwind);
-      // Send the amount back to the warden for the immediate withdrawal
-      IERC20(garden.reserveAsset()).safeTransfer(address(garden), _amountToUnwind);
+    function unwindStrategy(uint256 _amountToUnwind) external onlyProtocolOrGarden nonReentrant {
+        require(active && !finalized, 'Strategy needs to be active');
+        require(_amountToUnwind <= capitalAllocated.sub(minRebalanceCapital), 'Not enough liquidity to unwind');
+        // Exits and enters the strategy
+        _exitStrategy(_amountToUnwind.preciseDiv(capitalAllocated));
+        updatedAt = block.timestamp;
+        capitalAllocated = capitalAllocated.sub(_amountToUnwind);
+        // Removes protocol principal for the calculation of rewards
+        IRewardsDistributor rewardsDistributor =
+            IRewardsDistributor(IBabController(controller).getRewardsDistributor());
+        rewardsDistributor.substractProtocolPrincipal(_amountToUnwind);
+        // Send the amount back to the warden for the immediate withdrawal
+        IERC20(garden.reserveAsset()).safeTransfer(address(garden), _amountToUnwind);
     }
 
     /**
@@ -519,7 +524,9 @@ abstract contract Strategy is ReentrancyGuard, Initializable {
      * Needs to be overriden in base class.
      * hparam _percentage of capital to exit from the strategy
      */
-    function _exitStrategy(uint256 /*_percentage*/) internal virtual;
+    function _exitStrategy(
+        uint256 /*_percentage*/
+    ) internal virtual;
 
     /**
      * Deletes this strategy and returns the stake to the strategist

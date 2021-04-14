@@ -209,13 +209,12 @@ describe('Strategy', function () {
     it('should execute strategy', async function () {
       const strategyContract = await createStrategy(
         0,
-        'vote',
+        'active',
         [signer1, signer2, signer3],
         kyberTradeIntegration.address,
         garden1,
       );
 
-      await executeStrategy(garden1, strategyContract, ethers.utils.parseEther('1'), 42);
       const [address, active, dataSet, finalized, executedAt, exitedAt] = await strategyContract.getStrategyState();
 
       expect(address).to.equal(strategyContract.address);
@@ -227,6 +226,49 @@ describe('Strategy', function () {
 
       // Keeper gets paid
       expect(await wethToken.balanceOf(await owner.getAddress())).to.equal(42);
+    });
+
+    it('should not be able to unwind an active strategy with not enough capital', async function () {
+      const strategyContract = await createStrategy(
+        0,
+        'active',
+        [signer1, signer2, signer3],
+        kyberTradeIntegration.address,
+        garden1,
+      );
+      await expect(strategyContract.unwindStrategy(ethers.utils.parseEther('1'))).to.be.reverted;
+    });
+
+    it('should be able to unwind an active strategy with enough capital', async function () {
+      const strategyContract = await createStrategy(
+        0,
+        'vote',
+        [signer1, signer2, signer3],
+        kyberTradeIntegration.address,
+        garden1,
+      );
+      expect(await wethToken.balanceOf(garden1.address)).to.be.gt(ethers.utils.parseEther('2'));
+      await executeStrategy(garden1, strategyContract, ethers.utils.parseEther('2'), 0);
+      expect(await wethToken.balanceOf(garden1.address)).to.be.lt(ethers.utils.parseEther('0.1'));
+      expect(await strategyContract.capitalAllocated()).to.equal(ethers.utils.parseEther('2'));
+      await strategyContract.unwindStrategy(ethers.utils.parseEther('1'));
+      expect(await strategyContract.capitalAllocated()).to.equal(ethers.utils.parseEther('1'));
+      expect(await wethToken.balanceOf(garden1.address)).to.be.gt(ethers.utils.parseEther('1'));
+    });
+
+    it('should not be able to unwind an active strategy with enough capital if it is not the owner', async function () {
+      const strategyContract = await createStrategy(
+        0,
+        'vote',
+        [signer1, signer2, signer3],
+        kyberTradeIntegration.address,
+        garden1,
+      );
+      expect(await wethToken.balanceOf(garden1.address)).to.be.gt(ethers.utils.parseEther('2'));
+      await executeStrategy(garden1, strategyContract, ethers.utils.parseEther('2'), 0);
+      expect(await wethToken.balanceOf(garden1.address)).to.be.lt(ethers.utils.parseEther('0.1'));
+      expect(await strategyContract.capitalAllocated()).to.equal(ethers.utils.parseEther('2'));
+      await expect(strategyContract.connect(signer3).unwindStrategy(ethers.utils.parseEther('1'))).to.be.reverted;
     });
 
     it('can execute strategy twice', async function () {
