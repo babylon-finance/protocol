@@ -101,7 +101,7 @@ interface IStrategy {
             uint256
         );
 
-    function isIdeaActive() external pure returns (bool);
+    function isStrategyActive() external pure returns (bool);
 
     function getUserVotes(address _address) external view returns (int256);
 

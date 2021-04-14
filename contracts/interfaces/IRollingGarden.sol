@@ -38,8 +38,8 @@ interface IRollingGarden is IERC20, IGarden {
         uint256 _strategyVotersProfitPercentage,
         uint256 _gardenCreatorProfitPercentage,
         uint256 _minVotersQuorum,
-        uint256 _minIdeaDuration,
-        uint256 _maxIdeaDuration
+        uint256 _minStrategyDuration,
+        uint256 _maxStrategyDuration
     ) external;
 
     function deposit(
@@ -55,6 +55,8 @@ interface IRollingGarden is IERC20, IGarden {
     ) external;
 
     function claimReturns(address[] calldata _finalizedStrategies) external;
+
+    function getActiveCapital() external view returns (uint256, address);
 
     function getProfitsAndBabl(address[] calldata _finalizedStrategies) external view returns (uint256, uint96);
 

@@ -76,9 +76,9 @@ interface IGarden is IERC20 {
 
     function minVotersQuorum() external pure returns (uint256);
 
-    function minIdeaDuration() external pure returns (uint256);
+    function minStrategyDuration() external pure returns (uint256);
 
-    function maxIdeaDuration() external pure returns (uint256);
+    function maxStrategyDuration() external pure returns (uint256);
 
     function strategyCooldownPeriod() external pure returns (uint256);
 

@@ -194,8 +194,8 @@ abstract contract BaseGarden is ERC20Upgradeable {
     // Strategies variables
     uint256 public totalStake = 0;
     uint256 public minVotersQuorum = TEN_PERCENT; // 10%. (0.01% = 1e14, 1% = 1e16)
-    uint256 public minIdeaDuration; // Min duration for an strategy
-    uint256 public maxIdeaDuration; // Max duration for an strategy
+    uint256 public minStrategyDuration; // Min duration for an strategy
+    uint256 public maxStrategyDuration; // Max duration for an strategy
     uint256 public strategyCooldownPeriod; // Window for the strategy to cooldown after approval before receiving capital
 
     address[] public strategies; // Strategies that are either in candidate or active state
@@ -241,15 +241,15 @@ abstract contract BaseGarden is ERC20Upgradeable {
      * @param _minContribution                  Min contribution to participate in this garden
      * @param _strategyCooldownPeriod           How long after the strategy has been activated, will it be ready to be executed
      * @param _minVotersQuorum                  Percentage of votes needed to activate an strategy (0.01% = 1e14, 1% = 1e16)
-     * @param _minIdeaDuration                  Min duration of an strategy
-     * @param _maxIdeaDuration                  Max duration of an strategy
+     * @param _minStrategyDuration                  Min duration of an strategy
+     * @param _maxStrategyDuration                  Max duration of an strategy
      */
     function startCommon(
         uint256 _minContribution,
         uint256 _strategyCooldownPeriod,
         uint256 _minVotersQuorum,
-        uint256 _minIdeaDuration,
-        uint256 _maxIdeaDuration
+        uint256 _minStrategyDuration,
+        uint256 _maxStrategyDuration
     ) internal {
         _require(
             _strategyCooldownPeriod <= IBabController(controller).getMaxCooldownPeriod() &&
@@ -260,8 +260,8 @@ abstract contract BaseGarden is ERC20Upgradeable {
         minContribution = _minContribution;
         strategyCooldownPeriod = _strategyCooldownPeriod;
         minVotersQuorum = _minVotersQuorum;
-        minIdeaDuration = _minIdeaDuration;
-        maxIdeaDuration = _maxIdeaDuration;
+        minStrategyDuration = _minStrategyDuration;
+        maxStrategyDuration = _maxStrategyDuration;
     }
 
     /* ============ External Functions ============ */

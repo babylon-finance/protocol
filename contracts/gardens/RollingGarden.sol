@@ -126,8 +126,8 @@ contract RollingGarden is ReentrancyGuard, BaseGarden {
      * @param _minContribution        Min contribution to the garden
      * @param _strategyCooldownPeriod               How long after the strategy has been activated, will it be ready to be executed
      * @param _minVotersQuorum                  Percentage of votes needed to activate an strategy (0.01% = 1e14, 1% = 1e16)
-     * @param _minIdeaDuration                  Min duration of an strategy
-     * @param _maxIdeaDuration                  Max duration of an strategy
+     * @param _minStrategyDuration                  Min duration of an strategy
+     * @param _maxStrategyDuration                  Max duration of an strategy
      */
     function start(
         uint256 _maxDepositLimit,
@@ -137,8 +137,8 @@ contract RollingGarden is ReentrancyGuard, BaseGarden {
         uint256 _minContribution,
         uint256 _strategyCooldownPeriod,
         uint256 _minVotersQuorum,
-        uint256 _minIdeaDuration,
-        uint256 _maxIdeaDuration
+        uint256 _minStrategyDuration,
+        uint256 _maxStrategyDuration
     ) external payable onlyCreator onlyInactive {
         _require(_maxDepositLimit <= MAX_DEPOSITS_FUND_V1, Errors.MAX_DEPOSIT_LIMIT);
 
@@ -156,7 +156,13 @@ contract RollingGarden is ReentrancyGuard, BaseGarden {
         minLiquidityAsset = _minLiquidityAsset;
         depositHardlock = _depositHardlock;
         withdrawalWindowAfterStrategyCompletes = 7 days;
-        startCommon(_minContribution, _strategyCooldownPeriod, _minVotersQuorum, _minIdeaDuration, _maxIdeaDuration);
+        startCommon(
+            _minContribution,
+            _strategyCooldownPeriod,
+            _minVotersQuorum,
+            _minStrategyDuration,
+            _maxStrategyDuration
+        );
 
         // Deposit
         IWETH(WETH).deposit{value: msg.value}();
@@ -251,9 +257,13 @@ contract RollingGarden is ReentrancyGuard, BaseGarden {
     {
         // Check that cannot do a normal withdrawal
         _require(!canWithdrawEthAmount(msg.sender, _gardenTokenQuantity), Errors.NORMAL_WITHDRAWAL_POSSIBLE);
-        (, uint256 netReserveFlows) = _getFees(_gardenTokenQuantity, false);
-        netReserveFlows = _gardenTokenQuantity.sub(_gardenTokenQuantity.preciseMul(EARLY_WITHDRAWAL_PENALTY));
-        IStrategy(strategies[0]).unwindStrategy(netReserveFlows);
+        uint256 netReserveFlows = _gardenTokenQuantity.sub(_gardenTokenQuantity.preciseMul(EARLY_WITHDRAWAL_PENALTY));
+        (uint256 totalActive, uint256 largestCapital, address maxStrategy) = getActiveCapital();
+        // Check that strategy has enough capital to support the withdrawal
+        require(IStrategy(maxStrategy).minRebalanceCapital() <= largestCapital.sub(netReserveFlows));
+        IStrategy(maxStrategy).unwindStrategy(netReserveFlows);
+        // We burn their penalty
+        _burn(msg.sender, _gardenTokenQuantity.preciseMul(EARLY_WITHDRAWAL_PENALTY));
         _withdraw(_gardenTokenQuantity, netReserveFlows, _to);
     }
 
@@ -421,6 +431,39 @@ contract RollingGarden is ReentrancyGuard, BaseGarden {
         }
         if (balanceOf(_contributor) < lockedAmount) lockedAmount = balanceOf(_contributor); // TODO Remove when implementing locked stake in voting and strategy creation - Now this avoid overflows
         return lockedAmount;
+    }
+
+    /**
+     * Gets the total active capital currently invested in strategies
+     *
+     * @return uint256       Total amount active
+     * @return uint256       Total amount active in the largest strategy
+     * @return address       Address of the largest strategy
+     */
+    function getActiveCapital()
+        public
+        view
+        returns (
+            uint256,
+            uint256,
+            address
+        )
+    {
+        uint256 totalActiveCapital = 0;
+        uint256 maxAllocation = 0;
+        address maxStrategy = address(0);
+        for (uint8 i = 0; i < strategies.length; i++) {
+            IStrategy strategy = IStrategy(strategies[i]);
+            if (strategy.isStrategyActive()) {
+                uint256 allocation = strategy.capitalAllocated();
+                totalActiveCapital = totalActiveCapital.add(allocation);
+                if (allocation > maxAllocation) {
+                    maxAllocation = allocation;
+                    maxStrategy = strategies[i];
+                }
+            }
+        }
+        return (totalActiveCapital, maxAllocation, maxStrategy);
     }
 
     // solhint-disable-next-line
