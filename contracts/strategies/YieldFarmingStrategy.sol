@@ -88,10 +88,12 @@ contract YieldFarmingStrategy is Strategy {
     }
 
     /**
-     * Exits the long strategy.
+     * Exits the yield farming strategy.
+     * @param _percentage of capital to exit from the strategy
      */
-    function _exitStrategy() internal override {
-        uint256 amountVault = IERC20(yieldVault).balanceOf(address(this));
+    function _exitStrategy(uint256 _percentage) internal override {
+        require(_percentage <= HUNDRED_PERCENT, 'Unwind Percentage <= 100%');
+        uint256 amountVault = IERC20(yieldVault).balanceOf(address(this)).preciseMul(_percentage);
         IPassiveIntegration(integration).exitInvestment(
             yieldVault,
             amountVault,

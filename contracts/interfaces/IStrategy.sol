@@ -54,6 +54,8 @@ interface IStrategy {
 
     function finalizeStrategy(uint256 fee) external;
 
+    function unwindStrategy(uint256 _amountToUnwind) external;
+
     function changeStrategyDuration(uint256 _newDuration) external;
 
     function invokeFromIntegration(

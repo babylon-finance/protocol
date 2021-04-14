@@ -112,9 +112,12 @@ contract LiquidityPoolStrategy is Strategy {
 
     /**
      * Exits the pool strategy.
+     * @param _percentage _percentage of capital to exit from the strategy
      */
-    function _exitStrategy() internal override {
-        uint256 lpTokens = IERC20(pool).balanceOf(address(this)); // Sell all pool tokens
+    function _exitStrategy(uint256 _percentage) internal override {
+        require(_percentage <= HUNDRED_PERCENT, 'Unwind Percentage <= 100%');
+
+        uint256 lpTokens = IERC20(pool).balanceOf(address(this)).preciseMul(_percentage); // Sell all pool tokens
         uint256[] memory _minAmountsOut = IPoolIntegration(integration).getPoolMinAmountsOut(pool, lpTokens);
         IPoolIntegration(integration).exitPool(
             pool,
