@@ -73,15 +73,40 @@ interface IBabController {
     // Getters
     function owner() external view returns (address);
 
+    function priceOracle() external view returns (address);
+
+    function gardenValuer() external view returns (address);
+
+    function rewardsDistributor() external view returns (address);
+
+    function gardenFactory() external view returns (address);
+
+    function treasury() external view returns (address);
+
+    function protocolDepositGardenTokenFee() external view returns (uint256);
+
+    function protocolWithdrawalGardenTokenFee() external view returns (uint256);
+
     function gardenTokensTransfersEnabled() external view returns (bool);
 
-    function getPriceOracle() external view returns (address);
+    function getProfitSharing()
+        external
+        view
+        returns (
+            uint256,
+            uint256,
+            uint256
+        );
 
-    function getRewardsDistributor() external view returns (address);
-
-    function getGardenValuer() external view returns (address);
-
-    function getTreasury() external view returns (address);
+    function getBABLSharing()
+        external
+        view
+        returns (
+            uint256,
+            uint256,
+            uint256,
+            uint256
+        );
 
     function getStrategyFactory(uint8 _strategyKind) external view returns (address);
 
@@ -111,11 +136,7 @@ interface IBabController {
 
     function getProtocolPerformanceFee() external view returns (uint256);
 
-    function getProtocolManagementFee() external view returns (uint256);
-
-    function getProtocolDepositGardenTokenFee() external view returns (uint256);
-
-    function getProtocolWithdrawalGardenTokenFee() external view returns (uint256);
+    function protocolManagementFee() external view returns (uint256);
 
     function minRiskyPairLiquidityEth() external view returns (uint256);
 

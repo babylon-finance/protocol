@@ -144,4 +144,6 @@ library Errors {
     uint256 internal constant VALUE_TOO_HIGH = 26;
     // Only strategy or protcol allowed
     uint256 internal constant ONLY_STRATEGY_OR_CONTROLLER = 27;
+    // Only strategy or protcol allowed
+    uint256 internal constant NORMAL_WITHDRAWAL_POSSIBLE = 28;
 }

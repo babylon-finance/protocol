@@ -31,7 +31,7 @@ describe('BabController', function () {
     });
 
     it('should set the protocol manager address', async function () {
-      expect(await babController.getTreasury()).to.equal(treasury.address);
+      expect(await babController.treasury()).to.equal(treasury.address);
     });
 
     it('can create gardens', async function () {
@@ -111,7 +111,7 @@ describe('BabController', function () {
     it('can edit a price oracle', async function () {
       // Note: This is just the wETH address and is testing that the oracle address can be changed
       await expect(babController.editPriceOracle(addresses.tokens.WETH)).to.not.be.reverted;
-      const oracle2 = await babController.getPriceOracle();
+      const oracle2 = await babController.priceOracle();
       expect(oracle2).to.equal(addresses.tokens.WETH);
     });
 
@@ -119,14 +119,14 @@ describe('BabController', function () {
       // Note: This is just the wETH address and is testing that the gardenValuer address can be changed
       await expect(babController.editGardenValuer(addresses.tokens.WETH)).to.not.be.reverted;
 
-      const valuer2 = await babController.getGardenValuer();
+      const valuer2 = await babController.gardenValuer();
       expect(valuer2).to.equal(addresses.tokens.WETH);
     });
 
     it('can edit the protocol fee recipient', async function () {
       await babController.editTreasury(addresses.users.hardhat3);
 
-      const recipient = await babController.getTreasury();
+      const recipient = await babController.treasury();
       // TODO(tylerm): Use checksumed addresses
       expect(recipient.toLowerCase()).to.equal(addresses.users.hardhat3);
     });
