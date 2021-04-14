@@ -189,9 +189,7 @@ describe('Garden', function () {
       );
 
       // It is executed
-      console.log('execute strat');
       await executeStrategy(garden1, strategyContract, ethers.utils.parseEther('1'), 42);
-      console.log('after execution');
 
       // Cannot withdraw locked stake amount
       await expect(
