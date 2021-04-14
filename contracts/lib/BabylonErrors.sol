@@ -59,13 +59,13 @@ function _revert(uint256 errorCode) pure {
         let hundreds := add(mod(errorCode, 10), 0x30)
 
         // With the individual characters, we can now construct the full string. The "BAB#" part is a known constant
-        // (0x42416223): we simply shift this by 24 (to provide space for the 3 bytes of the error code), and add the
+        // (0x42414223): we simply shift this by 24 (to provide space for the 3 bytes of the error code), and add the
         // characters to it, each shifted by a multiple of 8.
         // The revert reason is then shifted left by 200 bits (256 minus the length of the string, 7 characters * 8 bits
         // per character = 56) to locate it in the most significant part of the 256 slot (the beginning of a byte
         // array).
 
-        let revertReason := shl(200, add(0x42414c23000000, add(add(units, shl(8, tenths)), shl(16, hundreds))))
+        let revertReason := shl(200, add(0x42414423000000, add(add(units, shl(8, tenths)), shl(16, hundreds))))
 
         // We can now encode the reason in memory, which can be safely overwritten as we're about to revert. The encoded
         // message will have the following layout:

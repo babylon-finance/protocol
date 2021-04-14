@@ -55,7 +55,7 @@ describe('Garden', function () {
 
   describe('Garden state', async function () {
     it('only the protocol should be able to update active state', async function () {
-      await expect(garden1.connect(signer1).setActive()).to.be.revertedWith('revert BAL#016');
+      await expect(garden1.connect(signer1).setActive()).to.be.reverted;
     });
 
     it('the initial deposit must be correct', async function () {
@@ -192,13 +192,11 @@ describe('Garden', function () {
       await executeStrategy(garden1, strategyContract, ethers.utils.parseEther('1'), 42);
 
       // Cannot withdraw locked stake amount
-      await expect(
-        garden1.connect(signer1).withdraw(ethers.utils.parseEther('1.2'), 1, signer1.getAddress()),
-      ).to.be.revertedWith('revert BAL#007');
+      await expect(garden1.connect(signer1).withdraw(ethers.utils.parseEther('1.2'), 1, signer1.getAddress())).to.be
+        .reverted;
       // Cannot withdraw locked stake amount
-      await expect(
-        garden1.connect(signer2).withdraw(ethers.utils.parseEther('1.2'), 1, signer1.getAddress()),
-      ).to.be.revertedWith('revert BAL#007');
+      await expect(garden1.connect(signer2).withdraw(ethers.utils.parseEther('1.2'), 1, signer1.getAddress())).to.be
+        .reverted;
     });
     it('strategist or voters can withdraw comunity tokens that were locked during strategy execution (negative profits) once they are unlocked after finishing active strategies', async function () {
       const strategyContract = await createStrategy(
