@@ -62,8 +62,12 @@ contract YieldFarmingStrategy is Strategy {
         if (!active || finalized) {
             return 0;
         }
-        // TODO
-        return 0;
+        uint256 price = _getPrice(garden.reserveAsset(), vaultAsset);
+        return
+            IPassiveIntegration(integration)
+                .getPricePerShare(yieldVault)
+                .mul(IERC20(yieldVault).balanceOf(address(this)))
+                .div(price);
     }
 
     /**

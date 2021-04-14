@@ -37,6 +37,7 @@ describe('Strategy', function () {
   let uniswapPoolIntegration;
   let balancerIntegration;
   let oneInchPoolIntegration;
+  let yearnVaultIntegration;
 
   beforeEach(async () => {
     ({
@@ -53,6 +54,7 @@ describe('Strategy', function () {
       uniswapPoolIntegration,
       balancerIntegration,
       oneInchPoolIntegration,
+      yearnVaultIntegration,
     } = await loadFixture(deployFolioFixture));
 
     strategyDataset = await ethers.getContractAt('Strategy', strategy11);
@@ -279,57 +281,26 @@ describe('Strategy', function () {
     });
   });
 
-  describe('finalizeStrategy', async function () {
-    it('should finalize strategy with negative profits', async function () {
-      const strategyContract = await createStrategy(
-        0,
-        'active',
-        [signer1, signer2, signer3],
-        kyberTradeIntegration.address,
-        garden1,
-      );
-
-      await finalizeStrategy(garden1, strategyContract, 42);
-      const [address, active, dataSet, finalized, executedAt, exitedAt] = await strategyContract.getStrategyState();
-
-      expect(address).to.equal(strategyContract.address);
-      expect(active).to.equal(false);
-      expect(dataSet).to.equal(true);
-      expect(finalized).to.equal(true);
-      expect(executedAt).to.not.equal(0);
-      expect(exitedAt).to.not.equal(0);
-
-      // Keeper gets paid
-      expect(await wethToken.balanceOf(await owner.getAddress())).to.equal(42);
-
-      const capitalAllocated = await strategyContract.capitalAllocated();
-      const capitalReturned = await strategyContract.capitalReturned();
-      expect(capitalReturned).to.be.lt(capitalAllocated);
-    });
-
-    it('should finalize strategy with profits', async function () {
-      const strategyContract = await createStrategy(
-        0,
-        'active',
-        [signer1, signer2, signer3],
-        kyberTradeIntegration.address,
-        garden1,
-      );
-
-      await injectFakeProfits(strategyContract, ethers.utils.parseEther('1000'));
-      await finalizeStrategy(garden1, strategyContract, 42);
-      const capitalAllocated = await strategyContract.capitalAllocated();
-      const capitalReturned = await strategyContract.capitalReturned();
-
-      expect(capitalReturned).to.be.gt(capitalAllocated);
-    });
-
+  describe('getNAV', async function () {
     it('should get the NAV value of a long strategy', async function () {
       const strategyContract = await createStrategy(
         0,
         'active',
         [signer1, signer2, signer3],
         kyberTradeIntegration.address,
+        garden1,
+      );
+      const nav = await strategyContract.getNAV();
+      expect(await strategyContract.capitalAllocated()).to.equal(ONE_ETH);
+      expect(nav).to.be.closeTo(ONE_ETH, ONE_ETH.div(500));
+    });
+
+    it('should get the NAV value of a Yearn Farming strategy', async function () {
+      const strategyContract = await createStrategy(
+        2,
+        'active',
+        [signer1, signer2, signer3],
+        yearnVaultIntegration.address,
         garden1,
       );
       const nav = await strategyContract.getNAV();
@@ -398,6 +369,52 @@ describe('Strategy', function () {
       const nav = await strategyContract.getNAV();
       expect(await strategyContract.capitalAllocated()).to.equal(ONE_ETH);
       expect(nav).to.be.closeTo(ONE_ETH, ONE_ETH.div(400));
+    });
+  });
+
+  describe('finalizeStrategy', async function () {
+    it('should finalize strategy with negative profits', async function () {
+      const strategyContract = await createStrategy(
+        0,
+        'active',
+        [signer1, signer2, signer3],
+        kyberTradeIntegration.address,
+        garden1,
+      );
+
+      await finalizeStrategy(garden1, strategyContract, 42);
+      const [address, active, dataSet, finalized, executedAt, exitedAt] = await strategyContract.getStrategyState();
+
+      expect(address).to.equal(strategyContract.address);
+      expect(active).to.equal(false);
+      expect(dataSet).to.equal(true);
+      expect(finalized).to.equal(true);
+      expect(executedAt).to.not.equal(0);
+      expect(exitedAt).to.not.equal(0);
+
+      // Keeper gets paid
+      expect(await wethToken.balanceOf(await owner.getAddress())).to.equal(42);
+
+      const capitalAllocated = await strategyContract.capitalAllocated();
+      const capitalReturned = await strategyContract.capitalReturned();
+      expect(capitalReturned).to.be.lt(capitalAllocated);
+    });
+
+    it('should finalize strategy with profits', async function () {
+      const strategyContract = await createStrategy(
+        0,
+        'active',
+        [signer1, signer2, signer3],
+        kyberTradeIntegration.address,
+        garden1,
+      );
+
+      await injectFakeProfits(strategyContract, ethers.utils.parseEther('1000'));
+      await finalizeStrategy(garden1, strategyContract, 42);
+      const capitalAllocated = await strategyContract.capitalAllocated();
+      const capitalReturned = await strategyContract.capitalReturned();
+
+      expect(capitalReturned).to.be.gt(capitalAllocated);
     });
 
     it("can't finalize strategy twice", async function () {
