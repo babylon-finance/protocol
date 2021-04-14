@@ -73,6 +73,7 @@ contract BabController is OwnableUpgradeable {
     /* ============ State Variables ============ */
 
     address public constant UNISWAP_FACTORY = 0x5C69bEe701ef814a2B6a3EDD4B1652CB9cc5aA6f;
+    address public constant WETH = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
 
     // List of enabled Communities
     address[] public gardens;
@@ -98,9 +99,21 @@ contract BabController is OwnableUpgradeable {
     // Recipient of protocol fees
     address public treasury;
 
-    // Idea cooldown period
+    // Strategy cooldown period
     uint256 public constant MIN_COOLDOWN_PERIOD = 6 hours;
     uint256 public constant MAX_COOLDOWN_PERIOD = 7 days;
+
+    // Strategy Profit Sharing
+    uint256 public strategistProfitPercentage; // (0.01% = 1e14, 1% = 1e16)
+    uint256 public stewardsProfitPercentage; // (0.01% = 1e14, 1% = 1e16)
+    uint256 public lpsProfitPercentage; //
+
+    // Strategy BABL Rewards Sharing
+    uint256 public strategistBABLPercentage; // (0.01% = 1e14, 1% = 1e16)
+    uint256 public stewardsBABLPercentage; // (0.01% = 1e14, 1% = 1e16)
+    uint256 public lpsBABLPercentage; //
+
+    uint256 public gardenCreatorBonus;
 
     // Assets
     // Absolute Min liquidity of assets for risky gardens 1000 ETH
@@ -112,9 +125,8 @@ contract BabController is OwnableUpgradeable {
 
     uint256 public protocolPerformanceFee; // 5% (0.01% = 1e14, 1% = 1e16) on profits
     uint256 public protocolManagementFee; // 0.5% (0.01% = 1e14, 1% = 1e16)
-    uint256 public protocolGardenCreationFee; // (0.01% = 1e14, 1% = 1e16)
-    uint256 public protocolDepositGardenTokenFee; // (0.01% = 1e14, 1% = 1e16)
-    uint256 public protocolWithdrawalGardenTokenFee; // (0.01% = 1e14, 1% = 1e16)
+    uint256 public protocolDepositGardenTokenFee; // 0 (0.01% = 1e14, 1% = 1e16)
+    uint256 public protocolWithdrawalGardenTokenFee; // 0 (0.01% = 1e14, 1% = 1e16)
 
     /* ============ Constructor ============ */
 
@@ -127,8 +139,20 @@ contract BabController is OwnableUpgradeable {
         // vars init values has to be set in initialize due to how upgrade proxy pattern works
         protocolManagementFee = 5e15; // 0.5% (0.01% = 1e14, 1% = 1e16)
         protocolPerformanceFee = 5e16; // 5% (0.01% = 1e14, 1% = 1e16) on profits
+        protocolDepositGardenTokenFee = 0; // 0% (0.01% = 1e14, 1% = 1e16) on profits
+        protocolWithdrawalGardenTokenFee = 0; // 0% (0.01% = 1e14, 1% = 1e16) on profits
         gardenTokensTransfersEnabled = false;
         minRiskyPairLiquidityEth = 1000 * 1e18;
+
+        strategistProfitPercentage = 10e16;
+        stewardsProfitPercentage = 5e16;
+        lpsProfitPercentage = 80e16;
+
+        strategistBABLPercentage = 8e16;
+        stewardsBABLPercentage = 17e16;
+        lpsBABLPercentage = 75e16;
+
+        gardenCreatorBonus = 15e16;
     }
 
     /* ============ External Functions ============ */
@@ -137,17 +161,16 @@ contract BabController is OwnableUpgradeable {
     /**
      * Creates a Garden smart contract and registers the Garden with the controller.
      *
-     * @param _weth                   Address of the WETH ERC20
      * @param _name                   Name of the Garden
      * @param _symbol                 Symbol of the Garden
      */
     function createRollingGarden(
-        address _weth,
+        address _reserveAsset,
         string memory _name,
         string memory _symbol
     ) external returns (address) {
         address newGarden =
-            IGardenFactory(gardenFactory).createRollingGarden(_weth, address(this), msg.sender, _name, _symbol);
+            IGardenFactory(gardenFactory).createRollingGarden(_reserveAsset, address(this), msg.sender, _name, _symbol);
         _addGarden(newGarden);
         return newGarden;
     }
@@ -416,18 +439,6 @@ contract BabController is OwnableUpgradeable {
         return UNISWAP_FACTORY;
     }
 
-    function getPriceOracle() external view returns (address) {
-        return priceOracle;
-    }
-
-    function getGardenValuer() external view returns (address) {
-        return gardenValuer;
-    }
-
-    function getGardenFactory() external view returns (address) {
-        return gardenFactory;
-    }
-
     function getStrategyFactory(uint8 _strategyKind) external view returns (address) {
         return strategyFactory[_strategyKind];
     }
@@ -448,36 +459,47 @@ contract BabController is OwnableUpgradeable {
         return MAX_COOLDOWN_PERIOD;
     }
 
-    function getProtocolDepositGardenTokenFee() external view returns (uint256) {
-        return protocolDepositGardenTokenFee;
-    }
-
-    function getProtocolPerformanceFee() external view returns (uint256) {
-        return protocolPerformanceFee;
-    }
-
-    function getProtocolManagementFee() external view returns (uint256) {
-        return protocolManagementFee;
-    }
-
-    function getProtocolWithdrawalGardenTokenFee() external view returns (uint256) {
-        return protocolWithdrawalGardenTokenFee;
-    }
-
-    function getRewardsDistributor() external view returns (address) {
-        return rewardsDistributor;
-    }
-
-    function getTreasury() external view returns (address) {
-        return treasury;
-    }
-
     function isValidReserveAsset(address _reserveAsset) external view returns (bool) {
         return validReserveAsset[_reserveAsset];
     }
 
     function isValidKeeper(address _keeper) external view returns (bool) {
         return keeperList[_keeper];
+    }
+
+    /**
+     * Returns the percentages of a strategy Profit Sharing
+     *
+     * @return            Strategist, Stewards, Lps, creator bonus
+     */
+    function getProfitSharing()
+        external
+        view
+        returns (
+            uint256,
+            uint256,
+            uint256
+        )
+    {
+        return (strategistProfitPercentage, stewardsProfitPercentage, lpsProfitPercentage);
+    }
+
+    /**
+     * Returns the percentages of BABL Profit Sharing
+     *
+     * @return            Strategist, Stewards, Lps, creator bonus
+     */
+    function getBABLSharing()
+        external
+        view
+        returns (
+            uint256,
+            uint256,
+            uint256,
+            uint256
+        )
+    {
+        return (strategistBABLPercentage, stewardsBABLPercentage, lpsBABLPercentage, gardenCreatorBonus);
     }
 
     /**

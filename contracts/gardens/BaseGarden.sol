@@ -161,7 +161,7 @@ abstract contract BaseGarden is ERC20Upgradeable {
     /* ============ State Variables ============ */
 
     // Wrapped ETH address
-    address public weth;
+    address public constant WETH = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
 
     // Reserve Asset of the garden
     address public reserveAsset;
@@ -202,10 +202,6 @@ abstract contract BaseGarden is ERC20Upgradeable {
     address[] public finalizedStrategies; // Strategies that have finalized execution
     mapping(address => bool) public strategyMapping;
 
-    uint256 public strategyCreatorProfitPercentage = 13e16; // (0.01% = 1e14, 1% = 1e16)
-    uint256 public strategyVotersProfitPercentage = 5e16; // (0.01% = 1e14, 1% = 1e16)
-    uint256 public gardenCreatorProfitPercentage = 2e16; //
-
     /* ============ Constructor ============ */
 
     /**
@@ -213,7 +209,6 @@ abstract contract BaseGarden is ERC20Upgradeable {
      * All parameter validations are on the BabController contract. Validations are performed already on the
      * BabController.
      *
-     * @param _weth                   Address of the WETH ERC20
      * @param _reserveAsset           Address of the reserve asset ERC20
      * @param _controller             Address of the controller
      * @param _creator                Address of the creator
@@ -221,7 +216,6 @@ abstract contract BaseGarden is ERC20Upgradeable {
      * @param _symbol                 Symbol of the Garden
      */
     function initialize(
-        address _weth,
         address _reserveAsset,
         address _controller,
         address _creator,
@@ -234,7 +228,6 @@ abstract contract BaseGarden is ERC20Upgradeable {
         __ERC20_init(_name, _symbol);
 
         controller = _controller;
-        weth = _weth;
         reserveAsset = _reserveAsset;
         creator = _creator;
         principal = 0;
@@ -246,9 +239,6 @@ abstract contract BaseGarden is ERC20Upgradeable {
      *
      * @param _minContribution                  Min contribution to participate in this garden
      * @param _strategyCooldownPeriod           How long after the strategy has been activated, will it be ready to be executed
-     * @param _strategyCreatorProfitPercentage  What percentage of the profits go to the strategy creator
-     * @param _strategyVotersProfitPercentage   What percentage of the profits go to the strategy curators
-     * @param _gardenCreatorProfitPercentage    What percentage of the profits go to the creator of the garden
      * @param _minVotersQuorum                  Percentage of votes needed to activate an strategy (0.01% = 1e14, 1% = 1e16)
      * @param _minIdeaDuration                  Min duration of an strategy
      * @param _maxIdeaDuration                  Max duration of an strategy
@@ -256,9 +246,6 @@ abstract contract BaseGarden is ERC20Upgradeable {
     function startCommon(
         uint256 _minContribution,
         uint256 _strategyCooldownPeriod,
-        uint256 _strategyCreatorProfitPercentage,
-        uint256 _strategyVotersProfitPercentage,
-        uint256 _gardenCreatorProfitPercentage,
         uint256 _minVotersQuorum,
         uint256 _minIdeaDuration,
         uint256 _maxIdeaDuration
@@ -270,9 +257,6 @@ abstract contract BaseGarden is ERC20Upgradeable {
         );
         _require(_minVotersQuorum >= TEN_PERCENT, Errors.VALUE_TOO_LOW);
         minContribution = _minContribution;
-        strategyCreatorProfitPercentage = _strategyCreatorProfitPercentage;
-        strategyVotersProfitPercentage = _strategyVotersProfitPercentage;
-        gardenCreatorProfitPercentage = _gardenCreatorProfitPercentage;
         strategyCooldownPeriod = _strategyCooldownPeriod;
         minVotersQuorum = _minVotersQuorum;
         minIdeaDuration = _minIdeaDuration;
@@ -387,11 +371,11 @@ abstract contract BaseGarden is ERC20Upgradeable {
      */
     function allocateCapitalToStrategy(uint256 _capital) external onlyStrategy onlyActive {
         uint256 liquidReserveAsset = ERC20Upgradeable(reserveAsset).balanceOf(address(this));
-        uint256 protocolMgmtFee = IBabController(controller).getProtocolManagementFee().preciseMul(_capital);
+        uint256 protocolMgmtFee = IBabController(controller).protocolManagementFee().preciseMul(_capital);
         _require(_capital.add(protocolMgmtFee) <= liquidReserveAsset, Errors.MIN_LIQUIDITY);
 
         // Take protocol mgmt fee
-        IERC20Upgradeable(reserveAsset).safeTransfer(IBabController(controller).getTreasury(), protocolMgmtFee);
+        IERC20Upgradeable(reserveAsset).safeTransfer(IBabController(controller).treasury(), protocolMgmtFee);
 
         // Send Capital to strategy
         IERC20Upgradeable(reserveAsset).safeTransfer(msg.sender, _capital);
@@ -403,7 +387,7 @@ abstract contract BaseGarden is ERC20Upgradeable {
         _require(_token != reserveAsset, Errors.MUST_BE_RESERVE_ASSET);
         uint256 balance = IERC20Upgradeable(_token).balanceOf(address(this));
         _require(balance > 0, Errors.BALANCE_TOO_LOW);
-        IERC20Upgradeable(_token).safeTransfer(IBabController(controller).getTreasury(), balance);
+        IERC20Upgradeable(_token).safeTransfer(IBabController(controller).treasury(), balance);
     }
 
     /*
@@ -500,7 +484,7 @@ abstract contract BaseGarden is ERC20Upgradeable {
      */
     function payProtocolFeeFromGarden(address _token, uint256 _feeQuantity) internal {
         if (_feeQuantity > 0) {
-            IERC20Upgradeable(_token).safeTransfer(IBabController(controller).getTreasury(), _feeQuantity);
+            IERC20Upgradeable(_token).safeTransfer(IBabController(controller).treasury(), _feeQuantity);
         }
     }
 

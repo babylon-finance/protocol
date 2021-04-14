@@ -384,7 +384,6 @@ describe('Strategy', function () {
 
     it('should get the NAV value of a OneInchPool strategy', async function () {
       const daiWethOneInchPair = await ethers.getContractAt('IMooniswap', addresses.oneinch.pools.wethdai);
-      console.log('address', daiWethOneInchPair.address);
       const strategyContract = await createStrategy(
         1,
         'active',

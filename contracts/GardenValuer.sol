@@ -81,7 +81,7 @@ contract GardenValuer {
      * @return                 Token valuation in terms of quote asset in precise units 1e18
      */
     function calculateGardenValuation(IGarden _garden, address _quoteAsset) external view returns (uint256) {
-        IPriceOracle priceOracle = IPriceOracle(IBabController(controller).getPriceOracle());
+        IPriceOracle priceOracle = IPriceOracle(IBabController(controller).priceOracle());
 
         // NOTE: This is temporary to allow for deposits / withdrawls. The masterQuoetAsset no longer
         // live in the PriceOracle so we'll need to add it back or take another approach.

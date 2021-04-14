@@ -45,8 +45,8 @@ contract BabControllerV2Mock is OwnableUpgradeable {
     /* ============ Modifiers ============ */
 
     /* ============ State Variables ============ */
-
     address public constant UNISWAP_FACTORY = 0x5C69bEe701ef814a2B6a3EDD4B1652CB9cc5aA6f;
+    address public constant WETH = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
 
     // List of enabled Communities
     address[] public gardens;
@@ -72,9 +72,21 @@ contract BabControllerV2Mock is OwnableUpgradeable {
     // Recipient of protocol fees
     address public treasury;
 
-    // Idea cooldown period
+    // Strategy cooldown period
     uint256 public constant MIN_COOLDOWN_PERIOD = 6 hours;
     uint256 public constant MAX_COOLDOWN_PERIOD = 7 days;
+
+    // Strategy Profit Sharing
+    uint256 public strategistProfitPercentage; // (0.01% = 1e14, 1% = 1e16)
+    uint256 public stewardsProfitPercentage; // (0.01% = 1e14, 1% = 1e16)
+    uint256 public lpsProfitPercentage; //
+
+    // Strategy BABL Rewards Sharing
+    uint256 public strategistBABLPercentage; // (0.01% = 1e14, 1% = 1e16)
+    uint256 public stewardsBABLPercentage; // (0.01% = 1e14, 1% = 1e16)
+    uint256 public lpsBABLPercentage; //
+
+    uint256 public gardenCreatorBonus;
 
     // Assets
     // Absolute Min liquidity of assets for risky gardens 1000 ETH
@@ -86,9 +98,8 @@ contract BabControllerV2Mock is OwnableUpgradeable {
 
     uint256 public protocolPerformanceFee; // 5% (0.01% = 1e14, 1% = 1e16) on profits
     uint256 public protocolManagementFee; // 0.5% (0.01% = 1e14, 1% = 1e16)
-    uint256 public protocolGardenCreationFee; // (0.01% = 1e14, 1% = 1e16)
-    uint256 public protocolDepositGardenTokenFee; // (0.01% = 1e14, 1% = 1e16)
-    uint256 public protocolWithdrawalGardenTokenFee; // (0.01% = 1e14, 1% = 1e16)
+    uint256 public protocolDepositGardenTokenFee; // 0 (0.01% = 1e14, 1% = 1e16)
+    uint256 public protocolWithdrawalGardenTokenFee; // 0 (0.01% = 1e14, 1% = 1e16)
 
     bool public newVar;
 
@@ -103,8 +114,20 @@ contract BabControllerV2Mock is OwnableUpgradeable {
         // vars init values has to be set in initialize due to how upgrade proxy pattern works
         protocolManagementFee = 5e15; // 0.5% (0.01% = 1e14, 1% = 1e16)
         protocolPerformanceFee = 5e16; // 5% (0.01% = 1e14, 1% = 1e16) on profits
+        protocolDepositGardenTokenFee = 0; // 0% (0.01% = 1e14, 1% = 1e16) on profits
+        protocolWithdrawalGardenTokenFee = 0; // 0% (0.01% = 1e14, 1% = 1e16) on profits
         gardenTokensTransfersEnabled = false;
         minRiskyPairLiquidityEth = 1000 * 1e18;
+
+        strategistProfitPercentage = 10e16;
+        stewardsProfitPercentage = 5e16;
+        lpsProfitPercentage = 80e16;
+
+        strategistBABLPercentage = 8e16;
+        stewardsBABLPercentage = 17e16;
+        lpsBABLPercentage = 75e16;
+
+        gardenCreatorBonus = 15e16;
     }
 
     /* ============ External Functions ============ */

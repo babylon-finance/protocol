@@ -303,8 +303,7 @@ abstract contract Strategy is ReentrancyGuard, Initializable {
         }
 
         // Add to Rewards Distributor an update of the Protocol Principal for BABL Mining Rewards calculations
-        IRewardsDistributor rewardsDistributor =
-            IRewardsDistributor(IBabController(controller).getRewardsDistributor());
+        IRewardsDistributor rewardsDistributor = IRewardsDistributor(IBabController(controller).rewardsDistributor());
         rewardsDistributor.addProtocolPrincipal(_capital);
         _payKeeper(msg.sender, _fee);
         updatedAt = block.timestamp;
@@ -352,8 +351,7 @@ abstract contract Strategy is ReentrancyGuard, Initializable {
         updatedAt = block.timestamp;
         capitalAllocated = capitalAllocated.sub(_amountToUnwind);
         // Removes protocol principal for the calculation of rewards
-        IRewardsDistributor rewardsDistributor =
-            IRewardsDistributor(IBabController(controller).getRewardsDistributor());
+        IRewardsDistributor rewardsDistributor = IRewardsDistributor(IBabController(controller).rewardsDistributor());
         rewardsDistributor.substractProtocolPrincipal(_amountToUnwind);
         // Send the amount back to the warden for the immediate withdrawal
         IERC20(garden.reserveAsset()).safeTransfer(address(garden), _amountToUnwind);
@@ -592,7 +590,7 @@ abstract contract Strategy is ReentrancyGuard, Initializable {
     ) internal returns (uint256) {
         address tradeIntegration = IBabController(controller).getIntegrationByName('1inch');
         // Uses on chain oracle for all internal strategy operations to avoid attacks        // Updates UniSwap TWAP
-        IPriceOracle oracle = IPriceOracle(IBabController(controller).getPriceOracle());
+        IPriceOracle oracle = IPriceOracle(IBabController(controller).priceOracle());
         oracle.updateAdapters(_sendToken, _receiveToken);
         uint256 pricePerTokenUnit = oracle.getPrice(_sendToken, _receiveToken);
         uint256 exactAmount = _sendQuantity.preciseMul(pricePerTokenUnit);
@@ -612,10 +610,10 @@ abstract contract Strategy is ReentrancyGuard, Initializable {
         if (capitalReturned >= capitalAllocated) {
             uint256 profits = capitalReturned - capitalAllocated; // in reserve asset (weth)
             // Send weth performance fee to the protocol
-            protocolProfits = IBabController(controller).getProtocolPerformanceFee().preciseMul(profits);
+            protocolProfits = IBabController(controller).protocolPerformanceFee().preciseMul(profits);
             IERC20(reserveAsset).safeTransferFrom(
                 address(this),
-                IBabController(controller).getTreasury(),
+                IBabController(controller).treasury(),
                 protocolProfits
             );
             reserveAssetDelta.add(int256(-protocolProfits));
@@ -639,15 +637,14 @@ abstract contract Strategy is ReentrancyGuard, Initializable {
 
         // Moves strategy to finalized
         IGarden(garden).moveStrategyToFinalized(reserveAssetDelta, address(this));
-        IRewardsDistributor rewardsDistributor =
-            IRewardsDistributor(IBabController(controller).getRewardsDistributor());
+        IRewardsDistributor rewardsDistributor = IRewardsDistributor(IBabController(controller).rewardsDistributor());
         // Substract the Principal in the Rewards Distributor to update the Protocol power value
         rewardsDistributor.substractProtocolPrincipal(capitalAllocated);
         strategyRewards = rewardsDistributor.getStrategyRewards(address(this));
     }
 
     function _getPrice(address _assetOne, address _assetTwo) internal view returns (uint256) {
-        IPriceOracle oracle = IPriceOracle(IBabController(controller).getPriceOracle());
+        IPriceOracle oracle = IPriceOracle(IBabController(controller).priceOracle());
         return oracle.getPrice(_assetOne, _assetTwo);
     }
 

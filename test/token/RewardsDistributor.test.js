@@ -125,7 +125,7 @@ async function checkQuarterWithParams(
 
 async function updateTWAPs(garden) {
   const controller = await ethers.getContractAt('BabController', await garden.controller());
-  const priceOracle = await ethers.getContractAt('PriceOracle', await controller.getPriceOracle());
+  const priceOracle = await ethers.getContractAt('PriceOracle', await controller.priceOracle());
   const adapterAddress = (await priceOracle.getAdapters())[0];
   const adapter = await ethers.getContractAt('UniswapTWAP', adapterAddress);
   for (let i = 0; i < TWAP_ORACLE_GRANULARITY; i += 1) {

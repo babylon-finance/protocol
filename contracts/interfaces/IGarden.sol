@@ -64,7 +64,7 @@ interface IGarden is IERC20 {
 
     function totalCommunitiesDeposited() external view returns (uint256);
 
-    function weth() external view returns (address);
+    function WETH() external view returns (address);
 
     function minLiquidityAsset() external view returns (uint256);
 

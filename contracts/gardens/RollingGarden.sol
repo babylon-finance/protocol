@@ -75,6 +75,8 @@ contract RollingGarden is ReentrancyGuard, BaseGarden {
     uint256 public withdrawalWindowAfterStrategyCompletes;
     uint256 public withdrawalsOpenUntil; // Indicates until when the withdrawals are open and the ETH is set aside
 
+    uint256 public constant EARLY_WITHDRAWAL_PENALTY = 15e16;
+
     uint256 public constant BABL_STRATEGIST_SHARE = 8e16;
     uint256 public constant BABL_STEWARD_SHARE = 17e16;
     uint256 public constant BABL_LP_SHARE = 75e16;
@@ -93,7 +95,7 @@ contract RollingGarden is ReentrancyGuard, BaseGarden {
      * All parameter validations are on the BabController contract. Validations are performed already on the
      * BabController.
      *
-     * @param _weth                   Address of the WETH ERC20
+     * @param _reserveAsset           Address of the reserve asset. Initially WETH ERC20
      * @param _controller             Address of the controller
      * @param _creator                Address of the creator
      * @param _name                   Name of the Garden
@@ -101,13 +103,13 @@ contract RollingGarden is ReentrancyGuard, BaseGarden {
      */
 
     function initialize(
-        address _weth,
+        address _reserveAsset,
         address _controller,
         address _creator,
         string memory _name,
         string memory _symbol
-    ) public {
-        super.initialize(_weth, _weth, _controller, _creator, _name, _symbol);
+    ) public override {
+        super.initialize(_reserveAsset, _controller, _creator, _name, _symbol);
         totalContributors = 0;
     }
 
@@ -123,9 +125,6 @@ contract RollingGarden is ReentrancyGuard, BaseGarden {
      * @param _depositHardlock                     Number that represents the time deposits are locked for an user after he deposits
      * @param _minContribution        Min contribution to the garden
      * @param _strategyCooldownPeriod               How long after the strategy has been activated, will it be ready to be executed
-     * @param _strategyCreatorProfitPercentage      What percentage of the profits go to the strategy creator
-     * @param _strategyVotersProfitPercentage       What percentage of the profits go to the strategy curators
-     * @param _gardenCreatorProfitPercentage What percentage of the profits go to the creator of the garden
      * @param _minVotersQuorum                  Percentage of votes needed to activate an strategy (0.01% = 1e14, 1% = 1e16)
      * @param _minIdeaDuration                  Min duration of an strategy
      * @param _maxIdeaDuration                  Max duration of an strategy
@@ -137,9 +136,6 @@ contract RollingGarden is ReentrancyGuard, BaseGarden {
         uint256 _depositHardlock,
         uint256 _minContribution,
         uint256 _strategyCooldownPeriod,
-        uint256 _strategyCreatorProfitPercentage,
-        uint256 _strategyVotersProfitPercentage,
-        uint256 _gardenCreatorProfitPercentage,
         uint256 _minVotersQuorum,
         uint256 _minIdeaDuration,
         uint256 _maxIdeaDuration
@@ -160,19 +156,10 @@ contract RollingGarden is ReentrancyGuard, BaseGarden {
         minLiquidityAsset = _minLiquidityAsset;
         depositHardlock = _depositHardlock;
         withdrawalWindowAfterStrategyCompletes = 7 days;
-        startCommon(
-            _minContribution,
-            _strategyCooldownPeriod,
-            _strategyCreatorProfitPercentage,
-            _strategyVotersProfitPercentage,
-            _gardenCreatorProfitPercentage,
-            _minVotersQuorum,
-            _minIdeaDuration,
-            _maxIdeaDuration
-        );
+        startCommon(_minContribution, _strategyCooldownPeriod, _minVotersQuorum, _minIdeaDuration, _maxIdeaDuration);
 
         // Deposit
-        IWETH(weth).deposit{value: msg.value}();
+        IWETH(WETH).deposit{value: msg.value}();
 
         uint256 previousBalance = balanceOf(msg.sender);
         _mint(creator, msg.value);
@@ -204,7 +191,7 @@ contract RollingGarden is ReentrancyGuard, BaseGarden {
         }
         _require(msg.value == _reserveAssetQuantity, Errors.MSG_VALUE_DO_NOT_MATCH);
         // Always wrap to WETH
-        IWETH(weth).deposit{value: msg.value}();
+        IWETH(WETH).deposit{value: msg.value}();
         // Check this here to avoid having relayers
         reenableEthForStrategies();
 
@@ -248,53 +235,26 @@ contract RollingGarden is ReentrancyGuard, BaseGarden {
         uint256 _minReserveReceiveQuantity,
         address payable _to
     ) external nonReentrant onlyContributor {
-        // Withdrawal amount has to be equal or less than msg.sender balance
-        _require(_gardenTokenQuantity <= balanceOf(msg.sender), Errors.MSG_SENDER_TOKENS_DO_NOT_MATCH);
-        // Flashloan protection
-        _require(
-            block.timestamp.sub(contributors[msg.sender].lastDepositAt) >= depositHardlock,
-            Errors.TOKENS_TIMELOCKED
-        );
-        _require(
-            _gardenTokenQuantity <= balanceOf(msg.sender).sub(this.getLockedBalance(msg.sender)),
-            Errors.TOKENS_TIMELOCKED
-        ); // Strategists and Voters cannot withdraw locked stake while in active strategies
+        _withdraw(_gardenTokenQuantity, _minReserveReceiveQuantity, _to);
+    }
 
-        // Check this here to avoid having relayers
-        reenableEthForStrategies();
-        ActionInfo memory withdrawalInfo = _createRedemptionInfo(_gardenTokenQuantity);
-
-        _validateReserveAsset(reserveAsset, withdrawalInfo.netFlowQuantity);
-
-        _validateRedemptionInfo(_minReserveReceiveQuantity, _gardenTokenQuantity, withdrawalInfo);
-
-        _burn(msg.sender, _gardenTokenQuantity);
-        _updateContributorWithdrawalInfo(withdrawalInfo.netFlowQuantity);
-
-        // Check that the withdrawal is possible
-        _require(canWithdrawEthAmount(msg.sender, withdrawalInfo.netFlowQuantity), Errors.MIN_LIQUIDITY);
-        // Unwrap WETH if ETH balance lower than netFlowQuantity
-        if (address(this).balance < withdrawalInfo.netFlowQuantity) {
-            IWETH(weth).withdraw(withdrawalInfo.netFlowQuantity);
-        }
-        // Send ETH
-        Address.sendValue(_to, withdrawalInfo.netFlowQuantity);
-        payProtocolFeeFromGarden(reserveAsset, withdrawalInfo.protocolFees);
-
-        uint256 outflow = withdrawalInfo.netFlowQuantity.add(withdrawalInfo.protocolFees);
-
-        // Required withdrawable quantity is greater than existing collateral
-        _require(principal >= outflow, Errors.BALANCE_TOO_LOW);
-        _updatePrincipal(principal.sub(outflow));
-
-        emit GardenTokenWithdrawn(
-            msg.sender,
-            _to,
-            withdrawalInfo.netFlowQuantity,
-            withdrawalInfo.gardenTokenQuantity,
-            withdrawalInfo.protocolFees,
-            block.timestamp
-        );
+    /**
+     * Requests an immediate withdrawal taking the EARLY_WITHDRAWAL_PENALTY that stays invested.
+     *
+     * @param _gardenTokenQuantity              Quantity of the garden token to withdrawal
+     * @param _to                               Address to send component assets to
+     */
+    function withdrawWithPenalty(uint256 _gardenTokenQuantity, address payable _to)
+        external
+        nonReentrant
+        onlyContributor
+    {
+        // Check that cannot do a normal withdrawal
+        _require(!canWithdrawEthAmount(msg.sender, _gardenTokenQuantity), Errors.NORMAL_WITHDRAWAL_POSSIBLE);
+        (, uint256 netReserveFlows) = _getFees(_gardenTokenQuantity, false);
+        netReserveFlows = _gardenTokenQuantity.sub(_gardenTokenQuantity.preciseMul(EARLY_WITHDRAWAL_PENALTY));
+        IStrategy(strategies[0]).unwindStrategy(netReserveFlows);
+        _withdraw(_gardenTokenQuantity, netReserveFlows, _to);
     }
 
     /**
@@ -318,7 +278,7 @@ contract RollingGarden is ReentrancyGuard, BaseGarden {
             contributor.claimedAt = block.timestamp; // Checkpoint of this claim
             // Send BABL rewards
             IRewardsDistributor rewardsDistributor =
-                IRewardsDistributor(IBabController(controller).getRewardsDistributor());
+                IRewardsDistributor(IBabController(controller).rewardsDistributor());
             rewardsDistributor.sendTokensToContributor(msg.sender, uint96(bablRewards));
             emit BABLRewardsForContributor(msg.sender, uint96(bablRewards));
         }
@@ -349,7 +309,7 @@ contract RollingGarden is ReentrancyGuard, BaseGarden {
      */
     function startWithdrawalWindow(uint256 _amount) external onlyStrategyOrProtocol {
         withdrawalsOpenUntil = block.timestamp.add(withdrawalWindowAfterStrategyCompletes);
-        IWETH(weth).withdraw(_amount);
+        IWETH(WETH).withdraw(_amount);
     }
 
     /**
@@ -359,7 +319,7 @@ contract RollingGarden is ReentrancyGuard, BaseGarden {
     function reenableEthForStrategies() public {
         if (block.timestamp >= withdrawalsOpenUntil && address(this).balance > minContribution) {
             withdrawalsOpenUntil = 0;
-            IWETH(weth).deposit{value: address(this).balance}();
+            IWETH(WETH).deposit{value: address(this).balance}();
         }
     }
 
@@ -467,6 +427,63 @@ contract RollingGarden is ReentrancyGuard, BaseGarden {
     receive() external payable {}
 
     /* ============ Internal Functions ============ */
+
+    /**
+     * Aux function to withdraw from a garden
+     */
+    function _withdraw(
+        uint256 _gardenTokenQuantity,
+        uint256 _minReserveReceiveQuantity,
+        address payable _to
+    ) private {
+        // Withdrawal amount has to be equal or less than msg.sender balance
+        _require(_gardenTokenQuantity <= balanceOf(msg.sender), Errors.MSG_SENDER_TOKENS_DO_NOT_MATCH);
+        // Flashloan protection
+        _require(
+            block.timestamp.sub(contributors[msg.sender].lastDepositAt) >= depositHardlock,
+            Errors.TOKENS_TIMELOCKED
+        );
+        _require(
+            _gardenTokenQuantity <= balanceOf(msg.sender).sub(this.getLockedBalance(msg.sender)),
+            Errors.TOKENS_TIMELOCKED
+        ); // Strategists and Voters cannot withdraw locked stake while in active strategies
+
+        // Check this here to avoid having relayers
+        reenableEthForStrategies();
+        ActionInfo memory withdrawalInfo = _createRedemptionInfo(_gardenTokenQuantity);
+        _require(canWithdrawEthAmount(msg.sender, withdrawalInfo.netFlowQuantity), Errors.MIN_LIQUIDITY);
+
+        _validateReserveAsset(reserveAsset, withdrawalInfo.netFlowQuantity);
+
+        _validateRedemptionInfo(_minReserveReceiveQuantity, _gardenTokenQuantity, withdrawalInfo);
+
+        _burn(msg.sender, _gardenTokenQuantity);
+        _updateContributorWithdrawalInfo(withdrawalInfo.netFlowQuantity);
+
+        // Check that the withdrawal is possible
+        // Unwrap WETH if ETH balance lower than netFlowQuantity
+        if (address(this).balance < withdrawalInfo.netFlowQuantity) {
+            IWETH(WETH).withdraw(withdrawalInfo.netFlowQuantity);
+        }
+        // Send ETH
+        Address.sendValue(_to, withdrawalInfo.netFlowQuantity);
+        payProtocolFeeFromGarden(reserveAsset, withdrawalInfo.protocolFees);
+
+        uint256 outflow = withdrawalInfo.netFlowQuantity.add(withdrawalInfo.protocolFees);
+
+        // Required withdrawable quantity is greater than existing collateral
+        _require(principal >= outflow, Errors.BALANCE_TOO_LOW);
+        _updatePrincipal(principal.sub(outflow));
+
+        emit GardenTokenWithdrawn(
+            msg.sender,
+            _to,
+            withdrawalInfo.netFlowQuantity,
+            withdrawalInfo.gardenTokenQuantity,
+            withdrawalInfo.protocolFees,
+            block.timestamp
+        );
+    }
 
     function _getProfitsAndBabl(address[] calldata _finalizedStrategies) internal view returns (uint256, uint96) {
         uint256 contributorTotalProfits = 0;
@@ -632,8 +649,8 @@ contract RollingGarden is ReentrancyGuard, BaseGarden {
         // Get protocol fee percentages
         uint256 protocolFeePercentage =
             _isDeposit
-                ? IBabController(controller).getProtocolDepositGardenTokenFee()
-                : IBabController(controller).getProtocolWithdrawalGardenTokenFee();
+                ? IBabController(controller).protocolDepositGardenTokenFee()
+                : IBabController(controller).protocolWithdrawalGardenTokenFee();
 
         uint256 reserveAssetReal = _reserveAssetQuantity;
         // If there is a withdrawal, we adjust for losses
