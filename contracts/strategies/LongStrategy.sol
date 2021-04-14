@@ -71,8 +71,10 @@ contract LongStrategy is Strategy {
 
     /**
      * Exits the long strategy.
+     * @param _percentage of capital to exit from the strategy
      */
-    function _exitStrategy() internal override {
-        _trade(longToken, IERC20(longToken).balanceOf(address(this)), garden.reserveAsset());
+    function _exitStrategy(uint256 _percentage) internal override {
+        require(_percentage <= HUNDRED_PERCENT, 'Unwind Percentage <= 100%');
+        _trade(longToken, IERC20(longToken).balanceOf(address(this)).preciseMul(_percentage), garden.reserveAsset());
     }
 }

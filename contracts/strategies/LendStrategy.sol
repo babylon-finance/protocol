@@ -84,10 +84,12 @@ contract LendStrategy is Strategy {
 
     /**
      * Exits the lend strategy.
+     * @param _percentage of capital to exit from the strategy
      */
-    function _exitStrategy() internal override {
+    function _exitStrategy(uint256 _percentage) internal override {
+        require(_percentage <= HUNDRED_PERCENT, 'Unwind Percentage <= 100%');
         uint256 numTokensToRedeem =
-            IERC20(ILendIntegration(integration).getInvestmentToken(assetToken)).balanceOf(address(this));
+            IERC20(ILendIntegration(integration).getInvestmentToken(assetToken)).balanceOf(address(this)).preciseMul(_percentage);
         ILendIntegration(integration).redeemTokens(
             assetToken,
             numTokensToRedeem,

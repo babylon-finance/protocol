@@ -123,6 +123,7 @@ abstract contract Strategy is ReentrancyGuard, Initializable {
     /* ============ Constants ============ */
 
     uint256 internal constant SLIPPAGE_ALLOWED = 1e16; // 1%
+    uint256 internal constant HUNDRED_PERCENT = 1e18; // 100%
     uint256 internal constant MAX_CANDIDATE_PERIOD = 7 days;
     uint256 internal constant MIN_VOTERS_TO_BECOME_ACTIVE = 2;
 
@@ -321,7 +322,7 @@ abstract contract Strategy is ReentrancyGuard, Initializable {
         );
         require(!finalized, 'This strategy was already exited');
         // Execute exit trade
-        _exitStrategy();
+        _exitStrategy(HUNDRED_PERCENT);
         // Mark as finalized
         finalized = true;
         active = false;
@@ -333,6 +334,24 @@ abstract contract Strategy is ReentrancyGuard, Initializable {
         _payKeeper(msg.sender, _fee);
         // Send rest to garden if any
         _sendReserveAssetToGarden();
+    }
+
+    /**
+     * Partially unwinds an strategy
+     * Triggered from an immediate withdraw in the Garden.
+     * @param _amountToUnwind              The amount of capital to unwind
+     */
+    function unwindStrategy(uint256 _amountToUnwind) external onlyActiveGarden nonReentrant {
+      require(_amountToUnwind <= capitalAllocated.sub(minRebalanceCapital), 'Not enough liquidity to unwind');
+      // Exits and enters the strategy
+      _exitStrategy(_amountToUnwind.preciseDiv(capitalAllocated));
+      updatedAt = block.timestamp;
+      // Removes protocol principal for the calculation of rewards
+      IRewardsDistributor rewardsDistributor =
+          IRewardsDistributor(IBabController(controller).getRewardsDistributor());
+      rewardsDistributor.substractProtocolPrincipal(_amountToUnwind);
+      // Send the amount back to the warden for the immediate withdrawal
+      IERC20(garden.reserveAsset()).safeTransfer(address(garden), _amountToUnwind);
     }
 
     /**
@@ -498,9 +517,9 @@ abstract contract Strategy is ReentrancyGuard, Initializable {
     /**
      * Exits the strategy. Virtual method.
      * Needs to be overriden in base class.
-     *
+     * hparam _percentage of capital to exit from the strategy
      */
-    function _exitStrategy() internal virtual;
+    function _exitStrategy(uint256 /*_percentage*/) internal virtual;
 
     /**
      * Deletes this strategy and returns the stake to the strategist
