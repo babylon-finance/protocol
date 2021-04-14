@@ -4,7 +4,7 @@ const { ethers, waffle } = require('hardhat');
 const { loadFixture } = waffle;
 
 const addresses = require('../../utils/addresses');
-const { ONE_DAY_IN_SECONDS, NOW, EMPTY_BYTES } = require('../../utils/constants.js');
+const { ONE_DAY_IN_SECONDS } = require('../../utils/constants.js');
 const {
   DEFAULT_STRATEGY_PARAMS,
   createStrategy,
@@ -16,7 +16,6 @@ const { deployFolioFixture } = require('../fixtures/ControllerFixture');
 
 describe('Garden', function () {
   let babController;
-  let owner;
   let signer1;
   let signer2;
   let signer3;
@@ -24,24 +23,17 @@ describe('Garden', function () {
   let weth;
   let balancerIntegration;
   let kyberTradeIntegration;
-  let strategy11;
-  let strategy21;
 
   beforeEach(async () => {
     ({
       babController,
-      owner,
       signer1,
       signer2,
       signer3,
       garden1,
       balancerIntegration,
       kyberTradeIntegration,
-      strategy11,
-      strategy21,
     } = await loadFixture(deployFolioFixture));
-    strategyDataset = await ethers.getContractAt('Strategy', strategy11);
-    strategyCandidate = await ethers.getContractAt('Strategy', strategy21);
 
     weth = await ethers.getContractAt('IERC20', addresses.tokens.WETH);
   });
@@ -186,6 +178,7 @@ describe('Garden', function () {
       await expect(garden1.connect(signer3).withdraw(ethers.utils.parseEther('20'), 2, signer3.getAddress())).to.be
         .reverted;
     });
+
     it('strategist or voters cannot withdraw more comunity tokens than they have locked in active strategies', async function () {
       const strategyContract = await createStrategy(
         0,
@@ -196,37 +189,9 @@ describe('Garden', function () {
       );
 
       // It is executed
+      console.log('execute strat');
       await executeStrategy(garden1, strategyContract, ethers.utils.parseEther('1'), 42);
-
-      const [
-        address,
-        strategist,
-        integration,
-        stake,
-        absoluteTotalVotes,
-        totalVotes,
-        capitalAllocated,
-        capitalReturned,
-        duration,
-        expectedReturn,
-        maxCapitalRequested,
-        minRebalanceCapital,
-        enteredAt,
-      ] = await strategyDataset.getStrategyDetails();
-      const [
-        address2,
-        active2,
-        dataSet2,
-        finalized2,
-        executedAt2,
-        exitedAt2,
-      ] = await strategyContract.getStrategyState();
-
-      expect(address2).to.equal(strategyContract.address);
-      expect(active2).to.equal(true);
-
-      expect(strategist).to.equal(signer1.address);
-      expect(stake).to.equal(ethers.utils.parseEther('1'));
+      console.log('after execution');
 
       // Cannot withdraw locked stake amount
       await expect(
@@ -249,35 +214,10 @@ describe('Garden', function () {
       // It is executed
       await executeStrategy(garden1, strategyContract, ethers.utils.parseEther('1'), 42);
 
-      const [
-        address,
-        strategist,
-        integration,
-        stake,
-        absoluteTotalVotes,
-        totalVotes,
-        capitalAllocated,
-        capitalReturned,
-        duration,
-        expectedReturn,
-        maxCapitalRequested,
-        minRebalanceCapital,
-        enteredAt,
-      ] = await strategyContract.getStrategyDetails();
-      const [
-        address2,
-        active2,
-        dataSet2,
-        finalized2,
-        executedAt2,
-        exitedAt2,
-      ] = await strategyContract.getStrategyState();
+      expect(await strategyContract.active()).to.equal(true);
 
-      expect(address2).to.equal(strategyContract.address);
-      expect(active2).to.equal(true);
-
-      expect(strategist).to.equal(signer1.address);
-      expect(stake).to.equal(ethers.utils.parseEther('1'));
+      expect(await strategyContract.strategist()).to.equal(signer1.address);
+      expect(await strategyContract.stake()).to.equal(ethers.utils.parseEther('1'));
 
       await finalizeStrategy(garden1, strategyContract, 42);
 
@@ -303,35 +243,10 @@ describe('Garden', function () {
       // It is executed
       await executeStrategy(garden1, strategyContract, ethers.utils.parseEther('1'), 42);
 
-      const [
-        address,
-        strategist,
-        integration,
-        stake,
-        absoluteTotalVotes,
-        totalVotes,
-        capitalAllocated,
-        capitalReturned,
-        duration,
-        expectedReturn,
-        maxCapitalRequested,
-        minRebalanceCapital,
-        enteredAt,
-      ] = await strategyContract.getStrategyDetails();
-      const [
-        address2,
-        active2,
-        dataSet2,
-        finalized2,
-        executedAt2,
-        exitedAt2,
-      ] = await strategyContract.getStrategyState();
+      expect(await strategyContract.active()).to.equal(true);
 
-      expect(address2).to.equal(strategyContract.address);
-      expect(active2).to.equal(true);
-
-      expect(strategist).to.equal(signer1.address);
-      expect(stake).to.equal(ethers.utils.parseEther('1'));
+      expect(await strategyContract.strategist()).to.equal(signer1.address);
+      expect(await strategyContract.stake()).to.equal(ethers.utils.parseEther('1'));
 
       await injectFakeProfits(strategyContract, ethers.utils.parseEther('200')); // We inject positive profits
 
@@ -359,58 +274,18 @@ describe('Garden', function () {
       // It is executed
       await executeStrategy(garden1, strategyContract, ethers.utils.parseEther('1'), 42);
 
-      const [
-        address,
-        strategist,
-        integration,
-        stake,
-        absoluteTotalVotes,
-        totalVotes,
-        capitalAllocated,
-        capitalReturned,
-        duration,
-        expectedReturn,
-        maxCapitalRequested,
-        minRebalanceCapital,
-        enteredAt,
-      ] = await strategyContract.getStrategyDetails();
-      const [
-        address2,
-        active2,
-        dataSet2,
-        finalized2,
-        executedAt2,
-        exitedAt2,
-      ] = await strategyContract.getStrategyState();
+      expect(await strategyContract.active()).to.equal(true);
 
-      expect(address2).to.equal(strategyContract.address);
-      expect(active2).to.equal(true);
-
-      expect(strategist).to.equal(signer1.address);
-      expect(stake).to.equal(ethers.utils.parseEther('1'));
+      expect(await strategyContract.strategist()).to.equal(signer1.address);
+      expect(await strategyContract.stake()).to.equal(ethers.utils.parseEther('1'));
 
       await finalizeStrategy(garden1, strategyContract, 42);
 
-      const [
-        address3,
-        strategist3,
-        integration3,
-        stake3,
-        absoluteTotalVotes3,
-        totalVotes3,
-        capitalAllocated3,
-        capitalReturned3,
-        duration3,
-        expectedReturn3,
-        maxCapitalRequested3,
-        minRebalanceCapital3,
-        enteredAt3,
-      ] = await strategyContract.getStrategyDetails();
-
       // Being a negative profit strategy, the corresponding % of the loss is reduced (burned) from the strategists stake
       const value =
-        (ethers.BigNumber.from(capitalReturned3) / ethers.BigNumber.from(capitalAllocated3)) *
-        ethers.BigNumber.from(stake3);
+        (ethers.BigNumber.from(await strategyContract.capitalReturned()) /
+          ethers.BigNumber.from(await strategyContract.capitalAllocated())) *
+        ethers.BigNumber.from(await strategyContract.stake());
 
       const finalStrategistBalance = await garden1.balanceOf(signer1.address);
       const finalReducedStrategistBalance = finalStrategistBalance - ethers.utils.parseEther('1.1');
@@ -428,36 +303,6 @@ describe('Garden', function () {
       );
       // It is executed
       await executeStrategy(garden1, strategyContract, ethers.utils.parseEther('1'), 42);
-
-      const [
-        address,
-        strategist,
-        integration,
-        stake,
-        absoluteTotalVotes,
-        totalVotes,
-        capitalAllocated,
-        capitalReturned,
-        duration,
-        expectedReturn,
-        maxCapitalRequested,
-        minRebalanceCapital,
-        enteredAt,
-      ] = await strategyDataset.getStrategyDetails();
-      const [
-        address2,
-        active2,
-        dataSet2,
-        finalized2,
-        executedAt2,
-        exitedAt2,
-      ] = await strategyContract.getStrategyState();
-
-      expect(address2).to.equal(strategyContract.address);
-      expect(active2).to.equal(true);
-
-      expect(strategist).to.equal(signer1.address);
-      expect(stake).to.equal(ethers.utils.parseEther('1'));
 
       await garden1.connect(signer2).deposit(ethers.utils.parseEther('5'), 1, signer2.getAddress(), {
         value: ethers.utils.parseEther('5'),

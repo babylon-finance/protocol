@@ -7,10 +7,7 @@ const { ADDRESS_ZERO, ONE_DAY_IN_SECONDS } = require('../../utils/constants');
 
 const { loadFixture } = waffle;
 
-const addresses = require('../../utils/addresses');
 const { deployFolioFixture } = require('../fixtures/ControllerFixture');
-const { BigNumber } = require('@ethersproject/bignumber');
-const { isExportDeclaration } = require('typescript');
 
 // `describe` is a Mocha function that allows you to organize your tests. It's
 // not actually needed, but having your tests organized makes debugging them
@@ -244,7 +241,6 @@ describe('BABLToken contract', function () {
 
       await bablToken.connect(signer1).delegate(signer1.address); // Own delegation
 
-      //await bablToken.transfer(signer1.address, ethers.utils.parseEther('26000'));
       const signer1Balance = await bablToken.balanceOf(signer1.address);
 
       const votesSigner1 = await bablToken.getCurrentVotes(signer1.address);
@@ -462,9 +458,8 @@ describe('BABLToken contract', function () {
       try {
         const totalSupply = await bablToken.totalSupply();
         const value2 = ethers.utils.parseEther('1000000');
-        const result = await bablToken.mint.call({ from: signer1 });
-        assert.equal(result.toString(), owner);
-        await expect(bablToken.connect(signer1).mint(signer1, value)).to.be.revertedWith('Only owner');
+        await bablToken.mint.call({ from: signer1 });
+        await expect(bablToken.connect(signer1).mint(signer1, value2)).to.be.revertedWith('Only owner');
 
         // TOTAL_SUPPLY shouldn't have changed.
         expect(totalSupply).to.equal(value2);
@@ -487,8 +482,8 @@ describe('BABLToken contract', function () {
     });
 
     it('Should fail when trying to mint new tokens before the first epoch (8 years)', async function () {
-      const maxSupply = await bablToken.maxSupply();
-      const totalSupply = await bablToken.totalSupply();
+      await bablToken.maxSupply();
+      await bablToken.totalSupply();
 
       await expect(bablToken.mint(signer1.address, 0)).to.be.revertedWith(
         'BABLToken::mint: minting not allowed after the FIRST_EPOCH_MINT has passed >= 8 years',
@@ -504,7 +499,7 @@ describe('BABLToken contract', function () {
     });
     it('Should fail when trying to mint before mintingAllowedAfter', async function () {
       const NEW_MAX_SUPPLY = ethers.utils.parseEther('1050000'); // 1_150_000e18
-      //Traveling on time >8 years ahead
+      // Traveling on time >8 years ahead
       ethers.provider.send('evm_increaseTime', [ONE_DAY_IN_SECONDS * 365 * 8]);
       await expect(bablToken.changeMaxSupply(NEW_MAX_SUPPLY, 1906560000)); // June 2030 the 1st
 
@@ -538,7 +533,7 @@ describe('BABLToken contract', function () {
 
     it('Should fail when trying to mint above Cap limit of 2%', async function () {
       const NEW_MAX_SUPPLY = ethers.utils.parseEther('1050000'); // 1_150_000e18
-      //Traveling on time >8 years ahead
+      // Traveling on time >8 years ahead
       ethers.provider.send('evm_increaseTime', [ONE_DAY_IN_SECONDS * 365 * 8]);
       await expect(bablToken.changeMaxSupply(NEW_MAX_SUPPLY, 1906560000)); // June 2030 the 1st
 
@@ -548,7 +543,7 @@ describe('BABLToken contract', function () {
     });
     it('Should mint new tokens after 8 years equals to the Cap limit of 2%', async function () {
       const NEW_MAX_SUPPLY = ethers.utils.parseEther('1050000'); // 1_150_000e18
-      //Traveling on time >8 years ahead
+      // Traveling on time >8 years ahead
       ethers.provider.send('evm_increaseTime', [ONE_DAY_IN_SECONDS * 365 * 8]);
       await expect(bablToken.changeMaxSupply(NEW_MAX_SUPPLY, 1906560000)); // June 2030 the 1st
 
@@ -563,8 +558,7 @@ describe('BABLToken contract', function () {
       try {
         const maxSupply = await bablToken.maxSupply();
         const NEW_MAX_SUPPLY = maxSupply + 1;
-        const result = await bablToken.changeMaxSupply.call({ from: signer1 });
-        assert.equal(result.toString(), owner);
+        await bablToken.changeMaxSupply.call({ from: signer1 });
         await expect(bablToken.connect(signer1).changeMaxSupply(NEW_MAX_SUPPLY, 251596800)).to.be.revertedWith(
           'Only owner',
         );
@@ -591,8 +585,6 @@ describe('BABLToken contract', function () {
       expect(OLD_MAX_SUPPLY[0]).to.equal(value2);
     });
     it('Should fail a try of changing MAX_SUPPLY before MaxSupplyAllowedAfter', async function () {
-      const OLD_MAX_SUPPLY = await bablToken.maxSupply();
-
       // Try to change MAX_SUPPLY by a new number after 8 years by a lower amount
       const NEW_MAX_SUPPLY = ethers.utils.parseEther('1050000'); // 1_150_000e18
       // Traveling on time >8 years ahead
@@ -657,8 +649,6 @@ describe('BABLToken contract', function () {
     });
 
     it('Should change MAX_SUPPLY allowed and set-up a newMaxSupplyAllowedAfter', async function () {
-      const OLD_MAX_SUPPLY = await bablToken.maxSupply();
-
       // Try to change MAX_SUPPLY by a new number after 8 years by a lower amount
       const NEW_MAX_SUPPLY = ethers.utils.parseEther('1050000'); // 1_150_000e18
       // Traveling on time >8 years ahead
@@ -674,8 +664,6 @@ describe('BABLToken contract', function () {
     it('Should fail when trying to change the MAX_SUPPLY after the FIRST EPOCH 8 years but before allowed after', async function () {
       // Traveling on time >8 years ahead
       ethers.provider.send('evm_increaseTime', [ONE_DAY_IN_SECONDS * 365 * 8]);
-
-      const OLD_MAX_SUPPLY = await bablToken.maxSupply();
 
       // Try to change MAX_SUPPLY by a new number after 8 years by a lower amount
       const NEW_MAX_SUPPLY = ethers.utils.parseEther('1050000'); // 1_150_000e18
