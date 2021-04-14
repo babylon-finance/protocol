@@ -11,11 +11,12 @@ const {
   finalizeStrategy,
   injectFakeProfits,
   deposit,
+  DEFAULT_STRATEGY_PARAMS,
 } = require('../fixtures/StrategyHelper.js');
 const { increaseTime } = require('../utils/test-helpers');
 
 const addresses = require('../../utils/addresses');
-const { ONE_DAY_IN_SECONDS } = require('../../utils/constants.js');
+const { ONE_DAY_IN_SECONDS, ONE_ETH } = require('../../utils/constants.js');
 const { deployFolioFixture } = require('../fixtures/ControllerFixture');
 
 describe('Strategy', function () {
@@ -31,7 +32,7 @@ describe('Strategy', function () {
   let strategy21;
   let kyberTradeIntegration;
   let wethToken;
-  let priceOracle;
+  let aaveLendIntegration;
 
   beforeEach(async () => {
     ({
@@ -43,7 +44,7 @@ describe('Strategy', function () {
       strategy21,
       signer2,
       signer3,
-      priceOracle,
+      aaveLendIntegration,
       kyberTradeIntegration,
     } = await loadFixture(deployFolioFixture));
 
@@ -315,7 +316,7 @@ describe('Strategy', function () {
       expect(capitalReturned).to.be.gt(capitalAllocated);
     });
 
-    it('should get the NAV value of a long asset', async function () {
+    it('should get the NAV value of a long strategy', async function () {
       const strategyContract = await createStrategy(
         0,
         'active',
@@ -324,8 +325,24 @@ describe('Strategy', function () {
         garden1,
       );
       const nav = await strategyContract.getNAV();
-      expect(await strategyContract.capitalAllocated()).to.equal(ethers.utils.parseEther('1'));
-      expect(nav).to.be.gt(ethers.utils.parseEther('0.99'));
+      expect(await strategyContract.capitalAllocated()).to.equal(ONE_ETH);
+      expect(nav).to.be.closeTo(ONE_ETH, ONE_ETH.div(500));
+    });
+
+    it('should get the NAV value of a lend strategy', async function () {
+      console.log('before createStrategy');
+      const strategyContract = await createStrategy(
+        3,
+        'active',
+        [signer1, signer2, signer3],
+        aaveLendIntegration.address,
+        garden1,
+        DEFAULT_STRATEGY_PARAMS,
+        [addresses.tokens.DAI],
+      );
+      const nav = await strategyContract.getNAV();
+      expect(await strategyContract.capitalAllocated()).to.equal(ONE_ETH);
+      expect(nav).to.be.closeTo(ONE_ETH, ONE_ETH.div(500));
     });
 
     it("can't finalize strategy twice", async function () {

@@ -61,8 +61,12 @@ contract LendStrategy is Strategy {
         if (!active || finalized) {
             return 0;
         }
-        // TODO
-        return 0;
+        uint256 numTokensToRedeem =
+            IERC20(ILendIntegration(integration).getInvestmentToken(assetToken)).balanceOf(address(this));
+        uint256 assetTokensAmount =
+            ILendIntegration(integration).getExchangeRatePerToken(assetToken).mul(numTokensToRedeem);
+        uint256 price = _getPrice(garden.reserveAsset(), assetToken);
+        return assetTokensAmount.preciseDiv(price);
     }
 
     /**

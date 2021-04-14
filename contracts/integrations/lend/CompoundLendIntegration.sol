@@ -101,6 +101,7 @@ contract CompoundLendIntegration is LendIntegration {
         return oneCTokenInUderlying.mul(_numTokensToSupply).div(10**18);
     }
 
+    // TODO: Test this
     function _getExchangeRatePerToken(address _assetToken) internal view override returns (uint256) {
         address cToken = assetToCToken[_assetToken];
         uint256 exchangeRateCurrent = ICToken(cToken).exchangeRateStored();
