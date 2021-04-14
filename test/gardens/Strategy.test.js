@@ -219,11 +219,13 @@ describe('Strategy', function () {
     it('should execute strategy', async function () {
       const strategyContract = await createStrategy(
         0,
-        'active',
+        'vote',
         [signer1, signer2, signer3],
         kyberTradeIntegration.address,
         garden1,
       );
+
+      await executeStrategy(garden1, strategyContract, ethers.utils.parseEther('2'), 42);
 
       const [address, active, dataSet, finalized, executedAt, exitedAt] = await strategyContract.getStrategyState();
 
