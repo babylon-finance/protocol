@@ -107,6 +107,7 @@ contract KyberTradeIntegration is TradeIntegration {
             bytes memory
         )
     {
+        // this has 3 percent slippage and doesn't account for the platform fee
         (, uint256 worstRate) =
             IKyberNetworkProxy(kyberNetworkProxyAddress).getExpectedRate(_sendToken, _receiveToken, _sendQuantity);
 

@@ -1,7 +1,6 @@
 const { expect } = require('chai');
 // const superagent = require('superagent');
 const { waffle, ethers } = require('hardhat');
-const { impersonateAddress } = require('../../utils/rpc');
 const { deployFolioFixture } = require('../fixtures/ControllerFixture');
 const { createStrategy, executeStrategy, finalizeStrategy } = require('../fixtures/StrategyHelper');
 const addresses = require('../../utils/addresses');

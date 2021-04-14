@@ -6,4 +6,5 @@ function increaseTime(value) {
 
 module.exports = {
   increaseTime,
+  from: ethers.BigNumber.from,
 };
