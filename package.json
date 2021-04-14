@@ -57,7 +57,7 @@
     "chalk": "^4.1.0",
     "ethereum-waffle": "^3.0.2",
     "ethers": "^5.0.7",
-    "hardhat": "^2.0.5",
+    "hardhat": "^2.1.2",
     "node-watch": "^0.6.4",
     "superagent": "^6.1.0"
   },
