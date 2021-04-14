@@ -81,9 +81,6 @@ contract TimeLockRegistry is Ownable {
     // mapping from token owners under vesting conditions to BABL due amount (e.g. SAFT addresses, team members, advisors)
     mapping(address => uint256) public registeredDistributions;
 
-    // vesting Cliff just for Team Members
-    uint256 private vestingCliff = 365 days;
-
     // vesting for Team Members
     uint256 private teamVesting = 365 days * 4;
 
@@ -196,7 +193,7 @@ contract TimeLockRegistry is Ownable {
      * @param account Address that should have it's distribution removed
      * @return Whether or not it succeeded
      */
-    function cancelDeliveredTokens(address account) public onlyOwner returns (bool) {
+    function cancelDeliveredTokens(address account) external onlyOwner returns (bool) {
         uint256 loosingAmount = token.cancelVestedTokens(account);
 
         // emit cancel event
@@ -212,7 +209,7 @@ contract TimeLockRegistry is Ownable {
      * @param amount Amount to be recovered by the owner of the Time Lock Registry smartcontract from its balance
      * @return Whether or not it succeeded
      */
-    function transferToOwner(uint256 amount) public onlyOwner returns (bool) {
+    function transferToOwner(uint256 amount) external onlyOwner returns (bool) {
         SafeERC20.safeTransfer(token, msg.sender, amount);
         return true;
     }
@@ -259,7 +256,7 @@ contract TimeLockRegistry is Ownable {
     /* ============ Getter Functions ============ */
 
     function checkVesting(address address_)
-        public
+        external
         view
         returns (
             bool team,
@@ -276,7 +273,7 @@ contract TimeLockRegistry is Ownable {
         );
     }
 
-    function checkRegisteredDistribution(address address_) public view returns (uint256 amount) {
+    function checkRegisteredDistribution(address address_) external view returns (uint256 amount) {
         return registeredDistributions[address_];
     }
 }

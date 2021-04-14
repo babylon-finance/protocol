@@ -43,7 +43,7 @@ contract UniswapPoolIntegration is PoolIntegration {
 
     /* ============ Constants ============ */
 
-    uint8 immutable MAX_DELTA_BLOCKS = 5;
+    uint8 public immutable MAX_DELTA_BLOCKS = 5;
 
     /* ============ Constructor ============ */
 

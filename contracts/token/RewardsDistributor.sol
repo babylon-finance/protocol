@@ -91,7 +91,7 @@ contract RewardsDistributor is Ownable {
     }
 
     uint256 public protocolPrincipal = 0; // Total allocation points. Must be the sum of all allocation points (strategyPrincipal) in all strategy pools.
-    mapping(uint256 => ProtocolPerTimestamp) protocolPerTimestamp; // Total allocation points. Must be the sum of all allocation points (strategyPrincipal) in all strategy pools.
+    mapping(uint256 => ProtocolPerTimestamp) public protocolPerTimestamp; // Total allocation points. Must be the sum of all allocation points (strategyPrincipal) in all strategy pools.
     uint256[] public timeList; // TODO needs to be updated anytime there is a checkpoint of new strategy changing
     uint256 public pid = 0; // Initialization of the ID assigning timeListPointer to the checkpoint number
 
@@ -102,10 +102,10 @@ contract RewardsDistributor is Ownable {
         uint256 quarterPower; // Protocol power checkpoint
         uint96 supplyPerQuarter; // Supply per quarter
     }
-    mapping(uint256 => ProtocolPerQuarter) protocolPerQuarter; //
-    mapping(uint256 => bool) isProtocolPerQuarter; // Check if the protocol per quarter data has been initialized
+    mapping(uint256 => ProtocolPerQuarter) public protocolPerQuarter; //
+    mapping(uint256 => bool) public isProtocolPerQuarter; // Check if the protocol per quarter data has been initialized
 
-    mapping(address => mapping(uint256 => uint256)) rewardsPowerOverhead; // Only used if each strategy has power overhead due to changes overtime
+    mapping(address => mapping(uint256 => uint256)) public rewardsPowerOverhead; // Only used if each strategy has power overhead due to changes overtime
 
     uint256 public constant EPOCH_DURATION = 90 days; // Duration of its EPOCH in days
     uint256 public START_TIME; // Starting time of the rewards distribution
@@ -126,7 +126,7 @@ contract RewardsDistributor is Ownable {
 
     /* ============ External Functions ============ */
 
-    function addProtocolPrincipal(uint256 _capital) public onlyStrategy {
+    function addProtocolPrincipal(uint256 _capital) external onlyStrategy {
         strategy = IStrategy(msg.sender);
         protocolPrincipal = protocolPrincipal.add(_capital);
         ProtocolPerTimestamp storage protocolCheckpoint = protocolPerTimestamp[block.timestamp];
@@ -156,7 +156,7 @@ contract RewardsDistributor is Ownable {
         pid++;
     }
 
-    function substractProtocolPrincipal(uint256 _capital) public onlyStrategy {
+    function substractProtocolPrincipal(uint256 _capital) external onlyStrategy {
         protocolPrincipal = protocolPrincipal.sub(_capital);
         ProtocolPerTimestamp storage protocolCheckpoint = protocolPerTimestamp[block.timestamp];
         protocolCheckpoint.principal = protocolPrincipal;
@@ -175,7 +175,7 @@ contract RewardsDistributor is Ownable {
         pid++;
     }
 
-    function getStrategyRewards(address _strategy) public returns (uint96) {
+    function getStrategyRewards(address _strategy) external returns (uint96) {
         strategy = IStrategy(_strategy);
         require(strategy.exitedAt() != 0, 'The strategy has to be finished before calculations');
         if (strategy.strategyRewards() != 0) return strategy.strategyRewards(); // We avoid gas consuming once a strategy got its BABL rewards during its finalization
@@ -262,23 +262,23 @@ contract RewardsDistributor is Ownable {
 
     /* ========== View functions ========== */
 
-    function getProtocolPrincipalByTimestamp(uint256 _timestamp) public view onlyOwner returns (uint256) {
+    function getProtocolPrincipalByTimestamp(uint256 _timestamp) external view onlyOwner returns (uint256) {
         return protocolPerTimestamp[_timestamp].principal;
     }
 
-    function getProtocolPowerPerQuarterByTimestamp(uint256 _timestamp) public view onlyOwner returns (uint256) {
+    function getProtocolPowerPerQuarterByTimestamp(uint256 _timestamp) external view onlyOwner returns (uint256) {
         return protocolPerQuarter[getQuarter(_timestamp)].quarterPower;
     }
 
-    function getProtocolPowerPerQuarterById(uint256 _id) public view onlyOwner returns (uint256) {
+    function getProtocolPowerPerQuarterById(uint256 _id) external view onlyOwner returns (uint256) {
         return protocolPerQuarter[_id].quarterPower;
     }
 
-    function getProtocolSupplyPerQuarterByTimestamp(uint256 _timestamp) public view onlyOwner returns (uint256) {
+    function getProtocolSupplyPerQuarterByTimestamp(uint256 _timestamp) external view onlyOwner returns (uint256) {
         return protocolPerQuarter[getQuarter(_timestamp)].supplyPerQuarter;
     }
 
-    function getEpochRewards(uint256 epochs) public pure returns (uint96[] memory) {
+    function getEpochRewards(uint256 epochs) external pure returns (uint96[] memory) {
         uint96[] memory tokensPerEpoch = new uint96[](epochs);
         for (uint256 i = 0; i <= epochs - 1; i++) {
             tokensPerEpoch[i] = (uint96(tokenSupplyPerQuarter(i.add(1))));
@@ -286,7 +286,7 @@ contract RewardsDistributor is Ownable {
         return tokensPerEpoch;
     }
 
-    function getCheckpoints() public view returns (uint256) {
+    function getCheckpoints() external view returns (uint256) {
         return pid;
     }
 
@@ -301,7 +301,7 @@ contract RewardsDistributor is Ownable {
         return (quarters.add(1), startingQuarter.add(1));
     }
 
-    function getSupplyForPeriod(uint256 _from, uint256 _to) public view returns (uint96[] memory) {
+    function getSupplyForPeriod(uint256 _from, uint256 _to) external view returns (uint96[] memory) {
         // check number of quarters and what quarters are they
         (uint256 quarters, uint256 startingQuarter) = getRewardsWindow(_from, _to);
         uint96[] memory supplyPerQuarter = new uint96[](quarters);
@@ -335,7 +335,7 @@ contract RewardsDistributor is Ownable {
     }
 
     function checkProtocol(uint256 _time)
-        public
+        external
         view
         returns (
             uint256 principal,
@@ -355,7 +355,7 @@ contract RewardsDistributor is Ownable {
     }
 
     function checkQuarter(uint256 _num)
-        public
+        external
         view
         returns (
             uint256 quarterPrincipal,

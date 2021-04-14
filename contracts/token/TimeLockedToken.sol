@@ -199,7 +199,7 @@ abstract contract TimeLockedToken is VoteToken {
      *
      * @dev Claim msg.sender tokens (if any available in the registry)
      */
-    function claimMyTokens() public {
+    function claimMyTokens() external {
         // claim msg.sender tokens from timeLockRegistry
         uint256 amount = timeLockRegistry.claim(msg.sender);
         // After a proper claim, locked tokens of Team and Advisors profiles are under restricted special vesting conditions so they automatic grant
@@ -283,7 +283,7 @@ abstract contract TimeLockedToken is VoteToken {
      * @notice Get the address of Time Lock Registry
      * @return Address of the Time Lock Registry
      */
-    function getTimeLockRegistry() public view returns (address) {
+    function getTimeLockRegistry() external view returns (address) {
         return address(timeLockRegistry);
     }
 
