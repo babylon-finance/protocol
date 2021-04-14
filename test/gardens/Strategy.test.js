@@ -30,9 +30,13 @@ describe('Strategy', function () {
   let garden2;
   let strategy11;
   let strategy21;
-  let kyberTradeIntegration;
   let wethToken;
+  let daiWethPair;
   let aaveLendIntegration;
+  let kyberTradeIntegration;
+  let uniswapPoolIntegration;
+  let balancerIntegration;
+  let oneInchPoolIntegration;
 
   beforeEach(async () => {
     ({
@@ -46,12 +50,16 @@ describe('Strategy', function () {
       signer3,
       aaveLendIntegration,
       kyberTradeIntegration,
+      uniswapPoolIntegration,
+      balancerIntegration,
+      oneInchPoolIntegration,
     } = await loadFixture(deployFolioFixture));
 
     strategyDataset = await ethers.getContractAt('Strategy', strategy11);
     strategyCandidate = await ethers.getContractAt('Strategy', strategy21);
 
     wethToken = await ethers.getContractAt('IERC20', addresses.tokens.WETH);
+    daiWethPair = await ethers.getContractAt('IUniswapV2PairB', addresses.uniswap.pairs.wethdai);
   });
 
   describe('Strategy Deployment', async function () {
@@ -330,7 +338,6 @@ describe('Strategy', function () {
     });
 
     it('should get the NAV value of a lend strategy', async function () {
-      console.log('before createStrategy');
       const strategyContract = await createStrategy(
         3,
         'active',
@@ -343,6 +350,54 @@ describe('Strategy', function () {
       const nav = await strategyContract.getNAV();
       expect(await strategyContract.capitalAllocated()).to.equal(ONE_ETH);
       expect(nav).to.be.closeTo(ONE_ETH, ONE_ETH.div(500));
+    });
+
+    it('should get the NAV value of a BalancerPool strategy', async function () {
+      const strategyContract = await createStrategy(
+        1,
+        'active',
+        [signer1, signer2, signer3],
+        balancerIntegration.address,
+        garden1,
+      );
+
+      const nav = await strategyContract.getNAV();
+      expect(await strategyContract.capitalAllocated()).to.equal(ONE_ETH);
+      // So much slipage at Balancer 😭
+      expect(nav).to.be.closeTo(ONE_ETH, ONE_ETH.div(50));
+    });
+
+    it('should get the NAV value of a OneInchPool strategy', async function () {
+      const daiWethOneInchPair = await ethers.getContractAt('IMooniswap', addresses.oneinch.pools.wethdai);
+      console.log('address', daiWethOneInchPair.address);
+      const strategyContract = await createStrategy(
+        1,
+        'active',
+        [signer1, signer2, signer3],
+        oneInchPoolIntegration.address,
+        garden1,
+        DEFAULT_STRATEGY_PARAMS,
+        [daiWethOneInchPair.address],
+      );
+
+      const nav = await strategyContract.getNAV();
+      expect(await strategyContract.capitalAllocated()).to.equal(ONE_ETH);
+      expect(nav).to.be.closeTo(ONE_ETH, ONE_ETH.div(100));
+    });
+
+    it('should get the NAV value of a UniswapPool strategy', async function () {
+      const strategyContract = await createStrategy(
+        1,
+        'active',
+        [signer1, signer2, signer3],
+        uniswapPoolIntegration.address,
+        garden1,
+        DEFAULT_STRATEGY_PARAMS,
+        [daiWethPair.address],
+      );
+      const nav = await strategyContract.getNAV();
+      expect(await strategyContract.capitalAllocated()).to.equal(ONE_ETH);
+      expect(nav).to.be.closeTo(ONE_ETH, ONE_ETH.div(400));
     });
 
     it("can't finalize strategy twice", async function () {

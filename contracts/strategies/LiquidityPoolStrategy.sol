@@ -63,8 +63,16 @@ contract LiquidityPoolStrategy is Strategy {
         if (!active || finalized) {
             return 0;
         }
-        // TODO
-        return 0;
+        uint256 NAV;
+        uint256 totalSupply = IERC20(pool).totalSupply();
+        uint256 lpTokens = IERC20(pool).balanceOf(address(this));
+        for (uint256 i = 0; i < poolTokens.length; i++) {
+            uint256 price =
+                _getPrice(garden.reserveAsset(), poolTokens[i] != address(0) ? poolTokens[i] : garden.weth());
+            uint256 balance = poolTokens[i] != address(0) ? IERC20(poolTokens[i]).balanceOf(pool) : pool.balance;
+            NAV += balance.mul(lpTokens).div(totalSupply).preciseDiv(price);
+        }
+        return NAV;
     }
 
     /**

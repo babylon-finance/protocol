@@ -57,6 +57,8 @@ module.exports = {
   networks: {
     // Local Hardhat network using alchemy for pinned block
     hardhat: {
+      blockGasLimit: 0x1fffffffffffff,
+      allowUnlimitedContractSize: true,
       forking: {
         url: 'https://eth-mainnet.alchemyapi.io/v2/sncj01nDcsAQr_QWyhYWNkg3qzW2o9kt',
         blockNumber: 12160000,

@@ -75,7 +75,6 @@ describe('OneInchPoolIntegrationTest', function () {
             value: ethers.utils.parseEther('0.1'),
           },
         );
-      // console.log('balance', ethers.utils.formatEther(await daiWethPair.balanceOf(signer1.address)));
       expect(await daiWethPair.balanceOf(signer1.address)).to.be.gt(0);
     });
 
