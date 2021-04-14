@@ -134,7 +134,7 @@ interface IBabController {
 
     function getMaxCooldownPeriod() external view returns (uint256);
 
-    function getProtocolPerformanceFee() external view returns (uint256);
+    function protocolPerformanceFee() external view returns (uint256);
 
     function protocolManagementFee() external view returns (uint256);
 

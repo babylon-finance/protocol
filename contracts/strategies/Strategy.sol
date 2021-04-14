@@ -610,7 +610,7 @@ abstract contract Strategy is ReentrancyGuard, Initializable {
         if (capitalReturned >= capitalAllocated) {
             uint256 profits = capitalReturned - capitalAllocated; // in reserve asset (weth)
             // Send weth performance fee to the protocol
-            protocolProfits = IBabController(controller).getProtocolPerformanceFee().preciseMul(profits);
+            protocolProfits = IBabController(controller).protocolPerformanceFee().preciseMul(profits);
             IERC20(reserveAsset).safeTransferFrom(
                 address(this),
                 IBabController(controller).treasury(),
