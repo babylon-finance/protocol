@@ -67,8 +67,8 @@
     "prettier:check": "prettier --check .",
     "lint:contracts": "solhint contracts/**/*.sol",
     "lint:tests": "eslint 'test/**/*.test.js'",
-    "compile": "hardhat compile --no-typechain",
-    "typechain": "hardhat compile",
+    "compile": "hardhat compile --max-memory 8096 --no-typechain",
+    "typechain": "hardhat compile --max-memory 8096",
     "export": "hardhat run scripts/export.js",
     "deploy": "hardhat run scripts/deploy.js --network localhost && yarn run export",
     "deploy:mainnet": "hardhat run scripts/deploy.js --network mainnet",
@@ -79,9 +79,9 @@
     "generate": "hardhat generate",
     "balance": "hardhat balance",
     "send": "hardhat send",
-    "test": "hardhat test --network hardhat",
+    "test": "hardhat test --network hardhat --max-memory 8096",
     "gas-report": "env REPORT_GAS=1 yarn test",
-    "estimate-size": "yarn run hardhat size-contracts",
-    "coverage": "hardhat coverage"
+    "estimate-size": "yarn run hardhat size-contracts --max-memory 8096",
+    "coverage": "hardhat coverage --max-memory 8096"
   }
 }
