@@ -192,7 +192,7 @@ contract GovernorAlpha is Ownable {
         string[] memory signatures,
         bytes[] memory calldatas,
         string memory description
-    ) public returns (uint256) {
+    ) external returns (uint256) {
         require(
             babl.getPriorVotes(msg.sender, sub256(block.number, 1)) > proposalThreshold(),
             'GovernorAlpha::propose: proposer votes below proposal threshold'
@@ -261,7 +261,7 @@ contract GovernorAlpha is Ownable {
      * @notice Allows to queue a specific proposal in state = Succeeded
      * @param proposalId The ID of the proposal
      */
-    function queue(uint256 proposalId) public {
+    function queue(uint256 proposalId) external {
         require(
             state(proposalId) == ProposalState.Succeeded,
             'GovernorAlpha::queue: proposal can only be queued if it is succeeded'
@@ -305,7 +305,7 @@ contract GovernorAlpha is Ownable {
      * @notice Allows to queue or revert a transaction part of a proposal (not queued earlier) within the timelock
      * @param proposalId The ID of the proposal
      */
-    function execute(uint256 proposalId) public payable {
+    function execute(uint256 proposalId) external payable {
         require(
             state(proposalId) == ProposalState.Queued,
             'GovernorAlpha::execute: proposal can only be executed if it is queued'
@@ -331,7 +331,7 @@ contract GovernorAlpha is Ownable {
      * @param proposalId The ID of the proposal
      * @param support Boolean whether it supports or not the proposal
      */
-    function castVote(uint256 proposalId, bool support) public {
+    function castVote(uint256 proposalId, bool support) external {
         return _castVote(msg.sender, proposalId, support);
     }
 
@@ -351,7 +351,7 @@ contract GovernorAlpha is Ownable {
         uint8 v,
         bytes32 r,
         bytes32 s
-    ) public {
+    ) external {
         bytes32 domainSeparator =
             keccak256(abi.encode(DOMAIN_TYPEHASH, keccak256(bytes(name)), getChainId(), address(this)));
         bytes32 structHash = keccak256(abi.encode(BALLOT_TYPEHASH, proposalId, support));
@@ -367,7 +367,7 @@ contract GovernorAlpha is Ownable {
      * @notice Allows the Pause Guardian to cancel a proposal if state != executed
      * @param proposalId The ID of the proposal
      */
-    function cancel(uint256 proposalId) public {
+    function cancel(uint256 proposalId) external {
         ProposalState _state = state(proposalId);
         require(_state != ProposalState.Executed, 'GovernorAlpha::cancel: cannot cancel executed proposal');
 
@@ -398,7 +398,7 @@ contract GovernorAlpha is Ownable {
      *
      * @notice Allows the Pause Guardian to execute acceptAdmin in the timelock instance
      */
-    function __acceptAdmin() public {
+    function __acceptAdmin() external {
         // The Pause Guardian is capable of disabling protocol functionality. Used only in the event of an unforeseen vulnerability and just for specific operations.
         require(msg.sender == guardian, 'GovernorAlpha::__acceptAdmin: sender must be gov guardian');
         timelock.acceptAdmin();
@@ -409,7 +409,7 @@ contract GovernorAlpha is Ownable {
      *
      * @notice Allows the Pause Guardian to abdicate as Guardian
      */
-    function __abdicate() public {
+    function __abdicate() external {
         // The Pause Guardian is capable of disabling protocol functionality. Used only in the event of an unforeseen vulnerability and just for specific operations.
         require(msg.sender == guardian, 'GovernorAlpha::__abdicate: sender must be gov guardian');
         guardian = address(0);
@@ -420,7 +420,7 @@ contract GovernorAlpha is Ownable {
      *
      * @notice Allows the Pause Guardian to queue a set of timelock pending admin
      */
-    function __queueSetTimelockPendingAdmin(address newPendingAdmin, uint256 eta) public {
+    function __queueSetTimelockPendingAdmin(address newPendingAdmin, uint256 eta) external {
         // The Pause Guardian is capable of disabling protocol functionality. Used only in the event of an unforeseen vulnerability and just for specific operations.
         require(msg.sender == guardian, 'GovernorAlpha::__queueSetTimelockPendingAdmin: sender must be gov guardian');
         timelock.queueTransaction(address(timelock), 0, 'setPendingAdmin(address)', abi.encode(newPendingAdmin), eta);
@@ -431,7 +431,7 @@ contract GovernorAlpha is Ownable {
      *
      * @notice Allows the Pause Guardian to execute the set of timelock pending admin
      */
-    function __executeSetTimelockPendingAdmin(address newPendingAdmin, uint256 eta) public {
+    function __executeSetTimelockPendingAdmin(address newPendingAdmin, uint256 eta) external {
         // The Pause Guardian is capable of disabling protocol functionality. Used only in the event of an unforeseen vulnerability and just for specific operations.
         require(msg.sender == guardian, 'GovernorAlpha::__executeSetTimelockPendingAdmin: sender must be gov guardian');
         timelock.executeTransaction(address(timelock), 0, 'setPendingAdmin(address)', abi.encode(newPendingAdmin), eta);
@@ -451,7 +451,7 @@ contract GovernorAlpha is Ownable {
      *
      */
     function getActions(uint256 proposalId)
-        public
+        external
         view
         returns (
             address[] memory targets,
@@ -472,7 +472,7 @@ contract GovernorAlpha is Ownable {
      * @param voter The ID of the proposal
      * @return The receipt
      */
-    function getReceipt(uint256 proposalId, address voter) public view returns (Receipt memory) {
+    function getReceipt(uint256 proposalId, address voter) external view returns (Receipt memory) {
         return proposals[proposalId].receipts[voter];
     }
 

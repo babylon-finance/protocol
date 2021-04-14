@@ -439,7 +439,7 @@ abstract contract BaseGarden is ERC20Upgradeable {
      * @return  address[]        Returns list of addresses
      */
 
-    function getStrategies() public view returns (address[] memory) {
+    function getStrategies() external view returns (address[] memory) {
         return strategies;
     }
 
@@ -449,7 +449,7 @@ abstract contract BaseGarden is ERC20Upgradeable {
      * @return  address[]        Returns list of addresses
      */
 
-    function getFinalizedStrategies() public view returns (address[] memory) {
+    function getFinalizedStrategies() external view returns (address[] memory) {
         return finalizedStrategies;
     }
 
@@ -458,7 +458,7 @@ abstract contract BaseGarden is ERC20Upgradeable {
     }
 
     function getContributor(address _contributor)
-        public
+        external
         view
         returns (
             uint256,

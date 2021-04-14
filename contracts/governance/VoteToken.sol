@@ -92,7 +92,7 @@ abstract contract VoteToken is Context, ERC20, Ownable, IVoteToken, ReentrancyGu
      * @param delegatee The address to delegate votes to
      */
 
-    function delegate(address delegatee) public override {
+    function delegate(address delegatee) external override {
         return _delegate(msg.sender, delegatee);
     }
 
@@ -115,7 +115,7 @@ abstract contract VoteToken is Context, ERC20, Ownable, IVoteToken, ReentrancyGu
         uint8 v,
         bytes32 r,
         bytes32 s
-    ) public override {
+    ) external override {
         bytes32 domainSeparator =
             keccak256(abi.encode(DOMAIN_TYPEHASH, keccak256(bytes(name())), getChainId(), address(this)));
         bytes32 structHash = keccak256(abi.encode(DELEGATION_TYPEHASH, delegatee, nonce, expiry));
@@ -135,7 +135,7 @@ abstract contract VoteToken is Context, ERC20, Ownable, IVoteToken, ReentrancyGu
      * @param account Account to get voting power for
      * @return Voting power for an account
      */
-    function getCurrentVotes(address account) public view virtual override returns (uint96) {
+    function getCurrentVotes(address account) external view virtual override returns (uint96) {
         uint32 nCheckpoints = numCheckpoints[account];
         return nCheckpoints > 0 ? checkpoints[account][nCheckpoints - 1].votes : 0;
     }
@@ -147,7 +147,7 @@ abstract contract VoteToken is Context, ERC20, Ownable, IVoteToken, ReentrancyGu
      * @param blockNumber Block to get voting power at
      * @return Voting power for an account at specific block
      */
-    function getPriorVotes(address account, uint256 blockNumber) public view virtual override returns (uint96) {
+    function getPriorVotes(address account, uint256 blockNumber) external view virtual override returns (uint96) {
         require(blockNumber < block.number, 'BABLToken::getPriorVotes: not yet determined');
 
         uint32 nCheckpoints = numCheckpoints[account];
@@ -181,20 +181,25 @@ abstract contract VoteToken is Context, ERC20, Ownable, IVoteToken, ReentrancyGu
         return checkpoints[account][lower].votes;
     }
 
-    function getMyDelegatee() public view override returns (address) {
+    function getMyDelegatee() external view override returns (address) {
         return delegates[msg.sender];
     }
 
-    function getDelegatee(address account) public view override returns (address) {
+    function getDelegatee(address account) external view override returns (address) {
         return delegates[account];
     }
 
-    function getCheckpoints(address account, uint32 id) public view override returns (uint32 fromBlock, uint96 votes) {
+    function getCheckpoints(address account, uint32 id)
+        external
+        view
+        override
+        returns (uint32 fromBlock, uint96 votes)
+    {
         Checkpoint storage getCheckpoint = checkpoints[account][id];
         return (getCheckpoint.fromBlock, getCheckpoint.votes);
     }
 
-    function getNumberOfCheckpoints(address account) public view override returns (uint32) {
+    function getNumberOfCheckpoints(address account) external view override returns (uint32) {
         return numCheckpoints[account];
     }
 

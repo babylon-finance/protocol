@@ -201,20 +201,19 @@ abstract contract Strategy is ReentrancyGuard, Initializable {
         uint256 _strategyDuration,
         uint256 _expectedReturn,
         uint256 _minRebalanceCapital
-    ) public initializer {
+    ) external initializer {
         controller = IBabController(_controller);
-        garden = IGarden(_garden);
-        require(
-            controller.isValidIntegration(ITradeIntegration(_integration).getName(), _integration),
-            'Integration must be valid'
-        );
         require(controller.isSystemContract(_garden), 'Must be a valid garden');
-
+        garden = IGarden(_garden);
         require(IERC20(address(garden)).balanceOf(_strategist) > 0, 'Strategist mush have a stake');
         require(_stake > garden.totalSupply().div(100), 'Stake amount must be at least 1%');
         require(
             _strategyDuration >= garden.minIdeaDuration() && _strategyDuration <= garden.maxIdeaDuration(),
             'Duration must be in range'
+        );
+        require(
+            controller.isValidIntegration(ITradeIntegration(_integration).getName(), _integration),
+            'Integration must be valid'
         );
         require(_minRebalanceCapital > 0, 'Min capital be greater than 0');
         require(_maxCapitalRequested >= _minRebalanceCapital, 'The max amount >= one chunk');
@@ -275,7 +274,7 @@ abstract contract Strategy is ReentrancyGuard, Initializable {
      * @param _capital                  The capital to allocate to this strategy.
      * @param _fee                      The fee paid to keeper to compensate the gas cost.
      */
-    function executeStrategy(uint256 _capital, uint256 _fee) public onlyKeeper(_fee) nonReentrant onlyActiveGarden {
+    function executeStrategy(uint256 _capital, uint256 _fee) external onlyKeeper(_fee) nonReentrant onlyActiveGarden {
         require(active, 'Idea needs to be active');
         require(capitalAllocated.add(_capital) <= maxCapitalRequested, 'Max capital reached');
         require(_capital >= minRebalanceCapital, 'Amount needs to be more than min');

@@ -207,7 +207,7 @@ contract BABLToken is TimeLockedToken {
      *
      * @return Returns the value of maxSupplyAllowed at the time
      */
-    function maxSupply() public view returns (uint96, uint256) {
+    function maxSupply() external view returns (uint96, uint256) {
         uint96 safeMaxSupply =
             safe96(maxSupplyAllowed, 'BABLToken::maxSupplyAllowed: maxSupplyAllowed exceeds 96 bits'); // Overflow check
         return (safeMaxSupply, maxSupplyAllowedAfter);

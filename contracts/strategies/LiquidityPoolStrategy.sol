@@ -45,7 +45,7 @@ contract LiquidityPoolStrategy is Strategy {
      *
      * @param _pool                           Liquidity pool
      */
-    function setData(address _pool) public onlyGardenAndNotSet {
+    function setData(address _pool) external onlyGardenAndNotSet {
         require(IPoolIntegration(integration).isPool(_pool), 'Not a valid pool');
 
         kind = 1;

@@ -31,7 +31,7 @@ import {Clones} from '@openzeppelin/contracts/proxy/Clones.sol';
  * Factory to create investment strategy contracts
  */
 contract LendStrategyFactory {
-    address immutable lendStrategy;
+    address public immutable lendStrategy;
 
     constructor() {
         lendStrategy = address(new LendStrategy());
