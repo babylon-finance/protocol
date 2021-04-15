@@ -549,7 +549,7 @@ contract BabController is OwnableUpgradeable, IBabController {
             gardenValuer == _contractAddress ||
             priceOracle == _contractAddress ||
             owner() == _contractAddress ||
-            (isGarden[IStrategy(_contractAddress).garden()] &&
+            (isGarden[address(IStrategy(_contractAddress).garden())] &&
                 IGarden(IStrategy(_contractAddress).garden()).isStrategy(_contractAddress)) ||
             _contractAddress == address(this));
     }
