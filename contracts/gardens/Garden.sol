@@ -31,6 +31,7 @@ import {SignedSafeMath} from '@openzeppelin/contracts/math/SignedSafeMath.sol';
 import {Errors, _require} from '../lib/BabylonErrors.sol';
 import {AddressArrayUtils} from '../lib/AddressArrayUtils.sol';
 import {PreciseUnitMath} from '../lib/PreciseUnitMath.sol';
+import {Math} from '../lib/Math.sol';
 
 import {IRewardsDistributor} from '../interfaces/IRewardsDistributor.sol';
 import {IBabController} from '../interfaces/IBabController.sol';
@@ -45,16 +46,19 @@ import {IWETH} from '../interfaces/external/weth/IWETH.sol';
  * Class that holds common garden-related state and functions
  */
 contract Garden is ERC20Upgradeable, ReentrancyGuard {
-    using SafeCast for uint256;
     using SafeCast for int256;
-    using SafeMath for uint256;
     using SignedSafeMath for int256;
-    using PreciseUnitMath for uint256;
     using PreciseUnitMath for int256;
     using SafeDecimalMath for int256;
+
+    using SafeCast for uint256;
+    using SafeMath for uint256;
+    using PreciseUnitMath for uint256;
     using SafeDecimalMath for uint256;
+
     using Address for address;
     using AddressArrayUtils for address[];
+
     using SafeERC20Upgradeable for IERC20Upgradeable;
 
     /* ============ Events ============ */
@@ -791,7 +795,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard {
         uint256 lockedAmount;
         for (uint256 i = 0; i <= strategies.length - 1; i++) {
             IStrategy strategy = IStrategy(strategies[i]);
-            uint256 votes = uint256(_abs(strategy.getUserVotes(_contributor)));
+            uint256 votes = uint256(Math.abs(strategy.getUserVotes(_contributor)));
             if (votes > 0) {
                 lockedAmount += votes;
             }
@@ -1143,9 +1147,5 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard {
         contributor.timeListPointer.push(block.timestamp);
         contributor.pid++;
         contributor.lastUpdated = block.timestamp;
-    }
-
-    function _abs(int256 x) private pure returns (int256) {
-        return x >= 0 ? x : -x;
     }
 }
