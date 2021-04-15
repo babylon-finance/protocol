@@ -17,7 +17,6 @@
 
 pragma solidity 0.7.4;
 
-import 'hardhat/console.sol';
 import {TimeLockRegistry} from './TimeLockRegistry.sol';
 import {SafeMath} from '@openzeppelin/contracts/math/SafeMath.sol';
 import {VoteToken} from '../governance/VoteToken.sol';

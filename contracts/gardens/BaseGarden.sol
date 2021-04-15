@@ -17,7 +17,6 @@
 
 pragma solidity 0.7.4;
 
-import 'hardhat/console.sol';
 import {Address} from '@openzeppelin/contracts/utils/Address.sol';
 import {ERC20Upgradeable} from '@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol';
 import {IERC20Upgradeable} from '@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol';
@@ -51,16 +50,16 @@ abstract contract BaseGarden is ERC20Upgradeable {
     using SafeERC20Upgradeable for IERC20Upgradeable;
 
     /* ============ Events ============ */
-    event ReserveAssetChanged(address indexed _reserveAsset);
+    event ReserveAssetChanged(address indexed _reserveAsset, address _oldReserve);
     event PrincipalChanged(uint256 _newAmount, uint256 _oldAmount);
-    event GardenTokenDeposited(
+    event GardenDeposit(
         address indexed _to,
         uint256 reserveDeposited,
         uint256 gardenTokenQuantity,
         uint256 protocolFees,
         uint256 timestamp
     );
-    event GardenTokenWithdrawn(
+    event GardenWithdrawal(
         address indexed _from,
         address indexed _to,
         uint256 reserveReceived,
@@ -272,13 +271,14 @@ abstract contract BaseGarden is ERC20Upgradeable {
      * @param _reserveAsset                 Address of the new reserve asset
      */
     function editReserveAsset(address _reserveAsset) external onlyProtocol {
+        address oldReserve = reserveAsset;
         reserveAsset = _reserveAsset;
 
-        emit ReserveAssetChanged(_reserveAsset);
+        emit ReserveAssetChanged(_reserveAsset, oldReserve);
     }
 
     /**
-     * PRIVILEGED Manager, protocol FUNCTION. When a Garden is disabled, deposits are disabled.
+     * PRIVILEGED Manager, protocol FUNCTION. When a Garden is active, deposits are enabled.
      */
     function setActive() external onlyProtocol {
         _require(!active, Errors.ONLY_INACTIVE);
@@ -294,12 +294,14 @@ abstract contract BaseGarden is ERC20Upgradeable {
     }
 
     /**
-     * Function that allows the reserve balance to be updated
+     * Function that allows the principal of the garden to be updated by strategies
      *
      * @param _amount             Amount of the reserve balance
      */
     function updatePrincipal(uint256 _amount) external onlyStrategy {
-        _updatePrincipal(_amount);
+        uint256 oldAmount = principal;
+        principal = _amount;
+        emit PrincipalChanged(_amount, oldAmount);
     }
 
     /* ============ Strategy Functions ============ */
@@ -412,6 +414,10 @@ abstract contract BaseGarden is ERC20Upgradeable {
         strategyMapping[_strategy] = false;
     }
 
+    /*
+     * Burns the stake of the strategist of a given strategy
+     * @param _strategy      Strategy
+     */
     function burnStrategistStake(address _strategist, uint256 _amount) external onlyStrategy {
         _burn(_strategist, _amount);
     }
@@ -470,7 +476,7 @@ abstract contract BaseGarden is ERC20Upgradeable {
     /* ============ Internal Functions ============ */
 
     /**
-     * Function that allows the reserve balance to be updated
+     * Function that allows the principal to be updated
      *
      * @param _amount             Amount of the reserve balance
      */
@@ -482,6 +488,8 @@ abstract contract BaseGarden is ERC20Upgradeable {
 
     /**
      * Pays the _feeQuantity from the _garden denominated in _token to the protocol fee recipient
+     * @param _token                   Address of the token to pay with
+     * @param _feeQuantity             Fee to transfer
      */
     function payProtocolFeeFromGarden(address _token, uint256 _feeQuantity) internal {
         if (_feeQuantity > 0) {

@@ -18,7 +18,6 @@
 
 pragma solidity 0.7.4;
 
-import 'hardhat/console.sol';
 import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import {Strategy} from './Strategy.sol';
 import {IGarden} from '../interfaces/IGarden.sol';
@@ -64,6 +63,7 @@ contract LongStrategy is Strategy {
 
     /**
      * Enters the long strategy
+     * @param _capital      Amount of capital received from the garden
      */
     function _enterStrategy(uint256 _capital) internal override {
         _trade(garden.reserveAsset(), _capital, longToken);

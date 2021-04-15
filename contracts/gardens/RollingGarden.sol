@@ -18,7 +18,6 @@
 
 pragma solidity 0.7.4;
 
-import 'hardhat/console.sol';
 import {ERC20} from '@openzeppelin/contracts/token/ERC20/ERC20.sol';
 import {ReentrancyGuard} from '@openzeppelin/contracts/utils/ReentrancyGuard.sol';
 import {Address} from '@openzeppelin/contracts/utils/Address.sol';
@@ -174,7 +173,7 @@ contract RollingGarden is ReentrancyGuard, BaseGarden {
 
         _require(totalSupply() > 0, Errors.MIN_LIQUIDITY);
         active = true;
-        emit GardenTokenDeposited(msg.sender, msg.value, msg.value, 0, block.timestamp);
+        emit GardenDeposit(msg.sender, msg.value, msg.value, 0, block.timestamp);
     }
 
     /**
@@ -220,13 +219,7 @@ contract RollingGarden is ReentrancyGuard, BaseGarden {
         _mint(_to, depositInfo.gardenTokenQuantity);
         _updateContributorDepositInfo(previousBalance);
         _updatePrincipal(principal.add(depositInfo.netFlowQuantity));
-        emit GardenTokenDeposited(
-            _to,
-            msg.value,
-            depositInfo.gardenTokenQuantity,
-            depositInfo.protocolFees,
-            block.timestamp
-        );
+        emit GardenDeposit(_to, msg.value, depositInfo.gardenTokenQuantity, depositInfo.protocolFees, block.timestamp);
     }
 
     /**
@@ -298,7 +291,6 @@ contract RollingGarden is ReentrancyGuard, BaseGarden {
      * When an strategy finishes execution, contributors might want
      * to know the profits and BABL rewards for their participation in the different strategies
      *
-     *
      * @param _finalizedStrategies       Array of the finalized strategies
      */
 
@@ -318,7 +310,13 @@ contract RollingGarden is ReentrancyGuard, BaseGarden {
      * @param _amount                        Amount of WETH to convert to ETH to set aside
      */
     function startWithdrawalWindow(uint256 _amount) external onlyStrategyOrProtocol {
-        withdrawalsOpenUntil = block.timestamp.add(withdrawalWindowAfterStrategyCompletes);
+        if (withdrawalsOpenUntil > block.timestamp) {
+            withdrawalsOpenUntil = block.timestamp.add(
+                withdrawalWindowAfterStrategyCompletes.sub(withdrawalsOpenUntil.sub(block.timestamp))
+            );
+        } else {
+            withdrawalsOpenUntil = block.timestamp.add(withdrawalWindowAfterStrategyCompletes);
+        }
         IWETH(WETH).withdraw(_amount);
     }
 
@@ -421,7 +419,7 @@ contract RollingGarden is ReentrancyGuard, BaseGarden {
         uint256 lockedAmount;
         for (uint256 i = 0; i <= strategies.length - 1; i++) {
             IStrategy strategy = IStrategy(strategies[i]);
-            uint256 votes = uint256(abs(strategy.getUserVotes(_contributor)));
+            uint256 votes = uint256(_abs(strategy.getUserVotes(_contributor)));
             if (votes > 0) {
                 lockedAmount += votes;
             }
@@ -518,7 +516,7 @@ contract RollingGarden is ReentrancyGuard, BaseGarden {
         _require(principal >= outflow, Errors.BALANCE_TOO_LOW);
         _updatePrincipal(principal.sub(outflow));
 
-        emit GardenTokenWithdrawn(
+        emit GardenWithdrawal(
             msg.sender,
             _to,
             withdrawalInfo.netFlowQuantity,
@@ -761,7 +759,7 @@ contract RollingGarden is ReentrancyGuard, BaseGarden {
         }
     }
 
-    function abs(int256 x) private pure returns (int256) {
+    function _abs(int256 x) private pure returns (int256) {
         return x >= 0 ? x : -x;
     }
 }

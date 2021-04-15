@@ -17,17 +17,6 @@
 
 pragma solidity 0.7.4;
 
-/**
- * @title Rewards Distributor implementing the BABL Mining Program
- * @author Babylon Finance
- * Rewards Distributor contract is a smart contract used to calculate and distribute all the BABL rewards of the BABL Mining Program
- * along the time reserve for executed strategies. It implements a supply curve to distribute 500K BABL along the time.
- * The supply curve is designed to optimize the long-term sustainability of the protocol.
- * The rewards are front-loaded but they last for more than 10 years, slowly decreasing quarter by quarter.
- * For that, it houses the state of the protocol power along the time as each strategy power is compared to the whole protocol usage.
- */
-
-import 'hardhat/console.sol';
 import {TimeLockedToken} from './TimeLockedToken.sol';
 
 import {Ownable} from '@openzeppelin/contracts/access/Ownable.sol';
@@ -46,6 +35,15 @@ import {IStrategy} from '../interfaces/IStrategy.sol';
 import {TimeLockedToken} from './TimeLockedToken.sol';
 import {IRewardsDistributor} from '../interfaces/IRewardsDistributor.sol';
 
+/**
+ * @title Rewards Distributor implementing the BABL Mining Program
+ * @author Babylon Finance
+ * Rewards Distributor contract is a smart contract used to calculate and distribute all the BABL rewards of the BABL Mining Program
+ * along the time reserve for executed strategies. It implements a supply curve to distribute 500K BABL along the time.
+ * The supply curve is designed to optimize the long-term sustainability of the protocol.
+ * The rewards are front-loaded but they last for more than 10 years, slowly decreasing quarter by quarter.
+ * For that, it houses the state of the protocol power along the time as each strategy power is compared to the whole protocol usage.
+ */
 contract RewardsDistributor is Ownable {
     using SafeMath for uint256;
     using SafeMath for int256;

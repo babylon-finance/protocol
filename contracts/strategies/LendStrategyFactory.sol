@@ -18,7 +18,6 @@
 
 pragma solidity 0.7.4;
 
-import 'hardhat/console.sol';
 import {Strategy} from './Strategy.sol';
 import {LendStrategy} from './LendStrategy.sol';
 import {IStrategy} from '../interfaces/IStrategy.sol';

@@ -18,7 +18,6 @@
 
 pragma solidity 0.7.4;
 
-import 'hardhat/console.sol';
 import {SafeMath} from '@openzeppelin/contracts/math/SafeMath.sol';
 import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import {PreciseUnitMath} from '../lib/PreciseUnitMath.sol';
@@ -71,6 +70,7 @@ contract LendStrategy is Strategy {
 
     /**
      * Enters the lend strategy
+     * @param _capital      Amount of capital received from the garden
      */
     function _enterStrategy(uint256 _capital) internal override {
         if (assetToken != garden.reserveAsset()) {

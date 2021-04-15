@@ -34,6 +34,14 @@ contract GardenFactory {
         rollingGarden = address(new RollingGarden());
     }
 
+    /**
+     * Creates a garden using minimal proxies
+     * @param _reserveAsset           Address of the reserve asset ERC20
+     * @param _controller             Address of the controller
+     * @param _creator                Address of the creator
+     * @param _name                   Name of the Garden
+     * @param _symbol                 Symbol of the Garden
+     */
     function createRollingGarden(
         address _reserveAsset,
         address _controller,
