@@ -84,9 +84,6 @@ contract RewardsDistributor is Ownable {
     // Controller contract
     IBabController public controller;
 
-    // Strategies that the reward calculations belong to
-    IStrategy public strategy;
-
     // BABL Token contract
     TimeLockedToken public babltoken;
 
@@ -134,7 +131,7 @@ contract RewardsDistributor is Ownable {
     /* ============ External Functions ============ */
 
     function addProtocolPrincipal(uint256 _capital) external onlyStrategy {
-        strategy = IStrategy(msg.sender);
+        IStrategy strategy = IStrategy(msg.sender);
         protocolPrincipal = protocolPrincipal.add(_capital);
         ProtocolPerTimestamp storage protocolCheckpoint = protocolPerTimestamp[block.timestamp];
         protocolCheckpoint.principal = protocolPrincipal;
@@ -183,7 +180,7 @@ contract RewardsDistributor is Ownable {
     }
 
     function getStrategyRewards(address _strategy) external returns (uint96) {
-        strategy = IStrategy(_strategy);
+        IStrategy strategy = IStrategy(_strategy);
         require(strategy.exitedAt() != 0, 'The strategy has to be finished');
         // We avoid gas consuming once a strategy got its BABL rewards during its finalization
         uint256 rewards = strategy.strategyRewards();
@@ -427,11 +424,11 @@ contract RewardsDistributor is Ownable {
 
             // Get strategist rewards in case the contributor is also the strategist of the strategy
             contributorBABL = contributorBABL.add(_getStrategyStrategistBabl(address(strategy), _contributor));
-            contributorProfits = contributorProfits.add(_getStrategyStrategistProfits(_contributor, totalProfits));
+            contributorProfits = contributorProfits.add(_getStrategyStrategistProfits(address(strategy), _contributor, totalProfits));
 
             // Get steward rewards
             contributorBABL = contributorBABL.add(_getStrategyStewardBabl(address(strategy), _contributor));
-            contributorProfits = contributorProfits.add(_getStrategyStewardProfits(_contributor, totalProfits));
+            contributorProfits = contributorProfits.add(_getStrategyStewardProfits(address(strategy), _contributor, totalProfits));
 
             // Get LP rewards
             contributorBABL = contributorBABL.add(
@@ -452,7 +449,8 @@ contract RewardsDistributor is Ownable {
     }
 
     function _getStrategyStewardBabl(address _strategy, address _contributor) private view returns (uint256) {
-        uint256 strategyRewards = IStrategy(_strategy).strategyRewards();
+        IStrategy strategy = IStrategy(_strategy);
+        uint256 strategyRewards = strategy.strategyRewards();
         // Get proportional voter (stewards) rewards in case the contributor was also a steward of the strategy
         uint256 babl = 0;
         if (strategy.getUserVotes(_contributor) != 0) {
@@ -463,7 +461,8 @@ contract RewardsDistributor is Ownable {
         return babl;
     }
 
-    function _getStrategyStewardProfits(address _contributor, uint256 _totalProfits) private view returns (uint256) {
+    function _getStrategyStewardProfits(address _strategy, address _contributor, uint256 _totalProfits) private view returns (uint256) {
+        IStrategy strategy = IStrategy(_strategy);
         // Get proportional voter (stewards) rewards in case the contributor was also a steward of the strategy
         uint256 profits = 0;
         if (strategy.getUserVotes(_contributor) != 0) {
@@ -476,7 +475,8 @@ contract RewardsDistributor is Ownable {
     }
 
     function _getStrategyStrategistBabl(address _strategy, address _contributor) private view returns (uint256) {
-        uint256 strategyRewards = IStrategy(_strategy).strategyRewards();
+        IStrategy strategy = IStrategy(_strategy);
+        uint256 strategyRewards = strategy.strategyRewards();
         uint256 babl = 0;
         if (strategy.strategist() == _contributor) {
             babl = strategyRewards.multiplyDecimal(BABL_STRATEGIST_SHARE);
@@ -484,10 +484,10 @@ contract RewardsDistributor is Ownable {
         return babl;
     }
 
-    function _getStrategyStrategistProfits(address _contributor, uint256 _totalProfits) private view returns (uint256) {
+    function _getStrategyStrategistProfits(address _strategy, address _contributor, uint256 _totalProfits) private view returns (uint256) {
         // Get proportional voter (stewards) rewards in case the contributor was also a steward of the strategy
         uint256 profits = 0;
-        if (strategy.getUserVotes(_contributor) != 0) {
+        if (IStrategy(_strategy).getUserVotes(_contributor) != 0) {
             profits = _totalProfits.multiplyDecimal(PROFIT_STRATEGIST_SHARE);
         }
         return profits;
