@@ -41,7 +41,7 @@ abstract contract PassiveIntegration is BaseIntegration, ReentrancyGuard {
     /* ============ Struct ============ */
 
     struct InvestmentInfo {
-        IStrategy strategy; // Idea address
+        IStrategy strategy; // Strategy address
         IGarden garden; // Garden address
         address investment; // Investment address
         uint256 totalSupply; // Total Supply of the investment
@@ -97,7 +97,7 @@ abstract contract PassiveIntegration is BaseIntegration, ReentrancyGuard {
         uint256 _investmentTokensOut,
         address _tokenIn,
         uint256 _maxAmountIn
-    ) external nonReentrant onlyIdea {
+    ) external nonReentrant onlyStrategy {
         InvestmentInfo memory investmentInfo =
             _createInvestmentInfo(_investmentAddress, _investmentTokensOut, _tokenIn, _maxAmountIn);
         _validatePreJoinInvestmentData(investmentInfo);
@@ -131,7 +131,7 @@ abstract contract PassiveIntegration is BaseIntegration, ReentrancyGuard {
         uint256 _investmentTokenIn,
         address _tokenOut,
         uint256 _minAmountOut
-    ) external nonReentrant onlyIdea {
+    ) external nonReentrant onlyStrategy {
         InvestmentInfo memory investmentInfo =
             _createInvestmentInfo(_investmentAddress, _investmentTokenIn, _tokenOut, _minAmountOut);
         _validatePreExitInvestmentData(investmentInfo);

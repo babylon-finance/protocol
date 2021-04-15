@@ -385,7 +385,7 @@ abstract contract Strategy is ReentrancyGuard, Initializable {
     }
 
     /**
-     * Delete a candidate strategy by the ideator
+     * Delete a candidate strategy by the strategist
      */
     function deleteCandidateStrategy() external onlyStrategist {
         _deleteCandidateStrategy();

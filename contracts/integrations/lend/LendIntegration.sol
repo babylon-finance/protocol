@@ -43,7 +43,7 @@ abstract contract LendIntegration is BaseIntegration, ReentrancyGuard {
 
     /* ============ Struct ============ */
     struct InvestmentInfo {
-        IStrategy strategy; // Idea address
+        IStrategy strategy; // Strategy address
         IGarden garden; // Garden address
         address assetToken;
         address investment; // Investment address

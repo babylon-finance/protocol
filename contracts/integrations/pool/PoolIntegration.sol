@@ -43,7 +43,7 @@ abstract contract PoolIntegration is BaseIntegration, ReentrancyGuard {
 
     struct PoolInfo {
         IGarden garden; // Garden address
-        IStrategy strategy; // Idea address
+        IStrategy strategy; // Strategy address
         address pool; // Pool address
         uint256 totalSupply; // Total Supply of the pool
         uint256 poolTokensInTransaction; // Pool tokens affected by this transaction
@@ -91,7 +91,7 @@ abstract contract PoolIntegration is BaseIntegration, ReentrancyGuard {
         uint256 _poolTokensOut,
         address[] calldata _tokensIn,
         uint256[] calldata _maxAmountsIn
-    ) external nonReentrant onlyIdea {
+    ) external nonReentrant onlyStrategy {
         PoolInfo memory poolInfo = _createPoolInfo(_poolAddress, _poolTokensOut, _tokensIn, _maxAmountsIn);
         _validatePreJoinPoolData(poolInfo);
         // Approve spending of the tokens
@@ -125,7 +125,7 @@ abstract contract PoolIntegration is BaseIntegration, ReentrancyGuard {
         uint256 _poolTokensIn,
         address[] calldata _tokensOut,
         uint256[] calldata _minAmountsOut
-    ) external nonReentrant onlyIdea {
+    ) external nonReentrant onlyStrategy {
         PoolInfo memory poolInfo = _createPoolInfo(_poolAddress, _poolTokensIn, _tokensOut, _minAmountsOut);
         _validatePreExitPoolData(poolInfo);
         // Approve spending of the pool token

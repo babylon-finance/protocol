@@ -43,7 +43,7 @@ abstract contract TradeIntegration is BaseIntegration, ReentrancyGuard {
 
     struct TradeInfo {
         IGarden garden; // Garden
-        IStrategy strategy; // Idea
+        IStrategy strategy; // Strategy
         string exchangeName; // Which exchange to use
         address sendToken; // Address of token being sold
         address receiveToken; // Address of token being bought
@@ -97,7 +97,7 @@ abstract contract TradeIntegration is BaseIntegration, ReentrancyGuard {
         uint256 _sendQuantity,
         address _receiveToken,
         uint256 _minReceiveQuantity
-    ) external nonReentrant onlyIdea {
+    ) external nonReentrant onlyStrategy {
         TradeInfo memory tradeInfo =
             _createTradeInfo(name, _sendToken, _receiveToken, _sendQuantity, _minReceiveQuantity);
         _validatePreTradeData(tradeInfo, _sendQuantity);
