@@ -249,7 +249,6 @@ describe('BABL Rewards Distributor', function () {
       expect(exitedAt).to.equal(ethers.BigNumber.from(0));
 
       ethers.provider.send('evm_increaseTime', [ONE_DAY_IN_SECONDS * 2]);
-
       await finishStrategyQ1(garden1, strategyContract, 42);
 
       const [

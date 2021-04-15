@@ -582,10 +582,27 @@ contract RewardsDistributor is Ownable {
 
     function _updatePowerOverhead(IStrategy _strategy, uint256 _capital) private {
         // TODO Make it be more accurate per Epoch (uint256 numQuarters, uint256 startingQuarter) = getRewardsWindow(strategy.updatedAt(), block.timestamp);
-        rewardsPowerOverhead[address(_strategy)][getQuarter(block.timestamp)] = rewardsPowerOverhead[
-            address(_strategy)
-        ][getQuarter(block.timestamp)]
-            .add(_capital.preciseMul(block.timestamp.sub(_strategy.updatedAt())));
+        if (_strategy.updatedAt() != 0) {
+            // There will be overhead after the first execution not before
+            if (getQuarter(block.timestamp) == getQuarter(_strategy.updatedAt())) {
+                // The overhead will remain within the same epoch
+                rewardsPowerOverhead[address(_strategy)][getQuarter(block.timestamp)] = rewardsPowerOverhead[
+                    address(_strategy)
+                ][getQuarter(block.timestamp)]
+                    .add(_capital.mul(block.timestamp.sub(_strategy.updatedAt())));
+            } else {
+                // We need to iterate since last update of the strategy capital
+                (uint256 numQuarters, uint256 startingQuarter) =
+                    getRewardsWindow(_strategy.updatedAt(), block.timestamp);
+                uint256 overheadPerQuarter = _capital.mul(block.timestamp.sub(_strategy.updatedAt())).div(numQuarters);
+                for (uint256 i = 0; i <= numQuarters.sub(1); i++) {
+                    rewardsPowerOverhead[address(_strategy)][startingQuarter.add(i)] = rewardsPowerOverhead[
+                        address(_strategy)
+                    ][startingQuarter.add(i)]
+                        .add(overheadPerQuarter);
+                }
+            }
+        }
     }
 
     // Safe BABL transfer function, just in case if rounding error causes DistributorRewards to not have enough BABL.
