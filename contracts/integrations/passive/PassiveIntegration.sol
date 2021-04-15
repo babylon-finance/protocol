@@ -23,6 +23,8 @@ import {SafeMath} from '@openzeppelin/contracts/math/SafeMath.sol';
 import {SafeCast} from '@openzeppelin/contracts/utils/SafeCast.sol';
 import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import {ReentrancyGuard} from '@openzeppelin/contracts/utils/ReentrancyGuard.sol';
+
+import {IPassiveIntegration} from '../../interfaces/IPassiveIntegration.sol';
 import {IGarden} from '../../interfaces/IGarden.sol';
 import {IStrategy} from '../../interfaces/IStrategy.sol';
 import {IBabController} from '../../interfaces/IBabController.sol';
@@ -34,7 +36,7 @@ import {BaseIntegration} from '../BaseIntegration.sol';
  *
  * Base class for integration with passive investments like Yearn, Indexed
  */
-abstract contract PassiveIntegration is BaseIntegration, ReentrancyGuard {
+abstract contract PassiveIntegration is BaseIntegration, ReentrancyGuard, IPassiveIntegration {
     using SafeMath for uint256;
     using SafeCast for uint256;
 
@@ -97,7 +99,7 @@ abstract contract PassiveIntegration is BaseIntegration, ReentrancyGuard {
         uint256 _investmentTokensOut,
         address _tokenIn,
         uint256 _maxAmountIn
-    ) external nonReentrant onlyStrategy {
+    ) external override nonReentrant onlyStrategy {
         InvestmentInfo memory investmentInfo =
             _createInvestmentInfo(_investmentAddress, _investmentTokensOut, _tokenIn, _maxAmountIn);
         _validatePreJoinInvestmentData(investmentInfo);
@@ -131,7 +133,7 @@ abstract contract PassiveIntegration is BaseIntegration, ReentrancyGuard {
         uint256 _investmentTokenIn,
         address _tokenOut,
         uint256 _minAmountOut
-    ) external nonReentrant onlyStrategy {
+    ) external override nonReentrant onlyStrategy {
         InvestmentInfo memory investmentInfo =
             _createInvestmentInfo(_investmentAddress, _investmentTokenIn, _tokenOut, _minAmountOut);
         _validatePreExitInvestmentData(investmentInfo);
@@ -157,7 +159,7 @@ abstract contract PassiveIntegration is BaseIntegration, ReentrancyGuard {
      * @param _investmentAddress                 Investment address to check
      * @return bool                              True if the address is a investment
      */
-    function isInvestment(address _investmentAddress) external view returns (bool) {
+    function isInvestment(address _investmentAddress) external view override returns (bool) {
         return _isInvestment(_investmentAddress);
     }
 
@@ -168,7 +170,12 @@ abstract contract PassiveIntegration is BaseIntegration, ReentrancyGuard {
      * @param _ethAmount                         Amount of eth to invest
      * @return uint256                           Amount of investment shares to receive
      */
-    function getExpectedShares(address _investmentAddress, uint256 _ethAmount) external view returns (uint256) {
+    function getExpectedShares(address _investmentAddress, uint256 _ethAmount)
+        external
+        view
+        override
+        returns (uint256)
+    {
         return _getExpectedShares(_investmentAddress, _ethAmount);
     }
 
@@ -178,7 +185,7 @@ abstract contract PassiveIntegration is BaseIntegration, ReentrancyGuard {
      * @param _investmentAddress                 Investment address to check
      * @return uint256                           Returns the price in ETH of an investment share
      */
-    function getPricePerShare(address _investmentAddress) external view returns (uint256) {
+    function getPricePerShare(address _investmentAddress) external view override returns (uint256) {
         return _getPricePerShare(_investmentAddress);
     }
 
@@ -187,7 +194,7 @@ abstract contract PassiveIntegration is BaseIntegration, ReentrancyGuard {
      *
      * @return address                           Returns the asset that this investment needs
      */
-    function getInvestmentAsset(address _investmentAddress) external view returns (address) {
+    function getInvestmentAsset(address _investmentAddress) external view override returns (address) {
         return _getInvestmentAsset(_investmentAddress);
     }
 

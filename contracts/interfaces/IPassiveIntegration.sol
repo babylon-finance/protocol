@@ -17,15 +17,13 @@
 */
 pragma solidity 0.7.4;
 
-import {IIntegration} from './IIntegration.sol';
-
 /**
  * @title IPassiveIntegration
  * @author Babylon Finance
  *
  * Interface for passive investments protocol integrations
  */
-interface IPassiveIntegration is IIntegration {
+interface IPassiveIntegration {
     function enterInvestment(
         address _investmentAddress,
         uint256 _investmentTokensOut,
