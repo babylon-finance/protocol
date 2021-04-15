@@ -30,7 +30,7 @@ import {Math} from '../lib/Math.sol';
 import {Safe3296} from '../lib/Safe3296.sol';
 
 import {IBabController} from '../interfaces/IBabController.sol';
-import {IRollingGarden} from '../interfaces/IRollingGarden.sol';
+import {IGarden} from '../interfaces/IGarden.sol';
 import {IStrategy} from '../interfaces/IStrategy.sol';
 import {TimeLockedToken} from './TimeLockedToken.sol';
 import {IRewardsDistributor} from '../interfaces/IRewardsDistributor.sol';

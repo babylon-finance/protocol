@@ -23,7 +23,7 @@ import {AddressUpgradeable} from '@openzeppelin/contracts-upgradeable/utils/Addr
 import {SafeMath} from '@openzeppelin/contracts/math/SafeMath.sol';
 import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import {IGarden} from './interfaces/IGarden.sol';
-import {IRollingGarden} from './interfaces/IRollingGarden.sol';
+import {IGarden} from './interfaces/IGarden.sol';
 import {IGardenFactory} from './interfaces/IGardenFactory.sol';
 import {IStrategy} from './interfaces/IStrategy.sol';
 import {IIntegration} from './interfaces/IIntegration.sol';
@@ -161,13 +161,13 @@ contract BabController is OwnableUpgradeable {
      * @param _name                   Name of the Garden
      * @param _symbol                 Symbol of the Garden
      */
-    function createRollingGarden(
+    function createGarden(
         address _reserveAsset,
         string memory _name,
         string memory _symbol
     ) external returns (address) {
         address newGarden =
-            IGardenFactory(gardenFactory).createRollingGarden(_reserveAsset, address(this), msg.sender, _name, _symbol);
+            IGardenFactory(gardenFactory).createGarden(_reserveAsset, address(this), msg.sender, _name, _symbol);
         _addGarden(newGarden);
         return newGarden;
     }
@@ -541,7 +541,7 @@ contract BabController is OwnableUpgradeable {
             priceOracle == _contractAddress ||
             owner() == _contractAddress ||
             (isGarden[IStrategy(_contractAddress).garden()] &&
-                IRollingGarden(IStrategy(_contractAddress).garden()).isStrategy(_contractAddress)) ||
+                IGarden(IStrategy(_contractAddress).garden()).isStrategy(_contractAddress)) ||
             _contractAddress == address(this));
     }
 

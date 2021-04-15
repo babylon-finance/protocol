@@ -48,7 +48,6 @@ interface IGarden is IERC20 {
             uint256,
             uint256,
             uint256,
-            uint256,
             uint256[] calldata,
             uint256,
             uint256
@@ -114,6 +113,55 @@ interface IGarden is IERC20 {
         uint256 _minRebalanceCapital,
         address _strategyData
     ) external;
+
+    function start(
+        uint256 _maxDepositLimit,
+        uint256 _minGardenTokenSupply,
+        uint256 _minLiquidityAsset,
+        uint256 _depositHardlock,
+        uint256 _minContribution,
+        uint256 _strategyCooldownPeriod,
+        uint256 _strategyCreatorProfitPercentage,
+        uint256 _strategyVotersProfitPercentage,
+        uint256 _gardenCreatorProfitPercentage,
+        uint256 _minVotersQuorum,
+        uint256 _minStrategyDuration,
+        uint256 _maxStrategyDuration
+    ) external;
+
+    function deposit(
+        uint256 _reserveAssetQuantity,
+        uint256 _minGardenTokenReceiveQuantity,
+        address _to
+    ) external payable;
+
+    function withdraw(
+        uint256 _gardenTokenQuantity,
+        uint256 _minReserveReceiveQuantity,
+        address payable _to
+    ) external;
+
+    function claimReturns(address[] calldata _finalizedStrategies) external;
+
+    function getActiveCapital() external view returns (uint256, address);
+
+    function getProfitsAndBabl(address[] calldata _finalizedStrategies) external view returns (uint256, uint96);
+
+    function setDepositLimit(uint256 limit) external;
+
+    function getExpectedReserveWithdrawalQuantity(uint256 _gardenTokenQuantity) external view returns (uint256);
+
+    function getLockedBalance(address _contributor) external view returns (uint256);
+
+    function isDepositValid(address _reserveAsset, uint256 _reserveAssetQuantity) external view returns (bool);
+
+    function isWithdrawalValid(address _reserveAsset, uint256 _gardenTokenQuantity) external view returns (bool);
+
+    function reenableEthForStrategies() external;
+
+    function burnAssetsFromSenderAndMintToReserve(address _contributor, uint256 _quantity) external;
+
+    function canWithdrawEthAmount(uint256 _amount) external view returns (bool);
 
     function rebalanceStrategies(uint256 _fee) external;
 

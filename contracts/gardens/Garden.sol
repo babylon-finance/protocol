@@ -4,7 +4,6 @@
     Licensed under the Apache License, Version 2.0 (the "License");
     you may not use this file except in compliance with the License.
     You may obtain a copy of the License at
-
     http://www.apache.org/licenses/LICENSE-2.0
 
     Unless required by applicable law or agreed to in writing, software
@@ -18,46 +17,165 @@
 
 pragma solidity 0.7.4;
 
-import {ERC20} from '@openzeppelin/contracts/token/ERC20/ERC20.sol';
-import {ReentrancyGuard} from '@openzeppelin/contracts/utils/ReentrancyGuard.sol';
 import {Address} from '@openzeppelin/contracts/utils/Address.sol';
+import {ERC20Upgradeable} from '@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol';
+import {IERC20Upgradeable} from '@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol';
+import {SafeERC20Upgradeable} from '@openzeppelin/contracts-upgradeable/token/ERC20/SafeERC20Upgradeable.sol';
+import {ReentrancyGuard} from '@openzeppelin/contracts/utils/ReentrancyGuard.sol';
 import {SafeMath} from '@openzeppelin/contracts/math/SafeMath.sol';
-import {SignedSafeMath} from '@openzeppelin/contracts/math/SignedSafeMath.sol';
-
-import {PreciseUnitMath} from '../lib/PreciseUnitMath.sol';
 import {SafeDecimalMath} from '../lib/SafeDecimalMath.sol';
 import {Safe3296} from '../lib/Safe3296.sol';
+import {SafeCast} from '@openzeppelin/contracts/utils/SafeCast.sol';
+import {SignedSafeMath} from '@openzeppelin/contracts/math/SignedSafeMath.sol';
+
 import {Errors, _require} from '../lib/BabylonErrors.sol';
+import {AddressArrayUtils} from '../lib/AddressArrayUtils.sol';
+import {PreciseUnitMath} from '../lib/PreciseUnitMath.sol';
 
-import {IWETH} from '../interfaces/external/weth/IWETH.sol';
-import {IBabController} from '../interfaces/IBabController.sol';
-import {IStrategy} from '../interfaces/IStrategy.sol';
 import {IRewardsDistributor} from '../interfaces/IRewardsDistributor.sol';
-import {BaseGarden} from './BaseGarden.sol';
-
-/* solhint-disable private-vars-leading-underscore */
+import {IBabController} from '../interfaces/IBabController.sol';
+import {IStrategyFactory} from '../interfaces/IStrategyFactory.sol';
+import {IStrategy} from '../interfaces/IStrategy.sol';
+import {IWETH} from '../interfaces/external/weth/IWETH.sol';
 
 /**
- * @title RollingGarden
+ * @title BaseGarden
  * @author Babylon Finance
  *
- * RollingGarden holds the logic to deposit, withdraw and track contributions and fees.
+ * Class that holds common garden-related state and functions
  */
-contract RollingGarden is ReentrancyGuard, BaseGarden {
+contract Garden is ERC20Upgradeable, ReentrancyGuard {
+    using SafeCast for uint256;
+    using SafeCast for int256;
     using SafeMath for uint256;
     using SignedSafeMath for int256;
-    using PreciseUnitMath for int256;
     using PreciseUnitMath for uint256;
+    using PreciseUnitMath for int256;
     using SafeDecimalMath for int256;
     using SafeDecimalMath for uint256;
     using Address for address;
+    using AddressArrayUtils for address[];
+    using SafeERC20Upgradeable for IERC20Upgradeable;
 
     /* ============ Events ============ */
-    event ProfitsForContributor(address indexed _contributor, uint256 indexed _amount);
+    event ReserveAssetChanged(address indexed _reserveAsset, address _oldReserve);
+    event PrincipalChanged(uint256 _newAmount, uint256 _oldAmount);
+    event GardenDeposit(
+        address indexed _to,
+        uint256 reserveDeposited,
+        uint256 gardenTokenQuantity,
+        uint256 protocolFees,
+        uint256 timestamp
+    );
+    event GardenWithdrawal(
+        address indexed _from,
+        address indexed _to,
+        uint256 reserveReceived,
+        uint256 gardenTokenQuantity,
+        uint256 protocolFees,
+        uint256 timestamp
+    );
 
+    event ProfitsForContributor(address indexed _contributor, uint256 indexed _amount);
     event BABLRewardsForContributor(address indexed _contributor, uint96 _rewards);
 
-    /* ============ State Variables ============ */
+    /* ============ Modifiers ============ */
+    modifier onlyContributor {
+        _require(balanceOf(msg.sender) > 0, Errors.ONLY_CONTRIBUTOR);
+        _;
+    }
+
+    /**
+     * Throws if the sender is not the protocol
+     */
+    modifier onlyProtocol() {
+        _require(msg.sender == controller, Errors.ONLY_CONTROLLER);
+        _;
+    }
+
+    /**
+     * Throws if the sender is not the garden creator
+     */
+    modifier onlyCreator() {
+        _require(msg.sender == creator, Errors.ONLY_CREATOR);
+        _;
+    }
+
+    /**
+     * Throws if the sender is not a keeper in the protocol
+     * @param _fee                     The fee paid to keeper to compensate the gas cost
+     */
+    modifier onlyKeeper(uint256 _fee) {
+        _require(IBabController(controller).isValidKeeper(msg.sender), Errors.ONLY_KEEPER);
+        // We assume that calling keeper functions should be less expensive
+        // than 1 million gas and the gas price should be lower than 1000 gwei.
+        _require(_fee < MAX_KEEPER_FEE, Errors.FEE_TOO_HIGH);
+        _;
+    }
+
+    /**
+     * Throws if the sender is not an strategy of this garden
+     */
+    modifier onlyStrategy() {
+        _require(strategyMapping[msg.sender], Errors.ONLY_STRATEGY);
+        _;
+    }
+
+    /**
+     * Throws if the sender is not an strategy or the protocol
+     */
+    modifier onlyStrategyOrProtocol() {
+        _require(
+            (strategyMapping[msg.sender] && IStrategy(msg.sender).garden() == address(this)) ||
+                msg.sender == controller,
+            Errors.ONLY_STRATEGY_OR_CONTROLLER
+        );
+        _;
+    }
+
+    /**
+     * Throws if the garden is not active
+     */
+    modifier onlyActive() {
+        _require(active, Errors.ONLY_ACTIVE);
+        _;
+    }
+
+    /**
+     * Throws if the garden is not disabled
+     */
+    modifier onlyInactive() {
+        _require(!active, Errors.ONLY_INACTIVE);
+        _;
+    }
+
+    /* ============ State Constants ============ */
+
+    uint256 public constant MAX_DEPOSITS_FUND_V1 = 1e21; // Max deposit per garden is 1000 eth for v1
+    uint256 public constant MAX_TOTAL_STRATEGIES = 20; // Max number of strategies
+    uint256 internal constant TEN_PERCENT = 1e17;
+    uint256 internal constant MAX_KEEPER_FEE = (1e6 * 1e3 gwei);
+
+    /* ============ Structs ============ */
+
+    struct Contributor {
+        uint256 lastDepositAt;
+        uint256 initialDepositAt;
+        uint256 claimedAt;
+        uint256 claimedBABL;
+        uint256 claimedProfits;
+        uint256[] timeListPointer;
+        uint256 pid;
+        uint256 lastUpdated;
+        mapping(uint256 => TimestampContribution) tsContributions;
+    }
+
+    struct TimestampContribution {
+        uint256 principal;
+        uint256 timestamp;
+        uint256 timePointer;
+        uint256 power;
+    }
 
     struct ActionInfo {
         // During withdrawal, represents post-premium value
@@ -69,13 +187,13 @@ contract RollingGarden is ReentrancyGuard, BaseGarden {
         uint256 newGardenTokenSupply; // Garden token supply after deposit/withdrawal action
     }
 
-    uint256 public depositHardlock; // Window of time after deposits when withdraws are disabled for that user
-    // Window of time after an investment strategy finishes when the capital is available for withdrawals
-    uint256 public withdrawalWindowAfterStrategyCompletes;
-    uint256 public withdrawalsOpenUntil; // Indicates until when the withdrawals are open and the ETH is set aside
+    /* ============ State Variables ============ */
 
+    // Wrapped ETH address
+    address public constant WETH = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
     uint256 public constant EARLY_WITHDRAWAL_PENALTY = 15e16;
 
+    // TODO: Move this to rewards distributor along getProfitsAndBabl
     uint256 public constant BABL_STRATEGIST_SHARE = 8e16;
     uint256 public constant BABL_STEWARD_SHARE = 17e16;
     uint256 public constant BABL_LP_SHARE = 75e16;
@@ -87,32 +205,83 @@ contract RollingGarden is ReentrancyGuard, BaseGarden {
 
     uint256 public constant CREATOR_BONUS = 15e16;
 
+    // Reserve Asset of the garden
+    address public reserveAsset;
+
+    // Address of the controller
+    address public controller;
+    // The person that creates the garden
+    address public creator;
+    // Whether the garden is currently active or not
+    bool public active;
+
+    // Keeps track of the reserve balance. In case we receive some through other means
+    uint256 public principal;
+    int256 public absoluteReturns; // Total profits or losses of this garden
+
+    // Indicates the minimum liquidity the asset needs to have to be tradable by this garden
+    uint256 public minLiquidityAsset;
+
+    uint256 public depositHardlock; // Window of time after deposits when withdraws are disabled for that user
+    // Window of time after an investment strategy finishes when the capital is available for withdrawals
+    uint256 public withdrawalWindowAfterStrategyCompletes;
+    uint256 public withdrawalsOpenUntil; // Indicates until when the withdrawals are open and the ETH is set aside
+
+    // Contributors
+    mapping(address => Contributor) public contributors;
+    uint256 public totalContributors;
+    uint256 public maxDepositLimit; // Limits the amount of deposits
+
+    uint256 public gardenInitializedAt; // Garden Initialized at timestamp
+
+    // Min contribution in the garden
+    uint256 public minContribution = 1e18; //wei
+    uint256 public minGardenTokenSupply;
+
+    // Strategies variables
+    uint256 public totalStake = 0;
+    uint256 public minVotersQuorum = TEN_PERCENT; // 10%. (0.01% = 1e14, 1% = 1e16)
+    uint256 public minStrategyDuration; // Min duration for an strategy
+    uint256 public maxStrategyDuration; // Max duration for an strategy
+    uint256 public strategyCooldownPeriod; // Window for the strategy to cooldown after approval before receiving capital
+
+    address[] public strategies; // Strategies that are either in candidate or active state
+    address[] public finalizedStrategies; // Strategies that have finalized execution
+    mapping(address => bool) public strategyMapping;
+
     /* ============ Constructor ============ */
 
     /**
-     * When a new Garden is created, initializes strategies are set to empty.
+     * When a new Garden is created.
      * All parameter validations are on the BabController contract. Validations are performed already on the
      * BabController.
      *
-     * @param _reserveAsset           Address of the reserve asset. Initially WETH ERC20
+     * @param _reserveAsset           Address of the reserve asset ERC20
      * @param _controller             Address of the controller
      * @param _creator                Address of the creator
      * @param _name                   Name of the Garden
      * @param _symbol                 Symbol of the Garden
      */
-
     function initialize(
         address _reserveAsset,
         address _controller,
         address _creator,
         string memory _name,
         string memory _symbol
-    ) public override {
-        super.initialize(_reserveAsset, _controller, _creator, _name, _symbol);
+    ) public virtual initializer {
+        _require(_creator != address(0), Errors.ADDRESS_IS_ZERO);
+        _require(_controller != address(0), Errors.ADDRESS_IS_ZERO);
+        _require(_reserveAsset != address(0), Errors.ADDRESS_IS_ZERO);
+        _require(IBabController(_controller).isValidReserveAsset(_reserveAsset), Errors.MUST_BE_RESERVE_ASSET);
+        __ERC20_init(_name, _symbol);
+
+        controller = _controller;
+        reserveAsset = _reserveAsset;
+        creator = _creator;
+        principal = 0;
+        active = false;
         totalContributors = 0;
     }
-
-    /* ============ External Functions ============ */
 
     /**
      * FUND LEAD ONLY.  Starts the Garden with allowed reserve assets,
@@ -149,19 +318,23 @@ contract RollingGarden is ReentrancyGuard, BaseGarden {
         // make initial deposit
         _require(msg.value >= _minGardenTokenSupply, Errors.MIN_LIQUIDITY);
         _require(msg.value <= _maxDepositLimit, Errors.MAX_DEPOSIT_LIMIT);
+        _require(
+            _strategyCooldownPeriod <= IBabController(controller).getMaxCooldownPeriod() &&
+                _strategyCooldownPeriod >= IBabController(controller).getMinCooldownPeriod(),
+            Errors.NOT_IN_RANGE
+        );
+        _require(_minVotersQuorum >= TEN_PERCENT, Errors.VALUE_TOO_LOW);
+        minContribution = _minContribution;
+        strategyCooldownPeriod = _strategyCooldownPeriod;
+        minVotersQuorum = _minVotersQuorum;
+        minStrategyDuration = _minStrategyDuration;
+        maxStrategyDuration = _maxStrategyDuration;
         minGardenTokenSupply = _minGardenTokenSupply;
         maxDepositLimit = _maxDepositLimit;
         gardenInitializedAt = block.timestamp;
         minLiquidityAsset = _minLiquidityAsset;
         depositHardlock = _depositHardlock;
         withdrawalWindowAfterStrategyCompletes = 7 days;
-        startCommon(
-            _minContribution,
-            _strategyCooldownPeriod,
-            _minVotersQuorum,
-            _minStrategyDuration,
-            _maxStrategyDuration
-        );
 
         // Deposit
         IWETH(WETH).deposit{value: msg.value}();
@@ -251,7 +424,7 @@ contract RollingGarden is ReentrancyGuard, BaseGarden {
         // Check that cannot do a normal withdrawal
         _require(!canWithdrawEthAmount(msg.sender, _gardenTokenQuantity), Errors.NORMAL_WITHDRAWAL_POSSIBLE);
         uint256 netReserveFlows = _gardenTokenQuantity.sub(_gardenTokenQuantity.preciseMul(EARLY_WITHDRAWAL_PENALTY));
-        (uint256 totalActive, uint256 largestCapital, address maxStrategy) = getActiveCapital();
+        (, uint256 largestCapital, address maxStrategy) = getActiveCapital();
         // Check that strategy has enough capital to support the withdrawal
         require(IStrategy(maxStrategy).minRebalanceCapital() <= largestCapital.sub(netReserveFlows));
         IStrategy(maxStrategy).unwindStrategy(netReserveFlows);
@@ -288,22 +461,6 @@ contract RollingGarden is ReentrancyGuard, BaseGarden {
     }
 
     /**
-     * When an strategy finishes execution, contributors might want
-     * to know the profits and BABL rewards for their participation in the different strategies
-     *
-     * @param _finalizedStrategies       Array of the finalized strategies
-     */
-
-    function getProfitsAndBabl(address[] calldata _finalizedStrategies)
-        public
-        view
-        onlyContributor
-        returns (uint256, uint96)
-    {
-        return _getProfitsAndBabl(_finalizedStrategies);
-    }
-
-    /**
      * When an strategy finishes execution, we want to make that eth available for withdrawals
      * from members of the garden.
      *
@@ -331,7 +488,231 @@ contract RollingGarden is ReentrancyGuard, BaseGarden {
         }
     }
 
+    /* ============ External Functions ============ */
+
+    /**
+     * PRIVILEGED Manager, protocol FUNCTION. Changes the reserve asset
+     *
+     * @param _reserveAsset                 Address of the new reserve asset
+     */
+    function editReserveAsset(address _reserveAsset) external onlyProtocol {
+        address oldReserve = reserveAsset;
+        reserveAsset = _reserveAsset;
+
+        emit ReserveAssetChanged(_reserveAsset, oldReserve);
+    }
+
+    /**
+     * PRIVILEGED Manager, protocol FUNCTION. When a Garden is active, deposits are enabled.
+     */
+    function setActive() external onlyProtocol {
+        _require(!active, Errors.ONLY_INACTIVE);
+        active = true;
+    }
+
+    /**
+     * PRIVILEGED Manager, protocol FUNCTION. When a Garden is disabled, deposits are disabled.
+     */
+    function setDisabled() external onlyProtocol {
+        _require(active, Errors.ONLY_ACTIVE);
+        active = false;
+    }
+
+    /**
+     * Function that allows the principal of the garden to be updated by strategies
+     *
+     * @param _amount             Amount of the reserve balance
+     */
+    function updatePrincipal(uint256 _amount) external onlyStrategy {
+        _updatePrincipal(_amount);
+    }
+
+    /* ============ Strategy Functions ============ */
+    /**
+     * Creates a new strategy calling the factory and adds it to the array
+     * @param _strategyKind                  Int representing kind of strategy
+     * @param _integration                   Address of the integration
+     * @param _maxCapitalRequested           Max Capital requested denominated in the reserve asset (0 to be unlimited)
+     * @param _stake                         Stake with garden participations absolute amounts 1e18
+     * @param _strategyDuration              Strategy duration in seconds
+     * @param _expectedReturn                Expected return
+     * @param _minRebalanceCapital           Min capital that is worth it to deposit into this strategy
+     * @param _strategyData                  Param of strategy to add
+     */
+    function addStrategy(
+        uint8 _strategyKind,
+        address _integration,
+        uint256 _maxCapitalRequested,
+        uint256 _stake,
+        uint256 _strategyDuration,
+        uint256 _expectedReturn,
+        uint256 _minRebalanceCapital,
+        address _strategyData
+    ) external onlyContributor onlyActive {
+        _require(strategies.length < MAX_TOTAL_STRATEGIES, Errors.VALUE_TOO_HIGH);
+        IStrategyFactory strategyFactory =
+            IStrategyFactory(IBabController(controller).getStrategyFactory(_strategyKind));
+        address strategy =
+            strategyFactory.createStrategy(
+                msg.sender,
+                address(this),
+                controller,
+                _integration,
+                _maxCapitalRequested,
+                _stake,
+                _strategyDuration,
+                _expectedReturn,
+                _minRebalanceCapital
+            );
+        strategyMapping[strategy] = true;
+        totalStake = totalStake.add(_stake);
+        strategies.push(strategy);
+        IStrategy(strategy).setData(_strategyData);
+    }
+
+    /**
+     * Rebalances available capital of the garden between the strategies that are active.
+     * We enter into the strategy and add it to the executed strategies array.
+     * @param _fee                     The fee paid to keeper to compensate the gas cost for each strategy executed
+     */
+    function rebalanceStrategies(uint256 _fee) external onlyKeeper(_fee) onlyActive {
+        uint256 liquidReserveAsset = ERC20Upgradeable(reserveAsset).balanceOf(address(this));
+        for (uint256 i = 0; i < strategies.length; i++) {
+            IStrategy strategy = IStrategy(strategies[i]);
+            uint256 percentage = strategy.totalVotes().toUint256().preciseDiv(totalStake);
+            uint256 toAllocate = liquidReserveAsset.preciseMul(percentage);
+            if (
+                toAllocate >= strategy.minRebalanceCapital() &&
+                toAllocate.add(strategy.capitalAllocated()) <= strategy.maxCapitalRequested()
+            ) {
+                strategy.executeStrategy(toAllocate, _fee);
+            }
+        }
+    }
+
+    /**
+     * Allocates garden capital to an strategy
+     *
+     * @param _capital        Amount of capital to allocate to the strategy
+     */
+    function allocateCapitalToStrategy(uint256 _capital) external onlyStrategy onlyActive {
+        uint256 liquidReserveAsset = ERC20Upgradeable(reserveAsset).balanceOf(address(this));
+        uint256 protocolMgmtFee = IBabController(controller).protocolManagementFee().preciseMul(_capital);
+        _require(_capital.add(protocolMgmtFee) <= liquidReserveAsset, Errors.MIN_LIQUIDITY);
+
+        // Take protocol mgmt fee
+        IERC20Upgradeable(reserveAsset).safeTransfer(IBabController(controller).treasury(), protocolMgmtFee);
+
+        // Send Capital to strategy
+        IERC20Upgradeable(reserveAsset).safeTransfer(msg.sender, _capital);
+    }
+
+    // Any tokens (other than the target) that are sent here by mistake are recoverable by the protocol
+    // Exchange for WETH
+    function sweep(address _token) external onlyContributor {
+        _require(_token != reserveAsset, Errors.MUST_BE_RESERVE_ASSET);
+        uint256 balance = IERC20Upgradeable(_token).balanceOf(address(this));
+        _require(balance > 0, Errors.BALANCE_TOO_LOW);
+        IERC20Upgradeable(_token).safeTransfer(IBabController(controller).treasury(), balance);
+    }
+
+    /*
+     * Moves an estrategy from the active array to the finalized array
+     * @param _returns       Positive or negative returns of the strategy
+     * @param _strategy      Strategy to move from active to finalized
+     */
+    function moveStrategyToFinalized(int256 _returns, address _strategy) external onlyStrategy {
+        absoluteReturns.add(_returns);
+        strategies = strategies.remove(_strategy);
+        finalizedStrategies.push(_strategy);
+        strategyMapping[_strategy] = false;
+    }
+
+    /*
+     * Remove an expire candidate from the strategy Array
+     * @param _strategy      Strategy to remove
+     */
+    function expireCandidateStrategy(address _strategy) external onlyStrategy {
+        strategies = strategies.remove(_strategy);
+        strategyMapping[_strategy] = false;
+    }
+
+    /*
+     * Burns the stake of the strategist of a given strategy
+     * @param _strategy      Strategy
+     */
+    function burnStrategistStake(address _strategist, uint256 _amount) external onlyStrategy {
+        _burn(_strategist, _amount);
+    }
+
     /* ============ External Getter Functions ============ */
+
+    /**
+     * Gets current strategies
+     *
+     * @return  address[]        Returns list of addresses
+     */
+
+    function getStrategies() external view returns (address[] memory) {
+        return strategies;
+    }
+
+    /**
+     * Gets finalized strategies
+     *
+     * @return  address[]        Returns list of addresses
+     */
+
+    function getFinalizedStrategies() external view returns (address[] memory) {
+        return finalizedStrategies;
+    }
+
+    function isStrategy(address _strategy) external view returns (bool) {
+        return strategyMapping[_strategy];
+    }
+
+    /**
+     * When an strategy finishes execution, contributors might want
+     * to know the profits and BABL rewards for their participation in the different strategies
+     *
+     * @param _finalizedStrategies       Array of the finalized strategies
+     */
+
+    function getProfitsAndBabl(address[] calldata _finalizedStrategies)
+        public
+        view
+        onlyContributor
+        returns (uint256, uint96)
+    {
+        return _getProfitsAndBabl(_finalizedStrategies);
+    }
+
+    function getContributor(address _contributor)
+        external
+        view
+        returns (
+            uint256,
+            uint256,
+            uint256,
+            uint256,
+            uint256,
+            uint256[] memory,
+            uint256,
+            uint256
+        )
+    {
+        Contributor storage contributor = contributors[_contributor];
+        return (
+            contributor.lastDepositAt,
+            contributor.initialDepositAt,
+            contributor.claimedAt,
+            contributor.claimedBABL,
+            contributor.claimedProfits,
+            contributor.timeListPointer,
+            contributor.pid,
+            contributor.lastUpdated
+        );
+    }
 
     /**
      * Check if the fund has ETH amount available for withdrawals.
@@ -341,7 +722,7 @@ contract RollingGarden is ReentrancyGuard, BaseGarden {
      */
     function canWithdrawEthAmount(address _contributor, uint256 _amount) public view returns (bool) {
         uint256 ethAsideBalance = address(this).balance;
-        uint256 liquidWeth = ERC20(reserveAsset).balanceOf(address(this));
+        uint256 liquidWeth = IERC20Upgradeable(reserveAsset).balanceOf(address(this));
 
         // Weth already available
         if (liquidWeth >= _amount) {
@@ -351,7 +732,9 @@ contract RollingGarden is ReentrancyGuard, BaseGarden {
         // Withdrawal open
         if (block.timestamp <= withdrawalsOpenUntil) {
             // Pro rata withdrawals
-            return ethAsideBalance.preciseMul(contributors[msg.sender].gardenAverageOwnership) >= _amount;
+            uint256 contributorPower =
+                _getContributorPower(_contributor, contributors[_contributor].initialDepositAt, block.timestamp);
+            return ethAsideBalance.preciseMul(contributorPower) >= _amount;
         }
         return false;
     }
@@ -485,6 +868,40 @@ contract RollingGarden is ReentrancyGuard, BaseGarden {
     /* ============ Internal Functions ============ */
 
     /**
+     * Function that allows the principal to be updated
+     *
+     * @param _amount             Amount of the reserve balance
+     */
+    function _updatePrincipal(uint256 _amount) internal {
+        uint256 oldAmount = principal;
+        principal = _amount;
+        emit PrincipalChanged(_amount, oldAmount);
+    }
+
+    /**
+     * Pays the _feeQuantity from the _garden denominated in _token to the protocol fee recipient
+     * @param _token                   Address of the token to pay with
+     * @param _feeQuantity             Fee to transfer
+     */
+    function payProtocolFeeFromGarden(address _token, uint256 _feeQuantity) internal {
+        if (_feeQuantity > 0) {
+            IERC20Upgradeable(_token).safeTransfer(IBabController(controller).treasury(), _feeQuantity);
+        }
+    }
+
+    // Disable garden token transfers. Allow minting and burning.
+    function _beforeTokenTransfer(
+        address from,
+        address to,
+        uint256 /* amount */
+    ) internal view override {
+        _require(
+            from == address(0) || to == address(0) || IBabController(controller).gardenTokensTransfersEnabled(),
+            Errors.TOKENS_TIMELOCKED
+        );
+    }
+
+    /**
      * Aux function to withdraw from a garden
      */
     function _withdraw(
@@ -520,7 +937,7 @@ contract RollingGarden is ReentrancyGuard, BaseGarden {
         if (address(this).balance < withdrawalInfo.netFlowQuantity) {
             IWETH(WETH).withdraw(withdrawalInfo.netFlowQuantity);
         }
-        _updateContributorWithdrawalInfo(withdrawalInfo.netFlowQuantity);
+        _updateContributorWithdrawalInfo();
         // Send ETH
         Address.sendValue(_to, withdrawalInfo.netFlowQuantity);
         payProtocolFeeFromGarden(reserveAsset, withdrawalInfo.protocolFees);
@@ -541,7 +958,7 @@ contract RollingGarden is ReentrancyGuard, BaseGarden {
         );
     }
 
-    function _getProfitsAndBabl(address[] calldata _finalizedStrategies) internal view returns (uint256, uint96) {
+    function _getProfitsAndBabl(address[] calldata _finalizedStrategies) private view returns (uint256, uint96) {
         uint256 contributorTotalProfits = 0;
         uint256 bablTotalRewards = 0;
         for (uint256 i = 0; i < _finalizedStrategies.length; i++) {
@@ -640,7 +1057,7 @@ contract RollingGarden is ReentrancyGuard, BaseGarden {
         return totalLosses;
     }
 
-    function _validateReserveAsset(address _reserveAsset, uint256 _quantity) internal view {
+    function _validateReserveAsset(address _reserveAsset, uint256 _quantity) private view {
         _require(_quantity > 0, Errors.GREATER_THAN_ZERO);
         _require(IBabController(controller).isValidReserveAsset(_reserveAsset), Errors.MUST_BE_RESERVE_ASSET);
     }
@@ -649,7 +1066,7 @@ contract RollingGarden is ReentrancyGuard, BaseGarden {
         uint256 _minReserveReceiveQuantity,
         uint256, /* _gardenTokenQuantity */
         ActionInfo memory _withdrawalInfo
-    ) internal view {
+    ) private view {
         // Check that new supply is more than min supply needed for withdrawal
         // Note: A min supply amount is needed to avoid division by 0 when withdrawaling garden token to 0
         _require(_withdrawalInfo.newGardenTokenSupply >= minGardenTokenSupply, Errors.MIN_TOKEN_SUPPLY);
@@ -657,7 +1074,7 @@ contract RollingGarden is ReentrancyGuard, BaseGarden {
         _require(_withdrawalInfo.netFlowQuantity >= _minReserveReceiveQuantity, Errors.MIN_TOKEN_SUPPLY);
     }
 
-    function _createIssuanceInfo(uint256 _reserveAssetQuantity) internal view returns (ActionInfo memory) {
+    function _createIssuanceInfo(uint256 _reserveAssetQuantity) private view returns (ActionInfo memory) {
         ActionInfo memory depositInfo;
 
         (depositInfo.protocolFees, depositInfo.netFlowQuantity) = _getFees(_reserveAssetQuantity, true);
@@ -669,7 +1086,7 @@ contract RollingGarden is ReentrancyGuard, BaseGarden {
         return depositInfo;
     }
 
-    function _createRedemptionInfo(uint256 _gardenTokenQuantity) internal view returns (ActionInfo memory) {
+    function _createRedemptionInfo(uint256 _gardenTokenQuantity) private view returns (ActionInfo memory) {
         ActionInfo memory withdrawalInfo;
 
         withdrawalInfo.gardenTokenQuantity = _gardenTokenQuantity;
@@ -692,7 +1109,7 @@ contract RollingGarden is ReentrancyGuard, BaseGarden {
      * @return  uint256                     Fees paid to the protocol in reserve asset
      * @return  uint256                     Net reserve to user net of fees
      */
-    function _getFees(uint256 _reserveAssetQuantity, bool _isDeposit) internal view returns (uint256, uint256) {
+    function _getFees(uint256 _reserveAssetQuantity, bool _isDeposit) private view returns (uint256, uint256) {
         // Get protocol fee percentages
         uint256 protocolFeePercentage =
             _isDeposit
@@ -706,7 +1123,9 @@ contract RollingGarden is ReentrancyGuard, BaseGarden {
             // // If there are losses we need to adjust them down
             if (losses > 0) {
                 reserveAssetReal = reserveAssetReal.sub(
-                    losses.preciseMul(contributors[msg.sender].gardenAverageOwnership)
+                    losses.preciseMul(
+                        _getContributorPower(msg.sender, contributors[msg.sender].initialDepositAt, block.timestamp)
+                    )
                 );
             }
         }
@@ -727,10 +1146,7 @@ contract RollingGarden is ReentrancyGuard, BaseGarden {
         // If new contributor, create one, increment count, and set the current TS
         if (previousBalance == 0) {
             totalContributors = totalContributors.add(1);
-            contributor.gardenAverageOwnership = balanceOf(msg.sender).preciseDiv(totalSupply());
             contributor.initialDepositAt = block.timestamp;
-        } else {
-            contributor.gardenAverageOwnership = _calculateGardenAverageOwnership(contributor);
         }
         // We make checkpoints around contributor deposits to avoid fast loans and give the right rewards afterwards
         _setContributorTimestampParams();
@@ -741,20 +1157,18 @@ contract RollingGarden is ReentrancyGuard, BaseGarden {
     /**
      * Updates the contributor info in the array
      */
-    function _updateContributorWithdrawalInfo(uint256 amount) internal {
+    function _updateContributorWithdrawalInfo() internal {
         Contributor storage contributor = contributors[msg.sender];
         // If sold everything
         if (balanceOf(msg.sender) == 0) {
             contributor.lastDepositAt = 0;
             contributor.initialDepositAt = 0;
-            contributor.gardenAverageOwnership = 0;
             delete contributor.timeListPointer;
             totalContributors = totalContributors.sub(1);
+            contributor.lastUpdated = block.timestamp;
         } else {
-            contributor.gardenAverageOwnership = _calculateGardenAverageOwnership(contributor);
             _setContributorTimestampParams();
         }
-        contributor.lastUpdated = block.timestamp;
     }
 
     /**
@@ -817,17 +1231,6 @@ contract RollingGarden is ReentrancyGuard, BaseGarden {
         contributor.timeListPointer.push(block.timestamp);
         contributor.pid++;
         contributor.lastUpdated = block.timestamp;
-    }
-
-    function _calculateGardenAverageOwnership(Contributor storage contributor) private returns (uint256) {
-        TimestampContribution memory tsLastUpdated = contributor.tsContributions[contributor.lastUpdated];
-        return
-            (
-                (tsLastUpdated.power.add(block.timestamp.sub(contributor.lastUpdated)).mul(tsLastUpdated.principal))
-                    .add(tsLastUpdated.principal)
-                    .div(block.timestamp.sub(contributor.initialDepositAt))
-            )
-                .preciseDiv(totalSupply());
     }
 
     function _abs(int256 x) private pure returns (int256) {

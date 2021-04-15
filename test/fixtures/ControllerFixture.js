@@ -152,23 +152,23 @@ async function deployFolioFixture() {
 
   // Creates a new Garden instance
 
-  await babController.connect(signer1).createRollingGarden(addresses.tokens.WETH, 'Absolute ETH Return [beta]', 'EYFA');
+  await babController.connect(signer1).createGarden(addresses.tokens.WETH, 'Absolute ETH Return [beta]', 'EYFA');
 
-  await babController.connect(signer1).createRollingGarden(addresses.tokens.WETH, 'ETH Yield Farm [a]', 'EYFB');
+  await babController.connect(signer1).createGarden(addresses.tokens.WETH, 'ETH Yield Farm [a]', 'EYFB');
 
-  await babController.connect(signer1).createRollingGarden(addresses.tokens.WETH, 'ETH Yield Farm [b]', 'EYFG');
+  await babController.connect(signer1).createGarden(addresses.tokens.WETH, 'ETH Yield Farm [b]', 'EYFG');
 
-  await babController.connect(signer1).createRollingGarden(addresses.tokens.WETH, 'ETH Yield Farm [d]', 'EYFG');
+  await babController.connect(signer1).createGarden(addresses.tokens.WETH, 'ETH Yield Farm [d]', 'EYFG');
 
   const gardens = await babController.getGardens();
 
-  const garden1 = await ethers.getContractAt('RollingGarden', gardens[0]);
+  const garden1 = await ethers.getContractAt('Garden', gardens[0]);
 
-  const garden2 = await ethers.getContractAt('RollingGarden', gardens[1]);
+  const garden2 = await ethers.getContractAt('Garden', gardens[1]);
 
-  const garden3 = await ethers.getContractAt('RollingGarden', gardens[2]);
+  const garden3 = await ethers.getContractAt('Garden', gardens[2]);
 
-  const garden4 = await ethers.getContractAt('RollingGarden', gardens[3]);
+  const garden4 = await ethers.getContractAt('Garden', gardens[3]);
 
   // Initial deposit
   await garden1.connect(signer1).start(

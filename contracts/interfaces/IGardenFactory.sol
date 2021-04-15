@@ -26,7 +26,7 @@ import {IIntegration} from './IIntegration.sol';
  * Interface for the garden factory
  */
 interface IGardenFactory {
-    function createRollingGarden(
+    function createGarden(
         address _reserveAsset,
         address _controller,
         address _creator,
