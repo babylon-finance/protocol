@@ -481,9 +481,7 @@ abstract contract BaseGarden is ERC20Upgradeable {
      * @param _amount             Amount of the reserve balance
      */
     function _updatePrincipal(uint256 _amount) internal {
-        uint256 oldAmount = principal;
-        principal = _amount;
-        emit PrincipalChanged(_amount, oldAmount);
+        _updatePrincipal(_amount);
     }
 
     /**
