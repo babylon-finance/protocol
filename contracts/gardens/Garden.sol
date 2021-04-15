@@ -464,7 +464,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
      * @param _amount                        Amount of WETH to convert to ETH to set aside until the window ends
      * @param _profits                       Amount of WETH to convert to ETH to set aside forever
      */
-    function startWithdrawalWindow(uint256 _amount, uint256 _profits) external onlyStrategyOrProtocol {
+    function startWithdrawalWindow(uint256 _amount, uint256 _profits) override external onlyStrategyOrProtocol {
         if (withdrawalsOpenUntil > block.timestamp) {
             withdrawalsOpenUntil = block.timestamp.add(
                 withdrawalWindowAfterStrategyCompletes.sub(withdrawalsOpenUntil.sub(block.timestamp))
@@ -480,7 +480,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
      * When the window of withdrawals finishes, we need to make the capital available again for investments
      * We still keep the profits aside.
      */
-    function reenableEthForStrategies() public {
+    function reenableEthForStrategies() public override {
         if (block.timestamp >= withdrawalsOpenUntil && address(this).balance > minContribution) {
             withdrawalsOpenUntil = 0;
             IWETH(WETH).deposit{value: address(this).balance.sub(profitsSetAside)}();

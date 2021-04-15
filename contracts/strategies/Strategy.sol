@@ -659,9 +659,9 @@ abstract contract Strategy is ReentrancyGuard, Initializable, IStrategy {
         );
         address reserveAsset = garden.reserveAsset();
         int256 reserveAssetDelta = capitalReturned.toInt256().sub(capitalAllocated.toInt256());
-        uint256 protocolProfits = capitalReturned > capitalAllocated ? capitalReturned.sub(capitalAllocated) : 0;
+        uint256 protocolProfits = 0;
         // Strategy returns were positive
-        uint256 profits = capitalReturned - capitalAllocated; // in reserve asset (weth)
+        uint256 profits = capitalReturned > capitalAllocated ? capitalReturned.sub(capitalAllocated) : 0; // in reserve asset (weth)
         if (capitalReturned >= capitalAllocated) {
             // Send weth performance fee to the protocol
             protocolProfits = IBabController(controller).protocolPerformanceFee().preciseMul(profits);
