@@ -251,7 +251,7 @@ abstract contract Strategy is ReentrancyGuard, Initializable {
         int256 _totalVotes,
         uint256 _fee
     ) external onlyKeeper(_fee) onlyActiveGarden {
-        require(!active, 'Voting already resolved');
+        require(!active && !finalized, 'Voting already resolved');
         require(block.timestamp.sub(enteredAt) <= MAX_CANDIDATE_PERIOD, 'Voting window closed');
         active = true;
 
@@ -265,7 +265,7 @@ abstract contract Strategy is ReentrancyGuard, Initializable {
 
         // Get Keeper Fees allocated
         garden.allocateCapitalToStrategy(MAX_STRATEGY_KEEPER_FEES);
-
+        enteredCooldownAt = block.timestamp;
         _payKeeper(msg.sender, _fee);
     }
 
@@ -289,7 +289,6 @@ abstract contract Strategy is ReentrancyGuard, Initializable {
         // Sets the executed timestamp on first execution
         if (executedAt == 0) {
             executedAt = block.timestamp;
-            updatedAt = executedAt;
         } else {
             // Updating allocation - we need to consider the difference for the calculation
             // We control the potential overhead in BABL Rewards calculations to keep control and avoid distributing a wrong number (e.g. flash loans)
