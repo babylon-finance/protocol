@@ -63,8 +63,7 @@ contract RewardsDistributor is Ownable {
     /* ============ Modifiers ============ */
 
     modifier onlyStrategy {
-        address garden = IStrategy(msg.sender).garden();
-        require(controller.isSystemContract(garden));
+        require(controller.isSystemContract(address(IStrategy(msg.sender).garden())));
         _;
     }
 
@@ -185,8 +184,12 @@ contract RewardsDistributor is Ownable {
 
     function getStrategyRewards(address _strategy) external returns (uint96) {
         strategy = IStrategy(_strategy);
-        require(strategy.exitedAt() != 0, 'The strategy has to be finished before calculations');
-        if (strategy.strategyRewards() != 0) return strategy.strategyRewards(); // We avoid gas consuming once a strategy got its BABL rewards during its finalization
+        require(strategy.exitedAt() != 0, 'The strategy has to be finished');
+        // We avoid gas consuming once a strategy got its BABL rewards during its finalization
+        uint256 rewards = strategy.strategyRewards();
+        if (rewards != 0) {
+            return Safe3296.safe96(rewards, 'overflow 96 bits');
+        }
 
         // If the calculation was not done earlier we go for it
         (uint256 numQuarters, uint256 startingQuarter) = getRewardsWindow(strategy.executedAt(), strategy.exitedAt());

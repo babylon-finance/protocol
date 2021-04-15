@@ -17,15 +17,13 @@
 */
 pragma solidity 0.7.4;
 
-import {IIntegration} from './IIntegration.sol';
-
 /**
  * @title ITrade
  * @author Babylon Finance
  *
  * Interface for trading protocol integrations
  */
-interface ITradeIntegration is IIntegration {
+interface ITradeIntegration {
     function trade(
         address _sendToken,
         uint256 _sendQuantity,

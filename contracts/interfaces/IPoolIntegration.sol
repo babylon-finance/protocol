@@ -17,15 +17,13 @@
 */
 pragma solidity 0.7.4;
 
-import {IIntegration} from './IIntegration.sol';
-
 /**
  * @title IPoolIntegration
  * @author Babylon Finance
  *
  * Interface for liquiditypool protocol integrations
  */
-interface IPoolIntegration is IIntegration {
+interface IPoolIntegration {
     function joinPool(
         address _poolAddress,
         uint256 _poolTokensOut,

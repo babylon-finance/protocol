@@ -131,7 +131,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
      */
     modifier onlyStrategyOrProtocol() {
         _require(
-            (strategyMapping[msg.sender] && IStrategy(msg.sender).garden() == address(this)) ||
+            (strategyMapping[msg.sender] && address(IStrategy(msg.sender).garden()) == address(this)) ||
                 msg.sender == controller,
             Errors.ONLY_STRATEGY_OR_CONTROLLER
         );

@@ -44,7 +44,7 @@ contract LendStrategy is Strategy {
      *
      * @param _assetToken                  ERC20 Token to supply.
      */
-    function setData(address _assetToken) external onlyGardenAndNotSet {
+    function setData(address _assetToken) external override onlyGardenAndNotSet {
         kind = 3;
         assetToken = _assetToken;
 

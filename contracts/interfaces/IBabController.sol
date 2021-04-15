@@ -40,8 +40,6 @@ interface IBabController {
 
     function disableGarden(address _garden) external;
 
-    function reenableGarden(address _garden) external;
-
     function editPriceOracle(address _priceOracle) external;
 
     function editGardenValuer(address _gardenValuer) external;
@@ -70,7 +68,6 @@ interface IBabController {
 
     function editLiquidityMinimum(uint256 _minRiskyPairLiquidityEth) external;
 
-    // Getters
     function owner() external view returns (address);
 
     function priceOracle() external view returns (address);
@@ -110,15 +107,11 @@ interface IBabController {
 
     function getStrategyFactory(uint8 _strategyKind) external view returns (address);
 
-    function getGardenFactory() external view returns (address);
-
     function getGardens() external view returns (address[] memory);
 
     function isGarden(address _garden) external view returns (bool);
 
     function getIntegrationByName(string memory _name) external view returns (address);
-
-    function getIntegrationFee(address _integration) external view returns (uint256);
 
     function getIntegrationWithHash(bytes32 _nameHashP) external view returns (address);
 

@@ -77,7 +77,7 @@ contract BalancerIntegration is PoolIntegration {
         address _poolAddress,
         address _poolToken,
         uint256 _maxAmountsIn
-    ) external view returns (uint256) {
+    ) external view override returns (uint256) {
         uint256 tokenBalance = IBPool(_poolAddress).getBalance(_poolToken);
         return IBPool(_poolAddress).totalSupply().preciseMul(_maxAmountsIn.preciseDiv(tokenBalance));
     }
@@ -85,6 +85,7 @@ contract BalancerIntegration is PoolIntegration {
     function getPoolMinAmountsOut(address _poolAddress, uint256 _liquidity)
         external
         view
+        override
         returns (uint256[] memory _minAmountsOut)
     {
         uint256 lpTokensTotalSupply = IBPool(_poolAddress).totalSupply();

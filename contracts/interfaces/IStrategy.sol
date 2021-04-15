@@ -17,6 +17,8 @@
 */
 pragma solidity 0.7.4;
 
+import {IGarden} from '../interfaces/IGarden.sol';
+
 /**
  * @title IStrategy
  * @author Babylon Finance
@@ -79,6 +81,7 @@ interface IStrategy {
             address,
             uint256,
             uint256,
+            int256,
             uint256,
             uint256,
             uint256,
@@ -101,61 +104,49 @@ interface IStrategy {
             uint256
         );
 
-    function isStrategyActive() external pure returns (bool);
+    function isStrategyActive() external view returns (bool);
 
     function getUserVotes(address _address) external view returns (int256);
 
-    function strategist() external pure returns (address);
+    function strategist() external view returns (address);
 
-    function enteredAt() external pure returns (uint256);
+    function enteredAt() external view returns (uint256);
 
-    function enteredCooldownAt() external pure returns (uint256);
+    function enteredCooldownAt() external view returns (uint256);
 
-    function executedAt() external pure returns (uint256);
+    function executedAt() external view returns (uint256);
 
-    function updatedAt() external pure returns (uint256);
+    function updatedAt() external view returns (uint256);
 
-    function exitedAt() external pure returns (uint256);
+    function exitedAt() external view returns (uint256);
 
-    function stake() external pure returns (uint256);
+    function stake() external view returns (uint256);
 
-    function strategyRewards() external pure returns (uint96);
+    function strategyRewards() external view returns (uint256);
 
-    function rewardsTotalOverhead() external pure returns (uint256);
+    function rewardsTotalOverhead() external view returns (uint256);
 
-    function maxCapitalRequested() external pure returns (uint256);
+    function maxCapitalRequested() external view returns (uint256);
 
-    function expectedReturn() external pure returns (uint256);
+    function expectedReturn() external view returns (uint256);
 
-    function minRebalanceCapital() external pure returns (uint256);
+    function minRebalanceCapital() external view returns (uint256);
 
-    function enterTokensNeeded() external pure returns (address[] memory);
+    function duration() external view returns (uint256);
 
-    function enterTokensAmounts() external pure returns (uint256[] memory);
+    function totalVotes() external view returns (int256);
 
-    function voters() external pure returns (address[] memory);
+    function absoluteTotalVotes() external view returns (uint256);
 
-    function duration() external pure returns (uint256);
+    function integration() external view returns (address);
 
-    function totalVotes() external pure returns (int256);
+    function capitalReturned() external view returns (uint256);
 
-    function absoluteTotalVotes() external pure returns (uint256);
+    function capitalAllocated() external view returns (uint256);
 
-    function totalVoters() external pure returns (int256);
+    function finalized() external view returns (bool);
 
-    function integration() external pure returns (address);
+    function active() external view returns (bool);
 
-    function enterPayload() external pure returns (bytes memory);
-
-    function exitPayload() external pure returns (bytes memory);
-
-    function capitalReturned() external pure returns (uint256);
-
-    function capitalAllocated() external pure returns (uint256);
-
-    function finalized() external pure returns (bool);
-
-    function active() external pure returns (bool);
-
-    function garden() external pure returns (address);
+    function garden() external view returns (IGarden);
 }

@@ -43,7 +43,7 @@ contract YieldFarmingStrategy is Strategy {
      *
      * @param _yieldVault                   Yield vault to enter
      */
-    function setData(address _yieldVault) external onlyGardenAndNotSet {
+    function setData(address _yieldVault) external override onlyGardenAndNotSet {
         require(IPassiveIntegration(integration).isInvestment(_yieldVault), 'Must be a valid yield vault');
 
         kind = 2;

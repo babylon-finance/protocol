@@ -205,7 +205,7 @@ describe('BABL Rewards Distributor', function () {
       );
 
       await expect(rewardsDistributor.getStrategyRewards(strategyContract.address)).to.be.revertedWith(
-        'The strategy has to be finished before calculations',
+        'The strategy has to be finished',
       );
     });
 

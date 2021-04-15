@@ -34,7 +34,9 @@ import {IWETH} from '../interfaces/external/weth/IWETH.sol';
 import {IBabController} from '../interfaces/IBabController.sol';
 import {IGarden} from '../interfaces/IGarden.sol';
 import {ITradeIntegration} from '../interfaces/ITradeIntegration.sol';
+import {IIntegration} from '../interfaces/IIntegration.sol';
 import {IPriceOracle} from '../interfaces/IPriceOracle.sol';
+import {IStrategy} from '../interfaces/IStrategy.sol';
 import {IRewardsDistributor} from '../interfaces/IRewardsDistributor.sol';
 
 /**
@@ -44,7 +46,7 @@ import {IRewardsDistributor} from '../interfaces/IRewardsDistributor.sol';
  * Base Strategy contract. Belongs to a garden. Abstract.
  * Will be extended from specific strategy contracts.
  */
-abstract contract Strategy is ReentrancyGuard, Initializable {
+abstract contract Strategy is ReentrancyGuard, Initializable, IStrategy {
     using SignedSafeMath for int256;
     using SafeMath for uint256;
     using SafeCast for uint256;
@@ -108,7 +110,7 @@ abstract contract Strategy is ReentrancyGuard, Initializable {
     modifier onlyIntegration() {
         // Internal function used to reduce bytecode size
         require(
-            controller.isValidIntegration(ITradeIntegration(msg.sender).getName(), msg.sender),
+            controller.isValidIntegration(IIntegration(msg.sender).getName(), msg.sender),
             'Integration must be valid'
         );
         _;
@@ -165,36 +167,36 @@ abstract contract Strategy is ReentrancyGuard, Initializable {
     uint8 public kind;
 
     // Garden that these strategies belong to
-    IGarden public garden;
+    IGarden public override garden;
 
-    address public integration; // Address of the integration
-    address public strategist; // Address of the strategist that submitted the bet
+    address public override integration; // Address of the integration
+    address public override strategist; // Address of the strategist that submitted the bet
 
-    uint256 public enteredAt; // Timestamp when the strategy was submitted
-    uint256 public enteredCooldownAt; // Timestamp when the strategy reached quorum
-    uint256 public executedAt; // Timestamp when the strategy was executed
-    uint256 public updatedAt; // Timestamp of last capital allocation update
-    uint256 public exitedAt; // Timestamp when the strategy was submitted
+    uint256 public override enteredAt; // Timestamp when the strategy was submitted
+    uint256 public override enteredCooldownAt; // Timestamp when the strategy reached quorum
+    uint256 public override executedAt; // Timestamp when the strategy was executed
+    uint256 public override updatedAt; // Timestamp of last capital allocation update
+    uint256 public override exitedAt; // Timestamp when the strategy was submitted
 
     address[] public voters; // Addresses with the voters
-    int256 public totalVotes; // Total votes staked
-    uint256 public absoluteTotalVotes; // Absolute number of votes staked
-    bool public finalized; // Flag that indicates whether we exited the strategy
-    bool public active; // Whether the strategy has met the voting quorum
+    int256 public override totalVotes; // Total votes staked
+    uint256 public override absoluteTotalVotes; // Absolute number of votes staked
+    bool public override finalized; // Flag that indicates whether we exited the strategy
+    bool public override active; // Whether the strategy has met the voting quorum
     bool public dataSet;
 
-    uint256 public duration; // Duration of the bet
-    uint256 public stake; // Amount of stake by the strategist (in reserve asset) needs to be positive
-    uint256 public maxCapitalRequested; // Amount of max capital to allocate
-    uint256 public capitalAllocated; // Current amount of capital allocated
-    uint256 public expectedReturn; // Expect return by this strategy
-    uint256 public capitalReturned; // Actual return by this strategy
-    uint256 public minRebalanceCapital; // Min amount of capital so that it is worth to rebalance the capital here
+    uint256 public override duration; // Duration of the bet
+    uint256 public override stake; // Amount of stake by the strategist (in reserve asset) needs to be positive
+    uint256 public override maxCapitalRequested; // Amount of max capital to allocate
+    uint256 public override capitalAllocated; // Current amount of capital allocated
+    uint256 public override expectedReturn; // Expect return by this strategy
+    uint256 public override capitalReturned; // Actual return by this strategy
+    uint256 public override minRebalanceCapital; // Min amount of capital so that it is worth to rebalance the capital here
     address[] public tokensNeeded; // Positions that need to be taken prior to enter the strategy
     uint256[] public tokenAmountsNeeded; // Amount of these positions
 
-    uint256 public strategyRewards; // Rewards allocated for this strategy updated on finalized
-    uint256 public rewardsTotalOverhead; // Potential extra amount we are giving in BABL rewards
+    uint256 public override strategyRewards; // Rewards allocated for this strategy updated on finalized
+    uint256 public override rewardsTotalOverhead; // Potential extra amount we are giving in BABL rewards
 
     // Voters mapped to their votes.
     mapping(address => int256) public votes;
@@ -223,7 +225,7 @@ abstract contract Strategy is ReentrancyGuard, Initializable {
         uint256 _strategyDuration,
         uint256 _expectedReturn,
         uint256 _minRebalanceCapital
-    ) external initializer {
+    ) external override initializer {
         controller = IBabController(_controller);
         require(controller.isSystemContract(_garden), 'Must be a valid garden');
         garden = IGarden(_garden);
@@ -234,7 +236,7 @@ abstract contract Strategy is ReentrancyGuard, Initializable {
             'Duration must be in range'
         );
         require(
-            controller.isValidIntegration(ITradeIntegration(_integration).getName(), _integration),
+            controller.isValidIntegration(IIntegration(_integration).getName(), _integration),
             'Integration must be valid'
         );
         require(_minRebalanceCapital > 0, 'Min capital >= 0');
@@ -271,7 +273,7 @@ abstract contract Strategy is ReentrancyGuard, Initializable {
         uint256 _absoluteTotalVotes,
         int256 _totalVotes,
         uint256 _fee
-    ) external onlyKeeper(_fee) onlyActiveGarden {
+    ) external override onlyKeeper(_fee) onlyActiveGarden {
         require(!active && !finalized, 'Voting already resolved');
         require(block.timestamp.sub(enteredAt) <= MAX_CANDIDATE_PERIOD, 'Voting window closed');
         active = true;
@@ -298,7 +300,13 @@ abstract contract Strategy is ReentrancyGuard, Initializable {
      * @param _capital                  The capital to allocate to this strategy.
      * @param _fee                      The fee paid to keeper to compensate the gas cost.
      */
-    function executeStrategy(uint256 _capital, uint256 _fee) external onlyKeeper(_fee) nonReentrant onlyActiveGarden {
+    function executeStrategy(uint256 _capital, uint256 _fee)
+        external
+        override
+        onlyKeeper(_fee)
+        nonReentrant
+        onlyActiveGarden
+    {
         require(active, 'Strategy needs to be active');
         require(capitalAllocated.add(_capital) <= maxCapitalRequested, 'Max capital reached');
         require(_capital >= minRebalanceCapital, 'Amount >= min');
@@ -333,7 +341,7 @@ abstract contract Strategy is ReentrancyGuard, Initializable {
      * Updates the reserve asset position accordingly.
      * @param _fee                     The fee paid to keeper to compensate the gas cost
      */
-    function finalizeStrategy(uint256 _fee) external onlyKeeper(_fee) nonReentrant onlyActiveGarden {
+    function finalizeStrategy(uint256 _fee) external override onlyKeeper(_fee) nonReentrant onlyActiveGarden {
         require(executedAt > 0, 'Strategy has not executed');
         require(block.timestamp > executedAt.add(duration), 'Protection for flash loan attack');
         require(!finalized, 'Strategy already exited');
@@ -358,7 +366,7 @@ abstract contract Strategy is ReentrancyGuard, Initializable {
      * Triggered from an immediate withdraw in the Garden.
      * @param _amountToUnwind              The amount of capital to unwind
      */
-    function unwindStrategy(uint256 _amountToUnwind) external onlyProtocolOrGarden nonReentrant {
+    function unwindStrategy(uint256 _amountToUnwind) external override onlyProtocolOrGarden nonReentrant {
         require(active && !finalized, 'Strategy must be active');
         require(_amountToUnwind <= capitalAllocated.sub(minRebalanceCapital), 'Not liquidity to unwind');
         // Exits and enters the strategy
@@ -396,7 +404,7 @@ abstract contract Strategy is ReentrancyGuard, Initializable {
      * Lets the strategist change the duration of the strategy
      * @param _newDuration            New duration of the strategy
      */
-    function changeStrategyDuration(uint256 _newDuration) external onlyStrategist {
+    function changeStrategyDuration(uint256 _newDuration) external override onlyStrategist {
         require(!finalized, 'strategy already exited');
         require(_newDuration < duration, 'Duration needs to be less');
         emit StrategyDurationChanged(_newDuration, duration);
@@ -425,7 +433,7 @@ abstract contract Strategy is ReentrancyGuard, Initializable {
         address _spender,
         address _asset,
         uint256 _quantity
-    ) external onlyIntegration {
+    ) external override onlyIntegration {
         IERC20(_asset).approve(_spender, _quantity);
     }
 
@@ -440,7 +448,7 @@ abstract contract Strategy is ReentrancyGuard, Initializable {
         address _target,
         uint256 _value,
         bytes calldata _data
-    ) external onlyIntegration returns (bytes memory) {
+    ) external override onlyIntegration returns (bytes memory) {
         return _invoke(_target, _value, _data);
     }
 
@@ -449,7 +457,7 @@ abstract contract Strategy is ReentrancyGuard, Initializable {
     /**
      * Returns whether this strategy is currently active or not
      */
-    function isStrategyActive() public view returns (bool) {
+    function isStrategyActive() public view override returns (bool) {
         return executedAt > 0 && exitedAt == 0;
     }
 
@@ -460,6 +468,7 @@ abstract contract Strategy is ReentrancyGuard, Initializable {
     function getStrategyDetails()
         external
         view
+        override
         returns (
             address,
             address,
@@ -500,6 +509,7 @@ abstract contract Strategy is ReentrancyGuard, Initializable {
     function getStrategyState()
         external
         view
+        override
         returns (
             address,
             bool,
@@ -519,7 +529,7 @@ abstract contract Strategy is ReentrancyGuard, Initializable {
      *
      * @return _nav           NAV of the strategy
      */
-    function getNAV() public view virtual returns (uint256);
+    function getNAV() public view virtual override returns (uint256);
 
     /**
      * Gets the votes casted by the contributor in this strategy
@@ -527,7 +537,7 @@ abstract contract Strategy is ReentrancyGuard, Initializable {
      * @param _address           Address of the contributor
      * @return _votes            Number of votes cast
      */
-    function getUserVotes(address _address) external view returns (int256) {
+    function getUserVotes(address _address) external view override returns (int256) {
         return votes[_address];
     }
 
@@ -536,7 +546,7 @@ abstract contract Strategy is ReentrancyGuard, Initializable {
      *
      * @return _losses           Amount of current losses
      */
-    function getLossesStrategy() external view onlyActiveGarden returns (uint256) {
+    function getLossesStrategy() external view override onlyActiveGarden returns (uint256) {
         if (isStrategyActive()) {
             uint256 navStrategy = getNAV();
             // If strategy is currently experiencing losses, we add them

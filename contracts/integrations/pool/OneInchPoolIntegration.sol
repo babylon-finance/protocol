@@ -80,7 +80,7 @@ contract OneInchPoolIntegration is PoolIntegration {
         address, /* _poolAddress */
         address, /* _poolToken */
         uint256 /* _maxAmountsIn */
-    ) external pure returns (uint256) {
+    ) external pure override returns (uint256) {
         // return 1 since _poolTokensOut are not used
         return 1;
     }
@@ -88,6 +88,7 @@ contract OneInchPoolIntegration is PoolIntegration {
     function getPoolMinAmountsOut(address _poolAddress, uint256 _liquidity)
         external
         view
+        override
         returns (uint256[] memory _minAmountsOut)
     {
         address[] memory tokens = IMooniswap(_poolAddress).getTokens();

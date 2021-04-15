@@ -40,7 +40,7 @@ contract LongStrategy is Strategy {
      *
      * @param _longToken                   Token to be bought
      */
-    function setData(address _longToken) external onlyGardenAndNotSet {
+    function setData(address _longToken) external override onlyGardenAndNotSet {
         require(garden.reserveAsset() != _longToken, 'Receive token must be different');
 
         kind = 0;
