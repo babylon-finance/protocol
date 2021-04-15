@@ -23,7 +23,7 @@ import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
  * @title IGarden
  * @author Babylon Finance
  *
- * Interface for operating with SetTokens.
+ * Interface for operating with a Garden.
  */
 interface IGarden is IERC20 {
     /* ============ Functions ============ */
