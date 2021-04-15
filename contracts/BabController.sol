@@ -22,11 +22,14 @@ import {OwnableUpgradeable} from '@openzeppelin/contracts-upgradeable/access/Own
 import {AddressUpgradeable} from '@openzeppelin/contracts-upgradeable/utils/AddressUpgradeable.sol';
 import {SafeMath} from '@openzeppelin/contracts/math/SafeMath.sol';
 import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
+
 import {IGarden} from './interfaces/IGarden.sol';
 import {IGarden} from './interfaces/IGarden.sol';
 import {IGardenFactory} from './interfaces/IGardenFactory.sol';
 import {IStrategy} from './interfaces/IStrategy.sol';
 import {IIntegration} from './interfaces/IIntegration.sol';
+import {IBabController} from './interfaces/IBabController.sol';
+
 import {AddressArrayUtils} from './lib/AddressArrayUtils.sol';
 
 /**
@@ -36,7 +39,7 @@ import {AddressArrayUtils} from './lib/AddressArrayUtils.sol';
  * BabController is a smart contract used to deploy new gardens contracts and house the
  * integrations and resources of the system.
  */
-contract BabController is OwnableUpgradeable {
+contract BabController is OwnableUpgradeable, IBabController {
     using AddressArrayUtils for address[];
     using AddressUpgradeable for address;
     using SafeMath for uint256;
@@ -74,16 +77,16 @@ contract BabController is OwnableUpgradeable {
     // List of enabled Communities
     address[] public gardens;
     address[] public reserveAssets;
-    address public gardenValuer;
-    address public priceOracle;
-    address public gardenFactory;
-    address public rewardsDistributor;
+    address public override gardenValuer;
+    address public override priceOracle;
+    address public override gardenFactory;
+    address public override rewardsDistributor;
     mapping(uint8 => address) public strategyFactory;
     // Mapping of garden => integration identifier => integration address
     mapping(bytes32 => address) private integrations;
 
     // Mappings to check whether address is valid Garden or Reserve Asset
-    mapping(address => bool) public isGarden;
+    mapping(address => bool) public override isGarden;
     mapping(address => bool) public validReserveAsset;
 
     // Mapping to check whitelisted assets
@@ -93,7 +96,7 @@ contract BabController is OwnableUpgradeable {
     mapping(address => bool) public keeperList;
 
     // Recipient of protocol fees
-    address public treasury;
+    address public override treasury;
 
     // Strategy cooldown period
     uint256 public constant MIN_COOLDOWN_PERIOD = 6 hours;
@@ -113,16 +116,16 @@ contract BabController is OwnableUpgradeable {
 
     // Assets
     // Absolute Min liquidity of assets for risky gardens 1000 ETH
-    uint256 public minRiskyPairLiquidityEth;
+    uint256 public override minRiskyPairLiquidityEth;
 
     // Enable Transfer of ERC20 gardenTokens
     // Only members can transfer tokens until the protocol is fully decentralized
-    bool public gardenTokensTransfersEnabled;
+    bool public override gardenTokensTransfersEnabled;
 
-    uint256 public protocolPerformanceFee; // 5% (0.01% = 1e14, 1% = 1e16) on profits
-    uint256 public protocolManagementFee; // 0.5% (0.01% = 1e14, 1% = 1e16)
-    uint256 public protocolDepositGardenTokenFee; // 0 (0.01% = 1e14, 1% = 1e16)
-    uint256 public protocolWithdrawalGardenTokenFee; // 0 (0.01% = 1e14, 1% = 1e16)
+    uint256 public override protocolPerformanceFee; // 5% (0.01% = 1e14, 1% = 1e16) on profits
+    uint256 public override protocolManagementFee; // 0.5% (0.01% = 1e14, 1% = 1e16)
+    uint256 public override protocolDepositGardenTokenFee; // 0 (0.01% = 1e14, 1% = 1e16)
+    uint256 public override protocolWithdrawalGardenTokenFee; // 0 (0.01% = 1e14, 1% = 1e16)
 
     /* ============ Constructor ============ */
 
@@ -165,7 +168,7 @@ contract BabController is OwnableUpgradeable {
         address _reserveAsset,
         string memory _name,
         string memory _symbol
-    ) external returns (address) {
+    ) external override returns (address) {
         address newGarden =
             IGardenFactory(gardenFactory).createGarden(_reserveAsset, address(this), msg.sender, _name, _symbol);
         _addGarden(newGarden);
@@ -177,7 +180,7 @@ contract BabController is OwnableUpgradeable {
      *
      * @param _garden               Address of the Garden contract to remove
      */
-    function removeGarden(address _garden) external onlyOwner {
+    function removeGarden(address _garden) external override onlyOwner {
         require(isGarden[_garden], 'Garden does not exist');
         require(!IGarden(_garden).active(), 'The garden needs to be disabled.');
         gardens = gardens.remove(_garden);
@@ -192,7 +195,7 @@ contract BabController is OwnableUpgradeable {
      *
      * @param _garden               Address of the garden
      */
-    function disableGarden(address _garden) external onlyOwner {
+    function disableGarden(address _garden) external override onlyOwner {
         require(isGarden[_garden], 'Garden does not exist');
         IGarden garden = IGarden(_garden);
         require(!!garden.active(), 'The garden needs to be active.');
@@ -215,7 +218,7 @@ contract BabController is OwnableUpgradeable {
      * PRIVILEGED GOVERNANCE FUNCTION. Allows transfers of ERC20 gardenTokens
      * Can only happen after 2021 is finished.
      */
-    function enableGardenTokensTransfers() external onlyOwner {
+    function enableGardenTokensTransfers() external override onlyOwner {
         require(block.timestamp > 1641024000000, 'Transfers cannot be enabled yet');
         gardenTokensTransfersEnabled = true;
     }
@@ -227,7 +230,7 @@ contract BabController is OwnableUpgradeable {
      *
      * @param _keeper Address of the keeper
      */
-    function addKeeper(address _keeper) external onlyOwner {
+    function addKeeper(address _keeper) external override onlyOwner {
         keeperList[_keeper] = true;
     }
 
@@ -236,7 +239,7 @@ contract BabController is OwnableUpgradeable {
      *
      * @param _keeper Address of the keeper
      */
-    function removeKeeper(address _keeper) external onlyOwner {
+    function removeKeeper(address _keeper) external override onlyOwner {
         require(keeperList[_keeper], 'Keeper is whitelisted');
         keeperList[_keeper] = false;
     }
@@ -246,7 +249,7 @@ contract BabController is OwnableUpgradeable {
      *
      * @param _keepers List with keeprs of the assets to whitelist
      */
-    function addKeepers(address[] memory _keepers) external onlyOwner {
+    function addKeepers(address[] memory _keepers) external override onlyOwner {
         for (uint256 i = 0; i < _keepers.length; i++) {
             keeperList[_keepers[i]] = true;
         }
@@ -257,7 +260,7 @@ contract BabController is OwnableUpgradeable {
      *
      * @param _reserveAsset Address of the reserve assset
      */
-    function addReserveAsset(address _reserveAsset) external onlyOwner {
+    function addReserveAsset(address _reserveAsset) external override onlyOwner {
         require(!validReserveAsset[_reserveAsset], 'Reserve asset already added');
         validReserveAsset[_reserveAsset] = true;
         reserveAssets.push(_reserveAsset);
@@ -269,7 +272,7 @@ contract BabController is OwnableUpgradeable {
      *
      * @param _reserveAsset               Address of the reserve asset to remove
      */
-    function removeReserveAsset(address _reserveAsset) external onlyOwner {
+    function removeReserveAsset(address _reserveAsset) external override onlyOwner {
         require(validReserveAsset[_reserveAsset], 'Reserve asset does not exist');
 
         reserveAssets = reserveAssets.remove(_reserveAsset);
@@ -284,7 +287,7 @@ contract BabController is OwnableUpgradeable {
      *
      * @param _priceOracle               Address of the new price oracle
      */
-    function editPriceOracle(address _priceOracle) external onlyOwner {
+    function editPriceOracle(address _priceOracle) external override onlyOwner {
         require(_priceOracle != priceOracle, 'Price oracle already exists');
 
         require(_priceOracle != address(0), 'Price oracle must exist');
@@ -300,7 +303,7 @@ contract BabController is OwnableUpgradeable {
      *
      * @param _gardenValuer Address of the new garden valuer
      */
-    function editGardenValuer(address _gardenValuer) external onlyOwner {
+    function editGardenValuer(address _gardenValuer) external override onlyOwner {
         require(_gardenValuer != gardenValuer, 'Garden Valuer already exists');
 
         require(_gardenValuer != address(0), 'Garden Valuer must exist');
@@ -316,7 +319,7 @@ contract BabController is OwnableUpgradeable {
      *
      * @param _newTreasury      Address of the new protocol fee recipient
      */
-    function editTreasury(address _newTreasury) external onlyOwner {
+    function editTreasury(address _newTreasury) external override onlyOwner {
         require(_newTreasury != address(0), 'Address must not be 0');
 
         address oldTreasury = treasury;
@@ -330,7 +333,7 @@ contract BabController is OwnableUpgradeable {
      *
      * @param _newRewardsDistributor      Address of the new rewards distributor
      */
-    function editRewardsDistributor(address _newRewardsDistributor) external onlyOwner {
+    function editRewardsDistributor(address _newRewardsDistributor) external override onlyOwner {
         require(_newRewardsDistributor != address(0), 'Address must not be 0');
 
         address oldRewardsDistributor = rewardsDistributor;
@@ -344,7 +347,7 @@ contract BabController is OwnableUpgradeable {
      *
      * @param _newGardenFactory      Address of the new garden factory
      */
-    function editGardenFactory(address _newGardenFactory) external onlyOwner {
+    function editGardenFactory(address _newGardenFactory) external override onlyOwner {
         require(_newGardenFactory != address(0), 'Address must not be 0');
 
         address oldGardenFactory = gardenFactory;
@@ -359,7 +362,7 @@ contract BabController is OwnableUpgradeable {
      * @param _strategyKind            Type of the strategy
      * @param _newStrategyFactory      Address of the new strategy factory
      */
-    function editStrategyFactory(uint8 _strategyKind, address _newStrategyFactory) external onlyOwner {
+    function editStrategyFactory(uint8 _strategyKind, address _newStrategyFactory) external override onlyOwner {
         require(_newStrategyFactory != address(0), 'Address must not be 0');
 
         address oldStrategyFactory = strategyFactory[_strategyKind];
@@ -374,7 +377,7 @@ contract BabController is OwnableUpgradeable {
      * @param  _name             Human readable string identifying the integration
      * @param  _integration      Address of the integration contract to add
      */
-    function addIntegration(string memory _name, address _integration) public onlyOwner {
+    function addIntegration(string memory _name, address _integration) public override onlyOwner {
         bytes32 hashedName = _nameHash(_name);
         require(integrations[hashedName] == address(0), 'Integration exists already.');
         require(_integration != address(0), 'Integration address must exist.');
@@ -390,7 +393,7 @@ contract BabController is OwnableUpgradeable {
      * @param  _name         Human readable string identifying the integration
      * @param  _integration      Address of the integration contract to edit
      */
-    function editIntegration(string memory _name, address _integration) public onlyOwner {
+    function editIntegration(string memory _name, address _integration) public override onlyOwner {
         bytes32 hashedName = _nameHash(_name);
 
         require(integrations[hashedName] != address(0), 'Integration does not exist.');
@@ -406,7 +409,7 @@ contract BabController is OwnableUpgradeable {
      *
      * @param  _name         Human readable string identifying the integration
      */
-    function removeIntegration(string memory _name) external onlyOwner {
+    function removeIntegration(string memory _name) external override onlyOwner {
         bytes32 hashedName = _nameHash(_name);
         require(integrations[hashedName] != address(0), 'Integration does not exist.');
 
@@ -421,7 +424,7 @@ contract BabController is OwnableUpgradeable {
      *
      * @param  _minRiskyPairLiquidityEth       Absolute min liquidity of an asset to grab price
      */
-    function editLiquidityMinimum(uint256 _minRiskyPairLiquidityEth) public onlyOwner {
+    function editLiquidityMinimum(uint256 _minRiskyPairLiquidityEth) public override onlyOwner {
         require(_minRiskyPairLiquidityEth > 0, '_minRiskyPairLiquidityEth > 0');
         minRiskyPairLiquidityEth = _minRiskyPairLiquidityEth;
 
@@ -430,15 +433,19 @@ contract BabController is OwnableUpgradeable {
 
     /* ============ External Getter Functions ============ */
 
-    function getUniswapFactory() external pure returns (address) {
+    function owner() public view override(IBabController, OwnableUpgradeable) returns (address) {
+        return OwnableUpgradeable.owner();
+    }
+
+    function getUniswapFactory() external pure override returns (address) {
         return UNISWAP_FACTORY;
     }
 
-    function getStrategyFactory(uint8 _strategyKind) external view returns (address) {
+    function getStrategyFactory(uint8 _strategyKind) external view override returns (address) {
         return strategyFactory[_strategyKind];
     }
 
-    function getGardens() external view returns (address[] memory) {
+    function getGardens() external view override returns (address[] memory) {
         return gardens;
     }
 
@@ -446,19 +453,19 @@ contract BabController is OwnableUpgradeable {
         return reserveAssets;
     }
 
-    function getMinCooldownPeriod() external pure returns (uint256) {
+    function getMinCooldownPeriod() external pure override returns (uint256) {
         return MIN_COOLDOWN_PERIOD;
     }
 
-    function getMaxCooldownPeriod() external pure returns (uint256) {
+    function getMaxCooldownPeriod() external pure override returns (uint256) {
         return MAX_COOLDOWN_PERIOD;
     }
 
-    function isValidReserveAsset(address _reserveAsset) external view returns (bool) {
+    function isValidReserveAsset(address _reserveAsset) external view override returns (bool) {
         return validReserveAsset[_reserveAsset];
     }
 
-    function isValidKeeper(address _keeper) external view returns (bool) {
+    function isValidKeeper(address _keeper) external view override returns (bool) {
         return keeperList[_keeper];
     }
 
@@ -470,6 +477,7 @@ contract BabController is OwnableUpgradeable {
     function getProfitSharing()
         external
         view
+        override
         returns (
             uint256,
             uint256,
@@ -487,6 +495,7 @@ contract BabController is OwnableUpgradeable {
     function getBABLSharing()
         external
         view
+        override
         returns (
             uint256,
             uint256,
@@ -504,7 +513,7 @@ contract BabController is OwnableUpgradeable {
      *
      * @return               Address of integration
      */
-    function getIntegrationByName(string memory _name) external view returns (address) {
+    function getIntegrationByName(string memory _name) external view override returns (address) {
         return integrations[_nameHash(_name)];
     }
 
@@ -515,7 +524,7 @@ contract BabController is OwnableUpgradeable {
      *
      * @return               Address of integration
      */
-    function getIntegrationWithHash(bytes32 _nameHashP) external view returns (address) {
+    function getIntegrationWithHash(bytes32 _nameHashP) external view override returns (address) {
         return integrations[_nameHashP];
     }
 
@@ -526,7 +535,7 @@ contract BabController is OwnableUpgradeable {
      *
      * @return               Boolean indicating if valid
      */
-    function isValidIntegration(string memory _name, address _integration) external view returns (bool) {
+    function isValidIntegration(string memory _name, address _integration) external view override returns (bool) {
         return integrations[_nameHash(_name)] == _integration;
     }
 
@@ -535,7 +544,7 @@ contract BabController is OwnableUpgradeable {
      *
      * @param  _contractAddress           The contract address to check
      */
-    function isSystemContract(address _contractAddress) external view returns (bool) {
+    function isSystemContract(address _contractAddress) external view override returns (bool) {
         return (isGarden[_contractAddress] ||
             gardenValuer == _contractAddress ||
             priceOracle == _contractAddress ||
