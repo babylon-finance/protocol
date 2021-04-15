@@ -443,6 +443,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
             contributor.claimedProfits = contributor.claimedProfits.add(totalProfits); // Profits claimed properly
             // Send ETH
             Address.sendValue(msg.sender, totalProfits);
+            profitsSetAside = profitsSetAside.sub(totalProfits);
             emit ProfitsForContributor(msg.sender, totalProfits);
         }
         if (bablRewards > 0) {
@@ -460,9 +461,10 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
      * When an strategy finishes execution, we want to make that eth available for withdrawals
      * from members of the garden.
      *
-     * @param _amount                        Amount of WETH to convert to ETH to set aside
+     * @param _amount                        Amount of WETH to convert to ETH to set aside until the window ends
+     * @param _profits                       Amount of WETH to convert to ETH to set aside forever
      */
-    function startWithdrawalWindow(uint256 _amount) external override onlyStrategyOrProtocol {
+    function startWithdrawalWindow(uint256 _amount, uint256 _profits) external onlyStrategyOrProtocol {
         if (withdrawalsOpenUntil > block.timestamp) {
             withdrawalsOpenUntil = block.timestamp.add(
                 withdrawalWindowAfterStrategyCompletes.sub(withdrawalsOpenUntil.sub(block.timestamp))
@@ -470,19 +472,22 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         } else {
             withdrawalsOpenUntil = block.timestamp.add(withdrawalWindowAfterStrategyCompletes);
         }
+        profitsSetAside = profitsSetAside.add(_profits);
         IWETH(WETH).withdraw(_amount);
     }
 
     /**
      * When the window of withdrawals finishes, we need to make the capital available again for investments
-     *
+     * We still keep the profits aside.
      */
-    function reenableEthForStrategies() public override {
+    function reenableEthForStrategies() public {
         if (block.timestamp >= withdrawalsOpenUntil && address(this).balance > minContribution) {
             withdrawalsOpenUntil = 0;
-            IWETH(WETH).deposit{value: address(this).balance}();
+            IWETH(WETH).deposit{value: address(this).balance.sub(profitsSetAside)}();
         }
     }
+
+    /* ============ External Functions ============ */
 
     /**
      * PRIVILEGED Manager, protocol FUNCTION. Changes the reserve asset
