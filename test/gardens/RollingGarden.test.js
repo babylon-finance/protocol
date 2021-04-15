@@ -217,6 +217,7 @@ describe('Garden', function () {
       // Can now withdraw stake amount as it is again unlocked
       await expect(garden1.connect(signer1).withdraw(ethers.utils.parseEther('0.1'), 1, signer1.getAddress())).not.to.be
         .reverted;
+
       await expect(garden1.connect(signer2).withdraw(ethers.utils.parseEther('1.1'), 1, signer2.getAddress())).not.to.be
         .reverted;
 
