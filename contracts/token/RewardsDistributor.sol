@@ -467,7 +467,7 @@ contract RewardsDistributor is Ownable {
         rewardsPowerOverhead[address(_strategy)][getQuarter(block.timestamp)] = rewardsPowerOverhead[
             address(_strategy)
         ][getQuarter(block.timestamp)]
-            .add(_capital.mul(block.timestamp.sub(_strategy.updatedAt())));
+            .add(_capital.preciseMul(block.timestamp.sub(_strategy.updatedAt())));
     }
 
     // Safe BABL transfer function, just in case if rounding error causes DistributorRewards to not have enough BABL.

@@ -105,7 +105,6 @@ describe('Garden', function () {
       const contributor = await garden1.contributors(signer3.getAddress());
       expect(contributor.lastDepositAt).to.be.gt(0);
       expect(contributor.initialDepositAt).to.be.gt(0);
-      expect(contributor.numberOfOps).to.equal(1);
     });
 
     it('a contributor can make multiple deposits', async function () {
