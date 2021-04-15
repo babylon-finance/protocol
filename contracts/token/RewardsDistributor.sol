@@ -130,6 +130,10 @@ contract RewardsDistributor is Ownable {
 
     /* ============ External Functions ============ */
 
+    /**
+     * Function that adds the capital received to the total principal of the protocol per timestamp
+     * @param _capital                Amount of capital in WETH
+     */
     function addProtocolPrincipal(uint256 _capital) external onlyStrategy {
         IStrategy strategy = IStrategy(msg.sender);
         protocolPrincipal = protocolPrincipal.add(_capital);
@@ -160,6 +164,10 @@ contract RewardsDistributor is Ownable {
         pid++;
     }
 
+    /**
+     * Function that removes the capital received to the total principal of the protocol per timestamp
+     * @param _capital                Amount of capital in WETH
+     */
     function substractProtocolPrincipal(uint256 _capital) external onlyStrategy {
         protocolPrincipal = protocolPrincipal.sub(_capital);
         ProtocolPerTimestamp storage protocolCheckpoint = protocolPerTimestamp[block.timestamp];
@@ -179,6 +187,10 @@ contract RewardsDistributor is Ownable {
         pid++;
     }
 
+    /**
+     * Gets the total amount of rewards for a given strategy
+     * @param _strategy                Strategy to check
+     */
     function getStrategyRewards(address _strategy) external returns (uint96) {
         IStrategy strategy = IStrategy(_strategy);
         require(strategy.exitedAt() != 0, 'The strategy has to be finished');
@@ -262,12 +274,21 @@ contract RewardsDistributor is Ownable {
         return Safe3296.safe96(bablRewards, 'overflow 96 bits');
     }
 
-    //function sendTokensToContributor(address _to, uint96 _amount) public onlyStrategy {
+    /**
+     * Sends BABL tokens to a contributor.
+     * @param _to                Address to send the tokens to
+     * @param _amount            Amount of tokens to send the address to
+     */
     function sendTokensToContributor(address _to, uint96 _amount) external {
         require(controller.isSystemContract(msg.sender), 'The caller is not a system contract');
         _safeBABLTransfer(_to, _amount);
     }
 
+    /**
+     * Calcualtes the profits and BABL that a contributor should receive from a series of finalized strategies
+     * @param _contributor              Address of the contributor to check
+     * @param _finalizedStrategies      List of addresses if the finalized strategies
+     */
     function getProfitsAndBabl(address _contributor, address[] calldata _finalizedStrategies)
         external
         view

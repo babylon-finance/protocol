@@ -210,7 +210,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
 
     // Keeps track of the reserve balance. In case we receive some through other means
     uint256 public override principal;
-    uint256 public profitsSetAside;
+    uint256 public override profitsSetAside;
     int256 public override absoluteReturns; // Total profits or losses of this garden
 
     // Indicates the minimum liquidity the asset needs to have to be tradable by this garden
@@ -481,7 +481,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
      * When the window of withdrawals finishes, we need to make the capital available again for investments
      * We still keep the profits aside.
      */
-    function reenableEthForStrategies() override public {
+    function reenableEthForStrategies() public override {
         if (block.timestamp >= withdrawalsOpenUntil && address(this).balance > minContribution) {
             withdrawalsOpenUntil = 0;
             IWETH(WETH).deposit{value: address(this).balance.sub(profitsSetAside)}();

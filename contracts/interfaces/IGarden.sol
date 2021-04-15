@@ -61,6 +61,8 @@ interface IGarden {
 
     function principal() external view returns (uint256);
 
+    function profitsSetAside() external view returns (uint256);
+
     function absoluteReturns() external view returns (int256);
 
     function totalStake() external view returns (uint256);
