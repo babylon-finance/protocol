@@ -182,7 +182,7 @@ describe('Strategy', function () {
             gasPrice: 0,
           },
         ),
-      ).to.be.revertedWith(/voting window is closed/i);
+      ).to.be.revertedWith(/Voting window closed/i);
     });
 
     it("can't push voting results twice", async function () {
@@ -211,7 +211,7 @@ describe('Strategy', function () {
             gasPrice: 0,
           },
         ),
-      ).to.be.revertedWith(/voting is already resolved/i);
+      ).to.be.revertedWith(/voting already resolved/i);
     });
   });
 
@@ -384,7 +384,6 @@ describe('Strategy', function () {
 
     it('should get the NAV value of a OneInchPool strategy', async function () {
       const daiWethOneInchPair = await ethers.getContractAt('IMooniswap', addresses.oneinch.pools.wethdai);
-      console.log('address', daiWethOneInchPair.address);
       const strategyContract = await createStrategy(
         1,
         'active',

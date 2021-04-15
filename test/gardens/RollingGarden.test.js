@@ -44,12 +44,9 @@ describe('Garden', function () {
       expect(await garden1.creator()).to.equal(await signer1.getAddress());
       expect(await garden1.controller()).to.equal(babController.address);
       expect(await garden1.strategyCooldownPeriod()).to.equal(ONE_DAY_IN_SECONDS);
-      expect(await garden1.strategyCreatorProfitPercentage()).to.equal(ethers.utils.parseEther('0.13'));
-      expect(await garden1.strategyVotersProfitPercentage()).to.equal(ethers.utils.parseEther('0.05'));
-      expect(await garden1.gardenCreatorProfitPercentage()).to.equal(ethers.utils.parseEther('0.02'));
       expect(await garden1.minVotersQuorum()).to.equal(ethers.utils.parseEther('0.10'));
-      expect(await garden1.minIdeaDuration()).to.equal(ONE_DAY_IN_SECONDS * 3);
-      expect(await garden1.maxIdeaDuration()).to.equal(ONE_DAY_IN_SECONDS * 365);
+      expect(await garden1.minStrategyDuration()).to.equal(ONE_DAY_IN_SECONDS * 3);
+      expect(await garden1.maxStrategyDuration()).to.equal(ONE_DAY_IN_SECONDS * 365);
     });
   });
 

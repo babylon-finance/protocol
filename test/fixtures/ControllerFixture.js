@@ -178,9 +178,6 @@ async function deployFolioFixture() {
     2,
     ethers.utils.parseEther('0.01'),
     ONE_DAY_IN_SECONDS,
-    ethers.utils.parseEther('0.13'), // 13% Ideator
-    ethers.utils.parseEther('0.05'), // 5% Voters
-    ethers.utils.parseEther('0.02'), // 2% garden creator
     ethers.utils.parseEther('0.10'), // 10% quorum
     ONE_DAY_IN_SECONDS * 3,
     ONE_DAY_IN_SECONDS * 365,
@@ -195,9 +192,6 @@ async function deployFolioFixture() {
     2,
     ethers.utils.parseEther('0.01'),
     ONE_DAY_IN_SECONDS,
-    ethers.utils.parseEther('0.13'), // 13% Ideator
-    ethers.utils.parseEther('0.05'), // 5% Voters
-    ethers.utils.parseEther('0.02'), // 2% garden creator
     ethers.utils.parseEther('0.10'), // 10% quorum
     ONE_DAY_IN_SECONDS * 3,
     ONE_DAY_IN_SECONDS * 365,
@@ -213,9 +207,6 @@ async function deployFolioFixture() {
     2,
     ethers.utils.parseEther('0.01'),
     ONE_DAY_IN_SECONDS,
-    ethers.utils.parseEther('0.13'), // 13% Ideator
-    ethers.utils.parseEther('0.05'), // 5% Voters
-    ethers.utils.parseEther('0.02'), // 2% garden creator
     ethers.utils.parseEther('0.10'), // 10% quorum
     ONE_DAY_IN_SECONDS * 3,
     ONE_DAY_IN_SECONDS * 365,

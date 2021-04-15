@@ -18,7 +18,7 @@
 
 pragma solidity 0.7.4;
 
-import 'hardhat/console.sol';
+// import 'hardhat/console.sol';
 
 import {Address} from '@openzeppelin/contracts/utils/Address.sol';
 import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
@@ -67,20 +67,17 @@ abstract contract Strategy is ReentrancyGuard, Initializable {
      * Throws if the sender is not the creator of the strategy
      */
     modifier onlyProtocolOrGarden {
-        require(
-            msg.sender == address(garden) || msg.sender == controller.owner(),
-            'Only Protocol or garden can access this'
-        );
+        require(msg.sender == address(garden) || msg.sender == controller.owner(), 'Only Protocol or garden');
         _;
     }
 
-    modifier onlyIdeator {
-        require(msg.sender == strategist, 'Only Ideator can access this');
+    modifier onlyStrategist {
+        require(msg.sender == strategist, 'Only Strategist ');
         _;
     }
 
     modifier onlyContributor {
-        require(IERC20(address(garden)).balanceOf(msg.sender) > 0, 'Only someone with the garden token can withdraw');
+        require(IERC20(address(garden)).balanceOf(msg.sender) > 0, 'Only contributor');
         _;
     }
 
@@ -117,7 +114,7 @@ abstract contract Strategy is ReentrancyGuard, Initializable {
      * @param _fee                     The fee paid to keeper to compensate the gas cost
      */
     modifier onlyKeeper(uint256 _fee) {
-        require(controller.isValidKeeper(msg.sender), 'Only a keeper can call this');
+        require(controller.isValidKeeper(msg.sender), 'Only keeper');
         // We assume that calling keeper functions should be less expensive than 1 million gas and the gas price should be lower than 1000 gwei.
         require(_fee < MAX_KEEPER_FEE, 'Fee is too high');
         _;
@@ -209,18 +206,18 @@ abstract contract Strategy is ReentrancyGuard, Initializable {
         controller = IBabController(_controller);
         require(controller.isSystemContract(_garden), 'Must be a valid garden');
         garden = IGarden(_garden);
-        require(IERC20(address(garden)).balanceOf(_strategist) > 0, 'Strategist mush have a stake');
-        require(_stake > garden.totalSupply().div(100), 'Stake amount must be at least 1%');
+        require(IERC20(address(garden)).balanceOf(_strategist) > 0, 'Strategist needs to stake');
+        require(_stake > garden.totalSupply().div(100), 'Stake > 1%');
         require(
-            _strategyDuration >= garden.minIdeaDuration() && _strategyDuration <= garden.maxIdeaDuration(),
+            _strategyDuration >= garden.minStrategyDuration() && _strategyDuration <= garden.maxStrategyDuration(),
             'Duration must be in range'
         );
         require(
             controller.isValidIntegration(ITradeIntegration(_integration).getName(), _integration),
             'Integration must be valid'
         );
-        require(_minRebalanceCapital > 0, 'Min capital be greater than 0');
-        require(_maxCapitalRequested >= _minRebalanceCapital, 'The max amount >= one chunk');
+        require(_minRebalanceCapital > 0, 'Min capital >= 0');
+        require(_maxCapitalRequested >= _minRebalanceCapital, 'max amount >= rebalance');
         // Check than enter and exit data call integrations
         strategist = _strategist;
         enteredAt = block.timestamp;
@@ -254,8 +251,8 @@ abstract contract Strategy is ReentrancyGuard, Initializable {
         int256 _totalVotes,
         uint256 _fee
     ) external onlyKeeper(_fee) onlyActiveGarden {
-        require(!active, 'Voting is already resolved');
-        require(block.timestamp.sub(enteredAt) <= MAX_CANDIDATE_PERIOD, 'Voting window is closed');
+        require(!active && !finalized, 'Voting already resolved');
+        require(block.timestamp.sub(enteredAt) <= MAX_CANDIDATE_PERIOD, 'Voting window closed');
         active = true;
 
         // Set votes data
@@ -268,7 +265,7 @@ abstract contract Strategy is ReentrancyGuard, Initializable {
 
         // Get Keeper Fees allocated
         garden.allocateCapitalToStrategy(MAX_STRATEGY_KEEPER_FEES);
-
+        enteredCooldownAt = block.timestamp;
         _payKeeper(msg.sender, _fee);
     }
 
@@ -279,13 +276,10 @@ abstract contract Strategy is ReentrancyGuard, Initializable {
      * @param _fee                      The fee paid to keeper to compensate the gas cost.
      */
     function executeStrategy(uint256 _capital, uint256 _fee) external onlyKeeper(_fee) nonReentrant onlyActiveGarden {
-        require(active, 'Idea needs to be active');
+        require(active, 'Strategy needs to be active');
         require(capitalAllocated.add(_capital) <= maxCapitalRequested, 'Max capital reached');
-        require(_capital >= minRebalanceCapital, 'Amount needs to be more than min');
-        require(
-            block.timestamp.sub(enteredCooldownAt) >= garden.strategyCooldownPeriod(),
-            'Idea has not completed the cooldown period'
-        );
+        require(_capital >= minRebalanceCapital, 'Amount >= min');
+        require(block.timestamp.sub(enteredCooldownAt) >= garden.strategyCooldownPeriod(), 'Strategy in cooldown');
 
         // Execute enter trade
         garden.allocateCapitalToStrategy(_capital);
@@ -295,7 +289,6 @@ abstract contract Strategy is ReentrancyGuard, Initializable {
         // Sets the executed timestamp on first execution
         if (executedAt == 0) {
             executedAt = block.timestamp;
-            updatedAt = executedAt;
         } else {
             // Updating allocation - we need to consider the difference for the calculation
             // We control the potential overhead in BABL Rewards calculations to keep control and avoid distributing a wrong number (e.g. flash loans)
@@ -303,8 +296,7 @@ abstract contract Strategy is ReentrancyGuard, Initializable {
         }
 
         // Add to Rewards Distributor an update of the Protocol Principal for BABL Mining Rewards calculations
-        IRewardsDistributor rewardsDistributor =
-            IRewardsDistributor(IBabController(controller).getRewardsDistributor());
+        IRewardsDistributor rewardsDistributor = IRewardsDistributor(IBabController(controller).rewardsDistributor());
         rewardsDistributor.addProtocolPrincipal(_capital);
         _payKeeper(msg.sender, _fee);
         updatedAt = block.timestamp;
@@ -318,12 +310,9 @@ abstract contract Strategy is ReentrancyGuard, Initializable {
      * @param _fee                     The fee paid to keeper to compensate the gas cost
      */
     function finalizeStrategy(uint256 _fee) external onlyKeeper(_fee) nonReentrant onlyActiveGarden {
-        require(executedAt > 0, 'This strategy has not been executed');
-        require(
-            block.timestamp > executedAt.add(duration),
-            'Idea can only be finalized after the minimum period has elapsed'
-        );
-        require(!finalized, 'This strategy was already exited');
+        require(executedAt > 0, 'Strategy has not executed');
+        require(block.timestamp > executedAt.add(duration), 'Protection for flash loan attack');
+        require(!finalized, 'Strategy already exited');
         // Execute exit trade
         _exitStrategy(HUNDRED_PERCENT);
         // Mark as finalized
@@ -345,15 +334,14 @@ abstract contract Strategy is ReentrancyGuard, Initializable {
      * @param _amountToUnwind              The amount of capital to unwind
      */
     function unwindStrategy(uint256 _amountToUnwind) external onlyProtocolOrGarden nonReentrant {
-        require(active && !finalized, 'Strategy needs to be active');
-        require(_amountToUnwind <= capitalAllocated.sub(minRebalanceCapital), 'Not enough liquidity to unwind');
+        require(active && !finalized, 'Strategy must be active');
+        require(_amountToUnwind <= capitalAllocated.sub(minRebalanceCapital), 'Not liquidity to unwind');
         // Exits and enters the strategy
         _exitStrategy(_amountToUnwind.preciseDiv(capitalAllocated));
         updatedAt = block.timestamp;
         capitalAllocated = capitalAllocated.sub(_amountToUnwind);
         // Removes protocol principal for the calculation of rewards
-        IRewardsDistributor rewardsDistributor =
-            IRewardsDistributor(IBabController(controller).getRewardsDistributor());
+        IRewardsDistributor rewardsDistributor = IRewardsDistributor(IBabController(controller).rewardsDistributor());
         rewardsDistributor.substractProtocolPrincipal(_amountToUnwind);
         // Send the amount back to the warden for the immediate withdrawal
         IERC20(garden.reserveAsset()).safeTransfer(address(garden), _amountToUnwind);
@@ -371,7 +359,7 @@ abstract contract Strategy is ReentrancyGuard, Initializable {
     /**
      * Delete a candidate strategy by the ideator
      */
-    function deleteCandidateStrategy() external onlyIdeator {
+    function deleteCandidateStrategy() external onlyStrategist {
         _deleteCandidateStrategy();
     }
 
@@ -379,9 +367,9 @@ abstract contract Strategy is ReentrancyGuard, Initializable {
      * Lets the strategist change the duration of the strategy
      * @param _newDuration            New duration of the strategy
      */
-    function changeStrategyDuration(uint256 _newDuration) external onlyIdeator {
-        require(!finalized, 'This strategy was already exited');
-        require(_newDuration < duration, 'Duration needs to be less than the old duration');
+    function changeStrategyDuration(uint256 _newDuration) external onlyStrategist {
+        require(!finalized, 'strategy already exited');
+        require(_newDuration < duration, 'Duration needs to be less');
         duration = _newDuration;
     }
 
@@ -390,8 +378,8 @@ abstract contract Strategy is ReentrancyGuard, Initializable {
     function sweep(address _token) external onlyContributor {
         require(_token != garden.reserveAsset(), 'Cannot sweep reserve asset');
         uint256 balance = IERC20(_token).balanceOf(address(this));
-        require(!active, 'Do not sweep tokens of active strategies');
-        require(balance > 0, 'Token balance > 0');
+        require(!active, 'Do not sweep active tokens');
+        require(balance > 0, 'Token > 0');
         _trade(_token, balance, garden.reserveAsset());
         // Send WETH to garden
         _sendReserveAssetToGarden();
@@ -418,7 +406,7 @@ abstract contract Strategy is ReentrancyGuard, Initializable {
     /**
      * Returns whether this strategy is currently active or not
      */
-    function isIdeaActive() public view returns (bool) {
+    function isStrategyActive() public view returns (bool) {
         return executedAt > 0 && exitedAt == 0;
     }
 
@@ -505,7 +493,7 @@ abstract contract Strategy is ReentrancyGuard, Initializable {
         require(IBabController(controller).isValidKeeper(_keeper), 'Only Keeper'); // Only keeper
         // Pay Keeper in WETH
         if (_fee > 0) {
-            require(IERC20(garden.reserveAsset()).balanceOf(address(this)) >= _fee, 'Not enough weth to pay keeper');
+            require(IERC20(garden.reserveAsset()).balanceOf(address(this)) >= _fee, 'Failed to pay keeper');
             IERC20(garden.reserveAsset()).safeTransfer(_keeper, _fee);
         }
     }
@@ -533,8 +521,8 @@ abstract contract Strategy is ReentrancyGuard, Initializable {
      */
     function _deleteCandidateStrategy() internal {
         require(block.timestamp.sub(enteredAt) > MAX_CANDIDATE_PERIOD, 'Voters still have time');
-        require(executedAt == 0, 'This strategy has executed');
-        require(!finalized, 'This strategy already exited');
+        require(executedAt == 0, 'strategy has executed');
+        require(!finalized, 'strategy already exited');
         IGarden(garden).expireCandidateStrategy(address(this));
         // TODO: Call selfdestruct??
     }
@@ -565,7 +553,7 @@ abstract contract Strategy is ReentrancyGuard, Initializable {
     }
 
     function getLossesStrategy() external view onlyActiveGarden returns (uint256) {
-        if (isIdeaActive()) {
+        if (isStrategyActive()) {
             uint256 navStrategy = getNAV();
             // If strategy is currently experiencing losses, we add them
             if (navStrategy < capitalAllocated) {
@@ -592,7 +580,7 @@ abstract contract Strategy is ReentrancyGuard, Initializable {
     ) internal returns (uint256) {
         address tradeIntegration = IBabController(controller).getIntegrationByName('1inch');
         // Uses on chain oracle for all internal strategy operations to avoid attacks        // Updates UniSwap TWAP
-        IPriceOracle oracle = IPriceOracle(IBabController(controller).getPriceOracle());
+        IPriceOracle oracle = IPriceOracle(IBabController(controller).priceOracle());
         oracle.updateAdapters(_sendToken, _receiveToken);
         uint256 pricePerTokenUnit = oracle.getPrice(_sendToken, _receiveToken);
         uint256 exactAmount = _sendQuantity.preciseMul(pricePerTokenUnit);
@@ -608,14 +596,14 @@ abstract contract Strategy is ReentrancyGuard, Initializable {
         address reserveAsset = garden.reserveAsset();
         int256 reserveAssetDelta = capitalReturned.toInt256().sub(capitalAllocated.toInt256());
         uint256 protocolProfits = 0;
-        // Idea returns were positive
+        // Strategy returns were positive
         if (capitalReturned >= capitalAllocated) {
             uint256 profits = capitalReturned - capitalAllocated; // in reserve asset (weth)
             // Send weth performance fee to the protocol
-            protocolProfits = IBabController(controller).getProtocolPerformanceFee().preciseMul(profits);
+            protocolProfits = IBabController(controller).protocolPerformanceFee().preciseMul(profits);
             IERC20(reserveAsset).safeTransferFrom(
                 address(this),
-                IBabController(controller).getTreasury(),
+                IBabController(controller).treasury(),
                 protocolProfits
             );
             reserveAssetDelta.add(int256(-protocolProfits));
@@ -639,15 +627,14 @@ abstract contract Strategy is ReentrancyGuard, Initializable {
 
         // Moves strategy to finalized
         IGarden(garden).moveStrategyToFinalized(reserveAssetDelta, address(this));
-        IRewardsDistributor rewardsDistributor =
-            IRewardsDistributor(IBabController(controller).getRewardsDistributor());
+        IRewardsDistributor rewardsDistributor = IRewardsDistributor(IBabController(controller).rewardsDistributor());
         // Substract the Principal in the Rewards Distributor to update the Protocol power value
         rewardsDistributor.substractProtocolPrincipal(capitalAllocated);
         strategyRewards = rewardsDistributor.getStrategyRewards(address(this));
     }
 
     function _getPrice(address _assetOne, address _assetTwo) internal view returns (uint256) {
-        IPriceOracle oracle = IPriceOracle(IBabController(controller).getPriceOracle());
+        IPriceOracle oracle = IPriceOracle(IBabController(controller).priceOracle());
         return oracle.getPrice(_assetOne, _assetTwo);
     }
 

@@ -18,7 +18,7 @@
 
 pragma solidity 0.7.4;
 
-import 'hardhat/console.sol';
+// import 'hardhat/console.sol';
 import {SafeMath} from '@openzeppelin/contracts/math/SafeMath.sol';
 import {PreciseUnitMath} from '../lib/PreciseUnitMath.sol';
 import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
@@ -68,7 +68,7 @@ contract LiquidityPoolStrategy is Strategy {
         uint256 lpTokens = IERC20(pool).balanceOf(address(this));
         for (uint256 i = 0; i < poolTokens.length; i++) {
             uint256 price =
-                _getPrice(garden.reserveAsset(), poolTokens[i] != address(0) ? poolTokens[i] : garden.weth());
+                _getPrice(garden.reserveAsset(), poolTokens[i] != address(0) ? poolTokens[i] : garden.WETH());
             uint256 balance = poolTokens[i] != address(0) ? IERC20(poolTokens[i]).balanceOf(pool) : pool.balance;
             NAV += balance.mul(lpTokens).div(totalSupply).preciseDiv(price);
         }
@@ -91,11 +91,11 @@ contract LiquidityPoolStrategy is Strategy {
                 _maxAmountsIn[i] = IERC20(poolTokens[i]).balanceOf(address(this));
             } else {
                 if (poolTokens[i] == address(0)) {
-                    if (reserveAsset != garden.weth()) {
-                        _trade(reserveAsset, normalizedAmount, garden.weth());
+                    if (reserveAsset != garden.WETH()) {
+                        _trade(reserveAsset, normalizedAmount, garden.WETH());
                     }
                     // Convert WETH to ETH
-                    IWETH(garden.weth()).withdraw(normalizedAmount);
+                    IWETH(garden.WETH()).withdraw(normalizedAmount);
                     ethValue = normalizedAmount;
                 }
                 _maxAmountsIn[i] = normalizedAmount;
@@ -130,7 +130,7 @@ contract LiquidityPoolStrategy is Strategy {
         for (uint256 i = 0; i < poolTokens.length; i++) {
             if (poolTokens[i] != reserveAsset) {
                 if (poolTokens[i] == address(0)) {
-                    IWETH(garden.weth()).deposit{value: address(this).balance}();
+                    IWETH(garden.WETH()).deposit{value: address(this).balance}();
                 } else {
                     _trade(poolTokens[i], IERC20(poolTokens[i]).balanceOf(address(this)), reserveAsset);
                 }
