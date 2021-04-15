@@ -267,9 +267,7 @@ contract RollingGarden is ReentrancyGuard, BaseGarden {
         _validateReserveAsset(reserveAsset, withdrawalInfo.netFlowQuantity);
 
         _validateRedemptionInfo(_minReserveReceiveQuantity, _gardenTokenQuantity, withdrawalInfo);
-
         _burn(msg.sender, _gardenTokenQuantity);
-        _updateContributorWithdrawalInfo(withdrawalInfo.netFlowQuantity);
 
         // Check that the withdrawal is possible
         _require(canWithdrawEthAmount(msg.sender, withdrawalInfo.netFlowQuantity), Errors.MIN_LIQUIDITY);
@@ -277,6 +275,9 @@ contract RollingGarden is ReentrancyGuard, BaseGarden {
         if (address(this).balance < withdrawalInfo.netFlowQuantity) {
             IWETH(weth).withdraw(withdrawalInfo.netFlowQuantity);
         }
+
+        _updateContributorWithdrawalInfo(withdrawalInfo.netFlowQuantity);
+
         // Send ETH
         Address.sendValue(_to, withdrawalInfo.netFlowQuantity);
         payProtocolFeeFromGarden(reserveAsset, withdrawalInfo.protocolFees);
@@ -463,6 +464,14 @@ contract RollingGarden is ReentrancyGuard, BaseGarden {
         return lockedAmount;
     }
 
+    function getContributorPower(
+        address _contributor,
+        uint256 _from,
+        uint256 _to
+    ) external view returns (uint256) {
+        return _getContributorPower(_contributor, _from, _to);
+    }
+
     // solhint-disable-next-line
     receive() external payable {}
 
@@ -487,6 +496,7 @@ contract RollingGarden is ReentrancyGuard, BaseGarden {
 
                     totalProfits = totalProfits.sub(totalProfits.multiplyDecimal(PROFIT_PROTOCOL_FEE));
                 }
+                uint256 contributorPower = _getContributorPower(msg.sender, strategy.executedAt(), strategy.exitedAt());
 
                 // Give out BABL
                 uint256 creatorBonus = msg.sender == creator ? CREATOR_BONUS : 0;
@@ -496,7 +506,6 @@ contract RollingGarden is ReentrancyGuard, BaseGarden {
                 uint256 strategyRewards = strategy.strategyRewards();
                 uint256 contributorProfits = 0;
                 uint256 bablRewards = 0;
-                uint256 tempForEvents = 0;
 
                 // Get strategist rewards in case the contributor is also the strategist of the strategy
                 if (isStrategist) {
@@ -507,14 +516,11 @@ contract RollingGarden is ReentrancyGuard, BaseGarden {
 
                 // Get proportional voter (stewards) rewards in case the contributor was also a steward of the strategy
                 if (isVoter) {
-                    tempForEvents = bablRewards;
                     bablRewards = bablRewards.add(
                         strategyRewards.multiplyDecimal(BABL_STEWARD_SHARE).preciseMul(
                             uint256(strategy.getUserVotes(msg.sender)).preciseDiv(strategy.absoluteTotalVotes())
                         )
                     );
-
-                    tempForEvents = contributorProfits;
 
                     contributorProfits = contributorProfits.add(
                         totalProfits
@@ -525,24 +531,18 @@ contract RollingGarden is ReentrancyGuard, BaseGarden {
                 }
 
                 // Get proportional LP rewards as every active contributor of the garden is a LP of their strategies
-                tempForEvents = bablRewards;
                 bablRewards = bablRewards.add(
                     strategyRewards.multiplyDecimal(BABL_LP_SHARE).preciseMul(
-                        contributors[msg.sender].gardenAverageOwnership.preciseDiv(strategy.capitalAllocated())
+                        contributorPower.preciseDiv(strategy.capitalAllocated())
                     )
                 );
 
-                tempForEvents = contributorProfits;
-
                 contributorProfits = contributorProfits.add(
-                    contributors[msg.sender].gardenAverageOwnership.preciseMul(totalProfits).multiplyDecimal(
-                        PROFIT_LP_SHARE
-                    )
+                    contributorPower.preciseMul(totalProfits).multiplyDecimal(PROFIT_LP_SHARE)
                 );
 
                 // Get a multiplier bonus in case the contributor is the garden creator
                 if (creatorBonus > 0) {
-                    tempForEvents = bablRewards;
                     bablRewards = bablRewards.add(bablRewards.multiplyDecimal(creatorBonus));
                 }
 
@@ -659,31 +659,69 @@ contract RollingGarden is ReentrancyGuard, BaseGarden {
      */
     function _updateContributorDepositInfo(uint256 previousBalance) internal {
         Contributor storage contributor = contributors[msg.sender];
+        uint256 thisTime = block.timestamp;
+
         // If new contributor, create one, increment count, and set the current TS
         if (previousBalance == 0) {
             totalContributors = totalContributors.add(1);
             contributor.gardenAverageOwnership = balanceOf(msg.sender).preciseDiv(totalSupply());
-            contributor.initialDepositAt = block.timestamp;
+            contributor.initialDepositAt = thisTime;
         } else {
             // Cumulative moving average
             // CMAn+1 = New value + (CMAn * operations) / (operations + 1)
-            contributor.gardenAverageOwnership = contributor
-                .gardenAverageOwnership
-                .mul(contributor.numberOfOps)
-                .add(balanceOf(msg.sender).preciseDiv(totalSupply()))
-                .div(contributor.numberOfOps.add(1));
+            //contributor.gardenAverageOwnership = contributor
+            //    .gardenAverageOwnership
+            //    .mul(contributor.numberOfOps)
+            //    .add(balanceOf(msg.sender).preciseDiv(totalSupply()))
+            //    .div(contributor.numberOfOps.add(1));
+            contributor.gardenAverageOwnership = (
+                (
+                    contributor.contributorPerTimestamp[contributor.lastUpdated]
+                        .power
+                        .add(block.timestamp.sub(contributor.lastUpdated))
+                        .mul(contributor.contributorPerTimestamp[contributor.lastUpdated].principal)
+                )
+                    .add(contributor.contributorPerTimestamp[contributor.lastUpdated].principal)
+                    .div(block.timestamp.sub(contributor.initialDepositAt))
+            )
+                .preciseDiv(totalSupply());
         }
-        contributor.lastDepositAt = block.timestamp;
         contributor.numberOfOps = contributor.numberOfOps.add(1);
+        // We make checkpoints around contributor deposits to avoid fast loans and give the right rewards afterwards
+
+        contributor.contributorPerTimestamp[thisTime].principal = balanceOf(msg.sender);
+        contributor.contributorPerTimestamp[thisTime].timestamp = thisTime;
+        contributor.contributorPerTimestamp[thisTime].timePointer = contributor.pid;
+
+        if (contributor.pid == 0) {
+            // The very first strategy of all strategies in the mining program
+            contributor.contributorPerTimestamp[thisTime].power = 0;
+        } else {
+            // Any other strategy different from the very first one (will have an antecesor)
+            contributor.contributorPerTimestamp[thisTime].power = contributor.contributorPerTimestamp[
+                contributor.lastUpdated
+            ]
+                .power
+                .add(
+                contributor.contributorPerTimestamp[thisTime]
+                    .timestamp
+                    .sub(contributor.contributorPerTimestamp[contributor.lastUpdated].timestamp)
+                    .mul(contributor.contributorPerTimestamp[contributor.lastUpdated].principal)
+            );
+        }
+
+        contributor.lastDepositAt = thisTime;
+        contributor.timeListPointer.push(thisTime);
+        contributor.pid++;
+        contributor.lastUpdated = thisTime;
     }
 
     /**
      * Updates the contributor info in the array
      */
-    function _updateContributorWithdrawalInfo(
-        uint256 /*amount*/
-    ) internal {
+    function _updateContributorWithdrawalInfo(uint256 amount) internal {
         Contributor storage contributor = contributors[msg.sender];
+        uint256 thisTime = block.timestamp;
         // If sold everything
         if (balanceOf(msg.sender) == 0) {
             contributor.lastDepositAt = 0;
@@ -692,13 +730,79 @@ contract RollingGarden is ReentrancyGuard, BaseGarden {
             contributor.numberOfOps = 0;
             totalContributors = totalContributors.sub(1);
         } else {
-            contributor.gardenAverageOwnership = contributor
-                .gardenAverageOwnership
-                .mul(contributor.numberOfOps)
-                .add(balanceOf(msg.sender).preciseDiv(totalSupply()))
-                .div(contributor.numberOfOps.add(1));
+            //contributor.gardenAverageOwnership = contributor
+            //    .gardenAverageOwnership
+            //    .mul(contributor.numberOfOps)
+            //    .add(balanceOf(msg.sender).preciseDiv(totalSupply()))
+            //    .div(contributor.numberOfOps.add(1));
+
+            contributor.gardenAverageOwnership = (
+                (
+                    contributor.contributorPerTimestamp[contributor.lastUpdated]
+                        .power
+                        .add(block.timestamp.sub(contributor.lastUpdated))
+                        .mul(contributor.contributorPerTimestamp[contributor.lastUpdated].principal)
+                )
+                    .add(contributor.contributorPerTimestamp[contributor.lastUpdated].principal)
+                    .div(block.timestamp.sub(contributor.initialDepositAt))
+            )
+                .preciseDiv(totalSupply());
+
             contributor.numberOfOps = contributor.numberOfOps.add(1);
+            contributor.contributorPerTimestamp[thisTime].principal = balanceOf(msg.sender);
+            contributor.contributorPerTimestamp[thisTime].timestamp = thisTime;
+            contributor.contributorPerTimestamp[thisTime].timePointer = contributor.pid;
+            contributor.contributorPerTimestamp[thisTime].power = contributor.contributorPerTimestamp[
+                contributor.lastUpdated
+            ]
+                .power
+                .add(
+                contributor.contributorPerTimestamp[thisTime]
+                    .timestamp
+                    .sub(contributor.contributorPerTimestamp[contributor.lastUpdated].timestamp)
+                    .mul(contributor.contributorPerTimestamp[contributor.lastUpdated].principal)
+            );
+
+            contributor.timeListPointer.push(thisTime);
+            contributor.pid++;
+            contributor.lastUpdated = thisTime;
         }
+    }
+
+    function _getContributorPower(
+        address _contributor,
+        uint256 _from,
+        uint256 _to
+    ) internal view returns (uint256) {
+        Contributor storage contributor = contributors[_contributor];
+        // Find closest point to _from and goes until the last
+        uint256 contributorPower;
+        uint256 lastCheckpoint = contributor.timeListPointer[contributor.timeListPointer.length.sub(1)];
+
+        if (lastCheckpoint < _to) {
+            contributorPower = contributor.contributorPerTimestamp[lastCheckpoint].power.add(
+                (_to.sub(lastCheckpoint)).mul(contributor.contributorPerTimestamp[lastCheckpoint].principal)
+            );
+            contributorPower = contributorPower.add(contributor.contributorPerTimestamp[lastCheckpoint].principal).div(
+                _to.sub(contributor.initialDepositAt)
+            );
+        } else {
+            // We go to find the last deposit before the strategy ends
+            uint256 lastDeposit;
+            for (uint256 i = 0; i <= contributor.timeListPointer.length.sub(1); i++) {
+                if (contributor.timeListPointer[i] <= _to) {
+                    lastDeposit = contributor.timeListPointer[i];
+                }
+            }
+            contributorPower = contributor.contributorPerTimestamp[lastDeposit].power.add(
+                (_to.sub(lastDeposit)).mul(contributor.contributorPerTimestamp[lastDeposit].principal)
+            );
+            contributorPower = contributorPower.add(contributor.contributorPerTimestamp[lastDeposit].principal).div(
+                _to.sub(contributor.initialDepositAt)
+            );
+        }
+
+        return contributorPower.preciseDiv(totalSupply());
     }
 
     function abs(int256 x) private pure returns (int256) {
