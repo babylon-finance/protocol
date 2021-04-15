@@ -87,9 +87,9 @@ async function main() {
     exportAndPushContract(file, 'integrations/trade/');
   });
 
-  // Garden Factory Contracts
-  const factories = ['GardenFactory.sol'];
-  factories.forEach((file) => {
+  // Garden Contracts
+  const garden = ['GardenFactory.sol', 'Garden.sol'];
+  garden.forEach((file) => {
     exportAndPushContract(file, 'gardens/');
   });
 
