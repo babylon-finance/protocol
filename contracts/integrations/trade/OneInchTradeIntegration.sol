@@ -65,6 +65,25 @@ contract OneInchTradeIntegration is TradeIntegration {
     }
 
     /* ============ External Functions ============ */
+    /**
+     * Returns the conversion rate between the source token and the destination token
+     * in 18 decimals, regardless of component token's decimals
+     *
+     * hparam  _sourceToken        Address of source token to be sold
+     * hparam  _destinationToken   Address of destination token to buy
+     * hparam  _sourceQuantity     Amount of source token to sell
+     *
+     * @return uint256             Conversion rate in wei
+     * @return uint256             Slippage rate in wei
+     */
+    function getConversionRates(
+        address,
+        address,
+        uint256
+    ) external view override returns (uint256, uint256) {
+        revert('not implemented');
+        return (0, 0);
+    }
 
     function updateExchangeAddress(address _newExchangeAddress) public onlyProtocol {
         oneInchExchangeAddress = _newExchangeAddress;

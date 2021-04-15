@@ -74,7 +74,7 @@ contract KyberTradeIntegration is TradeIntegration {
         address _sourceToken,
         address _destinationToken,
         uint256 _sourceQuantity
-    ) external view returns (uint256, uint256) {
+    ) external view override returns (uint256, uint256) {
         // Get Kyber expectedRate to trade with
         return
             IKyberNetworkProxy(kyberNetworkProxyAddress).getExpectedRate(

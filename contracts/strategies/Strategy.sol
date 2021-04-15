@@ -34,6 +34,7 @@ import {IWETH} from '../interfaces/external/weth/IWETH.sol';
 import {IBabController} from '../interfaces/IBabController.sol';
 import {IGarden} from '../interfaces/IGarden.sol';
 import {ITradeIntegration} from '../interfaces/ITradeIntegration.sol';
+import {IIntegration} from '../interfaces/IIntegration.sol';
 import {IPriceOracle} from '../interfaces/IPriceOracle.sol';
 import {IStrategy} from '../interfaces/IStrategy.sol';
 import {IRewardsDistributor} from '../interfaces/IRewardsDistributor.sol';
@@ -109,7 +110,7 @@ abstract contract Strategy is ReentrancyGuard, Initializable, IStrategy {
     modifier onlyIntegration() {
         // Internal function used to reduce bytecode size
         require(
-            controller.isValidIntegration(ITradeIntegration(msg.sender).getName(), msg.sender),
+            controller.isValidIntegration(IIntegration(msg.sender).getName(), msg.sender),
             'Integration must be valid'
         );
         _;
@@ -235,7 +236,7 @@ abstract contract Strategy is ReentrancyGuard, Initializable, IStrategy {
             'Duration must be in range'
         );
         require(
-            controller.isValidIntegration(ITradeIntegration(_integration).getName(), _integration),
+            controller.isValidIntegration(IIntegration(_integration).getName(), _integration),
             'Integration must be valid'
         );
         require(_minRebalanceCapital > 0, 'Min capital >= 0');

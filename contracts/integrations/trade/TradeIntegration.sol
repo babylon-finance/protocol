@@ -19,14 +19,18 @@
 pragma solidity 0.7.4;
 
 import 'hardhat/console.sol';
+
 import {SafeCast} from '@openzeppelin/contracts/utils/SafeCast.sol';
 import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import {ReentrancyGuard} from '@openzeppelin/contracts/utils/ReentrancyGuard.sol';
 import '@uniswap/v2-core/contracts/interfaces/IUniswapV2Pair.sol';
 import '@uniswap/v2-periphery/contracts/libraries/UniswapV2Library.sol';
+
 import {IStrategy} from '../../interfaces/IStrategy.sol';
+import {ITradeIntegration} from '../../interfaces/ITradeIntegration.sol';
 import {IGarden} from '../../interfaces/IGarden.sol';
 import {IBabController} from '../../interfaces/IBabController.sol';
+
 import {BaseIntegration} from '../BaseIntegration.sol';
 
 /**
@@ -35,7 +39,7 @@ import {BaseIntegration} from '../BaseIntegration.sol';
  *
  * Base class for integration with trading protocols
  */
-abstract contract TradeIntegration is BaseIntegration, ReentrancyGuard {
+abstract contract TradeIntegration is BaseIntegration, ReentrancyGuard, ITradeIntegration {
     using SafeMath for uint256;
     using SafeCast for uint256;
 
@@ -97,7 +101,7 @@ abstract contract TradeIntegration is BaseIntegration, ReentrancyGuard {
         uint256 _sendQuantity,
         address _receiveToken,
         uint256 _minReceiveQuantity
-    ) external nonReentrant onlyStrategy {
+    ) external override nonReentrant onlyStrategy {
         TradeInfo memory tradeInfo =
             _createTradeInfo(name, _sendToken, _receiveToken, _sendQuantity, _minReceiveQuantity);
         _validatePreTradeData(tradeInfo, _sendQuantity);
