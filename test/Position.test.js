@@ -53,9 +53,7 @@ describe('Position testing', function () {
       let contributor = await garden1.getContributor(signer3.address);
       expect(contributor[0]).to.equal(contributor[1]);
       expect(contributor[2]).to.equal(0);
-      expect(contributor[3]).to.equal(1);
-      const oldAverage = contributor[4];
-      expect(contributor[4]).to.equal(ethers.utils.parseEther('1').div(11).mul(10));
+      expect(contributor[3]).to.equal(0);
 
       expect(await garden1.totalContributors()).to.equal(2);
       const wethPosition = await garden1.principal();
@@ -73,8 +71,7 @@ describe('Position testing', function () {
       });
       contributor = await garden1.getContributor(signer3.address);
       expect(contributor[0]).to.not.equal(contributor[1]);
-      expect(contributor[3]).to.equal(2);
-      expect(contributor[4]).to.be.gt(oldAverage);
+      expect(contributor[3]).to.equal(0);
     });
 
     it('supply and balances update accordingly after deposits & withdraws', async function () {
@@ -101,7 +98,7 @@ describe('Position testing', function () {
       const contributor = await garden1.getContributor(signer3.address);
       expect(contributor[0]).to.equal(contributor[1]);
       expect(contributor[2]).to.equal(0);
-      expect(contributor[3]).to.equal(2);
+      expect(contributor[3]).to.equal(0);
       // TODO: Check moving average calc
     });
   });

@@ -1832,9 +1832,6 @@ describe('BABL Rewards Distributor', function () {
           await rewardsDistributor.tokenSupplyPerQuarter(1),
         );
 
-        const bablRewards1 = await strategyContract.strategyRewards();
-        const bablRewards2 = await strategyContract2.strategyRewards();
-
         // Transfer 500_000e18 tokens from owner to rewardsDistributor for BABL Mining Program
         const value = ethers.utils.parseEther('500000');
         await bablToken.connect(owner).transfer(rewardsDistributor.address, value);
@@ -1851,7 +1848,7 @@ describe('BABL Rewards Distributor', function () {
         // Try again to claim the same tokens but no more tokens are delivered
         await garden1.connect(signer1).claimReturns([strategyContract.address, strategyContract2.address]);
         const contributor2 = await garden1.getContributor(signer1.address);
-        await expect(contributor2[5].toString()).to.equal(contributor[5]);
+        await expect(contributor2[4].toString()).to.equal(contributor[4]);
 
         // Signer 2 claim his tokens and check that they are received properly
         await garden1.connect(signer2).claimReturns([strategyContract.address, strategyContract2.address]);
@@ -1859,7 +1856,7 @@ describe('BABL Rewards Distributor', function () {
         // Try again to claim the same tokens but no more tokens are delivered
         await garden1.connect(signer2).claimReturns([strategyContract.address, strategyContract2.address]);
         const contributor4 = await garden1.getContributor(signer2.address);
-        await expect(contributor4[5].toString()).to.equal(contributor3[5]);
+        await expect(contributor4[4].toString()).to.equal(contributor3[4]);
       });
 
       it('should only provide new additional BABL and profits between claims (claiming results of 2 strategies only 1 with profit)', async function () {
@@ -1984,7 +1981,7 @@ describe('BABL Rewards Distributor', function () {
         // Try again to claim the same tokens but no more tokens are delivered
         await garden1.connect(signer1).claimReturns([strategyContract.address, strategyContract2.address]);
         const contributor2 = await garden1.getContributor(signer1.address);
-        await expect(contributor2[5].toString()).to.equal(contributor[5]);
+        await expect(contributor2[4].toString()).to.equal(contributor[4]);
 
         // Signer 2 claim his tokens and check that they are received properly
         await garden1.connect(signer2).claimReturns([strategyContract.address, strategyContract2.address]);
@@ -1992,7 +1989,7 @@ describe('BABL Rewards Distributor', function () {
         // Try again to claim the same tokens but no more tokens are delivered
         await garden1.connect(signer2).claimReturns([strategyContract.address, strategyContract2.address]);
         const contributor4 = await garden1.getContributor(signer2.address);
-        await expect(contributor4[5].toString()).to.equal(contributor3[5]);
+        await expect(contributor4[4].toString()).to.equal(contributor3[4]);
 
         // Nos we finish the second strategy, it should not have given BABL rewards before
 
@@ -2026,7 +2023,7 @@ describe('BABL Rewards Distributor', function () {
         // Try again to claim the same tokens but no more tokens are delivered
         await garden1.connect(signer1).claimReturns([strategyContract.address, strategyContract2.address]);
         const contributor6 = await garden1.getContributor(signer1.address);
-        await expect(contributor6[5].toString()).to.equal(contributor5[5]);
+        await expect(contributor6[4].toString()).to.equal(contributor5[4]);
 
         // Signer 2 claim his tokens and check that they are received properly
         await garden1.connect(signer2).claimReturns([strategyContract.address, strategyContract2.address]);
@@ -2034,7 +2031,7 @@ describe('BABL Rewards Distributor', function () {
         // Try again to claim the same tokens but no more tokens are delivered
         await garden1.connect(signer2).claimReturns([strategyContract.address, strategyContract2.address]);
         const contributor8 = await garden1.getContributor(signer2.address);
-        await expect(contributor8[5].toString()).to.equal(contributor7[5]);
+        await expect(contributor8[4].toString()).to.equal(contributor7[4]);
       });
       it('should only provide new additional BABL and profits between claims (claiming results of 2 strategies both with profit)', async function () {
         // Create strategy 1
@@ -2159,7 +2156,7 @@ describe('BABL Rewards Distributor', function () {
         // Try again to claim the same tokens but no more tokens are delivered
         await garden1.connect(signer1).claimReturns([strategyContract.address, strategyContract2.address]);
         const contributor2 = await garden1.getContributor(signer1.address);
-        await expect(contributor2[5].toString()).to.equal(contributor[5]);
+        await expect(contributor2[4].toString()).to.equal(contributor[4]);
 
         // Signer 2 claim his tokens and check that they are received properly
         await garden1.connect(signer2).claimReturns([strategyContract.address, strategyContract2.address]);
@@ -2167,7 +2164,7 @@ describe('BABL Rewards Distributor', function () {
         // Try again to claim the same tokens but no more tokens are delivered
         await garden1.connect(signer2).claimReturns([strategyContract.address, strategyContract2.address]);
         const contributor4 = await garden1.getContributor(signer2.address);
-        await expect(contributor4[5].toString()).to.equal(contributor3[5]);
+        await expect(contributor4[4].toString()).to.equal(contributor3[4]);
 
         // Now we finish the second strategy, it should not have given BABL rewards before
 
@@ -2203,7 +2200,7 @@ describe('BABL Rewards Distributor', function () {
         // Try again to claim the same tokens but no more tokens are delivered
         await garden1.connect(signer1).claimReturns([strategyContract.address, strategyContract2.address]);
         const contributor6 = await garden1.getContributor(signer1.address);
-        await expect(contributor6[5].toString()).to.equal(contributor5[5]);
+        await expect(contributor6[4].toString()).to.equal(contributor5[4]);
 
         // Signer 2 claim his tokens and check that they are received properly
         await garden1.connect(signer2).claimReturns([strategyContract.address, strategyContract2.address]);
@@ -2211,7 +2208,7 @@ describe('BABL Rewards Distributor', function () {
         // Try again to claim the same tokens but no more tokens are delivered
         await garden1.connect(signer2).claimReturns([strategyContract.address, strategyContract2.address]);
         const contributor8 = await garden1.getContributor(signer2.address);
-        await expect(contributor8[5].toString()).to.equal(contributor7[5]);
+        await expect(contributor8[4].toString()).to.equal(contributor7[4]);
       });
 
       it('should check potential claim values of Profit and BABL Rewards', async function () {

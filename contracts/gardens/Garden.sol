@@ -193,18 +193,6 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard {
     address public constant WETH = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
     uint256 public constant EARLY_WITHDRAWAL_PENALTY = 15e16;
 
-    // TODO: Move this to rewards distributor along getProfitsAndBabl
-    uint256 public constant BABL_STRATEGIST_SHARE = 8e16;
-    uint256 public constant BABL_STEWARD_SHARE = 17e16;
-    uint256 public constant BABL_LP_SHARE = 75e16;
-
-    uint256 public constant PROFIT_STRATEGIST_SHARE = 10e16;
-    uint256 public constant PROFIT_STEWARD_SHARE = 5e16;
-    uint256 public constant PROFIT_LP_SHARE = 80e16;
-    uint256 public constant PROFIT_PROTOCOL_FEE = 5e16;
-
-    uint256 public constant CREATOR_BONUS = 15e16;
-
     // Reserve Asset of the garden
     address public reserveAsset;
 
@@ -441,7 +429,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard {
         Contributor storage contributor = contributors[msg.sender];
         _require(block.timestamp > contributor.claimedAt, Errors.ALREADY_CLAIMED); // race condition check
 
-        (uint256 totalProfits, uint256 bablRewards) = _getProfitsAndBabl(_finalizedStrategies);
+        (uint256 totalProfits, uint256 bablRewards) = getProfitsAndBabl(_finalizedStrategies);
 
         if (totalProfits > 0 && address(this).balance > 0) {
             contributor.claimedProfits = contributor.claimedProfits.add(totalProfits); // Profits claimed properly
@@ -684,7 +672,8 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard {
         onlyContributor
         returns (uint256, uint96)
     {
-        return _getProfitsAndBabl(_finalizedStrategies);
+        IRewardsDistributor rewardsDistributor = IRewardsDistributor(IBabController(controller).rewardsDistributor());
+        return rewardsDistributor.getProfitsAndBabl(msg.sender, _finalizedStrategies);
     }
 
     function getContributor(address _contributor)
@@ -956,83 +945,6 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard {
             withdrawalInfo.protocolFees,
             block.timestamp
         );
-    }
-
-    function _getProfitsAndBabl(address[] calldata _finalizedStrategies) private view returns (uint256, uint96) {
-        uint256 contributorTotalProfits = 0;
-        uint256 bablTotalRewards = 0;
-        for (uint256 i = 0; i < _finalizedStrategies.length; i++) {
-            IStrategy strategy = IStrategy(_finalizedStrategies[i]);
-            uint256 totalProfits = 0; // Total Profits of each finalized strategy
-            // Positive strategies not yet claimed
-            if (
-                strategy.exitedAt() > contributors[msg.sender].claimedAt &&
-                strategy.executedAt() >= contributors[msg.sender].initialDepositAt
-            ) {
-                // If strategy returned money we give out the profits
-                if (strategy.capitalReturned() > strategy.capitalAllocated()) {
-                    // (User percentage * strategy profits) / (strategy capital)
-                    totalProfits = totalProfits.add(strategy.capitalReturned().sub(strategy.capitalAllocated()));
-                    // We reserve 5% of profits for performance fees
-
-                    totalProfits = totalProfits.sub(totalProfits.multiplyDecimal(PROFIT_PROTOCOL_FEE));
-                }
-                uint256 contributorPower = _getContributorPower(msg.sender, strategy.executedAt(), strategy.exitedAt());
-
-                // Give out BABL
-                uint256 creatorBonus = msg.sender == creator ? CREATOR_BONUS : 0;
-                bool isStrategist = msg.sender == strategy.strategist();
-                bool isVoter = strategy.getUserVotes(msg.sender) != 0;
-                // pending userPrincipal improvement to have more accurate calculations
-                uint256 strategyRewards = strategy.strategyRewards();
-                uint256 contributorProfits = 0;
-                uint256 bablRewards = 0;
-
-                // Get strategist rewards in case the contributor is also the strategist of the strategy
-                if (isStrategist) {
-                    bablRewards = bablRewards.add(strategyRewards.multiplyDecimal(BABL_STRATEGIST_SHARE));
-
-                    contributorProfits = contributorProfits.add(totalProfits.multiplyDecimal(PROFIT_STRATEGIST_SHARE));
-                }
-
-                // Get proportional voter (stewards) rewards in case the contributor was also a steward of the strategy
-                if (isVoter) {
-                    bablRewards = bablRewards.add(
-                        strategyRewards.multiplyDecimal(BABL_STEWARD_SHARE).preciseMul(
-                            uint256(strategy.getUserVotes(msg.sender)).preciseDiv(strategy.absoluteTotalVotes())
-                        )
-                    );
-
-                    contributorProfits = contributorProfits.add(
-                        totalProfits
-                            .multiplyDecimal(PROFIT_STEWARD_SHARE)
-                            .preciseMul(uint256(strategy.getUserVotes(msg.sender)))
-                            .preciseDiv(strategy.absoluteTotalVotes())
-                    );
-                }
-
-                // Get proportional LP rewards as every active contributor of the garden is a LP of their strategies
-                bablRewards = bablRewards.add(
-                    strategyRewards.multiplyDecimal(BABL_LP_SHARE).preciseMul(
-                        contributorPower.preciseDiv(strategy.capitalAllocated())
-                    )
-                );
-
-                contributorProfits = contributorProfits.add(
-                    contributorPower.preciseMul(totalProfits).multiplyDecimal(PROFIT_LP_SHARE)
-                );
-
-                // Get a multiplier bonus in case the contributor is the garden creator
-                if (creatorBonus > 0) {
-                    bablRewards = bablRewards.add(bablRewards.multiplyDecimal(creatorBonus));
-                }
-
-                bablTotalRewards = bablTotalRewards.add(bablRewards);
-                contributorTotalProfits = contributorTotalProfits.add(contributorProfits);
-            }
-        }
-
-        return (contributorTotalProfits, Safe3296.safe96(bablTotalRewards, 'R28'));
     }
 
     /**

@@ -145,6 +145,12 @@ interface IGarden is IERC20 {
 
     function getActiveCapital() external view returns (uint256, address);
 
+    function getContributorPower(
+        address _contributor,
+        uint256 _from,
+        uint256 _to
+    ) external view returns (uint256);
+
     function getProfitsAndBabl(address[] calldata _finalizedStrategies) external view returns (uint256, uint96);
 
     function setDepositLimit(uint256 limit) external;
