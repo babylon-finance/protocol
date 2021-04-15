@@ -81,7 +81,7 @@ interface IGarden {
 
     function isStrategy(address _strategy) external view returns (bool);
 
-    function startWithdrawalWindow(uint256 _amount) external;
+    function startWithdrawalWindow(uint256 _amount, uint256 _profits) external;
 
     function allocateCapitalToStrategy(uint256 _capital) external;
 

@@ -661,8 +661,8 @@ abstract contract Strategy is ReentrancyGuard, Initializable, IStrategy {
         int256 reserveAssetDelta = capitalReturned.toInt256().sub(capitalAllocated.toInt256());
         uint256 protocolProfits = 0;
         // Strategy returns were positive
+        uint256 profits = capitalReturned > capitalAllocated ? capitalReturned.sub(capitalAllocated) : 0; // in reserve asset (weth)
         if (capitalReturned >= capitalAllocated) {
-            uint256 profits = capitalReturned - capitalAllocated; // in reserve asset (weth)
             // Send weth performance fee to the protocol
             protocolProfits = IBabController(controller).protocolPerformanceFee().preciseMul(profits);
             IERC20(reserveAsset).safeTransferFrom(
@@ -687,7 +687,7 @@ abstract contract Strategy is ReentrancyGuard, Initializable, IStrategy {
         uint256 _newTotal = garden.principal().toInt256().add(reserveAssetDelta).toUint256();
         garden.updatePrincipal(_newTotal);
         // Start a redemption window in the garden with this capital
-        garden.startWithdrawalWindow(capitalReturned);
+        garden.startWithdrawalWindow(capitalReturned, profits);
 
         // Moves strategy to finalized
         IGarden(garden).moveStrategyToFinalized(reserveAssetDelta, address(this));
