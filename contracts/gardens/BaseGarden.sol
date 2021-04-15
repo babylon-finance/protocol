@@ -157,10 +157,10 @@ abstract contract BaseGarden is ERC20Upgradeable {
         uint256[] timeListPointer;
         uint256 pid;
         uint256 lastUpdated;
-        mapping(uint256 => ContributorPerTimestamp) contributorPerTimestamp;
+        mapping(uint256 => TimestampContribution) tsContributions;
     }
 
-    struct ContributorPerTimestamp {
+    struct TimestampContribution {
         uint256 principal;
         uint256 timestamp;
         uint256 timePointer;
@@ -466,7 +466,6 @@ abstract contract BaseGarden is ERC20Upgradeable {
             uint256,
             uint256,
             uint256,
-            uint256,
             uint256[] memory,
             uint256,
             uint256
@@ -477,7 +476,6 @@ abstract contract BaseGarden is ERC20Upgradeable {
             contributor.lastDepositAt,
             contributor.initialDepositAt,
             contributor.claimedAt,
-            contributor.numberOfOps,
             contributor.gardenAverageOwnership,
             contributor.claimedBABL,
             contributor.claimedProfits,

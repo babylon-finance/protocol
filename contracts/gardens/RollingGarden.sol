@@ -431,6 +431,13 @@ contract RollingGarden is ReentrancyGuard, BaseGarden {
         return lockedAmount;
     }
 
+    /**
+     * Gets the contributor power from one timestamp to the other
+     * @param _contributor Address if the contributor
+     * @param _from        Initial timestamp
+     * @param _to          End timestamp
+     * @return uint256     Contributor power during that period
+     */
     function getContributorPower(
         address _contributor,
         uint256 _from,
@@ -723,45 +730,12 @@ contract RollingGarden is ReentrancyGuard, BaseGarden {
             contributor.gardenAverageOwnership = balanceOf(msg.sender).preciseDiv(totalSupply());
             contributor.initialDepositAt = block.timestamp;
         } else {
-            contributor.gardenAverageOwnership = (
-                (
-                    contributor.contributorPerTimestamp[contributor.lastUpdated]
-                        .power
-                        .add(block.timestamp.sub(contributor.lastUpdated))
-                        .mul(contributor.contributorPerTimestamp[contributor.lastUpdated].principal)
-                )
-                    .add(contributor.contributorPerTimestamp[contributor.lastUpdated].principal)
-                    .div(block.timestamp.sub(contributor.initialDepositAt))
-            )
-                .preciseDiv(totalSupply());
+            contributor.gardenAverageOwnership = _calculateGardenAverageOwnership(contributor);
         }
         // We make checkpoints around contributor deposits to avoid fast loans and give the right rewards afterwards
-
-        contributor.contributorPerTimestamp[block.timestamp].principal = balanceOf(msg.sender);
-        contributor.contributorPerTimestamp[block.timestamp].timestamp = block.timestamp;
-        contributor.contributorPerTimestamp[block.timestamp].timePointer = contributor.pid;
-
-        if (contributor.pid == 0) {
-            // The very first strategy of all strategies in the mining program
-            contributor.contributorPerTimestamp[block.timestamp].power = 0;
-        } else {
-            // Any other strategy different from the very first one (will have an antecesor)
-            contributor.contributorPerTimestamp[block.timestamp].power = contributor.contributorPerTimestamp[
-                contributor.lastUpdated
-            ]
-                .power
-                .add(
-                contributor.contributorPerTimestamp[block.timestamp]
-                    .timestamp
-                    .sub(contributor.contributorPerTimestamp[contributor.lastUpdated].timestamp)
-                    .mul(contributor.contributorPerTimestamp[contributor.lastUpdated].principal)
-            );
-        }
+        _setContributorTimestampParams();
 
         contributor.lastDepositAt = block.timestamp;
-        contributor.timeListPointer.push(block.timestamp);
-        contributor.pid++;
-        contributor.lastUpdated = block.timestamp;
     }
 
     /**
@@ -774,41 +748,22 @@ contract RollingGarden is ReentrancyGuard, BaseGarden {
             contributor.lastDepositAt = 0;
             contributor.initialDepositAt = 0;
             contributor.gardenAverageOwnership = 0;
-            contributor.timeListPointer = [];
+            delete contributor.timeListPointer;
             totalContributors = totalContributors.sub(1);
         } else {
-            contributor.gardenAverageOwnership = (
-                (
-                    contributor.contributorPerTimestamp[contributor.lastUpdated]
-                        .power
-                        .add(block.timestamp.sub(contributor.lastUpdated))
-                        .mul(contributor.contributorPerTimestamp[contributor.lastUpdated].principal)
-                )
-                    .add(contributor.contributorPerTimestamp[contributor.lastUpdated].principal)
-                    .div(block.timestamp.sub(contributor.initialDepositAt))
-            )
-                .preciseDiv(totalSupply());
-
-            contributor.contributorPerTimestamp[block.timestamp].principal = balanceOf(msg.sender);
-            contributor.contributorPerTimestamp[block.timestamp].timestamp = block.timestamp;
-            contributor.contributorPerTimestamp[block.timestamp].timePointer = contributor.pid;
-            contributor.contributorPerTimestamp[block.timestamp].power = contributor.contributorPerTimestamp[
-                contributor.lastUpdated
-            ]
-                .power
-                .add(
-                contributor.contributorPerTimestamp[block.timestamp]
-                    .timestamp
-                    .sub(contributor.contributorPerTimestamp[contributor.lastUpdated].timestamp)
-                    .mul(contributor.contributorPerTimestamp[contributor.lastUpdated].principal)
-            );
-
-            contributor.timeListPointer.push(block.timestamp);
-            contributor.pid++;
+            contributor.gardenAverageOwnership = _calculateGardenAverageOwnership(contributor);
+            _setContributorTimestampParams();
         }
         contributor.lastUpdated = block.timestamp;
     }
 
+    /**
+     * Gets the contributor power from one timestamp to the other
+     * @param _contributor Address if the contributor
+     * @param _from        Initial timestamp
+     * @param _to          End timestamp
+     * @return uint256     Contributor power during that period
+     */
     function _getContributorPower(
         address _contributor,
         uint256 _from,
@@ -817,26 +772,62 @@ contract RollingGarden is ReentrancyGuard, BaseGarden {
         Contributor storage contributor = contributors[_contributor];
         // Find closest point to _from and goes until the last
         uint256 contributorPower;
-        uint256 lastCheckpoint = contributor.timeListPointer[contributor.timeListPointer.length.sub(1)];
+        uint256 lastDepositAt = contributor.timeListPointer[contributor.timeListPointer.length.sub(1)];
 
-        if (lastCheckpoint > _to) {
+        if (lastDepositAt > _to) {
             // We go to find the last deposit before the strategy ends
-            uint256 lastDeposit;
             for (uint256 i = 0; i <= contributor.timeListPointer.length.sub(1); i++) {
                 if (contributor.timeListPointer[i] <= _to) {
-                    lastDeposit = contributor.timeListPointer[i];
+                    lastDepositAt = contributor.timeListPointer[i];
                 }
             }
-          }
-          contributorPower = contributor.contributorPerTimestamp[lastDeposit].power.add(
-              (_to.sub(lastDeposit)).mul(contributor.contributorPerTimestamp[lastDeposit].principal)
-          );
-          contributorPower = contributorPower.add(contributor.contributorPerTimestamp[lastDeposit].principal).div(
-              _to.sub(contributor.initialDepositAt)
-          );
         }
+        TimestampContribution memory tsContribution = contributor.tsContributions[lastDepositAt];
+        contributorPower = tsContribution.power.add((_to.sub(lastDepositAt)).mul(tsContribution.principal));
+        contributorPower = contributorPower.add(tsContribution.principal).div(_to.sub(contributor.initialDepositAt));
 
         return contributorPower.preciseDiv(totalSupply());
+    }
+
+    /**
+     * Updates contributor timestamps params
+     */
+    function _setContributorTimestampParams() private {
+        Contributor storage contributor = contributors[msg.sender];
+        contributor.tsContributions[block.timestamp].principal = balanceOf(msg.sender);
+        contributor.tsContributions[block.timestamp].timestamp = block.timestamp;
+        contributor.tsContributions[block.timestamp].timePointer = contributor.pid;
+
+        if (contributor.pid == 0) {
+            // The very first strategy of all strategies in the mining program
+            contributor.tsContributions[block.timestamp].power = 0;
+        } else {
+            // Any other strategy different from the very first one (will have an antecesor)
+
+            TimestampContribution memory tsContribution = contributor.tsContributions[contributor.lastUpdated];
+            uint256 timestampPower =
+                tsContribution.power.add(
+                    contributor.tsContributions[block.timestamp].timestamp.sub(tsContribution.timestamp).mul(
+                        tsContribution.principal
+                    )
+                );
+
+            contributor.tsContributions[block.timestamp].power = timestampPower;
+        }
+        contributor.timeListPointer.push(block.timestamp);
+        contributor.pid++;
+        contributor.lastUpdated = block.timestamp;
+    }
+
+    function _calculateGardenAverageOwnership(Contributor storage contributor) private returns (uint256) {
+        TimestampContribution memory tsLastUpdated = contributor.tsContributions[contributor.lastUpdated];
+        return
+            (
+                (tsLastUpdated.power.add(block.timestamp.sub(contributor.lastUpdated)).mul(tsLastUpdated.principal))
+                    .add(tsLastUpdated.principal)
+                    .div(block.timestamp.sub(contributor.initialDepositAt))
+            )
+                .preciseDiv(totalSupply());
     }
 
     function _abs(int256 x) private pure returns (int256) {
