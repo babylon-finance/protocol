@@ -275,6 +275,8 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard {
         totalContributors = 0;
     }
 
+    /* ============ External Functions ============ */
+
     /**
      * FUND LEAD ONLY.  Starts the Garden with allowed reserve assets,
      * fees and issuance premium. Only callable by the Garden's creator
@@ -479,8 +481,6 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard {
             IWETH(WETH).deposit{value: address(this).balance}();
         }
     }
-
-    /* ============ External Functions ============ */
 
     /**
      * PRIVILEGED Manager, protocol FUNCTION. Changes the reserve asset

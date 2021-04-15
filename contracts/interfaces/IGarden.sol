@@ -17,7 +17,7 @@
 */
 pragma solidity 0.7.4;
 
-import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
+import {IERC20Upgradeable} from '@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol';
 
 /**
  * @title IGarden
@@ -25,7 +25,7 @@ import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
  *
  * Interface for operating with a Garden.
  */
-interface IGarden is IERC20 {
+interface IGarden is IERC20Upgradeable {
     /* ============ Functions ============ */
     function setActive() external;
 

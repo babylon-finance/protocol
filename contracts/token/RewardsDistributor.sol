@@ -124,8 +124,6 @@ contract RewardsDistributor is Ownable {
     uint256 public constant Q1_REWARDS = 53_571_428_571_428_600e6; // First quarter (epoch) BABL rewards
     uint256 public constant DECAY_RATE = 120000000000000000; // 12% quarterly decay rate (each 90 days) (Rewards on Q1 = 1,12 * Rewards on Q2) being Q1= Quarter 1, Q2 = Quarter 2
 
-    /* ============ Functions ============ */
-
     /* ============ Constructor ============ */
 
     constructor(TimeLockedToken _bablToken, IBabController _controller) {
