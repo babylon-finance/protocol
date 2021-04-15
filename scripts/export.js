@@ -100,7 +100,7 @@ async function main() {
   });
 
   // Internal Interfaces
-  const interfaces = ['IBabController.sol', 'IGarden.sol', 'IIntegration.sol', 'IStrategy.sol'];
+  const interfaces = ['IBabController.sol', 'IGarden.sol', 'IGardenValuer.sol', 'IIntegration.sol', 'IStrategy.sol'];
 
   interfaces.forEach((file) => {
     exportAndPushContract(file, 'interfaces/');
