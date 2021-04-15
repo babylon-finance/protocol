@@ -69,23 +69,18 @@ contract RewardsDistributor is Ownable {
 
     /* ============ State Variables ============ */
 
-    // TODO: Move this to rewards distributor along getProfitsAndBabl
-    uint256 public constant BABL_STRATEGIST_SHARE = 8e16;
-    uint256 public constant BABL_STEWARD_SHARE = 17e16;
-    uint256 public constant BABL_LP_SHARE = 75e16;
-
-    uint256 public constant PROFIT_STRATEGIST_SHARE = 10e16;
-    uint256 public constant PROFIT_STEWARD_SHARE = 5e16;
-    uint256 public constant PROFIT_LP_SHARE = 80e16;
-    uint256 public constant PROFIT_PROTOCOL_FEE = 5e16;
-
-    uint256 public constant CREATOR_BONUS = 15e16;
+    // BABL & profits split from the protocol
+    uint256 public immutable babl_strategist_share;
+    uint256 public immutable babl_steward_share;
+    uint256 public immutable babl_lp_share;
+    uint256 public immutable profit_strategist_share;
+    uint256 public immutable profit_steward_share;
+    uint256 public immutable profit_lp_share;
+    uint256 public immutable profit_protocol_fee;
+    uint256 public immutable creator_bonus;
 
     // Controller contract
     IBabController public controller;
-
-    // Strategies that the reward calculations belong to
-    IStrategy public strategy;
 
     // BABL Token contract
     TimeLockedToken public babltoken;
@@ -126,9 +121,15 @@ contract RewardsDistributor is Ownable {
     /* ============ Constructor ============ */
 
     constructor(TimeLockedToken _bablToken, IBabController _controller) {
+        require(address(_bablToken) != address(0), 'Token needs to exist');
+        require(address(_controller) != address(0), 'Controller needs to exist');
         babltoken = _bablToken;
         controller = _controller;
         START_TIME = block.timestamp;
+
+        (babl_strategist_share, babl_steward_share, babl_lp_share, creator_bonus) = controller.getBABLSharing();
+        (profit_strategist_share, profit_steward_share, profit_lp_share) = controller.getProfitSharing();
+        profit_protocol_fee = controller.protocolPerformanceFee();
     }
 
     /* ============ External Functions ============ */
@@ -138,7 +139,7 @@ contract RewardsDistributor is Ownable {
      * @param _capital                Amount of capital in WETH
      */
     function addProtocolPrincipal(uint256 _capital) external onlyStrategy {
-        strategy = IStrategy(msg.sender);
+        IStrategy strategy = IStrategy(msg.sender);
         protocolPrincipal = protocolPrincipal.add(_capital);
         ProtocolPerTimestamp storage protocolCheckpoint = protocolPerTimestamp[block.timestamp];
         protocolCheckpoint.principal = protocolPrincipal;
@@ -195,7 +196,7 @@ contract RewardsDistributor is Ownable {
      * @param _strategy                Strategy to check
      */
     function getStrategyRewards(address _strategy) external returns (uint96) {
-        strategy = IStrategy(_strategy);
+        IStrategy strategy = IStrategy(_strategy);
         require(strategy.exitedAt() != 0, 'The strategy has to be finished');
         // We avoid gas consuming once a strategy got its BABL rewards during its finalization
         uint256 rewards = strategy.strategyRewards();
@@ -207,17 +208,7 @@ contract RewardsDistributor is Ownable {
         (uint256 numQuarters, uint256 startingQuarter) = getRewardsWindow(strategy.executedAt(), strategy.exitedAt());
         uint256 bablRewards = 0;
         if (numQuarters <= 1) {
-            bablRewards = (
-                (
-                    strategy.capitalAllocated().mul(strategy.exitedAt().sub(strategy.executedAt())).sub(
-                        strategy.rewardsTotalOverhead()
-                    )
-                )
-                    .preciseDiv(protocolPerQuarter[startingQuarter].quarterPower)
-            )
-                .preciseMul(uint256(protocolPerQuarter[startingQuarter].supplyPerQuarter))
-                .mul(strategy.exitedAt().sub(startingQuarter))
-                .div(block.timestamp.sub(startingQuarter)); // Proportional supply till that moment within the same epoch
+            bablRewards = _getStrategyRewardsOneQuarter(_strategy, startingQuarter); // Proportional supply till that moment within the same epoch
             require(bablRewards <= protocolPerQuarter[startingQuarter].supplyPerQuarter, 'overflow in supply');
             require(
                 strategy.capitalAllocated().mul(strategy.exitedAt().sub(strategy.executedAt())).sub(
@@ -443,53 +434,63 @@ contract RewardsDistributor is Ownable {
                 // (User percentage * strategy profits) / (strategy capital)
                 totalProfits = totalProfits.add(strategy.capitalReturned().sub(strategy.capitalAllocated()));
                 // We reserve 5% of profits for performance fees
-                totalProfits = totalProfits.sub(totalProfits.multiplyDecimal(PROFIT_PROTOCOL_FEE));
+                totalProfits = totalProfits.sub(totalProfits.multiplyDecimal(profit_protocol_fee));
             }
 
             // Get strategist rewards in case the contributor is also the strategist of the strategy
             contributorBABL = contributorBABL.add(_getStrategyStrategistBabl(address(strategy), _contributor));
-            contributorProfits = contributorProfits.add(_getStrategyStrategistProfits(_contributor, totalProfits));
+            contributorProfits = contributorProfits.add(
+                _getStrategyStrategistProfits(address(strategy), _contributor, totalProfits)
+            );
 
             // Get steward rewards
             contributorBABL = contributorBABL.add(_getStrategyStewardBabl(address(strategy), _contributor));
-            contributorProfits = contributorProfits.add(_getStrategyStewardProfits(_contributor, totalProfits));
+            contributorProfits = contributorProfits.add(
+                _getStrategyStewardProfits(address(strategy), _contributor, totalProfits)
+            );
 
             // Get LP rewards
             contributorBABL = contributorBABL.add(
-                uint256(strategy.strategyRewards()).multiplyDecimal(BABL_LP_SHARE).preciseMul(
+                uint256(strategy.strategyRewards()).multiplyDecimal(babl_lp_share).preciseMul(
                     contributorPower.preciseDiv(strategy.capitalAllocated())
                 )
             );
             contributorProfits = contributorProfits.add(
-                contributorPower.preciseMul(totalProfits).multiplyDecimal(PROFIT_LP_SHARE)
+                contributorPower.preciseMul(totalProfits).multiplyDecimal(profit_lp_share)
             );
 
             // Get a multiplier bonus in case the contributor is the garden creator
             if (_contributor == IGarden(msg.sender).creator()) {
-                contributorBABL = contributorBABL.add(contributorBABL.multiplyDecimal(CREATOR_BONUS));
+                contributorBABL = contributorBABL.add(contributorBABL.multiplyDecimal(creator_bonus));
             }
         }
         return (contributorProfits, contributorBABL);
     }
 
     function _getStrategyStewardBabl(address _strategy, address _contributor) private view returns (uint256) {
-        uint256 strategyRewards = IStrategy(_strategy).strategyRewards();
+        IStrategy strategy = IStrategy(_strategy);
+        uint256 strategyRewards = strategy.strategyRewards();
         // Get proportional voter (stewards) rewards in case the contributor was also a steward of the strategy
         uint256 babl = 0;
         if (strategy.getUserVotes(_contributor) != 0) {
-            babl = strategyRewards.multiplyDecimal(BABL_STEWARD_SHARE).preciseMul(
+            babl = strategyRewards.multiplyDecimal(babl_steward_share).preciseMul(
                 uint256(strategy.getUserVotes(_contributor)).preciseDiv(strategy.absoluteTotalVotes())
             );
         }
         return babl;
     }
 
-    function _getStrategyStewardProfits(address _contributor, uint256 _totalProfits) private view returns (uint256) {
+    function _getStrategyStewardProfits(
+        address _strategy,
+        address _contributor,
+        uint256 _totalProfits
+    ) private view returns (uint256) {
+        IStrategy strategy = IStrategy(_strategy);
         // Get proportional voter (stewards) rewards in case the contributor was also a steward of the strategy
         uint256 profits = 0;
         if (strategy.getUserVotes(_contributor) != 0) {
             profits = _totalProfits
-                .multiplyDecimal(PROFIT_STEWARD_SHARE)
+                .multiplyDecimal(profit_steward_share)
                 .preciseMul(uint256(strategy.getUserVotes(_contributor)))
                 .preciseDiv(strategy.absoluteTotalVotes());
         }
@@ -497,19 +498,24 @@ contract RewardsDistributor is Ownable {
     }
 
     function _getStrategyStrategistBabl(address _strategy, address _contributor) private view returns (uint256) {
-        uint256 strategyRewards = IStrategy(_strategy).strategyRewards();
+        IStrategy strategy = IStrategy(_strategy);
+        uint256 strategyRewards = strategy.strategyRewards();
         uint256 babl = 0;
         if (strategy.strategist() == _contributor) {
-            babl = strategyRewards.multiplyDecimal(BABL_STRATEGIST_SHARE);
+            babl = strategyRewards.multiplyDecimal(babl_strategist_share);
         }
         return babl;
     }
 
-    function _getStrategyStrategistProfits(address _contributor, uint256 _totalProfits) private view returns (uint256) {
+    function _getStrategyStrategistProfits(
+        address _strategy,
+        address _contributor,
+        uint256 _totalProfits
+    ) private view returns (uint256) {
         // Get proportional voter (stewards) rewards in case the contributor was also a steward of the strategy
         uint256 profits = 0;
-        if (strategy.getUserVotes(_contributor) != 0) {
-            profits = _totalProfits.multiplyDecimal(PROFIT_STRATEGIST_SHARE);
+        if (IStrategy(_strategy).getUserVotes(_contributor) != 0) {
+            profits = _totalProfits.multiplyDecimal(profit_strategist_share);
         }
         return profits;
     }
@@ -627,6 +633,20 @@ contract RewardsDistributor is Ownable {
                 }
             }
         }
+    }
+
+    function _getStrategyRewardsOneQuarter(address _strategy, uint256 _startingQuarter) private returns (uint256) {
+        IStrategy strategy = IStrategy(_strategy);
+        uint256 strategyOverTime =
+            strategy.capitalAllocated().mul(strategy.exitedAt().sub(strategy.executedAt())).sub(
+                strategy.rewardsTotalOverhead()
+            );
+        return
+            strategyOverTime
+                .preciseDiv(protocolPerQuarter[_startingQuarter].quarterPower)
+                .preciseMul(uint256(protocolPerQuarter[_startingQuarter].supplyPerQuarter))
+                .mul(strategy.exitedAt().sub(_startingQuarter))
+                .div(block.timestamp.sub(_startingQuarter));
     }
 
     // Safe BABL transfer function, just in case if rounding error causes DistributorRewards to not have enough BABL.
