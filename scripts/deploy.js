@@ -44,6 +44,8 @@ async function main() {
   console.log('Contracts deployed...');
 
   console.log('Deploying test strategies...');
+  await createStrategy(0, 'active', [signer1, signer2, signer3], kyberTradeIntegration.address, garden3);
+  await createStrategy(0, 'active', [signer1, signer2, signer3], kyberTradeIntegration.address, garden3);
   const strategy1 = await createStrategy(
     0,
     'vote',

@@ -87,9 +87,9 @@ async function main() {
     exportAndPushContract(file, 'integrations/trade/');
   });
 
-  // Garden Factory Contracts
-  const factories = ['GardenFactory.sol'];
-  factories.forEach((file) => {
+  // Garden Contracts
+  const garden = ['GardenFactory.sol', 'Garden.sol'];
+  garden.forEach((file) => {
     exportAndPushContract(file, 'gardens/');
   });
 
@@ -100,7 +100,7 @@ async function main() {
   });
 
   // Internal Interfaces
-  const interfaces = ['IBabController.sol', 'IGarden.sol', 'IIntegration.sol', 'IStrategy.sol'];
+  const interfaces = ['IBabController.sol', 'IGarden.sol', 'IGardenValuer.sol', 'IIntegration.sol', 'IStrategy.sol'];
 
   interfaces.forEach((file) => {
     exportAndPushContract(file, 'interfaces/');
