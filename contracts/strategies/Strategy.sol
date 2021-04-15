@@ -228,7 +228,7 @@ abstract contract Strategy is ReentrancyGuard, Initializable {
         require(controller.isSystemContract(_garden), 'Must be a valid garden');
         garden = IGarden(_garden);
         require(IERC20(address(garden)).balanceOf(_strategist) > 0, 'Strategist needs to stake');
-        require(_stake > garden.totalSupply().div(100), 'Stake > 1%');
+        require(_stake > IERC20(_garden).totalSupply().div(100), 'Stake > 1%');
         require(
             _strategyDuration >= garden.minStrategyDuration() && _strategyDuration <= garden.maxStrategyDuration(),
             'Duration must be in range'

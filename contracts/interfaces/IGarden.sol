@@ -17,15 +17,13 @@
 */
 pragma solidity 0.7.4;
 
-import {IERC20Upgradeable} from '@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol';
-
 /**
  * @title IGarden
  * @author Babylon Finance
  *
  * Interface for operating with a Garden.
  */
-interface IGarden is IERC20Upgradeable {
+interface IGarden {
     /* ============ Functions ============ */
     function setActive() external;
 
@@ -36,8 +34,6 @@ interface IGarden is IERC20Upgradeable {
     function controller() external view returns (address);
 
     function creator() external view returns (address);
-
-    function gardenEndsBy() external view returns (uint256);
 
     function getContributor(address _contributor)
         external
@@ -55,15 +51,9 @@ interface IGarden is IERC20Upgradeable {
 
     function reserveAsset() external view returns (address);
 
-    function name() external view returns (string memory);
-
-    function symbol() external view returns (string memory);
-
     function totalContributors() external view returns (uint256);
 
     function minContribution() external view returns (uint256);
-
-    function totalCommunitiesDeposited() external view returns (uint256);
 
     function WETH() external view returns (address);
 
@@ -73,23 +63,15 @@ interface IGarden is IERC20Upgradeable {
 
     function absoluteReturns() external view returns (int256);
 
-    function totalStake() external pure returns (uint256);
+    function totalStake() external view returns (uint256);
 
-    function minVotersQuorum() external pure returns (uint256);
+    function minVotersQuorum() external view returns (uint256);
 
-    function minStrategyDuration() external pure returns (uint256);
+    function minStrategyDuration() external view returns (uint256);
 
-    function maxStrategyDuration() external pure returns (uint256);
+    function maxStrategyDuration() external view returns (uint256);
 
-    function strategyCooldownPeriod() external pure returns (uint256);
-
-    function initialBuyRate() external pure returns (uint256);
-
-    function strategyCreatorProfitPercentage() external pure returns (uint256);
-
-    function strategyVotersProfitPercentage() external pure returns (uint256);
-
-    function gardenCreatorProfitPercentage() external pure returns (uint256);
+    function strategyCooldownPeriod() external view returns (uint256);
 
     function getStrategies() external view returns (address[] memory);
 
@@ -114,21 +96,6 @@ interface IGarden is IERC20Upgradeable {
         address _strategyData
     ) external;
 
-    function start(
-        uint256 _maxDepositLimit,
-        uint256 _minGardenTokenSupply,
-        uint256 _minLiquidityAsset,
-        uint256 _depositHardlock,
-        uint256 _minContribution,
-        uint256 _strategyCooldownPeriod,
-        uint256 _strategyCreatorProfitPercentage,
-        uint256 _strategyVotersProfitPercentage,
-        uint256 _gardenCreatorProfitPercentage,
-        uint256 _minVotersQuorum,
-        uint256 _minStrategyDuration,
-        uint256 _maxStrategyDuration
-    ) external;
-
     function deposit(
         uint256 _reserveAssetQuantity,
         uint256 _minGardenTokenReceiveQuantity,
@@ -143,7 +110,14 @@ interface IGarden is IERC20Upgradeable {
 
     function claimReturns(address[] calldata _finalizedStrategies) external;
 
-    function getActiveCapital() external view returns (uint256, address);
+    function getActiveCapital()
+        external
+        view
+        returns (
+            uint256,
+            uint256,
+            address
+        );
 
     function getContributorPower(
         address _contributor,
@@ -152,8 +126,6 @@ interface IGarden is IERC20Upgradeable {
     ) external view returns (uint256);
 
     function getProfitsAndBabl(address[] calldata _finalizedStrategies) external view returns (uint256, uint96);
-
-    function setDepositLimit(uint256 limit) external;
 
     function getExpectedReserveWithdrawalQuantity(uint256 _gardenTokenQuantity) external view returns (uint256);
 
@@ -164,10 +136,6 @@ interface IGarden is IERC20Upgradeable {
     function isWithdrawalValid(address _reserveAsset, uint256 _gardenTokenQuantity) external view returns (bool);
 
     function reenableEthForStrategies() external;
-
-    function burnAssetsFromSenderAndMintToReserve(address _contributor, uint256 _quantity) external;
-
-    function canWithdrawEthAmount(uint256 _amount) external view returns (bool);
 
     function rebalanceStrategies(uint256 _fee) external;
 

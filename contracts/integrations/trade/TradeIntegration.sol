@@ -152,7 +152,7 @@ abstract contract TradeIntegration is BaseIntegration, ReentrancyGuard {
         tradeInfo.sendToken = _sendToken;
         tradeInfo.receiveToken = _receiveToken;
 
-        tradeInfo.gardenTotalSupply = tradeInfo.garden.totalSupply();
+        tradeInfo.gardenTotalSupply = IERC20(tradeInfo.strategy.garden()).totalSupply();
 
         tradeInfo.totalSendQuantity = _sendQuantity;
 

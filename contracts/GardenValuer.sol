@@ -18,7 +18,7 @@
 
 pragma solidity 0.7.4;
 
-import {ERC20} from '@openzeppelin/contracts/token/ERC20/ERC20.sol';
+import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import {SafeCast} from '@openzeppelin/contracts/utils/SafeCast.sol';
 import {SignedSafeMath} from '@openzeppelin/contracts/math/SignedSafeMath.sol';
 import {SafeMath} from '@openzeppelin/contracts/math/SafeMath.sol';
@@ -77,11 +77,11 @@ contract GardenValuer {
      *
      * @return                 Token valuation in terms of quote asset in precise units 1e18
      */
-    function calculateGardenValuation(IGarden _garden, address _quoteAsset) external view returns (uint256) {
+    function calculateGardenValuation(address _garden, address _quoteAsset) external view returns (uint256) {
         IPriceOracle priceOracle = IPriceOracle(IBabController(controller).priceOracle());
         address masterQuoteAsset = priceOracle.masterQuoteAsset();
 
-        address[] memory strategies = _garden.getStrategies();
+        address[] memory strategies = IGarden(_garden).getStrategies();
         int256 valuation;
         for (uint256 j = 0; j < strategies.length; j++) {
             // solhint-disable-next-line
@@ -94,12 +94,14 @@ contract GardenValuer {
             valuation = valuation.preciseDiv(quoteToMaster.toInt256());
         }
         // Get component price from price oracle. If price does not exist, revert.
-        uint256 reservePrice = priceOracle.getPrice(_garden.reserveAsset(), masterQuoteAsset);
+        uint256 reservePrice = priceOracle.getPrice(IGarden(_garden).reserveAsset(), masterQuoteAsset);
         valuation = valuation.add(
-            ERC20(_garden.reserveAsset()).balanceOf(address(_garden)).toInt256().preciseMul(reservePrice.toInt256())
+            IERC20(IGarden(_garden).reserveAsset()).balanceOf(address(_garden)).toInt256().preciseMul(
+                reservePrice.toInt256()
+            )
         );
         // Adds ETH set aside
         valuation = valuation.add(address(_garden).balance.toInt256());
-        return valuation.toUint256().preciseDiv(_garden.totalSupply());
+        return valuation.toUint256().preciseDiv(IERC20(_garden).totalSupply());
     }
 }

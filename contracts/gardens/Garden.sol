@@ -37,6 +37,7 @@ import {IRewardsDistributor} from '../interfaces/IRewardsDistributor.sol';
 import {IBabController} from '../interfaces/IBabController.sol';
 import {IStrategyFactory} from '../interfaces/IStrategyFactory.sol';
 import {IStrategy} from '../interfaces/IStrategy.sol';
+import {IGarden} from '../interfaces/IGarden.sol';
 import {IWETH} from '../interfaces/external/weth/IWETH.sol';
 
 /**
@@ -45,7 +46,7 @@ import {IWETH} from '../interfaces/external/weth/IWETH.sol';
  *
  * Class that holds common garden-related state and functions
  */
-contract Garden is ERC20Upgradeable, ReentrancyGuard {
+contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
     using SafeCast for int256;
     using SignedSafeMath for int256;
     using PreciseUnitMath for int256;
@@ -194,25 +195,25 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard {
     /* ============ State Variables ============ */
 
     // Wrapped ETH address
-    address public constant WETH = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
+    address public constant override WETH = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
     uint256 public constant EARLY_WITHDRAWAL_PENALTY = 15e16;
 
     // Reserve Asset of the garden
-    address public reserveAsset;
+    address public override reserveAsset;
 
     // Address of the controller
-    address public controller;
+    address public override controller;
     // The person that creates the garden
-    address public creator;
+    address public override creator;
     // Whether the garden is currently active or not
-    bool public active;
+    bool public override active;
 
     // Keeps track of the reserve balance. In case we receive some through other means
-    uint256 public principal;
-    int256 public absoluteReturns; // Total profits or losses of this garden
+    uint256 public override principal;
+    int256 public override absoluteReturns; // Total profits or losses of this garden
 
     // Indicates the minimum liquidity the asset needs to have to be tradable by this garden
-    uint256 public minLiquidityAsset;
+    uint256 public override minLiquidityAsset;
 
     uint256 public depositHardlock; // Window of time after deposits when withdraws are disabled for that user
     // Window of time after an investment strategy finishes when the capital is available for withdrawals
@@ -221,23 +222,24 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard {
 
     // Contributors
     mapping(address => Contributor) public contributors;
-    uint256 public totalContributors;
+    uint256 public override totalContributors;
     uint256 public maxDepositLimit; // Limits the amount of deposits
 
     uint256 public gardenInitializedAt; // Garden Initialized at timestamp
 
     // Min contribution in the garden
-    uint256 public minContribution = 1e18; //wei
+    uint256 public override minContribution = 1e18; //wei
     uint256 public minGardenTokenSupply;
 
     // Strategies variables
-    uint256 public totalStake = 0;
-    uint256 public minVotersQuorum = TEN_PERCENT; // 10%. (0.01% = 1e14, 1% = 1e16)
-    uint256 public minStrategyDuration; // Min duration for an strategy
-    uint256 public maxStrategyDuration; // Max duration for an strategy
-    uint256 public strategyCooldownPeriod; // Window for the strategy to cooldown after approval before receiving capital
+    uint256 public override totalStake = 0;
+    uint256 public override minVotersQuorum = TEN_PERCENT; // 10%. (0.01% = 1e14, 1% = 1e16)
+    uint256 public override minStrategyDuration; // Min duration for an strategy
+    uint256 public override maxStrategyDuration; // Max duration for an strategy
+    // Window for the strategy to cooldown after approval before receiving capital
+    uint256 public override strategyCooldownPeriod;
 
-    address[] public strategies; // Strategies that are either in candidate or active state
+    address[] public override strategies; // Strategies that are either in candidate or active state
     address[] public finalizedStrategies; // Strategies that have finalized execution
     mapping(address => bool) public strategyMapping;
 
@@ -355,7 +357,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard {
         uint256 _reserveAssetQuantity,
         uint256 _minGardenTokenReceiveQuantity,
         address _to
-    ) public payable nonReentrant onlyActive {
+    ) public payable override nonReentrant onlyActive {
         _require(msg.value >= minContribution, Errors.MIN_CONTRIBUTION);
         // if deposit limit is 0, then there is no deposit limit
         if (maxDepositLimit > 0) {
@@ -400,7 +402,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard {
         uint256 _gardenTokenQuantity,
         uint256 _minReserveReceiveQuantity,
         address payable _to
-    ) external nonReentrant onlyContributor {
+    ) external override nonReentrant onlyContributor {
         _withdraw(_gardenTokenQuantity, _minReserveReceiveQuantity, _to);
     }
 
@@ -431,7 +433,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard {
      * User can claim the profits from the strategies that his principal
      * was invested in.
      */
-    function claimReturns(address[] calldata _finalizedStrategies) external nonReentrant onlyContributor {
+    function claimReturns(address[] calldata _finalizedStrategies) external override nonReentrant onlyContributor {
         Contributor storage contributor = contributors[msg.sender];
         _require(block.timestamp > contributor.claimedAt, Errors.ALREADY_CLAIMED); // race condition check
 
@@ -460,7 +462,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard {
      *
      * @param _amount                        Amount of WETH to convert to ETH to set aside
      */
-    function startWithdrawalWindow(uint256 _amount) external onlyStrategyOrProtocol {
+    function startWithdrawalWindow(uint256 _amount) external override onlyStrategyOrProtocol {
         if (withdrawalsOpenUntil > block.timestamp) {
             withdrawalsOpenUntil = block.timestamp.add(
                 withdrawalWindowAfterStrategyCompletes.sub(withdrawalsOpenUntil.sub(block.timestamp))
@@ -475,7 +477,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard {
      * When the window of withdrawals finishes, we need to make the capital available again for investments
      *
      */
-    function reenableEthForStrategies() public {
+    function reenableEthForStrategies() public override {
         if (block.timestamp >= withdrawalsOpenUntil && address(this).balance > minContribution) {
             withdrawalsOpenUntil = 0;
             IWETH(WETH).deposit{value: address(this).balance}();
@@ -497,7 +499,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard {
     /**
      * PRIVILEGED Manager, protocol FUNCTION. When a Garden is active, deposits are enabled.
      */
-    function setActive() external onlyProtocol {
+    function setActive() external override onlyProtocol {
         _require(!active, Errors.ONLY_INACTIVE);
         active = true;
     }
@@ -505,7 +507,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard {
     /**
      * PRIVILEGED Manager, protocol FUNCTION. When a Garden is disabled, deposits are disabled.
      */
-    function setDisabled() external onlyProtocol {
+    function setDisabled() external override onlyProtocol {
         _require(active, Errors.ONLY_ACTIVE);
         active = false;
     }
@@ -515,7 +517,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard {
      *
      * @param _amount             Amount of the reserve balance
      */
-    function updatePrincipal(uint256 _amount) external onlyStrategy {
+    function updatePrincipal(uint256 _amount) external override onlyStrategy {
         _updatePrincipal(_amount);
     }
 
@@ -540,7 +542,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard {
         uint256 _expectedReturn,
         uint256 _minRebalanceCapital,
         address _strategyData
-    ) external onlyContributor onlyActive {
+    ) external override onlyContributor onlyActive {
         _require(strategies.length < MAX_TOTAL_STRATEGIES, Errors.VALUE_TOO_HIGH);
         IStrategyFactory strategyFactory =
             IStrategyFactory(IBabController(controller).getStrategyFactory(_strategyKind));
@@ -567,7 +569,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard {
      * We enter into the strategy and add it to the executed strategies array.
      * @param _fee                     The fee paid to keeper to compensate the gas cost for each strategy executed
      */
-    function rebalanceStrategies(uint256 _fee) external onlyKeeper(_fee) onlyActive {
+    function rebalanceStrategies(uint256 _fee) external override onlyKeeper(_fee) onlyActive {
         uint256 liquidReserveAsset = ERC20Upgradeable(reserveAsset).balanceOf(address(this));
         for (uint256 i = 0; i < strategies.length; i++) {
             IStrategy strategy = IStrategy(strategies[i]);
@@ -587,7 +589,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard {
      *
      * @param _capital        Amount of capital to allocate to the strategy
      */
-    function allocateCapitalToStrategy(uint256 _capital) external onlyStrategy onlyActive {
+    function allocateCapitalToStrategy(uint256 _capital) external override onlyStrategy onlyActive {
         uint256 liquidReserveAsset = ERC20Upgradeable(reserveAsset).balanceOf(address(this));
         uint256 protocolMgmtFee = IBabController(controller).protocolManagementFee().preciseMul(_capital);
         _require(_capital.add(protocolMgmtFee) <= liquidReserveAsset, Errors.MIN_LIQUIDITY);
@@ -613,7 +615,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard {
      * @param _returns       Positive or negative returns of the strategy
      * @param _strategy      Strategy to move from active to finalized
      */
-    function moveStrategyToFinalized(int256 _returns, address _strategy) external onlyStrategy {
+    function moveStrategyToFinalized(int256 _returns, address _strategy) external override onlyStrategy {
         absoluteReturns.add(_returns);
         strategies = strategies.remove(_strategy);
         finalizedStrategies.push(_strategy);
@@ -624,7 +626,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard {
      * Remove an expire candidate from the strategy Array
      * @param _strategy      Strategy to remove
      */
-    function expireCandidateStrategy(address _strategy) external onlyStrategy {
+    function expireCandidateStrategy(address _strategy) external override onlyStrategy {
         strategies = strategies.remove(_strategy);
         strategyMapping[_strategy] = false;
     }
@@ -633,7 +635,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard {
      * Burns the stake of the strategist of a given strategy
      * @param _strategy      Strategy
      */
-    function burnStrategistStake(address _strategist, uint256 _amount) external onlyStrategy {
+    function burnStrategistStake(address _strategist, uint256 _amount) external override onlyStrategy {
         _burn(_strategist, _amount);
     }
 
@@ -645,7 +647,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard {
      * @return  address[]        Returns list of addresses
      */
 
-    function getStrategies() external view returns (address[] memory) {
+    function getStrategies() external view override returns (address[] memory) {
         return strategies;
     }
 
@@ -655,11 +657,11 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard {
      * @return  address[]        Returns list of addresses
      */
 
-    function getFinalizedStrategies() external view returns (address[] memory) {
+    function getFinalizedStrategies() external view override returns (address[] memory) {
         return finalizedStrategies;
     }
 
-    function isStrategy(address _strategy) external view returns (bool) {
+    function isStrategy(address _strategy) external view override returns (bool) {
         return strategyMapping[_strategy];
     }
 
@@ -673,6 +675,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard {
     function getProfitsAndBabl(address[] calldata _finalizedStrategies)
         public
         view
+        override
         onlyContributor
         returns (uint256, uint96)
     {
@@ -683,6 +686,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard {
     function getContributor(address _contributor)
         external
         view
+        override
         returns (
             uint256,
             uint256,
@@ -739,7 +743,12 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard {
      *
      * @return  uint256                     Expected reserve asset quantity withdrawaled
      */
-    function getExpectedReserveWithdrawalQuantity(uint256 _gardenTokenQuantity) external view returns (uint256) {
+    function getExpectedReserveWithdrawalQuantity(uint256 _gardenTokenQuantity)
+        external
+        view
+        override
+        returns (uint256)
+    {
         (, uint256 netReserveFlows) = _getFees(_gardenTokenQuantity, false);
 
         return netReserveFlows;
@@ -753,7 +762,12 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard {
      *
      * @return  bool                        Returns true if deposit is valid
      */
-    function isDepositValid(address _reserveAsset, uint256 _reserveAssetQuantity) external view returns (bool) {
+    function isDepositValid(address _reserveAsset, uint256 _reserveAssetQuantity)
+        external
+        view
+        override
+        returns (bool)
+    {
         return
             _reserveAssetQuantity != 0 &&
             IBabController(controller).isValidReserveAsset(_reserveAsset) &&
@@ -768,7 +782,12 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard {
      *
      * @return  bool                        Returns true if withdrawal is valid
      */
-    function isWithdrawalValid(address _reserveAsset, uint256 _gardenTokenQuantity) external view returns (bool) {
+    function isWithdrawalValid(address _reserveAsset, uint256 _gardenTokenQuantity)
+        external
+        view
+        override
+        returns (bool)
+    {
         if (
             _gardenTokenQuantity == 0 ||
             !IBabController(controller).isValidReserveAsset(_reserveAsset) ||
@@ -791,7 +810,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard {
      *
      * @return  uint256                    Returns the amount of locked garden tokens for the account
      */
-    function getLockedBalance(address _contributor) external view returns (uint256) {
+    function getLockedBalance(address _contributor) external view override returns (uint256) {
         uint256 lockedAmount;
         for (uint256 i = 0; i <= strategies.length - 1; i++) {
             IStrategy strategy = IStrategy(strategies[i]);
@@ -818,7 +837,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard {
         address _contributor,
         uint256 _from,
         uint256 _to
-    ) external view returns (uint256) {
+    ) external view override returns (uint256) {
         return _getContributorPower(_contributor, _from, _to);
     }
 
@@ -832,6 +851,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard {
     function getActiveCapital()
         public
         view
+        override
         returns (
             uint256,
             uint256,
