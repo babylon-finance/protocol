@@ -23,10 +23,12 @@ import {SafeMath} from '@openzeppelin/contracts/math/SafeMath.sol';
 import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import {SafeCast} from '@openzeppelin/contracts/utils/SafeCast.sol';
 import {ReentrancyGuard} from '@openzeppelin/contracts/utils/ReentrancyGuard.sol';
+
 import {IPoolIntegration} from '../../interfaces/IPoolIntegration.sol';
 import {IGarden} from '../../interfaces/IGarden.sol';
 import {IStrategy} from '../../interfaces/IStrategy.sol';
 import {IBabController} from '../../interfaces/IBabController.sol';
+
 import {BaseIntegration} from '../BaseIntegration.sol';
 
 /**
@@ -35,7 +37,7 @@ import {BaseIntegration} from '../BaseIntegration.sol';
  *
  * Base class for integration with trading protocols
  */
-abstract contract PoolIntegration is BaseIntegration, ReentrancyGuard {
+abstract contract PoolIntegration is BaseIntegration, ReentrancyGuard, IPoolIntegration {
     using SafeMath for uint256;
     using SafeCast for uint256;
 
@@ -91,7 +93,7 @@ abstract contract PoolIntegration is BaseIntegration, ReentrancyGuard {
         uint256 _poolTokensOut,
         address[] calldata _tokensIn,
         uint256[] calldata _maxAmountsIn
-    ) external nonReentrant onlyStrategy {
+    ) external override nonReentrant onlyStrategy {
         PoolInfo memory poolInfo = _createPoolInfo(_poolAddress, _poolTokensOut, _tokensIn, _maxAmountsIn);
         _validatePreJoinPoolData(poolInfo);
         // Approve spending of the tokens
@@ -125,7 +127,7 @@ abstract contract PoolIntegration is BaseIntegration, ReentrancyGuard {
         uint256 _poolTokensIn,
         address[] calldata _tokensOut,
         uint256[] calldata _minAmountsOut
-    ) external nonReentrant onlyStrategy {
+    ) external override nonReentrant onlyStrategy {
         PoolInfo memory poolInfo = _createPoolInfo(_poolAddress, _poolTokensIn, _tokensOut, _minAmountsOut);
         _validatePreExitPoolData(poolInfo);
         // Approve spending of the pool token
@@ -145,17 +147,17 @@ abstract contract PoolIntegration is BaseIntegration, ReentrancyGuard {
      * @param _poolAddress                 Pool address to check
      * @return bool                        True if the address is a pool
      */
-    function isPool(address _poolAddress) external view returns (bool) {
+    function isPool(address _poolAddress) external view override returns (bool) {
         return _isPool(_poolAddress);
     }
 
     function getPoolTokens(
         address /* _poolAddress */
-    ) external view virtual returns (address[] memory);
+    ) external view virtual override returns (address[] memory);
 
     function getPoolWeights(
         address /*_poolAddress */
-    ) external view virtual returns (uint256[] memory);
+    ) external view virtual override returns (uint256[] memory);
 
     /* ============ Internal Functions ============ */
 
