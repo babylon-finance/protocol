@@ -37,7 +37,7 @@ import {BaseIntegration} from '../BaseIntegration.sol';
  *
  * Base class for integration with passive investments like Yearn, Indexed
  */
-abstract contract LendIntegration is BaseIntegration, ReentrancyGuard {
+abstract contract LendIntegration is BaseIntegration, ReentrancyGuard, ILendIntegration {
     using SafeMath for uint256;
     using SafeCast for uint256;
 
@@ -85,7 +85,7 @@ abstract contract LendIntegration is BaseIntegration, ReentrancyGuard {
     ) BaseIntegration(_name, _weth, _controller) {}
 
     /* ============ External Functions ============ */
-    function getInvestmentToken(address _assetToken) external view returns (address) {
+    function getInvestmentToken(address _assetToken) external view override returns (address) {
         return _getInvestmentToken(_assetToken);
     }
 
@@ -103,7 +103,7 @@ abstract contract LendIntegration is BaseIntegration, ReentrancyGuard {
         address _assetToken,
         uint256 _numTokensToSupply,
         uint256 _minAmountExpected
-    ) external {
+    ) external override {
         InvestmentInfo memory investmentInfo =
             _createInvestmentInfo(
                 _assetToken,
@@ -135,7 +135,7 @@ abstract contract LendIntegration is BaseIntegration, ReentrancyGuard {
         address _assetToken,
         uint256 _numTokensToRedeem,
         uint256 _minAmountExpected
-    ) external {
+    ) external override {
         InvestmentInfo memory investmentInfo =
             _createInvestmentInfo(
                 _assetToken,
@@ -161,7 +161,7 @@ abstract contract LendIntegration is BaseIntegration, ReentrancyGuard {
         );
     }
 
-    function getExchangeRatePerToken(address _assetToken) external returns (uint256) {
+    function getExchangeRatePerToken(address _assetToken) external view override returns (uint256) {
         return _getExchangeRatePerToken(_assetToken);
     }
 
@@ -171,7 +171,12 @@ abstract contract LendIntegration is BaseIntegration, ReentrancyGuard {
      * @param _numTokensToSupply                 Amount of ERC20 tokens to supply
      * @return uint256                           Amount of supply tokens to receive
      */
-    function getExpectedShares(address _assetToken, uint256 _numTokensToSupply) external returns (uint256) {
+    function getExpectedShares(address _assetToken, uint256 _numTokensToSupply)
+        external
+        view
+        override
+        returns (uint256)
+    {
         return _getExpectedShares(_assetToken, _numTokensToSupply);
     }
 
@@ -260,9 +265,9 @@ abstract contract LendIntegration is BaseIntegration, ReentrancyGuard {
         return investmentInfo;
     }
 
-    function _getExpectedShares(address, uint256) internal virtual returns (uint256);
+    function _getExpectedShares(address, uint256) internal view virtual returns (uint256);
 
-    function _getExchangeRatePerToken(address) internal virtual returns (uint256);
+    function _getExchangeRatePerToken(address) internal view virtual returns (uint256);
 
     function _getRedeemCalldata(
         address, /* _assetToken */

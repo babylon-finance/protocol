@@ -17,15 +17,13 @@
 */
 pragma solidity 0.7.4;
 
-import {IIntegration} from './IIntegration.sol';
-
 /**
  * @title ILendIntegration
  * @author Babylon Finance
  *
  * Interface for lending integrations such as Compound, Aave.
  */
-interface ILendIntegration is IIntegration {
+interface ILendIntegration {
     function supplyTokens(
         address _assetToken,
         uint256 _numTokensToSupply,
