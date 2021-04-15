@@ -659,13 +659,12 @@ contract RollingGarden is ReentrancyGuard, BaseGarden {
      */
     function _updateContributorDepositInfo(uint256 previousBalance) internal {
         Contributor storage contributor = contributors[msg.sender];
-        uint256 thisTime = block.timestamp;
 
         // If new contributor, create one, increment count, and set the current TS
         if (previousBalance == 0) {
             totalContributors = totalContributors.add(1);
             contributor.gardenAverageOwnership = balanceOf(msg.sender).preciseDiv(totalSupply());
-            contributor.initialDepositAt = thisTime;
+            contributor.initialDepositAt = block.timestamp;
         } else {
             // Cumulative moving average
             // CMAn+1 = New value + (CMAn * operations) / (operations + 1)
@@ -689,31 +688,31 @@ contract RollingGarden is ReentrancyGuard, BaseGarden {
         contributor.numberOfOps = contributor.numberOfOps.add(1);
         // We make checkpoints around contributor deposits to avoid fast loans and give the right rewards afterwards
 
-        contributor.contributorPerTimestamp[thisTime].principal = balanceOf(msg.sender);
-        contributor.contributorPerTimestamp[thisTime].timestamp = thisTime;
-        contributor.contributorPerTimestamp[thisTime].timePointer = contributor.pid;
+        contributor.contributorPerTimestamp[block.timestamp].principal = balanceOf(msg.sender);
+        contributor.contributorPerTimestamp[block.timestamp].timestamp = block.timestamp;
+        contributor.contributorPerTimestamp[block.timestamp].timePointer = contributor.pid;
 
         if (contributor.pid == 0) {
             // The very first strategy of all strategies in the mining program
-            contributor.contributorPerTimestamp[thisTime].power = 0;
+            contributor.contributorPerTimestamp[block.timestamp].power = 0;
         } else {
             // Any other strategy different from the very first one (will have an antecesor)
-            contributor.contributorPerTimestamp[thisTime].power = contributor.contributorPerTimestamp[
+            contributor.contributorPerTimestamp[block.timestamp].power = contributor.contributorPerTimestamp[
                 contributor.lastUpdated
             ]
                 .power
                 .add(
-                contributor.contributorPerTimestamp[thisTime]
+                contributor.contributorPerTimestamp[block.timestamp]
                     .timestamp
                     .sub(contributor.contributorPerTimestamp[contributor.lastUpdated].timestamp)
                     .mul(contributor.contributorPerTimestamp[contributor.lastUpdated].principal)
             );
         }
 
-        contributor.lastDepositAt = thisTime;
-        contributor.timeListPointer.push(thisTime);
+        contributor.lastDepositAt = block.timestamp;
+        contributor.timeListPointer.push(block.timestamp);
         contributor.pid++;
-        contributor.lastUpdated = thisTime;
+        contributor.lastUpdated = block.timestamp;
     }
 
     /**
@@ -721,7 +720,6 @@ contract RollingGarden is ReentrancyGuard, BaseGarden {
      */
     function _updateContributorWithdrawalInfo(uint256 amount) internal {
         Contributor storage contributor = contributors[msg.sender];
-        uint256 thisTime = block.timestamp;
         // If sold everything
         if (balanceOf(msg.sender) == 0) {
             contributor.lastDepositAt = 0;
@@ -749,23 +747,23 @@ contract RollingGarden is ReentrancyGuard, BaseGarden {
                 .preciseDiv(totalSupply());
 
             contributor.numberOfOps = contributor.numberOfOps.add(1);
-            contributor.contributorPerTimestamp[thisTime].principal = balanceOf(msg.sender);
-            contributor.contributorPerTimestamp[thisTime].timestamp = thisTime;
-            contributor.contributorPerTimestamp[thisTime].timePointer = contributor.pid;
-            contributor.contributorPerTimestamp[thisTime].power = contributor.contributorPerTimestamp[
+            contributor.contributorPerTimestamp[block.timestamp].principal = balanceOf(msg.sender);
+            contributor.contributorPerTimestamp[block.timestamp].timestamp = block.timestamp;
+            contributor.contributorPerTimestamp[block.timestamp].timePointer = contributor.pid;
+            contributor.contributorPerTimestamp[block.timestamp].power = contributor.contributorPerTimestamp[
                 contributor.lastUpdated
             ]
                 .power
                 .add(
-                contributor.contributorPerTimestamp[thisTime]
+                contributor.contributorPerTimestamp[block.timestamp]
                     .timestamp
                     .sub(contributor.contributorPerTimestamp[contributor.lastUpdated].timestamp)
                     .mul(contributor.contributorPerTimestamp[contributor.lastUpdated].principal)
             );
 
-            contributor.timeListPointer.push(thisTime);
+            contributor.timeListPointer.push(block.timestamp);
             contributor.pid++;
-            contributor.lastUpdated = thisTime;
+            contributor.lastUpdated = block.timestamp;
         }
     }
 
