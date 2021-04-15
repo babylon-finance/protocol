@@ -189,7 +189,7 @@ describe('BABL Rewards Distributor', function () {
   });
 
   describe('Strategy BABL Mining Rewards Calculation', async function () {
-    it('should fail trying to calculate rewards of a strategy that has not ended yet', async function () {
+    it.only('should fail trying to calculate rewards of a strategy that has not ended yet', async function () {
       const strategyContract = await createStrategy(
         0,
         'active',
@@ -205,7 +205,7 @@ describe('BABL Rewards Distributor', function () {
       );
 
       await expect(rewardsDistributor.getStrategyRewards(strategyContract.address)).to.be.revertedWith(
-        'The strategy has to be finished before calculations',
+        'The strategy has to be finished',
       );
     });
 
