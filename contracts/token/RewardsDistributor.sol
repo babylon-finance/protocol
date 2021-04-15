@@ -17,17 +17,6 @@
 
 pragma solidity 0.7.4;
 
-/**
- * @title Rewards Distributor implementing the BABL Mining Program
- * @author Babylon Finance
- * Rewards Distributor contract is a smart contract used to calculate and distribute all the BABL rewards of the BABL Mining Program
- * along the time reserve for executed strategies. It implements a supply curve to distribute 500K BABL along the time.
- * The supply curve is designed to optimize the long-term sustainability of the protocol.
- * The rewards are front-loaded but they last for more than 10 years, slowly decreasing quarter by quarter.
- * For that, it houses the state of the protocol power along the time as each strategy power is compared to the whole protocol usage.
- */
-
-import 'hardhat/console.sol';
 import {TimeLockedToken} from './TimeLockedToken.sol';
 
 import {Ownable} from '@openzeppelin/contracts/access/Ownable.sol';
@@ -41,11 +30,20 @@ import {Math} from '../lib/Math.sol';
 import {Safe3296} from '../lib/Safe3296.sol';
 
 import {IBabController} from '../interfaces/IBabController.sol';
-import {IRollingGarden} from '../interfaces/IRollingGarden.sol';
+import {IGarden} from '../interfaces/IGarden.sol';
 import {IStrategy} from '../interfaces/IStrategy.sol';
 import {TimeLockedToken} from './TimeLockedToken.sol';
 import {IRewardsDistributor} from '../interfaces/IRewardsDistributor.sol';
 
+/**
+ * @title Rewards Distributor implementing the BABL Mining Program
+ * @author Babylon Finance
+ * Rewards Distributor contract is a smart contract used to calculate and distribute all the BABL rewards of the BABL Mining Program
+ * along the time reserve for executed strategies. It implements a supply curve to distribute 500K BABL along the time.
+ * The supply curve is designed to optimize the long-term sustainability of the protocol.
+ * The rewards are front-loaded but they last for more than 10 years, slowly decreasing quarter by quarter.
+ * For that, it houses the state of the protocol power along the time as each strategy power is compared to the whole protocol usage.
+ */
 contract RewardsDistributor is Ownable {
     using SafeMath for uint256;
     using SafeMath for int256;
@@ -71,6 +69,18 @@ contract RewardsDistributor is Ownable {
     }
 
     /* ============ State Variables ============ */
+
+    // TODO: Move this to rewards distributor along getProfitsAndBabl
+    uint256 public constant BABL_STRATEGIST_SHARE = 8e16;
+    uint256 public constant BABL_STEWARD_SHARE = 17e16;
+    uint256 public constant BABL_LP_SHARE = 75e16;
+
+    uint256 public constant PROFIT_STRATEGIST_SHARE = 10e16;
+    uint256 public constant PROFIT_STEWARD_SHARE = 5e16;
+    uint256 public constant PROFIT_LP_SHARE = 80e16;
+    uint256 public constant PROFIT_PROTOCOL_FEE = 5e16;
+
+    uint256 public constant CREATOR_BONUS = 15e16;
 
     // Controller contract
     IBabController public controller;
@@ -260,6 +270,24 @@ contract RewardsDistributor is Ownable {
         _safeBABLTransfer(_to, _amount);
     }
 
+    function getProfitsAndBabl(address _contributor, address[] calldata _finalizedStrategies)
+        external
+        view
+        returns (uint256, uint96)
+    {
+        require(controller.isSystemContract(msg.sender), 'The caller is not a system contract');
+        uint256 contributorTotalProfits = 0;
+        uint256 bablTotalRewards = 0;
+        for (uint256 i = 0; i < _finalizedStrategies.length; i++) {
+            (uint256 strategyProfits, uint256 strategyBABL) =
+                _getStrategyProfitsAndBABL(_finalizedStrategies[i], _contributor);
+            contributorTotalProfits = contributorTotalProfits.add(strategyProfits);
+            bablTotalRewards = bablTotalRewards.add(strategyBABL);
+        }
+
+        return (contributorTotalProfits, Safe3296.safe96(bablTotalRewards, 'R28'));
+    }
+
     /* ========== View functions ========== */
 
     function getProtocolPrincipalByTimestamp(uint256 _timestamp) external view onlyOwner returns (uint256) {
@@ -374,7 +402,97 @@ contract RewardsDistributor is Ownable {
 
     /* ============ Internal Functions ============ */
 
-    function _addProtocolPerQuarter(uint256 _time) internal {
+    function _getStrategyProfitsAndBABL(address _strategy, address _contributor)
+        private
+        view
+        returns (uint256, uint256)
+    {
+        IStrategy strategy = IStrategy(_strategy);
+        uint256 totalProfits = 0; // Total Profits of each finalized strategy
+        uint256 contributorProfits = 0;
+        uint256 contributorBABL = 0;
+        (, uint256 initialDepositAt, uint256 claimedAt, , , , , ) = IGarden(msg.sender).getContributor(_contributor);
+        // Positive strategies not yet claimed
+        if (strategy.exitedAt() > claimedAt && strategy.executedAt() >= initialDepositAt) {
+            uint256 contributorPower =
+                IGarden(msg.sender).getContributorPower(_contributor, strategy.executedAt(), strategy.exitedAt());
+            // If strategy returned money we give out the profits
+            if (strategy.capitalReturned() > strategy.capitalAllocated()) {
+                // (User percentage * strategy profits) / (strategy capital)
+                totalProfits = totalProfits.add(strategy.capitalReturned().sub(strategy.capitalAllocated()));
+                // We reserve 5% of profits for performance fees
+                totalProfits = totalProfits.sub(totalProfits.multiplyDecimal(PROFIT_PROTOCOL_FEE));
+            }
+
+            // Get strategist rewards in case the contributor is also the strategist of the strategy
+            contributorBABL = contributorBABL.add(_getStrategyStrategistBabl(address(strategy), _contributor));
+            contributorProfits = contributorProfits.add(_getStrategyStrategistProfits(_contributor, totalProfits));
+
+            // Get steward rewards
+            contributorBABL = contributorBABL.add(_getStrategyStewardBabl(address(strategy), _contributor));
+            contributorProfits = contributorProfits.add(_getStrategyStewardProfits(_contributor, totalProfits));
+
+            // Get LP rewards
+            contributorBABL = contributorBABL.add(
+                uint256(strategy.strategyRewards()).multiplyDecimal(BABL_LP_SHARE).preciseMul(
+                    contributorPower.preciseDiv(strategy.capitalAllocated())
+                )
+            );
+            contributorProfits = contributorProfits.add(
+                contributorPower.preciseMul(totalProfits).multiplyDecimal(PROFIT_LP_SHARE)
+            );
+
+            // Get a multiplier bonus in case the contributor is the garden creator
+            if (_contributor == IGarden(msg.sender).creator()) {
+                contributorBABL = contributorBABL.add(contributorBABL.multiplyDecimal(CREATOR_BONUS));
+            }
+        }
+        return (contributorProfits, contributorBABL);
+    }
+
+    function _getStrategyStewardBabl(address _strategy, address _contributor) private view returns (uint256) {
+        uint256 strategyRewards = IStrategy(_strategy).strategyRewards();
+        // Get proportional voter (stewards) rewards in case the contributor was also a steward of the strategy
+        uint256 babl = 0;
+        if (strategy.getUserVotes(_contributor) != 0) {
+            babl = strategyRewards.multiplyDecimal(BABL_STEWARD_SHARE).preciseMul(
+                uint256(strategy.getUserVotes(_contributor)).preciseDiv(strategy.absoluteTotalVotes())
+            );
+        }
+        return babl;
+    }
+
+    function _getStrategyStewardProfits(address _contributor, uint256 _totalProfits) private view returns (uint256) {
+        // Get proportional voter (stewards) rewards in case the contributor was also a steward of the strategy
+        uint256 profits = 0;
+        if (strategy.getUserVotes(_contributor) != 0) {
+            profits = _totalProfits
+                .multiplyDecimal(PROFIT_STEWARD_SHARE)
+                .preciseMul(uint256(strategy.getUserVotes(_contributor)))
+                .preciseDiv(strategy.absoluteTotalVotes());
+        }
+        return profits;
+    }
+
+    function _getStrategyStrategistBabl(address _strategy, address _contributor) private view returns (uint256) {
+        uint256 strategyRewards = IStrategy(_strategy).strategyRewards();
+        uint256 babl = 0;
+        if (strategy.strategist() == _contributor) {
+            babl = strategyRewards.multiplyDecimal(BABL_STRATEGIST_SHARE);
+        }
+        return babl;
+    }
+
+    function _getStrategyStrategistProfits(address _contributor, uint256 _totalProfits) private view returns (uint256) {
+        // Get proportional voter (stewards) rewards in case the contributor was also a steward of the strategy
+        uint256 profits = 0;
+        if (strategy.getUserVotes(_contributor) != 0) {
+            profits = _totalProfits.multiplyDecimal(PROFIT_STRATEGIST_SHARE);
+        }
+        return profits;
+    }
+
+    function _addProtocolPerQuarter(uint256 _time) private {
         ProtocolPerQuarter storage protocolCheckpoint = protocolPerQuarter[getQuarter(_time)];
 
         if (!isProtocolPerQuarter[getQuarter(_time).sub(1)]) {
@@ -464,16 +582,16 @@ contract RewardsDistributor is Ownable {
         protocolCheckpoint.quarterPrincipal = protocolPrincipal;
     }
 
-    function _updatePowerOverhead(IStrategy _strategy, uint256 _capital) internal {
+    function _updatePowerOverhead(IStrategy _strategy, uint256 _capital) private {
         // TODO Make it be more accurate per Epoch (uint256 numQuarters, uint256 startingQuarter) = getRewardsWindow(strategy.updatedAt(), block.timestamp);
         rewardsPowerOverhead[address(_strategy)][getQuarter(block.timestamp)] = rewardsPowerOverhead[
             address(_strategy)
         ][getQuarter(block.timestamp)]
-            .add(_capital.mul(block.timestamp.sub(_strategy.updatedAt())));
+            .add(_capital.preciseMul(block.timestamp.sub(_strategy.updatedAt())));
     }
 
     // Safe BABL transfer function, just in case if rounding error causes DistributorRewards to not have enough BABL.
-    function _safeBABLTransfer(address _to, uint96 _amount) internal {
+    function _safeBABLTransfer(address _to, uint96 _amount) private {
         uint256 bablBal = babltoken.balanceOf(address(this));
         if (_amount > bablBal) {
             SafeERC20.safeTransfer(babltoken, _to, bablBal);

@@ -20,7 +20,6 @@
 
 pragma solidity 0.7.4;
 
-import 'hardhat/console.sol';
 import {Address} from '@openzeppelin/contracts/utils/Address.sol';
 import {Ownable} from '@openzeppelin/contracts/access/Ownable.sol';
 import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
@@ -54,6 +53,7 @@ contract Treasury is Ownable {
      * @param _controller         Address of controller contract
      */
     constructor(IBabController _controller) {
+        require(address(_controller) != address(0), 'Controller must exist');
         controller = _controller;
     }
 

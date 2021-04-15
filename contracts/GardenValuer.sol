@@ -1,8 +1,6 @@
 /*
     Copyright 2021 Babylon Finance
 
-    Modified from (Set Protocol GardenValuer)
-
     Licensed under the Apache License, Version 2.0 (the "License");
     you may not use this file except in compliance with the License.
     You may obtain a copy of the License at
@@ -20,7 +18,6 @@
 
 pragma solidity 0.7.4;
 
-import 'hardhat/console.sol';
 import {ERC20} from '@openzeppelin/contracts/token/ERC20/ERC20.sol';
 import {SafeCast} from '@openzeppelin/contracts/utils/SafeCast.sol';
 import {SignedSafeMath} from '@openzeppelin/contracts/math/SignedSafeMath.sol';
@@ -36,7 +33,7 @@ import {PreciseUnitMath} from './lib/PreciseUnitMath.sol';
  * @title GardenValuer
  * @author Babylon Finance
  *
- * Contract that returns the valuation of SetTokens using price oracle data used in contracts
+ * Contract that returns the valuation of a Garden using price oracle data used in contracts
  * that are external to the system.
  *
  * Note: Prices are returned in preciseUnits (i.e. 18 decimals of precision)
@@ -68,12 +65,12 @@ contract GardenValuer {
     /* ============ External Functions ============ */
 
     /**
-     * Gets the valuation of a Garden using data from the price oracle. Reverts
-     * if no price exists for a component in the Garden. Note: this works for external
+     * Gets the valuation of a Garden using data from the price oracle.
+     * Adds all the active strategies plus the reserve asset and ETH.
+     * Note: this works for external
      * positions and negative (debt) positions.
      *
-     * Note: There is a risk that the valuation is off if airdrops aren't retrieved or
-     * debt builds up via interest and its not reflected in the position
+     * Note: There is a risk that the valuation is off if airdrops aren't retrieved
      *
      * @param _garden          Garden instance to get valuation
      * @param _quoteAsset      Address of token to quote valuation in
@@ -82,9 +79,6 @@ contract GardenValuer {
      */
     function calculateGardenValuation(IGarden _garden, address _quoteAsset) external view returns (uint256) {
         IPriceOracle priceOracle = IPriceOracle(IBabController(controller).priceOracle());
-
-        // NOTE: This is temporary to allow for deposits / withdrawls. The masterQuoetAsset no longer
-        // live in the PriceOracle so we'll need to add it back or take another approach.
         address masterQuoteAsset = priceOracle.masterQuoteAsset();
 
         address[] memory strategies = _garden.getStrategies();

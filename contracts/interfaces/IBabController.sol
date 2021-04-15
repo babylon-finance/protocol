@@ -26,8 +26,8 @@ pragma solidity 0.7.4;
 interface IBabController {
     /* ============ Functions ============ */
 
-    function createRollingGarden(
-        address _weth,
+    function createGarden(
+        address _reserveAsset,
         string memory _name,
         string memory _symbol
     ) external returns (address);

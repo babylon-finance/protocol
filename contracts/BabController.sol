@@ -18,14 +18,14 @@
 
 pragma solidity 0.7.4;
 
-import 'hardhat/console.sol';
 import {OwnableUpgradeable} from '@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol';
 import {AddressUpgradeable} from '@openzeppelin/contracts-upgradeable/utils/AddressUpgradeable.sol';
 import {SafeMath} from '@openzeppelin/contracts/math/SafeMath.sol';
 import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import {IGarden} from './interfaces/IGarden.sol';
-import {IRollingGarden} from './interfaces/IRollingGarden.sol';
+import {IGarden} from './interfaces/IGarden.sol';
 import {IGardenFactory} from './interfaces/IGardenFactory.sol';
+import {IStrategy} from './interfaces/IStrategy.sol';
 import {IIntegration} from './interfaces/IIntegration.sol';
 import {AddressArrayUtils} from './lib/AddressArrayUtils.sol';
 
@@ -51,11 +51,7 @@ contract BabController is OwnableUpgradeable {
 
     event ReserveAssetAdded(address indexed _reserveAsset);
     event ReserveAssetRemoved(address indexed _reserveAsset);
-
     event LiquidityMinimumEdited(uint256 _minRiskyPairLiquidityEth);
-
-    event ModuleAdded(address indexed _module);
-    event ModuleRemoved(address indexed _module);
 
     event PriceOracleChanged(address indexed _priceOracle, address _oldPriceOracle);
     event RewardsDistributorChanged(address indexed _rewardsDistributor, address _oldRewardsDistributor);
@@ -161,16 +157,17 @@ contract BabController is OwnableUpgradeable {
     /**
      * Creates a Garden smart contract and registers the Garden with the controller.
      *
+     * @param _reserveAsset           Reserve asset of the Garden. Initially just weth
      * @param _name                   Name of the Garden
      * @param _symbol                 Symbol of the Garden
      */
-    function createRollingGarden(
+    function createGarden(
         address _reserveAsset,
         string memory _name,
         string memory _symbol
     ) external returns (address) {
         address newGarden =
-            IGardenFactory(gardenFactory).createRollingGarden(_reserveAsset, address(this), msg.sender, _name, _symbol);
+            IGardenFactory(gardenFactory).createGarden(_reserveAsset, address(this), msg.sender, _name, _symbol);
         _addGarden(newGarden);
         return newGarden;
     }
@@ -219,8 +216,6 @@ contract BabController is OwnableUpgradeable {
      * Can only happen after 2021 is finished.
      */
     function enableGardenTokensTransfers() external onlyOwner {
-        // TODO: Check timestamp. January 1 2022
-        // Seems correct.
         require(block.timestamp > 1641024000000, 'Transfers cannot be enabled yet');
         gardenTokensTransfersEnabled = true;
     }
@@ -301,9 +296,9 @@ contract BabController is OwnableUpgradeable {
     }
 
     /**
-     * PRIVILEGED GOVERNANCE FUNCTION. Allows governance to change the integration registry
+     * PRIVILEGED GOVERNANCE FUNCTION. Allows governance to change the garden valuer
      *
-     * @param _gardenValuer Address of the new price oracle
+     * @param _gardenValuer Address of the new garden valuer
      */
     function editGardenValuer(address _gardenValuer) external onlyOwner {
         require(_gardenValuer != gardenValuer, 'Garden Valuer already exists');
@@ -331,7 +326,7 @@ contract BabController is OwnableUpgradeable {
     }
 
     /**
-     * PRIVILEGED GOVERNANCE FUNCTION. Allows governance to edit the protocol fee recipient
+     * PRIVILEGED GOVERNANCE FUNCTION. Allows governance to edit the rewards distributor
      *
      * @param _newRewardsDistributor      Address of the new rewards distributor
      */
@@ -422,7 +417,7 @@ contract BabController is OwnableUpgradeable {
     }
 
     /**
-     * GOVERNANCE FUNCTION: Edit
+     * GOVERNANCE FUNCTION: Edits the minimum liquidity an asset must have on Uniswap
      *
      * @param  _minRiskyPairLiquidityEth       Absolute min liquidity of an asset to grab price
      */
@@ -503,7 +498,7 @@ contract BabController is OwnableUpgradeable {
     }
 
     /**
-     * Get integration integration address associated with passed human readable name
+     * Get the integration address associated with passed human readable name
      *
      * @param  _name         Human readable integration name
      *
@@ -544,6 +539,9 @@ contract BabController is OwnableUpgradeable {
         return (isGarden[_contractAddress] ||
             gardenValuer == _contractAddress ||
             priceOracle == _contractAddress ||
+            owner() == _contractAddress ||
+            (isGarden[IStrategy(_contractAddress).garden()] &&
+                IGarden(IStrategy(_contractAddress).garden()).isStrategy(_contractAddress)) ||
             _contractAddress == address(this));
     }
 
@@ -552,7 +550,7 @@ contract BabController is OwnableUpgradeable {
     /**
      * Hashes the string and returns a bytes32 value
      */
-    function _nameHash(string memory _name) internal pure returns (bytes32) {
+    function _nameHash(string memory _name) private pure returns (bytes32) {
         return keccak256(bytes(_name));
     }
 
@@ -561,7 +559,7 @@ contract BabController is OwnableUpgradeable {
      *
      * @param _garden Address of the Garden contract to add
      */
-    function _addGarden(address _garden) internal {
+    function _addGarden(address _garden) private {
         require(!isGarden[_garden], 'Garden already exists');
         isGarden[_garden] = true;
         gardens.push(_garden);
