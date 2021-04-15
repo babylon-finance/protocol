@@ -65,7 +65,9 @@ contract LendStrategy is Strategy {
         uint256 assetTokensAmount =
             ILendIntegration(integration).getExchangeRatePerToken(assetToken).mul(numTokensToRedeem);
         uint256 price = _getPrice(garden.reserveAsset(), assetToken);
-        return assetTokensAmount.preciseDiv(price);
+        uint256 NAV = assetTokensAmount.preciseDiv(price);
+        require(NAV != 0, 'NAV has to be bigger 0');
+        return NAV;
     }
 
     /**

@@ -1692,15 +1692,10 @@ describe('BABL Rewards Distributor', function () {
 
         const signer1Balance0 = await bablToken.balanceOf(signer1.address);
         const signer1Profit0 = await garden1.balanceOf(signer1.address);
-        console.log('BALANCE BABL', signer1Balance0.toString());
-        console.log('BALANCE GARDEN', signer1Profit0.toString());
-
         // We claim our tokens and check that they are received properly
         await garden1.connect(signer1).claimReturns([strategyContract.address, strategyContract2.address]);
         const signer1Balance1 = await bablToken.balanceOf(signer1.address);
         const signer1Profit1 = await garden1.balanceOf(signer1.address);
-        console.log('BALANCE BABL', signer1Balance1.toString());
-        console.log('BALANCE GARDEN', signer1Profit1.toString());
 
         expect(signer1Balance1.toString()).to.gt(ethers.utils.parseEther('29000'));
         expect(signer1Profit1.toString()).to.gt(ethers.utils.parseEther('2'));

@@ -71,6 +71,7 @@ contract LiquidityPoolStrategy is Strategy {
             uint256 balance = poolTokens[i] != address(0) ? IERC20(poolTokens[i]).balanceOf(pool) : pool.balance;
             NAV += balance.mul(lpTokens).div(totalSupply).preciseDiv(price);
         }
+        require(NAV != 0, 'NAV has to be bigger 0');
         return NAV;
     }
 

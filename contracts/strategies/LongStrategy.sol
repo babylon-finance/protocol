@@ -58,7 +58,9 @@ contract LongStrategy is Strategy {
             return 0;
         }
         uint256 price = _getPrice(garden.reserveAsset(), longToken);
-        return IERC20(longToken).balanceOf(address(this)).preciseDiv(price);
+        uint256 NAV = IERC20(longToken).balanceOf(address(this)).preciseDiv(price);
+        require(NAV != 0, 'NAV has to be bigger 0');
+        return NAV;
     }
 
     /**

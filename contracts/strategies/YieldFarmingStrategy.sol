@@ -62,11 +62,13 @@ contract YieldFarmingStrategy is Strategy {
             return 0;
         }
         uint256 price = _getPrice(garden.reserveAsset(), vaultAsset);
-        return
+        uint256 NAV =
             IPassiveIntegration(integration)
                 .getPricePerShare(yieldVault)
                 .mul(IERC20(yieldVault).balanceOf(address(this)))
                 .div(price);
+        require(NAV != 0, 'NAV has to be bigger 0');
+        return NAV;
     }
 
     /**
