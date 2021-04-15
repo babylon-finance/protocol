@@ -61,6 +61,8 @@ interface IGarden {
 
     function principal() external view returns (uint256);
 
+    function profitsSetAside() external view returns (uint256);
+
     function absoluteReturns() external view returns (int256);
 
     function totalStake() external view returns (uint256);
@@ -81,7 +83,7 @@ interface IGarden {
 
     function isStrategy(address _strategy) external view returns (bool);
 
-    function startWithdrawalWindow(uint256 _amount) external;
+    function startWithdrawalWindow(uint256 _amount, uint256 _profits) external;
 
     function allocateCapitalToStrategy(uint256 _capital) external;
 
