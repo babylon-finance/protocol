@@ -387,7 +387,7 @@ abstract contract Strategy is ReentrancyGuard, Initializable, IStrategy {
      * @param _fee              The keeper fee
      */
     function expireStrategy(uint256 _fee) external onlyKeeper(_fee) nonReentrant onlyActiveGarden {
-        require(!active, 'Do not sweep active tokens');
+        require(!active, 'Strategy is active');
         _deleteCandidateStrategy();
         _payKeeper(msg.sender, _fee);
         emit StrategyExpired(address(garden), kind, block.timestamp);
