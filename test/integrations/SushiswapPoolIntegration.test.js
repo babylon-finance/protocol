@@ -57,7 +57,7 @@ describe('SushiswapPoolIntegrationTest', function () {
 
     it('can enter and exit the weth dai pool', async function () {
       const strategyContract = await createStrategy(
-        1,
+        'pool',
         'vote',
         [signer1, signer2, signer3],
         sushiswapPoolIntegration.address,
@@ -65,10 +65,10 @@ describe('SushiswapPoolIntegrationTest', function () {
         DEFAULT_STRATEGY_PARAMS,
         [daiWethPair.address],
       );
-      await executeStrategy(garden1, strategyContract);
+      await executeStrategy(strategyContract);
       expect(await daiWethPair.balanceOf(strategyContract.address)).to.be.gt(0);
 
-      await finalizeStrategy(garden1, strategyContract, 0);
+      await finalizeStrategy(strategyContract, 0);
       expect(await daiWethPair.balanceOf(strategyContract.address)).to.equal(0);
     });
   });

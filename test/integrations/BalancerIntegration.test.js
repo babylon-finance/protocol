@@ -47,18 +47,18 @@ describe('BalancerIntegrationTest', function () {
 
     it('can enter and exit the weth dai pool', async function () {
       const strategyContract = await createStrategy(
-        1,
+        'pool',
         'vote',
         [signer1, signer2, signer3],
         balancerIntegration.address,
         garden1,
       );
 
-      await executeStrategy(garden1, strategyContract);
+      await executeStrategy(strategyContract);
       expect(await strategyContract.capitalAllocated()).to.equal(ONE_ETH);
       expect(await daiWethPool.balanceOf(strategyContract.address)).to.be.gt(0);
 
-      await finalizeStrategy(garden1, strategyContract, 0);
+      await finalizeStrategy(strategyContract, 0);
       expect(await daiWethPool.balanceOf(strategyContract.address)).to.equal(0);
     });
   });

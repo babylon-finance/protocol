@@ -7,7 +7,6 @@ const {
   finalizeStrategy,
   injectFakeProfits,
 } = require('../test/fixtures/StrategyHelper');
-const { ONE_DAY_IN_SECONDS } = require('../utils/constants.js');
 const { deployFolioFixture } = require('../test/fixtures/ControllerFixture');
 
 async function deploy(name, _args) {
@@ -44,8 +43,8 @@ async function main() {
   console.log('Contracts deployed...');
 
   console.log('Deploying test strategies...');
-  await createStrategy(0, 'active', [signer1, signer2, signer3], kyberTradeIntegration.address, garden3);
-  await createStrategy(0, 'active', [signer1, signer2, signer3], kyberTradeIntegration.address, garden3);
+  await createStrategy('long', 'active', [signer1, signer2, signer3], kyberTradeIntegration.address, garden3);
+  await createStrategy('long', 'active', [signer1, signer2, signer3], kyberTradeIntegration.address, garden3);
   const strategy1 = await createStrategy(
     0,
     'vote',

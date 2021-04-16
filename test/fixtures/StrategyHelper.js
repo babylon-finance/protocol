@@ -12,7 +12,8 @@ const DEFAULT_STRATEGY_PARAMS = [
   ethers.utils.parseEther('1'), // _minRebalanceCapital
 ];
 
-async function updateTWAPs(garden) {
+async function updateTWAPs(gardenAddress) {
+  const garden = await ethers.getContractAt('Garden', gardenAddress);
   const controller = await ethers.getContractAt('BabController', await garden.controller());
   const priceOracle = await ethers.getContractAt('PriceOracle', await controller.priceOracle());
   const adapterAddress = (await priceOracle.getAdapters())[0];
@@ -97,17 +98,17 @@ async function vote(garden, signers, strategy) {
   );
 }
 
-async function executeStrategy(garden, strategy, amount = ethers.utils.parseEther('1'), fee = 0) {
+async function executeStrategy(strategy, amount = ethers.utils.parseEther('1'), fee = 0) {
   ethers.provider.send('evm_increaseTime', [ONE_DAY_IN_SECONDS * 2]);
-  await updateTWAPs(garden);
+  await updateTWAPs(await strategy.garden());
   return strategy.executeStrategy(amount, fee, {
     gasPrice: 0,
   });
 }
 
-async function finalizeStrategy(garden, strategy, fee = 0) {
+async function finalizeStrategy(strategy, fee = 0) {
   ethers.provider.send('evm_increaseTime', [ONE_DAY_IN_SECONDS * 90]);
-  await updateTWAPs(garden);
+  await updateTWAPs(strategy.garden());
   return strategy.finalizeStrategy(fee, { gasPrice: 0 });
 }
 
@@ -149,16 +150,16 @@ async function createStrategy(
   specificParams,
 ) {
   let strategy;
-  if (kind === 0) {
+  if (kind === 'long') {
     strategy = await createLongStrategy(garden, integration, signers[0], params, specificParams);
   }
-  if (kind === 1) {
+  if (kind === 'pool') {
     strategy = await createPoolStrategy(garden, integration, signers[0], params, specificParams);
   }
-  if (kind === 2) {
+  if (kind === 'yield') {
     strategy = await createYieldStrategy(garden, integration, signers[0], params, specificParams);
   }
-  if (kind === 3) {
+  if (kind === 'lend') {
     strategy = await createLendStrategy(garden, integration, signers[0], params, specificParams);
   }
   if (strategy) {
@@ -173,11 +174,11 @@ async function createStrategy(
     if (state === 'vote') {
       return strategy;
     }
-    await executeStrategy(garden, strategy);
+    await executeStrategy(strategy);
     if (state === 'active') {
       return strategy;
     }
-    await finalizeStrategy(garden, strategy);
+    await finalizeStrategy(strategy);
   }
   return strategy;
 }
