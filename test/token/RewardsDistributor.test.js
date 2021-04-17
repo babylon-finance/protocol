@@ -1696,7 +1696,7 @@ describe('BABL Rewards Distributor', function () {
         const signer1Balance1 = await bablToken.balanceOf(signer1.address);
         const signer1Profit1 = await garden1.balanceOf(signer1.address);
 
-        expect(signer1Balance1.toString()).to.gt(ethers.utils.parseEther('29000'));
+        expect(signer1Balance1.toString()).to.gt(ethers.utils.parseEther('23700'));
         expect(signer1Profit1.toString()).to.gt(ethers.utils.parseEther('2'));
       });
       it('should not allow a race condition of two consecutive claims for the same rewards & profit of the same strategies', async function () {
@@ -2350,7 +2350,7 @@ describe('BABL Rewards Distributor', function () {
           .getProfitsAndBabl([strategyContract.address, strategyContract2.address]);
 
         expect(rewards[0].toString()).to.lt(ethers.utils.parseEther('1'));
-        expect(rewards[1].toString()).to.gt(ethers.utils.parseEther('29000'));
+        expect(rewards[1].toString()).to.gt(ethers.utils.parseEther('23700'));
       });
 
       it('should claim and update balances of Signer 1 either Garden tokens or BABL rewards as contributor of 5 strategies (4 with positive profits) of 2 different Gardens with different timings along 3 Years', async function () {

@@ -17,6 +17,8 @@
 
 pragma solidity 0.7.4;
 
+import 'hardhat/console.sol';
+
 import {TimeLockedToken} from './TimeLockedToken.sol';
 
 import {Ownable} from '@openzeppelin/contracts/access/Ownable.sol';
@@ -279,9 +281,9 @@ contract RewardsDistributor is Ownable {
     }
 
     /**
-     * Calcualtes the profits and BABL that a contributor should receive from a series of finalized strategies
+     * Calculates the profits and BABL that a contributor should receive from a series of finalized strategies
      * @param _contributor              Address of the contributor to check
-     * @param _finalizedStrategies      List of addresses if the finalized strategies
+     * @param _finalizedStrategies      List of addresses of the finalized strategies
      */
     function getProfitsAndBabl(address _contributor, address[] calldata _finalizedStrategies)
         external
@@ -421,32 +423,31 @@ contract RewardsDistributor is Ownable {
         returns (uint256, uint256)
     {
         IStrategy strategy = IStrategy(_strategy);
-        uint256 totalProfits = 0; // Total Profits of each finalized strategy
         uint256 contributorProfits = 0;
         uint256 contributorBABL = 0;
+        // We get the state of the strategy in terms of profit and distance from expected to accurately calculate profits and rewards
+        (bool profit, uint256 profitValue, bool distance, uint256 distanceValue ) = _getStrategyRewardsContext(address(strategy));
         (, uint256 initialDepositAt, uint256 claimedAt, , , , , ) = IGarden(msg.sender).getContributor(_contributor);
         // Positive strategies not yet claimed
         if (strategy.exitedAt() > claimedAt && strategy.executedAt() >= initialDepositAt) {
             uint256 contributorPower =
                 IGarden(msg.sender).getContributorPower(_contributor, strategy.executedAt(), strategy.exitedAt());
             // If strategy returned money we give out the profits
-            if (strategy.capitalReturned() > strategy.capitalAllocated()) {
-                // (User percentage * strategy profits) / (strategy capital)
-                totalProfits = totalProfits.add(strategy.capitalReturned().sub(strategy.capitalAllocated()));
+            if (profit == true) {
                 // We reserve 5% of profits for performance fees
-                totalProfits = totalProfits.sub(totalProfits.multiplyDecimal(profit_protocol_fee));
-            }
+                profitValue = profitValue.sub(profitValue.multiplyDecimal(profit_protocol_fee));
+            } 
 
             // Get strategist rewards in case the contributor is also the strategist of the strategy
-            contributorBABL = contributorBABL.add(_getStrategyStrategistBabl(address(strategy), _contributor));
+            contributorBABL = contributorBABL.add(_getStrategyStrategistBabl(address(strategy), _contributor, profit, profitValue, distance, distanceValue));
             contributorProfits = contributorProfits.add(
-                _getStrategyStrategistProfits(address(strategy), _contributor, totalProfits)
+                _getStrategyStrategistProfits(address(strategy), _contributor, profit, profitValue, distance, distanceValue)
             );
 
             // Get steward rewards
-            contributorBABL = contributorBABL.add(_getStrategyStewardBabl(address(strategy), _contributor));
+            contributorBABL = contributorBABL.add(_getStrategyStewardBabl(address(strategy), _contributor, profit, profitValue, distance, distanceValue));
             contributorProfits = contributorProfits.add(
-                _getStrategyStewardProfits(address(strategy), _contributor, totalProfits)
+                _getStrategyStewardProfits(address(strategy), _contributor, profit, profitValue, distance, distanceValue)
             );
 
             // Get LP rewards
@@ -455,9 +456,11 @@ contract RewardsDistributor is Ownable {
                     contributorPower.preciseDiv(strategy.capitalAllocated())
                 )
             );
-            contributorProfits = contributorProfits.add(
-                contributorPower.preciseMul(totalProfits).multiplyDecimal(profit_lp_share)
-            );
+            if (profit == true) {
+                contributorProfits = contributorProfits.add(
+                contributorPower.preciseMul(profitValue).multiplyDecimal(profit_lp_share)
+                ); 
+            }
 
             // Get a multiplier bonus in case the contributor is the garden creator
             if (_contributor == IGarden(msg.sender).creator()) {
@@ -467,15 +470,68 @@ contract RewardsDistributor is Ownable {
         return (contributorProfits, contributorBABL);
     }
 
-    function _getStrategyStewardBabl(address _strategy, address _contributor) private view returns (uint256) {
+    function _getStrategyRewardsContext(address _strategy) private view returns (bool, uint256, bool, uint256 ) {
+        IStrategy strategy = IStrategy(_strategy);
+        uint256 returned = strategy.capitalReturned();
+        uint256 expected = strategy.capitalAllocated().add(strategy.capitalAllocated().preciseMul(strategy.expectedReturn()));
+        uint256 allocated = strategy.capitalAllocated();
+        bool _profit;
+        bool _distance;
+        uint256 _profitValue;
+        uint256 _distanceValue; 
+        if (returned > allocated && returned >= expected) { // The strategy went equal or above expectations
+            _profit = true; // positive
+            _distance = true; // positive
+            _profitValue = returned.sub(allocated);
+            _distanceValue = returned.sub(expected);
+        } else if (returned >= allocated && returned < expected) { // The strategy went worse than expected but with some profits
+            _profit = true; // positive or zero profits
+            _distance = false; // negative vs expected return (got less than expected)
+            _profitValue = returned.sub(allocated);
+            _distanceValue = expected.sub(returned);
+        } else if (returned < allocated && returned < expected) { // Negative profits - bad investments has penalties
+            _profit = false; // negative - loosing capital
+            _distance = false; // negative vs expected return (got less than expected)
+            _profitValue = allocated.sub(returned); // Negative number, there were no profits at all
+            _distanceValue = expected.sub(returned);
+        }
+
+        return (_profit, _profitValue, _distance, _distanceValue);
+    }
+
+    function _getStrategyStewardBabl(address _strategy, address _contributor, bool _profit, uint256 _profitValue, bool _distance, uint256 _distanceValue) private view returns (uint256) {
         IStrategy strategy = IStrategy(_strategy);
         uint256 strategyRewards = strategy.strategyRewards();
+        int256 userVotes = strategy.getUserVotes(_contributor);
+        uint256 bablCap;
+        uint256 expected = strategy.capitalAllocated().add(strategy.capitalAllocated().preciseMul(strategy.expectedReturn()));
+
         // Get proportional voter (stewards) rewards in case the contributor was also a steward of the strategy
         uint256 babl = 0;
-        if (strategy.getUserVotes(_contributor) != 0) {
+        if (userVotes > 0 && _profit == true && _distance == true) { // Voting in favor of the execution of the strategy with profits and positive distance
             babl = strategyRewards.multiplyDecimal(babl_steward_share).preciseMul(
-                uint256(strategy.getUserVotes(_contributor)).preciseDiv(strategy.absoluteTotalVotes())
-            );
+                uint256(userVotes).preciseDiv(strategy.absoluteTotalVotes()) 
+            );// TODO CHECK absolute total votes vs. totalvotes usage
+        } else if (userVotes > 0 && _profit == true && _distance == false) { // Voting in favor positive profits but below expected return
+            babl = strategyRewards.multiplyDecimal(babl_steward_share).preciseMul(
+                uint256(userVotes).preciseDiv(strategy.absoluteTotalVotes()) 
+            );// TODO CHECK absolute total votes vs. totalvotes usage
+            babl = babl.sub(babl.preciseMul(_distanceValue.preciseDiv(expected))); // We discount the error of expected return vs real returns
+
+        } else if  (userVotes > 0 && _profit == false) { // Voting in favor of a non profitable strategy get nothing
+            babl = 0;
+        } else if (userVotes < 0 && _distance == false) { // Voting against a strategy that got results below expected return provides rewards to the voter (helping the protocol to only have good strategies)
+             babl = strategyRewards.multiplyDecimal(babl_steward_share).preciseMul(
+                uint256(abs(userVotes)).preciseDiv(strategy.absoluteTotalVotes()) 
+            );// TODO CHECK absolute total votes vs. totalvotes usage
+
+            bablCap = babl.mul(2); // Max cap
+            babl = babl.add(babl.preciseMul(_distanceValue.preciseDiv(expected))); // We add a bonus inverse to the error of expected return vs real returns
+
+            if (babl > bablCap) babl= bablCap; // We limit 2x by a Cap
+
+        } else if (userVotes < 0 && _distance == true) {
+            babl = 0;
         }
         return babl;
     }
@@ -483,26 +539,50 @@ contract RewardsDistributor is Ownable {
     function _getStrategyStewardProfits(
         address _strategy,
         address _contributor,
-        uint256 _totalProfits
+        bool _profit, 
+        uint256 _profitValue, 
+        bool _distance, 
+        uint256 _distanceValue
     ) private view returns (uint256) {
         IStrategy strategy = IStrategy(_strategy);
         // Get proportional voter (stewards) rewards in case the contributor was also a steward of the strategy
         uint256 profits = 0;
-        if (strategy.getUserVotes(_contributor) != 0) {
-            profits = _totalProfits
-                .multiplyDecimal(profit_steward_share)
-                .preciseMul(uint256(strategy.getUserVotes(_contributor)))
-                .preciseDiv(strategy.absoluteTotalVotes());
-        }
+        if (_profit == true) {
+            if ((strategy.getUserVotes(_contributor) > 0) || ((strategy.getUserVotes(_contributor) < 0) && _distance == false)){     
+                profits = _profitValue
+                    .multiplyDecimal(profit_steward_share)
+                    .preciseMul(uint256(strategy.getUserVotes(_contributor)))
+                    .preciseDiv(strategy.absoluteTotalVotes());
+            } else if ((strategy.getUserVotes(_contributor) < 0) && _distance == true) { // Voted against a very profit strategy above expected returns, get no profit at all
+                profits = 0;
+            }
+        } else profits = 0; // No profits at all
+        
         return profits;
     }
 
-    function _getStrategyStrategistBabl(address _strategy, address _contributor) private view returns (uint256) {
+    function _getStrategyStrategistBabl(address _strategy, address _contributor, bool _profit, uint256 _profitValue, bool _distance, uint256 _distanceValue) private view returns (uint256) {
         IStrategy strategy = IStrategy(_strategy);
         uint256 strategyRewards = strategy.strategyRewards();
         uint256 babl = 0;
+        uint256 bablCap;
+        uint256 expected = strategy.capitalAllocated().add(strategy.capitalAllocated().preciseMul(strategy.expectedReturn()));
+
         if (strategy.strategist() == _contributor) {
-            babl = strategyRewards.multiplyDecimal(babl_strategist_share);
+            babl = strategyRewards.multiplyDecimal(babl_strategist_share); // Standard calculation to be ponderated
+            if (_profit == true && _distance == true ) { // Strategy with equal or higher profits than expected
+                bablCap = babl.mul(2); // Max cap
+                // The more the results are close to the expected the more bonus will get (limited by a x2 cap)
+                babl = babl.add(babl.preciseMul(expected.preciseDiv(strategy.capitalReturned()))); 
+                if (babl > bablCap) babl= bablCap; // We limit 2x by a Cap
+            } else if (_profit == true && _distance == false) { //under expectations
+                // The more the results are close to the expected the less penalization it might have
+                babl = babl.sub(babl.sub(babl.preciseMul(strategy.capitalReturned().preciseDiv(expected)))); 
+            } else { // No positive profit
+                return 0;
+            }
+        } else {
+            return 0;
         }
         return babl;
     }
@@ -510,13 +590,19 @@ contract RewardsDistributor is Ownable {
     function _getStrategyStrategistProfits(
         address _strategy,
         address _contributor,
-        uint256 _totalProfits
+        bool _profit, 
+        uint256 _profitValue, 
+        bool _distance, 
+        uint256 _distanceValue
     ) private view returns (uint256) {
+        IStrategy strategy = IStrategy(_strategy);
         // Get proportional voter (stewards) rewards in case the contributor was also a steward of the strategy
         uint256 profits = 0;
-        if (IStrategy(_strategy).getUserVotes(_contributor) != 0) {
-            profits = _totalProfits.multiplyDecimal(profit_strategist_share);
-        }
+        if (_profit == true) {
+            if (strategy.strategist() == _contributor) { // If the contributor was the strategist of the strategy
+                profits = _profitValue.multiplyDecimal(profit_strategist_share);
+            }
+        } else profits = 0; // No profits at all
         return profits;
     }
 
@@ -611,7 +697,6 @@ contract RewardsDistributor is Ownable {
     }
 
     function _updatePowerOverhead(IStrategy _strategy, uint256 _capital) private {
-        // TODO Make it be more accurate per Epoch (uint256 numQuarters, uint256 startingQuarter) = getRewardsWindow(strategy.updatedAt(), block.timestamp);
         if (_strategy.updatedAt() != 0) {
             // There will be overhead after the first execution not before
             if (getQuarter(block.timestamp) == getQuarter(_strategy.updatedAt())) {
@@ -657,5 +742,8 @@ contract RewardsDistributor is Ownable {
         } else {
             SafeERC20.safeTransfer(babltoken, _to, _amount);
         }
+    }
+    function abs(int256 x) internal pure returns (int256) {
+        return x >= 0 ? x : -x;
     }
 }
