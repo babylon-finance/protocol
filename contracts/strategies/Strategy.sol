@@ -29,6 +29,7 @@ import {Initializable} from '@openzeppelin/contracts/proxy/Initializable.sol';
 
 import {AddressArrayUtils} from '../lib/AddressArrayUtils.sol';
 import {PreciseUnitMath} from '../lib/PreciseUnitMath.sol';
+import {Math} from '../lib/Math.sol';
 
 import {IWETH} from '../interfaces/external/weth/IWETH.sol';
 import {IBabController} from '../interfaces/IBabController.sol';
@@ -53,6 +54,8 @@ abstract contract Strategy is ReentrancyGuard, Initializable, IStrategy {
     using SafeCast for int256;
     using PreciseUnitMath for int256;
     using PreciseUnitMath for uint256;
+    using Math for int256;
+    using Math for uint256;
     using AddressArrayUtils for address[];
     using Address for address;
     using SafeERC20 for IERC20;
@@ -181,6 +184,8 @@ abstract contract Strategy is ReentrancyGuard, Initializable, IStrategy {
     address[] public voters; // Addresses with the voters
     int256 public override totalVotes; // Total votes staked
     uint256 public override absoluteTotalVotes; // Absolute number of votes staked
+    uint256 public override totalPositiveVotes; // Total positive votes endorsing the strategy execution
+    uint256 public override totalNegativeVotes; // Total negative votes against the strategy execution
     bool public override finalized; // Flag that indicates whether we exited the strategy
     bool public override active; // Whether the strategy has met the voting quorum
     bool public dataSet;
@@ -260,10 +265,10 @@ abstract contract Strategy is ReentrancyGuard, Initializable, IStrategy {
 
     /**
      * Adds off-chain voting results on-chain.
-     * @param _voters                  An array of garden memeber who voted on strategy.
+     * @param _voters                  An array of garden member who voted on strategy.
      * @param _votes                   An array of votes by on strategy by garden members.
      *                                 Votes can be positive or negative.
-     * @param _absoluteTotalVotes      Abosulte number of votes. _absoluteTotalVotes = abs(upvotes) + abs(downvotes).
+     * @param _absoluteTotalVotes      Absolute number of votes. _absoluteTotalVotes = abs(upvotes) + abs(downvotes).
      * @param _totalVotes              Total number of votes. _totalVotes = upvotes + downvotes.
      * @param _fee                     The fee paid to keeper to compensate the gas cost
      */
@@ -281,6 +286,13 @@ abstract contract Strategy is ReentrancyGuard, Initializable, IStrategy {
         // Set votes data
         for (uint256 i = 0; i < _voters.length; i++) {
             votes[_voters[i]] = _votes[i];
+            if (_votes[i] > 0) {
+                // Positive votes
+                totalPositiveVotes = totalPositiveVotes.add(uint256(_votes[i]));
+            } else {
+                // Negative votes
+                totalNegativeVotes = totalNegativeVotes.add(uint256(Math.abs(_votes[i])));
+            }
         }
         voters = _voters;
         absoluteTotalVotes = absoluteTotalVotes + _absoluteTotalVotes;

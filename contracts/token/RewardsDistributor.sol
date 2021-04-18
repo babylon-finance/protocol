@@ -559,12 +559,12 @@ contract RewardsDistributor is Ownable {
         if (userVotes > 0 && _profit == true && _distance == true) {
             // Voting in favor of the execution of the strategy with profits and positive distance
             babl = strategyRewards.multiplyDecimal(babl_steward_share).preciseMul(
-                uint256(userVotes).preciseDiv(strategy.absoluteTotalVotes())
+                uint256(userVotes).preciseDiv(strategy.totalPositiveVotes())
             ); // TODO CHECK absolute total votes vs. totalvotes usage
         } else if (userVotes > 0 && _profit == true && _distance == false) {
             // Voting in favor positive profits but below expected return
             babl = strategyRewards.multiplyDecimal(babl_steward_share).preciseMul(
-                uint256(userVotes).preciseDiv(strategy.absoluteTotalVotes())
+                uint256(userVotes).preciseDiv(strategy.totalPositiveVotes())
             ); // TODO CHECK absolute total votes vs. totalvotes usage
             babl = babl.sub(babl.preciseMul(_distanceValue.preciseDiv(expected))); // We discount the error of expected return vs real returns
         } else if (userVotes > 0 && _profit == false) {
@@ -573,7 +573,7 @@ contract RewardsDistributor is Ownable {
         } else if (userVotes < 0 && _distance == false) {
             // Voting against a strategy that got results below expected return provides rewards to the voter (helping the protocol to only have good strategies)
             babl = strategyRewards.multiplyDecimal(babl_steward_share).preciseMul(
-                uint256(abs(userVotes)).preciseDiv(strategy.absoluteTotalVotes())
+                uint256(Math.abs(userVotes)).preciseDiv(strategy.totalNegativeVotes())
             ); // TODO CHECK absolute total votes vs. totalvotes usage
 
             bablCap = babl.mul(2); // Max cap
@@ -597,16 +597,18 @@ contract RewardsDistributor is Ownable {
         IStrategy strategy = IStrategy(_strategy);
         // Get proportional voter (stewards) rewards in case the contributor was also a steward of the strategy
         uint256 profits = 0;
+        int256 userVotes = strategy.getUserVotes(_contributor);
         if (_profit == true) {
-            if (
-                (strategy.getUserVotes(_contributor) > 0) ||
-                ((strategy.getUserVotes(_contributor) < 0) && _distance == false)
-            ) {
+            if (userVotes > 0) {
+                profits = _profitValue.multiplyDecimal(profit_steward_share).preciseMul(uint256(userVotes)).preciseDiv(
+                    strategy.totalPositiveVotes()
+                );
+            } else if ((userVotes < 0) && _distance == false) {
                 profits = _profitValue
                     .multiplyDecimal(profit_steward_share)
-                    .preciseMul(uint256(strategy.getUserVotes(_contributor)))
-                    .preciseDiv(strategy.absoluteTotalVotes());
-            } else if ((strategy.getUserVotes(_contributor) < 0) && _distance == true) {
+                    .preciseMul(uint256(Math.abs(userVotes)))
+                    .preciseDiv(strategy.totalNegativeVotes());
+            } else if ((userVotes < 0) && _distance == true) {
                 // Voted against a very profit strategy above expected returns, get no profit at all
                 profits = 0;
             }
@@ -808,9 +810,5 @@ contract RewardsDistributor is Ownable {
         } else {
             SafeERC20.safeTransfer(babltoken, _to, _amount);
         }
-    }
-
-    function abs(int256 x) internal pure returns (int256) {
-        return x >= 0 ? x : -x;
     }
 }
