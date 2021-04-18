@@ -33,6 +33,8 @@ interface IGarden {
 
     function controller() external view returns (address);
 
+    function nftAddress() external view returns (address);
+
     function creator() external view returns (address);
 
     function getContributor(address _contributor)

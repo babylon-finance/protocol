@@ -60,8 +60,16 @@ contract GardenFactory is IGardenFactory {
     ) external payable override returns (address) {
         address payable clone = payable(Clones.clone(garden));
         address cloneNFT = Clones.clone(gardenNFT);
-        Garden(clone).initialize{value: msg.value}(_reserveAsset, _controller, _creator, _name, _symbol, _gardenParams);
         GardenNFT(cloneNFT).initialize(_controller, address(clone), _name, _symbol, _tokenURI);
+        Garden(clone).initialize{value: msg.value}(
+            _reserveAsset,
+            _controller,
+            _creator,
+            _name,
+            _symbol,
+            _gardenParams,
+            cloneNFT
+        );
         return clone;
     }
 }

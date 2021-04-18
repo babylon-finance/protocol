@@ -18,6 +18,7 @@
 
 pragma solidity 0.7.4;
 
+import 'hardhat/console.sol';
 import {ERC721Upgradeable} from '@openzeppelin/contracts-upgradeable/token/ERC721/ERC721Upgradeable.sol';
 import {Counters} from '@openzeppelin/contracts/utils/Counters.sol';
 import {IBabController} from '../interfaces/IBabController.sol';
@@ -35,7 +36,7 @@ contract GardenNFT is ERC721Upgradeable, IGardenNFT {
 
     /* ============ Events ============ */
 
-    event GardenGateAwarded(address indexed _member, uint256 indexed _newItemId);
+    event GardenNFTAwarded(address indexed _member, uint256 indexed _newItemId);
 
     /* ============ Modifiers ============ */
 
@@ -74,7 +75,6 @@ contract GardenNFT is ERC721Upgradeable, IGardenNFT {
         string memory _tokenURI
     ) external override initializer {
         require(address(_controller) != address(0), 'Controller must exist');
-        require(address(_controller) == IGarden(_garden).controller(), 'Controller must match');
         __ERC721_init(_name, _symbol);
         controller = IBabController(_controller);
         garden = IGarden(_garden);
@@ -107,7 +107,7 @@ contract GardenNFT is ERC721Upgradeable, IGardenNFT {
             newItemId = _tokenIds.current();
             _mint(_user, newItemId);
             _setTokenURI(newItemId, tokenURI);
-            emit GardenGateAwarded(_user, newItemId);
+            emit GardenNFTAwarded(_user, newItemId);
         } else {
             newItemId = tokenOfOwnerByIndex(_user, 0);
         }
