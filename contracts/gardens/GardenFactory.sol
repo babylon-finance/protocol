@@ -22,6 +22,7 @@ import {Clones} from '@openzeppelin/contracts/proxy/Clones.sol';
 
 import {IGardenFactory} from '../interfaces/IGardenFactory.sol';
 import {Garden} from './Garden.sol';
+import {GardenNFT} from './GardenNFT.sol';
 
 /**
  * @title GardenFactory
@@ -31,9 +32,11 @@ import {Garden} from './Garden.sol';
  */
 contract GardenFactory is IGardenFactory {
     address private immutable garden;
+    address private immutable gardenNFT;
 
     constructor() {
         garden = address(new Garden());
+        gardenNFT = address(new GardenNFT());
     }
 
     /**
@@ -44,6 +47,7 @@ contract GardenFactory is IGardenFactory {
      * @param _name                   Name of the Garden
      * @param _symbol                 Symbol of the Garden
      * @param _gardenParams           Array of numeric params in the garden
+     * @param _tokenURI               URL of the garden NFT JSON
      */
     function createGarden(
         address _reserveAsset,
@@ -51,10 +55,13 @@ contract GardenFactory is IGardenFactory {
         address _creator,
         string memory _name,
         string memory _symbol,
-        uint256[] calldata _gardenParams
+        uint256[] calldata _gardenParams,
+        string memory _tokenURI
     ) external payable override returns (address) {
         address payable clone = payable(Clones.clone(garden));
+        address cloneNFT = Clones.clone(gardenNFT);
         Garden(clone).initialize{value: msg.value}(_reserveAsset, _controller, _creator, _name, _symbol, _gardenParams);
+        GardenNFT(cloneNFT).initialize(_controller, address(clone), _name, _symbol, _tokenURI);
         return clone;
     }
 }

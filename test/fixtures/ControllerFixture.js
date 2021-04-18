@@ -170,21 +170,27 @@ async function deployFolioFixture() {
 
   await babController
     .connect(signer1)
-    .createGarden(addresses.tokens.WETH, 'Absolute ETH Return [beta]', 'EYFA', gardenParams, {
+    .createGarden(addresses.tokens.WETH, 'Absolute ETH Return [beta]', 'EYFA', gardenParams, 'http...', {
       value: ethers.utils.parseEther('0.1'),
     });
 
-  await babController.connect(signer1).createGarden(addresses.tokens.WETH, 'ETH Yield Farm [a]', 'EYFB', gardenParams, {
-    value: ethers.utils.parseEther('0.1'),
-  });
+  await babController
+    .connect(signer1)
+    .createGarden(addresses.tokens.WETH, 'ETH Yield Farm [a]', 'EYFB', gardenParams, 'http...', {
+      value: ethers.utils.parseEther('0.1'),
+    });
 
-  await babController.connect(signer1).createGarden(addresses.tokens.WETH, 'ETH Yield Farm [b]', 'EYFG', gardenParams, {
-    value: ethers.utils.parseEther('0.1'),
-  });
+  await babController
+    .connect(signer1)
+    .createGarden(addresses.tokens.WETH, 'ETH Yield Farm [b]', 'EYFG', gardenParams, 'http...', {
+      value: ethers.utils.parseEther('0.1'),
+    });
 
-  await babController.connect(signer1).createGarden(addresses.tokens.WETH, 'ETH Yield Farm [d]', 'EYFG', gardenParams, {
-    value: ethers.utils.parseEther('0.1'),
-  });
+  await babController
+    .connect(signer1)
+    .createGarden(addresses.tokens.WETH, 'ETH Yield Farm [d]', 'EYFG', gardenParams, 'http...', {
+      value: ethers.utils.parseEther('0.1'),
+    });
 
   const gardens = await babController.getGardens();
 
