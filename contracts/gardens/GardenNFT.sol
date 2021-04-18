@@ -105,7 +105,7 @@ contract GardenNFT is ERC721Upgradeable, IGardenNFT {
         if (balanceOf(_user) == 0) {
             _tokenIds.increment();
             newItemId = _tokenIds.current();
-            _mint(_user, newItemId);
+            _safeMint(_user, newItemId);
             _setTokenURI(newItemId, tokenURI);
             emit GardenNFTAwarded(_user, newItemId);
         } else {

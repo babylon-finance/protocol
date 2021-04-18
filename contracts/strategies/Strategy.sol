@@ -369,7 +369,7 @@ abstract contract Strategy is ERC721Upgradeable, ReentrancyGuard, IStrategy {
         // Send rest to garden if any
         _sendReserveAssetToGarden();
         // Mint NFT
-        _mint(strategist, 1);
+        _safeMint(strategist, 1);
         _setTokenURI(1, _tokenURI);
         emit StrategyFinalized(address(garden), kind, capitalReturned, _fee, block.timestamp);
     }

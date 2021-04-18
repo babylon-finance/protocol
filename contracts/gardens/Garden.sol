@@ -971,8 +971,9 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
     function _beforeTokenTransfer(
         address from,
         address to,
-        uint256 /* amount */
-    ) internal view override {
+        uint256 _amount
+    ) internal virtual override {
+        super._beforeTokenTransfer(from, to, _amount);
         _require(
             from == address(0) || to == address(0) || IBabController(controller).gardenTokensTransfersEnabled(),
             Errors.TOKENS_TIMELOCKED
