@@ -264,8 +264,9 @@ contract RewardsDistributor is Ownable {
             }
         }
 
-        // Babl rewards will be proportional to the total return (profit)
+        // Babl rewards will be proportional to the total return (profit) with a max cap of x2
         uint256 percentageMul = strategy.capitalReturned().preciseDiv(strategy.capitalAllocated());
+        if (percentageMul > 2e18) percentageMul = 2e18;
         bablRewards = bablRewards.preciseMul(percentageMul);
         return Safe3296.safe96(bablRewards, 'overflow 96 bits');
     }
