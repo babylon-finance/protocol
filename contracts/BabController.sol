@@ -163,14 +163,23 @@ contract BabController is OwnableUpgradeable, IBabController {
      * @param _reserveAsset           Reserve asset of the Garden. Initially just weth
      * @param _name                   Name of the Garden
      * @param _symbol                 Symbol of the Garden
+     * @param _gardenParams           Array of numeric garden params
      */
     function createGarden(
         address _reserveAsset,
         string memory _name,
-        string memory _symbol
-    ) external override returns (address) {
+        string memory _symbol,
+        uint256[] calldata _gardenParams
+    ) external payable override returns (address) {
         address newGarden =
-            IGardenFactory(gardenFactory).createGarden(_reserveAsset, address(this), msg.sender, _name, _symbol);
+            IGardenFactory(gardenFactory).createGarden{value: msg.value}(
+                _reserveAsset,
+                address(this),
+                msg.sender,
+                _name,
+                _symbol,
+                _gardenParams
+            );
         _addGarden(newGarden);
         return newGarden;
     }
