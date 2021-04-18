@@ -633,7 +633,7 @@ contract RewardsDistributor is Ownable, IRewardsDistributor {
         int256 userVotes = strategy.getUserVotes(_contributor);
         if (_profit == true) {
             if (userVotes > 0) {
-                profits = _profitValue.multiplyDecimal(profit_steward_share).preciseMul(uint256(userVotes)).preciseDiv(
+                profits = _profitValue.multiplyDecimal(PROFIT_STEWARD_SHARE).preciseMul(uint256(userVotes)).preciseDiv(
                     strategy.totalPositiveVotes()
                 );
             } else if ((userVotes < 0) && _distance == false) {
@@ -683,6 +683,10 @@ contract RewardsDistributor is Ownable, IRewardsDistributor {
             }
         } else {
             return 0;
+<<<<<<< HEAD
+=======
+
+>>>>>>> e076118b2f8f84217632911de074716d27bc4c88
         }
         return babl;
     }
@@ -704,6 +708,10 @@ contract RewardsDistributor is Ownable, IRewardsDistributor {
                 profits = _profitValue.multiplyDecimal(PROFIT_STRATEGIST_SHARE);
             }
         } else profits = 0; // No profits at all
+<<<<<<< HEAD
+=======
+
+>>>>>>> e076118b2f8f84217632911de074716d27bc4c88
         return profits;
     }
 

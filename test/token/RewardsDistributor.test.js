@@ -1697,6 +1697,9 @@ describe('BABL Rewards Distributor', function () {
         const signer1Profit1 = await garden1.balanceOf(signer1.address);
 
         expect(signer1Balance1.toString()).to.gt(ethers.utils.parseEther('23700'));
+        // todo: check difference not absolute balance
+        // expect(signer1Balance1.toString()).to.gt(ethers.utils.parseEther('29000'));
+
         expect(signer1Profit1.toString()).to.gt(ethers.utils.parseEther('2'));
       });
       it('should not allow a race condition of two consecutive claims for the same rewards & profit of the same strategies', async function () {
