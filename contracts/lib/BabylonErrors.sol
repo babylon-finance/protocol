@@ -146,4 +146,8 @@ library Errors {
     uint256 internal constant ONLY_STRATEGY_OR_CONTROLLER = 27;
     // Only strategy or protcol allowed
     uint256 internal constant NORMAL_WITHDRAWAL_POSSIBLE = 28;
+    // User does not have permissions to join garden
+    uint256 internal constant USER_CANNOT_JOIN = 29;
+    // User does not have permissions to add strategies in garden
+    uint256 internal constant USER_CANNOT_ADD_STRATEGIES = 30;
 }
