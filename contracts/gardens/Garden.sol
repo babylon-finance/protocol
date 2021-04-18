@@ -427,7 +427,8 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         IStrategy(maxStrategy).unwindStrategy(netReserveFlows);
         // We burn their penalty
         _burn(msg.sender, _gardenTokenQuantity.preciseMul(EARLY_WITHDRAWAL_PENALTY));
-        _withdraw(_gardenTokenQuantity, netReserveFlows, _to);
+        // todo: replace the 1
+        _withdraw(netReserveFlows, 1, _to);
     }
 
     /**
