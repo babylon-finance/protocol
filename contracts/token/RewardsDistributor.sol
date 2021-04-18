@@ -286,6 +286,7 @@ contract RewardsDistributor is Ownable, IRewardsDistributor {
         uint256 percentageMul = strategy.capitalReturned().preciseDiv(strategy.capitalAllocated());
         if (percentageMul > 2e18) percentageMul = 2e18;
         bablRewards = bablRewards.preciseMul(percentageMul);
+
         return Safe3296.safe96(bablRewards, 'overflow 96 bits');
     }
 
@@ -462,6 +463,7 @@ contract RewardsDistributor is Ownable, IRewardsDistributor {
         // We get the state of the strategy in terms of profit and distance from expected to accurately calculate profits and rewards
         (bool profit, uint256 profitValue, bool distance, uint256 distanceValue) =
             _getStrategyRewardsContext(address(strategy));
+
         (, uint256 initialDepositAt, uint256 claimedAt, , , , , ) = IGarden(msg.sender).getContributor(_contributor);
         // Positive strategies not yet claimed
         if (strategy.exitedAt() > claimedAt && strategy.executedAt() >= initialDepositAt) {
@@ -472,7 +474,6 @@ contract RewardsDistributor is Ownable, IRewardsDistributor {
                 // We reserve 5% of profits for performance fees
                 profitValue = profitValue.sub(profitValue.multiplyDecimal(PROFIT_PROTOCOL_FEE));
             }
-
             // Get strategist rewards in case the contributor is also the strategist of the strategy
             contributorBABL = contributorBABL.add(
                 _getStrategyStrategistBabl(
@@ -484,6 +485,7 @@ contract RewardsDistributor is Ownable, IRewardsDistributor {
                     distanceValue
                 )
             );
+
             contributorProfits = contributorProfits.add(
                 _getStrategyStrategistProfits(
                     address(strategy),
@@ -516,6 +518,7 @@ contract RewardsDistributor is Ownable, IRewardsDistributor {
                     contributorPower.preciseDiv(strategy.capitalAllocated())
                 )
             );
+
             if (profit == true) {
                 contributorProfits = contributorProfits.add(
                     contributorPower.preciseMul(profitValue).multiplyDecimal(PROFIT_LP_SHARE)
@@ -683,11 +686,8 @@ contract RewardsDistributor is Ownable, IRewardsDistributor {
             }
         } else {
             return 0;
-<<<<<<< HEAD
-=======
-
->>>>>>> e076118b2f8f84217632911de074716d27bc4c88
         }
+
         return babl;
     }
 
@@ -708,10 +708,7 @@ contract RewardsDistributor is Ownable, IRewardsDistributor {
                 profits = _profitValue.multiplyDecimal(PROFIT_STRATEGIST_SHARE);
             }
         } else profits = 0; // No profits at all
-<<<<<<< HEAD
-=======
 
->>>>>>> e076118b2f8f84217632911de074716d27bc4c88
         return profits;
     }
 
