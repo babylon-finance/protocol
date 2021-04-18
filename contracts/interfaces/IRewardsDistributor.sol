@@ -32,18 +32,20 @@ interface IRewardsDistributor {
         uint256 timeListPointer;
     }
 
-    function protocolPrincipal() external pure returns (uint256);
+    function protocolPrincipal() external view returns (uint256);
 
-    function timeList() external pure returns (uint256[] memory);
+    function pid() external view returns (uint256);
 
-    function pid() external pure returns (uint256);
-
+    // solhint-disable-next-line
     function EPOCH_DURATION() external pure returns (uint256);
 
-    function START_TIME() external pure returns (uint256);
+    // solhint-disable-next-line
+    function START_TIME() external view returns (uint256);
 
+    // solhint-disable-next-line
     function Q1_REWARDS() external pure returns (uint256);
 
+    // solhint-disable-next-line
     function DECAY_RATE() external pure returns (uint256);
 
     function addProtocolPrincipal(uint256 _capital) external;

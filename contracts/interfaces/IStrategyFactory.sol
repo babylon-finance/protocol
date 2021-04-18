@@ -35,6 +35,8 @@ interface IStrategyFactory {
         uint256 _stake,
         uint256 _strategyDuration,
         uint256 _expectedReturn,
-        uint256 _minRebalanceCapital
+        uint256 _minRebalanceCapital,
+        string memory _name,
+        string memory _symbol
     ) external returns (address);
 }

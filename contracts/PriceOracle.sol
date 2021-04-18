@@ -22,11 +22,14 @@ pragma solidity 0.7.4;
 
 import {Ownable} from '@openzeppelin/contracts/access/Ownable.sol';
 import {ERC20} from '@openzeppelin/contracts/token/ERC20/ERC20.sol';
+
 import {AddressArrayUtils} from './lib/AddressArrayUtils.sol';
 import {PreciseUnitMath} from './lib/PreciseUnitMath.sol';
+
 import {IBabController} from './interfaces/IBabController.sol';
-import {IUniswapAnchoredView} from './interfaces/IUniswapAnchoredView.sol';
+import {IUniswapAnchoredView} from './interfaces/external/compound/IUniswapAnchoredView.sol';
 import {IOracleAdapter} from './interfaces/IOracleAdapter.sol';
+import {IPriceOracle} from './interfaces/IPriceOracle.sol';
 
 /**
  * @title PriceOracle
@@ -36,7 +39,7 @@ import {IOracleAdapter} from './interfaces/IOracleAdapter.sol';
  * calculated using common asset pairs, or uses external data to calculate price.
  * Note: Prices are returned in preciseUnits (i.e. 18 decimals of precision)
  */
-contract PriceOracle is Ownable {
+contract PriceOracle is Ownable, IPriceOracle {
     using PreciseUnitMath for uint256;
     using AddressArrayUtils for address[];
 
@@ -50,12 +53,10 @@ contract PriceOracle is Ownable {
     // Address of the Controller contract
     IBabController public controller;
 
-    address public immutable weth = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
-
-    address public masterQuoteAsset = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
+    address public constant WETH = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
 
     // Address of uniswap anchored view contract. See https://compound.finance/docs/prices#price
-    address public uniswapAnchoredView;
+    address public immutable uniswapAnchoredView;
 
     // List of IOracleAdapters used to return prices of third party protocols (e.g. Uniswap, Compound, Balancer)
     address[] public adapters;
@@ -94,9 +95,10 @@ contract PriceOracle is Ownable {
      * @param _assetTwo         Address of second asset in pair
      * @return                  Price of asset pair to 18 decimals of precision
      */
-    function getPrice(address _assetOne, address _assetTwo) external view returns (uint256) {
+    function getPrice(address _assetOne, address _assetTwo) external view override returns (uint256) {
         require(
-            controller.isSystemContract(msg.sender) || msg.sender == owner() || true, // TODO: check is an strategy
+            // TODO: check is an strategy
+            controller.isSystemContract(msg.sender) || msg.sender == owner() || true,
             'Caller must be system contract'
         );
         // Same asset. Returns base unit
@@ -155,7 +157,7 @@ contract PriceOracle is Ownable {
      * @param _assetOne       First Asset of the pair
      * @param _assetTwo       Second Asset of the pair
      */
-    function updateAdapters(address _assetOne, address _assetTwo) external {
+    function updateAdapters(address _assetOne, address _assetTwo) external override {
         for (uint256 i = 0; i < adapters.length; i += 1) {
             IOracleAdapter(adapters[i]).update(_assetOne, _assetTwo);
         }
@@ -177,10 +179,10 @@ contract PriceOracle is Ownable {
         view
         returns (bool, uint256)
     {
-        string memory symbol1 = _assetOne == weth ? 'ETH' : ERC20(_assetOne).symbol();
-        string memory symbol2 = _assetTwo == weth ? 'ETH' : ERC20(_assetTwo).symbol();
+        string memory symbol1 = _assetOne == WETH ? 'ETH' : ERC20(_assetOne).symbol();
+        string memory symbol2 = _assetTwo == WETH ? 'ETH' : ERC20(_assetTwo).symbol();
         address assetToCheck = _assetOne;
-        if (_assetOne == weth) {
+        if (_assetOne == WETH) {
             assetToCheck = _assetTwo;
         }
         if (

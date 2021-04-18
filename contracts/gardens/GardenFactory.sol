@@ -18,8 +18,10 @@
 
 pragma solidity 0.7.4;
 
-import {Garden} from './Garden.sol';
 import {Clones} from '@openzeppelin/contracts/proxy/Clones.sol';
+
+import {IGardenFactory} from '../interfaces/IGardenFactory.sol';
+import {Garden} from './Garden.sol';
 
 /**
  * @title GardenFactory
@@ -27,8 +29,8 @@ import {Clones} from '@openzeppelin/contracts/proxy/Clones.sol';
  *
  * Factory to create garden contracts
  */
-contract GardenFactory {
-    address immutable garden;
+contract GardenFactory is IGardenFactory {
+    address private immutable garden;
 
     constructor() {
         garden = address(new Garden());
@@ -41,16 +43,18 @@ contract GardenFactory {
      * @param _creator                Address of the creator
      * @param _name                   Name of the Garden
      * @param _symbol                 Symbol of the Garden
+     * @param _gardenParams           Array of numeric params in the garden
      */
     function createGarden(
         address _reserveAsset,
         address _controller,
         address _creator,
         string memory _name,
-        string memory _symbol
-    ) external returns (address) {
+        string memory _symbol,
+        uint256[] calldata _gardenParams
+    ) external payable override returns (address) {
         address payable clone = payable(Clones.clone(garden));
-        Garden(clone).initialize(_reserveAsset, _controller, _creator, _name, _symbol);
+        Garden(clone).initialize{value: msg.value}(_reserveAsset, _controller, _creator, _name, _symbol, _gardenParams);
         return clone;
     }
 }
