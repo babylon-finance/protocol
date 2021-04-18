@@ -41,16 +41,18 @@ contract GardenFactory {
      * @param _creator                Address of the creator
      * @param _name                   Name of the Garden
      * @param _symbol                 Symbol of the Garden
+     * @param _gardenParams           Array of numeric params in the garden
      */
     function createGarden(
         address _reserveAsset,
         address _controller,
         address _creator,
         string memory _name,
-        string memory _symbol
-    ) external returns (address) {
+        string memory _symbol,
+        uint256[] calldata _gardenParams
+    ) external payable returns (address) {
         address payable clone = payable(Clones.clone(garden));
-        Garden(clone).initialize(_reserveAsset, _controller, _creator, _name, _symbol);
+        Garden(clone).initialize{value: msg.value}(_reserveAsset, _controller, _creator, _name, _symbol, _gardenParams);
         return clone;
     }
 }

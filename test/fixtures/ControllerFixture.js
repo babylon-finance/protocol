@@ -152,13 +152,35 @@ async function deployFolioFixture() {
 
   // Creates a new Garden instance
 
-  await babController.connect(signer1).createGarden(addresses.tokens.WETH, 'Absolute ETH Return [beta]', 'EYFA');
+  const gardenParams = [
+    ethers.utils.parseEther('20'),
+    1,
+    ethers.utils.parseEther('1000'),
+    2,
+    ethers.utils.parseEther('0.01'),
+    ONE_DAY_IN_SECONDS,
+    ethers.utils.parseEther('0.10'), // 10% quorum
+    ONE_DAY_IN_SECONDS * 3,
+    ONE_DAY_IN_SECONDS * 365,
+  ];
 
-  await babController.connect(signer1).createGarden(addresses.tokens.WETH, 'ETH Yield Farm [a]', 'EYFB');
+  await babController
+    .connect(signer1)
+    .createGarden(addresses.tokens.WETH, 'Absolute ETH Return [beta]', 'EYFA', gardenParams, {
+      value: ethers.utils.parseEther('0.1'),
+    });
 
-  await babController.connect(signer1).createGarden(addresses.tokens.WETH, 'ETH Yield Farm [b]', 'EYFG');
+  await babController.connect(signer1).createGarden(addresses.tokens.WETH, 'ETH Yield Farm [a]', 'EYFB', gardenParams, {
+    value: ethers.utils.parseEther('0.1'),
+  });
 
-  await babController.connect(signer1).createGarden(addresses.tokens.WETH, 'ETH Yield Farm [d]', 'EYFG');
+  await babController.connect(signer1).createGarden(addresses.tokens.WETH, 'ETH Yield Farm [b]', 'EYFG', gardenParams, {
+    value: ethers.utils.parseEther('0.1'),
+  });
+
+  await babController.connect(signer1).createGarden(addresses.tokens.WETH, 'ETH Yield Farm [d]', 'EYFG', gardenParams, {
+    value: ethers.utils.parseEther('0.1'),
+  });
 
   const gardens = await babController.getGardens();
 
@@ -169,49 +191,6 @@ async function deployFolioFixture() {
   const garden3 = await ethers.getContractAt('Garden', gardens[2]);
 
   const garden4 = await ethers.getContractAt('Garden', gardens[3]);
-
-  // Initial deposit
-  await garden1.connect(signer1).start(
-    ethers.utils.parseEther('20'),
-    1,
-    ethers.utils.parseEther('1000'),
-    2,
-    ethers.utils.parseEther('0.01'),
-    ONE_DAY_IN_SECONDS,
-    ethers.utils.parseEther('0.10'), // 10% quorum
-    ONE_DAY_IN_SECONDS * 3,
-    ONE_DAY_IN_SECONDS * 365,
-    { value: ethers.utils.parseEther('0.1') },
-  );
-
-  // Initial deposit
-  await garden2.connect(signer1).start(
-    ethers.utils.parseEther('20'),
-    1,
-    ethers.utils.parseEther('1000'),
-    2,
-    ethers.utils.parseEther('0.01'),
-    ONE_DAY_IN_SECONDS,
-    ethers.utils.parseEther('0.10'), // 10% quorum
-    ONE_DAY_IN_SECONDS * 3,
-    ONE_DAY_IN_SECONDS * 365,
-    { value: ethers.utils.parseEther('0.1') },
-  );
-
-  // NOTE: Use this garden for manual testing in the dApp
-  // Initial deposit
-  await garden3.connect(signer1).start(
-    ethers.utils.parseEther('20'),
-    1,
-    ethers.utils.parseEther('1000'),
-    2,
-    ethers.utils.parseEther('0.01'),
-    ONE_DAY_IN_SECONDS,
-    ethers.utils.parseEther('0.10'), // 10% quorum
-    ONE_DAY_IN_SECONDS * 3,
-    ONE_DAY_IN_SECONDS * 365,
-    { value: ethers.utils.parseEther('0.1') },
-  );
 
   // Create strategies
   const strategy11 = (

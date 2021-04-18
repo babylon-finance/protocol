@@ -256,14 +256,16 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
      * @param _creator                Address of the creator
      * @param _name                   Name of the Garden
      * @param _symbol                 Symbol of the Garden
+     * @param _gardenParams          Array of numeric garden params
      */
     function initialize(
         address _reserveAsset,
         address _controller,
         address _creator,
         string memory _name,
-        string memory _symbol
-    ) public virtual initializer {
+        string memory _symbol,
+        uint256[] calldata _gardenParams
+    ) public payable initializer {
         _require(_creator != address(0), Errors.ADDRESS_IS_ZERO);
         _require(_controller != address(0), Errors.ADDRESS_IS_ZERO);
         _require(_reserveAsset != address(0), Errors.ADDRESS_IS_ZERO);
@@ -276,6 +278,31 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         principal = 0;
         active = false;
         totalContributors = 0;
+
+        _start(
+            msg.value,
+            _gardenParams[0],
+            _gardenParams[1],
+            _gardenParams[2],
+            _gardenParams[3],
+            _gardenParams[4],
+            _gardenParams[5],
+            _gardenParams[6],
+            _gardenParams[7],
+            _gardenParams[8]
+        );
+
+        // Deposit
+        IWETH(WETH).deposit{value: msg.value}();
+
+        uint256 previousBalance = balanceOf(msg.sender);
+        _mint(creator, msg.value);
+        _updateContributorDepositInfo(previousBalance);
+        _updatePrincipal(msg.value);
+
+        _require(totalSupply() > 0, Errors.MIN_LIQUIDITY);
+        active = true;
+        emit GardenDeposit(msg.sender, msg.value, msg.value, 0, block.timestamp);
     }
 
     /* ============ External Functions ============ */
@@ -284,6 +311,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
      * FUND LEAD ONLY.  Starts the Garden with allowed reserve assets,
      * fees and issuance premium. Only callable by the Garden's creator
      *
+     * @param _creatorDeposit                      Deposit by the creator
      * @param _maxDepositLimit                     Max deposit limit
      * @param _minGardenTokenSupply             Min garden token supply
      * @param _minLiquidityAsset                   Number that represents min amount of liquidity denominated in ETH
@@ -294,7 +322,8 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
      * @param _minStrategyDuration                  Min duration of an strategy
      * @param _maxStrategyDuration                  Max duration of an strategy
      */
-    function start(
+    function _start(
+        uint256 _creatorDeposit,
         uint256 _maxDepositLimit,
         uint256 _minGardenTokenSupply,
         uint256 _minLiquidityAsset,
@@ -304,17 +333,15 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         uint256 _minVotersQuorum,
         uint256 _minStrategyDuration,
         uint256 _maxStrategyDuration
-    ) external payable onlyCreator onlyInactive {
+    ) private {
+        _require(_creatorDeposit >= minContribution, Errors.MIN_CONTRIBUTION);
+        _require(_creatorDeposit >= _minGardenTokenSupply, Errors.MIN_LIQUIDITY);
+        _require(_creatorDeposit <= _maxDepositLimit, Errors.MAX_DEPOSIT_LIMIT);
         _require(_maxDepositLimit <= MAX_DEPOSITS_FUND_V1, Errors.MAX_DEPOSIT_LIMIT);
-
-        _require(msg.value >= minContribution, Errors.MIN_CONTRIBUTION);
         IBabController babController = IBabController(controller);
         _require(_minGardenTokenSupply > 0, Errors.MIN_TOKEN_SUPPLY);
         _require(_depositHardlock > 0, Errors.DEPOSIT_HARDLOCK);
         _require(_minLiquidityAsset >= babController.minRiskyPairLiquidityEth(), Errors.MIN_LIQUIDITY);
-        // make initial deposit
-        _require(msg.value >= _minGardenTokenSupply, Errors.MIN_LIQUIDITY);
-        _require(msg.value <= _maxDepositLimit, Errors.MAX_DEPOSIT_LIMIT);
         _require(
             _strategyCooldownPeriod <= IBabController(controller).getMaxCooldownPeriod() &&
                 _strategyCooldownPeriod >= IBabController(controller).getMinCooldownPeriod(),
@@ -332,18 +359,6 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         minLiquidityAsset = _minLiquidityAsset;
         depositHardlock = _depositHardlock;
         withdrawalWindowAfterStrategyCompletes = 7 days;
-
-        // Deposit
-        IWETH(WETH).deposit{value: msg.value}();
-
-        uint256 previousBalance = balanceOf(msg.sender);
-        _mint(creator, msg.value);
-        _updateContributorDepositInfo(previousBalance);
-        _updatePrincipal(msg.value);
-
-        _require(totalSupply() > 0, Errors.MIN_LIQUIDITY);
-        active = true;
-        emit GardenDeposit(msg.sender, msg.value, msg.value, 0, block.timestamp);
     }
 
     /**

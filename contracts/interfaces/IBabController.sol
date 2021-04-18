@@ -29,8 +29,9 @@ interface IBabController {
     function createGarden(
         address _reserveAsset,
         string memory _name,
-        string memory _symbol
-    ) external returns (address);
+        string memory _symbol,
+        uint256[] calldata _gardenParams
+    ) external payable returns (address);
 
     function removeGarden(address _garden) external;
 
