@@ -51,6 +51,8 @@ contract GardenValuer {
     // Instance of the Controller contract
     address public controller;
 
+    address private constant WETH = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
+
     /* ============ Constructor ============ */
 
     /**
@@ -73,35 +75,49 @@ contract GardenValuer {
      * Note: There is a risk that the valuation is off if airdrops aren't retrieved
      *
      * @param _garden          Garden instance to get valuation
-     * @param _quoteAsset      Address of token to quote valuation in
      *
      * @return                 Token valuation in terms of quote asset in precise units 1e18
      */
     function calculateGardenValuation(address _garden, address _quoteAsset) external view returns (uint256) {
         IPriceOracle priceOracle = IPriceOracle(IBabController(controller).priceOracle());
-        address masterQuoteAsset = priceOracle.masterQuoteAsset();
+        address reserveAsset = IGarden(_garden).reserveAsset();
+
+        uint256 reservePrice;
+        // Get price of the reserveAsset in _quoteAsset
+        if (reserveAsset == _quoteAsset) {
+            // meaning 1 reserveAsset equals to 1 _quoteAsset
+            reservePrice = 1 ether;
+        } else {
+            reservePrice = priceOracle.getPrice(reserveAsset, _quoteAsset);
+        }
+
+        uint256 wethPrice;
+        // Get price of the WETH in _quoteAsset
+        if (_quoteAsset == WETH) {
+            // meaning 1 WETH equals to 1 _quoteAsset
+            // this line looks ironic. 10/10.
+            wethPrice = 1 ether;
+        } else {
+            uint256 wethPrice = priceOracle.getPrice(WETH, _quoteAsset);
+        }
 
         address[] memory strategies = IGarden(_garden).getStrategies();
-        int256 valuation;
+        uint256 valuation;
         for (uint256 j = 0; j < strategies.length; j++) {
-            // solhint-disable-next-line
             IStrategy strategy = IStrategy(strategies[j]);
-            valuation = valuation.add(strategy.getNAV().toInt256());
+            // strategies return their valuation in garden's reserveAsset
+            valuation = valuation.add(strategy.getNAV());
         }
 
-        if (masterQuoteAsset != _quoteAsset && valuation > 0) {
-            uint256 quoteToMaster = priceOracle.getPrice(_quoteAsset, masterQuoteAsset);
-            valuation = valuation.preciseDiv(quoteToMaster.toInt256());
-        }
-        // Get component price from price oracle. If price does not exist, revert.
-        uint256 reservePrice = priceOracle.getPrice(IGarden(_garden).reserveAsset(), masterQuoteAsset);
-        valuation = valuation.add(
-            IERC20(IGarden(_garden).reserveAsset()).balanceOf(address(_garden)).toInt256().preciseMul(
-                reservePrice.toInt256()
-            )
-        );
-        // Adds ETH set aside
-        valuation = valuation.add(address(_garden).balance.toInt256());
-        return valuation.toUint256().preciseDiv(IERC20(_garden).totalSupply());
+        // Recalculate the valuation in the _quoteAsset prices
+        valuation = valuation.preciseMul(reservePrice);
+
+        // Add garden's reserve asset to calculations
+        valuation = valuation.add(IERC20(reserveAsset).balanceOf(address(_garden)).preciseMul(reservePrice));
+
+        // Adds ETH of garden in _quoteAsset prices
+        valuation = valuation.add(address(_garden).balance.preciseMul(wethPrice));
+
+        return valuation.preciseDiv(IERC20(_garden).totalSupply());
     }
 }

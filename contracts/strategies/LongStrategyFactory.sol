@@ -18,10 +18,13 @@
 
 pragma solidity 0.7.4;
 
+import {Clones} from '@openzeppelin/contracts/proxy/Clones.sol';
+
+import {IStrategy} from '../interfaces/IStrategy.sol';
+import {IStrategyFactory} from '../interfaces/IStrategyFactory.sol';
+
 import {Strategy} from './Strategy.sol';
 import {LongStrategy} from './LongStrategy.sol';
-import {IStrategy} from '../interfaces/IStrategy.sol';
-import {Clones} from '@openzeppelin/contracts/proxy/Clones.sol';
 
 /**
  * @title StrategyFactory
@@ -29,8 +32,8 @@ import {Clones} from '@openzeppelin/contracts/proxy/Clones.sol';
  *
  * Factory to create investment strategy contracts
  */
-contract LongStrategyFactory {
-    address payable immutable longStrategy;
+contract LongStrategyFactory is IStrategyFactory {
+    address payable private immutable longStrategy;
 
     constructor() {
         longStrategy = address(new LongStrategy());
@@ -59,7 +62,7 @@ contract LongStrategyFactory {
         uint256 _investmentDuration,
         uint256 _expectedReturn,
         uint256 _minRebalanceCapital
-    ) external returns (address) {
+    ) external override returns (address) {
         address payable clone = payable(Clones.clone(longStrategy));
         IStrategy(clone).initialize(
             _strategist,

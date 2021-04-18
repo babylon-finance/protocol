@@ -18,9 +18,11 @@
 
 pragma solidity 0.7.4;
 
-import {Strategy} from './Strategy.sol';
-import {YieldFarmingStrategy} from './YieldFarmingStrategy.sol';
 import {Clones} from '@openzeppelin/contracts/proxy/Clones.sol';
+
+import {Strategy} from './Strategy.sol';
+import {IStrategyFactory} from '../interfaces/IStrategyFactory.sol';
+import {YieldFarmingStrategy} from './YieldFarmingStrategy.sol';
 
 /**
  * @title YieldFarmingStrategyFactory
@@ -28,7 +30,7 @@ import {Clones} from '@openzeppelin/contracts/proxy/Clones.sol';
  *
  * Factory to create yield farming strategies
  */
-contract YieldFarmingStrategyFactory {
+contract YieldFarmingStrategyFactory is IStrategyFactory {
     address payable immutable yieldFarmingStrategy;
 
     constructor() {
@@ -58,7 +60,7 @@ contract YieldFarmingStrategyFactory {
         uint256 _investmentDuration,
         uint256 _expectedReturn,
         uint256 _minRebalanceCapital
-    ) external returns (address) {
+    ) external override returns (address) {
         address payable clone = payable(Clones.clone(yieldFarmingStrategy));
         YieldFarmingStrategy(clone).initialize(
             _strategist,
