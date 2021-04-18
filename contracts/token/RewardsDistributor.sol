@@ -635,7 +635,7 @@ contract RewardsDistributor is Ownable {
         }
     }
 
-    function _getStrategyRewardsOneQuarter(address _strategy, uint256 _startingQuarter) private returns (uint256) {
+    function _getStrategyRewardsOneQuarter(address _strategy, uint256 _startingQuarter) private view returns (uint256) {
         IStrategy strategy = IStrategy(_strategy);
         uint256 strategyOverTime =
             strategy.capitalAllocated().mul(strategy.exitedAt().sub(strategy.executedAt())).sub(
