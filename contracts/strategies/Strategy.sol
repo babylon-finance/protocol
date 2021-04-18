@@ -311,7 +311,6 @@ abstract contract Strategy is ReentrancyGuard, Initializable, IStrategy {
         require(capitalAllocated.add(_capital) <= maxCapitalRequested, 'Max capital reached');
         require(_capital >= minRebalanceCapital, 'Amount >= min');
         require(block.timestamp.sub(enteredCooldownAt) >= garden.strategyCooldownPeriod(), 'Strategy in cooldown');
-        require(block.timestamp < executedAt.add(duration).sub(1 days), 'cannot deposit so close to end');
 
         // Execute enter trade
         garden.allocateCapitalToStrategy(_capital);

@@ -584,6 +584,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
             uint256 percentage = strategy.totalVotes().toUint256().preciseDiv(totalStake);
             uint256 toAllocate = liquidReserveAsset.preciseMul(percentage);
             if (
+                block.timestamp < strategy.executedAt().add(strategy.duration()).sub(1 days) &&
                 toAllocate >= strategy.minRebalanceCapital() &&
                 toAllocate.add(strategy.capitalAllocated()) <= strategy.maxCapitalRequested()
             ) {
