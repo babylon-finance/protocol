@@ -42,11 +42,11 @@ interface IIshtarGate {
 
     function grantCreatorsInBatch(address[] calldata _users, bool[] calldata _perms) external returns (bool);
 
-    function canCreate(address _user) external returns (bool);
+    function canCreate(address _user) external view returns (bool);
 
-    function canJoinAGarden(address _garden, address _user) external returns (bool);
+    function canJoinAGarden(address _garden, address _user) external view returns (bool);
 
-    function canVoteInAGarden(address _garden, address _user) external returns (bool);
+    function canVoteInAGarden(address _garden, address _user) external view returns (bool);
 
-    function canAddStrategiesInAGarden(address _garden, address _user) external returns (bool);
+    function canAddStrategiesInAGarden(address _garden, address _user) external view returns (bool);
 }

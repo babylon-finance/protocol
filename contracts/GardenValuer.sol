@@ -98,7 +98,7 @@ contract GardenValuer {
             // this line looks ironic. 10/10.
             wethPrice = 1 ether;
         } else {
-            uint256 wethPrice = priceOracle.getPrice(WETH, _quoteAsset);
+            wethPrice = priceOracle.getPrice(WETH, _quoteAsset);
         }
 
         address[] memory strategies = IGarden(_garden).getStrategies();

@@ -12,6 +12,8 @@ const DEFAULT_STRATEGY_PARAMS = [
   ethers.utils.parseEther('1'), // _minRebalanceCapital
 ];
 
+const NFT_STRAT_PARAMS = ['Strat Name', 'STRT'];
+
 async function updateTWAPs(garden) {
   const controller = await ethers.getContractAt('BabController', await garden.controller());
   const priceOracle = await ethers.getContractAt('PriceOracle', await controller.priceOracle());
@@ -30,7 +32,7 @@ async function updateTWAPs(garden) {
 
 async function createLongStrategy(garden, integration, signer, params = DEFAULT_STRATEGY_PARAMS, longParams) {
   const passedLongParams = longParams || [addresses.tokens.DAI];
-  await garden.connect(signer).addStrategy(0, integration, ...params, ...passedLongParams);
+  await garden.connect(signer).addStrategy(0, integration, ...params, ...passedLongParams, ...NFT_STRAT_PARAMS);
   const strategies = await garden.getStrategies();
   const lastStrategyAddr = strategies[strategies.length - 1];
 
@@ -41,7 +43,7 @@ async function createLongStrategy(garden, integration, signer, params = DEFAULT_
 
 async function createPoolStrategy(garden, integration, signer, params = DEFAULT_STRATEGY_PARAMS, poolParams) {
   const passedPoolParams = poolParams || [addresses.balancer.pools.wethdai];
-  await garden.connect(signer).addStrategy(1, integration, ...params, ...passedPoolParams);
+  await garden.connect(signer).addStrategy(1, integration, ...params, ...passedPoolParams, ...NFT_STRAT_PARAMS);
   const strategies = await garden.getStrategies();
   const lastStrategyAddr = strategies[strategies.length - 1];
 
@@ -52,7 +54,7 @@ async function createPoolStrategy(garden, integration, signer, params = DEFAULT_
 
 async function createYieldStrategy(garden, integration, signer, params = DEFAULT_STRATEGY_PARAMS, yieldParams) {
   const passedYieldParams = yieldParams || [addresses.yearn.vaults.ydai];
-  await garden.connect(signer).addStrategy(2, integration, ...params, ...passedYieldParams);
+  await garden.connect(signer).addStrategy(2, integration, ...params, ...passedYieldParams, ...NFT_STRAT_PARAMS);
   const strategies = await garden.getStrategies();
   const lastStrategyAddr = strategies[strategies.length - 1];
 
@@ -63,7 +65,7 @@ async function createYieldStrategy(garden, integration, signer, params = DEFAULT
 
 async function createLendStrategy(garden, integration, signer, params = DEFAULT_STRATEGY_PARAMS, lendParams) {
   const passedLendParams = lendParams || [addresses.tokens.USDC];
-  await garden.connect(signer).addStrategy(3, integration, ...params, ...passedLendParams);
+  await garden.connect(signer).addStrategy(3, integration, ...params, ...passedLendParams, ...NFT_STRAT_PARAMS);
   const strategies = await garden.getStrategies();
   const lastStrategyAddr = strategies[strategies.length - 1];
 
@@ -108,7 +110,7 @@ async function executeStrategy(garden, strategy, amount = ethers.utils.parseEthe
 async function finalizeStrategy(garden, strategy, fee = 0) {
   ethers.provider.send('evm_increaseTime', [ONE_DAY_IN_SECONDS * 90]);
   await updateTWAPs(garden);
-  return strategy.finalizeStrategy(fee, { gasPrice: 0 });
+  return strategy.finalizeStrategy(fee, 'http://...', { gasPrice: 0 });
 }
 
 async function injectFakeProfits(strategy, amount) {

@@ -471,7 +471,7 @@ describe('Strategy', function () {
 
       await finalizeStrategy(garden1, strategyContract, 42);
 
-      await expect(strategyContract.finalizeStrategy(42, { gasPrice: 0 })).to.be.reverted;
+      await expect(strategyContract.finalizeStrategy(42, 'http://', { gasPrice: 0 })).to.be.reverted;
     });
   });
 });
