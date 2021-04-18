@@ -31,18 +31,22 @@ describe('IshtarGate', function () {
     it('succeeds with the gate NFT awarded', async function () {
       await ishtarGate.connect(owner).setCreatorPermissions(signer2.address, true, { gasPrice: 0 });
       await expect(
-        babController.connect(signer2).createGarden(addresses.tokens.WETH, 'TEST Ishtar', 'AAA', gardenParams, {
-          value: ethers.utils.parseEther('0.1'),
-        }),
+        babController
+          .connect(signer2)
+          .createGarden(addresses.tokens.WETH, 'TEST Ishtar', 'AAA', gardenParams, 'http:', {
+            value: ethers.utils.parseEther('0.1'),
+          }),
       ).to.not.be.reverted;
     });
 
     it('succeeds with the gate NFT awarded through batch creation', async function () {
       await ishtarGate.connect(owner).grantCreatorsInBatch([signer2.address], [true], { gasPrice: 0 });
       await expect(
-        babController.connect(signer2).createGarden(addresses.tokens.WETH, 'TEST Ishtar', 'AAA', gardenParams, {
-          value: ethers.utils.parseEther('0.1'),
-        }),
+        babController
+          .connect(signer2)
+          .createGarden(addresses.tokens.WETH, 'TEST Ishtar', 'AAA', gardenParams, 'http...', {
+            value: ethers.utils.parseEther('0.1'),
+          }),
       ).to.not.be.reverted;
     });
 
@@ -57,9 +61,11 @@ describe('IshtarGate', function () {
 
     it('fails without the gate NFT', async function () {
       await expect(
-        babController.connect(signer2).createGarden(addresses.tokens.WETH, 'TEST Ishtar', 'AAA', gardenParams, {
-          value: ethers.utils.parseEther('0.1'),
-        }),
+        babController
+          .connect(signer2)
+          .createGarden(addresses.tokens.WETH, 'TEST Ishtar', 'AAA', gardenParams, 'http...', {
+            value: ethers.utils.parseEther('0.1'),
+          }),
       ).to.be.reverted;
     });
   });
@@ -67,9 +73,11 @@ describe('IshtarGate', function () {
   describe('join a garden', async function () {
     it('succeeds with the gate NFT awarded', async function () {
       await expect(
-        babController.connect(signer1).createGarden(addresses.tokens.WETH, 'TEST Ishtar', 'AAA', gardenParams, {
-          value: ethers.utils.parseEther('0.1'),
-        }),
+        babController
+          .connect(signer1)
+          .createGarden(addresses.tokens.WETH, 'TEST Ishtar', 'AAA', gardenParams, 'http...', {
+            value: ethers.utils.parseEther('0.1'),
+          }),
       ).to.not.be.reverted;
       const gardens = await babController.getGardens();
 
@@ -84,9 +92,11 @@ describe('IshtarGate', function () {
 
     it('fails without the gate NFT', async function () {
       await expect(
-        babController.connect(signer1).createGarden(addresses.tokens.WETH, 'TEST Ishtar', 'AAA', gardenParams, {
-          value: ethers.utils.parseEther('0.1'),
-        }),
+        babController
+          .connect(signer1)
+          .createGarden(addresses.tokens.WETH, 'TEST Ishtar', 'AAA', gardenParams, 'http...', {
+            value: ethers.utils.parseEther('0.1'),
+          }),
       ).to.not.be.reverted;
       const gardens = await babController.getGardens();
 
@@ -101,9 +111,11 @@ describe('IshtarGate', function () {
 
     it('only creator can grant access to a garden', async function () {
       await expect(
-        babController.connect(signer1).createGarden(addresses.tokens.WETH, 'TEST Ishtar', 'AAA', gardenParams, {
-          value: ethers.utils.parseEther('0.1'),
-        }),
+        babController
+          .connect(signer1)
+          .createGarden(addresses.tokens.WETH, 'TEST Ishtar', 'AAA', gardenParams, 'http...', {
+            value: ethers.utils.parseEther('0.1'),
+          }),
       ).to.not.be.reverted;
       const gardens = await babController.getGardens();
 
@@ -115,9 +127,11 @@ describe('IshtarGate', function () {
 
     it('can grant access through batch method', async function () {
       await expect(
-        babController.connect(signer1).createGarden(addresses.tokens.WETH, 'TEST Ishtar', 'AAA', gardenParams, {
-          value: ethers.utils.parseEther('0.1'),
-        }),
+        babController
+          .connect(signer1)
+          .createGarden(addresses.tokens.WETH, 'TEST Ishtar', 'AAA', gardenParams, 'http...', {
+            value: ethers.utils.parseEther('0.1'),
+          }),
       ).to.not.be.reverted;
       const gardens = await babController.getGardens();
 

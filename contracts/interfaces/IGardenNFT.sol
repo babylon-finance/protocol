@@ -17,22 +17,23 @@
 */
 pragma solidity 0.7.4;
 
-import {IIntegration} from './IIntegration.sol';
+import {IGarden} from './IGarden.sol';
+import {IBabController} from './IBabController.sol';
 
 /**
- * @title IGardenFactory
+ * @title IGardenNFT
  * @author Babylon Finance
  *
- * Interface for the garden factory
+ * Interface for operating with a Garden NFT.
  */
-interface IGardenFactory {
-    function createGarden(
-        address _reserveAsset,
+interface IGardenNFT {
+    function initialize(
         address _controller,
-        address _creator,
+        address _garden,
         string memory _name,
         string memory _symbol,
-        uint256[] calldata _gardenParams,
         string memory _tokenURI
-    ) external payable returns (address);
+    ) external;
+
+    function grantGardenNFT(address _user) external returns (uint256);
 }

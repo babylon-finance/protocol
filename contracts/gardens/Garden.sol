@@ -39,6 +39,7 @@ import {IBabController} from '../interfaces/IBabController.sol';
 import {IStrategyFactory} from '../interfaces/IStrategyFactory.sol';
 import {IStrategy} from '../interfaces/IStrategy.sol';
 import {IGarden} from '../interfaces/IGarden.sol';
+import {IGardenNFT} from '../interfaces/IGardenNFT.sol';
 import {IIshtarGate} from '../interfaces/IIshtarGate.sol';
 import {IWETH} from '../interfaces/external/weth/IWETH.sol';
 
@@ -205,6 +206,8 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
 
     // Address of the controller
     address public override controller;
+    // Address of the nft
+    address public override nftAddress;
     // The person that creates the garden
     address public override creator;
     // Whether the garden is currently active or not
@@ -259,7 +262,8 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
      * @param _creator                Address of the creator
      * @param _name                   Name of the Garden
      * @param _symbol                 Symbol of the Garden
-     * @param _gardenParams          Array of numeric garden params
+     * @param _gardenParams           Array of numeric garden params
+     * @param _nftAddress             Garden NFT address
      */
     function initialize(
         address _reserveAsset,
@@ -267,7 +271,8 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         address _creator,
         string memory _name,
         string memory _symbol,
-        uint256[] calldata _gardenParams
+        uint256[] calldata _gardenParams,
+        address _nftAddress
     ) public payable initializer {
         _require(_creator != address(0), Errors.ADDRESS_IS_ZERO);
         _require(_controller != address(0), Errors.ADDRESS_IS_ZERO);
@@ -282,6 +287,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         active = false;
         totalContributors = 0;
         maxContributors = 100;
+        nftAddress = _nftAddress;
 
         _start(
             msg.value,
@@ -295,18 +301,11 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
             _gardenParams[7],
             _gardenParams[8]
         );
+        active = true;
 
         // Deposit
         IWETH(WETH).deposit{value: msg.value}();
-
-        uint256 previousBalance = balanceOf(msg.sender);
-        _mint(creator, msg.value);
-        _updateContributorDepositInfo(previousBalance);
-        _updatePrincipal(msg.value);
-
-        _require(totalSupply() > 0, Errors.MIN_LIQUIDITY);
-        active = true;
-        emit GardenDeposit(msg.sender, msg.value, msg.value, 0, block.timestamp);
+        _mintGardenTokens(creator, msg.value, msg.value, 0);
     }
 
     /* ============ External Functions ============ */
@@ -407,12 +406,13 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         // Send Protocol Fee
         payProtocolFeeFromGarden(reserveAsset, depositInfo.protocolFees);
 
-        // Updates Reserve Balance and Mint
-        uint256 previousBalance = balanceOf(msg.sender);
-        _mint(_to, depositInfo.gardenTokenQuantity);
-        _updateContributorDepositInfo(previousBalance);
-        _updatePrincipal(principal.add(depositInfo.netFlowQuantity));
-        emit GardenDeposit(_to, msg.value, depositInfo.gardenTokenQuantity, depositInfo.protocolFees, block.timestamp);
+        // Mint tokens
+        _mintGardenTokens(
+            _to,
+            depositInfo.gardenTokenQuantity,
+            principal.add(depositInfo.netFlowQuantity),
+            depositInfo.protocolFees
+        );
     }
 
     /**
@@ -921,6 +921,29 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
     receive() external payable {}
 
     /* ============ Internal Functions ============ */
+
+    /**
+     * Function that mints the appropriate garden tokens along with the Garden NFT
+     * @param _to                              Address to mint the tokens
+     * @param _gardenTokenQuantity             Amount of garden tokens
+     * @param _newPrincipal                    New principal for that user
+     * @param _protocolFees                    Protocol Fees Paid
+     */
+    function _mintGardenTokens(
+        address _to,
+        uint256 _gardenTokenQuantity,
+        uint256 _newPrincipal,
+        uint256 _protocolFees
+    ) private {
+        uint256 previousBalance = balanceOf(msg.sender);
+        _mint(_to, _gardenTokenQuantity);
+        _updateContributorDepositInfo(previousBalance);
+        _updatePrincipal(_newPrincipal);
+        // Mint the garden NFT
+        IGardenNFT(nftAddress).grantGardenNFT(_to);
+        _require(totalSupply() > 0, Errors.MIN_LIQUIDITY);
+        emit GardenDeposit(_to, msg.value, _gardenTokenQuantity, _protocolFees, block.timestamp);
+    }
 
     /**
      * Function that allows the principal to be updated

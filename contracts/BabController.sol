@@ -168,12 +168,14 @@ contract BabController is OwnableUpgradeable, IBabController {
      * @param _name                   Name of the Garden
      * @param _symbol                 Symbol of the Garden
      * @param _gardenParams           Array of numeric garden params
+     * @param _tokenURI               Garden NFT token URI
      */
     function createGarden(
         address _reserveAsset,
         string memory _name,
         string memory _symbol,
-        uint256[] calldata _gardenParams
+        uint256[] calldata _gardenParams,
+        string memory _tokenURI
     ) external payable override returns (address) {
         require(IIshtarGate(ishtarGate).canCreate(msg.sender), 'User does not have creation permissions');
         address newGarden =
@@ -183,7 +185,8 @@ contract BabController is OwnableUpgradeable, IBabController {
                 msg.sender,
                 _name,
                 _symbol,
-                _gardenParams
+                _gardenParams,
+                _tokenURI
             );
         _addGarden(newGarden);
         return newGarden;
