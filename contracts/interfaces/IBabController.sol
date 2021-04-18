@@ -43,6 +43,8 @@ interface IBabController {
 
     function editPriceOracle(address _priceOracle) external;
 
+    function editIshtarGate(address _ishtarGate) external;
+
     function editGardenValuer(address _gardenValuer) external;
 
     function editRewardsDistributor(address _rewardsDistributor) external;
@@ -80,6 +82,8 @@ interface IBabController {
     function gardenFactory() external view returns (address);
 
     function treasury() external view returns (address);
+
+    function ishtarGate() external view returns (address);
 
     function protocolDepositGardenTokenFee() external view returns (uint256);
 

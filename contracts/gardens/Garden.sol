@@ -39,6 +39,7 @@ import {IBabController} from '../interfaces/IBabController.sol';
 import {IStrategyFactory} from '../interfaces/IStrategyFactory.sol';
 import {IStrategy} from '../interfaces/IStrategy.sol';
 import {IGarden} from '../interfaces/IGarden.sol';
+import {IIshtarGate} from '../interfaces/IIshtarGate.sol';
 import {IWETH} from '../interfaces/external/weth/IWETH.sol';
 
 /**
@@ -225,6 +226,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
     // Contributors
     mapping(address => Contributor) public contributors;
     uint256 public override totalContributors;
+    uint256 public override maxContributors;
     uint256 public maxDepositLimit; // Limits the amount of deposits
 
     uint256 public gardenInitializedAt; // Garden Initialized at timestamp
@@ -279,6 +281,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         principal = 0;
         active = false;
         totalContributors = 0;
+        maxContributors = 100;
 
         _start(
             msg.value,
@@ -375,6 +378,10 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         uint256 _minGardenTokenReceiveQuantity,
         address _to
     ) public payable override nonReentrant onlyActive {
+        _require(
+            IIshtarGate(IBabController(controller).ishtarGate()).canJoinAGarden(address(this), msg.sender),
+            Errors.USER_CANNOT_JOIN
+        );
         _require(msg.value >= minContribution, Errors.MIN_CONTRIBUTION);
         // if deposit limit is 0, then there is no deposit limit
         if (maxDepositLimit > 0) {
@@ -567,6 +574,10 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         uint256 _minRebalanceCapital,
         address _strategyData
     ) external override onlyContributor onlyActive {
+        _require(
+            IIshtarGate(IBabController(controller).ishtarGate()).canAddStrategiesInAGarden(address(this), msg.sender),
+            Errors.USER_CANNOT_ADD_STRATEGIES
+        );
         _require(strategies.length < MAX_TOTAL_STRATEGIES, Errors.VALUE_TOO_HIGH);
         IStrategyFactory strategyFactory =
             IStrategyFactory(IBabController(controller).getStrategyFactory(_strategyKind));

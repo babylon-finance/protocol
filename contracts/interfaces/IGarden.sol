@@ -55,6 +55,8 @@ interface IGarden {
 
     function minContribution() external view returns (uint256);
 
+    function maxContributors() external view returns (uint256);
+
     function WETH() external view returns (address);
 
     function minLiquidityAsset() external view returns (uint256);

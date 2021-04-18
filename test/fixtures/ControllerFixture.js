@@ -44,6 +44,7 @@ async function deployFolioFixture() {
   const GardenValuer = await ethers.getContractFactory('GardenValuer', owner);
   const PriceOracle = await ethers.getContractFactory('PriceOracle', owner);
   const Treasury = await ethers.getContractFactory('Treasury', owner);
+  const IshtarGate = await ethers.getContractFactory('IshtarGate', owner);
   const UniswapTWAP = await ethers.getContractFactory('UniswapTWAP', owner);
   const GardenFactory = await ethers.getContractFactory('GardenFactory', owner);
   const LongStrategyFactory = await ethers.getContractFactory('LongStrategyFactory', owner);
@@ -53,6 +54,7 @@ async function deployFolioFixture() {
 
   const gardenValuer = await GardenValuer.deploy(babController.address);
   const treasury = await Treasury.deploy(babController.address);
+  const ishtarGate = await IshtarGate.deploy(babController.address, 'http://json.api/test');
   const gardenFactory = await GardenFactory.deploy();
   const longStrategyFactory = await LongStrategyFactory.deploy();
   const liquidityPoolStrategyFactory = await LiquidityPoolStrategyFactory.deploy();
@@ -72,6 +74,7 @@ async function deployFolioFixture() {
   babController.editPriceOracle(priceOracle.address);
   babController.editTreasury(treasury.address);
   babController.editGardenValuer(gardenValuer.address);
+  babController.editIshtarGate(ishtarGate.address);
   babController.editRewardsDistributor(rewardsDistributor.address);
   babController.editGardenFactory(gardenFactory.address);
   babController.editStrategyFactory(0, longStrategyFactory.address);
