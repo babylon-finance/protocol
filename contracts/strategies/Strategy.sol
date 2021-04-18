@@ -154,6 +154,8 @@ abstract contract Strategy is ReentrancyGuard, Initializable, IStrategy {
     uint256 internal constant MAX_KEEPER_FEE = (1e6 * 1e3 gwei);
     uint256 internal constant MAX_STRATEGY_KEEPER_FEES = 2 * MAX_KEEPER_FEE;
 
+    /* ============ Structs ============ */
+
     /* ============ State Variables ============ */
 
     // Babylon Controller Address
