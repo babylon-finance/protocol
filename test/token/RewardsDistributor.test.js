@@ -29,30 +29,30 @@ const { BigNumber } = require('@ethersproject/bignumber');
 async function finishStrategyQ1(garden, strategy, fee = 0) {
   ethers.provider.send('evm_increaseTime', [ONE_DAY_IN_SECONDS * 30]); // TO HAVE STRATEGIES WITHIN THE SAME EPOCH
   await updateTWAPs(garden);
-  return strategy.finalizeStrategy(fee, { gasPrice: 0 });
+  return strategy.finalizeStrategy(fee, 'http:...', { gasPrice: 0 });
 }
 
 async function finishStrategyQ1_noIncreaseTime(garden, strategy, fee = 0) {
   await updateTWAPs(garden);
-  return strategy.finalizeStrategy(fee, { gasPrice: 0 });
+  return strategy.finalizeStrategy(fee, 'http:...', { gasPrice: 0 });
 }
 
 async function finishStrategy2Q(garden, strategy, fee = 0) {
   ethers.provider.send('evm_increaseTime', [ONE_DAY_IN_SECONDS * 90]); // TO HAVE STRATEGIES OF 2 EPOCH DURATION
   await updateTWAPs(garden);
-  return strategy.finalizeStrategy(fee, { gasPrice: 0 });
+  return strategy.finalizeStrategy(fee, 'http:...', { gasPrice: 0 });
 }
 
 async function finishStrategy3Q(garden, strategy, fee = 0) {
   ethers.provider.send('evm_increaseTime', [ONE_DAY_IN_SECONDS * 180]); // TO HAVE STRATEGIES LASTING >2 EPOCH
   await updateTWAPs(garden);
-  return strategy.finalizeStrategy(fee, { gasPrice: 0 });
+  return strategy.finalizeStrategy(fee, 'http:...', { gasPrice: 0 });
 }
 
 async function finishStrategy2Y(garden, strategy, fee = 0) {
   ethers.provider.send('evm_increaseTime', [ONE_DAY_IN_SECONDS * 365 * 2]); // TO HAVE STRATEGIES LASTING >2 EPOCH
   await updateTWAPs(garden);
-  return strategy.finalizeStrategy(fee, { gasPrice: 0 });
+  return strategy.finalizeStrategy(fee, 'http:...', { gasPrice: 0 });
 }
 
 async function checkStrategyStateExecuting(strategyContract) {

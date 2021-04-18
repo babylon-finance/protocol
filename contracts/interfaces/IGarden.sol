@@ -97,7 +97,9 @@ interface IGarden {
         uint256 _strategyDuration,
         uint256 _expectedReturn,
         uint256 _minRebalanceCapital,
-        address _strategyData
+        address _strategyData,
+        string memory _name,
+        string memory _symbol
     ) external;
 
     function deposit(

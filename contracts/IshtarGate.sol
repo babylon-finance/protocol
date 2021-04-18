@@ -163,7 +163,7 @@ contract IshtarGate is ERC721, IIshtarGate, Ownable {
      * @param _user                     Address of the user
      * @return _canCreate               Whether or not the user can create
      */
-    function canCreate(address _user) external override returns (bool) {
+    function canCreate(address _user) external view override returns (bool) {
         return canCreateAGarden[_user];
     }
 
@@ -174,7 +174,7 @@ contract IshtarGate is ERC721, IIshtarGate, Ownable {
      * @param _garden                     Address of the _garden
      * @return _canJoin                   Whether or not the user can join
      */
-    function canJoinAGarden(address _garden, address _user) external override returns (bool) {
+    function canJoinAGarden(address _garden, address _user) external view override returns (bool) {
         return permissionsByCommunity[_garden][_user] >= JUST_LP;
     }
 
@@ -185,7 +185,7 @@ contract IshtarGate is ERC721, IIshtarGate, Ownable {
      * @param _garden                     Address of the _garden
      * @return _canVote                   Whether or not the user can vote
      */
-    function canVoteInAGarden(address _garden, address _user) external override returns (bool) {
+    function canVoteInAGarden(address _garden, address _user) external view override returns (bool) {
         return permissionsByCommunity[_garden][_user] >= STEWARD;
     }
 
@@ -196,7 +196,7 @@ contract IshtarGate is ERC721, IIshtarGate, Ownable {
      * @param _garden                     Address of the _garden
      * @return _canStrategize             Whether or not the user can create strategies
      */
-    function canAddStrategiesInAGarden(address _garden, address _user) external override returns (bool) {
+    function canAddStrategiesInAGarden(address _garden, address _user) external view override returns (bool) {
         return permissionsByCommunity[_garden][_user] >= STRATEGIST;
     }
 

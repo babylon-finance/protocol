@@ -563,6 +563,8 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
      * @param _expectedReturn                Expected return
      * @param _minRebalanceCapital           Min capital that is worth it to deposit into this strategy
      * @param _strategyData                  Param of strategy to add
+     * @param _name                          Name of the strategy
+     * @param _symbol                        Symbol of the strategy
      */
     function addStrategy(
         uint8 _strategyKind,
@@ -572,7 +574,9 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         uint256 _strategyDuration,
         uint256 _expectedReturn,
         uint256 _minRebalanceCapital,
-        address _strategyData
+        address _strategyData,
+        string memory _name,
+        string memory _symbol
     ) external override onlyContributor onlyActive {
         _require(
             IIshtarGate(IBabController(controller).ishtarGate()).canAddStrategiesInAGarden(address(this), msg.sender),
@@ -591,7 +595,9 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
                 _stake,
                 _strategyDuration,
                 _expectedReturn,
-                _minRebalanceCapital
+                _minRebalanceCapital,
+                _name,
+                _symbol
             );
         strategyMapping[strategy] = true;
         totalStake = totalStake.add(_stake);

@@ -21,13 +21,12 @@ pragma solidity 0.7.4;
 import {Address} from '@openzeppelin/contracts/utils/Address.sol';
 import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import {SafeERC20} from '@openzeppelin/contracts/token/ERC20/SafeERC20.sol';
+import {ERC721Upgradeable} from '@openzeppelin/contracts-upgradeable/token/ERC721/ERC721Upgradeable.sol';
 import {ReentrancyGuard} from '@openzeppelin/contracts/utils/ReentrancyGuard.sol';
 import {SafeMath} from '@openzeppelin/contracts/math/SafeMath.sol';
 import {SignedSafeMath} from '@openzeppelin/contracts/math/SignedSafeMath.sol';
 import {SafeCast} from '@openzeppelin/contracts/utils/SafeCast.sol';
-import {Initializable} from '@openzeppelin/contracts/proxy/Initializable.sol';
 
-import {AddressArrayUtils} from '../lib/AddressArrayUtils.sol';
 import {PreciseUnitMath} from '../lib/PreciseUnitMath.sol';
 
 import {IWETH} from '../interfaces/external/weth/IWETH.sol';
@@ -46,14 +45,13 @@ import {IRewardsDistributor} from '../interfaces/IRewardsDistributor.sol';
  * Base Strategy contract. Belongs to a garden. Abstract.
  * Will be extended from specific strategy contracts.
  */
-abstract contract Strategy is ReentrancyGuard, Initializable, IStrategy {
+abstract contract Strategy is ERC721Upgradeable, ReentrancyGuard, IStrategy {
     using SignedSafeMath for int256;
     using SafeMath for uint256;
     using SafeCast for uint256;
     using SafeCast for int256;
     using PreciseUnitMath for int256;
     using PreciseUnitMath for uint256;
-    using AddressArrayUtils for address[];
     using Address for address;
     using SafeERC20 for IERC20;
 
@@ -226,7 +224,9 @@ abstract contract Strategy is ReentrancyGuard, Initializable, IStrategy {
         uint256 _stake,
         uint256 _strategyDuration,
         uint256 _expectedReturn,
-        uint256 _minRebalanceCapital
+        uint256 _minRebalanceCapital,
+        string memory _name,
+        string memory _symbol
     ) external override initializer {
         controller = IBabController(_controller);
         require(controller.isSystemContract(_garden), 'Must be a valid garden');
@@ -241,6 +241,7 @@ abstract contract Strategy is ReentrancyGuard, Initializable, IStrategy {
             controller.isValidIntegration(IIntegration(_integration).getName(), _integration),
             'Integration must be valid'
         );
+        __ERC721_init(_name, _symbol);
         require(_minRebalanceCapital > 0, 'Min capital >= 0');
         require(_maxCapitalRequested >= _minRebalanceCapital, 'max amount >= rebalance');
         // Check than enter and exit data call integrations
@@ -342,8 +343,15 @@ abstract contract Strategy is ReentrancyGuard, Initializable, IStrategy {
      * Pays the keeper.
      * Updates the reserve asset position accordingly.
      * @param _fee                     The fee paid to keeper to compensate the gas cost
+     * @param _tokenURI                URL with the JSON for the strategy
      */
-    function finalizeStrategy(uint256 _fee) external override onlyKeeper(_fee) nonReentrant onlyActiveGarden {
+    function finalizeStrategy(uint256 _fee, string memory _tokenURI)
+        external
+        override
+        onlyKeeper(_fee)
+        nonReentrant
+        onlyActiveGarden
+    {
         require(executedAt > 0, 'Strategy has not executed');
         require(block.timestamp > executedAt.add(duration), 'Protection for flash loan attack');
         require(!finalized, 'Strategy already exited');
@@ -360,6 +368,9 @@ abstract contract Strategy is ReentrancyGuard, Initializable, IStrategy {
         _payKeeper(msg.sender, _fee);
         // Send rest to garden if any
         _sendReserveAssetToGarden();
+        // Mint NFT
+        _mint(strategist, 1);
+        _setTokenURI(1, _tokenURI);
         emit StrategyFinalized(address(garden), kind, capitalReturned, _fee, block.timestamp);
     }
 

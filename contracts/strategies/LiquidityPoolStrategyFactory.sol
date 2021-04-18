@@ -51,6 +51,8 @@ contract LiquidityPoolStrategyFactory is IStrategyFactory {
      * @param _investmentDuration            Investment duration in seconds
      * @param _expectedReturn                Expected return
      * @param _minRebalanceCapital           Min capital that is worth it to deposit into this strategy
+     * @param _name                          Name of the strategy
+     * @param _symbol                        Symbol of the strategy
      */
     function createStrategy(
         address _strategist,
@@ -61,7 +63,9 @@ contract LiquidityPoolStrategyFactory is IStrategyFactory {
         uint256 _stake,
         uint256 _investmentDuration,
         uint256 _expectedReturn,
-        uint256 _minRebalanceCapital
+        uint256 _minRebalanceCapital,
+        string memory _name,
+        string memory _symbol
     ) external override returns (address) {
         address payable clone = payable(Clones.clone(liquidityPoolStrategy));
         IStrategy(clone).initialize(
@@ -73,7 +77,9 @@ contract LiquidityPoolStrategyFactory is IStrategyFactory {
             _stake,
             _investmentDuration,
             _expectedReturn,
-            _minRebalanceCapital
+            _minRebalanceCapital,
+            _name,
+            _symbol
         );
         return clone;
     }
