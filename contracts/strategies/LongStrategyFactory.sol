@@ -18,10 +18,13 @@
 
 pragma solidity 0.7.4;
 
+import {Clones} from '@openzeppelin/contracts/proxy/Clones.sol';
+
+import {IStrategy} from '../interfaces/IStrategy.sol';
+import {IStrategyFactory} from '../interfaces/IStrategyFactory.sol';
+
 import {Strategy} from './Strategy.sol';
 import {LongStrategy} from './LongStrategy.sol';
-import {IStrategy} from '../interfaces/IStrategy.sol';
-import {Clones} from '@openzeppelin/contracts/proxy/Clones.sol';
 
 /**
  * @title StrategyFactory
@@ -29,8 +32,8 @@ import {Clones} from '@openzeppelin/contracts/proxy/Clones.sol';
  *
  * Factory to create investment strategy contracts
  */
-contract LongStrategyFactory {
-    address payable immutable longStrategy;
+contract LongStrategyFactory is IStrategyFactory {
+    address payable private immutable longStrategy;
 
     constructor() {
         longStrategy = address(new LongStrategy());
@@ -48,6 +51,8 @@ contract LongStrategyFactory {
      * @param _investmentDuration            Investment duration in seconds
      * @param _expectedReturn                Expected return
      * @param _minRebalanceCapital           Min capital that is worth it to deposit into this strategy
+     * @param _name                          Name of the strategy
+     * @param _symbol                        Symbol of the strategy
      */
     function createStrategy(
         address _strategist,
@@ -58,8 +63,10 @@ contract LongStrategyFactory {
         uint256 _stake,
         uint256 _investmentDuration,
         uint256 _expectedReturn,
-        uint256 _minRebalanceCapital
-    ) external returns (address) {
+        uint256 _minRebalanceCapital,
+        string memory _name,
+        string memory _symbol
+    ) external override returns (address) {
         address payable clone = payable(Clones.clone(longStrategy));
         IStrategy(clone).initialize(
             _strategist,
@@ -70,7 +77,9 @@ contract LongStrategyFactory {
             _stake,
             _investmentDuration,
             _expectedReturn,
-            _minRebalanceCapital
+            _minRebalanceCapital,
+            _name,
+            _symbol
         );
         return clone;
     }

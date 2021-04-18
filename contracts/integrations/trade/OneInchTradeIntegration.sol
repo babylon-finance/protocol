@@ -80,7 +80,7 @@ contract OneInchTradeIntegration is TradeIntegration {
         address,
         address,
         uint256
-    ) external view override returns (uint256, uint256) {
+    ) external pure override returns (uint256, uint256) {
         revert('not implemented');
         return (0, 0);
     }

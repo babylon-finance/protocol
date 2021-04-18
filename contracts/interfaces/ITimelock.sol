@@ -20,6 +20,7 @@ pragma solidity 0.7.4;
 interface ITimelock {
     function delay() external view returns (uint256);
 
+    // solhint-disable-next-line
     function GRACE_PERIOD() external view returns (uint256);
 
     function acceptAdmin() external;

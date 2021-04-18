@@ -18,9 +18,11 @@
 
 pragma solidity 0.7.4;
 
-import {Strategy} from './Strategy.sol';
-import {YieldFarmingStrategy} from './YieldFarmingStrategy.sol';
 import {Clones} from '@openzeppelin/contracts/proxy/Clones.sol';
+
+import {Strategy} from './Strategy.sol';
+import {IStrategyFactory} from '../interfaces/IStrategyFactory.sol';
+import {YieldFarmingStrategy} from './YieldFarmingStrategy.sol';
 
 /**
  * @title YieldFarmingStrategyFactory
@@ -28,7 +30,7 @@ import {Clones} from '@openzeppelin/contracts/proxy/Clones.sol';
  *
  * Factory to create yield farming strategies
  */
-contract YieldFarmingStrategyFactory {
+contract YieldFarmingStrategyFactory is IStrategyFactory {
     address payable immutable yieldFarmingStrategy;
 
     constructor() {
@@ -47,6 +49,8 @@ contract YieldFarmingStrategyFactory {
      * @param _investmentDuration            Investment duration in seconds
      * @param _expectedReturn                Expected return
      * @param _minRebalanceCapital           Min capital that is worth it to deposit into this strategy
+     * @param _name                          Name of the strategy
+     * @param _symbol                        Symbol of the strategy
      */
     function createStrategy(
         address _strategist,
@@ -57,8 +61,10 @@ contract YieldFarmingStrategyFactory {
         uint256 _stake,
         uint256 _investmentDuration,
         uint256 _expectedReturn,
-        uint256 _minRebalanceCapital
-    ) external returns (address) {
+        uint256 _minRebalanceCapital,
+        string memory _name,
+        string memory _symbol
+    ) external override returns (address) {
         address payable clone = payable(Clones.clone(yieldFarmingStrategy));
         YieldFarmingStrategy(clone).initialize(
             _strategist,
@@ -69,7 +75,9 @@ contract YieldFarmingStrategyFactory {
             _stake,
             _investmentDuration,
             _expectedReturn,
-            _minRebalanceCapital
+            _minRebalanceCapital,
+            _name,
+            _symbol
         );
         return clone;
     }

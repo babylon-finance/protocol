@@ -18,10 +18,13 @@
 
 pragma solidity 0.7.4;
 
-import {Strategy} from './Strategy.sol';
-import {LiquidityPoolStrategy} from './LiquidityPoolStrategy.sol';
-import {IStrategy} from '../interfaces/IStrategy.sol';
 import {Clones} from '@openzeppelin/contracts/proxy/Clones.sol';
+
+import {Strategy} from './Strategy.sol';
+
+import {LiquidityPoolStrategy} from './LiquidityPoolStrategy.sol';
+import {IStrategyFactory} from '../interfaces/IStrategyFactory.sol';
+import {IStrategy} from '../interfaces/IStrategy.sol';
 
 /**
  * @title LiquidityPoolStrategyFactory
@@ -29,7 +32,7 @@ import {Clones} from '@openzeppelin/contracts/proxy/Clones.sol';
  *
  * Factory to create liquidity pool strategy contracts
  */
-contract LiquidityPoolStrategyFactory {
+contract LiquidityPoolStrategyFactory is IStrategyFactory {
     address payable immutable liquidityPoolStrategy;
 
     constructor() {
@@ -48,6 +51,8 @@ contract LiquidityPoolStrategyFactory {
      * @param _investmentDuration            Investment duration in seconds
      * @param _expectedReturn                Expected return
      * @param _minRebalanceCapital           Min capital that is worth it to deposit into this strategy
+     * @param _name                          Name of the strategy
+     * @param _symbol                        Symbol of the strategy
      */
     function createStrategy(
         address _strategist,
@@ -58,8 +63,10 @@ contract LiquidityPoolStrategyFactory {
         uint256 _stake,
         uint256 _investmentDuration,
         uint256 _expectedReturn,
-        uint256 _minRebalanceCapital
-    ) external returns (address) {
+        uint256 _minRebalanceCapital,
+        string memory _name,
+        string memory _symbol
+    ) external override returns (address) {
         address payable clone = payable(Clones.clone(liquidityPoolStrategy));
         IStrategy(clone).initialize(
             _strategist,
@@ -70,7 +77,9 @@ contract LiquidityPoolStrategyFactory {
             _stake,
             _investmentDuration,
             _expectedReturn,
-            _minRebalanceCapital
+            _minRebalanceCapital,
+            _name,
+            _symbol
         );
         return clone;
     }

@@ -29,8 +29,9 @@ interface IBabController {
     function createGarden(
         address _reserveAsset,
         string memory _name,
-        string memory _symbol
-    ) external returns (address);
+        string memory _symbol,
+        uint256[] calldata _gardenParams
+    ) external payable returns (address);
 
     function removeGarden(address _garden) external;
 
@@ -41,6 +42,8 @@ interface IBabController {
     function disableGarden(address _garden) external;
 
     function editPriceOracle(address _priceOracle) external;
+
+    function editIshtarGate(address _ishtarGate) external;
 
     function editGardenValuer(address _gardenValuer) external;
 
@@ -79,6 +82,8 @@ interface IBabController {
     function gardenFactory() external view returns (address);
 
     function treasury() external view returns (address);
+
+    function ishtarGate() external view returns (address);
 
     function protocolDepositGardenTokenFee() external view returns (uint256);
 
