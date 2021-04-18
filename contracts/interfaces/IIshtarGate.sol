@@ -1,8 +1,6 @@
 /*
     Copyright 2021 Babylon Finance
 
-    Modified from (Set Protocol IPriceOracle)
-
     Licensed under the Apache License, Version 2.0 (the "License");
     you may not use this file except in compliance with the License.
     You may obtain a copy of the License at
@@ -42,11 +40,7 @@ interface IIshtarGate {
         uint8[] calldata _perms
     ) external returns (bool);
 
-    function grantCreatorsInBatch(
-        address _garden,
-        address[] calldata _users,
-        bool[] calldata _perms
-    ) external returns (bool);
+    function grantCreatorsInBatch(address[] calldata _users, bool[] calldata _perms) external returns (bool);
 
     function canCreate(address _user) external returns (bool);
 

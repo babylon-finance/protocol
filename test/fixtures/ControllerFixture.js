@@ -153,8 +153,6 @@ async function deployFolioFixture() {
     babController.addIntegration(await integration.getName(), integration.address);
   });
 
-  // Creates a new Garden instance
-
   const gardenParams = [
     ethers.utils.parseEther('20'),
     1,
@@ -166,6 +164,9 @@ async function deployFolioFixture() {
     ONE_DAY_IN_SECONDS * 3,
     ONE_DAY_IN_SECONDS * 365,
   ];
+
+  // Gives signer1 creator permissions
+  await ishtarGate.connect(owner).setCreatorPermissions(signer1.address, true, { gasPrice: 0 });
 
   await babController
     .connect(signer1)
@@ -195,6 +196,20 @@ async function deployFolioFixture() {
 
   const garden4 = await ethers.getContractAt('Garden', gardens[3]);
 
+  // Grants community access
+  for (let i = 0; i < gardens.length; i += 1) {
+    await ishtarGate
+      .connect(signer1)
+      .grantGardenAccessBatch(
+        gardens[i],
+        [owner.address, signer1.address, signer2.address, signer3.address],
+        [3, 3, 3, 3],
+        {
+          gasPrice: 0,
+        },
+      );
+  }
+  console.log('befre create strategies');
   // Create strategies
   const strategy11 = (
     await createStrategy(0, 'dataset', [signer1, signer2, signer3], kyberTradeIntegration.address, garden1)
@@ -238,6 +253,9 @@ async function deployFolioFixture() {
 
     gardenValuer,
     priceOracle,
+    ishtarGate,
+
+    gardenParams,
 
     owner,
     signer1,

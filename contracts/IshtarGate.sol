@@ -1,8 +1,6 @@
 /*
     Copyright 2021 Babylon Finance
 
-    Modified from (Set Protocol SetValuer)
-
     Licensed under the Apache License, Version 2.0 (the "License");
     you may not use this file except in compliance with the License.
     You may obtain a copy of the License at
@@ -20,6 +18,7 @@
 
 pragma solidity 0.7.4;
 
+import 'hardhat/console.sol';
 import {Ownable} from '@openzeppelin/contracts/access/Ownable.sol';
 import {ERC721} from '@openzeppelin/contracts/token/ERC721/ERC721.sol';
 import {SafeMath} from '@openzeppelin/contracts/math/SafeMath.sol';
@@ -136,21 +135,21 @@ contract IshtarGate is ERC721, IIshtarGate, Ownable {
      * @param _canCreate          Boolean with permissions as to whether the user can create gardens
      */
     function setCreatorPermissions(address _user, bool _canCreate) external override onlyOwner returns (uint256) {
-        _setCreatorPermissions(_user, _canCreate);
+        return _setCreatorPermissions(_user, _canCreate);
     }
 
     /**
      * Awards the ishtar gate to a list of users with permissions to create gardens
      *
-     * @param _garden             Community that the gate grants access to
      * @param _users              Addresses of the users
      * @param _perms              Lists of booleans
      */
-    function grantCreatorsInBatch(
-        address _garden,
-        address[] calldata _users,
-        bool[] calldata _perms
-    ) external override onlyOwner returns (bool) {
+    function grantCreatorsInBatch(address[] calldata _users, bool[] calldata _perms)
+        external
+        override
+        onlyOwner
+        returns (bool)
+    {
         require(_users.length == _perms.length, 'Permissions and users must match');
         for (uint8 i = 0; i < _users.length; i++) {
             _setCreatorPermissions(_users[i], _perms[i]);
