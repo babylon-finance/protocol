@@ -150,4 +150,56 @@ library Errors {
     uint256 internal constant USER_CANNOT_JOIN = 29;
     // User does not have permissions to add strategies in garden
     uint256 internal constant USER_CANNOT_ADD_STRATEGIES = 30;
+    // Only Protocol or garden
+    uint256 internal constant ONLY_PROTOCOL_OR_GARDEN = 31;
+    // Only Strategist
+    uint256 internal constant ONLY_STRATEGIST = 32;
+    // Only Integration
+    uint256 internal constant ONLY_INTEGRATION = 33;
+    // Only garden and data not set
+    uint256 internal constant ONLY_GARDEN_AND_DATA_NOT_SET = 34;
+    // Only active garden
+    uint256 internal constant ONLY_ACTIVE_GARDEN = 35;
+    // Contract is not a garden
+    uint256 internal constant NOT_A_GARDEN = 36;
+    // Not enough tokens
+    uint256 internal constant STRATEGIST_TOKENS_TOO_LOW = 37;
+    // Stake is too low
+    uint256 internal constant STAKE_HAS_TO_AT_LEAST_ONE = 38;
+    // Duration must be in range
+    uint256 internal constant DURATION_MUST_BE_IN_RANGE = 39;
+    // Max Capital Requested
+    uint256 internal constant MAX_CAPITAL_REQUESTED = 41;
+    // Votes are already resolved
+    uint256 internal constant VOTES_ALREADY_RESOLVED = 42;
+    // Voting window is closed
+    uint256 internal constant VOTING_WINDOW_IS_OVER = 43;
+    // Strategy needs to be active
+    uint256 internal constant STRATEGY_NEEDS_TO_BE_ACTIVE = 44;
+    // Max capital reached
+    uint256 internal constant MAX_CAPITAL_REACHED = 45;
+    // Capital is less then rebalance
+    uint256 internal constant CAPITAL_IS_LESS_THAN_REBALANCE = 46;
+    // Strategy is in cooldown period
+    uint256 internal constant STRATEGY_IN_COOLDOWN = 47;
+    // Strategy is not executed
+    uint256 internal constant STRATEGY_IS_NOT_EXECUTED = 48;
+    // Strategy is not over yet
+    uint256 internal constant STRATEGY_IS_NOT_OVER_YET = 49;
+    // Strategy is already finalized
+    uint256 internal constant STRATEGY_IS_ALREADY_FINALIZED = 50;
+    // No capital to unwind
+    uint256 internal constant STRATEGY_NO_CAPITAL_TO_UNWIND = 51;
+    // Strategy needs to be inactive
+    uint256 internal constant STRATEGY_NEEDS_TO_BE_INACTIVE = 52;
+    // Duration needs to be less
+    uint256 internal constant DURATION_NEEDS_TO_BE_LESS = 53;
+    // Can't sweep reserve asset
+    uint256 internal constant CANNOT_SWEEP_RESERVE_ASSET = 54;
+    // Voting window is opened
+    uint256 internal constant VOTING_WINDOW_IS_OPENED = 55;
+    // Strategy is executed
+    uint256 internal constant STRATEGY_IS_EXECUTED = 56;
+    // Min Rebalance Capital
+    uint256 internal constant MIN_REBALANCE_CAPITAL = 57;
 }
