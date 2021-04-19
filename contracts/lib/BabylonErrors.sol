@@ -102,8 +102,8 @@ library Errors {
     uint256 internal constant MSG_VALUE_DO_NOT_MATCH = 5;
     // Withdrawal amount has to be equal or less than msg.sender balance
     uint256 internal constant MSG_SENDER_TOKENS_DO_NOT_MATCH = 6;
-    // Tokens are timelocked
-    uint256 internal constant TOKENS_TIMELOCKED = 7;
+    // Tokens are staked
+    uint256 internal constant TOKENS_STAKED = 7;
     // Balance too low
     uint256 internal constant BALANCE_TOO_LOW = 8;
     // msg.sender doesn't have enough tokens
@@ -202,4 +202,10 @@ library Errors {
     uint256 internal constant STRATEGY_IS_EXECUTED = 56;
     // Min Rebalance Capital
     uint256 internal constant MIN_REBALANCE_CAPITAL = 57;
+    // Not a valid strategy NFT
+    uint256 internal constant NOT_STRATEGY_NFT = 58;
+    // Garden Transfers Disabled
+    uint256 internal constant GARDEN_TRANSFERS_DISABLED = 59;
+    // Not a valid strategy NFT
+    uint256 internal constant TOKENS_HARDLOCKED = 60;
 }

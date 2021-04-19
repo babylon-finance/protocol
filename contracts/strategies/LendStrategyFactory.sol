@@ -21,6 +21,7 @@ pragma solidity 0.7.4;
 import {Clones} from '@openzeppelin/contracts/proxy/Clones.sol';
 
 import {Strategy} from './Strategy.sol';
+import {StrategyNFT} from './StrategyNFT.sol';
 import {LendStrategy} from './LendStrategy.sol';
 import {IStrategy} from '../interfaces/IStrategy.sol';
 import {IStrategyFactory} from '../interfaces/IStrategyFactory.sol';
@@ -32,10 +33,12 @@ import {IStrategyFactory} from '../interfaces/IStrategyFactory.sol';
  * Factory to create investment strategy contracts
  */
 contract LendStrategyFactory is IStrategyFactory {
-    address public immutable lendStrategy;
+    address private immutable lendStrategy;
+    address private immutable strategyNft;
 
     constructor() {
         lendStrategy = address(new LendStrategy());
+        strategyNft = address(new StrategyNFT());
     }
 
     /**
@@ -67,6 +70,8 @@ contract LendStrategyFactory is IStrategyFactory {
         string memory _symbol
     ) external override returns (address) {
         address clone = Clones.clone(lendStrategy);
+        address cloneNFT = Clones.clone(strategyNft);
+        StrategyNFT(cloneNFT).initialize(_controller, address(clone), _name, _symbol);
         IStrategy(clone).initialize(
             _strategist,
             _garden,
@@ -77,8 +82,7 @@ contract LendStrategyFactory is IStrategyFactory {
             _investmentDuration,
             _expectedReturn,
             _minRebalanceCapital,
-            _name,
-            _symbol
+            cloneNFT
         );
         return clone;
     }
