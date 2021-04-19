@@ -55,7 +55,6 @@ contract StrategyNFT is ERC721Upgradeable, IStrategyNFT {
 
     // Address of the Garden JSON (Shared JSON for each garden)
     string public tokenURI;
-    uint256 public seed;
 
     Counters.Counter private _tokenIds;
 
@@ -79,7 +78,6 @@ contract StrategyNFT is ERC721Upgradeable, IStrategyNFT {
         __ERC721_init(_name, _symbol);
         controller = IBabController(_controller);
         strategy = IStrategy(_strategy);
-        seed = garden.gardenInitializedAt();
     }
 
     /* ============ External Functions ============ */
