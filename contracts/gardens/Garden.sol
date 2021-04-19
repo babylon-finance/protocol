@@ -232,7 +232,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
     uint256 public override maxContributors;
     uint256 public maxDepositLimit; // Limits the amount of deposits
 
-    uint256 public gardenInitializedAt; // Garden Initialized at timestamp
+    uint256 public override gardenInitializedAt; // Garden Initialized at timestamp
 
     // Min contribution in the garden
     uint256 public override minContribution = 1e18; //wei

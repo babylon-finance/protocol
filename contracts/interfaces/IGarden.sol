@@ -55,6 +55,8 @@ interface IGarden {
 
     function totalContributors() external view returns (uint256);
 
+    function gardenInitializedAt() external view returns (uint256);
+
     function minContribution() external view returns (uint256);
 
     function maxContributors() external view returns (uint256);

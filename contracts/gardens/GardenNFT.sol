@@ -37,6 +37,7 @@ contract GardenNFT is ERC721Upgradeable, IGardenNFT {
     /* ============ Events ============ */
 
     event GardenNFTAwarded(address indexed _member, uint256 indexed _newItemId);
+    event GardenURIUpdated(string _newValue, string _oldValue);
 
     /* ============ Modifiers ============ */
 
@@ -53,6 +54,7 @@ contract GardenNFT is ERC721Upgradeable, IGardenNFT {
 
     // Address of the Garden JSON (Shared JSON for each garden)
     string public tokenURI;
+    uint256 public seed;
 
     Counters.Counter private _tokenIds;
 
@@ -65,7 +67,7 @@ contract GardenNFT is ERC721Upgradeable, IGardenNFT {
      * @param _garden             Address of the garden this NFT belongs to
      * @param _name               Name of the garden
      * @param _symbol             Symbol of the garden
-     * @param _tokenURI           URL of the Ishtar Gate JSON metadata
+     * @param _tokenURI           Initial token URI
      */
     function initialize(
         address _controller,
@@ -78,19 +80,32 @@ contract GardenNFT is ERC721Upgradeable, IGardenNFT {
         __ERC721_init(_name, _symbol);
         controller = IBabController(_controller);
         garden = IGarden(_garden);
+        seed = garden.gardenInitializedAt();
         tokenURI = _tokenURI;
     }
 
     /* ============ External Functions ============ */
 
     /**
-     * Awards the ishtar gate to a user and gives him access to a specific garden
+     * Awards the garden NFT to a user and gives him access to a specific garden
      *
      * @param _user               Address of the user
      */
     function grantGardenNFT(address _user) external override onlyGarden returns (uint256) {
         require(address(_user) != address(0), 'User must exist');
         return _createOrGetGardenNFT(_user);
+    }
+
+    /**
+     * Updates the token URI of the garden NFT
+     *
+     * @param _tokenURI               Address of the tokenURI
+     */
+    function updateGardenURI(string memory _tokenURI) external override {
+        require(msg.sender == controller.owner(), 'Only owner can call this');
+        string memory oldURI = tokenURI;
+        tokenURI = _tokenURI;
+        emit GardenURIUpdated(tokenURI, oldURI);
     }
 
     /* ============ Internal Functions ============ */
