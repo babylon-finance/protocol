@@ -21,6 +21,7 @@ pragma solidity 0.7.4;
 import {Clones} from '@openzeppelin/contracts/proxy/Clones.sol';
 
 import {Strategy} from './Strategy.sol';
+import {StrategyNFT} from './StrategyNFT.sol';
 import {IStrategyFactory} from '../interfaces/IStrategyFactory.sol';
 import {YieldFarmingStrategy} from './YieldFarmingStrategy.sol';
 
@@ -31,10 +32,12 @@ import {YieldFarmingStrategy} from './YieldFarmingStrategy.sol';
  * Factory to create yield farming strategies
  */
 contract YieldFarmingStrategyFactory is IStrategyFactory {
-    address payable immutable yieldFarmingStrategy;
+    address payable private immutable yieldFarmingStrategy;
+    address private immutable strategyNft;
 
     constructor() {
         yieldFarmingStrategy = address(new YieldFarmingStrategy());
+        strategyNft = address(new StrategyNFT());
     }
 
     /**
@@ -66,6 +69,8 @@ contract YieldFarmingStrategyFactory is IStrategyFactory {
         string memory _symbol
     ) external override returns (address) {
         address payable clone = payable(Clones.clone(yieldFarmingStrategy));
+        address cloneNFT = Clones.clone(strategyNft);
+        StrategyNFT(cloneNFT).initialize(_controller, address(clone), _name, _symbol);
         YieldFarmingStrategy(clone).initialize(
             _strategist,
             _garden,
@@ -76,8 +81,7 @@ contract YieldFarmingStrategyFactory is IStrategyFactory {
             _investmentDuration,
             _expectedReturn,
             _minRebalanceCapital,
-            _name,
-            _symbol
+            cloneNFT
         );
         return clone;
     }

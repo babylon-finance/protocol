@@ -202,4 +202,6 @@ library Errors {
     uint256 internal constant STRATEGY_IS_EXECUTED = 56;
     // Min Rebalance Capital
     uint256 internal constant MIN_REBALANCE_CAPITAL = 57;
+    // Not a valid strategy NFT
+    uint256 internal constant NOT_STRATEGY_NFT = 58;
 }

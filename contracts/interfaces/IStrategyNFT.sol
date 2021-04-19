@@ -17,8 +17,24 @@
 */
 pragma solidity 0.7.4;
 
-interface IGardenValuer {
-    function calculateGardenValuation(address _garden, address _quoteAsset) external view returns (uint256);
+import {IGarden} from './IGarden.sol';
+import {IBabController} from './IBabController.sol';
 
-    function getLossesGarden(address _garden, uint256 _since) external view returns (uint256);
+/**
+ * @title IStrategyNFT
+ * @author Babylon Finance
+ *
+ * Interface for operating with a Strategy NFT.
+ */
+interface IStrategyNFT {
+    function initialize(
+        address _controller,
+        address _strategy,
+        string memory _name,
+        string memory _symbol
+    ) external;
+
+    function grantStrategyNFT(address _user, string memory _tokenURI) external returns (uint256);
+
+    function updateStrategyURI(string memory _tokenURI) external;
 }

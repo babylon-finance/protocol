@@ -20,8 +20,8 @@ pragma solidity 0.7.4;
 
 import {Address} from '@openzeppelin/contracts/utils/Address.sol';
 import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
+import {Initializable} from '@openzeppelin/contracts-upgradeable/proxy/Initializable.sol';
 import {SafeERC20} from '@openzeppelin/contracts/token/ERC20/SafeERC20.sol';
-import {ERC721Upgradeable} from '@openzeppelin/contracts-upgradeable/token/ERC721/ERC721Upgradeable.sol';
 import {ReentrancyGuard} from '@openzeppelin/contracts/utils/ReentrancyGuard.sol';
 import {SafeMath} from '@openzeppelin/contracts/math/SafeMath.sol';
 import {SignedSafeMath} from '@openzeppelin/contracts/math/SignedSafeMath.sol';
@@ -39,6 +39,7 @@ import {ITradeIntegration} from '../interfaces/ITradeIntegration.sol';
 import {IIntegration} from '../interfaces/IIntegration.sol';
 import {IPriceOracle} from '../interfaces/IPriceOracle.sol';
 import {IStrategy} from '../interfaces/IStrategy.sol';
+import {IStrategyNFT} from '../interfaces/IStrategyNFT.sol';
 import {IRewardsDistributor} from '../interfaces/IRewardsDistributor.sol';
 
 /**
@@ -48,7 +49,7 @@ import {IRewardsDistributor} from '../interfaces/IRewardsDistributor.sol';
  * Base Strategy contract. Belongs to a garden. Abstract.
  * Will be extended from specific strategy contracts.
  */
-abstract contract Strategy is ERC721Upgradeable, ReentrancyGuard, IStrategy {
+abstract contract Strategy is ReentrancyGuard, IStrategy, Initializable {
     using SignedSafeMath for int256;
     using SafeMath for uint256;
     using SafeCast for uint256;
@@ -177,6 +178,7 @@ abstract contract Strategy is ERC721Upgradeable, ReentrancyGuard, IStrategy {
 
     address public override integration; // Address of the integration
     address public override strategist; // Address of the strategist that submitted the bet
+    address public override strategyNft; // Address of the strategy nft
 
     uint256 public override enteredAt; // Timestamp when the strategy was submitted
     uint256 public override enteredCooldownAt; // Timestamp when the strategy reached quorum
@@ -222,6 +224,7 @@ abstract contract Strategy is ERC721Upgradeable, ReentrancyGuard, IStrategy {
      * @param _strategyDuration              Strategy duration in seconds
      * @param _expectedReturn                Expected return
      * @param _minRebalanceCapital           Min capital that makes executing the strategy worth it
+     * @param _strategyNft                   Address of the strategy nft
      */
     function initialize(
         address _strategist,
@@ -233,8 +236,7 @@ abstract contract Strategy is ERC721Upgradeable, ReentrancyGuard, IStrategy {
         uint256 _strategyDuration,
         uint256 _expectedReturn,
         uint256 _minRebalanceCapital,
-        string memory _name,
-        string memory _symbol
+        address _strategyNft
     ) external override initializer {
         controller = IBabController(_controller);
 
@@ -253,8 +255,8 @@ abstract contract Strategy is ERC721Upgradeable, ReentrancyGuard, IStrategy {
         );
         _require(_minRebalanceCapital > 0, Errors.MIN_REBALANCE_CAPITAL);
         _require(_maxCapitalRequested >= _minRebalanceCapital, Errors.MAX_CAPITAL_REQUESTED);
-
-        __ERC721_init(_name, _symbol);
+        _require(_strategyNft != address(0), Errors.NOT_STRATEGY_NFT);
+        strategyNft = _strategyNft;
 
         // Check than enter and exit data call integrations
         strategist = _strategist;
@@ -380,15 +382,14 @@ abstract contract Strategy is ERC721Upgradeable, ReentrancyGuard, IStrategy {
         active = false;
         exitedAt = block.timestamp;
         updatedAt = exitedAt;
+        // Mint NFT
+        IStrategyNFT(strategyNft).grantStrategyNFT(strategist, _tokenURI);
         // Transfer rewards
         _transferStrategyPrincipal(_fee);
         // Pay Keeper Fee
         _payKeeper(msg.sender, _fee);
         // Send rest to garden if any
         _sendReserveAssetToGarden();
-        // Mint NFT
-        _safeMint(strategist, 1);
-        _setTokenURI(1, _tokenURI);
         emit StrategyFinalized(address(garden), kind, capitalReturned, _fee, block.timestamp);
     }
 
