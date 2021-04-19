@@ -158,7 +158,7 @@ async function deployFolioFixture() {
     1,
     ethers.utils.parseEther('1000'),
     2,
-    ethers.utils.parseEther('0.01'),
+    1,
     ONE_DAY_IN_SECONDS,
     ethers.utils.parseEther('0.10'), // 10% quorum
     ONE_DAY_IN_SECONDS * 3,
