@@ -31,6 +31,8 @@ interface IGardenFactory {
         address _controller,
         address _creator,
         string memory _name,
-        string memory _symbol
-    ) external returns (address);
+        string memory _symbol,
+        uint256[] calldata _gardenParams,
+        string memory _tokenURI
+    ) external payable returns (address);
 }

@@ -337,7 +337,14 @@ describe('Garden', function () {
       await expect(
         garden1
           .connect(signer3)
-          .addStrategy(0, balancerIntegration.address, ...DEFAULT_STRATEGY_PARAMS, addresses.balancer.pools.wethdai),
+          .addStrategy(
+            0,
+            balancerIntegration.address,
+            ...DEFAULT_STRATEGY_PARAMS,
+            addresses.balancer.pools.wethdai,
+            'name',
+            'STRT',
+          ),
       ).to.not.be.reverted;
     });
 

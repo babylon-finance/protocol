@@ -1,41 +1,23 @@
 const { expect } = require('chai');
-const { ethers, waffle } = require('hardhat');
+const { waffle } = require('hardhat');
 
 const { ONE_DAY_IN_SECONDS, ONE_ETH } = require('../../utils/constants');
 const { increaseTime } = require('../utils/test-helpers');
 const { loadFixture } = waffle;
 
-const { createStrategy, executeStrategy, injectFakeProfits, updateTWAPs } = require('../fixtures/StrategyHelper.js');
+const {
+  createStrategy,
+  executeStrategy,
+  injectFakeProfits,
+  finalizeStrategy,
+  finalizeStrategyAfterQuarter,
+  finalizeStrategyAfter2Quarters,
+  finalizeStrategyAfter30Days,
+  finalizeStrategyAfter2Years,
+  finalizeStrategyAfter3Quarters,
+} = require('../fixtures/StrategyHelper.js');
 
 const { deployFolioFixture } = require('../fixtures/ControllerFixture');
-
-async function finishStrategy(strategy, time = 0) {
-  if (time > 0) {
-    increaseTime(time);
-  }
-  await updateTWAPs(await strategy.garden());
-  return strategy.finalizeStrategy(0, { gasPrice: 0 });
-}
-
-async function finishStrategyAfter30Days(strategy) {
-  await finishStrategy(strategy, ONE_DAY_IN_SECONDS * 30);
-}
-
-async function finishStrategyAfterQuarter(strategy, fee = 0) {
-  await finishStrategy(strategy, ONE_DAY_IN_SECONDS * 90);
-}
-
-async function finishStrategyAfter2Quarters(strategy, fee = 0) {
-  await finishStrategy(strategy, ONE_DAY_IN_SECONDS * 180);
-}
-
-async function finishStrategyAfter3Quarters(strategy, fee = 0) {
-  await finishStrategy(strategy, ONE_DAY_IN_SECONDS * 270);
-}
-
-async function finishStrategyAfter2Years(strategy, fee = 0) {
-  await finishStrategy(strategy, ONE_DAY_IN_SECONDS * 365 * 2);
-}
 
 async function getAndValidateProtocolTimestamp(rewardsDistributor, timestamp, protocolPerTimestamp) {
   const [principal, time, quarterBelonging, timeListPointer, power] = await rewardsDistributor.checkProtocol(timestamp);
@@ -89,7 +71,7 @@ async function getStrategyState(strategy) {
   return { address, active, dataSet, finalized, executedAt, exitedAt, updatedAt };
 }
 
-describe.only('BABL Rewards Distributor', function () {
+describe('BABL Rewards Distributor', function () {
   let owner;
   let signer1;
   let signer2;
@@ -164,7 +146,7 @@ describe.only('BABL Rewards Distributor', function () {
 
       increaseTime(ONE_DAY_IN_SECONDS * 2);
 
-      await finishStrategyAfter30Days(long1);
+      await finalizeStrategyAfter30Days(long1);
 
       const { exitedAt } = await getStrategyState(long1);
 
@@ -184,7 +166,7 @@ describe.only('BABL Rewards Distributor', function () {
 
       increaseTime(ONE_DAY_IN_SECONDS * 2);
 
-      await finishStrategyAfter30Days(long1);
+      await finalizeStrategyAfter30Days(long1);
 
       const { exitedAt } = await getStrategyState(long1);
 
@@ -202,7 +184,7 @@ describe.only('BABL Rewards Distributor', function () {
       await executeStrategy(long1, ONE_ETH);
       await executeStrategy(long2, ONE_ETH.mul(2));
 
-      await finishStrategyAfter30Days(long1);
+      await finalizeStrategyAfter30Days(long1);
 
       const { exitedAt } = await getStrategyState(long1);
 
@@ -212,7 +194,7 @@ describe.only('BABL Rewards Distributor', function () {
         timeListPointer: 2,
       });
 
-      await finishStrategyAfter30Days(long2);
+      await finalizeStrategyAfter30Days(long2);
 
       const { exitedAt: long2exitedAt } = await getStrategyState(long2);
 
@@ -247,9 +229,9 @@ describe.only('BABL Rewards Distributor', function () {
 
       increaseTime(ONE_DAY_IN_SECONDS * 30);
 
-      await finishStrategy(long1);
-      await finishStrategy(long2);
-      await finishStrategy(long3);
+      await finalizeStrategy(long1);
+      await finalizeStrategy(long2);
+      await finalizeStrategy(long3);
 
       const { exitedAt } = await getStrategyState(long3);
 
@@ -289,11 +271,11 @@ describe.only('BABL Rewards Distributor', function () {
       });
 
       increaseTime(ONE_DAY_IN_SECONDS * 30);
-      await finishStrategy(long1);
-      await finishStrategy(long2);
-      await finishStrategy(long3);
-      await finishStrategy(long4);
-      await finishStrategy(long5);
+      await finalizeStrategy(long1);
+      await finalizeStrategy(long2);
+      await finalizeStrategy(long3);
+      await finalizeStrategy(long4);
+      await finalizeStrategy(long5);
 
       const { exitedAt } = await getStrategyState(long5);
 
@@ -311,7 +293,7 @@ describe.only('BABL Rewards Distributor', function () {
 
       increaseTime(ONE_DAY_IN_SECONDS * 30);
 
-      await finishStrategyAfter2Quarters(long1);
+      await finalizeStrategyAfter2Quarters(long1);
       const { exitedAt } = await getStrategyState(long1);
 
       await getAndValidateProtocolTimestampAndQuarter(rewardsDistributor, exitedAt, {
@@ -329,7 +311,7 @@ describe.only('BABL Rewards Distributor', function () {
 
       await executeStrategy(long1, ONE_ETH);
 
-      await finishStrategyAfter2Quarters(long1);
+      await finalizeStrategyAfter2Quarters(long1);
       const { exitedAt } = await getStrategyState(long1);
 
       await getAndValidateProtocolTimestampAndQuarter(rewardsDistributor, exitedAt, {
@@ -344,7 +326,7 @@ describe.only('BABL Rewards Distributor', function () {
 
       await executeStrategy(long1, ONE_ETH);
 
-      await finishStrategyAfter3Quarters(long1);
+      await finalizeStrategyAfter3Quarters(long1);
       const { exitedAt } = await getStrategyState(long1);
 
       await getAndValidateProtocolTimestampAndQuarter(rewardsDistributor, exitedAt, {
@@ -379,11 +361,11 @@ describe.only('BABL Rewards Distributor', function () {
 
       increaseTime(ONE_DAY_IN_SECONDS * 30);
 
-      await finishStrategyAfterQuarter(long1);
-      await finishStrategyAfter2Quarters(long2);
-      await finishStrategyAfterQuarter(long3);
-      await finishStrategyAfter2Quarters(long4);
-      await finishStrategyAfter3Quarters(long5);
+      await finalizeStrategyAfterQuarter(long1);
+      await finalizeStrategyAfter2Quarters(long2);
+      await finalizeStrategyAfterQuarter(long3);
+      await finalizeStrategyAfter2Quarters(long4);
+      await finalizeStrategyAfter3Quarters(long5);
       const { exitedAt } = await getStrategyState(long5);
 
       await getAndValidateProtocolTimestampAndQuarter(rewardsDistributor, exitedAt, {
@@ -420,11 +402,11 @@ describe.only('BABL Rewards Distributor', function () {
 
       increaseTime(ONE_DAY_IN_SECONDS * 30);
 
-      await finishStrategyAfterQuarter(long1);
-      await finishStrategyAfter2Quarters(long2);
-      await finishStrategyAfterQuarter(long3);
-      await finishStrategyAfter2Quarters(long4);
-      await finishStrategyAfter3Quarters(long5);
+      await finalizeStrategyAfterQuarter(long1);
+      await finalizeStrategyAfter2Quarters(long2);
+      await finalizeStrategyAfterQuarter(long3);
+      await finalizeStrategyAfter2Quarters(long4);
+      await finalizeStrategyAfter3Quarters(long5);
       const { exitedAt } = await getStrategyState(long5);
 
       await getAndValidateProtocolTimestampAndQuarter(rewardsDistributor, exitedAt, {
@@ -451,11 +433,11 @@ describe.only('BABL Rewards Distributor', function () {
 
       increaseTime(ONE_DAY_IN_SECONDS * 30);
 
-      await finishStrategyAfterQuarter(long1);
-      await finishStrategyAfter2Quarters(long2);
-      await finishStrategyAfter2Years(long3);
-      await finishStrategyAfter2Quarters(long4);
-      await finishStrategyAfter3Quarters(long5);
+      await finalizeStrategyAfterQuarter(long1);
+      await finalizeStrategyAfter2Quarters(long2);
+      await finalizeStrategyAfter2Years(long3);
+      await finalizeStrategyAfter2Quarters(long4);
+      await finalizeStrategyAfter3Quarters(long5);
       const { exitedAt } = await getStrategyState(long5);
 
       await getAndValidateProtocolTimestampAndQuarter(rewardsDistributor, exitedAt, {
@@ -483,18 +465,18 @@ describe.only('BABL Rewards Distributor', function () {
       increaseTime(ONE_DAY_IN_SECONDS * 30);
 
       await injectFakeProfits(long1, ONE_ETH.mul(200));
-      await finishStrategyAfterQuarter(long1);
+      await finalizeStrategyAfterQuarter(long1);
 
-      await finishStrategyAfter2Quarters(long2);
+      await finalizeStrategyAfter2Quarters(long2);
 
       await injectFakeProfits(long3, ONE_ETH.mul(200));
-      await finishStrategyAfter2Years(long3);
+      await finalizeStrategyAfter2Years(long3);
 
       await injectFakeProfits(long4, ONE_ETH.mul(200));
-      await finishStrategyAfter2Quarters(long4);
+      await finalizeStrategyAfter2Quarters(long4);
 
       await injectFakeProfits(long5, ONE_ETH.mul(222));
-      await finishStrategyAfter3Quarters(long5);
+      await finalizeStrategyAfter3Quarters(long5);
 
       const { exitedAt } = await getStrategyState(long5);
 
@@ -514,9 +496,9 @@ describe.only('BABL Rewards Distributor', function () {
       await executeStrategy(long2, ONE_ETH.mul(2));
 
       await injectFakeProfits(long1, ONE_ETH.mul(200));
-      await finishStrategyAfterQuarter(long1);
+      await finalizeStrategyAfterQuarter(long1);
 
-      await finishStrategyAfterQuarter(long2);
+      await finalizeStrategyAfterQuarter(long2);
 
       // Transfer 500_000e18 tokens from owner to rewardsDistributor for BABL Mining Program
       await bablToken.connect(owner).transfer(rewardsDistributor.address, ONE_ETH.mul(500000));
@@ -538,9 +520,9 @@ describe.only('BABL Rewards Distributor', function () {
       await executeStrategy(long2, ONE_ETH.mul(2));
 
       await injectFakeProfits(long1, ONE_ETH.mul(200));
-      await finishStrategyAfterQuarter(long1);
+      await finalizeStrategyAfterQuarter(long1);
 
-      await finishStrategyAfterQuarter(long2);
+      await finalizeStrategyAfterQuarter(long2);
 
       // Transfer 500_000e18 tokens from owner to rewardsDistributor for BABL Mining Program
       await bablToken.connect(owner).transfer(rewardsDistributor.address, ONE_ETH.mul(500000));
@@ -573,9 +555,9 @@ describe.only('BABL Rewards Distributor', function () {
       await executeStrategy(long2, ONE_ETH.mul(2));
 
       await injectFakeProfits(long1, ONE_ETH.mul(200));
-      await finishStrategyAfterQuarter(long1);
+      await finalizeStrategyAfterQuarter(long1);
 
-      await finishStrategyAfterQuarter(long2);
+      await finalizeStrategyAfterQuarter(long2);
 
       // Transfer 500_000e18 tokens from owner to rewardsDistributor for BABL Mining Program
       await bablToken.connect(owner).transfer(rewardsDistributor.address, ONE_ETH.mul(500000));
@@ -590,14 +572,17 @@ describe.only('BABL Rewards Distributor', function () {
       await executeStrategy(long2, ONE_ETH.mul(2));
 
       await injectFakeProfits(long1, ONE_ETH.mul(200));
-      await finishStrategyAfterQuarter(long1);
+      await finalizeStrategyAfterQuarter(long1);
 
       await injectFakeProfits(long2, ONE_ETH.mul(200));
-      await finishStrategyAfterQuarter(long2);
+      await finalizeStrategyAfterQuarter(long2);
 
       // Transfer 500_000e18 tokens from owner to rewardsDistributor for BABL Mining Program
       await bablToken.connect(owner).transfer(rewardsDistributor.address, ONE_ETH.mul(500000));
       // TODO: Write actual checks
+      // const rewards = await garden1.connect(signer1).getProfitsAndBabl([long1.address, long2.address]);
+      // expect(rewards[0].toString()).to.lt(ethers.utils.parseEther('1'));
+      // expect(rewards[1].toString()).to.gt(ethers.utils.parseEther('23700'));
     });
 
     it('should check potential claim values of Profit and BABL Rewards', async function () {
@@ -607,10 +592,10 @@ describe.only('BABL Rewards Distributor', function () {
       await executeStrategy(long2, ONE_ETH.mul(2));
 
       await injectFakeProfits(long1, ONE_ETH.mul(200));
-      await finishStrategyAfterQuarter(long1);
+      await finalizeStrategyAfterQuarter(long1);
 
       await injectFakeProfits(long2, ONE_ETH.mul(200));
-      await finishStrategyAfterQuarter(long2);
+      await finalizeStrategyAfterQuarter(long2);
 
       // Transfer 500_000e18 tokens from owner to rewardsDistributor for BABL Mining Program
       await bablToken.connect(owner).transfer(rewardsDistributor.address, ONE_ETH.mul(500000));
@@ -640,18 +625,18 @@ describe.only('BABL Rewards Distributor', function () {
       increaseTime(ONE_DAY_IN_SECONDS * 30);
 
       await injectFakeProfits(long1, ONE_ETH.mul(200));
-      await finishStrategyAfterQuarter(long1);
+      await finalizeStrategyAfterQuarter(long1);
 
-      await finishStrategyAfter2Quarters(long2);
+      await finalizeStrategyAfter2Quarters(long2);
 
       await injectFakeProfits(long3, ONE_ETH.mul(200));
-      await finishStrategyAfter2Years(long3);
+      await finalizeStrategyAfter2Years(long3);
 
       await injectFakeProfits(long4, ONE_ETH.mul(222));
-      await finishStrategyAfter2Quarters(long4);
+      await finalizeStrategyAfter2Quarters(long4);
 
       await injectFakeProfits(long5, ONE_ETH.mul(222));
-      await finishStrategyAfter3Quarters(long5);
+      await finalizeStrategyAfter3Quarters(long5);
 
       // We claim our tokens and check that they are received properly
       await garden1.connect(signer1).claimReturns([long1.address, long2.address]);

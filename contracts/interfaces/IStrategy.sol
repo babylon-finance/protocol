@@ -35,7 +35,9 @@ interface IStrategy {
         uint256 _stake,
         uint256 _strategyDuration,
         uint256 _expectedReturn,
-        uint256 _minRebalanceCapital
+        uint256 _minRebalanceCapital,
+        string memory _name,
+        string memory _symbol
     ) external;
 
     function resolveVoting(
@@ -54,7 +56,7 @@ interface IStrategy {
 
     function getLossesStrategy() external view returns (uint256);
 
-    function finalizeStrategy(uint256 fee) external;
+    function finalizeStrategy(uint256 fee, string memory _tokenURI) external;
 
     function unwindStrategy(uint256 _amountToUnwind) external;
 
@@ -137,6 +139,10 @@ interface IStrategy {
     function totalVotes() external view returns (int256);
 
     function absoluteTotalVotes() external view returns (uint256);
+
+    function totalPositiveVotes() external view returns (uint256);
+
+    function totalNegativeVotes() external view returns (uint256);
 
     function integration() external view returns (address);
 

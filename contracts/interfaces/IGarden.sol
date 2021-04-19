@@ -33,6 +33,8 @@ interface IGarden {
 
     function controller() external view returns (address);
 
+    function nftAddress() external view returns (address);
+
     function creator() external view returns (address);
 
     function getContributor(address _contributor)
@@ -53,7 +55,11 @@ interface IGarden {
 
     function totalContributors() external view returns (uint256);
 
+    function gardenInitializedAt() external view returns (uint256);
+
     function minContribution() external view returns (uint256);
+
+    function maxContributors() external view returns (uint256);
 
     function WETH() external view returns (address);
 
@@ -95,7 +101,9 @@ interface IGarden {
         uint256 _strategyDuration,
         uint256 _expectedReturn,
         uint256 _minRebalanceCapital,
-        address _strategyData
+        address _strategyData,
+        string memory _name,
+        string memory _symbol
     ) external;
 
     function deposit(

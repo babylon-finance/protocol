@@ -17,14 +17,25 @@
 */
 pragma solidity 0.7.4;
 
-import {IIntegration} from './IIntegration.sol';
+import {IGarden} from './IGarden.sol';
+import {IBabController} from './IBabController.sol';
 
 /**
- * @title IIntegration
+ * @title IGardenNFT
  * @author Babylon Finance
  *
- * Interface for insurance protocol integrations
+ * Interface for operating with a Garden NFT.
  */
-interface ICover is IIntegration {
+interface IGardenNFT {
+    function initialize(
+        address _controller,
+        address _garden,
+        string memory _name,
+        string memory _symbol,
+        string memory _tokenURI
+    ) external;
 
+    function grantGardenNFT(address _user) external returns (uint256);
+
+    function updateGardenURI(string memory _tokenURI) external;
 }

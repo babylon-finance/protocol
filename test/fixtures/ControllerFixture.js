@@ -44,6 +44,7 @@ async function deployFolioFixture() {
   const GardenValuer = await ethers.getContractFactory('GardenValuer', owner);
   const PriceOracle = await ethers.getContractFactory('PriceOracle', owner);
   const Treasury = await ethers.getContractFactory('Treasury', owner);
+  const IshtarGate = await ethers.getContractFactory('IshtarGate', owner);
   const UniswapTWAP = await ethers.getContractFactory('UniswapTWAP', owner);
   const GardenFactory = await ethers.getContractFactory('GardenFactory', owner);
   const LongStrategyFactory = await ethers.getContractFactory('LongStrategyFactory', owner);
@@ -53,6 +54,7 @@ async function deployFolioFixture() {
 
   const gardenValuer = await GardenValuer.deploy(babController.address);
   const treasury = await Treasury.deploy(babController.address);
+  const ishtarGate = await IshtarGate.deploy(babController.address, 'http://json.api/test');
   const gardenFactory = await GardenFactory.deploy();
   const longStrategyFactory = await LongStrategyFactory.deploy();
   const liquidityPoolStrategyFactory = await LiquidityPoolStrategyFactory.deploy();
@@ -72,6 +74,7 @@ async function deployFolioFixture() {
   babController.editPriceOracle(priceOracle.address);
   babController.editTreasury(treasury.address);
   babController.editGardenValuer(gardenValuer.address);
+  babController.editIshtarGate(ishtarGate.address);
   babController.editRewardsDistributor(rewardsDistributor.address);
   babController.editGardenFactory(gardenFactory.address);
   babController.editStrategyFactory(0, longStrategyFactory.address);
@@ -150,15 +153,44 @@ async function deployFolioFixture() {
     babController.addIntegration(await integration.getName(), integration.address);
   });
 
-  // Creates a new Garden instance
+  const gardenParams = [
+    ethers.utils.parseEther('20'),
+    1,
+    ethers.utils.parseEther('1000'),
+    2,
+    1,
+    ONE_DAY_IN_SECONDS,
+    ethers.utils.parseEther('0.10'), // 10% quorum
+    ONE_DAY_IN_SECONDS * 3,
+    ONE_DAY_IN_SECONDS * 365,
+  ];
 
-  await babController.connect(signer1).createGarden(addresses.tokens.WETH, 'Absolute ETH Return [beta]', 'EYFA');
+  // Gives signer1 creator permissions
+  await ishtarGate.connect(owner).setCreatorPermissions(signer1.address, true, { gasPrice: 0 });
 
-  await babController.connect(signer1).createGarden(addresses.tokens.WETH, 'ETH Yield Farm [a]', 'EYFB');
+  await babController
+    .connect(signer1)
+    .createGarden(addresses.tokens.WETH, 'Absolute ETH Return [beta]', 'EYFA', gardenParams, 'http...', {
+      value: ethers.utils.parseEther('0.1'),
+    });
 
-  await babController.connect(signer1).createGarden(addresses.tokens.WETH, 'ETH Yield Farm [b]', 'EYFG');
+  await babController
+    .connect(signer1)
+    .createGarden(addresses.tokens.WETH, 'ETH Yield Farm [a]', 'EYFB', gardenParams, 'http...', {
+      value: ethers.utils.parseEther('0.1'),
+    });
 
-  await babController.connect(signer1).createGarden(addresses.tokens.WETH, 'ETH Yield Farm [d]', 'EYFG');
+  await babController
+    .connect(signer1)
+    .createGarden(addresses.tokens.WETH, 'ETH Yield Farm [b]', 'EYFG', gardenParams, 'http...', {
+      value: ethers.utils.parseEther('0.1'),
+    });
+
+  await babController
+    .connect(signer1)
+    .createGarden(addresses.tokens.WETH, 'ETH Yield Farm [d]', 'EYFG', gardenParams, 'http...', {
+      value: ethers.utils.parseEther('0.1'),
+    });
 
   const gardens = await babController.getGardens();
 
@@ -170,49 +202,20 @@ async function deployFolioFixture() {
 
   const garden4 = await ethers.getContractAt('Garden', gardens[3]);
 
-  // Initial deposit
-  await garden1.connect(signer1).start(
-    ethers.utils.parseEther('20'),
-    1,
-    ethers.utils.parseEther('1000'),
-    2,
-    ethers.utils.parseEther('0.01'),
-    ONE_DAY_IN_SECONDS,
-    ethers.utils.parseEther('0.10'), // 10% quorum
-    ONE_DAY_IN_SECONDS * 3,
-    ONE_DAY_IN_SECONDS * 365,
-    { value: ethers.utils.parseEther('0.1') },
-  );
-
-  // Initial deposit
-  await garden2.connect(signer1).start(
-    ethers.utils.parseEther('20'),
-    1,
-    ethers.utils.parseEther('1000'),
-    2,
-    ethers.utils.parseEther('0.01'),
-    ONE_DAY_IN_SECONDS,
-    ethers.utils.parseEther('0.10'), // 10% quorum
-    ONE_DAY_IN_SECONDS * 3,
-    ONE_DAY_IN_SECONDS * 365,
-    { value: ethers.utils.parseEther('0.1') },
-  );
-
-  // NOTE: Use this garden for manual testing in the dApp
-  // Initial deposit
-  await garden3.connect(signer1).start(
-    ethers.utils.parseEther('20'),
-    1,
-    ethers.utils.parseEther('1000'),
-    2,
-    ethers.utils.parseEther('0.01'),
-    ONE_DAY_IN_SECONDS,
-    ethers.utils.parseEther('0.10'), // 10% quorum
-    ONE_DAY_IN_SECONDS * 3,
-    ONE_DAY_IN_SECONDS * 365,
-    { value: ethers.utils.parseEther('0.1') },
-  );
-
+  // Grants community access
+  for (let i = 0; i < gardens.length; i += 1) {
+    await ishtarGate
+      .connect(signer1)
+      .grantGardenAccessBatch(
+        gardens[i],
+        [owner.address, signer1.address, signer2.address, signer3.address],
+        [3, 3, 3, 3],
+        {
+          gasPrice: 0,
+        },
+      );
+  }
+  console.log('befre create strategies');
   // Create strategies
   const strategy11 = (
     await createStrategy('long', 'dataset', [signer1, signer2, signer3], kyberTradeIntegration.address, garden1)
@@ -256,6 +259,9 @@ async function deployFolioFixture() {
 
     gardenValuer,
     priceOracle,
+    ishtarGate,
+
+    gardenParams,
 
     owner,
     signer1,

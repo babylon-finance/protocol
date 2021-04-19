@@ -24,7 +24,6 @@ import {AddressUpgradeable} from '@openzeppelin/contracts-upgradeable/utils/Addr
 import {SafeMath} from '@openzeppelin/contracts/math/SafeMath.sol';
 import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import {IGarden} from '../interfaces/IGarden.sol';
-import {IGarden} from '../interfaces/IGarden.sol';
 import {IGardenFactory} from '../interfaces/IGardenFactory.sol';
 import {IIntegration} from '../interfaces/IIntegration.sol';
 import {AddressArrayUtils} from '../lib/AddressArrayUtils.sol';
@@ -55,6 +54,8 @@ contract BabControllerV2Mock is OwnableUpgradeable {
     address public priceOracle;
     address public gardenFactory;
     address public rewardsDistributor;
+    address public ishtarGate;
+
     mapping(uint8 => address) public strategyFactory;
     // Mapping of garden => integration identifier => integration address
     mapping(bytes32 => address) private integrations;

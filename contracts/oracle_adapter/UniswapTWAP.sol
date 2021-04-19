@@ -27,8 +27,11 @@ import '@uniswap/v2-core/contracts/interfaces/IUniswapV2Pair.sol';
 import '@uniswap/v2-periphery/contracts/libraries/UniswapV2OracleLibrary.sol';
 import '@uniswap/v2-periphery/contracts/libraries/UniswapV2Library.sol';
 import '@uniswap/lib/contracts/libraries/FixedPoint.sol';
+
 import {PreciseUnitMath} from '../lib/PreciseUnitMath.sol';
+
 import {IBabController} from '../interfaces/IBabController.sol';
+import {IOracleAdapter} from '../interfaces/IOracleAdapter.sol';
 
 /**
  * @title UniswapTWAP
@@ -39,7 +42,7 @@ import {IBabController} from '../interfaces/IBabController.sol';
  * note this is a singleton oracle and only needs to be deployed once per desired parameters, which
  * differs from the simple oracle which must be deployed once per pair.
  */
-contract UniswapTWAP is Ownable {
+contract UniswapTWAP is Ownable, IOracleAdapter {
     using FixedPoint for *;
     using SafeMath for uint256;
     using PreciseUnitMath for uint256;
@@ -113,7 +116,7 @@ contract UniswapTWAP is Ownable {
 
     // update the cumulative price for the observation at the current timestamp. each observation is updated at most
     // once per epoch period.
-    function update(address tokenA, address tokenB) external {
+    function update(address tokenA, address tokenB) external override {
         address pair = UniswapV2Library.pairFor(factory, tokenA, tokenB);
 
         // populate the array with empty observations (first call only)
@@ -138,7 +141,12 @@ contract UniswapTWAP is Ownable {
     // returns the amount out corresponding to the amount in for a given token using the moving average over the time
     // range [now - [windowSize, windowSize - periodSize * 2], now]
     // update must have been called for the bucket corresponding to timestamp `now - windowSize`
-    function getPrice(address tokenIn, address tokenOut) external view returns (bool found, uint256 amountOut) {
+    function getPrice(address tokenIn, address tokenOut)
+        external
+        view
+        override
+        returns (bool found, uint256 amountOut)
+    {
         address pair = UniswapV2Library.pairFor(factory, tokenIn, tokenOut);
         Observation storage firstObservation = getFirstObservationInWindow(pair);
 

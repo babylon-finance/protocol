@@ -27,6 +27,7 @@ import {IGarden} from './interfaces/IGarden.sol';
 import {IGarden} from './interfaces/IGarden.sol';
 import {IGardenFactory} from './interfaces/IGardenFactory.sol';
 import {IStrategy} from './interfaces/IStrategy.sol';
+import {IIshtarGate} from './interfaces/IIshtarGate.sol';
 import {IIntegration} from './interfaces/IIntegration.sol';
 import {IBabController} from './interfaces/IBabController.sol';
 
@@ -59,8 +60,10 @@ contract BabController is OwnableUpgradeable, IBabController {
     event PriceOracleChanged(address indexed _priceOracle, address _oldPriceOracle);
     event RewardsDistributorChanged(address indexed _rewardsDistributor, address _oldRewardsDistributor);
     event TreasuryChanged(address _newTreasury, address _oldTreasury);
+    event IshtarGateChanged(address _newIshtarGate, address _oldIshtarGate);
     event GardenValuerChanged(address indexed _gardenValuer, address _oldGardenValuer);
     event GardenFactoryChanged(address indexed _gardenFactory, address _oldGardenFactory);
+
     event StrategyFactoryEdited(
         uint8 indexed _strategyKind,
         address indexed _strategyFactory,
@@ -81,6 +84,7 @@ contract BabController is OwnableUpgradeable, IBabController {
     address public override priceOracle;
     address public override gardenFactory;
     address public override rewardsDistributor;
+    address public override ishtarGate;
     mapping(uint8 => address) public strategyFactory;
     // Mapping of garden => integration identifier => integration address
     mapping(bytes32 => address) private integrations;
@@ -163,14 +167,27 @@ contract BabController is OwnableUpgradeable, IBabController {
      * @param _reserveAsset           Reserve asset of the Garden. Initially just weth
      * @param _name                   Name of the Garden
      * @param _symbol                 Symbol of the Garden
+     * @param _gardenParams           Array of numeric garden params
+     * @param _tokenURI               Garden NFT token URI
      */
     function createGarden(
         address _reserveAsset,
         string memory _name,
-        string memory _symbol
-    ) external override returns (address) {
+        string memory _symbol,
+        uint256[] calldata _gardenParams,
+        string memory _tokenURI
+    ) external payable override returns (address) {
+        require(IIshtarGate(ishtarGate).canCreate(msg.sender), 'User does not have creation permissions');
         address newGarden =
-            IGardenFactory(gardenFactory).createGarden(_reserveAsset, address(this), msg.sender, _name, _symbol);
+            IGardenFactory(gardenFactory).createGarden{value: msg.value}(
+                _reserveAsset,
+                address(this),
+                msg.sender,
+                _name,
+                _symbol,
+                _gardenParams,
+                _tokenURI
+            );
         _addGarden(newGarden);
         return newGarden;
     }
@@ -296,6 +313,22 @@ contract BabController is OwnableUpgradeable, IBabController {
         priceOracle = _priceOracle;
 
         emit PriceOracleChanged(_priceOracle, oldPriceOracle);
+    }
+
+    /**
+     * PRIVILEGED GOVERNANCE FUNCTION. Allows governance to change the Ishtar Gate Address
+     *
+     * @param _ishtarGate               Address of the new Ishtar Gate
+     */
+    function editIshtarGate(address _ishtarGate) external override onlyOwner {
+        require(_ishtarGate != ishtarGate, 'Ishtar Gate already exists');
+
+        require(_ishtarGate != address(0), 'Ishtar Gate oracle must exist');
+
+        address oldIshtarGate = ishtarGate;
+        ishtarGate = _ishtarGate;
+
+        emit IshtarGateChanged(_ishtarGate, oldIshtarGate);
     }
 
     /**

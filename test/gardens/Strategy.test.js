@@ -182,7 +182,7 @@ describe('Strategy', function () {
             gasPrice: 0,
           },
         ),
-      ).to.be.revertedWith(/Voting window closed/i);
+      ).to.be.revertedWith(/revert BAB#043/i);
     });
 
     it("can't push voting results twice", async function () {
@@ -211,7 +211,7 @@ describe('Strategy', function () {
             gasPrice: 0,
           },
         ),
-      ).to.be.revertedWith(/voting already resolved/i);
+      ).to.be.revertedWith(/revert BAB#042/i);
     });
   });
 
@@ -321,7 +321,7 @@ describe('Strategy', function () {
         strategyContract.executeStrategy(ethers.utils.parseEther('1'), ethers.utils.parseEther('100'), {
           gasPrice: 0,
         }),
-      ).to.be.revertedWith(/fee is too high/i);
+      ).to.be.revertedWith(/revert BAB#019/i);
     });
   });
 
@@ -471,7 +471,7 @@ describe('Strategy', function () {
 
       await finalizeStrategy(strategyContract, 42);
 
-      await expect(strategyContract.finalizeStrategy(42, { gasPrice: 0 })).to.be.reverted;
+      await expect(strategyContract.finalizeStrategy(42, 'http://', { gasPrice: 0 })).to.be.reverted;
     });
   });
 });

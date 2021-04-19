@@ -17,6 +17,7 @@
 
 pragma solidity 0.7.4;
 
+import 'hardhat/console.sol';
 import {Address} from '@openzeppelin/contracts/utils/Address.sol';
 import {ERC20Upgradeable} from '@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol';
 import {IERC20Upgradeable} from '@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol';
@@ -38,6 +39,8 @@ import {IBabController} from '../interfaces/IBabController.sol';
 import {IStrategyFactory} from '../interfaces/IStrategyFactory.sol';
 import {IStrategy} from '../interfaces/IStrategy.sol';
 import {IGarden} from '../interfaces/IGarden.sol';
+import {IGardenNFT} from '../interfaces/IGardenNFT.sol';
+import {IIshtarGate} from '../interfaces/IIshtarGate.sol';
 import {IWETH} from '../interfaces/external/weth/IWETH.sol';
 
 /**
@@ -203,6 +206,8 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
 
     // Address of the controller
     address public override controller;
+    // Address of the nft
+    address public override nftAddress;
     // The person that creates the garden
     address public override creator;
     // Whether the garden is currently active or not
@@ -224,9 +229,10 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
     // Contributors
     mapping(address => Contributor) public contributors;
     uint256 public override totalContributors;
+    uint256 public override maxContributors;
     uint256 public maxDepositLimit; // Limits the amount of deposits
 
-    uint256 public gardenInitializedAt; // Garden Initialized at timestamp
+    uint256 public override gardenInitializedAt; // Garden Initialized at timestamp
 
     // Min contribution in the garden
     uint256 public override minContribution = 1e18; //wei
@@ -256,14 +262,18 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
      * @param _creator                Address of the creator
      * @param _name                   Name of the Garden
      * @param _symbol                 Symbol of the Garden
+     * @param _gardenParams           Array of numeric garden params
+     * @param _nftAddress             Garden NFT address
      */
     function initialize(
         address _reserveAsset,
         address _controller,
         address _creator,
         string memory _name,
-        string memory _symbol
-    ) public virtual initializer {
+        string memory _symbol,
+        uint256[] calldata _gardenParams,
+        address _nftAddress
+    ) public payable initializer {
         _require(_creator != address(0), Errors.ADDRESS_IS_ZERO);
         _require(_controller != address(0), Errors.ADDRESS_IS_ZERO);
         _require(_reserveAsset != address(0), Errors.ADDRESS_IS_ZERO);
@@ -276,6 +286,26 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         principal = 0;
         active = false;
         totalContributors = 0;
+        maxContributors = 100;
+        nftAddress = _nftAddress;
+
+        _start(
+            msg.value,
+            _gardenParams[0],
+            _gardenParams[1],
+            _gardenParams[2],
+            _gardenParams[3],
+            _gardenParams[4],
+            _gardenParams[5],
+            _gardenParams[6],
+            _gardenParams[7],
+            _gardenParams[8]
+        );
+        active = true;
+
+        // Deposit
+        IWETH(WETH).deposit{value: msg.value}();
+        _mintGardenTokens(creator, creator, msg.value, msg.value, 0);
     }
 
     /* ============ External Functions ============ */
@@ -284,6 +314,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
      * FUND LEAD ONLY.  Starts the Garden with allowed reserve assets,
      * fees and issuance premium. Only callable by the Garden's creator
      *
+     * @param _creatorDeposit                      Deposit by the creator
      * @param _maxDepositLimit                     Max deposit limit
      * @param _minGardenTokenSupply             Min garden token supply
      * @param _minLiquidityAsset                   Number that represents min amount of liquidity denominated in ETH
@@ -294,7 +325,8 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
      * @param _minStrategyDuration                  Min duration of an strategy
      * @param _maxStrategyDuration                  Max duration of an strategy
      */
-    function start(
+    function _start(
+        uint256 _creatorDeposit,
         uint256 _maxDepositLimit,
         uint256 _minGardenTokenSupply,
         uint256 _minLiquidityAsset,
@@ -304,17 +336,15 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         uint256 _minVotersQuorum,
         uint256 _minStrategyDuration,
         uint256 _maxStrategyDuration
-    ) external payable onlyCreator onlyInactive {
+    ) private {
+        _require(_creatorDeposit >= minContribution, Errors.MIN_CONTRIBUTION);
+        _require(_creatorDeposit >= _minGardenTokenSupply, Errors.MIN_LIQUIDITY);
+        _require(_creatorDeposit <= _maxDepositLimit, Errors.MAX_DEPOSIT_LIMIT);
         _require(_maxDepositLimit <= MAX_DEPOSITS_FUND_V1, Errors.MAX_DEPOSIT_LIMIT);
-
-        _require(msg.value >= minContribution, Errors.MIN_CONTRIBUTION);
         IBabController babController = IBabController(controller);
         _require(_minGardenTokenSupply > 0, Errors.MIN_TOKEN_SUPPLY);
         _require(_depositHardlock > 0, Errors.DEPOSIT_HARDLOCK);
         _require(_minLiquidityAsset >= babController.minRiskyPairLiquidityEth(), Errors.MIN_LIQUIDITY);
-        // make initial deposit
-        _require(msg.value >= _minGardenTokenSupply, Errors.MIN_LIQUIDITY);
-        _require(msg.value <= _maxDepositLimit, Errors.MAX_DEPOSIT_LIMIT);
         _require(
             _strategyCooldownPeriod <= IBabController(controller).getMaxCooldownPeriod() &&
                 _strategyCooldownPeriod >= IBabController(controller).getMinCooldownPeriod(),
@@ -332,18 +362,6 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         minLiquidityAsset = _minLiquidityAsset;
         depositHardlock = _depositHardlock;
         withdrawalWindowAfterStrategyCompletes = 7 days;
-
-        // Deposit
-        IWETH(WETH).deposit{value: msg.value}();
-
-        uint256 previousBalance = balanceOf(msg.sender);
-        _mint(creator, msg.value);
-        _updateContributorDepositInfo(previousBalance);
-        _updatePrincipal(msg.value);
-
-        _require(totalSupply() > 0, Errors.MIN_LIQUIDITY);
-        active = true;
-        emit GardenDeposit(msg.sender, msg.value, msg.value, 0, block.timestamp);
     }
 
     /**
@@ -359,6 +377,10 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         uint256 _minGardenTokenReceiveQuantity,
         address _to
     ) public payable override nonReentrant onlyActive {
+        _require(
+            IIshtarGate(IBabController(controller).ishtarGate()).canJoinAGarden(address(this), msg.sender),
+            Errors.USER_CANNOT_JOIN
+        );
         _require(msg.value >= minContribution, Errors.MIN_CONTRIBUTION);
         // if deposit limit is 0, then there is no deposit limit
         if (maxDepositLimit > 0) {
@@ -384,12 +406,14 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         // Send Protocol Fee
         payProtocolFeeFromGarden(reserveAsset, depositInfo.protocolFees);
 
-        // Updates Reserve Balance and Mint
-        uint256 previousBalance = balanceOf(msg.sender);
-        _mint(_to, depositInfo.gardenTokenQuantity);
-        _updateContributorDepositInfo(previousBalance);
-        _updatePrincipal(principal.add(depositInfo.netFlowQuantity));
-        emit GardenDeposit(_to, msg.value, depositInfo.gardenTokenQuantity, depositInfo.protocolFees, block.timestamp);
+        // Mint tokens
+        _mintGardenTokens(
+            msg.sender,
+            _to,
+            depositInfo.gardenTokenQuantity,
+            principal.add(depositInfo.netFlowQuantity),
+            depositInfo.protocolFees
+        );
     }
 
     /**
@@ -427,7 +451,8 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         IStrategy(maxStrategy).unwindStrategy(netReserveFlows);
         // We burn their penalty
         _burn(msg.sender, _gardenTokenQuantity.preciseMul(EARLY_WITHDRAWAL_PENALTY));
-        _withdraw(_gardenTokenQuantity, netReserveFlows, _to);
+        // todo: replace the 1
+        _withdraw(netReserveFlows, 1, _to);
     }
 
     /**
@@ -446,15 +471,16 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
             Address.sendValue(msg.sender, totalProfits);
             profitsSetAside = profitsSetAside.sub(totalProfits);
             emit ProfitsForContributor(msg.sender, totalProfits);
+            contributor.claimedAt = block.timestamp; // Checkpoint of this claim
         }
         if (bablRewards > 0) {
             contributor.claimedBABL = contributor.claimedBABL.add(bablRewards); // BABL Rewards claimed properly
-            contributor.claimedAt = block.timestamp; // Checkpoint of this claim
             // Send BABL rewards
             IRewardsDistributor rewardsDistributor =
                 IRewardsDistributor(IBabController(controller).rewardsDistributor());
             rewardsDistributor.sendTokensToContributor(msg.sender, uint96(bablRewards));
             emit BABLRewardsForContributor(msg.sender, uint96(bablRewards));
+            contributor.claimedAt = block.timestamp; // Checkpoint of this claim
         }
     }
 
@@ -538,6 +564,8 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
      * @param _expectedReturn                Expected return
      * @param _minRebalanceCapital           Min capital that is worth it to deposit into this strategy
      * @param _strategyData                  Param of strategy to add
+     * @param _name                          Name of the strategy
+     * @param _symbol                        Symbol of the strategy
      */
     function addStrategy(
         uint8 _strategyKind,
@@ -547,8 +575,14 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         uint256 _strategyDuration,
         uint256 _expectedReturn,
         uint256 _minRebalanceCapital,
-        address _strategyData
+        address _strategyData,
+        string memory _name,
+        string memory _symbol
     ) external override onlyContributor onlyActive {
+        _require(
+            IIshtarGate(IBabController(controller).ishtarGate()).canAddStrategiesInAGarden(address(this), msg.sender),
+            Errors.USER_CANNOT_ADD_STRATEGIES
+        );
         _require(strategies.length < MAX_TOTAL_STRATEGIES, Errors.VALUE_TOO_HIGH);
         IStrategyFactory strategyFactory =
             IStrategyFactory(IBabController(controller).getStrategyFactory(_strategyKind));
@@ -562,7 +596,9 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
                 _stake,
                 _strategyDuration,
                 _expectedReturn,
-                _minRebalanceCapital
+                _minRebalanceCapital,
+                _name,
+                _symbol
             );
         strategyMapping[strategy] = true;
         totalStake = totalStake.add(_stake);
@@ -582,6 +618,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
             uint256 percentage = strategy.totalVotes().toUint256().preciseDiv(totalStake);
             uint256 toAllocate = liquidReserveAsset.preciseMul(percentage);
             if (
+                block.timestamp < strategy.executedAt().add(strategy.duration()).sub(1 days) &&
                 toAllocate >= strategy.minRebalanceCapital() &&
                 toAllocate.add(strategy.capitalAllocated()) <= strategy.maxCapitalRequested()
             ) {
@@ -887,6 +924,31 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
     /* ============ Internal Functions ============ */
 
     /**
+     * Function that mints the appropriate garden tokens along with the Garden NFT
+     * @param _from                            Address that triggered the transaction
+     * @param _to                              Address to mint the tokens
+     * @param _gardenTokenQuantity             Amount of garden tokens
+     * @param _newPrincipal                    New principal for that user
+     * @param _protocolFees                    Protocol Fees Paid
+     */
+    function _mintGardenTokens(
+        address _from,
+        address _to,
+        uint256 _gardenTokenQuantity,
+        uint256 _newPrincipal,
+        uint256 _protocolFees
+    ) private {
+        uint256 previousBalance = balanceOf(msg.sender);
+        _mint(_to, _gardenTokenQuantity);
+        _updateContributorDepositInfo(_from, previousBalance);
+        _updatePrincipal(_newPrincipal);
+        // Mint the garden NFT
+        IGardenNFT(nftAddress).grantGardenNFT(_to);
+        _require(totalSupply() > 0, Errors.MIN_LIQUIDITY);
+        emit GardenDeposit(_to, msg.value, _gardenTokenQuantity, _protocolFees, block.timestamp);
+    }
+
+    /**
      * Function that allows the principal to be updated
      *
      * @param _amount             Amount of the reserve balance
@@ -912,8 +974,9 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
     function _beforeTokenTransfer(
         address from,
         address to,
-        uint256 /* amount */
-    ) internal view override {
+        uint256 _amount
+    ) internal virtual override {
+        super._beforeTokenTransfer(from, to, _amount);
         _require(
             from == address(0) || to == address(0) || IBabController(controller).gardenTokensTransfersEnabled(),
             Errors.TOKENS_TIMELOCKED
@@ -1082,11 +1145,10 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
     /**
      * Updates the contributor info in the array
      */
-    function _updateContributorDepositInfo(uint256 previousBalance) internal {
-        Contributor storage contributor = contributors[msg.sender];
-
+    function _updateContributorDepositInfo(address _contributor, uint256 previousBalance) internal {
+        Contributor storage contributor = contributors[_contributor];
         // If new contributor, create one, increment count, and set the current TS
-        if (previousBalance == 0) {
+        if (previousBalance == 0 || contributor.initialDepositAt == 0) {
             totalContributors = totalContributors.add(1);
             contributor.initialDepositAt = block.timestamp;
         }
@@ -1140,8 +1202,8 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         }
         TimestampContribution memory tsContribution = contributor.tsContributions[lastDepositAt];
         contributorPower = tsContribution.power.add((_to.sub(lastDepositAt)).mul(tsContribution.principal));
-        contributorPower = contributorPower.add(tsContribution.principal).div(_to.sub(contributor.initialDepositAt));
 
+        contributorPower = contributorPower.add(tsContribution.principal).div(_to.sub(contributor.initialDepositAt));
         return contributorPower.preciseDiv(totalSupply());
     }
 

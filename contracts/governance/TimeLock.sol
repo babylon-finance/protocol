@@ -17,8 +17,10 @@ pragma solidity 0.7.4;
 import {SafeMath} from '@openzeppelin/contracts/math/SafeMath.sol';
 import {Ownable} from '@openzeppelin/contracts/access/Ownable.sol';
 
+import {ITimelock} from '../interfaces/ITimelock.sol';
+
 // TODO: Do a diff to check for changes
-contract Timelock {
+contract Timelock is ITimelock {
     using SafeMath for uint256;
 
     /* ============ Events ============ */
@@ -55,15 +57,15 @@ contract Timelock {
 
     /* ============ State Variables ============ */
 
-    uint256 public constant GRACE_PERIOD = 14 days;
+    uint256 public constant override GRACE_PERIOD = 14 days;
     uint256 public constant MINIMUM_DELAY = 2 days;
     uint256 public constant MAXIMUM_DELAY = 30 days;
 
     address public admin;
     address public pendingAdmin;
-    uint256 public delay;
+    uint256 public override delay;
 
-    mapping(bytes32 => bool) public queuedTransactions;
+    mapping(bytes32 => bool) public override queuedTransactions;
 
     /* ============ Functions ============ */
 
@@ -94,7 +96,7 @@ contract Timelock {
         emit NewDelay(delay);
     }
 
-    function acceptAdmin() external {
+    function acceptAdmin() external override {
         require(msg.sender == pendingAdmin, 'Timelock::acceptAdmin: Call must come from pendingAdmin.');
         admin = msg.sender;
         pendingAdmin = address(0);
@@ -115,7 +117,7 @@ contract Timelock {
         string memory signature,
         bytes memory data,
         uint256 eta
-    ) external returns (bytes32) {
+    ) external override returns (bytes32) {
         require(msg.sender == admin, 'Timelock::queueTransaction: Call must come from admin.');
         require(
             eta >= getBlockTimestamp().add(delay),
@@ -135,7 +137,7 @@ contract Timelock {
         string memory signature,
         bytes memory data,
         uint256 eta
-    ) external {
+    ) external override {
         require(msg.sender == admin, 'Timelock::cancelTransaction: Call must come from admin.');
 
         bytes32 txHash = keccak256(abi.encode(target, value, signature, data, eta));
@@ -150,7 +152,7 @@ contract Timelock {
         string memory signature,
         bytes memory data,
         uint256 eta
-    ) external payable returns (bytes memory) {
+    ) external payable override returns (bytes memory) {
         require(msg.sender == admin, 'Timelock::executeTransaction: Call must come from admin.');
 
         bytes32 txHash = keccak256(abi.encode(target, value, signature, data, eta));

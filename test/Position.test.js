@@ -21,14 +21,6 @@ describe('Position testing', function () {
   });
 
   describe('Initial Positions', async function () {
-    it('when creating a garden the variables are at 0', async function () {
-      expect(await garden4.totalContributors()).to.equal(0);
-      expect(await garden4.principal()).to.equal(ethers.utils.parseEther('0'));
-      const wethPosition = await garden4.principal();
-      expect(wethPosition).to.equal(ethers.utils.parseEther('0'));
-      expect(await garden4.totalSupply()).to.equal(ethers.utils.parseEther('0'));
-    });
-
     it('updates weth balance accordingly when initializing the garden', async function () {
       expect(await garden1.totalContributors()).to.equal(1);
       expect(await garden1.principal()).to.equal(ethers.utils.parseEther('0.1'));
