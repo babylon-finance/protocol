@@ -186,16 +186,6 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         uint256 power;
     }
 
-    struct ActionInfo {
-        // During withdrawal, represents post-premium value
-        uint256 protocolFees; // Total protocol fees (direct + manager revenue share)
-        uint256 netFlowQuantity; // When issuing, quantity of reserve asset sent to Garden
-        // When withdrawaling, quantity of reserve asset sent to withdrawaler
-        uint256 gardenTokenQuantity; // When issuing, quantity of Garden tokens minted to mintee
-        // When withdrawaling, quantity of Garden tokens withdrawaled
-        uint256 newGardenTokenSupply; // Garden token supply after deposit/withdrawal action
-    }
-
     /* ============ State Variables ============ */
 
     // Wrapped ETH address
@@ -395,26 +385,20 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
 
         _validateReserveAsset(reserveAsset, _reserveAssetQuantity);
 
-        ActionInfo memory depositInfo = _createIssuanceInfo(_reserveAssetQuantity);
+        (uint256 protocolFees, uint256 netFlowQuantity) = _getFees(_reserveAssetQuantity, true);
 
         // Check that total supply is greater than min supply needed for issuance
         // TODO: A min supply amount is needed to avoid division by 0 when Garden token supply is 0
         _require(totalSupply() >= minGardenTokenSupply, Errors.MIN_TOKEN_SUPPLY);
 
         // gardenTokenQuantity has to be at least _minGardenTokenReceiveQuantity
-        _require(depositInfo.gardenTokenQuantity >= _minGardenTokenReceiveQuantity, Errors.MIN_TOKEN_SUPPLY);
+        _require(netFlowQuantity >= _minGardenTokenReceiveQuantity, Errors.MIN_TOKEN_SUPPLY);
 
         // Send Protocol Fee
-        payProtocolFeeFromGarden(reserveAsset, depositInfo.protocolFees);
+        payProtocolFeeFromGarden(reserveAsset, protocolFees);
 
         // Mint tokens
-        _mintGardenTokens(
-            msg.sender,
-            _to,
-            depositInfo.gardenTokenQuantity,
-            principal.add(depositInfo.netFlowQuantity),
-            depositInfo.protocolFees
-        );
+        _mintGardenTokens(msg.sender, _to, netFlowQuantity, principal.add(netFlowQuantity), protocolFees);
     }
 
     /**
@@ -1006,80 +990,45 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
 
         // Check this here to avoid having relayers
         reenableEthForStrategies();
-        ActionInfo memory withdrawalInfo = _createRedemptionInfo(_gardenTokenQuantity);
-        _require(canWithdrawEthAmount(msg.sender, withdrawalInfo.netFlowQuantity), Errors.MIN_LIQUIDITY);
 
-        _validateReserveAsset(reserveAsset, withdrawalInfo.netFlowQuantity);
+        (uint256 protocolFees, uint256 netFlowQuantity) = _getFees(_gardenTokenQuantity, false);
 
-        _validateRedemptionInfo(_minReserveReceiveQuantity, _gardenTokenQuantity, withdrawalInfo);
+        uint256 newGardenTokenSupply = totalSupply().sub(_gardenTokenQuantity);
+
+        _require(canWithdrawEthAmount(msg.sender, netFlowQuantity), Errors.MIN_LIQUIDITY);
+
+        _validateReserveAsset(reserveAsset, netFlowQuantity);
+
+        // Check that new supply is more than min supply needed for withdrawal
+        // Note: A min supply amount is needed to avoid division by 0 when withdrawaling garden token to 0
+        _require(newGardenTokenSupply >= minGardenTokenSupply, Errors.MIN_TOKEN_SUPPLY);
+
+        _require(netFlowQuantity >= _minReserveReceiveQuantity, Errors.MIN_TOKEN_SUPPLY);
 
         _burn(msg.sender, _gardenTokenQuantity);
 
         // Check that the withdrawal is possible
         // Unwrap WETH if ETH balance lower than netFlowQuantity
-        if (address(this).balance < withdrawalInfo.netFlowQuantity) {
-            IWETH(WETH).withdraw(withdrawalInfo.netFlowQuantity);
+        if (address(this).balance < netFlowQuantity) {
+            IWETH(WETH).withdraw(netFlowQuantity);
         }
         _updateContributorWithdrawalInfo();
         // Send ETH
-        Address.sendValue(_to, withdrawalInfo.netFlowQuantity);
-        payProtocolFeeFromGarden(reserveAsset, withdrawalInfo.protocolFees);
+        Address.sendValue(_to, netFlowQuantity);
+        payProtocolFeeFromGarden(reserveAsset, protocolFees);
 
-        uint256 outflow = withdrawalInfo.netFlowQuantity.add(withdrawalInfo.protocolFees);
+        uint256 outflow = netFlowQuantity.add(protocolFees);
 
         // Required withdrawable quantity is greater than existing collateral
         _require(principal >= outflow, Errors.BALANCE_TOO_LOW);
         _updatePrincipal(principal.sub(outflow));
 
-        emit GardenWithdrawal(
-            msg.sender,
-            _to,
-            withdrawalInfo.netFlowQuantity,
-            withdrawalInfo.gardenTokenQuantity,
-            withdrawalInfo.protocolFees,
-            block.timestamp
-        );
+        emit GardenWithdrawal(msg.sender, _to, netFlowQuantity, _gardenTokenQuantity, protocolFees, block.timestamp);
     }
 
     function _validateReserveAsset(address _reserveAsset, uint256 _quantity) private view {
         _require(_quantity > 0, Errors.GREATER_THAN_ZERO);
         _require(IBabController(controller).isValidReserveAsset(_reserveAsset), Errors.MUST_BE_RESERVE_ASSET);
-    }
-
-    function _validateRedemptionInfo(
-        uint256 _minReserveReceiveQuantity,
-        uint256, /* _gardenTokenQuantity */
-        ActionInfo memory _withdrawalInfo
-    ) private view {
-        // Check that new supply is more than min supply needed for withdrawal
-        // Note: A min supply amount is needed to avoid division by 0 when withdrawaling garden token to 0
-        _require(_withdrawalInfo.newGardenTokenSupply >= minGardenTokenSupply, Errors.MIN_TOKEN_SUPPLY);
-
-        _require(_withdrawalInfo.netFlowQuantity >= _minReserveReceiveQuantity, Errors.MIN_TOKEN_SUPPLY);
-    }
-
-    function _createIssuanceInfo(uint256 _reserveAssetQuantity) private view returns (ActionInfo memory) {
-        ActionInfo memory depositInfo;
-
-        (depositInfo.protocolFees, depositInfo.netFlowQuantity) = _getFees(_reserveAssetQuantity, true);
-
-        depositInfo.gardenTokenQuantity = depositInfo.netFlowQuantity;
-
-        depositInfo.newGardenTokenSupply = depositInfo.gardenTokenQuantity.add(totalSupply());
-
-        return depositInfo;
-    }
-
-    function _createRedemptionInfo(uint256 _gardenTokenQuantity) private view returns (ActionInfo memory) {
-        ActionInfo memory withdrawalInfo;
-
-        withdrawalInfo.gardenTokenQuantity = _gardenTokenQuantity;
-
-        (withdrawalInfo.protocolFees, withdrawalInfo.netFlowQuantity) = _getFees(_gardenTokenQuantity, false);
-
-        withdrawalInfo.newGardenTokenSupply = totalSupply().sub(_gardenTokenQuantity);
-
-        return withdrawalInfo;
     }
 
     /**

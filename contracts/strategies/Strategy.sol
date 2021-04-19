@@ -382,14 +382,14 @@ abstract contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         active = false;
         exitedAt = block.timestamp;
         updatedAt = exitedAt;
+        // Mint NFT
+        IStrategyNFT(strategyNft).grantStrategyNFT(strategist, _tokenURI);
         // Transfer rewards
         _transferStrategyPrincipal(_fee);
         // Pay Keeper Fee
         _payKeeper(msg.sender, _fee);
         // Send rest to garden if any
         _sendReserveAssetToGarden();
-        // Mint NFT
-        IStrategyNFT(strategyNft).grantStrategyNFT(strategist, _tokenURI);
         emit StrategyFinalized(address(garden), kind, capitalReturned, _fee, block.timestamp);
     }
 
