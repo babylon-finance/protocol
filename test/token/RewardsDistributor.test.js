@@ -96,11 +96,11 @@ async function updateTWAPs(gardenAddress) {
   for (let i = 0; i < TWAP_ORACLE_GRANULARITY; i += 1) {
     await adapter.update(addresses.tokens.WETH, addresses.tokens.USDC);
     await adapter.update(addresses.tokens.WETH, addresses.tokens.DAI);
-    ethers.provider.send('evm_increaseTime', [TWAP_ORACLE_WINDOW / TWAP_ORACLE_GRANULARITY]);
+    increaseTime(TWAP_ORACLE_WINDOW / TWAP_ORACLE_GRANULARITY);
   }
 }
 
-describe('BABL Rewards Distributor', function () {
+describe.only('BABL Rewards Distributor', function () {
   let owner;
   let signer1;
   let signer2;
@@ -118,6 +118,21 @@ describe('BABL Rewards Distributor', function () {
   let garden2LongStrategy2;
   let garden2LongStrategy3;
 
+  async function createStrategies(strategies) {
+    const retVal = [];
+    for (let i = 0; i < strategies.length; i++) {
+      const strategy = await createStrategy(
+        'long',
+        'vote',
+        [signer1, signer2, signer3],
+        kyberTradeIntegration.address,
+        strategies[i].garden,
+      );
+      retVal.push(strategy);
+    }
+    return retVal;
+  }
+
   beforeEach(async () => {
     ({
       owner,
@@ -132,13 +147,6 @@ describe('BABL Rewards Distributor', function () {
       kyberTradeIntegration,
     } = await loadFixture(deployFolioFixture));
 
-    garden1LongStrategy1 = await createStrategy(
-      'long',
-      'vote',
-      [signer1, signer2, signer3],
-      kyberTradeIntegration.address,
-      garden1,
-    );
     garden1LongStrategy2 = await createStrategy(
       'long',
       'vote',
@@ -158,7 +166,7 @@ describe('BABL Rewards Distributor', function () {
       'vote',
       [signer1, signer2, signer3],
       kyberTradeIntegration.address,
-      garden1,
+      garden2,
     );
     garden2LongStrategy2 = await createStrategy(
       'long',
@@ -184,10 +192,11 @@ describe('BABL Rewards Distributor', function () {
   });
 
   describe('Strategy BABL Mining Rewards Calculation', async function () {
-    it('should fail trying to calculate rewards of a strategy that has not ended yet', async function () {
-      await executeStrategy(garden1LongStrategy1, ONE_ETH);
+    it.only('should fail trying to calculate rewards of a strategy that has not ended yet', async function () {
+      const [long] = await createStrategies([{ garden: garden1 }]);
+      await executeStrategy(long, ONE_ETH);
 
-      await expect(rewardsDistributor.getStrategyRewards(garden1LongStrategy1.address)).to.be.revertedWith(
+      await expect(rewardsDistributor.getStrategyRewards(long.address)).to.be.revertedWith(
         'The strategy has to be finished',
       );
     });
@@ -241,18 +250,15 @@ describe('BABL Rewards Distributor', function () {
     });
 
     // TODO: This test doesn't check BABL rewards.
-    it('should calculate correct BABL in case of 2 strategies with total duration of 1 quarter', async function () {
-      await executeStrategy(garden1LongStrategy1, ONE_ETH);
+    it.only('should calculate correct BABL in case of 2 strategies with total duration of 1 quarter', async function () {
+      const [long1, long2] = await createStrategies([{ garden: garden1 }, { garden: garden1 }]);
 
-      increaseTime(ONE_DAY_IN_SECONDS * 2);
+      await executeStrategy(long1, ONE_ETH);
+      await executeStrategy(long2, ONE_ETH.mul(2));
 
-      await executeStrategy(garden1LongStrategy2, ONE_ETH.mul(2));
+      await finishStrategyAfter30Days(long1);
 
-      increaseTime(ONE_DAY_IN_SECONDS * 2);
-
-      await finishStrategyAfter30Days(garden1LongStrategy1);
-
-      const { exitedAt } = await getStrategyState(garden1LongStrategy1);
+      const { exitedAt } = await getStrategyState(long1);
 
       await getAndValidateProtocolTimestampAndQuarter(rewardsDistributor, exitedAt, {
         principal: ONE_ETH.mul(2),
@@ -260,11 +266,9 @@ describe('BABL Rewards Distributor', function () {
         timeListPointer: 2,
       });
 
-      increaseTime(ONE_DAY_IN_SECONDS * 2);
+      await finishStrategyAfter30Days(long2);
 
-      await finishStrategyAfter30Days(garden1LongStrategy2);
-
-      const { exitedAt: long2exitedAt } = await getStrategyState(garden1LongStrategy2);
+      const { exitedAt: long2exitedAt } = await getStrategyState(long2);
 
       await getAndValidateProtocolTimestampAndQuarter(rewardsDistributor, long2exitedAt, {
         principal: 0,
@@ -272,8 +276,8 @@ describe('BABL Rewards Distributor', function () {
         timeListPointer: 3,
       });
 
-      await garden1LongStrategy1.strategyRewards();
-      await garden1LongStrategy2.strategyRewards();
+      await long1.strategyRewards();
+      await long2.strategyRewards();
     });
 
     // TODO: This test doesn't check BABL rewards.
@@ -372,66 +376,66 @@ describe('BABL Rewards Distributor', function () {
       await garden1LongStrategy1.strategyRewards();
     });
 
-    // it('should calculate correct BABL in the future (10 years) in case of 1 strategy with total duration of 2 quarters', async function () {
-    //   // We go to the future 10 years
-    //   ethers.provider.send('evm_increaseTime', [ONE_DAY_IN_SECONDS * 3650]);
+    it('should calculate correct BABL in the future (10 years) in case of 1 strategy with total duration of 2 quarters', async function () {
+      // We go to the future 10 years
+      ethers.provider.send('evm_increaseTime', [ONE_DAY_IN_SECONDS * 3650]);
 
-    //   // Create strategy 1
+      // Create strategy 1
 
-    //   const strategyContract1 = await createStrategy(
-    //     0,
-    //     'active',
-    //     [signer1, signer2, signer3],
-    //     kyberTradeIntegration.address,
-    //     garden1,
-    //   );
+      const strategyContract1 = await createStrategy(
+        0,
+        'active',
+        [signer1, signer2, signer3],
+        kyberTradeIntegration.address,
+        garden1,
+      );
 
-    //   // Execute strategy 1
-    //   await executeStrategy(garden1, strategyContract1, ethers.utils.parseEther('1'), 42); // Strategy 1
+      // Execute strategy 1
+      await executeStrategy(garden1, strategyContract1, ethers.utils.parseEther('1'), 42); // Strategy 1
 
-    //   const [address, active, dataSet, finalized, executedAt, exitedAt, updatedAt] = await checkStrategyExecuted(
-    //     strategyContract1,
-    //   );
+      const [address, active, dataSet, finalized, executedAt, exitedAt, updatedAt] = await checkStrategyExecuted(
+        strategyContract1,
+      );
 
-    //   ethers.provider.send('evm_increaseTime', [ONE_DAY_IN_SECONDS * 30]);
+      ethers.provider.send('evm_increaseTime', [ONE_DAY_IN_SECONDS * 30]);
 
-    //   await finishStrategy2Q(garden1, strategyContract1, 42);
+      await finishStrategy2Q(garden1, strategyContract1, 42);
 
-    //   const [
-    //     address3,
-    //     active3,
-    //     dataSet3,
-    //     finalized3,
-    //     executedAt3,
-    //     exitedAt3,
-    //     updatedAt3,
-    //   ] = await checkStrategyFinalized(strategyContract1);
+      const [
+        address3,
+        active3,
+        dataSet3,
+        finalized3,
+        executedAt3,
+        exitedAt3,
+        updatedAt3,
+      ] = await checkStrategyFinalized(strategyContract1);
 
-    //   // Check protocol
-    //   const protocol2 = await rewardsDistributor.checkProtocol(updatedAt3);
-    //   await checkProtocolTimestamp(protocol2, ethers.utils.parseEther('0'), exitedAt3, 42, 2, protocol2[4]); // TODO CHECK EXACT AMOUNT
-    //   // PARAMS checkProtocolWithParams(_protocol, _principal, _timestamp, _quarter, _timeListPointer, _power)
+      // Check protocol
+      const protocol2 = await rewardsDistributor.checkProtocol(updatedAt3);
+      await checkProtocolTimestamp(protocol2, ethers.utils.parseEther('0'), exitedAt3, 42, 2, protocol2[4]); // TODO CHECK EXACT AMOUNT
+      // PARAMS checkProtocolWithParams(_protocol, _principal, _timestamp, _quarter, _timeListPointer, _power)
 
-    //   expect(protocol2[4]).to.not.equal(0); // TODO Check exact numbers
+      expect(protocol2[4]).to.not.equal(0); // TODO Check exact numbers
 
-    //   const protocolQuarter2 = await rewardsDistributor.checkQuarter(protocol2[2]);
-    //   const [quarterPrincipal2, quarterNumber2, quarterPower2, quarterSupply2] = protocolQuarter2;
-    //   await checkQuarterWithParams(
-    //     quarterPrincipal2,
-    //     quarterNumber2,
-    //     quarterPower2,
-    //     quarterSupply2,
-    //     protocol2[0],
-    //     42,
-    //     quarterPower2,
-    //     await rewardsDistributor.tokenSupplyPerQuarter(42),
-    //   );
-    //   // PARAMS checkQuarterWithParams(_quarter0, _quarter1, _quarter2, _quarter3, _principal, _quarter, _power, _supply)
+      const protocolQuarter2 = await rewardsDistributor.checkQuarter(protocol2[2]);
+      const [quarterPrincipal2, quarterNumber2, quarterPower2, quarterSupply2] = protocolQuarter2;
+      await checkQuarterWithParams(
+        quarterPrincipal2,
+        quarterNumber2,
+        quarterPower2,
+        quarterSupply2,
+        protocol2[0],
+        42,
+        quarterPower2,
+        await rewardsDistributor.tokenSupplyPerQuarter(42),
+      );
+      // PARAMS checkQuarterWithParams(_quarter0, _quarter1, _quarter2, _quarter3, _principal, _quarter, _power, _supply)
 
-    //   expect(protocol2[4]).to.gt(quarterPower2);
+      expect(protocol2[4]).to.gt(quarterPower2);
 
-    //   const bablRewards1 = await strategyContract1.strategyRewards();
-    // });
+      const bablRewards1 = await strategyContract1.strategyRewards();
+    });
 
     // it('should calculate correct BABL rewards in case of 1 strategy with total duration of 3 quarters', async function () {
     //   // Create strategy 1
