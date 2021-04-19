@@ -101,8 +101,8 @@ contract GardenNFT is ERC721Upgradeable, IGardenNFT {
      *
      * @param _tokenURI               Address of the tokenURI
      */
-    function updateGardenURI(string memory _tokenURI) external override {
-        require(msg.sender == controller.owner(), 'Only owner can call this');
+    function updateGardenURI(string memory _tokenURI) override external {
+        require(msg.sender == controller.owner(), "Only owner can call this");
         string memory oldURI = tokenURI;
         tokenURI = _tokenURI;
         emit GardenURIUpdated(tokenURI, oldURI);
