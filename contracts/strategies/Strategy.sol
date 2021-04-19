@@ -713,7 +713,7 @@ abstract contract Strategy is ReentrancyGuard, IStrategy, Initializable {
                 strategist,
                 stake.sub(capitalReturned.preciseDiv(capitalAllocated).preciseMul(stake)) // TODO ADD A QUADRATIC PENALTY THE MORE LOOSE THE MORE PENALTY
             );
-            reserveAssetDelta.add(int256(stake.sub(capitalReturned.preciseDiv(capitalAllocated).preciseMul(stake)))); 
+            reserveAssetDelta.add(int256(stake.sub(capitalReturned.preciseDiv(capitalAllocated).preciseMul(stake))));
         }
         // Return the balance back to the garden
         IERC20(reserveAsset).safeTransferFrom(address(this), address(garden), capitalReturned.sub(protocolProfits));
