@@ -548,31 +548,31 @@ contract RewardsDistributor is Ownable, IRewardsDistributor {
         uint256 expected =
             strategy.capitalAllocated().add(strategy.capitalAllocated().preciseMul(strategy.expectedReturn()));
         uint256 allocated = strategy.capitalAllocated();
-        bool _profit;
-        bool _distance;
-        uint256 _profitValue;
-        uint256 _distanceValue;
+        bool profit;
+        bool distance;
+        uint256 profitValue;
+        uint256 distanceValue;
         if (returned > allocated && returned >= expected) {
             // The strategy went equal or above expectations
-            _profit = true; // positive
-            _distance = true; // positive
-            _profitValue = returned.sub(allocated);
-            _distanceValue = returned.sub(expected);
+            profit = true; // positive
+            distance = true; // positive
+            profitValue = returned.sub(allocated);
+            distanceValue = returned.sub(expected);
         } else if (returned >= allocated && returned < expected) {
             // The strategy went worse than expected but with some profits
-            _profit = true; // positive or zero profits
-            _distance = false; // negative vs expected return (got less than expected)
-            _profitValue = returned.sub(allocated);
-            _distanceValue = expected.sub(returned);
+            profit = true; // positive or zero profits
+            distance = false; // negative vs expected return (got less than expected)
+            profitValue = returned.sub(allocated);
+            distanceValue = expected.sub(returned);
         } else if (returned < allocated && returned < expected) {
             // Negative profits - bad investments has penalties
-            _profit = false; // negative - loosing capital
-            _distance = false; // negative vs expected return (got less than expected)
-            _profitValue = allocated.sub(returned); // Negative number, there were no profits at all
-            _distanceValue = expected.sub(returned);
+            profit = false; // negative - loosing capital
+            distance = false; // negative vs expected return (got less than expected)
+            profitValue = allocated.sub(returned); // Negative number, there were no profits at all
+            distanceValue = expected.sub(returned);
         }
 
-        return (_profit, _profitValue, _distance, _distanceValue);
+        return (profit, profitValue, distance, distanceValue);
     }
 
     function _getStrategyStewardBabl(

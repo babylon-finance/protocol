@@ -291,14 +291,9 @@ abstract contract Strategy is ERC721Upgradeable, ReentrancyGuard, IStrategy {
         // Set votes data
         for (uint256 i = 0; i < _voters.length; i++) {
             votes[_voters[i]] = _votes[i];
-            if (_votes[i] > 0) {
-                // Positive votes
-                totalPositiveVotes = totalPositiveVotes.add(uint256(_votes[i]));
-            } else {
-                // Negative votes
-                totalNegativeVotes = totalNegativeVotes.add(uint256(Math.abs(_votes[i])));
-            }
         }
+        totalPositiveVotes = ((_absoluteTotalVotes.toInt256() + _totalVotes) / 2).toUint256();
+        totalNegativeVotes = ((_absoluteTotalVotes.toInt256() - _totalVotes) / 2).toUint256();
         voters = _voters;
         absoluteTotalVotes = absoluteTotalVotes + _absoluteTotalVotes;
         totalVotes = totalVotes + _totalVotes;
