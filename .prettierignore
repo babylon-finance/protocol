@@ -2,3 +2,6 @@ artifacts
 cache
 coverage
 typechain
+*.abi.js
+*.bytecode.js
+*.address.js
