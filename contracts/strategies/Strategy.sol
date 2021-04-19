@@ -164,7 +164,7 @@ abstract contract Strategy is ERC721Upgradeable, ReentrancyGuard, IStrategy {
     // Babylon Controller Address
     IBabController public controller;
 
-    //Type of strategy.
+    // Type of strategy.
     // 0 = LongStrategy
     // 1 = LiquidityPoolStrategy
     // 2 = YieldFarmingStrategy

@@ -305,7 +305,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
 
         // Deposit
         IWETH(WETH).deposit{value: msg.value}();
-        _mintGardenTokens(creator, msg.value, msg.value, 0);
+        _mintGardenTokens(creator, creator, msg.value, msg.value, 0);
     }
 
     /* ============ External Functions ============ */
@@ -408,6 +408,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
 
         // Mint tokens
         _mintGardenTokens(
+            msg.sender,
             _to,
             depositInfo.gardenTokenQuantity,
             principal.add(depositInfo.netFlowQuantity),
@@ -924,12 +925,14 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
 
     /**
      * Function that mints the appropriate garden tokens along with the Garden NFT
+     * @param _from                            Address that triggered the transaction
      * @param _to                              Address to mint the tokens
      * @param _gardenTokenQuantity             Amount of garden tokens
      * @param _newPrincipal                    New principal for that user
      * @param _protocolFees                    Protocol Fees Paid
      */
     function _mintGardenTokens(
+        address _from,
         address _to,
         uint256 _gardenTokenQuantity,
         uint256 _newPrincipal,
@@ -937,7 +940,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
     ) private {
         uint256 previousBalance = balanceOf(msg.sender);
         _mint(_to, _gardenTokenQuantity);
-        _updateContributorDepositInfo(previousBalance);
+        _updateContributorDepositInfo(_from, previousBalance);
         _updatePrincipal(_newPrincipal);
         // Mint the garden NFT
         IGardenNFT(nftAddress).grantGardenNFT(_to);
@@ -1142,8 +1145,8 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
     /**
      * Updates the contributor info in the array
      */
-    function _updateContributorDepositInfo(uint256 previousBalance) internal {
-        Contributor storage contributor = contributors[msg.sender];
+    function _updateContributorDepositInfo(address _contributor, uint256 previousBalance) internal {
+        Contributor storage contributor = contributors[_contributor];
         // If new contributor, create one, increment count, and set the current TS
         if (previousBalance == 0 || contributor.initialDepositAt == 0) {
             totalContributors = totalContributors.add(1);
