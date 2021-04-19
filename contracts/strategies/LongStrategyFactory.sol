@@ -22,7 +22,7 @@ import {Clones} from '@openzeppelin/contracts/proxy/Clones.sol';
 
 import {IStrategy} from '../interfaces/IStrategy.sol';
 import {IStrategyFactory} from '../interfaces/IStrategyFactory.sol';
-
+import {StrategyNFT} from './StrategyNFT.sol';
 import {Strategy} from './Strategy.sol';
 import {LongStrategy} from './LongStrategy.sol';
 
@@ -34,9 +34,11 @@ import {LongStrategy} from './LongStrategy.sol';
  */
 contract LongStrategyFactory is IStrategyFactory {
     address payable private immutable longStrategy;
+    address private immutable strategyNft;
 
     constructor() {
         longStrategy = address(new LongStrategy());
+        strategyNft = address(new StrategyNFT());
     }
 
     /**
@@ -68,6 +70,8 @@ contract LongStrategyFactory is IStrategyFactory {
         string memory _symbol
     ) external override returns (address) {
         address payable clone = payable(Clones.clone(longStrategy));
+        address cloneNFT = Clones.clone(strategyNft);
+        StrategyNFT(cloneNFT).initialize(_controller, address(clone), _name, _symbol);
         IStrategy(clone).initialize(
             _strategist,
             _garden,
@@ -78,8 +82,7 @@ contract LongStrategyFactory is IStrategyFactory {
             _investmentDuration,
             _expectedReturn,
             _minRebalanceCapital,
-            _name,
-            _symbol
+            cloneNFT
         );
         return clone;
     }

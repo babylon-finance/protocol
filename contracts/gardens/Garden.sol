@@ -37,6 +37,7 @@ import {Math} from '../lib/Math.sol';
 import {IRewardsDistributor} from '../interfaces/IRewardsDistributor.sol';
 import {IBabController} from '../interfaces/IBabController.sol';
 import {IStrategyFactory} from '../interfaces/IStrategyFactory.sol';
+import {IGardenValuer} from '../interfaces/IGardenValuer.sol';
 import {IStrategy} from '../interfaces/IStrategy.sol';
 import {IGarden} from '../interfaces/IGarden.sol';
 import {IGardenNFT} from '../interfaces/IGardenNFT.sol';
@@ -1040,28 +1041,6 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         );
     }
 
-    /**
-     * Returns the losses of a garden since a timestamp
-     *
-     * @param _since                        Timestamp since when we should calculate the losses
-     * @return  uint256                     Losses of a garden since a timestamp
-     */
-    function _getLossesGarden(uint256 _since) private view returns (uint256) {
-        uint256 totalLosses = 0;
-        for (uint256 i = 0; i < finalizedStrategies.length; i++) {
-            if (IStrategy(finalizedStrategies[i]).executedAt() >= _since) {
-                totalLosses = totalLosses.add(IStrategy(finalizedStrategies[i]).getLossesStrategy());
-            }
-        }
-        for (uint256 i = 0; i < strategies.length; i++) {
-            if (IStrategy(strategies[i]).executedAt() >= _since) {
-                totalLosses = totalLosses.add(IStrategy(strategies[i]).getLossesStrategy());
-            }
-        }
-
-        return totalLosses;
-    }
-
     function _validateReserveAsset(address _reserveAsset, uint256 _quantity) private view {
         _require(_quantity > 0, Errors.GREATER_THAN_ZERO);
         _require(IBabController(controller).isValidReserveAsset(_reserveAsset), Errors.MUST_BE_RESERVE_ASSET);
@@ -1124,7 +1103,11 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         uint256 reserveAssetReal = _reserveAssetQuantity;
         // If there is a withdrawal, we adjust for losses
         if (!_isDeposit) {
-            uint256 losses = _getLossesGarden(contributors[msg.sender].initialDepositAt);
+            uint256 losses =
+                IGardenValuer(IBabController(controller).gardenValuer()).getLossesGarden(
+                    address(this),
+                    contributors[msg.sender].initialDepositAt
+                );
             // // If there are losses we need to adjust them down
             if (losses > 0) {
                 reserveAssetReal = reserveAssetReal.sub(

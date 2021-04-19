@@ -21,7 +21,7 @@ pragma solidity 0.7.4;
 import {Clones} from '@openzeppelin/contracts/proxy/Clones.sol';
 
 import {Strategy} from './Strategy.sol';
-
+import {StrategyNFT} from './StrategyNFT.sol';
 import {LiquidityPoolStrategy} from './LiquidityPoolStrategy.sol';
 import {IStrategyFactory} from '../interfaces/IStrategyFactory.sol';
 import {IStrategy} from '../interfaces/IStrategy.sol';
@@ -34,9 +34,11 @@ import {IStrategy} from '../interfaces/IStrategy.sol';
  */
 contract LiquidityPoolStrategyFactory is IStrategyFactory {
     address payable immutable liquidityPoolStrategy;
+    address private immutable strategyNft;
 
     constructor() {
         liquidityPoolStrategy = address(new LiquidityPoolStrategy());
+        strategyNft = address(new StrategyNFT());
     }
 
     /**
@@ -68,6 +70,8 @@ contract LiquidityPoolStrategyFactory is IStrategyFactory {
         string memory _symbol
     ) external override returns (address) {
         address payable clone = payable(Clones.clone(liquidityPoolStrategy));
+        address cloneNFT = Clones.clone(strategyNft);
+        StrategyNFT(cloneNFT).initialize(_controller, address(clone), _name, _symbol);
         IStrategy(clone).initialize(
             _strategist,
             _garden,
@@ -78,8 +82,7 @@ contract LiquidityPoolStrategyFactory is IStrategyFactory {
             _investmentDuration,
             _expectedReturn,
             _minRebalanceCapital,
-            _name,
-            _symbol
+            cloneNFT
         );
         return clone;
     }
