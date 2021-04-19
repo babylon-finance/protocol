@@ -1144,9 +1144,8 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
      */
     function _updateContributorDepositInfo(uint256 previousBalance) internal {
         Contributor storage contributor = contributors[msg.sender];
-
         // If new contributor, create one, increment count, and set the current TS
-        if (previousBalance == 0) {
+        if (previousBalance == 0 || contributor.initialDepositAt == 0) {
             totalContributors = totalContributors.add(1);
             contributor.initialDepositAt = block.timestamp;
         }
@@ -1200,8 +1199,8 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         }
         TimestampContribution memory tsContribution = contributor.tsContributions[lastDepositAt];
         contributorPower = tsContribution.power.add((_to.sub(lastDepositAt)).mul(tsContribution.principal));
-        contributorPower = contributorPower.add(tsContribution.principal).div(_to.sub(contributor.initialDepositAt));
 
+        contributorPower = contributorPower.add(tsContribution.principal).div(_to.sub(contributor.initialDepositAt));
         return contributorPower.preciseDiv(totalSupply());
     }
 

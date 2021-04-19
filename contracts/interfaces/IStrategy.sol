@@ -140,6 +140,10 @@ interface IStrategy {
 
     function absoluteTotalVotes() external view returns (uint256);
 
+    function totalPositiveVotes() external view returns (uint256);
+
+    function totalNegativeVotes() external view returns (uint256);
+
     function integration() external view returns (address);
 
     function capitalReturned() external view returns (uint256);
