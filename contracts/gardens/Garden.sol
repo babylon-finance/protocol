@@ -964,7 +964,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         super._beforeTokenTransfer(from, to, _amount);
         _require(
             from == address(0) || to == address(0) || IBabController(controller).gardenTokensTransfersEnabled(),
-            Errors.TOKENS_TIMELOCKED
+            Errors.GARDEN_TRANSFERS_DISABLED
         );
     }
 
@@ -981,11 +981,11 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         // Flashloan protection
         _require(
             block.timestamp.sub(contributors[msg.sender].lastDepositAt) >= depositHardlock,
-            Errors.TOKENS_TIMELOCKED
+            Errors.DEPOSIT_HARDLOCK
         );
         _require(
             _gardenTokenQuantity <= balanceOf(msg.sender).sub(this.getLockedBalance(msg.sender)),
-            Errors.TOKENS_TIMELOCKED
+            Errors.TOKENS_STAKED
         ); // Strategists and Voters cannot withdraw locked stake while in active strategies
 
         // Check this here to avoid having relayers
