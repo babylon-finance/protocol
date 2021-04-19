@@ -707,23 +707,22 @@ abstract contract Strategy is ReentrancyGuard, IStrategy, Initializable {
                 protocolProfits
             );
             reserveAssetDelta.add(int256(-protocolProfits));
-            capitalReturned = capitalReturned.sub(protocolProfits);
         } else {
             // Returns were negative
             // Burn strategist stake and add the amount to the garden
             garden.burnStrategistStake(
                 strategist,
-                stake.sub(capitalReturned.preciseDiv(capitalAllocated).preciseMul(stake))
+                stake.sub(capitalReturned.preciseDiv(capitalAllocated).preciseMul(stake)) // TODO ADD A QUADRATIC PENALTY THE MORE LOOSE THE MORE PENALTY
             );
-            reserveAssetDelta.add(int256(stake)); // TODO CHECK IF WE SHOULD RETURN THE REDUCED VERSION OF THE STAKE INSTEAD OF THE TOTAL
+            reserveAssetDelta.add(int256(stake.sub(capitalReturned.preciseDiv(capitalAllocated).preciseMul(stake))));
         }
         // Return the balance back to the garden
-        IERC20(reserveAsset).safeTransferFrom(address(this), address(garden), capitalReturned);
+        IERC20(reserveAsset).safeTransferFrom(address(this), address(garden), capitalReturned.sub(protocolProfits));
         // Updates reserve asset
         uint256 _newTotal = garden.principal().toInt256().add(reserveAssetDelta).toUint256();
         garden.updatePrincipal(_newTotal);
         // Start a redemption window in the garden with this capital
-        garden.startWithdrawalWindow(capitalReturned, profits);
+        garden.startWithdrawalWindow(capitalReturned.sub(protocolProfits), profits);
 
         // Moves strategy to finalized
         IGarden(garden).moveStrategyToFinalized(reserveAssetDelta, address(this));
