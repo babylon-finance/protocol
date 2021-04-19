@@ -283,7 +283,7 @@ describe('Garden', function () {
       const finalStrategistBalance = await garden1.balanceOf(signer1.address);
       const finalReducedStrategistBalance = finalStrategistBalance - ethers.utils.parseEther('1.1');
 
-      await expect(finalReducedStrategistBalance).to.be.closeTo(value, 100);
+      await expect(finalReducedStrategistBalance).to.be.closeTo(value, 200);
     });
 
     it('strategist or voters can withdraw comunity tokens during strategy execution if they have enough unlocked amount in their balance', async function () {

@@ -98,7 +98,20 @@ async function vote(garden, signers, strategy) {
   );
 }
 
-async function executeStrategy(strategy, { amount = ONE_ETH, fee = 0, TWAPs = true, gasPrice = 0 } = {}) {
+async function executeStrategy(
+  strategy,
+  {
+    /* Strategy default cooldown period */
+    time = ONE_DAY_IN_SECONDS,
+    amount = ONE_ETH,
+    fee = 0,
+    TWAPs = true,
+    gasPrice = 0,
+  } = {},
+) {
+  if (time > 0) {
+    await increaseTime(time);
+  }
   if (TWAPs) {
     await updateTWAPs(await strategy.garden());
   }
@@ -107,7 +120,20 @@ async function executeStrategy(strategy, { amount = ONE_ETH, fee = 0, TWAPs = tr
   });
 }
 
-async function finalizeStrategy(strategy, { fee = 0, time = 0, TWAPs = true, gasPrice = 0 } = {}) {
+async function executeStrategyImmediate(strategy) {
+  await executeStrategy(strategy, { time: 0 });
+}
+
+async function finalizeStrategy(
+  strategy,
+  {
+    fee = 0,
+    /* Strategy default duration */
+    time = ONE_DAY_IN_SECONDS * 30,
+    TWAPs = true,
+    gasPrice = 0,
+  } = {},
+) {
   if (time > 0) {
     await increaseTime(time);
   }
@@ -118,24 +144,28 @@ async function finalizeStrategy(strategy, { fee = 0, time = 0, TWAPs = true, gas
   return strategy.finalizeStrategy(fee, NFT_ADDRESS, { gasPrice });
 }
 
+async function finalizeStrategyImmediate(strategy) {
+  await finalizeStrategy(strategy, { time: 0 });
+}
+
 async function finalizeStrategyAfter30Days(strategy) {
-  await finalizeStrategy(strategy, ONE_DAY_IN_SECONDS * 30);
+  await finalizeStrategy(strategy, { time: ONE_DAY_IN_SECONDS * 30 });
 }
 
 async function finalizeStrategyAfterQuarter(strategy) {
-  await finalizeStrategy(strategy, ONE_DAY_IN_SECONDS * 90);
+  await finalizeStrategy(strategy, { time: ONE_DAY_IN_SECONDS * 90 });
 }
 
 async function finalizeStrategyAfter2Quarters(strategy) {
-  await finalizeStrategy(strategy, ONE_DAY_IN_SECONDS * 180);
+  await finalizeStrategy(strategy, { time: ONE_DAY_IN_SECONDS * 180 });
 }
 
 async function finalizeStrategyAfter3Quarters(strategy) {
-  await finalizeStrategy(strategy, ONE_DAY_IN_SECONDS * 270);
+  await finalizeStrategy(strategy, { time: ONE_DAY_IN_SECONDS * 270 });
 }
 
 async function finalizeStrategyAfter2Years(strategy) {
-  await finalizeStrategy(strategy, ONE_DAY_IN_SECONDS * 365 * 2);
+  await finalizeStrategy(strategy, { time: ONE_DAY_IN_SECONDS * 365 * 2 });
 }
 
 async function injectFakeProfits(strategy, amount) {
@@ -213,7 +243,9 @@ module.exports = {
   createStrategy,
   DEFAULT_STRATEGY_PARAMS,
   executeStrategy,
+  executeStrategyImmediate,
   finalizeStrategy,
+  finalizeStrategyImmediate,
   finalizeStrategyAfterQuarter,
   finalizeStrategyAfter2Quarters,
   finalizeStrategyAfter30Days,

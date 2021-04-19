@@ -225,7 +225,7 @@ describe('Strategy', function () {
         garden1,
       );
 
-      await executeStrategy(strategyContract, ethers.utils.parseEther('2'), 42);
+      await executeStrategy(strategyContract, { amount: ONE_ETH.mul(2), fee: 42 });
 
       const [address, active, dataSet, finalized, executedAt, exitedAt] = await strategyContract.getStrategyState();
 
@@ -260,7 +260,9 @@ describe('Strategy', function () {
         garden1,
       );
       expect(await wethToken.balanceOf(garden1.address)).to.be.gt(ethers.utils.parseEther('2'));
-      await executeStrategy(strategyContract, ethers.utils.parseEther('2'), 0);
+
+      await executeStrategy(strategyContract, { amount: ONE_ETH.mul(2) });
+
       expect(await wethToken.balanceOf(garden1.address)).to.be.lt(ethers.utils.parseEther('0.1'));
       expect(await strategyContract.capitalAllocated()).to.equal(ethers.utils.parseEther('2'));
       await strategyContract.unwindStrategy(ethers.utils.parseEther('1'));
@@ -277,7 +279,9 @@ describe('Strategy', function () {
         garden1,
       );
       expect(await wethToken.balanceOf(garden1.address)).to.be.gt(ethers.utils.parseEther('2'));
-      await executeStrategy(strategyContract, ethers.utils.parseEther('2'), 0);
+
+      await executeStrategy(strategyContract, { amount: ONE_ETH.mul(2) });
+
       expect(await wethToken.balanceOf(garden1.address)).to.be.lt(ethers.utils.parseEther('0.1'));
       expect(await strategyContract.capitalAllocated()).to.equal(ethers.utils.parseEther('2'));
       await expect(strategyContract.connect(signer3).unwindStrategy(ethers.utils.parseEther('1'))).to.be.reverted;
@@ -318,7 +322,7 @@ describe('Strategy', function () {
       ethers.provider.send('evm_increaseTime', [ONE_DAY_IN_SECONDS * 2]);
 
       await expect(
-        strategyContract.executeStrategy(ethers.utils.parseEther('1'), ethers.utils.parseEther('100'), {
+        strategyContract.executeStrategy(ONE_ETH, ONE_ETH.mul(100), {
           gasPrice: 0,
         }),
       ).to.be.revertedWith(/revert BAB#019/i);
@@ -425,7 +429,7 @@ describe('Strategy', function () {
         garden1,
       );
 
-      await finalizeStrategy(strategyContract, 42);
+      await finalizeStrategy(strategyContract, { fee: 42 });
       const [address, active, dataSet, finalized, executedAt, exitedAt] = await strategyContract.getStrategyState();
 
       expect(address).to.equal(strategyContract.address);

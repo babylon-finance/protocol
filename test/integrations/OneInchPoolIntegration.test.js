@@ -79,7 +79,7 @@ describe('OneInchPoolIntegrationTest', function () {
       expect(await daiWethPair.balanceOf(signer1.address)).to.be.gt(0);
     });
 
-    it.only('can enter and exit the eth dai pool', async function () {
+    it('can enter and exit the eth dai pool', async function () {
       const strategyContract = await createStrategy(
         'pool',
         'vote',
@@ -93,8 +93,8 @@ describe('OneInchPoolIntegrationTest', function () {
       await executeStrategy(strategyContract);
       expect(await daiWethPair.balanceOf(strategyContract.address)).to.be.gt(0);
 
-      // await finalizeStrategy(strategyContract);
-      // expect(await daiWethPair.balanceOf(strategyContract.address)).to.equal(0);
+      await finalizeStrategy(strategyContract);
+      expect(await daiWethPair.balanceOf(strategyContract.address)).to.equal(0);
     });
   });
 });

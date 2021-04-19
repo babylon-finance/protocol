@@ -8,8 +8,10 @@ const { loadFixture } = waffle;
 const {
   createStrategy,
   executeStrategy,
+  executeStrategyImmediate,
   injectFakeProfits,
   finalizeStrategy,
+  finalizeStrategyImmediate,
   finalizeStrategyAfterQuarter,
   finalizeStrategyAfter2Quarters,
   finalizeStrategyAfter30Days,
@@ -144,8 +146,6 @@ describe('BABL Rewards Distributor', function () {
         timeListPointer: 0,
       });
 
-      increaseTime(ONE_DAY_IN_SECONDS * 2);
-
       await finalizeStrategyAfter30Days(long1);
 
       const { exitedAt } = await getStrategyState(long1);
@@ -163,8 +163,6 @@ describe('BABL Rewards Distributor', function () {
       await executeStrategy(long1, ONE_ETH);
 
       await injectFakeProfits(long1, ONE_ETH.mul(222));
-
-      increaseTime(ONE_DAY_IN_SECONDS * 2);
 
       await finalizeStrategyAfter30Days(long1);
 
@@ -189,7 +187,7 @@ describe('BABL Rewards Distributor', function () {
       const { exitedAt } = await getStrategyState(long1);
 
       await getAndValidateProtocolTimestampAndQuarter(rewardsDistributor, exitedAt, {
-        principal: ONE_ETH.mul(2),
+        principal: ONE_ETH,
         quarter: 1,
         timeListPointer: 2,
       });
@@ -213,9 +211,6 @@ describe('BABL Rewards Distributor', function () {
         { garden: garden1 },
       ]);
       await executeStrategy(long1, ONE_ETH);
-
-      increaseTime(ONE_DAY_IN_SECONDS * 2);
-
       await executeStrategy(long2, ONE_ETH);
       await executeStrategy(long3, ONE_ETH);
 
@@ -229,9 +224,9 @@ describe('BABL Rewards Distributor', function () {
 
       increaseTime(ONE_DAY_IN_SECONDS * 30);
 
-      await finalizeStrategy(long1);
-      await finalizeStrategy(long2);
-      await finalizeStrategy(long3);
+      await finalizeStrategyImmediate(long1);
+      await finalizeStrategyImmediate(long2);
+      await finalizeStrategyImmediate(long3);
 
       const { exitedAt } = await getStrategyState(long3);
 
@@ -253,12 +248,8 @@ describe('BABL Rewards Distributor', function () {
       ]);
 
       await executeStrategy(long1, ONE_ETH);
-
-      increaseTime(ONE_DAY_IN_SECONDS * 2);
       await executeStrategy(long2, ONE_ETH);
       await executeStrategy(long3, ONE_ETH);
-
-      increaseTime(ONE_DAY_IN_SECONDS * 2);
       await executeStrategy(long4, ONE_ETH);
       await executeStrategy(long5, ONE_ETH);
 
@@ -271,11 +262,12 @@ describe('BABL Rewards Distributor', function () {
       });
 
       increaseTime(ONE_DAY_IN_SECONDS * 30);
-      await finalizeStrategy(long1);
-      await finalizeStrategy(long2);
-      await finalizeStrategy(long3);
-      await finalizeStrategy(long4);
-      await finalizeStrategy(long5);
+
+      await finalizeStrategyImmediate(long1);
+      await finalizeStrategyImmediate(long2);
+      await finalizeStrategyImmediate(long3);
+      await finalizeStrategyImmediate(long4);
+      await finalizeStrategyImmediate(long5);
 
       const { exitedAt } = await getStrategyState(long5);
 
@@ -290,8 +282,6 @@ describe('BABL Rewards Distributor', function () {
     it('should calculate correct BABL in case of 1 strategy with total duration of 2 quarters', async function () {
       const [long1] = await createStrategies([{ garden: garden1 }]);
       await executeStrategy(long1, ONE_ETH);
-
-      increaseTime(ONE_DAY_IN_SECONDS * 30);
 
       await finalizeStrategyAfter2Quarters(long1);
       const { exitedAt } = await getStrategyState(long1);
@@ -411,7 +401,7 @@ describe('BABL Rewards Distributor', function () {
 
       await getAndValidateProtocolTimestampAndQuarter(rewardsDistributor, exitedAt, {
         principal: 0,
-        quarter: 51,
+        quarter: 50,
         timeListPointer: 9,
       });
     });
