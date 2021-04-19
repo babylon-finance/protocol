@@ -190,4 +190,5 @@ module.exports = {
   finalizeStrategy,
   injectFakeProfits,
   deposit,
+  updateTWAPs,
 };
