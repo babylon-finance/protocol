@@ -1,8 +1,9 @@
 const { ethers } = require('hardhat');
-const { ONE_DAY_IN_SECONDS } = require('../../utils/constants.js');
+const { ONE_DAY_IN_SECONDS, ONE_ETH } = require('../../utils/constants.js');
 const { TWAP_ORACLE_WINDOW, TWAP_ORACLE_GRANULARITY } = require('../../utils/system.js');
 const { impersonateAddress } = require('../../utils/rpc');
 const addresses = require('../../utils/addresses');
+const { increaseTime } = require('../utils/test-helpers');
 
 const DEFAULT_STRATEGY_PARAMS = [
   ethers.utils.parseEther('10'), // _maxCapitalRequested
@@ -13,8 +14,10 @@ const DEFAULT_STRATEGY_PARAMS = [
 ];
 
 const NFT_STRAT_PARAMS = ['Strat Name', 'STRT'];
+const NFT_ADDRESS = 'http://null.dev';
 
-async function updateTWAPs(garden) {
+async function updateTWAPs(gardenAddress) {
+  const garden = await ethers.getContractAt('Garden', gardenAddress);
   const controller = await ethers.getContractAt('BabController', await garden.controller());
   const priceOracle = await ethers.getContractAt('PriceOracle', await controller.priceOracle());
   const adapterAddress = (await priceOracle.getAdapters())[0];
@@ -22,11 +25,7 @@ async function updateTWAPs(garden) {
   for (let i = 0; i < TWAP_ORACLE_GRANULARITY; i += 1) {
     await adapter.update(addresses.tokens.WETH, addresses.tokens.USDC);
     await adapter.update(addresses.tokens.WETH, addresses.tokens.DAI);
-    // await adapter.update(addresses.tokens.WETH, addresses.tokens.WBTC);
-    // await adapter.update(addresses.tokens.WETH, addresses.tokens.UNI);
-    // await adapter.update(addresses.tokens.WETH, addresses.tokens.BAL);
-    // await adapter.update(addresses.tokens.WETH, addresses.tokens.COMP);
-    ethers.provider.send('evm_increaseTime', [TWAP_ORACLE_WINDOW / TWAP_ORACLE_GRANULARITY]);
+    await increaseTime(TWAP_ORACLE_WINDOW / TWAP_ORACLE_GRANULARITY);
   }
 }
 
@@ -99,18 +98,74 @@ async function vote(garden, signers, strategy) {
   );
 }
 
-async function executeStrategy(garden, strategy, amount = ethers.utils.parseEther('1'), fee = 0) {
-  ethers.provider.send('evm_increaseTime', [ONE_DAY_IN_SECONDS * 2]);
-  await updateTWAPs(garden);
+async function executeStrategy(
+  strategy,
+  {
+    /* Strategy default cooldown period */
+    time = ONE_DAY_IN_SECONDS,
+    amount = ONE_ETH,
+    fee = 0,
+    TWAPs = true,
+    gasPrice = 0,
+  } = {},
+) {
+  if (time > 0) {
+    await increaseTime(time);
+  }
+  if (TWAPs) {
+    await updateTWAPs(await strategy.garden());
+  }
   return strategy.executeStrategy(amount, fee, {
-    gasPrice: 0,
+    gasPrice,
   });
 }
 
-async function finalizeStrategy(garden, strategy, fee = 0) {
-  ethers.provider.send('evm_increaseTime', [ONE_DAY_IN_SECONDS * 90]);
-  await updateTWAPs(garden);
-  return strategy.finalizeStrategy(fee, 'http://...', { gasPrice: 0 });
+async function executeStrategyImmediate(strategy) {
+  await executeStrategy(strategy, { time: 0 });
+}
+
+async function finalizeStrategy(
+  strategy,
+  {
+    fee = 0,
+    /* Strategy default duration */
+    time = ONE_DAY_IN_SECONDS * 30,
+    TWAPs = true,
+    gasPrice = 0,
+  } = {},
+) {
+  if (time > 0) {
+    await increaseTime(time);
+  }
+  // increaseTime(ONE_DAY_IN_SECONDS * 90);
+  if (TWAPs) {
+    await updateTWAPs(await strategy.garden());
+  }
+  return strategy.finalizeStrategy(fee, NFT_ADDRESS, { gasPrice });
+}
+
+async function finalizeStrategyImmediate(strategy) {
+  await finalizeStrategy(strategy, { time: 0 });
+}
+
+async function finalizeStrategyAfter30Days(strategy) {
+  await finalizeStrategy(strategy, { time: ONE_DAY_IN_SECONDS * 30 });
+}
+
+async function finalizeStrategyAfterQuarter(strategy) {
+  await finalizeStrategy(strategy, { time: ONE_DAY_IN_SECONDS * 90 });
+}
+
+async function finalizeStrategyAfter2Quarters(strategy) {
+  await finalizeStrategy(strategy, { time: ONE_DAY_IN_SECONDS * 180 });
+}
+
+async function finalizeStrategyAfter3Quarters(strategy) {
+  await finalizeStrategy(strategy, { time: ONE_DAY_IN_SECONDS * 270 });
+}
+
+async function finalizeStrategyAfter2Years(strategy) {
+  await finalizeStrategy(strategy, { time: ONE_DAY_IN_SECONDS * 365 * 2 });
 }
 
 async function injectFakeProfits(strategy, amount) {
@@ -151,16 +206,16 @@ async function createStrategy(
   specificParams,
 ) {
   let strategy;
-  if (kind === 0) {
+  if (kind === 'long') {
     strategy = await createLongStrategy(garden, integration, signers[0], params, specificParams);
   }
-  if (kind === 1) {
+  if (kind === 'pool') {
     strategy = await createPoolStrategy(garden, integration, signers[0], params, specificParams);
   }
-  if (kind === 2) {
+  if (kind === 'yield') {
     strategy = await createYieldStrategy(garden, integration, signers[0], params, specificParams);
   }
-  if (kind === 3) {
+  if (kind === 'lend') {
     strategy = await createLendStrategy(garden, integration, signers[0], params, specificParams);
   }
   if (strategy) {
@@ -175,11 +230,11 @@ async function createStrategy(
     if (state === 'vote') {
       return strategy;
     }
-    await executeStrategy(garden, strategy);
+    await executeStrategy(strategy);
     if (state === 'active') {
       return strategy;
     }
-    await finalizeStrategy(garden, strategy);
+    await finalizeStrategy(strategy);
   }
   return strategy;
 }
@@ -188,7 +243,15 @@ module.exports = {
   createStrategy,
   DEFAULT_STRATEGY_PARAMS,
   executeStrategy,
+  executeStrategyImmediate,
   finalizeStrategy,
+  finalizeStrategyImmediate,
+  finalizeStrategyAfterQuarter,
+  finalizeStrategyAfter2Quarters,
+  finalizeStrategyAfter30Days,
+  finalizeStrategyAfter3Quarters,
+  finalizeStrategyAfter2Years,
   injectFakeProfits,
   deposit,
+  updateTWAPs,
 };

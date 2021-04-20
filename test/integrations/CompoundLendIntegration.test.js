@@ -47,18 +47,18 @@ describe('CompoundLendIntegrationTest', function () {
 
     it('can supply and redeem tokens from Compound', async function () {
       const strategyContract = await createStrategy(
-        3,
+        'lend',
         'vote',
         [signer1, signer2, signer3],
         compoundLendIntegration.address,
         garden1,
       );
 
-      await executeStrategy(garden1, strategyContract);
+      await executeStrategy(strategyContract);
       expect(await USDC.balanceOf(strategyContract.address)).to.be.equal(0);
       expect(await CUSDC.balanceOf(strategyContract.address)).to.be.gte(0);
 
-      await finalizeStrategy(garden1, strategyContract);
+      await finalizeStrategy(strategyContract);
       expect(await USDC.balanceOf(strategyContract.address)).to.equal(0);
       expect(await CUSDC.balanceOf(strategyContract.address)).to.be.equal(0);
       expect(await WETH.balanceOf(strategyContract.address)).to.equal(0);

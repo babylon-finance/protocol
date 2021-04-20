@@ -7,6 +7,7 @@ const {
   createStrategy,
   executeStrategy,
   finalizeStrategy,
+  finalizeStrategyAfterQuarter,
 } = require('../fixtures/StrategyHelper');
 const addresses = require('../../utils/addresses');
 const { ADDRESS_ZERO } = require('../../utils/constants');
@@ -80,7 +81,7 @@ describe('OneInchPoolIntegrationTest', function () {
 
     it('can enter and exit the eth dai pool', async function () {
       const strategyContract = await createStrategy(
-        1,
+        'pool',
         'vote',
         [signer1, signer2, signer3],
         oneInchPoolIntegration.address,
@@ -89,10 +90,10 @@ describe('OneInchPoolIntegrationTest', function () {
         [daiWethPair.address],
       );
 
-      await executeStrategy(garden1, strategyContract, ethers.utils.parseEther('1'));
+      await executeStrategy(strategyContract);
       expect(await daiWethPair.balanceOf(strategyContract.address)).to.be.gt(0);
 
-      await finalizeStrategy(garden1, strategyContract, 0);
+      await finalizeStrategy(strategyContract);
       expect(await daiWethPair.balanceOf(strategyContract.address)).to.equal(0);
     });
   });
