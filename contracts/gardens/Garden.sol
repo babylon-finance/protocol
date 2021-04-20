@@ -844,17 +844,15 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
      */
     function getLockedBalance(address _contributor) external view override returns (uint256) {
         uint256 lockedAmount;
-        for (uint256 i = 0; i <= strategies.length - 1; i++) {
+        for (uint256 i = 0; i < strategies.length; i++) {
             IStrategy strategy = IStrategy(strategies[i]);
             uint256 votes = uint256(Math.abs(strategy.getUserVotes(_contributor)));
             if (votes > 0) {
                 lockedAmount += votes;
             }
-            if (_contributor == strategy.strategist()) {
-                lockedAmount += strategy.stake();
-            }
         }
-        if (balanceOf(_contributor) < lockedAmount) lockedAmount = balanceOf(_contributor); // TODO Remove when implementing locked stake in voting and strategy creation - Now this avoid overflows
+        // TODO Remove when implementing locked stake in voting and strategy creation - Now this avoid overflows
+        if (balanceOf(_contributor) < lockedAmount) lockedAmount = balanceOf(_contributor);
         return lockedAmount;
     }
 

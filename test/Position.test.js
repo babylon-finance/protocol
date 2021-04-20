@@ -23,13 +23,13 @@ describe('Position testing', function () {
   describe('Initial Positions', async function () {
     it('updates weth balance accordingly when initializing the garden', async function () {
       expect(await garden1.totalContributors()).to.equal(1);
-      expect(await garden1.principal()).to.equal(ethers.utils.parseEther('0.1'));
+      expect(await garden1.principal()).to.equal(ethers.utils.parseEther('1'));
       const wethPosition = await garden1.principal();
-      expect(await weth.balanceOf(garden1.address)).to.equal(ethers.utils.parseEther('0.1'));
-      expect(wethPosition).to.equal(ethers.utils.parseEther('0.1'));
+      expect(await weth.balanceOf(garden1.address)).to.equal(ethers.utils.parseEther('1'));
+      expect(wethPosition).to.equal(ethers.utils.parseEther('1'));
       expect(await garden1.creator()).to.equal(await signer1.getAddress());
       expect(await garden1.balanceOf(signer1.getAddress())).to.equal(await garden1.totalSupply());
-      expect(await garden1.totalSupply()).to.equal(ethers.utils.parseEther('0.1'));
+      expect(await garden1.totalSupply()).to.equal(ethers.utils.parseEther('1'));
     });
   });
 
@@ -51,11 +51,11 @@ describe('Position testing', function () {
       const wethPosition = await garden1.principal();
       const gardenBalanceAfter = await weth.balanceOf(garden1.address);
       const supplyAfter = await garden1.totalSupply();
-      expect(supplyAfter.div(11)).to.equal(supplyBefore);
+      expect(supplyAfter.sub(ethers.utils.parseEther('1'))).to.equal(supplyBefore);
       expect(gardenBalanceAfter.sub(gardenBalance)).to.equal(ethers.utils.parseEther('1'));
       expect(wethPosition.sub(wethPositionBefore)).to.equal(ethers.utils.parseEther('1'));
-      expect(await garden1.principal()).to.equal(ethers.utils.parseEther('1.1'));
-      expect(await garden1.principal()).to.equal(ethers.utils.parseEther('1.1'));
+      expect(await garden1.principal()).to.equal(ethers.utils.parseEther('2'));
+      expect(await garden1.principal()).to.equal(ethers.utils.parseEther('2'));
 
       await garden1.connect(signer3).deposit(ethers.utils.parseEther('0.5'), 1, signer3.getAddress(), {
         value: ethers.utils.parseEther('0.5'),
@@ -83,7 +83,7 @@ describe('Position testing', function () {
       expect(supplyAfter.add(tokenBalance.div(2))).to.equal(supplyBefore);
       expect(gardenBalance.sub(gardenBalanceAfter)).to.equal(ethers.utils.parseEther('0.5'));
       expect(wethPositionBefore.sub(wethPosition)).to.equal(ethers.utils.parseEther('0.5'));
-      expect(await garden1.principal()).to.equal(ethers.utils.parseEther('0.6'));
+      expect(await garden1.principal()).to.equal(ethers.utils.parseEther('1.5'));
       // Check that the protocol didn't get an exit fee
       const protocolTreasuryAfter = await weth.balanceOf(treasury.address);
       expect(protocolTreasuryAfter.sub(protocolTreasury)).to.equal(ethers.utils.parseEther('0'));

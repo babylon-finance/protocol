@@ -53,7 +53,7 @@ describe('KyberTradeIntegration', function () {
       await garden1.connect(signer2).deposit(ethers.utils.parseEther('2'), 1, signer2.getAddress(), {
         value: ethers.utils.parseEther('2'),
       });
-      expect(await wethToken.balanceOf(garden1.address)).to.equal(ethers.utils.parseEther('6.1'));
+      expect(await wethToken.balanceOf(garden1.address)).to.equal(ethers.utils.parseEther('7'));
 
       ethers.provider.send('evm_increaseTime', [ONE_DAY_IN_SECONDS * 2]);
 
