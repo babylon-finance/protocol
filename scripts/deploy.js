@@ -57,7 +57,7 @@ async function main() {
   );
   await executeStrategy(strategy1);
   await injectFakeProfits(strategy1, ethers.utils.parseEther('5000'));
-  await finalizeStrategy(strategy1, { time: ONE_DAY_IN_SECONDS * 30 });
+  await finalizeStrategy(strategy1, { time: ONE_DAY_IN_SECONDS.mul(ethers.BigNumber.from(30)) });
   console.log('Test strategies deployed...');
 
   console.log('Syncing artifacts for export...');
