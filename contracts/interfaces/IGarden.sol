@@ -31,6 +31,8 @@ interface IGarden {
 
     function active() external view returns (bool);
 
+    function guestListEnabled() external view returns (bool);
+
     function controller() external view returns (address);
 
     function nftAddress() external view returns (address);
