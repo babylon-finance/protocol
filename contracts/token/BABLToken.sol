@@ -21,6 +21,7 @@ import {SafeMath} from '@openzeppelin/contracts/math/SafeMath.sol';
 import {TimeLockedToken} from './TimeLockedToken.sol';
 import {Address} from '@openzeppelin/contracts/utils/Address.sol';
 import {ReentrancyGuard} from '@openzeppelin/contracts/utils/ReentrancyGuard.sol';
+import {TimeLockRegistry} from './TimeLockRegistry.sol';
 
 /**
  * @title BABL Token
@@ -85,9 +86,7 @@ contract BABLToken is TimeLockedToken {
     /**
      * @notice Construct a new BABL token and gives ownership to sender
      */
-    constructor(address newTimeLockOwner) TimeLockedToken(NAME, SYMBOL) {
-        // TODO - CHECK
-
+    constructor(TimeLockRegistry newTimeLockRegistry) TimeLockedToken(NAME, SYMBOL) {
         // Timestamp of contract deployment
         BABLTokenDeploymentTimestamp = block.timestamp;
 
@@ -100,8 +99,8 @@ contract BABLToken is TimeLockedToken {
         //Set-up the minimum time of 8 years for additional mints
         mintingAllowedAfter = block.timestamp.add(FIRST_EPOCH_MINT);
 
-        // Set the Time Lock Registry Owner
-        timeLockOwner = newTimeLockOwner;
+        // Set the Time Lock Registry
+        timeLockRegistry = newTimeLockRegistry;
     }
 
     /* ============ External Functions ============ */
