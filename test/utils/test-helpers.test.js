@@ -12,17 +12,19 @@ describe('Test Helpers', function () {
     let onePromise, twoPromise;
 
     await mineInBlock(async () => {
-      onePromise = signer.sendTransaction({
+      onePromise = await signer.sendTransaction({
         to: signer.address,
         value: 1,
+        gasLimit: 21000,
       });
-      twoPromise = signer.sendTransaction({
+      twoPromise = await signer.sendTransaction({
         to: signer.address,
         value: 1,
+        gasLimit: 21000,
       });
     });
 
-    const [receiptOne, receiptTwo] = await Promise.all([(await onePromise).wait(), (await twoPromise).wait()]);
+    const [receiptOne, receiptTwo] = await Promise.all([onePromise.wait(), twoPromise.wait()]);
 
     expect(receiptOne.blockNumber).to.be.gt(0);
     expect(receiptTwo.blockNumber).to.be.gt(0);

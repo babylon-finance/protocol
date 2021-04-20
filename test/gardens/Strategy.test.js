@@ -87,6 +87,7 @@ describe('Strategy', function () {
         address,
         strategist,
         integration,
+        kind,
         stake,
         absoluteTotalVotes,
         totalVotes,
@@ -105,6 +106,7 @@ describe('Strategy', function () {
       expect(stake).to.equal(ethers.utils.parseEther('0.5'));
       expect(absoluteTotalVotes).to.equal(ethers.utils.parseEther('0.5'));
       expect(totalVotes).to.equal(ethers.utils.parseEther('0.5'));
+      expect(kind).to.equal(0);
       expect(capitalAllocated).to.equal(ethers.BigNumber.from(0));
       expect(capitalReturned).to.equal(ethers.BigNumber.from(0));
       expect(duration).to.equal(ethers.BigNumber.from(ONE_DAY_IN_SECONDS * 30));
@@ -147,7 +149,7 @@ describe('Strategy', function () {
       expect(await strategyCandidate.getUserVotes(signer1.getAddress())).to.equal(signer1Balance);
       expect(await strategyCandidate.getUserVotes(signer2.getAddress())).to.equal(signer2Balance);
 
-      const [, , , , absoluteTotalVotes, totalVotes] = await strategyCandidate.getStrategyDetails();
+      const [, , , , , absoluteTotalVotes, totalVotes] = await strategyCandidate.getStrategyDetails();
 
       // The stake is counted as votes of the strategists
       expect(absoluteTotalVotes).to.equal(ethers.utils.parseEther('5.5'));

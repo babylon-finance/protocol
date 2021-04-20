@@ -203,6 +203,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
     address public override creator;
     // Whether the garden is currently active or not
     bool public override active;
+    bool public override guestListEnabled;
 
     // Keeps track of the reserve balance. In case we receive some through other means
     uint256 public override principal;
@@ -279,6 +280,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         totalContributors = 0;
         maxContributors = 100;
         nftAddress = _nftAddress;
+        guestListEnabled = true;
 
         _start(
             msg.value,
@@ -369,7 +371,8 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         address _to
     ) public payable override nonReentrant onlyActive {
         _require(
-            IIshtarGate(IBabController(controller).ishtarGate()).canJoinAGarden(address(this), msg.sender),
+            guestListEnabled &&
+                IIshtarGate(IBabController(controller).ishtarGate()).canJoinAGarden(address(this), msg.sender),
             Errors.USER_CANNOT_JOIN
         );
         _require(msg.value >= minContribution, Errors.MIN_CONTRIBUTION);
@@ -377,6 +380,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         if (maxDepositLimit > 0) {
             _require(principal.add(msg.value) <= maxDepositLimit, Errors.MAX_DEPOSIT_LIMIT);
         }
+        _require(totalContributors <= maxContributors, Errors.MAX_CONTRIBUTORS);
         _require(msg.value == _reserveAssetQuantity, Errors.MSG_VALUE_DO_NOT_MATCH);
         // Always wrap to WETH
         IWETH(WETH).deposit{value: msg.value}();

@@ -71,6 +71,16 @@ abstract contract TimeLockedToken is VoteToken {
         _;
     }
 
+    modifier onlyTimeLockOwner() {
+        if (address(timeLockRegistry) != address(0)) {
+            require(
+                msg.sender == Ownable(timeLockRegistry).owner(),
+                'TimeLockedToken:: onlyTimeLockOwner: can only be executed by the owner of TimeLockRegistry'
+            );
+        }
+        _;
+    }
+
     /* ============ State Variables ============ */
 
     // represents total distribution for locked balances
@@ -121,9 +131,7 @@ abstract contract TimeLockedToken is VoteToken {
      * @notice Set the Time Lock Registry contract to control token vesting conditions
      * @param newTimeLockRegistry Address of TimeLockRegistry contract
      */
-    function setTimeLockRegistry(TimeLockRegistry newTimeLockRegistry) external onlyOwner returns (bool) {
-        //TODO - REMOVE THIS FUNCTION - TIMELOCKREGISTRY ADDRESS MUST NOT BE CHANGED SINCE DEPLOYMENT - AFTER USING CREATE2 DURING DEPLOYMENT TO ASSIGN ITS ADDRESS AS A CONSTANT FOREVER - NOT ABLE TO BE CHANGED BY OWNER
-
+    function setTimeLockRegistry(TimeLockRegistry newTimeLockRegistry) external onlyTimeLockOwner returns (bool) {
         require(address(newTimeLockRegistry) != address(0), 'cannot be zero address');
         require(address(newTimeLockRegistry) != address(this), 'cannot be this contract');
         require(address(newTimeLockRegistry) != address(timeLockRegistry), 'must be new TimeLockRegistry');
