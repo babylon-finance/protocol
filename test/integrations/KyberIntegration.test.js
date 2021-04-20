@@ -71,11 +71,11 @@ describe('KyberTradeIntegration', function () {
         },
       );
 
-      await executeStrategy(garden1, strategyContract);
+      await executeStrategy(strategyContract);
 
       expect(await daiToken.balanceOf(strategyContract.address)).to.be.gt(ethers.utils.parseEther('97') / 10 ** 12);
 
-      await finalizeStrategy(garden1, strategyContract, 0);
+      await finalizeStrategy(strategyContract, 0);
       expect(await daiToken.balanceOf(strategyContract.address)).to.equal(0);
     });
   });

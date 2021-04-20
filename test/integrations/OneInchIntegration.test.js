@@ -41,18 +41,19 @@ describe('OneInchTradeIntegration', function () {
 
     it('trade WETH to DAI', async function () {
       const strategyContract = await createStrategy(
-        0,
+        'long',
         'vote',
         [signer1, signer2, signer3],
         oneInchTradeIntegration.address,
         garden1,
       );
 
-      await executeStrategy(garden1, strategyContract);
+      //PR await executeStrategy(garden1, strategyContract);
 
+      await executeStrategy(strategyContract);
       expect(await daiToken.balanceOf(strategyContract.address)).to.be.gt(ethers.utils.parseEther('900') / 10 ** 12);
 
-      await finalizeStrategy(garden1, strategyContract, 0);
+      await finalizeStrategy(strategyContract, 0);
       expect(await daiToken.balanceOf(strategyContract.address)).to.equal(0);
       expect(await wethToken.balanceOf(garden1.address)).to.equal('3985000000000000000'); // 1.085 ETH TODO -CHECK
     });

@@ -58,17 +58,17 @@ describe('YearnVaultIntegrationTest', function () {
       expect(vaultAsset).to.equal(addresses.tokens.DAI);
 
       const strategyContract = await createStrategy(
-        2,
+        'yield',
         'vote',
         [signer1, signer2, signer3],
         yearnVaultIntegration.address,
         garden1,
       );
 
-      await executeStrategy(garden1, strategyContract);
+      await executeStrategy(strategyContract);
       expect(await yearnDaiVault.balanceOf(strategyContract.address)).to.be.gte(expectedShares);
 
-      await finalizeStrategy(garden1, strategyContract, 0);
+      await finalizeStrategy(strategyContract, 0);
       expect(await yearnDaiVault.balanceOf(strategyContract.address)).to.equal(0);
       expect(await daiToken.balanceOf(strategyContract.address)).to.equal(0);
       expect(await WETH.balanceOf(strategyContract.address)).to.equal(0);

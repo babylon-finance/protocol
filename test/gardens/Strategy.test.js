@@ -219,14 +219,14 @@ describe('Strategy', function () {
   describe('executeStrategy', async function () {
     it('should execute strategy', async function () {
       const strategyContract = await createStrategy(
-        0,
+        'long',
         'vote',
         [signer1, signer2, signer3],
         kyberTradeIntegration.address,
         garden1,
       );
 
-      await executeStrategy(garden1, strategyContract, ethers.utils.parseEther('2'), 42);
+      await executeStrategy(strategyContract, { amount: ONE_ETH.mul(2), fee: 42 });
 
       const [address, active, dataSet, finalized, executedAt, exitedAt] = await strategyContract.getStrategyState();
 
@@ -243,7 +243,7 @@ describe('Strategy', function () {
 
     it('should not be able to unwind an active strategy with not enough capital', async function () {
       const strategyContract = await createStrategy(
-        0,
+        'long',
         'active',
         [signer1, signer2, signer3],
         kyberTradeIntegration.address,
@@ -254,14 +254,18 @@ describe('Strategy', function () {
 
     it('should be able to unwind an active strategy with enough capital', async function () {
       const strategyContract = await createStrategy(
-        0,
+        'long',
         'vote',
         [signer1, signer2, signer3],
         kyberTradeIntegration.address,
         garden1,
       );
       expect(await wethToken.balanceOf(garden1.address)).to.be.gt(ethers.utils.parseEther('2'));
-      await executeStrategy(garden1, strategyContract, ethers.utils.parseEther('2'), 0);
+      //PR await executeStrategy(garden1, strategyContract, ethers.utils.parseEther('2'), 0);
+      //PRexpect(await wethToken.balanceOf(garden1.address)).to.be.lt(ethers.utils.parseEther('1'));
+
+      await executeStrategy(strategyContract, { amount: ONE_ETH.mul(2) });
+
       expect(await wethToken.balanceOf(garden1.address)).to.be.lt(ethers.utils.parseEther('1'));
       expect(await strategyContract.capitalAllocated()).to.equal(ethers.utils.parseEther('2'));
       await strategyContract.unwindStrategy(ethers.utils.parseEther('1'));
@@ -271,14 +275,18 @@ describe('Strategy', function () {
 
     it('should not be able to unwind an active strategy with enough capital if it is not the owner', async function () {
       const strategyContract = await createStrategy(
-        0,
+        'long',
         'vote',
         [signer1, signer2, signer3],
         kyberTradeIntegration.address,
         garden1,
       );
       expect(await wethToken.balanceOf(garden1.address)).to.be.gt(ethers.utils.parseEther('2'));
-      await executeStrategy(garden1, strategyContract, ethers.utils.parseEther('2'), 0);
+      //PR await executeStrategy(garden1, strategyContract, ethers.utils.parseEther('2'), 0);
+      //PR expect(await wethToken.balanceOf(garden1.address)).to.be.lt(ethers.utils.parseEther('1'));
+
+      await executeStrategy(strategyContract, { amount: ONE_ETH.mul(2) });
+
       expect(await wethToken.balanceOf(garden1.address)).to.be.lt(ethers.utils.parseEther('1'));
       expect(await strategyContract.capitalAllocated()).to.equal(ethers.utils.parseEther('2'));
       await expect(strategyContract.connect(signer3).unwindStrategy(ethers.utils.parseEther('1'))).to.be.reverted;
@@ -286,7 +294,7 @@ describe('Strategy', function () {
 
     it('can execute strategy twice', async function () {
       const strategyContract = await createStrategy(
-        0,
+        'long',
         'active',
         [signer1, signer2, signer3],
         kyberTradeIntegration.address,
@@ -295,11 +303,11 @@ describe('Strategy', function () {
 
       deposit(garden1, [signer1, signer2]);
 
-      await executeStrategy(garden1, strategyContract);
+      await executeStrategy(strategyContract);
 
       const [, , , , executedAt] = await strategyContract.getStrategyState();
 
-      await executeStrategy(garden1, strategyContract);
+      await executeStrategy(strategyContract);
 
       const [, , , , newExecutedAt] = await strategyContract.getStrategyState();
 
@@ -309,7 +317,7 @@ describe('Strategy', function () {
 
     it('refuse to pay a high fee to the keeper', async function () {
       const strategyContract = await createStrategy(
-        0,
+        'long',
         'vote',
         [signer1, signer2, signer3],
         kyberTradeIntegration.address,
@@ -319,7 +327,7 @@ describe('Strategy', function () {
       ethers.provider.send('evm_increaseTime', [ONE_DAY_IN_SECONDS * 2]);
 
       await expect(
-        strategyContract.executeStrategy(ethers.utils.parseEther('1'), ethers.utils.parseEther('100'), {
+        strategyContract.executeStrategy(ONE_ETH, ONE_ETH.mul(100), {
           gasPrice: 0,
         }),
       ).to.be.revertedWith(/revert BAB#019/i);
@@ -329,7 +337,7 @@ describe('Strategy', function () {
   describe('getNAV', async function () {
     it('should get the NAV value of a long strategy', async function () {
       const strategyContract = await createStrategy(
-        0,
+        'long',
         'active',
         [signer1, signer2, signer3],
         kyberTradeIntegration.address,
@@ -342,7 +350,7 @@ describe('Strategy', function () {
 
     it('should get the NAV value of a Yearn Farming strategy', async function () {
       const strategyContract = await createStrategy(
-        2,
+        'yield',
         'active',
         [signer1, signer2, signer3],
         yearnVaultIntegration.address,
@@ -355,7 +363,7 @@ describe('Strategy', function () {
 
     it('should get the NAV value of a lend strategy', async function () {
       const strategyContract = await createStrategy(
-        3,
+        'lend',
         'active',
         [signer1, signer2, signer3],
         aaveLendIntegration.address,
@@ -370,7 +378,7 @@ describe('Strategy', function () {
 
     it('should get the NAV value of a BalancerPool strategy', async function () {
       const strategyContract = await createStrategy(
-        1,
+        'pool',
         'active',
         [signer1, signer2, signer3],
         balancerIntegration.address,
@@ -386,7 +394,7 @@ describe('Strategy', function () {
     it('should get the NAV value of a OneInchPool strategy', async function () {
       const daiWethOneInchPair = await ethers.getContractAt('IMooniswap', addresses.oneinch.pools.wethdai);
       const strategyContract = await createStrategy(
-        1,
+        'pool',
         'active',
         [signer1, signer2, signer3],
         oneInchPoolIntegration.address,
@@ -402,7 +410,7 @@ describe('Strategy', function () {
 
     it('should get the NAV value of a UniswapPool strategy', async function () {
       const strategyContract = await createStrategy(
-        1,
+        'pool',
         'active',
         [signer1, signer2, signer3],
         uniswapPoolIntegration.address,
@@ -419,14 +427,14 @@ describe('Strategy', function () {
   describe('finalizeStrategy', async function () {
     it('should finalize strategy with negative profits', async function () {
       const strategyContract = await createStrategy(
-        0,
+        'long',
         'active',
         [signer1, signer2, signer3],
         kyberTradeIntegration.address,
         garden1,
       );
 
-      await finalizeStrategy(garden1, strategyContract, 42);
+      await finalizeStrategy(strategyContract, { fee: 42 });
       const [address, active, dataSet, finalized, executedAt, exitedAt] = await strategyContract.getStrategyState();
 
       expect(address).to.equal(strategyContract.address);
@@ -446,7 +454,7 @@ describe('Strategy', function () {
 
     it('should finalize strategy with profits', async function () {
       const strategyContract = await createStrategy(
-        0,
+        'long',
         'active',
         [signer1, signer2, signer3],
         kyberTradeIntegration.address,
@@ -454,7 +462,7 @@ describe('Strategy', function () {
       );
 
       await injectFakeProfits(strategyContract, ethers.utils.parseEther('1000'));
-      await finalizeStrategy(garden1, strategyContract, 42);
+      await finalizeStrategy(strategyContract, 42);
       const capitalAllocated = await strategyContract.capitalAllocated();
       const capitalReturned = await strategyContract.capitalReturned();
 
@@ -463,14 +471,14 @@ describe('Strategy', function () {
 
     it("can't finalize strategy twice", async function () {
       const strategyContract = await createStrategy(
-        0,
+        'long',
         'active',
         [signer1, signer2, signer3],
         kyberTradeIntegration.address,
         garden1,
       );
 
-      await finalizeStrategy(garden1, strategyContract, 42);
+      await finalizeStrategy(strategyContract, 42);
 
       await expect(strategyContract.finalizeStrategy(42, 'http://', { gasPrice: 0 })).to.be.reverted;
     });
