@@ -184,7 +184,6 @@ describe('Garden', function () {
       );
 
       // It is executed
-      //await executeStrategy(garden1, strategyContract, ethers.utils.parseEther('1'), 42);
       const signer1Balance = await garden1.balanceOf(signer1.address);
       const signer2Balance = await garden1.balanceOf(signer2.address);
       const signer1LockedBalance = await garden1.getLockedBalance(signer1.address);

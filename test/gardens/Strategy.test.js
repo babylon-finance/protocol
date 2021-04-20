@@ -261,8 +261,6 @@ describe('Strategy', function () {
         garden1,
       );
       expect(await wethToken.balanceOf(garden1.address)).to.be.gt(ethers.utils.parseEther('2'));
-      //PR await executeStrategy(garden1, strategyContract, ethers.utils.parseEther('2'), 0);
-      //PRexpect(await wethToken.balanceOf(garden1.address)).to.be.lt(ethers.utils.parseEther('1'));
 
       await executeStrategy(strategyContract, { amount: ONE_ETH.mul(2) });
 
@@ -282,8 +280,6 @@ describe('Strategy', function () {
         garden1,
       );
       expect(await wethToken.balanceOf(garden1.address)).to.be.gt(ethers.utils.parseEther('2'));
-      //PR await executeStrategy(garden1, strategyContract, ethers.utils.parseEther('2'), 0);
-      //PR expect(await wethToken.balanceOf(garden1.address)).to.be.lt(ethers.utils.parseEther('1'));
 
       await executeStrategy(strategyContract, { amount: ONE_ETH.mul(2) });
 

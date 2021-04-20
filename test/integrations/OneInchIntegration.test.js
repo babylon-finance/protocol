@@ -48,8 +48,6 @@ describe('OneInchTradeIntegration', function () {
         garden1,
       );
 
-      //PR await executeStrategy(garden1, strategyContract);
-
       await executeStrategy(strategyContract);
       expect(await daiToken.balanceOf(strategyContract.address)).to.be.gt(ethers.utils.parseEther('900') / 10 ** 12);
 
