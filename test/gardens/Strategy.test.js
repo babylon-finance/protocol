@@ -87,6 +87,7 @@ describe('Strategy', function () {
         address,
         strategist,
         integration,
+        kind,
         stake,
         absoluteTotalVotes,
         totalVotes,
@@ -102,6 +103,7 @@ describe('Strategy', function () {
       expect(address).to.equal(strategyDataset.address);
       expect(strategist).to.equal(signer1.address);
       expect(integration).to.not.equal(addresses.zero);
+      expect(kind).to.equal(0);
       expect(stake).to.equal(ethers.utils.parseEther('1'));
       expect(absoluteTotalVotes).to.equal(ethers.utils.parseEther('1'));
       expect(totalVotes).to.equal(ethers.utils.parseEther('1'));
@@ -147,7 +149,7 @@ describe('Strategy', function () {
       expect(await strategyCandidate.getUserVotes(signer1.getAddress())).to.equal(signer1Balance);
       expect(await strategyCandidate.getUserVotes(signer2.getAddress())).to.equal(signer2Balance);
 
-      const [, , , , absoluteTotalVotes, totalVotes] = await strategyCandidate.getStrategyDetails();
+      const [, , , , , absoluteTotalVotes, totalVotes] = await strategyCandidate.getStrategyDetails();
 
       expect(absoluteTotalVotes).to.equal(ethers.utils.parseEther('5.1'));
       expect(totalVotes).to.equal(ethers.utils.parseEther('5.1'));

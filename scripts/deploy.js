@@ -8,6 +8,7 @@ const {
   injectFakeProfits,
 } = require('../test/fixtures/StrategyHelper');
 const { deployFolioFixture } = require('../test/fixtures/ControllerFixture');
+const { ONE_DAY_IN_SECONDS } = require('../utils/constants');
 
 async function deploy(name, _args) {
   const args = _args || [];
@@ -45,16 +46,18 @@ async function main() {
   console.log('Deploying test strategies...');
   await createStrategy('long', 'active', [signer1, signer2, signer3], kyberTradeIntegration.address, garden3);
   await createStrategy('long', 'active', [signer1, signer2, signer3], kyberTradeIntegration.address, garden3);
+  console.log('Active strategies deployed...');
+  console.log('Deploying finalized strategy with profits...');
   const strategy1 = await createStrategy(
-    0,
+    'long',
     'vote',
     [signer1, signer2, signer3],
     kyberTradeIntegration.address,
     garden3,
   );
-  await executeStrategy(garden3, strategy1);
+  await executeStrategy(strategy1);
   await injectFakeProfits(strategy1, ethers.utils.parseEther('5000'));
-  await finalizeStrategy(garden3, strategy1);
+  await finalizeStrategy(strategy1, { time: ONE_DAY_IN_SECONDS.mul(ethers.BigNumber.from(30)) });
   console.log('Test strategies deployed...');
 
   console.log('Syncing artifacts for export...');

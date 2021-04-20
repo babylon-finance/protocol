@@ -215,7 +215,7 @@ async function deployFolioFixture() {
         },
       );
   }
-  console.log('befre create strategies');
+  console.log('Before create strategies...');
   // Create strategies
   const strategy11 = (
     await createStrategy('long', 'dataset', [signer1, signer2, signer3], kyberTradeIntegration.address, garden1)

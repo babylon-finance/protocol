@@ -80,6 +80,7 @@ interface IStrategy {
             address,
             address,
             address,
+            uint8,
             uint256,
             uint256,
             int256,
