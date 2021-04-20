@@ -85,7 +85,7 @@ contract BABLToken is TimeLockedToken {
     /**
      * @notice Construct a new BABL token and gives ownership to sender
      */
-    constructor() TimeLockedToken(NAME, SYMBOL) {
+    constructor(address newTimeLockOwner) TimeLockedToken(NAME, SYMBOL) {
         // TODO - CHECK
 
         // Timestamp of contract deployment
@@ -99,6 +99,9 @@ contract BABLToken is TimeLockedToken {
 
         //Set-up the minimum time of 8 years for additional mints
         mintingAllowedAfter = block.timestamp.add(FIRST_EPOCH_MINT);
+
+        // Set the Time Lock Registry Owner
+        timeLockOwner = newTimeLockOwner;
     }
 
     /* ============ External Functions ============ */

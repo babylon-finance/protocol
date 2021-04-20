@@ -71,6 +71,14 @@ abstract contract TimeLockedToken is VoteToken {
         _;
     }
 
+    modifier onlyTimeLockOwner() {
+        require(
+            msg.sender == timeLockOwner,
+            'TimeLockedToken:: onlyTimeLockOwner: can only be executed by the owner of TimeLockRegistry'
+        );
+        _;
+    }
+
     /* ============ State Variables ============ */
 
     // represents total distribution for locked balances
@@ -105,6 +113,9 @@ abstract contract TimeLockedToken is VoteToken {
     // address of Time Lock Registry contract
     TimeLockRegistry public timeLockRegistry;
 
+    // address of the Time Lock Registry Owner
+    address public timeLockOwner;
+
     /* ============ Functions ============ */
 
     /* ============ Constructor ============ */
@@ -121,8 +132,8 @@ abstract contract TimeLockedToken is VoteToken {
      * @notice Set the Time Lock Registry contract to control token vesting conditions
      * @param newTimeLockRegistry Address of TimeLockRegistry contract
      */
-    function setTimeLockRegistry(TimeLockRegistry newTimeLockRegistry) external onlyOwner returns (bool) {
-        //TODO - REMOVE THIS FUNCTION - TIMELOCKREGISTRY ADDRESS MUST NOT BE CHANGED SINCE DEPLOYMENT - AFTER USING CREATE2 DURING DEPLOYMENT TO ASSIGN ITS ADDRESS AS A CONSTANT FOREVER - NOT ABLE TO BE CHANGED BY OWNER
+    function setTimeLockRegistry(TimeLockRegistry newTimeLockRegistry) external onlyTimeLockOwner returns (bool) {
+        //TODO - TIMELOCKREGISTRY ADDRESS MUST NOT BE CHANGED SINCE VESTING TOKENS ARE CLAIMED BY USERS
 
         require(address(newTimeLockRegistry) != address(0), 'cannot be zero address');
         require(address(newTimeLockRegistry) != address(this), 'cannot be this contract');
@@ -132,6 +143,16 @@ abstract contract TimeLockedToken is VoteToken {
         timeLockRegistry = newTimeLockRegistry;
 
         return true;
+    }
+
+    /**
+     * PRIVILEGED GOVERNANCE FUNCTION. Set the Time Lock Registry owner to set the TimeLockRegistry smartcontract
+     *
+     * @notice Set the Time Lock Registry owner to control token vesting conditions
+     * @param newTimeLockOwner Address of TimeLockRegistry contract
+     */
+    function setNewTimeLockRegistryOwner(address newTimeLockOwner) public onlyTimeLockOwner {
+        timeLockOwner = newTimeLockOwner;
     }
 
     /**
