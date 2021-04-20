@@ -102,9 +102,9 @@ describe('Strategy', function () {
       expect(address).to.equal(strategyDataset.address);
       expect(strategist).to.equal(signer1.address);
       expect(integration).to.not.equal(addresses.zero);
-      expect(stake).to.equal(ethers.utils.parseEther('1'));
-      expect(absoluteTotalVotes).to.equal(ethers.utils.parseEther('1'));
-      expect(totalVotes).to.equal(ethers.utils.parseEther('1'));
+      expect(stake).to.equal(ethers.utils.parseEther('0.5'));
+      expect(absoluteTotalVotes).to.equal(ethers.utils.parseEther('0.5'));
+      expect(totalVotes).to.equal(ethers.utils.parseEther('0.5'));
       expect(capitalAllocated).to.equal(ethers.BigNumber.from(0));
       expect(capitalReturned).to.equal(ethers.BigNumber.from(0));
       expect(duration).to.equal(ethers.BigNumber.from(ONE_DAY_IN_SECONDS * 30));
@@ -149,8 +149,9 @@ describe('Strategy', function () {
 
       const [, , , , absoluteTotalVotes, totalVotes] = await strategyCandidate.getStrategyDetails();
 
-      expect(absoluteTotalVotes).to.equal(ethers.utils.parseEther('5.1'));
-      expect(totalVotes).to.equal(ethers.utils.parseEther('5.1'));
+      // The stake is counted as votes of the strategists
+      expect(absoluteTotalVotes).to.equal(ethers.utils.parseEther('5.5'));
+      expect(totalVotes).to.equal(ethers.utils.parseEther('5.5'));
 
       const [address, active, dataSet, finalized, executedAt, exitedAt] = await strategyCandidate.getStrategyState();
 
@@ -261,7 +262,7 @@ describe('Strategy', function () {
       );
       expect(await wethToken.balanceOf(garden1.address)).to.be.gt(ethers.utils.parseEther('2'));
       await executeStrategy(garden1, strategyContract, ethers.utils.parseEther('2'), 0);
-      expect(await wethToken.balanceOf(garden1.address)).to.be.lt(ethers.utils.parseEther('0.1'));
+      expect(await wethToken.balanceOf(garden1.address)).to.be.lt(ethers.utils.parseEther('1'));
       expect(await strategyContract.capitalAllocated()).to.equal(ethers.utils.parseEther('2'));
       await strategyContract.unwindStrategy(ethers.utils.parseEther('1'));
       expect(await strategyContract.capitalAllocated()).to.equal(ethers.utils.parseEther('1'));
@@ -278,7 +279,7 @@ describe('Strategy', function () {
       );
       expect(await wethToken.balanceOf(garden1.address)).to.be.gt(ethers.utils.parseEther('2'));
       await executeStrategy(garden1, strategyContract, ethers.utils.parseEther('2'), 0);
-      expect(await wethToken.balanceOf(garden1.address)).to.be.lt(ethers.utils.parseEther('0.1'));
+      expect(await wethToken.balanceOf(garden1.address)).to.be.lt(ethers.utils.parseEther('1'));
       expect(await strategyContract.capitalAllocated()).to.equal(ethers.utils.parseEther('2'));
       await expect(strategyContract.connect(signer3).unwindStrategy(ethers.utils.parseEther('1'))).to.be.reverted;
     });

@@ -49,11 +49,12 @@ describe('OneInchTradeIntegration', function () {
       );
 
       await executeStrategy(garden1, strategyContract);
+
       expect(await daiToken.balanceOf(strategyContract.address)).to.be.gt(ethers.utils.parseEther('900') / 10 ** 12);
 
       await finalizeStrategy(garden1, strategyContract, 0);
       expect(await daiToken.balanceOf(strategyContract.address)).to.equal(0);
-      expect(await wethToken.balanceOf(garden1.address)).to.equal('3085000000000000000'); // 1.085 ETH
+      expect(await wethToken.balanceOf(garden1.address)).to.equal('3985000000000000000'); // 1.085 ETH TODO -CHECK
     });
   });
 });

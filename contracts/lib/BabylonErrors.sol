@@ -206,6 +206,6 @@ library Errors {
     uint256 internal constant NOT_STRATEGY_NFT = 58;
     // Garden Transfers Disabled
     uint256 internal constant GARDEN_TRANSFERS_DISABLED = 59;
-    // Not a valid strategy NFT
+    // Tokens hardlocked
     uint256 internal constant TOKENS_HARDLOCKED = 60;
 }

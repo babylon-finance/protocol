@@ -171,25 +171,25 @@ async function deployFolioFixture() {
   await babController
     .connect(signer1)
     .createGarden(addresses.tokens.WETH, 'Absolute ETH Return [beta]', 'EYFA', gardenParams, 'http...', {
-      value: ethers.utils.parseEther('0.1'),
+      value: ethers.utils.parseEther('1'),
     });
 
   await babController
     .connect(signer1)
     .createGarden(addresses.tokens.WETH, 'ETH Yield Farm [a]', 'EYFB', gardenParams, 'http...', {
-      value: ethers.utils.parseEther('0.1'),
+      value: ethers.utils.parseEther('1'),
     });
 
   await babController
     .connect(signer1)
     .createGarden(addresses.tokens.WETH, 'ETH Yield Farm [b]', 'EYFG', gardenParams, 'http...', {
-      value: ethers.utils.parseEther('0.1'),
+      value: ethers.utils.parseEther('1'),
     });
 
   await babController
     .connect(signer1)
     .createGarden(addresses.tokens.WETH, 'ETH Yield Farm [d]', 'EYFG', gardenParams, 'http...', {
-      value: ethers.utils.parseEther('0.1'),
+      value: ethers.utils.parseEther('1'),
     });
 
   const gardens = await babController.getGardens();
@@ -215,7 +215,6 @@ async function deployFolioFixture() {
         },
       );
   }
-  console.log('befre create strategies');
   // Create strategies
   const strategy11 = (
     await createStrategy(0, 'dataset', [signer1, signer2, signer3], kyberTradeIntegration.address, garden1)
