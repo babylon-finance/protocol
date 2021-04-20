@@ -3,7 +3,7 @@ const { ONE_DAY_IN_SECONDS, ONE_ETH } = require('../../utils/constants.js');
 const { TWAP_ORACLE_WINDOW, TWAP_ORACLE_GRANULARITY } = require('../../utils/system.js');
 const { impersonateAddress } = require('../../utils/rpc');
 const addresses = require('../../utils/addresses');
-const { increaseTime } = require('../utils/test-helpers');
+const { increaseTime, from } = require('../utils/test-helpers');
 
 const DEFAULT_STRATEGY_PARAMS = [
   ethers.utils.parseEther('10'), // _maxCapitalRequested
@@ -25,7 +25,7 @@ async function updateTWAPs(gardenAddress) {
   for (let i = 0; i < TWAP_ORACLE_GRANULARITY; i += 1) {
     await adapter.update(addresses.tokens.WETH, addresses.tokens.USDC);
     await adapter.update(addresses.tokens.WETH, addresses.tokens.DAI);
-    await increaseTime(TWAP_ORACLE_WINDOW / TWAP_ORACLE_GRANULARITY);
+    await increaseTime(from(TWAP_ORACLE_WINDOW).div(TWAP_ORACLE_GRANULARITY));
   }
 }
 
