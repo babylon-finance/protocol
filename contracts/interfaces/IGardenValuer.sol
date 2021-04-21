@@ -15,7 +15,7 @@
 
     SPDX-License-Identifier: Apache License, Version 2.0
 */
-pragma solidity 0.7.4;
+pragma solidity 0.7.6;
 
 interface IGardenValuer {
     function calculateGardenValuation(address _garden, address _quoteAsset) external view returns (uint256);

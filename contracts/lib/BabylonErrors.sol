@@ -18,7 +18,7 @@
     SPDX-License-Identifier: Apache License, Version 2.0
 */
 
-pragma solidity 0.7.4;
+pragma solidity 0.7.6;
 
 // solhint-disable
 
@@ -212,4 +212,6 @@ library Errors {
     uint256 internal constant MAX_CONTRIBUTORS = 61;
     // BABL Transfers Disabled
     uint256 internal constant BABL_TRANSFERS_DISABLED = 62;
+    // Strategy duration range error
+    uint256 internal constant DURATION_RANGE = 63;
 }
