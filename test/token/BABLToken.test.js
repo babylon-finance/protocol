@@ -32,15 +32,23 @@ describe('BABLToken contract', function () {
   let signer3;
   let bablToken;
   let timeLockRegistry;
+  let rewardsDistributor;
   let babController;
 
   // `beforeEach` will run before each test, re-deploying the contract every
   // time. It receives a callback, which can be async.
 
   beforeEach(async () => {
-    ({ owner, bablToken, timeLockRegistry, babController, signer1, signer2, signer3 } = await loadFixture(
-      deployFolioFixture,
-    ));
+    ({
+      owner,
+      bablToken,
+      timeLockRegistry,
+      rewardsDistributor,
+      babController,
+      signer1,
+      signer2,
+      signer3,
+    } = await loadFixture(deployFolioFixture));
   });
 
   // You can nest describe calls to create subsections.
@@ -91,6 +99,30 @@ describe('BABLToken contract', function () {
   });
 
   describe('Transactions', function () {
+    it('Should fail if trying to transfer any tokens between addresses which are not TimeLockRegistry or RewardsDistributor', async function () {
+      const ownerBalance = await bablToken.balanceOf(owner.address);
+      expect(ownerBalance).to.equal(ethers.utils.parseEther('1000000'));
+
+      // Trying to transfer 260_000e18 tokens from owner to userSigner1
+      const value = ethers.utils.parseEther('260000');
+      await expect(bablToken.connect(owner).transfer(signer1.address, value)).to.be.revertedWith('revert BAB#062');
+      await expect(bablToken.connect(owner).transfer(signer2.address, value)).to.be.revertedWith('revert BAB#062');
+
+      //It might work if from/to is the TimeLockRegistry or RewardsDistributor
+      await expect(bablToken.connect(owner).transfer(rewardsDistributor.address, value)).not.to.be.reverted;
+      await expect(bablToken.connect(owner).transfer(timeLockRegistry.address, value)).not.to.be.reverted;
+
+      await timeLockRegistry.register(signer1.address, ethers.utils.parseEther('18000'), false, 1614618000);
+      await bablToken.connect(signer1).claimMyTokens();
+      await timeLockRegistry.register(signer2.address, ethers.utils.parseEther('18000'), false, 1614618000);
+      await bablToken.connect(signer2).claimMyTokens();
+      ethers.provider.send('evm_increaseTime', [ONE_DAY_IN_SECONDS * 366]);
+
+      // Might not work other type of transfers
+      const value2 = ethers.utils.parseEther('1800');
+      await expect(bablToken.connect(signer1).transfer(signer2.address, value2)).to.be.revertedWith('revert BAB#062');
+      await expect(bablToken.connect(signer2).transfer(signer1.address, value2)).to.be.revertedWith('revert BAB#062');
+    });
     it('Should transfer tokens between accounts', async function () {
       // Enable BABL token transfers
       await babController.connect(owner).enableBABLTokensTransfers();
