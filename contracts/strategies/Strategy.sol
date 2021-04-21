@@ -17,8 +17,6 @@
 */
 pragma solidity 0.7.4;
 
-import 'hardhat/console.sol';
-
 import {Address} from '@openzeppelin/contracts/utils/Address.sol';
 import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import {Initializable} from '@openzeppelin/contracts-upgradeable/proxy/Initializable.sol';
@@ -243,8 +241,10 @@ abstract contract Strategy is ReentrancyGuard, IStrategy, Initializable {
 
         _require(controller.isSystemContract(_garden), Errors.NOT_A_GARDEN);
         garden = IGarden(_garden);
-        // TODO: Check that strategist actually have `_stake` amount of tokens
+        uint256 strategistUnlockedBalance =
+            IERC20(address(garden)).balanceOf(_strategist).sub(garden.getLockedBalance(_strategist));
         _require(IERC20(address(garden)).balanceOf(_strategist) > 0, Errors.STRATEGIST_TOKENS_TOO_LOW);
+        _require(strategistUnlockedBalance >= _stake, Errors.TOKENS_STAKED);
         _require(_stake > IERC20(_garden).totalSupply().div(100), Errors.STAKE_HAS_TO_AT_LEAST_ONE);
         _require(
             _strategyDuration >= garden.minStrategyDuration() && _strategyDuration <= garden.maxStrategyDuration(),
@@ -269,6 +269,7 @@ abstract contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         minRebalanceCapital = _minRebalanceCapital;
         maxCapitalRequested = _maxCapitalRequested;
         totalVotes = _stake.toInt256();
+        votes[_strategist] = _stake.toInt256();
         absoluteTotalVotes = _stake;
         integration = _integration;
         dataSet = false;
