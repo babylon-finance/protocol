@@ -173,6 +173,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         uint256 claimedAt;
         uint256 claimedBABL;
         uint256 claimedProfits;
+        uint256 withdrawnSince;
         uint256[] timeListPointer;
         uint256 pid;
         uint256 lastUpdated;
@@ -1016,7 +1017,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         if (address(this).balance < netFlowQuantity) {
             IWETH(WETH).withdraw(netFlowQuantity);
         }
-        _updateContributorWithdrawalInfo();
+        _updateContributorWithdrawalInfo(netFlowQuantity);
         // Send ETH
         Address.sendValue(_to, netFlowQuantity);
         payProtocolFeeFromGarden(reserveAsset, protocolFees);
@@ -1097,17 +1098,19 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
     /**
      * Updates the contributor info in the array
      */
-    function _updateContributorWithdrawalInfo() internal {
+    function _updateContributorWithdrawalInfo(uint256 _netflowQuantity) internal {
         Contributor storage contributor = contributors[msg.sender];
         // If sold everything
         if (balanceOf(msg.sender) == 0) {
             contributor.lastDepositAt = 0;
             contributor.initialDepositAt = 0;
+            contributor.withdrawnSince = 0;
             delete contributor.timeListPointer;
             totalContributors = totalContributors.sub(1);
             contributor.lastUpdated = block.timestamp;
         } else {
             _setContributorTimestampParams();
+            contributor.withdrawnSince = contributor.withdrawnSince.add(_netflowQuantity);
         }
     }
 
