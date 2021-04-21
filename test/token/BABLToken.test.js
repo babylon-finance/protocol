@@ -4,6 +4,7 @@ const { expect } = require('chai');
 const { ethers, waffle } = require('hardhat');
 
 const { ADDRESS_ZERO, ONE_DAY_IN_SECONDS } = require('../../utils/constants');
+const { increaseTime, from } = require('../utils/test-helpers');
 
 const { loadFixture } = waffle;
 
@@ -99,7 +100,7 @@ describe('BABLToken contract', function () {
   });
 
   describe('Transactions', function () {
-    it('Should fail if trying to transfer any tokens between addresses which are not TimeLockRegistry or RewardsDistributor', async function () {
+    it('Should fail if trying to transfer any tokens between addresses which are not either TimeLockRegistry or RewardsDistributor', async function () {
       const ownerBalance = await bablToken.balanceOf(owner.address);
       expect(ownerBalance).to.equal(ethers.utils.parseEther('1000000'));
 
@@ -116,12 +117,40 @@ describe('BABLToken contract', function () {
       await bablToken.connect(signer1).claimMyTokens();
       await timeLockRegistry.register(signer2.address, ethers.utils.parseEther('18000'), false, 1614618000);
       await bablToken.connect(signer2).claimMyTokens();
-      ethers.provider.send('evm_increaseTime', [ONE_DAY_IN_SECONDS * 366]);
+      await increaseTime(ONE_DAY_IN_SECONDS * 365); // Getting some unlocked tokens
 
       // Might not work other type of transfers
       const value2 = ethers.utils.parseEther('1800');
       await expect(bablToken.connect(signer1).transfer(signer2.address, value2)).to.be.revertedWith('revert BAB#062');
       await expect(bablToken.connect(signer2).transfer(signer1.address, value2)).to.be.revertedWith('revert BAB#062');
+    });
+    it('Should fail if trying to burn tokens', async function () {
+      // burn() is not available at BABLToken on purpose, we simulate burning by transferring into address(0)
+      const value = ethers.utils.parseEther('260000');
+      await expect(bablToken.connect(owner).transfer(ADDRESS_ZERO, value)).to.be.revertedWith(
+        'revert TimeLockedToken:: _transfer: cannot transfer to the zero address',
+      );
+    });
+    it('Should transfer tokens to TimeLockRegistry or RewardsDistributor without the boolean activated', async function () {
+      // Trying to transfer 260_000e18 tokens from owner to userSigner1
+      const value = ethers.utils.parseEther('260000');
+
+      //It might work if from/to is the TimeLockRegistry or RewardsDistributor
+      await expect(bablToken.connect(owner).transfer(rewardsDistributor.address, value)).not.to.be.reverted;
+      await expect(bablToken.connect(owner).transfer(timeLockRegistry.address, value)).not.to.be.reverted;
+      const rewardsDistributorBalance = await bablToken.balanceOf(rewardsDistributor.address);
+      const timeLockRegistryBalance = await bablToken.balanceOf(timeLockRegistry.address);
+      expect(rewardsDistributorBalance).to.be.equal(value);
+      expect(timeLockRegistryBalance).to.be.equal(value);
+    });
+    it('Should work if transfers are done after we activate the boolean to enable transfers', async function () {
+      // Enable BABL token transfers
+      await babController.connect(owner).enableBABLTokensTransfers();
+      // Transfer 260_000e18 tokens from owner to userSigner1
+      const value = ethers.utils.parseEther('260000');
+      await bablToken.connect(owner).transfer(signer1.address, value);
+      const signer1Balance = await bablToken.balanceOf(signer1.address);
+      expect(signer1Balance).to.equal(ethers.utils.parseEther('260000'));
     });
     it('Should transfer tokens between accounts', async function () {
       // Enable BABL token transfers
@@ -420,7 +449,7 @@ describe('BABLToken contract', function () {
       // Tokens are claimed by the Team Member and the registration is deleted in Time Lock Registry
       await bablToken.connect(signer1).claimMyTokens();
       // We move ahead 30 days
-      ethers.provider.send('evm_increaseTime', [ONE_DAY_IN_SECONDS * 30]);
+      await increaseTime(ONE_DAY_IN_SECONDS * 30);
 
       const userSigner1LockedBalance = await bablToken.viewLockedBalance(signer1.address);
 
@@ -444,7 +473,7 @@ describe('BABLToken contract', function () {
       // Tokens are claimed by the Team Member and the registration is deleted in Time Lock Registry
       await bablToken.connect(signer1).claimMyTokens();
       // We move ahead 30 days
-      ethers.provider.send('evm_increaseTime', [ONE_DAY_IN_SECONDS * 30]);
+      await increaseTime(ONE_DAY_IN_SECONDS * 30);
 
       const userSigner1LockedBalance = await bablToken.viewLockedBalance(signer1.address);
 
@@ -463,7 +492,7 @@ describe('BABLToken contract', function () {
       // Tokens are claimed by the Team Member and the registration is deleted in Time Lock Registry
       await bablToken.connect(signer1).claimMyTokens();
       // We move ahead 30 days
-      ethers.provider.send('evm_increaseTime', [ONE_DAY_IN_SECONDS * 30]);
+      await increaseTime(ONE_DAY_IN_SECONDS * 30);
 
       const userSigner1LockedBalance = await bablToken.viewLockedBalance(signer1.address);
 
@@ -483,7 +512,7 @@ describe('BABLToken contract', function () {
       // Tokens are claimed by the Team Member and the registration is deleted in Time Lock Registry
       await bablToken.connect(signer1).claimMyTokens();
       // We move ahead 30 days
-      ethers.provider.send('evm_increaseTime', [ONE_DAY_IN_SECONDS * 30]);
+      await increaseTime(ONE_DAY_IN_SECONDS * 30);
 
       const userSigner1LockedBalance = await bablToken.viewLockedBalance(signer1.address);
 
@@ -534,7 +563,7 @@ describe('BABLToken contract', function () {
     });
 
     it('Should fail when trying to mint 0 tokens', async function () {
-      ethers.provider.send('evm_increaseTime', [ONE_DAY_IN_SECONDS * 365 * 8]);
+      await increaseTime(ONE_DAY_IN_SECONDS * 365 * 8);
 
       await expect(bablToken.mint(signer1.address, 0)).to.be.revertedWith(
         'BABLToken::mint: mint should be higher than zero',
@@ -543,7 +572,7 @@ describe('BABLToken contract', function () {
     it('Should fail when trying to mint before mintingAllowedAfter', async function () {
       const NEW_MAX_SUPPLY = ethers.utils.parseEther('1050000'); // 1_150_000e18
       // Traveling on time >8 years ahead
-      ethers.provider.send('evm_increaseTime', [ONE_DAY_IN_SECONDS * 365 * 8]);
+      await increaseTime(ONE_DAY_IN_SECONDS * 365 * 8);
       await expect(bablToken.changeMaxSupply(NEW_MAX_SUPPLY, 1906560000)); // June 2030 the 1st
 
       await expect(bablToken.mint(signer1.address, 1)).to.be.not.reverted;
@@ -555,7 +584,7 @@ describe('BABLToken contract', function () {
     it('Should fail when trying to mint to the 0 (zero) address', async function () {
       const NEW_MAX_SUPPLY = ethers.utils.parseEther('1050000'); // 1_150_000e18
       // Traveling on time >8 years ahead
-      ethers.provider.send('evm_increaseTime', [ONE_DAY_IN_SECONDS * 365 * 8]);
+      await increaseTime(ONE_DAY_IN_SECONDS * 365 * 8);
       await expect(bablToken.changeMaxSupply(NEW_MAX_SUPPLY, 1906560000)); // June 2030 the 1st
 
       await expect(bablToken.mint(ADDRESS_ZERO, ethers.utils.parseEther('1'))).to.be.revertedWith(
@@ -566,7 +595,7 @@ describe('BABLToken contract', function () {
     it('Should fail when trying to mint to the address of the own BABL Token smartcontract', async function () {
       const NEW_MAX_SUPPLY = ethers.utils.parseEther('1050000'); // 1_150_000e18
       // Traveling on time >8 years ahead
-      ethers.provider.send('evm_increaseTime', [ONE_DAY_IN_SECONDS * 365 * 8]);
+      await increaseTime(ONE_DAY_IN_SECONDS * 365 * 8);
       await expect(bablToken.changeMaxSupply(NEW_MAX_SUPPLY, 1906560000)); // June 2030 the 1st
 
       await expect(bablToken.mint(bablToken.address, ethers.utils.parseEther('1'))).to.be.revertedWith(
@@ -577,7 +606,7 @@ describe('BABLToken contract', function () {
     it('Should fail when trying to mint above Cap limit of 2%', async function () {
       const NEW_MAX_SUPPLY = ethers.utils.parseEther('1050000'); // 1_150_000e18
       // Traveling on time >8 years ahead
-      ethers.provider.send('evm_increaseTime', [ONE_DAY_IN_SECONDS * 365 * 8]);
+      await increaseTime(ONE_DAY_IN_SECONDS * 365 * 8);
       await expect(bablToken.changeMaxSupply(NEW_MAX_SUPPLY, 1906560000)); // June 2030 the 1st
 
       await expect(bablToken.mint(signer1.address, ethers.utils.parseEther('21000'))).to.be.revertedWith(
@@ -587,7 +616,7 @@ describe('BABLToken contract', function () {
     it('Should mint new tokens after 8 years equals to the Cap limit of 2%', async function () {
       const NEW_MAX_SUPPLY = ethers.utils.parseEther('1050000'); // 1_150_000e18
       // Traveling on time >8 years ahead
-      ethers.provider.send('evm_increaseTime', [ONE_DAY_IN_SECONDS * 365 * 8]);
+      await increaseTime(ONE_DAY_IN_SECONDS * 365 * 8);
       await expect(bablToken.changeMaxSupply(NEW_MAX_SUPPLY, 1906560000)); // June 2030 the 1st
 
       await expect(bablToken.mint(signer1.address, ethers.utils.parseEther('20000'))).to.be.not.reverted;
@@ -631,7 +660,7 @@ describe('BABLToken contract', function () {
       // Try to change MAX_SUPPLY by a new number after 8 years by a lower amount
       const NEW_MAX_SUPPLY = ethers.utils.parseEther('1050000'); // 1_150_000e18
       // Traveling on time >8 years ahead
-      ethers.provider.send('evm_increaseTime', [ONE_DAY_IN_SECONDS * 365 * 8]);
+      await increaseTime(ONE_DAY_IN_SECONDS * 365 * 8);
       await expect(bablToken.changeMaxSupply(NEW_MAX_SUPPLY, 1906560000)); // June 2030 the 1st
 
       await expect(bablToken.changeMaxSupply(NEW_MAX_SUPPLY + 100, 1906560010)).to.be.revertedWith(
@@ -647,7 +676,7 @@ describe('BABLToken contract', function () {
       const NEW_MAX_SUPPLY = ethers.utils.parseEther('900000'); // 900_000e18
       const value2 = ethers.utils.parseEther('1000000');
       // Traveling on time >8 years ahead
-      ethers.provider.send('evm_increaseTime', [ONE_DAY_IN_SECONDS * 365 * 8]);
+      await increaseTime(ONE_DAY_IN_SECONDS * 365 * 8);
       await expect(bablToken.changeMaxSupply(NEW_MAX_SUPPLY, 251596800)).to.be.revertedWith(
         'BABLToken::changeMaxSupply: changeMaxSupply should be higher than previous value',
       );
@@ -663,7 +692,7 @@ describe('BABLToken contract', function () {
       // `require` will evaluate false and revert the transaction if the new value is above the cap (5%) the current MAX_SUPPLY.
       const NEW_MAX_SUPPLY = ethers.utils.parseEther('1150000'); // 1_150_000e18
       // Traveling on time >8 years ahead
-      ethers.provider.send('evm_increaseTime', [ONE_DAY_IN_SECONDS * 365 * 8]);
+      await increaseTime(ONE_DAY_IN_SECONDS * 365 * 8);
       await expect(bablToken.changeMaxSupply(NEW_MAX_SUPPLY, 251596800)).to.be.revertedWith(
         'BABLToken::changeMaxSupply: exceeded of allowed 5% cap',
       );
@@ -680,7 +709,7 @@ describe('BABLToken contract', function () {
       // `require` will evaluate false and revert the transaction if the new value is above the cap (5%) the current MAX_SUPPLY.
       const NEW_MAX_SUPPLY = ethers.utils.parseEther('1050000'); // 1_150_000e18
       // Traveling on time >8 years ahead
-      ethers.provider.send('evm_increaseTime', [ONE_DAY_IN_SECONDS * 365 * 8]);
+      await increaseTime(ONE_DAY_IN_SECONDS * 365 * 8);
       await expect(bablToken.changeMaxSupply(NEW_MAX_SUPPLY, 1617292800)).to.be.revertedWith(
         'BABLToken::changeMaxSupply: the newMaxSupplyAllowedAfter should be at least 1 year in the future',
       );
@@ -695,7 +724,7 @@ describe('BABLToken contract', function () {
       // Try to change MAX_SUPPLY by a new number after 8 years by a lower amount
       const NEW_MAX_SUPPLY = ethers.utils.parseEther('1050000'); // 1_150_000e18
       // Traveling on time >8 years ahead
-      ethers.provider.send('evm_increaseTime', [ONE_DAY_IN_SECONDS * 365 * 8]);
+      await increaseTime(ONE_DAY_IN_SECONDS * 365 * 8);
       await expect(bablToken.changeMaxSupply(NEW_MAX_SUPPLY, 1906560000)); // June 2030 the 1st
 
       const value = await bablToken.maxSupply();
@@ -706,7 +735,7 @@ describe('BABLToken contract', function () {
     });
     it('Should fail when trying to change the MAX_SUPPLY after the FIRST EPOCH 8 years but before allowed after', async function () {
       // Traveling on time >8 years ahead
-      ethers.provider.send('evm_increaseTime', [ONE_DAY_IN_SECONDS * 365 * 8]);
+      await increaseTime(ONE_DAY_IN_SECONDS * 365 * 8);
 
       // Try to change MAX_SUPPLY by a new number after 8 years by a lower amount
       const NEW_MAX_SUPPLY = ethers.utils.parseEther('1050000'); // 1_150_000e18

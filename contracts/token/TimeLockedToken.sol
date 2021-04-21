@@ -472,7 +472,7 @@ abstract contract TimeLockedToken is VoteToken {
                 _from == address(timeLockRegistry) ||
                 _from == address(rewardsDistributor) ||
                 _to == address(timeLockRegistry) ||
-                _to == address(rewardsDistributor) ||
+                (_from == Ownable(address(this)).owner() && _to == address(rewardsDistributor)) ||
                 IBabController(controller).bablTokensTransfersEnabled(),
             Errors.BABL_TRANSFERS_DISABLED
         );
