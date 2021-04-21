@@ -20,7 +20,7 @@ async function deployFolioFixture() {
 
   // Deployment of BABL Token contract
   const BABLToken = await ethers.getContractFactory('BABLToken', owner);
-  const bablToken = await BABLToken.connect(owner).deploy(ADDRESS_ZERO); // We will use CREATE2
+  const bablToken = await BABLToken.connect(owner).deploy(ADDRESS_ZERO, babController.address); // We will use CREATE2
 
   // Deployment of Time Lock Registry contract
   const TimeLockRegistry = await ethers.getContractFactory('TimeLockRegistry', owner);
@@ -40,6 +40,9 @@ async function deployFolioFixture() {
   });
 
   const rewardsDistributor = await RewardsDistributor.deploy(bablToken.address, babController.address);
+
+  // Sets the Rewards Distributor address into the BABL Token contract
+  await bablToken.setRewardsDistributor(rewardsDistributor.address);
 
   const GardenValuer = await ethers.getContractFactory('GardenValuer', owner);
   const PriceOracle = await ethers.getContractFactory('PriceOracle', owner);

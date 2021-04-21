@@ -22,6 +22,7 @@ import {TimeLockedToken} from './TimeLockedToken.sol';
 import {Address} from '@openzeppelin/contracts/utils/Address.sol';
 import {ReentrancyGuard} from '@openzeppelin/contracts/utils/ReentrancyGuard.sol';
 import {TimeLockRegistry} from './TimeLockRegistry.sol';
+import {IBabController} from '../interfaces/IBabController.sol';
 
 /**
  * @title BABL Token
@@ -86,7 +87,7 @@ contract BABLToken is TimeLockedToken {
     /**
      * @notice Construct a new BABL token and gives ownership to sender
      */
-    constructor(TimeLockRegistry newTimeLockRegistry) TimeLockedToken(NAME, SYMBOL) {
+    constructor(TimeLockRegistry newTimeLockRegistry, IBabController newController) TimeLockedToken(NAME, SYMBOL) {
         // Timestamp of contract deployment
         BABLTokenDeploymentTimestamp = block.timestamp;
 
@@ -101,6 +102,9 @@ contract BABLToken is TimeLockedToken {
 
         // Set the Time Lock Registry
         timeLockRegistry = newTimeLockRegistry;
+
+        // Set the Babylon Controller
+        controller = newController;
     }
 
     /* ============ External Functions ============ */

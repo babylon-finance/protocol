@@ -32,12 +32,15 @@ describe('BABLToken contract', function () {
   let signer3;
   let bablToken;
   let timeLockRegistry;
+  let babController;
 
   // `beforeEach` will run before each test, re-deploying the contract every
   // time. It receives a callback, which can be async.
 
   beforeEach(async () => {
-    ({ owner, bablToken, timeLockRegistry, signer1, signer2, signer3 } = await loadFixture(deployFolioFixture));
+    ({ owner, bablToken, timeLockRegistry, babController, signer1, signer2, signer3 } = await loadFixture(
+      deployFolioFixture,
+    ));
   });
 
   // You can nest describe calls to create subsections.
@@ -89,6 +92,8 @@ describe('BABLToken contract', function () {
 
   describe('Transactions', function () {
     it('Should transfer tokens between accounts', async function () {
+      // Enable BABL token transfers
+      await babController.connect(owner).enableBABLTokensTransfers();
       // Transfer 260_000e18 tokens from owner to userSigner1
       const value = ethers.utils.parseEther('260000');
       await bablToken.connect(owner).transfer(signer1.address, value);
@@ -121,6 +126,8 @@ describe('BABLToken contract', function () {
     it('Should update balances after transfers', async function () {
       const initialOwnerBalance = await bablToken.balanceOf(owner.address);
       const value = ethers.utils.parseEther('260000');
+      // Enable BABL token transfers
+      await babController.connect(owner).enableBABLTokensTransfers();
       // Transfer 260_000e18 tokens from owner to userSigner1.
       await bablToken.transfer(signer1.address, value);
       const value2 = ethers.utils.parseEther('180000');
@@ -237,6 +244,9 @@ describe('BABLToken contract', function () {
 
   describe('Voting Power for Governance', function () {
     it('Should get voting power equivalent to its balance if it delegates in itself', async function () {
+      // Enable BABL token transfers
+      await babController.connect(owner).enableBABLTokensTransfers();
+
       await bablToken.transfer(signer1.address, ethers.utils.parseEther('26000'));
 
       await bablToken.connect(signer1).delegate(signer1.address); // Own delegation
@@ -250,7 +260,8 @@ describe('BABLToken contract', function () {
     it('Should update voting power when transferring tokens between accounts', async function () {
       await bablToken.connect(signer1).delegate(signer1.address); // Own delegation
       await bablToken.connect(signer2).delegate(signer2.address); // Own delegation
-
+      // Enable BABL token transfers
+      await babController.connect(owner).enableBABLTokensTransfers();
       await bablToken.transfer(signer1.address, ethers.utils.parseEther('26000'));
       const signer1Balance = await bablToken.balanceOf(signer1.address);
       const votesSigner1 = await bablToken.getCurrentVotes(signer1.address);

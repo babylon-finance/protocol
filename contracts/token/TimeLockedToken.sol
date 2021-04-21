@@ -17,10 +17,15 @@
 
 pragma solidity 0.7.4;
 
+import 'hardhat/console.sol';
+import {IBabController} from '../interfaces/IBabController.sol';
 import {TimeLockRegistry} from './TimeLockRegistry.sol';
+import {RewardsDistributor} from './RewardsDistributor.sol';
 import {SafeMath} from '@openzeppelin/contracts/math/SafeMath.sol';
 import {VoteToken} from './VoteToken.sol';
 import {Ownable} from '@openzeppelin/contracts/access/Ownable.sol';
+import {Errors, _require} from '../lib/BabylonErrors.sol';
+import {IBabController} from '../interfaces/IBabController.sol';
 
 /**
  * @title TimeLockedToken
@@ -54,6 +59,9 @@ abstract contract TimeLockedToken is VoteToken {
 
     /// @notice An event that emitted when a new Time Lock is registered
     event NewTimeLockRegistration(address previousAddress, address newAddress);
+
+    /// @notice An event that emitted when a new Rewards Distributor is registered
+    event NewRewardsDistributorRegistration(address previousAddress, address newAddress);
 
     /// @notice An event that emitted when a cancellation of Lock tokens is registered
     event Cancel(address account, uint256 amount);
@@ -113,7 +121,13 @@ abstract contract TimeLockedToken is VoteToken {
     uint256 private investorVesting = 365 days * 3;
 
     // address of Time Lock Registry contract
+    IBabController public controller;
+
+    // address of Time Lock Registry contract
     TimeLockRegistry public timeLockRegistry;
+
+    // address of Rewards Distriburor contract
+    RewardsDistributor public rewardsDistributor;
 
     /* ============ Functions ============ */
 
@@ -138,6 +152,23 @@ abstract contract TimeLockedToken is VoteToken {
         emit NewTimeLockRegistration(address(timeLockRegistry), address(newTimeLockRegistry));
 
         timeLockRegistry = newTimeLockRegistry;
+
+        return true;
+    }
+
+    /**
+     * PRIVILEGED GOVERNANCE FUNCTION. Set the Rewards Distributor contract to control either BABL Mining or profit rewards
+     *
+     * @notice Set the Rewards Distriburor contract to control both types of rewards (profit and BABL Mining program)
+     * @param newRewardsDistributor Address of Rewards Distributor contract
+     */
+    function setRewardsDistributor(RewardsDistributor newRewardsDistributor) external onlyOwner returns (bool) {
+        require(address(newRewardsDistributor) != address(0), 'cannot be zero address');
+        require(address(newRewardsDistributor) != address(this), 'cannot be this contract');
+        require(address(newRewardsDistributor) != address(rewardsDistributor), 'must be new Rewards Distributor');
+        emit NewRewardsDistributorRegistration(address(rewardsDistributor), address(newRewardsDistributor));
+
+        rewardsDistributor = newRewardsDistributor;
 
         return true;
     }
@@ -414,6 +445,36 @@ abstract contract TimeLockedToken is VoteToken {
             delegates[_from],
             delegates[_to],
             safe96(_value, 'TimeLockedToken:: _transfer: uint96 overflow')
+        );
+    }
+
+    /**
+     * PRIVILEGED GOVERNANCE FUNCTION. Disable BABL token transfer until certain conditions are met
+     *
+     * @dev Override the _beforeTokenTransfer of ERC20 BABL tokens until certain conditions are met:
+     * Only allowing minting or transfers from Time Lock Registry and Rewards Distributor until transfers are allowed in the controller
+     * Transferring to owner allows re-issuance of funds through registry
+     *
+     * @param _from The address to send tokens from
+     * @param _to The address that will receive the tokens
+     * @param _value The amount of tokens to be transferred
+     */
+
+    // Disable garden token transfers. Allow minting and burning.
+    function _beforeTokenTransfer(
+        address _from,
+        address _to,
+        uint256 _value
+    ) internal virtual override {
+        super._beforeTokenTransfer(_from, _to, _value);
+        _require(
+            _from == address(0) ||
+                _from == address(timeLockRegistry) ||
+                _from == address(rewardsDistributor) ||
+                _to == address(timeLockRegistry) ||
+                _to == address(rewardsDistributor) ||
+                IBabController(controller).bablTokensTransfersEnabled(),
+            Errors.BABL_TRANSFERS_DISABLED
         );
     }
 
