@@ -210,4 +210,6 @@ library Errors {
     uint256 internal constant TOKENS_HARDLOCKED = 60;
     // Max contributors reached
     uint256 internal constant MAX_CONTRIBUTORS = 61;
+    // Strategy duration range error
+    uint256 internal constant DURATION_RANGE = 62;
 }

@@ -344,6 +344,8 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
             Errors.NOT_IN_RANGE
         );
         _require(_minVotersQuorum >= TEN_PERCENT, Errors.VALUE_TOO_LOW);
+        _require(_maxStrategyDuration >= _minStrategyDuration, Errors.DURATION_RANGE);
+        _require(_minStrategyDuration >= 1 days && _maxStrategyDuration <= 500 days, Errors.DURATION_RANGE);
         minContribution = _minContribution;
         strategyCooldownPeriod = _strategyCooldownPeriod;
         minVotersQuorum = _minVotersQuorum;
