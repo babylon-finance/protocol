@@ -94,7 +94,7 @@ async function main() {
   });
 
   // Strategy Factory Contracts
-  const strategies = ['LongStrategyFactory.sol', 'LiquidityPoolStrategyFactory'];
+  const strategies = ['LongStrategyFactory.sol', 'LiquidityPoolStrategyFactory.sol', 'Strategy.sol'];
   strategies.forEach((file) => {
     exportAndPushContract(file, 'strategies/');
   });
