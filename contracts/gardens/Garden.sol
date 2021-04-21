@@ -15,7 +15,7 @@
     SPDX-License-Identifier: Apache License, Version 2.0
 */
 
-pragma solidity 0.7.4;
+pragma solidity 0.7.6;
 
 import 'hardhat/console.sol';
 import {Address} from '@openzeppelin/contracts/utils/Address.sol';
@@ -343,7 +343,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
                 _strategyCooldownPeriod >= IBabController(controller).getMinCooldownPeriod(),
             Errors.NOT_IN_RANGE
         );
-        _require(_minVotersQuorum >= TEN_PERCENT, Errors.VALUE_TOO_LOW);
+        _require(_minVotersQuorum >= TEN_PERCENT && _minVotersQuorum <= TEN_PERCENT.mul(5), Errors.VALUE_TOO_LOW);
         _require(_maxStrategyDuration >= _minStrategyDuration, Errors.DURATION_RANGE);
         _require(_minStrategyDuration >= 1 days && _maxStrategyDuration <= 500 days, Errors.DURATION_RANGE);
         minContribution = _minContribution;
