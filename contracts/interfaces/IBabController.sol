@@ -70,6 +70,8 @@ interface IBabController {
 
     function enableGardenTokensTransfers() external;
 
+    function enableBABLTokensTransfers() external;
+
     function editLiquidityMinimum(uint256 _minRiskyPairLiquidityEth) external;
 
     function owner() external view returns (address);
@@ -91,6 +93,8 @@ interface IBabController {
     function protocolWithdrawalGardenTokenFee() external view returns (uint256);
 
     function gardenTokensTransfersEnabled() external view returns (bool);
+
+    function bablTokensTransfersEnabled() external view returns (bool);
 
     function getProfitSharing()
         external
