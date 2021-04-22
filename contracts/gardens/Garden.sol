@@ -67,7 +67,6 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
     using SafeERC20Upgradeable for IERC20Upgradeable;
 
     /* ============ Events ============ */
-    event ReserveAssetChanged(address indexed _reserveAsset, address _oldReserve);
     event PrincipalChanged(uint256 _newAmount, uint256 _oldAmount);
     event GardenDeposit(
         address indexed _to,
@@ -506,18 +505,6 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
     }
 
     /* ============ External Functions ============ */
-
-    /**
-     * PRIVILEGED Manager, protocol FUNCTION. Changes the reserve asset
-     *
-     * @param _reserveAsset                 Address of the new reserve asset
-     */
-    function editReserveAsset(address _reserveAsset) external onlyProtocol {
-        address oldReserve = reserveAsset;
-        reserveAsset = _reserveAsset;
-
-        emit ReserveAssetChanged(_reserveAsset, oldReserve);
-    }
 
     /**
      * PRIVILEGED Manager, protocol FUNCTION. When a Garden is active, deposits are enabled.
