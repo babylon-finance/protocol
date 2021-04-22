@@ -777,26 +777,6 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
     }
 
     /**
-     * Checks if deposit is valid
-     *
-     * @param _reserveAsset                 Address of the reserve asset
-     * @param _reserveAssetQuantity         Quantity of the reserve asset to deposit with
-     *
-     * @return  bool                        Returns true if deposit is valid
-     */
-    function isDepositValid(address _reserveAsset, uint256 _reserveAssetQuantity)
-        external
-        view
-        override
-        returns (bool)
-    {
-        return
-            _reserveAssetQuantity != 0 &&
-            IBabController(controller).isValidReserveAsset(_reserveAsset) &&
-            totalSupply() >= minGardenTokenSupply;
-    }
-
-    /**
      * Checks if withdrawal is valid
      *
      * @param _reserveAsset                 Address of the reserve asset
