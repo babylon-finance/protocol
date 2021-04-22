@@ -20,6 +20,7 @@ const {
 } = require('../fixtures/StrategyHelper.js');
 
 const { deployFolioFixture } = require('../fixtures/ControllerFixture');
+const { ethers } = require('ethers');
 
 async function getAndValidateProtocolTimestamp(rewardsDistributor, timestamp, protocolPerTimestamp) {
   const [principal, time, quarterBelonging, timeListPointer, power] = await rewardsDistributor.checkProtocol(timestamp);
@@ -123,8 +124,43 @@ describe('BABL Rewards Distributor', function () {
   });
 
   describe('Strategy BABL Mining Rewards Calculation', async function () {
+    it('should get 0 BABL rewards if the Mining Program has not started yet', async function () {
+      const [long] = await createStrategies([{ garden: garden1 }]);
+
+      await executeStrategy(long, ONE_ETH);
+      await finalizeStrategyAfter30Days(long);
+
+      const value = await long.strategyRewards();
+      expect(value.toString()).to.be.equal('0');
+    });
+    it('should get 0 BABL rewards if the Mining Program starts after the creation of an strategy', async function () {
+      const [long] = await createStrategies([{ garden: garden1 }]);
+      // Mining program has to be enabled before the strategy is created
+      await babController.enableBABLMiningProgram();
+      await executeStrategy(long, ONE_ETH);
+
+      await finalizeStrategyAfter30Days(long);
+
+      const value = await long.strategyRewards();
+      expect(value.toString()).to.be.equal('0');
+    });
+    it('should get 0 BABL rewards if the Mining Program starts in the middle of an strategy execution', async function () {
+      const [long] = await createStrategies([{ garden: garden1 }]);
+
+      await executeStrategy(long, ONE_ETH);
+      // Mining program has to be enabled before the strategy is created
+      await babController.enableBABLMiningProgram();
+      await finalizeStrategyAfter30Days(long);
+
+      const value = await long.strategyRewards();
+      expect(value.toString()).to.be.equal('0');
+    });
     it('should fail trying to calculate rewards of a strategy that has not ended yet', async function () {
       const [long] = await createStrategies([{ garden: garden1 }]);
+
+      // Mining program has to be enabled before the strategy starts its execution
+      await babController.enableBABLMiningProgram();
+
       await executeStrategy(long, ONE_ETH);
 
       await expect(rewardsDistributor.getStrategyRewards(long.address)).to.be.revertedWith(
@@ -132,8 +168,10 @@ describe('BABL Rewards Distributor', function () {
       );
     });
 
-    // TODO: This test doesn't check BABL rewards.
     it('should calculate correct BABL in case of 1 strategy with negative profit and total duration of 1 quarter', async function () {
+      // Mining program has to be enabled before the strategy starts its execution
+      await babController.enableBABLMiningProgram();
+
       const [long1] = await createStrategies([{ garden: garden1 }]);
 
       await executeStrategy(long1, ONE_ETH);
@@ -155,11 +193,17 @@ describe('BABL Rewards Distributor', function () {
         quarter: 1,
         timeListPointer: 1,
       });
+      const value = await long1.strategyRewards();
+
+      expect(value.toString()).to.be.closeTo('53348540978530991898983', ethers.utils.parseEther('100'));
     });
 
-    // TODO: This test doesn't check BABL rewards.
     it('should calculate correct BABL in case of 1 strategy with positive profit and with total duration of 1 quarter', async function () {
+      // Mining program has to be enabled before the strategy starts its execution
+      await babController.enableBABLMiningProgram();
+
       const [long1] = await createStrategies([{ garden: garden1 }]);
+
       await executeStrategy(long1, ONE_ETH);
 
       await injectFakeProfits(long1, ONE_ETH.mul(222));
@@ -173,10 +217,14 @@ describe('BABL Rewards Distributor', function () {
         quarter: 1,
         timeListPointer: 1,
       });
+      const value = await long1.strategyRewards();
+
+      expect(value.toString()).to.be.closeTo('59249976195741897367844', ethers.utils.parseEther('100'));
     });
 
-    // TODO: This test doesn't check BABL rewards.
     it('should calculate correct BABL in case of 2 strategies with total duration of 1 quarter', async function () {
+      // Mining program has to be enabled before the strategy starts its execution
+      await babController.enableBABLMiningProgram();
       const [long1, long2] = await createStrategies([{ garden: garden1 }, { garden: garden1 }]);
 
       await executeStrategy(long1, ONE_ETH);
@@ -201,15 +249,23 @@ describe('BABL Rewards Distributor', function () {
         quarter: 1,
         timeListPointer: 3,
       });
+
+      const value = await long1.strategyRewards();
+      const value2 = await long2.strategyRewards();
+      expect(value.toString()).to.be.closeTo('27180447233494116321502', ethers.utils.parseEther('100'));
+      expect(value2.toString()).to.be.closeTo('35048359900229386030568', ethers.utils.parseEther('100'));
     });
 
-    // TODO: This test doesn't check BABL rewards.
     it('should calculate correct BABL in case of 3 strategies with total duration of 1 quarter', async function () {
+      // Mining program has to be enabled before the strategy starts its execution
+      await babController.enableBABLMiningProgram();
+
       const [long1, long2, long3] = await createStrategies([
         { garden: garden1 },
         { garden: garden1 },
         { garden: garden1 },
       ]);
+
       await executeStrategy(long1, ONE_ETH);
       await executeStrategy(long2, ONE_ETH);
       await executeStrategy(long3, ONE_ETH);
@@ -235,10 +291,19 @@ describe('BABL Rewards Distributor', function () {
         quarter: 1,
         timeListPointer: 5,
       });
+      const value = await long1.strategyRewards();
+      const value2 = await long2.strategyRewards();
+      const value3 = await long3.strategyRewards();
+
+      expect(value.toString()).to.be.closeTo('18445181219085995431261', ethers.utils.parseEther('100'));
+      expect(value2.toString()).to.be.closeTo('17782866245738688737500', ethers.utils.parseEther('100'));
+      expect(value3.toString()).to.be.closeTo('17185457418296213096639', ethers.utils.parseEther('100'));
     });
 
-    // TODO: This test doesn't check BABL rewards.
     it('should calculate correct BABL in case of 5 strategies of 2 different Gardens with total duration of less than 1 quarter', async function () {
+      // Mining program has to be enabled before the strategy starts its execution
+      await babController.enableBABLMiningProgram();
+
       const [long1, long2, long3, long4, long5] = await createStrategies([
         { garden: garden1 },
         { garden: garden1 },
@@ -276,11 +341,25 @@ describe('BABL Rewards Distributor', function () {
         quarter: 1,
         timeListPointer: 9,
       });
+      const value = await long1.strategyRewards();
+      const value2 = await long2.strategyRewards();
+      const value3 = await long3.strategyRewards();
+      const value4 = await long4.strategyRewards();
+      const value5 = await long5.strategyRewards();
+
+      expect(value.toString()).to.be.closeTo('11435970164063358738429', ethers.utils.parseEther('100'));
+      expect(value2.toString()).to.be.closeTo('11044229195829251755344', ethers.utils.parseEther('100'));
+      expect(value3.toString()).to.be.closeTo('10683469693470981807217', ethers.utils.parseEther('100'));
+      expect(value4.toString()).to.be.closeTo('10335531645539449819993', ethers.utils.parseEther('100'));
+      expect(value5.toString()).to.be.closeTo('9999261911014897602655', ethers.utils.parseEther('100'));
     });
 
-    // TODO: This test doesn't check BABL rewards.
     it('should calculate correct BABL in case of 1 strategy with total duration of 2 quarters', async function () {
+      // Mining program has to be enabled before the strategy starts its execution
+      await babController.enableBABLMiningProgram();
+
       const [long1] = await createStrategies([{ garden: garden1 }]);
+
       await executeStrategy(long1, ONE_ETH);
 
       await finalizeStrategyAfter2Quarters(long1);
@@ -291,13 +370,17 @@ describe('BABL Rewards Distributor', function () {
         quarter: 3,
         timeListPointer: 1,
       });
+      const value1 = await long1.strategyRewards();
+      expect(value1.toString()).to.be.closeTo('101611616359986629966551', ethers.utils.parseEther('100'));
     });
 
     it('should calculate correct BABL in the future (10 years) in case of 1 strategy with total duration of 2 quarters', async function () {
-      const [long1] = await createStrategies([{ garden: garden1 }]);
-
+      // Mining program has to be enabled before the strategy starts its execution
+      await babController.enableBABLMiningProgram();
       // We go to the future 10 years
       increaseTime(ONE_DAY_IN_SECONDS * 3650);
+
+      const [long1] = await createStrategies([{ garden: garden1 }]);
 
       await executeStrategy(long1, ONE_ETH);
 
@@ -309,9 +392,14 @@ describe('BABL Rewards Distributor', function () {
         quarter: 43,
         timeListPointer: 1,
       });
+      const value1 = await long1.strategyRewards();
+      expect(value1.toString()).to.be.closeTo('1345917359221846850849', ethers.utils.parseEther('100'));
     });
 
     it('should calculate correct BABL rewards in case of 1 strategy with total duration of 3 quarters', async function () {
+      // Mining program has to be enabled before the strategy starts its execution
+      await babController.enableBABLMiningProgram();
+
       const [long1] = await createStrategies([{ garden: garden1 }]);
 
       await executeStrategy(long1, ONE_ETH);
@@ -324,9 +412,14 @@ describe('BABL Rewards Distributor', function () {
         quarter: 4,
         timeListPointer: 1,
       });
+      const value1 = await long1.strategyRewards();
+      expect(value1.toString()).to.be.closeTo('144073198442804768654832', ethers.utils.parseEther('100'));
     });
 
     it('should calculate correct BABL in case of 5 strategies of 2 different Gardens with different timings along 3 quarters', async function () {
+      // Mining program has to be enabled before the strategy starts its execution
+      await babController.enableBABLMiningProgram();
+
       const [long1, long2, long3, long4, long5] = await createStrategies([
         { garden: garden1 },
         { garden: garden1 },
@@ -363,9 +456,23 @@ describe('BABL Rewards Distributor', function () {
         quarter: 10,
         timeListPointer: 9,
       });
+      const value = await long1.strategyRewards();
+      const value2 = await long2.strategyRewards();
+      const value3 = await long3.strategyRewards();
+      const value4 = await long4.strategyRewards();
+      const value5 = await long5.strategyRewards();
+
+      expect(value.toString()).to.be.closeTo('14768509337275189635976', ethers.utils.parseEther('100'));
+      expect(value2.toString()).to.be.closeTo('36028010516922891357773', ethers.utils.parseEther('100'));
+      expect(value3.toString()).to.be.closeTo('47767976443221726749911', ethers.utils.parseEther('100'));
+      expect(value4.toString()).to.be.closeTo('77718716359714865220580', ethers.utils.parseEther('100'));
+      expect(value5.toString()).to.be.closeTo('144690957560334038164365', ethers.utils.parseEther('100'));
     });
 
     it('should calculate correct BABL (in 10 Years from now) in case of 5 strategies of 2 different Gardens with different timings along 3 quarters', async function () {
+      // Mining program has to be enabled before the strategy starts its execution
+      await babController.enableBABLMiningProgram();
+
       increaseTime(ONE_DAY_IN_SECONDS * 3650);
 
       const [long1, long2, long3, long4, long5] = await createStrategies([
@@ -404,9 +511,23 @@ describe('BABL Rewards Distributor', function () {
         quarter: 50,
         timeListPointer: 9,
       });
+      const value = await long1.strategyRewards();
+      const value2 = await long2.strategyRewards();
+      const value3 = await long3.strategyRewards();
+      const value4 = await long4.strategyRewards();
+      const value5 = await long5.strategyRewards();
+
+      expect(value.toString()).to.be.closeTo('219830499847879011062', ethers.utils.parseEther('100'));
+      expect(value2.toString()).to.be.closeTo('432866381321524321541', ethers.utils.parseEther('100'));
+      expect(value3.toString()).to.be.closeTo('550877848075216077400', ethers.utils.parseEther('100'));
+      expect(value4.toString()).to.be.closeTo('855415131918472783218', ethers.utils.parseEther('100'));
+      expect(value5.toString()).to.be.closeTo('1548719778914765381373', ethers.utils.parseEther('100'));
     });
 
     it('should calculate correct BABL in case of 5 strategies of 2 different Gardens with different timings along 3 Years', async function () {
+      // Mining program has to be enabled before the strategy starts its execution
+      await babController.enableBABLMiningProgram();
+
       const [long1, long2, long3, long4, long5] = await createStrategies([
         { garden: garden1 },
         { garden: garden1 },
@@ -435,9 +556,23 @@ describe('BABL Rewards Distributor', function () {
         quarter: 17,
         timeListPointer: 9,
       });
+      const value = await long1.strategyRewards();
+      const value2 = await long2.strategyRewards();
+      const value3 = await long3.strategyRewards();
+      const value4 = await long4.strategyRewards();
+      const value5 = await long5.strategyRewards();
+
+      expect(value.toString()).to.be.closeTo('14768510523869051906610', ethers.utils.parseEther('100'));
+      expect(value2.toString()).to.be.closeTo('36028010181804892681797', ethers.utils.parseEther('100'));
+      expect(value3.toString()).to.be.closeTo('103504194661629220128166', ethers.utils.parseEther('100'));
+      expect(value4.toString()).to.be.closeTo('116791666375962828576062', ethers.utils.parseEther('100'));
+      expect(value5.toString()).to.be.closeTo('146647388604927375625599', ethers.utils.parseEther('100'));
     });
 
     it('should calculate correct BABL in case of 5 (4 with positive profits) strategies of 2 different Gardens with different timings along 3 Years', async function () {
+      // Mining program has to be enabled before the strategy starts its execution
+      await babController.enableBABLMiningProgram();
+
       const [long1, long2, long3, long4, long5] = await createStrategies([
         { garden: garden1 },
         { garden: garden1 },
@@ -475,11 +610,25 @@ describe('BABL Rewards Distributor', function () {
         quarter: 17,
         timeListPointer: 9,
       });
+      const value = await long1.strategyRewards();
+      const value2 = await long2.strategyRewards();
+      const value3 = await long3.strategyRewards();
+      const value4 = await long4.strategyRewards();
+      const value5 = await long5.strategyRewards();
+
+      expect(value.toString()).to.be.closeTo('16240388525503153926512', ethers.utils.parseEther('100'));
+      expect(value2.toString()).to.be.closeTo('36028007825033530186347', ethers.utils.parseEther('100'));
+      expect(value3.toString()).to.be.closeTo('113879793599216106591361', ethers.utils.parseEther('100'));
+      expect(value4.toString()).to.be.closeTo('128499165056248655452247', ethers.utils.parseEther('100'));
+      expect(value5.toString()).to.be.closeTo('162964850162148936616798', ethers.utils.parseEther('100'));
     });
   });
 
   describe('Claiming Profits and BABL Rewards', function () {
     it('should claim and update balances of Signer1 either Garden tokens or BABL rewards as contributor of 2 strategies (1 with positive profits and other without them) within a quarter', async function () {
+      // Mining program has to be enabled before the strategy starts its execution
+      await babController.enableBABLMiningProgram();
+
       const [long1, long2] = await createStrategies([{ garden: garden1 }, { garden: garden1 }]);
 
       await executeStrategy(long1, ONE_ETH);
@@ -504,6 +653,9 @@ describe('BABL Rewards Distributor', function () {
     });
 
     it('should not allow a race condition of two consecutive claims for the same rewards & profit of the same strategies', async function () {
+      // Mining program has to be enabled before the strategy starts its execution
+      await babController.enableBABLMiningProgram();
+
       const [long1, long2] = await createStrategies([{ garden: garden1 }, { garden: garden1 }]);
 
       await executeStrategy(long1, ONE_ETH);
@@ -539,6 +691,9 @@ describe('BABL Rewards Distributor', function () {
     });
 
     it('should only provide new additional BABL and profits between claims (claiming results of 2 strategies only 1 with profit)', async function () {
+      // Mining program has to be enabled before the strategy starts its execution
+      await babController.enableBABLMiningProgram();
+
       const [long1, long2] = await createStrategies([{ garden: garden1 }, { garden: garden1 }]);
 
       await executeStrategy(long1, ONE_ETH);
@@ -556,6 +711,9 @@ describe('BABL Rewards Distributor', function () {
     });
 
     it('should only provide new additional BABL and profits between claims (claiming results of 2 strategies both with profit)', async function () {
+      // Mining program has to be enabled before the strategy starts its execution
+      await babController.enableBABLMiningProgram();
+
       const [long1, long2] = await createStrategies([{ garden: garden1 }, { garden: garden1 }]);
 
       await executeStrategy(long1, ONE_ETH);
@@ -576,6 +734,9 @@ describe('BABL Rewards Distributor', function () {
     });
 
     it('should check potential claim values of Profit and BABL Rewards', async function () {
+      // Mining program has to be enabled before the strategy starts its execution
+      await babController.enableBABLMiningProgram();
+
       const [long1, long2] = await createStrategies([{ garden: garden1 }, { garden: garden1 }]);
 
       await executeStrategy(long1, ONE_ETH);
@@ -598,6 +759,8 @@ describe('BABL Rewards Distributor', function () {
     });
 
     it('should claim and update balances of Signer1 either Garden tokens or BABL rewards as contributor of 5 strategies (4 with positive profits) of 2 different Gardens with different timings along 3 Years', async function () {
+      // Mining program has to be enabled before the strategy starts its execution
+      await babController.enableBABLMiningProgram();
       const [long1, long2, long3, long4, long5] = await createStrategies([
         { garden: garden1 },
         { garden: garden1 },

@@ -18,7 +18,6 @@
 
 pragma solidity 0.7.6;
 
-import 'hardhat/console.sol';
 import {OwnableUpgradeable} from '@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol';
 import {AddressUpgradeable} from '@openzeppelin/contracts-upgradeable/utils/AddressUpgradeable.sol';
 import {SafeMath} from '@openzeppelin/contracts/math/SafeMath.sol';
@@ -100,6 +99,8 @@ contract BabControllerV2Mock is OwnableUpgradeable {
     // Enable Transfer of ERC20 BABL Tokens
     // Only Minting or transfers from/to TimeLockRegistry and Rewards Distributor can transfer tokens until the protocol is fully decentralized
     bool public bablTokensTransfersEnabled;
+    // Enable and starts the BABL Mining program within Rewards Distributor contract
+    bool public bablMiningProgramEnabled;
 
     uint256 public protocolPerformanceFee; // 5% (0.01% = 1e14, 1% = 1e16) on profits
     uint256 public protocolManagementFee; // 0.5% (0.01% = 1e14, 1% = 1e16)
@@ -123,6 +124,7 @@ contract BabControllerV2Mock is OwnableUpgradeable {
         protocolWithdrawalGardenTokenFee = 0; // 0% (0.01% = 1e14, 1% = 1e16) on profits
         gardenTokensTransfersEnabled = false;
         bablTokensTransfersEnabled = false;
+        bablMiningProgramEnabled = false;
         minRiskyPairLiquidityEth = 1000 * 1e18;
 
         strategistProfitPercentage = 10e16;

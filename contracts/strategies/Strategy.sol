@@ -341,6 +341,10 @@ abstract contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         capitalAllocated = capitalAllocated.add(_capital);
         _enterStrategy(_capital);
 
+        // Add to Rewards Distributor an update of the Protocol Principal for BABL Mining Rewards calculations
+        IRewardsDistributor rewardsDistributor = IRewardsDistributor(IBabController(controller).rewardsDistributor());
+        uint256 rewardsStartTime = rewardsDistributor.START_TIME();
+        bool miningStarted = ((enteredAt > rewardsStartTime) && (rewardsStartTime != 0));
         // Sets the executed timestamp on first execution
         if (executedAt == 0) {
             executedAt = block.timestamp;
@@ -348,12 +352,15 @@ abstract contract Strategy is ReentrancyGuard, IStrategy, Initializable {
             // Updating allocation - we need to consider the difference for the calculation
             // We control the potential overhead in BABL Rewards calculations to keep control
             // and avoid distributing a wrong number (e.g. flash loans)
-            rewardsTotalOverhead = rewardsTotalOverhead.add(_capital.mul(block.timestamp.sub(updatedAt)));
+            if (miningStarted) {
+                // The Mining program has not started on time for this strategy
+                rewardsTotalOverhead = rewardsTotalOverhead.add(_capital.mul(block.timestamp.sub(updatedAt)));
+            }
         }
-
-        // Add to Rewards Distributor an update of the Protocol Principal for BABL Mining Rewards calculations
-        IRewardsDistributor rewardsDistributor = IRewardsDistributor(IBabController(controller).rewardsDistributor());
-        rewardsDistributor.addProtocolPrincipal(_capital);
+        if (miningStarted) {
+            // The Mining program has not started on time for this strategy
+            rewardsDistributor.addProtocolPrincipal(_capital);
+        }
         _payKeeper(msg.sender, _fee);
         updatedAt = block.timestamp;
         emit StrategyExecuted(address(garden), kind, _capital, _fee, block.timestamp);
@@ -409,7 +416,12 @@ abstract contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         capitalAllocated = capitalAllocated.sub(_amountToUnwind);
         // Removes protocol principal for the calculation of rewards
         IRewardsDistributor rewardsDistributor = IRewardsDistributor(IBabController(controller).rewardsDistributor());
-        rewardsDistributor.substractProtocolPrincipal(_amountToUnwind);
+        uint256 rewardsStartTime = rewardsDistributor.START_TIME();
+        bool miningStarted = ((enteredAt > rewardsStartTime) && (rewardsStartTime != 0));
+        if (miningStarted) {
+            // Only if the Mining program started on time for this strategy
+            rewardsDistributor.substractProtocolPrincipal(_amountToUnwind);
+        }
         // Send the amount back to the warden for the immediate withdrawal
         IERC20(garden.reserveAsset()).safeTransfer(address(garden), _amountToUnwind);
         emit StrategyReduced(address(garden), kind, _amountToUnwind, block.timestamp);
@@ -731,8 +743,13 @@ abstract contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         IGarden(garden).moveStrategyToFinalized(reserveAssetDelta, address(this));
         IRewardsDistributor rewardsDistributor = IRewardsDistributor(IBabController(controller).rewardsDistributor());
         // Substract the Principal in the Rewards Distributor to update the Protocol power value
-        rewardsDistributor.substractProtocolPrincipal(capitalAllocated);
-        strategyRewards = rewardsDistributor.getStrategyRewards(address(this));
+        uint256 rewardsStartTime = rewardsDistributor.START_TIME();
+        bool miningStarted = ((enteredAt > rewardsStartTime) && (rewardsStartTime != 0));
+        if (miningStarted) {
+            // Only if the Mining program started on time for this strategy
+            rewardsDistributor.substractProtocolPrincipal(capitalAllocated);
+        }
+        strategyRewards = rewardsDistributor.getStrategyRewards(address(this)); // Must be zero in case the mining program didnt started on time
     }
 
     function _getPrice(address _assetOne, address _assetTwo) internal view returns (uint256) {

@@ -17,8 +17,6 @@
 
 pragma solidity 0.7.6;
 
-import 'hardhat/console.sol';
-
 import {TimeLockedToken} from './TimeLockedToken.sol';
 
 import {Ownable} from '@openzeppelin/contracts/access/Ownable.sol';
@@ -63,9 +61,27 @@ contract RewardsDistributor is Ownable, IRewardsDistributor {
     /* ========== Events ========== */
 
     /* ============ Modifiers ============ */
-
+    /**
+     * Throws if the call is not from a valid strategy
+     */
     modifier onlyStrategy {
         require(controller.isSystemContract(address(IStrategy(msg.sender).garden())));
+        _;
+    }
+
+    /**
+     * Throws if the BABL Rewards mining program is not active
+     */
+    modifier onlyMiningActive() {
+        require(IBabController(controller).bablMiningProgramEnabled(), 'BABL Mining program not started yet');
+        _;
+    }
+    /**
+     * Throws if the sender is not the controller
+     */
+    modifier onlyController() {
+        require(IBabController(controller).isSystemContract(msg.sender), 'Check of system contract fail');
+        require(address(controller) == msg.sender, 'Only the controller can activate the BABL Rewards Mining Program');
         _;
     }
 
@@ -80,7 +96,7 @@ contract RewardsDistributor is Ownable, IRewardsDistributor {
     uint256 public constant override EPOCH_DURATION = 90 days;
 
     // solhint-disable-next-line
-    uint256 public immutable override START_TIME; // Starting time of the rewards distribution
+    uint256 public override START_TIME; // Starting time of the rewards distribution
 
     // solhint-disable-next-line
     uint256 public immutable BABL_STRATEGIST_SHARE;
@@ -119,7 +135,7 @@ contract RewardsDistributor is Ownable, IRewardsDistributor {
 
     /* ============ State Variables ============ */
 
-    // Controller contract
+    // Instance of the Controller contract
     IBabController public controller;
 
     // BABL Token contract
@@ -145,7 +161,6 @@ contract RewardsDistributor is Ownable, IRewardsDistributor {
         require(address(_controller) != address(0), 'Controller needs to exist');
         babltoken = _bablToken;
         controller = _controller;
-        START_TIME = block.timestamp;
 
         (BABL_STRATEGIST_SHARE, BABL_STEWARD_SHARE, BABL_LP_SHARE, CREATOR_BONUS) = controller.getBABLSharing();
         (PROFIT_STRATEGIST_SHARE, PROFIT_STEWARD_SHARE, PROFIT_LP_SHARE) = controller.getProfitSharing();
@@ -158,57 +173,63 @@ contract RewardsDistributor is Ownable, IRewardsDistributor {
      * Function that adds the capital received to the total principal of the protocol per timestamp
      * @param _capital                Amount of capital in WETH
      */
-    function addProtocolPrincipal(uint256 _capital) external override onlyStrategy {
+    function addProtocolPrincipal(uint256 _capital) external override onlyStrategy onlyMiningActive {
         IStrategy strategy = IStrategy(msg.sender);
-        protocolPrincipal = protocolPrincipal.add(_capital);
-        ProtocolPerTimestamp storage protocolCheckpoint = protocolPerTimestamp[block.timestamp];
-        protocolCheckpoint.principal = protocolPrincipal;
-        protocolCheckpoint.time = block.timestamp;
-        protocolCheckpoint.quarterBelonging = getQuarter(block.timestamp);
-        protocolCheckpoint.timeListPointer = pid;
-        if (pid == 0) {
-            // The very first strategy of all strategies in the mining program
-            protocolCheckpoint.power = 0;
-        } else {
-            // Any other strategy different from the very first one (will have an antecesor)
-            protocolCheckpoint.power = protocolPerTimestamp[timeList[pid.sub(1)]].power.add(
-                protocolCheckpoint.time.sub(protocolPerTimestamp[timeList[pid.sub(1)]].time).mul(
-                    protocolPerTimestamp[timeList[pid.sub(1)]].principal
-                )
-            );
-        }
+        if (strategy.enteredAt() >= START_TIME) {
+            // onlyMiningActive control, it does not create a checkpoint if the strategy is not part of the Mining Program
+            protocolPrincipal = protocolPrincipal.add(_capital);
+            ProtocolPerTimestamp storage protocolCheckpoint = protocolPerTimestamp[block.timestamp];
+            protocolCheckpoint.principal = protocolPrincipal;
+            protocolCheckpoint.time = block.timestamp;
+            protocolCheckpoint.quarterBelonging = getQuarter(block.timestamp);
+            protocolCheckpoint.timeListPointer = pid;
+            if (pid == 0) {
+                // The very first strategy of all strategies in the mining program
+                protocolCheckpoint.power = 0;
+            } else {
+                // Any other strategy different from the very first one (will have an antecesor)
+                protocolCheckpoint.power = protocolPerTimestamp[timeList[pid.sub(1)]].power.add(
+                    protocolCheckpoint.time.sub(protocolPerTimestamp[timeList[pid.sub(1)]].time).mul(
+                        protocolPerTimestamp[timeList[pid.sub(1)]].principal
+                    )
+                );
+            }
 
-        timeList.push(block.timestamp); // Register of added strategies timestamps in the array for iteration
-        // Here we control the accumulated protocol power per each quarter
-        // Create the quarter checkpoint in case the checkpoint is the first in the epoch
-        _addProtocolPerQuarter(block.timestamp);
-        // We update the rewards overhead if any
-        //rewardsPowerOverhead[address(strategy)][getQuarter(block.timestamp)] = rewardsPowerOverhead[address(strategy)][getQuarter(block.timestamp)].add(_capital.mul(block.timestamp.sub(strategy.updatedAt())));
-        _updatePowerOverhead(strategy, _capital);
-        pid++;
+            timeList.push(block.timestamp); // Register of added strategies timestamps in the array for iteration
+            // Here we control the accumulated protocol power per each quarter
+            // Create the quarter checkpoint in case the checkpoint is the first in the epoch
+            _addProtocolPerQuarter(block.timestamp);
+            // We update the rewards overhead if any
+            _updatePowerOverhead(strategy, _capital);
+            pid++;
+        }
     }
 
     /**
      * Function that removes the capital received to the total principal of the protocol per timestamp
      * @param _capital                Amount of capital in WETH
      */
-    function substractProtocolPrincipal(uint256 _capital) external override onlyStrategy {
-        protocolPrincipal = protocolPrincipal.sub(_capital);
-        ProtocolPerTimestamp storage protocolCheckpoint = protocolPerTimestamp[block.timestamp];
-        protocolCheckpoint.principal = protocolPrincipal;
-        protocolCheckpoint.time = block.timestamp;
-        protocolCheckpoint.quarterBelonging = getQuarter(block.timestamp);
-        protocolCheckpoint.timeListPointer = pid;
-        protocolCheckpoint.power = protocolPerTimestamp[timeList[pid.sub(1)]].power.add(
-            protocolCheckpoint.time.sub(protocolPerTimestamp[timeList[pid.sub(1)]].time).mul(
-                protocolPerTimestamp[timeList[pid.sub(1)]].principal
-            )
-        );
-        timeList.push(block.timestamp);
-        // Here we control the accumulated protocol power per each quarter
-        // Create the quarter checkpoint in case the checkpoint is the first in the epoch or there were epochs without checkpoints
-        _addProtocolPerQuarter(block.timestamp);
-        pid++;
+    function substractProtocolPrincipal(uint256 _capital) external override onlyStrategy onlyMiningActive {
+        IStrategy strategy = IStrategy(msg.sender);
+        if (strategy.enteredAt() >= START_TIME) {
+            // onlyMiningActive control, it does not create a checkpoint if the strategy is not part of the Mining Program
+            protocolPrincipal = protocolPrincipal.sub(_capital);
+            ProtocolPerTimestamp storage protocolCheckpoint = protocolPerTimestamp[block.timestamp];
+            protocolCheckpoint.principal = protocolPrincipal;
+            protocolCheckpoint.time = block.timestamp;
+            protocolCheckpoint.quarterBelonging = getQuarter(block.timestamp);
+            protocolCheckpoint.timeListPointer = pid;
+            protocolCheckpoint.power = protocolPerTimestamp[timeList[pid.sub(1)]].power.add(
+                protocolCheckpoint.time.sub(protocolPerTimestamp[timeList[pid.sub(1)]].time).mul(
+                    protocolPerTimestamp[timeList[pid.sub(1)]].principal
+                )
+            );
+            timeList.push(block.timestamp);
+            // Here we control the accumulated protocol power per each quarter
+            // Create the quarter checkpoint in case the checkpoint is the first in the epoch or there were epochs without checkpoints
+            _addProtocolPerQuarter(block.timestamp);
+            pid++;
+        }
     }
 
     /**
@@ -218,76 +239,81 @@ contract RewardsDistributor is Ownable, IRewardsDistributor {
     function getStrategyRewards(address _strategy) external override returns (uint96) {
         IStrategy strategy = IStrategy(_strategy);
         require(strategy.exitedAt() != 0, 'The strategy has to be finished');
-        // We avoid gas consuming once a strategy got its BABL rewards during its finalization
-        uint256 rewards = strategy.strategyRewards();
-        if (rewards != 0) {
-            return Safe3296.safe96(rewards, 'overflow 96 bits');
-        }
-
-        // If the calculation was not done earlier we go for it
-        (uint256 numQuarters, uint256 startingQuarter) = getRewardsWindow(strategy.executedAt(), strategy.exitedAt());
-        uint256 bablRewards = 0;
-        if (numQuarters <= 1) {
-            bablRewards = _getStrategyRewardsOneQuarter(_strategy, startingQuarter); // Proportional supply till that moment within the same epoch
-            require(bablRewards <= protocolPerQuarter[startingQuarter].supplyPerQuarter, 'overflow in supply');
-            require(
-                strategy.capitalAllocated().mul(strategy.exitedAt().sub(strategy.executedAt())).sub(
-                    strategy.rewardsTotalOverhead()
-                ) <= protocolPerQuarter[startingQuarter].quarterPower,
-                'overflow in power'
-            );
-        } else {
-            // The strategy takes longer than one quarter / epoch
-            // We need to calculate the strategy vs. protocol power ratio per each quarter
-            uint256[] memory strategyPower = new uint256[](numQuarters); // Strategy power in each Epoch
-            uint256[] memory protocolPower = new uint256[](numQuarters); // Protocol power in each Epoch
-            for (uint256 i = 0; i <= numQuarters.sub(1); i++) {
-                uint256 slotEnding = START_TIME.add(startingQuarter.add(i).mul(EPOCH_DURATION)); // Initialization timestamp at the end of the first slot where the strategy starts its execution
-
-                // We iterate all the quarters where the strategy was active
-                uint256 percentage = 1e18;
-                if (strategy.executedAt().add(EPOCH_DURATION) > slotEnding) {
-                    // We are in the first quarter of the strategy
-
-                    strategyPower[i] = strategy.capitalAllocated().mul(slotEnding.sub(strategy.executedAt())).sub(
-                        rewardsPowerOverhead[address(strategy)][getQuarter(strategy.executedAt())]
-                    );
-                } else if (strategy.executedAt() < slotEnding.sub(EPOCH_DURATION) && slotEnding < strategy.exitedAt()) {
-                    // We are in an intermediate quarter different from starting or ending quarters
-                    strategyPower[i] = strategy
-                        .capitalAllocated()
-                        .mul(slotEnding.sub(slotEnding.sub(EPOCH_DURATION)))
-                        .sub(rewardsPowerOverhead[address(strategy)][getQuarter(slotEnding.sub(45 days))]);
-                } else {
-                    // We are in the last quarter of the strategy
-                    percentage = block.timestamp.sub(slotEnding.sub(EPOCH_DURATION)).preciseDiv(
-                        slotEnding.sub(slotEnding.sub(EPOCH_DURATION))
-                    );
-
-                    strategyPower[i] = strategy
-                        .capitalAllocated()
-                        .mul(strategy.exitedAt().sub(slotEnding.sub(EPOCH_DURATION)))
-                        .sub(rewardsPowerOverhead[address(strategy)][getQuarter(strategy.exitedAt())]);
-                }
-                protocolPower[i] = protocolPerQuarter[startingQuarter.add(i)].quarterPower;
-
-                require(strategyPower[i] <= protocolPower[i], 'overflow str over protocol in an epoch');
-
-                bablRewards = bablRewards.add(
-                    strategyPower[i]
-                        .preciseDiv(protocolPower[i])
-                        .preciseMul(uint256(protocolPerQuarter[startingQuarter.add(i)].supplyPerQuarter))
-                        .preciseMul(percentage)
-                );
+        if ((strategy.enteredAt() >= START_TIME) && (START_TIME != 0)) {
+            // We avoid gas consuming once a strategy got its BABL rewards during its finalization
+            uint256 rewards = strategy.strategyRewards();
+            if (rewards != 0) {
+                return Safe3296.safe96(rewards, 'overflow 96 bits');
             }
+            // If the calculation was not done earlier we go for it
+            (uint256 numQuarters, uint256 startingQuarter) =
+                getRewardsWindow(strategy.executedAt(), strategy.exitedAt());
+            uint256 bablRewards = 0;
+            if (numQuarters <= 1) {
+                bablRewards = _getStrategyRewardsOneQuarter(_strategy, startingQuarter); // Proportional supply till that moment within the same epoch
+                require(bablRewards <= protocolPerQuarter[startingQuarter].supplyPerQuarter, 'overflow in supply');
+                require(
+                    strategy.capitalAllocated().mul(strategy.exitedAt().sub(strategy.executedAt())).sub(
+                        strategy.rewardsTotalOverhead()
+                    ) <= protocolPerQuarter[startingQuarter].quarterPower,
+                    'overflow in power'
+                );
+            } else {
+                // The strategy takes longer than one quarter / epoch
+                // We need to calculate the strategy vs. protocol power ratio per each quarter
+                uint256[] memory strategyPower = new uint256[](numQuarters); // Strategy power in each Epoch
+                uint256[] memory protocolPower = new uint256[](numQuarters); // Protocol power in each Epoch
+                for (uint256 i = 0; i <= numQuarters.sub(1); i++) {
+                    uint256 slotEnding = START_TIME.add(startingQuarter.add(i).mul(EPOCH_DURATION)); // Initialization timestamp at the end of the first slot where the strategy starts its execution
+
+                    // We iterate all the quarters where the strategy was active
+                    uint256 percentage = 1e18;
+                    if (strategy.executedAt().add(EPOCH_DURATION) > slotEnding) {
+                        // We are in the first quarter of the strategy
+
+                        strategyPower[i] = strategy.capitalAllocated().mul(slotEnding.sub(strategy.executedAt())).sub(
+                            rewardsPowerOverhead[address(strategy)][getQuarter(strategy.executedAt())]
+                        );
+                    } else if (
+                        strategy.executedAt() < slotEnding.sub(EPOCH_DURATION) && slotEnding < strategy.exitedAt()
+                    ) {
+                        // We are in an intermediate quarter different from starting or ending quarters
+                        strategyPower[i] = strategy
+                            .capitalAllocated()
+                            .mul(slotEnding.sub(slotEnding.sub(EPOCH_DURATION)))
+                            .sub(rewardsPowerOverhead[address(strategy)][getQuarter(slotEnding.sub(45 days))]);
+                    } else {
+                        // We are in the last quarter of the strategy
+                        percentage = block.timestamp.sub(slotEnding.sub(EPOCH_DURATION)).preciseDiv(
+                            slotEnding.sub(slotEnding.sub(EPOCH_DURATION))
+                        );
+
+                        strategyPower[i] = strategy
+                            .capitalAllocated()
+                            .mul(strategy.exitedAt().sub(slotEnding.sub(EPOCH_DURATION)))
+                            .sub(rewardsPowerOverhead[address(strategy)][getQuarter(strategy.exitedAt())]);
+                    }
+                    protocolPower[i] = protocolPerQuarter[startingQuarter.add(i)].quarterPower;
+
+                    require(strategyPower[i] <= protocolPower[i], 'overflow str over protocol in an epoch');
+
+                    bablRewards = bablRewards.add(
+                        strategyPower[i]
+                            .preciseDiv(protocolPower[i])
+                            .preciseMul(uint256(protocolPerQuarter[startingQuarter.add(i)].supplyPerQuarter))
+                            .preciseMul(percentage)
+                    );
+                }
+            }
+
+            // Babl rewards will be proportional to the total return (profit) with a max cap of x2
+            uint256 percentageMul = strategy.capitalReturned().preciseDiv(strategy.capitalAllocated());
+            if (percentageMul > 2e18) percentageMul = 2e18;
+            bablRewards = bablRewards.preciseMul(percentageMul);
+            return Safe3296.safe96(bablRewards, 'overflow 96 bits');
+        } else {
+            return 0;
         }
-
-        // Babl rewards will be proportional to the total return (profit) with a max cap of x2
-        uint256 percentageMul = strategy.capitalReturned().preciseDiv(strategy.capitalAllocated());
-        if (percentageMul > 2e18) percentageMul = 2e18;
-        bablRewards = bablRewards.preciseMul(percentageMul);
-
-        return Safe3296.safe96(bablRewards, 'overflow 96 bits');
     }
 
     /**
@@ -295,9 +321,19 @@ contract RewardsDistributor is Ownable, IRewardsDistributor {
      * @param _to                Address to send the tokens to
      * @param _amount            Amount of tokens to send the address to
      */
-    function sendTokensToContributor(address _to, uint96 _amount) external override {
+    function sendTokensToContributor(address _to, uint96 _amount) external override onlyMiningActive {
         require(controller.isSystemContract(msg.sender), 'The caller is not a system contract');
         _safeBABLTransfer(_to, _amount);
+    }
+
+    /**
+     * Starts BABL Rewards Mining Program from the controller.
+     */
+    function startBABLRewards() external onlyController {
+        if (START_TIME == 0) {
+            // It can only be activated once to avoid overriding START_TIME
+            START_TIME = block.timestamp;
+        }
     }
 
     /**
@@ -326,7 +362,13 @@ contract RewardsDistributor is Ownable, IRewardsDistributor {
 
     /* ========== View functions ========== */
 
-    function getProtocolPrincipalByTimestamp(uint256 _timestamp) external view override onlyOwner returns (uint256) {
+    function getProtocolPrincipalByTimestamp(uint256 _timestamp)
+        external
+        view
+        override
+        onlyMiningActive
+        returns (uint256)
+    {
         return protocolPerTimestamp[_timestamp].principal;
     }
 
@@ -335,12 +377,13 @@ contract RewardsDistributor is Ownable, IRewardsDistributor {
         view
         override
         onlyOwner
+        onlyMiningActive
         returns (uint256)
     {
         return protocolPerQuarter[getQuarter(_timestamp)].quarterPower;
     }
 
-    function getProtocolPowerPerQuarterById(uint256 _id) external view override onlyOwner returns (uint256) {
+    function getProtocolPowerPerQuarterById(uint256 _id) external view override onlyMiningActive returns (uint256) {
         return protocolPerQuarter[_id].quarterPower;
     }
 
@@ -348,7 +391,7 @@ contract RewardsDistributor is Ownable, IRewardsDistributor {
         external
         view
         override
-        onlyOwner
+        onlyMiningActive
         returns (uint256)
     {
         return protocolPerQuarter[getQuarter(_timestamp)].supplyPerQuarter;
@@ -366,18 +409,30 @@ contract RewardsDistributor is Ownable, IRewardsDistributor {
         return pid;
     }
 
-    function getQuarter(uint256 _now) public view override returns (uint256) {
+    function getQuarter(uint256 _now) public view override onlyMiningActive returns (uint256) {
         uint256 quarter = (_now.sub(START_TIME).preciseDivCeil(EPOCH_DURATION)).div(1e18);
         return quarter.add(1);
     }
 
-    function getRewardsWindow(uint256 _from, uint256 _to) public view override returns (uint256, uint256) {
+    function getRewardsWindow(uint256 _from, uint256 _to)
+        public
+        view
+        override
+        onlyMiningActive
+        returns (uint256, uint256)
+    {
         uint256 quarters = (_to.sub(_from).preciseDivCeil(EPOCH_DURATION)).div(1e18);
         uint256 startingQuarter = (_from.sub(START_TIME).preciseDivCeil(EPOCH_DURATION)).div(1e18);
         return (quarters.add(1), startingQuarter.add(1));
     }
 
-    function getSupplyForPeriod(uint256 _from, uint256 _to) external view override returns (uint96[] memory) {
+    function getSupplyForPeriod(uint256 _from, uint256 _to)
+        external
+        view
+        override
+        onlyMiningActive
+        returns (uint96[] memory)
+    {
         // check number of quarters and what quarters are they
         (uint256 quarters, uint256 startingQuarter) = getRewardsWindow(_from, _to);
         uint96[] memory supplyPerQuarter = new uint96[](quarters);
@@ -596,12 +651,12 @@ contract RewardsDistributor is Ownable, IRewardsDistributor {
             // Voting in favor of the execution of the strategy with profits and positive distance
             babl = strategyRewards.multiplyDecimal(BABL_STEWARD_SHARE).preciseMul(
                 uint256(userVotes).preciseDiv(strategy.totalPositiveVotes())
-            ); // TODO CHECK absolute total votes vs. totalvotes usage
+            );
         } else if (userVotes > 0 && _profit == true && _distance == false) {
             // Voting in favor positive profits but below expected return
             babl = strategyRewards.multiplyDecimal(BABL_STEWARD_SHARE).preciseMul(
                 uint256(userVotes).preciseDiv(strategy.totalPositiveVotes())
-            ); // TODO CHECK absolute total votes vs. totalvotes usage
+            );
             babl = babl.sub(babl.preciseMul(_distanceValue.preciseDiv(expected))); // We discount the error of expected return vs real returns
         } else if (userVotes > 0 && _profit == false) {
             // Voting in favor of a non profitable strategy get nothing
@@ -610,7 +665,7 @@ contract RewardsDistributor is Ownable, IRewardsDistributor {
             // Voting against a strategy that got results below expected return provides rewards to the voter (helping the protocol to only have good strategies)
             babl = strategyRewards.multiplyDecimal(BABL_STEWARD_SHARE).preciseMul(
                 uint256(Math.abs(userVotes)).preciseDiv(strategy.totalNegativeVotes())
-            ); // TODO CHECK absolute total votes vs. totalvotes usage
+            );
 
             bablCap = babl.mul(2); // Max cap
             babl = babl.add(babl.preciseMul(_distanceValue.preciseDiv(expected))); // We add a bonus inverse to the error of expected return vs real returns
@@ -712,7 +767,7 @@ contract RewardsDistributor is Ownable, IRewardsDistributor {
         return profits;
     }
 
-    function _addProtocolPerQuarter(uint256 _time) private {
+    function _addProtocolPerQuarter(uint256 _time) private onlyMiningActive {
         ProtocolPerQuarter storage protocolCheckpoint = protocolPerQuarter[getQuarter(_time)];
 
         if (!isProtocolPerQuarter[getQuarter(_time).sub(1)]) {
@@ -802,7 +857,7 @@ contract RewardsDistributor is Ownable, IRewardsDistributor {
         protocolCheckpoint.quarterPrincipal = protocolPrincipal;
     }
 
-    function _updatePowerOverhead(IStrategy _strategy, uint256 _capital) private {
+    function _updatePowerOverhead(IStrategy _strategy, uint256 _capital) private onlyMiningActive {
         if (_strategy.updatedAt() != 0) {
             // There will be overhead after the first execution not before
             if (getQuarter(block.timestamp) == getQuarter(_strategy.updatedAt())) {
@@ -826,7 +881,12 @@ contract RewardsDistributor is Ownable, IRewardsDistributor {
         }
     }
 
-    function _getStrategyRewardsOneQuarter(address _strategy, uint256 _startingQuarter) private view returns (uint256) {
+    function _getStrategyRewardsOneQuarter(address _strategy, uint256 _startingQuarter)
+        private
+        view
+        onlyMiningActive
+        returns (uint256)
+    {
         IStrategy strategy = IStrategy(_strategy);
         uint256 strategyOverTime =
             strategy.capitalAllocated().mul(strategy.exitedAt().sub(strategy.executedAt())).sub(
@@ -841,7 +901,7 @@ contract RewardsDistributor is Ownable, IRewardsDistributor {
     }
 
     // Safe BABL transfer function, just in case if rounding error causes DistributorRewards to not have enough BABL.
-    function _safeBABLTransfer(address _to, uint96 _amount) private {
+    function _safeBABLTransfer(address _to, uint96 _amount) private onlyMiningActive {
         uint256 bablBal = babltoken.balanceOf(address(this));
         if (_amount > bablBal) {
             SafeERC20.safeTransfer(babltoken, _to, bablBal);
