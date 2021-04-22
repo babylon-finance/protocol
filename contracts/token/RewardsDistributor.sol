@@ -464,7 +464,7 @@ contract RewardsDistributor is Ownable, IRewardsDistributor {
         (bool profit, uint256 profitValue, bool distance, uint256 distanceValue) =
             _getStrategyRewardsContext(address(strategy));
 
-        (, uint256 initialDepositAt, uint256 claimedAt, , , , , ,) = IGarden(msg.sender).getContributor(_contributor);
+        (, uint256 initialDepositAt, uint256 claimedAt, , , , , , ) = IGarden(msg.sender).getContributor(_contributor);
         // Positive strategies not yet claimed
         if (strategy.exitedAt() > claimedAt && strategy.executedAt() >= initialDepositAt) {
             uint256 contributorPower =
