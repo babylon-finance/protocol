@@ -724,8 +724,13 @@ abstract contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         // Updates reserve asset
         uint256 _newTotal = garden.principal().toInt256().add(reserveAssetDelta).toUint256();
         garden.updatePrincipal(_newTotal);
-        // Start a redemption window in the garden with this capital
-        garden.startWithdrawalWindow(capitalReturned.sub(protocolProfits), profits);
+
+        // Start a redemption window in the garden with the capital plus the profits for the lps
+        (, , uint256 lpsProfitSharing) = IBabController(controller).getProfitSharing();
+        garden.startWithdrawalWindow(
+            capitalReturned.sub(protocolProfits).add(profits).preciseMul(lpsProfitSharing),
+            profits.sub(profits.preciseMul(lpsProfitSharing)).sub(protocolProfits)
+        );
 
         // Moves strategy to finalized
         IGarden(garden).moveStrategyToFinalized(reserveAssetDelta, address(this));

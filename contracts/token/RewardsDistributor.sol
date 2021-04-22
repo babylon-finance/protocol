@@ -519,12 +519,6 @@ contract RewardsDistributor is Ownable, IRewardsDistributor {
                 )
             );
 
-            if (profit == true) {
-                contributorProfits = contributorProfits.add(
-                    contributorPower.preciseMul(profitValue).multiplyDecimal(PROFIT_LP_SHARE)
-                );
-            }
-
             // Get a multiplier bonus in case the contributor is the garden creator
             if (_contributor == IGarden(msg.sender).creator()) {
                 contributorBABL = contributorBABL.add(contributorBABL.multiplyDecimal(CREATOR_BONUS));

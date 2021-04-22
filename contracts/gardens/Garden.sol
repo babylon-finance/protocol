@@ -85,7 +85,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         uint256 timestamp
     );
 
-    event ProfitsForContributor(address indexed _contributor, uint256 indexed _amount);
+    event RewardsForContributor(address indexed _contributor, uint256 indexed _amount);
     event BABLRewardsForContributor(address indexed _contributor, uint96 _rewards);
 
     /* ============ Modifiers ============ */
@@ -208,7 +208,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
 
     // Keeps track of the reserve balance. In case we receive some through other means
     uint256 public override principal;
-    uint256 public override profitsSetAside;
+    uint256 public override reserveAssetRewardsSetAside;
     int256 public override absoluteReturns; // Total profits or losses of this garden
 
     // Indicates the minimum liquidity the asset needs to have to be tradable by this garden
@@ -460,8 +460,8 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
             contributor.claimedProfits = contributor.claimedProfits.add(totalProfits); // Profits claimed properly
             // Send ETH
             Address.sendValue(msg.sender, totalProfits);
-            profitsSetAside = profitsSetAside.sub(totalProfits);
-            emit ProfitsForContributor(msg.sender, totalProfits);
+            reserveAssetRewardsSetAside = reserveAssetRewardsSetAside.sub(totalProfits);
+            emit RewardsForContributor(msg.sender, totalProfits);
             contributor.claimedAt = block.timestamp; // Checkpoint of this claim
         }
         if (bablRewards > 0) {
@@ -480,9 +480,9 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
      * from members of the garden.
      *
      * @param _amount                        Amount of WETH to convert to ETH to set aside until the window ends
-     * @param _profits                       Amount of WETH to convert to ETH to set aside forever
+     * @param _rewards                       Amount of WETH to convert to ETH to set aside forever
      */
-    function startWithdrawalWindow(uint256 _amount, uint256 _profits) external override onlyStrategyOrProtocol {
+    function startWithdrawalWindow(uint256 _amount, uint256 _rewards) external override onlyStrategyOrProtocol {
         if (withdrawalsOpenUntil > block.timestamp) {
             withdrawalsOpenUntil = block.timestamp.add(
                 withdrawalWindowAfterStrategyCompletes.sub(withdrawalsOpenUntil.sub(block.timestamp))
@@ -490,7 +490,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         } else {
             withdrawalsOpenUntil = block.timestamp.add(withdrawalWindowAfterStrategyCompletes);
         }
-        profitsSetAside = profitsSetAside.add(_profits);
+        reserveAssetRewardsSetAside = reserveAssetRewardsSetAside.add(_rewards);
         IWETH(WETH).withdraw(_amount);
     }
 
@@ -501,7 +501,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
     function reenableEthForStrategies() public override {
         if (block.timestamp >= withdrawalsOpenUntil && address(this).balance > minContribution) {
             withdrawalsOpenUntil = 0;
-            IWETH(WETH).deposit{value: address(this).balance.sub(profitsSetAside)}();
+            IWETH(WETH).deposit{value: address(this).balance.sub(reserveAssetRewardsSetAside)}();
         }
     }
 
