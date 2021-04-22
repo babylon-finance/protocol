@@ -730,6 +730,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
             uint256,
             uint256[] memory,
             uint256,
+            uint256,
             uint256
         )
     {
@@ -742,7 +743,8 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
             contributor.claimedProfits,
             contributor.timeListPointer,
             contributor.pid,
-            contributor.lastUpdated
+            contributor.lastUpdated,
+            contributor.withdrawnSince
         );
     }
 

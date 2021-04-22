@@ -50,6 +50,7 @@ interface IGarden {
             uint256,
             uint256[] memory,
             uint256,
+            uint256,
             uint256
         );
 
