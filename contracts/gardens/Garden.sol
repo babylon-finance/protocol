@@ -446,7 +446,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
     }
 
     /**
-     * User can claim the profits from the strategies that his principal
+     * User can claim the rewards from the strategies that his principal
      * was invested in.
      */
     function claimReturns(address[] calldata _finalizedStrategies) external override nonReentrant onlyContributor {
@@ -456,7 +456,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         (uint256 totalProfits, uint256 bablRewards) = getRewards(_finalizedStrategies);
 
         if (totalProfits > 0 && address(this).balance > 0) {
-            contributor.claimedProfits = contributor.claimedProfits.add(totalProfits); // Profits claimed properly
+            contributor.claimedProfits = contributor.claimedProfits.add(totalProfits); // Rewards claimed properly
             // Send ETH
             Address.sendValue(msg.sender, totalProfits);
             reserveAssetRewardsSetAside = reserveAssetRewardsSetAside.sub(totalProfits);
