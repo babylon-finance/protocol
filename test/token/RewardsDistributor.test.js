@@ -591,7 +591,9 @@ describe('BABL Rewards Distributor', function () {
       await bablToken.connect(owner).transfer(rewardsDistributor.address, ONE_ETH.mul(500000));
       // TODO: Write actual checks
 
-      const rewards = await garden1.connect(signer1).getRewards([long1.address, long2.address]);
+      const rewards = await rewardsDistributor
+        .connect(signer1)
+        .getRewards(signer1.address, [long1.address, long2.address]);
 
       expect(rewards[0]).to.lt(ONE_ETH.mul(1));
       expect(rewards[1]).to.gt(ONE_ETH.mul(29000));

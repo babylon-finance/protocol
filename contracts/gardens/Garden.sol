@@ -171,7 +171,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         uint256 initialDepositAt;
         uint256 claimedAt;
         uint256 claimedBABL;
-        uint256 claimedProfits;
+        uint256 claimedRewards;
         uint256 withdrawnSince;
         uint256[] timeListPointer;
         uint256 pid;
@@ -453,21 +453,21 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         Contributor storage contributor = contributors[msg.sender];
         _require(block.timestamp > contributor.claimedAt, Errors.ALREADY_CLAIMED); // race condition check
 
-        (uint256 totalProfits, uint256 bablRewards) = getRewards(_finalizedStrategies);
+        IRewardsDistributor rewardsDistributor = IRewardsDistributor(IBabController(controller).rewardsDistributor());
+        (uint256 reserveRewards, uint256 bablRewards) = rewardsDistributor.getRewards(msg.sender, _finalizedStrategies);
 
-        if (totalProfits > 0 && address(this).balance > 0) {
-            contributor.claimedProfits = contributor.claimedProfits.add(totalProfits); // Rewards claimed properly
+        if (reserveRewards > 0 && address(this).balance > 0) {
+            contributor.claimedRewards = contributor.claimedRewards.add(reserveRewards); // Rewards claimed properly
             // Send ETH
-            Address.sendValue(msg.sender, totalProfits);
-            reserveAssetRewardsSetAside = reserveAssetRewardsSetAside.sub(totalProfits);
-            emit RewardsForContributor(msg.sender, totalProfits);
+            Address.sendValue(msg.sender, reserveRewards);
+            reserveAssetRewardsSetAside = reserveAssetRewardsSetAside.sub(reserveRewards);
+            emit RewardsForContributor(msg.sender, reserveRewards);
             contributor.claimedAt = block.timestamp; // Checkpoint of this claim
         }
         if (bablRewards > 0) {
             contributor.claimedBABL = contributor.claimedBABL.add(bablRewards); // BABL Rewards claimed properly
             // Send BABL rewards
-            IRewardsDistributor rewardsDistributor =
-                IRewardsDistributor(IBabController(controller).rewardsDistributor());
+
             rewardsDistributor.sendTokensToContributor(msg.sender, uint96(bablRewards));
             emit BABLRewardsForContributor(msg.sender, uint96(bablRewards));
             contributor.claimedAt = block.timestamp; // Checkpoint of this claim
@@ -686,23 +686,6 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         return strategyMapping[_strategy];
     }
 
-    /**
-     * When an strategy finishes execution, contributors might want
-     * to know the profits and BABL rewards for their participation in the different strategies
-     *
-     * @param _finalizedStrategies       Array of the finalized strategies
-     */
-    function getRewards(address[] calldata _finalizedStrategies)
-        public
-        view
-        override
-        onlyContributor
-        returns (uint256, uint96)
-    {
-        IRewardsDistributor rewardsDistributor = IRewardsDistributor(IBabController(controller).rewardsDistributor());
-        return rewardsDistributor.getRewards(msg.sender, _finalizedStrategies);
-    }
-
     function getContributor(address _contributor)
         external
         view
@@ -724,7 +707,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
             contributor.initialDepositAt,
             contributor.claimedAt,
             contributor.claimedBABL,
-            contributor.claimedProfits,
+            contributor.claimedRewards,
             contributor.timeListPointer,
             contributor.pid,
             contributor.lastUpdated
