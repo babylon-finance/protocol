@@ -67,7 +67,6 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
     using SafeERC20Upgradeable for IERC20Upgradeable;
 
     /* ============ Events ============ */
-    event ReserveAssetChanged(address indexed _reserveAsset, address _oldReserve);
     event PrincipalChanged(uint256 _newAmount, uint256 _oldAmount);
     event GardenDeposit(
         address indexed _to,
@@ -85,7 +84,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         uint256 timestamp
     );
 
-    event ProfitsForContributor(address indexed _contributor, uint256 indexed _amount);
+    event RewardsForContributor(address indexed _contributor, uint256 indexed _amount);
     event BABLRewardsForContributor(address indexed _contributor, uint96 _rewards);
 
     /* ============ Modifiers ============ */
@@ -172,7 +171,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         uint256 initialDepositAt;
         uint256 claimedAt;
         uint256 claimedBABL;
-        uint256 claimedProfits;
+        uint256 claimedRewards;
         uint256 withdrawnSince;
         uint256[] timeListPointer;
         uint256 pid;
@@ -208,7 +207,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
 
     // Keeps track of the reserve balance. In case we receive some through other means
     uint256 public override principal;
-    uint256 public override profitsSetAside;
+    uint256 public override reserveAssetRewardsSetAside;
     int256 public override absoluteReturns; // Total profits or losses of this garden
 
     // Indicates the minimum liquidity the asset needs to have to be tradable by this garden
@@ -395,7 +394,6 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         (uint256 protocolFees, uint256 netFlowQuantity) = _getFees(_reserveAssetQuantity, true);
 
         // Check that total supply is greater than min supply needed for issuance
-        // TODO: A min supply amount is needed to avoid division by 0 when Garden token supply is 0
         _require(totalSupply() >= minGardenTokenSupply, Errors.MIN_TOKEN_SUPPLY);
 
         // gardenTokenQuantity has to be at least _minGardenTokenReceiveQuantity
@@ -448,28 +446,28 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
     }
 
     /**
-     * User can claim the profits from the strategies that his principal
+     * User can claim the rewards from the strategies that his principal
      * was invested in.
      */
     function claimReturns(address[] calldata _finalizedStrategies) external override nonReentrant onlyContributor {
         Contributor storage contributor = contributors[msg.sender];
         _require(block.timestamp > contributor.claimedAt, Errors.ALREADY_CLAIMED); // race condition check
 
-        (uint256 totalProfits, uint256 bablRewards) = getProfitsAndBabl(_finalizedStrategies);
+        IRewardsDistributor rewardsDistributor = IRewardsDistributor(IBabController(controller).rewardsDistributor());
+        (uint256 reserveRewards, uint256 bablRewards) = rewardsDistributor.getRewards(msg.sender, _finalizedStrategies);
 
-        if (totalProfits > 0 && address(this).balance > 0) {
-            contributor.claimedProfits = contributor.claimedProfits.add(totalProfits); // Profits claimed properly
+        if (reserveRewards > 0 && address(this).balance > 0) {
+            contributor.claimedRewards = contributor.claimedRewards.add(reserveRewards); // Rewards claimed properly
             // Send ETH
-            Address.sendValue(msg.sender, totalProfits);
-            profitsSetAside = profitsSetAside.sub(totalProfits);
-            emit ProfitsForContributor(msg.sender, totalProfits);
+            Address.sendValue(msg.sender, reserveRewards);
+            reserveAssetRewardsSetAside = reserveAssetRewardsSetAside.sub(reserveRewards);
+            emit RewardsForContributor(msg.sender, reserveRewards);
             contributor.claimedAt = block.timestamp; // Checkpoint of this claim
         }
         if (bablRewards > 0) {
             contributor.claimedBABL = contributor.claimedBABL.add(bablRewards); // BABL Rewards claimed properly
             // Send BABL rewards
-            IRewardsDistributor rewardsDistributor =
-                IRewardsDistributor(IBabController(controller).rewardsDistributor());
+
             rewardsDistributor.sendTokensToContributor(msg.sender, uint96(bablRewards));
             emit BABLRewardsForContributor(msg.sender, uint96(bablRewards));
             contributor.claimedAt = block.timestamp; // Checkpoint of this claim
@@ -481,9 +479,18 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
      * from members of the garden.
      *
      * @param _amount                        Amount of WETH to convert to ETH to set aside until the window ends
-     * @param _profits                       Amount of WETH to convert to ETH to set aside forever
+     * @param _rewards                       Amount of WETH to convert to ETH to set aside forever
+     * @param _returns                       Profits or losses that the strategy received
      */
-    function startWithdrawalWindow(uint256 _amount, uint256 _profits) external override onlyStrategyOrProtocol {
+    function startWithdrawalWindow(
+        uint256 _amount,
+        uint256 _rewards,
+        int256 _returns,
+        address _strategy
+    ) external override onlyStrategyOrProtocol {
+        // Updates reserve asset
+        uint256 _newTotal = principal.toInt256().add(_returns).toUint256();
+        _updatePrincipal(_newTotal);
         if (withdrawalsOpenUntil > block.timestamp) {
             withdrawalsOpenUntil = block.timestamp.add(
                 withdrawalWindowAfterStrategyCompletes.sub(withdrawalsOpenUntil.sub(block.timestamp))
@@ -491,8 +498,14 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         } else {
             withdrawalsOpenUntil = block.timestamp.add(withdrawalWindowAfterStrategyCompletes);
         }
-        profitsSetAside = profitsSetAside.add(_profits);
+        reserveAssetRewardsSetAside = reserveAssetRewardsSetAside.add(_rewards);
         IWETH(WETH).withdraw(_amount);
+
+        // Mark strategy as finalized
+        absoluteReturns.add(_returns);
+        strategies = strategies.remove(_strategy);
+        finalizedStrategies.push(_strategy);
+        strategyMapping[_strategy] = false;
     }
 
     /**
@@ -502,23 +515,11 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
     function reenableEthForStrategies() public override {
         if (block.timestamp >= withdrawalsOpenUntil && address(this).balance > minContribution) {
             withdrawalsOpenUntil = 0;
-            IWETH(WETH).deposit{value: address(this).balance.sub(profitsSetAside)}();
+            IWETH(WETH).deposit{value: address(this).balance.sub(reserveAssetRewardsSetAside)}();
         }
     }
 
     /* ============ External Functions ============ */
-
-    /**
-     * PRIVILEGED Manager, protocol FUNCTION. Changes the reserve asset
-     *
-     * @param _reserveAsset                 Address of the new reserve asset
-     */
-    function editReserveAsset(address _reserveAsset) external onlyProtocol {
-        address oldReserve = reserveAsset;
-        reserveAsset = _reserveAsset;
-
-        emit ReserveAssetChanged(_reserveAsset, oldReserve);
-    }
 
     /**
      * PRIVILEGED Manager, protocol FUNCTION. When a Garden is active, deposits are enabled.
@@ -534,15 +535,6 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
     function setDisabled() external override onlyProtocol {
         _require(active, Errors.ONLY_ACTIVE);
         active = false;
-    }
-
-    /**
-     * Function that allows the principal of the garden to be updated by strategies
-     *
-     * @param _amount             Amount of the reserve balance
-     */
-    function updatePrincipal(uint256 _amount) external override onlyStrategy {
-        _updatePrincipal(_amount);
     }
 
     /* ============ Strategy Functions ============ */
@@ -646,18 +638,6 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
     }
 
     /*
-     * Moves an estrategy from the active array to the finalized array
-     * @param _returns       Positive or negative returns of the strategy
-     * @param _strategy      Strategy to move from active to finalized
-     */
-    function moveStrategyToFinalized(int256 _returns, address _strategy) external override onlyStrategy {
-        absoluteReturns.add(_returns);
-        strategies = strategies.remove(_strategy);
-        finalizedStrategies.push(_strategy);
-        strategyMapping[_strategy] = false;
-    }
-
-    /*
      * Remove an expire candidate from the strategy Array
      * @param _strategy      Strategy to remove
      */
@@ -700,24 +680,6 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         return strategyMapping[_strategy];
     }
 
-    /**
-     * When an strategy finishes execution, contributors might want
-     * to know the profits and BABL rewards for their participation in the different strategies
-     *
-     * @param _finalizedStrategies       Array of the finalized strategies
-     */
-
-    function getProfitsAndBabl(address[] calldata _finalizedStrategies)
-        public
-        view
-        override
-        onlyContributor
-        returns (uint256, uint96)
-    {
-        IRewardsDistributor rewardsDistributor = IRewardsDistributor(IBabController(controller).rewardsDistributor());
-        return rewardsDistributor.getProfitsAndBabl(msg.sender, _finalizedStrategies);
-    }
-
     function getContributor(address _contributor)
         external
         view
@@ -740,7 +702,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
             contributor.initialDepositAt,
             contributor.claimedAt,
             contributor.claimedBABL,
-            contributor.claimedProfits,
+            contributor.claimedRewards,
             contributor.timeListPointer,
             contributor.pid,
             contributor.lastUpdated,
@@ -786,29 +748,11 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         override
         returns (uint256)
     {
-        (, uint256 netReserveFlows) = _getFees(_gardenTokenQuantity, false);
+        uint256 preFeeReserveQuantity = _getWithdrawalReserveQuantity(reserveAsset, _gardenTokenQuantity);
+
+        (, uint256 netReserveFlows) = _getFees(preFeeReserveQuantity, false);
 
         return netReserveFlows;
-    }
-
-    /**
-     * Checks if deposit is valid
-     *
-     * @param _reserveAsset                 Address of the reserve asset
-     * @param _reserveAssetQuantity         Quantity of the reserve asset to deposit with
-     *
-     * @return  bool                        Returns true if deposit is valid
-     */
-    function isDepositValid(address _reserveAsset, uint256 _reserveAssetQuantity)
-        external
-        view
-        override
-        returns (bool)
-    {
-        return
-            _reserveAssetQuantity != 0 &&
-            IBabController(controller).isValidReserveAsset(_reserveAsset) &&
-            totalSupply() >= minGardenTokenSupply;
     }
 
     /**
@@ -832,7 +776,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         ) {
             return false;
         } else {
-            uint256 totalWithdrawalValue = _gardenTokenQuantity;
+            uint256 totalWithdrawalValue = _getWithdrawalReserveQuantity(reserveAsset, _gardenTokenQuantity);
 
             (, uint256 expectedWithdrawalQuantity) = _getFees(totalWithdrawalValue, false);
 
@@ -931,7 +875,8 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         uint256 _protocolFees
     ) private {
         uint256 previousBalance = balanceOf(msg.sender);
-        _mint(_to, _gardenTokenQuantity);
+        uint256 amountToMint = _getGardenTokenMintQuantity(reserveAsset, _gardenTokenQuantity, totalSupply());
+        _mint(_to, amountToMint);
         _updateContributorDepositInfo(_from, previousBalance);
         _updatePrincipal(_newPrincipal);
         // Mint the garden NFT
@@ -945,7 +890,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
      *
      * @param _amount             Amount of the reserve balance
      */
-    function _updatePrincipal(uint256 _amount) internal {
+    function _updatePrincipal(uint256 _amount) private {
         uint256 oldAmount = principal;
         principal = _amount;
         emit PrincipalChanged(_amount, oldAmount);
@@ -956,7 +901,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
      * @param _token                   Address of the token to pay with
      * @param _feeQuantity             Fee to transfer
      */
-    function payProtocolFeeFromGarden(address _token, uint256 _feeQuantity) internal {
+    function payProtocolFeeFromGarden(address _token, uint256 _feeQuantity) private {
         if (_feeQuantity > 0) {
             IERC20Upgradeable(_token).safeTransfer(IBabController(controller).treasury(), _feeQuantity);
         }
@@ -998,7 +943,9 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         // Check this here to avoid having relayers
         reenableEthForStrategies();
 
-        (uint256 protocolFees, uint256 netFlowQuantity) = _getFees(_gardenTokenQuantity, false);
+        uint256 reserveAssetQuantity = _getWithdrawalReserveQuantity(reserveAsset, _gardenTokenQuantity);
+
+        (uint256 protocolFees, uint256 netFlowQuantity) = _getFees(reserveAssetQuantity, false);
 
         uint256 newGardenTokenSupply = totalSupply().sub(_gardenTokenQuantity);
 
@@ -1056,35 +1003,70 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
                 ? IBabController(controller).protocolDepositGardenTokenFee()
                 : IBabController(controller).protocolWithdrawalGardenTokenFee();
 
-        uint256 reserveAssetReal = _reserveAssetQuantity;
-        // If there is a withdrawal, we adjust for losses
-        if (!_isDeposit) {
-            uint256 losses =
-                IGardenValuer(IBabController(controller).gardenValuer()).getLossesGarden(
-                    address(this),
-                    contributors[msg.sender].initialDepositAt
-                );
-            // // If there are losses we need to adjust them down
-            if (losses > 0) {
-                reserveAssetReal = reserveAssetReal.sub(
-                    losses.preciseMul(
-                        _getContributorPower(msg.sender, contributors[msg.sender].initialDepositAt, block.timestamp)
-                    )
-                );
-            }
-        }
         // Calculate total notional fees
-        uint256 protocolFees = protocolFeePercentage.preciseMul(reserveAssetReal);
+        uint256 protocolFees = protocolFeePercentage.preciseMul(_reserveAssetQuantity);
 
-        uint256 netReserveFlow = reserveAssetReal.sub(protocolFees);
+        uint256 netReserveFlow = _reserveAssetQuantity.sub(protocolFees);
 
         return (protocolFees, netReserveFlow);
+    }
+
+    function _getGardenTokenMintQuantity(
+        address _reserveAsset,
+        uint256 _netReserveFlows, // Value of reserve asset net of fees
+        uint256 _gardenTokenTotalSupply
+    ) private view returns (uint256) {
+        // Get valuation of the Garden with the quote asset as the reserve asset.
+        // Reverts if price is not found
+        uint8 reserveAssetDecimals = ERC20Upgradeable(_reserveAsset).decimals();
+        uint256 baseUnits = uint256(10)**reserveAssetDecimals;
+        uint256 normalizedTotalReserveQuantityNetFees = _netReserveFlows.preciseDiv(baseUnits);
+        // First deposit
+        if (totalSupply() == 0) {
+            return normalizedTotalReserveQuantityNetFees;
+        }
+        uint256 gardenValuationPerToken =
+            IGardenValuer(IBabController(controller).gardenValuer()).calculateGardenValuation(
+                address(this),
+                _reserveAsset
+            );
+        gardenValuationPerToken = gardenValuationPerToken.sub(_netReserveFlows.preciseDiv(_gardenTokenTotalSupply));
+
+        // Calculate Garden tokens to mint to depositor
+        uint256 denominator =
+            _gardenTokenTotalSupply.preciseMul(gardenValuationPerToken).add(normalizedTotalReserveQuantityNetFees).sub(
+                normalizedTotalReserveQuantityNetFees
+            );
+        uint256 quantityToMint =
+            normalizedTotalReserveQuantityNetFees.preciseMul(_gardenTokenTotalSupply).preciseDiv(denominator);
+        return quantityToMint;
+    }
+
+    function _getWithdrawalReserveQuantity(address _reserveAsset, uint256 _gardenTokenQuantity)
+        private
+        view
+        returns (uint256)
+    {
+        // Get valuation of the Garden with the quote asset as the reserve asset. Returns value in precise units (10e18)
+        // Reverts if price is not found
+        uint256 gardenValuationPerToken =
+            IGardenValuer(IBabController(controller).gardenValuer()).calculateGardenValuation(
+                address(this),
+                _reserveAsset
+            );
+
+        uint256 totalWithdrawalValueInPreciseUnits = _gardenTokenQuantity.preciseMul(gardenValuationPerToken);
+        // Get reserve asset decimals
+        uint8 reserveAssetDecimals = ERC20Upgradeable(_reserveAsset).decimals();
+        uint256 prePremiumReserveQuantity = totalWithdrawalValueInPreciseUnits.preciseMul(10**reserveAssetDecimals);
+
+        return prePremiumReserveQuantity;
     }
 
     /**
      * Updates the contributor info in the array
      */
-    function _updateContributorDepositInfo(address _contributor, uint256 previousBalance) internal {
+    function _updateContributorDepositInfo(address _contributor, uint256 previousBalance) private {
         Contributor storage contributor = contributors[_contributor];
         // If new contributor, create one, increment count, and set the current TS
         if (previousBalance == 0 || contributor.initialDepositAt == 0) {
@@ -1100,7 +1082,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
     /**
      * Updates the contributor info in the array
      */
-    function _updateContributorWithdrawalInfo(uint256 _netflowQuantity) internal {
+    function _updateContributorWithdrawalInfo(uint256 _netflowQuantity) private {
         Contributor storage contributor = contributors[msg.sender];
         // If sold everything
         if (balanceOf(msg.sender) == 0) {
@@ -1119,15 +1101,15 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
     /**
      * Gets the contributor power from one timestamp to the other
      * @param _contributor Address if the contributor
-     * @param _from        Initial timestamp
+     * hparam _from        Initial timestamp
      * @param _to          End timestamp
      * @return uint256     Contributor power during that period
      */
     function _getContributorPower(
         address _contributor,
-        uint256 _from,
+        uint256, /* _from */
         uint256 _to
-    ) internal view returns (uint256) {
+    ) private view returns (uint256) {
         Contributor storage contributor = contributors[_contributor];
         // Find closest point to _from and goes until the last
         uint256 contributorPower;

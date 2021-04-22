@@ -129,7 +129,7 @@ contract RewardsDistributor is Ownable, IRewardsDistributor {
     uint256 public override protocolPrincipal;
     // Total allocation points. Must be the sum of all allocation points (strategyPrincipal) in all strategy pools.
     mapping(uint256 => ProtocolPerTimestamp) public protocolPerTimestamp;
-    uint256[] public timeList; // TODO needs to be updated anytime there is a checkpoint of new strategy changing
+    uint256[] public timeList;
     uint256 public override pid; // Initialization of the ID assigning timeListPointer to the checkpoint number
 
     mapping(uint256 => ProtocolPerQuarter) public protocolPerQuarter; //
@@ -215,7 +215,7 @@ contract RewardsDistributor is Ownable, IRewardsDistributor {
      * Gets the total amount of rewards for a given strategy
      * @param _strategy                Strategy to check
      */
-    function getStrategyRewards(address _strategy) external override returns (uint96) {
+    function getStrategyRewards(address _strategy) external view override returns (uint96) {
         IStrategy strategy = IStrategy(_strategy);
         require(strategy.exitedAt() != 0, 'The strategy has to be finished');
         // We avoid gas consuming once a strategy got its BABL rewards during its finalization
@@ -305,7 +305,7 @@ contract RewardsDistributor is Ownable, IRewardsDistributor {
      * @param _contributor              Address of the contributor to check
      * @param _finalizedStrategies      List of addresses of the finalized strategies
      */
-    function getProfitsAndBabl(address _contributor, address[] calldata _finalizedStrategies)
+    function getRewards(address _contributor, address[] calldata _finalizedStrategies)
         external
         view
         override
@@ -487,14 +487,7 @@ contract RewardsDistributor is Ownable, IRewardsDistributor {
             );
 
             contributorProfits = contributorProfits.add(
-                _getStrategyStrategistProfits(
-                    address(strategy),
-                    _contributor,
-                    profit,
-                    profitValue,
-                    distance,
-                    distanceValue
-                )
+                _getStrategyStrategistProfits(address(strategy), _contributor, profit, profitValue)
             );
 
             // Get steward rewards
@@ -518,12 +511,6 @@ contract RewardsDistributor is Ownable, IRewardsDistributor {
                     contributorPower.preciseDiv(strategy.capitalAllocated())
                 )
             );
-
-            if (profit == true) {
-                contributorProfits = contributorProfits.add(
-                    contributorPower.preciseMul(profitValue).multiplyDecimal(PROFIT_LP_SHARE)
-                );
-            }
 
             // Get a multiplier bonus in case the contributor is the garden creator
             if (_contributor == IGarden(msg.sender).creator()) {
@@ -579,7 +566,7 @@ contract RewardsDistributor is Ownable, IRewardsDistributor {
         address _strategy,
         address _contributor,
         bool _profit,
-        uint256 _profitValue,
+        uint256, /* _profitValue */
         bool _distance,
         uint256 _distanceValue
     ) private view returns (uint256) {
@@ -628,7 +615,7 @@ contract RewardsDistributor is Ownable, IRewardsDistributor {
         bool _profit,
         uint256 _profitValue,
         bool _distance,
-        uint256 _distanceValue
+        uint256 /* _distanceValue */
     ) private view returns (uint256) {
         IStrategy strategy = IStrategy(_strategy);
         // Get proportional voter (stewards) rewards in case the contributor was also a steward of the strategy
@@ -657,9 +644,9 @@ contract RewardsDistributor is Ownable, IRewardsDistributor {
         address _strategy,
         address _contributor,
         bool _profit,
-        uint256 _profitValue,
+        uint256, /* _profitValue */
         bool _distance,
-        uint256 _distanceValue
+        uint256 /* _distanceValue */
     ) private view returns (uint256) {
         IStrategy strategy = IStrategy(_strategy);
         uint256 strategyRewards = strategy.strategyRewards();
@@ -695,9 +682,7 @@ contract RewardsDistributor is Ownable, IRewardsDistributor {
         address _strategy,
         address _contributor,
         bool _profit,
-        uint256 _profitValue,
-        bool _distance,
-        uint256 _distanceValue
+        uint256 _profitValue
     ) private view returns (uint256) {
         IStrategy strategy = IStrategy(_strategy);
         // Get proportional voter (stewards) rewards in case the contributor was also a steward of the strategy

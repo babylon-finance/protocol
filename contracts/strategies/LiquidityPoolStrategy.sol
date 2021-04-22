@@ -59,7 +59,7 @@ contract LiquidityPoolStrategy is Strategy {
      * @return _nav           NAV of the strategy
      */
     function getNAV() public view override returns (uint256) {
-        if (!active || finalized) {
+        if (!isStrategyActive()) {
             return 0;
         }
         uint256 NAV;
