@@ -137,7 +137,7 @@ interface IGarden {
         uint256 _to
     ) external view returns (uint256);
 
-    function getProfitsAndBabl(address[] calldata _finalizedStrategies) external view returns (uint256, uint96);
+    function getRewards(address[] calldata _finalizedStrategies) external view returns (uint256, uint96);
 
     function getExpectedReserveWithdrawalQuantity(uint256 _gardenTokenQuantity) external view returns (uint256);
 

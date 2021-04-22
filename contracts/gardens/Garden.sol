@@ -395,7 +395,6 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         (uint256 protocolFees, uint256 netFlowQuantity) = _getFees(_reserveAssetQuantity, true);
 
         // Check that total supply is greater than min supply needed for issuance
-        // TODO: A min supply amount is needed to avoid division by 0 when Garden token supply is 0
         _require(totalSupply() >= minGardenTokenSupply, Errors.MIN_TOKEN_SUPPLY);
 
         // gardenTokenQuantity has to be at least _minGardenTokenReceiveQuantity
@@ -455,7 +454,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         Contributor storage contributor = contributors[msg.sender];
         _require(block.timestamp > contributor.claimedAt, Errors.ALREADY_CLAIMED); // race condition check
 
-        (uint256 totalProfits, uint256 bablRewards) = getProfitsAndBabl(_finalizedStrategies);
+        (uint256 totalProfits, uint256 bablRewards) = getRewards(_finalizedStrategies);
 
         if (totalProfits > 0 && address(this).balance > 0) {
             contributor.claimedProfits = contributor.claimedProfits.add(totalProfits); // Profits claimed properly
@@ -706,8 +705,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
      *
      * @param _finalizedStrategies       Array of the finalized strategies
      */
-
-    function getProfitsAndBabl(address[] calldata _finalizedStrategies)
+    function getRewards(address[] calldata _finalizedStrategies)
         public
         view
         override
@@ -715,7 +713,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         returns (uint256, uint96)
     {
         IRewardsDistributor rewardsDistributor = IRewardsDistributor(IBabController(controller).rewardsDistributor());
-        return rewardsDistributor.getProfitsAndBabl(msg.sender, _finalizedStrategies);
+        return rewardsDistributor.getRewards(msg.sender, _finalizedStrategies);
     }
 
     function getContributor(address _contributor)
@@ -830,7 +828,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         ) {
             return false;
         } else {
-            uint256 totalWithdrawalValue = _gardenTokenQuantity;
+            uint256 totalWithdrawalValue = _getWithdrawalReserveQuantity(reserveAsset, _gardenTokenQuantity);
 
             (, uint256 expectedWithdrawalQuantity) = _getFees(totalWithdrawalValue, false);
 
@@ -929,7 +927,8 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         uint256 _protocolFees
     ) private {
         uint256 previousBalance = balanceOf(msg.sender);
-        _mint(_to, _gardenTokenQuantity);
+        uint256 amountToMint = _getGardenTokenMintQuantity(reserveAsset, _gardenTokenQuantity, previousBalance);
+        _mint(_to, amountToMint);
         _updateContributorDepositInfo(_from, previousBalance);
         _updatePrincipal(_newPrincipal);
         // Mint the garden NFT
@@ -996,7 +995,9 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         // Check this here to avoid having relayers
         reenableEthForStrategies();
 
-        (uint256 protocolFees, uint256 netFlowQuantity) = _getFees(_gardenTokenQuantity, false);
+        uint256 reserveAssetQuantity = _getWithdrawalReserveQuantity(reserveAsset, _gardenTokenQuantity);
+
+        (uint256 protocolFees, uint256 netFlowQuantity) = _getFees(reserveAssetQuantity, false);
 
         uint256 newGardenTokenSupply = totalSupply().sub(_gardenTokenQuantity);
 
@@ -1055,28 +1056,62 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
                 : IBabController(controller).protocolWithdrawalGardenTokenFee();
 
         uint256 reserveAssetReal = _reserveAssetQuantity;
-        // If there is a withdrawal, we adjust for losses
-        if (!_isDeposit) {
-            uint256 losses =
-                IGardenValuer(IBabController(controller).gardenValuer()).getLossesGarden(
-                    address(this),
-                    contributors[msg.sender].initialDepositAt
-                );
-            // // If there are losses we need to adjust them down
-            if (losses > 0) {
-                reserveAssetReal = reserveAssetReal.sub(
-                    losses.preciseMul(
-                        _getContributorPower(msg.sender, contributors[msg.sender].initialDepositAt, block.timestamp)
-                    )
-                );
-            }
-        }
         // Calculate total notional fees
         uint256 protocolFees = protocolFeePercentage.preciseMul(reserveAssetReal);
 
         uint256 netReserveFlow = reserveAssetReal.sub(protocolFees);
 
         return (protocolFees, netReserveFlow);
+    }
+
+    function _getGardenTokenMintQuantity(
+        address _reserveAsset,
+        uint256 _netReserveFlows, // Value of reserve asset net of fees
+        uint256 _gardenTokenTotalSupply
+    ) internal view returns (uint256) {
+        // Get valuation of the Garden with the quote asset as the reserve asset.
+        // Reverts if price is not found
+        uint256 gardenValuationPerToken =
+            IGardenValuer(IBabController(controller).gardenValuer()).calculateGardenValuation(
+                address(this),
+                _reserveAsset
+            );
+        gardenValuationPerToken = gardenValuationPerToken.sub(_netReserveFlows.preciseDiv(totalSupply()));
+
+        // Get reserve asset decimals
+        uint8 reserveAssetDecimals = ERC20Upgradeable(_reserveAsset).decimals();
+        uint256 baseUnits = uint256(10)**reserveAssetDecimals;
+        uint256 normalizedTotalReserveQuantityNetFees = _netReserveFlows.preciseDiv(baseUnits);
+
+        // Calculate Garden tokens to mint to depositor
+        uint256 denominator =
+            _gardenTokenTotalSupply.preciseMul(gardenValuationPerToken).add(normalizedTotalReserveQuantityNetFees).sub(
+                normalizedTotalReserveQuantityNetFees
+            );
+        uint256 quantityToMint =
+            normalizedTotalReserveQuantityNetFees.preciseMul(_gardenTokenTotalSupply).preciseDiv(denominator);
+        return quantityToMint;
+    }
+
+    function _getWithdrawalReserveQuantity(address _reserveAsset, uint256 _gardenTokenQuantity)
+        internal
+        view
+        returns (uint256)
+    {
+        // Get valuation of the Garden with the quote asset as the reserve asset. Returns value in precise units (10e18)
+        // Reverts if price is not found
+        uint256 gardenValuationPerToken =
+            IGardenValuer(IBabController(controller).gardenValuer()).calculateGardenValuation(
+                address(this),
+                _reserveAsset
+            );
+
+        uint256 totalWithdrawalValueInPreciseUnits = _gardenTokenQuantity.preciseMul(gardenValuationPerToken);
+        // Get reserve asset decimals
+        uint8 reserveAssetDecimals = ERC20Upgradeable(_reserveAsset).decimals();
+        uint256 prePremiumReserveQuantity = totalWithdrawalValueInPreciseUnits.preciseMul(10**reserveAssetDecimals);
+
+        return prePremiumReserveQuantity;
     }
 
     /**

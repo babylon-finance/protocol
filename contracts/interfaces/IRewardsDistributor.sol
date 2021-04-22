@@ -76,7 +76,7 @@ interface IRewardsDistributor {
 
     function tokenSupplyPerQuarter(uint256 quarter) external pure returns (uint96);
 
-    function getProfitsAndBabl(address _contributor, address[] calldata _finalizedStrategies)
+    function getRewards(address _contributor, address[] calldata _finalizedStrategies)
         external
         view
         returns (uint256, uint96);

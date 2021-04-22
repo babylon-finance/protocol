@@ -305,7 +305,7 @@ contract RewardsDistributor is Ownable, IRewardsDistributor {
      * @param _contributor              Address of the contributor to check
      * @param _finalizedStrategies      List of addresses of the finalized strategies
      */
-    function getProfitsAndBabl(address _contributor, address[] calldata _finalizedStrategies)
+    function getRewards(address _contributor, address[] calldata _finalizedStrategies)
         external
         view
         override

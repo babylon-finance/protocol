@@ -570,7 +570,7 @@ describe('BABL Rewards Distributor', function () {
       // Transfer 500_000e18 tokens from owner to rewardsDistributor for BABL Mining Program
       await bablToken.connect(owner).transfer(rewardsDistributor.address, ONE_ETH.mul(500000));
       // TODO: Write actual checks
-      // const rewards = await garden1.connect(signer1).getProfitsAndBabl([long1.address, long2.address]);
+      // const rewards = await garden1.connect(signer1).getRewards([long1.address, long2.address]);
       // expect(rewards[0].toString()).to.lt(ethers.utils.parseEther('1'));
       // expect(rewards[1].toString()).to.gt(ethers.utils.parseEther('23700'));
     });
@@ -591,7 +591,7 @@ describe('BABL Rewards Distributor', function () {
       await bablToken.connect(owner).transfer(rewardsDistributor.address, ONE_ETH.mul(500000));
       // TODO: Write actual checks
 
-      const rewards = await garden1.connect(signer1).getProfitsAndBabl([long1.address, long2.address]);
+      const rewards = await garden1.connect(signer1).getRewards([long1.address, long2.address]);
 
       expect(rewards[0]).to.lt(ONE_ETH.mul(1));
       expect(rewards[1]).to.gt(ONE_ETH.mul(29000));
