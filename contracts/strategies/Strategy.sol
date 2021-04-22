@@ -93,7 +93,7 @@ abstract contract Strategy is ReentrancyGuard, IStrategy, Initializable {
     /**
      * Throws if the sender is not the creator of the strategy
      */
-    modifier onlyProtocolOrGarden {
+    modifier onlyGovernorOrGarden {
         _require(msg.sender == address(garden) || msg.sender == controller.owner(), Errors.ONLY_PROTOCOL_OR_GARDEN);
         _;
     }
@@ -293,6 +293,10 @@ abstract contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         int256 _totalVotes,
         uint256 _fee
     ) external override onlyKeeper(_fee) onlyActiveGarden {
+        _require(
+            _voters.length >= (garden.totalContributors() == 1 ? 1 : MIN_VOTERS_TO_BECOME_ACTIVE),
+            Errors.MIN_VOTERS_CHECK
+        );
         _require(!active && !finalized, Errors.VOTES_ALREADY_RESOLVED);
         _require(block.timestamp.sub(enteredAt) <= MAX_CANDIDATE_PERIOD, Errors.VOTING_WINDOW_IS_OVER);
         active = true;
@@ -400,7 +404,7 @@ abstract contract Strategy is ReentrancyGuard, IStrategy, Initializable {
      * Triggered from an immediate withdraw in the Garden.
      * @param _amountToUnwind              The amount of capital to unwind
      */
-    function unwindStrategy(uint256 _amountToUnwind) external override onlyProtocolOrGarden nonReentrant {
+    function unwindStrategy(uint256 _amountToUnwind) external override onlyGovernorOrGarden nonReentrant {
         _require(active && !finalized, Errors.STRATEGY_NEEDS_TO_BE_ACTIVE);
         _require(_amountToUnwind <= capitalAllocated.sub(minRebalanceCapital), Errors.STRATEGY_NO_CAPITAL_TO_UNWIND);
         // Exits and enters the strategy

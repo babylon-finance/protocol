@@ -215,7 +215,7 @@ contract RewardsDistributor is Ownable, IRewardsDistributor {
      * Gets the total amount of rewards for a given strategy
      * @param _strategy                Strategy to check
      */
-    function getStrategyRewards(address _strategy) external override returns (uint96) {
+    function getStrategyRewards(address _strategy) external view override returns (uint96) {
         IStrategy strategy = IStrategy(_strategy);
         require(strategy.exitedAt() != 0, 'The strategy has to be finished');
         // We avoid gas consuming once a strategy got its BABL rewards during its finalization
@@ -487,14 +487,7 @@ contract RewardsDistributor is Ownable, IRewardsDistributor {
             );
 
             contributorProfits = contributorProfits.add(
-                _getStrategyStrategistProfits(
-                    address(strategy),
-                    _contributor,
-                    profit,
-                    profitValue,
-                    distance,
-                    distanceValue
-                )
+                _getStrategyStrategistProfits(address(strategy), _contributor, profit, profitValue)
             );
 
             // Get steward rewards
@@ -573,7 +566,7 @@ contract RewardsDistributor is Ownable, IRewardsDistributor {
         address _strategy,
         address _contributor,
         bool _profit,
-        uint256 _profitValue,
+        uint256, /* _profitValue */
         bool _distance,
         uint256 _distanceValue
     ) private view returns (uint256) {
@@ -622,7 +615,7 @@ contract RewardsDistributor is Ownable, IRewardsDistributor {
         bool _profit,
         uint256 _profitValue,
         bool _distance,
-        uint256 _distanceValue
+        uint256 /* _distanceValue */
     ) private view returns (uint256) {
         IStrategy strategy = IStrategy(_strategy);
         // Get proportional voter (stewards) rewards in case the contributor was also a steward of the strategy
@@ -651,9 +644,9 @@ contract RewardsDistributor is Ownable, IRewardsDistributor {
         address _strategy,
         address _contributor,
         bool _profit,
-        uint256 _profitValue,
+        uint256, /* _profitValue */
         bool _distance,
-        uint256 _distanceValue
+        uint256 /* _distanceValue */
     ) private view returns (uint256) {
         IStrategy strategy = IStrategy(_strategy);
         uint256 strategyRewards = strategy.strategyRewards();
@@ -689,9 +682,7 @@ contract RewardsDistributor is Ownable, IRewardsDistributor {
         address _strategy,
         address _contributor,
         bool _profit,
-        uint256 _profitValue,
-        bool _distance,
-        uint256 _distanceValue
+        uint256 _profitValue
     ) private view returns (uint256) {
         IStrategy strategy = IStrategy(_strategy);
         // Get proportional voter (stewards) rewards in case the contributor was also a steward of the strategy

@@ -1099,13 +1099,13 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
     /**
      * Gets the contributor power from one timestamp to the other
      * @param _contributor Address if the contributor
-     * @param _from        Initial timestamp
+     * hparam _from        Initial timestamp
      * @param _to          End timestamp
      * @return uint256     Contributor power during that period
      */
     function _getContributorPower(
         address _contributor,
-        uint256 _from,
+        uint256, /* _from */
         uint256 _to
     ) private view returns (uint256) {
         Contributor storage contributor = contributors[_contributor];
