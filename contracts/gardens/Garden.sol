@@ -769,7 +769,9 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         override
         returns (uint256)
     {
-        (, uint256 netReserveFlows) = _getFees(_gardenTokenQuantity, false);
+        uint256 preFeeReserveQuantity = _getWithdrawalReserveQuantity(reserveAsset, _gardenTokenQuantity);
+
+        (, uint256 netReserveFlows) = _getFees(preFeeReserveQuantity, false);
 
         return netReserveFlows;
     }
