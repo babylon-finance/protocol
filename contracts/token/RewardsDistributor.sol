@@ -129,7 +129,7 @@ contract RewardsDistributor is Ownable, IRewardsDistributor {
     uint256 public override protocolPrincipal;
     // Total allocation points. Must be the sum of all allocation points (strategyPrincipal) in all strategy pools.
     mapping(uint256 => ProtocolPerTimestamp) public protocolPerTimestamp;
-    uint256[] public timeList; // TODO needs to be updated anytime there is a checkpoint of new strategy changing
+    uint256[] public timeList;
     uint256 public override pid; // Initialization of the ID assigning timeListPointer to the checkpoint number
 
     mapping(uint256 => ProtocolPerQuarter) public protocolPerQuarter; //

@@ -91,7 +91,12 @@ interface IGarden {
 
     function isStrategy(address _strategy) external view returns (bool);
 
-    function startWithdrawalWindow(uint256 _amount, uint256 _profits) external;
+    function startWithdrawalWindow(
+        uint256 _amount,
+        uint256 _profits,
+        int256 _returns,
+        address _strategy
+    ) external;
 
     function allocateCapitalToStrategy(uint256 _capital) external;
 
@@ -147,11 +152,7 @@ interface IGarden {
 
     function rebalanceStrategies(uint256 _fee) external;
 
-    function moveStrategyToFinalized(int256 _returns, address _strategy) external;
-
     function expireCandidateStrategy(address _strategy) external;
-
-    function updatePrincipal(uint256 _amount) external;
 
     function burnStrategistStake(address _strategist, uint256 _amount) external;
 }

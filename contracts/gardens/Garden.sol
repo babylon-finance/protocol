@@ -480,8 +480,17 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
      *
      * @param _amount                        Amount of WETH to convert to ETH to set aside until the window ends
      * @param _rewards                       Amount of WETH to convert to ETH to set aside forever
+     * @param _returns                       Profits or losses that the strategy received
      */
-    function startWithdrawalWindow(uint256 _amount, uint256 _rewards) external override onlyStrategyOrProtocol {
+    function startWithdrawalWindow(
+        uint256 _amount,
+        uint256 _rewards,
+        int256 _returns,
+        address _strategy
+    ) external override onlyStrategyOrProtocol {
+        // Updates reserve asset
+        uint256 _newTotal = principal.toInt256().add(_returns).toUint256();
+        _updatePrincipal(_newTotal);
         if (withdrawalsOpenUntil > block.timestamp) {
             withdrawalsOpenUntil = block.timestamp.add(
                 withdrawalWindowAfterStrategyCompletes.sub(withdrawalsOpenUntil.sub(block.timestamp))
@@ -491,6 +500,12 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         }
         reserveAssetRewardsSetAside = reserveAssetRewardsSetAside.add(_rewards);
         IWETH(WETH).withdraw(_amount);
+
+        // Mark strategy as finalized
+        absoluteReturns.add(_returns);
+        strategies = strategies.remove(_strategy);
+        finalizedStrategies.push(_strategy);
+        strategyMapping[_strategy] = false;
     }
 
     /**
@@ -520,15 +535,6 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
     function setDisabled() external override onlyProtocol {
         _require(active, Errors.ONLY_ACTIVE);
         active = false;
-    }
-
-    /**
-     * Function that allows the principal of the garden to be updated by strategies
-     *
-     * @param _amount             Amount of the reserve balance
-     */
-    function updatePrincipal(uint256 _amount) external override onlyStrategy {
-        _updatePrincipal(_amount);
     }
 
     /* ============ Strategy Functions ============ */
@@ -629,18 +635,6 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         uint256 balance = IERC20Upgradeable(_token).balanceOf(address(this));
         _require(balance > 0, Errors.BALANCE_TOO_LOW);
         IERC20Upgradeable(_token).safeTransfer(IBabController(controller).treasury(), balance);
-    }
-
-    /*
-     * Moves an estrategy from the active array to the finalized array
-     * @param _returns       Positive or negative returns of the strategy
-     * @param _strategy      Strategy to move from active to finalized
-     */
-    function moveStrategyToFinalized(int256 _returns, address _strategy) external override onlyStrategy {
-        absoluteReturns.add(_returns);
-        strategies = strategies.remove(_strategy);
-        finalizedStrategies.push(_strategy);
-        strategyMapping[_strategy] = false;
     }
 
     /*
@@ -894,7 +888,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
      *
      * @param _amount             Amount of the reserve balance
      */
-    function _updatePrincipal(uint256 _amount) internal {
+    function _updatePrincipal(uint256 _amount) private {
         uint256 oldAmount = principal;
         principal = _amount;
         emit PrincipalChanged(_amount, oldAmount);
@@ -905,7 +899,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
      * @param _token                   Address of the token to pay with
      * @param _feeQuantity             Fee to transfer
      */
-    function payProtocolFeeFromGarden(address _token, uint256 _feeQuantity) internal {
+    function payProtocolFeeFromGarden(address _token, uint256 _feeQuantity) private {
         if (_feeQuantity > 0) {
             IERC20Upgradeable(_token).safeTransfer(IBabController(controller).treasury(), _feeQuantity);
         }
@@ -1019,7 +1013,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         address _reserveAsset,
         uint256 _netReserveFlows, // Value of reserve asset net of fees
         uint256 _gardenTokenTotalSupply
-    ) internal view returns (uint256) {
+    ) private view returns (uint256) {
         // Get valuation of the Garden with the quote asset as the reserve asset.
         // Reverts if price is not found
         uint8 reserveAssetDecimals = ERC20Upgradeable(_reserveAsset).decimals();
@@ -1047,7 +1041,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
     }
 
     function _getWithdrawalReserveQuantity(address _reserveAsset, uint256 _gardenTokenQuantity)
-        internal
+        private
         view
         returns (uint256)
     {
@@ -1070,7 +1064,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
     /**
      * Updates the contributor info in the array
      */
-    function _updateContributorDepositInfo(address _contributor, uint256 previousBalance) internal {
+    function _updateContributorDepositInfo(address _contributor, uint256 previousBalance) private {
         Contributor storage contributor = contributors[_contributor];
         // If new contributor, create one, increment count, and set the current TS
         if (previousBalance == 0 || contributor.initialDepositAt == 0) {
@@ -1086,7 +1080,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
     /**
      * Updates the contributor info in the array
      */
-    function _updateContributorWithdrawalInfo(uint256 _netflowQuantity) internal {
+    function _updateContributorWithdrawalInfo(uint256 _netflowQuantity) private {
         Contributor storage contributor = contributors[msg.sender];
         // If sold everything
         if (balanceOf(msg.sender) == 0) {
@@ -1113,7 +1107,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         address _contributor,
         uint256 _from,
         uint256 _to
-    ) internal view returns (uint256) {
+    ) private view returns (uint256) {
         Contributor storage contributor = contributors[_contributor];
         // Find closest point to _from and goes until the last
         uint256 contributorPower;

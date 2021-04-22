@@ -721,19 +721,14 @@ abstract contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         }
         // Return the balance back to the garden
         IERC20(reserveAsset).safeTransferFrom(address(this), address(garden), capitalReturned.sub(protocolProfits));
-        // Updates reserve asset
-        uint256 _newTotal = garden.principal().toInt256().add(reserveAssetDelta).toUint256();
-        garden.updatePrincipal(_newTotal);
-
         // Start a redemption window in the garden with the capital plus the profits for the lps
         (, , uint256 lpsProfitSharing) = IBabController(controller).getProfitSharing();
         garden.startWithdrawalWindow(
             capitalReturned.sub(protocolProfits).add(profits).preciseMul(lpsProfitSharing),
-            profits.sub(profits.preciseMul(lpsProfitSharing)).sub(protocolProfits)
+            profits.sub(profits.preciseMul(lpsProfitSharing)).sub(protocolProfits),
+            reserveAssetDelta,
+            address(this)
         );
-
-        // Moves strategy to finalized
-        IGarden(garden).moveStrategyToFinalized(reserveAssetDelta, address(this));
         IRewardsDistributor rewardsDistributor = IRewardsDistributor(IBabController(controller).rewardsDistributor());
         // Substract the Principal in the Rewards Distributor to update the Protocol power value
         rewardsDistributor.substractProtocolPrincipal(capitalAllocated);
