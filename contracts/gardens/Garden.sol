@@ -455,7 +455,6 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         _require(block.timestamp > contributor.claimedAt, Errors.ALREADY_CLAIMED); // race condition check
 
         (uint256 totalProfits, uint256 bablRewards) = getProfitsAndBabl(_finalizedStrategies);
-
         if (totalProfits > 0 && address(this).balance > 0) {
             contributor.claimedProfits = contributor.claimedProfits.add(totalProfits); // Profits claimed properly
             // Send ETH
