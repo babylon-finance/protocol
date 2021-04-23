@@ -93,6 +93,11 @@ async function main() {
     exportAndPushContract(file, 'gardens/');
   });
 
+  const token = ['RewardsDistributor.sol'];
+  token.forEach((file) => {
+    exportAndPushContract(file, 'token/');
+  });
+
   // Strategy Factory Contracts
   const strategies = ['LongStrategyFactory.sol', 'LiquidityPoolStrategyFactory.sol', 'Strategy.sol'];
   strategies.forEach((file) => {
