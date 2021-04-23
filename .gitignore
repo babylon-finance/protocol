@@ -95,3 +95,4 @@ export
 deployments/hardhat
 deployments/localhost
 deployments/rinkeby
+contracts.json

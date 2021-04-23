@@ -10,10 +10,6 @@
     "typechain",
     "export"
   ],
-  "publishConfig": {
-    "cache": "cache/.npm",
-    "registry": "https://npm.pkg.github.com"
-  },
   "devDependencies": {
     "@nomiclabs/hardhat-ethers": "^2.0.1",
     "@nomiclabs/hardhat-waffle": "^2.0.1",
@@ -70,16 +66,11 @@
     "lint:tests": "eslint 'test/**/*.test.js'",
     "compile": "hardhat compile --max-memory 8096 --no-typechain",
     "typechain": "hardhat compile --max-memory 8096",
-    "export": "hardhat run scripts/export.js",
-    "deploy": "hardhat run scripts/deploy.js && yarn run export",
-    "deploy:mainnet": "hardhat run scripts/deploy.js --network mainnet",
-    "watch": "node scripts/watch.js",
+    "export": "hardhat export --network hardhat --export export.json",
+    "deploy:hardhat": "hardhat deploy --network hardhat",
+    "deploy:mainnet": "hardhat deploy --network mainnet",
+    "deploy:rinkeby": "hardhat deploy --network rinkeby",
     "chain": "hardhat node --as-network hardhat",
-    "accounts": "hardhat accounts",
-    "account": "hardhat account",
-    "generate": "hardhat generate",
-    "balance": "hardhat balance",
-    "send": "hardhat send",
     "test": "hardhat test --network hardhat --max-memory 8096",
     "gas-report": "env REPORT_GAS=1 yarn test",
     "estimate-size": "yarn run hardhat size-contracts --max-memory 8096",
