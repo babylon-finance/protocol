@@ -20,3 +20,4 @@ module.exports = async ({ getNamedAccounts, deployments, ethers }) => {
 };
 
 module.exports.tags = ['Registry'];
+module.exports.dependencies = ['Token'];

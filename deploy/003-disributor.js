@@ -22,3 +22,4 @@ module.exports = async ({ getNamedAccounts, deployments, ethers }) => {
 };
 
 module.exports.tags = ['Distributor'];
+module.exports.dependencies = ['Registry'];

@@ -10,3 +10,4 @@ module.exports = async ({ getNamedAccounts, deployments, ethers }) => {
 };
 
 module.exports.tags = ['LongStrategy'];
+module.exports.dependencies = ['GardenFactory'];

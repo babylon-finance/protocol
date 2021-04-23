@@ -14,3 +14,4 @@ module.exports = async ({ getNamedAccounts, deployments, ethers }) => {
 };
 
 module.exports.tags = ['OneInch'];
+module.exports.dependencies = ['Kyber'];

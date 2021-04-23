@@ -12,3 +12,4 @@ module.exports = async ({ getNamedAccounts, deployments, ethers }) => {
 };
 
 module.exports.tags = ['Treasury'];
+module.exports.dependencies = ['Distributor'];

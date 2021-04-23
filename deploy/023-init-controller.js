@@ -1,4 +1,11 @@
+const KEEPER = process.env.KEEPER || '';
+
 module.exports = async ({ getNamedAccounts, deployments, ethers, getSigner }) => {
+  if (!KEEPER) {
+    throw new Error('Keeper address is not set');
+  }
+  console.log('keeper', KEEPER);
+
   const { deployer } = await getNamedAccounts();
   const owner = await getSigner(deployer);
 
@@ -20,7 +27,7 @@ module.exports = async ({ getNamedAccounts, deployments, ethers, getSigner }) =>
   // Add WETH
   await controllerContract.connect(owner).addReserveAsset('0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2');
   // TODO: use OpenZeppelin Defender Keeper
-  await controllerContract.connect(owner).addKeepers((await ethers.getSigners()).map((sig) => sig.address));
+  await controllerContract.connect(owner).addKeepers([KEEPER]);
 
   // Sets the price oracle and gardenvaluer address
   await controllerContract.connect(owner).editPriceOracle(priceOracle.address);
@@ -54,3 +61,4 @@ module.exports = async ({ getNamedAccounts, deployments, ethers, getSigner }) =>
 };
 
 module.exports.tags = ['Init'];
+module.exports.dependencies = ['Aave'];

@@ -1,4 +1,4 @@
-module.exports = async ({ getNamedAccounts, deployments, ethers }) => {
+module.exports = async ({ getNamedAccounts, deployments }) => {
   const { deploy } = deployments;
   const { deployer } = await getNamedAccounts();
 
@@ -10,3 +10,4 @@ module.exports = async ({ getNamedAccounts, deployments, ethers }) => {
 };
 
 module.exports.tags = ['LendStrategy'];
+module.exports.dependencies = ['YieldFarmingStrategy'];

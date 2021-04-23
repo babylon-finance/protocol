@@ -15,3 +15,4 @@ module.exports = async ({ getNamedAccounts, deployments, ethers }) => {
 };
 
 module.exports.tags = ['TWAP'];
+module.exports.dependencies = ['LendStrategy'];

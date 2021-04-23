@@ -14,3 +14,4 @@ module.exports = async ({ getNamedAccounts, deployments, ethers }) => {
 };
 
 module.exports.tags = ['OneInchPool'];
+module.exports.dependencies = ['Sushiswap'];

@@ -14,3 +14,4 @@ module.exports = async ({ getNamedAccounts, deployments, ethers }) => {
 };
 
 module.exports.tags = ['Sushiswap'];
+module.exports.dependencies = ['Uniswap'];
