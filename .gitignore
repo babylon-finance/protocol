@@ -94,3 +94,4 @@ export
 .openzeppelin
 deployments/hardhat
 deployments/localhost
+deployments/rinkeby
