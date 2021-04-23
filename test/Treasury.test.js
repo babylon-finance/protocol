@@ -2,8 +2,8 @@ const { expect } = require('chai');
 const { ethers, waffle } = require('hardhat');
 
 const { loadFixture } = waffle;
-const { ADDRESS_ZERO, MINUS_ONE_ETH, ONE_ETH } = require('../utils/constants');
-const addresses = require('../utils/addresses');
+const { ADDRESS_ZERO, MINUS_ONE_ETH, ONE_ETH } = require('../lib/constants');
+const addresses = require('../lib/addresses');
 const { deployFolioFixture } = require('./fixtures/ControllerFixture');
 
 describe('Treasury', function () {

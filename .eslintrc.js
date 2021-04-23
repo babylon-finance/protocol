@@ -12,6 +12,7 @@ module.exports = {
     contract: false,
     assert: false,
     web3: false,
+    ethers: false,
   },
   rules: {
     'prettier/prettier': ['error'],

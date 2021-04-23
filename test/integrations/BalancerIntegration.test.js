@@ -2,8 +2,8 @@ const { expect } = require('chai');
 const { waffle, ethers } = require('hardhat');
 const { deployFolioFixture } = require('../fixtures/ControllerFixture');
 const { createStrategy, executeStrategy, finalizeStrategy } = require('../fixtures/StrategyHelper');
-const addresses = require('../../utils/addresses');
-const { ADDRESS_ZERO, ONE_ETH } = require('../../utils/constants');
+const addresses = require('../../lib/addresses');
+const { ADDRESS_ZERO, ONE_ETH } = require('../../lib/constants');
 
 const { loadFixture } = waffle;
 

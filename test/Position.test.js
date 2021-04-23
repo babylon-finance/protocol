@@ -2,8 +2,8 @@ const { expect } = require('chai');
 const { ethers, waffle } = require('hardhat');
 
 const { loadFixture } = waffle;
-const { ONE_DAY_IN_SECONDS, NOW } = require('../utils/constants');
-const addresses = require('../utils/addresses');
+const { ONE_DAY_IN_SECONDS } = require('../lib/constants');
+const addresses = require('../lib/addresses');
 const { deployFolioFixture } = require('./fixtures/ControllerFixture');
 
 describe('Position testing', function () {

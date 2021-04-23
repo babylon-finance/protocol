@@ -7,8 +7,8 @@ const {
   executeStrategy,
   finalizeStrategy,
 } = require('../fixtures/StrategyHelper');
-const addresses = require('../../utils/addresses');
-const { ADDRESS_ZERO } = require('../../utils/constants');
+const addresses = require('../../lib/addresses');
+const { ADDRESS_ZERO } = require('../../lib/constants');
 
 const { loadFixture } = waffle;
 

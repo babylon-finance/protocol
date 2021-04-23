@@ -3,8 +3,8 @@ const { ethers, waffle } = require('hardhat');
 
 const { loadFixture } = waffle;
 
-const addresses = require('../utils/addresses');
-const { TWAP_ORACLE_WINDOW, TWAP_ORACLE_GRANULARITY } = require('../utils/system.js');
+const addresses = require('../lib/addresses');
+const { TWAP_ORACLE_WINDOW, TWAP_ORACLE_GRANULARITY } = require('../lib/system.js');
 const { deployFolioFixture } = require('./fixtures/ControllerFixture');
 
 describe('PriceOracle', function () {

@@ -15,8 +15,8 @@ const {
 } = require('../fixtures/StrategyHelper.js');
 const { increaseTime } = require('../utils/test-helpers');
 
-const addresses = require('../../utils/addresses');
-const { ONE_DAY_IN_SECONDS, ONE_ETH } = require('../../utils/constants.js');
+const addresses = require('../../lib/addresses');
+const { ONE_DAY_IN_SECONDS, ONE_ETH } = require('../../lib/constants.js');
 const { deployFolioFixture } = require('../fixtures/ControllerFixture');
 
 describe('Strategy', function () {

@@ -1,8 +1,8 @@
 const { ethers, upgrades } = require('hardhat');
-const { ONE_DAY_IN_SECONDS, ADDRESS_ZERO } = require('../../utils/constants.js');
-const { TWAP_ORACLE_WINDOW, TWAP_ORACLE_GRANULARITY } = require('../../utils/system.js');
-const addresses = require('../../utils/addresses');
-const { impersonateAddress } = require('../../utils/rpc');
+const { ONE_DAY_IN_SECONDS, ADDRESS_ZERO } = require('../../lib/constants.js');
+const { TWAP_ORACLE_WINDOW, TWAP_ORACLE_GRANULARITY } = require('../../lib/system.js');
+const addresses = require('../../lib/addresses');
+const { impersonateAddress } = require('../../lib/rpc');
 const { createStrategy } = require('./StrategyHelper.js');
 
 async function deployFolioFixture() {
@@ -20,7 +20,7 @@ async function deployFolioFixture() {
 
   // Deployment of BABL Token contract
   const BABLToken = await ethers.getContractFactory('BABLToken', owner);
-  const bablToken = await BABLToken.connect(owner).deploy(ADDRESS_ZERO, babController.address); // We will use CREATE2
+  const bablToken = await BABLToken.connect(owner).deploy(ADDRESS_ZERO, babController.address);
 
   // Deployment of Time Lock Registry contract
   const TimeLockRegistry = await ethers.getContractFactory('TimeLockRegistry', owner);
