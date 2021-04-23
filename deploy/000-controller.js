@@ -1,7 +1,7 @@
-module.exports = async ({ getNamedAccounts, deployments, myPlugin }) => {
+module.exports = async ({ getNamedAccounts, deployments, upgrades }) => {
   const { deployer } = await getNamedAccounts();
 
-  await myPlugin.deployOrUpgrade(
+  await upgrades.deployOrUpgrade(
     'BabController',
     { from: deployer, log: true },
     {

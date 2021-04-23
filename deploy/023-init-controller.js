@@ -1,5 +1,6 @@
-module.exports = async ({ deployments, ethers }) => {
-  const [owner] = await ethers.getSigners();
+module.exports = async ({ getNamedAccounts, deployments, ethers, getSigner }) => {
+  const { deployer } = await getNamedAccounts();
+  const owner = await getSigner(deployer);
 
   const controller = await deployments.get('BabControllerProxy');
   const priceOracle = await deployments.get('PriceOracle');
