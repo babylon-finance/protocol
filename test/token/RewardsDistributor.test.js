@@ -195,7 +195,7 @@ describe('BABL Rewards Distributor', function () {
       });
       const value = await long1.strategyRewards();
 
-      expect(value.toString()).to.be.closeTo('53348540978530991898983', ethers.utils.parseEther('100'));
+      expect(value.toString()).to.be.closeTo('53348540978530991898983', ethers.utils.parseEther('0.05'));
     });
 
     it('should calculate correct BABL in case of 1 strategy with positive profit and with total duration of 1 quarter', async function () {
@@ -219,7 +219,7 @@ describe('BABL Rewards Distributor', function () {
       });
       const value = await long1.strategyRewards();
 
-      expect(value.toString()).to.be.closeTo('59249976195741897367844', ethers.utils.parseEther('100'));
+      expect(value.toString()).to.be.closeTo('59249976195741897367844', ethers.utils.parseEther('0.05'));
     });
 
     it('should calculate correct BABL in case of 2 strategies with total duration of 1 quarter', async function () {
@@ -252,8 +252,8 @@ describe('BABL Rewards Distributor', function () {
 
       const value = await long1.strategyRewards();
       const value2 = await long2.strategyRewards();
-      expect(value.toString()).to.be.closeTo('27180447233494116321502', ethers.utils.parseEther('100'));
-      expect(value2.toString()).to.be.closeTo('35048359900229386030568', ethers.utils.parseEther('100'));
+      expect(value.toString()).to.be.closeTo('27180447233494116321502', ethers.utils.parseEther('0.05'));
+      expect(value2.toString()).to.be.closeTo('35048359900229386030568', ethers.utils.parseEther('0.05'));
     });
 
     it('should calculate correct BABL in case of 3 strategies with total duration of 1 quarter', async function () {
@@ -295,9 +295,9 @@ describe('BABL Rewards Distributor', function () {
       const value2 = await long2.strategyRewards();
       const value3 = await long3.strategyRewards();
 
-      expect(value.toString()).to.be.closeTo('18445181219085995431261', ethers.utils.parseEther('100'));
-      expect(value2.toString()).to.be.closeTo('17782866245738688737500', ethers.utils.parseEther('100'));
-      expect(value3.toString()).to.be.closeTo('17185457418296213096639', ethers.utils.parseEther('100'));
+      expect(value.toString()).to.be.closeTo('18445181219085995431261', ethers.utils.parseEther('0.05'));
+      expect(value2.toString()).to.be.closeTo('17782866245738688737500', ethers.utils.parseEther('0.05'));
+      expect(value3.toString()).to.be.closeTo('17185457418296213096639', ethers.utils.parseEther('0.05'));
     });
 
     it('should calculate correct BABL in case of 5 strategies of 2 different Gardens with total duration of less than 1 quarter', async function () {
@@ -347,11 +347,11 @@ describe('BABL Rewards Distributor', function () {
       const value4 = await long4.strategyRewards();
       const value5 = await long5.strategyRewards();
 
-      expect(value.toString()).to.be.closeTo('11435970164063358738429', ethers.utils.parseEther('100'));
-      expect(value2.toString()).to.be.closeTo('11044229195829251755344', ethers.utils.parseEther('100'));
-      expect(value3.toString()).to.be.closeTo('10683469693470981807217', ethers.utils.parseEther('100'));
-      expect(value4.toString()).to.be.closeTo('10335531645539449819993', ethers.utils.parseEther('100'));
-      expect(value5.toString()).to.be.closeTo('9999261911014897602655', ethers.utils.parseEther('100'));
+      expect(value.toString()).to.be.closeTo('11435970164063358738429', ethers.utils.parseEther('0.05'));
+      expect(value2.toString()).to.be.closeTo('11044229195829251755344', ethers.utils.parseEther('0.05'));
+      expect(value3.toString()).to.be.closeTo('10683469693470981807217', ethers.utils.parseEther('0.05'));
+      expect(value4.toString()).to.be.closeTo('10335531645539449819993', ethers.utils.parseEther('0.05'));
+      expect(value5.toString()).to.be.closeTo('9999261911014897602655', ethers.utils.parseEther('0.05'));
     });
 
     it('should calculate correct BABL in case of 1 strategy with total duration of 2 quarters', async function () {
@@ -371,7 +371,7 @@ describe('BABL Rewards Distributor', function () {
         timeListPointer: 1,
       });
       const value1 = await long1.strategyRewards();
-      expect(value1.toString()).to.be.closeTo('101611616359986629966551', ethers.utils.parseEther('100'));
+      expect(value1.toString()).to.be.closeTo('101611616359986629966551', ethers.utils.parseEther('0.05'));
     });
 
     it('should calculate correct BABL in the future (10 years) in case of 1 strategy with total duration of 2 quarters', async function () {
@@ -393,7 +393,7 @@ describe('BABL Rewards Distributor', function () {
         timeListPointer: 1,
       });
       const value1 = await long1.strategyRewards();
-      expect(value1.toString()).to.be.closeTo('1345917359221846850849', ethers.utils.parseEther('100'));
+      expect(value1.toString()).to.be.closeTo('1345917359221846850849', ethers.utils.parseEther('0.05'));
     });
 
     it('should calculate correct BABL rewards in case of 1 strategy with total duration of 3 quarters', async function () {
@@ -413,7 +413,7 @@ describe('BABL Rewards Distributor', function () {
         timeListPointer: 1,
       });
       const value1 = await long1.strategyRewards();
-      expect(value1.toString()).to.be.closeTo('144073198442804768654832', ethers.utils.parseEther('100'));
+      expect(value1.toString()).to.be.closeTo('144073198442804768654832', ethers.utils.parseEther('0.05'));
     });
 
     it('should calculate correct BABL in case of 5 strategies of 2 different Gardens with different timings along 3 quarters', async function () {
@@ -462,11 +462,11 @@ describe('BABL Rewards Distributor', function () {
       const value4 = await long4.strategyRewards();
       const value5 = await long5.strategyRewards();
 
-      expect(value.toString()).to.be.closeTo('14768509337275189635976', ethers.utils.parseEther('100'));
-      expect(value2.toString()).to.be.closeTo('36028010516922891357773', ethers.utils.parseEther('100'));
-      expect(value3.toString()).to.be.closeTo('47767976443221726749911', ethers.utils.parseEther('100'));
-      expect(value4.toString()).to.be.closeTo('77718716359714865220580', ethers.utils.parseEther('100'));
-      expect(value5.toString()).to.be.closeTo('144690957560334038164365', ethers.utils.parseEther('100'));
+      expect(value.toString()).to.be.closeTo('14768509337275189635976', ethers.utils.parseEther('0.05'));
+      expect(value2.toString()).to.be.closeTo('36028010516922891357773', ethers.utils.parseEther('0.05'));
+      expect(value3.toString()).to.be.closeTo('47767976443221726749911', ethers.utils.parseEther('0.05'));
+      expect(value4.toString()).to.be.closeTo('77718716359714865220580', ethers.utils.parseEther('0.05'));
+      expect(value5.toString()).to.be.closeTo('144690957560334038164365', ethers.utils.parseEther('0.05'));
     });
 
     it('should calculate correct BABL (in 10 Years from now) in case of 5 strategies of 2 different Gardens with different timings along 3 quarters', async function () {
@@ -517,11 +517,11 @@ describe('BABL Rewards Distributor', function () {
       const value4 = await long4.strategyRewards();
       const value5 = await long5.strategyRewards();
 
-      expect(value.toString()).to.be.closeTo('219830499847879011062', ethers.utils.parseEther('100'));
-      expect(value2.toString()).to.be.closeTo('432866381321524321541', ethers.utils.parseEther('100'));
-      expect(value3.toString()).to.be.closeTo('550877848075216077400', ethers.utils.parseEther('100'));
-      expect(value4.toString()).to.be.closeTo('855415131918472783218', ethers.utils.parseEther('100'));
-      expect(value5.toString()).to.be.closeTo('1548719778914765381373', ethers.utils.parseEther('100'));
+      expect(value.toString()).to.be.closeTo('219830499847879011062', ethers.utils.parseEther('0.05'));
+      expect(value2.toString()).to.be.closeTo('432866381321524321541', ethers.utils.parseEther('0.05'));
+      expect(value3.toString()).to.be.closeTo('550877848075216077400', ethers.utils.parseEther('0.05'));
+      expect(value4.toString()).to.be.closeTo('855415131918472783218', ethers.utils.parseEther('0.05'));
+      expect(value5.toString()).to.be.closeTo('1548719778914765381373', ethers.utils.parseEther('0.05'));
     });
 
     it('should calculate correct BABL in case of 5 strategies of 2 different Gardens with different timings along 3 Years', async function () {
@@ -562,11 +562,11 @@ describe('BABL Rewards Distributor', function () {
       const value4 = await long4.strategyRewards();
       const value5 = await long5.strategyRewards();
 
-      expect(value.toString()).to.be.closeTo('14768510523869051906610', ethers.utils.parseEther('100'));
-      expect(value2.toString()).to.be.closeTo('36028010181804892681797', ethers.utils.parseEther('100'));
-      expect(value3.toString()).to.be.closeTo('103504194661629220128166', ethers.utils.parseEther('100'));
-      expect(value4.toString()).to.be.closeTo('116791666375962828576062', ethers.utils.parseEther('100'));
-      expect(value5.toString()).to.be.closeTo('146647388604927375625599', ethers.utils.parseEther('100'));
+      expect(value.toString()).to.be.closeTo('14768510523869051906610', ethers.utils.parseEther('0.05'));
+      expect(value2.toString()).to.be.closeTo('36028010181804892681797', ethers.utils.parseEther('0.05'));
+      expect(value3.toString()).to.be.closeTo('103504194661629220128166', ethers.utils.parseEther('0.05'));
+      expect(value4.toString()).to.be.closeTo('116791666375962828576062', ethers.utils.parseEther('0.05'));
+      expect(value5.toString()).to.be.closeTo('146647388604927375625599', ethers.utils.parseEther('0.05'));
     });
 
     it('should calculate correct BABL in case of 5 (4 with positive profits) strategies of 2 different Gardens with different timings along 3 Years', async function () {
@@ -616,11 +616,11 @@ describe('BABL Rewards Distributor', function () {
       const value4 = await long4.strategyRewards();
       const value5 = await long5.strategyRewards();
 
-      expect(value.toString()).to.be.closeTo('16240388525503153926512', ethers.utils.parseEther('100'));
-      expect(value2.toString()).to.be.closeTo('36028007825033530186347', ethers.utils.parseEther('100'));
-      expect(value3.toString()).to.be.closeTo('113879793599216106591361', ethers.utils.parseEther('100'));
-      expect(value4.toString()).to.be.closeTo('128499165056248655452247', ethers.utils.parseEther('100'));
-      expect(value5.toString()).to.be.closeTo('162964850162148936616798', ethers.utils.parseEther('100'));
+      expect(value.toString()).to.be.closeTo('16240388525503153926512', ethers.utils.parseEther('0.05'));
+      expect(value2.toString()).to.be.closeTo('36028007825033530186347', ethers.utils.parseEther('0.05'));
+      expect(value3.toString()).to.be.closeTo('113879793599216106591361', ethers.utils.parseEther('0.05'));
+      expect(value4.toString()).to.be.closeTo('128499165056248655452247', ethers.utils.parseEther('0.05'));
+      expect(value5.toString()).to.be.closeTo('162964850162148936616798', ethers.utils.parseEther('0.05'));
     });
   });
 
