@@ -1111,6 +1111,10 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         uint256 _to
     ) private view returns (uint256) {
         Contributor storage contributor = contributors[_contributor];
+        // Return 0 if no deposit
+        if (contributor.initialDepositAt == 0) {
+          return 0;
+        }
         // Find closest point to _from and goes until the last
         uint256 contributorPower;
         uint256 lastDepositAt = contributor.timeListPointer[contributor.timeListPointer.length.sub(1)];
@@ -1123,6 +1127,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
                 }
             }
         }
+        _require(_to >= lastDepositAt && _to >= contributor.initialDepositAt, Errors.GET_CONTRIBUTOR_POWER);
         TimestampContribution memory tsContribution = contributor.tsContributions[lastDepositAt];
         contributorPower = tsContribution.power.add((_to.sub(lastDepositAt)).mul(tsContribution.principal));
 
