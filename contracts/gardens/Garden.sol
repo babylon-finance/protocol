@@ -1032,7 +1032,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
             );
         gardenValuationPerToken = gardenValuationPerToken.sub(_netReserveFlows.preciseDiv(_gardenTokenTotalSupply));
 
-        // Calculate Garden tokens to mint to depositor
+          // Calculate Garden tokens to mint to depositor
         uint256 denominator =
             _gardenTokenTotalSupply.preciseMul(gardenValuationPerToken).add(normalizedTotalReserveQuantityNetFees).sub(
                 normalizedTotalReserveQuantityNetFees

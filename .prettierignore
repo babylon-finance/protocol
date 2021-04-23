@@ -5,3 +5,4 @@ typechain
 *.abi.js
 *.bytecode.js
 *.address.js
+contracts.json
