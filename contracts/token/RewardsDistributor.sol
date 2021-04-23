@@ -513,6 +513,7 @@ contract RewardsDistributor is Ownable, IRewardsDistributor {
         returns (uint256, uint256)
     {
         IStrategy strategy = IStrategy(_strategy);
+        require(address(IStrategy(_strategy).garden()) == address(msg.sender), 'Garden vs. strategy mismatch');
         uint256 contributorProfits = 0;
         uint256 contributorBABL = 0;
         // We get the state of the strategy in terms of profit and distance from expected to accurately calculate profits and rewards
@@ -521,7 +522,11 @@ contract RewardsDistributor is Ownable, IRewardsDistributor {
 
         (, uint256 initialDepositAt, uint256 claimedAt, , , , , ) = IGarden(msg.sender).getContributor(_contributor);
         // Positive strategies not yet claimed
-        if (strategy.exitedAt() > claimedAt && strategy.executedAt() >= initialDepositAt) {
+        if (
+            strategy.exitedAt() > claimedAt &&
+            strategy.executedAt() >= initialDepositAt &&
+            address(IStrategy(_strategy).garden()) == address(msg.sender)
+        ) {
             uint256 contributorPower =
                 IGarden(msg.sender).getContributorPower(_contributor, strategy.executedAt(), strategy.exitedAt());
             // If strategy returned money we give out the profits
