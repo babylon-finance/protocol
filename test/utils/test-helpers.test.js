@@ -1,7 +1,7 @@
 const { expect } = require('chai');
 const { ethers } = require('hardhat');
 
-const { ONE_DAY_IN_SECONDS } = require('../../utils/constants');
+const { ONE_DAY_IN_SECONDS } = require('../../lib/constants');
 const { increaseTime, getTimestamp, mineInBlock } = require('./test-helpers');
 
 describe('Test Helpers', function () {

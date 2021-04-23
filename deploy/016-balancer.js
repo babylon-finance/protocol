@@ -1,4 +1,4 @@
-const addresses = require('../utils/addresses');
+const addresses = require('../lib/addresses');
 
 module.exports = async ({ getNamedAccounts, deployments, ethers }) => {
   const { deploy } = deployments;

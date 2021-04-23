@@ -1,8 +1,8 @@
 const { ethers } = require('hardhat');
-const { ONE_DAY_IN_SECONDS, ONE_ETH } = require('../../utils/constants.js');
-const { TWAP_ORACLE_WINDOW, TWAP_ORACLE_GRANULARITY } = require('../../utils/system.js');
-const { impersonateAddress } = require('../../utils/rpc');
-const addresses = require('../../utils/addresses');
+const { ONE_DAY_IN_SECONDS, ONE_ETH } = require('../../lib/constants.js');
+const { TWAP_ORACLE_WINDOW, TWAP_ORACLE_GRANULARITY } = require('../../lib/system.js');
+const { impersonateAddress } = require('../../lib/rpc');
+const addresses = require('../../lib/addresses');
 const { increaseTime, from } = require('../utils/test-helpers');
 
 const DEFAULT_STRATEGY_PARAMS = [

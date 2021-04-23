@@ -3,7 +3,7 @@ const { waffle } = require('hardhat');
 
 const { loadFixture } = waffle;
 
-const addresses = require('../utils/addresses');
+const addresses = require('../lib/addresses');
 const { deployFolioFixture } = require('./fixtures/ControllerFixture');
 
 describe('BabController', function () {

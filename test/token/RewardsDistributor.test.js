@@ -1,7 +1,7 @@
 const { expect } = require('chai');
 const { waffle } = require('hardhat');
 
-const { ONE_DAY_IN_SECONDS, ONE_ETH } = require('../../utils/constants');
+const { ONE_DAY_IN_SECONDS, ONE_ETH } = require('../../lib/constants');
 const { increaseTime } = require('../utils/test-helpers');
 const { loadFixture } = waffle;
 

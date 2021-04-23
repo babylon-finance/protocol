@@ -3,8 +3,8 @@ const { ethers, waffle } = require('hardhat');
 
 const { loadFixture } = waffle;
 
-const addresses = require('../../utils/addresses');
-const { ONE_DAY_IN_SECONDS } = require('../../utils/constants.js');
+const addresses = require('../../lib/addresses');
+const { ONE_DAY_IN_SECONDS } = require('../../lib/constants.js');
 const {
   DEFAULT_STRATEGY_PARAMS,
   createStrategy,

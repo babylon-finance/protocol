@@ -22,7 +22,7 @@ const { utils } = require('ethers');
 const fs = require('fs');
 
 const { isAddress, getAddress, formatUnits, parseUnits } = utils;
-const { setup } = require('./utils/setup');
+const { setup } = require('./lib/setup');
 
 const AdminUpgradeabilityProxy = require('@openzeppelin/upgrades-core/artifacts/contracts/proxy/AdminUpgradeabilityProxy.sol/AdminUpgradeabilityProxy.json');
 const ProxyAdmin = require('@openzeppelin/upgrades-core/artifacts/contracts/proxy/ProxyAdmin.sol/ProxyAdmin.json');

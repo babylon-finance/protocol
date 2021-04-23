@@ -1,9 +1,9 @@
 const { ethers, upgrades, config } = require('hardhat');
-const addresses = require('../utils/addresses');
+const addresses = require('../lib/addresses');
 const fs = require('fs');
 
-const { ONE_DAY_IN_SECONDS, ADDRESS_ZERO } = require('../utils/constants.js');
-const { TWAP_ORACLE_WINDOW, TWAP_ORACLE_GRANULARITY } = require('../utils/system.js');
+const { ONE_DAY_IN_SECONDS, ADDRESS_ZERO } = require('../lib/constants.js');
+const { TWAP_ORACLE_WINDOW, TWAP_ORACLE_GRANULARITY } = require('../lib/system.js');
 
 const {
   createStrategy,

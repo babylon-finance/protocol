@@ -1,16 +1,15 @@
 const { expect } = require('chai');
 const { waffle, ethers } = require('hardhat');
-const { impersonateAddress } = require('../../utils/rpc');
+const { impersonateAddress } = require('../../lib/rpc');
 const { deployFolioFixture } = require('../fixtures/ControllerFixture');
 const {
   DEFAULT_STRATEGY_PARAMS,
   createStrategy,
   executeStrategy,
   finalizeStrategy,
-  finalizeStrategyAfterQuarter,
 } = require('../fixtures/StrategyHelper');
-const addresses = require('../../utils/addresses');
-const { ADDRESS_ZERO } = require('../../utils/constants');
+const addresses = require('../../lib/addresses');
+const { ADDRESS_ZERO } = require('../../lib/constants');
 
 const { loadFixture } = waffle;
 

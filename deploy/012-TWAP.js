@@ -1,5 +1,5 @@
-const { TWAP_ORACLE_WINDOW, TWAP_ORACLE_GRANULARITY } = require('../utils/system.js');
-const addresses = require('../utils/addresses');
+const { TWAP_ORACLE_WINDOW, TWAP_ORACLE_GRANULARITY } = require('../lib/system.js');
+const addresses = require('../lib/addresses');
 
 module.exports = async ({ getNamedAccounts, deployments, ethers }) => {
   const { deploy } = deployments;
