@@ -1113,7 +1113,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         Contributor storage contributor = contributors[_contributor];
         // Return 0 if no deposit
         if (contributor.initialDepositAt == 0) {
-          return 0;
+            return 0;
         }
         // Find closest point to _from and goes until the last
         uint256 contributorPower;
