@@ -50,6 +50,7 @@ interface IGarden {
             uint256,
             uint256[] memory,
             uint256,
+            uint256,
             uint256
         );
 
@@ -69,7 +70,7 @@ interface IGarden {
 
     function principal() external view returns (uint256);
 
-    function profitsSetAside() external view returns (uint256);
+    function reserveAssetRewardsSetAside() external view returns (uint256);
 
     function absoluteReturns() external view returns (int256);
 
@@ -91,7 +92,12 @@ interface IGarden {
 
     function isStrategy(address _strategy) external view returns (bool);
 
-    function startWithdrawalWindow(uint256 _amount, uint256 _profits) external;
+    function startWithdrawalWindow(
+        uint256 _amount,
+        uint256 _profits,
+        int256 _returns,
+        address _strategy
+    ) external;
 
     function allocateCapitalToStrategy(uint256 _capital) external;
 
@@ -137,13 +143,9 @@ interface IGarden {
         uint256 _to
     ) external view returns (uint256);
 
-    function getProfitsAndBabl(address[] calldata _finalizedStrategies) external view returns (uint256, uint96);
-
     function getExpectedReserveWithdrawalQuantity(uint256 _gardenTokenQuantity) external view returns (uint256);
 
     function getLockedBalance(address _contributor) external view returns (uint256);
-
-    function isDepositValid(address _reserveAsset, uint256 _reserveAssetQuantity) external view returns (bool);
 
     function isWithdrawalValid(address _reserveAsset, uint256 _gardenTokenQuantity) external view returns (bool);
 
@@ -151,11 +153,7 @@ interface IGarden {
 
     function rebalanceStrategies(uint256 _fee) external;
 
-    function moveStrategyToFinalized(int256 _returns, address _strategy) external;
-
     function expireCandidateStrategy(address _strategy) external;
-
-    function updatePrincipal(uint256 _amount) external;
 
     function burnStrategistStake(address _strategist, uint256 _amount) external;
 }

@@ -93,7 +93,7 @@ abstract contract Strategy is ReentrancyGuard, IStrategy, Initializable {
     /**
      * Throws if the sender is not the creator of the strategy
      */
-    modifier onlyProtocolOrGarden {
+    modifier onlyGovernorOrGarden {
         _require(msg.sender == address(garden) || msg.sender == controller.owner(), Errors.ONLY_PROTOCOL_OR_GARDEN);
         _;
     }
@@ -293,6 +293,10 @@ abstract contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         int256 _totalVotes,
         uint256 _fee
     ) external override onlyKeeper(_fee) onlyActiveGarden {
+        _require(
+            _voters.length >= (garden.totalContributors() == 1 ? 1 : MIN_VOTERS_TO_BECOME_ACTIVE),
+            Errors.MIN_VOTERS_CHECK
+        );
         _require(!active && !finalized, Errors.VOTES_ALREADY_RESOLVED);
         _require(block.timestamp.sub(enteredAt) <= MAX_CANDIDATE_PERIOD, Errors.VOTING_WINDOW_IS_OVER);
         active = true;
@@ -400,7 +404,7 @@ abstract contract Strategy is ReentrancyGuard, IStrategy, Initializable {
      * Triggered from an immediate withdraw in the Garden.
      * @param _amountToUnwind              The amount of capital to unwind
      */
-    function unwindStrategy(uint256 _amountToUnwind) external override onlyProtocolOrGarden nonReentrant {
+    function unwindStrategy(uint256 _amountToUnwind) external override onlyGovernorOrGarden nonReentrant {
         _require(active && !finalized, Errors.STRATEGY_NEEDS_TO_BE_ACTIVE);
         _require(_amountToUnwind <= capitalAllocated.sub(minRebalanceCapital), Errors.STRATEGY_NO_CAPITAL_TO_UNWIND);
         // Exits and enters the strategy
@@ -721,14 +725,14 @@ abstract contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         }
         // Return the balance back to the garden
         IERC20(reserveAsset).safeTransferFrom(address(this), address(garden), capitalReturned.sub(protocolProfits));
-        // Updates reserve asset
-        uint256 _newTotal = garden.principal().toInt256().add(reserveAssetDelta).toUint256();
-        garden.updatePrincipal(_newTotal);
-        // Start a redemption window in the garden with this capital
-        garden.startWithdrawalWindow(capitalReturned.sub(protocolProfits), profits);
-
-        // Moves strategy to finalized
-        IGarden(garden).moveStrategyToFinalized(reserveAssetDelta, address(this));
+        // Start a redemption window in the garden with the capital plus the profits for the lps
+        (, , uint256 lpsProfitSharing) = IBabController(controller).getProfitSharing();
+        garden.startWithdrawalWindow(
+            capitalReturned.sub(protocolProfits).sub(profits).add((profits).preciseMul(lpsProfitSharing)),
+            profits.sub(profits.preciseMul(lpsProfitSharing)).sub(protocolProfits),
+            reserveAssetDelta,
+            address(this)
+        );
         IRewardsDistributor rewardsDistributor = IRewardsDistributor(IBabController(controller).rewardsDistributor());
         // Substract the Principal in the Rewards Distributor to update the Protocol power value
         rewardsDistributor.substractProtocolPrincipal(capitalAllocated);

@@ -84,6 +84,7 @@ describe('BABL Rewards Distributor', function () {
   let garden1;
   let garden2;
   let kyberTradeIntegration;
+  let long1, long2, long3, long4, long5;
 
   async function createStrategies(strategies) {
     const retVal = [];
@@ -113,6 +114,18 @@ describe('BABL Rewards Distributor', function () {
       rewardsDistributor,
       kyberTradeIntegration,
     } = await loadFixture(deployFolioFixture));
+    const precreatedStrategies1 = await createStrategies([
+      { garden: garden1 },
+      { garden: garden1 },
+      { garden: garden1 },
+    ]);
+    const precreatedStrategies2 = await createStrategies([
+      { garden: garden2 },
+      { garden: garden2 },
+      { garden: garden2 },
+    ]);
+    [long1, long2] = precreatedStrategies1;
+    [long3, long4, long5] = precreatedStrategies2;
   });
 
   describe('Deployment', function () {
@@ -124,18 +137,15 @@ describe('BABL Rewards Distributor', function () {
 
   describe('Strategy BABL Mining Rewards Calculation', async function () {
     it('should fail trying to calculate rewards of a strategy that has not ended yet', async function () {
-      const [long] = await createStrategies([{ garden: garden1 }]);
-      await executeStrategy(long, ONE_ETH);
+      await executeStrategy(long1, ONE_ETH);
 
-      await expect(rewardsDistributor.getStrategyRewards(long.address)).to.be.revertedWith(
+      await expect(rewardsDistributor.getStrategyRewards(long1.address)).to.be.revertedWith(
         'The strategy has to be finished',
       );
     });
 
     // TODO: This test doesn't check BABL rewards.
     it('should calculate correct BABL in case of 1 strategy with negative profit and total duration of 1 quarter', async function () {
-      const [long1] = await createStrategies([{ garden: garden1 }]);
-
       await executeStrategy(long1, ONE_ETH);
 
       const { updatedAt } = await getStrategyState(long1);
@@ -159,7 +169,6 @@ describe('BABL Rewards Distributor', function () {
 
     // TODO: This test doesn't check BABL rewards.
     it('should calculate correct BABL in case of 1 strategy with positive profit and with total duration of 1 quarter', async function () {
-      const [long1] = await createStrategies([{ garden: garden1 }]);
       await executeStrategy(long1, ONE_ETH);
 
       await injectFakeProfits(long1, ONE_ETH.mul(222));
@@ -177,8 +186,6 @@ describe('BABL Rewards Distributor', function () {
 
     // TODO: This test doesn't check BABL rewards.
     it('should calculate correct BABL in case of 2 strategies with total duration of 1 quarter', async function () {
-      const [long1, long2] = await createStrategies([{ garden: garden1 }, { garden: garden1 }]);
-
       await executeStrategy(long1, ONE_ETH);
       await executeStrategy(long2, ONE_ETH.mul(2));
 
@@ -205,11 +212,6 @@ describe('BABL Rewards Distributor', function () {
 
     // TODO: This test doesn't check BABL rewards.
     it('should calculate correct BABL in case of 3 strategies with total duration of 1 quarter', async function () {
-      const [long1, long2, long3] = await createStrategies([
-        { garden: garden1 },
-        { garden: garden1 },
-        { garden: garden1 },
-      ]);
       await executeStrategy(long1, ONE_ETH);
       await executeStrategy(long2, ONE_ETH);
       await executeStrategy(long3, ONE_ETH);
@@ -239,14 +241,6 @@ describe('BABL Rewards Distributor', function () {
 
     // TODO: This test doesn't check BABL rewards.
     it('should calculate correct BABL in case of 5 strategies of 2 different Gardens with total duration of less than 1 quarter', async function () {
-      const [long1, long2, long3, long4, long5] = await createStrategies([
-        { garden: garden1 },
-        { garden: garden1 },
-        { garden: garden2 },
-        { garden: garden2 },
-        { garden: garden2 },
-      ]);
-
       await executeStrategy(long1, ONE_ETH);
       await executeStrategy(long2, ONE_ETH);
       await executeStrategy(long3, ONE_ETH);
@@ -280,7 +274,6 @@ describe('BABL Rewards Distributor', function () {
 
     // TODO: This test doesn't check BABL rewards.
     it('should calculate correct BABL in case of 1 strategy with total duration of 2 quarters', async function () {
-      const [long1] = await createStrategies([{ garden: garden1 }]);
       await executeStrategy(long1, ONE_ETH);
 
       await finalizeStrategyAfter2Quarters(long1);
@@ -294,8 +287,6 @@ describe('BABL Rewards Distributor', function () {
     });
 
     it('should calculate correct BABL in the future (10 years) in case of 1 strategy with total duration of 2 quarters', async function () {
-      const [long1] = await createStrategies([{ garden: garden1 }]);
-
       // We go to the future 10 years
       increaseTime(ONE_DAY_IN_SECONDS * 3650);
 
@@ -312,8 +303,6 @@ describe('BABL Rewards Distributor', function () {
     });
 
     it('should calculate correct BABL rewards in case of 1 strategy with total duration of 3 quarters', async function () {
-      const [long1] = await createStrategies([{ garden: garden1 }]);
-
       await executeStrategy(long1, ONE_ETH);
 
       await finalizeStrategyAfter3Quarters(long1);
@@ -327,14 +316,6 @@ describe('BABL Rewards Distributor', function () {
     });
 
     it('should calculate correct BABL in case of 5 strategies of 2 different Gardens with different timings along 3 quarters', async function () {
-      const [long1, long2, long3, long4, long5] = await createStrategies([
-        { garden: garden1 },
-        { garden: garden1 },
-        { garden: garden2 },
-        { garden: garden2 },
-        { garden: garden2 },
-      ]);
-
       await executeStrategy(long1, ONE_ETH);
       await executeStrategy(long2, ONE_ETH);
       await executeStrategy(long3, ONE_ETH);
@@ -368,14 +349,6 @@ describe('BABL Rewards Distributor', function () {
     it('should calculate correct BABL (in 10 Years from now) in case of 5 strategies of 2 different Gardens with different timings along 3 quarters', async function () {
       increaseTime(ONE_DAY_IN_SECONDS * 3650);
 
-      const [long1, long2, long3, long4, long5] = await createStrategies([
-        { garden: garden1 },
-        { garden: garden1 },
-        { garden: garden2 },
-        { garden: garden2 },
-        { garden: garden2 },
-      ]);
-
       await executeStrategy(long1, ONE_ETH);
       await executeStrategy(long2, ONE_ETH);
       await executeStrategy(long3, ONE_ETH);
@@ -407,14 +380,6 @@ describe('BABL Rewards Distributor', function () {
     });
 
     it('should calculate correct BABL in case of 5 strategies of 2 different Gardens with different timings along 3 Years', async function () {
-      const [long1, long2, long3, long4, long5] = await createStrategies([
-        { garden: garden1 },
-        { garden: garden1 },
-        { garden: garden2 },
-        { garden: garden2 },
-        { garden: garden2 },
-      ]);
-
       await executeStrategy(long1, ONE_ETH);
       await executeStrategy(long2, ONE_ETH);
       await executeStrategy(long3, ONE_ETH);
@@ -438,14 +403,6 @@ describe('BABL Rewards Distributor', function () {
     });
 
     it('should calculate correct BABL in case of 5 (4 with positive profits) strategies of 2 different Gardens with different timings along 3 Years', async function () {
-      const [long1, long2, long3, long4, long5] = await createStrategies([
-        { garden: garden1 },
-        { garden: garden1 },
-        { garden: garden2 },
-        { garden: garden2 },
-        { garden: garden2 },
-      ]);
-
       await executeStrategy(long1, ONE_ETH);
       await executeStrategy(long2, ONE_ETH);
       await executeStrategy(long3, ONE_ETH);
@@ -478,10 +435,8 @@ describe('BABL Rewards Distributor', function () {
     });
   });
 
-  describe('Claiming Profits and BABL Rewards', function () {
+  describe('Claiming Reserve Asset Rewards and BABL Rewards', function () {
     it('should claim and update balances of Signer1 either Garden tokens or BABL rewards as contributor of 2 strategies (1 with positive profits and other without them) within a quarter', async function () {
-      const [long1, long2] = await createStrategies([{ garden: garden1 }, { garden: garden1 }]);
-
       await executeStrategy(long1, ONE_ETH);
       await executeStrategy(long2, ONE_ETH.mul(2));
 
@@ -504,8 +459,6 @@ describe('BABL Rewards Distributor', function () {
     });
 
     it('should not allow a race condition of two consecutive claims for the same rewards & profit of the same strategies', async function () {
-      const [long1, long2] = await createStrategies([{ garden: garden1 }, { garden: garden1 }]);
-
       await executeStrategy(long1, ONE_ETH);
       await executeStrategy(long2, ONE_ETH.mul(2));
 
@@ -539,8 +492,6 @@ describe('BABL Rewards Distributor', function () {
     });
 
     it('should only provide new additional BABL and profits between claims (claiming results of 2 strategies only 1 with profit)', async function () {
-      const [long1, long2] = await createStrategies([{ garden: garden1 }, { garden: garden1 }]);
-
       await executeStrategy(long1, ONE_ETH);
       await executeStrategy(long2, ONE_ETH.mul(2));
 
@@ -556,8 +507,6 @@ describe('BABL Rewards Distributor', function () {
     });
 
     it('should only provide new additional BABL and profits between claims (claiming results of 2 strategies both with profit)', async function () {
-      const [long1, long2] = await createStrategies([{ garden: garden1 }, { garden: garden1 }]);
-
       await executeStrategy(long1, ONE_ETH);
       await executeStrategy(long2, ONE_ETH.mul(2));
 
@@ -570,14 +519,12 @@ describe('BABL Rewards Distributor', function () {
       // Transfer 500_000e18 tokens from owner to rewardsDistributor for BABL Mining Program
       await bablToken.connect(owner).transfer(rewardsDistributor.address, ONE_ETH.mul(500000));
       // TODO: Write actual checks
-      // const rewards = await garden1.connect(signer1).getProfitsAndBabl([long1.address, long2.address]);
+      // const rewards = await garden1.connect(signer1).getRewards([long1.address, long2.address]);
       // expect(rewards[0].toString()).to.lt(ethers.utils.parseEther('1'));
       // expect(rewards[1].toString()).to.gt(ethers.utils.parseEther('23700'));
     });
 
     it('should check potential claim values of Profit and BABL Rewards', async function () {
-      const [long1, long2] = await createStrategies([{ garden: garden1 }, { garden: garden1 }]);
-
       await executeStrategy(long1, ONE_ETH);
       await executeStrategy(long2, ONE_ETH.mul(2));
 
@@ -591,21 +538,15 @@ describe('BABL Rewards Distributor', function () {
       await bablToken.connect(owner).transfer(rewardsDistributor.address, ONE_ETH.mul(500000));
       // TODO: Write actual checks
 
-      const rewards = await garden1.connect(signer1).getProfitsAndBabl([long1.address, long2.address]);
-
-      expect(rewards[0]).to.lt(ONE_ETH.mul(1));
-      expect(rewards[1]).to.gt(ONE_ETH.mul(29000));
+      // const rewards = await rewardsDistributor
+      //   .connect(owner)
+      //   .getRewards(signer1.address, [long1.address, long2.address]);
+      //
+      // expect(rewards[0]).to.lt(ONE_ETH.mul(1));
+      // expect(rewards[1]).to.gt(ONE_ETH.mul(29000));
     });
 
     it('should claim and update balances of Signer1 either Garden tokens or BABL rewards as contributor of 5 strategies (4 with positive profits) of 2 different Gardens with different timings along 3 Years', async function () {
-      const [long1, long2, long3, long4, long5] = await createStrategies([
-        { garden: garden1 },
-        { garden: garden1 },
-        { garden: garden2 },
-        { garden: garden2 },
-        { garden: garden2 },
-      ]);
-
       await executeStrategy(long1, ONE_ETH);
       await executeStrategy(long2, ONE_ETH);
       await executeStrategy(long3, ONE_ETH);

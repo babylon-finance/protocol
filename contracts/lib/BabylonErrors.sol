@@ -214,4 +214,6 @@ library Errors {
     uint256 internal constant BABL_TRANSFERS_DISABLED = 62;
     // Strategy duration range error
     uint256 internal constant DURATION_RANGE = 63;
+    // Checks the min amount of voters
+    uint256 internal constant MIN_VOTERS_CHECK = 64;
 }
