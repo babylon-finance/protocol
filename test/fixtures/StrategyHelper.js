@@ -1,8 +1,8 @@
 const { ethers } = require('hardhat');
-const { ONE_DAY_IN_SECONDS, ONE_ETH } = require('../../utils/constants.js');
-const { TWAP_ORACLE_WINDOW, TWAP_ORACLE_GRANULARITY } = require('../../utils/system.js');
-const { impersonateAddress } = require('../../utils/rpc');
-const addresses = require('../../utils/addresses');
+const { ONE_DAY_IN_SECONDS, ONE_ETH } = require('../../lib/constants.js');
+const { TWAP_ORACLE_WINDOW, TWAP_ORACLE_GRANULARITY } = require('../../lib/system.js');
+const { impersonateAddress } = require('../../lib/rpc');
+const addresses = require('../../lib/addresses');
 const { increaseTime, from } = require('../utils/test-helpers');
 
 const DEFAULT_STRATEGY_PARAMS = [
@@ -88,13 +88,18 @@ async function vote(garden, signers, strategy) {
   const signer1Balance = await garden.balanceOf(signer1.getAddress());
   const signer2Balance = await garden.balanceOf(signer2.getAddress());
 
-  return strategy.resolveVoting(
-    [signer1.getAddress(), signer2.getAddress()],
-    [signer1Balance.div(3), signer2Balance.div(3)],
-    signer1Balance.add(signer2Balance).toString(),
-    signer1Balance.add(signer2Balance).toString(),
-    0,
-    { gasPrice: 0 },
+  return (
+    strategy
+      // use keeper
+      .connect(signers[0])
+      .resolveVoting(
+        [signer1.getAddress(), signer2.getAddress()],
+        [signer1Balance.div(3), signer2Balance.div(3)],
+        signer1Balance.add(signer2Balance).toString(),
+        signer1Balance.add(signer2Balance).toString(),
+        0,
+        { gasPrice: 0 },
+      )
   );
 }
 
@@ -109,15 +114,21 @@ async function executeStrategy(
     gasPrice = 0,
   } = {},
 ) {
+  const signers = await ethers.getSigners();
   if (time > 0) {
     await increaseTime(time);
   }
   if (TWAPs) {
     await updateTWAPs(await strategy.garden());
   }
-  return strategy.executeStrategy(amount, fee, {
-    gasPrice,
-  });
+  return (
+    strategy
+      // use keeper
+      .connect(signers[1])
+      .executeStrategy(amount, fee, {
+        gasPrice,
+      })
+  );
 }
 
 async function executeStrategyImmediate(strategy) {
@@ -134,6 +145,7 @@ async function finalizeStrategy(
     gasPrice = 0,
   } = {},
 ) {
+  const signers = await ethers.getSigners();
   if (time > 0) {
     await increaseTime(time);
   }
@@ -141,7 +153,12 @@ async function finalizeStrategy(
   if (TWAPs) {
     await updateTWAPs(await strategy.garden());
   }
-  return strategy.finalizeStrategy(fee, NFT_ADDRESS, { gasPrice });
+  return (
+    strategy
+      // use keeper
+      .connect(signers[1])
+      .finalizeStrategy(fee, NFT_ADDRESS, { gasPrice })
+  );
 }
 
 async function finalizeStrategyImmediate(strategy) {

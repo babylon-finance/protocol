@@ -3,8 +3,8 @@ const { ethers, waffle } = require('hardhat');
 
 const { loadFixture } = waffle;
 
-const addresses = require('../../utils/addresses');
-const { ONE_DAY_IN_SECONDS } = require('../../utils/constants.js');
+const addresses = require('../../lib/addresses');
+const { ONE_DAY_IN_SECONDS } = require('../../lib/constants.js');
 const {
   DEFAULT_STRATEGY_PARAMS,
   createStrategy,
@@ -319,11 +319,12 @@ describe('Garden', function () {
       });
 
       ethers.provider.send('evm_increaseTime', [ONE_DAY_IN_SECONDS * 5]); // to bypass hardlock
+      const beforeBalance = await garden1.balanceOf(signer2.address);
 
       await expect(garden1.connect(signer2).withdraw(ethers.utils.parseEther('5'), 1, signer2.getAddress()));
 
-      const WITHDRAWsigner2Balance = await garden1.balanceOf(signer2.address);
-      await expect(WITHDRAWsigner2Balance).to.be.equal(ethers.utils.parseEther('2'));
+      const afterBalance = await garden1.balanceOf(signer2.address);
+      await expect(afterBalance).to.be.equal(beforeBalance.sub(ethers.utils.parseEther('5')));
     });
   });
 

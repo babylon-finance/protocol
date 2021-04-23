@@ -3,7 +3,7 @@ const { expect } = require('chai');
 const { waffle, ethers } = require('hardhat');
 const { deployFolioFixture } = require('../fixtures/ControllerFixture');
 const { createStrategy, executeStrategy, finalizeStrategy } = require('../fixtures/StrategyHelper');
-const addresses = require('../../utils/addresses');
+const addresses = require('../../lib/addresses');
 
 const { loadFixture } = waffle;
 
@@ -40,6 +40,8 @@ describe('OneInchTradeIntegration', function () {
     });
 
     it('trade WETH to DAI', async function () {
+      const balanceBeforeStarting = await wethToken.balanceOf(garden1.address);
+      expect(balanceBeforeStarting).to.equal(ethers.utils.parseEther('1.0'));
       const strategyContract = await createStrategy(
         'long',
         'vote',
@@ -47,13 +49,23 @@ describe('OneInchTradeIntegration', function () {
         oneInchTradeIntegration.address,
         garden1,
       );
-
+      // Got the initial deposit 1 ETH + 4ETH from voters minus the 2 ETH from the fee
+      expect(await wethToken.balanceOf(garden1.address)).to.equal(ethers.utils.parseEther('2.99'));
+      // Got keeper fees 2.0 ETH
+      expect(await wethToken.balanceOf(strategyContract.address)).to.equal(ethers.utils.parseEther('2.0'));
       await executeStrategy(strategyContract);
+      // Just below 2
+      expect(await wethToken.balanceOf(garden1.address)).to.be.lt(ethers.utils.parseEther('2.0'));
+      // Strategy has 2 weth from keepers still
+      expect(await wethToken.balanceOf(strategyContract.address)).to.equal(ethers.utils.parseEther('2.0'));
       expect(await daiToken.balanceOf(strategyContract.address)).to.be.gt(ethers.utils.parseEther('900') / 10 ** 12);
-
       await finalizeStrategy(strategyContract, 0);
       expect(await daiToken.balanceOf(strategyContract.address)).to.equal(0);
-      expect(await wethToken.balanceOf(garden1.address)).to.equal('3985000000000000000'); // 1.085 ETH TODO -CHECK
+      expect(await wethToken.balanceOf(garden1.address)).to.be.gt('4');
+      // 4 in WETH, the remaining in ETH
+      expect(await ethers.provider.getBalance(garden1.address)).to.equal(
+        (await strategyContract.capitalReturned()).mul(80).div(100),
+      );
     });
   });
 });

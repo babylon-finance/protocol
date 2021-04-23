@@ -41,6 +41,8 @@ jobs:
         run: yarn --frozen-lockfile
 
       - name: Run tests
+        env:
+          ALCHEMY_KEY: ${{ secrets.ALCHEMY_KEY}}
         run: yarn test
 
   lint:

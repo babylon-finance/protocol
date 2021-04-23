@@ -3,8 +3,8 @@
 const { expect } = require('chai');
 const { ethers, waffle } = require('hardhat');
 
-const { ADDRESS_ZERO, ONE_DAY_IN_SECONDS } = require('../../utils/constants');
-const { increaseTime, from } = require('../utils/test-helpers');
+const { ADDRESS_ZERO, ONE_DAY_IN_SECONDS } = require('../../lib/constants');
+const { increaseTime } = require('../utils/test-helpers');
 
 const { loadFixture } = waffle;
 
@@ -109,7 +109,7 @@ describe('BABLToken contract', function () {
       await expect(bablToken.connect(owner).transfer(signer1.address, value)).to.be.revertedWith('revert BAB#062');
       await expect(bablToken.connect(owner).transfer(signer2.address, value)).to.be.revertedWith('revert BAB#062');
 
-      //It might work if from/to is the TimeLockRegistry or RewardsDistributor
+      // It might work if from/to is the TimeLockRegistry or RewardsDistributor
       await expect(bablToken.connect(owner).transfer(rewardsDistributor.address, value)).not.to.be.reverted;
       await expect(bablToken.connect(owner).transfer(timeLockRegistry.address, value)).not.to.be.reverted;
 
@@ -135,7 +135,7 @@ describe('BABLToken contract', function () {
       // Trying to transfer 260_000e18 tokens from owner to userSigner1
       const value = ethers.utils.parseEther('260000');
 
-      //It might work if from/to is the TimeLockRegistry or RewardsDistributor
+      // It might work if from/to is the TimeLockRegistry or RewardsDistributor
       await expect(bablToken.connect(owner).transfer(rewardsDistributor.address, value)).not.to.be.reverted;
       await expect(bablToken.connect(owner).transfer(timeLockRegistry.address, value)).not.to.be.reverted;
       const rewardsDistributorBalance = await bablToken.balanceOf(rewardsDistributor.address);

@@ -3,8 +3,8 @@ const { waffle, ethers } = require('hardhat');
 // const { impersonateAddress } = require("../../utils/rpc");
 const { deployFolioFixture } = require('../fixtures/ControllerFixture');
 const { executeStrategy, finalizeStrategy } = require('../fixtures/StrategyHelper');
-const addresses = require('../../utils/addresses');
-const { ONE_DAY_IN_SECONDS } = require('../../utils/constants');
+const addresses = require('../../lib/addresses');
+const { ONE_DAY_IN_SECONDS } = require('../../lib/constants');
 
 const { loadFixture } = waffle;
 

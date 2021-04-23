@@ -92,3 +92,7 @@ typechain
 publish
 export
 .openzeppelin
+deployments/hardhat
+deployments/localhost
+deployments/rinkeby
+contracts.json
