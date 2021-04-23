@@ -5429,7 +5429,7 @@ hardhat-contract-sizer@^2.0.2:
 
 "hardhat-deploy@https://github.com/ylv-io/hardhat-deploy.git":
   version "0.7.5"
-  resolved "https://github.com/ylv-io/hardhat-deploy.git#0ff374b3e732f666d92ab5441c399b000a0218d0"
+  resolved "https://github.com/ylv-io/hardhat-deploy.git#63debbb5aaa111a1714adb06cb097472aee18237"
   dependencies:
     "@ethersproject/abi" "^5.0.0"
     "@ethersproject/abstract-signer" "^5.0.0"
