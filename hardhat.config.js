@@ -1,3 +1,4 @@
+require('dotenv/config');
 require('@nomiclabs/hardhat-ethers');
 require('@openzeppelin/hardhat-upgrades');
 require('@nomiclabs/hardhat-waffle');
@@ -9,6 +10,7 @@ require('solidity-coverage');
 require('@typechain/hardhat');
 
 require('./lib/plugins/upgrades');
+const ALCHEMY_KEY = process.env.ALCHEMY_KEY || '';
 
 const { extendEnvironment, task, subtask, extendConfig } = require('hardhat/config');
 
@@ -51,7 +53,7 @@ module.exports = {
       blockGasLimit: 0x1fffffffffffff,
       allowUnlimitedContractSize: true,
       forking: {
-        url: 'https://eth-mainnet.alchemyapi.io/v2/sncj01nDcsAQr_QWyhYWNkg3qzW2o9kt',
+        url: `https://eth-mainnet.alchemyapi.io/v2/${ALCHEMY_KEY}`,
         blockNumber: 12160000,
       },
       saveDeployments: true,
