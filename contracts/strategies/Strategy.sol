@@ -350,12 +350,12 @@ abstract contract Strategy is ReentrancyGuard, IStrategy, Initializable {
             // Updating allocation - we need to consider the difference for the calculation
             // We control the potential overhead in BABL Rewards calculations to keep control
             // and avoid distributing a wrong number (e.g. flash loans)
-            if (this.hasMiningStarted()) {
+            if (_hasMiningStarted()) {
                 // The Mining program has not started on time for this strategy
                 rewardsTotalOverhead = rewardsTotalOverhead.add(_capital.mul(block.timestamp.sub(updatedAt)));
             }
         }
-        if (this.hasMiningStarted()) {
+        if (_hasMiningStarted()) {
             // The Mining program has not started on time for this strategy
             rewardsDistributor.addProtocolPrincipal(_capital);
         }
@@ -414,7 +414,7 @@ abstract contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         capitalAllocated = capitalAllocated.sub(_amountToUnwind);
         // Removes protocol principal for the calculation of rewards
         IRewardsDistributor rewardsDistributor = IRewardsDistributor(IBabController(controller).rewardsDistributor());
-        if (this.hasMiningStarted()) {
+        if (_hasMiningStarted()) {
             // Only if the Mining program started on time for this strategy
             rewardsDistributor.substractProtocolPrincipal(_amountToUnwind);
         }
@@ -607,13 +607,6 @@ abstract contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         return 0;
     }
 
-    function hasMiningStarted() external view override returns (bool) {
-        IRewardsDistributor rewardsDistributor = IRewardsDistributor(IBabController(controller).rewardsDistributor());
-        uint256 rewardsStartTime = rewardsDistributor.START_TIME();
-        bool miningStarted = ((enteredAt > rewardsStartTime) && (rewardsStartTime != 0));
-        return miningStarted;
-    }
-
     /* ============ Internal Functions ============ */
 
     /**
@@ -746,7 +739,7 @@ abstract contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         IGarden(garden).moveStrategyToFinalized(reserveAssetDelta, address(this));
         IRewardsDistributor rewardsDistributor = IRewardsDistributor(IBabController(controller).rewardsDistributor());
         // Substract the Principal in the Rewards Distributor to update the Protocol power value
-        if (this.hasMiningStarted()) {
+        if (_hasMiningStarted()) {
             // Only if the Mining program started on time for this strategy
             rewardsDistributor.substractProtocolPrincipal(capitalAllocated);
         }
@@ -756,6 +749,13 @@ abstract contract Strategy is ReentrancyGuard, IStrategy, Initializable {
     function _getPrice(address _assetOne, address _assetTwo) internal view returns (uint256) {
         IPriceOracle oracle = IPriceOracle(IBabController(controller).priceOracle());
         return oracle.getPrice(_assetOne, _assetTwo);
+    }
+
+    function _hasMiningStarted() internal view returns (bool) {
+        IRewardsDistributor rewardsDistributor = IRewardsDistributor(IBabController(controller).rewardsDistributor());
+        uint256 rewardsStartTime = rewardsDistributor.START_TIME();
+        bool miningStarted = ((enteredAt > rewardsStartTime) && (rewardsStartTime != 0));
+        return miningStarted;
     }
 
     // solhint-disable-next-line

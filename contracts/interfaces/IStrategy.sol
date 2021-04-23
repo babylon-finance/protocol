@@ -157,6 +157,4 @@ interface IStrategy {
     function active() external view returns (bool);
 
     function garden() external view returns (IGarden);
-
-    function hasMiningStarted() external view returns (bool);
 }
