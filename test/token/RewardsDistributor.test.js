@@ -115,6 +115,7 @@ describe('BABL Rewards Distributor', function () {
       rewardsDistributor,
       kyberTradeIntegration,
     } = await loadFixture(deployFolioFixture));
+    /**
     const precreatedStrategies1 = await createStrategies([
       { garden: garden1 },
       { garden: garden1 },
@@ -127,6 +128,7 @@ describe('BABL Rewards Distributor', function () {
     ]);
     [long1, long2] = precreatedStrategies1;
     [long3, long4, long5] = precreatedStrategies2;
+    */
   });
 
   describe('Deployment', function () {
@@ -172,8 +174,7 @@ describe('BABL Rewards Distributor', function () {
 
       await executeStrategy(long, ONE_ETH);
 
-
-      await expect(rewardsDistributor.getStrategyRewards(long1.address)).to.be.revertedWith(
+      await expect(rewardsDistributor.getStrategyRewards(long.address)).to.be.revertedWith(
         'The strategy has to be finished',
       );
     });
@@ -240,7 +241,6 @@ describe('BABL Rewards Distributor', function () {
       await babController.enableBABLMiningProgram();
       const [long1, long2] = await createStrategies([{ garden: garden1 }, { garden: garden1 }]);
 
-
       await executeStrategy(long1, ONE_ETH);
       await executeStrategy(long2, ONE_ETH.mul(2));
 
@@ -284,7 +284,6 @@ describe('BABL Rewards Distributor', function () {
         { garden: garden1 },
       ]);
 
-
       await executeStrategy(long1, ONE_ETH);
       await executeStrategy(long2, ONE_ETH);
       await executeStrategy(long3, ONE_ETH);
@@ -304,7 +303,6 @@ describe('BABL Rewards Distributor', function () {
       await finalizeStrategyImmediate(long3);
 
       const { exitedAt } = await getStrategyState(long3);
-
       await getAndValidateProtocolTimestampAndQuarter(rewardsDistributor, exitedAt, {
         principal: 0,
         quarter: 1,
@@ -335,7 +333,6 @@ describe('BABL Rewards Distributor', function () {
         { garden: garden2 },
         { garden: garden2 },
       ]);
-
 
       await executeStrategy(long1, ONE_ETH);
       await executeStrategy(long2, ONE_ETH);
@@ -395,7 +392,6 @@ describe('BABL Rewards Distributor', function () {
 
       const [long1] = await createStrategies([{ garden: garden1 }]);
 
-
       await executeStrategy(long1, ONE_ETH);
 
       await finalizeStrategyAfter2Quarters(long1);
@@ -443,7 +439,6 @@ describe('BABL Rewards Distributor', function () {
 
       const [long1] = await createStrategies([{ garden: garden1 }]);
 
-
       await executeStrategy(long1, ONE_ETH);
 
       await finalizeStrategyAfter3Quarters(long1);
@@ -471,7 +466,6 @@ describe('BABL Rewards Distributor', function () {
         { garden: garden2 },
         { garden: garden2 },
       ]);
-
 
       await executeStrategy(long1, ONE_ETH);
       await executeStrategy(long2, ONE_ETH);
@@ -527,6 +521,13 @@ describe('BABL Rewards Distributor', function () {
     it('should calculate correct BABL (in 10 Years from now) in case of 5 strategies of 2 different Gardens with different timings along 3 quarters', async function () {
       // Mining program has to be enabled before the strategy starts its execution
       await babController.enableBABLMiningProgram();
+      const [long1, long2, long3, long4, long5] = await createStrategies([
+        { garden: garden1 },
+        { garden: garden1 },
+        { garden: garden2 },
+        { garden: garden2 },
+        { garden: garden2 },
+      ]);
 
       increaseTime(ONE_DAY_IN_SECONDS * 3650);
 
@@ -592,7 +593,6 @@ describe('BABL Rewards Distributor', function () {
         { garden: garden2 },
         { garden: garden2 },
       ]);
-
 
       await executeStrategy(long1, ONE_ETH);
       await executeStrategy(long2, ONE_ETH);
@@ -733,7 +733,6 @@ describe('BABL Rewards Distributor', function () {
 
       const [long1, long2] = await createStrategies([{ garden: garden1 }, { garden: garden1 }]);
 
-
       await executeStrategy(long1, ONE_ETH);
       await executeStrategy(long2, ONE_ETH.mul(2));
 
@@ -745,8 +744,14 @@ describe('BABL Rewards Distributor', function () {
       // Transfer 500_000e18 tokens from owner to rewardsDistributor for BABL Mining Program
       await bablToken.connect(owner).transfer(rewardsDistributor.address, ONE_ETH.mul(500000));
       // Check pending rewards for users
-      const [, signer1BABL] = await garden1.connect(signer1).getProfitsAndBabl([long1.address, long2.address]);
-      const [, signer2BABL] = await garden1.connect(signer2).getProfitsAndBabl([long1.address, long2.address]);
+      const [, signer1BABL] = await rewardsDistributor.getRewards(garden1.address, signer1.address, [
+        long1.address,
+        long2.address,
+      ]);
+      const [, signer2BABL] = await rewardsDistributor.getRewards(garden1.address, signer2.address, [
+        long1.address,
+        long2.address,
+      ]);
 
       // Balances before claiming
       const signer1GardenBalance = await garden1.balanceOf(signer1.address);
@@ -776,12 +781,15 @@ describe('BABL Rewards Distributor', function () {
       await expect(contributor4[4].toString()).to.equal(contributor3[4]);
 
       // Check pending rewards for users (shouldn´t be any as they are already claimed)
-      const [signer1Profits2, signer1BABL2] = await garden1
-        .connect(signer1)
-        .getProfitsAndBabl([long1.address, long2.address]);
-      const [signer2Profits2, signer2BABL2] = await garden1
-        .connect(signer2)
-        .getProfitsAndBabl([long1.address, long2.address]);
+
+      const [signer1Profits2, signer1BABL2] = await rewardsDistributor.getRewards(garden1.address, signer1.address, [
+        long1.address,
+        long2.address,
+      ]);
+      const [signer2Profits2, signer2BABL2] = await rewardsDistributor.getRewards(garden1.address, signer2.address, [
+        long1.address,
+        long2.address,
+      ]);
 
       expect(signer1Profits2.toString()).to.be.equal('0');
       expect(signer1BABL2.toString()).to.be.equal('0');
@@ -810,26 +818,30 @@ describe('BABL Rewards Distributor', function () {
       await bablToken.connect(owner).transfer(rewardsDistributor.address, ONE_ETH.mul(500000));
       expect((await bablToken.balanceOf(signer1.address)).toString()).to.be.equal('0');
 
-      const [signer1Profit, signer1BABL] = await garden1
-        .connect(signer1)
-        .getProfitsAndBabl([long1.address, long2.address]);
+      const [signer1Profit, signer1BABL] = await rewardsDistributor.getRewards(garden1.address, signer1.address, [
+        long1.address,
+        long2.address,
+      ]);
 
       await garden1.connect(signer1).claimReturns([long1.address, long2.address]);
       expect((await bablToken.balanceOf(signer1.address)).toString()).to.be.equal(signer1BABL);
       expect(signer1Profit.toString()).to.be.closeTo('50085069448364166', ethers.utils.parseEther('0.05'));
-      const [signer1Profit2, signer1BABL2] = await garden1
-        .connect(signer1)
-        .getProfitsAndBabl([long1.address, long2.address]);
+      const [signer1Profit2, signer1BABL2] = await rewardsDistributor.getRewards(garden1.address, signer1.address, [
+        long1.address,
+        long2.address,
+      ]);
       expect(signer1Profit2.toString()).to.be.equal('0');
       expect(signer1BABL2.toString()).to.be.equal('0');
 
       await finalizeStrategyAfterQuarter(long2);
-      const [signer1Profit3, signer1BABL3] = await garden1
-        .connect(signer1)
-        .getProfitsAndBabl([long1.address, long2.address]);
+      const [signer1Profit3, signer1BABL3] = await rewardsDistributor.getRewards(garden1.address, signer1.address, [
+        long1.address,
+        long2.address,
+      ]);
+
       await garden1.connect(signer1).claimReturns([long1.address, long2.address]);
       expect(signer1Profit3.toString()).to.be.equal('0'); // Negative profit means no profit at all
-      expect(signer1BABL3.toString()).to.be.closeTo('35454394517198928381723', ethers.utils.parseEther('0.5'));
+      expect(signer1BABL3.toString()).to.be.closeTo('34636118453683837571056', ethers.utils.parseEther('0.5'));
     });
 
     it('should only provide new additional BABL and profits between claims (claiming results of 2 strategies both with profit)', async function () {
@@ -845,19 +857,18 @@ describe('BABL Rewards Distributor', function () {
       await finalizeStrategyAfterQuarter(long1);
       // Transfer 500_000e18 tokens from owner to rewardsDistributor for BABL Mining Program
       await bablToken.connect(owner).transfer(rewardsDistributor.address, ONE_ETH.mul(500000));
-
-      const [signer1Profit, signer1BABL] = await garden1
-        .connect(signer1)
-        .getProfitsAndBabl([long1.address, long2.address]);
-
+      const [signer1Profit, signer1BABL] = await rewardsDistributor.getRewards(garden1.address, signer1.address, [
+        long1.address,
+        long2.address,
+      ]);
       await garden1.connect(signer1).claimReturns([long1.address, long2.address]);
 
       await injectFakeProfits(long2, ONE_ETH.mul(200));
       await finalizeStrategyAfterQuarter(long2);
-
-      const [signer1Profit2, signer1BABL2] = await garden1
-        .connect(signer1)
-        .getProfitsAndBabl([long1.address, long2.address]);
+      const [signer1Profit2, signer1BABL2] = await rewardsDistributor.getRewards(garden1.address, signer1.address, [
+        long1.address,
+        long2.address,
+      ]);
       await garden1.connect(signer1).claimReturns([long1.address, long2.address]);
       expect(signer1Profit.toString()).to.be.not.equal(signer1Profit2);
       expect(signer1Profit).to.be.closeTo('50085069448375857', ethers.utils.parseEther('0.05'));
@@ -879,13 +890,14 @@ describe('BABL Rewards Distributor', function () {
 
       await injectFakeProfits(long2, ONE_ETH.mul(200));
       await finalizeStrategyAfterQuarter(long2);
-
-      const [signer1Profit, signer1BABL] = await garden1
-        .connect(signer1)
-        .getProfitsAndBabl([long1.address, long2.address]);
-
-      expect(signer1Profit).to.be.closeTo('99343939480695811', ethers.utils.parseEther('0.05'));
-      expect(signer1BABL).to.be.closeTo('77748990094148673789748', ethers.utils.parseEther('0.5'));
+      const [signer1Profit, signer1BABL] = await rewardsDistributor.getRewards(garden1.address, signer1.address, [
+        long1.address,
+        long2.address,
+      ]);
+      // PROFITS ARE NOW A 20% OF THE TOTAL, AS WE NOW HAVE COMPOUNDED (RE-STAKED) THE REST (80%) FOR LPs
+      //expect(signer1Profit).to.be.closeTo('99343939480695811', ethers.utils.parseEther('0.05'));
+      expect(signer1Profit).to.be.closeTo('19637773343746505', ethers.utils.parseEther('0.005'));
+      expect(signer1BABL).to.be.closeTo('76450670569849938480019', ethers.utils.parseEther('0.5'));
     });
 
     it('should claim and update balances of Signer1 either Garden tokens or BABL rewards as contributor of 5 strategies (4 with positive profits) of 2 different Gardens with different timings along 3 Years', async function () {
@@ -927,13 +939,14 @@ describe('BABL Rewards Distributor', function () {
       await finalizeStrategyAfter3Quarters(long5);
 
       // We claim our tokens and check that they are received properly
-      const [signer1Profit, signer1BABL] = await garden1
-        .connect(signer1)
-        .getProfitsAndBabl([long1.address, long2.address]);
-
-      const [signer2Profit, signer2BABL] = await garden1
-        .connect(signer2)
-        .getProfitsAndBabl([long1.address, long2.address]);
+      const [signer1Profit, signer1BABL] = await rewardsDistributor.getRewards(garden1.address, signer1.address, [
+        long1.address,
+        long2.address,
+      ]);
+      const [signer2Profit, signer2BABL] = await rewardsDistributor.getRewards(garden1.address, signer2.address, [
+        long1.address,
+        long2.address,
+      ]);
 
       await garden1.connect(signer1).claimReturns([long1.address, long2.address]);
       await garden1.connect(signer2).claimReturns([long1.address, long2.address]);
@@ -942,65 +955,27 @@ describe('BABL Rewards Distributor', function () {
       expect((await bablToken.balanceOf(signer2.address)).toString()).to.be.equal(signer2BABL);
       expect(signer1Profit.toString()).to.be.closeTo('50097981844158404', ethers.utils.parseEther('0.05'));
       expect(signer2Profit.toString()).to.be.closeTo('32731278197558590', ethers.utils.parseEther('0.05'));
-
-      const [signer1Profit2, signer1BABL2] = await garden2
-        .connect(signer1)
-        .getProfitsAndBabl([long3.address, long4.address, long5.address]);
-
-      const [signer2Profit2, signer2BABL2] = await garden2
-        .connect(signer2)
-        .getProfitsAndBabl([long3.address, long4.address, long5.address]);
+      const [signer1Profit2, signer1BABL2] = await rewardsDistributor.getRewards(garden2.address, signer1.address, [
+        long3.address,
+        long4.address,
+        long5.address,
+      ]);
+      const [signer2Profit2, signer2BABL2] = await rewardsDistributor.getRewards(garden2.address, signer2.address, [
+        long3.address,
+        long4.address,
+        long5.address,
+      ]);
 
       await garden2.connect(signer1).claimReturns([long3.address, long4.address, long5.address]);
       await garden2.connect(signer2).claimReturns([long3.address, long4.address, long5.address]);
 
       expect((await bablToken.balanceOf(signer1.address)).toString()).to.be.equal(signer1BABL2.add(signer1BABL));
       expect((await bablToken.balanceOf(signer2.address)).toString()).to.be.equal(signer2BABL2.add(signer2BABL));
-      expect(signer1Profit2.toString()).to.be.closeTo('153109612988159780', ethers.utils.parseEther('0.05'));
-      expect(signer2Profit2.toString()).to.be.closeTo('110439572793446869', ethers.utils.parseEther('0.05'));
-    });
-    it('A Garden should not get rewards from strategies which is not responsible for, to avoid malicious users bypassing the claimedAt control', async function () {
-      // Mining program has to be enabled before the strategy starts its execution
-      await babController.enableBABLMiningProgram();
-      // Transfer 500_000e18 tokens from owner to rewardsDistributor for BABL Mining Program
-      await bablToken.connect(owner).transfer(rewardsDistributor.address, ONE_ETH.mul(500000));
-
-      const [long1, long2, long3, long4, long5] = await createStrategies([
-        { garden: garden1 },
-        { garden: garden1 },
-        { garden: garden2 },
-        { garden: garden2 },
-        { garden: garden2 },
-      ]);
-
-      await executeStrategy(long1, ONE_ETH);
-      await executeStrategy(long2, ONE_ETH);
-      await executeStrategy(long3, ONE_ETH);
-      await executeStrategy(long4, ONE_ETH);
-      await executeStrategy(long5, ONE_ETH);
-
-      increaseTime(ONE_DAY_IN_SECONDS * 30);
-
-      await injectFakeProfits(long1, ONE_ETH.mul(200));
-      await finalizeStrategyAfterQuarter(long1);
-
-      await finalizeStrategyAfterQuarter(long2);
-
-      await injectFakeProfits(long3, ONE_ETH.mul(200));
-      await finalizeStrategyAfterQuarter(long3);
-
-      await injectFakeProfits(long4, ONE_ETH.mul(222));
-      await finalizeStrategyAfterQuarter(long4);
-
-      await injectFakeProfits(long5, ONE_ETH.mul(222));
-      await finalizeStrategyAfterQuarter(long5);
-
-      // We try to hack the system bypassing claimedAt mistmaching different gardens with different strategies
-      await expect(
-        garden1
-          .connect(signer1)
-          .getProfitsAndBabl([long1.address, long2.address, long3.address, long4.address, long5.address]),
-      ).to.be.revertedWith('revert Garden vs. strategy mismatch');
+      // PROFITS ARE NOW A 20% OF THE TOTAL, AS WE NOW HAVE COMPOUNDED (RE-STAKED) THE REST (80%) FOR LPs
+      //expect(signer1Profit2.toString()).to.be.closeTo('153109612988159780', ethers.utils.parseEther('0.05'));
+      expect(signer1Profit2.toString()).to.be.closeTo('31328058680880152', ethers.utils.parseEther('0.005'));
+      //expect(signer2Profit2.toString()).to.be.closeTo('110439572793446869', ethers.utils.parseEther('0.05'));
+      expect(signer2Profit2.toString()).to.be.closeTo('2320756106692071', ethers.utils.parseEther('0.005'));
     });
     it('A user cannot claim strategies from 2 different gardens at the same time avoiding malicious bypassing of the claimedAt control (e.g. using claimedAtfrom different gardens over the same strategies)', async function () {
       // Mining program has to be enabled before the strategy starts its execution
@@ -1043,7 +1018,55 @@ describe('BABL Rewards Distributor', function () {
         garden1
           .connect(signer1)
           .claimReturns([long1.address, long2.address, long3.address, long4.address, long5.address]),
-      ).to.be.revertedWith('revert Garden vs. strategy mismatch');
+      ).to.be.revertedWith('revert Strategies need to belong to the garden');
+    });
+    it('A user cannot get rewards from strategies of 2 different gardens at the same time avoiding malicious bypassing of the claimedAt control (e.g. using claimedAtfrom different gardens over the same strategies)', async function () {
+      // Mining program has to be enabled before the strategy starts its execution
+      await babController.enableBABLMiningProgram();
+      // Transfer 500_000e18 tokens from owner to rewardsDistributor for BABL Mining Program
+      await bablToken.connect(owner).transfer(rewardsDistributor.address, ONE_ETH.mul(500000));
+
+      const [long1, long2, long3, long4, long5] = await createStrategies([
+        { garden: garden1 },
+        { garden: garden1 },
+        { garden: garden2 },
+        { garden: garden2 },
+        { garden: garden2 },
+      ]);
+
+      await executeStrategy(long1, ONE_ETH);
+      await executeStrategy(long2, ONE_ETH);
+      await executeStrategy(long3, ONE_ETH);
+      await executeStrategy(long4, ONE_ETH);
+      await executeStrategy(long5, ONE_ETH);
+
+      increaseTime(ONE_DAY_IN_SECONDS * 30);
+
+      await injectFakeProfits(long1, ONE_ETH.mul(200));
+      await finalizeStrategyAfterQuarter(long1);
+
+      await finalizeStrategyAfterQuarter(long2);
+
+      await injectFakeProfits(long3, ONE_ETH.mul(200));
+      await finalizeStrategyAfterQuarter(long3);
+
+      await injectFakeProfits(long4, ONE_ETH.mul(222));
+      await finalizeStrategyAfterQuarter(long4);
+
+      await injectFakeProfits(long5, ONE_ETH.mul(222));
+      await finalizeStrategyAfterQuarter(long5);
+
+      // We try to hack the system bypassing claimedAt mistmaching different gardens with different strategies
+
+      await expect(
+        rewardsDistributor.getRewards(garden2.address, signer1.address, [
+          long1.address,
+          long2.address,
+          long3.address,
+          long4.address,
+          long5.address,
+        ]),
+      ).to.be.revertedWith('revert Strategies need to belong to the garden');
     });
   });
 });

@@ -454,7 +454,8 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         _require(block.timestamp > contributor.claimedAt, Errors.ALREADY_CLAIMED); // race condition check
 
         IRewardsDistributor rewardsDistributor = IRewardsDistributor(IBabController(controller).rewardsDistributor());
-        (uint256 reserveRewards, uint256 bablRewards) = rewardsDistributor.getRewards(msg.sender, _finalizedStrategies);
+        (uint256 reserveRewards, uint256 bablRewards) =
+            rewardsDistributor.getRewards(address(this), msg.sender, _finalizedStrategies);
 
         if (reserveRewards > 0 && address(this).balance > 0) {
             contributor.claimedRewards = contributor.claimedRewards.add(reserveRewards); // Rewards claimed properly
