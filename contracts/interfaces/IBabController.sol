@@ -72,6 +72,8 @@ interface IBabController {
 
     function enableBABLTokensTransfers() external;
 
+    function enableBABLMiningProgram() external;
+
     function editLiquidityMinimum(uint256 _minRiskyPairLiquidityEth) external;
 
     function owner() external view returns (address);
@@ -95,6 +97,8 @@ interface IBabController {
     function gardenTokensTransfersEnabled() external view returns (bool);
 
     function bablTokensTransfersEnabled() external view returns (bool);
+
+    function bablMiningProgramEnabled() external view returns (bool);
 
     function getProfitSharing()
         external

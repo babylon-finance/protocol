@@ -22,6 +22,7 @@ import {OwnableUpgradeable} from '@openzeppelin/contracts-upgradeable/access/Own
 import {AddressUpgradeable} from '@openzeppelin/contracts-upgradeable/utils/AddressUpgradeable.sol';
 import {SafeMath} from '@openzeppelin/contracts/math/SafeMath.sol';
 import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
+import {RewardsDistributor} from './token/RewardsDistributor.sol';
 
 import {IGarden} from './interfaces/IGarden.sol';
 import {IGarden} from './interfaces/IGarden.sol';
@@ -129,6 +130,8 @@ contract BabController is OwnableUpgradeable, IBabController {
     // Enable Transfer of ERC20 BABL Tokens
     // Only Minting or transfers from/to TimeLockRegistry and Rewards Distributor can transfer tokens until the protocol is fully decentralized
     bool public override bablTokensTransfersEnabled;
+    // Enable and starts the BABL Mining program within Rewards Distributor contract
+    bool public override bablMiningProgramEnabled;
 
     uint256 public override protocolPerformanceFee; // 5% (0.01% = 1e14, 1% = 1e16) on profits
     uint256 public override protocolManagementFee; // 0.5% (0.01% = 1e14, 1% = 1e16)
@@ -150,6 +153,7 @@ contract BabController is OwnableUpgradeable, IBabController {
         protocolWithdrawalGardenTokenFee = 0; // 0% (0.01% = 1e14, 1% = 1e16) on profits
         gardenTokensTransfersEnabled = false;
         bablTokensTransfersEnabled = false;
+        bablMiningProgramEnabled = false;
         minRiskyPairLiquidityEth = 1000 * 1e18;
 
         strategistProfitPercentage = 10e16;
@@ -251,6 +255,17 @@ contract BabController is OwnableUpgradeable, IBabController {
      */
     function enableBABLTokensTransfers() external override onlyOwner {
         bablTokensTransfersEnabled = true;
+    }
+
+    /**  PRIVILEGED GOVERNANCE FUNCTION. Enable and starts the BABL Mining program by the Rewards Distributor
+     * Can only happen after public launch of the protocol.
+     */
+    function enableBABLMiningProgram() external override onlyOwner {
+        if (bablMiningProgramEnabled == false) {
+            // Can only be activated once
+            bablMiningProgramEnabled = true;
+            RewardsDistributor(rewardsDistributor).startBABLRewards(); // Sets the timestamp
+        }
     }
 
     // ===========  Protocol related Gov Functions ======
@@ -595,9 +610,9 @@ contract BabController is OwnableUpgradeable, IBabController {
             gardenValuer == _contractAddress ||
             priceOracle == _contractAddress ||
             owner() == _contractAddress ||
+            _contractAddress == address(this) ||
             (isGarden[address(IStrategy(_contractAddress).garden())] &&
-                IGarden(IStrategy(_contractAddress).garden()).isStrategy(_contractAddress)) ||
-            _contractAddress == address(this));
+                IGarden(IStrategy(_contractAddress).garden()).isStrategy(_contractAddress)));
     }
 
     /* ============ Internal Only Function ============ */
