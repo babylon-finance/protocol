@@ -135,16 +135,18 @@ describe('Strategy', function () {
       const signer1Balance = await garden2.balanceOf(signer1.getAddress());
       const signer2Balance = await garden2.balanceOf(signer2.getAddress());
 
-      await strategyCandidate.resolveVoting(
-        [signer1.getAddress(), signer2.getAddress()],
-        [signer1Balance, signer2Balance],
-        signer1Balance.add(signer2Balance).toString(),
-        signer1Balance.add(signer2Balance).toString(),
-        42,
-        {
-          gasPrice: 0,
-        },
-      );
+      await strategyCandidate
+        .connect(signer1)
+        .resolveVoting(
+          [signer1.getAddress(), signer2.getAddress()],
+          [signer1Balance, signer2Balance],
+          signer1Balance.add(signer2Balance).toString(),
+          signer1Balance.add(signer2Balance).toString(),
+          42,
+          {
+            gasPrice: 0,
+          },
+        );
 
       expect(await strategyCandidate.getUserVotes(signer1.getAddress())).to.equal(signer1Balance);
       expect(await strategyCandidate.getUserVotes(signer2.getAddress())).to.equal(signer2Balance);
@@ -165,7 +167,7 @@ describe('Strategy', function () {
       expect(exitedAt).to.equal(ethers.BigNumber.from(0));
 
       // Keeper gets paid
-      expect(await wethToken.balanceOf(await owner.getAddress())).to.equal(42);
+      expect(await wethToken.balanceOf(await signer1.getAddress())).to.equal(42);
     });
 
     it("can't vote if voting window is closed", async function () {
@@ -240,7 +242,7 @@ describe('Strategy', function () {
       expect(exitedAt).to.equal(ethers.BigNumber.from(0));
 
       // Keeper gets paid
-      expect(await wethToken.balanceOf(await owner.getAddress())).to.equal(42);
+      expect(await wethToken.balanceOf(await signer1.getAddress())).to.equal(42);
     });
 
     it('should not be able to unwind an active strategy with not enough capital', async function () {
@@ -443,7 +445,7 @@ describe('Strategy', function () {
       expect(exitedAt).to.not.equal(0);
 
       // Keeper gets paid
-      expect(await wethToken.balanceOf(await owner.getAddress())).to.equal(42);
+      expect(await wethToken.balanceOf(await signer1.getAddress())).to.equal(42);
 
       const capitalAllocated = await strategyContract.capitalAllocated();
       const capitalReturned = await strategyContract.capitalReturned();
@@ -460,7 +462,7 @@ describe('Strategy', function () {
       );
 
       await injectFakeProfits(strategyContract, ethers.utils.parseEther('1000'));
-      await finalizeStrategy(strategyContract, 42);
+      await finalizeStrategy(strategyContract);
       const capitalAllocated = await strategyContract.capitalAllocated();
       const capitalReturned = await strategyContract.capitalReturned();
 
@@ -476,7 +478,7 @@ describe('Strategy', function () {
         garden1,
       );
 
-      await finalizeStrategy(strategyContract, 42);
+      await finalizeStrategy(strategyContract);
 
       await expect(strategyContract.finalizeStrategy(42, 'http://', { gasPrice: 0 })).to.be.reverted;
     });
