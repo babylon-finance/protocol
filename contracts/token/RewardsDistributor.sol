@@ -302,21 +302,20 @@ contract RewardsDistributor is Ownable, IRewardsDistributor {
 
     /**
      * Calculates the profits and BABL that a contributor should receive from a series of finalized strategies
+     * @param _garden                   Garden to check the address
      * @param _contributor              Address of the contributor to check
      * @param _finalizedStrategies      List of addresses of the finalized strategies
      */
-    function getRewards(address _contributor, address[] calldata _finalizedStrategies)
-        external
-        view
-        override
-        returns (uint256, uint96)
-    {
-        require(controller.isSystemContract(msg.sender), 'The caller is not a system contract');
+    function getRewards(
+        address _garden,
+        address _contributor,
+        address[] calldata _finalizedStrategies
+    ) external view override returns (uint256, uint96) {
         uint256 contributorTotalProfits = 0;
         uint256 bablTotalRewards = 0;
         for (uint256 i = 0; i < _finalizedStrategies.length; i++) {
             (uint256 strategyProfits, uint256 strategyBABL) =
-                _getStrategyProfitsAndBABL(_finalizedStrategies[i], _contributor);
+                _getStrategyProfitsAndBABL(_garden, _finalizedStrategies[i], _contributor);
             contributorTotalProfits = contributorTotalProfits.add(strategyProfits);
             bablTotalRewards = bablTotalRewards.add(strategyBABL);
         }
@@ -452,23 +451,24 @@ contract RewardsDistributor is Ownable, IRewardsDistributor {
 
     /* ============ Internal Functions ============ */
 
-    function _getStrategyProfitsAndBABL(address _strategy, address _contributor)
-        private
-        view
-        returns (uint256, uint256)
-    {
+    function _getStrategyProfitsAndBABL(
+        address _garden,
+        address _strategy,
+        address _contributor
+    ) private view returns (uint256, uint256) {
         IStrategy strategy = IStrategy(_strategy);
+        require(address(strategy.garden()) == _garden, 'Strategies need to belong to the garden');
         uint256 contributorProfits = 0;
         uint256 contributorBABL = 0;
         // We get the state of the strategy in terms of profit and distance from expected to accurately calculate profits and rewards
         (bool profit, uint256 profitValue, bool distance, uint256 distanceValue) =
             _getStrategyRewardsContext(address(strategy));
 
-        (, uint256 initialDepositAt, uint256 claimedAt, , , , , , ) = IGarden(msg.sender).getContributor(_contributor);
+        (, uint256 initialDepositAt, uint256 claimedAt, , , , , , ) = IGarden(_garden).getContributor(_contributor);
         // Positive strategies not yet claimed
         if (strategy.exitedAt() > claimedAt && strategy.executedAt() >= initialDepositAt) {
             uint256 contributorPower =
-                IGarden(msg.sender).getContributorPower(_contributor, strategy.executedAt(), strategy.exitedAt());
+                IGarden(_garden).getContributorPower(_contributor, strategy.executedAt(), strategy.exitedAt());
             // If strategy returned money we give out the profits
             if (profit == true) {
                 // We reserve 5% of profits for performance fees
@@ -513,7 +513,7 @@ contract RewardsDistributor is Ownable, IRewardsDistributor {
             );
 
             // Get a multiplier bonus in case the contributor is the garden creator
-            if (_contributor == IGarden(msg.sender).creator()) {
+            if (_contributor == IGarden(_garden).creator()) {
                 contributorBABL = contributorBABL.add(contributorBABL.multiplyDecimal(CREATOR_BONUS));
             }
         }
