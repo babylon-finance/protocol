@@ -76,10 +76,11 @@ interface IRewardsDistributor {
 
     function tokenSupplyPerQuarter(uint256 quarter) external pure returns (uint96);
 
-    function getRewards(address _contributor, address[] calldata _finalizedStrategies)
-        external
-        view
-        returns (uint256, uint96);
+    function getRewards(
+        address _garden,
+        address _contributor,
+        address[] calldata _finalizedStrategies
+    ) external view returns (uint256, uint96);
 
     function checkProtocol(uint256 _time)
         external
