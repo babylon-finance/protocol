@@ -5432,9 +5432,9 @@ hardhat-contract-sizer@^2.0.2:
     cli-table3 "^0.6.0"
     colors "^1.4.0"
 
-"hardhat-deploy@https://github.com/ylv-io/hardhat-deploy.git":
+"hardhat-deploy@https://github.com/ylv-io/hardhat-deploy.git#1d5f9ec88bd8305bc82b75a18087fa4f0503343d":
   version "0.7.5"
-  resolved "https://github.com/ylv-io/hardhat-deploy.git#63debbb5aaa111a1714adb06cb097472aee18237"
+  resolved "https://github.com/ylv-io/hardhat-deploy.git#1d5f9ec88bd8305bc82b75a18087fa4f0503343d"
   dependencies:
     "@ethersproject/abi" "^5.0.0"
     "@ethersproject/abstract-signer" "^5.0.0"
