@@ -20,6 +20,7 @@ pragma solidity 0.7.6;
 import 'hardhat/console.sol';
 import {Address} from '@openzeppelin/contracts/utils/Address.sol';
 import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
+
 import {Initializable} from '@openzeppelin/contracts-upgradeable/proxy/Initializable.sol';
 import {SafeERC20} from '@openzeppelin/contracts/token/ERC20/SafeERC20.sol';
 import {ReentrancyGuard} from '@openzeppelin/contracts/utils/ReentrancyGuard.sol';
@@ -29,6 +30,7 @@ import {SafeCast} from '@openzeppelin/contracts/utils/SafeCast.sol';
 
 import {Errors, _require} from '../lib/BabylonErrors.sol';
 import {PreciseUnitMath} from '../lib/PreciseUnitMath.sol';
+import {SafeDecimalMath} from '../lib/SafeDecimalMath.sol';
 import {Math} from '../lib/Math.sol';
 import {AddressArrayUtils} from '../lib/AddressArrayUtils.sol';
 
@@ -56,6 +58,8 @@ abstract contract Strategy is ReentrancyGuard, IStrategy, Initializable {
     using SafeCast for int256;
     using PreciseUnitMath for int256;
     using PreciseUnitMath for uint256;
+    using SafeDecimalMath for int256;
+    using SafeDecimalMath for uint256;
     using Math for int256;
     using Math for uint256;
     using AddressArrayUtils for address[];
@@ -158,6 +162,9 @@ abstract contract Strategy is ReentrancyGuard, IStrategy, Initializable {
     // Keeper max fee
     uint256 internal constant MAX_KEEPER_FEE = (1e6 * 1e3 gwei);
     uint256 internal constant MAX_STRATEGY_KEEPER_FEES = 2 * MAX_KEEPER_FEE;
+
+    // Quadratic penalty for looses
+    uint256 internal constant STAKE_QUADRATIC_PENALTY_FOR_LOSSES = 1750000000000000000; // 1.75 %
 
     /* ============ Structs ============ */
 
@@ -726,11 +733,17 @@ abstract contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         } else {
             // Returns were negative
             // Burn strategist stake and add the amount to the garden
-            garden.burnStrategistStake(
-                strategist,
-                stake.sub(capitalReturned.preciseDiv(capitalAllocated).preciseMul(stake)) // TODO ADD A QUADRATIC PENALTY THE MORE LOOSE THE MORE PENALTY
-            );
-            reserveAssetDelta.add(int256(stake.sub(capitalReturned.preciseDiv(capitalAllocated).preciseMul(stake))));
+            uint256 burningAmount =
+                (stake.sub(capitalReturned.preciseDiv(capitalAllocated).preciseMul(stake))).multiplyDecimal(
+                    STAKE_QUADRATIC_PENALTY_FOR_LOSSES
+                );
+            if (IERC20(address(garden)).balanceOf(strategist) < burningAmount) {
+                // Avoid underflow burning more than its balance
+                burningAmount = IERC20(address(garden)).balanceOf(strategist);
+            }
+
+            garden.burnStrategistStake(strategist, burningAmount);
+            reserveAssetDelta.add(int256(burningAmount));
         }
         // Return the balance back to the garden
         IERC20(reserveAsset).safeTransferFrom(address(this), address(garden), capitalReturned.sub(protocolProfits));
