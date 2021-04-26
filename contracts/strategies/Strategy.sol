@@ -164,7 +164,7 @@ abstract contract Strategy is ReentrancyGuard, IStrategy, Initializable {
     uint256 internal constant MAX_STRATEGY_KEEPER_FEES = 2 * MAX_KEEPER_FEE;
 
     // Quadratic penalty for looses
-    uint256 internal constant STAKE_QUADRATIC_PENALTY_FOR_LOSSES = 1750000000000000000; // 1.75 %
+    uint256 internal constant STAKE_QUADRATIC_PENALTY_FOR_LOSSES = 1750000000000000000; // 1.75 
 
     /* ============ Structs ============ */
 
