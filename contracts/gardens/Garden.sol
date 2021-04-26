@@ -517,9 +517,13 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
      * We still keep the profits aside.
      */
     function reenableEthForStrategies() public override {
-        if (block.timestamp >= withdrawalsOpenUntil && address(this).balance > minContribution) {
+        if (
+            block.timestamp >= withdrawalsOpenUntil &&
+            address(this).balance > minContribution &&
+            address(this).balance >= reserveAssetPrincipalWindow
+        ) {
             withdrawalsOpenUntil = 0;
-            IWETH(WETH).deposit{value: address(this).balance.sub(reserveAssetPrincipalWindow)}();
+            IWETH(WETH).deposit{value: reserveAssetPrincipalWindow}();
             reserveAssetPrincipalWindow = 0;
         }
     }

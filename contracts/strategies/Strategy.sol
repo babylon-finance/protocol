@@ -736,8 +736,6 @@ abstract contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         IERC20(reserveAsset).safeTransferFrom(address(this), address(garden), capitalReturned.sub(protocolProfits));
         // Start a redemption window in the garden with the capital plus the profits for the lps
         (, , uint256 lpsProfitSharing) = IBabController(controller).getProfitSharing();
-        console.log('profits', profits);
-        console.log('profits rwards', profits.sub(profits.preciseMul(lpsProfitSharing)).sub(protocolProfits));
         garden.startWithdrawalWindow(
             capitalReturned.sub(protocolProfits).sub(profits).add((profits).preciseMul(lpsProfitSharing)),
             profits.sub(profits.preciseMul(lpsProfitSharing)).sub(protocolProfits),
