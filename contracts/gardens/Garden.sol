@@ -727,8 +727,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
      */
     function canWithdrawEthAmount(address _contributor, uint256 _amount) public view returns (bool) {
         // ETH rewards cannot be withdrawn. Only claimed
-        uint256 ethAsideBalance = reserveAssetPrincipalWindow;
-        _require(address(this).balance >= ethAsideBalance, Errors.NOT_ENOUGH_ETH);
+        _require(address(this).balance >= reserveAssetPrincipalWindow, Errors.NOT_ENOUGH_ETH);
         uint256 liquidWeth = IERC20Upgradeable(reserveAsset).balanceOf(address(this));
 
         // Weth already available
@@ -741,7 +740,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
             // Pro rata withdrawals
             uint256 contributorPower =
                 _getContributorPower(_contributor, contributors[_contributor].initialDepositAt, block.timestamp);
-            return ethAsideBalance.preciseMul(contributorPower) >= _amount;
+            return reserveAssetPrincipalWindow.preciseMul(contributorPower) >= _amount;
         }
         return false;
     }
