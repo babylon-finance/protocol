@@ -1,20 +1,8 @@
 const { deployments } = require('hardhat');
-const { ONE_DAY_IN_SECONDS } = require('../../lib/constants.js');
+const { GARDEN_PARAMS } = require('../../lib/constants.js');
 const addresses = require('../../lib/addresses');
 const { impersonateAddress } = require('../../lib/rpc');
 const { createStrategy } = require('./StrategyHelper.js');
-
-const GARDEN_PARAMS = [
-  ethers.utils.parseEther('20'), // Max Deposit Limit
-  1, // Min Garden Token Supply
-  ethers.utils.parseEther('1000'), // Min Liquidity Asset | ie: Uniswap Volume
-  1, // Deposit Hardlock | 1 second
-  ethers.utils.parseEther('0.10'), // Min Contribution
-  ONE_DAY_IN_SECONDS, // Strategy Cooldown Period
-  ethers.utils.parseEther('0.10'), // Min Voter Quorum | 10%
-  ONE_DAY_IN_SECONDS * 3, // Min Strategy Duration
-  ONE_DAY_IN_SECONDS * 365, // Max Strategy Duration
-];
 
 async function setUpFixture({ deployments, getNamedAccounts, ethers }, options, gardenParams) {
   async function getContract(contractName, deploymentName) {

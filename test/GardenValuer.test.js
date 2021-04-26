@@ -11,7 +11,7 @@ describe('GardenValuer', function () {
   // let weth;
 
   beforeEach(async () => {
-    ({ babController, gardenValuer, garden1 } = await setupTests());
+    ({ babController, gardenValuer, garden1 } = await setupTests()());
     // weth = await ethers.getContractAt('IERC20', addresses.tokens.WETH);
   });
 

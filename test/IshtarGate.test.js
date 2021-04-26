@@ -2,6 +2,7 @@ const { expect } = require('chai');
 const { ethers } = require('hardhat');
 
 const addresses = require('../lib/addresses');
+const { GARDEN_PARAMS } = require('../lib/constants');
 const { setupTests } = require('./fixtures/GardenFixture');
 
 describe('IshtarGate', function () {
@@ -10,11 +11,10 @@ describe('IshtarGate', function () {
   let signer3;
   let ishtarGate;
   let babController;
-  let gardenParams;
   let owner;
 
   beforeEach(async () => {
-    ({ owner, babController, gardenParams, signer1, signer2, signer3, ishtarGate } = await setupTests()());
+    ({ owner, babController, signer1, signer2, signer3, ishtarGate } = await setupTests()());
   });
 
   describe('Deployment', function () {
@@ -30,7 +30,7 @@ describe('IshtarGate', function () {
       await expect(
         babController
           .connect(signer2)
-          .createGarden(addresses.tokens.WETH, 'TEST Ishtar', 'AAA', gardenParams, 'http:', {
+          .createGarden(addresses.tokens.WETH, 'TEST Ishtar', 'AAA', GARDEN_PARAMS, 'http:', {
             value: ethers.utils.parseEther('0.1'),
           }),
       ).to.not.be.reverted;
@@ -41,13 +41,14 @@ describe('IshtarGate', function () {
       await expect(
         babController
           .connect(signer2)
-          .createGarden(addresses.tokens.WETH, 'TEST Ishtar', 'AAA', gardenParams, 'http...', {
+          .createGarden(addresses.tokens.WETH, 'TEST Ishtar', 'AAA', GARDEN_PARAMS, 'http...', {
             value: ethers.utils.parseEther('0.1'),
           }),
       ).to.not.be.reverted;
     });
 
     it('fails with the gate NFT awarded through batch creation with different elements', async function () {
+      console.log('singer2', signer2.address);
       await expect(ishtarGate.connect(owner).grantCreatorsInBatch([signer2.address], [true, false], { gasPrice: 0 })).to
         .be.reverted;
     });
@@ -60,7 +61,7 @@ describe('IshtarGate', function () {
       await expect(
         babController
           .connect(signer2)
-          .createGarden(addresses.tokens.WETH, 'TEST Ishtar', 'AAA', gardenParams, 'http...', {
+          .createGarden(addresses.tokens.WETH, 'TEST Ishtar', 'AAA', GARDEN_PARAMS, 'http...', {
             value: ethers.utils.parseEther('0.1'),
           }),
       ).to.be.reverted;
@@ -72,7 +73,7 @@ describe('IshtarGate', function () {
       await expect(
         babController
           .connect(signer1)
-          .createGarden(addresses.tokens.WETH, 'TEST Ishtar', 'AAA', gardenParams, 'http...', {
+          .createGarden(addresses.tokens.WETH, 'TEST Ishtar', 'AAA', GARDEN_PARAMS, 'http...', {
             value: ethers.utils.parseEther('0.1'),
           }),
       ).to.not.be.reverted;
@@ -91,10 +92,11 @@ describe('IshtarGate', function () {
       await expect(
         babController
           .connect(signer1)
-          .createGarden(addresses.tokens.WETH, 'TEST Ishtar', 'AAA', gardenParams, 'http...', {
+          .createGarden(addresses.tokens.WETH, 'TEST Ishtar', 'AAA', GARDEN_PARAMS, 'http...', {
             value: ethers.utils.parseEther('0.1'),
           }),
       ).to.not.be.reverted;
+
       const gardens = await babController.getGardens();
 
       const newGarden = await ethers.getContractAt('Garden', gardens[gardens.length - 1]);
@@ -110,7 +112,7 @@ describe('IshtarGate', function () {
       await expect(
         babController
           .connect(signer1)
-          .createGarden(addresses.tokens.WETH, 'TEST Ishtar', 'AAA', gardenParams, 'http...', {
+          .createGarden(addresses.tokens.WETH, 'TEST Ishtar', 'AAA', GARDEN_PARAMS, 'http...', {
             value: ethers.utils.parseEther('0.1'),
           }),
       ).to.not.be.reverted;
@@ -126,7 +128,7 @@ describe('IshtarGate', function () {
       await expect(
         babController
           .connect(signer1)
-          .createGarden(addresses.tokens.WETH, 'TEST Ishtar', 'AAA', gardenParams, 'http...', {
+          .createGarden(addresses.tokens.WETH, 'TEST Ishtar', 'AAA', GARDEN_PARAMS, 'http...', {
             value: ethers.utils.parseEther('0.1'),
           }),
       ).to.not.be.reverted;
