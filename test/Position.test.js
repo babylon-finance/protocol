@@ -10,11 +10,10 @@ describe('Position testing', function () {
   let signer3;
   let treasury;
   let garden1;
-  let garden4;
   let weth;
 
   beforeEach(async () => {
-    ({ signer1, signer3, garden1, garden4, treasury } = await setupTests());
+    ({ signer1, signer3, garden1, treasury } = await setupTests()());
 
     weth = await ethers.getContractAt('IERC20', addresses.tokens.WETH);
   });

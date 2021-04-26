@@ -20,7 +20,7 @@ describe('OneInchPoolIntegrationTest', function () {
   let babController;
 
   beforeEach(async () => {
-    ({ babController, garden1, oneInchPoolIntegration, signer1, signer2, signer3 } = await setupTests());
+    ({ babController, garden1, oneInchPoolIntegration, signer1, signer2, signer3 } = await setupTests()());
   });
 
   describe('Deployment', function () {

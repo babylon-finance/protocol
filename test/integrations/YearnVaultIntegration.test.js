@@ -14,7 +14,7 @@ describe('YearnVaultIntegrationTest', function () {
   let babController;
 
   beforeEach(async () => {
-    ({ garden1, babController, yearnVaultIntegration, signer1, signer2, signer3 } = await setupTests());
+    ({ garden1, babController, yearnVaultIntegration, signer1, signer2, signer3 } = await setupTests()());
   });
 
   describe('Deployment', function () {

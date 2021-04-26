@@ -108,7 +108,7 @@ describe('BABL Rewards Distributor', function () {
       bablToken,
       rewardsDistributor,
       kyberTradeIntegration,
-    } = await setupTests());
+    } = await setupTests()());
 
     await babController.connect(owner).enableBABLTokensTransfers();
   });

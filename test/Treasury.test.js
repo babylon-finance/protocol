@@ -13,7 +13,7 @@ describe('Treasury', function () {
   let wethWhaleSigner;
 
   beforeEach(async () => {
-    ({ owner, wethWhaleSigner, signer1, treasury } = await setupTests());
+    ({ owner, wethWhaleSigner, signer1, treasury } = await setupTests()());
 
     weth = await ethers.getContractAt('IERC20', addresses.tokens.WETH);
     await weth.connect(wethWhaleSigner).transfer(treasury.address, ONE_ETH);

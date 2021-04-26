@@ -32,7 +32,7 @@ describe('Garden', function () {
       garden1,
       balancerIntegration,
       kyberTradeIntegration,
-    } = await setupTests());
+    } = await setupTests()());
 
     weth = await ethers.getContractAt('IERC20', addresses.tokens.WETH);
   });

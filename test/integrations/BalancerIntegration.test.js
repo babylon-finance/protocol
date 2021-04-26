@@ -14,7 +14,7 @@ describe('BalancerIntegrationTest', function () {
   let garden1;
 
   beforeEach(async () => {
-    ({ balancerIntegration, babController, garden1, signer1, signer2, signer3 } = await setupTests());
+    ({ balancerIntegration, babController, garden1, signer1, signer2, signer3 } = await setupTests()());
   });
 
   describe('Deployment', function () {

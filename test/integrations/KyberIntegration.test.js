@@ -15,7 +15,7 @@ describe('KyberTradeIntegration', function () {
   let strategyContract;
 
   beforeEach(async () => {
-    ({ babController, garden1, strategy11, kyberTradeIntegration, signer1, signer2, signer3 } = await setupTests());
+    ({ babController, garden1, strategy11, kyberTradeIntegration, signer1, signer2, signer3 } = await setupTests()());
     strategyContract = await ethers.getContractAt('LongStrategy', strategy11);
   });
 

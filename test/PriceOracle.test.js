@@ -11,7 +11,7 @@ describe('PriceOracle', function () {
   let adapter;
 
   beforeEach(async () => {
-    ({ babController, priceOracle } = await setupTests());
+    ({ babController, priceOracle } = await setupTests()());
     adapter = await ethers.getContractAt('UniswapTWAP', (await priceOracle.getAdapters())[0]);
   });
 

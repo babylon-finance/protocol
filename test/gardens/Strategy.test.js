@@ -54,7 +54,7 @@ describe('Strategy', function () {
       balancerIntegration,
       oneInchPoolIntegration,
       yearnVaultIntegration,
-    } = await setupTests());
+    } = await setupTests()());
 
     strategyDataset = await ethers.getContractAt('Strategy', strategy11);
     strategyCandidate = await ethers.getContractAt('Strategy', strategy21);

@@ -28,11 +28,10 @@ describe('BABLToken contract', function () {
       signer1,
       signer2,
       signer3,
-    } = await setupTests());
+    } = await setupTests()());
   });
 
   describe('Deployment', function () {
-
     it('should successfully deploy BABLToken contract', async function () {
       const deployedc = await bablToken.deployed();
       expect(!!deployedc).to.equal(true);

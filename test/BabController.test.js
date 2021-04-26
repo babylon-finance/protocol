@@ -11,7 +11,7 @@ describe('BabController', function () {
   let garden3;
 
   beforeEach(async () => {
-    ({ babController, treasury, garden1, garden2, garden3 } = await setupTests());
+    ({ babController, treasury, garden1, garden2, garden3 } = await setupTests()());
   });
 
   describe('Deployment', function () {
