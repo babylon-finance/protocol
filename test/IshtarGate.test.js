@@ -1,9 +1,8 @@
 const { expect } = require('chai');
-const { ethers, waffle } = require('hardhat');
+const { ethers } = require('hardhat');
 
-const { loadFixture } = waffle;
 const addresses = require('../lib/addresses');
-const { deployFolioFixture } = require('./fixtures/ControllerFixture');
+const { setupTests } = require('./fixtures/GardenFixture');
 
 describe('IshtarGate', function () {
   let signer1;
@@ -15,9 +14,7 @@ describe('IshtarGate', function () {
   let owner;
 
   beforeEach(async () => {
-    ({ owner, babController, gardenParams, signer1, signer2, signer3, ishtarGate } = await loadFixture(
-      deployFolioFixture,
-    ));
+    ({ owner, babController, gardenParams, signer1, signer2, signer3, ishtarGate } = await setupTests());
   });
 
   describe('Deployment', function () {

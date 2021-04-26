@@ -1,20 +1,18 @@
 const { expect } = require('chai');
-const { ethers, waffle } = require('hardhat');
-
-const { loadFixture } = waffle;
+const { ethers } = require('hardhat');
 
 const addresses = require('../lib/addresses');
-const { deployFolioFixture } = require('./fixtures/ControllerFixture');
+const { setupTests } = require('./fixtures/GardenFixture');
 
 describe('GardenValuer', function () {
   let babController;
   let gardenValuer;
   let garden1;
-  let weth;
+  // let weth;
 
   beforeEach(async () => {
-    ({ babController, gardenValuer, garden1 } = await loadFixture(deployFolioFixture));
-    weth = await ethers.getContractAt('IERC20', addresses.tokens.WETH);
+    ({ babController, gardenValuer, garden1 } = await setupTests());
+    // weth = await ethers.getContractAt('IERC20', addresses.tokens.WETH);
   });
 
   describe('Deployment', function () {

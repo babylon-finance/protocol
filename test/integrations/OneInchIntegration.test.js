@@ -1,11 +1,8 @@
 const { expect } = require('chai');
-// const superagent = require('superagent');
-const { waffle, ethers } = require('hardhat');
-const { deployFolioFixture } = require('../fixtures/ControllerFixture');
+const { ethers } = require('hardhat');
+const { setupTests } = require('../fixtures/GardenFixture');
 const { createStrategy, executeStrategy, finalizeStrategy } = require('../fixtures/StrategyHelper');
 const addresses = require('../../lib/addresses');
-
-const { loadFixture } = waffle;
 
 describe('OneInchTradeIntegration', function () {
   let oneInchTradeIntegration;
@@ -16,9 +13,7 @@ describe('OneInchTradeIntegration', function () {
   let signer3;
 
   beforeEach(async () => {
-    ({ babController, garden1, oneInchTradeIntegration, signer1, signer2, signer3 } = await loadFixture(
-      deployFolioFixture,
-    ));
+    ({ babController, garden1, oneInchTradeIntegration, signer1, signer2, signer3 } = await setupTests());
   });
 
   describe('Deployment', function () {

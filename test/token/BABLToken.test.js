@@ -1,32 +1,14 @@
 // We import Chai to use its asserting functions here.
 
 const { expect } = require('chai');
-const { ethers, waffle } = require('hardhat');
+const { ethers } = require('hardhat');
 
 const { ADDRESS_ZERO, ONE_DAY_IN_SECONDS } = require('../../lib/constants');
 const { increaseTime } = require('../utils/test-helpers');
 
-const { loadFixture } = waffle;
+const { setupTests } = require('../fixtures/GardenFixture');
 
-const { deployFolioFixture } = require('../fixtures/ControllerFixture');
-
-// `describe` is a Mocha function that allows you to organize your tests. It's
-// not actually needed, but having your tests organized makes debugging them
-// easier. All Mocha functions are available in the global scope.
-
-// `describe` receives the name of a section of your test suite, and a callback.
-// The callback must define the tests of that section. This callback can't be
-// an async function.
 describe('BABLToken contract', function () {
-  // Mocha has four functions that let you hook into the the test runner's
-  // lifecyle. These are: `before`, `beforeEach`, `after`, `afterEach`.
-
-  // They're very useful to setup the environment for tests, and to clean it
-  // up after they run.
-
-  // A common pattern is to declare some variables, and assign them in the
-  // `before` and `beforeEach` callbacks.
-
   let owner;
   let signer1;
   let signer2;
@@ -35,9 +17,6 @@ describe('BABLToken contract', function () {
   let timeLockRegistry;
   let rewardsDistributor;
   let babController;
-
-  // `beforeEach` will run before each test, re-deploying the contract every
-  // time. It receives a callback, which can be async.
 
   beforeEach(async () => {
     ({
@@ -49,13 +28,10 @@ describe('BABLToken contract', function () {
       signer1,
       signer2,
       signer3,
-    } = await loadFixture(deployFolioFixture));
+    } = await setupTests());
   });
 
-  // You can nest describe calls to create subsections.
   describe('Deployment', function () {
-    // `it` is another Mocha function. This is the one you use to define your
-    // tests. It receives the test name, and a callback function.
 
     it('should successfully deploy BABLToken contract', async function () {
       const deployedc = await bablToken.deployed();
@@ -109,7 +85,7 @@ describe('BABLToken contract', function () {
       await expect(bablToken.connect(owner).transfer(signer1.address, value)).to.be.revertedWith('revert BAB#062');
       await expect(bablToken.connect(owner).transfer(signer2.address, value)).to.be.revertedWith('revert BAB#062');
 
-      // It might work if from/to is the TimeLockRegistry or RewardsDistributor
+      // It should work if from/to is the TimeLockRegistry or RewardsDistributor
       await expect(bablToken.connect(owner).transfer(rewardsDistributor.address, value)).not.to.be.reverted;
       await expect(bablToken.connect(owner).transfer(timeLockRegistry.address, value)).not.to.be.reverted;
 

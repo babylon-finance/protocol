@@ -1,12 +1,8 @@
 const { expect } = require('chai');
-const { waffle, ethers } = require('hardhat');
-// const { impersonateAddress } = require("../../utils/rpc");
-const { deployFolioFixture } = require('../fixtures/ControllerFixture');
+const { setupTests } = require('../fixtures/GardenFixture');
 const { executeStrategy, finalizeStrategy } = require('../fixtures/StrategyHelper');
 const addresses = require('../../lib/addresses');
 const { ONE_DAY_IN_SECONDS } = require('../../lib/constants');
-
-const { loadFixture } = waffle;
 
 describe('KyberTradeIntegration', function () {
   let babController;
@@ -19,9 +15,7 @@ describe('KyberTradeIntegration', function () {
   let strategyContract;
 
   beforeEach(async () => {
-    ({ babController, garden1, strategy11, kyberTradeIntegration, signer1, signer2, signer3 } = await loadFixture(
-      deployFolioFixture,
-    ));
+    ({ babController, garden1, strategy11, kyberTradeIntegration, signer1, signer2, signer3 } = await setupTests());
     strategyContract = await ethers.getContractAt('LongStrategy', strategy11);
   });
 
@@ -60,16 +54,18 @@ describe('KyberTradeIntegration', function () {
       const user2GardenBalance = await garden1.balanceOf(signer2.getAddress());
       const user3GardenBalance = await garden1.balanceOf(signer3.getAddress());
 
-      await strategyContract.resolveVoting(
-        [signer2.getAddress(), signer3.getAddress()],
-        [user2GardenBalance, user3GardenBalance],
-        user2GardenBalance.add(user3GardenBalance).toString(),
-        user2GardenBalance.add(user3GardenBalance).toString(),
-        0,
-        {
-          gasPrice: 0,
-        },
-      );
+      await strategyContract
+        .connect(signer1)
+        .resolveVoting(
+          [signer2.getAddress(), signer3.getAddress()],
+          [user2GardenBalance, user3GardenBalance],
+          user2GardenBalance.add(user3GardenBalance).toString(),
+          user2GardenBalance.add(user3GardenBalance).toString(),
+          0,
+          {
+            gasPrice: 0,
+          },
+        );
 
       await executeStrategy(strategyContract);
 

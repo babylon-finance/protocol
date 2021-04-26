@@ -70,7 +70,7 @@
     "deploy:hardhat": "hardhat deploy --network hardhat",
     "deploy:mainnet": "hardhat deploy --network mainnet",
     "deploy:rinkeby": "hardhat deploy --network rinkeby",
-    "chain": "KEEPER=0x70997970c51812dc3a010c7d01b50e0d17dc79c8 hardhat node --as-network hardhat",
+    "chain": "hardhat node --as-network hardhat",
     "test": "hardhat test --network hardhat --max-memory 8096",
     "gas-report": "env REPORT_GAS=1 yarn test",
     "estimate-size": "yarn run hardhat size-contracts --max-memory 8096",

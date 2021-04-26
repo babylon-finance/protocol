@@ -46,7 +46,7 @@ git config core.hooksPath git-hooks/
 yarn gas-report
 ```
 
-🛡 Coverage
+🛡 Coverae
 
 ```bash
 yarn coverage

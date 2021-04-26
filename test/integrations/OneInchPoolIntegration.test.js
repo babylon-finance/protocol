@@ -1,7 +1,7 @@
 const { expect } = require('chai');
-const { waffle, ethers } = require('hardhat');
+const { ethers } = require('hardhat');
 const { impersonateAddress } = require('../../lib/rpc');
-const { deployFolioFixture } = require('../fixtures/ControllerFixture');
+const { setupTests } = require('../fixtures/GardenFixture');
 const {
   DEFAULT_STRATEGY_PARAMS,
   createStrategy,
@@ -10,8 +10,6 @@ const {
 } = require('../fixtures/StrategyHelper');
 const addresses = require('../../lib/addresses');
 const { ADDRESS_ZERO } = require('../../lib/constants');
-
-const { loadFixture } = waffle;
 
 describe('OneInchPoolIntegrationTest', function () {
   let oneInchPoolIntegration;
@@ -22,9 +20,7 @@ describe('OneInchPoolIntegrationTest', function () {
   let babController;
 
   beforeEach(async () => {
-    ({ babController, garden1, oneInchPoolIntegration, signer1, signer2, signer3 } = await loadFixture(
-      deployFolioFixture,
-    ));
+    ({ babController, garden1, oneInchPoolIntegration, signer1, signer2, signer3 } = await setupTests());
   });
 
   describe('Deployment', function () {

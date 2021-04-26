@@ -1,11 +1,9 @@
 const { expect } = require('chai');
-const { waffle, ethers } = require('hardhat');
+const { ethers } = require('hardhat');
 const { createStrategy, executeStrategy, finalizeStrategy } = require('../fixtures/StrategyHelper');
-const { deployFolioFixture } = require('../fixtures/ControllerFixture');
+const { setupTests } = require('../fixtures/GardenFixture');
 const addresses = require('../../lib/addresses');
 const { ADDRESS_ZERO } = require('../../lib/constants');
-
-const { loadFixture } = waffle;
 
 describe('CompoundLendIntegrationTest', function () {
   let compoundLendIntegration;
@@ -19,9 +17,7 @@ describe('CompoundLendIntegrationTest', function () {
   let WETH;
 
   beforeEach(async () => {
-    ({ garden1, babController, compoundLendIntegration, signer1, signer2, signer3 } = await loadFixture(
-      deployFolioFixture,
-    ));
+    ({ garden1, babController, compoundLendIntegration, signer1, signer2, signer3 } = await setupTests());
     USDC = await ethers.getContractAt('IERC20', addresses.tokens.USDC);
     CUSDC = await ethers.getContractAt('IERC20', addresses.tokens.CUSDC);
     WETH = await ethers.getContractAt('IERC20', addresses.tokens.WETH);

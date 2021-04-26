@@ -1,7 +1,13 @@
-const KEEPER = process.env.KEEPER || '';
+let KEEPER = process.env.KEEPER || '';
 
-module.exports = async ({ getNamedAccounts, deployments, ethers, getSigner }) => {
-  if (!KEEPER) {
+module.exports = async ({ getNamedAccounts, deployments, ethers, getSigner, getChainId }) => {
+  const chainId = await getChainId();
+  const signers = await ethers.getSigners();
+
+  if (chainId === '31337') {
+    // user second signer as Keeper
+    KEEPER = signers[1].address;
+  } else if (!KEEPER) {
     throw new Error('Keeper address is not set');
   }
   console.log('keeper', KEEPER);

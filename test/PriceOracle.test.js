@@ -1,11 +1,9 @@
 const { expect } = require('chai');
-const { ethers, waffle } = require('hardhat');
-
-const { loadFixture } = waffle;
+const { ethers } = require('hardhat');
 
 const addresses = require('../lib/addresses');
 const { TWAP_ORACLE_WINDOW, TWAP_ORACLE_GRANULARITY } = require('../lib/system.js');
-const { deployFolioFixture } = require('./fixtures/ControllerFixture');
+const { setupTests } = require('./fixtures/GardenFixture');
 
 describe('PriceOracle', function () {
   let babController;
@@ -13,7 +11,7 @@ describe('PriceOracle', function () {
   let adapter;
 
   beforeEach(async () => {
-    ({ babController, priceOracle } = await loadFixture(deployFolioFixture));
+    ({ babController, priceOracle } = await setupTests());
     adapter = await ethers.getContractAt('UniswapTWAP', (await priceOracle.getAdapters())[0]);
   });
 

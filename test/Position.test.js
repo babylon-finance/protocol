@@ -1,10 +1,9 @@
 const { expect } = require('chai');
-const { ethers, waffle } = require('hardhat');
+const { ethers } = require('hardhat');
 
-const { loadFixture } = waffle;
 const { ONE_DAY_IN_SECONDS } = require('../lib/constants');
 const addresses = require('../lib/addresses');
-const { deployFolioFixture } = require('./fixtures/ControllerFixture');
+const { setupTests } = require('./fixtures/GardenFixture');
 
 describe('Position testing', function () {
   let signer1;
@@ -15,7 +14,7 @@ describe('Position testing', function () {
   let weth;
 
   beforeEach(async () => {
-    ({ signer1, signer3, garden1, garden4, treasury } = await loadFixture(deployFolioFixture));
+    ({ signer1, signer3, garden1, garden4, treasury } = await setupTests());
 
     weth = await ethers.getContractAt('IERC20', addresses.tokens.WETH);
   });

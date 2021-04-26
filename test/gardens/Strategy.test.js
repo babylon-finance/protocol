@@ -1,8 +1,7 @@
 const { expect } = require('chai');
 const chaiAsPromised = require('chai-as-promised');
-const { ethers, waffle } = require('hardhat');
+const { ethers } = require('hardhat');
 
-const { loadFixture } = waffle;
 require('chai').use(chaiAsPromised);
 
 const {
@@ -17,7 +16,7 @@ const { increaseTime } = require('../utils/test-helpers');
 
 const addresses = require('../../lib/addresses');
 const { ONE_DAY_IN_SECONDS, ONE_ETH } = require('../../lib/constants.js');
-const { deployFolioFixture } = require('../fixtures/ControllerFixture');
+const { setupTests } = require('../fixtures/GardenFixture');
 
 describe('Strategy', function () {
   let strategyDataset;
@@ -55,7 +54,7 @@ describe('Strategy', function () {
       balancerIntegration,
       oneInchPoolIntegration,
       yearnVaultIntegration,
-    } = await loadFixture(deployFolioFixture));
+    } = await setupTests());
 
     strategyDataset = await ethers.getContractAt('Strategy', strategy11);
     strategyCandidate = await ethers.getContractAt('Strategy', strategy21);
@@ -177,16 +176,18 @@ describe('Strategy', function () {
       increaseTime(ONE_DAY_IN_SECONDS * 7);
 
       await expect(
-        strategyCandidate.resolveVoting(
-          [signer1.getAddress(), signer2.getAddress()],
-          [signer1Balance, signer2Balance],
-          signer1Balance.add(signer2Balance).toString(),
-          signer1Balance.add(signer2Balance).toString(),
-          42,
-          {
-            gasPrice: 0,
-          },
-        ),
+        strategyCandidate
+          .connect(signer1)
+          .resolveVoting(
+            [signer1.getAddress(), signer2.getAddress()],
+            [signer1Balance, signer2Balance],
+            signer1Balance.add(signer2Balance).toString(),
+            signer1Balance.add(signer2Balance).toString(),
+            42,
+            {
+              gasPrice: 0,
+            },
+          ),
       ).to.be.revertedWith(/revert BAB#043/i);
     });
 
@@ -194,19 +195,9 @@ describe('Strategy', function () {
       const signer1Balance = await garden2.balanceOf(signer1.getAddress());
       const signer2Balance = await garden2.balanceOf(signer2.getAddress());
 
-      await strategyCandidate.resolveVoting(
-        [signer1.getAddress(), signer2.getAddress()],
-        [signer1Balance, signer2Balance],
-        signer1Balance.add(signer2Balance).toString(),
-        signer1Balance.add(signer2Balance).toString(),
-        42,
-        {
-          gasPrice: 0,
-        },
-      );
-
-      await expect(
-        strategyCandidate.resolveVoting(
+      await strategyCandidate
+        .connect(signer1)
+        .resolveVoting(
           [signer1.getAddress(), signer2.getAddress()],
           [signer1Balance, signer2Balance],
           signer1Balance.add(signer2Balance).toString(),
@@ -215,7 +206,21 @@ describe('Strategy', function () {
           {
             gasPrice: 0,
           },
-        ),
+        );
+
+      await expect(
+        strategyCandidate
+          .connect(signer1)
+          .resolveVoting(
+            [signer1.getAddress(), signer2.getAddress()],
+            [signer1Balance, signer2Balance],
+            signer1Balance.add(signer2Balance).toString(),
+            signer1Balance.add(signer2Balance).toString(),
+            42,
+            {
+              gasPrice: 0,
+            },
+          ),
       ).to.be.revertedWith(/revert BAB#042/i);
     });
   });
@@ -327,7 +332,7 @@ describe('Strategy', function () {
       ethers.provider.send('evm_increaseTime', [ONE_DAY_IN_SECONDS * 2]);
 
       await expect(
-        strategyContract.executeStrategy(ONE_ETH, ONE_ETH.mul(100), {
+        strategyContract.connect(signer1).executeStrategy(ONE_ETH, ONE_ETH.mul(100), {
           gasPrice: 0,
         }),
       ).to.be.revertedWith(/revert BAB#019/i);

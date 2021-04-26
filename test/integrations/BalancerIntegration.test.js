@@ -1,11 +1,9 @@
 const { expect } = require('chai');
-const { waffle, ethers } = require('hardhat');
-const { deployFolioFixture } = require('../fixtures/ControllerFixture');
+const { ethers } = require('hardhat');
+const { setupTests } = require('../fixtures/GardenFixture');
 const { createStrategy, executeStrategy, finalizeStrategy } = require('../fixtures/StrategyHelper');
 const addresses = require('../../lib/addresses');
 const { ADDRESS_ZERO, ONE_ETH } = require('../../lib/constants');
-
-const { loadFixture } = waffle;
 
 describe('BalancerIntegrationTest', function () {
   let balancerIntegration;
@@ -16,9 +14,7 @@ describe('BalancerIntegrationTest', function () {
   let garden1;
 
   beforeEach(async () => {
-    ({ balancerIntegration, babController, garden1, signer1, signer2, signer3 } = await loadFixture(
-      deployFolioFixture,
-    ));
+    ({ balancerIntegration, babController, garden1, signer1, signer2, signer3 } = await setupTests());
   });
 
   describe('Deployment', function () {

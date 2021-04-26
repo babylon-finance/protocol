@@ -1,11 +1,9 @@
 const { expect } = require('chai');
-const { waffle, ethers } = require('hardhat');
+const { ethers } = require('hardhat');
 const { createStrategy, executeStrategy, finalizeStrategy } = require('../fixtures/StrategyHelper');
-const { deployFolioFixture } = require('../fixtures/ControllerFixture');
+const { setupTests } = require('../fixtures/GardenFixture');
 const addresses = require('../../lib/addresses');
 const { ADDRESS_ZERO } = require('../../lib/constants');
-
-const { loadFixture } = waffle;
 
 describe('YearnVaultIntegrationTest', function () {
   let yearnVaultIntegration;
@@ -16,9 +14,7 @@ describe('YearnVaultIntegrationTest', function () {
   let babController;
 
   beforeEach(async () => {
-    ({ garden1, babController, yearnVaultIntegration, signer1, signer2, signer3 } = await loadFixture(
-      deployFolioFixture,
-    ));
+    ({ garden1, babController, yearnVaultIntegration, signer1, signer2, signer3 } = await setupTests());
   });
 
   describe('Deployment', function () {

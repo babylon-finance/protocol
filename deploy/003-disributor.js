@@ -11,7 +11,7 @@ module.exports = async ({ getNamedAccounts, deployments, ethers }) => {
   const bablToken = await deployments.get('BABLToken');
   const controller = await deployments.get('BabControllerProxy');
 
-  await deploy('RewardsDistributor', {
+  const rewardsDistributor = await deploy('RewardsDistributor', {
     from: deployer,
     args: [bablToken.address, controller.address],
     log: true,
@@ -19,6 +19,11 @@ module.exports = async ({ getNamedAccounts, deployments, ethers }) => {
       SafeDecimalMath: safeDecimalMath.address,
     },
   });
+
+  const bablTokenContract = await ethers.getContractAt('BABLToken', bablToken.address);
+
+  // Sets the Rewards Distributor address into the BABL Token contract
+  await bablTokenContract.setRewardsDistributor(rewardsDistributor.address);
 };
 
 module.exports.tags = ['Distributor'];

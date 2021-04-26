@@ -1,7 +1,5 @@
 const { expect } = require('chai');
-const { ethers, waffle } = require('hardhat');
-
-const { loadFixture } = waffle;
+const { ethers } = require('hardhat');
 
 const addresses = require('../../lib/addresses');
 const { ONE_DAY_IN_SECONDS } = require('../../lib/constants.js');
@@ -12,7 +10,8 @@ const {
   finalizeStrategy,
   injectFakeProfits,
 } = require('../fixtures/StrategyHelper');
-const { deployFolioFixture } = require('../fixtures/ControllerFixture');
+
+const { setupTests } = require('../fixtures/GardenFixture');
 
 describe('Garden', function () {
   let babController;
@@ -33,7 +32,7 @@ describe('Garden', function () {
       garden1,
       balancerIntegration,
       kyberTradeIntegration,
-    } = await loadFixture(deployFolioFixture));
+    } = await setupTests());
 
     weth = await ethers.getContractAt('IERC20', addresses.tokens.WETH);
   });

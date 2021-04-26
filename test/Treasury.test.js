@@ -1,10 +1,9 @@
 const { expect } = require('chai');
-const { ethers, waffle } = require('hardhat');
+const { ethers } = require('hardhat');
 
-const { loadFixture } = waffle;
 const { ADDRESS_ZERO, MINUS_ONE_ETH, ONE_ETH } = require('../lib/constants');
 const addresses = require('../lib/addresses');
-const { deployFolioFixture } = require('./fixtures/ControllerFixture');
+const { setupTests } = require('./fixtures/GardenFixture');
 
 describe('Treasury', function () {
   let signer1;
@@ -14,7 +13,7 @@ describe('Treasury', function () {
   let wethWhaleSigner;
 
   beforeEach(async () => {
-    ({ owner, wethWhaleSigner, signer1, treasury } = await loadFixture(deployFolioFixture));
+    ({ owner, wethWhaleSigner, signer1, treasury } = await setupTests());
 
     weth = await ethers.getContractAt('IERC20', addresses.tokens.WETH);
     await weth.connect(wethWhaleSigner).transfer(treasury.address, ONE_ETH);
