@@ -219,5 +219,5 @@ library Errors {
     // Ge contributor to
     uint256 internal constant GET_CONTRIBUTOR_POWER = 65;
     // Ge contributor to
-    uint256 internal constant NOT_ENOUGH_ETH = 65;
+    uint256 internal constant NOT_ENOUGH_ETH = 66;
 }
