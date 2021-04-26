@@ -218,4 +218,6 @@ library Errors {
     uint256 internal constant MIN_VOTERS_CHECK = 64;
     // Ge contributor to
     uint256 internal constant GET_CONTRIBUTOR_POWER = 65;
+    // Ge contributor to
+    uint256 internal constant NOT_ENOUGH_ETH = 65;
 }

@@ -208,6 +208,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
     // Keeps track of the reserve balance. In case we receive some through other means
     uint256 public override principal;
     uint256 public override reserveAssetRewardsSetAside;
+    uint256 public override reserveAssetPrincipalWindow;
     int256 public override absoluteReturns; // Total profits or losses of this garden
 
     // Indicates the minimum liquidity the asset needs to have to be tradable by this garden
@@ -500,7 +501,9 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
             withdrawalsOpenUntil = block.timestamp.add(withdrawalWindowAfterStrategyCompletes);
         }
         reserveAssetRewardsSetAside = reserveAssetRewardsSetAside.add(_rewards);
-        IWETH(WETH).withdraw(_amount);
+        reserveAssetPrincipalWindow = reserveAssetPrincipalWindow.add(_amount);
+        // Both are converted to weth
+        IWETH(WETH).withdraw(_amount.add(_rewards));
 
         // Mark strategy as finalized
         absoluteReturns.add(_returns);
@@ -516,7 +519,8 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
     function reenableEthForStrategies() public override {
         if (block.timestamp >= withdrawalsOpenUntil && address(this).balance > minContribution) {
             withdrawalsOpenUntil = 0;
-            IWETH(WETH).deposit{value: address(this).balance.sub(reserveAssetRewardsSetAside)}();
+            IWETH(WETH).deposit{value: address(this).balance.sub(reserveAssetPrincipalWindow)}();
+            reserveAssetPrincipalWindow = 0;
         }
     }
 
@@ -718,7 +722,9 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
      * @param _amount                        Amount of ETH to withdraw
      */
     function canWithdrawEthAmount(address _contributor, uint256 _amount) public view returns (bool) {
-        uint256 ethAsideBalance = address(this).balance;
+        // ETH rewards cannot be withdrawn. Only claimed
+        uint256 ethAsideBalance = reserveAssetPrincipalWindow;
+        _require(address(this).balance >= ethAsideBalance, Errors.NOT_ENOUGH_ETH);
         uint256 liquidWeth = IERC20Upgradeable(reserveAsset).balanceOf(address(this));
 
         // Weth already available
