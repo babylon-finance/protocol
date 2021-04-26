@@ -159,10 +159,14 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
 
     /* ============ State Constants ============ */
 
+    // Wrapped ETH address
+    address public constant override WETH = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
+    uint256 public constant EARLY_WITHDRAWAL_PENALTY = 15e16;
     uint256 public constant MAX_DEPOSITS_FUND_V1 = 1e21; // Max deposit per garden is 1000 eth for v1
     uint256 public constant MAX_TOTAL_STRATEGIES = 20; // Max number of strategies
     uint256 internal constant TEN_PERCENT = 1e17;
     uint256 internal constant MAX_KEEPER_FEE = (1e6 * 1e3 gwei);
+    uint256 internal constant ABSOLUTE_MIN_CONTRIBUTION = 1e17;
 
     /* ============ Structs ============ */
 
@@ -187,10 +191,6 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
     }
 
     /* ============ State Variables ============ */
-
-    // Wrapped ETH address
-    address public constant override WETH = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
-    uint256 public constant EARLY_WITHDRAWAL_PENALTY = 15e16;
 
     // Reserve Asset of the garden
     address public override reserveAsset;
@@ -228,7 +228,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
     uint256 public override gardenInitializedAt; // Garden Initialized at timestamp
 
     // Min contribution in the garden
-    uint256 public override minContribution = 1e18; //wei
+    uint256 public override minContribution; //wei
     uint256 public minGardenTokenSupply;
 
     // Strategies variables
@@ -331,7 +331,8 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         uint256 _minStrategyDuration,
         uint256 _maxStrategyDuration
     ) private {
-        _require(_creatorDeposit >= minContribution, Errors.MIN_CONTRIBUTION);
+        _require(_minContribution >= ABSOLUTE_MIN_CONTRIBUTION, Errors.MIN_CONTRIBUTION);
+        _require(_creatorDeposit >= _minContribution, Errors.MIN_CONTRIBUTION);
         _require(_creatorDeposit >= _minGardenTokenSupply, Errors.MIN_LIQUIDITY);
         _require(_creatorDeposit <= _maxDepositLimit, Errors.MAX_DEPOSIT_LIMIT);
         _require(_maxDepositLimit <= MAX_DEPOSITS_FUND_V1, Errors.MAX_DEPOSIT_LIMIT);
