@@ -154,7 +154,7 @@ abstract contract Strategy is ReentrancyGuard, IStrategy, Initializable {
     uint256 internal constant HUNDRED_PERCENT = 1e18; // 100%
     uint256 internal constant MAX_CANDIDATE_PERIOD = 7 days;
     uint256 internal constant MIN_VOTERS_TO_BECOME_ACTIVE = 2;
-    uint256 internal constant ABSOLUTE_MIN_REBALANCE = 3e18;
+    uint256 internal constant ABSOLUTE_MIN_REBALANCE = 1e18;
 
     // Keeper max fee
     uint256 internal constant MAX_KEEPER_FEE = (1e6 * 1e3 gwei);

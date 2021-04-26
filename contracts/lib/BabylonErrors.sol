@@ -216,8 +216,8 @@ library Errors {
     uint256 internal constant DURATION_RANGE = 63;
     // Checks the min amount of voters
     uint256 internal constant MIN_VOTERS_CHECK = 64;
-    // Ge contributor to
+    // Ge contributor power error
     uint256 internal constant GET_CONTRIBUTOR_POWER = 65;
-    // Ge contributor to
+    // Not enough ETH set aside
     uint256 internal constant NOT_ENOUGH_ETH = 66;
 }
