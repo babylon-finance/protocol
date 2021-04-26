@@ -72,6 +72,8 @@ interface IGarden {
 
     function reserveAssetRewardsSetAside() external view returns (uint256);
 
+    function reserveAssetPrincipalWindow() external view returns (uint256);
+
     function absoluteReturns() external view returns (int256);
 
     function totalStake() external view returns (uint256);

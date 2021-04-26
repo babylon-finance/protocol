@@ -159,10 +159,14 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
 
     /* ============ State Constants ============ */
 
+    // Wrapped ETH address
+    address public constant override WETH = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
+    uint256 public constant EARLY_WITHDRAWAL_PENALTY = 15e16;
     uint256 public constant MAX_DEPOSITS_FUND_V1 = 1e21; // Max deposit per garden is 1000 eth for v1
     uint256 public constant MAX_TOTAL_STRATEGIES = 20; // Max number of strategies
     uint256 internal constant TEN_PERCENT = 1e17;
     uint256 internal constant MAX_KEEPER_FEE = (1e6 * 1e3 gwei);
+    uint256 internal constant ABSOLUTE_MIN_CONTRIBUTION = 1e17;
 
     /* ============ Structs ============ */
 
@@ -188,10 +192,6 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
 
     /* ============ State Variables ============ */
 
-    // Wrapped ETH address
-    address public constant override WETH = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
-    uint256 public constant EARLY_WITHDRAWAL_PENALTY = 15e16;
-
     // Reserve Asset of the garden
     address public override reserveAsset;
 
@@ -208,6 +208,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
     // Keeps track of the reserve balance. In case we receive some through other means
     uint256 public override principal;
     uint256 public override reserveAssetRewardsSetAside;
+    uint256 public override reserveAssetPrincipalWindow;
     int256 public override absoluteReturns; // Total profits or losses of this garden
 
     // Indicates the minimum liquidity the asset needs to have to be tradable by this garden
@@ -227,7 +228,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
     uint256 public override gardenInitializedAt; // Garden Initialized at timestamp
 
     // Min contribution in the garden
-    uint256 public override minContribution = 1e18; //wei
+    uint256 public override minContribution; //wei
     uint256 public minGardenTokenSupply;
 
     // Strategies variables
@@ -330,7 +331,8 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         uint256 _minStrategyDuration,
         uint256 _maxStrategyDuration
     ) private {
-        _require(_creatorDeposit >= minContribution, Errors.MIN_CONTRIBUTION);
+        _require(_minContribution >= ABSOLUTE_MIN_CONTRIBUTION, Errors.MIN_CONTRIBUTION);
+        _require(_creatorDeposit >= _minContribution, Errors.MIN_CONTRIBUTION);
         _require(_creatorDeposit >= _minGardenTokenSupply, Errors.MIN_LIQUIDITY);
         _require(_creatorDeposit <= _maxDepositLimit, Errors.MAX_DEPOSIT_LIMIT);
         _require(_maxDepositLimit <= MAX_DEPOSITS_FUND_V1, Errors.MAX_DEPOSIT_LIMIT);
@@ -500,7 +502,9 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
             withdrawalsOpenUntil = block.timestamp.add(withdrawalWindowAfterStrategyCompletes);
         }
         reserveAssetRewardsSetAside = reserveAssetRewardsSetAside.add(_rewards);
-        IWETH(WETH).withdraw(_amount);
+        reserveAssetPrincipalWindow = reserveAssetPrincipalWindow.add(_amount);
+        // Both are converted to weth
+        IWETH(WETH).withdraw(_amount.add(_rewards));
 
         // Mark strategy as finalized
         absoluteReturns.add(_returns);
@@ -514,9 +518,14 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
      * We still keep the profits aside.
      */
     function reenableEthForStrategies() public override {
-        if (block.timestamp >= withdrawalsOpenUntil && address(this).balance > minContribution) {
+        if (
+            block.timestamp >= withdrawalsOpenUntil &&
+            address(this).balance > minContribution &&
+            address(this).balance >= reserveAssetPrincipalWindow
+        ) {
             withdrawalsOpenUntil = 0;
-            IWETH(WETH).deposit{value: address(this).balance.sub(reserveAssetRewardsSetAside)}();
+            IWETH(WETH).deposit{value: reserveAssetPrincipalWindow}();
+            reserveAssetPrincipalWindow = 0;
         }
     }
 
@@ -718,7 +727,8 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
      * @param _amount                        Amount of ETH to withdraw
      */
     function canWithdrawEthAmount(address _contributor, uint256 _amount) public view returns (bool) {
-        uint256 ethAsideBalance = address(this).balance;
+        // ETH rewards cannot be withdrawn. Only claimed
+        _require(address(this).balance >= reserveAssetPrincipalWindow, Errors.NOT_ENOUGH_ETH);
         uint256 liquidWeth = IERC20Upgradeable(reserveAsset).balanceOf(address(this));
 
         // Weth already available
@@ -731,7 +741,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
             // Pro rata withdrawals
             uint256 contributorPower =
                 _getContributorPower(_contributor, contributors[_contributor].initialDepositAt, block.timestamp);
-            return ethAsideBalance.preciseMul(contributorPower) >= _amount;
+            return reserveAssetPrincipalWindow.preciseMul(contributorPower) >= _amount;
         }
         return false;
     }
