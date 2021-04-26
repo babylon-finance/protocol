@@ -62,10 +62,9 @@ describe('OneInchTradeIntegration', function () {
       await finalizeStrategy(strategyContract, 0);
       expect(await daiToken.balanceOf(strategyContract.address)).to.equal(0);
       expect(await wethToken.balanceOf(garden1.address)).to.be.gt('4');
-      // 4 in WETH, the remaining in ETH
-      expect(await ethers.provider.getBalance(garden1.address)).to.equal(
-        (await strategyContract.capitalReturned()).mul(80).div(100),
-      );
+      // Sets capital returned in ETH. No profits.
+      // TODO: create the same test for a strategy that returns profits
+      expect(await ethers.provider.getBalance(garden1.address)).to.equal(await strategyContract.capitalReturned());
     });
   });
 });
