@@ -17,6 +17,7 @@
 
 pragma solidity 0.7.6;
 
+import 'hardhat/console.sol';
 import {TimeLockedToken} from './TimeLockedToken.sol';
 
 import {Ownable} from '@openzeppelin/contracts/access/Ownable.sol';
@@ -553,6 +554,7 @@ contract RewardsDistributor is Ownable, IRewardsDistributor {
             contributorBABL = contributorBABL.add(
                 _getStrategyStewardBabl(address(strategy), _contributor, profit, profitValue, distance, distanceValue)
             );
+
             contributorProfits = contributorProfits.add(
                 _getStrategyStewardProfits(
                     address(strategy),
@@ -565,6 +567,7 @@ contract RewardsDistributor is Ownable, IRewardsDistributor {
             );
 
             // Get LP rewards
+
             contributorBABL = contributorBABL.add(
                 uint256(strategy.strategyRewards()).multiplyDecimal(BABL_LP_SHARE).preciseMul(
                     contributorPower.preciseDiv(strategy.capitalAllocated())
@@ -713,7 +716,6 @@ contract RewardsDistributor is Ownable, IRewardsDistributor {
         uint256 bablCap;
         uint256 expected =
             strategy.capitalAllocated().add(strategy.capitalAllocated().preciseMul(strategy.expectedReturn()));
-
         if (strategy.strategist() == _contributor) {
             babl = strategyRewards.multiplyDecimal(BABL_STRATEGIST_SHARE); // Standard calculation to be ponderated
             if (_profit == true && _distance == true) {

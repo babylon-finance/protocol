@@ -807,7 +807,7 @@ describe('BABL Rewards Distributor', function () {
 
       await garden1.connect(signer1).claimReturns([long1.address, long2.address]);
       expect((await bablToken.balanceOf(signer1.address)).toString()).to.be.equal(signer1BABL);
-      expect(signer1Profit.toString()).to.be.closeTo('50085069448364166', ethers.utils.parseEther('0.05'));
+      expect(signer1Profit.toString()).to.be.closeTo('9936735722763861', ethers.utils.parseEther('0.0005'));
       const [signer1Profit2, signer1BABL2] = await rewardsDistributor.getRewards(garden1.address, signer1.address, [
         long1.address,
         long2.address,
@@ -823,7 +823,7 @@ describe('BABL Rewards Distributor', function () {
 
       await garden1.connect(signer1).claimReturns([long1.address, long2.address]);
       expect(signer1Profit3.toString()).to.be.equal('0'); // Negative profit means no profit at all
-      expect(signer1BABL3.toString()).to.be.closeTo('34636118453683837571056', ethers.utils.parseEther('0.5'));
+      expect(signer1BABL3.toString()).to.be.closeTo('34642797423847758166597', ethers.utils.parseEther('0.09'));
     });
 
     it('should only provide new additional BABL and profits between claims (claiming results of 2 strategies both with profit)', async function () {

@@ -230,11 +230,8 @@ describe('Garden', function () {
       await finalizeStrategy(strategyContract, 42);
 
       // Can now withdraw stake amount as it is again unlocked
-      await expect(garden1.connect(signer1).withdraw(ethers.utils.parseEther('0.1'), 1, signer1.getAddress())).not.to.be
-        .reverted;
 
-      await expect(garden1.connect(signer2).withdraw(ethers.utils.parseEther('1.1'), 1, signer2.getAddress())).not.to.be
-        .reverted;
+      await garden1.connect(signer2).withdraw(ethers.utils.parseEther('1.1'), 1, signer2.getAddress());
 
       const WITHDRAWsigner2Balance = await garden1.balanceOf(signer2.address);
       await expect(WITHDRAWsigner2Balance).to.be.equal(ethers.utils.parseEther('0.9'));
@@ -262,7 +259,7 @@ describe('Garden', function () {
       await finalizeStrategy(strategyContract, 42);
 
       // Can now withdraw stake amount as it is again unlocked
-      await expect(garden1.connect(signer1).withdraw(ethers.utils.parseEther('0.1'), 1, signer1.getAddress())).not.to.be
+      await expect(garden1.connect(signer1).withdraw(ethers.utils.parseEther('1.1'), 1, signer1.getAddress())).not.to.be
         .reverted;
       await expect(garden1.connect(signer2).withdraw(ethers.utils.parseEther('1.1'), 1, signer2.getAddress())).not.to.be
         .reverted;
@@ -271,7 +268,7 @@ describe('Garden', function () {
       await expect(WITHDRAWsigner2Balance).to.be.equal(ethers.utils.parseEther('0.9'));
     });
 
-    it('strategist is taken the exact amount of stake after a negative profit strategy with negative results', async function () {
+    it('strategist is taken the exact (quadratic) amount of stake after a negative profit strategy with negative results', async function () {
       const strategyContract = await createStrategy(
         'long',
         'vote',
@@ -287,6 +284,7 @@ describe('Garden', function () {
 
       expect(await strategyContract.strategist()).to.equal(signer1.address);
       expect(await strategyContract.stake()).to.equal(ethers.utils.parseEther('0.5'));
+      const InitialStrategistBalance = await garden1.balanceOf(signer1.address);
 
       await finalizeStrategy(strategyContract, 42);
 
@@ -295,11 +293,11 @@ describe('Garden', function () {
         (ethers.BigNumber.from(await strategyContract.capitalReturned()) /
           ethers.BigNumber.from(await strategyContract.capitalAllocated())) *
         ethers.BigNumber.from(await strategyContract.stake());
-
+      const value2 = ethers.BigNumber.from(await strategyContract.stake()) - value;
+      const toBurn = value2 * 1.75; // Quadratic penalty for bad strategists
       const finalStrategistBalance = await garden1.balanceOf(signer1.address);
-      const finalReducedStrategistBalance = finalStrategistBalance - ethers.utils.parseEther('2.5');
-
-      await expect(finalReducedStrategistBalance).to.be.closeTo(value, 200);
+      const finalReducedBalance = InitialStrategistBalance.toString() - toBurn.toString();
+      await expect(finalStrategistBalance).to.be.closeTo(finalReducedBalance.toString(), 200);
     });
 
     it('strategist or voters can withdraw comunity tokens during strategy execution if they have enough unlocked amount in their balance', async function () {
