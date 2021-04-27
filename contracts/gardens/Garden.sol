@@ -435,9 +435,9 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         onlyContributor
     {
         // Check that cannot do a normal withdrawal
-        _require(!canWithdrawEthAmount(msg.sender, _gardenTokenQuantity), Errors.NORMAL_WITHDRAWAL_POSSIBLE);
+        _require(!_canWithdrawEthAmount(msg.sender, _gardenTokenQuantity), Errors.NORMAL_WITHDRAWAL_POSSIBLE);
         uint256 netReserveFlows = _gardenTokenQuantity.sub(_gardenTokenQuantity.preciseMul(EARLY_WITHDRAWAL_PENALTY));
-        (, uint256 largestCapital, address maxStrategy) = getActiveCapital();
+        (, uint256 largestCapital, address maxStrategy) = _getActiveCapital();
         // Check that strategy has enough capital to support the withdrawal
         require(IStrategy(maxStrategy).minRebalanceCapital() <= largestCapital.sub(netReserveFlows));
         IStrategy(maxStrategy).unwindStrategy(netReserveFlows);
@@ -725,32 +725,6 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
     }
 
     /**
-     * Check if the fund has ETH amount available for withdrawals.
-     * If it returns false, reserve pool would be available.
-     * @param _contributor                   Address of the contributors
-     * @param _amount                        Amount of ETH to withdraw
-     */
-    function canWithdrawEthAmount(address _contributor, uint256 _amount) public view returns (bool) {
-        // ETH rewards cannot be withdrawn. Only claimed
-        _require(address(this).balance >= reserveAssetPrincipalWindow, Errors.NOT_ENOUGH_ETH);
-        uint256 liquidWeth = IERC20Upgradeable(reserveAsset).balanceOf(address(this));
-
-        // Weth already available
-        if (liquidWeth >= _amount) {
-            return true;
-        }
-
-        // Withdrawal open
-        if (block.timestamp <= withdrawalsOpenUntil) {
-            // Pro rata withdrawals
-            uint256 contributorPower =
-                _getContributorPower(_contributor, contributors[_contributor].initialDepositAt, block.timestamp);
-            return reserveAssetPrincipalWindow.preciseMul(contributorPower) >= _amount;
-        }
-        return false;
-    }
-
-    /**
      * Get the expected reserve asset to be withdrawaled
      *
      * @param _gardenTokenQuantity             Quantity of Garden tokens to withdrawal
@@ -835,38 +809,35 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         return _getContributorPower(_contributor, _from, _to);
     }
 
-    /**
-     * Gets the total active capital currently invested in strategies
-     *
-     * @return uint256       Total amount active
-     * @return uint256       Total amount active in the largest strategy
-     * @return address       Address of the largest strategy
-     */
-    function getActiveCapital()
-        public
-        view
-        override
-        returns (
-            uint256,
-            uint256,
-            address
-        )
-    {
-        uint256 totalActiveCapital = 0;
-        uint256 maxAllocation = 0;
-        address maxStrategy = address(0);
-        for (uint8 i = 0; i < strategies.length; i++) {
-            IStrategy strategy = IStrategy(strategies[i]);
-            if (strategy.isStrategyActive()) {
-                uint256 allocation = strategy.capitalAllocated();
-                totalActiveCapital = totalActiveCapital.add(allocation);
-                if (allocation > maxAllocation) {
-                    maxAllocation = allocation;
-                    maxStrategy = strategies[i];
-                }
-            }
+    function getGardenTokenMintQuantity(
+        address _reserveAsset,
+        uint256 _netReserveFlows, // Value of reserve asset net of fees
+        uint256 _gardenTokenTotalSupply
+    ) public view override returns (uint256) {
+        // Get valuation of the Garden with the quote asset as the reserve asset.
+        // Reverts if price is not found
+        uint8 reserveAssetDecimals = ERC20Upgradeable(_reserveAsset).decimals();
+        uint256 baseUnits = uint256(10)**reserveAssetDecimals;
+        uint256 normalizedTotalReserveQuantityNetFees = _netReserveFlows.preciseDiv(baseUnits);
+        // First deposit
+        if (totalSupply() == 0) {
+            return normalizedTotalReserveQuantityNetFees;
         }
-        return (totalActiveCapital, maxAllocation, maxStrategy);
+        uint256 gardenValuationPerToken =
+            IGardenValuer(IBabController(controller).gardenValuer()).calculateGardenValuation(
+                address(this),
+                _reserveAsset
+            );
+        gardenValuationPerToken = gardenValuationPerToken.sub(_netReserveFlows.preciseDiv(_gardenTokenTotalSupply));
+
+        // Calculate Garden tokens to mint to depositor
+        uint256 denominator =
+            _gardenTokenTotalSupply.preciseMul(gardenValuationPerToken).add(normalizedTotalReserveQuantityNetFees).sub(
+                normalizedTotalReserveQuantityNetFees
+            );
+        uint256 quantityToMint =
+            normalizedTotalReserveQuantityNetFees.preciseMul(_gardenTokenTotalSupply).preciseDiv(denominator);
+        return quantityToMint;
     }
 
     // solhint-disable-next-line
@@ -890,7 +861,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         uint256 _protocolFees
     ) private {
         uint256 previousBalance = balanceOf(msg.sender);
-        uint256 amountToMint = _getGardenTokenMintQuantity(reserveAsset, _gardenTokenQuantity, totalSupply());
+        uint256 amountToMint = getGardenTokenMintQuantity(reserveAsset, _gardenTokenQuantity, totalSupply());
         _mint(_to, amountToMint);
         _updateContributorDepositInfo(_from, previousBalance);
         _updatePrincipal(_newPrincipal);
@@ -898,6 +869,65 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         IGardenNFT(nftAddress).grantGardenNFT(_to);
         _require(totalSupply() > 0, Errors.MIN_LIQUIDITY);
         emit GardenDeposit(_to, msg.value, _gardenTokenQuantity, _protocolFees, block.timestamp);
+    }
+
+    /**
+     * Check if the fund has ETH amount available for withdrawals.
+     * If it returns false, reserve pool would be available.
+     * @param _contributor                   Address of the contributors
+     * @param _amount                        Amount of ETH to withdraw
+     */
+    function _canWithdrawEthAmount(address _contributor, uint256 _amount) private view returns (bool) {
+        // ETH rewards cannot be withdrawn. Only claimed
+        _require(address(this).balance >= reserveAssetPrincipalWindow, Errors.NOT_ENOUGH_ETH);
+        uint256 liquidWeth = IERC20Upgradeable(reserveAsset).balanceOf(address(this));
+
+        // Weth already available
+        if (liquidWeth >= _amount) {
+            return true;
+        }
+
+        // Withdrawal open
+        if (block.timestamp <= withdrawalsOpenUntil) {
+            // Pro rata withdrawals
+            uint256 contributorPower =
+                _getContributorPower(_contributor, contributors[_contributor].initialDepositAt, block.timestamp);
+            return reserveAssetPrincipalWindow.preciseMul(contributorPower) >= _amount;
+        }
+        return false;
+    }
+
+    /**
+     * Gets the total active capital currently invested in strategies
+     *
+     * @return uint256       Total amount active
+     * @return uint256       Total amount active in the largest strategy
+     * @return address       Address of the largest strategy
+     */
+    function _getActiveCapital()
+        private
+        view
+        returns (
+            uint256,
+            uint256,
+            address
+        )
+    {
+        uint256 totalActiveCapital = 0;
+        uint256 maxAllocation = 0;
+        address maxStrategy = address(0);
+        for (uint8 i = 0; i < strategies.length; i++) {
+            IStrategy strategy = IStrategy(strategies[i]);
+            if (strategy.isStrategyActive()) {
+                uint256 allocation = strategy.capitalAllocated();
+                totalActiveCapital = totalActiveCapital.add(allocation);
+                if (allocation > maxAllocation) {
+                    maxAllocation = allocation;
+                    maxStrategy = strategies[i];
+                }
+            }
+        }
+        return (totalActiveCapital, maxAllocation, maxStrategy);
     }
 
     /**
@@ -964,7 +994,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
 
         uint256 newGardenTokenSupply = totalSupply().sub(_gardenTokenQuantity);
 
-        _require(canWithdrawEthAmount(msg.sender, netFlowQuantity), Errors.MIN_LIQUIDITY);
+        _require(_canWithdrawEthAmount(msg.sender, netFlowQuantity), Errors.MIN_LIQUIDITY);
 
         _validateReserveAsset(reserveAsset, netFlowQuantity);
 
@@ -1024,37 +1054,6 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         uint256 netReserveFlow = _reserveAssetQuantity.sub(protocolFees);
 
         return (protocolFees, netReserveFlow);
-    }
-
-    function _getGardenTokenMintQuantity(
-        address _reserveAsset,
-        uint256 _netReserveFlows, // Value of reserve asset net of fees
-        uint256 _gardenTokenTotalSupply
-    ) private view returns (uint256) {
-        // Get valuation of the Garden with the quote asset as the reserve asset.
-        // Reverts if price is not found
-        uint8 reserveAssetDecimals = ERC20Upgradeable(_reserveAsset).decimals();
-        uint256 baseUnits = uint256(10)**reserveAssetDecimals;
-        uint256 normalizedTotalReserveQuantityNetFees = _netReserveFlows.preciseDiv(baseUnits);
-        // First deposit
-        if (totalSupply() == 0) {
-            return normalizedTotalReserveQuantityNetFees;
-        }
-        uint256 gardenValuationPerToken =
-            IGardenValuer(IBabController(controller).gardenValuer()).calculateGardenValuation(
-                address(this),
-                _reserveAsset
-            );
-        gardenValuationPerToken = gardenValuationPerToken.sub(_netReserveFlows.preciseDiv(_gardenTokenTotalSupply));
-
-        // Calculate Garden tokens to mint to depositor
-        uint256 denominator =
-            _gardenTokenTotalSupply.preciseMul(gardenValuationPerToken).add(normalizedTotalReserveQuantityNetFees).sub(
-                normalizedTotalReserveQuantityNetFees
-            );
-        uint256 quantityToMint =
-            normalizedTotalReserveQuantityNetFees.preciseMul(_gardenTokenTotalSupply).preciseDiv(denominator);
-        return quantityToMint;
     }
 
     function _getWithdrawalReserveQuantity(address _reserveAsset, uint256 _gardenTokenQuantity)
