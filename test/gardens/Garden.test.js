@@ -231,11 +231,8 @@ describe('Garden', function () {
       await finalizeStrategy(strategyContract, 42);
 
       // Can now withdraw stake amount as it is again unlocked
-      await expect(garden1.connect(signer1).withdraw(ethers.utils.parseEther('1.1'), 1, signer1.getAddress())).not.to.be
-        .reverted;
 
-      await expect(garden1.connect(signer2).withdraw(ethers.utils.parseEther('1.1'), 1, signer2.getAddress())).not.to.be
-        .reverted;
+      await garden1.connect(signer2).withdraw(ethers.utils.parseEther('1.1'), 1, signer2.getAddress());
 
       const WITHDRAWsigner2Balance = await garden1.balanceOf(signer2.address);
       await expect(WITHDRAWsigner2Balance).to.be.equal(ethers.utils.parseEther('0.9'));
