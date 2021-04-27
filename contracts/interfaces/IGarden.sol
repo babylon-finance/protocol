@@ -130,19 +130,16 @@ interface IGarden {
 
     function claimReturns(address[] calldata _finalizedStrategies) external;
 
-    function getActiveCapital()
-        external
-        view
-        returns (
-            uint256,
-            uint256,
-            address
-        );
-
     function getContributorPower(
         address _contributor,
         uint256 _from,
         uint256 _to
+    ) external view returns (uint256);
+
+    function getGardenTokenMintQuantity(
+        address _reserveAsset,
+        uint256 _netReserveFlows,
+        uint256 _gardenTokenTotalSupply
     ) external view returns (uint256);
 
     function getExpectedReserveWithdrawalQuantity(uint256 _gardenTokenQuantity) external view returns (uint256);
