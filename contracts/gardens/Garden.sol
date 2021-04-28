@@ -1088,7 +1088,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
             contributor.initialDepositAt = block.timestamp;
         }
         // We make checkpoints around contributor deposits to avoid fast loans and give the right rewards afterwards
-        _setContributorTimestampParams();
+        _setContributorTimestampParams(_contributor);
 
         contributor.lastDepositAt = block.timestamp;
     }
@@ -1107,7 +1107,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
             totalContributors = totalContributors.sub(1);
             contributor.lastUpdated = block.timestamp;
         } else {
-            _setContributorTimestampParams();
+            _setContributorTimestampParams(msg.sender);
             contributor.withdrawnSince = contributor.withdrawnSince.add(_netflowQuantity);
         }
     }
@@ -1152,9 +1152,9 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
     /**
      * Updates contributor timestamps params
      */
-    function _setContributorTimestampParams() private {
-        Contributor storage contributor = contributors[msg.sender];
-        contributor.tsContributions[block.timestamp].principal = balanceOf(msg.sender);
+    function _setContributorTimestampParams(address _contributor) private {
+        Contributor storage contributor = contributors[_contributor];
+        contributor.tsContributions[block.timestamp].principal = balanceOf(_contributor);
         contributor.tsContributions[block.timestamp].timestamp = block.timestamp;
         contributor.tsContributions[block.timestamp].timePointer = contributor.pid;
 
