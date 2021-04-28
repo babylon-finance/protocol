@@ -32,7 +32,8 @@ interface IGardenNFT {
         address _garden,
         string memory _name,
         string memory _symbol,
-        string memory _tokenURI
+        string memory _tokenURI,
+        uint256 _seed
     ) external;
 
     function grantGardenNFT(address _user) external returns (uint256);

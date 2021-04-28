@@ -68,19 +68,21 @@ contract GardenNFT is ERC721Upgradeable, IGardenNFT {
      * @param _name               Name of the garden
      * @param _symbol             Symbol of the garden
      * @param _tokenURI           Initial token URI
+     * @param _seed               Seed to regenerated the Babylong Garden in 3D
      */
     function initialize(
         address _controller,
         address _garden,
         string memory _name,
         string memory _symbol,
-        string memory _tokenURI
+        string memory _tokenURI,
+        uint256 _seed
     ) external override initializer {
         require(address(_controller) != address(0), 'Controller must exist');
         __ERC721_init(_name, _symbol);
         controller = IBabController(_controller);
         garden = IGarden(_garden);
-        seed = garden.gardenInitializedAt();
+        seed = _seed;
         tokenURI = _tokenURI;
     }
 

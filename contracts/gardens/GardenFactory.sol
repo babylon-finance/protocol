@@ -46,8 +46,9 @@ contract GardenFactory is IGardenFactory {
      * @param _creator                Address of the creator
      * @param _name                   Name of the Garden
      * @param _symbol                 Symbol of the Garden
-     * @param _gardenParams           Array of numeric params in the garden
      * @param _tokenURI               URL of the garden NFT JSON
+     * @param _seed                   Seed to regenerate the garden NFT
+     * @param _gardenParams           Array of numeric params in the garden
      */
     function createGarden(
         address _reserveAsset,
@@ -55,12 +56,13 @@ contract GardenFactory is IGardenFactory {
         address _creator,
         string memory _name,
         string memory _symbol,
-        uint256[] calldata _gardenParams,
-        string memory _tokenURI
+        string memory _tokenURI,
+        uint256 _seed,
+        uint256[] calldata _gardenParams
     ) external payable override returns (address) {
         address payable clone = payable(Clones.clone(garden));
         address cloneNFT = Clones.clone(gardenNFT);
-        GardenNFT(cloneNFT).initialize(_controller, address(clone), _name, _symbol, _tokenURI);
+        GardenNFT(cloneNFT).initialize(_controller, address(clone), _name, _symbol, _tokenURI, _seed);
         Garden(clone).initialize{value: msg.value}(
             _reserveAsset,
             _controller,
