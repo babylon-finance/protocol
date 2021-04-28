@@ -860,7 +860,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         uint256 _newPrincipal,
         uint256 _protocolFees
     ) private {
-        uint256 previousBalance = balanceOf(msg.sender);
+        uint256 previousBalance = balanceOf(_to);
         uint256 amountToMint = getGardenTokenMintQuantity(reserveAsset, _gardenTokenQuantity, totalSupply());
         _mint(_to, amountToMint);
         _updateContributorDepositInfo(_from, previousBalance);
