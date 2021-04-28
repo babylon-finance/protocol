@@ -24,8 +24,6 @@ import {AddressUpgradeable} from '@openzeppelin/contracts-upgradeable/utils/Addr
 import {SafeMath} from '@openzeppelin/contracts/math/SafeMath.sol';
 import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import {RewardsDistributor} from './token/RewardsDistributor.sol';
-
-import {IGarden} from './interfaces/IGarden.sol';
 import {IGarden} from './interfaces/IGarden.sol';
 import {IGardenFactory} from './interfaces/IGardenFactory.sol';
 import {IStrategy} from './interfaces/IStrategy.sol';
@@ -179,13 +177,15 @@ contract BabController is OwnableUpgradeable, IBabController {
      * @param _symbol                 Symbol of the Garden
      * @param _gardenParams           Array of numeric garden params
      * @param _tokenURI               Garden NFT token URI
+     * @param _seed                   Seed to regenerate the garden NFT
      */
     function createGarden(
         address _reserveAsset,
         string memory _name,
         string memory _symbol,
-        uint256[] calldata _gardenParams,
-        string memory _tokenURI
+        string memory _tokenURI,
+        uint256 _seed,
+        uint256[] calldata _gardenParams
     ) external payable override returns (address) {
         require(IIshtarGate(ishtarGate).canCreate(msg.sender), 'User does not have creation permissions');
         address newGarden =
@@ -195,8 +195,9 @@ contract BabController is OwnableUpgradeable, IBabController {
                 msg.sender,
                 _name,
                 _symbol,
-                _gardenParams,
-                _tokenURI
+                _tokenURI,
+                _seed,
+                _gardenParams
             );
         _addGarden(newGarden);
         return newGarden;

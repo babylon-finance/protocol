@@ -30,7 +30,7 @@ describe('IshtarGate', function () {
       await expect(
         babController
           .connect(signer2)
-          .createGarden(addresses.tokens.WETH, 'TEST Ishtar', 'AAA', GARDEN_PARAMS, 'http:', {
+          .createGarden(addresses.tokens.WETH, 'TEST Ishtar', 'AAA', 'http:', 0, GARDEN_PARAMS, {
             value: ethers.utils.parseEther('0.1'),
           }),
       ).to.not.be.reverted;
@@ -41,7 +41,7 @@ describe('IshtarGate', function () {
       await expect(
         babController
           .connect(signer2)
-          .createGarden(addresses.tokens.WETH, 'TEST Ishtar', 'AAA', GARDEN_PARAMS, 'http...', {
+          .createGarden(addresses.tokens.WETH, 'TEST Ishtar', 'AAA', 'http...', 1, GARDEN_PARAMS, {
             value: ethers.utils.parseEther('0.1'),
           }),
       ).to.not.be.reverted;
@@ -61,7 +61,7 @@ describe('IshtarGate', function () {
       await expect(
         babController
           .connect(signer2)
-          .createGarden(addresses.tokens.WETH, 'TEST Ishtar', 'AAA', GARDEN_PARAMS, 'http...', {
+          .createGarden(addresses.tokens.WETH, 'TEST Ishtar', 'AAA', 'http...', 2, GARDEN_PARAMS, {
             value: ethers.utils.parseEther('0.1'),
           }),
       ).to.be.reverted;
@@ -73,7 +73,7 @@ describe('IshtarGate', function () {
       await expect(
         babController
           .connect(signer1)
-          .createGarden(addresses.tokens.WETH, 'TEST Ishtar', 'AAA', GARDEN_PARAMS, 'http...', {
+          .createGarden(addresses.tokens.WETH, 'TEST Ishtar', 'AAA', 'http...', 3, GARDEN_PARAMS, {
             value: ethers.utils.parseEther('0.1'),
           }),
       ).to.not.be.reverted;
@@ -92,7 +92,7 @@ describe('IshtarGate', function () {
       await expect(
         babController
           .connect(signer1)
-          .createGarden(addresses.tokens.WETH, 'TEST Ishtar', 'AAA', GARDEN_PARAMS, 'http...', {
+          .createGarden(addresses.tokens.WETH, 'TEST Ishtar', 'AAA', 'http...', 4, GARDEN_PARAMS, {
             value: ethers.utils.parseEther('0.1'),
           }),
       ).to.not.be.reverted;
@@ -112,7 +112,7 @@ describe('IshtarGate', function () {
       await expect(
         babController
           .connect(signer1)
-          .createGarden(addresses.tokens.WETH, 'TEST Ishtar', 'AAA', GARDEN_PARAMS, 'http...', {
+          .createGarden(addresses.tokens.WETH, 'TEST Ishtar', 'AAA', 'http...', 5, GARDEN_PARAMS, {
             value: ethers.utils.parseEther('0.1'),
           }),
       ).to.not.be.reverted;
@@ -128,7 +128,7 @@ describe('IshtarGate', function () {
       await expect(
         babController
           .connect(signer1)
-          .createGarden(addresses.tokens.WETH, 'TEST Ishtar', 'AAA', GARDEN_PARAMS, 'http...', {
+          .createGarden(addresses.tokens.WETH, 'TEST Ishtar', 'AAA', 'http...', GARDEN_PARAMS, {
             value: ethers.utils.parseEther('0.1'),
           }),
       ).to.not.be.reverted;
