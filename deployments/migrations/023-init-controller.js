@@ -10,7 +10,7 @@ module.exports = async ({ getNamedAccounts, deployments, ethers, getSigner, getC
   } else if (!KEEPER) {
     throw new Error('Keeper address is not set');
   }
-  console.log('keeper', KEEPER);
+  console.log('KEEPER', KEEPER);
 
   const { deployer } = await getNamedAccounts();
   const owner = await getSigner(deployer);

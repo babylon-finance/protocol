@@ -73,6 +73,8 @@ interface IBabController {
 
     function enableBABLTokensTransfers() external;
 
+    function disableBABLTokensTransfers() external;
+
     function enableBABLMiningProgram() external;
 
     function editLiquidityMinimum(uint256 _minRiskyPairLiquidityEth) external;

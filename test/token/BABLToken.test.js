@@ -138,7 +138,6 @@ describe('BABLToken contract', function () {
       expect(addr1Balance).to.equal(value);
 
       // Transfer 180_000e18 tokens from userSigner1 to userSigner2
-      // We use .connect(signer) to send a transaction from another account
       const value2 = ethers.utils.parseEther('180000');
       await bablToken.connect(signer1).transfer(signer2.address, value2);
 
@@ -315,21 +314,24 @@ describe('BABLToken contract', function () {
 
   describe('Time Lock Registry for Vesting', function () {
     it('Should fail as Time Lock Registry cannot registry the zero address', async function () {
-      // Try to register de zero address
+      // Try to register a zero address
       await expect(
         timeLockRegistry.register(ADDRESS_ZERO, ethers.utils.parseEther('26000'), true, 1614618000),
       ).to.be.revertedWith('TimeLockRegistry::register: cannot register the zero address');
     });
+
     it('Should fail as Time Lock Registry contract address cannot be registered itself', async function () {
       await expect(
         timeLockRegistry.register(timeLockRegistry.address, ethers.utils.parseEther('26000'), true, 1614618000),
       ).to.be.revertedWith('TimeLockRegistry::register: Time Lock Registry contract cannot be an investor');
     });
+
     it('should fail if the distribution amount to register equals 0', async function () {
       await expect(
         timeLockRegistry.register(signer1.address, ethers.utils.parseEther('0'), true, 1614618000),
       ).to.be.revertedWith('TimeLockRegistry::register: Distribution = 0');
     });
+
     it('should fail if the account is already registered', async function () {
       const registeredDistribution = await timeLockRegistry.checkRegisteredDistribution(signer1.address);
       expect(registeredDistribution.toString()).to.equal(ethers.utils.parseEther('0'));
@@ -339,6 +341,7 @@ describe('BABLToken contract', function () {
         timeLockRegistry.register(signer1.address, ethers.utils.parseEther('26000'), true, 1614618000),
       ).to.be.revertedWith('TimeLockRegistry::register:Distribution for this address is already registered');
     });
+
     it('should fail if the transfer fails', async function () {
       await timeLockRegistry.register(signer1.address, ethers.utils.parseEther('26000'), true, 1614618000);
 
@@ -346,9 +349,11 @@ describe('BABLToken contract', function () {
         timeLockRegistry.register(signer1.address, ethers.utils.parseEther('1000001'), true, 1614618000),
       ).to.be.revertedWith('TimeLockRegistry::register:Distribution for this address is already registered');
     });
+
     it('Should fail when trying to cancel a registration that is not registered', async function () {
       await expect(timeLockRegistry.cancelRegistration(signer2.address)).to.be.revertedWith('Not registered');
     });
+
     it('Should cancel a registration of an Advisor before tokens are claimed', async function () {
       // Register 1 Advisor with 2_000 BABL 4Y of Vesting
       // Vesting starting date 1 March 2021 9h PST Unix Time 1614618000
@@ -371,7 +376,8 @@ describe('BABLToken contract', function () {
       expect(newOwnerSignerBalance).to.equal(await bablToken.balanceOf(owner.address));
       expect(await bablToken.balanceOf(timeLockRegistry.address)).to.equal(0);
     });
-    it('Time Lock Registry should properly register 1 Team Member, 1 Advisor and 1 Investor with its own vesting conditions', async function () {
+
+    it.only('Time Lock Registry should properly register 1 Team Member, 1 Advisor and 1 Investor with its own vesting conditions', async function () {
       // First of all there should be an allowance from BABL Token Owner into the Registry
       // Approve 310_000e18 tokens from owner to Time Lock Registry
       await bablToken.approve(timeLockRegistry.address, ethers.utils.parseEther('310000'));
@@ -379,41 +385,38 @@ describe('BABLToken contract', function () {
       expect(await bablToken.totalSupply()).to.equal(ownerBalance);
 
       // Check allowance has been done
-      const allowSigner1 = await bablToken.allowance(owner.address, timeLockRegistry.address);
-      expect(allowSigner1).to.equal(ethers.utils.parseEther('310000'));
+      const timeLockRegistryAllowance = await bablToken.allowance(owner.address, timeLockRegistry.address);
+      expect(timeLockRegistryAllowance).to.equal(ethers.utils.parseEther('310000'));
 
       // Register 1 Team Member with 26_000 BABL 4Y of Vesting
       // Vesting starting date 1 March 2021 9h PST Unix Time 1614618000
       await timeLockRegistry.register(signer1.address, ethers.utils.parseEther('26000'), true, 1614618000);
-      const userSigner1Registered = await timeLockRegistry.checkVesting(signer1.address);
-      const userSigner1RegisteredTeam = userSigner1Registered[0];
-      const userSigner1RegisteredVestingBegin = userSigner1Registered[1];
-      const userSigner1RegisteredVestingEnd = userSigner1Registered[2];
-      expect(userSigner1RegisteredTeam).to.equal(true);
-      expect(userSigner1RegisteredVestingBegin).to.equal(1614618000);
-      expect(userSigner1RegisteredVestingEnd).to.equal(1614618000 + ONE_DAY_IN_SECONDS * 365 * 4);
+
+      let [isTeam, vestingBegins, vestingEnds] = await timeLockRegistry.checkVesting(signer1.address);
+
+      expect(isTeam).to.equal(true);
+      expect(vestingBegins).to.equal(1614618000);
+      expect(vestingEnds).to.equal(1614618000 + ONE_DAY_IN_SECONDS * 365 * 4);
 
       // Register 1 Advisor with 2_000 BABL 1Y 4Y of Vesting
       // Vesting starting date 1 March 2021 9h PST Unix Time 1614618000
       await timeLockRegistry.register(signer2.address, ethers.utils.parseEther('2000'), true, 1614618000);
-      const userSigner2Registered = await timeLockRegistry.checkVesting(signer2.address);
-      const userSigner2RegisteredTeam = userSigner2Registered[0];
-      const userSigner2RegisteredVestingBegin = userSigner2Registered[1];
-      const userSigner2RegisteredVestingEnd = userSigner2Registered[2];
-      expect(userSigner2RegisteredTeam).to.equal(true);
-      expect(userSigner2RegisteredVestingBegin).to.equal(1614618000);
-      expect(userSigner2RegisteredVestingEnd).to.equal(1614618000 + ONE_DAY_IN_SECONDS * 365 * 4);
+
+      [isTeam, vestingBegins, vestingEnds] = await timeLockRegistry.checkVesting(signer2.address);
+
+      expect(isTeam).to.equal(true);
+      expect(vestingBegins).to.equal(1614618000);
+      expect(vestingEnds).to.equal(1614618000 + ONE_DAY_IN_SECONDS * 365 * 4);
 
       // Register 1 Investor with 10_000 BABL and 3Y of Vesting
       // Vesting starting date 1 March 2021 9h PST Unix Time 1614618000
       await timeLockRegistry.register(signer3.address, ethers.utils.parseEther('10000'), false, 1614618000);
-      const userSigner3Registered = await timeLockRegistry.checkVesting(signer3.address);
-      const userSigner3RegisteredTeam = userSigner3Registered[0];
-      const userSigner3RegisteredVestingBegin = userSigner3Registered[1];
-      const userSigner3RegisteredVestingEnd = userSigner3Registered[2];
-      expect(userSigner3RegisteredTeam).to.equal(false);
-      expect(userSigner3RegisteredVestingBegin).to.equal(1614618000);
-      expect(userSigner3RegisteredVestingEnd).to.equal(1614618000 + ONE_DAY_IN_SECONDS * 365 * 3);
+
+      [isTeam, vestingBegins, vestingEnds] = await timeLockRegistry.checkVesting(signer3.address);
+
+      expect(isTeam).to.equal(false);
+      expect(vestingBegins).to.equal(1614618000);
+      expect(vestingEnds).to.equal(1614618000 + ONE_DAY_IN_SECONDS * 365 * 3);
     });
 
     it('Should cancel all delivered tokens after a Team Member left', async function () {
@@ -440,6 +443,7 @@ describe('BABLToken contract', function () {
       expect(await bablToken.balanceOf(owner.address)).to.equal(ethers.utils.parseEther('1000000'));
       expect(await bablToken.balanceOf(timeLockRegistry.address)).to.equal(ethers.utils.parseEther('0'));
     });
+
     it('Should fail trying to cancel delivered tokens to an investor', async function () {
       // Register 1 Investor with 26_000 BABL 4Y of Vesting
       // Vesting starting date 1 March 2021 9h PST Unix Time 1614618000
@@ -459,6 +463,7 @@ describe('BABLToken contract', function () {
         'TimeLockedToken::cancelTokens:cannot cancel locked tokens to Investors',
       );
     });
+
     it('Should fail if a cancel on delivered tokens is from the owner', async function () {
       // Register 1 Team Member with 26_000 BABL 4Y of Vesting
       // Vesting starting date 1 March 2021 9h PST Unix Time 1614618000

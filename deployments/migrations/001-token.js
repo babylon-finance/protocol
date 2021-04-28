@@ -1,4 +1,4 @@
-const { ADDRESS_ZERO } = require('../lib/constants');
+const { ADDRESS_ZERO } = require('../../lib/constants');
 
 module.exports = async ({ getNamedAccounts, deployments }) => {
   const { deploy } = deployments;
