@@ -25,6 +25,8 @@ pragma solidity 0.7.6;
  */
 interface IGarden {
     /* ============ Functions ============ */
+    function makeGardenPublic() external;
+
     function setActive() external;
 
     function setDisabled() external;
@@ -145,8 +147,6 @@ interface IGarden {
     function getExpectedReserveWithdrawalQuantity(uint256 _gardenTokenQuantity) external view returns (uint256);
 
     function getLockedBalance(address _contributor) external view returns (uint256);
-
-    function isWithdrawalValid(address _reserveAsset, uint256 _gardenTokenQuantity) external view returns (bool);
 
     function reenableEthForStrategies() external;
 

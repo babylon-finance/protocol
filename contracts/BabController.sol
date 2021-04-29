@@ -131,6 +131,8 @@ contract BabController is OwnableUpgradeable, IBabController {
     bool public override bablTokensTransfersEnabled;
     // Enable and starts the BABL Mining program within Rewards Distributor contract
     bool public override bablMiningProgramEnabled;
+    // Enable public gardens
+    bool public override allowPublicGardens;
 
     uint256 public override protocolPerformanceFee; // 5% (0.01% = 1e14, 1% = 1e16) on profits
     uint256 public override protocolManagementFee; // 0.5% (0.01% = 1e14, 1% = 1e16)
@@ -153,6 +155,7 @@ contract BabController is OwnableUpgradeable, IBabController {
         gardenTokensTransfersEnabled = false;
         bablTokensTransfersEnabled = false;
         bablMiningProgramEnabled = false;
+        allowPublicGardens = false;
         minRiskyPairLiquidityEth = 1000 * 1e18;
 
         strategistProfitPercentage = 10e16;
@@ -257,6 +260,13 @@ contract BabController is OwnableUpgradeable, IBabController {
      */
     function enableBABLTokensTransfers() external override onlyOwner {
         bablTokensTransfersEnabled = true;
+    }
+
+    /**
+     * PRIVILEGED GOVERNANCE FUNCTION. Allows public gardens
+     */
+    function setAllowPublicGardens() external override onlyOwner {
+        allowPublicGardens = true;
     }
 
     /**  PRIVILEGED GOVERNANCE FUNCTION. Enable and starts the BABL Mining program by the Rewards Distributor
