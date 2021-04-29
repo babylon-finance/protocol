@@ -190,6 +190,13 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         uint256 power;
     }
 
+    struct GardenPowerByTimestamp {
+        uint256 principal;
+        uint256 timestamp;
+        uint256 timePointer;
+        uint256 power;
+    }
+
     /* ============ State Variables ============ */
 
     // Reserve Asset of the garden
@@ -226,6 +233,9 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
     uint256 public maxDepositLimit; // Limits the amount of deposits
 
     uint256 public override gardenInitializedAt; // Garden Initialized at timestamp
+    mapping(uint256 => GardenPowerByTimestamp) public gardenPowerByTimestamp;
+    uint256[] public gardenTimelist;
+    uint256 public pid;
 
     // Min contribution in the garden
     uint256 public override minContribution; //wei
@@ -1092,6 +1102,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         _setContributorTimestampParams();
 
         contributor.lastDepositAt = block.timestamp;
+        _updateGardenPower();
     }
 
     /**
@@ -1111,6 +1122,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
             _setContributorTimestampParams();
             contributor.withdrawnSince = contributor.withdrawnSince.add(_netflowQuantity);
         }
+        _updateGardenPower();
     }
 
     /**
@@ -1120,34 +1132,112 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
      * @param _to          End timestamp
      * @return uint256     Contributor power during that period
      */
+
     function _getContributorPower(
         address _contributor,
-        uint256, /* _from */
+        uint256 _from,
         uint256 _to
     ) private view returns (uint256) {
+        _require(_to > gardenInitializedAt && _to >= _from, Errors.GET_CONTRIBUTOR_POWER);
         Contributor storage contributor = contributors[_contributor];
-        // Return 0 if no deposit
-        if (contributor.initialDepositAt == 0) {
+        if (contributor.initialDepositAt == 0 || contributor.initialDepositAt > _to) {
             return 0;
-        }
-        // Find closest point to _from and goes until the last
-        uint256 contributorPower;
-        uint256 lastDepositAt = contributor.timeListPointer[contributor.timeListPointer.length.sub(1)];
-
-        if (lastDepositAt > _to) {
-            // We go to find the last deposit before the strategy ends
-            for (uint256 i = 0; i <= contributor.timeListPointer.length.sub(1); i++) {
-                if (contributor.timeListPointer[i] <= _to) {
-                    lastDepositAt = contributor.timeListPointer[i];
+        } else {
+            if (_from <= gardenInitializedAt) {
+                // Avoid division by zero in case of _from parameter is not passed
+                _from = gardenInitializedAt;
+            }
+            // Find closest point to _from and _to either contributor and garden checkpoints at their left
+            uint256 lastDepositAt = contributor.timeListPointer[contributor.timeListPointer.length.sub(1)]; // Initialized with lastDeposit
+            uint256 fromDepositAt = contributor.timeListPointer[0]; // Initialized with initialDeposit
+            uint256 gardenLastDepositAt = gardenPowerByTimestamp[gardenTimelist[pid.sub(1)]].timestamp; // Initialized to the last garden checkpoint
+            uint256 gardenFromDepositAt = gardenPowerByTimestamp[gardenTimelist[0]].timestamp; // Initialized to the first garden checkpoint
+            if (lastDepositAt > _to || fromDepositAt < _from) {
+                // We go to find the closest deposits of the contributor to _from and _to
+                for (uint256 i = 0; i <= contributor.timeListPointer.length.sub(1); i++) {
+                    if (contributor.timeListPointer[i] <= _to) {
+                        lastDepositAt = contributor.timeListPointer[i];
+                    }
+                    if (contributor.timeListPointer[i] <= _from) {
+                        fromDepositAt = contributor.timeListPointer[i];
+                    }
                 }
             }
-        }
-        _require(_to >= lastDepositAt && _to >= contributor.initialDepositAt, Errors.GET_CONTRIBUTOR_POWER);
-        TimestampContribution memory tsContribution = contributor.tsContributions[lastDepositAt];
-        contributorPower = tsContribution.power.add((_to.sub(lastDepositAt)).mul(tsContribution.principal));
+            // We go for the closest timestamp of garden to _to and _from
+            if (gardenLastDepositAt > _to || gardenFromDepositAt < _from) {
+                for (uint256 i = 0; i < pid; i++) {
+                    GardenPowerByTimestamp storage gardenPower = gardenPowerByTimestamp[gardenTimelist[i]];
+                    if (gardenPower.timestamp <= _to) {
+                        gardenLastDepositAt = gardenPower.timestamp;
+                    }
+                    if (gardenPower.timestamp <= _from) {
+                        gardenFromDepositAt = gardenPower.timestamp;
+                    }
+                }
+            }
 
-        contributorPower = contributorPower.add(tsContribution.principal).div(_to.sub(contributor.initialDepositAt));
-        return contributorPower.preciseDiv(totalSupply());
+            _require(
+                fromDepositAt <= lastDepositAt && gardenFromDepositAt <= gardenLastDepositAt,
+                Errors.GET_CONTRIBUTOR_POWER
+            );
+            uint256 contributorPower;
+            uint256 gardenPower;
+
+            // "FROM power calculations" PART
+            // Avoid underflows
+
+            if (_from < fromDepositAt) {
+                // Contributor still has no power but _from is later than the start of the garden
+                contributorPower = 0;
+            } else if (_from > fromDepositAt) {
+                contributorPower = contributor.tsContributions[fromDepositAt].power.add(
+                    (_from.sub(fromDepositAt)).mul(contributor.tsContributions[fromDepositAt].principal)
+                );
+            } else {
+                // _from == fromDepositAt
+                contributorPower = contributor.tsContributions[fromDepositAt].power;
+            }
+            gardenPower = gardenPowerByTimestamp[gardenFromDepositAt].power.add(
+                (_from.sub(gardenFromDepositAt)).mul(gardenPowerByTimestamp[gardenFromDepositAt].principal)
+            );
+
+            // "TO power calculations" PART
+            // We go for accurate power calculations avoiding overflows
+            _require(contributorPower <= gardenPower, Errors.GET_CONTRIBUTOR_POWER);
+            if (_from == _to) {
+                // Requested a specific checkpoint calculation (no slot)
+                return contributorPower.preciseDiv(gardenPower);
+                // Not a checkpoint anymore but a slot
+            } else if (_to < lastDepositAt) {
+                // contributor has not deposited yet
+                return 0;
+            } else if (_to == lastDepositAt && fromDepositAt == lastDepositAt) {
+                // no more contributor checkpoints in the slot
+                gardenPower = (
+                    gardenPowerByTimestamp[gardenLastDepositAt].power.add(
+                        (_to.sub(gardenLastDepositAt)).mul(gardenPowerByTimestamp[gardenLastDepositAt].principal)
+                    )
+                )
+                    .sub(gardenPower);
+                _require(contributorPower <= gardenPower, Errors.GET_CONTRIBUTOR_POWER);
+                return contributorPower.preciseDiv(gardenPower);
+            } else {
+                contributorPower = (
+                    contributor.tsContributions[lastDepositAt].power.add(
+                        (_to.sub(lastDepositAt)).mul(contributor.tsContributions[lastDepositAt].principal)
+                    )
+                )
+                    .sub(contributorPower);
+                gardenPower = (
+                    gardenPowerByTimestamp[gardenLastDepositAt].power.add(
+                        (_to.sub(gardenLastDepositAt)).mul(gardenPowerByTimestamp[gardenLastDepositAt].principal)
+                    )
+                )
+                    .sub(gardenPower);
+                _require(contributorPower <= gardenPower, Errors.GET_CONTRIBUTOR_POWER);
+                return contributorPower.preciseDiv(gardenPower);
+            }
+        }
     }
 
     /**
@@ -1178,5 +1268,29 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         contributor.timeListPointer.push(block.timestamp);
         contributor.pid++;
         contributor.lastUpdated = block.timestamp;
+    }
+
+    /**
+     * Function that keeps checkpoints of the garden power (deposits and withdrawals) per timestamp
+     */
+    function _updateGardenPower() private {
+        GardenPowerByTimestamp storage gardenTimestamp = gardenPowerByTimestamp[block.timestamp];
+        gardenTimestamp.principal = totalSupply();
+        gardenTimestamp.timestamp = block.timestamp;
+        gardenTimestamp.timePointer = pid;
+        if (pid == 0) {
+            // The very first deposit of all contributors in the mining program
+            gardenTimestamp.power = 0;
+        } else {
+            // Any other deposit different from the very first one (will have an antecesor)
+            gardenTimestamp.power = gardenPowerByTimestamp[gardenTimelist[pid.sub(1)]].power.add(
+                gardenTimestamp.timestamp.sub(gardenPowerByTimestamp[gardenTimelist[pid.sub(1)]].timestamp).mul(
+                    gardenPowerByTimestamp[gardenTimelist[pid.sub(1)]].principal
+                )
+            );
+        }
+
+        gardenTimelist.push(block.timestamp); // Register of deposit timestamps in the array for iteration
+        pid++;
     }
 }

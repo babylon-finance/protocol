@@ -807,13 +807,14 @@ describe('BABL Rewards Distributor', function () {
 
       await garden1.connect(signer1).claimReturns([long1.address, long2.address]);
       expect((await bablToken.balanceOf(signer1.address)).toString()).to.be.equal(signer1BABL);
-      expect(signer1Profit.toString()).to.be.closeTo('9936735722763861', ethers.utils.parseEther('0.0005'));
+      expect(signer1Profit.toString()).to.be.closeTo('9936735722763861', ethers.utils.parseEther('0.00005'));
       const [signer1Profit2, signer1BABL2] = await rewardsDistributor.getRewards(garden1.address, signer1.address, [
         long1.address,
         long2.address,
       ]);
       expect(signer1Profit2.toString()).to.be.equal('0');
       expect(signer1BABL2.toString()).to.be.equal('0');
+      increaseTime(ONE_DAY_IN_SECONDS * 10);
 
       await finalizeStrategyAfterQuarter(long2);
       const [signer1Profit3, signer1BABL3] = await rewardsDistributor.getRewards(garden1.address, signer1.address, [
@@ -823,7 +824,7 @@ describe('BABL Rewards Distributor', function () {
 
       await garden1.connect(signer1).claimReturns([long1.address, long2.address]);
       expect(signer1Profit3.toString()).to.be.equal('0'); // Negative profit means no profit at all
-      expect(signer1BABL3.toString()).to.be.closeTo('34642797423847758166597', ethers.utils.parseEther('0.09'));
+      expect(signer1BABL3.toString()).to.be.closeTo('36835432187269733938942', ethers.utils.parseEther('0.1'));
     });
 
     it('should only provide new additional BABL and profits between claims (claiming results of 2 strategies both with profit)', async function () {
@@ -879,7 +880,7 @@ describe('BABL Rewards Distributor', function () {
       // PROFITS ARE NOW A 20% OF THE TOTAL, AS WE NOW HAVE COMPOUNDED (RE-STAKED) THE REST (80%) FOR LPs
       // expect(signer1Profit).to.be.closeTo('99343939480695811', ethers.utils.parseEther('0.05'));
       expect(signer1Profit).to.be.closeTo('19637773343746505', ethers.utils.parseEther('0.005'));
-      expect(signer1BABL).to.be.closeTo('76450670569849938480019', ethers.utils.parseEther('0.5'));
+      expect(signer1BABL).to.be.closeTo('76450788244508364203443', ethers.utils.parseEther('0.1'));
     });
 
     it('should claim and update balances of Signer1 either Garden tokens or BABL rewards as contributor of 5 strategies (4 with positive profits) of 2 different Gardens with different timings along 3 Years', async function () {
