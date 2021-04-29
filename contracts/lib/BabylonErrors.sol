@@ -220,4 +220,6 @@ library Errors {
     uint256 internal constant GET_CONTRIBUTOR_POWER = 65;
     // Not enough ETH set aside
     uint256 internal constant NOT_ENOUGH_ETH = 66;
+    // Garden is already public
+    uint256 internal constant GARDEN_ALREADY_PUBLIC = 67;
 }

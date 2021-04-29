@@ -532,6 +532,14 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
     /* ============ External Functions ============ */
 
     /**
+     * Makes a previously private garden public
+     */
+    function makeGardenPublic() external override onlyCreator {
+        _require(guestListEnabled && IBabController(controller).allowPublicGardens(), Errors.GARDEN_ALREADY_PUBLIC);
+        guestListEnabled = false;
+    }
+
+    /**
      * PRIVILEGED Manager, protocol FUNCTION. When a Garden is active, deposits are enabled.
      */
     function setActive() external override onlyProtocol {
@@ -742,35 +750,6 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         (, uint256 netReserveFlows) = _getFees(preFeeReserveQuantity, false);
 
         return netReserveFlows;
-    }
-
-    /**
-     * Checks if withdrawal is valid
-     *
-     * @param _reserveAsset                 Address of the reserve asset
-     * @param _gardenTokenQuantity             Quantity of garden tokens to withdrawal
-     *
-     * @return  bool                        Returns true if withdrawal is valid
-     */
-    function isWithdrawalValid(address _reserveAsset, uint256 _gardenTokenQuantity)
-        external
-        view
-        override
-        returns (bool)
-    {
-        if (
-            _gardenTokenQuantity == 0 ||
-            !IBabController(controller).isValidReserveAsset(_reserveAsset) ||
-            totalSupply() < minGardenTokenSupply.add(_gardenTokenQuantity)
-        ) {
-            return false;
-        } else {
-            uint256 totalWithdrawalValue = _getWithdrawalReserveQuantity(reserveAsset, _gardenTokenQuantity);
-
-            (, uint256 expectedWithdrawalQuantity) = _getFees(totalWithdrawalValue, false);
-
-            return principal >= expectedWithdrawalQuantity;
-        }
     }
 
     /**
