@@ -73,6 +73,8 @@ interface IBabController {
 
     function enableBABLTokensTransfers() external;
 
+    function disableBABLTokensTransfers() external;
+
     function enableBABLMiningProgram() external;
 
     function setAllowPublicGardens() external;

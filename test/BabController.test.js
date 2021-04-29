@@ -9,9 +9,10 @@ describe('BabController', function () {
   let garden1;
   let garden2;
   let garden3;
+  let owner;
 
   beforeEach(async () => {
-    ({ babController, treasury, garden1, garden2, garden3 } = await setupTests()());
+    ({ babController, owner, treasury, garden1, garden2, garden3 } = await setupTests()());
   });
 
   describe('Deployment', function () {
@@ -40,15 +41,15 @@ describe('BabController', function () {
     it('cannot disable an inactive garden', async function () {
       const initialCommunities = await babController.getGardens();
 
-      await expect(babController.disableGarden(initialCommunities[0])).to.not.be.reverted;
-      await expect(babController.disableGarden(initialCommunities[0])).to.be.reverted;
+      await expect(babController.connect(owner).disableGarden(initialCommunities[0])).to.not.be.reverted;
+      await expect(babController.connect(owner).disableGarden(initialCommunities[0])).to.be.reverted;
     });
 
     it('can remove a disabled garden', async function () {
       const initialCommunities = await babController.getGardens();
       expect(initialCommunities.length).to.equal(4);
-      await expect(babController.disableGarden(initialCommunities[0])).to.not.be.reverted;
-      await babController.removeGarden(initialCommunities[0]);
+      await expect(babController.connect(owner).disableGarden(initialCommunities[0])).to.not.be.reverted;
+      await babController.connect(owner).removeGarden(initialCommunities[0]);
 
       const updatedCommunities = await babController.getGardens();
       expect(updatedCommunities.length).to.equal(3);
@@ -57,29 +58,29 @@ describe('BabController', function () {
     it('can enable and disable a garden', async function () {
       const initialCommunities = await babController.getGardens();
 
-      await expect(babController.disableGarden(initialCommunities[0])).to.not.be.reverted;
-      await expect(babController.enableGarden(initialCommunities[0])).to.not.be.reverted;
+      await expect(babController.connect(owner).disableGarden(initialCommunities[0])).to.not.be.reverted;
+      await expect(babController.connect(owner).enableGarden(initialCommunities[0])).to.not.be.reverted;
     });
   });
 
   describe('Keeper List', function () {
     it('can add new keepers', async function () {
-      await babController.addKeeper(addresses.users.hardhat3);
+      await babController.connect(owner).addKeeper(addresses.users.hardhat3);
 
       const valid = await babController.isValidKeeper(addresses.users.hardhat3);
       expect(valid).to.equal(true);
     });
 
     it('can remove keepers', async function () {
-      await babController.addKeeper(addresses.users.hardhat3);
-      await babController.removeKeeper(addresses.users.hardhat3);
+      await babController.connect(owner).addKeeper(addresses.users.hardhat3);
+      await babController.connect(owner).removeKeeper(addresses.users.hardhat3);
 
       const valid = await babController.isValidKeeper(addresses.users.hardhat3);
       expect(valid).to.equal(false);
     });
 
     it('can add keepers in bulk', async function () {
-      await babController.addKeepers([addresses.users.hardhat3, addresses.users.hardhat2]);
+      await babController.connect(owner).addKeepers([addresses.users.hardhat3, addresses.users.hardhat2]);
 
       expect(await babController.isValidKeeper(addresses.users.hardhat3)).to.equal(true);
       expect(await babController.isValidKeeper(addresses.users.hardhat2)).to.equal(true);
@@ -89,17 +90,17 @@ describe('BabController', function () {
   describe('Protocol operations', function () {
     it('can add a reserve asset', async function () {
       const initialAssets = await babController.getReserveAssets();
-      await babController.addReserveAsset(addresses.tokens.DAI);
+      await babController.connect(owner).addReserveAsset(addresses.tokens.DAI);
 
       const updatedAssets = await babController.getReserveAssets();
       expect(updatedAssets.length > initialAssets.length).to.equal(true);
     });
 
     it('can remove a reserve asset', async function () {
-      await babController.addReserveAsset(addresses.tokens.DAI);
+      await babController.connect(owner).addReserveAsset(addresses.tokens.DAI);
       const initialAssets = await babController.getReserveAssets();
 
-      await babController.removeReserveAsset(initialAssets[0]);
+      await babController.connect(owner).removeReserveAsset(initialAssets[0]);
 
       const updatedAssets = await babController.getReserveAssets();
       expect(updatedAssets.length < initialAssets.length).to.equal(true);
@@ -107,21 +108,21 @@ describe('BabController', function () {
 
     it('can edit a price oracle', async function () {
       // Note: This is just the wETH address and is testing that the oracle address can be changed
-      await expect(babController.editPriceOracle(addresses.tokens.WETH)).to.not.be.reverted;
-      const oracle2 = await babController.priceOracle();
+      await expect(babController.connect(owner).editPriceOracle(addresses.tokens.WETH)).to.not.be.reverted;
+      const oracle2 = await babController.connect(owner).priceOracle();
       expect(oracle2).to.equal(addresses.tokens.WETH);
     });
 
     it('can edit a garden valuer', async function () {
       // Note: This is just the wETH address and is testing that the gardenValuer address can be changed
-      await expect(babController.editGardenValuer(addresses.tokens.WETH)).to.not.be.reverted;
+      await expect(babController.connect(owner).editGardenValuer(addresses.tokens.WETH)).to.not.be.reverted;
 
       const valuer2 = await babController.gardenValuer();
       expect(valuer2).to.equal(addresses.tokens.WETH);
     });
 
     it('can edit the protocol fee recipient', async function () {
-      await babController.editTreasury(addresses.users.hardhat3);
+      await babController.connect(owner).editTreasury(addresses.users.hardhat3);
 
       const recipient = await babController.treasury();
       // TODO(tylerm): Use checksumed addresses

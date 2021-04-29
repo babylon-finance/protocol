@@ -153,7 +153,7 @@ contract BabController is OwnableUpgradeable, IBabController {
         protocolDepositGardenTokenFee = 0; // 0% (0.01% = 1e14, 1% = 1e16) on profits
         protocolWithdrawalGardenTokenFee = 0; // 0% (0.01% = 1e14, 1% = 1e16) on profits
         gardenTokensTransfersEnabled = false;
-        bablTokensTransfersEnabled = false;
+        bablTokensTransfersEnabled = true;
         bablMiningProgramEnabled = false;
         allowPublicGardens = false;
         minRiskyPairLiquidityEth = 1000 * 1e18;
@@ -252,6 +252,13 @@ contract BabController is OwnableUpgradeable, IBabController {
     function enableGardenTokensTransfers() external override onlyOwner {
         require(block.timestamp > 1641024000000, 'Transfers cannot be enabled yet');
         gardenTokensTransfersEnabled = true;
+    }
+
+    /**
+     * PRIVILEGED GOVERNANCE FUNCTION. Disables transfers of ERC20 BABL Tokens
+     */
+    function disableBABLTokensTransfers() external override onlyOwner {
+        bablTokensTransfersEnabled = false;
     }
 
     /**
