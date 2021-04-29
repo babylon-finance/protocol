@@ -131,7 +131,7 @@ describe('BABL Rewards Distributor', function () {
     it('should get 0 BABL rewards if the Mining Program starts after the creation of an strategy', async function () {
       const [long] = await createStrategies([{ garden: garden1 }]);
       // Mining program has to be enabled before the strategy is created
-      await babController.enableBABLMiningProgram();
+      await babController.connect(owner).enableBABLMiningProgram();
       await executeStrategy(long, ONE_ETH);
 
       await finalizeStrategyAfter30Days(long);
@@ -143,7 +143,7 @@ describe('BABL Rewards Distributor', function () {
 
       await executeStrategy(long, ONE_ETH);
       // Mining program has to be enabled before the strategy is created
-      await babController.enableBABLMiningProgram();
+      await babController.connect(owner).enableBABLMiningProgram();
       await finalizeStrategyAfter30Days(long);
 
       expect((await long.strategyRewards()).toString()).to.be.equal('0');
@@ -152,7 +152,7 @@ describe('BABL Rewards Distributor', function () {
       const [long] = await createStrategies([{ garden: garden1 }]);
 
       // Mining program has to be enabled before the strategy starts its execution
-      await babController.enableBABLMiningProgram();
+      await babController.connect(owner).enableBABLMiningProgram();
 
       await executeStrategy(long, ONE_ETH);
 
@@ -163,7 +163,7 @@ describe('BABL Rewards Distributor', function () {
 
     it('should calculate correct BABL in case of 1 strategy with negative profit and total duration of 1 quarter', async function () {
       // Mining program has to be enabled before the strategy starts its execution
-      await babController.enableBABLMiningProgram();
+      await babController.connect(owner).enableBABLMiningProgram();
 
       const [long1] = await createStrategies([{ garden: garden1 }]);
 
@@ -194,7 +194,7 @@ describe('BABL Rewards Distributor', function () {
 
     it('should calculate correct BABL in case of 1 strategy with positive profit and with total duration of 1 quarter', async function () {
       // Mining program has to be enabled before the strategy starts its execution
-      await babController.enableBABLMiningProgram();
+      await babController.connect(owner).enableBABLMiningProgram();
 
       const [long1] = await createStrategies([{ garden: garden1 }]);
 
@@ -220,7 +220,7 @@ describe('BABL Rewards Distributor', function () {
 
     it('should calculate correct BABL in case of 2 strategies with total duration of 1 quarter', async function () {
       // Mining program has to be enabled before the strategy starts its execution
-      await babController.enableBABLMiningProgram();
+      await babController.connect(owner).enableBABLMiningProgram();
       const [long1, long2] = await createStrategies([{ garden: garden1 }, { garden: garden1 }]);
 
       await executeStrategy(long1, ONE_ETH);
@@ -258,7 +258,7 @@ describe('BABL Rewards Distributor', function () {
 
     it('should calculate correct BABL in case of 3 strategies with total duration of 1 quarter', async function () {
       // Mining program has to be enabled before the strategy starts its execution
-      await babController.enableBABLMiningProgram();
+      await babController.connect(owner).enableBABLMiningProgram();
 
       const [long1, long2, long3] = await createStrategies([
         { garden: garden1 },
@@ -306,7 +306,7 @@ describe('BABL Rewards Distributor', function () {
 
     it('should calculate correct BABL in case of 5 strategies of 2 different Gardens with total duration of less than 1 quarter', async function () {
       // Mining program has to be enabled before the strategy starts its execution
-      await babController.enableBABLMiningProgram();
+      await babController.connect(owner).enableBABLMiningProgram();
 
       const [long1, long2, long3, long4, long5] = await createStrategies([
         { garden: garden1 },
@@ -370,7 +370,7 @@ describe('BABL Rewards Distributor', function () {
 
     it('should calculate correct BABL in case of 1 strategy with total duration of 2 quarters', async function () {
       // Mining program has to be enabled before the strategy starts its execution
-      await babController.enableBABLMiningProgram();
+      await babController.connect(owner).enableBABLMiningProgram();
 
       const [long1] = await createStrategies([{ garden: garden1 }]);
 
@@ -392,7 +392,7 @@ describe('BABL Rewards Distributor', function () {
 
     it('should calculate correct BABL in the future (10 years) in case of 1 strategy with total duration of 2 quarters', async function () {
       // Mining program has to be enabled before the strategy starts its execution
-      await babController.enableBABLMiningProgram();
+      await babController.connect(owner).enableBABLMiningProgram();
 
       // We go to the future 10 years
       increaseTime(ONE_DAY_IN_SECONDS * 3650);
@@ -417,7 +417,7 @@ describe('BABL Rewards Distributor', function () {
 
     it('should calculate correct BABL rewards in case of 1 strategy with total duration of 3 quarters', async function () {
       // Mining program has to be enabled before the strategy starts its execution
-      await babController.enableBABLMiningProgram();
+      await babController.connect(owner).enableBABLMiningProgram();
 
       const [long1] = await createStrategies([{ garden: garden1 }]);
 
@@ -439,7 +439,7 @@ describe('BABL Rewards Distributor', function () {
 
     it('should calculate correct BABL in case of 5 strategies of 2 different Gardens with different timings along 3 quarters', async function () {
       // Mining program has to be enabled before the strategy starts its execution
-      await babController.enableBABLMiningProgram();
+      await babController.connect(owner).enableBABLMiningProgram();
 
       const [long1, long2, long3, long4, long5] = await createStrategies([
         { garden: garden1 },
@@ -502,7 +502,7 @@ describe('BABL Rewards Distributor', function () {
 
     it('should calculate correct BABL (in 10 Years from now) in case of 5 strategies of 2 different Gardens with different timings along 3 quarters', async function () {
       // Mining program has to be enabled before the strategy starts its execution
-      await babController.enableBABLMiningProgram();
+      await babController.connect(owner).enableBABLMiningProgram();
       const [long1, long2, long3, long4, long5] = await createStrategies([
         { garden: garden1 },
         { garden: garden1 },
@@ -566,7 +566,7 @@ describe('BABL Rewards Distributor', function () {
 
     it('should calculate correct BABL in case of 5 strategies of 2 different Gardens with different timings along 3 Years', async function () {
       // Mining program has to be enabled before the strategy starts its execution
-      await babController.enableBABLMiningProgram();
+      await babController.connect(owner).enableBABLMiningProgram();
 
       const [long1, long2, long3, long4, long5] = await createStrategies([
         { garden: garden1 },
@@ -621,7 +621,7 @@ describe('BABL Rewards Distributor', function () {
 
     it('should calculate correct BABL in case of 5 (4 with positive profits) strategies of 2 different Gardens with different timings along 3 Years', async function () {
       // Mining program has to be enabled before the strategy starts its execution
-      await babController.enableBABLMiningProgram();
+      await babController.connect(owner).enableBABLMiningProgram();
 
       const [long1, long2, long3, long4, long5] = await createStrategies([
         { garden: garden1 },
@@ -687,7 +687,7 @@ describe('BABL Rewards Distributor', function () {
   describe('Claiming Reserve Asset Rewards and BABL Rewards', function () {
     it('should claim and update balances of Signer1 either Garden tokens or BABL rewards as contributor of 2 strategies (1 with positive profits and other without them) within a quarter', async function () {
       // Mining program has to be enabled before the strategy starts its execution
-      await babController.enableBABLMiningProgram();
+      await babController.connect(owner).enableBABLMiningProgram();
 
       const [long1, long2] = await createStrategies([{ garden: garden1 }, { garden: garden1 }]);
 
@@ -698,9 +698,6 @@ describe('BABL Rewards Distributor', function () {
       await finalizeStrategyAfterQuarter(long1);
 
       await finalizeStrategyAfterQuarter(long2);
-
-      // Transfer 500_000e18 tokens from owner to rewardsDistributor for BABL Mining Program
-      await bablToken.connect(owner).transfer(rewardsDistributor.address, ONE_ETH.mul(500000));
 
       // We claim our tokens and check that they are received properly
       await garden1.connect(signer1).claimReturns([long1.address, long2.address]);
@@ -711,7 +708,7 @@ describe('BABL Rewards Distributor', function () {
 
     it('should not allow a race condition of two consecutive claims for the same rewards & profit of the same strategies', async function () {
       // Mining program has to be enabled before the strategy starts its execution
-      await babController.enableBABLMiningProgram();
+      await babController.connect(owner).enableBABLMiningProgram();
 
       const [long1, long2] = await createStrategies([{ garden: garden1 }, { garden: garden1 }]);
 
@@ -723,8 +720,6 @@ describe('BABL Rewards Distributor', function () {
 
       await finalizeStrategyAfterQuarter(long2);
 
-      // Transfer 500_000e18 tokens from owner to rewardsDistributor for BABL Mining Program
-      await bablToken.connect(owner).transfer(rewardsDistributor.address, ONE_ETH.mul(500000));
       // Check pending rewards for users
       const [, signer1BABL] = await rewardsDistributor.getRewards(garden1.address, signer1.address, [
         long1.address,
@@ -786,7 +781,7 @@ describe('BABL Rewards Distributor', function () {
 
     it('should only provide new additional BABL and profits between claims (claiming results of 2 strategies only 1 with profit)', async function () {
       // Mining program has to be enabled before the strategy starts its execution
-      await babController.enableBABLMiningProgram();
+      await babController.connect(owner).enableBABLMiningProgram();
 
       const [long1, long2] = await createStrategies([{ garden: garden1 }, { garden: garden1 }]);
 
@@ -796,8 +791,6 @@ describe('BABL Rewards Distributor', function () {
       await injectFakeProfits(long1, ONE_ETH.mul(200));
       await finalizeStrategyAfterQuarter(long1);
 
-      // Transfer 500_000e18 tokens from owner to rewardsDistributor for BABL Mining Program
-      await bablToken.connect(owner).transfer(rewardsDistributor.address, ONE_ETH.mul(500000));
       expect((await bablToken.balanceOf(signer1.address)).toString()).to.be.equal('0');
 
       const [signer1Profit, signer1BABL] = await rewardsDistributor.getRewards(garden1.address, signer1.address, [
@@ -828,7 +821,7 @@ describe('BABL Rewards Distributor', function () {
 
     it('should only provide new additional BABL and profits between claims (claiming results of 2 strategies both with profit)', async function () {
       // Mining program has to be enabled before the strategy starts its execution
-      await babController.enableBABLMiningProgram();
+      await babController.connect(owner).enableBABLMiningProgram();
 
       const [long1, long2] = await createStrategies([{ garden: garden1 }, { garden: garden1 }]);
 
@@ -837,8 +830,7 @@ describe('BABL Rewards Distributor', function () {
 
       await injectFakeProfits(long1, ONE_ETH.mul(200));
       await finalizeStrategyAfterQuarter(long1);
-      // Transfer 500_000e18 tokens from owner to rewardsDistributor for BABL Mining Program
-      await bablToken.connect(owner).transfer(rewardsDistributor.address, ONE_ETH.mul(500000));
+
       const [signer1Profit, signer1BABL] = await rewardsDistributor.getRewards(garden1.address, signer1.address, [
         long1.address,
         long2.address,
@@ -860,7 +852,7 @@ describe('BABL Rewards Distributor', function () {
 
     it('should check potential claim values of Profit and BABL Rewards', async function () {
       // Mining program has to be enabled before the strategy starts its execution
-      await babController.enableBABLMiningProgram();
+      await babController.connect(owner).enableBABLMiningProgram();
 
       const [long1, long2] = await createStrategies([{ garden: garden1 }, { garden: garden1 }]);
 
@@ -884,9 +876,7 @@ describe('BABL Rewards Distributor', function () {
 
     it('should claim and update balances of Signer1 either Garden tokens or BABL rewards as contributor of 5 strategies (4 with positive profits) of 2 different Gardens with different timings along 3 Years', async function () {
       // Mining program has to be enabled before the strategy starts its execution
-      await babController.enableBABLMiningProgram();
-      // Transfer 500_000e18 tokens from owner to rewardsDistributor for BABL Mining Program
-      await bablToken.connect(owner).transfer(rewardsDistributor.address, ONE_ETH.mul(500000));
+      await babController.connect(owner).enableBABLMiningProgram();
 
       const [long1, long2, long3, long4, long5] = await createStrategies([
         { garden: garden1 },
@@ -959,9 +949,7 @@ describe('BABL Rewards Distributor', function () {
     });
     it('A user cannot claim strategies from 2 different gardens at the same time avoiding malicious bypassing of the claimedAt control (e.g. using claimedAtfrom different gardens over the same strategies)', async function () {
       // Mining program has to be enabled before the strategy starts its execution
-      await babController.enableBABLMiningProgram();
-      // Transfer 500_000e18 tokens from owner to rewardsDistributor for BABL Mining Program
-      await bablToken.connect(owner).transfer(rewardsDistributor.address, ONE_ETH.mul(500000));
+      await babController.connect(owner).enableBABLMiningProgram();
 
       const [long1, long2, long3, long4, long5] = await createStrategies([
         { garden: garden1 },
@@ -1002,9 +990,7 @@ describe('BABL Rewards Distributor', function () {
     });
     it('A user cannot get rewards from strategies of 2 different gardens at the same time avoiding malicious bypassing of the claimedAt control (e.g. using claimedAtfrom different gardens over the same strategies)', async function () {
       // Mining program has to be enabled before the strategy starts its execution
-      await babController.enableBABLMiningProgram();
-      // Transfer 500_000e18 tokens from owner to rewardsDistributor for BABL Mining Program
-      await bablToken.connect(owner).transfer(rewardsDistributor.address, ONE_ETH.mul(500000));
+      await babController.connect(owner).enableBABLMiningProgram();
 
       const [long1, long2, long3, long4, long5] = await createStrategies([
         { garden: garden1 },

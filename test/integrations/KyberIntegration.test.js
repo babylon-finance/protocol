@@ -8,6 +8,7 @@ describe('KyberTradeIntegration', function () {
   let babController;
   let kyberTradeIntegration;
   let garden1;
+  let keeper;
   let signer1;
   let signer2;
   let signer3;
@@ -15,7 +16,16 @@ describe('KyberTradeIntegration', function () {
   let strategyContract;
 
   beforeEach(async () => {
-    ({ babController, garden1, strategy11, kyberTradeIntegration, signer1, signer2, signer3 } = await setupTests()());
+    ({
+      babController,
+      garden1,
+      strategy11,
+      kyberTradeIntegration,
+      keeper,
+      signer1,
+      signer2,
+      signer3,
+    } = await setupTests()());
     strategyContract = await ethers.getContractAt('LongStrategy', strategy11);
   });
 
@@ -55,7 +65,7 @@ describe('KyberTradeIntegration', function () {
       const user3GardenBalance = await garden1.balanceOf(signer3.getAddress());
 
       await strategyContract
-        .connect(signer1)
+        .connect(keeper)
         .resolveVoting(
           [signer2.getAddress(), signer3.getAddress()],
           [user2GardenBalance, user3GardenBalance],

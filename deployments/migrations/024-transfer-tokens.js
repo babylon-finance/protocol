@@ -2,10 +2,7 @@ const { ONE_ETH } = require('../../lib/constants');
 
 let MULTISIG = process.env.MULTISIG || '';
 
-module.exports = async ({ getNamedAccounts, deployments, ethers, getSigner, getChainId }) => {
-  async function getContract(contractName, deploymentName) {
-    return await ethers.getContractAt(contractName, (await deployments.get(deploymentName || contractName)).address);
-  }
+module.exports = async ({ getNamedAccounts, deployments, ethers, getSigner, getChainId, getContract }) => {
   const signers = await ethers.getSigners();
   const chainId = await getChainId();
 
@@ -20,18 +17,21 @@ module.exports = async ({ getNamedAccounts, deployments, ethers, getSigner, getC
   const { deployer } = await getNamedAccounts();
   const deployerSigner = await getSigner(deployer);
 
+  const babController = await getContract('BabController', 'BabControllerProxy');
   const bablToken = await getContract('BABLToken');
   const rewardsDistributor = await getContract('RewardsDistributor');
   const timeLockRegistry = await getContract('TimeLockRegistry');
   const treasury = await getContract('Treasury');
 
-  // Send 500k BABL to RewardsDistributor
   console.log('Send 500k BABL tokens to RewardsDistributor');
   await bablToken.connect(deployerSigner).transfer(rewardsDistributor.address, ONE_ETH.mul(500000));
 
-  // Locally singer2 is the MULTISIG on mainnet approval has to be done after deployment
+  console.log('Send 293.2k BABL tokens to MULTISIG');
+  await bablToken.connect(deployerSigner).transfer(signers[2].address, ONE_ETH.mul('293200'));
+
+  // Locally singer2 is the MULTISIG; on mainnet approval has to be done after deployment
   if (chainId === '31337') {
-    console.log('Approve 293.2K BABL to TimeLockRegistry for investors and team');
+    console.log('Approve 293.2k BABL to TimeLockRegistry for investors and team');
     await bablToken.connect(signers[2]).approve(timeLockRegistry.address, ONE_ETH.mul('293200'));
   } else {
     console.log('You have to approve 293200 tokens for the TimeLockReigstry from the MULTISIG.');
@@ -45,8 +45,9 @@ module.exports = async ({ getNamedAccounts, deployments, ethers, getSigner, getC
   console.log('Send 190.8k to the Treasury');
   await bablToken.connect(deployerSigner).transfer(treasury.address, ONE_ETH.mul(190800));
 
-  // Disable BABL transfers
+  console.log('Disable BABL transfers');
+  await babController.disableBABLTokensTransfers();
 };
 
-module.exports.tags = ['transfer'];
+module.exports.tags = ['Transfer'];
 module.exports.dependencies = ['Init'];

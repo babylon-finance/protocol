@@ -36,6 +36,7 @@ module.exports = async ({ getNamedAccounts, deployments, ethers, getSigner, getC
   await controllerContract.connect(owner).addKeepers([KEEPER]);
 
   // Sets the price oracle and gardenvaluer address
+
   await controllerContract.connect(owner).editPriceOracle(priceOracle.address);
   await controllerContract.connect(owner).editTreasury(treasury.address);
   await controllerContract.connect(owner).editGardenValuer(gardenValuer.address);

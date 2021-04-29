@@ -22,6 +22,7 @@ describe('Strategy', function () {
   let strategyDataset;
   let strategyCandidate;
   let owner;
+  let keeper;
   let signer1;
   let signer2;
   let signer3;
@@ -41,6 +42,7 @@ describe('Strategy', function () {
   beforeEach(async () => {
     ({
       owner,
+      keeper,
       signer1,
       garden1,
       garden2,
@@ -135,7 +137,7 @@ describe('Strategy', function () {
       const signer2Balance = await garden2.balanceOf(signer2.getAddress());
 
       await strategyCandidate
-        .connect(signer1)
+        .connect(keeper)
         .resolveVoting(
           [signer1.getAddress(), signer2.getAddress()],
           [signer1Balance, signer2Balance],
@@ -166,7 +168,7 @@ describe('Strategy', function () {
       expect(exitedAt).to.equal(ethers.BigNumber.from(0));
 
       // Keeper gets paid
-      expect(await wethToken.balanceOf(await signer1.getAddress())).to.equal(42);
+      expect(await wethToken.balanceOf(await keeper.getAddress())).to.equal(42);
     });
 
     it("can't vote if voting window is closed", async function () {
@@ -177,7 +179,7 @@ describe('Strategy', function () {
 
       await expect(
         strategyCandidate
-          .connect(signer1)
+          .connect(keeper)
           .resolveVoting(
             [signer1.getAddress(), signer2.getAddress()],
             [signer1Balance, signer2Balance],
@@ -196,7 +198,7 @@ describe('Strategy', function () {
       const signer2Balance = await garden2.balanceOf(signer2.getAddress());
 
       await strategyCandidate
-        .connect(signer1)
+        .connect(keeper)
         .resolveVoting(
           [signer1.getAddress(), signer2.getAddress()],
           [signer1Balance, signer2Balance],
@@ -210,7 +212,7 @@ describe('Strategy', function () {
 
       await expect(
         strategyCandidate
-          .connect(signer1)
+          .connect(keeper)
           .resolveVoting(
             [signer1.getAddress(), signer2.getAddress()],
             [signer1Balance, signer2Balance],
@@ -247,7 +249,7 @@ describe('Strategy', function () {
       expect(exitedAt).to.equal(ethers.BigNumber.from(0));
 
       // Keeper gets paid
-      expect(await wethToken.balanceOf(await signer1.getAddress())).to.equal(42);
+      expect(await wethToken.balanceOf(await keeper.getAddress())).to.equal(42);
     });
 
     it('should not be able to unwind an active strategy with not enough capital', async function () {
@@ -275,7 +277,9 @@ describe('Strategy', function () {
 
       expect(await wethToken.balanceOf(garden1.address)).to.be.lt(ethers.utils.parseEther('1'));
       expect(await strategyContract.capitalAllocated()).to.equal(ethers.utils.parseEther('2'));
-      await strategyContract.unwindStrategy(ethers.utils.parseEther('1'));
+
+      await strategyContract.connect(owner).unwindStrategy(ethers.utils.parseEther('1'));
+
       expect(await strategyContract.capitalAllocated()).to.equal(ethers.utils.parseEther('1'));
       expect(await wethToken.balanceOf(garden1.address)).to.be.gt(ethers.utils.parseEther('1'));
     });
@@ -329,10 +333,10 @@ describe('Strategy', function () {
         garden1,
       );
 
-      ethers.provider.send('evm_increaseTime', [ONE_DAY_IN_SECONDS * 2]);
+      increaseTime(ONE_DAY_IN_SECONDS * 2);
 
       await expect(
-        strategyContract.connect(signer1).executeStrategy(ONE_ETH, ONE_ETH.mul(100), {
+        strategyContract.connect(keeper).executeStrategy(ONE_ETH, ONE_ETH.mul(100), {
           gasPrice: 0,
         }),
       ).to.be.revertedWith(/revert BAB#019/i);
@@ -450,7 +454,7 @@ describe('Strategy', function () {
       expect(exitedAt).to.not.equal(0);
 
       // Keeper gets paid
-      expect(await wethToken.balanceOf(await signer1.getAddress())).to.equal(42);
+      expect(await wethToken.balanceOf(await keeper.getAddress())).to.equal(42);
 
       const capitalAllocated = await strategyContract.capitalAllocated();
       const capitalReturned = await strategyContract.capitalReturned();
