@@ -101,6 +101,7 @@ contract BabControllerV2Mock is OwnableUpgradeable {
     bool public bablTokensTransfersEnabled;
     // Enable and starts the BABL Mining program within Rewards Distributor contract
     bool public bablMiningProgramEnabled;
+    bool public allowPublicGardens;
 
     uint256 public protocolPerformanceFee; // 5% (0.01% = 1e14, 1% = 1e16) on profits
     uint256 public protocolManagementFee; // 0.5% (0.01% = 1e14, 1% = 1e16)
