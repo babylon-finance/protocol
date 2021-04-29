@@ -58,15 +58,19 @@ contract LendStrategy is Strategy {
      * @return _nav           NAV of the strategy
      */
     function getNAV() public view override returns (uint256) {
+        address reserveAsset = garden.reserveAsset();
+        uint256 NAV = IERC20(reserveAsset).balanceOf(address(this));
+
         if (!isStrategyActive()) {
-            return 0;
+            return NAV;
         }
+
         uint256 numTokensToRedeem =
             IERC20(ILendIntegration(integration).getInvestmentToken(assetToken)).balanceOf(address(this));
         uint256 assetTokensAmount =
             ILendIntegration(integration).getExchangeRatePerToken(assetToken).mul(numTokensToRedeem);
         uint256 price = _getPrice(garden.reserveAsset(), assetToken);
-        uint256 NAV = assetTokensAmount.preciseDiv(price);
+        NAV = NAV.add(assetTokensAmount.preciseDiv(price));
         require(NAV != 0, 'NAV has to be bigger 0');
         return NAV;
     }

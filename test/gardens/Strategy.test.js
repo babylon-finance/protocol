@@ -354,7 +354,7 @@ describe('Strategy', function () {
       );
       const nav = await strategyContract.getNAV();
       expect(await strategyContract.capitalAllocated()).to.equal(ONE_ETH);
-      expect(nav).to.be.closeTo(ONE_ETH, ONE_ETH.div(500));
+      expect(nav).to.be.closeTo(ONE_ETH.mul(3), ONE_ETH.div(500));
     });
 
     it('should get the NAV value of a Yearn Farming strategy', async function () {
@@ -367,7 +367,7 @@ describe('Strategy', function () {
       );
       const nav = await strategyContract.getNAV();
       expect(await strategyContract.capitalAllocated()).to.equal(ONE_ETH);
-      expect(nav).to.be.closeTo(ONE_ETH, ONE_ETH.div(500));
+      expect(nav).to.be.closeTo(ONE_ETH.mul(3), ONE_ETH.div(500));
     });
 
     it('should get the NAV value of a lend strategy', async function () {
@@ -382,7 +382,7 @@ describe('Strategy', function () {
       );
       const nav = await strategyContract.getNAV();
       expect(await strategyContract.capitalAllocated()).to.equal(ONE_ETH);
-      expect(nav).to.be.closeTo(ONE_ETH, ONE_ETH.div(500));
+      expect(nav).to.be.closeTo(ONE_ETH.mul(3), ONE_ETH.div(500));
     });
 
     it('should get the NAV value of a BalancerPool strategy', async function () {
@@ -397,7 +397,7 @@ describe('Strategy', function () {
       const nav = await strategyContract.getNAV();
       expect(await strategyContract.capitalAllocated()).to.equal(ONE_ETH);
       // So much slipage at Balancer 😭
-      expect(nav).to.be.closeTo(ONE_ETH, ONE_ETH.div(50));
+      expect(nav).to.be.closeTo(ONE_ETH.mul(3), ONE_ETH.div(50));
     });
 
     it('should get the NAV value of a OneInchPool strategy', async function () {
@@ -414,7 +414,7 @@ describe('Strategy', function () {
 
       const nav = await strategyContract.getNAV();
       expect(await strategyContract.capitalAllocated()).to.equal(ONE_ETH);
-      expect(nav).to.be.closeTo(ONE_ETH, ONE_ETH.div(100));
+      expect(nav).to.be.closeTo(ONE_ETH.mul(3), ONE_ETH.div(100));
     });
 
     it('should get the NAV value of a UniswapPool strategy', async function () {
@@ -429,7 +429,7 @@ describe('Strategy', function () {
       );
       const nav = await strategyContract.getNAV();
       expect(await strategyContract.capitalAllocated()).to.equal(ONE_ETH);
-      expect(nav).to.be.closeTo(ONE_ETH, ONE_ETH.div(400));
+      expect(nav).to.be.closeTo(ONE_ETH.mul(3), ONE_ETH.div(400));
     });
   });
 
