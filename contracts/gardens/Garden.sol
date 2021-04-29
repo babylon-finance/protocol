@@ -1137,7 +1137,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         uint256 _from,
         uint256 _to
     ) private view returns (uint256) {
-        _require(_to > gardenInitializedAt && _to >= _from, Errors.GET_CONTRIBUTOR_POWER);
+        _require(_to >= gardenInitializedAt && _to >= _from, Errors.GET_CONTRIBUTOR_POWER);
         Contributor storage contributor = contributors[_contributor];
         if (contributor.initialDepositAt == 0 || contributor.initialDepositAt > _to) {
             return 0;
@@ -1174,7 +1174,6 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
                     }
                 }
             }
-
             _require(
                 fromDepositAt <= lastDepositAt && gardenFromDepositAt <= gardenLastDepositAt,
                 Errors.GET_CONTRIBUTOR_POWER
@@ -1205,7 +1204,11 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
             _require(contributorPower <= gardenPower, Errors.GET_CONTRIBUTOR_POWER);
             if (_from == _to) {
                 // Requested a specific checkpoint calculation (no slot)
-                return contributorPower.preciseDiv(gardenPower);
+                if (gardenPower == 0) {
+                    return 0;
+                } else {
+                    return contributorPower.preciseDiv(gardenPower);
+                }
                 // Not a checkpoint anymore but a slot
             } else if (_to < lastDepositAt) {
                 // contributor has not deposited yet
