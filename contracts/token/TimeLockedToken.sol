@@ -211,7 +211,7 @@ abstract contract TimeLockedToken is VoteToken {
         newVestedToken.vestingBegin = _vestingBegin;
         newVestedToken.vestingEnd = _vestingEnd;
         newVestedToken.lastClaim = _lastClaim;
-        
+
         // transfer tokens to the recipient
         _transfer(msg.sender, _receiver, _amount);
         emit NewLockout(_receiver, _amount, _profile, _vestingBegin, _vestingEnd);
@@ -348,7 +348,7 @@ abstract contract TimeLockedToken is VoteToken {
         if ((spender == address(timeLockRegistry)) && (amount < allowance(msg.sender, address(timeLockRegistry)))) {
             amount = safe96(
                 allowance(msg.sender, address(timeLockRegistry)),
-                'TimeLockedToken::approve: amount exceeds 96 bits'
+                'TimeLockedToken::approve: cannot decrease allowance to timelockregistry'
             );
         }
         _approve(msg.sender, spender, amount);
