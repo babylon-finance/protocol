@@ -18,80 +18,116 @@
 
 pragma solidity 0.7.6;
 
-import {SafeMath} from '@openzeppelin/contracts/math/SafeMath.sol';
 import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
-
-import {PreciseUnitMath} from '../../lib/PreciseUnitMath.sol';
-
+import {SafeMath} from '@openzeppelin/contracts/math/SafeMath.sol';
 import {Operation} from './Operation.sol';
 import {IGarden} from '../../interfaces/IGarden.sol';
-import {ITradeIntegration} from '../../interfaces/ITradeIntegration.sol';
+import {IStrategy} from '../../interfaces/IStrategy.sol';
+import {PreciseUnitMath} from '../../lib/PreciseUnitMath.sol';
 import {ILendIntegration} from '../../interfaces/ILendIntegration.sol';
 
 /**
- * @title LendOperation
+ * @title LendOperatin
  * @author Babylon Finance
  *
- * Allows to supply funds to protocols (Compound, Aave) to earn interest over time.
+ * Executes a lend operation
  */
 contract LendOperation is Operation {
     using SafeMath for uint256;
     using PreciseUnitMath for uint256;
 
-    address public assetToken;
+    /**
+     * Sets operation data for the lend operation
+     *
+     * @param _data                   Operation data
+     */
+    function validateOperation(
+        bytes _data,
+        IGarden _garden,
+        IStrategy _strategy,
+        address _integration
+    ) external override onlyStrategy {
+        require(_parseData(_data) != _garden.reserveAsset(), 'Receive token must be different');
+    }
 
     /**
-     * Gets the NAV of the lend asset in ETH
+     * Executes the lend operation
+     * @param _capital      Amount of capital received from the garden
+     */
+    function executeOperation(
+        uint256 _capital,
+        bytes _data,
+        IGarden _garden,
+        IStrategy _strategy,
+        address _integration
+    ) internal override onlyStrategy returns (address, uint256) {
+        address assetToken = _parseData(_data);
+        if (assetToken != _garden.reserveAsset()) {
+            _trade(_garden.reserveAsset(), _capital, assetToken);
+        }
+        uint256 numTokensToSupply = IERC20(assetToken).balanceOf(msg.sender);
+        uint256 exactAmount = ILendIntegration(_integration).getExpectedShares(assetToken, numTokensToSupply);
+        uint256 minAmountExpected = exactAmount.sub(exactAmount.preciseMul(SLIPPAGE_ALLOWED));
+        ILendIntegration(_integration).supplyTokens(assetToken, numTokensToSupply, minAmountExpected);
+        return (assetToken, numTokensToSupply);
+    }
+
+    /**
+     * Exits the lend operation.
+     * @param _percentage of capital to exit from the strategy
+     */
+    function exitOperation(
+        uint256 _percentage,
+        bytes _data,
+        IGarden _garden,
+        IStrategy _strategy,
+        address _integration
+    ) internal override onlyStrategy {
+        require(_percentage <= HUNDRED_PERCENT, 'Unwind Percentage <= 100%');
+        address assetToken = _parseData(_data);
+        uint256 numTokensToRedeem =
+            IERC20(ILendIntegration(_integration).getInvestmentToken(assetToken)).balanceOf(msg.sender).preciseMul(
+                _percentage
+            );
+        ILendIntegration(_integration).redeemTokens(
+            assetToken,
+            numTokensToRedeem,
+            ILendIntegration(_integration).getExchangeRatePerToken(assetToken).mul(
+                numTokensToRedeem.sub(numTokensToRedeem.preciseMul(SLIPPAGE_ALLOWED))
+            )
+        );
+        if (assetToken != _garden.reserveAsset()) {
+            _trade(assetToken, IERC20(assetToken).balanceOf(msg.sender), _garden.reserveAsset());
+        }
+    }
+
+    /**
+     * Gets the NAV of the lend op in the reserve asset
      *
      * @return _nav           NAV of the strategy
      */
-    function getNAV() public view override returns (uint256) {
-        if (!isOperationActive()) {
+    function getNAV(
+        bytes _data,
+        IGarden _garden,
+        IStrategy _strategy,
+        address _integration
+    ) public view override onlyStrategy returns (uint256) {
+        if (!_strategy.isStrategyActive()) {
             return 0;
         }
         uint256 numTokensToRedeem =
-            IERC20(ILendIntegration(integration).getInvestmentToken(assetToken)).balanceOf(address(this));
+            IERC20(ILendIntegration(_integration).getInvestmentToken(assetToken)).balanceOf(address(this));
         uint256 assetTokensAmount =
-            ILendIntegration(integration).getExchangeRatePerToken(assetToken).mul(numTokensToRedeem);
-        uint256 price = _getPrice(garden.reserveAsset(), assetToken);
+            ILendIntegration(_integration).getExchangeRatePerToken(assetToken).mul(numTokensToRedeem);
+        uint256 price = _getPrice(_garden.reserveAsset(), assetToken);
         uint256 NAV = assetTokensAmount.preciseDiv(price);
         require(NAV != 0, 'NAV has to be bigger 0');
         return NAV;
     }
 
-    /**
-     * Enters the lend strategy
-     * @param _capital      Amount of capital received from the garden
-     */
-    function _enterOperation(uint256 _capital) internal override {
-        if (assetToken != garden.reserveAsset()) {
-            _trade(garden.reserveAsset(), _capital, assetToken);
-        }
-        uint256 numTokensToSupply = IERC20(assetToken).balanceOf(address(this));
-        uint256 exactAmount = ILendIntegration(integration).getExpectedShares(assetToken, numTokensToSupply);
-        uint256 minAmountExpected = exactAmount.sub(exactAmount.preciseMul(SLIPPAGE_ALLOWED));
-        ILendIntegration(integration).supplyTokens(assetToken, numTokensToSupply, minAmountExpected);
-    }
+    /* ============ Private Functions ============ */
 
-    /**
-     * Exits the lend strategy.
-     * @param _percentage of capital to exit from the strategy
-     */
-    function _exitOperation(uint256 _percentage) internal override {
-        require(_percentage <= HUNDRED_PERCENT, 'Unwind Percentage <= 100%');
-        uint256 numTokensToRedeem =
-            IERC20(ILendIntegration(integration).getInvestmentToken(assetToken)).balanceOf(address(this)).preciseMul(
-                _percentage
-            );
-        ILendIntegration(integration).redeemTokens(
-            assetToken,
-            numTokensToRedeem,
-            ILendIntegration(integration).getExchangeRatePerToken(assetToken).mul(
-                numTokensToRedeem.sub(numTokensToRedeem.preciseMul(SLIPPAGE_ALLOWED))
-            )
-        );
-        if (assetToken != garden.reserveAsset()) {
-            _trade(assetToken, IERC20(assetToken).balanceOf(address(this)), garden.reserveAsset());
-        }
+    function _parseData(bytes _data) private view returns (address) {
+        return address(0);
     }
 }

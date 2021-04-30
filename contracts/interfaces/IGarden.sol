@@ -106,17 +106,17 @@ interface IGarden {
     function allocateCapitalToStrategy(uint256 _capital) external;
 
     function addStrategy(
+        string memory _name,
+        string memory _symbol,
         uint8 _strategyKind,
-        address _integration,
         uint256 _maxCapitalRequested,
         uint256 _stake,
         uint256 _strategyDuration,
         uint256 _expectedReturn,
         uint256 _minRebalanceCapital,
         uint8[] calldata _opTypes,
-        bytes[] calldata _opsDatas,
-        string memory _name,
-        string memory _symbol
+        address[] calldata _opIntegrations,
+        bytes[] calldata _opDatas
     ) external;
 
     function deposit(

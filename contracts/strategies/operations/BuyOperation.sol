@@ -21,11 +21,12 @@ pragma solidity 0.7.6;
 import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import {Operation} from './Operation.sol';
 import {IGarden} from '../../interfaces/IGarden.sol';
+import {IStrategy} from '../../interfaces/IStrategy.sol';
 import {PreciseUnitMath} from '../../lib/PreciseUnitMath.sol';
 import {ITradeIntegration} from '../../interfaces/ITradeIntegration.sol';
 
 /**
- * @title Operation
+ * @title BuyOperation
  * @author Babylon Finance
  *
  * Executes a buy operation
@@ -33,46 +34,80 @@ import {ITradeIntegration} from '../../interfaces/ITradeIntegration.sol';
 contract BuyOperation is Operation {
     using PreciseUnitMath for uint256;
 
-    address public longToken; // Asset to receive
-
     /**
-     * Sets integration data for the long strategy
+     * Sets operation data for the buy operation
      *
-     * @param _longToken                   Token to be bought
+     * @param _data                   Operation data
      */
-    function setData(address _longToken) external override {
-        require(garden.reserveAsset() != _longToken, 'Receive token must be different');
+    function validateOperation(
+        bytes _data,
+        IGarden _garden,
+        IStrategy _strategy,
+        address _integration
+    ) external override onlyStrategy {
+        require(_parseData(_data) != _garden.reserveAsset(), 'Receive token must be different');
     }
 
     /**
-     * Gets the NAV of the long asset in ETH
+     * Executes the buy operation
+     * @param _capital      Amount of capital received from the garden
+     */
+    function executeOperation(
+        uint256 _capital,
+        bytes _data,
+        IGarden _garden,
+        IStrategy _strategy,
+        address _integration
+    ) internal override onlyStrategy returns (address, uint256) {
+        address longToken = _parseData(_data);
+        _trade(_garden.reserveAsset(), _capital, longToken);
+        return (longToken, IERC20(longToken).balanceOf(address(msg.sender)));
+    }
+
+    /**
+     * Exits the buy operation.
+     * @param _percentage of capital to exit from the strategy
+     */
+    function exitOperation(
+        uint256 _percentage,
+        bytes _data,
+        IGarden _garden,
+        IStrategy _strategy,
+        address _integration
+    ) internal override onlyStrategy {
+        require(_percentage <= 100e18, 'Unwind Percentage <= 100%');
+        address longToken = _parseData(_data);
+        strategy.trade(
+            longToken,
+            IERC20(longToken).balanceOf(address(msg.sender)).preciseMul(_percentage),
+            _garden.reserveAsset()
+        );
+    }
+
+    /**
+     * Gets the NAV of the buy op in the reserve asset
      *
      * @return _nav           NAV of the strategy
      */
-    function getNAV() public view override returns (uint256) {
-        if (!isStrategyActive()) {
+    function getNAV(
+        bytes _data,
+        IGarden _garden,
+        IStrategy _strategy,
+        address _integration
+    ) public view override onlyStrategy returns (uint256) {
+        if (!_strategy.isStrategyActive()) {
             return 0;
         }
-        uint256 price = _getPrice(garden.reserveAsset(), longToken);
-        uint256 NAV = IERC20(longToken).balanceOf(address(this)).preciseDiv(price);
+        address longToken = _parseData(_data);
+        uint256 price = _getPrice(_garden.reserveAsset(), longToken);
+        uint256 NAV = IERC20(longToken).balanceOf(msg.sender).preciseDiv(price);
         require(NAV != 0, 'NAV has to be bigger 0');
         return NAV;
     }
 
-    /**
-     * Enters the long strategy
-     * @param _capital      Amount of capital received from the garden
-     */
-    function _enterStrategy(uint256 _capital) internal override {
-        _trade(garden.reserveAsset(), _capital, longToken);
-    }
+    /* ============ Private Functions ============ */
 
-    /**
-     * Exits the long strategy.
-     * @param _percentage of capital to exit from the strategy
-     */
-    function _exitStrategy(uint256 _percentage) internal override {
-        require(_percentage <= HUNDRED_PERCENT, 'Unwind Percentage <= 100%');
-        _trade(longToken, IERC20(longToken).balanceOf(address(this)).preciseMul(_percentage), garden.reserveAsset());
+    function _parseData(bytes _data) private view returns (address) {
+        return address(0);
     }
 }

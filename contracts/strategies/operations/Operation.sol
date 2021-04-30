@@ -19,8 +19,8 @@
 pragma solidity 0.7.6;
 
 import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
-import {Strategy} from '../Strategy.sol';
 import {IGarden} from '../../interfaces/IGarden.sol';
+import {IStrategy} from '../../interfaces/IStrategy.sol';
 import {PreciseUnitMath} from '../../lib/PreciseUnitMath.sol';
 import {ITradeIntegration} from '../../interfaces/ITradeIntegration.sol';
 
@@ -30,6 +30,86 @@ import {ITradeIntegration} from '../../interfaces/ITradeIntegration.sol';
  *
  * Holds the data for a long strategy
  */
-abstract contract Operation {
-    using PreciseUnitMath for uint256;
+abstract contract Operation is IOperation {
+    /* ============ Modifiers ============ */
+
+    modifier onlyStrategy() {
+        IStrategy strategy = IStrategy(msg.sender);
+        IGarden garden = strategy.garden();
+        require(IBabController(controller).isSystemContract(address(garden)), 'Only a garden can call this');
+        require(garden.isStrategy(msg.sender), 'Sender must be a strategy');
+        _;
+    }
+
+    /* ============ State Variables ============ */
+
+    // Address of the controller
+    address public controller;
+    // Name of the operation
+    string public name;
+
+    /* ============ Constructor ============ */
+
+    /**
+     * Creates the integration
+     *
+     * @param _name                   Name of the integration
+     * @param _controller             Address of the controller
+     */
+
+    constructor(string memory _name, address _controller) {
+        require(_controller != address(0), 'Controller must be defined');
+        name = _name;
+        controller = _controller;
+    }
+
+    /* ============ Virtual External Functions ============ */
+
+    function validateOperation(
+        bytes _data,
+        IGarden _garden,
+        IStrategy _strategy,
+        address _integration
+    ) external view virtual override returns (bool);
+
+    function executeOperation(
+        address _asset,
+        uint256 _capital,
+        bytes _data,
+        IGarden _garden,
+        IStrategy _strategy,
+        address _integration
+    ) external virtual override returns (address, uint256);
+
+    function exitOperation(
+        uint256 _percentage,
+        bytes _data,
+        IGarden _garden,
+        IStrategy _strategy,
+        address _integration
+    ) external virtual override;
+
+    function getNAV(
+        bytes _data,
+        IGarden _garden,
+        IStrategy _strategy,
+        address _integration
+    ) external view virtual override returns (uint256);
+
+    /* ============ External Functions ============ */
+
+    /**
+     * Returns the name of the operation
+     */
+    function getName() external view returns (string memory) {
+        return name;
+    }
+
+    /**
+     * Returns the price of the pair through the price oracle
+     */
+    function _getPrice(address _assetOne, address _assetTwo) internal view returns (uint256) {
+        IPriceOracle oracle = IPriceOracle(IBabController(controller).priceOracle());
+        return oracle.getPrice(_assetOne, _assetTwo);
+    }
 }

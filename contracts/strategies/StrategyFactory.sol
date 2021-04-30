@@ -43,30 +43,28 @@ contract StrategyFactory is IStrategyFactory {
     /**
      * Creates a new investment strategy using minimal proxies
      *
+     * @param _name                          Name of the strategy
+     * @param _symbol                        Symbol of the strategy
      * @param _strategist                    Address of the strategist
      * @param _garden                        Address of the garden
      * @param _controller                    Address of the controller
-     * @param _integration                   Address of the integration
      * @param _maxCapitalRequested           Max Capital requested denominated in the reserve asset (0 to be unlimited)
      * @param _stake                         Stake with garden participations absolute amounts 1e18
      * @param _investmentDuration            Investment duration in seconds
      * @param _expectedReturn                Expected return
      * @param _minRebalanceCapital           Min capital that is worth it to deposit into this strategy
-     * @param _name                          Name of the strategy
-     * @param _symbol                        Symbol of the strategy
      */
     function createStrategy(
+        string memory _name,
+        string memory _symbol,
         address _strategist,
         address _garden,
         address _controller,
-        address _integration,
         uint256 _maxCapitalRequested,
         uint256 _stake,
         uint256 _investmentDuration,
         uint256 _expectedReturn,
-        uint256 _minRebalanceCapital,
-        string memory _name,
-        string memory _symbol
+        uint256 _minRebalanceCapital
     ) external override returns (address) {
         address payable clone = payable(Clones.clone(strategy));
         address cloneNFT = Clones.clone(strategyNft);
@@ -75,7 +73,6 @@ contract StrategyFactory is IStrategyFactory {
             _strategist,
             _garden,
             _controller,
-            _integration,
             _maxCapitalRequested,
             _stake,
             _investmentDuration,

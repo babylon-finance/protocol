@@ -24,5 +24,37 @@ pragma solidity 0.7.6;
  * Interface for an strategy operation
  */
 interface IOperation {
+    function validateOperation(
+        bytes _data,
+        IGarden _garden,
+        IStrategy _strategy,
+        address _integration
+    ) external view returns (bool);
 
+    function executeOperation(
+        address _asset,
+        uint256 _capital,
+        bytes _data,
+        IGarden _garden,
+        IStrategy _strategy,
+        address _integration
+    ) external returns (address, uint256);
+
+    function exitOperation(
+        uint256 _percentage,
+        bytes _data,
+        IGarden _garden,
+        IStrategy _strategy,
+        address _integration
+    ) external;
+
+    function getNAV(
+        bytes _data,
+        IGarden _garden,
+        IStrategy _strategy,
+        address _integration,
+        address _integration
+    ) external view returns (uint256);
+
+    function getName() external view returns (string);
 }

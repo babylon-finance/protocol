@@ -30,7 +30,6 @@ interface IStrategy {
         address _strategist,
         address _garden,
         address _controller,
-        address _integration,
         uint256 _maxCapitalRequested,
         uint256 _stake,
         uint256 _strategyDuration,
@@ -73,11 +72,16 @@ interface IStrategy {
         uint256 _quantity
     ) external;
 
+    function trade(
+        address _sendToken,
+        uint256 _sendQuantity,
+        address _receiveToken
+    ) external returns (uint256);
+
     function getStrategyDetails()
         external
         view
         returns (
-            address,
             address,
             address,
             uint8,

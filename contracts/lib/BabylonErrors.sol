@@ -224,4 +224,6 @@ library Errors {
     uint256 internal constant GARDEN_ALREADY_PUBLIC = 67;
     // Too many strategy operations
     uint256 internal constant TOO_MANY_OPS = 68;
+    // Only operations
+    uint256 internal constant ONLY_OPERATION = 69;
 }

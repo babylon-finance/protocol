@@ -20,92 +20,120 @@ pragma solidity 0.7.6;
 
 import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import {SafeMath} from '@openzeppelin/contracts/math/SafeMath.sol';
-import {PreciseUnitMath} from '../../lib/PreciseUnitMath.sol';
 import {Operation} from './Operation.sol';
 import {IGarden} from '../../interfaces/IGarden.sol';
+import {IStrategy} from '../../interfaces/IStrategy.sol';
+import {PreciseUnitMath} from '../../lib/PreciseUnitMath.sol';
 import {IPassiveIntegration} from '../../interfaces/IPassiveIntegration.sol';
 
 /**
  * @title DepositVaultOperation
  * @author Babylon Finance
  *
- * Holds the data for a long strategy
+ * Executes a deposit vault operation
  */
 contract DepositVaultOperation is Operation {
     using SafeMath for uint256;
     using PreciseUnitMath for uint256;
 
-    address public yieldVault; // Yield Farming Vault
-    address public vaultAsset; // Vault Asset required
-
     /**
-     * Sets integration data for the long strategy
+     * Sets operation data for the deposit vault operation
      *
-     * @param _yieldVault                   Yield vault to enter
+     * @param _data                   Operation data
      */
-    function setData(address _yieldVault) external override {
-        require(IPassiveIntegration(integration).isInvestment(_yieldVault), 'Must be a valid yield vault');
-
-        kind = 2;
-        yieldVault = _yieldVault;
-        vaultAsset = IPassiveIntegration(integration).getInvestmentAsset(_yieldVault);
-        dataSet = true;
+    function validateOperation(
+        bytes _data,
+        IGarden _garden,
+        IStrategy _strategy,
+        address _integration
+    ) external override onlyStrategy {
+        require(IPassiveIntegration(_integration).isInvestment(_parseData(_data)), 'Must be a valid yield vault');
     }
 
     /**
-     * Gets the NAV of the liquidity pool asset in ETH
+     * Executes the deposit vault operation
+     * @param _capital      Amount of capital received from the garden
+     */
+    function executeOperation(
+        uint256 _capital,
+        bytes _data,
+        IGarden _garden,
+        IStrategy _strategy,
+        address _integration
+    ) internal override onlyStrategy returns (address, uint256) {
+        address yieldVault = _parseData(_data);
+        address vaultAsset = IPassiveIntegration(_integration).getInvestmentAsset(yieldVault);
+        if (vaultAsset != _garden.reserveAsset()) {
+            IStrategy(_strategy).trade(_garden.reserveAsset(), _capital, vaultAsset);
+        }
+        uint256 exactAmount = IPassiveIntegration(_integration).getExpectedShares(yieldVault, _capital);
+        uint256 minAmountExpected = exactAmount.sub(exactAmount.preciseMul(SLIPPAGE_ALLOWED));
+        IPassiveIntegration(_integration).enterInvestment(
+            yieldVault,
+            minAmountExpected,
+            vaultAsset,
+            IERC20(vaultAsset).balanceOf(msg.sender)
+        );
+        return (yieldVault, IERC20(yieldVault).balanceOf(msg.sender));
+    }
+
+    /**
+     * Exits the deposit vault operation.
+     * @param _percentage of capital to exit from the strategy
+     */
+    function exitOperation(
+        uint256 _percentage,
+        bytes _data,
+        IGarden _garden,
+        IStrategy _strategy,
+        address _integration
+    ) internal override onlyStrategy {
+        require(_percentage <= HUNDRED_PERCENT, 'Unwind Percentage <= 100%');
+        address yieldVault = _parseData(_data);
+        address vaultAsset = IPassiveIntegration(_integration).getInvestmentAsset(yieldVault);
+        uint256 amountVault = IERC20(yieldVault).balanceOf(msg.sender).preciseMul(_percentage);
+        IPassiveIntegration(integration).exitInvestment(
+            yieldVault,
+            amountVault,
+            vaultAsset,
+            IPassiveIntegration(_integration).getPricePerShare(yieldVault).mul(
+                amountVault.sub(amountVault.preciseMul(SLIPPAGE_ALLOWED))
+            )
+        );
+        if (vaultAsset != garden.reserveAsset()) {
+            IStrategy(_strategy).trade(vaultAsset, IERC20(vaultAsset).balanceOf(msg.sender), garden.reserveAsset());
+        }
+    }
+
+    /**
+     * Gets the NAV of the deposit vault op in the reserve asset
      *
      * @return _nav           NAV of the strategy
      */
-    function getNAV() public view override returns (uint256) {
-        if (!isOperationActive()) {
+    function getNAV(
+        bytes _data,
+        IGarden _garden,
+        IStrategy _strategy,
+        address _integration
+    ) public view override onlyStrategy returns (uint256) {
+        if (!_strategy.isStrategyActive()) {
             return 0;
         }
-        uint256 price = _getPrice(garden.reserveAsset(), vaultAsset);
+        address yieldVault = _parseData(_data);
+        address vaultAsset = IPassiveIntegration(_integration).getInvestmentAsset(yieldVault);
+        uint256 price = _getPrice(_garden.reserveAsset(), vaultAsset);
         uint256 NAV =
-            IPassiveIntegration(integration)
+            IPassiveIntegration(_integration)
                 .getPricePerShare(yieldVault)
-                .mul(IERC20(yieldVault).balanceOf(address(this)))
+                .mul(IERC20(yieldVault).balanceOf(msg.sender))
                 .div(price);
         require(NAV != 0, 'NAV has to be bigger 0');
         return NAV;
     }
 
-    /**
-     * Enters the long strategy
-     * @param _capital      Amount of capital received from the garden
-     */
-    function _enterOperation(uint256 _capital) internal override {
-        if (vaultAsset != garden.reserveAsset()) {
-            _trade(garden.reserveAsset(), _capital, vaultAsset);
-        }
-        uint256 exactAmount = IPassiveIntegration(integration).getExpectedShares(yieldVault, _capital);
-        uint256 minAmountExpected = exactAmount.sub(exactAmount.preciseMul(SLIPPAGE_ALLOWED));
-        IPassiveIntegration(integration).enterInvestment(
-            yieldVault,
-            minAmountExpected,
-            vaultAsset,
-            IERC20(vaultAsset).balanceOf(address(this))
-        );
-    }
+    /* ============ Private Functions ============ */
 
-    /**
-     * Exits the yield farming strategy.
-     * @param _percentage of capital to exit from the strategy
-     */
-    function _exitOperation(uint256 _percentage) internal override {
-        require(_percentage <= HUNDRED_PERCENT, 'Unwind Percentage <= 100%');
-        uint256 amountVault = IERC20(yieldVault).balanceOf(address(this)).preciseMul(_percentage);
-        IPassiveIntegration(integration).exitInvestment(
-            yieldVault,
-            amountVault,
-            vaultAsset,
-            IPassiveIntegration(integration).getPricePerShare(yieldVault).mul(
-                amountVault.sub(amountVault.preciseMul(SLIPPAGE_ALLOWED))
-            )
-        );
-        if (vaultAsset != garden.reserveAsset()) {
-            _trade(vaultAsset, IERC20(vaultAsset).balanceOf(address(this)), garden.reserveAsset());
-        }
+    function _parseData(bytes _data) private view returns (address) {
+        return address(0);
     }
 }
