@@ -765,7 +765,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
             IStrategy strategy = IStrategy(strategies[i]);
             uint256 votes = uint256(Math.abs(strategy.getUserVotes(_contributor)));
             if (votes > 0) {
-                lockedAmount += votes;
+                lockedAmount = lockedAmount.add(votes);
             }
         }
         // TODO Remove when implementing locked stake in voting and strategy creation - Now this avoid overflows
