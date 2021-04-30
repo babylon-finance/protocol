@@ -74,35 +74,33 @@ contract AddLiquidityOperation is Operation {
         address _integration
     ) external override onlyStrategy returns (address, uint256) {
         address pool = _parseData(_data);
-        // address[] memory poolTokens = IPoolIntegration(_integration).getPoolTokens(pool);
-        // uint256[] memory _maxAmountsIn = new uint256[](poolTokens.length);
-        // uint256[] memory _poolWeights = IPoolIntegration(_integration).getPoolWeights(pool);
-        // // Get the tokens needed to enter the pool
-        // uint256 ethValue = 0;
-        // for (uint256 i = 0; i < poolTokens.length; i++) {
-        //     uint256 normalizedAmount = _capital.preciseMul(_poolWeights[i]);
-        //     if (poolTokens[i] != _asset && poolTokens[i] != address(0)) {
-        //         IStrategy(_strategy).trade(_asset, normalizedAmount, poolTokens[i]);
-        //         _maxAmountsIn[i] = IERC20(poolTokens[i]).balanceOf(msg.sender);
-        //     } else {
-        //         if (poolTokens[i] == address(0)) {
-        //             if (_asset != _garden.WETH()) {
-        //                 IStrategy(_strategy).trade(_asset, normalizedAmount, _garden.WETH());
-        //             }
-        //             // Convert WETH to ETH
-        //             IWETH(_garden.WETH()).withdraw(normalizedAmount);
-        //             ethValue = normalizedAmount;
-        //         }
-        //         _maxAmountsIn[i] = normalizedAmount;
-        //     }
-        // }
-        // uint256 poolTokensOut = IPoolIntegration(_integration).getPoolTokensOut(pool, poolTokens[0], _maxAmountsIn[0]);
-        // IPoolIntegration(_integration).joinPool(
-        //     pool,
-        //     poolTokensOut.sub(poolTokensOut.preciseMul(SLIPPAGE_ALLOWED)),
-        //     poolTokens,
-        //     _maxAmountsIn
-        // );
+        address[] memory poolTokens = IPoolIntegration(_integration).getPoolTokens(pool);
+        uint256[] memory _maxAmountsIn = new uint256[](poolTokens.length);
+        uint256[] memory _poolWeights = IPoolIntegration(_integration).getPoolWeights(pool);
+        // Get the tokens needed to enter the pool
+        for (uint256 i = 0; i < poolTokens.length; i++) {
+            // uint256 normalizedAmount = _capital.preciseMul(_poolWeights[i]);
+            // if (poolTokens[i] != _asset && poolTokens[i] != address(0)) {
+            //     IStrategy(_strategy).trade(_asset, normalizedAmount, poolTokens[i]);
+            //     _maxAmountsIn[i] = IERC20(poolTokens[i]).balanceOf(msg.sender);
+            // } else {
+            //     if (poolTokens[i] == address(0)) {
+            //         if (_asset != _garden.WETH()) {
+            //             IStrategy(_strategy).trade(_asset, normalizedAmount, _garden.WETH());
+            //         }
+            //         // Convert WETH to ETH
+            //         IWETH(_garden.WETH()).withdraw(normalizedAmount);
+            //     }
+            //     _maxAmountsIn[i] = normalizedAmount;
+            // }
+        }
+        uint256 poolTokensOut = IPoolIntegration(_integration).getPoolTokensOut(pool, poolTokens[0], _maxAmountsIn[0]);
+        IPoolIntegration(_integration).joinPool(
+            pool,
+            poolTokensOut.sub(poolTokensOut.preciseMul(SLIPPAGE_ALLOWED)),
+            poolTokens,
+            _maxAmountsIn
+        );
         return (pool, IERC20(pool).balanceOf(msg.sender));
     }
 
