@@ -36,6 +36,17 @@ contract DepositVaultOperation is Operation {
     using SafeMath for uint256;
     using PreciseUnitMath for uint256;
 
+    /* ============ Constructor ============ */
+
+    /**
+     * Creates the integration
+     *
+     * @param _name                   Name of the integration
+     * @param _controller             Address of the controller
+     */
+    constructor(string memory _name, address _controller) Operation(_name, _controller) {
+    }
+
     /**
      * Sets operation data for the deposit vault operation
      *
@@ -46,7 +57,7 @@ contract DepositVaultOperation is Operation {
         IGarden _garden,
         IStrategy _strategy,
         address _integration
-    ) external override onlyStrategy {
+    ) external view override onlyStrategy {
         require(IPassiveIntegration(_integration).isInvestment(_parseData(_data)), 'Must be a valid yield vault');
     }
 
@@ -55,16 +66,17 @@ contract DepositVaultOperation is Operation {
      * @param _capital      Amount of capital received from the garden
      */
     function executeOperation(
+        address _asset,
         uint256 _capital,
         bytes calldata _data,
         IGarden _garden,
         IStrategy _strategy,
         address _integration
-    ) internal override onlyStrategy returns (address, uint256) {
+    ) external override onlyStrategy returns (address, uint256) {
         address yieldVault = _parseData(_data);
         address vaultAsset = IPassiveIntegration(_integration).getInvestmentAsset(yieldVault);
-        if (vaultAsset != _garden.reserveAsset()) {
-            IStrategy(_strategy).trade(_garden.reserveAsset(), _capital, vaultAsset);
+        if (vaultAsset != _asset) {
+            IStrategy(_strategy).trade(_asset, _capital, vaultAsset);
         }
         uint256 exactAmount = IPassiveIntegration(_integration).getExpectedShares(yieldVault, _capital);
         uint256 minAmountExpected = exactAmount.sub(exactAmount.preciseMul(SLIPPAGE_ALLOWED));
@@ -87,7 +99,7 @@ contract DepositVaultOperation is Operation {
         IGarden _garden,
         IStrategy _strategy,
         address _integration
-    ) internal override onlyStrategy {
+    ) external override onlyStrategy {
         require(_percentage <= HUNDRED_PERCENT, 'Unwind Percentage <= 100%');
         address yieldVault = _parseData(_data);
         address vaultAsset = IPassiveIntegration(_integration).getInvestmentAsset(yieldVault);
@@ -115,7 +127,7 @@ contract DepositVaultOperation is Operation {
         IGarden _garden,
         IStrategy _strategy,
         address _integration
-    ) public view override onlyStrategy returns (uint256) {
+    ) external view override onlyStrategy returns (uint256) {
         if (!_strategy.isStrategyActive()) {
             return 0;
         }

@@ -34,6 +34,17 @@ import {ITradeIntegration} from '../../interfaces/ITradeIntegration.sol';
 contract BuyOperation is Operation {
     using PreciseUnitMath for uint256;
 
+    /* ============ Constructor ============ */
+
+    /**
+     * Creates the integration
+     *
+     * @param _name                   Name of the integration
+     * @param _controller             Address of the controller
+     */
+    constructor(string memory _name, address _controller) Operation(_name, _controller) {
+    }
+
     /**
      * Sets operation data for the buy operation
      *
@@ -44,7 +55,7 @@ contract BuyOperation is Operation {
         IGarden _garden,
         IStrategy _strategy,
         address _integration
-    ) external override onlyStrategy {
+    ) external view override onlyStrategy {
         require(_parseData(_data) != _garden.reserveAsset(), 'Receive token must be different');
     }
 
@@ -53,14 +64,15 @@ contract BuyOperation is Operation {
      * @param _capital      Amount of capital received from the garden
      */
     function executeOperation(
+        address _asset,
         uint256 _capital,
         bytes calldata _data,
         IGarden _garden,
         IStrategy _strategy,
         address _integration
-    ) internal override onlyStrategy returns (address, uint256) {
+    ) external override onlyStrategy returns (address, uint256) {
         address longToken = _parseData(_data);
-        IStrategy(_strategy).trade(_garden.reserveAsset(), _capital, longToken);
+        IStrategy(_strategy).trade(_asset, _capital, longToken);
         return (longToken, IERC20(longToken).balanceOf(address(msg.sender)));
     }
 
@@ -74,7 +86,7 @@ contract BuyOperation is Operation {
         IGarden _garden,
         IStrategy _strategy,
         address _integration
-    ) internal override onlyStrategy {
+    ) external override onlyStrategy {
         require(_percentage <= 100e18, 'Unwind Percentage <= 100%');
         address longToken = _parseData(_data);
         IStrategy(_strategy).trade(
@@ -94,7 +106,7 @@ contract BuyOperation is Operation {
         IGarden _garden,
         IStrategy _strategy,
         address _integration
-    ) public view override onlyStrategy returns (uint256) {
+    ) external view override onlyStrategy returns (uint256) {
         if (!_strategy.isStrategyActive()) {
             return 0;
         }

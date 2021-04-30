@@ -61,7 +61,6 @@ abstract contract Operation is IOperation {
      * @param _name                   Name of the integration
      * @param _controller             Address of the controller
      */
-
     constructor(string memory _name, address _controller) {
         require(_controller != address(0), 'Controller must be defined');
         name = _name;
@@ -75,7 +74,7 @@ abstract contract Operation is IOperation {
         IGarden _garden,
         IStrategy _strategy,
         address _integration
-    ) external view virtual override returns (bool);
+    ) external view virtual override;
 
     function executeOperation(
         address _asset,
@@ -106,7 +105,7 @@ abstract contract Operation is IOperation {
     /**
      * Returns the name of the operation
      */
-    function getName() external view returns (string memory) {
+    function getName() external view override returns (string memory) {
         return name;
     }
 

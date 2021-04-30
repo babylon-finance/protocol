@@ -36,6 +36,18 @@ contract LendOperation is Operation {
     using SafeMath for uint256;
     using PreciseUnitMath for uint256;
 
+
+    /* ============ Constructor ============ */
+
+    /**
+     * Creates the integration
+     *
+     * @param _name                   Name of the integration
+     * @param _controller             Address of the controller
+     */
+    constructor(string memory _name, address _controller) Operation(_name, _controller) {
+    }
+
     /**
      * Sets operation data for the lend operation
      *
@@ -46,7 +58,7 @@ contract LendOperation is Operation {
         IGarden _garden,
         IStrategy _strategy,
         address _integration
-    ) external override onlyStrategy {
+    ) external view override onlyStrategy {
         require(_parseData(_data) != _garden.reserveAsset(), 'Receive token must be different');
     }
 
@@ -55,15 +67,16 @@ contract LendOperation is Operation {
      * @param _capital      Amount of capital received from the garden
      */
     function executeOperation(
+        address _asset,
         uint256 _capital,
         bytes calldata _data,
         IGarden _garden,
         IStrategy _strategy,
         address _integration
-    ) internal override onlyStrategy returns (address, uint256) {
+    ) external view override onlyStrategy returns (address, uint256) {
         address assetToken = _parseData(_data);
-        if (assetToken != _garden.reserveAsset()) {
-            IStrategy(_strategy).trade(_garden.reserveAsset(), _capital, assetToken);
+        if (assetToken != _asset) {
+            IStrategy(_strategy).trade(_asset, _capital, assetToken);
         }
         uint256 numTokensToSupply = IERC20(assetToken).balanceOf(msg.sender);
         uint256 exactAmount = ILendIntegration(_integration).getExpectedShares(assetToken, numTokensToSupply);
@@ -82,7 +95,7 @@ contract LendOperation is Operation {
         IGarden _garden,
         IStrategy _strategy,
         address _integration
-    ) internal override onlyStrategy {
+    ) external override onlyStrategy {
         require(_percentage <= HUNDRED_PERCENT, 'Unwind Percentage <= 100%');
         address assetToken = _parseData(_data);
         uint256 numTokensToRedeem =
@@ -111,7 +124,7 @@ contract LendOperation is Operation {
         IGarden _garden,
         IStrategy _strategy,
         address _integration
-    ) public view override onlyStrategy returns (uint256) {
+    ) external view override onlyStrategy returns (uint256) {
         if (!_strategy.isStrategyActive()) {
             return 0;
         }

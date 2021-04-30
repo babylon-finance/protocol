@@ -318,7 +318,8 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         );
         _require(_opDatas.length < MAX_OPERATIONS, Errors.TOO_MANY_OPS);
 
-        for (uint256 i = 0; i < MAX_OPERATIONS; i++) {
+        for (uint256 i = 0; i < _opTypes.length; i++) {
+            IOperation(controller.enabledOperations(_opTypes[i])).validateOperation(_opDatas[i], garden, IStrategy(address(this)), _opIntegrations[i]);
             _require(
                 controller.isValidIntegration(IIntegration(_opIntegrations[i]).getName(), _opIntegrations[i]),
                 Errors.ONLY_INTEGRATION
@@ -649,7 +650,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
     function getNAV() public view override returns (uint256) {
         uint256 nav = 0;
         for (uint256 i = 0; i < opTypes.length; i++) {
-            IOperation operation = IBabController(controller).enabledOperations(opTypes[i]);
+            IOperation operation = IOperation(IBabController(controller).enabledOperations(opTypes[i]));
             nav = nav.add(operation.getNAV(opDatas[i], garden, IStrategy(address(this)), opIntegrations[i]));
         }
         return nav;
@@ -714,7 +715,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
                 capitalForNexOperation,
                 opDatas[i],
                 garden,
-                address(this),
+                IStrategy(address(this)),
                 opIntegrations[i]
             );
         }
@@ -728,7 +729,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
     function _exitStrategy(uint256 _percentage) internal {
         for (uint256 i = opTypes.length - 1; i > 0; i--) {
             IOperation operation = IOperation(IBabController(controller).enabledOperations(opTypes[i]));
-            operation.exitOperation(_percentage, opDatas[i], garden, address(this), opIntegrations[i]);
+            operation.exitOperation(_percentage, opDatas[i], garden, IStrategy(address(this)), opIntegrations[i]);
         }
     }
 

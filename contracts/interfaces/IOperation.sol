@@ -32,7 +32,7 @@ interface IOperation {
         IGarden _garden,
         IStrategy _strategy,
         address _integration
-    ) external view returns (bool);
+    ) external view;
 
     function executeOperation(
         address _asset,

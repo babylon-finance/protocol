@@ -89,9 +89,9 @@ contract BabController is OwnableUpgradeable, IBabController {
     // Mapping of integration name => integration address
     mapping(bytes32 => address) private enabledIntegrations;
     // Address of the default trade integration used by the protocol
-    address public defaultTradeIntegration;
+    address public override defaultTradeIntegration;
     // Mapping of valid operations
-    address[] public enabledOperations;
+    address[] public override enabledOperations;
 
     // Mappings to check whether address is valid Garden or Reserve Asset
     mapping(address => bool) public override isGarden;
