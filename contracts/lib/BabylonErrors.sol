@@ -142,9 +142,9 @@ library Errors {
     uint256 internal constant VALUE_TOO_LOW = 25;
     // Value is too high
     uint256 internal constant VALUE_TOO_HIGH = 26;
-    // Only strategy or protcol allowed
+    // Only strategy or protocol allowed
     uint256 internal constant ONLY_STRATEGY_OR_CONTROLLER = 27;
-    // Only strategy or protcol allowed
+    // Normal withdraw possible
     uint256 internal constant NORMAL_WITHDRAWAL_POSSIBLE = 28;
     // User does not have permissions to join garden
     uint256 internal constant USER_CANNOT_JOIN = 29;
@@ -220,4 +220,8 @@ library Errors {
     uint256 internal constant GET_CONTRIBUTOR_POWER = 65;
     // Not enough ETH set aside
     uint256 internal constant NOT_ENOUGH_ETH = 66;
+    // Garden is already public
+    uint256 internal constant GARDEN_ALREADY_PUBLIC = 67;
+    // Withdrawal with penalty
+    uint256 internal constant WITHDRAWAL_WITH_PENALTY = 68;
 }
