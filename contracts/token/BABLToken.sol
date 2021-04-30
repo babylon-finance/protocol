@@ -176,34 +176,23 @@ contract BABLToken is TimeLockedToken {
         );
 
         // update the amount
-        uint96 amount = safe96(newMaxSupply, 'BABLToken::changeMaxSupply: new max amount exceeds 96 bits'); // Overflow check
         require(
-            amount > maxSupplyAllowed,
+            newMaxSupply > maxSupplyAllowed,
             'BABLToken::changeMaxSupply: changeMaxSupply should be higher than previous value'
         );
-        uint96 limitedNewSupply =
-            safe96(
-                maxSupplyAllowed.add(maxSupplyAllowed.mul(MAX_SUPPLY_CAP).div(100)),
-                'BABLToken::changeMaxSupply: potential max amount exceeds 96 bits'
-            );
-        require(amount <= limitedNewSupply, 'BABLToken::changeMaxSupply: exceeded of allowed 5% cap');
-        emit MaxSupplyChanged(maxSupplyAllowed, amount);
-        maxSupplyAllowed = amount;
+        uint256 limitedNewSupply = maxSupplyAllowed.add(maxSupplyAllowed.mul(MAX_SUPPLY_CAP).div(100));
+        require(newMaxSupply <= limitedNewSupply, 'BABLToken::changeMaxSupply: exceeded of allowed 5% cap');
+        emit MaxSupplyChanged(maxSupplyAllowed, newMaxSupply);
+        maxSupplyAllowed = safe96(newMaxSupply, 'BABLToken::changeMaxSupply: potential max amount exceeds 96 bits');
 
         // update the new waiting time until a new change could be done >= 1 year since this change
-        uint96 time =
-            safe96(
-                newMaxSupplyAllowedAfter,
-                'BABLToken::changeMaxSupply: new newMaxSupplyAllowedAfter exceeds 96 bits'
-            ); // Overflow check
-        uint96 futureTime =
-            safe96(block.timestamp.add(365 days), 'BABLToken::changeMaxSupply: minimum future time exceeds 96 bits'); // Overflow check
+        uint256 futureTime = block.timestamp.add(365 days);
         require(
-            time >= futureTime,
+            newMaxSupplyAllowedAfter >= futureTime,
             'BABLToken::changeMaxSupply: the newMaxSupplyAllowedAfter should be at least 1 year in the future'
         );
-        emit MaxSupplyAllowedAfterChanged(maxSupplyAllowedAfter, time);
-        maxSupplyAllowedAfter = time;
+        emit MaxSupplyAllowedAfterChanged(maxSupplyAllowedAfter, newMaxSupplyAllowedAfter);
+        maxSupplyAllowedAfter = safe96(newMaxSupplyAllowedAfter, 'BABLToken::changeMaxSupply: new newMaxSupplyAllowedAfter exceeds 96 bits');
 
         return true;
     }
