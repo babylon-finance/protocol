@@ -19,18 +19,18 @@
 pragma solidity 0.7.6;
 
 import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
-import {Strategy} from './Strategy.sol';
-import {IGarden} from '../interfaces/IGarden.sol';
-import {PreciseUnitMath} from '../lib/PreciseUnitMath.sol';
-import {ITradeIntegration} from '../interfaces/ITradeIntegration.sol';
+import {Operation} from './Operation.sol';
+import {IGarden} from '../../interfaces/IGarden.sol';
+import {PreciseUnitMath} from '../../lib/PreciseUnitMath.sol';
+import {ITradeIntegration} from '../../interfaces/ITradeIntegration.sol';
 
 /**
- * @title LongStrategy
+ * @title Operation
  * @author Babylon Finance
  *
- * Holds the data for a long strategy
+ * Executes a buy operation
  */
-contract LongStrategy is Strategy {
+contract BuyOperation is Operation {
     using PreciseUnitMath for uint256;
 
     address public longToken; // Asset to receive
@@ -40,12 +40,8 @@ contract LongStrategy is Strategy {
      *
      * @param _longToken                   Token to be bought
      */
-    function setData(address _longToken) external override onlyGardenAndNotSet {
+    function setData(address _longToken) external override {
         require(garden.reserveAsset() != _longToken, 'Receive token must be different');
-
-        kind = 0;
-        longToken = _longToken;
-        dataSet = true;
     }
 
     /**

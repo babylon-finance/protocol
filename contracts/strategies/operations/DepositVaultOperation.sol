@@ -20,19 +20,18 @@ pragma solidity 0.7.6;
 
 import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import {SafeMath} from '@openzeppelin/contracts/math/SafeMath.sol';
-import {PreciseUnitMath} from '../lib/PreciseUnitMath.sol';
-import {Strategy} from './Strategy.sol';
-import {StrategyNFT} from './StrategyNFT.sol';
-import {IGarden} from '../interfaces/IGarden.sol';
-import {IPassiveIntegration} from '../interfaces/IPassiveIntegration.sol';
+import {PreciseUnitMath} from '../../lib/PreciseUnitMath.sol';
+import {Operation} from './Operation.sol';
+import {IGarden} from '../../interfaces/IGarden.sol';
+import {IPassiveIntegration} from '../../interfaces/IPassiveIntegration.sol';
 
 /**
- * @title YieldFarmingStrategy
+ * @title DepositVaultOperation
  * @author Babylon Finance
  *
  * Holds the data for a long strategy
  */
-contract YieldFarmingStrategy is Strategy {
+contract DepositVaultOperation is Operation {
     using SafeMath for uint256;
     using PreciseUnitMath for uint256;
 
@@ -44,7 +43,7 @@ contract YieldFarmingStrategy is Strategy {
      *
      * @param _yieldVault                   Yield vault to enter
      */
-    function setData(address _yieldVault) external override onlyGardenAndNotSet {
+    function setData(address _yieldVault) external override {
         require(IPassiveIntegration(integration).isInvestment(_yieldVault), 'Must be a valid yield vault');
 
         kind = 2;
@@ -59,7 +58,7 @@ contract YieldFarmingStrategy is Strategy {
      * @return _nav           NAV of the strategy
      */
     function getNAV() public view override returns (uint256) {
-        if (!isStrategyActive()) {
+        if (!isOperationActive()) {
             return 0;
         }
         uint256 price = _getPrice(garden.reserveAsset(), vaultAsset);
@@ -76,7 +75,7 @@ contract YieldFarmingStrategy is Strategy {
      * Enters the long strategy
      * @param _capital      Amount of capital received from the garden
      */
-    function _enterStrategy(uint256 _capital) internal override {
+    function _enterOperation(uint256 _capital) internal override {
         if (vaultAsset != garden.reserveAsset()) {
             _trade(garden.reserveAsset(), _capital, vaultAsset);
         }
@@ -94,7 +93,7 @@ contract YieldFarmingStrategy is Strategy {
      * Exits the yield farming strategy.
      * @param _percentage of capital to exit from the strategy
      */
-    function _exitStrategy(uint256 _percentage) internal override {
+    function _exitOperation(uint256 _percentage) internal override {
         require(_percentage <= HUNDRED_PERCENT, 'Unwind Percentage <= 100%');
         uint256 amountVault = IERC20(yieldVault).balanceOf(address(this)).preciseMul(_percentage);
         IPassiveIntegration(integration).exitInvestment(

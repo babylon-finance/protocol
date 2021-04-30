@@ -565,7 +565,8 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
      * @param _strategyDuration              Strategy duration in seconds
      * @param _expectedReturn                Expected return
      * @param _minRebalanceCapital           Min capital that is worth it to deposit into this strategy
-     * @param _strategyData                  Param of strategy to add
+     * @param _opTypes                      Type for every operation in the strategy
+     * @param _opsDatas                      Param for every operation in the strategy
      * @param _name                          Name of the strategy
      * @param _symbol                        Symbol of the strategy
      */
@@ -577,7 +578,8 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         uint256 _strategyDuration,
         uint256 _expectedReturn,
         uint256 _minRebalanceCapital,
-        address _strategyData,
+        uint8[] calldata _opTypes,
+        bytes[] calldata _opsDatas,
         string memory _name,
         string memory _symbol
     ) external override onlyContributor onlyActive {
@@ -605,7 +607,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         strategyMapping[strategy] = true;
         totalStake = totalStake.add(_stake);
         strategies.push(strategy);
-        IStrategy(strategy).setData(_strategyData);
+        IStrategy(strategy).setData(_opTypes, _opsDatas);
     }
 
     /**

@@ -19,24 +19,25 @@
 pragma solidity 0.7.6;
 
 import {SafeMath} from '@openzeppelin/contracts/math/SafeMath.sol';
-import {PreciseUnitMath} from '../lib/PreciseUnitMath.sol';
+import {PreciseUnitMath} from '../../lib/PreciseUnitMath.sol';
 import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
-import {Strategy} from './Strategy.sol';
-import {IWETH} from '../interfaces/external/weth/IWETH.sol';
-import {IGarden} from '../interfaces/IGarden.sol';
-import {IPoolIntegration} from '../interfaces/IPoolIntegration.sol';
+import {Operation} from './Operation.sol';
+import {IWETH} from '../../interfaces/external/weth/IWETH.sol';
+import {IGarden} from '../../interfaces/IGarden.sol';
+import {IPoolIntegration} from '../../interfaces/IPoolIntegration.sol';
 
 /**
- * @title LongStrategy
+ * @title LongOperation
  * @author Babylon Finance
  *
  * Holds the data for a strategy that adds liquidity to a pool
  */
-contract LiquidityPoolStrategy is Strategy {
+contract AddLiquidityOperation is Operation {
     using SafeMath for uint256;
     using PreciseUnitMath for uint256;
 
     address public pool; // Pool to add liquidity to
+    address public integration; // Pool to add liquidity to
     address[] public poolTokens; // List of pool tokens
 
     /**
@@ -44,13 +45,8 @@ contract LiquidityPoolStrategy is Strategy {
      *
      * @param _pool                           Liquidity pool
      */
-    function setData(address _pool) external override onlyGardenAndNotSet {
+    function setData(address _pool) external override {
         require(IPoolIntegration(integration).isPool(_pool), 'Not a valid pool');
-
-        kind = 1;
-        pool = _pool;
-        poolTokens = IPoolIntegration(integration).getPoolTokens(pool);
-        dataSet = true;
     }
 
     /**
@@ -59,7 +55,7 @@ contract LiquidityPoolStrategy is Strategy {
      * @return _nav           NAV of the strategy
      */
     function getNAV() public view override returns (uint256) {
-        if (!isStrategyActive()) {
+        if (!isOperationActive()) {
             return 0;
         }
         uint256 NAV;
@@ -79,7 +75,7 @@ contract LiquidityPoolStrategy is Strategy {
      * Enters the pool strategy
      * @param _capital      Amount of capital received from the garden
      */
-    function _enterStrategy(uint256 _capital) internal override {
+    function _enterOperation(uint256 _capital) internal override {
         address reserveAsset = garden.reserveAsset();
         uint256[] memory _maxAmountsIn = new uint256[](poolTokens.length);
         uint256[] memory _poolWeights = IPoolIntegration(integration).getPoolWeights(pool);
@@ -115,7 +111,7 @@ contract LiquidityPoolStrategy is Strategy {
      * Exits the pool strategy.
      * @param _percentage _percentage of capital to exit from the strategy
      */
-    function _exitStrategy(uint256 _percentage) internal override {
+    function _exitOperation(uint256 _percentage) internal override {
         require(_percentage <= HUNDRED_PERCENT, 'Unwind Percentage <= 100%');
 
         uint256 lpTokens = IERC20(pool).balanceOf(address(this)).preciseMul(_percentage); // Sell all pool tokens

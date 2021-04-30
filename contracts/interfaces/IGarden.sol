@@ -113,7 +113,8 @@ interface IGarden {
         uint256 _strategyDuration,
         uint256 _expectedReturn,
         uint256 _minRebalanceCapital,
-        address _strategyData,
+        uint8[] calldata _opTypes,
+        bytes[] calldata _opsDatas,
         string memory _name,
         string memory _symbol
     ) external;

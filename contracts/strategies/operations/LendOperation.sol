@@ -21,36 +21,24 @@ pragma solidity 0.7.6;
 import {SafeMath} from '@openzeppelin/contracts/math/SafeMath.sol';
 import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 
-import {PreciseUnitMath} from '../lib/PreciseUnitMath.sol';
+import {PreciseUnitMath} from '../../lib/PreciseUnitMath.sol';
 
-import {Strategy} from './Strategy.sol';
-import {IGarden} from '../interfaces/IGarden.sol';
-import {ITradeIntegration} from '../interfaces/ITradeIntegration.sol';
-import {ILendIntegration} from '../interfaces/ILendIntegration.sol';
+import {Operation} from './Operation.sol';
+import {IGarden} from '../../interfaces/IGarden.sol';
+import {ITradeIntegration} from '../../interfaces/ITradeIntegration.sol';
+import {ILendIntegration} from '../../interfaces/ILendIntegration.sol';
 
 /**
- * @title LendStrategy
+ * @title LendOperation
  * @author Babylon Finance
  *
  * Allows to supply funds to protocols (Compound, Aave) to earn interest over time.
  */
-contract LendStrategy is Strategy {
+contract LendOperation is Operation {
     using SafeMath for uint256;
     using PreciseUnitMath for uint256;
 
     address public assetToken;
-
-    /**
-     * Sets integration data for the long strategy
-     *
-     * @param _assetToken                  ERC20 Token to supply.
-     */
-    function setData(address _assetToken) external override onlyGardenAndNotSet {
-        kind = 3;
-        assetToken = _assetToken;
-
-        dataSet = true;
-    }
 
     /**
      * Gets the NAV of the lend asset in ETH
@@ -58,7 +46,7 @@ contract LendStrategy is Strategy {
      * @return _nav           NAV of the strategy
      */
     function getNAV() public view override returns (uint256) {
-        if (!isStrategyActive()) {
+        if (!isOperationActive()) {
             return 0;
         }
         uint256 numTokensToRedeem =
@@ -75,7 +63,7 @@ contract LendStrategy is Strategy {
      * Enters the lend strategy
      * @param _capital      Amount of capital received from the garden
      */
-    function _enterStrategy(uint256 _capital) internal override {
+    function _enterOperation(uint256 _capital) internal override {
         if (assetToken != garden.reserveAsset()) {
             _trade(garden.reserveAsset(), _capital, assetToken);
         }
@@ -89,7 +77,7 @@ contract LendStrategy is Strategy {
      * Exits the lend strategy.
      * @param _percentage of capital to exit from the strategy
      */
-    function _exitStrategy(uint256 _percentage) internal override {
+    function _exitOperation(uint256 _percentage) internal override {
         require(_percentage <= HUNDRED_PERCENT, 'Unwind Percentage <= 100%');
         uint256 numTokensToRedeem =
             IERC20(ILendIntegration(integration).getInvestmentToken(assetToken)).balanceOf(address(this)).preciseMul(

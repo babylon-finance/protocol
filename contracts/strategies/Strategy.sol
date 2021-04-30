@@ -181,6 +181,10 @@ abstract contract Strategy is ReentrancyGuard, IStrategy, Initializable {
     // 3 = LendStrategy
     uint8 public kind;
 
+    // Types and data for the operations of this strategy
+    uint8[5] public opTypes;
+    bytes[5] public opDatas;
+
     // Garden that these strategies belong to
     IGarden public override garden;
 
@@ -285,6 +289,18 @@ abstract contract Strategy is ReentrancyGuard, IStrategy, Initializable {
     }
 
     /* ============ External Functions ============ */
+
+    /**
+     * Sets the data for the operations of this strategy
+     * @param _opTypes                    An array with the op types
+     * @param _opDatas                     Bytes with the params for the op in the same position in the opTypes array
+     */
+    function setData(uint[] calldata _opTypes, bytes[] calldata _opDatas) external override onlyGardenAndNotSet {
+      _require(_opTypes.length == _opDatas.length && _opDatas.length <= 5, Errors.TOO_MANY_OPS);
+      opTypes = _opTypes;
+      opDatas = _opDatas;
+      dataSet = true;
+    }
 
     /**
      * Adds off-chain voting results on-chain.
@@ -636,22 +652,26 @@ abstract contract Strategy is ReentrancyGuard, IStrategy, Initializable {
     }
 
     /**
-     * Enters the strategy. Virtual method.
-     * Needs to be overriden in base class.
+     * Enters the strategy.
+     * Executes all the operations in order
      * hparam _capital  Amount of capital that the strategy receives
      */
     function _enterStrategy(
         uint256 /*_capital*/
-    ) internal virtual;
+    ) internal {
+
+    }
 
     /**
-     * Exits the strategy. Virtual method.
-     * Needs to be overriden in base class.
+     * Exits the strategy.
+     * Exists all the operations starting by the end.
      * hparam _percentage of capital to exit from the strategy
      */
     function _exitStrategy(
         uint256 /*_percentage*/
-    ) internal virtual;
+    ) internal {
+
+    }
 
     /**
      * Deletes this strategy and returns the stake to the strategist
