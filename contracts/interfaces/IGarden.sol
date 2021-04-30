@@ -109,11 +109,7 @@ interface IGarden {
         string memory _name,
         string memory _symbol,
         uint8 _strategyKind,
-        uint256 _maxCapitalRequested,
-        uint256 _stake,
-        uint256 _strategyDuration,
-        uint256 _expectedReturn,
-        uint256 _minRebalanceCapital,
+        uint256[] calldata _stratParams,
         uint8[] calldata _opTypes,
         address[] calldata _opIntegrations,
         bytes32[] calldata _opDatas

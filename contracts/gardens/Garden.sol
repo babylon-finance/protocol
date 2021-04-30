@@ -561,11 +561,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
      * @param _name                          Name of the strategy
      * @param _symbol                        Symbol of the strategy
      * @param _strategyKind                  Int representing kind of strategy
-     * @param _maxCapitalRequested           Max Capital requested denominated in the reserve asset (0 to be unlimited)
-     * @param _stake                         Stake with garden participations absolute amounts 1e18
-     * @param _strategyDuration              Strategy duration in seconds
-     * @param _expectedReturn                Expected return
-     * @param _minRebalanceCapital           Min capital that is worth it to deposit into this strategy
+     * @param _stratParams                   Num params for the strategy
      * @param _opTypes                      Type for every operation in the strategy
      * @param _opIntegrations               Integration to use for every operation
      * @param _opDatas                      Param for every operation in the strategy
@@ -574,11 +570,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         string memory _name,
         string memory _symbol,
         uint8 _strategyKind,
-        uint256 _maxCapitalRequested,
-        uint256 _stake,
-        uint256 _strategyDuration,
-        uint256 _expectedReturn,
-        uint256 _minRebalanceCapital,
+        uint256[] calldata _stratParams,
         uint8[] calldata _opTypes,
         address[] calldata _opIntegrations,
         bytes32[] calldata _opDatas
@@ -588,6 +580,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
             Errors.USER_CANNOT_ADD_STRATEGIES
         );
         _require(strategies.length < MAX_TOTAL_STRATEGIES, Errors.VALUE_TOO_HIGH);
+        _require(_stratParams.length == 5, Errors.STRAT_PARAMS_LENGTH);
         address strategy =
             IStrategyFactory(IBabController(controller).strategyFactory()).createStrategy(
                 _name,
@@ -595,14 +588,10 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
                 msg.sender,
                 address(this),
                 controller,
-                _maxCapitalRequested,
-                _stake,
-                _strategyDuration,
-                _expectedReturn,
-                _minRebalanceCapital
+                _stratParams
             );
         strategyMapping[strategy] = true;
-        totalStake = totalStake.add(_stake);
+        totalStake = totalStake.add(_stratParams[1]);
         strategies.push(strategy);
         IStrategy(strategy).setData(_opTypes, _opIntegrations, _opDatas);
     }

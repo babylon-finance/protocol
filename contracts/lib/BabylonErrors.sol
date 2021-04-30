@@ -226,4 +226,6 @@ library Errors {
     uint256 internal constant TOO_MANY_OPS = 68;
     // Only operations
     uint256 internal constant ONLY_OPERATION = 69;
+    // Strat params wrong length
+    uint256 internal constant STRAT_PARAMS_LENGTH = 70;
 }

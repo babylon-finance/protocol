@@ -48,11 +48,7 @@ contract StrategyFactory is IStrategyFactory {
      * @param _strategist                    Address of the strategist
      * @param _garden                        Address of the garden
      * @param _controller                    Address of the controller
-     * @param _maxCapitalRequested           Max Capital requested denominated in the reserve asset (0 to be unlimited)
-     * @param _stake                         Stake with garden participations absolute amounts 1e18
-     * @param _investmentDuration            Investment duration in seconds
-     * @param _expectedReturn                Expected return
-     * @param _minRebalanceCapital           Min capital that is worth it to deposit into this strategy
+     * @param _stratParams                   Strat Params
      */
     function createStrategy(
         string memory _name,
@@ -60,11 +56,7 @@ contract StrategyFactory is IStrategyFactory {
         address _strategist,
         address _garden,
         address _controller,
-        uint256 _maxCapitalRequested,
-        uint256 _stake,
-        uint256 _investmentDuration,
-        uint256 _expectedReturn,
-        uint256 _minRebalanceCapital
+        uint256[] calldata _stratParams
     ) external override returns (address) {
         address payable clone = payable(Clones.clone(strategy));
         address cloneNFT = Clones.clone(strategyNft);
@@ -73,11 +65,11 @@ contract StrategyFactory is IStrategyFactory {
             _strategist,
             _garden,
             _controller,
-            _maxCapitalRequested,
-            _stake,
-            _investmentDuration,
-            _expectedReturn,
-            _minRebalanceCapital,
+            _stratParams[0],
+            _stratParams[1],
+            _stratParams[2],
+            _stratParams[3],
+            _stratParams[4],
             cloneNFT
         );
         return clone;

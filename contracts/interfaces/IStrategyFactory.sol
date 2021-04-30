@@ -32,10 +32,6 @@ interface IStrategyFactory {
         address _strategist,
         address _garden,
         address _controller,
-        uint256 _maxCapitalRequested,
-        uint256 _stake,
-        uint256 _strategyDuration,
-        uint256 _expectedReturn,
-        uint256 _minRebalanceCapital
+        uint256[] calldata _stratParams
     ) external returns (address);
 }
