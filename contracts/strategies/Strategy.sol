@@ -365,7 +365,7 @@ abstract contract Strategy is ReentrancyGuard, IStrategy, Initializable {
             Errors.STRATEGY_IN_COOLDOWN
         );
 
-        // Execute enter trade
+        // Execute enter operation
         garden.allocateCapitalToStrategy(_capital);
         capitalAllocated = capitalAllocated.add(_capital);
         _enterStrategy(_capital);
@@ -411,7 +411,7 @@ abstract contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         _require(executedAt > 0, Errors.STRATEGY_IS_NOT_EXECUTED);
         _require(block.timestamp > executedAt.add(duration), Errors.STRATEGY_IS_NOT_OVER_YET);
         _require(!finalized, Errors.STRATEGY_IS_ALREADY_FINALIZED);
-        // Execute exit trade
+        // Execute exit operations
         _exitStrategy(HUNDRED_PERCENT);
         // Mark as finalized
         finalized = true;

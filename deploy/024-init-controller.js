@@ -22,11 +22,7 @@ module.exports = async ({ getNamedAccounts, deployments, ethers, getSigner, getC
   const ishtarGate = await deployments.get('IshtarGate');
   const rewardsDistributor = await deployments.get('RewardsDistributor');
   const gardenFactory = await deployments.get('GardenFactory');
-  const longStrategyFactory = await deployments.get('LongStrategyFactory');
-  const liquidityPoolStrategyFactory = await deployments.get('LiquidityPoolStrategyFactory');
-  const yieldFarmingStrategyFactory = await deployments.get('YieldFarmingStrategyFactory');
-
-  const lendStrategyFactory = await deployments.get('LendStrategyFactory');
+  const strategyFactory = await deployments.get('LongStrategyFactory');
 
   const controllerContract = await ethers.getContractAt('BabController', controller.address);
 
@@ -42,10 +38,7 @@ module.exports = async ({ getNamedAccounts, deployments, ethers, getSigner, getC
   await controllerContract.connect(owner).editIshtarGate(ishtarGate.address);
   await controllerContract.connect(owner).editRewardsDistributor(rewardsDistributor.address);
   await controllerContract.connect(owner).editGardenFactory(gardenFactory.address);
-  await controllerContract.connect(owner).editStrategyFactory(0, longStrategyFactory.address);
-  await controllerContract.connect(owner).editStrategyFactory(1, liquidityPoolStrategyFactory.address);
-  await controllerContract.connect(owner).editStrategyFactory(2, yieldFarmingStrategyFactory.address);
-  await controllerContract.connect(owner).editStrategyFactory(3, lendStrategyFactory.address);
+  await controllerContract.connect(owner).editStrategyFactory(strategyFactory.address);
 
   // Adding integrations
   for (const integration of [
