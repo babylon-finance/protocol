@@ -211,9 +211,7 @@ abstract contract TimeLockedToken is VoteToken {
         newVestedToken.vestingBegin = _vestingBegin;
         newVestedToken.vestingEnd = _vestingEnd;
         newVestedToken.lastClaim = _lastClaim;
-
-        vestedToken[_receiver] = newVestedToken;
-
+        
         // transfer tokens to the recipient
         _transfer(msg.sender, _receiver, _amount);
         emit NewLockout(_receiver, _amount, _profile, _vestingBegin, _vestingEnd);
