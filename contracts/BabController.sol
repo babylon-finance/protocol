@@ -131,6 +131,8 @@ contract BabController is OwnableUpgradeable, IBabController {
     bool public override bablTokensTransfersEnabled;
     // Enable and starts the BABL Mining program within Rewards Distributor contract
     bool public override bablMiningProgramEnabled;
+    // Enable public gardens
+    bool public override allowPublicGardens;
 
     uint256 public override protocolPerformanceFee; // 5% (0.01% = 1e14, 1% = 1e16) on profits
     uint256 public override protocolManagementFee; // 0.5% (0.01% = 1e14, 1% = 1e16)
@@ -151,8 +153,9 @@ contract BabController is OwnableUpgradeable, IBabController {
         protocolDepositGardenTokenFee = 0; // 0% (0.01% = 1e14, 1% = 1e16) on profits
         protocolWithdrawalGardenTokenFee = 0; // 0% (0.01% = 1e14, 1% = 1e16) on profits
         gardenTokensTransfersEnabled = false;
-        bablTokensTransfersEnabled = false;
+        bablTokensTransfersEnabled = true;
         bablMiningProgramEnabled = false;
+        allowPublicGardens = false;
         minRiskyPairLiquidityEth = 1000 * 1e18;
 
         strategistProfitPercentage = 10e16;
@@ -252,11 +255,25 @@ contract BabController is OwnableUpgradeable, IBabController {
     }
 
     /**
+     * PRIVILEGED GOVERNANCE FUNCTION. Disables transfers of ERC20 BABL Tokens
+     */
+    function disableBABLTokensTransfers() external override onlyOwner {
+        bablTokensTransfersEnabled = false;
+    }
+
+    /**
      * PRIVILEGED GOVERNANCE FUNCTION. Allows transfers of ERC20 BABL Tokens
      * Can only happen after the protocol is fully decentralized.
      */
     function enableBABLTokensTransfers() external override onlyOwner {
         bablTokensTransfersEnabled = true;
+    }
+
+    /**
+     * PRIVILEGED GOVERNANCE FUNCTION. Allows public gardens
+     */
+    function setAllowPublicGardens() external override onlyOwner {
+        allowPublicGardens = true;
     }
 
     /**  PRIVILEGED GOVERNANCE FUNCTION. Enable and starts the BABL Mining program by the Rewards Distributor

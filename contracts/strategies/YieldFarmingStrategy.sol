@@ -59,15 +59,20 @@ contract YieldFarmingStrategy is Strategy {
      * @return _nav           NAV of the strategy
      */
     function getNAV() public view override returns (uint256) {
+        address reserveAsset = garden.reserveAsset();
+        uint256 NAV = IERC20(reserveAsset).balanceOf(address(this));
+
         if (!isStrategyActive()) {
-            return 0;
+            return NAV;
         }
+
         uint256 price = _getPrice(garden.reserveAsset(), vaultAsset);
-        uint256 NAV =
+        NAV = NAV.add(
             IPassiveIntegration(integration)
                 .getPricePerShare(yieldVault)
                 .mul(IERC20(yieldVault).balanceOf(address(this)))
-                .div(price);
+                .div(price)
+        );
         require(NAV != 0, 'NAV has to be bigger 0');
         return NAV;
     }

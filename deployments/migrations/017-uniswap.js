@@ -1,4 +1,4 @@
-const addresses = require('../lib/addresses');
+const addresses = require('../../lib/addresses');
 
 module.exports = async ({ getNamedAccounts, deployments, ethers }) => {
   const { deploy } = deployments;
@@ -6,12 +6,12 @@ module.exports = async ({ getNamedAccounts, deployments, ethers }) => {
 
   const controller = await deployments.get('BabControllerProxy');
 
-  await deploy('AaveLendIntegration', {
+  await deploy('UniswapPoolIntegration', {
     from: deployer,
-    args: [controller.address, addresses.tokens.WETH],
+    args: [controller.address, addresses.tokens.WETH, addresses.uniswap.router],
     log: true,
   });
 };
 
-module.exports.tags = ['Aave'];
-module.exports.dependencies = ['Compound'];
+module.exports.tags = ['Uniswap'];
+module.exports.dependencies = ['Balancer'];

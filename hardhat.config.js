@@ -88,6 +88,8 @@ module.exports = {
     sources: './contracts',
     integrations: './contracts/integrations',
     artifacts: './artifacts',
+    deploy: 'deployments/migrations',
+    deployments: 'deployments/artifacts',
   },
   mocha: {
     timeout: 120000,

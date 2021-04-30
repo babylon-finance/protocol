@@ -18,7 +18,10 @@
 
 pragma solidity 0.7.6;
 
+import 'hardhat/console.sol';
 import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
+import {SafeMath} from '@openzeppelin/contracts/math/SafeMath.sol';
+
 import {Strategy} from './Strategy.sol';
 import {IGarden} from '../interfaces/IGarden.sol';
 import {PreciseUnitMath} from '../lib/PreciseUnitMath.sol';
@@ -32,6 +35,7 @@ import {ITradeIntegration} from '../interfaces/ITradeIntegration.sol';
  */
 contract LongStrategy is Strategy {
     using PreciseUnitMath for uint256;
+    using SafeMath for uint256;
 
     address public longToken; // Asset to receive
 
@@ -54,11 +58,14 @@ contract LongStrategy is Strategy {
      * @return _nav           NAV of the strategy
      */
     function getNAV() public view override returns (uint256) {
+        address reserveAsset = garden.reserveAsset();
+        uint256 NAV = IERC20(reserveAsset).balanceOf(address(this));
+
         if (!isStrategyActive()) {
-            return 0;
+            return NAV;
         }
-        uint256 price = _getPrice(garden.reserveAsset(), longToken);
-        uint256 NAV = IERC20(longToken).balanceOf(address(this)).preciseDiv(price);
+        uint256 price = _getPrice(reserveAsset, longToken);
+        NAV = NAV.add(IERC20(longToken).balanceOf(address(this)).preciseDiv(price));
         require(NAV != 0, 'NAV has to be bigger 0');
         return NAV;
     }
