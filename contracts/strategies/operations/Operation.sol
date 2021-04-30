@@ -19,10 +19,13 @@
 pragma solidity 0.7.6;
 
 import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
+import {PreciseUnitMath} from '../../lib/PreciseUnitMath.sol';
 import {IGarden} from '../../interfaces/IGarden.sol';
 import {IStrategy} from '../../interfaces/IStrategy.sol';
-import {PreciseUnitMath} from '../../lib/PreciseUnitMath.sol';
+import {IOperation} from '../../interfaces/IOperation.sol';
 import {ITradeIntegration} from '../../interfaces/ITradeIntegration.sol';
+import {IPriceOracle} from '../../interfaces/IPriceOracle.sol';
+import {IBabController} from '../../interfaces/IBabController.sol';
 
 /**
  * @title LongStrategy
@@ -42,6 +45,8 @@ abstract contract Operation is IOperation {
     }
 
     /* ============ State Variables ============ */
+    uint256 internal constant SLIPPAGE_ALLOWED = 1e16; // 1%
+    uint256 internal constant HUNDRED_PERCENT = 1e18; // 100%
 
     // Address of the controller
     address public controller;
@@ -66,7 +71,7 @@ abstract contract Operation is IOperation {
     /* ============ Virtual External Functions ============ */
 
     function validateOperation(
-        bytes _data,
+        bytes calldata _data,
         IGarden _garden,
         IStrategy _strategy,
         address _integration
@@ -75,7 +80,7 @@ abstract contract Operation is IOperation {
     function executeOperation(
         address _asset,
         uint256 _capital,
-        bytes _data,
+        bytes calldata _data,
         IGarden _garden,
         IStrategy _strategy,
         address _integration
@@ -83,14 +88,14 @@ abstract contract Operation is IOperation {
 
     function exitOperation(
         uint256 _percentage,
-        bytes _data,
+        bytes calldata _data,
         IGarden _garden,
         IStrategy _strategy,
         address _integration
     ) external virtual override;
 
     function getNAV(
-        bytes _data,
+        bytes calldata _data,
         IGarden _garden,
         IStrategy _strategy,
         address _integration

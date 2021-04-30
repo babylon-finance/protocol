@@ -40,7 +40,7 @@ contract BuyOperation is Operation {
      * @param _data                   Operation data
      */
     function validateOperation(
-        bytes _data,
+        bytes calldata _data,
         IGarden _garden,
         IStrategy _strategy,
         address _integration
@@ -54,13 +54,13 @@ contract BuyOperation is Operation {
      */
     function executeOperation(
         uint256 _capital,
-        bytes _data,
+        bytes calldata _data,
         IGarden _garden,
         IStrategy _strategy,
         address _integration
     ) internal override onlyStrategy returns (address, uint256) {
         address longToken = _parseData(_data);
-        _trade(_garden.reserveAsset(), _capital, longToken);
+        IStrategy(_strategy).trade(_garden.reserveAsset(), _capital, longToken);
         return (longToken, IERC20(longToken).balanceOf(address(msg.sender)));
     }
 
@@ -70,14 +70,14 @@ contract BuyOperation is Operation {
      */
     function exitOperation(
         uint256 _percentage,
-        bytes _data,
+        bytes calldata _data,
         IGarden _garden,
         IStrategy _strategy,
         address _integration
     ) internal override onlyStrategy {
         require(_percentage <= 100e18, 'Unwind Percentage <= 100%');
         address longToken = _parseData(_data);
-        strategy.trade(
+        IStrategy(_strategy).trade(
             longToken,
             IERC20(longToken).balanceOf(address(msg.sender)).preciseMul(_percentage),
             _garden.reserveAsset()
@@ -90,7 +90,7 @@ contract BuyOperation is Operation {
      * @return _nav           NAV of the strategy
      */
     function getNAV(
-        bytes _data,
+        bytes calldata _data,
         IGarden _garden,
         IStrategy _strategy,
         address _integration
@@ -107,7 +107,7 @@ contract BuyOperation is Operation {
 
     /* ============ Private Functions ============ */
 
-    function _parseData(bytes _data) private view returns (address) {
+    function _parseData(bytes calldata _data) private view returns (address) {
         return address(0);
     }
 }

@@ -17,6 +17,9 @@
 */
 pragma solidity 0.7.6;
 
+import {IGarden} from './IGarden.sol';
+import {IStrategy} from './IStrategy.sol';
+
 /**
  * @title IOperation
  * @author Babylon Finance
@@ -25,7 +28,7 @@ pragma solidity 0.7.6;
  */
 interface IOperation {
     function validateOperation(
-        bytes _data,
+        bytes calldata _data,
         IGarden _garden,
         IStrategy _strategy,
         address _integration
@@ -34,7 +37,7 @@ interface IOperation {
     function executeOperation(
         address _asset,
         uint256 _capital,
-        bytes _data,
+        bytes calldata _data,
         IGarden _garden,
         IStrategy _strategy,
         address _integration
@@ -42,19 +45,18 @@ interface IOperation {
 
     function exitOperation(
         uint256 _percentage,
-        bytes _data,
+        bytes calldata _data,
         IGarden _garden,
         IStrategy _strategy,
         address _integration
     ) external;
 
     function getNAV(
-        bytes _data,
+        bytes calldata _data,
         IGarden _garden,
         IStrategy _strategy,
-        address _integration,
         address _integration
     ) external view returns (uint256);
 
-    function getName() external view returns (string);
+    function getName() external view returns (string memory);
 }

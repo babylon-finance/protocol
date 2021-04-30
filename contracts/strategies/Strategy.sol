@@ -38,6 +38,7 @@ import {IWETH} from '../interfaces/external/weth/IWETH.sol';
 import {IBabController} from '../interfaces/IBabController.sol';
 import {IGarden} from '../interfaces/IGarden.sol';
 import {ITradeIntegration} from '../interfaces/ITradeIntegration.sol';
+import {IOperation} from '../interfaces/IOperation.sol';
 import {IIntegration} from '../interfaces/IIntegration.sol';
 import {IPriceOracle} from '../interfaces/IPriceOracle.sol';
 import {IStrategy} from '../interfaces/IStrategy.sol';
@@ -51,7 +52,7 @@ import {IRewardsDistributor} from '../interfaces/IRewardsDistributor.sol';
  * Base Strategy contract. Belongs to a garden. Abstract.
  * Will be extended from specific strategy contracts.
  */
-abstract contract Strategy is ReentrancyGuard, IStrategy, Initializable {
+contract Strategy is ReentrancyGuard, IStrategy, Initializable {
     using SignedSafeMath for int256;
     using SafeMath for uint256;
     using SafeCast for uint256;
@@ -308,7 +309,7 @@ abstract contract Strategy is ReentrancyGuard, IStrategy, Initializable {
      */
     function setData(
         uint8[] calldata _opTypes,
-        address[] _opIntegrations,
+        address[] calldata _opIntegrations,
         bytes[] calldata _opDatas
     ) external override onlyGardenAndNotSet {
         _require(
@@ -649,7 +650,7 @@ abstract contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         uint256 nav = 0;
         for (uint256 i = 0; i < opTypes.length; i++) {
             IOperation operation = IBabController(controller).enabledOperations(opTypes[i]);
-            nav = nav.add(operation.getNAV());
+            nav = nav.add(operation.getNAV(opDatas[i], garden, IStrategy(address(this)), opIntegrations[i]));
         }
         return nav;
     }
@@ -707,10 +708,14 @@ abstract contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         uint256 capitalForNexOperation = _capital;
         address assetAccumulated = garden.reserveAsset();
         for (uint256 i = 0; i < opTypes.length; i++) {
-            IOperation operation = IBabController(controller).enabledOperations(opTypes[i]);
+            IOperation operation = IOperation(IBabController(controller).enabledOperations(opTypes[i]));
             (assetAccumulated, capitalForNexOperation) = operation.executeOperation(
                 assetAccumulated,
-                capitalForNexOperation
+                capitalForNexOperation,
+                opDatas[i],
+                garden,
+                address(this),
+                opIntegrations[i]
             );
         }
     }
@@ -722,8 +727,8 @@ abstract contract Strategy is ReentrancyGuard, IStrategy, Initializable {
      */
     function _exitStrategy(uint256 _percentage) internal {
         for (uint256 i = opTypes.length - 1; i > 0; i--) {
-            IOperation operation = IBabController(controller).enabledOperations(opTypes[i]);
-            operation.exitOperation(_percentage);
+            IOperation operation = IOperation(IBabController(controller).enabledOperations(opTypes[i]));
+            operation.exitOperation(_percentage, opDatas[i], garden, address(this), opIntegrations[i]);
         }
     }
 

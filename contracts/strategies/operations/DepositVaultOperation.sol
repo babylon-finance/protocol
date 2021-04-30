@@ -42,7 +42,7 @@ contract DepositVaultOperation is Operation {
      * @param _data                   Operation data
      */
     function validateOperation(
-        bytes _data,
+        bytes calldata _data,
         IGarden _garden,
         IStrategy _strategy,
         address _integration
@@ -56,7 +56,7 @@ contract DepositVaultOperation is Operation {
      */
     function executeOperation(
         uint256 _capital,
-        bytes _data,
+        bytes calldata _data,
         IGarden _garden,
         IStrategy _strategy,
         address _integration
@@ -83,7 +83,7 @@ contract DepositVaultOperation is Operation {
      */
     function exitOperation(
         uint256 _percentage,
-        bytes _data,
+        bytes calldata _data,
         IGarden _garden,
         IStrategy _strategy,
         address _integration
@@ -92,7 +92,7 @@ contract DepositVaultOperation is Operation {
         address yieldVault = _parseData(_data);
         address vaultAsset = IPassiveIntegration(_integration).getInvestmentAsset(yieldVault);
         uint256 amountVault = IERC20(yieldVault).balanceOf(msg.sender).preciseMul(_percentage);
-        IPassiveIntegration(integration).exitInvestment(
+        IPassiveIntegration(_integration).exitInvestment(
             yieldVault,
             amountVault,
             vaultAsset,
@@ -100,8 +100,8 @@ contract DepositVaultOperation is Operation {
                 amountVault.sub(amountVault.preciseMul(SLIPPAGE_ALLOWED))
             )
         );
-        if (vaultAsset != garden.reserveAsset()) {
-            IStrategy(_strategy).trade(vaultAsset, IERC20(vaultAsset).balanceOf(msg.sender), garden.reserveAsset());
+        if (vaultAsset != _garden.reserveAsset()) {
+            IStrategy(_strategy).trade(vaultAsset, IERC20(vaultAsset).balanceOf(msg.sender), _garden.reserveAsset());
         }
     }
 
@@ -111,7 +111,7 @@ contract DepositVaultOperation is Operation {
      * @return _nav           NAV of the strategy
      */
     function getNAV(
-        bytes _data,
+        bytes calldata _data,
         IGarden _garden,
         IStrategy _strategy,
         address _integration
@@ -133,7 +133,7 @@ contract DepositVaultOperation is Operation {
 
     /* ============ Private Functions ============ */
 
-    function _parseData(bytes _data) private view returns (address) {
+    function _parseData(bytes calldata _data) private view returns (address) {
         return address(0);
     }
 }

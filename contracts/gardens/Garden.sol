@@ -588,8 +588,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
             Errors.USER_CANNOT_ADD_STRATEGIES
         );
         _require(strategies.length < MAX_TOTAL_STRATEGIES, Errors.VALUE_TOO_HIGH);
-        IStrategyFactory strategyFactory =
-            IStrategyFactory(IBabController(controller).getStrategyFactory(_strategyKind));
+        IStrategyFactory strategyFactory = IStrategyFactory(IBabController(controller).strategyFactory());
         address strategy =
             strategyFactory.createStrategy(
                 _name,
@@ -606,7 +605,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         strategyMapping[strategy] = true;
         totalStake = totalStake.add(_stake);
         strategies.push(strategy);
-        IStrategy(strategy).setData(_opTypes, _opIntegrations, _opsDatas);
+        IStrategy(strategy).setData(_opTypes, _opIntegrations, _opDatas);
     }
 
     /**

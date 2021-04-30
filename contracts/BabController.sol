@@ -460,7 +460,8 @@ contract BabController is OwnableUpgradeable, IBabController {
         require(_newDefaultTradeIntegation != address(0), 'Address must not be 0');
         require(_newDefaultTradeIntegation != defaultTradeIntegration, 'Address must be different');
         require(
-            isValidIntegration(IIntegration(_newDefaultTradeIntegation).getName(), _newDefaultTradeIntegation),
+            enabledIntegrations[_nameHash(IIntegration(_newDefaultTradeIntegation).getName())] ==
+                _newDefaultTradeIntegation,
             'Integration needs to be valid'
         );
         address oldDefaultTradeIntegration = defaultTradeIntegration;
@@ -526,7 +527,7 @@ contract BabController is OwnableUpgradeable, IBabController {
     function setOperation(uint8 _kind, address _operation) public override onlyOwner {
         require(_kind < MAX_OPERATIONS, 'Max operations reached');
         require(enabledOperations[_kind] != _operation, 'Operation already set');
-        require(operation != address(0), 'Operation address must exist.');
+        require(_operation != address(0), 'Operation address must exist.');
 
         enabledOperations[_kind] = _operation;
 
