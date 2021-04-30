@@ -295,11 +295,11 @@ abstract contract Strategy is ReentrancyGuard, IStrategy, Initializable {
      * @param _opTypes                    An array with the op types
      * @param _opDatas                     Bytes with the params for the op in the same position in the opTypes array
      */
-    function setData(uint[] calldata _opTypes, bytes[] calldata _opDatas) external override onlyGardenAndNotSet {
-      _require(_opTypes.length == _opDatas.length && _opDatas.length <= 5, Errors.TOO_MANY_OPS);
-      opTypes = _opTypes;
-      opDatas = _opDatas;
-      dataSet = true;
+    function setData(uint256[] calldata _opTypes, bytes[] calldata _opDatas) external override onlyGardenAndNotSet {
+        _require(_opTypes.length == _opDatas.length && _opDatas.length <= 5, Errors.TOO_MANY_OPS);
+        opTypes = _opTypes;
+        opDatas = _opDatas;
+        dataSet = true;
     }
 
     /**
@@ -658,9 +658,7 @@ abstract contract Strategy is ReentrancyGuard, IStrategy, Initializable {
      */
     function _enterStrategy(
         uint256 /*_capital*/
-    ) internal {
-
-    }
+    ) internal {}
 
     /**
      * Exits the strategy.
@@ -669,9 +667,7 @@ abstract contract Strategy is ReentrancyGuard, IStrategy, Initializable {
      */
     function _exitStrategy(
         uint256 /*_percentage*/
-    ) internal {
-
-    }
+    ) internal {}
 
     /**
      * Deletes this strategy and returns the stake to the strategist

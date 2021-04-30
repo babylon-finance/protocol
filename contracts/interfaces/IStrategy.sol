@@ -47,7 +47,7 @@ interface IStrategy {
         uint256 fee
     ) external;
 
-    function setData(uint[] calldata _opTypes, bytes[] calldata _opDatas) external;
+    function setData(uint256[] calldata _opTypes, bytes[] calldata _opDatas) external;
 
     function executeStrategy(uint256 _capital, uint256 fee) external;
 

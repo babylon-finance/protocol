@@ -30,6 +30,6 @@ import {ITradeIntegration} from '../../interfaces/ITradeIntegration.sol';
  *
  * Holds the data for a long strategy
  */
-contract Operation {
+abstract contract Operation {
     using PreciseUnitMath for uint256;
 }
