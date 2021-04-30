@@ -28,7 +28,7 @@ import {IStrategy} from './IStrategy.sol';
  */
 interface IOperation {
     function validateOperation(
-        bytes calldata _data,
+        bytes32 _data,
         IGarden _garden,
         IStrategy _strategy,
         address _integration
@@ -37,7 +37,7 @@ interface IOperation {
     function executeOperation(
         address _asset,
         uint256 _capital,
-        bytes calldata _data,
+        bytes32 _data,
         IGarden _garden,
         IStrategy _strategy,
         address _integration
@@ -45,14 +45,14 @@ interface IOperation {
 
     function exitOperation(
         uint256 _percentage,
-        bytes calldata _data,
+        bytes32 _data,
         IGarden _garden,
         IStrategy _strategy,
         address _integration
     ) external;
 
     function getNAV(
-        bytes calldata _data,
+        bytes32 _data,
         IGarden _garden,
         IStrategy _strategy,
         address _integration

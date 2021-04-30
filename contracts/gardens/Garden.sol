@@ -581,16 +581,15 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         uint256 _minRebalanceCapital,
         uint8[] calldata _opTypes,
         address[] calldata _opIntegrations,
-        bytes[] calldata _opDatas
+        bytes32[] calldata _opDatas
     ) external override onlyContributor onlyActive {
         _require(
             IIshtarGate(IBabController(controller).ishtarGate()).canAddStrategiesInAGarden(address(this), msg.sender),
             Errors.USER_CANNOT_ADD_STRATEGIES
         );
         _require(strategies.length < MAX_TOTAL_STRATEGIES, Errors.VALUE_TOO_HIGH);
-        IStrategyFactory strategyFactory = IStrategyFactory(IBabController(controller).strategyFactory());
         address strategy =
-            strategyFactory.createStrategy(
+            IStrategyFactory(IBabController(controller).strategyFactory()).createStrategy(
                 _name,
                 _symbol,
                 msg.sender,

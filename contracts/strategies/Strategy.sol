@@ -201,7 +201,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
     // Types and data for the operations of this strategy
     uint8[] public opTypes;
     address[] public opIntegrations;
-    bytes[] public opDatas;
+    bytes32[] public opDatas;
 
     // Garden that these strategies belong to
     IGarden public override garden;
@@ -310,7 +310,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
     function setData(
         uint8[] calldata _opTypes,
         address[] calldata _opIntegrations,
-        bytes[] calldata _opDatas
+        bytes32[] calldata _opDatas
     ) external override onlyGardenAndNotSet {
         _require(
             _opTypes.length == opIntegrations.length && opIntegrations.length == opDatas.length,
@@ -319,7 +319,12 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         _require(_opDatas.length < MAX_OPERATIONS, Errors.TOO_MANY_OPS);
 
         for (uint256 i = 0; i < _opTypes.length; i++) {
-            IOperation(controller.enabledOperations(_opTypes[i])).validateOperation(_opDatas[i], garden, IStrategy(address(this)), _opIntegrations[i]);
+            IOperation(controller.enabledOperations(_opTypes[i])).validateOperation(
+                _opDatas[i],
+                garden,
+                IStrategy(address(this)),
+                _opIntegrations[i]
+            );
             _require(
                 controller.isValidIntegration(IIntegration(_opIntegrations[i]).getName(), _opIntegrations[i]),
                 Errors.ONLY_INTEGRATION

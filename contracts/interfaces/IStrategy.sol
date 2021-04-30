@@ -49,7 +49,7 @@ interface IStrategy {
     function setData(
         uint8[] calldata _opTypes,
         address[] calldata _opIntegrations,
-        bytes[] calldata _opDatas
+        bytes32[] calldata _opDatas
     ) external;
 
     function executeStrategy(uint256 _capital, uint256 fee) external;

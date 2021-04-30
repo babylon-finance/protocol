@@ -45,8 +45,7 @@ contract AddLiquidityOperation is Operation {
      * @param _name                   Name of the integration
      * @param _controller             Address of the controller
      */
-    constructor(string memory _name, address _controller) Operation(_name, _controller) {
-    }
+    constructor(string memory _name, address _controller) Operation(_name, _controller) {}
 
     /**
      * Sets operation data for the add liquidity operation
@@ -54,7 +53,7 @@ contract AddLiquidityOperation is Operation {
      * @param _data                   Operation data
      */
     function validateOperation(
-        bytes calldata _data,
+        bytes32 _data,
         IGarden _garden,
         IStrategy _strategy,
         address _integration
@@ -69,7 +68,7 @@ contract AddLiquidityOperation is Operation {
     function executeOperation(
         address _asset,
         uint256 _capital,
-        bytes calldata _data,
+        bytes32 _data,
         IGarden _garden,
         IStrategy _strategy,
         address _integration
@@ -113,7 +112,7 @@ contract AddLiquidityOperation is Operation {
      */
     function exitOperation(
         uint256 _percentage,
-        bytes calldata _data,
+        bytes32 _data,
         IGarden _garden,
         IStrategy _strategy,
         address _integration
@@ -152,7 +151,7 @@ contract AddLiquidityOperation is Operation {
      * @return _nav           NAV of the strategy
      */
     function getNAV(
-        bytes calldata _data,
+        bytes32 _data,
         IGarden _garden,
         IStrategy _strategy,
         address _integration
@@ -177,7 +176,7 @@ contract AddLiquidityOperation is Operation {
 
     /* ============ Private Functions ============ */
 
-    function _parseData(bytes calldata _data) private view returns (address) {
+    function _parseData(bytes32 _data) private view returns (address) {
         return address(0);
     }
 }
