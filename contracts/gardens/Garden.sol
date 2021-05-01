@@ -180,12 +180,12 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
     } 
   
 
-    struct GardenPowerByTimestamp {
-        uint256 principal;
-        uint256 timestamp;
-        uint256 timePointer;
-        uint256 power;
-    }
+    //struct GardenPowerByTimestamp {
+    //    uint256 principal;
+    //    uint256 timestamp;
+    //    uint256 timePointer;
+    //    uint256 power;
+    //}
 
     /* ============ State Variables ============ */
 
@@ -223,8 +223,8 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
     uint256 public maxDepositLimit; // Limits the amount of deposits
 
     uint256 public override gardenInitializedAt; // Garden Initialized at timestamp
-    mapping(uint256 => GardenPowerByTimestamp) public gardenPowerByTimestamp;
-    uint256[] public gardenTimelist;
+    //mapping(uint256 => GardenPowerByTimestamp) public gardenPowerByTimestamp;
+    //uint256[] public gardenTimelist;
     uint256 public pid;
 
     // Min contribution in the garden
@@ -405,6 +405,13 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         payProtocolFeeFromGarden(reserveAsset, protocolFees);
 
         // Mint tokens
+        console.log('MINTING FROM', msg.sender);
+        console.log('MINTING TO', _to);
+        console.log('MINTING NETFLOWQUANTITY', netFlowQuantity);
+        console.log('MINTING principal add netflow', principal.add(netFlowQuantity));
+        console.log('MINTING protocol fees', protocolFees);
+        console.log('TOTAL SUPPLY', totalSupply());
+        console.log('THIS GARDEN ADDRESS', address(this));
         _mintGardenTokens(msg.sender, _to, netFlowQuantity, principal.add(netFlowQuantity), protocolFees);
     }
 
@@ -1050,8 +1057,9 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
 
         contributor.lastDepositAt = block.timestamp;
         IRewardsDistributor rewardsDistributor = IRewardsDistributor(IBabController(controller).rewardsDistributor());
-        rewardsDistributor.updateGardenPower(address(this));
-        rewardsDistributor.setContributorTimestampParams(address(this), _contributor, previousBalance, true); // true = deposit
+        rewardsDistributor.updateGardenPower(address(this), pid);
+        rewardsDistributor.setContributorTimestampParams(address(this), _contributor, previousBalance, true, pid); // true = deposit
+        pid++;
     }
 
     /**
@@ -1070,8 +1078,9 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
             contributor.withdrawnSince = contributor.withdrawnSince.add(_netflowQuantity);
         }
         IRewardsDistributor rewardsDistributor = IRewardsDistributor(IBabController(controller).rewardsDistributor());
-        rewardsDistributor.updateGardenPower(address(this));
-        rewardsDistributor.setContributorTimestampParams(address(this), msg.sender, 0, false); // false = withdraw
+        rewardsDistributor.updateGardenPower(address(this), pid);
+        rewardsDistributor.setContributorTimestampParams(address(this), msg.sender, 0, false, pid); // false = withdraw
+        pid++;
 
     }
 

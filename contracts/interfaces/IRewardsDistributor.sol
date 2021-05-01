@@ -75,9 +75,9 @@ interface IRewardsDistributor {
             uint256
         );
     */
-    function updateGardenPower(address _garden) external;
+    function updateGardenPower(address _garden, uint256 _pid) external;
 
-    function setContributorTimestampParams(address _garden, address _contributor, uint256 _previousBalance, bool _depositOrWithdraw) external;
+    function setContributorTimestampParams(address _garden, address _contributor, uint256 _previousBalance, bool _depositOrWithdraw, uint256 _pid) external;
 
     function checkProtocol(uint256 _time)
         external

@@ -75,10 +75,13 @@ contract RewardsDistributor is Ownable, IRewardsDistributor {
     /** 
      * Throws if the call is not from a valid active garden
      */
-    modifier onlyActiveGarden(address _garden) {
+    modifier onlyActiveGarden(address _garden, uint256 _pid) {
+        
+        if (_pid != 0) { // Enable deploying flow
+            _require(IBabController(controller).isSystemContract(address(_garden)), Errors.NOT_A_SYSTEM_CONTRACT);
+            _require(IBabController(controller).isGarden(address(_garden)), Errors.ONLY_ACTIVE_GARDEN);
+        }
         _require(msg.sender == address(_garden), Errors.ONLY_ACTIVE_GARDEN);
-        _require(controller.isSystemContract(address(_garden)), Errors.NOT_A_SYSTEM_CONTRACT);
-        _require(controller.isGarden(address(_garden)), Errors.ONLY_ACTIVE_GARDEN);
         _require(IGarden(_garden).active(), Errors.ONLY_ACTIVE_GARDEN);
         _;
     }
@@ -401,12 +404,17 @@ contract RewardsDistributor is Ownable, IRewardsDistributor {
     */
 
 
-    function updateGardenPower(address _garden) external override onlyActiveGarden(_garden) {
+    function updateGardenPower(address _garden, uint256 _pid) external override onlyActiveGarden(_garden, _pid) {
         _updateGardenPower(_garden);
     }
-    function setContributorTimestampParams(address _garden, address _contributor, uint256 _previousBalance, bool _depositOrWithdraw) external override onlyActiveGarden(_garden) {
+    function setContributorTimestampParams(address _garden, address _contributor, uint256 _previousBalance, bool _depositOrWithdraw, uint256 _pid) external override onlyActiveGarden(_garden, _pid) {
         _setContributorTimestampParams(_garden, _contributor, _previousBalance, _depositOrWithdraw);
     }
+
+    function tokenSupplyPerQuarter(uint256 quarter) external view returns (uint96) {
+        _tokenSupplyPerQuarter(quarter);
+    }
+
 
     function checkProtocol(uint256 _time)
         external
@@ -891,7 +899,8 @@ contract RewardsDistributor is Ownable, IRewardsDistributor {
         uint256 _to
     ) private view returns (uint256) {
         //IGarden garden = IGarden(_garden);
-
+        console.log('GETTING POWER OF GARDEN %s CONTRIBUTOR %s FROM %s TO %s', _garden, _contributor);
+        console.log('GETTING POWER FROM %s TO %s', _from, _to);
         _require(_to >= IGarden(_garden).gardenInitializedAt() && _to >= _from, Errors.GET_CONTRIBUTOR_POWER);
         ContributorPerGarden storage contributor = contributorPerGarden[address(_garden)][address(_contributor)];
         Checkpoints memory powerCheckpoints = checkpoints[address(_garden)][address(_contributor)];
@@ -907,6 +916,10 @@ contract RewardsDistributor is Ownable, IRewardsDistributor {
 
             (powerCheckpoints.fromDepositAt, powerCheckpoints.lastDepositAt) = _locateCheckpointsContributor(_garden, _contributor, _from, _to);
             (powerCheckpoints.gardenFromDepositAt, powerCheckpoints.gardenLastDepositAt) = _locateCheckpointsGarden(_garden, _from, _to);
+            console.log('contributor from', powerCheckpoints.fromDepositAt);
+            console.log('contributor to', powerCheckpoints.lastDepositAt);
+            console.log('garden from', powerCheckpoints.gardenFromDepositAt);
+            console.log('garden to', powerCheckpoints.gardenLastDepositAt);
 
             _require(
                 powerCheckpoints.fromDepositAt <= powerCheckpoints.lastDepositAt && powerCheckpoints.gardenFromDepositAt <= powerCheckpoints.gardenLastDepositAt,
@@ -932,7 +945,8 @@ contract RewardsDistributor is Ownable, IRewardsDistributor {
             gardenPower = gardenPowerByTimestamp[address(_garden)][powerCheckpoints.gardenFromDepositAt].power.add(
                 (_from.sub(powerCheckpoints.gardenFromDepositAt)).mul(gardenPowerByTimestamp[address(_garden)][powerCheckpoints.gardenFromDepositAt].principal)
             );
-
+            console.log('CONTRIBUTOR POWER FROM', contributorPower);
+            console.log('GARDEN POWER FROM', gardenPower);
             // "TO power calculations" PART
             // We go for accurate power calculations avoiding overflows
             _require(contributorPower <= gardenPower, Errors.GET_CONTRIBUTOR_POWER);
@@ -949,6 +963,7 @@ contract RewardsDistributor is Ownable, IRewardsDistributor {
                 return 0;
             } else if (_to == powerCheckpoints.lastDepositAt && powerCheckpoints.fromDepositAt == powerCheckpoints.lastDepositAt) {
                 // no more contributor checkpoints in the slot
+                console.log('ELSE IF');
                 gardenPower = (
                     gardenPowerByTimestamp[address(_garden)][powerCheckpoints.gardenLastDepositAt].power.add(
                         (_to.sub(powerCheckpoints.gardenLastDepositAt)).mul(gardenPowerByTimestamp[address(_garden)][powerCheckpoints.gardenLastDepositAt].principal)
@@ -958,12 +973,19 @@ contract RewardsDistributor is Ownable, IRewardsDistributor {
                 _require(contributorPower <= gardenPower, Errors.GET_CONTRIBUTOR_POWER);
                 return contributorPower.preciseDiv(gardenPower);
             } else {
+                console.log('ELSE');
+                console.log('previous power', contributor.tsContributions[powerCheckpoints.lastDepositAt].power);
+                console.log('previous ppal', contributor.tsContributions[powerCheckpoints.lastDepositAt].principal);
+
                 contributorPower = (
                     contributor.tsContributions[powerCheckpoints.lastDepositAt].power.add(
                         (_to.sub(powerCheckpoints.lastDepositAt)).mul(contributor.tsContributions[powerCheckpoints.lastDepositAt].principal)
                     )
                 )
                     .sub(contributorPower);
+                console.log('previous GARDEN power', gardenPowerByTimestamp[address(_garden)][powerCheckpoints.gardenLastDepositAt].power);
+                console.log('previous GARDEN ppal', gardenPowerByTimestamp[address(_garden)][powerCheckpoints.gardenLastDepositAt].principal);
+
                 gardenPower = (
                     gardenPowerByTimestamp[address(_garden)][powerCheckpoints.gardenLastDepositAt].power.add(
                         (_to.sub(powerCheckpoints.gardenLastDepositAt)).mul(gardenPowerByTimestamp[address(_garden)][powerCheckpoints.gardenLastDepositAt].principal)
@@ -971,6 +993,9 @@ contract RewardsDistributor is Ownable, IRewardsDistributor {
                 )
                     .sub(gardenPower);
                 _require(contributorPower <= gardenPower, Errors.GET_CONTRIBUTOR_POWER);
+                console.log('FINAL CONTRIBUTOR POWER', contributorPower);
+                console.log('FINAL GARDEN POWER', gardenPower);
+                console.log('% POWER', contributorPower.preciseDiv(gardenPower));
                 return contributorPower.preciseDiv(gardenPower);
             }
         }
@@ -1021,7 +1046,10 @@ contract RewardsDistributor is Ownable, IRewardsDistributor {
         IGarden garden = IGarden(_garden);
         GardenPowerByTimestamp storage gardenTimestamp = gardenPowerByTimestamp[address(garden)][block.timestamp];
         gardenTimestamp.principal = IERC20(address(IGarden(_garden).reserveAsset())).totalSupply();
+        console.log('TOTAL SUPPLY FROM REWARDS DISTRIBUTOR', IERC20(address(IGarden(_garden).reserveAsset())).totalSupply());
+        console.log('UPDATING GARDEN PRINCIPAL - PIDs', gardenTimestamp.principal, pid, gardenPid[address(_garden)]);
         gardenTimestamp.timestamp = block.timestamp;
+        console.log('UPDATING GARDEN TIMESTAMP - PIDs', gardenTimestamp.timestamp, pid, gardenPid[address(_garden)]);
         //gardenTimestamp.timePointer = pid;
         if (gardenPid[address(_garden)] == 0) {
             // The very first deposit of all contributors in the mining program
