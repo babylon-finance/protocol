@@ -157,7 +157,7 @@ contract AddLiquidityOperation is Operation {
         address[] memory poolTokens = IPoolIntegration(_integration).getPoolTokens(pool);
         uint256 NAV;
         uint256 totalSupply = IERC20(pool).totalSupply();
-        uint256 lpTokens = IERC20(pool).balanceOf(address(this));
+        uint256 lpTokens = IERC20(pool).balanceOf(address(_strategy));
         for (uint256 i = 0; i < poolTokens.length; i++) {
             uint256 price =
                 _getPrice(_garden.reserveAsset(), poolTokens[i] != address(0) ? poolTokens[i] : _garden.WETH());

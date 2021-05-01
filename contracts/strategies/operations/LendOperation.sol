@@ -18,6 +18,7 @@
 
 pragma solidity 0.7.6;
 
+import 'hardhat/console.sol';
 import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import {SafeMath} from '@openzeppelin/contracts/math/SafeMath.sol';
 import {Operation} from './Operation.sol';
@@ -124,7 +125,7 @@ contract LendOperation is Operation {
      * @return _nav           NAV of the strategy
      */
     function getNAV(
-        address _data,
+        address _assetToken,
         IGarden _garden,
         IStrategy _strategy,
         address _integration
@@ -132,13 +133,12 @@ contract LendOperation is Operation {
         if (!_strategy.isStrategyActive()) {
             return 0;
         }
-        address assetToken = _data;
         uint256 numTokensToRedeem =
-            IERC20(ILendIntegration(_integration).getInvestmentToken(assetToken)).balanceOf(address(this));
+            IERC20(ILendIntegration(_integration).getInvestmentToken(_assetToken)).balanceOf(address(_strategy));
         uint256 assetTokensAmount =
-            ILendIntegration(_integration).getExchangeRatePerToken(assetToken).mul(numTokensToRedeem);
-        uint256 price = _getPrice(_garden.reserveAsset(), assetToken);
-        uint256 NAV = assetTokensAmount.preciseDiv(price);
+            ILendIntegration(_integration).getExchangeRatePerToken(_assetToken).mul(numTokensToRedeem);
+        uint256 price = _getPrice(_garden.reserveAsset(), _assetToken);
+        uint256 NAV = _normalizeDecimals(_assetToken, assetTokensAmount).preciseDiv(price);
         require(NAV != 0, 'NAV has to be bigger 0');
         return NAV;
     }

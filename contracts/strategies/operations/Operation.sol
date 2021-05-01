@@ -18,8 +18,8 @@
 
 pragma solidity 0.7.6;
 
-import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
-import {PreciseUnitMath} from '../../lib/PreciseUnitMath.sol';
+import {ERC20} from '@openzeppelin/contracts/token/ERC20/ERC20.sol';
+import {SafeMath} from '@openzeppelin/contracts/math/SafeMath.sol';
 import {IGarden} from '../../interfaces/IGarden.sol';
 import {IStrategy} from '../../interfaces/IStrategy.sol';
 import {IOperation} from '../../interfaces/IOperation.sol';
@@ -34,6 +34,7 @@ import {IBabController} from '../../interfaces/IBabController.sol';
  * Holds the data for a long strategy
  */
 abstract contract Operation is IOperation {
+  using SafeMath for uint256;
     /* ============ Modifiers ============ */
 
     modifier onlyStrategy() {
@@ -115,5 +116,10 @@ abstract contract Operation is IOperation {
     function _getPrice(address _assetOne, address _assetTwo) internal view returns (uint256) {
         IPriceOracle oracle = IPriceOracle(IBabController(controller).priceOracle());
         return oracle.getPrice(_assetOne, _assetTwo);
+    }
+
+    function _normalizeDecimals(address _asset, uint256 _quantity) internal view returns (uint256) {
+      uint8 tokenDecimals = ERC20(_asset).decimals();
+      return tokenDecimals != 18 ? _quantity.mul(10**(18 - tokenDecimals)) : _quantity;
     }
 }

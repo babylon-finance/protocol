@@ -20,6 +20,7 @@
 
 pragma solidity 0.7.6;
 
+import 'hardhat/console.sol';
 import {Ownable} from '@openzeppelin/contracts/access/Ownable.sol';
 import {ERC20} from '@openzeppelin/contracts/token/ERC20/ERC20.sol';
 
@@ -189,6 +190,7 @@ contract PriceOracle is Ownable, IPriceOracle {
             assetToCheck == 0xdd974D5C2e2928deA5F71b9825b8b646686BD200 || // knc
             assetToCheck == 0x514910771AF9Ca656af840dff83E8264EcF986CA || // link
             assetToCheck == 0xc00e94Cb662C3520282E6f5717214004A7f26888 || // comp
+            assetToCheck == 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48 || // USDC
             assetToCheck == 0x1f9840a85d5aF5bf1D1762F925BDADdC4201F984 // uni
         ) {
             uint256 assetOnePrice = IUniswapAnchoredView(uniswapAnchoredView).price(symbol1);

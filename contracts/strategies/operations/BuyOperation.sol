@@ -110,9 +110,8 @@ contract BuyOperation is Operation {
         if (!_strategy.isStrategyActive()) {
             return 0;
         }
-        address longToken = _data;
-        uint256 price = _getPrice(_garden.reserveAsset(), longToken);
-        uint256 NAV = IERC20(longToken).balanceOf(msg.sender).preciseDiv(price);
+        uint256 price = _getPrice(_garden.reserveAsset(), _data);
+        uint256 NAV = _normalizeDecimals(_data, IERC20(_data).balanceOf(msg.sender)).preciseDiv(price);
         require(NAV != 0, 'NAV has to be bigger 0');
         return NAV;
     }

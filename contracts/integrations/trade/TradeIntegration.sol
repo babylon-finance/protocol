@@ -21,7 +21,7 @@ pragma solidity 0.7.6;
 import 'hardhat/console.sol';
 
 import {SafeCast} from '@openzeppelin/contracts/utils/SafeCast.sol';
-import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
+import {ERC20} from '@openzeppelin/contracts/token/ERC20/ERC20.sol';
 import {ReentrancyGuard} from '@openzeppelin/contracts/utils/ReentrancyGuard.sol';
 import '@uniswap/v2-core/contracts/interfaces/IUniswapV2Pair.sol';
 import '@uniswap/v2-periphery/contracts/libraries/UniswapV2Library.sol';
@@ -159,14 +159,14 @@ abstract contract TradeIntegration is BaseIntegration, ReentrancyGuard, ITradeIn
         tradeInfo.sendToken = _sendToken;
         tradeInfo.receiveToken = _receiveToken;
 
-        tradeInfo.gardenTotalSupply = IERC20(address(tradeInfo.strategy.garden())).totalSupply();
+        tradeInfo.gardenTotalSupply = ERC20(address(tradeInfo.strategy.garden())).totalSupply();
 
         tradeInfo.totalSendQuantity = _sendQuantity;
 
         tradeInfo.totalMinReceiveQuantity = _minReceiveQuantity;
 
-        tradeInfo.preTradeSendTokenBalance = IERC20(_sendToken).balanceOf(_strategy);
-        tradeInfo.preTradeReceiveTokenBalance = IERC20(_receiveToken).balanceOf(_strategy);
+        tradeInfo.preTradeSendTokenBalance = ERC20(_sendToken).balanceOf(_strategy);
+        tradeInfo.preTradeReceiveTokenBalance = ERC20(_receiveToken).balanceOf(_strategy);
 
         return tradeInfo;
     }
@@ -194,7 +194,7 @@ abstract contract TradeIntegration is BaseIntegration, ReentrancyGuard, ITradeIn
             'Not enough liquidity'
         );
         require(
-            IERC20(_tradeInfo.sendToken).balanceOf(address(_tradeInfo.strategy)) >= _sendQuantity,
+            ERC20(_tradeInfo.sendToken).balanceOf(address(_tradeInfo.strategy)) >= _sendQuantity,
             'Garden needs to have enough liquid tokens'
         );
     }
@@ -207,12 +207,15 @@ abstract contract TradeIntegration is BaseIntegration, ReentrancyGuard, ITradeIn
      */
     function _validatePostTrade(TradeInfo memory _tradeInfo) internal view returns (uint256) {
         uint256 exchangedQuantity =
-            IERC20(_tradeInfo.receiveToken).balanceOf(address(_tradeInfo.strategy)).sub(
+            ERC20(_tradeInfo.receiveToken).balanceOf(address(_tradeInfo.strategy)).sub(
                 _tradeInfo.preTradeReceiveTokenBalance
             );
-        require(exchangedQuantity >= _tradeInfo.totalMinReceiveQuantity, 'Slippage greater than allowed');
+        // Get reserve asset decimals
+        uint8 tokenDecimals = ERC20(_tradeInfo.receiveToken).decimals();
+        uint256 normalizedExchangedQuantity = tokenDecimals != 18 ? exchangedQuantity.mul(10**(18 - tokenDecimals)) : exchangedQuantity;
+        require(normalizedExchangedQuantity >= _tradeInfo.totalMinReceiveQuantity, 'Slippage greater than allowed');
 
-        return exchangedQuantity;
+        return normalizedExchangedQuantity;
     }
 
     /**
