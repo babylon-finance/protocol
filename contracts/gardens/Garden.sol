@@ -384,7 +384,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         if (maxDepositLimit > 0) {
             _require(principal.add(msg.value) <= maxDepositLimit, Errors.MAX_DEPOSIT_LIMIT);
         }
-        _require(totalContributors <= maxContributors, Errors.MAX_CONTRIBUTORS);
+        _require(totalContributors < maxContributors, Errors.MAX_CONTRIBUTORS);
         _require(msg.value == _reserveAssetQuantity, Errors.MSG_VALUE_DO_NOT_MATCH);
         // Always wrap to WETH
         IWETH(WETH).deposit{value: msg.value}();

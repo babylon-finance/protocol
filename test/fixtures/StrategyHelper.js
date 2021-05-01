@@ -7,7 +7,7 @@ const { increaseTime, from } = require('../utils/test-helpers');
 
 const DEFAULT_STRATEGY_PARAMS = [
   ethers.utils.parseEther('10'), // _maxCapitalRequested
-  ethers.utils.parseEther('0.5'), // _stake
+  ethers.utils.parseEther('0.1'), // _stake
   ONE_DAY_IN_SECONDS * 30, // _strategyDuration
   ethers.utils.parseEther('0.05'), // 5% _expectedReturn
   ethers.utils.parseEther('1'), // _minRebalanceCapital
