@@ -236,7 +236,7 @@ contract BabController is OwnableUpgradeable, IBabController {
         require(isGarden[_garden], 'Garden does not exist');
         IGarden garden = IGarden(_garden);
         require(!!garden.active(), 'The garden needs to be active.');
-        garden.setDisabled();
+        garden.setActive(false);
     }
 
     /**
@@ -248,7 +248,7 @@ contract BabController is OwnableUpgradeable, IBabController {
         require(isGarden[_garden], 'Garden does not exist');
         IGarden garden = IGarden(_garden);
         require(!garden.active(), 'The garden needs to be disabled.');
-        garden.setActive();
+        garden.setActive(true);
     }
 
     /**

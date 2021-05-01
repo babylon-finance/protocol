@@ -445,7 +445,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         IStrategy(maxStrategy).unwindStrategy(netReserveFlows);
         // We burn their penalty
         _burn(msg.sender, _gardenTokenQuantity.preciseMul(EARLY_WITHDRAWAL_PENALTY));
-        // todo: replace the 1
+        // TODO: replace the 1
         _withdraw(netReserveFlows, 1, _to);
     }
 
@@ -544,17 +544,9 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
     /**
      * PRIVILEGED Manager, protocol FUNCTION. When a Garden is active, deposits are enabled.
      */
-    function setActive() external override onlyProtocol {
-        _require(!active, Errors.ONLY_INACTIVE);
-        active = true;
-    }
-
-    /**
-     * PRIVILEGED Manager, protocol FUNCTION. When a Garden is disabled, deposits are disabled.
-     */
-    function setDisabled() external override onlyProtocol {
-        _require(active, Errors.ONLY_ACTIVE);
-        active = false;
+    function setActive(bool _newValue) external override onlyProtocol {
+        _require(active != _newValue, Errors.ONLY_INACTIVE);
+        active = _newValue;
     }
 
     /* ============ Strategy Functions ============ */

@@ -27,9 +27,7 @@ interface IGarden {
     /* ============ Functions ============ */
     function makeGardenPublic() external;
 
-    function setActive() external;
-
-    function setDisabled() external;
+    function setActive(bool _val) external;
 
     function active() external view returns (bool);
 
