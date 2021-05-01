@@ -56,26 +56,6 @@ interface IRewardsDistributor {
 
     function sendTokensToContributor(address _to, uint96 _amount) external;
 
-    function getProtocolPrincipalByTimestamp(uint256 _timestamp) external view returns (uint256);
-
-    function getProtocolPowerPerQuarterByTimestamp(uint256 _timestamp) external view returns (uint256);
-
-    function getProtocolPowerPerQuarterById(uint256 _id) external view returns (uint256);
-
-    function getProtocolSupplyPerQuarterByTimestamp(uint256 _timestamp) external view returns (uint256);
-
-    function getEpochRewards(uint256 epochs) external view returns (uint96[] memory);
-
-    function getCheckpoints() external view returns (uint256);
-
-    function getQuarter(uint256 _now) external view returns (uint256);
-
-    function getRewardsWindow(uint256 _from, uint256 _to) external view returns (uint256, uint256);
-
-    function getSupplyForPeriod(uint256 _from, uint256 _to) external view returns (uint96[] memory);
-
-    function tokenSupplyPerQuarter(uint256 quarter) external pure returns (uint96);
-
     function getRewards(
         address _garden,
         address _contributor,
@@ -84,6 +64,7 @@ interface IRewardsDistributor {
     
     function getContributorPower(address _garden, address _contributor, uint256 _from, uint256 _to) external view returns (uint256);
 
+    /**
     function getContributor(address _garden, address _contributor)
         external
         view
@@ -93,7 +74,7 @@ interface IRewardsDistributor {
             uint256[] memory,
             uint256
         );
-    
+    */
     function updateGardenPower(address _garden) external;
 
     function setContributorTimestampParams(address _garden, address _contributor, uint256 _previousBalance, bool _depositOrWithdraw) external;

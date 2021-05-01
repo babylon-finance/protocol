@@ -224,4 +224,19 @@ library Errors {
     uint256 internal constant GARDEN_ALREADY_PUBLIC = 67;
     // Withdrawal with penalty
     uint256 internal constant WITHDRAWAL_WITH_PENALTY = 68;
+    // Withdrawal with penalty
+    uint256 internal constant ONLY_MINING_ACTIVE = 69;
+    // Overflow in supply
+    uint256 internal constant OVERFLOW_IN_SUPPLY = 70;
+    // Overflow in power
+    uint256 internal constant OVERFLOW_IN_POWER = 71;
+    // Not a system contract
+    uint256 internal constant NOT_A_SYSTEM_CONTRACT = 72;
+    // Strategy vs Garden mismatch
+    uint256 internal constant STRATEGY_GARDEN_MISMATCH = 73;
+    // Minimum quarters is 1
+    uint256 internal constant QUARTERS_MIN_1 = 74;
+    
+    
+
 }
