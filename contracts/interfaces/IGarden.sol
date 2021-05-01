@@ -123,11 +123,7 @@ interface IGarden {
 
     function claimReturns(address[] calldata _finalizedStrategies) external;
 
-    function getGardenTokenMintQuantity(
-        address _reserveAsset,
-        uint256 _netReserveFlows,
-        uint256 _gardenTokenTotalSupply
-    ) external view returns (uint256);
+    function getGardenTokenMintQuantity(uint256 _netReserveFlows, bool isDeposit) external view returns (uint256);
 
     function getExpectedReserveWithdrawalQuantity(uint256 _gardenTokenQuantity) external view returns (uint256);
 

@@ -70,16 +70,16 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
     event PrincipalChanged(uint256 _newAmount, uint256 _oldAmount);
     event GardenDeposit(
         address indexed _to,
-        uint256 reserveDeposited,
-        uint256 gardenTokenQuantity,
+        uint256 reserveToken,
+        uint256 reserveTokenQuantity,
         uint256 protocolFees,
         uint256 timestamp
     );
     event GardenWithdrawal(
         address indexed _from,
         address indexed _to,
-        uint256 reserveReceived,
-        uint256 gardenTokenQuantity,
+        uint256 reserveToken,
+        uint256 reserveTokenQuantity,
         uint256 protocolFees,
         uint256 timestamp
     );
@@ -748,33 +748,30 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
     }
 
     function getGardenTokenMintQuantity(
-        address _reserveAsset,
-        uint256 _netReserveFlows, // Value of reserve asset net of fees
-        uint256 _gardenTokenTotalSupply
+        uint256 _reserveAssetQuantity,
+        bool isDeposit // Value of reserve asset net of fees
     ) public view override returns (uint256) {
+        uint256 totalSupply = totalSupply();
         // Get valuation of the Garden with the quote asset as the reserve asset.
         // Reverts if price is not found
-        uint8 reserveAssetDecimals = ERC20Upgradeable(_reserveAsset).decimals();
+        uint8 reserveAssetDecimals = ERC20Upgradeable(reserveAsset).decimals();
         uint256 baseUnits = uint256(10)**reserveAssetDecimals;
-        uint256 normalizedTotalReserveQuantityNetFees = _netReserveFlows.preciseDiv(baseUnits);
+        uint256 normalizedReserveQuantity = _reserveAssetQuantity.preciseDiv(baseUnits);
         // First deposit
-        if (totalSupply() == 0) {
-            return normalizedTotalReserveQuantityNetFees;
+        if (totalSupply == 0) {
+            return normalizedReserveQuantity;
         }
         uint256 gardenValuationPerToken =
             IGardenValuer(IBabController(controller).gardenValuer()).calculateGardenValuation(
                 address(this),
-                _reserveAsset
+                reserveAsset
             );
-        gardenValuationPerToken = gardenValuationPerToken.sub(_netReserveFlows.preciseDiv(_gardenTokenTotalSupply));
 
-        // Calculate Garden tokens to mint to depositor
-        uint256 denominator =
-            _gardenTokenTotalSupply.preciseMul(gardenValuationPerToken).add(normalizedTotalReserveQuantityNetFees).sub(
-                normalizedTotalReserveQuantityNetFees
-            );
-        uint256 quantityToMint =
-            normalizedTotalReserveQuantityNetFees.preciseMul(_gardenTokenTotalSupply).preciseDiv(denominator);
+        gardenValuationPerToken = gardenValuationPerToken.preciseDiv(baseUnits);
+        if (isDeposit) {
+            gardenValuationPerToken = gardenValuationPerToken.sub(normalizedReserveQuantity.preciseDiv(totalSupply));
+        }
+        uint256 quantityToMint = normalizedReserveQuantity.preciseDiv(gardenValuationPerToken);
         return quantityToMint;
     }
 
@@ -787,26 +784,26 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
      * Function that mints the appropriate garden tokens along with the Garden NFT
      * @param _from                            Address that triggered the transaction
      * @param _to                              Address to mint the tokens
-     * @param _gardenTokenQuantity             Amount of garden tokens
+     * @param _reserveAssetQuantity            Amount of garden tokens
      * @param _newPrincipal                    New principal for that user
      * @param _protocolFees                    Protocol Fees Paid
      */
     function _mintGardenTokens(
         address _from,
         address _to,
-        uint256 _gardenTokenQuantity,
+        uint256 _reserveAssetQuantity,
         uint256 _newPrincipal,
         uint256 _protocolFees
     ) private {
         uint256 previousBalance = balanceOf(_to);
-        uint256 amountToMint = getGardenTokenMintQuantity(reserveAsset, _gardenTokenQuantity, totalSupply());
+        uint256 amountToMint = getGardenTokenMintQuantity(_reserveAssetQuantity, true);
         _mint(_to, amountToMint);
         _updateContributorDepositInfo(_from, previousBalance);
         _updatePrincipal(_newPrincipal);
         // Mint the garden NFT
         IGardenNFT(nftAddress).grantGardenNFT(_to);
         _require(totalSupply() > 0, Errors.MIN_LIQUIDITY);
-        emit GardenDeposit(_to, msg.value, _gardenTokenQuantity, _protocolFees, block.timestamp);
+        emit GardenDeposit(_to, msg.value, _reserveAssetQuantity, _protocolFees, block.timestamp);
     }
 
     /**

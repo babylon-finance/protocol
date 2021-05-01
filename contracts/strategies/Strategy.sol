@@ -647,7 +647,8 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
             IOperation operation = IOperation(IBabController(controller).enabledOperations(uint256(opTypes[i])));
             nav = nav.add(operation.getNAV(opDatas[i], garden, IStrategy(address(this)), opIntegrations[i]));
         }
-        return nav.add(MAX_STRATEGY_KEEPER_FEES);
+        if (active) return nav.add(MAX_STRATEGY_KEEPER_FEES);
+        else return nav;
     }
 
     /**

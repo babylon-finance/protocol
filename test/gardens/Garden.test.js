@@ -2,7 +2,7 @@ const { expect } = require('chai');
 const { ethers } = require('hardhat');
 
 const addresses = require('../../lib/addresses');
-const { ONE_DAY_IN_SECONDS, NOW } = require('../../lib/constants.js');
+const { ONE_DAY_IN_SECONDS, ONE_ETH, NOW } = require('../../lib/constants.js');
 const { increaseTime } = require('../utils/test-helpers');
 const {
   DEFAULT_STRATEGY_PARAMS,
@@ -51,6 +51,41 @@ describe('Garden', function () {
       expect(await garden1.minVotersQuorum()).to.equal(ethers.utils.parseEther('0.10'));
       expect(await garden1.minStrategyDuration()).to.equal(ONE_DAY_IN_SECONDS * 3);
       expect(await garden1.maxStrategyDuration()).to.equal(ONE_DAY_IN_SECONDS * 365);
+    });
+  });
+
+  describe('getGardenTokenMintQuantity', async function () {
+    it('get correct amounts of tokens if 1 ETH deposited', async function () {
+      const tokens = await garden1.getGardenTokenMintQuantity(ONE_ETH, false);
+
+      expect(tokens).to.be.equal(ONE_ETH);
+    });
+
+    it('get correct amounts of tokens if 8 ETH deposited', async function () {
+      garden1.connect(signer3).deposit(ONE_ETH.mul(8), 1, signer3.getAddress(), {
+        value: ONE_ETH.mul(8),
+      });
+      const tokens = await garden1.getGardenTokenMintQuantity(ONE_ETH.mul(2), false);
+      expect(tokens).to.be.equal(ONE_ETH.mul(2));
+    });
+
+    it('get correct amounts of tokens if 8 ETH deposited and strategy is executed', async function () {
+      garden1.connect(signer3).deposit(ONE_ETH.mul(8), 1, signer3.getAddress(), {
+        value: ONE_ETH.mul(8),
+      });
+
+      const strategyContract = await createStrategy(
+        'buy',
+        'vote',
+        [signer1, signer2, signer3],
+        kyberTradeIntegration.address,
+        garden1,
+      );
+
+      await executeStrategy(strategyContract);
+
+      const tokens = await garden1.getGardenTokenMintQuantity(ONE_ETH.mul(3), false);
+      expect(tokens).to.be.closeTo(ONE_ETH.mul(3), ONE_ETH.div(100));
     });
   });
 
@@ -218,6 +253,7 @@ describe('Garden', function () {
           ),
       ).to.be.reverted;
     });
+
     it('strategist or voters can withdraw comunity tokens that were locked during strategy execution (negative profits) once they are unlocked after finishing active strategies', async function () {
       const strategyContract = await createStrategy(
         'buy',
