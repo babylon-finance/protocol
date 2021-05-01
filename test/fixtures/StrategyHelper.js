@@ -223,18 +223,24 @@ async function createStrategy(
   specificParams,
 ) {
   let strategy;
-  if (kind === 'buy') {
-    strategy = await createStrategyWithBuyOperation(garden, signers[0], params, integration, specificParams);
+
+  switch (kind) {
+    case 'buy':
+      strategy = await createStrategyWithBuyOperation(garden, signers[0], params, integration, specificParams);
+      break;
+    case 'lp':
+      strategy = await createStrategyWithPoolOperation(garden, signers[0], params, integration, specificParams);
+      break;
+    case 'vault':
+      strategy = await createStrategyWithVaultOperation(garden, signers[0], params, integration, specificParams);
+      break;
+    case 'lend':
+      strategy = await createStrategyWithLendOperation(garden, signers[0], params, integration, specificParams);
+      break;
+    default:
+      throw new Error(`Strategy type: "${kind}" not supported`);
   }
-  if (kind === 'lp') {
-    strategy = await createStrategyWithPoolOperation(garden, signers[0], params, integration, specificParams);
-  }
-  if (kind === 'vault') {
-    strategy = await createStrategyWithVaultOperation(garden, signers[0], params, integration, specificParams);
-  }
-  if (kind === 'lend') {
-    strategy = await createStrategyWithLendOperation(garden, signers[0], params, integration, specificParams);
-  }
+
   if (strategy) {
     if (state === 'dataset') {
       return strategy;
@@ -253,6 +259,7 @@ async function createStrategy(
     }
     await finalizeStrategy(strategy);
   }
+
   return strategy;
 }
 
