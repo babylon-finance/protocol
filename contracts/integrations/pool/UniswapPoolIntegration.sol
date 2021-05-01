@@ -154,20 +154,21 @@ contract UniswapPoolIntegration is PoolIntegration {
         // Encode method data for Garden to invoke
         require(_tokensIn.length == 2, 'Two tokens required');
         require(_maxAmountsIn.length == 2, 'Two amounts required');
-        bytes memory methodData =
-            abi.encodeWithSignature(
-                'addLiquidity(address,address,uint256,uint256,uint256,uint256,address,uint256)',
-                _tokensIn[0],
-                _tokensIn[1],
-                _maxAmountsIn[0],
-                _maxAmountsIn[1],
-                _maxAmountsIn[0].sub(_maxAmountsIn[0].preciseMul(SLIPPAGE_ALLOWED)),
-                _maxAmountsIn[1].sub(_maxAmountsIn[1].preciseMul(SLIPPAGE_ALLOWED)),
-                _strategy,
-                block.timestamp.add(MAX_DELTA_BLOCKS)
-            );
+        return (address(uniRouter), 0, _getMethodData(_strategy, _tokensIn, _maxAmountsIn));
+    }
 
-        return (address(uniRouter), 0, methodData);
+    function _getMethodData(address _strategy, address[] calldata _tokensIn, uint256[] calldata _maxAmountsIn) private view returns (bytes memory) {
+      return abi.encodeWithSignature(
+          'addLiquidity(address,address,uint256,uint256,uint256,uint256,address,uint256)',
+          _tokensIn[0],
+          _tokensIn[1],
+          _maxAmountsIn[0],
+          _maxAmountsIn[1],
+          _maxAmountsIn[0].sub(_maxAmountsIn[0].preciseMul(SLIPPAGE_ALLOWED)),
+          _maxAmountsIn[1].sub(_maxAmountsIn[1].preciseMul(SLIPPAGE_ALLOWED)),
+          _strategy,
+          block.timestamp.add(MAX_DELTA_BLOCKS)
+      );
     }
 
     /**

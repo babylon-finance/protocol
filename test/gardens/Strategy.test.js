@@ -369,7 +369,7 @@ describe('Strategy', function () {
       expect(nav).to.be.closeTo(ONE_ETH.mul(3), ONE_ETH.div(500));
     });
 
-    it.only('should get the NAV value of a lend strategy', async function () {
+    it('should get the NAV value of a lend strategy', async function () {
       const strategyContract = await createStrategy(
         'lend',
         'active',
