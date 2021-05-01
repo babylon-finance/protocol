@@ -763,7 +763,13 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         uint256 pricePerTokenUnit = oracle.getPrice(_sendToken, _receiveToken);
         uint256 exactAmount = _sendQuantity.preciseMul(pricePerTokenUnit);
         uint256 minAmountExpected = exactAmount.sub(exactAmount.preciseMul(SLIPPAGE_ALLOWED));
-        ITradeIntegration(tradeIntegration).trade(address(this), _sendToken, _sendQuantity, _receiveToken, minAmountExpected);
+        ITradeIntegration(tradeIntegration).trade(
+            address(this),
+            _sendToken,
+            _sendQuantity,
+            _receiveToken,
+            minAmountExpected
+        );
         return minAmountExpected;
     }
 

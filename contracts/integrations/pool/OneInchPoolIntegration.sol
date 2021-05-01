@@ -127,7 +127,7 @@ contract OneInchPoolIntegration is PoolIntegration {
      * @return bytes                     Trade calldata
      */
     function _getJoinPoolCalldata(
-        address /* _strategy */,
+        address, /* _strategy */
         address _poolAddress,
         uint256, /* _poolTokensOut */
         address[] calldata _tokensIn,
@@ -179,7 +179,7 @@ contract OneInchPoolIntegration is PoolIntegration {
      * @return bytes                     Trade calldata
      */
     function _getExitPoolCalldata(
-        address /* _strategy */,
+        address, /* _strategy */
         address _poolAddress,
         uint256 _poolTokensIn,
         address[] calldata _tokensOut,

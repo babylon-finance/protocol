@@ -118,7 +118,11 @@ contract CompoundLendIntegration is LendIntegration {
         }
     }
 
-    function _getRedeemCalldata(address /* _strategy */, address _assetToken, uint256 _numTokensToSupply)
+    function _getRedeemCalldata(
+        address, /* _strategy */
+        address _assetToken,
+        uint256 _numTokensToSupply
+    )
         internal
         view
         override
@@ -141,7 +145,11 @@ contract CompoundLendIntegration is LendIntegration {
      * @return uint256                         Call value
      * @return bytes                           Trade calldata
      */
-    function _getSupplyCalldata(address /* _strategy */, address _assetToken, uint256 _numTokensToSupply)
+    function _getSupplyCalldata(
+        address, /* _strategy */
+        address _assetToken,
+        uint256 _numTokensToSupply
+    )
         internal
         view
         override

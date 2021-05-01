@@ -100,7 +100,7 @@ contract OneInchTradeIntegration is TradeIntegration {
      * @param _receiveToken         Address of the token that will be received from the exchange
      */
     function _getTradeCallData(
-        address /*_strategy*/,
+        address, /*_strategy*/
         address _sendToken,
         uint256 _sendQuantity,
         address _receiveToken

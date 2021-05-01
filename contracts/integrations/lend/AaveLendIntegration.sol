@@ -97,7 +97,11 @@ contract AaveLendIntegration is LendIntegration {
      * @return uint256                         Call value
      * @return bytes                           Trade calldata
      */
-    function _getSupplyCalldata(address _strategy, address _assetToken, uint256 _numTokensToSupply)
+    function _getSupplyCalldata(
+        address _strategy,
+        address _assetToken,
+        uint256 _numTokensToSupply
+    )
         internal
         view
         override
@@ -119,7 +123,6 @@ contract AaveLendIntegration is LendIntegration {
         return (address(lendingPool), 0, methodData);
     }
 
-
     /**
      * Returns calldata for redeeming the collateral
      *
@@ -127,7 +130,11 @@ contract AaveLendIntegration is LendIntegration {
      * @return uint256                         Call value
      * @return bytes                           Trade calldata
      */
-    function _getRedeemCalldata(address _strategy, address _assetToken, uint256 _numTokensToSupply)
+    function _getRedeemCalldata(
+        address _strategy,
+        address _assetToken,
+        uint256 _numTokensToSupply
+    )
         internal
         view
         override

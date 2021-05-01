@@ -100,7 +100,7 @@ contract YearnVaultIntegration is PassiveIntegration {
      * @return bytes                           Trade calldata
      */
     function _getEnterInvestmentCalldata(
-        address /* _strategy */,
+        address, /* _strategy */
         address _investmentAddress,
         uint256, /* _investmentTokensOut */
         address, /* _tokenIn */
@@ -135,7 +135,7 @@ contract YearnVaultIntegration is PassiveIntegration {
      * @return bytes                           Trade calldata
      */
     function _getExitInvestmentCalldata(
-        address /* _strategy */,
+        address, /* _strategy */
         address _investmentAddress,
         uint256 _investmentTokensIn,
         address, /* _tokenOut */
