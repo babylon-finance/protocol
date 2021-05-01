@@ -212,7 +212,8 @@ abstract contract TradeIntegration is BaseIntegration, ReentrancyGuard, ITradeIn
             );
         // Get reserve asset decimals
         uint8 tokenDecimals = ERC20(_tradeInfo.receiveToken).decimals();
-        uint256 normalizedExchangedQuantity = tokenDecimals != 18 ? exchangedQuantity.mul(10**(18 - tokenDecimals)) : exchangedQuantity;
+        uint256 normalizedExchangedQuantity =
+            tokenDecimals != 18 ? exchangedQuantity.mul(10**(18 - tokenDecimals)) : exchangedQuantity;
         require(normalizedExchangedQuantity >= _tradeInfo.totalMinReceiveQuantity, 'Slippage greater than allowed');
 
         return normalizedExchangedQuantity;

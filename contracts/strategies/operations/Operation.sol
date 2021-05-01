@@ -34,7 +34,7 @@ import {IBabController} from '../../interfaces/IBabController.sol';
  * Holds the data for a long strategy
  */
 abstract contract Operation is IOperation {
-  using SafeMath for uint256;
+    using SafeMath for uint256;
     /* ============ Modifiers ============ */
 
     modifier onlyStrategy() {
@@ -119,7 +119,7 @@ abstract contract Operation is IOperation {
     }
 
     function _normalizeDecimals(address _asset, uint256 _quantity) internal view returns (uint256) {
-      uint8 tokenDecimals = ERC20(_asset).decimals();
-      return tokenDecimals != 18 ? _quantity.mul(10**(18 - tokenDecimals)) : _quantity;
+        uint8 tokenDecimals = ERC20(_asset).decimals();
+        return tokenDecimals != 18 ? _quantity.mul(10**(18 - tokenDecimals)) : _quantity;
     }
 }
