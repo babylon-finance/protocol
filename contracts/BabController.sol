@@ -261,13 +261,6 @@ contract BabController is OwnableUpgradeable, IBabController {
     }
 
     /**
-     * PRIVILEGED GOVERNANCE FUNCTION. Disables transfers of ERC20 BABL Tokens
-     */
-    function disableBABLTokensTransfers() external override onlyOwner {
-        bablTokensTransfersEnabled = false;
-    }
-
-    /**
      * PRIVILEGED GOVERNANCE FUNCTION. Allows transfers of ERC20 BABL Tokens
      * Can only happen after the protocol is fully decentralized.
      * PRIVILEGED GOVERNANCE FUNCTION. Allows public gardens
@@ -277,14 +270,6 @@ contract BabController is OwnableUpgradeable, IBabController {
     }
 
     // ===========  Protocol related Gov Functions ======
-
-    /**
-     * PRIVILEGED GOVERNANCE FUNCTION. Allows transfers of ERC20 BABL Tokens
-     * Can only happen after the protocol is fully decentralized.
-     */
-    function enableBABLTokensTransfers() external override onlyOwner {
-        bablTokensTransfersEnabled = true;
-    }
 
     /**  PRIVILEGED GOVERNANCE FUNCTION. Enable and starts the BABL Mining program by the Rewards Distributor
      * Can only happen after public launch of the protocol.
