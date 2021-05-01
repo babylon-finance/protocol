@@ -129,15 +129,39 @@ abstract contract TimeLockedToken is VoteToken {
     // address of Rewards Distriburor contract
     RewardsDistributor public rewardsDistributor;
 
+    // Enable Transfer of ERC20 BABL Tokens
+    // Only Minting or transfers from/to TimeLockRegistry and Rewards Distributor can transfer tokens until the protocol is fully decentralized
+    bool private tokenTransfersEnabled;
+    bool private tokenTransfersWereDisabled;
+
     /* ============ Functions ============ */
 
     /* ============ Constructor ============ */
 
-    constructor(string memory _name, string memory _symbol) VoteToken(_name, _symbol) {}
+    constructor(string memory _name, string memory _symbol) VoteToken(_name, _symbol) {
+        tokenTransfersEnabled = true;
+    }
 
     /* ============ External Functions ============ */
 
     /* ===========  Token related Gov Functions ====== */
+
+    /**
+     * PRIVILEGED GOVERNANCE FUNCTION. Disables transfers of ERC20 BABL Tokens
+     */
+    function disableTokensTransfers() external onlyOwner {
+        require(!tokenTransfersWereDisabled, 'BABL must flow');
+        tokenTransfersEnabled = false;
+        tokenTransfersWereDisabled = true;
+    }
+
+    /**
+     * PRIVILEGED GOVERNANCE FUNCTION. Allows transfers of ERC20 BABL Tokens
+     * Can only happen after the protocol is fully decentralized.
+     */
+    function enableTokensTransfers() external onlyOwner {
+        tokenTransfersEnabled = true;
+    }
 
     /**
      * PRIVILEGED GOVERNANCE FUNCTION. Set the Time Lock Registry contract to control token vesting conditions
@@ -470,8 +494,7 @@ abstract contract TimeLockedToken is VoteToken {
                 _from == address(timeLockRegistry) ||
                 _from == address(rewardsDistributor) ||
                 _to == address(timeLockRegistry) ||
-                (_from == Ownable(address(this)).owner() && _to == address(rewardsDistributor)) ||
-                IBabController(controller).bablTokensTransfersEnabled(),
+                tokenTransfersEnabled,
             Errors.BABL_TRANSFERS_DISABLED
         );
     }

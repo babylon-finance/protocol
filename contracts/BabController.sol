@@ -130,9 +130,6 @@ contract BabController is OwnableUpgradeable, IBabController {
     // Only members can transfer tokens until the protocol is fully decentralized
     bool public override gardenTokensTransfersEnabled;
 
-    // Enable Transfer of ERC20 BABL Tokens
-    // Only Minting or transfers from/to TimeLockRegistry and Rewards Distributor can transfer tokens until the protocol is fully decentralized
-    bool public override bablTokensTransfersEnabled;
     // Enable and starts the BABL Mining program within Rewards Distributor contract
     bool public override bablMiningProgramEnabled;
     // Enable public gardens
@@ -157,7 +154,6 @@ contract BabController is OwnableUpgradeable, IBabController {
         protocolDepositGardenTokenFee = 0; // 0% (0.01% = 1e14, 1% = 1e16) on profits
         protocolWithdrawalGardenTokenFee = 0; // 0% (0.01% = 1e14, 1% = 1e16) on profits
         gardenTokensTransfersEnabled = false;
-        bablTokensTransfersEnabled = true;
         bablMiningProgramEnabled = false;
         allowPublicGardens = false;
         minRiskyPairLiquidityEth = 1000 * 1e18;

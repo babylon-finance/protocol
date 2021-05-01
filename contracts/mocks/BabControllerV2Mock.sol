@@ -101,9 +101,6 @@ contract BabControllerV2Mock is OwnableUpgradeable {
     // Only members can transfer tokens until the protocol is fully decentralized
     bool public gardenTokensTransfersEnabled;
 
-    // Enable Transfer of ERC20 BABL Tokens
-    // Only Minting or transfers from/to TimeLockRegistry and Rewards Distributor can transfer tokens until the protocol is fully decentralized
-    bool public bablTokensTransfersEnabled;
     // Enable and starts the BABL Mining program within Rewards Distributor contract
     bool public bablMiningProgramEnabled;
     // Enable public gardens
@@ -130,7 +127,6 @@ contract BabControllerV2Mock is OwnableUpgradeable {
         protocolDepositGardenTokenFee = 0; // 0% (0.01% = 1e14, 1% = 1e16) on profits
         protocolWithdrawalGardenTokenFee = 0; // 0% (0.01% = 1e14, 1% = 1e16) on profits
         gardenTokensTransfersEnabled = false;
-        bablTokensTransfersEnabled = false;
         bablMiningProgramEnabled = false;
         minRiskyPairLiquidityEth = 1000 * 1e18;
 
