@@ -192,7 +192,10 @@ contract BABLToken is TimeLockedToken {
             'BABLToken::changeMaxSupply: the newMaxSupplyAllowedAfter should be at least 1 year in the future'
         );
         emit MaxSupplyAllowedAfterChanged(maxSupplyAllowedAfter, newMaxSupplyAllowedAfter);
-        maxSupplyAllowedAfter = safe96(newMaxSupplyAllowedAfter, 'BABLToken::changeMaxSupply: new newMaxSupplyAllowedAfter exceeds 96 bits');
+        maxSupplyAllowedAfter = safe96(
+            newMaxSupplyAllowedAfter,
+            'BABLToken::changeMaxSupply: new newMaxSupplyAllowedAfter exceeds 96 bits'
+        );
 
         return true;
     }
