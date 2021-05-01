@@ -177,8 +177,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         uint256 claimedBABL;
         uint256 claimedRewards;
         uint256 withdrawnSince;
-    } 
-  
+    }
 
     //struct GardenPowerByTimestamp {
     //    uint256 principal;
@@ -405,13 +404,6 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         payProtocolFeeFromGarden(reserveAsset, protocolFees);
 
         // Mint tokens
-        console.log('MINTING FROM', msg.sender);
-        console.log('MINTING TO', _to);
-        console.log('MINTING NETFLOWQUANTITY', netFlowQuantity);
-        console.log('MINTING principal add netflow', principal.add(netFlowQuantity));
-        console.log('MINTING protocol fees', protocolFees);
-        console.log('TOTAL SUPPLY', totalSupply());
-        console.log('THIS GARDEN ADDRESS', address(this));
         _mintGardenTokens(msg.sender, _to, netFlowQuantity, principal.add(netFlowQuantity), protocolFees);
     }
 
@@ -446,7 +438,10 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         uint256 netReserveFlows = _gardenTokenQuantity.sub(_gardenTokenQuantity.preciseMul(EARLY_WITHDRAWAL_PENALTY));
         (, uint256 largestCapital, address maxStrategy) = _getActiveCapital();
         // Check that strategy has enough capital to support the withdrawal
-        _require(IStrategy(maxStrategy).minRebalanceCapital() <= largestCapital.sub(netReserveFlows), Errors.WITHDRAWAL_WITH_PENALTY);
+        _require(
+            IStrategy(maxStrategy).minRebalanceCapital() <= largestCapital.sub(netReserveFlows),
+            Errors.WITHDRAWAL_WITH_PENALTY
+        );
         IStrategy(maxStrategy).unwindStrategy(netReserveFlows);
         // We burn their penalty
         _burn(msg.sender, _gardenTokenQuantity.preciseMul(EARLY_WITHDRAWAL_PENALTY));
@@ -854,10 +849,16 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
 
         // Withdrawal open
         if (block.timestamp <= withdrawalsOpenUntil) {
-            IRewardsDistributor rewardsDistributor = IRewardsDistributor(IBabController(controller).rewardsDistributor());
+            IRewardsDistributor rewardsDistributor =
+                IRewardsDistributor(IBabController(controller).rewardsDistributor());
             // Pro rata withdrawals
             uint256 contributorPower =
-                rewardsDistributor.getContributorPower(address(this),_contributor, contributors[_contributor].initialDepositAt, block.timestamp);
+                rewardsDistributor.getContributorPower(
+                    address(this),
+                    _contributor,
+                    contributors[_contributor].initialDepositAt,
+                    block.timestamp
+                );
             return reserveAssetPrincipalWindow.preciseMul(contributorPower) >= _amount;
         }
         return false;
@@ -1081,8 +1082,5 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         rewardsDistributor.updateGardenPower(address(this), pid);
         rewardsDistributor.setContributorTimestampParams(address(this), msg.sender, 0, false, pid); // false = withdraw
         pid++;
-
     }
-
-
 }

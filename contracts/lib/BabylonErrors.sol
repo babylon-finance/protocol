@@ -236,7 +236,4 @@ library Errors {
     uint256 internal constant STRATEGY_GARDEN_MISMATCH = 73;
     // Minimum quarters is 1
     uint256 internal constant QUARTERS_MIN_1 = 74;
-    
-    
-
 }

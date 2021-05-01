@@ -156,9 +156,7 @@ describe('BABL Rewards Distributor', function () {
 
       await executeStrategy(long, ONE_ETH);
 
-      await expect(rewardsDistributor.getStrategyRewards(long.address)).to.be.revertedWith(
-        'The strategy has to be finished',
-      );
+      await expect(rewardsDistributor.getStrategyRewards(long.address)).to.be.revertedWith('revert BAB#049');
     });
 
     it('should calculate correct BABL in case of 1 strategy with negative profit and total duration of 1 quarter', async function () {
@@ -817,7 +815,7 @@ describe('BABL Rewards Distributor', function () {
 
       await garden1.connect(signer1).claimReturns([long1.address, long2.address]);
       expect(signer1Profit3.toString()).to.be.equal('0'); // Negative profit means no profit at all
-      expect(signer1BABL3.toString()).to.be.closeTo('36835432187269733938942', ethers.utils.parseEther('0.1'));
+      expect(signer1BABL3.toString()).to.be.closeTo('37699396938360106703788', ethers.utils.parseEther('0.1'));
     });
 
     it('should only provide new additional BABL and profits between claims (claiming results of 2 strategies both with profit)', async function () {
@@ -872,7 +870,7 @@ describe('BABL Rewards Distributor', function () {
       // PROFITS ARE NOW A 20% OF THE TOTAL, AS WE NOW HAVE COMPOUNDED (RE-STAKED) THE REST (80%) FOR LPs
       // expect(signer1Profit).to.be.closeTo('99343939480695811', ethers.utils.parseEther('0.05'));
       expect(signer1Profit).to.be.closeTo('19637773343746505', ethers.utils.parseEther('0.005'));
-      expect(signer1BABL).to.be.closeTo('76450788244508364203443', ethers.utils.parseEther('0.1'));
+      expect(signer1BABL).to.be.closeTo('77744094588240781014116', ethers.utils.parseEther('0.1'));
     });
 
     it('should claim and update balances of Signer1 either Garden tokens or BABL rewards as contributor of 5 strategies (4 with positive profits) of 2 different Gardens with different timings along 3 Years', async function () {
@@ -987,7 +985,7 @@ describe('BABL Rewards Distributor', function () {
         garden1
           .connect(signer1)
           .claimReturns([long1.address, long2.address, long3.address, long4.address, long5.address]),
-      ).to.be.revertedWith('revert Strategies need to belong to the garden');
+      ).to.be.revertedWith('revert BAB#073');
     });
     it('A user cannot get rewards from strategies of 2 different gardens at the same time avoiding malicious bypassing of the claimedAt control (e.g. using claimedAtfrom different gardens over the same strategies)', async function () {
       // Mining program has to be enabled before the strategy starts its execution
@@ -1033,7 +1031,7 @@ describe('BABL Rewards Distributor', function () {
           long4.address,
           long5.address,
         ]),
-      ).to.be.revertedWith('revert Strategies need to belong to the garden');
+      ).to.be.revertedWith('revert BAB#073');
     });
   });
 });
