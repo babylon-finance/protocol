@@ -210,10 +210,9 @@ async function finalizeStrategyAfter2Years(strategy) {
 }
 
 async function injectFakeProfits(strategy, amount) {
-  const kind = await strategy.kind();
+  const kind = await strategy.opTypes(0);
   if (kind === 0) {
-    const op = await ethers.getContractAt('BuyOperation', await strategy.opIntegrations(0));
-    const asset = await op.getParsedData(await strategy.opDatas[0]);
+    const asset = await ethers.getContractAt('IERC20', await strategy.opDatas(0));
     const whaleAddress = '0x6B175474E89094C44Da98b954EedeAC495271d0F'; // Has DAI
     const whaleSigner = await impersonateAddress(whaleAddress);
     await asset.connect(whaleSigner).transfer(strategy.address, amount, {
@@ -221,8 +220,7 @@ async function injectFakeProfits(strategy, amount) {
     });
   }
   if (kind === 1) {
-    const op = await ethers.getContractAt('AddLiquidityOperation', await strategy.opIntegrations(0));
-    const asset = await op.getParsedData(await strategy.opDatas[0]);
+    const asset = await ethers.getContractAt('IERC20', await strategy.opDatas(0));
     const whaleAddress = await strategy.pool();
     const whaleSigner = await impersonateAddress(whaleAddress);
     await asset.connect(whaleSigner).transfer(strategy.address, amount, {
@@ -230,8 +228,7 @@ async function injectFakeProfits(strategy, amount) {
     });
   }
   if (kind === 2) {
-    const op = await ethers.getContractAt('DepositVaultOperation', await strategy.opIntegrations(0));
-    const asset = await op.getParsedData(await strategy.opDatas[0]);
+    const asset = await ethers.getContractAt('IERC20', await strategy.opDatas(0));
     const whaleAddress = await strategy.yieldVault();
     const whaleSigner = await impersonateAddress(whaleAddress);
     await asset.connect(whaleSigner).transfer(strategy.address, amount, {

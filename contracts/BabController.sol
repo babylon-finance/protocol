@@ -194,6 +194,8 @@ contract BabController is OwnableUpgradeable, IBabController {
         uint256 _seed,
         uint256[] calldata _gardenParams
     ) external payable override returns (address) {
+        require(defaultTradeIntegration != address(0), 'Need a default trade integration');
+        require(enabledOperations.length > 0, 'Need operations enabled');
         require(IIshtarGate(ishtarGate).canCreate(msg.sender), 'User does not have creation permissions');
         address newGarden =
             IGardenFactory(gardenFactory).createGarden{value: msg.value}(
@@ -664,6 +666,7 @@ contract BabController is OwnableUpgradeable, IBabController {
             priceOracle == _contractAddress ||
             owner() == _contractAddress ||
             _contractAddress == address(this) ||
+            _isOperation(_contractAddress) ||
             (isGarden[address(IStrategy(_contractAddress).garden())] &&
                 IGarden(IStrategy(_contractAddress).garden()).isStrategy(_contractAddress)));
     }
@@ -675,5 +678,14 @@ contract BabController is OwnableUpgradeable, IBabController {
      */
     function _nameHash(string memory _name) private pure returns (bytes32) {
         return keccak256(bytes(_name));
+    }
+
+    function _isOperation(address _address) private view returns (bool) {
+        for (uint8 i = 0; i < MAX_OPERATIONS; i++) {
+            if (_address == enabledOperations[i]) {
+                return true;
+            }
+        }
+        return false;
     }
 }

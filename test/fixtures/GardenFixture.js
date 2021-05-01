@@ -8,9 +8,7 @@ async function setUpFixture({ deployments, getNamedAccounts, ethers }, options, 
   async function getContract(contractName, deploymentName) {
     return await ethers.getContractAt(contractName, (await deployments.get(deploymentName || contractName)).address);
   }
-  console.log('fixture');
   await deployments.fixture();
-  console.log('after deployments');
   const [owner, signer1, signer2, signer3] = await ethers.getSigners();
 
   const babController = await getContract('BabController', 'BabControllerProxy');

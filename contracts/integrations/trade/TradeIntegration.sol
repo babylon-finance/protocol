@@ -105,7 +105,6 @@ abstract contract TradeIntegration is BaseIntegration, ReentrancyGuard, ITradeIn
         TradeInfo memory tradeInfo =
             _createTradeInfo(name, _sendToken, _receiveToken, _sendQuantity, _minReceiveQuantity);
         _validatePreTradeData(tradeInfo, _sendQuantity);
-
         // Get spender address from exchange adapter and invoke approve for exact amount on sendToken
         tradeInfo.strategy.invokeApprove(_getSpender(), tradeInfo.sendToken, tradeInfo.totalSendQuantity);
         (address targetExchange, uint256 callValue, bytes memory methodData) =

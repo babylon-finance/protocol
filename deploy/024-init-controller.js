@@ -57,6 +57,10 @@ module.exports = async ({ getNamedAccounts, deployments, ethers, getSigner, getC
     const contract = await ethers.getContractAt(integration, deployment.address);
     await controllerContract.connect(owner).addIntegration(await contract.getName(), deployment.address);
   }
+  const oneinch = await deployments.get('OneInchTradeIntegration');
+  // Set default trade integration
+  await controllerContract.connect(owner).setDefaultTradeIntegration(oneinch.address);
+
   // Adding operations
   const ops = ['BuyOperation', 'AddLiquidityOperation', 'DepositVaultOperation', 'LendOperation'];
   for (let i = 0; i < ops.length; i++) {
