@@ -108,7 +108,6 @@ interface IGarden {
     function addStrategy(
         string memory _name,
         string memory _symbol,
-        uint8 _strategyKind,
         uint256[] calldata _stratParams,
         uint8[] calldata _opTypes,
         address[] calldata _opIntegrations,

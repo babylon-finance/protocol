@@ -116,4 +116,8 @@ abstract contract Operation is IOperation {
         IPriceOracle oracle = IPriceOracle(IBabController(controller).priceOracle());
         return oracle.getPrice(_assetOne, _assetTwo);
     }
+
+    function _convertDataToAddress(bytes32 _data) internal view returns (address) {
+        return address(uint160(bytes20(_data)));
+    }
 }

@@ -57,7 +57,7 @@ contract LendOperation is Operation {
         IStrategy _strategy,
         address _integration
     ) external view override onlyStrategy {
-        require(_parseData(_data) != _garden.reserveAsset(), 'Receive token must be different');
+        require(getParsedData(_data) != _garden.reserveAsset(), 'Receive token must be different');
     }
 
     /**
@@ -72,7 +72,7 @@ contract LendOperation is Operation {
         IStrategy _strategy,
         address _integration
     ) external override onlyStrategy returns (address, uint256) {
-        address assetToken = _parseData(_data);
+        address assetToken = getParsedData(_data);
         if (assetToken != _asset) {
             IStrategy(_strategy).trade(_asset, _capital, assetToken);
         }
@@ -95,7 +95,7 @@ contract LendOperation is Operation {
         address _integration
     ) external override onlyStrategy {
         require(_percentage <= HUNDRED_PERCENT, 'Unwind Percentage <= 100%');
-        address assetToken = _parseData(_data);
+        address assetToken = getParsedData(_data);
         uint256 numTokensToRedeem =
             IERC20(ILendIntegration(_integration).getInvestmentToken(assetToken)).balanceOf(msg.sender).preciseMul(
                 _percentage
@@ -126,7 +126,7 @@ contract LendOperation is Operation {
         if (!_strategy.isStrategyActive()) {
             return 0;
         }
-        address assetToken = _parseData(_data);
+        address assetToken = getParsedData(_data);
         uint256 numTokensToRedeem =
             IERC20(ILendIntegration(_integration).getInvestmentToken(assetToken)).balanceOf(address(this));
         uint256 assetTokensAmount =
@@ -139,7 +139,7 @@ contract LendOperation is Operation {
 
     /* ============ Private Functions ============ */
 
-    function _parseData(bytes32 _data) private view returns (address) {
-        return address(0);
+    function getParsedData(bytes32 _data) private view returns (address) {
+        return _convertDataToAddress(_data);
     }
 }

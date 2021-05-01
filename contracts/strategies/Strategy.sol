@@ -69,30 +69,12 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
 
     /* ============ Events ============ */
     event Invoked(address indexed _target, uint256 indexed _value, bytes _data, bytes _returnValue);
-    event StrategyVoted(
-        address indexed _garden,
-        uint8 indexed _kind,
-        uint256 _absoluteVotes,
-        int256 _totalVotes,
-        uint256 _timestamp
-    );
-    event StrategyExecuted(
-        address indexed _garden,
-        uint8 indexed _kind,
-        uint256 _capital,
-        uint256 _fee,
-        uint256 timestamp
-    );
-    event StrategyFinalized(
-        address indexed _garden,
-        uint8 indexed _kind,
-        uint256 _capitalReturned,
-        uint256 _fee,
-        uint256 timestamp
-    );
-    event StrategyReduced(address indexed _garden, uint8 indexed _kind, uint256 _amountReduced, uint256 timestamp);
-    event StrategyExpired(address indexed _garden, uint8 indexed _kind, uint256 _timestamp);
-    event StrategyDeleted(address indexed _garden, uint8 indexed _kind, uint256 _timestamp);
+    event StrategyVoted(address indexed _garden, uint256 _absoluteVotes, int256 _totalVotes, uint256 _timestamp);
+    event StrategyExecuted(address indexed _garden, uint256 _capital, uint256 _fee, uint256 timestamp);
+    event StrategyFinalized(address indexed _garden, uint256 _capitalReturned, uint256 _fee, uint256 timestamp);
+    event StrategyReduced(address indexed _garden, uint256 _amountReduced, uint256 timestamp);
+    event StrategyExpired(address indexed _garden, uint256 _timestamp);
+    event StrategyDeleted(address indexed _garden, uint256 _timestamp);
     event StrategyDurationChanged(uint256 _newDuration, uint256 _oldDuration);
 
     /* ============ Modifiers ============ */
@@ -191,17 +173,16 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
     // Babylon Controller Address
     IBabController public controller;
 
-    // Type of strategy.
-    // 0 = LongStrategy
-    // 1 = LiquidityPoolStrategy
-    // 2 = YieldFarmingStrategy
-    // 3 = LendStrategy
-    uint8 public kind;
+    // Type of operation.
+    // 0 = BuyOperation
+    // 1 = LiquidityOperation
+    // 2 = VaultOperation
+    // 3 = LendOperation
 
     // Types and data for the operations of this strategy
-    uint8[] public opTypes;
-    address[] public opIntegrations;
-    bytes32[] public opDatas;
+    uint8[] public override opTypes;
+    address[] public override opIntegrations;
+    bytes32[] public override opDatas;
 
     // Garden that these strategies belong to
     IGarden public override garden;
@@ -374,7 +355,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         garden.allocateCapitalToStrategy(MAX_STRATEGY_KEEPER_FEES);
         // Initializes cooldown
         enteredCooldownAt = block.timestamp;
-        emit StrategyVoted(address(garden), kind, _absoluteTotalVotes, _totalVotes, block.timestamp);
+        emit StrategyVoted(address(garden), _absoluteTotalVotes, _totalVotes, block.timestamp);
         _payKeeper(msg.sender, _fee);
     }
 
@@ -424,7 +405,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         }
         _payKeeper(msg.sender, _fee);
         updatedAt = block.timestamp;
-        emit StrategyExecuted(address(garden), kind, _capital, _fee, block.timestamp);
+        emit StrategyExecuted(address(garden), _capital, _fee, block.timestamp);
     }
 
     /**
@@ -460,7 +441,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         _payKeeper(msg.sender, _fee);
         // Send rest to garden if any
         _sendReserveAssetToGarden();
-        emit StrategyFinalized(address(garden), kind, capitalReturned, _fee, block.timestamp);
+        emit StrategyFinalized(address(garden), capitalReturned, _fee, block.timestamp);
     }
 
     /**
@@ -483,7 +464,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         }
         // Send the amount back to the warden for the immediate withdrawal
         IERC20(garden.reserveAsset()).safeTransfer(address(garden), _amountToUnwind);
-        emit StrategyReduced(address(garden), kind, _amountToUnwind, block.timestamp);
+        emit StrategyReduced(address(garden), _amountToUnwind, block.timestamp);
     }
 
     /**
@@ -495,7 +476,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         _require(!active, Errors.STRATEGY_NEEDS_TO_BE_INACTIVE);
         _deleteCandidateStrategy();
         _payKeeper(msg.sender, _fee);
-        emit StrategyExpired(address(garden), kind, block.timestamp);
+        emit StrategyExpired(address(garden), block.timestamp);
     }
 
     /**
@@ -503,7 +484,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
      */
     function deleteCandidateStrategy() external onlyStrategist {
         _deleteCandidateStrategy();
-        emit StrategyDeleted(address(garden), kind, block.timestamp);
+        emit StrategyDeleted(address(garden), block.timestamp);
     }
 
     /**
@@ -585,6 +566,13 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
     }
 
     /**
+     * Returns the number of operations in this strategy
+     */
+    function getOperationsCount() external view override returns (uint256) {
+        return opTypes.length;
+    }
+
+    /**
      * Get the non-state related details of a Strategy
      *
      */
@@ -595,7 +583,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         returns (
             address,
             address,
-            uint8,
+            uint256,
             uint256,
             uint256,
             int256,
@@ -611,7 +599,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         return (
             address(this),
             strategist,
-            kind,
+            opIntegrations.length,
             stake,
             absoluteTotalVotes,
             totalVotes,
@@ -669,25 +657,6 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
      */
     function getUserVotes(address _address) external view override returns (int256) {
         return votes[_address];
-    }
-
-    /**
-     * Returns the losses of the active strategy if any
-     *
-     * @return _losses           Amount of current losses
-     */
-    function getLossesStrategy() external view override onlyActiveGarden returns (uint256) {
-        if (isStrategyActive()) {
-            uint256 navStrategy = getNAV();
-            // If strategy is currently experiencing losses, we add them
-            if (navStrategy < capitalAllocated) {
-                return capitalAllocated.sub(navStrategy);
-            }
-        }
-        if (finalized && capitalAllocated > capitalReturned) {
-            return capitalAllocated.sub(capitalReturned);
-        }
-        return 0;
     }
 
     /* ============ Internal Functions ============ */

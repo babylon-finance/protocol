@@ -56,7 +56,13 @@ interface IStrategy {
 
     function getNAV() external view returns (uint256);
 
-    function getLossesStrategy() external view returns (uint256);
+    function opDatas(uint256 _index) external view returns (bytes32);
+
+    function opIntegrations(uint256 _index) external view returns (address);
+
+    function opTypes(uint256 _index) external view returns (uint8);
+
+    function getOperationsCount() external view returns (uint256);
 
     function finalizeStrategy(uint256 fee, string memory _tokenURI) external;
 
@@ -88,7 +94,7 @@ interface IStrategy {
         returns (
             address,
             address,
-            uint8,
+            uint256,
             uint256,
             uint256,
             int256,

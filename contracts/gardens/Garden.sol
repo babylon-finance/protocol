@@ -560,7 +560,6 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
      * Creates a new strategy calling the factory and adds it to the array
      * @param _name                          Name of the strategy
      * @param _symbol                        Symbol of the strategy
-     * @param _strategyKind                  Int representing kind of strategy
      * @param _stratParams                   Num params for the strategy
      * @param _opTypes                      Type for every operation in the strategy
      * @param _opIntegrations               Integration to use for every operation
@@ -569,7 +568,6 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
     function addStrategy(
         string memory _name,
         string memory _symbol,
-        uint8 _strategyKind,
         uint256[] calldata _stratParams,
         uint8[] calldata _opTypes,
         address[] calldata _opIntegrations,

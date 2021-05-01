@@ -120,29 +120,4 @@ contract GardenValuer {
 
         return valuation.preciseDiv(IERC20(_garden).totalSupply());
     }
-
-    /**
-     * Returns the losses of a garden since a timestamp
-     *
-     * @param _garden                       Addres of the garden
-     * @param _since                        Timestamp since when we should calculate the losses
-     * @return  uint256                     Losses of a garden since a timestamp
-     */
-    function getLossesGarden(address _garden, uint256 _since) external view returns (uint256) {
-        uint256 totalLosses = 0;
-        address[] memory finalizedStrategies = IGarden(_garden).getFinalizedStrategies();
-        for (uint256 i = 0; i < finalizedStrategies.length; i++) {
-            if (IStrategy(finalizedStrategies[i]).executedAt() >= _since) {
-                totalLosses = totalLosses.add(IStrategy(finalizedStrategies[i]).getLossesStrategy());
-            }
-        }
-        address[] memory strategies = IGarden(_garden).getStrategies();
-        for (uint256 i = 0; i < strategies.length; i++) {
-            if (IStrategy(strategies[i]).executedAt() >= _since) {
-                totalLosses = totalLosses.add(IStrategy(strategies[i]).getLossesStrategy());
-            }
-        }
-
-        return totalLosses;
-    }
 }

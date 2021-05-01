@@ -58,7 +58,7 @@ contract AddLiquidityOperation is Operation {
         IStrategy _strategy,
         address _integration
     ) external view override onlyStrategy {
-        require(IPoolIntegration(_integration).isPool(_parseData(_data)), 'Not a valid pool');
+        require(IPoolIntegration(_integration).isPool(getParsedData(_data)), 'Not a valid pool');
     }
 
     /**
@@ -73,7 +73,7 @@ contract AddLiquidityOperation is Operation {
         IStrategy _strategy,
         address _integration
     ) external override onlyStrategy returns (address, uint256) {
-        address pool = _parseData(_data);
+        address pool = getParsedData(_data);
         address[] memory poolTokens = IPoolIntegration(_integration).getPoolTokens(pool);
         uint256[] memory _maxAmountsIn = new uint256[](poolTokens.length);
         uint256[] memory _poolWeights = IPoolIntegration(_integration).getPoolWeights(pool);
@@ -116,7 +116,7 @@ contract AddLiquidityOperation is Operation {
         address _integration
     ) external override onlyStrategy {
         require(_percentage <= 100e18, 'Unwind Percentage <= 100%');
-        address pool = _parseData(_data);
+        address pool = getParsedData(_data);
         address[] memory poolTokens = IPoolIntegration(_integration).getPoolTokens(pool);
         uint256 lpTokens = IERC20(pool).balanceOf(msg.sender).preciseMul(_percentage); // Sell all pool tokens
         uint256[] memory _minAmountsOut = IPoolIntegration(_integration).getPoolMinAmountsOut(pool, lpTokens);
@@ -157,7 +157,7 @@ contract AddLiquidityOperation is Operation {
         if (!_strategy.isStrategyActive()) {
             return 0;
         }
-        address pool = _parseData(_data);
+        address pool = getParsedData(_data);
         address[] memory poolTokens = IPoolIntegration(_integration).getPoolTokens(pool);
         uint256 NAV;
         uint256 totalSupply = IERC20(pool).totalSupply();
@@ -172,9 +172,7 @@ contract AddLiquidityOperation is Operation {
         return NAV;
     }
 
-    /* ============ Private Functions ============ */
-
-    function _parseData(bytes32 _data) private view returns (address) {
-        return address(0);
+    function getParsedData(bytes32 _data) public view returns (address) {
+        return _convertDataToAddress(_data);
     }
 }
