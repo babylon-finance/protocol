@@ -79,20 +79,7 @@ contract AddLiquidityOperation is Operation {
         uint256[] memory _poolWeights = IPoolIntegration(_integration).getPoolWeights(pool);
         // Get the tokens needed to enter the pool
         for (uint256 i = 0; i < poolTokens.length; i++) {
-            // uint256 normalizedAmount = _capital.preciseMul(_poolWeights[i]);
-            // if (poolTokens[i] != _asset && poolTokens[i] != address(0)) {
-            //     IStrategy(_strategy).trade(_asset, normalizedAmount, poolTokens[i]);
-            //     _maxAmountsIn[i] = IERC20(poolTokens[i]).balanceOf(msg.sender);
-            // } else {
-            //     if (poolTokens[i] == address(0)) {
-            //         if (_asset != _garden.WETH()) {
-            //             IStrategy(_strategy).trade(_asset, normalizedAmount, _garden.WETH());
-            //         }
-            //         // Convert WETH to ETH
-            //         IWETH(_garden.WETH()).withdraw(normalizedAmount);
-            //     }
-            //     _maxAmountsIn[i] = normalizedAmount;
-            // }
+          _maxAmountsIn[i] = _getMaxAmountTokenPool(_asset, _capital, _garden, _strategy, _poolWeights[i], poolTokens[i]);
         }
         uint256 poolTokensOut = IPoolIntegration(_integration).getPoolTokensOut(pool, poolTokens[0], _maxAmountsIn[0]);
         IPoolIntegration(_integration).joinPool(
@@ -174,5 +161,23 @@ contract AddLiquidityOperation is Operation {
 
     function getParsedData(bytes32 _data) public view returns (address) {
         return _convertDataToAddress(_data);
+    }
+
+    /* ============ Private Functions ============ */
+
+    function _getMaxAmountTokenPool(address _asset, uint256 _capital, IGarden _garden, IStrategy _strategy, uint256 _poolWeight, address _poolToken) private returns(uint256) {
+      uint256 normalizedAmount = _capital.preciseMul(_poolWeight);
+      if (_poolToken != _asset && _poolToken != address(0)) {
+          IStrategy(_strategy).trade(_asset, normalizedAmount, _poolToken);
+          return IERC20(_poolToken).balanceOf(msg.sender);
+      }
+      if (_poolToken == address(0)) {
+          if (_asset != _garden.WETH()) {
+            IStrategy(_strategy).trade(_asset, normalizedAmount, _garden.WETH());
+          }
+          // Convert WETH to ETH
+          IWETH(_garden.WETH()).withdraw(normalizedAmount);
+      }
+      return normalizedAmount;
     }
 }
