@@ -18,6 +18,7 @@
 
 pragma solidity 0.7.6;
 
+import 'hardhat/console.sol';
 import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import {SafeMath} from '@openzeppelin/contracts/math/SafeMath.sol';
 import {Operation} from './Operation.sol';
@@ -80,6 +81,7 @@ contract DepositVaultOperation is Operation {
         uint256 exactAmount = IPassiveIntegration(_integration).getExpectedShares(yieldVault, _capital);
         uint256 minAmountExpected = exactAmount.sub(exactAmount.preciseMul(SLIPPAGE_ALLOWED));
         IPassiveIntegration(_integration).enterInvestment(
+            address(_strategy),
             yieldVault,
             minAmountExpected,
             vaultAsset,
@@ -104,6 +106,7 @@ contract DepositVaultOperation is Operation {
         address vaultAsset = IPassiveIntegration(_integration).getInvestmentAsset(yieldVault);
         uint256 amountVault = IERC20(yieldVault).balanceOf(msg.sender).preciseMul(_percentage);
         IPassiveIntegration(_integration).exitInvestment(
+            address(_strategy),
             yieldVault,
             amountVault,
             vaultAsset,

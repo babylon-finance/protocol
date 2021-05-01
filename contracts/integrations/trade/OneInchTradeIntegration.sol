@@ -94,11 +94,13 @@ contract OneInchTradeIntegration is TradeIntegration {
     /**
      * Executes the trade through 1Inch.
      *
+     * hparam _strategy             Address of the strategy
      * @param _sendToken            Address of the token to be sent to the exchange
      * @param _sendQuantity         Units of reserve asset token sent to the exchange
      * @param _receiveToken         Address of the token that will be received from the exchange
      */
     function _getTradeCallData(
+        address /*_strategy*/,
         address _sendToken,
         uint256 _sendQuantity,
         address _receiveToken

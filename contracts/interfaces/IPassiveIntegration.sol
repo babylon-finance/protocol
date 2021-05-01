@@ -25,6 +25,7 @@ pragma solidity 0.7.6;
  */
 interface IPassiveIntegration {
     function enterInvestment(
+        address _strategy,
         address _investmentAddress,
         uint256 _investmentTokensOut,
         address _tokenIn,
@@ -32,6 +33,7 @@ interface IPassiveIntegration {
     ) external;
 
     function exitInvestment(
+        address _strategy,
         address _investmentAddress,
         uint256 _investmentTokenIn,
         address _tokenOut,

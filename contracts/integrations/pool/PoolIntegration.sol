@@ -83,18 +83,20 @@ abstract contract PoolIntegration is BaseIntegration, ReentrancyGuard, IPoolInte
     /**
      * Joins a pool
      *
+     * @param _strategy             Address of the strategy
      * @param _poolAddress          Address of the pool token to join
      * @param _poolTokensOut        Min amount of pool tokens to receive
      * @param _tokensIn             Array of token addresses to deposit
      * @param _maxAmountsIn         Array of max token quantities to pull out from the garden
      */
     function joinPool(
+        address _strategy,
         address _poolAddress,
         uint256 _poolTokensOut,
         address[] calldata _tokensIn,
         uint256[] calldata _maxAmountsIn
-    ) external override nonReentrant onlyStrategy {
-        PoolInfo memory poolInfo = _createPoolInfo(_poolAddress, _poolTokensOut, _tokensIn, _maxAmountsIn);
+    ) external override nonReentrant onlySystemContract {
+        PoolInfo memory poolInfo = _createPoolInfo(_strategy, _poolAddress, _poolTokensOut, _tokensIn, _maxAmountsIn);
         _validatePreJoinPoolData(poolInfo);
         // Approve spending of the tokens
         for (uint256 i = 0; i < _tokensIn.length; i++) {
@@ -104,7 +106,7 @@ abstract contract PoolIntegration is BaseIntegration, ReentrancyGuard, IPoolInte
             }
         }
         (address targetPool, uint256 callValue, bytes memory methodData) =
-            _getJoinPoolCalldata(_poolAddress, _poolTokensOut, _tokensIn, _maxAmountsIn);
+            _getJoinPoolCalldata(_strategy, _poolAddress, _poolTokensOut, _tokensIn, _maxAmountsIn);
         poolInfo.strategy.invokeFromIntegration(targetPool, callValue, methodData);
         poolInfo.poolTokensInTransaction = IERC20(poolInfo.pool).balanceOf(address(poolInfo.strategy)).sub(
             poolInfo.poolTokensInStrategy
@@ -117,24 +119,26 @@ abstract contract PoolIntegration is BaseIntegration, ReentrancyGuard, IPoolInte
     /**
      * Exits a liquidity pool. Accrue protocol fee (if any)
      *
-     * @param _poolAddress          Address of the pool token to join
+     * @param _strategy               Address of the strategy
+     * @param _poolAddress            Address of the pool token to join
      * @param _poolTokensIn           Pool tokens to exchange for the underlying tokens
-     * @param _tokensOut             Array of token addresses to withdraw
-     * @param _minAmountsOut         Array of min token quantities to receive from the pool
+     * @param _tokensOut              Array of token addresses to withdraw
+     * @param _minAmountsOut          Array of min token quantities to receive from the pool
      */
     function exitPool(
+        address _strategy,
         address _poolAddress,
         uint256 _poolTokensIn,
         address[] calldata _tokensOut,
         uint256[] calldata _minAmountsOut
-    ) external override nonReentrant onlyStrategy {
-        PoolInfo memory poolInfo = _createPoolInfo(_poolAddress, _poolTokensIn, _tokensOut, _minAmountsOut);
+    ) external override nonReentrant onlySystemContract {
+        PoolInfo memory poolInfo = _createPoolInfo(_strategy, _poolAddress, _poolTokensIn, _tokensOut, _minAmountsOut);
         _validatePreExitPoolData(poolInfo);
         // Approve spending of the pool token
         poolInfo.strategy.invokeApprove(_getSpender(_poolAddress), _poolAddress, _poolTokensIn);
 
         (address targetPool, uint256 callValue, bytes memory methodData) =
-            _getExitPoolCalldata(_poolAddress, _poolTokensIn, _tokensOut, _minAmountsOut);
+            _getExitPoolCalldata(_strategy, _poolAddress, _poolTokensIn, _tokensOut, _minAmountsOut);
         poolInfo.strategy.invokeFromIntegration(targetPool, callValue, methodData);
         _validatePostExitPoolData(poolInfo);
 
@@ -164,6 +168,7 @@ abstract contract PoolIntegration is BaseIntegration, ReentrancyGuard, IPoolInte
     /**
      * Create and return PoolInfo struct
      *
+     * @param _strategy                      Address of the strategy
      * @param _pool                          Address of the pool
      * @param _poolTokensInTransaction       Number of pool tokens involved
      * hparam _poolTokens                    Addresseses of the pool tokens
@@ -172,17 +177,18 @@ abstract contract PoolIntegration is BaseIntegration, ReentrancyGuard, IPoolInte
      * return PoolInfo             Struct containing data for pool
      */
     function _createPoolInfo(
+        address _strategy,
         address _pool,
         uint256 _poolTokensInTransaction,
         address[] calldata, /* _poolTokens */
         uint256[] calldata _limitPoolTokenQuantities
     ) internal returns (PoolInfo memory) {
         PoolInfo memory poolInfo;
-        poolInfo.strategy = IStrategy(msg.sender);
+        poolInfo.strategy = IStrategy(_strategy);
         poolInfo.garden = IGarden(poolInfo.strategy.garden());
         poolInfo.pool = _pool;
         poolInfo.totalSupply = IERC20(_pool).totalSupply();
-        poolInfo.poolTokensInStrategy = IERC20(_pool).balanceOf(address(msg.sender));
+        poolInfo.poolTokensInStrategy = IERC20(_pool).balanceOf(_strategy);
         poolInfo.poolTokensInTransaction = _poolTokensInTransaction;
         poolInfo.limitPoolTokenQuantities = _limitPoolTokenQuantities;
 
@@ -242,6 +248,7 @@ abstract contract PoolIntegration is BaseIntegration, ReentrancyGuard, IPoolInte
     /**
      * Return join pool calldata which is already generated from the pool API
      *
+     * hparam  _strategy                 Address of the strategy
      * hparam  _poolAddress              Address of the pool
      * hparam  _poolTokensOut            Amount of pool tokens to send
      * hparam  _tokensIn                 Addresses of tokens to send to the pool
@@ -252,6 +259,7 @@ abstract contract PoolIntegration is BaseIntegration, ReentrancyGuard, IPoolInte
      * @return bytes                     Trade calldata
      */
     function _getJoinPoolCalldata(
+        address /* _strategy */,
         address, /* _poolAddress */
         uint256, /* _poolTokensOut */
         address[] calldata, /* _tokensIn */
@@ -269,6 +277,7 @@ abstract contract PoolIntegration is BaseIntegration, ReentrancyGuard, IPoolInte
     /**
      * Return exit pool calldata which is already generated from the pool API
      *
+     * hparam  _strategy                 Address of the strategy
      * hparam  _poolAddress              Address of the pool
      * hparam  _poolTokensIn             Amount of pool tokens to receive
      * hparam  _tokensOut                Addresses of tokens to receive
@@ -279,6 +288,7 @@ abstract contract PoolIntegration is BaseIntegration, ReentrancyGuard, IPoolInte
      * @return bytes                     Trade calldata
      */
     function _getExitPoolCalldata(
+        address /* _strategy */,
         address, /* _poolAddress */
         uint256, /* _poolTokensIn */
         address[] calldata, /* _tokensOut */

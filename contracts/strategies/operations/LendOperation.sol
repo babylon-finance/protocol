@@ -79,7 +79,7 @@ contract LendOperation is Operation {
         uint256 numTokensToSupply = IERC20(assetToken).balanceOf(msg.sender);
         uint256 exactAmount = ILendIntegration(_integration).getExpectedShares(assetToken, numTokensToSupply);
         uint256 minAmountExpected = exactAmount.sub(exactAmount.preciseMul(SLIPPAGE_ALLOWED));
-        ILendIntegration(_integration).supplyTokens(assetToken, numTokensToSupply, minAmountExpected);
+        ILendIntegration(_integration).supplyTokens(address(_strategy), assetToken, numTokensToSupply, minAmountExpected);
         return (assetToken, numTokensToSupply);
     }
 
@@ -101,6 +101,7 @@ contract LendOperation is Operation {
                 _percentage
             );
         ILendIntegration(_integration).redeemTokens(
+            address(_strategy),
             assetToken,
             numTokensToRedeem,
             ILendIntegration(_integration).getExchangeRatePerToken(assetToken).mul(

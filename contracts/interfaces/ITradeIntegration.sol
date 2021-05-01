@@ -25,6 +25,7 @@ pragma solidity 0.7.6;
  */
 interface ITradeIntegration {
     function trade(
+        address _strategy,
         address _sendToken,
         uint256 _sendQuantity,
         address _receiveToken,

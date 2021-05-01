@@ -89,25 +89,26 @@ abstract contract PassiveIntegration is BaseIntegration, ReentrancyGuard, IPassi
     /**
      * Deposits tokens into an investment
      *
+     * @param _strategy                   Address of the strategy
      * @param _investmentAddress          Address of the investment token to join
      * @param _investmentTokensOut        Min amount of investment tokens to receive
      * @param _tokenIn                    Token aaddress to deposit
      * @param _maxAmountIn                Max amount of the token to deposit
      */
     function enterInvestment(
+        address _strategy,
         address _investmentAddress,
         uint256 _investmentTokensOut,
         address _tokenIn,
         uint256 _maxAmountIn
-    ) external override nonReentrant onlyStrategy {
+    ) external override nonReentrant onlySystemContract {
         InvestmentInfo memory investmentInfo =
-            _createInvestmentInfo(_investmentAddress, _investmentTokensOut, _tokenIn, _maxAmountIn);
+            _createInvestmentInfo(_strategy, _investmentAddress, _investmentTokensOut, _tokenIn, _maxAmountIn);
         _validatePreJoinInvestmentData(investmentInfo);
         // Approve spending of the token
         investmentInfo.strategy.invokeApprove(_getSpender(_investmentAddress), _tokenIn, _maxAmountIn);
-
         (address targetInvestment, uint256 callValue, bytes memory methodData) =
-            _getEnterInvestmentCalldata(_investmentAddress, _investmentTokensOut, _tokenIn, _maxAmountIn);
+            _getEnterInvestmentCalldata(_strategy, _investmentAddress, _investmentTokensOut, _tokenIn, _maxAmountIn);
         investmentInfo.strategy.invokeFromIntegration(targetInvestment, callValue, methodData);
         _validatePostEnterInvestmentData(investmentInfo);
 
@@ -123,25 +124,27 @@ abstract contract PassiveIntegration is BaseIntegration, ReentrancyGuard, IPassi
     /**
      * Exits an outside passive investment
      *
+     * @param _strategy                   Address of the strategy
      * @param _investmentAddress          Address of the investment token to join
      * @param _investmentTokenIn          Quantity of investment tokens to return
      * @param _tokenOut                   Token address to withdraw
      * @param _minAmountOut               Min token quantities to receive from the investment
      */
     function exitInvestment(
+        address _strategy,
         address _investmentAddress,
         uint256 _investmentTokenIn,
         address _tokenOut,
         uint256 _minAmountOut
-    ) external override nonReentrant onlyStrategy {
+    ) external override nonReentrant onlySystemContract {
         InvestmentInfo memory investmentInfo =
-            _createInvestmentInfo(_investmentAddress, _investmentTokenIn, _tokenOut, _minAmountOut);
+            _createInvestmentInfo(_strategy, _investmentAddress, _investmentTokenIn, _tokenOut, _minAmountOut);
         _validatePreExitInvestmentData(investmentInfo);
         // Approve spending of the investment token
         investmentInfo.strategy.invokeApprove(_getSpender(_investmentAddress), _investmentAddress, _investmentTokenIn);
 
         (address targetInvestment, uint256 callValue, bytes memory methodData) =
-            _getExitInvestmentCalldata(_investmentAddress, _investmentTokenIn, _tokenOut, _minAmountOut);
+            _getExitInvestmentCalldata(_strategy, _investmentAddress, _investmentTokenIn, _tokenOut, _minAmountOut);
         investmentInfo.strategy.invokeFromIntegration(targetInvestment, callValue, methodData);
         _validatePostExitInvestmentData(investmentInfo);
 
@@ -203,6 +206,7 @@ abstract contract PassiveIntegration is BaseIntegration, ReentrancyGuard, IPassi
     /**
      * Create and return InvestmentInfo struct
      *
+     * @param _strategy                                 Address of the strategy
      * @param _investment                               Address of the investment
      * @param _investmentTokensInTransaction            Number of investment tokens involved
      * hparam _tokenIn                                  Addresseses of the deposit token
@@ -211,17 +215,18 @@ abstract contract PassiveIntegration is BaseIntegration, ReentrancyGuard, IPassi
      * return InvestmentInfo                            Struct containing data for the investment
      */
     function _createInvestmentInfo(
+        address _strategy,
         address _investment,
         uint256 _investmentTokensInTransaction,
         address, /*_tokenIn*/
         uint256 _limitDepositToken
     ) internal view returns (InvestmentInfo memory) {
         InvestmentInfo memory investmentInfo;
-        investmentInfo.strategy = IStrategy(msg.sender);
+        investmentInfo.strategy = IStrategy(_strategy);
         investmentInfo.garden = IGarden(investmentInfo.strategy.garden());
         investmentInfo.investment = _investment;
         investmentInfo.totalSupply = IERC20(_investment).totalSupply();
-        investmentInfo.investmentTokensInGarden = IERC20(_investment).balanceOf(address(msg.sender));
+        investmentInfo.investmentTokensInGarden = IERC20(_investment).balanceOf(_strategy);
         investmentInfo.investmentTokensInTransaction = _investmentTokensInTransaction;
         investmentInfo.limitDepositTokenQuantity = _limitDepositToken;
 
@@ -287,6 +292,7 @@ abstract contract PassiveIntegration is BaseIntegration, ReentrancyGuard, IPassi
     /**
      * Return join investment calldata which is already generated from the investment API
      *
+     * hparam  _strategy                       Address of the strategy
      * hparam  _investmentAddress              Address of the investment
      * hparam  _investmentTokensOut            Amount of investment tokens to send
      * hparam  _tokenIn                       Addresses of tokens to send to the investment
@@ -297,6 +303,7 @@ abstract contract PassiveIntegration is BaseIntegration, ReentrancyGuard, IPassi
      * @return bytes                           Trade calldata
      */
     function _getEnterInvestmentCalldata(
+        address, /* _strategy */
         address, /* _investmentAddress */
         uint256, /* _investmentTokensOut */
         address, /* _tokenIn */
@@ -314,6 +321,7 @@ abstract contract PassiveIntegration is BaseIntegration, ReentrancyGuard, IPassi
     /**
      * Return exit investment calldata which is already generated from the investment API
      *
+     * hparam  _strategy                       Address of the strategy
      * hparam  _investmentAddress              Address of the investment
      * hparam  _investmentTokensIn             Amount of investment tokens to receive
      * hparam  _tokenOut                       Addresses of token to receive
@@ -324,6 +332,7 @@ abstract contract PassiveIntegration is BaseIntegration, ReentrancyGuard, IPassi
      * @return bytes                           Trade calldata
      */
     function _getExitInvestmentCalldata(
+        address, /*_strategy */
         address, /*_investmentAddress */
         uint256, /*_investmentTokensIn */
         address, /*_tokenOut */

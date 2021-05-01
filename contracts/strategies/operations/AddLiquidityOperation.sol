@@ -90,6 +90,7 @@ contract AddLiquidityOperation is Operation {
         }
         uint256 poolTokensOut = IPoolIntegration(_integration).getPoolTokensOut(pool, poolTokens[0], _maxAmountsIn[0]);
         IPoolIntegration(_integration).joinPool(
+            address(_strategy),
             pool,
             poolTokensOut.sub(poolTokensOut.preciseMul(SLIPPAGE_ALLOWED)),
             poolTokens,
@@ -115,6 +116,7 @@ contract AddLiquidityOperation is Operation {
         uint256 lpTokens = IERC20(pool).balanceOf(msg.sender).preciseMul(_percentage); // Sell all pool tokens
         uint256[] memory _minAmountsOut = IPoolIntegration(_integration).getPoolMinAmountsOut(pool, lpTokens);
         IPoolIntegration(_integration).exitPool(
+            address(_strategy),
             pool,
             lpTokens, // Sell all pool tokens
             poolTokens,

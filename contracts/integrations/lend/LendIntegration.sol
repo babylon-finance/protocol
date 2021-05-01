@@ -100,12 +100,14 @@ abstract contract LendIntegration is BaseIntegration, ReentrancyGuard, ILendInte
     }
 
     function supplyTokens(
+        address _strategy,
         address _assetToken,
         uint256 _numTokensToSupply,
         uint256 _minAmountExpected
     ) external override {
         InvestmentInfo memory investmentInfo =
             _createInvestmentInfo(
+                _strategy,
                 _assetToken,
                 _getInvestmentToken(_assetToken),
                 _numTokensToSupply,
@@ -117,10 +119,9 @@ abstract contract LendIntegration is BaseIntegration, ReentrancyGuard, ILendInte
         investmentInfo.strategy.invokeApprove(_getSpender(_assetToken), _assetToken, _numTokensToSupply);
 
         (address targetInvestment, uint256 callValue, bytes memory methodData) =
-            _getSupplyCalldata(_assetToken, _numTokensToSupply);
+            _getSupplyCalldata(_strategy, _assetToken, _numTokensToSupply);
 
         investmentInfo.strategy.invokeFromIntegration(targetInvestment, callValue, methodData);
-
         _validatePostEnterInvestmentData(investmentInfo);
 
         emit TokensSupplied(
@@ -132,12 +133,14 @@ abstract contract LendIntegration is BaseIntegration, ReentrancyGuard, ILendInte
     }
 
     function redeemTokens(
+        address _strategy,
         address _assetToken,
         uint256 _numTokensToRedeem,
         uint256 _minAmountExpected
     ) external override {
         InvestmentInfo memory investmentInfo =
             _createInvestmentInfo(
+                _strategy,
                 _assetToken,
                 _getInvestmentToken(_assetToken),
                 _numTokensToRedeem,
@@ -147,7 +150,7 @@ abstract contract LendIntegration is BaseIntegration, ReentrancyGuard, ILendInte
         _validatePreExitInvestmentData(investmentInfo);
 
         (address targetInvestment, uint256 callValue, bytes memory methodData) =
-            _getRedeemCalldata(_assetToken, _numTokensToRedeem);
+            _getRedeemCalldata(_strategy, _assetToken, _numTokensToRedeem);
 
         investmentInfo.strategy.invokeFromIntegration(targetInvestment, callValue, methodData);
 
@@ -248,17 +251,18 @@ abstract contract LendIntegration is BaseIntegration, ReentrancyGuard, ILendInte
      * return InvestmentInfo                            Struct containing data for the investment
      */
     function _createInvestmentInfo(
+        address _strategy,
         address _assetToken,
         address _investmentToken,
         uint256 _investmentTokensInTransaction,
         uint256 _limitDepositToken
     ) internal view returns (InvestmentInfo memory) {
         InvestmentInfo memory investmentInfo;
-        investmentInfo.strategy = IStrategy(msg.sender);
+        investmentInfo.strategy = IStrategy(_strategy);
         investmentInfo.garden = IGarden(investmentInfo.strategy.garden());
         investmentInfo.assetToken = _assetToken;
         investmentInfo.investment = _investmentToken;
-        investmentInfo.investmentTokensInGarden = IERC20(_investmentToken).balanceOf(address(msg.sender));
+        investmentInfo.investmentTokensInGarden = IERC20(_investmentToken).balanceOf(_strategy);
         investmentInfo.investmentTokensInTransaction = _investmentTokensInTransaction;
         investmentInfo.limitDepositTokenQuantity = _limitDepositToken;
 
@@ -270,6 +274,7 @@ abstract contract LendIntegration is BaseIntegration, ReentrancyGuard, ILendInte
     function _getExchangeRatePerToken(address) internal view virtual returns (uint256);
 
     function _getRedeemCalldata(
+        address, /* _strategy */
         address, /* _assetToken */
         uint256 /* _numTokensToSupply */
     )
@@ -285,13 +290,16 @@ abstract contract LendIntegration is BaseIntegration, ReentrancyGuard, ILendInte
     /**
      * Returns calldata for supplying tokens.
      *
-     * hparam  _tokenAddress              Address of the token
+     * hparam  _strategy                Address of the strat
+     * hparam  _assetToken              Address of the token
+     * hparam  _numTokensToSupply       Number of tokens
      *
      * @return address                         Target contract address
      * @return uint256                         Call value
      * @return bytes                           Trade calldata
      */
     function _getSupplyCalldata(
+        address, /* _strategy */
         address, /* _assetToken */
         uint256 /* _numTokensToSupply */
     )

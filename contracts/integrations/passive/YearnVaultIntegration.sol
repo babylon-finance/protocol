@@ -89,6 +89,7 @@ contract YearnVaultIntegration is PassiveIntegration {
     /**
      * Return join investment calldata which is already generated from the investment API
      *
+     * hparam  _strategy                       Address of the strategy
      * @param  _investmentAddress              Address of the vault
      * hparam  _investmentTokensOut            Amount of investment tokens to send
      * hparam  _tokenIn                        Addresses of tokens to send to the investment
@@ -99,6 +100,7 @@ contract YearnVaultIntegration is PassiveIntegration {
      * @return bytes                           Trade calldata
      */
     function _getEnterInvestmentCalldata(
+        address /* _strategy */,
         address _investmentAddress,
         uint256, /* _investmentTokensOut */
         address, /* _tokenIn */
@@ -122,6 +124,7 @@ contract YearnVaultIntegration is PassiveIntegration {
     /**
      * Return exit investment calldata which is already generated from the investment API
      *
+     * hparam  _strategy                       Address of the strategy
      * @param  _investmentAddress              Address of the investment
      * @param  _investmentTokensIn             Amount of investment tokens to receive
      * hparam  _tokenOut                       Addresses of tokens to receive
@@ -132,6 +135,7 @@ contract YearnVaultIntegration is PassiveIntegration {
      * @return bytes                           Trade calldata
      */
     function _getExitInvestmentCalldata(
+        address /* _strategy */,
         address _investmentAddress,
         uint256 _investmentTokensIn,
         address, /* _tokenOut */

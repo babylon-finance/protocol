@@ -330,19 +330,20 @@ describe('Garden', function () {
   describe('Add Strategy', async function () {
     it('should not be able to add an strategy unless there is a contributor', async function () {
       await expect(
-        garden1.connect(signer2).addStrategy(
-          0,
-          balancerIntegration.address,
-          ethers.utils.parseEther('10'),
-          ethers.utils.parseEther('5'),
-          ONE_DAY_IN_SECONDS * 30,
-          ethers.utils.parseEther('0.05'), // 5%
-          ethers.utils.parseEther('1'),
-          {
-            gasLimit: 9500000,
-            gasPrice: 0,
-          },
-        ),
+        garden1
+          .connect(signer2)
+          .addStrategy(
+            'name',
+            'STRT',
+            DEFAULT_STRATEGY_PARAMS,
+            [1],
+            [balancerIntegration.address],
+            [addresses.balancer.pools.wethdai],
+            {
+              gasLimit: 9500000,
+              gasPrice: 0,
+            },
+          ),
       ).to.be.reverted;
     });
 
@@ -355,12 +356,12 @@ describe('Garden', function () {
         garden1
           .connect(signer3)
           .addStrategy(
-            0,
-            balancerIntegration.address,
-            ...DEFAULT_STRATEGY_PARAMS,
-            addresses.balancer.pools.wethdai,
             'name',
             'STRT',
+            DEFAULT_STRATEGY_PARAMS,
+            [1],
+            [balancerIntegration.address],
+            [addresses.balancer.pools.wethdai],
           ),
       ).to.not.be.reverted;
     });
@@ -369,9 +370,14 @@ describe('Garden', function () {
       await garden1.connect(signer3).deposit(ethers.utils.parseEther('1'), 1, signer3.getAddress(), {
         value: ethers.utils.parseEther('1'),
       });
+      const params = DEFAULT_STRATEGY_PARAMS;
+      params[1] = ethers.utils.parseEther('0.005');
 
-      await expect(garden1.connect(signer3).addStrategy(0, balancerIntegration.address, DEFAULT_STRATEGY_PARAMS)).to.be
-        .reverted;
+      await expect(
+        garden1
+          .connect(signer3)
+          .addStrategy('name', 'STRT', params, [1], [balancerIntegration.address], [addresses.balancer.pools.wethdai]),
+      ).to.be.reverted;
     });
   });
 });
