@@ -142,9 +142,9 @@ library Errors {
     uint256 internal constant VALUE_TOO_LOW = 25;
     // Value is too high
     uint256 internal constant VALUE_TOO_HIGH = 26;
-    // Only strategy or protcol allowed
+    // Only strategy or protocol allowed
     uint256 internal constant ONLY_STRATEGY_OR_CONTROLLER = 27;
-    // Only strategy or protcol allowed
+    // Normal withdraw possible
     uint256 internal constant NORMAL_WITHDRAWAL_POSSIBLE = 28;
     // User does not have permissions to join garden
     uint256 internal constant USER_CANNOT_JOIN = 29;
@@ -222,10 +222,24 @@ library Errors {
     uint256 internal constant NOT_ENOUGH_ETH = 66;
     // Garden is already public
     uint256 internal constant GARDEN_ALREADY_PUBLIC = 67;
+    // Withdrawal with penalty
+    uint256 internal constant WITHDRAWAL_WITH_PENALTY = 68;
+    // Withdrawal with penalty
+    uint256 internal constant ONLY_MINING_ACTIVE = 69;
+    // Overflow in supply
+    uint256 internal constant OVERFLOW_IN_SUPPLY = 70;
+    // Overflow in power
+    uint256 internal constant OVERFLOW_IN_POWER = 71;
+    // Not a system contract
+    uint256 internal constant NOT_A_SYSTEM_CONTRACT = 72;
+    // Strategy vs Garden mismatch
+    uint256 internal constant STRATEGY_GARDEN_MISMATCH = 73;
+    // Minimum quarters is 1
+    uint256 internal constant QUARTERS_MIN_1 = 74;
     // Too many strategy operations
-    uint256 internal constant TOO_MANY_OPS = 68;
+    uint256 internal constant TOO_MANY_OPS = 75;
     // Only operations
-    uint256 internal constant ONLY_OPERATION = 69;
+    uint256 internal constant ONLY_OPERATION = 76;
     // Strat params wrong length
-    uint256 internal constant STRAT_PARAMS_LENGTH = 70;
+    uint256 internal constant STRAT_PARAMS_LENGTH = 77;
 }

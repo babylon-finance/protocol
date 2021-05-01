@@ -50,9 +50,6 @@ interface IGarden {
             uint256,
             uint256,
             uint256,
-            uint256[] memory,
-            uint256,
-            uint256,
             uint256
         );
 
@@ -127,12 +124,6 @@ interface IGarden {
     ) external;
 
     function claimReturns(address[] calldata _finalizedStrategies) external;
-
-    function getContributorPower(
-        address _contributor,
-        uint256 _from,
-        uint256 _to
-    ) external view returns (uint256);
 
     function getGardenTokenMintQuantity(
         address _reserveAsset,
