@@ -29,14 +29,8 @@ async function updateTWAPs(gardenAddress) {
   }
 }
 
-async function createStrategyWithBuyOperation(
-  garden,
-  integration,
-  signer,
-  params = DEFAULT_STRATEGY_PARAMS,
-  longParams,
-) {
-  const passedLongParams = longParams || [[0], [integration], [addresses.tokens.DAI]];
+async function createStrategyWithBuyOperation(garden, signer, params = DEFAULT_STRATEGY_PARAMS, integration, data) {
+  const passedLongParams = [[0], [integration], [data || addresses.tokens.DAI]];
   await garden.connect(signer).addStrategy(...STRAT_NAME_PARAMS, params, ...passedLongParams);
   const strategies = await garden.getStrategies();
   const lastStrategyAddr = strategies[strategies.length - 1];
@@ -46,14 +40,8 @@ async function createStrategyWithBuyOperation(
   return strategy;
 }
 
-async function createStrategyWithPoolOperation(
-  garden,
-  integration,
-  signer,
-  params = DEFAULT_STRATEGY_PARAMS,
-  poolParams,
-) {
-  const passedPoolParams = poolParams || [[1], [integration], [addresses.balancer.pools.wethdai]];
+async function createStrategyWithPoolOperation(garden, signer, params = DEFAULT_STRATEGY_PARAMS, integration, data) {
+  const passedPoolParams = [[1], [integration], [data || addresses.oneinch.pools.wethdai]];
   await garden.connect(signer).addStrategy(...STRAT_NAME_PARAMS, params, ...passedPoolParams);
   const strategies = await garden.getStrategies();
   const lastStrategyAddr = strategies[strategies.length - 1];
@@ -63,14 +51,8 @@ async function createStrategyWithPoolOperation(
   return strategy;
 }
 
-async function createStrategyWithVaultOperation(
-  garden,
-  integration,
-  signer,
-  params = DEFAULT_STRATEGY_PARAMS,
-  yieldParams,
-) {
-  const passedYieldParams = yieldParams || [[2], [integration], [addresses.yearn.vaults.ydai]];
+async function createStrategyWithVaultOperation(garden, signer, params = DEFAULT_STRATEGY_PARAMS, integration, data) {
+  const passedYieldParams = [[2], [integration], [data || addresses.yearn.vaults.ydai]];
   await garden.connect(signer).addStrategy(...STRAT_NAME_PARAMS, params, ...passedYieldParams);
   const strategies = await garden.getStrategies();
   const lastStrategyAddr = strategies[strategies.length - 1];
@@ -80,14 +62,8 @@ async function createStrategyWithVaultOperation(
   return strategy;
 }
 
-async function createStrategyWithLendOperation(
-  garden,
-  integration,
-  signer,
-  params = DEFAULT_STRATEGY_PARAMS,
-  lendParams,
-) {
-  const passedLendParams = lendParams || [[3], [integration], [addresses.tokens.USDC]];
+async function createStrategyWithLendOperation(garden, signer, params = DEFAULT_STRATEGY_PARAMS, integration, data) {
+  const passedLendParams = [[3], [integration], [data || addresses.tokens.USDC]];
   await garden.connect(signer).addStrategy(...STRAT_NAME_PARAMS, params, ...passedLendParams);
   const strategies = await garden.getStrategies();
   const lastStrategyAddr = strategies[strategies.length - 1];
@@ -247,17 +223,17 @@ async function createStrategy(
   specificParams,
 ) {
   let strategy;
-  if (kind === 'long') {
-    strategy = await createStrategyWithBuyOperation(garden, integration, signers[0], params, specificParams);
+  if (kind === 'buy') {
+    strategy = await createStrategyWithBuyOperation(garden, signers[0], params, integration, specificParams);
   }
-  if (kind === 'pool') {
-    strategy = await createStrategyWithPoolOperation(garden, integration, signers[0], params, specificParams);
+  if (kind === 'lp') {
+    strategy = await createStrategyWithPoolOperation(garden, signers[0], params, integration, specificParams);
   }
-  if (kind === 'yield') {
-    strategy = await createStrategyWithVaultOperation(garden, integration, signers[0], params, specificParams);
+  if (kind === 'vault') {
+    strategy = await createStrategyWithVaultOperation(garden, signers[0], params, integration, specificParams);
   }
   if (kind === 'lend') {
-    strategy = await createStrategyWithLendOperation(garden, integration, signers[0], params, specificParams);
+    strategy = await createStrategyWithLendOperation(garden, signers[0], params, integration, specificParams);
   }
   if (strategy) {
     if (state === 'dataset') {

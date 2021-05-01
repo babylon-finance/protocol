@@ -102,9 +102,9 @@ describe('Strategy', function () {
 
       expect(address).to.equal(strategyDataset.address);
       expect(strategist).to.equal(signer1.address);
-      expect(stake).to.equal(ethers.utils.parseEther('0.5'));
-      expect(absoluteTotalVotes).to.equal(ethers.utils.parseEther('0.5'));
-      expect(totalVotes).to.equal(ethers.utils.parseEther('0.5'));
+      expect(stake).to.equal(ethers.utils.parseEther('0.1'));
+      expect(absoluteTotalVotes).to.equal(ethers.utils.parseEther('0.1'));
+      expect(totalVotes).to.equal(ethers.utils.parseEther('0.1'));
       expect(operationsCount).to.equal(1);
       expect(capitalAllocated).to.equal(ethers.BigNumber.from(0));
       expect(capitalReturned).to.equal(ethers.BigNumber.from(0));
@@ -229,7 +229,7 @@ describe('Strategy', function () {
   describe('executeStrategy', async function () {
     it('should execute strategy', async function () {
       const strategyContract = await createStrategy(
-        'long',
+        'buy',
         'vote',
         [signer1, signer2, signer3],
         kyberTradeIntegration.address,
@@ -253,7 +253,7 @@ describe('Strategy', function () {
 
     it('should not be able to unwind an active strategy with not enough capital', async function () {
       const strategyContract = await createStrategy(
-        'long',
+        'buy',
         'active',
         [signer1, signer2, signer3],
         kyberTradeIntegration.address,
@@ -264,7 +264,7 @@ describe('Strategy', function () {
 
     it('should be able to unwind an active strategy with enough capital', async function () {
       const strategyContract = await createStrategy(
-        'long',
+        'buy',
         'vote',
         [signer1, signer2, signer3],
         kyberTradeIntegration.address,
@@ -285,7 +285,7 @@ describe('Strategy', function () {
 
     it('should not be able to unwind an active strategy with enough capital if it is not the owner', async function () {
       const strategyContract = await createStrategy(
-        'long',
+        'buy',
         'vote',
         [signer1, signer2, signer3],
         kyberTradeIntegration.address,
@@ -302,7 +302,7 @@ describe('Strategy', function () {
 
     it('can execute strategy twice', async function () {
       const strategyContract = await createStrategy(
-        'long',
+        'buy',
         'active',
         [signer1, signer2, signer3],
         kyberTradeIntegration.address,
@@ -325,7 +325,7 @@ describe('Strategy', function () {
 
     it('refuse to pay a high fee to the keeper', async function () {
       const strategyContract = await createStrategy(
-        'long',
+        'buy',
         'vote',
         [signer1, signer2, signer3],
         kyberTradeIntegration.address,
@@ -345,7 +345,7 @@ describe('Strategy', function () {
   describe('getNAV', async function () {
     it('should get the NAV value of a long strategy', async function () {
       const strategyContract = await createStrategy(
-        'long',
+        'buy',
         'active',
         [signer1, signer2, signer3],
         kyberTradeIntegration.address,
@@ -358,7 +358,7 @@ describe('Strategy', function () {
 
     it('should get the NAV value of a Yearn Farming strategy', async function () {
       const strategyContract = await createStrategy(
-        'yield',
+        'vault',
         'active',
         [signer1, signer2, signer3],
         yearnVaultIntegration.address,
@@ -384,11 +384,13 @@ describe('Strategy', function () {
 
     it('should get the NAV value of a BalancerPool strategy', async function () {
       const strategyContract = await createStrategy(
-        'pool',
+        'lp',
         'active',
         [signer1, signer2, signer3],
         balancerIntegration.address,
         garden1,
+        DEFAULT_STRATEGY_PARAMS,
+        addresses.balancer.pools.wethdai,
       );
 
       const nav = await strategyContract.getNAV();
@@ -400,11 +402,13 @@ describe('Strategy', function () {
     it('should get the NAV value of a OneInchPool strategy', async function () {
       // const daiWethOneInchPair = await ethers.getContractAt('IMooniswap', addresses.oneinch.pools.wethdai);
       const strategyContract = await createStrategy(
-        'pool',
+        'lp',
         'active',
         [signer1, signer2, signer3],
         oneInchPoolIntegration.address,
         garden1,
+        DEFAULT_STRATEGY_PARAMS,
+        addresses.oneinch.pools.wethdai,
       );
 
       const nav = await strategyContract.getNAV();
@@ -414,11 +418,13 @@ describe('Strategy', function () {
 
     it('should get the NAV value of a UniswapPool strategy', async function () {
       const strategyContract = await createStrategy(
-        'pool',
+        'lp',
         'active',
         [signer1, signer2, signer3],
         uniswapPoolIntegration.address,
         garden1,
+        DEFAULT_STRATEGY_PARAMS,
+        addresses.uniswap.pairs.wethdai,
       );
       const nav = await strategyContract.getNAV();
       expect(await strategyContract.capitalAllocated()).to.equal(ONE_ETH);
@@ -429,7 +435,7 @@ describe('Strategy', function () {
   describe('finalizeStrategy', async function () {
     it('should finalize strategy with negative profits', async function () {
       const strategyContract = await createStrategy(
-        'long',
+        'buy',
         'active',
         [signer1, signer2, signer3],
         kyberTradeIntegration.address,
@@ -456,7 +462,7 @@ describe('Strategy', function () {
 
     it('should finalize strategy with profits', async function () {
       const strategyContract = await createStrategy(
-        'long',
+        'buy',
         'active',
         [signer1, signer2, signer3],
         kyberTradeIntegration.address,
@@ -473,7 +479,7 @@ describe('Strategy', function () {
 
     it("can't finalize strategy twice", async function () {
       const strategyContract = await createStrategy(
-        'long',
+        'buy',
         'active',
         [signer1, signer2, signer3],
         kyberTradeIntegration.address,

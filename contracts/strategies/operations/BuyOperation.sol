@@ -71,9 +71,8 @@ contract BuyOperation is Operation {
         IStrategy _strategy,
         address _integration
     ) external override onlyStrategy returns (address, uint256) {
-        address longToken = _data;
-        IStrategy(_strategy).trade(_asset, _capital, longToken);
-        return (longToken, IERC20(longToken).balanceOf(address(msg.sender)));
+        IStrategy(_strategy).trade(_asset, _capital, _data);
+        return (_data, IERC20(_data).balanceOf(address(msg.sender)));
     }
 
     /**
@@ -88,10 +87,9 @@ contract BuyOperation is Operation {
         address _integration
     ) external override onlyStrategy {
         require(_percentage <= 100e18, 'Unwind Percentage <= 100%');
-        address longToken = _data;
         IStrategy(_strategy).trade(
-            longToken,
-            IERC20(longToken).balanceOf(address(msg.sender)).preciseMul(_percentage),
+            _data,
+            IERC20(_data).balanceOf(address(msg.sender)).preciseMul(_percentage),
             _garden.reserveAsset()
         );
     }

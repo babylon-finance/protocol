@@ -38,7 +38,7 @@ describe('OneInchTradeIntegration', function () {
       const balanceBeforeStarting = await wethToken.balanceOf(garden1.address);
       expect(balanceBeforeStarting).to.equal(ethers.utils.parseEther('1.0'));
       const strategyContract = await createStrategy(
-        'long',
+        'buy',
         'vote',
         [signer1, signer2, signer3],
         oneInchTradeIntegration.address,

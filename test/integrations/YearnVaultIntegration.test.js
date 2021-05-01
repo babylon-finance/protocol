@@ -54,7 +54,7 @@ describe('YearnVaultIntegrationTest', function () {
       expect(vaultAsset).to.equal(addresses.tokens.DAI);
 
       const strategyContract = await createStrategy(
-        'yield',
+        'vault',
         'vote',
         [signer1, signer2, signer3],
         yearnVaultIntegration.address,

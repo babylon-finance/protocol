@@ -88,7 +88,6 @@ describe('Garden', function () {
       expect(await garden1.totalContributors()).to.equal(1);
       const gardenBalance = await weth.balanceOf(garden1.address);
       const supplyBefore = await garden1.totalSupply();
-      console.log('supplyBefore', ethers.utils.formatEther(supplyBefore));
       await garden1.connect(signer3).deposit(ethers.utils.parseEther('1'), 1, signer3.getAddress(), {
         value: ethers.utils.parseEther('1'),
       });
@@ -181,7 +180,7 @@ describe('Garden', function () {
 
     it('strategist or voters cannot withdraw more comunity tokens than they have locked in active strategies', async function () {
       const strategyContract = await createStrategy(
-        'long',
+        'buy',
         'vote',
         [signer1, signer2, signer3],
         kyberTradeIntegration.address,
@@ -218,7 +217,7 @@ describe('Garden', function () {
     });
     it('strategist or voters can withdraw comunity tokens that were locked during strategy execution (negative profits) once they are unlocked after finishing active strategies', async function () {
       const strategyContract = await createStrategy(
-        'long',
+        'buy',
         'vote',
         [signer1, signer2, signer3],
         kyberTradeIntegration.address,
@@ -245,7 +244,7 @@ describe('Garden', function () {
 
     it('strategist or voters can withdraw comunity tokens that were locked during strategy execution (positive profits) once they are unlocked after finishing active strategies', async function () {
       const strategyContract = await createStrategy(
-        'long',
+        'buy',
         'vote',
         [signer1, signer2, signer3],
         kyberTradeIntegration.address,
@@ -274,7 +273,7 @@ describe('Garden', function () {
 
     it('strategist is taken the exact (quadratic) amount of stake after a negative profit strategy with negative results', async function () {
       const strategyContract = await createStrategy(
-        'long',
+        'buy',
         'vote',
         [signer1, signer2, signer3],
         kyberTradeIntegration.address,
@@ -306,7 +305,7 @@ describe('Garden', function () {
 
     it('strategist or voters can withdraw comunity tokens during strategy execution if they have enough unlocked amount in their balance', async function () {
       const strategyContract = await createStrategy(
-        'long',
+        'buy',
         'vote',
         [signer1, signer2, signer3],
         kyberTradeIntegration.address,
