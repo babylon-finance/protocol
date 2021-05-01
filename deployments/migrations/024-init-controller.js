@@ -10,7 +10,7 @@ module.exports = async ({ getNamedAccounts, deployments, ethers, getSigner, getC
   } else if (!KEEPER) {
     throw new Error('Keeper address is not set');
   }
-  console.log('keeper', KEEPER);
+  console.log('KEEPER', KEEPER);
 
   const { deployer } = await getNamedAccounts();
   const owner = await getSigner(deployer);
@@ -32,6 +32,7 @@ module.exports = async ({ getNamedAccounts, deployments, ethers, getSigner, getC
   await controllerContract.connect(owner).addKeepers([KEEPER]);
 
   // Sets the price oracle and gardenvaluer address
+
   await controllerContract.connect(owner).editPriceOracle(priceOracle.address);
   await controllerContract.connect(owner).editTreasury(treasury.address);
   await controllerContract.connect(owner).editGardenValuer(gardenValuer.address);

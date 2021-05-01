@@ -115,7 +115,7 @@ async function vote(garden, signers, strategy) {
   return (
     strategy
       // use keeper
-      .connect(signer1)
+      .connect((await ethers.getSigners())[1])
       .resolveVoting(
         [signer1.getAddress(), signer2.getAddress()],
         [signer1Balance.div(3), signer2Balance.div(3)],

@@ -11,7 +11,7 @@ describe('PriceOracle', function () {
   let adapter;
 
   beforeEach(async () => {
-    ({ babController, priceOracle } = await setupTests()());
+    ({ babController, priceOracle, owner } = await setupTests()());
     adapter = await ethers.getContractAt('UniswapTWAP', (await priceOracle.getAdapters())[0]);
   });
 
@@ -26,12 +26,12 @@ describe('PriceOracle', function () {
 
   describe('UniswapAnchoredView', function () {
     it('should get the price of ETH/DAI', async function () {
-      const price = await priceOracle.getPrice(addresses.tokens.WETH, addresses.tokens.DAI);
+      const price = await priceOracle.connect(owner).getPrice(addresses.tokens.WETH, addresses.tokens.DAI);
       expect(price).to.be.gt(ethers.utils.parseEther('500'));
     });
 
     it('should get the price of DAI/USDC', async function () {
-      const price = await priceOracle.getPrice(addresses.tokens.DAI, addresses.tokens.USDC);
+      const price = await priceOracle.connect(owner).getPrice(addresses.tokens.DAI, addresses.tokens.USDC);
       expect(price).to.be.lt(ethers.utils.parseEther('1.1'));
     });
   });
@@ -67,7 +67,7 @@ describe('PriceOracle', function () {
         await adapter.update(addresses.tokens.YFI, addresses.tokens.WETH);
         ethers.provider.send('evm_increaseTime', [TWAP_ORACLE_WINDOW / TWAP_ORACLE_GRANULARITY]);
       }
-      const price = await priceOracle.getPrice(addresses.tokens.YFI, addresses.tokens.WETH);
+      const price = await priceOracle.connect(owner).getPrice(addresses.tokens.YFI, addresses.tokens.WETH);
       expect(price).to.be.gt(ethers.utils.parseEther('15'));
     });
   });

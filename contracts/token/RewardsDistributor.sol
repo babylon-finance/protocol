@@ -399,7 +399,7 @@ contract RewardsDistributor is Ownable, IRewardsDistributor {
 
     function getEpochRewards(uint256 epochs) external pure override returns (uint96[] memory) {
         uint96[] memory tokensPerEpoch = new uint96[](epochs);
-        for (uint256 i = 0; i <= epochs - 1; i++) {
+        for (uint256 i = 0; i <= epochs.sub(1); i++) {
             tokensPerEpoch[i] = (uint96(tokenSupplyPerQuarter(i.add(1))));
         }
         return tokensPerEpoch;
@@ -433,6 +433,7 @@ contract RewardsDistributor is Ownable, IRewardsDistributor {
         onlyMiningActive
         returns (uint96[] memory)
     {
+        require(_from <= _to, 'final date must be greater than original date');
         // check number of quarters and what quarters are they
         (uint256 quarters, uint256 startingQuarter) = getRewardsWindow(_from, _to);
         uint96[] memory supplyPerQuarter = new uint96[](quarters);

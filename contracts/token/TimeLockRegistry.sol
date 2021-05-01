@@ -126,6 +126,7 @@ contract TimeLockRegistry is Ownable {
             registeredDistributions[receiver] == 0,
             'TimeLockRegistry::register:Distribution for this address is already registered'
         );
+        require(block.timestamp >= 1614553200, 'Cannot register earlier than March 2021'); // 1614553200 is UNIX TIME of 2021 March the 1st
 
         // register distribution
         registeredDistributions[receiver] = distribution;

@@ -9,7 +9,8 @@ async function setUpFixture({ deployments, getNamedAccounts, ethers }, options, 
     return await ethers.getContractAt(contractName, (await deployments.get(deploymentName || contractName)).address);
   }
   await deployments.fixture();
-  const [owner, signer1, signer2, signer3] = await ethers.getSigners();
+
+  const [deployer, keeper, owner, signer1, signer2, signer3] = await ethers.getSigners();
 
   const babController = await getContract('BabController', 'BabControllerProxy');
   const bablToken = await getContract('BABLToken');
@@ -139,6 +140,8 @@ async function setUpFixture({ deployments, getNamedAccounts, ethers }, options, 
 
     GARDEN_PARAMS,
 
+    deployer,
+    keeper,
     owner,
     signer1,
     signer2,

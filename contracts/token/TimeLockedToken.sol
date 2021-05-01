@@ -212,8 +212,6 @@ abstract contract TimeLockedToken is VoteToken {
         newVestedToken.vestingEnd = _vestingEnd;
         newVestedToken.lastClaim = _lastClaim;
 
-        vestedToken[_receiver] = newVestedToken;
-
         // transfer tokens to the recipient
         _transfer(msg.sender, _receiver, _amount);
         emit NewLockout(_receiver, _amount, _profile, _vestingBegin, _vestingEnd);
@@ -309,8 +307,8 @@ abstract contract TimeLockedToken is VoteToken {
         // in case of vesting has passed, all tokens are now available so we set mapping to 0
         if (block.timestamp >= vestedToken[account].vestingEnd && msg.sender == account && lockedAmount == 0) {
             delete distribution[account];
-        } else {
-            vestedToken[account].lastClaim = block.timestamp;
+        } else if (msg.sender == account) {
+            vestedToken[msg.sender].lastClaim = block.timestamp;
         }
         return lockedAmount;
     }
@@ -350,7 +348,7 @@ abstract contract TimeLockedToken is VoteToken {
         if ((spender == address(timeLockRegistry)) && (amount < allowance(msg.sender, address(timeLockRegistry)))) {
             amount = safe96(
                 allowance(msg.sender, address(timeLockRegistry)),
-                'TimeLockedToken::approve: amount exceeds 96 bits'
+                'TimeLockedToken::approve: cannot decrease allowance to timelockregistry'
             );
         }
         _approve(msg.sender, spender, amount);

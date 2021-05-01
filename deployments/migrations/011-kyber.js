@@ -1,4 +1,4 @@
-const addresses = require('../lib/addresses');
+const addresses = require('../../lib/addresses');
 
 module.exports = async ({ getNamedAccounts, deployments, ethers }) => {
   const { deploy } = deployments;
@@ -6,12 +6,12 @@ module.exports = async ({ getNamedAccounts, deployments, ethers }) => {
 
   const controller = await deployments.get('BabControllerProxy');
 
-  await deploy('OneInchTradeIntegration', {
+  await deploy('KyberTradeIntegration', {
     from: deployer,
-    args: [controller.address, addresses.tokens.WETH, addresses.oneinch.exchange],
+    args: [controller.address, addresses.tokens.WETH, addresses.kyber.proxy],
     log: true,
   });
 };
 
-module.exports.tags = ['OneInch'];
-module.exports.dependencies = ['Kyber'];
+module.exports.tags = ['Kyber'];
+module.exports.dependencies = ['Oracle'];

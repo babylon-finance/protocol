@@ -15,6 +15,7 @@ const { setupTests } = require('../fixtures/GardenFixture');
 
 describe('Garden', function () {
   let babController;
+  let owner;
   let signer1;
   let signer2;
   let signer3;
@@ -26,6 +27,7 @@ describe('Garden', function () {
   beforeEach(async () => {
     ({
       babController,
+      owner,
       signer1,
       signer2,
       signer3,
@@ -72,7 +74,7 @@ describe('Garden', function () {
 
   describe('Garden deposit disabled', async function () {
     it('reverts if the garden is disabled', async function () {
-      await babController.disableGarden(garden1.address);
+      await babController.connect(owner).disableGarden(garden1.address);
       await expect(
         garden1.connect(signer3).deposit(ethers.utils.parseEther('1'), 1, signer3.getAddress(), {
           value: ethers.utils.parseEther('1'),
@@ -152,7 +154,7 @@ describe('Garden', function () {
     });
 
     it('a contributor cannot make a deposit when the garden is disabled', async function () {
-      await expect(babController.disableGarden(garden1.address)).to.not.be.reverted;
+      await expect(babController.connect(owner).disableGarden(garden1.address)).to.not.be.reverted;
       await expect(
         garden1.connect(signer3).deposit(ethers.utils.parseEther('1'), 1, signer3.getAddress(), {
           value: ethers.utils.parseEther('1'),
