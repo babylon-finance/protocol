@@ -8,7 +8,6 @@ async function setUpFixture({ deployments, getNamedAccounts, ethers }, options, 
   async function getContract(contractName, deploymentName) {
     return await ethers.getContractAt(contractName, (await deployments.get(deploymentName || contractName)).address);
   }
-
   await deployments.fixture();
 
   const [deployer, keeper, owner, signer1, signer2, signer3] = await ethers.getSigners();
@@ -31,6 +30,11 @@ async function setUpFixture({ deployments, getNamedAccounts, ethers }, options, 
   const oneInchPoolIntegration = await getContract('OneInchPoolIntegration');
   const compoundLendIntegration = await getContract('CompoundLendIntegration');
   const aaveLendIntegration = await getContract('AaveLendIntegration');
+
+  const buyOperation = await getContract('BuyOperation');
+  const addLiquidityOperation = await getContract('AddLiquidityOperation');
+  const depositVaultOperation = await getContract('DepositVaultOperation');
+  const lendOperation = await getContract('LendOperation');
 
   // Gives signer1 creator permissions
   await ishtarGate.connect(owner).setCreatorPermissions(owner.address, true, { gasPrice: 0 });
@@ -83,16 +87,17 @@ async function setUpFixture({ deployments, getNamedAccounts, ethers }, options, 
         },
       );
   }
+  console.log('create strategies');
   // Create strategies
   const strategy11 = (
-    await createStrategy('long', 'dataset', [signer1, signer2, signer3], kyberTradeIntegration.address, garden1)
+    await createStrategy('buy', 'dataset', [signer1, signer2, signer3], kyberTradeIntegration.address, garden1)
   ).address;
   const strategy21 = (
-    await createStrategy('long', 'deposit', [signer1, signer2, signer3], kyberTradeIntegration.address, garden2)
+    await createStrategy('buy', 'deposit', [signer1, signer2, signer3], kyberTradeIntegration.address, garden2)
   ).address;
 
-  await createStrategy('long', 'deposit', [signer1, signer2, signer3], kyberTradeIntegration.address, garden3);
-  await createStrategy('long', 'dataset', [signer1, signer2, signer3], kyberTradeIntegration.address, garden3);
+  await createStrategy('buy', 'deposit', [signer1, signer2, signer3], kyberTradeIntegration.address, garden3);
+  await createStrategy('buy', 'dataset', [signer1, signer2, signer3], kyberTradeIntegration.address, garden3);
 
   console.log('Created and started garden', garden1.address);
   console.log('Created manual testing garden', garden3.address);
@@ -123,6 +128,11 @@ async function setUpFixture({ deployments, getNamedAccounts, ethers }, options, 
 
     strategy11,
     strategy21,
+
+    buyOperation,
+    addLiquidityOperation,
+    depositVaultOperation,
+    lendOperation,
 
     gardenValuer,
     priceOracle,

@@ -76,13 +76,13 @@ describe('OneInchPoolIntegrationTest', function () {
 
     it('can enter and exit the eth dai pool', async function () {
       const strategyContract = await createStrategy(
-        'pool',
+        'lp',
         'vote',
         [signer1, signer2, signer3],
         oneInchPoolIntegration.address,
         garden1,
         DEFAULT_STRATEGY_PARAMS,
-        [daiWethPair.address],
+        daiWethPair.address,
       );
 
       await executeStrategy(strategyContract);

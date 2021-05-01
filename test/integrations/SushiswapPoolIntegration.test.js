@@ -53,13 +53,13 @@ describe('SushiswapPoolIntegrationTest', function () {
 
     it('can enter and exit the weth dai pool', async function () {
       const strategyContract = await createStrategy(
-        'pool',
+        'lp',
         'vote',
         [signer1, signer2, signer3],
         sushiswapPoolIntegration.address,
         garden1,
         DEFAULT_STRATEGY_PARAMS,
-        [daiWethPair.address],
+        daiWethPair.address,
       );
       await executeStrategy(strategyContract);
       expect(await daiWethPair.balanceOf(strategyContract.address)).to.be.gt(0);

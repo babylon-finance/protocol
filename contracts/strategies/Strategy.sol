@@ -38,6 +38,7 @@ import {IWETH} from '../interfaces/external/weth/IWETH.sol';
 import {IBabController} from '../interfaces/IBabController.sol';
 import {IGarden} from '../interfaces/IGarden.sol';
 import {ITradeIntegration} from '../interfaces/ITradeIntegration.sol';
+import {IOperation} from '../interfaces/IOperation.sol';
 import {IIntegration} from '../interfaces/IIntegration.sol';
 import {IPriceOracle} from '../interfaces/IPriceOracle.sol';
 import {IStrategy} from '../interfaces/IStrategy.sol';
@@ -51,7 +52,7 @@ import {IRewardsDistributor} from '../interfaces/IRewardsDistributor.sol';
  * Base Strategy contract. Belongs to a garden. Abstract.
  * Will be extended from specific strategy contracts.
  */
-abstract contract Strategy is ReentrancyGuard, IStrategy, Initializable {
+contract Strategy is ReentrancyGuard, IStrategy, Initializable {
     using SignedSafeMath for int256;
     using SafeMath for uint256;
     using SafeCast for uint256;
@@ -68,30 +69,12 @@ abstract contract Strategy is ReentrancyGuard, IStrategy, Initializable {
 
     /* ============ Events ============ */
     event Invoked(address indexed _target, uint256 indexed _value, bytes _data, bytes _returnValue);
-    event StrategyVoted(
-        address indexed _garden,
-        uint8 indexed _kind,
-        uint256 _absoluteVotes,
-        int256 _totalVotes,
-        uint256 _timestamp
-    );
-    event StrategyExecuted(
-        address indexed _garden,
-        uint8 indexed _kind,
-        uint256 _capital,
-        uint256 _fee,
-        uint256 timestamp
-    );
-    event StrategyFinalized(
-        address indexed _garden,
-        uint8 indexed _kind,
-        uint256 _capitalReturned,
-        uint256 _fee,
-        uint256 timestamp
-    );
-    event StrategyReduced(address indexed _garden, uint8 indexed _kind, uint256 _amountReduced, uint256 timestamp);
-    event StrategyExpired(address indexed _garden, uint8 indexed _kind, uint256 _timestamp);
-    event StrategyDeleted(address indexed _garden, uint8 indexed _kind, uint256 _timestamp);
+    event StrategyVoted(address indexed _garden, uint256 _absoluteVotes, int256 _totalVotes, uint256 _timestamp);
+    event StrategyExecuted(address indexed _garden, uint256 _capital, uint256 _fee, uint256 timestamp);
+    event StrategyFinalized(address indexed _garden, uint256 _capitalReturned, uint256 _fee, uint256 timestamp);
+    event StrategyReduced(address indexed _garden, uint256 _amountReduced, uint256 timestamp);
+    event StrategyExpired(address indexed _garden, uint256 _timestamp);
+    event StrategyDeleted(address indexed _garden, uint256 _timestamp);
     event StrategyDurationChanged(uint256 _newDuration, uint256 _oldDuration);
 
     /* ============ Modifiers ============ */
@@ -122,6 +105,19 @@ abstract contract Strategy is ReentrancyGuard, IStrategy, Initializable {
             controller.isValidIntegration(IIntegration(msg.sender).getName(), msg.sender),
             Errors.ONLY_INTEGRATION
         );
+        _;
+    }
+
+    /**
+     * Throws if the sender is not a Garden's integration or integration not enabled
+     */
+    modifier onlyOperation() {
+        bool found = false;
+        for (uint8 i = 0; i < opTypes.length; i++) {
+            found = found || msg.sender == controller.enabledOperations(opTypes[i]);
+        }
+        // Internal function used to reduce bytecode size
+        _require(found, Errors.ONLY_OPERATION);
         _;
     }
 
@@ -160,6 +156,9 @@ abstract contract Strategy is ReentrancyGuard, IStrategy, Initializable {
     uint256 internal constant MIN_VOTERS_TO_BECOME_ACTIVE = 2;
     uint256 internal constant ABSOLUTE_MIN_REBALANCE = 1e18;
 
+    // Max Operations
+    uint256 internal constant MAX_OPERATIONS = 6;
+
     // Keeper max fee
     uint256 internal constant MAX_KEEPER_FEE = (1e6 * 1e3 gwei);
     uint256 internal constant MAX_STRATEGY_KEEPER_FEES = 2 * MAX_KEEPER_FEE;
@@ -174,17 +173,20 @@ abstract contract Strategy is ReentrancyGuard, IStrategy, Initializable {
     // Babylon Controller Address
     IBabController public controller;
 
-    // Type of strategy.
-    // 0 = LongStrategy
-    // 1 = LiquidityPoolStrategy
-    // 2 = YieldFarmingStrategy
-    // 3 = LendStrategy
-    uint8 public kind;
+    // Type of operation.
+    // 0 = BuyOperation
+    // 1 = LiquidityOperation
+    // 2 = VaultOperation
+    // 3 = LendOperation
+
+    // Types and data for the operations of this strategy
+    uint8[] public override opTypes;
+    address[] public override opIntegrations;
+    address[] public override opDatas;
 
     // Garden that these strategies belong to
     IGarden public override garden;
 
-    address public override integration; // Address of the integration
     address public override strategist; // Address of the strategist that submitted the bet
     address public override strategyNft; // Address of the strategy nft
 
@@ -238,7 +240,6 @@ abstract contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         address _strategist,
         address _garden,
         address _controller,
-        address _integration,
         uint256 _maxCapitalRequested,
         uint256 _stake,
         uint256 _strategyDuration,
@@ -254,21 +255,18 @@ abstract contract Strategy is ReentrancyGuard, IStrategy, Initializable {
             IERC20(address(garden)).balanceOf(_strategist).sub(garden.getLockedBalance(_strategist));
         _require(IERC20(address(garden)).balanceOf(_strategist) > 0, Errors.STRATEGIST_TOKENS_TOO_LOW);
         _require(strategistUnlockedBalance >= _stake, Errors.TOKENS_STAKED);
-        _require(_stake > IERC20(_garden).totalSupply().div(100), Errors.STAKE_HAS_TO_AT_LEAST_ONE);
+        // TODO: adjust this calc
+        _require(_stake > 1e10, Errors.STAKE_HAS_TO_AT_LEAST_ONE);
         _require(
             _strategyDuration >= garden.minStrategyDuration() && _strategyDuration <= garden.maxStrategyDuration(),
             Errors.DURATION_MUST_BE_IN_RANGE
         );
-        _require(
-            controller.isValidIntegration(IIntegration(_integration).getName(), _integration),
-            Errors.ONLY_INTEGRATION
-        );
         _require(_minRebalanceCapital >= ABSOLUTE_MIN_REBALANCE, Errors.MIN_REBALANCE_CAPITAL);
         _require(_maxCapitalRequested >= _minRebalanceCapital, Errors.MAX_CAPITAL_REQUESTED);
         _require(_strategyNft != address(0), Errors.NOT_STRATEGY_NFT);
+
         strategyNft = _strategyNft;
 
-        // Check than enter and exit data call integrations
         strategist = _strategist;
         enteredAt = block.timestamp;
         stake = _stake;
@@ -280,11 +278,45 @@ abstract contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         totalVotes = _stake.toInt256();
         votes[_strategist] = _stake.toInt256();
         absoluteTotalVotes = _stake;
-        integration = _integration;
         dataSet = false;
     }
 
     /* ============ External Functions ============ */
+
+    /**
+     * Sets the data for the operations of this strategy
+     * @param _opTypes                    An array with the op types
+     * @param _opIntegrations             Addresses with the integration for each op
+     * @param _opDatas                    Bytes with the params for the op in the same position in the opTypes array
+     */
+    function setData(
+        uint8[] calldata _opTypes,
+        address[] calldata _opIntegrations,
+        address[] calldata _opDatas
+    ) external override onlyGardenAndNotSet {
+        _require(
+            (_opTypes.length == _opIntegrations.length) && (_opIntegrations.length == _opDatas.length),
+            Errors.TOO_MANY_OPS
+        );
+        _require(_opDatas.length < MAX_OPERATIONS && _opDatas.length > 0, Errors.TOO_MANY_OPS);
+        for (uint256 i = 0; i < _opTypes.length; i++) {
+            IOperation(controller.enabledOperations(_opTypes[i])).validateOperation(
+                _opDatas[i],
+                garden,
+                IStrategy(address(this)),
+                _opIntegrations[i]
+            );
+            _require(
+                controller.isValidIntegration(IIntegration(_opIntegrations[i]).getName(), _opIntegrations[i]),
+                Errors.ONLY_INTEGRATION
+            );
+        }
+
+        opTypes = _opTypes;
+        opIntegrations = _opIntegrations;
+        opDatas = _opDatas;
+        dataSet = true;
+    }
 
     /**
      * Adds off-chain voting results on-chain.
@@ -324,7 +356,7 @@ abstract contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         garden.allocateCapitalToStrategy(MAX_STRATEGY_KEEPER_FEES);
         // Initializes cooldown
         enteredCooldownAt = block.timestamp;
-        emit StrategyVoted(address(garden), kind, _absoluteTotalVotes, _totalVotes, block.timestamp);
+        emit StrategyVoted(address(garden), _absoluteTotalVotes, _totalVotes, block.timestamp);
         _payKeeper(msg.sender, _fee);
     }
 
@@ -349,7 +381,7 @@ abstract contract Strategy is ReentrancyGuard, IStrategy, Initializable {
             Errors.STRATEGY_IN_COOLDOWN
         );
 
-        // Execute enter trade
+        // Execute enter operation
         garden.allocateCapitalToStrategy(_capital);
         capitalAllocated = capitalAllocated.add(_capital);
         _enterStrategy(_capital);
@@ -374,7 +406,7 @@ abstract contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         }
         _payKeeper(msg.sender, _fee);
         updatedAt = block.timestamp;
-        emit StrategyExecuted(address(garden), kind, _capital, _fee, block.timestamp);
+        emit StrategyExecuted(address(garden), _capital, _fee, block.timestamp);
     }
 
     /**
@@ -395,7 +427,7 @@ abstract contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         _require(executedAt > 0, Errors.STRATEGY_IS_NOT_EXECUTED);
         _require(block.timestamp > executedAt.add(duration), Errors.STRATEGY_IS_NOT_OVER_YET);
         _require(!finalized, Errors.STRATEGY_IS_ALREADY_FINALIZED);
-        // Execute exit trade
+        // Execute exit operations
         _exitStrategy(HUNDRED_PERCENT);
         // Mark as finalized
         finalized = true;
@@ -410,7 +442,7 @@ abstract contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         _payKeeper(msg.sender, _fee);
         // Send rest to garden if any
         _sendReserveAssetToGarden();
-        emit StrategyFinalized(address(garden), kind, capitalReturned, _fee, block.timestamp);
+        emit StrategyFinalized(address(garden), capitalReturned, _fee, block.timestamp);
     }
 
     /**
@@ -433,7 +465,7 @@ abstract contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         }
         // Send the amount back to the warden for the immediate withdrawal
         IERC20(garden.reserveAsset()).safeTransfer(address(garden), _amountToUnwind);
-        emit StrategyReduced(address(garden), kind, _amountToUnwind, block.timestamp);
+        emit StrategyReduced(address(garden), _amountToUnwind, block.timestamp);
     }
 
     /**
@@ -445,7 +477,7 @@ abstract contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         _require(!active, Errors.STRATEGY_NEEDS_TO_BE_INACTIVE);
         _deleteCandidateStrategy();
         _payKeeper(msg.sender, _fee);
-        emit StrategyExpired(address(garden), kind, block.timestamp);
+        emit StrategyExpired(address(garden), block.timestamp);
     }
 
     /**
@@ -453,7 +485,7 @@ abstract contract Strategy is ReentrancyGuard, IStrategy, Initializable {
      */
     function deleteCandidateStrategy() external onlyStrategist {
         _deleteCandidateStrategy();
-        emit StrategyDeleted(address(garden), kind, block.timestamp);
+        emit StrategyDeleted(address(garden), block.timestamp);
     }
 
     /**
@@ -510,6 +542,21 @@ abstract contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         return _invoke(_target, _value, _data);
     }
 
+    /**
+     * Function that calculates the price using the oracle and executes a trade.
+     * Must call the exchange to get the price and pass minReceiveQuantity accordingly.
+     * @param _sendToken                    Token to exchange
+     * @param _sendQuantity                 Amount of tokens to send
+     * @param _receiveToken                 Token to receive
+     */
+    function trade(
+        address _sendToken,
+        uint256 _sendQuantity,
+        address _receiveToken
+    ) external override onlyOperation returns (uint256) {
+        return _trade(_sendToken, _sendQuantity, _receiveToken);
+    }
+
     /* ============ External Getter Functions ============ */
 
     /**
@@ -517,6 +564,13 @@ abstract contract Strategy is ReentrancyGuard, IStrategy, Initializable {
      */
     function isStrategyActive() public view override returns (bool) {
         return executedAt > 0 && exitedAt == 0;
+    }
+
+    /**
+     * Returns the number of operations in this strategy
+     */
+    function getOperationsCount() external view override returns (uint256) {
+        return opTypes.length;
     }
 
     /**
@@ -530,8 +584,7 @@ abstract contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         returns (
             address,
             address,
-            address,
-            uint8,
+            uint256,
             uint256,
             uint256,
             int256,
@@ -547,8 +600,7 @@ abstract contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         return (
             address(this),
             strategist,
-            integration,
-            kind,
+            opIntegrations.length,
             stake,
             absoluteTotalVotes,
             totalVotes,
@@ -584,12 +636,19 @@ abstract contract Strategy is ReentrancyGuard, IStrategy, Initializable {
     }
 
     /**
-     * Gets the NAV of assets under management. Virtual method.
-     * Needs to be overriden in base class.
+     * Gets the NAV of assets under management.
+     * It is the sum of the NAV of all the operations
      *
      * @return _nav           NAV of the strategy
      */
-    function getNAV() public view virtual override returns (uint256);
+    function getNAV() public view override returns (uint256) {
+        uint256 nav = 0;
+        for (uint256 i = 0; i < opTypes.length; i++) {
+            IOperation operation = IOperation(IBabController(controller).enabledOperations(uint256(opTypes[i])));
+            nav = nav.add(operation.getNAV(opDatas[i], garden, IStrategy(address(this)), opIntegrations[i]));
+        }
+        return nav.add(MAX_STRATEGY_KEEPER_FEES);
+    }
 
     /**
      * Gets the votes casted by the contributor in this strategy
@@ -599,25 +658,6 @@ abstract contract Strategy is ReentrancyGuard, IStrategy, Initializable {
      */
     function getUserVotes(address _address) external view override returns (int256) {
         return votes[_address];
-    }
-
-    /**
-     * Returns the losses of the active strategy if any
-     *
-     * @return _losses           Amount of current losses
-     */
-    function getLossesStrategy() external view override onlyActiveGarden returns (uint256) {
-        if (isStrategyActive()) {
-            uint256 navStrategy = getNAV();
-            // If strategy is currently experiencing losses, we add them
-            if (navStrategy < capitalAllocated) {
-                return capitalAllocated.sub(navStrategy);
-            }
-        }
-        if (finalized && capitalAllocated > capitalReturned) {
-            return capitalAllocated.sub(capitalReturned);
-        }
-        return 0;
     }
 
     /* ============ Internal Functions ============ */
@@ -636,22 +676,43 @@ abstract contract Strategy is ReentrancyGuard, IStrategy, Initializable {
     }
 
     /**
-     * Enters the strategy. Virtual method.
-     * Needs to be overriden in base class.
-     * hparam _capital  Amount of capital that the strategy receives
+     * Enters the strategy.
+     * Executes all the operations in order
+     * @param _capital  Amount of capital that the strategy receives
      */
-    function _enterStrategy(
-        uint256 /*_capital*/
-    ) internal virtual;
+    function _enterStrategy(uint256 _capital) internal {
+        uint256 capitalForNexOperation = _capital;
+        address assetAccumulated = garden.reserveAsset();
+        for (uint256 i = 0; i < opTypes.length; i++) {
+            IOperation operation = IOperation(IBabController(controller).enabledOperations(opTypes[i]));
+            (assetAccumulated, capitalForNexOperation) = operation.executeOperation(
+                assetAccumulated,
+                capitalForNexOperation,
+                opDatas[i],
+                garden,
+                IStrategy(address(this)),
+                opIntegrations[i]
+            );
+        }
+    }
 
     /**
-     * Exits the strategy. Virtual method.
-     * Needs to be overriden in base class.
-     * hparam _percentage of capital to exit from the strategy
+     * Exits the strategy.
+     * Exists all the operations starting by the end.
+     * @param _percentage of capital to exit from the strategy
      */
-    function _exitStrategy(
-        uint256 /*_percentage*/
-    ) internal virtual;
+    function _exitStrategy(uint256 _percentage) internal {
+        for (uint256 i = opTypes.length; i > 0; i--) {
+            IOperation operation = IOperation(IBabController(controller).enabledOperations(opTypes[i - 1]));
+            operation.exitOperation(
+                _percentage,
+                opDatas[i - 1],
+                garden,
+                IStrategy(address(this)),
+                opIntegrations[i - 1]
+            );
+        }
+    }
 
     /**
      * Deletes this strategy and returns the stake to the strategist
@@ -702,14 +763,20 @@ abstract contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         uint256 _sendQuantity,
         address _receiveToken
     ) internal returns (uint256) {
-        address tradeIntegration = IBabController(controller).getIntegrationByName('1inch');
+        address tradeIntegration = IBabController(controller).defaultTradeIntegration();
         // Uses on chain oracle for all internal strategy operations to avoid attacks        // Updates UniSwap TWAP
         IPriceOracle oracle = IPriceOracle(IBabController(controller).priceOracle());
         oracle.updateAdapters(_sendToken, _receiveToken);
         uint256 pricePerTokenUnit = oracle.getPrice(_sendToken, _receiveToken);
         uint256 exactAmount = _sendQuantity.preciseMul(pricePerTokenUnit);
         uint256 minAmountExpected = exactAmount.sub(exactAmount.preciseMul(SLIPPAGE_ALLOWED));
-        ITradeIntegration(tradeIntegration).trade(_sendToken, _sendQuantity, _receiveToken, minAmountExpected);
+        ITradeIntegration(tradeIntegration).trade(
+            address(this),
+            _sendToken,
+            _sendQuantity,
+            _receiveToken,
+            minAmountExpected
+        );
         return minAmountExpected;
     }
 

@@ -37,7 +37,7 @@ describe('GardenValuer', function () {
 
     it('gets correct value for the garden with many deposits', async function () {
       // add 4 ETH to the garden
-      await createStrategy('long', 'deposit', [signer1, signer2, signer3], kyberTradeIntegration.address, garden1);
+      await createStrategy('buy', 'deposit', [signer1, signer2, signer3], kyberTradeIntegration.address, garden1);
 
       const pricePerGardenToken = await gardenValuer.calculateGardenValuation(garden1.address, addresses.tokens.WETH);
       const totalSupply = await garden1.totalSupply();
@@ -47,7 +47,7 @@ describe('GardenValuer', function () {
 
     it('gets correct value for the garden with active strategy', async function () {
       // add 4 ETH to the garden and trade them for a token
-      await createStrategy('long', 'active', [signer1, signer2, signer3], kyberTradeIntegration.address, garden1);
+      await createStrategy('buy', 'active', [signer1, signer2, signer3], kyberTradeIntegration.address, garden1);
 
       const pricePerGardenToken = await gardenValuer.calculateGardenValuation(garden1.address, addresses.tokens.WETH);
       const totalSupply = await garden1.totalSupply();
@@ -57,7 +57,7 @@ describe('GardenValuer', function () {
 
     it('gets correct value for the garden with finished strategy', async function () {
       // add 4 ETH to the garden, trade them for a token, and finish strategy
-      await createStrategy('long', 'final', [signer1, signer2, signer3], kyberTradeIntegration.address, garden1);
+      await createStrategy('buy', 'final', [signer1, signer2, signer3], kyberTradeIntegration.address, garden1);
 
       const pricePerGardenToken = await gardenValuer.calculateGardenValuation(garden1.address, addresses.tokens.WETH);
       const totalSupply = await garden1.totalSupply();

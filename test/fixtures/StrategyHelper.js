@@ -7,13 +7,13 @@ const { increaseTime, from } = require('../utils/test-helpers');
 
 const DEFAULT_STRATEGY_PARAMS = [
   ethers.utils.parseEther('10'), // _maxCapitalRequested
-  ethers.utils.parseEther('0.5'), // _stake
+  ethers.utils.parseEther('0.1'), // _stake
   ONE_DAY_IN_SECONDS * 30, // _strategyDuration
   ethers.utils.parseEther('0.05'), // 5% _expectedReturn
   ethers.utils.parseEther('1'), // _minRebalanceCapital
 ];
 
-const NFT_STRAT_PARAMS = ['Strat Name', 'STRT'];
+const STRAT_NAME_PARAMS = ['Strat Name', 'STRT'];
 const NFT_ADDRESS = 'http://null.dev';
 
 async function updateTWAPs(gardenAddress) {
@@ -29,46 +29,46 @@ async function updateTWAPs(gardenAddress) {
   }
 }
 
-async function createLongStrategy(garden, integration, signer, params = DEFAULT_STRATEGY_PARAMS, longParams) {
-  const passedLongParams = longParams || [addresses.tokens.DAI];
-  await garden.connect(signer).addStrategy(0, integration, ...params, ...passedLongParams, ...NFT_STRAT_PARAMS);
+async function createStrategyWithBuyOperation(garden, signer, params = DEFAULT_STRATEGY_PARAMS, integration, data) {
+  const passedLongParams = [[0], [integration], [data || addresses.tokens.DAI]];
+  await garden.connect(signer).addStrategy(...STRAT_NAME_PARAMS, params, ...passedLongParams);
   const strategies = await garden.getStrategies();
   const lastStrategyAddr = strategies[strategies.length - 1];
 
-  const strategy = await ethers.getContractAt('LongStrategy', lastStrategyAddr);
+  const strategy = await ethers.getContractAt('Strategy', lastStrategyAddr);
 
   return strategy;
 }
 
-async function createPoolStrategy(garden, integration, signer, params = DEFAULT_STRATEGY_PARAMS, poolParams) {
-  const passedPoolParams = poolParams || [addresses.balancer.pools.wethdai];
-  await garden.connect(signer).addStrategy(1, integration, ...params, ...passedPoolParams, ...NFT_STRAT_PARAMS);
+async function createStrategyWithPoolOperation(garden, signer, params = DEFAULT_STRATEGY_PARAMS, integration, data) {
+  const passedPoolParams = [[1], [integration], [data || addresses.oneinch.pools.wethdai]];
+  await garden.connect(signer).addStrategy(...STRAT_NAME_PARAMS, params, ...passedPoolParams);
   const strategies = await garden.getStrategies();
   const lastStrategyAddr = strategies[strategies.length - 1];
 
-  const strategy = await ethers.getContractAt('LiquidityPoolStrategy', lastStrategyAddr);
+  const strategy = await ethers.getContractAt('Strategy', lastStrategyAddr);
 
   return strategy;
 }
 
-async function createYieldStrategy(garden, integration, signer, params = DEFAULT_STRATEGY_PARAMS, yieldParams) {
-  const passedYieldParams = yieldParams || [addresses.yearn.vaults.ydai];
-  await garden.connect(signer).addStrategy(2, integration, ...params, ...passedYieldParams, ...NFT_STRAT_PARAMS);
+async function createStrategyWithVaultOperation(garden, signer, params = DEFAULT_STRATEGY_PARAMS, integration, data) {
+  const passedYieldParams = [[2], [integration], [data || addresses.yearn.vaults.ydai]];
+  await garden.connect(signer).addStrategy(...STRAT_NAME_PARAMS, params, ...passedYieldParams);
   const strategies = await garden.getStrategies();
   const lastStrategyAddr = strategies[strategies.length - 1];
 
-  const strategy = await ethers.getContractAt('YieldFarmingStrategy', lastStrategyAddr);
+  const strategy = await ethers.getContractAt('Strategy', lastStrategyAddr);
 
   return strategy;
 }
 
-async function createLendStrategy(garden, integration, signer, params = DEFAULT_STRATEGY_PARAMS, lendParams) {
-  const passedLendParams = lendParams || [addresses.tokens.USDC];
-  await garden.connect(signer).addStrategy(3, integration, ...params, ...passedLendParams, ...NFT_STRAT_PARAMS);
+async function createStrategyWithLendOperation(garden, signer, params = DEFAULT_STRATEGY_PARAMS, integration, data) {
+  const passedLendParams = [[3], [integration], [data || addresses.tokens.USDC]];
+  await garden.connect(signer).addStrategy(...STRAT_NAME_PARAMS, params, ...passedLendParams);
   const strategies = await garden.getStrategies();
   const lastStrategyAddr = strategies[strategies.length - 1];
 
-  const strategy = await ethers.getContractAt('LendStrategy', lastStrategyAddr);
+  const strategy = await ethers.getContractAt('Strategy', lastStrategyAddr);
 
   return strategy;
 }
@@ -186,9 +186,9 @@ async function finalizeStrategyAfter2Years(strategy) {
 }
 
 async function injectFakeProfits(strategy, amount) {
-  const kind = await strategy.kind();
+  const kind = await strategy.opTypes(0);
   if (kind === 0) {
-    const asset = await ethers.getContractAt('IERC20', await strategy.longToken());
+    const asset = await ethers.getContractAt('IERC20', await strategy.opDatas(0));
     const whaleAddress = '0x6B175474E89094C44Da98b954EedeAC495271d0F'; // Has DAI
     const whaleSigner = await impersonateAddress(whaleAddress);
     await asset.connect(whaleSigner).transfer(strategy.address, amount, {
@@ -196,7 +196,7 @@ async function injectFakeProfits(strategy, amount) {
     });
   }
   if (kind === 1) {
-    const asset = await ethers.getContractAt('IERC20', await strategy.pool());
+    const asset = await ethers.getContractAt('IERC20', await strategy.opDatas(0));
     const whaleAddress = await strategy.pool();
     const whaleSigner = await impersonateAddress(whaleAddress);
     await asset.connect(whaleSigner).transfer(strategy.address, amount, {
@@ -204,7 +204,7 @@ async function injectFakeProfits(strategy, amount) {
     });
   }
   if (kind === 2) {
-    const asset = await ethers.getContractAt('IERC20', await strategy.yieldVault());
+    const asset = await ethers.getContractAt('IERC20', await strategy.opDatas(0));
     const whaleAddress = await strategy.yieldVault();
     const whaleSigner = await impersonateAddress(whaleAddress);
     await asset.connect(whaleSigner).transfer(strategy.address, amount, {
@@ -223,17 +223,17 @@ async function createStrategy(
   specificParams,
 ) {
   let strategy;
-  if (kind === 'long') {
-    strategy = await createLongStrategy(garden, integration, signers[0], params, specificParams);
+  if (kind === 'buy') {
+    strategy = await createStrategyWithBuyOperation(garden, signers[0], params, integration, specificParams);
   }
-  if (kind === 'pool') {
-    strategy = await createPoolStrategy(garden, integration, signers[0], params, specificParams);
+  if (kind === 'lp') {
+    strategy = await createStrategyWithPoolOperation(garden, signers[0], params, integration, specificParams);
   }
-  if (kind === 'yield') {
-    strategy = await createYieldStrategy(garden, integration, signers[0], params, specificParams);
+  if (kind === 'vault') {
+    strategy = await createStrategyWithVaultOperation(garden, signers[0], params, integration, specificParams);
   }
   if (kind === 'lend') {
-    strategy = await createLendStrategy(garden, integration, signers[0], params, specificParams);
+    strategy = await createStrategyWithLendOperation(garden, signers[0], params, integration, specificParams);
   }
   if (strategy) {
     if (state === 'dataset') {
@@ -256,6 +256,7 @@ async function createStrategy(
   return strategy;
 }
 
+console.log('export');
 module.exports = {
   createStrategy,
   DEFAULT_STRATEGY_PARAMS,

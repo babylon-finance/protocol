@@ -236,4 +236,10 @@ library Errors {
     uint256 internal constant STRATEGY_GARDEN_MISMATCH = 73;
     // Minimum quarters is 1
     uint256 internal constant QUARTERS_MIN_1 = 74;
+    // Too many strategy operations
+    uint256 internal constant TOO_MANY_OPS = 75;
+    // Only operations
+    uint256 internal constant ONLY_OPERATION = 76;
+    // Strat params wrong length
+    uint256 internal constant STRAT_PARAMS_LENGTH = 77;
 }

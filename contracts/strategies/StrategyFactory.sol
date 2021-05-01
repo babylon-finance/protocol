@@ -20,11 +20,10 @@ pragma solidity 0.7.6;
 
 import {Clones} from '@openzeppelin/contracts/proxy/Clones.sol';
 
-import {Strategy} from './Strategy.sol';
-import {StrategyNFT} from './StrategyNFT.sol';
-import {LendStrategy} from './LendStrategy.sol';
 import {IStrategy} from '../interfaces/IStrategy.sol';
 import {IStrategyFactory} from '../interfaces/IStrategyFactory.sol';
+import {StrategyNFT} from './StrategyNFT.sol';
+import {Strategy} from './Strategy.sol';
 
 /**
  * @title StrategyFactory
@@ -32,56 +31,45 @@ import {IStrategyFactory} from '../interfaces/IStrategyFactory.sol';
  *
  * Factory to create investment strategy contracts
  */
-contract LendStrategyFactory is IStrategyFactory {
-    address private immutable lendStrategy;
+contract StrategyFactory is IStrategyFactory {
+    address payable private immutable strategy;
     address private immutable strategyNft;
 
     constructor() {
-        lendStrategy = address(new LendStrategy());
+        strategy = address(new Strategy());
         strategyNft = address(new StrategyNFT());
     }
 
     /**
      * Creates a new investment strategy using minimal proxies
      *
+     * @param _name                          Name of the strategy
+     * @param _symbol                        Symbol of the strategy
      * @param _strategist                    Address of the strategist
      * @param _garden                        Address of the garden
      * @param _controller                    Address of the controller
-     * @param _integration                   Address of the integration
-     * @param _maxCapitalRequested           Max Capital requested denominated in the reserve asset (0 to be unlimited)
-     * @param _stake                         Stake with garden participations absolute amounts 1e18
-     * @param _investmentDuration            Investment duration in seconds
-     * @param _expectedReturn                Expected return
-     * @param _minRebalanceCapital           Min capital that is worth it to deposit into this strategy
-     * @param _name                          Name of the strategy
-     * @param _symbol                        Symbol of the strategy
+     * @param _stratParams                   Strat Params
      */
     function createStrategy(
+        string memory _name,
+        string memory _symbol,
         address _strategist,
         address _garden,
         address _controller,
-        address _integration,
-        uint256 _maxCapitalRequested,
-        uint256 _stake,
-        uint256 _investmentDuration,
-        uint256 _expectedReturn,
-        uint256 _minRebalanceCapital,
-        string memory _name,
-        string memory _symbol
+        uint256[] calldata _stratParams
     ) external override returns (address) {
-        address clone = Clones.clone(lendStrategy);
+        address payable clone = payable(Clones.clone(strategy));
         address cloneNFT = Clones.clone(strategyNft);
         StrategyNFT(cloneNFT).initialize(_controller, address(clone), _name, _symbol);
         IStrategy(clone).initialize(
             _strategist,
             _garden,
             _controller,
-            _integration,
-            _maxCapitalRequested,
-            _stake,
-            _investmentDuration,
-            _expectedReturn,
-            _minRebalanceCapital,
+            _stratParams[0],
+            _stratParams[1],
+            _stratParams[2],
+            _stratParams[3],
+            _stratParams[4],
             cloneNFT
         );
         return clone;

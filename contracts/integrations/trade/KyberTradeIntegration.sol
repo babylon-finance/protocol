@@ -89,11 +89,13 @@ contract KyberTradeIntegration is TradeIntegration {
     /**
      * Get calldata through Kyber.
      *
+     * @param _strategy             Address of the strategy
      * @param _sendToken            Address of the token to be sent to the exchange
      * @param _sendQuantity         Units of reserve asset token sent to the exchange
      * @param _receiveToken         Address of the token that will be received from the exchange
      */
     function _getTradeCallData(
+        address _strategy,
         address _sendToken,
         uint256 _sendQuantity,
         address _receiveToken
@@ -118,10 +120,10 @@ contract KyberTradeIntegration is TradeIntegration {
                 _sendToken,
                 _sendQuantity,
                 _receiveToken,
-                msg.sender,
+                _strategy,
                 PreciseUnitMath.maxUint256(), // Sell entire amount of sourceToken
                 worstRate, // Trade with implied conversion rate
-                msg.sender // Garden address
+                _strategy // Strategy address
             );
 
         return (kyberNetworkProxyAddress, 0, methodData);

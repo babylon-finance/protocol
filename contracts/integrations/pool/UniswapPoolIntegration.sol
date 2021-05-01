@@ -125,6 +125,7 @@ contract UniswapPoolIntegration is PoolIntegration {
     /**
      * Return join pool calldata which is already generated from the pool API
      *
+     * @param  _strategy                 Address of the strategy
      * hparam  _poolAddress              Address of the pool
      * hparam  _poolTokensOut            Amount of pool tokens to send
      * @param  _tokensIn                 Addresses of tokens to send to the pool
@@ -135,6 +136,7 @@ contract UniswapPoolIntegration is PoolIntegration {
      * @return bytes                     Trade calldata
      */
     function _getJoinPoolCalldata(
+        address _strategy,
         address, /* _poolAddress */
         uint256, /* _poolTokensOut */
         address[] calldata _tokensIn,
@@ -152,7 +154,15 @@ contract UniswapPoolIntegration is PoolIntegration {
         // Encode method data for Garden to invoke
         require(_tokensIn.length == 2, 'Two tokens required');
         require(_maxAmountsIn.length == 2, 'Two amounts required');
-        bytes memory methodData =
+        return (address(uniRouter), 0, _getMethodData(_strategy, _tokensIn, _maxAmountsIn));
+    }
+
+    function _getMethodData(
+        address _strategy,
+        address[] calldata _tokensIn,
+        uint256[] calldata _maxAmountsIn
+    ) private view returns (bytes memory) {
+        return
             abi.encodeWithSignature(
                 'addLiquidity(address,address,uint256,uint256,uint256,uint256,address,uint256)',
                 _tokensIn[0],
@@ -161,16 +171,15 @@ contract UniswapPoolIntegration is PoolIntegration {
                 _maxAmountsIn[1],
                 _maxAmountsIn[0].sub(_maxAmountsIn[0].preciseMul(SLIPPAGE_ALLOWED)),
                 _maxAmountsIn[1].sub(_maxAmountsIn[1].preciseMul(SLIPPAGE_ALLOWED)),
-                msg.sender,
+                _strategy,
                 block.timestamp.add(MAX_DELTA_BLOCKS)
             );
-
-        return (address(uniRouter), 0, methodData);
     }
 
     /**
      * Return exit pool calldata which is already generated from the pool API
      *
+     * @param  _strategy                 Address of the strategy
      * hparam  _poolAddress              Address of the pool
      * @param  _poolTokensIn             Amount of pool tokens to liquidate
      * @param  _tokensOut                Addresses of tokens to receive
@@ -181,6 +190,7 @@ contract UniswapPoolIntegration is PoolIntegration {
      * @return bytes                     Trade calldata
      */
     function _getExitPoolCalldata(
+        address _strategy,
         address, /* _poolAddress */
         uint256 _poolTokensIn,
         address[] calldata _tokensOut,
@@ -206,7 +216,7 @@ contract UniswapPoolIntegration is PoolIntegration {
                 _poolTokensIn,
                 _minAmountsOut[0],
                 _minAmountsOut[1],
-                msg.sender,
+                _strategy,
                 block.timestamp.add(MAX_DELTA_BLOCKS)
             );
 

@@ -85,7 +85,7 @@ describe('BABL Rewards Distributor', function () {
     const retVal = [];
     for (let i = 0; i < strategies.length; i++) {
       const strategy = await createStrategy(
-        'long',
+        'buy',
         'vote',
         [signer1, signer2, signer3],
         kyberTradeIntegration.address,
@@ -110,7 +110,7 @@ describe('BABL Rewards Distributor', function () {
       kyberTradeIntegration,
     } = await setupTests()());
 
-    await babController.connect(owner).enableBABLTokensTransfers();
+    await bablToken.connect(owner).enableTokensTransfers();
   });
 
   describe('Deployment', function () {

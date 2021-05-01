@@ -46,7 +46,7 @@ module.exports = async ({ getNamedAccounts, deployments, ethers, getSigner, getC
   await bablToken.connect(deployerSigner).transfer(treasury.address, ONE_ETH.mul(190800));
 
   console.log('Disable BABL transfers');
-  await babController.disableBABLTokensTransfers();
+  await bablToken.connect(deployerSigner).disableTokensTransfers();
 };
 
 module.exports.tags = ['Transfer'];

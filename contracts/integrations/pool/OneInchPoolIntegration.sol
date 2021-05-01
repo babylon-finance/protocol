@@ -116,6 +116,7 @@ contract OneInchPoolIntegration is PoolIntegration {
     /**
      * Return join pool calldata which is already generated from the pool API
      *
+     * hparam  _strategy                 Address of the strategy
      * hparam  _poolAddress              Address of the pool
      * hparam  _poolTokensOut            Amount of pool tokens to send
      * @param  _tokensIn                 Addresses of tokens to send to the pool
@@ -126,6 +127,7 @@ contract OneInchPoolIntegration is PoolIntegration {
      * @return bytes                     Trade calldata
      */
     function _getJoinPoolCalldata(
+        address, /* _strategy */
         address _poolAddress,
         uint256, /* _poolTokensOut */
         address[] calldata _tokensIn,
@@ -166,6 +168,7 @@ contract OneInchPoolIntegration is PoolIntegration {
     /**
      * Return exit pool calldata which is already generated from the pool API
      *
+     * hparam  _strategy                 Address of the strategy
      * hparam  _poolAddress              Address of the pool
      * @param  _poolTokensIn             Amount of pool tokens to receive
      * @param  _tokensOut                Addresses of tokens to receive
@@ -176,6 +179,7 @@ contract OneInchPoolIntegration is PoolIntegration {
      * @return bytes                     Trade calldata
      */
     function _getExitPoolCalldata(
+        address, /* _strategy */
         address _poolAddress,
         uint256 _poolTokensIn,
         address[] calldata _tokensOut,
