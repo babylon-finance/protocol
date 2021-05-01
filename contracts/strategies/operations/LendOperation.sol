@@ -52,12 +52,12 @@ contract LendOperation is Operation {
      * @param _data                   Operation data
      */
     function validateOperation(
-        bytes32 _data,
+        address _data,
         IGarden _garden,
         IStrategy _strategy,
         address _integration
     ) external view override onlyStrategy {
-        require(getParsedData(_data) != _garden.reserveAsset(), 'Receive token must be different');
+        require(_data != _garden.reserveAsset(), 'Receive token must be different');
     }
 
     /**
@@ -67,12 +67,12 @@ contract LendOperation is Operation {
     function executeOperation(
         address _asset,
         uint256 _capital,
-        bytes32 _data,
+        address _data,
         IGarden _garden,
         IStrategy _strategy,
         address _integration
     ) external override onlyStrategy returns (address, uint256) {
-        address assetToken = getParsedData(_data);
+        address assetToken = _data;
         if (assetToken != _asset) {
             IStrategy(_strategy).trade(_asset, _capital, assetToken);
         }
@@ -89,13 +89,13 @@ contract LendOperation is Operation {
      */
     function exitOperation(
         uint256 _percentage,
-        bytes32 _data,
+        address _data,
         IGarden _garden,
         IStrategy _strategy,
         address _integration
     ) external override onlyStrategy {
         require(_percentage <= HUNDRED_PERCENT, 'Unwind Percentage <= 100%');
-        address assetToken = getParsedData(_data);
+        address assetToken = _data;
         uint256 numTokensToRedeem =
             IERC20(ILendIntegration(_integration).getInvestmentToken(assetToken)).balanceOf(msg.sender).preciseMul(
                 _percentage
@@ -118,7 +118,7 @@ contract LendOperation is Operation {
      * @return _nav           NAV of the strategy
      */
     function getNAV(
-        bytes32 _data,
+        address _data,
         IGarden _garden,
         IStrategy _strategy,
         address _integration
@@ -126,7 +126,7 @@ contract LendOperation is Operation {
         if (!_strategy.isStrategyActive()) {
             return 0;
         }
-        address assetToken = getParsedData(_data);
+        address assetToken = _data;
         uint256 numTokensToRedeem =
             IERC20(ILendIntegration(_integration).getInvestmentToken(assetToken)).balanceOf(address(this));
         uint256 assetTokensAmount =
@@ -135,11 +135,5 @@ contract LendOperation is Operation {
         uint256 NAV = assetTokensAmount.preciseDiv(price);
         require(NAV != 0, 'NAV has to be bigger 0');
         return NAV;
-    }
-
-    /* ============ Private Functions ============ */
-
-    function getParsedData(bytes32 _data) private view returns (address) {
-        return _convertDataToAddress(_data);
     }
 }

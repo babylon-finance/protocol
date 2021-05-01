@@ -22,7 +22,7 @@ module.exports = async ({ getNamedAccounts, deployments, ethers, getSigner, getC
   const ishtarGate = await deployments.get('IshtarGate');
   const rewardsDistributor = await deployments.get('RewardsDistributor');
   const gardenFactory = await deployments.get('GardenFactory');
-  const strategyFactory = await deployments.get('LongStrategyFactory');
+  const strategyFactory = await deployments.get('StrategyFactory');
 
   const controllerContract = await ethers.getContractAt('BabController', controller.address);
 
@@ -57,7 +57,15 @@ module.exports = async ({ getNamedAccounts, deployments, ethers, getSigner, getC
     const contract = await ethers.getContractAt(integration, deployment.address);
     await controllerContract.connect(owner).addIntegration(await contract.getName(), deployment.address);
   }
+  // Adding operations
+  const ops = ['BuyOperation', 'AddLiquidityOperation', 'DepositVaultOperation', 'LendOperation'];
+  for (let i = 0; i < ops.length; i++) {
+    const operation = ops[i];
+    console.log(`Adding operation ${operation} to BabController`);
+    const deployment = await deployments.get(operation);
+    await controllerContract.connect(owner).setOperation(i, deployment.address);
+  }
 };
 
 module.exports.tags = ['Init'];
-module.exports.dependencies = ['Aave'];
+module.exports.dependencies = ['LendOp'];

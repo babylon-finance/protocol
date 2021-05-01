@@ -91,7 +91,7 @@ contract BabController is OwnableUpgradeable, IBabController {
     // Address of the default trade integration used by the protocol
     address public override defaultTradeIntegration;
     // Mapping of valid operations
-    address[] public override enabledOperations;
+    address[MAX_OPERATIONS] public override enabledOperations;
 
     // Mappings to check whether address is valid Garden or Reserve Asset
     mapping(address => bool) public override isGarden;
@@ -528,7 +528,6 @@ contract BabController is OwnableUpgradeable, IBabController {
         require(_kind < MAX_OPERATIONS, 'Max operations reached');
         require(enabledOperations[_kind] != _operation, 'Operation already set');
         require(_operation != address(0), 'Operation address must exist.');
-
         enabledOperations[_kind] = _operation;
 
         emit ControllerOperationSet(_kind, _operation);
@@ -560,7 +559,7 @@ contract BabController is OwnableUpgradeable, IBabController {
         return gardens;
     }
 
-    function getOperations() external view override returns (address[] memory) {
+    function getOperations() external view override returns (address[20] memory) {
         return enabledOperations;
     }
 

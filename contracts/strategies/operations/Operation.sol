@@ -70,7 +70,7 @@ abstract contract Operation is IOperation {
     /* ============ Virtual External Functions ============ */
 
     function validateOperation(
-        bytes32 _data,
+        address _data,
         IGarden _garden,
         IStrategy _strategy,
         address _integration
@@ -79,7 +79,7 @@ abstract contract Operation is IOperation {
     function executeOperation(
         address _asset,
         uint256 _capital,
-        bytes32 _data,
+        address _data,
         IGarden _garden,
         IStrategy _strategy,
         address _integration
@@ -87,14 +87,14 @@ abstract contract Operation is IOperation {
 
     function exitOperation(
         uint256 _percentage,
-        bytes32 _data,
+        address _data,
         IGarden _garden,
         IStrategy _strategy,
         address _integration
     ) external virtual override;
 
     function getNAV(
-        bytes32 _data,
+        address _data,
         IGarden _garden,
         IStrategy _strategy,
         address _integration
@@ -115,9 +115,5 @@ abstract contract Operation is IOperation {
     function _getPrice(address _assetOne, address _assetTwo) internal view returns (uint256) {
         IPriceOracle oracle = IPriceOracle(IBabController(controller).priceOracle());
         return oracle.getPrice(_assetOne, _assetTwo);
-    }
-
-    function _convertDataToAddress(bytes32 _data) internal view returns (address) {
-        return address(uint160(bytes20(_data)));
     }
 }

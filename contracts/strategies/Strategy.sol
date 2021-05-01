@@ -182,7 +182,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
     // Types and data for the operations of this strategy
     uint8[] public override opTypes;
     address[] public override opIntegrations;
-    bytes32[] public override opDatas;
+    address[] public override opDatas;
 
     // Garden that these strategies belong to
     IGarden public override garden;
@@ -291,14 +291,13 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
     function setData(
         uint8[] calldata _opTypes,
         address[] calldata _opIntegrations,
-        bytes32[] calldata _opDatas
+        address[] calldata _opDatas
     ) external override onlyGardenAndNotSet {
         _require(
-            _opTypes.length == opIntegrations.length && opIntegrations.length == opDatas.length,
+            (_opTypes.length == _opIntegrations.length) && (_opIntegrations.length == _opDatas.length),
             Errors.TOO_MANY_OPS
         );
-        _require(_opDatas.length < MAX_OPERATIONS, Errors.TOO_MANY_OPS);
-
+        _require(_opDatas.length < MAX_OPERATIONS && _opDatas.length > 0, Errors.TOO_MANY_OPS);
         for (uint256 i = 0; i < _opTypes.length; i++) {
             IOperation(controller.enabledOperations(_opTypes[i])).validateOperation(
                 _opDatas[i],
@@ -313,6 +312,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         }
 
         opTypes = _opTypes;
+        opIntegrations = _opIntegrations;
         opDatas = _opDatas;
         dataSet = true;
     }
@@ -643,7 +643,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
     function getNAV() public view override returns (uint256) {
         uint256 nav = 0;
         for (uint256 i = 0; i < opTypes.length; i++) {
-            IOperation operation = IOperation(IBabController(controller).enabledOperations(opTypes[i]));
+            IOperation operation = IOperation(IBabController(controller).enabledOperations(uint256(opTypes[i])));
             nav = nav.add(operation.getNAV(opDatas[i], garden, IStrategy(address(this)), opIntegrations[i]));
         }
         return nav;

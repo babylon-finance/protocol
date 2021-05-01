@@ -41,7 +41,7 @@ async function createStrategyWithBuyOperation(
   const strategies = await garden.getStrategies();
   const lastStrategyAddr = strategies[strategies.length - 1];
 
-  const strategy = await ethers.getContractAt('LongStrategy', lastStrategyAddr);
+  const strategy = await ethers.getContractAt('Strategy', lastStrategyAddr);
 
   return strategy;
 }
@@ -58,7 +58,7 @@ async function createStrategyWithPoolOperation(
   const strategies = await garden.getStrategies();
   const lastStrategyAddr = strategies[strategies.length - 1];
 
-  const strategy = await ethers.getContractAt('LiquidityPoolStrategy', lastStrategyAddr);
+  const strategy = await ethers.getContractAt('Strategy', lastStrategyAddr);
 
   return strategy;
 }
@@ -75,7 +75,7 @@ async function createStrategyWithVaultOperation(
   const strategies = await garden.getStrategies();
   const lastStrategyAddr = strategies[strategies.length - 1];
 
-  const strategy = await ethers.getContractAt('YieldFarmingStrategy', lastStrategyAddr);
+  const strategy = await ethers.getContractAt('Strategy', lastStrategyAddr);
 
   return strategy;
 }
@@ -92,7 +92,7 @@ async function createStrategyWithLendOperation(
   const strategies = await garden.getStrategies();
   const lastStrategyAddr = strategies[strategies.length - 1];
 
-  const strategy = await ethers.getContractAt('LendStrategy', lastStrategyAddr);
+  const strategy = await ethers.getContractAt('Strategy', lastStrategyAddr);
 
   return strategy;
 }
@@ -283,6 +283,7 @@ async function createStrategy(
   return strategy;
 }
 
+console.log('export');
 module.exports = {
   createStrategy,
   DEFAULT_STRATEGY_PARAMS,

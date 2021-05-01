@@ -52,12 +52,12 @@ contract DepositVaultOperation is Operation {
      * @param _data                   Operation data
      */
     function validateOperation(
-        bytes32 _data,
+        address _data,
         IGarden _garden,
         IStrategy _strategy,
         address _integration
     ) external view override onlyStrategy {
-        require(IPassiveIntegration(_integration).isInvestment(getParsedData(_data)), 'Must be a valid yield vault');
+        require(IPassiveIntegration(_integration).isInvestment(_data), 'Must be a valid yield vault');
     }
 
     /**
@@ -67,12 +67,12 @@ contract DepositVaultOperation is Operation {
     function executeOperation(
         address _asset,
         uint256 _capital,
-        bytes32 _data,
+        address _data,
         IGarden _garden,
         IStrategy _strategy,
         address _integration
     ) external override onlyStrategy returns (address, uint256) {
-        address yieldVault = getParsedData(_data);
+        address yieldVault = _data;
         address vaultAsset = IPassiveIntegration(_integration).getInvestmentAsset(yieldVault);
         if (vaultAsset != _asset) {
             IStrategy(_strategy).trade(_asset, _capital, vaultAsset);
@@ -94,13 +94,13 @@ contract DepositVaultOperation is Operation {
      */
     function exitOperation(
         uint256 _percentage,
-        bytes32 _data,
+        address _data,
         IGarden _garden,
         IStrategy _strategy,
         address _integration
     ) external override onlyStrategy {
         require(_percentage <= HUNDRED_PERCENT, 'Unwind Percentage <= 100%');
-        address yieldVault = getParsedData(_data);
+        address yieldVault = _data;
         address vaultAsset = IPassiveIntegration(_integration).getInvestmentAsset(yieldVault);
         uint256 amountVault = IERC20(yieldVault).balanceOf(msg.sender).preciseMul(_percentage);
         IPassiveIntegration(_integration).exitInvestment(
@@ -122,7 +122,7 @@ contract DepositVaultOperation is Operation {
      * @return _nav           NAV of the strategy
      */
     function getNAV(
-        bytes32 _data,
+        address _data,
         IGarden _garden,
         IStrategy _strategy,
         address _integration
@@ -130,7 +130,7 @@ contract DepositVaultOperation is Operation {
         if (!_strategy.isStrategyActive()) {
             return 0;
         }
-        address yieldVault = getParsedData(_data);
+        address yieldVault = _data;
         address vaultAsset = IPassiveIntegration(_integration).getInvestmentAsset(yieldVault);
         uint256 price = _getPrice(_garden.reserveAsset(), vaultAsset);
         uint256 NAV =
@@ -140,11 +140,5 @@ contract DepositVaultOperation is Operation {
                 .div(price);
         require(NAV != 0, 'NAV has to be bigger 0');
         return NAV;
-    }
-
-    /* ============ Private Functions ============ */
-
-    function getParsedData(bytes32 _data) private view returns (address) {
-        return _convertDataToAddress(_data);
     }
 }

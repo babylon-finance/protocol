@@ -50,12 +50,12 @@ contract BuyOperation is Operation {
      * @param _data                   Operation data
      */
     function validateOperation(
-        bytes32 _data,
+        address _data,
         IGarden _garden,
         IStrategy _strategy,
         address _integration
     ) external view override onlyStrategy {
-        require(getParsedData(_data) != _garden.reserveAsset(), 'Receive token must be different');
+        require(_data != _garden.reserveAsset(), 'Receive token must be different');
     }
 
     /**
@@ -65,12 +65,12 @@ contract BuyOperation is Operation {
     function executeOperation(
         address _asset,
         uint256 _capital,
-        bytes32 _data,
+        address _data,
         IGarden _garden,
         IStrategy _strategy,
         address _integration
     ) external override onlyStrategy returns (address, uint256) {
-        address longToken = getParsedData(_data);
+        address longToken = _data;
         IStrategy(_strategy).trade(_asset, _capital, longToken);
         return (longToken, IERC20(longToken).balanceOf(address(msg.sender)));
     }
@@ -81,13 +81,13 @@ contract BuyOperation is Operation {
      */
     function exitOperation(
         uint256 _percentage,
-        bytes32 _data,
+        address _data,
         IGarden _garden,
         IStrategy _strategy,
         address _integration
     ) external override onlyStrategy {
         require(_percentage <= 100e18, 'Unwind Percentage <= 100%');
-        address longToken = getParsedData(_data);
+        address longToken = _data;
         IStrategy(_strategy).trade(
             longToken,
             IERC20(longToken).balanceOf(address(msg.sender)).preciseMul(_percentage),
@@ -101,7 +101,7 @@ contract BuyOperation is Operation {
      * @return _nav           NAV of the strategy
      */
     function getNAV(
-        bytes32 _data,
+        address _data,
         IGarden _garden,
         IStrategy _strategy,
         address _integration
@@ -109,16 +109,10 @@ contract BuyOperation is Operation {
         if (!_strategy.isStrategyActive()) {
             return 0;
         }
-        address longToken = getParsedData(_data);
+        address longToken = _data;
         uint256 price = _getPrice(_garden.reserveAsset(), longToken);
         uint256 NAV = IERC20(longToken).balanceOf(msg.sender).preciseDiv(price);
         require(NAV != 0, 'NAV has to be bigger 0');
         return NAV;
-    }
-
-    /* ============ Private Functions ============ */
-
-    function getParsedData(bytes32 _data) private view returns (address) {
-        return _convertDataToAddress(_data);
     }
 }

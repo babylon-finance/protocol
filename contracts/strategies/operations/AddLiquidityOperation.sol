@@ -53,12 +53,12 @@ contract AddLiquidityOperation is Operation {
      * @param _data                   Operation data
      */
     function validateOperation(
-        bytes32 _data,
+        address _data,
         IGarden _garden,
         IStrategy _strategy,
         address _integration
     ) external view override onlyStrategy {
-        require(IPoolIntegration(_integration).isPool(getParsedData(_data)), 'Not a valid pool');
+        require(IPoolIntegration(_integration).isPool(_data), 'Not a valid pool');
     }
 
     /**
@@ -68,18 +68,25 @@ contract AddLiquidityOperation is Operation {
     function executeOperation(
         address _asset,
         uint256 _capital,
-        bytes32 _data,
+        address _data,
         IGarden _garden,
         IStrategy _strategy,
         address _integration
     ) external override onlyStrategy returns (address, uint256) {
-        address pool = getParsedData(_data);
+        address pool = _data;
         address[] memory poolTokens = IPoolIntegration(_integration).getPoolTokens(pool);
         uint256[] memory _maxAmountsIn = new uint256[](poolTokens.length);
         uint256[] memory _poolWeights = IPoolIntegration(_integration).getPoolWeights(pool);
         // Get the tokens needed to enter the pool
         for (uint256 i = 0; i < poolTokens.length; i++) {
-          _maxAmountsIn[i] = _getMaxAmountTokenPool(_asset, _capital, _garden, _strategy, _poolWeights[i], poolTokens[i]);
+            _maxAmountsIn[i] = _getMaxAmountTokenPool(
+                _asset,
+                _capital,
+                _garden,
+                _strategy,
+                _poolWeights[i],
+                poolTokens[i]
+            );
         }
         uint256 poolTokensOut = IPoolIntegration(_integration).getPoolTokensOut(pool, poolTokens[0], _maxAmountsIn[0]);
         IPoolIntegration(_integration).joinPool(
@@ -97,13 +104,13 @@ contract AddLiquidityOperation is Operation {
      */
     function exitOperation(
         uint256 _percentage,
-        bytes32 _data,
+        address _data,
         IGarden _garden,
         IStrategy _strategy,
         address _integration
     ) external override onlyStrategy {
         require(_percentage <= 100e18, 'Unwind Percentage <= 100%');
-        address pool = getParsedData(_data);
+        address pool = _data;
         address[] memory poolTokens = IPoolIntegration(_integration).getPoolTokens(pool);
         uint256 lpTokens = IERC20(pool).balanceOf(msg.sender).preciseMul(_percentage); // Sell all pool tokens
         uint256[] memory _minAmountsOut = IPoolIntegration(_integration).getPoolMinAmountsOut(pool, lpTokens);
@@ -136,7 +143,7 @@ contract AddLiquidityOperation is Operation {
      * @return _nav           NAV of the strategy
      */
     function getNAV(
-        bytes32 _data,
+        address _data,
         IGarden _garden,
         IStrategy _strategy,
         address _integration
@@ -144,7 +151,7 @@ contract AddLiquidityOperation is Operation {
         if (!_strategy.isStrategyActive()) {
             return 0;
         }
-        address pool = getParsedData(_data);
+        address pool = _data;
         address[] memory poolTokens = IPoolIntegration(_integration).getPoolTokens(pool);
         uint256 NAV;
         uint256 totalSupply = IERC20(pool).totalSupply();
@@ -159,25 +166,28 @@ contract AddLiquidityOperation is Operation {
         return NAV;
     }
 
-    function getParsedData(bytes32 _data) public view returns (address) {
-        return _convertDataToAddress(_data);
-    }
-
     /* ============ Private Functions ============ */
 
-    function _getMaxAmountTokenPool(address _asset, uint256 _capital, IGarden _garden, IStrategy _strategy, uint256 _poolWeight, address _poolToken) private returns(uint256) {
-      uint256 normalizedAmount = _capital.preciseMul(_poolWeight);
-      if (_poolToken != _asset && _poolToken != address(0)) {
-          IStrategy(_strategy).trade(_asset, normalizedAmount, _poolToken);
-          return IERC20(_poolToken).balanceOf(msg.sender);
-      }
-      if (_poolToken == address(0)) {
-          if (_asset != _garden.WETH()) {
-            IStrategy(_strategy).trade(_asset, normalizedAmount, _garden.WETH());
-          }
-          // Convert WETH to ETH
-          IWETH(_garden.WETH()).withdraw(normalizedAmount);
-      }
-      return normalizedAmount;
+    function _getMaxAmountTokenPool(
+        address _asset,
+        uint256 _capital,
+        IGarden _garden,
+        IStrategy _strategy,
+        uint256 _poolWeight,
+        address _poolToken
+    ) private returns (uint256) {
+        uint256 normalizedAmount = _capital.preciseMul(_poolWeight);
+        if (_poolToken != _asset && _poolToken != address(0)) {
+            IStrategy(_strategy).trade(_asset, normalizedAmount, _poolToken);
+            return IERC20(_poolToken).balanceOf(msg.sender);
+        }
+        if (_poolToken == address(0)) {
+            if (_asset != _garden.WETH()) {
+                IStrategy(_strategy).trade(_asset, normalizedAmount, _garden.WETH());
+            }
+            // Convert WETH to ETH
+            IWETH(_garden.WETH()).withdraw(normalizedAmount);
+        }
+        return normalizedAmount;
     }
 }

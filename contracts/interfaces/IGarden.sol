@@ -111,7 +111,7 @@ interface IGarden {
         uint256[] calldata _stratParams,
         uint8[] calldata _opTypes,
         address[] calldata _opIntegrations,
-        bytes32[] calldata _opDatas
+        address[] calldata _opDatas
     ) external;
 
     function deposit(

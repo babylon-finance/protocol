@@ -8,9 +8,9 @@ async function setUpFixture({ deployments, getNamedAccounts, ethers }, options, 
   async function getContract(contractName, deploymentName) {
     return await ethers.getContractAt(contractName, (await deployments.get(deploymentName || contractName)).address);
   }
-
+  console.log('fixture');
   await deployments.fixture();
-
+  console.log('after deployments');
   const [owner, signer1, signer2, signer3] = await ethers.getSigners();
 
   const babController = await getContract('BabController', 'BabControllerProxy');
@@ -31,6 +31,11 @@ async function setUpFixture({ deployments, getNamedAccounts, ethers }, options, 
   const oneInchPoolIntegration = await getContract('OneInchPoolIntegration');
   const compoundLendIntegration = await getContract('CompoundLendIntegration');
   const aaveLendIntegration = await getContract('AaveLendIntegration');
+
+  const buyOperation = await getContract('BuyOperation');
+  const addLiquidityOperation = await getContract('AddLiquidityOperation');
+  const depositVaultOperation = await getContract('DepositVaultOperation');
+  const lendOperation = await getContract('LendOperation');
 
   // Gives signer1 creator permissions
   await ishtarGate.connect(owner).setCreatorPermissions(owner.address, true, { gasPrice: 0 });
@@ -83,6 +88,7 @@ async function setUpFixture({ deployments, getNamedAccounts, ethers }, options, 
         },
       );
   }
+  console.log('create strategies');
   // Create strategies
   const strategy11 = (
     await createStrategy('long', 'dataset', [signer1, signer2, signer3], kyberTradeIntegration.address, garden1)
@@ -123,6 +129,11 @@ async function setUpFixture({ deployments, getNamedAccounts, ethers }, options, 
 
     strategy11,
     strategy21,
+
+    buyOperation,
+    addLiquidityOperation,
+    depositVaultOperation,
+    lendOperation,
 
     gardenValuer,
     priceOracle,
