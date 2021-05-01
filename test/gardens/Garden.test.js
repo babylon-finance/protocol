@@ -373,7 +373,7 @@ describe('Garden', function () {
         value: ethers.utils.parseEther('1'),
       });
       const params = DEFAULT_STRATEGY_PARAMS;
-      params[1] = ethers.utils.parseEther('0.005');
+      params[1] = ethers.utils.parseEther('0.000000000005');
 
       await expect(
         garden1

@@ -45,6 +45,7 @@ contract BabControllerV2Mock is OwnableUpgradeable {
     /* ============ State Variables ============ */
     address public constant UNISWAP_FACTORY = 0x5C69bEe701ef814a2B6a3EDD4B1652CB9cc5aA6f;
     address public constant WETH = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
+    uint8 public constant MAX_OPERATIONS = 20;
 
     // List of enabled Communities
     address[] public gardens;
@@ -54,10 +55,14 @@ contract BabControllerV2Mock is OwnableUpgradeable {
     address public gardenFactory;
     address public rewardsDistributor;
     address public ishtarGate;
+    address public strategyFactory;
 
-    mapping(uint8 => address) public strategyFactory;
-    // Mapping of garden => integration identifier => integration address
-    mapping(bytes32 => address) private integrations;
+    // Mapping of integration name => integration address
+    mapping(bytes32 => address) private enabledIntegrations;
+    // Address of the default trade integration used by the protocol
+    address public defaultTradeIntegration;
+    // Mapping of valid operations
+    address[MAX_OPERATIONS] public enabledOperations;
 
     // Mappings to check whether address is valid Garden or Reserve Asset
     mapping(address => bool) public isGarden;
@@ -101,6 +106,7 @@ contract BabControllerV2Mock is OwnableUpgradeable {
     bool public bablTokensTransfersEnabled;
     // Enable and starts the BABL Mining program within Rewards Distributor contract
     bool public bablMiningProgramEnabled;
+    // Enable public gardens
     bool public allowPublicGardens;
 
     uint256 public protocolPerformanceFee; // 5% (0.01% = 1e14, 1% = 1e16) on profits

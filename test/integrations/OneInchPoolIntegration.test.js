@@ -82,7 +82,7 @@ describe('OneInchPoolIntegrationTest', function () {
         oneInchPoolIntegration.address,
         garden1,
         DEFAULT_STRATEGY_PARAMS,
-        [daiWethPair.address],
+        daiWethPair.address,
       );
 
       await executeStrategy(strategyContract);

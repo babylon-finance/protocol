@@ -59,7 +59,7 @@ describe('SushiswapPoolIntegrationTest', function () {
         sushiswapPoolIntegration.address,
         garden1,
         DEFAULT_STRATEGY_PARAMS,
-        [daiWethPair.address],
+        daiWethPair.address,
       );
       await executeStrategy(strategyContract);
       expect(await daiWethPair.balanceOf(strategyContract.address)).to.be.gt(0);

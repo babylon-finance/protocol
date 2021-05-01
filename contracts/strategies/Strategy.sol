@@ -255,7 +255,8 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
             IERC20(address(garden)).balanceOf(_strategist).sub(garden.getLockedBalance(_strategist));
         _require(IERC20(address(garden)).balanceOf(_strategist) > 0, Errors.STRATEGIST_TOKENS_TOO_LOW);
         _require(strategistUnlockedBalance >= _stake, Errors.TOKENS_STAKED);
-        // _require(_stake > IERC20(_garden).totalSupply().div(100), Errors.STAKE_HAS_TO_AT_LEAST_ONE);
+        // TODO: adjust this calc
+        _require(_stake > 1e10, Errors.STAKE_HAS_TO_AT_LEAST_ONE);
         _require(
             _strategyDuration >= garden.minStrategyDuration() && _strategyDuration <= garden.maxStrategyDuration(),
             Errors.DURATION_MUST_BE_IN_RANGE
@@ -702,8 +703,14 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
      */
     function _exitStrategy(uint256 _percentage) internal {
         for (uint256 i = opTypes.length; i > 0; i--) {
-            IOperation operation = IOperation(IBabController(controller).enabledOperations(opTypes[i-1]));
-            operation.exitOperation(_percentage, opDatas[i-1], garden, IStrategy(address(this)), opIntegrations[i-1]);
+            IOperation operation = IOperation(IBabController(controller).enabledOperations(opTypes[i - 1]));
+            operation.exitOperation(
+                _percentage,
+                opDatas[i - 1],
+                garden,
+                IStrategy(address(this)),
+                opIntegrations[i - 1]
+            );
         }
     }
 
