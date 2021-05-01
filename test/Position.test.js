@@ -79,7 +79,10 @@ describe('Position testing', function () {
       const gardenBalanceAfter = await weth.balanceOf(garden1.address);
       const supplyAfter = await garden1.totalSupply();
       expect(supplyAfter.add(tokenBalance.div(2))).to.equal(supplyBefore);
-      expect(gardenBalance.sub(gardenBalanceAfter)).to.be.lt(ethers.utils.parseEther('0.5'));
+      expect(gardenBalance.sub(gardenBalanceAfter)).to.be.closeTo(
+        ethers.utils.parseEther('0.5'),
+        ethers.utils.parseEther('0.01'),
+      );
       expect(wethPositionBefore.sub(wethPosition)).to.be.closeTo(
         ethers.utils.parseEther('0.5'),
         ethers.utils.parseEther('0.01'),

@@ -256,7 +256,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         _require(IERC20(address(garden)).balanceOf(_strategist) > 0, Errors.STRATEGIST_TOKENS_TOO_LOW);
         _require(strategistUnlockedBalance >= _stake, Errors.TOKENS_STAKED);
         // TODO: adjust this calc
-        _require(_stake > 1e10, Errors.STAKE_HAS_TO_AT_LEAST_ONE);
+        _require(_stake > 0, Errors.STAKE_HAS_TO_AT_LEAST_ONE);
         _require(
             _strategyDuration >= garden.minStrategyDuration() && _strategyDuration <= garden.maxStrategyDuration(),
             Errors.DURATION_MUST_BE_IN_RANGE
