@@ -34,6 +34,10 @@ describe('PriceOracle', function () {
       const price = await priceOracle.connect(owner).getPrice(addresses.tokens.DAI, addresses.tokens.USDC);
       expect(price).to.be.lt(ethers.utils.parseEther('1.1'));
     });
+    it('should get the price of WETH/USDC', async function () {
+      const price = await priceOracle.connect(owner).getPrice(addresses.tokens.WETH, addresses.tokens.USDC);
+      expect(price).to.be.gt(ethers.utils.parseEther('1.8'));
+    });
   });
 
   describe('Uniswap TWAP', function () {

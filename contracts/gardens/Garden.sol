@@ -384,7 +384,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         if (maxDepositLimit > 0) {
             _require(principal.add(msg.value) <= maxDepositLimit, Errors.MAX_DEPOSIT_LIMIT);
         }
-        _require(totalContributors <= maxContributors, Errors.MAX_CONTRIBUTORS);
+        _require(totalContributors < maxContributors, Errors.MAX_CONTRIBUTORS);
         _require(msg.value == _reserveAssetQuantity, Errors.MSG_VALUE_DO_NOT_MATCH);
         // Always wrap to WETH
         IWETH(WETH).deposit{value: msg.value}();
@@ -558,54 +558,40 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
     /* ============ Strategy Functions ============ */
     /**
      * Creates a new strategy calling the factory and adds it to the array
-     * @param _strategyKind                  Int representing kind of strategy
-     * @param _integration                   Address of the integration
-     * @param _maxCapitalRequested           Max Capital requested denominated in the reserve asset (0 to be unlimited)
-     * @param _stake                         Stake with garden participations absolute amounts 1e18
-     * @param _strategyDuration              Strategy duration in seconds
-     * @param _expectedReturn                Expected return
-     * @param _minRebalanceCapital           Min capital that is worth it to deposit into this strategy
-     * @param _strategyData                  Param of strategy to add
      * @param _name                          Name of the strategy
      * @param _symbol                        Symbol of the strategy
+     * @param _stratParams                   Num params for the strategy
+     * @param _opTypes                      Type for every operation in the strategy
+     * @param _opIntegrations               Integration to use for every operation
+     * @param _opDatas                      Param for every operation in the strategy
      */
     function addStrategy(
-        uint8 _strategyKind,
-        address _integration,
-        uint256 _maxCapitalRequested,
-        uint256 _stake,
-        uint256 _strategyDuration,
-        uint256 _expectedReturn,
-        uint256 _minRebalanceCapital,
-        address _strategyData,
         string memory _name,
-        string memory _symbol
+        string memory _symbol,
+        uint256[] calldata _stratParams,
+        uint8[] calldata _opTypes,
+        address[] calldata _opIntegrations,
+        address[] calldata _opDatas
     ) external override onlyContributor onlyActive {
         _require(
             IIshtarGate(IBabController(controller).ishtarGate()).canAddStrategiesInAGarden(address(this), msg.sender),
             Errors.USER_CANNOT_ADD_STRATEGIES
         );
         _require(strategies.length < MAX_TOTAL_STRATEGIES, Errors.VALUE_TOO_HIGH);
-        IStrategyFactory strategyFactory =
-            IStrategyFactory(IBabController(controller).getStrategyFactory(_strategyKind));
+        _require(_stratParams.length == 5, Errors.STRAT_PARAMS_LENGTH);
         address strategy =
-            strategyFactory.createStrategy(
+            IStrategyFactory(IBabController(controller).strategyFactory()).createStrategy(
+                _name,
+                _symbol,
                 msg.sender,
                 address(this),
                 controller,
-                _integration,
-                _maxCapitalRequested,
-                _stake,
-                _strategyDuration,
-                _expectedReturn,
-                _minRebalanceCapital,
-                _name,
-                _symbol
+                _stratParams
             );
         strategyMapping[strategy] = true;
-        totalStake = totalStake.add(_stake);
+        totalStake = totalStake.add(_stratParams[1]);
         strategies.push(strategy);
-        IStrategy(strategy).setData(_strategyData);
+        IStrategy(strategy).setData(_opTypes, _opIntegrations, _opDatas);
     }
 
     /**

@@ -25,12 +25,14 @@ pragma solidity 0.7.6;
  */
 interface ILendIntegration {
     function supplyTokens(
+        address _strategy,
         address _assetToken,
         uint256 _numTokensToSupply,
         uint256 _minAmountExpected
     ) external;
 
     function redeemTokens(
+        address _strategy,
         address _assetToken,
         uint256 _numTokensToRedeem,
         uint256 _minAmountExpected

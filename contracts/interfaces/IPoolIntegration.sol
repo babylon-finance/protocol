@@ -25,6 +25,7 @@ pragma solidity 0.7.6;
  */
 interface IPoolIntegration {
     function joinPool(
+        address _strategy,
         address _poolAddress,
         uint256 _poolTokensOut,
         address[] memory _poolTokens,
@@ -32,6 +33,7 @@ interface IPoolIntegration {
     ) external;
 
     function exitPool(
+        address _strategy,
         address _poolAddress,
         uint256 _poolTokensIn,
         address[] memory _poolTokens,

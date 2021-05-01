@@ -49,7 +49,7 @@ describe('Position testing', function () {
       const wethPosition = await garden1.principal();
       const gardenBalanceAfter = await weth.balanceOf(garden1.address);
       const supplyAfter = await garden1.totalSupply();
-      expect(supplyAfter.sub(ethers.utils.parseEther('1'))).to.equal(supplyBefore);
+      expect(supplyAfter).to.be.gt(supplyBefore);
       expect(gardenBalanceAfter.sub(gardenBalance)).to.equal(ethers.utils.parseEther('1'));
       expect(wethPosition.sub(wethPositionBefore)).to.equal(ethers.utils.parseEther('1'));
       expect(await garden1.principal()).to.equal(ethers.utils.parseEther('2'));
@@ -79,9 +79,12 @@ describe('Position testing', function () {
       const gardenBalanceAfter = await weth.balanceOf(garden1.address);
       const supplyAfter = await garden1.totalSupply();
       expect(supplyAfter.add(tokenBalance.div(2))).to.equal(supplyBefore);
-      expect(gardenBalance.sub(gardenBalanceAfter)).to.equal(ethers.utils.parseEther('0.5'));
-      expect(wethPositionBefore.sub(wethPosition)).to.equal(ethers.utils.parseEther('0.5'));
-      expect(await garden1.principal()).to.equal(ethers.utils.parseEther('1.5'));
+      expect(gardenBalance.sub(gardenBalanceAfter)).to.be.lt(ethers.utils.parseEther('0.5'));
+      expect(wethPositionBefore.sub(wethPosition)).to.be.closeTo(
+        ethers.utils.parseEther('0.5'),
+        ethers.utils.parseEther('0.01'),
+      );
+      expect(await garden1.principal()).to.be.closeTo(ethers.utils.parseEther('1.5'), ethers.utils.parseEther('0.01'));
       // Check that the protocol didn't get an exit fee
       const protocolTreasuryAfter = await weth.balanceOf(treasury.address);
       expect(protocolTreasuryAfter.sub(protocolTreasury)).to.equal(ethers.utils.parseEther('0'));
@@ -89,7 +92,6 @@ describe('Position testing', function () {
       expect(contributor[0]).to.equal(contributor[1]);
       expect(contributor[2]).to.equal(0);
       expect(contributor[3]).to.equal(0);
-      // TODO: Check moving average calc
     });
   });
 });

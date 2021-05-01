@@ -27,16 +27,11 @@ import {IIntegration} from './IIntegration.sol';
  */
 interface IStrategyFactory {
     function createStrategy(
+        string memory _name,
+        string memory _symbol,
         address _strategist,
         address _garden,
         address _controller,
-        address _integration,
-        uint256 _maxCapitalRequested,
-        uint256 _stake,
-        uint256 _strategyDuration,
-        uint256 _expectedReturn,
-        uint256 _minRebalanceCapital,
-        string memory _name,
-        string memory _symbol
+        uint256[] calldata _stratParams
     ) external returns (address);
 }

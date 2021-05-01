@@ -22,11 +22,7 @@ module.exports = async ({ getNamedAccounts, deployments, ethers, getSigner, getC
   const ishtarGate = await deployments.get('IshtarGate');
   const rewardsDistributor = await deployments.get('RewardsDistributor');
   const gardenFactory = await deployments.get('GardenFactory');
-  const longStrategyFactory = await deployments.get('LongStrategyFactory');
-  const liquidityPoolStrategyFactory = await deployments.get('LiquidityPoolStrategyFactory');
-  const yieldFarmingStrategyFactory = await deployments.get('YieldFarmingStrategyFactory');
-
-  const lendStrategyFactory = await deployments.get('LendStrategyFactory');
+  const strategyFactory = await deployments.get('StrategyFactory');
 
   const controllerContract = await ethers.getContractAt('BabController', controller.address);
 
@@ -43,10 +39,7 @@ module.exports = async ({ getNamedAccounts, deployments, ethers, getSigner, getC
   await controllerContract.connect(owner).editIshtarGate(ishtarGate.address);
   await controllerContract.connect(owner).editRewardsDistributor(rewardsDistributor.address);
   await controllerContract.connect(owner).editGardenFactory(gardenFactory.address);
-  await controllerContract.connect(owner).editStrategyFactory(0, longStrategyFactory.address);
-  await controllerContract.connect(owner).editStrategyFactory(1, liquidityPoolStrategyFactory.address);
-  await controllerContract.connect(owner).editStrategyFactory(2, yieldFarmingStrategyFactory.address);
-  await controllerContract.connect(owner).editStrategyFactory(3, lendStrategyFactory.address);
+  await controllerContract.connect(owner).editStrategyFactory(strategyFactory.address);
 
   // Adding integrations
   for (const integration of [
@@ -65,7 +58,19 @@ module.exports = async ({ getNamedAccounts, deployments, ethers, getSigner, getC
     const contract = await ethers.getContractAt(integration, deployment.address);
     await controllerContract.connect(owner).addIntegration(await contract.getName(), deployment.address);
   }
+  const oneinch = await deployments.get('OneInchTradeIntegration');
+  // Set default trade integration
+  await controllerContract.connect(owner).setDefaultTradeIntegration(oneinch.address);
+
+  // Adding operations
+  const ops = ['BuyOperation', 'AddLiquidityOperation', 'DepositVaultOperation', 'LendOperation'];
+  for (let i = 0; i < ops.length; i++) {
+    const operation = ops[i];
+    console.log(`Adding operation ${operation} to BabController`);
+    const deployment = await deployments.get(operation);
+    await controllerContract.connect(owner).setOperation(i, deployment.address);
+  }
 };
 
 module.exports.tags = ['Init'];
-module.exports.dependencies = ['Aave'];
+module.exports.dependencies = ['LendOp'];

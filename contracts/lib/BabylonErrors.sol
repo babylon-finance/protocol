@@ -222,4 +222,10 @@ library Errors {
     uint256 internal constant NOT_ENOUGH_ETH = 66;
     // Garden is already public
     uint256 internal constant GARDEN_ALREADY_PUBLIC = 67;
+    // Too many strategy operations
+    uint256 internal constant TOO_MANY_OPS = 68;
+    // Only operations
+    uint256 internal constant ONLY_OPERATION = 69;
+    // Strat params wrong length
+    uint256 internal constant STRAT_PARAMS_LENGTH = 70;
 }

@@ -55,13 +55,17 @@ interface IBabController {
 
     function editGardenFactory(address _newGardenFactory) external;
 
-    function editStrategyFactory(uint8 _strategyKind, address _newStrategyFactory) external;
+    function editStrategyFactory(address _newStrategyFactory) external;
 
     function addIntegration(string memory _name, address _integration) external;
 
     function editIntegration(string memory _name, address _integration) external;
 
     function removeIntegration(string memory _name) external;
+
+    function setOperation(uint8 _kind, address _operation) external;
+
+    function setDefaultTradeIntegration(address _newDefaultTradeIntegation) external;
 
     function addKeeper(address _keeper) external;
 
@@ -91,6 +95,10 @@ interface IBabController {
 
     function ishtarGate() external view returns (address);
 
+    function strategyFactory() external view returns (address);
+
+    function defaultTradeIntegration() external view returns (address);
+
     function protocolDepositGardenTokenFee() external view returns (uint256);
 
     function protocolWithdrawalGardenTokenFee() external view returns (uint256);
@@ -100,6 +108,8 @@ interface IBabController {
     function bablMiningProgramEnabled() external view returns (bool);
 
     function allowPublicGardens() external view returns (bool);
+
+    function enabledOperations(uint256 _kind) external view returns (address);
 
     function getProfitSharing()
         external
@@ -120,9 +130,9 @@ interface IBabController {
             uint256
         );
 
-    function getStrategyFactory(uint8 _strategyKind) external view returns (address);
-
     function getGardens() external view returns (address[] memory);
+
+    function getOperations() external view returns (address[20] memory);
 
     function isGarden(address _garden) external view returns (bool);
 

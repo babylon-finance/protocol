@@ -97,7 +97,11 @@ contract AaveLendIntegration is LendIntegration {
      * @return uint256                         Call value
      * @return bytes                           Trade calldata
      */
-    function _getSupplyCalldata(address _assetToken, uint256 _numTokensToSupply)
+    function _getSupplyCalldata(
+        address _strategy,
+        address _assetToken,
+        uint256 _numTokensToSupply
+    )
         internal
         view
         override
@@ -113,13 +117,24 @@ contract AaveLendIntegration is LendIntegration {
                 'deposit(address,uint256,address,uint16)',
                 _assetToken,
                 _numTokensToSupply,
-                msg.sender,
+                _strategy,
                 0
             );
         return (address(lendingPool), 0, methodData);
     }
 
-    function _getRedeemCalldata(address _assetToken, uint256 _numTokensToSupply)
+    /**
+     * Returns calldata for redeeming the collateral
+     *
+     * @return address                         Target contract address
+     * @return uint256                         Call value
+     * @return bytes                           Trade calldata
+     */
+    function _getRedeemCalldata(
+        address _strategy,
+        address _assetToken,
+        uint256 _numTokensToSupply
+    )
         internal
         view
         override
@@ -131,7 +146,7 @@ contract AaveLendIntegration is LendIntegration {
     {
         // Encode method data for Garden to invoke
         bytes memory methodData =
-            abi.encodeWithSignature('withdraw(address,uint256,address)', _assetToken, _numTokensToSupply, msg.sender);
+            abi.encodeWithSignature('withdraw(address,uint256,address)', _assetToken, _numTokensToSupply, _strategy);
         return (address(lendingPool), 0, methodData);
     }
 

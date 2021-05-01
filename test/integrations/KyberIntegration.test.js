@@ -26,7 +26,7 @@ describe('KyberTradeIntegration', function () {
       signer2,
       signer3,
     } = await setupTests()());
-    strategyContract = await ethers.getContractAt('LongStrategy', strategy11);
+    strategyContract = await ethers.getContractAt('Strategy', strategy11);
   });
 
   describe('Deployment', function () {

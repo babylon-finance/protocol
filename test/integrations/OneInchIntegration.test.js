@@ -1,7 +1,12 @@
 const { expect } = require('chai');
 const { ethers } = require('hardhat');
 const { setupTests } = require('../fixtures/GardenFixture');
-const { createStrategy, executeStrategy, finalizeStrategy } = require('../fixtures/StrategyHelper');
+const {
+  createStrategy,
+  DEFAULT_STRATEGY_PARAMS,
+  executeStrategy,
+  finalizeStrategy,
+} = require('../fixtures/StrategyHelper');
 const addresses = require('../../lib/addresses');
 
 describe('OneInchTradeIntegration', function () {
@@ -38,11 +43,13 @@ describe('OneInchTradeIntegration', function () {
       const balanceBeforeStarting = await wethToken.balanceOf(garden1.address);
       expect(balanceBeforeStarting).to.equal(ethers.utils.parseEther('1.0'));
       const strategyContract = await createStrategy(
-        'long',
+        'buy',
         'vote',
         [signer1, signer2, signer3],
         oneInchTradeIntegration.address,
         garden1,
+        DEFAULT_STRATEGY_PARAMS,
+        addresses.oneinch.pools.wethdai,
       );
       // Got the initial deposit 1 ETH + 4ETH from voters minus the 2 ETH from the fee
       expect(await wethToken.balanceOf(garden1.address)).to.equal(ethers.utils.parseEther('2.99'));
