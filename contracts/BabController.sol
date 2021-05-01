@@ -265,9 +265,6 @@ contract BabController is OwnableUpgradeable, IBabController {
     }
 
     /**
-<<<<<<< HEAD
-     * PRIVILEGED GOVERNANCE FUNCTION. Allows public gardens
-=======
      * PRIVILEGED GOVERNANCE FUNCTION. Disables transfers of ERC20 BABL Tokens
      */
     function disableBABLTokensTransfers() external override onlyOwner {
@@ -277,7 +274,7 @@ contract BabController is OwnableUpgradeable, IBabController {
     /**
      * PRIVILEGED GOVERNANCE FUNCTION. Allows transfers of ERC20 BABL Tokens
      * Can only happen after the protocol is fully decentralized.
->>>>>>> 7ddc156ba80d267dded49d03d8cc0cf07f40dd98
+     * PRIVILEGED GOVERNANCE FUNCTION. Allows public gardens
      */
     function setAllowPublicGardens() external override onlyOwner {
         allowPublicGardens = true;
