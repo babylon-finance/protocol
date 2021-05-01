@@ -71,10 +71,6 @@ interface IBabController {
 
     function enableGardenTokensTransfers() external;
 
-    function enableBABLTokensTransfers() external;
-
-    function disableBABLTokensTransfers() external;
-
     function enableBABLMiningProgram() external;
 
     function setAllowPublicGardens() external;
@@ -100,8 +96,6 @@ interface IBabController {
     function protocolWithdrawalGardenTokenFee() external view returns (uint256);
 
     function gardenTokensTransfersEnabled() external view returns (bool);
-
-    function bablTokensTransfersEnabled() external view returns (bool);
 
     function bablMiningProgramEnabled() external view returns (bool);
 

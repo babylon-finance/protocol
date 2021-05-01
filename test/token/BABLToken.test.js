@@ -76,8 +76,8 @@ describe('BABLToken contract', function () {
     });
   });
 
-  describe('Transactions', function () {
-    it('Should fail if trying to transfer any tokens between addresses which are not either TimeLockRegistry or RewardsDistributor', async function () {
+  describe('Transfers', function () {
+    it('should fail if trying to transfer any tokens between addresses which is not TimeLockRegistry', async function () {
       const ownerBalance = await bablToken.balanceOf(owner.address);
       expect(ownerBalance).to.equal(OWNER_BALANCE);
 
@@ -85,8 +85,7 @@ describe('BABLToken contract', function () {
       await expect(bablToken.connect(owner).transfer(signer1.address, value)).to.be.revertedWith('revert BAB#062');
       await expect(bablToken.connect(owner).transfer(signer2.address, value)).to.be.revertedWith('revert BAB#062');
 
-      // It should work if from/to is the TimeLockRegistry or RewardsDistributor
-      await expect(bablToken.connect(owner).transfer(rewardsDistributor.address, value)).not.to.be.reverted;
+      // It should work if from/to is the TimeLockRegistry
       await expect(bablToken.connect(owner).transfer(timeLockRegistry.address, value)).not.to.be.reverted;
 
       await timeLockRegistry
@@ -109,31 +108,38 @@ describe('BABLToken contract', function () {
       await expect(bablToken.connect(signer2).transfer(signer1.address, value2)).to.be.revertedWith('revert BAB#062');
     });
 
-    it('Should fail if trying to burn tokens', async function () {
-      // burn() is not available at BABLToken on purpose, we simulate burning by transferring into address(0)
+    it('can"t transfer to zero address', async function () {
       const value = ethers.utils.parseEther('260000');
       await expect(bablToken.connect(owner).transfer(ADDRESS_ZERO, value)).to.be.revertedWith(
         'revert TimeLockedToken:: _transfer: cannot transfer to the zero address',
       );
     });
 
-    it('Should transfer tokens to TimeLockRegistry or RewardsDistributor without the boolean activated', async function () {
+    it('Should transfer tokens to TimeLockRegistry without the boolean activated', async function () {
       const value = ethers.utils.parseEther('1000');
 
       // It might work if from/to is the TimeLockRegistry or RewardsDistributor
-      await expect(bablToken.connect(owner).transfer(rewardsDistributor.address, value)).not.to.be.reverted;
       await expect(bablToken.connect(owner).transfer(timeLockRegistry.address, value)).not.to.be.reverted;
 
-      const rewardsDistributorBalance = await bablToken.balanceOf(rewardsDistributor.address);
       const timeLockRegistryBalance = await bablToken.balanceOf(timeLockRegistry.address);
 
-      expect(rewardsDistributorBalance).to.be.equal(value.add(REWARDS_BALANCE));
       expect(timeLockRegistryBalance).to.be.equal(value);
     });
 
-    it('Should work if transfers are done after we activate the boolean to enable transfers', async function () {
+    it('can enable transfers', async function () {
       // Enable BABL token transfers
-      await babController.connect(owner).enableBABLTokensTransfers();
+      await bablToken.connect(owner).enableTokensTransfers();
+      // Transfer 260_000e18 tokens from owner to userSigner1
+      const value = ethers.utils.parseEther('260000');
+      await bablToken.connect(owner).transfer(signer1.address, value);
+      const signer1Balance = await bablToken.balanceOf(signer1.address);
+      expect(signer1Balance).to.equal(ethers.utils.parseEther('260000'));
+    });
+
+    it('can NOT disabled BABL transfers after enabling them', async function () {
+      await bablToken.connect(owner).enableTokensTransfers();
+      await expect(bablToken.connect(owner).disableTokensTransfers()).to.be.revertedWith('BABL must flow');
+
       // Transfer 260_000e18 tokens from owner to userSigner1
       const value = ethers.utils.parseEther('260000');
       await bablToken.connect(owner).transfer(signer1.address, value);
@@ -143,7 +149,7 @@ describe('BABLToken contract', function () {
 
     it('Should transfer tokens between accounts', async function () {
       // Enable BABL token transfers
-      await babController.connect(owner).enableBABLTokensTransfers();
+      await bablToken.connect(owner).enableTokensTransfers();
       // Transfer 260_000e18 tokens from owner to userSigner1
       const value = ethers.utils.parseEther('260000');
       await bablToken.connect(owner).transfer(signer1.address, value);
@@ -177,7 +183,7 @@ describe('BABLToken contract', function () {
       const value = ethers.utils.parseEther('1000');
 
       // Enable BABL token transfers
-      await babController.connect(owner).enableBABLTokensTransfers();
+      await bablToken.connect(owner).enableTokensTransfers();
       await bablToken.connect(owner).transfer(signer1.address, value);
       const value2 = ethers.utils.parseEther('2000');
       await bablToken.connect(owner).transfer(signer2.address, value2);
@@ -311,7 +317,7 @@ describe('BABLToken contract', function () {
   describe('Voting Power for Governance', function () {
     it('Should get voting power equivalent to its balance if it delegates in itself', async function () {
       // Enable BABL token transfers
-      await babController.connect(owner).enableBABLTokensTransfers();
+      await bablToken.connect(owner).enableTokensTransfers();
 
       await bablToken.connect(owner).transfer(signer1.address, ethers.utils.parseEther('16000'));
 
@@ -329,7 +335,7 @@ describe('BABLToken contract', function () {
       await bablToken.connect(signer2).delegate(signer2.address); // Own delegation
       //
       // Enable BABL token transfers
-      await babController.connect(owner).enableBABLTokensTransfers();
+      await bablToken.connect(owner).enableTokensTransfers();
       await bablToken.connect(owner).transfer(signer1.address, ethers.utils.parseEther('16000'));
 
       const signer1Balance = await bablToken.balanceOf(signer1.address);
