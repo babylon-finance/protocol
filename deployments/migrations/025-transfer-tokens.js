@@ -27,7 +27,7 @@ module.exports = async ({ getNamedAccounts, deployments, ethers, getSigner, getC
   await bablToken.connect(deployerSigner).transfer(rewardsDistributor.address, ONE_ETH.mul(500000));
 
   console.log('Send 293.2k BABL tokens to MULTISIG');
-  await bablToken.connect(deployerSigner).transfer(signers[2].address, ONE_ETH.mul('293200'));
+  await bablToken.connect(deployerSigner).transfer(MULTISIG, ONE_ETH.mul('293200'));
 
   // Locally singer2 is the MULTISIG; on mainnet approval has to be done after deployment
   if (chainId === '31337') {
