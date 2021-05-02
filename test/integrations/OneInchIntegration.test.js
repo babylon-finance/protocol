@@ -1,5 +1,7 @@
 const { expect } = require('chai');
 const { ethers } = require('hardhat');
+
+const { ONE_ETH } = require('../../lib/constants');
 const { setupTests } = require('../fixtures/GardenFixture');
 const {
   createStrategy,
@@ -52,14 +54,12 @@ describe('OneInchTradeIntegration', function () {
         addresses.tokens.DAI,
       );
       // Got the initial deposit 1 ETH + 4ETH from voters minus the 2 ETH from the fee
-      expect(await wethToken.balanceOf(garden1.address)).to.equal(ethers.utils.parseEther('2.99'));
-      // Got keeper fees 2.0 ETH
-      expect(await wethToken.balanceOf(strategyContract.address)).to.equal(ethers.utils.parseEther('2.0'));
+      expect(await wethToken.balanceOf(garden1.address)).to.equal(ONE_ETH.mul(5));
+      expect(await wethToken.balanceOf(strategyContract.address)).to.equal(0);
       await executeStrategy(strategyContract);
       // Just below 2
-      expect(await wethToken.balanceOf(garden1.address)).to.be.lt(ethers.utils.parseEther('2.0'));
-      // Strategy has 2 weth from keepers still
-      expect(await wethToken.balanceOf(strategyContract.address)).to.equal(ethers.utils.parseEther('2.0'));
+      expect(await wethToken.balanceOf(garden1.address)).to.be.closeTo(ONE_ETH.mul(4), ONE_ETH.div(100));
+      expect(await wethToken.balanceOf(strategyContract.address)).to.equal(0);
       expect(await daiToken.balanceOf(strategyContract.address)).to.be.gt(ethers.utils.parseEther('900') / 10 ** 12);
       await finalizeStrategy(strategyContract, 0);
       expect(await daiToken.balanceOf(strategyContract.address)).to.equal(0);

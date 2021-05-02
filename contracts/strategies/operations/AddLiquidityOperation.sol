@@ -157,8 +157,7 @@ contract AddLiquidityOperation is Operation {
         uint256 totalSupply = IERC20(pool).totalSupply();
         uint256 lpTokens = IERC20(pool).balanceOf(msg.sender);
         for (uint256 i = 0; i < poolTokens.length; i++) {
-            uint256 price =
-                _getPrice(_garden.reserveAsset(), poolTokens[i] != address(0) ? poolTokens[i] : _garden.WETH());
+            uint256 price = _getPrice(_garden.reserveAsset(), poolTokens[i] != address(0) ? poolTokens[i] : WETH);
             uint256 balance = poolTokens[i] != address(0) ? IERC20(poolTokens[i]).balanceOf(pool) : pool.balance;
             NAV += balance.mul(lpTokens).div(totalSupply).preciseDiv(price);
         }
@@ -181,8 +180,8 @@ contract AddLiquidityOperation is Operation {
             return IERC20(_poolToken).balanceOf(msg.sender);
         }
         if (_poolToken == address(0)) {
-            if (_asset != _garden.WETH()) {
-                IStrategy(msg.sender).trade(_asset, normalizedAmount, _garden.WETH());
+            if (_asset != WETH) {
+                IStrategy(msg.sender).trade(_asset, normalizedAmount, WETH);
             }
             // Convert WETH to ETH
             IStrategy(msg.sender).handleWeth(false, normalizedAmount);

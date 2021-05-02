@@ -61,8 +61,6 @@ interface IGarden {
 
     function maxContributors() external view returns (uint256);
 
-    function WETH() external view returns (address);
-
     function minLiquidityAsset() external view returns (uint256);
 
     function principal() external view returns (uint256);
@@ -86,8 +84,6 @@ interface IGarden {
     function getStrategies() external view returns (address[] memory);
 
     function getFinalizedStrategies() external view returns (address[] memory);
-
-    function strategies(uint256 _index) external view returns (address);
 
     function isStrategy(address _strategy) external view returns (bool);
 
@@ -136,4 +132,6 @@ interface IGarden {
     function expireCandidateStrategy(address _strategy) external;
 
     function burnStrategistStake(address _strategist, uint256 _amount) external;
+
+    function payKeeper(address payable _keeper, uint256 _fee) external;
 }

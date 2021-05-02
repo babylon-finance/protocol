@@ -144,7 +144,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
     modifier onlyKeeper(uint256 _fee) {
         _require(controller.isValidKeeper(msg.sender), Errors.ONLY_KEEPER);
         // We assume that calling keeper functions should be less expensive than 1 million gas and the gas price should be lower than 1000 gwei.
-        _require(_fee < MAX_KEEPER_FEE, Errors.FEE_TOO_HIGH);
+        _require(_fee <= MAX_KEEPER_FEE, Errors.FEE_TOO_HIGH);
         _;
     }
 
@@ -155,13 +155,13 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
     uint256 internal constant MAX_CANDIDATE_PERIOD = 7 days;
     uint256 internal constant MIN_VOTERS_TO_BECOME_ACTIVE = 2;
     uint256 internal constant ABSOLUTE_MIN_REBALANCE = 1e18;
+    address private constant WETH = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
 
     // Max Operations
     uint256 internal constant MAX_OPERATIONS = 6;
 
     // Keeper max fee
     uint256 internal constant MAX_KEEPER_FEE = (1e6 * 1e3 gwei);
-    uint256 internal constant MAX_STRATEGY_KEEPER_FEES = 2 * MAX_KEEPER_FEE;
 
     // Quadratic penalty for looses
     uint256 internal constant STAKE_QUADRATIC_PENALTY_FOR_LOSSES = 175e16; // 1.75e18
@@ -358,12 +358,10 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         absoluteTotalVotes = absoluteTotalVotes + _absoluteTotalVotes;
         totalVotes = totalVotes + _totalVotes;
 
-        // Get Keeper Fees allocated
-        garden.allocateCapitalToStrategy(MAX_STRATEGY_KEEPER_FEES);
         // Initializes cooldown
         enteredCooldownAt = block.timestamp;
         emit StrategyVoted(address(garden), _absoluteTotalVotes, _totalVotes, block.timestamp);
-        _payKeeper(msg.sender, _fee);
+        garden.payKeeper(msg.sender, _fee);
     }
 
     /**
@@ -410,7 +408,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
             // The Mining program has not started on time for this strategy
             rewardsDistributor.addProtocolPrincipal(_capital);
         }
-        _payKeeper(msg.sender, _fee);
+        garden.payKeeper(msg.sender, _fee);
         updatedAt = block.timestamp;
         emit StrategyExecuted(address(garden), _capital, _fee, block.timestamp);
     }
@@ -444,11 +442,11 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         IStrategyNFT(strategyNft).grantStrategyNFT(strategist, _tokenURI);
         // Transfer rewards
         _transferStrategyPrincipal(_fee);
-        // Pay Keeper Fee
-        _payKeeper(msg.sender, _fee);
         // Send rest to garden if any
         _sendReserveAssetToGarden();
         emit StrategyFinalized(address(garden), capitalReturned, _fee, block.timestamp);
+        // Pay Keeper Fee
+        garden.payKeeper(msg.sender, _fee);
     }
 
     /**
@@ -470,7 +468,11 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
             rewardsDistributor.substractProtocolPrincipal(_amountToUnwind);
         }
         // Send the amount back to the warden for the immediate withdrawal
-        IERC20(garden.reserveAsset()).safeTransfer(address(garden), _amountToUnwind);
+        // TODO: Transfer the precise value; not entire balance
+        IERC20(garden.reserveAsset()).safeTransfer(
+            address(garden),
+            IERC20(garden.reserveAsset()).balanceOf(address(this))
+        );
         emit StrategyReduced(address(garden), _amountToUnwind, block.timestamp);
     }
 
@@ -482,7 +484,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
     function expireStrategy(uint256 _fee) external onlyKeeper(_fee) nonReentrant onlyActiveGarden {
         _require(!active, Errors.STRATEGY_NEEDS_TO_BE_INACTIVE);
         _deleteCandidateStrategy();
-        _payKeeper(msg.sender, _fee);
+        garden.payKeeper(msg.sender, _fee);
         emit StrategyExpired(address(garden), block.timestamp);
     }
 
@@ -570,10 +572,10 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
      */
     function handleWeth(bool _isDeposit, uint256 _wethAmount) external override onlyOperation {
         if (_isDeposit) {
-            IWETH(garden.WETH()).deposit{value: _wethAmount}();
+            IWETH(WETH).deposit{value: _wethAmount}();
             return;
         }
-        IWETH(garden.WETH()).withdraw(_wethAmount);
+        IWETH(WETH).withdraw(_wethAmount);
     }
 
     /* ============ External Getter Functions ============ */
@@ -666,8 +668,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
             IOperation operation = IOperation(IBabController(controller).enabledOperations(uint256(opTypes[i])));
             nav = nav.add(operation.getNAV(opDatas[i], garden, opIntegrations[i]));
         }
-        if (active) return nav.add(MAX_STRATEGY_KEEPER_FEES);
-        else return nav;
+        return nav;
     }
 
     /**
@@ -681,19 +682,6 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
     }
 
     /* ============ Internal Functions ============ */
-
-    /**
-     * Pays gas cost back to the keeper from executing a transaction
-     * @param _keeper             Keeper that executed the transaction
-     * @param _fee                The fee paid to keeper to compensate the gas cost
-     */
-    function _payKeeper(address payable _keeper, uint256 _fee) internal {
-        _require(IBabController(controller).isValidKeeper(_keeper), Errors.ONLY_KEEPER);
-        // Pay Keeper in WETH
-        if (_fee > 0) {
-            IERC20(garden.reserveAsset()).safeTransfer(_keeper, _fee);
-        }
-    }
 
     /**
      * Enters the strategy.
@@ -796,9 +784,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
     }
 
     function _transferStrategyPrincipal(uint256 _fee) internal {
-        capitalReturned = IERC20(garden.reserveAsset()).balanceOf(address(this)).sub(_fee).sub(
-            MAX_STRATEGY_KEEPER_FEES
-        );
+        capitalReturned = IERC20(garden.reserveAsset()).balanceOf(address(this)).sub(_fee);
         address reserveAsset = garden.reserveAsset();
         int256 reserveAssetDelta = capitalReturned.toInt256().sub(capitalAllocated.toInt256());
         uint256 protocolProfits = 0;
