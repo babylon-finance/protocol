@@ -469,7 +469,10 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         }
         // Send the amount back to the warden for the immediate withdrawal
         // TODO: Transfer the precise value; not entire balance
-        IERC20(garden.reserveAsset()).safeTransfer(address(garden), IERC20(garden.reserveAsset()).balanceOf(address(this)));
+        IERC20(garden.reserveAsset()).safeTransfer(
+            address(garden),
+            IERC20(garden.reserveAsset()).balanceOf(address(this))
+        );
         emit StrategyReduced(address(garden), _amountToUnwind, block.timestamp);
     }
 

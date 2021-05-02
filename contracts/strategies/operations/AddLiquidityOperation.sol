@@ -157,8 +157,7 @@ contract AddLiquidityOperation is Operation {
         uint256 totalSupply = IERC20(pool).totalSupply();
         uint256 lpTokens = IERC20(pool).balanceOf(msg.sender);
         for (uint256 i = 0; i < poolTokens.length; i++) {
-            uint256 price =
-                _getPrice(_garden.reserveAsset(), poolTokens[i] != address(0) ? poolTokens[i] : WETH);
+            uint256 price = _getPrice(_garden.reserveAsset(), poolTokens[i] != address(0) ? poolTokens[i] : WETH);
             uint256 balance = poolTokens[i] != address(0) ? IERC20(poolTokens[i]).balanceOf(pool) : pool.balance;
             NAV += balance.mul(lpTokens).div(totalSupply).preciseDiv(price);
         }

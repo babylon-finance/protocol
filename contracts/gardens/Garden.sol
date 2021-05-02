@@ -166,6 +166,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
 
     // Keeper debt in WETH if any, repaid upon every strategy finalization
     uint256 public keeperDebt;
+
     /* ============ Constructor ============ */
 
     /**
@@ -352,10 +353,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
      * @param _gardenTokenQuantity              Quantity of the garden token to withdrawal
      * @param _to                               Address to send component assets to
      */
-    function withdrawWithPenalty(uint256 _gardenTokenQuantity, address payable _to)
-        external
-        nonReentrant
-    {
+    function withdrawWithPenalty(uint256 _gardenTokenQuantity, address payable _to) external nonReentrant {
         _onlyContributor();
         // Check that cannot do a normal withdrawal
         _require(!_canWithdrawEthAmount(msg.sender, _gardenTokenQuantity), Errors.NORMAL_WITHDRAWAL_POSSIBLE);
@@ -472,14 +470,14 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         // Pay Keeper in WETH
         // TOOD: Update principal
         // TOOD: Reserve asset may be not WETH
-        if(keeperDebt > 0) {
-          if(address(this).balance >= keeperDebt) {
-            Address.sendValue(_keeper, keeperDebt);
-            keeperDebt = 0;
-          } else if(IERC20(reserveAsset).balanceOf(address(this)) >= keeperDebt) {
-           IERC20(reserveAsset).safeTransfer(_keeper, keeperDebt);
-           keeperDebt = 0;
-          }
+        if (keeperDebt > 0) {
+            if (address(this).balance >= keeperDebt) {
+                Address.sendValue(_keeper, keeperDebt);
+                keeperDebt = 0;
+            } else if (IERC20(reserveAsset).balanceOf(address(this)) >= keeperDebt) {
+                IERC20(reserveAsset).safeTransfer(_keeper, keeperDebt);
+                keeperDebt = 0;
+            }
         }
     }
 
@@ -765,8 +763,6 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
     function _onlyActive() internal {
         _require(active, Errors.ONLY_ACTIVE);
     }
-
-
 
     /**
      * Function that mints the appropriate garden tokens along with the Garden NFT
