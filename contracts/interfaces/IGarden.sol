@@ -136,4 +136,6 @@ interface IGarden {
     function expireCandidateStrategy(address _strategy) external;
 
     function burnStrategistStake(address _strategist, uint256 _amount) external;
+
+    function payKeeper(address payable _keeper, uint256 _fee) external;
 }

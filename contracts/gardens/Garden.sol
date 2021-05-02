@@ -19,6 +19,8 @@ pragma solidity 0.7.6;
 
 import 'hardhat/console.sol';
 import {Address} from '@openzeppelin/contracts/utils/Address.sol';
+import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
+import {SafeERC20} from '@openzeppelin/contracts/token/ERC20/SafeERC20.sol';
 import {ERC20Upgradeable} from '@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol';
 import {IERC20Upgradeable} from '@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol';
 import {SafeERC20Upgradeable} from '@openzeppelin/contracts-upgradeable/token/ERC20/SafeERC20Upgradeable.sol';
@@ -65,6 +67,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
     using AddressArrayUtils for address[];
 
     using SafeERC20Upgradeable for IERC20Upgradeable;
+    using SafeERC20 for IERC20;
 
     /* ============ Events ============ */
     event PrincipalChanged(uint256 _newAmount, uint256 _oldAmount);
@@ -179,6 +182,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
     uint256 public maxDepositLimit; // Limits the amount of deposits
 
     uint256 public override gardenInitializedAt; // Garden Initialized at timestamp
+    // TODO: Explain what pid is
     uint256 public pid;
 
     // Min contribution in the garden
@@ -197,6 +201,8 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
     address[] public finalizedStrategies; // Strategies that have finalized execution
     mapping(address => bool) public strategyMapping;
 
+    // Keeper debt in WETH if any, repaid upon every strategy finalization
+    uint256 public keeperDebt;
     /* ============ Constructor ============ */
 
     /**
@@ -489,6 +495,21 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         }
     }
 
+    /**
+     * Pays gas cost back to the keeper from executing a transaction
+     * @param _keeper             Keeper that executed the transaction
+     * @param _fee                The fee paid to keeper to compensate the gas cost
+     */
+    function payKeeper(address payable _keeper, uint256 _fee) external override {
+        _require(IBabController(controller).isValidKeeper(_keeper), Errors.ONLY_KEEPER);
+        keeperDebt = keeperDebt.add(_fee);
+        // Pay Keeper in WETH
+        // TOOD: Update principal
+        if(keeperDebt > 0 && IERC20(reserveAsset).balanceOf(address(this)) >= keeperDebt) {
+          IERC20(reserveAsset).safeTransfer(_keeper, _fee);
+        }
+    }
+
     /* ============ External Functions ============ */
 
     /**
@@ -575,15 +596,15 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
      * @param _capital        Amount of capital to allocate to the strategy
      */
     function allocateCapitalToStrategy(uint256 _capital) external override onlyStrategy onlyActive {
-        uint256 liquidReserveAsset = ERC20Upgradeable(reserveAsset).balanceOf(address(this));
+        uint256 liquidReserveAsset = IERC20(reserveAsset).balanceOf(address(this));
         uint256 protocolMgmtFee = IBabController(controller).protocolManagementFee().preciseMul(_capital);
         _require(_capital.add(protocolMgmtFee) <= liquidReserveAsset, Errors.MIN_LIQUIDITY);
 
         // Take protocol mgmt fee
-        IERC20Upgradeable(reserveAsset).safeTransfer(IBabController(controller).treasury(), protocolMgmtFee);
+        IERC20(reserveAsset).safeTransfer(IBabController(controller).treasury(), protocolMgmtFee);
 
         // Send Capital to strategy
-        IERC20Upgradeable(reserveAsset).safeTransfer(msg.sender, _capital);
+        IERC20(reserveAsset).safeTransfer(msg.sender, _capital);
     }
 
     // Any tokens (other than the target) that are sent here by mistake are recoverable by the protocol
