@@ -28,7 +28,7 @@ module.exports = async ({ getNamedAccounts, deployments, ethers, getSigner, getC
 
   // Add WETH
   await controllerContract.connect(owner).addReserveAsset('0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2');
-  // TODO: use OpenZeppelin Defender Keeper
+  // Use OpenZeppelin Defender Keeper
   await controllerContract.connect(owner).addKeepers([KEEPER]);
 
   // Sets the price oracle and gardenvaluer address
@@ -60,6 +60,7 @@ module.exports = async ({ getNamedAccounts, deployments, ethers, getSigner, getC
   }
   const oneinch = await deployments.get('OneInchTradeIntegration');
   // Set default trade integration
+  console.log('Setting default trade integration', oneinch.address);
   await controllerContract.connect(owner).setDefaultTradeIntegration(oneinch.address);
 
   // Adding operations
