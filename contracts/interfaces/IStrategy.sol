@@ -64,6 +64,15 @@ interface IStrategy {
 
     function getOperationsCount() external view returns (uint256);
 
+    function getOperationByIndex(uint8 _index)
+        external
+        view
+        returns (
+            uint8,
+            address,
+            address
+        );
+
     function finalizeStrategy(uint256 fee, string memory _tokenURI) external;
 
     function unwindStrategy(uint256 _amountToUnwind) external;

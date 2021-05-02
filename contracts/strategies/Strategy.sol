@@ -657,6 +657,23 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
     }
 
     /**
+     * Get the operation params by index
+     *
+     */
+    function getOperationByIndex(uint8 _index)
+        external
+        view
+        override
+        returns (
+            uint8,
+            address,
+            address
+        )
+    {
+        return (opTypes[_index], opIntegrations[_index], opDatas[_index]);
+    }
+
+    /**
      * Gets the NAV of assets under management.
      * It is the sum of the NAV of all the operations
      *
