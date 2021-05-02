@@ -122,6 +122,7 @@ contract IshtarGate is ERC721, IIshtarGate, Ownable {
     ) external override onlyGardenCreator(_garden) returns (bool) {
         require(_users.length == _perms.length, 'Permissions and users must match');
         for (uint8 i = 0; i < _users.length; i++) {
+            require(address(_users[i]) != address(0), 'User must exist');
             _setIndividualGardenAccess(_users[i], _garden, _perms[i]);
         }
         return true;

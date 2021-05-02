@@ -224,6 +224,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         _require(_creator != address(0), Errors.ADDRESS_IS_ZERO);
         _require(_controller != address(0), Errors.ADDRESS_IS_ZERO);
         _require(_reserveAsset != address(0), Errors.ADDRESS_IS_ZERO);
+        _require(_gardenParams.length == 9, Errors.GARDEN_PARAMS_LENGTH);
         _require(IBabController(_controller).isValidReserveAsset(_reserveAsset), Errors.MUST_BE_RESERVE_ASSET);
         __ERC20_init(_name, _symbol);
 
@@ -413,7 +414,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         (uint256 reserveRewards, uint256 bablRewards) =
             rewardsDistributor.getRewards(address(this), msg.sender, _finalizedStrategies);
 
-        if (reserveRewards > 0 && address(this).balance > 0) {
+        if (reserveRewards > 0 && address(this).balance >= reserveRewards) {
             contributor.claimedRewards = contributor.claimedRewards.add(reserveRewards); // Rewards claimed properly
             // Send ETH
             Address.sendValue(msg.sender, reserveRewards);
@@ -907,7 +908,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         // Check that the withdrawal is possible
         // Unwrap WETH if ETH balance lower than netFlowQuantity
         if (address(this).balance < netFlowQuantity) {
-            IWETH(WETH).withdraw(netFlowQuantity);
+            IWETH(WETH).withdraw(netFlowQuantity.sub(address(this).balance));
         }
         _updateContributorWithdrawalInfo(netFlowQuantity);
         // Send ETH

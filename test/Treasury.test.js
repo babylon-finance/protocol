@@ -43,7 +43,7 @@ describe('Treasury', function () {
         treasury
           .connect(owner)
           .sendTreasuryFunds(addresses.tokens.WETH, ONE_ETH.mul(100), signer1.address, { gasPrice: 0 }),
-      ).to.be.revertedWith('Not enough funds in treasury');
+      ).to.be.reverted;
     });
   });
 });

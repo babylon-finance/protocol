@@ -222,7 +222,7 @@ contract BabController is OwnableUpgradeable, IBabController {
         require(!IGarden(_garden).active(), 'The garden needs to be disabled.');
         gardens = gardens.remove(_garden);
 
-        isGarden[_garden] = false;
+        delete isGarden[_garden];
 
         emit GardenRemoved(_garden);
     }
@@ -235,7 +235,7 @@ contract BabController is OwnableUpgradeable, IBabController {
     function disableGarden(address _garden) external override onlyOwner {
         require(isGarden[_garden], 'Garden does not exist');
         IGarden garden = IGarden(_garden);
-        require(!!garden.active(), 'The garden needs to be active.');
+        require(garden.active(), 'The garden needs to be active.');
         garden.setActive(false);
     }
 
@@ -298,7 +298,7 @@ contract BabController is OwnableUpgradeable, IBabController {
      */
     function removeKeeper(address _keeper) external override onlyOwner {
         require(keeperList[_keeper], 'Keeper is whitelisted');
-        keeperList[_keeper] = false;
+        delete keeperList[_keeper];
     }
 
     /**
@@ -334,7 +334,7 @@ contract BabController is OwnableUpgradeable, IBabController {
 
         reserveAssets = reserveAssets.remove(_reserveAsset);
 
-        validReserveAsset[_reserveAsset] = false;
+        delete validReserveAsset[_reserveAsset];
 
         emit ReserveAssetRemoved(_reserveAsset);
     }

@@ -73,7 +73,6 @@ contract Treasury is Ownable {
     ) external onlyOwner {
         require(_asset != address(0), 'Asset must exist');
         require(_to != address(0), 'Target address must exist');
-        require(IERC20(_asset).balanceOf(address(this)) >= _amount, 'Not enough funds in treasury');
         IERC20(_asset).safeTransferFrom(address(this), _to, _amount);
         emit TreasuryFundsSent(_asset, _amount, _to);
     }

@@ -133,7 +133,6 @@ contract PriceOracle is Ownable, IPriceOracle {
      * @param _adapter         Address of  adapter to remove
      */
     function removeAdapter(address _adapter) external onlyOwner {
-        require(adapters.contains(_adapter), 'Adapter does not exist');
         adapters = adapters.remove(_adapter);
 
         emit AdapterRemoved(_adapter);
@@ -176,8 +175,6 @@ contract PriceOracle is Ownable, IPriceOracle {
         view
         returns (bool, uint256)
     {
-        string memory symbol1 = _assetOne == WETH ? 'ETH' : ERC20(_assetOne).symbol();
-        string memory symbol2 = _assetTwo == WETH ? 'ETH' : ERC20(_assetTwo).symbol();
         address assetToCheck = _assetOne;
         if (_assetOne == WETH) {
             assetToCheck = _assetTwo;
@@ -193,6 +190,8 @@ contract PriceOracle is Ownable, IPriceOracle {
             assetToCheck == 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48 || // USDC
             assetToCheck == 0x1f9840a85d5aF5bf1D1762F925BDADdC4201F984 // uni
         ) {
+            string memory symbol1 = _assetOne == WETH ? 'ETH' : ERC20(_assetOne).symbol();
+            string memory symbol2 = _assetTwo == WETH ? 'ETH' : ERC20(_assetTwo).symbol();
             uint256 assetOnePrice = IUniswapAnchoredView(uniswapAnchoredView).price(symbol1);
             uint256 assetTwoPrice = IUniswapAnchoredView(uniswapAnchoredView).price(symbol2);
 
