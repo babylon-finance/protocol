@@ -471,8 +471,15 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         keeperDebt = keeperDebt.add(_fee);
         // Pay Keeper in WETH
         // TOOD: Update principal
-        if(keeperDebt > 0 && IERC20(reserveAsset).balanceOf(address(this)) >= keeperDebt) {
-           IERC20(reserveAsset).safeTransfer(_keeper, _fee);
+        // TOOD: Reserve asset may be not WETH
+        if(keeperDebt > 0) {
+          if(address(this).balance >= keeperDebt) {
+            Address.sendValue(_keeper, keeperDebt);
+            keeperDebt = 0;
+          } else if(IERC20(reserveAsset).balanceOf(address(this)) >= keeperDebt) {
+           IERC20(reserveAsset).safeTransfer(_keeper, keeperDebt);
+           keeperDebt = 0;
+          }
         }
     }
 
@@ -547,7 +554,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         _require(IBabController(controller).isValidKeeper(msg.sender), Errors.ONLY_KEEPER);
         // We assume that calling keeper functions should be less expensive
         // than 1 million gas and the gas price should be lower than 1000 gwei.
-        _require(_fee < MAX_KEEPER_FEE, Errors.FEE_TOO_HIGH);
+        _require(_fee <= MAX_KEEPER_FEE, Errors.FEE_TOO_HIGH);
 
         uint256 liquidReserveAsset = ERC20Upgradeable(reserveAsset).balanceOf(address(this));
         for (uint256 i = 0; i < strategies.length; i++) {

@@ -31,6 +31,7 @@ describe('Strategy', function () {
   let strategy11;
   let strategy21;
   let wethToken;
+  let daiToken;
   let daiWethPair;
   let aaveLendIntegration;
   let kyberTradeIntegration;
@@ -62,6 +63,7 @@ describe('Strategy', function () {
     strategyCandidate = await ethers.getContractAt('Strategy', strategy21);
 
     wethToken = await ethers.getContractAt('IERC20', addresses.tokens.WETH);
+    daiToken = await ethers.getContractAt('IERC20', addresses.tokens.DAI);
     daiWethPair = await ethers.getContractAt('IUniswapV2PairB', addresses.uniswap.pairs.wethdai);
   });
 
@@ -168,7 +170,7 @@ describe('Strategy', function () {
 
       // Keeper gets paid
       expect(await wethToken.balanceOf(await keeper.getAddress())).to.equal(42);
-      expect(await garden2.keeperDebt()).to.equal(42);
+      expect(await garden2.keeperDebt()).to.equal(0);
     });
 
     it("can't vote if voting window is closed", async function () {
@@ -250,7 +252,7 @@ describe('Strategy', function () {
 
       // Keeper gets paid
       expect(await wethToken.balanceOf(await keeper.getAddress())).to.equal(42);
-      expect(await garden1.keeperDebt()).to.equal(42);
+      expect(await garden1.keeperDebt()).to.equal(0);
     });
 
     it('should not be able to unwind an active strategy with not enough capital', async function () {
@@ -439,13 +441,19 @@ describe('Strategy', function () {
     it('should finalize strategy with negative profits', async function () {
       const strategyContract = await createStrategy(
         'buy',
-        'active',
+        'vote',
         [signer1, signer2, signer3],
         kyberTradeIntegration.address,
         garden1,
       );
 
-      await finalizeStrategy(strategyContract, { fee: 42 });
+      expect(await wethToken.balanceOf(garden1.address)).to.be.closeTo(ONE_ETH.mul(5), ONE_ETH.div(100));
+
+      await executeStrategy(strategyContract, { fee: ONE_ETH, amount: ONE_ETH.mul(4) });
+      expect(await garden1.keeperDebt()).to.equal(ONE_ETH);
+      expect(await wethToken.balanceOf(garden1.address)).to.be.closeTo(ONE_ETH.mul(1), ONE_ETH.div(50));
+
+      await finalizeStrategy(strategyContract, { fee: ONE_ETH });
       const [address, active, dataSet, finalized, executedAt, exitedAt] = await strategyContract.getStrategyState();
 
       expect(address).to.equal(strategyContract.address);
@@ -456,11 +464,15 @@ describe('Strategy', function () {
       expect(exitedAt).to.not.equal(0);
 
       // Keeper gets paid
-      expect(await wethToken.balanceOf(await keeper.getAddress())).to.equal(42);
+      expect(await keeper.getBalance()).to.equal(ONE_ETH.mul(10002));
+      expect(await garden1.keeperDebt()).to.equal(0);
 
       const capitalAllocated = await strategyContract.capitalAllocated();
       const capitalReturned = await strategyContract.capitalReturned();
+
       expect(capitalReturned).to.be.lt(capitalAllocated);
+      // takes into account ETH send to withdrawal window
+      expect(await wethToken.balanceOf(garden1.address)).to.be.closeTo(ONE_ETH.mul(2), ONE_ETH.div(50));
     });
 
     it('should finalize strategy with profits', async function () {

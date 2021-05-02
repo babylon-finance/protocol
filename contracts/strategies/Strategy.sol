@@ -144,7 +144,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
     modifier onlyKeeper(uint256 _fee) {
         _require(controller.isValidKeeper(msg.sender), Errors.ONLY_KEEPER);
         // We assume that calling keeper functions should be less expensive than 1 million gas and the gas price should be lower than 1000 gwei.
-        _require(_fee < MAX_KEEPER_FEE, Errors.FEE_TOO_HIGH);
+        _require(_fee <= MAX_KEEPER_FEE, Errors.FEE_TOO_HIGH);
         _;
     }
 
@@ -442,11 +442,11 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         IStrategyNFT(strategyNft).grantStrategyNFT(strategist, _tokenURI);
         // Transfer rewards
         _transferStrategyPrincipal(_fee);
-        // Pay Keeper Fee
-        garden.payKeeper(msg.sender, _fee);
         // Send rest to garden if any
         _sendReserveAssetToGarden();
         emit StrategyFinalized(address(garden), capitalReturned, _fee, block.timestamp);
+        // Pay Keeper Fee
+        garden.payKeeper(msg.sender, _fee);
     }
 
     /**
