@@ -39,13 +39,15 @@ import {TimeLockedToken} from './TimeLockedToken.sol';
 import {IRewardsDistributor} from '../interfaces/IRewardsDistributor.sol';
 
 /**
- * @title Rewards Distributor implementing the BABL Mining Program
+ * @title Rewards Distributor implementing the BABL Mining Program and other Rewards to Strategists and Stewards
  * @author Babylon Finance
  * Rewards Distributor contract is a smart contract used to calculate and distribute all the BABL rewards of the BABL Mining Program
- * along the time reserve for executed strategies. It implements a supply curve to distribute 500K BABL along the time.
+ * along the time reserved for executed strategies. It implements a supply curve to distribute 500K BABL along the time.
  * The supply curve is designed to optimize the long-term sustainability of the protocol.
  * The rewards are front-loaded but they last for more than 10 years, slowly decreasing quarter by quarter.
  * For that, it houses the state of the protocol power along the time as each strategy power is compared to the whole protocol usage.
+ * Rewards Distributor also is responsible for the calculation and delivery of other rewards as bonuses to specific profiles 
+ * which are actively contributing to the protocol growth and their communities (Garden creators, Strategists and Stewards).
  */
 contract RewardsDistributor is Ownable, IRewardsDistributor {
     using SafeMath for uint256;
@@ -132,48 +134,52 @@ contract RewardsDistributor is Ownable, IRewardsDistributor {
     uint256 public immutable CREATOR_BONUS;
 
     /* ============ Structs ============ */
+    
     struct ProtocolPerTimestamp {
-        // Allocation points per timestamp along the time
-        uint256 principal; // Checkpoint principal
-        uint256 time; // Checkpoint time
-        uint256 quarterBelonging; // Checkpoint quarter
-        uint256 timeListPointer; // Pointer to the array of times in order to enable the possibility of iteration
-        uint256 power; // Protocol power checkpoint
+        // Protocol allocation checkpoints per timestamp along the time
+        uint256 principal; // Protocol principal allocation 
+        uint256 time; // Time of the checkpoint
+        uint256 quarterBelonging; // # Quarter checkpoint belonging since START_TIME
+        uint256 timeListPointer; // Pointer to the array of timestamps to enable the possibility of struct iteration
+        uint256 power; // Protocol power checkpoint (power is proportional to = principal * duration)
     }
 
     struct ProtocolPerQuarter {
-        // Allocation points per timestamp along the time
-        uint256 quarterPrincipal; //
+        // Protocol allocation checkpoints per timestamp per each quarter along the time
+        uint256 quarterPrincipal; // Checkpoint to keep track on accumulated protocol principal per quarter
         uint256 quarterNumber; // # Quarter since START_TIME
-        uint256 quarterPower; // Protocol power checkpoint
+        uint256 quarterPower; //  Accumulated Protocol power for each quarter
         uint96 supplyPerQuarter; // Supply per quarter
     }
 
     struct GardenPowerByTimestamp {
-        uint256 principal;
-        uint256 timestamp;
-        //uint256 timePointer;
-        uint256 power;
+        // Garden allocation checkpoints per timestamp per each garden
+        uint256 principal; // Checkpoint to keep track on garden allocation
+        uint256 timestamp; // Checkpoint timestamps
+        uint256 power; // Garden power checkpoint (power is proportional to = principal * duration)
     }
     struct ContributorPerGarden {
-        uint256 lastDepositAt;
-        uint256 initialDepositAt;
-        uint256[] timeListPointer;
-        uint256 pid;
-        mapping(uint256 => TimestampContribution) tsContributions;
+        // Checkpoints to keep track on the evolution of each contributor vs. each garden
+        uint256 lastDepositAt; // Last deposit timestamp of each contributor in each garden
+        uint256 initialDepositAt; // Checkpoint of the initial deposit
+        uint256[] timeListPointer; // Array of timestamps for each user in each garden
+        uint256 pid; // Garden contributor checkpoints counter to enable iteration
+        mapping(uint256 => TimestampContribution) tsContributions; // Sub-mapping all the contributor checkpoints
     }
 
     struct TimestampContribution {
-        uint256 principal;
-        uint256 timestamp;
-        uint256 timePointer;
-        uint256 power;
+        // Sub-mapping with all checkpoints for deposits and withdrawals of garden users
+        uint256 principal; // Principal of user in each garden
+        uint256 timestamp; // Checkpoint time
+        uint256 timePointer; // Pointer
+        uint256 power; // Contributor power per checkpoint
     }
     struct Checkpoints {
-        uint256 fromDepositAt;
-        uint256 lastDepositAt;
-        uint256 gardenFromDepositAt;
-        uint256 gardenLastDepositAt;
+        // Checkpoints for contributor power calculations where a certain window (from -> to) is queried
+        uint256 fromDepositAt; // First contributor checkpoint within the provided window
+        uint256 lastDepositAt; // Last contributor checkpoint within the provided window
+        uint256 gardenFromDepositAt; // First contributor checkpoint within the provided window
+        uint256 gardenLastDepositAt; // Last garden checkpoint within the provided window
     }
 
     /* ============ State Variables ============ */
@@ -184,22 +190,21 @@ contract RewardsDistributor is Ownable, IRewardsDistributor {
     // BABL Token contract
     TimeLockedToken public babltoken;
 
-    // Total allocation points. Must be the sum of all allocation points (strategyPrincipal) in all strategy pools.
+    // Protocol total allocation points. Must be the sum of all allocation points (strategyPrincipal) in all strategy pools.
     uint256 public override protocolPrincipal;
-    // Total allocation points. Must be the sum of all allocation points (strategyPrincipal) in all strategy pools.
-    mapping(uint256 => ProtocolPerTimestamp) public protocolPerTimestamp;
-    uint256[] public timeList;
+    mapping(uint256 => ProtocolPerTimestamp) public protocolPerTimestamp; // Mapping of all protocol checkpoints
+    uint256[] public timeList; // Array of all protocol checkpoints
     uint256 public override pid; // Initialization of the ID assigning timeListPointer to the checkpoint number
 
-    mapping(uint256 => ProtocolPerQuarter) public protocolPerQuarter; //
+    mapping(uint256 => ProtocolPerQuarter) public protocolPerQuarter; // Mapping of the accumulated protocol per each active quarter 
     mapping(uint256 => bool) public isProtocolPerQuarter; // Check if the protocol per quarter data has been initialized
 
-    // Only used if each strategy has power overhead due to changes overtime
-    mapping(address => mapping(uint256 => uint256)) public rewardsPowerOverhead;
-
-    mapping(address => mapping(address => ContributorPerGarden)) public contributorPerGarden;
+    // Strategy overhead control. Only used if each strategy has power overhead due to changes overtime
+    mapping(address => mapping(uint256 => uint256)) public rewardsPowerOverhead; // Overhead control to enable high level accuracy calculations for strategy rewards
+    // Contributor power control
+    mapping(address => mapping(address => ContributorPerGarden)) public contributorPerGarden; // Enable high level accuracy calculations
     mapping(address => mapping(address => Checkpoints)) private checkpoints;
-
+    // Garden power control
     mapping(address => mapping(uint256 => GardenPowerByTimestamp)) public gardenPowerByTimestamp;
     mapping(address => uint256[]) public gardenTimelist;
     mapping(address => uint256) public gardenPid;
@@ -331,7 +336,7 @@ contract RewardsDistributor is Ownable, IRewardsDistributor {
     }
 
     /**
-     * Sends BABL tokens to a contributor.
+     * Sends BABL tokens rewards to a contributor after a claim is requested to the protocol.
      * @param _to                Address to send the tokens to
      * @param _amount            Amount of tokens to send the address to
      */
@@ -352,9 +357,9 @@ contract RewardsDistributor is Ownable, IRewardsDistributor {
 
     /**
      * Calculates the profits and BABL that a contributor should receive from a series of finalized strategies
-     * @param _garden                   Garden to check the address
+     * @param _garden                   Garden to which the strategies and the user must belong to
      * @param _contributor              Address of the contributor to check
-     * @param _finalizedStrategies      List of addresses of the finalized strategies
+     * @param _finalizedStrategies      List of addresses of the finalized strategies to check
      */
     function getRewards(
         address _garden,
@@ -377,6 +382,7 @@ contract RewardsDistributor is Ownable, IRewardsDistributor {
 
     /**
      * Gets the contributor power from one timestamp to the other
+     * @param _garden      Address of the garden where the contributor belongs to
      * @param _contributor Address if the contributor
      * @param _from        Initial timestamp
      * @param _to          End timestamp
