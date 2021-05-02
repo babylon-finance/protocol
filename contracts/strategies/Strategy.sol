@@ -155,6 +155,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
     uint256 internal constant MAX_CANDIDATE_PERIOD = 7 days;
     uint256 internal constant MIN_VOTERS_TO_BECOME_ACTIVE = 2;
     uint256 internal constant ABSOLUTE_MIN_REBALANCE = 1e18;
+    address private constant WETH = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
 
     // Max Operations
     uint256 internal constant MAX_OPERATIONS = 6;
@@ -567,10 +568,10 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
      */
     function handleWeth(bool _isDeposit, uint256 _wethAmount) external override onlyOperation {
         if (_isDeposit) {
-            IWETH(garden.WETH()).deposit{value: _wethAmount}();
+            IWETH(WETH).deposit{value: _wethAmount}();
             return;
         }
-        IWETH(garden.WETH()).withdraw(_wethAmount);
+        IWETH(WETH).withdraw(_wethAmount);
     }
 
     /* ============ External Getter Functions ============ */

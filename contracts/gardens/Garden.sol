@@ -22,8 +22,6 @@ import {Address} from '@openzeppelin/contracts/utils/Address.sol';
 import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import {SafeERC20} from '@openzeppelin/contracts/token/ERC20/SafeERC20.sol';
 import {ERC20Upgradeable} from '@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol';
-import {IERC20Upgradeable} from '@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol';
-import {SafeERC20Upgradeable} from '@openzeppelin/contracts-upgradeable/token/ERC20/SafeERC20Upgradeable.sol';
 import {ReentrancyGuard} from '@openzeppelin/contracts/utils/ReentrancyGuard.sol';
 import {SafeMath} from '@openzeppelin/contracts/math/SafeMath.sol';
 import {SafeDecimalMath} from '../lib/SafeDecimalMath.sol';
@@ -66,7 +64,6 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
     using Address for address;
     using AddressArrayUtils for address[];
 
-    using SafeERC20Upgradeable for IERC20Upgradeable;
     using SafeERC20 for IERC20;
 
     /* ============ Events ============ */
@@ -90,44 +87,10 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
     event RewardsForContributor(address indexed _contributor, uint256 indexed _amount);
     event BABLRewardsForContributor(address indexed _contributor, uint96 _rewards);
 
-    /* ============ Modifiers ============ */
-    modifier onlyContributor {
-        _require(balanceOf(msg.sender) > 0, Errors.ONLY_CONTRIBUTOR);
-        _;
-    }
-
-    /**
-     * Throws if the sender is not a keeper in the protocol
-     * @param _fee                     The fee paid to keeper to compensate the gas cost
-     */
-    modifier onlyKeeper(uint256 _fee) {
-        _require(IBabController(controller).isValidKeeper(msg.sender), Errors.ONLY_KEEPER);
-        // We assume that calling keeper functions should be less expensive
-        // than 1 million gas and the gas price should be lower than 1000 gwei.
-        _require(_fee < MAX_KEEPER_FEE, Errors.FEE_TOO_HIGH);
-        _;
-    }
-
-    /**
-     * Throws if the sender is not an strategy of this garden
-     */
-    modifier onlyStrategy() {
-        _require(strategyMapping[msg.sender], Errors.ONLY_STRATEGY);
-        _;
-    }
-
-    /**
-     * Throws if the garden is not active
-     */
-    modifier onlyActive() {
-        _require(active, Errors.ONLY_ACTIVE);
-        _;
-    }
-
     /* ============ State Constants ============ */
 
     // Wrapped ETH address
-    address public constant override WETH = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
+    address private constant WETH = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
     uint256 public constant EARLY_WITHDRAWAL_PENALTY = 15e16;
     uint256 public constant MAX_DEPOSITS_FUND_V1 = 1e21; // Max deposit per garden is 1000 eth for v1
     uint256 public constant MAX_TOTAL_STRATEGIES = 20; // Max number of strategies
@@ -197,8 +160,8 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
     // Window for the strategy to cooldown after approval before receiving capital
     uint256 public override strategyCooldownPeriod;
 
-    address[] public override strategies; // Strategies that are either in candidate or active state
-    address[] public finalizedStrategies; // Strategies that have finalized execution
+    address[] private strategies; // Strategies that are either in candidate or active state
+    address[] private finalizedStrategies; // Strategies that have finalized execution
     mapping(address => bool) public strategyMapping;
 
     // Keeper debt in WETH if any, repaid upon every strategy finalization
@@ -331,7 +294,8 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         uint256 _reserveAssetQuantity,
         uint256 _minGardenTokenReceiveQuantity,
         address _to
-    ) public payable override nonReentrant onlyActive {
+    ) public payable override nonReentrant {
+        _onlyActive();
         _require(
             guestListEnabled &&
                 IIshtarGate(IBabController(controller).ishtarGate()).canJoinAGarden(address(this), msg.sender),
@@ -377,7 +341,8 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         uint256 _gardenTokenQuantity,
         uint256 _minReserveReceiveQuantity,
         address payable _to
-    ) external override nonReentrant onlyContributor {
+    ) external override nonReentrant {
+        _onlyContributor();
         _withdraw(_gardenTokenQuantity, _minReserveReceiveQuantity, _to);
     }
 
@@ -390,8 +355,8 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
     function withdrawWithPenalty(uint256 _gardenTokenQuantity, address payable _to)
         external
         nonReentrant
-        onlyContributor
     {
+        _onlyContributor();
         // Check that cannot do a normal withdrawal
         _require(!_canWithdrawEthAmount(msg.sender, _gardenTokenQuantity), Errors.NORMAL_WITHDRAWAL_POSSIBLE);
         uint256 netReserveFlows = _gardenTokenQuantity.sub(_gardenTokenQuantity.preciseMul(EARLY_WITHDRAWAL_PENALTY));
@@ -412,7 +377,8 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
      * User can claim the rewards from the strategies that his principal
      * was invested in.
      */
-    function claimReturns(address[] calldata _finalizedStrategies) external override nonReentrant onlyContributor {
+    function claimReturns(address[] calldata _finalizedStrategies) external override nonReentrant {
+        _onlyContributor();
         Contributor storage contributor = contributors[msg.sender];
         _require(block.timestamp > contributor.claimedAt, Errors.ALREADY_CLAIMED); // race condition check
 
@@ -496,7 +462,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
     }
 
     /**
-     * Pays gas cost back to the keeper from executing a transaction
+     * Pays gas costs back to the keeper from executing transactions including the past debt
      * @param _keeper             Keeper that executed the transaction
      * @param _fee                The fee paid to keeper to compensate the gas cost
      */
@@ -547,7 +513,9 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         uint8[] calldata _opTypes,
         address[] calldata _opIntegrations,
         address[] calldata _opDatas
-    ) external override onlyContributor onlyActive {
+    ) external override {
+        _onlyActive();
+        _onlyContributor();
         _require(
             IIshtarGate(IBabController(controller).ishtarGate()).canAddStrategiesInAGarden(address(this), msg.sender),
             Errors.USER_CANNOT_ADD_STRATEGIES
@@ -574,7 +542,13 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
      * We enter into the strategy and add it to the executed strategies array.
      * @param _fee                     The fee paid to keeper to compensate the gas cost for each strategy executed
      */
-    function rebalanceStrategies(uint256 _fee) external override onlyKeeper(_fee) onlyActive {
+    function rebalanceStrategies(uint256 _fee) external override {
+        _onlyActive();
+        _require(IBabController(controller).isValidKeeper(msg.sender), Errors.ONLY_KEEPER);
+        // We assume that calling keeper functions should be less expensive
+        // than 1 million gas and the gas price should be lower than 1000 gwei.
+        _require(_fee < MAX_KEEPER_FEE, Errors.FEE_TOO_HIGH);
+
         uint256 liquidReserveAsset = ERC20Upgradeable(reserveAsset).balanceOf(address(this));
         for (uint256 i = 0; i < strategies.length; i++) {
             IStrategy strategy = IStrategy(strategies[i]);
@@ -595,7 +569,9 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
      *
      * @param _capital        Amount of capital to allocate to the strategy
      */
-    function allocateCapitalToStrategy(uint256 _capital) external override onlyStrategy onlyActive {
+    function allocateCapitalToStrategy(uint256 _capital) external override {
+        _onlyStrategy();
+        _onlyActive();
         uint256 liquidReserveAsset = IERC20(reserveAsset).balanceOf(address(this));
         uint256 protocolMgmtFee = IBabController(controller).protocolManagementFee().preciseMul(_capital);
         _require(_capital.add(protocolMgmtFee) <= liquidReserveAsset, Errors.MIN_LIQUIDITY);
@@ -609,18 +585,20 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
 
     // Any tokens (other than the target) that are sent here by mistake are recoverable by the protocol
     // Exchange for WETH
-    function sweep(address _token) external onlyContributor {
+    function sweep(address _token) external {
+        _onlyContributor();
         _require(_token != reserveAsset, Errors.MUST_BE_RESERVE_ASSET);
-        uint256 balance = IERC20Upgradeable(_token).balanceOf(address(this));
+        uint256 balance = IERC20(_token).balanceOf(address(this));
         _require(balance > 0, Errors.BALANCE_TOO_LOW);
-        IERC20Upgradeable(_token).safeTransfer(IBabController(controller).treasury(), balance);
+        IERC20(_token).safeTransfer(IBabController(controller).treasury(), balance);
     }
 
     /*
      * Remove an expire candidate from the strategy Array
      * @param _strategy      Strategy to remove
      */
-    function expireCandidateStrategy(address _strategy) external override onlyStrategy {
+    function expireCandidateStrategy(address _strategy) external override {
+        _onlyStrategy();
         strategies = strategies.remove(_strategy);
         strategyMapping[_strategy] = false;
     }
@@ -629,7 +607,8 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
      * Burns the stake of the strategist of a given strategy
      * @param _strategy      Strategy
      */
-    function burnStrategistStake(address _strategist, uint256 _amount) external override onlyStrategy {
+    function burnStrategistStake(address _strategist, uint256 _amount) external override {
+        _onlyStrategy();
         if (_amount >= balanceOf(_strategist)) {
             // Avoid underflow condition
             _amount = balanceOf(_strategist);
@@ -756,7 +735,31 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
     // solhint-disable-next-line
     receive() external payable {}
 
+    /* ============ Modifiers ============ */
+
+    // Replaced by internal functions due to contract size limit of 24KB
+
     /* ============ Internal Functions ============ */
+
+    function _onlyContributor() internal {
+        _require(balanceOf(msg.sender) > 0, Errors.ONLY_CONTRIBUTOR);
+    }
+
+    /**
+     * Throws if the sender is not an strategy of this garden
+     */
+    function _onlyStrategy() internal {
+        _require(strategyMapping[msg.sender], Errors.ONLY_STRATEGY);
+    }
+
+    /**
+     * Throws if the garden is not active
+     */
+    function _onlyActive() internal {
+        _require(active, Errors.ONLY_ACTIVE);
+    }
+
+
 
     /**
      * Function that mints the appropriate garden tokens along with the Garden NFT
@@ -793,7 +796,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
     function _canWithdrawEthAmount(address _contributor, uint256 _amount) private view returns (bool) {
         // ETH rewards cannot be withdrawn. Only claimed
         _require(address(this).balance >= reserveAssetPrincipalWindow, Errors.NOT_ENOUGH_ETH);
-        uint256 liquidWeth = IERC20Upgradeable(reserveAsset).balanceOf(address(this));
+        uint256 liquidWeth = IERC20(reserveAsset).balanceOf(address(this));
 
         // Weth already available
         if (liquidWeth >= _amount) {
@@ -868,7 +871,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
      */
     function payProtocolFeeFromGarden(address _token, uint256 _feeQuantity) private {
         if (_feeQuantity > 0) {
-            IERC20Upgradeable(_token).safeTransfer(IBabController(controller).treasury(), _feeQuantity);
+            IERC20(_token).safeTransfer(IBabController(controller).treasury(), _feeQuantity);
         }
     }
 

@@ -262,7 +262,7 @@ describe('Strategy', function () {
       await expect(strategyContract.unwindStrategy(ethers.utils.parseEther('1'))).to.be.reverted;
     });
 
-    it('should be able to unwind an active strategy with enough capital', async function () {
+    it.only('should be able to unwind an active strategy with enough capital', async function () {
       const strategyContract = await createStrategy(
         'buy',
         'vote',
@@ -274,7 +274,7 @@ describe('Strategy', function () {
 
       await executeStrategy(strategyContract, { amount: ONE_ETH.mul(2) });
 
-      expect(await wethToken.balanceOf(garden1.address)).to.be.lt(ethers.utils.parseEther('1'));
+      expect(await wethToken.balanceOf(garden1.address)).to.be.closeTo(ONE_ETH.mul(3), ONE_ETH.div(100));
       expect(await strategyContract.capitalAllocated()).to.equal(ethers.utils.parseEther('2'));
 
       await strategyContract.connect(owner).unwindStrategy(ethers.utils.parseEther('1'));
@@ -295,8 +295,6 @@ describe('Strategy', function () {
 
       await executeStrategy(strategyContract, { amount: ONE_ETH.mul(2) });
 
-      expect(await wethToken.balanceOf(garden1.address)).to.be.lt(ethers.utils.parseEther('1'));
-      expect(await strategyContract.capitalAllocated()).to.equal(ethers.utils.parseEther('2'));
       await expect(strategyContract.connect(signer3).unwindStrategy(ethers.utils.parseEther('1'))).to.be.reverted;
     });
 
