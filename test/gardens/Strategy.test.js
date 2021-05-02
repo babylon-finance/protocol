@@ -276,16 +276,13 @@ describe('Strategy', function () {
       );
       expect(await wethToken.balanceOf(garden1.address)).to.be.gt(ethers.utils.parseEther('2'));
 
-      console.log('execute');
       await executeStrategy(strategyContract, { amount: ONE_ETH.mul(2) });
 
       expect(await wethToken.balanceOf(garden1.address)).to.be.closeTo(ONE_ETH.mul(3), ONE_ETH.div(100));
       expect(await strategyContract.capitalAllocated()).to.equal(ethers.utils.parseEther('2'));
 
-      console.log('execute');
       await strategyContract.connect(owner).unwindStrategy(ONE_ETH);
 
-      console.log('execute');
       expect(await strategyContract.capitalAllocated()).to.equal(ethers.utils.parseEther('1'));
       expect(await wethToken.balanceOf(garden1.address)).to.be.gt(ethers.utils.parseEther('1'));
     });
