@@ -1,9 +1,10 @@
-module.exports = async ({ getNamedAccounts, upgradesDeployer }) => {
+module.exports = async ({ getNamedAccounts, upgradesDeployer, getRapid }) => {
   const { deployer } = await getNamedAccounts();
+  const gasPrice = await getRapid();
 
   await upgradesDeployer.deployOrUpgrade(
     'BabController',
-    { from: deployer, log: true },
+    { from: deployer, log: true, gasPrice },
     {
       initializer: { method: 'initialize', args: [] },
     },

@@ -16,6 +16,7 @@
     "@openzeppelin/hardhat-upgrades": "^1.6.0",
     "@typechain/ethers-v5": "^6.0.5",
     "@typechain/hardhat": "^1.0.1",
+    "axios": "^0.21.1",
     "chai-as-promised": "^7.1.1",
     "dotenv": "^8.2.0",
     "eslint": "^7.24.0",

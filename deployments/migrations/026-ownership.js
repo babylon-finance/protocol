@@ -1,8 +1,9 @@
 let MULTISIG = process.env.MULTISIG || '';
 
-module.exports = async ({ getNamedAccounts, deployments, ethers, getSigner, getChainId, getContract }) => {
+module.exports = async ({ getNamedAccounts, deployments, ethers, getSigner, getChainId, getContract, getRapid }) => {
   const signers = await ethers.getSigners();
   const chainId = await getChainId();
+  const gasPrice = await getRapid();
 
   const { deployer } = await getNamedAccounts();
   const deployerSigner = await getSigner(deployer);
@@ -16,35 +17,35 @@ module.exports = async ({ getNamedAccounts, deployments, ethers, getSigner, getC
 
   console.log('Transfer ownership of BabController');
   const babController = await getContract('BabController', 'BabControllerProxy');
-  await babController.connect(deployerSigner).transferOwnership(MULTISIG);
+  await babController.connect(deployerSigner).transferOwnership(MULTISIG, { gasPrice });
 
   console.log('Transfer ownership of BABLToken');
   const bablToken = await getContract('BABLToken');
-  await bablToken.connect(deployerSigner).transferOwnership(MULTISIG);
+  await bablToken.connect(deployerSigner).transferOwnership(MULTISIG, { gasPrice });
 
   console.log('Transfer ownership of RewardsDistributor');
   const rewardsDistributor = await getContract('RewardsDistributor');
-  await rewardsDistributor.connect(deployerSigner).transferOwnership(MULTISIG);
+  await rewardsDistributor.connect(deployerSigner).transferOwnership(MULTISIG, { gasPrice });
 
   console.log('Transfer ownership of TimeLockRegistry');
   const timeLockRegistry = await getContract('TimeLockRegistry');
-  await timeLockRegistry.connect(deployerSigner).transferOwnership(MULTISIG);
+  await timeLockRegistry.connect(deployerSigner).transferOwnership(MULTISIG, { gasPrice });
 
   console.log('Transfer ownership of Treasury');
   const treasury = await getContract('Treasury');
-  await treasury.connect(deployerSigner).transferOwnership(MULTISIG);
+  await treasury.connect(deployerSigner).transferOwnership(MULTISIG, { gasPrice });
 
   console.log('Transfer ownership of PriceOracle');
   const priceOracle = await getContract('PriceOracle');
-  await priceOracle.connect(deployerSigner).transferOwnership(MULTISIG);
+  await priceOracle.connect(deployerSigner).transferOwnership(MULTISIG, { gasPrice });
 
   console.log('Transfer ownership of IshtarGate');
   const ishtarGate = await getContract('IshtarGate');
-  await ishtarGate.connect(deployerSigner).transferOwnership(MULTISIG);
+  await ishtarGate.connect(deployerSigner).transferOwnership(MULTISIG, { gasPrice });
 
   console.log('Transfer ownership of UniswapTWAP');
   const uniswapTWAP = await getContract('UniswapTWAP');
-  await uniswapTWAP.connect(deployerSigner).transferOwnership(MULTISIG);
+  await uniswapTWAP.connect(deployerSigner).transferOwnership(MULTISIG, { gasPrice });
 };
 
 module.exports.tags = ['Ownership'];

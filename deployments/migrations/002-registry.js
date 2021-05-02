@@ -1,6 +1,7 @@
-module.exports = async ({ getNamedAccounts, deployments, ethers }) => {
+module.exports = async ({ getNamedAccounts, deployments, ethers, getRapid }) => {
   const { deploy } = deployments;
   const { deployer } = await getNamedAccounts();
+  const gasPrice = await getRapid();
 
   const bablToken = await deployments.get('BABLToken');
 
@@ -8,6 +9,7 @@ module.exports = async ({ getNamedAccounts, deployments, ethers }) => {
     from: deployer,
     args: [bablToken.address],
     log: true,
+    gasPrice,
   });
 
   const bablTokenContract = await ethers.getContractAt('BABLToken', bablToken.address);

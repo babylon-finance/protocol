@@ -1,8 +1,9 @@
 const { ADDRESS_ZERO } = require('../../lib/constants');
 
-module.exports = async ({ getNamedAccounts, deployments }) => {
-  const { deploy } = deployments;
+module.exports = async ({ getNamedAccounts, deployments, getRapid }) => {
   const { deployer } = await getNamedAccounts();
+  const gasPrice = await getRapid();
+  const { deploy } = deployments;
 
   const controller = await deployments.get('BabControllerProxy');
 
@@ -10,6 +11,7 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
     from: deployer,
     args: [ADDRESS_ZERO, controller.address],
     log: true,
+    gasPrice,
   });
 };
 

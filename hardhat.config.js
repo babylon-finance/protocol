@@ -10,6 +10,7 @@ require('solidity-coverage');
 require('@typechain/hardhat');
 
 require('./lib/plugins/upgrades');
+require('./lib/plugins/gasnow');
 
 require('./lib/tasks/node-ready');
 
