@@ -37,10 +37,17 @@ interface IOperation {
     function executeOperation(
         address _asset,
         uint256 _capital,
+        uint8 _assetStatus,
         address _data,
         IGarden _garden,
         address _integration
-    ) external returns (address, uint256);
+    )
+        external
+        returns (
+            address,
+            uint256,
+            uint8
+        );
 
     function exitOperation(
         uint256 _percentage,

@@ -80,10 +80,19 @@ abstract contract Operation is IOperation {
     function executeOperation(
         address _asset,
         uint256 _capital,
+        uint8 _assetStatus,
         address _data,
         IGarden _garden,
         address _integration
-    ) external virtual override returns (address, uint256);
+    )
+        external
+        virtual
+        override
+        returns (
+            address,
+            uint256,
+            uint8
+        );
 
     function exitOperation(
         uint256 _percentage,

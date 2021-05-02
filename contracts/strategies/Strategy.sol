@@ -179,6 +179,12 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
     // 2 = VaultOperation
     // 3 = LendOperation
 
+    // Asset Status
+    // 0 = Liquid
+    // 1 = Put as collateral
+    // 2 = Borrowed
+    // 3 = staked
+
     // Types and data for the operations of this strategy
     uint8[] public override opTypes;
     address[] public override opIntegrations;
@@ -697,11 +703,13 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
     function _enterStrategy(uint256 _capital) internal {
         uint256 capitalForNexOperation = _capital;
         address assetAccumulated = garden.reserveAsset();
+        uint8 assetStatus = 0; // liquid
         for (uint256 i = 0; i < opTypes.length; i++) {
             IOperation operation = IOperation(IBabController(controller).enabledOperations(opTypes[i]));
-            (assetAccumulated, capitalForNexOperation) = operation.executeOperation(
+            (assetAccumulated, capitalForNexOperation, assetStatus) = operation.executeOperation(
                 assetAccumulated,
                 capitalForNexOperation,
+                assetStatus,
                 opDatas[i],
                 garden,
                 opIntegrations[i]

@@ -182,7 +182,7 @@ abstract contract PoolIntegration is BaseIntegration, ReentrancyGuard, IPoolInte
         uint256 _poolTokensInTransaction,
         address[] calldata, /* _poolTokens */
         uint256[] calldata _limitPoolTokenQuantities
-    ) internal returns (PoolInfo memory) {
+    ) internal view returns (PoolInfo memory) {
         PoolInfo memory poolInfo;
         poolInfo.strategy = IStrategy(_strategy);
         poolInfo.garden = IGarden(poolInfo.strategy.garden());

@@ -67,27 +67,36 @@ contract AddLiquidityOperation is Operation {
     function executeOperation(
         address _asset,
         uint256 _capital,
-        address _data,
+        uint8, /* _assetStatus */
+        address _pool,
         IGarden _garden,
         address _integration
-    ) external override onlyStrategy returns (address, uint256) {
-        address pool = _data;
-        address[] memory poolTokens = IPoolIntegration(_integration).getPoolTokens(pool);
+    )
+        external
+        override
+        onlyStrategy
+        returns (
+            address,
+            uint256,
+            uint8
+        )
+    {
+        address[] memory poolTokens = IPoolIntegration(_integration).getPoolTokens(_pool);
         uint256[] memory _maxAmountsIn = new uint256[](poolTokens.length);
-        uint256[] memory _poolWeights = IPoolIntegration(_integration).getPoolWeights(pool);
+        uint256[] memory _poolWeights = IPoolIntegration(_integration).getPoolWeights(_pool);
         // Get the tokens needed to enter the pool
         for (uint256 i = 0; i < poolTokens.length; i++) {
             _maxAmountsIn[i] = _getMaxAmountTokenPool(_asset, _capital, _garden, _poolWeights[i], poolTokens[i]);
         }
-        uint256 poolTokensOut = IPoolIntegration(_integration).getPoolTokensOut(pool, poolTokens[0], _maxAmountsIn[0]);
+        uint256 poolTokensOut = IPoolIntegration(_integration).getPoolTokensOut(_pool, poolTokens[0], _maxAmountsIn[0]);
         IPoolIntegration(_integration).joinPool(
             msg.sender,
-            pool,
+            _pool,
             poolTokensOut.sub(poolTokensOut.preciseMul(SLIPPAGE_ALLOWED)),
             poolTokens,
             _maxAmountsIn
         );
-        return (pool, IERC20(pool).balanceOf(msg.sender));
+        return (_pool, IERC20(_pool).balanceOf(msg.sender), 0); // liquid
     }
 
     /**

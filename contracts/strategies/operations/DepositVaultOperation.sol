@@ -68,10 +68,20 @@ contract DepositVaultOperation is Operation {
     function executeOperation(
         address _asset,
         uint256 _capital,
+        uint8, /* _assetStatus */
         address _data,
         IGarden, /* _garden */
         address _integration
-    ) external override onlyStrategy returns (address, uint256) {
+    )
+        external
+        override
+        onlyStrategy
+        returns (
+            address,
+            uint256,
+            uint8
+        )
+    {
         address yieldVault = _data;
         address vaultAsset = IPassiveIntegration(_integration).getInvestmentAsset(yieldVault);
         if (vaultAsset != _asset) {
@@ -86,7 +96,7 @@ contract DepositVaultOperation is Operation {
             vaultAsset,
             IERC20(vaultAsset).balanceOf(msg.sender)
         );
-        return (yieldVault, IERC20(yieldVault).balanceOf(msg.sender));
+        return (yieldVault, IERC20(yieldVault).balanceOf(msg.sender), 0); // liquid
     }
 
     /**

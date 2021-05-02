@@ -148,7 +148,7 @@ abstract contract TradeIntegration is BaseIntegration, ReentrancyGuard, ITradeIn
         address _receiveToken,
         uint256 _sendQuantity,
         uint256 _minReceiveQuantity
-    ) internal returns (TradeInfo memory) {
+    ) internal view returns (TradeInfo memory) {
         TradeInfo memory tradeInfo;
 
         tradeInfo.strategy = IStrategy(_strategy);

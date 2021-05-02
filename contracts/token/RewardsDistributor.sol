@@ -411,7 +411,7 @@ contract RewardsDistributor is Ownable, IRewardsDistributor {
         _setContributorTimestampParams(_garden, _contributor, _previousBalance, _depositOrWithdraw);
     }
 
-    function tokenSupplyPerQuarter(uint256 quarter) external view override returns (uint96) {
+    function tokenSupplyPerQuarter(uint256 quarter) external pure override returns (uint96) {
         return _tokenSupplyPerQuarter(quarter);
     }
 
@@ -1152,7 +1152,7 @@ contract RewardsDistributor is Ownable, IRewardsDistributor {
         contributor.pid++;
     }
 
-    function _tokenSupplyPerQuarter(uint256 quarter) internal view returns (uint96) {
+    function _tokenSupplyPerQuarter(uint256 quarter) internal pure returns (uint96) {
         _require(quarter >= 1, Errors.QUARTERS_MIN_1);
         //require(quarter < 513, 'overflow'); // TODO CHECK FUTURE MAX PROJECTION
         uint256 firstFactor = (SafeDecimalMath.unit().add(DECAY_RATE)).powDecimal(quarter.sub(1));

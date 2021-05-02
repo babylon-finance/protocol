@@ -68,10 +68,20 @@ contract LendOperation is Operation {
     function executeOperation(
         address _asset,
         uint256 _capital,
+        uint8, /* _assetStatus */
         address _data,
         IGarden, /* _garden */
         address _integration
-    ) external override onlyStrategy returns (address, uint256) {
+    )
+        external
+        override
+        onlyStrategy
+        returns (
+            address,
+            uint256,
+            uint8
+        )
+    {
         address assetToken = _data;
         if (assetToken != _asset) {
             IStrategy(msg.sender).trade(_asset, _capital, assetToken);
@@ -80,7 +90,7 @@ contract LendOperation is Operation {
         uint256 exactAmount = ILendIntegration(_integration).getExpectedShares(assetToken, numTokensToSupply);
         uint256 minAmountExpected = exactAmount.sub(exactAmount.preciseMul(SLIPPAGE_ALLOWED));
         ILendIntegration(_integration).supplyTokens(msg.sender, assetToken, numTokensToSupply, minAmountExpected);
-        return (assetToken, numTokensToSupply);
+        return (assetToken, numTokensToSupply, 1); // put as collateral
     }
 
     /**

@@ -66,12 +66,22 @@ contract BuyOperation is Operation {
     function executeOperation(
         address _asset,
         uint256 _capital,
+        uint8, /* _assetStatus */
         address _data,
         IGarden, /* _garden */
         address /* _integration */
-    ) external override onlyStrategy returns (address, uint256) {
+    )
+        external
+        override
+        onlyStrategy
+        returns (
+            address,
+            uint256,
+            uint8
+        )
+    {
         IStrategy(msg.sender).trade(_asset, _capital, _data);
-        return (_data, IERC20(_data).balanceOf(address(msg.sender)));
+        return (_data, IERC20(_data).balanceOf(address(msg.sender)), 0); // liquid
     }
 
     /**
