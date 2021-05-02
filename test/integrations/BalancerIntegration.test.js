@@ -1,7 +1,12 @@
 const { expect } = require('chai');
 const { ethers } = require('hardhat');
 const { setupTests } = require('../fixtures/GardenFixture');
-const { createStrategy, executeStrategy, finalizeStrategy } = require('../fixtures/StrategyHelper');
+const {
+  DEFAULT_STRATEGY_PARAMS,
+  createStrategy,
+  executeStrategy,
+  finalizeStrategy,
+} = require('../fixtures/StrategyHelper');
 const addresses = require('../../lib/addresses');
 const { ADDRESS_ZERO, ONE_ETH } = require('../../lib/constants');
 
@@ -48,8 +53,9 @@ describe('BalancerIntegrationTest', function () {
         [signer1, signer2, signer3],
         balancerIntegration.address,
         garden1,
+        DEFAULT_STRATEGY_PARAMS,
+        addresses.balancer.pools.wethdai,
       );
-
       await executeStrategy(strategyContract);
       expect(await strategyContract.capitalAllocated()).to.equal(ONE_ETH);
       expect(await daiWethPool.balanceOf(strategyContract.address)).to.be.gt(0);

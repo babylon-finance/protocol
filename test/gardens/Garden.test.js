@@ -366,7 +366,6 @@ describe('Garden', function () {
   describe('Garden Balances', async function () {
     it('Garden WETH balance cannot be above deposit just after creation', async function () {
       const gardenBalance = await weth.balanceOf(garden1.address);
-      const gardenSupply = await weth.totalSupply;
       expect(gardenBalance).to.be.equal(ethers.utils.parseEther('1'));
     });
   });
@@ -769,28 +768,16 @@ describe('Garden', function () {
       ).to.be.closeTo((333333202595448891).toString(), ethers.utils.parseEther('0.0000005'));
     });
     it('the contributor power is 0 if still not deposited in the garden', async function () {
-      const power = await rewardsDistributor.getContributorPower(garden1.address, signer3.address, 0, NOW);
       await expect(
         (await rewardsDistributor.getContributorPower(garden1.address, signer3.address, 0, NOW)).toString(),
       ).to.be.equal('0');
     });
-    it('the contributor power is 0 if the time period is before its deposit', async function () {
+    it('the contributor power is reverted if the time is before the garden initializes', async function () {
       await garden1.connect(signer3).deposit(ethers.utils.parseEther('1'), 1, signer3.getAddress(), {
         value: ethers.utils.parseEther('1'),
       });
-      const power = await rewardsDistributor.getContributorPower(garden1.address, signer3.address, 0, 1617365660);
-      await expect(
-        (await rewardsDistributor.getContributorPower(garden1.address, signer3.address, 0, 1617365660)).toString(),
-      ).to.be.equal('0');
-    });
-    it('the contributor power is 0 if the time period is before its deposit', async function () {
-      await garden1.connect(signer3).deposit(ethers.utils.parseEther('1'), 1, signer3.getAddress(), {
-        value: ethers.utils.parseEther('1'),
-      });
-      const power = await rewardsDistributor.getContributorPower(garden1.address, signer3.address, 0, 1617365660);
-      await expect(
-        (await rewardsDistributor.getContributorPower(garden1.address, signer3.address, 0, 1617365660)).toString(),
-      ).to.be.equal('0');
+      await expect(rewardsDistributor.getContributorPower(garden1.address, signer3.address, 0, 1617365660)).to.be
+        .reverted;
     });
   });
 

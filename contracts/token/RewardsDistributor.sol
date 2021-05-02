@@ -46,7 +46,7 @@ import {IRewardsDistributor} from '../interfaces/IRewardsDistributor.sol';
  * The supply curve is designed to optimize the long-term sustainability of the protocol.
  * The rewards are front-loaded but they last for more than 10 years, slowly decreasing quarter by quarter.
  * For that, it houses the state of the protocol power along the time as each strategy power is compared to the whole protocol usage.
- * Rewards Distributor also is responsible for the calculation and delivery of other rewards as bonuses to specific profiles 
+ * Rewards Distributor also is responsible for the calculation and delivery of other rewards as bonuses to specific profiles
  * which are actively contributing to the protocol growth and their communities (Garden creators, Strategists and Stewards).
  */
 contract RewardsDistributor is Ownable, IRewardsDistributor {
@@ -134,10 +134,10 @@ contract RewardsDistributor is Ownable, IRewardsDistributor {
     uint256 public immutable CREATOR_BONUS;
 
     /* ============ Structs ============ */
-    
+
     struct ProtocolPerTimestamp {
         // Protocol allocation checkpoints per timestamp along the time
-        uint256 principal; // Protocol principal allocation 
+        uint256 principal; // Protocol principal allocation
         uint256 time; // Time of the checkpoint
         uint256 quarterBelonging; // # Quarter checkpoint belonging since START_TIME
         uint256 timeListPointer; // Pointer to the array of timestamps to enable the possibility of struct iteration
@@ -196,7 +196,7 @@ contract RewardsDistributor is Ownable, IRewardsDistributor {
     uint256[] public timeList; // Array of all protocol checkpoints
     uint256 public override pid; // Initialization of the ID assigning timeListPointer to the checkpoint number
 
-    mapping(uint256 => ProtocolPerQuarter) public protocolPerQuarter; // Mapping of the accumulated protocol per each active quarter 
+    mapping(uint256 => ProtocolPerQuarter) public protocolPerQuarter; // Mapping of the accumulated protocol per each active quarter
     mapping(uint256 => bool) public isProtocolPerQuarter; // Check if the protocol per quarter data has been initialized
 
     // Strategy overhead control. Only used if each strategy has power overhead due to changes overtime
@@ -902,7 +902,6 @@ contract RewardsDistributor is Ownable, IRewardsDistributor {
         uint256 _from,
         uint256 _to
     ) private view returns (uint256) {
-        //IGarden garden = IGarden(_garden);
         _require(_to >= IGarden(_garden).gardenInitializedAt() && _to >= _from, Errors.GET_CONTRIBUTOR_POWER);
         ContributorPerGarden storage contributor = contributorPerGarden[address(_garden)][address(_contributor)];
         Checkpoints memory powerCheckpoints = checkpoints[address(_garden)][address(_contributor)];

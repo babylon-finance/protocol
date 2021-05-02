@@ -178,7 +178,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         uint256 claimedRewards;
         uint256 withdrawnSince;
     }
-    
+
     /* ============ State Variables ============ */
 
     // Reserve Asset of the garden
@@ -215,8 +215,6 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
     uint256 public maxDepositLimit; // Limits the amount of deposits
 
     uint256 public override gardenInitializedAt; // Garden Initialized at timestamp
-    //mapping(uint256 => GardenPowerByTimestamp) public gardenPowerByTimestamp;
-    //uint256[] public gardenTimelist;
     uint256 public pid;
 
     // Min contribution in the garden

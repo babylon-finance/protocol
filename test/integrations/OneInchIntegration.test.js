@@ -49,7 +49,7 @@ describe('OneInchTradeIntegration', function () {
         oneInchTradeIntegration.address,
         garden1,
         DEFAULT_STRATEGY_PARAMS,
-        addresses.oneinch.pools.wethdai,
+        addresses.tokens.DAI,
       );
       // Got the initial deposit 1 ETH + 4ETH from voters minus the 2 ETH from the fee
       expect(await wethToken.balanceOf(garden1.address)).to.equal(ethers.utils.parseEther('2.99'));
