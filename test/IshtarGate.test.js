@@ -68,6 +68,22 @@ describe('IshtarGate', function () {
     });
   });
 
+  describe('garden access', async function () {
+    it('number of invites initialized', async function () {
+      const invites = await ishtarGate.connect(owner).maxNumberOfInvites();
+      expect(invites).to.equal(10);
+    });
+
+    it('can change the number of invites', async function () {
+      await ishtarGate.connect(owner).setMaxNumberOfInvites(25);
+      const invites = await ishtarGate.connect(owner).maxNumberOfInvites();
+      expect(invites).to.equal(25);
+    });
+    it('only owner can change the number of invites', async function () {
+      await expect(ishtarGate.connect(signer1).setMaxNumberOfInvites(25)).to.be.reverted;
+    });
+  });
+
   describe('join a garden', async function () {
     it('succeeds with the gate NFT awarded', async function () {
       await expect(
