@@ -94,22 +94,6 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
     }
 
     /**
-     * Throws if the sender is not the protocol
-     */
-    modifier onlyProtocol() {
-        _require(msg.sender == controller, Errors.ONLY_CONTROLLER);
-        _;
-    }
-
-    /**
-     * Throws if the sender is not the garden creator
-     */
-    modifier onlyCreator() {
-        _require(msg.sender == creator, Errors.ONLY_CREATOR);
-        _;
-    }
-
-    /**
      * Throws if the sender is not a keeper in the protocol
      * @param _fee                     The fee paid to keeper to compensate the gas cost
      */
@@ -130,30 +114,10 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
     }
 
     /**
-     * Throws if the sender is not an strategy or the protocol
-     */
-    modifier onlyStrategyOrProtocol() {
-        _require(
-            (strategyMapping[msg.sender] && address(IStrategy(msg.sender).garden()) == address(this)) ||
-                msg.sender == controller,
-            Errors.ONLY_STRATEGY_OR_CONTROLLER
-        );
-        _;
-    }
-
-    /**
      * Throws if the garden is not active
      */
     modifier onlyActive() {
         _require(active, Errors.ONLY_ACTIVE);
-        _;
-    }
-
-    /**
-     * Throws if the garden is not disabled
-     */
-    modifier onlyInactive() {
-        _require(!active, Errors.ONLY_INACTIVE);
         _;
     }
 
@@ -266,9 +230,6 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         controller = _controller;
         reserveAsset = _reserveAsset;
         creator = _creator;
-        principal = 0;
-        active = false;
-        totalContributors = 0;
         maxContributors = 100;
         nftAddress = _nftAddress;
         guestListEnabled = true;
@@ -483,7 +444,12 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         uint256 _rewards,
         int256 _returns,
         address _strategy
-    ) external override onlyStrategyOrProtocol {
+    ) external override {
+        _require(
+            (strategyMapping[msg.sender] && address(IStrategy(msg.sender).garden()) == address(this)) ||
+                msg.sender == controller,
+            Errors.ONLY_STRATEGY_OR_CONTROLLER
+        );
         // Updates reserve asset
         uint256 _newTotal = principal.toInt256().add(_returns).toUint256();
         _updatePrincipal(_newTotal);
@@ -527,7 +493,8 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
     /**
      * Makes a previously private garden public
      */
-    function makeGardenPublic() external override onlyCreator {
+    function makeGardenPublic() external override {
+        _require(msg.sender == creator, Errors.ONLY_CREATOR);
         _require(guestListEnabled && IBabController(controller).allowPublicGardens(), Errors.GARDEN_ALREADY_PUBLIC);
         guestListEnabled = false;
     }
@@ -535,7 +502,8 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
     /**
      * PRIVILEGED Manager, protocol FUNCTION. When a Garden is active, deposits are enabled.
      */
-    function setActive(bool _newValue) external override onlyProtocol {
+    function setActive(bool _newValue) external override {
+        _require(msg.sender == controller, Errors.ONLY_CONTROLLER);
         _require(active != _newValue, Errors.ONLY_INACTIVE);
         active = _newValue;
     }
@@ -710,9 +678,8 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         override
         returns (uint256)
     {
-        uint256 preFeeReserveQuantity = _getWithdrawalReserveQuantity(reserveAsset, _gardenTokenQuantity);
-
-        (, uint256 netReserveFlows) = _getFees(preFeeReserveQuantity, false);
+        (, uint256 netReserveFlows) =
+            _getFees(_getWithdrawalReserveQuantity(reserveAsset, _gardenTokenQuantity), false);
 
         return netReserveFlows;
     }
@@ -742,14 +709,13 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         uint256 _reserveAssetQuantity,
         bool isDeposit // Value of reserve asset net of fees
     ) public view override returns (uint256) {
-        uint256 totalSupply = totalSupply();
         // Get valuation of the Garden with the quote asset as the reserve asset.
         // Reverts if price is not found
         uint8 reserveAssetDecimals = ERC20Upgradeable(reserveAsset).decimals();
         uint256 baseUnits = uint256(10)**reserveAssetDecimals;
         uint256 normalizedReserveQuantity = _reserveAssetQuantity.preciseDiv(baseUnits);
         // First deposit
-        if (totalSupply == 0) {
+        if (totalSupply() == 0) {
             return normalizedReserveQuantity;
         }
         uint256 gardenValuationPerToken =
@@ -760,10 +726,9 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
 
         gardenValuationPerToken = gardenValuationPerToken.preciseDiv(baseUnits);
         if (isDeposit) {
-            gardenValuationPerToken = gardenValuationPerToken.sub(normalizedReserveQuantity.preciseDiv(totalSupply));
+            gardenValuationPerToken = gardenValuationPerToken.sub(normalizedReserveQuantity.preciseDiv(totalSupply()));
         }
-        uint256 quantityToMint = normalizedReserveQuantity.preciseDiv(gardenValuationPerToken);
-        return quantityToMint;
+        return normalizedReserveQuantity.preciseDiv(gardenValuationPerToken);
     }
 
     // solhint-disable-next-line
