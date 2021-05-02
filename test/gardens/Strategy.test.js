@@ -168,6 +168,7 @@ describe('Strategy', function () {
 
       // Keeper gets paid
       expect(await wethToken.balanceOf(await keeper.getAddress())).to.equal(42);
+      expect(await garden2.keeperDebt()).to.equal(42);
     });
 
     it("can't vote if voting window is closed", async function () {
@@ -249,6 +250,7 @@ describe('Strategy', function () {
 
       // Keeper gets paid
       expect(await wethToken.balanceOf(await keeper.getAddress())).to.equal(42);
+      expect(await garden1.keeperDebt()).to.equal(42);
     });
 
     it('should not be able to unwind an active strategy with not enough capital', async function () {
@@ -262,7 +264,7 @@ describe('Strategy', function () {
       await expect(strategyContract.unwindStrategy(ethers.utils.parseEther('1'))).to.be.reverted;
     });
 
-    it.only('should be able to unwind an active strategy with enough capital', async function () {
+    it('should be able to unwind an active strategy with enough capital', async function () {
       const strategyContract = await createStrategy(
         'buy',
         'vote',
@@ -272,13 +274,16 @@ describe('Strategy', function () {
       );
       expect(await wethToken.balanceOf(garden1.address)).to.be.gt(ethers.utils.parseEther('2'));
 
+      console.log('execute');
       await executeStrategy(strategyContract, { amount: ONE_ETH.mul(2) });
 
       expect(await wethToken.balanceOf(garden1.address)).to.be.closeTo(ONE_ETH.mul(3), ONE_ETH.div(100));
       expect(await strategyContract.capitalAllocated()).to.equal(ethers.utils.parseEther('2'));
 
-      await strategyContract.connect(owner).unwindStrategy(ethers.utils.parseEther('1'));
+      console.log('execute');
+      await strategyContract.connect(owner).unwindStrategy(ONE_ETH);
 
+      console.log('execute');
       expect(await strategyContract.capitalAllocated()).to.equal(ethers.utils.parseEther('1'));
       expect(await wethToken.balanceOf(garden1.address)).to.be.gt(ethers.utils.parseEther('1'));
     });
@@ -351,7 +356,7 @@ describe('Strategy', function () {
       );
       const nav = await strategyContract.getNAV();
       expect(await strategyContract.capitalAllocated()).to.equal(ONE_ETH);
-      expect(nav).to.be.closeTo(ONE_ETH.mul(3), ONE_ETH.div(500));
+      expect(nav).to.be.closeTo(ONE_ETH.mul(1), ONE_ETH.div(500));
     });
 
     it('should get the NAV value of a Yearn Farming strategy', async function () {
@@ -364,7 +369,7 @@ describe('Strategy', function () {
       );
       const nav = await strategyContract.getNAV();
       expect(await strategyContract.capitalAllocated()).to.equal(ONE_ETH);
-      expect(nav).to.be.closeTo(ONE_ETH.mul(3), ONE_ETH.div(500));
+      expect(nav).to.be.closeTo(ONE_ETH.mul(1), ONE_ETH.div(500));
     });
 
     it('should get the NAV value of a lend strategy', async function () {
@@ -377,7 +382,7 @@ describe('Strategy', function () {
       );
       const nav = await strategyContract.getNAV();
       expect(await strategyContract.capitalAllocated()).to.equal(ONE_ETH);
-      expect(nav).to.be.closeTo(ONE_ETH.mul(3), ONE_ETH.div(500));
+      expect(nav).to.be.closeTo(ONE_ETH.mul(1), ONE_ETH.div(500));
     });
 
     it('should get the NAV value of a BalancerPool strategy', async function () {
@@ -394,7 +399,7 @@ describe('Strategy', function () {
       const nav = await strategyContract.getNAV();
       expect(await strategyContract.capitalAllocated()).to.equal(ONE_ETH);
       // So much slipage at Balancer 😭
-      expect(nav).to.be.closeTo(ONE_ETH.mul(3), ONE_ETH.div(50));
+      expect(nav).to.be.closeTo(ONE_ETH.mul(1), ONE_ETH.div(50));
     });
 
     it('should get the NAV value of a OneInchPool strategy', async function () {
@@ -411,7 +416,7 @@ describe('Strategy', function () {
 
       const nav = await strategyContract.getNAV();
       expect(await strategyContract.capitalAllocated()).to.equal(ONE_ETH);
-      expect(nav).to.be.closeTo(ONE_ETH.mul(3), ONE_ETH.div(100));
+      expect(nav).to.be.closeTo(ONE_ETH.mul(1), ONE_ETH.div(100));
     });
 
     it('should get the NAV value of a UniswapPool strategy', async function () {
@@ -426,7 +431,7 @@ describe('Strategy', function () {
       );
       const nav = await strategyContract.getNAV();
       expect(await strategyContract.capitalAllocated()).to.equal(ONE_ETH);
-      expect(nav).to.be.closeTo(ONE_ETH.mul(3), ONE_ETH.div(400));
+      expect(nav).to.be.closeTo(ONE_ETH.mul(1), ONE_ETH.div(400));
     });
   });
 

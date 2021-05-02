@@ -472,7 +472,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         // Pay Keeper in WETH
         // TOOD: Update principal
         if(keeperDebt > 0 && IERC20(reserveAsset).balanceOf(address(this)) >= keeperDebt) {
-          IERC20(reserveAsset).safeTransfer(_keeper, _fee);
+           IERC20(reserveAsset).safeTransfer(_keeper, _fee);
         }
     }
 
