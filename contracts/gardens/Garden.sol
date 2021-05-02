@@ -178,14 +178,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         uint256 claimedRewards;
         uint256 withdrawnSince;
     }
-
-    //struct GardenPowerByTimestamp {
-    //    uint256 principal;
-    //    uint256 timestamp;
-    //    uint256 timePointer;
-    //    uint256 power;
-    //}
-
+    
     /* ============ State Variables ============ */
 
     // Reserve Asset of the garden
