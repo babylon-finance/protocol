@@ -80,7 +80,7 @@ typings/
 #mnemonic
 *.txt
 cache
-artifacts
+/artifacts
 
 
 .DS_Store
@@ -95,5 +95,5 @@ export
 .openzeppelin
 deployments/hardhat
 deployments/localhost
-deployments/rinkeby
+deployments/artifacts/rinkeby
 contracts.json

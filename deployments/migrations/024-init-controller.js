@@ -61,7 +61,7 @@ module.exports = async ({ getNamedAccounts, deployments, ethers, getSigner, getC
   const oneinch = await deployments.get('OneInchTradeIntegration');
   // Set default trade integration
   console.log('Setting default trade integration', oneinch.address);
-  await controllerContract.connect(owner).setDefaultTradeIntegration(oneinch.address);
+  await controllerContract.connect(owner).setDefaultTradeIntegration(oneinch.address, { gasLimit: 1000000 });
 
   // Adding operations
   const ops = ['BuyOperation', 'AddLiquidityOperation', 'DepositVaultOperation', 'LendOperation'];
