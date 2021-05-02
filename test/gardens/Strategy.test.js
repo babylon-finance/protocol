@@ -450,7 +450,12 @@ describe('Strategy', function () {
       expect(await garden1.keeperDebt()).to.equal(ONE_ETH);
       expect(await wethToken.balanceOf(garden1.address)).to.be.closeTo(ONE_ETH.mul(1), ONE_ETH.div(50));
 
-      await finalizeStrategy(strategyContract, { fee: ONE_ETH });
+      // add extra WETH to repay keeper
+      await garden1.connect(signer1).deposit(ONE_ETH.mul(2), 1, signer1.address, {
+        value: ONE_ETH.mul(2),
+      });
+
+      await finalizeStrategy(strategyContract);
       const [address, active, dataSet, finalized, executedAt, exitedAt] = await strategyContract.getStrategyState();
 
       expect(address).to.equal(strategyContract.address);
@@ -461,7 +466,7 @@ describe('Strategy', function () {
       expect(exitedAt).to.not.equal(0);
 
       // Keeper gets paid
-      expect(await keeper.getBalance()).to.equal(ONE_ETH.mul(10002));
+      expect(await wethToken.balanceOf(keeper.address)).to.be.closeTo(ONE_ETH, ONE_ETH);
       expect(await garden1.keeperDebt()).to.equal(0);
 
       const capitalAllocated = await strategyContract.capitalAllocated();
