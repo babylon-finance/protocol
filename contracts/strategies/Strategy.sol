@@ -557,6 +557,19 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         return _trade(_sendToken, _sendQuantity, _receiveToken);
     }
 
+    /**
+     * Deposits or withdraws weth from an operation in this context
+     * @param _isDeposit                    Wether is a deposit or withdraw
+     * @param _wethAmount                   Amount to deposit or withdraw
+     */
+    function handleWeth(bool _isDeposit, uint256 _wethAmount) external override onlyOperation {
+      if (_isDeposit) {
+          IWETH(garden.WETH()).deposit{value: _wethAmount}();
+          return;
+      }
+      IWETH(garden.WETH()).withdraw(_wethAmount);
+    }
+
     /* ============ External Getter Functions ============ */
 
     /**

@@ -88,6 +88,8 @@ interface IStrategy {
         address _receiveToken
     ) external returns (uint256);
 
+    function handleWeth(bool _isDeposit, uint256 _wethAmount) external;
+
     function getStrategyDetails()
         external
         view

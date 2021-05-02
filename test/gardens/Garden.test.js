@@ -91,7 +91,7 @@ describe('Garden', function () {
 
   describe('Garden state', async function () {
     it('only the protocol should be able to update active state', async function () {
-      await expect(garden1.connect(signer1).setActive()).to.be.revertedWith('revert BAB#016');
+      await expect(garden1.connect(signer1).setActive(true)).to.be.revertedWith('revert BAB#016');
     });
 
     it('the initial deposit must be correct', async function () {
@@ -133,10 +133,7 @@ describe('Garden', function () {
       const supplyAfter = await garden1.totalSupply();
       // Communities
       // Manager deposit in fixture is only 1
-      expect(supplyAfter.sub(supplyBefore)).to.be.closeTo(
-        ethers.utils.parseEther('0.3'),
-        ethers.utils.parseEther('0.1'),
-      );
+      expect(supplyAfter.sub(supplyBefore)).to.be.closeTo(ethers.utils.parseEther('1'), ethers.utils.parseEther('0.1'));
       expect(gardenBalanceAfter.sub(gardenBalance)).to.equal(ethers.utils.parseEther('1'));
       expect(await garden1.totalContributors()).to.equal(2);
       expect(await garden1.principal()).to.equal(ethers.utils.parseEther('2'));
@@ -840,7 +837,7 @@ describe('Garden', function () {
       await garden1.connect(signer3).deposit(ethers.utils.parseEther('1'), 1, signer3.getAddress(), {
         value: ethers.utils.parseEther('1'),
       });
-      const params = DEFAULT_STRATEGY_PARAMS;
+      const params = [...DEFAULT_STRATEGY_PARAMS];
       params[1] = ethers.utils.parseEther('0');
 
       await expect(

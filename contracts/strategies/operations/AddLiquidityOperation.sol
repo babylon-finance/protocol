@@ -24,7 +24,6 @@ import {Operation} from './Operation.sol';
 import {IGarden} from '../../interfaces/IGarden.sol';
 import {IStrategy} from '../../interfaces/IStrategy.sol';
 import {PreciseUnitMath} from '../../lib/PreciseUnitMath.sol';
-import {IWETH} from '../../interfaces/external/weth/IWETH.sol';
 import {IPoolIntegration} from '../../interfaces/IPoolIntegration.sol';
 
 /**
@@ -127,7 +126,7 @@ contract AddLiquidityOperation is Operation {
         for (uint256 i = 0; i < poolTokens.length; i++) {
             if (poolTokens[i] != reserveAsset) {
                 if (poolTokens[i] == address(0)) {
-                    IWETH(_garden.WETH()).deposit{value: address(msg.sender).balance}();
+                    IStrategy(_strategy).handleWeth(true, address(msg.sender).balance);
                 } else {
                     IStrategy(_strategy).trade(
                         poolTokens[i],
@@ -188,7 +187,7 @@ contract AddLiquidityOperation is Operation {
                 IStrategy(_strategy).trade(_asset, normalizedAmount, _garden.WETH());
             }
             // Convert WETH to ETH
-            IWETH(_garden.WETH()).withdraw(normalizedAmount);
+            IStrategy(_strategy).handleWeth(false, normalizedAmount);
         }
         return normalizedAmount;
     }
