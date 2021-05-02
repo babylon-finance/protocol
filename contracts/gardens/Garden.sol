@@ -472,6 +472,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         // TOOD: Reserve asset may be not WETH
         if (keeperDebt > 0 && IERC20(reserveAsset).balanceOf(address(this)) >= keeperDebt) {
             IERC20(reserveAsset).safeTransfer(_keeper, keeperDebt);
+            _updatePrincipal(principal.sub(keeperDebt));
             keeperDebt = 0;
         }
     }
