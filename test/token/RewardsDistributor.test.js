@@ -121,11 +121,13 @@ describe('BABL Rewards Distributor', function () {
   });
 
   describe('Strategy BABL Mining Rewards Calculation', async function () {
-    it('should provide 0 supply in quarter 463 and beyond to avoid multiplication overflow of quarter 513 (128 years)', async function () {
+    it('should protect from overflow returning 0 supply in totalSupplyPerQuarter >= 513 (128 years)', async function () {
+      await expect((await rewardsDistributor.tokenSupplyPerQuarter(455)).toString()).to.be.equal('2');
       await expect((await rewardsDistributor.tokenSupplyPerQuarter(462)).toString()).to.be.equal('1');
       await expect((await rewardsDistributor.tokenSupplyPerQuarter(463)).toString()).to.be.equal('0');
       await expect((await rewardsDistributor.tokenSupplyPerQuarter(512)).toString()).to.be.equal('0');
       await expect((await rewardsDistributor.tokenSupplyPerQuarter(513)).toString()).to.be.equal('0');
+      await expect((await rewardsDistributor.tokenSupplyPerQuarter(700)).toString()).to.be.equal('0');
     });
     it('should get 0 BABL rewards if the Mining Program has not started yet', async function () {
       const [long] = await createStrategies([{ garden: garden1 }]);

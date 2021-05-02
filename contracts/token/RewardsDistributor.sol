@@ -1153,10 +1153,10 @@ contract RewardsDistributor is Ownable, IRewardsDistributor {
     }
 
     function _tokenSupplyPerQuarter(uint256 quarter) internal pure returns (uint96) {
+        _require(quarter >= 1, Errors.QUARTERS_MIN_1);
         if (quarter >= 513) {
-            return 0; // multiplication overflow protection
+            return 0;
         } else {
-            _require(quarter >= 1, Errors.QUARTERS_MIN_1);
             uint256 firstFactor = (SafeDecimalMath.unit().add(DECAY_RATE)).powDecimal(quarter.sub(1));
             uint256 supplyForQuarter = Q1_REWARDS.divideDecimal(firstFactor);
             return Safe3296.safe96(supplyForQuarter, 'overflow 96 bits');
