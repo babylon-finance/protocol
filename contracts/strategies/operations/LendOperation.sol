@@ -55,8 +55,8 @@ contract LendOperation is Operation {
     function validateOperation(
         address _data,
         IGarden _garden,
-        IStrategy _strategy,
-        address _integration
+        address, /* _integration */
+        uint256 /* _index */
     ) external view override onlyStrategy {
         require(_data != _garden.reserveAsset(), 'Receive token must be different');
     }
@@ -69,23 +69,17 @@ contract LendOperation is Operation {
         address _asset,
         uint256 _capital,
         address _data,
-        IGarden _garden,
-        IStrategy _strategy,
+        IGarden, /* _garden */
         address _integration
     ) external override onlyStrategy returns (address, uint256) {
         address assetToken = _data;
         if (assetToken != _asset) {
-            IStrategy(_strategy).trade(_asset, _capital, assetToken);
+            IStrategy(msg.sender).trade(_asset, _capital, assetToken);
         }
         uint256 numTokensToSupply = IERC20(assetToken).balanceOf(msg.sender);
         uint256 exactAmount = ILendIntegration(_integration).getExpectedShares(assetToken, numTokensToSupply);
         uint256 minAmountExpected = exactAmount.sub(exactAmount.preciseMul(SLIPPAGE_ALLOWED));
-        ILendIntegration(_integration).supplyTokens(
-            address(_strategy),
-            assetToken,
-            numTokensToSupply,
-            minAmountExpected
-        );
+        ILendIntegration(_integration).supplyTokens(msg.sender, assetToken, numTokensToSupply, minAmountExpected);
         return (assetToken, numTokensToSupply);
     }
 
@@ -97,7 +91,6 @@ contract LendOperation is Operation {
         uint256 _percentage,
         address _data,
         IGarden _garden,
-        IStrategy _strategy,
         address _integration
     ) external override onlyStrategy {
         require(_percentage <= HUNDRED_PERCENT, 'Unwind Percentage <= 100%');
@@ -107,7 +100,7 @@ contract LendOperation is Operation {
                 _percentage
             );
         ILendIntegration(_integration).redeemTokens(
-            address(_strategy),
+            msg.sender,
             assetToken,
             numTokensToRedeem,
             ILendIntegration(_integration).getExchangeRatePerToken(assetToken).mul(
@@ -115,7 +108,7 @@ contract LendOperation is Operation {
             )
         );
         if (assetToken != _garden.reserveAsset()) {
-            IStrategy(_strategy).trade(assetToken, IERC20(assetToken).balanceOf(msg.sender), _garden.reserveAsset());
+            IStrategy(msg.sender).trade(assetToken, IERC20(assetToken).balanceOf(msg.sender), _garden.reserveAsset());
         }
     }
 
@@ -127,14 +120,13 @@ contract LendOperation is Operation {
     function getNAV(
         address _assetToken,
         IGarden _garden,
-        IStrategy _strategy,
         address _integration
     ) external view override onlyStrategy returns (uint256) {
-        if (!_strategy.isStrategyActive()) {
+        if (!IStrategy(msg.sender).isStrategyActive()) {
             return 0;
         }
         uint256 numTokensToRedeem =
-            IERC20(ILendIntegration(_integration).getInvestmentToken(_assetToken)).balanceOf(address(_strategy));
+            IERC20(ILendIntegration(_integration).getInvestmentToken(_assetToken)).balanceOf(msg.sender);
         uint256 assetTokensAmount =
             ILendIntegration(_integration).getExchangeRatePerToken(_assetToken).mul(numTokensToRedeem);
         uint256 price = _getPrice(_garden.reserveAsset(), _assetToken);

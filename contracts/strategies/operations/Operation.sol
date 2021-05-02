@@ -73,8 +73,8 @@ abstract contract Operation is IOperation {
     function validateOperation(
         address _data,
         IGarden _garden,
-        IStrategy _strategy,
-        address _integration
+        address _integration,
+        uint256 _index
     ) external view virtual override;
 
     function executeOperation(
@@ -82,7 +82,6 @@ abstract contract Operation is IOperation {
         uint256 _capital,
         address _data,
         IGarden _garden,
-        IStrategy _strategy,
         address _integration
     ) external virtual override returns (address, uint256);
 
@@ -90,14 +89,12 @@ abstract contract Operation is IOperation {
         uint256 _percentage,
         address _data,
         IGarden _garden,
-        IStrategy _strategy,
         address _integration
     ) external virtual override;
 
     function getNAV(
         address _data,
         IGarden _garden,
-        IStrategy _strategy,
         address _integration
     ) external view virtual override returns (uint256);
 

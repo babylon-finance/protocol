@@ -303,8 +303,8 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
             IOperation(controller.enabledOperations(_opTypes[i])).validateOperation(
                 _opDatas[i],
                 garden,
-                IStrategy(address(this)),
-                _opIntegrations[i]
+                _opIntegrations[i],
+                i
             );
             _require(
                 controller.isValidIntegration(IIntegration(_opIntegrations[i]).getName(), _opIntegrations[i]),
@@ -658,7 +658,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         uint256 nav = 0;
         for (uint256 i = 0; i < opTypes.length; i++) {
             IOperation operation = IOperation(IBabController(controller).enabledOperations(uint256(opTypes[i])));
-            nav = nav.add(operation.getNAV(opDatas[i], garden, IStrategy(address(this)), opIntegrations[i]));
+            nav = nav.add(operation.getNAV(opDatas[i], garden, opIntegrations[i]));
         }
         if (active) return nav.add(MAX_STRATEGY_KEEPER_FEES);
         else return nav;
@@ -704,7 +704,6 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
                 capitalForNexOperation,
                 opDatas[i],
                 garden,
-                IStrategy(address(this)),
                 opIntegrations[i]
             );
         }
@@ -718,13 +717,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
     function _exitStrategy(uint256 _percentage) internal {
         for (uint256 i = opTypes.length; i > 0; i--) {
             IOperation operation = IOperation(IBabController(controller).enabledOperations(opTypes[i - 1]));
-            operation.exitOperation(
-                _percentage,
-                opDatas[i - 1],
-                garden,
-                IStrategy(address(this)),
-                opIntegrations[i - 1]
-            );
+            operation.exitOperation(_percentage, opDatas[i - 1], garden, opIntegrations[i - 1]);
         }
     }
 

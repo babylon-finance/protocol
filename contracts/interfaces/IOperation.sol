@@ -30,8 +30,8 @@ interface IOperation {
     function validateOperation(
         address _data,
         IGarden _garden,
-        IStrategy _strategy,
-        address _integration
+        address _integration,
+        uint256 _index
     ) external view;
 
     function executeOperation(
@@ -39,7 +39,6 @@ interface IOperation {
         uint256 _capital,
         address _data,
         IGarden _garden,
-        IStrategy _strategy,
         address _integration
     ) external returns (address, uint256);
 
@@ -47,14 +46,12 @@ interface IOperation {
         uint256 _percentage,
         address _data,
         IGarden _garden,
-        IStrategy _strategy,
         address _integration
     ) external;
 
     function getNAV(
         address _data,
         IGarden _garden,
-        IStrategy _strategy,
         address _integration
     ) external view returns (uint256);
 

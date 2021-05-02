@@ -53,8 +53,8 @@ contract BuyOperation is Operation {
     function validateOperation(
         address _data,
         IGarden _garden,
-        IStrategy _strategy,
-        address _integration
+        address, /* _integration */
+        uint256 /* _index */
     ) external view override onlyStrategy {
         require(_data != _garden.reserveAsset(), 'Receive token must be different');
     }
@@ -67,11 +67,10 @@ contract BuyOperation is Operation {
         address _asset,
         uint256 _capital,
         address _data,
-        IGarden _garden,
-        IStrategy _strategy,
-        address _integration
+        IGarden, /* _garden */
+        address /* _integration */
     ) external override onlyStrategy returns (address, uint256) {
-        IStrategy(_strategy).trade(_asset, _capital, _data);
+        IStrategy(msg.sender).trade(_asset, _capital, _data);
         return (_data, IERC20(_data).balanceOf(address(msg.sender)));
     }
 
@@ -83,11 +82,10 @@ contract BuyOperation is Operation {
         uint256 _percentage,
         address _data,
         IGarden _garden,
-        IStrategy _strategy,
-        address _integration
+        address /* _integration */
     ) external override onlyStrategy {
         require(_percentage <= 100e18, 'Unwind Percentage <= 100%');
-        IStrategy(_strategy).trade(
+        IStrategy(msg.sender).trade(
             _data,
             IERC20(_data).balanceOf(address(msg.sender)).preciseMul(_percentage),
             _garden.reserveAsset()
@@ -102,10 +100,9 @@ contract BuyOperation is Operation {
     function getNAV(
         address _data,
         IGarden _garden,
-        IStrategy _strategy,
-        address _integration
+        address /* _integration */
     ) external view override onlyStrategy returns (uint256) {
-        if (!_strategy.isStrategyActive()) {
+        if (!IStrategy(msg.sender).isStrategyActive()) {
             return 0;
         }
         uint256 price = _getPrice(_garden.reserveAsset(), _data);
