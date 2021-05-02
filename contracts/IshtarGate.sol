@@ -41,6 +41,7 @@ contract IshtarGate is ERC721, IIshtarGate, Ownable {
     event IshtarGateAwarded(address indexed _member, uint256 indexed _newItemId);
     event GardenAccess(address indexed _member, address indexed _garden, uint8 _permission, uint256 _tokenId);
     event GardenCreationPower(address indexed _member, bool _creation, uint256 _tokenId);
+    event GateURIUpdated(string indexed _newURI, string indexed _oldURI);
 
     /* ============ State Variables ============ */
 
@@ -48,7 +49,9 @@ contract IshtarGate is ERC721, IIshtarGate, Ownable {
     IBabController public controller;
 
     // Address of the Ishtar Gate JSON (Shared JSON)
-    string public tokenURI;
+    string public override tokenURI;
+
+    uint256 public override maxNumberOfInvites;
 
     // Permissions by community user
     mapping(address => mapping(address => uint8)) public permissionsByCommunity;
@@ -69,10 +72,7 @@ contract IshtarGate is ERC721, IIshtarGate, Ownable {
         IGarden garden = IGarden(_garden);
         require(garden.controller() == address(controller), 'Controller must match');
         require(msg.sender == garden.creator(), 'Only creator can give access to garden');
-        require(
-            gardenAccessCount[_garden] < garden.maxContributors(),
-            'The number of contributors must be below the limit'
-        );
+        require(gardenAccessCount[_garden] < maxNumberOfInvites, 'The number of contributors must be below the limit');
         _;
     }
 
@@ -88,9 +88,31 @@ contract IshtarGate is ERC721, IIshtarGate, Ownable {
         require(address(_controller) != address(0), 'Controller must exist');
         controller = _controller;
         tokenURI = _tokenURI;
+        maxNumberOfInvites = 10;
     }
 
     /* ============ External Functions ============ */
+
+    /**
+     * Changs the number of invites we are going to give per garden
+     *
+     * @param _maxNumberOfInvites               New max number of invites per garden
+     */
+    function setMaxNumberOfInvites(uint256 _maxNumberOfInvites) external override onlyOwner {
+        require(_maxNumberOfInvites > maxNumberOfInvites, 'Invites must be higher');
+        maxNumberOfInvites = _maxNumberOfInvites;
+    }
+
+    /**
+     * Updates the token URI of the gate NFT
+     *
+     * @param _tokenURI               Address of the tokenURI
+     */
+    function updateGardenURI(string memory _tokenURI) external override onlyOwner {
+        string memory oldURI = tokenURI;
+        tokenURI = _tokenURI;
+        emit GateURIUpdated(tokenURI, oldURI);
+    }
 
     /**
      * Awards the ishtar gate to a user and gives him access to a specific garden
@@ -156,6 +178,8 @@ contract IshtarGate is ERC721, IIshtarGate, Ownable {
         }
         return true;
     }
+
+    /* ============ Getter Functions ============ */
 
     /**
      * Check if a user can create gardens
