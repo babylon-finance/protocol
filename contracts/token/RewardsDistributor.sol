@@ -386,20 +386,20 @@ contract RewardsDistributor is Ownable, IRewardsDistributor {
 
     /**
      * Calculates the profits and BABL that a contributor should receive from a series of finalized strategies
-     * @param garden                   Garden to which the strategies and the user must belong to
-     * @param contributor              Address of the contributor to check
-     * @param finalizedStrategies      List of addresses of the finalized strategies to check
+     * @param _garden                   Garden to which the strategies and the user must belong to
+     * @param _contributor              Address of the contributor to check
+     * @param _finalizedStrategies      List of addresses of the finalized strategies to check
      */
     function getRewards(
-        address garden,
-        address contributor,
-        address[] calldata finalizedStrategies
+        address _garden,
+        address _contributor,
+        address[] calldata _finalizedStrategies
     ) external view override returns (uint256, uint96) {
         uint256 contributorTotalProfits = 0;
         uint256 bablTotalRewards = 0;
-        for (uint256 i = 0; i < finalizedStrategies.length; i++) {
+        for (uint256 i = 0; i < _finalizedStrategies.length; i++) {
             (uint256 strategyProfits, uint256 strategyBABL) =
-                _getStrategyProfitsAndBABL(garden, finalizedStrategies[i], contributor);
+                _getStrategyProfitsAndBABL(_garden, _finalizedStrategies[i], _contributor);
             contributorTotalProfits = contributorTotalProfits.add(strategyProfits);
             bablTotalRewards = bablTotalRewards.add(strategyBABL);
         }
@@ -409,27 +409,27 @@ contract RewardsDistributor is Ownable, IRewardsDistributor {
 
     /**
      * Gets the contributor power from one timestamp to the other
-     * @param garden      Address of the garden where the contributor belongs to
-     * @param contributor Address if the contributor
-     * @param from        Initial timestamp
-     * @param to          End timestamp
+     * @param _garden      Address of the garden where the contributor belongs to
+     * @param _contributor Address if the contributor
+     * @param _from        Initial timestamp
+     * @param _to          End timestamp
      * @return uint256     Contributor power during that period
      */
     function getContributorPower(
-        address garden,
-        address contributor,
-        uint256 from,
-        uint256 to
+        address _garden,
+        address _contributor,
+        uint256 _from,
+        uint256 _to
     ) external view override returns (uint256) {
-        return _getContributorPower(garden, contributor, from, to);
+        return _getContributorPower(_garden, _contributor, _from, _to);
     }
 
     /**
      * Calculates the BABL rewards supply for each quarter
-     * @param quarter      Number of the epoch (quarter)
+     * @param _quarter      Number of the epoch (quarter)
      */
-    function tokenSupplyPerQuarter(uint256 quarter) external pure override returns (uint96) {
-        return _tokenSupplyPerQuarter(quarter);
+    function tokenSupplyPerQuarter(uint256 _quarter) external pure override returns (uint96) {
+        return _tokenSupplyPerQuarter(_quarter);
     }
 
     /**
@@ -459,9 +459,9 @@ contract RewardsDistributor is Ownable, IRewardsDistributor {
 
     /**
      * Check the quarter state for a specific quarter
-     * @param num     Number of quarter
+     * @param _num     Number of quarter
      */
-    function checkQuarter(uint256 num)
+    function checkQuarter(uint256 _num)
         external
         view
         override
@@ -473,10 +473,10 @@ contract RewardsDistributor is Ownable, IRewardsDistributor {
         )
     {
         return (
-            protocolPerQuarter[num].quarterPrincipal,
-            protocolPerQuarter[num].quarterNumber,
-            protocolPerQuarter[num].quarterPower,
-            protocolPerQuarter[num].supplyPerQuarter
+            protocolPerQuarter[_num].quarterPrincipal,
+            protocolPerQuarter[_num].quarterNumber,
+            protocolPerQuarter[_num].quarterPower,
+            protocolPerQuarter[_num].supplyPerQuarter
         );
     }
 
@@ -1263,14 +1263,14 @@ contract RewardsDistributor is Ownable, IRewardsDistributor {
 
     /**
      * Calculates the BABL rewards supply for each quarter
-     * @param quarter      Number of the epoch (quarter)
+     * @param _quarter      Number of the epoch (quarter)
      */
-    function _tokenSupplyPerQuarter(uint256 quarter) internal pure returns (uint96) {
-        _require(quarter >= 1, Errors.QUARTERS_MIN_1);
-        if (quarter >= 513) {
+    function _tokenSupplyPerQuarter(uint256 _quarter) internal pure returns (uint96) {
+        _require(_quarter >= 1, Errors.QUARTERS_MIN_1);
+        if (_quarter >= 513) {
             return 0;
         } else {
-            uint256 firstFactor = (SafeDecimalMath.unit().add(DECAY_RATE)).powDecimal(quarter.sub(1));
+            uint256 firstFactor = (SafeDecimalMath.unit().add(DECAY_RATE)).powDecimal(_quarter.sub(1));
             uint256 supplyForQuarter = Q1_REWARDS.divideDecimal(firstFactor);
             return Safe3296.safe96(supplyForQuarter, 'overflow 96 bits');
         }
