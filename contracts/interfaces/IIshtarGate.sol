@@ -40,6 +40,14 @@ interface IIshtarGate {
         uint8[] calldata _perms
     ) external returns (bool);
 
+    function maxNumberOfInvites() external view returns (uint256);
+
+    function tokenURI() external view returns (string memory);
+
+    function setMaxNumberOfInvites(uint256 _maxNumberOfInvites) external;
+
+    function updateGardenURI(string memory _tokenURI) external;
+
     function grantCreatorsInBatch(address[] calldata _users, bool[] calldata _perms) external returns (bool);
 
     function canCreate(address _user) external view returns (bool);
