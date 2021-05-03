@@ -28,8 +28,7 @@ module.exports = async ({ getNamedAccounts, deployments, ethers, getSigner, getC
   }
 
   console.log('Transfer ownership of ProxyAdmin');
-  const proxyArtifact = await deployments.getArtifact('ProxyAdmin');
-  const proxyAdmin = new ethers.Contract((await deployments.get('ProxyAdmin')).address, proxyArtifact.abi);
+  const proxyAdmin = await getContract('ProxyAdmin');
   await proxyAdmin.connect(deployerSigner).transferOwnership(MULTISIG, { gasPrice });
 
   console.log('Transfer ownership of BabController');
