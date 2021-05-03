@@ -15,6 +15,23 @@ module.exports = async ({ getNamedAccounts, deployments, ethers, getSigner, getC
     throw new Error('MULTISIG address is not set');
   }
 
+  const ishtarGate = await getContract('IshtarGate');
+  for (const address of [
+    '0x83f4622A18e38bE297e089fB055Dd5123bb0b279',
+    '0x21584Cc5a52102AbB381286a5119E3be08431CfD',
+    '0x71763709Da2488F75bc2DB5d194769d801e97Fa8',
+    '0x908295e2be3a36021aadaaed0bbb124fd602cbf2',
+    '0xFBbA8ceA4e9835B9f304d6E69905cD9403F2b606',
+  ]) {
+    console.log(`Setting creator permission for ${address}`);
+    await ishtarGate.connect(deployerSigner).setCreatorPermissions(address, true, { gasPrice });
+  }
+
+  console.log('Transfer ownership of ProxyAdmin');
+  const proxyArtifact = await deployments.getArtifact('ProxyAdmin');
+  const proxyAdmin = new ethers.Contract((await deployments.get('ProxyAdmin')).address, proxyArtifact.abi);
+  await proxyAdmin.connect(deployerSigner).transferOwnership(MULTISIG, { gasPrice });
+
   console.log('Transfer ownership of BabController');
   const babController = await getContract('BabController', 'BabControllerProxy');
   await babController.connect(deployerSigner).transferOwnership(MULTISIG, { gasPrice });
@@ -40,7 +57,6 @@ module.exports = async ({ getNamedAccounts, deployments, ethers, getSigner, getC
   await priceOracle.connect(deployerSigner).transferOwnership(MULTISIG, { gasPrice });
 
   console.log('Transfer ownership of IshtarGate');
-  const ishtarGate = await getContract('IshtarGate');
   await ishtarGate.connect(deployerSigner).transferOwnership(MULTISIG, { gasPrice });
 
   console.log('Transfer ownership of UniswapTWAP');

@@ -96,4 +96,5 @@ export
 deployments/hardhat
 deployments/localhost
 deployments/artifacts/rinkeby
+deployments/artifacts/hardhat
 contracts.json
