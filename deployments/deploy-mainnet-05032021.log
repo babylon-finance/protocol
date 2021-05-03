@@ -1,0 +1,172 @@
+~/r/b/protocol > yarn deploy:mainnet                                                                                         20:01:29
+yarn run v1.22.4
+$ hardhat deploy --network mainnet
+Nothing to compile
+Creating Typechain artifacts in directory typechain for target ethers-v5
+Successfully generated Typechain artifacts!
+deploying "ProxyAdmin" (tx: 0x50230eab6c318bf3c1522906aa71be1c2503ad9b91be353a797ad7d206a41491)...: deployed at 0x631e196B2E2a8C24966394234356d80b00dc5A64 with 542157 gas
+deploying "BabController" (tx: 0x47c538ac6f9b92f417ceb6fc7e6e55d64e68bea36f11d2575f507dd887345f0e)...: deployed at 0x28FdD1E736a96F8f7D938c20A3c22eD8Fc0209b3 with 4190414 gas
+deploying "BabControllerProxy" (tx: 0x96b9afd5178645eda745d4219ce0a4fba9484184531723bd3f7323d59e426350)...: deployed at 0xffe7c30daDb1B132b86aB7bbede496615d54c8Ac with 732419 gas
+deploying "BABLToken" (tx: 0x0628e2e5a8878e6e543d665b4d14359ba3f2bd399c674f53c96ae1f488bdb83c)...: deployed at 0xBe8B354695c9C766984520b6274db1e7842C0993 with 4475366 gas
+deploying "TimeLockRegistry" (tx: 0x225e276c831693a7c8c466c3d9e7d5ce00d65ff7217abf79571394665dc3afde)...: deployed at 0x5E8ff9EA9356Eb21B69610b35de7E7692b0E0dd6 with 1277826 gas
+deploying "SafeDecimalMath" (tx: 0x3c7af6847750d7504636b895533887af6db90eddc61f10f5824eefd126a8a7f4)...: deployed at 0x3Da35AAe517f4381c4f5C749A96074f44e95C221 with 125858 gas
+deploying "RewardsDistributor" (tx: 0x9305353f151846d6c63877bfd053621cea058f65f179c6a576722dfbb80f4380)...: deployed at 0x44EBBAE44b051B960006cE9Da93C6179F547A388 with 4975546 gas
+deploying "Treasury" (tx: 0x5ccb8341904915d7609033277d1d98fca92ef1ae47ba96d9efa521e2bbf094cd)...: deployed at 0xC5cbEB6a7f79C027611b58Cc192769035c79De35 with 753656 gas
+deploying "GardenValuer" (tx: 0x859d40ac9d742f4ebcdb510dbe0fc8a2b63e27a76c29f7d57dca282ce7ad6439)...: deployed at 0x2aFBB0366cA9426dEEa887717b7d2ee5ef86989c with 510663 gas
+deploying "IshtarGate" (tx: 0x4f42f45db9ece7e5d0ad667f941e1093ba5bf90442e2801d4fe638c122dac248)...: deployed at 0xdf425815A0378107aa894e7D55C30AdCB6308685 with 3315155 gas
+deploying "GardenFactory"An unexpected error occurred:
+
+Error: ERROR processing /Users/iYalovoy/repo/babylon/protocol/deployments/migrations/007-garden-factory.js:
+HardhatError: HH109: Network connection timed-out.
+Please check your internet connection and networks config
+    at HttpProvider._fetchJsonRpcResponse (/Users/iYalovoy/repo/babylon/protocol/node_modules/hardhat/src/internal/core/providers/http.ts:175:15)
+    at processTicksAndRejections (internal/process/task_queues.js:97:5)
+    at DeploymentsManager.executeDeployScripts (/Users/iYalovoy/repo/babylon/protocol/node_modules/hardhat-deploy/src/DeploymentsManager.ts:1009:19)
+    at processTicksAndRejections (internal/process/task_queues.js:97:5)
+error Command failed with exit code 1.
+info Visit https://yarnpkg.com/en/docs/cli/run for documentation about this command.
+
+Nothing to compile
+Creating Typechain artifacts in directory typechain for target ethers-v5
+Successfully generated Typechain artifacts!
+deploying "StrategyFactory" (tx: 0xe103ca73860ef64e72e02164738cd239a73fa9fc7f834970fa95a0305a42a24d)...: deployed at 0x7d9c2A5d0B14912693b26dDBedAE9d58AAD3BF0f with 7633903 gas
+~/r/b/protocol > npx hardhat deploy --network mainnet --tags TWAP                                                            14:18:26
+Nothing to compile
+Creating Typechain artifacts in directory typechain for target ethers-v5
+Successfully generated Typechain artifacts!
+deploying "UniswapTWAP" (tx: 0x4cb55e2006d1df4a285c489d0ac047f9ac51b6b9e840d5a72164e42da4f21dda)...: deployed at 0x4d622957e49c1E7F5CdF0aaE5Bb02297ef884C87 with 1194523 gas
+~/r/b/protocol > npx hardhat deploy --network mainnet --tags Oracle                                                          14:19:09
+Nothing to compile
+Creating Typechain artifacts in directory typechain for target ethers-v5
+Successfully generated Typechain artifacts!
+proxy ddress 0xffe7c30daDb1B132b86aB7bbede496615d54c8Ac
+TWAP ddress 0x4d622957e49c1E7F5CdF0aaE5Bb02297ef884C87
+deploying "PriceOracle" (tx: 0xcc7a0466ec9b6d7b103e664ab6cc3557580de10e66c813308420294338e80bab)...: deployed at 0xED063363482Ec52f09Fd9C2a96B5dC46312bdD5d with 1392117 gas
+~/r/b/protocol > npx hardhat deploy --network mainnet --tags Kyber                                                           14:21:22
+Nothing to compile
+Creating Typechain artifacts in directory typechain for target ethers-v5
+Successfully generated Typechain artifacts!
+deploying "KyberTradeIntegration" (tx: 0xe0f799fcc064a25a71bad24a9a79a02411edcf8488a19c11b940fdd88f89fd58)...: deployed at 0x43B9ee4D4B1C86A14a81eE254e0b17433c2b4D8b with 1458642 gas
+~/r/b/protocol > npx hardhat deploy --network mainnet --tags OneInch                                                         14:25:07
+Nothing to compile
+Creating Typechain artifacts in directory typechain for target ethers-v5
+Successfully generated Typechain artifacts!
+deploying "OneInchTradeIntegration" (tx: 0x34fc6831e6ba102e61edcbe1cbd92f940160e7798c8336bf54ce8d87f24036fb)...: deployed at 0xa02DaE2F6f3576556B0f941AaCBb38dC54D1b82a with 1557528 gas
+~/r/b/protocol > npx hardhat deploy --network mainnet --tags Balancer                                                        14:26:30
+Nothing to compile
+Creating Typechain artifacts in directory typechain for target ethers-v5
+Successfully generated Typechain artifacts!
+deploying "BalancerIntegration" (tx: 0xd7a0bca0bac70370b7d6993733e776f44eeb0ef46e80df50a92e07dfb58b8bfa)...: deployed at 0xC32C2e1c7cB4c6B09503b8102F676f7bB42374Fe with 1986479 gas
+~/r/b/protocol > npx hardhat deploy --network mainnet --tags Uniswap                                                         14:27:17
+Nothing to compile
+Creating Typechain artifacts in directory typechain for target ethers-v5
+Successfully generated Typechain artifacts!
+deploying "UniswapPoolIntegration" (tx: 0xc37926f9d837f40c78a5260ffc8790169c6cd71ce6e7f93c1c46475b1e5549f0)...: deployed at 0x7BeAce58e885f9bD5FEE24d6699AF683Ac4166cE with 1977285 gas
+~/r/b/protocol > npx hardhat deploy --network mainnet --tags Sushiswap                                                       14:28:40
+Nothing to compile
+Creating Typechain artifacts in directory typechain for target ethers-v5
+Successfully generated Typechain artifacts!
+0xffe7c30daDb1B132b86aB7bbede496615d54c8Acdeploying "SushiswapPoolIntegration" (tx: 0x3fffea46dcea26ef82cd7d8c5180ffb9d802a9741c6d903d00f118943323a5e5)...: deployed at 0x0e0FFFB6a55C88670874e1d3e638F10Bdde43C5a with 1981247 gas
+~/r/b/protocol > npx hardhat deploy --network mainnet --tags OneInchPool                                                     14:30:15
+Nothing to compile
+Creating Typechain artifacts in directory typechain for target ethers-v5
+Successfully generated Typechain artifacts!
+deploying "OneInchPoolIntegration" (tx: 0xdbc470833a5b86aa35dd061e4a4191e6374bd631f51df2c2f0ea807c1bb38ee2)...: deployed at 0xD0A53010217EBF8C93f44d0C607C04552728a400 with 1975549 gas
+~/r/b/protocol > npx hardhat deploy --network mainnet --tags Yearn                                                           14:33:49
+Nothing to compile
+Creating Typechain artifacts in directory typechain for target ethers-v5
+Successfully generated Typechain artifacts!
+deploying "YearnVaultIntegration" (tx: 0xb0333877857bfec47ff1e48dff008d56d28be8c5de563e31e926413a3bb6a241)...: deployed at 0x215e785cEF1F6024762cf16E895ede5bB3E1908A with 1415152 gas
+~/r/b/protocol > npx hardhat deploy --network mainnet --tags Compound                                                        14:37:03
+Nothing to compile
+Creating Typechain artifacts in directory typechain for target ethers-v5
+Successfully generated Typechain artifacts!
+deploying "CompoundLendIntegration" (tx: 0xf65019141a34fb7e8ffbd3254c901a03bf6db64ca9dd7e9446980306168e1550)...: deployed at 0xCfBA8914e3C543DEd1753a71999BEd53d169855D with 1408134 gas
+~/r/b/protocol > npx hardhat deploy --network mainnet --tags Aave                                                            14:39:02
+Nothing to compile
+Creating Typechain artifacts in directory typechain for target ethers-v5
+Successfully generated Typechain artifacts!
+deploying "AaveLendIntegration" (tx: 0xfc4b033e247a27975304f81c255dfb89b0dd0f68f5aae8db65903fb1946cad6e)...: deployed at 0xC6EC77668C96189850e973553D3ACDA3040f5c2e with 1105409 gas
+~/r/b/protocol > npx hardhat deploy --network mainnet --tags BuyOp                                                           14:40:17
+Nothing to compile
+Creating Typechain artifacts in directory typechain for target ethers-v5
+Successfully generated Typechain artifacts!
+deploying "BuyOperation" (tx: 0xe6742610596dafdcc9bb6b3438d02d622ea8938f0ca009d34a451a5b81d1e257)...: deployed at 0x4Bd40678693F3699903064f12838A8645b9F574C with 1236363 gas
+~/r/b/protocol > npx hardhat deploy --network mainnet --tags AddLiquidityOperation                                           14:41:01
+Nothing to compile
+Creating Typechain artifacts in directory typechain for target ethers-v5
+Successfully generated Typechain artifacts!
+~/r/b/protocol > npx hardhat deploy --network mainnet --tags AddLiquidityOp                                                  14:42:38
+Nothing to compile
+Creating Typechain artifacts in directory typechain for target ethers-v5
+Successfully generated Typechain artifacts!
+deploying "AddLiquidityOperation" (tx: 0xec68323184f54b7d02264439db9e19510ae6a5096be9dc106bef52a660c34c0a)...: deployed at 0x6DC8a9bF1b9d111aa9f64156be9F8bb6b27061F0 with 2004663 gas
+~/r/b/protocol > npx hardhat deploy --network mainnet --tags DepositVaultOp                                                  14:44:18
+Nothing to compile
+Creating Typechain artifacts in directory typechain for target ethers-v5
+Successfully generated Typechain artifacts!
+deploying "DepositVaultOperation" (tx: 0xa6c0b9c4aca7b5feda5c849cb639bc0647d31a622fa267c020c3becf8a9259ef)...: deployed at 0xcb5A91A89c164a05AECDF3459b370Bd62032503c with 1549657 gas
+~/r/b/protocol > npx hardhat deploy --network mainnet --tags LendOp                                                          14:45:09
+Nothing to compile
+Creating Typechain artifacts in directory typechain for target ethers-v5
+Successfully generated Typechain artifacts!
+deploying "LendOperation" (tx: 0x6565a761600cbe65a3be31192a7e3e35bd55d47df482f09a0bf5185d72afdb99)...: deployed at 0x1Dbf58244095a0Cd45f5Fa7B816eC6B9ffbfaB31 with 1529476 gas
+~/r/b/protocol > npx hardhat deploy --network mainnet --tags Init                                                            14:54:30
+Nothing to compile
+Creating Typechain artifacts in directory typechain for target ethers-v5
+Successfully generated Typechain artifacts!
+KEEPER 0x74d206186b84d4c2dafebd9fd230878ec161d5b8
+Setting reserve asset to WETH
+Adding KEEPER 0x74d206186b84d4c2dafebd9fd230878ec161d5b8
+Setting price oracle on controller 0xED063363482Ec52f09Fd9C2a96B5dC46312bdD5d
+Setting treasury on controller 0xC5cbEB6a7f79C027611b58Cc192769035c79De35
+Setting garden valuer on controller 0x2aFBB0366cA9426dEEa887717b7d2ee5ef86989c
+Setting ishtar gate on controller 0xdf425815A0378107aa894e7D55C30AdCB6308685
+Setting rewards distributor on controller 0x44EBBAE44b051B960006cE9Da93C6179F547A388
+Setting garden factory on controller 0x10EE25121d1850B1DBb21E83fDCE5Bb82Af9AE80
+Setting strategy factory on controller 0x7d9c2A5d0B14912693b26dDBedAE9d58AAD3BF0f
+Adding integration KyberTradeIntegration(0x43B9ee4D4B1C86A14a81eE254e0b17433c2b4D8b) to BabController
+Adding integration OneInchTradeIntegration(0xa02DaE2F6f3576556B0f941AaCBb38dC54D1b82a) to BabController
+Adding integration BalancerIntegration(0xC32C2e1c7cB4c6B09503b8102F676f7bB42374Fe) to BabController
+Adding integration UniswapPoolIntegration(0x7BeAce58e885f9bD5FEE24d6699AF683Ac4166cE) to BabController
+Adding integration YearnVaultIntegration(0x215e785cEF1F6024762cf16E895ede5bB3E1908A) to BabController
+Adding integration CompoundLendIntegration(0xCfBA8914e3C543DEd1753a71999BEd53d169855D) to BabController
+Adding integration AaveLendIntegration(0xC6EC77668C96189850e973553D3ACDA3040f5c2e) to BabController
+Adding integration SushiswapPoolIntegration(0x0e0FFFB6a55C88670874e1d3e638F10Bdde43C5a) to BabController
+Adding integration OneInchPoolIntegration(0xD0A53010217EBF8C93f44d0C607C04552728a400) to BabController
+Setting default trade integration 0xa02DaE2F6f3576556B0f941AaCBb38dC54D1b82a
+Adding operation BuyOperation(0x4Bd40678693F3699903064f12838A8645b9F574C) to BabController
+Adding operation AddLiquidityOperation(0x6DC8a9bF1b9d111aa9f64156be9F8bb6b27061F0) to BabController
+Adding operation DepositVaultOperation(0xcb5A91A89c164a05AECDF3459b370Bd62032503c) to BabController
+Adding operation LendOperation(0x1Dbf58244095a0Cd45f5Fa7B816eC6B9ffbfaB31) to BabController
+~/r/b/protocol > npx hardhat deploy --network mainnet --tags Transfer                                                        14:58:30
+Nothing to compile
+Creating Typechain artifacts in directory typechain for target ethers-v5
+Successfully generated Typechain artifacts!
+MULTISIG 0xeA4E1d01Fad05465a84bAd319c93B73Fa12756fB
+Send 500k BABL tokens to RewardsDistributor
+Send 293.2k BABL tokens to MULTISIG
+You have to approve 293200 tokens for the TimeLockReigstry from the MULTISIG.
+await bablToken.connect(MULTISIG).approve(timeLockRegistry.address, ONE_ETH.mul('293200')
+Send 16k to MULTISIG
+Send 190.8k to the Treasury
+Disable BABL transfers
+~/r/b/protocol > npx hardhat deploy --network mainnet --tags Ownership                                                       15:00:26
+Nothing to compile
+Creating Typechain artifacts in directory typechain for target ethers-v5
+Successfully generated Typechain artifacts!
+Setting creator permission for 0x83f4622A18e38bE297e089fB055Dd5123bb0b279
+Setting creator permission for 0x21584Cc5a52102AbB381286a5119E3be08431CfD
+Setting creator permission for 0x71763709Da2488F75bc2DB5d194769d801e97Fa8
+Setting creator permission for 0x908295e2be3a36021aadaaed0bbb124fd602cbf2
+Setting creator permission for 0xFBbA8ceA4e9835B9f304d6E69905cD9403F2b606
+Transfer ownership of ProxyAdmin
+Transfer ownership of BabController
+Transfer ownership of BABLToken
+Transfer ownership of RewardsDistributor
+Transfer ownership of TimeLockRegistry
+Transfer ownership of Treasury
+Transfer ownership of PriceOracle
+Transfer ownership of IshtarGate
+Transfer ownership of UniswapTWAP
+~/r/b/protocol >                                                                                                             15:24:15

@@ -13,6 +13,7 @@ require('./lib/plugins/upgrades');
 require('./lib/plugins/gasnow');
 
 require('./lib/tasks/node-ready');
+require('./lib/tasks/export');
 
 const ALCHEMY_KEY = process.env.ALCHEMY_KEY || '';
 const DEPLOYER_PRIVATE_KEY =
