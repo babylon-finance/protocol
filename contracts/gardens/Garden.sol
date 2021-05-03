@@ -17,7 +17,6 @@
 
 pragma solidity 0.7.6;
 
-import 'hardhat/console.sol';
 import {Address} from '@openzeppelin/contracts/utils/Address.sol';
 import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import {SafeERC20} from '@openzeppelin/contracts/token/ERC20/SafeERC20.sol';
@@ -145,7 +144,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
     uint256 public maxDepositLimit; // Limits the amount of deposits
 
     uint256 public override gardenInitializedAt; // Garden Initialized at timestamp
-    // TODO: Explain what pid is
+    // Number of garden checkpoints used to control de garden power and each contributor power with accuracy avoiding flash loans and related attack vectors
     uint256 public pid;
 
     // Min contribution in the garden
@@ -163,6 +162,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
     address[] private strategies; // Strategies that are either in candidate or active state
     address[] private finalizedStrategies; // Strategies that have finalized execution
     mapping(address => bool) public strategyMapping;
+    mapping(address => bool) public override isGardenStrategy; // Security control mapping
 
     // Keeper debt in WETH if any, repaid upon every strategy finalization
     uint256 public keeperDebt;
@@ -536,6 +536,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         totalStake = totalStake.add(_stratParams[1]);
         strategies.push(strategy);
         IStrategy(strategy).setData(_opTypes, _opIntegrations, _opDatas);
+        isGardenStrategy[strategy] = true;
     }
 
     /**
