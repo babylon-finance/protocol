@@ -26,6 +26,8 @@ jobs:
         run: yarn compile
 
       - name: Export locally
+        env:
+          ALCHEMY_KEY: ${{ secrets.ALCHEMY_KEY}}
         run: yarn export:hardhat
 
   test:
