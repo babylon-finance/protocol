@@ -50,4 +50,3 @@ module.exports = async ({ getNamedAccounts, deployments, ethers, getSigner, getC
 };
 
 module.exports.tags = ['Transfer'];
-module.exports.dependencies = ['Init'];

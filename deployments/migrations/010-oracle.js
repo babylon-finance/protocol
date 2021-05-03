@@ -17,4 +17,3 @@ module.exports = async ({ getNamedAccounts, deployments, ethers, getRapid }) => 
 };
 
 module.exports.tags = ['Oracle'];
-module.exports.dependencies = ['TWAP'];

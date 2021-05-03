@@ -14,4 +14,3 @@ module.exports = async ({ getNamedAccounts, deployments, ethers, getRapid }) => 
 };
 
 module.exports.tags = ['DepositVaultOp'];
-module.exports.dependencies = ['AddLiquidityOp'];

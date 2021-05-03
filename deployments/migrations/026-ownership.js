@@ -65,4 +65,3 @@ module.exports = async ({ getNamedAccounts, deployments, ethers, getSigner, getC
 };
 
 module.exports.tags = ['Ownership'];
-module.exports.dependencies = ['Transfer'];
