@@ -25,6 +25,9 @@ jobs:
       - name: Compile smart-contracts
         run: yarn compile
 
+      - name: Export locally
+        run: yarn export:hardhat
+
   test:
     name: Test
     runs-on: ubuntu-latest
