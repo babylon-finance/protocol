@@ -53,7 +53,7 @@ contract GardenNFT is ERC721Upgradeable, IGardenNFT {
     IGarden public garden;
 
     // Address of the Garden JSON (Shared JSON for each garden)
-    string public tokenURI;
+    string public override gardenTokenURI;
     uint256 public seed;
 
     Counters.Counter private _tokenIds;
@@ -67,7 +67,7 @@ contract GardenNFT is ERC721Upgradeable, IGardenNFT {
      * @param _garden             Address of the garden this NFT belongs to
      * @param _name               Name of the garden
      * @param _symbol             Symbol of the garden
-     * @param _tokenURI           Initial token URI
+     * @param _gardenTokenURI           Initial token URI
      * @param _seed               Seed to regenerated the Babylong Garden in 3D
      */
     function initialize(
@@ -75,7 +75,7 @@ contract GardenNFT is ERC721Upgradeable, IGardenNFT {
         address _garden,
         string memory _name,
         string memory _symbol,
-        string memory _tokenURI,
+        string memory _gardenTokenURI,
         uint256 _seed
     ) external override initializer {
         require(address(_controller) != address(0), 'Controller must exist');
@@ -83,7 +83,7 @@ contract GardenNFT is ERC721Upgradeable, IGardenNFT {
         controller = IBabController(_controller);
         garden = IGarden(_garden);
         seed = _seed;
-        tokenURI = _tokenURI;
+        gardenTokenURI = _gardenTokenURI;
     }
 
     /* ============ External Functions ============ */
@@ -99,15 +99,15 @@ contract GardenNFT is ERC721Upgradeable, IGardenNFT {
     }
 
     /**
-     * Updates the token URI of the garden NFT
+     * Updates the token URI of the whole garden NFT
      *
-     * @param _tokenURI               Address of the tokenURI
+     * @param _gardenTokenURI               Address of the tokenURI
      */
-    function updateGardenURI(string memory _tokenURI) external override {
+    function updateGardenURI(string memory _gardenTokenURI) external override {
         require(msg.sender == controller.owner(), 'Only owner can call this');
-        string memory oldURI = tokenURI;
-        tokenURI = _tokenURI;
-        emit GardenURIUpdated(tokenURI, oldURI);
+        string memory oldURI = gardenTokenURI;
+        gardenTokenURI = _gardenTokenURI;
+        emit GardenURIUpdated(gardenTokenURI, oldURI);
     }
 
     /* ============ Internal Functions ============ */
@@ -123,7 +123,7 @@ contract GardenNFT is ERC721Upgradeable, IGardenNFT {
             _tokenIds.increment();
             newItemId = _tokenIds.current();
             _safeMint(_user, newItemId);
-            _setTokenURI(newItemId, tokenURI);
+            _setTokenURI(newItemId, gardenTokenURI);
             emit GardenNFTAwarded(_user, newItemId);
         } else {
             newItemId = tokenOfOwnerByIndex(_user, 0);
