@@ -66,7 +66,6 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
     using SafeERC20 for IERC20;
 
     /* ============ Events ============ */
-    event PrincipalChanged(uint256 _newAmount, uint256 _oldAmount);
     event GardenDeposit(
         address indexed _to,
         uint256 reserveToken,
@@ -422,8 +421,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
             Errors.ONLY_STRATEGY_OR_CONTROLLER
         );
         // Updates reserve asset
-        uint256 _newTotal = principal.toInt256().add(_returns).toUint256();
-        _updatePrincipal(_newTotal);
+        principal = principal.toInt256().add(_returns).toUint256();
         if (withdrawalsOpenUntil > block.timestamp) {
             withdrawalsOpenUntil = block.timestamp.add(
                 withdrawalWindowAfterStrategyCompletes.sub(withdrawalsOpenUntil.sub(block.timestamp))
@@ -472,7 +470,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         // TOOD: Reserve asset may be not WETH
         if (keeperDebt > 0 && IERC20(reserveAsset).balanceOf(address(this)) >= keeperDebt) {
             IERC20(reserveAsset).safeTransfer(_keeper, keeperDebt);
-            _updatePrincipal(principal.sub(keeperDebt));
+            principal = principal.sub(keeperDebt);
             keeperDebt = 0;
         }
     }
@@ -588,7 +586,6 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
     // Any tokens (other than the target) that are sent here by mistake are recoverable by the protocol
     // Exchange for WETH
     function sweep(address _token) external {
-        _onlyContributor();
         _require(_token != reserveAsset, Errors.MUST_BE_RESERVE_ASSET);
         uint256 balance = IERC20(_token).balanceOf(address(this));
         _require(balance > 0, Errors.BALANCE_TOO_LOW);
@@ -743,21 +740,21 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
 
     /* ============ Internal Functions ============ */
 
-    function _onlyContributor() internal {
+    function _onlyContributor() private {
         _require(balanceOf(msg.sender) > 0, Errors.ONLY_CONTRIBUTOR);
     }
 
     /**
      * Throws if the sender is not an strategy of this garden
      */
-    function _onlyStrategy() internal {
+    function _onlyStrategy() private {
         _require(strategyMapping[msg.sender], Errors.ONLY_STRATEGY);
     }
 
     /**
      * Throws if the garden is not active
      */
-    function _onlyActive() internal {
+    function _onlyActive() private {
         _require(active, Errors.ONLY_ACTIVE);
     }
 
@@ -777,10 +774,9 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         uint256 _protocolFees
     ) private {
         uint256 previousBalance = balanceOf(_to);
-        uint256 amountToMint = getGardenTokenMintQuantity(_reserveAssetQuantity, true);
-        _mint(_to, amountToMint);
+        _mint(_to, getGardenTokenMintQuantity(_reserveAssetQuantity, true));
         _updateContributorDepositInfo(_from, previousBalance);
-        _updatePrincipal(_newPrincipal);
+        principal = _newPrincipal;
         // Mint the garden NFT
         IGardenNFT(nftAddress).grantGardenNFT(_to);
         _require(totalSupply() > 0, Errors.MIN_LIQUIDITY);
@@ -851,17 +847,6 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
             }
         }
         return (totalActiveCapital, maxAllocation, maxStrategy);
-    }
-
-    /**
-     * Function that allows the principal to be updated
-     *
-     * @param _amount             Amount of the reserve balance
-     */
-    function _updatePrincipal(uint256 _amount) private {
-        uint256 oldAmount = principal;
-        principal = _amount;
-        emit PrincipalChanged(_amount, oldAmount);
     }
 
     /**
@@ -943,7 +928,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
 
         // Required withdrawable quantity is greater than existing collateral
         _require(principal >= outflow, Errors.BALANCE_TOO_LOW);
-        _updatePrincipal(principal.sub(outflow));
+        principal = principal.sub(outflow);
 
         emit GardenWithdrawal(msg.sender, _to, netFlowQuantity, _gardenTokenQuantity, protocolFees, block.timestamp);
     }

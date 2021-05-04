@@ -170,7 +170,7 @@ contract AddLiquidityOperation is Operation {
     function _getMaxAmountTokenPool(
         address _asset,
         uint256 _capital,
-        IGarden _garden,
+        IGarden, /* _garden */
         uint256 _poolWeight,
         address _poolToken
     ) private returns (uint256) {
