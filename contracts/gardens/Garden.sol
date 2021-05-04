@@ -955,8 +955,8 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
                 : IBabController(controller).protocolWithdrawalGardenTokenFee();
 
         // Calculate total notional fees
-
-        return (protocolFeePercentage.preciseMul(_reserveAssetQuantity), _reserveAssetQuantity.sub(protocolFees));
+        uint256 protocolFees = protocolFeePercentage.preciseMul(_reserveAssetQuantity);
+        return (protocolFees, _reserveAssetQuantity.sub(protocolFees));
     }
 
     function _getWithdrawalReserveQuantity(address _reserveAsset, uint256 _gardenTokenQuantity)
