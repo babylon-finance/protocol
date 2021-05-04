@@ -368,6 +368,7 @@ contract RewardsDistributor is Ownable, IRewardsDistributor {
     ) external view override returns (uint256, uint96) {
         uint256 contributorTotalProfits = 0;
         uint256 bablTotalRewards = 0;
+        _require(IBabController(controller).isGarden(address(_garden)), Errors.ONLY_ACTIVE_GARDEN);
         for (uint256 i = 0; i < _finalizedStrategies.length; i++) {
             (uint256 strategyProfits, uint256 strategyBABL) =
                 _getStrategyProfitsAndBABL(_garden, _finalizedStrategies[i], _contributor);
@@ -501,6 +502,7 @@ contract RewardsDistributor is Ownable, IRewardsDistributor {
     ) private view returns (uint256, uint256) {
         IStrategy strategy = IStrategy(_strategy);
         _require(address(strategy.garden()) == _garden, Errors.STRATEGY_GARDEN_MISMATCH);
+        _require(IGarden(_garden).isGardenStrategy(_strategy), Errors.STRATEGY_GARDEN_MISMATCH);
         uint256 contributorProfits = 0;
         uint256 contributorBABL = 0;
         // We get the state of the strategy in terms of profit and distance from expected to accurately calculate profits and rewards

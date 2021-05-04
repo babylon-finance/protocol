@@ -17,7 +17,6 @@
 
 pragma solidity 0.7.6;
 
-import 'hardhat/console.sol';
 import {Address} from '@openzeppelin/contracts/utils/Address.sol';
 import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import {SafeERC20} from '@openzeppelin/contracts/token/ERC20/SafeERC20.sol';
@@ -67,7 +66,6 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
     using SafeERC20 for IERC20;
 
     /* ============ Events ============ */
-    event PrincipalChanged(uint256 _newAmount, uint256 _oldAmount);
     event GardenDeposit(
         address indexed _to,
         uint256 reserveToken,
@@ -94,9 +92,9 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
     uint256 public constant EARLY_WITHDRAWAL_PENALTY = 15e16;
     uint256 public constant MAX_DEPOSITS_FUND_V1 = 1e21; // Max deposit per garden is 1000 eth for v1
     uint256 public constant MAX_TOTAL_STRATEGIES = 20; // Max number of strategies
-    uint256 internal constant TEN_PERCENT = 1e17;
-    uint256 internal constant MAX_KEEPER_FEE = (1e6 * 1e3 gwei);
-    uint256 internal constant ABSOLUTE_MIN_CONTRIBUTION = 1e17;
+    uint256 private constant TEN_PERCENT = 1e17;
+    uint256 private constant MAX_KEEPER_FEE = (1e6 * 1e3 gwei);
+    uint256 private constant ABSOLUTE_MIN_CONTRIBUTION = 1e17;
 
     /* ============ Structs ============ */
 
@@ -145,7 +143,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
     uint256 public maxDepositLimit; // Limits the amount of deposits
 
     uint256 public override gardenInitializedAt; // Garden Initialized at timestamp
-    // TODO: Explain what pid is
+    // Number of garden checkpoints used to control de garden power and each contributor power with accuracy avoiding flash loans and related attack vectors
     uint256 public pid;
 
     // Min contribution in the garden
@@ -163,6 +161,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
     address[] private strategies; // Strategies that are either in candidate or active state
     address[] private finalizedStrategies; // Strategies that have finalized execution
     mapping(address => bool) public strategyMapping;
+    mapping(address => bool) public override isGardenStrategy; // Security control mapping
 
     // Keeper debt in WETH if any, repaid upon every strategy finalization
     uint256 public keeperDebt;
@@ -422,8 +421,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
             Errors.ONLY_STRATEGY_OR_CONTROLLER
         );
         // Updates reserve asset
-        uint256 _newTotal = principal.toInt256().add(_returns).toUint256();
-        _updatePrincipal(_newTotal);
+        principal = principal.toInt256().add(_returns).toUint256();
         if (withdrawalsOpenUntil > block.timestamp) {
             withdrawalsOpenUntil = block.timestamp.add(
                 withdrawalWindowAfterStrategyCompletes.sub(withdrawalsOpenUntil.sub(block.timestamp))
@@ -472,7 +470,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         // TOOD: Reserve asset may be not WETH
         if (keeperDebt > 0 && IERC20(reserveAsset).balanceOf(address(this)) >= keeperDebt) {
             IERC20(reserveAsset).safeTransfer(_keeper, keeperDebt);
-            _updatePrincipal(principal.sub(keeperDebt));
+            principal = principal.sub(keeperDebt);
             keeperDebt = 0;
         }
     }
@@ -536,6 +534,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         totalStake = totalStake.add(_stratParams[1]);
         strategies.push(strategy);
         IStrategy(strategy).setData(_opTypes, _opIntegrations, _opDatas);
+        isGardenStrategy[strategy] = true;
     }
 
     /**
@@ -587,7 +586,6 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
     // Any tokens (other than the target) that are sent here by mistake are recoverable by the protocol
     // Exchange for WETH
     function sweep(address _token) external {
-        _onlyContributor();
         _require(_token != reserveAsset, Errors.MUST_BE_RESERVE_ASSET);
         uint256 balance = IERC20(_token).balanceOf(address(this));
         _require(balance > 0, Errors.BALANCE_TOO_LOW);
@@ -742,21 +740,21 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
 
     /* ============ Internal Functions ============ */
 
-    function _onlyContributor() internal {
+    function _onlyContributor() private view {
         _require(balanceOf(msg.sender) > 0, Errors.ONLY_CONTRIBUTOR);
     }
 
     /**
      * Throws if the sender is not an strategy of this garden
      */
-    function _onlyStrategy() internal {
+    function _onlyStrategy() private view {
         _require(strategyMapping[msg.sender], Errors.ONLY_STRATEGY);
     }
 
     /**
      * Throws if the garden is not active
      */
-    function _onlyActive() internal {
+    function _onlyActive() private view {
         _require(active, Errors.ONLY_ACTIVE);
     }
 
@@ -776,10 +774,9 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         uint256 _protocolFees
     ) private {
         uint256 previousBalance = balanceOf(_to);
-        uint256 amountToMint = getGardenTokenMintQuantity(_reserveAssetQuantity, true);
-        _mint(_to, amountToMint);
+        _mint(_to, getGardenTokenMintQuantity(_reserveAssetQuantity, true));
         _updateContributorDepositInfo(_from, previousBalance);
-        _updatePrincipal(_newPrincipal);
+        principal = _newPrincipal;
         // Mint the garden NFT
         IGardenNFT(nftAddress).grantGardenNFT(_to);
         _require(totalSupply() > 0, Errors.MIN_LIQUIDITY);
@@ -853,25 +850,12 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
     }
 
     /**
-     * Function that allows the principal to be updated
-     *
-     * @param _amount             Amount of the reserve balance
-     */
-    function _updatePrincipal(uint256 _amount) private {
-        uint256 oldAmount = principal;
-        principal = _amount;
-        emit PrincipalChanged(_amount, oldAmount);
-    }
-
-    /**
      * Pays the _feeQuantity from the _garden denominated in _token to the protocol fee recipient
      * @param _token                   Address of the token to pay with
      * @param _feeQuantity             Fee to transfer
      */
     function payProtocolFeeFromGarden(address _token, uint256 _feeQuantity) private {
-        if (_feeQuantity > 0) {
-            IERC20(_token).safeTransfer(IBabController(controller).treasury(), _feeQuantity);
-        }
+        IERC20(_token).safeTransfer(IBabController(controller).treasury(), _feeQuantity);
     }
 
     // Disable garden token transfers. Allow minting and burning.
@@ -942,7 +926,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
 
         // Required withdrawable quantity is greater than existing collateral
         _require(principal >= outflow, Errors.BALANCE_TOO_LOW);
-        _updatePrincipal(principal.sub(outflow));
+        principal = principal.sub(outflow);
 
         emit GardenWithdrawal(msg.sender, _to, netFlowQuantity, _gardenTokenQuantity, protocolFees, block.timestamp);
     }
@@ -971,11 +955,8 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
                 : IBabController(controller).protocolWithdrawalGardenTokenFee();
 
         // Calculate total notional fees
-        uint256 protocolFees = protocolFeePercentage.preciseMul(_reserveAssetQuantity);
 
-        uint256 netReserveFlow = _reserveAssetQuantity.sub(protocolFees);
-
-        return (protocolFees, netReserveFlow);
+        return (protocolFeePercentage.preciseMul(_reserveAssetQuantity), _reserveAssetQuantity.sub(protocolFees));
     }
 
     function _getWithdrawalReserveQuantity(address _reserveAsset, uint256 _gardenTokenQuantity)
