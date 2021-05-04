@@ -92,9 +92,9 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
     uint256 public constant EARLY_WITHDRAWAL_PENALTY = 15e16;
     uint256 public constant MAX_DEPOSITS_FUND_V1 = 1e21; // Max deposit per garden is 1000 eth for v1
     uint256 public constant MAX_TOTAL_STRATEGIES = 20; // Max number of strategies
-    uint256 internal constant TEN_PERCENT = 1e17;
-    uint256 internal constant MAX_KEEPER_FEE = (1e6 * 1e3 gwei);
-    uint256 internal constant ABSOLUTE_MIN_CONTRIBUTION = 1e17;
+    uint256 private constant TEN_PERCENT = 1e17;
+    uint256 private constant MAX_KEEPER_FEE = (1e6 * 1e3 gwei);
+    uint256 private constant ABSOLUTE_MIN_CONTRIBUTION = 1e17;
 
     /* ============ Structs ============ */
 
@@ -740,21 +740,21 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
 
     /* ============ Internal Functions ============ */
 
-    function _onlyContributor() private {
+    function _onlyContributor() private view {
         _require(balanceOf(msg.sender) > 0, Errors.ONLY_CONTRIBUTOR);
     }
 
     /**
      * Throws if the sender is not an strategy of this garden
      */
-    function _onlyStrategy() private {
+    function _onlyStrategy() private view {
         _require(strategyMapping[msg.sender], Errors.ONLY_STRATEGY);
     }
 
     /**
      * Throws if the garden is not active
      */
-    function _onlyActive() private {
+    function _onlyActive() private view {
         _require(active, Errors.ONLY_ACTIVE);
     }
 
@@ -855,9 +855,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
      * @param _feeQuantity             Fee to transfer
      */
     function payProtocolFeeFromGarden(address _token, uint256 _feeQuantity) private {
-        if (_feeQuantity > 0) {
-            IERC20(_token).safeTransfer(IBabController(controller).treasury(), _feeQuantity);
-        }
+        IERC20(_token).safeTransfer(IBabController(controller).treasury(), _feeQuantity);
     }
 
     // Disable garden token transfers. Allow minting and burning.
@@ -957,11 +955,8 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
                 : IBabController(controller).protocolWithdrawalGardenTokenFee();
 
         // Calculate total notional fees
-        uint256 protocolFees = protocolFeePercentage.preciseMul(_reserveAssetQuantity);
 
-        uint256 netReserveFlow = _reserveAssetQuantity.sub(protocolFees);
-
-        return (protocolFees, netReserveFlow);
+        return (protocolFeePercentage.preciseMul(_reserveAssetQuantity), _reserveAssetQuantity.sub(protocolFees));
     }
 
     function _getWithdrawalReserveQuantity(address _reserveAsset, uint256 _gardenTokenQuantity)
