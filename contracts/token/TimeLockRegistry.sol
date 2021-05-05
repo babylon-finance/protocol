@@ -13,6 +13,7 @@
 */
 
 pragma solidity 0.7.6;
+pragma experimental ABIEncoderV2;
 
 import {Ownable} from '@openzeppelin/contracts/access/Ownable.sol';
 import {SafeMath} from '@openzeppelin/contracts/math/SafeMath.sol';
@@ -21,6 +22,7 @@ import {SafeERC20} from '@openzeppelin/contracts/token/ERC20/SafeERC20.sol';
 import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 
 import {TimeLockedToken} from './TimeLockedToken.sol';
+import {AddressArrayUtils} from '../lib/AddressArrayUtils.sol';
 
 /**
  * @title TimeLockRegistry
@@ -40,6 +42,7 @@ import {TimeLockedToken} from './TimeLockedToken.sol';
 contract TimeLockRegistry is Ownable {
     using SafeMath for uint256;
     using Address for address;
+    using AddressArrayUtils for address[];
 
     /* ============ Events ============ */
 
@@ -59,8 +62,22 @@ contract TimeLockRegistry is Ownable {
     // time locked token
     TimeLockedToken public token;
 
-    /// @notice The profile of each token owner under vesting conditions and its special conditions
     /**
+     * @notice The profile of each token owner under vesting conditions and its special conditions
+     * @param receiver Account being registered
+     * @param investorType Indicates whether or not is a Team member (true = team member / advisor, false = private investor)
+     * @param vestingStarting Date When the vesting begins for such token owner
+     * @param distribution Tokens amount that receiver is due to get
+     */
+    struct Registration {
+        address receiver;
+        uint256 distribution;
+        bool investorType;
+        uint256 vestingStartingDate;
+    }
+
+    /**
+     * @notice The profile of each token owner under vesting conditions and its special conditions
      * @param team Indicates whether or not is a Team member (true = team member / advisor, false = private investor)
      * @param vestingBegin When the vesting begins for such token owner
      * @param vestingEnd When the vesting ends for such token owner
@@ -79,6 +96,12 @@ contract TimeLockRegistry is Ownable {
 
     // mapping from token owners under vesting conditions to BABL due amount (e.g. SAFT addresses, team members, advisors)
     mapping(address => uint256) public registeredDistributions;
+
+    // array of all registrations
+    address[] public registrations;
+
+    // total amount of tokens registered
+    uint256 public totalTokens;
 
     // vesting for Team Members
     uint256 private teamVesting = 365 days * 4;
@@ -100,22 +123,51 @@ contract TimeLockRegistry is Ownable {
 
     /* ============ External Functions ============ */
 
+    /* ============ External Getter Functions ============ */
+
+    /**
+     * Gets registrations
+     *
+     * @return  address[]        Returns list of registrations
+     */
+
+    function getRegistrations() external view returns (address[] memory) {
+        return registrations;
+    }
+
+
     /* ===========  Token related Gov Functions ====== */
 
     /**
-     * PRIVILEGED GOVERNANCE FUNCTION. Register new account under vesting conditions (Team, Advisors, Investors e.g. SAFT purchaser)
+     * PRIVILEGED GOVERNANCE FUNCTION
+     *
+     * @notice Register multiple investors/teemmembers in a batch
+     * @param _registrations Registrations to process
+     */
+    function registerBatch(Registration[] memory _registrations) external onlyOwner {
+        for (uint256 i = 0; i < _registrations.length; i++) {
+            register(
+                _registrations[i].receiver,
+                _registrations[i].distribution,
+                _registrations[i].investorType,
+                _registrations[i].vestingStartingDate
+            );
+        }
+    }
+
+    /**
+     * PRIVILEGED GOVERNANCE FUNCTION
      *
      * @notice Register new account under vesting conditions (Team, Advisors, Investors e.g. SAFT purchaser)
      * @param receiver Address belonging vesting conditions
      * @param distribution Tokens amount that receiver is due to get
-     * @return Whether or not the registration succeeded
      */
     function register(
         address receiver,
         uint256 distribution,
         bool investorType,
         uint256 vestingStartingDate
-    ) external onlyOwner returns (bool) {
+    ) public onlyOwner {
         require(receiver != address(0), 'TimeLockRegistry::register: cannot register the zero address');
         require(
             receiver != address(this),
@@ -127,9 +179,12 @@ contract TimeLockRegistry is Ownable {
             'TimeLockRegistry::register:Distribution for this address is already registered'
         );
         require(block.timestamp >= 1614553200, 'Cannot register earlier than March 2021'); // 1614553200 is UNIX TIME of 2021 March the 1st
+        require(totalTokens.add(distribution) <= IERC20(token).balanceOf(address(this)), 'Not enough tokens');
 
+        totalTokens = totalTokens.add(distribution);
         // register distribution
         registeredDistributions[receiver] = distribution;
+        registrations.push(receiver);
 
         // register token vested conditions
         TokenVested storage newTokenVested = tokenVested[receiver];
@@ -144,15 +199,9 @@ contract TimeLockRegistry is Ownable {
         newTokenVested.lastClaim = vestingStartingDate;
 
         tokenVested[receiver] = newTokenVested;
-        // TODO CHECK IF ALLOWANCE AS OF TODAY IS THE FINAL MODEL
-        // IN CASE OF A DIRECT MINT TO TIME LOCK REGISTRY ADDRESS THE TOKEN TRANSFER MIGHT BE UPDATED
-        // transfer tokens from owner who might have enough allowance of tokens by BABL Token owner
-        SafeERC20.safeTransferFrom(token, msg.sender, address(this), distribution);
 
         // emit register event
         emit Register(receiver, distribution);
-
-        return true;
     }
 
     /**
@@ -175,7 +224,12 @@ contract TimeLockRegistry is Ownable {
         // set tokenVested mapping to 0
         delete tokenVested[receiver];
 
-        // TODO CHECK THE PROCESS ADDRESS(THIS) VS. OWNER
+        // decrease total tokens
+        totalTokens = totalTokens.sub(totalTokens);
+
+        // remove from the list of all registrations
+        registrations.remove(receiver);
+
         // transfer tokens back to owner
         SafeERC20.safeTransfer(token, msg.sender, amount);
 
