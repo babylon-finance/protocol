@@ -135,7 +135,6 @@ contract TimeLockRegistry is Ownable {
         return registrations;
     }
 
-
     /* ===========  Token related Gov Functions ====== */
 
     /**
