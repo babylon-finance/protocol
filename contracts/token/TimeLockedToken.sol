@@ -111,9 +111,6 @@ abstract contract TimeLockedToken is VoteToken {
     /// @notice A record of token owners under vesting conditions for each account, by index
     mapping(address => VestedToken) public vestedToken;
 
-    // vesting Cliff for Team Members and Advisors
-    uint256 private vestingCliff = 365 days;
-
     // vesting duration for Team Members and Advisors
     uint256 private teamVesting = 365 days * 4;
 
@@ -309,8 +306,8 @@ abstract contract TimeLockedToken is VoteToken {
             lockedAmount = 0;
         } else {
             // in case of still under vesting period, locked tokens are recalculated
-            lockedAmount = amount.mul(vestedToken[account].vestingEnd - block.timestamp).div(
-                vestedToken[account].vestingEnd - vestedToken[account].vestingBegin
+            lockedAmount = amount.mul(vestedToken[account].vestingEnd.sub(block.timestamp)).div(
+                vestedToken[account].vestingEnd.sub(vestedToken[account].vestingBegin)
             );
         }
         return lockedAmount;
@@ -331,8 +328,6 @@ abstract contract TimeLockedToken is VoteToken {
         // in case of vesting has passed, all tokens are now available so we set mapping to 0
         if (block.timestamp >= vestedToken[account].vestingEnd && msg.sender == account && lockedAmount == 0) {
             delete distribution[account];
-        } else if (msg.sender == account) {
-            vestedToken[msg.sender].lastClaim = block.timestamp;
         }
         return lockedAmount;
     }
