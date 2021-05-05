@@ -39,7 +39,7 @@ interface IGarden {
 
     function creator() external view returns (address);
 
-    function isGardenStrategy(address _strategy) external view returns (bool);
+    function isFinalizedStrategy(address _strategy) external view returns (bool);
 
     function getContributor(address _contributor)
         external

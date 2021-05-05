@@ -41,7 +41,7 @@ abstract contract Operation is IOperation {
         IStrategy strategy = IStrategy(msg.sender);
         IGarden garden = strategy.garden();
         require(IBabController(controller).isSystemContract(address(garden)), 'Only a garden can call this');
-        require(garden.isStrategy(msg.sender), 'Sender must be a strategy');
+        require(garden.isStrategy(msg.sender) || garden.isFinalizedStrategy(msg.sender), 'Sender must be a strategy');
         _;
     }
 

@@ -161,7 +161,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
     address[] private strategies; // Strategies that are either in candidate or active state
     address[] private finalizedStrategies; // Strategies that have finalized execution
     mapping(address => bool) public strategyMapping;
-    mapping(address => bool) public override isGardenStrategy; // Security control mapping
+    mapping(address => bool) public override isFinalizedStrategy; // Security control mapping
 
     // Keeper debt in WETH if any, repaid upon every strategy finalization
     uint256 public keeperDebt;
@@ -534,7 +534,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         totalStake = totalStake.add(_stratParams[1]);
         strategies.push(strategy);
         IStrategy(strategy).setData(_opTypes, _opIntegrations, _opDatas);
-        isGardenStrategy[strategy] = true;
+        isFinalizedStrategy[strategy] = true;
     }
 
     /**
