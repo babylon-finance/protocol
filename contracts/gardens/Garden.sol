@@ -609,7 +609,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         return finalizedStrategies;
     }
 
-    function isStrategy(address _strategy) external view override returns (bool) {
+    function isStrategyActiveInGarden(address _strategy) external view override returns (bool) {
         return strategyMapping[_strategy];
     }
 
