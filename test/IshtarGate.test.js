@@ -1,9 +1,9 @@
 const { expect } = require('chai');
 const { ethers } = require('hardhat');
-
 const addresses = require('../lib/addresses');
 const { GARDEN_PARAMS } = require('../lib/constants');
 const { setupTests } = require('./fixtures/GardenFixture');
+const { createStrategy } = require('./fixtures/StrategyHelper.js');
 
 describe('IshtarGate', function () {
   let signer1;
@@ -11,10 +11,11 @@ describe('IshtarGate', function () {
   let signer3;
   let ishtarGate;
   let babController;
+  let kyberTradeIntegration;
   let owner;
 
   beforeEach(async () => {
-    ({ owner, babController, signer1, signer2, signer3, ishtarGate } = await setupTests()());
+    ({ owner, babController, signer1, signer2, signer3, ishtarGate, kyberTradeIntegration } = await setupTests()());
   });
 
   describe('Deployment', function () {
@@ -66,7 +67,6 @@ describe('IshtarGate', function () {
     });
 
     it('fails with the gate NFT awarded through batch creation with different elements', async function () {
-      console.log('singer2', signer2.address);
       await expect(ishtarGate.connect(owner).grantCreatorsInBatch([signer2.address], [true, false], { gasPrice: 0 })).to
         .be.reverted;
     });
@@ -93,6 +93,41 @@ describe('IshtarGate', function () {
           ),
       ).to.be.reverted;
     });
+
+    it('creator can join a garden', async function () {
+      await ishtarGate.connect(owner).setCreatorPermissions(signer2.address, true, { gasPrice: 0 });
+      await expect(
+        babController
+          .connect(signer2)
+          .createGarden(addresses.tokens.WETH, 'TEST Ishtar', 'AAA', 'http:', 0, GARDEN_PARAMS, {
+            value: ethers.utils.parseEther('0.1'),
+          }),
+      ).to.not.be.reverted;
+      const gardens = await babController.getGardens();
+      const newGarden = await ethers.getContractAt('Garden', gardens[gardens.length - 1]);
+      await expect(
+        newGarden.connect(signer2).deposit(ethers.utils.parseEther('1'), 1, signer3.getAddress(), {
+          value: ethers.utils.parseEther('1'),
+        }),
+      ).not.to.be.reverted;
+    });
+
+    it('creator can create a strategy', async function () {
+      await ishtarGate.connect(owner).setCreatorPermissions(signer2.address, true, { gasPrice: 0 });
+      await expect(
+        babController
+          .connect(signer2)
+          .createGarden(addresses.tokens.WETH, 'TEST Ishtar', 'AAA', 'http:', 0, GARDEN_PARAMS, {
+            value: ethers.utils.parseEther('0.1'),
+          }),
+      ).to.not.be.reverted;
+      const gardens = await babController.getGardens();
+      const newGarden = await ethers.getContractAt('Garden', gardens[gardens.length - 1]);
+
+      await expect(
+        createStrategy('buy', 'dataset', [signer2, signer1, signer3], kyberTradeIntegration.address, newGarden),
+      ).not.to.be.reverted;
+    });
   });
 
   describe('garden access', async function () {
@@ -108,6 +143,44 @@ describe('IshtarGate', function () {
     });
     it('only owner can change the number of invites', async function () {
       await expect(ishtarGate.connect(signer1).setMaxNumberOfInvites(25)).to.be.reverted;
+    });
+  });
+
+  describe('be a strategist', async function () {
+    it('succeeds with the gate NFT awarded with permission 3', async function () {
+      await ishtarGate.connect(owner).setCreatorPermissions(signer2.address, true, { gasPrice: 0 });
+      await expect(
+        babController
+          .connect(signer2)
+          .createGarden(addresses.tokens.WETH, 'TEST Ishtar', 'AAA', 'http:', 0, GARDEN_PARAMS, {
+            value: ethers.utils.parseEther('0.1'),
+          }),
+      ).to.not.be.reverted;
+      const gardens = await babController.getGardens();
+      const newGarden = await ethers.getContractAt('Garden', gardens[gardens.length - 1]);
+      await ishtarGate.connect(signer2).setGardenAccess(signer1.address, newGarden.address, 3, { gasPrice: 0 });
+      await newGarden.connect(signer1).deposit(ethers.utils.parseEther('1'), 1, signer1.getAddress(), {
+        value: ethers.utils.parseEther('1'),
+      });
+      await expect(
+        createStrategy('buy', 'dataset', [signer1, signer2, signer3], kyberTradeIntegration.address, newGarden),
+      ).not.to.be.reverted;
+    });
+
+    it('fails without the right permissions', async function () {
+      await ishtarGate.connect(owner).setCreatorPermissions(signer2.address, true, { gasPrice: 0 });
+      await expect(
+        babController
+          .connect(signer2)
+          .createGarden(addresses.tokens.WETH, 'TEST Ishtar', 'AAA', 'http:', 0, GARDEN_PARAMS, {
+            value: ethers.utils.parseEther('0.1'),
+          }),
+      ).to.not.be.reverted;
+      const gardens = await babController.getGardens();
+      const newGarden = await ethers.getContractAt('Garden', gardens[gardens.length - 1]);
+      await ishtarGate.connect(signer2).setGardenAccess(signer1.address, newGarden.address, 2, { gasPrice: 0 });
+      await expect(createStrategy('buy', 'vote', [signer1, signer2, signer3], kyberTradeIntegration.address, newGarden))
+        .to.be.reverted;
     });
   });
 
