@@ -539,7 +539,7 @@ contract RewardsDistributor is Ownable, IRewardsDistributor {
     ) private view returns (uint256, uint256) {
         IStrategy strategy = IStrategy(_strategy);
         _require(address(strategy.garden()) == _garden, Errors.STRATEGY_GARDEN_MISMATCH);
-        _require(IGarden(_garden).isFinalizedStrategy(_strategy), Errors.STRATEGY_GARDEN_MISMATCH);
+        _require(IGarden(_garden).isGardenStrategy(_strategy), Errors.STRATEGY_GARDEN_MISMATCH);
         uint256 contributorProfits = 0;
         uint256 contributorBABL = 0;
         // We get the state of the strategy in terms of profit and distance from expected to accurately calculate profits and rewards
