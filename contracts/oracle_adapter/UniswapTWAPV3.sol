@@ -35,7 +35,6 @@ import {IOracleAdapter} from '../interfaces/IOracleAdapter.sol';
  * Uses uniswap V3 to get the price of a token pair
  */
 contract UniswapTWAPV3 is Ownable, IOracleAdapter {
-
     /* ============ State Variables ============ */
 
     // Instance of the Controller contract
@@ -59,10 +58,7 @@ contract UniswapTWAPV3 is Ownable, IOracleAdapter {
      * @param _controller         Instance of controller contract
      * @param _factory            Address of Uniswap factory
      */
-    constructor(
-        address _controller,
-        address _factory
-    ) {
+    constructor(address _controller, address _factory) {
         factory = IUniswapV3Factory(_factory);
         controller = IBabController(_controller);
         secondsAgo.push(0);
@@ -72,12 +68,12 @@ contract UniswapTWAPV3 is Ownable, IOracleAdapter {
     /* ============ External Functions ============ */
 
     /**
-    * Returns the amount out corresponding to the amount in for a given token
-    * @param tokenIn              Address of the first token
-    * @param tokenOut             Address of the second token
-    * @return found               Whether or not the price as found
-    * @return amountOut            How many tokenOut are one tokenIn
-    */
+     * Returns the amount out corresponding to the amount in for a given token
+     * @param tokenIn              Address of the first token
+     * @param tokenOut             Address of the second token
+     * @return found               Whether or not the price as found
+     * @return amountOut            How many tokenOut are one tokenIn
+     */
     function getPrice(address tokenIn, address tokenOut)
         external
         view
@@ -85,7 +81,8 @@ contract UniswapTWAPV3 is Ownable, IOracleAdapter {
         returns (bool found, uint256 amountOut)
     {
         IUniswapV3Pool pair = IUniswapV3Pool(factory.getPool(tokenIn, tokenOut, 0));
-        (int56[] memory tickCumulatives, uint160[] memory secondsPerLiquidityCumulativeX128s) = pair.observe(secondsAgo);
+        (int56[] memory tickCumulatives, uint160[] memory secondsPerLiquidityCumulativeX128s) =
+            pair.observe(secondsAgo);
         return (true, computeAmountOut(tickCumulatives));
     }
 
@@ -93,10 +90,7 @@ contract UniswapTWAPV3 is Ownable, IOracleAdapter {
 
     // given the cumulative prices of the start and end of a period, and the length of the period, compute the average
     // price in terms of how much amount out is received for the amount in
-    function computeAmountOut(
-        int56[] memory tickCumulatives
-    ) private pure returns (uint256 amountOut) {
-      return 10001e18 ** ((tickCumulatives[1] - tickCumulatives[0]) / SECONDS_GRANULARITY);
+    function computeAmountOut(int56[] memory tickCumulatives) private pure returns (uint256 amountOut) {
+        return 10001e18**((tickCumulatives[1] - tickCumulatives[0]) / SECONDS_GRANULARITY);
     }
-
 }
