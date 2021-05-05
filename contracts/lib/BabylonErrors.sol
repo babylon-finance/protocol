@@ -244,4 +244,6 @@ library Errors {
     uint256 internal constant STRAT_PARAMS_LENGTH = 77;
     // Garden params wrong length
     uint256 internal constant GARDEN_PARAMS_LENGTH = 78;
+    // Token names too long
+    uint256 internal constant NAME_TOO_LONG = 79;
 }
