@@ -42,7 +42,7 @@ contract StrategyNFT is ERC721Upgradeable, IStrategyNFT {
     /* ============ Modifiers ============ */
 
     modifier onlyStrategy {
-        require(IGarden(strategy.garden()).isStrategy(msg.sender), 'Only the strategy can mint the NFT');
+        require(IGarden(strategy.garden()).isStrategyActiveInGarden(msg.sender), 'Only the strategy can mint the NFT');
         _;
     }
 
