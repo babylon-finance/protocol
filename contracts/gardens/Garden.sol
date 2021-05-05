@@ -192,6 +192,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         address _nftAddress,
         uint256 _initialContribution
     ) public payable initializer {
+        _require(bytes(_name).length < 50, Errors.NAME_TOO_LONG);
         _require(_creator != address(0), Errors.ADDRESS_IS_ZERO);
         _require(_controller != address(0), Errors.ADDRESS_IS_ZERO);
         _require(_reserveAsset != address(0), Errors.ADDRESS_IS_ZERO);

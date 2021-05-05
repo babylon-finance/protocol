@@ -332,6 +332,7 @@ contract BabController is OwnableUpgradeable, IBabController {
      */
     function addReserveAsset(address _reserveAsset) external override onlyOwner {
         require(!validReserveAsset[_reserveAsset], 'Reserve asset already added');
+        // TODO: check decimals reserve asset
         validReserveAsset[_reserveAsset] = true;
         reserveAssets.push(_reserveAsset);
         emit ReserveAssetAdded(_reserveAsset);

@@ -75,6 +75,7 @@ contract StrategyNFT is ERC721Upgradeable, IStrategyNFT {
         string memory _symbol
     ) external override initializer {
         require(address(_controller) != address(0), 'Controller must exist');
+        require(bytes(_name).length < 50, 'Strategy Name is too long');
         __ERC721_init(_name, _symbol);
         controller = IBabController(_controller);
         strategy = IStrategy(_strategy);
