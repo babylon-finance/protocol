@@ -128,6 +128,14 @@ describe('BABLToken contract', function () {
     });
   });
 
+  describe('registerBatch', function () {
+    it('can NOT register if there are not enough tokens', async function () {
+      await expect(
+        timeLockRegistry.connect(owner).register(signer1.address, ONE_ETH.mul(999999999999), true, 1614618000),
+      ).to.be.revertedWith('Not enough tokens');
+    });
+  });
+
   describe('Transfers', function () {
     it('should fail if trying to transfer any tokens between addresses which is not TimeLockRegistry', async function () {
       const ownerBalance = await bablToken.balanceOf(owner.address);
