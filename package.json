@@ -16,6 +16,7 @@
     "@openzeppelin/hardhat-upgrades": "^1.6.0",
     "@typechain/ethers-v5": "^6.0.5",
     "@typechain/hardhat": "^1.0.1",
+    "axios": "^0.21.1",
     "chai-as-promised": "^7.1.1",
     "dotenv": "^8.2.0",
     "eslint": "^7.24.0",
@@ -66,14 +67,15 @@
     "lint:tests": "eslint 'test/**/*.test.js'",
     "compile": "hardhat compile --max-memory 8096 --no-typechain",
     "typechain": "hardhat compile --max-memory 8096",
-    "export": "hardhat export --network hardhat --export contracts.json",
+    "export:hardhat": "hardhat export --network hardhat --export contracts.json",
+    "export:mainnet": "hardhat export --network mainnet --export contracts.json",
     "deploy:hardhat": "hardhat deploy --network hardhat",
     "deploy:mainnet": "hardhat deploy --network mainnet",
     "deploy:rinkeby": "hardhat deploy --network rinkeby",
     "chain": "hardhat node --as-network hardhat --show-stack-traces",
     "test": "hardhat test --network hardhat --max-memory 8096",
     "gas-report": "env REPORT_GAS=1 yarn test",
-    "estimate-size": "yarn run hardhat size-contracts --max-memory 8096",
+    "estimate-size": "yarn compile && hardhat size-contracts --max-memory 8096",
     "coverage": "hardhat coverage --max-memory 8096"
   }
 }

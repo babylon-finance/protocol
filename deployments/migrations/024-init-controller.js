@@ -1,8 +1,9 @@
 let KEEPER = process.env.KEEPER || '';
 
-module.exports = async ({ getNamedAccounts, deployments, ethers, getSigner, getChainId }) => {
+module.exports = async ({ getNamedAccounts, deployments, ethers, getSigner, getChainId, getRapid }) => {
   const chainId = await getChainId();
   const signers = await ethers.getSigners();
+  const gasPrice = await getRapid();
 
   if (chainId === '31337') {
     // user second signer as Keeper
@@ -27,19 +28,26 @@ module.exports = async ({ getNamedAccounts, deployments, ethers, getSigner, getC
   const controllerContract = await ethers.getContractAt('BabController', controller.address);
 
   // Add WETH
-  await controllerContract.connect(owner).addReserveAsset('0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2');
-  // TODO: use OpenZeppelin Defender Keeper
-  await controllerContract.connect(owner).addKeepers([KEEPER]);
+  console.log('Setting reserve asset to WETH');
+  await controllerContract.connect(owner).addReserveAsset('0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2', { gasPrice });
+  // Use OpenZeppelin Defender Keeper
+  console.log(`Adding KEEPER ${KEEPER}`);
+  await controllerContract.connect(owner).addKeepers([KEEPER], { gasPrice });
 
-  // Sets the price oracle and gardenvaluer address
-
-  await controllerContract.connect(owner).editPriceOracle(priceOracle.address);
-  await controllerContract.connect(owner).editTreasury(treasury.address);
-  await controllerContract.connect(owner).editGardenValuer(gardenValuer.address);
-  await controllerContract.connect(owner).editIshtarGate(ishtarGate.address);
-  await controllerContract.connect(owner).editRewardsDistributor(rewardsDistributor.address);
-  await controllerContract.connect(owner).editGardenFactory(gardenFactory.address);
-  await controllerContract.connect(owner).editStrategyFactory(strategyFactory.address);
+  console.log(`Setting price oracle on controller ${priceOracle.address}`);
+  await controllerContract.connect(owner).editPriceOracle(priceOracle.address, { gasPrice });
+  console.log(`Setting treasury on controller ${treasury.address}`);
+  await controllerContract.connect(owner).editTreasury(treasury.address, { gasPrice });
+  console.log(`Setting garden valuer on controller ${gardenValuer.address}`);
+  await controllerContract.connect(owner).editGardenValuer(gardenValuer.address, { gasPrice });
+  console.log(`Setting ishtar gate on controller ${ishtarGate.address}`);
+  await controllerContract.connect(owner).editIshtarGate(ishtarGate.address, { gasPrice });
+  console.log(`Setting rewards distributor on controller ${rewardsDistributor.address}`);
+  await controllerContract.connect(owner).editRewardsDistributor(rewardsDistributor.address, { gasPrice });
+  console.log(`Setting garden factory on controller ${gardenFactory.address}`);
+  await controllerContract.connect(owner).editGardenFactory(gardenFactory.address, { gasPrice });
+  console.log(`Setting strategy factory on controller ${strategyFactory.address}`);
+  await controllerContract.connect(owner).editStrategyFactory(strategyFactory.address, { gasPrice });
 
   // Adding integrations
   for (const integration of [
@@ -53,24 +61,24 @@ module.exports = async ({ getNamedAccounts, deployments, ethers, getSigner, getC
     'SushiswapPoolIntegration',
     'OneInchPoolIntegration',
   ]) {
-    console.log(`Adding integration ${integration} to BabController`);
     const deployment = await deployments.get(integration);
     const contract = await ethers.getContractAt(integration, deployment.address);
-    await controllerContract.connect(owner).addIntegration(await contract.getName(), deployment.address);
+    console.log(`Adding integration ${integration}(${deployment.address}) to BabController`);
+    await controllerContract.connect(owner).addIntegration(await contract.getName(), deployment.address, { gasPrice });
   }
   const oneinch = await deployments.get('OneInchTradeIntegration');
   // Set default trade integration
-  await controllerContract.connect(owner).setDefaultTradeIntegration(oneinch.address);
+  console.log('Setting default trade integration', oneinch.address);
+  await controllerContract.connect(owner).setDefaultTradeIntegration(oneinch.address, { gasLimit: 1000000, gasPrice });
 
   // Adding operations
   const ops = ['BuyOperation', 'AddLiquidityOperation', 'DepositVaultOperation', 'LendOperation'];
   for (let i = 0; i < ops.length; i++) {
     const operation = ops[i];
-    console.log(`Adding operation ${operation} to BabController`);
     const deployment = await deployments.get(operation);
-    await controllerContract.connect(owner).setOperation(i, deployment.address);
+    console.log(`Adding operation ${operation}(${deployment.address}) to BabController`);
+    await controllerContract.connect(owner).setOperation(i, deployment.address, { gasPrice });
   }
 };
 
 module.exports.tags = ['Init'];
-module.exports.dependencies = ['LendOp'];

@@ -1,6 +1,5 @@
 # Logs
 logs
-*.log
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
@@ -64,6 +63,7 @@ typings/
 
 # dotenv environment variables file
 .env
+*.env
 .env.test
 
 # parcel-bundler cache (https://parceljs.org/)
@@ -79,7 +79,7 @@ typings/
 #mnemonic
 *.txt
 cache
-artifacts
+/artifacts
 
 
 .DS_Store
@@ -94,5 +94,6 @@ export
 .openzeppelin
 deployments/hardhat
 deployments/localhost
-deployments/rinkeby
+deployments/artifacts/rinkeby
+deployments/artifacts/hardhat
 contracts.json

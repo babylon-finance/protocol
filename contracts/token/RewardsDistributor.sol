@@ -356,6 +356,35 @@ contract RewardsDistributor is Ownable, IRewardsDistributor {
     }
 
     /**
+     * Function that set each contributor timestamp per garden
+     * @param _garden                Address of the garden the contributor belongs to
+     * @param _contributor           Address of the contributor
+     * @param _previousBalance       Previous balance of the contributor
+     * @param _depositOrWithdraw     If the timestamp is a deposit (true) or a withdraw (false)
+     * @param _pid                   The pid # of the Garden timestamps
+     */
+    function setContributorTimestampParams(
+        address _garden,
+        address _contributor,
+        uint256 _previousBalance,
+        bool _depositOrWithdraw,
+        uint256 _pid
+    ) external override onlyActiveGarden(_garden, _pid) {
+        _setContributorTimestampParams(_garden, _contributor, _previousBalance, _depositOrWithdraw);
+    }
+
+    /**
+     * Function that set each garden timestamp
+     * @param _garden                Address of the garden
+     * @param _pid                   The pid # of the Garden timestamp
+     */
+    function updateGardenPower(address _garden, uint256 _pid) external override onlyActiveGarden(_garden, _pid) {
+        _updateGardenPower(_garden);
+    }
+
+    /* ========== View functions ========== */
+
+    /**
      * Calculates the profits and BABL that a contributor should receive from a series of finalized strategies
      * @param _garden                   Garden to which the strategies and the user must belong to
      * @param _contributor              Address of the contributor to check
@@ -368,6 +397,7 @@ contract RewardsDistributor is Ownable, IRewardsDistributor {
     ) external view override returns (uint256, uint96) {
         uint256 contributorTotalProfits = 0;
         uint256 bablTotalRewards = 0;
+        _require(IBabController(controller).isGarden(address(_garden)), Errors.ONLY_ACTIVE_GARDEN);
         for (uint256 i = 0; i < _finalizedStrategies.length; i++) {
             (uint256 strategyProfits, uint256 strategyBABL) =
                 _getStrategyProfitsAndBABL(_garden, _finalizedStrategies[i], _contributor);
@@ -377,8 +407,6 @@ contract RewardsDistributor is Ownable, IRewardsDistributor {
 
         return (contributorTotalProfits, Safe3296.safe96(bablTotalRewards, 'R28'));
     }
-
-    /* ========== View functions ========== */
 
     /**
      * Gets the contributor power from one timestamp to the other
@@ -397,24 +425,18 @@ contract RewardsDistributor is Ownable, IRewardsDistributor {
         return _getContributorPower(_garden, _contributor, _from, _to);
     }
 
-    function updateGardenPower(address _garden, uint256 _pid) external override onlyActiveGarden(_garden, _pid) {
-        _updateGardenPower(_garden);
+    /**
+     * Calculates the BABL rewards supply for each quarter
+     * @param _quarter      Number of the epoch (quarter)
+     */
+    function tokenSupplyPerQuarter(uint256 _quarter) external pure override returns (uint96) {
+        return _tokenSupplyPerQuarter(_quarter);
     }
 
-    function setContributorTimestampParams(
-        address _garden,
-        address _contributor,
-        uint256 _previousBalance,
-        bool _depositOrWithdraw,
-        uint256 _pid
-    ) external override onlyActiveGarden(_garden, _pid) {
-        _setContributorTimestampParams(_garden, _contributor, _previousBalance, _depositOrWithdraw);
-    }
-
-    function tokenSupplyPerQuarter(uint256 quarter) external pure override returns (uint96) {
-        return _tokenSupplyPerQuarter(quarter);
-    }
-
+    /**
+     * Check the protocol state in a certain timestamp
+     * @param time      Timestamp
+     */
     function checkProtocol(uint256 _time)
         external
         view
@@ -436,6 +458,10 @@ contract RewardsDistributor is Ownable, IRewardsDistributor {
         );
     }
 
+    /**
+     * Check the quarter state for a specific quarter
+     * @param _num     Number of quarter
+     */
     function checkQuarter(uint256 _num)
         external
         view
@@ -456,6 +482,12 @@ contract RewardsDistributor is Ownable, IRewardsDistributor {
     }
 
     /* ============ Internal Functions ============ */
+    /**
+     * Update the protocol principal checkpoints
+     * @param _strategy         Strategy which is adding/removing principal
+     * @param _capital          Capital to update
+     * @param _addOrSubstract   Adding (true) or removing (false)
+     */
 
     function _updateProtocolPrincipal(
         address _strategy,
@@ -494,6 +526,12 @@ contract RewardsDistributor is Ownable, IRewardsDistributor {
         pid++;
     }
 
+    /**
+     * Get the rewards for a specific contributor activately contributing in strategies of a specific garden
+     * @param _garden           Garden address responsible of the strategies to calculate rewards
+     * @param _strategy         Strategy address
+     * @param _contributor      Contributor address
+     */
     function _getStrategyProfitsAndBABL(
         address _garden,
         address _strategy,
@@ -501,6 +539,7 @@ contract RewardsDistributor is Ownable, IRewardsDistributor {
     ) private view returns (uint256, uint256) {
         IStrategy strategy = IStrategy(_strategy);
         _require(address(strategy.garden()) == _garden, Errors.STRATEGY_GARDEN_MISMATCH);
+        _require(IGarden(_garden).isGardenStrategy(_strategy), Errors.STRATEGY_GARDEN_MISMATCH);
         uint256 contributorProfits = 0;
         uint256 contributorBABL = 0;
         // We get the state of the strategy in terms of profit and distance from expected to accurately calculate profits and rewards
@@ -569,6 +608,10 @@ contract RewardsDistributor is Ownable, IRewardsDistributor {
         return (contributorProfits, contributorBABL);
     }
 
+    /**
+     * Get the context of a specific address depending on their expected returns, capital allocated and capital returned
+     * @param _strategy         Strategy address
+     */
     function _getStrategyRewardsContext(address _strategy)
         private
         view
@@ -611,6 +654,14 @@ contract RewardsDistributor is Ownable, IRewardsDistributor {
         return (profit, profitValue, distance, distanceValue);
     }
 
+    /**
+     * Get the BABL rewards (Mining program) for a Steward profile
+     * @param _strategy         Strategy address
+     * @param _contributor      Contributor address
+     * @param _profit           Whether or not the strategy had profits
+     * @param _distance         If true the results were above expected returns, false means opposite
+     * @param _distanceValue        The distance from/to expected returns for capital returned
+     */
     function _getStrategyStewardBabl(
         address _strategy,
         address _contributor,
@@ -658,6 +709,14 @@ contract RewardsDistributor is Ownable, IRewardsDistributor {
         return babl;
     }
 
+    /**
+     * Get the rewards for a Steward profile
+     * @param _strategy         Strategy address
+     * @param _contributor      Contributor address
+     * @param _profit           Whether or not the strategy had profits
+     * @param _profitValue      The value of profits
+     * @param _distance         If true the results were above expected returns, false means opposite
+     */
     function _getStrategyStewardProfits(
         address _strategy,
         address _contributor,
@@ -689,6 +748,13 @@ contract RewardsDistributor is Ownable, IRewardsDistributor {
         return profits;
     }
 
+    /**
+     * Get the BABL rewards (Mining program) for a Strategist profile
+     * @param _strategy         Strategy address
+     * @param _contributor      Contributor address
+     * @param _profit           Whether or not the strategy had profits
+     * @param _distance         If true the results were above expected returns, false means opposite
+     */
     function _getStrategyStrategistBabl(
         address _strategy,
         address _contributor,
@@ -726,6 +792,13 @@ contract RewardsDistributor is Ownable, IRewardsDistributor {
         return babl;
     }
 
+    /**
+     * Get the rewards for a Strategist profile
+     * @param _strategy         Strategy address
+     * @param _contributor      Contributor address
+     * @param _profit           Whether or not the strategy had profits
+     * @param _profitValue      The value of profits
+     */
     function _getStrategyStrategistProfits(
         address _strategy,
         address _contributor,
@@ -745,6 +818,10 @@ contract RewardsDistributor is Ownable, IRewardsDistributor {
         return profits;
     }
 
+    /**
+     * Add protocol power timestamps for each quarter
+     * @param _time         Timestamp
+     */
     function _addProtocolPerQuarter(uint256 _time) private onlyMiningActive {
         ProtocolPerQuarter storage protocolCheckpoint = protocolPerQuarter[_getQuarter(_time)];
 
@@ -835,6 +912,11 @@ contract RewardsDistributor is Ownable, IRewardsDistributor {
         protocolCheckpoint.quarterPrincipal = protocolPrincipal;
     }
 
+    /**
+     * Updates the strategy power overhead for rewards calculations of each strategy out of the whole protocol
+     * @param _strategy      Strategy
+     * @param _capital       New capital
+     */
     function _updatePowerOverhead(IStrategy _strategy, uint256 _capital) private onlyMiningActive {
         if (_strategy.updatedAt() != 0) {
             // There will be overhead after the first execution not before
@@ -859,6 +941,11 @@ contract RewardsDistributor is Ownable, IRewardsDistributor {
         }
     }
 
+    /**
+     * Check the strategy rewards for strategies starting and ending in the same quarter
+     * @param _strategy         Strategy
+     * @param _startingQuarter  Starting quarter
+     */
     function _getStrategyRewardsOneQuarter(address _strategy, uint256 _startingQuarter)
         private
         view
@@ -878,7 +965,12 @@ contract RewardsDistributor is Ownable, IRewardsDistributor {
                 .div(block.timestamp.sub(_startingQuarter));
     }
 
-    // Safe BABL transfer function, just in case if rounding error causes DistributorRewards to not have enough BABL.
+    /**
+     * Safe BABL rewards (Mining program) token transfer.
+     * It handle cases when in case of rounding errors, RewardsDistributor might not have enough BABL.
+     * @param _to               The receiver address of the contributor to send
+     * @param _amount           The amount of BABL tokens to be rewarded during this claim
+     */
     function _safeBABLTransfer(address _to, uint96 _amount) private onlyMiningActive {
         uint256 bablBal = babltoken.balanceOf(address(this));
         if (_amount > bablBal) {
@@ -889,13 +981,13 @@ contract RewardsDistributor is Ownable, IRewardsDistributor {
     }
 
     /**
-     * Gets the contributor power from one timestamp to the other
+     * Gets the contributor power from a timestamp to a specific timestamp within a garden
+     * @param _garden      Address of the garden
      * @param _contributor Address if the contributor
      * @param _from        Initial timestamp
      * @param _to          End timestamp
      * @return uint256     Contributor power during that period
      */
-
     function _getContributorPower(
         address _garden,
         address _contributor,
@@ -914,7 +1006,6 @@ contract RewardsDistributor is Ownable, IRewardsDistributor {
                 _from = IGarden(_garden).gardenInitializedAt();
             }
             // Find closest point to _from and _to either contributor and garden checkpoints at their left
-
             (powerCheckpoints.fromDepositAt, powerCheckpoints.lastDepositAt) = _locateCheckpointsContributor(
                 _garden,
                 _contributor,
@@ -1010,6 +1101,14 @@ contract RewardsDistributor is Ownable, IRewardsDistributor {
         }
     }
 
+    /**
+     * Gets the earlier and closest (deposit/withdrawal) checkpoints of a contributor in a specific range
+     * @param _garden      Address of the garden
+     * @param _contributor Address if the contributor
+     * @param _from        Initial timestamp
+     * @param _to          End timestamp
+     * @return uint256     Contributor power during that period
+     */
     function _locateCheckpointsContributor(
         address _garden,
         address _contributor,
@@ -1035,6 +1134,13 @@ contract RewardsDistributor is Ownable, IRewardsDistributor {
         return (fromDepositAt, lastDepositAt);
     }
 
+    /**
+     * Gets the earlier and closest (deposit/withdrawal) checkpoints of a garden in a specific range
+     * @param _garden      Address of the garden
+     * @param _from        Initial timestamp
+     * @param _to          End timestamp
+     * @return uint256     Contributor power during that period
+     */
     function _locateCheckpointsGarden(
         address _garden,
         uint256 _from,
@@ -1061,6 +1167,7 @@ contract RewardsDistributor is Ownable, IRewardsDistributor {
 
     /**
      * Function that keeps checkpoints of the garden power (deposits and withdrawals) per timestamp
+     * @param _garden               Garden address
      */
     function _updateGardenPower(address _garden) private {
         IGarden garden = IGarden(_garden);
@@ -1102,6 +1209,10 @@ contract RewardsDistributor is Ownable, IRewardsDistributor {
 
     /**
      * Updates contributor timestamps params
+     * @param _garden               Garden address
+     * @param _contributor          Contributor address
+     * @param _previousBalance      Previous balance
+     * @param _depositOrWithdraw    Whether it is a deposit or a withdraw
      */
     function _setContributorTimestampParams(
         address _garden,
@@ -1152,22 +1263,35 @@ contract RewardsDistributor is Ownable, IRewardsDistributor {
         contributor.pid++;
     }
 
-    function _tokenSupplyPerQuarter(uint256 quarter) internal pure returns (uint96) {
-        _require(quarter >= 1, Errors.QUARTERS_MIN_1);
-        if (quarter >= 513) {
+    /**
+     * Calculates the BABL rewards supply for each quarter
+     * @param _quarter      Number of the epoch (quarter)
+     */
+    function _tokenSupplyPerQuarter(uint256 _quarter) internal pure returns (uint96) {
+        _require(_quarter >= 1, Errors.QUARTERS_MIN_1);
+        if (_quarter >= 513) {
             return 0;
         } else {
-            uint256 firstFactor = (SafeDecimalMath.unit().add(DECAY_RATE)).powDecimal(quarter.sub(1));
+            uint256 firstFactor = (SafeDecimalMath.unit().add(DECAY_RATE)).powDecimal(_quarter.sub(1));
             uint256 supplyForQuarter = Q1_REWARDS.divideDecimal(firstFactor);
             return Safe3296.safe96(supplyForQuarter, 'overflow 96 bits');
         }
     }
 
+    /**
+     * Calculates the quarter number for a specific time since START_TIME
+     * @param _now      Timestamp to calculate its quarter
+     */
     function _getQuarter(uint256 _now) internal view returns (uint256) {
         uint256 quarter = (_now.sub(START_TIME).preciseDivCeil(EPOCH_DURATION)).div(1e18);
         return quarter.add(1);
     }
 
+    /**
+     * Calculates the range (starting quarter and ending quarter since START_TIME)
+     * @param _from   Starting timestamp
+     * @param _to     Ending timestamp
+     */
     function _getRewardsWindow(uint256 _from, uint256 _to) internal view returns (uint256, uint256) {
         uint256 quarters = (_to.sub(_from).preciseDivCeil(EPOCH_DURATION)).div(1e18);
         uint256 startingQuarter = (_from.sub(START_TIME).preciseDivCeil(EPOCH_DURATION)).div(1e18);

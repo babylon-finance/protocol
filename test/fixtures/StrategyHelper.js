@@ -263,7 +263,6 @@ async function createStrategy(
   return strategy;
 }
 
-console.log('export');
 module.exports = {
   createStrategy,
   DEFAULT_STRATEGY_PARAMS,
