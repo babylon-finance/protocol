@@ -40,7 +40,7 @@ module.exports = async ({ getNamedAccounts, deployments, ethers, getSigner, getC
     investorType: alloc[2],
     vestingStartingDate: now,
   }));
-  const batchSize = 5;
+  const batchSize = 20;
   for (let i = 0; i < allocations.length; i += batchSize) {
     await timeLockRegistry.connect(deployerSigner).registerBatch(allocations.slice(i, i + batchSize));
   }
