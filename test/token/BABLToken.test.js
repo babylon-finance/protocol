@@ -170,7 +170,6 @@ describe('BABLToken contract', function () {
     it('can enable transfers', async function () {
       // Enable BABL token transfers
       await bablToken.connect(owner).enableTokensTransfers();
-      // Transfer 260_000e18 tokens from owner to userSigner1
       const value = ethers.utils.parseEther('100');
       await bablToken.connect(owner).transfer(signer1.address, value);
       const signer1Balance = await bablToken.balanceOf(signer1.address);
@@ -181,7 +180,6 @@ describe('BABLToken contract', function () {
       await bablToken.connect(owner).enableTokensTransfers();
       await expect(bablToken.connect(owner).disableTokensTransfers()).to.be.revertedWith('BABL must flow');
 
-      // Transfer 260_000e18 tokens from owner to userSigner1
       const value = ethers.utils.parseEther('1000');
       await bablToken.connect(owner).transfer(signer1.address, value);
       const signer1Balance = await bablToken.balanceOf(signer1.address);
