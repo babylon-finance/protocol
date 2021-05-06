@@ -140,7 +140,7 @@ contract TimeLockRegistry is Ownable {
     /**
      * PRIVILEGED GOVERNANCE FUNCTION
      *
-     * @notice Register multiple investors/teemmembers in a batch
+     * @notice Register multiple investors/team in a batch
      * @param _registrations Registrations to process
      */
     function registerBatch(Registration[] memory _registrations) external onlyOwner {
