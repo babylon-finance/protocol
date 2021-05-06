@@ -50,9 +50,9 @@ contract UniswapTWAPV3 is Ownable, IOracleAdapter {
     uint32[] public secondsAgo;
     uint32 public constant SECONDS_GRANULARITY = 900;
 
-    uint32 constant private FEE_LOW = 500;
-    uint32 constant private FEE_MEDIUM = 3000;
-    uint32 constant private FEE_HIGH = 10000;
+    uint32 private constant FEE_LOW = 500;
+    uint32 private constant FEE_MEDIUM = 3000;
+    uint32 private constant FEE_HIGH = 10000;
 
     /* ============ Constructor ============ */
 
@@ -84,9 +84,10 @@ contract UniswapTWAPV3 is Ownable, IOracleAdapter {
         override
         returns (bool found, uint256 amountOut)
     {
-        IUniswapV3Pool pair = IUniswapV3Pool(factory.getPool(tokenIn, tokenOut, FEE_LOW)) ||
-          IUniswapV3Pool(factory.getPool(tokenIn, tokenOut, FEE_MEDIUM)) ||
-          IUniswapV3Pool(factory.getPool(tokenIn, tokenOut, FEE_HIGH));
+        IUniswapV3Pool pair =
+            IUniswapV3Pool(factory.getPool(tokenIn, tokenOut, FEE_LOW)) ||
+                IUniswapV3Pool(factory.getPool(tokenIn, tokenOut, FEE_MEDIUM)) ||
+                IUniswapV3Pool(factory.getPool(tokenIn, tokenOut, FEE_HIGH));
         (int56[] memory tickCumulatives, uint160[] memory secondsPerLiquidityCumulativeX128s) =
             pair.observe(secondsAgo);
         return (true, computeAmountOut(tickCumulatives));
