@@ -15,6 +15,7 @@
 pragma solidity 0.7.6;
 pragma experimental ABIEncoderV2;
 
+import 'hardhat/console.sol';
 import {Ownable} from '@openzeppelin/contracts/access/Ownable.sol';
 import {SafeMath} from '@openzeppelin/contracts/math/SafeMath.sol';
 import {Address} from '@openzeppelin/contracts/utils/Address.sol';
@@ -223,14 +224,9 @@ contract TimeLockRegistry is Ownable {
         // set tokenVested mapping to 0
         delete tokenVested[receiver];
 
-        // decrease total tokens
-        totalTokens = totalTokens.sub(totalTokens);
 
         // remove from the list of all registrations
         registrations.remove(receiver);
-
-        // transfer tokens back to owner
-        SafeERC20.safeTransfer(token, msg.sender, amount);
 
         // emit cancel event
         emit Cancel(receiver, amount);
@@ -285,8 +281,10 @@ contract TimeLockRegistry is Ownable {
         // set distribution mapping to 0
         delete registeredDistributions[_receiver];
 
-        // register lockup in TimeLockedToken
+        // decrease total tokens
+        totalTokens = totalTokens.sub(amount);
 
+        // register lockup in TimeLockedToken
         // this will transfer funds from this contract and lock them for sender
         token.registerLockup(
             _receiver,

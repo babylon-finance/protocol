@@ -74,66 +74,6 @@ describe('BABLToken contract', function () {
       const ownerBalance = await bablToken.balanceOf(owner.address);
       expect(ownerBalance).to.equal(ONE_ETH.mul(16000));
     });
-
-    it('timeLockRegistry should have 310k tokens after deployment', async function () {
-      const ownerBalance = await bablToken.balanceOf(timeLockRegistry.address);
-      expect(ownerBalance).to.equal(ONE_ETH.mul(310000));
-    });
-
-    it('timeLockRegistry should have all registrations', async function () {
-      expect((await timeLockRegistry.getRegistrations()).length).to.be.eq(79);
-    });
-  });
-
-  describe('registerBatch', function () {
-    it('can register multiple addresses at once', async function () {
-      await timeLockRegistry.connect(owner).registerBatch([
-        {
-          receiver: signer1.address,
-          distribution: ethers.utils.parseEther('1000'),
-          investorType: true,
-          vestingStartingDate: 1614618000,
-        },
-        {
-          receiver: signer2.address,
-          distribution: ethers.utils.parseEther('500'),
-          investorType: false,
-          vestingStartingDate: 1614618000,
-        },
-        {
-          receiver: signer3.address,
-          distribution: ethers.utils.parseEther('100'),
-          investorType: false,
-          vestingStartingDate: 1614618000,
-        },
-      ]);
-
-      let [isTeam, vestingBegins, vestingEnds] = await timeLockRegistry.connect(owner).checkVesting(signer1.address);
-
-      expect(isTeam).to.equal(true);
-      expect(vestingBegins).to.equal(1614618000);
-      expect(vestingEnds).to.equal(1614618000 + ONE_DAY_IN_SECONDS * 365 * 4);
-
-      [isTeam, vestingBegins, vestingEnds] = await timeLockRegistry.connect(owner).checkVesting(signer2.address);
-
-      expect(isTeam).to.equal(false);
-      expect(vestingBegins).to.equal(1614618000);
-      expect(vestingEnds).to.equal(1614618000 + ONE_DAY_IN_SECONDS * 365 * 3);
-
-      [isTeam, vestingBegins, vestingEnds] = await timeLockRegistry.connect(owner).checkVesting(signer3.address);
-
-      expect(isTeam).to.equal(false);
-      expect(vestingBegins).to.equal(1614618000);
-      expect(vestingEnds).to.equal(1614618000 + ONE_DAY_IN_SECONDS * 365 * 3);
-    });
-  });
-
-  describe('registerBatch', function () {
-    it('can NOT register if there are not enough tokens', async function () {
-      await expect(
-        timeLockRegistry.connect(owner).register(signer1.address, ONE_ETH.mul(999999999999), true, 1614618000),
-      ).to.be.revertedWith('Not enough tokens');
-    });
   });
 
   describe('Transfers', function () {
@@ -438,21 +378,14 @@ describe('BABLToken contract', function () {
         .connect(owner)
         .register(signer2.address, ethers.utils.parseEther('2000'), true, 1614618000);
 
-      const userSigner2Registered = await timeLockRegistry.checkVesting(signer2.address);
-      const userSigner2RegisteredTeam = userSigner2Registered[0];
-      const userSigner2RegisteredVestingBegin = userSigner2Registered[1];
-      const userSigner2RegisteredVestingEnd = userSigner2Registered[2];
-
-      expect(userSigner2RegisteredTeam).to.equal(true);
-      expect(userSigner2RegisteredVestingBegin).to.equal(1614618000);
-      expect(userSigner2RegisteredVestingEnd).to.equal(1614618000 + ONE_DAY_IN_SECONDS * 365 * 4);
-
       // Cancel the registration of above registered Advisor before the claim is done
       await timeLockRegistry.connect(owner).cancelRegistration(signer2.address);
 
-      expect(await bablToken.balanceOf(timeLockRegistry.address)).to.equal(ONE_ETH.mul(308000));
+      const [isTeam, vestingBegins, vestingEnds] = await timeLockRegistry.connect(owner).checkVesting(signer1.address);
 
-      // TODO: check that registration is actually cancelled for signer2
+      expect(isTeam).to.equal(false);
+      expect(vestingBegins).to.equal(0);
+      expect(vestingEnds).to.equal(0);
     });
 
     it('Time Lock Registry should properly register 1 Team Member, 1 Advisor and 1 Investor with its own vesting conditions', async function () {
