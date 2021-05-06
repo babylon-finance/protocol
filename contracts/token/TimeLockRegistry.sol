@@ -227,6 +227,9 @@ contract TimeLockRegistry is Ownable {
         // remove from the list of all registrations
         registrations.remove(receiver);
 
+        // decrease total tokens
+        totalTokens = totalTokens.sub(amount);
+
         // emit cancel event
         emit Cancel(receiver, amount);
 
