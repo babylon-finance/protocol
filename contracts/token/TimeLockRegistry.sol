@@ -224,7 +224,6 @@ contract TimeLockRegistry is Ownable {
         // set tokenVested mapping to 0
         delete tokenVested[receiver];
 
-
         // remove from the list of all registrations
         registrations.remove(receiver);
 
