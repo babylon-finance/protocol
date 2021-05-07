@@ -440,13 +440,13 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         updatedAt = exitedAt;
         // Mint NFT
         IStrategyNFT(strategyNft).grantStrategyNFT(strategist, _tokenURI);
+        // Pay Keeper Fee
+        garden.payKeeper(msg.sender, _fee);
         // Transfer rewards
         _transferStrategyPrincipal(_fee);
         // Send rest to garden if any
         _sendReserveAssetToGarden();
         emit StrategyFinalized(address(garden), capitalReturned, _fee, block.timestamp);
-        // Pay Keeper Fee
-        garden.payKeeper(msg.sender, _fee);
     }
 
     /**

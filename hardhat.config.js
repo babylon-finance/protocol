@@ -14,10 +14,14 @@ require('./lib/plugins/gasnow');
 
 require('./lib/tasks/node-ready');
 require('./lib/tasks/export');
+require('./lib/tasks/gate');
 
 const ALCHEMY_KEY = process.env.ALCHEMY_KEY || '';
 const DEPLOYER_PRIVATE_KEY =
   process.env.DEPLOYER_PRIVATE_KEY || '0000000000000000000000000000000000000000000000000000000000000000';
+
+const OWNER_PRIVATE_KEY =
+  process.env.OWNER_PRIVATE_KEY || '0000000000000000000000000000000000000000000000000000000000000000';
 
 const defaultNetwork = 'hardhat';
 
@@ -53,7 +57,7 @@ module.exports = {
     mainnet: {
       chainId: CHAIN_IDS.mainnet,
       url: `https://eth-mainnet.alchemyapi.io/v2/${ALCHEMY_KEY}`,
-      accounts: [`0x${DEPLOYER_PRIVATE_KEY}`],
+      accounts: [`0x${DEPLOYER_PRIVATE_KEY}`, `0x${OWNER_PRIVATE_KEY}`],
       saveDeployments: true,
     },
     rinkeby: {
