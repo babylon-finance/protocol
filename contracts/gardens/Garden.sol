@@ -17,7 +17,7 @@
 
 pragma solidity 0.7.6;
 
-// import 'hardhat/console.sol';
+import 'hardhat/console.sol';
 import {Address} from '@openzeppelin/contracts/utils/Address.sol';
 import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import {SafeERC20} from '@openzeppelin/contracts/token/ERC20/SafeERC20.sol';
@@ -439,6 +439,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
      */
     function payKeeper(address payable _keeper, uint256 _fee) external override {
         _require(IBabController(controller).isValidKeeper(_keeper), Errors.ONLY_KEEPER);
+        _onlyStrategy();
         keeperDebt = keeperDebt.add(_fee);
         // Pay Keeper in Reserve Asset
         if (keeperDebt > 0 && IERC20(reserveAsset).balanceOf(address(this)) >= keeperDebt) {
