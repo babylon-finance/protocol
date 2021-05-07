@@ -141,7 +141,6 @@ describe('TimeLockRegistry', function () {
   });
   describe('Quality Tests: Register ->  Claim -> Time passes -> Unlocking balances -> Transfers', function () {
     it('Should unlock correct amount of BABL tokens during the vesting and depending on each personal conditions', async function () {
-      // Register 1 Team Member with 26_000 BABL 4Y of Vesting
       // Vesting starting date 1 March 2021 9h PST Unix Time 1614618000
       await timeLockRegistry
         .connect(owner)
@@ -176,7 +175,6 @@ describe('TimeLockRegistry', function () {
       expect(userSigner2LockedBalance2).to.be.closeTo('330227417343142228986', ethers.utils.parseEther('0.0005')); // Investor 3Y vesting (1/3 available after 1Y)
     });
     it('Should unlock all vested tokens after 3Y for investors and after 4Y for team members and advisors', async function () {
-      // Register 1 Team Member with 26_000 BABL 4Y of Vesting
       // Vesting starting date 1 March 2021 9h PST Unix Time 1614618000
       await timeLockRegistry
         .connect(owner)
@@ -216,7 +214,6 @@ describe('TimeLockRegistry', function () {
     });
 
     it('be able to transfer all babl tokens after vesting passes (3Y investors, 4Y to team/advisors)', async function () {
-      // Register 1 Team Member with 26_000 BABL 4Y of Vesting
       // Vesting starting date 1 March 2021 9h PST Unix Time 1614618000
       await timeLockRegistry
         .connect(owner)
