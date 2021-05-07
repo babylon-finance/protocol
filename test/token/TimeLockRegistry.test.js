@@ -139,4 +139,118 @@ describe('TimeLockRegistry', function () {
       expect(await timeLockRegistry.totalTokens()).to.be.eq(TOTAL_REGISTERED_TOKENS.sub(ONE_ETH.mul(17000)));
     });
   });
+  describe('Quality Tests: Register ->  Claim -> Time passes -> Unlocking balances -> Transfers', function () {
+    it('Should unlock correct amount of BABL tokens during the vesting and depending on each personal conditions', async function () {
+      // Register 1 Team Member with 26_000 BABL 4Y of Vesting
+      // Vesting starting date 1 March 2021 9h PST Unix Time 1614618000
+      await timeLockRegistry
+        .connect(owner)
+        .register(signer1.address, ethers.utils.parseEther('1000'), true, 1614618000);
+
+      await timeLockRegistry
+        .connect(owner)
+        .register(signer2.address, ethers.utils.parseEther('500'), false, 1614618000);
+
+      // Tokens are claimed by the Team Member and the registration is deleted in Time Lock Registry
+      await bablToken.connect(signer1).claimMyTokens();
+      await bablToken.connect(signer2).claimMyTokens();
+
+      const userSigner1LockedBalance1 = await bablToken.viewLockedBalance(signer1.address);
+      const userSigner1Balance1 = await bablToken.balanceOf(signer1.address);
+
+      const userSigner2LockedBalance1 = await bablToken.viewLockedBalance(signer2.address);
+      const userSigner2Balance1 = await bablToken.balanceOf(signer2.address);
+
+      // We move ahead 365 days
+      await increaseTime(ONE_DAY_IN_SECONDS * 340);
+
+      const userSigner1LockedBalance2 = await bablToken.viewLockedBalance(signer1.address);
+      const userSigner1Balance2 = await bablToken.balanceOf(signer1.address);
+
+      const userSigner2LockedBalance2 = await bablToken.viewLockedBalance(signer2.address);
+      const userSigner2Balance2 = await bablToken.balanceOf(signer2.address);
+
+      expect(userSigner1Balance2).to.equal(userSigner1Balance1);
+      expect(userSigner2Balance2).to.equal(userSigner2Balance1);
+      expect(userSigner1LockedBalance2).to.be.closeTo('745341126014713343480', ethers.utils.parseEther('0.0005')); // Team 4 Y vesting (1/4 available after 1Y)
+      expect(userSigner2LockedBalance2).to.be.closeTo('330227417343142228986', ethers.utils.parseEther('0.0005')); // Investor 3Y vesting (1/3 available after 1Y)
+    });
+    it('Should unlock all vested tokens after 3Y for investors and after 4Y for team members and advisors', async function () {
+      // Register 1 Team Member with 26_000 BABL 4Y of Vesting
+      // Vesting starting date 1 March 2021 9h PST Unix Time 1614618000
+      await timeLockRegistry
+        .connect(owner)
+        .register(signer1.address, ethers.utils.parseEther('1000'), true, 1614618000);
+
+      await timeLockRegistry
+        .connect(owner)
+        .register(signer2.address, ethers.utils.parseEther('500'), false, 1614618000);
+
+      // Tokens are claimed by the Team Member and the registration is deleted in Time Lock Registry
+      await bablToken.connect(signer1).claimMyTokens();
+      await bablToken.connect(signer2).claimMyTokens();
+
+      const userSigner1LockedBalance1 = await bablToken.viewLockedBalance(signer1.address);
+      const userSigner1Balance1 = await bablToken.balanceOf(signer1.address);
+
+      const userSigner2LockedBalance1 = await bablToken.viewLockedBalance(signer2.address);
+      const userSigner2Balance1 = await bablToken.balanceOf(signer2.address);
+
+      // We move ahead 3Y
+      await increaseTime(ONE_DAY_IN_SECONDS * 1095);
+
+      const userSigner1LockedBalance2 = await bablToken.viewLockedBalance(signer1.address);
+      const userSigner1Balance2 = await bablToken.balanceOf(signer1.address);
+      const userSigner2LockedBalance2 = await bablToken.viewLockedBalance(signer2.address);
+      const userSigner2Balance2 = await bablToken.balanceOf(signer2.address);
+
+      expect(userSigner1Balance2).to.equal(userSigner1Balance1);
+      expect(userSigner2Balance2).to.equal(userSigner2Balance1);
+      expect(userSigner1LockedBalance2).to.be.closeTo('228217830416032470826', ethers.utils.parseEther('0.0005')); // Team 4 Y vesting (3/4 available after 3Y)
+      expect(userSigner2LockedBalance2).to.be.equal('0'); // Investor 3Y vesting (all available after 3Y)
+      // We move ahead 365 days more
+      await increaseTime(ONE_DAY_IN_SECONDS * 365);
+
+      const userSigner1LockedBalance3 = await bablToken.viewLockedBalance(signer1.address);
+      expect(userSigner1LockedBalance3).to.be.equal('0'); // Team 4Y vesting (all available after 4Y)
+    });
+
+    it('be able to transfer all babl tokens after vesting passes (3Y investors, 4Y to team/advisors)', async function () {
+      // Register 1 Team Member with 26_000 BABL 4Y of Vesting
+      // Vesting starting date 1 March 2021 9h PST Unix Time 1614618000
+      await timeLockRegistry
+        .connect(owner)
+        .register(signer1.address, ethers.utils.parseEther('1000'), true, 1614618000);
+
+      await timeLockRegistry
+        .connect(owner)
+        .register(signer2.address, ethers.utils.parseEther('500'), false, 1614618000);
+
+      // Tokens are claimed by the Team Member and the registration is deleted in Time Lock Registry
+      await bablToken.connect(signer1).claimMyTokens();
+      await bablToken.connect(signer2).claimMyTokens();
+      const signer1Balance = await bablToken.balanceOf(signer1.address);
+      const signer2Balance = await bablToken.balanceOf(signer2.address);
+
+      await increaseTime(ONE_DAY_IN_SECONDS * 1095);
+      const signer1LockedBalance = await bablToken.viewLockedBalance(signer1.address);
+
+      // Enable BABL token transfers
+      await bablToken.connect(owner).enableTokensTransfers();
+
+      await bablToken.connect(signer2).transfer(signer1.address, signer2Balance); // signer 2 sends all its balance to signer 1
+      expect(await bablToken.balanceOf(signer2.address)).to.be.equal(0);
+      expect(await bablToken.balanceOf(signer1.address)).to.be.equal(signer1Balance.add(signer2Balance));
+      expect(await bablToken.viewLockedBalance(signer1.address)).to.be.closeTo(
+        signer1LockedBalance,
+        ethers.utils.parseEther('0.0005'),
+      ); // New received tokens are not locked
+
+      await increaseTime(ONE_DAY_IN_SECONDS * 365);
+      await bablToken.connect(signer1).transfer(signer2.address, await bablToken.balanceOf(signer1.address)); // signer 1 sends all its balance to signer 2
+      expect(await bablToken.viewLockedBalance(signer1.address)).to.be.equal(0); // New received tokens are not locked
+      expect(await bablToken.viewLockedBalance(signer2.address)).to.be.equal(0); // New received tokens are not locked
+      expect(await bablToken.balanceOf(signer2.address)).to.be.equal(ethers.utils.parseEther('1500'));
+    });
+  });
 });
