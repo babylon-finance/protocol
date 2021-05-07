@@ -18,6 +18,7 @@ describe('Garden', function () {
   let babController;
   let rewardsDistributor;
   let owner;
+  let keeper;
   let signer1;
   let signer2;
   let signer3;
@@ -30,6 +31,7 @@ describe('Garden', function () {
     ({
       babController,
       rewardsDistributor,
+      keeper,
       owner,
       signer1,
       signer2,
@@ -51,6 +53,12 @@ describe('Garden', function () {
       expect(await garden1.minVotersQuorum()).to.equal(ethers.utils.parseEther('0.10'));
       expect(await garden1.minStrategyDuration()).to.equal(ONE_DAY_IN_SECONDS * 3);
       expect(await garden1.maxStrategyDuration()).to.equal(ONE_DAY_IN_SECONDS * 365);
+    });
+  });
+
+  describe('payKeeper', async function () {
+    it('anyone can NOT invoke payKeeper', async function () {
+      await expect(garden1.connect(signer1).payKeeper(keeper.address, ONE_ETH)).to.be.revertedWith('revert BAB#020');
     });
   });
 
