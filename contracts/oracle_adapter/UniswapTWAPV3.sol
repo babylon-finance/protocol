@@ -47,12 +47,12 @@ contract UniswapTWAPV3 is Ownable, IOracleAdapter {
     IUniswapV3Factory public immutable factory;
 
     // the desired seconds agos array passed to the observe method
-    uint32[] public secondsAgo;
+    uint32[] public secondsAgo = new uint32[](2);
     uint32 public constant SECONDS_GRANULARITY = 900;
 
-    uint32 private constant FEE_LOW = 500;
-    uint32 private constant FEE_MEDIUM = 3000;
-    uint32 private constant FEE_HIGH = 10000;
+    uint24 private constant FEE_LOW = 500;
+    uint24 private constant FEE_MEDIUM = 3000;
+    uint24 private constant FEE_HIGH = 10000;
 
     /* ============ Constructor ============ */
 
@@ -65,8 +65,8 @@ contract UniswapTWAPV3 is Ownable, IOracleAdapter {
     constructor(address _controller, address _factory) {
         factory = IUniswapV3Factory(_factory);
         controller = IBabController(_controller);
-        secondsAgo.push(0);
-        secondsAgo.push(SECONDS_GRANULARITY);
+        secondsAgo[0] = SECONDS_GRANULARITY;
+        secondsAgo[1] = 0;
     }
 
     /* ============ External Functions ============ */
@@ -84,14 +84,35 @@ contract UniswapTWAPV3 is Ownable, IOracleAdapter {
         override
         returns (bool found, uint256 amountOut)
     {
-        IUniswapV3Pool pair =
-            IUniswapV3Pool(factory.getPool(tokenIn, tokenOut, FEE_LOW)) ||
-                IUniswapV3Pool(factory.getPool(tokenIn, tokenOut, FEE_MEDIUM)) ||
-                IUniswapV3Pool(factory.getPool(tokenIn, tokenOut, FEE_HIGH));
+        IUniswapV3Pool pairLow = IUniswapV3Pool(factory.getPool(tokenIn, tokenOut, FEE_LOW));
+        IUniswapV3Pool pairMedium = IUniswapV3Pool(factory.getPool(tokenIn, tokenOut, FEE_MEDIUM));
+        IUniswapV3Pool pairHigh = IUniswapV3Pool(factory.getPool(tokenIn, tokenOut, FEE_HIGH));
+
         (int56[] memory tickCumulatives, uint160[] memory secondsPerLiquidityCumulativeX128s) =
-            pair.observe(secondsAgo);
+            pairLow.observe(secondsAgo);
         return (true, computeAmountOut(tickCumulatives));
     }
+
+    function update(address tokenA, address tokenB) external override {}
+
+    /**
+    //  * @notice Fetch TWAP from Uniswap V3 pool. If `twapDuration` is 0, returns
+    //  * current price.
+    //  */
+    // function getTwap() public view returns (int24) {
+    //     uint32 _twapDuration = twapDuration;
+    //     if (_twapDuration == 0) {
+    //         return _mid();
+    //     }
+    //
+    //     uint32[] memory secondsAgo = new uint32[](2);
+    //     secondsAgo[0] = _twapDuration;
+    //     secondsAgo[1] = 0;
+    //
+    //     (int56[] memory tickCumulatives, ) = pool.observe(secondsAgo);
+    //     return int24((tickCumulatives[1] - tickCumulatives[0]) / _twapDuration);
+    // }
+
 
     /* ============ Internal Functions ============ */
 
