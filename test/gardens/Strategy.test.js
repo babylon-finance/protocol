@@ -99,6 +99,7 @@ describe('Strategy', function () {
         expectedReturn,
         maxCapitalRequested,
         minRebalanceCapital,
+        strategyNft,
         enteredAt,
       ] = await strategyDataset.getStrategyDetails();
 
@@ -114,6 +115,7 @@ describe('Strategy', function () {
       expect(expectedReturn).to.equal(ethers.utils.parseEther('0.05'));
       expect(maxCapitalRequested).to.equal(ethers.utils.parseEther('10'));
       expect(minRebalanceCapital).to.equal(ethers.utils.parseEther('1'));
+      expect(strategyNft).to.equal('0xf9b42E09Fd787d6864D6b2Cd8E1350fc93E6683D');
       expect(enteredAt.isZero()).to.equal(false);
     });
   });

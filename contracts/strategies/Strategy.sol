@@ -617,6 +617,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
             uint256,
             uint256,
             uint256,
+            address,
             uint256
         )
     {
@@ -633,6 +634,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
             expectedReturn,
             maxCapitalRequested,
             minRebalanceCapital,
+            strategyNft,
             enteredAt
         );
     }
