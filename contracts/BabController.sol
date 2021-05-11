@@ -204,7 +204,6 @@ contract BabController is OwnableUpgradeable, IBabController {
         address newGarden =
             IGardenFactory(gardenFactory).createGarden(
                 _reserveAsset,
-                address(this),
                 msg.sender,
                 _name,
                 _symbol,

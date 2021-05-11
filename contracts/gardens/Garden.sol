@@ -501,7 +501,6 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
                 _symbol,
                 msg.sender,
                 address(this),
-                controller,
                 _stratParams
             );
         strategyMapping[strategy] = true;
