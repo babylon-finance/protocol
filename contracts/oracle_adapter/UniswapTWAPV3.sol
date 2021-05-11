@@ -102,9 +102,9 @@ contract UniswapTWAPV3 is Ownable, IOracleAdapter {
     function computeAmountOut(int56[] memory tickCumulatives) private pure returns (uint256 amountOut) {
         uint32 ticksDiff = uint32(tickCumulatives[1] - tickCumulatives[0]) / SECONDS_GRANULARITY;
         if (tickCumulatives[1] >= tickCumulatives[0]) {
-          return 10001e18 ** (uint256(ticksDiff));
+            return 10001e18**(uint256(ticksDiff));
         } else {
-          return 10001e18 / (10001e18 ** uint256(-ticksDiff));
+            return 10001e18 / (10001e18**uint256(-ticksDiff));
         }
     }
 }
