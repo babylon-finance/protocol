@@ -32,10 +32,14 @@ import {GardenNFT} from './GardenNFT.sol';
  * Factory to create garden contracts
  */
 contract GardenFactory is IGardenFactory {
+    address private immutable controller;
     address private immutable garden;
     address private immutable gardenNFT;
 
-    constructor() {
+    constructor(address _controller) {
+        require(_controller != address(0), 'Controller is zero');
+
+        controller = _controller;
         garden = address(new Garden());
         gardenNFT = address(new GardenNFT());
     }
@@ -43,7 +47,6 @@ contract GardenFactory is IGardenFactory {
     /**
      * Creates a garden using minimal proxies
      * @param _reserveAsset           Address of the reserve asset ERC20
-     * @param _controller             Address of the controller
      * @param _creator                Address of the creator
      * @param _name                   Name of the Garden
      * @param _symbol                 Symbol of the Garden
@@ -53,7 +56,6 @@ contract GardenFactory is IGardenFactory {
      */
     function createGarden(
         address _reserveAsset,
-        address _controller,
         address _creator,
         string memory _name,
         string memory _symbol,
@@ -63,10 +65,10 @@ contract GardenFactory is IGardenFactory {
     ) external payable override returns (address) {
         address payable clone = payable(Clones.clone(garden));
         address cloneNFT = Clones.clone(gardenNFT);
-        GardenNFT(cloneNFT).initialize(_controller, address(clone), _name, _symbol, _tokenURI, _seed);
+        GardenNFT(cloneNFT).initialize(controller, address(clone), _name, _symbol, _tokenURI, _seed);
         Garden(clone).initialize{value: msg.value}(
             _reserveAsset,
-            _controller,
+            controller,
             _creator,
             _name,
             _symbol,
