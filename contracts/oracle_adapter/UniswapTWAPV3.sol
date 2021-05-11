@@ -24,6 +24,7 @@ import 'hardhat/console.sol';
 import {Ownable} from '@openzeppelin/contracts/access/Ownable.sol';
 import '@uniswap/v3-core/contracts/interfaces/IUniswapV3Factory.sol';
 import '@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol';
+import "@uniswap/v3-core/contracts/libraries/TickMath.sol";
 
 import {IBabController} from '../interfaces/IBabController.sol';
 import {IOracleAdapter} from '../interfaces/IOracleAdapter.sol';
@@ -48,11 +49,12 @@ contract UniswapTWAPV3 is Ownable, IOracleAdapter {
 
     // the desired seconds agos array passed to the observe method
     uint32[] public secondsAgo = new uint32[](2);
-    uint32 public constant SECONDS_GRANULARITY = 900;
+    uint32 public constant SECONDS_GRANULARITY = 30;
 
     uint24 private constant FEE_LOW = 500;
     uint24 private constant FEE_MEDIUM = 3000;
     uint24 private constant FEE_HIGH = 10000;
+    int24 private maxTwapDeviation = 100;
 
     /* ============ Constructor ============ */
 
@@ -87,24 +89,38 @@ contract UniswapTWAPV3 is Ownable, IOracleAdapter {
         IUniswapV3Pool pairLow = IUniswapV3Pool(factory.getPool(tokenIn, tokenOut, FEE_LOW));
         IUniswapV3Pool pairMedium = IUniswapV3Pool(factory.getPool(tokenIn, tokenOut, FEE_MEDIUM));
         IUniswapV3Pool pairHigh = IUniswapV3Pool(factory.getPool(tokenIn, tokenOut, FEE_HIGH));
-
-        (int56[] memory tickCumulatives, uint160[] memory secondsPerLiquidityCumulativeX128s) =
-            pairLow.observe(secondsAgo);
-        return (true, computeAmountOut(tickCumulatives));
+        console.log('pair', address(pairLow));
+        console.log('after observe');
+        (uint160 price, int24 mid,,,,,) =  pairLow.slot0();
+        _checkMid(mid, pairLow);
+        return (true, price**2);
     }
 
     function update(address tokenA, address tokenB) external override {}
 
     /* ============ Internal Functions ============ */
 
+    /// @dev Revert if current price is too close to min or max ticks allowed
+    /// by Uniswap, or if it deviates too much from the TWAP. Should be called
+    /// whenever base and limit ranges are updated. In practice, prices should
+    /// only become this extreme if there's no liquidity in the Uniswap pool.
+    function _checkMid(int24 mid, IUniswapV3Pool _pool) internal view {
+        int24 tickSpacing = _pool.tickSpacing();
+        require(mid > TickMath.MIN_TICK + tickSpacing, "price too low");
+        require(mid < TickMath.MAX_TICK - tickSpacing, "price too high");
+
+        // Check TWAP deviation. This check prevents price manipulation before
+        // the rebalance and also avoids rebalancing when price has just spiked.
+        int56 twap = _getTwap(_pool);
+        int56 deviation = mid > twap ? mid - twap : twap - mid;
+        require(deviation <= maxTwapDeviation, "maxTwapDeviation");
+    }
+
     // given the cumulative prices of the start and end of a period, and the length of the period, compute the average
     // price in terms of how much amount out is received for the amount in
-    function computeAmountOut(int56[] memory tickCumulatives) private pure returns (uint256 amountOut) {
-        uint32 ticksDiff = uint32(tickCumulatives[1] - tickCumulatives[0]) / SECONDS_GRANULARITY;
-        if (tickCumulatives[1] >= tickCumulatives[0]) {
-            return 10001e18**(uint256(ticksDiff));
-        } else {
-            return 10001e18 / (10001e18**uint256(-ticksDiff));
-        }
+    function _getTwap(IUniswapV3Pool _pool) private view returns (int56 amountOut) {
+      (int56[] memory tickCumulatives, uint160[] memory secondsPerLiquidityCumulativeX128s) =
+        _pool.observe(secondsAgo);
+      return (tickCumulatives[1] - tickCumulatives[0]) / SECONDS_GRANULARITY;
     }
 }

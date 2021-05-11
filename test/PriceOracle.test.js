@@ -64,6 +64,7 @@ describe('PriceOracle', function () {
         ethers.provider.send('evm_increaseTime', [TWAP_ORACLE_WINDOW / TWAP_ORACLE_GRANULARITY]);
       }
       const { amountOut } = await adapter.getPrice(addresses.tokens.WETH, addresses.tokens.DAI);
+      console.log('price', ethers.utils.formatEther(amountOut));
       expect(amountOut).to.be.gt(ethers.utils.parseEther('500'));
     });
   });
@@ -81,6 +82,7 @@ describe('PriceOracle', function () {
 
     it('should get the price of DAI', async function () {
       const { amountOut } = await univ3.getPrice(addresses.tokens.WETH, addresses.tokens.DAI);
+      console.log('price', ethers.utils.formatEther(amountOut));
       expect(amountOut).to.be.gt(ethers.utils.parseEther('500'));
     });
   });
