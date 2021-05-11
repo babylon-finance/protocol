@@ -95,30 +95,16 @@ contract UniswapTWAPV3 is Ownable, IOracleAdapter {
 
     function update(address tokenA, address tokenB) external override {}
 
-    /**
-    //  * @notice Fetch TWAP from Uniswap V3 pool. If `twapDuration` is 0, returns
-    //  * current price.
-    //  */
-    // function getTwap() public view returns (int24) {
-    //     uint32 _twapDuration = twapDuration;
-    //     if (_twapDuration == 0) {
-    //         return _mid();
-    //     }
-    //
-    //     uint32[] memory secondsAgo = new uint32[](2);
-    //     secondsAgo[0] = _twapDuration;
-    //     secondsAgo[1] = 0;
-    //
-    //     (int56[] memory tickCumulatives, ) = pool.observe(secondsAgo);
-    //     return int24((tickCumulatives[1] - tickCumulatives[0]) / _twapDuration);
-    // }
-
-
     /* ============ Internal Functions ============ */
 
     // given the cumulative prices of the start and end of a period, and the length of the period, compute the average
     // price in terms of how much amount out is received for the amount in
     function computeAmountOut(int56[] memory tickCumulatives) private pure returns (uint256 amountOut) {
-        return 10001e18**((tickCumulatives[1] - tickCumulatives[0]) / SECONDS_GRANULARITY);
+        uint32 ticksDiff = uint32(tickCumulatives[1] - tickCumulatives[0]) / SECONDS_GRANULARITY;
+        if (tickCumulatives[1] >= tickCumulatives[0]) {
+          return 10001e18 ** (uint256(ticksDiff));
+        } else {
+          return 10001e18 / (10001e18 ** uint256(-ticksDiff));
+        }
     }
 }
