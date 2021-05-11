@@ -484,8 +484,9 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
     function expireStrategy(uint256 _fee) external onlyKeeper(_fee) nonReentrant onlyActiveGarden {
         _require(!active, Errors.STRATEGY_NEEDS_TO_BE_INACTIVE);
         _require(block.timestamp.sub(enteredAt) > MAX_CANDIDATE_PERIOD, Errors.VOTING_WINDOW_IS_OPENED);
-        _deleteCandidateStrategy();
+        // pay keeper before expiring strategy
         garden.payKeeper(msg.sender, _fee);
+        _deleteCandidateStrategy();
         emit StrategyExpired(address(garden), block.timestamp);
     }
 
