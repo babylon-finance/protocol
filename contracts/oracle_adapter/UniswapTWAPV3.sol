@@ -113,8 +113,12 @@ contract UniswapTWAPV3 is Ownable, IOracleAdapter {
             found = _checkPriceAndLiquidity(tick, pool, minLiquidityInETH);
         }
         require(found, 'Invalid Uni V3');
-
-        return (true, uint256(sqrtPriceX96).mul(uint256(sqrtPriceX96)).mul(1e18) >> (96 * 2));
+        uint256 price = uint256(sqrtPriceX96).mul(uint256(sqrtPriceX96)).mul(1e18) >> (96 * 2);
+        console.log('square', uint256(sqrtPriceX96).mul(uint256(sqrtPriceX96)));
+        console.log('squar1', uint256(sqrtPriceX96).mul(uint256(sqrtPriceX96)).mul(1e18));
+        console.log('squars', uint256(sqrtPriceX96).mul(uint256(sqrtPriceX96)).mul(1e18) >> (96 * 2));
+        console.log('realss', uint256(1e18).preciseDiv(price));
+        return (true, uint256(1e18).preciseDiv(price));
     }
 
     function update(address tokenA, address tokenB) external override {}

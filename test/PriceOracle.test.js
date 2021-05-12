@@ -78,9 +78,7 @@ describe('PriceOracle', function () {
 
     it('should get the price of DAI', async function () {
       const { amountOut } = await univ3.getPrice(addresses.tokens.WETH, addresses.tokens.DAI);
-      console.log('price', ethers.utils.formatEther(amountOut));
-      const price = ethers.BigNumber.from(ONE_ETH.mul(ONE_ETH)).div(amountOut);
-      expect(price).to.be.eq('3938801407293532197958');
+      expect(ethers.utils.formatEther(amountOut)).to.be.eq('3938.801407293532197958');
     });
   });
 
