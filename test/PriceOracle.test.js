@@ -80,6 +80,10 @@ describe('PriceOracle', function () {
       const { amountOut } = await univ3.getPrice(addresses.tokens.WETH, addresses.tokens.DAI);
       expect(ethers.utils.formatEther(amountOut)).to.be.eq('3938.801407293532197958');
     });
+    it('should get the price of DAI inverse', async function () {
+      const { amountOut } = await univ3.getPrice(addresses.tokens.DAI, addresses.tokens.WETH);
+      expect(ethers.utils.formatEther(amountOut)).to.be.eq('0.000253884341096326');
+    });
   });
 
   describe('Global Oracle', function () {
