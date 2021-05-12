@@ -233,5 +233,133 @@ describe('IshtarGate', function () {
         value: ethers.utils.parseEther('1'),
       });
     });
+    it('should revert if we try to go beyond the max number of invitations that might stuck the modifier onlyGardenCreator', async function () {
+      await expect(
+        babController
+          .connect(signer1)
+          .createGarden(addresses.tokens.WETH, 'TEST Ishtar', 'AAA', 'http...', GARDEN_PARAMS, {
+            value: ethers.utils.parseEther('0.1'),
+          }),
+      ).to.not.be.reverted;
+      const gardens = await babController.getGardens();
+
+      const newGarden = await ethers.getContractAt('Garden', gardens[gardens.length - 1]);
+
+      // We try to set-up more than max limit
+      await expect(
+        ishtarGate
+          .connect(signer1)
+          .grantGardenAccessBatch(
+            newGarden.address,
+            [
+              signer1.address,
+              signer2.address,
+              signer3.address,
+              '0x8CF48E06700C64fEF96D0e6269172cC5371E2d4a',
+              '0x605f3e3e5adb86dedf3966daa9ca671199c27f44',
+              '0x83f4622A18e38bE297e089fB055Dd5123bb0b279',
+              '0x21584Cc5a52102AbB381286a5119E3be08431CfD',
+              '0x71763709Da2488F75bc2DB5d194769d801e97Fa8',
+              '0x908295e2be3a36021aadaaed0bbb124fd602cbf2',
+              '0xFBbA8ceA4e9835B9f304d6E69905cD9403F2b606',
+              '0x7caa78e0b71095eebad77757936b7a06cf474558',
+              '0xD81CE8E89DD987c8Ab630858C8f1e9DF14788c35',
+              '0x7F6105aB06f5Cd2deAd20b09Ca1fe15AfB4ddf49',
+            ],
+            [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+            { gasPrice: 0 },
+          ),
+      ).to.be.revertedWith('revert Max Number of invites reached');
+    });
+    it('should give access rights to the maximum limit without stucking the modifier onlyGardenCreator', async function () {
+      await expect(
+        babController
+          .connect(signer1)
+          .createGarden(addresses.tokens.WETH, 'TEST Ishtar', 'AAA', 'http...', GARDEN_PARAMS, {
+            value: ethers.utils.parseEther('0.1'),
+          }),
+      ).to.not.be.reverted;
+      const gardens = await babController.getGardens();
+
+      const newGarden = await ethers.getContractAt('Garden', gardens[gardens.length - 1]);
+
+      await expect(
+        ishtarGate
+          .connect(signer1)
+          .grantGardenAccessBatch(
+            newGarden.address,
+            [
+              signer1.address,
+              signer2.address,
+              signer3.address,
+              '0x8CF48E06700C64fEF96D0e6269172cC5371E2d4a',
+              '0x605f3e3e5adb86dedf3966daa9ca671199c27f44',
+              '0x83f4622A18e38bE297e089fB055Dd5123bb0b279',
+              '0x21584Cc5a52102AbB381286a5119E3be08431CfD',
+              '0x71763709Da2488F75bc2DB5d194769d801e97Fa8',
+              '0x908295e2be3a36021aadaaed0bbb124fd602cbf2',
+            ],
+            [1, 1, 1, 1, 1, 1, 1, 1, 1],
+            { gasPrice: 0 },
+          ),
+      ).not.to.be.reverted;
+
+      // Assumes that updating is not adding new users
+      await expect(
+        ishtarGate
+          .connect(signer1)
+          .grantGardenAccessBatch(
+            newGarden.address,
+            [
+              signer1.address,
+              signer2.address,
+              signer3.address,
+              '0x8CF48E06700C64fEF96D0e6269172cC5371E2d4a',
+              '0x605f3e3e5adb86dedf3966daa9ca671199c27f44',
+              '0x83f4622A18e38bE297e089fB055Dd5123bb0b279',
+              '0x21584Cc5a52102AbB381286a5119E3be08431CfD',
+              '0x71763709Da2488F75bc2DB5d194769d801e97Fa8',
+              '0x908295e2be3a36021aadaaed0bbb124fd602cbf2',
+            ],
+            [3, 2, 3, 2, 3, 2, 3, 2, 3],
+            { gasPrice: 0 },
+          ),
+      ).not.to.be.reverted;
+
+      // New users mixed with previous updates do not stuck the system they are just reverted
+      await expect(
+        ishtarGate
+          .connect(signer1)
+          .grantGardenAccessBatch(
+            newGarden.address,
+            [
+              signer1.address,
+              signer2.address,
+              signer3.address,
+              '0x8CF48E06700C64fEF96D0e6269172cC5371E2d4a',
+              '0x605f3e3e5adb86dedf3966daa9ca671199c27f44',
+              '0x83f4622A18e38bE297e089fB055Dd5123bb0b279',
+              '0x21584Cc5a52102AbB381286a5119E3be08431CfD',
+              '0x71763709Da2488F75bc2DB5d194769d801e97Fa8',
+              '0x908295e2be3a36021aadaaed0bbb124fd602cbf2',
+              '0xFBbA8ceA4e9835B9f304d6E69905cD9403F2b606',
+              '0x7caa78e0b71095eebad77757936b7a06cf474558',
+              '0xD81CE8E89DD987c8Ab630858C8f1e9DF14788c35',
+              '0x7F6105aB06f5Cd2deAd20b09Ca1fe15AfB4ddf49',
+            ],
+            [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+            { gasPrice: 0 },
+          ),
+      ).to.be.revertedWith('revert Max Number of invites reached');
+
+      // Only 1 new user do not stuck the system it is just reverted
+      await expect(
+        ishtarGate
+          .connect(signer1)
+          .grantGardenAccessBatch(newGarden.address, ['0x7F6105aB06f5Cd2deAd20b09Ca1fe15AfB4ddf49'], [3], {
+            gasPrice: 0,
+          }),
+      ).to.be.revertedWith('revert Max Number of invites reached');
+    });
   });
 });
