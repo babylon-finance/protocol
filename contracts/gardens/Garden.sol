@@ -299,8 +299,9 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
     ) public payable override nonReentrant {
         _onlyActive();
         _require(
-            guestListEnabled &&
-                IIshtarGate(IBabController(controller).ishtarGate()).canJoinAGarden(address(this), msg.sender),
+            ((guestListEnabled &&
+                IIshtarGate(IBabController(controller).ishtarGate()).canJoinAGarden(address(this), msg.sender)) ||
+                !guestListEnabled),
             Errors.USER_CANNOT_JOIN
         );
         _require(msg.value >= minContribution, Errors.MIN_CONTRIBUTION);
