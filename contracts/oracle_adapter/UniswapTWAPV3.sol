@@ -26,6 +26,10 @@ import '@uniswap/v3-core/contracts/interfaces/IUniswapV3Factory.sol';
 import '@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol';
 import "@uniswap/v3-core/contracts/libraries/TickMath.sol";
 
+import {SafeCast} from '@openzeppelin/contracts/utils/SafeCast.sol';
+import {PreciseUnitMath} from '../lib/PreciseUnitMath.sol';
+import {SafeMath} from '@openzeppelin/contracts/math/SafeMath.sol';
+
 import {IBabController} from '../interfaces/IBabController.sol';
 import {IOracleAdapter} from '../interfaces/IOracleAdapter.sol';
 
@@ -36,6 +40,10 @@ import {IOracleAdapter} from '../interfaces/IOracleAdapter.sol';
  * Uses uniswap V3 to get the price of a token pair
  */
 contract UniswapTWAPV3 is Ownable, IOracleAdapter {
+    using PreciseUnitMath for int256;
+    using PreciseUnitMath for uint256;
+    using SafeMath for uint256;
+
     /* ============ State Variables ============ */
 
     // Instance of the Controller contract
@@ -86,19 +94,36 @@ contract UniswapTWAPV3 is Ownable, IOracleAdapter {
         override
         returns (bool found, uint256 amountOut)
     {
-        IUniswapV3Pool pairLow = IUniswapV3Pool(factory.getPool(tokenIn, tokenOut, FEE_LOW));
-        IUniswapV3Pool pairMedium = IUniswapV3Pool(factory.getPool(tokenIn, tokenOut, FEE_MEDIUM));
-        IUniswapV3Pool pairHigh = IUniswapV3Pool(factory.getPool(tokenIn, tokenOut, FEE_HIGH));
-        console.log('pair', address(pairLow));
+        IUniswapV3Pool poolLow = IUniswapV3Pool(factory.getPool(tokenIn, tokenOut, FEE_LOW));
+        IUniswapV3Pool poolLowAlt = IUniswapV3Pool(factory.getPool(tokenOut, tokenIn, FEE_LOW));
+        IUniswapV3Pool poolMedium = IUniswapV3Pool(factory.getPool(tokenIn, tokenOut, FEE_MEDIUM));
+        IUniswapV3Pool poolHigh = IUniswapV3Pool(factory.getPool(tokenIn, tokenOut, FEE_HIGH));
+        console.log('pool low', address(poolLow));
+        console.log('pool low alt', address(poolLowAlt));
+        console.log('pool medium', address(poolMedium));
+        console.log('pool high', address(poolHigh));
         console.log('after observe');
-        (uint160 price, int24 mid,,,,,) =  pairLow.slot0();
-        _checkMid(mid, pairLow);
-        return (true, price**2);
+        (uint160 sqrtPriceX96Low, int24 tick,,,,,) =  poolLow.slot0();
+        (uint160 sqrtPriceX96Medium,,,,,,) =  poolLow.slot0();
+        (uint160 sqrtPriceX96High,,,,,,) =  poolLow.slot0();
+        console.log('tick');
+        console.logInt(int256(tick));
+        console.log('sqrtPriceX96Low', sqrtPriceX96Low);
+        console.log('sqrtPriceX96Low', uint(sqrtPriceX96Low));
+        console.log('sqrtPriceX96Medium', sqrtPriceX96Medium);
+        console.log('sqrtPriceX96High', sqrtPriceX96High);
+        //_checkMid(mid, poolLow);
+        return (true, uint(sqrtPriceX96Low).mul(uint(sqrtPriceX96Low)).mul(1e18) >> (96 * 2));
     }
 
     function update(address tokenA, address tokenB) external override {}
 
     /* ============ Internal Functions ============ */
+
+    /// @dev Get current price from pool
+    function _mid(IUniswapV3Pool _pool) internal view returns (int24 mid) {
+        (, mid, , , , , ) = _pool.slot0();
+    }
 
     /// @dev Revert if current price is too close to min or max ticks allowed
     /// by Uniswap, or if it deviates too much from the TWAP. Should be called
