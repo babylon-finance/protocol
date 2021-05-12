@@ -22,6 +22,7 @@ pragma solidity 0.7.6;
 
 import 'hardhat/console.sol';
 import {Ownable} from '@openzeppelin/contracts/access/Ownable.sol';
+import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import '@uniswap/v3-core/contracts/interfaces/IUniswapV3Factory.sol';
 import '@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol';
 import '@uniswap/v3-core/contracts/libraries/TickMath.sol';
@@ -55,6 +56,9 @@ contract UniswapTWAPV3 is Ownable, IOracleAdapter {
     // Address of Uniswap factory
     IUniswapV3Factory public immutable factory;
 
+
+    address public constant WETH = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
+
     // the desired seconds agos array passed to the observe method
     uint32[] public secondsAgo = new uint32[](2);
     uint32 public constant SECONDS_GRANULARITY = 30;
@@ -63,6 +67,7 @@ contract UniswapTWAPV3 is Ownable, IOracleAdapter {
     uint24 private constant FEE_MEDIUM = 3000;
     uint24 private constant FEE_HIGH = 10000;
     int24 private maxTwapDeviation = 100;
+    uint160 private maxLiquidityDeviationPercentage = 1000;
 
     /* ============ Constructor ============ */
 
@@ -112,12 +117,11 @@ contract UniswapTWAPV3 is Ownable, IOracleAdapter {
             (sqrtPriceX96, tick, , , , , ) = pool.slot0();
             found = _checkPriceAndLiquidity(tick, pool, minLiquidityInETH);
         }
-        require(found, 'Invalid Uni V3');
+        // No valid price
+        if (!found) {
+          return (false, 0);
+        }
         uint256 price = uint256(sqrtPriceX96).mul(uint256(sqrtPriceX96)).mul(1e18) >> (96 * 2);
-        console.log('square', uint256(sqrtPriceX96).mul(uint256(sqrtPriceX96)));
-        console.log('squar1', uint256(sqrtPriceX96).mul(uint256(sqrtPriceX96)).mul(1e18));
-        console.log('squars', uint256(sqrtPriceX96).mul(uint256(sqrtPriceX96)).mul(1e18) >> (96 * 2));
-        console.log('realss', uint256(1e18).preciseDiv(price));
         if (pool.token0() == tokenOut) {
           return (true, uint256(1e18).preciseDiv(price));
         } else {
@@ -150,10 +154,27 @@ contract UniswapTWAPV3 is Ownable, IOracleAdapter {
 
         // Check TWAP deviation. This check prevents price manipulation before
         // the rebalance and also avoids rebalancing when price has just spiked.
-        (int56 twap, uint160 liquidity) = _getTwap(_pool);
+        (int56 twap, uint160 liquidityCumulative) = _getTwap(_pool);
         int56 deviation = mid > twap ? mid - twap : twap - mid;
-        console.log('liquidity', liquidity);
-        return deviation <= maxTwapDeviation && liquidity > 0;
+        // Fail twap check
+        if (deviation > maxTwapDeviation) {
+          return false;
+        }
+        console.log('liquidity deviation', liquidityCumulative);
+        uint256 poolLiquidity = uint256(_pool.liquidity());
+        console.log('liquidity pool,    ', poolLiquidity);
+        // Liquidity cumulative check
+        if (liquidityCumulative > poolLiquidity.div(maxLiquidityDeviationPercentage)) {
+          return false;
+        }
+        uint256 liquidityInETH;
+        if (_pool.token0() == WETH) {
+          liquidityInETH = poolLiquidity.mul(poolLiquidity).div(IERC20(_pool.token1()).balanceOf(address(_pool)));
+        }
+        if (_pool.token1() == WETH) {
+          liquidityInETH = poolLiquidity.mul(poolLiquidity).div(IERC20(_pool.token0()).balanceOf(address(_pool)));
+        }
+        return liquidityInETH >= minLiquidityInETH;
     }
 
     // given the cumulative prices of the start and end of a period, and the length of the period, compute the average

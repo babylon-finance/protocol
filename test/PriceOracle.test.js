@@ -2,7 +2,6 @@ const { expect } = require('chai');
 const { ethers } = require('hardhat');
 
 const addresses = require('../lib/addresses');
-const { ONE_ETH } = require('../lib/constants');
 const { TWAP_ORACLE_WINDOW, TWAP_ORACLE_GRANULARITY } = require('../lib/system.js');
 const { setupTests } = require('./fixtures/GardenFixture');
 
@@ -71,15 +70,16 @@ describe('PriceOracle', function () {
   });
 
   describe('Uniswap TWAP V3x', function () {
-    // it('should not get the price of FEI', async function () {
-    //   await adapter.update(addresses.tokens.YFI, addresses.tokens.WETH);
-    //   await expect(univ3.getPrice(addresses.tokens.YFI, addresses.tokens.WETH)).to.be.reverted;
-    // });
+    it('should not get the price of YFI', async function () {
+      await adapter.update(addresses.tokens.YFI, addresses.tokens.WETH);
+      await expect(univ3.getPrice(addresses.tokens.YFI, addresses.tokens.WETH)).to.be.reverted;
+    });
 
     it('should get the price of DAI', async function () {
       const { amountOut } = await univ3.getPrice(addresses.tokens.WETH, addresses.tokens.DAI);
       expect(ethers.utils.formatEther(amountOut)).to.be.eq('3938.801407293532197958');
     });
+
     it('should get the price of DAI inverse', async function () {
       const { amountOut } = await univ3.getPrice(addresses.tokens.DAI, addresses.tokens.WETH);
       expect(ethers.utils.formatEther(amountOut)).to.be.eq('0.000253884341096326');
@@ -92,8 +92,8 @@ describe('PriceOracle', function () {
         await adapter.update(addresses.tokens.YFI, addresses.tokens.WETH);
         ethers.provider.send('evm_increaseTime', [TWAP_ORACLE_WINDOW / TWAP_ORACLE_GRANULARITY]);
       }
-      let price = await priceOracle.connect(owner).getPrice(addresses.tokens.YFI, addresses.tokens.WETH);
-      price = ethers.BigNumber.from(1).div(price);
+      const price = await priceOracle.connect(owner).getPrice(addresses.tokens.YFI, addresses.tokens.WETH);
+      console.log('price yfi', ethers.utils.formatEther(price));
       expect(price).to.be.gt(ethers.utils.parseEther('15'));
     });
   });

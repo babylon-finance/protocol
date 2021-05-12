@@ -157,7 +157,7 @@ contract BabController is OwnableUpgradeable, IBabController {
         gardenTokensTransfersEnabled = false;
         bablMiningProgramEnabled = false;
         allowPublicGardens = false;
-        minRiskyPairLiquidityEth = 1000 * 1e18;
+        minRiskyPairLiquidityEth = 100 * 1e18;
 
         strategistProfitPercentage = 10e16;
         stewardsProfitPercentage = 5e16;
