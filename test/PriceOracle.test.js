@@ -2,7 +2,7 @@ const { expect } = require('chai');
 const { ethers } = require('hardhat');
 
 const addresses = require('../lib/addresses');
-const { ADDRESS_ZERO, ONE_ETH } = require('../lib/constants');
+const { ONE_ETH } = require('../lib/constants');
 const { TWAP_ORACLE_WINDOW, TWAP_ORACLE_GRANULARITY } = require('../lib/system.js');
 const { setupTests } = require('./fixtures/GardenFixture');
 
@@ -71,21 +71,15 @@ describe('PriceOracle', function () {
   });
 
   describe('Uniswap TWAP V3x', function () {
-    // it('should not get the price of YFI without enough observations', async function () {
+    // it('should not get the price of FEI', async function () {
     //   await adapter.update(addresses.tokens.YFI, addresses.tokens.WETH);
     //   await expect(univ3.getPrice(addresses.tokens.YFI, addresses.tokens.WETH)).to.be.reverted;
     // });
-    //
-    // it('should get the price of YFI with enough observations', async function () {
-    //   const { amountOut } = await univ3.getPrice(addresses.tokens.YFI, addresses.tokens.WETH);
-    //   expect(amountOut).to.be.gt(ethers.utils.parseEther('15'));
-    // });
 
-    it.only('should get the price of DAI', async function () {
+    it('should get the price of DAI', async function () {
       const { amountOut } = await univ3.getPrice(addresses.tokens.WETH, addresses.tokens.DAI);
-      console.log('price', amountOut.toString());
+      console.log('price', ethers.utils.formatEther(amountOut));
       const price = ethers.BigNumber.from(ONE_ETH.mul(ONE_ETH)).div(amountOut);
-      console.log('price', price.toString());
       expect(price).to.be.eq('3938801407293532197958');
     });
   });

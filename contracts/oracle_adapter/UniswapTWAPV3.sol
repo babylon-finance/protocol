@@ -94,58 +94,62 @@ contract UniswapTWAPV3 is Ownable, IOracleAdapter {
         override
         returns (bool found, uint256 amountOut)
     {
-        IUniswapV3Pool poolLow = IUniswapV3Pool(factory.getPool(tokenIn, tokenOut, FEE_LOW));
-        IUniswapV3Pool poolLowAlt = IUniswapV3Pool(factory.getPool(tokenOut, tokenIn, FEE_LOW));
-        IUniswapV3Pool poolMedium = IUniswapV3Pool(factory.getPool(tokenIn, tokenOut, FEE_MEDIUM));
-        IUniswapV3Pool poolHigh = IUniswapV3Pool(factory.getPool(tokenIn, tokenOut, FEE_HIGH));
-        console.log('pool low', address(poolLow));
-        console.log('pool low alt', address(poolLowAlt));
-        console.log('pool medium', address(poolMedium));
-        console.log('pool high', address(poolHigh));
-        console.log('after observe');
-        (uint160 sqrtPriceX96Low, int24 tick,,,,,) =  poolLow.slot0();
-        (uint160 sqrtPriceX96Medium,,,,,,) =  poolLow.slot0();
-        (uint160 sqrtPriceX96High,,,,,,) =  poolLow.slot0();
-        console.log('tick');
-        console.logInt(int256(tick));
-        console.log('sqrtPriceX96Low', sqrtPriceX96Low);
-        console.log('sqrtPriceX96Low', uint(sqrtPriceX96Low));
-        console.log('sqrtPriceX96Medium', sqrtPriceX96Medium);
-        console.log('sqrtPriceX96High', sqrtPriceX96High);
-        //_checkMid(mid, poolLow);
-        return (true, uint(sqrtPriceX96Low).mul(uint(sqrtPriceX96Low)).mul(1e18) >> (96 * 2));
+        uint256 minLiquidityInETH = IBabController(controller).minRiskyPairLiquidityEth();
+        uint160 sqrtPriceX96;
+        int24 tick;
+        bool found = false;
+        // We try the low pool first
+        IUniswapV3Pool pool = IUniswapV3Pool(factory.getPool(tokenIn, tokenOut, FEE_LOW));
+        (sqrtPriceX96, tick,,,,,) =  pool.slot0();
+        found = _checkPriceAndLiquidity(tick, pool, minLiquidityInETH);
+        if (!found) {
+          pool = IUniswapV3Pool(factory.getPool(tokenIn, tokenOut, FEE_MEDIUM));
+          (sqrtPriceX96, tick,,,,,) =  pool.slot0();
+          found = _checkPriceAndLiquidity(tick, pool, minLiquidityInETH);
+        }
+        if (!found) {
+          pool = IUniswapV3Pool(factory.getPool(tokenIn, tokenOut, FEE_HIGH));
+          (sqrtPriceX96, tick,,,,,) =  pool.slot0();
+          found = _checkPriceAndLiquidity(tick, pool, minLiquidityInETH);
+        }
+        require(found, 'Invalid Uni V3');
+
+        return (true, uint(sqrtPriceX96).mul(uint(sqrtPriceX96)).mul(1e18) >> (96 * 2));
     }
 
     function update(address tokenA, address tokenB) external override {}
 
     /* ============ Internal Functions ============ */
 
-    /// @dev Get current price from pool
-    function _mid(IUniswapV3Pool _pool) internal view returns (int24 mid) {
-        (, mid, , , , , ) = _pool.slot0();
-    }
-
     /// @dev Revert if current price is too close to min or max ticks allowed
     /// by Uniswap, or if it deviates too much from the TWAP. Should be called
     /// whenever base and limit ranges are updated. In practice, prices should
     /// only become this extreme if there's no liquidity in the Uniswap pool.
-    function _checkMid(int24 mid, IUniswapV3Pool _pool) internal view {
+    function _checkPriceAndLiquidity(int24 mid, IUniswapV3Pool _pool, uint256 minLiquidityInETH) internal view returns (bool) {
         int24 tickSpacing = _pool.tickSpacing();
-        require(mid > TickMath.MIN_TICK + tickSpacing, "price too low");
-        require(mid < TickMath.MAX_TICK - tickSpacing, "price too high");
+        if (mid < TickMath.MIN_TICK + tickSpacing) {
+          // "price too low"
+          return false;
+        }
+        if (mid > TickMath.MAX_TICK - tickSpacing) {
+          // "price too high"
+          return false;
+        }
 
         // Check TWAP deviation. This check prevents price manipulation before
         // the rebalance and also avoids rebalancing when price has just spiked.
-        int56 twap = _getTwap(_pool);
+        (int56 twap, uint160 liquidity) = _getTwap(_pool);
         int56 deviation = mid > twap ? mid - twap : twap - mid;
-        require(deviation <= maxTwapDeviation, "maxTwapDeviation");
+        console.log('liquidity', liquidity);
+        return deviation <= maxTwapDeviation && liquidity > 0;
     }
 
     // given the cumulative prices of the start and end of a period, and the length of the period, compute the average
     // price in terms of how much amount out is received for the amount in
-    function _getTwap(IUniswapV3Pool _pool) private view returns (int56 amountOut) {
+    function _getTwap(IUniswapV3Pool _pool) private view returns (int56 amountOut, uint160 liquidity) {
       (int56[] memory tickCumulatives, uint160[] memory secondsPerLiquidityCumulativeX128s) =
         _pool.observe(secondsAgo);
-      return (tickCumulatives[1] - tickCumulatives[0]) / SECONDS_GRANULARITY;
+      uint160 liquidity = (secondsPerLiquidityCumulativeX128s[1] - secondsPerLiquidityCumulativeX128s[0]) / SECONDS_GRANULARITY;
+      return ((tickCumulatives[1] - tickCumulatives[0]) / SECONDS_GRANULARITY, liquidity);
     }
 }
