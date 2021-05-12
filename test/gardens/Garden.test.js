@@ -135,6 +135,19 @@ describe('Garden', function () {
       ).to.be.reverted;
     });
   });
+  describe('Garden deposit can be done after making a garden public', async function () {
+    it('a user can still deposit after a garden is granted public access', async function () {
+      await babController.connect(owner).setAllowPublicGardens();
+      await garden1.connect(signer1).makeGardenPublic();
+      await expect(
+        garden1.connect(signer3).deposit(ethers.utils.parseEther('1'), 1, signer3.getAddress(), {
+          value: ethers.utils.parseEther('1'),
+        }),
+      ).not.to.be.reverted;
+      const signer3Balance = await garden1.balanceOf(signer3.address);
+      expect(signer3Balance).to.be.equal(ethers.utils.parseEther('1'));
+    });
+  });
 
   describe('Garden Deposits / Withdrawals with a different reserve asset', async function () {
     it('a contributor can make an initial deposit and withdraw with DAI', async function () {
