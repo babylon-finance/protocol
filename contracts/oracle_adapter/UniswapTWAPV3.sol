@@ -24,7 +24,7 @@ import 'hardhat/console.sol';
 import {Ownable} from '@openzeppelin/contracts/access/Ownable.sol';
 import '@uniswap/v3-core/contracts/interfaces/IUniswapV3Factory.sol';
 import '@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol';
-import "@uniswap/v3-core/contracts/libraries/TickMath.sol";
+import '@uniswap/v3-core/contracts/libraries/TickMath.sol';
 
 import {SafeCast} from '@openzeppelin/contracts/utils/SafeCast.sol';
 import {PreciseUnitMath} from '../lib/PreciseUnitMath.sol';
@@ -100,21 +100,21 @@ contract UniswapTWAPV3 is Ownable, IOracleAdapter {
         bool found = false;
         // We try the low pool first
         IUniswapV3Pool pool = IUniswapV3Pool(factory.getPool(tokenIn, tokenOut, FEE_LOW));
-        (sqrtPriceX96, tick,,,,,) =  pool.slot0();
+        (sqrtPriceX96, tick, , , , , ) = pool.slot0();
         found = _checkPriceAndLiquidity(tick, pool, minLiquidityInETH);
         if (!found) {
-          pool = IUniswapV3Pool(factory.getPool(tokenIn, tokenOut, FEE_MEDIUM));
-          (sqrtPriceX96, tick,,,,,) =  pool.slot0();
-          found = _checkPriceAndLiquidity(tick, pool, minLiquidityInETH);
+            pool = IUniswapV3Pool(factory.getPool(tokenIn, tokenOut, FEE_MEDIUM));
+            (sqrtPriceX96, tick, , , , , ) = pool.slot0();
+            found = _checkPriceAndLiquidity(tick, pool, minLiquidityInETH);
         }
         if (!found) {
-          pool = IUniswapV3Pool(factory.getPool(tokenIn, tokenOut, FEE_HIGH));
-          (sqrtPriceX96, tick,,,,,) =  pool.slot0();
-          found = _checkPriceAndLiquidity(tick, pool, minLiquidityInETH);
+            pool = IUniswapV3Pool(factory.getPool(tokenIn, tokenOut, FEE_HIGH));
+            (sqrtPriceX96, tick, , , , , ) = pool.slot0();
+            found = _checkPriceAndLiquidity(tick, pool, minLiquidityInETH);
         }
         require(found, 'Invalid Uni V3');
 
-        return (true, uint(sqrtPriceX96).mul(uint(sqrtPriceX96)).mul(1e18) >> (96 * 2));
+        return (true, uint256(sqrtPriceX96).mul(uint256(sqrtPriceX96)).mul(1e18) >> (96 * 2));
     }
 
     function update(address tokenA, address tokenB) external override {}
@@ -125,15 +125,19 @@ contract UniswapTWAPV3 is Ownable, IOracleAdapter {
     /// by Uniswap, or if it deviates too much from the TWAP. Should be called
     /// whenever base and limit ranges are updated. In practice, prices should
     /// only become this extreme if there's no liquidity in the Uniswap pool.
-    function _checkPriceAndLiquidity(int24 mid, IUniswapV3Pool _pool, uint256 minLiquidityInETH) internal view returns (bool) {
+    function _checkPriceAndLiquidity(
+        int24 mid,
+        IUniswapV3Pool _pool,
+        uint256 minLiquidityInETH
+    ) internal view returns (bool) {
         int24 tickSpacing = _pool.tickSpacing();
         if (mid < TickMath.MIN_TICK + tickSpacing) {
-          // "price too low"
-          return false;
+            // "price too low"
+            return false;
         }
         if (mid > TickMath.MAX_TICK - tickSpacing) {
-          // "price too high"
-          return false;
+            // "price too high"
+            return false;
         }
 
         // Check TWAP deviation. This check prevents price manipulation before
@@ -147,9 +151,10 @@ contract UniswapTWAPV3 is Ownable, IOracleAdapter {
     // given the cumulative prices of the start and end of a period, and the length of the period, compute the average
     // price in terms of how much amount out is received for the amount in
     function _getTwap(IUniswapV3Pool _pool) private view returns (int56 amountOut, uint160 liquidity) {
-      (int56[] memory tickCumulatives, uint160[] memory secondsPerLiquidityCumulativeX128s) =
-        _pool.observe(secondsAgo);
-      uint160 liquidity = (secondsPerLiquidityCumulativeX128s[1] - secondsPerLiquidityCumulativeX128s[0]) / SECONDS_GRANULARITY;
-      return ((tickCumulatives[1] - tickCumulatives[0]) / SECONDS_GRANULARITY, liquidity);
+        (int56[] memory tickCumulatives, uint160[] memory secondsPerLiquidityCumulativeX128s) =
+            _pool.observe(secondsAgo);
+        uint160 liquidity =
+            (secondsPerLiquidityCumulativeX128s[1] - secondsPerLiquidityCumulativeX128s[0]) / SECONDS_GRANULARITY;
+        return ((tickCumulatives[1] - tickCumulatives[0]) / SECONDS_GRANULARITY, liquidity);
     }
 }
