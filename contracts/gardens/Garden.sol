@@ -438,7 +438,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         IWETH(WETH).withdraw(_amount.add(_rewards));
 
         // Mark strategy as finalized
-        absoluteReturns.add(_returns);
+        absoluteReturns = absoluteReturns.add(_returns);
         strategies = strategies.remove(_strategy);
         finalizedStrategies.push(_strategy);
         strategyMapping[_strategy] = false;
