@@ -426,7 +426,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         reserveAssetRewardsSetAside = reserveAssetRewardsSetAside.add(_rewards);
         reserveAssetPrincipalWindow = reserveAssetPrincipalWindow.add(_amount);
         // Mark strategy as finalized
-        absoluteReturns.add(_returns);
+        absoluteReturns = absoluteReturns.add(_returns);
         strategies = strategies.remove(_strategy);
         finalizedStrategies.push(_strategy);
         strategyMapping[_strategy] = false;
