@@ -465,9 +465,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
     function payKeeper(address payable _keeper, uint256 _fee) external override {
         _require(IBabController(controller).isValidKeeper(_keeper), Errors.ONLY_KEEPER);
         keeperDebt = keeperDebt.add(_fee);
-        // Pay Keeper in WETH
-        // TOOD: Update principal
-        // TOOD: Reserve asset may be not WETH
+        // Pay Keeper in Reserve Asset
         if (keeperDebt > 0 && IERC20(reserveAsset).balanceOf(address(this)) >= keeperDebt) {
             IERC20(reserveAsset).safeTransfer(_keeper, keeperDebt);
             principal = principal.sub(keeperDebt);
