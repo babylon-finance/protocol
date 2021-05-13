@@ -381,7 +381,7 @@ describe('Strategy', function () {
       );
       const nav = await strategyContract.getNAV();
       expect(await strategyContract.capitalAllocated()).to.equal(ONE_ETH);
-      expect(nav).to.be.closeTo(ONE_ETH.mul(1), ONE_ETH.div(100));
+      expect(nav).to.be.closeTo(ONE_ETH.mul(1), ONE_ETH.div(50));
     });
 
     it('should get the NAV value of a BalancerPool strategy', async function () {

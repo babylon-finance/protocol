@@ -194,7 +194,7 @@ describe('BABL Rewards Distributor', function () {
       });
       expect((await long1.strategyRewards()).toString()).to.be.closeTo(
         '53252867971266677419386',
-        ethers.utils.parseEther('0.05'),
+        ethers.utils.parseEther('0.10'),
       );
     });
 
@@ -220,7 +220,7 @@ describe('BABL Rewards Distributor', function () {
 
       expect((await long1.strategyRewards()).toString()).to.be.closeTo(
         '56245433363508517711850',
-        ethers.utils.parseEther('0.05'),
+        ethers.utils.parseEther('0.10'),
       );
     });
 
@@ -254,11 +254,11 @@ describe('BABL Rewards Distributor', function () {
 
       expect((await long1.strategyRewards()).toString()).to.be.closeTo(
         '27132419508506259553580',
-        ethers.utils.parseEther('0.05'),
+        ethers.utils.parseEther('0.10'),
       );
       expect((await long2.strategyRewards()).toString()).to.be.closeTo(
-        '35048359900229386030568',
-        ethers.utils.parseEther('0.05'),
+        '35047470808640457275688',
+        ethers.utils.parseEther('0.10'),
       );
     });
 
@@ -298,15 +298,15 @@ describe('BABL Rewards Distributor', function () {
       });
       expect((await long1.strategyRewards()).toString()).to.be.closeTo(
         '18414360810740186824305',
-        ethers.utils.parseEther('0.05'),
+        ethers.utils.parseEther('0.10'),
       );
       expect((await long2.strategyRewards()).toString()).to.be.closeTo(
-        '17782866245738688737500',
-        ethers.utils.parseEther('0.05'),
+        '17781600117468574435385',
+        ethers.utils.parseEther('0.10'),
       );
       expect((await long3.strategyRewards()).toString()).to.be.closeTo(
-        '17185457418296213096639',
-        ethers.utils.parseEther('0.05'),
+        '17184592362734916590598',
+        ethers.utils.parseEther('0.10'),
       );
     });
 
@@ -354,23 +354,23 @@ describe('BABL Rewards Distributor', function () {
 
       expect((await long1.strategyRewards()).toString()).to.be.closeTo(
         '11419076202165184207617',
-        ethers.utils.parseEther('0.05'),
+        ethers.utils.parseEther('0.10'),
       );
       expect((await long2.strategyRewards()).toString()).to.be.closeTo(
-        '11044229195829251755344',
-        ethers.utils.parseEther('0.05'),
+        '11044001745689719476197',
+        ethers.utils.parseEther('0.10'),
       );
       expect((await long3.strategyRewards()).toString()).to.be.closeTo(
-        '10683469693470981807217',
-        ethers.utils.parseEther('0.05'),
+        '10682716204848241431450',
+        ethers.utils.parseEther('0.10'),
       );
       expect((await long4.strategyRewards()).toString()).to.be.closeTo(
-        '10335531645539449819993',
-        ethers.utils.parseEther('0.05'),
+        '10334270615144077320828',
+        ethers.utils.parseEther('0.10'),
       );
       expect((await long5.strategyRewards()).toString()).to.be.closeTo(
-        '9999261911014897602655',
-        ethers.utils.parseEther('0.05'),
+        '9998260599911546111505',
+        ethers.utils.parseEther('0.10'),
       );
     });
 
@@ -392,7 +392,7 @@ describe('BABL Rewards Distributor', function () {
       });
       expect((await long1.strategyRewards()).toString()).to.be.closeTo(
         '101429390403440602823930',
-        ethers.utils.parseEther('0.05'),
+        ethers.utils.parseEther('0.10'),
       );
     });
 
@@ -417,7 +417,7 @@ describe('BABL Rewards Distributor', function () {
       });
       expect((await long1.strategyRewards()).toString()).to.be.closeTo(
         '1343503648201374544096',
-        ethers.utils.parseEther('0.05'),
+        ethers.utils.parseEther('0.10'),
       );
     });
 
@@ -439,7 +439,7 @@ describe('BABL Rewards Distributor', function () {
       });
       expect((await long1.strategyRewards()).toString()).to.be.closeTo(
         '143814823688624358512181',
-        ethers.utils.parseEther('0.05'),
+        ethers.utils.parseEther('0.10'),
       );
     });
 
@@ -486,23 +486,23 @@ describe('BABL Rewards Distributor', function () {
 
       expect((await long1.strategyRewards()).toString()).to.be.closeTo(
         '14746686400974691978871',
-        ethers.utils.parseEther('0.05'),
+        ethers.utils.parseEther('0.10'),
       );
       expect((await long2.strategyRewards()).toString()).to.be.closeTo(
-        '36028010516922891357773',
-        ethers.utils.parseEther('0.05'),
+        '36027272426754649843657',
+        ethers.utils.parseEther('0.10'),
       );
       expect((await long3.strategyRewards()).toString()).to.be.closeTo(
-        '47767976443221726749911',
-        ethers.utils.parseEther('0.05'),
+        '47764584261311153592536',
+        ethers.utils.parseEther('0.10'),
       );
       expect((await long4.strategyRewards()).toString()).to.be.closeTo(
-        '77718716359714865220580',
-        ethers.utils.parseEther('0.05'),
+        '77709264981258266348085',
+        ethers.utils.parseEther('0.10'),
       );
       expect((await long5.strategyRewards()).toString()).to.be.closeTo(
-        '144690957560334038164365',
-        ethers.utils.parseEther('0.05'),
+        '144676471940142761206850',
+        ethers.utils.parseEther('0.10'),
       );
     });
 
@@ -550,23 +550,23 @@ describe('BABL Rewards Distributor', function () {
 
       expect((await long1.strategyRewards()).toString()).to.be.closeTo(
         '219505782600391978866',
-        ethers.utils.parseEther('0.05'),
+        ethers.utils.parseEther('0.10'),
       );
       expect((await long2.strategyRewards()).toString()).to.be.closeTo(
         '432866381321524321541',
-        ethers.utils.parseEther('0.05'),
+        ethers.utils.parseEther('0.10'),
       );
       expect((await long3.strategyRewards()).toString()).to.be.closeTo(
         '550877848075216077400',
-        ethers.utils.parseEther('0.05'),
+        ethers.utils.parseEther('0.10'),
       );
       expect((await long4.strategyRewards()).toString()).to.be.closeTo(
-        '855415131918472783218',
-        ethers.utils.parseEther('0.05'),
+        '855311059338348715428',
+        ethers.utils.parseEther('0.10'),
       );
       expect((await long5.strategyRewards()).toString()).to.be.closeTo(
-        '1548719778914765381373',
-        ethers.utils.parseEther('0.05'),
+        '1548564705482122746208',
+        ethers.utils.parseEther('0.10'),
       );
     });
 
@@ -605,23 +605,23 @@ describe('BABL Rewards Distributor', function () {
 
       expect((await long1.strategyRewards()).toString()).to.be.closeTo(
         '14746684630519643055653',
-        ethers.utils.parseEther('0.05'),
+        ethers.utils.parseEther('0.10'),
       );
       expect((await long2.strategyRewards()).toString()).to.be.closeTo(
-        '36028010181804892681797',
-        ethers.utils.parseEther('0.05'),
+        '36027274829677121559080',
+        ethers.utils.parseEther('0.10'),
       );
       expect((await long3.strategyRewards()).toString()).to.be.closeTo(
-        '103504194661629220128166',
-        ethers.utils.parseEther('0.05'),
+        '103496845269185705914380',
+        ethers.utils.parseEther('0.10'),
       );
       expect((await long4.strategyRewards()).toString()).to.be.closeTo(
-        '116791666375962828576062',
-        ethers.utils.parseEther('0.05'),
+        '116777460754824659278346',
+        ethers.utils.parseEther('0.10'),
       );
       expect((await long5.strategyRewards()).toString()).to.be.closeTo(
-        '146647388604927375625599',
-        ethers.utils.parseEther('0.05'),
+        '146632702332807071553557',
+        ethers.utils.parseEther('0.10'),
       );
     });
 
@@ -668,24 +668,24 @@ describe('BABL Rewards Distributor', function () {
       });
 
       expect((await long1.strategyRewards()).toString()).to.be.closeTo(
-        '15501053247045131008417',
-        ethers.utils.parseEther('0.05'),
+        '15494254972521277311382',
+        ethers.utils.parseEther('0.10'),
       );
       expect((await long2.strategyRewards()).toString()).to.be.closeTo(
-        '36028007825033530186347',
-        ethers.utils.parseEther('0.05'),
+        '36027097055554831892944',
+        ethers.utils.parseEther('0.10'),
       );
       expect((await long3.strategyRewards()).toString()).to.be.closeTo(
         '113879793599216106591361',
-        ethers.utils.parseEther('0.05'),
+        ethers.utils.parseEther('0.10'),
       );
       expect((await long4.strategyRewards()).toString()).to.be.closeTo(
         '128499165056248655452247',
-        ethers.utils.parseEther('0.05'),
+        ethers.utils.parseEther('0.10'),
       );
       expect((await long5.strategyRewards()).toString()).to.be.closeTo(
         '162964850162148936616798',
-        ethers.utils.parseEther('0.05'),
+        ethers.utils.parseEther('0.10'),
       );
     });
   });
@@ -852,8 +852,8 @@ describe('BABL Rewards Distributor', function () {
       ]);
       await garden1.connect(signer1).claimReturns([long1.address, long2.address]);
       expect(signer1Profit.toString()).to.be.not.equal(signer1Profit2);
-      expect(signer1Profit).to.be.closeTo('50085069448375857', ethers.utils.parseEther('0.05'));
-      expect(signer1Profit2).to.be.closeTo('49258870032308262', ethers.utils.parseEther('0.05'));
+      expect(signer1Profit).to.be.closeTo('50085069448375857', ethers.utils.parseEther('0.10'));
+      expect(signer1Profit2).to.be.closeTo('49258870032308262', ethers.utils.parseEther('0.10'));
       expect((await bablToken.balanceOf(signer1.address)).toString()).to.be.equal(signer1BABL.add(signer1BABL2));
     });
 
@@ -876,7 +876,7 @@ describe('BABL Rewards Distributor', function () {
         long2.address,
       ]);
       // PROFITS ARE NOW A 20% OF THE TOTAL, AS WE NOW HAVE COMPOUNDED (RE-STAKED) THE REST (80%) FOR LPs
-      // expect(signer1Profit).to.be.closeTo('99343939480695811', ethers.utils.parseEther('0.05'));
+      // expect(signer1Profit).to.be.closeTo('99343939480695811', ethers.utils.parseEther('0.10'));
       // TODO: Add calculations of profits and BABL
       expect(signer1Profit).to.be.closeTo('19637773343746505', ethers.utils.parseEther('0.005'));
       expect(signer1BABL).to.be.closeTo('77749116927875608582243', ethers.utils.parseEther('0.1'));
@@ -931,8 +931,8 @@ describe('BABL Rewards Distributor', function () {
 
       expect((await bablToken.balanceOf(signer1.address)).toString()).to.be.equal(signer1BABL);
       expect((await bablToken.balanceOf(signer2.address)).toString()).to.be.equal(signer2BABL);
-      expect(signer1Profit.toString()).to.be.closeTo('50097981844158404', ethers.utils.parseEther('0.05'));
-      expect(signer2Profit.toString()).to.be.closeTo('32731278197558590', ethers.utils.parseEther('0.05'));
+      expect(signer1Profit.toString()).to.be.closeTo('50097981844158404', ethers.utils.parseEther('0.10'));
+      expect(signer2Profit.toString()).to.be.closeTo('32731278197558590', ethers.utils.parseEther('0.10'));
       const [signer1Profit2, signer1BABL2] = await rewardsDistributor.getRewards(garden2.address, signer1.address, [
         long3.address,
         long4.address,
@@ -950,9 +950,9 @@ describe('BABL Rewards Distributor', function () {
       expect((await bablToken.balanceOf(signer1.address)).toString()).to.be.equal(signer1BABL2.add(signer1BABL));
       expect((await bablToken.balanceOf(signer2.address)).toString()).to.be.equal(signer2BABL2.add(signer2BABL));
       // PROFITS ARE NOW A 20% OF THE TOTAL, AS WE NOW HAVE COMPOUNDED (RE-STAKED) THE REST (80%) FOR LPs
-      // expect(signer1Profit2.toString()).to.be.closeTo('153109612988159780', ethers.utils.parseEther('0.05'));
+      // expect(signer1Profit2.toString()).to.be.closeTo('153109612988159780', ethers.utils.parseEther('0.10'));
       expect(signer1Profit2.toString()).to.be.closeTo('31328058680880152', ethers.utils.parseEther('0.005'));
-      // expect(signer2Profit2.toString()).to.be.closeTo('110439572793446869', ethers.utils.parseEther('0.05'));
+      // expect(signer2Profit2.toString()).to.be.closeTo('110439572793446869', ethers.utils.parseEther('0.10'));
       expect(signer2Profit2.toString()).to.be.closeTo('2320756106692071', ethers.utils.parseEther('0.005'));
     });
     it('A user cannot claim strategies from 2 different gardens at the same time avoiding malicious bypassing of the claimedAt control (e.g. using claimedAtfrom different gardens over the same strategies)', async function () {
