@@ -106,8 +106,10 @@ describe('Strategy', function () {
       expect(address).to.equal(strategyDataset.address);
       expect(strategist).to.equal(signer1.address);
       expect(stake).to.equal(ethers.utils.parseEther('0.1'));
-      expect(absoluteTotalVotes).to.equal(ethers.utils.parseEther('0.1'));
-      expect(totalVotes).to.equal(ethers.utils.parseEther('0.1'));
+
+      expect(absoluteTotalVotes).to.equal(0);
+      expect(totalVotes).to.equal(0);
+
       expect(operationsCount).to.equal(1);
       expect(capitalAllocated).to.equal(ethers.BigNumber.from(0));
       expect(capitalReturned).to.equal(ethers.BigNumber.from(0));

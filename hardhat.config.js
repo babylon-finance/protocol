@@ -15,6 +15,7 @@ require('./lib/plugins/gasnow');
 require('./lib/tasks/node-ready');
 require('./lib/tasks/export');
 require('./lib/tasks/gate');
+require('./lib/tasks/increaseTime');
 
 const ALCHEMY_KEY = process.env.ALCHEMY_KEY || '';
 const DEPLOYER_PRIVATE_KEY =

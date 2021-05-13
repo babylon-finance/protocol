@@ -281,9 +281,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         capitalAllocated = 0;
         minRebalanceCapital = _minRebalanceCapital;
         maxCapitalRequested = _maxCapitalRequested;
-        totalVotes = _stake.toInt256();
-        votes[_strategist] = _stake.toInt256();
-        absoluteTotalVotes = _stake;
+
         dataSet = false;
     }
 
@@ -354,9 +352,11 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         }
         totalPositiveVotes = _absoluteTotalVotes.toInt256().add(_totalVotes).div(2).toUint256();
         totalNegativeVotes = _absoluteTotalVotes.toInt256().sub(_totalVotes).div(2).toUint256();
+
+        // Keeper will account for strategist vote/stake
         voters = _voters;
-        absoluteTotalVotes = absoluteTotalVotes + _absoluteTotalVotes;
-        totalVotes = totalVotes + _totalVotes;
+        absoluteTotalVotes = _absoluteTotalVotes;
+        totalVotes = _totalVotes;
 
         // Initializes cooldown
         enteredCooldownAt = block.timestamp;
