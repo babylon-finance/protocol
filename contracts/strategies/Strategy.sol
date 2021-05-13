@@ -520,7 +520,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         _require(balance > 0, Errors.BALANCE_TOO_LOW);
 
         _trade(_token, balance, garden.reserveAsset());
-        // Send WETH to garden
+        // Send reserve asset to garden
         _sendReserveAssetToGarden();
     }
 
@@ -576,6 +576,10 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
             return;
         }
         IWETH(WETH).withdraw(_wethAmount);
+        // If reserve asset different than weth, trade to reserve asset
+        if (garden.reserveAsset() !=  WETH) {
+          _trade(WETH, _wethAmount, garden.reserveAsset());
+        }
     }
 
     /* ============ External Getter Functions ============ */

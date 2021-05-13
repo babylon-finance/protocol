@@ -163,7 +163,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
     mapping(address => bool) public strategyMapping;
     mapping(address => bool) public override isGardenStrategy; // Security control mapping
 
-    // Keeper debt in WETH if any, repaid upon every strategy finalization
+    // Keeper debt in reserve asset if any, repaid upon every strategy finalization
     uint256 public keeperDebt;
 
     /* ============ Constructor ============ */
@@ -219,7 +219,13 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         active = true;
 
         // Deposit
-        IWETH(WETH).deposit{value: msg.value}();
+        if (reserveAsset == WETH) {
+          IWETH(WETH).deposit{value: msg.value}();
+        } else {
+          // todo: tansfer ERC20 to garden
+
+        }
+
         _mintGardenTokens(creator, creator, msg.value, msg.value, 0);
     }
 
@@ -309,7 +315,11 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         _require(totalContributors < maxContributors, Errors.MAX_CONTRIBUTORS);
         _require(msg.value == _reserveAssetQuantity, Errors.MSG_VALUE_DO_NOT_MATCH);
         // Always wrap to WETH
-        IWETH(WETH).deposit{value: msg.value}();
+        if (reserveAsset == WETH) {
+          IWETH(WETH).deposit{value: msg.value}();
+        } else {
+            // todo: transfer erc20 to garden
+        }
         // Check this here to avoid having relayers
         reenableEthForStrategies();
 
@@ -405,8 +415,8 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
      * When an strategy finishes execution, we want to make that eth available for withdrawals
      * from members of the garden.
      *
-     * @param _amount                        Amount of WETH to convert to ETH to set aside until the window ends
-     * @param _rewards                       Amount of WETH to convert to ETH to set aside forever
+     * @param _amount                        Amount of Reserve Asset to convert to ETH to set aside until the window ends
+     * @param _rewards                       Amount of Reserve Asset to convert to ETH to set aside forever
      * @param _returns                       Profits or losses that the strategy received
      */
     function startWithdrawalWindow(
@@ -431,9 +441,11 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         }
         reserveAssetRewardsSetAside = reserveAssetRewardsSetAside.add(_rewards);
         reserveAssetPrincipalWindow = reserveAssetPrincipalWindow.add(_amount);
-        // Both are converted to weth
+        if (reserveAsset != WETH) {
+          // todo: trade to weth
+        }
+        // Both are converted to eth
         IWETH(WETH).withdraw(_amount.add(_rewards));
-
         // Mark strategy as finalized
         absoluteReturns.add(_returns);
         strategies = strategies.remove(_strategy);
@@ -452,7 +464,11 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
             address(this).balance >= reserveAssetPrincipalWindow
         ) {
             withdrawalsOpenUntil = 0;
-            IWETH(WETH).deposit{value: reserveAssetPrincipalWindow}();
+            if (reserveAsset == WETH) {
+              IWETH(WETH).deposit{value: reserveAssetPrincipalWindow}();
+            } else {
+              // todo: trade eth to reserve asset
+            }
             reserveAssetPrincipalWindow = 0;
         }
     }
@@ -582,7 +598,6 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
     }
 
     // Any tokens (other than the target) that are sent here by mistake are recoverable by the protocol
-    // Exchange for WETH
     function sweep(address _token) external {
         _require(_token != reserveAsset, Errors.MUST_BE_RESERVE_ASSET);
         uint256 balance = IERC20(_token).balanceOf(address(this));
@@ -910,14 +925,19 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
 
         _burn(msg.sender, _gardenTokenQuantity);
 
-        // Check that the withdrawal is possible
-        // Unwrap WETH if ETH balance lower than netFlowQuantity
-        if (address(this).balance < netFlowQuantity) {
-            IWETH(WETH).withdraw(netFlowQuantity.sub(address(this).balance));
+        if (reserveAsset == WETH) {
+          // Check that the withdrawal is possible
+          // Unwrap WETH if ETH balance lower than netFlowQuantity
+          if (address(this).balance < netFlowQuantity) {
+              IWETH(WETH).withdraw(netFlowQuantity.sub(address(this).balance));
+          }
+          // Send ETH
+          Address.sendValue(_to, netFlowQuantity);
+        } else {
+
         }
+
         _updateContributorWithdrawalInfo(netFlowQuantity);
-        // Send ETH
-        Address.sendValue(_to, netFlowQuantity);
         payProtocolFeeFromGarden(reserveAsset, protocolFees);
 
         uint256 outflow = netFlowQuantity.add(protocolFees);
