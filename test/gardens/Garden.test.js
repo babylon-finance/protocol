@@ -14,6 +14,30 @@ const {
 
 const { setupTests } = require('../fixtures/GardenFixture');
 
+async function createWallets(number) {
+  const walletAddresses = [];
+  for (let i = 0; i < number; i++) {
+    const newWallet = ethers.Wallet.createRandom();
+    walletAddresses.push(newWallet);
+  }
+  return walletAddresses;
+}
+
+async function depositBath1ETH(owner, garden, walletAddresses) {
+  for (let i = 0; i < walletAddresses.length; i++) {
+    //console.log('DEPOSITING before', walletAddresses[i].address, i);
+    //const tx = owner.sendTransaction({
+    //  to: walletAddresses[i].address,
+    //  value: ethers.utils.parseEther("0.1")
+    //});
+    // TODO Change owner deposits on behalf to own deposits
+    await garden.connect(owner).deposit(ethers.utils.parseEther('0.1'), 1, walletAddresses[i].address, {
+      value: ethers.utils.parseEther('0.1'),
+    });
+    //console.log('DEPOSITING after', walletAddresses[i].address, i);
+  }
+}
+
 describe('Garden', function () {
   let babController;
   let rewardsDistributor;
@@ -139,6 +163,33 @@ describe('Garden', function () {
       ).not.to.be.reverted;
       const signer3Balance = await garden1.balanceOf(signer3.address);
       expect(signer3Balance).to.be.equal(ethers.utils.parseEther('1'));
+    });
+  });
+  describe('Garden deposit can be done after reaching max limit of users', async function () {
+    it('a user can still deposit after a garden reached its max limit of users but new users fail', async function () {
+      // Signer 3 joins the garden
+      await garden1.connect(signer3).deposit(ethers.utils.parseEther('1'), 1, signer3.getAddress(), {
+        value: ethers.utils.parseEther('1'),
+      });
+      // 98 new (random) people joins the garden as well + signer 3 + gardener = 100 = maximum
+      let randomWallets = await createWallets(98);
+      await depositBath1ETH(owner, garden1, randomWallets);
+      // No more contributors allowed
+      await expect(
+        garden1.connect(signer2).deposit(ethers.utils.parseEther('1'), 1, signer2.getAddress(), {
+          value: ethers.utils.parseEther('1'),
+        }),
+      ).to.be.revertedWith('revert BAB#061');
+
+      // Previous contributors belonging to the garden can still deposit
+      await garden1.connect(signer3).deposit(ethers.utils.parseEther('1'), 1, signer3.getAddress(), {
+        value: ethers.utils.parseEther('1'),
+      });
+
+      await garden1.connect(signer3).deposit(ethers.utils.parseEther('1'), 1, signer3.getAddress(), {
+        value: ethers.utils.parseEther('1'),
+      });
+      expect((await garden1.balanceOf(signer3.address)).toString()).to.be.equal(ethers.utils.parseEther('3'));
     });
   });
 
