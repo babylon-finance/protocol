@@ -53,8 +53,8 @@ contract StrategyNFT is ERC721Upgradeable, IStrategyNFT {
     IGarden public garden;
     IStrategy public strategy;
 
-    // Address of the Garden JSON (Shared JSON for each garden)
-    string public tokenURI;
+    // Address of the Strategy NFT JSON
+    string public strategyTokenURI;
 
     Counters.Counter private _tokenIds;
 
@@ -88,20 +88,25 @@ contract StrategyNFT is ERC721Upgradeable, IStrategyNFT {
      *
      * @param _user               Address of the user
      */
-    function grantStrategyNFT(address _user, string memory _tokenURI) external override onlyStrategy returns (uint256) {
+    function grantStrategyNFT(address _user, string memory _strategyTokenURI)
+        external
+        override
+        onlyStrategy
+        returns (uint256)
+    {
         require(address(_user) != address(0), 'User must exist');
-        _updateStrategyURI(_tokenURI);
+        _updateStrategyURI(_strategyTokenURI);
         return _createOrGetStrategyNFT(_user);
     }
 
     /**
      * Updates the token URI of the garden NFT
      *
-     * @param _tokenURI               Address of the tokenURI
+     * @param _strategyTokenURI               Address of the strategyTokenURI
      */
-    function updateStrategyURI(string memory _tokenURI) external override {
+    function updateStrategyURI(string memory _strategyTokenURI) external override {
         require(msg.sender == controller.owner(), 'Only owner can call this');
-        _updateStrategyURI(_tokenURI);
+        _updateStrategyURI(_strategyTokenURI);
     }
 
     /* ============ Internal Functions ============ */
@@ -117,7 +122,7 @@ contract StrategyNFT is ERC721Upgradeable, IStrategyNFT {
             _tokenIds.increment();
             newItemId = _tokenIds.current();
             _safeMint(_user, newItemId);
-            _setTokenURI(newItemId, tokenURI);
+            _setTokenURI(newItemId, strategyTokenURI);
             emit StrategyNFTAwarded(_user, newItemId);
         } else {
             newItemId = tokenOfOwnerByIndex(_user, 0);
@@ -128,11 +133,11 @@ contract StrategyNFT is ERC721Upgradeable, IStrategyNFT {
     /**
      * Updates the token URI of the strategy NFT
      *
-     * @param _tokenURI               Address of the tokenURI
+     * @param _strategyTokenURI               Address of the strategyTokenURI
      */
-    function _updateStrategyURI(string memory _tokenURI) private {
-        string memory oldURI = tokenURI;
-        tokenURI = _tokenURI;
-        emit StrategyURIUpdated(tokenURI, oldURI);
+    function _updateStrategyURI(string memory _strategyTokenURI) private {
+        string memory oldURI = strategyTokenURI;
+        strategyTokenURI = _strategyTokenURI;
+        emit StrategyURIUpdated(strategyTokenURI, oldURI);
     }
 }
