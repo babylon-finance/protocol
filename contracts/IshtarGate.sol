@@ -18,6 +18,7 @@
 
 pragma solidity 0.7.6;
 
+import 'hardhat/console.sol';
 import {Ownable} from '@openzeppelin/contracts/access/Ownable.sol';
 import {ERC721} from '@openzeppelin/contracts/token/ERC721/ERC721.sol';
 import {SafeMath} from '@openzeppelin/contracts/math/SafeMath.sol';
@@ -72,7 +73,9 @@ contract IshtarGate is ERC721, IIshtarGate, Ownable {
         IGarden garden = IGarden(_garden);
         require(garden.controller() == address(controller), 'Controller must match');
         require(msg.sender == garden.creator(), 'Only creator can give access to garden');
-        require(gardenAccessCount[_garden] < maxNumberOfInvites, 'The number of contributors must be below the limit');
+        require(IBabController(controller).isSystemContract(address(_garden)));
+        require(IBabController(controller).isGarden(address(_garden)));
+        require(gardenAccessCount[_garden] <= maxNumberOfInvites, 'The number of contributors must be below the limit');
         _;
     }
 
@@ -263,8 +266,10 @@ contract IshtarGate is ERC721, IIshtarGate, Ownable {
         address _garden,
         uint8 _permission
     ) private returns (uint256) {
+        require(_permission <= 3, 'Permission out of bounds');
         uint256 newItemId = _createOrGetGateNFT(_user);
         if (_permission > 0 && permissionsByCommunity[_garden][_user] == 0) {
+            require(gardenAccessCount[_garden] < maxNumberOfInvites, 'Max Number of invites reached');
             gardenAccessCount[_garden] = gardenAccessCount[_garden].add(1);
         }
         if (_permission == 0 && permissionsByCommunity[_garden][_user] > 0) {
