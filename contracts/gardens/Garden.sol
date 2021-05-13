@@ -221,15 +221,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         );
         active = true;
 
-        _require(_initialContribution >= minContribution, Errors.MIN_CONTRIBUTION);
-        _require(_reserveAsset != WETH || msg.value == _initialContribution, Errors.MSG_VALUE_DO_NOT_MATCH);
-        // Deposit
-        if (reserveAsset == WETH) {
-            IWETH(WETH).deposit{value: msg.value}();
-        } else {
-            // transfer ERC20 to garden
-            IERC20(reserveAsset).safeTransferFrom(msg.sender, address(this), _initialContribution);
-        }
+        _receiveReserveAsset(_initialContribution);
 
         _mintGardenTokens(creator, creator, msg.value, msg.value, 0);
     }
@@ -313,22 +305,12 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
                 IIshtarGate(IBabController(controller).ishtarGate()).canJoinAGarden(address(this), msg.sender),
             Errors.USER_CANNOT_JOIN
         );
-        _require(_reserveAssetQuantity >= minContribution, Errors.MIN_CONTRIBUTION);
         // if deposit limit is 0, then there is no deposit limit
         if (maxDepositLimit > 0) {
             _require(principal.add(_reserveAssetQuantity) <= maxDepositLimit, Errors.MAX_DEPOSIT_LIMIT);
         }
         _require(totalContributors < maxContributors, Errors.MAX_CONTRIBUTORS);
-        _require(reserveAsset != WETH || msg.value == _reserveAssetQuantity, Errors.MSG_VALUE_DO_NOT_MATCH);
-        // Always wrap to WETH
-        if (reserveAsset == WETH) {
-            IWETH(WETH).deposit{value: msg.value}();
-        } else {
-            // Transfer ERC20 to the garden
-            IERC20(reserveAsset).safeTransferFrom(msg.sender, address(this), _reserveAssetQuantity);
-        }
-
-        _validateReserveAsset(reserveAsset, _reserveAssetQuantity);
+        _receiveReserveAsset(_reserveAssetQuantity);
 
         (uint256 protocolFees, uint256 netFlowQuantity) = _getFees(_reserveAssetQuantity, true);
 
@@ -801,6 +783,10 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
 
         // Withdrawal open
         if (block.timestamp <= withdrawalsOpenUntil) {
+            // There is a window but there is more than needed
+            if (liquidReserve > reserveAssetPrincipalWindow.add(_amount)) {
+              return true;
+            }
             IRewardsDistributor rewardsDistributor =
                 IRewardsDistributor(IBabController(controller).rewardsDistributor());
             // Pro rata withdrawals
@@ -903,8 +889,6 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
 
         _require(_canWithdrawReserveAmount(msg.sender, netFlowQuantity), Errors.MIN_LIQUIDITY);
 
-        _validateReserveAsset(reserveAsset, netFlowQuantity);
-
         // Check that new supply is more than min supply needed for withdrawal
         // Note: A min supply amount is needed to avoid division by 0 when withdrawaling garden token to 0
         _require(newGardenTokenSupply >= minGardenTokenSupply, Errors.MIN_TOKEN_SUPPLY);
@@ -938,9 +922,19 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         emit GardenWithdrawal(msg.sender, _to, netFlowQuantity, _gardenTokenQuantity, protocolFees, block.timestamp);
     }
 
-    function _validateReserveAsset(address _reserveAsset, uint256 _quantity) private view {
-        _require(_quantity > 0, Errors.GREATER_THAN_ZERO);
-        _require(IBabController(controller).isValidReserveAsset(_reserveAsset), Errors.MUST_BE_RESERVE_ASSET);
+    function _receiveReserveAsset(uint256 _reserveAssetQuantity) private {
+      _require(_reserveAssetQuantity >= minContribution, Errors.MIN_CONTRIBUTION);
+      _require(reserveAsset != WETH || msg.value == _reserveAssetQuantity, Errors.MSG_VALUE_DO_NOT_MATCH);
+      // If reserve asset is WETH wrap it
+      uint256 reserveAssetBalance = IERC20(reserveAsset).balanceOf(address(this));
+      if (reserveAsset == WETH) {
+          IWETH(WETH).deposit{value: msg.value}();
+      } else {
+          // Transfer ERC20 to the garden
+          IERC20(reserveAsset).safeTransferFrom(msg.sender, address(this), _reserveAssetQuantity);
+      }
+      // Make sure we received the reserve asset
+      _require(IERC20(reserveAsset).balanceOf(address(this)).sub(reserveAssetBalance) == _reserveAssetQuantity, Errors.MSG_VALUE_DO_NOT_MATCH);
     }
 
     /**
