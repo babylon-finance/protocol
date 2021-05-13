@@ -13,8 +13,8 @@ const DEFAULT_STRATEGY_PARAMS = [
   ethers.utils.parseEther('1'), // _minRebalanceCapital
 ];
 
-const STRAT_NAME_PARAMS = ['Strat Name', 'STRT'];
-const NFT_ADDRESS = 'http://null.dev';
+const STRAT_NAME_PARAMS = ['Strategy Name', 'STRT']; // [ NAME, SYMBOL ]
+const NFT_ADDRESS = 'https://babylon.mypinata.cloud/ipfs/Qmc7MfvuCkhA8AA2z6aBzmb5G4MaRfPeKgCVTWcKqU2tjB';
 
 async function updateTWAPs(gardenAddress) {
   const garden = await ethers.getContractAt('Garden', gardenAddress);
