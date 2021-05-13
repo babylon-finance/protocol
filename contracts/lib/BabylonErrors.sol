@@ -247,5 +247,5 @@ library Errors {
     // Token names too long
     uint256 internal constant NAME_TOO_LONG = 79;
     // Not enough votes for quorum
-    uint256 internal constant QUORUM_NOT_REACHED= 80;
+    uint256 internal constant QUORUM_NOT_REACHED = 80;
 }
