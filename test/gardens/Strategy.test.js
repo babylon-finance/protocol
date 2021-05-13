@@ -246,6 +246,26 @@ describe('Strategy', function () {
           ),
       ).to.be.revertedWith(/revert BAB#042/i);
     });
+
+    it('have to reach quorum', async function () {
+      const signer1Balance = (await garden2.balanceOf(signer1.getAddress())).div(1000);
+      const signer2Balance = (await garden2.balanceOf(signer2.getAddress())).div(1000);
+
+      await expect(
+        strategyCandidate
+          .connect(keeper)
+          .resolveVoting(
+            [signer1.getAddress(), signer2.getAddress()],
+            [signer1Balance, signer2Balance],
+            signer1Balance.add(signer2Balance).toString(),
+            signer1Balance.add(signer2Balance).toString(),
+            42,
+            {
+              gasPrice: 0,
+            },
+          ),
+      ).to.be.revertedWith(/revert BAB#080/i);
+    });
   });
 
   describe('executeStrategy', async function () {

@@ -346,6 +346,8 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         );
         _require(!active && !finalized, Errors.VOTES_ALREADY_RESOLVED);
         _require(block.timestamp.sub(enteredAt) <= MAX_CANDIDATE_PERIOD, Errors.VOTING_WINDOW_IS_OVER);
+        _require(_absoluteTotalVotes >= IERC20(address(garden)).totalSupply().preciseMul(garden.minVotersQuorum()), Errors.QUORUM_NOT_REACHED);
+
         active = true;
 
         // Set votes data
