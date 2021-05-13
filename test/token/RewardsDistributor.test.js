@@ -193,7 +193,7 @@ describe('BABL Rewards Distributor', function () {
         timeListPointer: 1,
       });
       expect((await long1.strategyRewards()).toString()).to.be.closeTo(
-        '53348540978530991898983',
+        '53252867971266677419386',
         ethers.utils.parseEther('0.05'),
       );
     });
@@ -219,7 +219,7 @@ describe('BABL Rewards Distributor', function () {
       });
 
       expect((await long1.strategyRewards()).toString()).to.be.closeTo(
-        '59249976195741897367844',
+        '56245433363508517711850',
         ethers.utils.parseEther('0.05'),
       );
     });
@@ -253,7 +253,7 @@ describe('BABL Rewards Distributor', function () {
       });
 
       expect((await long1.strategyRewards()).toString()).to.be.closeTo(
-        '27180447233494116321502',
+        '27132419508506259553580',
         ethers.utils.parseEther('0.05'),
       );
       expect((await long2.strategyRewards()).toString()).to.be.closeTo(
@@ -297,7 +297,7 @@ describe('BABL Rewards Distributor', function () {
         timeListPointer: 5,
       });
       expect((await long1.strategyRewards()).toString()).to.be.closeTo(
-        '18445181219085995431261',
+        '18414360810740186824305',
         ethers.utils.parseEther('0.05'),
       );
       expect((await long2.strategyRewards()).toString()).to.be.closeTo(
@@ -353,7 +353,7 @@ describe('BABL Rewards Distributor', function () {
       });
 
       expect((await long1.strategyRewards()).toString()).to.be.closeTo(
-        '11435970164063358738429',
+        '11419076202165184207617',
         ethers.utils.parseEther('0.05'),
       );
       expect((await long2.strategyRewards()).toString()).to.be.closeTo(
@@ -391,7 +391,7 @@ describe('BABL Rewards Distributor', function () {
         timeListPointer: 1,
       });
       expect((await long1.strategyRewards()).toString()).to.be.closeTo(
-        '101611616359986629966551',
+        '101429390403440602823930',
         ethers.utils.parseEther('0.05'),
       );
     });
@@ -416,7 +416,7 @@ describe('BABL Rewards Distributor', function () {
         timeListPointer: 1,
       });
       expect((await long1.strategyRewards()).toString()).to.be.closeTo(
-        '1345917359221846850849',
+        '1343503648201374544096',
         ethers.utils.parseEther('0.05'),
       );
     });
@@ -438,7 +438,7 @@ describe('BABL Rewards Distributor', function () {
         timeListPointer: 1,
       });
       expect((await long1.strategyRewards()).toString()).to.be.closeTo(
-        '144073198442804768654832',
+        '143814823688624358512181',
         ethers.utils.parseEther('0.05'),
       );
     });
@@ -485,7 +485,7 @@ describe('BABL Rewards Distributor', function () {
       });
 
       expect((await long1.strategyRewards()).toString()).to.be.closeTo(
-        '14768509337275189635976',
+        '14746686400974691978871',
         ethers.utils.parseEther('0.05'),
       );
       expect((await long2.strategyRewards()).toString()).to.be.closeTo(
@@ -549,7 +549,7 @@ describe('BABL Rewards Distributor', function () {
       });
 
       expect((await long1.strategyRewards()).toString()).to.be.closeTo(
-        '219830499847879011062',
+        '219505782600391978866',
         ethers.utils.parseEther('0.05'),
       );
       expect((await long2.strategyRewards()).toString()).to.be.closeTo(
@@ -604,7 +604,7 @@ describe('BABL Rewards Distributor', function () {
       });
 
       expect((await long1.strategyRewards()).toString()).to.be.closeTo(
-        '14768510523869051906610',
+        '14746684630519643055653',
         ethers.utils.parseEther('0.05'),
       );
       expect((await long2.strategyRewards()).toString()).to.be.closeTo(
@@ -668,7 +668,7 @@ describe('BABL Rewards Distributor', function () {
       });
 
       expect((await long1.strategyRewards()).toString()).to.be.closeTo(
-        '16240388525503153926512',
+        '15501053247045131008417',
         ethers.utils.parseEther('0.05'),
       );
       expect((await long2.strategyRewards()).toString()).to.be.closeTo(
