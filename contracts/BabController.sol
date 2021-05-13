@@ -185,6 +185,7 @@ contract BabController is OwnableUpgradeable, IBabController {
      * @param _gardenParams           Array of numeric garden params
      * @param _tokenURI               Garden NFT token URI
      * @param _seed                   Seed to regenerate the garden NFT
+     * @param _initialContribution    Initial contribution by the gardener
      */
     function createGarden(
         address _reserveAsset,
@@ -192,7 +193,8 @@ contract BabController is OwnableUpgradeable, IBabController {
         string memory _symbol,
         string memory _tokenURI,
         uint256 _seed,
-        uint256[] calldata _gardenParams
+        uint256[] calldata _gardenParams,
+        uint256 _initialContribution
     ) external payable override returns (address) {
         require(defaultTradeIntegration != address(0), 'Need a default trade integration');
         require(enabledOperations.length > 0, 'Need operations enabled');
@@ -206,7 +208,8 @@ contract BabController is OwnableUpgradeable, IBabController {
                 _symbol,
                 _tokenURI,
                 _seed,
-                _gardenParams
+                _gardenParams,
+                _initialContribution
             );
 
         require(!isGarden[newGarden], 'Garden already exists');

@@ -218,8 +218,8 @@ library Errors {
     uint256 internal constant MIN_VOTERS_CHECK = 64;
     // Ge contributor power error
     uint256 internal constant GET_CONTRIBUTOR_POWER = 65;
-    // Not enough ETH set aside
-    uint256 internal constant NOT_ENOUGH_ETH = 66;
+    // Not enough reserve set aside
+    uint256 internal constant NOT_ENOUGH_RESERVE = 66;
     // Garden is already public
     uint256 internal constant GARDEN_ALREADY_PUBLIC = 67;
     // Withdrawal with penalty
