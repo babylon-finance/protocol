@@ -111,6 +111,9 @@ contract BabControllerV2Mock is OwnableUpgradeable {
     uint256 public protocolDepositGardenTokenFee; // 0 (0.01% = 1e14, 1% = 1e16)
     uint256 public protocolWithdrawalGardenTokenFee; // 0 (0.01% = 1e14, 1% = 1e16)
 
+    // Maximum number of contributors per garden
+    uint256 public maxContributorsPerGarden;
+
     bool public newVar;
 
     /* ============ Constructor ============ */
