@@ -17,6 +17,7 @@
 
 pragma solidity 0.7.6;
 
+import 'hardhat/console.sol';
 import {Address} from '@openzeppelin/contracts/utils/Address.sol';
 import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import {SafeERC20} from '@openzeppelin/contracts/token/ERC20/SafeERC20.sol';
@@ -785,7 +786,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         if (block.timestamp <= withdrawalsOpenUntil) {
             // There is a window but there is more than needed
             if (liquidReserve > reserveAssetPrincipalWindow.add(_amount)) {
-              return true;
+                return true;
             }
             IRewardsDistributor rewardsDistributor =
                 IRewardsDistributor(IBabController(controller).rewardsDistributor());
@@ -923,18 +924,21 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
     }
 
     function _receiveReserveAsset(uint256 _reserveAssetQuantity) private {
-      _require(_reserveAssetQuantity >= minContribution, Errors.MIN_CONTRIBUTION);
-      _require(reserveAsset != WETH || msg.value == _reserveAssetQuantity, Errors.MSG_VALUE_DO_NOT_MATCH);
-      // If reserve asset is WETH wrap it
-      uint256 reserveAssetBalance = IERC20(reserveAsset).balanceOf(address(this));
-      if (reserveAsset == WETH) {
-          IWETH(WETH).deposit{value: msg.value}();
-      } else {
-          // Transfer ERC20 to the garden
-          IERC20(reserveAsset).safeTransferFrom(msg.sender, address(this), _reserveAssetQuantity);
-      }
-      // Make sure we received the reserve asset
-      _require(IERC20(reserveAsset).balanceOf(address(this)).sub(reserveAssetBalance) == _reserveAssetQuantity, Errors.MSG_VALUE_DO_NOT_MATCH);
+        _require(_reserveAssetQuantity >= minContribution, Errors.MIN_CONTRIBUTION);
+        _require(reserveAsset != WETH || msg.value == _reserveAssetQuantity, Errors.MSG_VALUE_DO_NOT_MATCH);
+        // If reserve asset is WETH wrap it
+        uint256 reserveAssetBalance = IERC20(reserveAsset).balanceOf(address(this));
+        if (reserveAsset == WETH) {
+            IWETH(WETH).deposit{value: msg.value}();
+        } else {
+            // Transfer ERC20 to the garden
+            IERC20(reserveAsset).safeTransferFrom(msg.sender, address(this), _reserveAssetQuantity);
+        }
+        // Make sure we received the reserve asset
+        _require(
+            IERC20(reserveAsset).balanceOf(address(this)).sub(reserveAssetBalance) == _reserveAssetQuantity,
+            Errors.MSG_VALUE_DO_NOT_MATCH
+        );
     }
 
     /**

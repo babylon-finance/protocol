@@ -49,7 +49,7 @@ async function setUpFixture({ deployments, getNamedAccounts, ethers }, options, 
       'http...',
       0,
       gardenParams,
-      gardenParams[4],
+      ethers.utils.parseEther('1'),
       {
         value: ethers.utils.parseEther('1'),
       },
@@ -57,21 +57,48 @@ async function setUpFixture({ deployments, getNamedAccounts, ethers }, options, 
 
   await babController
     .connect(signer1)
-    .createGarden(addresses.tokens.WETH, 'ETH Yield Farm [a]', 'EYFB', 'http...', 1, gardenParams, gardenParams[4], {
-      value: ethers.utils.parseEther('1'),
-    });
+    .createGarden(
+      addresses.tokens.WETH,
+      'ETH Yield Farm [a]',
+      'EYFB',
+      'http...',
+      1,
+      gardenParams,
+      ethers.utils.parseEther('1'),
+      {
+        value: ethers.utils.parseEther('1'),
+      },
+    );
 
   await babController
     .connect(signer1)
-    .createGarden(addresses.tokens.WETH, 'ETH Yield Farm [b]', 'EYFG', 'http...', 2, gardenParams, gardenParams[4], {
-      value: ethers.utils.parseEther('1'),
-    });
+    .createGarden(
+      addresses.tokens.WETH,
+      'ETH Yield Farm [b]',
+      'EYFG',
+      'http...',
+      2,
+      gardenParams,
+      ethers.utils.parseEther('1'),
+      {
+        value: ethers.utils.parseEther('1'),
+      },
+    );
 
   await babController
     .connect(signer1)
-    .createGarden(addresses.tokens.WETH, 'ETH Yield Farm [d]', 'EYFG', 'http...', 3, gardenParams, gardenParams[4], {
-      value: ethers.utils.parseEther('1'),
-    });
+    .createGarden(
+      addresses.tokens.WETH,
+      'ETH Yield Farm [d]',
+      'EYFG',
+      'http...',
+      3,
+      gardenParams,
+      ethers.utils.parseEther('1'),
+      {
+        value: ethers.utils.parseEther('1'),
+      },
+    );
 
   const gardens = await babController.getGardens();
 
