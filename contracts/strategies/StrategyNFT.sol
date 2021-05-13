@@ -88,7 +88,12 @@ contract StrategyNFT is ERC721Upgradeable, IStrategyNFT {
      *
      * @param _user               Address of the user
      */
-    function grantStrategyNFT(address _user, string memory _strategyTokenURI) external override onlyStrategy returns (uint256) {
+    function grantStrategyNFT(address _user, string memory _strategyTokenURI)
+        external
+        override
+        onlyStrategy
+        returns (uint256)
+    {
         require(address(_user) != address(0), 'User must exist');
         _updateStrategyURI(_strategyTokenURI);
         return _createOrGetStrategyNFT(_user);
