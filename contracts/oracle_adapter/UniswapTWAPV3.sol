@@ -67,7 +67,7 @@ contract UniswapTWAPV3 is Ownable, IOracleAdapter {
     uint24 private constant FEE_MEDIUM = 3000;
     uint24 private constant FEE_HIGH = 10000;
     int24 private maxTwapDeviation = 100;
-    uint160 private maxLiquidityDeviationPercentage = 1000;
+    uint160 private maxLiquidityDeviationFactor = 50;
 
     /* ============ Constructor ============ */
 
@@ -99,23 +99,22 @@ contract UniswapTWAPV3 is Ownable, IOracleAdapter {
         override
         returns (bool found, uint256 amountOut)
     {
-        uint256 minLiquidityInETH = IBabController(controller).minRiskyPairLiquidityEth();
         uint160 sqrtPriceX96;
         int24 tick;
         bool found = false;
         // We try the low pool first
         IUniswapV3Pool pool = IUniswapV3Pool(factory.getPool(tokenIn, tokenOut, FEE_LOW));
         (sqrtPriceX96, tick, , , , , ) = pool.slot0();
-        found = _checkPriceAndLiquidity(tick, pool, minLiquidityInETH);
+        found = _checkPriceAndLiquidity(tick, pool);
         if (!found) {
             pool = IUniswapV3Pool(factory.getPool(tokenIn, tokenOut, FEE_MEDIUM));
             (sqrtPriceX96, tick, , , , , ) = pool.slot0();
-            found = _checkPriceAndLiquidity(tick, pool, minLiquidityInETH);
+            found = _checkPriceAndLiquidity(tick, pool);
         }
         if (!found) {
             pool = IUniswapV3Pool(factory.getPool(tokenIn, tokenOut, FEE_HIGH));
             (sqrtPriceX96, tick, , , , , ) = pool.slot0();
-            found = _checkPriceAndLiquidity(tick, pool, minLiquidityInETH);
+            found = _checkPriceAndLiquidity(tick, pool);
         }
         // No valid price
         if (!found) {
@@ -139,10 +138,10 @@ contract UniswapTWAPV3 is Ownable, IOracleAdapter {
     /// only become this extreme if there's no liquidity in the Uniswap pool.
     function _checkPriceAndLiquidity(
         int24 mid,
-        IUniswapV3Pool _pool,
-        uint256 minLiquidityInETH
+        IUniswapV3Pool _pool
     ) internal view returns (bool) {
         int24 tickSpacing = _pool.tickSpacing();
+        // TODO: Add the other param from charm
         if (mid < TickMath.MIN_TICK + tickSpacing) {
             // "price too low"
             return false;
@@ -160,21 +159,9 @@ contract UniswapTWAPV3 is Ownable, IOracleAdapter {
         if (deviation > maxTwapDeviation) {
           return false;
         }
-        console.log('liquidity deviation', liquidityCumulative);
         uint256 poolLiquidity = uint256(_pool.liquidity());
-        console.log('liquidity pool,    ', poolLiquidity);
         // Liquidity cumulative check
-        if (liquidityCumulative > poolLiquidity.div(maxLiquidityDeviationPercentage)) {
-          return false;
-        }
-        uint256 liquidityInETH;
-        if (_pool.token0() == WETH) {
-          liquidityInETH = poolLiquidity.mul(poolLiquidity).div(IERC20(_pool.token1()).balanceOf(address(_pool)));
-        }
-        if (_pool.token1() == WETH) {
-          liquidityInETH = poolLiquidity.mul(poolLiquidity).div(IERC20(_pool.token0()).balanceOf(address(_pool)));
-        }
-        return liquidityInETH >= minLiquidityInETH;
+        return liquidityCumulative <= poolLiquidity.div(maxLiquidityDeviationFactor);
     }
 
     // given the cumulative prices of the start and end of a period, and the length of the period, compute the average
@@ -182,8 +169,8 @@ contract UniswapTWAPV3 is Ownable, IOracleAdapter {
     function _getTwap(IUniswapV3Pool _pool) private view returns (int56 amountOut, uint160 liquidity) {
         (int56[] memory tickCumulatives, uint160[] memory secondsPerLiquidityCumulativeX128s) =
             _pool.observe(secondsAgo);
-        uint160 liquidity =
+        liquidity =
             (secondsPerLiquidityCumulativeX128s[1] - secondsPerLiquidityCumulativeX128s[0]) / SECONDS_GRANULARITY;
-        return ((tickCumulatives[1] - tickCumulatives[0]) / SECONDS_GRANULARITY, liquidity);
+        amountOut = (tickCumulatives[1] - tickCumulatives[0]) / SECONDS_GRANULARITY;
     }
 }

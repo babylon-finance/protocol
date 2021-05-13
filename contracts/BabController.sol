@@ -58,7 +58,7 @@ contract BabController is OwnableUpgradeable, IBabController {
 
     event ReserveAssetAdded(address indexed _reserveAsset);
     event ReserveAssetRemoved(address indexed _reserveAsset);
-    event LiquidityMinimumEdited(uint256 _minRiskyPairLiquidityEth);
+    event LiquidityMinimumEdited(address indexed _resesrveAsset, uint256 _newMinLiquidityReserve);
 
     event PriceOracleChanged(address indexed _priceOracle, address _oldPriceOracle);
     event RewardsDistributorChanged(address indexed _rewardsDistributor, address _oldRewardsDistributor);
@@ -66,6 +66,7 @@ contract BabController is OwnableUpgradeable, IBabController {
     event IshtarGateChanged(address _newIshtarGate, address _oldIshtarGate);
     event GardenValuerChanged(address indexed _gardenValuer, address _oldGardenValuer);
     event GardenFactoryChanged(address indexed _gardenFactory, address _oldGardenFactory);
+    event UniswapFactoryChanged(address indexed _newUniswapFactory, address _oldUniswapFactory);
 
     event StrategyFactoryEdited(address indexed _strategyFactory, address _oldStrategyFactory);
 
@@ -73,13 +74,13 @@ contract BabController is OwnableUpgradeable, IBabController {
 
     /* ============ State Variables ============ */
 
-    address public constant UNISWAP_FACTORY = 0x5C69bEe701ef814a2B6a3EDD4B1652CB9cc5aA6f;
     address public constant WETH = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
     uint8 public constant MAX_OPERATIONS = 20;
 
     // List of enabled Communities
     address[] public gardens;
     address[] public reserveAssets;
+    address public override uniswapFactory;
     address public override gardenValuer;
     address public override priceOracle;
     address public override gardenFactory;
@@ -104,6 +105,9 @@ contract BabController is OwnableUpgradeable, IBabController {
     // Mapping to check keepers
     mapping(address => bool) public keeperList;
 
+    // Mapping of minimum liquidity per reserve asset
+    mapping(address => uint256) public override minLiquidityPerReserve;
+
     // Recipient of protocol fees
     address public override treasury;
 
@@ -124,8 +128,6 @@ contract BabController is OwnableUpgradeable, IBabController {
     uint256 public gardenCreatorBonus;
 
     // Assets
-    // Absolute Min liquidity of assets for risky gardens 1000 ETH
-    uint256 public override minRiskyPairLiquidityEth;
 
     // Enable Transfer of ERC20 gardenTokens
     // Only members can transfer tokens until the protocol is fully decentralized
@@ -157,7 +159,8 @@ contract BabController is OwnableUpgradeable, IBabController {
         gardenTokensTransfersEnabled = false;
         bablMiningProgramEnabled = false;
         allowPublicGardens = false;
-        minRiskyPairLiquidityEth = 100 * 1e18;
+
+        uniswapFactory = 0x1F98431c8aD98523631AE4a59f267346ea31F984;
 
         strategistProfitPercentage = 10e16;
         stewardsProfitPercentage = 5e16;
@@ -431,6 +434,20 @@ contract BabController is OwnableUpgradeable, IBabController {
     }
 
     /**
+     * PRIVILEGED GOVERNANCE FUNCTION. Allows governance to edit the protocol uniswaps factory
+     *
+     * @param _newUniswapFactory      Address of the new uniswap factory
+     */
+    function editUniswapFactory(address _newUniswapFactory) external override onlyOwner {
+        require(_newUniswapFactory != address(0), 'Address must not be 0');
+
+        address oldUniswapFactory = uniswapFactory;
+        uniswapFactory = _newUniswapFactory;
+
+        emit UniswapFactoryChanged(_newUniswapFactory, oldUniswapFactory);
+    }
+
+    /**
      * PRIVILEGED GOVERNANCE FUNCTION. Allows governance to edit the protocol strategy factory
      *
      * @param _newStrategyFactory      Address of the new strategy factory
@@ -529,23 +546,21 @@ contract BabController is OwnableUpgradeable, IBabController {
     /**
      * GOVERNANCE FUNCTION: Edits the minimum liquidity an asset must have on Uniswap
      *
-     * @param  _minRiskyPairLiquidityEth       Absolute min liquidity of an asset to grab price
+     * @param  _reserve                         Address of the reserve to edit
+     * @param  _newMinLiquidityReserve          Absolute min liquidity of an asset to grab price
      */
-    function editLiquidityMinimum(uint256 _minRiskyPairLiquidityEth) public override onlyOwner {
-        require(_minRiskyPairLiquidityEth > 0, '_minRiskyPairLiquidityEth > 0');
-        minRiskyPairLiquidityEth = _minRiskyPairLiquidityEth;
+    function editLiquidityReserve(address _reserve, uint256 _newMinLiquidityReserve) public override onlyOwner {
+        require(_newMinLiquidityReserve > 0, '_minRiskyPairLiquidityEth > 0');
+        require(validReserveAsset[_reserve], 'Needs to be a valid reserve');
+        minLiquidityPerReserve[_reserve] = _newMinLiquidityReserve;
 
-        emit LiquidityMinimumEdited(_minRiskyPairLiquidityEth);
+        emit LiquidityMinimumEdited(_reserve, _newMinLiquidityReserve);
     }
 
     /* ============ External Getter Functions ============ */
 
     function owner() public view override(IBabController, OwnableUpgradeable) returns (address) {
         return OwnableUpgradeable.owner();
-    }
-
-    function getUniswapFactory() external pure override returns (address) {
-        return UNISWAP_FACTORY;
     }
 
     function getGardens() external view override returns (address[] memory) {

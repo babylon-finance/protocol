@@ -260,7 +260,8 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         IBabController babController = IBabController(controller);
         _require(_minGardenTokenSupply > 0, Errors.MIN_TOKEN_SUPPLY);
         _require(_depositHardlock > 0, Errors.DEPOSIT_HARDLOCK);
-        _require(_minLiquidityAsset >= babController.minRiskyPairLiquidityEth(), Errors.MIN_LIQUIDITY);
+        // todo: create minimum mapping of liquidity per reserve asset in controller
+        _require(_minLiquidityAsset >= babController.minLiquidityPerReserve(reserveAsset), Errors.MIN_LIQUIDITY);
         _require(
             _strategyCooldownPeriod <= IBabController(controller).getMaxCooldownPeriod() &&
                 _strategyCooldownPeriod >= IBabController(controller).getMinCooldownPeriod(),
