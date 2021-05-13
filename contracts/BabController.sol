@@ -274,7 +274,7 @@ contract BabController is OwnableUpgradeable, IBabController {
      * PRIVILEGED GOVERNANCE FUNCTION. Change the max number of contributors for new Gardens since the change
      */
     function setMaxContributorsPerGarden(uint256 _newMax) external override onlyOwner {
-        require(_newMax >= 1, 'Contributos cannot be less than 1 per garden');
+        require(_newMax >= 1, 'Contributors cannot be less than 1 per garden');
         maxContributorsPerGarden = _newMax;
     }
 
