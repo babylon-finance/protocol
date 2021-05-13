@@ -191,10 +191,10 @@ abstract contract TradeIntegration is BaseIntegration, ReentrancyGuard, ITradeIn
         uint256 liquidityInReserve;
 
         if (_pool.token0() == _tradeInfo.garden.reserveAsset()) {
-          liquidityInReserve = poolLiquidity.mul(poolLiquidity).div(ERC20(_pool.token1()).balanceOf(address(_pool)));
+            liquidityInReserve = poolLiquidity.mul(poolLiquidity).div(ERC20(_pool.token1()).balanceOf(address(_pool)));
         }
         if (_pool.token1() == _tradeInfo.garden.reserveAsset()) {
-          liquidityInReserve = poolLiquidity.mul(poolLiquidity).div(ERC20(_pool.token0()).balanceOf(address(_pool)));
+            liquidityInReserve = poolLiquidity.mul(poolLiquidity).div(ERC20(_pool.token0()).balanceOf(address(_pool)));
         }
         require(liquidityInReserve >= minLiquidityReserveAsset, 'Not enough liquidity');
         require(
@@ -204,21 +204,24 @@ abstract contract TradeIntegration is BaseIntegration, ReentrancyGuard, ITradeIn
     }
 
     function _getUniswapPoolWithMostLiquidity(TradeInfo memory _tradeInfo) internal view returns (IUniswapV3Pool) {
-      IUniswapV3Factory factory = IUniswapV3Factory(IBabController(controller).uniswapFactory());
-      IUniswapV3Pool poolLow = IUniswapV3Pool(factory.getPool(_tradeInfo.sendToken, _tradeInfo.receiveToken, FEE_LOW));
-      IUniswapV3Pool poolMedium = IUniswapV3Pool(factory.getPool(_tradeInfo.sendToken, _tradeInfo.receiveToken, FEE_MEDIUM));
-      IUniswapV3Pool poolHigh = IUniswapV3Pool(factory.getPool(_tradeInfo.sendToken, _tradeInfo.receiveToken, FEE_HIGH));
+        IUniswapV3Factory factory = IUniswapV3Factory(IBabController(controller).uniswapFactory());
+        IUniswapV3Pool poolLow =
+            IUniswapV3Pool(factory.getPool(_tradeInfo.sendToken, _tradeInfo.receiveToken, FEE_LOW));
+        IUniswapV3Pool poolMedium =
+            IUniswapV3Pool(factory.getPool(_tradeInfo.sendToken, _tradeInfo.receiveToken, FEE_MEDIUM));
+        IUniswapV3Pool poolHigh =
+            IUniswapV3Pool(factory.getPool(_tradeInfo.sendToken, _tradeInfo.receiveToken, FEE_HIGH));
 
-      uint128 liquidityLow = poolLow.liquidity();
-      uint128 liquidityMedium = poolMedium.liquidity();
-      uint128 liquidityHigh = poolHigh.liquidity();
-      if (liquidityLow > liquidityMedium && liquidityLow >= liquidityHigh) {
-        return poolLow;
-      }
-      if (liquidityMedium > liquidityLow && liquidityMedium >= liquidityHigh) {
-        return poolMedium;
-      }
-      return poolHigh;
+        uint128 liquidityLow = poolLow.liquidity();
+        uint128 liquidityMedium = poolMedium.liquidity();
+        uint128 liquidityHigh = poolHigh.liquidity();
+        if (liquidityLow > liquidityMedium && liquidityLow >= liquidityHigh) {
+            return poolLow;
+        }
+        if (liquidityMedium > liquidityLow && liquidityMedium >= liquidityHigh) {
+            return poolMedium;
+        }
+        return poolHigh;
     }
 
     /**
