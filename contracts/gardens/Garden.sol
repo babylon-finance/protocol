@@ -202,7 +202,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         controller = _controller;
         reserveAsset = _reserveAsset;
         creator = _creator;
-        maxContributors = 100;
+        maxContributors = IBabController(_controller).maxContributorsPerGarden();
         nftAddress = _nftAddress;
         guestListEnabled = true;
 
