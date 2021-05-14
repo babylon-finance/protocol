@@ -316,7 +316,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         payProtocolFeeFromGarden(reserveAsset, protocolFees);
 
         // Mint tokens
-        _mintGardenTokens(msg.sender, _to, netFlowQuantity, principal.add(netFlowQuantity), protocolFees);
+        _mintGardenTokens(_to, netFlowQuantity, principal.add(netFlowQuantity), protocolFees);
 
         // Check that total supply is greater than min supply needed for issuance
         _require(totalSupply() >= minGardenTokenSupply, Errors.MIN_TOKEN_SUPPLY);
@@ -731,14 +731,12 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
 
     /**
      * Function that mints the appropriate garden tokens along with the Garden NFT
-     * @param _from                            Address that triggered the transaction
      * @param _to                              Address to mint the tokens
      * @param _reserveAssetQuantity            Amount of garden tokens
      * @param _newPrincipal                    New principal for that user
      * @param _protocolFees                    Protocol Fees Paid
      */
     function _mintGardenTokens(
-        address _from,
         address _to,
         uint256 _reserveAssetQuantity,
         uint256 _newPrincipal,

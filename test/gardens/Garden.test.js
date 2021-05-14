@@ -4,6 +4,8 @@ const { ethers } = require('hardhat');
 const addresses = require('../../lib/addresses');
 const { ONE_DAY_IN_SECONDS, ONE_ETH, NOW } = require('../../lib/constants.js');
 const { increaseTime } = require('../utils/test-helpers');
+const { GARDEN_PARAMS_STABLE } = require('../../lib/constants');
+const { impersonateAddress } = require('../../lib/rpc');
 const {
   DEFAULT_STRATEGY_PARAMS,
   createStrategy,
@@ -22,9 +24,12 @@ describe('Garden', function () {
   let signer2;
   let signer3;
   let garden1;
+  let ishtarGate;
   let weth;
+  let dai;
   let balancerIntegration;
   let kyberTradeIntegration;
+  let daiGarden;
 
   beforeEach(async () => {
     ({
@@ -35,10 +40,12 @@ describe('Garden', function () {
       signer2,
       signer3,
       garden1,
+      ishtarGate,
       balancerIntegration,
       kyberTradeIntegration,
     } = await setupTests()());
 
+    dai = await ethers.getContractAt('IERC20', addresses.tokens.DAI);
     weth = await ethers.getContractAt('IERC20', addresses.tokens.WETH);
   });
 
@@ -118,6 +125,60 @@ describe('Garden', function () {
           value: ethers.utils.parseEther('1'),
         }),
       ).to.be.reverted;
+    });
+  });
+
+  describe('Garden Deposits / Withdrawals with a different reserve asset', async function () {
+    it('a contributor can make an initial deposit and withdraw', async function () {
+      const whaleAddress = '0x6B175474E89094C44Da98b954EedeAC495271d0F'; // Has DAI
+      const whaleSigner = await impersonateAddress(whaleAddress);
+      await dai.connect(whaleSigner).transfer(signer1.address, ethers.utils.parseEther('1000'), {
+        gasPrice: 0,
+      });
+      await dai.connect(whaleSigner).transfer(signer3.address, ethers.utils.parseEther('1000'), {
+        gasPrice: 0,
+      });
+      await dai.connect(signer1).approve(babController.address, ethers.utils.parseEther('1000'), {
+        gasPrice: 0,
+      });
+      await babController
+        .connect(signer1)
+        .createGarden(
+          addresses.tokens.DAI,
+          'Absolute DAI Return [beta]',
+          'EYFA',
+          'http...',
+          0,
+          GARDEN_PARAMS_STABLE,
+          ethers.utils.parseEther('100'),
+          {},
+        );
+      const gardens = await babController.getGardens();
+      daiGarden = await ethers.getContractAt('Garden', gardens[4]);
+      expect(await daiGarden.totalContributors()).to.equal(1);
+      const gardenBalance = await dai.balanceOf(daiGarden.address);
+      const supplyBefore = await daiGarden.totalSupply();
+      await dai.connect(signer3).approve(babController.address, ethers.utils.parseEther('1000'), {
+        gasPrice: 0,
+      });
+      await ishtarGate.connect(signer1).setGardenAccess(signer3.address, daiGarden.address, 1, { gasPrice: 0 });
+      await dai.connect(signer3).approve(daiGarden.address, ethers.utils.parseEther('1000'), { gasPrice: 0 });
+      await daiGarden.connect(signer3).deposit(ethers.utils.parseEther('1000'), 1, signer3.getAddress());
+      const gardenBalanceAfter = await dai.balanceOf(daiGarden.address);
+      const supplyAfter = await daiGarden.totalSupply();
+      // Communities
+      // Manager deposit in fixture is only 1
+      expect(supplyAfter.sub(supplyBefore)).to.be.closeTo(
+        ethers.utils.parseEther('1000'),
+        ethers.utils.parseEther('0.1'),
+      );
+      expect(gardenBalanceAfter.sub(gardenBalance)).to.equal(ethers.utils.parseEther('1000'));
+      expect(await daiGarden.principal()).to.equal(ethers.utils.parseEther('1100'));
+      expect(await daiGarden.totalContributors()).to.equal(2);
+      ethers.provider.send('evm_increaseTime', [1]);
+      await daiGarden.connect(signer3).withdraw(await daiGarden.balanceOf(signer3.address), 1, signer3.getAddress());
+      expect(await daiGarden.principal()).to.equal(ethers.utils.parseEther('100'));
+      expect(await daiGarden.totalContributors()).to.equal(1);
     });
   });
 
