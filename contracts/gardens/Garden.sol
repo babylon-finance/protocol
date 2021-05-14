@@ -299,7 +299,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         _require(
             ((guestListEnabled &&
                 (IIshtarGate(IBabController(controller).ishtarGate()).canJoinAGarden(address(this), _to) ||
-                    creator == _to )) || !guestListEnabled),
+                    creator == _to)) || !guestListEnabled),
             Errors.USER_CANNOT_JOIN
         );
         // if deposit limit is 0, then there is no deposit limit
