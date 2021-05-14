@@ -446,6 +446,30 @@ describe('Garden', function () {
       const afterBalance = await garden1.balanceOf(signer2.address);
       await expect(afterBalance).to.be.equal(beforeBalance.mul(lockedBalance).div(beforeBalance));
     });
+    it('should fail if startWithdrawalWindow is called more than once or from a non-strategy address', async function () {
+      const strategyContract = await createStrategy(
+        'buy',
+        'vote',
+        [signer1, signer2, signer3],
+        kyberTradeIntegration.address,
+        garden1,
+      );
+      // It is executed
+      await executeStrategy(strategyContract, ethers.utils.parseEther('1'), 42);
+
+      await injectFakeProfits(strategyContract, ethers.utils.parseEther('200')); // We inject positive profits
+      await finalizeStrategy(strategyContract, 0);
+      await expect(finalizeStrategy(strategyContract, 0)).to.be.revertedWith('revert BAB#050');
+
+      await expect(
+        garden1.startWithdrawalWindow(
+          ethers.BigNumber.from('1076070704097713768'),
+          ethers.BigNumber.from('14263257018321332'),
+          ethers.BigNumber.from('90333961116035100'),
+          '0xd41b236f19726aba094b8b9d130620bfef535fd0',
+        ),
+      ).to.be.revertedWith('revert BAB#020');
+    });
   });
   describe('Garden Balances', async function () {
     it('Garden WETH balance cannot be above deposit just after creation', async function () {
