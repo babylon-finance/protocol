@@ -79,7 +79,25 @@ describe('Garden', function () {
       expect(await garden1.maxStrategyDuration()).to.equal(ONE_DAY_IN_SECONDS * 365);
     });
   });
-
+  describe('Garden creation open to public', async function () {
+    it('should allow the creation of a garden to a non-Ishtar gate user once garden creation is open to the public', async function () {
+      await expect(
+        babController
+          .connect(signer2)
+          .createGarden(addresses.tokens.WETH, 'TEST Ishtar', 'AAA', 'http:', 0, GARDEN_PARAMS, {
+            value: ethers.utils.parseEther('0.1'),
+          }),
+      ).to.be.revertedWith('revert User does not have creation permissions');
+      await babController.connect(owner).openPublicGardenCreation();
+      await expect(
+        babController
+          .connect(signer2)
+          .createGarden(addresses.tokens.WETH, 'TEST Ishtar', 'AAA', 'http:', 0, GARDEN_PARAMS, {
+            value: ethers.utils.parseEther('0.1'),
+          }),
+      ).not.to.be.reverted;
+    });
+  });
   describe('payKeeper', async function () {
     it('anyone can NOT invoke payKeeper', async function () {
       await expect(garden1.connect(signer1).payKeeper(keeper.address, ONE_ETH)).to.be.revertedWith('revert BAB#020');
