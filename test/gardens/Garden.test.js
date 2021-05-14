@@ -129,7 +129,7 @@ describe('Garden', function () {
   });
 
   describe('Garden Deposits / Withdrawals with a different reserve asset', async function () {
-    it('a contributor can make an initial deposit and withdraw', async function () {
+    it('a contributor can make an initial deposit and withdraw with DAI', async function () {
       const whaleAddress = '0x6B175474E89094C44Da98b954EedeAC495271d0F'; // Has DAI
       const whaleSigner = await impersonateAddress(whaleAddress);
       await dai.connect(whaleSigner).transfer(signer1.address, ethers.utils.parseEther('1000'), {

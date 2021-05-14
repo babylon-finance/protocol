@@ -297,7 +297,8 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         _onlyActive();
         _require(
             guestListEnabled &&
-                (IIshtarGate(IBabController(controller).ishtarGate()).canJoinAGarden(address(this), _to) || creator == _to),
+                (IIshtarGate(IBabController(controller).ishtarGate()).canJoinAGarden(address(this), _to) ||
+                    creator == _to),
             Errors.USER_CANNOT_JOIN
         );
         // if deposit limit is 0, then there is no deposit limit
@@ -923,8 +924,8 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         if (reserveAsset == WETH) {
             IWETH(WETH).deposit{value: msg.value}();
         } else {
-          // Transfer ERC20 to the garden
-          IERC20(reserveAsset).safeTransferFrom(msg.sender, address(this), _reserveAssetQuantity);
+            // Transfer ERC20 to the garden
+            IERC20(reserveAsset).safeTransferFrom(msg.sender, address(this), _reserveAssetQuantity);
         }
         // Make sure we received the reserve asset
         _require(

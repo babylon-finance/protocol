@@ -214,8 +214,8 @@ contract BabController is OwnableUpgradeable, IBabController {
                 _initialContribution
             );
         if (_reserveAsset != WETH) {
-          IERC20(_reserveAsset).transferFrom(msg.sender, address(this), _initialContribution);
-          IERC20(_reserveAsset).approve(newGarden, _initialContribution);
+            IERC20(_reserveAsset).transferFrom(msg.sender, address(this), _initialContribution);
+            IERC20(_reserveAsset).approve(newGarden, _initialContribution);
         }
         IGarden(newGarden).deposit{value: msg.value}(_initialContribution, _initialContribution, msg.sender);
         require(!isGarden[newGarden], 'Garden already exists');
