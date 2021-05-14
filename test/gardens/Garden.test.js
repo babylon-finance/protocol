@@ -87,7 +87,25 @@ describe('Garden', function () {
       expect(await garden1.maxStrategyDuration()).to.equal(ONE_DAY_IN_SECONDS * 365);
     });
   });
-
+  describe('Garden creation open to public', async function () {
+    it('should allow the creation of a garden to a non-Ishtar gate user once garden creation is open to the public', async function () {
+      await expect(
+        babController
+          .connect(signer2)
+          .createGarden(addresses.tokens.WETH, 'TEST Ishtar', 'AAA', 'http:', 0, GARDEN_PARAMS, {
+            value: ethers.utils.parseEther('0.1'),
+          }),
+      ).to.be.revertedWith('revert User does not have creation permissions');
+      await babController.connect(owner).openPublicGardenCreation();
+      await expect(
+        babController
+          .connect(signer2)
+          .createGarden(addresses.tokens.WETH, 'TEST Ishtar', 'AAA', 'http:', 0, GARDEN_PARAMS, {
+            value: ethers.utils.parseEther('0.1'),
+          }),
+      ).not.to.be.reverted;
+    });
+  });
   describe('payKeeper', async function () {
     it('anyone can NOT invoke payKeeper', async function () {
       await expect(garden1.connect(signer1).payKeeper(keeper.address, ONE_ETH)).to.be.revertedWith('revert BAB#020');
@@ -507,6 +525,30 @@ describe('Garden', function () {
 
       const afterBalance = await garden1.balanceOf(signer2.address);
       await expect(afterBalance).to.be.equal(beforeBalance.mul(lockedBalance).div(beforeBalance));
+    });
+    it('should fail if startWithdrawalWindow is called more than once or from a non-strategy address', async function () {
+      const strategyContract = await createStrategy(
+        'buy',
+        'vote',
+        [signer1, signer2, signer3],
+        kyberTradeIntegration.address,
+        garden1,
+      );
+      // It is executed
+      await executeStrategy(strategyContract, ethers.utils.parseEther('1'), 42);
+
+      await injectFakeProfits(strategyContract, ethers.utils.parseEther('200')); // We inject positive profits
+      await finalizeStrategy(strategyContract, 0);
+      await expect(finalizeStrategy(strategyContract, 0)).to.be.revertedWith('revert BAB#050');
+
+      await expect(
+        garden1.startWithdrawalWindow(
+          ethers.BigNumber.from('1076070704097713768'),
+          ethers.BigNumber.from('14263257018321332'),
+          ethers.BigNumber.from('90333961116035100'),
+          '0xd41b236f19726aba094b8b9d130620bfef535fd0',
+        ),
+      ).to.be.revertedWith('revert BAB#020');
     });
   });
   describe('Garden Balances', async function () {

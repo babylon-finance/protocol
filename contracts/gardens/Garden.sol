@@ -410,9 +410,8 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         address _strategy
     ) external override {
         _require(
-            (strategyMapping[msg.sender] && address(IStrategy(msg.sender).garden()) == address(this)) ||
-                msg.sender == controller,
-            Errors.ONLY_STRATEGY_OR_CONTROLLER
+            (strategyMapping[msg.sender] && address(IStrategy(msg.sender).garden()) == address(this)),
+            Errors.ONLY_STRATEGY
         );
         // Updates reserve asset
         principal = principal.toInt256().add(_returns).toUint256();

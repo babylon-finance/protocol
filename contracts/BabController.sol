@@ -146,6 +146,9 @@ contract BabController is OwnableUpgradeable, IBabController {
     // Maximum number of contributors per garden
     uint256 public override maxContributorsPerGarden;
 
+    // Enable garden creations to be fully open to the public (no need of Ishtar gate anymore)
+    bool public override gardenCreationIsOpen;
+
     /* ============ Constructor ============ */
 
     /**
@@ -175,6 +178,7 @@ contract BabController is OwnableUpgradeable, IBabController {
 
         gardenCreatorBonus = 15e16;
         maxContributorsPerGarden = 100;
+        gardenCreationIsOpen = false;
     }
 
     /* ============ External Functions ============ */
@@ -203,8 +207,10 @@ contract BabController is OwnableUpgradeable, IBabController {
     ) external payable override returns (address) {
         require(defaultTradeIntegration != address(0), 'Need a default trade integration');
         require(enabledOperations.length > 0, 'Need operations enabled');
-        require(IIshtarGate(ishtarGate).canCreate(msg.sender), 'User does not have creation permissions');
-
+        require(
+            IIshtarGate(ishtarGate).canCreate(msg.sender) || gardenCreationIsOpen,
+            'User does not have creation permissions'
+        );
         address newGarden =
             IGardenFactory(gardenFactory).createGarden(
                 _reserveAsset,
@@ -265,6 +271,15 @@ contract BabController is OwnableUpgradeable, IBabController {
         IGarden garden = IGarden(_garden);
         require(!garden.active(), 'The garden needs to be disabled.');
         garden.setActive(true);
+    }
+
+    /**
+     * PRIVILEGED GOVERNANCE FUNCTION. Allows governance to enable public creation of gardens
+     *
+     */
+    function openPublicGardenCreation() external override onlyOwner {
+        require(!gardenCreationIsOpen, 'Garden creation is already open to the public');
+        gardenCreationIsOpen = true;
     }
 
     /**
