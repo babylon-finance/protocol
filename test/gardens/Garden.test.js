@@ -6,6 +6,8 @@ const { ONE_DAY_IN_SECONDS, ONE_ETH, NOW } = require('../../lib/constants.js');
 const { increaseTime } = require('../utils/test-helpers');
 const { GARDEN_PARAMS_STABLE } = require('../../lib/constants');
 const { impersonateAddress } = require('../../lib/rpc');
+//const { GARDEN_PARAMS } = require('../../lib/constants.js');
+
 const {
   DEFAULT_STRATEGY_PARAMS,
   createStrategy,
@@ -16,10 +18,33 @@ const {
 
 const { setupTests } = require('../fixtures/GardenFixture');
 
+async function createWallets(number) {
+  const walletAddresses = [];
+  for (let i = 0; i < number; i++) {
+    const newWallet = ethers.Wallet.createRandom();
+    walletAddresses.push(newWallet);
+  }
+  return walletAddresses;
+}
+
+async function depositBatch(owner, garden, walletAddresses) {
+  for (let i = 0; i < walletAddresses.length; i++) {
+    //const tx = owner.sendTransaction({
+    //  to: walletAddresses[i].address,
+    //  value: ethers.utils.parseEther("0.1")
+    //});
+    // TODO Change "owner depositing on behalf of users" by direct deposits by the new generated wallets
+    await garden.connect(owner).deposit(ethers.utils.parseEther('0.1'), 1, walletAddresses[i].address, {
+      value: ethers.utils.parseEther('0.1'),
+    });
+  }
+}
+
 describe('Garden', function () {
   let babController;
   let rewardsDistributor;
   let owner;
+  let keeper;
   let signer1;
   let signer2;
   let signer3;
@@ -35,6 +60,7 @@ describe('Garden', function () {
     ({
       babController,
       rewardsDistributor,
+      keeper,
       owner,
       signer1,
       signer2,
@@ -58,6 +84,12 @@ describe('Garden', function () {
       expect(await garden1.minVotersQuorum()).to.equal(ethers.utils.parseEther('0.10'));
       expect(await garden1.minStrategyDuration()).to.equal(ONE_DAY_IN_SECONDS * 3);
       expect(await garden1.maxStrategyDuration()).to.equal(ONE_DAY_IN_SECONDS * 365);
+    });
+  });
+
+  describe('payKeeper', async function () {
+    it('anyone can NOT invoke payKeeper', async function () {
+      await expect(garden1.connect(signer1).payKeeper(keeper.address, ONE_ETH)).to.be.revertedWith('revert BAB#020');
     });
   });
 
@@ -125,6 +157,58 @@ describe('Garden', function () {
           value: ethers.utils.parseEther('1'),
         }),
       ).to.be.reverted;
+    });
+  });
+  describe('Garden deposit can be done after making a garden public', async function () {
+    it('a user can still deposit after a garden is granted public access', async function () {
+      await babController.connect(owner).setAllowPublicGardens();
+      await garden1.connect(signer1).makeGardenPublic();
+      await expect(
+        garden1.connect(signer3).deposit(ethers.utils.parseEther('1'), 1, signer3.getAddress(), {
+          value: ethers.utils.parseEther('1'),
+        }),
+      ).not.to.be.reverted;
+      const signer3Balance = await garden1.balanceOf(signer3.address);
+      expect(signer3Balance).to.be.equal(ethers.utils.parseEther('1'));
+    });
+  });
+  describe('Garden deposit can be done after reaching max limit of users', async function () {
+    it('a user can still deposit after a garden reached its max limit of users but new users fail', async function () {
+      // Downside the limit of new gardens to 10 to speed up the test
+      await babController.connect(owner).setMaxContributorsPerGarden(10);
+      await babController
+        .connect(signer1)
+        .createGarden(addresses.tokens.WETH, 'New Garden', 'NEWG', 'http...', 0, GARDEN_PARAMS_STABLE, {
+          value: ethers.utils.parseEther('1'),
+        });
+      const gardens = await babController.getGardens();
+      const garden4 = await ethers.getContractAt('Garden', gardens[4]);
+      await babController.connect(owner).setAllowPublicGardens();
+      await garden4.connect(signer1).makeGardenPublic();
+
+      // Signer 3 joins the new garden
+      await garden4.connect(signer3).deposit(ethers.utils.parseEther('1'), 1, signer3.getAddress(), {
+        value: ethers.utils.parseEther('1'),
+      });
+      // 8 new (random) people joins the garden as well + signer 3 + gardener = 10 = maximum
+      let randomWallets = await createWallets(8);
+      await depositBatch(owner, garden4, randomWallets);
+      // Despite it is a public garden, no more contributors allowed <= 10 so it throws an exception for new users
+      await expect(
+        garden4.connect(signer2).deposit(ethers.utils.parseEther('1'), 1, signer2.getAddress(), {
+          value: ethers.utils.parseEther('1'),
+        }),
+      ).to.be.revertedWith('revert BAB#061');
+
+      // Previous contributors belonging to the garden can still deposit
+      await garden4.connect(signer3).deposit(ethers.utils.parseEther('1'), 1, signer3.getAddress(), {
+        value: ethers.utils.parseEther('1'),
+      });
+
+      await garden4.connect(signer3).deposit(ethers.utils.parseEther('1'), 1, signer3.getAddress(), {
+        value: ethers.utils.parseEther('1'),
+      });
+      expect((await garden4.balanceOf(signer3.address)).toString()).to.be.equal(ethers.utils.parseEther('3'));
     });
   });
 

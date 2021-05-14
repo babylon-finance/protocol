@@ -440,13 +440,13 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         updatedAt = exitedAt;
         // Mint NFT
         IStrategyNFT(strategyNft).grantStrategyNFT(strategist, _tokenURI);
+        // Pay Keeper Fee
+        garden.payKeeper(msg.sender, _fee);
         // Transfer rewards
         _transferStrategyPrincipal(_fee);
         // Send rest to garden if any
         _sendReserveAssetToGarden();
         emit StrategyFinalized(address(garden), capitalReturned, _fee, block.timestamp);
-        // Pay Keeper Fee
-        garden.payKeeper(msg.sender, _fee);
     }
 
     /**
@@ -483,8 +483,10 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
      */
     function expireStrategy(uint256 _fee) external onlyKeeper(_fee) nonReentrant onlyActiveGarden {
         _require(!active, Errors.STRATEGY_NEEDS_TO_BE_INACTIVE);
-        _deleteCandidateStrategy();
+        _require(block.timestamp.sub(enteredAt) > MAX_CANDIDATE_PERIOD, Errors.VOTING_WINDOW_IS_OPENED);
+        // pay keeper before expiring strategy
         garden.payKeeper(msg.sender, _fee);
+        _deleteCandidateStrategy();
         emit StrategyExpired(address(garden), block.timestamp);
     }
 
@@ -615,6 +617,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
             uint256,
             uint256,
             uint256,
+            address,
             uint256
         )
     {
@@ -631,6 +634,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
             expectedReturn,
             maxCapitalRequested,
             minRebalanceCapital,
+            strategyNft,
             enteredAt
         );
     }
@@ -738,7 +742,6 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
      * Deletes this strategy and returns the stake to the strategist
      */
     function _deleteCandidateStrategy() internal {
-        _require(block.timestamp.sub(enteredAt) > MAX_CANDIDATE_PERIOD, Errors.VOTING_WINDOW_IS_OPENED);
         _require(executedAt == 0, Errors.STRATEGY_IS_EXECUTED);
         _require(!finalized, Errors.STRATEGY_IS_ALREADY_FINALIZED);
 
@@ -815,7 +818,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
                 IBabController(controller).treasury(),
                 protocolProfits
             );
-            reserveAssetDelta.add(int256(-protocolProfits));
+            reserveAssetDelta = reserveAssetDelta.add(int256(-protocolProfits));
         } else {
             // Returns were negative
             // Burn strategist stake and add the amount to the garden
@@ -829,14 +832,14 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
             }
 
             garden.burnStrategistStake(strategist, burningAmount);
-            reserveAssetDelta.add(int256(burningAmount));
+            reserveAssetDelta = reserveAssetDelta.add(int256(burningAmount));
         }
         // Return the balance back to the garden
         IERC20(reserveAsset).safeTransferFrom(address(this), address(garden), capitalReturned.sub(protocolProfits));
         // Start a redemption window in the garden with the capital plus the profits for the lps
         (, , uint256 lpsProfitSharing) = IBabController(controller).getProfitSharing();
         garden.startWithdrawalWindow(
-            capitalReturned.sub(protocolProfits).sub(profits).add((profits).preciseMul(lpsProfitSharing)),
+            capitalReturned.sub(profits).add((profits).preciseMul(lpsProfitSharing)),
             profits.sub(profits.preciseMul(lpsProfitSharing)).sub(protocolProfits),
             reserveAssetDelta,
             address(this)

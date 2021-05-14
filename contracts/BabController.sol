@@ -143,6 +143,9 @@ contract BabController is OwnableUpgradeable, IBabController {
     uint256 public override protocolDepositGardenTokenFee; // 0 (0.01% = 1e14, 1% = 1e16)
     uint256 public override protocolWithdrawalGardenTokenFee; // 0 (0.01% = 1e14, 1% = 1e16)
 
+    // Maximum number of contributors per garden
+    uint256 public override maxContributorsPerGarden;
+
     /* ============ Constructor ============ */
 
     /**
@@ -171,6 +174,7 @@ contract BabController is OwnableUpgradeable, IBabController {
         lpsBABLPercentage = 75e16;
 
         gardenCreatorBonus = 15e16;
+        maxContributorsPerGarden = 100;
     }
 
     /* ============ External Functions ============ */
@@ -204,7 +208,6 @@ contract BabController is OwnableUpgradeable, IBabController {
         address newGarden =
             IGardenFactory(gardenFactory).createGarden(
                 _reserveAsset,
-                address(this),
                 msg.sender,
                 _name,
                 _symbol,
@@ -274,12 +277,18 @@ contract BabController is OwnableUpgradeable, IBabController {
     }
 
     /**
-     * PRIVILEGED GOVERNANCE FUNCTION. Allows transfers of ERC20 BABL Tokens
-     * Can only happen after the protocol is fully decentralized.
      * PRIVILEGED GOVERNANCE FUNCTION. Allows public gardens
      */
     function setAllowPublicGardens() external override onlyOwner {
         allowPublicGardens = true;
+    }
+
+    /**
+     * PRIVILEGED GOVERNANCE FUNCTION. Change the max number of contributors for new Gardens since the change
+     */
+    function setMaxContributorsPerGarden(uint256 _newMax) external override onlyOwner {
+        require(_newMax >= 1, 'Contributors cannot be less than 1 per garden');
+        maxContributorsPerGarden = _newMax;
     }
 
     // ===========  Protocol related Gov Functions ======
@@ -332,6 +341,7 @@ contract BabController is OwnableUpgradeable, IBabController {
      */
     function addReserveAsset(address _reserveAsset) external override onlyOwner {
         require(!validReserveAsset[_reserveAsset], 'Reserve asset already added');
+        // TODO: check decimals reserve asset
         validReserveAsset[_reserveAsset] = true;
         reserveAssets.push(_reserveAsset);
         emit ReserveAssetAdded(_reserveAsset);
@@ -683,7 +693,7 @@ contract BabController is OwnableUpgradeable, IBabController {
             _contractAddress == address(this) ||
             _isOperation(_contractAddress) ||
             (isGarden[address(IStrategy(_contractAddress).garden())] &&
-                IGarden(IStrategy(_contractAddress).garden()).isStrategy(_contractAddress)));
+                IGarden(IStrategy(_contractAddress).garden()).isStrategyActiveInGarden(_contractAddress)));
     }
 
     /* ============ Internal Only Function ============ */

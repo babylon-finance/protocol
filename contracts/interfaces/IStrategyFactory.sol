@@ -31,7 +31,6 @@ interface IStrategyFactory {
         string memory _symbol,
         address _strategist,
         address _garden,
-        address _controller,
         uint256[] calldata _stratParams
     ) external returns (address);
 }

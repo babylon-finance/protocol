@@ -3,9 +3,11 @@ module.exports = async ({ getNamedAccounts, deployments, ethers, getRapid }) => 
   const { deployer } = await getNamedAccounts();
   const gasPrice = await getRapid();
 
+  const controller = await deployments.get('BabControllerProxy');
+
   await deploy('StrategyFactory', {
     from: deployer,
-    args: [],
+    args: [controller.address],
     log: true,
     gasPrice,
   });
