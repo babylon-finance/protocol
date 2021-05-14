@@ -41,7 +41,7 @@ describe('OneInchTradeIntegration', function () {
       wethToken = await ethers.getContractAt('IERC20', addresses.tokens.WETH);
     });
 
-    it.only('trade WETH to DAI', async function () {
+    it('trade WETH to DAI', async function () {
       const balanceBeforeStarting = await wethToken.balanceOf(garden1.address);
       expect(balanceBeforeStarting).to.equal(ethers.utils.parseEther('1.0'));
       const strategyContract = await createStrategy(
