@@ -79,6 +79,10 @@ interface IBabController {
 
     function setAllowPublicGardens() external;
 
+    function maxContributorsPerGarden() external view returns (uint256);
+
+    function setMaxContributorsPerGarden(uint256 _newMax) external;
+
     function editLiquidityMinimum(uint256 _minRiskyPairLiquidityEth) external;
 
     function owner() external view returns (address);
