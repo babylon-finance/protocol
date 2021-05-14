@@ -91,11 +91,9 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
     // Wrapped ETH address
     address private constant WETH = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
     uint256 public constant EARLY_WITHDRAWAL_PENALTY = 15e16;
-    uint256 public constant MAX_DEPOSITS_FUND_V1 = 1e21; // Max deposit per garden is 1000 eth for v1
     uint256 public constant MAX_TOTAL_STRATEGIES = 20; // Max number of strategies
     uint256 private constant TEN_PERCENT = 1e17;
     uint256 private constant MAX_KEEPER_FEE = (1e6 * 1e3 gwei);
-    uint256 private constant ABSOLUTE_MIN_CONTRIBUTION = 1e17;
 
     /* ============ Structs ============ */
 
@@ -173,7 +171,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
      * When a new Garden is created.
      * All parameter validations are on the BabController contract. Validations are performed already on the
      * BabController.
-     * WARN: If the reserve Asset is different than WETH the sender needs to have approved the garden.
+     * WARN: If the reserve Asset is different than WETH the gardener needs to have approved the controller.
      *
      * @param _reserveAsset           Address of the reserve asset ERC20
      * @param _controller             Address of the controller
@@ -209,7 +207,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         guestListEnabled = true;
 
         _start(
-            msg.value,
+            _initialContribution,
             _gardenParams[0],
             _gardenParams[1],
             _gardenParams[2],
@@ -221,10 +219,6 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
             _gardenParams[8]
         );
         active = true;
-
-        _receiveReserveAsset(_initialContribution);
-
-        _mintGardenTokens(creator, creator, msg.value, msg.value, 0);
     }
 
     /* ============ External Functions ============ */
@@ -233,14 +227,14 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
      * FUND LEAD ONLY.  Starts the Garden with allowed reserve assets,
      * fees and issuance premium. Only callable by the Garden's creator
      *
-     * @param _creatorDeposit                      Deposit by the creator
-     * @param _maxDepositLimit                     Max deposit limit
-     * @param _minGardenTokenSupply             Min garden token supply
-     * @param _minLiquidityAsset                   Number that represents min amount of liquidity denominated in ETH
-     * @param _depositHardlock                     Number that represents the time deposits are locked for an user after he deposits
-     * @param _minContribution        Min contribution to the garden
+     * @param _creatorDeposit                       Deposit by the creator
+     * @param _maxDepositLimit                      Max deposit limit
+     * @param _minGardenTokenSupply                 Min garden token supply
+     * @param _minLiquidityAsset                    Number that represents min amount of liquidity denominated in ETH
+     * @param _depositHardlock                      Number that represents the time deposits are locked for an user after he deposits
+     * @param _minContribution                      Min contribution to the garden
      * @param _strategyCooldownPeriod               How long after the strategy has been activated, will it be ready to be executed
-     * @param _minVotersQuorum                  Percentage of votes needed to activate an strategy (0.01% = 1e14, 1% = 1e16)
+     * @param _minVotersQuorum                      Percentage of votes needed to activate an strategy (0.01% = 1e14, 1% = 1e16)
      * @param _minStrategyDuration                  Min duration of an strategy
      * @param _maxStrategyDuration                  Max duration of an strategy
      */
@@ -256,11 +250,11 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         uint256 _minStrategyDuration,
         uint256 _maxStrategyDuration
     ) private {
-        _require(_minContribution >= ABSOLUTE_MIN_CONTRIBUTION, Errors.MIN_CONTRIBUTION);
+        _require(_minContribution > 0, Errors.MIN_CONTRIBUTION);
         _require(_creatorDeposit >= _minContribution, Errors.MIN_CONTRIBUTION);
         _require(_creatorDeposit >= _minGardenTokenSupply, Errors.MIN_LIQUIDITY);
         _require(_creatorDeposit <= _maxDepositLimit, Errors.MAX_DEPOSIT_LIMIT);
-        _require(_maxDepositLimit <= MAX_DEPOSITS_FUND_V1, Errors.MAX_DEPOSIT_LIMIT);
+        _require(_maxDepositLimit <= (reserveAsset == WETH ? 1e22 : 1e25), Errors.MAX_DEPOSIT_LIMIT);
         IBabController babController = IBabController(controller);
         _require(_minGardenTokenSupply > 0, Errors.MIN_TOKEN_SUPPLY);
         _require(_depositHardlock > 0, Errors.DEPOSIT_HARDLOCK);
@@ -299,11 +293,11 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         uint256 _reserveAssetQuantity,
         uint256 _minGardenTokenReceiveQuantity,
         address _to
-    ) public payable override nonReentrant {
+    ) external payable override nonReentrant {
         _onlyActive();
         _require(
             guestListEnabled &&
-                IIshtarGate(IBabController(controller).ishtarGate()).canJoinAGarden(address(this), msg.sender),
+                (IIshtarGate(IBabController(controller).ishtarGate()).canJoinAGarden(address(this), _to) || creator == _to),
             Errors.USER_CANNOT_JOIN
         );
         // if deposit limit is 0, then there is no deposit limit
@@ -315,9 +309,6 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
 
         (uint256 protocolFees, uint256 netFlowQuantity) = _getFees(_reserveAssetQuantity, true);
 
-        // Check that total supply is greater than min supply needed for issuance
-        _require(totalSupply() >= minGardenTokenSupply, Errors.MIN_TOKEN_SUPPLY);
-
         // gardenTokenQuantity has to be at least _minGardenTokenReceiveQuantity
         _require(netFlowQuantity >= _minGardenTokenReceiveQuantity, Errors.MIN_TOKEN_SUPPLY);
 
@@ -326,6 +317,9 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
 
         // Mint tokens
         _mintGardenTokens(msg.sender, _to, netFlowQuantity, principal.add(netFlowQuantity), protocolFees);
+
+        // Check that total supply is greater than min supply needed for issuance
+        _require(totalSupply() >= minGardenTokenSupply, Errors.MIN_TOKEN_SUPPLY);
     }
 
     /**
@@ -752,7 +746,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
     ) private {
         uint256 previousBalance = balanceOf(_to);
         _mint(_to, getGardenTokenMintQuantity(_reserveAssetQuantity, true));
-        _updateContributorDepositInfo(_from, previousBalance);
+        _updateContributorDepositInfo(_to, previousBalance);
         principal = _newPrincipal;
         // Mint the garden NFT
         IGardenNFT(nftAddress).grantGardenNFT(_to);
@@ -931,8 +925,8 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         if (reserveAsset == WETH) {
             IWETH(WETH).deposit{value: msg.value}();
         } else {
-            // Transfer ERC20 to the garden
-            IERC20(reserveAsset).safeTransferFrom(msg.sender, address(this), _reserveAssetQuantity);
+          // Transfer ERC20 to the garden
+          IERC20(reserveAsset).safeTransferFrom(msg.sender, address(this), _reserveAssetQuantity);
         }
         // Make sure we received the reserve asset
         _require(

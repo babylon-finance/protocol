@@ -130,7 +130,11 @@ contract AddLiquidityOperation is Operation {
                     poolTokens[i] = WETH;
                 }
                 if (poolTokens[i] != reserveAsset) {
-                  IStrategy(msg.sender).trade(poolTokens[i], IERC20(poolTokens[i]).balanceOf(msg.sender), reserveAsset);
+                    IStrategy(msg.sender).trade(
+                        poolTokens[i],
+                        IERC20(poolTokens[i]).balanceOf(msg.sender),
+                        reserveAsset
+                    );
                 }
             }
         }

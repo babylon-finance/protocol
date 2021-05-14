@@ -36,5 +36,5 @@ interface IGardenFactory {
         uint256 _seed,
         uint256[] calldata _gardenParams,
         uint256 _initialContribution
-    ) external payable returns (address);
+    ) external returns (address);
 }

@@ -179,6 +179,7 @@ contract BabController is OwnableUpgradeable, IBabController {
     /**
      * Creates a Garden smart contract and registers the Garden with the controller.
      *
+     * If asset is not WETH, the creator needs to approve the controller
      * @param _reserveAsset           Reserve asset of the Garden. Initially just weth
      * @param _name                   Name of the Garden
      * @param _symbol                 Symbol of the Garden
@@ -199,8 +200,9 @@ contract BabController is OwnableUpgradeable, IBabController {
         require(defaultTradeIntegration != address(0), 'Need a default trade integration');
         require(enabledOperations.length > 0, 'Need operations enabled');
         require(IIshtarGate(ishtarGate).canCreate(msg.sender), 'User does not have creation permissions');
+
         address newGarden =
-            IGardenFactory(gardenFactory).createGarden{value: msg.value}(
+            IGardenFactory(gardenFactory).createGarden(
                 _reserveAsset,
                 address(this),
                 msg.sender,
@@ -211,7 +213,11 @@ contract BabController is OwnableUpgradeable, IBabController {
                 _gardenParams,
                 _initialContribution
             );
-
+        if (_reserveAsset != WETH) {
+          IERC20(_reserveAsset).transferFrom(msg.sender, address(this), _initialContribution);
+          IERC20(_reserveAsset).approve(newGarden, _initialContribution);
+        }
+        IGarden(newGarden).deposit{value: msg.value}(_initialContribution, _initialContribution, msg.sender);
         require(!isGarden[newGarden], 'Garden already exists');
         isGarden[newGarden] = true;
         gardens.push(newGarden);
