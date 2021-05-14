@@ -387,7 +387,7 @@ describe('Garden', function () {
       });
       await expect(
         (await rewardsDistributor.getContributorPower(garden1.address, signer3.address, 0, NOW)).toString(),
-      ).to.be.closeTo((666642802079881986).toString(), ethers.utils.parseEther('0.0000005'));
+      ).to.be.closeTo((666642802079881986).toString(), ethers.utils.parseEther('0.0005'));
     });
     it('the contributor power is calculated correctly if _to is between two deposits and from = 0 (2 distanced deposits from user)', async function () {
       await garden1.connect(signer3).deposit(ethers.utils.parseEther('1'), 1, signer3.getAddress(), {
@@ -429,7 +429,7 @@ describe('Garden', function () {
 
       await expect(
         (
-          await rewardsDistributor.getContributorPower(garden1.address, signer3.address, 1617365663, 1619546549)
+          await rewardsDistributor.getContributorPower(garden1.address, signer3.address, 1622628863, 1624809743)
         ).toString(),
       ).to.be.closeTo((662205878389618258).toString(), ethers.utils.parseEther('0.005'));
     });
