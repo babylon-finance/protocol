@@ -83,7 +83,7 @@ interface IBabController {
     function setAllowPublicGardens() external;
 
     function editLiquidityReserve(address _reserve, uint256 _minRiskyPairLiquidityEth) external;
-    
+
     function maxContributorsPerGarden() external view returns (uint256);
 
     function setMaxContributorsPerGarden(uint256 _newMax) external;
