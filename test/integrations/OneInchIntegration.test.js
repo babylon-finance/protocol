@@ -41,7 +41,7 @@ describe('OneInchTradeIntegration', function () {
       wethToken = await ethers.getContractAt('IERC20', addresses.tokens.WETH);
     });
 
-    it('trade WETH to DAI', async function () {
+    it.only('trade WETH to DAI', async function () {
       const balanceBeforeStarting = await wethToken.balanceOf(garden1.address);
       expect(balanceBeforeStarting).to.equal(ethers.utils.parseEther('1.0'));
       const strategyContract = await createStrategy(
@@ -53,20 +53,23 @@ describe('OneInchTradeIntegration', function () {
         DEFAULT_STRATEGY_PARAMS,
         addresses.tokens.DAI,
       );
-      // Got the initial deposit 1 ETH + 4ETH from voters minus the 2 ETH from the fee
+      // Got the initial deposit 1 ETH + 4ETH from voters
       expect(await wethToken.balanceOf(garden1.address)).to.equal(ONE_ETH.mul(5));
       expect(await wethToken.balanceOf(strategyContract.address)).to.equal(0);
+
       await executeStrategy(strategyContract);
       // Just below 2
       expect(await wethToken.balanceOf(garden1.address)).to.be.closeTo(ONE_ETH.mul(4), ONE_ETH.div(100));
       expect(await wethToken.balanceOf(strategyContract.address)).to.equal(0);
-      expect(await daiToken.balanceOf(strategyContract.address)).to.be.gt(ethers.utils.parseEther('900') / 10 ** 12);
+      expect(await daiToken.balanceOf(strategyContract.address)).to.be.closeTo(ONE_ETH.mul(3945), ONE_ETH);
+
       await finalizeStrategy(strategyContract, 0);
       expect(await daiToken.balanceOf(strategyContract.address)).to.equal(0);
-      expect(await wethToken.balanceOf(garden1.address)).to.be.gt('4');
+
       // Sets capital returned in ETH. No profits.
       // TODO: create the same test for a strategy that returns profits
-      expect(await ethers.provider.getBalance(garden1.address)).to.equal(await strategyContract.capitalReturned());
+      expect(await wethToken.balanceOf(garden1.address)).to.closeTo(ONE_ETH.mul(5), ONE_ETH.div(50)); // account for losses during the trade
+      expect(await strategyContract.capitalReturned()).to.closeTo(ONE_ETH, ONE_ETH.div(100));
     });
   });
 });
