@@ -203,7 +203,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         controller = _controller;
         reserveAsset = _reserveAsset;
         creator = _creator;
-        maxContributors = 100;
+        maxContributors = IBabController(_controller).maxContributorsPerGarden();
         nftAddress = _nftAddress;
         guestListEnabled = true;
 
@@ -306,7 +306,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         if (maxDepositLimit > 0) {
             _require(principal.add(_reserveAssetQuantity) <= maxDepositLimit, Errors.MAX_DEPOSIT_LIMIT);
         }
-        _require(totalContributors < maxContributors, Errors.MAX_CONTRIBUTORS);
+        _require(totalContributors <= maxContributors, Errors.MAX_CONTRIBUTORS);
         _receiveReserveAsset(_reserveAssetQuantity);
 
         (uint256 protocolFees, uint256 netFlowQuantity) = _getFees(_reserveAssetQuantity, true);
@@ -986,6 +986,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         Contributor storage contributor = contributors[_contributor];
         // If new contributor, create one, increment count, and set the current TS
         if (previousBalance == 0 || contributor.initialDepositAt == 0) {
+            _require(totalContributors < maxContributors, Errors.MAX_CONTRIBUTORS);
             totalContributors = totalContributors.add(1);
             contributor.initialDepositAt = block.timestamp;
         }
