@@ -53,17 +53,19 @@ describe('OneInchTradeIntegration', function () {
         DEFAULT_STRATEGY_PARAMS,
         addresses.tokens.DAI,
       );
-      // Got the initial deposit 1 ETH + 4ETH from voters minus the 2 ETH from the fee
+      // Got the initial deposit 1 ETH + 4ETH from voters
       expect(await wethToken.balanceOf(garden1.address)).to.equal(ONE_ETH.mul(5));
       expect(await wethToken.balanceOf(strategyContract.address)).to.equal(0);
+
       await executeStrategy(strategyContract);
       // Just below 2
       expect(await wethToken.balanceOf(garden1.address)).to.be.closeTo(ONE_ETH.mul(4), ONE_ETH.div(100));
       expect(await wethToken.balanceOf(strategyContract.address)).to.equal(0);
-      expect(await daiToken.balanceOf(strategyContract.address)).to.be.gt(ethers.utils.parseEther('900') / 10 ** 12);
+      expect(await daiToken.balanceOf(strategyContract.address)).to.be.closeTo(ONE_ETH.mul(3945), ONE_ETH);
+
       await finalizeStrategy(strategyContract, 0);
       expect(await daiToken.balanceOf(strategyContract.address)).to.equal(0);
-      expect(await wethToken.balanceOf(garden1.address)).to.be.gt('4');
+
       // Sets capital returned in ETH. No profits.
       expect(await ethers.provider.getBalance(garden1.address)).to.equal(0);
     });
