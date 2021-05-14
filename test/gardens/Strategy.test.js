@@ -474,7 +474,7 @@ describe('Strategy', function () {
 
       expect(capitalReturned).to.be.lt(capitalAllocated);
       // takes into account ETH send to withdrawal window
-      expect(await wethToken.balanceOf(garden1.address)).to.be.closeTo(ONE_ETH.mul(2), ONE_ETH.div(50));
+      expect(await wethToken.balanceOf(garden1.address)).to.be.closeTo(ONE_ETH.mul(6), ONE_ETH.div(10));
     });
 
     it('should finalize strategy with profits', async function () {
