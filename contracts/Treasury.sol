@@ -24,6 +24,7 @@ import {Address} from '@openzeppelin/contracts/utils/Address.sol';
 import {Ownable} from '@openzeppelin/contracts/access/Ownable.sol';
 import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import {SafeERC20} from '@openzeppelin/contracts/token/ERC20/SafeERC20.sol';
+import {ReentrancyGuard} from '@openzeppelin/contracts/utils/ReentrancyGuard.sol';
 import {IBabController} from './interfaces/IBabController.sol';
 
 /**
@@ -33,7 +34,7 @@ import {IBabController} from './interfaces/IBabController.sol';
  * Contract that will receive the fees earned by the protocol.
  * Governance will be able to send funds from the treasury.
  */
-contract Treasury is Ownable {
+contract Treasury is Ownable, ReentrancyGuard {
     using SafeERC20 for IERC20;
     using Address for address;
     /* ============ Events ============ */
@@ -70,7 +71,7 @@ contract Treasury is Ownable {
         address _asset,
         uint256 _amount,
         address _to
-    ) external onlyOwner {
+    ) external onlyOwner nonReentrant {
         require(_asset != address(0), 'Asset must exist');
         require(_to != address(0), 'Target address must exist');
         IERC20(_asset).safeTransferFrom(address(this), _to, _amount);
@@ -83,7 +84,7 @@ contract Treasury is Ownable {
      * @param _amount           Amount to send of the asset
      * @param _to               Address to send the assets to
      */
-    function sendTreasuryETH(uint256 _amount, address payable _to) external onlyOwner {
+    function sendTreasuryETH(uint256 _amount, address payable _to) external onlyOwner nonReentrant {
         require(_to != address(0), 'Target address must exist');
         require(address(this).balance >= _amount, 'Not enough funds in treasury');
         Address.sendValue(_to, _amount);
