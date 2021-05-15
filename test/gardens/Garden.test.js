@@ -30,6 +30,8 @@ describe('Garden', function () {
   let balancerIntegration;
   let kyberTradeIntegration;
   let daiGarden;
+  let usdcGarden;
+  let usdc;
 
   beforeEach(async () => {
     ({
@@ -45,6 +47,7 @@ describe('Garden', function () {
       kyberTradeIntegration,
     } = await setupTests()());
 
+    usdc = await ethers.getContractAt('IERC20', addresses.tokens.USDC);
     dai = await ethers.getContractAt('IERC20', addresses.tokens.DAI);
     weth = await ethers.getContractAt('IERC20', addresses.tokens.WETH);
   });
@@ -158,16 +161,11 @@ describe('Garden', function () {
       expect(await daiGarden.totalContributors()).to.equal(1);
       const gardenBalance = await dai.balanceOf(daiGarden.address);
       const supplyBefore = await daiGarden.totalSupply();
-      await dai.connect(signer3).approve(babController.address, ethers.utils.parseEther('1000'), {
-        gasPrice: 0,
-      });
       await ishtarGate.connect(signer1).setGardenAccess(signer3.address, daiGarden.address, 1, { gasPrice: 0 });
       await dai.connect(signer3).approve(daiGarden.address, ethers.utils.parseEther('1000'), { gasPrice: 0 });
       await daiGarden.connect(signer3).deposit(ethers.utils.parseEther('1000'), 1, signer3.getAddress());
       const gardenBalanceAfter = await dai.balanceOf(daiGarden.address);
       const supplyAfter = await daiGarden.totalSupply();
-      // Communities
-      // Manager deposit in fixture is only 1
       expect(supplyAfter.sub(supplyBefore)).to.be.closeTo(
         ethers.utils.parseEther('1000'),
         ethers.utils.parseEther('0.1'),
@@ -179,6 +177,58 @@ describe('Garden', function () {
       await daiGarden.connect(signer3).withdraw(await daiGarden.balanceOf(signer3.address), 1, signer3.getAddress());
       expect(await daiGarden.principal()).to.equal(ethers.utils.parseEther('100'));
       expect(await daiGarden.totalContributors()).to.equal(1);
+    });
+
+    it('a contributor can make an initial deposit and withdraw with USDC', async function () {
+      const whaleAddress = '0x47ac0fb4f2d84898e4d9e7b4dab3c24507a6d503'; // Has USDC
+      const whaleSigner = await impersonateAddress(whaleAddress);
+      const thousandUSDC = ethers.BigNumber.from(1000 * 1000000);
+      await usdc.connect(whaleSigner).transfer(signer1.address, thousandUSDC, {
+        gasPrice: 0,
+      });
+      await usdc.connect(whaleSigner).transfer(signer3.address, thousandUSDC, {
+        gasPrice: 0,
+      });
+      await usdc.connect(signer1).approve(babController.address, thousandUSDC, {
+        gasPrice: 0,
+      });
+      const params = [...GARDEN_PARAMS_STABLE];
+      params[4] = thousandUSDC.div(10);
+      await babController
+        .connect(signer1)
+        .createGarden(
+          addresses.tokens.USDC,
+          'Absolute USDC Return [beta]',
+          'EYFA',
+          'http...',
+          0,
+          params,
+          thousandUSDC.div(10),
+          {},
+        );
+      const gardens = await babController.getGardens();
+      usdcGarden = await ethers.getContractAt('Garden', gardens[4]);
+      expect(await usdcGarden.totalContributors()).to.equal(1);
+      const gardenBalance = await usdc.balanceOf(usdcGarden.address);
+      const supplyBefore = await usdcGarden.totalSupply();
+      await ishtarGate.connect(signer1).setGardenAccess(signer3.address, usdcGarden.address, 1, { gasPrice: 0 });
+      await usdc.connect(signer3).approve(usdcGarden.address, thousandUSDC, {
+        gasPrice: 0,
+      });
+      await usdcGarden.connect(signer3).deposit(thousandUSDC, 1, signer3.getAddress());
+      const gardenBalanceAfter = await usdc.balanceOf(usdcGarden.address);
+      const supplyAfter = await usdcGarden.totalSupply();
+      expect(supplyAfter.sub(supplyBefore)).to.be.closeTo(
+        ethers.utils.parseEther('1000'),
+        ethers.utils.parseEther('0.1'),
+      );
+      expect(gardenBalanceAfter.sub(gardenBalance)).to.equal(thousandUSDC);
+      expect(await usdcGarden.principal()).to.equal(thousandUSDC.add(thousandUSDC.div(10)));
+      expect(await usdcGarden.totalContributors()).to.equal(2);
+      ethers.provider.send('evm_increaseTime', [1]);
+      await usdcGarden.connect(signer3).withdraw(await usdcGarden.balanceOf(signer3.address), 1, signer3.getAddress());
+      expect(await usdcGarden.principal()).to.equal(thousandUSDC.div(10));
+      expect(await usdcGarden.totalContributors()).to.equal(1);
     });
   });
 

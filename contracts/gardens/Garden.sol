@@ -695,8 +695,6 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
                 address(this),
                 reserveAsset
             );
-
-        gardenValuationPerToken = gardenValuationPerToken.preciseDiv(baseUnits);
         if (isDeposit) {
             gardenValuationPerToken = gardenValuationPerToken.sub(normalizedReserveQuantity.preciseDiv(totalSupply()));
         }
@@ -874,7 +872,6 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         ); // Strategists and Voters cannot withdraw locked stake while in active strategies
 
         _reenableReserveForStrategies();
-
         uint256 reserveAssetQuantity = _getWithdrawalReserveQuantity(reserveAsset, _gardenTokenQuantity);
 
         (uint256 protocolFees, uint256 netFlowQuantity) = _getFees(reserveAssetQuantity, false);
@@ -886,7 +883,6 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         // Check that new supply is more than min supply needed for withdrawal
         // Note: A min supply amount is needed to avoid division by 0 when withdrawaling garden token to 0
         _require(newGardenTokenSupply >= minGardenTokenSupply, Errors.MIN_TOKEN_SUPPLY);
-
         _require(netFlowQuantity >= _minReserveReceiveQuantity, Errors.MIN_TOKEN_SUPPLY);
 
         _burn(msg.sender, _gardenTokenQuantity);

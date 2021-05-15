@@ -19,7 +19,7 @@
 pragma solidity 0.7.6;
 
 import 'hardhat/console.sol';
-import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
+import {ERC20} from '@openzeppelin/contracts/token/ERC20/ERC20.sol';
 import {SafeCast} from '@openzeppelin/contracts/utils/SafeCast.sol';
 import {SignedSafeMath} from '@openzeppelin/contracts/math/SignedSafeMath.sol';
 import {SafeMath} from '@openzeppelin/contracts/math/SafeMath.sol';
@@ -75,13 +75,17 @@ contract GardenValuer {
      *
      * Note: There is a risk that the valuation is off if airdrops aren't retrieved
      *
-     * @param _garden          Garden instance to get valuation
+     * @param _garden               Garden instance to get valuation
+     * @param _quoteAsset           Quote asset for the valuation
      *
      * @return                 Token valuation in terms of quote asset in precise units 1e18
      */
     function calculateGardenValuation(address _garden, address _quoteAsset) external view returns (uint256) {
         IPriceOracle priceOracle = IPriceOracle(IBabController(controller).priceOracle());
         address reserveAsset = IGarden(_garden).reserveAsset();
+
+        uint8 reserveAssetDecimals = ERC20(reserveAsset).decimals();
+        uint8 quoteAssetDecimals = ERC20(_quoteAsset).decimals();
 
         uint256 reservePrice;
         // Get price of the reserveAsset in _quoteAsset
@@ -110,15 +114,19 @@ contract GardenValuer {
             valuation = valuation.add(strategy.getNAV());
         }
 
-        // Recalculate the valuation in the _quoteAsset prices
-        valuation = valuation.preciseMul(reservePrice);
+        // Add strategy reserve assets and garden's reserve asset
+        valuation = valuation.add(ERC20(reserveAsset).balanceOf(address(_garden)));
 
-        // Add garden's reserve asset to calculations
-        valuation = valuation.add(IERC20(reserveAsset).balanceOf(address(_garden)).preciseMul(reservePrice));
+        // Get the valuation in terms of the quote asset
+        valuation = valuation.preciseMul(reservePrice);
 
         // Adds ETH of garden in _quoteAsset prices
         valuation = valuation.add(address(_garden).balance.preciseMul(wethPrice));
 
-        return valuation.preciseDiv(IERC20(_garden).totalSupply());
+        if (quoteAssetDecimals < 18) {
+            valuation = valuation.mul(10**(18 - quoteAssetDecimals));
+        }
+
+        return valuation.preciseDiv(ERC20(_garden).totalSupply());
     }
 }

@@ -140,14 +140,14 @@ describe('BabController', function () {
   describe('Protocol operations', function () {
     it('can add a reserve asset', async function () {
       const initialAssets = await babController.getReserveAssets();
-      await babController.connect(owner).addReserveAsset(addresses.tokens.USDC);
+      await babController.connect(owner).addReserveAsset(addresses.tokens.YFI);
 
       const updatedAssets = await babController.getReserveAssets();
       expect(updatedAssets.length > initialAssets.length).to.equal(true);
     });
 
     it('can remove a reserve asset', async function () {
-      await babController.connect(owner).addReserveAsset(addresses.tokens.USDC);
+      await babController.connect(owner).addReserveAsset(addresses.tokens.YFI);
       const initialAssets = await babController.getReserveAssets();
 
       await babController.connect(owner).removeReserveAsset(initialAssets[0]);
