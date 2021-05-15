@@ -505,6 +505,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
     function changeStrategyDuration(uint256 _newDuration) external override onlyStrategist {
         _require(!finalized, Errors.STRATEGY_IS_ALREADY_FINALIZED);
         _require(_newDuration < duration, Errors.DURATION_NEEDS_TO_BE_LESS);
+        _require(_newDuration >= garden.minStrategyDuration(), Errors.DURATION_NEEDS_TO_BE_LESS);
         emit StrategyDurationChanged(_newDuration, duration);
         duration = _newDuration;
     }
