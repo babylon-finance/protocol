@@ -67,6 +67,7 @@ contract UniswapTWAPV3 is Ownable, IOracleAdapter {
     uint24 private constant FEE_HIGH = 10000;
     int24 private maxTwapDeviation = 100;
     uint160 private maxLiquidityDeviationFactor = 50;
+    int24 private baseThreshold = 1000;
 
     /* ============ Constructor ============ */
 
@@ -140,11 +141,11 @@ contract UniswapTWAPV3 is Ownable, IOracleAdapter {
     function _checkPrice(int24 mid, IUniswapV3Pool _pool) internal view returns (bool) {
         int24 tickSpacing = _pool.tickSpacing();
         // TODO: Add the other param from charm
-        if (mid < TickMath.MIN_TICK + tickSpacing) {
+        if (mid < TickMath.MIN_TICK + baseThreshold + tickSpacing) {
             // "price too low"
             return false;
         }
-        if (mid > TickMath.MAX_TICK - tickSpacing) {
+        if (mid > TickMath.MAX_TICK - baseThreshold - tickSpacing) {
             // "price too high"
             return false;
         }
