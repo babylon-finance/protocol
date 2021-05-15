@@ -125,8 +125,7 @@ describe('TimeLockRegistry', function () {
   describe('claim', function () {
     it('totalTokens value is correct after claim', async function () {
       const teamSigner = await impersonateAddress('0x908295e2be3a36021aadaaed0bbb124fd602cbf2');
-
-      await bablToken.connect(teamSigner).claimMyTokens();
+      await bablToken.connect(teamSigner).claimMyTokens({ gasPrice: 0 });
       expect(await timeLockRegistry.totalTokens()).to.be.eq(TOTAL_REGISTERED_TOKENS.sub(ONE_ETH.mul(17000)));
     });
   });
