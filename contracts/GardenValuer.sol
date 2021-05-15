@@ -84,7 +84,7 @@ contract GardenValuer {
         IPriceOracle priceOracle = IPriceOracle(IBabController(controller).priceOracle());
         address reserveAsset = IGarden(_garden).reserveAsset();
 
-        uint8 reserveAssetDecimals = ERC20(reserveAsset).decimals();
+        // uint8 reserveAssetDecimals = ERC20(reserveAsset).decimals();
         uint8 quoteAssetDecimals = ERC20(_quoteAsset).decimals();
 
         uint256 reservePrice;

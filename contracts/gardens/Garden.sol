@@ -550,7 +550,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         _require(_capital.add(protocolMgmtFee) <= liquidReserveAsset, Errors.MIN_LIQUIDITY);
 
         // Take protocol mgmt fee
-        IERC20(reserveAsset).safeTransfer(IBabController(controller).treasury(), protocolMgmtFee);
+        payProtocolFeeFromGarden(reserveAsset, protocolMgmtFee);
 
         // Send Capital to strategy
         IERC20(reserveAsset).safeTransfer(msg.sender, _capital);
@@ -560,8 +560,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
     function sweep(address _token) external {
         _require(_token != reserveAsset, Errors.MUST_BE_RESERVE_ASSET);
         uint256 balance = IERC20(_token).balanceOf(address(this));
-        _require(balance > 0, Errors.BALANCE_TOO_LOW);
-        IERC20(_token).safeTransfer(IBabController(controller).treasury(), balance);
+        payProtocolFeeFromGarden(_token, balance);
     }
 
     /*
@@ -683,8 +682,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
     ) public view override returns (uint256) {
         // Get valuation of the Garden with the quote asset as the reserve asset.
         // Reverts if price is not found
-        uint8 reserveAssetDecimals = ERC20Upgradeable(reserveAsset).decimals();
-        uint256 baseUnits = uint256(10)**reserveAssetDecimals;
+        uint256 baseUnits = uint256(10)**ERC20Upgradeable(reserveAsset).decimals();
         uint256 normalizedReserveQuantity = _reserveAssetQuantity.preciseDiv(baseUnits);
         // First deposit
         if (totalSupply() == 0) {
@@ -967,9 +965,8 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
             );
 
         uint256 totalWithdrawalValueInPreciseUnits = _gardenTokenQuantity.preciseMul(gardenValuationPerToken);
-        // Get reserve asset decimals
-        uint8 reserveAssetDecimals = ERC20Upgradeable(_reserveAsset).decimals();
-        uint256 prePremiumReserveQuantity = totalWithdrawalValueInPreciseUnits.preciseMul(10**reserveAssetDecimals);
+        uint256 prePremiumReserveQuantity =
+            totalWithdrawalValueInPreciseUnits.preciseMul(10**ERC20Upgradeable(_reserveAsset).decimals());
 
         return prePremiumReserveQuantity;
     }
