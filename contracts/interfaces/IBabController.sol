@@ -32,7 +32,8 @@ interface IBabController {
         string memory _symbol,
         string memory _tokenURI,
         uint256 _seed,
-        uint256[] calldata _gardenParams
+        uint256[] calldata _gardenParams,
+        uint256 _initialContribution
     ) external payable returns (address);
 
     function removeGarden(address _garden) external;
@@ -57,6 +58,8 @@ interface IBabController {
 
     function editStrategyFactory(address _newStrategyFactory) external;
 
+    function editUniswapFactory(address _newUniswapFactory) external;
+
     function addIntegration(string memory _name, address _integration) external;
 
     function editIntegration(string memory _name, address _integration) external;
@@ -79,6 +82,8 @@ interface IBabController {
 
     function setAllowPublicGardens() external;
 
+    function editLiquidityReserve(address _reserve, uint256 _minRiskyPairLiquidityEth) external;
+
     function maxContributorsPerGarden() external view returns (uint256);
 
     function gardenCreationIsOpen() external view returns (bool);
@@ -86,8 +91,6 @@ interface IBabController {
     function openPublicGardenCreation() external;
 
     function setMaxContributorsPerGarden(uint256 _newMax) external;
-
-    function editLiquidityMinimum(uint256 _minRiskyPairLiquidityEth) external;
 
     function owner() external view returns (address);
 
@@ -164,7 +167,7 @@ interface IBabController {
 
     function protocolManagementFee() external view returns (uint256);
 
-    function minRiskyPairLiquidityEth() external view returns (uint256);
+    function minLiquidityPerReserve(address _reserve) external view returns (uint256);
 
-    function getUniswapFactory() external view returns (address);
+    function uniswapFactory() external view returns (address);
 }

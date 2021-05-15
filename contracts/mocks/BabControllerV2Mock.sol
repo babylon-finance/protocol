@@ -50,6 +50,7 @@ contract BabControllerV2Mock is OwnableUpgradeable {
     // List of enabled Communities
     address[] public gardens;
     address[] public reserveAssets;
+    address public uniswapFactory;
     address public gardenValuer;
     address public priceOracle;
     address public gardenFactory;
@@ -74,6 +75,9 @@ contract BabControllerV2Mock is OwnableUpgradeable {
     // Mapping to check keepers
     mapping(address => bool) public keeperList;
 
+    // Mapping of minimum liquidity per reserve asset
+    mapping(address => uint256) public minLiquidityPerReserve;
+
     // Recipient of protocol fees
     address public treasury;
 
@@ -92,10 +96,6 @@ contract BabControllerV2Mock is OwnableUpgradeable {
     uint256 public lpsBABLPercentage; //
 
     uint256 public gardenCreatorBonus;
-
-    // Assets
-    // Absolute Min liquidity of assets for risky gardens 1000 ETH
-    uint256 public minRiskyPairLiquidityEth;
 
     // Enable Transfer of ERC20 gardenTokens
     // Only members can transfer tokens until the protocol is fully decentralized
@@ -134,7 +134,6 @@ contract BabControllerV2Mock is OwnableUpgradeable {
         protocolWithdrawalGardenTokenFee = 0; // 0% (0.01% = 1e14, 1% = 1e16) on profits
         gardenTokensTransfersEnabled = false;
         bablMiningProgramEnabled = false;
-        minRiskyPairLiquidityEth = 1000 * 1e18;
 
         strategistProfitPercentage = 10e16;
         stewardsProfitPercentage = 5e16;

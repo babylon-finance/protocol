@@ -22,7 +22,6 @@ import 'hardhat/console.sol';
 import {ERC20} from '@openzeppelin/contracts/token/ERC20/ERC20.sol';
 import {IBabController} from '../interfaces/IBabController.sol';
 import {IIntegration} from '../interfaces/IIntegration.sol';
-import {IWETH} from '../interfaces/external/weth/IWETH.sol';
 import {IStrategy} from '../interfaces/IStrategy.sol';
 import {IGarden} from '../interfaces/IGarden.sol';
 import {SafeMath} from '@openzeppelin/contracts/math/SafeMath.sol';

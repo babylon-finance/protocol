@@ -127,8 +127,6 @@ interface IGarden {
 
     function getLockedBalance(address _contributor) external view returns (uint256);
 
-    function reenableEthForStrategies() external;
-
     function rebalanceStrategies(uint256 _fee) external;
 
     function expireCandidateStrategy(address _strategy) external;

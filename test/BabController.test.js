@@ -2,6 +2,8 @@ const { expect } = require('chai');
 
 const addresses = require('../lib/addresses');
 const { setupTests } = require('./fixtures/GardenFixture');
+const { GARDEN_PARAMS_STABLE, GARDEN_PARAMS } = require('../lib/constants');
+const { impersonateAddress } = require('../lib/rpc');
 
 describe('BabController', function () {
   let babController;
@@ -9,10 +11,11 @@ describe('BabController', function () {
   let garden1;
   let garden2;
   let garden3;
+  let signer1;
   let owner;
 
   beforeEach(async () => {
-    ({ babController, owner, treasury, garden1, garden2, garden3 } = await setupTests()());
+    ({ babController, owner, signer1, treasury, garden1, garden2, garden3 } = await setupTests()());
   });
 
   describe('Deployment', function () {
@@ -36,6 +39,53 @@ describe('BabController', function () {
       expect(!!garden1).to.equal(true);
       expect(!!garden2).to.equal(true);
       expect(!!garden3).to.equal(true);
+    });
+
+    it('can create a new garden with DAI as the reserve asset', async function () {
+      const dai = await ethers.getContractAt('IERC20', addresses.tokens.DAI);
+      const whaleAddress = '0x6B175474E89094C44Da98b954EedeAC495271d0F'; // Has DAI
+      const whaleSigner = await impersonateAddress(whaleAddress);
+      await dai.connect(whaleSigner).transfer(signer1.address, ethers.utils.parseEther('1000'), {
+        gasPrice: 0,
+      });
+      await dai.connect(signer1).approve(babController.address, ethers.utils.parseEther('1000'), {
+        gasPrice: 0,
+      });
+      await babController
+        .connect(signer1)
+        .createGarden(
+          addresses.tokens.DAI,
+          'Absolute DAI Return [beta]',
+          'EYFA',
+          'http...',
+          0,
+          GARDEN_PARAMS_STABLE,
+          ethers.utils.parseEther('100'),
+          {
+            value: ethers.utils.parseEther('100'),
+          },
+        );
+      const gardens = await babController.getGardens();
+      expect(gardens.length).to.equal(5);
+    });
+
+    it('cannot create a new garden with YFI as the reserve asset', async function () {
+      await expect(
+        babController
+          .connect(signer1)
+          .createGarden(
+            addresses.tokens.YFI,
+            'Absolute YFI Return [beta]',
+            'EYFA',
+            'http...',
+            0,
+            GARDEN_PARAMS,
+            ethers.utils.parseEther('1'),
+            {
+              value: ethers.utils.parseEther('1'),
+            },
+          ),
+      ).to.be.reverted;
     });
 
     it('cannot disable an inactive garden', async function () {
@@ -90,14 +140,14 @@ describe('BabController', function () {
   describe('Protocol operations', function () {
     it('can add a reserve asset', async function () {
       const initialAssets = await babController.getReserveAssets();
-      await babController.connect(owner).addReserveAsset(addresses.tokens.DAI);
+      await babController.connect(owner).addReserveAsset(addresses.tokens.YFI);
 
       const updatedAssets = await babController.getReserveAssets();
       expect(updatedAssets.length > initialAssets.length).to.equal(true);
     });
 
     it('can remove a reserve asset', async function () {
-      await babController.connect(owner).addReserveAsset(addresses.tokens.DAI);
+      await babController.connect(owner).addReserveAsset(addresses.tokens.YFI);
       const initialAssets = await babController.getReserveAssets();
 
       await babController.connect(owner).removeReserveAsset(initialAssets[0]);
