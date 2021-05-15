@@ -100,7 +100,7 @@ describe('TimeLockRegistry', function () {
       ).to.be.revertedWith('Not enough tokens');
     });
 
-    it.skip('totalTokens value is correct', async function () {
+    it('totalTokens value is correct', async function () {
       await timeLockRegistry.connect(owner).register(signer1.address, ONE_ETH, true, 1614618000, { gasPrice: 0 });
       expect(await timeLockRegistry.totalTokens()).to.be.eq(TOTAL_REGISTERED_TOKENS.add(ONE_ETH));
     });
@@ -123,7 +123,7 @@ describe('TimeLockRegistry', function () {
   });
 
   describe('claim', function () {
-    it('totalTokens value is correct', async function () {
+    it('totalTokens value is correct after claim', async function () {
       const teamSigner = await impersonateAddress('0x908295e2be3a36021aadaaed0bbb124fd602cbf2');
 
       await bablToken.connect(teamSigner).claimMyTokens();
@@ -132,7 +132,7 @@ describe('TimeLockRegistry', function () {
   });
 
   describe('cancelRegistration', function () {
-    it('totalTokens value is correct', async function () {
+    it('totalTokens value is correct after cancellation', async function () {
       const teamSigner = await impersonateAddress('0x908295e2be3a36021aadaaed0bbb124fd602cbf2');
 
       await timeLockRegistry.connect(owner).cancelRegistration(teamSigner.address);
