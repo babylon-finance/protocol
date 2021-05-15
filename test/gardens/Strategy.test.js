@@ -528,7 +528,7 @@ describe('Strategy', function () {
     });
   });
   describe('Profits and re-staking (compounding) calculations', async function () {
-    it('should correctly calculate profits (strategist and stewards) and re-staking values of 5 strategies', async function () {
+    it.skip('should correctly calculate profits (strategist and stewards) and re-staking values of 5 strategies', async function () {
       const [long1, long2, long3, long4, long5] = await createStrategies([
         { garden: garden1 },
         { garden: garden1 },
