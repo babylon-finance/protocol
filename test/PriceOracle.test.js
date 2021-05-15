@@ -30,7 +30,7 @@ describe('PriceOracle', function () {
   describe('UniswapAnchoredView', function () {
     it('should get the price of ETH/DAI', async function () {
       const price = await priceOracle.connect(owner).getPrice(addresses.tokens.WETH, addresses.tokens.DAI);
-      expect(price).to.be.gt(ethers.utils.parseEther('500'));
+      expect(price).to.be.gt(ethers.utils.parseEther('2000'));
     });
 
     it('should get the price of DAI/USDC', async function () {
@@ -39,7 +39,7 @@ describe('PriceOracle', function () {
     });
     it('should get the price of WETH/USDC', async function () {
       const price = await priceOracle.connect(owner).getPrice(addresses.tokens.WETH, addresses.tokens.USDC);
-      expect(price).to.be.gt(ethers.utils.parseEther('1.8'));
+      expect(price).to.be.gt(ethers.utils.parseEther('2000'));
     });
   });
 

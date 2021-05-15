@@ -26,5 +26,6 @@ pragma solidity 0.7.6;
  * Interface for calling an oracle adapter.
  */
 interface IUniswapAnchoredView {
+
     function price(string memory symbol) external view returns (uint256);
 }
