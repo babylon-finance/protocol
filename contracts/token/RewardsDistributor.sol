@@ -462,7 +462,6 @@ contract RewardsDistributor is Ownable, IRewardsDistributor {
         // Normalizing into DAI
         IPriceOracle oracle = IPriceOracle(IBabController(controller).priceOracle());
         uint256 pricePerTokenUnit = oracle.getPrice(IGarden(strategy.garden()).reserveAsset(), DAI);
-        // TODO Check that we always get 18 decimals
         _capital = _capital.preciseMul(pricePerTokenUnit);
         ProtocolPerTimestamp storage protocolCheckpoint = protocolPerTimestamp[block.timestamp];
         if (_addOrSubstract == false) {
