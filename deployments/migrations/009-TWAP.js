@@ -1,4 +1,3 @@
-const { TWAP_ORACLE_WINDOW, TWAP_ORACLE_GRANULARITY } = require('../../lib/system.js');
 const addresses = require('../../lib/addresses');
 
 module.exports = async ({
@@ -13,13 +12,13 @@ module.exports = async ({
   const { deploy } = deployments;
   const { deployer } = await getNamedAccounts();
   const gasPrice = await getRapid();
-  const contract = 'UniswapTWAP';
+  const contract = 'UniswapTWAPV3';
 
   const controller = await deployments.get('BabControllerProxy');
 
   const deployment = await deploy(contract, {
     from: deployer,
-    args: [controller.address, addresses.uniswap.factory, TWAP_ORACLE_WINDOW, TWAP_ORACLE_GRANULARITY],
+    args: [controller.address, addresses.uniswap.v3.factory],
     log: true,
     gasPrice,
   });

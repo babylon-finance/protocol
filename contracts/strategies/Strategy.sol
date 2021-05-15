@@ -150,7 +150,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
 
     /* ============ Constants ============ */
 
-    uint256 internal constant SLIPPAGE_ALLOWED = 1e16; // 1%
+    uint256 internal constant SLIPPAGE_ALLOWED = 5e16; // 1%
     uint256 internal constant HUNDRED_PERCENT = 1e18; // 100%
     uint256 internal constant MAX_CANDIDATE_PERIOD = 7 days;
     uint256 internal constant MIN_VOTERS_TO_BECOME_ACTIVE = 2;
@@ -522,7 +522,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         _require(balance > 0, Errors.BALANCE_TOO_LOW);
 
         _trade(_token, balance, garden.reserveAsset());
-        // Send WETH to garden
+        // Send reserve asset to garden
         _sendReserveAssetToGarden();
     }
 

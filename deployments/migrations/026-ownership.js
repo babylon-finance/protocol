@@ -62,6 +62,10 @@ module.exports = async ({ getNamedAccounts, deployments, ethers, getSigner, getC
   console.log('Transfer ownership of UniswapTWAP');
   const uniswapTWAP = await getContract('UniswapTWAP');
   await uniswapTWAP.connect(deployerSigner).transferOwnership(MULTISIG, { gasPrice });
+
+  console.log('Transfer ownership of UniswapTWAP v3');
+  const uniswapTWAPv3 = await getContract('UniswapTWAPV3');
+  await uniswapTWAPv3.connect(deployerSigner).transferOwnership(MULTISIG, { gasPrice });
 };
 
 module.exports.tags = ['Ownership'];

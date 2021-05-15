@@ -9,10 +9,13 @@ describe('PriceOracle', function () {
   let babController;
   let priceOracle;
   let adapter;
+  let univ3;
+  let owner;
 
   beforeEach(async () => {
     ({ babController, priceOracle, owner } = await setupTests()());
     adapter = await ethers.getContractAt('UniswapTWAP', (await priceOracle.getAdapters())[0]);
+    univ3 = await ethers.getContractAt('UniswapTWAPV3', (await priceOracle.getAdapters())[1]);
   });
 
   describe('Deployment', function () {
@@ -27,7 +30,7 @@ describe('PriceOracle', function () {
   describe('UniswapAnchoredView', function () {
     it('should get the price of ETH/DAI', async function () {
       const price = await priceOracle.connect(owner).getPrice(addresses.tokens.WETH, addresses.tokens.DAI);
-      expect(price).to.be.gt(ethers.utils.parseEther('500'));
+      expect(price).to.be.gt(ethers.utils.parseEther('2000'));
     });
 
     it('should get the price of DAI/USDC', async function () {
@@ -36,7 +39,7 @@ describe('PriceOracle', function () {
     });
     it('should get the price of WETH/USDC', async function () {
       const price = await priceOracle.connect(owner).getPrice(addresses.tokens.WETH, addresses.tokens.USDC);
-      expect(price).to.be.gt(ethers.utils.parseEther('1.8'));
+      expect(price).to.be.gt(ethers.utils.parseEther('2000'));
     });
   });
 
@@ -62,6 +65,28 @@ describe('PriceOracle', function () {
       }
       const { amountOut } = await adapter.getPrice(addresses.tokens.WETH, addresses.tokens.DAI);
       expect(amountOut).to.be.gt(ethers.utils.parseEther('500'));
+    });
+  });
+
+  describe('Uniswap TWAP V3x', function () {
+    it('should not get the price of YFI', async function () {
+      await adapter.update(addresses.tokens.YFI, addresses.tokens.WETH);
+      await expect(univ3.getPrice(addresses.tokens.YFI, addresses.tokens.WETH)).to.be.reverted;
+    });
+
+    it('should get the price of DAI', async function () {
+      const { amountOut } = await univ3.getPrice(addresses.tokens.WETH, addresses.tokens.DAI);
+      expect(ethers.utils.formatEther(amountOut)).to.be.eq('3938.801407293532197958');
+    });
+
+    it('should get the price of USDC', async function () {
+      const { amountOut } = await univ3.getPrice(addresses.tokens.WETH, addresses.tokens.USDC);
+      expect(ethers.utils.formatEther(amountOut)).to.be.eq('3958.944346368296183367');
+    });
+
+    it('should get the price of DAI inverse', async function () {
+      const { amountOut } = await univ3.getPrice(addresses.tokens.DAI, addresses.tokens.WETH);
+      expect(ethers.utils.formatEther(amountOut)).to.be.eq('0.000253884341096326');
     });
   });
 

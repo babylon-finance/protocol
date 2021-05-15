@@ -17,9 +17,11 @@ module.exports = async ({
   const TWAP = await deployments.get('UniswapTWAP');
   const contract = 'PriceOracle';
 
+  const uniswapTWAPv3 = await deployments.get('UniswapTWAPV3');
+
   const deployment = await deploy(contract, {
     from: deployer,
-    args: [controller.address, addresses.compound.OpenOracle, [TWAP.address]],
+    args: [controller.address, addresses.compound.OpenOracle, [TWAP.address, uniswapTWAPv3.address]],
     log: true,
     gasPrice,
   });

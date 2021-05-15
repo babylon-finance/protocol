@@ -84,7 +84,6 @@ describe('OneInchPoolIntegrationTest', function () {
         DEFAULT_STRATEGY_PARAMS,
         daiWethPair.address,
       );
-
       await executeStrategy(strategyContract);
       expect(await daiWethPair.balanceOf(strategyContract.address)).to.be.gt(0);
 
