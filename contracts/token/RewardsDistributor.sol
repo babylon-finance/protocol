@@ -154,7 +154,7 @@ contract RewardsDistributor is Ownable, IRewardsDistributor {
 
     struct GardenPowerByTimestamp {
         // Garden allocation checkpoints per timestamp per each garden
-        uint256 principal; // Checkpoint to keep track on garden allocation
+        uint256 supply; // Checkpoint to keep track on garden supply
         uint256 timestamp; // Checkpoint timestamps
         uint256 power; // Garden power checkpoint (power is proportional to = principal * duration)
     }
@@ -169,7 +169,7 @@ contract RewardsDistributor is Ownable, IRewardsDistributor {
 
     struct TimestampContribution {
         // Sub-mapping with all checkpoints for deposits and withdrawals of garden users
-        uint256 principal; // Principal of user in each garden
+        uint256 supply; // Garden token balance of user in each garden along the time
         uint256 timestamp; // Checkpoint time
         uint256 timePointer; // Pointer
         uint256 power; // Contributor power per checkpoint
@@ -1035,7 +1035,7 @@ contract RewardsDistributor is Ownable, IRewardsDistributor {
             } else if (_from > powerCheckpoints.fromDepositAt) {
                 contributorPower = contributor.tsContributions[powerCheckpoints.fromDepositAt].power.add(
                     (_from.sub(powerCheckpoints.fromDepositAt)).mul(
-                        contributor.tsContributions[powerCheckpoints.fromDepositAt].principal
+                        contributor.tsContributions[powerCheckpoints.fromDepositAt].supply
                     )
                 );
             } else {
@@ -1044,7 +1044,7 @@ contract RewardsDistributor is Ownable, IRewardsDistributor {
             }
             gardenPower = gardenPowerByTimestamp[address(_garden)][powerCheckpoints.gardenFromDepositAt].power.add(
                 (_from.sub(powerCheckpoints.gardenFromDepositAt)).mul(
-                    gardenPowerByTimestamp[address(_garden)][powerCheckpoints.gardenFromDepositAt].principal
+                    gardenPowerByTimestamp[address(_garden)][powerCheckpoints.gardenFromDepositAt].supply
                 )
             );
             // "TO power calculations" PART
@@ -1069,7 +1069,7 @@ contract RewardsDistributor is Ownable, IRewardsDistributor {
                 gardenPower = (
                     gardenPowerByTimestamp[address(_garden)][powerCheckpoints.gardenLastDepositAt].power.add(
                         (_to.sub(powerCheckpoints.gardenLastDepositAt)).mul(
-                            gardenPowerByTimestamp[address(_garden)][powerCheckpoints.gardenLastDepositAt].principal
+                            gardenPowerByTimestamp[address(_garden)][powerCheckpoints.gardenLastDepositAt].supply
                         )
                     )
                 )
@@ -1080,7 +1080,7 @@ contract RewardsDistributor is Ownable, IRewardsDistributor {
                 contributorPower = (
                     contributor.tsContributions[powerCheckpoints.lastDepositAt].power.add(
                         (_to.sub(powerCheckpoints.lastDepositAt)).mul(
-                            contributor.tsContributions[powerCheckpoints.lastDepositAt].principal
+                            contributor.tsContributions[powerCheckpoints.lastDepositAt].supply
                         )
                     )
                 )
@@ -1089,7 +1089,7 @@ contract RewardsDistributor is Ownable, IRewardsDistributor {
                 gardenPower = (
                     gardenPowerByTimestamp[address(_garden)][powerCheckpoints.gardenLastDepositAt].power.add(
                         (_to.sub(powerCheckpoints.gardenLastDepositAt)).mul(
-                            gardenPowerByTimestamp[address(_garden)][powerCheckpoints.gardenLastDepositAt].principal
+                            gardenPowerByTimestamp[address(_garden)][powerCheckpoints.gardenLastDepositAt].supply
                         )
                     )
                 )
@@ -1172,7 +1172,7 @@ contract RewardsDistributor is Ownable, IRewardsDistributor {
     function _updateGardenPower(address _garden) private {
         IGarden garden = IGarden(_garden);
         GardenPowerByTimestamp storage gardenTimestamp = gardenPowerByTimestamp[address(garden)][block.timestamp];
-        gardenTimestamp.principal = IERC20(address(IGarden(_garden))).totalSupply();
+        gardenTimestamp.supply = IERC20(address(IGarden(_garden))).totalSupply();
 
         gardenTimestamp.timestamp = block.timestamp;
 
@@ -1198,7 +1198,7 @@ contract RewardsDistributor is Ownable, IRewardsDistributor {
                     gardenPowerByTimestamp[address(garden)][
                         gardenTimelist[address(garden)][gardenPid[address(garden)].sub(1)]
                     ]
-                        .principal
+                        .supply
                 )
             );
         }
@@ -1223,7 +1223,7 @@ contract RewardsDistributor is Ownable, IRewardsDistributor {
         // We make checkpoints around contributor deposits to avoid fast loans and give the right rewards afterwards
         ContributorPerGarden storage contributor = contributorPerGarden[address(_garden)][_contributor];
 
-        contributor.tsContributions[block.timestamp].principal = IERC20(address(IGarden(_garden))).balanceOf(
+        contributor.tsContributions[block.timestamp].supply = IERC20(address(IGarden(_garden))).balanceOf(
             address(_contributor)
         );
 
@@ -1240,7 +1240,7 @@ contract RewardsDistributor is Ownable, IRewardsDistributor {
                 .power
                 .add(
                 (block.timestamp.sub(contributor.lastDepositAt)).mul(
-                    contributor.tsContributions[contributor.lastDepositAt].principal
+                    contributor.tsContributions[contributor.lastDepositAt].supply
                 )
             );
         }
