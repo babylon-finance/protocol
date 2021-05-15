@@ -189,15 +189,15 @@ contract PriceOracle is Ownable, IPriceOracle {
         returns (bool, uint256)
     {
         if (uniswapAssets[_assetOne] && uniswapAssets[_assetTwo]) {
-          IUniswapAnchoredView anchoredView = IUniswapAnchoredView(uniswapAnchoredView);
-          string memory symbol1 = _assetOne == WETH ? 'ETH' : ERC20(_assetOne).symbol();
-          string memory symbol2 = _assetTwo == WETH ? 'ETH' : ERC20(_assetTwo).symbol();
-          uint256 assetOnePrice = anchoredView.price(symbol1);
-          uint256 assetTwoPrice = anchoredView.price(symbol2);
+            IUniswapAnchoredView anchoredView = IUniswapAnchoredView(uniswapAnchoredView);
+            string memory symbol1 = _assetOne == WETH ? 'ETH' : ERC20(_assetOne).symbol();
+            string memory symbol2 = _assetTwo == WETH ? 'ETH' : ERC20(_assetTwo).symbol();
+            uint256 assetOnePrice = anchoredView.price(symbol1);
+            uint256 assetTwoPrice = anchoredView.price(symbol2);
 
-          if (assetOnePrice > 0 && assetTwoPrice > 0) {
-              return (true, assetOnePrice.preciseDiv(assetTwoPrice));
-          }
+            if (assetOnePrice > 0 && assetTwoPrice > 0) {
+                return (true, assetOnePrice.preciseDiv(assetTwoPrice));
+            }
         }
 
         return (false, 0);

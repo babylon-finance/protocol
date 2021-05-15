@@ -64,7 +64,6 @@ describe('PriceOracle', function () {
         ethers.provider.send('evm_increaseTime', [TWAP_ORACLE_WINDOW / TWAP_ORACLE_GRANULARITY]);
       }
       const { amountOut } = await adapter.getPrice(addresses.tokens.WETH, addresses.tokens.DAI);
-      console.log('price', ethers.utils.formatEther(amountOut));
       expect(amountOut).to.be.gt(ethers.utils.parseEther('500'));
     });
   });
@@ -80,6 +79,11 @@ describe('PriceOracle', function () {
       expect(ethers.utils.formatEther(amountOut)).to.be.eq('3938.801407293532197958');
     });
 
+    it('should get the price of USDC', async function () {
+      const { amountOut } = await univ3.getPrice(addresses.tokens.WETH, addresses.tokens.USDC);
+      expect(ethers.utils.formatEther(amountOut)).to.be.eq('3958.944346368296183367');
+    });
+
     it('should get the price of DAI inverse', async function () {
       const { amountOut } = await univ3.getPrice(addresses.tokens.DAI, addresses.tokens.WETH);
       expect(ethers.utils.formatEther(amountOut)).to.be.eq('0.000253884341096326');
@@ -93,7 +97,6 @@ describe('PriceOracle', function () {
         ethers.provider.send('evm_increaseTime', [TWAP_ORACLE_WINDOW / TWAP_ORACLE_GRANULARITY]);
       }
       const price = await priceOracle.connect(owner).getPrice(addresses.tokens.YFI, addresses.tokens.WETH);
-      console.log('price yfi', ethers.utils.formatEther(price));
       expect(price).to.be.gt(ethers.utils.parseEther('15'));
     });
   });

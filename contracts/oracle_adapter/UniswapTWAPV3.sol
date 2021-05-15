@@ -22,7 +22,7 @@ pragma solidity 0.7.6;
 
 import 'hardhat/console.sol';
 import {Ownable} from '@openzeppelin/contracts/access/Ownable.sol';
-import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
+import {ERC20} from '@openzeppelin/contracts/token/ERC20/ERC20.sol';
 import '@uniswap/v3-core/contracts/interfaces/IUniswapV3Factory.sol';
 import '@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol';
 import '@uniswap/v3-core/contracts/libraries/TickMath.sol';
@@ -104,22 +104,24 @@ contract UniswapTWAPV3 is Ownable, IOracleAdapter {
         // We try the low pool first
         IUniswapV3Pool pool = IUniswapV3Pool(factory.getPool(tokenIn, tokenOut, FEE_LOW));
         (sqrtPriceX96, tick, , , , , ) = pool.slot0();
-        found = _checkPriceAndLiquidity(tick, pool);
+        found = _checkPrice(tick, pool);
         if (!found) {
             pool = IUniswapV3Pool(factory.getPool(tokenIn, tokenOut, FEE_MEDIUM));
             (sqrtPriceX96, tick, , , , , ) = pool.slot0();
-            found = _checkPriceAndLiquidity(tick, pool);
+            found = _checkPrice(tick, pool);
         }
         if (!found) {
             pool = IUniswapV3Pool(factory.getPool(tokenIn, tokenOut, FEE_HIGH));
             (sqrtPriceX96, tick, , , , , ) = pool.slot0();
-            found = _checkPriceAndLiquidity(tick, pool);
+            found = _checkPrice(tick, pool);
         }
         // No valid price
         if (!found) {
             return (false, 0);
         }
-        uint256 price = uint256(sqrtPriceX96).mul(uint256(sqrtPriceX96)).mul(1e18) >> (96 * 2);
+
+        uint256 price =
+            uint256(sqrtPriceX96).mul(uint256(sqrtPriceX96)).mul(10**ERC20(pool.token0()).decimals()) >> (96 * 2);
         if (pool.token0() == tokenOut) {
             return (true, uint256(1e18).preciseDiv(price));
         } else {
@@ -135,7 +137,7 @@ contract UniswapTWAPV3 is Ownable, IOracleAdapter {
     /// by Uniswap, or if it deviates too much from the TWAP. Should be called
     /// whenever base and limit ranges are updated. In practice, prices should
     /// only become this extreme if there's no liquidity in the Uniswap pool.
-    function _checkPriceAndLiquidity(int24 mid, IUniswapV3Pool _pool) internal view returns (bool) {
+    function _checkPrice(int24 mid, IUniswapV3Pool _pool) internal view returns (bool) {
         int24 tickSpacing = _pool.tickSpacing();
         // TODO: Add the other param from charm
         if (mid < TickMath.MIN_TICK + tickSpacing) {
@@ -149,15 +151,10 @@ contract UniswapTWAPV3 is Ownable, IOracleAdapter {
 
         // Check TWAP deviation. This check prevents price manipulation before
         // the rebalance and also avoids rebalancing when price has just spiked.
-        (int56 twap, uint160 liquidityCumulative) = _getTwap(_pool);
+        (int56 twap, ) = _getTwap(_pool);
         int56 deviation = mid > twap ? mid - twap : twap - mid;
         // Fail twap check
-        if (deviation > maxTwapDeviation) {
-            return false;
-        }
-        uint256 poolLiquidity = uint256(_pool.liquidity());
-        // Liquidity cumulative check
-        return liquidityCumulative <= poolLiquidity.div(maxLiquidityDeviationFactor);
+        return deviation > maxTwapDeviation;
     }
 
     // given the cumulative prices of the start and end of a period, and the length of the period, compute the average
