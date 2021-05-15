@@ -111,6 +111,12 @@ contract BabControllerV2Mock is OwnableUpgradeable {
     uint256 public protocolDepositGardenTokenFee; // 0 (0.01% = 1e14, 1% = 1e16)
     uint256 public protocolWithdrawalGardenTokenFee; // 0 (0.01% = 1e14, 1% = 1e16)
 
+    // Maximum number of contributors per garden
+    uint256 public maxContributorsPerGarden;
+
+    // Enable garden creations to be fully open to the public (no need of Ishtar gate anymore)
+    bool public gardenCreationIsOpen;
+
     bool public newVar;
 
     /* ============ Constructor ============ */
@@ -138,6 +144,8 @@ contract BabControllerV2Mock is OwnableUpgradeable {
         lpsBABLPercentage = 75e16;
 
         gardenCreatorBonus = 15e16;
+        maxContributorsPerGarden = 100;
+        gardenCreationIsOpen = false;
     }
 
     /* ============ External Functions ============ */

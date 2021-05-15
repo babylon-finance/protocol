@@ -154,7 +154,7 @@ contract UniswapTWAPV3 is Ownable, IOracleAdapter {
         (int56 twap, ) = _getTwap(_pool);
         int56 deviation = mid > twap ? mid - twap : twap - mid;
         // Fail twap check
-        return deviation > maxTwapDeviation;
+        return deviation < maxTwapDeviation;
     }
 
     // given the cumulative prices of the start and end of a period, and the length of the period, compute the average

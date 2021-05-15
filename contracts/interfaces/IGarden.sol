@@ -87,7 +87,7 @@ interface IGarden {
 
     function getFinalizedStrategies() external view returns (address[] memory);
 
-    function isStrategy(address _strategy) external view returns (bool);
+    function isStrategyActiveInGarden(address _strategy) external view returns (bool);
 
     function startWithdrawalWindow(
         uint256 _amount,

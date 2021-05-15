@@ -32,10 +32,14 @@ import {Strategy} from './Strategy.sol';
  * Factory to create investment strategy contracts
  */
 contract StrategyFactory is IStrategyFactory {
+    address private immutable controller;
     address payable private immutable strategy;
     address private immutable strategyNft;
 
-    constructor() {
+    constructor(address _controller) {
+        require(_controller != address(0), 'Controller is zero');
+
+        controller = _controller;
         strategy = address(new Strategy());
         strategyNft = address(new StrategyNFT());
     }
@@ -47,7 +51,6 @@ contract StrategyFactory is IStrategyFactory {
      * @param _symbol                        Symbol of the strategy
      * @param _strategist                    Address of the strategist
      * @param _garden                        Address of the garden
-     * @param _controller                    Address of the controller
      * @param _stratParams                   Strat Params
      */
     function createStrategy(
@@ -55,16 +58,15 @@ contract StrategyFactory is IStrategyFactory {
         string memory _symbol,
         address _strategist,
         address _garden,
-        address _controller,
         uint256[] calldata _stratParams
     ) external override returns (address) {
         address payable clone = payable(Clones.clone(strategy));
         address cloneNFT = Clones.clone(strategyNft);
-        StrategyNFT(cloneNFT).initialize(_controller, address(clone), _name, _symbol);
+        StrategyNFT(cloneNFT).initialize(controller, address(clone), _name, _symbol);
         IStrategy(clone).initialize(
             _strategist,
             _garden,
-            _controller,
+            controller,
             _stratParams[0],
             _stratParams[1],
             _stratParams[2],

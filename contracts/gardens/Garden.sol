@@ -192,6 +192,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         address _nftAddress,
         uint256 _initialContribution
     ) public payable initializer {
+        _require(bytes(_name).length < 50, Errors.NAME_TOO_LONG);
         _require(_creator != address(0), Errors.ADDRESS_IS_ZERO);
         _require(_controller != address(0), Errors.ADDRESS_IS_ZERO);
         _require(_reserveAsset != address(0), Errors.ADDRESS_IS_ZERO);
@@ -202,7 +203,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         controller = _controller;
         reserveAsset = _reserveAsset;
         creator = _creator;
-        maxContributors = 100;
+        maxContributors = IBabController(_controller).maxContributorsPerGarden();
         nftAddress = _nftAddress;
         guestListEnabled = true;
 
@@ -296,16 +297,16 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
     ) external payable override nonReentrant {
         _onlyActive();
         _require(
-            guestListEnabled &&
-                (IIshtarGate(IBabController(controller).ishtarGate()).canJoinAGarden(address(this), _to) ||
-                    creator == _to),
+            !guestListEnabled ||
+                IIshtarGate(IBabController(controller).ishtarGate()).canJoinAGarden(address(this), msg.sender) ||
+                creator == _to,
             Errors.USER_CANNOT_JOIN
         );
         // if deposit limit is 0, then there is no deposit limit
         if (maxDepositLimit > 0) {
             _require(principal.add(_reserveAssetQuantity) <= maxDepositLimit, Errors.MAX_DEPOSIT_LIMIT);
         }
-        _require(totalContributors < maxContributors, Errors.MAX_CONTRIBUTORS);
+        _require(totalContributors <= maxContributors, Errors.MAX_CONTRIBUTORS);
         _receiveReserveAsset(_reserveAssetQuantity);
 
         (uint256 protocolFees, uint256 netFlowQuantity) = _getFees(_reserveAssetQuantity, true);
@@ -409,9 +410,8 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         address _strategy
     ) external override {
         _require(
-            (strategyMapping[msg.sender] && address(IStrategy(msg.sender).garden()) == address(this)) ||
-                msg.sender == controller,
-            Errors.ONLY_STRATEGY_OR_CONTROLLER
+            (strategyMapping[msg.sender] && address(IStrategy(msg.sender).garden()) == address(this)),
+            Errors.ONLY_STRATEGY
         );
         // Updates reserve asset
         principal = principal.toInt256().add(_returns).toUint256();
@@ -425,7 +425,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         reserveAssetRewardsSetAside = reserveAssetRewardsSetAside.add(_rewards);
         reserveAssetPrincipalWindow = reserveAssetPrincipalWindow.add(_amount);
         // Mark strategy as finalized
-        absoluteReturns.add(_returns);
+        absoluteReturns = absoluteReturns.add(_returns);
         strategies = strategies.remove(_strategy);
         finalizedStrategies.push(_strategy);
         strategyMapping[_strategy] = false;
@@ -438,6 +438,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
      */
     function payKeeper(address payable _keeper, uint256 _fee) external override {
         _require(IBabController(controller).isValidKeeper(_keeper), Errors.ONLY_KEEPER);
+        _onlyStrategy();
         keeperDebt = keeperDebt.add(_fee);
         // Pay Keeper in Reserve Asset
         if (keeperDebt > 0 && IERC20(reserveAsset).balanceOf(address(this)) >= keeperDebt) {
@@ -499,7 +500,6 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
                 _symbol,
                 msg.sender,
                 address(this),
-                controller,
                 _stratParams
             );
         strategyMapping[strategy] = true;
@@ -609,7 +609,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         return finalizedStrategies;
     }
 
-    function isStrategy(address _strategy) external view override returns (bool) {
+    function isStrategyActiveInGarden(address _strategy) external view override returns (bool) {
         return strategyMapping[_strategy];
     }
 
@@ -981,6 +981,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         Contributor storage contributor = contributors[_contributor];
         // If new contributor, create one, increment count, and set the current TS
         if (previousBalance == 0 || contributor.initialDepositAt == 0) {
+            _require(totalContributors < maxContributors, Errors.MAX_CONTRIBUTORS);
             totalContributors = totalContributors.add(1);
             contributor.initialDepositAt = block.timestamp;
         }
