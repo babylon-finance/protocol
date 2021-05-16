@@ -41,9 +41,9 @@ module.exports = async ({ getNamedAccounts, deployments, ethers, getSigner, getC
     vestingStartingDate: now,
   }));
   const batchSize = 20;
-  for (let i = 0; i < allocations.length; i += batchSize) {
-    await timeLockRegistry.connect(deployerSigner).registerBatch(allocations.slice(i, i + batchSize));
-  }
+  // for (let i = 0; i < allocations.length; i += batchSize) {
+  //   await timeLockRegistry.connect(deployerSigner).registerBatch(allocations.slice(i, i + batchSize));
+  // }
   console.log(
     `Total amount of BABL tokens in registrations is ${ethers.utils.formatUnits(await timeLockRegistry.totalTokens())}`,
   );
@@ -56,7 +56,7 @@ module.exports = async ({ getNamedAccounts, deployments, ethers, getSigner, getC
   await bablToken.connect(deployerSigner).transfer(treasury.address, balance, { gasPrice });
 
   console.log('Disable BABL transfers');
-  await bablToken.connect(deployerSigner).disableTokensTransfers({ gasPrice });
+  // await bablToken.connect(deployerSigner).disableTokensTransfers({ gasPrice });
 };
 
 module.exports.tags = ['Transfer'];

@@ -19,6 +19,8 @@ async function setUpFixture({ deployments, getNamedAccounts, ethers }, options, 
   const priceOracle = await getContract('PriceOracle');
   const treasury = await getContract('Treasury');
   const gardenValuer = await getContract('GardenValuer');
+  const gardenNFT = await getContract('GardenNFT');
+  const strategyNFT = await getContract('StrategyNFT');
   const rewardsDistributor = await getContract('RewardsDistributor');
 
   const kyberTradeIntegration = await getContract('KyberTradeIntegration');
@@ -173,6 +175,9 @@ async function setUpFixture({ deployments, getNamedAccounts, ethers }, options, 
     gardenValuer,
     priceOracle,
     ishtarGate,
+
+    gardenNFT,
+    strategyNFT,
 
     GARDEN_PARAMS,
 
