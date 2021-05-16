@@ -192,7 +192,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         _require(bytes(_name).length < 50, Errors.NAME_TOO_LONG);
         _require(_creator != address(0), Errors.ADDRESS_IS_ZERO);
         _require(_controller != address(0), Errors.ADDRESS_IS_ZERO);
-        _require(_reserveAsset != address(0), Errors.ADDRESS_IS_ZERO);
+        _require(ERC20Upgradeable(_reserveAsset).decimals() > 0, Errors.ADDRESS_IS_ZERO);
         _require(_gardenParams.length == 9, Errors.GARDEN_PARAMS_LENGTH);
         _require(IBabController(_controller).isValidReserveAsset(_reserveAsset), Errors.MUST_BE_RESERVE_ASSET);
         __ERC20_init(_name, _symbol);
