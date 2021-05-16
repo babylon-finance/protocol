@@ -38,12 +38,12 @@ async function setUpFixture({ deployments, getNamedAccounts, ethers }, options, 
   const lendOperation = await getContract('LendOperation');
 
   // deploy uniswap v2 adapter for tests
-  const twap = await deployments.deploy('UniswapTWAP', {
+  await deployments.deploy('UniswapTWAP', {
     from: deployer.address,
     args: [babController.address, addresses.uniswap.factory, TWAP_ORACLE_WINDOW, TWAP_ORACLE_GRANULARITY],
     log: true,
   });
-  await priceOracle.connect(owner).addAdapter(twap.address);
+  const univ2 = await getContract('UniswapTWAP');
 
   // Gives signer1 creator permissions
   await ishtarGate.connect(owner).setCreatorPermissions(owner.address, true, { gasPrice: 0 });
@@ -165,6 +165,7 @@ async function setUpFixture({ deployments, getNamedAccounts, ethers }, options, 
     oneInchPoolIntegration,
     compoundLendIntegration,
     aaveLendIntegration,
+    univ2,
 
     garden1,
     garden2,

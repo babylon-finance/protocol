@@ -12,9 +12,8 @@ describe('PriceOracle', function () {
   let owner;
 
   beforeEach(async () => {
-    ({ priceOracle, owner } = await setupTests()());
+    ({ priceOracle, owner, univ2 } = await setupTests()());
     univ3 = await ethers.getContractAt('UniswapTWAP', (await priceOracle.getAdapters())[0]);
-    univ2 = await ethers.getContractAt('UniswapTWAPV3', (await priceOracle.getAdapters())[1]);
   });
 
   describe('Deployment', function () {
@@ -92,10 +91,10 @@ describe('PriceOracle', function () {
     });
   });
 
-  describe('Global Oracle', function () {
-    it('should get the price of YFI with enough observations', async function () {
+  describe('Price Oracle', function () {
+    it('should get the price of YFI', async function () {
       const price = await priceOracle.connect(owner).getPrice(addresses.tokens.YFI, addresses.tokens.WETH);
-      expect(price).to.be.gt(ethers.utils.parseEther('15'));
+      expect(price).to.be.eq('17946888880119016864');
     });
   });
 });
