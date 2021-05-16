@@ -908,7 +908,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         _require(reserveAsset != WETH || msg.value == _reserveAssetQuantity, Errors.MSG_VALUE_DO_NOT_MATCH);
         // If reserve asset is WETH wrap it
         uint256 reserveAssetBalance = IERC20(reserveAsset).balanceOf(address(this));
-        if (reserveAsset == WETH) {
+        if (reserveAsset == WETH && msg.value > 0) {
             IWETH(WETH).deposit{value: msg.value}();
         } else {
             // Transfer ERC20 to the garden

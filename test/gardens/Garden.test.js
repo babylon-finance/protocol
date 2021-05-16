@@ -667,7 +667,7 @@ describe('Garden', function () {
       const value = ethers.BigNumber.from(signer3Timestamp[1]);
       await expect(
         await rewardsDistributor.getContributorPower(garden1.address, signer3.address, 0, value.add(4)),
-      ).to.be.closeTo((166666666666666666).toString(), ethers.utils.parseEther('0.05'));
+      ).to.be.closeTo((114285714285714285).toString(), ethers.utils.parseEther('0.05'));
     });
     it('the contributor power is calculated correctly if _from and _to are between two deposits', async function () {
       await garden1.connect(signer3).deposit(ethers.utils.parseEther('1'), 1, signer3.getAddress(), {
