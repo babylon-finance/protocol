@@ -82,7 +82,11 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
      * Throws if the sender is not the creator of the strategy
      */
     modifier onlyGovernorOrGarden {
-        _require(msg.sender == address(garden) || msg.sender == controller.owner(), Errors.ONLY_PROTOCOL_OR_GARDEN);
+        _require(
+            (msg.sender == address(garden) && IBabController(controller).isSystemContract(address(garden))) ||
+                msg.sender == controller.owner(),
+            Errors.ONLY_PROTOCOL_OR_GARDEN
+        );
         _;
     }
 
@@ -92,7 +96,11 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
     }
 
     modifier onlyContributor {
-        _require(IERC20(address(garden)).balanceOf(msg.sender) > 0, Errors.ONLY_CONTRIBUTOR);
+        _require(
+            IERC20(address(garden)).balanceOf(msg.sender) > 0 &&
+                IBabController(controller).isSystemContract(address(garden)),
+            Errors.ONLY_CONTRIBUTOR
+        );
         _;
     }
 
@@ -125,7 +133,10 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
      * Throws if the garden is not the caller or data is already set
      */
     modifier onlyGardenAndNotSet() {
-        _require(msg.sender == address(garden) && !dataSet, Errors.ONLY_GARDEN_AND_DATA_NOT_SET);
+        _require(
+            msg.sender == address(garden) && !dataSet && IBabController(controller).isSystemContract(address(garden)),
+            Errors.ONLY_GARDEN_AND_DATA_NOT_SET
+        );
         _;
     }
 
@@ -133,7 +144,10 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
      * Throws if the garden is not active
      */
     modifier onlyActiveGarden() {
-        _require(garden.active() == true, Errors.ONLY_ACTIVE_GARDEN);
+        _require(
+            garden.active() == true && IBabController(controller).isSystemContract(address(garden)),
+            Errors.ONLY_ACTIVE_GARDEN
+        );
         _;
     }
 
