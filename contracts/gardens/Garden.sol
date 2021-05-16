@@ -192,7 +192,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         _require(bytes(_name).length < 50, Errors.NAME_TOO_LONG);
         _require(_creator != address(0), Errors.ADDRESS_IS_ZERO);
         _require(_controller != address(0), Errors.ADDRESS_IS_ZERO);
-        _require(_reserveAsset != address(0), Errors.ADDRESS_IS_ZERO);
+        _require(ERC20Upgradeable(_reserveAsset).decimals() > 0, Errors.ADDRESS_IS_ZERO);
         _require(_gardenParams.length == 9, Errors.GARDEN_PARAMS_LENGTH);
         _require(IBabController(_controller).isValidReserveAsset(_reserveAsset), Errors.MUST_BE_RESERVE_ASSET);
         __ERC20_init(_name, _symbol);
@@ -905,10 +905,9 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
 
     function _receiveReserveAsset(uint256 _reserveAssetQuantity) private {
         _require(_reserveAssetQuantity >= minContribution, Errors.MIN_CONTRIBUTION);
-        _require(reserveAsset != WETH || msg.value == _reserveAssetQuantity, Errors.MSG_VALUE_DO_NOT_MATCH);
         // If reserve asset is WETH wrap it
         uint256 reserveAssetBalance = IERC20(reserveAsset).balanceOf(address(this));
-        if (reserveAsset == WETH) {
+        if (reserveAsset == WETH && msg.value > 0) {
             IWETH(WETH).deposit{value: msg.value}();
         } else {
             // Transfer ERC20 to the garden

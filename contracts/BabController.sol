@@ -226,7 +226,7 @@ contract BabController is OwnableUpgradeable, IBabController {
                 _gardenParams,
                 _initialContribution
             );
-        if (_reserveAsset != WETH) {
+        if (_reserveAsset != WETH || msg.value == 0) {
             IERC20(_reserveAsset).transferFrom(msg.sender, address(this), _initialContribution);
             IERC20(_reserveAsset).approve(newGarden, _initialContribution);
         }

@@ -384,6 +384,38 @@ describe('Garden', function () {
       expect(contributor.initialDepositAt).to.be.gt(0);
     });
 
+    it('a contributor can deposit weth directly in a weth garden', async function () {
+      expect(await garden1.totalContributors()).to.equal(1);
+      const gardenBalance = await weth.balanceOf(garden1.address);
+      const supplyBefore = await garden1.totalSupply();
+
+      // impersonate and give
+      const whaleAddress = '0x2f0b23f53734252bda2277357e97e1517d6b042a'; // Has WETH
+      const whaleSigner = await impersonateAddress(whaleAddress);
+      const tenWETH = ethers.utils.parseEther('10');
+      await weth.connect(whaleSigner).transfer(signer3.address, tenWETH, {
+        gasPrice: 0,
+      });
+      await weth.connect(signer3).approve(garden1.address, tenWETH, {
+        gasPrice: 0,
+      });
+      await garden1.connect(signer3).deposit(ethers.utils.parseEther('1'), 1, signer3.getAddress());
+      const gardenBalanceAfter = await weth.balanceOf(garden1.address);
+      const supplyAfter = await garden1.totalSupply();
+      // Communities
+      // Manager deposit in fixture is only 1
+      expect(supplyAfter.sub(supplyBefore)).to.be.closeTo(ethers.utils.parseEther('1'), ethers.utils.parseEther('0.1'));
+      expect(gardenBalanceAfter.sub(gardenBalance)).to.equal(ethers.utils.parseEther('1'));
+      expect(await garden1.totalContributors()).to.equal(2);
+      expect(await garden1.principal()).to.equal(ethers.utils.parseEther('2'));
+      const wethPosition = await garden1.principal();
+      expect(wethPosition).to.be.gt(ethers.utils.parseEther('1.999'));
+      // Contributor Struct
+      const contributor = await garden1.contributors(signer3.getAddress());
+      expect(contributor.lastDepositAt).to.be.gt(0);
+      expect(contributor.initialDepositAt).to.be.gt(0);
+    });
+
     it('a contributor can make multiple deposits', async function () {
       await garden1.connect(signer3).deposit(ethers.utils.parseEther('1'), 1, signer3.getAddress(), {
         value: ethers.utils.parseEther('1'),
@@ -667,7 +699,7 @@ describe('Garden', function () {
       const value = ethers.BigNumber.from(signer3Timestamp[1]);
       await expect(
         await rewardsDistributor.getContributorPower(garden1.address, signer3.address, 0, value.add(4)),
-      ).to.be.closeTo((166666666666666666).toString(), ethers.utils.parseEther('0.05'));
+      ).to.be.closeTo((114285714285714285).toString(), ethers.utils.parseEther('0.05'));
     });
     it('the contributor power is calculated correctly if _from and _to are between two deposits', async function () {
       await garden1.connect(signer3).deposit(ethers.utils.parseEther('1'), 1, signer3.getAddress(), {
