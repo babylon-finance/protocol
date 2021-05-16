@@ -22,6 +22,7 @@ import 'hardhat/console.sol';
 import {Clones} from '@openzeppelin/contracts/proxy/Clones.sol';
 
 import {IGardenFactory} from '../interfaces/IGardenFactory.sol';
+import {IBabController} from '../interfaces/IBabController.sol';
 import {Garden} from './Garden.sol';
 import {GardenNFT} from './GardenNFT.sol';
 
@@ -34,14 +35,12 @@ import {GardenNFT} from './GardenNFT.sol';
 contract GardenFactory is IGardenFactory {
     address private immutable controller;
     address private immutable garden;
-    address private immutable gardenNFT;
 
     constructor(address _controller) {
         require(_controller != address(0), 'Controller is zero');
 
         controller = _controller;
         garden = address(new Garden());
-        gardenNFT = address(new GardenNFT());
     }
 
     /**
@@ -67,8 +66,6 @@ contract GardenFactory is IGardenFactory {
     ) external override returns (address) {
         require(msg.sender == controller, 'Only the controller can create gardens');
         address payable clone = payable(Clones.clone(garden));
-        address cloneNFT = Clones.clone(gardenNFT);
-        GardenNFT(cloneNFT).initialize(controller, address(clone), _name, _symbol, _tokenURI, _seed);
         Garden(clone).initialize(
             _reserveAsset,
             controller,
@@ -76,9 +73,9 @@ contract GardenFactory is IGardenFactory {
             _name,
             _symbol,
             _gardenParams,
-            cloneNFT,
             _initialContribution
         );
+        GardenNFT(IBabController(controller).gardenNFT()).saveGardenURIAndSeed(clone, _tokenURI, _seed);
         return clone;
     }
 }

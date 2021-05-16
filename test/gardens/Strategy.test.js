@@ -138,7 +138,7 @@ describe('Strategy', function () {
       expect(expectedReturn).to.equal(ethers.utils.parseEther('0.05'));
       expect(maxCapitalRequested).to.equal(ethers.utils.parseEther('10'));
       expect(minRebalanceCapital).to.equal(ethers.utils.parseEther('1'));
-      expect(strategyNft).to.equal('0x74bE95FF2Bb67B49ca168ec5f682a03f0c8f3269');
+      expect(strategyNft).to.equal(await babController.strategyNFT());
       expect(enteredAt.isZero()).to.equal(false);
     });
   });

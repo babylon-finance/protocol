@@ -27,18 +27,15 @@ import {IBabController} from './IBabController.sol';
  * Interface for operating with a Garden NFT.
  */
 interface IGardenNFT {
-    function initialize(
-        address _controller,
+    function grantGardenNFT(address _user) external returns (uint256);
+
+    function saveGardenURIAndSeed(
         address _garden,
-        string memory _name,
-        string memory _symbol,
-        string memory _tokenURI,
+        string memory _gardenTokenURI,
         uint256 _seed
     ) external;
 
-    function grantGardenNFT(address _user) external returns (uint256);
+    function gardenTokenURIs(address _garden) external view returns (string memory);
 
-    function updateGardenURI(string memory _tokenURI) external;
-
-    function gardenTokenURI() external returns (string memory);
+    function gardenSeeds(address _garden) external view returns (uint256);
 }

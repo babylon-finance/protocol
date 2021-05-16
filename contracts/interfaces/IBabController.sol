@@ -56,6 +56,10 @@ interface IBabController {
 
     function editGardenFactory(address _newGardenFactory) external;
 
+    function editGardenNFT(address _newGardenNFT) external;
+
+    function editStrategyNFT(address _newStrategyNFT) external;
+
     function editStrategyFactory(address _newStrategyFactory) external;
 
     function editUniswapFactory(address _newUniswapFactory) external;
@@ -97,6 +101,10 @@ interface IBabController {
     function priceOracle() external view returns (address);
 
     function gardenValuer() external view returns (address);
+
+    function gardenNFT() external view returns (address);
+
+    function strategyNFT() external view returns (address);
 
     function rewardsDistributor() external view returns (address);
 

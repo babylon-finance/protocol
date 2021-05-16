@@ -208,7 +208,6 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
     IGarden public override garden;
 
     address public override strategist; // Address of the strategist that submitted the bet
-    address public override strategyNft; // Address of the strategy nft
 
     uint256 public override enteredAt; // Timestamp when the strategy was submitted
     uint256 public override enteredCooldownAt; // Timestamp when the strategy reached quorum
@@ -254,7 +253,6 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
      * @param _strategyDuration              Strategy duration in seconds
      * @param _expectedReturn                Expected return
      * @param _minRebalanceCapital           Min capital that makes executing the strategy worth it
-     * @param _strategyNft                   Address of the strategy nft
      */
     function initialize(
         address _strategist,
@@ -264,8 +262,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         uint256 _stake,
         uint256 _strategyDuration,
         uint256 _expectedReturn,
-        uint256 _minRebalanceCapital,
-        address _strategyNft
+        uint256 _minRebalanceCapital
     ) external override initializer {
         controller = IBabController(_controller);
 
@@ -283,9 +280,6 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         );
         _require(_minRebalanceCapital >= ABSOLUTE_MIN_REBALANCE, Errors.MIN_REBALANCE_CAPITAL);
         _require(_maxCapitalRequested >= _minRebalanceCapital, Errors.MAX_CAPITAL_REQUESTED);
-        _require(_strategyNft != address(0), Errors.NOT_STRATEGY_NFT);
-
-        strategyNft = _strategyNft;
 
         strategist = _strategist;
         enteredAt = block.timestamp;
@@ -453,7 +447,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         exitedAt = block.timestamp;
         updatedAt = exitedAt;
         // Mint NFT
-        IStrategyNFT(strategyNft).grantStrategyNFT(strategist, _tokenURI);
+        IStrategyNFT(IBabController(controller).strategyNFT()).grantStrategyNFT(strategist, _tokenURI);
         // Pay Keeper Fee
         garden.payKeeper(msg.sender, _fee);
         // Transfer rewards
@@ -649,7 +643,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
             expectedReturn,
             maxCapitalRequested,
             minRebalanceCapital,
-            strategyNft,
+            IBabController(controller).strategyNFT(),
             enteredAt
         );
     }
