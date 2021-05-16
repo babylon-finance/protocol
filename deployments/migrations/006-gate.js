@@ -16,7 +16,7 @@ module.exports = async ({
 
   const deployment = await deploy(contract, {
     from: deployer,
-    args: [controller.address, 'http://json.api/test'],
+    args: [controller.address, 'https://babylon.mypinata.cloud/ipfs/QmTTcF8a1asL9YKsCB5DzND1Biy4Kyw4nX7EPSgv1pLEDA'],
     log: true,
     gasPrice,
   });
