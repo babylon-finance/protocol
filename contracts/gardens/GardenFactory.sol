@@ -65,7 +65,7 @@ contract GardenFactory is IGardenFactory {
         uint256[] calldata _gardenParams,
         uint256 _initialContribution
     ) external override returns (address) {
-        require(msg.sender == controller, "Only the controller can create gardens");
+        require(msg.sender == controller, 'Only the controller can create gardens');
         address payable clone = payable(Clones.clone(garden));
         address cloneNFT = Clones.clone(gardenNFT);
         GardenNFT(cloneNFT).initialize(controller, address(clone), _name, _symbol, _tokenURI, _seed);
