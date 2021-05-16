@@ -298,7 +298,9 @@ describe('Garden', function () {
       expect(await daiGarden.principal()).to.equal(ethers.utils.parseEther('1100'));
       expect(await daiGarden.totalContributors()).to.equal(2);
       ethers.provider.send('evm_increaseTime', [1]);
-      await daiGarden.connect(signer3).withdraw(await daiGarden.balanceOf(signer3.address), 1, signer3.getAddress());
+      await daiGarden
+        .connect(signer3)
+        .withdraw(await daiGarden.balanceOf(signer3.address), 1, signer3.getAddress(), false);
       expect(await daiGarden.principal()).to.equal(ethers.utils.parseEther('100'));
       expect(await daiGarden.totalContributors()).to.equal(1);
     });
@@ -350,7 +352,9 @@ describe('Garden', function () {
       expect(await usdcGarden.principal()).to.equal(thousandUSDC.add(thousandUSDC.div(10)));
       expect(await usdcGarden.totalContributors()).to.equal(2);
       ethers.provider.send('evm_increaseTime', [1]);
-      await usdcGarden.connect(signer3).withdraw(await usdcGarden.balanceOf(signer3.address), 1, signer3.getAddress());
+      await usdcGarden
+        .connect(signer3)
+        .withdraw(await usdcGarden.balanceOf(signer3.address), 1, signer3.getAddress(), false);
       expect(await usdcGarden.principal()).to.equal(thousandUSDC.div(10));
       expect(await usdcGarden.totalContributors()).to.equal(1);
     });
@@ -413,7 +417,7 @@ describe('Garden', function () {
       ethers.provider.send('evm_increaseTime', [ONE_DAY_IN_SECONDS * 90]);
       expect(await garden1.principal()).to.equal(ethers.utils.parseEther('2'));
       expect(await garden1.totalContributors()).to.equal(2);
-      await garden1.connect(signer3).withdraw(90909, 1, signer3.getAddress());
+      await garden1.connect(signer3).withdraw(90909, 1, signer3.getAddress(), false);
     });
 
     it('a contributor cannot withdraw gardens until the time ends', async function () {
@@ -422,8 +426,8 @@ describe('Garden', function () {
       });
       expect(await garden1.principal()).to.equal(ethers.utils.parseEther('2'));
       expect(await garden1.totalContributors()).to.equal(2);
-      await expect(garden1.connect(signer3).withdraw(ethers.utils.parseEther('20'), 1, signer3.getAddress())).to.be
-        .reverted;
+      await expect(garden1.connect(signer3).withdraw(ethers.utils.parseEther('20'), 1, signer3.getAddress()), false).to
+        .be.reverted;
     });
 
     it('a contributor cannot make a deposit when the garden is disabled', async function () {
@@ -442,10 +446,10 @@ describe('Garden', function () {
       ethers.provider.send('evm_increaseTime', [ONE_DAY_IN_SECONDS * 90]);
       expect(await garden1.principal()).to.equal(ethers.utils.parseEther('2'));
       expect(await garden1.totalContributors()).to.equal(2);
-      await expect(garden1.connect(signer3).withdraw(ethers.utils.parseEther('1.12'), 2, signer3.getAddress())).to.be
-        .reverted;
-      await expect(garden1.connect(signer3).withdraw(ethers.utils.parseEther('20'), 2, signer3.getAddress())).to.be
-        .reverted;
+      await expect(garden1.connect(signer3).withdraw(ethers.utils.parseEther('1.12'), 2, signer3.getAddress()), false)
+        .to.be.reverted;
+      await expect(garden1.connect(signer3).withdraw(ethers.utils.parseEther('20'), 2, signer3.getAddress()), false).to
+        .to.be.reverted;
     });
 
     it('strategist or voters cannot withdraw more comunity tokens than they have locked in active strategies', async function () {
@@ -472,6 +476,7 @@ describe('Garden', function () {
             signer1Balance.sub(signer1LockedBalance).add(ethers.utils.parseEther('0.1')),
             1,
             signer1.getAddress(),
+            false,
           ),
       ).to.be.reverted;
       // Cannot withdraw locked stake amount
@@ -482,6 +487,7 @@ describe('Garden', function () {
             signer2Balance.sub(signer2LockedBalance).add(ethers.utils.parseEther('0.1')),
             1,
             signer2.getAddress(),
+            false,
           ),
       ).to.be.reverted;
     });
@@ -507,7 +513,7 @@ describe('Garden', function () {
 
       // Can now withdraw stake amount as it is again unlocked
 
-      await garden1.connect(signer2).withdraw(await garden1.balanceOf(signer2.address), 1, signer2.getAddress());
+      await garden1.connect(signer2).withdraw(await garden1.balanceOf(signer2.address), 1, signer2.getAddress(), false);
 
       const WITHDRAWsigner2Balance = await garden1.balanceOf(signer2.address);
       await expect(WITHDRAWsigner2Balance).to.be.equal(ethers.utils.parseEther('0'));
@@ -535,8 +541,9 @@ describe('Garden', function () {
       await finalizeStrategy(strategyContract, 42);
 
       // Can now withdraw stake amount as it is again unlocked
-      await expect(garden1.connect(signer2).withdraw(await garden1.balanceOf(signer2.address), 1, signer2.getAddress()))
-        .not.to.be.reverted;
+      await expect(
+        garden1.connect(signer2).withdraw(await garden1.balanceOf(signer2.address), 1, signer2.getAddress(), false),
+      ).not.to.be.reverted;
 
       const WITHDRAWsigner2Balance = await garden1.balanceOf(signer2.address);
       await expect(WITHDRAWsigner2Balance).to.be.equal(ethers.utils.parseEther('0'));
@@ -592,7 +599,7 @@ describe('Garden', function () {
       const beforeBalance = await garden1.balanceOf(signer2.address);
 
       const lockedBalance = await garden1.getLockedBalance(signer2.address);
-      await expect(garden1.connect(signer2).withdraw(beforeBalance.sub(lockedBalance), 1, signer2.getAddress()));
+      await expect(garden1.connect(signer2).withdraw(beforeBalance.sub(lockedBalance), 1, signer2.getAddress(), false));
 
       const afterBalance = await garden1.balanceOf(signer2.address);
       await expect(afterBalance).to.be.equal(beforeBalance.mul(lockedBalance).div(beforeBalance));

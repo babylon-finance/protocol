@@ -24,6 +24,8 @@ module.exports = async ({ getNamedAccounts, deployments, ethers, getSigner, getC
   const rewardsDistributor = await deployments.get('RewardsDistributor');
   const gardenFactory = await deployments.get('GardenFactory');
   const strategyFactory = await deployments.get('StrategyFactory');
+  const strategyNFT = await deployments.get('StrategyNFT');
+  const gardenNFT = await deployments.get('GardenNFT');
 
   const controllerContract = await ethers.getContractAt('BabController', controller.address);
 
@@ -54,6 +56,10 @@ module.exports = async ({ getNamedAccounts, deployments, ethers, getSigner, getC
   await controllerContract.connect(owner).editGardenFactory(gardenFactory.address, { gasPrice });
   console.log(`Setting strategy factory on controller ${strategyFactory.address}`);
   await controllerContract.connect(owner).editStrategyFactory(strategyFactory.address, { gasPrice });
+  console.log(`Setting garden NFT on controller ${gardenNFT.address}`);
+  await controllerContract.connect(owner).editGardenNFT(gardenNFT.address, { gasPrice });
+  console.log(`Setting strategy NFT on controller ${strategyNFT.address}`);
+  await controllerContract.connect(owner).editStrategyNFT(strategyNFT.address, { gasPrice });
 
   // Adding integrations
   for (const integration of [

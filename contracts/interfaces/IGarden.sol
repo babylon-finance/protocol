@@ -35,8 +35,6 @@ interface IGarden {
 
     function controller() external view returns (address);
 
-    function nftAddress() external view returns (address);
-
     function creator() external view returns (address);
 
     function isGardenStrategy(address _strategy) external view returns (bool);
@@ -116,7 +114,8 @@ interface IGarden {
     function withdraw(
         uint256 _gardenTokenQuantity,
         uint256 _minReserveReceiveQuantity,
-        address payable _to
+        address payable _to,
+        bool _withPenalty
     ) external;
 
     function claimReturns(address[] calldata _finalizedStrategies) external;
