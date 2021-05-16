@@ -57,6 +57,8 @@ contract BabControllerV2Mock is OwnableUpgradeable {
     address public rewardsDistributor;
     address public ishtarGate;
     address public strategyFactory;
+    address public gardenNFT;
+    address public strategyNFT;
 
     // Mapping of integration name => integration address
     mapping(bytes32 => address) private enabledIntegrations;

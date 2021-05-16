@@ -542,8 +542,7 @@ describe('Garden', function () {
 
       // Can now withdraw stake amount as it is again unlocked
       await expect(
-        garden1.connect(signer2).withdraw(await garden1.balanceOf(signer2.address), 1, signer2.getAddress()),
-        false,
+        garden1.connect(signer2).withdraw(await garden1.balanceOf(signer2.address), 1, signer2.getAddress(), false),
       ).not.to.be.reverted;
 
       const WITHDRAWsigner2Balance = await garden1.balanceOf(signer2.address);
@@ -600,7 +599,7 @@ describe('Garden', function () {
       const beforeBalance = await garden1.balanceOf(signer2.address);
 
       const lockedBalance = await garden1.getLockedBalance(signer2.address);
-      await expect(garden1.connect(signer2).withdraw(beforeBalance.sub(lockedBalance), 1, signer2.getAddress()), false);
+      await expect(garden1.connect(signer2).withdraw(beforeBalance.sub(lockedBalance), 1, signer2.getAddress(), false));
 
       const afterBalance = await garden1.balanceOf(signer2.address);
       await expect(afterBalance).to.be.equal(beforeBalance.mul(lockedBalance).div(beforeBalance));
