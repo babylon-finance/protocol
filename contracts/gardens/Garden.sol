@@ -17,7 +17,7 @@
 
 pragma solidity 0.7.6;
 
-// import 'hardhat/console.sol';
+import 'hardhat/console.sol';
 import {Address} from '@openzeppelin/contracts/utils/Address.sol';
 import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import {SafeERC20} from '@openzeppelin/contracts/token/ERC20/SafeERC20.sol';
@@ -838,7 +838,9 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
     ) internal virtual override {
         super._beforeTokenTransfer(from, to, _amount);
         _require(
-            from == address(0) || to == address(0) || IBabController(controller).gardenTokensTransfersEnabled(),
+            from == address(0) ||
+                to == address(0) ||
+                (IBabController(controller).gardenTokensTransfersEnabled() && !guestListEnabled),
             Errors.GARDEN_TRANSFERS_DISABLED
         );
     }
