@@ -1,4 +1,5 @@
 const { deployments } = require('hardhat');
+const { TWAP_ORACLE_WINDOW, TWAP_ORACLE_GRANULARITY } = require('../../lib/system.js');
 const { GARDEN_PARAMS } = require('../../lib/constants.js');
 const addresses = require('../../lib/addresses');
 const { impersonateAddress } = require('../../lib/rpc');
@@ -8,9 +9,9 @@ async function setUpFixture({ deployments, getNamedAccounts, ethers }, options, 
   async function getContract(contractName, deploymentName) {
     return await ethers.getContractAt(contractName, (await deployments.get(deploymentName || contractName)).address);
   }
-  await deployments.fixture();
-
   const [deployer, keeper, owner, signer1, signer2, signer3] = await ethers.getSigners();
+
+  await deployments.fixture();
 
   const babController = await getContract('BabController', 'BabControllerProxy');
   const bablToken = await getContract('BABLToken');
@@ -35,6 +36,14 @@ async function setUpFixture({ deployments, getNamedAccounts, ethers }, options, 
   const addLiquidityOperation = await getContract('AddLiquidityOperation');
   const depositVaultOperation = await getContract('DepositVaultOperation');
   const lendOperation = await getContract('LendOperation');
+
+  // deploy uniswap v2 adapter for tests
+  const twap = await deployments.deploy('UniswapTWAP', {
+    from: deployer.address,
+    args: [babController.address, addresses.uniswap.factory, TWAP_ORACLE_WINDOW, TWAP_ORACLE_GRANULARITY],
+    log: true,
+  });
+  await priceOracle.connect(owner).addAdapter(twap.address);
 
   // Gives signer1 creator permissions
   await ishtarGate.connect(owner).setCreatorPermissions(owner.address, true, { gasPrice: 0 });

@@ -104,17 +104,23 @@ contract UniswapTWAPV3 is Ownable, IOracleAdapter {
         bool found = false;
         // We try the low pool first
         IUniswapV3Pool pool = IUniswapV3Pool(factory.getPool(tokenIn, tokenOut, FEE_LOW));
-        (sqrtPriceX96, tick, , , , , ) = pool.slot0();
-        found = _checkPrice(tick, pool);
-        if (!found) {
-            pool = IUniswapV3Pool(factory.getPool(tokenIn, tokenOut, FEE_MEDIUM));
+        if (address(pool) != address(0)) {
             (sqrtPriceX96, tick, , , , , ) = pool.slot0();
             found = _checkPrice(tick, pool);
         }
         if (!found) {
+            pool = IUniswapV3Pool(factory.getPool(tokenIn, tokenOut, FEE_MEDIUM));
+            if (address(pool) != address(0)) {
+                (sqrtPriceX96, tick, , , , , ) = pool.slot0();
+                found = _checkPrice(tick, pool);
+            }
+        }
+        if (!found) {
             pool = IUniswapV3Pool(factory.getPool(tokenIn, tokenOut, FEE_HIGH));
-            (sqrtPriceX96, tick, , , , , ) = pool.slot0();
-            found = _checkPrice(tick, pool);
+            if (address(pool) != address(0)) {
+                (sqrtPriceX96, tick, , , , , ) = pool.slot0();
+                found = _checkPrice(tick, pool);
+            }
         }
         // No valid price
         if (!found) {
