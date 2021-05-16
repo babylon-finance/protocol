@@ -95,13 +95,15 @@ describe('Strategy', function () {
     });
   });
 
-  describe('changeStrategyDuration', function () {
+  describe.only('changeStrategyDuration', function () {
     it('strategist should be able to change the duration of an strategy strategy', async function () {
-      await expect(strategyDataset.connect(signer1).changeStrategyDuration(ONE_DAY_IN_SECONDS)).to.not.be.reverted;
+      await expect(strategyDataset.connect(signer1).changeStrategyDuration(ONE_DAY_IN_SECONDS * 3)).to.not.be.reverted;
     });
 
-    it('other member should be able to change the duration of an strategy', async function () {
-      await expect(strategyDataset.connect(signer3).changeStrategyDuration(ONE_DAY_IN_SECONDS)).to.be.reverted;
+    it('other member should not be able to change the duration of an strategy', async function () {
+      await expect(strategyDataset.connect(signer3).changeStrategyDuration(ONE_DAY_IN_SECONDS * 3)).to.be.revertedWith(
+        'revert BAB#032',
+      );
     });
   });
 
