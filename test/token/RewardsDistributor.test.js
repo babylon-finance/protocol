@@ -176,9 +176,9 @@ describe('BABL Rewards Distributor', function () {
       await executeStrategy(long1, ONE_ETH);
 
       const { updatedAt } = await getStrategyState(long1);
-
+      // Check principal normalized to DAI
       await getAndValidateProtocolTimestampAndQuarter(rewardsDistributor, updatedAt, {
-        principal: ONE_ETH,
+        principal: '3911436663717185355925',
         quarter: 1,
         timeListPointer: 0,
       });
@@ -236,8 +236,9 @@ describe('BABL Rewards Distributor', function () {
 
       const { exitedAt } = await getStrategyState(long1);
 
+      // Check principal normalized to DAI
       await getAndValidateProtocolTimestampAndQuarter(rewardsDistributor, exitedAt, {
-        principal: ONE_ETH,
+        principal: '3911436663717185355925',
         quarter: 1,
         timeListPointer: 2,
       });
@@ -277,9 +278,9 @@ describe('BABL Rewards Distributor', function () {
       await executeStrategy(long3, ONE_ETH);
 
       const { updatedAt } = await getStrategyState(long3);
-
+      // Check principal normalized to DAI
       await getAndValidateProtocolTimestampAndQuarter(rewardsDistributor, updatedAt, {
-        principal: ONE_ETH.mul(3),
+        principal: '11734309991151556067775',
         quarter: 1,
         timeListPointer: 2,
       });
@@ -330,8 +331,9 @@ describe('BABL Rewards Distributor', function () {
 
       const { updatedAt } = await getStrategyState(long5);
 
+      // Check principal normalized to DAI
       await getAndValidateProtocolTimestampAndQuarter(rewardsDistributor, updatedAt, {
-        principal: ONE_ETH.mul(5),
+        principal: '19557183318585926779625',
         quarter: 1,
         timeListPointer: 4,
       });
@@ -463,8 +465,9 @@ describe('BABL Rewards Distributor', function () {
 
       const { updatedAt } = await getStrategyState(long5);
 
+      // Check principal normalized to DAI
       await getAndValidateProtocolTimestampAndQuarter(rewardsDistributor, updatedAt, {
-        principal: ONE_ETH.mul(5),
+        principal: '19557183318585926779625',
         quarter: 1,
         timeListPointer: 4,
       });
@@ -527,8 +530,9 @@ describe('BABL Rewards Distributor', function () {
 
       const { updatedAt } = await getStrategyState(long5);
 
+      // Check principal normalized to DAI
       await getAndValidateProtocolTimestampAndQuarter(rewardsDistributor, updatedAt, {
-        principal: ONE_ETH.mul(5),
+        principal: '19557183318585926779625',
         quarter: 41,
         timeListPointer: 4,
       });
