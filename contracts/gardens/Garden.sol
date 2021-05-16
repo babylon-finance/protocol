@@ -113,8 +113,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
 
     // Address of the controller
     address public override controller;
-    // Address of the nft
-    address public override nftAddress;
+
     // The person that creates the garden
     address public override creator;
     // Whether the garden is currently active or not
@@ -179,7 +178,6 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
      * @param _name                   Name of the Garden
      * @param _symbol                 Symbol of the Garden
      * @param _gardenParams           Array of numeric garden params
-     * @param _nftAddress             Garden NFT address
      * @param _initialContribution    Initial Contribution by the Gardener
      */
     function initialize(
@@ -189,7 +187,6 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         string memory _name,
         string memory _symbol,
         uint256[] calldata _gardenParams,
-        address _nftAddress,
         uint256 _initialContribution
     ) public payable initializer {
         _require(bytes(_name).length < 50, Errors.NAME_TOO_LONG);
@@ -204,7 +201,6 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         reserveAsset = _reserveAsset;
         creator = _creator;
         maxContributors = IBabController(_controller).maxContributorsPerGarden();
-        nftAddress = _nftAddress;
         guestListEnabled = true;
 
         _start(
@@ -330,24 +326,19 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
      * @param _gardenTokenQuantity             Quantity of the garden token to withdrawal
      * @param _minReserveReceiveQuantity     Min quantity of reserve asset to receive
      * @param _to                            Address to send component assets to
+     * @param _withPenalty                   Whether or not this is an immediate withdrawal
      */
     function withdraw(
         uint256 _gardenTokenQuantity,
         uint256 _minReserveReceiveQuantity,
-        address payable _to
+        address payable _to,
+        bool _withPenalty
     ) external override nonReentrant {
         _onlyContributor();
-        _withdraw(_gardenTokenQuantity, _minReserveReceiveQuantity, _to);
-    }
-
-    /**
-     * Requests an immediate withdrawal taking the EARLY_WITHDRAWAL_PENALTY that stays invested.
-     *
-     * @param _gardenTokenQuantity              Quantity of the garden token to withdrawal
-     * @param _to                               Address to send component assets to
-     */
-    function withdrawWithPenalty(uint256 _gardenTokenQuantity, address payable _to) external nonReentrant {
-        _onlyContributor();
+        if (!_withPenalty) {
+            // Requests an immediate withdrawal taking the EARLY_WITHDRAWAL_PENALTY that stays invested.
+            return _withdraw(_gardenTokenQuantity, _minReserveReceiveQuantity, _to);
+        }
         // Check that cannot do a normal withdrawal
         _require(!_canWithdrawReserveAmount(msg.sender, _gardenTokenQuantity), Errors.NORMAL_WITHDRAWAL_POSSIBLE);
         uint256 netReserveFlows = _gardenTokenQuantity.sub(_gardenTokenQuantity.preciseMul(EARLY_WITHDRAWAL_PENALTY));
@@ -744,7 +735,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         _updateContributorDepositInfo(_to, previousBalance);
         principal = _newPrincipal;
         // Mint the garden NFT
-        IGardenNFT(nftAddress).grantGardenNFT(_to);
+        IGardenNFT(IBabController(controller).gardenNFT()).grantGardenNFT(_to);
         _require(totalSupply() > 0, Errors.MIN_LIQUIDITY);
         emit GardenDeposit(_to, msg.value, _reserveAssetQuantity, _protocolFees, block.timestamp);
     }

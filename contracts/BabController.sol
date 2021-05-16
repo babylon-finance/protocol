@@ -67,6 +67,8 @@ contract BabController is OwnableUpgradeable, IBabController {
     event GardenValuerChanged(address indexed _gardenValuer, address _oldGardenValuer);
     event GardenFactoryChanged(address indexed _gardenFactory, address _oldGardenFactory);
     event UniswapFactoryChanged(address indexed _newUniswapFactory, address _oldUniswapFactory);
+    event GardenNFTChanged(address indexed _newGardenNFT, address _oldStrategyNFT);
+    event StrategyNFTChanged(address indexed _newStrategyNFT, address _oldStrategyNFT);
 
     event StrategyFactoryEdited(address indexed _strategyFactory, address _oldStrategyFactory);
 
@@ -87,6 +89,8 @@ contract BabController is OwnableUpgradeable, IBabController {
     address public override rewardsDistributor;
     address public override ishtarGate;
     address public override strategyFactory;
+    address public override gardenNFT;
+    address public override strategyNFT;
 
     // Mapping of integration name => integration address
     mapping(bytes32 => address) private enabledIntegrations;
@@ -468,6 +472,34 @@ contract BabController is OwnableUpgradeable, IBabController {
     }
 
     /**
+     * PRIVILEGED GOVERNANCE FUNCTION. Allows governance to edit the protocol garden NFT
+     *
+     * @param _newGardenNFT      Address of the new garden NFT
+     */
+    function editGardenNFT(address _newGardenNFT) external override onlyOwner {
+        require(_newGardenNFT != address(0), 'Address must not be 0');
+
+        address oldGardenNFT = gardenNFT;
+        gardenNFT = _newGardenNFT;
+
+        emit GardenNFTChanged(_newGardenNFT, oldGardenNFT);
+    }
+
+    /**
+     * PRIVILEGED GOVERNANCE FUNCTION. Allows governance to edit the protocol strategy NFT
+     *
+     * @param _newStrategyNFT      Address of the new strategy NFT
+     */
+    function editStrategyNFT(address _newStrategyNFT) external override onlyOwner {
+        require(_newStrategyNFT != address(0), 'Address must not be 0');
+
+        address oldStrategyNFT = strategyNFT;
+        strategyNFT = _newStrategyNFT;
+
+        emit StrategyNFTChanged(_newStrategyNFT, oldStrategyNFT);
+    }
+
+    /**
      * PRIVILEGED GOVERNANCE FUNCTION. Allows governance to edit the protocol uniswaps factory
      *
      * @param _newUniswapFactory      Address of the new uniswap factory
@@ -704,6 +736,8 @@ contract BabController is OwnableUpgradeable, IBabController {
         return (isGarden[_contractAddress] ||
             gardenValuer == _contractAddress ||
             priceOracle == _contractAddress ||
+            gardenFactory == _contractAddress ||
+            strategyFactory == _contractAddress ||
             rewardsDistributor == _contractAddress ||
             owner() == _contractAddress ||
             _contractAddress == address(this) ||

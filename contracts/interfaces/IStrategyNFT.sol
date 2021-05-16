@@ -27,14 +27,21 @@ import {IBabController} from './IBabController.sol';
  * Interface for operating with a Strategy NFT.
  */
 interface IStrategyNFT {
-    function initialize(
-        address _controller,
+    struct StratDetail {
+        string name;
+        string symbol;
+        uint256 tokenId;
+    }
+
+    function grantStrategyNFT(address _user, string memory _strategyTokenURI) external returns (uint256);
+
+    function saveStrategyNameAndSymbol(
         address _strategy,
         string memory _name,
         string memory _symbol
     ) external;
 
-    function grantStrategyNFT(address _user, string memory _tokenURI) external returns (uint256);
+    function getStrategyTokenURI(address _stratgy) external view returns (string memory);
 
-    function updateStrategyURI(string memory _tokenURI) external;
+    function getStrategyName(address _strategy) external view returns (string memory);
 }
