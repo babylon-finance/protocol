@@ -95,7 +95,7 @@ describe('Strategy', function () {
     });
   });
 
-  describe.only('changeStrategyDuration', function () {
+  describe('changeStrategyDuration', function () {
     it('strategist should be able to change the duration of an strategy strategy', async function () {
       await expect(strategyDataset.connect(signer1).changeStrategyDuration(ONE_DAY_IN_SECONDS * 3)).to.not.be.reverted;
     });
