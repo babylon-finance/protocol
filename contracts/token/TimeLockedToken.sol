@@ -322,11 +322,15 @@ abstract contract TimeLockedToken is VoteToken {
      */
     function lockedBalance(address account) public returns (uint256) {
         // get amount from distributions locked tokens (if any)
-
         uint256 lockedAmount = viewLockedBalance(account);
 
-        // in case of vesting has passed, all tokens are now available so we set mapping to 0
-        if (block.timestamp >= vestedToken[account].vestingEnd && msg.sender == account && lockedAmount == 0) {
+        // in case of vesting has passed, all tokens are now available so we set mapping to 0 only for accounts under vesting
+        if (
+            block.timestamp >= vestedToken[account].vestingEnd &&
+            msg.sender == account &&
+            lockedAmount == 0 &&
+            vestedToken[account].vestingEnd != 0
+        ) {
             delete distribution[account];
         }
         return lockedAmount;
@@ -386,7 +390,7 @@ abstract contract TimeLockedToken is VoteToken {
      */
     function increaseAllowance(address spender, uint256 addedValue) public override nonReentrant returns (bool) {
         require(
-            unlockedBalance(msg.sender) >= addedValue,
+            unlockedBalance(msg.sender) >= allowance(msg.sender, spender).add(addedValue),
             'TimeLockedToken::increaseAllowance:Not enough unlocked tokens'
         );
         require(spender != address(0), 'TimeLockedToken::increaseAllowance:Spender cannot be zero address');
