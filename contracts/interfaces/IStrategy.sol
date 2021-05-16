@@ -34,8 +34,7 @@ interface IStrategy {
         uint256 _stake,
         uint256 _strategyDuration,
         uint256 _expectedReturn,
-        uint256 _minRebalanceCapital,
-        address _strategyNft
+        uint256 _minRebalanceCapital
     ) external;
 
     function resolveVoting(
@@ -137,8 +136,6 @@ interface IStrategy {
     function getUserVotes(address _address) external view returns (int256);
 
     function strategist() external view returns (address);
-
-    function strategyNft() external view returns (address);
 
     function enteredAt() external view returns (uint256);
 

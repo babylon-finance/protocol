@@ -82,7 +82,11 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
      * Throws if the sender is not the creator of the strategy
      */
     modifier onlyGovernorOrGarden {
-        _require(msg.sender == address(garden) || msg.sender == controller.owner(), Errors.ONLY_PROTOCOL_OR_GARDEN);
+        _require(
+            (msg.sender == address(garden) && IBabController(controller).isSystemContract(address(garden))) ||
+                msg.sender == controller.owner(),
+            Errors.ONLY_PROTOCOL_OR_GARDEN
+        );
         _;
     }
 
@@ -92,7 +96,11 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
     }
 
     modifier onlyContributor {
-        _require(IERC20(address(garden)).balanceOf(msg.sender) > 0, Errors.ONLY_CONTRIBUTOR);
+        _require(
+            IERC20(address(garden)).balanceOf(msg.sender) > 0 &&
+                IBabController(controller).isSystemContract(address(garden)),
+            Errors.ONLY_CONTRIBUTOR
+        );
         _;
     }
 
@@ -125,7 +133,10 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
      * Throws if the garden is not the caller or data is already set
      */
     modifier onlyGardenAndNotSet() {
-        _require(msg.sender == address(garden) && !dataSet, Errors.ONLY_GARDEN_AND_DATA_NOT_SET);
+        _require(
+            msg.sender == address(garden) && !dataSet && IBabController(controller).isSystemContract(address(garden)),
+            Errors.ONLY_GARDEN_AND_DATA_NOT_SET
+        );
         _;
     }
 
@@ -133,7 +144,10 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
      * Throws if the garden is not active
      */
     modifier onlyActiveGarden() {
-        _require(garden.active() == true, Errors.ONLY_ACTIVE_GARDEN);
+        _require(
+            garden.active() == true && IBabController(controller).isSystemContract(address(garden)),
+            Errors.ONLY_ACTIVE_GARDEN
+        );
         _;
     }
 
@@ -150,7 +164,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
 
     /* ============ Constants ============ */
 
-    uint256 internal constant SLIPPAGE_ALLOWED = 1e16; // 1%
+    uint256 internal constant SLIPPAGE_ALLOWED = 5e16; // 1%
     uint256 internal constant HUNDRED_PERCENT = 1e18; // 100%
     uint256 internal constant MAX_CANDIDATE_PERIOD = 7 days;
     uint256 internal constant MIN_VOTERS_TO_BECOME_ACTIVE = 2;
@@ -194,7 +208,6 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
     IGarden public override garden;
 
     address public override strategist; // Address of the strategist that submitted the bet
-    address public override strategyNft; // Address of the strategy nft
 
     uint256 public override enteredAt; // Timestamp when the strategy was submitted
     uint256 public override enteredCooldownAt; // Timestamp when the strategy reached quorum
@@ -240,7 +253,6 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
      * @param _strategyDuration              Strategy duration in seconds
      * @param _expectedReturn                Expected return
      * @param _minRebalanceCapital           Min capital that makes executing the strategy worth it
-     * @param _strategyNft                   Address of the strategy nft
      */
     function initialize(
         address _strategist,
@@ -250,8 +262,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         uint256 _stake,
         uint256 _strategyDuration,
         uint256 _expectedReturn,
-        uint256 _minRebalanceCapital,
-        address _strategyNft
+        uint256 _minRebalanceCapital
     ) external override initializer {
         controller = IBabController(_controller);
 
@@ -269,9 +280,6 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         );
         _require(_minRebalanceCapital >= ABSOLUTE_MIN_REBALANCE, Errors.MIN_REBALANCE_CAPITAL);
         _require(_maxCapitalRequested >= _minRebalanceCapital, Errors.MAX_CAPITAL_REQUESTED);
-        _require(_strategyNft != address(0), Errors.NOT_STRATEGY_NFT);
-
-        strategyNft = _strategyNft;
 
         strategist = _strategist;
         enteredAt = block.timestamp;
@@ -444,7 +452,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         exitedAt = block.timestamp;
         updatedAt = exitedAt;
         // Mint NFT
-        IStrategyNFT(strategyNft).grantStrategyNFT(strategist, _tokenURI);
+        IStrategyNFT(IBabController(controller).strategyNFT()).grantStrategyNFT(strategist, _tokenURI);
         // Pay Keeper Fee
         garden.payKeeper(msg.sender, _fee);
         // Transfer rewards
@@ -510,6 +518,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
     function changeStrategyDuration(uint256 _newDuration) external override onlyStrategist {
         _require(!finalized, Errors.STRATEGY_IS_ALREADY_FINALIZED);
         _require(_newDuration < duration, Errors.DURATION_NEEDS_TO_BE_LESS);
+        _require(_newDuration >= garden.minStrategyDuration(), Errors.DURATION_NEEDS_TO_BE_LESS);
         emit StrategyDurationChanged(_newDuration, duration);
         duration = _newDuration;
     }
@@ -527,7 +536,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         _require(balance > 0, Errors.BALANCE_TOO_LOW);
 
         _trade(_token, balance, garden.reserveAsset());
-        // Send WETH to garden
+        // Send reserve asset to garden
         _sendReserveAssetToGarden();
     }
 
@@ -639,7 +648,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
             expectedReturn,
             maxCapitalRequested,
             minRebalanceCapital,
-            strategyNft,
+            IBabController(controller).strategyNFT(),
             enteredAt
         );
     }

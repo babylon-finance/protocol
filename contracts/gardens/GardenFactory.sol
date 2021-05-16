@@ -22,6 +22,7 @@ import 'hardhat/console.sol';
 import {Clones} from '@openzeppelin/contracts/proxy/Clones.sol';
 
 import {IGardenFactory} from '../interfaces/IGardenFactory.sol';
+import {IBabController} from '../interfaces/IBabController.sol';
 import {Garden} from './Garden.sol';
 import {GardenNFT} from './GardenNFT.sol';
 
@@ -34,14 +35,12 @@ import {GardenNFT} from './GardenNFT.sol';
 contract GardenFactory is IGardenFactory {
     address private immutable controller;
     address private immutable garden;
-    address private immutable gardenNFT;
 
     constructor(address _controller) {
         require(_controller != address(0), 'Controller is zero');
 
         controller = _controller;
         garden = address(new Garden());
-        gardenNFT = address(new GardenNFT());
     }
 
     /**
@@ -53,6 +52,7 @@ contract GardenFactory is IGardenFactory {
      * @param _tokenURI               URL of the garden NFT JSON
      * @param _seed                   Seed to regenerate the garden NFT
      * @param _gardenParams           Array of numeric params in the garden
+     * @param _initialContribution    Initial Contribution by the Gardener
      */
     function createGarden(
         address _reserveAsset,
@@ -61,20 +61,21 @@ contract GardenFactory is IGardenFactory {
         string memory _symbol,
         string memory _tokenURI,
         uint256 _seed,
-        uint256[] calldata _gardenParams
-    ) external payable override returns (address) {
+        uint256[] calldata _gardenParams,
+        uint256 _initialContribution
+    ) external override returns (address) {
+        require(msg.sender == controller, 'Only the controller can create gardens');
         address payable clone = payable(Clones.clone(garden));
-        address cloneNFT = Clones.clone(gardenNFT);
-        GardenNFT(cloneNFT).initialize(controller, address(clone), _name, _symbol, _tokenURI, _seed);
-        Garden(clone).initialize{value: msg.value}(
+        Garden(clone).initialize(
             _reserveAsset,
             controller,
             _creator,
             _name,
             _symbol,
             _gardenParams,
-            cloneNFT
+            _initialContribution
         );
+        GardenNFT(IBabController(controller).gardenNFT()).saveGardenURIAndSeed(clone, _tokenURI, _seed);
         return clone;
     }
 }

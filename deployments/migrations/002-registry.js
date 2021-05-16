@@ -1,4 +1,12 @@
-module.exports = async ({ getNamedAccounts, deployments, ethers, getRapid }) => {
+module.exports = async ({
+  tenderly,
+  getTenderlyContract,
+  network,
+  getNamedAccounts,
+  deployments,
+  ethers,
+  getRapid,
+}) => {
   const { deploy } = deployments;
   const { deployer } = await getNamedAccounts();
   const gasPrice = await getRapid();
@@ -12,10 +20,17 @@ module.exports = async ({ getNamedAccounts, deployments, ethers, getRapid }) => 
     gasPrice,
   });
 
-  const bablTokenContract = await ethers.getContractAt('BABLToken', bablToken.address);
-  // Sets the Time Lock Registry address
-  await bablTokenContract.setTimeLockRegistry(timeLockRegistry.address);
+  if (timeLockRegistry.newlyDeployed) {
+    const bablTokenContract = await ethers.getContractAt('BABLToken', bablToken.address);
+    // Sets the Time Lock Registry address
+    await bablTokenContract.setTimeLockRegistry(timeLockRegistry.address);
+  }
+
+  if (network.live && timeLockRegistry.newlyDeployed) {
+    const contract = await getTenderlyContract('TimeLockRegistry');
+    await tenderly.push(contract);
+  }
 };
 
 module.exports.tags = ['Registry'];
-module.exports.dependencies = ['Token'];
+module.exports.dependencies = ['Controller'];

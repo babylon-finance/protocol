@@ -6,11 +6,13 @@ require('hardhat-deploy');
 require('hardhat-contract-sizer');
 require('hardhat-docgen');
 require('hardhat-gas-reporter');
+require('@tenderly/hardhat-tenderly');
 require('solidity-coverage');
 require('@typechain/hardhat');
 
 require('./lib/plugins/upgrades');
 require('./lib/plugins/gasnow');
+require('./lib/plugins/utils');
 
 require('./lib/tasks/node-ready');
 require('./lib/tasks/export');
@@ -50,7 +52,7 @@ module.exports = {
       allowUnlimitedContractSize: true,
       forking: {
         url: `https://eth-mainnet.alchemyapi.io/v2/${ALCHEMY_KEY}`,
-        blockNumber: 12160000,
+        blockNumber: 12413620,
       },
       saveDeployments: true,
     },
@@ -89,6 +91,10 @@ module.exports = {
         },
       },
     ],
+  },
+  tenderly: {
+    username: 'babylon_finance',
+    project: 'babylon',
   },
   paths: {
     sources: './contracts',

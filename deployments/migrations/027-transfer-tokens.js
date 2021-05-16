@@ -42,7 +42,7 @@ module.exports = async ({ getNamedAccounts, deployments, ethers, getSigner, getC
   }));
   const batchSize = 20;
   for (let i = 0; i < allocations.length; i += batchSize) {
-    await timeLockRegistry.connect(deployerSigner).registerBatch(allocations.slice(i, i + batchSize));
+    await timeLockRegistry.connect(deployerSigner).registerBatch(allocations.slice(i, i + batchSize), { gasPrice });
   }
   console.log(
     `Total amount of BABL tokens in registrations is ${ethers.utils.formatUnits(await timeLockRegistry.totalTokens())}`,

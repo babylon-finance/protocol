@@ -21,8 +21,9 @@ pragma solidity 0.7.6;
 import {Clones} from '@openzeppelin/contracts/proxy/Clones.sol';
 
 import {IStrategy} from '../interfaces/IStrategy.sol';
+import {IStrategyNFT} from '../interfaces/IStrategyNFT.sol';
+import {IBabController} from '../interfaces/IBabController.sol';
 import {IStrategyFactory} from '../interfaces/IStrategyFactory.sol';
-import {StrategyNFT} from './StrategyNFT.sol';
 import {Strategy} from './Strategy.sol';
 
 /**
@@ -34,14 +35,12 @@ import {Strategy} from './Strategy.sol';
 contract StrategyFactory is IStrategyFactory {
     address private immutable controller;
     address payable private immutable strategy;
-    address private immutable strategyNft;
 
     constructor(address _controller) {
         require(_controller != address(0), 'Controller is zero');
 
         controller = _controller;
         strategy = address(new Strategy());
-        strategyNft = address(new StrategyNFT());
     }
 
     /**
@@ -61,8 +60,6 @@ contract StrategyFactory is IStrategyFactory {
         uint256[] calldata _stratParams
     ) external override returns (address) {
         address payable clone = payable(Clones.clone(strategy));
-        address cloneNFT = Clones.clone(strategyNft);
-        StrategyNFT(cloneNFT).initialize(controller, address(clone), _name, _symbol);
         IStrategy(clone).initialize(
             _strategist,
             _garden,
@@ -71,9 +68,9 @@ contract StrategyFactory is IStrategyFactory {
             _stratParams[1],
             _stratParams[2],
             _stratParams[3],
-            _stratParams[4],
-            cloneNFT
+            _stratParams[4]
         );
+        IStrategyNFT(IBabController(controller).strategyNFT()).saveStrategyNameAndSymbol(clone, _name, _symbol);
         return clone;
     }
 }

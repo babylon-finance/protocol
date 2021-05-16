@@ -55,6 +55,7 @@ contract PriceOracle is Ownable, IPriceOracle {
     IBabController public controller;
 
     address public constant WETH = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
+    mapping(address => bool) public uniswapAssets;
 
     // Address of uniswap anchored view contract. See https://compound.finance/docs/prices#price
     address public immutable uniswapAnchoredView;
@@ -79,6 +80,18 @@ contract PriceOracle is Ownable, IPriceOracle {
         controller = _controller;
         uniswapAnchoredView = _uniswapAnchoredView;
         adapters = _adapters;
+
+        uniswapAssets[0x6B175474E89094C44Da98b954EedeAC495271d0F] = true; // dai
+        uniswapAssets[0x1985365e9f78359a9B6AD760e32412f4a445E862] = true; // rep
+        uniswapAssets[0xE41d2489571d322189246DaFA5ebDe1F4699F498] = true; // zrx
+        uniswapAssets[0x0D8775F648430679A709E98d2b0Cb6250d2887EF] = true; // bat
+        uniswapAssets[0xdd974D5C2e2928deA5F71b9825b8b646686BD200] = true; // knc
+        uniswapAssets[0x514910771AF9Ca656af840dff83E8264EcF986CA] = true; // link
+        uniswapAssets[0xc00e94Cb662C3520282E6f5717214004A7f26888] = true; // comp
+        uniswapAssets[0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48] = true; // USDC
+        uniswapAssets[0x1f9840a85d5aF5bf1D1762F925BDADdC4201F984] = true; // uni
+        uniswapAssets[address(0)] = true; // eth
+        uniswapAssets[WETH] = true; // weth
     }
 
     /* ============ External Functions ============ */
@@ -175,25 +188,12 @@ contract PriceOracle is Ownable, IPriceOracle {
         view
         returns (bool, uint256)
     {
-        address assetToCheck = _assetOne;
-        if (_assetOne == WETH) {
-            assetToCheck = _assetTwo;
-        }
-        if (
-            assetToCheck == 0x6B175474E89094C44Da98b954EedeAC495271d0F || // dai
-            assetToCheck == 0x1985365e9f78359a9B6AD760e32412f4a445E862 || // rep
-            assetToCheck == 0xE41d2489571d322189246DaFA5ebDe1F4699F498 || // zrx
-            assetToCheck == 0x0D8775F648430679A709E98d2b0Cb6250d2887EF || // bat
-            assetToCheck == 0xdd974D5C2e2928deA5F71b9825b8b646686BD200 || // knc
-            assetToCheck == 0x514910771AF9Ca656af840dff83E8264EcF986CA || // link
-            assetToCheck == 0xc00e94Cb662C3520282E6f5717214004A7f26888 || // comp
-            assetToCheck == 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48 || // USDC
-            assetToCheck == 0x1f9840a85d5aF5bf1D1762F925BDADdC4201F984 // uni
-        ) {
+        if (uniswapAssets[_assetOne] && uniswapAssets[_assetTwo]) {
+            IUniswapAnchoredView anchoredView = IUniswapAnchoredView(uniswapAnchoredView);
             string memory symbol1 = _assetOne == WETH ? 'ETH' : ERC20(_assetOne).symbol();
             string memory symbol2 = _assetTwo == WETH ? 'ETH' : ERC20(_assetTwo).symbol();
-            uint256 assetOnePrice = IUniswapAnchoredView(uniswapAnchoredView).price(symbol1);
-            uint256 assetTwoPrice = IUniswapAnchoredView(uniswapAnchoredView).price(symbol2);
+            uint256 assetOnePrice = anchoredView.price(symbol1);
+            uint256 assetTwoPrice = anchoredView.price(symbol2);
 
             if (assetOnePrice > 0 && assetTwoPrice > 0) {
                 return (true, assetOnePrice.preciseDiv(assetTwoPrice));

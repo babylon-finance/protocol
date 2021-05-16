@@ -58,7 +58,7 @@ contract BabController is OwnableUpgradeable, IBabController {
 
     event ReserveAssetAdded(address indexed _reserveAsset);
     event ReserveAssetRemoved(address indexed _reserveAsset);
-    event LiquidityMinimumEdited(uint256 _minRiskyPairLiquidityEth);
+    event LiquidityMinimumEdited(address indexed _resesrveAsset, uint256 _newMinLiquidityReserve);
 
     event PriceOracleChanged(address indexed _priceOracle, address _oldPriceOracle);
     event RewardsDistributorChanged(address indexed _rewardsDistributor, address _oldRewardsDistributor);
@@ -66,6 +66,9 @@ contract BabController is OwnableUpgradeable, IBabController {
     event IshtarGateChanged(address _newIshtarGate, address _oldIshtarGate);
     event GardenValuerChanged(address indexed _gardenValuer, address _oldGardenValuer);
     event GardenFactoryChanged(address indexed _gardenFactory, address _oldGardenFactory);
+    event UniswapFactoryChanged(address indexed _newUniswapFactory, address _oldUniswapFactory);
+    event GardenNFTChanged(address indexed _newGardenNFT, address _oldStrategyNFT);
+    event StrategyNFTChanged(address indexed _newStrategyNFT, address _oldStrategyNFT);
 
     event StrategyFactoryEdited(address indexed _strategyFactory, address _oldStrategyFactory);
 
@@ -73,19 +76,21 @@ contract BabController is OwnableUpgradeable, IBabController {
 
     /* ============ State Variables ============ */
 
-    address public constant UNISWAP_FACTORY = 0x5C69bEe701ef814a2B6a3EDD4B1652CB9cc5aA6f;
     address public constant WETH = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
     uint8 public constant MAX_OPERATIONS = 20;
 
     // List of enabled Communities
     address[] public gardens;
     address[] public reserveAssets;
+    address public override uniswapFactory;
     address public override gardenValuer;
     address public override priceOracle;
     address public override gardenFactory;
     address public override rewardsDistributor;
     address public override ishtarGate;
     address public override strategyFactory;
+    address public override gardenNFT;
+    address public override strategyNFT;
 
     // Mapping of integration name => integration address
     mapping(bytes32 => address) private enabledIntegrations;
@@ -103,6 +108,9 @@ contract BabController is OwnableUpgradeable, IBabController {
 
     // Mapping to check keepers
     mapping(address => bool) public keeperList;
+
+    // Mapping of minimum liquidity per reserve asset
+    mapping(address => uint256) public override minLiquidityPerReserve;
 
     // Recipient of protocol fees
     address public override treasury;
@@ -124,8 +132,6 @@ contract BabController is OwnableUpgradeable, IBabController {
     uint256 public gardenCreatorBonus;
 
     // Assets
-    // Absolute Min liquidity of assets for risky gardens 1000 ETH
-    uint256 public override minRiskyPairLiquidityEth;
 
     // Enable Transfer of ERC20 gardenTokens
     // Only members can transfer tokens until the protocol is fully decentralized
@@ -140,6 +146,12 @@ contract BabController is OwnableUpgradeable, IBabController {
     uint256 public override protocolManagementFee; // 0.5% (0.01% = 1e14, 1% = 1e16)
     uint256 public override protocolDepositGardenTokenFee; // 0 (0.01% = 1e14, 1% = 1e16)
     uint256 public override protocolWithdrawalGardenTokenFee; // 0 (0.01% = 1e14, 1% = 1e16)
+
+    // Maximum number of contributors per garden
+    uint256 public override maxContributorsPerGarden;
+
+    // Enable garden creations to be fully open to the public (no need of Ishtar gate anymore)
+    bool public override gardenCreationIsOpen;
 
     /* ============ Constructor ============ */
 
@@ -157,7 +169,8 @@ contract BabController is OwnableUpgradeable, IBabController {
         gardenTokensTransfersEnabled = false;
         bablMiningProgramEnabled = false;
         allowPublicGardens = false;
-        minRiskyPairLiquidityEth = 1000 * 1e18;
+
+        uniswapFactory = 0x1F98431c8aD98523631AE4a59f267346ea31F984;
 
         strategistProfitPercentage = 10e16;
         stewardsProfitPercentage = 5e16;
@@ -168,6 +181,8 @@ contract BabController is OwnableUpgradeable, IBabController {
         lpsBABLPercentage = 75e16;
 
         gardenCreatorBonus = 15e16;
+        maxContributorsPerGarden = 100;
+        gardenCreationIsOpen = false;
     }
 
     /* ============ External Functions ============ */
@@ -176,12 +191,14 @@ contract BabController is OwnableUpgradeable, IBabController {
     /**
      * Creates a Garden smart contract and registers the Garden with the controller.
      *
+     * If asset is not WETH, the creator needs to approve the controller
      * @param _reserveAsset           Reserve asset of the Garden. Initially just weth
      * @param _name                   Name of the Garden
      * @param _symbol                 Symbol of the Garden
      * @param _gardenParams           Array of numeric garden params
      * @param _tokenURI               Garden NFT token URI
      * @param _seed                   Seed to regenerate the garden NFT
+     * @param _initialContribution    Initial contribution by the gardener
      */
     function createGarden(
         address _reserveAsset,
@@ -189,25 +206,34 @@ contract BabController is OwnableUpgradeable, IBabController {
         string memory _symbol,
         string memory _tokenURI,
         uint256 _seed,
-        uint256[] calldata _gardenParams
+        uint256[] calldata _gardenParams,
+        uint256 _initialContribution
     ) external payable override returns (address) {
         require(defaultTradeIntegration != address(0), 'Need a default trade integration');
         require(enabledOperations.length > 0, 'Need operations enabled');
-        require(IIshtarGate(ishtarGate).canCreate(msg.sender), 'User does not have creation permissions');
+        require(
+            IIshtarGate(ishtarGate).canCreate(msg.sender) || gardenCreationIsOpen,
+            'User does not have creation permissions'
+        );
         address newGarden =
-            IGardenFactory(gardenFactory).createGarden{value: msg.value}(
+            IGardenFactory(gardenFactory).createGarden(
                 _reserveAsset,
                 msg.sender,
                 _name,
                 _symbol,
                 _tokenURI,
                 _seed,
-                _gardenParams
+                _gardenParams,
+                _initialContribution
             );
-
+        if (_reserveAsset != WETH || msg.value == 0) {
+            IERC20(_reserveAsset).transferFrom(msg.sender, address(this), _initialContribution);
+            IERC20(_reserveAsset).approve(newGarden, _initialContribution);
+        }
         require(!isGarden[newGarden], 'Garden already exists');
         isGarden[newGarden] = true;
         gardens.push(newGarden);
+        IGarden(newGarden).deposit{value: msg.value}(_initialContribution, _initialContribution, msg.sender);
         emit GardenAdded(newGarden, msg.sender);
         return newGarden;
     }
@@ -252,6 +278,15 @@ contract BabController is OwnableUpgradeable, IBabController {
     }
 
     /**
+     * PRIVILEGED GOVERNANCE FUNCTION. Allows governance to enable public creation of gardens
+     *
+     */
+    function openPublicGardenCreation() external override onlyOwner {
+        require(!gardenCreationIsOpen, 'Garden creation is already open to the public');
+        gardenCreationIsOpen = true;
+    }
+
+    /**
      * PRIVILEGED GOVERNANCE FUNCTION. Allows transfers of ERC20 gardenTokens
      * Can only happen after 2021 is finished.
      */
@@ -261,12 +296,18 @@ contract BabController is OwnableUpgradeable, IBabController {
     }
 
     /**
-     * PRIVILEGED GOVERNANCE FUNCTION. Allows transfers of ERC20 BABL Tokens
-     * Can only happen after the protocol is fully decentralized.
      * PRIVILEGED GOVERNANCE FUNCTION. Allows public gardens
      */
     function setAllowPublicGardens() external override onlyOwner {
         allowPublicGardens = true;
+    }
+
+    /**
+     * PRIVILEGED GOVERNANCE FUNCTION. Change the max number of contributors for new Gardens since the change
+     */
+    function setMaxContributorsPerGarden(uint256 _newMax) external override onlyOwner {
+        require(_newMax >= 1, 'Contributors cannot be less than 1 per garden');
+        maxContributorsPerGarden = _newMax;
     }
 
     // ===========  Protocol related Gov Functions ======
@@ -431,6 +472,48 @@ contract BabController is OwnableUpgradeable, IBabController {
     }
 
     /**
+     * PRIVILEGED GOVERNANCE FUNCTION. Allows governance to edit the protocol garden NFT
+     *
+     * @param _newGardenNFT      Address of the new garden NFT
+     */
+    function editGardenNFT(address _newGardenNFT) external override onlyOwner {
+        require(_newGardenNFT != address(0), 'Address must not be 0');
+
+        address oldGardenNFT = gardenNFT;
+        gardenNFT = _newGardenNFT;
+
+        emit GardenNFTChanged(_newGardenNFT, oldGardenNFT);
+    }
+
+    /**
+     * PRIVILEGED GOVERNANCE FUNCTION. Allows governance to edit the protocol strategy NFT
+     *
+     * @param _newStrategyNFT      Address of the new strategy NFT
+     */
+    function editStrategyNFT(address _newStrategyNFT) external override onlyOwner {
+        require(_newStrategyNFT != address(0), 'Address must not be 0');
+
+        address oldStrategyNFT = strategyNFT;
+        strategyNFT = _newStrategyNFT;
+
+        emit StrategyNFTChanged(_newStrategyNFT, oldStrategyNFT);
+    }
+
+    /**
+     * PRIVILEGED GOVERNANCE FUNCTION. Allows governance to edit the protocol uniswaps factory
+     *
+     * @param _newUniswapFactory      Address of the new uniswap factory
+     */
+    function editUniswapFactory(address _newUniswapFactory) external override onlyOwner {
+        require(_newUniswapFactory != address(0), 'Address must not be 0');
+
+        address oldUniswapFactory = uniswapFactory;
+        uniswapFactory = _newUniswapFactory;
+
+        emit UniswapFactoryChanged(_newUniswapFactory, oldUniswapFactory);
+    }
+
+    /**
      * PRIVILEGED GOVERNANCE FUNCTION. Allows governance to edit the protocol strategy factory
      *
      * @param _newStrategyFactory      Address of the new strategy factory
@@ -529,23 +612,21 @@ contract BabController is OwnableUpgradeable, IBabController {
     /**
      * GOVERNANCE FUNCTION: Edits the minimum liquidity an asset must have on Uniswap
      *
-     * @param  _minRiskyPairLiquidityEth       Absolute min liquidity of an asset to grab price
+     * @param  _reserve                         Address of the reserve to edit
+     * @param  _newMinLiquidityReserve          Absolute min liquidity of an asset to grab price
      */
-    function editLiquidityMinimum(uint256 _minRiskyPairLiquidityEth) public override onlyOwner {
-        require(_minRiskyPairLiquidityEth > 0, '_minRiskyPairLiquidityEth > 0');
-        minRiskyPairLiquidityEth = _minRiskyPairLiquidityEth;
+    function editLiquidityReserve(address _reserve, uint256 _newMinLiquidityReserve) public override onlyOwner {
+        require(_newMinLiquidityReserve > 0, '_minRiskyPairLiquidityEth > 0');
+        require(validReserveAsset[_reserve], 'Needs to be a valid reserve');
+        minLiquidityPerReserve[_reserve] = _newMinLiquidityReserve;
 
-        emit LiquidityMinimumEdited(_minRiskyPairLiquidityEth);
+        emit LiquidityMinimumEdited(_reserve, _newMinLiquidityReserve);
     }
 
     /* ============ External Getter Functions ============ */
 
     function owner() public view override(IBabController, OwnableUpgradeable) returns (address) {
         return OwnableUpgradeable.owner();
-    }
-
-    function getUniswapFactory() external pure override returns (address) {
-        return UNISWAP_FACTORY;
     }
 
     function getGardens() external view override returns (address[] memory) {
@@ -655,6 +736,9 @@ contract BabController is OwnableUpgradeable, IBabController {
         return (isGarden[_contractAddress] ||
             gardenValuer == _contractAddress ||
             priceOracle == _contractAddress ||
+            gardenFactory == _contractAddress ||
+            strategyFactory == _contractAddress ||
+            rewardsDistributor == _contractAddress ||
             owner() == _contractAddress ||
             _contractAddress == address(this) ||
             _isOperation(_contractAddress) ||

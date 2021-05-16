@@ -10,13 +10,13 @@ module.exports = async ({
   const { deploy } = deployments;
   const { deployer } = await getNamedAccounts();
   const gasPrice = await getRapid();
-  const contract = 'IshtarGate';
+  const contract = 'GardenNFT';
 
   const controller = await deployments.get('BabControllerProxy');
 
   const deployment = await deploy(contract, {
     from: deployer,
-    args: [controller.address, 'https://babylon.mypinata.cloud/ipfs/QmTTcF8a1asL9YKsCB5DzND1Biy4Kyw4nX7EPSgv1pLEDA'],
+    args: [controller.address, 'Babylon Garden NFT', 'GARDEN_NFT'],
     log: true,
     gasPrice,
   });
@@ -26,5 +26,4 @@ module.exports = async ({
   }
 };
 
-module.exports.tags = ['Gate'];
-module.exports.dependencies = ['Controller'];
+module.exports.tags = ['GardenNFT'];

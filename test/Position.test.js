@@ -74,7 +74,7 @@ describe('Position testing', function () {
       const wethPositionBefore = await garden1.principal();
       ethers.provider.send('evm_increaseTime', [ONE_DAY_IN_SECONDS * 90]);
       const protocolTreasury = await weth.balanceOf(treasury.address);
-      await garden1.connect(signer3).withdraw(tokenBalance.div(2), 1, signer3.getAddress());
+      await garden1.connect(signer3).withdraw(tokenBalance.div(2), 1, signer3.getAddress(), false);
       const wethPosition = await garden1.principal();
       const gardenBalanceAfter = await weth.balanceOf(garden1.address);
       const supplyAfter = await garden1.totalSupply();
