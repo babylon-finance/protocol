@@ -16,8 +16,6 @@
 */
 
 pragma solidity 0.7.6;
-
-import 'hardhat/console.sol';
 import {TimeLockedToken} from './TimeLockedToken.sol';
 
 import {Ownable} from '@openzeppelin/contracts/access/Ownable.sol';

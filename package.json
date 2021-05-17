@@ -37,6 +37,7 @@
     "hardhat-deploy": "https://github.com/ylv-io/hardhat-deploy.git#1d5f9ec88bd8305bc82b75a18087fa4f0503343d",
     "hardhat-docgen": "^1.0.3",
     "hardhat-gas-reporter": "^1.0.4",
+    "hardhat-log-remover": "^2.0.2",
     "prettier": "^2.2.1",
     "prettier-plugin-solidity": "^1.0.0-beta.6",
     "solhint": "^3.3.4",
@@ -64,6 +65,7 @@
   },
   "scripts": {
     "clean": "rm -rf cache/* && rm -rf artifacts/* && rm -rf ./export/*",
+    "remove-logs": "hardhat remove-logs",
     "prettier": "prettier --write .",
     "prettier:check": "prettier --check .",
     "lint:contracts": "solhint contracts/**/*.sol",

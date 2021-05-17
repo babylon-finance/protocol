@@ -17,8 +17,6 @@
 */
 
 pragma solidity 0.7.6;
-
-import 'hardhat/console.sol';
 import {Clones} from '@openzeppelin/contracts/proxy/Clones.sol';
 
 import {IGardenFactory} from '../interfaces/IGardenFactory.sol';

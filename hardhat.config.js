@@ -2,10 +2,13 @@ require('dotenv/config');
 require('@nomiclabs/hardhat-ethers');
 require('@openzeppelin/hardhat-upgrades');
 require('@nomiclabs/hardhat-waffle');
+
 require('hardhat-deploy');
 require('hardhat-contract-sizer');
 require('hardhat-docgen');
 require('hardhat-gas-reporter');
+require('hardhat-log-remover');
+
 require('@tenderly/hardhat-tenderly');
 require('solidity-coverage');
 require('@typechain/hardhat');
