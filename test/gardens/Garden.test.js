@@ -942,11 +942,12 @@ describe('Garden', function () {
       await garden1.connect(signer2).deposit(ethers.utils.parseEther('1'), 1, signer2.getAddress(), {
         value: ethers.utils.parseEther('1'),
       });
+      // close to 49.99%
       await expect(
         (
           await rewardsDistributor.getContributorPower(garden1.address, signer2.address, 1630602307, 1630602307)
         ).toString(),
-      ).to.be.closeTo((499999697808826913).toString(), ethers.utils.parseEther('0.0000005'));
+      ).to.be.closeTo(ethers.utils.parseEther('0.4999').toString(), ethers.utils.parseEther('0.01'));
     });
     it('contributor power is 100% for the creator if it is the only user (several deposits)', async function () {
       await garden1.connect(signer1).deposit(ethers.utils.parseEther('1'), 1, signer1.getAddress(), {
