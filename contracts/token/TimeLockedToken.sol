@@ -69,6 +69,9 @@ abstract contract TimeLockedToken is VoteToken {
     /// @notice An event that emitted when a claim of tokens are registered
     event Claim(address _receiver, uint256 amount);
 
+    /// @notice An event that emitted when a lockedBalance query is done
+    event LockedBalance(address _account, uint256 amount);
+
     /* ============ Modifiers ============ */
 
     modifier onlyTimeLockRegistry() {
@@ -297,14 +300,14 @@ abstract contract TimeLockedToken is VoteToken {
         uint256 lockedAmount = amount;
 
         // Team and investors cannot transfer tokens in the first year
-        if (vestedToken[account].vestingBegin.add(365 days) > block.timestamp) {
+        if (vestedToken[account].vestingBegin.add(365 days) > block.timestamp && amount != 0) {
             return lockedAmount;
         }
 
-        // in case of vesting has passed, all tokens are now available
-        if (block.timestamp >= vestedToken[account].vestingEnd) {
+        // in case of vesting has passed, all tokens are now available, if no vesting lock is 0 as well
+        if (block.timestamp >= vestedToken[account].vestingEnd || amount == 0) {
             lockedAmount = 0;
-        } else {
+        } else if (amount != 0) {
             // in case of still under vesting period, locked tokens are recalculated
             lockedAmount = amount.mul(vestedToken[account].vestingEnd.sub(block.timestamp)).div(
                 vestedToken[account].vestingEnd.sub(vestedToken[account].vestingBegin)
@@ -323,7 +326,6 @@ abstract contract TimeLockedToken is VoteToken {
     function lockedBalance(address account) public returns (uint256) {
         // get amount from distributions locked tokens (if any)
         uint256 lockedAmount = viewLockedBalance(account);
-
         // in case of vesting has passed, all tokens are now available so we set mapping to 0 only for accounts under vesting
         if (
             block.timestamp >= vestedToken[account].vestingEnd &&
@@ -333,6 +335,7 @@ abstract contract TimeLockedToken is VoteToken {
         ) {
             delete distribution[account];
         }
+        emit LockedBalance(account, lockedAmount);
         return lockedAmount;
     }
 
