@@ -28,44 +28,44 @@ module.exports = async ({ getNamedAccounts, deployments, ethers, getSigner, getC
     '0x48d21Dc6BBF18288520E9384aA505015c26ea43C',
   ]) {
     console.log(`Setting creator permission for ${address}`);
-    await ishtarGate.connect(deployerSigner).setCreatorPermissions(address, true, { gasPrice });
+    await (await ishtarGate.connect(deployerSigner).setCreatorPermissions(address, true, { gasPrice })).wait();
   }
 
   console.log('Transfer ownership of ProxyAdmin');
   const proxyAdminDeployment = await deployments.get('ProxyAdmin');
   const proxyAdmin = new ethers.Contract(proxyAdminDeployment.address, proxyAdminDeployment.abi);
-  await proxyAdmin.connect(deployerSigner).transferOwnership(MULTISIG, { gasPrice });
+  await (await proxyAdmin.connect(deployerSigner).transferOwnership(MULTISIG, { gasPrice })).wait();
 
   console.log('Transfer ownership of BabController');
   const babController = await getContract('BabController', 'BabControllerProxy');
-  await babController.connect(deployerSigner).transferOwnership(MULTISIG, { gasPrice });
+  await (await babController.connect(deployerSigner).transferOwnership(MULTISIG, { gasPrice })).wait();
 
   console.log('Transfer ownership of BABLToken');
   const bablToken = await getContract('BABLToken');
-  await bablToken.connect(deployerSigner).transferOwnership(MULTISIG, { gasPrice });
+  await (await bablToken.connect(deployerSigner).transferOwnership(MULTISIG, { gasPrice })).wait();
 
   console.log('Transfer ownership of RewardsDistributor');
   const rewardsDistributor = await getContract('RewardsDistributor');
-  await rewardsDistributor.connect(deployerSigner).transferOwnership(MULTISIG, { gasPrice });
+  await (await rewardsDistributor.connect(deployerSigner).transferOwnership(MULTISIG, { gasPrice })).wait();
 
   console.log('Transfer ownership of TimeLockRegistry');
   const timeLockRegistry = await getContract('TimeLockRegistry');
-  await timeLockRegistry.connect(deployerSigner).transferOwnership(MULTISIG, { gasPrice });
+  await (await timeLockRegistry.connect(deployerSigner).transferOwnership(MULTISIG, { gasPrice })).wait();
 
   console.log('Transfer ownership of Treasury');
   const treasury = await getContract('Treasury');
-  await treasury.connect(deployerSigner).transferOwnership(MULTISIG, { gasPrice });
+  await (await treasury.connect(deployerSigner).transferOwnership(MULTISIG, { gasPrice })).wait();
 
   console.log('Transfer ownership of PriceOracle');
   const priceOracle = await getContract('PriceOracle');
-  await priceOracle.connect(deployerSigner).transferOwnership(MULTISIG, { gasPrice });
+  await (await priceOracle.connect(deployerSigner).transferOwnership(MULTISIG, { gasPrice })).wait();
 
   console.log('Transfer ownership of IshtarGate');
-  await ishtarGate.connect(deployerSigner).transferOwnership(MULTISIG, { gasPrice });
+  await (await ishtarGate.connect(deployerSigner).transferOwnership(MULTISIG, { gasPrice })).wait();
 
   console.log('Transfer ownership of UniswapTWAP v3');
   const uniswapTWAPv3 = await getContract('UniswapTWAPV3');
-  await uniswapTWAPv3.connect(deployerSigner).transferOwnership(MULTISIG, { gasPrice });
+  await (await uniswapTWAPv3.connect(deployerSigner).transferOwnership(MULTISIG, { gasPrice })).wait();
 };
 
 module.exports.tags = ['Ownership'];
