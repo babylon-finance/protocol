@@ -137,6 +137,27 @@ describe('TimeLockRegistry', function () {
       await timeLockRegistry.connect(owner).cancelRegistration(teamSigner.address);
       expect(await timeLockRegistry.totalTokens()).to.be.eq(TOTAL_REGISTERED_TOKENS.sub(ONE_ETH.mul(17000)));
     });
+    it('cancel a wrong address before claim and re-register the right address', async function () {
+      const teamSignerOK = await impersonateAddress('0x232775eAD28F0C0c750A097bA77302E7d84efd3B');
+
+      await timeLockRegistry.connect(owner).cancelRegistration(teamSignerOK.address);
+      expect(await timeLockRegistry.totalTokens()).to.be.eq(TOTAL_REGISTERED_TOKENS.sub(ONE_ETH.mul(17000)));
+
+      const teamSignerWrong = await impersonateAddress('0x71763709Da2488F75bc2DB5d194769d801e97Fa8');
+
+      await timeLockRegistry
+        .connect(owner)
+        .register(teamSignerWrong.address, ethers.utils.parseEther('17000'), true, 1614618000);
+      expect(await timeLockRegistry.totalTokens()).to.be.eq(TOTAL_REGISTERED_TOKENS);
+
+      await timeLockRegistry.connect(owner).cancelRegistration(teamSignerWrong.address);
+      expect(await timeLockRegistry.totalTokens()).to.be.eq(TOTAL_REGISTERED_TOKENS.sub(ONE_ETH.mul(17000)));
+
+      await timeLockRegistry
+        .connect(owner)
+        .register(teamSignerOK.address, ethers.utils.parseEther('17000'), true, 1614618000);
+      expect(await timeLockRegistry.totalTokens()).to.be.eq(TOTAL_REGISTERED_TOKENS);
+    });
   });
   describe('Quality Tests: Register ->  Claim -> Time passes -> Unlocking balances -> Transfers', function () {
     it('Should unlock correct amount of BABL tokens during the vesting and depending on each personal conditions', async function () {
