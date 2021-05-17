@@ -1039,7 +1039,8 @@ contract RewardsDistributor is Ownable, IRewardsDistributor {
         uint256 _from,
         uint256 _to
     ) private view returns (uint256) {
-        _require(_to >= IGarden(_garden).gardenInitializedAt() && _to >= _from, Errors.GET_CONTRIBUTOR_POWER);
+        // Out of bounds
+        _require(_to >= IGarden(_garden).gardenInitializedAt() && _to >= _from, Errors.CONTRIBUTOR_POWER_CHECK_WINDOW);
         ContributorPerGarden storage contributor = contributorPerGarden[address(_garden)][address(_contributor)];
         Checkpoints memory powerCheckpoints = checkpoints[address(_garden)][address(_contributor)];
 
@@ -1063,10 +1064,11 @@ contract RewardsDistributor is Ownable, IRewardsDistributor {
                 _to
             );
 
+            // origin must be less than end window
             _require(
                 powerCheckpoints.fromDepositAt <= powerCheckpoints.lastDepositAt &&
                     powerCheckpoints.gardenFromDepositAt <= powerCheckpoints.gardenLastDepositAt,
-                Errors.GET_CONTRIBUTOR_POWER
+                Errors.CONTRIBUTOR_POWER_CHECK_DEPOSITS
             );
             uint256 contributorPower;
             uint256 gardenPower;
@@ -1094,7 +1096,8 @@ contract RewardsDistributor is Ownable, IRewardsDistributor {
             );
             // "TO power calculations" PART
             // We go for accurate power calculations avoiding overflows
-            _require(contributorPower <= gardenPower, Errors.GET_CONTRIBUTOR_POWER);
+            // contributor power overflow
+            _require(contributorPower <= gardenPower, Errors.CONTRIBUTOR_POWER_OVERFLOW);
             if (_from == _to) {
                 // Requested a specific checkpoint calculation (no slot)
                 if (gardenPower == 0) {
@@ -1119,7 +1122,7 @@ contract RewardsDistributor is Ownable, IRewardsDistributor {
                     )
                 )
                     .sub(gardenPower);
-                _require(contributorPower <= gardenPower, Errors.GET_CONTRIBUTOR_POWER);
+                _require(contributorPower <= gardenPower, Errors.CONTRIBUTOR_POWER_OVERFLOW);
                 return contributorPower.preciseDiv(gardenPower);
             } else {
                 contributorPower = (
@@ -1139,7 +1142,7 @@ contract RewardsDistributor is Ownable, IRewardsDistributor {
                     )
                 )
                     .sub(gardenPower);
-                _require(contributorPower <= gardenPower, Errors.GET_CONTRIBUTOR_POWER);
+                _require(contributorPower <= gardenPower, Errors.CONTRIBUTOR_POWER_OVERFLOW);
 
                 return contributorPower.preciseDiv(gardenPower);
             }
