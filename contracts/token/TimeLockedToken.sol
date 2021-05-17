@@ -393,7 +393,8 @@ abstract contract TimeLockedToken is VoteToken {
      */
     function increaseAllowance(address spender, uint256 addedValue) public override nonReentrant returns (bool) {
         require(
-            unlockedBalance(msg.sender) >= allowance(msg.sender, spender).add(addedValue) || spender == address (timeLockRegistry),
+            unlockedBalance(msg.sender) >= allowance(msg.sender, spender).add(addedValue) ||
+                spender == address(timeLockRegistry),
             'TimeLockedToken::increaseAllowance:Not enough unlocked tokens'
         );
         require(spender != address(0), 'TimeLockedToken::increaseAllowance:Spender cannot be zero address');
