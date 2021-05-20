@@ -64,6 +64,7 @@
     "superagent": "^6.1.0"
   },
   "scripts": {
+    "increaseTime": "hardhat increaseTime",
     "clean": "rm -rf cache/* && rm -rf artifacts/* && rm -rf ./export/*",
     "remove-logs": "hardhat remove-logs",
     "prettier": "prettier --write .",
