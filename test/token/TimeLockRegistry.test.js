@@ -1,7 +1,7 @@
 const { expect } = require('chai');
 const { ethers } = require('hardhat');
 
-const { ONE_ETH, ADDRESS_ZERO, ONE_DAY_IN_SECONDS } = require('../../lib/constants');
+const { ONE_ETH, ADDRESS_ZERO, ONE_DAY_IN_SECONDS, ONE_YEAR_IN_SECONDS } = require('../../lib/constants');
 const { impersonateAddress } = require('../../lib/rpc');
 const { increaseTime } = require('../utils/test-helpers');
 
@@ -33,6 +33,8 @@ describe('TimeLockRegistry', function () {
       signer2,
       signer3,
     } = await setupTests()());
+    const block = await ethers.provider.getBlock();
+    now = block.timestamp;
   });
 
   describe('deployment', function () {
@@ -161,15 +163,9 @@ describe('TimeLockRegistry', function () {
   });
   describe('Quality Tests: Register ->  Claim -> Time passes -> Unlocking balances -> Transfers', function () {
     it('Should unlock correct amount of BABL tokens during the vesting and depending on each personal conditions', async function () {
-      // Vesting starting date 1 March 2021 9h PST Unix Time 1614618000
-      await timeLockRegistry
-        .connect(owner)
-        .register(signer1.address, ethers.utils.parseEther('1000'), true, 1614618000);
+      await timeLockRegistry.connect(owner).register(signer1.address, ethers.utils.parseEther('1000'), true, now);
 
-      await timeLockRegistry
-        .connect(owner)
-        .register(signer2.address, ethers.utils.parseEther('500'), false, 1614618000);
-
+      await timeLockRegistry.connect(owner).register(signer2.address, ethers.utils.parseEther('500'), false, now);
       // Tokens are claimed by the Team Member and the registration is deleted in Time Lock Registry
       await bablToken.connect(signer1).claimMyTokens();
       await bablToken.connect(signer2).claimMyTokens();
@@ -179,9 +175,11 @@ describe('TimeLockRegistry', function () {
 
       const userSigner2LockedBalance1 = await bablToken.viewLockedBalance(signer2.address);
       const userSigner2Balance1 = await bablToken.balanceOf(signer2.address);
+      expect(userSigner1Balance1).to.equal(userSigner1LockedBalance1);
+      expect(userSigner2Balance1).to.equal(userSigner2LockedBalance1);
 
-      // We move ahead 365 days
-      await increaseTime(ONE_DAY_IN_SECONDS * 340);
+      // We move ahead
+      await increaseTime(ONE_DAY_IN_SECONDS * 365 * 2);
 
       const userSigner1LockedBalance2 = await bablToken.viewLockedBalance(signer1.address);
       const userSigner1Balance2 = await bablToken.balanceOf(signer1.address);
@@ -191,31 +189,23 @@ describe('TimeLockRegistry', function () {
 
       expect(userSigner1Balance2).to.equal(userSigner1Balance1);
       expect(userSigner2Balance2).to.equal(userSigner2Balance1);
-      expect(userSigner1LockedBalance2).to.be.closeTo('718567692478437341451', ethers.utils.parseEther('0.0005')); // Team 4 Y vesting (1/4 available after 1Y)
-      expect(userSigner2LockedBalance2).to.be.closeTo('312378451082360899712', ethers.utils.parseEther('0.0005')); // Investor 3Y vesting (1/3 available after 1Y)
+      expect(userSigner1LockedBalance2).to.be.closeTo(userSigner1Balance2.div(2), ethers.utils.parseEther('0.001')); // Team 4 Y vesting (1/2 available after 2Y)
+      expect(userSigner2LockedBalance2).to.be.closeTo(userSigner2Balance2.div(3), ethers.utils.parseEther('0.001')); // Investor 3Y vesting (2/3 available after 2Y)
     });
     it('Should unlock all vested tokens after 3Y for investors and after 4Y for team members and advisors', async function () {
-      // Vesting starting date 1 March 2021 9h PST Unix Time 1614618000
-      await timeLockRegistry
-        .connect(owner)
-        .register(signer1.address, ethers.utils.parseEther('1000'), true, 1614618000);
+      await timeLockRegistry.connect(owner).register(signer1.address, ethers.utils.parseEther('1000'), true, now);
 
-      await timeLockRegistry
-        .connect(owner)
-        .register(signer2.address, ethers.utils.parseEther('500'), false, 1614618000);
+      await timeLockRegistry.connect(owner).register(signer2.address, ethers.utils.parseEther('500'), false, now);
 
       // Tokens are claimed by the Team Member and the registration is deleted in Time Lock Registry
       await bablToken.connect(signer1).claimMyTokens();
       await bablToken.connect(signer2).claimMyTokens();
 
-      const userSigner1LockedBalance1 = await bablToken.viewLockedBalance(signer1.address);
       const userSigner1Balance1 = await bablToken.balanceOf(signer1.address);
-
-      const userSigner2LockedBalance1 = await bablToken.viewLockedBalance(signer2.address);
       const userSigner2Balance1 = await bablToken.balanceOf(signer2.address);
 
       // We move ahead 3Y
-      await increaseTime(ONE_DAY_IN_SECONDS * 1095);
+      await increaseTime(ONE_DAY_IN_SECONDS * 365 * 3);
 
       const userSigner1LockedBalance2 = await bablToken.viewLockedBalance(signer1.address);
       const userSigner1Balance2 = await bablToken.balanceOf(signer1.address);
@@ -224,7 +214,7 @@ describe('TimeLockRegistry', function () {
 
       expect(userSigner1Balance2).to.equal(userSigner1Balance1);
       expect(userSigner2Balance2).to.equal(userSigner2Balance1);
-      expect(userSigner1LockedBalance2).to.be.closeTo('201444404807204464738', ethers.utils.parseEther('0.0005')); // Team 4 Y vesting (3/4 available after 3Y)
+      expect(userSigner1LockedBalance2).to.be.closeTo(userSigner1Balance1.div(4), ethers.utils.parseEther('0.001')); // Team 4 Y vesting (3/4 available after 3Y)
       expect(userSigner2LockedBalance2).to.be.equal('0'); // Investor 3Y vesting (all available after 3Y)
       // We move ahead 365 days more
       await increaseTime(ONE_DAY_IN_SECONDS * 365);
@@ -235,13 +225,9 @@ describe('TimeLockRegistry', function () {
 
     it('be able to transfer all babl tokens after vesting passes (3Y investors, 4Y to team/advisors)', async function () {
       // Vesting starting date 1 March 2021 9h PST Unix Time 1614618000
-      await timeLockRegistry
-        .connect(owner)
-        .register(signer1.address, ethers.utils.parseEther('1000'), true, 1614618000);
+      await timeLockRegistry.connect(owner).register(signer1.address, ethers.utils.parseEther('1000'), true, now);
 
-      await timeLockRegistry
-        .connect(owner)
-        .register(signer2.address, ethers.utils.parseEther('500'), false, 1614618000);
+      await timeLockRegistry.connect(owner).register(signer2.address, ethers.utils.parseEther('500'), false, now);
 
       // Tokens are claimed by the Team Member and the registration is deleted in Time Lock Registry
       await bablToken.connect(signer1).claimMyTokens();
