@@ -53,6 +53,12 @@ interface IStrategy {
 
     function executeStrategy(uint256 _capital, uint256 fee) external;
 
+    function executeStrategyRebalance(
+        uint256 _capital,
+        uint256 fee,
+        address payable _keeper
+    ) external;
+
     function getNAV() external view returns (uint256);
 
     function opDatas(uint256 _index) external view returns (address);

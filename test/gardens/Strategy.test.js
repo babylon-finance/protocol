@@ -280,6 +280,77 @@ describe('Strategy', function () {
       expect(await garden1.keeperDebt()).to.equal(0);
     });
 
+    it('should be able to add more capital in tranches to an active strategy', async function () {
+      const strategyContract = await createStrategy(
+        'buy',
+        'vote',
+        [signer1, signer2, signer3],
+        kyberTradeIntegration.address,
+        garden1,
+      );
+
+      await executeStrategy(strategyContract, { amount: ONE_ETH, fee: 42 });
+      await executeStrategy(strategyContract, { amount: ONE_ETH, fee: 42 });
+
+      const [address, active, dataSet, finalized, executedAt, exitedAt] = await strategyContract.getStrategyState();
+
+      expect(address).to.equal(strategyContract.address);
+      expect(active).to.equal(true);
+      expect(dataSet).to.equal(true);
+      expect(finalized).to.equal(false);
+      expect(executedAt).to.not.equal(0);
+      expect(exitedAt).to.equal(ethers.BigNumber.from(0));
+
+      // Keeper gets paid
+      expect(await wethToken.balanceOf(await keeper.getAddress())).to.equal(84);
+      expect(await garden1.keeperDebt()).to.equal(0);
+      expect(await strategyContract.capitalAllocated()).to.equal(ONE_ETH.mul(2));
+    });
+
+    it('should not be able to add more capital below rebalance amount', async function () {
+      const strategyContract = await createStrategy(
+        'buy',
+        'vote',
+        [signer1, signer2, signer3],
+        kyberTradeIntegration.address,
+        garden1,
+      );
+
+      await executeStrategy(strategyContract, { amount: ONE_ETH, fee: 42 });
+      await expect(executeStrategy(strategyContract, { amount: ONE_ETH.div(2), fee: 42 })).to.be.reverted;
+    });
+
+    it('should add more capital on active strategies when calling rebalance on the garden', async function () {
+      const strategyContract = await createStrategy(
+        'buy',
+        'vote',
+        [signer1, signer2, signer3],
+        kyberTradeIntegration.address,
+        garden1,
+      );
+
+      await executeStrategy(strategyContract, { amount: ONE_ETH, fee: 42 });
+      const liquidBalance = await wethToken.balanceOf(garden1.address);
+      await garden1.connect(keeper).rebalanceStrategies(42);
+
+      const [address, active, dataSet, finalized, executedAt, exitedAt] = await strategyContract.getStrategyState();
+
+      expect(address).to.equal(strategyContract.address);
+      expect(active).to.equal(true);
+      expect(dataSet).to.equal(true);
+      expect(finalized).to.equal(false);
+      expect(executedAt).to.not.equal(0);
+      expect(exitedAt).to.equal(ethers.BigNumber.from(0));
+
+      // Keeper gets paid
+      expect(await wethToken.balanceOf(await keeper.getAddress())).to.equal(84);
+      expect(await garden1.keeperDebt()).to.equal(0);
+      expect(await strategyContract.capitalAllocated()).to.be.closeTo(
+        ONE_ETH.add(liquidBalance),
+        liquidBalance.div(10),
+      );
+    });
+
     it('should not be able to unwind an active strategy with not enough capital', async function () {
       const strategyContract = await createStrategy(
         'buy',
