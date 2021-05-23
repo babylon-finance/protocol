@@ -17,7 +17,7 @@
 
 pragma solidity 0.7.6;
 
-//
+import 'hardhat/console.sol';
 import {Address} from '@openzeppelin/contracts/utils/Address.sol';
 import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import {SafeERC20} from '@openzeppelin/contracts/token/ERC20/SafeERC20.sol';
@@ -367,6 +367,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         IRewardsDistributor rewardsDistributor = IRewardsDistributor(IBabController(controller).rewardsDistributor());
         (uint256 reserveRewards, uint256 bablRewards) =
             rewardsDistributor.getRewards(address(this), msg.sender, _finalizedStrategies);
+        _require(reserveRewards > 0 || bablRewards > 0, Errors.NO_REWARDS_TO_CLAIM);
 
         if (reserveRewards > 0 && address(this).balance >= reserveRewards) {
             contributor.claimedRewards = contributor.claimedRewards.add(reserveRewards); // Rewards claimed properly

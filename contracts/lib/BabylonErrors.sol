@@ -250,4 +250,6 @@ library Errors {
     uint256 internal constant CONTRIBUTOR_POWER_OVERFLOW = 80;
     // Contributor power window out of bounds
     uint256 internal constant CONTRIBUTOR_POWER_CHECK_DEPOSITS = 81;
+    // Contributor power window out of bounds
+    uint256 internal constant NO_REWARDS_TO_CLAIM = 82;
 }

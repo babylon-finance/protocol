@@ -752,7 +752,9 @@ describe('BABL Rewards Distributor', function () {
       const contributor = await garden1.getContributor(signer1.address);
 
       // Try again to claims the same tokens but no more tokens are delivered
-      await garden1.connect(signer1).claimReturns([long1.address, long2.address]);
+      await expect(garden1.connect(signer1).claimReturns([long1.address, long2.address])).to.be.revertedWith(
+        'revert BAB#082',
+      );
       const contributor2 = await garden1.getContributor(signer1.address);
 
       await expect(contributor2[4].toString()).to.equal(contributor[4]);
@@ -761,8 +763,10 @@ describe('BABL Rewards Distributor', function () {
       await garden1.connect(signer2).claimReturns([long1.address, long2.address]);
       const contributor3 = await garden1.getContributor(signer2.address);
 
-      // Try again to claims the same tokens but no more tokens are delivered
-      await garden1.connect(signer2).claimReturns([long1.address, long2.address]);
+      // Try again to claims the same tokens but as there are no more tokens or rewards, it reverts
+      await expect(garden1.connect(signer2).claimReturns([long1.address, long2.address])).to.be.revertedWith(
+        'revert BAB#082',
+      );
       const contributor4 = await garden1.getContributor(signer2.address);
 
       await expect(contributor4[4].toString()).to.equal(contributor3[4]);
