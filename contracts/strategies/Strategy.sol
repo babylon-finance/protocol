@@ -67,7 +67,12 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
 
     /* ============ Events ============ */
     event Invoked(address indexed _target, uint256 indexed _value, bytes _data, bytes _returnValue);
-    event StrategyVoted(address indexed _garden, uint256 totalPositiveVotes, uint256 totalNegativeVotes, uint256 _timestamp);
+    event StrategyVoted(
+        address indexed _garden,
+        uint256 totalPositiveVotes,
+        uint256 totalNegativeVotes,
+        uint256 _timestamp
+    );
     event StrategyExecuted(address indexed _garden, uint256 _capital, uint256 _fee, uint256 timestamp);
     event StrategyFinalized(address indexed _garden, uint256 _capitalReturned, uint256 _fee, uint256 timestamp);
     event StrategyReduced(address indexed _garden, uint256 _amountReduced, uint256 timestamp);
@@ -349,9 +354,9 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         for (uint256 i = 0; i < _voters.length; i++) {
             votes[_voters[i]] = _votes[i];
             if (_votes[i] > 0) {
-                totalPositiveVotes = totalPositiveVotes.add(uint(Math.abs(_votes[i])));
+                totalPositiveVotes = totalPositiveVotes.add(uint256(Math.abs(_votes[i])));
             } else {
-                totalNegativeVotes = totalNegativeVotes.add(uint(Math.abs(_votes[i])));
+                totalNegativeVotes = totalNegativeVotes.add(uint256(Math.abs(_votes[i])));
             }
         }
 
