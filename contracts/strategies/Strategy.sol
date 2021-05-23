@@ -291,6 +291,9 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         minRebalanceCapital = _minRebalanceCapital;
         maxCapitalRequested = _maxCapitalRequested;
 
+        votes[_strategist] = _stake.toInt256();
+        totalPositiveVotes = _stake;
+
         dataSet = false;
     }
 
