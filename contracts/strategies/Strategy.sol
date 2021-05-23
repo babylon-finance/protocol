@@ -353,6 +353,10 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         _require(block.timestamp.sub(enteredAt) <= MAX_CANDIDATE_PERIOD, Errors.VOTING_WINDOW_IS_OVER);
         active = true;
 
+        // set votes to zero expecting keeper to provide correct values
+        totalPositiveVotes  = 0;
+        totalNegativeVotes = 0;
+
         // Set votes data
         for (uint256 i = 0; i < _voters.length; i++) {
             votes[_voters[i]] = _votes[i];
