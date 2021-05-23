@@ -221,6 +221,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
     bool public override finalized; // Flag that indicates whether we exited the strategy
     bool public override active; // Whether the strategy has met the voting quorum
     bool public dataSet;
+    bool public hasMiningStarted;
 
     uint256 public override duration; // Duration of the bet
     uint256 public override stake; // Amount of stake by the strategist (in reserve asset) needs to be positive
@@ -282,6 +283,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         strategist = _strategist;
         enteredAt = block.timestamp;
         stake = _stake;
+        hasMiningStarted = _hasMiningStarted();
         duration = _strategyDuration;
         expectedReturn = _expectedReturn;
         capitalAllocated = 0;
@@ -450,8 +452,9 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         updatedAt = block.timestamp;
         capitalAllocated = capitalAllocated.sub(_amountToUnwind);
         // Removes protocol principal for the calculation of rewards
-        IRewardsDistributor rewardsDistributor = IRewardsDistributor(IBabController(controller).rewardsDistributor());
-        if (_hasMiningStarted()) {
+        if (hasMiningStarted) {
+            IRewardsDistributor rewardsDistributor =
+                IRewardsDistributor(IBabController(controller).rewardsDistributor());
             // Only if the Mining program started on time for this strategy
             rewardsDistributor.substractProtocolPrincipal(_amountToUnwind);
         }
@@ -718,8 +721,6 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         capitalAllocated = capitalAllocated.add(_capital);
         _enterStrategy(_capital);
 
-        // Add to Rewards Distributor an update of the Protocol Principal for BABL Mining Rewards calculations
-        IRewardsDistributor rewardsDistributor = IRewardsDistributor(IBabController(controller).rewardsDistributor());
         // Sets the executed timestamp on first execution
         if (executedAt == 0) {
             executedAt = block.timestamp;
@@ -727,12 +728,14 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
             // Updating allocation - we need to consider the difference for the calculation
             // We control the potential overhead in BABL Rewards calculations to keep control
             // and avoid distributing a wrong number (e.g. flash loans)
-            if (_hasMiningStarted()) {
+            if (hasMiningStarted) {
                 // The Mining program has not started on time for this strategy
                 rewardsTotalOverhead = rewardsTotalOverhead.add(_capital.mul(block.timestamp.sub(updatedAt)));
             }
         }
-        if (_hasMiningStarted()) {
+        if (hasMiningStarted) {
+            IRewardsDistributor rewardsDistributor =
+                IRewardsDistributor(IBabController(controller).rewardsDistributor());
             // The Mining program has not started on time for this strategy
             rewardsDistributor.addProtocolPrincipal(_capital);
         }
@@ -880,13 +883,14 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
             reserveAssetDelta,
             address(this)
         );
-        IRewardsDistributor rewardsDistributor = IRewardsDistributor(IBabController(controller).rewardsDistributor());
         // Substract the Principal in the Rewards Distributor to update the Protocol power value
-        if (_hasMiningStarted()) {
+        if (hasMiningStarted) {
+            IRewardsDistributor rewardsDistributor =
+                IRewardsDistributor(IBabController(controller).rewardsDistributor());
             // Only if the Mining program started on time for this strategy
             rewardsDistributor.substractProtocolPrincipal(capitalAllocated);
+            strategyRewards = rewardsDistributor.getStrategyRewards(address(this)); // Must be zero in case the mining program didnt started on time
         }
-        strategyRewards = rewardsDistributor.getStrategyRewards(address(this)); // Must be zero in case the mining program didnt started on time
     }
 
     function _getPrice(address _assetOne, address _assetTwo) internal view returns (uint256) {
