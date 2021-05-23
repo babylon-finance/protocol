@@ -93,6 +93,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
     uint256 public constant EARLY_WITHDRAWAL_PENALTY = 15e16;
     uint256 public constant MAX_TOTAL_STRATEGIES = 20; // Max number of strategies
     uint256 private constant TEN_PERCENT = 1e17;
+    // TODO: Given DAI, USDC, and WBTC can be a reseve asset, MAX_KEEPER_FEE should depend on reserve asset
     uint256 private constant MAX_KEEPER_FEE = (1e6 * 1e3 gwei);
 
     /* ============ Structs ============ */
@@ -515,7 +516,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         uint256 liquidReserveAsset = ERC20Upgradeable(reserveAsset).balanceOf(address(this));
         for (uint256 i = 0; i < strategies.length; i++) {
             IStrategy strategy = IStrategy(strategies[i]);
-            uint256 percentage = strategy.totalVotes().toUint256().preciseDiv(totalStake);
+            uint256 percentage = strategy.totalPositiveVotes().sub(strategy.totalNegativeVotes()).preciseDiv(totalStake);
             uint256 toAllocate = liquidReserveAsset.preciseMul(percentage);
             if (
                 block.timestamp < strategy.executedAt().add(strategy.duration()).sub(1 days) &&
