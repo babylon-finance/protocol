@@ -195,6 +195,25 @@ describe('BABLToken contract', function () {
         bablToken.connect(owner).increaseAllowance(signer2.address, ethers.utils.parseEther('310000')),
       ).to.be.revertedWith('TimeLockedToken::increaseAllowance:Not enough unlocked tokens');
     });
+    it('Should fail if trying to increase allowance to an address above the unlocked balance in small chunks', async function () {
+      // Register 1 Team Member with 1_000 BABL 4Y of Vesting
+      // Vesting starting date 1 March 2021 9h PST Unix Time 1614618000
+      await timeLockRegistry.connect(owner).register(signer1.address, ethers.utils.parseEther('10'), false, 1614618000);
+
+      // Tokens are claimed by the Team Member and the registration is deleted in Time Lock Registry
+      await bablToken.connect(signer1).claimMyTokens();
+      await increaseTime(ONE_DAY_IN_SECONDS * 366);
+
+      const lockedBalance = await bablToken.viewLockedBalance(signer1.address);
+      await expect(
+        bablToken.connect(signer1).increaseAllowance(signer2.address, ethers.utils.parseEther('4')),
+      ).to.be.revertedWith('TimeLockedToken::increaseAllowance:Not enough unlocked tokens');
+      await expect(bablToken.connect(signer1).increaseAllowance(signer2.address, ethers.utils.parseEther('2'))).not.to
+        .be.reverted;
+      await expect(
+        bablToken.connect(signer1).increaseAllowance(signer2.address, ethers.utils.parseEther('2')),
+      ).to.be.revertedWith('TimeLockedToken::increaseAllowance:Not enough unlocked tokens');
+    });
 
     it('Should fail if trying to increase allowance to the zero address', async function () {
       await expect(
@@ -328,7 +347,13 @@ describe('BABLToken contract', function () {
         timeLockRegistry.connect(owner).register(ADDRESS_ZERO, ethers.utils.parseEther('26000'), true, 1614618000),
       ).to.be.revertedWith('TimeLockRegistry::register: cannot register the zero address');
     });
-
+    it('Should get 0 lockedAmount for a non vested user', async function () {
+      // Enable BABL token transfers
+      await bablToken.connect(owner).enableTokensTransfers();
+      await bablToken.connect(owner).transfer(signer2.address, ethers.utils.parseEther('1'));
+      await expect((await bablToken.viewLockedBalance(signer2.address)).toString()).to.be.equal('0');
+      await expect((await bablToken.balanceOf(signer2.address)).toString()).to.equal(ethers.utils.parseEther('1'));
+    });
     it('Should fail as Time Lock Registry contract address cannot be registered itself', async function () {
       await expect(
         timeLockRegistry

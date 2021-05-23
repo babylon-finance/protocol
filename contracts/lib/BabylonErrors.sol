@@ -217,9 +217,9 @@ library Errors {
     // Checks the min amount of voters
     uint256 internal constant MIN_VOTERS_CHECK = 64;
     // Ge contributor power error
-    uint256 internal constant GET_CONTRIBUTOR_POWER = 65;
-    // Not enough ETH set aside
-    uint256 internal constant NOT_ENOUGH_ETH = 66;
+    uint256 internal constant CONTRIBUTOR_POWER_CHECK_WINDOW = 65;
+    // Not enough reserve set aside
+    uint256 internal constant NOT_ENOUGH_RESERVE = 66;
     // Garden is already public
     uint256 internal constant GARDEN_ALREADY_PUBLIC = 67;
     // Withdrawal with penalty
@@ -246,4 +246,8 @@ library Errors {
     uint256 internal constant GARDEN_PARAMS_LENGTH = 78;
     // Token names too long
     uint256 internal constant NAME_TOO_LONG = 79;
+    // Contributor power overflows over garden power
+    uint256 internal constant CONTRIBUTOR_POWER_OVERFLOW = 80;
+    // Contributor power window out of bounds
+    uint256 internal constant CONTRIBUTOR_POWER_CHECK_DEPOSITS = 81;
 }

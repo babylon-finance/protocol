@@ -1,4 +1,5 @@
 const { deployments } = require('hardhat');
+const { TWAP_ORACLE_WINDOW, TWAP_ORACLE_GRANULARITY } = require('../../lib/system.js');
 const { GARDEN_PARAMS } = require('../../lib/constants.js');
 const addresses = require('../../lib/addresses');
 const { impersonateAddress } = require('../../lib/rpc');
@@ -8,9 +9,9 @@ async function setUpFixture({ deployments, getNamedAccounts, ethers }, options, 
   async function getContract(contractName, deploymentName) {
     return await ethers.getContractAt(contractName, (await deployments.get(deploymentName || contractName)).address);
   }
-  await deployments.fixture();
-
   const [deployer, keeper, owner, signer1, signer2, signer3] = await ethers.getSigners();
+
+  await deployments.fixture();
 
   const babController = await getContract('BabController', 'BabControllerProxy');
   const bablToken = await getContract('BABLToken');
@@ -19,6 +20,8 @@ async function setUpFixture({ deployments, getNamedAccounts, ethers }, options, 
   const priceOracle = await getContract('PriceOracle');
   const treasury = await getContract('Treasury');
   const gardenValuer = await getContract('GardenValuer');
+  const gardenNFT = await getContract('GardenNFT');
+  const strategyNFT = await getContract('StrategyNFT');
   const rewardsDistributor = await getContract('RewardsDistributor');
 
   const kyberTradeIntegration = await getContract('KyberTradeIntegration');
@@ -36,33 +39,77 @@ async function setUpFixture({ deployments, getNamedAccounts, ethers }, options, 
   const depositVaultOperation = await getContract('DepositVaultOperation');
   const lendOperation = await getContract('LendOperation');
 
+  // deploy uniswap v2 adapter for tests
+  await deployments.deploy('UniswapTWAP', {
+    from: deployer.address,
+    args: [babController.address, addresses.uniswap.factory, TWAP_ORACLE_WINDOW, TWAP_ORACLE_GRANULARITY],
+    log: true,
+  });
+  const univ2 = await getContract('UniswapTWAP');
+
   // Gives signer1 creator permissions
   await ishtarGate.connect(owner).setCreatorPermissions(owner.address, true, { gasPrice: 0 });
   await ishtarGate.connect(owner).setCreatorPermissions(signer1.address, true, { gasPrice: 0 });
 
   await babController
     .connect(signer1)
-    .createGarden(addresses.tokens.WETH, 'Absolute ETH Return [beta]', 'EYFA', 'http...', 0, gardenParams, {
-      value: ethers.utils.parseEther('1'),
-    });
+    .createGarden(
+      addresses.tokens.WETH,
+      'Absolute ETH Return [beta]',
+      'EYFA',
+      'http...',
+      0,
+      gardenParams,
+      ethers.utils.parseEther('1'),
+      {
+        value: ethers.utils.parseEther('1'),
+      },
+    );
 
   await babController
     .connect(signer1)
-    .createGarden(addresses.tokens.WETH, 'ETH Yield Farm [a]', 'EYFB', 'http...', 1, gardenParams, {
-      value: ethers.utils.parseEther('1'),
-    });
+    .createGarden(
+      addresses.tokens.WETH,
+      'ETH Yield Farm [a]',
+      'EYFB',
+      'http...',
+      1,
+      gardenParams,
+      ethers.utils.parseEther('1'),
+      {
+        value: ethers.utils.parseEther('1'),
+      },
+    );
 
   await babController
     .connect(signer1)
-    .createGarden(addresses.tokens.WETH, 'ETH Yield Farm [b]', 'EYFG', 'http...', 2, gardenParams, {
-      value: ethers.utils.parseEther('1'),
-    });
+    .createGarden(
+      addresses.tokens.WETH,
+      'ETH Yield Farm [b]',
+      'EYFG',
+      'http...',
+      2,
+      gardenParams,
+      ethers.utils.parseEther('1'),
+      {
+        value: ethers.utils.parseEther('1'),
+      },
+    );
 
   await babController
     .connect(signer1)
-    .createGarden(addresses.tokens.WETH, 'ETH Yield Farm [d]', 'EYFG', 'http...', 3, gardenParams, {
-      value: ethers.utils.parseEther('1'),
-    });
+    .createGarden(
+      addresses.tokens.WETH,
+      'ETH Yield Farm [d]',
+      'EYFG',
+      'http...',
+      3,
+      gardenParams,
+      ethers.utils.parseEther('1'),
+      {
+        value: ethers.utils.parseEther('1'),
+      },
+    );
 
   const gardens = await babController.getGardens();
 
@@ -120,6 +167,7 @@ async function setUpFixture({ deployments, getNamedAccounts, ethers }, options, 
     oneInchPoolIntegration,
     compoundLendIntegration,
     aaveLendIntegration,
+    univ2,
 
     garden1,
     garden2,
@@ -137,6 +185,9 @@ async function setUpFixture({ deployments, getNamedAccounts, ethers }, options, 
     gardenValuer,
     priceOracle,
     ishtarGate,
+
+    gardenNFT,
+    strategyNFT,
 
     GARDEN_PARAMS,
 

@@ -18,13 +18,12 @@
 
 pragma solidity 0.7.6;
 
-import 'hardhat/console.sol';
-
 import {SafeCast} from '@openzeppelin/contracts/utils/SafeCast.sol';
+import {SafeMath} from '@openzeppelin/contracts/math/SafeMath.sol';
 import {ERC20} from '@openzeppelin/contracts/token/ERC20/ERC20.sol';
 import {ReentrancyGuard} from '@openzeppelin/contracts/utils/ReentrancyGuard.sol';
-import '@uniswap/v2-core/contracts/interfaces/IUniswapV2Pair.sol';
-import '@uniswap/v2-periphery/contracts/libraries/UniswapV2Library.sol';
+import '@uniswap/v3-core/contracts/interfaces/IUniswapV3Factory.sol';
+import '@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol';
 
 import {IStrategy} from '../../interfaces/IStrategy.sol';
 import {ITradeIntegration} from '../../interfaces/ITradeIntegration.sol';
@@ -69,6 +68,10 @@ abstract contract TradeIntegration is BaseIntegration, ReentrancyGuard, ITradeIn
         uint256 _totalSendAmount,
         uint256 _totalReceiveAmount
     );
+
+    uint24 private constant FEE_LOW = 500;
+    uint24 private constant FEE_MEDIUM = 3000;
+    uint24 private constant FEE_HIGH = 10000;
 
     /* ============ Constructor ============ */
 
@@ -179,24 +182,44 @@ abstract contract TradeIntegration is BaseIntegration, ReentrancyGuard, ITradeIn
      */
     function _validatePreTradeData(TradeInfo memory _tradeInfo, uint256 _sendQuantity) internal view {
         require(_tradeInfo.totalSendQuantity > 0, 'Token to sell must be nonzero');
-        address pair =
-            UniswapV2Library.pairFor(
-                IBabController(controller).getUniswapFactory(),
-                _tradeInfo.sendToken,
-                _tradeInfo.receiveToken
-            );
-        uint256 minLiquidity = _tradeInfo.garden.minLiquidityAsset();
-        // Check that there is enough liquidity
-        (uint256 liquidity0, uint256 liquidity1, ) = IUniswapV2Pair(pair).getReserves();
-        require(
-            (IUniswapV2Pair(pair).token0() == weth && liquidity0 >= minLiquidity) ||
-                (IUniswapV2Pair(pair).token1() == weth && liquidity1 >= minLiquidity),
-            'Not enough liquidity'
-        );
+        IUniswapV3Pool _pool = _getUniswapPoolWithMostLiquidity(_tradeInfo);
+
+        uint256 minLiquidityReserveAsset = _tradeInfo.garden.minLiquidityAsset();
+        uint256 poolLiquidity = uint256(_pool.liquidity());
+        uint256 liquidityInReserve;
+
+        if (_pool.token0() == _tradeInfo.garden.reserveAsset()) {
+            liquidityInReserve = poolLiquidity.mul(poolLiquidity).div(ERC20(_pool.token1()).balanceOf(address(_pool)));
+        }
+        if (_pool.token1() == _tradeInfo.garden.reserveAsset()) {
+            liquidityInReserve = poolLiquidity.mul(poolLiquidity).div(ERC20(_pool.token0()).balanceOf(address(_pool)));
+        }
+        require(liquidityInReserve >= minLiquidityReserveAsset, 'Not enough liquidity');
         require(
             ERC20(_tradeInfo.sendToken).balanceOf(address(_tradeInfo.strategy)) >= _sendQuantity,
             'Garden needs to have enough liquid tokens'
         );
+    }
+
+    function _getUniswapPoolWithMostLiquidity(TradeInfo memory _tradeInfo) internal view returns (IUniswapV3Pool) {
+        IUniswapV3Factory factory = IUniswapV3Factory(IBabController(controller).uniswapFactory());
+        IUniswapV3Pool poolLow =
+            IUniswapV3Pool(factory.getPool(_tradeInfo.sendToken, _tradeInfo.receiveToken, FEE_LOW));
+        IUniswapV3Pool poolMedium =
+            IUniswapV3Pool(factory.getPool(_tradeInfo.sendToken, _tradeInfo.receiveToken, FEE_MEDIUM));
+        IUniswapV3Pool poolHigh =
+            IUniswapV3Pool(factory.getPool(_tradeInfo.sendToken, _tradeInfo.receiveToken, FEE_HIGH));
+
+        uint128 liquidityLow = poolLow.liquidity();
+        uint128 liquidityMedium = poolMedium.liquidity();
+        uint128 liquidityHigh = poolHigh.liquidity();
+        if (liquidityLow > liquidityMedium && liquidityLow >= liquidityHigh) {
+            return poolLow;
+        }
+        if (liquidityMedium > liquidityLow && liquidityMedium >= liquidityHigh) {
+            return poolMedium;
+        }
+        return poolHigh;
     }
 
     /**

@@ -17,8 +17,6 @@
 
 pragma solidity 0.7.6;
 
-import 'hardhat/console.sol';
-
 import {ERC20} from '@openzeppelin/contracts/token/ERC20/ERC20.sol';
 import {IVoteToken} from '../interfaces/IVoteToken.sol';
 import {ReentrancyGuard} from '@openzeppelin/contracts/utils/ReentrancyGuard.sol';
@@ -122,7 +120,7 @@ abstract contract VoteToken is Context, ERC20, Ownable, IVoteToken, ReentrancyGu
         bytes32 digest = keccak256(abi.encodePacked('\x19\x01', domainSeparator, structHash));
         address signatory = ecrecover(digest, v, r, s);
         require(signatory != address(0), 'VoteToken::delegateBySig: invalid signature');
-        require(nonce == nonces[signatory] + 1, 'VoteToken::delegateBySig: invalid nonce');
+        require(nonce == nonces[signatory].add(1), 'VoteToken::delegateBySig: invalid nonce');
         nonces[signatory]++;
         require(block.timestamp <= expiry, 'VoteToken::delegateBySig: signature expired');
         return _delegate(signatory, delegatee);

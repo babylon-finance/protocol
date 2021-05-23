@@ -26,10 +26,14 @@ module.exports = async ({ getNamedAccounts, deployments, ethers, getSigner, getC
   const treasury = await getContract('Treasury');
 
   console.log('Send 500k BABL tokens to RewardsDistributor');
-  await bablToken.connect(deployerSigner).transfer(rewardsDistributor.address, ONE_ETH.mul(500000), { gasPrice });
+  await (
+    await bablToken.connect(deployerSigner).transfer(rewardsDistributor.address, ONE_ETH.mul(500000), { gasPrice })
+  ).wait();
 
   console.log('Send 310k BABL tokens to TimeLockRegistry');
-  await bablToken.connect(deployerSigner).transfer(timeLockRegistry.address, ONE_ETH.mul('310000'), { gasPrice });
+  await (
+    await bablToken.connect(deployerSigner).transfer(timeLockRegistry.address, ONE_ETH.mul('310000'), { gasPrice })
+  ).wait();
 
   console.log('Register investor and team allocations');
   const now = new Date().getTime();
@@ -42,21 +46,23 @@ module.exports = async ({ getNamedAccounts, deployments, ethers, getSigner, getC
   }));
   const batchSize = 20;
   for (let i = 0; i < allocations.length; i += batchSize) {
-    await timeLockRegistry.connect(deployerSigner).registerBatch(allocations.slice(i, i + batchSize));
+    await (
+      await timeLockRegistry.connect(deployerSigner).registerBatch(allocations.slice(i, i + batchSize), { gasPrice })
+    ).wait();
   }
   console.log(
     `Total amount of BABL tokens in registrations is ${ethers.utils.formatUnits(await timeLockRegistry.totalTokens())}`,
   );
 
   console.log('Send 16k to MULTISIG');
-  await bablToken.connect(deployerSigner).transfer(MULTISIG, ONE_ETH.mul(16000), { gasPrice });
+  await (await bablToken.connect(deployerSigner).transfer(MULTISIG, ONE_ETH.mul(16000), { gasPrice })).wait();
 
   const balance = await bablToken.balanceOf(deployerSigner.address);
   console.log(`Send ${ethers.utils.formatUnits(balance, 'ether')} to the Treasury`);
-  await bablToken.connect(deployerSigner).transfer(treasury.address, balance, { gasPrice });
+  await (await bablToken.connect(deployerSigner).transfer(treasury.address, balance, { gasPrice })).wait();
 
   console.log('Disable BABL transfers');
-  await bablToken.connect(deployerSigner).disableTokensTransfers({ gasPrice });
+  await (await bablToken.connect(deployerSigner).disableTokensTransfers({ gasPrice })).wait();
 };
 
 module.exports.tags = ['Transfer'];

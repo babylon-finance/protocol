@@ -101,7 +101,7 @@ describe('TimeLockRegistry', function () {
     });
 
     it('totalTokens value is correct', async function () {
-      await timeLockRegistry.connect(owner).register(signer1.address, ONE_ETH, true, 1614618000);
+      await timeLockRegistry.connect(owner).register(signer1.address, ONE_ETH, true, 1614618000, { gasPrice: 0 });
       expect(await timeLockRegistry.totalTokens()).to.be.eq(TOTAL_REGISTERED_TOKENS.add(ONE_ETH));
     });
 
@@ -123,20 +123,40 @@ describe('TimeLockRegistry', function () {
   });
 
   describe('claim', function () {
-    it('totalTokens value is correct', async function () {
+    it('totalTokens value is correct after claim', async function () {
       const teamSigner = await impersonateAddress('0x908295e2be3a36021aadaaed0bbb124fd602cbf2');
-
-      await bablToken.connect(teamSigner).claimMyTokens();
+      await bablToken.connect(teamSigner).claimMyTokens({ gasPrice: 0 });
       expect(await timeLockRegistry.totalTokens()).to.be.eq(TOTAL_REGISTERED_TOKENS.sub(ONE_ETH.mul(17000)));
     });
   });
 
   describe('cancelRegistration', function () {
-    it('totalTokens value is correct', async function () {
+    it('totalTokens value is correct after cancellation', async function () {
       const teamSigner = await impersonateAddress('0x908295e2be3a36021aadaaed0bbb124fd602cbf2');
 
       await timeLockRegistry.connect(owner).cancelRegistration(teamSigner.address);
       expect(await timeLockRegistry.totalTokens()).to.be.eq(TOTAL_REGISTERED_TOKENS.sub(ONE_ETH.mul(17000)));
+    });
+    it('cancel a wrong address before claim and re-register the right address', async function () {
+      const teamSignerOK = await impersonateAddress('0x232775eAD28F0C0c750A097bA77302E7d84efd3B');
+
+      await timeLockRegistry.connect(owner).cancelRegistration(teamSignerOK.address);
+      expect(await timeLockRegistry.totalTokens()).to.be.eq(TOTAL_REGISTERED_TOKENS.sub(ONE_ETH.mul(17000)));
+
+      const teamSignerWrong = await impersonateAddress('0x71763709Da2488F75bc2DB5d194769d801e97Fa8');
+
+      await timeLockRegistry
+        .connect(owner)
+        .register(teamSignerWrong.address, ethers.utils.parseEther('17000'), true, 1614618000);
+      expect(await timeLockRegistry.totalTokens()).to.be.eq(TOTAL_REGISTERED_TOKENS);
+
+      await timeLockRegistry.connect(owner).cancelRegistration(teamSignerWrong.address);
+      expect(await timeLockRegistry.totalTokens()).to.be.eq(TOTAL_REGISTERED_TOKENS.sub(ONE_ETH.mul(17000)));
+
+      await timeLockRegistry
+        .connect(owner)
+        .register(teamSignerOK.address, ethers.utils.parseEther('17000'), true, 1614618000);
+      expect(await timeLockRegistry.totalTokens()).to.be.eq(TOTAL_REGISTERED_TOKENS);
     });
   });
   describe('Quality Tests: Register ->  Claim -> Time passes -> Unlocking balances -> Transfers', function () {
@@ -171,8 +191,8 @@ describe('TimeLockRegistry', function () {
 
       expect(userSigner1Balance2).to.equal(userSigner1Balance1);
       expect(userSigner2Balance2).to.equal(userSigner2Balance1);
-      expect(userSigner1LockedBalance2).to.be.closeTo('745341126014713343480', ethers.utils.parseEther('0.0005')); // Team 4 Y vesting (1/4 available after 1Y)
-      expect(userSigner2LockedBalance2).to.be.closeTo('330227417343142228986', ethers.utils.parseEther('0.0005')); // Investor 3Y vesting (1/3 available after 1Y)
+      expect(userSigner1LockedBalance2).to.be.closeTo('718567692478437341451', ethers.utils.parseEther('0.0005')); // Team 4 Y vesting (1/4 available after 1Y)
+      expect(userSigner2LockedBalance2).to.be.closeTo('312378451082360899712', ethers.utils.parseEther('0.0005')); // Investor 3Y vesting (1/3 available after 1Y)
     });
     it('Should unlock all vested tokens after 3Y for investors and after 4Y for team members and advisors', async function () {
       // Vesting starting date 1 March 2021 9h PST Unix Time 1614618000
@@ -204,7 +224,7 @@ describe('TimeLockRegistry', function () {
 
       expect(userSigner1Balance2).to.equal(userSigner1Balance1);
       expect(userSigner2Balance2).to.equal(userSigner2Balance1);
-      expect(userSigner1LockedBalance2).to.be.closeTo('228217830416032470826', ethers.utils.parseEther('0.0005')); // Team 4 Y vesting (3/4 available after 3Y)
+      expect(userSigner1LockedBalance2).to.be.closeTo('201444404807204464738', ethers.utils.parseEther('0.0005')); // Team 4 Y vesting (3/4 available after 3Y)
       expect(userSigner2LockedBalance2).to.be.equal('0'); // Investor 3Y vesting (all available after 3Y)
       // We move ahead 365 days more
       await increaseTime(ONE_DAY_IN_SECONDS * 365);

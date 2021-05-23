@@ -18,8 +18,8 @@
 
 pragma solidity 0.7.6;
 
-import 'hardhat/console.sol';
-import {ERC721Upgradeable} from '@openzeppelin/contracts-upgradeable/token/ERC721/ERC721Upgradeable.sol';
+//
+import {ERC721} from '@openzeppelin/contracts/token/ERC721/ERC721.sol';
 import {Counters} from '@openzeppelin/contracts/utils/Counters.sol';
 import {IBabController} from '../interfaces/IBabController.sol';
 import {IGarden} from '../interfaces/IGarden.sol';
@@ -31,18 +31,20 @@ import {IGardenNFT} from '../interfaces/IGardenNFT.sol';
  *
  * Contract the NFT for each Garden
  */
-contract GardenNFT is ERC721Upgradeable, IGardenNFT {
+contract GardenNFT is ERC721, IGardenNFT {
     using Counters for Counters.Counter;
 
     /* ============ Events ============ */
 
     event GardenNFTAwarded(address indexed _member, uint256 indexed _newItemId);
-    event GardenURIUpdated(string _newValue, string _oldValue);
 
     /* ============ Modifiers ============ */
 
     modifier onlyGarden {
-        require(msg.sender == address(garden), 'Only the garden can mint the NFT');
+        require(
+            controller.isSystemContract(msg.sender) && IGarden(msg.sender).controller() == address(controller),
+            'Only the garden can mint the NFT'
+        );
         _;
     }
 
@@ -50,13 +52,10 @@ contract GardenNFT is ERC721Upgradeable, IGardenNFT {
 
     // Address of the Controller contract
     IBabController public controller;
-    IGarden public garden;
-
-    // Address of the Garden JSON (Shared JSON for each garden)
-    string public override gardenTokenURI;
-    uint256 public seed;
 
     Counters.Counter private _tokenIds;
+    mapping(address => string) public override gardenTokenURIs;
+    mapping(address => uint256) public override gardenSeeds;
 
     /* ============ Constructor ============ */
 
@@ -64,26 +63,16 @@ contract GardenNFT is ERC721Upgradeable, IGardenNFT {
      * Sets the protocol controller
      *
      * @param _controller         Address of controller contract
-     * @param _garden             Address of the garden this NFT belongs to
      * @param _name               Name of the garden
      * @param _symbol             Symbol of the garden
-     * @param _gardenTokenURI           Initial token URI
-     * @param _seed               Seed to regenerated the Babylong Garden in 3D
      */
-    function initialize(
+    constructor(
         address _controller,
-        address _garden,
         string memory _name,
-        string memory _symbol,
-        string memory _gardenTokenURI,
-        uint256 _seed
-    ) external override initializer {
+        string memory _symbol
+    ) ERC721(_name, _symbol) {
         require(address(_controller) != address(0), 'Controller must exist');
-        __ERC721_init(_name, _symbol);
         controller = IBabController(_controller);
-        garden = IGarden(_garden);
-        seed = _seed;
-        gardenTokenURI = _gardenTokenURI;
     }
 
     /* ============ External Functions ============ */
@@ -95,39 +84,27 @@ contract GardenNFT is ERC721Upgradeable, IGardenNFT {
      */
     function grantGardenNFT(address _user) external override onlyGarden returns (uint256) {
         require(address(_user) != address(0), 'User must exist');
-        return _createOrGetGardenNFT(_user);
-    }
-
-    /**
-     * Updates the token URI of the whole garden NFT
-     *
-     * @param _gardenTokenURI               Address of the tokenURI
-     */
-    function updateGardenURI(string memory _gardenTokenURI) external override {
-        require(msg.sender == controller.owner(), 'Only owner can call this');
-        string memory oldURI = gardenTokenURI;
-        gardenTokenURI = _gardenTokenURI;
-        emit GardenURIUpdated(gardenTokenURI, oldURI);
-    }
-
-    /* ============ Internal Functions ============ */
-
-    /**
-     * Gives a new nft to the user or retrieve the existing one
-     *
-     * @param _user               Address of the user
-     */
-    function _createOrGetGardenNFT(address _user) private returns (uint256) {
-        uint256 newItemId = 0;
-        if (balanceOf(_user) == 0) {
-            _tokenIds.increment();
-            newItemId = _tokenIds.current();
-            _safeMint(_user, newItemId);
-            _setTokenURI(newItemId, gardenTokenURI);
-            emit GardenNFTAwarded(_user, newItemId);
-        } else {
-            newItemId = tokenOfOwnerByIndex(_user, 0);
-        }
+        _tokenIds.increment();
+        uint256 newItemId = _tokenIds.current();
+        _safeMint(_user, newItemId);
+        _setTokenURI(newItemId, gardenTokenURIs[msg.sender]);
+        emit GardenNFTAwarded(_user, newItemId);
         return newItemId;
+    }
+
+    /**
+     * Saves the Garden URI and seed
+     *
+     * @param _garden               Address of the garden
+     * @param _gardenTokenURI     Garden Token URI
+     */
+    function saveGardenURIAndSeed(
+        address _garden,
+        string memory _gardenTokenURI,
+        uint256 _seed
+    ) external override {
+        require(controller.isSystemContract(msg.sender), 'Only a system contract can call this');
+        gardenTokenURIs[_garden] = _gardenTokenURI;
+        gardenSeeds[_garden] = _seed;
     }
 }

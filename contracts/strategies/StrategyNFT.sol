@@ -18,7 +18,7 @@
 
 pragma solidity 0.7.6;
 
-import {ERC721Upgradeable} from '@openzeppelin/contracts-upgradeable/token/ERC721/ERC721Upgradeable.sol';
+import {ERC721} from '@openzeppelin/contracts/token/ERC721/ERC721.sol';
 import {Counters} from '@openzeppelin/contracts/utils/Counters.sol';
 import {IBabController} from '../interfaces/IBabController.sol';
 import {IGarden} from '../interfaces/IGarden.sol';
@@ -31,18 +31,21 @@ import {IStrategyNFT} from '../interfaces/IStrategyNFT.sol';
  *
  * Contract the NFT for each Strategy
  */
-contract StrategyNFT is ERC721Upgradeable, IStrategyNFT {
+contract StrategyNFT is ERC721, IStrategyNFT {
     using Counters for Counters.Counter;
 
     /* ============ Events ============ */
 
     event StrategyNFTAwarded(address indexed _member, uint256 indexed _newItemId);
-    event StrategyURIUpdated(string _newValue, string _oldValue);
 
     /* ============ Modifiers ============ */
 
     modifier onlyStrategy {
-        require(IGarden(strategy.garden()).isStrategyActiveInGarden(msg.sender), 'Only the strategy can mint the NFT');
+        IStrategy strategy = IStrategy(msg.sender);
+        require(
+            IGarden(strategy.garden()).isStrategyActiveInGarden(msg.sender) && controller.isSystemContract(msg.sender),
+            'Only the strategy can mint the NFT'
+        );
         _;
     }
 
@@ -50,11 +53,8 @@ contract StrategyNFT is ERC721Upgradeable, IStrategyNFT {
 
     // Address of the Controller contract
     IBabController public controller;
-    IGarden public garden;
-    IStrategy public strategy;
 
-    // Address of the Garden JSON (Shared JSON for each garden)
-    string public tokenURI;
+    mapping(address => StratDetail) public stratDetails;
 
     Counters.Counter private _tokenIds;
 
@@ -64,21 +64,17 @@ contract StrategyNFT is ERC721Upgradeable, IStrategyNFT {
      * Sets the protocol controller
      *
      * @param _controller         Address of controller contract
-     * @param _strategy           Address of the strategy this NFT belongs to
      * @param _name               Name of the garden
      * @param _symbol             Symbol of the garden
      */
-    function initialize(
+    constructor(
         address _controller,
-        address _strategy,
         string memory _name,
         string memory _symbol
-    ) external override initializer {
+    ) ERC721(_name, _symbol) {
         require(address(_controller) != address(0), 'Controller must exist');
         require(bytes(_name).length < 50, 'Strategy Name is too long');
-        __ERC721_init(_name, _symbol);
         controller = IBabController(_controller);
-        strategy = IStrategy(_strategy);
     }
 
     /* ============ External Functions ============ */
@@ -86,53 +82,48 @@ contract StrategyNFT is ERC721Upgradeable, IStrategyNFT {
     /**
      * Awards the garden NFT to a user and gives him access to a specific garden
      *
-     * @param _user               Address of the user
+     * @param _user                           Address of the user
+     * @param _strategyTokenURI               Strategy token URI
      */
-    function grantStrategyNFT(address _user, string memory _tokenURI) external override onlyStrategy returns (uint256) {
+    function grantStrategyNFT(address _user, string memory _strategyTokenURI)
+        external
+        override
+        onlyStrategy
+        returns (uint256)
+    {
         require(address(_user) != address(0), 'User must exist');
-        _updateStrategyURI(_tokenURI);
-        return _createOrGetStrategyNFT(_user);
-    }
-
-    /**
-     * Updates the token URI of the garden NFT
-     *
-     * @param _tokenURI               Address of the tokenURI
-     */
-    function updateStrategyURI(string memory _tokenURI) external override {
-        require(msg.sender == controller.owner(), 'Only owner can call this');
-        _updateStrategyURI(_tokenURI);
-    }
-
-    /* ============ Internal Functions ============ */
-
-    /**
-     * Gives a new nft to the user or retrieve the existing one
-     *
-     * @param _user               Address of the user
-     */
-    function _createOrGetStrategyNFT(address _user) private returns (uint256) {
-        uint256 newItemId = 0;
-        if (balanceOf(_user) == 0) {
-            _tokenIds.increment();
-            newItemId = _tokenIds.current();
-            _safeMint(_user, newItemId);
-            _setTokenURI(newItemId, tokenURI);
-            emit StrategyNFTAwarded(_user, newItemId);
-        } else {
-            newItemId = tokenOfOwnerByIndex(_user, 0);
-        }
+        _tokenIds.increment();
+        uint256 newItemId = _tokenIds.current();
+        _safeMint(_user, newItemId);
+        _setTokenURI(newItemId, _strategyTokenURI);
+        stratDetails[msg.sender].tokenId = newItemId;
+        emit StrategyNFTAwarded(_user, newItemId);
         return newItemId;
     }
 
     /**
-     * Updates the token URI of the strategy NFT
+     * Saves the name an symbol for a new created strategy
      *
-     * @param _tokenURI               Address of the tokenURI
+     * @param _strategy               Address of the strategy
+     * @param _name                   Strategy Name
+     * @param _symbol                 Strategy Symbol
      */
-    function _updateStrategyURI(string memory _tokenURI) private {
-        string memory oldURI = tokenURI;
-        tokenURI = _tokenURI;
-        emit StrategyURIUpdated(tokenURI, oldURI);
+    function saveStrategyNameAndSymbol(
+        address _strategy,
+        string memory _name,
+        string memory _symbol
+    ) external override {
+        require(controller.isSystemContract(msg.sender), 'Only a system contract can call this');
+        StratDetail storage stratDetail = stratDetails[_strategy];
+        stratDetail.name = _name;
+        stratDetail.symbol = _symbol;
+    }
+
+    function getStrategyTokenURI(address _strategy) external view override returns (string memory) {
+        return tokenURI(stratDetails[_strategy].tokenId);
+    }
+
+    function getStrategyName(address _strategy) external view override returns (string memory) {
+        return stratDetails[_strategy].name;
     }
 }
