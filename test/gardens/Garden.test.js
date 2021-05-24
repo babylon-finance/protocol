@@ -649,7 +649,16 @@ describe('Garden', function () {
 
       await injectFakeProfits(strategyContract, ethers.utils.parseEther('200')); // We inject positive profits
       await finalizeStrategy(strategyContract, 0);
-      await expect(finalizeStrategy(strategyContract, 0)).to.be.reverted;
+      await expect(finalizeStrategy(strategyContract, 0)).to.be.revertedWith('revert BAB#050');
+
+      await expect(
+        garden1.startWithdrawalWindow(
+          ethers.BigNumber.from('1076070704097713768'),
+          ethers.BigNumber.from('14263257018321332'),
+          ethers.BigNumber.from('90333961116035100'),
+          '0xd41b236f19726aba094b8b9d130620bfef535fd0',
+        ),
+      ).to.be.revertedWith('revert BAB#020');
     });
   });
   describe('Garden Balances', async function () {

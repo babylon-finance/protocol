@@ -21,7 +21,6 @@ const { setupTests } = require('../fixtures/GardenFixture');
 describe('Strategy', function () {
   let strategyDataset;
   let strategyCandidate;
-  let rewardsDistributor;
   let babController;
   let owner;
   let keeper;
@@ -33,8 +32,6 @@ describe('Strategy', function () {
   let strategy11;
   let strategy21;
   let wethToken;
-  let daiToken;
-  let daiWethPair;
   let treasury;
   let aaveLendIntegration;
   let kyberTradeIntegration;
@@ -83,8 +80,6 @@ describe('Strategy', function () {
     strategyCandidate = await ethers.getContractAt('Strategy', strategy21);
 
     wethToken = await ethers.getContractAt('IERC20', addresses.tokens.WETH);
-    // daiToken = await ethers.getContractAt('IERC20', addresses.tokens.DAI);
-    // daiWethPair = await ethers.getContractAt('IUniswapV2PairB', addresses.uniswap.pairs.wethdai);
   });
 
   describe('Strategy Deployment', async function () {
@@ -99,8 +94,10 @@ describe('Strategy', function () {
       await expect(strategyDataset.connect(signer1).changeStrategyDuration(ONE_DAY_IN_SECONDS * 3)).to.not.be.reverted;
     });
 
-    it('other member should not be able to change the duration of an strategy', async function () {
-      await expect(strategyDataset.connect(signer3).changeStrategyDuration(ONE_DAY_IN_SECONDS * 3)).to.be.reverted;
+    it('other member should NOT be able to change the duration of an strategy', async function () {
+      await expect(strategyDataset.connect(signer3).changeStrategyDuration(ONE_DAY_IN_SECONDS * 3)).to.be.revertedWith(
+        'revert BAB#032',
+      );
     });
   });
 
@@ -214,7 +211,7 @@ describe('Strategy', function () {
               gasPrice: 0,
             },
           ),
-      ).to.be.reverted;
+      ).to.be.revertedWith(/revert BAB#043/i);
     });
 
     it("can't push voting results twice", async function () {
@@ -247,7 +244,7 @@ describe('Strategy', function () {
               gasPrice: 0,
             },
           ),
-      ).to.be.reverted;
+      ).to.be.revertedWith(/revert BAB#042/i);
     });
   });
 
@@ -433,7 +430,7 @@ describe('Strategy', function () {
         strategyContract.connect(keeper).executeStrategy(ONE_ETH, ONE_ETH.mul(100), {
           gasPrice: 0,
         }),
-      ).to.be.reverted;
+      ).to.be.revertedWith(/revert BAB#019/i);
     });
   });
 
