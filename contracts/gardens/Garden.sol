@@ -507,24 +507,26 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
      * @param _fee                     The fee paid to keeper to compensate the gas cost for each strategy executed
      */
     function rebalanceStrategies(uint256 _fee) external override {
-        _onlyActive();
-        _require(IBabController(controller).isValidKeeper(msg.sender), Errors.ONLY_KEEPER);
-        // We assume that calling keeper functions should be less expensive
-        // than 1 million gas and the gas price should be lower than 1000 gwei.
-        _require(_fee <= MAX_KEEPER_FEE, Errors.FEE_TOO_HIGH);
-
         uint256 liquidReserveAsset = ERC20Upgradeable(reserveAsset).balanceOf(address(this));
+        uint256 totalActiveVotes;
         for (uint256 i = 0; i < strategies.length; i++) {
             IStrategy strategy = IStrategy(strategies[i]);
-            uint256 percentage =
-                strategy.totalPositiveVotes().sub(strategy.totalNegativeVotes()).preciseDiv(totalStake);
-            uint256 toAllocate = liquidReserveAsset.preciseMul(percentage);
-            if (
-                block.timestamp < strategy.executedAt().add(strategy.duration()).sub(1 days) &&
-                toAllocate >= strategy.minRebalanceCapital() &&
-                toAllocate.add(strategy.capitalAllocated()) <= strategy.maxCapitalRequested()
-            ) {
-                strategy.executeStrategy(toAllocate, _fee);
+            if (strategy.isStrategyActive()) {
+                totalActiveVotes = totalActiveVotes.add(strategy.totalVotes().toUint256());
+            }
+        }
+        totalActiveVotes = totalActiveVotes.add(totalActiveVotes.preciseMul(1e17)); // Add 10% for protocol and keeper fees
+        for (uint256 i = 0; i < strategies.length; i++) {
+            IStrategy strategy = IStrategy(strategies[i]);
+            if (strategy.isStrategyActive()) {
+                uint256 toAllocate =
+                    liquidReserveAsset.preciseMul(strategy.totalVotes().toUint256().preciseDiv(totalActiveVotes));
+                if (
+                    toAllocate >= strategy.minRebalanceCapital() &&
+                    toAllocate.add(strategy.capitalAllocated()) <= strategy.maxCapitalRequested()
+                ) {
+                    strategy.executeStrategyRebalance(toAllocate, _fee, msg.sender);
+                }
             }
         }
     }

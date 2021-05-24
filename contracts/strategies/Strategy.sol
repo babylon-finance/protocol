@@ -224,6 +224,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
     bool public override finalized; // Flag that indicates whether we exited the strategy
     bool public override active; // Whether the strategy has met the voting quorum
     bool public dataSet;
+    bool public hasMiningStarted;
 
     uint256 public override duration; // Duration of the bet
     uint256 public override stake; // Amount of stake by the strategist (in reserve asset) needs to be positive
@@ -285,6 +286,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         strategist = _strategist;
         enteredAt = block.timestamp;
         stake = _stake;
+        hasMiningStarted = _hasMiningStarted();
         duration = _strategyDuration;
         expectedReturn = _expectedReturn;
         capitalAllocated = 0;
@@ -354,7 +356,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         active = true;
 
         // set votes to zero expecting keeper to provide correct values
-        totalPositiveVotes  = 0;
+        totalPositiveVotes = 0;
         totalNegativeVotes = 0;
 
         // Set votes data
@@ -389,40 +391,22 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         nonReentrant
         onlyActiveGarden
     {
-        _require(active, Errors.STRATEGY_NEEDS_TO_BE_ACTIVE);
-        _require(capitalAllocated.add(_capital) <= maxCapitalRequested, Errors.MAX_CAPITAL_REACHED);
-        _require(_capital >= minRebalanceCapital, Errors.CAPITAL_IS_LESS_THAN_REBALANCE);
-        _require(
-            block.timestamp.sub(enteredCooldownAt) >= garden.strategyCooldownPeriod(),
-            Errors.STRATEGY_IN_COOLDOWN
-        );
+        _executesStrategy(_capital, _fee, msg.sender);
+    }
 
-        // Execute enter operation
-        garden.allocateCapitalToStrategy(_capital);
-        capitalAllocated = capitalAllocated.add(_capital);
-        _enterStrategy(_capital);
-
-        // Add to Rewards Distributor an update of the Protocol Principal for BABL Mining Rewards calculations
-        IRewardsDistributor rewardsDistributor = IRewardsDistributor(IBabController(controller).rewardsDistributor());
-        // Sets the executed timestamp on first execution
-        if (executedAt == 0) {
-            executedAt = block.timestamp;
-        } else {
-            // Updating allocation - we need to consider the difference for the calculation
-            // We control the potential overhead in BABL Rewards calculations to keep control
-            // and avoid distributing a wrong number (e.g. flash loans)
-            if (_hasMiningStarted()) {
-                // The Mining program has not started on time for this strategy
-                rewardsTotalOverhead = rewardsTotalOverhead.add(_capital.mul(block.timestamp.sub(updatedAt)));
-            }
-        }
-        if (_hasMiningStarted()) {
-            // The Mining program has not started on time for this strategy
-            rewardsDistributor.addProtocolPrincipal(_capital);
-        }
-        garden.payKeeper(msg.sender, _fee);
-        updatedAt = block.timestamp;
-        emit StrategyExecuted(address(garden), _capital, _fee, block.timestamp);
+    /**
+     * Executes an strategy from the garden as part of a rebalance
+     * @param _capital                  The capital to allocate to this strategy.
+     * @param _fee                      The fee paid to keeper to compensate the gas cost.
+     * @param _keeper                   The keeper that needs to be paid.
+     */
+    function executeStrategyRebalance(
+        uint256 _capital,
+        uint256 _fee,
+        address payable _keeper
+    ) external override nonReentrant onlyActiveGarden {
+        _require(msg.sender == address(garden), Errors.ONLY_ACTIVE_GARDEN);
+        _executesStrategy(_capital, _fee, _keeper);
     }
 
     /**
@@ -474,8 +458,9 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         updatedAt = block.timestamp;
         capitalAllocated = capitalAllocated.sub(_amountToUnwind);
         // Removes protocol principal for the calculation of rewards
-        IRewardsDistributor rewardsDistributor = IRewardsDistributor(IBabController(controller).rewardsDistributor());
-        if (_hasMiningStarted()) {
+        if (hasMiningStarted) {
+            IRewardsDistributor rewardsDistributor =
+                IRewardsDistributor(IBabController(controller).rewardsDistributor());
             // Only if the Mining program started on time for this strategy
             rewardsDistributor.substractProtocolPrincipal(_amountToUnwind);
         }
@@ -715,7 +700,64 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         return votes[_address];
     }
 
+    /**
+     * Gets the total votes casted for the strategy
+     *
+     * @return _totalVotes            Total amount of votes for the strategy
+     */
+    function totalVotes() external view override returns (int256) {
+        return totalPositiveVotes.toInt256().sub(totalNegativeVotes.toInt256());
+    }
+
     /* ============ Internal Functions ============ */
+
+    /*
+     * Executes an strategy that has been activated and gone through the cooldown period.
+     * Keeper will validate that quorum is reached, cacluates all the voting data and push it.
+     * @param _capital                  The capital to allocate to this strategy.
+     * @param _fee                      The fee paid to keeper to compensate the gas cost.
+     * @param _keepers                  The address of the keeper to pay
+     */
+    function _executesStrategy(
+        uint256 _capital,
+        uint256 _fee,
+        address payable _keeper
+    ) internal {
+        _require(active, Errors.STRATEGY_NEEDS_TO_BE_ACTIVE);
+        _require(capitalAllocated.add(_capital) <= maxCapitalRequested, Errors.MAX_CAPITAL_REACHED);
+        _require(_capital >= minRebalanceCapital, Errors.CAPITAL_IS_LESS_THAN_REBALANCE);
+        _require(
+            block.timestamp.sub(enteredCooldownAt) >= garden.strategyCooldownPeriod(),
+            Errors.STRATEGY_IN_COOLDOWN
+        );
+
+        // Execute enter operation
+        garden.allocateCapitalToStrategy(_capital);
+        capitalAllocated = capitalAllocated.add(_capital);
+        _enterStrategy(_capital);
+
+        // Sets the executed timestamp on first execution
+        if (executedAt == 0) {
+            executedAt = block.timestamp;
+        } else {
+            // Updating allocation - we need to consider the difference for the calculation
+            // We control the potential overhead in BABL Rewards calculations to keep control
+            // and avoid distributing a wrong number (e.g. flash loans)
+            if (hasMiningStarted) {
+                // The Mining program has not started on time for this strategy
+                rewardsTotalOverhead = rewardsTotalOverhead.add(_capital.mul(block.timestamp.sub(updatedAt)));
+            }
+        }
+        if (hasMiningStarted) {
+            IRewardsDistributor rewardsDistributor =
+                IRewardsDistributor(IBabController(controller).rewardsDistributor());
+            // The Mining program has not started on time for this strategy
+            rewardsDistributor.addProtocolPrincipal(_capital);
+        }
+        garden.payKeeper(_keeper, _fee);
+        updatedAt = block.timestamp;
+        emit StrategyExecuted(address(garden), _capital, _fee, block.timestamp);
+    }
 
     /**
      * Enters the strategy.
@@ -856,13 +898,14 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
             reserveAssetDelta,
             address(this)
         );
-        IRewardsDistributor rewardsDistributor = IRewardsDistributor(IBabController(controller).rewardsDistributor());
         // Substract the Principal in the Rewards Distributor to update the Protocol power value
-        if (_hasMiningStarted()) {
+        if (hasMiningStarted) {
+            IRewardsDistributor rewardsDistributor =
+                IRewardsDistributor(IBabController(controller).rewardsDistributor());
             // Only if the Mining program started on time for this strategy
             rewardsDistributor.substractProtocolPrincipal(capitalAllocated);
+            strategyRewards = rewardsDistributor.getStrategyRewards(address(this)); // Must be zero in case the mining program didnt started on time
         }
-        strategyRewards = rewardsDistributor.getStrategyRewards(address(this)); // Must be zero in case the mining program didnt started on time
     }
 
     function _getPrice(address _assetOne, address _assetTwo) internal view returns (uint256) {
