@@ -40,8 +40,6 @@ interface IStrategy {
     function resolveVoting(
         address[] calldata _voters,
         int256[] calldata _votes,
-        uint256 _absoluteTotalVotes,
-        int256 _totalVotes,
         uint256 fee
     ) external;
 
@@ -113,7 +111,7 @@ interface IStrategy {
             uint256,
             uint256,
             uint256,
-            int256,
+            uint256,
             uint256,
             uint256,
             uint256,
@@ -167,11 +165,9 @@ interface IStrategy {
 
     function duration() external view returns (uint256);
 
-    function totalVotes() external view returns (int256);
-
-    function absoluteTotalVotes() external view returns (uint256);
-
     function totalPositiveVotes() external view returns (uint256);
+
+    function totalVotes() external view returns (int256);
 
     function totalNegativeVotes() external view returns (uint256);
 

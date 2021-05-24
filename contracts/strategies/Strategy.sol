@@ -67,7 +67,12 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
 
     /* ============ Events ============ */
     event Invoked(address indexed _target, uint256 indexed _value, bytes _data, bytes _returnValue);
-    event StrategyVoted(address indexed _garden, uint256 _absoluteVotes, int256 _totalVotes, uint256 _timestamp);
+    event StrategyVoted(
+        address indexed _garden,
+        uint256 totalPositiveVotes,
+        uint256 totalNegativeVotes,
+        uint256 _timestamp
+    );
     event StrategyExecuted(address indexed _garden, uint256 _capital, uint256 _fee, uint256 timestamp);
     event StrategyFinalized(address indexed _garden, uint256 _capitalReturned, uint256 _fee, uint256 timestamp);
     event StrategyReduced(address indexed _garden, uint256 _amountReduced, uint256 timestamp);
@@ -214,8 +219,6 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
     uint256 public override exitedAt; // Timestamp when the strategy was submitted
 
     address[] public voters; // Addresses with the voters
-    int256 public override totalVotes; // Total votes staked
-    uint256 public override absoluteTotalVotes; // Absolute number of votes staked
     uint256 public override totalPositiveVotes; // Total positive votes endorsing the strategy execution
     uint256 public override totalNegativeVotes; // Total negative votes against the strategy execution
     bool public override finalized; // Flag that indicates whether we exited the strategy
@@ -289,9 +292,10 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         capitalAllocated = 0;
         minRebalanceCapital = _minRebalanceCapital;
         maxCapitalRequested = _maxCapitalRequested;
-        totalVotes = _stake.toInt256();
+
         votes[_strategist] = _stake.toInt256();
-        absoluteTotalVotes = _stake;
+        totalPositiveVotes = _stake;
+
         dataSet = false;
     }
 
@@ -336,16 +340,11 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
      * Adds off-chain voting results on-chain.
      * @param _voters                  An array of garden member who voted on strategy.
      * @param _votes                   An array of votes by on strategy by garden members.
-     *                                 Votes can be positive or negative.
-     * @param _absoluteTotalVotes      Absolute number of votes. _absoluteTotalVotes = abs(upvotes) + abs(downvotes).
-     * @param _totalVotes              Total number of votes. _totalVotes = upvotes + downvotes.
      * @param _fee                     The fee paid to keeper to compensate the gas cost
      */
     function resolveVoting(
         address[] calldata _voters,
         int256[] calldata _votes,
-        uint256 _absoluteTotalVotes,
-        int256 _totalVotes,
         uint256 _fee
     ) external override onlyKeeper(_fee) onlyActiveGarden {
         _require(
@@ -356,19 +355,26 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         _require(block.timestamp.sub(enteredAt) <= MAX_CANDIDATE_PERIOD, Errors.VOTING_WINDOW_IS_OVER);
         active = true;
 
+        // set votes to zero expecting keeper to provide correct values
+        totalPositiveVotes = 0;
+        totalNegativeVotes = 0;
+
         // Set votes data
         for (uint256 i = 0; i < _voters.length; i++) {
             votes[_voters[i]] = _votes[i];
+            if (_votes[i] > 0) {
+                totalPositiveVotes = totalPositiveVotes.add(uint256(Math.abs(_votes[i])));
+            } else {
+                totalNegativeVotes = totalNegativeVotes.add(uint256(Math.abs(_votes[i])));
+            }
         }
-        totalPositiveVotes = _absoluteTotalVotes.toInt256().add(_totalVotes).div(2).toUint256();
-        totalNegativeVotes = _absoluteTotalVotes.toInt256().sub(_totalVotes).div(2).toUint256();
+
+        // Keeper will account for strategist vote/stake
         voters = _voters;
-        absoluteTotalVotes = absoluteTotalVotes + _absoluteTotalVotes;
-        totalVotes = totalVotes + _totalVotes;
 
         // Initializes cooldown
         enteredCooldownAt = block.timestamp;
-        emit StrategyVoted(address(garden), _absoluteTotalVotes, _totalVotes, block.timestamp);
+        emit StrategyVoted(address(garden), totalPositiveVotes, totalNegativeVotes, block.timestamp);
         garden.payKeeper(msg.sender, _fee);
     }
 
@@ -602,7 +608,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
             uint256,
             uint256,
             uint256,
-            int256,
+            uint256,
             uint256,
             uint256,
             uint256,
@@ -618,8 +624,8 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
             strategist,
             opIntegrations.length,
             stake,
-            absoluteTotalVotes,
-            totalVotes,
+            totalPositiveVotes,
+            totalNegativeVotes,
             capitalAllocated,
             capitalReturned,
             duration,
@@ -692,6 +698,15 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
      */
     function getUserVotes(address _address) external view override returns (int256) {
         return votes[_address];
+    }
+
+    /**
+     * Gets the total votes casted for the strategy
+     *
+     * @return _totalVotes            Total amount of votes for the strategy
+     */
+    function totalVotes() external view override returns (int256) {
+        return totalPositiveVotes.toInt256().sub(totalNegativeVotes.toInt256());
     }
 
     /* ============ Internal Functions ============ */

@@ -66,16 +66,9 @@ describe('KyberTradeIntegration', function () {
 
       await strategyContract
         .connect(keeper)
-        .resolveVoting(
-          [signer2.getAddress(), signer3.getAddress()],
-          [user2GardenBalance, user3GardenBalance],
-          user2GardenBalance.add(user3GardenBalance).toString(),
-          user2GardenBalance.add(user3GardenBalance).toString(),
-          0,
-          {
-            gasPrice: 0,
-          },
-        );
+        .resolveVoting([signer2.getAddress(), signer3.getAddress()], [user2GardenBalance, user3GardenBalance], 0, {
+          gasPrice: 0,
+        });
 
       await executeStrategy(strategyContract);
 

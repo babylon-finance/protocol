@@ -108,8 +108,8 @@ describe('Strategy', function () {
         strategist,
         operationsCount,
         stake,
-        absoluteTotalVotes,
-        totalVotes,
+        totalPositiveVotes,
+        totalNegativeVotes,
         capitalAllocated,
         capitalReturned,
         duration,
@@ -123,8 +123,10 @@ describe('Strategy', function () {
       expect(address).to.equal(strategyDataset.address);
       expect(strategist).to.equal(signer1.address);
       expect(stake).to.equal(ethers.utils.parseEther('0.1'));
-      expect(absoluteTotalVotes).to.equal(ethers.utils.parseEther('0.1'));
-      expect(totalVotes).to.equal(ethers.utils.parseEther('0.1'));
+
+      expect(totalPositiveVotes).to.equal(ethers.utils.parseEther('0.1'));
+      expect(totalNegativeVotes).to.equal(0);
+
       expect(operationsCount).to.equal(1);
       expect(capitalAllocated).to.equal(ethers.BigNumber.from(0));
       expect(capitalReturned).to.equal(ethers.BigNumber.from(0));
@@ -157,26 +159,18 @@ describe('Strategy', function () {
 
       await strategyCandidate
         .connect(keeper)
-        .resolveVoting(
-          [signer1.getAddress(), signer2.getAddress()],
-          [signer1Balance, signer2Balance],
-          signer1Balance.add(signer2Balance).toString(),
-          signer1Balance.add(signer2Balance).toString(),
-          42,
-          {
-            gasPrice: 0,
-          },
-        );
+        .resolveVoting([signer1.getAddress(), signer2.getAddress()], [signer1Balance, signer2Balance], 42, {
+          gasPrice: 0,
+        });
 
       expect(await strategyCandidate.getUserVotes(signer1.getAddress())).to.equal(signer1Balance);
       expect(await strategyCandidate.getUserVotes(signer2.getAddress())).to.equal(signer2Balance);
 
-      const [address, , , , absoluteTotalVotes, totalVotes] = await strategyCandidate.getStrategyDetails();
+      const [address, , , , totalPositveVotes, totalNegativeVotes] = await strategyCandidate.getStrategyDetails();
 
       // The stake is counted as votes of the strategists
-      expect(absoluteTotalVotes).to.equal(totalVotes);
-      // TODO: fix
-      // expect(totalVotes).to.equal(ethers.utils.parseEther('5.5'));
+      expect(totalPositveVotes).to.equal(ONE_ETH.mul(5));
+      expect(totalNegativeVotes).to.equal(0);
 
       const [, active, dataSet, finalized, executedAt, exitedAt] = await strategyCandidate.getStrategyState();
 
@@ -201,16 +195,9 @@ describe('Strategy', function () {
       await expect(
         strategyCandidate
           .connect(keeper)
-          .resolveVoting(
-            [signer1.getAddress(), signer2.getAddress()],
-            [signer1Balance, signer2Balance],
-            signer1Balance.add(signer2Balance).toString(),
-            signer1Balance.add(signer2Balance).toString(),
-            42,
-            {
-              gasPrice: 0,
-            },
-          ),
+          .resolveVoting([signer1.getAddress(), signer2.getAddress()], [signer1Balance, signer2Balance], 42, {
+            gasPrice: 0,
+          }),
       ).to.be.revertedWith(/revert BAB#043/i);
     });
 
@@ -220,30 +207,16 @@ describe('Strategy', function () {
 
       await strategyCandidate
         .connect(keeper)
-        .resolveVoting(
-          [signer1.getAddress(), signer2.getAddress()],
-          [signer1Balance, signer2Balance],
-          signer1Balance.add(signer2Balance).toString(),
-          signer1Balance.add(signer2Balance).toString(),
-          42,
-          {
-            gasPrice: 0,
-          },
-        );
+        .resolveVoting([signer1.getAddress(), signer2.getAddress()], [signer1Balance, signer2Balance], 42, {
+          gasPrice: 0,
+        });
 
       await expect(
         strategyCandidate
           .connect(keeper)
-          .resolveVoting(
-            [signer1.getAddress(), signer2.getAddress()],
-            [signer1Balance, signer2Balance],
-            signer1Balance.add(signer2Balance).toString(),
-            signer1Balance.add(signer2Balance).toString(),
-            42,
-            {
-              gasPrice: 0,
-            },
-          ),
+          .resolveVoting([signer1.getAddress(), signer2.getAddress()], [signer1Balance, signer2Balance], 42, {
+            gasPrice: 0,
+          }),
       ).to.be.revertedWith(/revert BAB#042/i);
     });
   });
