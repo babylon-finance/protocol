@@ -16,6 +16,7 @@
 */
 
 pragma solidity 0.7.6;
+import 'hardhat/console.sol';
 import {TimeLockedToken} from './TimeLockedToken.sol';
 
 import {Ownable} from '@openzeppelin/contracts/access/Ownable.sol';
@@ -917,14 +918,16 @@ contract RewardsDistributor is Ownable, IRewardsDistributor {
         uint256 _startingQuarter
     ) private view onlyMiningActive returns (uint256) {
         IStrategy strategy = IStrategy(_strategy);
+        uint256 slotEnding = START_TIME.add(_startingQuarter.mul(EPOCH_DURATION)); // Initialization timestamp at the end of the first slot where the strategy starts its execution
+        uint256 slotStarting = slotEnding.sub(EPOCH_DURATION);
         uint256 strategyOverTime =
             _allocated.mul(strategy.exitedAt().sub(strategy.executedAt())).sub(strategy.rewardsTotalOverhead());
         return
             strategyOverTime
                 .preciseDiv(protocolPerQuarter[_startingQuarter].quarterPower)
                 .preciseMul(uint256(protocolPerQuarter[_startingQuarter].supplyPerQuarter))
-                .mul(strategy.exitedAt().sub(_startingQuarter))
-                .div(block.timestamp.sub(_startingQuarter));
+                .preciseMul(strategy.exitedAt().sub(slotStarting))
+                .preciseDiv(EPOCH_DURATION);
     }
 
     /**
@@ -942,7 +945,7 @@ contract RewardsDistributor is Ownable, IRewardsDistributor {
     ) private view onlyMiningActive returns (uint256) {
         // The strategy takes longer than one quarter / epoch
         uint256 bablRewards;
-        for (uint256 i = 0; i <= _numQuarters.sub(1); i++) {
+        for (uint256 i = 0; i < _numQuarters; i++) {
             uint256 slotEnding = START_TIME.add(_startingQuarter.add(i).mul(EPOCH_DURATION)); // Initialization timestamp at the end of the first slot where the strategy starts its execution
             uint256 powerRatioInQuarter =
                 _getStrategyRewardsPerQuarter(_strategy, _allocated, _startingQuarter, i, slotEnding);
@@ -973,6 +976,7 @@ contract RewardsDistributor is Ownable, IRewardsDistributor {
 
         // We iterate all the quarters where the strategy was active
         uint256 percentage = 1e18;
+
         if (IStrategy(_strategy).executedAt().add(EPOCH_DURATION) > _slotEnding) {
             // We are in the first quarter of the strategy
 
@@ -989,10 +993,10 @@ contract RewardsDistributor is Ownable, IRewardsDistributor {
             );
         } else {
             // We are in the last quarter of the strategy
+
             percentage = block.timestamp.sub(_slotEnding.sub(EPOCH_DURATION)).preciseDiv(
                 _slotEnding.sub(_slotEnding.sub(EPOCH_DURATION))
             );
-
             strategyPower = _allocated.mul(IStrategy(_strategy).exitedAt().sub(_slotEnding.sub(EPOCH_DURATION))).sub(
                 rewardsPowerOverhead[address(_strategy)][_getQuarter(IStrategy(_strategy).exitedAt())]
             );
@@ -1340,7 +1344,17 @@ contract RewardsDistributor is Ownable, IRewardsDistributor {
      */
     function _getRewardsWindow(uint256 _from, uint256 _to) internal view returns (uint256, uint256) {
         uint256 quarters = (_to.sub(_from).preciseDivCeil(EPOCH_DURATION)).div(1e18);
+
         uint256 startingQuarter = (_from.sub(START_TIME).preciseDivCeil(EPOCH_DURATION)).div(1e18);
+        uint256 endingQuarter = (_to.sub(START_TIME).preciseDivCeil(EPOCH_DURATION)).div(1e18);
+
+        if (
+            startingQuarter != endingQuarter &&
+            endingQuarter == startingQuarter.add(1) &&
+            _to.sub(_from) < EPOCH_DURATION
+        ) {
+            quarters = quarters.add(1);
+        }
         return (quarters.add(1), startingQuarter.add(1));
     }
 }

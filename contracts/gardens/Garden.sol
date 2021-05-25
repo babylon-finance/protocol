@@ -367,6 +367,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         IRewardsDistributor rewardsDistributor = IRewardsDistributor(IBabController(controller).rewardsDistributor());
         (uint256 reserveRewards, uint256 bablRewards) =
             rewardsDistributor.getRewards(address(this), msg.sender, _finalizedStrategies);
+        _require(reserveRewards > 0 || bablRewards > 0, Errors.NO_REWARDS_TO_CLAIM);
 
         if (
             reserveRewards > 0 &&

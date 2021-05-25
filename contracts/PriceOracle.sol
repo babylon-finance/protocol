@@ -121,7 +121,6 @@ contract PriceOracle is Ownable, IPriceOracle {
         if (!priceFound) {
             (priceFound, price) = _getPriceFromAdapters(_assetOne, _assetTwo);
         }
-
         require(priceFound, 'Price not found');
         return price;
     }
