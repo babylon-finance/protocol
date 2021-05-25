@@ -96,13 +96,13 @@ async function deposit(garden, signers) {
     default:
       amount = ethers.utils.parseEther('2');
   }
-  if (reserveAsset.address !== addresses.tokens.WETH.toLowerCase()) {
+  if (reserveAsset.address.toLowerCase() !== addresses.tokens.WETH.toLowerCase()) {
     await reserveContract.connect(signers[0]).approve(garden.address, amount, { gasPrice: 0 });
   }
   await garden.connect(signers[0]).deposit(amount, 1, signers[0].getAddress(), {
     value: amount,
   });
-  if (reserveAsset.address !== addresses.tokens.WETH.toLowerCase()) {
+  if (reserveAsset.address.toLowerCase() !== addresses.tokens.WETH.toLowerCase()) {
     await reserveContract.connect(signers[1]).approve(garden.address, amount, { gasPrice: 0 });
   }
   await garden.connect(signers[1]).deposit(amount, 1, signers[1].getAddress(), {
