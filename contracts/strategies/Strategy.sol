@@ -170,7 +170,6 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
     uint256 internal constant SLIPPAGE_ALLOWED = 5e16; // 1%
     uint256 internal constant HUNDRED_PERCENT = 1e18; // 100%
     uint256 internal constant MAX_CANDIDATE_PERIOD = 7 days;
-    uint256 internal constant MIN_VOTERS_TO_BECOME_ACTIVE = 2;
     uint256 internal constant ABSOLUTE_MIN_REBALANCE = 1e18;
     address private constant WETH = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
 
@@ -347,10 +346,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         int256[] calldata _votes,
         uint256 _fee
     ) external override onlyKeeper(_fee) onlyActiveGarden {
-        _require(
-            _voters.length >= (garden.totalContributors() == 1 ? 1 : MIN_VOTERS_TO_BECOME_ACTIVE),
-            Errors.MIN_VOTERS_CHECK
-        );
+        _require(_voters.length >= garden.minVoters(), Errors.MIN_VOTERS_CHECK);
         _require(!active && !finalized, Errors.VOTES_ALREADY_RESOLVED);
         _require(block.timestamp.sub(enteredAt) <= MAX_CANDIDATE_PERIOD, Errors.VOTING_WINDOW_IS_OVER);
         active = true;

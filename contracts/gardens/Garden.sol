@@ -142,7 +142,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
 
     uint256 public override gardenInitializedAt; // Garden Initialized at timestamp
     // Number of garden checkpoints used to control de garden power and each contributor power with accuracy avoiding flash loans and related attack vectors
-    uint256 public pid;
+    uint256 private pid;
 
     // Min contribution in the garden
     uint256 public override minContribution; //wei
@@ -150,7 +150,8 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
 
     // Strategies variables
     uint256 public override totalStake;
-    uint256 public override minVotersQuorum = TEN_PERCENT; // 10%. (0.01% = 1e14, 1% = 1e16)
+    uint256 public override minVotesQuorum = TEN_PERCENT; // 10%. (0.01% = 1e14, 1% = 1e16)
+    uint256 public override minVoters;
     uint256 public override minStrategyDuration; // Min duration for an strategy
     uint256 public override maxStrategyDuration; // Max duration for an strategy
     // Window for the strategy to cooldown after approval before receiving capital
@@ -158,11 +159,11 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
 
     address[] private strategies; // Strategies that are either in candidate or active state
     address[] private finalizedStrategies; // Strategies that have finalized execution
-    mapping(address => bool) public strategyMapping;
+    mapping(address => bool) public override strategyMapping;
     mapping(address => bool) public override isGardenStrategy; // Security control mapping
 
     // Keeper debt in reserve asset if any, repaid upon every strategy finalization
-    uint256 public keeperDebt;
+    uint256 private keeperDebt;
 
     /* ============ Constructor ============ */
 
@@ -190,10 +191,9 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         uint256 _initialContribution
     ) public payable initializer {
         _require(bytes(_name).length < 50, Errors.NAME_TOO_LONG);
-        _require(_creator != address(0), Errors.ADDRESS_IS_ZERO);
-        _require(_controller != address(0), Errors.ADDRESS_IS_ZERO);
+        _require(_creator != address(0) && _controller != address(0), Errors.ADDRESS_IS_ZERO);
         _require(ERC20Upgradeable(_reserveAsset).decimals() > 0, Errors.ADDRESS_IS_ZERO);
-        _require(_gardenParams.length == 9, Errors.GARDEN_PARAMS_LENGTH);
+        _require(_gardenParams.length == 10, Errors.GARDEN_PARAMS_LENGTH);
         _require(IBabController(_controller).isValidReserveAsset(_reserveAsset), Errors.MUST_BE_RESERVE_ASSET);
         __ERC20_init(_name, _symbol);
 
@@ -213,7 +213,8 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
             _gardenParams[5],
             _gardenParams[6],
             _gardenParams[7],
-            _gardenParams[8]
+            _gardenParams[8],
+            _gardenParams[9]
         );
         active = true;
     }
@@ -231,9 +232,10 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
      * @param _depositHardlock                      Number that represents the time deposits are locked for an user after he deposits
      * @param _minContribution                      Min contribution to the garden
      * @param _strategyCooldownPeriod               How long after the strategy has been activated, will it be ready to be executed
-     * @param _minVotersQuorum                      Percentage of votes needed to activate an strategy (0.01% = 1e14, 1% = 1e16)
+     * @param _minVotesQuorum                       Percentage of votes needed to activate an strategy (0.01% = 1e14, 1% = 1e16)
      * @param _minStrategyDuration                  Min duration of an strategy
      * @param _maxStrategyDuration                  Max duration of an strategy
+     * @param _minVoters                            The minimum amount of voters needed for quorum
      */
     function _start(
         uint256 _creatorDeposit,
@@ -243,12 +245,12 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         uint256 _depositHardlock,
         uint256 _minContribution,
         uint256 _strategyCooldownPeriod,
-        uint256 _minVotersQuorum,
+        uint256 _minVotesQuorum,
         uint256 _minStrategyDuration,
-        uint256 _maxStrategyDuration
+        uint256 _maxStrategyDuration,
+        uint256 _minVoters
     ) private {
-        _require(_minContribution > 0, Errors.MIN_CONTRIBUTION);
-        _require(_creatorDeposit >= _minContribution, Errors.MIN_CONTRIBUTION);
+        _require(_minContribution > 0 && _creatorDeposit >= _minContribution, Errors.MIN_CONTRIBUTION);
         _require(_creatorDeposit >= _minGardenTokenSupply, Errors.MIN_LIQUIDITY);
         _require(_creatorDeposit <= _maxDepositLimit, Errors.MAX_DEPOSIT_LIMIT);
         _require(_maxDepositLimit <= (reserveAsset == WETH ? 1e22 : 1e25), Errors.MAX_DEPOSIT_LIMIT);
@@ -261,12 +263,14 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
                 _strategyCooldownPeriod >= IBabController(controller).getMinCooldownPeriod(),
             Errors.NOT_IN_RANGE
         );
-        _require(_minVotersQuorum >= TEN_PERCENT && _minVotersQuorum <= TEN_PERCENT.mul(5), Errors.VALUE_TOO_LOW);
+        _require(_minVotesQuorum >= TEN_PERCENT && _minVotesQuorum <= TEN_PERCENT.mul(5), Errors.VALUE_TOO_LOW);
         _require(_maxStrategyDuration >= _minStrategyDuration, Errors.DURATION_RANGE);
         _require(_minStrategyDuration >= 1 days && _maxStrategyDuration <= 500 days, Errors.DURATION_RANGE);
+        _require(_minVoters >= 1 days && _minVoters < 10, Errors.DURATION_RANGE);
         minContribution = _minContribution;
         strategyCooldownPeriod = _strategyCooldownPeriod;
-        minVotersQuorum = _minVotersQuorum;
+        minVotesQuorum = _minVotesQuorum;
+        minVoters = _minVoters;
         minStrategyDuration = _minStrategyDuration;
         maxStrategyDuration = _maxStrategyDuration;
         minGardenTokenSupply = _minGardenTokenSupply;
@@ -351,8 +355,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         IStrategy(maxStrategy).unwindStrategy(netReserveFlows);
         // We burn their penalty
         _burn(msg.sender, _gardenTokenQuantity.preciseMul(EARLY_WITHDRAWAL_PENALTY));
-        // TODO: replace the 1
-        _withdraw(netReserveFlows, 1, _to);
+        _withdraw(netReserveFlows, _minReserveReceiveQuantity, _to);
     }
 
     /**
@@ -554,9 +557,12 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         _onlyStrategy();
         _onlyActive();
         _reenableReserveForStrategies();
-        uint256 liquidReserveAsset = IERC20(reserveAsset).balanceOf(address(this)).sub(reserveAssetPrincipalWindow);
         uint256 protocolMgmtFee = IBabController(controller).protocolManagementFee().preciseMul(_capital);
-        _require(_capital.add(protocolMgmtFee) <= liquidReserveAsset, Errors.MIN_LIQUIDITY);
+        _require(
+            _capital.add(protocolMgmtFee) <=
+                IERC20(reserveAsset).balanceOf(address(this)).sub(reserveAssetPrincipalWindow),
+            Errors.MIN_LIQUIDITY
+        );
 
         // Take protocol mgmt fee
         payProtocolFeeFromGarden(reserveAsset, protocolMgmtFee);
@@ -617,10 +623,6 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         return finalizedStrategies;
     }
 
-    function isStrategyActiveInGarden(address _strategy) external view override returns (bool) {
-        return strategyMapping[_strategy];
-    }
-
     function getContributor(address _contributor)
         external
         view
@@ -674,8 +676,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
     function getLockedBalance(address _contributor) external view override returns (uint256) {
         uint256 lockedAmount;
         for (uint256 i = 0; i < strategies.length; i++) {
-            IStrategy strategy = IStrategy(strategies[i]);
-            uint256 votes = uint256(Math.abs(strategy.getUserVotes(_contributor)));
+            uint256 votes = uint256(Math.abs(IStrategy(strategies[i]).getUserVotes(_contributor)));
             if (votes > 0) {
                 lockedAmount = lockedAmount.add(votes);
             }
