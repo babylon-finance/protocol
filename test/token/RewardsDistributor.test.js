@@ -1,6 +1,5 @@
 const { expect } = require('chai');
-
-const { ONE_DAY_IN_SECONDS, ONE_ETH, GARDEN_PARAMS_STABLE, GARDEN_PARAMS } = require('../../lib/constants');
+const { ONE_DAY_IN_SECONDS, ONE_ETH, GARDEN_PARAMS_STABLE } = require('../../lib/constants');
 const { increaseTime } = require('../utils/test-helpers');
 const { impersonateAddress } = require('../../lib/rpc');
 const addresses = require('../../lib/addresses.js');
@@ -15,6 +14,8 @@ const {
   finalizeStrategyAfter30Days,
   finalizeStrategyAfter2Years,
   finalizeStrategyAfter3Quarters,
+  DEFAULT_STRATEGY_PARAMS,
+  DAI_STRATEGY_PARAMS,
 } = require('../fixtures/StrategyHelper.js');
 
 const { setupTests } = require('../fixtures/GardenFixture');
@@ -85,6 +86,8 @@ describe('BABL Rewards Distributor', function () {
   let daiGarden;
   let usdcGarden;
   let usdc;
+  let dai;
+  let weth;
   let kyberTradeIntegration;
 
   async function createStrategies(strategies) {
@@ -729,13 +732,13 @@ describe('BABL Rewards Distributor', function () {
       expect(await garden1.balanceOf(signer1.address)).to.gt(ONE_ETH.mul(2));
     });
 
-    it.skip('should claim and update balances of Signer1 in DAI Garden as contributor of 1 strategy with profit within a quarter', async function () {
+    it.only('should claim and update balances of Signer1 in DAI Garden as contributor of 1 strategy with profit within a quarter', async function () {
       const whaleAddress = '0x6B175474E89094C44Da98b954EedeAC495271d0F'; // Has DAI
       const whaleSigner = await impersonateAddress(whaleAddress);
-      await dai.connect(whaleSigner).transfer(signer1.address, ethers.utils.parseEther('3000'), {
+      await dai.connect(whaleSigner).transfer(signer1.address, ethers.utils.parseEther('5000'), {
         gasPrice: 0,
       });
-      await dai.connect(whaleSigner).transfer(signer3.address, ethers.utils.parseEther('1000'), {
+      await dai.connect(whaleSigner).transfer(signer3.address, ethers.utils.parseEther('5000'), {
         gasPrice: 0,
       });
       await dai.connect(signer1).approve(babController.address, ethers.utils.parseEther('2000'), {
@@ -762,12 +765,18 @@ describe('BABL Rewards Distributor', function () {
 
       // Mining program has to be enabled before the strategy starts its execution
       await babController.connect(owner).enableBABLMiningProgram();
-
-      const long1 = await createStrategy('lend', 'vote', [signer1, signer3], kyberTradeIntegration.address, daiGarden);
-
-      await executeStrategy(long1, ONE_ETH);
-
-      await injectFakeProfits(long1, ONE_ETH.mul(200));
+      const long1 = await createStrategy(
+        'buy',
+        'vote',
+        [signer1, signer3],
+        kyberTradeIntegration.address,
+        daiGarden,
+        DAI_STRATEGY_PARAMS,
+        usdc.address,
+      );
+      await executeStrategy(long1, { amount: ethers.utils.parseEther('1000') });
+      console.log('after executing');
+      await injectFakeProfits(long1, ethers.BigNumber.from(200 * 1000000)); // Dai has 6 decimals
       await finalizeStrategyAfterQuarter(long1);
 
       // Check pending rewards for users

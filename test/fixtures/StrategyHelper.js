@@ -3,6 +3,7 @@ const { ONE_DAY_IN_SECONDS, ONE_ETH } = require('../../lib/constants.js');
 const { TWAP_ORACLE_WINDOW, TWAP_ORACLE_GRANULARITY } = require('../../lib/system.js');
 const { impersonateAddress } = require('../../lib/rpc');
 const addresses = require('../../lib/addresses');
+const { getAssetWhale } = require('../../lib/whale');
 const { increaseTime, from } = require('../utils/test-helpers');
 
 const DEFAULT_STRATEGY_PARAMS = [
@@ -11,6 +12,14 @@ const DEFAULT_STRATEGY_PARAMS = [
   ONE_DAY_IN_SECONDS * 30, // _strategyDuration
   ethers.utils.parseEther('0.05'), // 5% _expectedReturn
   ethers.utils.parseEther('1'), // _minRebalanceCapital
+];
+
+const DAI_STRATEGY_PARAMS = [
+  ethers.utils.parseEther('100000'), // _maxCapitalRequested
+  ethers.utils.parseEther('100'), // _stake
+  ONE_DAY_IN_SECONDS * 30, // _strategyDuration
+  ethers.utils.parseEther('0.05'), // 5% _expectedReturn
+  ethers.utils.parseEther('500'), // _minRebalanceCapital
 ];
 
 const STRAT_NAME_PARAMS = ['Strategy Name', 'STRT']; // [ NAME, SYMBOL ]
@@ -74,11 +83,30 @@ async function createStrategyWithLendOperation(garden, signer, params = DEFAULT_
 }
 
 async function deposit(garden, signers) {
-  await garden.connect(signers[0]).deposit(ethers.utils.parseEther('2'), 1, signers[0].getAddress(), {
-    value: ethers.utils.parseEther('2'),
+  const reserveAsset = await garden.reserveAsset();
+  const reserveContract = await ethers.getContractAt('IERC20', reserveAsset);
+  let amount;
+  switch (reserveAsset.toLowerCase()) {
+    case addresses.tokens.USDC.toLowerCase():
+      amount = ethers.BigNumber.from(400 * 1000000);
+      break;
+    case addresses.tokens.DAI.toLowerCase():
+      amount = ethers.utils.parseEther('1000');
+      break;
+    default:
+      amount = ethers.utils.parseEther('2');
+  }
+  if (reserveAsset.address !== addresses.tokens.WETH.toLowerCase()) {
+    await reserveContract.connect(signers[0]).approve(garden.address, amount, { gasPrice: 0 });
+  }
+  await garden.connect(signers[0]).deposit(amount, 1, signers[0].getAddress(), {
+    value: amount,
   });
-  await garden.connect(signers[1]).deposit(ethers.utils.parseEther('2'), 1, signers[1].getAddress(), {
-    value: ethers.utils.parseEther('2'),
+  if (reserveAsset.address !== addresses.tokens.WETH.toLowerCase()) {
+    await reserveContract.connect(signers[1]).approve(garden.address, amount, { gasPrice: 0 });
+  }
+  await garden.connect(signers[1]).deposit(amount, 1, signers[1].getAddress(), {
+    value: amount,
   });
 }
 
@@ -184,11 +212,15 @@ async function injectFakeProfits(strategy, amount) {
   const kind = await strategy.opTypes(0);
   if (kind === 0) {
     const asset = await ethers.getContractAt('IERC20', await strategy.opDatas(0));
-    const whaleAddress = '0x6B175474E89094C44Da98b954EedeAC495271d0F'; // Has DAI
-    const whaleSigner = await impersonateAddress(whaleAddress);
-    await asset.connect(whaleSigner).transfer(strategy.address, amount, {
-      gasPrice: 0,
-    });
+    const whaleAddress = getAssetWhale(asset.address);
+    if (whaleAddress) {
+      const whaleSigner = await impersonateAddress(whaleAddress);
+      await asset.connect(whaleSigner).transfer(strategy.address, amount, {
+        gasPrice: 0,
+      });
+    } else {
+      console.error("Couldn't inject fake profits for", asset.address);
+    }
   }
   if (kind === 1) {
     const asset = await ethers.getContractAt('IERC20', await strategy.opDatas(0));
@@ -261,6 +293,7 @@ async function createStrategy(
 module.exports = {
   createStrategy,
   DEFAULT_STRATEGY_PARAMS,
+  DAI_STRATEGY_PARAMS,
   executeStrategy,
   executeStrategyImmediate,
   finalizeStrategy,
