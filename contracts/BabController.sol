@@ -741,7 +741,7 @@ contract BabController is OwnableUpgradeable, IBabController {
             _contractAddress == address(this) ||
             _isOperation(_contractAddress) ||
             (isGarden[address(IStrategy(_contractAddress).garden())] &&
-                IGarden(IStrategy(_contractAddress).garden()).isStrategyActiveInGarden(_contractAddress)));
+                IGarden(IStrategy(_contractAddress).garden()).strategyMapping(_contractAddress)));
     }
 
     /* ============ Internal Only Function ============ */
