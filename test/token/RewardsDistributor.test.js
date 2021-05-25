@@ -1,7 +1,9 @@
 const { expect } = require('chai');
 
-const { ONE_DAY_IN_SECONDS, ONE_ETH } = require('../../lib/constants');
+const { ONE_DAY_IN_SECONDS, ONE_ETH, GARDEN_PARAMS_STABLE, GARDEN_PARAMS } = require('../../lib/constants');
 const { increaseTime } = require('../utils/test-helpers');
+const { impersonateAddress } = require('../../lib/rpc');
+const addresses = require('../../lib/addresses.js');
 
 const {
   createStrategy,
@@ -77,8 +79,12 @@ describe('BABL Rewards Distributor', function () {
   let babController;
   let bablToken;
   let rewardsDistributor;
+  let ishtarGate;
   let garden1;
   let garden2;
+  let daiGarden;
+  let usdcGarden;
+  let usdc;
   let kyberTradeIntegration;
 
   async function createStrategies(strategies) {
@@ -104,13 +110,20 @@ describe('BABL Rewards Distributor', function () {
       signer3,
       garden1,
       garden2,
+      daiGarden,
+      usdcGarden,
+      usdc,
       babController,
       bablToken,
       rewardsDistributor,
+      ishtarGate,
       kyberTradeIntegration,
     } = await setupTests()());
 
     await bablToken.connect(owner).enableTokensTransfers();
+    usdc = await ethers.getContractAt('IERC20', addresses.tokens.USDC);
+    dai = await ethers.getContractAt('IERC20', addresses.tokens.DAI);
+    weth = await ethers.getContractAt('IERC20', addresses.tokens.WETH);
   });
 
   describe('Deployment', function () {
@@ -714,6 +727,62 @@ describe('BABL Rewards Distributor', function () {
 
       expect(await bablToken.balanceOf(signer1.address)).to.gt(ONE_ETH.mul(29000));
       expect(await garden1.balanceOf(signer1.address)).to.gt(ONE_ETH.mul(2));
+    });
+
+    it.skip('should claim and update balances of Signer1 in DAI Garden as contributor of 1 strategy with profit within a quarter', async function () {
+      const whaleAddress = '0x6B175474E89094C44Da98b954EedeAC495271d0F'; // Has DAI
+      const whaleSigner = await impersonateAddress(whaleAddress);
+      await dai.connect(whaleSigner).transfer(signer1.address, ethers.utils.parseEther('3000'), {
+        gasPrice: 0,
+      });
+      await dai.connect(whaleSigner).transfer(signer3.address, ethers.utils.parseEther('1000'), {
+        gasPrice: 0,
+      });
+      await dai.connect(signer1).approve(babController.address, ethers.utils.parseEther('2000'), {
+        gasPrice: 0,
+      });
+      await babController
+        .connect(signer1)
+        .createGarden(
+          addresses.tokens.DAI,
+          'Absolute DAI Return [beta]',
+          'EYFA',
+          'http...',
+          0,
+          GARDEN_PARAMS_STABLE,
+          ethers.utils.parseEther('500'),
+          {},
+        );
+      const gardens = await babController.getGardens();
+      daiGarden = await ethers.getContractAt('Garden', gardens[4]);
+
+      await ishtarGate.connect(signer1).setGardenAccess(signer3.address, daiGarden.address, 1, { gasPrice: 0 });
+      await dai.connect(signer3).approve(daiGarden.address, ethers.utils.parseEther('500'), { gasPrice: 0 });
+      await daiGarden.connect(signer3).deposit(ethers.utils.parseEther('500'), 1, signer3.getAddress());
+
+      // Mining program has to be enabled before the strategy starts its execution
+      await babController.connect(owner).enableBABLMiningProgram();
+
+      const long1 = await createStrategy('lend', 'vote', [signer1, signer3], kyberTradeIntegration.address, daiGarden);
+
+      await executeStrategy(long1, ONE_ETH);
+
+      await injectFakeProfits(long1, ONE_ETH.mul(200));
+      await finalizeStrategyAfterQuarter(long1);
+
+      // Check pending rewards for users
+      const [signer1Profit, signer1BABL] = await rewardsDistributor.getRewards(daiGarden.address, signer1.address, [
+        long1.address,
+      ]);
+      // We claim our tokens and check that they are received properly
+      await daiGarden.connect(signer1).claimReturns([long1.address]);
+      // Check remaining rewards for users (if any)
+      const [signer1Profit2, signer1BABL2] = await rewardsDistributor.getRewards(daiGarden.address, signer1.address, [
+        long1.address,
+      ]);
+
+      //expect(await bablToken.balanceOf(signer1.address)).to.gt(ONE_ETH.mul(29000));
+      //expect(await daiGarden.balanceOf(signer1.address)).to.gt(ONE_ETH.mul(2));
     });
 
     it('should not allow a race condition of two consecutive claims for the same rewards & profit of the same strategies', async function () {
