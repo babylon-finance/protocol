@@ -18,8 +18,12 @@
 
 pragma solidity 0.7.6;
 import {SafeMath} from '@openzeppelin/contracts/math/SafeMath.sol';
+
+import {PreciseUnitMath} from '../../lib/PreciseUnitMath.sol';
 import {IOneInchExchange} from '../../interfaces/external/1inch/IOneInchExchange.sol';
 import {TradeIntegration} from './TradeIntegration.sol';
+
+import 'hardhat/console.sol';
 
 /**
  * @title 1InchTradeIntegration
@@ -29,6 +33,7 @@ import {TradeIntegration} from './TradeIntegration.sol';
  */
 contract OneInchTradeIntegration is TradeIntegration {
     using SafeMath for uint256;
+    using PreciseUnitMath for uint256;
 
     /* ============ Modifiers ============ */
 
@@ -121,7 +126,8 @@ contract OneInchTradeIntegration is TradeIntegration {
                 _sendToken,
                 _receiveToken,
                 _sendQuantity,
-                0, // TODO: Fix this. _returnAmount
+                _returnAmount
+                .preciseMul(1e18 - SLIPPAGE_ALLOWED),
                 _distribution,
                 0
             );

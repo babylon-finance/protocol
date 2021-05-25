@@ -48,6 +48,8 @@ abstract contract BaseIntegration {
 
     /* ============ State Variables ============ */
 
+    uint256 internal constant SLIPPAGE_ALLOWED = 1e16; // 1%
+
     // Address of the controller
     address public controller;
     // Wrapped ETH address
