@@ -765,6 +765,7 @@ describe('BABL Rewards Distributor', function () {
 
       // Mining program has to be enabled before the strategy starts its execution
       await babController.connect(owner).enableBABLMiningProgram();
+      const signer1StartingBalance = await daiGarden.balanceOf(signer1.address);
       const long1 = await createStrategy(
         'buy',
         'vote',
@@ -774,11 +775,10 @@ describe('BABL Rewards Distributor', function () {
         DAI_STRATEGY_PARAMS,
         usdc.address,
       );
+      const signer1DAIBalance2 = await dai.balanceOf(signer1.address);
       await executeStrategy(long1, { amount: ethers.utils.parseEther('1000') });
-      console.log('after executing');
       await injectFakeProfits(long1, ethers.BigNumber.from(200 * 1000000)); // Dai has 6 decimals
       await finalizeStrategyAfterQuarter(long1);
-
       // Check pending rewards for users
       const [signer1Profit, signer1BABL] = await rewardsDistributor.getRewards(daiGarden.address, signer1.address, [
         long1.address,
@@ -789,9 +789,20 @@ describe('BABL Rewards Distributor', function () {
       const [signer1Profit2, signer1BABL2] = await rewardsDistributor.getRewards(daiGarden.address, signer1.address, [
         long1.address,
       ]);
-
-      //expect(await bablToken.balanceOf(signer1.address)).to.gt(ONE_ETH.mul(29000));
-      //expect(await daiGarden.balanceOf(signer1.address)).to.gt(ONE_ETH.mul(2));
+      const value = signer1DAIBalance2.add(signer1Profit);
+      // LP profits
+      const value2 = ethers.utils.parseEther('0.255595');
+      // Receive BABL token after claim
+      expect(await bablToken.balanceOf(signer1.address)).to.equal(signer1BABL);
+      // Receive DAI as strategist and steward directly in its wallet after claim
+      expect(await dai.balanceOf(signer1.address)).to.equal(value);
+      // Automatically get DAI profit as LP in its garden balance when strategy finalizes
+      expect((await daiGarden.balanceOf(signer1.address)).sub(signer1StartingBalance)).to.closeTo(
+        value2,
+        ethers.utils.parseEther('0.001'),
+      );
+      expect(signer1Profit2).to.equal('0');
+      expect(signer1BABL2).to.equal('0');
     });
 
     it('should not allow a race condition of two consecutive claims for the same rewards & profit of the same strategies', async function () {
