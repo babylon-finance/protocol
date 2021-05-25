@@ -17,7 +17,6 @@
 
 pragma solidity 0.7.6;
 
-import 'hardhat/console.sol';
 import {Address} from '@openzeppelin/contracts/utils/Address.sol';
 import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import {SafeERC20} from '@openzeppelin/contracts/token/ERC20/SafeERC20.sol';
@@ -370,21 +369,35 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
             rewardsDistributor.getRewards(address(this), msg.sender, _finalizedStrategies);
         _require(reserveRewards > 0 || bablRewards > 0, Errors.NO_REWARDS_TO_CLAIM);
 
-        if (reserveRewards > 0 && address(this).balance >= reserveRewards) {
+        if (
+            reserveRewards > 0 &&
+            IERC20(reserveAsset).balanceOf(address(this)) >= reserveRewards &&
+            reserveAssetRewardsSetAside >= reserveRewards
+        ) {
             contributor.claimedRewards = contributor.claimedRewards.add(reserveRewards); // Rewards claimed properly
-            // Send ETH
-            Address.sendValue(msg.sender, reserveRewards);
             reserveAssetRewardsSetAside = reserveAssetRewardsSetAside.sub(reserveRewards);
-            emit RewardsForContributor(msg.sender, reserveRewards);
             contributor.claimedAt = block.timestamp; // Checkpoint of this claim
+
+            if (reserveAsset == WETH) {
+                // Check that the withdrawal is possible
+                // Unwrap WETH if ETH balance lower than netFlowQuantity
+                if (address(this).balance < reserveRewards) {
+                    IWETH(WETH).withdraw(reserveRewards.sub(address(this).balance));
+                }
+                // Send ETH
+                Address.sendValue(msg.sender, reserveRewards);
+            } else {
+                // Send reserve asset
+                IERC20(reserveAsset).safeTransfer(msg.sender, reserveRewards);
+            }
+            emit RewardsForContributor(msg.sender, reserveRewards);
         }
         if (bablRewards > 0) {
             contributor.claimedBABL = contributor.claimedBABL.add(bablRewards); // BABL Rewards claimed properly
+            contributor.claimedAt = block.timestamp; // Checkpoint of this claim
             // Send BABL rewards
-
             rewardsDistributor.sendTokensToContributor(msg.sender, uint96(bablRewards));
             emit BABLRewardsForContributor(msg.sender, uint96(bablRewards));
-            contributor.claimedAt = block.timestamp; // Checkpoint of this claim
         }
     }
 
@@ -892,7 +905,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
             // Send ETH
             Address.sendValue(_to, netFlowQuantity);
         } else {
-            // Ssend reserve asset
+            // Send reserve asset
             IERC20(reserveAsset).safeTransfer(msg.sender, netFlowQuantity);
         }
 
