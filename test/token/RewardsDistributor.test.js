@@ -732,7 +732,7 @@ describe('BABL Rewards Distributor', function () {
       expect(await garden1.balanceOf(signer1.address)).to.gt(ONE_ETH.mul(2));
     });
 
-    it.only('should claim and update balances of Signer1 in DAI Garden as contributor of 1 strategy with profit within a quarter', async function () {
+    it('should claim and update balances of Signer1 in DAI Garden as contributor of 1 strategy with profit within a quarter', async function () {
       const whaleAddress = '0x6B175474E89094C44Da98b954EedeAC495271d0F'; // Has DAI
       const whaleSigner = await impersonateAddress(whaleAddress);
       await dai.connect(whaleSigner).transfer(signer1.address, ethers.utils.parseEther('5000'), {
