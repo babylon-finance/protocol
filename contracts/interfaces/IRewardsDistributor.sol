@@ -69,20 +69,7 @@ interface IRewardsDistributor {
         uint256 _to
     ) external view returns (uint256);
 
-    /**
-    function getContributor(address _garden, address _contributor)
-        external
-        view
-        returns (
-            uint256,
-            uint256,
-            uint256[] memory,
-            uint256
-        );
-    */
-    function updateGardenPower(address _garden, uint256 _pid) external;
-
-    function setContributorTimestampParams(
+    function updateGardenPowerAndContributor(
         address _garden,
         address _contributor,
         uint256 _previousBalance,

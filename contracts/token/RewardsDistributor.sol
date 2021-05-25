@@ -326,23 +326,15 @@ contract RewardsDistributor is Ownable, IRewardsDistributor {
      * @param _depositOrWithdraw     If the timestamp is a deposit (true) or a withdraw (false)
      * @param _pid                   The pid # of the Garden timestamps
      */
-    function setContributorTimestampParams(
+    function updateGardenPowerAndContributor(
         address _garden,
         address _contributor,
         uint256 _previousBalance,
         bool _depositOrWithdraw,
         uint256 _pid
     ) external override onlyActiveGarden(_garden, _pid) {
-        _setContributorTimestampParams(_garden, _contributor, _previousBalance, _depositOrWithdraw);
-    }
-
-    /**
-     * Function that set each garden timestamp
-     * @param _garden                Address of the garden
-     * @param _pid                   The pid # of the Garden timestamp
-     */
-    function updateGardenPower(address _garden, uint256 _pid) external override onlyActiveGarden(_garden, _pid) {
         _updateGardenPower(_garden);
+        _setContributorTimestampParams(_garden, _contributor, _previousBalance, _depositOrWithdraw);
     }
 
     /* ========== View functions ========== */
@@ -478,10 +470,9 @@ contract RewardsDistributor is Ownable, IRewardsDistributor {
             protocolCheckpoint.power = 0;
         } else {
             // Any other strategy different from the very first one (will have an antecesor)
-            protocolCheckpoint.power = protocolPerTimestamp[timeList[pid.sub(1)]].power.add(
-                protocolCheckpoint.time.sub(protocolPerTimestamp[timeList[pid.sub(1)]].time).mul(
-                    protocolPerTimestamp[timeList[pid.sub(1)]].principal
-                )
+            ProtocolPerTimestamp storage previousProtocolCheckpoint = protocolPerTimestamp[timeList[pid.sub(1)]];
+            protocolCheckpoint.power = previousProtocolCheckpoint.power.add(
+                protocolCheckpoint.time.sub(previousProtocolCheckpoint.time).mul(previousProtocolCheckpoint.principal)
             );
         }
         timeList.push(block.timestamp); // Register of added strategies timestamps in the array for iteration
@@ -789,31 +780,30 @@ contract RewardsDistributor is Ownable, IRewardsDistributor {
      * @param _time         Timestamp
      */
     function _addProtocolPerQuarter(uint256 _time) private onlyMiningActive {
-        ProtocolPerQuarter storage protocolCheckpoint = protocolPerQuarter[_getQuarter(_time)];
+        uint256 quarter = _getQuarter(_time);
+        ProtocolPerQuarter storage protocolCheckpoint = protocolPerQuarter[quarter];
 
-        if (!isProtocolPerQuarter[_getQuarter(_time).sub(1)]) {
+        if (!isProtocolPerQuarter[quarter.sub(1)]) {
             // The quarter is not yet initialized then we create it
-            protocolCheckpoint.quarterNumber = _getQuarter(_time);
+            protocolCheckpoint.quarterNumber = quarter;
             if (pid == 0) {
                 // The first strategy added in the first epoch
                 protocolCheckpoint.quarterPower = 0;
-                protocolCheckpoint.supplyPerQuarter = _tokenSupplyPerQuarter(_getQuarter(_time));
+                protocolCheckpoint.supplyPerQuarter = _tokenSupplyPerQuarter(quarter);
             } else {
                 // Each time a new epoch starts with either a new strategy execution or finalization
                 // We just take the proportional power for this quarter from previous checkpoint
                 uint256 powerToSplit =
                     protocolPerTimestamp[_time].power.sub(protocolPerTimestamp[timeList[pid.sub(1)]].power);
-                if (protocolPerTimestamp[timeList[pid.sub(1)]].quarterBelonging == _getQuarter(_time).sub(1)) {
+                if (protocolPerTimestamp[timeList[pid.sub(1)]].quarterBelonging == quarter.sub(1)) {
                     // There were no intermediate epochs without checkpoints
                     // We re-initialize the protocol power counting for this new quarter
                     protocolCheckpoint.quarterPower = powerToSplit
-                        .mul(_time.sub(START_TIME.add(_getQuarter(_time).mul(EPOCH_DURATION).sub(EPOCH_DURATION))))
+                        .mul(_time.sub(START_TIME.add(quarter.mul(EPOCH_DURATION).sub(EPOCH_DURATION))))
                         .div(_time.sub(protocolPerTimestamp[timeList[pid.sub(1)]].time));
-                    protocolCheckpoint.supplyPerQuarter = _tokenSupplyPerQuarter(_getQuarter(_time));
+                    protocolCheckpoint.supplyPerQuarter = _tokenSupplyPerQuarter(quarter);
 
-                    protocolPerQuarter[_getQuarter(_time).sub(1)].quarterPower = protocolPerQuarter[
-                        _getQuarter(_time).sub(1)
-                    ]
+                    protocolPerQuarter[quarter.sub(1)].quarterPower = protocolPerQuarter[quarter.sub(1)]
                         .quarterPower
                         .add(powerToSplit.sub(protocolCheckpoint.quarterPower));
                 } else {
@@ -821,7 +811,7 @@ contract RewardsDistributor is Ownable, IRewardsDistributor {
                     // We have to update all the quarters including where the previous checkpoint is and the one were we are now
                     for (
                         uint256 i = 0;
-                        i <= _getQuarter(_time).sub(protocolPerTimestamp[timeList[pid.sub(1)]].quarterBelonging);
+                        i <= quarter.sub(protocolPerTimestamp[timeList[pid.sub(1)]].quarterBelonging);
                         i++
                     ) {
                         ProtocolPerQuarter storage newCheckpoint =
@@ -839,9 +829,7 @@ contract RewardsDistributor is Ownable, IRewardsDistributor {
                                 )
                             );
                             newCheckpoint.quarterPrincipal = protocolPerTimestamp[timeList[pid.sub(1)]].principal;
-                        } else if (
-                            i < _getQuarter(_time).sub(protocolPerTimestamp[timeList[pid.sub(1)]].quarterBelonging)
-                        ) {
+                        } else if (i < quarter.sub(protocolPerTimestamp[timeList[pid.sub(1)]].quarterBelonging)) {
                             // We are in an intermediate quarter
                             newCheckpoint.quarterPower = powerToSplit.mul(EPOCH_DURATION).div(
                                 _time.sub(protocolPerTimestamp[timeList[pid.sub(1)]].time)
@@ -856,18 +844,16 @@ contract RewardsDistributor is Ownable, IRewardsDistributor {
                         } else {
                             // We are in the last quarter of the strategy
                             protocolCheckpoint.quarterPower = powerToSplit
-                                .mul(
-                                _time.sub(START_TIME.add(_getQuarter(_time).mul(EPOCH_DURATION).sub(EPOCH_DURATION)))
-                            )
+                                .mul(_time.sub(START_TIME.add(quarter.mul(EPOCH_DURATION).sub(EPOCH_DURATION))))
                                 .div(_time.sub(protocolPerTimestamp[timeList[pid.sub(1)]].time));
-                            protocolCheckpoint.supplyPerQuarter = _tokenSupplyPerQuarter(_getQuarter(_time));
-                            protocolCheckpoint.quarterNumber = _getQuarter(_time);
+                            protocolCheckpoint.supplyPerQuarter = _tokenSupplyPerQuarter(quarter);
+                            protocolCheckpoint.quarterNumber = quarter;
                             protocolCheckpoint.quarterPrincipal = protocolPrincipal;
                         }
                     }
                 }
             }
-            isProtocolPerQuarter[_getQuarter(_time).sub(1)] = true;
+            isProtocolPerQuarter[quarter.sub(1)] = true;
         } else {
             // Quarter checkpoint already created, it must have been filled with general info
             // We update the power of the quarter by adding the new difference between last quarter checkpoint and this checkpoint
@@ -1231,25 +1217,12 @@ contract RewardsDistributor is Ownable, IRewardsDistributor {
             gardenTimestamp.power = 0;
         } else {
             // Any other deposit different from the very first one (will have an antecesor)
-            gardenTimestamp.power = gardenPowerByTimestamp[address(garden)][
-                gardenTimelist[address(garden)][gardenPid[address(garden)].sub(1)]
-            ]
-                .power
-                .add(
-                gardenTimestamp
-                    .timestamp
-                    .sub(
-                    gardenPowerByTimestamp[address(garden)][
-                        gardenTimelist[address(garden)][gardenPid[address(garden)].sub(1)]
-                    ]
-                        .timestamp
-                )
-                    .mul(
-                    gardenPowerByTimestamp[address(garden)][
-                        gardenTimelist[address(garden)][gardenPid[address(garden)].sub(1)]
-                    ]
-                        .supply
-                )
+            GardenPowerByTimestamp storage previousGardenTimestamp =
+                gardenPowerByTimestamp[address(garden)][
+                    gardenTimelist[address(garden)][gardenPid[address(garden)].sub(1)]
+                ];
+            gardenTimestamp.power = previousGardenTimestamp.power.add(
+                gardenTimestamp.timestamp.sub(previousGardenTimestamp.timestamp).mul(previousGardenTimestamp.supply)
             );
         }
 
@@ -1272,23 +1245,19 @@ contract RewardsDistributor is Ownable, IRewardsDistributor {
     ) private {
         // We make checkpoints around contributor deposits to avoid fast loans and give the right rewards afterwards
         ContributorPerGarden storage contributor = contributorPerGarden[address(_garden)][_contributor];
+        TimestampContribution storage contributorDetail = contributor.tsContributions[block.timestamp];
+        contributorDetail.supply = IERC20(address(IGarden(_garden))).balanceOf(address(_contributor));
 
-        contributor.tsContributions[block.timestamp].supply = IERC20(address(IGarden(_garden))).balanceOf(
-            address(_contributor)
-        );
+        contributorDetail.timestamp = block.timestamp;
 
-        contributor.tsContributions[block.timestamp].timestamp = block.timestamp;
-
-        contributor.tsContributions[block.timestamp].timePointer = contributor.pid;
+        contributorDetail.timePointer = contributor.pid;
 
         if (contributor.pid == 0) {
             // The very first deposit
-            contributor.tsContributions[block.timestamp].power = 0;
+            contributorDetail.power = 0;
         } else {
             // Any other deposits or withdrawals different from the very first one (will have an antecesor)
-            contributor.tsContributions[block.timestamp].power = contributor.tsContributions[contributor.lastDepositAt]
-                .power
-                .add(
+            contributorDetail.power = contributor.tsContributions[contributor.lastDepositAt].power.add(
                 (block.timestamp.sub(contributor.lastDepositAt)).mul(
                     contributor.tsContributions[contributor.lastDepositAt].supply
                 )
@@ -1302,7 +1271,7 @@ contract RewardsDistributor is Ownable, IRewardsDistributor {
             contributor.lastDepositAt = block.timestamp;
         } else {
             // Withdrawals
-            if (IERC20(address(IGarden(_garden))).balanceOf(address(_contributor)) == 0) {
+            if (contributorDetail.supply == 0) {
                 contributor.lastDepositAt = 0;
                 contributor.initialDepositAt = 0;
                 delete contributor.timeListPointer;

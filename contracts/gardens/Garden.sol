@@ -996,8 +996,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
 
         contributor.lastDepositAt = block.timestamp;
         IRewardsDistributor rewardsDistributor = IRewardsDistributor(IBabController(controller).rewardsDistributor());
-        rewardsDistributor.updateGardenPower(address(this), pid);
-        rewardsDistributor.setContributorTimestampParams(address(this), _contributor, previousBalance, true, pid); // true = deposit
+        rewardsDistributor.updateGardenPowerAndContributor(address(this), _contributor, previousBalance, true, pid);
         pid++;
     }
 
@@ -1017,8 +1016,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
             contributor.withdrawnSince = contributor.withdrawnSince.add(_netflowQuantity);
         }
         IRewardsDistributor rewardsDistributor = IRewardsDistributor(IBabController(controller).rewardsDistributor());
-        rewardsDistributor.updateGardenPower(address(this), pid);
-        rewardsDistributor.setContributorTimestampParams(address(this), msg.sender, 0, false, pid); // false = withdraw
+        rewardsDistributor.updateGardenPowerAndContributor(address(this), msg.sender, 0, false, pid);
         pid++;
     }
 }
