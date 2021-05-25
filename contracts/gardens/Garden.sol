@@ -89,11 +89,9 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
 
     // Wrapped ETH address
     address private constant WETH = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
-    uint256 public constant EARLY_WITHDRAWAL_PENALTY = 15e16;
+    uint256 private constant EARLY_WITHDRAWAL_PENALTY = 15e16;
     uint256 public constant MAX_TOTAL_STRATEGIES = 20; // Max number of strategies
     uint256 private constant TEN_PERCENT = 1e17;
-    // TODO: Given DAI, USDC, and WBTC can be a reseve asset, MAX_KEEPER_FEE should depend on reserve asset
-    uint256 private constant MAX_KEEPER_FEE = (1e6 * 1e3 gwei);
 
     /* ============ Structs ============ */
 
@@ -163,7 +161,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
     mapping(address => bool) public override isGardenStrategy; // Security control mapping
 
     // Keeper debt in reserve asset if any, repaid upon every strategy finalization
-    uint256 private keeperDebt;
+    uint256 public keeperDebt;
 
     /* ============ Constructor ============ */
 

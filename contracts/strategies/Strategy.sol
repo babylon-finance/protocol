@@ -177,6 +177,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
     uint256 internal constant MAX_OPERATIONS = 6;
 
     // Keeper max fee
+    // TODO: Given DAI, USDC, and WBTC can be a reseve asset, MAX_KEEPER_FEE should depend on reserve asset
     uint256 internal constant MAX_KEEPER_FEE = (1e6 * 1e3 gwei);
 
     // Quadratic penalty for looses
