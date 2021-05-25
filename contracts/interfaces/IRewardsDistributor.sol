@@ -60,7 +60,7 @@ interface IRewardsDistributor {
         address _garden,
         address _contributor,
         address[] calldata _finalizedStrategies
-    ) external view returns (uint256, uint96);
+    ) external view returns (uint256[] memory);
 
     function getContributorPower(
         address _garden,

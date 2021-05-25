@@ -363,41 +363,41 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         _onlyContributor();
         Contributor storage contributor = contributors[msg.sender];
         _require(block.timestamp > contributor.claimedAt, Errors.ALREADY_CLAIMED); // race condition check
+        uint256[] memory rewards = new uint256[](7);
 
         IRewardsDistributor rewardsDistributor = IRewardsDistributor(IBabController(controller).rewardsDistributor());
-        (uint256 reserveRewards, uint256 bablRewards) =
-            rewardsDistributor.getRewards(address(this), msg.sender, _finalizedStrategies);
-        _require(reserveRewards > 0 || bablRewards > 0, Errors.NO_REWARDS_TO_CLAIM);
+        rewards = rewardsDistributor.getRewards(address(this), msg.sender, _finalizedStrategies);
+        _require(rewards[5] > 0 || rewards[6] > 0, Errors.NO_REWARDS_TO_CLAIM);
 
         if (
-            reserveRewards > 0 &&
-            IERC20(reserveAsset).balanceOf(address(this)) >= reserveRewards &&
-            reserveAssetRewardsSetAside >= reserveRewards
+            rewards[6] > 0 &&
+            IERC20(reserveAsset).balanceOf(address(this)) >= rewards[6] &&
+            reserveAssetRewardsSetAside >= rewards[6]
         ) {
-            contributor.claimedRewards = contributor.claimedRewards.add(reserveRewards); // Rewards claimed properly
-            reserveAssetRewardsSetAside = reserveAssetRewardsSetAside.sub(reserveRewards);
+            contributor.claimedRewards = contributor.claimedRewards.add(rewards[6]); // Rewards claimed properly
+            reserveAssetRewardsSetAside = reserveAssetRewardsSetAside.sub(rewards[6]);
             contributor.claimedAt = block.timestamp; // Checkpoint of this claim
 
             if (reserveAsset == WETH) {
                 // Check that the withdrawal is possible
                 // Unwrap WETH if ETH balance lower than netFlowQuantity
-                if (address(this).balance < reserveRewards) {
-                    IWETH(WETH).withdraw(reserveRewards.sub(address(this).balance));
+                if (address(this).balance < rewards[6]) {
+                    IWETH(WETH).withdraw(rewards[6].sub(address(this).balance));
                 }
                 // Send ETH
-                Address.sendValue(msg.sender, reserveRewards);
+                Address.sendValue(msg.sender, rewards[6]);
             } else {
                 // Send reserve asset
-                IERC20(reserveAsset).safeTransfer(msg.sender, reserveRewards);
+                IERC20(reserveAsset).safeTransfer(msg.sender, rewards[6]);
             }
-            emit RewardsForContributor(msg.sender, reserveRewards);
+            emit RewardsForContributor(msg.sender, rewards[6]);
         }
-        if (bablRewards > 0) {
-            contributor.claimedBABL = contributor.claimedBABL.add(bablRewards); // BABL Rewards claimed properly
+        if (rewards[5] > 0) {
+            contributor.claimedBABL = contributor.claimedBABL.add(rewards[5]); // BABL Rewards claimed properly
             contributor.claimedAt = block.timestamp; // Checkpoint of this claim
             // Send BABL rewards
-            rewardsDistributor.sendTokensToContributor(msg.sender, uint96(bablRewards));
-            emit BABLRewardsForContributor(msg.sender, uint96(bablRewards));
+            rewardsDistributor.sendTokensToContributor(msg.sender, uint96(rewards[5]));
+            emit BABLRewardsForContributor(msg.sender, uint96(rewards[5]));
         }
     }
 

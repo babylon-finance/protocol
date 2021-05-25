@@ -344,23 +344,29 @@ contract RewardsDistributor is Ownable, IRewardsDistributor {
      * @param _garden                   Garden to which the strategies and the user must belong to
      * @param _contributor              Address of the contributor to check
      * @param _finalizedStrategies      List of addresses of the finalized strategies to check
+     * @return Array of size 7 with the following distribution:
+     * rewards[0]: Strategist BABL , rewards[1]: Strategist Profit, rewards[2]: Steward BABL, rewards[3]: Steward Profit, rewards[4]: LP BABL, rewards[5]: total BABL, rewards[6]: total Profits
      */
     function getRewards(
         address _garden,
         address _contributor,
         address[] calldata _finalizedStrategies
-    ) external view override returns (uint256, uint96) {
-        uint256 contributorTotalProfits = 0;
-        uint256 bablTotalRewards = 0;
+    ) external view override returns (uint256[] memory) {
+        uint256[] memory totalRewards = new uint256[](7);
         _require(IBabController(controller).isGarden(address(_garden)), Errors.ONLY_ACTIVE_GARDEN);
         for (uint256 i = 0; i < _finalizedStrategies.length; i++) {
-            (uint256 strategyProfits, uint256 strategyBABL) =
-                _getStrategyProfitsAndBABL(_garden, _finalizedStrategies[i], _contributor);
-            contributorTotalProfits = contributorTotalProfits.add(strategyProfits);
-            bablTotalRewards = bablTotalRewards.add(strategyBABL);
+            uint256[] memory tempRewards = new uint256[](7);
+            tempRewards = _getStrategyProfitsAndBABL(_garden, _finalizedStrategies[i], _contributor);
+            totalRewards[0] = totalRewards[0].add(uint256(Safe3296.safe96(tempRewards[0], 'R28')));
+            totalRewards[1] = totalRewards[1].add(tempRewards[1]);
+            totalRewards[2] = totalRewards[2].add(uint256(Safe3296.safe96(tempRewards[2], 'R28')));
+            totalRewards[3] = totalRewards[3].add(tempRewards[3]);
+            totalRewards[4] = totalRewards[4].add(uint256(Safe3296.safe96(tempRewards[4], 'R28')));
+            totalRewards[5] = totalRewards[5].add(uint256(Safe3296.safe96(tempRewards[5], 'R28')));
+            totalRewards[6] = totalRewards[6].add(tempRewards[6]);
         }
 
-        return (contributorTotalProfits, Safe3296.safe96(bablTotalRewards, 'R28'));
+        return totalRewards;
     }
 
     /**
@@ -489,15 +495,19 @@ contract RewardsDistributor is Ownable, IRewardsDistributor {
      * @param _garden           Garden address responsible of the strategies to calculate rewards
      * @param _strategy         Strategy address
      * @param _contributor      Contributor address
+     * @return Array of size 7 with the following distribution:
+     * rewards[0]: Strategist BABL , rewards[1]: Strategist Profit, rewards[2]: Steward BABL, rewards[3]: Steward Profit, rewards[4]: LP BABL, rewards[5]: total BABL, rewards[6]: total Profits
      */
     function _getStrategyProfitsAndBABL(
         address _garden,
         address _strategy,
         address _contributor
-    ) private view returns (uint256, uint256) {
+    ) private view returns (uint256[] memory) {
         IStrategy strategy = IStrategy(_strategy);
         _require(address(strategy.garden()) == _garden, Errors.STRATEGY_GARDEN_MISMATCH);
         _require(IGarden(_garden).isGardenStrategy(_strategy), Errors.STRATEGY_GARDEN_MISMATCH);
+        // rewards[0]: Strategist BABL , rewards[1]: Strategist Profit, rewards[2]: Steward BABL, rewards[3]: Steward Profit, rewards[4]: LP BABL, rewards[5]: total BABL, rewards[6]: total Profits
+        uint256[] memory rewards = new uint256[](7);
         uint256 contributorProfits = 0;
         uint256 contributorBABL = 0;
         // We get the state of the strategy in terms of profit and distance from expected to accurately calculate profits and rewards
@@ -519,51 +529,52 @@ contract RewardsDistributor is Ownable, IRewardsDistributor {
                 profitValue = profitValue.sub(profitValue.multiplyDecimal(PROFIT_PROTOCOL_FEE));
             }
             // Get strategist rewards in case the contributor is also the strategist of the strategy
-            contributorBABL = contributorBABL.add(
-                _getStrategyStrategistBabl(
-                    address(strategy),
-                    _contributor,
-                    profit,
-                    profitValue,
-                    distance,
-                    distanceValue
-                )
+            rewards[0] = _getStrategyStrategistBabl(
+                address(strategy),
+                _contributor,
+                profit,
+                profitValue,
+                distance,
+                distanceValue
             );
-
-            contributorProfits = contributorProfits.add(
-                _getStrategyStrategistProfits(address(strategy), _contributor, profit, profitValue)
-            );
+            contributorBABL = contributorBABL.add(rewards[0]);
+            rewards[1] = _getStrategyStrategistProfits(address(strategy), _contributor, profit, profitValue);
+            contributorProfits = contributorProfits.add(rewards[1]);
 
             // Get steward rewards
-            contributorBABL = contributorBABL.add(
-                _getStrategyStewardBabl(address(strategy), _contributor, profit, profitValue, distance, distanceValue)
+            rewards[2] = _getStrategyStewardBabl(
+                address(strategy),
+                _contributor,
+                profit,
+                profitValue,
+                distance,
+                distanceValue
             );
-
-            contributorProfits = contributorProfits.add(
-                _getStrategyStewardProfits(
-                    address(strategy),
-                    _contributor,
-                    profit,
-                    profitValue,
-                    distance,
-                    distanceValue
-                )
+            contributorBABL = contributorBABL.add(rewards[2]);
+            rewards[3] = _getStrategyStewardProfits(
+                address(strategy),
+                _contributor,
+                profit,
+                profitValue,
+                distance,
+                distanceValue
             );
+            contributorProfits = contributorProfits.add(rewards[3]);
 
             // Get LP rewards
-
-            contributorBABL = contributorBABL.add(
-                uint256(strategy.strategyRewards()).multiplyDecimal(BABL_LP_SHARE).preciseMul(
-                    contributorPower.preciseDiv(strategy.capitalAllocated())
-                )
+            rewards[4] = uint256(strategy.strategyRewards()).multiplyDecimal(BABL_LP_SHARE).preciseMul(
+                contributorPower.preciseDiv(strategy.capitalAllocated())
             );
+            contributorBABL = contributorBABL.add(rewards[4]);
 
             // Get a multiplier bonus in case the contributor is the garden creator
             if (_contributor == IGarden(_garden).creator()) {
                 contributorBABL = contributorBABL.add(contributorBABL.multiplyDecimal(CREATOR_BONUS));
             }
+            rewards[5] = contributorBABL;
+            rewards[6] = contributorProfits;
         }
-        return (contributorProfits, contributorBABL);
+        return rewards;
     }
 
     /**

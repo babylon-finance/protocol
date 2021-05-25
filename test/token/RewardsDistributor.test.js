@@ -1012,15 +1012,15 @@ describe('BABL Rewards Distributor', function () {
       await injectFakeProfits(long1, ethers.BigNumber.from(200 * 1000000)); // Dai has 6 decimals
       await finalizeStrategyAfterQuarter(long1);
       // Check pending rewards for users
-      const [signer1Profit, signer1BABL] = await rewardsDistributor.getRewards(daiGarden.address, signer1.address, [
-        long1.address,
-      ]);
+      const signer1Rewards = await rewardsDistributor.getRewards(daiGarden.address, signer1.address, [long1.address]);
+      const signer1BABL = signer1Rewards[5];
+      const signer1Profit = signer1Rewards[6];
       // We claim our tokens and check that they are received properly
       await daiGarden.connect(signer1).claimReturns([long1.address]);
       // Check remaining rewards for users (if any)
-      const [signer1Profit2, signer1BABL2] = await rewardsDistributor.getRewards(daiGarden.address, signer1.address, [
-        long1.address,
-      ]);
+      const signer1Rewards2 = await rewardsDistributor.getRewards(daiGarden.address, signer1.address, [long1.address]);
+      const signer1BABL2 = signer1Rewards2[5];
+      const signer1Profit2 = signer1Rewards2[6];
       const value = signer1DAIBalance2.add(signer1Profit);
       // LP profits
       const value2 = ethers.utils.parseEther('0.255595');
@@ -1052,18 +1052,21 @@ describe('BABL Rewards Distributor', function () {
       await finalizeStrategyAfterQuarter(long2);
 
       // Check pending rewards for users
-      const [, signer1BABL] = await rewardsDistributor.getRewards(garden1.address, signer1.address, [
+      const signer1Rewards = await rewardsDistributor.getRewards(garden1.address, signer1.address, [
         long1.address,
         long2.address,
       ]);
-      const [, signer2BABL] = await rewardsDistributor.getRewards(garden1.address, signer2.address, [
+      console.log('EO');
+      const signer1BABL = signer1Rewards[5];
+      const signer2Rewards = await rewardsDistributor.getRewards(garden1.address, signer2.address, [
         long1.address,
         long2.address,
       ]);
-
+      const signer2BABL = signer2Rewards[5];
       // Balances before claiming
       const signer1GardenBalance = await garden1.balanceOf(signer1.address);
       const signer2GardenBalance = await garden1.balanceOf(signer2.address);
+      console.log('AO');
 
       expect((await bablToken.balanceOf(signer1.address)).toString()).to.be.equal('0');
       expect((await bablToken.balanceOf(signer2.address)).toString()).to.be.equal('0');
@@ -1071,6 +1074,7 @@ describe('BABL Rewards Distributor', function () {
       // Signer1 claims its tokens and check that they are received properly
       await garden1.connect(signer1).claimReturns([long1.address, long2.address]);
       const contributor = await garden1.getContributor(signer1.address);
+      console.log('OA');
 
       // Try again to claims the same tokens but no more tokens are delivered
       await expect(garden1.connect(signer1).claimReturns([long1.address, long2.address])).to.be.revertedWith(
@@ -1083,7 +1087,7 @@ describe('BABL Rewards Distributor', function () {
       // Signer2 claims his tokens and check that they are received properly
       await garden1.connect(signer2).claimReturns([long1.address, long2.address]);
       const contributor3 = await garden1.getContributor(signer2.address);
-
+      console.log(contributor3.toString(), contributor2.toString());
       // Try again to claims the same tokens but as there are no more tokens or rewards, it reverts
       await expect(garden1.connect(signer2).claimReturns([long1.address, long2.address])).to.be.revertedWith(
         'revert BAB#082',
@@ -1094,14 +1098,19 @@ describe('BABL Rewards Distributor', function () {
 
       // Check pending rewards for users (shouldn´t be any as they are already claimed)
 
-      const [signer1Profits2, signer1BABL2] = await rewardsDistributor.getRewards(garden1.address, signer1.address, [
+      const signer1Rewards2 = await rewardsDistributor.getRewards(garden1.address, signer1.address, [
         long1.address,
         long2.address,
       ]);
-      const [signer2Profits2, signer2BABL2] = await rewardsDistributor.getRewards(garden1.address, signer2.address, [
+      const signer1BABL2 = signer1Rewards2[5];
+      const signer1Profits2 = signer1Rewards2[6];
+
+      const signer2Rewards2 = await rewardsDistributor.getRewards(garden1.address, signer2.address, [
         long1.address,
         long2.address,
       ]);
+      const signer2BABL2 = signer2Rewards2[5];
+      const signer2Profits2 = signer2Rewards2[6];
 
       expect(signer1Profits2.toString()).to.be.equal('0');
       expect(signer1BABL2.toString()).to.be.equal('0');
@@ -1128,27 +1137,32 @@ describe('BABL Rewards Distributor', function () {
 
       expect((await bablToken.balanceOf(signer1.address)).toString()).to.be.equal('0');
 
-      const [signer1Profit, signer1BABL] = await rewardsDistributor.getRewards(garden1.address, signer1.address, [
+      const signer1Rewards = await rewardsDistributor.getRewards(garden1.address, signer1.address, [
         long1.address,
         long2.address,
       ]);
-
+      const signer1BABL = signer1Rewards[5];
+      const signer1Profit = signer1Rewards[6];
       await garden1.connect(signer1).claimReturns([long1.address, long2.address]);
       expect((await bablToken.balanceOf(signer1.address)).toString()).to.be.equal(signer1BABL);
       expect(signer1Profit.toString()).to.be.closeTo('5492428466120193', ethers.utils.parseEther('0.00005'));
-      const [signer1Profit2, signer1BABL2] = await rewardsDistributor.getRewards(garden1.address, signer1.address, [
+      const signer1Rewards2 = await rewardsDistributor.getRewards(garden1.address, signer1.address, [
         long1.address,
         long2.address,
       ]);
+      const signer1BABL2 = signer1Rewards2[5];
+      const signer1Profit2 = signer1Rewards2[6];
       expect(signer1Profit2.toString()).to.be.equal('0');
       expect(signer1BABL2.toString()).to.be.equal('0');
       increaseTime(ONE_DAY_IN_SECONDS * 10);
 
       await finalizeStrategyAfterQuarter(long2);
-      const [signer1Profit3, signer1BABL3] = await rewardsDistributor.getRewards(garden1.address, signer1.address, [
+      const signer1Rewards3 = await rewardsDistributor.getRewards(garden1.address, signer1.address, [
         long1.address,
         long2.address,
       ]);
+      const signer1BABL3 = signer1Rewards3[5];
+      const signer1Profit3 = signer1Rewards3[6];
 
       await garden1.connect(signer1).claimReturns([long1.address, long2.address]);
       expect(signer1Profit3.toString()).to.be.equal('0'); // Negative profit means no profit at all
@@ -1167,18 +1181,24 @@ describe('BABL Rewards Distributor', function () {
       await injectFakeProfits(long1, ONE_ETH.mul(200));
       await finalizeStrategyAfterQuarter(long1);
 
-      const [signer1Profit, signer1BABL] = await rewardsDistributor.getRewards(garden1.address, signer1.address, [
+      const signer1Rewards = await rewardsDistributor.getRewards(garden1.address, signer1.address, [
         long1.address,
         long2.address,
       ]);
+      const signer1BABL = signer1Rewards[5];
+      const signer1Profit = signer1Rewards[6];
+
       await garden1.connect(signer1).claimReturns([long1.address, long2.address]);
 
       await injectFakeProfits(long2, ONE_ETH.mul(200));
       await finalizeStrategyAfterQuarter(long2);
-      const [signer1Profit2, signer1BABL2] = await rewardsDistributor.getRewards(garden1.address, signer1.address, [
+      const signer1Rewards2 = await rewardsDistributor.getRewards(garden1.address, signer1.address, [
         long1.address,
         long2.address,
       ]);
+      const signer1BABL2 = signer1Rewards2[5];
+      const signer1Profit2 = signer1Rewards2[6];
+
       await garden1.connect(signer1).claimReturns([long1.address, long2.address]);
       expect(signer1Profit.toString()).to.be.not.equal(signer1Profit2);
       expect(signer1Profit).to.be.closeTo('50085069448375857', ethers.utils.parseEther('0.10'));
@@ -1200,11 +1220,12 @@ describe('BABL Rewards Distributor', function () {
 
       await injectFakeProfits(long2, ONE_ETH.mul(200));
       await finalizeStrategyAfterQuarter(long2);
-      const [signer1Profit, signer1BABL] = await rewardsDistributor.getRewards(garden1.address, signer1.address, [
+      const signer1Rewards = await rewardsDistributor.getRewards(garden1.address, signer1.address, [
         long1.address,
         long2.address,
       ]);
-
+      const signer1BABL = signer1Rewards[5];
+      const signer1Profit = signer1Rewards[6];
       // TODO: Add calculations of profits and BABL
       expect(signer1Profit).to.be.closeTo('9245294724499069', ethers.utils.parseEther('0.005'));
       expect(signer1BABL).to.be.closeTo('72575095304174896713320', ethers.utils.parseEther('0.1'));
@@ -1245,14 +1266,18 @@ describe('BABL Rewards Distributor', function () {
       await finalizeStrategyAfter3Quarters(long5);
 
       // We claim our tokens and check that they are received properly
-      const [signer1Profit, signer1BABL] = await rewardsDistributor.getRewards(garden1.address, signer1.address, [
+      const signer1Rewards = await rewardsDistributor.getRewards(garden1.address, signer1.address, [
         long1.address,
         long2.address,
       ]);
-      const [signer2Profit, signer2BABL] = await rewardsDistributor.getRewards(garden1.address, signer2.address, [
+      const signer1BABL = signer1Rewards[5];
+      const signer1Profit = signer1Rewards[6];
+      const signer2Rewards = await rewardsDistributor.getRewards(garden1.address, signer2.address, [
         long1.address,
         long2.address,
       ]);
+      const signer2BABL = signer2Rewards[5];
+      const signer2Profit = signer2Rewards[6];
 
       await garden1.connect(signer1).claimReturns([long1.address, long2.address]);
       await garden1.connect(signer2).claimReturns([long1.address, long2.address]);
@@ -1261,16 +1286,21 @@ describe('BABL Rewards Distributor', function () {
       expect((await bablToken.balanceOf(signer2.address)).toString()).to.be.equal(signer2BABL);
       expect(signer1Profit.toString()).to.be.closeTo('5529883560310006', ethers.utils.parseEther('0.0005'));
       expect(signer2Profit.toString()).to.be.closeTo('850751316970769', ethers.utils.parseEther('0.0005'));
-      const [signer1Profit2, signer1BABL2] = await rewardsDistributor.getRewards(garden2.address, signer1.address, [
+      const signer1Rewards2 = await rewardsDistributor.getRewards(garden2.address, signer1.address, [
         long3.address,
         long4.address,
         long5.address,
       ]);
-      const [signer2Profit2, signer2BABL2] = await rewardsDistributor.getRewards(garden2.address, signer2.address, [
+      const signer1BABL2 = signer1Rewards2[5];
+      const signer1Profit2 = signer1Rewards2[6];
+
+      const signer2Rewards2 = await rewardsDistributor.getRewards(garden2.address, signer2.address, [
         long3.address,
         long4.address,
         long5.address,
       ]);
+      const signer2BABL2 = signer2Rewards2[5];
+      const signer2Profit2 = signer2Rewards2[6];
 
       await garden2.connect(signer1).claimReturns([long3.address, long4.address, long5.address]);
       await garden2.connect(signer2).claimReturns([long3.address, long4.address, long5.address]);
