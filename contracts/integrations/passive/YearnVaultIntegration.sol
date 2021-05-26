@@ -19,6 +19,8 @@
 pragma solidity 0.7.6;
 import {ERC20} from '@openzeppelin/contracts/token/ERC20/ERC20.sol';
 import {SafeMath} from '@openzeppelin/contracts/math/SafeMath.sol';
+
+import {IBabController} from '../../interfaces/IBabController.sol';
 import {PreciseUnitMath} from '../../lib/PreciseUnitMath.sol';
 import {PassiveIntegration} from './PassiveIntegration.sol';
 import {YRegistry} from '../../interfaces/external/yearn/YRegistry.sol';
@@ -49,7 +51,7 @@ contract YearnVaultIntegration is PassiveIntegration {
      * @param _yearnRegistryAddress           Address of Balancer core factory address
      */
     constructor(
-        address _controller,
+        IBabController _controller,
         address _weth,
         address _yearnRegistryAddress
     ) PassiveIntegration('yearnvaults', _weth, _controller) {

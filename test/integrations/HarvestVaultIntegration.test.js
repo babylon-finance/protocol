@@ -10,7 +10,7 @@ const { setupTests } = require('../fixtures/GardenFixture');
 const addresses = require('../../lib/addresses');
 const { ADDRESS_ZERO, ONE_ETH } = require('../../lib/constants');
 
-describe.only('HarvestVaultIntegrationTest', function () {
+describe('HarvestVaultIntegrationTest', function () {
   let harvestVaultIntegration;
   let garden1;
   let signer1;
