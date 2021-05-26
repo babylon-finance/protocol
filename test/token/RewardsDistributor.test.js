@@ -1074,7 +1074,9 @@ describe('BABL Rewards Distributor', function () {
       const contributor = await garden1.getContributor(signer1.address);
 
       // Try again to claims the same tokens but no more tokens are delivered
-      await expect(garden1.connect(signer1).claimReturns([long1.address, long2.address])).to.be.revertedWith(/revert BAB#082/i);
+      await expect(garden1.connect(signer1).claimReturns([long1.address, long2.address])).to.be.revertedWith(
+        'revert BAB#082',
+      );
       const contributor2 = await garden1.getContributor(signer1.address);
 
       await expect(contributor2[4].toString()).to.equal(contributor[4]);
