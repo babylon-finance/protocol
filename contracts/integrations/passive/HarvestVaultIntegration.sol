@@ -51,33 +51,38 @@ contract HarvestVaultIntegration is PassiveIntegration {
         address _controller,
         address _weth
     ) PassiveIntegration('harvestvaults', _weth, _controller) {
+        assetToVault[0x6B175474E89094C44Da98b954EedeAC495271d0F] = 0xab7FA2B2985BCcfC13c6D86b1D5A17486ab1e04C; // DAI
+        assetToVault[0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2] = 0xFE09e53A81Fe2808bc493ea64319109B5bAa573e; // WETH
+        assetToVault[0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48] = 0xf0358e8c3CD5Fa238a29301d0bEa3D63A17bEdBE; // USDC
+        assetToVault[0xdAC17F958D2ee523a2206206994597C13D831ec7] = 0x053c80eA73Dc6941F518a68E2FC52Ac45BDE7c9C; // USDT
+        assetToVault[0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599] = 0x5d9d25c7C457dD82fc8668FFC6B9746b674d4EcB; // WBTC
     }
 
     /* ============ Internal Functions ============ */
 
-    function _isInvestment(address _asset) internal view override returns (bool) {
-        return assetToVault[_asset] != address(0);
+    function _isInvestment(address _vault) internal view override returns (bool) {
+        return IHarvestVault(_vault).underlying() != address(0);
     }
 
-    function _getSpender(address _asset) internal view override returns (address) {
-        return assetToVault[_asset];
+    function _getSpender(address _vault) internal view override returns (address) {
+        return _vault;
     }
 
-    function _getExpectedShares(address _asset, uint256 _amount)
+    function _getExpectedShares(address _vault, uint256 _amount)
         internal
         view
         override
         returns (uint256)
     {
-        return _amount.preciseDiv(IHarvestVault(assetToVault[_asset]).getPricePerFullShare());
+        return _amount.preciseDiv(IHarvestVault(_vault).getPricePerFullShare());
     }
 
-    function _getPricePerShare(address _asset) internal view override returns (uint256) {
-        return IHarvestVault(assetToVault[_asset]).getPricePerFullShare();
+    function _getPricePerShare(address _vault) internal view override returns (uint256) {
+        return IHarvestVault(_vault).getPricePerFullShare();
     }
 
-    function _getInvestmentAsset(address _asset) internal view override returns (address) {
-        return assetToVault[_asset];
+    function _getInvestmentAsset(address _vault) internal view override returns (address) {
+        return IHarvestVault(_vault).underlying();
     }
 
     /**

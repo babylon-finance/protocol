@@ -25,5 +25,7 @@ interface IHarvestVault {
 
     // hard work should be callable only by the controller (by the hard worker) or by governance
     function doHardWork() external;
+
+    function balanceOf(address) external view returns (uint256);
 }
 
