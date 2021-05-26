@@ -73,7 +73,9 @@ interface IGarden {
 
     function totalStake() external view returns (uint256);
 
-    function minVotersQuorum() external view returns (uint256);
+    function minVotesQuorum() external view returns (uint256);
+
+    function minVoters() external view returns (uint256);
 
     function minStrategyDuration() external view returns (uint256);
 
@@ -85,7 +87,7 @@ interface IGarden {
 
     function getFinalizedStrategies() external view returns (address[] memory);
 
-    function isStrategyActiveInGarden(address _strategy) external view returns (bool);
+    function strategyMapping(address _strategy) external view returns (bool);
 
     function startWithdrawalWindow(
         uint256 _amount,

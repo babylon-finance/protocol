@@ -43,7 +43,7 @@ contract StrategyNFT is ERC721, IStrategyNFT {
     modifier onlyStrategy {
         IStrategy strategy = IStrategy(msg.sender);
         require(
-            IGarden(strategy.garden()).isStrategyActiveInGarden(msg.sender) && controller.isSystemContract(msg.sender),
+            IGarden(strategy.garden()).strategyMapping(msg.sender) && controller.isSystemContract(msg.sender),
             'Only the strategy can mint the NFT'
         );
         _;
