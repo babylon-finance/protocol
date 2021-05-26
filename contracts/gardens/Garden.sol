@@ -83,7 +83,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
     );
 
     event RewardsForContributor(address indexed _contributor, uint256 indexed _amount);
-    event BABLRewardsForContributor(address indexed _contributor, uint96 _rewards);
+    event BABLRewardsForContributor(address indexed _contributor, uint256 _rewards);
 
     /* ============ State Constants ============ */
 
@@ -397,8 +397,8 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
             contributor.claimedBABL = contributor.claimedBABL.add(rewards[5]); // BABL Rewards claimed properly
             contributor.claimedAt = block.timestamp; // Checkpoint of this claim
             // Send BABL rewards
-            rewardsDistributor.sendTokensToContributor(msg.sender, uint96(rewards[5]));
-            emit BABLRewardsForContributor(msg.sender, uint96(rewards[5]));
+            rewardsDistributor.sendTokensToContributor(msg.sender, rewards[5]);
+            emit BABLRewardsForContributor(msg.sender, rewards[5]);
         }
     }
 

@@ -1056,7 +1056,6 @@ describe('BABL Rewards Distributor', function () {
         long1.address,
         long2.address,
       ]);
-      console.log('EO');
       const signer1BABL = signer1Rewards[5];
       const signer2Rewards = await rewardsDistributor.getRewards(garden1.address, signer2.address, [
         long1.address,
@@ -1066,7 +1065,6 @@ describe('BABL Rewards Distributor', function () {
       // Balances before claiming
       const signer1GardenBalance = await garden1.balanceOf(signer1.address);
       const signer2GardenBalance = await garden1.balanceOf(signer2.address);
-      console.log('AO');
 
       expect((await bablToken.balanceOf(signer1.address)).toString()).to.be.equal('0');
       expect((await bablToken.balanceOf(signer2.address)).toString()).to.be.equal('0');
@@ -1074,7 +1072,6 @@ describe('BABL Rewards Distributor', function () {
       // Signer1 claims its tokens and check that they are received properly
       await garden1.connect(signer1).claimReturns([long1.address, long2.address]);
       const contributor = await garden1.getContributor(signer1.address);
-      console.log('OA');
 
       // Try again to claims the same tokens but no more tokens are delivered
       await expect(garden1.connect(signer1).claimReturns([long1.address, long2.address])).to.be.revertedWith(
@@ -1087,7 +1084,6 @@ describe('BABL Rewards Distributor', function () {
       // Signer2 claims his tokens and check that they are received properly
       await garden1.connect(signer2).claimReturns([long1.address, long2.address]);
       const contributor3 = await garden1.getContributor(signer2.address);
-      console.log(contributor3.toString(), contributor2.toString());
       // Try again to claims the same tokens but as there are no more tokens or rewards, it reverts
       await expect(garden1.connect(signer2).claimReturns([long1.address, long2.address])).to.be.revertedWith(
         'revert BAB#082',

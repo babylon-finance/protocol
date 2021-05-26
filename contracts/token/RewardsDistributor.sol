@@ -303,9 +303,10 @@ contract RewardsDistributor is Ownable, IRewardsDistributor {
      * @param _to                Address to send the tokens to
      * @param _amount            Amount of tokens to send the address to
      */
-    function sendTokensToContributor(address _to, uint96 _amount) external override onlyMiningActive {
+    function sendTokensToContributor(address _to, uint256 _amount) external override onlyMiningActive {
         _require(controller.isSystemContract(msg.sender), Errors.NOT_A_SYSTEM_CONTRACT);
-        _safeBABLTransfer(_to, _amount);
+        uint96 amount = Safe3296.safe96(_amount, 'overflow 96 bits');
+        _safeBABLTransfer(_to, amount);
     }
 
     /**
@@ -357,12 +358,12 @@ contract RewardsDistributor is Ownable, IRewardsDistributor {
         for (uint256 i = 0; i < _finalizedStrategies.length; i++) {
             uint256[] memory tempRewards = new uint256[](7);
             tempRewards = _getStrategyProfitsAndBABL(_garden, _finalizedStrategies[i], _contributor);
-            totalRewards[0] = totalRewards[0].add(uint256(Safe3296.safe96(tempRewards[0], 'R28')));
+            totalRewards[0] = totalRewards[0].add(tempRewards[0]);
             totalRewards[1] = totalRewards[1].add(tempRewards[1]);
-            totalRewards[2] = totalRewards[2].add(uint256(Safe3296.safe96(tempRewards[2], 'R28')));
+            totalRewards[2] = totalRewards[2].add(tempRewards[2]);
             totalRewards[3] = totalRewards[3].add(tempRewards[3]);
-            totalRewards[4] = totalRewards[4].add(uint256(Safe3296.safe96(tempRewards[4], 'R28')));
-            totalRewards[5] = totalRewards[5].add(uint256(Safe3296.safe96(tempRewards[5], 'R28')));
+            totalRewards[4] = totalRewards[4].add(tempRewards[4]);
+            totalRewards[5] = totalRewards[5].add(tempRewards[5]);
             totalRewards[6] = totalRewards[6].add(tempRewards[6]);
         }
 
