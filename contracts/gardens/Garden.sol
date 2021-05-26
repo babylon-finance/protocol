@@ -370,27 +370,11 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         rewards = rewardsDistributor.getRewards(address(this), msg.sender, _finalizedStrategies);
         _require(rewards[5] > 0 || rewards[6] > 0, Errors.NO_REWARDS_TO_CLAIM);
 
-        if (
-            rewards[6] > 0 &&
-            IERC20(reserveAsset).balanceOf(address(this)) >= rewards[6] &&
-            reserveAssetRewardsSetAside >= rewards[6]
-        ) {
+        if (rewards[6] > 0) {
             contributor.claimedRewards = contributor.claimedRewards.add(rewards[6]); // Rewards claimed properly
             reserveAssetRewardsSetAside = reserveAssetRewardsSetAside.sub(rewards[6]);
             contributor.claimedAt = block.timestamp; // Checkpoint of this claim
-
-            if (reserveAsset == WETH) {
-                // Check that the withdrawal is possible
-                // Unwrap WETH if ETH balance lower than netFlowQuantity
-                if (address(this).balance < rewards[6]) {
-                    IWETH(WETH).withdraw(rewards[6].sub(address(this).balance));
-                }
-                // Send ETH
-                Address.sendValue(msg.sender, rewards[6]);
-            } else {
-                // Send reserve asset
-                IERC20(reserveAsset).safeTransfer(msg.sender, rewards[6]);
-            }
+            _safeSendReserveAsset(msg.sender, rewards[6]);
             emit RewardsForContributor(msg.sender, rewards[6]);
         }
         if (rewards[5] > 0) {
@@ -894,20 +878,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         _require(netFlowQuantity >= _minReserveReceiveQuantity, Errors.MIN_TOKEN_SUPPLY);
 
         _burn(msg.sender, _gardenTokenQuantity);
-
-        if (reserveAsset == WETH) {
-            // Check that the withdrawal is possible
-            // Unwrap WETH if ETH balance lower than netFlowQuantity
-            if (address(this).balance < netFlowQuantity) {
-                IWETH(WETH).withdraw(netFlowQuantity.sub(address(this).balance));
-            }
-            // Send ETH
-            Address.sendValue(_to, netFlowQuantity);
-        } else {
-            // Send reserve asset
-            IERC20(reserveAsset).safeTransfer(msg.sender, netFlowQuantity);
-        }
-
+        _safeSendReserveAsset(msg.sender, netFlowQuantity);
         _updateContributorWithdrawalInfo(netFlowQuantity);
         payProtocolFeeFromGarden(reserveAsset, protocolFees);
 
@@ -918,6 +889,21 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         principal = principal.sub(outflow);
 
         emit GardenWithdrawal(msg.sender, _to, netFlowQuantity, _gardenTokenQuantity, protocolFees, block.timestamp);
+    }
+
+    function _safeSendReserveAsset(address payable _to, uint256 _amount) private {
+        if (reserveAsset == WETH) {
+            // Check that the withdrawal is possible
+            // Unwrap WETH if ETH balance lower than netFlowQuantity
+            if (address(this).balance < _amount) {
+                IWETH(WETH).withdraw(_amount.sub(address(this).balance));
+            }
+            // Send ETH
+            Address.sendValue(_to, _amount);
+        } else {
+            // Send reserve asset
+            IERC20(reserveAsset).safeTransfer(_to, _amount);
+        }
     }
 
     function _receiveReserveAsset(uint256 _reserveAssetQuantity) private {

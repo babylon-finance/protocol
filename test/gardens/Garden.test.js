@@ -123,7 +123,7 @@ describe('Garden', function () {
   });
   describe('payKeeper', async function () {
     it('anyone can NOT invoke payKeeper', async function () {
-      await expect(garden1.connect(signer1).payKeeper(keeper.address, ONE_ETH)).to.be.revertedWith('revert BAB#020');
+      await expect(garden1.connect(signer1).payKeeper(keeper.address, ONE_ETH)).to.be.revertedWith(/revert BAB#020/i);
     });
   });
 
@@ -164,7 +164,7 @@ describe('Garden', function () {
 
   describe('Garden state', async function () {
     it('only the protocol should be able to update active state', async function () {
-      await expect(garden1.connect(signer1).setActive(true)).to.be.revertedWith('revert BAB#016');
+      await expect(garden1.connect(signer1).setActive(true)).to.be.revertedWith(/revert BAB#016/i);
     });
 
     it('the initial deposit must be correct', async function () {
@@ -241,7 +241,7 @@ describe('Garden', function () {
         garden4.connect(signer2).deposit(ethers.utils.parseEther('1'), 1, signer2.getAddress(), {
           value: ethers.utils.parseEther('1'),
         }),
-      ).to.be.revertedWith('revert BAB#061');
+      ).to.be.revertedWith(/revert BAB#061/i);
 
       // Previous contributors belonging to the garden can still deposit
       await garden4.connect(signer3).deposit(ethers.utils.parseEther('1'), 1, signer3.getAddress(), {
@@ -649,7 +649,7 @@ describe('Garden', function () {
 
       await injectFakeProfits(strategyContract, ethers.utils.parseEther('200')); // We inject positive profits
       await finalizeStrategy(strategyContract, 0);
-      await expect(finalizeStrategy(strategyContract, 0)).to.be.revertedWith('revert BAB#050');
+      await expect(finalizeStrategy(strategyContract, 0)).to.be.revertedWith(/revert BAB#050/i);
 
       await expect(
         garden1.startWithdrawalWindow(
@@ -658,7 +658,7 @@ describe('Garden', function () {
           ethers.BigNumber.from('90333961116035100'),
           '0xd41b236f19726aba094b8b9d130620bfef535fd0',
         ),
-      ).to.be.revertedWith('revert BAB#020');
+      ).to.be.revertedWith(/revert BAB#020/i);
     });
   });
   describe('Garden Balances', async function () {

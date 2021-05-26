@@ -394,8 +394,8 @@ describe('BABL Rewards Distributor', function () {
       const rewardsLong1 = await long1.strategyRewards();
       const rewardsLong2 = await long2.strategyRewards();
 
-      expect(rewardsLong1).to.be.closeTo(valueLong1, ethers.utils.parseEther('0.005'));
-      expect(rewardsLong2).to.be.closeTo(valueLong2, ethers.utils.parseEther('0.005'));
+      expect(rewardsLong1).to.be.closeTo(valueLong1, ethers.utils.parseEther('0.01'));
+      expect(rewardsLong2).to.be.closeTo(valueLong2, ethers.utils.parseEther('0.01'));
     });
 
     it('should calculate correct BABL in case of 3 strategies with total duration of 1 quarter', async function () {
@@ -1074,9 +1074,7 @@ describe('BABL Rewards Distributor', function () {
       const contributor = await garden1.getContributor(signer1.address);
 
       // Try again to claims the same tokens but no more tokens are delivered
-      await expect(garden1.connect(signer1).claimReturns([long1.address, long2.address])).to.be.revertedWith(
-        'revert BAB#082',
-      );
+      await expect(garden1.connect(signer1).claimReturns([long1.address, long2.address])).to.be.revertedWith(/revert BAB#082/i);
       const contributor2 = await garden1.getContributor(signer1.address);
 
       await expect(contributor2[4].toString()).to.equal(contributor[4]);
