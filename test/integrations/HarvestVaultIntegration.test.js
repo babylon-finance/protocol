@@ -17,9 +17,10 @@ describe('HarvestVaultIntegrationTest', function () {
   let signer2;
   let signer3;
   let daiVault;
+  let owner;
 
   beforeEach(async () => {
-    ({ garden1, harvestVaultIntegration, signer1, signer2, signer3 } = await setupTests()());
+    ({ owner, garden1, harvestVaultIntegration, signer1, signer2, signer3 } = await setupTests()());
     daiVault = await ethers.getContractAt('IHarvestVault', addresses.harvest.vaults.fDAI);
   });
 
@@ -37,6 +38,27 @@ describe('HarvestVaultIntegrationTest', function () {
 
     it('check that a vault is NOT valid', async function () {
       await expect(harvestVaultIntegration.isInvestment(ADDRESS_ZERO)).to.be.revertedWith(/non-contract account/);
+    });
+  });
+
+  describe('updateVaultMapping', function () {
+    it('update vault mapping', async function () {
+      await harvestVaultIntegration
+        .connect(owner)
+        .updateVaultMapping('0x0000000000000000000000000000000000000001', '0x0000000000000000000000000000000000000002');
+      const vault = await harvestVaultIntegration.assetToVault('0x0000000000000000000000000000000000000001');
+      expect(vault).to.equal('0x0000000000000000000000000000000000000002');
+    });
+
+    it('anyone can NOT update vault mapping', async function () {
+      await expect(
+        harvestVaultIntegration
+          .connect(signer1)
+          .updateVaultMapping(
+            '0x0000000000000000000000000000000000000001',
+            '0x0000000000000000000000000000000000000002',
+          ),
+      ).to.be.revertedWith(/only governance can call this/i);
     });
   });
 
