@@ -5,7 +5,7 @@ const addresses = require('../../lib/addresses');
 const { impersonateAddress } = require('../../lib/rpc');
 const { createStrategy } = require('./StrategyHelper.js');
 
-async function setUpFixture({ deployments, getNamedAccounts, ethers }, options, gardenParams) {
+async function setUpFixture({ upgradesDeployer, deployments, getNamedAccounts, ethers }, options, gardenParams) {
   async function getContract(contractName, deploymentName) {
     return await ethers.getContractAt(contractName, (await deployments.get(deploymentName || contractName)).address);
   }
@@ -199,6 +199,9 @@ async function setUpFixture({ deployments, getNamedAccounts, ethers }, options, 
     signer3,
     daiWhaleSigner,
     wethWhaleSigner,
+
+    deployments,
+    upgradesDeployer,
   };
 }
 

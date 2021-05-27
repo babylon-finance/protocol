@@ -1,15 +1,27 @@
-const { ethers, upgrades } = require('hardhat');
 const { expect } = require('chai');
 
-describe('Upgrades', function () {
+const { setupTests } = require('./fixtures/GardenFixture');
+
+describe.only('Upgrades', function () {
+  let upgradesDeployer;
+  let owner;
+
+  beforeEach(async () => {
+    ({ owner, upgradesDeployer } = await setupTests()());
+  });
+
   it('can upgrade BabController', async () => {
-    const BabController = await ethers.getContractFactory('BabController');
-    const BabControllerV2Mock = await ethers.getContractFactory('BabControllerV2Mock');
+    const upgraded = await upgradesDeployer.deployOrUpgrade(
+      'BabController',
+      { from: owner.address, log: true },
+      {
+        upgrades: ['BabControllerV2Mock'],
+      },
+    );
 
-    const instance = await upgrades.deployProxy(BabController, []);
-    const upgraded = await upgrades.upgradeProxy(instance.address, BabControllerV2Mock);
+    const upgradedContract = await ethers.getContractAt('BabControllerV2Mock', upgraded.address);
 
-    expect(await upgraded.newVar()).to.equal(false);
-    expect(await upgraded.newMethod()).to.equal('foobar');
+    expect(await upgradedContract.newVar()).to.equal(false);
+    expect(await upgradedContract.newMethod()).to.equal('foobar');
   });
 });
