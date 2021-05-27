@@ -42,7 +42,9 @@ describe('YearnVaultIntegrationTest', function () {
     });
 
     it('check that a vault is not valid', async function () {
-      await expect(yearnVaultIntegration.isInvestment(ADDRESS_ZERO)).to.be.revertedWith(/non-contract account/);
+      await expect(yearnVaultIntegration.isInvestment(ADDRESS_ZERO)).to.be.revertedWith(
+        /transaction reverted without a reason/i,
+      );
     });
 
     it('can enter and exit the yearn dai vault', async function () {
