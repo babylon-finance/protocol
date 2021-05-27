@@ -24,7 +24,6 @@ import {ERC20Upgradeable} from '@openzeppelin/contracts-upgradeable/token/ERC20/
 import {ReentrancyGuard} from '@openzeppelin/contracts/utils/ReentrancyGuard.sol';
 import {SafeMath} from '@openzeppelin/contracts/math/SafeMath.sol';
 import {SafeDecimalMath} from '../lib/SafeDecimalMath.sol';
-import {Safe3296} from '../lib/Safe3296.sol';
 import {SafeCast} from '@openzeppelin/contracts/utils/SafeCast.sol';
 import {SignedSafeMath} from '@openzeppelin/contracts/math/SignedSafeMath.sol';
 
@@ -81,16 +80,17 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         uint256 protocolFees,
         uint256 timestamp
     );
+    event AddStrategy(address indexed _strategy, uint256 _expectedReturn);
 
     event RewardsForContributor(address indexed _contributor, uint256 indexed _amount);
-    event BABLRewardsForContributor(address indexed _contributor, uint96 _rewards);
+    event BABLRewardsForContributor(address indexed _contributor, uint256 _rewards);
 
     /* ============ State Constants ============ */
 
     // Wrapped ETH address
     address private constant WETH = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
     uint256 private constant EARLY_WITHDRAWAL_PENALTY = 15e16;
-    uint256 public constant MAX_TOTAL_STRATEGIES = 20; // Max number of strategies
+    uint256 private constant MAX_TOTAL_STRATEGIES = 20; // Max number of strategies
     uint256 private constant TEN_PERCENT = 1e17;
 
     /* ============ Structs ============ */
@@ -133,7 +133,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
     uint256 public withdrawalsOpenUntil; // Indicates until when the withdrawals are open and the ETH is set aside
 
     // Contributors
-    mapping(address => Contributor) public contributors;
+    mapping(address => Contributor) private contributors;
     uint256 public override totalContributors;
     uint256 public override maxContributors;
     uint256 public maxDepositLimit; // Limits the amount of deposits
@@ -144,7 +144,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
 
     // Min contribution in the garden
     uint256 public override minContribution; //wei
-    uint256 public minGardenTokenSupply;
+    uint256 private minGardenTokenSupply;
 
     // Strategies variables
     uint256 public override totalStake;
@@ -262,8 +262,12 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
             Errors.NOT_IN_RANGE
         );
         _require(_minVotesQuorum >= TEN_PERCENT && _minVotesQuorum <= TEN_PERCENT.mul(5), Errors.VALUE_TOO_LOW);
-        _require(_maxStrategyDuration >= _minStrategyDuration, Errors.DURATION_RANGE);
-        _require(_minStrategyDuration >= 1 days && _maxStrategyDuration <= 500 days, Errors.DURATION_RANGE);
+        _require(
+            _maxStrategyDuration >= _minStrategyDuration &&
+                _minStrategyDuration >= 1 days &&
+                _maxStrategyDuration <= 500 days,
+            Errors.DURATION_RANGE
+        );
         _require(_minVoters >= 1 && _minVoters < 10, Errors.MIN_VOTERS_CHECK);
         minContribution = _minContribution;
         strategyCooldownPeriod = _strategyCooldownPeriod;
@@ -313,7 +317,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         _require(netFlowQuantity >= _minGardenTokenReceiveQuantity, Errors.MIN_TOKEN_SUPPLY);
 
         // Send Protocol Fee
-        payProtocolFeeFromGarden(reserveAsset, protocolFees);
+        _payProtocolFeeFromGarden(reserveAsset, protocolFees);
 
         // Mint tokens
         _mintGardenTokens(_to, netFlowQuantity, principal.add(netFlowQuantity), protocolFees);
@@ -364,41 +368,25 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         _onlyContributor();
         Contributor storage contributor = contributors[msg.sender];
         _require(block.timestamp > contributor.claimedAt, Errors.ALREADY_CLAIMED); // race condition check
+        uint256[] memory rewards = new uint256[](7);
 
         IRewardsDistributor rewardsDistributor = IRewardsDistributor(IBabController(controller).rewardsDistributor());
-        (uint256 reserveRewards, uint256 bablRewards) =
-            rewardsDistributor.getRewards(address(this), msg.sender, _finalizedStrategies);
-        _require(reserveRewards > 0 || bablRewards > 0, Errors.NO_REWARDS_TO_CLAIM);
+        rewards = rewardsDistributor.getRewards(address(this), msg.sender, _finalizedStrategies);
+        _require(rewards[5] > 0 || rewards[6] > 0, Errors.NO_REWARDS_TO_CLAIM);
 
-        if (
-            reserveRewards > 0 &&
-            IERC20(reserveAsset).balanceOf(address(this)) >= reserveRewards &&
-            reserveAssetRewardsSetAside >= reserveRewards
-        ) {
-            contributor.claimedRewards = contributor.claimedRewards.add(reserveRewards); // Rewards claimed properly
-            reserveAssetRewardsSetAside = reserveAssetRewardsSetAside.sub(reserveRewards);
+        if (rewards[6] > 0) {
+            contributor.claimedRewards = contributor.claimedRewards.add(rewards[6]); // Rewards claimed properly
+            reserveAssetRewardsSetAside = reserveAssetRewardsSetAside.sub(rewards[6]);
             contributor.claimedAt = block.timestamp; // Checkpoint of this claim
-
-            if (reserveAsset == WETH) {
-                // Check that the withdrawal is possible
-                // Unwrap WETH if ETH balance lower than netFlowQuantity
-                if (address(this).balance < reserveRewards) {
-                    IWETH(WETH).withdraw(reserveRewards.sub(address(this).balance));
-                }
-                // Send ETH
-                Address.sendValue(msg.sender, reserveRewards);
-            } else {
-                // Send reserve asset
-                IERC20(reserveAsset).safeTransfer(msg.sender, reserveRewards);
-            }
-            emit RewardsForContributor(msg.sender, reserveRewards);
+            _safeSendReserveAsset(msg.sender, rewards[6]);
+            emit RewardsForContributor(msg.sender, rewards[6]);
         }
-        if (bablRewards > 0) {
-            contributor.claimedBABL = contributor.claimedBABL.add(bablRewards); // BABL Rewards claimed properly
+        if (rewards[5] > 0) {
+            contributor.claimedBABL = contributor.claimedBABL.add(rewards[5]); // BABL Rewards claimed properly
             contributor.claimedAt = block.timestamp; // Checkpoint of this claim
             // Send BABL rewards
-            rewardsDistributor.sendTokensToContributor(msg.sender, uint96(bablRewards));
-            emit BABLRewardsForContributor(msg.sender, uint96(bablRewards));
+            rewardsDistributor.sendTokensToContributor(msg.sender, rewards[5]);
+            emit BABLRewardsForContributor(msg.sender, rewards[5]);
         }
     }
 
@@ -514,6 +502,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         strategies.push(strategy);
         IStrategy(strategy).setData(_opTypes, _opIntegrations, _opDatas);
         isGardenStrategy[strategy] = true;
+        emit AddStrategy(strategy, _stratParams[3]);
     }
 
     /**
@@ -563,7 +552,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         );
 
         // Take protocol mgmt fee
-        payProtocolFeeFromGarden(reserveAsset, protocolMgmtFee);
+        _payProtocolFeeFromGarden(reserveAsset, protocolMgmtFee);
 
         // Send Capital to strategy
         IERC20(reserveAsset).safeTransfer(msg.sender, _capital);
@@ -572,8 +561,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
     // Any tokens (other than the target) that are sent here by mistake are recoverable by the protocol
     function sweep(address _token) external {
         _require(_token != reserveAsset, Errors.MUST_BE_RESERVE_ASSET);
-        uint256 balance = IERC20(_token).balanceOf(address(this));
-        payProtocolFeeFromGarden(_token, balance);
+        _payProtocolFeeFromGarden(_token, IERC20(_token).balanceOf(address(this)));
     }
 
     /*
@@ -840,7 +828,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
      * @param _token                   Address of the token to pay with
      * @param _feeQuantity             Fee to transfer
      */
-    function payProtocolFeeFromGarden(address _token, uint256 _feeQuantity) private {
+    function _payProtocolFeeFromGarden(address _token, uint256 _feeQuantity) private {
         IERC20(_token).safeTransfer(IBabController(controller).treasury(), _feeQuantity);
     }
 
@@ -867,13 +855,12 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         uint256 _minReserveReceiveQuantity,
         address payable _to
     ) private {
-        // Withdrawal amount has to be equal or less than msg.sender balance
-        _require(_gardenTokenQuantity <= balanceOf(msg.sender), Errors.MSG_SENDER_TOKENS_DO_NOT_MATCH);
         // Flashloan protection
         _require(
             block.timestamp.sub(contributors[msg.sender].lastDepositAt) >= depositHardlock,
             Errors.DEPOSIT_HARDLOCK
         );
+        // Withdrawal amount has to be equal or less than msg.sender balance minus the locked balance
         _require(
             _gardenTokenQuantity <= balanceOf(msg.sender).sub(this.getLockedBalance(msg.sender)),
             Errors.TOKENS_STAKED
@@ -884,32 +871,17 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
 
         (uint256 protocolFees, uint256 netFlowQuantity) = _getFees(reserveAssetQuantity, false);
 
-        uint256 newGardenTokenSupply = totalSupply().sub(_gardenTokenQuantity);
-
         _require(_canWithdrawReserveAmount(msg.sender, netFlowQuantity), Errors.MIN_LIQUIDITY);
 
         // Check that new supply is more than min supply needed for withdrawal
         // Note: A min supply amount is needed to avoid division by 0 when withdrawaling garden token to 0
-        _require(newGardenTokenSupply >= minGardenTokenSupply, Errors.MIN_TOKEN_SUPPLY);
+        _require(totalSupply().sub(_gardenTokenQuantity) >= minGardenTokenSupply, Errors.MIN_TOKEN_SUPPLY);
         _require(netFlowQuantity >= _minReserveReceiveQuantity, Errors.MIN_TOKEN_SUPPLY);
 
         _burn(msg.sender, _gardenTokenQuantity);
-
-        if (reserveAsset == WETH) {
-            // Check that the withdrawal is possible
-            // Unwrap WETH if ETH balance lower than netFlowQuantity
-            if (address(this).balance < netFlowQuantity) {
-                IWETH(WETH).withdraw(netFlowQuantity.sub(address(this).balance));
-            }
-            // Send ETH
-            Address.sendValue(_to, netFlowQuantity);
-        } else {
-            // Send reserve asset
-            IERC20(reserveAsset).safeTransfer(msg.sender, netFlowQuantity);
-        }
-
+        _safeSendReserveAsset(msg.sender, netFlowQuantity);
         _updateContributorWithdrawalInfo(netFlowQuantity);
-        payProtocolFeeFromGarden(reserveAsset, protocolFees);
+        _payProtocolFeeFromGarden(reserveAsset, protocolFees);
 
         uint256 outflow = netFlowQuantity.add(protocolFees);
 
@@ -918,6 +890,21 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         principal = principal.sub(outflow);
 
         emit GardenWithdrawal(msg.sender, _to, netFlowQuantity, _gardenTokenQuantity, protocolFees, block.timestamp);
+    }
+
+    function _safeSendReserveAsset(address payable _to, uint256 _amount) private {
+        if (reserveAsset == WETH) {
+            // Check that the withdrawal is possible
+            // Unwrap WETH if ETH balance lower than netFlowQuantity
+            if (address(this).balance < _amount) {
+                IWETH(WETH).withdraw(_amount.sub(address(this).balance));
+            }
+            // Send ETH
+            Address.sendValue(_to, _amount);
+        } else {
+            // Send reserve asset
+            IERC20(reserveAsset).safeTransfer(_to, _amount);
+        }
     }
 
     function _receiveReserveAsset(uint256 _reserveAssetQuantity) private {
@@ -974,10 +961,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
             );
 
         uint256 totalWithdrawalValueInPreciseUnits = _gardenTokenQuantity.preciseMul(gardenValuationPerToken);
-        uint256 prePremiumReserveQuantity =
-            totalWithdrawalValueInPreciseUnits.preciseMul(10**ERC20Upgradeable(_reserveAsset).decimals());
-
-        return prePremiumReserveQuantity;
+        return totalWithdrawalValueInPreciseUnits.preciseMul(10**ERC20Upgradeable(_reserveAsset).decimals());
     }
 
     /**

@@ -54,13 +54,13 @@ interface IRewardsDistributor {
 
     function getStrategyRewards(address _strategy) external returns (uint96);
 
-    function sendTokensToContributor(address _to, uint96 _amount) external;
+    function sendTokensToContributor(address _to, uint256 _amount) external;
 
     function getRewards(
         address _garden,
         address _contributor,
         address[] calldata _finalizedStrategies
-    ) external view returns (uint256, uint96);
+    ) external view returns (uint256[] memory);
 
     function getContributorPower(
         address _garden,

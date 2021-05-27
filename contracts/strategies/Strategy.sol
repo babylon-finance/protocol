@@ -901,7 +901,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
                 IRewardsDistributor(IBabController(controller).rewardsDistributor());
             // Only if the Mining program started on time for this strategy
             rewardsDistributor.substractProtocolPrincipal(capitalAllocated);
-            strategyRewards = rewardsDistributor.getStrategyRewards(address(this)); // Must be zero in case the mining program didnt started on time
+            strategyRewards = uint256(rewardsDistributor.getStrategyRewards(address(this))); // Must be zero in case the mining program didnt started on time
         }
     }
 
