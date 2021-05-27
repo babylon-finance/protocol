@@ -80,10 +80,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         uint256 protocolFees,
         uint256 timestamp
     );
-    event AddStrategy(
-        address indexed _strategy,
-        uint256 _expectedReturn
-    );
+    event AddStrategy(address indexed _strategy, uint256 _expectedReturn);
 
     event RewardsForContributor(address indexed _contributor, uint256 indexed _amount);
     event BABLRewardsForContributor(address indexed _contributor, uint256 _rewards);
@@ -265,7 +262,12 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
             Errors.NOT_IN_RANGE
         );
         _require(_minVotesQuorum >= TEN_PERCENT && _minVotesQuorum <= TEN_PERCENT.mul(5), Errors.VALUE_TOO_LOW);
-        _require(_maxStrategyDuration >= _minStrategyDuration && _minStrategyDuration >= 1 days && _maxStrategyDuration <= 500 days, Errors.DURATION_RANGE);
+        _require(
+            _maxStrategyDuration >= _minStrategyDuration &&
+                _minStrategyDuration >= 1 days &&
+                _maxStrategyDuration <= 500 days,
+            Errors.DURATION_RANGE
+        );
         _require(_minVoters >= 1 && _minVoters < 10, Errors.MIN_VOTERS_CHECK);
         minContribution = _minContribution;
         strategyCooldownPeriod = _strategyCooldownPeriod;
@@ -501,7 +503,6 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         IStrategy(strategy).setData(_opTypes, _opIntegrations, _opDatas);
         isGardenStrategy[strategy] = true;
         emit AddStrategy(strategy, _stratParams[3]);
-
     }
 
     /**
@@ -960,8 +961,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
             );
 
         uint256 totalWithdrawalValueInPreciseUnits = _gardenTokenQuantity.preciseMul(gardenValuationPerToken);
-        return
-            totalWithdrawalValueInPreciseUnits.preciseMul(10**ERC20Upgradeable(_reserveAsset).decimals());
+        return totalWithdrawalValueInPreciseUnits.preciseMul(10**ERC20Upgradeable(_reserveAsset).decimals());
     }
 
     /**
