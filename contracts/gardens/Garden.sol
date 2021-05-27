@@ -80,6 +80,10 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         uint256 protocolFees,
         uint256 timestamp
     );
+    event AddStrategy(
+        address indexed _strategy,
+        uint256 _expectedReturn
+    );
 
     event RewardsForContributor(address indexed _contributor, uint256 indexed _amount);
     event BABLRewardsForContributor(address indexed _contributor, uint256 _rewards);
@@ -89,7 +93,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
     // Wrapped ETH address
     address private constant WETH = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
     uint256 private constant EARLY_WITHDRAWAL_PENALTY = 15e16;
-    uint256 public constant MAX_TOTAL_STRATEGIES = 20; // Max number of strategies
+    uint256 private constant MAX_TOTAL_STRATEGIES = 20; // Max number of strategies
     uint256 private constant TEN_PERCENT = 1e17;
 
     /* ============ Structs ============ */
@@ -132,7 +136,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
     uint256 public withdrawalsOpenUntil; // Indicates until when the withdrawals are open and the ETH is set aside
 
     // Contributors
-    mapping(address => Contributor) public contributors;
+    mapping(address => Contributor) private contributors;
     uint256 public override totalContributors;
     uint256 public override maxContributors;
     uint256 public maxDepositLimit; // Limits the amount of deposits
@@ -143,7 +147,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
 
     // Min contribution in the garden
     uint256 public override minContribution; //wei
-    uint256 public minGardenTokenSupply;
+    uint256 private minGardenTokenSupply;
 
     // Strategies variables
     uint256 public override totalStake;
@@ -261,8 +265,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
             Errors.NOT_IN_RANGE
         );
         _require(_minVotesQuorum >= TEN_PERCENT && _minVotesQuorum <= TEN_PERCENT.mul(5), Errors.VALUE_TOO_LOW);
-        _require(_maxStrategyDuration >= _minStrategyDuration, Errors.DURATION_RANGE);
-        _require(_minStrategyDuration >= 1 days && _maxStrategyDuration <= 500 days, Errors.DURATION_RANGE);
+        _require(_maxStrategyDuration >= _minStrategyDuration && _minStrategyDuration >= 1 days && _maxStrategyDuration <= 500 days, Errors.DURATION_RANGE);
         _require(_minVoters >= 1 && _minVoters < 10, Errors.MIN_VOTERS_CHECK);
         minContribution = _minContribution;
         strategyCooldownPeriod = _strategyCooldownPeriod;
@@ -497,6 +500,8 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         strategies.push(strategy);
         IStrategy(strategy).setData(_opTypes, _opIntegrations, _opDatas);
         isGardenStrategy[strategy] = true;
+        emit AddStrategy(strategy, _stratParams[3]);
+
     }
 
     /**
@@ -555,8 +560,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
     // Any tokens (other than the target) that are sent here by mistake are recoverable by the protocol
     function sweep(address _token) external {
         _require(_token != reserveAsset, Errors.MUST_BE_RESERVE_ASSET);
-        uint256 balance = IERC20(_token).balanceOf(address(this));
-        _payProtocolFeeFromGarden(_token, balance);
+        _payProtocolFeeFromGarden(_token, IERC20(_token).balanceOf(address(this)));
     }
 
     /*
@@ -956,10 +960,8 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
             );
 
         uint256 totalWithdrawalValueInPreciseUnits = _gardenTokenQuantity.preciseMul(gardenValuationPerToken);
-        uint256 prePremiumReserveQuantity =
+        return
             totalWithdrawalValueInPreciseUnits.preciseMul(10**ERC20Upgradeable(_reserveAsset).decimals());
-
-        return prePremiumReserveQuantity;
     }
 
     /**

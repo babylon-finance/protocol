@@ -389,7 +389,7 @@ describe('Garden', function () {
       const wethPosition = await garden1.principal();
       expect(wethPosition).to.be.gt(ethers.utils.parseEther('1.999'));
       // Contributor Struct
-      const contributor = await garden1.contributors(signer3.getAddress());
+      const contributor = await garden1.getContributor(signer3.getAddress());
       expect(contributor.lastDepositAt).to.be.gt(0);
       expect(contributor.initialDepositAt).to.be.gt(0);
     });
@@ -421,7 +421,7 @@ describe('Garden', function () {
       const wethPosition = await garden1.principal();
       expect(wethPosition).to.be.gt(ethers.utils.parseEther('1.999'));
       // Contributor Struct
-      const contributor = await garden1.contributors(signer3.getAddress());
+      const contributor = await garden1.getContributor(signer3.getAddress());
       expect(contributor.lastDepositAt).to.be.gt(0);
       expect(contributor.initialDepositAt).to.be.gt(0);
     });
