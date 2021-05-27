@@ -390,8 +390,8 @@ describe('Garden', function () {
       expect(wethPosition).to.be.gt(ethers.utils.parseEther('1.999'));
       // Contributor Struct
       const contributor = await garden1.getContributor(signer3.getAddress());
-      expect(contributor.lastDepositAt).to.be.gt(0);
-      expect(contributor.initialDepositAt).to.be.gt(0);
+      expect(contributor[0]).to.be.gt(0);
+      expect(contributor[1]).to.be.gt(0);
     });
 
     it('a contributor can deposit weth directly in a weth garden', async function () {
@@ -422,8 +422,8 @@ describe('Garden', function () {
       expect(wethPosition).to.be.gt(ethers.utils.parseEther('1.999'));
       // Contributor Struct
       const contributor = await garden1.getContributor(signer3.getAddress());
-      expect(contributor.lastDepositAt).to.be.gt(0);
-      expect(contributor.initialDepositAt).to.be.gt(0);
+      expect(contributor[0]).to.be.gt(0);
+      expect(contributor[1]).to.be.gt(0);
     });
 
     it('a contributor can make multiple deposits', async function () {
