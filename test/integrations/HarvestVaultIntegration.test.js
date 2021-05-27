@@ -39,7 +39,7 @@ const vaults = [
   '0x2a32dcBB121D48C106F6d94cf2B4714c0b4Dfe48',
 ];
 
-describe.only('HarvestVaultIntegrationTest', function () {
+describe('HarvestVaultIntegrationTest', function () {
   let harvestVaultIntegration;
   let garden1;
   let signer1;
