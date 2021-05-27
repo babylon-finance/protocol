@@ -17,7 +17,9 @@
 */
 
 pragma solidity 0.7.6;
+
 import {UniswapPoolIntegration} from './UniswapPoolIntegration.sol';
+import {IBabController} from '../../interfaces/IBabController.sol';
 
 /**
  * @title SushiswapPoolIntegration
@@ -36,7 +38,7 @@ contract SushiswapPoolIntegration is UniswapPoolIntegration {
      * @param _sushiswapRouterAddress         Address of Sushiswap router
      */
     constructor(
-        address _controller,
+        IBabController _controller,
         address _weth,
         address _sushiswapRouterAddress
     ) UniswapPoolIntegration(_controller, _weth, _sushiswapRouterAddress) {

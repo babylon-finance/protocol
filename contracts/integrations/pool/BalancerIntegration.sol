@@ -19,6 +19,7 @@
 pragma solidity 0.7.6;
 import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import {SafeMath} from '@openzeppelin/contracts/math/SafeMath.sol';
+import {IBabController} from '../../interfaces/IBabController.sol';
 import {PoolIntegration} from './PoolIntegration.sol';
 import {PreciseUnitMath} from '../../lib/PreciseUnitMath.sol';
 import {IBFactory} from '../../interfaces/external/balancer/IBFactory.sol';
@@ -49,7 +50,7 @@ contract BalancerIntegration is PoolIntegration {
      * @param _coreFactoryAddress           Address of Balancer core factory address
      */
     constructor(
-        address _controller,
+        IBabController _controller,
         address _weth,
         address _coreFactoryAddress
     ) PoolIntegration('balancer', _weth, _controller) {

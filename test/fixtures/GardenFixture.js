@@ -29,6 +29,7 @@ async function setUpFixture({ deployments, getNamedAccounts, ethers }, options, 
   const balancerIntegration = await getContract('BalancerIntegration');
   const uniswapPoolIntegration = await getContract('UniswapPoolIntegration');
   const yearnVaultIntegration = await getContract('YearnVaultIntegration');
+  const harvestVaultIntegration = await getContract('HarvestVaultIntegration');
   const sushiswapPoolIntegration = await getContract('SushiswapPoolIntegration');
   const oneInchPoolIntegration = await getContract('OneInchPoolIntegration');
   const compoundLendIntegration = await getContract('CompoundLendIntegration');
@@ -162,6 +163,7 @@ async function setUpFixture({ deployments, getNamedAccounts, ethers }, options, 
     oneInchTradeIntegration,
     balancerIntegration,
     uniswapPoolIntegration,
+    harvestVaultIntegration,
     yearnVaultIntegration,
     sushiswapPoolIntegration,
     oneInchPoolIntegration,

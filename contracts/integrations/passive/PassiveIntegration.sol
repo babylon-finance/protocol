@@ -79,7 +79,7 @@ abstract contract PassiveIntegration is BaseIntegration, ReentrancyGuard, IPassi
     constructor(
         string memory _name,
         address _weth,
-        address _controller
+        IBabController _controller
     ) BaseIntegration(_name, _weth, _controller) {}
 
     /* ============ External Functions ============ */

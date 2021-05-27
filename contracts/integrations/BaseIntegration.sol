@@ -42,14 +42,14 @@ abstract contract BaseIntegration {
     /* ============ Modifiers ============ */
 
     modifier onlySystemContract() {
-        require(IBabController(controller).isSystemContract(msg.sender), 'Only system can call this');
+        require(controller.isSystemContract(msg.sender), 'Only system can call this');
         _;
     }
 
     /* ============ State Variables ============ */
 
     // Address of the controller
-    address public controller;
+    IBabController public controller;
     // Wrapped ETH address
     address public immutable weth;
     // Name of the integration
@@ -69,9 +69,9 @@ abstract contract BaseIntegration {
     constructor(
         string memory _name,
         address _weth,
-        address _controller
+        IBabController _controller
     ) {
-        require(_controller != address(0), 'Controller must be defined');
+        require(address(_controller) != address(0), 'Controller must be defined');
         name = _name;
         controller = _controller;
         weth = _weth;

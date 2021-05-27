@@ -62,7 +62,7 @@ contract AaveLendIntegration is LendIntegration {
      * @param _weth                   Address of the WETH ERC20
      * @param _controller             Address of the controller
      */
-    constructor(address _controller, address _weth) LendIntegration('aavelend', _weth, _controller) {}
+    constructor(IBabController _controller, address _weth) LendIntegration('aavelend', _weth, _controller) {}
 
     /* ============ External Functions ============ */
 
