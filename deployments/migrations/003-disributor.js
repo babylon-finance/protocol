@@ -11,13 +11,6 @@ module.exports = async ({
   const { deployer } = await getNamedAccounts();
   const gasPrice = await getRapid();
 
-  const safeDecimalMath = await deploy('SafeDecimalMath', {
-    from: deployer,
-    args: [],
-    log: true,
-    gasPrice,
-  });
-
   const bablToken = await deployments.get('BABLToken');
   const controller = await deployments.get('BabControllerProxy');
 
@@ -26,9 +19,6 @@ module.exports = async ({
     args: [bablToken.address, controller.address],
     log: true,
     gasPrice,
-    libraries: {
-      SafeDecimalMath: safeDecimalMath.address,
-    },
   });
 
   if (rewardsDistributor.newlyDeployed) {
