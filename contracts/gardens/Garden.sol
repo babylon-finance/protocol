@@ -24,7 +24,6 @@ import {ERC20Upgradeable} from '@openzeppelin/contracts-upgradeable/token/ERC20/
 import {ReentrancyGuard} from '@openzeppelin/contracts/utils/ReentrancyGuard.sol';
 import {SafeMath} from '@openzeppelin/contracts/math/SafeMath.sol';
 import {SafeDecimalMath} from '../lib/SafeDecimalMath.sol';
-import {Safe3296} from '../lib/Safe3296.sol';
 import {SafeCast} from '@openzeppelin/contracts/utils/SafeCast.sol';
 import {SignedSafeMath} from '@openzeppelin/contracts/math/SignedSafeMath.sol';
 
@@ -313,7 +312,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         _require(netFlowQuantity >= _minGardenTokenReceiveQuantity, Errors.MIN_TOKEN_SUPPLY);
 
         // Send Protocol Fee
-        payProtocolFeeFromGarden(reserveAsset, protocolFees);
+        _payProtocolFeeFromGarden(reserveAsset, protocolFees);
 
         // Mint tokens
         _mintGardenTokens(_to, netFlowQuantity, principal.add(netFlowQuantity), protocolFees);
@@ -547,7 +546,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         );
 
         // Take protocol mgmt fee
-        payProtocolFeeFromGarden(reserveAsset, protocolMgmtFee);
+        _payProtocolFeeFromGarden(reserveAsset, protocolMgmtFee);
 
         // Send Capital to strategy
         IERC20(reserveAsset).safeTransfer(msg.sender, _capital);
@@ -557,7 +556,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
     function sweep(address _token) external {
         _require(_token != reserveAsset, Errors.MUST_BE_RESERVE_ASSET);
         uint256 balance = IERC20(_token).balanceOf(address(this));
-        payProtocolFeeFromGarden(_token, balance);
+        _payProtocolFeeFromGarden(_token, balance);
     }
 
     /*
@@ -824,7 +823,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
      * @param _token                   Address of the token to pay with
      * @param _feeQuantity             Fee to transfer
      */
-    function payProtocolFeeFromGarden(address _token, uint256 _feeQuantity) private {
+    function _payProtocolFeeFromGarden(address _token, uint256 _feeQuantity) private {
         IERC20(_token).safeTransfer(IBabController(controller).treasury(), _feeQuantity);
     }
 
@@ -851,13 +850,12 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         uint256 _minReserveReceiveQuantity,
         address payable _to
     ) private {
-        // Withdrawal amount has to be equal or less than msg.sender balance
-        _require(_gardenTokenQuantity <= balanceOf(msg.sender), Errors.MSG_SENDER_TOKENS_DO_NOT_MATCH);
         // Flashloan protection
         _require(
             block.timestamp.sub(contributors[msg.sender].lastDepositAt) >= depositHardlock,
             Errors.DEPOSIT_HARDLOCK
         );
+        // Withdrawal amount has to be equal or less than msg.sender balance minus the locked balance
         _require(
             _gardenTokenQuantity <= balanceOf(msg.sender).sub(this.getLockedBalance(msg.sender)),
             Errors.TOKENS_STAKED
@@ -868,19 +866,17 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
 
         (uint256 protocolFees, uint256 netFlowQuantity) = _getFees(reserveAssetQuantity, false);
 
-        uint256 newGardenTokenSupply = totalSupply().sub(_gardenTokenQuantity);
-
         _require(_canWithdrawReserveAmount(msg.sender, netFlowQuantity), Errors.MIN_LIQUIDITY);
 
         // Check that new supply is more than min supply needed for withdrawal
         // Note: A min supply amount is needed to avoid division by 0 when withdrawaling garden token to 0
-        _require(newGardenTokenSupply >= minGardenTokenSupply, Errors.MIN_TOKEN_SUPPLY);
+        _require(totalSupply().sub(_gardenTokenQuantity) >= minGardenTokenSupply, Errors.MIN_TOKEN_SUPPLY);
         _require(netFlowQuantity >= _minReserveReceiveQuantity, Errors.MIN_TOKEN_SUPPLY);
 
         _burn(msg.sender, _gardenTokenQuantity);
         _safeSendReserveAsset(msg.sender, netFlowQuantity);
         _updateContributorWithdrawalInfo(netFlowQuantity);
-        payProtocolFeeFromGarden(reserveAsset, protocolFees);
+        _payProtocolFeeFromGarden(reserveAsset, protocolFees);
 
         uint256 outflow = netFlowQuantity.add(protocolFees);
 
