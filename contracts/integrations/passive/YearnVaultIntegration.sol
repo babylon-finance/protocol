@@ -69,12 +69,7 @@ contract YearnVaultIntegration is PassiveIntegration {
         return _investmentAddress;
     }
 
-    function _getExpectedShares(address _investmentAddress, uint256 _amount)
-        internal
-        view
-        override
-        returns (uint256)
-    {
+    function _getExpectedShares(address _investmentAddress, uint256 _amount) internal view override returns (uint256) {
         return _amount.preciseDiv(IVault(_investmentAddress).getPricePerFullShare());
     }
 

@@ -39,7 +39,7 @@ const vaults = [
   '0x2a32dcBB121D48C106F6d94cf2B4714c0b4Dfe48',
 ];
 
-describe('HarvestVaultIntegrationTest', function () {
+describe.only('HarvestVaultIntegrationTest', function () {
   let harvestVaultIntegration;
   let garden1;
   let signer1;
@@ -70,27 +70,6 @@ describe('HarvestVaultIntegrationTest', function () {
 
     it('check that a vault is NOT valid', async function () {
       await expect(harvestVaultIntegration.isInvestment(ADDRESS_ZERO)).to.be.revertedWith(/non-contract account/);
-    });
-  });
-
-  describe('updateVaultMapping', function () {
-    it('update vault mapping', async function () {
-      await harvestVaultIntegration
-        .connect(owner)
-        .updateVaultMapping('0x0000000000000000000000000000000000000001', '0x0000000000000000000000000000000000000002');
-      const vault = await harvestVaultIntegration.assetToVault('0x0000000000000000000000000000000000000001');
-      expect(vault).to.equal('0x0000000000000000000000000000000000000002');
-    });
-
-    it('anyone can NOT update vault mapping', async function () {
-      await expect(
-        harvestVaultIntegration
-          .connect(signer1)
-          .updateVaultMapping(
-            '0x0000000000000000000000000000000000000001',
-            '0x0000000000000000000000000000000000000002',
-          ),
-      ).to.be.revertedWith(/only governance can call this/i);
     });
   });
 
@@ -147,7 +126,6 @@ describe('HarvestVaultIntegrationTest', function () {
         const expectedShares = (await harvestVaultIntegration.getExpectedShares(vault, wethPriceInAsset)).div(
           decimalsDelta,
         );
-        const pricePerShare = await harvestVaultIntegration.getPricePerShare(vault);
         expect(await vaultContract.balanceOf(strategyContract.address)).to.be.closeTo(
           expectedShares,
           expectedShares.div(50),
