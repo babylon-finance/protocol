@@ -22,6 +22,8 @@ require('./lib/tasks/export');
 require('./lib/tasks/gate');
 require('./lib/tasks/increaseTime');
 
+const OPTIMIZER = !(process.env.OPTIMIZER === 'false');
+
 const ALCHEMY_KEY = process.env.ALCHEMY_KEY || '';
 const DEPLOYER_PRIVATE_KEY =
   process.env.DEPLOYER_PRIVATE_KEY || '0000000000000000000000000000000000000000000000000000000000000000';
@@ -89,7 +91,7 @@ module.exports = {
         version: '0.7.6',
         settings: {
           optimizer: {
-            enabled: true,
+            enabled: OPTIMIZER,
             runs: 999,
           },
         },

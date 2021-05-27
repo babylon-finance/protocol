@@ -79,7 +79,7 @@
     "deploy:mainnet": "hardhat deploy --network mainnet",
     "deploy:rinkeby": "hardhat deploy --network rinkeby",
     "chain": "hardhat node --as-network hardhat --show-stack-traces",
-    "test": "hardhat test --network hardhat --max-memory 8096",
+    "test": "OPTIMIZER=false hardhat test --network hardhat --max-memory 8096",
     "gas-report": "env REPORT_GAS=1 yarn test",
     "estimate-size": "yarn compile && hardhat size-contracts --max-memory 8096",
     "coverage": "hardhat coverage --max-memory 8096"

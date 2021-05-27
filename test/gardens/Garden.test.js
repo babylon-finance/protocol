@@ -123,9 +123,7 @@ describe('Garden', function () {
   });
   describe('payKeeper', async function () {
     it('anyone can NOT invoke payKeeper', async function () {
-      // TODO FIX the encoding issue of revertedWith and Hardhat
-      //await expect(garden1.connect(signer1).payKeeper(keeper.address, ONE_ETH)).to.be.revertedWith(/revert BAB#020/i);
-      await expect(garden1.connect(signer1).payKeeper(keeper.address, ONE_ETH)).to.be.reverted;
+      await expect(garden1.connect(signer1).payKeeper(keeper.address, ONE_ETH)).to.be.revertedWith(/revert BAB#020/i);
     });
   });
 
@@ -166,9 +164,7 @@ describe('Garden', function () {
 
   describe('Garden state', async function () {
     it('only the protocol should be able to update active state', async function () {
-      // TODO FIX the encoding issue of revertedWith and Hardhat
-      //await expect(garden1.connect(signer1).setActive(true)).to.be.revertedWith(/revert BAB#016/i);
-      await expect(garden1.connect(signer1).setActive(true)).to.be.reverted;
+      await expect(garden1.connect(signer1).setActive(true)).to.be.revertedWith(/revert BAB#016/i);
     });
 
     it('the initial deposit must be correct', async function () {
@@ -238,20 +234,14 @@ describe('Garden', function () {
         value: ethers.utils.parseEther('1'),
       });
       // 8 new (random) people joins the garden as well + signer 3 + gardener = 10 = maximum
-      let randomWallets = await createWallets(8);
+      const randomWallets = await createWallets(8);
       await depositBatch(owner, garden4, randomWallets);
       // Despite it is a public garden, no more contributors allowed <= 10 so it throws an exception for new users
       await expect(
         garden4.connect(signer2).deposit(ethers.utils.parseEther('1'), 1, signer2.getAddress(), {
           value: ethers.utils.parseEther('1'),
         }),
-      ).to.be.reverted;
-      // TODO FIX the encoding issue of revertedWith and Hardhat
-      //await expect(
-      //  garden4.connect(signer2).deposit(ethers.utils.parseEther('1'), 1, signer2.getAddress(), {
-      //    value: ethers.utils.parseEther('1'),
-      //  }),
-      //).to.be.revertedWith('revert BAB#061');
+      ).to.be.revertedWith('revert BAB#061');
 
       // Previous contributors belonging to the garden can still deposit
       await garden4.connect(signer3).deposit(ethers.utils.parseEther('1'), 1, signer3.getAddress(), {
@@ -622,6 +612,7 @@ describe('Garden', function () {
       const finalReducedBalance = InitialStrategistBalance.toString() - toBurn.toString();
       await expect(finalStrategistBalance).to.be.closeTo(finalReducedBalance.toString(), 200);
     });
+
     it('strategist or voters can withdraw comunity tokens during strategy execution if they have enough unlocked amount in their balance', async function () {
       const strategyContract = await createStrategy(
         'buy',
@@ -646,6 +637,7 @@ describe('Garden', function () {
       const afterBalance = await garden1.balanceOf(signer2.address);
       await expect(afterBalance).to.be.equal(beforeBalance.mul(lockedBalance).div(beforeBalance));
     });
+
     it('should fail if startWithdrawalWindow is called more than once or from a non-strategy address', async function () {
       const strategyContract = await createStrategy(
         'buy',
@@ -661,15 +653,6 @@ describe('Garden', function () {
       await finalizeStrategy(strategyContract, 0);
       await expect(finalizeStrategy(strategyContract, 0)).to.be.revertedWith('revert BAB#050');
 
-      // TODO FIX the encoding issue of revertedWith and Hardhat
-      //await expect(
-      //  garden1.startWithdrawalWindow(
-      //    ethers.BigNumber.from('1076070704097713768'),
-      //    ethers.BigNumber.from('14263257018321332'),
-      //    ethers.BigNumber.from('90333961116035100'),
-      //    '0xd41b236f19726aba094b8b9d130620bfef535fd0',
-      //  ),
-      //).to.be.revertedWith('revert BAB#020');
       await expect(
         garden1.startWithdrawalWindow(
           ethers.BigNumber.from('1076070704097713768'),
@@ -677,15 +660,17 @@ describe('Garden', function () {
           ethers.BigNumber.from('90333961116035100'),
           '0xd41b236f19726aba094b8b9d130620bfef535fd0',
         ),
-      ).to.be.reverted;
+      ).to.be.revertedWith('revert BAB#020');
     });
   });
+
   describe('Garden Balances', async function () {
     it('Garden WETH balance cannot be above deposit just after creation', async function () {
       const gardenBalance = await weth.balanceOf(garden1.address);
       expect(gardenBalance).to.be.equal(ethers.utils.parseEther('1'));
     });
   });
+
   describe('Contributor Power', async function () {
     it('the contributor power is calculated correctly if _to is after its last deposit (1 deposit from user)', async function () {
       await garden1.connect(signer3).deposit(ethers.utils.parseEther('1'), 1, signer3.getAddress(), {
