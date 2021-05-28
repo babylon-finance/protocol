@@ -106,12 +106,12 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
     /* ============ Constants ============ */
     // 500K BABL allocated to this BABL Mining Program, the first quarter is Q1_REWARDS
     // and the following quarters will follow the supply curve using a decay rate
-    uint256 public override Q1_REWARDS; // First quarter (epoch) BABL rewards
+    uint256 public constant override Q1_REWARDS = 53_571_428_571_428_600e6; // First quarter (epoch) BABL rewards
     // 12% quarterly decay rate (each 90 days)
     // (Rewards on Q1 = 1,12 * Rewards on Q2) being Q1= Quarter 1, Q2 = Quarter 2
-    uint256 public override DECAY_RATE;
+    uint256 public constant override DECAY_RATE = 12e16;
     // Duration of its EPOCH in days  // BABL & profits split from the protocol
-    uint256 public override EPOCH_DURATION;
+    uint256 public constant override EPOCH_DURATION = 90 days;
 
     // solhint-disable-next-line
     uint256 public override START_TIME; // Starting time of the rewards distribution
@@ -222,9 +222,6 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         babltoken = _bablToken;
         controller = _controller;
 
-        DECAY_RATE = 12e16;
-        EPOCH_DURATION = 90 days;
-        Q1_REWARDS = 53_571_428_571_428_600e6; // First quarter (epoch) BABL rewards
         (BABL_STRATEGIST_SHARE, BABL_STEWARD_SHARE, BABL_LP_SHARE, CREATOR_BONUS) = controller.getBABLSharing();
         (PROFIT_STRATEGIST_SHARE, PROFIT_STEWARD_SHARE, PROFIT_LP_SHARE) = controller.getProfitSharing();
         PROFIT_PROTOCOL_FEE = controller.protocolPerformanceFee();
