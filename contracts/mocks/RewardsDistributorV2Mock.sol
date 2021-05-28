@@ -149,7 +149,6 @@ contract RewardsDistributorV2Mock is OwnableUpgradeable {
         uint256 gardenLastDepositAt; // Last garden checkpoint within the provided window
     }
 
-
     /* ============ State Variables ============ */
 
     // Instance of the Controller contract

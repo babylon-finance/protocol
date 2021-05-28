@@ -31,7 +31,7 @@ module.exports = async ({
 
   if (network.live && rewardsDistributor.newlyDeployed) {
     // fails, mostly likely because of the usage of libs
-     await tenderly.push(await getTenderlyContracts(['RewardsDistributor', 'RewardsDistributorProxy']));
+    await tenderly.push(await getTenderlyContracts(['RewardsDistributor', 'RewardsDistributorProxy']));
   }
 };
 
