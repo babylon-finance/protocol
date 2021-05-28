@@ -23,5 +23,6 @@ describe.only('Upgrades', function () {
 
     expect(await upgradedContract.newVar()).to.equal(false);
     expect(await upgradedContract.newMethod()).to.equal('foobar');
+    expect(await upgradedContract.uniswapFactory()).to.equal('0x1F98431c8aD98523631AE4a59f267346ea31F984');
   });
 });

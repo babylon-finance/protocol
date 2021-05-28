@@ -45,7 +45,7 @@ module.exports = async ({ getNamedAccounts, deployments, ethers, getSigner, getC
   await (await bablToken.connect(deployerSigner).transferOwnership(MULTISIG, { gasPrice })).wait();
 
   console.log('Transfer ownership of RewardsDistributor');
-  const rewardsDistributor = await getContract('RewardsDistributor');
+  const rewardsDistributor = await getContract('RewardsDistributor', 'RewardsDistributorProxy');
   await (await rewardsDistributor.connect(deployerSigner).transferOwnership(MULTISIG, { gasPrice })).wait();
 
   console.log('Transfer ownership of TimeLockRegistry');

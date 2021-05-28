@@ -37,16 +37,16 @@ interface IRewardsDistributor {
     function pid() external view returns (uint256);
 
     // solhint-disable-next-line
-    function EPOCH_DURATION() external pure returns (uint256);
+    function EPOCH_DURATION() external view returns (uint256);
 
     // solhint-disable-next-line
     function START_TIME() external view returns (uint256);
 
     // solhint-disable-next-line
-    function Q1_REWARDS() external pure returns (uint256);
+    function Q1_REWARDS() external view returns (uint256);
 
     // solhint-disable-next-line
-    function DECAY_RATE() external pure returns (uint256);
+    function DECAY_RATE() external view returns (uint256);
 
     function addProtocolPrincipal(uint256 _capital) external;
 
