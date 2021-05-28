@@ -37,12 +37,14 @@ describe('YearnVaultIntegrationTest', function () {
       WETH = await ethers.getContractAt('IERC20', addresses.tokens.WETH);
     });
 
-    it('check that a valid yearn vault is valid', async function () {
+    it('check that a vault is valid', async function () {
       expect(await yearnVaultIntegration.isInvestment(addresses.yearn.vaults.ydai)).to.equal(true);
     });
 
-    it('check that an invalid vault is not valid', async function () {
-      await expect(yearnVaultIntegration.isInvestment(ADDRESS_ZERO)).to.be.reverted;
+    it('check that a vault is not valid', async function () {
+      await expect(yearnVaultIntegration.isInvestment(ADDRESS_ZERO)).to.be.revertedWith(
+        /transaction reverted without a reason/i,
+      );
     });
 
     it('can enter and exit the yearn dai vault', async function () {

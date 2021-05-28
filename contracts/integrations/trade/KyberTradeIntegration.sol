@@ -19,6 +19,8 @@
 pragma solidity 0.7.6;
 import {ERC20} from '@openzeppelin/contracts/token/ERC20/ERC20.sol';
 import {SafeMath} from '@openzeppelin/contracts/math/SafeMath.sol';
+
+import {IBabController} from '../../interfaces/IBabController.sol';
 import {TradeIntegration} from './TradeIntegration.sol';
 import {PreciseUnitMath} from '../../lib/PreciseUnitMath.sol';
 import {IKyberNetworkProxy} from '../../interfaces/external/kyber/IKyberNetworkProxy.sol';
@@ -48,7 +50,7 @@ contract KyberTradeIntegration is TradeIntegration {
      * @param _kyberNetworkProxyAddress    Address of Kyber Network Proxy contract
      */
     constructor(
-        address _controller,
+        IBabController _controller,
         address _weth,
         address _kyberNetworkProxyAddress
     ) TradeIntegration('kyber', _weth, _controller) {

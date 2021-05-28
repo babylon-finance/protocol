@@ -18,6 +18,8 @@
 
 pragma solidity 0.7.6;
 import {SafeMath} from '@openzeppelin/contracts/math/SafeMath.sol';
+import {IBabController} from '../../interfaces/IBabController.sol';
+
 import {IOneInchExchange} from '../../interfaces/external/1inch/IOneInchExchange.sol';
 import {TradeIntegration} from './TradeIntegration.sol';
 
@@ -31,14 +33,6 @@ contract OneInchTradeIntegration is TradeIntegration {
     using SafeMath for uint256;
 
     /* ============ Modifiers ============ */
-
-    /**
-     * Throws if the sender is not the protocol
-     */
-    modifier onlyProtocol() {
-        require(msg.sender == controller, 'Only controller can call this');
-        _;
-    }
 
     /* ============ State Variables ============ */
 
@@ -55,7 +49,7 @@ contract OneInchTradeIntegration is TradeIntegration {
      * @param _oneInchExchangeAddress       Address of 1inch exchange contract
      */
     constructor(
-        address _controller,
+        IBabController _controller,
         address _weth,
         address _oneInchExchangeAddress
     ) TradeIntegration('1inch', _weth, _controller) {
@@ -81,10 +75,6 @@ contract OneInchTradeIntegration is TradeIntegration {
     ) external pure override returns (uint256, uint256) {
         revert('not implemented');
         return (0, 0);
-    }
-
-    function updateExchangeAddress(address _newExchangeAddress) public onlyProtocol {
-        oneInchExchangeAddress = _newExchangeAddress;
     }
 
     /* ============ Internal Functions ============ */

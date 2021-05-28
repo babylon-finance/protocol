@@ -23,23 +23,22 @@ import {SafeMath} from '@openzeppelin/contracts/math/SafeMath.sol';
 import {IBabController} from '../../interfaces/IBabController.sol';
 import {PreciseUnitMath} from '../../lib/PreciseUnitMath.sol';
 import {PassiveIntegration} from './PassiveIntegration.sol';
-import {YRegistry} from '../../interfaces/external/yearn/YRegistry.sol';
-import {IVault} from '../../interfaces/external/yearn/IVault.sol';
+
+import {IHarvestVault} from '../../interfaces/external/harvest/IVault.sol';
 
 /**
- * @title YearnIntegration
+ * @title HarvestIntegration
  * @author Babylon Finance Protocol
  *
- * Yearn v2 Vault Integration
+ * Harvest v2 Vault Integration
  */
-contract YearnVaultIntegration is PassiveIntegration {
+contract HarvestVaultIntegration is PassiveIntegration {
     using SafeMath for uint256;
     using PreciseUnitMath for uint256;
 
-    /* ============ State Variables ============ */
+    /* ============ Modifiers ============ */
 
-    // Address of Kyber Network Proxy
-    YRegistry public yearnv2Registry;
+    /* ============ State Variables ============ */
 
     /* ============ Constructor ============ */
 
@@ -48,37 +47,31 @@ contract YearnVaultIntegration is PassiveIntegration {
      *
      * @param _controller                   Address of the controller
      * @param _weth                         Address of the WETH ERC20
-     * @param _yearnRegistryAddress           Address of Balancer core factory address
      */
-    constructor(
-        IBabController _controller,
-        address _weth,
-        address _yearnRegistryAddress
-    ) PassiveIntegration('yearnvaults', _weth, _controller) {
-        yearnv2Registry = YRegistry(_yearnRegistryAddress);
-    }
+    constructor(IBabController _controller, address _weth) PassiveIntegration('harvestvaults', _weth, _controller) {}
+
+    /* ============ External Functions ============ */
 
     /* ============ Internal Functions ============ */
 
-    function _isInvestment(address _investmentAddress) internal view override returns (bool) {
-        (address _controller, , , , ) = yearnv2Registry.getVaultInfo(_investmentAddress);
-        return _controller != address(0);
+    function _isInvestment(address _vault) internal view override returns (bool) {
+        return IHarvestVault(_vault).underlying() != address(0);
     }
 
-    function _getSpender(address _investmentAddress) internal pure override returns (address) {
-        return _investmentAddress;
+    function _getSpender(address _vault) internal view override returns (address) {
+        return _vault;
     }
 
-    function _getExpectedShares(address _investmentAddress, uint256 _amount) internal view override returns (uint256) {
-        return _amount.preciseDiv(IVault(_investmentAddress).getPricePerFullShare());
+    function _getExpectedShares(address _vault, uint256 _amount) internal view override returns (uint256) {
+        return _amount.preciseDiv(IHarvestVault(_vault).getPricePerFullShare());
     }
 
-    function _getPricePerShare(address _investmentAddress) internal view override returns (uint256) {
-        return IVault(_investmentAddress).getPricePerFullShare();
+    function _getPricePerShare(address _vault) internal view override returns (uint256) {
+        return IHarvestVault(_vault).getPricePerFullShare();
     }
 
-    function _getInvestmentAsset(address _investmentAddress) internal view override returns (address) {
-        return IVault(_investmentAddress).token();
+    function _getInvestmentAsset(address _vault) internal view override returns (address) {
+        return IHarvestVault(_vault).underlying();
     }
 
     /**

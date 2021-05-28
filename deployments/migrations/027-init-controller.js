@@ -78,6 +78,7 @@ module.exports = async ({ getNamedAccounts, deployments, ethers, getSigner, getC
     'BalancerIntegration',
     'UniswapPoolIntegration',
     'YearnVaultIntegration',
+    'HarvestVaultIntegration',
     'CompoundLendIntegration',
     'AaveLendIntegration',
     'SushiswapPoolIntegration',

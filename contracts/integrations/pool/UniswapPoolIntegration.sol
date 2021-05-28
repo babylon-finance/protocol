@@ -20,6 +20,8 @@ pragma solidity 0.7.6;
 import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import {SafeMath} from '@openzeppelin/contracts/math/SafeMath.sol';
 import '@uniswap/v2-core/contracts/interfaces/IUniswapV2Pair.sol';
+
+import {IBabController} from '../../interfaces/IBabController.sol';
 import {PoolIntegration} from './PoolIntegration.sol';
 import {PreciseUnitMath} from '../../lib/PreciseUnitMath.sol';
 import {IUniswapV2Router} from '../../interfaces/external/uniswap/IUniswapV2Router.sol';
@@ -53,7 +55,7 @@ contract UniswapPoolIntegration is PoolIntegration {
      * @param _uniswapRouterAddress         Address of Uniswap router
      */
     constructor(
-        address _controller,
+        IBabController _controller,
         address _weth,
         address _uniswapRouterAddress
     ) PoolIntegration('uniswap_pool', _weth, _controller) {
