@@ -22,7 +22,7 @@ async function setUpFixture({ upgradesDeployer, deployments, getNamedAccounts, e
   const gardenValuer = await getContract('GardenValuer');
   const gardenNFT = await getContract('GardenNFT');
   const strategyNFT = await getContract('StrategyNFT');
-  const rewardsDistributor = await getContract('RewardsDistributor');
+  const rewardsDistributor = await getContract('RewardsDistributor', 'RewardsDistributorProxy');
 
   const kyberTradeIntegration = await getContract('KyberTradeIntegration');
   const oneInchTradeIntegration = await getContract('OneInchTradeIntegration');
