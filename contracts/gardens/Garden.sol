@@ -675,8 +675,8 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         uint256 lockedAmount;
         for (uint256 i = 0; i < strategies.length; i++) {
             uint256 votes = uint256(Math.abs(IStrategy(strategies[i]).getUserVotes(_contributor)));
-            if (votes > 0) {
-                lockedAmount = lockedAmount.add(votes);
+            if (votes > 0 && votes > lockedAmount) {
+                lockedAmount = votes;
             }
         }
         // Avoid overflows if off-chain voting system fails
