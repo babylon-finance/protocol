@@ -119,6 +119,11 @@ contract BabControllerV2Mock is OwnableUpgradeable {
     // Enable garden creations to be fully open to the public (no need of Ishtar gate anymore)
     bool public gardenCreationIsOpen;
 
+    // Pause Guardian
+    address public guardian;
+    mapping(address => bool) public guardianPaused;
+    bool public guardianGlobalPaused;
+
     bool public newVar;
 
     /* ============ Constructor ============ */
@@ -136,6 +141,7 @@ contract BabControllerV2Mock is OwnableUpgradeable {
         protocolWithdrawalGardenTokenFee = 0; // 0% (0.01% = 1e14, 1% = 1e16) on profits
         gardenTokensTransfersEnabled = false;
         bablMiningProgramEnabled = false;
+        guardianGlobalPaused = false;
 
         strategistProfitPercentage = 10e16;
         stewardsProfitPercentage = 5e16;

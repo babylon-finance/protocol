@@ -70,6 +70,15 @@ contract BabController is OwnableUpgradeable, IBabController {
 
     event StrategyFactoryEdited(address indexed _strategyFactory, address _oldStrategyFactory);
 
+    /// @notice Emitted when pause guardian is changed
+    event NewPauseGuardian(address _oldPauseGuardian, address _newPauseGuardian);
+
+    /// @notice Emitted when an action is paused globally
+    event ActionPaused(string _action, bool _pauseState);
+
+    /// @notice Emitted when an action is paused individually
+    event ActionPausedIndividually(string _action, address _address, bool _pauseState);
+
     /* ============ Modifiers ============ */
 
     /* ============ State Variables ============ */
@@ -151,6 +160,11 @@ contract BabController is OwnableUpgradeable, IBabController {
     // Enable garden creations to be fully open to the public (no need of Ishtar gate anymore)
     bool public override gardenCreationIsOpen;
 
+    // Pause Guardian
+    address public guardian;
+    mapping(address => bool) public override guardianPaused;
+    bool public override guardianGlobalPaused;
+
     /* ============ Constructor ============ */
 
     /**
@@ -167,6 +181,7 @@ contract BabController is OwnableUpgradeable, IBabController {
         gardenTokensTransfersEnabled = false;
         bablMiningProgramEnabled = false;
         allowPublicGardens = false;
+        guardianGlobalPaused = false;
 
         uniswapFactory = 0x1F98431c8aD98523631AE4a59f267346ea31F984;
 
@@ -298,6 +313,44 @@ contract BabController is OwnableUpgradeable, IBabController {
      */
     function setAllowPublicGardens() external override onlyOwner {
         allowPublicGardens = true;
+    }
+
+    /**
+     * PRIVILEGED GOVERNANCE FUNCTION. Allows a pause guardian
+     */
+    function setPauseGuardian(address _guardian) external override {
+        require(
+            msg.sender == guardian || msg.sender == owner(),
+            'only pause guardian and owner can update pause guardian'
+        );
+        // Save current value for inclusion in log
+        address oldPauseGuardian = guardian;
+        // Store pauseGuardian with value newPauseGuardian
+        guardian = _guardian;
+        // Emit NewPauseGuardian(OldPauseGuardian, NewPauseGuardian)
+        emit NewPauseGuardian(oldPauseGuardian, _guardian);
+    }
+
+    function setGlobalPause(bool _state) external override returns (bool) {
+        require(msg.sender == guardian || msg.sender == owner(), 'only pause guardian and owner can pause globally');
+        require(msg.sender == owner() || _state == true, 'only admin can unpause');
+
+        guardianGlobalPaused = _state;
+        emit ActionPaused('Guardian global pause', _state);
+        return _state;
+    }
+
+    function setSomePause(address[] memory _address, bool _state) external override returns (bool) {
+        require(
+            msg.sender == guardian || msg.sender == owner(),
+            'only pause guardian and owner can pause individually'
+        );
+        require(msg.sender == owner() || _state == true, 'only admin can unpause');
+        for (uint256 i = 0; i < _address.length; i++) {
+            guardianPaused[_address[i]] = _state;
+            emit ActionPausedIndividually('Guardian individual pause', _address[i], _state);
+        }
+        return _state;
     }
 
     /**

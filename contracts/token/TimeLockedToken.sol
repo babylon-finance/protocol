@@ -89,6 +89,15 @@ abstract contract TimeLockedToken is VoteToken {
         }
         _;
     }
+    modifier onlyUnpaused() {
+        // Do not execute if Globally or individually paused
+        _require(
+            !IBabController(controller).guardianGlobalPaused() &&
+                !IBabController(controller).guardianPaused(address(this)),
+            Errors.ONLY_UNPAUSED
+        );
+        _;
+    }
 
     /* ============ State Variables ============ */
 
@@ -450,7 +459,7 @@ abstract contract TimeLockedToken is VoteToken {
         address _from,
         address _to,
         uint256 _value
-    ) internal override {
+    ) internal override onlyUnpaused {
         require(_from != address(0), 'TimeLockedToken:: _transfer: cannot transfer from the zero address');
         require(_to != address(0), 'TimeLockedToken:: _transfer: cannot transfer to the zero address');
         require(
