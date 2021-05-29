@@ -165,6 +165,16 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         _;
     }
 
+    modifier onlyUnpaused() {
+        // Do not execute if Globally or individually paused
+        _require(
+            !IBabController(controller).guardianGlobalPaused() &&
+                !IBabController(controller).guardianPaused(address(this)),
+            Errors.ONLY_UNPAUSED
+        );
+        _;
+    }
+
     /* ============ Constants ============ */
 
     uint256 internal constant SLIPPAGE_ALLOWED = 5e16; // 1%
@@ -346,7 +356,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         address[] calldata _voters,
         int256[] calldata _votes,
         uint256 _fee
-    ) external override onlyKeeper(_fee) onlyActiveGarden {
+    ) external override onlyKeeper(_fee) onlyActiveGarden onlyUnpaused {
         _require(_voters.length >= garden.minVoters(), Errors.MIN_VOTERS_CHECK);
         _require(!active && !finalized, Errors.VOTES_ALREADY_RESOLVED);
         _require(block.timestamp.sub(enteredAt) <= MAX_CANDIDATE_PERIOD, Errors.VOTING_WINDOW_IS_OVER);
@@ -385,6 +395,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         external
         override
         onlyKeeper(_fee)
+        onlyUnpaused
         nonReentrant
         onlyActiveGarden
     {
@@ -401,7 +412,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         uint256 _capital,
         uint256 _fee,
         address payable _keeper
-    ) external override nonReentrant onlyActiveGarden {
+    ) external override nonReentrant onlyActiveGarden onlyUnpaused {
         _require(msg.sender == address(garden), Errors.ONLY_ACTIVE_GARDEN);
         _executesStrategy(_capital, _fee, _keeper);
     }
@@ -418,6 +429,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         external
         override
         onlyKeeper(_fee)
+        onlyUnpaused
         nonReentrant
         onlyActiveGarden
     {
@@ -447,7 +459,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
      * Triggered from an immediate withdraw in the Garden.
      * @param _amountToUnwind              The amount of capital to unwind
      */
-    function unwindStrategy(uint256 _amountToUnwind) external override onlyGovernorOrGarden nonReentrant {
+    function unwindStrategy(uint256 _amountToUnwind) external override onlyGovernorOrGarden nonReentrant onlyUnpaused {
         _require(active && !finalized, Errors.STRATEGY_NEEDS_TO_BE_ACTIVE);
         _require(_amountToUnwind <= capitalAllocated.sub(minRebalanceCapital), Errors.STRATEGY_NO_CAPITAL_TO_UNWIND);
         // Exits and enters the strategy
@@ -496,7 +508,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
      * Lets the strategist change the duration of the strategy
      * @param _newDuration            New duration of the strategy
      */
-    function changeStrategyDuration(uint256 _newDuration) external override onlyStrategist {
+    function changeStrategyDuration(uint256 _newDuration) external override onlyStrategist onlyUnpaused {
         _require(!finalized, Errors.STRATEGY_IS_ALREADY_FINALIZED);
         _require(_newDuration < duration, Errors.DURATION_NEEDS_TO_BE_LESS);
         _require(_newDuration >= garden.minStrategyDuration(), Errors.DURATION_NEEDS_TO_BE_LESS);
@@ -509,7 +521,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
      * Converts it to the reserve asset and sends it to the garden.
      * @param _token             Address of the token to sweep
      */
-    function sweep(address _token) external onlyContributor {
+    function sweep(address _token) external onlyContributor onlyUnpaused {
         _require(_token != garden.reserveAsset(), Errors.CANNOT_SWEEP_RESERVE_ASSET);
         _require(!active, Errors.STRATEGY_NEEDS_TO_BE_INACTIVE);
 
@@ -558,7 +570,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         address _sendToken,
         uint256 _sendQuantity,
         address _receiveToken
-    ) external override onlyOperation returns (uint256) {
+    ) external override onlyOperation onlyUnpaused returns (uint256) {
         return _trade(_sendToken, _sendQuantity, _receiveToken);
     }
 
@@ -567,7 +579,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
      * @param _isDeposit                    Wether is a deposit or withdraw
      * @param _wethAmount                   Amount to deposit or withdraw
      */
-    function handleWeth(bool _isDeposit, uint256 _wethAmount) external override onlyOperation {
+    function handleWeth(bool _isDeposit, uint256 _wethAmount) external override onlyOperation onlyUnpaused {
         if (_isDeposit) {
             IWETH(WETH).deposit{value: _wethAmount}();
             return;

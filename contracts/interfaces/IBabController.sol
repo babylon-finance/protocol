@@ -98,6 +98,16 @@ interface IBabController {
 
     function owner() external view returns (address);
 
+    function guardianGlobalPaused() external view returns (bool);
+
+    function guardianPaused(address _address) external view returns (bool);
+
+    function setPauseGuardian(address _guardian) external;
+
+    function setGlobalPause(bool _state) external returns (bool);
+
+    function setSomePause(address[] memory _address, bool _state) external returns (bool);
+
     function priceOracle() external view returns (address);
 
     function gardenValuer() external view returns (address);

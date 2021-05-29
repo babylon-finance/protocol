@@ -102,6 +102,15 @@ contract RewardsDistributor is Ownable, IRewardsDistributor {
         _require(address(controller) == msg.sender, Errors.ONLY_CONTROLLER);
         _;
     }
+    modifier onlyUnpaused() {
+        // Do not execute if Globally or individually paused
+        _require(
+            !IBabController(controller).guardianGlobalPaused() &&
+                !IBabController(controller).guardianPaused(address(this)),
+            Errors.ONLY_UNPAUSED
+        );
+        _;
+    }
 
     /* ============ Constants ============ */
     // 500K BABL allocated to this BABL Mining Program, the first quarter is Q1_REWARDS
@@ -255,7 +264,7 @@ contract RewardsDistributor is Ownable, IRewardsDistributor {
      * Gets the total amount of rewards for a given strategy
      * @param _strategy                Strategy to check
      */
-    function getStrategyRewards(address _strategy) external view override returns (uint96) {
+    function getStrategyRewards(address _strategy) external view override onlyUnpaused returns (uint96) {
         IStrategy strategy = IStrategy(_strategy);
         _require(strategy.exitedAt() != 0, Errors.STRATEGY_IS_NOT_OVER_YET);
         IPriceOracle oracle = IPriceOracle(IBabController(controller).priceOracle());
@@ -303,7 +312,7 @@ contract RewardsDistributor is Ownable, IRewardsDistributor {
      * @param _to                Address to send the tokens to
      * @param _amount            Amount of tokens to send the address to
      */
-    function sendTokensToContributor(address _to, uint256 _amount) external override onlyMiningActive {
+    function sendTokensToContributor(address _to, uint256 _amount) external override onlyMiningActive onlyUnpaused {
         _require(controller.isSystemContract(msg.sender), Errors.NOT_A_SYSTEM_CONTRACT);
         uint96 amount = Safe3296.safe96(_amount, 'overflow 96 bits');
         _safeBABLTransfer(_to, amount);
@@ -352,7 +361,7 @@ contract RewardsDistributor is Ownable, IRewardsDistributor {
         address _garden,
         address _contributor,
         address[] calldata _finalizedStrategies
-    ) external view override returns (uint256[] memory) {
+    ) external view override onlyUnpaused returns (uint256[] memory) {
         uint256[] memory totalRewards = new uint256[](7);
         _require(IBabController(controller).isGarden(address(_garden)), Errors.ONLY_ACTIVE_GARDEN);
         for (uint256 i = 0; i < _finalizedStrategies.length; i++) {

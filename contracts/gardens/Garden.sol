@@ -298,6 +298,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         address _to
     ) external payable override nonReentrant {
         _onlyActive();
+        _onlyUnpaused();
         _require(
             !guestListEnabled ||
                 IIshtarGate(IBabController(controller).ishtarGate()).canJoinAGarden(address(this), msg.sender) ||
@@ -341,6 +342,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         bool _withPenalty
     ) external override nonReentrant {
         _onlyContributor();
+        _onlyUnpaused();
         if (!_withPenalty) {
             // Requests an immediate withdrawal taking the EARLY_WITHDRAWAL_PENALTY that stays invested.
             return _withdraw(_gardenTokenQuantity, _minReserveReceiveQuantity, _to);
@@ -366,6 +368,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
      */
     function claimReturns(address[] calldata _finalizedStrategies) external override nonReentrant {
         _onlyContributor();
+        _onlyUnpaused();
         Contributor storage contributor = contributors[msg.sender];
         _require(block.timestamp > contributor.claimedAt, Errors.ALREADY_CLAIMED); // race condition check
         uint256[] memory rewards = new uint256[](7);
@@ -404,6 +407,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         int256 _returns,
         address _strategy
     ) external override {
+        _onlyUnpaused();
         _require(
             (strategyMapping[msg.sender] && address(IStrategy(msg.sender).garden()) == address(this)),
             Errors.ONLY_STRATEGY
@@ -433,6 +437,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
      */
     function payKeeper(address payable _keeper, uint256 _fee) external override {
         _require(IBabController(controller).isValidKeeper(_keeper), Errors.ONLY_KEEPER);
+        _onlyUnpaused();
         _onlyStrategy();
         keeperDebt = keeperDebt.add(_fee);
         // Pay Keeper in Reserve Asset
@@ -483,6 +488,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
     ) external override {
         _onlyActive();
         _onlyContributor();
+        _onlyUnpaused();
         _require(
             IIshtarGate(IBabController(controller).ishtarGate()).canAddStrategiesInAGarden(address(this), msg.sender),
             Errors.USER_CANNOT_ADD_STRATEGIES
@@ -511,6 +517,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
      * @param _fee                     The fee paid to keeper to compensate the gas cost for each strategy executed
      */
     function rebalanceStrategies(uint256 _fee) external override {
+        _onlyUnpaused();
         uint256 liquidReserveAsset = ERC20Upgradeable(reserveAsset).balanceOf(address(this));
         uint256 totalActiveVotes;
         for (uint256 i = 0; i < strategies.length; i++) {
@@ -541,6 +548,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
      * @param _capital        Amount of capital to allocate to the strategy
      */
     function allocateCapitalToStrategy(uint256 _capital) external override {
+        _onlyUnpaused();
         _onlyStrategy();
         _onlyActive();
         _reenableReserveForStrategies();
@@ -706,6 +714,15 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
 
     function _onlyContributor() private view {
         _require(balanceOf(msg.sender) > 0, Errors.ONLY_CONTRIBUTOR);
+    }
+
+    function _onlyUnpaused() private view {
+        // Do not execute if Globally or individually paused
+        _require(
+            !IBabController(controller).guardianGlobalPaused() &&
+                !IBabController(controller).guardianPaused(address(this)),
+            Errors.ONLY_UNPAUSED
+        );
     }
 
     /**
