@@ -353,10 +353,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         _onlyContributor();
         // Withdrawal amount has to be equal or less than msg.sender balance minus the locked balance
         (uint256 lockedAmount, uint256 votedAmount) = this.getLockedBalance(msg.sender);
-        _require(
-            _gardenTokenQuantity <= balanceOf(msg.sender).sub(lockedAmount),
-            Errors.TOKENS_STAKED
-        ); // Strategists and Voters cannot withdraw locked stake while in active strategies
+        _require(_gardenTokenQuantity <= balanceOf(msg.sender).sub(lockedAmount), Errors.TOKENS_STAKED); // Strategists and Voters cannot withdraw locked stake while in active strategies
         if (!_withPenalty) {
             // If you have active votes, you can only withdraw with a penalty
             _require(_gardenTokenQuantity <= balanceOf(msg.sender).sub(votedAmount), Errors.TOKENS_STAKED);
@@ -690,7 +687,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
             }
             uint256 votes = uint256(Math.abs(strategy.getUserVotes(_contributor)));
             if (votes > votedAmount) {
-              votedAmount = votes;
+                votedAmount = votes;
             }
         }
         // Avoid overflows if off-chain voting system fails
