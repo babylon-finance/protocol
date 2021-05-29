@@ -93,7 +93,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
     uint256 private constant MAX_TOTAL_STRATEGIES = 20; // Max number of strategies
     uint256 private constant TEN_PERCENT = 1e17;
     // Window of time after an investment strategy finishes when the capital is available for withdrawals
-    uint256 public constant withdrawalWindowAfterStrategyCompletes = 7 days;
+    uint256 private constant withdrawalWindowAfterStrategyCompletes = 7 days;
 
     /* ============ Structs ============ */
 
