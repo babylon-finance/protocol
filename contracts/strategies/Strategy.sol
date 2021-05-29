@@ -151,6 +151,11 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
             garden.active() == true && IBabController(controller).isSystemContract(address(garden)),
             Errors.ONLY_ACTIVE_GARDEN
         );
+        _require(
+            !IBabController(controller).guardianGlobalPaused() &&
+                !IBabController(controller).guardianPaused(address(this)),
+            Errors.ONLY_UNPAUSED
+        );
         _;
     }
 
@@ -356,7 +361,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         address[] calldata _voters,
         int256[] calldata _votes,
         uint256 _fee
-    ) external override onlyKeeper(_fee) onlyActiveGarden onlyUnpaused {
+    ) external override onlyKeeper(_fee) onlyActiveGarden {
         _require(_voters.length >= garden.minVoters(), Errors.MIN_VOTERS_CHECK);
         _require(!active && !finalized, Errors.VOTES_ALREADY_RESOLVED);
         _require(block.timestamp.sub(enteredAt) <= MAX_CANDIDATE_PERIOD, Errors.VOTING_WINDOW_IS_OVER);
@@ -395,7 +400,6 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         external
         override
         onlyKeeper(_fee)
-        onlyUnpaused
         nonReentrant
         onlyActiveGarden
     {
@@ -412,7 +416,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         uint256 _capital,
         uint256 _fee,
         address payable _keeper
-    ) external override nonReentrant onlyActiveGarden onlyUnpaused {
+    ) external override nonReentrant onlyActiveGarden {
         _require(msg.sender == address(garden), Errors.ONLY_ACTIVE_GARDEN);
         _executesStrategy(_capital, _fee, _keeper);
     }
@@ -429,7 +433,6 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         external
         override
         onlyKeeper(_fee)
-        onlyUnpaused
         nonReentrant
         onlyActiveGarden
     {

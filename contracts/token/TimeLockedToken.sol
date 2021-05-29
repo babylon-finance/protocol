@@ -266,7 +266,7 @@ abstract contract TimeLockedToken is VoteToken {
      *
      * @dev Claim msg.sender tokens (if any available in the registry)
      */
-    function claimMyTokens() external onlyUnpaused {
+    function claimMyTokens() external {
         // claim msg.sender tokens from timeLockRegistry
         uint256 amount = timeLockRegistry.claim(msg.sender);
         // After a proper claim, locked tokens of Team and Advisors profiles are under restricted special vesting conditions so they automatic grant

@@ -298,7 +298,6 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         address _to
     ) external payable override nonReentrant {
         _onlyActive();
-        _onlyUnpaused();
         _require(
             !guestListEnabled ||
                 IIshtarGate(IBabController(controller).ishtarGate()).canJoinAGarden(address(this), msg.sender) ||
@@ -488,7 +487,6 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
     ) external override {
         _onlyActive();
         _onlyContributor();
-        _onlyUnpaused();
         _require(
             IIshtarGate(IBabController(controller).ishtarGate()).canAddStrategiesInAGarden(address(this), msg.sender),
             Errors.USER_CANNOT_ADD_STRATEGIES
@@ -548,7 +546,6 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
      * @param _capital        Amount of capital to allocate to the strategy
      */
     function allocateCapitalToStrategy(uint256 _capital) external override {
-        _onlyUnpaused();
         _onlyStrategy();
         _onlyActive();
         _reenableReserveForStrategies();
@@ -737,6 +734,11 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
      */
     function _onlyActive() private view {
         _require(active, Errors.ONLY_ACTIVE);
+        _require(
+            !IBabController(controller).guardianGlobalPaused() &&
+                !IBabController(controller).guardianPaused(address(this)),
+            Errors.ONLY_UNPAUSED
+        );
     }
 
     /**
