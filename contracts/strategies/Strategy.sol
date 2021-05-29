@@ -285,8 +285,9 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
 
         _require(controller.isSystemContract(_garden), Errors.NOT_A_GARDEN);
         garden = IGarden(_garden);
+        (uint256 lockedBalance, uint256 votedAmount) = garden.getLockedBalance(_strategist);
         uint256 strategistUnlockedBalance =
-            IERC20(address(garden)).balanceOf(_strategist).sub(garden.getLockedBalance(_strategist));
+            IERC20(address(garden)).balanceOf(_strategist).sub(lockedBalance);
         _require(IERC20(address(garden)).balanceOf(_strategist) > 0, Errors.STRATEGIST_TOKENS_TOO_LOW);
         _require(strategistUnlockedBalance >= _stake, Errors.TOKENS_STAKED);
         // TODO: adjust this calc
