@@ -92,6 +92,8 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
     uint256 private constant EARLY_WITHDRAWAL_PENALTY = 15e16;
     uint256 private constant MAX_TOTAL_STRATEGIES = 20; // Max number of strategies
     uint256 private constant TEN_PERCENT = 1e17;
+    // Window of time after an investment strategy finishes when the capital is available for withdrawals
+    uint256 public constant withdrawalWindowAfterStrategyCompletes = 7 days;
 
     /* ============ Structs ============ */
 
@@ -130,10 +132,8 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
     // Indicates the minimum liquidity the asset needs to have to be tradable by this garden
     uint256 public override minLiquidityAsset;
 
-    uint256 private depositHardlock; // Window of time after deposits when withdraws are disabled for that user
-    // Window of time after an investment strategy finishes when the capital is available for withdrawals
-    uint256 private withdrawalWindowAfterStrategyCompletes;
-    uint256 private withdrawalsOpenUntil; // Indicates until when the withdrawals are open and the ETH is set aside
+    uint256 public depositHardlock; // Window of time after deposits when withdraws are disabled for that user
+    uint256 public withdrawalsOpenUntil; // Indicates until when the withdrawals are open and the ETH is set aside
 
     // Contributors
     mapping(address => Contributor) private contributors;
@@ -291,7 +291,6 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         gardenInitializedAt = block.timestamp;
         minLiquidityAsset = _minLiquidityAsset;
         depositHardlock = _depositHardlock;
-        withdrawalWindowAfterStrategyCompletes = 7 days;
     }
 
     /**
