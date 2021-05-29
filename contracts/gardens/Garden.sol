@@ -665,7 +665,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
     }
 
     /**
-     * Checks balance locked for strategists and voters in active strategies
+     * Checks balance locked for strategists in active strategies
      *
      * @param _contributor                 Address of the account
      *
@@ -674,9 +674,9 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
     function getLockedBalance(address _contributor) external view override returns (uint256) {
         uint256 lockedAmount;
         for (uint256 i = 0; i < strategies.length; i++) {
-            uint256 votes = uint256(Math.abs(IStrategy(strategies[i]).getUserVotes(_contributor)));
-            if (votes > 0 && votes > lockedAmount) {
-                lockedAmount = votes;
+            IStrategy strategy = IStrategy(strategies[i]);
+            if (_contributor == strategy.strategist()) {
+                lockedAmount = lockedAmount.add(strategy.stake());
             }
         }
         // Avoid overflows if off-chain voting system fails
