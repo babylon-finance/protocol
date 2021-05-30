@@ -18,8 +18,9 @@
 
 pragma solidity 0.7.6;
 
-import {Clones} from '@openzeppelin/contracts/proxy/Clones.sol';
+import {UpgradeableBeacon} from '@openzeppelin/contracts/proxy/UpgradeableBeacon.sol';
 
+import {SafeBeaconProxy} from '../proxy/SafeBeaconProxy.sol';
 import {IStrategy} from '../interfaces/IStrategy.sol';
 import {IStrategyNFT} from '../interfaces/IStrategyNFT.sol';
 import {IBabController} from '../interfaces/IBabController.sol';
@@ -34,13 +35,13 @@ import {Strategy} from './Strategy.sol';
  */
 contract StrategyFactory is IStrategyFactory {
     address private immutable controller;
-    address payable private immutable strategy;
+    UpgradeableBeacon private immutable beacon;
 
     constructor(address _controller) {
         require(_controller != address(0), 'Controller is zero');
 
         controller = _controller;
-        strategy = address(new Strategy());
+        beacon = new UpgradeableBeacon(address(new Strategy()));
     }
 
     /**
@@ -59,18 +60,24 @@ contract StrategyFactory is IStrategyFactory {
         address _garden,
         uint256[] calldata _stratParams
     ) external override returns (address) {
-        address payable clone = payable(Clones.clone(strategy));
-        IStrategy(clone).initialize(
-            _strategist,
-            _garden,
-            controller,
-            _stratParams[0],
-            _stratParams[1],
-            _stratParams[2],
-            _stratParams[3],
-            _stratParams[4]
-        );
-        IStrategyNFT(IBabController(controller).strategyNFT()).saveStrategyNameAndSymbol(clone, _name, _symbol);
-        return clone;
+        address payable proxy =
+            payable(
+                new SafeBeaconProxy(
+                    address(beacon),
+                    abi.encodeWithSelector(
+                        IStrategy.initialize.selector,
+                        _strategist,
+                        _garden,
+                        controller,
+                        _stratParams[0],
+                        _stratParams[1],
+                        _stratParams[2],
+                        _stratParams[3],
+                        _stratParams[4]
+                    )
+                )
+            );
+        IStrategyNFT(IBabController(controller).strategyNFT()).saveStrategyNameAndSymbol(proxy, _name, _symbol);
+        return proxy;
     }
 }

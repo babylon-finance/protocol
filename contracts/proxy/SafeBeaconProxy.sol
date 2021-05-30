@@ -40,5 +40,5 @@ contract SafeBeaconProxy is BeaconProxy {
      */
     constructor(address beacon, bytes memory data) public payable BeaconProxy(beacon, data) {}
 
-    receive () external payable override {}
+    receive() external payable override {}
 }
