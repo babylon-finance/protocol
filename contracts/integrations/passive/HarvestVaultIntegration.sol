@@ -58,7 +58,7 @@ contract HarvestVaultIntegration is PassiveIntegration {
         return IHarvestVault(_vault).underlying() != address(0);
     }
 
-    function _getSpender(address _vault) internal view override returns (address) {
+    function _getSpender(address _vault) internal pure override returns (address) {
         return _vault;
     }
 
