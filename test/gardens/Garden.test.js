@@ -633,7 +633,6 @@ describe('Garden', function () {
 
       const lockedBalance = (await garden1.getLockedBalance(signer2.address))[0];
       await expect(garden1.connect(signer2).withdraw(beforeBalance.sub(lockedBalance), 1, signer2.getAddress(), false));
-
     });
 
     it('should fail if startWithdrawalWindow is called more than once or from a non-strategy address', async function () {
