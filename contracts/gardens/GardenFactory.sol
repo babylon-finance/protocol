@@ -18,7 +18,9 @@
 
 pragma solidity 0.7.6;
 import {Clones} from '@openzeppelin/contracts/proxy/Clones.sol';
+import {UpgradeableBeacon} from '@openzeppelin/contracts/proxy/UpgradeableBeacon.sol';
 
+import {SafeBeaconProxy} from '../proxy/SafeBeaconProxy.sol';
 import {IGardenFactory} from '../interfaces/IGardenFactory.sol';
 import {IBabController} from '../interfaces/IBabController.sol';
 import {Garden} from './Garden.sol';
@@ -32,13 +34,13 @@ import {GardenNFT} from './GardenNFT.sol';
  */
 contract GardenFactory is IGardenFactory {
     address private immutable controller;
-    address private immutable garden;
+    UpgradeableBeacon private immutable beacon;
 
     constructor(address _controller) {
         require(_controller != address(0), 'Controller is zero');
 
         controller = _controller;
-        garden = address(new Garden());
+        beacon = new UpgradeableBeacon(address(new Garden()));
     }
 
     /**
@@ -63,17 +65,23 @@ contract GardenFactory is IGardenFactory {
         uint256 _initialContribution
     ) external override returns (address) {
         require(msg.sender == controller, 'Only the controller can create gardens');
-        address payable clone = payable(Clones.clone(garden));
-        Garden(clone).initialize(
-            _reserveAsset,
-            controller,
-            _creator,
-            _name,
-            _symbol,
-            _gardenParams,
-            _initialContribution
-        );
-        GardenNFT(IBabController(controller).gardenNFT()).saveGardenURIAndSeed(clone, _tokenURI, _seed);
-        return clone;
+        address payable proxy =
+            payable(
+                new SafeBeaconProxy(
+                    address(beacon),
+                    abi.encodeWithSelector(
+                        Garden.initialize.selector,
+                        _reserveAsset,
+                        controller,
+                        _creator,
+                        _name,
+                        _symbol,
+                        _gardenParams,
+                        _initialContribution
+                    )
+                )
+            );
+        GardenNFT(IBabController(controller).gardenNFT()).saveGardenURIAndSeed(proxy, _tokenURI, _seed);
+        return proxy;
     }
 }
