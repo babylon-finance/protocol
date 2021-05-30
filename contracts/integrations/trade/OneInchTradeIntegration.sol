@@ -111,7 +111,7 @@ contract OneInchTradeIntegration is TradeIntegration {
                 _sendToken,
                 _receiveToken,
                 _sendQuantity,
-                0, // TODO: Fix this. _returnAmount
+                0, // not needed because of post trade check
                 _distribution,
                 0
             );
