@@ -471,7 +471,7 @@ describe('Garden', function () {
       ).to.be.reverted;
     });
 
-    it('a contributor cannot withdraw more comunity tokens than they have deposited', async function () {
+    it('a contributor cannot withdraw more community tokens than they have deposited', async function () {
       await garden1.connect(signer3).deposit(ethers.utils.parseEther('1'), 1, signer3.getAddress(), {
         value: ethers.utils.parseEther('1'),
       });
@@ -484,7 +484,7 @@ describe('Garden', function () {
         .to.be.reverted;
     });
 
-    it('strategist or voters cannot withdraw more comunity tokens than they have locked in active strategies', async function () {
+    it('strategist or voters cannot withdraw more community tokens than they have locked in active strategies', async function () {
       const strategyContract = await createStrategy(
         'buy',
         'vote',
@@ -496,8 +496,8 @@ describe('Garden', function () {
       // It is executed
       const signer1Balance = await garden1.balanceOf(signer1.address);
       const signer2Balance = await garden1.balanceOf(signer2.address);
-      const signer1LockedBalance = await garden1.getLockedBalance(signer1.address)[0];
-      const signer2LockedBalance = await garden1.getLockedBalance(signer2.address)[0];
+      const signer1LockedBalance = (await garden1.getLockedBalance(signer1.address))[0];
+      const signer2LockedBalance = (await garden1.getLockedBalance(signer2.address))[0];
       await executeStrategy(strategyContract, ethers.utils.parseEther('1'), 42);
 
       // Cannot withdraw locked stake amount
@@ -631,7 +631,7 @@ describe('Garden', function () {
       ethers.provider.send('evm_increaseTime', [ONE_DAY_IN_SECONDS * 5]); // to bypass hardlock
       const beforeBalance = await garden1.balanceOf(signer2.address);
 
-      const lockedBalance = await garden1.getLockedBalance(signer2.address)[0];
+      const lockedBalance = (await garden1.getLockedBalance(signer2.address))[0];
       await expect(garden1.connect(signer2).withdraw(beforeBalance.sub(lockedBalance), 1, signer2.getAddress(), false));
 
       const afterBalance = await garden1.balanceOf(signer2.address);
