@@ -575,12 +575,6 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         IERC20(reserveAsset).safeTransfer(msg.sender, _capital);
     }
 
-    // Any tokens (other than the target) that are sent here by mistake are recoverable by the protocol
-    function sweep(address _token) external {
-        _require(_token != reserveAsset, Errors.MUST_BE_RESERVE_ASSET);
-        _payProtocolFeeFromGarden(_token, IERC20(_token).balanceOf(address(this)));
-    }
-
     /*
      * Remove an expire candidate from the strategy Array
      * @param _strategy      Strategy to remove
