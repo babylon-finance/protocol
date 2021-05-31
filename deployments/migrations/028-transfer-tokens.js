@@ -21,7 +21,7 @@ module.exports = async ({ getNamedAccounts, deployments, ethers, getSigner, getC
   const deployerSigner = await getSigner(deployer);
 
   const bablToken = await getContract('BABLToken');
-  const rewardsDistributor = await getContract('RewardsDistributor');
+  const rewardsDistributor = await getContract('RewardsDistributor', 'RewardsDistributorProxy');
   const timeLockRegistry = await getContract('TimeLockRegistry');
   const treasury = await getContract('Treasury');
 

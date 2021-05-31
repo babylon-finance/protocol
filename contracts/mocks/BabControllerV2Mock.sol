@@ -18,6 +18,7 @@
 
 pragma solidity 0.7.6;
 
+import 'hardhat/console.sol';
 import {OwnableUpgradeable} from '@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol';
 import {AddressUpgradeable} from '@openzeppelin/contracts-upgradeable/utils/AddressUpgradeable.sol';
 import {SafeMath} from '@openzeppelin/contracts/math/SafeMath.sol';
@@ -43,7 +44,6 @@ contract BabControllerV2Mock is OwnableUpgradeable {
     /* ============ Modifiers ============ */
 
     /* ============ State Variables ============ */
-    address public constant UNISWAP_FACTORY = 0x5C69bEe701ef814a2B6a3EDD4B1652CB9cc5aA6f;
     address public constant WETH = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
     uint8 public constant MAX_OPERATIONS = 20;
 
@@ -143,6 +143,8 @@ contract BabControllerV2Mock is OwnableUpgradeable {
         bablMiningProgramEnabled = false;
         guardianGlobalPaused = false;
 
+        uniswapFactory = 0x1F98431c8aD98523631AE4a59f267346ea31F984;
+
         strategistProfitPercentage = 10e16;
         stewardsProfitPercentage = 5e16;
         lpsProfitPercentage = 80e16;
@@ -158,7 +160,7 @@ contract BabControllerV2Mock is OwnableUpgradeable {
 
     /* ============ External Functions ============ */
 
-    function newMethod() public pure returns (string memory) {
+    function newMethod() public view returns (string memory) {
         return 'foobar';
     }
 }

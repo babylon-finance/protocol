@@ -48,7 +48,7 @@
     "typescript": "^4.2.3"
   },
   "dependencies": {
-    "@openzeppelin/contracts": "^3.3.0",
+    "@openzeppelin/contracts": "3.4.1",
     "@openzeppelin/contracts-upgradeable": "^3.4.1",
     "@uniswap/lib": "^4.0.1-alpha",
     "@uniswap/v2-core": "^1.0.1",
@@ -80,7 +80,7 @@
     "deploy:rinkeby": "hardhat deploy --network rinkeby",
     "chain": "hardhat node --as-network hardhat --show-stack-traces",
     "test": "OPTIMIZER=false hardhat test --network hardhat --max-memory 8096",
-    "gas-report": "env REPORT_GAS=1 yarn test",
+    "gas-report": "REPORT_GAS=1 hardhat test --network hardhat --max-memory 8096",
     "estimate-size": "yarn compile && hardhat size-contracts --max-memory 8096",
     "coverage": "hardhat coverage --max-memory 8096"
   }

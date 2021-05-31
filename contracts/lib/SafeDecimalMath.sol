@@ -26,28 +26,16 @@ library SafeDecimalMath {
     using SafeMath for uint256;
 
     /* Number of decimal places in the representations. */
-    uint8 public constant decimals = 18;
-    uint8 public constant highPrecisionDecimals = 27;
+    uint8 internal constant decimals = 18;
 
     /* The number representing 1.0. */
-    uint256 public constant UNIT = 10**uint256(decimals);
-
-    /* The number representing 1.0 for higher fidelity numbers. */
-    uint256 public constant PRECISE_UNIT = 10**uint256(highPrecisionDecimals);
-    uint256 private constant UNIT_TO_HIGH_PRECISION_CONVERSION_FACTOR = 10**uint256(highPrecisionDecimals - decimals);
+    uint256 internal constant UNIT = 10**uint256(decimals);
 
     /**
      * @return Provides an interface to UNIT.
      */
-    function unit() external pure returns (uint256) {
+    function unit() internal pure returns (uint256) {
         return UNIT;
-    }
-
-    /**
-     * @return Provides an interface to PRECISE_UNIT.
-     */
-    function preciseUnit() external pure returns (uint256) {
-        return PRECISE_UNIT;
     }
 
     /**
@@ -89,22 +77,6 @@ library SafeDecimalMath {
         }
 
         return quotientTimesTen / 10;
-    }
-
-    /**
-     * @return The result of safely multiplying x and y, interpreting the operands
-     * as fixed-point decimals of a precise unit.
-     *
-     * @dev The operands should be in the precise unit factor which will be
-     * divided out after the product of x and y is evaluated, so that product must be
-     * less than 2**256.
-     *
-     * Unlike multiplyDecimal, this function rounds the result to the nearest increment.
-     * Rounding is useful when you need to retain fidelity for small decimal numbers
-     * (eg. small fractions or percentages).
-     */
-    function multiplyDecimalRoundPrecise(uint256 x, uint256 y) internal pure returns (uint256) {
-        return _multiplyDecimalRound(x, y, PRECISE_UNIT);
     }
 
     /**
@@ -169,37 +141,5 @@ library SafeDecimalMath {
      */
     function divideDecimalRound(uint256 x, uint256 y) internal pure returns (uint256) {
         return _divideDecimalRound(x, y, UNIT);
-    }
-
-    /**
-     * @return The result of safely dividing x and y. The return value is as a rounded
-     * high precision decimal.
-     *
-     * @dev y is divided after the product of x and the high precision unit
-     * is evaluated, so the product of x and the high precision unit must
-     * be less than 2**256. The result is rounded to the nearest increment.
-     */
-    function divideDecimalRoundPrecise(uint256 x, uint256 y) internal pure returns (uint256) {
-        return _divideDecimalRound(x, y, PRECISE_UNIT);
-    }
-
-    /**
-     * @dev Convert a standard decimal representation to a high precision one.
-     */
-    function decimalToPreciseDecimal(uint256 i) internal pure returns (uint256) {
-        return i.mul(UNIT_TO_HIGH_PRECISION_CONVERSION_FACTOR);
-    }
-
-    /**
-     * @dev Convert a high precision decimal to a standard decimal representation.
-     */
-    function preciseDecimalToDecimal(uint256 i) internal pure returns (uint256) {
-        uint256 quotientTimesTen = i / (UNIT_TO_HIGH_PRECISION_CONVERSION_FACTOR / 10);
-
-        if (quotientTimesTen % 10 >= 5) {
-            quotientTimesTen += 10;
-        }
-
-        return quotientTimesTen / 10;
     }
 }

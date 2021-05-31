@@ -11,25 +11,16 @@ module.exports = async ({
   const { deployer } = await getNamedAccounts();
   const gasPrice = await getRapid();
 
-  const safeDecimalMath = await deploy('SafeDecimalMath', {
-    from: deployer,
-    args: [],
-    log: true,
-    gasPrice,
-  });
-
   const bablToken = await deployments.get('BABLToken');
   const controller = await deployments.get('BabControllerProxy');
 
-  const rewardsDistributor = await deploy('RewardsDistributor', {
-    from: deployer,
-    args: [bablToken.address, controller.address],
-    log: true,
-    gasPrice,
-    libraries: {
-      SafeDecimalMath: safeDecimalMath.address,
+  const rewardsDistributor = await upgradesDeployer.deployOrUpgrade(
+    'RewardsDistributor',
+    { from: deployer, log: true, gasPrice },
+    {
+      initializer: { method: 'initialize', args: [bablToken.address, controller.address] },
     },
-  });
+  );
 
   if (rewardsDistributor.newlyDeployed) {
     const bablTokenContract = await ethers.getContractAt('BABLToken', bablToken.address);
@@ -40,7 +31,7 @@ module.exports = async ({
 
   if (network.live && rewardsDistributor.newlyDeployed) {
     // fails, mostly likely because of the usage of libs
-    // await tenderly.push(await getTenderlyContracts(['SafeDecimalMath', 'RewardsDistributor']));
+    await tenderly.push(await getTenderlyContracts(['RewardsDistributor', 'RewardsDistributorProxy']));
   }
 };
 
