@@ -34,14 +34,15 @@ import {Strategy} from './Strategy.sol';
  * Factory to create investment strategy contracts
  */
 contract StrategyFactory is IStrategyFactory {
-    address private immutable controller;
+    IBabController private immutable controller;
     UpgradeableBeacon private immutable beacon;
 
-    constructor(address _controller) {
-        require(_controller != address(0), 'Controller is zero');
+    constructor(IBabController _controller, UpgradeableBeacon _beacon) {
+        require(address(_controller) != address(0), 'Controller is zero');
+        require(address(_beacon) != address(0), 'Beacon is zero');
 
-        controller = _controller;
-        beacon = new UpgradeableBeacon(address(new Strategy()));
+        controller = IBabController(_controller);
+        beacon = _beacon;
     }
 
     /**
@@ -77,7 +78,7 @@ contract StrategyFactory is IStrategyFactory {
                     )
                 )
             );
-        IStrategyNFT(IBabController(controller).strategyNFT()).saveStrategyNameAndSymbol(proxy, _name, _symbol);
+        IStrategyNFT(controller.strategyNFT()).saveStrategyNameAndSymbol(proxy, _name, _symbol);
         return proxy;
     }
 }

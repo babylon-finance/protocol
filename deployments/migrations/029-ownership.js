@@ -36,6 +36,17 @@ module.exports = async ({ getNamedAccounts, deployments, ethers, getSigner, getC
   const proxyAdmin = new ethers.Contract(proxyAdminDeployment.address, proxyAdminDeployment.abi);
   await (await proxyAdmin.connect(deployerSigner).transferOwnership(MULTISIG, { gasPrice })).wait();
 
+  console.log('Transfer ownership of GardenBeacon');
+  let deployment = await deployments.get('GardenBeacon');
+  let contract = new ethers.Contract(deployment.address, deployment.abi);
+  await (await contract.connect(deployerSigner).transferOwnership(MULTISIG, { gasPrice })).wait();
+
+  console.log('Transfer ownership of StrategyBeacon');
+  deployment = await deployments.get('StrategyBeacon');
+  contract = new ethers.Contract(deployment.address, deployment.abi);
+  await (await contract.connect(deployerSigner).transferOwnership(MULTISIG, { gasPrice })).wait();
+
+
   console.log('Transfer ownership of BabController');
   const babController = await getContract('BabController', 'BabControllerProxy');
   await (await babController.connect(deployerSigner).transferOwnership(MULTISIG, { gasPrice })).wait();

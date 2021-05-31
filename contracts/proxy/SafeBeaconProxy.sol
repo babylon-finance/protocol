@@ -40,5 +40,15 @@ contract SafeBeaconProxy is BeaconProxy {
      */
     constructor(address beacon, bytes memory data) public payable BeaconProxy(beacon, data) {}
 
+    /**
+     * @dev Accepts all ETH transfers but does not proxy calls to the implementation.
+     *
+     * Due to EIP-2929 the proxy overhead gas cost is higher than 2300 gas which is the stipend used by address.transfer.
+     * This results to a `out of gas` error for proxy calls initiated by code `address.transfer`.
+     * A notable example is WETH https://etherscan.io/address/0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2#code
+     * A downside of this approach is that a proxy implementation contract can not handle receiving pure ETH.
+     * In a scope of Babylon project this is acceptable but should be kept in mind at all times.
+     *
+     */
     receive() external payable override {}
 }

@@ -2,12 +2,39 @@ const { expect } = require('chai');
 
 const { setupTests } = require('./fixtures/GardenFixture');
 
-describe('Upgrades', function () {
+describe.only('Upgrades', function () {
   let upgradesDeployer;
   let owner;
 
   beforeEach(async () => {
     ({ owner, upgradesDeployer, deployments } = await setupTests()());
+  });
+
+  describe('StrategyBeacon', function () {
+    it('has correct owner', async () => {
+      const deployment = await deployments.get('StrategyBeacon');
+      const beacon = new ethers.Contract(deployment.address, deployment.abi);
+
+      expect(await beacon.connect(owner).owner()).to.eq(owner.address);
+    });
+  });
+
+  describe('Garden Beacon', function () {
+    it('has correct owner', async () => {
+      const deployment = await deployments.get('GardenBeacon');
+      const beacon = new ethers.Contract(deployment.address, deployment.abi);
+
+      expect(await beacon.connect(owner).owner()).to.eq(owner.address);
+    });
+  });
+
+  describe('ProxyAdmin', function () {
+    it('has correct owner', async () => {
+      const deployment = await deployments.get('ProxyAdmin');
+      const proxyAdmin = new ethers.Contract(deployment.address, deployment.abi);
+
+      expect(await proxyAdmin.connect(owner).owner()).to.eq(owner.address);
+    });
   });
 
   describe('BabController', function () {

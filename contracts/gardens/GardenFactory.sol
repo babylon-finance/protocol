@@ -23,8 +23,8 @@ import {UpgradeableBeacon} from '@openzeppelin/contracts/proxy/UpgradeableBeacon
 import {SafeBeaconProxy} from '../proxy/SafeBeaconProxy.sol';
 import {IGardenFactory} from '../interfaces/IGardenFactory.sol';
 import {IBabController} from '../interfaces/IBabController.sol';
+import {IGardenNFT} from '../interfaces/IGardenNFT.sol';
 import {Garden} from './Garden.sol';
-import {GardenNFT} from './GardenNFT.sol';
 
 /**
  * @title GardenFactory
@@ -33,14 +33,15 @@ import {GardenNFT} from './GardenNFT.sol';
  * Factory to create garden contracts
  */
 contract GardenFactory is IGardenFactory {
-    address private immutable controller;
+    IBabController private immutable controller;
     UpgradeableBeacon private immutable beacon;
 
-    constructor(address _controller) {
-        require(_controller != address(0), 'Controller is zero');
+    constructor(IBabController _controller, UpgradeableBeacon _beacon) {
+        require(address(_controller) != address(0), 'Controller is zero');
+        require(address(_beacon) != address(0), 'Beacon is zero');
 
-        controller = _controller;
-        beacon = new UpgradeableBeacon(address(new Garden()));
+        controller = IBabController(_controller);
+        beacon = _beacon;
     }
 
     /**
@@ -64,7 +65,7 @@ contract GardenFactory is IGardenFactory {
         uint256[] calldata _gardenParams,
         uint256 _initialContribution
     ) external override returns (address) {
-        require(msg.sender == controller, 'Only the controller can create gardens');
+        require(msg.sender == address(controller), 'Only the controller can create gardens');
         address payable proxy =
             payable(
                 new SafeBeaconProxy(
@@ -81,7 +82,7 @@ contract GardenFactory is IGardenFactory {
                     )
                 )
             );
-        GardenNFT(IBabController(controller).gardenNFT()).saveGardenURIAndSeed(proxy, _tokenURI, _seed);
+        IGardenNFT(controller.gardenNFT()).saveGardenURIAndSeed(proxy, _tokenURI, _seed);
         return proxy;
     }
 }
