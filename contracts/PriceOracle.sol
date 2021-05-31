@@ -111,7 +111,7 @@ contract PriceOracle is Ownable, IPriceOracle {
         require(controller.isSystemContract(msg.sender) || msg.sender == owner(), 'Caller must be system contract');
         // Same asset. Returns base unit
         if (_assetOne == _assetTwo) {
-            return 10**18;
+            return 10**ERC20(_assetOne).decimals();
         }
 
         bool priceFound;
