@@ -1,13 +1,36 @@
 const { expect } = require('chai');
 
+const { GARDEN_PARAMS } = require('../lib/constants.js');
+const addresses = require('../lib/addresses');
+const { createStrategy } = require('./fixtures/StrategyHelper.js');
 const { setupTests } = require('./fixtures/GardenFixture');
 
-describe.only('Upgrades', function () {
+describe('Upgrades', function () {
   let upgradesDeployer;
   let owner;
+  let signer1;
+  let signer2;
+  let signer3;
+  let oneInchTradeIntegration;
+  let deploy;
+  let strategy11;
+  let garden1;
+  let babController;
 
   beforeEach(async () => {
-    ({ owner, upgradesDeployer, deployments } = await setupTests()());
+    ({
+      babController,
+      garden1,
+      strategy11,
+      owner,
+      signer1,
+      signer2,
+      signer3,
+      oneInchTradeIntegration,
+      upgradesDeployer,
+      deployments,
+    } = await setupTests()());
+    ({ deploy } = deployments);
   });
 
   describe('StrategyBeacon', function () {
@@ -17,6 +40,40 @@ describe.only('Upgrades', function () {
 
       expect(await beacon.connect(owner).owner()).to.eq(owner.address);
     });
+
+    it('can upgrade to a v2 existing and new strategies', async () => {
+      const deployment = await deployments.get('StrategyBeacon');
+      const beacon = new ethers.Contract(deployment.address, deployment.abi);
+
+      const v2 = await deploy('StrategyV2Mock', {
+        from: owner.address,
+        args: [],
+        log: true,
+      });
+
+      await beacon.connect(owner).upgradeTo(v2.address);
+
+      // check that old strategies have changed
+      const existingStrategy = new ethers.Contract(strategy11, v2.abi);
+
+      expect(await existingStrategy.connect(owner).newMethod()).to.eq('foobar');
+      expect(await existingStrategy.connect(owner).newVar()).to.eq('0');
+      expect(await existingStrategy.connect(owner).duration()).to.eq('65536');
+
+      // check that new strategies have changed
+      let freshStrategy = await createStrategy(
+        'buy',
+        'dataset',
+        [signer1, signer2, signer3],
+        oneInchTradeIntegration.address,
+        garden1,
+      );
+
+      freshStrategy = new ethers.Contract(freshStrategy.address, v2.abi);
+      expect(await freshStrategy.connect(owner).newMethod()).to.eq('foobar');
+      expect(await freshStrategy.connect(owner).newVar()).to.eq('42');
+      expect(await freshStrategy.connect(owner).duration()).to.eq('0');
+    });
   });
 
   describe('Garden Beacon', function () {
@@ -25,6 +82,49 @@ describe.only('Upgrades', function () {
       const beacon = new ethers.Contract(deployment.address, deployment.abi);
 
       expect(await beacon.connect(owner).owner()).to.eq(owner.address);
+    });
+
+    it('can upgrade to a v2 existing and new gardens', async () => {
+      const deployment = await deployments.get('GardenBeacon');
+      const beacon = new ethers.Contract(deployment.address, deployment.abi);
+
+      const v2 = await deploy('GardenV2Mock', {
+        from: owner.address,
+        args: [],
+        log: true,
+      });
+
+      await beacon.connect(owner).upgradeTo(v2.address);
+
+      // check that old strategies have changed
+      const garden = new ethers.Contract(garden1.address, v2.abi);
+      expect(await garden.connect(owner).newMethod()).to.eq('foobar');
+      expect(await garden.connect(owner).newVar()).to.eq('0');
+      expect(await garden.connect(owner).name()).to.eq('Absolute ETH Return [beta]');
+
+      // check that new strategies have changed
+      await babController
+        .connect(signer1)
+        .createGarden(
+          addresses.tokens.WETH,
+          'Absolute ETH Return [beta]',
+          'EYFA',
+          'http...',
+          0,
+          GARDEN_PARAMS,
+          ethers.utils.parseEther('1'),
+          {
+            value: ethers.utils.parseEther('1'),
+          },
+        );
+
+      const gardens = await babController.connect(owner).getGardens();
+
+      freshGarden = new ethers.Contract(gardens[4], v2.abi);
+
+      expect(await freshGarden.connect(owner).newMethod()).to.eq('foobar');
+      expect(await freshGarden.connect(owner).newVar()).to.eq('42');
+      expect(await freshGarden.connect(owner).name()).to.eq('');
     });
   });
 

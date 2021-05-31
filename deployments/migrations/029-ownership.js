@@ -46,7 +46,6 @@ module.exports = async ({ getNamedAccounts, deployments, ethers, getSigner, getC
   contract = new ethers.Contract(deployment.address, deployment.abi);
   await (await contract.connect(deployerSigner).transferOwnership(MULTISIG, { gasPrice })).wait();
 
-
   console.log('Transfer ownership of BabController');
   const babController = await getContract('BabController', 'BabControllerProxy');
   await (await babController.connect(deployerSigner).transferOwnership(MULTISIG, { gasPrice })).wait();
