@@ -157,18 +157,16 @@ contract GardenV2Mock is ERC20Upgradeable, ReentrancyGuard {
         uint256[] calldata _gardenParams,
         uint256 _initialContribution
     ) public payable initializer {
-      newVar = 42;
+        newVar = 42;
     }
 
     function deposit(
         uint256 _reserveAssetQuantity,
         uint256 _minGardenTokenReceiveQuantity,
         address _to
-    ) external payable {
-    }
+    ) external payable {}
 
     function newMethod() public view returns (string memory) {
         return 'foobar';
     }
 }
-

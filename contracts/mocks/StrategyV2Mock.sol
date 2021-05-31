@@ -154,16 +154,14 @@ contract StrategyV2Mock {
         uint256 _expectedReturn,
         uint256 _minRebalanceCapital
     ) external {
-      newVar = 42;
+        newVar = 42;
     }
-
 
     function setData(
         uint8[] calldata _opTypes,
         address[] calldata _opIntegrations,
         address[] calldata _opDatas
-    ) external {
-    }
+    ) external {}
 
     function newMethod() public view returns (string memory) {
         return 'foobar';
