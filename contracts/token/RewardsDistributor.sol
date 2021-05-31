@@ -19,7 +19,7 @@ pragma solidity 0.7.6;
 import 'hardhat/console.sol';
 import {TimeLockedToken} from './TimeLockedToken.sol';
 
-import {Ownable} from '@openzeppelin/contracts/access/Ownable.sol';
+import {OwnableUpgradeable} from '@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol';
 import {SafeMath} from '@openzeppelin/contracts/math/SafeMath.sol';
 import {Address} from '@openzeppelin/contracts/utils/Address.sol';
 import {SafeERC20} from '@openzeppelin/contracts/token/ERC20/SafeERC20.sol';
@@ -49,7 +49,7 @@ import {IPriceOracle} from '../interfaces/IPriceOracle.sol';
  * Rewards Distributor also is responsible for the calculation and delivery of other rewards as bonuses to specific profiles
  * which are actively contributing to the protocol growth and their communities (Garden creators, Strategists and Stewards).
  */
-contract RewardsDistributor is Ownable, IRewardsDistributor {
+contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
     using SafeMath for uint256;
     using SafeMath for int256;
     using PreciseUnitMath for uint256;
@@ -126,21 +126,21 @@ contract RewardsDistributor is Ownable, IRewardsDistributor {
     uint256 public override START_TIME; // Starting time of the rewards distribution
 
     // solhint-disable-next-line
-    uint256 public immutable BABL_STRATEGIST_SHARE;
+    uint256 private BABL_STRATEGIST_SHARE;
     // solhint-disable-next-line
-    uint256 public immutable BABL_STEWARD_SHARE;
+    uint256 private BABL_STEWARD_SHARE;
     // solhint-disable-next-line
-    uint256 public immutable BABL_LP_SHARE;
+    uint256 private BABL_LP_SHARE;
     // solhint-disable-next-line
-    uint256 public immutable PROFIT_STRATEGIST_SHARE;
+    uint256 private PROFIT_STRATEGIST_SHARE;
     // solhint-disable-next-line
-    uint256 public immutable PROFIT_STEWARD_SHARE;
+    uint256 private PROFIT_STEWARD_SHARE;
     // solhint-disable-next-line
-    uint256 public immutable PROFIT_LP_SHARE;
+    uint256 private PROFIT_LP_SHARE;
     // solhint-disable-next-line
-    uint256 public immutable PROFIT_PROTOCOL_FEE;
+    uint256 private PROFIT_PROTOCOL_FEE;
     // solhint-disable-next-line
-    uint256 public immutable CREATOR_BONUS;
+    uint256 private CREATOR_BONUS;
 
     // DAI normalize asset
     address private constant DAI = 0x6B175474E89094C44Da98b954EedeAC495271d0F;
@@ -223,7 +223,9 @@ contract RewardsDistributor is Ownable, IRewardsDistributor {
 
     /* ============ Constructor ============ */
 
-    constructor(TimeLockedToken _bablToken, IBabController _controller) {
+    function initialize(TimeLockedToken _bablToken, IBabController _controller) public {
+        OwnableUpgradeable.__Ownable_init();
+
         require(address(_bablToken) != address(0), 'Token needs to exist');
         require(address(_controller) != address(0), 'Controller needs to exist');
         babltoken = _bablToken;
@@ -400,7 +402,7 @@ contract RewardsDistributor is Ownable, IRewardsDistributor {
      * Calculates the BABL rewards supply for each quarter
      * @param _quarter      Number of the epoch (quarter)
      */
-    function tokenSupplyPerQuarter(uint256 _quarter) external pure override returns (uint96) {
+    function tokenSupplyPerQuarter(uint256 _quarter) external view override returns (uint96) {
         return _tokenSupplyPerQuarter(_quarter);
     }
 
@@ -1307,7 +1309,7 @@ contract RewardsDistributor is Ownable, IRewardsDistributor {
      * Calculates the BABL rewards supply for each quarter
      * @param _quarter      Number of the epoch (quarter)
      */
-    function _tokenSupplyPerQuarter(uint256 _quarter) internal pure returns (uint96) {
+    function _tokenSupplyPerQuarter(uint256 _quarter) internal view returns (uint96) {
         _require(_quarter >= 1, Errors.QUARTERS_MIN_1);
         if (_quarter >= 513) {
             return 0;

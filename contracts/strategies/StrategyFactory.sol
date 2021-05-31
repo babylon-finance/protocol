@@ -18,8 +18,9 @@
 
 pragma solidity 0.7.6;
 
-import {Clones} from '@openzeppelin/contracts/proxy/Clones.sol';
+import {UpgradeableBeacon} from '@openzeppelin/contracts/proxy/UpgradeableBeacon.sol';
 
+import {SafeBeaconProxy} from '../proxy/SafeBeaconProxy.sol';
 import {IStrategy} from '../interfaces/IStrategy.sol';
 import {IStrategyNFT} from '../interfaces/IStrategyNFT.sol';
 import {IBabController} from '../interfaces/IBabController.sol';
@@ -33,14 +34,15 @@ import {Strategy} from './Strategy.sol';
  * Factory to create investment strategy contracts
  */
 contract StrategyFactory is IStrategyFactory {
-    address private immutable controller;
-    address payable private immutable strategy;
+    IBabController private immutable controller;
+    UpgradeableBeacon private immutable beacon;
 
-    constructor(address _controller) {
-        require(_controller != address(0), 'Controller is zero');
+    constructor(IBabController _controller, UpgradeableBeacon _beacon) {
+        require(address(_controller) != address(0), 'Controller is zero');
+        require(address(_beacon) != address(0), 'Beacon is zero');
 
-        controller = _controller;
-        strategy = address(new Strategy());
+        controller = IBabController(_controller);
+        beacon = _beacon;
     }
 
     /**
@@ -59,18 +61,24 @@ contract StrategyFactory is IStrategyFactory {
         address _garden,
         uint256[] calldata _stratParams
     ) external override returns (address) {
-        address payable clone = payable(Clones.clone(strategy));
-        IStrategy(clone).initialize(
-            _strategist,
-            _garden,
-            controller,
-            _stratParams[0],
-            _stratParams[1],
-            _stratParams[2],
-            _stratParams[3],
-            _stratParams[4]
-        );
-        IStrategyNFT(IBabController(controller).strategyNFT()).saveStrategyNameAndSymbol(clone, _name, _symbol);
-        return clone;
+        address payable proxy =
+            payable(
+                new SafeBeaconProxy(
+                    address(beacon),
+                    abi.encodeWithSelector(
+                        IStrategy.initialize.selector,
+                        _strategist,
+                        _garden,
+                        controller,
+                        _stratParams[0],
+                        _stratParams[1],
+                        _stratParams[2],
+                        _stratParams[3],
+                        _stratParams[4]
+                    )
+                )
+            );
+        IStrategyNFT(controller.strategyNFT()).saveStrategyNameAndSymbol(proxy, _name, _symbol);
+        return proxy;
     }
 }

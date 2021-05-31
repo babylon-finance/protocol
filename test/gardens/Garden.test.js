@@ -613,7 +613,7 @@ describe('Garden', function () {
       await expect(finalStrategistBalance).to.be.closeTo(finalReducedBalance.toString(), 200);
     });
 
-    it('strategist or voters can withdraw comunity tokens during strategy execution if they have enough unlocked amount in their balance', async function () {
+    it('strategist or voters can withdraw comunity tokens during strategy execution if they have enough unlocked amount in their balance and not trying to withdraw the equivalent votes associated to a running strategy', async function () {
       const strategyContract = await createStrategy(
         'buy',
         'vote',
@@ -626,13 +626,47 @@ describe('Garden', function () {
 
       await garden1.connect(signer2).deposit(ethers.utils.parseEther('5'), 1, signer2.getAddress(), {
         value: ethers.utils.parseEther('5'),
+        gasPrice: 0,
       });
-
       ethers.provider.send('evm_increaseTime', [ONE_DAY_IN_SECONDS * 5]); // to bypass hardlock
       const beforeBalance = await garden1.balanceOf(signer2.address);
 
       const lockedBalance = (await garden1.getLockedBalance(signer2.address))[0];
-      await expect(garden1.connect(signer2).withdraw(beforeBalance.sub(lockedBalance), 1, signer2.getAddress(), false));
+      const lockedVotes = (await garden1.getLockedBalance(signer2.address))[1];
+
+      // Due to the strategy is under execution the withdrawal without penalty does not allow to withdraw the whole balance if votes had been compromised in the executing strategy
+      await expect(
+        garden1
+          .connect(signer2)
+          .withdraw(beforeBalance.sub(lockedBalance).sub(lockedVotes), 1, signer2.getAddress(), false),
+      );
+    });
+    it('should fail if strategist or voters try to withdraw all their comunity tokens during strategy execution with 0 staked amount but some voting amount associated to a running strategy', async function () {
+      const strategyContract = await createStrategy(
+        'buy',
+        'vote',
+        [signer1, signer2, signer3],
+        kyberTradeIntegration.address,
+        garden1,
+      );
+
+      // It is executed
+      await executeStrategy(strategyContract, ethers.utils.parseEther('1'), 42);
+
+      await garden1.connect(signer2).deposit(ethers.utils.parseEther('5'), 1, signer2.getAddress(), {
+        value: ethers.utils.parseEther('5'),
+        gasPrice: 0,
+      });
+      ethers.provider.send('evm_increaseTime', [ONE_DAY_IN_SECONDS * 5]); // to bypass hardlock
+      const beforeBalance = await garden1.balanceOf(signer2.address);
+
+      const lockedBalance = (await garden1.getLockedBalance(signer2.address))[0];
+      const lockedVotes = (await garden1.getLockedBalance(signer2.address))[1];
+
+      // Due to the strategy is under execution the withdrawal without penalty does not allow to withdraw the whole balance if votes had been compromised in the executing strategy
+      await expect(
+        garden1.connect(signer2).withdraw(beforeBalance.sub(lockedBalance), 1, signer2.getAddress(), false),
+      ).to.be.revertedWith('revert BAB#007');
     });
 
     it('should fail if startWithdrawalWindow is called more than once or from a non-strategy address', async function () {

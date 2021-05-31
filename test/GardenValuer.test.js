@@ -6,7 +6,6 @@ const { setupTests } = require('./fixtures/GardenFixture');
 const { createStrategy } = require('./fixtures/StrategyHelper.js');
 
 describe('GardenValuer', function () {
-  let babController;
   let gardenValuer;
   let garden1;
   let signer1;
@@ -15,15 +14,13 @@ describe('GardenValuer', function () {
   let kyberTradeIntegration;
 
   beforeEach(async () => {
-    ({ babController, gardenValuer, garden1, signer1, signer2, signer3, kyberTradeIntegration } = await setupTests()());
+    ({ gardenValuer, garden1, signer1, signer2, signer3, kyberTradeIntegration } = await setupTests()());
   });
 
   describe('Deployment', function () {
     it('should successfully deploy the contract', async function () {
-      const deployedc = await babController.deployed();
       const deployed = await gardenValuer.deployed();
       expect(!!deployed).to.equal(true);
-      expect(!!deployedc).to.equal(true);
     });
   });
 
