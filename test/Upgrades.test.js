@@ -34,7 +34,7 @@ describe('Upgrades', function () {
   });
 
   describe('StrategyBeacon', function () {
-    it.only('has correct owner', async () => {
+    it('has correct owner', async () => {
       const deployment = await deployments.get('StrategyBeacon');
       const beacon = new ethers.Contract(deployment.address, deployment.abi);
 

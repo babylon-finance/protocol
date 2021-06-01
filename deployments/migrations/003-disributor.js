@@ -9,12 +9,12 @@ module.exports = async ({
 }) => {
   const { deploy } = deployments;
   const { deployer, owner } = await getNamedAccounts();
-  const singer = await getSigner(deployer);
+  const signer = await getSigner(deployer);
   const gasPrice = await getRapid();
 
   const bablToken = await deployments.get('BABLToken');
   const controller = await deployments.get('BabControllerProxy');
-  const controllerContract = await ethers.getContractAt('BabController', controller.address, singer);
+  const controllerContract = await ethers.getContractAt('BabController', controller.address, signer);
 
   const rewardsDistributor = await upgradesDeployer.deployOrUpgrade(
     'RewardsDistributor',
