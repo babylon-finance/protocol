@@ -3,12 +3,12 @@ contracts/PriceOracle.sol -> Deploy -> Done -> Set
 contracts/gardens/Garden.sol -> Deploy -> Done
 contracts/gardens/GardenFactory.sol -> Deploy -> Done -> Set
 contracts/integrations/passive/HarvestVaultIntegration.sol -> Deploy -> Done -> Set
-contracts/integrations/trade/OneInchTradeIntegration.sol -> Deploy -> Done
+contracts/integrations/trade/OneInchTradeIntegration.sol -> Deploy -> Done -> Set
 contracts/strategies/Strategy.sol -> Deploy -> Done
-contracts/strategies/StrategyFactory.sol -> Deploy -> Done
-contracts/strategies/StrategyNFT.sol -> Deploy -> Done
-contracts/token/RewardsDistributor.sol -> Deploy -> Done
-contracts/strategies/operations/AddLiquidityOperation.sol -> Deploy -> Done
-contracts/strategies/operations/BuyOperation.sol -> Deploy -> Done
-contracts/strategies/operations/DepositVaultOperation.sol -> Deploy -> Done
-contracts/strategies/operations/LendOperation.sol -> Deploy -> Done
+contracts/strategies/StrategyFactory.sol -> Deploy -> Done -> Set
+contracts/strategies/StrategyNFT.sol -> Deploy -> Done -> Set
+contracts/token/RewardsDistributor.sol -> Deploy -> Done -> Set
+contracts/strategies/operations/AddLiquidityOperation.sol -> Deploy -> Done -> Set
+contracts/strategies/operations/BuyOperation.sol -> Deploy -> Done -> Set
+contracts/strategies/operations/DepositVaultOperation.sol -> Deploy -> Done -> Set
+contracts/strategies/operations/LendOperation.sol -> Deploy -> Done -> Set

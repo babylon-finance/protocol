@@ -8,13 +8,13 @@ module.exports = async ({
   getRapid,
 }) => {
   const { deploy } = deployments;
-  const { deployer } = await getNamedAccounts();
+  const { deployer, owner } = await getNamedAccounts();
   const gasPrice = await getRapid();
-  const singer = await getSigner(deployer);
+  const signer = await getSigner(deployer);
   const contract = 'AddLiquidityOperation';
 
   const controller = await deployments.get('BabControllerProxy');
-  const controllerContract = await ethers.getContractAt('BabController', controller.address, singer);
+  const controllerContract = await ethers.getContractAt('BabController', controller.address, signer);
 
   const deployment = await deploy(contract, {
     from: deployer,

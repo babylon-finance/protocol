@@ -11,7 +11,7 @@ module.exports = async ({
 }) => {
   const { deploy } = deployments;
   const { deployer, owner } = await getNamedAccounts();
-  const signer = await getSigner(owner);
+  const signer = await getSigner(deployer);
   const gasPrice = await getRapid();
   const contract = 'OneInchTradeIntegration';
 
@@ -25,7 +25,7 @@ module.exports = async ({
     gasPrice,
   });
 
-  if (!deployment.newlyDeployed) {
+  if (deployment.newlyDeployed) {
     console.log(`Adding integration ${contract}(${deployment.address}) to BabController`);
     await (
       await controllerContract.addIntegration(

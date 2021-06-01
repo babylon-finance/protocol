@@ -8,8 +8,8 @@ module.exports = async ({
   getRapid,
 }) => {
   const { deploy } = deployments;
-  const { deployer } = await getNamedAccounts();
-  const singer = await getSigner(deployer);
+  const { deployer, owner } = await getNamedAccounts();
+  const signer = await getSigner(deployer);
   const gasPrice = await getRapid();
 
   const strategyFactoryContract = 'StrategyFactory';
@@ -17,7 +17,7 @@ module.exports = async ({
   const beaconContract = 'StrategyBeacon';
 
   const controller = await deployments.get('BabControllerProxy');
-  const controllerContract = await ethers.getContractAt('BabController', controller.address, singer);
+  const controllerContract = await ethers.getContractAt('BabController', controller.address, signer);
 
   const strategy = await deploy(strategyContract, {
     from: deployer,

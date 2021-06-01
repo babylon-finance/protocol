@@ -9,12 +9,12 @@ module.exports = async ({
 }) => {
   const { deploy } = deployments;
   const { deployer } = await getNamedAccounts();
-  const singer = await getSigner(deployer);
+  const signer = await getSigner(deployer);
   const gasPrice = await getRapid();
   const contract = 'IshtarGate';
 
   const controller = await deployments.get('BabControllerProxy');
-  const controllerContract = await ethers.getContractAt('BabController', controller.address, singer);
+  const controllerContract = await ethers.getContractAt('BabController', controller.address, signer);
 
   const deployment = await deploy(contract, {
     from: deployer,
@@ -27,7 +27,7 @@ module.exports = async ({
     console.log(`Setting ishtar gate on controller ${deployment.address}`);
     await (await controllerContract.editIshtarGate(deployment.address, { gasPrice })).wait();
 
-    const ishtarGate = await ethers.getContractAt('IshtarGate', deployment.address, singer);
+    const ishtarGate = await ethers.getContractAt('IshtarGate', deployment.address, signer);
     for (const address of [
       '0x83f4622A18e38bE297e089fB055Dd5123bb0b279',
       '0x21584Cc5a52102AbB381286a5119E3be08431CfD',

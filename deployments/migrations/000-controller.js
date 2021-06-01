@@ -10,7 +10,7 @@ module.exports = async ({
   const { deployer } = await getNamedAccounts();
   const signers = await ethers.getSigners();
   const chainId = await getChainId();
-  const singer = await getSigner(deployer);
+  const signer = await getSigner(deployer);
   const gasPrice = await getRapid();
 
   if (chainId === '31337') {
@@ -29,7 +29,7 @@ module.exports = async ({
     },
   );
 
-  const controllerContract = await ethers.getContractAt('BabController', controller.address, singer);
+  const controllerContract = await ethers.getContractAt('BabController', controller.address, signer);
 
   if (!(await controllerContract.isValidReserveAsset('0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2'))) {
     console.log('Setting reserve asset to WETH');
