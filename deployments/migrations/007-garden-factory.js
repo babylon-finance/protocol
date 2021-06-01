@@ -8,8 +8,8 @@ module.exports = async ({
   getRapid,
 }) => {
   const { deploy } = deployments;
-  const { deployer } = await getNamedAccounts();
-  const singer = await getSigner(deployer);
+  const { deployer, owner } = await getNamedAccounts();
+  const signer = await getSigner(signer);
   const gasPrice = await getRapid();
 
   const gardenFactoryContract = 'GardenFactory';
@@ -17,7 +17,7 @@ module.exports = async ({
   const beaconContract = 'GardenBeacon';
 
   const controller = await deployments.get('BabControllerProxy');
-  const controllerContract = await ethers.getContractAt('BabController', controller.address, singer);
+  const controllerContract = await ethers.getContractAt('BabController', controller.address, signer);
 
   const garden = await deploy(gardenContract, {
     from: deployer,
@@ -60,4 +60,3 @@ module.exports = async ({
 };
 
 module.exports.tags = ['GardenFactory'];
-module.exports.dependencies = ['Controller'];

@@ -23,7 +23,6 @@ module.exports = async ({
     gasPrice,
   });
 
-
   if (deployment.newlyDeployed) {
     console.log(`Setting garden NFT on controller ${deployment.address}`);
     await (await controllerContract.editGardenNFT(deployment.address, { gasPrice })).wait();

@@ -1,8 +1,8 @@
 contracts/BabController.sol -> Upgrade -> Done
-contracts/PriceOracle.sol -> Deploy -> Done
+contracts/PriceOracle.sol -> Deploy -> Done -> Set
 contracts/gardens/Garden.sol -> Deploy -> Done
-contracts/gardens/GardenFactory.sol -> Deploy -> Done
-contracts/integrations/passive/HarvestVaultIntegration.sol -> Deploy -> Done
+contracts/gardens/GardenFactory.sol -> Deploy -> Done -> Set
+contracts/integrations/passive/HarvestVaultIntegration.sol -> Deploy -> Done -> Set
 contracts/integrations/trade/OneInchTradeIntegration.sol -> Deploy -> Done
 contracts/strategies/Strategy.sol -> Deploy -> Done
 contracts/strategies/StrategyFactory.sol -> Deploy -> Done

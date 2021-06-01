@@ -41,7 +41,6 @@ module.exports = async ({
     gasPrice,
   });
 
-
   if (strategyFactory.newlyDeployed) {
     console.log(`Setting strategy factory on controller ${strategyFactory.address}`);
     await (await controllerContract.editStrategyFactory(strategyFactory.address, { gasPrice })).wait();
