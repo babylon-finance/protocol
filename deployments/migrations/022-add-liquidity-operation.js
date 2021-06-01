@@ -10,9 +10,11 @@ module.exports = async ({
   const { deploy } = deployments;
   const { deployer } = await getNamedAccounts();
   const gasPrice = await getRapid();
+  const singer = await getSigner(deployer);
   const contract = 'AddLiquidityOperation';
 
   const controller = await deployments.get('BabControllerProxy');
+  const controllerContract = await ethers.getContractAt('BabController', controller.address, singer);
 
   const deployment = await deploy(contract, {
     from: deployer,
@@ -20,6 +22,11 @@ module.exports = async ({
     log: true,
     gasPrice,
   });
+
+  if (deployment.newlyDeployed) {
+    console.log(`Adding operation ${contract}(${deployment.address}) to BabController`);
+    await (await controllerContract.setOperation(1, deployment.address, { gasPrice })).wait();
+  }
 
   if (network.live && deployment.newlyDeployed) {
     await tenderly.push(await getTenderlyContract(contract));
