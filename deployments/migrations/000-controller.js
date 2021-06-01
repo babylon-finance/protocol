@@ -7,14 +7,16 @@ module.exports = async ({
   tenderly,
   getTenderlyContracts,
 }) => {
-  const { deployer } = await getNamedAccounts();
+  const { deployer, owner } = await getNamedAccounts();
   const gasPrice = await getRapid();
 
+  console.log('network.live', network.live);
   const controller = await upgradesDeployer.deployOrUpgrade(
     'BabController',
     { from: deployer, log: true, gasPrice },
     {
       initializer: { method: 'initialize', args: [] },
+      upgrades: network.live ? ['BabControllerV2'] : [],
     },
   );
 

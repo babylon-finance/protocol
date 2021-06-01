@@ -43,7 +43,7 @@ module.exports = async ({
     await tenderly.push(await getTenderlyContract(strategyContract));
   }
 
-  if (network.live && strategyFactory.newlyDeployed) {
+  if (network.live && beacon.newlyDeployed) {
     await tenderly.push(await getTenderlyContract(beaconContract));
   }
 

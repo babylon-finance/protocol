@@ -84,6 +84,14 @@ module.exports = {
       [CHAIN_IDS.goerli]: 0,
       [CHAIN_IDS.rinkeby]: 0,
     },
+    owner: {
+      default: 1,
+      [CHAIN_IDS.mainnet]: 1,
+      [CHAIN_IDS.kovan]: 1,
+      [CHAIN_IDS.ropsten]: 1,
+      [CHAIN_IDS.goerli]: 1,
+      [CHAIN_IDS.rinkeby]: 1,
+    },
   },
   solidity: {
     compilers: [

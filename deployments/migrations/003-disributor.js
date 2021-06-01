@@ -8,7 +8,7 @@ module.exports = async ({
   getRapid,
 }) => {
   const { deploy } = deployments;
-  const { deployer } = await getNamedAccounts();
+  const { deployer, owner } = await getNamedAccounts();
   const gasPrice = await getRapid();
 
   const bablToken = await deployments.get('BABLToken');
@@ -36,4 +36,3 @@ module.exports = async ({
 };
 
 module.exports.tags = ['Distributor'];
-module.exports.dependencies = ['Controller, Token'];
