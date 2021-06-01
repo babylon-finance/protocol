@@ -221,6 +221,15 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
     mapping(address => uint256[]) public gardenTimelist;
     mapping(address => uint256) public gardenPid;
 
+    struct StrategyPerQuarter {
+        // Acumulated strategy power per each quarter along the time
+        uint256 quarterPrincipal;
+        uint256 quarterNumber; // # Quarter since START_TIME
+        uint256 quarterPower; //  Accumulated strategy power for each quarter
+        bool initialized;
+    }
+    mapping(address => mapping(uint256 => StrategyPerQuarter)) public strategyPerQuarter; // Acumulated strategy power per each quarter along the time
+
     /* ============ Constructor ============ */
 
     function initialize(TimeLockedToken _bablToken, IBabController _controller) public {
@@ -282,28 +291,33 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
             // If the calculation was not done earlier we go for it
             (uint256 numQuarters, uint256 startingQuarter) =
                 _getRewardsWindow(strategy.executedAt(), strategy.exitedAt());
-            uint256 bablRewards = 0;
-            if (numQuarters <= 1) {
-                bablRewards = _getStrategyRewardsOneQuarter(_strategy, allocated, startingQuarter); // Proportional supply till that moment within the same epoch
-                _require(
-                    bablRewards <= protocolPerQuarter[startingQuarter].supplyPerQuarter,
-                    Errors.OVERFLOW_IN_SUPPLY
-                );
-                _require(
-                    allocated.mul(strategy.exitedAt().sub(strategy.executedAt())).sub(
-                        strategy.rewardsTotalOverhead()
-                    ) <= protocolPerQuarter[startingQuarter].quarterPower,
-                    Errors.OVERFLOW_IN_POWER
-                );
-            } else {
-                bablRewards = _getStrategyRewardsSomeQuarters(_strategy, allocated, startingQuarter, numQuarters);
-            }
+            uint256 percentage = 1e18;
 
+            for (uint256 i = 0; i < numQuarters; i++) {
+                uint256 slotEnding = START_TIME.add(startingQuarter.add(i).mul(EPOCH_DURATION)); // Initialization timestamp at the end of the first slot where the strategy starts its execution
+                // We calculate each epoch
+                uint256 strategyPower = strategyPerQuarter[_strategy][startingQuarter.add(i)].quarterPower;
+                uint256 protocolPower = protocolPerQuarter[startingQuarter.add(i)].quarterPower;
+
+                _require(strategyPower <= protocolPower, Errors.OVERFLOW_IN_POWER);
+                if (i.add(1) == numQuarters) {
+                    // last quarter - we take proportional supply for that timeframe
+                    percentage = block.timestamp.sub(slotEnding.sub(EPOCH_DURATION)).preciseDiv(
+                        slotEnding.sub(slotEnding.sub(EPOCH_DURATION))
+                    );
+                }
+                uint256 powerRatioInQuarter =
+                    strategyPower
+                        .preciseDiv(protocolPower)
+                        .preciseMul(uint256(protocolPerQuarter[startingQuarter.add(i)].supplyPerQuarter))
+                        .preciseMul(percentage);
+                rewards = rewards.add(powerRatioInQuarter);
+            }
             // Babl rewards will be proportional to the total return (profit) with a max cap of x2
             uint256 percentageMul = returned.preciseDiv(allocated);
             if (percentageMul > 2e18) percentageMul = 2e18;
-            bablRewards = bablRewards.preciseMul(percentageMul);
-            return Safe3296.safe96(bablRewards, 'overflow 96 bits');
+            rewards = rewards.preciseMul(percentageMul);
+            return Safe3296.safe96(rewards, 'overflow 96 bits');
         } else {
             return 0;
         }
@@ -475,7 +489,11 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         ProtocolPerTimestamp storage protocolCheckpoint = protocolPerTimestamp[block.timestamp];
         if (_addOrSubstract == false) {
             // Substract
-            protocolPrincipal = protocolPrincipal.sub(_capital);
+            if (protocolPrincipal >= _capital) {
+                protocolPrincipal = protocolPrincipal.sub(_capital);
+            } else {
+                protocolPrincipal = 0; // Avoid underflow due to reserveAsset-DAI ratio
+            }
         } else {
             protocolPrincipal = protocolPrincipal.add(_capital);
         }
@@ -497,8 +515,8 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         // Here we control the accumulated protocol power per each quarter
         // Create the quarter checkpoint in case the checkpoint is the first in the epoch
         _addProtocolPerQuarter(block.timestamp);
-        // We update the rewards overhead if any in normalized DAI
-        _updatePowerOverhead(strategy, _capital);
+        // We update the strategy power per quarter normalized in DAI
+        _updateStrategyPowerPerQuarter(strategy, _capital, _addOrSubstract);
         pid++;
     }
 
@@ -888,137 +906,91 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
     }
 
     /**
-     * Updates the strategy power overhead for rewards calculations of each strategy out of the whole protocol
+     * Updates the strategy power per quarter for rewards calculations of each strategy out of the whole protocol
      * @param _strategy      Strategy
      * @param _capital       New capital normalized in DAI
      */
-    function _updatePowerOverhead(IStrategy _strategy, uint256 _capital) private onlyMiningActive {
-        if (_strategy.updatedAt() != 0) {
-            // There will be overhead after the first execution not before
-            if (_getQuarter(block.timestamp) == _getQuarter(_strategy.updatedAt())) {
-                // The overhead will remain within the same epoch
-                rewardsPowerOverhead[address(_strategy)][_getQuarter(block.timestamp)] = rewardsPowerOverhead[
-                    address(_strategy)
-                ][_getQuarter(block.timestamp)]
-                    .add(_capital.mul(block.timestamp.sub(_strategy.updatedAt())));
+    function _updateStrategyPowerPerQuarter(
+        IStrategy _strategy,
+        uint256 _capital,
+        bool _addOrSubstract
+    ) private onlyMiningActive {
+        StrategyPerQuarter storage strategyCheckpoint =
+            strategyPerQuarter[address(_strategy)][_getQuarter(block.timestamp)];
+
+        if (!strategyCheckpoint.initialized) {
+            // The strategy quarter is not yet initialized then we create it
+            if (_getQuarter(block.timestamp) == _getQuarter(_strategy.executedAt())) {
+                // The first checkpoint in the first executing epoch
+                strategyCheckpoint.quarterPower = 0;
+                strategyCheckpoint.quarterNumber = _getQuarter(block.timestamp);
             } else {
+                // Each time a new epoch starts with either a new strategy execution or finalization
+                // We just take the proportional power for this quarter from previous checkpoint
+                uint256 powerToSplit =
+                    strategyPerQuarter[address(_strategy)][_getQuarter(_strategy.updatedAt())].quarterPrincipal.mul(
+                        block.timestamp.sub(_strategy.updatedAt())
+                    );
                 // We need to iterate since last update of the strategy capital
                 (uint256 numQuarters, uint256 startingQuarter) =
                     _getRewardsWindow(_strategy.updatedAt(), block.timestamp);
-                uint256 overheadPerQuarter = _capital.mul(block.timestamp.sub(_strategy.updatedAt())).div(numQuarters);
-                for (uint256 i = 0; i <= numQuarters.sub(1); i++) {
-                    rewardsPowerOverhead[address(_strategy)][startingQuarter.add(i)] = rewardsPowerOverhead[
-                        address(_strategy)
-                    ][startingQuarter.add(i)]
-                        .add(overheadPerQuarter);
+
+                // There were intermediate epochs without checkpoints - we need to create their protocolPerQuarter's and update the last one
+                // We have to update all the quarters including where the previous checkpoint is and the one were we are now
+                for (uint256 i = 0; i < numQuarters; i++) {
+                    StrategyPerQuarter storage newCheckpoint =
+                        strategyPerQuarter[address(_strategy)][startingQuarter.add(i)];
+                    uint256 slotEnding = START_TIME.add(startingQuarter.add(i).mul(EPOCH_DURATION));
+                    if (i == 0) {
+                        // We are in the first quarter to update, we add the corresponding part
+
+                        newCheckpoint.quarterPower = newCheckpoint.quarterPower.add(
+                            powerToSplit.mul(slotEnding.sub(_strategy.updatedAt())).div(
+                                block.timestamp.sub(_strategy.updatedAt())
+                            )
+                        );
+                    } else if (i > 0 && i.add(1) < numQuarters) {
+                        // We are in an intermediate quarter
+                        newCheckpoint.quarterPower = powerToSplit.mul(EPOCH_DURATION).div(
+                            block.timestamp.sub(_strategy.updatedAt())
+                        );
+                        newCheckpoint.quarterNumber = startingQuarter.add(i);
+                        newCheckpoint.quarterPrincipal = strategyPerQuarter[address(_strategy)][startingQuarter]
+                            .quarterPrincipal;
+                        newCheckpoint.initialized = true;
+                    } else {
+                        // We are in the last quarter of the strategy
+                        newCheckpoint.quarterPower = powerToSplit
+                            .mul(
+                            block.timestamp.sub(
+                                START_TIME.add(_getQuarter(block.timestamp).mul(EPOCH_DURATION).sub(EPOCH_DURATION))
+                            )
+                        )
+                            .div(block.timestamp.sub(_strategy.updatedAt()));
+                        newCheckpoint.quarterPrincipal = strategyPerQuarter[address(_strategy)][startingQuarter]
+                            .quarterPrincipal;
+                        newCheckpoint.quarterNumber = _getQuarter(block.timestamp);
+                    }
                 }
             }
-        }
-    }
-
-    /**
-     * Check the strategy rewards for strategies starting and ending in the same quarter
-     * @param _strategy         Strategy
-     * @param _startingQuarter  Starting quarter
-     */
-    function _getStrategyRewardsOneQuarter(
-        address _strategy,
-        uint256 _allocated,
-        uint256 _startingQuarter
-    ) private view onlyMiningActive returns (uint256) {
-        IStrategy strategy = IStrategy(_strategy);
-        uint256 slotEnding = START_TIME.add(_startingQuarter.mul(EPOCH_DURATION)); // Initialization timestamp at the end of the first slot where the strategy starts its execution
-        uint256 slotStarting = slotEnding.sub(EPOCH_DURATION);
-        uint256 strategyOverTime =
-            _allocated.mul(strategy.exitedAt().sub(strategy.executedAt())).sub(strategy.rewardsTotalOverhead());
-        return
-            strategyOverTime
-                .preciseDiv(protocolPerQuarter[_startingQuarter].quarterPower)
-                .preciseMul(uint256(protocolPerQuarter[_startingQuarter].supplyPerQuarter))
-                .preciseMul(strategy.exitedAt().sub(slotStarting))
-                .preciseDiv(EPOCH_DURATION);
-    }
-
-    /**
-     * Check the strategy rewards for strategies starting and ending in different quarters and/or more quarters
-     * @param _strategy         Strategy
-     * @param _allocated        Normalized allocated in DAI
-     * @param _startingQuarter  Starting quarter
-     * @param _numQuarters      Num of Quarters (in epochs)
-     */
-    function _getStrategyRewardsSomeQuarters(
-        address _strategy,
-        uint256 _allocated,
-        uint256 _startingQuarter,
-        uint256 _numQuarters
-    ) private view onlyMiningActive returns (uint256) {
-        // The strategy takes longer than one quarter / epoch
-        uint256 bablRewards;
-        for (uint256 i = 0; i < _numQuarters; i++) {
-            uint256 slotEnding = START_TIME.add(_startingQuarter.add(i).mul(EPOCH_DURATION)); // Initialization timestamp at the end of the first slot where the strategy starts its execution
-            uint256 powerRatioInQuarter =
-                _getStrategyRewardsPerQuarter(_strategy, _allocated, _startingQuarter, i, slotEnding);
-            bablRewards = bablRewards.add(powerRatioInQuarter);
-        }
-        return bablRewards;
-    }
-
-    /**
-     * Check the strategy rewards for a specific quarter when strategies starting and ending in different quarters and/or more quarters
-     * @param _strategy         Strategy
-     * @param _allocated        Normalized allocated in DAI
-     * @param _startingQuarter  Starting quarter
-     * @param _id               Epoch number
-     * @param _slotEnding       Ending slot timestamp of current slot (epoch)
-     */
-    function _getStrategyRewardsPerQuarter(
-        address _strategy,
-        uint256 _allocated,
-        uint256 _startingQuarter,
-        uint256 _id,
-        uint256 _slotEnding
-    ) private view onlyMiningActive returns (uint256) {
-        // The strategy takes longer than one quarter / epoch
-        // We need to calculate the strategy vs. protocol power ratio per each quarter
-        uint256 strategyPower; // Strategy power in each Epoch
-        uint256 protocolPower; // Protocol power in each Epoch
-
-        // We iterate all the quarters where the strategy was active
-        uint256 percentage = 1e18;
-
-        if (IStrategy(_strategy).executedAt().add(EPOCH_DURATION) > _slotEnding) {
-            // We are in the first quarter of the strategy
-
-            strategyPower = _allocated.mul(_slotEnding.sub(IStrategy(_strategy).executedAt())).sub(
-                rewardsPowerOverhead[address(_strategy)][_getQuarter(IStrategy(_strategy).executedAt())]
-            );
-        } else if (
-            IStrategy(_strategy).executedAt() < _slotEnding.sub(EPOCH_DURATION) &&
-            _slotEnding < IStrategy(_strategy).exitedAt()
-        ) {
-            // We are in an intermediate quarter different from starting or ending quarters
-            strategyPower = _allocated.mul(_slotEnding.sub(_slotEnding.sub(EPOCH_DURATION))).sub(
-                rewardsPowerOverhead[address(_strategy)][_getQuarter(_slotEnding.sub(45 days))]
-            );
+            strategyCheckpoint.initialized = true;
         } else {
-            // We are in the last quarter of the strategy
+            // Quarter checkpoint already created, it must have been filled with general info
+            // We update the power of the quarter by adding the new difference between last quarter checkpoint and this checkpoint
 
-            percentage = block.timestamp.sub(_slotEnding.sub(EPOCH_DURATION)).preciseDiv(
-                _slotEnding.sub(_slotEnding.sub(EPOCH_DURATION))
-            );
-            strategyPower = _allocated.mul(IStrategy(_strategy).exitedAt().sub(_slotEnding.sub(EPOCH_DURATION))).sub(
-                rewardsPowerOverhead[address(_strategy)][_getQuarter(IStrategy(_strategy).exitedAt())]
+            strategyCheckpoint.quarterPower = strategyCheckpoint.quarterPower.add(
+                strategyCheckpoint.quarterPrincipal.mul(block.timestamp.sub(_strategy.updatedAt()))
             );
         }
-        protocolPower = protocolPerQuarter[_startingQuarter.add(_id)].quarterPower;
-
-        _require(strategyPower <= protocolPower, Errors.OVERFLOW_IN_POWER);
-
-        return
-            strategyPower
-                .preciseDiv(protocolPower)
-                .preciseMul(uint256(protocolPerQuarter[_startingQuarter.add(_id)].supplyPerQuarter))
-                .preciseMul(percentage);
+        if (_addOrSubstract == true) {
+            strategyCheckpoint.quarterPrincipal = strategyCheckpoint.quarterPrincipal.add(_capital);
+        } else {
+            if (strategyCheckpoint.quarterPrincipal >= _capital) {
+                strategyCheckpoint.quarterPrincipal = strategyCheckpoint.quarterPrincipal.sub(_capital);
+            } else {
+                strategyCheckpoint.quarterPrincipal = 0;
+            }
+        }
     }
 
     /**
