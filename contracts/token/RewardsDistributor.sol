@@ -263,11 +263,11 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
      * Function that removes the capital received to the total principal of the protocol per timestamp
      * @param _capital                Amount of capital in any type of asset to be normalized into DAI
      */
-    function substractProtocolPrincipal(uint256 _capital) external override onlyStrategy onlyMiningActive {
+    function substractProtocolPrincipal(uint256 _capital, bool _finishing) external override onlyStrategy onlyMiningActive {
         IStrategy strategy = IStrategy(msg.sender);
         if (strategy.enteredAt() >= START_TIME) {
             // onlyMiningActive control, it does not create a checkpoint if the strategy is not part of the Mining Program
-            _updateProtocolPrincipal(address(strategy), _capital, false);
+            _updateProtocolPrincipal(address(strategy), _capital, false, _finishing);
         }
     }
 
@@ -479,7 +479,8 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
     function _updateProtocolPrincipal(
         address _strategy,
         uint256 _capital,
-        bool _addOrSubstract
+        bool _addOrSubstract,
+        bool _finishing
     ) internal {
         IStrategy strategy = IStrategy(_strategy);
         // Normalizing into DAI
@@ -516,7 +517,10 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         // Create the quarter checkpoint in case the checkpoint is the first in the epoch
         _addProtocolPerQuarter(block.timestamp);
         // We update the strategy power per quarter normalized in DAI
-        _updateStrategyPowerPerQuarter(strategy, _capital, _addOrSubstract);
+        uint256 overhead = _updateStrategyPowerPerQuarter(strategy, _capital, _addOrSubstract, _finishing);
+        if (_addOrSubstract == false && _finishing == true) {
+            protocolPrincipal = protocolPrincipal.sub(overhead);
+        }
         pid++;
     }
 
@@ -914,7 +918,7 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         IStrategy _strategy,
         uint256 _capital,
         bool _addOrSubstract
-    ) private onlyMiningActive {
+    ) private onlyMiningActive return(uint256){
         StrategyPerQuarter storage strategyCheckpoint =
             strategyPerQuarter[address(_strategy)][_getQuarter(block.timestamp)];
 
@@ -982,15 +986,21 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
                 strategyCheckpoint.quarterPrincipal.mul(block.timestamp.sub(_strategy.updatedAt()))
             );
         }
-        if (_addOrSubstract == true) {
+        if (_addOrSubstract == true) { // Add
             strategyCheckpoint.quarterPrincipal = strategyCheckpoint.quarterPrincipal.add(_capital);
+        } else if (_finishing == true) { // Substracting and finishing the strategy
+            uint256 capitalToRemove = strategyCheckpoint.quarterPrincipal > _capital ? strategyCheckpoint.quarterPrincipal.sub(_capital) : 0;
+            strategyCheckpoint.quarterPrincipal = 0;
+            return capitalToRemove;
         } else {
+             // Substract not finishing
             if (strategyCheckpoint.quarterPrincipal >= _capital) {
                 strategyCheckpoint.quarterPrincipal = strategyCheckpoint.quarterPrincipal.sub(_capital);
             } else {
                 strategyCheckpoint.quarterPrincipal = 0;
             }
         }
+        return 0;
     }
 
     /**

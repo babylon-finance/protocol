@@ -466,14 +466,17 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         _require(active && !finalized, Errors.STRATEGY_NEEDS_TO_BE_ACTIVE);
         _require(_amountToUnwind <= capitalAllocated.sub(minRebalanceCapital), Errors.STRATEGY_NO_CAPITAL_TO_UNWIND);
         // Exits and enters the strategy
+        console.log('UNWIND %s CAPITAL ALL %s BEFORE',_amountToUnwind, capitalAllocated );
         _exitStrategy(_amountToUnwind.preciseDiv(capitalAllocated));
         capitalAllocated = capitalAllocated.sub(_amountToUnwind);
+        console.log('UNWIND %s NEW CAPITAL ALL %s AFTER',_amountToUnwind, capitalAllocated );
+
         // Removes protocol principal for the calculation of rewards
         if (hasMiningStarted) {
             IRewardsDistributor rewardsDistributor =
                 IRewardsDistributor(IBabController(controller).rewardsDistributor());
             // Only if the Mining program started on time for this strategy
-            rewardsDistributor.substractProtocolPrincipal(_amountToUnwind);
+            rewardsDistributor.substractProtocolPrincipal(_amountToUnwind, false);
         }
         // Send the amount back to the warden for the immediate withdrawal
         // TODO: Transfer the precise value; not entire balance
@@ -907,7 +910,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
             IRewardsDistributor rewardsDistributor =
                 IRewardsDistributor(IBabController(controller).rewardsDistributor());
             // Only if the Mining program started on time for this strategy
-            rewardsDistributor.substractProtocolPrincipal(capitalAllocated);
+            rewardsDistributor.substractProtocolPrincipal(capitalAllocated, true);
             strategyRewards = uint256(rewardsDistributor.getStrategyRewards(address(this))); // Must be zero in case the mining program didnt started on time
         }
     }
