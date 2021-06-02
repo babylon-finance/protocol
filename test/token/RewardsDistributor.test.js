@@ -299,7 +299,7 @@ describe('BABL Rewards Distributor', function () {
       const rewards = await long1.strategyRewards();
       expect(rewards).to.be.closeTo(value.toString(), ethers.utils.parseEther('0.005'));
     });
-    it.only('should calculate correct BABL in an active strategy that was unwind before finishing (2 quarters)', async function () {
+    it('should calculate correct BABL in an active strategy that was unwind before finishing (2 quarters)', async function () {
       // Mining program has to be enabled before the strategy starts its execution
       await babController.connect(owner).enableBABLMiningProgram();
       const block = await ethers.provider.getBlock();

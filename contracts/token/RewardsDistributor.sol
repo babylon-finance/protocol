@@ -255,15 +255,21 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         IStrategy strategy = IStrategy(msg.sender);
         if (strategy.enteredAt() >= START_TIME) {
             // onlyMiningActive control, it does not create a checkpoint if the strategy is not part of the Mining Program
-            _updateProtocolPrincipal(address(strategy), _capital, true);
+            _updateProtocolPrincipal(address(strategy), _capital, true, false);
         }
     }
 
     /**
      * Function that removes the capital received to the total principal of the protocol per timestamp
      * @param _capital                Amount of capital in any type of asset to be normalized into DAI
+     * @param _finishing              Boolean indicating whether or not it is a call to finish the strategy execution
      */
-    function substractProtocolPrincipal(uint256 _capital, bool _finishing) external override onlyStrategy onlyMiningActive {
+    function substractProtocolPrincipal(uint256 _capital, bool _finishing)
+        external
+        override
+        onlyStrategy
+        onlyMiningActive
+    {
         IStrategy strategy = IStrategy(msg.sender);
         if (strategy.enteredAt() >= START_TIME) {
             // onlyMiningActive control, it does not create a checkpoint if the strategy is not part of the Mining Program
@@ -489,6 +495,7 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         _capital = _capital.preciseMul(pricePerTokenUnit);
         ProtocolPerTimestamp storage protocolCheckpoint = protocolPerTimestamp[block.timestamp];
         if (_addOrSubstract == false) {
+            // Substracting capital
             // Substract
             if (protocolPrincipal >= _capital) {
                 protocolPrincipal = protocolPrincipal.sub(_capital);
@@ -496,9 +503,9 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
                 protocolPrincipal = 0; // Avoid underflow due to reserveAsset-DAI ratio
             }
         } else {
+            // Adding capital
             protocolPrincipal = protocolPrincipal.add(_capital);
         }
-        protocolCheckpoint.principal = protocolPrincipal;
         protocolCheckpoint.time = block.timestamp;
         protocolCheckpoint.quarterBelonging = _getQuarter(block.timestamp);
         protocolCheckpoint.timeListPointer = pid;
@@ -517,10 +524,17 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         // Create the quarter checkpoint in case the checkpoint is the first in the epoch
         _addProtocolPerQuarter(block.timestamp);
         // We update the strategy power per quarter normalized in DAI
-        uint256 overhead = _updateStrategyPowerPerQuarter(strategy, _capital, _addOrSubstract, _finishing);
-        if (_addOrSubstract == false && _finishing == true) {
-            protocolPrincipal = protocolPrincipal.sub(overhead);
+        _updateStrategyPowerPerQuarter(strategy, _capital);
+        (uint256 overhead, bool positiveOverhead) =
+            _handleStrategyPrincipal(_strategy, _capital, _addOrSubstract, _finishing);
+        if (positiveOverhead && protocolPrincipal >= overhead) {
+            // We need to substract additional principal
+            protocolPrincipal.sub(overhead);
+        } else if (!positiveOverhead && overhead != 0) {
+            // We need to add/recover more principal
+            protocolPrincipal.add(overhead);
         }
+        protocolCheckpoint.principal = protocolPrincipal;
         pid++;
     }
 
@@ -914,11 +928,7 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
      * @param _strategy      Strategy
      * @param _capital       New capital normalized in DAI
      */
-    function _updateStrategyPowerPerQuarter(
-        IStrategy _strategy,
-        uint256 _capital,
-        bool _addOrSubstract
-    ) private onlyMiningActive return(uint256){
+    function _updateStrategyPowerPerQuarter(IStrategy _strategy, uint256 _capital) private onlyMiningActive {
         StrategyPerQuarter storage strategyCheckpoint =
             strategyPerQuarter[address(_strategy)][_getQuarter(block.timestamp)];
 
@@ -986,21 +996,41 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
                 strategyCheckpoint.quarterPrincipal.mul(block.timestamp.sub(_strategy.updatedAt()))
             );
         }
-        if (_addOrSubstract == true) { // Add
+    }
+
+    function _handleStrategyPrincipal(
+        address _strategy,
+        uint256 _capital,
+        bool _addOrSubstract,
+        bool _finishing
+    ) private returns (uint256, bool) {
+        StrategyPerQuarter storage strategyCheckpoint = strategyPerQuarter[_strategy][_getQuarter(block.timestamp)];
+        uint256 overhead;
+        bool positiveOverhead;
+        if (_addOrSubstract == true) {
+            // Add
             strategyCheckpoint.quarterPrincipal = strategyCheckpoint.quarterPrincipal.add(_capital);
-        } else if (_finishing == true) { // Substracting and finishing the strategy
-            uint256 capitalToRemove = strategyCheckpoint.quarterPrincipal > _capital ? strategyCheckpoint.quarterPrincipal.sub(_capital) : 0;
-            strategyCheckpoint.quarterPrincipal = 0;
-            return capitalToRemove;
-        } else {
-             // Substract not finishing
-            if (strategyCheckpoint.quarterPrincipal >= _capital) {
-                strategyCheckpoint.quarterPrincipal = strategyCheckpoint.quarterPrincipal.sub(_capital);
+            // Substracting and finishing the strategy or higher DAI price
+        } else if (_finishing == true || strategyCheckpoint.quarterPrincipal < _capital) {
+            if (strategyCheckpoint.quarterPrincipal > _capital) {
+                // There is overhead to be substracted from the protocol
+                overhead = strategyCheckpoint.quarterPrincipal.sub(_capital);
+                positiveOverhead = true;
+            } else if (strategyCheckpoint.quarterPrincipal == _capital) {
+                // No difference
+                overhead = 0;
+                positiveOverhead = false;
             } else {
-                strategyCheckpoint.quarterPrincipal = 0;
+                // Negative difference (negative : false overhead) to be added to the protocol
+                overhead = _capital.sub(strategyCheckpoint.quarterPrincipal);
+                positiveOverhead = false;
             }
+            strategyCheckpoint.quarterPrincipal = 0;
+        } else {
+            // Substract not finishing the strategy yet
+            strategyCheckpoint.quarterPrincipal = strategyCheckpoint.quarterPrincipal.sub(_capital);
         }
-        return 0;
+        return (overhead, positiveOverhead);
     }
 
     /**

@@ -466,10 +466,8 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         _require(active && !finalized, Errors.STRATEGY_NEEDS_TO_BE_ACTIVE);
         _require(_amountToUnwind <= capitalAllocated.sub(minRebalanceCapital), Errors.STRATEGY_NO_CAPITAL_TO_UNWIND);
         // Exits and enters the strategy
-        console.log('UNWIND %s CAPITAL ALL %s BEFORE',_amountToUnwind, capitalAllocated );
         _exitStrategy(_amountToUnwind.preciseDiv(capitalAllocated));
         capitalAllocated = capitalAllocated.sub(_amountToUnwind);
-        console.log('UNWIND %s NEW CAPITAL ALL %s AFTER',_amountToUnwind, capitalAllocated );
 
         // Removes protocol principal for the calculation of rewards
         if (hasMiningStarted) {
