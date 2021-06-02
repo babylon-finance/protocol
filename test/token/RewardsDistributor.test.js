@@ -1057,11 +1057,11 @@ describe('BABL Rewards Distributor', function () {
       // LP profits
       const value2 = ethers.utils.parseEther('0.255595');
       // Receive BABL token after claim
-      expect(await bablToken.balanceOf(signer1.address)).to.equal(signer1BABL);
+      await expect(await bablToken.balanceOf(signer1.address)).to.equal(signer1BABL);
       // Receive DAI as strategist and steward directly in its wallet after claim
-      expect(await dai.balanceOf(signer1.address)).to.equal(value);
+      await expect(await dai.balanceOf(signer1.address)).to.equal(value);
       // Automatically get DAI profit as LP in its garden balance when strategy finalizes
-      expect((await daiGarden.balanceOf(signer1.address)).sub(signer1StartingBalance)).to.closeTo(
+      await expect((await daiGarden.balanceOf(signer1.address)).sub(signer1StartingBalance)).to.closeTo(
         value2,
         ethers.utils.parseEther('0.001'),
       );
