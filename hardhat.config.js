@@ -8,6 +8,7 @@ require('hardhat-contract-sizer');
 require('hardhat-docgen');
 require('hardhat-gas-reporter');
 require('hardhat-log-remover');
+require('hardhat-watcher');
 
 require('@tenderly/hardhat-tenderly');
 require('solidity-coverage');
@@ -119,5 +120,13 @@ module.exports = {
   },
   mocha: {
     timeout: 120000,
+  },
+
+  watcher: {
+    test: {
+      tasks: [{ command: 'test', params: { testFiles: ['{path}'] } }],
+      files: ['./test/**/*'],
+      verbose: true,
+    },
   },
 };
