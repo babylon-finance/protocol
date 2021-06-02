@@ -506,6 +506,7 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
             // Adding capital
             protocolPrincipal = protocolPrincipal.add(_capital);
         }
+        protocolCheckpoint.principal = protocolPrincipal;
         protocolCheckpoint.time = block.timestamp;
         protocolCheckpoint.quarterBelonging = _getQuarter(block.timestamp);
         protocolCheckpoint.timeListPointer = pid;
@@ -525,14 +526,15 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         _addProtocolPerQuarter(block.timestamp);
         // We update the strategy power per quarter normalized in DAI
         _updateStrategyPowerPerQuarter(strategy, _capital);
+        // The strategy principal and protocol principal are handled considering the fluctuations on the pair ReserveAsset/DAI (normalized asset)
         (uint256 overhead, bool positiveOverhead) =
             _handleStrategyPrincipal(_strategy, _capital, _addOrSubstract, _finishing);
         if (positiveOverhead && protocolPrincipal >= overhead) {
             // We need to substract additional principal
-            protocolPrincipal.sub(overhead);
+            protocolPrincipal = protocolPrincipal.sub(overhead);
         } else if (!positiveOverhead && overhead != 0) {
             // We need to add/recover more principal
-            protocolPrincipal.add(overhead);
+            protocolPrincipal = protocolPrincipal.add(overhead);
         }
         protocolCheckpoint.principal = protocolPrincipal;
         pid++;
