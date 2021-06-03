@@ -228,7 +228,13 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         uint256 quarterPower; //  Accumulated strategy power for each quarter
         bool initialized;
     }
+    struct StrategyPricePerTokenUnit {
+        // Take control over the price per token changes along the time when normalizing into DAI
+        uint256 preallocated; // Strategy capital preallocated before each checkpoint
+        uint256 pricePerTokenUnit; // Last average price per allocated tokens per strategy normalized into DAI
+    }
     mapping(address => mapping(uint256 => StrategyPerQuarter)) public strategyPerQuarter; // Acumulated strategy power per each quarter along the time
+    mapping(address => StrategyPricePerTokenUnit) public strategyPricePerTokenUnit; // Pro-rata oracle price allowing re-allocations and unwinding of any capital value
 
     /* ============ Constructor ============ */
 
@@ -304,7 +310,6 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
                 // We calculate each epoch
                 uint256 strategyPower = strategyPerQuarter[_strategy][startingQuarter.add(i)].quarterPower;
                 uint256 protocolPower = protocolPerQuarter[startingQuarter.add(i)].quarterPower;
-
                 _require(strategyPower <= protocolPower, Errors.OVERFLOW_IN_POWER);
                 if (i.add(1) == numQuarters) {
                     // last quarter - we take proportional supply for that timeframe
@@ -488,20 +493,14 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         bool _addOrSubstract,
         bool _finishing
     ) internal {
-        IStrategy strategy = IStrategy(_strategy);
-        // Normalizing into DAI
-        IPriceOracle oracle = IPriceOracle(IBabController(controller).priceOracle());
-        uint256 pricePerTokenUnit = oracle.getPrice(IGarden(strategy.garden()).reserveAsset(), DAI);
+        // Take control of getPrice fluctuations along the time - normalizing into DAI
+        uint256 pricePerTokenUnit = _getStrategyPricePerTokenUnit(_strategy, _capital, _addOrSubstract);
         _capital = _capital.preciseMul(pricePerTokenUnit);
         ProtocolPerTimestamp storage protocolCheckpoint = protocolPerTimestamp[block.timestamp];
+        uint256 protocolOverhead;
         if (_addOrSubstract == false) {
             // Substracting capital
-            // Substract
-            if (protocolPrincipal >= _capital) {
-                protocolPrincipal = protocolPrincipal.sub(_capital);
-            } else {
-                protocolPrincipal = 0; // Avoid underflow due to reserveAsset-DAI ratio
-            }
+            protocolPrincipal = protocolPrincipal.sub(_capital);
         } else {
             // Adding capital
             protocolPrincipal = protocolPrincipal.add(_capital);
@@ -510,6 +509,7 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         protocolCheckpoint.time = block.timestamp;
         protocolCheckpoint.quarterBelonging = _getQuarter(block.timestamp);
         protocolCheckpoint.timeListPointer = pid;
+
         if (pid == 0) {
             // The very first strategy of all strategies in the mining program
             protocolCheckpoint.power = 0;
@@ -522,22 +522,52 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         }
         timeList.push(block.timestamp); // Register of added strategies timestamps in the array for iteration
         // Here we control the accumulated protocol power per each quarter
-        // Create the quarter checkpoint in case the checkpoint is the first in the epoch
-        _addProtocolPerQuarter(block.timestamp);
+        // Create or update the quarter checkpoint
+        _addProtocolPowerPerQuarter(block.timestamp);
         // We update the strategy power per quarter normalized in DAI
-        _updateStrategyPowerPerQuarter(strategy, _capital);
-        // The strategy principal and protocol principal are handled considering the fluctuations on the pair ReserveAsset/DAI (normalized asset)
-        (uint256 overhead, bool positiveOverhead) =
-            _handleStrategyPrincipal(_strategy, _capital, _addOrSubstract, _finishing);
-        if (positiveOverhead && protocolPrincipal >= overhead) {
-            // We need to substract additional principal
-            protocolPrincipal = protocolPrincipal.sub(overhead);
-        } else if (!positiveOverhead && overhead != 0) {
-            // We need to add/recover more principal
-            protocolPrincipal = protocolPrincipal.add(overhead);
-        }
-        protocolCheckpoint.principal = protocolPrincipal;
+        _updateStrategyPowerPerQuarter(IStrategy(_strategy), _capital, _addOrSubstract);
         pid++;
+    }
+
+    /**
+     * Get the price per token to be used in the adding or substraction normalized to DAI (supports multiple asset)
+     * @param _strategy         Strategy address
+     * @param _capital          Capital in reserve asset to add or substract
+     * @param _addOrSubstract   Whether or not we are adding or unwinding capital to the strategy
+     * @return pricePerToken value
+     */
+    function _getStrategyPricePerTokenUnit(
+        address _strategy,
+        uint256 _capital,
+        bool _addOrSubstract
+    ) private returns (uint256) {
+        // Normalizing into DAI
+        IPriceOracle oracle = IPriceOracle(IBabController(controller).priceOracle());
+        uint256 pricePerTokenUnit = oracle.getPrice(IGarden(IStrategy(_strategy).garden()).reserveAsset(), DAI);
+        if (strategyPricePerTokenUnit[_strategy].preallocated == 0) {
+            // First adding checkpoint
+            strategyPricePerTokenUnit[_strategy].preallocated = _capital;
+            strategyPricePerTokenUnit[_strategy].pricePerTokenUnit = pricePerTokenUnit;
+            return pricePerTokenUnit;
+        } else {
+            // We are controlling pair reserveAsset-DAI fluctuations along the time
+            if (_addOrSubstract) {
+                strategyPricePerTokenUnit[_strategy].pricePerTokenUnit = (
+                    strategyPricePerTokenUnit[_strategy].pricePerTokenUnit.add(_capital.mul(pricePerTokenUnit))
+                )
+                    .preciseDiv(strategyPricePerTokenUnit[_strategy].preallocated.add(_capital))
+                    .div(1e18);
+                strategyPricePerTokenUnit[_strategy].preallocated = strategyPricePerTokenUnit[_strategy]
+                    .preallocated
+                    .add(_capital);
+            } else {
+                //We use the previous pricePerToken in a substract instead of a new price (as allocated capital used previous prices not the current one)
+                strategyPricePerTokenUnit[_strategy].preallocated = strategyPricePerTokenUnit[_strategy]
+                    .preallocated
+                    .sub(_capital);
+            }
+            return strategyPricePerTokenUnit[_strategy].pricePerTokenUnit;
+        }
     }
 
     /**
@@ -840,7 +870,7 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
      * Add protocol power timestamps for each quarter
      * @param _time         Timestamp
      */
-    function _addProtocolPerQuarter(uint256 _time) private onlyMiningActive {
+    function _addProtocolPowerPerQuarter(uint256 _time) private onlyMiningActive {
         uint256 quarter = _getQuarter(_time);
         ProtocolPerQuarter storage protocolCheckpoint = protocolPerQuarter[quarter];
 
@@ -930,7 +960,11 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
      * @param _strategy      Strategy
      * @param _capital       New capital normalized in DAI
      */
-    function _updateStrategyPowerPerQuarter(IStrategy _strategy, uint256 _capital) private onlyMiningActive {
+    function _updateStrategyPowerPerQuarter(
+        IStrategy _strategy,
+        uint256 _capital,
+        bool _addOrSubstract
+    ) private onlyMiningActive {
         StrategyPerQuarter storage strategyCheckpoint =
             strategyPerQuarter[address(_strategy)][_getQuarter(block.timestamp)];
 
@@ -998,41 +1032,13 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
                 strategyCheckpoint.quarterPrincipal.mul(block.timestamp.sub(_strategy.updatedAt()))
             );
         }
-    }
-
-    function _handleStrategyPrincipal(
-        address _strategy,
-        uint256 _capital,
-        bool _addOrSubstract,
-        bool _finishing
-    ) private returns (uint256, bool) {
-        StrategyPerQuarter storage strategyCheckpoint = strategyPerQuarter[_strategy][_getQuarter(block.timestamp)];
-        uint256 overhead;
-        bool positiveOverhead;
         if (_addOrSubstract == true) {
             // Add
             strategyCheckpoint.quarterPrincipal = strategyCheckpoint.quarterPrincipal.add(_capital);
-            // Substracting and finishing the strategy or higher DAI price
-        } else if (_finishing == true || strategyCheckpoint.quarterPrincipal < _capital) {
-            if (strategyCheckpoint.quarterPrincipal > _capital) {
-                // There is overhead to be substracted from the protocol
-                overhead = strategyCheckpoint.quarterPrincipal.sub(_capital);
-                positiveOverhead = true;
-            } else if (strategyCheckpoint.quarterPrincipal == _capital) {
-                // No difference
-                overhead = 0;
-                positiveOverhead = false;
-            } else {
-                // Negative difference (negative : false overhead) to be added to the protocol
-                overhead = _capital.sub(strategyCheckpoint.quarterPrincipal);
-                positiveOverhead = false;
-            }
-            strategyCheckpoint.quarterPrincipal = 0;
         } else {
-            // Substract not finishing the strategy yet
+            // Sub
             strategyCheckpoint.quarterPrincipal = strategyCheckpoint.quarterPrincipal.sub(_capital);
         }
-        return (overhead, positiveOverhead);
     }
 
     /**
