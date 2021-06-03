@@ -261,25 +261,19 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         IStrategy strategy = IStrategy(msg.sender);
         if (strategy.enteredAt() >= START_TIME) {
             // onlyMiningActive control, it does not create a checkpoint if the strategy is not part of the Mining Program
-            _updateProtocolPrincipal(address(strategy), _capital, true, false);
+            _updateProtocolPrincipal(address(strategy), _capital, true);
         }
     }
 
     /**
      * Function that removes the capital received to the total principal of the protocol per timestamp
      * @param _capital                Amount of capital in any type of asset to be normalized into DAI
-     * @param _finishing              Boolean indicating whether or not it is a call to finish the strategy execution
      */
-    function substractProtocolPrincipal(uint256 _capital, bool _finishing)
-        external
-        override
-        onlyStrategy
-        onlyMiningActive
-    {
+    function substractProtocolPrincipal(uint256 _capital) external override onlyStrategy onlyMiningActive {
         IStrategy strategy = IStrategy(msg.sender);
         if (strategy.enteredAt() >= START_TIME) {
             // onlyMiningActive control, it does not create a checkpoint if the strategy is not part of the Mining Program
-            _updateProtocolPrincipal(address(strategy), _capital, false, _finishing);
+            _updateProtocolPrincipal(address(strategy), _capital, false);
         }
     }
 
@@ -490,8 +484,7 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
     function _updateProtocolPrincipal(
         address _strategy,
         uint256 _capital,
-        bool _addOrSubstract,
-        bool _finishing
+        bool _addOrSubstract
     ) internal {
         // Take control of getPrice fluctuations along the time - normalizing into DAI
         uint256 pricePerTokenUnit = _getStrategyPricePerTokenUnit(_strategy, _capital, _addOrSubstract);

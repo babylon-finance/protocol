@@ -50,7 +50,7 @@ interface IRewardsDistributor {
 
     function addProtocolPrincipal(uint256 _capital) external;
 
-    function substractProtocolPrincipal(uint256 _capital, bool _finishing) external;
+    function substractProtocolPrincipal(uint256 _capital) external;
 
     function getStrategyRewards(address _strategy) external returns (uint96);
 
