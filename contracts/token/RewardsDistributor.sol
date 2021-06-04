@@ -34,7 +34,6 @@ import {Errors, _require} from '../lib/BabylonErrors.sol';
 import {IBabController} from '../interfaces/IBabController.sol';
 import {IGarden} from '../interfaces/IGarden.sol';
 import {IStrategy} from '../interfaces/IStrategy.sol';
-import {TimeLockedToken} from './TimeLockedToken.sol';
 import {IRewardsDistributor} from '../interfaces/IRewardsDistributor.sol';
 import {IPriceOracle} from '../interfaces/IPriceOracle.sol';
 
@@ -71,6 +70,10 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
      */
     modifier onlyStrategy {
         _require(controller.isSystemContract(address(IStrategy(msg.sender).garden())), Errors.ONLY_STRATEGY);
+        _require(
+            IGarden(address(IStrategy(msg.sender).garden())).isGardenStrategy(msg.sender),
+            Errors.STRATEGY_GARDEN_MISMATCH
+        );
         _;
     }
     /**
