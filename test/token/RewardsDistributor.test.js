@@ -1064,10 +1064,7 @@ describe('BABL Rewards Distributor', function () {
       expect(signer1BalanceDAI).to.equal(value);
       // Automatically get DAI profit as LP in its garden balance when strategy finalizes
       const signer1BalanceDAIGarden = await daiGarden.balanceOf(signer1.address);
-      expect(signer1BalanceDAIGarden.sub(signer1StartingBalance)).to.closeTo(
-        value2,
-        ethers.utils.parseEther('0.001'),
-      );
+      expect(signer1BalanceDAIGarden.sub(signer1StartingBalance)).to.closeTo(value2, ethers.utils.parseEther('0.001'));
       expect(signer1Profit2).to.equal('0');
       expect(signer1BABL2).to.equal('0');
     });
