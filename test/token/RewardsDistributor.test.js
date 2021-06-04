@@ -1061,10 +1061,10 @@ describe('BABL Rewards Distributor', function () {
       expect(signer1BalanceBABL).to.equal(signer1BABL);
       // Receive DAI as strategist and steward directly in its wallet after claim
       const signer1BalanceDAI = await dai.balanceOf(signer1.address);
-      await expect(signer1BalanceDAI).to.equal(value);
+      expect(signer1BalanceDAI).to.equal(value);
       // Automatically get DAI profit as LP in its garden balance when strategy finalizes
       const signer1BalanceDAIGarden = await daiGarden.balanceOf(signer1.address);
-      await expect(signer1BalanceDAIGarden.sub(signer1StartingBalance)).to.closeTo(
+      expect(signer1BalanceDAIGarden.sub(signer1StartingBalance)).to.closeTo(
         value2,
         ethers.utils.parseEther('0.001'),
       );
