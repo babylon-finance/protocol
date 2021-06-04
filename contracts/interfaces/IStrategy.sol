@@ -155,6 +155,8 @@ interface IStrategy {
 
     function strategyRewards() external view returns (uint256);
 
+    function rewardsTotalOverhead() external view returns (uint256);
+
     function maxCapitalRequested() external view returns (uint256);
 
     function expectedReturn() external view returns (uint256);
