@@ -124,7 +124,7 @@ describe('BABL Rewards Distributor', function () {
       for (let i = 0; i <= quarterEnd - quarterStart; i++) {
         supplyPerQuarter[i] = await rewardsDistributor.tokenSupplyPerQuarter(quarterStart + i);
         if (i == 0) {
-          // First or intermediate quarters
+          // First
           timePercent = ONE_ETH;
           bablTokenQi[i] = powerRatio[i]
             .mul(profit)
@@ -137,6 +137,7 @@ describe('BABL Rewards Distributor', function () {
             .div(ONE_ETH);
           rewards = bablTokenQi[i];
         } else if (i > 0 && i <= quarterEnd - quarterStart - 1) {
+          // intermediate quarters
           timePercent = ONE_ETH;
           bablTokenQi[i] = powerRatio[i]
             .mul(profit)
@@ -285,7 +286,6 @@ describe('BABL Rewards Distributor', function () {
         quarter: 1,
         timeListPointer: 0,
       });
-
       await finalizeStrategyAfter30Days(long1);
 
       const { exitedAt } = await getStrategyState(long1);
@@ -298,6 +298,38 @@ describe('BABL Rewards Distributor', function () {
       const value = await getStrategyRewards(long1, now, 1, 1, [ethers.utils.parseEther('1')]);
       const rewards = await long1.strategyRewards();
       expect(rewards).to.be.closeTo(value.toString(), ethers.utils.parseEther('0.005'));
+    });
+    it('should calculate correct BABL in an active strategy that was unwind before finishing (2 quarters)', async function () {
+      // Mining program has to be enabled before the strategy starts its execution
+      await babController.connect(owner).enableBABLMiningProgram();
+      const block = await ethers.provider.getBlock();
+      now = block.timestamp;
+      const strategyContract = await createStrategy(
+        'buy',
+        'vote',
+        [signer1, signer2, signer3],
+        kyberTradeIntegration.address,
+        garden1,
+      );
+      expect(await weth.balanceOf(garden1.address)).to.be.gt(ethers.utils.parseEther('2'));
+
+      await executeStrategy(strategyContract, { amount: ONE_ETH.mul(2) });
+
+      expect(await weth.balanceOf(garden1.address)).to.be.closeTo(ONE_ETH.mul(3), ONE_ETH.div(100));
+      expect(await strategyContract.capitalAllocated()).to.equal(ethers.utils.parseEther('2'));
+      await increaseTime(ONE_DAY_IN_SECONDS * 70);
+      await strategyContract.connect(owner).unwindStrategy(ONE_ETH);
+
+      expect(await strategyContract.capitalAllocated()).to.equal(ethers.utils.parseEther('1'));
+      expect(await weth.balanceOf(garden1.address)).to.be.gt(ethers.utils.parseEther('1'));
+      await increaseTime(ONE_DAY_IN_SECONDS * 70);
+      await finalizeStrategyAfter30Days(strategyContract);
+      const value = await getStrategyRewards(strategyContract, now, 1, 2, [
+        ethers.utils.parseEther('1'),
+        ethers.utils.parseEther('1'),
+      ]);
+      const rewards = await strategyContract.strategyRewards();
+      expect(rewards).to.be.closeTo(value, ethers.utils.parseEther('0.005'));
     });
     it('should calculate correct BABL in case of 1 strategy with negative profit and total duration of 1 quarter but crossing edges (2 quarters)', async function () {
       // Mining program has to be enabled before the strategy starts its execution
@@ -1025,14 +1057,14 @@ describe('BABL Rewards Distributor', function () {
       // LP profits
       const value2 = ethers.utils.parseEther('0.255595');
       // Receive BABL token after claim
-      expect(await bablToken.balanceOf(signer1.address)).to.equal(signer1BABL);
+      const signer1BalanceBABL = await bablToken.balanceOf(signer1.address);
+      expect(signer1BalanceBABL).to.equal(signer1BABL);
       // Receive DAI as strategist and steward directly in its wallet after claim
-      expect(await dai.balanceOf(signer1.address)).to.equal(value);
+      const signer1BalanceDAI = await dai.balanceOf(signer1.address);
+      expect(signer1BalanceDAI).to.equal(value);
       // Automatically get DAI profit as LP in its garden balance when strategy finalizes
-      expect((await daiGarden.balanceOf(signer1.address)).sub(signer1StartingBalance)).to.closeTo(
-        value2,
-        ethers.utils.parseEther('0.001'),
-      );
+      const signer1BalanceDAIGarden = await daiGarden.balanceOf(signer1.address);
+      expect(signer1BalanceDAIGarden.sub(signer1StartingBalance)).to.closeTo(value2, ethers.utils.parseEther('0.001'));
       expect(signer1Profit2).to.equal('0');
       expect(signer1BABL2).to.equal('0');
     });

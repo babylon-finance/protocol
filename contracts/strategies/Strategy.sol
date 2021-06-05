@@ -445,7 +445,6 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         finalized = true;
         active = false;
         exitedAt = block.timestamp;
-        updatedAt = exitedAt;
         // Mint NFT
         IStrategyNFT(IBabController(controller).strategyNFT()).grantStrategyNFT(strategist, _tokenURI);
         // Pay Keeper Fee
@@ -454,6 +453,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         _transferStrategyPrincipal(_fee);
         // Send rest to garden if any
         _sendReserveAssetToGarden();
+        updatedAt = exitedAt;
         emit StrategyFinalized(address(garden), capitalReturned, _fee, block.timestamp);
     }
 
@@ -467,8 +467,8 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         _require(_amountToUnwind <= capitalAllocated.sub(minRebalanceCapital), Errors.STRATEGY_NO_CAPITAL_TO_UNWIND);
         // Exits and enters the strategy
         _exitStrategy(_amountToUnwind.preciseDiv(capitalAllocated));
-        updatedAt = block.timestamp;
         capitalAllocated = capitalAllocated.sub(_amountToUnwind);
+
         // Removes protocol principal for the calculation of rewards
         if (hasMiningStarted) {
             IRewardsDistributor rewardsDistributor =
@@ -482,6 +482,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
             address(garden),
             IERC20(garden.reserveAsset()).balanceOf(address(this))
         );
+        updatedAt = block.timestamp;
         emit StrategyReduced(address(garden), _amountToUnwind, block.timestamp);
     }
 
@@ -751,14 +752,6 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         // Sets the executed timestamp on first execution
         if (executedAt == 0) {
             executedAt = block.timestamp;
-        } else {
-            // Updating allocation - we need to consider the difference for the calculation
-            // We control the potential overhead in BABL Rewards calculations to keep control
-            // and avoid distributing a wrong number (e.g. flash loans)
-            if (hasMiningStarted) {
-                // The Mining program has not started on time for this strategy
-                rewardsTotalOverhead = rewardsTotalOverhead.add(_capital.mul(block.timestamp.sub(updatedAt)));
-            }
         }
         if (hasMiningStarted) {
             IRewardsDistributor rewardsDistributor =
