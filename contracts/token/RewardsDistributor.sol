@@ -878,7 +878,6 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         uint256 strategyRewards = strategy.strategyRewards();
         uint256 babl;
         uint8 tokenDecimals = ERC20(IGarden(_garden).reserveAsset()).decimals();
-        //uint256 allocated = tokenDecimals != 18 ? strategy.capitalAllocated().mul(10**(uint256(18).sub(tokenDecimals))) : strategy.capitalAllocated();
         uint256 allocated = _normalizeDecimals(IGarden(_garden).reserveAsset(), strategy.capitalAllocated());
         uint256 contributorPower =
             _getContributorPower(_garden, _contributor, strategy.executedAt(), strategy.exitedAt());

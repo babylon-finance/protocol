@@ -297,7 +297,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
             Errors.DURATION_MUST_BE_IN_RANGE
         );
         uint256 tokenDecimals = ERC20(IGarden(_garden).reserveAsset()).decimals();
-        absoluteMinRebalance = uint256(1).mul(10**(tokenDecimals));
+        absoluteMinRebalance = 10**(tokenDecimals);
 
         _require(_minRebalanceCapital >= absoluteMinRebalance, Errors.MIN_REBALANCE_CAPITAL);
         _require(_maxCapitalRequested >= _minRebalanceCapital, Errors.MAX_CAPITAL_REQUESTED);
