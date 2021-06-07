@@ -254,6 +254,4 @@ library Errors {
     uint256 internal constant NO_REWARDS_TO_CLAIM = 82;
     // Pause guardian paused this operation
     uint256 internal constant ONLY_UNPAUSED = 83;
-    // Unsupported decimals
-    uint256 internal constant UNSUPPORTED_DECIMALS = 84;
 }

@@ -478,7 +478,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
             IRewardsDistributor rewardsDistributor =
                 IRewardsDistributor(IBabController(controller).rewardsDistributor());
             // Only if the Mining program started on time for this strategy
-            rewardsDistributor.substractProtocolPrincipal(_amountToUnwind);
+            rewardsDistributor.updateProtocolPrincipal(_amountToUnwind, false);
         }
         // Send the amount back to the warden for the immediate withdrawal
         // TODO: Transfer the precise value; not entire balance
@@ -761,7 +761,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
             IRewardsDistributor rewardsDistributor =
                 IRewardsDistributor(IBabController(controller).rewardsDistributor());
             // The Mining program has not started on time for this strategy
-            rewardsDistributor.addProtocolPrincipal(_capital);
+            rewardsDistributor.updateProtocolPrincipal(_capital, true);
         }
         garden.payKeeper(_keeper, _fee);
         updatedAt = block.timestamp;
@@ -908,7 +908,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
             IRewardsDistributor rewardsDistributor =
                 IRewardsDistributor(IBabController(controller).rewardsDistributor());
             // Only if the Mining program started on time for this strategy
-            rewardsDistributor.substractProtocolPrincipal(capitalAllocated);
+            rewardsDistributor.updateProtocolPrincipal(capitalAllocated, false);
             strategyRewards = uint256(rewardsDistributor.getStrategyRewards(address(this))); // Must be zero in case the mining program didnt started on time
         }
     }
