@@ -1,5 +1,5 @@
 const { expect } = require('chai');
-const { ONE_DAY_IN_SECONDS, ONE_ETH, GARDEN_PARAMS_STABLE } = require('../../lib/constants');
+const { ONE_DAY_IN_SECONDS, ONE_ETH, GARDEN_PARAMS_STABLE, USDC_GARDEN_PARAMS } = require('../../lib/constants');
 const { increaseTime } = require('../utils/test-helpers');
 const { impersonateAddress } = require('../../lib/rpc');
 const addresses = require('../../lib/addresses');
@@ -15,6 +15,7 @@ const {
   finalizeStrategyAfter2Years,
   finalizeStrategyAfter3Quarters,
   DEFAULT_STRATEGY_PARAMS,
+  USDC_STRATEGY_PARAMS,
   DAI_STRATEGY_PARAMS,
 } = require('../fixtures/StrategyHelper.js');
 
@@ -1041,7 +1042,7 @@ describe('BABL Rewards Distributor', function () {
       );
       const signer1DAIBalance2 = await dai.balanceOf(signer1.address);
       await executeStrategy(long1, { amount: ethers.utils.parseEther('1000') });
-      await injectFakeProfits(long1, ethers.BigNumber.from(200 * 1000000)); // Dai has 6 decimals
+      await injectFakeProfits(long1, ethers.BigNumber.from(200 * 1000000)); // Dai has 18 decimals
       await finalizeStrategyAfterQuarter(long1);
       // Check pending rewards for users
       const signer1Rewards = await rewardsDistributor.getRewards(daiGarden.address, signer1.address, [long1.address]);
@@ -1068,7 +1069,88 @@ describe('BABL Rewards Distributor', function () {
       expect(signer1Profit2).to.equal('0');
       expect(signer1BABL2).to.equal('0');
     });
+    it('should claim and update balances of Signer1 in USDC Garden as contributor of 1 strategy with profit within a quarter', async function () {
+      const whaleAddress = '0x47ac0fb4f2d84898e4d9e7b4dab3c24507a6d503'; // Has USDC
+      const whaleSigner = await impersonateAddress(whaleAddress);
+      const thousandUSDC = ethers.BigNumber.from(1000 * 1000000);
 
+      await usdc.connect(whaleSigner).transfer(signer1.address, thousandUSDC, {
+        gasPrice: 0,
+      });
+      await usdc.connect(whaleSigner).transfer(signer3.address, thousandUSDC, {
+        gasPrice: 0,
+      });
+      await usdc.connect(signer1).approve(babController.address, thousandUSDC, {
+        gasPrice: 0,
+      });
+      const params = [...USDC_GARDEN_PARAMS];
+      params[4] = thousandUSDC.div(10);
+      await babController
+        .connect(signer1)
+        .createGarden(
+          addresses.tokens.USDC,
+          'Absolute USDC Return [beta]',
+          'EYFA',
+          'http...',
+          0,
+          params,
+          thousandUSDC.div(3),
+          {},
+        );
+      const gardens = await babController.getGardens();
+      usdcGarden = await ethers.getContractAt('Garden', gardens[4]);
+      const supplyBefore = await usdcGarden.totalSupply();
+
+      await ishtarGate.connect(signer1).setGardenAccess(signer3.address, usdcGarden.address, 1, { gasPrice: 0 });
+      await usdc.connect(signer3).approve(usdcGarden.address, thousandUSDC, { gasPrice: 0 });
+      await usdcGarden.connect(signer3).deposit(thousandUSDC.div(2), 1, signer3.getAddress());
+
+      const supplyAfter = await usdcGarden.totalSupply();
+
+      // Mining program has to be enabled before the strategy starts its execution
+      await babController.connect(owner).enableBABLMiningProgram();
+      const signer1StartingBalance = await usdcGarden.balanceOf(signer1.address);
+
+      const long1 = await createStrategy(
+        'buy',
+        'vote',
+        [signer1, signer3],
+        kyberTradeIntegration.address,
+        usdcGarden,
+        USDC_STRATEGY_PARAMS,
+        weth.address,
+      );
+      const signer1USDCBalance2 = await usdc.balanceOf(signer1.address);
+      await executeStrategy(long1, { amount: ethers.BigNumber.from(500 * 1000000) });
+      await injectFakeProfits(long1, ethers.BigNumber.from(200 * 1000000)); // USDC has 6 decimals
+
+      await finalizeStrategyAfterQuarter(long1);
+      // Check pending rewards for users
+      const signer1Rewards = await rewardsDistributor.getRewards(usdcGarden.address, signer1.address, [long1.address]);
+      const signer1BABL = signer1Rewards[5];
+      const signer1Profit = signer1Rewards[6];
+      // We claim our tokens and check that they are received properly
+      await usdcGarden.connect(signer1).claimReturns([long1.address]);
+      // Check remaining rewards for users (if any)
+      const signer1Rewards2 = await rewardsDistributor.getRewards(usdcGarden.address, signer1.address, [long1.address]);
+      const signer1BABL2 = signer1Rewards2[5];
+      const signer1Profit2 = signer1Rewards2[6];
+      const value = signer1USDCBalance2.add(signer1Profit);
+      // LP profits
+      const value2 = ethers.utils.parseEther('0.21265');
+      // Receive BABL token after claim
+      const signer1BalanceBABL = await bablToken.balanceOf(signer1.address);
+      expect(signer1BalanceBABL).to.equal(signer1BABL);
+      // Receive USDC as strategist and steward directly in its wallet after claim
+      const signer1BalanceUSDC = await usdc.balanceOf(signer1.address);
+      expect(signer1BalanceUSDC).to.equal(value);
+      // Automatically get USDC profit as LP in its garden balance when strategy finalizes
+      const signer1BalanceUSDCGarden = await usdcGarden.balanceOf(signer1.address);
+
+      expect(signer1BalanceUSDCGarden.sub(signer1StartingBalance)).to.closeTo(value2, ethers.utils.parseEther('0.001'));
+      expect(signer1Profit2).to.equal('0');
+      expect(signer1BABL2).to.equal('0');
+    });
     it('should not allow a race condition of two consecutive claims for the same rewards & profit of the same strategies', async function () {
       // Mining program has to be enabled before the strategy starts its execution
       await babController.connect(owner).enableBABLMiningProgram();

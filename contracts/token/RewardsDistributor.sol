@@ -23,6 +23,7 @@ import {OwnableUpgradeable} from '@openzeppelin/contracts-upgradeable/access/Own
 import {SafeMath} from '@openzeppelin/contracts/math/SafeMath.sol';
 import {Address} from '@openzeppelin/contracts/utils/Address.sol';
 import {SafeERC20} from '@openzeppelin/contracts/token/ERC20/SafeERC20.sol';
+import {ERC20} from '@openzeppelin/contracts/token/ERC20/ERC20.sol';
 import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 
 import {SafeDecimalMath} from '../lib/SafeDecimalMath.sol';
@@ -491,7 +492,11 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
     ) internal {
         // Take control of getPrice fluctuations along the time - normalizing into DAI
         uint256 pricePerTokenUnit = _getStrategyPricePerTokenUnit(_strategy, _capital, _addOrSubstract);
-        _capital = _capital.preciseMul(pricePerTokenUnit);
+        _capital = _normalizeDecimals(
+            IGarden(IStrategy(_strategy).garden()).reserveAsset(),
+            _capital.preciseMul(pricePerTokenUnit)
+        );
+
         ProtocolPerTimestamp storage protocolCheckpoint = protocolPerTimestamp[block.timestamp];
         uint256 protocolOverhead;
         if (_addOrSubstract == false) {
@@ -597,8 +602,6 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
             strategy.executedAt() >= initialDepositAt &&
             address(strategy.garden()) == _garden
         ) {
-            uint256 contributorPower =
-                _getContributorPower(address(_garden), _contributor, strategy.executedAt(), strategy.exitedAt());
             // If strategy returned money we give out the profits
             if (profit == true) {
                 // We reserve 5% of profits for performance fees
@@ -638,9 +641,7 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
             contributorProfits = contributorProfits.add(rewards[3]);
 
             // Get LP rewards
-            rewards[4] = uint256(strategy.strategyRewards()).multiplyDecimal(BABL_LP_SHARE).preciseMul(
-                contributorPower.preciseDiv(strategy.capitalAllocated())
-            );
+            rewards[4] = _getStrategyLPBabl(_garden, _strategy, _contributor);
             contributorBABL = contributorBABL.add(rewards[4]);
 
             // Get a multiplier bonus in case the contributor is the garden creator
@@ -860,6 +861,30 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         } else profits = 0; // No profits at all
 
         return profits;
+    }
+
+    /**
+     * Get the BABL rewards (Mining program) for a LP profile
+     * @param _garden           Garden address
+     * @param _strategy         Strategy address
+     * @param _contributor      Contributor address
+     */
+    function _getStrategyLPBabl(
+        address _garden,
+        address _strategy,
+        address _contributor
+    ) private view returns (uint256) {
+        IStrategy strategy = IStrategy(_strategy);
+        uint256 strategyRewards = strategy.strategyRewards();
+        uint256 babl;
+        uint8 tokenDecimals = ERC20(IGarden(_garden).reserveAsset()).decimals();
+        //uint256 allocated = tokenDecimals != 18 ? strategy.capitalAllocated().mul(10**(uint256(18).sub(tokenDecimals))) : strategy.capitalAllocated();
+        uint256 allocated = _normalizeDecimals(IGarden(_garden).reserveAsset(), strategy.capitalAllocated());
+        uint256 contributorPower =
+            _getContributorPower(_garden, _contributor, strategy.executedAt(), strategy.exitedAt());
+        // We take care of normalization into 18 decimals for capital allocated in less decimals than 18
+        babl = strategyRewards.multiplyDecimal(BABL_LP_SHARE).preciseMul(contributorPower.preciseDiv(allocated));
+        return babl;
     }
 
     /**
@@ -1364,5 +1389,16 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
             quarters = quarters.add(1);
         }
         return (quarters.add(1), startingQuarter.add(1));
+    }
+
+    /**
+     * Normalizing decimals for tokens with less than 18 decimals
+     * @param _asset    Garden asset (ERC20)
+     * @param _quantity Value to normalize (e.g. capital)
+     */
+    function _normalizeDecimals(address _asset, uint256 _quantity) internal view returns (uint256) {
+        uint8 tokenDecimals = ERC20(_asset).decimals();
+        require(tokenDecimals <= 18, 'Unsupported decimals');
+        return tokenDecimals != 18 ? _quantity.mul(10**(uint256(18).sub(tokenDecimals))) : _quantity;
     }
 }

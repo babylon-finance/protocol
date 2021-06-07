@@ -22,6 +22,14 @@ const DAI_STRATEGY_PARAMS = [
   ethers.utils.parseEther('500'), // _minRebalanceCapital
 ];
 
+const USDC_STRATEGY_PARAMS = [
+  ethers.BigNumber.from(100000 * 1000000), // _maxCapitalRequested
+  ethers.BigNumber.from(100 * 1000000), // _stake
+  ONE_DAY_IN_SECONDS * 30, // _strategyDuration
+  ethers.utils.parseEther('0.05'), // 5% _expectedReturn
+  ethers.BigNumber.from(500 * 1000000), // _minRebalanceCapital
+];
+
 const STRAT_NAME_PARAMS = ['Strategy Name', 'STRT']; // [ NAME, SYMBOL ]
 const NFT_ADDRESS = 'https://babylon.mypinata.cloud/ipfs/Qmc7MfvuCkhA8AA2z6aBzmb5G4MaRfPeKgCVTWcKqU2tjB';
 
@@ -294,6 +302,7 @@ module.exports = {
   createStrategy,
   DEFAULT_STRATEGY_PARAMS,
   DAI_STRATEGY_PARAMS,
+  USDC_STRATEGY_PARAMS,
   executeStrategy,
   executeStrategyImmediate,
   finalizeStrategy,
