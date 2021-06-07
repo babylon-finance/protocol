@@ -492,10 +492,7 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
     ) internal {
         // Take control of getPrice fluctuations along the time - normalizing into DAI
         uint256 pricePerTokenUnit = _getStrategyPricePerTokenUnit(_strategy, _capital, _addOrSubstract);
-        _capital = _normalizeDecimals(
-            IGarden(IStrategy(_strategy).garden()).reserveAsset(),
-            _capital.preciseMul(pricePerTokenUnit)
-        );
+        _capital = _normalizeDecimals(IGarden(IStrategy(_strategy).garden()), _capital.preciseMul(pricePerTokenUnit));
 
         ProtocolPerTimestamp storage protocolCheckpoint = protocolPerTimestamp[block.timestamp];
         uint256 protocolOverhead;
@@ -877,8 +874,7 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         IStrategy strategy = IStrategy(_strategy);
         uint256 strategyRewards = strategy.strategyRewards();
         uint256 babl;
-        uint8 tokenDecimals = ERC20(IGarden(_garden).reserveAsset()).decimals();
-        uint256 allocated = _normalizeDecimals(IGarden(_garden).reserveAsset(), strategy.capitalAllocated());
+        uint256 allocated = _normalizeDecimals(IGarden(_garden), strategy.capitalAllocated());
         uint256 contributorPower =
             _getContributorPower(_garden, _contributor, strategy.executedAt(), strategy.exitedAt());
         // We take care of normalization into 18 decimals for capital allocated in less decimals than 18
@@ -1392,11 +1388,11 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
 
     /**
      * Normalizing decimals for tokens with less than 18 decimals
-     * @param _asset    Garden asset (ERC20)
+     * @param _garden   Garden with a reserve Asset (ERC20)
      * @param _quantity Value to normalize (e.g. capital)
      */
-    function _normalizeDecimals(address _asset, uint256 _quantity) internal view returns (uint256) {
-        uint8 tokenDecimals = ERC20(_asset).decimals();
+    function _normalizeDecimals(IGarden _garden, uint256 _quantity) internal view returns (uint256) {
+        uint8 tokenDecimals = ERC20(_garden.reserveAsset()).decimals();
         require(tokenDecimals <= 18, 'Unsupported decimals');
         return tokenDecimals != 18 ? _quantity.mul(10**(uint256(18).sub(tokenDecimals))) : _quantity;
     }
