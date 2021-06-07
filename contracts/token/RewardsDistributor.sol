@@ -16,7 +16,7 @@
 */
 
 pragma solidity 0.7.6;
-import 'hardhat/console.sol';
+
 import {TimeLockedToken} from './TimeLockedToken.sol';
 
 import {OwnableUpgradeable} from '@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol';
@@ -491,7 +491,10 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
     ) internal {
         // Take control of getPrice fluctuations along the time - normalizing into DAI
         uint256 pricePerTokenUnit = _getStrategyPricePerTokenUnit(_strategy, _capital, _addOrSubstract);
-        _capital = _normalizeDecimals(IGarden(IStrategy(_strategy).garden()), _capital.preciseMul(pricePerTokenUnit));
+        _capital = SafeDecimalMath.normalizeDecimals(
+            IGarden(IStrategy(_strategy).garden()).reserveAsset(),
+            _capital.preciseMul(pricePerTokenUnit)
+        );
         ProtocolPerTimestamp storage protocolCheckpoint = protocolPerTimestamp[block.timestamp];
         uint256 protocolOverhead;
         if (_addOrSubstract == false) {
@@ -874,7 +877,8 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         IStrategy strategy = IStrategy(_strategy);
         uint256 strategyRewards = strategy.strategyRewards();
         uint256 babl;
-        uint256 allocated = _normalizeDecimals(IGarden(_garden), strategy.capitalAllocated());
+        uint256 allocated =
+            SafeDecimalMath.normalizeDecimals(IGarden(_garden).reserveAsset(), strategy.capitalAllocated());
         uint256 contributorPower =
             _getContributorPower(_garden, _contributor, strategy.executedAt(), strategy.exitedAt());
         // We take care of normalization into 18 decimals for capital allocated in less decimals than 18
@@ -1384,16 +1388,5 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
             quarters = quarters.add(1);
         }
         return (quarters.add(1), startingQuarter.add(1));
-    }
-
-    /**
-     * Normalizing decimals for tokens with less than 18 decimals
-     * @param _garden   Garden with a reserve Asset (ERC20)
-     * @param _quantity Value to normalize (e.g. capital)
-     */
-    function _normalizeDecimals(IGarden _garden, uint256 _quantity) internal view returns (uint256) {
-        uint8 tokenDecimals = ERC20(_garden.reserveAsset()).decimals();
-        _require(tokenDecimals <= 18, Errors.UNSUPPORTED_DECIMALS);
-        return tokenDecimals != 18 ? _quantity.mul(10**(uint256(18).sub(tokenDecimals))) : _quantity;
     }
 }
