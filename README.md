@@ -76,6 +76,12 @@ yarn estimate-size
 yarn test
 ```
 
+Or watch test 👁
+
+```bash
+yarn test:watch
+```
+
 ## Publish
 
 ## Deploy
