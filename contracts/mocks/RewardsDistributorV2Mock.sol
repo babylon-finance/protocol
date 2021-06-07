@@ -196,8 +196,8 @@ contract RewardsDistributorV2Mock is OwnableUpgradeable {
     function initialize(TimeLockedToken _bablToken, IBabController _controller) public {
         OwnableUpgradeable.__Ownable_init();
 
-        require(address(_bablToken) != address(0), 'Token needs to exist');
-        require(address(_controller) != address(0), 'Controller needs to exist');
+        _require(address(_bablToken) != address(0), Errors.ADDRESS_IS_ZERO);
+        _require(address(_controller) != address(0), Errors.ADDRESS_IS_ZERO);
         babltoken = _bablToken;
         controller = _controller;
 

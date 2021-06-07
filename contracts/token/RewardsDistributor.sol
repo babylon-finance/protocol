@@ -244,9 +244,8 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
 
     function initialize(TimeLockedToken _bablToken, IBabController _controller) public {
         OwnableUpgradeable.__Ownable_init();
-
-        require(address(_bablToken) != address(0), 'Token needs to exist');
-        require(address(_controller) != address(0), 'Controller needs to exist');
+        _require(address(_bablToken) != address(0), Errors.ADDRESS_IS_ZERO);
+        _require(address(_controller) != address(0), Errors.ADDRESS_IS_ZERO);
         babltoken = _bablToken;
         controller = _controller;
 
@@ -493,7 +492,6 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         // Take control of getPrice fluctuations along the time - normalizing into DAI
         uint256 pricePerTokenUnit = _getStrategyPricePerTokenUnit(_strategy, _capital, _addOrSubstract);
         _capital = _normalizeDecimals(IGarden(IStrategy(_strategy).garden()), _capital.preciseMul(pricePerTokenUnit));
-
         ProtocolPerTimestamp storage protocolCheckpoint = protocolPerTimestamp[block.timestamp];
         uint256 protocolOverhead;
         if (_addOrSubstract == false) {
@@ -732,19 +730,21 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
             babl = strategyRewards.multiplyDecimal(BABL_STEWARD_SHARE).preciseMul(
                 uint256(userVotes).preciseDiv(strategy.totalPositiveVotes())
             );
-            babl = babl.sub(babl.preciseMul(_distanceValue.preciseDiv(expected))); // We discount the error of expected return vs real returns
+            // We discount the error of expected return vs real returns
+            babl = babl.sub(babl.preciseMul(_distanceValue.preciseDiv(expected)));
         } else if (userVotes > 0 && _profit == false) {
             // Voting in favor of a non profitable strategy get nothing
             babl = 0;
         } else if (userVotes < 0 && _distance == false) {
-            // Voting against a strategy that got results below expected return provides rewards to the voter (helping the protocol to only have good strategies)
+            // Voting against a strategy that got results below expected return provides rewards
+            // to the voter (helping the protocol to only have good strategies)
             babl = strategyRewards.multiplyDecimal(BABL_STEWARD_SHARE).preciseMul(
                 uint256(Math.abs(userVotes)).preciseDiv(strategy.totalNegativeVotes())
             );
 
             bablCap = babl.mul(2); // Max cap
-            babl = babl.add(babl.preciseMul(_distanceValue.preciseDiv(expected))); // We add a bonus inverse to the error of expected return vs real returns
-
+            // We add a bonus inverse to the error of expected return vs real returns
+            babl = babl.add(babl.preciseMul(_distanceValue.preciseDiv(expected)));
             if (babl > bablCap) babl = bablCap; // We limit 2x by a Cap
         } else if (userVotes < 0 && _distance == true) {
             babl = 0;
@@ -1393,7 +1393,7 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
      */
     function _normalizeDecimals(IGarden _garden, uint256 _quantity) internal view returns (uint256) {
         uint8 tokenDecimals = ERC20(_garden.reserveAsset()).decimals();
-        require(tokenDecimals <= 18, 'Unsupported decimals');
+        _require(tokenDecimals <= 18, Errors.UNSUPPORTED_DECIMALS);
         return tokenDecimals != 18 ? _quantity.mul(10**(uint256(18).sub(tokenDecimals))) : _quantity;
     }
 }
