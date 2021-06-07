@@ -8,6 +8,7 @@ require('hardhat-contract-sizer');
 require('hardhat-docgen');
 require('hardhat-gas-reporter');
 require('hardhat-log-remover');
+require('hardhat-watcher');
 
 require('@tenderly/hardhat-tenderly');
 require('solidity-coverage');
@@ -84,6 +85,14 @@ module.exports = {
       [CHAIN_IDS.goerli]: 0,
       [CHAIN_IDS.rinkeby]: 0,
     },
+    owner: {
+      default: 1,
+      [CHAIN_IDS.mainnet]: 1,
+      [CHAIN_IDS.kovan]: 1,
+      [CHAIN_IDS.ropsten]: 1,
+      [CHAIN_IDS.goerli]: 1,
+      [CHAIN_IDS.rinkeby]: 1,
+    },
   },
   solidity: {
     compilers: [
@@ -111,5 +120,13 @@ module.exports = {
   },
   mocha: {
     timeout: 120000,
+  },
+
+  watcher: {
+    test: {
+      tasks: [{ command: 'test', params: { testFiles: ['{path}'] } }],
+      files: ['./test/**/*'],
+      verbose: true,
+    },
   },
 };

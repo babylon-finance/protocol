@@ -8,7 +8,8 @@ module.exports = async ({
   getRapid,
 }) => {
   const { deploy } = deployments;
-  const { deployer } = await getNamedAccounts();
+  const { deployer, owner } = await getNamedAccounts();
+  const signer = await getSigner(deployer);
   const gasPrice = await getRapid();
 
   const gardenFactoryContract = 'GardenFactory';
@@ -16,6 +17,7 @@ module.exports = async ({
   const beaconContract = 'GardenBeacon';
 
   const controller = await deployments.get('BabControllerProxy');
+  const controllerContract = await ethers.getContractAt('BabController', controller.address, signer);
 
   const garden = await deploy(gardenContract, {
     from: deployer,
@@ -39,6 +41,11 @@ module.exports = async ({
     gasPrice,
   });
 
+  if (gardenFactory.newlyDeployed) {
+    console.log(`Setting garden factory on controller ${gardenFactory.address}`);
+    await (await controllerContract.editGardenFactory(gardenFactory.address, { gasPrice })).wait();
+  }
+
   if (network.live && garden.newlyDeployed) {
     await tenderly.push(await getTenderlyContract(gardenContract));
   }
@@ -53,4 +60,3 @@ module.exports = async ({
 };
 
 module.exports.tags = ['GardenFactory'];
-module.exports.dependencies = ['Controller'];

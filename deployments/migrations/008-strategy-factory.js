@@ -8,7 +8,8 @@ module.exports = async ({
   getRapid,
 }) => {
   const { deploy } = deployments;
-  const { deployer } = await getNamedAccounts();
+  const { deployer, owner } = await getNamedAccounts();
+  const signer = await getSigner(deployer);
   const gasPrice = await getRapid();
 
   const strategyFactoryContract = 'StrategyFactory';
@@ -16,6 +17,7 @@ module.exports = async ({
   const beaconContract = 'StrategyBeacon';
 
   const controller = await deployments.get('BabControllerProxy');
+  const controllerContract = await ethers.getContractAt('BabController', controller.address, signer);
 
   const strategy = await deploy(strategyContract, {
     from: deployer,
@@ -39,11 +41,16 @@ module.exports = async ({
     gasPrice,
   });
 
+  if (strategyFactory.newlyDeployed) {
+    console.log(`Setting strategy factory on controller ${strategyFactory.address}`);
+    await (await controllerContract.editStrategyFactory(strategyFactory.address, { gasPrice })).wait();
+  }
+
   if (network.live && strategy.newlyDeployed) {
     await tenderly.push(await getTenderlyContract(strategyContract));
   }
 
-  if (network.live && strategyFactory.newlyDeployed) {
+  if (network.live && beacon.newlyDeployed) {
     await tenderly.push(await getTenderlyContract(beaconContract));
   }
 
