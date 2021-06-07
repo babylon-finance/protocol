@@ -23,6 +23,7 @@ import {Operation} from './Operation.sol';
 import {IGarden} from '../../interfaces/IGarden.sol';
 import {IStrategy} from '../../interfaces/IStrategy.sol';
 import {PreciseUnitMath} from '../../lib/PreciseUnitMath.sol';
+import {SafeDecimalMath} from '../../lib/SafeDecimalMath.sol';
 import {ILendIntegration} from '../../interfaces/ILendIntegration.sol';
 
 /**
@@ -34,6 +35,7 @@ import {ILendIntegration} from '../../interfaces/ILendIntegration.sol';
 contract LendOperation is Operation {
     using SafeMath for uint256;
     using PreciseUnitMath for uint256;
+    using SafeDecimalMath for uint256;
 
     /* ============ Constructor ============ */
 
@@ -138,7 +140,7 @@ contract LendOperation is Operation {
         uint256 assetTokensAmount =
             ILendIntegration(_integration).getExchangeRatePerToken(_assetToken).mul(numTokensToRedeem);
         uint256 price = _getPrice(_garden.reserveAsset(), _assetToken);
-        uint256 NAV = _normalizeDecimals(_assetToken, assetTokensAmount).preciseDiv(price);
+        uint256 NAV = SafeDecimalMath.normalizeDecimals(_assetToken, assetTokensAmount).preciseDiv(price);
         require(NAV != 0, 'NAV has to be bigger 0');
         return NAV;
     }

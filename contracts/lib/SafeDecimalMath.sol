@@ -21,6 +21,7 @@
 pragma solidity 0.7.6;
 
 import '@openzeppelin/contracts/math/SafeMath.sol';
+import {ERC20} from '@openzeppelin/contracts/token/ERC20/ERC20.sol';
 
 library SafeDecimalMath {
     using SafeMath for uint256;
@@ -141,5 +142,16 @@ library SafeDecimalMath {
      */
     function divideDecimalRound(uint256 x, uint256 y) internal pure returns (uint256) {
         return _divideDecimalRound(x, y, UNIT);
+    }
+
+    /**
+     * Normalizing decimals for tokens with less than 18 decimals
+     * @param asset    ERC20 asset address
+     * @param quantity Value to normalize (e.g. capital)
+     */
+    function normalizeDecimals(address asset, uint256 quantity) internal view returns (uint256) {
+        uint8 tokenDecimals = ERC20(asset).decimals();
+        require(tokenDecimals <= 18, 'Unsupported decimals');
+        return tokenDecimals != 18 ? quantity.mul(10**(uint256(18).sub(tokenDecimals))) : quantity;
     }
 }

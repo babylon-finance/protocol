@@ -48,9 +48,7 @@ interface IRewardsDistributor {
     // solhint-disable-next-line
     function DECAY_RATE() external pure returns (uint256);
 
-    function addProtocolPrincipal(uint256 _capital) external;
-
-    function substractProtocolPrincipal(uint256 _capital) external;
+    function updateProtocolPrincipal(uint256 _capital, bool _addOrSubstract) external;
 
     function getStrategyRewards(address _strategy) external returns (uint96);
 
