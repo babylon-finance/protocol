@@ -128,10 +128,6 @@ interface IBabController {
 
     function defaultTradeIntegration() external view returns (address);
 
-    function protocolDepositGardenTokenFee() external view returns (uint256);
-
-    function protocolWithdrawalGardenTokenFee() external view returns (uint256);
-
     function gardenTokensTransfersEnabled() external view returns (bool);
 
     function bablMiningProgramEnabled() external view returns (bool);
