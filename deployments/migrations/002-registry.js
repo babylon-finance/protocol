@@ -22,7 +22,7 @@ module.exports = async ({
 
   if (timeLockRegistry.newlyDeployed) {
     const bablTokenContract = await ethers.getContractAt('BABLToken', bablToken.address);
-    // Sets the Time Lock Registry address
+    console.log('Setting TimeLockRegistry on BABLToken');
     await bablTokenContract.setTimeLockRegistry(timeLockRegistry.address);
   }
 

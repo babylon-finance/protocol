@@ -22,6 +22,7 @@ import {Operation} from './Operation.sol';
 import {IGarden} from '../../interfaces/IGarden.sol';
 import {IStrategy} from '../../interfaces/IStrategy.sol';
 import {PreciseUnitMath} from '../../lib/PreciseUnitMath.sol';
+import {SafeDecimalMath} from '../../lib/SafeDecimalMath.sol';
 import {ITradeIntegration} from '../../interfaces/ITradeIntegration.sol';
 
 /**
@@ -32,6 +33,7 @@ import {ITradeIntegration} from '../../interfaces/ITradeIntegration.sol';
  */
 contract BuyOperation is Operation {
     using PreciseUnitMath for uint256;
+    using SafeDecimalMath for uint256;
 
     /* ============ Constructor ============ */
 
@@ -114,7 +116,7 @@ contract BuyOperation is Operation {
             return 0;
         }
         uint256 price = _getPrice(_garden.reserveAsset(), _data);
-        uint256 NAV = _normalizeDecimals(_data, IERC20(_data).balanceOf(msg.sender)).preciseDiv(price);
+        uint256 NAV = SafeDecimalMath.normalizeDecimals(_data, IERC20(_data).balanceOf(msg.sender)).preciseDiv(price);
         require(NAV != 0, 'NAV has to be bigger 0');
         return NAV;
     }

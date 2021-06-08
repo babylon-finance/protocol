@@ -22,6 +22,14 @@ const DAI_STRATEGY_PARAMS = [
   ethers.utils.parseEther('500'), // _minRebalanceCapital
 ];
 
+const USDC_STRATEGY_PARAMS = [
+  ethers.BigNumber.from(100000 * 1000000), // _maxCapitalRequested
+  ethers.BigNumber.from(100 * 1000000), // _stake
+  ONE_DAY_IN_SECONDS * 30, // _strategyDuration
+  ethers.utils.parseEther('0.05'), // 5% _expectedReturn
+  ethers.BigNumber.from(500 * 1000000), // _minRebalanceCapital
+];
+
 const STRAT_NAME_PARAMS = ['Strategy Name', 'STRT']; // [ NAME, SYMBOL ]
 const NFT_ADDRESS = 'https://babylon.mypinata.cloud/ipfs/Qmc7MfvuCkhA8AA2z6aBzmb5G4MaRfPeKgCVTWcKqU2tjB';
 
@@ -240,6 +248,39 @@ async function injectFakeProfits(strategy, amount) {
   }
 }
 
+async function substractFakeProfits(strategy, amount) {
+  const kind = await strategy.opTypes(0);
+  if (kind === 0) {
+    const asset = await ethers.getContractAt('IERC20', await strategy.opDatas(0));
+    const whaleAddress = getAssetWhale(asset.address);
+    const strategyAddress = await impersonateAddress(strategy.address);
+    if (whaleAddress) {
+      const whaleSigner = await impersonateAddress(whaleAddress);
+      await asset.connect(strategyAddress).transfer(whaleSigner.address, amount, {
+        gasPrice: 0,
+      });
+    } else {
+      console.error("Couldn't reduce fake profits for", asset.address);
+    }
+  }
+  if (kind === 1) {
+    const asset = await ethers.getContractAt('IERC20', await strategy.opDatas(0));
+    const whaleAddress = await strategy.pool();
+    const whaleSigner = await impersonateAddress(whaleAddress);
+    await asset.connect(strategyAddress).transfer(whaleSigner.address, amount, {
+      gasPrice: 0,
+    });
+  }
+  if (kind === 2) {
+    const asset = await ethers.getContractAt('IERC20', await strategy.opDatas(0));
+    const whaleAddress = await strategy.yieldVault();
+    const whaleSigner = await impersonateAddress(whaleAddress);
+    await asset.connect(strategyAddress).transfer(whaleSigner.address, amount, {
+      gasPrice: 0,
+    });
+  }
+}
+
 async function createStrategy(
   kind,
   state,
@@ -294,6 +335,7 @@ module.exports = {
   createStrategy,
   DEFAULT_STRATEGY_PARAMS,
   DAI_STRATEGY_PARAMS,
+  USDC_STRATEGY_PARAMS,
   executeStrategy,
   executeStrategyImmediate,
   finalizeStrategy,
@@ -304,6 +346,7 @@ module.exports = {
   finalizeStrategyAfter3Quarters,
   finalizeStrategyAfter2Years,
   injectFakeProfits,
+  substractFakeProfits,
   deposit,
   updateTWAPs,
 };

@@ -8,41 +8,37 @@ module.exports = async ({
   getRapid,
 }) => {
   const { deploy } = deployments;
-  const { deployer } = await getNamedAccounts();
+  const { deployer, owner } = await getNamedAccounts();
+  const signer = await getSigner(deployer);
   const gasPrice = await getRapid();
-
-  const safeDecimalMath = await deploy('SafeDecimalMath', {
-    from: deployer,
-    args: [],
-    log: true,
-    gasPrice,
-  });
 
   const bablToken = await deployments.get('BABLToken');
   const controller = await deployments.get('BabControllerProxy');
+  const controllerContract = await ethers.getContractAt('BabController', controller.address, signer);
 
-  const rewardsDistributor = await deploy('RewardsDistributor', {
-    from: deployer,
-    args: [bablToken.address, controller.address],
-    log: true,
-    gasPrice,
-    libraries: {
-      SafeDecimalMath: safeDecimalMath.address,
+  const rewardsDistributor = await upgradesDeployer.deployOrUpgrade(
+    'RewardsDistributor',
+    { from: deployer, log: true, gasPrice },
+    {
+      initializer: { method: 'initialize', args: [bablToken.address, controller.address] },
     },
-  });
+  );
 
+  //TOOD: newlyDeployed would be false in case of upgrade should use newlyUpgraded flag instead
   if (rewardsDistributor.newlyDeployed) {
     const bablTokenContract = await ethers.getContractAt('BABLToken', bablToken.address);
 
-    // Sets the Rewards Distributor address into the BABL Token contract
-    await bablTokenContract.setRewardsDistributor(rewardsDistributor.address, { gasPrice });
+    console.log('Setting RewardsDistributor on BABLToken');
+    await (await bablTokenContract.setRewardsDistributor(rewardsDistributor.address, { gasPrice })).wait();
+
+    console.log(`Setting rewards distributor on controller ${rewardsDistributor.address}`);
+    await (await controllerContract.editRewardsDistributor(rewardsDistributor.address, { gasPrice })).wait();
   }
 
   if (network.live && rewardsDistributor.newlyDeployed) {
     // fails, mostly likely because of the usage of libs
-    // await tenderly.push(await getTenderlyContracts(['SafeDecimalMath', 'RewardsDistributor']));
+    await tenderly.push(await getTenderlyContracts(['RewardsDistributor', 'RewardsDistributorProxy']));
   }
 };
 
 module.exports.tags = ['Distributor'];
-module.exports.dependencies = ['Controller, Token'];

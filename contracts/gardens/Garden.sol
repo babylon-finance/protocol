@@ -351,7 +351,12 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         bool _withPenalty
     ) external override nonReentrant {
         _onlyContributor();
+        // Withdrawal amount has to be equal or less than msg.sender balance minus the locked balance
+        (uint256 lockedAmount, uint256 votedAmount) = this.getLockedBalance(msg.sender);
+        _require(_gardenTokenQuantity <= balanceOf(msg.sender).sub(lockedAmount), Errors.TOKENS_STAKED); // Strategists and Voters cannot withdraw locked stake while in active strategies
         if (!_withPenalty) {
+            // If you have active votes, you can only withdraw with a penalty
+            _require(_gardenTokenQuantity <= balanceOf(msg.sender).sub(votedAmount), Errors.TOKENS_STAKED);
             // Requests an immediate withdrawal taking the EARLY_WITHDRAWAL_PENALTY that stays invested.
             return _withdraw(_gardenTokenQuantity, _minReserveReceiveQuantity, _to);
         }
@@ -570,12 +575,6 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         IERC20(reserveAsset).safeTransfer(msg.sender, _capital);
     }
 
-    // Any tokens (other than the target) that are sent here by mistake are recoverable by the protocol
-    function sweep(address _token) external {
-        _require(_token != reserveAsset, Errors.MUST_BE_RESERVE_ASSET);
-        _payProtocolFeeFromGarden(_token, IERC20(_token).balanceOf(address(this)));
-    }
-
     /*
      * Remove an expire candidate from the strategy Array
      * @param _strategy      Strategy to remove
@@ -665,23 +664,29 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
     }
 
     /**
-     * Checks balance locked for strategists and voters in active strategies
+     * Checks balance locked for strategists in active strategies
      *
      * @param _contributor                 Address of the account
      *
      * @return  uint256                    Returns the amount of locked garden tokens for the account
+     * @return  uint256                    Returns the amount of active votes for the account
      */
-    function getLockedBalance(address _contributor) external view override returns (uint256) {
+    function getLockedBalance(address _contributor) external view override returns (uint256, uint256) {
         uint256 lockedAmount;
+        uint256 votedAmount;
         for (uint256 i = 0; i < strategies.length; i++) {
-            uint256 votes = uint256(Math.abs(IStrategy(strategies[i]).getUserVotes(_contributor)));
-            if (votes > 0) {
-                lockedAmount = lockedAmount.add(votes);
+            IStrategy strategy = IStrategy(strategies[i]);
+            if (_contributor == strategy.strategist()) {
+                lockedAmount = lockedAmount.add(strategy.stake());
+            }
+            uint256 votes = uint256(Math.abs(strategy.getUserVotes(_contributor)));
+            if (votes > votedAmount) {
+                votedAmount = votes;
             }
         }
         // Avoid overflows if off-chain voting system fails
         if (balanceOf(_contributor) < lockedAmount) lockedAmount = balanceOf(_contributor);
-        return lockedAmount;
+        return (lockedAmount, votedAmount);
     }
 
     function getGardenTokenMintQuantity(
@@ -724,6 +729,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
     function _onlyUnpaused() private view {
         // Do not execute if Globally or individually paused
         _require(!IBabController(controller).isPaused(address(this)), Errors.ONLY_UNPAUSED);
+
     }
 
     /**
@@ -878,12 +884,6 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
             block.timestamp.sub(contributors[msg.sender].lastDepositAt) >= depositHardlock,
             Errors.DEPOSIT_HARDLOCK
         );
-        // Withdrawal amount has to be equal or less than msg.sender balance minus the locked balance
-        _require(
-            _gardenTokenQuantity <= balanceOf(msg.sender).sub(this.getLockedBalance(msg.sender)),
-            Errors.TOKENS_STAKED
-        ); // Strategists and Voters cannot withdraw locked stake while in active strategies
-
         _reenableReserveForStrategies();
         uint256 reserveAssetQuantity = _getWithdrawalReserveQuantity(reserveAsset, _gardenTokenQuantity);
 
