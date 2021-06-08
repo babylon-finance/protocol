@@ -151,11 +151,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
             garden.active() == true && IBabController(controller).isSystemContract(address(garden)),
             Errors.ONLY_ACTIVE_GARDEN
         );
-        _require(
-            !IBabController(controller).guardianGlobalPaused() &&
-                !IBabController(controller).guardianPaused(address(this)),
-            Errors.ONLY_UNPAUSED
-        );
+        _require(!IBabController(controller).isPaused(address(this)), Errors.ONLY_UNPAUSED);
         _;
     }
 
@@ -172,11 +168,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
 
     modifier onlyUnpaused() {
         // Do not execute if Globally or individually paused
-        _require(
-            !IBabController(controller).guardianGlobalPaused() &&
-                !IBabController(controller).guardianPaused(address(this)),
-            Errors.ONLY_UNPAUSED
-        );
+        _require(!IBabController(controller).isPaused(address(this)), Errors.ONLY_UNPAUSED);
         _;
     }
 
