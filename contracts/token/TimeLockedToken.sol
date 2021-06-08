@@ -91,11 +91,7 @@ abstract contract TimeLockedToken is VoteToken {
     }
     modifier onlyUnpaused() {
         // Do not execute if Globally or individually paused
-        _require(
-            !IBabController(controller).guardianGlobalPaused() &&
-                !IBabController(controller).guardianPaused(address(this)),
-            Errors.ONLY_UNPAUSED
-        );
+        _require(!IBabController(controller).isPaused(address(this)), Errors.ONLY_UNPAUSED);
         _;
     }
 
