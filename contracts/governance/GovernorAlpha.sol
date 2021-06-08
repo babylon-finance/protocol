@@ -275,30 +275,6 @@ contract GovernorAlpha is Ownable {
     }
 
     /**
-     * GOVERNANCE FUNCTION. Allows to queue or revert a transaction part of a proposal within the timelock
-     *
-     * @notice Allows to queue or revert a transaction part of a proposal (not queued earlier) within the timelock
-     * @param target The addresses of the target
-     * @param value The uint values
-     * @param signature The signature
-     * @param data The data
-     * @param eta The timestamp of allowed execution
-     */
-    function _queueOrRevert(
-        address target,
-        uint256 value,
-        string memory signature,
-        bytes memory data,
-        uint256 eta
-    ) internal {
-        require(
-            !timelock.queuedTransactions(keccak256(abi.encode(target, value, signature, data, eta))),
-            'GovernorAlpha::_queueOrRevert: proposal action already queued at eta'
-        );
-        timelock.queueTransaction(target, value, signature, data, eta);
-    }
-
-    /**
      * GOVERNANCE FUNCTION. Allows to execute a queued (state = queued) proposal
      *
      * @notice Allows to queue or revert a transaction part of a proposal (not queued earlier) within the timelock
@@ -468,7 +444,7 @@ contract GovernorAlpha is Ownable {
      *
      * @notice Allows the caller to get the receipt of the voter for a specific proposalId
      * @param proposalId The ID of the proposal
-     * @param voter The ID of the proposal
+     * @param voter The address of the voter
      * @return The receipt
      */
     function getReceipt(uint256 proposalId, address voter) external view returns (Receipt memory) {
@@ -479,6 +455,7 @@ contract GovernorAlpha is Ownable {
      * GOVERNANCE FUNCTION. Allows the caller to get the state a specific proposalId
      *
      * @notice Allows the caller to get the state a specific proposalId
+     * @param proposalId The id of the proposal
      * @return The proposal state
      */
     function state(uint256 proposalId) public view returns (ProposalState) {
@@ -504,6 +481,29 @@ contract GovernorAlpha is Ownable {
     }
 
     /* ============ Internal Only Function ============ */
+    /**
+     * GOVERNANCE FUNCTION. Allows to queue or revert a transaction part of a proposal within the timelock
+     *
+     * @notice Allows to queue or revert a transaction part of a proposal (not queued earlier) within the timelock
+     * @param target The addresses of the target
+     * @param value The uint values
+     * @param signature The signature
+     * @param data The data
+     * @param eta The timestamp of allowed execution
+     */
+    function _queueOrRevert(
+        address target,
+        uint256 value,
+        string memory signature,
+        bytes memory data,
+        uint256 eta
+    ) internal {
+        require(
+            !timelock.queuedTransactions(keccak256(abi.encode(target, value, signature, data, eta))),
+            'GovernorAlpha::_queueOrRevert: proposal action already queued at eta'
+        );
+        timelock.queueTransaction(target, value, signature, data, eta);
+    }
 
     /**
      * GOVERNANCE FUNCTION. Allows the voter to cast a vote
