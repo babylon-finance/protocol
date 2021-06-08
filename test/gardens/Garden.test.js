@@ -73,7 +73,7 @@ describe('Garden', function () {
     weth = await ethers.getContractAt('IERC20', addresses.tokens.WETH);
   });
 
-  describe('Garden construction', async function () {
+  describe.only('Garden construction', async function () {
     it('should have expected properties upon deployment', async function () {
       expect(await garden1.totalContributors()).to.equal(1);
       expect(await garden1.creator()).to.equal(await signer1.getAddress());

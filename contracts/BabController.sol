@@ -246,7 +246,7 @@ contract BabController is OwnableUpgradeable, IBabController {
         require(!isGarden[newGarden], 'Garden already exists');
         isGarden[newGarden] = true;
         gardens.push(newGarden);
-        IGarden(newGarden).deposit{value: msg.value}(_initialContribution, _initialContribution, msg.sender);
+        IGarden(newGarden).deposit{value: msg.value}(_initialContribution, _initialContribution, msg.sender, true);
         emit GardenAdded(newGarden, msg.sender);
         return newGarden;
     }

@@ -238,7 +238,7 @@ describe('BabController', function () {
       await babController.connect(owner).setPauseGuardian(signer1.address);
       await expect(babController.connect(signer1).setGlobalPause(true)).to.be.not.reverted;
       await expect(
-        garden1.connect(signer1).deposit(ethers.utils.parseEther('1'), 1, signer1.getAddress(), {
+        garden1.connect(signer1).deposit(ethers.utils.parseEther('1'), 1, signer1.getAddress(), false,{
           value: ethers.utils.parseEther('1'),
         }),
       ).to.be.revertedWith('revert BAB#083');
