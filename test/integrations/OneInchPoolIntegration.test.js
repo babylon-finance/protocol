@@ -67,7 +67,6 @@ describe('OneInchPoolIntegrationTest', function () {
         .deposit(
           [ethers.utils.parseEther('0.1'), ethers.utils.parseEther('100')],
           [ethers.utils.parseEther('0'), ethers.utils.parseEther('95')],
-          false,
           {
             value: ethers.utils.parseEther('0.1'),
           },

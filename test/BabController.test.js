@@ -248,14 +248,14 @@ describe('BabController', function () {
       await expect(babController.connect(signer1).setSomePause([garden1.address], true)).to.be.not.reverted;
       const signer1Garden2Balance = await garden2.balanceOf(signer1.address);
       await expect(
-        garden2.connect(signer1).deposit(ethers.utils.parseEther('1'), 1, signer1.getAddress(), {
+        garden2.connect(signer1).deposit(ethers.utils.parseEther('1'), 1, signer1.getAddress(), false, {
           value: ethers.utils.parseEther('1'),
         }),
       ).to.be.not.reverted;
       const signer1Garden2Balance2 = await garden2.balanceOf(signer1.address);
       expect(signer1Garden2Balance2.sub(signer1Garden2Balance)).to.equal(ethers.utils.parseEther('1'));
       await expect(
-        garden1.connect(signer1).deposit(ethers.utils.parseEther('1'), 1, signer1.getAddress(), {
+        garden1.connect(signer1).deposit(ethers.utils.parseEther('1'), 1, signer1.getAddress(), false, {
           value: ethers.utils.parseEther('1'),
         }),
       ).to.be.revertedWith('revert BAB#083');
@@ -297,20 +297,20 @@ describe('BabController', function () {
       await expect(babController.connect(signer1).setSomePause([garden1.address], true)).to.be.not.reverted;
       const signer1Garden2Balance = await garden2.balanceOf(signer1.address);
       await expect(
-        garden2.connect(signer1).deposit(ethers.utils.parseEther('1'), 1, signer1.getAddress(), {
+        garden2.connect(signer1).deposit(ethers.utils.parseEther('1'), 1, signer1.getAddress(), false, {
           value: ethers.utils.parseEther('1'),
         }),
       ).to.be.not.reverted;
       const signer1Garden2Balance2 = await garden2.balanceOf(signer1.address);
       expect(signer1Garden2Balance2.sub(signer1Garden2Balance)).to.equal(ethers.utils.parseEther('1'));
       await expect(
-        garden1.connect(signer1).deposit(ethers.utils.parseEther('1'), 1, signer1.getAddress(), {
+        garden1.connect(signer1).deposit(ethers.utils.parseEther('1'), 1, signer1.getAddress(), false, {
           value: ethers.utils.parseEther('1'),
         }),
       ).to.be.revertedWith('revert BAB#083');
       await babController.connect(owner).setSomePause([garden1.address], false);
       await expect(
-        garden1.connect(signer1).deposit(ethers.utils.parseEther('1'), 1, signer1.getAddress(), {
+        garden1.connect(signer1).deposit(ethers.utils.parseEther('1'), 1, signer1.getAddress(), false, {
           value: ethers.utils.parseEther('1'),
         }),
       ).to.not.be.reverted;
