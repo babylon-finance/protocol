@@ -181,13 +181,13 @@ describe('Garden', function () {
         await garden1.connect(signer3).deposit(ethers.utils.parseEther('1'), 1, signer3.getAddress(), true, {
           value: ethers.utils.parseEther('1'),
         });
-        expect(await gardenNFT.balanceOf(signer3.address)).to.eq(1) ;
+        expect(await gardenNFT.balanceOf(signer3.address)).to.eq(1);
       });
       it('does NOT mint an NFT if NOT asked', async function () {
         await garden1.connect(signer3).deposit(ethers.utils.parseEther('1'), 1, signer3.getAddress(), false, {
           value: ethers.utils.parseEther('1'),
         });
-        expect(await gardenNFT.balanceOf(signer3.address)).to.eq(0) ;
+        expect(await gardenNFT.balanceOf(signer3.address)).to.eq(0);
       });
     });
 
