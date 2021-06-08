@@ -143,7 +143,6 @@ contract BabControllerV2Mock is OwnableUpgradeable {
         bablMiningProgramEnabled = false;
         guardianGlobalPaused = false;
 
-
         uniswapFactory = 0x1F98431c8aD98523631AE4a59f267346ea31F984;
 
         strategistProfitPercentage = 10e16;

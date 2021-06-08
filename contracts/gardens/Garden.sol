@@ -729,7 +729,6 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
     function _onlyUnpaused() private view {
         // Do not execute if Globally or individually paused
         _require(!IBabController(controller).isPaused(address(this)), Errors.ONLY_UNPAUSED);
-
     }
 
     /**
