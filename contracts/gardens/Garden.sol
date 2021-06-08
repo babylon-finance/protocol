@@ -295,12 +295,13 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
      * @param _reserveAssetQuantity  Quantity of the reserve asset that are received
      * @param _minGardenTokenReceiveQuantity   Min quantity of Garden token to receive after issuance
      * @param _to                   Address to mint Garden tokens to
+     * @param _mintNft              Whether to mint NFT or not
      */
     function deposit(
         uint256 _reserveAssetQuantity,
         uint256 _minGardenTokenReceiveQuantity,
         address _to,
-        bool mintNFT
+        bool _mintNft
     ) external payable override nonReentrant {
         _onlyActive();
         _require(
@@ -342,7 +343,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         principal = principal.add(_reserveAssetQuantity);
 
         // Mint the garden NFT
-        if (mintNFT) {
+        if (_mintNft) {
             IGardenNFT(IBabController(controller).gardenNFT()).grantGardenNFT(_to);
         }
 
