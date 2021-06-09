@@ -134,7 +134,7 @@ describe('IshtarGate', function () {
       const gardens = await babController.getGardens();
       const newGarden = await ethers.getContractAt('Garden', gardens[gardens.length - 1]);
       await expect(
-        newGarden.connect(signer2).deposit(ethers.utils.parseEther('1'), 1, signer3.getAddress(), {
+        newGarden.connect(signer2).deposit(ethers.utils.parseEther('1'), 1, signer3.getAddress(), false, {
           value: ethers.utils.parseEther('1'),
         }),
       ).not.to.be.reverted;
@@ -205,7 +205,7 @@ describe('IshtarGate', function () {
       const gardens = await babController.getGardens();
       const newGarden = await ethers.getContractAt('Garden', gardens[gardens.length - 1]);
       await ishtarGate.connect(signer2).setGardenAccess(signer1.address, newGarden.address, 3, { gasPrice: 0 });
-      await newGarden.connect(signer1).deposit(ethers.utils.parseEther('1'), 1, signer1.getAddress(), {
+      await newGarden.connect(signer1).deposit(ethers.utils.parseEther('1'), 1, signer1.getAddress(), false, {
         value: ethers.utils.parseEther('1'),
       });
       await expect(
@@ -263,7 +263,7 @@ describe('IshtarGate', function () {
 
       await ishtarGate.connect(signer1).setGardenAccess(signer3.address, newGarden.address, 1, { gasPrice: 0 });
 
-      await newGarden.connect(signer3).deposit(ethers.utils.parseEther('1'), 1, signer3.getAddress(), {
+      await newGarden.connect(signer3).deposit(ethers.utils.parseEther('1'), 1, signer3.getAddress(), false, {
         value: ethers.utils.parseEther('1'),
       });
     });
@@ -291,7 +291,7 @@ describe('IshtarGate', function () {
       const newGarden = await ethers.getContractAt('Garden', gardens[gardens.length - 1]);
 
       await expect(
-        newGarden.connect(signer3).deposit(ethers.utils.parseEther('1'), 1, signer3.getAddress(), {
+        newGarden.connect(signer3).deposit(ethers.utils.parseEther('1'), 1, signer3.getAddress(), false, {
           value: ethers.utils.parseEther('1'),
         }),
       ).to.be.reverted;
@@ -346,7 +346,7 @@ describe('IshtarGate', function () {
         .connect(signer1)
         .grantGardenAccessBatch(newGarden.address, [signer3.address], [1], { gasPrice: 0 });
 
-      await newGarden.connect(signer3).deposit(ethers.utils.parseEther('1'), 1, signer3.getAddress(), {
+      await newGarden.connect(signer3).deposit(ethers.utils.parseEther('1'), 1, signer3.getAddress(), false, {
         value: ethers.utils.parseEther('1'),
       });
     });

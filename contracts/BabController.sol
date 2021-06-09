@@ -151,8 +151,8 @@ contract BabController is OwnableUpgradeable, IBabController {
 
     uint256 public override protocolPerformanceFee; // 5% (0.01% = 1e14, 1% = 1e16) on profits
     uint256 public override protocolManagementFee; // 0.5% (0.01% = 1e14, 1% = 1e16)
-    uint256 public override protocolDepositGardenTokenFee; // 0 (0.01% = 1e14, 1% = 1e16)
-    uint256 public override protocolWithdrawalGardenTokenFee; // 0 (0.01% = 1e14, 1% = 1e16)
+    uint256 private protocolDepositGardenTokenFee; // 0 (0.01% = 1e14, 1% = 1e16)
+    uint256 private protocolWithdrawalGardenTokenFee; // 0 (0.01% = 1e14, 1% = 1e16)
 
     // Maximum number of contributors per garden
     uint256 public override maxContributorsPerGarden;
@@ -242,7 +242,7 @@ contract BabController is OwnableUpgradeable, IBabController {
         require(!isGarden[newGarden], 'Garden already exists');
         isGarden[newGarden] = true;
         gardens.push(newGarden);
-        IGarden(newGarden).deposit{value: msg.value}(_initialContribution, _initialContribution, msg.sender);
+        IGarden(newGarden).deposit{value: msg.value}(_initialContribution, _initialContribution, msg.sender, true);
         emit GardenAdded(newGarden, msg.sender);
         return newGarden;
     }

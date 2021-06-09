@@ -48,13 +48,13 @@ describe('KyberTradeIntegration', function () {
     });
 
     it('trade weth to dai', async function () {
-      await garden1.connect(signer3).deposit(ethers.utils.parseEther('2'), 1, signer3.getAddress(), {
+      await garden1.connect(signer3).deposit(ethers.utils.parseEther('2'), 1, signer3.getAddress(), false, {
         value: ethers.utils.parseEther('2'),
       });
-      await garden1.connect(signer1).deposit(ethers.utils.parseEther('2'), 1, signer1.getAddress(), {
+      await garden1.connect(signer1).deposit(ethers.utils.parseEther('2'), 1, signer1.getAddress(), false, {
         value: ethers.utils.parseEther('2'),
       });
-      await garden1.connect(signer2).deposit(ethers.utils.parseEther('2'), 1, signer2.getAddress(), {
+      await garden1.connect(signer2).deposit(ethers.utils.parseEther('2'), 1, signer2.getAddress(), false, {
         value: ethers.utils.parseEther('2'),
       });
       expect(await wethToken.balanceOf(garden1.address)).to.equal(ethers.utils.parseEther('7'));

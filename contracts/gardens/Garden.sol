@@ -17,6 +17,7 @@
 
 pragma solidity 0.7.6;
 
+import 'hardhat/console.sol';
 import {Address} from '@openzeppelin/contracts/utils/Address.sol';
 import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import {SafeERC20} from '@openzeppelin/contracts/token/ERC20/SafeERC20.sol';
@@ -65,19 +66,12 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
     using SafeERC20 for IERC20;
 
     /* ============ Events ============ */
-    event GardenDeposit(
-        address indexed _to,
-        uint256 reserveToken,
-        uint256 reserveTokenQuantity,
-        uint256 protocolFees,
-        uint256 timestamp
-    );
+    event GardenDeposit(address indexed _to, uint256 reserveToken, uint256 reserveTokenQuantity, uint256 timestamp);
     event GardenWithdrawal(
         address indexed _from,
         address indexed _to,
         uint256 reserveToken,
         uint256 reserveTokenQuantity,
-        uint256 protocolFees,
         uint256 timestamp
     );
     event AddStrategy(address indexed _strategy, uint256 _expectedReturn);
@@ -301,11 +295,13 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
      * @param _reserveAssetQuantity  Quantity of the reserve asset that are received
      * @param _minGardenTokenReceiveQuantity   Min quantity of Garden token to receive after issuance
      * @param _to                   Address to mint Garden tokens to
+     * @param _mintNft              Whether to mint NFT or not
      */
     function deposit(
         uint256 _reserveAssetQuantity,
         uint256 _minGardenTokenReceiveQuantity,
-        address _to
+        address _to,
+        bool _mintNft
     ) external payable override nonReentrant {
         _onlyActive();
         _require(
@@ -318,19 +314,41 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         if (maxDepositLimit > 0) {
             _require(principal.add(_reserveAssetQuantity) <= maxDepositLimit, Errors.MAX_DEPOSIT_LIMIT);
         }
-        _require(totalContributors <= maxContributors, Errors.MAX_CONTRIBUTORS);
-        _receiveReserveAsset(_reserveAssetQuantity);
 
-        (uint256 protocolFees, uint256 netFlowQuantity) = _getFees(_reserveAssetQuantity, true);
+        _require(totalContributors <= maxContributors, Errors.MAX_CONTRIBUTORS);
+        _require(_reserveAssetQuantity >= minContribution, Errors.MIN_CONTRIBUTION);
+
+        // If reserve asset is WETH wrap it
+        uint256 reserveAssetBalance = IERC20(reserveAsset).balanceOf(address(this));
+
+        if (reserveAsset == WETH && msg.value > 0) {
+            IWETH(WETH).deposit{value: msg.value}();
+        } else {
+            // Transfer ERC20 to the garden
+            IERC20(reserveAsset).safeTransferFrom(msg.sender, address(this), _reserveAssetQuantity);
+        }
+        // Make sure we received the reserve asset
+        _require(
+            IERC20(reserveAsset).balanceOf(address(this)).sub(reserveAssetBalance) == _reserveAssetQuantity,
+            Errors.MSG_VALUE_DO_NOT_MATCH
+        );
 
         // gardenTokenQuantity has to be at least _minGardenTokenReceiveQuantity
-        _require(netFlowQuantity >= _minGardenTokenReceiveQuantity, Errors.MIN_TOKEN_SUPPLY);
+        _require(_reserveAssetQuantity >= _minGardenTokenReceiveQuantity, Errors.MIN_TOKEN_SUPPLY);
 
-        // Send Protocol Fee
-        _payProtocolFeeFromGarden(reserveAsset, protocolFees);
+        uint256 previousBalance = balanceOf(_to);
 
-        // Mint tokens
-        _mintGardenTokens(_to, netFlowQuantity, principal.add(netFlowQuantity), protocolFees);
+        _mint(_to, getGardenTokenMintQuantity(_reserveAssetQuantity, true));
+        _updateContributorDepositInfo(_to, previousBalance);
+        principal = principal.add(_reserveAssetQuantity);
+
+        // Mint the garden NFT
+        if (_mintNft) {
+            IGardenNFT(IBabController(controller).gardenNFT()).grantGardenNFT(_to);
+        }
+
+        _require(totalSupply() > 0, Errors.MIN_LIQUIDITY);
+        emit GardenDeposit(_to, msg.value, _reserveAssetQuantity, block.timestamp);
 
         // Check that total supply is greater than min supply needed for issuance
         _require(totalSupply() >= minGardenTokenSupply, Errors.MIN_TOKEN_SUPPLY);
@@ -657,10 +675,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         override
         returns (uint256)
     {
-        (, uint256 netReserveFlows) =
-            _getFees(_getWithdrawalReserveQuantity(reserveAsset, _gardenTokenQuantity), false);
-
-        return netReserveFlows;
+        return _getWithdrawalReserveQuantity(reserveAsset, _gardenTokenQuantity);
     }
 
     /**
@@ -745,29 +760,6 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
     function _onlyActive() private view {
         _onlyUnpaused();
         _require(active, Errors.ONLY_ACTIVE);
-    }
-
-    /**
-     * Function that mints the appropriate garden tokens along with the Garden NFT
-     * @param _to                              Address to mint the tokens
-     * @param _reserveAssetQuantity            Amount of garden tokens
-     * @param _newPrincipal                    New principal for that user
-     * @param _protocolFees                    Protocol Fees Paid
-     */
-    function _mintGardenTokens(
-        address _to,
-        uint256 _reserveAssetQuantity,
-        uint256 _newPrincipal,
-        uint256 _protocolFees
-    ) private {
-        uint256 previousBalance = balanceOf(_to);
-        _mint(_to, getGardenTokenMintQuantity(_reserveAssetQuantity, true));
-        _updateContributorDepositInfo(_to, previousBalance);
-        principal = _newPrincipal;
-        // Mint the garden NFT
-        IGardenNFT(IBabController(controller).gardenNFT()).grantGardenNFT(_to);
-        _require(totalSupply() > 0, Errors.MIN_LIQUIDITY);
-        emit GardenDeposit(_to, msg.value, _reserveAssetQuantity, _protocolFees, block.timestamp);
     }
 
     /**
@@ -884,29 +876,24 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
             Errors.DEPOSIT_HARDLOCK
         );
         _reenableReserveForStrategies();
-        uint256 reserveAssetQuantity = _getWithdrawalReserveQuantity(reserveAsset, _gardenTokenQuantity);
+        uint256 outflow = _getWithdrawalReserveQuantity(reserveAsset, _gardenTokenQuantity);
 
-        (uint256 protocolFees, uint256 netFlowQuantity) = _getFees(reserveAssetQuantity, false);
-
-        _require(_canWithdrawReserveAmount(msg.sender, netFlowQuantity), Errors.MIN_LIQUIDITY);
+        _require(_canWithdrawReserveAmount(msg.sender, outflow), Errors.MIN_LIQUIDITY);
 
         // Check that new supply is more than min supply needed for withdrawal
         // Note: A min supply amount is needed to avoid division by 0 when withdrawaling garden token to 0
         _require(totalSupply().sub(_gardenTokenQuantity) >= minGardenTokenSupply, Errors.MIN_TOKEN_SUPPLY);
-        _require(netFlowQuantity >= _minReserveReceiveQuantity, Errors.MIN_TOKEN_SUPPLY);
+        _require(outflow >= _minReserveReceiveQuantity, Errors.MIN_TOKEN_SUPPLY);
 
         _burn(msg.sender, _gardenTokenQuantity);
-        _safeSendReserveAsset(msg.sender, netFlowQuantity);
-        _updateContributorWithdrawalInfo(netFlowQuantity);
-        _payProtocolFeeFromGarden(reserveAsset, protocolFees);
-
-        uint256 outflow = netFlowQuantity.add(protocolFees);
+        _safeSendReserveAsset(msg.sender, outflow);
+        _updateContributorWithdrawalInfo(outflow);
 
         // Required withdrawable quantity is greater than existing collateral
         _require(principal >= outflow, Errors.BALANCE_TOO_LOW);
         principal = principal.sub(outflow);
 
-        emit GardenWithdrawal(msg.sender, _to, netFlowQuantity, _gardenTokenQuantity, protocolFees, block.timestamp);
+        emit GardenWithdrawal(msg.sender, _to, outflow, _gardenTokenQuantity, block.timestamp);
     }
 
     function _safeSendReserveAsset(address payable _to, uint256 _amount) private {
@@ -922,46 +909,6 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
             // Send reserve asset
             IERC20(reserveAsset).safeTransfer(_to, _amount);
         }
-    }
-
-    function _receiveReserveAsset(uint256 _reserveAssetQuantity) private {
-        _require(_reserveAssetQuantity >= minContribution, Errors.MIN_CONTRIBUTION);
-        // If reserve asset is WETH wrap it
-        uint256 reserveAssetBalance = IERC20(reserveAsset).balanceOf(address(this));
-        if (reserveAsset == WETH && msg.value > 0) {
-            IWETH(WETH).deposit{value: msg.value}();
-        } else {
-            // Transfer ERC20 to the garden
-            IERC20(reserveAsset).safeTransferFrom(msg.sender, address(this), _reserveAssetQuantity);
-        }
-        // Make sure we received the reserve asset
-        _require(
-            IERC20(reserveAsset).balanceOf(address(this)).sub(reserveAssetBalance) == _reserveAssetQuantity,
-            Errors.MSG_VALUE_DO_NOT_MATCH
-        );
-    }
-
-    /**
-     * Returns the fees attributed to the manager and the protocol. The fees are calculated as follows:
-     *
-     * Protocol Fee = (% direct fee %) * reserveAssetQuantity
-     *
-     * @param _reserveAssetQuantity         Quantity of reserve asset to calculate fees from
-     * @param _isDeposit                    Boolean that is true when it is a deposit
-     *
-     * @return  uint256                     Fees paid to the protocol in reserve asset
-     * @return  uint256                     Net reserve to user net of fees
-     */
-    function _getFees(uint256 _reserveAssetQuantity, bool _isDeposit) private view returns (uint256, uint256) {
-        // Get protocol fee percentages
-        uint256 protocolFeePercentage =
-            _isDeposit
-                ? IBabController(controller).protocolDepositGardenTokenFee()
-                : IBabController(controller).protocolWithdrawalGardenTokenFee();
-
-        // Calculate total notional fees
-        uint256 protocolFees = protocolFeePercentage.preciseMul(_reserveAssetQuantity);
-        return (protocolFees, _reserveAssetQuantity.sub(protocolFees));
     }
 
     function _getWithdrawalReserveQuantity(address _reserveAsset, uint256 _gardenTokenQuantity)
