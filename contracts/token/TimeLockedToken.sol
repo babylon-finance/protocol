@@ -117,12 +117,6 @@ abstract contract TimeLockedToken is VoteToken {
     /// @notice A record of token owners under vesting conditions for each account, by index
     mapping(address => VestedToken) public vestedToken;
 
-    // vesting duration for Team Members and Advisors
-    uint256 private teamVesting = 365 days * 4;
-
-    // vesting duration for Investors
-    uint256 private investorVesting = 365 days * 3;
-
     // address of Time Lock Registry contract
     IBabController public controller;
 

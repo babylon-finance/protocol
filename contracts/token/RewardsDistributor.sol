@@ -434,12 +434,14 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
             uint256 power
         )
     {
+        ProtocolPerTimestamp storage protocolCheckpoint = protocolPerTimestamp[_time];
+
         return (
-            protocolPerTimestamp[_time].principal,
-            protocolPerTimestamp[_time].time,
-            protocolPerTimestamp[_time].quarterBelonging,
-            protocolPerTimestamp[_time].timeListPointer,
-            protocolPerTimestamp[_time].power
+            protocolCheckpoint.principal,
+            protocolCheckpoint.time,
+            protocolCheckpoint.quarterBelonging,
+            protocolCheckpoint.timeListPointer,
+            protocolCheckpoint.power
         );
     }
 
@@ -458,11 +460,13 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
             uint96 supplyPerQuarter
         )
     {
+        ProtocolPerQuarter storage protocolCheckpoint = protocolPerQuarter[_num];
+
         return (
-            protocolPerQuarter[_num].quarterPrincipal,
-            protocolPerQuarter[_num].quarterNumber,
-            protocolPerQuarter[_num].quarterPower,
-            protocolPerQuarter[_num].supplyPerQuarter
+            protocolCheckpoint.quarterPrincipal,
+            protocolCheckpoint.quarterNumber,
+            protocolCheckpoint.quarterPower,
+            protocolCheckpoint.supplyPerQuarter
         );
     }
 
