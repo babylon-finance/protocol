@@ -108,6 +108,8 @@ interface IBabController {
 
     function setSomePause(address[] memory _address, bool _state) external returns (bool);
 
+    function isPaused(address _contract) external view returns (bool);
+
     function priceOracle() external view returns (address);
 
     function gardenValuer() external view returns (address);

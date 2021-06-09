@@ -316,44 +316,6 @@ contract BabController is OwnableUpgradeable, IBabController {
     }
 
     /**
-     * PRIVILEGED GOVERNANCE FUNCTION. Allows a pause guardian
-     */
-    function setPauseGuardian(address _guardian) external override {
-        require(
-            msg.sender == guardian || msg.sender == owner(),
-            'only pause guardian and owner can update pause guardian'
-        );
-        // Save current value for inclusion in log
-        address oldPauseGuardian = guardian;
-        // Store pauseGuardian with value newPauseGuardian
-        guardian = _guardian;
-        // Emit NewPauseGuardian(OldPauseGuardian, NewPauseGuardian)
-        emit NewPauseGuardian(oldPauseGuardian, _guardian);
-    }
-
-    function setGlobalPause(bool _state) external override returns (bool) {
-        require(msg.sender == guardian || msg.sender == owner(), 'only pause guardian and owner can pause globally');
-        require(msg.sender == owner() || _state == true, 'only admin can unpause');
-
-        guardianGlobalPaused = _state;
-        emit ActionPaused('Guardian global pause', _state);
-        return _state;
-    }
-
-    function setSomePause(address[] memory _address, bool _state) external override returns (bool) {
-        require(
-            msg.sender == guardian || msg.sender == owner(),
-            'only pause guardian and owner can pause individually'
-        );
-        require(msg.sender == owner() || _state == true, 'only admin can unpause');
-        for (uint256 i = 0; i < _address.length; i++) {
-            guardianPaused[_address[i]] = _state;
-            emit ActionPausedIndividually('Guardian individual pause', _address[i], _state);
-        }
-        return _state;
-    }
-
-    /**
      * PRIVILEGED GOVERNANCE FUNCTION. Change the max number of contributors for new Gardens since the change
      */
     function setMaxContributorsPerGarden(uint256 _newMax) external override onlyOwner {
@@ -674,6 +636,58 @@ contract BabController is OwnableUpgradeable, IBabController {
         emit LiquidityMinimumEdited(_reserve, _newMinLiquidityReserve);
     }
 
+    // ===========  Protocol security related Gov Functions ======
+
+    /**
+     * PRIVILEGED GOVERNANCE FUNCTION. Set-up a pause guardian
+     * @param _guardian               Address of the guardian
+     */
+    function setPauseGuardian(address _guardian) external override {
+        require(
+            msg.sender == guardian || msg.sender == owner(),
+            'only pause guardian and owner can update pause guardian'
+        );
+        // Save current value for inclusion in log
+        address oldPauseGuardian = guardian;
+        // Store pauseGuardian with value newPauseGuardian
+        guardian = _guardian;
+        // Emit NewPauseGuardian(OldPauseGuardian, NewPauseGuardian)
+        emit NewPauseGuardian(oldPauseGuardian, _guardian);
+    }
+
+    /**
+     * PRIVILEGED GOVERNANCE FUNCTION. Pause the protocol globally in case of unexpected issue
+     * Only the governance can unpause it
+     * @param _state               True to pause, false to unpause.
+     */
+    function setGlobalPause(bool _state) external override returns (bool) {
+        require(msg.sender == guardian || msg.sender == owner(), 'only pause guardian and owner can pause globally');
+        require(msg.sender == owner() || _state == true, 'only admin can unpause');
+
+        guardianGlobalPaused = _state;
+        emit ActionPaused('Guardian global pause', _state);
+        return _state;
+    }
+
+    /**
+     * PRIVILEGED GOVERNANCE FUNCTION. Pause some smartcontracts in a batch process in case of unexpected issue
+     * Only the governance can unpause it
+     * @param _address             Addresses of protocol smartcontract to be paused
+     * @param _state               Boolean pause state
+     */
+    function setSomePause(address[] memory _address, bool _state) external override returns (bool) {
+        require(
+            msg.sender == guardian || msg.sender == owner(),
+            'only pause guardian and owner can pause individually'
+        );
+        require(msg.sender == owner() || _state == true, 'only admin can unpause');
+        for (uint256 i = 0; i < _address.length; i++) {
+            guardianPaused[_address[i]] = _state;
+            emit ActionPausedIndividually('Guardian individual pause', _address[i], _state);
+        }
+        return _state;
+    }
+
     /* ============ External Getter Functions ============ */
 
     function owner() public view override(IBabController, OwnableUpgradeable) returns (address) {
@@ -706,6 +720,14 @@ contract BabController is OwnableUpgradeable, IBabController {
 
     function isValidKeeper(address _keeper) external view override returns (bool) {
         return keeperList[_keeper];
+    }
+
+    /**
+     * Check whether or not there is a global pause or a specific pause of the provided contract address
+     * @param _contract               Smartcontract address to check for a global or specific pause
+     */
+    function isPaused(address _contract) external view override returns (bool) {
+        return guardianGlobalPaused || guardianPaused[_contract];
     }
 
     /**

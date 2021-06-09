@@ -137,7 +137,6 @@ contract StrategyV2Mock {
     uint256[] public tokenAmountsNeeded; // Amount of these positions
 
     uint256 public strategyRewards; // Rewards allocated for this strategy updated on finalized
-    uint256 public rewardsTotalOverhead; // Potential extra amount we are giving in BABL rewards
 
     // Voters mapped to their votes.
     mapping(address => int256) public votes;

@@ -18,7 +18,7 @@
 pragma solidity 0.7.6;
 import {Address} from '@openzeppelin/contracts/utils/Address.sol';
 import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
-
+import {ERC20} from '@openzeppelin/contracts/token/ERC20/ERC20.sol';
 import {Initializable} from '@openzeppelin/contracts-upgradeable/proxy/Initializable.sol';
 import {SafeERC20} from '@openzeppelin/contracts/token/ERC20/SafeERC20.sol';
 import {ReentrancyGuard} from '@openzeppelin/contracts/utils/ReentrancyGuard.sol';
@@ -151,11 +151,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
             garden.active() == true && IBabController(controller).isSystemContract(address(garden)),
             Errors.ONLY_ACTIVE_GARDEN
         );
-        _require(
-            !IBabController(controller).guardianGlobalPaused() &&
-                !IBabController(controller).guardianPaused(address(this)),
-            Errors.ONLY_UNPAUSED
-        );
+        _require(!IBabController(controller).isPaused(address(this)), Errors.ONLY_UNPAUSED);
         _;
     }
 
@@ -172,11 +168,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
 
     modifier onlyUnpaused() {
         // Do not execute if Globally or individually paused
-        _require(
-            !IBabController(controller).guardianGlobalPaused() &&
-                !IBabController(controller).guardianPaused(address(this)),
-            Errors.ONLY_UNPAUSED
-        );
+        _require(!IBabController(controller).isPaused(address(this)), Errors.ONLY_UNPAUSED);
         _;
     }
 
@@ -185,7 +177,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
     uint256 internal constant SLIPPAGE_ALLOWED = 5e16; // 1%
     uint256 internal constant HUNDRED_PERCENT = 1e18; // 100%
     uint256 internal constant MAX_CANDIDATE_PERIOD = 7 days;
-    uint256 internal constant ABSOLUTE_MIN_REBALANCE = 1e18;
+
     address private constant WETH = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
 
     // Max Operations
@@ -252,10 +244,11 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
     uint256[] public tokenAmountsNeeded; // Amount of these positions
 
     uint256 public override strategyRewards; // Rewards allocated for this strategy updated on finalized
-    uint256 public override rewardsTotalOverhead; // Potential extra amount we are giving in BABL rewards
 
     // Voters mapped to their votes.
     mapping(address => int256) public votes;
+
+    uint256 internal absoluteMinRebalance; // 1e18 or 1e6 in case of USDC
 
     /* ============ Constructor ============ */
 
@@ -295,7 +288,10 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
             _strategyDuration >= garden.minStrategyDuration() && _strategyDuration <= garden.maxStrategyDuration(),
             Errors.DURATION_MUST_BE_IN_RANGE
         );
-        _require(_minRebalanceCapital >= ABSOLUTE_MIN_REBALANCE, Errors.MIN_REBALANCE_CAPITAL);
+        uint256 tokenDecimals = ERC20(IGarden(_garden).reserveAsset()).decimals();
+        absoluteMinRebalance = 10**(tokenDecimals);
+
+        _require(_minRebalanceCapital >= absoluteMinRebalance, Errors.MIN_REBALANCE_CAPITAL);
         _require(_maxCapitalRequested >= _minRebalanceCapital, Errors.MAX_CAPITAL_REQUESTED);
 
         strategist = _strategist;
@@ -445,7 +441,6 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         finalized = true;
         active = false;
         exitedAt = block.timestamp;
-        updatedAt = exitedAt;
         // Mint NFT
         IStrategyNFT(IBabController(controller).strategyNFT()).grantStrategyNFT(strategist, _tokenURI);
         // Pay Keeper Fee
@@ -454,6 +449,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         _transferStrategyPrincipal(_fee);
         // Send rest to garden if any
         _sendReserveAssetToGarden();
+        updatedAt = exitedAt;
         emit StrategyFinalized(address(garden), capitalReturned, _fee, block.timestamp);
     }
 
@@ -467,14 +463,14 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         _require(_amountToUnwind <= capitalAllocated.sub(minRebalanceCapital), Errors.STRATEGY_NO_CAPITAL_TO_UNWIND);
         // Exits and enters the strategy
         _exitStrategy(_amountToUnwind.preciseDiv(capitalAllocated));
-        updatedAt = block.timestamp;
         capitalAllocated = capitalAllocated.sub(_amountToUnwind);
+
         // Removes protocol principal for the calculation of rewards
         if (hasMiningStarted) {
             IRewardsDistributor rewardsDistributor =
                 IRewardsDistributor(IBabController(controller).rewardsDistributor());
             // Only if the Mining program started on time for this strategy
-            rewardsDistributor.substractProtocolPrincipal(_amountToUnwind);
+            rewardsDistributor.updateProtocolPrincipal(_amountToUnwind, false);
         }
         // Send the amount back to the warden for the immediate withdrawal
         // TODO: Transfer the precise value; not entire balance
@@ -482,6 +478,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
             address(garden),
             IERC20(garden.reserveAsset()).balanceOf(address(this))
         );
+        updatedAt = block.timestamp;
         emit StrategyReduced(address(garden), _amountToUnwind, block.timestamp);
     }
 
@@ -751,20 +748,12 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         // Sets the executed timestamp on first execution
         if (executedAt == 0) {
             executedAt = block.timestamp;
-        } else {
-            // Updating allocation - we need to consider the difference for the calculation
-            // We control the potential overhead in BABL Rewards calculations to keep control
-            // and avoid distributing a wrong number (e.g. flash loans)
-            if (hasMiningStarted) {
-                // The Mining program has not started on time for this strategy
-                rewardsTotalOverhead = rewardsTotalOverhead.add(_capital.mul(block.timestamp.sub(updatedAt)));
-            }
         }
         if (hasMiningStarted) {
             IRewardsDistributor rewardsDistributor =
                 IRewardsDistributor(IBabController(controller).rewardsDistributor());
             // The Mining program has not started on time for this strategy
-            rewardsDistributor.addProtocolPrincipal(_capital);
+            rewardsDistributor.updateProtocolPrincipal(_capital, true);
         }
         garden.payKeeper(_keeper, _fee);
         updatedAt = block.timestamp;
@@ -879,11 +868,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         if (capitalReturned >= capitalAllocated) {
             // Send weth performance fee to the protocol
             protocolProfits = IBabController(controller).protocolPerformanceFee().preciseMul(profits);
-            IERC20(reserveAsset).safeTransferFrom(
-                address(this),
-                IBabController(controller).treasury(),
-                protocolProfits
-            );
+            IERC20(reserveAsset).safeTransfer(IBabController(controller).treasury(), protocolProfits);
             reserveAssetDelta = reserveAssetDelta.add(int256(-protocolProfits));
         } else {
             // Returns were negative
@@ -901,7 +886,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
             reserveAssetDelta = reserveAssetDelta.add(int256(burningAmount));
         }
         // Return the balance back to the garden
-        IERC20(reserveAsset).safeTransferFrom(address(this), address(garden), capitalReturned.sub(protocolProfits));
+        IERC20(reserveAsset).safeTransfer(address(garden), capitalReturned.sub(protocolProfits));
         // Start a redemption window in the garden with the capital plus the profits for the lps
         (, , uint256 lpsProfitSharing) = IBabController(controller).getProfitSharing();
         garden.startWithdrawalWindow(
@@ -915,7 +900,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
             IRewardsDistributor rewardsDistributor =
                 IRewardsDistributor(IBabController(controller).rewardsDistributor());
             // Only if the Mining program started on time for this strategy
-            rewardsDistributor.substractProtocolPrincipal(capitalAllocated);
+            rewardsDistributor.updateProtocolPrincipal(capitalAllocated, false);
             strategyRewards = uint256(rewardsDistributor.getStrategyRewards(address(this))); // Must be zero in case the mining program didnt started on time
         }
     }

@@ -176,13 +176,28 @@ contract RewardsDistributorV2Mock is OwnableUpgradeable {
     mapping(address => uint256[]) public gardenTimelist;
     mapping(address => uint256) public gardenPid;
 
+    struct StrategyPerQuarter {
+        // Acumulated strategy power per each quarter along the time
+        uint256 quarterPrincipal;
+        uint256 quarterNumber; // # Quarter since START_TIME
+        uint256 quarterPower; //  Accumulated strategy power for each quarter
+        bool initialized;
+    }
+    struct StrategyPricePerTokenUnit {
+        // Take control over the price per token changes along the time when normalizing into DAI
+        uint256 preallocated; // Strategy capital preallocated before each checkpoint
+        uint256 pricePerTokenUnit; // Last average price per allocated tokens per strategy normalized into DAI
+    }
+    mapping(address => mapping(uint256 => StrategyPerQuarter)) public strategyPerQuarter; // Acumulated strategy power per each quarter along the time
+    mapping(address => StrategyPricePerTokenUnit) public strategyPricePerTokenUnit; // Pro-rata oracle price allowing re-allocations and unwinding of any capital value
+
     /* ============ Constructor ============ */
 
     function initialize(TimeLockedToken _bablToken, IBabController _controller) public {
         OwnableUpgradeable.__Ownable_init();
 
-        require(address(_bablToken) != address(0), 'Token needs to exist');
-        require(address(_controller) != address(0), 'Controller needs to exist');
+        _require(address(_bablToken) != address(0), Errors.ADDRESS_IS_ZERO);
+        _require(address(_controller) != address(0), Errors.ADDRESS_IS_ZERO);
         babltoken = _bablToken;
         controller = _controller;
 

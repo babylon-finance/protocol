@@ -124,10 +124,4 @@ abstract contract Operation is IOperation {
         IPriceOracle oracle = IPriceOracle(IBabController(controller).priceOracle());
         return oracle.getPrice(_assetOne, _assetTwo);
     }
-
-    function _normalizeDecimals(address _asset, uint256 _quantity) internal view returns (uint256) {
-        uint8 tokenDecimals = ERC20(_asset).decimals();
-        require(tokenDecimals <= 18, 'Unsupported decimals');
-        return tokenDecimals != 18 ? _quantity.mul(10**(uint256(18).sub(tokenDecimals))) : _quantity;
-    }
 }
