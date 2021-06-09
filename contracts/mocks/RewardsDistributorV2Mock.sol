@@ -20,6 +20,8 @@ import 'hardhat/console.sol';
 import {TimeLockedToken} from '../token/TimeLockedToken.sol';
 
 import {OwnableUpgradeable} from '@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol';
+import {ReentrancyGuardUpgradeable} from '@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol';
+
 import {SafeMath} from '@openzeppelin/contracts/math/SafeMath.sol';
 import {Address} from '@openzeppelin/contracts/utils/Address.sol';
 import {SafeERC20} from '@openzeppelin/contracts/token/ERC20/SafeERC20.sol';
@@ -48,7 +50,7 @@ import {IPriceOracle} from '../interfaces/IPriceOracle.sol';
  * Rewards Distributor also is responsible for the calculation and delivery of other rewards as bonuses to specific profiles
  * which are actively contributing to the protocol growth and their communities (Garden creators, Strategists and Stewards).
  */
-contract RewardsDistributorV2Mock is OwnableUpgradeable {
+contract RewardsDistributorV2Mock is OwnableUpgradeable, ReentrancyGuardUpgradeable {
     using SafeMath for uint256;
     using SafeMath for int256;
     using PreciseUnitMath for uint256;

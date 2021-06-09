@@ -20,6 +20,7 @@ pragma solidity 0.7.6;
 import {TimeLockedToken} from './TimeLockedToken.sol';
 
 import {OwnableUpgradeable} from '@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol';
+import {ReentrancyGuardUpgradeable} from '@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol';
 import {SafeMath} from '@openzeppelin/contracts/math/SafeMath.sol';
 import {Address} from '@openzeppelin/contracts/utils/Address.sol';
 import {SafeERC20} from '@openzeppelin/contracts/token/ERC20/SafeERC20.sol';
@@ -49,7 +50,7 @@ import {IPriceOracle} from '../interfaces/IPriceOracle.sol';
  * Rewards Distributor also is responsible for the calculation and delivery of other rewards as bonuses to specific profiles
  * which are actively contributing to the protocol growth and their communities (Garden creators, Strategists and Stewards).
  */
-contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
+contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor, ReentrancyGuardUpgradeable {
     using SafeMath for uint256;
     using SafeMath for int256;
     using PreciseUnitMath for uint256;
@@ -326,7 +327,7 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
      * @param _to                Address to send the tokens to
      * @param _amount            Amount of tokens to send the address to
      */
-    function sendTokensToContributor(address _to, uint256 _amount) external override onlyMiningActive {
+    function sendTokensToContributor(address _to, uint256 _amount) external override onlyMiningActive nonReentrant {
         _require(controller.isSystemContract(msg.sender), Errors.NOT_A_SYSTEM_CONTRACT);
         uint96 amount = Safe3296.safe96(_amount, 'overflow 96 bits');
         _safeBABLTransfer(_to, amount);
