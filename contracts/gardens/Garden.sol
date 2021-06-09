@@ -990,7 +990,11 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
     /**
      * Updates the contributor info in the array
      */
-    function _updateContributorDepositInfo(address _contributor, uint256 previousBalance, uint256 _reserveAssetQuantity) private {
+    function _updateContributorDepositInfo(
+        address _contributor,
+        uint256 previousBalance,
+        uint256 _reserveAssetQuantity
+    ) private {
         Contributor storage contributor = contributors[_contributor];
         // If new contributor, create one, increment count, and set the current TS
         if (previousBalance == 0 || contributor.initialDepositAt == 0) {
