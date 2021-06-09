@@ -44,6 +44,7 @@ describe('Position testing', function () {
       expect(contributor[0]).to.equal(contributor[1]);
       expect(contributor[2]).to.equal(0);
       expect(contributor[3]).to.equal(0);
+      expect(contributor[5]).to.equal(ethers.utils.parseEther('1'));
 
       expect(await garden1.totalContributors()).to.equal(2);
       const wethPosition = await garden1.principal();
@@ -62,6 +63,7 @@ describe('Position testing', function () {
       contributor = await garden1.getContributor(signer3.address);
       expect(contributor[0]).to.not.equal(contributor[1]);
       expect(contributor[3]).to.equal(0);
+      expect(contributor[5]).to.equal(ethers.utils.parseEther('1.5'));
     });
 
     it('supply and balances update accordingly after deposits & withdraws', async function () {
