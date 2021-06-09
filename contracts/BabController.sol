@@ -178,10 +178,6 @@ contract BabController is OwnableUpgradeable, IBabController {
         protocolPerformanceFee = 5e16; // 5% (0.01% = 1e14, 1% = 1e16) on profits
         protocolDepositGardenTokenFee = 0; // 0% (0.01% = 1e14, 1% = 1e16) on profits
         protocolWithdrawalGardenTokenFee = 0; // 0% (0.01% = 1e14, 1% = 1e16) on profits
-        gardenTokensTransfersEnabled = false;
-        bablMiningProgramEnabled = false;
-        allowPublicGardens = false;
-        guardianGlobalPaused = false;
 
         uniswapFactory = 0x1F98431c8aD98523631AE4a59f267346ea31F984;
 
