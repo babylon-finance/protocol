@@ -98,6 +98,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         uint256 claimedBABL;
         uint256 claimedRewards;
         uint256 withdrawnSince;
+        uint256 totalDeposits;
     }
 
     /* ============ State Variables ============ */
@@ -339,7 +340,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         uint256 previousBalance = balanceOf(_to);
 
         _mint(_to, getGardenTokenMintQuantity(_reserveAssetQuantity, true));
-        _updateContributorDepositInfo(_to, previousBalance);
+        _updateContributorDepositInfo(_to, previousBalance, _reserveAssetQuantity);
         principal = principal.add(_reserveAssetQuantity);
 
         // Mint the garden NFT
@@ -658,7 +659,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
             contributor.claimedAt,
             contributor.claimedBABL,
             contributor.claimedRewards,
-            contributor.withdrawnSince
+            contributor.totalDeposits
         );
     }
 
@@ -931,7 +932,11 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
     /**
      * Updates the contributor info in the array
      */
-    function _updateContributorDepositInfo(address _contributor, uint256 previousBalance) private {
+    function _updateContributorDepositInfo(
+        address _contributor,
+        uint256 previousBalance,
+        uint256 _reserveAssetQuantity
+    ) private {
         Contributor storage contributor = contributors[_contributor];
         // If new contributor, create one, increment count, and set the current TS
         if (previousBalance == 0 || contributor.initialDepositAt == 0) {
@@ -940,7 +945,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
             contributor.initialDepositAt = block.timestamp;
         }
         // We make checkpoints around contributor deposits to avoid fast loans and give the right rewards afterwards
-
+        contributor.totalDeposits = contributor.totalDeposits.add(_reserveAssetQuantity);
         contributor.lastDepositAt = block.timestamp;
         rewardsDistributor.updateGardenPowerAndContributor(address(this), _contributor, previousBalance, true, pid);
         pid++;
@@ -956,6 +961,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
             contributor.lastDepositAt = 0;
             contributor.initialDepositAt = 0;
             contributor.withdrawnSince = 0;
+            contributor.totalDeposits = 0;
             totalContributors = totalContributors.sub(1);
         } else {
             contributor.withdrawnSince = contributor.withdrawnSince.add(_netflowQuantity);

@@ -57,8 +57,7 @@ contract LendOperation is Operation {
         IGarden _garden,
         address, /* _integration */
         uint256 /* _index */
-    ) external view override onlyStrategy {
-    }
+    ) external view override onlyStrategy {}
 
     /**
      * Executes the lend operation
