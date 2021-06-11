@@ -100,8 +100,8 @@ contract RewardsDistributorV2Mock is OwnableUpgradeable {
     address private constant DAI = 0x6B175474E89094C44Da98b954EedeAC495271d0F;
 
     // Reentrancy guard countermeasure
-    uint256 private constant _NOT_ENTERED = 1;
-    uint256 private constant _ENTERED = 2;
+    uint256 private constant NOT_ENTERED = 1;
+    uint256 private constant ENTERED = 2;
 
     /* ============ Structs ============ */
 
@@ -196,7 +196,7 @@ contract RewardsDistributorV2Mock is OwnableUpgradeable {
     mapping(address => StrategyPricePerTokenUnit) public strategyPricePerTokenUnit; // Pro-rata oracle price allowing re-allocations and unwinding of any capital value
 
     // Reentrancy guard countermeasure
-    uint256 private _status;
+    uint256 private status;
 
     /* ============ Constructor ============ */
 
@@ -212,7 +212,7 @@ contract RewardsDistributorV2Mock is OwnableUpgradeable {
         (PROFIT_STRATEGIST_SHARE, PROFIT_STEWARD_SHARE, PROFIT_LP_SHARE) = controller.getProfitSharing();
         PROFIT_PROTOCOL_FEE = controller.protocolPerformanceFee();
 
-        _status = _NOT_ENTERED;
+        status = NOT_ENTERED;
     }
 
     /* ============ External Functions ============ */

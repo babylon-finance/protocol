@@ -114,13 +114,13 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
 
     modifier nonReentrant() {
         // On the first call to nonReentrant, _notEntered will be true
-        _require(_status != _ENTERED, Errors.REENTRANT_CALL);
+        _require(status != ENTERED, Errors.REENTRANT_CALL);
         // Any calls to nonReentrant after this point will fail
-        _status = _ENTERED;
+        status = ENTERED;
         _;
         // By storing the original value once again, a refund is triggered (see
         // https://eips.ethereum.org/EIPS/eip-2200)
-        _status = _NOT_ENTERED;
+        status = NOT_ENTERED;
     }
 
     /* ============ Constants ============ */
@@ -157,8 +157,8 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
     address private constant DAI = 0x6B175474E89094C44Da98b954EedeAC495271d0F;
 
     // Reentrancy guard countermeasure
-    uint256 private constant _NOT_ENTERED = 1;
-    uint256 private constant _ENTERED = 2;
+    uint256 private constant NOT_ENTERED = 1;
+    uint256 private constant ENTERED = 2;
 
     /* ============ Structs ============ */
 
@@ -252,7 +252,7 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
     mapping(address => StrategyPricePerTokenUnit) public strategyPricePerTokenUnit; // Pro-rata oracle price allowing re-allocations and unwinding of any capital value
 
     // Reentrancy guard countermeasure
-    uint256 private _status;
+    uint256 private status;
 
     /* ============ Constructor ============ */
 
@@ -267,7 +267,7 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         (PROFIT_STRATEGIST_SHARE, PROFIT_STEWARD_SHARE, PROFIT_LP_SHARE) = controller.getProfitSharing();
         PROFIT_PROTOCOL_FEE = controller.protocolPerformanceFee();
 
-        _status = _NOT_ENTERED;
+        status = NOT_ENTERED;
     }
 
     /* ============ External Functions ============ */
