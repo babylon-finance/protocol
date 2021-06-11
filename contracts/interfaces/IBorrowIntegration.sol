@@ -17,7 +17,6 @@
 */
 pragma solidity 0.7.6;
 
-
 /**
  * @title IBorrowIntegration
  * @author Babylon Finance

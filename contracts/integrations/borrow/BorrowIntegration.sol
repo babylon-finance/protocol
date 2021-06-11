@@ -52,19 +52,9 @@ abstract contract BorrowIntegration is BaseIntegration, ReentrancyGuard, IBorrow
 
     /* ============ Events ============ */
 
-    event AmountBorrowed(
-        IStrategy indexed strategy,
-        IGarden indexed garden,
-        address asset,
-        uint256 amount
-    );
+    event AmountBorrowed(IStrategy indexed strategy, IGarden indexed garden, address asset, uint256 amount);
 
-    event AmountRepaid(
-        IStrategy indexed strategy,
-        IGarden indexed garden,
-        address asset,
-        uint256 amount
-    );
+    event AmountRepaid(IStrategy indexed strategy, IGarden indexed garden, address asset, uint256 amount);
 
     /* ============ State Variables ============ */
     uint256 public override maxCollateralFactor;
@@ -101,7 +91,7 @@ abstract contract BorrowIntegration is BaseIntegration, ReentrancyGuard, IBorrow
      */
     function getBorrowBalance(
         address /* asset */
-    ) public view override virtual returns (uint256) {
+    ) public view virtual override returns (uint256) {
         require(false, 'This method must be overriden');
         return 0;
     }
@@ -333,6 +323,7 @@ abstract contract BorrowIntegration is BaseIntegration, ReentrancyGuard, IBorrow
         require(false, 'This method must be overriden');
         return 0;
     }
+
     /**
      * Get the remaining liquidity available to borrow
      *
