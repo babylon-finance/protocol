@@ -26,7 +26,7 @@ import {ERC20} from '@openzeppelin/contracts/token/ERC20/ERC20.sol';
 import '@uniswap/v3-core/contracts/interfaces/IUniswapV3Factory.sol';
 import '@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol';
 import '@uniswap/v3-core/contracts/libraries/TickMath.sol';
-import "@uniswap/v3-periphery/contracts/libraries/OracleLibrary.sol";
+import '@uniswap/v3-periphery/contracts/libraries/OracleLibrary.sol';
 
 import {SafeCast} from '@openzeppelin/contracts/utils/SafeCast.sol';
 import {PreciseUnitMath} from '../lib/PreciseUnitMath.sol';
@@ -93,13 +93,7 @@ contract UniswapTWAPV3 is Ownable, IOracleAdapter {
      * @param _tokenOut             Address of the second token
      * @return found               Whether or not the price as found
      */
-    function getPrice(address _tokenIn, address _tokenOut)
-        external
-        view
-        override
-        returns (bool found, uint256 price)
-    {
-
+    function getPrice(address _tokenIn, address _tokenOut) external view override returns (bool found, uint256 price) {
         int24 tick;
         bool found = false;
         // We try the low pool first
@@ -128,14 +122,16 @@ contract UniswapTWAPV3 is Ownable, IOracleAdapter {
         }
 
         int256 twapTick = OracleLibrary.consult(address(pool), SECONDS_GRANULARITY);
-        uint256 price =    OracleLibrary.getQuoteAtTick(
+        uint256 price =
+            OracleLibrary
+                .getQuoteAtTick(
                 int24(twapTick),
                 // because we use 1e18 as a precision unit
                 uint128(uint256(1e18).mul(10**(uint256(18).sub(ERC20(_tokenOut).decimals())))),
                 _tokenIn,
                 _tokenOut
             )
-            .div(10**(uint256(18).sub(ERC20(_tokenIn).decimals())));
+                .div(10**(uint256(18).sub(ERC20(_tokenIn).decimals())));
         return (true, price);
     }
 

@@ -25,7 +25,7 @@ import {SafeMath} from '@openzeppelin/contracts/math/SafeMath.sol';
 import {IBabController} from '../../interfaces/IBabController.sol';
 import {PreciseUnitMath} from '../../lib/PreciseUnitMath.sol';
 import {PassiveIntegration} from './PassiveIntegration.sol';
-import {IYearnRegistry } from '../../interfaces/external/yearn/IYearnRegistry.sol';
+import {IYearnRegistry} from '../../interfaces/external/yearn/IYearnRegistry.sol';
 import {IYearnVault} from '../../interfaces/external/yearn/IYearnVault.sol';
 
 /**
@@ -50,11 +50,7 @@ contract YearnVaultIntegration is PassiveIntegration {
      * @param _controller                   Address of the controller
      * @param _weth                         Address of the WETH ERC20
      */
-    constructor(
-        IBabController _controller,
-        address _weth
-    ) PassiveIntegration('yearnvaults', _weth, _controller) {
-    }
+    constructor(IBabController _controller, address _weth) PassiveIntegration('yearnvaults', _weth, _controller) {}
 
     /* ============ Internal Functions ============ */
 
