@@ -3,7 +3,53 @@ const { ethers } = require('hardhat');
 
 const addresses = require('../lib/addresses');
 const { TWAP_ORACLE_WINDOW, TWAP_ORACLE_GRANULARITY } = require('../lib/system.js');
+const { parse, from } = require('./utils/test-helpers');
 const { setupTests } = require('./fixtures/GardenFixture');
+
+const tokens = [
+  {
+    name: 'YFI',
+    tokenIn: addresses.tokens.WETH,
+    tokenOut: addresses.tokens.YFI,
+    value: parse('0.055723370908226538'),
+  },
+  {
+    name: 'WBTC',
+    tokenIn: addresses.tokens.WETH,
+    tokenOut: addresses.tokens.WBTC,
+    value: parse('0.071420821063921639'),
+  },
+  {
+    name: 'DAI',
+    tokenIn: addresses.tokens.WETH,
+    tokenOut: addresses.tokens.DAI,
+    value: parse('3939.015400039136715572'),
+  },
+  {
+    name: 'USDC',
+    tokenIn: addresses.tokens.WETH,
+    tokenOut: addresses.tokens.USDC,
+    value: parse('3959.165150489900928464'),
+  },
+  {
+    name: 'USDT',
+    tokenIn: addresses.tokens.WETH,
+    tokenOut: addresses.tokens.USDT,
+    value: parse('3972.251321495927553985'),
+  },
+  {
+    name: 'USDT inverse',
+    tokenIn: addresses.tokens.USDT,
+    tokenOut: addresses.tokens.WETH,
+    value: parse('0.000251746407531788'),
+  },
+  {
+    name: 'DAI inverse',
+    tokenIn: addresses.tokens.DAI,
+    tokenOut: addresses.tokens.WETH,
+    value: parse('0.000253870548459918'),
+  },
+];
 
 describe('PriceOracle', function () {
   let priceOracle;
@@ -65,36 +111,20 @@ describe('PriceOracle', function () {
   });
 
   describe('Uniswap TWAP V3', function () {
-    it('should get the price of YFI', async function () {
-      const { amountOut } = await univ3.getPrice(addresses.tokens.WETH, addresses.tokens.YFI);
-      expect(ethers.utils.formatEther(amountOut)).to.be.eq('0.05571996387116252');
-    });
-
-    it('should get the price of WBTC', async function () {
-      const { amountOut } = await univ3.getPrice(addresses.tokens.WETH, addresses.tokens.WBTC);
-      expect(ethers.utils.formatEther(amountOut)).to.be.eq('0.071417837761293314');
-    });
-
-    it('should get the price of DAI', async function () {
-      const { amountOut } = await univ3.getPrice(addresses.tokens.WETH, addresses.tokens.DAI);
-      expect(ethers.utils.formatEther(amountOut)).to.be.eq('3938.801407293532197958');
-    });
-
-    it('should get the price of USDC', async function () {
-      const { amountOut } = await univ3.getPrice(addresses.tokens.WETH, addresses.tokens.USDC);
-      expect(ethers.utils.formatEther(amountOut)).to.be.eq('3958.944346368296183367');
-    });
-
-    it('should get the price of DAI inverse', async function () {
-      const { amountOut } = await univ3.getPrice(addresses.tokens.DAI, addresses.tokens.WETH);
-      expect(ethers.utils.formatEther(amountOut)).to.be.eq('0.000253884341096326');
+    tokens.forEach(({ name, tokenIn, tokenOut, value }) => {
+      it(`should get the price of ${name}`, async function () {
+        const { amountOut } = await univ3.getPrice(tokenIn, tokenOut);
+        expect(amountOut).to.be.eq(value);
+      });
     });
   });
 
   describe('Price Oracle', function () {
-    it('should get the price of YFI', async function () {
-      const price = await priceOracle.connect(owner).getPrice(addresses.tokens.YFI, addresses.tokens.WETH);
-      expect(price).to.be.eq('17946888880119016864');
+    tokens.forEach(({ name, tokenIn, tokenOut, value }) => {
+      it(`should get the price of ${name}`, async function () {
+        const price = await priceOracle.connect(owner).getPrice(tokenIn, tokenOut);
+        expect(price).to.be.closeTo(value, value.div(50));
+      });
     });
   });
 });

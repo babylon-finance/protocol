@@ -944,16 +944,17 @@
   resolved "https://registry.yarnpkg.com/@uniswap/v3-core/-/v3-core-1.0.0.tgz#6c24adacc4c25dceee0ba3ca142b35adbd7e359d"
   integrity sha512-kSC4djMGKMHj7sLMYVnn61k9nu+lHjMIxgg9CDQT+s2QYLoA56GbSK9Oxr+qJXzzygbkrmuY6cwgP6cW2JXPFA==
 
-"@uniswap/v3-periphery@^1.0.0":
-  version "1.0.0"
-  resolved "https://registry.yarnpkg.com/@uniswap/v3-periphery/-/v3-periphery-1.0.0.tgz#8e789dcd70bdd06e01e21dd75372dc76ab38ea47"
-  integrity sha512-kRqUrjnyh+X1wJdSENPDFr9sjRVebv2KyLtfqDOPij0dXJ69GspFU2qrZXjouc6LYdkWG7x3fagiTlw0eGniYQ==
+"@uniswap/v3-periphery@^1.1.0":
+  version "1.1.0"
+  resolved "https://registry.yarnpkg.com/@uniswap/v3-periphery/-/v3-periphery-1.1.0.tgz#0afdf4d0bed536d06988a9d29f466c05f9f3286b"
+  integrity sha512-fZU0Ohf4uIpHxMEKuTjdjIPM/fWPh35m5sRAKo93RqAlwPD8UmMhngXEwcC4Hj8fz3bimmoY++2DiniGUVzpdQ==
   dependencies:
     "@openzeppelin/contracts" "3.4.1-solc-0.7-2"
     "@uniswap/lib" "^4.0.1-alpha"
     "@uniswap/v2-core" "1.0.1"
     "@uniswap/v3-core" "1.0.0"
     base64-sol "1.0.1"
+    hardhat-watcher "^2.1.1"
 
 "@vue/component-compiler-utils@^3.1.0":
   version "3.2.0"

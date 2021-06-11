@@ -45,4 +45,5 @@ module.exports = {
   mineInBlock,
   sleep,
   from: ethers.BigNumber.from,
+  parse: ethers.utils.parseEther,
 };

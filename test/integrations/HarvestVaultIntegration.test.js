@@ -61,18 +61,6 @@ describe('HarvestVaultIntegrationTest', function () {
     });
   });
 
-  describe('isInvestment', function () {
-    vaults.forEach((vault) => {
-      it(`check that ${vault} is a valid vault`, async function () {
-        expect(await harvestVaultIntegration.isInvestment(vault)).to.equal(true);
-      });
-    });
-
-    it('check that a vault is NOT valid', async function () {
-      await expect(harvestVaultIntegration.isInvestment(ADDRESS_ZERO)).to.be.revertedWith(/non-contract account/);
-    });
-  });
-
   describe('getPricePerShare', function () {
     it('get price per share', async function () {
       expect(await harvestVaultIntegration.getPricePerShare(daiVault.address)).to.equal('1040689410052141025');
@@ -93,10 +81,10 @@ describe('HarvestVaultIntegrationTest', function () {
 
   describe('enter and exit calldata', function () {
     [
-      '0xFE09e53A81Fe2808bc493ea64319109B5bAa573e', // WETH
-      '0xab7FA2B2985BCcfC13c6D86b1D5A17486ab1e04C', // DAI
-      '0xf0358e8c3CD5Fa238a29301d0bEa3D63A17bEdBE', // USDC
-      '0x5d9d25c7C457dD82fc8668FFC6B9746b674d4EcB', // WBTC
+      '0xFE09e53A81Fe2808bc493ea64319109B5bAa573e', // vWETH
+      '0xab7FA2B2985BCcfC13c6D86b1D5A17486ab1e04C', // vDAI
+      '0xf0358e8c3CD5Fa238a29301d0bEa3D63A17bEdBE', // vUSDC
+      '0x5d9d25c7C457dD82fc8668FFC6B9746b674d4EcB', // vWBTC
     ].forEach((vault) => {
       // other vaults fail due to `revert Price not found` error due to some assets being not tradable like LP tokens
       it(`can enter and exit the ${vault} vault`, async function () {

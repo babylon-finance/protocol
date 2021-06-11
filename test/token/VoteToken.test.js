@@ -3,6 +3,7 @@ const { ethers } = require('hardhat');
 
 const { ONE_ETH, ADDRESS_ZERO, ONE_DAY_IN_SECONDS } = require('../../lib/constants');
 const { increaseTime } = require('../utils/test-helpers');
+const { impersonateAddress } = require('../../lib/rpc');
 
 const { setupTests } = require('../fixtures/GardenFixture');
 
@@ -291,6 +292,70 @@ describe('VoteToken contract', function () {
       expect(ownerCheckpointVotes.toString()).to.be.equal(ownerBalance);
       expect(signer1CheckpointVotes.toString()).to.be.equal(ownerBalance);
       expect(signer1CheckpointVotes1.toString()).to.be.equal('0');
+    });
+    it('Should admit a delegation vote by a valid signature', async function () {
+      // Signature (signed by signer1.address) 0x90F79bf6EB2c4f870365E785982E1f101E93b906
+      // getChainId: 31337
+      // VoteToken address (address(this)): 0xf5059a5D33d5853360D16C683c16e67980206f36
+      // name(): "Babylon.Finance"
+      // first hash: 0x1cc69a52ef2ca6585e4baf6e8d879777b854021ae6d12254a47ef270890b204c"
+      // expiration 1653729994 28 may 2022
+      // nonce = 0
+      // delegatee 0x232775eAD28F0C0c750A097bA77302E7d84efd3B
+      // second hash : 0xd7ead66ff6bda9784088e2deae972d920c55438e8a76149605393615ba546a29
+      // Digest = 0x8ee6ffbe49082a199d8a8f83b9c5930af5e0a1078d8f84bfb51f3ed51f1342f9
+      // ethSignedMessageHash (digestHash): 0x59a7630a466378d7251a819c0577205d19cb5a5c11e0b3a296ef058eb0b7370d
+      // METAMASK:
+      // Signed message by Metamask = 0x0faca0d776b020b17fd3e802aea2ec5bd61cf8cc85ef27c4a8ad346edb50197f44e1158305a03d8d4958a8fa41cc44abbe741aa2e34d217d05e2b808a973168f1b
+      // Then splitting the signed message: Metamask
+      // bytes32: r 0x0faca0d776b020b17fd3e802aea2ec5bd61cf8cc85ef27c4a8ad346edb50197f
+      // bytes32: s 0x44e1158305a03d8d4958a8fa41cc44abbe741aa2e34d217d05e2b808a973168f
+      // uint8: v 27
+      // LEDGER + METAMASK:
+      // LEDGER signed: 0x3e9140970233a167713ba23429c8ecc48272a60dd6e422cf6f1cead2bbee87af27ca269d6b4e98d3220f62d9f5b99caf75003e7b88d66ab77000a48537fd9b0901
+      // LEDGER signer: 0x232775eAD28F0C0c750A097bA77302E7d84efd3B
+      // LEDGER message hash: 764B2DA7FCBD5AD5F4EF2F1E5AAE23944EC984FD9AAEE7338237255EE96758D7
+      // LEDGER message hash website: 47CCC7A49206F6F21AEEC9928F4AD5F7513304B08180BE46BBD46B65941D0F8F
+      // LEDGER signed split:
+      // bytes32: r 0x3e9140970233a167713ba23429c8ecc48272a60dd6e422cf6f1cead2bbee87af
+      // bytes32: s 0x27ca269d6b4e98d3220f62d9f5b99caf75003e7b88d66ab77000a48537fd9b09
+      // uint8: v 1
+      // TREZOR:
+      // Signer: 0x4632F4120DC68F225e7d24d973Ee57478389e9Fd
+      // Signed message: dbf6a54764d0aa63a21c5ca49aed69195c3531dde0755490817db0764e1a76d44e32366a19416b58cedbb014c4cc67c76294e51f03443f89ae958f77631915121b
+      // bytes32: r 0xdbf6a54764d0aa63a21c5ca49aed69195c3531dde0755490817db0764e1a76d4
+      // bytes32: s 0x4e32366a19416b58cedbb014c4cc67c76294e51f03443f89ae958f7763191512
+      // uint8: v 27
+      // Enable BABL token transfers
+      await bablToken.connect(owner).enableTokensTransfers();
+      await bablToken.connect(owner).transfer(signer1.address, ethers.utils.parseEther('100')); // Let's give stake to have the possibility to delegate
+      const signer1Balance = await bablToken.balanceOf(signer1.address);
+
+      const delegatee = '0x232775eAD28F0C0c750A097bA77302E7d84efd3B';
+      const nonce = 0; // It was signed using 0, it only works (and just once) with 0++ = 1
+      const expiry = 1653729994; // 28 may 2022
+      // METAMASK:
+      const v = '27';
+      const r = '0x0faca0d776b020b17fd3e802aea2ec5bd61cf8cc85ef27c4a8ad346edb50197f';
+      const s = '0x44e1158305a03d8d4958a8fa41cc44abbe741aa2e34d217d05e2b808a973168f';
+      // LEDGER + METAMASK
+      //const v = '1';
+      //const r = '0x3e9140970233a167713ba23429c8ecc48272a60dd6e422cf6f1cead2bbee87af';
+      //const s = '0x27ca269d6b4e98d3220f62d9f5b99caf75003e7b88d66ab77000a48537fd9b09';
+      // TREZOR
+      //const v = '27';
+      //const r = '0xdbf6a54764d0aa63a21c5ca49aed69195c3531dde0755490817db0764e1a76d4';
+      //const s = '0x4e32366a19416b58cedbb014c4cc67c76294e51f03443f89ae958f7763191512';
+      await bablToken.delegateBySig(delegatee, nonce, expiry, v, r, s, true);
+      const walletDelegatee = await impersonateAddress(delegatee);
+
+      const [, walletDelegateCheckpointVotes] = await bablToken.getCheckpoints(walletDelegatee.address, 0);
+      const signer1Delegatee = await bablToken.connect(signer1).getMyDelegatee();
+      const votesDelegatee = await bablToken.getCurrentVotes(walletDelegatee.address);
+
+      expect(signer1Delegatee).to.equal(delegatee);
+      expect(votesDelegatee).to.be.equal(signer1Balance);
+      expect(walletDelegateCheckpointVotes.toString()).to.be.equal(signer1Balance);
     });
   });
 });

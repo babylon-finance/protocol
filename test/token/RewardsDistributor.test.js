@@ -1027,7 +1027,7 @@ describe('BABL Rewards Distributor', function () {
 
       await ishtarGate.connect(signer1).setGardenAccess(signer3.address, daiGarden.address, 1, { gasPrice: 0 });
       await dai.connect(signer3).approve(daiGarden.address, ethers.utils.parseEther('500'), { gasPrice: 0 });
-      await daiGarden.connect(signer3).deposit(ethers.utils.parseEther('500'), 1, signer3.getAddress());
+      await daiGarden.connect(signer3).deposit(ethers.utils.parseEther('500'), 1, signer3.getAddress(), false);
 
       // Mining program has to be enabled before the strategy starts its execution
       await babController.connect(owner).enableBABLMiningProgram();
@@ -1104,7 +1104,7 @@ describe('BABL Rewards Distributor', function () {
 
       await ishtarGate.connect(signer1).setGardenAccess(signer3.address, usdcGarden.address, 1, { gasPrice: 0 });
       await usdc.connect(signer3).approve(usdcGarden.address, thousandUSDC, { gasPrice: 0 });
-      await usdcGarden.connect(signer3).deposit(thousandUSDC.div(2), 1, signer3.getAddress());
+      await usdcGarden.connect(signer3).deposit(thousandUSDC.div(2), 1, signer3.getAddress(), false);
 
       const supplyAfter = await usdcGarden.totalSupply();
 
@@ -1214,11 +1214,11 @@ describe('BABL Rewards Distributor', function () {
 
       await ishtarGate.connect(signer1).setGardenAccess(signer3.address, daiGarden.address, 1, { gasPrice: 0 });
       await dai.connect(signer3).approve(daiGarden.address, ethers.utils.parseEther('500'), { gasPrice: 0 });
-      await daiGarden.connect(signer3).deposit(ethers.utils.parseEther('500'), 1, signer3.getAddress());
+      await daiGarden.connect(signer3).deposit(ethers.utils.parseEther('500'), 1, signer3.getAddress(), false);
 
       await ishtarGate.connect(signer1).setGardenAccess(signer3.address, usdcGarden.address, 1, { gasPrice: 0 });
       await usdc.connect(signer3).approve(usdcGarden.address, thousandUSDC, { gasPrice: 0 });
-      await usdcGarden.connect(signer3).deposit(thousandUSDC.div(2), 1, signer3.getAddress());
+      await usdcGarden.connect(signer3).deposit(thousandUSDC.div(2), 1, signer3.getAddress(), false);
 
       // Mining program has to be enabled before the strategy starts its execution
       await babController.connect(owner).enableBABLMiningProgram();
@@ -1338,11 +1338,11 @@ describe('BABL Rewards Distributor', function () {
 
       await ishtarGate.connect(signer1).setGardenAccess(signer3.address, daiGarden.address, 1, { gasPrice: 0 });
       await dai.connect(signer3).approve(daiGarden.address, ethers.utils.parseEther('500'), { gasPrice: 0 });
-      await daiGarden.connect(signer3).deposit(ethers.utils.parseEther('500'), 1, signer3.getAddress());
+      await daiGarden.connect(signer3).deposit(ethers.utils.parseEther('500'), 1, signer3.getAddress(), false);
 
       await ishtarGate.connect(signer1).setGardenAccess(signer3.address, usdcGarden.address, 1, { gasPrice: 0 });
       await usdc.connect(signer3).approve(usdcGarden.address, thousandUSDC, { gasPrice: 0 });
-      await usdcGarden.connect(signer3).deposit(thousandUSDC.div(2), 1, signer3.getAddress());
+      await usdcGarden.connect(signer3).deposit(thousandUSDC.div(2), 1, signer3.getAddress(), false);
 
       // Mining program has to be enabled before the strategy starts its execution
       await babController.connect(owner).enableBABLMiningProgram();
@@ -1462,11 +1462,11 @@ describe('BABL Rewards Distributor', function () {
 
       await ishtarGate.connect(signer1).setGardenAccess(signer3.address, daiGarden.address, 1, { gasPrice: 0 });
       await dai.connect(signer3).approve(daiGarden.address, ethers.utils.parseEther('500'), { gasPrice: 0 });
-      await daiGarden.connect(signer3).deposit(ethers.utils.parseEther('500'), 1, signer3.getAddress());
+      await daiGarden.connect(signer3).deposit(ethers.utils.parseEther('500'), 1, signer3.getAddress(), false);
 
       await ishtarGate.connect(signer1).setGardenAccess(signer3.address, usdcGarden.address, 1, { gasPrice: 0 });
       await usdc.connect(signer3).approve(usdcGarden.address, thousandUSDC, { gasPrice: 0 });
-      await usdcGarden.connect(signer3).deposit(thousandUSDC.div(2), 1, signer3.getAddress());
+      await usdcGarden.connect(signer3).deposit(thousandUSDC.div(2), 1, signer3.getAddress(), false);
 
       // Mining program has to be enabled before the strategy starts its execution
       await babController.connect(owner).enableBABLMiningProgram();

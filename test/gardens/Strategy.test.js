@@ -514,7 +514,7 @@ describe('Strategy', function () {
       expect(await wethToken.balanceOf(garden1.address)).to.be.closeTo(ONE_ETH.mul(1), ONE_ETH.div(50));
 
       // add extra WETH to repay keeper
-      await garden1.connect(signer1).deposit(ONE_ETH.mul(2), 1, signer1.address, {
+      await garden1.connect(signer1).deposit(ONE_ETH.mul(2), 1, signer1.address, false, {
         value: ONE_ETH.mul(2),
       });
 

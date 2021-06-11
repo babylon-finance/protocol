@@ -57,9 +57,7 @@ contract LendOperation is Operation {
         IGarden _garden,
         address, /* _integration */
         uint256 /* _index */
-    ) external view override onlyStrategy {
-        require(_data != _garden.reserveAsset(), 'Receive token must be different');
-    }
+    ) external view override onlyStrategy {}
 
     /**
      * Executes the lend operation
