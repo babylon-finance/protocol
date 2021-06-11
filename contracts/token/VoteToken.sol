@@ -17,6 +17,7 @@
 
 pragma solidity 0.7.6;
 
+import 'hardhat/console.sol';
 import {ERC20} from '@openzeppelin/contracts/token/ERC20/ERC20.sol';
 import {IVoteToken} from '../interfaces/IVoteToken.sol';
 import {ReentrancyGuard} from '@openzeppelin/contracts/utils/ReentrancyGuard.sol';
@@ -112,15 +113,24 @@ abstract contract VoteToken is Context, ERC20, Ownable, IVoteToken, ReentrancyGu
         uint256 expiry,
         uint8 v,
         bytes32 r,
-        bytes32 s
+        bytes32 s,
+        bool prefix
     ) external override {
+        address signatory;
         bytes32 domainSeparator =
             keccak256(abi.encode(DOMAIN_TYPEHASH, keccak256(bytes(name())), getChainId(), address(this)));
         bytes32 structHash = keccak256(abi.encode(DELEGATION_TYPEHASH, delegatee, nonce, expiry));
         bytes32 digest = keccak256(abi.encodePacked('\x19\x01', domainSeparator, structHash));
-        address signatory = ecrecover(digest, v, r, s);
+        if (prefix) {
+            bytes32 digestHash = keccak256(abi.encodePacked('\x19Ethereum Signed Message:\n32', digest));
+            signatory = ecrecover(digestHash, v, r, s);
+        } else {
+            signatory = ecrecover(digest, v, r, s);
+        }
+
+        require(balanceOf(signatory) > 0, 'VoteToken::delegateBySig: invalid delegator');
         require(signatory != address(0), 'VoteToken::delegateBySig: invalid signature');
-        require(nonce == nonces[signatory].add(1), 'VoteToken::delegateBySig: invalid nonce');
+        require(nonce == nonces[signatory], 'VoteToken::delegateBySig: invalid nonce');
         nonces[signatory]++;
         require(block.timestamp <= expiry, 'VoteToken::delegateBySig: signature expired');
         return _delegate(signatory, delegatee);
