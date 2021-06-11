@@ -70,7 +70,6 @@ contract StrategyV2Mock {
     uint256 internal constant SLIPPAGE_ALLOWED = 5e16; // 1%
     uint256 internal constant HUNDRED_PERCENT = 1e18; // 100%
     uint256 internal constant MAX_CANDIDATE_PERIOD = 7 days;
-    uint256 internal constant ABSOLUTE_MIN_REBALANCE = 1e18;
     address private constant WETH = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
 
     // Max Operations
@@ -142,9 +141,9 @@ contract StrategyV2Mock {
     // Voters mapped to their votes.
     mapping(address => int256) public votes;
 
-    uint256 internal absoluteMinRebalance; // 1e18 or 1e6 in case of USDC
-
     uint256 public newVar;
+
+    uint256 internal absoluteMinRebalance; // 1e18 or 1e6 in case of USDC
 
     function initialize(
         address _strategist,
