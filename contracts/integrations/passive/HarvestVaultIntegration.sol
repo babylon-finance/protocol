@@ -54,10 +54,6 @@ contract HarvestVaultIntegration is PassiveIntegration {
 
     /* ============ Internal Functions ============ */
 
-    function _isInvestment(address _vault) internal view override returns (bool) {
-        return IHarvestVault(_vault).underlying() != address(0);
-    }
-
     function _getSpender(address _vault) internal pure override returns (address) {
         return _vault;
     }
@@ -104,7 +100,7 @@ contract HarvestVaultIntegration is PassiveIntegration {
         )
     {
         // Encode method data for Garden to invoke
-        bytes memory methodData = abi.encodeWithSignature('deposit(uint256)', _maxAmountIn);
+        bytes memory methodData = abi.encodeWithSelector(IHarvestVault.deposit.selector, _maxAmountIn);
 
         return (_investmentAddress, 0, methodData);
     }
@@ -139,7 +135,7 @@ contract HarvestVaultIntegration is PassiveIntegration {
         )
     {
         // Encode method data for Garden to invoke
-        bytes memory methodData = abi.encodeWithSignature('withdraw(uint256)', _investmentTokensIn);
+        bytes memory methodData = abi.encodeWithSelector(IHarvestVault.withdraw.selector, _investmentTokensIn);
 
         return (_investmentAddress, 0, methodData);
     }
