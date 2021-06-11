@@ -20,7 +20,6 @@ pragma solidity 0.7.6;
 import {TimeLockedToken} from './TimeLockedToken.sol';
 
 import {OwnableUpgradeable} from '@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol';
-import {ReentrancyGuardUpgradeable} from '@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol';
 import {SafeMath} from '@openzeppelin/contracts/math/SafeMath.sol';
 import {Address} from '@openzeppelin/contracts/utils/Address.sol';
 import {SafeERC20} from '@openzeppelin/contracts/token/ERC20/SafeERC20.sol';
@@ -50,7 +49,7 @@ import {IPriceOracle} from '../interfaces/IPriceOracle.sol';
  * Rewards Distributor also is responsible for the calculation and delivery of other rewards as bonuses to specific profiles
  * which are actively contributing to the protocol growth and their communities (Garden creators, Strategists and Stewards).
  */
-contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor, ReentrancyGuardUpgradeable {
+contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
     using SafeMath for uint256;
     using SafeMath for int256;
     using PreciseUnitMath for uint256;
@@ -111,6 +110,17 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor, Reentran
         // Do not execute if Globally or individually paused
         _require(!IBabController(controller).isPaused(address(this)), Errors.ONLY_UNPAUSED);
         _;
+    }
+
+    modifier nonReentrant() {
+        // On the first call to nonReentrant, _notEntered will be true
+        _require(_status != _ENTERED, Errors.REENTRANT_CALL);
+        // Any calls to nonReentrant after this point will fail
+        _status = _ENTERED;
+        _;
+        // By storing the original value once again, a refund is triggered (see
+        // https://eips.ethereum.org/EIPS/eip-2200)
+        _status = _NOT_ENTERED;
     }
 
     /* ============ Constants ============ */
@@ -237,6 +247,11 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor, Reentran
     mapping(address => mapping(uint256 => StrategyPerQuarter)) public strategyPerQuarter; // Acumulated strategy power per each quarter along the time
     mapping(address => StrategyPricePerTokenUnit) public strategyPricePerTokenUnit; // Pro-rata oracle price allowing re-allocations and unwinding of any capital value
 
+    uint256 private constant _NOT_ENTERED = 1;
+    uint256 private constant _ENTERED = 2;
+
+    uint256 private _status;
+
     /* ============ Constructor ============ */
 
     function initialize(TimeLockedToken _bablToken, IBabController _controller) public {
@@ -249,6 +264,8 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor, Reentran
         (BABL_STRATEGIST_SHARE, BABL_STEWARD_SHARE, BABL_LP_SHARE, CREATOR_BONUS) = controller.getBABLSharing();
         (PROFIT_STRATEGIST_SHARE, PROFIT_STEWARD_SHARE, PROFIT_LP_SHARE) = controller.getProfitSharing();
         PROFIT_PROTOCOL_FEE = controller.protocolPerformanceFee();
+
+        _status = _NOT_ENTERED;
     }
 
     /* ============ External Functions ============ */
@@ -327,7 +344,7 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor, Reentran
      * @param _to                Address to send the tokens to
      * @param _amount            Amount of tokens to send the address to
      */
-    function sendTokensToContributor(address _to, uint256 _amount) external override onlyMiningActive nonReentrant {
+    function sendTokensToContributor(address _to, uint256 _amount) external override nonReentrant onlyMiningActive {
         _require(controller.isSystemContract(msg.sender), Errors.NOT_A_SYSTEM_CONTRACT);
         uint96 amount = Safe3296.safe96(_amount, 'overflow 96 bits');
         _safeBABLTransfer(_to, amount);
@@ -357,7 +374,7 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor, Reentran
         uint256 _previousBalance,
         bool _depositOrWithdraw,
         uint256 _pid
-    ) external override onlyActiveGarden(_garden, _pid) {
+    ) external override nonReentrant onlyActiveGarden(_garden, _pid) {
         _updateGardenPower(_garden);
         _setContributorTimestampParams(_garden, _contributor, _previousBalance, _depositOrWithdraw);
     }

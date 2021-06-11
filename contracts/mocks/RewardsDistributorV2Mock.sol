@@ -20,8 +20,6 @@ import 'hardhat/console.sol';
 import {TimeLockedToken} from '../token/TimeLockedToken.sol';
 
 import {OwnableUpgradeable} from '@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol';
-import {ReentrancyGuardUpgradeable} from '@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol';
-
 import {SafeMath} from '@openzeppelin/contracts/math/SafeMath.sol';
 import {Address} from '@openzeppelin/contracts/utils/Address.sol';
 import {SafeERC20} from '@openzeppelin/contracts/token/ERC20/SafeERC20.sol';
@@ -50,7 +48,7 @@ import {IPriceOracle} from '../interfaces/IPriceOracle.sol';
  * Rewards Distributor also is responsible for the calculation and delivery of other rewards as bonuses to specific profiles
  * which are actively contributing to the protocol growth and their communities (Garden creators, Strategists and Stewards).
  */
-contract RewardsDistributorV2Mock is OwnableUpgradeable, ReentrancyGuardUpgradeable {
+contract RewardsDistributorV2Mock is OwnableUpgradeable {
     using SafeMath for uint256;
     using SafeMath for int256;
     using PreciseUnitMath for uint256;
@@ -193,6 +191,11 @@ contract RewardsDistributorV2Mock is OwnableUpgradeable, ReentrancyGuardUpgradea
     mapping(address => mapping(uint256 => StrategyPerQuarter)) public strategyPerQuarter; // Acumulated strategy power per each quarter along the time
     mapping(address => StrategyPricePerTokenUnit) public strategyPricePerTokenUnit; // Pro-rata oracle price allowing re-allocations and unwinding of any capital value
 
+    uint256 private constant _NOT_ENTERED = 1;
+    uint256 private constant _ENTERED = 2;
+
+    uint256 private _status;
+
     /* ============ Constructor ============ */
 
     function initialize(TimeLockedToken _bablToken, IBabController _controller) public {
@@ -206,6 +209,8 @@ contract RewardsDistributorV2Mock is OwnableUpgradeable, ReentrancyGuardUpgradea
         (BABL_STRATEGIST_SHARE, BABL_STEWARD_SHARE, BABL_LP_SHARE, CREATOR_BONUS) = controller.getBABLSharing();
         (PROFIT_STRATEGIST_SHARE, PROFIT_STEWARD_SHARE, PROFIT_LP_SHARE) = controller.getProfitSharing();
         PROFIT_PROTOCOL_FEE = controller.protocolPerformanceFee();
+
+        _status = _NOT_ENTERED;
     }
 
     /* ============ External Functions ============ */
