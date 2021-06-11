@@ -73,7 +73,7 @@ contract BorrowOperation is Operation {
     function executeOperation(
         address _asset,
         uint256 _capital,
-        uint8  _assetStatus,
+        uint8 _assetStatus,
         address _data,
         IGarden, /* _garden */
         address _integration
@@ -87,8 +87,11 @@ contract BorrowOperation is Operation {
             uint8
         )
     {
-        require(_capital > 0 && _assetStatus == 1, "There is collateral locked");
-        IBorrowIntegration(_integration).borrow(_borrowToken, IBorrowIntegration(_integration).maxCollateralFactor().preciseMul(_capital));
+        require(_capital > 0 && _assetStatus == 1, 'There is collateral locked');
+        IBorrowIntegration(_integration).borrow(
+            _borrowToken,
+            IBorrowIntegration(_integration).maxCollateralFactor().preciseMul(_capital)
+        );
         return (_data, IERC20(_borrowToken).balanceOf(address(msg.sender)), 0); // borrowings are liquid
     }
 
@@ -112,7 +115,7 @@ contract BorrowOperation is Operation {
             // TODO: update amount of tokens
             uint256 gardenReserveAmount = IERC20(_garden.reserveAsset()).balanceOf(address(msg.sender));
             if (gardenReserveAmount > 0) {
-              IStrategy(msg.sender).trade(_garden.reserveAsset(), gardenReserveAmount, _assetToken);
+                IStrategy(msg.sender).trade(_garden.reserveAsset(), gardenReserveAmount, _assetToken);
             }
         }
         IBorrowIntegration(_integration).repay(
@@ -141,6 +144,6 @@ contract BorrowOperation is Operation {
         uint256 price = _getPrice(_garden.reserveAsset(), _assetToken);
         uint256 NAV = SafeDecimalMath.normalizeDecimals(_assetToken, tokensOwed).preciseDiv(price);
         require(NAV != 0, 'NAV has to be different than 0');
-        return uint(-NAV);
+        return uint256(-NAV);
     }
 }

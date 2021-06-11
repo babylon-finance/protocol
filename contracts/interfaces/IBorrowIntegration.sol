@@ -26,7 +26,6 @@ import {IIntegration} from './IIntegration.sol';
  * Interface for borrow integrations
  */
 interface IBorrowIntegration is IIntegration {
-
     function borrow(address asset, uint256 borrowAmount) external;
 
     function repay(address asset, uint256 amount) external;
