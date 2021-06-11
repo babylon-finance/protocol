@@ -294,23 +294,22 @@ describe('VoteToken contract', function () {
       expect(signer1CheckpointVotes1.toString()).to.be.equal('0');
     });
     it('Should admit a delegation vote by a valid signature', async function () {
-      // Signature (signed by signer1.address)
+      // Signature (signed by signer1.address) 0x90F79bf6EB2c4f870365E785982E1f101E93b906
       // getChainId: 31337
-      // VoteToken address (address(this)): 0x84eA74d481Ee0A5332c457a4d796187F6Ba67fEB
+      // VoteToken address (address(this)): 0xf5059a5D33d5853360D16C683c16e67980206f36
       // name(): "Babylon.Finance"
-      // first hash: 0xc537366b6ef095dd13d57267f21209ecbfd22b5fb33030965870eefad22bc2df"
+      // first hash: 0x1cc69a52ef2ca6585e4baf6e8d879777b854021ae6d12254a47ef270890b204c"
       // expiration 1653729994 28 may 2022
       // nonce = 0
       // delegatee 0x232775eAD28F0C0c750A097bA77302E7d84efd3B
       // second hash : 0xd7ead66ff6bda9784088e2deae972d920c55438e8a76149605393615ba546a29
-      // third HASH: 0xab9f914973c2fc969ad6333b24425b6ad18a2e2196efc62d317ba823c1f7fe57
-      // Digest = 0x297270268e4d1336f372fd9e5bedb193732205a6ba2be6ef06ae9edaeb4ece59
-      // ethSignedMessageHash (digestHash): 0xbebc4bc5916106fa2c548dc168127011ac043e8d41c889ae8f3f1104a6c85fbb
+      // Digest = 0x8ee6ffbe49082a199d8a8f83b9c5930af5e0a1078d8f84bfb51f3ed51f1342f9
+      // ethSignedMessageHash (digestHash): 0x59a7630a466378d7251a819c0577205d19cb5a5c11e0b3a296ef058eb0b7370d
       // METAMASK:
-      // Signed message by Metamask = 0x4e302ab97d84f720d480d2fce8723158863f30c8557d14989d332966a41c1a5f7e2d62adc8c00d1c84f80fb75b2fcd38a934fad69c3091a5406d67b8c42db57a1b
+      // Signed message by Metamask = 0x0faca0d776b020b17fd3e802aea2ec5bd61cf8cc85ef27c4a8ad346edb50197f44e1158305a03d8d4958a8fa41cc44abbe741aa2e34d217d05e2b808a973168f1b
       // Then splitting the signed message: Metamask
-      // bytes32: r 0x4e302ab97d84f720d480d2fce8723158863f30c8557d14989d332966a41c1a5f
-      // bytes32: s 0x7e2d62adc8c00d1c84f80fb75b2fcd38a934fad69c3091a5406d67b8c42db57a
+      // bytes32: r 0x0faca0d776b020b17fd3e802aea2ec5bd61cf8cc85ef27c4a8ad346edb50197f
+      // bytes32: s 0x44e1158305a03d8d4958a8fa41cc44abbe741aa2e34d217d05e2b808a973168f
       // uint8: v 27
       // LEDGER + METAMASK:
       // LEDGER signed: 0x3e9140970233a167713ba23429c8ecc48272a60dd6e422cf6f1cead2bbee87af27ca269d6b4e98d3220f62d9f5b99caf75003e7b88d66ab77000a48537fd9b0901
@@ -337,8 +336,8 @@ describe('VoteToken contract', function () {
       const expiry = 1653729994; // 28 may 2022
       // METAMASK:
       const v = '27';
-      const r = '0x4e302ab97d84f720d480d2fce8723158863f30c8557d14989d332966a41c1a5f';
-      const s = '0x7e2d62adc8c00d1c84f80fb75b2fcd38a934fad69c3091a5406d67b8c42db57a';
+      const r = '0x0faca0d776b020b17fd3e802aea2ec5bd61cf8cc85ef27c4a8ad346edb50197f';
+      const s = '0x44e1158305a03d8d4958a8fa41cc44abbe741aa2e34d217d05e2b808a973168f';
       // LEDGER + METAMASK
       //const v = '1';
       //const r = '0x3e9140970233a167713ba23429c8ecc48272a60dd6e422cf6f1cead2bbee87af';
