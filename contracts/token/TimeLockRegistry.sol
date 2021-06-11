@@ -103,10 +103,10 @@ contract TimeLockRegistry is Ownable {
     uint256 public totalTokens;
 
     // vesting for Team Members
-    uint256 private teamVesting = 365 days * 4;
+    uint256 private constant teamVesting = 365 days * 4;
 
     // vesting for Investors and Advisors
-    uint256 private investorVesting = 365 days * 3;
+    uint256 private constant investorVesting = 365 days * 3;
 
     /* ============ Functions ============ */
 
@@ -276,7 +276,9 @@ contract TimeLockRegistry is Ownable {
 
         // get amount from distributions
         uint256 amount = registeredDistributions[_receiver];
-        tokenVested[_receiver].lastClaim = block.timestamp;
+        TokenVested storage claimTokenVested = tokenVested[_receiver];
+
+        claimTokenVested.lastClaim = block.timestamp;
 
         // set distribution mapping to 0
         delete registeredDistributions[_receiver];
@@ -289,10 +291,10 @@ contract TimeLockRegistry is Ownable {
         token.registerLockup(
             _receiver,
             amount,
-            tokenVested[_receiver].team,
-            tokenVested[_receiver].vestingBegin,
-            tokenVested[_receiver].vestingEnd,
-            tokenVested[_receiver].lastClaim
+            claimTokenVested.team,
+            claimTokenVested.vestingBegin,
+            claimTokenVested.vestingEnd,
+            claimTokenVested.lastClaim
         );
 
         // set tokenVested mapping to 0
@@ -316,11 +318,13 @@ contract TimeLockRegistry is Ownable {
             uint256 last
         )
     {
+        TokenVested storage checkTokenVested = tokenVested[address_];
+
         return (
-            tokenVested[address_].team,
-            tokenVested[address_].vestingBegin,
-            tokenVested[address_].vestingEnd,
-            tokenVested[address_].lastClaim
+            checkTokenVested.team,
+            checkTokenVested.vestingBegin,
+            checkTokenVested.vestingEnd,
+            checkTokenVested.lastClaim
         );
     }
 

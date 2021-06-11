@@ -155,16 +155,6 @@ abstract contract PassiveIntegration is BaseIntegration, ReentrancyGuard, IPassi
     }
 
     /**
-     * Checks whether an investment address is valid
-     *
-     * @param _investmentAddress                 Investment address to check
-     * @return bool                              True if the address is a investment
-     */
-    function isInvestment(address _investmentAddress) external view override returns (bool) {
-        return _isInvestment(_investmentAddress);
-    }
-
-    /**
      * Gets the amount of shares expected to get after depositing _ethAmount
      *
      * @param _investmentAddress                 Investment address to check
@@ -237,7 +227,6 @@ abstract contract PassiveIntegration is BaseIntegration, ReentrancyGuard, IPassi
      * @param _investmentInfo               Struct containing investment information used in internal functions
      */
     function _validatePreJoinInvestmentData(InvestmentInfo memory _investmentInfo) internal view {
-        require(_isInvestment(_investmentInfo.investment), 'The investment address is not valid');
         require(
             _investmentInfo.investmentTokensInTransaction > 0,
             'Min investment tokens to receive must be greater than 0'
@@ -250,7 +239,6 @@ abstract contract PassiveIntegration is BaseIntegration, ReentrancyGuard, IPassi
      * @param _investmentInfo               Struct containing investment information used in internal functions
      */
     function _validatePreExitInvestmentData(InvestmentInfo memory _investmentInfo) internal view {
-        require(_isInvestment(_investmentInfo.investment), 'The investment address is not valid');
         require(
             _investmentInfo.investmentTokensInTransaction > 0,
             'Investment tokens to exchange must be greater than 0'
@@ -344,10 +332,6 @@ abstract contract PassiveIntegration is BaseIntegration, ReentrancyGuard, IPassi
             uint256,
             bytes memory
         );
-
-    function _isInvestment(
-        address //_investmentAddress
-    ) internal view virtual returns (bool);
 
     function _getExpectedShares(
         address, //_investmentAddress

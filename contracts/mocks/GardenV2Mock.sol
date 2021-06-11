@@ -163,7 +163,8 @@ contract GardenV2Mock is ERC20Upgradeable, ReentrancyGuard {
     function deposit(
         uint256 _reserveAssetQuantity,
         uint256 _minGardenTokenReceiveQuantity,
-        address _to
+        address _to,
+        bool mintNFT
     ) external payable {}
 
     function newMethod() public view returns (string memory) {

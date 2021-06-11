@@ -19,11 +19,14 @@
 */
 
 pragma solidity 0.7.6;
+
+import 'hardhat/console.sol';
 import {Ownable} from '@openzeppelin/contracts/access/Ownable.sol';
 import {ERC20} from '@openzeppelin/contracts/token/ERC20/ERC20.sol';
 import '@uniswap/v3-core/contracts/interfaces/IUniswapV3Factory.sol';
 import '@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol';
 import '@uniswap/v3-core/contracts/libraries/TickMath.sol';
+import '@uniswap/v3-periphery/contracts/libraries/OracleLibrary.sol';
 
 import {SafeCast} from '@openzeppelin/contracts/utils/SafeCast.sol';
 import {PreciseUnitMath} from '../lib/PreciseUnitMath.sol';
@@ -86,37 +89,30 @@ contract UniswapTWAPV3 is Ownable, IOracleAdapter {
 
     /**
      * Returns the amount out corresponding to the amount in for a given token
-     * @param tokenIn              Address of the first token
-     * @param tokenOut             Address of the second token
+     * @param _tokenIn              Address of the first token
+     * @param _tokenOut             Address of the second token
      * @return found               Whether or not the price as found
-     * @return amountOut            How many tokenOut are one tokenIn
      */
-    function getPrice(address tokenIn, address tokenOut)
-        external
-        view
-        override
-        returns (bool found, uint256 amountOut)
-    {
-        uint160 sqrtPriceX96;
+    function getPrice(address _tokenIn, address _tokenOut) external view override returns (bool found, uint256 price) {
         int24 tick;
         bool found = false;
         // We try the low pool first
-        IUniswapV3Pool pool = IUniswapV3Pool(factory.getPool(tokenIn, tokenOut, FEE_LOW));
+        IUniswapV3Pool pool = IUniswapV3Pool(factory.getPool(_tokenIn, _tokenOut, FEE_LOW));
         if (address(pool) != address(0)) {
-            (sqrtPriceX96, tick, , , , , ) = pool.slot0();
+            (, tick, , , , , ) = pool.slot0();
             found = _checkPrice(tick, pool);
         }
         if (!found) {
-            pool = IUniswapV3Pool(factory.getPool(tokenIn, tokenOut, FEE_MEDIUM));
+            pool = IUniswapV3Pool(factory.getPool(_tokenIn, _tokenOut, FEE_MEDIUM));
             if (address(pool) != address(0)) {
-                (sqrtPriceX96, tick, , , , , ) = pool.slot0();
+                (, tick, , , , , ) = pool.slot0();
                 found = _checkPrice(tick, pool);
             }
         }
         if (!found) {
-            pool = IUniswapV3Pool(factory.getPool(tokenIn, tokenOut, FEE_HIGH));
+            pool = IUniswapV3Pool(factory.getPool(_tokenIn, _tokenOut, FEE_HIGH));
             if (address(pool) != address(0)) {
-                (sqrtPriceX96, tick, , , , , ) = pool.slot0();
+                (, tick, , , , , ) = pool.slot0();
                 found = _checkPrice(tick, pool);
             }
         }
@@ -125,13 +121,18 @@ contract UniswapTWAPV3 is Ownable, IOracleAdapter {
             return (false, 0);
         }
 
+        int256 twapTick = OracleLibrary.consult(address(pool), SECONDS_GRANULARITY);
         uint256 price =
-            uint256(sqrtPriceX96).mul(uint256(sqrtPriceX96)).mul(10**ERC20(pool.token0()).decimals()) >> (96 * 2);
-        if (pool.token0() == tokenOut) {
-            return (true, uint256(1e18).preciseDiv(price));
-        } else {
-            return (true, price);
-        }
+            OracleLibrary
+                .getQuoteAtTick(
+                int24(twapTick),
+                // because we use 1e18 as a precision unit
+                uint128(uint256(1e18).mul(10**(uint256(18).sub(ERC20(_tokenOut).decimals())))),
+                _tokenIn,
+                _tokenOut
+            )
+                .div(10**(uint256(18).sub(ERC20(_tokenIn).decimals())));
+        return (true, price);
     }
 
     function update(address tokenA, address tokenB) external override {}

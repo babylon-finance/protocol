@@ -54,7 +54,7 @@
     "@uniswap/v2-core": "^1.0.1",
     "@uniswap/v2-periphery": "https://github.com/hoytech/uniswap-v2-periphery.git#e8c36e5ad5178341cd67f8b0fdb983073428fb6b",
     "@uniswap/v3-core": "^1.0.0",
-    "@uniswap/v3-periphery": "^1.0.0",
+    "@uniswap/v3-periphery": "^1.1.0",
     "chai": "^4.2.0",
     "chalk": "^4.1.0",
     "ethereum-waffle": "^3.0.2",
