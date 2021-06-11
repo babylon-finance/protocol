@@ -80,6 +80,7 @@
     "deploy:mainnet": "hardhat deploy --network mainnet",
     "deploy:rinkeby": "hardhat deploy --network rinkeby",
     "chain": "hardhat node --as-network hardhat --show-stack-traces",
+    "chain:no-auto-mine": "HRE_NO_AUTOMINE=true yarn run chain",
     "test": "OPTIMIZER=false hardhat test --network hardhat --max-memory 8096",
     "test:watch": "OPTIMIZER=false hardhat watch test --network hardhat --max-memory 8096",
     "gas-report": "REPORT_GAS=1 hardhat test --network hardhat --max-memory 8096",
