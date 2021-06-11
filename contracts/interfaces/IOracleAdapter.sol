@@ -31,7 +31,7 @@ interface IOracleAdapter {
      *
      * @param  _assetOne    First asset in pair
      * @param  _assetTwo    Second asset in pair
-     * @return                  Boolean indicating if oracle exists
+     * @return              Boolean indicating if oracle exists
      * @return              Current price of asset represented in uint256
      */
     function getPrice(address _assetOne, address _assetTwo) external view returns (bool, uint256);

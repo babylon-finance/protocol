@@ -55,9 +55,7 @@ contract DepositVaultOperation is Operation {
         IGarden, /* _garden */
         address _integration,
         uint256 /* _index */
-    ) external view override onlyStrategy {
-        require(IPassiveIntegration(_integration).isInvestment(_data), 'Must be a valid yield vault');
-    }
+    ) external view override onlyStrategy {}
 
     /**
      * Executes the deposit vault operation

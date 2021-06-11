@@ -40,8 +40,6 @@ interface IPassiveIntegration {
         uint256 _minAmountOut
     ) external;
 
-    function isInvestment(address _investmentAddress) external view returns (bool);
-
     function getExpectedShares(address _investmentAddress, uint256 _ethAmount) external view returns (uint256);
 
     function getPricePerShare(address _investmentAddress) external view returns (uint256);

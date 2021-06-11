@@ -541,7 +541,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         address _asset,
         uint256 _quantity
     ) external override onlyIntegration {
-        IERC20(_asset).approve(_spender, _quantity);
+        IERC20(_asset).safeApprove(_spender, _quantity);
     }
 
     /**
