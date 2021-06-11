@@ -967,7 +967,7 @@ describe('Garden', function () {
             signer1DepositTimestamp[0],
           )
         ).toString(),
-      ).to.be.closeTo((833333333333333333).toString(), ethers.utils.parseEther('0.05'));
+      ).to.be.closeTo((833333333333333333).toString(), ethers.utils.parseEther('0.1'));
       await expect(
         (
           await rewardsDistributor.getContributorPower(
