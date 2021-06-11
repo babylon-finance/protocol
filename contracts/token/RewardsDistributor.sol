@@ -434,12 +434,14 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
             uint256 power
         )
     {
+        ProtocolPerTimestamp storage protocolCheckpoint = protocolPerTimestamp[_time];
+
         return (
-            protocolPerTimestamp[_time].principal,
-            protocolPerTimestamp[_time].time,
-            protocolPerTimestamp[_time].quarterBelonging,
-            protocolPerTimestamp[_time].timeListPointer,
-            protocolPerTimestamp[_time].power
+            protocolCheckpoint.principal,
+            protocolCheckpoint.time,
+            protocolCheckpoint.quarterBelonging,
+            protocolCheckpoint.timeListPointer,
+            protocolCheckpoint.power
         );
     }
 
@@ -458,11 +460,13 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
             uint96 supplyPerQuarter
         )
     {
+        ProtocolPerQuarter storage protocolCheckpoint = protocolPerQuarter[_num];
+
         return (
-            protocolPerQuarter[_num].quarterPrincipal,
-            protocolPerQuarter[_num].quarterNumber,
-            protocolPerQuarter[_num].quarterPower,
-            protocolPerQuarter[_num].supplyPerQuarter
+            protocolCheckpoint.quarterPrincipal,
+            protocolCheckpoint.quarterNumber,
+            protocolCheckpoint.quarterPower,
+            protocolCheckpoint.supplyPerQuarter
         );
     }
 
@@ -893,16 +897,17 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
                 protocolCheckpoint.quarterPower = 0;
                 protocolCheckpoint.supplyPerQuarter = _tokenSupplyPerQuarter(quarter);
             } else {
+                uint256 prevPid = pid.sub(1);
                 // Each time a new epoch starts with either a new strategy execution or finalization
                 // We just take the proportional power for this quarter from previous checkpoint
                 uint256 powerToSplit =
-                    protocolPerTimestamp[_time].power.sub(protocolPerTimestamp[timeList[pid.sub(1)]].power);
-                if (protocolPerTimestamp[timeList[pid.sub(1)]].quarterBelonging == quarter.sub(1)) {
+                    protocolPerTimestamp[_time].power.sub(protocolPerTimestamp[timeList[prevPid]].power);
+                if (protocolPerTimestamp[timeList[prevPid]].quarterBelonging == quarter.sub(1)) {
                     // There were no intermediate epochs without checkpoints
                     // We re-initialize the protocol power counting for this new quarter
                     protocolCheckpoint.quarterPower = powerToSplit
                         .mul(_time.sub(START_TIME.add(quarter.mul(EPOCH_DURATION).sub(EPOCH_DURATION))))
-                        .div(_time.sub(protocolPerTimestamp[timeList[pid.sub(1)]].time));
+                        .div(_time.sub(protocolPerTimestamp[timeList[prevPid]].time));
                     protocolCheckpoint.supplyPerQuarter = _tokenSupplyPerQuarter(quarter);
 
                     protocolPerQuarter[quarter.sub(1)].quarterPower = protocolPerQuarter[quarter.sub(1)]
@@ -913,41 +918,41 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
                     // We have to update all the quarters including where the previous checkpoint is and the one were we are now
                     for (
                         uint256 i = 0;
-                        i <= quarter.sub(protocolPerTimestamp[timeList[pid.sub(1)]].quarterBelonging);
+                        i <= quarter.sub(protocolPerTimestamp[timeList[prevPid]].quarterBelonging);
                         i++
                     ) {
                         ProtocolPerQuarter storage newCheckpoint =
-                            protocolPerQuarter[protocolPerTimestamp[timeList[pid.sub(1)]].quarterBelonging.add(i)];
+                            protocolPerQuarter[protocolPerTimestamp[timeList[prevPid]].quarterBelonging.add(i)];
                         uint256 slotEnding =
                             START_TIME.add(
-                                protocolPerTimestamp[timeList[pid.sub(1)]].quarterBelonging.add(i).mul(EPOCH_DURATION)
+                                protocolPerTimestamp[timeList[prevPid]].quarterBelonging.add(i).mul(EPOCH_DURATION)
                             );
                         if (i == 0) {
                             // We are in the first quarter to update, we add the corresponding part
 
                             newCheckpoint.quarterPower = newCheckpoint.quarterPower.add(
-                                powerToSplit.mul(slotEnding.sub(protocolPerTimestamp[timeList[pid.sub(1)]].time)).div(
-                                    _time.sub(protocolPerTimestamp[timeList[pid.sub(1)]].time)
+                                powerToSplit.mul(slotEnding.sub(protocolPerTimestamp[timeList[prevPid]].time)).div(
+                                    _time.sub(protocolPerTimestamp[timeList[prevPid]].time)
                                 )
                             );
-                            newCheckpoint.quarterPrincipal = protocolPerTimestamp[timeList[pid.sub(1)]].principal;
-                        } else if (i < quarter.sub(protocolPerTimestamp[timeList[pid.sub(1)]].quarterBelonging)) {
+                            newCheckpoint.quarterPrincipal = protocolPerTimestamp[timeList[prevPid]].principal;
+                        } else if (i < quarter.sub(protocolPerTimestamp[timeList[prevPid]].quarterBelonging)) {
                             // We are in an intermediate quarter
                             newCheckpoint.quarterPower = powerToSplit.mul(EPOCH_DURATION).div(
-                                _time.sub(protocolPerTimestamp[timeList[pid.sub(1)]].time)
+                                _time.sub(protocolPerTimestamp[timeList[prevPid]].time)
                             );
                             newCheckpoint.supplyPerQuarter = _tokenSupplyPerQuarter(
-                                protocolPerTimestamp[timeList[pid.sub(1)]].quarterBelonging.add(i)
+                                protocolPerTimestamp[timeList[prevPid]].quarterBelonging.add(i)
                             );
-                            newCheckpoint.quarterNumber = protocolPerTimestamp[timeList[pid.sub(1)]]
-                                .quarterBelonging
-                                .add(i);
-                            newCheckpoint.quarterPrincipal = protocolPerTimestamp[timeList[pid.sub(1)]].principal;
+                            newCheckpoint.quarterNumber = protocolPerTimestamp[timeList[prevPid]].quarterBelonging.add(
+                                i
+                            );
+                            newCheckpoint.quarterPrincipal = protocolPerTimestamp[timeList[prevPid]].principal;
                         } else {
                             // We are in the last quarter of the strategy
                             protocolCheckpoint.quarterPower = powerToSplit
                                 .mul(_time.sub(START_TIME.add(quarter.mul(EPOCH_DURATION).sub(EPOCH_DURATION))))
-                                .div(_time.sub(protocolPerTimestamp[timeList[pid.sub(1)]].time));
+                                .div(_time.sub(protocolPerTimestamp[timeList[prevPid]].time));
                             protocolCheckpoint.supplyPerQuarter = _tokenSupplyPerQuarter(quarter);
                             protocolCheckpoint.quarterNumber = quarter;
                             protocolCheckpoint.quarterPrincipal = protocolPrincipal;
