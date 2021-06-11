@@ -61,7 +61,12 @@ contract BuyOperation is Operation {
 
     /**
      * Executes the buy operation
-     * @param _capital      Amount of capital received from the garden
+     * @param _asset              Asset to receive into this operation
+     * @param _capital            Amount of asset received
+     * @param _assetStatus        Status of the asset amount
+     * @param _data               Address of the token to buy
+     * @param _garden             Garden of the strategy
+     * @param _integration        Address of the integration to execute
      */
     function executeOperation(
         address _asset,
@@ -105,7 +110,10 @@ contract BuyOperation is Operation {
     /**
      * Gets the NAV of the buy op in the reserve asset
      *
-     * @return _nav           NAV of the strategy
+     * @param _data               Asset bought
+     * @param _garden             Garden the strategy belongs to
+     * @param _integration        Status of the asset amount
+     * @return _nav               NAV of the strategy
      */
     function getNAV(
         address _data,

@@ -24,15 +24,15 @@ import {IGarden} from '../../interfaces/IGarden.sol';
 import {IStrategy} from '../../interfaces/IStrategy.sol';
 import {PreciseUnitMath} from '../../lib/PreciseUnitMath.sol';
 import {SafeDecimalMath} from '../../lib/SafeDecimalMath.sol';
-import {ILendIntegration} from '../../interfaces/ILendIntegration.sol';
+import {IBorrowIntegration} from '../../interfaces/IBorrowIntegration.sol';
 
 /**
  * @title LendOperatin
  * @author Babylon Finance
  *
- * Executes a lend operation
+ * Executes a borrow operation
  */
-contract LendOperation is Operation {
+contract BorrowOperation is Operation {
     using SafeMath for uint256;
     using PreciseUnitMath for uint256;
     using SafeDecimalMath for uint256;
@@ -48,7 +48,7 @@ contract LendOperation is Operation {
     constructor(string memory _name, address _controller) Operation(_name, _controller) {}
 
     /**
-     * Sets operation data for the lend operation
+     * Sets operation data for the borrow operation
      *
      * @param _data                   Operation data
      */
@@ -56,24 +56,24 @@ contract LendOperation is Operation {
         address _data,
         IGarden _garden,
         address, /* _integration */
-        uint256 /* _index */
+        uint256 _index
     ) external view override onlyStrategy {
-        require(_data != _garden.reserveAsset(), 'Receive token must be different');
+        require(_index > 0, 'The operation cannot be the first. Needs to be a lend first');
     }
 
     /**
-     * Executes the lend operation
+     * Executes the borrow operation
      * @param _asset              Asset to receive into this operation
      * @param _capital            Amount of asset received
      * @param _assetStatus        Status of the asset amount
-     * @param _data               Address of the asset to lend
+     * @param _borrowToken        Token to borrow
      * @param _garden             Garden of the strategy
      * @param _integration        Address of the integration to execute
      */
     function executeOperation(
         address _asset,
         uint256 _capital,
-        uint8, /* _assetStatus */
+        uint8  _assetStatus,
         address _data,
         IGarden, /* _garden */
         address _integration
@@ -87,53 +87,47 @@ contract LendOperation is Operation {
             uint8
         )
     {
-        address assetToken = _data;
-        if (assetToken != _asset) {
-            IStrategy(msg.sender).trade(_asset, _capital, assetToken);
-        }
-        uint256 numTokensToSupply = IERC20(assetToken).balanceOf(msg.sender);
-        uint256 exactAmount = ILendIntegration(_integration).getExpectedShares(assetToken, numTokensToSupply);
-        uint256 minAmountExpected = exactAmount.sub(exactAmount.preciseMul(SLIPPAGE_ALLOWED));
-        ILendIntegration(_integration).supplyTokens(msg.sender, assetToken, numTokensToSupply, minAmountExpected);
-        return (assetToken, numTokensToSupply, 1); // put as collateral
+        require(_capital > 0 && _assetStatus == 1, "There is collateral locked");
+        IBorrowIntegration(_integration).borrow(_borrowToken, IBorrowIntegration(_integration).maxCollateralFactor().preciseMul(_capital));
+        return (_data, IERC20(_borrowToken).balanceOf(address(msg.sender)), 0); // borrowings are liquid
     }
 
     /**
-     * Exits the lend operation.
+     * Exits the borrow operation.
      * @param _percentage of capital to exit from the strategy
      */
     function exitOperation(
         uint256 _percentage,
-        address _data,
+        address _assetToken,
         IGarden _garden,
         address _integration
     ) external override onlyStrategy {
         require(_percentage <= HUNDRED_PERCENT, 'Unwind Percentage <= 100%');
-        address assetToken = _data;
-        uint256 numTokensToRedeem =
-            IERC20(ILendIntegration(_integration).getInvestmentToken(assetToken)).balanceOf(msg.sender).preciseMul(
+        uint256 numTokensToRepay =
+            IERC20(IBorrowIntegration(_integration).getBorrowBalance(_assetToken)).balanceOf(msg.sender).preciseMul(
                 _percentage
             );
-        ILendIntegration(_integration).redeemTokens(
-            msg.sender,
-            assetToken,
-            numTokensToRedeem,
-            ILendIntegration(_integration).getExchangeRatePerToken(assetToken).mul(
-                numTokensToRedeem.sub(numTokensToRedeem.preciseMul(SLIPPAGE_ALLOWED))
-            )
-        );
-        if (assetToken != _garden.reserveAsset()) {
-            IStrategy(msg.sender).trade(assetToken, IERC20(assetToken).balanceOf(msg.sender), _garden.reserveAsset());
+        // If we don't have balance to repay
+        if (IERC20(_assetToken).balanceOf(address(msg.sender)) <= numTokensToRepay) {
+            // TODO: update amount of tokens
+            uint256 gardenReserveAmount = IERC20(_garden.reserveAsset()).balanceOf(address(msg.sender));
+            if (gardenReserveAmount > 0) {
+              IStrategy(msg.sender).trade(_garden.reserveAsset(), gardenReserveAmount, _assetToken);
+            }
         }
+        IBorrowIntegration(_integration).repay(
+            _assetToken,
+            IERC20(_assetToken).balanceOf(address(msg.sender)) // We repay all that we can
+        );
     }
 
     /**
      * Gets the NAV of the lend op in the reserve asset
      *
-     * @param _assetToken         Asset lent
+     * @param _assetToken         Asset borrowed
      * @param _garden             Garden the strategy belongs to
      * @param _integration        Status of the asset amount
-     * @return _nav           NAV of the strategy
+     * @return _nav               NAV of the strategy
      */
     function getNAV(
         address _assetToken,
@@ -143,13 +137,10 @@ contract LendOperation is Operation {
         if (!IStrategy(msg.sender).isStrategyActive()) {
             return 0;
         }
-        uint256 numTokensToRedeem =
-            IERC20(ILendIntegration(_integration).getInvestmentToken(_assetToken)).balanceOf(msg.sender);
-        uint256 assetTokensAmount =
-            ILendIntegration(_integration).getExchangeRatePerToken(_assetToken).mul(numTokensToRedeem);
+        uint256 tokensOwed = IBorrowIntegration(_integration)._getBorrowBalance(_debtInfo.asset);
         uint256 price = _getPrice(_garden.reserveAsset(), _assetToken);
-        uint256 NAV = SafeDecimalMath.normalizeDecimals(_assetToken, assetTokensAmount).preciseDiv(price);
-        require(NAV != 0, 'NAV has to be bigger 0');
-        return NAV;
+        uint256 NAV = SafeDecimalMath.normalizeDecimals(_assetToken, tokensOwed).preciseDiv(price);
+        require(NAV != 0, 'NAV has to be different than 0');
+        return uint(-NAV);
     }
 }
