@@ -51,10 +51,20 @@ contract AaveBorrowIntegration is BorrowIntegration {
      * @param _maxCollateralFactor    Max collateral factor allowed (from 0 to a 100)
      */
     constructor(
-        address _controller,
+        IBabController _controller,
         address _weth,
         uint256 _maxCollateralFactor
     ) BorrowIntegration('aave', _weth, _controller, _maxCollateralFactor) {}
+
+    /**
+     * Get the amount of borrowed debt that needs to be repaid
+     * @param asset   The underlying asset
+     *
+     */
+    function getBorrowBalance(address asset) public view override returns (uint256) {
+        (, uint256 stableDebt, , , , , , , ) = dataProvider.getUserReserveData(asset, msg.sender);
+        return stableDebt;
+    }
 
     /**
      * Return pre action calldata
@@ -169,16 +179,6 @@ contract AaveBorrowIntegration is BorrowIntegration {
         // Get the relevant debt token address
         (, address stableDebtTokenAddress, ) = dataProvider.getReserveTokensAddresses(asset);
         return stableDebtTokenAddress;
-    }
-
-    /**
-     * Get the amount of borrowed debt that needs to be repaid
-     * @param asset   The underlying asset
-     *
-     */
-    function _getBorrowBalance(address asset) internal view override returns (uint256) {
-        (, uint256 stableDebt, , , , , , , ) = dataProvider.getUserReserveData(asset, msg.sender);
-        return stableDebt;
     }
 
     /**

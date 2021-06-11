@@ -41,6 +41,16 @@ contract CompoundBorrowIntegration is BorrowIntegration {
     using SafeMath for uint256;
     using SafeERC20 for ERC20;
 
+    /* ============ Modifiers ============ */
+
+    /**
+     * Throws if the sender is not the protocol
+     */
+    modifier onlyGovernance() {
+        require(msg.sender == controller.owner(), 'Only governance can call this');
+        _;
+    }
+
     /* ============ State Variables ============ */
 
     address constant CompoundComptrollerAddress = 0x3d9819210A31b4961b30EF54bE2aeD79B9c9Cd3B;
@@ -58,7 +68,7 @@ contract CompoundBorrowIntegration is BorrowIntegration {
      * @param _maxCollateralFactor    Max collateral factor allowed
      */
     constructor(
-        address _controller,
+        IBabController _controller,
         address _weth,
         uint256 _maxCollateralFactor
     ) BorrowIntegration('compound', _weth, _controller, _maxCollateralFactor) {
@@ -73,8 +83,26 @@ contract CompoundBorrowIntegration is BorrowIntegration {
     /* ============ External Functions ============ */
 
     // Governance function
-    function updateCTokenMapping(address _assetAddress, address _cTokenAddress) external onlyProtocol {
+    function updateCTokenMapping(address _assetAddress, address _cTokenAddress) external onlyGovernance {
         assetToCtoken[_assetAddress] = _cTokenAddress;
+    }
+
+    /**
+     * Get the amount of borrowed debt that needs to be repaid
+     * @param asset   The underlying asset
+     *
+     */
+    function getBorrowBalance(address asset) public view override returns (uint256) {
+        address cToken = assetToCtoken[asset];
+        (
+            ,
+            ,
+            // err
+            // cTokenBalance
+            uint256 borrowBalance,
+            uint256 exchangeRateMantissa
+        ) = ICToken(cToken).getAccountSnapshot(msg.sender);
+        return borrowBalance.mul(exchangeRateMantissa).div(1e18);
     }
 
     /* ============ Overriden Functions ============ */
@@ -180,24 +208,6 @@ contract CompoundBorrowIntegration is BorrowIntegration {
 
         ) = comptroller.getAccountLiquidity(msg.sender);
         return liquidity;
-    }
-
-    /**
-     * Get the amount of borrowed debt that needs to be repaid
-     * @param asset   The underlying asset
-     *
-     */
-    function _getBorrowBalance(address asset) internal view override returns (uint256) {
-        address cToken = assetToCtoken[asset];
-        (
-            ,
-            ,
-            // err
-            // cTokenBalance
-            uint256 borrowBalance,
-            uint256 exchangeRateMantissa
-        ) = ICToken(cToken).getAccountSnapshot(msg.sender);
-        return borrowBalance.mul(exchangeRateMantissa).div(1e18);
     }
 
     function _getCollateralBalance(address asset) internal view override returns (uint256) {

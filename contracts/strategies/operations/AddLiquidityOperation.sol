@@ -64,7 +64,7 @@ contract AddLiquidityOperation is Operation {
      * Executes the add liquidity operation
      * @param _asset              Asset to receive into this operation
      * @param _capital            Amount of asset received
-     * @param _assetStatus        Status of the asset amount
+     * param _assetStatus        Status of the asset amount
      * @param _pool               Address of the pool to enter
      * @param _garden             Garden of the strategy
      * @param _integration        Address of the integration to execute

@@ -15,9 +15,8 @@
 
     SPDX-License-Identifier: Apache License, Version 2.0
 */
-pragma solidity 0.7.4;
+pragma solidity 0.7.6;
 
-import {IIntegration} from './IIntegration.sol';
 
 /**
  * @title IBorrowIntegration
@@ -25,18 +24,14 @@ import {IIntegration} from './IIntegration.sol';
  *
  * Interface for borrow integrations
  */
-interface IBorrowIntegration is IIntegration {
+interface IBorrowIntegration {
     function borrow(address asset, uint256 borrowAmount) external;
 
     function repay(address asset, uint256 amount) external;
 
     function updateMaxCollateralFactor(uint256 _newMaxCollateralFactor) external;
 
-    function getBorrowBalance(address asset) external view returns (uint256);
-
-    function getDebtToken(address asset) external returns (address);
-
-    function getHealthFactor() external view returns (uint256);
+    function getBorrowBalance(address _asset) external view returns (uint256);
 
     function maxCollateralFactor() external view returns (uint256);
 }

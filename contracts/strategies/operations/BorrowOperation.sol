@@ -67,14 +67,14 @@ contract BorrowOperation is Operation {
      * @param _capital            Amount of asset received
      * @param _assetStatus        Status of the asset amount
      * @param _borrowToken        Token to borrow
-     * @param _garden             Garden of the strategy
+     * param _garden              Garden of the strategy
      * @param _integration        Address of the integration to execute
      */
     function executeOperation(
         address _asset,
         uint256 _capital,
         uint8 _assetStatus,
-        address _data,
+        address _borrowToken,
         IGarden, /* _garden */
         address _integration
     )
@@ -92,7 +92,7 @@ contract BorrowOperation is Operation {
             _borrowToken,
             IBorrowIntegration(_integration).maxCollateralFactor().preciseMul(_capital)
         );
-        return (_data, IERC20(_borrowToken).balanceOf(address(msg.sender)), 0); // borrowings are liquid
+        return (_borrowToken, IERC20(_borrowToken).balanceOf(address(msg.sender)), 0); // borrowings are liquid
     }
 
     /**
@@ -110,14 +110,6 @@ contract BorrowOperation is Operation {
             IERC20(IBorrowIntegration(_integration).getBorrowBalance(_assetToken)).balanceOf(msg.sender).preciseMul(
                 _percentage
             );
-        // If we don't have balance to repay
-        if (IERC20(_assetToken).balanceOf(address(msg.sender)) <= numTokensToRepay) {
-            // TODO: update amount of tokens
-            uint256 gardenReserveAmount = IERC20(_garden.reserveAsset()).balanceOf(address(msg.sender));
-            if (gardenReserveAmount > 0) {
-                IStrategy(msg.sender).trade(_garden.reserveAsset(), gardenReserveAmount, _assetToken);
-            }
-        }
         IBorrowIntegration(_integration).repay(
             _assetToken,
             IERC20(_assetToken).balanceOf(address(msg.sender)) // We repay all that we can
@@ -140,7 +132,7 @@ contract BorrowOperation is Operation {
         if (!IStrategy(msg.sender).isStrategyActive()) {
             return 0;
         }
-        uint256 tokensOwed = IBorrowIntegration(_integration)._getBorrowBalance(_debtInfo.asset);
+        uint256 tokensOwed = IBorrowIntegration(_integration).getBorrowBalance(_assetToken);
         uint256 price = _getPrice(_garden.reserveAsset(), _assetToken);
         uint256 NAV = SafeDecimalMath.normalizeDecimals(_assetToken, tokensOwed).preciseDiv(price);
         require(NAV != 0, 'NAV has to be different than 0');

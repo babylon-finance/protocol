@@ -16,7 +16,7 @@
     SPDX-License-Identifier: Apache License, Version 2.0
 */
 
-pragma solidity 0.7.4;
+pragma solidity 0.7.6;
 
 import 'hardhat/console.sol';
 import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
@@ -25,6 +25,8 @@ import {ReentrancyGuard} from '@openzeppelin/contracts/utils/ReentrancyGuard.sol
 import {BaseIntegration} from '../BaseIntegration.sol';
 import {IGarden} from '../../interfaces/IGarden.sol';
 import {IStrategy} from '../../interfaces/IStrategy.sol';
+import {IBabController} from '../../interfaces/IBabController.sol';
+import {IBorrowIntegration} from '../../interfaces/IBorrowIntegration.sol';
 
 /**
  * @title BorrowIntetration
@@ -32,7 +34,7 @@ import {IStrategy} from '../../interfaces/IStrategy.sol';
  *
  * Base class for integration with lending protocols
  */
-abstract contract BorrowIntegration is BaseIntegration, ReentrancyGuard {
+abstract contract BorrowIntegration is BaseIntegration, ReentrancyGuard, IBorrowIntegration {
     using SafeMath for uint256;
 
     /* ============ Struct ============ */
@@ -54,20 +56,18 @@ abstract contract BorrowIntegration is BaseIntegration, ReentrancyGuard {
         IStrategy indexed strategy,
         IGarden indexed garden,
         address asset,
-        uint256 amount,
-        uint256 protocolFee
+        uint256 amount
     );
 
     event AmountRepaid(
         IStrategy indexed strategy,
         IGarden indexed garden,
         address asset,
-        uint256 amount,
-        uint256 protocolFee
+        uint256 amount
     );
 
     /* ============ State Variables ============ */
-    uint256 public maxCollateralFactor;
+    uint256 public override maxCollateralFactor;
 
     /* ============ Constructor ============ */
 
@@ -82,7 +82,7 @@ abstract contract BorrowIntegration is BaseIntegration, ReentrancyGuard {
     constructor(
         string memory _name,
         address _weth,
-        address _controller,
+        IBabController _controller,
         uint256 _maxCollateralFactor
     ) BaseIntegration(_name, _weth, _controller) {
         maxCollateralFactor = _maxCollateralFactor;
@@ -90,8 +90,20 @@ abstract contract BorrowIntegration is BaseIntegration, ReentrancyGuard {
 
     /* ============ External Functions ============ */
     // Governance function
-    function updateMaxCollateralFactor(uint256 _newMaxCollateralFactor) external onlyProtocol {
+    function updateMaxCollateralFactor(uint256 _newMaxCollateralFactor) external override {
         maxCollateralFactor = _newMaxCollateralFactor;
+    }
+
+    /**
+     * Get the amount of borrowed debt that needs to be repaid
+     * hparam asset   The underlying asset
+     *
+     */
+    function getBorrowBalance(
+        address /* asset */
+    ) public view override virtual returns (uint256) {
+        require(false, 'This method must be overriden');
+        return 0;
     }
 
     /**
@@ -99,9 +111,7 @@ abstract contract BorrowIntegration is BaseIntegration, ReentrancyGuard {
      * @param asset The asset to be borrowed
      * @param amount The amount to borrow
      */
-    function borrow(address asset, uint256 amount) external nonReentrant onlyIdea {
-        amount = normalizeAmountWithDecimals(asset, amount);
-
+    function borrow(address asset, uint256 amount) external override nonReentrant onlySystemContract {
         DebtInfo memory debtInfo = _createDebtInfo(asset, amount, BORROW_OPERATION_BORROW);
 
         _validatePreBorrow(debtInfo);
@@ -120,13 +130,7 @@ abstract contract BorrowIntegration is BaseIntegration, ReentrancyGuard {
         debtInfo.strategy.invokeFromIntegration(targetAddress, callValue, methodData);
         // Validate borrow
         _validatePostBorrow(debtInfo);
-
-        // Protocol Fee
-        uint256 protocolFee = _accrueProtocolFee(address(debtInfo.strategy), asset, amount);
-
-        _updateStrategyPosition(msg.sender, asset, int256(-amount), 3);
-
-        emit AmountBorrowed(debtInfo.strategy, debtInfo.garden, asset, amount, protocolFee);
+        emit AmountBorrowed(debtInfo.strategy, debtInfo.garden, asset, amount);
     }
 
     /**
@@ -134,9 +138,7 @@ abstract contract BorrowIntegration is BaseIntegration, ReentrancyGuard {
      * @param asset The asset to be repaid
      * @param amount The amount to repay
      */
-    function repay(address asset, uint256 amount) external nonReentrant onlyIdea {
-        amount = normalizeAmountWithDecimals(asset, amount);
-
+    function repay(address asset, uint256 amount) external override nonReentrant onlySystemContract {
         DebtInfo memory debtInfo = _createDebtInfo(asset, amount, BORROW_OPERATION_REPAY);
 
         _validatePreRepay(debtInfo);
@@ -158,11 +160,8 @@ abstract contract BorrowIntegration is BaseIntegration, ReentrancyGuard {
         debtInfo.strategy.invokeFromIntegration(targetAddress, callValue, methodData);
         // Validate borrow
         _validatePostRepay(debtInfo);
-        // Protocol Fee
-        uint256 protocolFee = _accrueProtocolFee(address(debtInfo.strategy), asset, amount);
-        _updateStrategyPosition(msg.sender, asset, 0, 0);
 
-        emit AmountRepaid(debtInfo.strategy, debtInfo.garden, asset, amount, protocolFee);
+        emit AmountRepaid(debtInfo.strategy, debtInfo.garden, asset, amount);
     }
 
     /* ============ Internal Functions ============ */
@@ -225,7 +224,7 @@ abstract contract BorrowIntegration is BaseIntegration, ReentrancyGuard {
             IERC20(_debtInfo.asset).balanceOf(address(_debtInfo.strategy)) >= _debtInfo.amount,
             'We do not have enough to repay debt'
         );
-        require(_getBorrowBalance(_debtInfo.asset) > 0, 'No debt to repay');
+        require(getBorrowBalance(_debtInfo.asset) > 0, 'No debt to repay');
     }
 
     /**
@@ -235,7 +234,7 @@ abstract contract BorrowIntegration is BaseIntegration, ReentrancyGuard {
      */
     function _validatePostRepay(DebtInfo memory _debtInfo) internal view {
         // debt is paid
-        require(_getBorrowBalance(_debtInfo.asset) == 0, 'No debt to repay');
+        require(getBorrowBalance(_debtInfo.asset) == 0, 'No debt to repay');
     }
 
     /* ============ Virtual Functions ============ */
@@ -324,18 +323,6 @@ abstract contract BorrowIntegration is BaseIntegration, ReentrancyGuard {
     }
 
     /**
-     * Get the amount of borrowed debt that needs to be repaid
-     * hparam asset   The underlying asset
-     *
-     */
-    function _getBorrowBalance(
-        address /* asset */
-    ) internal view virtual returns (uint256) {
-        require(false, 'This method must be overriden');
-        return 0;
-    }
-
-    /**
      * Get the amount of collateral supplied
      * hparam asset   The collateral asset
      *
@@ -346,7 +333,6 @@ abstract contract BorrowIntegration is BaseIntegration, ReentrancyGuard {
         require(false, 'This method must be overriden');
         return 0;
     }
-
     /**
      * Get the remaining liquidity available to borrow
      *
