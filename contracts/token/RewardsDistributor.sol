@@ -156,6 +156,10 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
     // DAI normalize asset
     address private constant DAI = 0x6B175474E89094C44Da98b954EedeAC495271d0F;
 
+    // Reentrancy guard countermeasure
+    uint256 private constant _NOT_ENTERED = 1;
+    uint256 private constant _ENTERED = 2;
+
     /* ============ Structs ============ */
 
     struct ProtocolPerTimestamp {
@@ -247,9 +251,7 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
     mapping(address => mapping(uint256 => StrategyPerQuarter)) public strategyPerQuarter; // Acumulated strategy power per each quarter along the time
     mapping(address => StrategyPricePerTokenUnit) public strategyPricePerTokenUnit; // Pro-rata oracle price allowing re-allocations and unwinding of any capital value
 
-    uint256 private constant _NOT_ENTERED = 1;
-    uint256 private constant _ENTERED = 2;
-
+    // Reentrancy guard countermeasure
     uint256 private _status;
 
     /* ============ Constructor ============ */
