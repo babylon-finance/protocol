@@ -244,6 +244,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
     uint256[] public tokenAmountsNeeded; // Amount of these positions
 
     uint256 public override strategyRewards; // Rewards allocated for this strategy updated on finalized
+    uint256 public rewardsTotalOverhead; // Potential extra amount we are giving in BABL rewards
 
     // Voters mapped to their votes.
     mapping(address => int256) public votes;
