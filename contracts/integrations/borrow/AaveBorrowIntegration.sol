@@ -152,7 +152,7 @@ contract AaveBorrowIntegration is BorrowIntegration {
      */
     function _getBorrowCalldata(address _strategy, address _asset, uint256 _amount)
         internal
-        view
+        pure
         override
         returns (
             address,
@@ -187,7 +187,7 @@ contract AaveBorrowIntegration is BorrowIntegration {
      */
     function _getRepayCalldata(address _strategy, address _asset, uint256 _amount)
         internal
-        view
+        pure
         override
         returns (
             address,
