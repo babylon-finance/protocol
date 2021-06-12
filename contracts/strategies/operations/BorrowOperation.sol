@@ -100,12 +100,10 @@ contract BorrowOperation is Operation {
         );
         uint256 price = _getPrice(_asset, _borrowToken);
         // % of the total collateral value in the borrow token
-        uint amountToBorrow = _capital.preciseMul(price).preciseMul(IBorrowIntegration(_integration).maxCollateralFactor());
-        IBorrowIntegration(_integration).borrow(
-            msg.sender,
-            _borrowToken,
-            amountToBorrow
-        );
+        uint256 amountToBorrow =
+            _capital.preciseMul(price).preciseMul(IBorrowIntegration(_integration).maxCollateralFactor());
+        uint256 normalizedAmount = SafeDecimalMath.normalizeDecimals(_asset, _borrowToken, amountToBorrow);
+        IBorrowIntegration(_integration).borrow(msg.sender, _borrowToken, normalizedAmount);
         return (_borrowToken, IERC20(_borrowToken).balanceOf(address(msg.sender)), 0); // borrowings are liquid
     }
 
@@ -114,17 +112,30 @@ contract BorrowOperation is Operation {
      * @param _percentage of capital to exit from the strategy
      */
     function exitOperation(
+        address, /* _asset */
+        uint256, /* _remaining */
+        uint8, /* _assetStatus */
         uint256 _percentage,
         address _assetToken,
         IGarden, /* _garden */
         address _integration
-    ) external override onlyStrategy {
+    )
+        external
+        override
+        onlyStrategy
+        returns (
+            address,
+            uint256,
+            uint8
+        )
+    {
         require(_percentage <= HUNDRED_PERCENT, 'Unwind Percentage <= 100%');
         IBorrowIntegration(_integration).repay(
             msg.sender,
             _assetToken,
             IERC20(_assetToken).balanceOf(address(msg.sender)) // We repay all that we can
         );
+        return (_assetToken, IBorrowIntegration(_integration).getBorrowBalance(msg.sender, _assetToken), 2);
     }
 
     /**
@@ -145,7 +156,8 @@ contract BorrowOperation is Operation {
         }
         uint256 tokensOwed = IBorrowIntegration(_integration).getBorrowBalance(msg.sender, _assetToken);
         uint256 price = _getPrice(_garden.reserveAsset(), _assetToken);
-        uint256 NAV = SafeDecimalMath.normalizeDecimals(_assetToken, tokensOwed).preciseDiv(price);
+        uint256 NAV =
+            SafeDecimalMath.normalizeDecimals(_garden.reserveAsset(), _assetToken, tokensOwed).preciseDiv(price);
         require(NAV != 0, 'NAV has to be different than 0');
         return uint256(-NAV);
     }

@@ -60,11 +60,14 @@ describe('AaveBorrowIntegrationTest', function () {
       await executeStrategy(strategyContract);
       expect(await DAI.balanceOf(strategyContract.address)).to.equal(0);
       expect(await USDC.balanceOf(strategyContract.address)).to.be.gt(0);
-      const beforeExitingWeth = await WETH.balanceOf(strategyContract.address);
+      const collateral = await aaveBorrowIntegration.getCollateralBalance(strategyContract.address, DAI.address);
+      expect(collateral).to.be.gt(1);
+      expect(await aaveBorrowIntegration.getBorrowBalance(strategyContract.address, USDC.address)).to.be.gt(0);
+      const beforeExitingWeth = await WETH.balanceOf(garden1.address);
       await finalizeStrategy(strategyContract);
       expect(await USDC.balanceOf(strategyContract.address)).to.equal(0);
-      expect(await DAI.balanceOf(strategyContract.address)).to.be.gt(0);
-      expect(await WETH.balanceOf(strategyContract.address)).to.gt(beforeExitingWeth);
+      expect(await DAI.balanceOf(strategyContract.address)).to.equal(0);
+      expect(await WETH.balanceOf(garden1.address)).to.gt(beforeExitingWeth);
     });
   });
 });

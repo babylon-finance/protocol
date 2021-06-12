@@ -107,27 +107,35 @@ contract DepositVaultOperation is Operation {
      * @param _percentage of capital to exit from the strategy
      */
     function exitOperation(
+        address, /* _asset */
+        uint256, /* _remaining */
+        uint8, /* _assetStatus */
         uint256 _percentage,
-        address _data,
+        address _yieldVault,
         IGarden _garden,
         address _integration
-    ) external override onlyStrategy {
+    )
+        external
+        override
+        onlyStrategy
+        returns (
+            address,
+            uint256,
+            uint8
+        )
+    {
         require(_percentage <= HUNDRED_PERCENT, 'Unwind Percentage <= 100%');
-        address yieldVault = _data;
-        address vaultAsset = IPassiveIntegration(_integration).getInvestmentAsset(yieldVault);
-        uint256 amountVault = IERC20(yieldVault).balanceOf(msg.sender).preciseMul(_percentage);
-        IPassiveIntegration(_integration).exitInvestment(
-            msg.sender,
-            yieldVault,
-            amountVault,
-            vaultAsset,
-            IPassiveIntegration(_integration).getPricePerShare(yieldVault).mul(
+        address vaultAsset = IPassiveIntegration(_integration).getInvestmentAsset(_yieldVault);
+        uint256 amountVault = IERC20(_yieldVault).balanceOf(msg.sender).preciseMul(_percentage);
+        uint256 minAmount =
+            IPassiveIntegration(_integration).getPricePerShare(_yieldVault).mul(
                 amountVault.sub(amountVault.preciseMul(SLIPPAGE_ALLOWED))
-            )
-        );
+            );
+        IPassiveIntegration(_integration).exitInvestment(msg.sender, _yieldVault, amountVault, vaultAsset, minAmount);
         if (vaultAsset != _garden.reserveAsset()) {
             IStrategy(msg.sender).trade(vaultAsset, IERC20(vaultAsset).balanceOf(msg.sender), _garden.reserveAsset());
         }
+        return (_yieldVault, 0, 0);
     }
 
     /**

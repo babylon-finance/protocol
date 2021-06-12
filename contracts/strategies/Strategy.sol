@@ -789,9 +789,20 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
      * @param _percentage of capital to exit from the strategy
      */
     function _exitStrategy(uint256 _percentage) internal {
+        address assetFinalized = garden.reserveAsset();
+        uint256 capitalPending = 0;
+        uint8 assetStatus = 0;
         for (uint256 i = opTypes.length; i > 0; i--) {
             IOperation operation = IOperation(IBabController(controller).enabledOperations(opTypes[i - 1]));
-            operation.exitOperation(_percentage, opDatas[i - 1], garden, opIntegrations[i - 1]);
+            (assetFinalized, capitalPending, assetStatus) = operation.exitOperation(
+                assetFinalized,
+                capitalPending,
+                assetStatus,
+                _percentage,
+                opDatas[i - 1],
+                garden,
+                opIntegrations[i - 1]
+            );
         }
     }
 

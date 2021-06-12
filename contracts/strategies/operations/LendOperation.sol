@@ -17,6 +17,7 @@
 */
 
 pragma solidity 0.7.6;
+import 'hardhat/console.sol';
 import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import {SafeMath} from '@openzeppelin/contracts/math/SafeMath.sol';
 import {Operation} from './Operation.sol';
@@ -103,28 +104,46 @@ contract LendOperation is Operation {
      * @param _percentage of capital to exit from the strategy
      */
     function exitOperation(
+        address _borrowToken,
+        uint256 _remaining,
+        uint8, /* _assetStatus */
         uint256 _percentage,
-        address _data,
+        address _assetToken,
         IGarden _garden,
         address _integration
-    ) external override onlyStrategy {
+    )
+        external
+        override
+        onlyStrategy
+        returns (
+            address,
+            uint256,
+            uint8
+        )
+    {
         require(_percentage <= HUNDRED_PERCENT, 'Unwind Percentage <= 100%');
-        address assetToken = _data;
         uint256 numTokensToRedeem =
-            IERC20(ILendIntegration(_integration).getInvestmentToken(assetToken)).balanceOf(msg.sender).preciseMul(
+            IERC20(ILendIntegration(_integration).getInvestmentToken(_assetToken)).balanceOf(msg.sender).preciseMul(
                 _percentage
             );
+        uint256 remainingDebtInCollateralTokens = _getRemainingDebtNormalized(_borrowToken, _assetToken, _remaining);
+        if (_remaining > 0) {
+            // Update amount so we can exit if there is debt
+            numTokensToRedeem = numTokensToRedeem.sub(remainingDebtInCollateralTokens.mul(130).div(100));
+        }
+        uint256 exchangeRate = ILendIntegration(_integration).getExchangeRatePerToken(_assetToken);
         ILendIntegration(_integration).redeemTokens(
             msg.sender,
-            assetToken,
+            _assetToken,
             numTokensToRedeem,
-            ILendIntegration(_integration).getExchangeRatePerToken(assetToken).mul(
-                numTokensToRedeem.sub(numTokensToRedeem.preciseMul(SLIPPAGE_ALLOWED))
-            )
+            exchangeRate.mul(numTokensToRedeem.sub(numTokensToRedeem.preciseMul(SLIPPAGE_ALLOWED)))
         );
-        if (assetToken != _garden.reserveAsset()) {
-            IStrategy(msg.sender).trade(assetToken, IERC20(assetToken).balanceOf(msg.sender), _garden.reserveAsset());
+        if (_assetToken != _garden.reserveAsset()) {
+            IStrategy(msg.sender).trade(_assetToken, IERC20(_assetToken).balanceOf(msg.sender), _garden.reserveAsset());
         }
+        uint256 collateralLocked =
+            IERC20(ILendIntegration(_integration).getInvestmentToken(_assetToken)).balanceOf(msg.sender);
+        return (_assetToken, collateralLocked, 1);
     }
 
     /**
@@ -148,8 +167,22 @@ contract LendOperation is Operation {
         uint256 assetTokensAmount =
             ILendIntegration(_integration).getExchangeRatePerToken(_assetToken).mul(numTokensToRedeem);
         uint256 price = _getPrice(_garden.reserveAsset(), _assetToken);
-        uint256 NAV = SafeDecimalMath.normalizeDecimals(_assetToken, assetTokensAmount).preciseDiv(price);
+        uint256 NAV =
+            SafeDecimalMath.normalizeDecimals(_garden.reserveAsset(), _assetToken, assetTokensAmount).preciseDiv(price);
         require(NAV != 0, 'NAV has to be bigger 0');
         return NAV;
+    }
+
+    function _getRemainingDebtNormalized(
+        address _borrowToken,
+        address _assetToken,
+        uint256 _remaining
+    ) private view returns (uint256) {
+        if (_remaining == 0) {
+            return 0;
+        }
+        uint256 price = _getPrice(_borrowToken, _assetToken);
+        uint256 amountToStayLocked = _remaining.preciseMul(price);
+        return SafeDecimalMath.normalizeDecimals(_borrowToken, _assetToken, amountToStayLocked);
     }
 }

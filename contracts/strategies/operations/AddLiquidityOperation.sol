@@ -109,11 +109,23 @@ contract AddLiquidityOperation is Operation {
      * @param _percentage of capital to exit from the strategy
      */
     function exitOperation(
+        address, /* _asset */
+        uint256, /* _remaining */
+        uint8, /* _assetStatus */
         uint256 _percentage,
         address _data,
         IGarden _garden,
         address _integration
-    ) external override onlyStrategy {
+    )
+        external
+        override
+        onlyStrategy
+        returns (
+            address,
+            uint256,
+            uint8
+        )
+    {
         require(_percentage <= 100e18, 'Unwind Percentage <= 100%');
         address pool = _data;
         address[] memory poolTokens = IPoolIntegration(_integration).getPoolTokens(pool);
@@ -143,6 +155,7 @@ contract AddLiquidityOperation is Operation {
                 }
             }
         }
+        return (_data, 0, 0);
     }
 
     /**

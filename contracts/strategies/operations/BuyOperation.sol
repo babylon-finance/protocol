@@ -94,11 +94,23 @@ contract BuyOperation is Operation {
      * @param _percentage of capital to exit from the strategy
      */
     function exitOperation(
+        address, /* _asset */
+        uint256, /* _remaining */
+        uint8, /* _assetStatus */
         uint256 _percentage,
         address _data,
         IGarden _garden,
         address /* _integration */
-    ) external override onlyStrategy {
+    )
+        external
+        override
+        onlyStrategy
+        returns (
+            address,
+            uint256,
+            uint8
+        )
+    {
         require(_percentage <= 100e18, 'Unwind Percentage <= 100%');
         IStrategy(msg.sender).trade(
             _data,
@@ -124,7 +136,10 @@ contract BuyOperation is Operation {
             return 0;
         }
         uint256 price = _getPrice(_garden.reserveAsset(), _data);
-        uint256 NAV = SafeDecimalMath.normalizeDecimals(_data, IERC20(_data).balanceOf(msg.sender)).preciseDiv(price);
+        uint256 NAV =
+            SafeDecimalMath
+                .normalizeDecimals(_garden.reserveAsset(), _data, IERC20(_data).balanceOf(msg.sender))
+                .preciseDiv(price);
         require(NAV != 0, 'NAV has to be bigger 0');
         return NAV;
     }

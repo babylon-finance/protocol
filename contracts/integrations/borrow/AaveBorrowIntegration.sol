@@ -150,7 +150,11 @@ contract AaveBorrowIntegration is BorrowIntegration {
      * @return uint256                   Call value
      * @return bytes                     Trade calldata
      */
-    function _getBorrowCalldata(address _strategy, address _asset, uint256 _amount)
+    function _getBorrowCalldata(
+        address _strategy,
+        address _asset,
+        uint256 _amount
+    )
         internal
         pure
         override
@@ -185,7 +189,11 @@ contract AaveBorrowIntegration is BorrowIntegration {
      * @return uint256                   Call value
      * @return bytes                     Trade calldata
      */
-    function _getRepayCalldata(address _strategy, address _asset, uint256 _amount)
+    function _getRepayCalldata(
+        address _strategy,
+        address _asset,
+        uint256 _amount
+    )
         internal
         pure
         override

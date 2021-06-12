@@ -17,7 +17,15 @@ describe('AaveLendIntegrationTest', function () {
   let WETH;
 
   beforeEach(async () => {
-    ({ garden1, babController, aaveBorrowIntegration, aaveLendIntegration, signer1, signer2, signer3 } = await setupTests()());
+    ({
+      garden1,
+      babController,
+      aaveBorrowIntegration,
+      aaveLendIntegration,
+      signer1,
+      signer2,
+      signer3,
+    } = await setupTests()());
     USDC = await ethers.getContractAt('IERC20', addresses.tokens.USDC);
     WETH = await ethers.getContractAt('IERC20', addresses.tokens.WETH);
   });

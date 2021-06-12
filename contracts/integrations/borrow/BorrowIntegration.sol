@@ -145,7 +145,8 @@ abstract contract BorrowIntegration is BaseIntegration, ReentrancyGuard, IBorrow
             debtInfo.strategy.invokeFromIntegration(targetAddressP, callValueP, methodDataP);
         }
 
-        (address targetAddress, uint256 callValue, bytes memory methodData) = _getBorrowCalldata(_strategy, asset, amount);
+        (address targetAddress, uint256 callValue, bytes memory methodData) =
+            _getBorrowCalldata(_strategy, asset, amount);
         // Invoke protocol specific call
         debtInfo.strategy.invokeFromIntegration(targetAddress, callValue, methodData);
         // Validate borrow
@@ -178,7 +179,8 @@ abstract contract BorrowIntegration is BaseIntegration, ReentrancyGuard, IBorrow
         // Approves the repayment contract to take the tokens
         debtInfo.strategy.invokeApprove(_getSpender(asset), asset, amount);
 
-        (address targetAddress, uint256 callValue, bytes memory methodData) = _getRepayCalldata(_strategy, asset, amount);
+        (address targetAddress, uint256 callValue, bytes memory methodData) =
+            _getRepayCalldata(_strategy, asset, amount);
 
         // Invoke protocol specific call
         debtInfo.strategy.invokeFromIntegration(targetAddress, callValue, methodData);
