@@ -46,7 +46,7 @@ describe('AaveBorrowIntegrationTest', function () {
   });
 
   describe('Aave Borrow', function () {
-    it('can supply DAI and borrow USDC in a WETH Garden', async function () {
+    it.only('can supply DAI and borrow USDC in a WETH Garden', async function () {
       const strategyContract = await createStrategy(
         'borrow',
         'vote',

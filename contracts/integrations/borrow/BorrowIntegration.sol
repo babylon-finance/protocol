@@ -145,7 +145,7 @@ abstract contract BorrowIntegration is BaseIntegration, ReentrancyGuard, IBorrow
             debtInfo.strategy.invokeFromIntegration(targetAddressP, callValueP, methodDataP);
         }
 
-        (address targetAddress, uint256 callValue, bytes memory methodData) = _getBorrowCalldata(asset, amount);
+        (address targetAddress, uint256 callValue, bytes memory methodData) = _getBorrowCalldata(_strategy, asset, amount);
         // Invoke protocol specific call
         debtInfo.strategy.invokeFromIntegration(targetAddress, callValue, methodData);
         // Validate borrow
@@ -178,7 +178,7 @@ abstract contract BorrowIntegration is BaseIntegration, ReentrancyGuard, IBorrow
         // Approves the repayment contract to take the tokens
         debtInfo.strategy.invokeApprove(_getSpender(asset), asset, amount);
 
-        (address targetAddress, uint256 callValue, bytes memory methodData) = _getRepayCalldata(asset, amount);
+        (address targetAddress, uint256 callValue, bytes memory methodData) = _getRepayCalldata(_strategy, asset, amount);
 
         // Invoke protocol specific call
         debtInfo.strategy.invokeFromIntegration(targetAddress, callValue, methodData);
@@ -269,6 +269,7 @@ abstract contract BorrowIntegration is BaseIntegration, ReentrancyGuard, IBorrow
     /**
      * Return borrow token calldata
      *
+     * hparam  _strategy                 Address of the strategy executing it
      * hparam  _asset                    Address of the asset to deposit
      * hparam  _amount                   Amount of the token to deposit
      *
@@ -277,6 +278,7 @@ abstract contract BorrowIntegration is BaseIntegration, ReentrancyGuard, IBorrow
      * @return bytes                     Trade calldata
      */
     function _getBorrowCalldata(
+        address, /* _strategy */
         address, /* _asset */
         uint256 /* _amount */
     )
@@ -296,6 +298,7 @@ abstract contract BorrowIntegration is BaseIntegration, ReentrancyGuard, IBorrow
     /**
      * Return repay borrowed asset calldata
      *
+     * hparam  _strategy                 Address of the strategy executing it
      * hparam  _asset                    Address of the asset to deposit
      * hparam  _amount                   Amount of the token to deposit
      *
@@ -304,6 +307,7 @@ abstract contract BorrowIntegration is BaseIntegration, ReentrancyGuard, IBorrow
      * @return bytes                     Trade calldata
      */
     function _getRepayCalldata(
+        address, /* _strategy */
         address, /* _asset */
         uint256 /* _amount */
     )

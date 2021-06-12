@@ -7,6 +7,7 @@ const { ADDRESS_ZERO } = require('../../lib/constants');
 
 describe('AaveLendIntegrationTest', function () {
   let aaveLendIntegration;
+  let aaveBorrowIntegration;
   let garden1;
   let signer1;
   let signer2;
@@ -16,7 +17,7 @@ describe('AaveLendIntegrationTest', function () {
   let WETH;
 
   beforeEach(async () => {
-    ({ garden1, babController, aaveLendIntegration, signer1, signer2, signer3 } = await setupTests()());
+    ({ garden1, babController, aaveBorrowIntegration, aaveLendIntegration, signer1, signer2, signer3 } = await setupTests()());
     USDC = await ethers.getContractAt('IERC20', addresses.tokens.USDC);
     WETH = await ethers.getContractAt('IERC20', addresses.tokens.WETH);
   });
@@ -50,12 +51,13 @@ describe('AaveLendIntegrationTest', function () {
 
       await executeStrategy(strategyContract);
       expect(await USDC.balanceOf(strategyContract.address)).to.be.equal(0);
-
+      const collateral = await aaveBorrowIntegration.getCollateralBalance(strategyContract.address, USDC.address);
+      expect(collateral).to.be.gt(1);
       await finalizeStrategy(strategyContract);
       expect(await USDC.balanceOf(strategyContract.address)).to.equal(0);
       expect(await WETH.balanceOf(strategyContract.address)).to.equal(0);
+      expect(await aaveBorrowIntegration.getCollateralBalance(strategyContract.address, USDC.address)).to.equal(0);
     });
-
     // TODO: test supply for WETH
   });
 });

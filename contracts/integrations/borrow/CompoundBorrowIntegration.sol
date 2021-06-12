@@ -179,6 +179,7 @@ contract CompoundBorrowIntegration is BorrowIntegration {
     /**
      * Return borrow token calldata
      *
+     * hparam  _strategy                 Address of the strategy executing it
      * @param  _asset                    Address of the asset to deposit
      * @param  _amount                   Amount of the token to deposit
      *
@@ -186,7 +187,7 @@ contract CompoundBorrowIntegration is BorrowIntegration {
      * @return uint256                   Call value
      * @return bytes                     Trade calldata
      */
-    function _getBorrowCalldata(address _asset, uint256 _amount)
+    function _getBorrowCalldata(address /* _strategy */, address _asset, uint256 _amount)
         internal
         pure
         override
@@ -205,6 +206,7 @@ contract CompoundBorrowIntegration is BorrowIntegration {
     /**
      * Return repay borrowed asset calldata
      *
+     * hparam  _strategy                 Address of the strategy executing it
      * @param  _asset                    Address of the asset to deposit
      * @param  _amount                   Amount of the token to deposit
      *
@@ -212,7 +214,7 @@ contract CompoundBorrowIntegration is BorrowIntegration {
      * @return uint256                   Call value
      * @return bytes                     Trade calldata
      */
-    function _getRepayCalldata(address _asset, uint256 _amount)
+    function _getRepayCalldata(address /* _strategy */, address _asset, uint256 _amount)
         internal
         view
         override

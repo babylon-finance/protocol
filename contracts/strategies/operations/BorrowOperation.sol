@@ -98,10 +98,13 @@ contract BorrowOperation is Operation {
                 IBorrowIntegration(_integration).getCollateralBalance(msg.sender, _asset) > 0,
             'There is no collateral locked'
         );
+        uint256 price = _getPrice(_asset, _borrowToken);
+        // % of the total collateral value in the borrow token
+        uint amountToBorrow = _capital.preciseMul(price).preciseMul(IBorrowIntegration(_integration).maxCollateralFactor());
         IBorrowIntegration(_integration).borrow(
             msg.sender,
             _borrowToken,
-            IBorrowIntegration(_integration).maxCollateralFactor().preciseMul(_capital)
+            amountToBorrow
         );
         return (_borrowToken, IERC20(_borrowToken).balanceOf(address(msg.sender)), 0); // borrowings are liquid
     }

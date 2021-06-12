@@ -142,6 +142,7 @@ contract AaveBorrowIntegration is BorrowIntegration {
     /**
      * Return borrow token calldata
      *
+     * @param  _strategy                 Address of the strategy executing
      * @param  _asset                    Address of the asset to deposit
      * @param  _amount                   Amount of the token to deposit
      *
@@ -149,7 +150,7 @@ contract AaveBorrowIntegration is BorrowIntegration {
      * @return uint256                   Call value
      * @return bytes                     Trade calldata
      */
-    function _getBorrowCalldata(address _asset, uint256 _amount)
+    function _getBorrowCalldata(address _strategy, address _asset, uint256 _amount)
         internal
         view
         override
@@ -167,7 +168,7 @@ contract AaveBorrowIntegration is BorrowIntegration {
                 _amount,
                 interestRateMode,
                 0,
-                msg.sender
+                _strategy
             );
 
         return (address(lendingPool), 0, methodData);
@@ -176,6 +177,7 @@ contract AaveBorrowIntegration is BorrowIntegration {
     /**
      * Return repay borrowed asset calldata
      *
+     * @param  _strategy                 Address of the strategy executing it
      * @param  _asset                    Address of the asset to deposit
      * @param  _amount                   Amount of the token to deposit
      *
@@ -183,7 +185,7 @@ contract AaveBorrowIntegration is BorrowIntegration {
      * @return uint256                   Call value
      * @return bytes                     Trade calldata
      */
-    function _getRepayCalldata(address _asset, uint256 _amount)
+    function _getRepayCalldata(address _strategy, address _asset, uint256 _amount)
         internal
         view
         override
@@ -200,7 +202,7 @@ contract AaveBorrowIntegration is BorrowIntegration {
                 _asset,
                 _amount,
                 interestRateMode,
-                msg.sender
+                _strategy
             );
         return (address(lendingPool), 0, methodData);
     }
