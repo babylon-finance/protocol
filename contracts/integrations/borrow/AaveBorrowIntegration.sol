@@ -56,7 +56,6 @@ contract AaveBorrowIntegration is BorrowIntegration {
         uint256 _maxCollateralFactor
     ) BorrowIntegration('aaveborrow', _weth, _controller, _maxCollateralFactor) {}
 
-
     /* ============ External Functions ============ */
     /**
      * Get the amount of borrowed debt that needs to be repaid

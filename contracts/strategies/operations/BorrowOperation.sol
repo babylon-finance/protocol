@@ -58,7 +58,7 @@ contract BorrowOperation is Operation {
         address, /* _integration */
         uint256 _index
     ) external view override onlyStrategy {
-        require(IBorrowIntegration(_integration).getCollateralBalance > 0 , "Neds to be collateral");
+        require(IBorrowIntegration(_integration).getCollateralBalance > 0, 'Neds to be collateral');
         require(_index > 0, 'The operation cannot be the first. Needs to be a lend first');
     }
 

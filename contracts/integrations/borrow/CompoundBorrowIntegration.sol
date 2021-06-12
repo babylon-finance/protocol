@@ -107,10 +107,10 @@ contract CompoundBorrowIntegration is BorrowIntegration {
 
     /**
      * Get the amount of collateral depposited
-     * @param asset   The collateral to check 
+     * @param asset   The collateral to check
      *
      */
-    function _getCollateralBalance(address asset) external view override returns (uint256) {
+    function getCollateralBalance(address asset) external view override returns (uint256) {
         address cToken = assetToCtoken[asset];
         (
             ,
