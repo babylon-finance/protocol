@@ -51,7 +51,6 @@ describe('AaveBorrowIntegrationTest', function () {
     //   expect(await CUSDC.balanceOf(strategyContract.address)).to.be.equal(0);
     //   expect(await WETH.balanceOf(strategyContract.address)).to.equal(0);
     // });
-
     // TODO: test supply/borrow for WETH
   });
 });
