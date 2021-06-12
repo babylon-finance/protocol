@@ -56,7 +56,7 @@ contract CompoundBorrowIntegration is BorrowIntegration {
     address constant CompoundComptrollerAddress = 0x3d9819210A31b4961b30EF54bE2aeD79B9c9Cd3B;
     address constant CEtherAddress = 0x4Ddc2D193948926D02f9B1fE9e1daa0718270ED5;
     // Mapping of asset addresses to cToken addresses
-    mapping(address => address) public assetToCtoken;
+    mapping(address => address) public assetToCToken;
 
     /* ============ Constructor ============ */
 
@@ -72,19 +72,20 @@ contract CompoundBorrowIntegration is BorrowIntegration {
         address _weth,
         uint256 _maxCollateralFactor
     ) BorrowIntegration('compoundborrow', _weth, _controller, _maxCollateralFactor) {
-        assetToCtoken[0x6B175474E89094C44Da98b954EedeAC495271d0F] = 0x5d3a536E4D6DbD6114cc1Ead35777bAB948E3643; // DAI
-        assetToCtoken[0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2] = 0x4Ddc2D193948926D02f9B1fE9e1daa0718270ED5; // WETH
-        assetToCtoken[0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48] = 0x39AA39c021dfbaE8faC545936693aC917d5E7563; // USDC
-        assetToCtoken[0xdAC17F958D2ee523a2206206994597C13D831ec7] = 0xf650C3d88D12dB855b8bf7D11Be6C55A4e07dCC9; // USDT
-        assetToCtoken[0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599] = 0xC11b1268C1A384e55C48c2391d8d480264A3A7F4; // WBTC
-        assetToCtoken[0xc00e94Cb662C3520282E6f5717214004A7f26888] = 0x70e36f6BF80a52b3B46b3aF8e106CC0ed743E8e4; // COMP
+      assetToCToken[0x6B175474E89094C44Da98b954EedeAC495271d0F] = 0x5d3a536E4D6DbD6114cc1Ead35777bAB948E3643; // DAI
+      assetToCToken[0x1f9840a85d5aF5bf1D1762F925BDADdC4201F984] = 0x35A18000230DA775CAc24873d00Ff85BccdeD550; // UNI
+      assetToCToken[0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2] = 0x4Ddc2D193948926D02f9B1fE9e1daa0718270ED5; // WETH
+      assetToCToken[0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48] = 0x39AA39c021dfbaE8faC545936693aC917d5E7563; // USDC
+      assetToCToken[0xdAC17F958D2ee523a2206206994597C13D831ec7] = 0xf650C3d88D12dB855b8bf7D11Be6C55A4e07dCC9; // USDT
+      assetToCToken[0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599] = 0xC11b1268C1A384e55C48c2391d8d480264A3A7F4; // WBTC
+      assetToCToken[0xc00e94Cb662C3520282E6f5717214004A7f26888] = 0x70e36f6BF80a52b3B46b3aF8e106CC0ed743E8e4; // COMP
     }
 
     /* ============ External Functions ============ */
 
     // Governance function
     function updateCTokenMapping(address _assetAddress, address _cTokenAddress) external onlyGovernance {
-        assetToCtoken[_assetAddress] = _cTokenAddress;
+        assetToCToken[_assetAddress] = _cTokenAddress;
     }
 
     /**
@@ -93,7 +94,7 @@ contract CompoundBorrowIntegration is BorrowIntegration {
      *
      */
     function getBorrowBalance(address _strategy, address asset) public view override returns (uint256) {
-        address cToken = assetToCtoken[asset];
+        address cToken = assetToCToken[asset];
         (
             ,
             ,
@@ -111,7 +112,7 @@ contract CompoundBorrowIntegration is BorrowIntegration {
      *
      */
     function getCollateralBalance(address _strategy, address asset) external view override returns (uint256) {
-        address cToken = assetToCtoken[asset];
+        address cToken = assetToCToken[asset];
         (
             ,
             // err
@@ -193,7 +194,7 @@ contract CompoundBorrowIntegration is BorrowIntegration {
         uint256 _amount
     )
         internal
-        pure
+        view
         override
         returns (
             address,
@@ -204,7 +205,7 @@ contract CompoundBorrowIntegration is BorrowIntegration {
         // Encode method data for Garden to invoke
         bytes memory methodData = abi.encodeWithSignature('borrow(uint256)', _amount);
 
-        return (_asset, 0, methodData);
+        return (assetToCToken[_asset], 0, methodData);
     }
 
     /**
@@ -234,7 +235,7 @@ contract CompoundBorrowIntegration is BorrowIntegration {
     {
         // Encode method data for Garden to invoke
         bytes memory methodData = abi.encodeWithSignature('repayBorrow(uint256)', _amount);
-        return (assetToCtoken[_asset], 0, methodData);
+        return (assetToCToken[_asset], 0, methodData);
     }
 
     /* ============ Internal Functions ============ */
@@ -244,10 +245,10 @@ contract CompoundBorrowIntegration is BorrowIntegration {
         uint8 /* _borrowOp */
     ) internal view override returns (address) {
         // TODO: check this
-        return assetToCtoken[_asset];
+        return assetToCToken[_asset];
     }
 
     function _getSpender(address _asset) internal view override returns (address) {
-        return assetToCtoken[_asset];
+        return assetToCToken[_asset];
     }
 }

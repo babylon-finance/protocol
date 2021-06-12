@@ -216,7 +216,7 @@ abstract contract LendIntegration is BaseIntegration, ReentrancyGuard, ILendInte
      */
     function _validatePostExitInvestmentData(InvestmentInfo memory _investmentInfo) internal view {
         require(
-            IERC20(_investmentInfo.investment).balanceOf(address(_investmentInfo.strategy)) ==
+            IERC20(_investmentInfo.investment).balanceOf(address(_investmentInfo.strategy)) >=
                 _investmentInfo.investmentTokensInGarden - _investmentInfo.investmentTokensInTransaction,
             'The garden did not return the investment tokens'
         );

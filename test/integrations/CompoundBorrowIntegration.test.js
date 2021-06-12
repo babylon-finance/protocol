@@ -9,9 +9,9 @@ const {
 const { setupTests } = require('../fixtures/GardenFixture');
 const addresses = require('../../lib/addresses');
 
-describe('AaveBorrowIntegrationTest', function () {
-  let aaveBorrowIntegration;
-  let aaveLendIntegration;
+describe('CompoundBorrowIntegrationTest', function () {
+  let compoundBorrowIntegration;
+  let compoundLendIntegration;
   let garden1;
   let signer1;
   let signer2;
@@ -25,8 +25,8 @@ describe('AaveBorrowIntegrationTest', function () {
     ({
       garden1,
       babController,
-      aaveLendIntegration,
-      aaveBorrowIntegration,
+      compoundLendIntegration,
+      compoundBorrowIntegration,
       signer1,
       signer2,
       signer3,
@@ -39,19 +39,19 @@ describe('AaveBorrowIntegrationTest', function () {
   describe('Deployment', function () {
     it('should successfully deploy the contract', async function () {
       const babControlerDeployed = await babController.deployed();
-      const lendDeployed = await aaveBorrowIntegration.deployed();
+      const lendDeployed = await compoundBorrowIntegration.deployed();
       expect(!!babControlerDeployed).to.equal(true);
       expect(!!lendDeployed).to.equal(true);
     });
   });
 
-  describe('Aave Borrow', function () {
-    it('can supply DAI and borrow USDC in a WETH Garden', async function () {
+  describe('Compound Borrow', function () {
+    it.only('can supply DAI and borrow USDC in a WETH Garden', async function () {
       const strategyContract = await createStrategy(
         'borrow',
         'vote',
         [signer1, signer2, signer3],
-        [aaveLendIntegration.address, aaveBorrowIntegration.address],
+        [compoundLendIntegration.address, compoundBorrowIntegration.address],
         garden1,
         DEFAULT_STRATEGY_PARAMS,
         [DAI.address, USDC.address],
@@ -60,9 +60,9 @@ describe('AaveBorrowIntegrationTest', function () {
       await executeStrategy(strategyContract);
       expect(await DAI.balanceOf(strategyContract.address)).to.equal(0);
       expect(await USDC.balanceOf(strategyContract.address)).to.be.gt(0);
-      const collateral = await aaveBorrowIntegration.getCollateralBalance(strategyContract.address, DAI.address);
+      const collateral = await compoundBorrowIntegration.getCollateralBalance(strategyContract.address, DAI.address);
       expect(collateral).to.be.gt(1);
-      expect(await aaveBorrowIntegration.getBorrowBalance(strategyContract.address, USDC.address)).to.be.gt(0);
+      expect(await compoundBorrowIntegration.getBorrowBalance(strategyContract.address, USDC.address)).to.be.gt(0);
       const beforeExitingWeth = await WETH.balanceOf(garden1.address);
       await finalizeStrategy(strategyContract);
       expect(await USDC.balanceOf(strategyContract.address)).to.equal(0);
@@ -75,7 +75,7 @@ describe('AaveBorrowIntegrationTest', function () {
         'borrow',
         'vote',
         [signer1, signer2, signer3],
-        [aaveLendIntegration.address, aaveBorrowIntegration.address],
+        [compoundLendIntegration.address, compoundBorrowIntegration.address],
         garden1,
         DEFAULT_STRATEGY_PARAMS,
         [USDC.address, DAI.address],
@@ -84,9 +84,9 @@ describe('AaveBorrowIntegrationTest', function () {
       await executeStrategy(strategyContract);
       expect(await USDC.balanceOf(strategyContract.address)).to.equal(0);
       expect(await DAI.balanceOf(strategyContract.address)).to.be.gt(0);
-      const collateral = await aaveBorrowIntegration.getCollateralBalance(strategyContract.address, USDC.address);
+      const collateral = await compoundBorrowIntegration.getCollateralBalance(strategyContract.address, USDC.address);
       expect(collateral).to.be.gt(1);
-      expect(await aaveBorrowIntegration.getBorrowBalance(strategyContract.address, DAI.address)).to.be.gt(0);
+      expect(await compoundBorrowIntegration.getBorrowBalance(strategyContract.address, DAI.address)).to.be.gt(0);
       const beforeExitingWeth = await WETH.balanceOf(garden1.address);
       await finalizeStrategy(strategyContract);
       expect(await DAI.balanceOf(strategyContract.address)).to.equal(0);
@@ -99,7 +99,7 @@ describe('AaveBorrowIntegrationTest', function () {
         'borrow',
         'vote',
         [signer1, signer2, signer3],
-        [aaveLendIntegration.address, aaveBorrowIntegration.address],
+        [compoundLendIntegration.address, compoundBorrowIntegration.address],
         garden1,
         DEFAULT_STRATEGY_PARAMS,
         [WETH.address, DAI.address],
@@ -108,9 +108,9 @@ describe('AaveBorrowIntegrationTest', function () {
       await executeStrategy(strategyContract);
       expect(await WETH.balanceOf(strategyContract.address)).to.equal(0);
       expect(await DAI.balanceOf(strategyContract.address)).to.be.gt(0);
-      const collateral = await aaveBorrowIntegration.getCollateralBalance(strategyContract.address, WETH.address);
+      const collateral = await compoundBorrowIntegration.getCollateralBalance(strategyContract.address, WETH.address);
       expect(collateral).to.be.gt(1);
-      expect(await aaveBorrowIntegration.getBorrowBalance(strategyContract.address, DAI.address)).to.be.gt(0);
+      expect(await compoundBorrowIntegration.getBorrowBalance(strategyContract.address, DAI.address)).to.be.gt(0);
       const beforeExitingWeth = await WETH.balanceOf(garden1.address);
       await finalizeStrategy(strategyContract);
       expect(await DAI.balanceOf(strategyContract.address)).to.equal(0);

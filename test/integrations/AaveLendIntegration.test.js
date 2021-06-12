@@ -1,6 +1,11 @@
 const { expect } = require('chai');
 const { ethers } = require('hardhat');
-const { createStrategy, executeStrategy, finalizeStrategy } = require('../fixtures/StrategyHelper');
+const {
+  createStrategy,
+  executeStrategy,
+  finalizeStrategy,
+  DEFAULT_STRATEGY_PARAMS,
+} = require('../fixtures/StrategyHelper');
 const { setupTests } = require('../fixtures/GardenFixture');
 const addresses = require('../../lib/addresses');
 const { ADDRESS_ZERO } = require('../../lib/constants');
@@ -66,6 +71,25 @@ describe('AaveLendIntegrationTest', function () {
       expect(await WETH.balanceOf(strategyContract.address)).to.equal(0);
       expect(await aaveBorrowIntegration.getCollateralBalance(strategyContract.address, USDC.address)).to.equal(0);
     });
-    // TODO: test supply for WETH
+
+    it('can supply the reserve asset (WETH)', async function () {
+      const strategyContract = await createStrategy(
+        'lend',
+        'vote',
+        [signer1, signer2, signer3],
+        aaveLendIntegration.address,
+        garden1,
+        DEFAULT_STRATEGY_PARAMS,
+        WETH.address,
+      );
+
+      await executeStrategy(strategyContract);
+      expect(await WETH.balanceOf(strategyContract.address)).to.be.equal(0);
+      const collateral = await aaveBorrowIntegration.getCollateralBalance(strategyContract.address, WETH.address);
+      expect(collateral).to.be.gt(1);
+      await finalizeStrategy(strategyContract);
+      expect(await WETH.balanceOf(strategyContract.address)).to.equal(0);
+      expect(await aaveBorrowIntegration.getCollateralBalance(strategyContract.address, WETH.address)).to.equal(0);
+    });
   });
 });
