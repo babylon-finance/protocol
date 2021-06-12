@@ -102,7 +102,7 @@ abstract contract LendIntegration is BaseIntegration, ReentrancyGuard, ILendInte
         address _assetToken,
         uint256 _numTokensToSupply,
         uint256 _minAmountExpected
-    ) external override {
+    ) external override nonReentrant onlySystemContract {
         InvestmentInfo memory investmentInfo =
             _createInvestmentInfo(
                 _strategy,
@@ -135,7 +135,7 @@ abstract contract LendIntegration is BaseIntegration, ReentrancyGuard, ILendInte
         address _assetToken,
         uint256 _numTokensToRedeem,
         uint256 _minAmountExpected
-    ) external override {
+    ) external override nonReentrant onlySystemContract {
         InvestmentInfo memory investmentInfo =
             _createInvestmentInfo(
                 _strategy,
