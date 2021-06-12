@@ -202,6 +202,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
     // 1 = LiquidityOperation
     // 2 = VaultOperation
     // 3 = LendOperation
+    // 4 = BorrowOperation
 
     // Asset Status
     // 0 = Liquid

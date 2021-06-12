@@ -71,7 +71,7 @@ contract CompoundBorrowIntegration is BorrowIntegration {
         IBabController _controller,
         address _weth,
         uint256 _maxCollateralFactor
-    ) BorrowIntegration('compound', _weth, _controller, _maxCollateralFactor) {
+    ) BorrowIntegration('compoundborrow', _weth, _controller, _maxCollateralFactor) {
         assetToCtoken[0x6B175474E89094C44Da98b954EedeAC495271d0F] = 0x5d3a536E4D6DbD6114cc1Ead35777bAB948E3643; // DAI
         assetToCtoken[0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2] = 0x4Ddc2D193948926D02f9B1fE9e1daa0718270ED5; // WETH
         assetToCtoken[0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48] = 0x39AA39c021dfbaE8faC545936693aC917d5E7563; // USDC
@@ -103,6 +103,25 @@ contract CompoundBorrowIntegration is BorrowIntegration {
             uint256 exchangeRateMantissa
         ) = ICToken(cToken).getAccountSnapshot(msg.sender);
         return borrowBalance.mul(exchangeRateMantissa).div(1e18);
+    }
+
+    /**
+     * Get the amount of collateral depposited
+     * @param asset   The collateral to check 
+     *
+     */
+    function _getCollateralBalance(address asset) external view override returns (uint256) {
+        address cToken = assetToCtoken[asset];
+        (
+            ,
+            // err
+            uint256 cTokenBalance, // borrow balance
+            ,
+            uint256 exchangeRateMantissa
+        ) = ICToken(cToken).getAccountSnapshot(msg.sender);
+
+        // Source: balanceOfUnderlying from any ctoken
+        return cTokenBalance.mul(exchangeRateMantissa).div(1e18);
     }
 
     /* ============ Overriden Functions ============ */
@@ -208,20 +227,6 @@ contract CompoundBorrowIntegration is BorrowIntegration {
 
         ) = comptroller.getAccountLiquidity(msg.sender);
         return liquidity;
-    }
-
-    function _getCollateralBalance(address asset) internal view override returns (uint256) {
-        address cToken = assetToCtoken[asset];
-        (
-            ,
-            // err
-            uint256 cTokenBalance, // borrow balance
-            ,
-            uint256 exchangeRateMantissa
-        ) = ICToken(cToken).getAccountSnapshot(msg.sender);
-
-        // Source: balanceOfUnderlying from any ctoken
-        return cTokenBalance.mul(exchangeRateMantissa).div(1e18);
     }
 
     function _getCollateralAsset(

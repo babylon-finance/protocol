@@ -154,6 +154,18 @@ abstract contract BorrowIntegration is BaseIntegration, ReentrancyGuard, IBorrow
         emit AmountRepaid(debtInfo.strategy, debtInfo.garden, asset, amount);
     }
 
+    /**
+     * Get the amount of collateral supplied
+     * hparam asset   The collateral asset
+     *
+     */
+    function getCollateralBalance(
+        address /* asset */
+    ) external view virtual returns (uint256) {
+        require(false, 'This method must be overriden');
+        return 0;
+    }
+
     /* ============ Internal Functions ============ */
 
     /**
@@ -173,6 +185,7 @@ abstract contract BorrowIntegration is BaseIntegration, ReentrancyGuard, IBorrow
         debtInfo.strategy = IStrategy(msg.sender);
         debtInfo.garden = IGarden(debtInfo.strategy.garden());
         debtInfo.asset = _asset;
+        debtInfo.debt = getBorrowBalance(_debtInfo.asset);
         debtInfo.amount = _amount;
         debtInfo.borrowOp = _borrowOp;
 
@@ -224,7 +237,7 @@ abstract contract BorrowIntegration is BaseIntegration, ReentrancyGuard, IBorrow
      */
     function _validatePostRepay(DebtInfo memory _debtInfo) internal view {
         // debt is paid
-        require(getBorrowBalance(_debtInfo.asset) == 0, 'No debt to repay');
+        require(getBorrowBalance(_debtInfo.asset) == _debtInfo.debt.sub(_debtInfo.amount), 'Debt was not repaid');
     }
 
     /* ============ Virtual Functions ============ */
@@ -310,18 +323,6 @@ abstract contract BorrowIntegration is BaseIntegration, ReentrancyGuard, IBorrow
     {
         require(false, 'This needs to be overriden');
         return (address(0), 0, bytes(''));
-    }
-
-    /**
-     * Get the amount of collateral supplied
-     * hparam asset   The collateral asset
-     *
-     */
-    function _getCollateralBalance(
-        address /* asset */
-    ) internal view virtual returns (uint256) {
-        require(false, 'This method must be overriden');
-        return 0;
     }
 
     /**

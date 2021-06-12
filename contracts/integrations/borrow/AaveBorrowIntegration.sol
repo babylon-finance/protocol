@@ -54,8 +54,10 @@ contract AaveBorrowIntegration is BorrowIntegration {
         IBabController _controller,
         address _weth,
         uint256 _maxCollateralFactor
-    ) BorrowIntegration('aave', _weth, _controller, _maxCollateralFactor) {}
+    ) BorrowIntegration('aaveborrow', _weth, _controller, _maxCollateralFactor) {}
 
+
+    /* ============ External Functions ============ */
     /**
      * Get the amount of borrowed debt that needs to be repaid
      * @param asset   The underlying asset
@@ -65,6 +67,29 @@ contract AaveBorrowIntegration is BorrowIntegration {
         (, uint256 stableDebt, , , , , , , ) = dataProvider.getUserReserveData(asset, msg.sender);
         return stableDebt;
     }
+
+    /**
+     * Get the amount of collateral supplied
+     * hparam asset   The collateral asset
+     *
+     */
+    function getCollateralBalance(
+        address /* asset */
+    ) external view override returns (uint256) {
+        (
+            uint256 totalCollateral, // uint256 totalDebt, // uint256 borrowingPower, // uint256 liquidationThreshold, // uint256 ltv,
+            ,
+            ,
+            ,
+            ,
+
+        ) =
+            // uint256 healthFactor
+            lendingPool.getUserAccountData(msg.sender);
+        return totalCollateral;
+    }
+
+    /* ============ Internal Functions ============ */
 
     /**
      * Return pre action calldata
@@ -160,8 +185,6 @@ contract AaveBorrowIntegration is BorrowIntegration {
         return (address(lendingPool), 0, methodData);
     }
 
-    /* ============ Internal Functions ============ */
-
     function _getCollateralAsset(
         address asset,
         uint8 /* _borrowOp */
@@ -179,27 +202,6 @@ contract AaveBorrowIntegration is BorrowIntegration {
         // Get the relevant debt token address
         (, address stableDebtTokenAddress, ) = dataProvider.getReserveTokensAddresses(asset);
         return stableDebtTokenAddress;
-    }
-
-    /**
-     * Get the amount of collateral supplied
-     * hparam asset   The collateral asset
-     *
-     */
-    function _getCollateralBalance(
-        address /* asset */
-    ) internal view override returns (uint256) {
-        (
-            uint256 totalCollateral, // uint256 totalDebt, // uint256 borrowingPower, // uint256 liquidationThreshold, // uint256 ltv,
-            ,
-            ,
-            ,
-            ,
-
-        ) =
-            // uint256 healthFactor
-            lendingPool.getUserAccountData(msg.sender);
-        return totalCollateral;
     }
 
     /**

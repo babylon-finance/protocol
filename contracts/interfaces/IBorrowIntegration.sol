@@ -32,5 +32,7 @@ interface IBorrowIntegration {
 
     function getBorrowBalance(address _asset) external view returns (uint256);
 
+    function getCollateralBalance(address asset) external view returns (uint256);
+
     function maxCollateralFactor() external view returns (uint256);
 }
