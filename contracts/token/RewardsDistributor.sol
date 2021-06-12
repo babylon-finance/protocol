@@ -112,6 +112,17 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         _;
     }
 
+    modifier nonReentrant() {
+        // On the first call to nonReentrant, _notEntered will be true
+        _require(status != ENTERED, Errors.REENTRANT_CALL);
+        // Any calls to nonReentrant after this point will fail
+        status = ENTERED;
+        _;
+        // By storing the original value once again, a refund is triggered (see
+        // https://eips.ethereum.org/EIPS/eip-2200)
+        status = NOT_ENTERED;
+    }
+
     /* ============ Constants ============ */
     // 500K BABL allocated to this BABL Mining Program, the first quarter is Q1_REWARDS
     // and the following quarters will follow the supply curve using a decay rate
@@ -144,6 +155,10 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
 
     // DAI normalize asset
     address private constant DAI = 0x6B175474E89094C44Da98b954EedeAC495271d0F;
+
+    // Reentrancy guard countermeasure
+    uint256 private constant NOT_ENTERED = 1;
+    uint256 private constant ENTERED = 2;
 
     /* ============ Structs ============ */
 
@@ -236,6 +251,9 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
     mapping(address => mapping(uint256 => StrategyPerQuarter)) public strategyPerQuarter; // Acumulated strategy power per each quarter along the time
     mapping(address => StrategyPricePerTokenUnit) public strategyPricePerTokenUnit; // Pro-rata oracle price allowing re-allocations and unwinding of any capital value
 
+    // Reentrancy guard countermeasure
+    uint256 private status;
+
     /* ============ Constructor ============ */
 
     function initialize(TimeLockedToken _bablToken, IBabController _controller) public {
@@ -248,6 +266,8 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         (BABL_STRATEGIST_SHARE, BABL_STEWARD_SHARE, BABL_LP_SHARE, CREATOR_BONUS) = controller.getBABLSharing();
         (PROFIT_STRATEGIST_SHARE, PROFIT_STEWARD_SHARE, PROFIT_LP_SHARE) = controller.getProfitSharing();
         PROFIT_PROTOCOL_FEE = controller.protocolPerformanceFee();
+
+        status = NOT_ENTERED;
     }
 
     /* ============ External Functions ============ */
@@ -326,7 +346,7 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
      * @param _to                Address to send the tokens to
      * @param _amount            Amount of tokens to send the address to
      */
-    function sendTokensToContributor(address _to, uint256 _amount) external override onlyMiningActive {
+    function sendTokensToContributor(address _to, uint256 _amount) external override nonReentrant onlyMiningActive {
         _require(controller.isSystemContract(msg.sender), Errors.NOT_A_SYSTEM_CONTRACT);
         uint96 amount = Safe3296.safe96(_amount, 'overflow 96 bits');
         _safeBABLTransfer(_to, amount);
@@ -356,7 +376,7 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         uint256 _previousBalance,
         bool _depositOrWithdraw,
         uint256 _pid
-    ) external override onlyActiveGarden(_garden, _pid) {
+    ) external override nonReentrant onlyActiveGarden(_garden, _pid) {
         _updateGardenPower(_garden);
         _setContributorTimestampParams(_garden, _contributor, _previousBalance, _depositOrWithdraw);
     }

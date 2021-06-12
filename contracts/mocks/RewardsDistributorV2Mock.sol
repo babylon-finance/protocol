@@ -99,6 +99,10 @@ contract RewardsDistributorV2Mock is OwnableUpgradeable {
     // DAI normalize asset
     address private constant DAI = 0x6B175474E89094C44Da98b954EedeAC495271d0F;
 
+    // Reentrancy guard countermeasure
+    uint256 private constant NOT_ENTERED = 1;
+    uint256 private constant ENTERED = 2;
+
     /* ============ Structs ============ */
 
     struct ProtocolPerTimestamp {
@@ -191,6 +195,9 @@ contract RewardsDistributorV2Mock is OwnableUpgradeable {
     mapping(address => mapping(uint256 => StrategyPerQuarter)) public strategyPerQuarter; // Acumulated strategy power per each quarter along the time
     mapping(address => StrategyPricePerTokenUnit) public strategyPricePerTokenUnit; // Pro-rata oracle price allowing re-allocations and unwinding of any capital value
 
+    // Reentrancy guard countermeasure
+    uint256 private status;
+
     /* ============ Constructor ============ */
 
     function initialize(TimeLockedToken _bablToken, IBabController _controller) public {
@@ -204,6 +211,8 @@ contract RewardsDistributorV2Mock is OwnableUpgradeable {
         (BABL_STRATEGIST_SHARE, BABL_STEWARD_SHARE, BABL_LP_SHARE, CREATOR_BONUS) = controller.getBABLSharing();
         (PROFIT_STRATEGIST_SHARE, PROFIT_STEWARD_SHARE, PROFIT_LP_SHARE) = controller.getProfitSharing();
         PROFIT_PROTOCOL_FEE = controller.protocolPerformanceFee();
+
+        status = NOT_ENTERED;
     }
 
     /* ============ External Functions ============ */
