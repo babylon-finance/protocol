@@ -33,24 +33,24 @@ describe('AaveBorrowIntegrationTest', function () {
   });
 
   describe('Aave Borrow', function () {
-    it('can supply and redeem tokens from Aave', async function () {
-      const strategyContract = await createStrategy(
-        'lend',
-        'vote',
-        [signer1, signer2, signer3],
-        aaveBorrowIntegration.address,
-        garden1,
-      );
-
-      await executeStrategy(strategyContract);
-      expect(await USDC.balanceOf(strategyContract.address)).to.be.equal(0);
-      expect(await CUSDC.balanceOf(strategyContract.address)).to.be.gte(0);
-
-      await finalizeStrategy(strategyContract);
-      expect(await USDC.balanceOf(strategyContract.address)).to.equal(0);
-      expect(await CUSDC.balanceOf(strategyContract.address)).to.be.equal(0);
-      expect(await WETH.balanceOf(strategyContract.address)).to.equal(0);
-    });
+    // it('can supply and redeem tokens from Aave', async function () {
+    //   const strategyContract = await createStrategy(
+    //     'lend',
+    //     'vote',
+    //     [signer1, signer2, signer3],
+    //     aaveBorrowIntegration.address,
+    //     garden1,
+    //   );
+    //
+    //   await executeStrategy(strategyContract);
+    //   expect(await USDC.balanceOf(strategyContract.address)).to.be.equal(0);
+    //   expect(await CUSDC.balanceOf(strategyContract.address)).to.be.gte(0);
+    //
+    //   await finalizeStrategy(strategyContract);
+    //   expect(await USDC.balanceOf(strategyContract.address)).to.equal(0);
+    //   expect(await CUSDC.balanceOf(strategyContract.address)).to.be.equal(0);
+    //   expect(await WETH.balanceOf(strategyContract.address)).to.equal(0);
+    // });
 
     // TODO: test supply/borrow for WETH
   });

@@ -44,6 +44,7 @@ abstract contract BorrowIntegration is BaseIntegration, ReentrancyGuard, IBorrow
         IGarden garden; // Garden address
         address asset; // Asset involved in the operation
         uint256 amount; // Amount involved in the operation
+        uint256 debt; // Amount of debt at the start of the operation
         uint8 borrowOp; // Borrow operation type
     }
 
@@ -161,7 +162,7 @@ abstract contract BorrowIntegration is BaseIntegration, ReentrancyGuard, IBorrow
      */
     function getCollateralBalance(
         address /* asset */
-    ) external view virtual returns (uint256) {
+    ) external view virtual override returns (uint256) {
         require(false, 'This method must be overriden');
         return 0;
     }
@@ -185,7 +186,7 @@ abstract contract BorrowIntegration is BaseIntegration, ReentrancyGuard, IBorrow
         debtInfo.strategy = IStrategy(msg.sender);
         debtInfo.garden = IGarden(debtInfo.strategy.garden());
         debtInfo.asset = _asset;
-        debtInfo.debt = getBorrowBalance(_debtInfo.asset);
+        debtInfo.debt = getBorrowBalance(debtInfo.asset);
         debtInfo.amount = _amount;
         debtInfo.borrowOp = _borrowOp;
 

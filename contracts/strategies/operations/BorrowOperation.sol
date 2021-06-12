@@ -51,14 +51,17 @@ contract BorrowOperation is Operation {
      * Sets operation data for the borrow operation
      *
      * @param _data                   Operation data
+     * @param _garden                 Garden
+     * @param _integration            Integration used
+     * @param _index                  Index of this operation
      */
     function validateOperation(
         address _data,
         IGarden _garden,
-        address, /* _integration */
+        address _integration,
         uint256 _index
     ) external view override onlyStrategy {
-        require(IBorrowIntegration(_integration).getCollateralBalance > 0, 'Neds to be collateral');
+        require(IBorrowIntegration(_integration).getCollateralBalance(_data) > 0, 'Neds to be collateral');
         require(_index > 0, 'The operation cannot be the first. Needs to be a lend first');
     }
 
