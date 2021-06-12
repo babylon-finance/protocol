@@ -17,6 +17,8 @@
 */
 
 pragma solidity 0.7.6;
+
+import 'hardhat/console.sol';
 import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import {SafeMath} from '@openzeppelin/contracts/math/SafeMath.sol';
 import {Operation} from './Operation.sol';
@@ -50,18 +52,17 @@ contract BorrowOperation is Operation {
     /**
      * Sets operation data for the borrow operation
      *
-     * @param _data                   Operation data
-     * @param _garden                 Garden
-     * @param _integration            Integration used
+     * param _data                   Operation data
+     * param _garden                 Garden
+     * param _integration            Integration used
      * @param _index                  Index of this operation
      */
     function validateOperation(
-        address _data,
-        IGarden _garden,
-        address _integration,
+        address, /* _data */
+        IGarden, /* _garden */
+        address, /* _integration */
         uint256 _index
     ) external view override onlyStrategy {
-        require(IBorrowIntegration(_integration).getCollateralBalance(_data) > 0, 'Neds to be collateral');
         require(_index > 0, 'The operation cannot be the first. Needs to be a lend first');
     }
 
@@ -91,8 +92,14 @@ contract BorrowOperation is Operation {
             uint8
         )
     {
-        require(_capital > 0 && _assetStatus == 1, 'There is collateral locked');
+        require(
+            _capital > 0 &&
+                _assetStatus == 1 &&
+                IBorrowIntegration(_integration).getCollateralBalance(msg.sender, _asset) > 0,
+            'There is no collateral locked'
+        );
         IBorrowIntegration(_integration).borrow(
+            msg.sender,
             _borrowToken,
             IBorrowIntegration(_integration).maxCollateralFactor().preciseMul(_capital)
         );
@@ -106,15 +113,12 @@ contract BorrowOperation is Operation {
     function exitOperation(
         uint256 _percentage,
         address _assetToken,
-        IGarden _garden,
+        IGarden, /* _garden */
         address _integration
     ) external override onlyStrategy {
         require(_percentage <= HUNDRED_PERCENT, 'Unwind Percentage <= 100%');
-        uint256 numTokensToRepay =
-            IERC20(IBorrowIntegration(_integration).getBorrowBalance(_assetToken)).balanceOf(msg.sender).preciseMul(
-                _percentage
-            );
         IBorrowIntegration(_integration).repay(
+            msg.sender,
             _assetToken,
             IERC20(_assetToken).balanceOf(address(msg.sender)) // We repay all that we can
         );
@@ -136,7 +140,7 @@ contract BorrowOperation is Operation {
         if (!IStrategy(msg.sender).isStrategyActive()) {
             return 0;
         }
-        uint256 tokensOwed = IBorrowIntegration(_integration).getBorrowBalance(_assetToken);
+        uint256 tokensOwed = IBorrowIntegration(_integration).getBorrowBalance(msg.sender, _assetToken);
         uint256 price = _getPrice(_garden.reserveAsset(), _assetToken);
         uint256 NAV = SafeDecimalMath.normalizeDecimals(_assetToken, tokensOwed).preciseDiv(price);
         require(NAV != 0, 'NAV has to be different than 0');

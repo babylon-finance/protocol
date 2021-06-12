@@ -13,13 +13,11 @@ describe('AaveLendIntegrationTest', function () {
   let signer3;
   let babController;
   let USDC;
-  let CUSDC;
   let WETH;
 
   beforeEach(async () => {
     ({ garden1, babController, aaveLendIntegration, signer1, signer2, signer3 } = await setupTests()());
     USDC = await ethers.getContractAt('IERC20', addresses.tokens.USDC);
-    CUSDC = await ethers.getContractAt('IERC20', addresses.tokens.CUSDC);
     WETH = await ethers.getContractAt('IERC20', addresses.tokens.WETH);
   });
 
@@ -52,14 +50,12 @@ describe('AaveLendIntegrationTest', function () {
 
       await executeStrategy(strategyContract);
       expect(await USDC.balanceOf(strategyContract.address)).to.be.equal(0);
-      expect(await CUSDC.balanceOf(strategyContract.address)).to.be.gte(0);
 
       await finalizeStrategy(strategyContract);
       expect(await USDC.balanceOf(strategyContract.address)).to.equal(0);
-      expect(await CUSDC.balanceOf(strategyContract.address)).to.be.equal(0);
       expect(await WETH.balanceOf(strategyContract.address)).to.equal(0);
     });
 
-    // TODO: test supply/borrow for WETH
+    // TODO: test supply for WETH
   });
 });

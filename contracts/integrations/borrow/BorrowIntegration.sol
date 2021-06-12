@@ -91,7 +91,32 @@ abstract contract BorrowIntegration is BaseIntegration, ReentrancyGuard, IBorrow
      *
      */
     function getBorrowBalance(
+        address, /* strategy */
         address /* asset */
+    ) public view virtual override returns (uint256) {
+        require(false, 'This method must be overriden');
+        return 0;
+    }
+
+    /**
+     * Get the amount of collateral supplied
+     * hparam asset   The collateral asset
+     *
+     */
+    function getCollateralBalance(
+        address, /* strategy */
+        address /* asset */
+    ) external view virtual override returns (uint256) {
+        require(false, 'This method must be overriden');
+        return 0;
+    }
+
+    /**
+     * Get the remaining liquidity available to borrow
+     *
+     */
+    function getRemainingLiquidity(
+        address /* strategy */
     ) public view virtual override returns (uint256) {
         require(false, 'This method must be overriden');
         return 0;
@@ -102,8 +127,12 @@ abstract contract BorrowIntegration is BaseIntegration, ReentrancyGuard, IBorrow
      * @param asset The asset to be borrowed
      * @param amount The amount to borrow
      */
-    function borrow(address asset, uint256 amount) external override nonReentrant onlySystemContract {
-        DebtInfo memory debtInfo = _createDebtInfo(asset, amount, BORROW_OPERATION_BORROW);
+    function borrow(
+        address _strategy,
+        address asset,
+        uint256 amount
+    ) external override nonReentrant onlySystemContract {
+        DebtInfo memory debtInfo = _createDebtInfo(_strategy, asset, amount, BORROW_OPERATION_BORROW);
 
         _validatePreBorrow(debtInfo);
 
@@ -129,8 +158,12 @@ abstract contract BorrowIntegration is BaseIntegration, ReentrancyGuard, IBorrow
      * @param asset The asset to be repaid
      * @param amount The amount to repay
      */
-    function repay(address asset, uint256 amount) external override nonReentrant onlySystemContract {
-        DebtInfo memory debtInfo = _createDebtInfo(asset, amount, BORROW_OPERATION_REPAY);
+    function repay(
+        address _strategy,
+        address asset,
+        uint256 amount
+    ) external override nonReentrant onlySystemContract {
+        DebtInfo memory debtInfo = _createDebtInfo(_strategy, asset, amount, BORROW_OPERATION_REPAY);
 
         _validatePreRepay(debtInfo);
 
@@ -155,38 +188,28 @@ abstract contract BorrowIntegration is BaseIntegration, ReentrancyGuard, IBorrow
         emit AmountRepaid(debtInfo.strategy, debtInfo.garden, asset, amount);
     }
 
-    /**
-     * Get the amount of collateral supplied
-     * hparam asset   The collateral asset
-     *
-     */
-    function getCollateralBalance(
-        address /* asset */
-    ) external view virtual override returns (uint256) {
-        require(false, 'This method must be overriden');
-        return 0;
-    }
-
     /* ============ Internal Functions ============ */
 
     /**
      * Create and return DebtInfo struct
      *
+     * @param _strategy            The strategy executing this integration
      * @param _asset               The asset involved in the op
      * @param _amount              The amount involved in the op
      * @param _borrowOp            Type of borrow operation
      * return DebtInfo             Struct containing data for the debt position
      */
     function _createDebtInfo(
+        address _strategy,
         address _asset,
         uint256 _amount,
         uint8 _borrowOp
     ) internal view returns (DebtInfo memory) {
         DebtInfo memory debtInfo;
-        debtInfo.strategy = IStrategy(msg.sender);
+        debtInfo.strategy = IStrategy(_strategy);
         debtInfo.garden = IGarden(debtInfo.strategy.garden());
         debtInfo.asset = _asset;
-        debtInfo.debt = getBorrowBalance(debtInfo.asset);
+        debtInfo.debt = getBorrowBalance(_strategy, debtInfo.asset);
         debtInfo.amount = _amount;
         debtInfo.borrowOp = _borrowOp;
 
@@ -198,11 +221,8 @@ abstract contract BorrowIntegration is BaseIntegration, ReentrancyGuard, IBorrow
      *
      * hparam _debtInfo               Struct containing debt information used in internal functions
      */
-    function _validatePreBorrow(
-        DebtInfo memory /* _debtInfo */
-    ) internal view {
-        // TODO: Check healthy collateral factor
-        require(_getRemainingLiquidity() > 0, 'Not enough liquidity');
+    function _validatePreBorrow(DebtInfo memory _debtInfo) internal view {
+        require(getRemainingLiquidity(address(_debtInfo.strategy)) > 0, 'Not enough liquidity');
     }
 
     /**
@@ -215,7 +235,7 @@ abstract contract BorrowIntegration is BaseIntegration, ReentrancyGuard, IBorrow
             IERC20(_debtInfo.asset).balanceOf(address(_debtInfo.strategy)) >= _debtInfo.amount,
             'Did not receive the borrowed asset'
         );
-        require(_getRemainingLiquidity() > 0, 'Not enough liquidity');
+        require(getRemainingLiquidity(address(_debtInfo.strategy)) > 0, 'Not enough liquidity');
     }
 
     /**
@@ -228,7 +248,7 @@ abstract contract BorrowIntegration is BaseIntegration, ReentrancyGuard, IBorrow
             IERC20(_debtInfo.asset).balanceOf(address(_debtInfo.strategy)) >= _debtInfo.amount,
             'We do not have enough to repay debt'
         );
-        require(getBorrowBalance(_debtInfo.asset) > 0, 'No debt to repay');
+        require(getBorrowBalance(address(_debtInfo.strategy), _debtInfo.asset) > 0, 'No debt to repay');
     }
 
     /**
@@ -238,7 +258,10 @@ abstract contract BorrowIntegration is BaseIntegration, ReentrancyGuard, IBorrow
      */
     function _validatePostRepay(DebtInfo memory _debtInfo) internal view {
         // debt is paid
-        require(getBorrowBalance(_debtInfo.asset) == _debtInfo.debt.sub(_debtInfo.amount), 'Debt was not repaid');
+        require(
+            getBorrowBalance(address(_debtInfo.strategy), _debtInfo.asset) == _debtInfo.debt.sub(_debtInfo.amount),
+            'Debt was not repaid'
+        );
     }
 
     /* ============ Virtual Functions ============ */
@@ -324,15 +347,6 @@ abstract contract BorrowIntegration is BaseIntegration, ReentrancyGuard, IBorrow
     {
         require(false, 'This needs to be overriden');
         return (address(0), 0, bytes(''));
-    }
-
-    /**
-     * Get the remaining liquidity available to borrow
-     *
-     */
-    function _getRemainingLiquidity() public view virtual returns (uint256) {
-        require(false, 'This method must be overriden');
-        return 0;
     }
 
     function _getCollateralAsset(

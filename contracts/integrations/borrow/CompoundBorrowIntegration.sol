@@ -92,7 +92,7 @@ contract CompoundBorrowIntegration is BorrowIntegration {
      * @param asset   The underlying asset
      *
      */
-    function getBorrowBalance(address asset) public view override returns (uint256) {
+    function getBorrowBalance(address _strategy, address asset) public view override returns (uint256) {
         address cToken = assetToCtoken[asset];
         (
             ,
@@ -101,7 +101,7 @@ contract CompoundBorrowIntegration is BorrowIntegration {
             // cTokenBalance
             uint256 borrowBalance,
             uint256 exchangeRateMantissa
-        ) = ICToken(cToken).getAccountSnapshot(msg.sender);
+        ) = ICToken(cToken).getAccountSnapshot(_strategy);
         return borrowBalance.mul(exchangeRateMantissa).div(1e18);
     }
 
@@ -110,7 +110,7 @@ contract CompoundBorrowIntegration is BorrowIntegration {
      * @param asset   The collateral to check
      *
      */
-    function getCollateralBalance(address asset) external view override returns (uint256) {
+    function getCollateralBalance(address _strategy, address asset) external view override returns (uint256) {
         address cToken = assetToCtoken[asset];
         (
             ,
@@ -118,10 +118,25 @@ contract CompoundBorrowIntegration is BorrowIntegration {
             uint256 cTokenBalance, // borrow balance
             ,
             uint256 exchangeRateMantissa
-        ) = ICToken(cToken).getAccountSnapshot(msg.sender);
+        ) = ICToken(cToken).getAccountSnapshot(_strategy);
 
         // Source: balanceOfUnderlying from any ctoken
         return cTokenBalance.mul(exchangeRateMantissa).div(1e18);
+    }
+
+    /**
+     * Get the remaining liquidity available to borrow
+     *
+     */
+    function getRemainingLiquidity(address _strategy) public view override returns (uint256) {
+        IComptroller comptroller = IComptroller(CompoundComptrollerAddress);
+        (
+            ,
+            /* error */
+            uint256 liquidity, /* shortfall */
+
+        ) = comptroller.getAccountLiquidity(_strategy);
+        return liquidity;
     }
 
     /* ============ Overriden Functions ============ */
@@ -213,21 +228,6 @@ contract CompoundBorrowIntegration is BorrowIntegration {
     }
 
     /* ============ Internal Functions ============ */
-
-    /**
-     * Get the remaining liquidity available to borrow
-     *
-     */
-    function _getRemainingLiquidity() public view override returns (uint256) {
-        IComptroller comptroller = IComptroller(CompoundComptrollerAddress);
-        (
-            ,
-            /* error */
-            uint256 liquidity, /* shortfall */
-
-        ) = comptroller.getAccountLiquidity(msg.sender);
-        return liquidity;
-    }
 
     function _getCollateralAsset(
         address _asset,

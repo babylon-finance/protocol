@@ -100,8 +100,8 @@ async function createStrategyWithLendAndBorrowOperation(
   if (integrations.length !== 2 || data.length !== 2) {
     throw new Error('Need two integrations and data to create lend & borrow');
   }
-  const passedLendParams = [[3, 4], integrations, data];
-  await garden.connect(signer).addStrategy(...STRAT_NAME_PARAMS, params, ...passedLendParams);
+  const passedLendBorrowParams = [[3, 4], integrations, data];
+  await garden.connect(signer).addStrategy(...STRAT_NAME_PARAMS, params, ...passedLendBorrowParams);
   const strategies = await garden.getStrategies();
   const lastStrategyAddr = strategies[strategies.length - 1];
 

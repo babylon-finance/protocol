@@ -1,25 +1,38 @@
 const { expect } = require('chai');
 const { ethers } = require('hardhat');
-const { createStrategy, executeStrategy, finalizeStrategy } = require('../fixtures/StrategyHelper');
+const {
+  createStrategy,
+  executeStrategy,
+  finalizeStrategy,
+  DEFAULT_STRATEGY_PARAMS,
+} = require('../fixtures/StrategyHelper');
 const { setupTests } = require('../fixtures/GardenFixture');
 const addresses = require('../../lib/addresses');
-const { ADDRESS_ZERO } = require('../../lib/constants');
 
 describe('AaveBorrowIntegrationTest', function () {
   let aaveBorrowIntegration;
+  let aaveLendIntegration;
   let garden1;
   let signer1;
   let signer2;
   let signer3;
   let babController;
   let USDC;
-  let CUSDC;
+  let DAI;
   let WETH;
 
   beforeEach(async () => {
-    ({ garden1, babController, aaveBorrowIntegration, signer1, signer2, signer3 } = await setupTests()());
+    ({
+      garden1,
+      babController,
+      aaveLendIntegration,
+      aaveBorrowIntegration,
+      signer1,
+      signer2,
+      signer3,
+    } = await setupTests()());
     USDC = await ethers.getContractAt('IERC20', addresses.tokens.USDC);
-    CUSDC = await ethers.getContractAt('IERC20', addresses.tokens.CUSDC);
+    DAI = await ethers.getContractAt('IERC20', addresses.tokens.DAI);
     WETH = await ethers.getContractAt('IERC20', addresses.tokens.WETH);
   });
 
@@ -33,24 +46,25 @@ describe('AaveBorrowIntegrationTest', function () {
   });
 
   describe('Aave Borrow', function () {
-    // it('can supply and redeem tokens from Aave', async function () {
-    //   const strategyContract = await createStrategy(
-    //     'lend',
-    //     'vote',
-    //     [signer1, signer2, signer3],
-    //     aaveBorrowIntegration.address,
-    //     garden1,
-    //   );
-    //
-    //   await executeStrategy(strategyContract);
-    //   expect(await USDC.balanceOf(strategyContract.address)).to.be.equal(0);
-    //   expect(await CUSDC.balanceOf(strategyContract.address)).to.be.gte(0);
-    //
-    //   await finalizeStrategy(strategyContract);
-    //   expect(await USDC.balanceOf(strategyContract.address)).to.equal(0);
-    //   expect(await CUSDC.balanceOf(strategyContract.address)).to.be.equal(0);
-    //   expect(await WETH.balanceOf(strategyContract.address)).to.equal(0);
-    // });
-    // TODO: test supply/borrow for WETH
+    it('can supply DAI and borrow USDC in a WETH Garden', async function () {
+      const strategyContract = await createStrategy(
+        'borrow',
+        'vote',
+        [signer1, signer2, signer3],
+        [aaveLendIntegration.address, aaveBorrowIntegration.address],
+        garden1,
+        DEFAULT_STRATEGY_PARAMS,
+        [DAI.address, USDC.address],
+      );
+
+      await executeStrategy(strategyContract);
+      expect(await DAI.balanceOf(strategyContract.address)).to.equal(0);
+      expect(await USDC.balanceOf(strategyContract.address)).to.be.gt(0);
+      const beforeExitingWeth = await WETH.balanceOf(strategyContract.address);
+      await finalizeStrategy(strategyContract);
+      expect(await USDC.balanceOf(strategyContract.address)).to.equal(0);
+      expect(await DAI.balanceOf(strategyContract.address)).to.be.gt(0);
+      expect(await WETH.balanceOf(strategyContract.address)).to.gt(beforeExitingWeth);
+    });
   });
 });

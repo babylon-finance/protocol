@@ -62,8 +62,8 @@ contract AaveBorrowIntegration is BorrowIntegration {
      * @param asset   The underlying asset
      *
      */
-    function getBorrowBalance(address asset) public view override returns (uint256) {
-        (, uint256 stableDebt, , , , , , , ) = dataProvider.getUserReserveData(asset, msg.sender);
+    function getBorrowBalance(address _strategy, address asset) public view override returns (uint256) {
+        (, uint256 stableDebt, , , , , , , ) = dataProvider.getUserReserveData(asset, _strategy);
         return stableDebt;
     }
 
@@ -73,6 +73,7 @@ contract AaveBorrowIntegration is BorrowIntegration {
      *
      */
     function getCollateralBalance(
+        address _strategy,
         address /* asset */
     ) external view override returns (uint256) {
         (
@@ -84,8 +85,28 @@ contract AaveBorrowIntegration is BorrowIntegration {
 
         ) =
             // uint256 healthFactor
-            lendingPool.getUserAccountData(msg.sender);
+            lendingPool.getUserAccountData(_strategy);
         return totalCollateral;
+    }
+
+    /**
+     * Get the remaining liquidity available to borrow
+     *
+     */
+    function getRemainingLiquidity(address _strategy) public view override returns (uint256) {
+        (
+            ,
+            ,
+            // uint256 totalCollateral,
+            // uint256 totalDebt,
+            uint256 borrowingPower, // uint256 borrowingPower, // uint256 liquidationThreshold, // uint256 ltv,
+            ,
+            ,
+
+        ) =
+            // uint256 healthFactor
+            lendingPool.getUserAccountData(_strategy);
+        return borrowingPower;
     }
 
     /* ============ Internal Functions ============ */
@@ -201,25 +222,5 @@ contract AaveBorrowIntegration is BorrowIntegration {
         // Get the relevant debt token address
         (, address stableDebtTokenAddress, ) = dataProvider.getReserveTokensAddresses(asset);
         return stableDebtTokenAddress;
-    }
-
-    /**
-     * Get the remaining liquidity available to borrow
-     *
-     */
-    function _getRemainingLiquidity() public view override returns (uint256) {
-        (
-            ,
-            ,
-            // uint256 totalCollateral,
-            // uint256 totalDebt,
-            uint256 borrowingPower, // uint256 borrowingPower, // uint256 liquidationThreshold, // uint256 ltv,
-            ,
-            ,
-
-        ) =
-            // uint256 healthFactor
-            lendingPool.getUserAccountData(msg.sender);
-        return borrowingPower;
     }
 }
