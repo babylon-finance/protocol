@@ -291,10 +291,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
             _strategyDuration >= garden.minStrategyDuration() && _strategyDuration <= garden.maxStrategyDuration(),
             Errors.DURATION_MUST_BE_IN_RANGE
         );
-        uint256 tokenDecimals = ERC20(IGarden(_garden).reserveAsset()).decimals();
-        absoluteMinRebalance = 10**(tokenDecimals);
 
-        _require(_minRebalanceCapital >= absoluteMinRebalance, Errors.MIN_REBALANCE_CAPITAL);
         _require(_maxCapitalRequested >= _minRebalanceCapital, Errors.MAX_CAPITAL_REQUESTED);
 
         strategist = _strategist;

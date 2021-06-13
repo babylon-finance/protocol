@@ -4,7 +4,7 @@ const { TWAP_ORACLE_WINDOW, TWAP_ORACLE_GRANULARITY } = require('../../lib/syste
 const { impersonateAddress } = require('../../lib/rpc');
 const addresses = require('../../lib/addresses');
 const { getAssetWhale } = require('../../lib/whale');
-const { increaseTime, from } = require('../utils/test-helpers');
+const { increaseTime, getContract, parse, from } = require('../utils/test-helpers');
 
 const DEFAULT_STRATEGY_PARAMS = [
   ethers.utils.parseEther('10'), // _maxCapitalRequested
@@ -30,6 +30,21 @@ const USDC_STRATEGY_PARAMS = [
   ethers.BigNumber.from(500 * 1000000), // _minRebalanceCapital
 ];
 
+const WBTC_STRATEGY_PARAMS = [
+  ethers.BigNumber.from(10 * 1e8), // _maxCapitalRequested
+  ethers.BigNumber.from(1e6), // _stake
+  ONE_DAY_IN_SECONDS * 30, // _strategyDuration
+  ethers.utils.parseEther('0.05'), // 5% _expectedReturn
+  ethers.BigNumber.from(1e5), // _minRebalanceCapital
+];
+
+const GARDEN_PARAMS_MAP = {
+  [addresses.tokens.WETH]: DEFAULT_STRATEGY_PARAMS,
+  [addresses.tokens.DAI]: DAI_STRATEGY_PARAMS,
+  [addresses.tokens.USDC]: USDC_STRATEGY_PARAMS,
+  [addresses.tokens.WBTC]: WBTC_STRATEGY_PARAMS,
+};
+
 const STRAT_NAME_PARAMS = ['Strategy Name', 'STRT']; // [ NAME, SYMBOL ]
 const NFT_ADDRESS = 'https://babylon.mypinata.cloud/ipfs/Qmc7MfvuCkhA8AA2z6aBzmb5G4MaRfPeKgCVTWcKqU2tjB';
 
@@ -46,7 +61,7 @@ async function updateTWAPs(gardenAddress) {
   }
 }
 
-async function createStrategyWithBuyOperation(garden, signer, params = DEFAULT_STRATEGY_PARAMS, integration, data) {
+async function createStrategyWithBuyOperation(garden, signer, params, integration, data) {
   const passedLongParams = [[0], [integration], [data || addresses.tokens.DAI]];
   await garden.connect(signer).addStrategy(...STRAT_NAME_PARAMS, params, ...passedLongParams);
   const strategies = await garden.getStrategies();
@@ -57,7 +72,7 @@ async function createStrategyWithBuyOperation(garden, signer, params = DEFAULT_S
   return strategy;
 }
 
-async function createStrategyWithPoolOperation(garden, signer, params = DEFAULT_STRATEGY_PARAMS, integration, data) {
+async function createStrategyWithPoolOperation(garden, signer, params, integration, data) {
   const passedPoolParams = [[1], [integration], [data || addresses.oneinch.pools.wethdai]];
   await garden.connect(signer).addStrategy(...STRAT_NAME_PARAMS, params, ...passedPoolParams);
   const strategies = await garden.getStrategies();
@@ -68,7 +83,7 @@ async function createStrategyWithPoolOperation(garden, signer, params = DEFAULT_
   return strategy;
 }
 
-async function createStrategyWithVaultOperation(garden, signer, params = DEFAULT_STRATEGY_PARAMS, integration, data) {
+async function createStrategyWithVaultOperation(garden, signer, params, integration, data) {
   const passedYieldParams = [[2], [integration], [data || addresses.yearn.vaults.ydai]];
   await garden.connect(signer).addStrategy(...STRAT_NAME_PARAMS, params, ...passedYieldParams);
   const strategies = await garden.getStrategies();
@@ -79,7 +94,7 @@ async function createStrategyWithVaultOperation(garden, signer, params = DEFAULT
   return strategy;
 }
 
-async function createStrategyWithLendOperation(garden, signer, params = DEFAULT_STRATEGY_PARAMS, integration, data) {
+async function createStrategyWithLendOperation(garden, signer, params, integration, data) {
   const passedLendParams = [[3], [integration], [data || addresses.tokens.USDC]];
   await garden.connect(signer).addStrategy(...STRAT_NAME_PARAMS, params, ...passedLendParams);
   const strategies = await garden.getStrategies();
@@ -101,23 +116,32 @@ async function deposit(garden, signers) {
     case addresses.tokens.DAI.toLowerCase():
       amount = ethers.utils.parseEther('1000');
       break;
+    case addresses.tokens.WBTC.toLowerCase():
+      amount = 1e6;
+      break;
     default:
       amount = ethers.utils.parseEther('2');
   }
 
-  if (reserveAsset.toLowerCase() !== addresses.tokens.WETH.toLowerCase()) {
-    await reserveContract.connect(signers[0]).approve(garden.address, amount, { gasPrice: 0 });
-  }
-  await garden.connect(signers[0]).deposit(amount, 1, signers[0].getAddress(), false, {
-    value: amount,
-  });
+  for (const signer of signers.slice(0, 2)) {
+    console.log('balance', (await reserveContract.balanceOf(signer.address)).toString());
 
-  if (reserveAsset.toLowerCase() !== addresses.tokens.WETH.toLowerCase()) {
-    await reserveContract.connect(signers[1]).approve(garden.address, amount, { gasPrice: 0 });
+    const isWeth = reserveAsset.toLowerCase() === addresses.tokens.WETH.toLowerCase();
+    if (!isWeth) {
+      await reserveContract.connect(signer).approve(garden.address, amount, { gasPrice: 0 });
+    }
+    await garden.connect(signer).deposit(
+      amount,
+      1,
+      signer.getAddress(),
+      false,
+      isWeth
+        ? {
+            value: amount,
+          }
+        : {},
+    );
   }
-  await garden.connect(signers[1]).deposit(amount, 1, signers[1].getAddress(), false, {
-    value: amount,
-  });
 }
 
 async function vote(garden, signers, strategy) {
@@ -289,10 +313,17 @@ async function createStrategy(
   signers,
   integration,
   garden,
-  params = DEFAULT_STRATEGY_PARAMS,
+  params,
   specificParams,
 ) {
   let strategy;
+
+  const reserveAsset = await garden.reserveAsset();
+  params = params || GARDEN_PARAMS_MAP[reserveAsset];
+  console.log(GARDEN_PARAMS_MAP);
+  console.log(params);
+  console.log(reserveAsset);
+  console.log(params[1].toString());
 
   switch (kind) {
     case 'buy':
@@ -333,8 +364,35 @@ async function createStrategy(
   return strategy;
 }
 
+async function getStrategy({
+  garden,
+  kind = 'buy',
+  state = 'dataset',
+  signers,
+  integration,
+  params,
+  specificParams,
+}) {
+  const babController = await getContract('BabController', 'BabControllerProxy');
+  const kyberTradeIntegration = await getContract('KyberTradeIntegration');
+  const [deployer, keeper, owner, signer1, signer2, signer3] = await ethers.getSigners();
+
+  const gardens = await babController.getGardens();
+
+  return await createStrategy(
+    kind,
+    state,
+    signers ? signers : [signer1, signer2, signer3],
+    integration ? integration : kyberTradeIntegration.address,
+    garden ? garden : await ethers.getContractAt('Garden', gardens.slice(-1)[0]),
+    params,
+    specificParams,
+  );
+}
+
 module.exports = {
   createStrategy,
+  getStrategy,
   DEFAULT_STRATEGY_PARAMS,
   DAI_STRATEGY_PARAMS,
   USDC_STRATEGY_PARAMS,

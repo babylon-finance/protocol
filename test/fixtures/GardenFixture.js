@@ -2,14 +2,14 @@ const { deployments } = require('hardhat');
 const { TWAP_ORACLE_WINDOW, TWAP_ORACLE_GRANULARITY } = require('../../lib/system.js');
 const { GARDEN_PARAMS } = require('../../lib/constants.js');
 const addresses = require('../../lib/addresses');
+const { getAssetWhale } = require('../../lib/whale.js');
 const { impersonateAddress } = require('../../lib/rpc');
 const { createStrategy } = require('./StrategyHelper.js');
+const { getContract } = require('../utils/test-helpers');
 
 async function setUpFixture({ upgradesDeployer, deployments, getNamedAccounts, ethers }, options, gardenParams) {
-  async function getContract(contractName, deploymentName) {
-    return await ethers.getContractAt(contractName, (await deployments.get(deploymentName || contractName)).address);
-  }
-  const [deployer, keeper, owner, signer1, signer2, signer3] = await ethers.getSigners();
+  const signers = await ethers.getSigners();
+  const [deployer, keeper, owner, signer1, signer2, signer3] = signers;
 
   await deployments.fixture();
 
@@ -150,8 +150,36 @@ async function setUpFixture({ upgradesDeployer, deployments, getNamedAccounts, e
   console.log('Created and started garden', garden1.address);
   console.log('Created manual testing garden', garden3.address);
 
-  const daiWhaleSigner = await impersonateAddress('0x6B175474E89094C44Da98b954EedeAC495271d0F');
+  const dai = await ethers.getContractAt('IERC20', addresses.tokens.DAI);
+  const usdc = await ethers.getContractAt('IERC20', addresses.tokens.USDC);
+  const weth = await ethers.getContractAt('IERC20', addresses.tokens.WETH);
+  wbtc = await ethers.getContractAt('IERC20', addresses.tokens.WBTC);
+
+  const usdcWhaleAddress = getAssetWhale(addresses.tokens.USDC); // Has USDC
+
+  const daiWhaleSigner = await impersonateAddress('0x6b175474e89094c44da98b954eedeac495271d0f');
+  const usdcWhaleSigner = await impersonateAddress(usdcWhaleAddress);
   const wethWhaleSigner = await impersonateAddress('0xC8dDA504356195ba5344E5a9826Ce07DfEaA97b6');
+  const wbtcWhaleSigner = await impersonateAddress('0x2260fac5e5542a773aa44fbcfedf7c193bc2c599');
+
+  const thousandUSDC = ethers.BigNumber.from(1000 * 1000000);
+  console.log('signers', signers.length);
+  for (const signer of signers.slice(3, 10)) {
+    await dai.connect(daiWhaleSigner).transfer(signer.address, ethers.utils.parseEther('10000'), {
+      gasPrice: 0,
+    });
+    await usdc.connect(usdcWhaleSigner).transfer(signer.address, thousandUSDC, {
+      gasPrice: 0,
+    });
+    await weth.connect(wethWhaleSigner).transfer(signer.address, ethers.utils.parseEther('5'), {
+      gasPrice: 0,
+    });
+
+    await wbtc.connect(wbtcWhaleSigner).transfer(signer.address, 1e8, {
+      gasPrice: 0,
+    });
+    console.log('wbtc balance', (await wbtc.balanceOf(signer.address)).toString());
+  }
 
   return {
     babController,

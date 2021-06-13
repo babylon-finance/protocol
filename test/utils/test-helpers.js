@@ -39,6 +39,10 @@ async function sleep(milliseconds) {
   return new Promise((resolve) => setTimeout(resolve, milliseconds));
 }
 
+async function getContract(contractName, deploymentName) {
+  return await ethers.getContractAt(contractName, (await deployments.get(deploymentName || contractName)).address);
+}
+
 module.exports = {
   increaseTime,
   getTimestamp,
@@ -46,4 +50,5 @@ module.exports = {
   sleep,
   from: ethers.BigNumber.from,
   parse: ethers.utils.parseEther,
+  getContract
 };
