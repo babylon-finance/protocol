@@ -145,12 +145,12 @@ library SafeDecimalMath {
     }
 
     /**
-     * Normalizing decimals for tokens with less than 18 decimals
+     * Normalizing amount decimals between tokens
      * @param assetFrom       ERC20 asset address
      * @param assetTarget     ERC20 asset address
      * @param quantity Value to normalize (e.g. capital)
      */
-    function normalizeDecimals(
+    function normalizeAmountTokens(
         address assetFrom,
         address assetTarget,
         uint256 quantity

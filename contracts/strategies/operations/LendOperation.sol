@@ -17,7 +17,6 @@
 */
 
 pragma solidity 0.7.6;
-import 'hardhat/console.sol';
 import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import {SafeMath} from '@openzeppelin/contracts/math/SafeMath.sol';
 import {Operation} from './Operation.sol';
@@ -122,20 +121,16 @@ contract LendOperation is Operation {
         require(_percentage <= HUNDRED_PERCENT, 'Unwind Percentage <= 100%');
         // Normalize to underlying asset if any (ctokens for compound)
         uint256 numTokensToRedeem = ILendIntegration(_integration).getInvestmentTokenAmount(msg.sender, _assetToken);
-        console.log('underlying tokens to redeem', numTokensToRedeem);
         // Apply percentage
         numTokensToRedeem = numTokensToRedeem.mul(_percentage.div(10**(18)));
-        console.log('after percentage       ', numTokensToRedeem);
         uint256 remainingDebtInCollateralTokens = _getRemainingDebt(_borrowToken, _assetToken, _remaining);
-        remainingDebtInCollateralTokens = SafeDecimalMath.normalizeDecimals(
+        remainingDebtInCollateralTokens = SafeDecimalMath.normalizeAmountTokens(
             _borrowToken,
             _assetToken,
             remainingDebtInCollateralTokens
         );
 
         if (_remaining > 0) {
-            console.log('numTokensToRedeem', numTokensToRedeem);
-            console.log('remaining in usdc', remainingDebtInCollateralTokens);
             // Update amount so we can exit if there is debt
             numTokensToRedeem = numTokensToRedeem.sub(remainingDebtInCollateralTokens.mul(130).div(100));
         }
@@ -146,7 +141,6 @@ contract LendOperation is Operation {
             numTokensToRedeem,
             exchangeRate.mul(numTokensToRedeem.sub(numTokensToRedeem.preciseMul(SLIPPAGE_ALLOWED)))
         );
-        console.log('trading');
         if (_assetToken != _garden.reserveAsset()) {
             IStrategy(msg.sender).trade(_assetToken, IERC20(_assetToken).balanceOf(msg.sender), _garden.reserveAsset());
         }
@@ -179,7 +173,9 @@ contract LendOperation is Operation {
             ILendIntegration(_integration).getExchangeRatePerToken(_assetToken).mul(numTokensToRedeem);
         uint256 price = _getPrice(_garden.reserveAsset(), _assetToken);
         uint256 NAV =
-            SafeDecimalMath.normalizeDecimals(_garden.reserveAsset(), _assetToken, assetTokensAmount).preciseDiv(price);
+            SafeDecimalMath.normalizeAmountTokens(_garden.reserveAsset(), _assetToken, assetTokensAmount).preciseDiv(
+                price
+            );
         require(NAV != 0, 'NAV has to be bigger 0');
         return NAV;
     }

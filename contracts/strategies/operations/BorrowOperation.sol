@@ -102,7 +102,7 @@ contract BorrowOperation is Operation {
         // % of the total collateral value in the borrow token
         uint256 amountToBorrow =
             _capital.preciseMul(price).preciseMul(IBorrowIntegration(_integration).maxCollateralFactor());
-        uint256 normalizedAmount = SafeDecimalMath.normalizeDecimals(_asset, _borrowToken, amountToBorrow);
+        uint256 normalizedAmount = SafeDecimalMath.normalizeAmountTokens(_asset, _borrowToken, amountToBorrow);
         IBorrowIntegration(_integration).borrow(msg.sender, _borrowToken, normalizedAmount);
         return (_borrowToken, IERC20(_borrowToken).balanceOf(address(msg.sender)), 0); // borrowings are liquid
     }
@@ -157,7 +157,7 @@ contract BorrowOperation is Operation {
         uint256 tokensOwed = IBorrowIntegration(_integration).getBorrowBalance(msg.sender, _assetToken);
         uint256 price = _getPrice(_garden.reserveAsset(), _assetToken);
         uint256 NAV =
-            SafeDecimalMath.normalizeDecimals(_garden.reserveAsset(), _assetToken, tokensOwed).preciseDiv(price);
+            SafeDecimalMath.normalizeAmountTokens(_garden.reserveAsset(), _assetToken, tokensOwed).preciseDiv(price);
         require(NAV != 0, 'NAV has to be different than 0');
         return uint256(-NAV);
     }

@@ -481,7 +481,7 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
     ) internal {
         // Take control of getPrice fluctuations along the time - normalizing into DAI
         uint256 pricePerTokenUnit = _getStrategyPricePerTokenUnit(_strategy, _capital, _addOrSubstract);
-        _capital = SafeDecimalMath.normalizeDecimals(
+        _capital = SafeDecimalMath.normalizeAmountTokens(
             IGarden(IStrategy(_strategy).garden()).reserveAsset(),
             IGarden(IStrategy(_strategy).garden()).reserveAsset(),
             _capital.preciseMul(pricePerTokenUnit)
@@ -870,7 +870,7 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         uint256 strategyRewards = strategy.strategyRewards();
         uint256 babl;
         uint256 allocated =
-            SafeDecimalMath.normalizeDecimals(
+            SafeDecimalMath.normalizeAmountTokens(
                 IGarden(_garden).reserveAsset(),
                 IGarden(_garden).reserveAsset(),
                 strategy.capitalAllocated()
