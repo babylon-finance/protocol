@@ -16,9 +16,9 @@ const reserveAssetGarden = {
 
 const contributions = {
   [addresses.tokens.WETH]: parse('1'),
-  [addresses.tokens.DAI]: parse('100'),
-  [addresses.tokens.USDC]: from(100 * 1e6),
-  [addresses.tokens.WBTC]: from(1e6),
+  [addresses.tokens.DAI]: parse('10000'),
+  [addresses.tokens.USDC]: from(10000 * 1e6),
+  [addresses.tokens.WBTC]: from(1e7),
 };
 
 async function createGarden({
@@ -36,7 +36,6 @@ async function createGarden({
   const ishtarGate = await getContract('IshtarGate');
   const babController = await getContract('BabController', 'BabControllerProxy');
 
-  console.log('approve');
 
   const erc20 = await ethers.getContractAt('IERC20', reserveAsset);
   for (const sig of [signer1, signer2, signer3]) {
@@ -44,12 +43,10 @@ async function createGarden({
       gasPrice: 0,
     });
   }
-  console.log('create');
 
   await babController.connect(signer).createGarden(reserveAsset, name, symbol, nftUri, nftSeed, params, contribution, {
     value: reserveAsset === addresses.tokens.WETH ? contribution : 0,
   });
-  console.log('getGardens');
   const gardens = await babController.getGardens();
   const garden = await ethers.getContractAt('Garden', gardens.slice(-1)[0]);
   await ishtarGate

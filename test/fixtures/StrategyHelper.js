@@ -111,10 +111,10 @@ async function deposit(garden, signers) {
   let amount;
   switch (reserveAsset.toLowerCase()) {
     case addresses.tokens.USDC.toLowerCase():
-      amount = ethers.BigNumber.from(400 * 1000000);
+      amount = ethers.BigNumber.from(2000 * 1e6);
       break;
     case addresses.tokens.DAI.toLowerCase():
-      amount = ethers.utils.parseEther('1000');
+      amount = ethers.utils.parseEther('2000');
       break;
     case addresses.tokens.WBTC.toLowerCase():
       amount = 1e6;
@@ -124,8 +124,6 @@ async function deposit(garden, signers) {
   }
 
   for (const signer of signers.slice(0, 2)) {
-    console.log('balance', (await reserveContract.balanceOf(signer.address)).toString());
-
     const isWeth = reserveAsset.toLowerCase() === addresses.tokens.WETH.toLowerCase();
     if (!isWeth) {
       await reserveContract.connect(signer).approve(garden.address, amount, { gasPrice: 0 });
@@ -320,10 +318,6 @@ async function createStrategy(
 
   const reserveAsset = await garden.reserveAsset();
   params = params || GARDEN_PARAMS_MAP[reserveAsset];
-  console.log(GARDEN_PARAMS_MAP);
-  console.log(params);
-  console.log(reserveAsset);
-  console.log(params[1].toString());
 
   switch (kind) {
     case 'buy':

@@ -5,9 +5,13 @@ const addresses = require('../../lib/addresses');
 const { getAssetWhale } = require('../../lib/whale.js');
 const { impersonateAddress } = require('../../lib/rpc');
 const { createStrategy } = require('./StrategyHelper.js');
-const { getContract } = require('../utils/test-helpers');
+const { getContract, from, parse, eth } = require('../utils/test-helpers');
 
-async function setUpFixture({ upgradesDeployer, deployments, getNamedAccounts, ethers }, options, gardenParams) {
+async function setUpFixture(
+  { upgradesDeployer, deployments, getNamedAccounts, ethers },
+  options,
+  { gardenParams = GARDEN_PARAMS, fund },
+) {
   const signers = await ethers.getSigners();
   const [deployer, keeper, owner, signer1, signer2, signer3] = signers;
 
@@ -39,6 +43,11 @@ async function setUpFixture({ upgradesDeployer, deployments, getNamedAccounts, e
   const addLiquidityOperation = await getContract('AddLiquidityOperation');
   const depositVaultOperation = await getContract('DepositVaultOperation');
   const lendOperation = await getContract('LendOperation');
+
+  const dai = await ethers.getContractAt('IERC20', addresses.tokens.DAI);
+  const usdc = await ethers.getContractAt('IERC20', addresses.tokens.USDC);
+  const weth = await ethers.getContractAt('IERC20', addresses.tokens.WETH);
+  const wbtc = await ethers.getContractAt('IERC20', addresses.tokens.WBTC);
 
   // deploy uniswap v2 adapter for tests
   await deployments.deploy('UniswapTWAP', {
@@ -150,35 +159,29 @@ async function setUpFixture({ upgradesDeployer, deployments, getNamedAccounts, e
   console.log('Created and started garden', garden1.address);
   console.log('Created manual testing garden', garden3.address);
 
-  const dai = await ethers.getContractAt('IERC20', addresses.tokens.DAI);
-  const usdc = await ethers.getContractAt('IERC20', addresses.tokens.USDC);
-  const weth = await ethers.getContractAt('IERC20', addresses.tokens.WETH);
-  wbtc = await ethers.getContractAt('IERC20', addresses.tokens.WBTC);
-
-  const usdcWhaleAddress = getAssetWhale(addresses.tokens.USDC); // Has USDC
-
-  const daiWhaleSigner = await impersonateAddress('0x6b175474e89094c44da98b954eedeac495271d0f');
-  const usdcWhaleSigner = await impersonateAddress(usdcWhaleAddress);
+  const daiWhaleSigner = await impersonateAddress('0xbebc44782c7db0a1a60cb6fe97d0b483032ff1c7');
+  const usdcWhaleSigner = await impersonateAddress('0x0a59649758aa4d66e25f08dd01271e891fe52199');
   const wethWhaleSigner = await impersonateAddress('0xC8dDA504356195ba5344E5a9826Ce07DfEaA97b6');
-  const wbtcWhaleSigner = await impersonateAddress('0x2260fac5e5542a773aa44fbcfedf7c193bc2c599');
+  const wbtcWhaleSigner = await impersonateAddress('0x9ff58f4ffb29fa2266ab25e75e2a8b3503311656');
 
-  const thousandUSDC = ethers.BigNumber.from(1000 * 1000000);
-  console.log('signers', signers.length);
-  for (const signer of signers.slice(3, 10)) {
-    await dai.connect(daiWhaleSigner).transfer(signer.address, ethers.utils.parseEther('10000'), {
-      gasPrice: 0,
-    });
-    await usdc.connect(usdcWhaleSigner).transfer(signer.address, thousandUSDC, {
-      gasPrice: 0,
-    });
-    await weth.connect(wethWhaleSigner).transfer(signer.address, ethers.utils.parseEther('5'), {
-      gasPrice: 0,
-    });
+  if (fund) {
+    for (const signer of signers.slice(3, 10)) {
+      await dai.connect(daiWhaleSigner).transfer(signer.address, eth(1e6), {
+        gasPrice: 0,
+      });
 
-    await wbtc.connect(wbtcWhaleSigner).transfer(signer.address, 1e8, {
-      gasPrice: 0,
-    });
-    console.log('wbtc balance', (await wbtc.balanceOf(signer.address)).toString());
+      await usdc.connect(usdcWhaleSigner).transfer(signer.address, from(1e6 * 1e6), {
+        gasPrice: 0,
+      });
+
+      await weth.connect(wethWhaleSigner).transfer(signer.address, eth(100), {
+        gasPrice: 0,
+      });
+
+      await wbtc.connect(wbtcWhaleSigner).transfer(signer.address, from(10e8), {
+        gasPrice: 0,
+      });
+    }
   }
 
   return {
@@ -238,10 +241,11 @@ async function setUpFixture({ upgradesDeployer, deployments, getNamedAccounts, e
 const fixtureCache = {};
 
 module.exports = {
-  setupTests: (gardenParams = GARDEN_PARAMS) => {
-    const key = JSON.stringify(gardenParams);
+  setupTests: (params = {}) => {
+    const { gardenParams } = params;
+    const key = JSON.stringify(params);
     if (!fixtureCache[key]) {
-      fixtureCache[key] = deployments.createFixture((hre, options) => setUpFixture(hre, options, gardenParams));
+      fixtureCache[key] = deployments.createFixture((hre, options) => setUpFixture(hre, options, params));
     }
     return fixtureCache[key];
   },
