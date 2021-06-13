@@ -167,13 +167,10 @@ contract LendOperation is Operation {
         if (!IStrategy(msg.sender).isStrategyActive()) {
             return 0;
         }
-        uint256 numTokensToRedeem =
-            IERC20(ILendIntegration(_integration).getInvestmentToken(_assetToken)).balanceOf(msg.sender);
-        uint256 assetTokensAmount =
-            ILendIntegration(_integration).getExchangeRatePerToken(_assetToken).mul(numTokensToRedeem);
+        uint256 assetTokenAmount = ILendIntegration(_integration).getInvestmentTokenAmount(msg.sender, _assetToken);
         uint256 price = _getPrice(_garden.reserveAsset(), _assetToken);
         uint256 NAV =
-            SafeDecimalMath.normalizeAmountTokens(_garden.reserveAsset(), _assetToken, assetTokensAmount).preciseDiv(
+            SafeDecimalMath.normalizeAmountTokens(_garden.reserveAsset(), _assetToken, assetTokenAmount).preciseDiv(
                 price
             );
         require(NAV != 0, 'NAV has to be bigger 0');
