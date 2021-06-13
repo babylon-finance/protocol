@@ -288,11 +288,7 @@ abstract contract BorrowIntegration is BaseIntegration, ReentrancyGuard, IBorrow
             address,
             uint256,
             bytes memory
-        )
-    {
-        require(false, 'This needs to be overriden');
-        return (address(0), 0, bytes(''));
-    }
+        );
 
     /**
      * Return repay borrowed asset calldata
