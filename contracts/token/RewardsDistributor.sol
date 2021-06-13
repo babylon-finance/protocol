@@ -16,7 +16,6 @@
 */
 
 pragma solidity 0.7.6;
-
 import {TimeLockedToken} from './TimeLockedToken.sol';
 
 import {OwnableUpgradeable} from '@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol';
@@ -505,8 +504,9 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
     ) internal {
         // Take control of getPrice fluctuations along the time - normalizing into DAI
         uint256 pricePerTokenUnit = _getStrategyPricePerTokenUnit(_strategy, _capital, _addOrSubstract);
-        _capital = SafeDecimalMath.normalizeDecimals(
+        _capital = SafeDecimalMath.normalizeAmountTokens(
             IGarden(IStrategy(_strategy).garden()).reserveAsset(),
+            DAI,
             _capital.preciseMul(pricePerTokenUnit)
         );
         ProtocolPerTimestamp storage protocolCheckpoint = protocolPerTimestamp[block.timestamp];
@@ -893,7 +893,7 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         uint256 strategyRewards = strategy.strategyRewards();
         uint256 babl;
         uint256 allocated =
-            SafeDecimalMath.normalizeDecimals(IGarden(_garden).reserveAsset(), strategy.capitalAllocated());
+            SafeDecimalMath.normalizeAmountTokens(IGarden(_garden).reserveAsset(), DAI, strategy.capitalAllocated());
         uint256 contributorPower =
             _getContributorPower(_garden, _contributor, strategy.executedAt(), strategy.exitedAt());
         // We take care of normalization into 18 decimals for capital allocated in less decimals than 18

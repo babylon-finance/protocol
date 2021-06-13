@@ -61,7 +61,12 @@ contract BuyOperation is Operation {
 
     /**
      * Executes the buy operation
-     * @param _capital      Amount of capital received from the garden
+     * @param _asset              Asset to receive into this operation
+     * @param _capital            Amount of asset received
+     * param _assetStatus        Status of the asset amount
+     * @param _data               Address of the token to buy
+     * param _garden             Garden of the strategy
+     * param _integration        Address of the integration to execute
      */
     function executeOperation(
         address _asset,
@@ -89,11 +94,23 @@ contract BuyOperation is Operation {
      * @param _percentage of capital to exit from the strategy
      */
     function exitOperation(
+        address, /* _asset */
+        uint256, /* _remaining */
+        uint8, /* _assetStatus */
         uint256 _percentage,
         address _data,
         IGarden _garden,
         address /* _integration */
-    ) external override onlyStrategy {
+    )
+        external
+        override
+        onlyStrategy
+        returns (
+            address,
+            uint256,
+            uint8
+        )
+    {
         require(_percentage <= 100e18, 'Unwind Percentage <= 100%');
         IStrategy(msg.sender).trade(
             _data,
@@ -105,19 +122,25 @@ contract BuyOperation is Operation {
     /**
      * Gets the NAV of the buy op in the reserve asset
      *
-     * @return _nav           NAV of the strategy
+     * @param _data               Asset bought
+     * @param _garden             Garden the strategy belongs to
+     * param _integration        Status of the asset amount
+     * @return _nav               NAV of the strategy
      */
     function getNAV(
         address _data,
         IGarden _garden,
         address /* _integration */
-    ) external view override returns (uint256) {
+    ) external view override returns (uint256, bool) {
         if (!IStrategy(msg.sender).isStrategyActive()) {
-            return 0;
+            return (0, true);
         }
         uint256 price = _getPrice(_garden.reserveAsset(), _data);
-        uint256 NAV = SafeDecimalMath.normalizeDecimals(_data, IERC20(_data).balanceOf(msg.sender)).preciseDiv(price);
+        uint256 NAV =
+            SafeDecimalMath
+                .normalizeAmountTokens(_data, _garden.reserveAsset(), IERC20(_data).balanceOf(msg.sender))
+                .preciseDiv(price);
         require(NAV != 0, 'NAV has to be bigger 0');
-        return NAV;
+        return (NAV, true);
     }
 }

@@ -64,7 +64,9 @@ contract AaveLendIntegration is LendIntegration {
      */
     constructor(IBabController _controller, address _weth) LendIntegration('aavelend', _weth, _controller) {}
 
-    /* ============ External Functions ============ */
+    function getInvestmentTokenAmount(address _address, address _assetToken) public view override returns (uint256) {
+        return IERC20(_getInvestmentToken(_assetToken)).balanceOf(_address);
+    }
 
     /* ============ Internal Functions ============ */
 
@@ -146,6 +148,34 @@ contract AaveLendIntegration is LendIntegration {
         bytes memory methodData =
             abi.encodeWithSignature('withdraw(address,uint256,address)', _assetToken, _numTokensToSupply, _strategy);
         return (address(lendingPool), 0, methodData);
+    }
+
+    /**
+     * Return pre action calldata
+     *
+     * hparam  _asset                    Address of the asset to deposit
+     * hparam  _amount                   Amount of the token to deposit
+     * hparam  _borrowOp                Type of Borrow op
+     *
+     * @return address                   Target contract address
+     * @return uint256                   Call value
+     * @return bytes                     Trade calldata
+     */
+    function _getPreActionCallData(
+        address, /* _asset */
+        uint256, /* _amount */
+        uint256 /* _borrowOp */
+    )
+        internal
+        pure
+        override
+        returns (
+            address,
+            uint256,
+            bytes memory
+        )
+    {
+        return (address(0), 0, bytes(''));
     }
 
     function _getSpender(

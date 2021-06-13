@@ -97,6 +97,13 @@ abstract contract LendIntegration is BaseIntegration, ReentrancyGuard, ILendInte
         return _isInvestment(_investmentAddress);
     }
 
+    function getInvestmentTokenAmount(address _address, address _assetToken)
+        public
+        view
+        virtual
+        override
+        returns (uint256);
+
     function supplyTokens(
         address _strategy,
         address _assetToken,
@@ -113,6 +120,15 @@ abstract contract LendIntegration is BaseIntegration, ReentrancyGuard, ILendInte
             );
 
         _validatePreJoinInvestmentData(investmentInfo);
+
+        // Pre actions (enter markets for compound)
+        (address targetAddressP, uint256 callValueP, bytes memory methodDataP) =
+            _getPreActionCallData(_assetToken, _numTokensToSupply, 0);
+
+        if (targetAddressP != address(0)) {
+            // Invoke protocol specific call
+            investmentInfo.strategy.invokeFromIntegration(targetAddressP, callValueP, methodDataP);
+        }
 
         investmentInfo.strategy.invokeApprove(_getSpender(_assetToken), _assetToken, _numTokensToSupply);
 
@@ -146,6 +162,15 @@ abstract contract LendIntegration is BaseIntegration, ReentrancyGuard, ILendInte
             );
 
         _validatePreExitInvestmentData(investmentInfo);
+
+        // Pre actions (enter markets for compound)
+        (address targetAddressP, uint256 callValueP, bytes memory methodDataP) =
+            _getPreActionCallData(_assetToken, _numTokensToRedeem, 1);
+
+        if (targetAddressP != address(0)) {
+            // Invoke protocol specific call
+            investmentInfo.strategy.invokeFromIntegration(targetAddressP, callValueP, methodDataP);
+        }
 
         (address targetInvestment, uint256 callValue, bytes memory methodData) =
             _getRedeemCalldata(_strategy, _assetToken, _numTokensToRedeem);
@@ -216,7 +241,7 @@ abstract contract LendIntegration is BaseIntegration, ReentrancyGuard, ILendInte
      */
     function _validatePostExitInvestmentData(InvestmentInfo memory _investmentInfo) internal view {
         require(
-            IERC20(_investmentInfo.investment).balanceOf(address(_investmentInfo.strategy)) ==
+            IERC20(_investmentInfo.assetToken).balanceOf(address(_investmentInfo.strategy)) >=
                 _investmentInfo.investmentTokensInGarden - _investmentInfo.investmentTokensInTransaction,
             'The garden did not return the investment tokens'
         );
@@ -260,7 +285,7 @@ abstract contract LendIntegration is BaseIntegration, ReentrancyGuard, ILendInte
         investmentInfo.garden = IGarden(investmentInfo.strategy.garden());
         investmentInfo.assetToken = _assetToken;
         investmentInfo.investment = _investmentToken;
-        investmentInfo.investmentTokensInGarden = IERC20(_investmentToken).balanceOf(_strategy);
+        investmentInfo.investmentTokensInGarden = getInvestmentTokenAmount(_strategy, _assetToken);
         investmentInfo.investmentTokensInTransaction = _investmentTokensInTransaction;
         investmentInfo.limitDepositTokenQuantity = _limitDepositToken;
 
@@ -309,6 +334,35 @@ abstract contract LendIntegration is BaseIntegration, ReentrancyGuard, ILendInte
             uint256,
             bytes memory
         );
+
+    /**
+     * Return pre action calldata
+     *
+     * hparam  _asset                    Address of the asset to deposit
+     * hparam  _amount                   Amount of the token to deposit
+     * hparam  _borrowOp                Type of Borrow op
+     *
+     * @return address                   Target contract address
+     * @return uint256                   Call value
+     * @return bytes                     Trade calldata
+     */
+    function _getPreActionCallData(
+        address, /* _asset */
+        uint256, /* _amount */
+        uint256 /* _borrowOp */
+    )
+        internal
+        view
+        virtual
+        returns (
+            address,
+            uint256,
+            bytes memory
+        )
+    {
+        require(false, 'This needs to be overriden');
+        return (address(0), 0, bytes(''));
+    }
 
     function _getSpender(
         address //_investmentAddress

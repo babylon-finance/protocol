@@ -96,17 +96,28 @@ abstract contract Operation is IOperation {
         );
 
     function exitOperation(
+        address _asset,
+        uint256 _remaining,
+        uint8 _assetStatus,
         uint256 _percentage,
         address _data,
         IGarden _garden,
         address _integration
-    ) external virtual override;
+    )
+        external
+        virtual
+        override
+        returns (
+            address,
+            uint256,
+            uint8
+        );
 
     function getNAV(
         address _data,
         IGarden _garden,
         address _integration
-    ) external view virtual override returns (uint256);
+    ) external view virtual override returns (uint256, bool);
 
     /* ============ External Functions ============ */
 

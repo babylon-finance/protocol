@@ -34,11 +34,14 @@ async function setUpFixture({ upgradesDeployer, deployments, getNamedAccounts, e
   const oneInchPoolIntegration = await getContract('OneInchPoolIntegration');
   const compoundLendIntegration = await getContract('CompoundLendIntegration');
   const aaveLendIntegration = await getContract('AaveLendIntegration');
+  const aaveBorrowIntegration = await getContract('AaveBorrowIntegration');
+  const compoundBorrowIntegration = await getContract('CompoundBorrowIntegration');
 
   const buyOperation = await getContract('BuyOperation');
   const addLiquidityOperation = await getContract('AddLiquidityOperation');
   const depositVaultOperation = await getContract('DepositVaultOperation');
   const lendOperation = await getContract('LendOperation');
+  const borrowOperation = await getContract('BorrowOperation');
 
   // deploy uniswap v2 adapter for tests
   await deployments.deploy('UniswapTWAP', {
@@ -168,7 +171,9 @@ async function setUpFixture({ upgradesDeployer, deployments, getNamedAccounts, e
     sushiswapPoolIntegration,
     oneInchPoolIntegration,
     compoundLendIntegration,
+    compoundBorrowIntegration,
     aaveLendIntegration,
+    aaveBorrowIntegration,
     univ2,
 
     garden1,
@@ -183,6 +188,7 @@ async function setUpFixture({ upgradesDeployer, deployments, getNamedAccounts, e
     addLiquidityOperation,
     depositVaultOperation,
     lendOperation,
+    borrowOperation,
 
     gardenValuer,
     priceOracle,

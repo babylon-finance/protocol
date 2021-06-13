@@ -18,31 +18,31 @@
 pragma solidity 0.7.6;
 
 /**
- * @title ILendIntegration
+ * @title IBorrowIntegration
  * @author Babylon Finance
  *
- * Interface for lending integrations such as Compound, Aave.
+ * Interface for borrow integrations
  */
-interface ILendIntegration {
-    function supplyTokens(
+interface IBorrowIntegration {
+    function borrow(
         address _strategy,
-        address _assetToken,
-        uint256 _numTokensToSupply,
-        uint256 _minAmountExpected
+        address asset,
+        uint256 borrowAmount
     ) external;
 
-    function redeemTokens(
+    function repay(
         address _strategy,
-        address _assetToken,
-        uint256 _numTokensToRedeem,
-        uint256 _minAmountExpected
+        address asset,
+        uint256 amount
     ) external;
 
-    function getExpectedShares(address _assetToken, uint256 _numTokensToSupply) external view returns (uint256);
+    function updateMaxCollateralFactor(uint256 _newMaxCollateralFactor) external;
 
-    function getExchangeRatePerToken(address _assetToken) external view returns (uint256);
+    function maxCollateralFactor() external view returns (uint256);
 
-    function getInvestmentToken(address _assetToken) external view returns (address);
+    function getBorrowBalance(address _strategy, address _asset) external view returns (uint256);
 
-    function getInvestmentTokenAmount(address _address, address _assetToken) external view returns (uint256);
+    function getCollateralBalance(address _strategy, address asset) external view returns (uint256);
+
+    function getRemainingLiquidity(address _strategy) external view returns (uint256);
 }
