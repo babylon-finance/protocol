@@ -125,7 +125,9 @@ contract LendOperation is Operation {
             IERC20(ILendIntegration(_integration).getInvestmentToken(_assetToken)).balanceOf(msg.sender).preciseMul(
                 _percentage
             );
-        uint256 remainingDebtInCollateralTokens = _getRemainingDebtNormalized(_borrowToken, _assetToken, _remaining);
+        uint256 remainingDebtInCollateralTokens = _getRemainingDebt(_borrowToken, _assetToken, _remaining);
+        remainingDebtInCollateralTokens = SafeDecimalMath.normalizeDecimals(_borrowToken, ILendIntegration(_integration).getInvestmentToken(_assetToken), remainingDebtInCollateralTokens);
+
         if (_remaining > 0) {
             // Update amount so we can exit if there is debt
             numTokensToRedeem = numTokensToRedeem.sub(remainingDebtInCollateralTokens.mul(130).div(100));
@@ -140,9 +142,7 @@ contract LendOperation is Operation {
         if (_assetToken != _garden.reserveAsset()) {
             IStrategy(msg.sender).trade(_assetToken, IERC20(_assetToken).balanceOf(msg.sender), _garden.reserveAsset());
         }
-        uint256 collateralLocked =
-            IERC20(ILendIntegration(_integration).getInvestmentToken(_assetToken)).balanceOf(msg.sender);
-        return (_assetToken, collateralLocked, 1);
+        return (_assetToken, IERC20(ILendIntegration(_integration).getInvestmentToken(_assetToken)).balanceOf(msg.sender), 1);
     }
 
     /**
@@ -172,7 +172,7 @@ contract LendOperation is Operation {
         return NAV;
     }
 
-    function _getRemainingDebtNormalized(
+    function _getRemainingDebt(
         address _borrowToken,
         address _assetToken,
         uint256 _remaining
@@ -181,7 +181,6 @@ contract LendOperation is Operation {
             return 0;
         }
         uint256 price = _getPrice(_borrowToken, _assetToken);
-        uint256 amountToStayLocked = _remaining.preciseMul(price);
-        return SafeDecimalMath.normalizeDecimals(_borrowToken, _assetToken, amountToStayLocked);
-    }
+        return _remaining.preciseMul(price);
+      }
 }

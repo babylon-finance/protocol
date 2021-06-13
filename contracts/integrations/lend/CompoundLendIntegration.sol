@@ -50,6 +50,7 @@ contract CompoundLendIntegration is LendIntegration {
 
     /* ============ Constant ============ */
 
+    address internal constant CompoundComptrollerAddress = 0x3d9819210A31b4961b30EF54bE2aeD79B9c9Cd3B;
     address internal constant cETH = 0x4Ddc2D193948926D02f9B1fE9e1daa0718270ED5;
     // Mapping of asset addresses to cToken addresses
     mapping(address => address) public assetToCToken;
@@ -131,7 +132,7 @@ contract CompoundLendIntegration is LendIntegration {
         )
     {
         // Encode method data for Garden to invoke
-        bytes memory methodData = abi.encodeWithSignature('redeem(uint256)', _numTokensToSupply);
+        bytes memory methodData = abi.encodeWithSignature('redeemUnderlying(uint256)', _numTokensToSupply);
 
         return (assetToCToken[_assetToken], 0, methodData);
     }
@@ -161,6 +162,41 @@ contract CompoundLendIntegration is LendIntegration {
         bytes memory methodData = abi.encodeWithSignature('mint(uint256)', _numTokensToSupply);
         // If it is ETH, send the value
         return (assetToCToken[_assetToken], assetToCToken[_assetToken] == cETH ? _numTokensToSupply : 0, methodData);
+    }
+
+    /**
+     * Return pre action calldata
+     *
+     * @param  _asset                    Address of the asset to deposit
+     * hparam  _amount                   Amount of the token to deposit
+     * @param  _borrowOp                Type of Borrow op
+     *
+     * @return address                   Target contract address
+     * @return uint256                   Call value
+     * @return bytes                     Trade calldata
+     */
+    function _getPreActionCallData(
+        address _asset,
+        uint256, /* _amount */
+        uint256 _borrowOp
+    )
+        internal
+        view
+        override
+        returns (
+            address,
+            uint256,
+            bytes memory
+        )
+    {
+        if (_borrowOp == 0) {
+            // Encode method data for Garden to invoke
+            address[] memory markets = new address[](1);
+            markets[0] = assetToCToken[_asset];
+            bytes memory methodData = abi.encodeWithSignature('enterMarkets(address[])', markets);
+            return (CompoundComptrollerAddress, 0, methodData);
+        }
+        return (address(0), 0, bytes(''));
     }
 
     function _getSpender(address _assetToken) internal view override returns (address) {

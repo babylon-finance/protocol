@@ -101,9 +101,8 @@ contract CompoundBorrowIntegration is BorrowIntegration {
             // err
             // cTokenBalance
             uint256 borrowBalance,
-            uint256 exchangeRateMantissa
         ) = ICToken(cToken).getAccountSnapshot(_strategy);
-        return borrowBalance.mul(exchangeRateMantissa).div(1e18);
+        return borrowBalance;
     }
 
     /**
@@ -122,7 +121,7 @@ contract CompoundBorrowIntegration is BorrowIntegration {
         ) = ICToken(cToken).getAccountSnapshot(_strategy);
 
         // Source: balanceOfUnderlying from any ctoken
-        return cTokenBalance.mul(exchangeRateMantissa).div(1e18);
+        return cTokenBalance.mul(exchangeRateMantissa).div(10**ERC20(asset).decimals());
     }
 
     /**
@@ -159,7 +158,7 @@ contract CompoundBorrowIntegration is BorrowIntegration {
         uint256 _borrowOp
     )
         internal
-        pure
+        view
         override
         returns (
             address,
@@ -170,7 +169,7 @@ contract CompoundBorrowIntegration is BorrowIntegration {
         if (_borrowOp == 0) {
             // Encode method data for Garden to invoke
             address[] memory markets = new address[](1);
-            markets[0] = _asset;
+            markets[0] = assetToCToken[_asset];
             bytes memory methodData = abi.encodeWithSignature('enterMarkets(address[])', markets);
             return (CompoundComptrollerAddress, 0, methodData);
         }

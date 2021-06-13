@@ -261,7 +261,7 @@ abstract contract BorrowIntegration is BaseIntegration, ReentrancyGuard, IBorrow
     function _validatePostRepay(DebtInfo memory _debtInfo) internal view {
         // debt is paid
         require(
-            getBorrowBalance(address(_debtInfo.strategy), _debtInfo.asset) == _debtInfo.debt.sub(_debtInfo.amount),
+            getBorrowBalance(address(_debtInfo.strategy), _debtInfo.asset) < _debtInfo.debt,
             'Debt was not repaid'
         );
     }
