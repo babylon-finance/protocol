@@ -129,7 +129,7 @@ contract LendOperation is Operation {
         address _assetToken,
         IGarden _garden,
         address _integration
-    ) external view override onlyStrategy returns (uint256) {
+    ) external view override returns (uint256) {
         if (!IStrategy(msg.sender).isStrategyActive()) {
             return 0;
         }
