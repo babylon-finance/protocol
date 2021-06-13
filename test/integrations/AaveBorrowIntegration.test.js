@@ -71,6 +71,25 @@ describe('AaveBorrowIntegrationTest', function () {
       expect(await WETH.balanceOf(garden1.address)).to.gt(beforeExitingWeth);
     });
 
+    it('gets NAV of a borrow/lend strategy', async function () {
+      const strategyContract = await createStrategy(
+        'borrow',
+        'vote',
+        [signer1, signer2, signer3],
+        [aaveLendIntegration.address, aaveBorrowIntegration.address],
+        garden1,
+        DEFAULT_STRATEGY_PARAMS,
+        [DAI.address, USDC.address],
+      );
+
+      await executeStrategy(strategyContract);
+      const nav = await strategyContract.getNAV();
+      expect(nav).to.be.closeTo(
+        ethers.utils.parseEther('1').sub(ethers.utils.parseEther('1').mul(3).div(10)),
+        ethers.utils.parseEther('1').div(10),
+      );
+    });
+
     it('can supply USDC and borrow DAI in a WETH Garden', async function () {
       const strategyContract = await createStrategy(
         'borrow',

@@ -69,7 +69,7 @@ interface IOperation {
         address _data,
         IGarden _garden,
         address _integration
-    ) external view returns (uint256);
+    ) external view returns (uint256, bool);
 
     function getName() external view returns (string memory);
 }

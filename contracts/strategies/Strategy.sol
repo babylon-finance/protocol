@@ -692,12 +692,22 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
      * @return _nav           NAV of the strategy
      */
     function getNAV() public view override returns (uint256) {
-        uint256 nav = 0;
+        uint256 positiveNav = 0;
+        uint256 negativeNav = 0;
         for (uint256 i = 0; i < opTypes.length; i++) {
             IOperation operation = IOperation(IBabController(controller).enabledOperations(uint256(opTypes[i])));
-            nav = nav.add(operation.getNAV(opDatas[i], garden, opIntegrations[i]));
+            (uint256 strategyNav, bool positive) = operation.getNAV(opDatas[i], garden, opIntegrations[i]);
+            if (positive) {
+                positiveNav = positiveNav.add(strategyNav);
+            } else {
+                negativeNav = negativeNav.add(strategyNav);
+            }
         }
-        return nav;
+        if (negativeNav > positiveNav) {
+            // Underwater, will display using operation NAV
+            return 0;
+        }
+        return positiveNav.sub(negativeNav);
     }
 
     /**

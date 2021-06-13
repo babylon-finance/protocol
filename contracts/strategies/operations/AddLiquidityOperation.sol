@@ -170,9 +170,9 @@ contract AddLiquidityOperation is Operation {
         address _data,
         IGarden _garden,
         address _integration
-    ) external view override returns (uint256) {
+    ) external view override returns (uint256, bool) {
         if (!IStrategy(msg.sender).isStrategyActive()) {
-            return 0;
+            return (0, true);
         }
         address pool = _data;
         address[] memory poolTokens = IPoolIntegration(_integration).getPoolTokens(pool);
@@ -185,7 +185,7 @@ contract AddLiquidityOperation is Operation {
             NAV += balance.mul(lpTokens).div(totalSupply).preciseDiv(price);
         }
         require(NAV != 0, 'NAV has to be bigger 0');
-        return NAV;
+        return (NAV, true);
     }
 
     /* ============ Private Functions ============ */

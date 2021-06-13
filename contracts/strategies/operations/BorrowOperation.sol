@@ -18,7 +18,6 @@
 
 pragma solidity 0.7.6;
 
-import 'hardhat/console.sol';
 import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import {SafeMath} from '@openzeppelin/contracts/math/SafeMath.sol';
 import {Operation} from './Operation.sol';
@@ -150,15 +149,15 @@ contract BorrowOperation is Operation {
         address _assetToken,
         IGarden _garden,
         address _integration
-    ) external view override onlyStrategy returns (uint256) {
+    ) external view override onlyStrategy returns (uint256, bool) {
         if (!IStrategy(msg.sender).isStrategyActive()) {
-            return 0;
+            return (0, true);
         }
         uint256 tokensOwed = IBorrowIntegration(_integration).getBorrowBalance(msg.sender, _assetToken);
         uint256 price = _getPrice(_garden.reserveAsset(), _assetToken);
         uint256 NAV =
-            SafeDecimalMath.normalizeAmountTokens(_garden.reserveAsset(), _assetToken, tokensOwed).preciseDiv(price);
+            SafeDecimalMath.normalizeAmountTokens(_assetToken, _garden.reserveAsset(), tokensOwed).preciseDiv(price);
         require(NAV != 0, 'NAV has to be different than 0');
-        return uint256(-NAV);
+        return (NAV, false);
     }
 }

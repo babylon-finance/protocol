@@ -131,9 +131,9 @@ contract BuyOperation is Operation {
         address _data,
         IGarden _garden,
         address /* _integration */
-    ) external view override returns (uint256) {
+    ) external view override returns (uint256, bool) {
         if (!IStrategy(msg.sender).isStrategyActive()) {
-            return 0;
+            return (0, true);
         }
         uint256 price = _getPrice(_garden.reserveAsset(), _data);
         uint256 NAV =
@@ -141,6 +141,6 @@ contract BuyOperation is Operation {
                 .normalizeAmountTokens(_garden.reserveAsset(), _data, IERC20(_data).balanceOf(msg.sender))
                 .preciseDiv(price);
         require(NAV != 0, 'NAV has to be bigger 0');
-        return NAV;
+        return (NAV, true);
     }
 }

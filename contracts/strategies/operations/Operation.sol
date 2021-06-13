@@ -117,7 +117,7 @@ abstract contract Operation is IOperation {
         address _data,
         IGarden _garden,
         address _integration
-    ) external view virtual override returns (uint256);
+    ) external view virtual override returns (uint256, bool);
 
     /* ============ External Functions ============ */
 

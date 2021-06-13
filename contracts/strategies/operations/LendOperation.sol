@@ -163,9 +163,9 @@ contract LendOperation is Operation {
         address _assetToken,
         IGarden _garden,
         address _integration
-    ) external view override onlyStrategy returns (uint256) {
+    ) external view override onlyStrategy returns (uint256, bool) {
         if (!IStrategy(msg.sender).isStrategyActive()) {
-            return 0;
+            return (0, true);
         }
         uint256 assetTokenAmount = ILendIntegration(_integration).getInvestmentTokenAmount(msg.sender, _assetToken);
         uint256 price = _getPrice(_garden.reserveAsset(), _assetToken);
@@ -174,7 +174,7 @@ contract LendOperation is Operation {
                 price
             );
         require(NAV != 0, 'NAV has to be bigger 0');
-        return NAV;
+        return (NAV, true);
     }
 
     function _getRemainingDebt(
