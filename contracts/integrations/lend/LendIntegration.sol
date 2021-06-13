@@ -227,11 +227,11 @@ abstract contract LendIntegration is BaseIntegration, ReentrancyGuard, ILendInte
      * @param _investmentInfo               Struct containing investment information used in internal functions
      */
     function _validatePostEnterInvestmentData(InvestmentInfo memory _investmentInfo) internal view {
-        // require(
-        //     (IERC20(_investmentInfo.investment).balanceOf(address(_investmentInfo.strategy)) >
-        //         _investmentInfo.investmentTokensInGarden),
-        //     'The garden did not receive the investment tokens'
-        // );
+        require(
+            (IERC20(_investmentInfo.investment).balanceOf(address(_investmentInfo.strategy)) >
+                _investmentInfo.investmentTokensInGarden),
+            'The garden did not receive the investment tokens'
+        );
     }
 
     /**
