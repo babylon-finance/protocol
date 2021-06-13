@@ -170,7 +170,7 @@ contract LendOperation is Operation {
         uint256 assetTokenAmount = ILendIntegration(_integration).getInvestmentTokenAmount(msg.sender, _assetToken);
         uint256 price = _getPrice(_garden.reserveAsset(), _assetToken);
         uint256 NAV =
-            SafeDecimalMath.normalizeAmountTokens(_garden.reserveAsset(), _assetToken, assetTokenAmount).preciseDiv(
+            SafeDecimalMath.normalizeAmountTokens(_assetToken, _garden.reserveAsset(), assetTokenAmount).preciseDiv(
                 price
             );
         require(NAV != 0, 'NAV has to be bigger 0');
