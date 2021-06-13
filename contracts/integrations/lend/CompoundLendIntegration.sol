@@ -84,6 +84,11 @@ contract CompoundLendIntegration is LendIntegration {
         assetToCToken[_assetAddress] = _cTokenAddress;
     }
 
+    function getInvestmentTokenAmount(address _address, address _assetToken) public view override returns (uint256) {
+        ICToken ctoken = ICToken(_getInvestmentToken(_assetToken));
+        return ctoken.balanceOf(_address).mul(ctoken.exchangeRateStored()).div(10**18);
+    }
+
     /* ============ Internal Functions ============ */
 
     function _isInvestment(address _assetToken) internal view override returns (bool) {
@@ -104,8 +109,6 @@ contract CompoundLendIntegration is LendIntegration {
     function _getExchangeRatePerToken(address _assetToken) internal view override returns (uint256) {
         address cToken = assetToCToken[_assetToken];
         uint256 exchangeRateCurrent = ICToken(cToken).exchangeRateStored();
-        // TODO: exchangeRateCurrent reverts wit no reason. Super strange.
-        // uint256 exchangeRateCurrent = ICToken(cToken).exchangeRateCurrent();
         uint8 assetDecimals = ERC20(_assetToken).decimals();
         // cTokens always have 8 decimals.
         if (assetDecimals < 8) {

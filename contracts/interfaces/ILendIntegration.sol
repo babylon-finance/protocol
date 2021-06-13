@@ -43,4 +43,6 @@ interface ILendIntegration {
     function getExchangeRatePerToken(address _assetToken) external view returns (uint256);
 
     function getInvestmentToken(address _assetToken) external view returns (address);
+
+    function getInvestmentTokenAmount(address _address, address _assetToken) external view returns (uint256);
 }

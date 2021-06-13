@@ -58,8 +58,7 @@ contract LendOperation is Operation {
         IGarden _garden,
         address, /* _integration */
         uint256 /* _index */
-    ) external view override onlyStrategy {
-    }
+    ) external view override onlyStrategy {}
 
     /**
      * Executes the lend operation
@@ -121,14 +120,22 @@ contract LendOperation is Operation {
         )
     {
         require(_percentage <= HUNDRED_PERCENT, 'Unwind Percentage <= 100%');
-        uint256 numTokensToRedeem =
-            IERC20(ILendIntegration(_integration).getInvestmentToken(_assetToken)).balanceOf(msg.sender).preciseMul(
-                _percentage
-            );
+        // Normalize to underlying asset if any (ctokens for compound)
+        uint256 numTokensToRedeem = ILendIntegration(_integration).getInvestmentTokenAmount(msg.sender, _assetToken);
+        console.log('underlying tokens to redeem', numTokensToRedeem);
+        // Apply percentage
+        numTokensToRedeem = numTokensToRedeem.mul(_percentage.div(10**(18)));
+        console.log('after percentage       ', numTokensToRedeem);
         uint256 remainingDebtInCollateralTokens = _getRemainingDebt(_borrowToken, _assetToken, _remaining);
-        remainingDebtInCollateralTokens = SafeDecimalMath.normalizeDecimals(_borrowToken, ILendIntegration(_integration).getInvestmentToken(_assetToken), remainingDebtInCollateralTokens);
+        remainingDebtInCollateralTokens = SafeDecimalMath.normalizeDecimals(
+            _borrowToken,
+            _assetToken,
+            remainingDebtInCollateralTokens
+        );
 
         if (_remaining > 0) {
+            console.log('numTokensToRedeem', numTokensToRedeem);
+            console.log('remaining in usdc', remainingDebtInCollateralTokens);
             // Update amount so we can exit if there is debt
             numTokensToRedeem = numTokensToRedeem.sub(remainingDebtInCollateralTokens.mul(130).div(100));
         }
@@ -139,10 +146,15 @@ contract LendOperation is Operation {
             numTokensToRedeem,
             exchangeRate.mul(numTokensToRedeem.sub(numTokensToRedeem.preciseMul(SLIPPAGE_ALLOWED)))
         );
+        console.log('trading');
         if (_assetToken != _garden.reserveAsset()) {
             IStrategy(msg.sender).trade(_assetToken, IERC20(_assetToken).balanceOf(msg.sender), _garden.reserveAsset());
         }
-        return (_assetToken, IERC20(ILendIntegration(_integration).getInvestmentToken(_assetToken)).balanceOf(msg.sender), 1);
+        return (
+            _assetToken,
+            IERC20(ILendIntegration(_integration).getInvestmentToken(_assetToken)).balanceOf(msg.sender),
+            1
+        );
     }
 
     /**
@@ -182,5 +194,5 @@ contract LendOperation is Operation {
         }
         uint256 price = _getPrice(_borrowToken, _assetToken);
         return _remaining.preciseMul(price);
-      }
+    }
 }

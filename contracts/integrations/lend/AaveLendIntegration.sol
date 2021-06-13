@@ -64,6 +64,10 @@ contract AaveLendIntegration is LendIntegration {
      */
     constructor(IBabController _controller, address _weth) LendIntegration('aavelend', _weth, _controller) {}
 
+    function getInvestmentTokenAmount(address _address, address _assetToken) public view override returns (uint256) {
+        return IERC20(_getInvestmentToken(_assetToken)).balanceOf(_address);
+    }
+
     /* ============ Internal Functions ============ */
 
     function _isInvestment(address _assetToken) internal view override returns (bool) {

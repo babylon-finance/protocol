@@ -97,6 +97,13 @@ abstract contract LendIntegration is BaseIntegration, ReentrancyGuard, ILendInte
         return _isInvestment(_investmentAddress);
     }
 
+    function getInvestmentTokenAmount(address _address, address _assetToken)
+        public
+        view
+        virtual
+        override
+        returns (uint256);
+
     function supplyTokens(
         address _strategy,
         address _assetToken,
@@ -128,7 +135,6 @@ abstract contract LendIntegration is BaseIntegration, ReentrancyGuard, ILendInte
         (address targetInvestment, uint256 callValue, bytes memory methodData) =
             _getSupplyCalldata(_strategy, _assetToken, _numTokensToSupply);
 
-        console.log('supply');
         investmentInfo.strategy.invokeFromIntegration(targetInvestment, callValue, methodData);
         _validatePostEnterInvestmentData(investmentInfo);
 
@@ -221,11 +227,11 @@ abstract contract LendIntegration is BaseIntegration, ReentrancyGuard, ILendInte
      * @param _investmentInfo               Struct containing investment information used in internal functions
      */
     function _validatePostEnterInvestmentData(InvestmentInfo memory _investmentInfo) internal view {
-        require(
-            (IERC20(_investmentInfo.investment).balanceOf(address(_investmentInfo.strategy)) >
-                _investmentInfo.investmentTokensInGarden),
-            'The garden did not receive the investment tokens'
-        );
+        // require(
+        //     (IERC20(_investmentInfo.investment).balanceOf(address(_investmentInfo.strategy)) >
+        //         _investmentInfo.investmentTokensInGarden),
+        //     'The garden did not receive the investment tokens'
+        // );
     }
 
     /**
@@ -235,7 +241,7 @@ abstract contract LendIntegration is BaseIntegration, ReentrancyGuard, ILendInte
      */
     function _validatePostExitInvestmentData(InvestmentInfo memory _investmentInfo) internal view {
         require(
-            IERC20(_investmentInfo.investment).balanceOf(address(_investmentInfo.strategy)) >=
+            IERC20(_investmentInfo.assetToken).balanceOf(address(_investmentInfo.strategy)) >=
                 _investmentInfo.investmentTokensInGarden - _investmentInfo.investmentTokensInTransaction,
             'The garden did not return the investment tokens'
         );
@@ -279,7 +285,7 @@ abstract contract LendIntegration is BaseIntegration, ReentrancyGuard, ILendInte
         investmentInfo.garden = IGarden(investmentInfo.strategy.garden());
         investmentInfo.assetToken = _assetToken;
         investmentInfo.investment = _investmentToken;
-        investmentInfo.investmentTokensInGarden = IERC20(_investmentToken).balanceOf(_strategy);
+        investmentInfo.investmentTokensInGarden = getInvestmentTokenAmount(_strategy, _assetToken);
         investmentInfo.investmentTokensInTransaction = _investmentTokensInTransaction;
         investmentInfo.limitDepositTokenQuantity = _limitDepositToken;
 
@@ -357,7 +363,6 @@ abstract contract LendIntegration is BaseIntegration, ReentrancyGuard, ILendInte
         require(false, 'This needs to be overriden');
         return (address(0), 0, bytes(''));
     }
-
 
     function _getSpender(
         address //_investmentAddress
