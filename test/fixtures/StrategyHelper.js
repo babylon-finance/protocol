@@ -90,6 +90,26 @@ async function createStrategyWithLendOperation(garden, signer, params = DEFAULT_
   return strategy;
 }
 
+async function createStrategyWithLendAndBorrowOperation(
+  garden,
+  signer,
+  params = DEFAULT_STRATEGY_PARAMS,
+  integrations,
+  data,
+) {
+  if (integrations.length !== 2 || data.length !== 2) {
+    throw new Error('Need two integrations and data to create lend & borrow');
+  }
+  const passedLendBorrowParams = [[3, 4], integrations, data];
+  await garden.connect(signer).addStrategy(...STRAT_NAME_PARAMS, params, ...passedLendBorrowParams);
+  const strategies = await garden.getStrategies();
+  const lastStrategyAddr = strategies[strategies.length - 1];
+
+  const strategy = await ethers.getContractAt('Strategy', lastStrategyAddr);
+
+  return strategy;
+}
+
 async function deposit(garden, signers) {
   const reserveAsset = await garden.reserveAsset();
   const reserveContract = await ethers.getContractAt('IERC20', reserveAsset);
@@ -252,10 +272,10 @@ async function injectFakeProfits(strategy, amount) {
 
 async function substractFakeProfits(strategy, amount) {
   const kind = await strategy.opTypes(0);
+  const strategyAddress = await impersonateAddress(strategy.address);
   if (kind === 0) {
     const asset = await ethers.getContractAt('IERC20', await strategy.opDatas(0));
     const whaleAddress = getAssetWhale(asset.address);
-    const strategyAddress = await impersonateAddress(strategy.address);
     if (whaleAddress) {
       const whaleSigner = await impersonateAddress(whaleAddress);
       await asset.connect(strategyAddress).transfer(whaleSigner.address, amount, {
@@ -287,7 +307,7 @@ async function createStrategy(
   kind,
   state,
   signers,
-  integration,
+  integrations,
   garden,
   params = DEFAULT_STRATEGY_PARAMS,
   specificParams,
@@ -296,16 +316,25 @@ async function createStrategy(
 
   switch (kind) {
     case 'buy':
-      strategy = await createStrategyWithBuyOperation(garden, signers[0], params, integration, specificParams);
+      strategy = await createStrategyWithBuyOperation(garden, signers[0], params, integrations, specificParams);
       break;
     case 'lp':
-      strategy = await createStrategyWithPoolOperation(garden, signers[0], params, integration, specificParams);
+      strategy = await createStrategyWithPoolOperation(garden, signers[0], params, integrations, specificParams);
       break;
     case 'vault':
-      strategy = await createStrategyWithVaultOperation(garden, signers[0], params, integration, specificParams);
+      strategy = await createStrategyWithVaultOperation(garden, signers[0], params, integrations, specificParams);
       break;
     case 'lend':
-      strategy = await createStrategyWithLendOperation(garden, signers[0], params, integration, specificParams);
+      strategy = await createStrategyWithLendOperation(garden, signers[0], params, integrations, specificParams);
+      break;
+    case 'borrow':
+      strategy = await createStrategyWithLendAndBorrowOperation(
+        garden,
+        signers[0],
+        params,
+        integrations,
+        specificParams,
+      );
       break;
     default:
       throw new Error(`Strategy type: "${kind}" not supported`);
