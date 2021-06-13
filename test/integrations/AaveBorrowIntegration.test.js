@@ -6,6 +6,7 @@ const {
   finalizeStrategy,
   DEFAULT_STRATEGY_PARAMS,
 } = require('../fixtures/StrategyHelper');
+const { ONE_ETH } = require('../../lib/constants.js');
 const { setupTests } = require('../fixtures/GardenFixture');
 const addresses = require('../../lib/addresses');
 
@@ -61,7 +62,7 @@ describe('AaveBorrowIntegrationTest', function () {
       expect(await DAI.balanceOf(strategyContract.address)).to.equal(0);
       expect(await USDC.balanceOf(strategyContract.address)).to.be.gt(0);
       const collateral = await aaveBorrowIntegration.getCollateralBalance(strategyContract.address, DAI.address);
-      expect(collateral).to.be.gt(1);
+      expect(collateral).to.be.closeTo(ethers.utils.parseEther('1'), ONE_ETH.div(100));
       expect(await aaveBorrowIntegration.getBorrowBalance(strategyContract.address, USDC.address)).to.be.gt(0);
       const beforeExitingWeth = await WETH.balanceOf(garden1.address);
       await finalizeStrategy(strategyContract);
@@ -85,7 +86,7 @@ describe('AaveBorrowIntegrationTest', function () {
       expect(await USDC.balanceOf(strategyContract.address)).to.equal(0);
       expect(await DAI.balanceOf(strategyContract.address)).to.be.gt(0);
       const collateral = await aaveBorrowIntegration.getCollateralBalance(strategyContract.address, USDC.address);
-      expect(collateral).to.be.gt(1);
+      expect(collateral).to.be.closeTo(ethers.utils.parseEther('1'), ONE_ETH.div(100));
       expect(await aaveBorrowIntegration.getBorrowBalance(strategyContract.address, DAI.address)).to.be.gt(0);
       const beforeExitingWeth = await WETH.balanceOf(garden1.address);
       await finalizeStrategy(strategyContract);
@@ -109,7 +110,7 @@ describe('AaveBorrowIntegrationTest', function () {
       expect(await WETH.balanceOf(strategyContract.address)).to.equal(0);
       expect(await DAI.balanceOf(strategyContract.address)).to.be.gt(0);
       const collateral = await aaveBorrowIntegration.getCollateralBalance(strategyContract.address, WETH.address);
-      expect(collateral).to.be.gt(1);
+      expect(collateral).to.be.closeTo(ethers.utils.parseEther('1'), ONE_ETH.div(100));
       expect(await aaveBorrowIntegration.getBorrowBalance(strategyContract.address, DAI.address)).to.be.gt(0);
       const beforeExitingWeth = await WETH.balanceOf(garden1.address);
       await finalizeStrategy(strategyContract);
