@@ -16,6 +16,8 @@
     SPDX-License-Identifier: Apache License, Version 2.0
 */
 pragma solidity 0.7.6;
+
+import 'hardhat/console.sol';
 import {Address} from '@openzeppelin/contracts/utils/Address.sol';
 import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import {ERC20} from '@openzeppelin/contracts/token/ERC20/ERC20.sol';
@@ -26,7 +28,7 @@ import {SafeMath} from '@openzeppelin/contracts/math/SafeMath.sol';
 import {SignedSafeMath} from '@openzeppelin/contracts/math/SignedSafeMath.sol';
 import {SafeCast} from '@openzeppelin/contracts/utils/SafeCast.sol';
 
-import {Errors, _require} from '../lib/BabylonErrors.sol';
+import {Errors, _require, _revert} from '../lib/BabylonErrors.sol';
 import {PreciseUnitMath} from '../lib/PreciseUnitMath.sol';
 import {SafeDecimalMath} from '../lib/SafeDecimalMath.sol';
 import {Math} from '../lib/Math.sol';
@@ -81,95 +83,99 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
     event StrategyDurationChanged(uint256 _newDuration, uint256 _oldDuration);
 
     /* ============ Modifiers ============ */
-    /**
-     * Throws if the sender is not the creator of the strategy
-     */
-    modifier onlyGovernorOrGarden {
+
+    function _onlyGovernorOrGarden() private view {
         _require(
             (msg.sender == address(garden) && IBabController(controller).isSystemContract(address(garden))) ||
                 msg.sender == controller.owner(),
             Errors.ONLY_PROTOCOL_OR_GARDEN
         );
-        _;
     }
 
-    modifier onlyStrategist {
+    function _onlyStrategist() private view {
         _require(msg.sender == strategist, Errors.ONLY_STRATEGIST);
-        _;
     }
 
-    modifier onlyContributor {
+    function _onlyContributor() private view {
         _require(
             IERC20(address(garden)).balanceOf(msg.sender) > 0 &&
                 IBabController(controller).isSystemContract(address(garden)),
             Errors.ONLY_CONTRIBUTOR
         );
-        _;
     }
 
     /**
      * Throws if the sender is not a Garden's integration or integration not enabled
      */
-    modifier onlyIntegration() {
+    function _onlyIntegration() private view {
         // Internal function used to reduce bytecode size
         _require(
             controller.isValidIntegration(IIntegration(msg.sender).getName(), msg.sender),
             Errors.ONLY_INTEGRATION
         );
-        _;
     }
 
     /**
      * Throws if the sender is not a Garden's integration or integration not enabled
      */
-    modifier onlyOperation() {
+    function _onlyOperation() private view {
         bool found = false;
         for (uint8 i = 0; i < opTypes.length; i++) {
             found = found || msg.sender == controller.enabledOperations(opTypes[i]);
         }
         // Internal function used to reduce bytecode size
         _require(found, Errors.ONLY_OPERATION);
-        _;
     }
 
     /**
      * Throws if the garden is not the caller or data is already set
      */
-    modifier onlyGardenAndNotSet() {
+    function _onlyGardenAndNotSet() private view {
         _require(
             msg.sender == address(garden) && !dataSet && IBabController(controller).isSystemContract(address(garden)),
             Errors.ONLY_GARDEN_AND_DATA_NOT_SET
         );
-        _;
     }
 
     /**
      * Throws if the garden is not active
      */
-    modifier onlyActiveGarden() {
+    function _onlyActiveGarden() private view {
         _require(
             garden.active() == true && IBabController(controller).isSystemContract(address(garden)),
             Errors.ONLY_ACTIVE_GARDEN
         );
         _require(!IBabController(controller).isPaused(address(this)), Errors.ONLY_UNPAUSED);
-        _;
     }
 
     /**
      * Throws if the sender is not a keeper in the protocol
-     * @param _fee                     The fee paid to keeper to compensate the gas cost
+     * @param _fee                     The fee paid to keeper to compensate the gas cost in the reserveAsset
      */
-    modifier onlyKeeper(uint256 _fee) {
+    function _onlyKeeper(uint256 _fee) private view {
         _require(controller.isValidKeeper(msg.sender), Errors.ONLY_KEEPER);
         // We assume that calling keeper functions should be less expensive than 1 million gas and the gas price should be lower than 1000 gwei.
-        _require(_fee <= MAX_KEEPER_FEE, Errors.FEE_TOO_HIGH);
-        _;
+        address reserveAsset = garden.reserveAsset();
+        if (reserveAsset == WETH) {
+            // 1 ETH
+            _require(_fee <= (1e6 * 1e3 gwei), Errors.FEE_TOO_HIGH);
+        } else if (reserveAsset == DAI) {
+            // 2000 DAI
+            _require(_fee <= 2000 * 1e18, Errors.FEE_TOO_HIGH);
+        } else if (reserveAsset == USDC) {
+            // 2000 USDC
+            _require(_fee <= 2000 * 1e6, Errors.FEE_TOO_HIGH);
+        } else if (reserveAsset == WBTC) {
+            // 0.05 WBTC
+            _require(_fee <= 0.05 * 1e8, Errors.FEE_TOO_HIGH);
+        } else {
+            _revert(Errors.RESERVE_ASSET_NOT_SUPPORTED);
+        }
     }
 
-    modifier onlyUnpaused() {
+    function _onlyUnpaused() private view {
         // Do not execute if Globally or individually paused
         _require(!IBabController(controller).isPaused(address(this)), Errors.ONLY_UNPAUSED);
-        _;
     }
 
     /* ============ Constants ============ */
@@ -179,13 +185,12 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
     uint256 internal constant MAX_CANDIDATE_PERIOD = 7 days;
 
     address private constant WETH = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
+    address private constant DAI = 0x6B175474E89094C44Da98b954EedeAC495271d0F;
+    address private constant USDC = 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48;
+    address private constant WBTC = 0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599;
 
     // Max Operations
     uint256 internal constant MAX_OPERATIONS = 6;
-
-    // Keeper max fee
-    // TODO: Given DAI, USDC, and WBTC can be a reseve asset, MAX_KEEPER_FEE should depend on reserve asset
-    uint256 internal constant MAX_KEEPER_FEE = (1e6 * 1e3 gwei);
 
     // Quadratic penalty for looses
     uint256 internal constant STAKE_QUADRATIC_PENALTY_FOR_LOSSES = 175e16; // 1.75e18
@@ -240,9 +245,9 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
     uint256 public override capitalAllocated; // Current amount of capital allocated
     uint256 public override expectedReturn; // Expect return by this strategy
     uint256 public override capitalReturned; // Actual return by this strategy
-    uint256 public override minRebalanceCapital; // Min amount of capital so that it is worth to rebalance the capital here
-    address[] public tokensNeeded; // Positions that need to be taken prior to enter the strategy
-    uint256[] public tokenAmountsNeeded; // Amount of these positions
+    uint256 private minRebalanceCapital; // Min amount of capital so that it is worth to rebalance the capital here
+    address[] private tokensNeeded; // Not used anymore
+    uint256[] private tokenAmountsNeeded; // Not used anymore
 
     uint256 public override strategyRewards; // Rewards allocated for this strategy updated on finalized
     uint256 public rewardsTotalOverhead; // Potential extra amount we are giving in BABL rewards
@@ -250,7 +255,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
     // Voters mapped to their votes.
     mapping(address => int256) public votes;
 
-    uint256 internal absoluteMinRebalance; // 1e18 or 1e6 in case of USDC
+    uint256 private absoluteMinRebalance; // 1e18 or 1e6 in case of USDC
 
     /* ============ Constructor ============ */
 
@@ -264,7 +269,6 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
      * @param _stake                         Stake with garden participations absolute amounts 1e18
      * @param _strategyDuration              Strategy duration in seconds
      * @param _expectedReturn                Expected return
-     * @param _minRebalanceCapital           Min capital that makes executing the strategy worth it
      */
     function initialize(
         address _strategist,
@@ -273,8 +277,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         uint256 _maxCapitalRequested,
         uint256 _stake,
         uint256 _strategyDuration,
-        uint256 _expectedReturn,
-        uint256 _minRebalanceCapital
+        uint256 _expectedReturn
     ) external override initializer {
         controller = IBabController(_controller);
 
@@ -290,11 +293,6 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
             _strategyDuration >= garden.minStrategyDuration() && _strategyDuration <= garden.maxStrategyDuration(),
             Errors.DURATION_MUST_BE_IN_RANGE
         );
-        uint256 tokenDecimals = ERC20(IGarden(_garden).reserveAsset()).decimals();
-        absoluteMinRebalance = 10**(tokenDecimals);
-
-        _require(_minRebalanceCapital >= absoluteMinRebalance, Errors.MIN_REBALANCE_CAPITAL);
-        _require(_maxCapitalRequested >= _minRebalanceCapital, Errors.MAX_CAPITAL_REQUESTED);
 
         strategist = _strategist;
         enteredAt = block.timestamp;
@@ -303,7 +301,6 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         duration = _strategyDuration;
         expectedReturn = _expectedReturn;
         capitalAllocated = 0;
-        minRebalanceCapital = _minRebalanceCapital;
         maxCapitalRequested = _maxCapitalRequested;
 
         votes[_strategist] = _stake.toInt256();
@@ -324,7 +321,8 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         uint8[] calldata _opTypes,
         address[] calldata _opIntegrations,
         address[] calldata _opDatas
-    ) external override onlyGardenAndNotSet {
+    ) external override {
+        _onlyGardenAndNotSet();
         _require(
             (_opTypes.length == _opIntegrations.length) && (_opIntegrations.length == _opDatas.length),
             Errors.TOO_MANY_OPS
@@ -359,10 +357,13 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         address[] calldata _voters,
         int256[] calldata _votes,
         uint256 _fee
-    ) external override onlyKeeper(_fee) onlyActiveGarden {
+    ) external override {
+        _onlyActiveGarden();
+        _onlyKeeper(_fee);
         _require(_voters.length >= garden.minVoters(), Errors.MIN_VOTERS_CHECK);
         _require(!active && !finalized, Errors.VOTES_ALREADY_RESOLVED);
         _require(block.timestamp.sub(enteredAt) <= MAX_CANDIDATE_PERIOD, Errors.VOTING_WINDOW_IS_OVER);
+
         active = true;
 
         // set votes to zero expecting keeper to provide correct values
@@ -390,33 +391,13 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
 
     /**
      * Executes an strategy that has been activated and gone through the cooldown period.
-     * Keeper will validate that quorum is reached, cacluates all the voting data and push it.
      * @param _capital                  The capital to allocate to this strategy.
      * @param _fee                      The fee paid to keeper to compensate the gas cost.
      */
-    function executeStrategy(uint256 _capital, uint256 _fee)
-        external
-        override
-        onlyKeeper(_fee)
-        nonReentrant
-        onlyActiveGarden
-    {
+    function executeStrategy(uint256 _capital, uint256 _fee) external override nonReentrant {
+        _onlyActiveGarden();
+        _onlyKeeper(_fee);
         _executesStrategy(_capital, _fee, msg.sender);
-    }
-
-    /**
-     * Executes an strategy from the garden as part of a rebalance
-     * @param _capital                  The capital to allocate to this strategy.
-     * @param _fee                      The fee paid to keeper to compensate the gas cost.
-     * @param _keeper                   The keeper that needs to be paid.
-     */
-    function executeStrategyRebalance(
-        uint256 _capital,
-        uint256 _fee,
-        address payable _keeper
-    ) external override nonReentrant onlyActiveGarden {
-        _require(msg.sender == address(garden), Errors.ONLY_ACTIVE_GARDEN);
-        _executesStrategy(_capital, _fee, _keeper);
     }
 
     /**
@@ -427,13 +408,9 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
      * @param _fee                     The fee paid to keeper to compensate the gas cost
      * @param _tokenURI                URL with the JSON for the strategy
      */
-    function finalizeStrategy(uint256 _fee, string memory _tokenURI)
-        external
-        override
-        onlyKeeper(_fee)
-        nonReentrant
-        onlyActiveGarden
-    {
+    function finalizeStrategy(uint256 _fee, string memory _tokenURI) external override nonReentrant {
+        _onlyActiveGarden();
+        _onlyKeeper(_fee);
         _require(executedAt > 0, Errors.STRATEGY_IS_NOT_EXECUTED);
         _require(block.timestamp > executedAt.add(duration), Errors.STRATEGY_IS_NOT_OVER_YET);
         _require(!finalized, Errors.STRATEGY_IS_ALREADY_FINALIZED);
@@ -448,7 +425,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         // Pay Keeper Fee
         garden.payKeeper(msg.sender, _fee);
         // Transfer rewards
-        _transferStrategyPrincipal(_fee);
+        _transferStrategyPrincipal();
         // Send rest to garden if any
         _sendReserveAssetToGarden();
         updatedAt = exitedAt;
@@ -460,9 +437,10 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
      * Triggered from an immediate withdraw in the Garden.
      * @param _amountToUnwind              The amount of capital to unwind
      */
-    function unwindStrategy(uint256 _amountToUnwind) external override onlyGovernorOrGarden nonReentrant onlyUnpaused {
+    function unwindStrategy(uint256 _amountToUnwind) external override nonReentrant {
+        _onlyGovernorOrGarden();
+        _onlyUnpaused();
         _require(active && !finalized, Errors.STRATEGY_NEEDS_TO_BE_ACTIVE);
-        _require(_amountToUnwind <= capitalAllocated.sub(minRebalanceCapital), Errors.STRATEGY_NO_CAPITAL_TO_UNWIND);
         // Exits and enters the strategy
         _exitStrategy(_amountToUnwind.preciseDiv(capitalAllocated));
         capitalAllocated = capitalAllocated.sub(_amountToUnwind);
@@ -489,7 +467,9 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
      * reaching quorum
      * @param _fee              The keeper fee
      */
-    function expireStrategy(uint256 _fee) external onlyKeeper(_fee) nonReentrant onlyActiveGarden {
+    function expireStrategy(uint256 _fee) external nonReentrant {
+        _onlyActiveGarden();
+        _onlyKeeper(_fee);
         _require(!active, Errors.STRATEGY_NEEDS_TO_BE_INACTIVE);
         _require(block.timestamp.sub(enteredAt) > MAX_CANDIDATE_PERIOD, Errors.VOTING_WINDOW_IS_OPENED);
         // pay keeper before expiring strategy
@@ -501,7 +481,8 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
     /**
      * Delete a candidate strategy by the strategist
      */
-    function deleteCandidateStrategy() external onlyStrategist {
+    function deleteCandidateStrategy() external {
+        _onlyStrategist();
         _deleteCandidateStrategy();
         emit StrategyDeleted(address(garden), block.timestamp);
     }
@@ -510,7 +491,9 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
      * Lets the strategist change the duration of the strategy
      * @param _newDuration            New duration of the strategy
      */
-    function changeStrategyDuration(uint256 _newDuration) external override onlyStrategist onlyUnpaused {
+    function changeStrategyDuration(uint256 _newDuration) external override {
+        _onlyStrategist();
+        _onlyUnpaused();
         _require(!finalized, Errors.STRATEGY_IS_ALREADY_FINALIZED);
         _require(_newDuration < duration, Errors.DURATION_NEEDS_TO_BE_LESS);
         _require(_newDuration >= garden.minStrategyDuration(), Errors.DURATION_NEEDS_TO_BE_LESS);
@@ -523,7 +506,9 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
      * Converts it to the reserve asset and sends it to the garden.
      * @param _token             Address of the token to sweep
      */
-    function sweep(address _token) external onlyContributor onlyUnpaused {
+    function sweep(address _token) external {
+        _onlyContributor();
+        _onlyUnpaused();
         _require(_token != garden.reserveAsset(), Errors.CANNOT_SWEEP_RESERVE_ASSET);
         _require(!active, Errors.STRATEGY_NEEDS_TO_BE_INACTIVE);
 
@@ -542,7 +527,8 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         address _spender,
         address _asset,
         uint256 _quantity
-    ) external override onlyIntegration {
+    ) external override {
+        _onlyIntegration();
         IERC20(_asset).safeApprove(_spender, _quantity);
     }
 
@@ -557,7 +543,8 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         address _target,
         uint256 _value,
         bytes calldata _data
-    ) external override onlyIntegration returns (bytes memory) {
+    ) external override returns (bytes memory) {
+        _onlyIntegration();
         return _invoke(_target, _value, _data);
     }
 
@@ -572,7 +559,9 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         address _sendToken,
         uint256 _sendQuantity,
         address _receiveToken
-    ) external override onlyOperation onlyUnpaused returns (uint256) {
+    ) external override returns (uint256) {
+        _onlyOperation();
+        _onlyUnpaused();
         return _trade(_sendToken, _sendQuantity, _receiveToken);
     }
 
@@ -581,7 +570,9 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
      * @param _isDeposit                    Wether is a deposit or withdraw
      * @param _wethAmount                   Amount to deposit or withdraw
      */
-    function handleWeth(bool _isDeposit, uint256 _wethAmount) external override onlyOperation onlyUnpaused {
+    function handleWeth(bool _isDeposit, uint256 _wethAmount) external override {
+        _onlyOperation();
+        _onlyUnpaused();
         if (_isDeposit) {
             IWETH(WETH).deposit{value: _wethAmount}();
             return;
@@ -625,7 +616,6 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
             uint256,
             uint256,
             uint256,
-            uint256,
             address,
             uint256
         )
@@ -642,7 +632,6 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
             duration,
             expectedReturn,
             maxCapitalRequested,
-            minRebalanceCapital,
             IBabController(controller).strategyNFT(),
             enteredAt
         );
@@ -746,7 +735,6 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
     ) internal {
         _require(active, Errors.STRATEGY_NEEDS_TO_BE_ACTIVE);
         _require(capitalAllocated.add(_capital) <= maxCapitalRequested, Errors.MAX_CAPITAL_REACHED);
-        _require(_capital >= minRebalanceCapital, Errors.CAPITAL_IS_LESS_THAN_REBALANCE);
         _require(
             block.timestamp.sub(enteredCooldownAt) >= garden.strategyCooldownPeriod(),
             Errors.STRATEGY_IN_COOLDOWN
@@ -881,8 +869,8 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         return minAmountExpected;
     }
 
-    function _transferStrategyPrincipal(uint256 _fee) internal {
-        capitalReturned = IERC20(garden.reserveAsset()).balanceOf(address(this)).sub(_fee);
+    function _transferStrategyPrincipal() internal {
+        capitalReturned = IERC20(garden.reserveAsset()).balanceOf(address(this));
         address reserveAsset = garden.reserveAsset();
         int256 reserveAssetDelta = capitalReturned.toInt256().sub(capitalAllocated.toInt256());
         uint256 protocolProfits = 0;

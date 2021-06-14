@@ -131,9 +131,9 @@ contract StrategyV2Mock {
     uint256 public capitalAllocated; // Current amount of capital allocated
     uint256 public expectedReturn; // Expect return by this strategy
     uint256 public capitalReturned; // Actual return by this strategy
-    uint256 public minRebalanceCapital; // Min amount of capital so that it is worth to rebalance the capital here
-    address[] public tokensNeeded; // Positions that need to be taken prior to enter the strategy
-    uint256[] public tokenAmountsNeeded; // Amount of these positions
+    uint256 private minRebalanceCapital; // Min amount of capital so that it is worth to rebalance the capital here
+    address[] private tokensNeeded; // Positions that need to be taken prior to enter the strategy
+    uint256[] private tokenAmountsNeeded; // Amount of these positions
 
     uint256 public strategyRewards; // Rewards allocated for this strategy updated on finalized
     uint256 public rewardsTotalOverhead; // Potential extra amount we are giving in BABL rewards
@@ -152,8 +152,7 @@ contract StrategyV2Mock {
         uint256 _maxCapitalRequested,
         uint256 _stake,
         uint256 _strategyDuration,
-        uint256 _expectedReturn,
-        uint256 _minRebalanceCapital
+        uint256 _expectedReturn
     ) external {
         newVar = 42;
     }
