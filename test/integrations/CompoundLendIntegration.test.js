@@ -11,13 +11,12 @@ describe('CompoundLendIntegrationTest', function () {
   let signer1;
   let signer2;
   let signer3;
-  let babController;
   let USDC;
   let CUSDC;
   let WETH;
 
   beforeEach(async () => {
-    ({ garden1, babController, compoundLendIntegration, signer1, signer2, signer3 } = await setupTests()());
+    ({ garden1, compoundLendIntegration, signer1, signer2, signer3 } = await setupTests()());
     USDC = await ethers.getContractAt('IERC20', addresses.tokens.USDC);
     CUSDC = await ethers.getContractAt('IERC20', addresses.tokens.CUSDC);
     WETH = await ethers.getContractAt('IERC20', addresses.tokens.WETH);
@@ -25,9 +24,7 @@ describe('CompoundLendIntegrationTest', function () {
 
   describe('Deployment', function () {
     it('should successfully deploy the contract', async function () {
-      const babControlerDeployed = await babController.deployed();
       const compoundLendDeployed = await compoundLendIntegration.deployed();
-      expect(!!babControlerDeployed).to.equal(true);
       expect(!!compoundLendDeployed).to.equal(true);
     });
   });
@@ -53,10 +50,10 @@ describe('CompoundLendIntegrationTest', function () {
       await executeStrategy(strategyContract);
       expect(await USDC.balanceOf(strategyContract.address)).to.be.equal(0);
       expect(await CUSDC.balanceOf(strategyContract.address)).to.be.gte(0);
-
+      const beforeCusdc = await CUSDC.balanceOf(strategyContract.address);
       await finalizeStrategy(strategyContract);
       expect(await USDC.balanceOf(strategyContract.address)).to.equal(0);
-      expect(await CUSDC.balanceOf(strategyContract.address)).to.be.equal(0);
+      expect(await CUSDC.balanceOf(strategyContract.address)).to.be.lt(beforeCusdc.div(1000));
       expect(await WETH.balanceOf(strategyContract.address)).to.equal(0);
     });
 

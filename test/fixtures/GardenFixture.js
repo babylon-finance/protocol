@@ -38,11 +38,14 @@ async function setUpFixture(
   const oneInchPoolIntegration = await getContract('OneInchPoolIntegration');
   const compoundLendIntegration = await getContract('CompoundLendIntegration');
   const aaveLendIntegration = await getContract('AaveLendIntegration');
+  const aaveBorrowIntegration = await getContract('AaveBorrowIntegration');
+  const compoundBorrowIntegration = await getContract('CompoundBorrowIntegration');
 
   const buyOperation = await getContract('BuyOperation');
   const addLiquidityOperation = await getContract('AddLiquidityOperation');
   const depositVaultOperation = await getContract('DepositVaultOperation');
   const lendOperation = await getContract('LendOperation');
+  const borrowOperation = await getContract('BorrowOperation');
 
   const dai = await ethers.getContractAt('IERC20', addresses.tokens.DAI);
   const usdc = await ethers.getContractAt('IERC20', addresses.tokens.USDC);
@@ -199,7 +202,9 @@ async function setUpFixture(
     sushiswapPoolIntegration,
     oneInchPoolIntegration,
     compoundLendIntegration,
+    compoundBorrowIntegration,
     aaveLendIntegration,
+    aaveBorrowIntegration,
     univ2,
 
     garden1,
@@ -214,6 +219,7 @@ async function setUpFixture(
     addLiquidityOperation,
     depositVaultOperation,
     lendOperation,
+    borrowOperation,
 
     gardenValuer,
     priceOracle,

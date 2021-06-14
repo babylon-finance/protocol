@@ -207,6 +207,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
     // 1 = LiquidityOperation
     // 2 = VaultOperation
     // 3 = LendOperation
+    // 4 = BorrowOperation
 
     // Asset Status
     // 0 = Liquid
@@ -681,12 +682,22 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
      * @return _nav           NAV of the strategy
      */
     function getNAV() public view override returns (uint256) {
-        uint256 nav = 0;
+        uint256 positiveNav = 0;
+        uint256 negativeNav = 0;
         for (uint256 i = 0; i < opTypes.length; i++) {
             IOperation operation = IOperation(IBabController(controller).enabledOperations(uint256(opTypes[i])));
-            nav = nav.add(operation.getNAV(opDatas[i], garden, opIntegrations[i]));
+            (uint256 strategyNav, bool positive) = operation.getNAV(opDatas[i], garden, opIntegrations[i]);
+            if (positive) {
+                positiveNav = positiveNav.add(strategyNav);
+            } else {
+                negativeNav = negativeNav.add(strategyNav);
+            }
         }
-        return nav;
+        if (negativeNav > positiveNav) {
+            // Underwater, will display using operation NAV
+            return 0;
+        }
+        return positiveNav.sub(negativeNav);
     }
 
     /**
@@ -777,9 +788,20 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
      * @param _percentage of capital to exit from the strategy
      */
     function _exitStrategy(uint256 _percentage) internal {
+        address assetFinalized = garden.reserveAsset();
+        uint256 capitalPending = 0;
+        uint8 assetStatus = 0;
         for (uint256 i = opTypes.length; i > 0; i--) {
             IOperation operation = IOperation(IBabController(controller).enabledOperations(opTypes[i - 1]));
-            operation.exitOperation(_percentage, opDatas[i - 1], garden, opIntegrations[i - 1]);
+            (assetFinalized, capitalPending, assetStatus) = operation.exitOperation(
+                assetFinalized,
+                capitalPending,
+                assetStatus,
+                _percentage,
+                opDatas[i - 1],
+                garden,
+                opIntegrations[i - 1]
+            );
         }
     }
 
