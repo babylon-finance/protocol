@@ -413,7 +413,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         (, uint256 largestCapital, address maxStrategy) = _getActiveCapital();
         // Check that strategy has enough capital to support the withdrawal
         _require(
-            IStrategy(maxStrategy).minRebalanceCapital() <= largestCapital.sub(netReserveFlows),
+            0 <= largestCapital.sub(netReserveFlows),
             Errors.WITHDRAWAL_WITH_PENALTY
         );
         IStrategy(maxStrategy).unwindStrategy(netReserveFlows);
@@ -550,7 +550,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
             Errors.USER_CANNOT_ADD_STRATEGIES
         );
         _require(strategies.length < MAX_TOTAL_STRATEGIES, Errors.VALUE_TOO_HIGH);
-        _require(_stratParams.length == 5, Errors.STRAT_PARAMS_LENGTH);
+        _require(_stratParams.length == 4, Errors.STRAT_PARAMS_LENGTH);
         address strategy =
             IStrategyFactory(IBabController(controller).strategyFactory()).createStrategy(
                 _name,

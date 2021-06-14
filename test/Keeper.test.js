@@ -2,7 +2,7 @@ const { expect } = require('chai');
 const { ethers } = require('hardhat');
 
 const addresses = require('../lib/addresses');
-const { ONE_DAY_IN_SECONDS, ONE_ETH, NOW } = require('../lib/constants.js');
+const { ONE_DAY_IN_SECONDS, ONE_ETH, NOW, STRATEGY_EXECUTE_MAP } = require('../lib/constants.js');
 const { increaseTime, from, parse, eth } = require('./utils/test-helpers');
 const { createGarden } = require('./fixtures/GardenHelper');
 const { impersonateAddress } = require('../lib/rpc');
@@ -54,46 +54,60 @@ describe.only('Keeper', function () {
     } = await setupTests({ fund: true })());
   });
 
-  describe('resolveVoting', function () {
-    [
-      { token: addresses.tokens.WETH, name: 'WETH', fee: eth() },
-      { token: addresses.tokens.DAI, name: 'DAI', fee: eth(2000) },
-      { token: addresses.tokens.USDC, name: 'USDC', fee: from(2000 * 1e6) },
-      { token: addresses.tokens.WBTC, name: 'WBTC', fee: from(0.05 * 1e8) },
-    ].forEach(({ token, name, fee }) => {
-      it(`gets paid max fee at ${name} garden`, async function () {
-        const garden = await createGarden({ reserveAsset: token });
-        const tokenContract = await ethers.getContractAt('IERC20', token);
-
-        const strategy = await getStrategy({ state: 'deposit', specificParams: addresses.tokens.COMP });
-
-        const signer1Balance = await garden.balanceOf(signer1.getAddress());
-        const signer2Balance = await garden.balanceOf(signer2.getAddress());
-
+  for (const { func, name, state } of [
+    {
+      func: async (garden, strategy, keeper, fee) =>
         await strategy
           .connect(keeper)
-          .resolveVoting([signer1.getAddress(), signer2.getAddress()], [signer1Balance, signer2Balance], fee, {
-            gasPrice: 0,
-          });
+          .resolveVoting(
+            [signer1.getAddress(), signer2.getAddress()],
+            [await garden.balanceOf(signer1.getAddress()), await garden.balanceOf(signer2.getAddress())],
+            fee,
+            {
+              gasPrice: 0,
+            },
+          ),
+      name: 'resolveVoting',
+      state: 'deposit',
+    },
+    {
+      func: async (garden, strategy, keeper, fee, token) => {
+        await increaseTime(ONE_DAY_IN_SECONDS);
+        await strategy.connect(keeper).executeStrategy(STRATEGY_EXECUTE_MAP[token], fee, {
+          gasPrice: 0,
+        });
+      },
+      name: 'executeStrategy',
+      state: 'vote',
+    },
+  ]) {
+    describe(name, function () {
+      [
+        { token: addresses.tokens.WETH, name: 'WETH', fee: eth() },
+        { token: addresses.tokens.DAI, name: 'DAI', fee: eth(2000) },
+        { token: addresses.tokens.USDC, name: 'USDC', fee: from(2000 * 1e6) },
+        { token: addresses.tokens.WBTC, name: 'WBTC', fee: from(0.05 * 1e8) },
+      ].forEach(({ token, name, fee }) => {
+        it(`gets paid max fee at ${name} garden`, async function () {
+          const garden = await createGarden({ reserveAsset: token });
+          const tokenContract = await ethers.getContractAt('IERC20', token);
 
-        expect(await tokenContract.balanceOf(await keeper.getAddress())).to.equal(fee);
-      });
+          const strategy = await getStrategy({ state, specificParams: addresses.tokens.USDT });
 
-      it(`refuse to pay more than max fee at ${name} garden`, async function () {
-        const garden = await createGarden({ reserveAsset: token });
-        const tokenContract = await ethers.getContractAt('IERC20', token);
+          await func(garden, strategy, keeper, fee, token);
 
-        const strategy = await getStrategy({ state: 'deposit', specificParams: addresses.tokens.COMP });
+          expect(await tokenContract.balanceOf(await keeper.getAddress())).to.equal(fee);
+        });
 
-        const signer1Balance = await garden.balanceOf(signer1.getAddress());
-        const signer2Balance = await garden.balanceOf(signer2.getAddress());
+        it(`refuse to pay more than max fee at ${name} garden`, async function () {
+          const garden = await createGarden({ reserveAsset: token });
+          const tokenContract = await ethers.getContractAt('IERC20', token);
 
-        await expect(strategy
-          .connect(keeper)
-          .resolveVoting([signer1.getAddress(), signer2.getAddress()], [signer1Balance, signer2Balance], fee.add(1), {
-            gasPrice: 0,
-          })).to.be.revertedWith(/BAB#019/);
+          const strategy = await getStrategy({ state: 'deposit', specificParams: addresses.tokens.USDT });
+
+          await expect(func(garden, strategy, keeper, fee.add(1), token)).to.be.revertedWith(/BAB#019/);
+        });
       });
     });
-  });
+  }
 });

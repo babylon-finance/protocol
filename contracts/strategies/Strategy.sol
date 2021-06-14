@@ -16,6 +16,8 @@
     SPDX-License-Identifier: Apache License, Version 2.0
 */
 pragma solidity 0.7.6;
+
+import 'hardhat/console.sol';
 import {Address} from '@openzeppelin/contracts/utils/Address.sol';
 import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import {ERC20} from '@openzeppelin/contracts/token/ERC20/ERC20.sol';
@@ -242,9 +244,9 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
     uint256 public override capitalAllocated; // Current amount of capital allocated
     uint256 public override expectedReturn; // Expect return by this strategy
     uint256 public override capitalReturned; // Actual return by this strategy
-    uint256 public override minRebalanceCapital; // Min amount of capital so that it is worth to rebalance the capital here
-    address[] public tokensNeeded; // Not used anymore
-    uint256[] public tokenAmountsNeeded; // Not used anymore
+    uint256 private minRebalanceCapital; // Min amount of capital so that it is worth to rebalance the capital here
+    address[] private tokensNeeded; // Not used anymore
+    uint256[] private tokenAmountsNeeded; // Not used anymore
 
     uint256 public override strategyRewards; // Rewards allocated for this strategy updated on finalized
     uint256 public rewardsTotalOverhead; // Potential extra amount we are giving in BABL rewards
@@ -252,7 +254,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
     // Voters mapped to their votes.
     mapping(address => int256) public votes;
 
-    uint256 internal absoluteMinRebalance; // 1e18 or 1e6 in case of USDC
+    uint256 private absoluteMinRebalance; // 1e18 or 1e6 in case of USDC
     /* ============ Constructor ============ */
 
     /**
@@ -265,7 +267,6 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
      * @param _stake                         Stake with garden participations absolute amounts 1e18
      * @param _strategyDuration              Strategy duration in seconds
      * @param _expectedReturn                Expected return
-     * @param _minRebalanceCapital           Min capital that makes executing the strategy worth it
      */
     function initialize(
         address _strategist,
@@ -274,8 +275,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         uint256 _maxCapitalRequested,
         uint256 _stake,
         uint256 _strategyDuration,
-        uint256 _expectedReturn,
-        uint256 _minRebalanceCapital
+        uint256 _expectedReturn
     ) external override initializer {
         controller = IBabController(_controller);
 
@@ -292,8 +292,6 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
             Errors.DURATION_MUST_BE_IN_RANGE
         );
 
-        _require(_maxCapitalRequested >= _minRebalanceCapital, Errors.MAX_CAPITAL_REQUESTED);
-
         strategist = _strategist;
         enteredAt = block.timestamp;
         stake = _stake;
@@ -301,7 +299,6 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         duration = _strategyDuration;
         expectedReturn = _expectedReturn;
         capitalAllocated = 0;
-        minRebalanceCapital = _minRebalanceCapital;
         maxCapitalRequested = _maxCapitalRequested;
 
         votes[_strategist] = _stake.toInt256();
@@ -450,7 +447,6 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         _onlyGovernorOrGarden();
         _onlyUnpaused();
         _require(active && !finalized, Errors.STRATEGY_NEEDS_TO_BE_ACTIVE);
-        _require(_amountToUnwind <= capitalAllocated.sub(minRebalanceCapital), Errors.STRATEGY_NO_CAPITAL_TO_UNWIND);
         // Exits and enters the strategy
         _exitStrategy(_amountToUnwind.preciseDiv(capitalAllocated));
         capitalAllocated = capitalAllocated.sub(_amountToUnwind);
@@ -626,7 +622,6 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
             uint256,
             uint256,
             uint256,
-            uint256,
             address,
             uint256
         )
@@ -643,7 +638,6 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
             duration,
             expectedReturn,
             maxCapitalRequested,
-            minRebalanceCapital,
             IBabController(controller).strategyNFT(),
             enteredAt
         );
@@ -737,7 +731,6 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
     ) internal {
         _require(active, Errors.STRATEGY_NEEDS_TO_BE_ACTIVE);
         _require(capitalAllocated.add(_capital) <= maxCapitalRequested, Errors.MAX_CAPITAL_REACHED);
-        _require(_capital >= minRebalanceCapital, Errors.CAPITAL_IS_LESS_THAN_REBALANCE);
         _require(
             block.timestamp.sub(enteredCooldownAt) >= garden.strategyCooldownPeriod(),
             Errors.STRATEGY_IN_COOLDOWN

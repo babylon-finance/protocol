@@ -4,38 +4,34 @@ const { TWAP_ORACLE_WINDOW, TWAP_ORACLE_GRANULARITY } = require('../../lib/syste
 const { impersonateAddress } = require('../../lib/rpc');
 const addresses = require('../../lib/addresses');
 const { getAssetWhale } = require('../../lib/whale');
-const { increaseTime, getContract, parse, from } = require('../utils/test-helpers');
+const { increaseTime, getContract, parse, from, eth } = require('../utils/test-helpers');
 
 const DEFAULT_STRATEGY_PARAMS = [
-  ethers.utils.parseEther('10'), // _maxCapitalRequested
-  ethers.utils.parseEther('0.1'), // _stake
+  eth(10), // _maxCapitalRequested
+  eth(0.1), // _stake
   ONE_DAY_IN_SECONDS * 30, // _strategyDuration
-  ethers.utils.parseEther('0.05'), // 5% _expectedReturn
-  ethers.utils.parseEther('1'), // _minRebalanceCapital
+  eth(0.05), // 5% _expectedReturn
 ];
 
 const DAI_STRATEGY_PARAMS = [
-  ethers.utils.parseEther('100000'), // _maxCapitalRequested
-  ethers.utils.parseEther('100'), // _stake
+  eth(1e5), // _maxCapitalRequested
+  eth(100), // _stake
   ONE_DAY_IN_SECONDS * 30, // _strategyDuration
-  ethers.utils.parseEther('0.05'), // 5% _expectedReturn
-  ethers.utils.parseEther('500'), // _minRebalanceCapital
+  eth(0.05), // 5% _expectedReturn
 ];
 
 const USDC_STRATEGY_PARAMS = [
-  ethers.BigNumber.from(100000 * 1000000), // _maxCapitalRequested
-  ethers.BigNumber.from(100 * 1000000), // _stake
+  from(1e8 * 1e6), // _maxCapitalRequested
+  from(100 * 1e6), // _stake
   ONE_DAY_IN_SECONDS * 30, // _strategyDuration
-  ethers.utils.parseEther('0.05'), // 5% _expectedReturn
-  ethers.BigNumber.from(500 * 1000000), // _minRebalanceCapital
+  eth(0.05), // 5% _expectedReturn
 ];
 
 const WBTC_STRATEGY_PARAMS = [
-  ethers.BigNumber.from(10 * 1e8), // _maxCapitalRequested
-  ethers.BigNumber.from(1e6), // _stake
+  from(1000 * 1e8), // _maxCapitalRequested
+  from(1e6), // _stake
   ONE_DAY_IN_SECONDS * 30, // _strategyDuration
-  ethers.utils.parseEther('0.05'), // 5% _expectedReturn
-  ethers.BigNumber.from(1e5), // _minRebalanceCapital
+  eth(0.05), // 5% _expectedReturn
 ];
 
 const GARDEN_PARAMS_MAP = {
