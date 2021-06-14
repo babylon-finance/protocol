@@ -158,9 +158,10 @@ abstract contract TradeIntegration is BaseIntegration, ReentrancyGuard, ITradeIn
         tradeInfo.garden = tradeInfo.strategy.garden();
 
         tradeInfo.exchangeName = _exchangeName;
+        address reserveAsset = tradeInfo.garden.reserveAsset();
 
-        tradeInfo.sendToken = _sendToken;
-        tradeInfo.receiveToken = _receiveToken;
+        tradeInfo.sendToken = reserveAsset == _sendToken ? weth : _sendToken;
+        tradeInfo.receiveToken = reserveAsset == _receiveToken ? weth : _receiveToken;
 
         tradeInfo.gardenTotalSupply = ERC20(address(tradeInfo.strategy.garden())).totalSupply();
 
