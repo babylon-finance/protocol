@@ -806,6 +806,7 @@ contract BabController is OwnableUpgradeable, IBabController {
             gardenValuer == _contractAddress ||
             priceOracle == _contractAddress ||
             gardenFactory == _contractAddress ||
+            defaultTradeIntegration == _contractAddress ||
             strategyFactory == _contractAddress ||
             rewardsDistributor == _contractAddress ||
             owner() == _contractAddress ||

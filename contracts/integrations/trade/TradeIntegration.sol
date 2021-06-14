@@ -24,13 +24,13 @@ import {ERC20} from '@openzeppelin/contracts/token/ERC20/ERC20.sol';
 import {ReentrancyGuard} from '@openzeppelin/contracts/utils/ReentrancyGuard.sol';
 import '@uniswap/v3-core/contracts/interfaces/IUniswapV3Factory.sol';
 import '@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol';
-
+import {IPriceOracle} from '../../interfaces/IPriceOracle.sol';
 import {IStrategy} from '../../interfaces/IStrategy.sol';
 import {ITradeIntegration} from '../../interfaces/ITradeIntegration.sol';
 import {IGarden} from '../../interfaces/IGarden.sol';
 import {IBabController} from '../../interfaces/IBabController.sol';
-
 import {BaseIntegration} from '../BaseIntegration.sol';
+import {PreciseUnitMath} from '../../lib/PreciseUnitMath.sol';
 
 /**
  * @title BorrowIntetration
@@ -41,6 +41,7 @@ import {BaseIntegration} from '../BaseIntegration.sol';
 abstract contract TradeIntegration is BaseIntegration, ReentrancyGuard, ITradeIntegration {
     using SafeMath for uint256;
     using SafeCast for uint256;
+    using PreciseUnitMath for uint256;
 
     /* ============ Struct ============ */
 
@@ -182,18 +183,9 @@ abstract contract TradeIntegration is BaseIntegration, ReentrancyGuard, ITradeIn
      */
     function _validatePreTradeData(TradeInfo memory _tradeInfo, uint256 _sendQuantity) internal view {
         require(_tradeInfo.totalSendQuantity > 0, 'Token to sell must be nonzero');
-        IUniswapV3Pool _pool = _getUniswapPoolWithMostLiquidity(_tradeInfo);
-
+        address reserveAsset = _tradeInfo.garden.reserveAsset();
+        uint256 liquidityInReserve = _getUniswapHighestLiquidity(_tradeInfo, reserveAsset);
         uint256 minLiquidityReserveAsset = _tradeInfo.garden.minLiquidityAsset();
-        uint256 poolLiquidity = uint256(_pool.liquidity());
-        uint256 liquidityInReserve;
-
-        if (_pool.token0() == _tradeInfo.garden.reserveAsset()) {
-            liquidityInReserve = poolLiquidity.mul(poolLiquidity).div(ERC20(_pool.token1()).balanceOf(address(_pool)));
-        }
-        if (_pool.token1() == _tradeInfo.garden.reserveAsset()) {
-            liquidityInReserve = poolLiquidity.mul(poolLiquidity).div(ERC20(_pool.token0()).balanceOf(address(_pool)));
-        }
         require(liquidityInReserve >= minLiquidityReserveAsset, 'Not enough liquidity');
         require(
             ERC20(_tradeInfo.sendToken).balanceOf(address(_tradeInfo.strategy)) >= _sendQuantity,
@@ -201,26 +193,33 @@ abstract contract TradeIntegration is BaseIntegration, ReentrancyGuard, ITradeIn
         );
     }
 
-    function _getUniswapPoolWithMostLiquidity(TradeInfo memory _tradeInfo) internal view returns (IUniswapV3Pool) {
-        IUniswapV3Factory factory = IUniswapV3Factory(IBabController(controller).uniswapFactory());
-        IUniswapV3Pool poolLow =
-            IUniswapV3Pool(factory.getPool(_tradeInfo.sendToken, _tradeInfo.receiveToken, FEE_LOW));
-        IUniswapV3Pool poolMedium =
-            IUniswapV3Pool(factory.getPool(_tradeInfo.sendToken, _tradeInfo.receiveToken, FEE_MEDIUM));
-        IUniswapV3Pool poolHigh =
-            IUniswapV3Pool(factory.getPool(_tradeInfo.sendToken, _tradeInfo.receiveToken, FEE_HIGH));
-
-        // TODO: gives zero for assets which has no pool
-        uint128 liquidityLow = address(poolLow) != address(0) ? poolLow.liquidity() : 0;
-        uint128 liquidityMedium = address(poolMedium) != address(0) ? poolMedium.liquidity() : 0;
-        uint128 liquidityHigh = address(poolHigh) != address(0) ? poolHigh.liquidity() : 0;
-        if (liquidityLow > liquidityMedium && liquidityLow >= liquidityHigh) {
-            return poolLow;
+    function _getUniswapHighestLiquidity(TradeInfo memory _tradeInfo, address _reserveAsset)
+        internal
+        view
+        returns (uint256)
+    {
+        address sendToken = _getReserveAsWeth(_tradeInfo.sendToken, _reserveAsset);
+        address receiveToken = _getReserveAsWeth(_tradeInfo.receiveToken, _reserveAsset);
+        // Exit if going to weth from weth
+        if (sendToken == receiveToken) {
+            return _tradeInfo.garden.minLiquidityAsset();
         }
-        if (liquidityMedium > liquidityLow && liquidityMedium >= liquidityHigh) {
-            return poolMedium;
+        IUniswapV3Pool pool = _getUniswapPoolWithHighestLiquidity(sendToken, receiveToken);
+        uint256 poolLiquidity = uint256(pool.liquidity());
+        uint256 liquidityInReserve;
+        if (pool.token0() == weth) {
+            liquidityInReserve = poolLiquidity.mul(poolLiquidity).div(ERC20(pool.token1()).balanceOf(address(pool)));
         }
-        return poolHigh;
+        if (pool.token1() == weth) {
+            liquidityInReserve = poolLiquidity.mul(poolLiquidity).div(ERC20(pool.token0()).balanceOf(address(pool)));
+        }
+        // Normalize to reserve asset
+        if (weth != _reserveAsset) {
+            IPriceOracle oracle = IPriceOracle(IBabController(controller).priceOracle());
+            uint256 price = oracle.getPrice(weth, _reserveAsset);
+            liquidityInReserve = liquidityInReserve.preciseMul(price);
+        }
+        return liquidityInReserve;
     }
 
     /**
@@ -276,4 +275,30 @@ abstract contract TradeIntegration is BaseIntegration, ReentrancyGuard, ITradeIn
      * @return address     Address of the contract to approve tokens to
      */
     function _getSpender() internal view virtual returns (address);
+
+    function _getUniswapPoolWithHighestLiquidity(address sendToken, address receiveToken)
+        private
+        view
+        returns (IUniswapV3Pool)
+    {
+        IUniswapV3Factory factory = IUniswapV3Factory(IBabController(controller).uniswapFactory());
+        IUniswapV3Pool poolLow = IUniswapV3Pool(factory.getPool(sendToken, receiveToken, FEE_LOW));
+        IUniswapV3Pool poolMedium = IUniswapV3Pool(factory.getPool(sendToken, receiveToken, FEE_MEDIUM));
+        IUniswapV3Pool poolHigh = IUniswapV3Pool(factory.getPool(sendToken, receiveToken, FEE_HIGH));
+
+        uint128 liquidityLow = address(poolLow) != address(0) ? poolLow.liquidity() : 0;
+        uint128 liquidityMedium = address(poolMedium) != address(0) ? poolMedium.liquidity() : 0;
+        uint128 liquidityHigh = address(poolHigh) != address(0) ? poolHigh.liquidity() : 0;
+        if (liquidityLow > liquidityMedium && liquidityLow >= liquidityHigh) {
+            return poolLow;
+        }
+        if (liquidityMedium > liquidityLow && liquidityMedium >= liquidityHigh) {
+            return poolMedium;
+        }
+        return poolHigh;
+    }
+
+    function _getReserveAsWeth(address _token, address _reserveAsset) private view returns (address) {
+        return _reserveAsset == _token ? weth : _token;
+    }
 }
