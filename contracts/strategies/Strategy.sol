@@ -425,7 +425,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         // Pay Keeper Fee
         garden.payKeeper(msg.sender, _fee);
         // Transfer rewards
-        _transferStrategyPrincipal(_fee);
+        _transferStrategyPrincipal();
         // Send rest to garden if any
         _sendReserveAssetToGarden();
         updatedAt = exitedAt;
@@ -869,8 +869,8 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         return minAmountExpected;
     }
 
-    function _transferStrategyPrincipal(uint256 _fee) internal {
-        capitalReturned = IERC20(garden.reserveAsset()).balanceOf(address(this)).sub(_fee);
+    function _transferStrategyPrincipal() internal {
+        capitalReturned = IERC20(garden.reserveAsset()).balanceOf(address(this));
         address reserveAsset = garden.reserveAsset();
         int256 reserveAssetDelta = capitalReturned.toInt256().sub(capitalAllocated.toInt256());
         uint256 protocolProfits = 0;
