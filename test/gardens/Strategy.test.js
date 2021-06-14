@@ -272,19 +272,6 @@ describe('Strategy', function () {
       expect(await strategyContract.capitalAllocated()).to.equal(ONE_ETH.mul(2));
     });
 
-    it('should not be able to add more capital below rebalance amount', async function () {
-      const strategyContract = await createStrategy(
-        'buy',
-        'vote',
-        [signer1, signer2, signer3],
-        kyberTradeIntegration.address,
-        garden1,
-      );
-
-      await executeStrategy(strategyContract, { amount: ONE_ETH, fee: 42 });
-      await expect(executeStrategy(strategyContract, { amount: ONE_ETH.div(2), fee: 42 })).to.be.reverted;
-    });
-
     it('should not be able to unwind an active strategy with not enough capital', async function () {
       const strategyContract = await createStrategy(
         'buy',
