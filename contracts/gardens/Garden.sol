@@ -659,7 +659,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
             contributor.claimedAt,
             contributor.claimedBABL,
             contributor.claimedRewards,
-            contributor.totalDeposits
+            contributor.totalDeposits.sub(contributor.withdrawnSince)
         );
     }
 
