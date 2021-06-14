@@ -33,8 +33,7 @@ interface IStrategy {
         uint256 _maxCapitalRequested,
         uint256 _stake,
         uint256 _strategyDuration,
-        uint256 _expectedReturn,
-        uint256 _minRebalanceCapital
+        uint256 _expectedReturn
     ) external;
 
     function resolveVoting(
@@ -50,12 +49,6 @@ interface IStrategy {
     ) external;
 
     function executeStrategy(uint256 _capital, uint256 fee) external;
-
-    function executeStrategyRebalance(
-        uint256 _capital,
-        uint256 fee,
-        address payable _keeper
-    ) external;
 
     function getNAV() external view returns (uint256);
 
@@ -117,7 +110,6 @@ interface IStrategy {
             uint256,
             uint256,
             uint256,
-            uint256,
             address,
             uint256
         );
@@ -158,8 +150,6 @@ interface IStrategy {
     function maxCapitalRequested() external view returns (uint256);
 
     function expectedReturn() external view returns (uint256);
-
-    function minRebalanceCapital() external view returns (uint256);
 
     function duration() external view returns (uint256);
 

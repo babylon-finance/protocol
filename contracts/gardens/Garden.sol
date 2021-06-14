@@ -161,6 +161,34 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
     // Keeper debt in reserve asset if any, repaid upon every strategy finalization
     uint256 public keeperDebt;
 
+    /* ============ Modifiers ============ */
+
+    function _onlyContributor() private view {
+        _onlyUnpaused();
+        _require(balanceOf(msg.sender) > 0, Errors.ONLY_CONTRIBUTOR);
+    }
+
+    function _onlyUnpaused() private view {
+        // Do not execute if Globally or individually paused
+        _require(!IBabController(controller).isPaused(address(this)), Errors.ONLY_UNPAUSED);
+    }
+
+    /**
+     * Throws if the sender is not an strategy of this garden
+     */
+    function _onlyStrategy() private view {
+        _onlyUnpaused();
+        _require(strategyMapping[msg.sender], Errors.ONLY_STRATEGY);
+    }
+
+    /**
+     * Throws if the garden is not active
+     */
+    function _onlyActive() private view {
+        _onlyUnpaused();
+        _require(active, Errors.ONLY_ACTIVE);
+    }
+
     /* ============ Constructor ============ */
 
     /**
@@ -382,12 +410,16 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         // Check that cannot do a normal withdrawal
         _require(!_canWithdrawReserveAmount(msg.sender, _gardenTokenQuantity), Errors.NORMAL_WITHDRAWAL_POSSIBLE);
         uint256 netReserveFlows = _gardenTokenQuantity.sub(_gardenTokenQuantity.preciseMul(EARLY_WITHDRAWAL_PENALTY));
+
         (, uint256 largestCapital, address maxStrategy) = _getActiveCapital();
         // Check that strategy has enough capital to support the withdrawal
-        _require(
-            IStrategy(maxStrategy).minRebalanceCapital() <= largestCapital.sub(netReserveFlows),
-            Errors.WITHDRAWAL_WITH_PENALTY
-        );
+        // TODO: This is inaccurate because strategy might be down, i.e, capitalAllocated != capitalAvailable
+        // TODO: _getActiveCapital should be replaced by a parameter _strategy which is precalcualted off-chain;
+        // _getActiveCapital would consume a lot of gas and its cost would grow linearly with number of strategies in the garden.
+        // _require(
+        //     IStrategy(maxStrategy).minRebalanceCapital() <= largestCapital.sub(netReserveFlows),
+        //     Errors.WITHDRAWAL_WITH_PENALTY
+        // );
         IStrategy(maxStrategy).unwindStrategy(netReserveFlows);
         // We burn their penalty
         _burn(msg.sender, _gardenTokenQuantity.preciseMul(EARLY_WITHDRAWAL_PENALTY));
@@ -522,7 +554,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
             Errors.USER_CANNOT_ADD_STRATEGIES
         );
         _require(strategies.length < MAX_TOTAL_STRATEGIES, Errors.VALUE_TOO_HIGH);
-        _require(_stratParams.length == 5, Errors.STRAT_PARAMS_LENGTH);
+        _require(_stratParams.length == 4, Errors.STRAT_PARAMS_LENGTH);
         address strategy =
             IStrategyFactory(IBabController(controller).strategyFactory()).createStrategy(
                 _name,
@@ -537,38 +569,6 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         IStrategy(strategy).setData(_opTypes, _opIntegrations, _opDatas);
         isGardenStrategy[strategy] = true;
         emit AddStrategy(strategy, _stratParams[3]);
-    }
-
-    /**
-     * Rebalances available capital of the garden between the strategies that are active.
-     * We enter into the strategy and add it to the executed strategies array.
-     * @param _fee                     The fee paid to keeper to compensate the gas cost for each strategy executed
-     */
-    function rebalanceStrategies(uint256 _fee) external override {
-        _onlyUnpaused();
-        uint256 totalActiveVotes;
-        for (uint256 i = 0; i < strategies.length; i++) {
-            IStrategy strategy = IStrategy(strategies[i]);
-            if (strategy.isStrategyActive()) {
-                totalActiveVotes = totalActiveVotes.add(strategy.totalVotes().toUint256());
-            }
-        }
-        totalActiveVotes = totalActiveVotes.add(totalActiveVotes.preciseMul(1e17)); // Add 10% for protocol and keeper fees
-        for (uint256 i = 0; i < strategies.length; i++) {
-            IStrategy strategy = IStrategy(strategies[i]);
-            if (strategy.isStrategyActive()) {
-                uint256 toAllocate =
-                    ERC20Upgradeable(reserveAsset).balanceOf(address(this)).preciseMul(
-                        strategy.totalVotes().toUint256().preciseDiv(totalActiveVotes)
-                    );
-                if (
-                    toAllocate >= strategy.minRebalanceCapital() &&
-                    toAllocate.add(strategy.capitalAllocated()) <= strategy.maxCapitalRequested()
-                ) {
-                    strategy.executeStrategyRebalance(toAllocate, _fee, msg.sender);
-                }
-            }
-        }
     }
 
     /**
@@ -728,41 +728,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         return normalizedReserveQuantity.preciseDiv(gardenValuationPerToken);
     }
 
-    // solhint-disable-next-line
-    receive() external payable {}
-
-    /* ============ Modifiers ============ */
-
-    // Replaced by internal functions due to contract size limit of 24KB
-
     /* ============ Internal Functions ============ */
-
-    function _onlyContributor() private view {
-        _onlyUnpaused();
-        _require(balanceOf(msg.sender) > 0, Errors.ONLY_CONTRIBUTOR);
-    }
-
-    function _onlyUnpaused() private view {
-        // Do not execute if Globally or individually paused
-        _require(!IBabController(controller).isPaused(address(this)), Errors.ONLY_UNPAUSED);
-    }
-
-    /**
-     * Throws if the sender is not an strategy of this garden
-     */
-    function _onlyStrategy() private view {
-        _onlyUnpaused();
-        _require(strategyMapping[msg.sender], Errors.ONLY_STRATEGY);
-    }
-
-    /**
-     * Throws if the garden is not active
-     */
-    function _onlyActive() private view {
-        _onlyUnpaused();
-        _require(active, Errors.ONLY_ACTIVE);
-    }
-
     /**
      * When the window of withdrawals finishes, we need to make the capital available again for investments
      * We still keep the profits aside.
@@ -969,4 +935,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         rewardsDistributor.updateGardenPowerAndContributor(address(this), msg.sender, 0, false, pid);
         pid++;
     }
+
+    // solhint-disable-next-line
+    receive() external payable {}
 }

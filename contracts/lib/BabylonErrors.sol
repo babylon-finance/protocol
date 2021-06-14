@@ -256,4 +256,6 @@ library Errors {
     uint256 internal constant ONLY_UNPAUSED = 83;
     // Reentrant intent
     uint256 internal constant REENTRANT_CALL = 84;
+    // Reserve asset not supported
+    uint256 internal constant RESERVE_ASSET_NOT_SUPPORTED = 85;
 }

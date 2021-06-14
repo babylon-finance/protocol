@@ -2,14 +2,18 @@ const { deployments } = require('hardhat');
 const { TWAP_ORACLE_WINDOW, TWAP_ORACLE_GRANULARITY } = require('../../lib/system.js');
 const { GARDEN_PARAMS } = require('../../lib/constants.js');
 const addresses = require('../../lib/addresses');
+const { getAssetWhale } = require('../../lib/whale.js');
 const { impersonateAddress } = require('../../lib/rpc');
 const { createStrategy } = require('./StrategyHelper.js');
+const { getContract, from, parse, eth } = require('../utils/test-helpers');
 
-async function setUpFixture({ upgradesDeployer, deployments, getNamedAccounts, ethers }, options, gardenParams) {
-  async function getContract(contractName, deploymentName) {
-    return await ethers.getContractAt(contractName, (await deployments.get(deploymentName || contractName)).address);
-  }
-  const [deployer, keeper, owner, signer1, signer2, signer3] = await ethers.getSigners();
+async function setUpFixture(
+  { upgradesDeployer, deployments, getNamedAccounts, ethers },
+  options,
+  { gardenParams = GARDEN_PARAMS, fund },
+) {
+  const signers = await ethers.getSigners();
+  const [deployer, keeper, owner, signer1, signer2, signer3] = signers;
 
   await deployments.fixture();
 
@@ -42,6 +46,11 @@ async function setUpFixture({ upgradesDeployer, deployments, getNamedAccounts, e
   const depositVaultOperation = await getContract('DepositVaultOperation');
   const lendOperation = await getContract('LendOperation');
   const borrowOperation = await getContract('BorrowOperation');
+
+  const dai = await ethers.getContractAt('IERC20', addresses.tokens.DAI);
+  const usdc = await ethers.getContractAt('IERC20', addresses.tokens.USDC);
+  const weth = await ethers.getContractAt('IERC20', addresses.tokens.WETH);
+  const wbtc = await ethers.getContractAt('IERC20', addresses.tokens.WBTC);
 
   // deploy uniswap v2 adapter for tests
   await deployments.deploy('UniswapTWAP', {
@@ -153,8 +162,30 @@ async function setUpFixture({ upgradesDeployer, deployments, getNamedAccounts, e
   console.log('Created and started garden', garden1.address);
   console.log('Created manual testing garden', garden3.address);
 
-  const daiWhaleSigner = await impersonateAddress('0x6B175474E89094C44Da98b954EedeAC495271d0F');
+  const daiWhaleSigner = await impersonateAddress('0xbebc44782c7db0a1a60cb6fe97d0b483032ff1c7');
+  const usdcWhaleSigner = await impersonateAddress('0x0a59649758aa4d66e25f08dd01271e891fe52199');
   const wethWhaleSigner = await impersonateAddress('0xC8dDA504356195ba5344E5a9826Ce07DfEaA97b6');
+  const wbtcWhaleSigner = await impersonateAddress('0x9ff58f4ffb29fa2266ab25e75e2a8b3503311656');
+
+  if (fund) {
+    for (const signer of signers.slice(3, 10)) {
+      await dai.connect(daiWhaleSigner).transfer(signer.address, eth(1e6), {
+        gasPrice: 0,
+      });
+
+      await usdc.connect(usdcWhaleSigner).transfer(signer.address, from(1e6 * 1e6), {
+        gasPrice: 0,
+      });
+
+      await weth.connect(wethWhaleSigner).transfer(signer.address, eth(100), {
+        gasPrice: 0,
+      });
+
+      await wbtc.connect(wbtcWhaleSigner).transfer(signer.address, from(10e8), {
+        gasPrice: 0,
+      });
+    }
+  }
 
   return {
     babController,
@@ -216,10 +247,11 @@ async function setUpFixture({ upgradesDeployer, deployments, getNamedAccounts, e
 const fixtureCache = {};
 
 module.exports = {
-  setupTests: (gardenParams = GARDEN_PARAMS) => {
-    const key = JSON.stringify(gardenParams);
+  setupTests: (params = {}) => {
+    const { gardenParams } = params;
+    const key = JSON.stringify(params);
     if (!fixtureCache[key]) {
-      fixtureCache[key] = deployments.createFixture((hre, options) => setUpFixture(hre, options, gardenParams));
+      fixtureCache[key] = deployments.createFixture((hre, options) => setUpFixture(hre, options, params));
     }
     return fixtureCache[key];
   },

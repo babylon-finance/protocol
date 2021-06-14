@@ -210,9 +210,10 @@ abstract contract TradeIntegration is BaseIntegration, ReentrancyGuard, ITradeIn
         IUniswapV3Pool poolHigh =
             IUniswapV3Pool(factory.getPool(_tradeInfo.sendToken, _tradeInfo.receiveToken, FEE_HIGH));
 
-        uint128 liquidityLow = poolLow.liquidity();
-        uint128 liquidityMedium = poolMedium.liquidity();
-        uint128 liquidityHigh = poolHigh.liquidity();
+        // TODO: gives zero for assets which has no pool
+        uint128 liquidityLow = address(poolLow) != address(0) ? poolLow.liquidity() : 0;
+        uint128 liquidityMedium = address(poolMedium) != address(0) ? poolMedium.liquidity() : 0;
+        uint128 liquidityHigh = address(poolHigh) != address(0) ? poolHigh.liquidity() : 0;
         if (liquidityLow > liquidityMedium && liquidityLow >= liquidityHigh) {
             return poolLow;
         }

@@ -73,8 +73,7 @@ contract StrategyFactory is IStrategyFactory {
                         _stratParams[0],
                         _stratParams[1],
                         _stratParams[2],
-                        _stratParams[3],
-                        _stratParams[4]
+                        _stratParams[3]
                     )
                 )
             );
