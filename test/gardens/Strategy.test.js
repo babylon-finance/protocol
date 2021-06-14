@@ -115,7 +115,6 @@ describe('Strategy', function () {
         duration,
         expectedReturn,
         maxCapitalRequested,
-        minRebalanceCapital,
         strategyNft,
         enteredAt,
       ] = await strategyDataset.getStrategyDetails();
@@ -133,7 +132,6 @@ describe('Strategy', function () {
       expect(duration).to.equal(ethers.BigNumber.from(ONE_DAY_IN_SECONDS * 30));
       expect(expectedReturn).to.equal(ethers.utils.parseEther('0.05'));
       expect(maxCapitalRequested).to.equal(ethers.utils.parseEther('10'));
-      expect(minRebalanceCapital).to.equal(ethers.utils.parseEther('1'));
       expect(strategyNft).to.equal(await babController.strategyNFT());
       expect(enteredAt.isZero()).to.equal(false);
     });

@@ -18,7 +18,7 @@ const {
 
 const { setupTests } = require('./fixtures/GardenFixture');
 
-describe.only('Keeper', function () {
+describe('Keeper', function () {
   let babController;
   let rewardsDistributor;
   let owner;
