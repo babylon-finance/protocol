@@ -321,15 +321,7 @@ async function substractFakeProfits(strategy, amount) {
   }
 }
 
-async function createStrategy(
-  kind,
-  state,
-  signers,
-  integrations,
-  garden,
-  params,
-  specificParams,
-) {
+async function createStrategy(kind, state, signers, integrations, garden, params, specificParams) {
   let strategy;
 
   const reserveAsset = await garden.reserveAsset();
