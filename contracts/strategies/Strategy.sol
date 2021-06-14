@@ -156,20 +156,20 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         _require(controller.isValidKeeper(msg.sender), Errors.ONLY_KEEPER);
         // We assume that calling keeper functions should be less expensive than 1 million gas and the gas price should be lower than 1000 gwei.
         address reserveAsset = garden.reserveAsset();
-        if(reserveAsset == WETH) {
-          // 1 ETH
-          _require(_fee <= (1e6 * 1e3 gwei), Errors.FEE_TOO_HIGH);
-        } else if(reserveAsset == DAI) {
-          // 2000 DAI
-          _require(_fee <= 2000 * 1e18, Errors.FEE_TOO_HIGH);
-        } else if(reserveAsset == USDC) {
-          // 2000 USDC
-          _require(_fee <= 2000 * 1e6, Errors.FEE_TOO_HIGH);
-        } else if(reserveAsset == WBTC) {
-          // 0.05 WBTC
-          _require(_fee <= 0.05 * 1e8, Errors.FEE_TOO_HIGH);
+        if (reserveAsset == WETH) {
+            // 1 ETH
+            _require(_fee <= (1e6 * 1e3 gwei), Errors.FEE_TOO_HIGH);
+        } else if (reserveAsset == DAI) {
+            // 2000 DAI
+            _require(_fee <= 2000 * 1e18, Errors.FEE_TOO_HIGH);
+        } else if (reserveAsset == USDC) {
+            // 2000 USDC
+            _require(_fee <= 2000 * 1e6, Errors.FEE_TOO_HIGH);
+        } else if (reserveAsset == WBTC) {
+            // 0.05 WBTC
+            _require(_fee <= 0.05 * 1e8, Errors.FEE_TOO_HIGH);
         } else {
-          _revert(Errors.RESERVE_ASSET_NOT_SUPPORTED);
+            _revert(Errors.RESERVE_ASSET_NOT_SUPPORTED);
         }
     }
 
@@ -255,6 +255,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
     mapping(address => int256) public votes;
 
     uint256 private absoluteMinRebalance; // 1e18 or 1e6 in case of USDC
+
     /* ============ Constructor ============ */
 
     /**
@@ -392,11 +393,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
      * @param _capital                  The capital to allocate to this strategy.
      * @param _fee                      The fee paid to keeper to compensate the gas cost.
      */
-    function executeStrategy(uint256 _capital, uint256 _fee)
-        external
-        override
-        nonReentrant
-    {
+    function executeStrategy(uint256 _capital, uint256 _fee) external override nonReentrant {
         _onlyActiveGarden();
         _onlyKeeper(_fee);
         _executesStrategy(_capital, _fee, msg.sender);
@@ -410,11 +407,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
      * @param _fee                     The fee paid to keeper to compensate the gas cost
      * @param _tokenURI                URL with the JSON for the strategy
      */
-    function finalizeStrategy(uint256 _fee, string memory _tokenURI)
-        external
-        override
-        nonReentrant
-    {
+    function finalizeStrategy(uint256 _fee, string memory _tokenURI) external override nonReentrant {
         _onlyActiveGarden();
         _onlyKeeper(_fee);
         _require(executedAt > 0, Errors.STRATEGY_IS_NOT_EXECUTED);

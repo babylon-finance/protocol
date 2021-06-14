@@ -301,15 +301,7 @@ async function substractFakeProfits(strategy, amount) {
   }
 }
 
-async function createStrategy(
-  kind,
-  state,
-  signers,
-  integration,
-  garden,
-  params,
-  specificParams,
-) {
+async function createStrategy(kind, state, signers, integration, garden, params, specificParams) {
   let strategy;
 
   const reserveAsset = await garden.reserveAsset();
@@ -354,15 +346,7 @@ async function createStrategy(
   return strategy;
 }
 
-async function getStrategy({
-  garden,
-  kind = 'buy',
-  state = 'dataset',
-  signers,
-  integration,
-  params,
-  specificParams,
-}) {
+async function getStrategy({ garden, kind = 'buy', state = 'dataset', signers, integration, params, specificParams }) {
   const babController = await getContract('BabController', 'BabControllerProxy');
   const kyberTradeIntegration = await getContract('KyberTradeIntegration');
   const [deployer, keeper, owner, signer1, signer2, signer3] = await ethers.getSigners();

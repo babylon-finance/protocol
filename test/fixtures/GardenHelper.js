@@ -36,7 +36,6 @@ async function createGarden({
   const ishtarGate = await getContract('IshtarGate');
   const babController = await getContract('BabController', 'BabControllerProxy');
 
-
   const erc20 = await ethers.getContractAt('IERC20', reserveAsset);
   for (const sig of [signer1, signer2, signer3]) {
     await erc20.connect(sig).approve(babController.address, params[0], {
