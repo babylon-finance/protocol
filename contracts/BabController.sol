@@ -22,7 +22,7 @@ import {AddressUpgradeable} from '@openzeppelin/contracts-upgradeable/utils/Addr
 import {SafeMath} from '@openzeppelin/contracts/math/SafeMath.sol';
 import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 
-import {RewardsDistributor} from './token/RewardsDistributor.sol';
+import {IRewardsDistributor} from './interfaces/IRewardsDistributor.sol';
 import {IGarden} from './interfaces/IGarden.sol';
 import {IGardenFactory} from './interfaces/IGardenFactory.sol';
 import {IStrategy} from './interfaces/IStrategy.sol';
@@ -39,7 +39,7 @@ import {AddressArrayUtils} from './lib/AddressArrayUtils.sol';
  * BabController is a smart contract used to deploy new gardens contracts and house the
  * integrations and resources of the system.
  */
-contract BabControllerV3 is OwnableUpgradeable, IBabController {
+contract BabController is OwnableUpgradeable, IBabController {
     using AddressArrayUtils for address[];
     using AddressUpgradeable for address;
     using SafeMath for uint256;
@@ -328,7 +328,7 @@ contract BabControllerV3 is OwnableUpgradeable, IBabController {
         if (bablMiningProgramEnabled == false) {
             // Can only be activated once
             bablMiningProgramEnabled = true;
-            RewardsDistributor(rewardsDistributor).startBABLRewards(); // Sets the timestamp
+            IRewardsDistributor(rewardsDistributor).startBABLRewards(); // Sets the timestamp
         }
     }
 

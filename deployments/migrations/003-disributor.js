@@ -24,7 +24,6 @@ module.exports = async ({
     },
   );
 
-  //TOOD: newlyDeployed would be false in case of upgrade should use newlyUpgraded flag instead
   if (rewardsDistributor.newlyDeployed) {
     const bablTokenContract = await ethers.getContractAt('BABLToken', bablToken.address);
 
@@ -41,4 +40,5 @@ module.exports = async ({
   }
 };
 
+module.exports.dependencies = ['Controller', 'Token'];
 module.exports.tags = ['Distributor'];

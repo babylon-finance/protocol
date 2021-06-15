@@ -54,6 +54,8 @@ interface IRewardsDistributor {
 
     function sendTokensToContributor(address _to, uint256 _amount) external;
 
+    function startBABLRewards() external;
+
     function getRewards(
         address _garden,
         address _contributor,

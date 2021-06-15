@@ -18,7 +18,7 @@
 pragma solidity 0.7.6;
 import {IBabController} from '../interfaces/IBabController.sol';
 import {TimeLockRegistry} from './TimeLockRegistry.sol';
-import {RewardsDistributor} from './RewardsDistributor.sol';
+import {IRewardsDistributor} from '../interfaces/IRewardsDistributor.sol';
 import {SafeMath} from '@openzeppelin/contracts/math/SafeMath.sol';
 import {VoteToken} from './VoteToken.sol';
 import {Ownable} from '@openzeppelin/contracts/access/Ownable.sol';
@@ -124,7 +124,7 @@ abstract contract TimeLockedToken is VoteToken {
     TimeLockRegistry public timeLockRegistry;
 
     // address of Rewards Distriburor contract
-    RewardsDistributor public rewardsDistributor;
+    IRewardsDistributor public rewardsDistributor;
 
     // Enable Transfer of ERC20 BABL Tokens
     // Only Minting or transfers from/to TimeLockRegistry and Rewards Distributor can transfer tokens until the protocol is fully decentralized
@@ -183,7 +183,7 @@ abstract contract TimeLockedToken is VoteToken {
      * @notice Set the Rewards Distriburor contract to control both types of rewards (profit and BABL Mining program)
      * @param newRewardsDistributor Address of Rewards Distributor contract
      */
-    function setRewardsDistributor(RewardsDistributor newRewardsDistributor) external onlyOwner returns (bool) {
+    function setRewardsDistributor(IRewardsDistributor newRewardsDistributor) external onlyOwner returns (bool) {
         require(address(newRewardsDistributor) != address(0), 'cannot be zero address');
         require(address(newRewardsDistributor) != address(this), 'cannot be this contract');
         require(address(newRewardsDistributor) != address(rewardsDistributor), 'must be new Rewards Distributor');
