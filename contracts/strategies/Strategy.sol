@@ -96,6 +96,10 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         _require(msg.sender == strategist, Errors.ONLY_STRATEGIST);
     }
 
+    function _onlyStrategistOrGovernor() private view {
+        _require(msg.sender == strategist || msg.sender == controller.owner(), Errors.ONLY_STRATEGIST);
+    }
+
     function _onlyContributor() private view {
         _require(
             IERC20(address(garden)).balanceOf(msg.sender) > 0 &&
@@ -175,7 +179,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
 
     function _onlyUnpaused() private view {
         // Do not execute if Globally or individually paused
-        _require(!IBabController(controller).isPaused(address(this)), Errors.ONLY_UNPAUSED);
+        _require(!IBabController(controller).isPaused(address(this)) || msg.sender == msg.sender == controller.owner(), Errors.ONLY_UNPAUSED);
     }
 
     /* ============ Constants ============ */
@@ -492,7 +496,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
      * @param _newDuration            New duration of the strategy
      */
     function changeStrategyDuration(uint256 _newDuration) external override {
-        _onlyStrategist();
+        _onlyStrategistOrGovernor();
         _onlyUnpaused();
         _require(!finalized, Errors.STRATEGY_IS_ALREADY_FINALIZED);
         _require(_newDuration < duration, Errors.DURATION_NEEDS_TO_BE_LESS);
