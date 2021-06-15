@@ -49,7 +49,7 @@ import {IWETH} from '../interfaces/external/weth/IWETH.sol';
  *
  * Class that holds common garden-related state and functions
  */
-contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
+contract GardenV2 is ERC20Upgradeable, ReentrancyGuard, IGarden {
     using SafeCast for int256;
     using SignedSafeMath for int256;
     using PreciseUnitMath for int256;
