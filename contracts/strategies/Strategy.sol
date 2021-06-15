@@ -255,8 +255,6 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
     // Voters mapped to their votes.
     mapping(address => int256) public votes;
 
-    uint256 private absoluteMinRebalance; // 1e18 or 1e6 in case of USDC
-
     /* ============ Constructor ============ */
 
     /**
