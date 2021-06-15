@@ -354,7 +354,7 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
     /**
      * Starts BABL Rewards Mining Program from the controller.
      */
-    function startBABLRewards() override external onlyController {
+    function startBABLRewards() external override onlyController {
         if (START_TIME == 0) {
             // It can only be activated once to avoid overriding START_TIME
             START_TIME = block.timestamp;
