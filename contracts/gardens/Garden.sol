@@ -213,7 +213,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         string memory _symbol,
         uint256[] calldata _gardenParams,
         uint256 _initialContribution
-    ) public payable initializer {
+    ) public override payable initializer {
         _require(bytes(_name).length < 50, Errors.NAME_TOO_LONG);
         _require(
             _creator != address(0) && _controller != address(0) && ERC20Upgradeable(_reserveAsset).decimals() > 0,

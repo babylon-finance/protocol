@@ -25,6 +25,16 @@ pragma solidity 0.7.6;
  */
 interface IGarden {
     /* ============ Functions ============ */
+    function initialize(
+        address _reserveAsset,
+        address _controller,
+        address _creator,
+        string memory _name,
+        string memory _symbol,
+        uint256[] calldata _gardenParams,
+        uint256 _initialContribution
+    ) external payable;
+
     function makeGardenPublic() external;
 
     function setActive(bool _val) external;

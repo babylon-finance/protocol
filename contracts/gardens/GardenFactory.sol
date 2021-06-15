@@ -23,8 +23,8 @@ import {UpgradeableBeacon} from '@openzeppelin/contracts/proxy/UpgradeableBeacon
 import {SafeBeaconProxy} from '../proxy/SafeBeaconProxy.sol';
 import {IGardenFactory} from '../interfaces/IGardenFactory.sol';
 import {IBabController} from '../interfaces/IBabController.sol';
+import {IGarden} from '../interfaces/IGarden.sol';
 import {IGardenNFT} from '../interfaces/IGardenNFT.sol';
-import {Garden} from './Garden.sol';
 
 /**
  * @title GardenFactory
@@ -71,7 +71,7 @@ contract GardenFactory is IGardenFactory {
                 new SafeBeaconProxy(
                     address(beacon),
                     abi.encodeWithSelector(
-                        Garden.initialize.selector,
+                        IGarden.initialize.selector,
                         _reserveAsset,
                         controller,
                         _creator,
