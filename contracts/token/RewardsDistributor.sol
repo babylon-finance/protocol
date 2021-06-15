@@ -380,6 +380,14 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         _setContributorTimestampParams(_garden, _contributor, _previousBalance, _depositOrWithdraw);
     }
 
+    /**
+     * Function that set the babl Token address as it is going to be released in a future date
+     * @param _bablToken BABLToken address
+     */
+    function setBablToken(TimeLockedToken _bablToken) external onlyOwner onlyUnpaused {
+        babltoken = _bablToken;
+    }
+
     /* ========== View functions ========== */
 
     /**
