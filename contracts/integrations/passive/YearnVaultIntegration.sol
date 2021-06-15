@@ -50,7 +50,7 @@ contract YearnVaultIntegration is PassiveIntegration {
      * @param _controller                   Address of the controller
      * @param _weth                         Address of the WETH ERC20
      */
-    constructor(IBabController _controller, address _weth) PassiveIntegration('yearnvaults', _weth, _controller) {}
+    constructor(IBabController _controller, address _weth) PassiveIntegration('yearnvaultsv2', _weth, _controller) {}
 
     /* ============ Internal Functions ============ */
 
