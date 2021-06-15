@@ -21,7 +21,9 @@ require('./lib/plugins/utils');
 require('./lib/tasks/node-ready');
 require('./lib/tasks/export');
 require('./lib/tasks/gate');
-require('./lib/tasks/increaseTime');
+require('./lib/tasks/increase-time');
+require('./lib/tasks/upgrade-admin');
+require('./lib/tasks/upgrade-beacon');
 
 const OPTIMIZER = !(process.env.OPTIMIZER === 'false');
 
@@ -72,7 +74,7 @@ module.exports = {
     rinkeby: {
       chainId: CHAIN_IDS.rinkeby,
       url: `https://eth-rinkeby.alchemyapi.io/v2/${ALCHEMY_KEY}`,
-      accounts: [`0x${DEPLOYER_PRIVATE_KEY}`],
+      accounts: [`0x${DEPLOYER_PRIVATE_KEY}`, `0x${OWNER_PRIVATE_KEY}`],
       saveDeployments: true,
     },
   },
