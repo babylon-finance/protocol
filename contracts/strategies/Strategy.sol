@@ -422,7 +422,7 @@ contract StrategyV3 is ReentrancyGuard, IStrategy, Initializable {
         uint256 reserveAssetReturns = IERC20(garden.reserveAsset()).balanceOf(address(this));
         // Execute exit operations
         _exitStrategy(HUNDRED_PERCENT);
-        reserveAssetReturns = IERC20(garden.reserveAsset()).balanceOf(address(this)).sub(reserveAssetReturns);
+        capitalReturned = IERC20(garden.reserveAsset()).balanceOf(address(this)).sub(reserveAssetReturns);
         // Mark as finalized
         finalized = true;
         active = false;
@@ -432,7 +432,7 @@ contract StrategyV3 is ReentrancyGuard, IStrategy, Initializable {
         // Pay Keeper Fee
         garden.payKeeper(msg.sender, _fee);
         // Transfer rewards
-        _transferStrategyPrincipal(reserveAssetReturns);
+        _transferStrategyPrincipal();
         // Send rest to garden if any
         _sendReserveAssetToGarden();
         updatedAt = exitedAt;
@@ -875,8 +875,7 @@ contract StrategyV3 is ReentrancyGuard, IStrategy, Initializable {
         return minAmountExpected;
     }
 
-    function _transferStrategyPrincipal(uint256 _reserveAssetReturned) internal {
-        capitalReturned = _reserveAssetReturned;
+    function _transferStrategyPrincipal() internal {
         address reserveAsset = garden.reserveAsset();
         int256 reserveAssetDelta = capitalReturned.toInt256().sub(capitalAllocated.toInt256());
         uint256 protocolProfits = 0;
