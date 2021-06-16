@@ -657,7 +657,9 @@ contract GardenV2 is ERC20Upgradeable, ReentrancyGuard, IGarden {
             contributor.claimedAt,
             contributor.claimedBABL,
             contributor.claimedRewards,
-            contributor.totalDeposits.sub(contributor.withdrawnSince)
+            contributor.totalDeposits > contributor.withdrawnSince
+                ? contributor.totalDeposits.sub(contributor.withdrawnSince)
+                : 0
         );
     }
 
