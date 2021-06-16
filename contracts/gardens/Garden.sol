@@ -475,7 +475,6 @@ contract GardenV2 is ERC20Upgradeable, ReentrancyGuard, IGarden {
             Errors.ONLY_STRATEGY
         );
         // Updates reserve asset
-        principal = principal.toInt256().add(_returns).toUint256();
         if (withdrawalsOpenUntil > block.timestamp) {
             withdrawalsOpenUntil = block.timestamp.add(
                 withdrawalWindowAfterStrategyCompletes.sub(withdrawalsOpenUntil.sub(block.timestamp))
@@ -504,7 +503,6 @@ contract GardenV2 is ERC20Upgradeable, ReentrancyGuard, IGarden {
         // Pay Keeper in Reserve Asset
         if (keeperDebt > 0 && IERC20(reserveAsset).balanceOf(address(this)) >= keeperDebt) {
             IERC20(reserveAsset).safeTransfer(_keeper, keeperDebt);
-            principal = principal.sub(keeperDebt);
             keeperDebt = 0;
         }
     }
