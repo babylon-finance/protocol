@@ -52,7 +52,7 @@ import {IRewardsDistributor} from '../interfaces/IRewardsDistributor.sol';
  * Base Strategy contract. Belongs to a garden. Abstract.
  * Will be extended from specific strategy contracts.
  */
-contract StrategyV3 is ReentrancyGuard, IStrategy, Initializable {
+contract Strategy is ReentrancyGuard, IStrategy, Initializable {
     using SignedSafeMath for int256;
     using SafeMath for uint256;
     using SafeCast for uint256;
@@ -934,4 +934,7 @@ contract StrategyV3 is ReentrancyGuard, IStrategy, Initializable {
 
     // solhint-disable-next-line
     receive() external payable {}
+}
+
+contract StrategyV3 is Strategy{
 }

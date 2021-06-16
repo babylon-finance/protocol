@@ -48,7 +48,7 @@ import {IPriceOracle} from '../interfaces/IPriceOracle.sol';
  * Rewards Distributor also is responsible for the calculation and delivery of other rewards as bonuses to specific profiles
  * which are actively contributing to the protocol growth and their communities (Garden creators, Strategists and Stewards).
  */
-contract RewardsDistributorV2 is OwnableUpgradeable, IRewardsDistributor {
+contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
     using SafeMath for uint256;
     using SafeMath for int256;
     using PreciseUnitMath for uint256;
@@ -1414,3 +1414,6 @@ contract RewardsDistributorV2 is OwnableUpgradeable, IRewardsDistributor {
         return (quarters.add(1), startingQuarter.add(1));
     }
 }
+
+contract RewardsDistributorV2 is RewardsDistributor {
+} 

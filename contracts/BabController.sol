@@ -39,7 +39,7 @@ import {AddressArrayUtils} from './lib/AddressArrayUtils.sol';
  * BabController is a smart contract used to deploy new gardens contracts and house the
  * integrations and resources of the system.
  */
-contract BabControllerV3 is OwnableUpgradeable, IBabController {
+contract BabController is OwnableUpgradeable, IBabController {
     using AddressArrayUtils for address[];
     using AddressUpgradeable for address;
     using SafeMath for uint256;
@@ -834,3 +834,7 @@ contract BabControllerV3 is OwnableUpgradeable, IBabController {
         return false;
     }
 }
+
+
+contract BabControllerV3 is BabController {
+} 
