@@ -113,7 +113,12 @@ describe('BABL Rewards Distributor', function () {
     let timePercent = 0;
     // We calculate the profit of the strategy
     const allocated = await strategy.capitalAllocated();
-    const returned = await strategy.capitalReturned();
+    let returned = await strategy.capitalReturned();
+
+    if (returned > allocated * 2) {
+      // We simulate the protocol cap x2
+      returned = allocated.mul(2).mul(ONE_ETH).div(ONE_ETH);
+    }
     const profit = ethers.BigNumber.from(returned).mul(ONE_ETH).div(ethers.BigNumber.from(allocated));
     const [, , , , , exitedAt] = await strategy.getStrategyState();
     const bablSupplyQ1 = await rewardsDistributor.tokenSupplyPerQuarter(quarterStart);
@@ -374,6 +379,38 @@ describe('BABL Rewards Distributor', function () {
 
       await injectFakeProfits(long1, ONE_ETH.mul(222));
 
+      await finalizeStrategyAfter30Days(long1);
+
+      const { exitedAt } = await getStrategyState(long1);
+
+      await getAndValidateProtocolTimestampAndQuarter(rewardsDistributor, exitedAt, {
+        principal: 0,
+        quarter: 1,
+        timeListPointer: 1,
+      });
+
+      const value = await getStrategyRewards(long1, now, 1, 1, [ethers.utils.parseEther('1')]);
+      const rewards = await long1.strategyRewards();
+      expect(rewards).to.be.closeTo(value, ethers.utils.parseEther('0.005'));
+    });
+    it('should not count malicious injected profit in BABL rewards calculation in case of 1 strategy with positive profit and with total duration of 1 quarter', async function () {
+      // Mining program has to be enabled before the strategy starts its execution
+      await babController.connect(owner).enableBABLMiningProgram();
+      const block = await ethers.provider.getBlock();
+      now = block.timestamp;
+
+      const [long1] = await createStrategies([{ garden: garden1 }]);
+      await executeStrategy(long1, ONE_ETH);
+
+      await injectFakeProfits(long1, ONE_ETH.mul(222));
+
+      //Here we inject malicious reserveAsset
+      whaleAddress = '0x2f0b23f53734252bda2277357e97e1517d6b042a';
+      whaleSigner = await impersonateAddress(whaleAddress);
+      await weth.connect(whaleSigner).transfer(signer1.address, ONE_ETH.mul(100), {
+        gasPrice: 0,
+      });
+      await weth.connect(signer1).transfer(long1.address, ONE_ETH.mul(100));
       await finalizeStrategyAfter30Days(long1);
 
       const { exitedAt } = await getStrategyState(long1);
