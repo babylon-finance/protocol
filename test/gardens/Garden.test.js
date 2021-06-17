@@ -657,7 +657,7 @@ describe('Garden', function () {
       // Due to the strategy is under execution the withdrawal without penalty does not allow to withdraw the whole balance if votes had been compromised in the executing strategy
       await expect(garden1.connect(signer2).withdraw(beforeBalance.sub(lockedBalance), 1, signer2.getAddress(), false));
     });
-    it('should fail if strategist or voters try to withdraw all their comunity tokens during strategy execution with 0 staked amount but some voting amount associated to a running strategy', async function () {
+    it('should not fail if strategist or voters try to withdraw all their comunity tokens during strategy execution with 0 staked amount but some voting amount associated to a running strategy', async function () {
       const strategyContract = await createStrategy(
         'buy',
         'vote',
@@ -681,7 +681,7 @@ describe('Garden', function () {
       // Due to the strategy is under execution the withdrawal without penalty does not allow to withdraw the whole balance if votes had been compromised in the executing strategy
       await expect(
         garden1.connect(signer2).withdraw(beforeBalance.sub(lockedBalance), 1, signer2.getAddress(), false),
-      ).to.be.revertedWith('revert BAB#007');
+      ).to.not.be.reverted;
     });
 
     it('should fail if startWithdrawalWindow is called more than once or from a non-strategy address', async function () {
