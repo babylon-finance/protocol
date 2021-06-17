@@ -679,8 +679,7 @@ describe('Garden', function () {
       const lockedBalance = await garden1.getLockedBalance(signer2.address);
 
       // Due to the strategy is under execution the withdrawal without penalty does not allow to withdraw the whole balance if votes had been compromised in the executing strategy
-      await expect(
-        garden1.connect(signer2).withdraw(beforeBalance.sub(lockedBalance), 1, signer2.getAddress(), false),
+      await expect(garden1.connect(signer2).withdraw(beforeBalance.sub(lockedBalance), 1, signer2.getAddress(), false))
         .to.not.be.reverted;
     });
 
