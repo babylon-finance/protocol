@@ -419,8 +419,10 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         _require(executedAt > 0, Errors.STRATEGY_IS_NOT_EXECUTED);
         _require(block.timestamp > executedAt.add(duration), Errors.STRATEGY_IS_NOT_OVER_YET);
         _require(!finalized, Errors.STRATEGY_IS_ALREADY_FINALIZED);
+        uint256 reserveAssetReturns = IERC20(garden.reserveAsset()).balanceOf(address(this));
         // Execute exit operations
         _exitStrategy(HUNDRED_PERCENT);
+        capitalReturned = IERC20(garden.reserveAsset()).balanceOf(address(this)).sub(reserveAssetReturns);
         // Mark as finalized
         finalized = true;
         active = false;
@@ -874,7 +876,6 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
     }
 
     function _transferStrategyPrincipal() internal {
-        capitalReturned = IERC20(garden.reserveAsset()).balanceOf(address(this));
         address reserveAsset = garden.reserveAsset();
         int256 reserveAssetDelta = capitalReturned.toInt256().sub(capitalAllocated.toInt256());
         uint256 protocolProfits = 0;
