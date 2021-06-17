@@ -137,7 +137,7 @@ interface IGarden {
 
     function getExpectedReserveWithdrawalQuantity(uint256 _gardenTokenQuantity) external view returns (uint256);
 
-    function getLockedBalance(address _contributor) external view returns (uint256, uint256);
+    function getLockedBalance(address _contributor) external view returns (uint256);
 
     function expireCandidateStrategy(address _strategy) external;
 
