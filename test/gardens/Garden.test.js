@@ -681,7 +681,7 @@ describe('Garden', function () {
       // Due to the strategy is under execution the withdrawal without penalty does not allow to withdraw the whole balance if votes had been compromised in the executing strategy
       await expect(
         garden1.connect(signer2).withdraw(beforeBalance.sub(lockedBalance), 1, signer2.getAddress(), false),
-      ).to.not.be.reverted;
+        .to.not.be.reverted;
     });
 
     it('should fail if startWithdrawalWindow is called more than once or from a non-strategy address', async function () {
