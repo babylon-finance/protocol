@@ -150,23 +150,23 @@ describe('YearnVaultIntegrationTest', function () {
         { token: addresses.tokens.USDC, name: 'USDC' },
         { token: addresses.tokens.WBTC, name: 'WBTC' },
       ].forEach(({ token, name }) => {
-        it.only(`can enter and exit the yvDAI vault from a ${name} garden`, async function () {
+        it(`can enter and exit the yvDAI vault from a ${name} garden`, async function () {
           const vault = '0x19D3364A399d251E894aC732651be8B0E4e85001'; //yvDAI vault
           await enterAndExitVaultFromGarden(vault, token);
         });
-        it.only(`can enter and exit the yvWBTC vault from a ${name} garden`, async function () {
+        it(`can enter and exit the yvWBTC vault from a ${name} garden`, async function () {
           const vault = '0xA696a63cc78DfFa1a63E9E50587C197387FF6C7E'; //yvWBTC vault
           await enterAndExitVaultFromGarden(vault, token);
         });
-        it.only(`can enter and exit the yvUSDC vault from a ${name} garden`, async function () {
+        it(`can enter and exit the yvUSDC vault from a ${name} garden`, async function () {
           const vault = '0x5f18C75AbDAe578b483E5F43f12a39cF75b973a9'; //yvUSDC vault
           await enterAndExitVaultFromGarden(vault, token);
         });
-        it.only(`can enter and exit the yvUSDT vault from a ${name} garden`, async function () {
+        it(`can enter and exit the yvUSDT vault from a ${name} garden`, async function () {
           const vault = '0x7Da96a3891Add058AdA2E826306D812C638D87a7'; //yvUSDT vault
           await enterAndExitVaultFromGarden(vault, token);
         });
-        it.only(`can enter and exit the yvWETH vault from a ${name} garden`, async function () {
+        it(`can enter and exit the yvWETH vault from a ${name} garden`, async function () {
           const vault = '0xa9fE4601811213c340e850ea305481afF02f5b28'; //yvWETH vault
           await enterAndExitVaultFromGarden(vault, token);
         });
