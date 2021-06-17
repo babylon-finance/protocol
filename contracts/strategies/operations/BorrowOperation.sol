@@ -149,7 +149,7 @@ contract BorrowOperation is Operation {
         address _assetToken,
         IGarden _garden,
         address _integration
-    ) external view override onlyStrategy returns (uint256, bool) {
+    ) external view override returns (uint256, bool) {
         if (!IStrategy(msg.sender).isStrategyActive()) {
             return (0, true);
         }

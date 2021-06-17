@@ -7,9 +7,10 @@ const {
   finalizeStrategy,
 } = require('../fixtures/StrategyHelper');
 const { parse, from } = require('../utils/test-helpers');
+const { createGarden, transferFunds } = require('../fixtures/GardenHelper');
 const { setupTests } = require('../fixtures/GardenFixture');
 const addresses = require('../../lib/addresses');
-const { ADDRESS_ZERO, ONE_ETH } = require('../../lib/constants');
+const { ADDRESS_ZERO, ONE_ETH, STRATEGY_EXECUTE_MAP } = require('../../lib/constants');
 
 describe('YearnVaultIntegrationTest', function () {
   let yearnVaultIntegration;
@@ -20,6 +21,28 @@ describe('YearnVaultIntegrationTest', function () {
   let babController;
   let priceOracle;
   let owner;
+
+  async function enterAndExitVaultFromGarden(vault, token) {
+    const vaultContract = await ethers.getContractAt('IYearnVault', vault);
+    await transferFunds(token);
+
+    const garden = await createGarden({ reserveAsset: token });
+    const strategyContract = await createStrategy(
+      'vault',
+      'vote',
+      [signer1, signer2, signer3],
+      yearnVaultIntegration.address,
+      garden,
+      false,
+      vault,
+    );
+
+    expect(await vaultContract.balanceOf(strategyContract.address)).to.equal(0);
+    await executeStrategy(strategyContract, { amount: STRATEGY_EXECUTE_MAP[token] });
+    expect(await vaultContract.balanceOf(strategyContract.address)).to.be.gt(0);
+    await finalizeStrategy(strategyContract, 0);
+    expect(await vaultContract.balanceOf(strategyContract.address)).to.equal(0);
+  }
 
   beforeEach(async () => {
     ({
@@ -116,6 +139,36 @@ describe('YearnVaultIntegrationTest', function () {
           await finalizeStrategy(strategyContract, 0);
 
           expect(await vaultContract.balanceOf(strategyContract.address)).to.equal(0);
+        });
+      });
+    });
+
+    describe('enter and exit calldata per Garden per Vault', function () {
+      [
+        { token: addresses.tokens.WETH, name: 'WETH' },
+        { token: addresses.tokens.DAI, name: 'DAI' },
+        { token: addresses.tokens.USDC, name: 'USDC' },
+        { token: addresses.tokens.WBTC, name: 'WBTC' },
+      ].forEach(({ token, name }) => {
+        it.only(`can enter and exit the yvDAI vault from a ${name} garden`, async function () {
+          const vault = '0x19D3364A399d251E894aC732651be8B0E4e85001'; //yvDAI vault
+          await enterAndExitVaultFromGarden(vault, token);
+        });
+        it.only(`can enter and exit the yvWBTC vault from a ${name} garden`, async function () {
+          const vault = '0xA696a63cc78DfFa1a63E9E50587C197387FF6C7E'; //yvWBTC vault
+          await enterAndExitVaultFromGarden(vault, token);
+        });
+        it.only(`can enter and exit the yvUSDC vault from a ${name} garden`, async function () {
+          const vault = '0x5f18C75AbDAe578b483E5F43f12a39cF75b973a9'; //yvUSDC vault
+          await enterAndExitVaultFromGarden(vault, token);
+        });
+        it.only(`can enter and exit the yvUSDT vault from a ${name} garden`, async function () {
+          const vault = '0x7Da96a3891Add058AdA2E826306D812C638D87a7'; //yvUSDT vault
+          await enterAndExitVaultFromGarden(vault, token);
+        });
+        it.only(`can enter and exit the yvWETH vault from a ${name} garden`, async function () {
+          const vault = '0xa9fE4601811213c340e850ea305481afF02f5b28'; //yvWETH vault
+          await enterAndExitVaultFromGarden(vault, token);
         });
       });
     });
