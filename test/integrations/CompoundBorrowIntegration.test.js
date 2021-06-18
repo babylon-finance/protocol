@@ -109,8 +109,10 @@ describe('CompoundBorrowIntegrationTest', function () {
       expect(await WETH.balanceOf(strategyContract.address)).to.equal(0);
       expect(await DAI.balanceOf(strategyContract.address)).to.be.gt(0);
       const collateral = await compoundBorrowIntegration.getCollateralBalance(strategyContract.address, ADDRESS_ZERO);
-      expect(collateral).to.be.gt(1);
-      expect(await compoundBorrowIntegration.getBorrowBalance(strategyContract.address, DAI.address)).to.be.gt(0);
+      expect(collateral).to.be.closeTo(ethers.utils.parseEther('1'), ethers.utils.parseEther('1').div(100));
+      expect(await compoundBorrowIntegration.getBorrowBalance(strategyContract.address, DAI.address)).to.be.gt(
+        ethers.utils.parseEther('1000'),
+      );
       const beforeExitingWeth = await WETH.balanceOf(garden1.address);
       await finalizeStrategy(strategyContract);
       expect(await DAI.balanceOf(strategyContract.address)).to.equal(0);
@@ -132,7 +134,7 @@ describe('CompoundBorrowIntegrationTest', function () {
       expect(await DAI.balanceOf(strategyContract.address)).to.equal(0);
       const collateral = await compoundBorrowIntegration.getCollateralBalance(strategyContract.address, DAI.address);
       expect(collateral).to.be.gt(ethers.utils.parseEther('2000'));
-      expect(await compoundBorrowIntegration.getBorrowBalance(strategyContract.address, ADDRESS_ZERO)).to.be.gt(0);
+      expect(await compoundBorrowIntegration.getBorrowBalance(strategyContract.address, ADDRESS_ZERO)).to.be.close(0);
       const beforeExitingWeth = await WETH.balanceOf(garden1.address);
       await finalizeStrategy(strategyContract);
       expect(await DAI.balanceOf(strategyContract.address)).to.equal(0);
