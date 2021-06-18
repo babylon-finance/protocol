@@ -117,5 +117,26 @@ describe('CompoundBorrowIntegrationTest', function () {
       expect(await WETH.balanceOf(strategyContract.address)).to.equal(0);
       expect(await WETH.balanceOf(garden1.address)).to.gt(beforeExitingWeth);
     });
+
+    it('can supply DAI and borrow eth in a WETH Garden', async function () {
+      const strategyContract = await createStrategy(
+        'borrow',
+        'vote',
+        [signer1, signer2, signer3],
+        [compoundLendIntegration.address, compoundBorrowIntegration.address],
+        garden1,
+        DEFAULT_STRATEGY_PARAMS,
+        [DAI.address, ADDRESS_ZERO],
+      );
+      await executeStrategy(strategyContract);
+      expect(await DAI.balanceOf(strategyContract.address)).to.equal(0);
+      const collateral = await compoundBorrowIntegration.getCollateralBalance(strategyContract.address, DAI.address);
+      expect(collateral).to.be.gt(ethers.utils.parseEther('2000'));
+      expect(await compoundBorrowIntegration.getBorrowBalance(strategyContract.address, ADDRESS_ZERO)).to.be.gt(0);
+      const beforeExitingWeth = await WETH.balanceOf(garden1.address);
+      await finalizeStrategy(strategyContract);
+      expect(await DAI.balanceOf(strategyContract.address)).to.equal(0);
+      expect(await WETH.balanceOf(garden1.address)).to.gt(beforeExitingWeth);
+    });
   });
 });
