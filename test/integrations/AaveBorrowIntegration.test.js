@@ -17,7 +17,6 @@ describe('AaveBorrowIntegrationTest', function () {
   let signer1;
   let signer2;
   let signer3;
-  let babController;
   let USDC;
   let DAI;
   let WETH;
@@ -25,7 +24,6 @@ describe('AaveBorrowIntegrationTest', function () {
   beforeEach(async () => {
     ({
       garden1,
-      babController,
       aaveLendIntegration,
       aaveBorrowIntegration,
       signer1,
@@ -39,9 +37,7 @@ describe('AaveBorrowIntegrationTest', function () {
 
   describe('Deployment', function () {
     it('should successfully deploy the contract', async function () {
-      const babControlerDeployed = await babController.deployed();
       const lendDeployed = await aaveBorrowIntegration.deployed();
-      expect(!!babControlerDeployed).to.equal(true);
       expect(!!lendDeployed).to.equal(true);
     });
   });
@@ -83,6 +79,7 @@ describe('AaveBorrowIntegrationTest', function () {
       );
 
       await executeStrategy(strategyContract);
+
       const nav = await strategyContract.getNAV();
       expect(nav).to.be.closeTo(ethers.utils.parseEther('1'), ethers.utils.parseEther('1').div(10));
     });
@@ -123,13 +120,17 @@ describe('AaveBorrowIntegrationTest', function () {
       );
 
       await executeStrategy(strategyContract);
+
       expect(await WETH.balanceOf(strategyContract.address)).to.equal(0);
       expect(await DAI.balanceOf(strategyContract.address)).to.be.gt(0);
+
       const collateral = await aaveBorrowIntegration.getCollateralBalance(strategyContract.address, WETH.address);
       expect(collateral).to.be.closeTo(ethers.utils.parseEther('1'), ONE_ETH.div(100));
       expect(await aaveBorrowIntegration.getBorrowBalance(strategyContract.address, DAI.address)).to.be.gt(0);
+
       const beforeExitingWeth = await WETH.balanceOf(garden1.address);
       await finalizeStrategy(strategyContract);
+
       expect(await DAI.balanceOf(strategyContract.address)).to.equal(0);
       expect(await WETH.balanceOf(strategyContract.address)).to.equal(0);
       expect(await WETH.balanceOf(garden1.address)).to.gt(beforeExitingWeth);

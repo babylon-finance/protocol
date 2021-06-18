@@ -16,7 +16,6 @@ describe('CompoundBorrowIntegrationTest', function () {
   let signer1;
   let signer2;
   let signer3;
-  let babController;
   let USDC;
   let DAI;
   let WETH;
@@ -24,7 +23,6 @@ describe('CompoundBorrowIntegrationTest', function () {
   beforeEach(async () => {
     ({
       garden1,
-      babController,
       compoundLendIntegration,
       compoundBorrowIntegration,
       signer1,
@@ -38,9 +36,7 @@ describe('CompoundBorrowIntegrationTest', function () {
 
   describe('Deployment', function () {
     it('should successfully deploy the contract', async function () {
-      const babControlerDeployed = await babController.deployed();
       const lendDeployed = await compoundBorrowIntegration.deployed();
-      expect(!!babControlerDeployed).to.equal(true);
       expect(!!lendDeployed).to.equal(true);
     });
   });
