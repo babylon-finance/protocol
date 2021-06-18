@@ -84,10 +84,7 @@ describe('AaveBorrowIntegrationTest', function () {
 
       await executeStrategy(strategyContract);
       const nav = await strategyContract.getNAV();
-      expect(nav).to.be.closeTo(
-        ethers.utils.parseEther('1').sub(ethers.utils.parseEther('1').mul(3).div(10)),
-        ethers.utils.parseEther('1').div(10),
-      );
+      expect(nav).to.be.closeTo(ethers.utils.parseEther('1'), ethers.utils.parseEther('1').div(10));
     });
 
     it('can supply USDC and borrow DAI in a WETH Garden', async function () {

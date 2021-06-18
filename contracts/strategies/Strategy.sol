@@ -690,6 +690,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
     function getNAV() public view override returns (uint256) {
         uint256 positiveNav = 0;
         uint256 negativeNav = 0;
+        address reserveAsset = garden.reserveAsset();
         for (uint256 i = 0; i < opTypes.length; i++) {
             IOperation operation = IOperation(IBabController(controller).enabledOperations(uint256(opTypes[i])));
             (uint256 strategyNav, bool positive) = operation.getNAV(opDatas[i], garden, opIntegrations[i]);
@@ -697,6 +698,16 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
                 positiveNav = positiveNav.add(strategyNav);
             } else {
                 negativeNav = negativeNav.add(strategyNav);
+            }
+            // borrow op
+            if (opTypes[i] == 4) {
+                uint256 borrowBalance = IERC20(opDatas[i]).balanceOf(address(this));
+                if (borrowBalance > 0) {
+                    uint256 price = _getPrice(reserveAsset, opDatas[i]);
+                    positiveNav = positiveNav.add(
+                        SafeDecimalMath.normalizeAmountTokens(opDatas[i], reserveAsset, borrowBalance).preciseDiv(price)
+                    );
+                }
             }
         }
         if (negativeNav > positiveNav) {
@@ -861,8 +872,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
     ) internal returns (uint256) {
         address tradeIntegration = IBabController(controller).defaultTradeIntegration();
         // Uses on chain oracle for all internal strategy operations to avoid attacks        // Updates UniSwap TWAP
-        IPriceOracle oracle = IPriceOracle(IBabController(controller).priceOracle());
-        uint256 pricePerTokenUnit = oracle.getPrice(_sendToken, _receiveToken);
+        uint256 pricePerTokenUnit = _getPrice(_sendToken, _receiveToken);
         uint256 exactAmount = _sendQuantity.preciseMul(pricePerTokenUnit);
         uint256 minAmountExpected = exactAmount.sub(exactAmount.preciseMul(SLIPPAGE_ALLOWED));
         ITradeIntegration(tradeIntegration).trade(
