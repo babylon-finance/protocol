@@ -4,7 +4,7 @@ const { TWAP_ORACLE_WINDOW, TWAP_ORACLE_GRANULARITY } = require('../../lib/syste
 const { impersonateAddress } = require('../../lib/rpc');
 const addresses = require('../../lib/addresses');
 const { getAssetWhale } = require('../../lib/whale');
-const { increaseTime, getContract, parse, from, eth } = require('../utils/test-helpers');
+const { increaseTime, getContract, from, eth } = require('../utils/test-helpers');
 
 const DEFAULT_STRATEGY_PARAMS = [
   eth(10), // _maxCapitalRequested
