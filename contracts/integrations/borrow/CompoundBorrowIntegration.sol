@@ -242,9 +242,9 @@ contract CompoundBorrowIntegration is BorrowIntegration {
         // Encode method data for Garden to invoke
         bytes memory methodData;
         if (assetToCToken[_asset] == CEtherAddress) {
-          methodData = abi.encodeWithSignature('repayBorrow()');
+            methodData = abi.encodeWithSignature('repayBorrow()');
         } else {
-          methodData = abi.encodeWithSignature('repayBorrow(uint256)', _amount);
+            methodData = abi.encodeWithSignature('repayBorrow(uint256)', _amount);
         }
         return (assetToCToken[_asset], assetToCToken[_asset] == CEtherAddress ? _amount : 0, methodData);
     }

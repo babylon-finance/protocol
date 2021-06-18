@@ -170,9 +170,9 @@ contract CompoundLendIntegration is LendIntegration {
         // Encode method data for Garden to invoke
         bytes memory methodData;
         if (assetToCToken[_assetToken] == cETH) {
-          methodData = abi.encodeWithSignature('mint()');
+            methodData = abi.encodeWithSignature('mint()');
         } else {
-          methodData = abi.encodeWithSignature('mint(uint256)', _numTokensToSupply);
+            methodData = abi.encodeWithSignature('mint(uint256)', _numTokensToSupply);
         }
         // If it is ETH, send the value
         return (assetToCToken[_assetToken], assetToCToken[_assetToken] == cETH ? _numTokensToSupply : 0, methodData);

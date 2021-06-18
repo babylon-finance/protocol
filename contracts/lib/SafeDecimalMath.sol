@@ -155,7 +155,7 @@ library SafeDecimalMath {
         address assetTarget,
         uint256 quantity
     ) internal view returns (uint256) {
-        uint256 tokenDecimals = assetFrom == address(0) ? 18: ERC20(assetFrom).decimals();
+        uint256 tokenDecimals = assetFrom == address(0) ? 18 : ERC20(assetFrom).decimals();
         uint256 tokenDecimalsTarget = assetTarget == address(0) ? 18 : ERC20(assetTarget).decimals();
         require(tokenDecimals <= 18 && tokenDecimalsTarget <= 18, 'Unsupported decimals');
         if (tokenDecimals == tokenDecimalsTarget) {

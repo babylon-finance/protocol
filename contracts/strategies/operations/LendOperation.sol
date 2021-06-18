@@ -87,18 +87,18 @@ contract LendOperation is Operation {
         )
     {
         if (_assetToken != _asset) {
-          // Trade to WETH if is 0x0 (eth in compound)
-          if (_assetToken != address(0) || _asset != WETH) {
-            IStrategy(msg.sender).trade(_asset, _capital, _assetToken == address(0) ? WETH : _assetToken);
-          }
+            // Trade to WETH if is 0x0 (eth in compound)
+            if (_assetToken != address(0) || _asset != WETH) {
+                IStrategy(msg.sender).trade(_asset, _capital, _assetToken == address(0) ? WETH : _assetToken);
+            }
         }
         uint256 numTokensToSupply;
         if (_assetToken == address(0)) {
-          // change it to plain eth for compound
-          IStrategy(msg.sender).handleWeth(false, IERC20(WETH).balanceOf(msg.sender));
-          numTokensToSupply = address(msg.sender).balance;
+            // change it to plain eth for compound
+            IStrategy(msg.sender).handleWeth(false, IERC20(WETH).balanceOf(msg.sender));
+            numTokensToSupply = address(msg.sender).balance;
         } else {
-          numTokensToSupply = IERC20(_assetToken).balanceOf(msg.sender);
+            numTokensToSupply = IERC20(_assetToken).balanceOf(msg.sender);
         }
         uint256 exactAmount = ILendIntegration(_integration).getExpectedShares(_assetToken, numTokensToSupply);
         uint256 minAmountExpected = exactAmount.sub(exactAmount.preciseMul(SLIPPAGE_ALLOWED));
@@ -154,11 +154,15 @@ contract LendOperation is Operation {
         address tokenToTradeFrom = _assetToken;
         // if eth, convert it to weth
         if (_assetToken == address(0)) {
-          tokenToTradeFrom = WETH;
-          IStrategy(msg.sender).handleWeth(true, address(msg.sender).balance);
+            tokenToTradeFrom = WETH;
+            IStrategy(msg.sender).handleWeth(true, address(msg.sender).balance);
         }
         if (tokenToTradeFrom != _garden.reserveAsset()) {
-            IStrategy(msg.sender).trade(tokenToTradeFrom, IERC20(tokenToTradeFrom).balanceOf(msg.sender), _garden.reserveAsset());
+            IStrategy(msg.sender).trade(
+                tokenToTradeFrom,
+                IERC20(tokenToTradeFrom).balanceOf(msg.sender),
+                _garden.reserveAsset()
+            );
         }
         return (
             _assetToken,
