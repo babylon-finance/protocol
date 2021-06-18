@@ -8,7 +8,7 @@ const {
 } = require('../fixtures/StrategyHelper');
 const { setupTests } = require('../fixtures/GardenFixture');
 const addresses = require('../../lib/addresses');
-const { ADDRESS_ZERO, ONE_ETH } = require('../../lib/constants');
+const { ADDRESS_ZERO } = require('../../lib/constants');
 
 describe('CompoundLendIntegrationTest', function () {
   let compoundLendIntegration;
@@ -67,7 +67,7 @@ describe('CompoundLendIntegrationTest', function () {
       expect(await WETH.balanceOf(strategyContract.address)).to.equal(0);
     });
 
-    it('can supply and redeem eth/weth from Compound', async function () {
+    it('can supply and redeem eth from Compound', async function () {
       const strategyContract = await createStrategy(
         'lend',
         'vote',
@@ -92,7 +92,5 @@ describe('CompoundLendIntegrationTest', function () {
         ethers.utils.parseEther('0.01'),
       );
     });
-
-    // TODO: test supply/borrow for WETH
   });
 });

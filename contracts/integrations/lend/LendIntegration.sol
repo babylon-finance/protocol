@@ -245,7 +245,7 @@ abstract contract LendIntegration is BaseIntegration, ReentrancyGuard, ILendInte
     function _validatePostExitInvestmentData(InvestmentInfo memory _investmentInfo) internal view {
         uint256 balance =
             _investmentInfo.assetToken == address(0)
-                ? address(msg.sender).balance
+                ? address(_investmentInfo.strategy).balance
                 : IERC20(_investmentInfo.assetToken).balanceOf(address(_investmentInfo.strategy));
         require(
             balance >= _investmentInfo.investmentTokensInGarden - _investmentInfo.investmentTokensInTransaction,

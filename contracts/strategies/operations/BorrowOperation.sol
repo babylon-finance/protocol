@@ -94,6 +94,7 @@ contract BorrowOperation is Operation {
         require(
             _capital > 0 &&
                 _assetStatus == 1 &&
+                _asset != _borrowToken &&
                 IBorrowIntegration(_integration).getCollateralBalance(msg.sender, _asset) > 0,
             'There is no collateral locked'
         );
