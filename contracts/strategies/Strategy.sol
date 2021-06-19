@@ -486,6 +486,19 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
     }
 
     /**
+     * Expires a strategy in any state. Can be called only by gov or strategist
+     * reaching quorum
+     * @param _fee              The keeper fee
+     */
+    function expire() external nonReentrant {
+        _onlyActiveGarden();
+        _onlyStrategistOrGovernor();
+        _deleteCandidateStrategy();
+        emit StrategyExpired(address(garden), block.timestamp);
+    }
+
+
+    /**
      * Delete a candidate strategy by the strategist
      */
     function deleteCandidateStrategy() external {
