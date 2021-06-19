@@ -92,5 +92,30 @@ describe('CompoundLendIntegrationTest', function () {
         ethers.utils.parseEther('0.01'),
       );
     });
+    it('can supply and redeem eth from Compound passing WETH', async function () {
+      const strategyContract = await createStrategy(
+        'lend',
+        'vote',
+        [signer1, signer2, signer3],
+        compoundLendIntegration.address,
+        garden1,
+        DEFAULT_STRATEGY_PARAMS,
+        WETH.address, // ETH
+      );
+
+      await executeStrategy(strategyContract);
+      expect(await WETH.balanceOf(strategyContract.address)).to.be.equal(0);
+      expect(await CETH.balanceOf(strategyContract.address)).to.be.gt(0);
+      await finalizeStrategy(strategyContract);
+      expect(await CETH.balanceOf(strategyContract.address)).to.be.closeTo(
+        ethers.utils.parseEther('0'),
+        ethers.utils.parseEther('0.01'),
+      );
+      expect(await WETH.balanceOf(strategyContract.address)).to.equal(0);
+      expect(await strategyContract.capitalReturned()).to.be.closeTo(
+        ethers.utils.parseEther('1'),
+        ethers.utils.parseEther('0.01'),
+      );
+    });
   });
 });
