@@ -88,7 +88,7 @@ contract LendOperation is Operation {
     {
         // If it is WETH and Compound replace to zero address
         if (_assetToken == WETH && ILendIntegration(_integration).getInvestmentToken(_assetToken) == address(0)) {
-          _assetToken = address(0);
+            _assetToken = address(0);
         }
         if (_assetToken != _asset) {
             // Trade to WETH except if is 0x0 (ETH) and WETH
@@ -134,7 +134,7 @@ contract LendOperation is Operation {
     {
         // If it is WETH and Compound replace to zero address
         if (_assetToken == WETH && ILendIntegration(_integration).getInvestmentToken(_assetToken) == address(0)) {
-          _assetToken = address(0);
+            _assetToken = address(0);
         }
         require(_percentage <= HUNDRED_PERCENT, 'Unwind Percentage <= 100%');
         // Normalize to underlying asset if any (ctokens for compound)
