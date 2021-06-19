@@ -495,7 +495,6 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         emit StrategyExpired(address(garden), block.timestamp);
     }
 
-
     /**
      * Delete a candidate strategy by the strategist
      */
