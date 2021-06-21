@@ -21,6 +21,7 @@ pragma solidity 0.7.6;
 import 'hardhat/console.sol';
 import {ERC20} from '@openzeppelin/contracts/token/ERC20/ERC20.sol';
 import {SafeMath} from '@openzeppelin/contracts/math/SafeMath.sol';
+import {SafeDecimalMath} from '../../lib/SafeDecimalMath.sol';
 
 import {IBabController} from '../../interfaces/IBabController.sol';
 import {PreciseUnitMath} from '../../lib/PreciseUnitMath.sol';
@@ -37,6 +38,7 @@ import {IYearnVault} from '../../interfaces/external/yearn/IYearnVault.sol';
 contract YearnVaultIntegration is PassiveIntegration {
     using SafeMath for uint256;
     using PreciseUnitMath for uint256;
+    using SafeDecimalMath for uint256;
 
     /* ============ State Variables ============ */
 
@@ -59,7 +61,10 @@ contract YearnVaultIntegration is PassiveIntegration {
     }
 
     function _getExpectedShares(address _asset, uint256 _amount) internal view override returns (uint256) {
-        return _amount.preciseDiv(IYearnVault(_asset).pricePerShare());
+        // Normalizing denominator to 18 decimals to support all type of decimals by preciseDiv with multiasset vaults
+        uint256 pricePerShareNormalized =
+            SafeDecimalMath.normalizeAmountTokens(_asset, weth, IYearnVault(_asset).pricePerShare());
+        return _amount.preciseDiv(pricePerShareNormalized);
     }
 
     function _getPricePerShare(address _asset) internal view override returns (uint256) {

@@ -25,51 +25,14 @@ describe('YearnVaultIntegrationTest', function () {
   let owner;
 
   async function normalizeDecimals(tokenDecimals, tokenDecimalsTarget, quantity) {
-  
     if (tokenDecimals == tokenDecimalsTarget) {
-      console.log('EQUAL DECIMALS');
       return quantity;
     }
     if (tokenDecimalsTarget > tokenDecimals) {
-      console.log('TARGET MORE DECIMALS', (tokenDecimalsTarget - tokenDecimals).toString());
-      return quantity.mul(10**(tokenDecimalsTarget - tokenDecimals));
+      return quantity.mul(10 ** (tokenDecimalsTarget - tokenDecimals));
     }
-    console.log('ORIGIN MORE DECIMALS', (tokenDecimals - tokenDecimalsTarget).toString());
-
-    return quantity.div(10**(tokenDecimals - tokenDecimalsTarget));
+    return quantity.div(10 ** (tokenDecimals - tokenDecimalsTarget));
   }
-
-  async function normalizeExpectedShare(tokenDecimals, tokenDecimalsTarget, expectedShares){
-    if (tokenDecimals == tokenDecimalsTarget && tokenDecimals == 6) {
-      console.log('EQUAL DECIMALS');
-      return expectedShares.div(10**(12)); // preciseDiv behavior 
-    }
-    if (tokenDecimals == tokenDecimalsTarget) {
-      console.log('EQUAL DECIMALS');
-      return expectedShares;
-    }
-    if ((tokenDecimalsTarget - tokenDecimals) >= 10) {
-      console.log('TARGET MORE DECIMALS 10-12', (tokenDecimalsTarget - tokenDecimals).toString());
-      return expectedShares;
-    }
-    if ((tokenDecimalsTarget - tokenDecimals) == 2) {
-      console.log('TARGET MORE DECIMALS 10-12', (tokenDecimalsTarget - tokenDecimals).toString());
-      return expectedShares.div(10**(10));
-    }
-    if (tokenDecimalsTarget > tokenDecimals) {
-      console.log('TARGET MORE DECIMALS', (tokenDecimalsTarget - tokenDecimals).toString());
-      return expectedShares.mul(10**(tokenDecimalsTarget - tokenDecimals));
-    }
-    if ((tokenDecimals - tokenDecimalsTarget) == 2){
-
-      console.log('ORIGIN MORE DECIMALS', (tokenDecimals - tokenDecimalsTarget).toString());
-      return expectedShares.div(10**(12));
-    }
-    console.log('ORIGIN MORE DECIMALS', (tokenDecimals - tokenDecimalsTarget).toString());
-
-    return expectedShares.div(10**(tokenDecimals - tokenDecimalsTarget));
-  }
-    
 
   beforeEach(async () => {
     ({
@@ -122,7 +85,7 @@ describe('YearnVaultIntegrationTest', function () {
       });
     });
 
-    describe.only('enter and exit calldata per Garden per Vault', function () {
+    describe('enter and exit calldata per Garden per Vault', function () {
       [
         { token: addresses.tokens.WETH, name: 'WETH' },
         { token: addresses.tokens.DAI, name: 'DAI' },
@@ -132,9 +95,9 @@ describe('YearnVaultIntegrationTest', function () {
         [
           { vault: '0xa9fE4601811213c340e850ea305481afF02f5b28', symbol: 'yvWETH' }, //yvWETH vault
           { vault: '0x7Da96a3891Add058AdA2E826306D812C638D87a7', symbol: 'yvUSDT' }, //yvUSDT vault
-         { vault: '0x5f18C75AbDAe578b483E5F43f12a39cF75b973a9', symbol: 'yvUSDC' }, //yvUSDC vault
-         { vault: '0xA696a63cc78DfFa1a63E9E50587C197387FF6C7E', symbol: 'yvWBTC' }, //yvWBTC vault
-         { vault: '0x19D3364A399d251E894aC732651be8B0E4e85001', symbol: 'yvDAI' }, //yvDAI vault
+          { vault: '0x5f18C75AbDAe578b483E5F43f12a39cF75b973a9', symbol: 'yvUSDC' }, //yvUSDC vault
+          { vault: '0xA696a63cc78DfFa1a63E9E50587C197387FF6C7E', symbol: 'yvWBTC' }, //yvWBTC vault
+          { vault: '0x19D3364A399d251E894aC732651be8B0E4e85001', symbol: 'yvDAI' }, //yvDAI vault
         ].forEach(({ vault, symbol }) => {
           it(`can enter and exit the ${symbol} from a ${name} garden`, async function () {
             const vaultContract = await ethers.getContractAt('IYearnVault', vault);
@@ -151,7 +114,7 @@ describe('YearnVaultIntegrationTest', function () {
 
             expect(await vaultContract.balanceOf(strategyContract.address)).to.equal(0);
 
-            const amount = STRATEGY_EXECUTE_MAP[token];
+            let amount = STRATEGY_EXECUTE_MAP[token];
             await executeStrategy(strategyContract, { amount });
 
             const asset = await yearnVaultIntegration.getInvestmentAsset(vault); // USDC, DAI, USDT and etc...
@@ -160,38 +123,19 @@ describe('YearnVaultIntegrationTest', function () {
 
             const tokenContract = await ethers.getContractAt('ERC20', token);
             const tokenDecimals = await tokenContract.decimals();
-            console.log('tokenDecimals', tokenDecimals.toString());
-            console.log('assetDecimals', assetDecimals.toString());
 
+            const reservePriceInAsset = await priceOracle.connect(owner).getPrice(token, asset);
 
-            const decimalsDelta = 10 ** (tokenDecimals - assetDecimals);
-            console.log('decimalsDelta', decimalsDelta.toString());
+            // NOTE: getPrice from Oracle returns 1e18 except when token==asset and they have less than 18 decimals, then it returns the same decimals
+            let conversionRate =
+              tokenDecimals == assetDecimals && tokenDecimals < 18 && asset == token ? 10 ** tokenDecimals : eth(1);
 
-            let reservePriceInAsset = await priceOracle.connect(owner).getPrice(token, asset);
-            console.log('reservePriceInAsset', reservePriceInAsset.toString());
-            //reservePriceInAsset =
-            // decimalsDelta >= 1 ? reservePriceInAsset.div(decimalsDelta) : reservePriceInAsset.mul(decimalsDelta);
-            //reservePriceInAsset = await normalizeDecimals(tokenDecimals, assetDecimals, reservePriceInAsset);
-            //console.log('new reservePriceInAsset', reservePriceInAsset.toString());
-            
-            let quantity = await normalizeDecimals(tokenDecimals, assetDecimals, reservePriceInAsset.mul(amount).div(eth(1)));
-            //quantity = await normalizeDecimals(tokenDecimals, assetDecimals, reservePriceInAsset.mul(amount));
-
-            console.log('amount', amount.toString());
-            console.log('new amount', quantity.toString());
-
-
-
+            amount = await normalizeDecimals(tokenDecimals, assetDecimals, amount);
 
             let expectedShares = await yearnVaultIntegration.getExpectedShares(
               vault,
-              quantity,
+              reservePriceInAsset.mul(amount).div(conversionRate),
             );
-            console.log('CHECK expected shares', expectedShares.toString());
-            console.log('CHECK vault balance', (await vaultContract.balanceOf(strategyContract.address)).toString());
-                  
-            expectedShares = await normalizeExpectedShare(tokenDecimals, assetDecimals, expectedShares);
-            console.log('expected shares normalized', expectedShares.toString());
 
             expect(await vaultContract.balanceOf(strategyContract.address)).to.be.closeTo(
               expectedShares,
