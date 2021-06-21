@@ -14,7 +14,7 @@ module.exports = async ({
   const contract = 'LendOperation';
 
   const controller = await deployments.get('BabControllerProxy');
-  const controllerContract = await ethers.getContractAt('BabController', controller.address, signer);
+  const controllerContract = await ethers.getContractAt('IBabController', controller.address, signer);
 
   const deployment = await deploy(contract, {
     from: deployer,

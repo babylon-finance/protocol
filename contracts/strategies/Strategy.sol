@@ -96,6 +96,10 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         _require(msg.sender == strategist, Errors.ONLY_STRATEGIST);
     }
 
+    function _onlyStrategistOrGovernor() private view {
+        _require(msg.sender == strategist || msg.sender == controller.owner(), Errors.ONLY_STRATEGIST);
+    }
+
     function _onlyContributor() private view {
         _require(
             IERC20(address(garden)).balanceOf(msg.sender) > 0 &&
@@ -175,7 +179,10 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
 
     function _onlyUnpaused() private view {
         // Do not execute if Globally or individually paused
-        _require(!IBabController(controller).isPaused(address(this)), Errors.ONLY_UNPAUSED);
+        _require(
+            !IBabController(controller).isPaused(address(this)) || msg.sender == controller.owner(),
+            Errors.ONLY_UNPAUSED
+        );
     }
 
     /* ============ Constants ============ */
@@ -281,7 +288,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
 
         _require(controller.isSystemContract(_garden), Errors.NOT_A_GARDEN);
         garden = IGarden(_garden);
-        (uint256 lockedBalance, ) = garden.getLockedBalance(_strategist);
+        uint256 lockedBalance = garden.getLockedBalance(_strategist);
         uint256 strategistUnlockedBalance = IERC20(address(garden)).balanceOf(_strategist).sub(lockedBalance);
         _require(IERC20(address(garden)).balanceOf(_strategist) > 0, Errors.STRATEGIST_TOKENS_TOO_LOW);
         _require(strategistUnlockedBalance >= _stake, Errors.TOKENS_STAKED);
@@ -412,8 +419,10 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         _require(executedAt > 0, Errors.STRATEGY_IS_NOT_EXECUTED);
         _require(block.timestamp > executedAt.add(duration), Errors.STRATEGY_IS_NOT_OVER_YET);
         _require(!finalized, Errors.STRATEGY_IS_ALREADY_FINALIZED);
+        uint256 reserveAssetReturns = IERC20(garden.reserveAsset()).balanceOf(address(this));
         // Execute exit operations
         _exitStrategy(HUNDRED_PERCENT);
+        capitalReturned = IERC20(garden.reserveAsset()).balanceOf(address(this)).sub(reserveAssetReturns);
         // Mark as finalized
         finalized = true;
         active = false;
@@ -490,7 +499,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
      * @param _newDuration            New duration of the strategy
      */
     function changeStrategyDuration(uint256 _newDuration) external override {
-        _onlyStrategist();
+        _onlyStrategistOrGovernor();
         _onlyUnpaused();
         _require(!finalized, Errors.STRATEGY_IS_ALREADY_FINALIZED);
         _require(_newDuration < duration, Errors.DURATION_NEEDS_TO_BE_LESS);
@@ -867,7 +876,6 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
     }
 
     function _transferStrategyPrincipal() internal {
-        capitalReturned = IERC20(garden.reserveAsset()).balanceOf(address(this));
         address reserveAsset = garden.reserveAsset();
         int256 reserveAssetDelta = capitalReturned.toInt256().sub(capitalAllocated.toInt256());
         uint256 protocolProfits = 0;
@@ -928,3 +936,5 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
     // solhint-disable-next-line
     receive() external payable {}
 }
+
+contract StrategyV3 is Strategy {}

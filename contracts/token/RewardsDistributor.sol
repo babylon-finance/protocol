@@ -1414,3 +1414,5 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         return (quarters.add(1), startingQuarter.add(1));
     }
 }
+
+contract RewardsDistributorV2 is RewardsDistributor {}

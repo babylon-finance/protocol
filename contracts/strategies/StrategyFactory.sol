@@ -25,7 +25,7 @@ import {IStrategy} from '../interfaces/IStrategy.sol';
 import {IStrategyNFT} from '../interfaces/IStrategyNFT.sol';
 import {IBabController} from '../interfaces/IBabController.sol';
 import {IStrategyFactory} from '../interfaces/IStrategyFactory.sol';
-import {Strategy} from './Strategy.sol';
+import {IStrategy} from '../interfaces/IStrategy.sol';
 
 /**
  * @title StrategyFactory

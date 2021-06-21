@@ -16,7 +16,7 @@ module.exports = async ({
   const contract = 'OneInchTradeIntegration';
 
   const controller = await deployments.get('BabControllerProxy');
-  const controllerContract = await ethers.getContractAt('BabController', controller.address, signer);
+  const controllerContract = await ethers.getContractAt('IBabController', controller.address, signer);
 
   const deployment = await deploy(contract, {
     from: deployer,
@@ -36,9 +36,7 @@ module.exports = async ({
     ).wait();
 
     console.log('Setting default trade integration', deployment.address);
-    await (
-      await controllerContract.setDefaultTradeIntegration(deployment.address, { gasLimit: 1000000, gasPrice })
-    ).wait();
+    await (await controllerContract.setDefaultTradeIntegration(deployment.address, { gasPrice })).wait();
   }
 
   if (network.live && deployment.newlyDeployed) {

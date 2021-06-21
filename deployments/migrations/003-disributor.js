@@ -16,8 +16,9 @@ module.exports = async ({
   const controller = await deployments.get('BabControllerProxy');
   const controllerContract = await ethers.getContractAt('BabController', controller.address, signer);
 
-  const rewardsDistributor = await upgradesDeployer.deployOrUpgrade(
+  const rewardsDistributor = await upgradesDeployer.deployAdminProxy(
     'RewardsDistributor',
+    'RewardsDistributorProxy',
     { from: deployer, log: true, gasPrice },
     {
       initializer: { method: 'initialize', args: [bablToken.address, controller.address] },
