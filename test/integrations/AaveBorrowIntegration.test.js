@@ -165,14 +165,13 @@ describe('AaveBorrowIntegrationTest', function () {
         await supplyBorrowStrategy(WETH, DAI, token);
       });
       it(`should fail trying to supply DAI and borrow DAI in a ${name} Garden`, async function () {
-        await trySupplyBorrowStrategy(DAI, DAI, token, 'revert 13');
+        await trySupplyBorrowStrategy(DAI, DAI, token, 'revert There is no collateral locked');
       });
       it(`should fail trying to supply WETH and borrow WETH in a ${name} Garden`, async function () {
-        await trySupplyBorrowStrategy(WETH, WETH, token, 'revert 13');
+        await trySupplyBorrowStrategy(WETH, WETH, token, 'There is no collateral locked');
       });
       it(`should fail trying to supply USDC and borrow USDC in a ${name} Garden`, async function () {
-        // TODO Check why Aave reverts 1 before reverting by 13
-        await trySupplyBorrowStrategy(USDC, USDC, token, 'revert 1');
+        await trySupplyBorrowStrategy(USDC, USDC, token, 'There is no collateral locked');
       });
     });
   });
