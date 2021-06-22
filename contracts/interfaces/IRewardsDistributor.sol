@@ -50,7 +50,7 @@ interface IRewardsDistributor {
 
     function updateProtocolPrincipal(uint256 _capital, bool _addOrSubstract) external;
 
-    function getStrategyRewards(address _strategy) external returns (uint96);
+    function getStrategyRewards(address _strategy) external view returns (uint96);
 
     function sendTokensToContributor(address _to, uint256 _amount) external;
 

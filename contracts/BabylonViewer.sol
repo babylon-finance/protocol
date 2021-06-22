@@ -30,8 +30,8 @@ import {IGarden} from './interfaces/IGarden.sol';
 import {IStrategy} from './interfaces/IStrategy.sol';
 import {IIshtarGate} from './interfaces/IIshtarGate.sol';
 import {IGardenNFT} from './interfaces/IGardenNFT.sol';
+import {IStrategyNFT} from './interfaces/IStrategyNFT.sol';
 import {Math} from './lib/Math.sol';
-
 
 /**
  * @title BabylonViewer
@@ -40,8 +40,8 @@ import {Math} from './lib/Math.sol';
  * Class that holds common view functions to retrieve garden information effectively
  */
 contract BabylonViewer {
-  using SafeMath for uint256;
-  using Math for int256;
+    using SafeMath for uint256;
+    using Math for int256;
 
     IBabController public controller;
 
@@ -123,7 +123,8 @@ contract BabylonViewer {
         view
         returns (
             address,
-            uint256[11] memory,
+            string memory,
+            uint256[12] memory,
             bool[] memory,
             uint256[] memory
         )
@@ -132,8 +133,10 @@ contract BabylonViewer {
         bool[] memory status = new bool[](3);
         uint256[] memory ts = new uint256[](3);
         (, status[0], status[1], status[2], ts[0], ts[1], ts[2]) = strategy.getStrategyState();
+        uint256 rewards = IRewardsDistributor(controller.rewardsDistributor()).getStrategyRewards(_strategy);
         return (
             strategy.strategist(),
+            IStrategyNFT(controller.strategyNFT()).getStrategyName(_strategy),
             [
                 strategy.getOperationsCount(),
                 strategy.stake(),
@@ -145,7 +148,8 @@ contract BabylonViewer {
                 strategy.expectedReturn(),
                 strategy.maxCapitalRequested(),
                 strategy.enteredAt(),
-                strategy.getNAV()
+                strategy.getNAV(),
+                rewards
             ],
             status,
             ts
@@ -212,42 +216,53 @@ contract BabylonViewer {
         return (userGardens, hasUserDeposited);
     }
 
-    function getUserStrategyActions(address[] memory _strategies, address _user) external view returns (uint256, uint256) {
-      uint256 strategiesCreated;
-      uint256 totalVotes;
-      for (uint8 i = 0; i < _strategies.length; i++) {
-        IStrategy strategy = IStrategy(_strategies[i]);
-        if (strategy.strategist() == _user) {
-          strategiesCreated = strategiesCreated.add(1);
+    function getUserStrategyActions(address[] memory _strategies, address _user)
+        external
+        view
+        returns (uint256, uint256)
+    {
+        uint256 strategiesCreated;
+        uint256 totalVotes;
+        for (uint8 i = 0; i < _strategies.length; i++) {
+            IStrategy strategy = IStrategy(_strategies[i]);
+            if (strategy.strategist() == _user) {
+                strategiesCreated = strategiesCreated.add(1);
+            }
+            int256 votes = strategy.getUserVotes(_user);
+            if (votes != 0) {
+                totalVotes = totalVotes.add(uint256(Math.abs(votes)));
+            }
         }
-        int256 votes = strategy.getUserVotes(_user);
-        if (votes != 0) {
-          totalVotes = totalVotes.add(uint256(Math.abs(votes)));
-        }
-      }
-      return (strategiesCreated, totalVotes);
+        return (strategiesCreated, totalVotes);
     }
 
-    function getContributionAndRewards(address _garden, address _user) external view returns  (
-      uint[] memory, uint[] memory
-    ) {
-      IGarden garden = IGarden(_garden);
-      uint[] memory contribution = new uint[](9);
-      (
-        contribution[0],
-        contribution[1],
-        contribution[2],
-        contribution[3],
-        contribution[4],
-        contribution[5],
-        ,
-        ,
-        contribution[8]
-      ) = garden.getContributor(_user);
-      contribution[6] = IERC20(_garden).balanceOf(_user);
-      contribution[7] = garden.getLockedBalance(_user);
-      uint256[] memory totalRewards = IRewardsDistributor(controller.rewardsDistributor()).getRewards(_garden, _user, garden.getFinalizedStrategies());
-      return (contribution, totalRewards);
+    function getContributionAndRewards(address _garden, address _user)
+        external
+        view
+        returns (uint256[] memory, uint256[] memory)
+    {
+        IGarden garden = IGarden(_garden);
+        uint256[] memory contribution = new uint256[](9);
+        (
+            contribution[0],
+            contribution[1],
+            contribution[2],
+            contribution[3],
+            contribution[4],
+            contribution[5],
+            ,
+            ,
+            contribution[8]
+        ) = garden.getContributor(_user);
+        contribution[6] = IERC20(_garden).balanceOf(_user);
+        contribution[7] = garden.getLockedBalance(_user);
+        uint256[] memory totalRewards =
+            IRewardsDistributor(controller.rewardsDistributor()).getRewards(
+                _garden,
+                _user,
+                garden.getFinalizedStrategies()
+            );
+        return (contribution, totalRewards);
     }
 
     /* ============ Private Functions ============ */
