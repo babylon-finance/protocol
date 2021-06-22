@@ -19,7 +19,9 @@ pragma solidity 0.7.6;
 
 import 'hardhat/console.sol';
 import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
+import {ERC20} from '@openzeppelin/contracts/token/ERC20/ERC20.sol';
 import {IERC721} from '@openzeppelin/contracts/token/ERC721/IERC721.sol';
+import {SafeMath} from '@openzeppelin/contracts/math/SafeMath.sol';
 
 import {IRewardsDistributor} from './interfaces/IRewardsDistributor.sol';
 import {IBabController} from './interfaces/IBabController.sol';
@@ -28,6 +30,8 @@ import {IGarden} from './interfaces/IGarden.sol';
 import {IStrategy} from './interfaces/IStrategy.sol';
 import {IIshtarGate} from './interfaces/IIshtarGate.sol';
 import {IGardenNFT} from './interfaces/IGardenNFT.sol';
+import {Math} from './lib/Math.sol';
+
 
 /**
  * @title BabylonViewer
@@ -36,6 +40,9 @@ import {IGardenNFT} from './interfaces/IGardenNFT.sol';
  * Class that holds common view functions to retrieve garden information effectively
  */
 contract BabylonViewer {
+  using SafeMath for uint256;
+  using Math for int256;
+
     IBabController public controller;
 
     constructor(IBabController _controller) {
@@ -55,19 +62,24 @@ contract BabylonViewer {
         external
         view
         returns (
+            string memory,
+            string memory,
             address,
             address,
             bool[2] memory,
             address[] memory,
             address[] memory,
             uint256[11] memory,
-            uint256[8] memory
+            uint256[9] memory
         )
     {
         IGarden garden = IGarden(_garden);
         IGardenValuer valuer = IGardenValuer(controller.gardenValuer());
         uint256 valuation = valuer.calculateGardenValuation(_garden, garden.reserveAsset());
+        uint256 totalSupply = IERC20(_garden).totalSupply();
         return (
+            ERC20(_garden).name(),
+            ERC20(_garden).symbol(),
             garden.creator(),
             garden.reserveAsset(),
             [garden.active(), garden.guestListEnabled()],
@@ -94,7 +106,8 @@ contract BabylonViewer {
                 garden.gardenInitializedAt(),
                 garden.totalContributors(),
                 garden.totalStake(),
-                valuation
+                valuation,
+                totalSupply
             ]
         );
     }
@@ -197,6 +210,44 @@ contract BabylonViewer {
             }
         }
         return (userGardens, hasUserDeposited);
+    }
+
+    function getUserStrategyActions(address[] memory _strategies, address _user) external view returns (uint256, uint256) {
+      uint256 strategiesCreated;
+      uint256 totalVotes;
+      for (uint8 i = 0; i < _strategies.length; i++) {
+        IStrategy strategy = IStrategy(_strategies[i]);
+        if (strategy.strategist() == _user) {
+          strategiesCreated = strategiesCreated.add(1);
+        }
+        int256 votes = strategy.getUserVotes(_user);
+        if (votes != 0) {
+          totalVotes = totalVotes.add(uint256(Math.abs(votes)));
+        }
+      }
+      return (strategiesCreated, totalVotes);
+    }
+
+    function getContributionAndRewards(address _garden, address _user) external view returns  (
+      uint[] memory, uint[] memory
+    ) {
+      IGarden garden = IGarden(_garden);
+      uint[] memory contribution = new uint[](9);
+      (
+        contribution[0],
+        contribution[1],
+        contribution[2],
+        contribution[3],
+        contribution[4],
+        contribution[5],
+        ,
+        ,
+        contribution[8]
+      ) = garden.getContributor(_user);
+      contribution[6] = IERC20(_garden).balanceOf(_user);
+      contribution[7] = garden.getLockedBalance(_user);
+      uint256[] memory totalRewards = IRewardsDistributor(controller.rewardsDistributor()).getRewards(_garden, _user, garden.getFinalizedStrategies());
+      return (contribution, totalRewards);
     }
 
     /* ============ Private Functions ============ */
