@@ -18,10 +18,8 @@
 
 pragma solidity 0.7.6;
 
-<<<<<<< HEAD
 import 'hardhat/console.sol';
-=======
->>>>>>> main
+
 import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import {SafeMath} from '@openzeppelin/contracts/math/SafeMath.sol';
 import {Operation} from './Operation.sol';
