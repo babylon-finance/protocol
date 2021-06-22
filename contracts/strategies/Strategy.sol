@@ -21,6 +21,7 @@ import 'hardhat/console.sol';
 import {Address} from '@openzeppelin/contracts/utils/Address.sol';
 import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import {ERC20} from '@openzeppelin/contracts/token/ERC20/ERC20.sol';
+
 import {Initializable} from '@openzeppelin/contracts-upgradeable/proxy/Initializable.sol';
 import {SafeERC20} from '@openzeppelin/contracts/token/ERC20/SafeERC20.sol';
 import {ReentrancyGuard} from '@openzeppelin/contracts/utils/ReentrancyGuard.sol';
@@ -33,6 +34,7 @@ import {PreciseUnitMath} from '../lib/PreciseUnitMath.sol';
 import {SafeDecimalMath} from '../lib/SafeDecimalMath.sol';
 import {Math} from '../lib/Math.sol';
 import {AddressArrayUtils} from '../lib/AddressArrayUtils.sol';
+import {UniversalERC20} from '../lib/UniversalERC20.sol';
 
 import {IWETH} from '../interfaces/external/weth/IWETH.sol';
 import {IBabController} from '../interfaces/IBabController.sol';
@@ -66,6 +68,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
     using AddressArrayUtils for address[];
     using Address for address;
     using SafeERC20 for IERC20;
+    using UniversalERC20 for IERC20;
 
     /* ============ Events ============ */
     event Invoked(address indexed _target, uint256 indexed _value, bytes _data, bytes _returnValue);
@@ -705,7 +708,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         }
         uint256 lastOp = opTypes.length - 1;
         if (opTypes[lastOp] == 4) {
-            uint256 borrowBalance = IERC20(opDatas[lastOp]).balanceOf(address(this));
+            uint256 borrowBalance = IERC20(opDatas[lastOp]).universalBalanceOf(address(this));
             if (borrowBalance > 0) {
                 uint256 price = _getPrice(reserveAsset, opDatas[lastOp]);
                 positiveNav = positiveNav.add(
