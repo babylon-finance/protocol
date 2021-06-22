@@ -127,14 +127,14 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
     // Indicates the minimum liquidity the asset needs to have to be tradable by this garden
     uint256 public override minLiquidityAsset;
 
-    uint256 public depositHardlock; // Window of time after deposits when withdraws are disabled for that user
-    uint256 public withdrawalsOpenUntil; // Indicates until when the withdrawals are open and the ETH is set aside
+    uint256 public override depositHardlock; // Window of time after deposits when withdraws are disabled for that user
+    uint256 public override withdrawalsOpenUntil; // Indicates until when the withdrawals are open and the ETH is set aside
 
     // Contributors
     mapping(address => Contributor) private contributors;
     uint256 public override totalContributors;
     uint256 public override maxContributors;
-    uint256 public maxDepositLimit; // Limits the amount of deposits
+    uint256 public override maxDepositLimit; // Limits the amount of deposits
 
     uint256 public override gardenInitializedAt; // Garden Initialized at timestamp
     // Number of garden checkpoints used to control de garden power and each contributor power with accuracy avoiding flash loans and related attack vectors
@@ -399,11 +399,9 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
     ) external override nonReentrant {
         _onlyContributor();
         // Withdrawal amount has to be equal or less than msg.sender balance minus the locked balance
-        (uint256 lockedAmount, uint256 votedAmount) = this.getLockedBalance(msg.sender);
+        uint256 lockedAmount = getLockedBalance(msg.sender);
         _require(_gardenTokenQuantity <= balanceOf(msg.sender).sub(lockedAmount), Errors.TOKENS_STAKED); // Strategists and Voters cannot withdraw locked stake while in active strategies
         if (!_withPenalty) {
-            // If you have active votes, you can only withdraw with a penalty
-            _require(_gardenTokenQuantity <= balanceOf(msg.sender).sub(votedAmount), Errors.TOKENS_STAKED);
             // Requests an immediate withdrawal taking the EARLY_WITHDRAWAL_PENALTY that stays invested.
             return _withdraw(_gardenTokenQuantity, _minReserveReceiveQuantity, _to);
         }
@@ -647,10 +645,22 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
             uint256,
             uint256,
             uint256,
+            uint256,
+            uint256,
+            uint256,
             uint256
         )
     {
         Contributor storage contributor = contributors[_contributor];
+        uint256 contributorPower =
+            rewardsDistributor.getContributorPower(
+                address(this),
+                _contributor,
+                contributor.initialDepositAt,
+                block.timestamp
+            );
+        uint256 balance = balanceOf(_contributor);
+        uint256 lockedBalance = getLockedBalance(_contributor);
         return (
             contributor.lastDepositAt,
             contributor.initialDepositAt,
@@ -659,7 +669,10 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
             contributor.claimedRewards,
             contributor.totalDeposits > contributor.withdrawnSince
                 ? contributor.totalDeposits.sub(contributor.withdrawnSince)
-                : 0
+                : 0,
+            balance,
+            lockedBalance,
+            contributorPower
         );
     }
 
@@ -685,24 +698,18 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
      * @param _contributor                 Address of the account
      *
      * @return  uint256                    Returns the amount of locked garden tokens for the account
-     * @return  uint256                    Returns the amount of active votes for the account
      */
-    function getLockedBalance(address _contributor) external view override returns (uint256, uint256) {
+    function getLockedBalance(address _contributor) public view override returns (uint256) {
         uint256 lockedAmount;
-        uint256 votedAmount;
         for (uint256 i = 0; i < strategies.length; i++) {
             IStrategy strategy = IStrategy(strategies[i]);
             if (_contributor == strategy.strategist()) {
                 lockedAmount = lockedAmount.add(strategy.stake());
             }
-            uint256 votes = uint256(Math.abs(strategy.getUserVotes(_contributor)));
-            if (votes > votedAmount) {
-                votedAmount = votes;
-            }
         }
         // Avoid overflows if off-chain voting system fails
         if (balanceOf(_contributor) < lockedAmount) lockedAmount = balanceOf(_contributor);
-        return (lockedAmount, votedAmount);
+        return lockedAmount;
     }
 
     function getGardenTokenMintQuantity(

@@ -176,8 +176,10 @@ abstract contract BorrowIntegration is BaseIntegration, ReentrancyGuard, IBorrow
             // Invoke protocol specific call
             debtInfo.strategy.invokeFromIntegration(targetAddressP, callValueP, methodDataP);
         }
-        // Approves the repayment contract to take the tokens
-        debtInfo.strategy.invokeApprove(_getSpender(asset), asset, amount);
+        if (asset != address(0)) {
+            // Approves the repayment contract to take the tokens
+            debtInfo.strategy.invokeApprove(_getSpender(asset), asset, amount);
+        }
 
         (address targetAddress, uint256 callValue, bytes memory methodData) =
             _getRepayCalldata(_strategy, asset, amount);
@@ -233,10 +235,11 @@ abstract contract BorrowIntegration is BaseIntegration, ReentrancyGuard, IBorrow
      * @param _debtInfo               Struct containing debt information used in internal functions
      */
     function _validatePostBorrow(DebtInfo memory _debtInfo) internal view {
-        require(
-            IERC20(_debtInfo.asset).balanceOf(address(_debtInfo.strategy)) >= _debtInfo.amount,
-            'Did not receive the borrowed asset'
-        );
+        uint256 balance =
+            address(0) == _debtInfo.asset
+                ? address(_debtInfo.strategy).balance
+                : IERC20(_debtInfo.asset).balanceOf(address(_debtInfo.strategy));
+        require(balance >= _debtInfo.amount, 'Did not receive the borrowed asset');
         require(getRemainingLiquidity(address(_debtInfo.strategy)) > 0, 'Not enough liquidity');
     }
 
@@ -246,10 +249,11 @@ abstract contract BorrowIntegration is BaseIntegration, ReentrancyGuard, IBorrow
      * @param _debtInfo               Struct containing debt information used in internal functions
      */
     function _validatePreRepay(DebtInfo memory _debtInfo) internal view {
-        require(
-            IERC20(_debtInfo.asset).balanceOf(address(_debtInfo.strategy)) >= _debtInfo.amount,
-            'We do not have enough to repay debt'
-        );
+        uint256 balance =
+            address(0) == _debtInfo.asset
+                ? address(_debtInfo.strategy).balance
+                : IERC20(_debtInfo.asset).balanceOf(address(_debtInfo.strategy));
+        require(balance >= _debtInfo.amount, 'We do not have enough to repay debt');
         require(getBorrowBalance(address(_debtInfo.strategy), _debtInfo.asset) > 0, 'No debt to repay');
     }
 

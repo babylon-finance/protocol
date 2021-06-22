@@ -70,7 +70,7 @@ contract CompoundLendIntegration is LendIntegration {
     constructor(IBabController _controller, address _weth) LendIntegration('compoundlend', _weth, _controller) {
         assetToCToken[0x6B175474E89094C44Da98b954EedeAC495271d0F] = 0x5d3a536E4D6DbD6114cc1Ead35777bAB948E3643; // DAI
         assetToCToken[0x1f9840a85d5aF5bf1D1762F925BDADdC4201F984] = 0x35A18000230DA775CAc24873d00Ff85BccdeD550; // UNI
-        assetToCToken[0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2] = 0x4Ddc2D193948926D02f9B1fE9e1daa0718270ED5; // WETH
+        assetToCToken[address(0)] = 0x4Ddc2D193948926D02f9B1fE9e1daa0718270ED5; // ETH
         assetToCToken[0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48] = 0x39AA39c021dfbaE8faC545936693aC917d5E7563; // USDC
         assetToCToken[0xdAC17F958D2ee523a2206206994597C13D831ec7] = 0xf650C3d88D12dB855b8bf7D11Be6C55A4e07dCC9; // USDT
         assetToCToken[0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599] = 0xccF4429DB6322D5C611ee964527D42E5d685DD6a; // WBTC
@@ -115,7 +115,7 @@ contract CompoundLendIntegration is LendIntegration {
     function _getExchangeRatePerToken(address _assetToken) internal view override returns (uint256) {
         address cToken = assetToCToken[_assetToken];
         uint256 exchangeRateCurrent = ICToken(cToken).exchangeRateStored();
-        uint8 assetDecimals = ERC20(_assetToken).decimals();
+        uint8 assetDecimals = _assetToken == address(0) ? 18 : ERC20(_assetToken).decimals();
         // cTokens always have 8 decimals.
         if (assetDecimals < 8) {
             uint256 mantissa = 8 - assetDecimals;
@@ -168,7 +168,12 @@ contract CompoundLendIntegration is LendIntegration {
         )
     {
         // Encode method data for Garden to invoke
-        bytes memory methodData = abi.encodeWithSignature('mint(uint256)', _numTokensToSupply);
+        bytes memory methodData;
+        if (assetToCToken[_assetToken] == cETH) {
+            methodData = abi.encodeWithSignature('mint()');
+        } else {
+            methodData = abi.encodeWithSignature('mint(uint256)', _numTokensToSupply);
+        }
         // If it is ETH, send the value
         return (assetToCToken[_assetToken], assetToCToken[_assetToken] == cETH ? _numTokensToSupply : 0, methodData);
     }

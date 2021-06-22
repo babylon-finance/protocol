@@ -95,6 +95,7 @@ contract BorrowOperation is Operation {
         require(
             _capital > 0 &&
                 _assetStatus == 1 &&
+                _asset != _borrowToken &&
                 IBorrowIntegration(_integration).getCollateralBalance(msg.sender, _asset) > 0,
             'There is no collateral locked'
         );
@@ -104,6 +105,7 @@ contract BorrowOperation is Operation {
             _capital.preciseMul(price).preciseMul(IBorrowIntegration(_integration).maxCollateralFactor());
         uint256 normalizedAmount = SafeDecimalMath.normalizeAmountTokens(_asset, _borrowToken, amountToBorrow);
         IBorrowIntegration(_integration).borrow(msg.sender, _borrowToken, normalizedAmount);
+        _borrowToken = _borrowToken == address(0) ? WETH : _borrowToken;
         return (_borrowToken, IERC20(_borrowToken).balanceOf(address(msg.sender)), 0); // borrowings are liquid
     }
 
@@ -133,7 +135,7 @@ contract BorrowOperation is Operation {
         IBorrowIntegration(_integration).repay(
             msg.sender,
             _assetToken,
-            IERC20(_assetToken).balanceOf(address(msg.sender)) // We repay all that we can
+            address(0) == _assetToken ? address(msg.sender).balance : IERC20(_assetToken).balanceOf(address(msg.sender)) // We repay all that we can
         );
         return (_assetToken, IBorrowIntegration(_integration).getBorrowBalance(msg.sender, _assetToken), 2);
     }
