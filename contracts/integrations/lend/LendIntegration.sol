@@ -130,7 +130,10 @@ abstract contract LendIntegration is BaseIntegration, ReentrancyGuard, ILendInte
             investmentInfo.strategy.invokeFromIntegration(targetAddressP, callValueP, methodDataP);
         }
 
-        investmentInfo.strategy.invokeApprove(_getSpender(_assetToken), _assetToken, _numTokensToSupply);
+        // not needed for eth
+        if (_assetToken != address(0)) {
+            investmentInfo.strategy.invokeApprove(_getSpender(_assetToken), _assetToken, _numTokensToSupply);
+        }
 
         (address targetInvestment, uint256 callValue, bytes memory methodData) =
             _getSupplyCalldata(_strategy, _assetToken, _numTokensToSupply);
@@ -240,9 +243,12 @@ abstract contract LendIntegration is BaseIntegration, ReentrancyGuard, ILendInte
      * @param _investmentInfo               Struct containing investment information used in internal functions
      */
     function _validatePostExitInvestmentData(InvestmentInfo memory _investmentInfo) internal view {
+        uint256 balance =
+            _investmentInfo.assetToken == address(0)
+                ? address(_investmentInfo.strategy).balance
+                : IERC20(_investmentInfo.assetToken).balanceOf(address(_investmentInfo.strategy));
         require(
-            IERC20(_investmentInfo.assetToken).balanceOf(address(_investmentInfo.strategy)) >=
-                _investmentInfo.investmentTokensInGarden - _investmentInfo.investmentTokensInTransaction,
+            balance >= _investmentInfo.investmentTokensInGarden - _investmentInfo.investmentTokensInTransaction,
             'The garden did not return the investment tokens'
         );
     }

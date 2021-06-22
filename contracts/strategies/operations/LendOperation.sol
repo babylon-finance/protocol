@@ -17,6 +17,7 @@
 */
 
 pragma solidity 0.7.6;
+
 import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import {SafeMath} from '@openzeppelin/contracts/math/SafeMath.sol';
 import {Operation} from './Operation.sol';
@@ -64,7 +65,7 @@ contract LendOperation is Operation {
      * @param _asset              Asset to receive into this operation
      * @param _capital            Amount of asset received
      * param _assetStatus         Status of the asset amount
-     * @param _data               Address of the asset to lend
+     * @param _assetToken         Address of the asset to lend
      * param _garden              Garden of the strategy
      * @param _integration        Address of the integration to execute
      */
@@ -72,7 +73,7 @@ contract LendOperation is Operation {
         address _asset,
         uint256 _capital,
         uint8, /* _assetStatus */
-        address _data,
+        address _assetToken,
         IGarden, /* _garden */
         address _integration
     )
@@ -85,15 +86,28 @@ contract LendOperation is Operation {
             uint8
         )
     {
-        address assetToken = _data;
-        if (assetToken != _asset) {
-            IStrategy(msg.sender).trade(_asset, _capital, assetToken);
+        // If it is WETH and Compound replace to zero address
+        if (_assetToken == WETH && ILendIntegration(_integration).getInvestmentToken(_assetToken) == address(0)) {
+            _assetToken = address(0);
         }
-        uint256 numTokensToSupply = IERC20(assetToken).balanceOf(msg.sender);
-        uint256 exactAmount = ILendIntegration(_integration).getExpectedShares(assetToken, numTokensToSupply);
+        if (_assetToken != _asset) {
+            // Trade to WETH except if is 0x0 (ETH) and WETH
+            if (_assetToken != address(0) || _asset != WETH) {
+                IStrategy(msg.sender).trade(_asset, _capital, _assetToken == address(0) ? WETH : _assetToken);
+            }
+        }
+        uint256 numTokensToSupply;
+        if (_assetToken == address(0)) {
+            // change it to plain eth for compound
+            IStrategy(msg.sender).handleWeth(false, IERC20(WETH).balanceOf(msg.sender));
+            numTokensToSupply = address(msg.sender).balance;
+        } else {
+            numTokensToSupply = IERC20(_assetToken).balanceOf(msg.sender);
+        }
+        uint256 exactAmount = ILendIntegration(_integration).getExpectedShares(_assetToken, numTokensToSupply);
         uint256 minAmountExpected = exactAmount.sub(exactAmount.preciseMul(SLIPPAGE_ALLOWED));
-        ILendIntegration(_integration).supplyTokens(msg.sender, assetToken, numTokensToSupply, minAmountExpected);
-        return (assetToken, numTokensToSupply, 1); // put as collateral
+        ILendIntegration(_integration).supplyTokens(msg.sender, _assetToken, numTokensToSupply, minAmountExpected);
+        return (_assetToken, numTokensToSupply, 1); // put as collateral
     }
 
     /**
@@ -118,6 +132,10 @@ contract LendOperation is Operation {
             uint8
         )
     {
+        // If it is WETH and Compound replace to zero address
+        if (_assetToken == WETH && ILendIntegration(_integration).getInvestmentToken(_assetToken) == address(0)) {
+            _assetToken = address(0);
+        }
         require(_percentage <= HUNDRED_PERCENT, 'Unwind Percentage <= 100%');
         // Normalize to underlying asset if any (ctokens for compound)
         uint256 numTokensToRedeem = ILendIntegration(_integration).getInvestmentTokenAmount(msg.sender, _assetToken);
@@ -141,8 +159,18 @@ contract LendOperation is Operation {
             numTokensToRedeem,
             exchangeRate.mul(numTokensToRedeem.sub(numTokensToRedeem.preciseMul(SLIPPAGE_ALLOWED)))
         );
-        if (_assetToken != _garden.reserveAsset()) {
-            IStrategy(msg.sender).trade(_assetToken, IERC20(_assetToken).balanceOf(msg.sender), _garden.reserveAsset());
+        address tokenToTradeFrom = _assetToken;
+        // if eth, convert it to weth
+        if (_assetToken == address(0)) {
+            tokenToTradeFrom = WETH;
+            IStrategy(msg.sender).handleWeth(true, address(msg.sender).balance);
+        }
+        if (tokenToTradeFrom != _garden.reserveAsset()) {
+            IStrategy(msg.sender).trade(
+                tokenToTradeFrom,
+                IERC20(tokenToTradeFrom).balanceOf(msg.sender),
+                _garden.reserveAsset()
+            );
         }
         return (
             _assetToken,

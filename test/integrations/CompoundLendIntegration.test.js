@@ -1,6 +1,11 @@
 const { expect } = require('chai');
 const { ethers } = require('hardhat');
-const { createStrategy, executeStrategy, finalizeStrategy } = require('../fixtures/StrategyHelper');
+const {
+  createStrategy,
+  executeStrategy,
+  DEFAULT_STRATEGY_PARAMS,
+  finalizeStrategy,
+} = require('../fixtures/StrategyHelper');
 const { setupTests } = require('../fixtures/GardenFixture');
 const addresses = require('../../lib/addresses');
 const { ADDRESS_ZERO } = require('../../lib/constants');
@@ -12,11 +17,13 @@ describe('CompoundLendIntegrationTest', function () {
   let signer2;
   let signer3;
   let USDC;
-  let CUSDC;
   let WETH;
+  let CETH;
+  let CUSDC;
 
   beforeEach(async () => {
     ({ garden1, compoundLendIntegration, signer1, signer2, signer3 } = await setupTests()());
+    CETH = await ethers.getContractAt('IERC20', addresses.tokens.CETH);
     USDC = await ethers.getContractAt('IERC20', addresses.tokens.USDC);
     CUSDC = await ethers.getContractAt('IERC20', addresses.tokens.CUSDC);
     WETH = await ethers.getContractAt('IERC20', addresses.tokens.WETH);
@@ -34,8 +41,11 @@ describe('CompoundLendIntegrationTest', function () {
       expect(await compoundLendIntegration.isInvestment(addresses.tokens.USDC)).to.equal(true);
     });
 
-    it('fails to suplly to invlaid address', async function () {
-      expect(await compoundLendIntegration.isInvestment(ADDRESS_ZERO)).to.equal(false);
+    it('0x is a valid address (ETH)', async function () {
+      expect(await compoundLendIntegration.isInvestment(ADDRESS_ZERO)).to.equal(true);
+    });
+    it('fails when providing an invalid address', async function () {
+      expect(await compoundLendIntegration.isInvestment('0xf1cE2ca79D49B431652F9597947151cf21efB9C3')).to.equal(false);
     });
 
     it('can supply and redeem tokens from Compound', async function () {
@@ -57,6 +67,55 @@ describe('CompoundLendIntegrationTest', function () {
       expect(await WETH.balanceOf(strategyContract.address)).to.equal(0);
     });
 
-    // TODO: test supply/borrow for WETH
+    it('can supply and redeem eth from Compound', async function () {
+      const strategyContract = await createStrategy(
+        'lend',
+        'vote',
+        [signer1, signer2, signer3],
+        compoundLendIntegration.address,
+        garden1,
+        DEFAULT_STRATEGY_PARAMS,
+        ADDRESS_ZERO, // ETH
+      );
+
+      await executeStrategy(strategyContract);
+      expect(await WETH.balanceOf(strategyContract.address)).to.be.equal(0);
+      expect(await CETH.balanceOf(strategyContract.address)).to.be.gt(0);
+      await finalizeStrategy(strategyContract);
+      expect(await CETH.balanceOf(strategyContract.address)).to.be.closeTo(
+        ethers.utils.parseEther('0'),
+        ethers.utils.parseEther('0.01'),
+      );
+      expect(await WETH.balanceOf(strategyContract.address)).to.equal(0);
+      expect(await strategyContract.capitalReturned()).to.be.closeTo(
+        ethers.utils.parseEther('1'),
+        ethers.utils.parseEther('0.01'),
+      );
+    });
+    it('can supply and redeem eth from Compound passing WETH', async function () {
+      const strategyContract = await createStrategy(
+        'lend',
+        'vote',
+        [signer1, signer2, signer3],
+        compoundLendIntegration.address,
+        garden1,
+        DEFAULT_STRATEGY_PARAMS,
+        WETH.address, // ETH
+      );
+
+      await executeStrategy(strategyContract);
+      expect(await WETH.balanceOf(strategyContract.address)).to.be.equal(0);
+      expect(await CETH.balanceOf(strategyContract.address)).to.be.gt(0);
+      await finalizeStrategy(strategyContract);
+      expect(await CETH.balanceOf(strategyContract.address)).to.be.closeTo(
+        ethers.utils.parseEther('0'),
+        ethers.utils.parseEther('0.01'),
+      );
+      expect(await WETH.balanceOf(strategyContract.address)).to.equal(0);
+      expect(await strategyContract.capitalReturned()).to.be.closeTo(
+        ethers.utils.parseEther('1'),
+        ethers.utils.parseEther('0.01'),
+      );
+    });
   });
 });
