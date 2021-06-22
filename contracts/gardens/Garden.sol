@@ -127,14 +127,14 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
     // Indicates the minimum liquidity the asset needs to have to be tradable by this garden
     uint256 public override minLiquidityAsset;
 
-    uint256 public depositHardlock; // Window of time after deposits when withdraws are disabled for that user
-    uint256 public withdrawalsOpenUntil; // Indicates until when the withdrawals are open and the ETH is set aside
+    uint256 public override depositHardlock; // Window of time after deposits when withdraws are disabled for that user
+    uint256 public override withdrawalsOpenUntil; // Indicates until when the withdrawals are open and the ETH is set aside
 
     // Contributors
     mapping(address => Contributor) private contributors;
     uint256 public override totalContributors;
     uint256 public override maxContributors;
-    uint256 public maxDepositLimit; // Limits the amount of deposits
+    uint256 public override maxDepositLimit; // Limits the amount of deposits
 
     uint256 public override gardenInitializedAt; // Garden Initialized at timestamp
     // Number of garden checkpoints used to control de garden power and each contributor power with accuracy avoiding flash loans and related attack vectors
@@ -645,10 +645,22 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
             uint256,
             uint256,
             uint256,
+            uint256,
+            uint256,
+            uint256,
             uint256
         )
     {
         Contributor storage contributor = contributors[_contributor];
+        uint256 contributorPower =
+            rewardsDistributor.getContributorPower(
+                address(this),
+                _contributor,
+                contributor.initialDepositAt,
+                block.timestamp
+            );
+        uint256 balance = balanceOf(_contributor);
+        uint256 lockedBalance = getLockedBalance(_contributor);
         return (
             contributor.lastDepositAt,
             contributor.initialDepositAt,
@@ -657,7 +669,10 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
             contributor.claimedRewards,
             contributor.totalDeposits > contributor.withdrawnSince
                 ? contributor.totalDeposits.sub(contributor.withdrawnSince)
-                : 0
+                : 0,
+            balance,
+            lockedBalance,
+            contributorPower
         );
     }
 

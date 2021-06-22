@@ -19,13 +19,15 @@ pragma solidity 0.7.6;
 
 import 'hardhat/console.sol';
 import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
+import {IERC721} from '@openzeppelin/contracts/token/ERC721/IERC721.sol';
 
-import {IRewardsDistributor} from '../interfaces/IRewardsDistributor.sol';
-import {IBabController} from '../interfaces/IBabController.sol';
-import {IGardenValuer} from '../interfaces/IGardenValuer.sol';
-import {IGarden} from '../interfaces/IGarden.sol';
-import {IIshtarGate} from '../interfaces/IIshtarGate.sol';
-import {IGardenNFT} from '../interfaces/IGardenNFT.sol';
+import {IRewardsDistributor} from './interfaces/IRewardsDistributor.sol';
+import {IBabController} from './interfaces/IBabController.sol';
+import {IGardenValuer} from './interfaces/IGardenValuer.sol';
+import {IGarden} from './interfaces/IGarden.sol';
+import {IStrategy} from './interfaces/IStrategy.sol';
+import {IIshtarGate} from './interfaces/IIshtarGate.sol';
+import {IGardenNFT} from './interfaces/IGardenNFT.sol';
 
 /**
  * @title BabylonViewer
@@ -36,7 +38,7 @@ import {IGardenNFT} from '../interfaces/IGardenNFT.sol';
 contract BabylonViewer {
     IBabController public controller;
 
-    constructor(IBabController _controller) ERC721('IshtarGate', 'ISHT') {
+    constructor(IBabController _controller) {
         require(address(_controller) != address(0), 'Controller must exist');
         controller = _controller;
     }
@@ -54,7 +56,7 @@ contract BabylonViewer {
         returns (
             address,
             address,
-            bool[2],
+            bool[2] memory,
             address[] memory,
             address[] memory,
             uint256[11] memory,
@@ -62,12 +64,14 @@ contract BabylonViewer {
         )
     {
         IGarden garden = IGarden(_garden);
+        IGardenValuer valuer = IGardenValuer(controller.gardenValuer());
+        uint256 valuation = valuer.calculateGardenValuation(_garden, garden.reserveAsset());
         return (
             garden.creator(),
             garden.reserveAsset(),
             [garden.active(), garden.guestListEnabled()],
-            garden.strategies(),
-            garden.finalizedStrategies(),
+            garden.getStrategies(),
+            garden.getFinalizedStrategies(),
             [
                 garden.depositHardlock(),
                 garden.withdrawalsOpenUntil(),
@@ -85,28 +89,39 @@ contract BabylonViewer {
                 garden.principal(),
                 garden.reserveAssetRewardsSetAside(),
                 garden.reserveAssetPrincipalWindow(),
-                garden.absoluteReturns(),
+                uint256(garden.absoluteReturns()),
                 garden.gardenInitializedAt(),
                 garden.totalContributors(),
                 garden.totalStake(),
-                garden.keeperDebt()
+                valuation
             ]
         );
     }
 
-    function getGardenStrategiesSummary(address[] calldata _strategies) external view returns () {
-        for (uint256 i = 0; i < _strategies.length; i++) {
-            IStrategy strategy = IStrategy(_strategies[i]);
-        }
-    }
+    function getOperationsStrategy(address _strategy)
+        external
+        view
+        returns (
+            uint8[] memory,
+            address[] memory,
+            address[] memory
+        )
+    {
+        IStrategy strategy = IStrategy(_strategy);
+        uint256 count = strategy.getOperationsCount();
+        uint8[] memory types = new uint8[](count);
+        address[] memory integrations = new address[](count);
+        address[] memory datas = new address[](count);
 
-    function getStrategyFull(address _strategy) external view returns () {
-        return ();
+        for (uint8 i = 0; i < count; i++) {
+            (types[i], integrations[i], datas[i]) = strategy.getOperationByIndex(i);
+        }
+        return (types, integrations, datas);
     }
 
     function getPermissions(address _user) external view returns (bool, bool) {
         IIshtarGate gate = IIshtarGate(controller.ishtarGate());
-        return (gate.balanceOf(_user) > 0, gate.canCreate(_user));
+        return (IERC721(address(gate)).balanceOf(_user) > 0, gate.canCreate(_user));
     }
 
     function getGardenPermissions(address _garden, address _user)
