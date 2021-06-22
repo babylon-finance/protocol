@@ -7,12 +7,11 @@ const { GARDEN_PARAMS } = require('../lib/constants');
 describe('Babylon Viewer', function () {
   let garden1;
   let signer1;
-  let ishtarGate;
-  let babController;
+  let kyberTradeIntegration;
   let babViewer;
 
   beforeEach(async () => {
-    ({ babController, signer1, babViewer, garden1, ishtarGate } = await setupTests()());
+    ({ kyberTradeIntegration, signer1, babViewer, garden1 } = await setupTests()());
   });
 
   describe('Deployment', function () {
@@ -65,6 +64,17 @@ describe('Babylon Viewer', function () {
       expect(gardenPermissions[0]).to.equal(true);
       expect(gardenPermissions[1]).to.equal(true);
       expect(gardenPermissions[2]).to.equal(true);
+    });
+
+    it('calls get operations strategy', async function () {
+      const gardenDetails = await babViewer.getGardenDetails(garden1.address);
+      const strategyOperations = await babViewer.getOperationsStrategy(gardenDetails[3][0]);
+      expect(strategyOperations[0].length).to.equal(1);
+      expect(strategyOperations[1].length).to.equal(1);
+      expect(strategyOperations[2].length).to.equal(1);
+      expect(strategyOperations[0][0]).to.equal(0);
+      expect(strategyOperations[1][0]).to.equal(kyberTradeIntegration.address);
+      expect(strategyOperations[2][0]).to.equal(addresses.tokens.DAI);
     });
   });
 });
