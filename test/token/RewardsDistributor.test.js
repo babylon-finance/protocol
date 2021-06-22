@@ -520,7 +520,7 @@ describe('BABL Rewards Distributor', function () {
 
       expect(rewardsLong1).to.be.closeTo(valueLong1, ethers.utils.parseEther('0.005'));
       expect(rewardsLong2).to.be.closeTo(valueLong2, ethers.utils.parseEther('0.005'));
-      expect(rewardsLong3).to.be.closeTo(valueLong3, ethers.utils.parseEther('0.005'));
+      expect(rewardsLong3).to.be.closeTo(valueLong3, ethers.utils.parseEther('0.01'));
     });
 
     it('should calculate correct BABL in case of 5 strategies of 2 different Gardens with total duration of less than 1 quarter', async function () {

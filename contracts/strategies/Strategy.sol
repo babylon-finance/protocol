@@ -700,14 +700,15 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
                 negativeNav = negativeNav.add(strategyNav);
             }
             // borrow op
-            if (opTypes[i] == 4) {
-                uint256 borrowBalance = IERC20(opDatas[i]).balanceOf(address(this));
-                if (borrowBalance > 0) {
-                    uint256 price = _getPrice(reserveAsset, opDatas[i]);
-                    positiveNav = positiveNav.add(
-                        SafeDecimalMath.normalizeAmountTokens(opDatas[i], reserveAsset, borrowBalance).preciseDiv(price)
-                    );
-                }
+        }
+        uint256 lastOp = opTypes.length - 1;
+        if (opTypes[lastOp ] == 4) {
+            uint256 borrowBalance = IERC20(opDatas[lastOp]).balanceOf(address(this));
+            if (borrowBalance > 0) {
+                uint256 price = _getPrice(reserveAsset, opDatas[lastOp]);
+                positiveNav = positiveNav.add(
+                    SafeDecimalMath.normalizeAmountTokens(opDatas[lastOp], reserveAsset, borrowBalance).preciseDiv(price)
+                );
             }
         }
         if (negativeNav > positiveNav) {
