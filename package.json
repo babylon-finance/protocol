@@ -85,6 +85,7 @@
     "test:watch": "OPTIMIZER=false hardhat watch test --network hardhat --max-memory 8096",
     "gas-report": "REPORT_GAS=1 hardhat test --network hardhat --max-memory 8096",
     "estimate-size": "yarn compile && hardhat size-contracts --max-memory 8096",
-    "coverage": "hardhat coverage --max-memory 8096"
+    "coverage": "hardhat coverage --max-memory 8096",
+    "tvl": "hardhat tvl --network mainnet"
   }
 }
