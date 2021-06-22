@@ -2,6 +2,7 @@ const { expect } = require('chai');
 // const { ethers } = require('hardhat');
 const addresses = require('../lib/addresses');
 const { setupTests } = require('./fixtures/GardenFixture');
+const { DEFAULT_STRATEGY_PARAMS } = require('./fixtures/StrategyHelper');
 const { GARDEN_PARAMS } = require('../lib/constants');
 
 describe('Babylon Viewer', function () {
@@ -75,6 +76,29 @@ describe('Babylon Viewer', function () {
       expect(strategyOperations[0][0]).to.equal(0);
       expect(strategyOperations[1][0]).to.equal(kyberTradeIntegration.address);
       expect(strategyOperations[2][0]).to.equal(addresses.tokens.DAI);
+    });
+
+    it('calls get complete strategy', async function () {
+      const gardenDetails = await babViewer.getGardenDetails(garden1.address);
+      const strategyDetails = await babViewer.getCompleteStrategy(gardenDetails[3][0]);
+      expect(strategyDetails[0]).to.equal(signer1.address); // Strategist
+      expect(strategyDetails[1][0]).to.equal(1); // Ops count
+      expect(strategyDetails[1][1]).to.equal(DEFAULT_STRATEGY_PARAMS[1]); // Stake
+      expect(strategyDetails[1][2]).to.equal(DEFAULT_STRATEGY_PARAMS[1]); // Positive votes
+      expect(strategyDetails[1][3]).to.equal(0); // Negative votes
+      expect(strategyDetails[1][4]).to.equal(0); // Capital Allocated
+      expect(strategyDetails[1][5]).to.equal(0); // Capital Returned
+      expect(strategyDetails[1][6]).to.equal(DEFAULT_STRATEGY_PARAMS[2]); // Duration
+      expect(strategyDetails[1][7]).to.equal(DEFAULT_STRATEGY_PARAMS[3]); // Expected Return
+      expect(strategyDetails[1][8]).to.equal(DEFAULT_STRATEGY_PARAMS[0]); // Max Capital Requested
+      expect(strategyDetails[1][9]).to.be.gt(0); // Entered At
+      expect(strategyDetails[1][10]).to.equal(0); // Get NAV
+      expect(strategyDetails[2][0]).to.equal(false); // Active
+      expect(strategyDetails[2][1]).to.equal(true); // Data set
+      expect(strategyDetails[2][2]).to.equal(false); // Finalized
+      expect(strategyDetails[3][0]).to.equal(0); // Executed at
+      expect(strategyDetails[3][1]).to.equal(0); // Exited At
+      expect(strategyDetails[3][2]).to.equal(0); // Updated At
     });
   });
 });

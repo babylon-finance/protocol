@@ -48,7 +48,8 @@ contract BabylonViewer {
     /**
      * Gets garden details
      *
-     * @return  address[]        Returns list of addresses
+     * @param _garden            Address of the garden to fetch
+     * @return                   Garden complete details
      */
     function getGardenDetails(address _garden)
         external
@@ -98,8 +99,48 @@ contract BabylonViewer {
         );
     }
 
-    function getOperationsStrategy(address _strategy)
+    /**
+     * Gets complete strategy details
+     *
+     * @param _strategy            Address of the strategy to fetch
+     * @return                     All strategy details
+     */
+    function getCompleteStrategy(address _strategy)
         external
+        view
+        returns (
+            address,
+            uint256[11] memory,
+            bool[] memory,
+            uint256[] memory
+        )
+    {
+        IStrategy strategy = IStrategy(_strategy);
+        bool[] memory status = new bool[](3);
+        uint256[] memory ts = new uint256[](3);
+        (, status[0], status[1], status[2], ts[0], ts[1], ts[2]) = strategy.getStrategyState();
+        return (
+            strategy.strategist(),
+            [
+                strategy.getOperationsCount(),
+                strategy.stake(),
+                strategy.totalPositiveVotes(),
+                strategy.totalNegativeVotes(),
+                strategy.capitalAllocated(),
+                strategy.capitalReturned(),
+                strategy.duration(),
+                strategy.expectedReturn(),
+                strategy.maxCapitalRequested(),
+                strategy.enteredAt(),
+                strategy.getNAV()
+            ],
+            status,
+            ts
+        );
+    }
+
+    function getOperationsStrategy(address _strategy)
+        public
         view
         returns (
             uint8[] memory,
@@ -140,4 +181,6 @@ contract BabylonViewer {
             gate.canAddStrategiesInAGarden(_garden, _user)
         );
     }
+
+    /* ============ Private Functions ============ */
 }
