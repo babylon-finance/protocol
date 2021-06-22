@@ -187,7 +187,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
 
     /* ============ Constants ============ */
 
-    uint256 internal constant SLIPPAGE_ALLOWED = 5e16; // 1%
+    uint256 internal constant SLIPPAGE_ALLOWED = 5e16; // 5%
     uint256 internal constant HUNDRED_PERCENT = 1e18; // 100%
     uint256 internal constant MAX_CANDIDATE_PERIOD = 7 days;
 

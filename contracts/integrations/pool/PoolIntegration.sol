@@ -33,7 +33,7 @@ import {BaseIntegration} from '../BaseIntegration.sol';
  * @title PoolIntegration
  * @author Babylon Finance Protocol
  *
- * Base class for integration with trading protocols
+ * Base class for integration with pool protocols
  */
 abstract contract PoolIntegration is BaseIntegration, ReentrancyGuard, IPoolIntegration {
     using SafeMath for uint256;
