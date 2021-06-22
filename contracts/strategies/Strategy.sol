@@ -704,12 +704,14 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
             // borrow op
         }
         uint256 lastOp = opTypes.length - 1;
-        if (opTypes[lastOp ] == 4) {
+        if (opTypes[lastOp] == 4) {
             uint256 borrowBalance = IERC20(opDatas[lastOp]).balanceOf(address(this));
             if (borrowBalance > 0) {
                 uint256 price = _getPrice(reserveAsset, opDatas[lastOp]);
                 positiveNav = positiveNav.add(
-                    SafeDecimalMath.normalizeAmountTokens(opDatas[lastOp], reserveAsset, borrowBalance).preciseDiv(price)
+                    SafeDecimalMath.normalizeAmountTokens(opDatas[lastOp], reserveAsset, borrowBalance).preciseDiv(
+                        price
+                    )
                 );
             }
         }
