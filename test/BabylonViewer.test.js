@@ -12,13 +12,7 @@ describe('Babylon Viewer', function () {
   let babViewer;
 
   beforeEach(async () => {
-    ({
-      babController,
-      signer1,
-      babViewer,
-      garden1,
-      ishtarGate,
-    } = await setupTests()());
+    ({ babController, signer1, babViewer, garden1, ishtarGate } = await setupTests()());
   });
 
   describe('Deployment', function () {
@@ -31,7 +25,6 @@ describe('Babylon Viewer', function () {
   describe('can call getter methods', async function () {
     it('calls getGardenDetails', async function () {
       const gardenDetails = await babViewer.getGardenDetails(garden1.address);
-      console.log('gardenDetails', gardenDetails);
       expect(gardenDetails[0]).to.equal(signer1.address); // Creator
       expect(gardenDetails[1]).to.equal(addresses.tokens.WETH); // Reserve Asset
       expect(gardenDetails[2][0]).to.equal(true); // Active
@@ -59,6 +52,19 @@ describe('Babylon Viewer', function () {
       expect(status[5]).to.equal(1); // Initialized at
       expect(status[6]).to.be.gt(0); // Stake
       expect(status[7]).to.be.gt(0); // Valuation
+    });
+
+    it('calls get permissions', async function () {
+      const globalPermissions = await babViewer.getPermissions(signer1.address);
+      expect(globalPermissions[0]).to.equal(true);
+      expect(globalPermissions[1]).to.equal(true);
+    });
+
+    it('calls get garden permissions', async function () {
+      const gardenPermissions = await babViewer.getGardenPermissions(garden1.address, signer1.address);
+      expect(gardenPermissions[0]).to.equal(true);
+      expect(gardenPermissions[1]).to.equal(true);
+      expect(gardenPermissions[2]).to.equal(true);
     });
   });
 });
