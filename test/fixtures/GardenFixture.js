@@ -2,10 +2,9 @@ const { deployments } = require('hardhat');
 const { TWAP_ORACLE_WINDOW, TWAP_ORACLE_GRANULARITY } = require('../../lib/system.js');
 const { GARDEN_PARAMS } = require('../../lib/constants.js');
 const addresses = require('../../lib/addresses');
-const { getAssetWhale } = require('../../lib/whale.js');
 const { impersonateAddress } = require('../../lib/rpc');
 const { createStrategy } = require('./StrategyHelper.js');
-const { getContract, from, parse, eth } = require('../utils/test-helpers');
+const { getContract, from, eth } = require('../utils/test-helpers');
 
 async function setUpFixture(
   { upgradesDeployer, deployments, getNamedAccounts, ethers },
@@ -27,6 +26,7 @@ async function setUpFixture(
   const gardenNFT = await getContract('GardenNFT');
   const strategyNFT = await getContract('StrategyNFT');
   const rewardsDistributor = await getContract('RewardsDistributor', 'RewardsDistributorProxy');
+  const babViewer = await getContract('BabylonViewer');
 
   const kyberTradeIntegration = await getContract('KyberTradeIntegration');
   const oneInchTradeIntegration = await getContract('OneInchTradeIntegration');
@@ -206,6 +206,7 @@ async function setUpFixture(
     aaveLendIntegration,
     aaveBorrowIntegration,
     univ2,
+    babViewer,
 
     garden1,
     garden2,
@@ -248,7 +249,6 @@ const fixtureCache = {};
 
 module.exports = {
   setupTests: (params = {}) => {
-    const { gardenParams } = params;
     const key = JSON.stringify(params);
     if (!fixtureCache[key]) {
       fixtureCache[key] = deployments.createFixture((hre, options) => setUpFixture(hre, options, params));
