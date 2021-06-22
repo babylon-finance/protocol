@@ -182,5 +182,22 @@ contract BabylonViewer {
         );
     }
 
+    function getGardensUser(address _user, uint _offset) external view returns (address[] memory, bool[] memory) {
+      address[] memory gardens = controller.getGardens();
+      address[] memory userGardens = new address[](25);
+      bool[] memory hasUserDeposited = new bool[](25);
+      uint8 resultIndex;
+      IIshtarGate gate = IIshtarGate(controller.ishtarGate());
+      for (uint256 i = _offset; i < gardens.length; i++) {
+        IGarden garden = IGarden(gardens[i]);
+        if (garden.active() && (!garden.guestListEnabled() || gate.canJoinAGarden(gardens[i], _user))) {
+          userGardens[resultIndex] = gardens[i];
+          hasUserDeposited[resultIndex] = IERC20(gardens[i]).balanceOf(_user) > 0;
+          resultIndex = resultIndex + 1;
+        }
+      }
+      return (userGardens, hasUserDeposited);
+    }
+
     /* ============ Private Functions ============ */
 }

@@ -3,7 +3,7 @@ const { expect } = require('chai');
 const addresses = require('../lib/addresses');
 const { setupTests } = require('./fixtures/GardenFixture');
 const { DEFAULT_STRATEGY_PARAMS } = require('./fixtures/StrategyHelper');
-const { GARDEN_PARAMS } = require('../lib/constants');
+const { GARDEN_PARAMS, ADDRESS_ZERO } = require('../lib/constants');
 
 describe('Babylon Viewer', function () {
   let garden1;
@@ -99,6 +99,13 @@ describe('Babylon Viewer', function () {
       expect(strategyDetails[3][0]).to.equal(0); // Executed at
       expect(strategyDetails[3][1]).to.equal(0); // Exited At
       expect(strategyDetails[3][2]).to.equal(0); // Updated At
+    });
+
+    it('calls get user gardens', async function () {
+      const userGardens = await babViewer.getGardensUser(signer1.address, 0);
+      const gardens = userGardens[0].filter((t) => t !== ADDRESS_ZERO);
+      expect(gardens.length).to.be.gt(0);
+      expect(userGardens[1].filter((t) => t).length).to.equal(gardens.length);
     });
   });
 });
