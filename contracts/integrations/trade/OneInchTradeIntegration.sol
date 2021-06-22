@@ -17,6 +17,8 @@
 */
 
 pragma solidity 0.7.6;
+
+import 'hardhat/console.sol';
 import {SafeMath} from '@openzeppelin/contracts/math/SafeMath.sol';
 import {IBabController} from '../../interfaces/IBabController.sol';
 
@@ -102,8 +104,9 @@ contract OneInchTradeIntegration is TradeIntegration {
             bytes memory
         )
     {
-        (uint256 _returnAmount, uint256[] memory _distribution) =
-            IOneInchExchange(oneInchExchangeAddress).getExpectedReturn(_sendToken, _receiveToken, _sendQuantity, 1, 0);
+        // Use only UniswapV2 for all trades
+        uint256[] memory dis = new uint256[](1);
+        dis[0] = 1;
 
         bytes memory methodData =
             abi.encodeWithSignature(
@@ -112,7 +115,7 @@ contract OneInchTradeIntegration is TradeIntegration {
                 _receiveToken,
                 _sendQuantity,
                 0, // not needed because of post trade check
-                _distribution,
+                dis,
                 0
             );
         return (oneInchExchangeAddress, 0, methodData);
