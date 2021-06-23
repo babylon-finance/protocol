@@ -131,9 +131,10 @@ contract BabylonViewer {
     {
         IStrategy strategy = IStrategy(_strategy);
         bool[] memory status = new bool[](3);
-        uint256[] memory ts = new uint256[](3);
+        uint256[] memory ts = new uint256[](4);
         (, status[0], status[1], status[2], ts[0], ts[1], ts[2]) = strategy.getStrategyState();
         uint256 rewards = IRewardsDistributor(controller.rewardsDistributor()).getStrategyRewards(_strategy);
+        ts[3] = strategy.enteredCooldownAt();
         return (
             strategy.strategist(),
             IStrategyNFT(controller.strategyNFT()).getStrategyName(_strategy),
