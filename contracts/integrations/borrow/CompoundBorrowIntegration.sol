@@ -19,7 +19,6 @@
 pragma solidity >=0.7.0 <0.9.0;
 
 import 'hardhat/console.sol';
-import {SafeMath} from '@openzeppelin/contracts/math/SafeMath.sol';
 import {ERC20} from '@openzeppelin/contracts/token/ERC20/ERC20.sol';
 import {SafeERC20} from '@openzeppelin/contracts/token/ERC20/SafeERC20.sol';
 import {ICToken} from '../../interfaces/external/compound/ICToken.sol';
@@ -31,6 +30,8 @@ import {BorrowIntegration} from './BorrowIntegration.sol';
 import {IBabController} from '../../interfaces/IBabController.sol';
 import {IGarden} from '../../interfaces/IGarden.sol';
 
+import {LowGasSafeMath} from '../../lib/LowGasSafeMath.sol';
+
 /**
  * @title CompoundBorrowIntegration
  * @author Babylon Finance
@@ -38,7 +39,7 @@ import {IGarden} from '../../interfaces/IGarden.sol';
  * Abstract class that houses compound borring logic.
  */
 contract CompoundBorrowIntegration is BorrowIntegration {
-    using SafeMath for uint256;
+    using LowGasSafeMath for uint256;
     using SafeERC20 for ERC20;
 
     /* ============ Modifiers ============ */

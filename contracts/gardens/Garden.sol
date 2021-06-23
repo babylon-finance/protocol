@@ -23,7 +23,7 @@ import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import {SafeERC20} from '@openzeppelin/contracts/token/ERC20/SafeERC20.sol';
 import {ERC20Upgradeable} from '@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol';
 import {ReentrancyGuard} from '@openzeppelin/contracts/utils/ReentrancyGuard.sol';
-import {SafeMath} from '@openzeppelin/contracts/math/SafeMath.sol';
+import {LowGasSafeMath} from '../lib/LowGasSafeMath.sol';
 import {SafeDecimalMath} from '../lib/SafeDecimalMath.sol';
 import {SafeCast} from '@openzeppelin/contracts/utils/SafeCast.sol';
 import {SignedSafeMath} from '@openzeppelin/contracts/math/SignedSafeMath.sol';
@@ -56,7 +56,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
     using SafeDecimalMath for int256;
 
     using SafeCast for uint256;
-    using SafeMath for uint256;
+    using LowGasSafeMath for uint256;
     using PreciseUnitMath for uint256;
     using SafeDecimalMath for uint256;
 
