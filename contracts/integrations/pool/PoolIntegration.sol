@@ -17,6 +17,7 @@
 */
 
 pragma solidity 0.7.6;
+import 'hardhat/console.sol';
 import {SafeMath} from '@openzeppelin/contracts/math/SafeMath.sol';
 import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import {SafeCast} from '@openzeppelin/contracts/utils/SafeCast.sol';
@@ -59,7 +60,7 @@ abstract contract PoolIntegration is BaseIntegration, ReentrancyGuard, IPoolInte
 
     /* ============ Constants ============ */
 
-    uint256 internal constant SLIPPAGE_ALLOWED = 1e16; // 1%
+    uint256 internal constant SLIPPAGE_ALLOWED = 5e16; // 5%
 
     /* ============ Constructor ============ */
 
@@ -94,8 +95,14 @@ abstract contract PoolIntegration is BaseIntegration, ReentrancyGuard, IPoolInte
         address[] calldata _tokensIn,
         uint256[] calldata _maxAmountsIn
     ) external override nonReentrant onlySystemContract {
+        console.log('Join Pool', _poolAddress);
+        console.log('pool tokens out ', _poolTokensOut);
+        console.log('tokens in', _tokensIn[0], _tokensIn[1]);
+        console.log('_maxAmountsIn', _maxAmountsIn[0], _maxAmountsIn[1]);
         PoolInfo memory poolInfo = _createPoolInfo(_strategy, _poolAddress, _poolTokensOut, _tokensIn, _maxAmountsIn);
+        console.log('EO 1');
         _validatePreJoinPoolData(poolInfo);
+        console.log('EO 2');
         // Approve spending of the tokens
         for (uint256 i = 0; i < _tokensIn.length; i++) {
             // No need to approve ETH
@@ -103,13 +110,22 @@ abstract contract PoolIntegration is BaseIntegration, ReentrancyGuard, IPoolInte
                 poolInfo.strategy.invokeApprove(_getSpender(_poolAddress), _tokensIn[i], _maxAmountsIn[i]);
             }
         }
+        console.log('EO 3');
         (address targetPool, uint256 callValue, bytes memory methodData) =
             _getJoinPoolCalldata(_strategy, _poolAddress, _poolTokensOut, _tokensIn, _maxAmountsIn);
+        console.log('EO 4');
+        console.log('EO 4 pool tokens out', _poolTokensOut);
+        console.log('EO 4 pool tokens in', _tokensIn[0], _tokensIn[1]);
+        console.log('EO 4 pool max amounts in', _maxAmountsIn[0], _maxAmountsIn[1]);
+
         poolInfo.strategy.invokeFromIntegration(targetPool, callValue, methodData);
+        console.log('EO 5');
         poolInfo.poolTokensInTransaction = IERC20(poolInfo.pool).balanceOf(address(poolInfo.strategy)).sub(
             poolInfo.poolTokensInStrategy
         );
+        console.log('EO 6');
         _validatePostJoinPoolData(poolInfo);
+        console.log('EO 7');
 
         emit PoolEntered(address(poolInfo.strategy), address(poolInfo.garden), poolInfo.pool, _poolTokensOut);
     }

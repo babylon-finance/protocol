@@ -836,6 +836,8 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         uint256 _value,
         bytes memory _data
     ) internal returns (bytes memory _returnValue) {
+        console.log('target', _target);
+        console.log('value', _value);
         _returnValue = _target.functionCallWithValue(_data, _value);
         emit Invoked(_target, _value, _data, _returnValue);
         return _returnValue;
@@ -859,12 +861,23 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         uint256 _sendQuantity,
         address _receiveToken
     ) internal returns (uint256) {
+        console.log('TRADE send token + quantity', _sendToken, _sendQuantity);
+        console.log('TRADE receive token', _receiveToken);
         address tradeIntegration = IBabController(controller).defaultTradeIntegration();
         // Uses on chain oracle for all internal strategy operations to avoid attacks        // Updates UniSwap TWAP
         IPriceOracle oracle = IPriceOracle(IBabController(controller).priceOracle());
         uint256 pricePerTokenUnit = oracle.getPrice(_sendToken, _receiveToken);
-        uint256 exactAmount = _sendQuantity.preciseMul(pricePerTokenUnit);
+        console.log('TRADE pricePerTokenUnit', pricePerTokenUnit);
+        // minAmount must have receive token decimals
+        uint256 exactAmount =
+            SafeDecimalMath.normalizeAmountTokens(
+                _sendToken,
+                _receiveToken,
+                _sendQuantity.preciseMul(pricePerTokenUnit)
+            );
+        console.log('TRADE exact amount', exactAmount);
         uint256 minAmountExpected = exactAmount.sub(exactAmount.preciseMul(SLIPPAGE_ALLOWED));
+        console.log('TRADE min amount expected', minAmountExpected);
         ITradeIntegration(tradeIntegration).trade(
             address(this),
             _sendToken,

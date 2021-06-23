@@ -17,6 +17,7 @@
 */
 
 pragma solidity 0.7.6;
+import 'hardhat/console.sol';
 import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import {SafeMath} from '@openzeppelin/contracts/math/SafeMath.sol';
 import '@uniswap/v2-core/contracts/interfaces/IUniswapV2Pair.sol';
@@ -162,6 +163,13 @@ contract UniswapPoolIntegration is PoolIntegration {
         address[] calldata _tokensIn,
         uint256[] calldata _maxAmountsIn
     ) private view returns (bytes memory) {
+        console.log('DATA token 1 maxAmountsIn', _maxAmountsIn[0]);
+        console.log('CHECK token 1 .sub', _maxAmountsIn[0].preciseMul(SLIPPAGE_ALLOWED));
+        console.log('CHECK token 1 slippage', _maxAmountsIn[0].sub(_maxAmountsIn[0].preciseMul(SLIPPAGE_ALLOWED)));
+        console.log('DATA token 2 maxAmountsIn', _maxAmountsIn[1]);
+        console.log('CHECK token 2 .sub', _maxAmountsIn[1].preciseMul(SLIPPAGE_ALLOWED));
+        console.log('CHECK token 2 slippage', _maxAmountsIn[1].sub(_maxAmountsIn[1].preciseMul(SLIPPAGE_ALLOWED)));
+
         return
             abi.encodeWithSignature(
                 'addLiquidity(address,address,uint256,uint256,uint256,uint256,address,uint256)',

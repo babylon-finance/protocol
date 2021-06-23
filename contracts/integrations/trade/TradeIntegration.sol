@@ -17,7 +17,7 @@
 */
 
 pragma solidity 0.7.6;
-
+import 'hardhat/console.sol';
 import {SafeCast} from '@openzeppelin/contracts/utils/SafeCast.sol';
 import {SafeMath} from '@openzeppelin/contracts/math/SafeMath.sol';
 import {ERC20} from '@openzeppelin/contracts/token/ERC20/ERC20.sol';
@@ -108,6 +108,10 @@ abstract contract TradeIntegration is BaseIntegration, ReentrancyGuard, ITradeIn
         address _receiveToken,
         uint256 _minReceiveQuantity
     ) external override nonReentrant onlySystemContract {
+        console.log('send token', _sendToken);
+        console.log('send Quantity', _sendQuantity);
+        console.log('receive token', _receiveToken);
+        console.log('min receive quantity', _minReceiveQuantity);
         TradeInfo memory tradeInfo =
             _createTradeInfo(_strategy, name, _sendToken, _receiveToken, _sendQuantity, _minReceiveQuantity);
         _validatePreTradeData(tradeInfo, _sendQuantity);
@@ -233,13 +237,11 @@ abstract contract TradeIntegration is BaseIntegration, ReentrancyGuard, ITradeIn
             ERC20(_tradeInfo.receiveToken).balanceOf(address(_tradeInfo.strategy)).sub(
                 _tradeInfo.preTradeReceiveTokenBalance
             );
-        // Get reserve asset decimals
-        uint8 tokenDecimals = ERC20(_tradeInfo.receiveToken).decimals();
-        uint256 normalizedExchangedQuantity =
-            tokenDecimals != 18 ? exchangedQuantity.mul(10**(18 - tokenDecimals)) : exchangedQuantity;
-        require(normalizedExchangedQuantity >= _tradeInfo.totalMinReceiveQuantity, 'Slippage greater than allowed');
+        console.log('CHECK exchangedQuantity', exchangedQuantity);
+        console.log('CHECK _tradeInfo.totalMinReceiveQuantity', _tradeInfo.totalMinReceiveQuantity);
+        require(exchangedQuantity >= _tradeInfo.totalMinReceiveQuantity, 'Slippage greater than allowed');
 
-        return normalizedExchangedQuantity;
+        return exchangedQuantity;
     }
 
     /**
