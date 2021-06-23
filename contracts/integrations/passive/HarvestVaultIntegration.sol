@@ -18,10 +18,10 @@
 
 pragma solidity 0.7.6;
 import {ERC20} from '@openzeppelin/contracts/token/ERC20/ERC20.sol';
-import {SafeMath} from '@openzeppelin/contracts/math/SafeMath.sol';
 
 import {IBabController} from '../../interfaces/IBabController.sol';
 import {PreciseUnitMath} from '../../lib/PreciseUnitMath.sol';
+import {LowGasSafeMath} from '../../lib/LowGasSafeMath.sol';
 import {PassiveIntegration} from './PassiveIntegration.sol';
 
 import {IHarvestVault} from '../../interfaces/external/harvest/IVault.sol';
@@ -33,7 +33,7 @@ import {IHarvestVault} from '../../interfaces/external/harvest/IVault.sol';
  * Harvest v2 Vault Integration
  */
 contract HarvestVaultIntegration is PassiveIntegration {
-    using SafeMath for uint256;
+    using LowGasSafeMath for uint256;
     using PreciseUnitMath for uint256;
 
     /* ============ Modifiers ============ */

@@ -19,13 +19,16 @@
 pragma solidity 0.7.6;
 
 import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
-import {SafeMath} from '@openzeppelin/contracts/math/SafeMath.sol';
-import {Operation} from './Operation.sol';
+
 import {IGarden} from '../../interfaces/IGarden.sol';
 import {IStrategy} from '../../interfaces/IStrategy.sol';
+import {IBorrowIntegration} from '../../interfaces/IBorrowIntegration.sol';
+
 import {PreciseUnitMath} from '../../lib/PreciseUnitMath.sol';
 import {SafeDecimalMath} from '../../lib/SafeDecimalMath.sol';
-import {IBorrowIntegration} from '../../interfaces/IBorrowIntegration.sol';
+import {LowGasSafeMath as SafeMath} from '../../lib/LowGasSafeMath.sol';
+
+import {Operation} from './Operation.sol';
 
 /**
  * @title LendOperatin
