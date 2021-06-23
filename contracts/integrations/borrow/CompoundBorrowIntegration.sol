@@ -19,17 +19,22 @@
 pragma solidity >=0.7.0 <0.9.0;
 
 import 'hardhat/console.sol';
-import {SafeMath} from '@openzeppelin/contracts/math/SafeMath.sol';
 import {ERC20} from '@openzeppelin/contracts/token/ERC20/ERC20.sol';
+import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import {SafeERC20} from '@openzeppelin/contracts/token/ERC20/SafeERC20.sol';
+
 import {ICToken} from '../../interfaces/external/compound/ICToken.sol';
 import {ICEther} from '../../interfaces/external/compound/ICEther.sol';
 import {ICompoundPriceOracle} from '../../interfaces/external/compound/ICompoundPriceOracle.sol';
 import {IComptroller} from '../../interfaces/external/compound/IComptroller.sol';
 import {IWETH} from '../../interfaces/external/weth/IWETH.sol';
-import {BorrowIntegration} from './BorrowIntegration.sol';
 import {IBabController} from '../../interfaces/IBabController.sol';
 import {IGarden} from '../../interfaces/IGarden.sol';
+
+import {LowGasSafeMath} from '../../lib/LowGasSafeMath.sol';
+import {UniversalERC20} from '../../lib/UniversalERC20.sol';
+
+import {BorrowIntegration} from './BorrowIntegration.sol';
 
 /**
  * @title CompoundBorrowIntegration
@@ -38,8 +43,9 @@ import {IGarden} from '../../interfaces/IGarden.sol';
  * Abstract class that houses compound borring logic.
  */
 contract CompoundBorrowIntegration is BorrowIntegration {
-    using SafeMath for uint256;
+    using LowGasSafeMath for uint256;
     using SafeERC20 for ERC20;
+    using UniversalERC20 for IERC20;
 
     /* ============ Modifiers ============ */
 
@@ -126,7 +132,7 @@ contract CompoundBorrowIntegration is BorrowIntegration {
             ,
             uint256 exchangeRateMantissa
         ) = ICToken(cToken).getAccountSnapshot(_strategy);
-        uint256 decimals = asset == address(0) ? 18 : ERC20(asset).decimals();
+        uint256 decimals = IERC20(asset).universalDecimals();
         // Source: balanceOfUnderlying from any ctoken
         return cTokenBalance.mul(exchangeRateMantissa).div(10**decimals);
     }

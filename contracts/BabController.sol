@@ -19,7 +19,6 @@
 pragma solidity 0.7.6;
 import {OwnableUpgradeable} from '@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol';
 import {AddressUpgradeable} from '@openzeppelin/contracts-upgradeable/utils/AddressUpgradeable.sol';
-import {SafeMath} from '@openzeppelin/contracts/math/SafeMath.sol';
 import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 
 import {IRewardsDistributor} from './interfaces/IRewardsDistributor.sol';
@@ -31,6 +30,7 @@ import {IIntegration} from './interfaces/IIntegration.sol';
 import {IBabController} from './interfaces/IBabController.sol';
 
 import {AddressArrayUtils} from './lib/AddressArrayUtils.sol';
+import {LowGasSafeMath} from './lib/LowGasSafeMath.sol';
 
 /**
  * @title BabController
@@ -42,7 +42,7 @@ import {AddressArrayUtils} from './lib/AddressArrayUtils.sol';
 contract BabController is OwnableUpgradeable, IBabController {
     using AddressArrayUtils for address[];
     using AddressUpgradeable for address;
-    using SafeMath for uint256;
+    using LowGasSafeMath for uint256;
 
     /* ============ Events ============ */
     event GardenAdded(address indexed _garden, address indexed _factory);

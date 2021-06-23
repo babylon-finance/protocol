@@ -21,10 +21,10 @@ import 'hardhat/console.sol';
 import {Address} from '@openzeppelin/contracts/utils/Address.sol';
 import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import {ERC20} from '@openzeppelin/contracts/token/ERC20/ERC20.sol';
+
 import {Initializable} from '@openzeppelin/contracts-upgradeable/proxy/Initializable.sol';
 import {SafeERC20} from '@openzeppelin/contracts/token/ERC20/SafeERC20.sol';
 import {ReentrancyGuard} from '@openzeppelin/contracts/utils/ReentrancyGuard.sol';
-import {SafeMath} from '@openzeppelin/contracts/math/SafeMath.sol';
 import {SignedSafeMath} from '@openzeppelin/contracts/math/SignedSafeMath.sol';
 import {SafeCast} from '@openzeppelin/contracts/utils/SafeCast.sol';
 
@@ -33,6 +33,8 @@ import {PreciseUnitMath} from '../lib/PreciseUnitMath.sol';
 import {SafeDecimalMath} from '../lib/SafeDecimalMath.sol';
 import {Math} from '../lib/Math.sol';
 import {AddressArrayUtils} from '../lib/AddressArrayUtils.sol';
+import {LowGasSafeMath as SafeMath} from '../lib/LowGasSafeMath.sol';
+import {UniversalERC20} from '../lib/UniversalERC20.sol';
 
 import {IWETH} from '../interfaces/external/weth/IWETH.sol';
 import {IBabController} from '../interfaces/IBabController.sol';
@@ -66,6 +68,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
     using AddressArrayUtils for address[];
     using Address for address;
     using SafeERC20 for IERC20;
+    using UniversalERC20 for IERC20;
 
     /* ============ Events ============ */
     event Invoked(address indexed _target, uint256 indexed _value, bytes _data, bytes _returnValue);
@@ -692,6 +695,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
     function getNAV() public view override returns (uint256) {
         uint256 positiveNav = 0;
         uint256 negativeNav = 0;
+        address reserveAsset = garden.reserveAsset();
         for (uint256 i = 0; i < opTypes.length; i++) {
             IOperation operation = IOperation(IBabController(controller).enabledOperations(uint256(opTypes[i])));
             (uint256 strategyNav, bool positive) = operation.getNAV(opDatas[i], garden, opIntegrations[i]);
@@ -699,6 +703,19 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
                 positiveNav = positiveNav.add(strategyNav);
             } else {
                 negativeNav = negativeNav.add(strategyNav);
+            }
+            // borrow op
+        }
+        uint256 lastOp = opTypes.length - 1;
+        if (opTypes[lastOp] == 4) {
+            uint256 borrowBalance = IERC20(opDatas[lastOp]).universalBalanceOf(address(this));
+            if (borrowBalance > 0) {
+                uint256 price = _getPrice(reserveAsset, opDatas[lastOp]);
+                positiveNav = positiveNav.add(
+                    SafeDecimalMath.normalizeAmountTokens(opDatas[lastOp], reserveAsset, borrowBalance).preciseDiv(
+                        price
+                    )
+                );
             }
         }
         if (negativeNav > positiveNav) {
@@ -863,8 +880,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
     ) internal returns (uint256) {
         address tradeIntegration = IBabController(controller).defaultTradeIntegration();
         // Uses on chain oracle for all internal strategy operations to avoid attacks        // Updates UniSwap TWAP
-        IPriceOracle oracle = IPriceOracle(IBabController(controller).priceOracle());
-        uint256 pricePerTokenUnit = oracle.getPrice(_sendToken, _receiveToken);
+        uint256 pricePerTokenUnit = _getPrice(_sendToken, _receiveToken);
         uint256 exactAmount = _sendQuantity.preciseMul(pricePerTokenUnit);
         uint256 minAmountExpected = exactAmount.sub(exactAmount.preciseMul(SLIPPAGE_ALLOWED));
         ITradeIntegration(tradeIntegration).trade(

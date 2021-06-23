@@ -27,10 +27,10 @@ import '@uniswap/v3-core/contracts/interfaces/IUniswapV3Factory.sol';
 import '@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol';
 import '@uniswap/v3-core/contracts/libraries/TickMath.sol';
 import '@uniswap/v3-periphery/contracts/libraries/OracleLibrary.sol';
-
 import {SafeCast} from '@openzeppelin/contracts/utils/SafeCast.sol';
+
 import {PreciseUnitMath} from '../lib/PreciseUnitMath.sol';
-import {SafeMath} from '@openzeppelin/contracts/math/SafeMath.sol';
+import {LowGasSafeMath as SafeMath} from '../lib/LowGasSafeMath.sol';
 
 import {IBabController} from '../interfaces/IBabController.sol';
 import {IOracleAdapter} from '../interfaces/IOracleAdapter.sol';

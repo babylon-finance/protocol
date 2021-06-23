@@ -18,14 +18,18 @@
 
 pragma solidity 0.7.6;
 
+import 'hardhat/console.sol';
 import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
-import {SafeMath} from '@openzeppelin/contracts/math/SafeMath.sol';
-import {Operation} from './Operation.sol';
+
 import {IGarden} from '../../interfaces/IGarden.sol';
 import {IStrategy} from '../../interfaces/IStrategy.sol';
+import {IBorrowIntegration} from '../../interfaces/IBorrowIntegration.sol';
+
 import {PreciseUnitMath} from '../../lib/PreciseUnitMath.sol';
 import {SafeDecimalMath} from '../../lib/SafeDecimalMath.sol';
-import {IBorrowIntegration} from '../../interfaces/IBorrowIntegration.sol';
+import {LowGasSafeMath as SafeMath} from '../../lib/LowGasSafeMath.sol';
+
+import {Operation} from './Operation.sol';
 
 /**
  * @title LendOperatin
@@ -142,24 +146,23 @@ contract BorrowOperation is Operation {
     /**
      * Gets the NAV of the lend op in the reserve asset
      *
-     * @param _assetToken         Asset borrowed
+     * @param _borrowToken        Asset borrowed
      * @param _garden             Garden the strategy belongs to
      * @param _integration        Status of the asset amount
      * @return _nav               NAV of the strategy
      */
     function getNAV(
-        address _assetToken,
+        address _borrowToken,
         IGarden _garden,
         address _integration
     ) external view override onlyStrategy returns (uint256, bool) {
         if (!IStrategy(msg.sender).isStrategyActive()) {
             return (0, true);
         }
-        uint256 tokensOwed = IBorrowIntegration(_integration).getBorrowBalance(msg.sender, _assetToken);
-        uint256 price = _getPrice(_garden.reserveAsset(), _assetToken);
+        uint256 tokensOwed = IBorrowIntegration(_integration).getBorrowBalance(msg.sender, _borrowToken);
+        uint256 price = _getPrice(_garden.reserveAsset(), _borrowToken);
         uint256 NAV =
-            SafeDecimalMath.normalizeAmountTokens(_assetToken, _garden.reserveAsset(), tokensOwed).preciseDiv(price);
-        require(NAV != 0, 'NAV has to be different than 0');
+            SafeDecimalMath.normalizeAmountTokens(_borrowToken, _garden.reserveAsset(), tokensOwed).preciseDiv(price);
         return (NAV, false);
     }
 }

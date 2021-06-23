@@ -14,14 +14,14 @@
 
 pragma solidity 0.7.6;
 
-import {SafeMath} from '@openzeppelin/contracts/math/SafeMath.sol';
+import {LowGasSafeMath} from '../lib/LowGasSafeMath.sol';
 import {Ownable} from '@openzeppelin/contracts/access/Ownable.sol';
 
 import {ITimelock} from '../interfaces/ITimelock.sol';
 
 // TODO: Do a diff to check for changes
 contract Timelock is ITimelock {
-    using SafeMath for uint256;
+    using LowGasSafeMath for uint256;
 
     /* ============ Events ============ */
 
