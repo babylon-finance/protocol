@@ -13,14 +13,14 @@ module.exports = async ({
   const { deployer, owner } = await getNamedAccounts();
   const signer = await getSigner(deployer);
   const gasPrice = await getRapid();
-  const contract = 'OneInchTradeIntegration';
+  const contract = 'UniswapV3TradeIntegration';
 
   const controller = await deployments.get('BabControllerProxy');
   const controllerContract = await ethers.getContractAt('IBabController', controller.address, signer);
 
   const deployment = await deploy(contract, {
     from: deployer,
-    args: [controller.address, addresses.tokens.WETH, addresses.oneinch.exchange],
+    args: [controller.address, addresses.tokens.WETH],
     log: true,
     gasPrice,
   });
@@ -44,4 +44,4 @@ module.exports = async ({
   }
 };
 
-module.exports.tags = ['OneInch'];
+module.exports.tags = ['UniV3Trade'];

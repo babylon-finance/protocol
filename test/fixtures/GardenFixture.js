@@ -29,7 +29,7 @@ async function setUpFixture(
   const babViewer = await getContract('BabylonViewer');
 
   const kyberTradeIntegration = await getContract('KyberTradeIntegration');
-  const oneInchTradeIntegration = await getContract('OneInchTradeIntegration');
+  const uniswapV3TradeIntegration = await getContract('UniswapV3TradeIntegration');
   const balancerIntegration = await getContract('BalancerIntegration');
   const uniswapPoolIntegration = await getContract('UniswapPoolIntegration');
   const yearnVaultIntegration = await getContract('YearnVaultIntegration');
@@ -194,7 +194,7 @@ async function setUpFixture(
     treasury,
     rewardsDistributor,
     kyberTradeIntegration,
-    oneInchTradeIntegration,
+    uniswapV3TradeIntegration,
     balancerIntegration,
     uniswapPoolIntegration,
     harvestVaultIntegration,
@@ -237,11 +237,17 @@ async function setUpFixture(
     signer1,
     signer2,
     signer3,
+
     daiWhaleSigner,
     wethWhaleSigner,
 
     deployments,
     upgradesDeployer,
+
+    dai,
+    usdc,
+    weth,
+    wbtc,
   };
 }
 

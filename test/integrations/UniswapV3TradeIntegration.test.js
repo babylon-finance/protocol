@@ -11,31 +11,20 @@ const {
 } = require('../fixtures/StrategyHelper');
 const addresses = require('../../lib/addresses');
 
-describe('OneInchTradeIntegration', function () {
-  let oneInchTradeIntegration;
+describe.only('UniswapV3TradeIntegration', function () {
+  let uniswapV3TradeIntegration;
   let garden1;
-  let babController;
   let signer1;
   let signer2;
   let signer3;
+  let dai;
+  let weth;
 
   beforeEach(async () => {
-    ({ babController, garden1, oneInchTradeIntegration, signer1, signer2, signer3 } = await setupTests()());
-  });
-
-  describe('Deployment', function () {
-    it('should successfully deploy the contract', async function () {
-      const deployed = await babController.deployed();
-      const deployedOne = await oneInchTradeIntegration.deployed();
-      expect(!!deployed).to.equal(true);
-      expect(!!deployedOne).to.equal(true);
-    });
+    ({ garden1, uniswapV3TradeIntegration, signer1, signer2, signer3, dai, weth } = await setupTests()());
   });
 
   describe('Trading', function () {
-    let daiToken;
-    let wethToken;
-
     beforeEach(async () => {
       daiToken = await ethers.getContractAt('IERC20', addresses.tokens.DAI);
       wethToken = await ethers.getContractAt('IERC20', addresses.tokens.WETH);
@@ -48,7 +37,7 @@ describe('OneInchTradeIntegration', function () {
         'buy',
         'vote',
         [signer1, signer2, signer3],
-        oneInchTradeIntegration.address,
+        uniswapV3TradeIntegration.address,
         garden1,
         DEFAULT_STRATEGY_PARAMS,
         addresses.tokens.DAI,
