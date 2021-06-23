@@ -18,6 +18,8 @@
 
 pragma solidity 0.7.6;
 
+import 'hardhat/console.sol';
+
 import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 
 import {IGarden} from '../../interfaces/IGarden.sol';
@@ -177,26 +179,27 @@ contract LendOperation is Operation {
     /**
      * Gets the NAV of the lend op in the reserve asset
      *
-     * @param _assetToken         Asset lent
+     * @param _lendToken          Asset lent
      * @param _garden             Garden the strategy belongs to
      * @param _integration        Status of the asset amount
      * @return _nav           NAV of the strategy
      */
     function getNAV(
-        address _assetToken,
+        address _lendToken,
         IGarden _garden,
         address _integration
     ) external view override returns (uint256, bool) {
         if (!IStrategy(msg.sender).isStrategyActive()) {
             return (0, true);
         }
-        uint256 assetTokenAmount = ILendIntegration(_integration).getInvestmentTokenAmount(msg.sender, _assetToken);
-        uint256 price = _getPrice(_garden.reserveAsset(), _assetToken);
+        uint256 assetTokenAmount = ILendIntegration(_integration).getInvestmentTokenAmount(msg.sender, _lendToken);
+        uint256 price = _getPrice(_garden.reserveAsset(), _lendToken);
         uint256 NAV =
-            SafeDecimalMath.normalizeAmountTokens(_assetToken, _garden.reserveAsset(), assetTokenAmount).preciseDiv(
+            SafeDecimalMath.normalizeAmountTokens(_lendToken, _garden.reserveAsset(), assetTokenAmount).preciseDiv(
                 price
             );
         require(NAV != 0, 'NAV has to be bigger 0');
+        console.log('lend NAV', NAV);
         return (NAV, true);
     }
 

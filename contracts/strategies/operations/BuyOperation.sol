@@ -122,23 +122,23 @@ contract BuyOperation is Operation {
     /**
      * Gets the NAV of the buy op in the reserve asset
      *
-     * @param _data               Asset bought
+     * @param _token               Asset bought
      * @param _garden             Garden the strategy belongs to
-     * param _integration        Status of the asset amount
+     * param _integration         Status of the asset amount
      * @return _nav               NAV of the strategy
      */
     function getNAV(
-        address _data,
+        address _token,
         IGarden _garden,
         address /* _integration */
     ) external view override returns (uint256, bool) {
         if (!IStrategy(msg.sender).isStrategyActive()) {
             return (0, true);
         }
-        uint256 price = _getPrice(_garden.reserveAsset(), _data);
+        uint256 price = _getPrice(_garden.reserveAsset(), _token);
         uint256 NAV =
             SafeDecimalMath
-                .normalizeAmountTokens(_data, _garden.reserveAsset(), IERC20(_data).balanceOf(msg.sender))
+                .normalizeAmountTokens(_token, _garden.reserveAsset(), IERC20(_token).balanceOf(msg.sender))
                 .preciseDiv(price);
         require(NAV != 0, 'NAV has to be bigger 0');
         return (NAV, true);
