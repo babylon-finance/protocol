@@ -24,7 +24,6 @@ describe('AaveBorrowIntegrationTest', function () {
   let signer1;
   let signer2;
   let signer3;
-  let babController;
   let USDC;
   let DAI;
   let WETH;
@@ -97,15 +96,7 @@ describe('AaveBorrowIntegrationTest', function () {
   }
 
   beforeEach(async () => {
-    ({
-      garden1,
-      babController,
-      aaveLendIntegration,
-      aaveBorrowIntegration,
-      signer1,
-      signer2,
-      signer3,
-    } = await setupTests()());
+    ({ garden1, aaveLendIntegration, aaveBorrowIntegration, signer1, signer2, signer3 } = await setupTests()());
     USDC = await ethers.getContractAt('IERC20', addresses.tokens.USDC);
     DAI = await ethers.getContractAt('IERC20', addresses.tokens.DAI);
     WETH = await ethers.getContractAt('IERC20', addresses.tokens.WETH);
@@ -113,9 +104,7 @@ describe('AaveBorrowIntegrationTest', function () {
 
   describe('Deployment', function () {
     it('should successfully deploy the contract', async function () {
-      const babControlerDeployed = await babController.deployed();
       const lendDeployed = await aaveBorrowIntegration.deployed();
-      expect(!!babControlerDeployed).to.equal(true);
       expect(!!lendDeployed).to.equal(true);
     });
   });
@@ -134,11 +123,9 @@ describe('AaveBorrowIntegrationTest', function () {
       );
 
       await executeStrategy(strategyContract);
+
       const nav = await strategyContract.getNAV();
-      expect(nav).to.be.closeTo(
-        ethers.utils.parseEther('1').sub(ethers.utils.parseEther('1').mul(3).div(10)),
-        ethers.utils.parseEther('1').div(10),
-      );
+      expect(nav).to.be.closeTo(ethers.utils.parseEther('1'), ethers.utils.parseEther('1').div(10));
     });
   });
 
@@ -173,6 +160,7 @@ describe('AaveBorrowIntegrationTest', function () {
       it(`should fail trying to supply USDC and borrow USDC in a ${name} Garden`, async function () {
         await trySupplyBorrowStrategy(USDC, USDC, token, 'There is no collateral locked');
       });
+
     });
   });
 });
