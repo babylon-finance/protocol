@@ -22,7 +22,7 @@ import {IBabController} from '../interfaces/IBabController.sol';
 import {IIntegration} from '../interfaces/IIntegration.sol';
 import {IStrategy} from '../interfaces/IStrategy.sol';
 import {IGarden} from '../interfaces/IGarden.sol';
-import {SafeMath} from '@openzeppelin/contracts/math/SafeMath.sol';
+import {LowGasSafeMath} from '../lib/LowGasSafeMath.sol';
 import {SignedSafeMath} from '@openzeppelin/contracts/math/SignedSafeMath.sol';
 import {SafeCast} from '@openzeppelin/contracts/utils/SafeCast.sol';
 import {PreciseUnitMath} from '../lib/PreciseUnitMath.sol';
@@ -35,7 +35,7 @@ import {PreciseUnitMath} from '../lib/PreciseUnitMath.sol';
  */
 abstract contract BaseIntegration {
     using SafeCast for int256;
-    using SafeMath for uint256;
+    using LowGasSafeMath for uint256;
     using SignedSafeMath for int256;
     using PreciseUnitMath for uint256;
 

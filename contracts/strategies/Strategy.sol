@@ -25,7 +25,6 @@ import {ERC20} from '@openzeppelin/contracts/token/ERC20/ERC20.sol';
 import {Initializable} from '@openzeppelin/contracts-upgradeable/proxy/Initializable.sol';
 import {SafeERC20} from '@openzeppelin/contracts/token/ERC20/SafeERC20.sol';
 import {ReentrancyGuard} from '@openzeppelin/contracts/utils/ReentrancyGuard.sol';
-import {SafeMath} from '@openzeppelin/contracts/math/SafeMath.sol';
 import {SignedSafeMath} from '@openzeppelin/contracts/math/SignedSafeMath.sol';
 import {SafeCast} from '@openzeppelin/contracts/utils/SafeCast.sol';
 
@@ -34,6 +33,7 @@ import {PreciseUnitMath} from '../lib/PreciseUnitMath.sol';
 import {SafeDecimalMath} from '../lib/SafeDecimalMath.sol';
 import {Math} from '../lib/Math.sol';
 import {AddressArrayUtils} from '../lib/AddressArrayUtils.sol';
+import {LowGasSafeMath as SafeMath} from '../lib/LowGasSafeMath.sol';
 import {UniversalERC20} from '../lib/UniversalERC20.sol';
 
 import {IWETH} from '../interfaces/external/weth/IWETH.sol';

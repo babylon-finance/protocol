@@ -21,7 +21,7 @@ import 'hardhat/console.sol';
 import {ERC20} from '@openzeppelin/contracts/token/ERC20/ERC20.sol';
 import {IVoteToken} from '../interfaces/IVoteToken.sol';
 import {ReentrancyGuard} from '@openzeppelin/contracts/utils/ReentrancyGuard.sol';
-import {SafeMath} from '@openzeppelin/contracts/math/SafeMath.sol';
+import {LowGasSafeMath} from '../lib/LowGasSafeMath.sol';
 import {Context} from '@openzeppelin/contracts/utils/Context.sol';
 import {Ownable} from '@openzeppelin/contracts/access/Ownable.sol';
 import {Address} from '@openzeppelin/contracts/utils/Address.sol';
@@ -36,7 +36,7 @@ import {Address} from '@openzeppelin/contracts/utils/Address.sol';
  */
 
 abstract contract VoteToken is Context, ERC20, Ownable, IVoteToken, ReentrancyGuard {
-    using SafeMath for uint256;
+    using LowGasSafeMath for uint256;
     using Address for address;
 
     /* ============ Events ============ */

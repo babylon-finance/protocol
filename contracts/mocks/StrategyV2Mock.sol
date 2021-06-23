@@ -22,7 +22,7 @@ import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import {Initializable} from '@openzeppelin/contracts-upgradeable/proxy/Initializable.sol';
 import {SafeERC20} from '@openzeppelin/contracts/token/ERC20/SafeERC20.sol';
 import {ReentrancyGuard} from '@openzeppelin/contracts/utils/ReentrancyGuard.sol';
-import {SafeMath} from '@openzeppelin/contracts/math/SafeMath.sol';
+import {LowGasSafeMath} from '../lib/LowGasSafeMath.sol';
 import {SignedSafeMath} from '@openzeppelin/contracts/math/SignedSafeMath.sol';
 import {SafeCast} from '@openzeppelin/contracts/utils/SafeCast.sol';
 
@@ -52,7 +52,7 @@ import {IRewardsDistributor} from '../interfaces/IRewardsDistributor.sol';
  */
 contract StrategyV2Mock {
     using SignedSafeMath for int256;
-    using SafeMath for uint256;
+    using LowGasSafeMath for uint256;
     using SafeCast for uint256;
     using SafeCast for int256;
     using PreciseUnitMath for int256;

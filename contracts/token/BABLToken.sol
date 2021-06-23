@@ -16,7 +16,7 @@
 */
 
 pragma solidity 0.7.6;
-import {SafeMath} from '@openzeppelin/contracts/math/SafeMath.sol';
+import {LowGasSafeMath} from '../lib/LowGasSafeMath.sol';
 import {TimeLockedToken} from './TimeLockedToken.sol';
 import {Address} from '@openzeppelin/contracts/utils/Address.sol';
 import {ReentrancyGuard} from '@openzeppelin/contracts/utils/ReentrancyGuard.sol';
@@ -31,7 +31,7 @@ import {IBabController} from '../interfaces/IBabController.sol';
  */
 
 contract BABLToken is TimeLockedToken {
-    using SafeMath for uint256;
+    using LowGasSafeMath for uint256;
     using Address for address;
 
     /* ============ Events ============ */

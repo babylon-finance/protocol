@@ -18,8 +18,9 @@
 
 pragma solidity 0.7.6;
 
-import {SafeMath} from '@openzeppelin/contracts/math/SafeMath.sol';
 import {SignedSafeMath} from '@openzeppelin/contracts/math/SignedSafeMath.sol';
+
+import {LowGasSafeMath} from './LowGasSafeMath.sol';
 
 /**
  * @title PreciseUnitMath
@@ -32,7 +33,7 @@ import {SignedSafeMath} from '@openzeppelin/contracts/math/SignedSafeMath.sol';
  * - 9/21/20: Added safePower function
  */
 library PreciseUnitMath {
-    using SafeMath for uint256;
+    using LowGasSafeMath for uint256;
     using SignedSafeMath for int256;
 
     // The number One in precise units.

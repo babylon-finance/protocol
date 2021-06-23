@@ -19,7 +19,6 @@
 pragma solidity 0.7.6;
 
 import {ERC20} from '@openzeppelin/contracts/token/ERC20/ERC20.sol';
-import {SafeMath} from '@openzeppelin/contracts/math/SafeMath.sol';
 import {SafeCast} from '@openzeppelin/contracts/utils/SafeCast.sol';
 import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import {ReentrancyGuard} from '@openzeppelin/contracts/utils/ReentrancyGuard.sol';
@@ -29,6 +28,7 @@ import {IGarden} from '../../interfaces/IGarden.sol';
 import {IStrategy} from '../../interfaces/IStrategy.sol';
 import {IBabController} from '../../interfaces/IBabController.sol';
 
+import {LowGasSafeMath} from '../../lib/LowGasSafeMath.sol';
 import {UniversalERC20} from '../../lib/UniversalERC20.sol';
 
 import {LendIntegration} from './LendIntegration.sol';
@@ -40,7 +40,7 @@ import {LendIntegration} from './LendIntegration.sol';
  * Compound lend integration.
  */
 contract CompoundLendIntegration is LendIntegration {
-    using SafeMath for uint256;
+    using LowGasSafeMath for uint256;
     using SafeCast for uint256;
     using UniversalERC20 for IERC20;
 
