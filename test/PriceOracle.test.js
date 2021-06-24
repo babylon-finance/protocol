@@ -3,10 +3,34 @@ const { ethers } = require('hardhat');
 
 const addresses = require('../lib/addresses');
 const { TWAP_ORACLE_WINDOW, TWAP_ORACLE_GRANULARITY } = require('../lib/system.js');
-const { parse, from } = require('./utils/test-helpers');
+const { from, eth, parse } = require('../lib/helpers');
 const { setupTests } = require('./fixtures/GardenFixture');
 
 const tokens = [
+  {
+    name: 'YFI->DAI',
+    tokenIn: addresses.tokens.YFI,
+    tokenOut: addresses.tokens.DAI,
+    value: from('70688749367415192058580'),
+  },
+  {
+    name: 'SNX->USDT',
+    tokenIn: addresses.tokens.SNX,
+    tokenOut: addresses.tokens.USDT,
+    value: from('16644203924869776128'),
+  },
+  {
+    name: 'WBTC->DAI',
+    tokenIn: addresses.tokens.WBTC,
+    tokenOut: addresses.tokens.DAI,
+    value: from('55152199895793998496139'),
+  },
+  {
+    name: 'COMP->USDC',
+    tokenIn: addresses.tokens.COMP,
+    tokenOut: addresses.tokens.USDC,
+    value: from('794147161556756252270'),
+  },
   {
     name: 'YFI',
     tokenIn: addresses.tokens.WETH,

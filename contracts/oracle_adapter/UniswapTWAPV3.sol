@@ -91,11 +91,26 @@ contract UniswapTWAPV3 is Ownable, IOracleAdapter {
      * Returns the amount out corresponding to the amount in for a given token
      * @param _tokenIn              Address of the first token
      * @param _tokenOut             Address of the second token
-     * @return found               Whether or not the price as found
+     * @return found                Whether or not the price as found
      */
-    function getPrice(address _tokenIn, address _tokenOut) external view override returns (bool found, uint256 price) {
+    function getPrice(address _tokenIn, address _tokenOut) public view override returns (bool found, uint256 price) {
+        bool found;
+        uint256 price;
+
+        if(_tokenIn != WETH && _tokenOut != WETH) {
+          uint256 tokenInInWeth;
+          uint256 tokenOutInWeth;
+          (found, tokenInInWeth) = getPrice(_tokenIn, WETH);
+          if (!found) {
+              return (false, 0);
+          }
+          (found, tokenOutInWeth) = getPrice(_tokenOut, WETH);
+          if (!found) {
+              return (false, 0);
+          }
+          return (true, tokenInInWeth.preciseDiv(tokenOutInWeth));
+        }
         int24 tick;
-        bool found = false;
         // We try the low pool first
         IUniswapV3Pool pool = IUniswapV3Pool(factory.getPool(_tokenIn, _tokenOut, FEE_LOW));
         if (address(pool) != address(0)) {
@@ -122,7 +137,7 @@ contract UniswapTWAPV3 is Ownable, IOracleAdapter {
         }
 
         int256 twapTick = OracleLibrary.consult(address(pool), SECONDS_GRANULARITY);
-        uint256 price =
+        price =
             OracleLibrary
                 .getQuoteAtTick(
                 int24(twapTick),
