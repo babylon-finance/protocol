@@ -1,5 +1,5 @@
 const { ethers } = require('hardhat');
-const { ONE_DAY_IN_SECONDS, ONE_ETH } = require('../../lib/constants.js');
+const { ONE_DAY_IN_SECONDS, ONE_ETH, STRATEGY_EXECUTE_MAP } = require('../../lib/constants.js');
 const { TWAP_ORACLE_WINDOW, TWAP_ORACLE_GRANULARITY } = require('../../lib/system.js');
 const { impersonateAddress } = require('../../lib/rpc');
 const addresses = require('../../lib/addresses');
@@ -179,18 +179,21 @@ async function executeStrategy(
   {
     /* Strategy default cooldown period */
     time = ONE_DAY_IN_SECONDS,
-    amount = ONE_ETH,
+    amount = 0,
     fee = 0,
     TWAPs = true,
     gasPrice = 0,
   } = {},
 ) {
+  const garden = await strategy.garden();
+  const gardenContract = await ethers.getContractAt('Garden', garden);
+  amount = STRATEGY_EXECUTE_MAP[await gardenContract.reserveAsset()];
   const signers = await ethers.getSigners();
   if (time > 0) {
     await increaseTime(time);
   }
   if (TWAPs) {
-    await updateTWAPs(await strategy.garden());
+    await updateTWAPs(garden);
   }
   return (
     strategy

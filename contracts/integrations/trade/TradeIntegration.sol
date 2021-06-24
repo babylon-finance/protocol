@@ -72,9 +72,9 @@ abstract contract TradeIntegration is BaseIntegration, ReentrancyGuard, ITradeIn
         uint256 _totalReceiveAmount
     );
 
-    uint24 private constant FEE_LOW = 500;
-    uint24 private constant FEE_MEDIUM = 3000;
-    uint24 private constant FEE_HIGH = 10000;
+    uint24 internal constant FEE_LOW = 500;
+    uint24 internal constant FEE_MEDIUM = 3000;
+    uint24 internal constant FEE_HIGH = 10000;
 
     /* ============ Constructor ============ */
 

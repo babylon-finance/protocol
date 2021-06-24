@@ -17,8 +17,10 @@
 */
 
 pragma solidity 0.7.6;
+pragma abicoder v2;
 
 import {IBabController} from '../../interfaces/IBabController.sol';
+import {ISwapRouter} from '../../interfaces/external/uniswap-v3/ISwapRouter.sol';
 
 import {LowGasSafeMath as SafeMath} from '../../lib/LowGasSafeMath.sol';
 
@@ -36,6 +38,11 @@ contract UniswapV3TradeIntegration is TradeIntegration {
     /* ============ Modifiers ============ */
 
     /* ============ State Variables ============ */
+
+    /* ============ Constants ============ */
+     // Address of Uniswap V3 SwapRouter contract
+    address private constant swapRouter = 0xE592427A0AEce92De3Edee1F18E0157C05861564;
+
 
     /* ============ Constructor ============ */
 
@@ -77,13 +84,13 @@ contract UniswapV3TradeIntegration is TradeIntegration {
     /**
      * Executes the trade through 1Inch.
      *
-     * hparam _strategy             Address of the strategy
+     * @param _strategy             Address of the strategy
      * @param _sendToken            Address of the token to be sent to the exchange
      * @param _sendQuantity         Units of reserve asset token sent to the exchange
      * @param _receiveToken         Address of the token that will be received from the exchange
      */
     function _getTradeCallData(
-        address, /*_strategy*/
+        address _strategy,
         address _sendToken,
         uint256 _sendQuantity,
         address _receiveToken
@@ -97,7 +104,22 @@ contract UniswapV3TradeIntegration is TradeIntegration {
             bytes memory
         )
     {
-        return (address(0), 0, bytes(''));
+        bytes memory path;
+        if(_sendToken == weth || _receiveToken == weth) {
+          path = abi.encodePacked(_sendToken, FEE_MEDIUM, _receiveToken);
+        } else {
+          path = abi.encodePacked(_sendToken, FEE_MEDIUM, weth, FEE_MEDIUM, _receiveToken);
+        }
+        ISwapRouter.ExactInputParams memory params = ISwapRouter.ExactInputParams(
+            path,
+            _strategy,
+            block.timestamp,
+            _sendQuantity,
+            1 // we check for amountOutMinimum in the post trade check
+        );
+
+        bytes memory callData = abi.encodeWithSignature("exactInput((bytes,address,uint256,uint256,uint256))", params);
+        return (swapRouter, 0, callData);
     }
 
     /**
@@ -106,6 +128,6 @@ contract UniswapV3TradeIntegration is TradeIntegration {
      * @return address             Address of the contract to approve tokens to
      */
     function _getSpender() internal view override returns (address) {
-        return address(0);
+        return address(swapRouter);
     }
 }
