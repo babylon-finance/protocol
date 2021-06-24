@@ -10,7 +10,11 @@ library UniversalERC20 {
 
     IERC20 private constant ZERO_ADDRESS = IERC20(0x0000000000000000000000000000000000000000);
 
-    function universalTransfer(IERC20 token, address to, uint256 amount) internal returns(bool) {
+    function universalTransfer(
+        IERC20 token,
+        address to,
+        uint256 amount
+    ) internal returns (bool) {
         if (amount == 0) {
             return true;
         }
@@ -23,13 +27,18 @@ library UniversalERC20 {
         }
     }
 
-    function universalTransferFrom(IERC20 token, address from, address to, uint256 amount) internal {
+    function universalTransferFrom(
+        IERC20 token,
+        address from,
+        address to,
+        uint256 amount
+    ) internal {
         if (amount == 0) {
             return;
         }
 
         if (isETH(token)) {
-            require(from == msg.sender && msg.value >= amount, "msg.value is zero");
+            require(from == msg.sender && msg.value >= amount, 'msg.value is zero');
             if (to != address(this)) {
                 address(uint160(to)).transfer(amount);
             }
@@ -41,7 +50,11 @@ library UniversalERC20 {
         }
     }
 
-    function universalApprove(IERC20 token, address to, uint256 amount) internal {
+    function universalApprove(
+        IERC20 token,
+        address to,
+        uint256 amount
+    ) internal {
         if (!isETH(token)) {
             if (amount > 0 && token.allowance(address(this), to) > 0) {
                 token.safeApprove(to, 0);
@@ -63,14 +76,12 @@ library UniversalERC20 {
             return 18;
         }
 
-        (bool success, bytes memory data) = address(token).staticcall{gas:5000}(
-            abi.encodeWithSignature("decimals()")
-        );
+        (bool success, bytes memory data) = address(token).staticcall{gas: 5000}(abi.encodeWithSignature('decimals()'));
 
         return success ? abi.decode(data, (uint256)) : 18;
     }
 
-    function isETH(IERC20 token) internal pure returns(bool) {
+    function isETH(IERC20 token) internal pure returns (bool) {
         return address(token) == address(ZERO_ADDRESS);
     }
 }

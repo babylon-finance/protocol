@@ -17,10 +17,11 @@
 */
 
 pragma solidity 0.7.6;
-import {SafeMath} from '@openzeppelin/contracts/math/SafeMath.sol';
 import {IBabController} from '../../interfaces/IBabController.sol';
 
 import {IOneInchExchange} from '../../interfaces/external/1inch/IOneInchExchange.sol';
+import {LowGasSafeMath as SafeMath} from '../../lib/LowGasSafeMath.sol';
+
 import {TradeIntegration} from './TradeIntegration.sol';
 
 /**

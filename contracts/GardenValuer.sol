@@ -20,13 +20,13 @@ pragma solidity 0.7.6;
 import {ERC20} from '@openzeppelin/contracts/token/ERC20/ERC20.sol';
 import {SafeCast} from '@openzeppelin/contracts/utils/SafeCast.sol';
 import {SignedSafeMath} from '@openzeppelin/contracts/math/SignedSafeMath.sol';
-import {SafeMath} from '@openzeppelin/contracts/math/SafeMath.sol';
 
 import {IBabController} from './interfaces/IBabController.sol';
 import {IGarden} from './interfaces/IGarden.sol';
 import {IStrategy} from './interfaces/IStrategy.sol';
 import {IPriceOracle} from './interfaces/IPriceOracle.sol';
 import {PreciseUnitMath} from './lib/PreciseUnitMath.sol';
+import {LowGasSafeMath as SafeMath} from './lib/LowGasSafeMath.sol';
 
 /**
  * @title GardenValuer

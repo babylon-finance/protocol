@@ -20,7 +20,7 @@ import 'hardhat/console.sol';
 import {TimeLockedToken} from '../token/TimeLockedToken.sol';
 
 import {OwnableUpgradeable} from '@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol';
-import {SafeMath} from '@openzeppelin/contracts/math/SafeMath.sol';
+import {LowGasSafeMath} from '../lib/LowGasSafeMath.sol';
 import {Address} from '@openzeppelin/contracts/utils/Address.sol';
 import {SafeERC20} from '@openzeppelin/contracts/token/ERC20/SafeERC20.sol';
 import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
@@ -49,8 +49,8 @@ import {IPriceOracle} from '../interfaces/IPriceOracle.sol';
  * which are actively contributing to the protocol growth and their communities (Garden creators, Strategists and Stewards).
  */
 contract RewardsDistributorV2Mock is OwnableUpgradeable {
-    using SafeMath for uint256;
-    using SafeMath for int256;
+    using LowGasSafeMath for uint256;
+    using LowGasSafeMath for int256;
     using PreciseUnitMath for uint256;
     using PreciseUnitMath for int256;
     using SafeDecimalMath for uint256;

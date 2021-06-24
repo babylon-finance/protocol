@@ -19,10 +19,10 @@ pragma solidity 0.7.6;
 import {IBabController} from '../interfaces/IBabController.sol';
 import {TimeLockRegistry} from './TimeLockRegistry.sol';
 import {IRewardsDistributor} from '../interfaces/IRewardsDistributor.sol';
-import {SafeMath} from '@openzeppelin/contracts/math/SafeMath.sol';
 import {VoteToken} from './VoteToken.sol';
 import {Ownable} from '@openzeppelin/contracts/access/Ownable.sol';
 import {Errors, _require} from '../lib/BabylonErrors.sol';
+import {LowGasSafeMath} from '../lib/LowGasSafeMath.sol';
 import {IBabController} from '../interfaces/IBabController.sol';
 
 /**
@@ -42,7 +42,7 @@ import {IBabController} from '../interfaces/IBabController.sol';
  */
 
 abstract contract TimeLockedToken is VoteToken {
-    using SafeMath for uint256;
+    using LowGasSafeMath for uint256;
 
     /* ============ Events ============ */
 
@@ -424,11 +424,7 @@ abstract contract TimeLockedToken is VoteToken {
             'TimeLockedToken::decreaseAllowance:cannot decrease allowance to timeLockRegistry'
         );
 
-        _approve(
-            msg.sender,
-            spender,
-            allowance(msg.sender, spender).sub(subtractedValue, 'ERC20: decreased allowance below zero')
-        );
+        _approve(msg.sender, spender, allowance(msg.sender, spender).sub(subtractedValue));
         return true;
     }
 

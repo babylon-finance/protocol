@@ -18,11 +18,11 @@
 
 pragma solidity 0.7.6;
 import {ERC20} from '@openzeppelin/contracts/token/ERC20/ERC20.sol';
-import {SafeMath} from '@openzeppelin/contracts/math/SafeMath.sol';
 
 import {IBabController} from '../../interfaces/IBabController.sol';
 import {TradeIntegration} from './TradeIntegration.sol';
 import {PreciseUnitMath} from '../../lib/PreciseUnitMath.sol';
+import {LowGasSafeMath} from '../../lib/LowGasSafeMath.sol';
 import {IKyberNetworkProxy} from '../../interfaces/external/kyber/IKyberNetworkProxy.sol';
 
 /**
@@ -32,7 +32,7 @@ import {IKyberNetworkProxy} from '../../interfaces/external/kyber/IKyberNetworkP
  * Kyber protocol trade integration
  */
 contract KyberTradeIntegration is TradeIntegration {
-    using SafeMath for uint256;
+    using LowGasSafeMath for uint256;
     using PreciseUnitMath for uint256;
 
     /* ============ State Variables ============ */
