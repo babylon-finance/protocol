@@ -204,12 +204,15 @@ describe('OneInchPoolIntegrationTest', function () {
           let amount = STRATEGY_EXECUTE_MAP[token];
 
           await executeStrategy(strategyContract, { amount });
+          const tokenContract = await ethers.getContractAt('ERC20', token);
+          const executionTokenBalance = await tokenContract.balanceOf(garden.address);
           const LPTokens = await getExpectedLPTokens(token, amount, poolAddress, token0, token1);
 
           expect(await poolAddress.balanceOf(strategyContract.address)).to.be.closeTo(LPTokens, LPTokens.div(50)); // 2% slippage
 
           await finalizeStrategy(strategyContract, 0);
           expect(await poolAddress.balanceOf(strategyContract.address)).to.equal(0);
+          expect(await tokenContract.balanceOf(garden.address)).to.be.gt(executionTokenBalance);
         });
       });
     });

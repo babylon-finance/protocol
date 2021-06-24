@@ -160,7 +160,6 @@ describe('AaveBorrowIntegrationTest', function () {
       it(`should fail trying to supply USDC and borrow USDC in a ${name} Garden`, async function () {
         await trySupplyBorrowStrategy(USDC, USDC, token, 'There is no collateral locked');
       });
-
     });
   });
 });

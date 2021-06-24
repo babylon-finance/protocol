@@ -124,7 +124,7 @@ describe('YearnVaultIntegrationTest', function () {
               vault,
               reservePriceInAsset.mul(amount).div(conversionRate),
             );
-
+            const executionTokenBalance = await tokenContract.balanceOf(garden.address);
             expect(await vaultContract.balanceOf(strategyContract.address)).to.be.closeTo(
               expectedShares,
               expectedShares.div(50), // 2% percision
@@ -132,6 +132,7 @@ describe('YearnVaultIntegrationTest', function () {
 
             await finalizeStrategy(strategyContract, 0);
             expect(await vaultContract.balanceOf(strategyContract.address)).to.equal(0);
+            expect(await tokenContract.balanceOf(garden.address)).to.be.gt(executionTokenBalance);
           });
         });
       });
