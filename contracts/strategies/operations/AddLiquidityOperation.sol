@@ -169,27 +169,26 @@ contract AddLiquidityOperation is Operation {
     /**
      * Gets the NAV of the add liquidity op in the reserve asset
      *
-     * @param _data         Pool
+     * @param _pool               Pool address
      * @param _garden             Garden the strategy belongs to
      * @param _integration        Status of the asset amount
      * @return _nav               NAV of the strategy
      */
     function getNAV(
-        address _data,
+        address _pool,
         IGarden _garden,
         address _integration
     ) external view override returns (uint256, bool) {
         if (!IStrategy(msg.sender).isStrategyActive()) {
             return (0, true);
         }
-        address pool = _data;
-        address[] memory poolTokens = IPoolIntegration(_integration).getPoolTokens(pool);
+        address[] memory poolTokens = IPoolIntegration(_integration).getPoolTokens(_pool);
         uint256 NAV;
-        uint256 totalSupply = IERC20(pool).totalSupply();
-        uint256 lpTokens = IERC20(pool).balanceOf(msg.sender);
+        uint256 totalSupply = IERC20(_pool).totalSupply();
+        uint256 lpTokens = IERC20(_pool).balanceOf(msg.sender);
         for (uint256 i = 0; i < poolTokens.length; i++) {
             uint256 price = _getPrice(_garden.reserveAsset(), poolTokens[i] != address(0) ? poolTokens[i] : WETH);
-            uint256 balance = poolTokens[i] != address(0) ? IERC20(poolTokens[i]).balanceOf(pool) : pool.balance;
+            uint256 balance = poolTokens[i] != address(0) ? IERC20(poolTokens[i]).balanceOf(_pool) : _pool.balance;
             NAV += balance.mul(lpTokens).div(totalSupply).preciseDiv(price);
         }
         require(NAV != 0, 'NAV has to be bigger 0');
