@@ -70,13 +70,15 @@ contract BabylonViewer {
             address[] memory,
             address[] memory,
             uint256[11] memory,
-            uint256[9] memory
+            uint256[10] memory
         )
     {
         IGarden garden = IGarden(_garden);
         IGardenValuer valuer = IGardenValuer(controller.gardenValuer());
         uint256 valuation = valuer.calculateGardenValuation(_garden, garden.reserveAsset());
         uint256 totalSupply = IERC20(_garden).totalSupply();
+        uint256 seed = _getGardenSeed(_garden);
+
         return (
             ERC20(_garden).name(),
             ERC20(_garden).symbol(),
@@ -107,7 +109,8 @@ contract BabylonViewer {
                 garden.totalContributors(),
                 garden.totalStake(),
                 valuation,
-                totalSupply
+                totalSupply,
+                seed
             ]
         );
     }
@@ -133,7 +136,10 @@ contract BabylonViewer {
         bool[] memory status = new bool[](3);
         uint256[] memory ts = new uint256[](4);
         (, status[0], status[1], status[2], ts[0], ts[1], ts[2]) = strategy.getStrategyState();
-        uint256 rewards = IRewardsDistributor(controller.rewardsDistributor()).getStrategyRewards(_strategy);
+        uint256 rewards =
+            strategy.exitedAt() != 0
+                ? IRewardsDistributor(controller.rewardsDistributor()).getStrategyRewards(_strategy)
+                : 0;
         ts[3] = strategy.enteredCooldownAt();
         return (
             strategy.strategist(),
@@ -267,4 +273,8 @@ contract BabylonViewer {
     }
 
     /* ============ Private Functions ============ */
+
+    function _getGardenSeed(address _garden) private view returns (uint256) {
+        return IGardenNFT(controller.gardenNFT()).gardenSeeds(_garden);
+    }
 }

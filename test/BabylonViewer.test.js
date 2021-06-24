@@ -25,8 +25,8 @@ describe('Babylon Viewer', function () {
   describe('can call getter methods', async function () {
     it('calls getGardenDetails', async function () {
       const gardenDetails = await babViewer.getGardenDetails(garden1.address);
-      expect(gardenDetails[0]).to.equal(''); // Name
-      expect(gardenDetails[1]).to.equal(''); // Symbol
+      expect(gardenDetails[0]).to.equal('Absolute ETH Return [beta]'); // Name
+      expect(gardenDetails[1]).to.equal('EYFA'); // Symbol
       expect(gardenDetails[2]).to.equal(signer1.address); // Creator
       expect(gardenDetails[3]).to.equal(addresses.tokens.WETH); // Reserve Asset
       expect(gardenDetails[4][0]).to.equal(true); // Active
@@ -54,6 +54,8 @@ describe('Babylon Viewer', function () {
       expect(status[5]).to.equal(1); // Initialized at
       expect(status[6]).to.be.gt(0); // Stake
       expect(status[7]).to.be.gt(0); // Valuation
+      expect(status[8]).to.be.gt(0); // totalSupply
+      expect(status[9]).to.equal(0); // Seed
     });
 
     it('calls get permissions', async function () {
@@ -71,7 +73,7 @@ describe('Babylon Viewer', function () {
 
     it('calls get operations strategy', async function () {
       const gardenDetails = await babViewer.getGardenDetails(garden1.address);
-      const strategyOperations = await babViewer.getOperationsStrategy(gardenDetails[3][0]);
+      const strategyOperations = await babViewer.getOperationsStrategy(gardenDetails[5][0]);
       expect(strategyOperations[0].length).to.equal(1);
       expect(strategyOperations[1].length).to.equal(1);
       expect(strategyOperations[2].length).to.equal(1);
@@ -82,25 +84,27 @@ describe('Babylon Viewer', function () {
 
     it('calls get complete strategy', async function () {
       const gardenDetails = await babViewer.getGardenDetails(garden1.address);
-      const strategyDetails = await babViewer.getCompleteStrategy(gardenDetails[3][0]);
+      const strategyDetails = await babViewer.getCompleteStrategy(gardenDetails[5][0]);
       expect(strategyDetails[0]).to.equal(signer1.address); // Strategist
-      expect(strategyDetails[1][0]).to.equal(1); // Ops count
-      expect(strategyDetails[1][1]).to.equal(DEFAULT_STRATEGY_PARAMS[1]); // Stake
-      expect(strategyDetails[1][2]).to.equal(DEFAULT_STRATEGY_PARAMS[1]); // Positive votes
-      expect(strategyDetails[1][3]).to.equal(0); // Negative votes
-      expect(strategyDetails[1][4]).to.equal(0); // Capital Allocated
-      expect(strategyDetails[1][5]).to.equal(0); // Capital Returned
-      expect(strategyDetails[1][6]).to.equal(DEFAULT_STRATEGY_PARAMS[2]); // Duration
-      expect(strategyDetails[1][7]).to.equal(DEFAULT_STRATEGY_PARAMS[3]); // Expected Return
-      expect(strategyDetails[1][8]).to.equal(DEFAULT_STRATEGY_PARAMS[0]); // Max Capital Requested
-      expect(strategyDetails[1][9]).to.be.gt(0); // Entered At
-      expect(strategyDetails[1][10]).to.equal(0); // Get NAV
-      expect(strategyDetails[2][0]).to.equal(false); // Active
-      expect(strategyDetails[2][1]).to.equal(true); // Data set
-      expect(strategyDetails[2][2]).to.equal(false); // Finalized
-      expect(strategyDetails[3][0]).to.equal(0); // Executed at
-      expect(strategyDetails[3][1]).to.equal(0); // Exited At
-      expect(strategyDetails[3][2]).to.equal(0); // Updated At
+      expect(strategyDetails[1]).to.equal('Strategy Name'); // Name
+      expect(strategyDetails[2][0]).to.equal(1); // Ops count
+      expect(strategyDetails[2][1]).to.equal(DEFAULT_STRATEGY_PARAMS[1]); // Stake
+      expect(strategyDetails[2][2]).to.equal(DEFAULT_STRATEGY_PARAMS[1]); // Positive votes
+      expect(strategyDetails[2][3]).to.equal(0); // Negative votes
+      expect(strategyDetails[2][4]).to.equal(0); // Capital Allocated
+      expect(strategyDetails[2][5]).to.equal(0); // Capital Returned
+      expect(strategyDetails[2][6]).to.equal(DEFAULT_STRATEGY_PARAMS[2]); // Duration
+      expect(strategyDetails[2][7]).to.equal(DEFAULT_STRATEGY_PARAMS[3]); // Expected Return
+      expect(strategyDetails[2][8]).to.equal(DEFAULT_STRATEGY_PARAMS[0]); // Max Capital Requested
+      expect(strategyDetails[2][9]).to.be.gt(0); // Entered At
+      expect(strategyDetails[2][10]).to.equal(0); // Get NAV
+      expect(strategyDetails[2][11]).to.equal(0); // Rewards
+      expect(strategyDetails[3][0]).to.equal(false); // Active
+      expect(strategyDetails[3][1]).to.equal(true); // Data set
+      expect(strategyDetails[3][2]).to.equal(false); // Finalized
+      expect(strategyDetails[4][0]).to.equal(0); // Executed at
+      expect(strategyDetails[4][1]).to.equal(0); // Exited At
+      expect(strategyDetails[4][2]).to.equal(0); // Updated At
     });
 
     it('calls get user gardens', async function () {
