@@ -23,6 +23,7 @@ import {ERC20} from '@openzeppelin/contracts/token/ERC20/ERC20.sol';
 import {IERC721} from '@openzeppelin/contracts/token/ERC721/IERC721.sol';
 import {SafeMath} from '@openzeppelin/contracts/math/SafeMath.sol';
 
+import {PreciseUnitMath} from './lib/PreciseUnitMath.sol';
 import {IRewardsDistributor} from './interfaces/IRewardsDistributor.sol';
 import {IBabController} from './interfaces/IBabController.sol';
 import {IGardenValuer} from './interfaces/IGardenValuer.sol';
@@ -41,6 +42,7 @@ import {Math} from './lib/Math.sol';
  */
 contract BabylonViewer {
     using SafeMath for uint256;
+    using PreciseUnitMath for uint256;
     using Math for int256;
 
     IBabController public controller;
@@ -75,7 +77,7 @@ contract BabylonViewer {
     {
         IGarden garden = IGarden(_garden);
         IGardenValuer valuer = IGardenValuer(controller.gardenValuer());
-        uint256 valuation = valuer.calculateGardenValuation(_garden, garden.reserveAsset());
+        uint256 valuationPerToken = valuer.calculateGardenValuation(_garden, garden.reserveAsset());
         uint256 totalSupply = IERC20(_garden).totalSupply();
         uint256 seed = _getGardenSeed(_garden);
 
@@ -108,7 +110,7 @@ contract BabylonViewer {
                 garden.gardenInitializedAt(),
                 garden.totalContributors(),
                 garden.totalStake(),
-                valuation,
+                totalSupply.preciseMul(valuationPerToken),
                 totalSupply,
                 seed
             ]
