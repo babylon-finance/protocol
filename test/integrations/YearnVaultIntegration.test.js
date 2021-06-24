@@ -8,7 +8,7 @@ const {
   finalizeStrategy,
   injectFakeProfits,
 } = require('../fixtures/StrategyHelper');
-const { parse, from, eth } = require('../utils/test-helpers');
+const { parse, from, eth, normalizeDecimals } = require('../utils/test-helpers');
 const { createGarden, transferFunds } = require('../fixtures/GardenHelper');
 const { setupTests } = require('../fixtures/GardenFixture');
 const addresses = require('../../lib/addresses');
@@ -23,16 +23,6 @@ describe('YearnVaultIntegrationTest', function () {
   let babController;
   let priceOracle;
   let owner;
-
-  async function normalizeDecimals(tokenDecimals, tokenDecimalsTarget, quantity) {
-    if (tokenDecimals == tokenDecimalsTarget) {
-      return quantity;
-    }
-    if (tokenDecimalsTarget > tokenDecimals) {
-      return quantity.mul(10 ** (tokenDecimalsTarget - tokenDecimals));
-    }
-    return quantity.div(10 ** (tokenDecimals - tokenDecimalsTarget));
-  }
 
   beforeEach(async () => {
     ({

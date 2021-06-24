@@ -3,12 +3,15 @@ const { ethers } = require('hardhat');
 const {
   DEFAULT_STRATEGY_PARAMS,
   createStrategy,
+  getStrategy,
   executeStrategy,
   finalizeStrategy,
 } = require('../fixtures/StrategyHelper');
+const { parse, from, eth, normalizeDecimals } = require('../utils/test-helpers');
 const { setupTests } = require('../fixtures/GardenFixture');
+const { createGarden, transferFunds } = require('../fixtures/GardenHelper');
 const addresses = require('../../lib/addresses');
-const { ADDRESS_ZERO, ONE_ETH } = require('../../lib/constants');
+const { ADDRESS_ZERO, ONE_ETH, STRATEGY_EXECUTE_MAP } = require('../../lib/constants');
 
 const vaults = [
   '0xFE09e53A81Fe2808bc493ea64319109B5bAa573e',
@@ -122,6 +125,66 @@ describe('HarvestVaultIntegrationTest', function () {
         await finalizeStrategy(strategyContract, 0);
 
         expect(await vaultContract.balanceOf(strategyContract.address)).to.equal(0);
+      });
+    });
+  });
+  describe('enter and exit calldata per Garden per Vault', function () {
+    [
+      { token: addresses.tokens.WETH, name: 'WETH' },
+      { token: addresses.tokens.DAI, name: 'DAI' },
+      { token: addresses.tokens.USDC, name: 'USDC' },
+      { token: addresses.tokens.WBTC, name: 'WBTC' },
+    ].forEach(({ token, name }) => {
+      [
+        { vault: '0xFE09e53A81Fe2808bc493ea64319109B5bAa573e', symbol: 'vWETH' }, //vWETH vault
+        { vault: '0xf0358e8c3CD5Fa238a29301d0bEa3D63A17bEdBE', symbol: 'vUSDC' }, //vUSDC vault
+        { vault: '0x5d9d25c7C457dD82fc8668FFC6B9746b674d4EcB', symbol: 'vWBTC' }, //vWBTC vault
+        { vault: '0xab7FA2B2985BCcfC13c6D86b1D5A17486ab1e04C', symbol: 'vDAI' }, //vDAI vault
+      ].forEach(({ vault, symbol }) => {
+        it(`can enter and exit the ${symbol} from a ${name} garden`, async function () {
+          const vaultContract = await ethers.getContractAt('IHarvestVault', vault);
+          await transferFunds(token);
+
+          const garden = await createGarden({ reserveAsset: token });
+          const strategyContract = await getStrategy({
+            kind: 'vault',
+            state: 'vote',
+            integrations: harvestVaultIntegration.address,
+            garden,
+            specificParams: vault,
+          });
+
+          expect(await vaultContract.balanceOf(strategyContract.address)).to.equal(0);
+
+          let amount = STRATEGY_EXECUTE_MAP[token];
+          await executeStrategy(strategyContract, { amount });
+
+          const asset = await harvestVaultIntegration.getInvestmentAsset(vault); // USDC, DAI, USDT and etc...
+          const assetContract = await ethers.getContractAt('ERC20', asset);
+          const assetDecimals = await assetContract.decimals();
+
+          const tokenContract = await ethers.getContractAt('ERC20', token);
+          const tokenDecimals = await tokenContract.decimals();
+
+          const reservePriceInAsset = await priceOracle.connect(owner).getPrice(token, asset);
+
+          let conversionRate = eth(1);
+
+          amount = await normalizeDecimals(tokenDecimals, assetDecimals, amount);
+
+          let expectedShares = await harvestVaultIntegration.getExpectedShares(
+            vault,
+            reservePriceInAsset.mul(amount).div(conversionRate),
+          );
+
+          expect(await vaultContract.balanceOf(strategyContract.address)).to.be.closeTo(
+            expectedShares,
+            expectedShares.div(50), // 2% percision
+          );
+
+          await finalizeStrategy(strategyContract, 0);
+          expect(await vaultContract.balanceOf(strategyContract.address)).to.equal(0);
+        });
       });
     });
   });
