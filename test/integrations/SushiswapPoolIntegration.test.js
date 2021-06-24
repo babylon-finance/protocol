@@ -9,6 +9,7 @@ const {
   executeStrategy,
   finalizeStrategy,
 } = require('../fixtures/StrategyHelper');
+const { eth, normalizeDecimals } = require('../utils/test-helpers');
 const addresses = require('../../lib/addresses');
 const { ADDRESS_ZERO, STRATEGY_EXECUTE_MAP } = require('../../lib/constants');
 
@@ -18,10 +19,59 @@ describe('SushiswapPoolIntegrationTest', function () {
   let signer1;
   let signer2;
   let signer3;
+  let priceOracle;
   let babController;
+  let owner;
+
+  async function getExpectedLPTokens(token, amount, poolAddress, token0, token1) {
+    const reservePriceInAsset0 = await priceOracle.connect(owner).getPrice(token, token0);
+    const reservePriceInAsset1 = await priceOracle.connect(owner).getPrice(token, token1);
+
+    const token0Contract = await ethers.getContractAt('ERC20', token0);
+    const token0Decimals = await token0Contract.decimals();
+
+    const token1Contract = await ethers.getContractAt('ERC20', token1);
+    const token1Decimals = await token1Contract.decimals();
+
+    const tokenContract = await ethers.getContractAt('ERC20', token);
+    const tokenDecimals = await tokenContract.decimals();
+
+    const amount0ToAdd = await normalizeDecimals(
+      tokenDecimals,
+      token0Decimals,
+      amount.mul(reservePriceInAsset0).div(2).div(eth(1)),
+    );
+    const amount1ToAdd = await normalizeDecimals(
+      tokenDecimals,
+      token1Decimals,
+      amount.mul(reservePriceInAsset1).div(2).div(eth(1)),
+    );
+
+    // Uniswap documentation
+    const poolTotalSupply = await poolAddress.totalSupply();
+
+    const balanceToken0 = await token0Contract.balanceOf(poolAddress.address);
+    const balanceToken1 = await token1Contract.balanceOf(poolAddress.address);
+
+    const liquidityToken1 = amount0ToAdd.mul(poolTotalSupply).div(balanceToken0);
+    const liquidityToken2 = amount1ToAdd.mul(poolTotalSupply).div(balanceToken1);
+
+    LPTokens = liquidityToken1 < liquidityToken2 ? liquidityToken1 : liquidityToken2;
+
+    return LPTokens;
+  }
 
   beforeEach(async () => {
-    ({ babController, garden1, sushiswapPoolIntegration, signer1, signer2, signer3 } = await setupTests()());
+    ({
+      babController,
+      garden1,
+      sushiswapPoolIntegration,
+      owner,
+      signer1,
+      signer2,
+      signer3,
+      priceOracle,
+    } = await setupTests()());
   });
 
   describe('Deployment', function () {
@@ -78,13 +128,34 @@ describe('SushiswapPoolIntegrationTest', function () {
       { token: addresses.tokens.WBTC, name: 'WBTC' },
     ].forEach(({ token, name }) => {
       [
-        { pool: addresses.sushiswap.pairs.wethdai, symbol: 'WETH-DAI' }, //DAI-WETH pool
-        { pool: addresses.sushiswap.pairs.wethusdc, symbol: 'WETH-USDC' }, //WETH-USDC pool
-        { pool: addresses.sushiswap.pairs.wethwbtc, symbol: 'WETH-WBTC' }, //WETH-WBTC pool
-        //    { pool: addresses.sushiswap.pairs.wethrenBTC, symbol: 'WETH-renBTC' }, //WETH-renBTC pool only works from WETH and WBTC Gardens if not intermediate swaps are done
-        { pool: addresses.sushiswap.pairs.daiusdc, symbol: 'DAI-USDC' }, //DAI-USDC pool
-      ].forEach(({ pool, symbol }) => {
-        it(`can enter and exit the ${symbol} pool from a ${name} Garden`, async function () {
+        {
+          pool: addresses.sushiswap.pairs.wethdai,
+          symbol: 'WETH-DAI',
+          token0: addresses.tokens.WETH,
+          token1: addresses.tokens.DAI,
+        }, //DAI-WETH pool
+        {
+          pool: addresses.sushiswap.pairs.wethusdc,
+          symbol: 'WETH-USDC',
+          token0: addresses.tokens.WETH,
+          token1: addresses.tokens.USDC,
+        }, //WETH-USDC pool
+        {
+          pool: addresses.sushiswap.pairs.wethwbtc,
+          symbol: 'WETH-WBTC',
+          token0: addresses.tokens.WETH,
+          token1: addresses.tokens.WBTC,
+        }, //WETH-WBTC pool
+        //      { pool: addresses.sushiswap.pairs.wethrenBTC, symbol: 'WETH-renBTC', token0: addresses.tokens.WETH, token1: addresses.tokens.renBTC }, //WETH-renBTC pool only works from WETH and WBTC Gardens if not intermediate swaps are done
+        {
+          pool: addresses.sushiswap.pairs.daiusdc,
+          symbol: 'DAI-USDC',
+          token0: addresses.tokens.DAI,
+          token1: addresses.tokens.USDC,
+        }, //DAI-USDC pool
+        //      { pool: addresses.sushiswap.pairs.daiwbtc, symbol: 'DAI-WBTC', token0: addresses.tokens.DAI, token1: addresses.tokens.WBTC}, //DAI-WBTC pool - TODO: check pair address
+      ].forEach(({ pool, symbol, token0, token1 }) => {
+        it(`can enter and exit the ${symbol} SUHISWAP pool from a ${name} Garden`, async function () {
           const poolAddress = await ethers.getContractAt('IUniswapV2PairB', pool);
           expect(await sushiswapPoolIntegration.isPool(pool)).to.equal(true);
           await transferFunds(token);
@@ -100,12 +171,11 @@ describe('SushiswapPoolIntegrationTest', function () {
             specificParams: poolAddress.address,
           });
           let amount = STRATEGY_EXECUTE_MAP[token];
-          console.log('token', token);
-          console.log('amount', amount.toString());
 
           await executeStrategy(strategyContract, { amount });
 
-          expect(await poolAddress.balanceOf(strategyContract.address)).to.be.gt(0);
+          const LPTokens = await getExpectedLPTokens(token, amount, poolAddress, token0, token1);
+          expect(await poolAddress.balanceOf(strategyContract.address)).to.be.closeTo(LPTokens, LPTokens.div(50)); // 2% slippage
 
           await finalizeStrategy(strategyContract, 0);
           expect(await poolAddress.balanceOf(strategyContract.address)).to.equal(0);

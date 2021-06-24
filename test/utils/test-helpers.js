@@ -47,6 +47,16 @@ function eth(value = 1) {
   return ethers.utils.parseEther(value.toString());
 }
 
+function normalizeDecimals(tokenDecimals, tokenDecimalsTarget, quantity) {
+  if (tokenDecimals == tokenDecimalsTarget) {
+    return quantity;
+  }
+  if (tokenDecimalsTarget > tokenDecimals) {
+    return quantity.mul(10 ** (tokenDecimalsTarget - tokenDecimals));
+  }
+  return quantity.div(10 ** (tokenDecimals - tokenDecimalsTarget));
+}
+
 module.exports = {
   increaseTime,
   getTimestamp,
@@ -56,4 +66,5 @@ module.exports = {
   parse: ethers.utils.parseEther,
   getContract,
   eth,
+  normalizeDecimals,
 };

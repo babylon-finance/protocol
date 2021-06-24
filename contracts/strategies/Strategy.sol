@@ -573,7 +573,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
 
     /**
      * Deposits or withdraws weth from an operation in this context
-     * @param _isDeposit                    Wether is a deposit or withdraw
+     * @param _isDeposit                    Whether is a deposit or withdraw
      * @param _wethAmount                   Amount to deposit or withdraw
      */
     function handleWeth(bool _isDeposit, uint256 _wethAmount) external override {
@@ -867,7 +867,6 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         // Uses on chain oracle for all internal strategy operations to avoid attacks        // Updates UniSwap TWAP
         IPriceOracle oracle = IPriceOracle(IBabController(controller).priceOracle());
         uint256 pricePerTokenUnit = oracle.getPrice(_sendToken, _receiveToken);
-        console.log('TRADE pricePerTokenUnit', pricePerTokenUnit);
         // minAmount must have receive token decimals
         uint256 exactAmount =
             SafeDecimalMath.normalizeAmountTokens(
@@ -875,9 +874,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
                 _receiveToken,
                 _sendQuantity.preciseMul(pricePerTokenUnit)
             );
-        console.log('TRADE exact amount', exactAmount);
         uint256 minAmountExpected = exactAmount.sub(exactAmount.preciseMul(SLIPPAGE_ALLOWED));
-        console.log('TRADE min amount expected', minAmountExpected);
         ITradeIntegration(tradeIntegration).trade(
             address(this),
             _sendToken,

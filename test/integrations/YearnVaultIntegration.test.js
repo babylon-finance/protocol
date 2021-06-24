@@ -126,9 +126,7 @@ describe('YearnVaultIntegrationTest', function () {
 
             const reservePriceInAsset = await priceOracle.connect(owner).getPrice(token, asset);
 
-            // NOTE: getPrice from Oracle returns 1e18 except when token==asset and they have less than 18 decimals, then it returns the same decimals
-            let conversionRate =
-              tokenDecimals == assetDecimals && tokenDecimals < 18 && asset == token ? 10 ** tokenDecimals : eth(1);
+            let conversionRate = eth(1);
 
             amount = await normalizeDecimals(tokenDecimals, assetDecimals, amount);
 

@@ -100,9 +100,9 @@ abstract contract PoolIntegration is BaseIntegration, ReentrancyGuard, IPoolInte
         console.log('tokens in', _tokensIn[0], _tokensIn[1]);
         console.log('_maxAmountsIn', _maxAmountsIn[0], _maxAmountsIn[1]);
         PoolInfo memory poolInfo = _createPoolInfo(_strategy, _poolAddress, _poolTokensOut, _tokensIn, _maxAmountsIn);
-        console.log('EO 1');
+        //console.log('EO 1');
         _validatePreJoinPoolData(poolInfo);
-        console.log('EO 2');
+        //console.log('EO 2');
         // Approve spending of the tokens
         for (uint256 i = 0; i < _tokensIn.length; i++) {
             // No need to approve ETH
@@ -110,22 +110,22 @@ abstract contract PoolIntegration is BaseIntegration, ReentrancyGuard, IPoolInte
                 poolInfo.strategy.invokeApprove(_getSpender(_poolAddress), _tokensIn[i], _maxAmountsIn[i]);
             }
         }
-        console.log('EO 3');
+        //console.log('EO 3');
         (address targetPool, uint256 callValue, bytes memory methodData) =
             _getJoinPoolCalldata(_strategy, _poolAddress, _poolTokensOut, _tokensIn, _maxAmountsIn);
-        console.log('EO 4');
-        console.log('EO 4 pool tokens out', _poolTokensOut);
-        console.log('EO 4 pool tokens in', _tokensIn[0], _tokensIn[1]);
-        console.log('EO 4 pool max amounts in', _maxAmountsIn[0], _maxAmountsIn[1]);
-
+        //console.log('EO 4');
+        //console.log('EO 4 ETH', address(poolInfo.strategy).balance);
         poolInfo.strategy.invokeFromIntegration(targetPool, callValue, methodData);
-        console.log('EO 5');
+        //console.log('EO 5');
+        //console.log('EO 5 ETH', address(poolInfo.strategy).balance);
+
         poolInfo.poolTokensInTransaction = IERC20(poolInfo.pool).balanceOf(address(poolInfo.strategy)).sub(
             poolInfo.poolTokensInStrategy
         );
-        console.log('EO 6');
+        //console.log('EO 6');
+
         _validatePostJoinPoolData(poolInfo);
-        console.log('EO 7');
+        //console.log('EO 7');
 
         emit PoolEntered(address(poolInfo.strategy), address(poolInfo.garden), poolInfo.pool, _poolTokensOut);
     }

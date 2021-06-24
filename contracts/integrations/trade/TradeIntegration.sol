@@ -108,10 +108,10 @@ abstract contract TradeIntegration is BaseIntegration, ReentrancyGuard, ITradeIn
         address _receiveToken,
         uint256 _minReceiveQuantity
     ) external override nonReentrant onlySystemContract {
-        console.log('send token', _sendToken);
-        console.log('send Quantity', _sendQuantity);
-        console.log('receive token', _receiveToken);
-        console.log('min receive quantity', _minReceiveQuantity);
+        //console.log('send token', _sendToken);
+        //console.log('send Quantity', _sendQuantity);
+        //console.log('receive token', _receiveToken);
+        //console.log('min receive quantity', _minReceiveQuantity);
         TradeInfo memory tradeInfo =
             _createTradeInfo(_strategy, name, _sendToken, _receiveToken, _sendQuantity, _minReceiveQuantity);
         _validatePreTradeData(tradeInfo, _sendQuantity);
