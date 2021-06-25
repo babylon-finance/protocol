@@ -53,7 +53,6 @@ contract PriceOracle is Ownable, IPriceOracle {
     IBabController public controller;
 
     address public constant WETH = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
-    mapping(address => bool) public uniswapAssets;
 
     // List of IOracleAdapters used to return prices of third party protocols (e.g. Uniswap, Compound, Balancer)
     address[] public adapters;
@@ -90,17 +89,14 @@ contract PriceOracle is Ownable, IPriceOracle {
      * @return                  Price of asset pair to 18 decimals of precision
      */
     function getPrice(address _assetOne, address _assetTwo) external view override returns (uint256) {
-        require(controller.isSystemContract(msg.sender) || msg.sender == owner(), 'Caller must be system contract');
         // Same asset. Returns base unit
         if (_assetOne == _assetTwo) {
             return 10**ERC20(_assetOne).decimals();
         }
 
-        bool priceFound;
-        uint256 price;
+        (bool found, uint256 price) = _getPriceFromAdapters(_assetOne, _assetTwo);
+        require(found, 'Price not found');
 
-        (priceFound, price) = _getPriceFromAdapters(_assetOne, _assetTwo);
-        require(priceFound, 'Price not found');
         return price;
     }
 
@@ -161,10 +157,10 @@ contract PriceOracle is Ownable, IPriceOracle {
      */
     function _getPriceFromAdapters(address _assetOne, address _assetTwo) internal view returns (bool, uint256) {
         for (uint256 i = 0; i < adapters.length; i++) {
-            (bool priceFound, uint256 price) = IOracleAdapter(adapters[i]).getPrice(_assetOne, _assetTwo);
+            (bool found, uint256 price) = IOracleAdapter(adapters[i]).getPrice(_assetOne, _assetTwo);
 
-            if (priceFound) {
-                return (priceFound, price);
+            if (found) {
+                return (found, price);
             }
         }
 
