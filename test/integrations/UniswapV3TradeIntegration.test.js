@@ -37,8 +37,6 @@ describe.only('UniswapV3TradeIntegration', function () {
         { asset: addresses.tokens.USDC, symbol: 'USDC' },
         { asset: addresses.tokens.WBTC, symbol: 'WBTC' },
         { asset: addresses.tokens.COMP, symbol: 'COMP' },
-        // { asset: addresses.tokens.YFI, symbol: 'YFI' }, have to bumpt hardhat blocknumber to enable more tokens
-        // { asset: addresses.tokens.SNX, symbol: 'SNX' },
       ].forEach(({ asset, symbol }) => {
         it(`exchange ${name}->${symbol} in ${name} garden`, async function () {
           if (token === asset) return;
