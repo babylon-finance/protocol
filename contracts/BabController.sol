@@ -89,7 +89,7 @@ contract BabController is OwnableUpgradeable, IBabController {
     // List of enabled Communities
     address[] public gardens;
     address[] public reserveAssets;
-    address public override uniswapFactory;
+    address private uniswapFactory; // do not use
     address public override gardenValuer;
     address public override priceOracle;
     address public override gardenFactory;
@@ -178,9 +178,6 @@ contract BabController is OwnableUpgradeable, IBabController {
         protocolPerformanceFee = 5e16; // 5% (0.01% = 1e14, 1% = 1e16) on profits
         protocolDepositGardenTokenFee = 0; // 0% (0.01% = 1e14, 1% = 1e16) on profits
         protocolWithdrawalGardenTokenFee = 0; // 0% (0.01% = 1e14, 1% = 1e16) on profits
-
-        uniswapFactory = 0x1F98431c8aD98523631AE4a59f267346ea31F984;
-
         strategistProfitPercentage = 10e16;
         stewardsProfitPercentage = 5e16;
         lpsProfitPercentage = 80e16;
@@ -506,20 +503,6 @@ contract BabController is OwnableUpgradeable, IBabController {
         strategyNFT = _newStrategyNFT;
 
         emit StrategyNFTChanged(_newStrategyNFT, oldStrategyNFT);
-    }
-
-    /**
-     * PRIVILEGED GOVERNANCE FUNCTION. Allows governance to edit the protocol uniswaps factory
-     *
-     * @param _newUniswapFactory      Address of the new uniswap factory
-     */
-    function editUniswapFactory(address _newUniswapFactory) external override onlyOwner {
-        require(_newUniswapFactory != address(0), 'Address must not be 0');
-
-        address oldUniswapFactory = uniswapFactory;
-        uniswapFactory = _newUniswapFactory;
-
-        emit UniswapFactoryChanged(_newUniswapFactory, oldUniswapFactory);
     }
 
     /**

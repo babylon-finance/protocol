@@ -19,6 +19,8 @@
 pragma solidity 0.7.6;
 pragma abicoder v2;
 
+import 'hardhat/console.sol';
+
 import {IBabController} from '../../interfaces/IBabController.sol';
 import {ISwapRouter} from '../../interfaces/external/uniswap-v3/ISwapRouter.sol';
 
@@ -106,9 +108,12 @@ contract UniswapV3TradeIntegration is TradeIntegration {
     {
         bytes memory path;
         if(_sendToken == weth || _receiveToken == weth) {
-          path = abi.encodePacked(_sendToken, FEE_MEDIUM, _receiveToken);
+          (,uint24 fee) = _getUniswapPoolWithHighestLiquidity(_sendToken, _receiveToken);
+          path = abi.encodePacked(_sendToken, fee, _receiveToken);
         } else {
-          path = abi.encodePacked(_sendToken, FEE_MEDIUM, weth, FEE_MEDIUM, _receiveToken);
+          (,uint24 fee0) = _getUniswapPoolWithHighestLiquidity(_sendToken, weth);
+          (,uint24 fee1) = _getUniswapPoolWithHighestLiquidity(_sendToken, weth);
+          path = abi.encodePacked(_sendToken, fee0, weth, fee1, _receiveToken);
         }
         ISwapRouter.ExactInputParams memory params = ISwapRouter.ExactInputParams(
             path,

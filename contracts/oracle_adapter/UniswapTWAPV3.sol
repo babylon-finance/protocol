@@ -91,19 +91,16 @@ contract UniswapTWAPV3 is Ownable, IOracleAdapter {
      * @return found                Whether or not the price as found
      */
     function getPrice(address _tokenIn, address _tokenOut) public view override returns (bool found, uint256 price) {
-        console.log('getPrice');
         bool found;
         uint256 price;
 
         if(_tokenIn != WETH && _tokenOut != WETH) {
           uint256 tokenInInWeth;
           uint256 tokenOutInWeth;
-          console.log('getPrice tokenIn');
           (found, tokenInInWeth) = getPrice(_tokenIn, WETH);
           if (!found) {
               return (false, 0);
           }
-          console.log('getPrice tokenOut');
           (found, tokenOutInWeth) = getPrice(_tokenOut, WETH);
           if (!found) {
               return (false, 0);
@@ -136,8 +133,6 @@ contract UniswapTWAPV3 is Ownable, IOracleAdapter {
             return (false, 0);
         }
 
-
-        console.log('pool', address(pool));
         int256 twapTick = OracleLibrary.consult(address(pool), SECONDS_GRANULARITY);
         price =
             OracleLibrary
