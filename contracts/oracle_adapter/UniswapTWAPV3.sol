@@ -21,6 +21,7 @@
 pragma solidity 0.7.6;
 
 import 'hardhat/console.sol';
+
 import {Ownable} from '@openzeppelin/contracts/access/Ownable.sol';
 import {ERC20} from '@openzeppelin/contracts/token/ERC20/ERC20.sol';
 import '@uniswap/v3-core/contracts/interfaces/IUniswapV3Factory.sol';
@@ -108,6 +109,7 @@ contract UniswapTWAPV3 is Ownable, IOracleAdapter {
           return (true, tokenInInWeth.preciseDiv(tokenOutInWeth));
         }
         int24 tick;
+        uint16 observationIndex;
         // We try the low pool first
         IUniswapV3Pool pool = IUniswapV3Pool(factory.getPool(_tokenIn, _tokenOut, FEE_LOW));
         if (address(pool) != address(0)) {
@@ -170,6 +172,7 @@ contract UniswapTWAPV3 is Ownable, IOracleAdapter {
         // Check TWAP deviation. This check prevents price manipulation before
         // the rebalance and also avoids rebalancing when price has just spiked.
         (int56 twap, ) = _getTwap(_pool);
+
         int56 deviation = mid > twap ? mid - twap : twap - mid;
         // Fail twap check
         return deviation < maxTwapDeviation;
@@ -181,11 +184,15 @@ contract UniswapTWAPV3 is Ownable, IOracleAdapter {
         uint32[] memory secondsAgo = new uint32[](2);
         secondsAgo[0] = SECONDS_GRANULARITY;
         secondsAgo[1] = 0;
-        (int56[] memory tickCumulatives, uint160[] memory secondsPerLiquidityCumulativeX128s) =
-            _pool.observe(secondsAgo);
+        // observe fails if pair has no observations
+        try _pool.observe(secondsAgo) returns (int56[] memory tickCumulatives, uint160[] memory secondsPerLiquidityCumulativeX128s) {
         liquidity =
             (secondsPerLiquidityCumulativeX128s[1] - secondsPerLiquidityCumulativeX128s[0]) /
             SECONDS_GRANULARITY;
         amountOut = (tickCumulatives[1] - tickCumulatives[0]) / SECONDS_GRANULARITY;
+            return (amountOut, liquidity);
+        } catch {
+            return (0, 0);
+        }
     }
 }

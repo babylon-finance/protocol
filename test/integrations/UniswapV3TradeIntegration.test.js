@@ -32,13 +32,13 @@ describe.only('UniswapV3TradeIntegration', function () {
     ].forEach(({ token, name, fee }) => {
       [
         { asset: addresses.tokens.USDT, symbol: 'USDT' },
-//        { asset: addresses.tokens.WETH, symbol: 'WETH' },
-//        { asset: addresses.tokens.DAI, symbol: 'DAI' },
-//        { asset: addresses.tokens.USDC, symbol: 'USDC' },
-//        { asset: addresses.tokens.WBTC, symbol: 'WBTC' },
-//        { asset: addresses.tokens.COMP, symbol: 'COMP' },
-//        { asset: addresses.tokens.YFI, symbol: 'YFI' },
-        //        { asset: addresses.tokens.SNX, symbol: 'SNX' },
+        { asset: addresses.tokens.WETH, symbol: 'WETH' },
+        { asset: addresses.tokens.DAI, symbol: 'DAI' },
+        { asset: addresses.tokens.USDC, symbol: 'USDC' },
+        { asset: addresses.tokens.WBTC, symbol: 'WBTC' },
+        { asset: addresses.tokens.COMP, symbol: 'COMP' },
+        // { asset: addresses.tokens.YFI, symbol: 'YFI' }, have to bumpt hardhat blocknumber to enable more tokens
+        // { asset: addresses.tokens.SNX, symbol: 'SNX' },
       ].forEach(({ asset, symbol }) => {
         it(`exchange ${name}->${symbol} in ${name} garden`, async function () {
           if (token === asset) return;
@@ -71,7 +71,7 @@ describe.only('UniswapV3TradeIntegration', function () {
             .div(eth())
             .div(assetDecimalsDelta);
 
-          expect(expectedBalance).to.be.closeTo(assetBalance, assetBalance.div(50)); // 2% slippage
+          expect(expectedBalance).to.be.closeTo(assetBalance, assetBalance.div(40)); // 2.5% slippage
 
           await finalizeStrategy(strategyContract, 0);
 
