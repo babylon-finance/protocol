@@ -52,14 +52,6 @@ async function setUpFixture(
   const weth = await ethers.getContractAt('IERC20', addresses.tokens.WETH);
   const wbtc = await ethers.getContractAt('IERC20', addresses.tokens.WBTC);
 
-  // deploy uniswap v2 adapter for tests
-  await deployments.deploy('UniswapTWAP', {
-    from: deployer.address,
-    args: [babController.address, addresses.uniswap.factory, TWAP_ORACLE_WINDOW, TWAP_ORACLE_GRANULARITY],
-    log: true,
-  });
-  const univ2 = await getContract('UniswapTWAP');
-
   // Gives signer1 creator permissions
   await ishtarGate.connect(owner).setCreatorPermissions(owner.address, true, { gasPrice: 0 });
   await ishtarGate.connect(owner).setCreatorPermissions(signer1.address, true, { gasPrice: 0 });
@@ -205,7 +197,6 @@ async function setUpFixture(
     compoundBorrowIntegration,
     aaveLendIntegration,
     aaveBorrowIntegration,
-    univ2,
     babViewer,
 
     garden1,
