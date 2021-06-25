@@ -31,7 +31,7 @@ import {IMooniswap} from '../../interfaces/external/1inch/IMooniswap.sol';
  * @title BalancerIntegration
  * @author Babylon Finance Protocol
  *
- * Kyber protocol trade integration
+ * OneInchPoolIntegration protocol trade integration
  */
 contract OneInchPoolIntegration is PoolIntegration {
     using LowGasSafeMath for uint256;

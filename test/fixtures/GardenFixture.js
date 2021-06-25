@@ -28,7 +28,6 @@ async function setUpFixture(
   const rewardsDistributor = await getContract('RewardsDistributor', 'RewardsDistributorProxy');
   const babViewer = await getContract('BabylonViewer');
 
-  const kyberTradeIntegration = await getContract('KyberTradeIntegration');
   const uniswapV3TradeIntegration = await getContract('UniswapV3TradeIntegration');
   const balancerIntegration = await getContract('BalancerIntegration');
   const uniswapPoolIntegration = await getContract('UniswapPoolIntegration');
@@ -142,14 +141,14 @@ async function setUpFixture(
   console.log('create strategies');
   // Create strategies
   const strategy11 = (
-    await createStrategy('buy', 'dataset', [signer1, signer2, signer3], kyberTradeIntegration.address, garden1)
+    await createStrategy('buy', 'dataset', [signer1, signer2, signer3], uniswapV3TradeIntegration.address, garden1)
   ).address;
   const strategy21 = (
-    await createStrategy('buy', 'deposit', [signer1, signer2, signer3], kyberTradeIntegration.address, garden2)
+    await createStrategy('buy', 'deposit', [signer1, signer2, signer3], uniswapV3TradeIntegration.address, garden2)
   ).address;
 
-  await createStrategy('buy', 'deposit', [signer1, signer2, signer3], kyberTradeIntegration.address, garden3);
-  await createStrategy('buy', 'dataset', [signer1, signer2, signer3], kyberTradeIntegration.address, garden3);
+  await createStrategy('buy', 'deposit', [signer1, signer2, signer3], uniswapV3TradeIntegration.address, garden3);
+  await createStrategy('buy', 'dataset', [signer1, signer2, signer3], uniswapV3TradeIntegration.address, garden3);
 
   console.log('Created and started garden', garden1.address);
   console.log('Created manual testing garden', garden3.address);
@@ -185,7 +184,6 @@ async function setUpFixture(
     timeLockRegistry,
     treasury,
     rewardsDistributor,
-    kyberTradeIntegration,
     uniswapV3TradeIntegration,
     balancerIntegration,
     uniswapPoolIntegration,

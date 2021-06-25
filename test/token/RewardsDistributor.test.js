@@ -90,8 +90,8 @@ describe('BABL Rewards Distributor', function () {
   let usdc;
   let dai;
   let weth;
-  let kyberTradeIntegration;
   let priceOracle;
+  let uniswapV3TradeIntegration;
 
   async function createStrategies(strategies) {
     const retVal = [];
@@ -100,7 +100,7 @@ describe('BABL Rewards Distributor', function () {
         'buy',
         'vote',
         [signer1, signer2, signer3],
-        kyberTradeIntegration.address,
+        uniswapV3TradeIntegration.address,
         strategies[i].garden,
       );
       retVal.push(strategy);
@@ -210,7 +210,7 @@ describe('BABL Rewards Distributor', function () {
       bablToken,
       rewardsDistributor,
       ishtarGate,
-      kyberTradeIntegration,
+      uniswapV3TradeIntegration,
       priceOracle,
     } = await setupTests()());
 
@@ -315,7 +315,7 @@ describe('BABL Rewards Distributor', function () {
         'buy',
         'vote',
         [signer1, signer2, signer3],
-        kyberTradeIntegration.address,
+        uniswapV3TradeIntegration.address,
         garden1,
       );
       expect(await weth.balanceOf(garden1.address)).to.be.gt(ethers.utils.parseEther('2'));
@@ -1072,7 +1072,7 @@ describe('BABL Rewards Distributor', function () {
         'buy',
         'vote',
         [signer1, signer3],
-        kyberTradeIntegration.address,
+        uniswapV3TradeIntegration.address,
         daiGarden,
         DAI_STRATEGY_PARAMS,
         usdc.address,
@@ -1148,7 +1148,7 @@ describe('BABL Rewards Distributor', function () {
         'buy',
         'vote',
         [signer1, signer3],
-        kyberTradeIntegration.address,
+        uniswapV3TradeIntegration.address,
         usdcGarden,
         USDC_STRATEGY_PARAMS,
         weth.address,
@@ -1255,7 +1255,7 @@ describe('BABL Rewards Distributor', function () {
         'buy',
         'vote',
         [signer1, signer3],
-        kyberTradeIntegration.address,
+        uniswapV3TradeIntegration.address,
         usdcGarden,
         USDC_STRATEGY_PARAMS,
         weth.address,
@@ -1265,7 +1265,7 @@ describe('BABL Rewards Distributor', function () {
         'buy',
         'vote',
         [signer1, signer3],
-        kyberTradeIntegration.address,
+        uniswapV3TradeIntegration.address,
         daiGarden,
         DAI_STRATEGY_PARAMS,
         usdc.address,
@@ -1380,7 +1380,7 @@ describe('BABL Rewards Distributor', function () {
         'buy',
         'vote',
         [signer1, signer3],
-        kyberTradeIntegration.address,
+        uniswapV3TradeIntegration.address,
         usdcGarden,
         USDC_STRATEGY_PARAMS,
         weth.address,
@@ -1390,7 +1390,7 @@ describe('BABL Rewards Distributor', function () {
         'buy',
         'vote',
         [signer1, signer3],
-        kyberTradeIntegration.address,
+        uniswapV3TradeIntegration.address,
         daiGarden,
         DAI_STRATEGY_PARAMS,
         usdc.address,
@@ -1504,7 +1504,7 @@ describe('BABL Rewards Distributor', function () {
         'buy',
         'vote',
         [signer1, signer3],
-        kyberTradeIntegration.address,
+        uniswapV3TradeIntegration.address,
         usdcGarden,
         USDC_STRATEGY_PARAMS,
         weth.address,
@@ -1514,7 +1514,7 @@ describe('BABL Rewards Distributor', function () {
         'buy',
         'vote',
         [signer1, signer3],
-        kyberTradeIntegration.address,
+        uniswapV3TradeIntegration.address,
         daiGarden,
         DAI_STRATEGY_PARAMS,
         usdc.address,

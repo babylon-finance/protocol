@@ -11,12 +11,12 @@ describe('IshtarGate', function () {
   let signer3;
   let ishtarGate;
   let babController;
-  let kyberTradeIntegration;
+  let uniswapV3TradeIntegration;
   let owner;
   let WALLET_ADDRESSES;
 
   beforeEach(async () => {
-    ({ owner, babController, signer1, signer2, signer3, ishtarGate, kyberTradeIntegration } = await setupTests()());
+    ({ owner, babController, signer1, signer2, signer3, ishtarGate, uniswapV3TradeIntegration } = await setupTests()());
     WALLET_ADDRESSES = [
       signer1.address,
       signer2.address,
@@ -162,7 +162,7 @@ describe('IshtarGate', function () {
       const newGarden = await ethers.getContractAt('Garden', gardens[gardens.length - 1]);
 
       await expect(
-        createStrategy('buy', 'dataset', [signer2, signer1, signer3], kyberTradeIntegration.address, newGarden),
+        createStrategy('buy', 'dataset', [signer2, signer1, signer3], uniswapV3TradeIntegration.address, newGarden),
       ).not.to.be.reverted;
     });
   });
@@ -209,7 +209,7 @@ describe('IshtarGate', function () {
         value: ethers.utils.parseEther('1'),
       });
       await expect(
-        createStrategy('buy', 'dataset', [signer1, signer2, signer3], kyberTradeIntegration.address, newGarden),
+        createStrategy('buy', 'dataset', [signer1, signer2, signer3], uniswapV3TradeIntegration.address, newGarden),
       ).not.to.be.reverted;
     });
 
@@ -234,7 +234,7 @@ describe('IshtarGate', function () {
       const gardens = await babController.getGardens();
       const newGarden = await ethers.getContractAt('Garden', gardens[gardens.length - 1]);
       await ishtarGate.connect(signer2).setGardenAccess(signer1.address, newGarden.address, 2, { gasPrice: 0 });
-      await expect(createStrategy('buy', 'vote', [signer1, signer2, signer3], kyberTradeIntegration.address, newGarden))
+      await expect(createStrategy('buy', 'vote', [signer1, signer2, signer3], uniswapV3TradeIntegration.address, newGarden))
         .to.be.reverted;
     });
   });

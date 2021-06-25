@@ -34,7 +34,7 @@ describe('Strategy', function () {
   let wethToken;
   let treasury;
   let aaveLendIntegration;
-  let kyberTradeIntegration;
+  let uniswapV3TradeIntegration;
   let uniswapPoolIntegration;
   let balancerIntegration;
   let oneInchPoolIntegration;
@@ -47,7 +47,7 @@ describe('Strategy', function () {
         'buy',
         'vote',
         [signer1, signer2, signer3],
-        kyberTradeIntegration.address,
+        uniswapV3TradeIntegration.address,
         strategies[i].garden,
       );
       retVal.push(strategy);
@@ -69,7 +69,7 @@ describe('Strategy', function () {
       signer2,
       signer3,
       aaveLendIntegration,
-      kyberTradeIntegration,
+      uniswapV3TradeIntegration,
       uniswapPoolIntegration,
       balancerIntegration,
       oneInchPoolIntegration,
@@ -225,7 +225,7 @@ describe('Strategy', function () {
         'buy',
         'vote',
         [signer1, signer2, signer3],
-        kyberTradeIntegration.address,
+        uniswapV3TradeIntegration.address,
         garden1,
       );
 
@@ -250,7 +250,7 @@ describe('Strategy', function () {
         'buy',
         'vote',
         [signer1, signer2, signer3],
-        kyberTradeIntegration.address,
+        uniswapV3TradeIntegration.address,
         garden1,
       );
 
@@ -277,7 +277,7 @@ describe('Strategy', function () {
         'buy',
         'active',
         [signer1, signer2, signer3],
-        kyberTradeIntegration.address,
+        uniswapV3TradeIntegration.address,
         garden1,
       );
       await expect(strategyContract.unwindStrategy(ethers.utils.parseEther('1'))).to.be.reverted;
@@ -288,7 +288,7 @@ describe('Strategy', function () {
         'buy',
         'vote',
         [signer1, signer2, signer3],
-        kyberTradeIntegration.address,
+        uniswapV3TradeIntegration.address,
         garden1,
       );
       expect(await wethToken.balanceOf(garden1.address)).to.be.gt(ethers.utils.parseEther('2'));
@@ -309,7 +309,7 @@ describe('Strategy', function () {
         'buy',
         'vote',
         [signer1, signer2, signer3],
-        kyberTradeIntegration.address,
+        uniswapV3TradeIntegration.address,
         garden1,
       );
       expect(await wethToken.balanceOf(garden1.address)).to.be.gt(ethers.utils.parseEther('2'));
@@ -324,7 +324,7 @@ describe('Strategy', function () {
         'buy',
         'active',
         [signer1, signer2, signer3],
-        kyberTradeIntegration.address,
+        uniswapV3TradeIntegration.address,
         garden1,
       );
 
@@ -347,7 +347,7 @@ describe('Strategy', function () {
         'buy',
         'vote',
         [signer1, signer2, signer3],
-        kyberTradeIntegration.address,
+        uniswapV3TradeIntegration.address,
         garden1,
       );
 
@@ -367,7 +367,7 @@ describe('Strategy', function () {
         'buy',
         'active',
         [signer1, signer2, signer3],
-        kyberTradeIntegration.address,
+        uniswapV3TradeIntegration.address,
         garden1,
       );
       const nav = await strategyContract.getNAV();
@@ -457,7 +457,7 @@ describe('Strategy', function () {
         'buy',
         'vote',
         [signer1, signer2, signer3],
-        kyberTradeIntegration.address,
+        uniswapV3TradeIntegration.address,
         garden1,
       );
 
@@ -499,7 +499,7 @@ describe('Strategy', function () {
         'buy',
         'active',
         [signer1, signer2, signer3],
-        kyberTradeIntegration.address,
+        uniswapV3TradeIntegration.address,
         garden1,
       );
 
@@ -516,7 +516,7 @@ describe('Strategy', function () {
         'buy',
         'active',
         [signer1, signer2, signer3],
-        kyberTradeIntegration.address,
+        uniswapV3TradeIntegration.address,
         garden1,
       );
 

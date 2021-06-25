@@ -31,7 +31,7 @@ describe('Keeper', function () {
   let weth;
   let dai;
   let balancerIntegration;
-  let kyberTradeIntegration;
+  let uniswapV3TradeIntegration;
   let daiGarden;
   let usdcGarden;
   let usdc;
@@ -50,7 +50,7 @@ describe('Keeper', function () {
       garden1,
       ishtarGate,
       balancerIntegration,
-      kyberTradeIntegration,
+      uniswapV3TradeIntegration,
     } = await setupTests({ fund: true })());
   });
 

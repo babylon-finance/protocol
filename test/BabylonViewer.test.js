@@ -8,11 +8,11 @@ const { GARDEN_PARAMS } = require('../lib/constants');
 describe('Babylon Viewer', function () {
   let garden1;
   let signer1;
-  let kyberTradeIntegration;
+  let uniswapV3TradeIntegration;
   let babViewer;
 
   beforeEach(async () => {
-    ({ kyberTradeIntegration, signer1, babViewer, garden1 } = await setupTests()());
+    ({ uniswapV3TradeIntegration, signer1, babViewer, garden1 } = await setupTests()());
   });
 
   describe('Deployment', function () {
@@ -74,7 +74,7 @@ describe('Babylon Viewer', function () {
       expect(strategyOperations[1].length).to.equal(1);
       expect(strategyOperations[2].length).to.equal(1);
       expect(strategyOperations[0][0]).to.equal(0);
-      expect(strategyOperations[1][0]).to.equal(kyberTradeIntegration.address);
+      expect(strategyOperations[1][0]).to.equal(uniswapV3TradeIntegration.address);
       expect(strategyOperations[2][0]).to.equal(addresses.tokens.DAI);
     });
 
