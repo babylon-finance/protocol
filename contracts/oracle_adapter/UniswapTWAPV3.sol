@@ -49,26 +49,25 @@ contract UniswapTWAPV3 is Ownable, IOracleAdapter {
     /* ============ State Variables ============ */
 
     // Instance of the Controller contract
-    IBabController public controller;
+    IBabController private controller;
 
     // Name to identify this adapter
     string public constant name = 'uniswapTwapV3';
 
     // Address of Uniswap factory
-    IUniswapV3Factory public immutable factory;
+    IUniswapV3Factory private immutable factory;
 
-    address public constant WETH = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
+    address private constant WETH = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
 
     // the desired seconds agos array passed to the observe method
-    uint32[] public secondsAgo = new uint32[](2);
-    uint32 public constant SECONDS_GRANULARITY = 30;
+    uint32 private constant SECONDS_GRANULARITY = 30;
 
     uint24 private constant FEE_LOW = 500;
     uint24 private constant FEE_MEDIUM = 3000;
     uint24 private constant FEE_HIGH = 10000;
-    int24 private maxTwapDeviation = 100;
-    uint160 private maxLiquidityDeviationFactor = 50;
-    int24 private baseThreshold = 1000;
+    int24 private constant maxTwapDeviation = 100;
+    uint160 private constant maxLiquidityDeviationFactor = 50;
+    int24 private constant baseThreshold = 1000;
 
     /* ============ Constructor ============ */
 
@@ -81,8 +80,6 @@ contract UniswapTWAPV3 is Ownable, IOracleAdapter {
     constructor(address _controller, address _factory) {
         factory = IUniswapV3Factory(_factory);
         controller = IBabController(_controller);
-        secondsAgo[0] = SECONDS_GRANULARITY;
-        secondsAgo[1] = 0;
     }
 
     /* ============ External Functions ============ */
@@ -94,16 +91,19 @@ contract UniswapTWAPV3 is Ownable, IOracleAdapter {
      * @return found                Whether or not the price as found
      */
     function getPrice(address _tokenIn, address _tokenOut) public view override returns (bool found, uint256 price) {
+        console.log('getPrice');
         bool found;
         uint256 price;
 
         if(_tokenIn != WETH && _tokenOut != WETH) {
           uint256 tokenInInWeth;
           uint256 tokenOutInWeth;
+          console.log('getPrice tokenIn');
           (found, tokenInInWeth) = getPrice(_tokenIn, WETH);
           if (!found) {
               return (false, 0);
           }
+          console.log('getPrice tokenOut');
           (found, tokenOutInWeth) = getPrice(_tokenOut, WETH);
           if (!found) {
               return (false, 0);
@@ -136,6 +136,8 @@ contract UniswapTWAPV3 is Ownable, IOracleAdapter {
             return (false, 0);
         }
 
+
+        console.log('pool', address(pool));
         int256 twapTick = OracleLibrary.consult(address(pool), SECONDS_GRANULARITY);
         price =
             OracleLibrary
@@ -181,6 +183,9 @@ contract UniswapTWAPV3 is Ownable, IOracleAdapter {
     // given the cumulative prices of the start and end of a period, and the length of the period, compute the average
     // price in terms of how much amount out is received for the amount in
     function _getTwap(IUniswapV3Pool _pool) private view returns (int56 amountOut, uint160 liquidity) {
+        uint32[] memory secondsAgo = new uint32[](2);
+        secondsAgo[0] = SECONDS_GRANULARITY;
+        secondsAgo[1] = 0;
         (int56[] memory tickCumulatives, uint160[] memory secondsPerLiquidityCumulativeX128s) =
             _pool.observe(secondsAgo);
         liquidity =

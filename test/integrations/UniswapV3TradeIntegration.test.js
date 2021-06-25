@@ -14,7 +14,7 @@ const {
 const { createGarden } = require('../fixtures/GardenHelper');
 const addresses = require('../../lib/addresses');
 
-describe('UniswapV3TradeIntegration', function () {
+describe.only('UniswapV3TradeIntegration', function () {
   let uniswapV3TradeIntegration;
   let priceOracle;
   let owner;
@@ -26,18 +26,18 @@ describe('UniswapV3TradeIntegration', function () {
   describe('exchange', function () {
     [
       { token: addresses.tokens.WETH, name: 'WETH' },
-      { token: addresses.tokens.DAI, name: 'DAI' },
-      { token: addresses.tokens.USDC, name: 'USDC' },
-      { token: addresses.tokens.WBTC, name: 'WBTC' },
+//      { token: addresses.tokens.DAI, name: 'DAI' },
+//      { token: addresses.tokens.USDC, name: 'USDC' },
+//      { token: addresses.tokens.WBTC, name: 'WBTC' },
     ].forEach(({ token, name, fee }) => {
       [
-        { asset: addresses.tokens.USDT, symbol: 'USDT' },
-        { asset: addresses.tokens.WETH, symbol: 'WETH' },
-        { asset: addresses.tokens.DAI, symbol: 'DAI' },
-        { asset: addresses.tokens.USDC, symbol: 'USDC' },
-        { asset: addresses.tokens.WBTC, symbol: 'WBTC' },
-        { asset: addresses.tokens.COMP, symbol: 'COMP' },
-        { asset: addresses.tokens.YFI, symbol: 'YFI' },
+//        { asset: addresses.tokens.USDT, symbol: 'USDT' },
+//        { asset: addresses.tokens.WETH, symbol: 'WETH' },
+//        { asset: addresses.tokens.DAI, symbol: 'DAI' },
+//        { asset: addresses.tokens.USDC, symbol: 'USDC' },
+//        { asset: addresses.tokens.WBTC, symbol: 'WBTC' },
+//        { asset: addresses.tokens.COMP, symbol: 'COMP' },
+//        { asset: addresses.tokens.YFI, symbol: 'YFI' },
         { asset: addresses.tokens.SNX, symbol: 'SNX' },
       ].forEach(({ asset, symbol }) => {
         it(`exchange ${name}->${symbol} in ${name} garden`, async function () {
