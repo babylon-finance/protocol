@@ -345,7 +345,13 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
      * @param _to                Address to send the tokens to
      * @param _amount            Amount of tokens to send the address to
      */
-    function sendTokensToContributor(address _to, uint256 _amount) external override nonReentrant onlyMiningActive {
+    function sendTokensToContributor(address _to, uint256 _amount)
+        external
+        override
+        nonReentrant
+        onlyMiningActive
+        onlyUnpaused
+    {
         _require(controller.isSystemContract(msg.sender), Errors.NOT_A_SYSTEM_CONTRACT);
         uint96 amount = Safe3296.safe96(_amount, 'overflow 96 bits');
         _safeBABLTransfer(_to, amount);
@@ -354,7 +360,7 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
     /**
      * Starts BABL Rewards Mining Program from the controller.
      */
-    function startBABLRewards() external override onlyController {
+    function startBABLRewards() external override onlyController onlyUnpaused {
         if (START_TIME == 0) {
             // It can only be activated once to avoid overriding START_TIME
             START_TIME = block.timestamp;
@@ -404,10 +410,6 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         address[] calldata _finalizedStrategies
     ) external view override returns (uint256[] memory) {
         uint256[] memory totalRewards = new uint256[](7);
-        // If it has not started, return 0
-        if (START_TIME == 0) {
-            return totalRewards;
-        }
         _require(IBabController(controller).isGarden(address(_garden)), Errors.ONLY_ACTIVE_GARDEN);
         for (uint256 i = 0; i < _finalizedStrategies.length; i++) {
             uint256[] memory tempRewards = new uint256[](7);
