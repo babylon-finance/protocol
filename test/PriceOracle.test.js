@@ -82,7 +82,7 @@ describe('PriceOracle', function () {
 
   beforeEach(async () => {
     ({ priceOracle, owner } = await setupTests()());
-    univ3 = await ethers.getContractAt('UniswapTWAP', (await priceOracle.getAdapters())[0]);
+    univ3 = await ethers.getContractAt('UniswapTWAPV3', (await priceOracle.getAdapters())[0]);
   });
 
   describe('Uniswap TWAP V3', function () {

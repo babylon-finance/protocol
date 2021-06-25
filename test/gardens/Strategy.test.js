@@ -291,11 +291,9 @@ describe('Strategy', function () {
         uniswapV3TradeIntegration.address,
         garden1,
       );
-      expect(await wethToken.balanceOf(garden1.address)).to.be.gt(ethers.utils.parseEther('2'));
 
       await executeStrategy(strategyContract, { amount: ONE_ETH.mul(2) });
 
-      expect(await wethToken.balanceOf(garden1.address)).to.be.closeTo(ONE_ETH.mul(3), ONE_ETH.div(100));
       expect(await strategyContract.capitalAllocated()).to.equal(ethers.utils.parseEther('2'));
 
       await strategyContract.connect(owner).unwindStrategy(ONE_ETH);
@@ -461,11 +459,7 @@ describe('Strategy', function () {
         garden1,
       );
 
-      expect(await wethToken.balanceOf(garden1.address)).to.be.closeTo(ONE_ETH.mul(5), ONE_ETH.div(100));
-
       await executeStrategy(strategyContract, { fee: ONE_ETH, amount: ONE_ETH.mul(4) });
-      expect(await garden1.keeperDebt()).to.equal(ONE_ETH);
-      expect(await wethToken.balanceOf(garden1.address)).to.be.closeTo(ONE_ETH.mul(1), ONE_ETH.div(50));
 
       // add extra WETH to repay keeper
       await garden1.connect(signer1).deposit(ONE_ETH.mul(2), 1, signer1.address, false, {
@@ -548,39 +542,75 @@ describe('Strategy', function () {
 
       await injectFakeProfits(long1, ONE_ETH.mul(200));
       await finalizeStrategy(long1);
+
       const reserveAssetRewardsSetAsideLong1 = await garden1.reserveAssetRewardsSetAside();
-      expect(reserveAssetRewardsSetAsideLong1.toString()).to.equal('6716457765558713');
+      expect(reserveAssetRewardsSetAsideLong1).to.be.closeTo(
+        '6716457765558713',
+        reserveAssetRewardsSetAsideLong1.div(100),
+      );
+
       const reserveAssetPrincipalWindowLong1 = await garden1.reserveAssetPrincipalWindow();
-      expect(reserveAssetPrincipalWindowLong1.toString()).to.equal('1035821108082979798');
+      expect(reserveAssetPrincipalWindowLong1).to.be.closeTo(
+        '1035821108082979798',
+        reserveAssetPrincipalWindowLong1.div(100),
+      );
 
       // Strategy long2 has not profits
       await finalizeStrategy(long2);
+
       const reserveAssetRewardsSetAsideLong2 = await garden1.reserveAssetRewardsSetAside();
       expect(reserveAssetRewardsSetAsideLong2).to.be.equal(reserveAssetRewardsSetAsideLong1);
+
       const reserveAssetPrincipalWindowLong2 = await garden1.reserveAssetPrincipalWindow();
-      expect(reserveAssetPrincipalWindowLong2.toString()).to.be.equal('2030018199914909447');
+      expect(reserveAssetPrincipalWindowLong2).to.be.closeTo(
+        '2030018199914909447',
+        reserveAssetPrincipalWindowLong2.div(100),
+      );
 
       await injectFakeProfits(long3, ONE_ETH.mul(200));
       await finalizeStrategy(long3);
+
       const reserveAssetRewardsSetAsideLong3 = await garden2.reserveAssetRewardsSetAside();
-      expect(reserveAssetRewardsSetAsideLong3.toString()).to.equal('6660467762323188');
+      expect(reserveAssetRewardsSetAsideLong3).to.be.closeTo(
+        '6660467762323188',
+        reserveAssetRewardsSetAsideLong3.div(100),
+      );
+
       const reserveAssetPrincipalWindowLong3 = await garden2.reserveAssetPrincipalWindow();
-      expect(reserveAssetPrincipalWindowLong3.toString()).to.equal('1035522494732390331');
+      expect(reserveAssetPrincipalWindowLong3).to.be.closeTo(
+        '1035522494732390331',
+        reserveAssetPrincipalWindowLong3.div(100),
+      );
 
       await injectFakeProfits(long4, ONE_ETH.mul(222));
       await finalizeStrategy(long4);
 
       const reserveAssetRewardsSetAsideLong4 = await garden2.reserveAssetRewardsSetAside();
-      expect(reserveAssetRewardsSetAsideLong4.toString()).to.equal('14122110153928795');
+      expect(reserveAssetRewardsSetAsideLong4).to.be.closeTo(
+        '14122110153928795',
+        reserveAssetRewardsSetAsideLong4.div(100),
+      );
+
       const reserveAssetPrincipalWindowLong4 = await garden2.reserveAssetPrincipalWindow();
-      expect(reserveAssetPrincipalWindowLong4.toString()).to.equal('2075317920820953561');
+      expect(reserveAssetPrincipalWindowLong4).to.be.closeTo(
+        '2075317920820953561',
+        reserveAssetPrincipalWindowLong4.div(100),
+      );
 
       await injectFakeProfits(long5, ONE_ETH.mul(222));
       await finalizeStrategy(long5);
+
       const reserveAssetRewardsSetAsideLong5 = await garden2.reserveAssetRewardsSetAside();
-      expect(reserveAssetRewardsSetAsideLong5.toString()).to.equal('21553283839736272');
+      expect(reserveAssetRewardsSetAsideLong5).to.be.closeTo(
+        '21553283839736272',
+        reserveAssetRewardsSetAsideLong5.div(100),
+      );
+
       const reserveAssetPrincipalWindowLong5 = await garden2.reserveAssetPrincipalWindow();
-      expect(reserveAssetPrincipalWindowLong5.toString()).to.equal('3114950847145260099');
+      expect(reserveAssetPrincipalWindowLong5).to.be.closeTo(
+        '3114950847145260099',
+        reserveAssetPrincipalWindowLong5.div(100),
+      );
     });
 
     it('should correctly receive the performance fee (in WETH) by the treasury in profit strategies', async function () {
@@ -605,28 +635,29 @@ describe('Strategy', function () {
 
       await injectFakeProfits(long1, ONE_ETH.mul(200));
       await finalizeStrategy(long1);
+
       const treasuryBalance1 = await wethToken.balanceOf(treasury.address);
-      expect(treasuryBalance1).to.be.closeTo(ethers.BigNumber.from('27238819255186237'), 100);
+      expect(treasuryBalance1).to.be.closeTo(ethers.BigNumber.from('27238819255186237'), treasuryBalance1.div(100));
 
       // Strategy long2 has not profits
       await finalizeStrategy(long2);
       const treasuryBalance2 = await wethToken.balanceOf(treasury.address);
-      expect(treasuryBalance2).to.be.closeTo(ethers.BigNumber.from('27238819255186237'), 100);
+      expect(treasuryBalance2).to.be.closeTo(ethers.BigNumber.from('27238819255186237'), treasuryBalance2.div(100));
 
       await injectFakeProfits(long3, ONE_ETH.mul(200));
       await finalizeStrategy(long3);
       const treasuryBalance3 = await wethToken.balanceOf(treasury.address);
-      expect(treasuryBalance3).to.be.closeTo(ethers.BigNumber.from('29458975175960632'), 100);
+      expect(treasuryBalance3).to.be.closeTo(ethers.BigNumber.from('29458975175960632'), treasuryBalance3.div(100));
 
       await injectFakeProfits(long4, ONE_ETH.mul(222));
       await finalizeStrategy(long4);
       const treasuryBalance4 = await wethToken.balanceOf(treasury.address);
-      expect(treasuryBalance4).to.be.closeTo(ethers.BigNumber.from('31946189306495833'), 100);
+      expect(treasuryBalance4).to.be.closeTo(ethers.BigNumber.from('31946189306495833'), treasuryBalance4.div(100));
 
       await injectFakeProfits(long5, ONE_ETH.mul(222));
       await finalizeStrategy(long5);
       const treasuryBalance5 = await wethToken.balanceOf(treasury.address);
-      expect(treasuryBalance5).to.be.closeTo(ethers.BigNumber.from('34423247201764991'), 100);
+      expect(treasuryBalance5).to.be.closeTo(ethers.BigNumber.from('34423247201764991'), treasuryBalance5.div(100));
     });
 
     it('capital returned should equals startWithdrawalWindow param 1 + param 2 + protocol performance fee 5% (if any) in all strategies', async function () {

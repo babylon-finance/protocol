@@ -1,6 +1,5 @@
 const { ethers } = require('hardhat');
 const { ONE_DAY_IN_SECONDS, ONE_ETH, STRATEGY_EXECUTE_MAP } = require('../../lib/constants.js');
-const { TWAP_ORACLE_WINDOW, TWAP_ORACLE_GRANULARITY } = require('../../lib/system.js');
 const { impersonateAddress } = require('../../lib/rpc');
 const addresses = require('../../lib/addresses');
 const { getAssetWhale } = require('../../lib/whale');
@@ -43,19 +42,6 @@ const GARDEN_PARAMS_MAP = {
 
 const STRAT_NAME_PARAMS = ['Strategy Name', 'STRT']; // [ NAME, SYMBOL ]
 const NFT_ADDRESS = 'https://babylon.mypinata.cloud/ipfs/Qmc7MfvuCkhA8AA2z6aBzmb5G4MaRfPeKgCVTWcKqU2tjB';
-
-async function updateTWAPs(gardenAddress) {
-  const garden = await ethers.getContractAt('Garden', gardenAddress);
-  const controller = await ethers.getContractAt('BabController', await garden.controller());
-  const priceOracle = await ethers.getContractAt('PriceOracle', await controller.priceOracle());
-  const adapterAddress = (await priceOracle.getAdapters())[0];
-  const adapter = await ethers.getContractAt('UniswapTWAP', adapterAddress);
-  for (let i = 0; i < TWAP_ORACLE_GRANULARITY; i += 1) {
-    await adapter.update(addresses.tokens.WETH, addresses.tokens.USDC);
-    await adapter.update(addresses.tokens.WETH, addresses.tokens.DAI);
-    await increaseTime(from(TWAP_ORACLE_WINDOW).div(TWAP_ORACLE_GRANULARITY));
-  }
-}
 
 async function createStrategyWithBuyOperation(garden, signer, params, integration, data) {
   const passedLongParams = [[0], [integration], [data || addresses.tokens.DAI]];
@@ -181,19 +167,15 @@ async function executeStrategy(
     time = ONE_DAY_IN_SECONDS,
     amount = 0,
     fee = 0,
-    TWAPs = true,
     gasPrice = 0,
   } = {},
 ) {
   const garden = await strategy.garden();
   const gardenContract = await ethers.getContractAt('Garden', garden);
-  amount = STRATEGY_EXECUTE_MAP[await gardenContract.reserveAsset()];
+  amount = amount || STRATEGY_EXECUTE_MAP[await gardenContract.reserveAsset()];
   const signers = await ethers.getSigners();
   if (time > 0) {
     await increaseTime(time);
-  }
-  if (TWAPs) {
-    await updateTWAPs(garden);
   }
   return (
     strategy
@@ -215,17 +197,12 @@ async function finalizeStrategy(
     fee = 0,
     /* Strategy default duration */
     time = ONE_DAY_IN_SECONDS * 30,
-    TWAPs = true,
     gasPrice = 0,
   } = {},
 ) {
   const signers = await ethers.getSigners();
   if (time > 0) {
     await increaseTime(time);
-  }
-  // increaseTime(ONE_DAY_IN_SECONDS * 90);
-  if (TWAPs) {
-    await updateTWAPs(await strategy.garden());
   }
   return (
     strategy
@@ -413,5 +390,4 @@ module.exports = {
   injectFakeProfits,
   substractFakeProfits,
   deposit,
-  updateTWAPs,
 };
