@@ -34,17 +34,17 @@ describe('Babylon Viewer', function () {
       expect(gardenDetails[5].length).to.equal(1); // Active Strategies
       expect(gardenDetails[6].length).to.equal(0); // Finalized strategies
       const paramsCreation = gardenDetails[7];
-      expect(paramsCreation[0]).to.equal(GARDEN_PARAMS[3]); // Hardlock
+      expect(paramsCreation[0]).to.equal(GARDEN_PARAMS[2]); // Hardlock
       expect(paramsCreation[1]).to.equal(0); // Withdrawals open until
-      expect(paramsCreation[2]).to.equal(GARDEN_PARAMS[6]); // Min Votes Quorum
+      expect(paramsCreation[2]).to.equal(GARDEN_PARAMS[5]); // Min Votes Quorum
       expect(paramsCreation[3]).to.equal(100); // Max contributors
       expect(paramsCreation[4]).to.equal(GARDEN_PARAMS[0]); // Max deposit limit
-      expect(paramsCreation[5]).to.equal(GARDEN_PARAMS[9]); // Min Voters
-      expect(paramsCreation[6]).to.equal(GARDEN_PARAMS[7]); // Min Strategy Duration
-      expect(paramsCreation[7]).to.equal(GARDEN_PARAMS[8]); // Max Strategy Duration
-      expect(paramsCreation[8]).to.equal(GARDEN_PARAMS[5]); // Strategy cooldown
-      expect(paramsCreation[9]).to.equal(GARDEN_PARAMS[4]); // Min contribution
-      expect(paramsCreation[10]).to.equal(GARDEN_PARAMS[2]); // Min liquidity asset
+      expect(paramsCreation[5]).to.equal(GARDEN_PARAMS[8]); // Min Voters
+      expect(paramsCreation[6]).to.equal(GARDEN_PARAMS[6]); // Min Strategy Duration
+      expect(paramsCreation[7]).to.equal(GARDEN_PARAMS[7]); // Max Strategy Duration
+      expect(paramsCreation[8]).to.equal(GARDEN_PARAMS[4]); // Strategy cooldown
+      expect(paramsCreation[9]).to.equal(GARDEN_PARAMS[3]); // Min contribution
+      expect(paramsCreation[10]).to.equal(GARDEN_PARAMS[1]); // Min liquidity asset
       const status = gardenDetails[8];
       expect(status[0]).to.be.gt(0); // Principal
       expect(status[1]).to.equal(0); // Reserve rewards set aside
