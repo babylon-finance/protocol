@@ -42,9 +42,8 @@ contract UniswapV3TradeIntegration is TradeIntegration {
     /* ============ State Variables ============ */
 
     /* ============ Constants ============ */
-     // Address of Uniswap V3 SwapRouter contract
+    // Address of Uniswap V3 SwapRouter contract
     address private constant swapRouter = 0xE592427A0AEce92De3Edee1F18E0157C05861564;
-
 
     /* ============ Constructor ============ */
 
@@ -54,11 +53,7 @@ contract UniswapV3TradeIntegration is TradeIntegration {
      * @param _weth                         Address of the WETH ERC20
      * @param _controller                   Address of the controller
      */
-    constructor(
-        IBabController _controller,
-        address _weth
-    ) TradeIntegration('univ3', _weth, _controller) {
-    }
+    constructor(IBabController _controller, address _weth) TradeIntegration('univ3', _weth, _controller) {}
 
     /* ============ External Functions ============ */
     /**
@@ -107,23 +102,24 @@ contract UniswapV3TradeIntegration is TradeIntegration {
         )
     {
         bytes memory path;
-        if(_sendToken == weth || _receiveToken == weth) {
-          (,uint24 fee) = _getUniswapPoolWithHighestLiquidity(_sendToken, _receiveToken);
-          path = abi.encodePacked(_sendToken, fee, _receiveToken);
+        if (_sendToken == weth || _receiveToken == weth) {
+            (, uint24 fee) = _getUniswapPoolWithHighestLiquidity(_sendToken, _receiveToken);
+            path = abi.encodePacked(_sendToken, fee, _receiveToken);
         } else {
-          (,uint24 fee0) = _getUniswapPoolWithHighestLiquidity(_sendToken, weth);
-          (,uint24 fee1) = _getUniswapPoolWithHighestLiquidity(_sendToken, weth);
-          path = abi.encodePacked(_sendToken, fee0, weth, fee1, _receiveToken);
+            (, uint24 fee0) = _getUniswapPoolWithHighestLiquidity(_sendToken, weth);
+            (, uint24 fee1) = _getUniswapPoolWithHighestLiquidity(_sendToken, weth);
+            path = abi.encodePacked(_sendToken, fee0, weth, fee1, _receiveToken);
         }
-        ISwapRouter.ExactInputParams memory params = ISwapRouter.ExactInputParams(
-            path,
-            _strategy,
-            block.timestamp,
-            _sendQuantity,
-            1 // we check for amountOutMinimum in the post trade check
-        );
+        ISwapRouter.ExactInputParams memory params =
+            ISwapRouter.ExactInputParams(
+                path,
+                _strategy,
+                block.timestamp,
+                _sendQuantity,
+                1 // we check for amountOutMinimum in the post trade check
+            );
 
-        bytes memory callData = abi.encodeWithSignature("exactInput((bytes,address,uint256,uint256,uint256))", params);
+        bytes memory callData = abi.encodeWithSignature('exactInput((bytes,address,uint256,uint256,uint256))', params);
         return (swapRouter, 0, callData);
     }
 

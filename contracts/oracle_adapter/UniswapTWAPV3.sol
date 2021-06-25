@@ -96,18 +96,18 @@ contract UniswapTWAPV3 is Ownable, IOracleAdapter {
         uint256 price;
         int24 tick;
 
-        if(_tokenIn != WETH && _tokenOut != WETH) {
-          uint256 tokenInInWeth;
-          uint256 tokenOutInWeth;
-          (found, tokenInInWeth) = getPrice(_tokenIn, WETH);
-          if (!found) {
-              return (false, 0);
-          }
-          (found, tokenOutInWeth) = getPrice(_tokenOut, WETH);
-          if (!found) {
-              return (false, 0);
-          }
-          return (true, tokenInInWeth.preciseDiv(tokenOutInWeth));
+        if (_tokenIn != WETH && _tokenOut != WETH) {
+            uint256 tokenInInWeth;
+            uint256 tokenOutInWeth;
+            (found, tokenInInWeth) = getPrice(_tokenIn, WETH);
+            if (!found) {
+                return (false, 0);
+            }
+            (found, tokenOutInWeth) = getPrice(_tokenOut, WETH);
+            if (!found) {
+                return (false, 0);
+            }
+            return (true, tokenInInWeth.preciseDiv(tokenOutInWeth));
         }
         IUniswapV3Pool pool;
         // We try the low pool first
@@ -116,27 +116,38 @@ contract UniswapTWAPV3 is Ownable, IOracleAdapter {
             (found, pool, tick) = checkPool(_tokenIn, _tokenOut, FEE_MEDIUM);
         }
         if (!found) {
-            (found, pool, tick)= checkPool(_tokenIn, _tokenOut, FEE_HIGH);
+            (found, pool, tick) = checkPool(_tokenIn, _tokenOut, FEE_HIGH);
         }
         // No valid price
         if (!found) {
             return (false, 0);
         }
 
-        price =
-            OracleLibrary
-                .getQuoteAtTick(
-                tick,
-                // because we use 1e18 as a precision unit
-                uint128(uint256(1e18).mul(10**(uint256(18).sub(ERC20(_tokenOut).decimals())))),
-                _tokenIn,
-                _tokenOut
-            )
-                .div(10**(uint256(18).sub(ERC20(_tokenIn).decimals())));
+        price = OracleLibrary
+            .getQuoteAtTick(
+            tick,
+            // because we use 1e18 as a precision unit
+            uint128(uint256(1e18).mul(10**(uint256(18).sub(ERC20(_tokenOut).decimals())))),
+            _tokenIn,
+            _tokenOut
+        )
+            .div(10**(uint256(18).sub(ERC20(_tokenIn).decimals())));
         return (true, price);
     }
 
-    function checkPool(address _tokenIn, address _tokenOut, uint24 fee) internal view returns (bool, IUniswapV3Pool, int24) {
+    function checkPool(
+        address _tokenIn,
+        address _tokenOut,
+        uint24 fee
+    )
+        internal
+        view
+        returns (
+            bool,
+            IUniswapV3Pool,
+            int24
+        )
+    {
         int24 tick;
         IUniswapV3Pool pool = IUniswapV3Pool(factory.getPool(_tokenIn, _tokenOut, fee));
         if (address(pool) != address(0)) {
@@ -181,7 +192,10 @@ contract UniswapTWAPV3 is Ownable, IOracleAdapter {
         secondsAgo[0] = SECONDS_GRANULARITY;
         secondsAgo[1] = 0;
         // observe fails if the pair has no observations
-        try _pool.observe(secondsAgo) returns (int56[] memory tickCumulatives, uint160[] memory secondsPerLiquidityCumulativeX128s) {
+        try _pool.observe(secondsAgo) returns (
+            int56[] memory tickCumulatives,
+            uint160[] memory secondsPerLiquidityCumulativeX128s
+        ) {
             return (tickCumulatives[1] - tickCumulatives[0]) / SECONDS_GRANULARITY;
         } catch {
             return 0;

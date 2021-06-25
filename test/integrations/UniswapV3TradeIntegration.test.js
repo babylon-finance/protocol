@@ -14,7 +14,7 @@ const {
 const { createGarden } = require('../fixtures/GardenHelper');
 const addresses = require('../../lib/addresses');
 
-describe.only('UniswapV3TradeIntegration', function () {
+describe('UniswapV3TradeIntegration', function () {
   let uniswapV3TradeIntegration;
   let priceOracle;
   let owner;
