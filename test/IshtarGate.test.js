@@ -234,8 +234,9 @@ describe('IshtarGate', function () {
       const gardens = await babController.getGardens();
       const newGarden = await ethers.getContractAt('Garden', gardens[gardens.length - 1]);
       await ishtarGate.connect(signer2).setGardenAccess(signer1.address, newGarden.address, 2, { gasPrice: 0 });
-      await expect(createStrategy('buy', 'vote', [signer1, signer2, signer3], uniswapV3TradeIntegration.address, newGarden))
-        .to.be.reverted;
+      await expect(
+        createStrategy('buy', 'vote', [signer1, signer2, signer3], uniswapV3TradeIntegration.address, newGarden),
+      ).to.be.reverted;
     });
   });
 
