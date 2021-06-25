@@ -161,8 +161,6 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
     // Keeper debt in reserve asset if any, repaid upon every strategy finalization
     uint256 public keeperDebt;
 
-    uint256 private constant MIN_GARDEN_SUPPLY = 100;
-
     /* ============ Modifiers ============ */
 
     function _onlyContributor() private view {
@@ -279,8 +277,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
     ) private {
         _require(_minContribution > 0 && _creatorDeposit >= _minContribution, Errors.MIN_CONTRIBUTION);
         _require(
-            _creatorDeposit >= MIN_GARDEN_SUPPLY &&
-                _minLiquidityAsset >= IBabController(controller).minLiquidityPerReserve(reserveAsset),
+            _minLiquidityAsset >= IBabController(controller).minLiquidityPerReserve(reserveAsset),
             Errors.MIN_LIQUIDITY
         );
         _require(
@@ -374,9 +371,6 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         }
 
         emit GardenDeposit(_to, msg.value, _reserveAssetQuantity, block.timestamp);
-
-        // Check that total supply is greater than min supply needed for issuance
-        _require(totalSupply() >= MIN_GARDEN_SUPPLY, Errors.MIN_TOKEN_SUPPLY);
     }
 
     /**
