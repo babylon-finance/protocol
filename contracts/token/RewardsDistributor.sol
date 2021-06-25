@@ -405,7 +405,7 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
     ) external view override returns (uint256[] memory) {
         uint256[] memory totalRewards = new uint256[](7);
         // If it has not started, return 0
-        if (START_TIME > 0) {
+        if (START_TIME == 0) {
             return totalRewards;
         }
         _require(IBabController(controller).isGarden(address(_garden)), Errors.ONLY_ACTIVE_GARDEN);
