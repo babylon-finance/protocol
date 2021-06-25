@@ -15,7 +15,6 @@ const {
   finalizeStrategyAfter30Days,
   finalizeStrategyAfter2Years,
   finalizeStrategyAfter3Quarters,
-  DEFAULT_STRATEGY_PARAMS,
   USDC_STRATEGY_PARAMS,
   DAI_STRATEGY_PARAMS,
 } = require('../fixtures/StrategyHelper.js');
@@ -1118,7 +1117,7 @@ describe('BABL Rewards Distributor', function () {
         gasPrice: 0,
       });
       const params = [...USDC_GARDEN_PARAMS];
-      params[4] = thousandUSDC.div(10);
+      params[3] = thousandUSDC.div(10);
       await babController
         .connect(signer1)
         .createGarden(
@@ -1133,7 +1132,6 @@ describe('BABL Rewards Distributor', function () {
         );
       const gardens = await babController.getGardens();
       usdcGarden = await ethers.getContractAt('Garden', gardens[4]);
-      const supplyBefore = await usdcGarden.totalSupply();
 
       await ishtarGate.connect(signer1).setGardenAccess(signer3.address, usdcGarden.address, 1, { gasPrice: 0 });
       await usdc.connect(signer3).approve(usdcGarden.address, thousandUSDC, { gasPrice: 0 });
@@ -1208,7 +1206,7 @@ describe('BABL Rewards Distributor', function () {
         gasPrice: 0,
       });
       const params = [...USDC_GARDEN_PARAMS];
-      params[4] = thousandUSDC.div(10);
+      params[3] = thousandUSDC.div(10);
       // USC Garden
       await babController
         .connect(signer1)
@@ -1333,7 +1331,7 @@ describe('BABL Rewards Distributor', function () {
         gasPrice: 0,
       });
       const params = [...USDC_GARDEN_PARAMS];
-      params[4] = thousandUSDC.div(10);
+      params[3] = thousandUSDC.div(10);
       // USC Garden
       await babController
         .connect(signer1)
@@ -1457,7 +1455,7 @@ describe('BABL Rewards Distributor', function () {
         gasPrice: 0,
       });
       const params = [...USDC_GARDEN_PARAMS];
-      params[4] = thousandUSDC.div(10);
+      params[3] = thousandUSDC.div(10);
       // USC Garden
       await babController
         .connect(signer1)
