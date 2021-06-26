@@ -98,12 +98,7 @@ contract AddLiquidityOperation is Operation {
         for (uint256 i = 0; i < poolTokens.length; i++) {
             _maxAmountsIn[i] = _getMaxAmountTokenPool(_asset, _capital, _garden, _poolWeights[i], poolTokens[i]);
         }
-        console.log('CHECK MAX AMOUNTS IN token0', _maxAmountsIn[0]);
-        console.log('CHECK MAX AMOUNTS IN token1', _maxAmountsIn[1]);
-
         uint256 poolTokensOut = IPoolIntegration(_integration).getPoolTokensOut(_pool, poolTokens[0], _maxAmountsIn[0]);
-        console.log('CHECK POOL TOKENS OUT', poolTokensOut);
-
         IPoolIntegration(_integration).joinPool(
             msg.sender,
             _pool,

@@ -855,8 +855,6 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         uint256 _value,
         bytes memory _data
     ) internal returns (bytes memory _returnValue) {
-        console.log('target', _target);
-        console.log('value', _value);
         _returnValue = _target.functionCallWithValue(_data, _value);
         emit Invoked(_target, _value, _data, _returnValue);
         return _returnValue;
@@ -880,8 +878,6 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         uint256 _sendQuantity,
         address _receiveToken
     ) internal returns (uint256) {
-        console.log('TRADE send token + quantity', _sendToken, _sendQuantity);
-        console.log('TRADE receive token', _receiveToken);
         address tradeIntegration = IBabController(controller).defaultTradeIntegration();
         // Uses on chain oracle for all internal strategy operations to avoid attacks        // Updates UniSwap TWAP
         IPriceOracle oracle = IPriceOracle(IBabController(controller).priceOracle());

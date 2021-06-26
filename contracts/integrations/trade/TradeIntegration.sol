@@ -110,10 +110,6 @@ abstract contract TradeIntegration is BaseIntegration, ReentrancyGuard, ITradeIn
         address _receiveToken,
         uint256 _minReceiveQuantity
     ) external override nonReentrant onlySystemContract {
-        //console.log('send token', _sendToken);
-        //console.log('send Quantity', _sendQuantity);
-        //console.log('receive token', _receiveToken);
-        //console.log('min receive quantity', _minReceiveQuantity);
         TradeInfo memory tradeInfo =
             _createTradeInfo(_strategy, name, _sendToken, _receiveToken, _sendQuantity, _minReceiveQuantity);
         _validatePreTradeData(tradeInfo, _sendQuantity);
@@ -239,10 +235,7 @@ abstract contract TradeIntegration is BaseIntegration, ReentrancyGuard, ITradeIn
             ERC20(_tradeInfo.receiveToken).balanceOf(address(_tradeInfo.strategy)).sub(
                 _tradeInfo.preTradeReceiveTokenBalance
             );
-        console.log('CHECK exchangedQuantity', exchangedQuantity);
-        console.log('CHECK _tradeInfo.totalMinReceiveQuantity', _tradeInfo.totalMinReceiveQuantity);
         require(exchangedQuantity >= _tradeInfo.totalMinReceiveQuantity, 'Slippage greater than allowed');
-
         return exchangedQuantity;
     }
 

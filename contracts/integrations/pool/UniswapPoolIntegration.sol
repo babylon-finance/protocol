@@ -163,11 +163,6 @@ contract UniswapPoolIntegration is PoolIntegration {
         address[] calldata _tokensIn,
         uint256[] calldata _maxAmountsIn
     ) private view returns (bytes memory) {
-        console.log('DATA token 1 maxAmountsIn', _maxAmountsIn[0]);
-        console.log('CHECK token 1 slippage', _maxAmountsIn[0].sub(_maxAmountsIn[0].preciseMul(SLIPPAGE_ALLOWED)));
-        console.log('DATA token 2 maxAmountsIn', _maxAmountsIn[1]);
-        console.log('CHECK token 2 slippage', _maxAmountsIn[1].sub(_maxAmountsIn[1].preciseMul(SLIPPAGE_ALLOWED)));
-
         return
             abi.encodeWithSignature(
                 'addLiquidity(address,address,uint256,uint256,uint256,uint256,address,uint256)',
