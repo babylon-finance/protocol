@@ -21,6 +21,7 @@
 pragma solidity 0.7.6;
 
 import 'hardhat/console.sol';
+
 import {Ownable} from '@openzeppelin/contracts/access/Ownable.sol';
 import {ERC20} from '@openzeppelin/contracts/token/ERC20/ERC20.sol';
 import '@uniswap/v3-core/contracts/interfaces/IUniswapV3Factory.sol';
@@ -49,26 +50,25 @@ contract UniswapTWAPV3 is Ownable, IOracleAdapter {
     /* ============ State Variables ============ */
 
     // Instance of the Controller contract
-    IBabController public controller;
+    IBabController private controller;
 
     // Name to identify this adapter
     string public constant name = 'uniswapTwapV3';
 
     // Address of Uniswap factory
-    IUniswapV3Factory public immutable factory;
+    IUniswapV3Factory private immutable factory;
 
-    address public constant WETH = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
+    address private constant WETH = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
 
     // the desired seconds agos array passed to the observe method
-    uint32[] public secondsAgo = new uint32[](2);
-    uint32 public constant SECONDS_GRANULARITY = 30;
+    uint32 private constant SECONDS_GRANULARITY = 30;
 
     uint24 private constant FEE_LOW = 500;
     uint24 private constant FEE_MEDIUM = 3000;
     uint24 private constant FEE_HIGH = 10000;
-    int24 private maxTwapDeviation = 100;
-    uint160 private maxLiquidityDeviationFactor = 50;
-    int24 private baseThreshold = 1000;
+    int24 private constant maxTwapDeviation = 100;
+    uint160 private constant maxLiquidityDeviationFactor = 50;
+    int24 private constant baseThreshold = 1000;
 
     /* ============ Constructor ============ */
 
@@ -81,8 +81,6 @@ contract UniswapTWAPV3 is Ownable, IOracleAdapter {
     constructor(address _controller, address _factory) {
         factory = IUniswapV3Factory(_factory);
         controller = IBabController(_controller);
-        secondsAgo[0] = SECONDS_GRANULARITY;
-        secondsAgo[1] = 0;
     }
 
     /* ============ External Functions ============ */
@@ -91,48 +89,72 @@ contract UniswapTWAPV3 is Ownable, IOracleAdapter {
      * Returns the amount out corresponding to the amount in for a given token
      * @param _tokenIn              Address of the first token
      * @param _tokenOut             Address of the second token
-     * @return found               Whether or not the price as found
+     * @return found                Whether or not the price as found
      */
-    function getPrice(address _tokenIn, address _tokenOut) external view override returns (bool found, uint256 price) {
+    function getPrice(address _tokenIn, address _tokenOut) public view override returns (bool found, uint256 price) {
+        bool found;
+        uint256 price;
         int24 tick;
-        bool found = false;
+
+        if (_tokenIn != WETH && _tokenOut != WETH) {
+            uint256 tokenInInWeth;
+            uint256 tokenOutInWeth;
+            (found, tokenInInWeth) = getPrice(_tokenIn, WETH);
+            if (!found) {
+                return (false, 0);
+            }
+            (found, tokenOutInWeth) = getPrice(_tokenOut, WETH);
+            if (!found) {
+                return (false, 0);
+            }
+            return (true, tokenInInWeth.preciseDiv(tokenOutInWeth));
+        }
+        IUniswapV3Pool pool;
         // We try the low pool first
-        IUniswapV3Pool pool = IUniswapV3Pool(factory.getPool(_tokenIn, _tokenOut, FEE_LOW));
-        if (address(pool) != address(0)) {
-            (, tick, , , , , ) = pool.slot0();
-            found = _checkPrice(tick, pool);
+        (found, pool, tick) = checkPool(_tokenIn, _tokenOut, FEE_LOW);
+        if (!found) {
+            (found, pool, tick) = checkPool(_tokenIn, _tokenOut, FEE_MEDIUM);
         }
         if (!found) {
-            pool = IUniswapV3Pool(factory.getPool(_tokenIn, _tokenOut, FEE_MEDIUM));
-            if (address(pool) != address(0)) {
-                (, tick, , , , , ) = pool.slot0();
-                found = _checkPrice(tick, pool);
-            }
-        }
-        if (!found) {
-            pool = IUniswapV3Pool(factory.getPool(_tokenIn, _tokenOut, FEE_HIGH));
-            if (address(pool) != address(0)) {
-                (, tick, , , , , ) = pool.slot0();
-                found = _checkPrice(tick, pool);
-            }
+            (found, pool, tick) = checkPool(_tokenIn, _tokenOut, FEE_HIGH);
         }
         // No valid price
         if (!found) {
             return (false, 0);
         }
 
-        int256 twapTick = OracleLibrary.consult(address(pool), SECONDS_GRANULARITY);
-        uint256 price =
-            OracleLibrary
-                .getQuoteAtTick(
-                int24(twapTick),
-                // because we use 1e18 as a precision unit
-                uint128(uint256(1e18).mul(10**(uint256(18).sub(ERC20(_tokenOut).decimals())))),
-                _tokenIn,
-                _tokenOut
-            )
-                .div(10**(uint256(18).sub(ERC20(_tokenIn).decimals())));
+        price = OracleLibrary
+            .getQuoteAtTick(
+            tick,
+            // because we use 1e18 as a precision unit
+            uint128(uint256(1e18).mul(10**(uint256(18).sub(ERC20(_tokenOut).decimals())))),
+            _tokenIn,
+            _tokenOut
+        )
+            .div(10**(uint256(18).sub(ERC20(_tokenIn).decimals())));
         return (true, price);
+    }
+
+    function checkPool(
+        address _tokenIn,
+        address _tokenOut,
+        uint24 fee
+    )
+        internal
+        view
+        returns (
+            bool,
+            IUniswapV3Pool,
+            int24
+        )
+    {
+        int24 tick;
+        IUniswapV3Pool pool = IUniswapV3Pool(factory.getPool(_tokenIn, _tokenOut, fee));
+        if (address(pool) != address(0)) {
+            (, tick, , , , , ) = pool.slot0();
+            return (_checkPrice(tick, pool), pool, tick);
+        }
+        return (false, IUniswapV3Pool(0), 0);
     }
 
     function update(address tokenA, address tokenB) external override {}
@@ -157,20 +179,26 @@ contract UniswapTWAPV3 is Ownable, IOracleAdapter {
 
         // Check TWAP deviation. This check prevents price manipulation before
         // the rebalance and also avoids rebalancing when price has just spiked.
-        (int56 twap, ) = _getTwap(_pool);
+        int56 twap = _getTwap(_pool);
+
         int56 deviation = mid > twap ? mid - twap : twap - mid;
         // Fail twap check
         return deviation < maxTwapDeviation;
     }
 
     // given the cumulative prices of the start and end of a period, and the length of the period, compute the average
-    // price in terms of how much amount out is received for the amount in
-    function _getTwap(IUniswapV3Pool _pool) private view returns (int56 amountOut, uint160 liquidity) {
-        (int56[] memory tickCumulatives, uint160[] memory secondsPerLiquidityCumulativeX128s) =
-            _pool.observe(secondsAgo);
-        liquidity =
-            (secondsPerLiquidityCumulativeX128s[1] - secondsPerLiquidityCumulativeX128s[0]) /
-            SECONDS_GRANULARITY;
-        amountOut = (tickCumulatives[1] - tickCumulatives[0]) / SECONDS_GRANULARITY;
+    function _getTwap(IUniswapV3Pool _pool) private view returns (int56 twap) {
+        uint32[] memory secondsAgo = new uint32[](2);
+        secondsAgo[0] = SECONDS_GRANULARITY;
+        secondsAgo[1] = 0;
+        // observe fails if the pair has no observations
+        try _pool.observe(secondsAgo) returns (
+            int56[] memory tickCumulatives,
+            uint160[] memory secondsPerLiquidityCumulativeX128s
+        ) {
+            return (tickCumulatives[1] - tickCumulatives[0]) / SECONDS_GRANULARITY;
+        } catch {
+            return 0;
+        }
     }
 }

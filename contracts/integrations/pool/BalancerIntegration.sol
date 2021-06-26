@@ -60,12 +60,8 @@ contract BalancerIntegration is PoolIntegration {
     }
     // Mapping for each strategy
     mapping(address => JoinPoolRequest) private joinRequest;
-    mapping(address => ExitPoolRequest) private exitRequest;
+    mapping(address => ExitPoolRequest) private exitRequest;  
 
-    
-
-
-    
 
     /* ============ Constructor ============ */
 

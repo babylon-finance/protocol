@@ -69,7 +69,7 @@ contract GardenV2Mock is ERC20Upgradeable, ReentrancyGuard {
 
     // Wrapped ETH address
     address private constant WETH = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
-    uint256 private constant EARLY_WITHDRAWAL_PENALTY = 15e16;
+    uint256 private constant EARLY_WITHDRAWAL_PENALTY = 5e16;
     uint256 private constant MAX_TOTAL_STRATEGIES = 20; // Max number of strategies
     uint256 private constant TEN_PERCENT = 1e17;
     // Window of time after an investment strategy finishes when the capital is available for withdrawals

@@ -61,10 +61,11 @@ contract YearnVaultIntegration is PassiveIntegration {
     }
 
     function _getExpectedShares(address _asset, uint256 _amount) internal view override returns (uint256) {
-        // Normalizing denominator to 18 decimals to support all type of decimals by preciseDiv with multiasset vaults
-        uint256 pricePerShareNormalized =
-            SafeDecimalMath.normalizeAmountTokens(_asset, weth, IYearnVault(_asset).pricePerShare());
-        return _amount.preciseDiv(pricePerShareNormalized);
+        // Normalizing pricePerShare returned by Yearn
+        return
+            _amount.preciseDiv(IYearnVault(_asset).pricePerShare()).div(
+                10**PreciseUnitMath.decimals().sub(ERC20(_asset).decimals())
+            );
     }
 
     function _getPricePerShare(address _asset) internal view override returns (uint256) {
