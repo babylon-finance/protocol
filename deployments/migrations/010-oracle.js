@@ -22,7 +22,7 @@ module.exports = async ({
 
   const deployment = await deploy(contract, {
     from: deployer,
-    args: [controller.address, addresses.compound.OpenOracle, [uniswapTWAPv3.address]],
+    args: [controller.address, [uniswapTWAPv3.address]],
     log: true,
     gasPrice,
   });

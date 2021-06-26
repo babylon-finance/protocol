@@ -72,9 +72,12 @@ abstract contract TradeIntegration is BaseIntegration, ReentrancyGuard, ITradeIn
         uint256 _totalReceiveAmount
     );
 
-    uint24 private constant FEE_LOW = 500;
-    uint24 private constant FEE_MEDIUM = 3000;
-    uint24 private constant FEE_HIGH = 10000;
+    /* ============ Constants ============ */
+
+    uint24 internal constant FEE_LOW = 500;
+    uint24 internal constant FEE_MEDIUM = 3000;
+    uint24 internal constant FEE_HIGH = 10000;
+    IUniswapV3Factory internal constant uniswapFactory = IUniswapV3Factory(0x1F98431c8aD98523631AE4a59f267346ea31F984);
 
     /* ============ Constructor ============ */
 
@@ -185,13 +188,15 @@ abstract contract TradeIntegration is BaseIntegration, ReentrancyGuard, ITradeIn
      */
     function _validatePreTradeData(TradeInfo memory _tradeInfo, uint256 _sendQuantity) internal view {
         require(_tradeInfo.totalSendQuantity > 0, 'Token to sell must be nonzero');
+
         address reserveAsset = _tradeInfo.garden.reserveAsset();
         uint256 liquidityInReserve = _getUniswapHighestLiquidity(_tradeInfo, reserveAsset);
         uint256 minLiquidityReserveAsset = _tradeInfo.garden.minLiquidityAsset();
         require(liquidityInReserve >= minLiquidityReserveAsset, 'Not enough liquidity');
+
         require(
             ERC20(_tradeInfo.sendToken).balanceOf(address(_tradeInfo.strategy)) >= _sendQuantity,
-            'Garden needs to have enough liquid tokens'
+            'Strategy needs to have enough liquid tokens'
         );
     }
 
@@ -206,7 +211,7 @@ abstract contract TradeIntegration is BaseIntegration, ReentrancyGuard, ITradeIn
         if (sendToken == receiveToken) {
             return _tradeInfo.garden.minLiquidityAsset();
         }
-        IUniswapV3Pool pool = _getUniswapPoolWithHighestLiquidity(sendToken, receiveToken);
+        (IUniswapV3Pool pool, ) = _getUniswapPoolWithHighestLiquidity(sendToken, receiveToken);
         uint256 poolLiquidity = uint256(pool.liquidity());
         uint256 liquidityInReserve;
         if (pool.token0() == weth) {
@@ -274,25 +279,24 @@ abstract contract TradeIntegration is BaseIntegration, ReentrancyGuard, ITradeIn
     function _getSpender() internal view virtual returns (address);
 
     function _getUniswapPoolWithHighestLiquidity(address sendToken, address receiveToken)
-        private
+        internal
         view
-        returns (IUniswapV3Pool)
+        returns (IUniswapV3Pool pool, uint24 fee)
     {
-        IUniswapV3Factory factory = IUniswapV3Factory(IBabController(controller).uniswapFactory());
-        IUniswapV3Pool poolLow = IUniswapV3Pool(factory.getPool(sendToken, receiveToken, FEE_LOW));
-        IUniswapV3Pool poolMedium = IUniswapV3Pool(factory.getPool(sendToken, receiveToken, FEE_MEDIUM));
-        IUniswapV3Pool poolHigh = IUniswapV3Pool(factory.getPool(sendToken, receiveToken, FEE_HIGH));
+        IUniswapV3Pool poolLow = IUniswapV3Pool(uniswapFactory.getPool(sendToken, receiveToken, FEE_LOW));
+        IUniswapV3Pool poolMedium = IUniswapV3Pool(uniswapFactory.getPool(sendToken, receiveToken, FEE_MEDIUM));
+        IUniswapV3Pool poolHigh = IUniswapV3Pool(uniswapFactory.getPool(sendToken, receiveToken, FEE_HIGH));
 
         uint128 liquidityLow = address(poolLow) != address(0) ? poolLow.liquidity() : 0;
         uint128 liquidityMedium = address(poolMedium) != address(0) ? poolMedium.liquidity() : 0;
         uint128 liquidityHigh = address(poolHigh) != address(0) ? poolHigh.liquidity() : 0;
         if (liquidityLow > liquidityMedium && liquidityLow >= liquidityHigh) {
-            return poolLow;
+            return (poolLow, FEE_LOW);
         }
         if (liquidityMedium > liquidityLow && liquidityMedium >= liquidityHigh) {
-            return poolMedium;
+            return (poolMedium, FEE_MEDIUM);
         }
-        return poolHigh;
+        return (poolHigh, FEE_HIGH);
     }
 
     function _getReserveAsWeth(address _token, address _reserveAsset) private view returns (address) {

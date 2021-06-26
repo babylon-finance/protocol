@@ -11,7 +11,6 @@ describe('Upgrades', function () {
   let signer1;
   let signer2;
   let signer3;
-  let oneInchTradeIntegration;
   let deploy;
   let strategy11;
   let garden1;
@@ -26,7 +25,7 @@ describe('Upgrades', function () {
       signer1,
       signer2,
       signer3,
-      oneInchTradeIntegration,
+      uniswapV3TradeIntegration,
       upgradesDeployer,
       deployments,
     } = await setupTests()());
@@ -65,7 +64,7 @@ describe('Upgrades', function () {
         'buy',
         'dataset',
         [signer1, signer2, signer3],
-        oneInchTradeIntegration.address,
+        uniswapV3TradeIntegration.address,
         garden1,
       );
 

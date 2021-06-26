@@ -31,7 +31,7 @@ import {IUniswapV2Router} from '../../interfaces/external/uniswap/IUniswapV2Rout
  * @title BalancerIntegration
  * @author Babylon Finance Protocol
  *
- * Uniswap protocol pool integration
+ * UniswapPoolIntegration protocol integration
  */
 contract UniswapPoolIntegration is PoolIntegration {
     using LowGasSafeMath for uint256;

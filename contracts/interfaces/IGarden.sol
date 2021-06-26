@@ -137,7 +137,8 @@ interface IGarden {
         uint256 _gardenTokenQuantity,
         uint256 _minReserveReceiveQuantity,
         address payable _to,
-        bool _withPenalty
+        bool _withPenalty,
+        address _unwindStrategy
     ) external;
 
     function claimReturns(address[] calldata _finalizedStrategies) external;
