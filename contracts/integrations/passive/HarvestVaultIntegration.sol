@@ -18,6 +18,7 @@
 
 pragma solidity 0.7.6;
 import {ERC20} from '@openzeppelin/contracts/token/ERC20/ERC20.sol';
+import {SafeDecimalMath} from '../../lib/SafeDecimalMath.sol';
 
 import {IBabController} from '../../interfaces/IBabController.sol';
 import {PreciseUnitMath} from '../../lib/PreciseUnitMath.sol';
@@ -35,6 +36,7 @@ import {IHarvestVault} from '../../interfaces/external/harvest/IVault.sol';
 contract HarvestVaultIntegration is PassiveIntegration {
     using LowGasSafeMath for uint256;
     using PreciseUnitMath for uint256;
+    using SafeDecimalMath for uint256;
 
     /* ============ Modifiers ============ */
 
@@ -59,7 +61,11 @@ contract HarvestVaultIntegration is PassiveIntegration {
     }
 
     function _getExpectedShares(address _vault, uint256 _amount) internal view override returns (uint256) {
-        return _amount.preciseDiv(IHarvestVault(_vault).getPricePerFullShare());
+        // Normalizing pricePerShare returned by Harvest
+        return
+            _amount.preciseDiv(IHarvestVault(_vault).getPricePerFullShare()).div(
+                10**PreciseUnitMath.decimals().sub(ERC20(_vault).decimals())
+            );
     }
 
     function _getPricePerShare(address _vault) internal view override returns (uint256) {

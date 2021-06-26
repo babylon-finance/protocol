@@ -73,7 +73,7 @@ contract PriceOracle is Ownable, IPriceOracle {
     /* ============ External Functions ============ */
 
     /**
-     * SYSTEM-ONLY PRIVELEGE: Find price of passed asset pair, if possible. The steps it takes are:
+     * SYSTEM-ONLY PRIVILEGE: Find price of passed asset pair, if possible. The steps it takes are:
      *  1) Check to see if a direct or inverse oracle of the pair exists,
      *  2) If not, use masterQuoteAsset to link pairs together (i.e. BTC/ETH and ETH/USDC
      *     could be used to calculate BTC/USDC).
@@ -88,7 +88,7 @@ contract PriceOracle is Ownable, IPriceOracle {
     function getPrice(address _assetOne, address _assetTwo) external view override returns (uint256) {
         // Same asset. Returns base unit
         if (_assetOne == _assetTwo) {
-            return 10**ERC20(_assetOne).decimals();
+            return 10**18;
         }
 
         (bool found, uint256 price) = _getPriceFromAdapters(_assetOne, _assetTwo);

@@ -17,7 +17,7 @@
 */
 
 pragma solidity 0.7.6;
-
+import 'hardhat/console.sol';
 import {SafeCast} from '@openzeppelin/contracts/utils/SafeCast.sol';
 import {ERC20} from '@openzeppelin/contracts/token/ERC20/ERC20.sol';
 import {ReentrancyGuard} from '@openzeppelin/contracts/utils/ReentrancyGuard.sol';
@@ -240,13 +240,8 @@ abstract contract TradeIntegration is BaseIntegration, ReentrancyGuard, ITradeIn
             ERC20(_tradeInfo.receiveToken).balanceOf(address(_tradeInfo.strategy)).sub(
                 _tradeInfo.preTradeReceiveTokenBalance
             );
-        // Get reserve asset decimals
-        uint8 tokenDecimals = ERC20(_tradeInfo.receiveToken).decimals();
-        uint256 normalizedExchangedQuantity =
-            tokenDecimals != 18 ? exchangedQuantity.mul(10**(18 - tokenDecimals)) : exchangedQuantity;
-        require(normalizedExchangedQuantity >= _tradeInfo.totalMinReceiveQuantity, 'Slippage greater than allowed');
-
-        return normalizedExchangedQuantity;
+        require(exchangedQuantity >= _tradeInfo.totalMinReceiveQuantity, 'Slippage greater than allowed');
+        return exchangedQuantity;
     }
 
     /**

@@ -190,7 +190,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
 
     /* ============ Constants ============ */
 
-    uint256 internal constant SLIPPAGE_ALLOWED = 5e16; // 1%
+    uint256 internal constant SLIPPAGE_ALLOWED = 5e16; // 5%
     uint256 internal constant HUNDRED_PERCENT = 1e18; // 100%
     uint256 internal constant MAX_CANDIDATE_PERIOD = 7 days;
 
@@ -576,7 +576,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
 
     /**
      * Deposits or withdraws weth from an operation in this context
-     * @param _isDeposit                    Wether is a deposit or withdraw
+     * @param _isDeposit                    Whether is a deposit or withdraw
      * @param _wethAmount                   Amount to deposit or withdraw
      */
     function handleWeth(bool _isDeposit, uint256 _wethAmount) external override {
@@ -880,8 +880,15 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
     ) internal returns (uint256) {
         address tradeIntegration = IBabController(controller).defaultTradeIntegration();
         // Uses on chain oracle for all internal strategy operations to avoid attacks        // Updates UniSwap TWAP
-        uint256 pricePerTokenUnit = _getPrice(_sendToken, _receiveToken);
-        uint256 exactAmount = _sendQuantity.preciseMul(pricePerTokenUnit);
+        IPriceOracle oracle = IPriceOracle(IBabController(controller).priceOracle());
+        uint256 pricePerTokenUnit = oracle.getPrice(_sendToken, _receiveToken);
+        // minAmount must have receive token decimals
+        uint256 exactAmount =
+            SafeDecimalMath.normalizeAmountTokens(
+                _sendToken,
+                _receiveToken,
+                _sendQuantity.preciseMul(pricePerTokenUnit)
+            );
         uint256 minAmountExpected = exactAmount.sub(exactAmount.preciseMul(SLIPPAGE_ALLOWED));
         ITradeIntegration(tradeIntegration).trade(
             address(this),

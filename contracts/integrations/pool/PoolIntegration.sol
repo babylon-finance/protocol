@@ -17,6 +17,7 @@
 */
 
 pragma solidity 0.7.6;
+import 'hardhat/console.sol';
 import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import {SafeCast} from '@openzeppelin/contracts/utils/SafeCast.sol';
 import {ReentrancyGuard} from '@openzeppelin/contracts/utils/ReentrancyGuard.sol';
@@ -34,7 +35,7 @@ import {BaseIntegration} from '../BaseIntegration.sol';
  * @title PoolIntegration
  * @author Babylon Finance Protocol
  *
- * Base class for integration with trading protocols
+ * Base class for integration with pool protocols
  */
 abstract contract PoolIntegration is BaseIntegration, ReentrancyGuard, IPoolIntegration {
     using LowGasSafeMath for uint256;
@@ -60,7 +61,7 @@ abstract contract PoolIntegration is BaseIntegration, ReentrancyGuard, IPoolInte
 
     /* ============ Constants ============ */
 
-    uint256 internal constant SLIPPAGE_ALLOWED = 1e16; // 1%
+    uint256 internal constant SLIPPAGE_ALLOWED = 5e16; // 5%
 
     /* ============ Constructor ============ */
 
@@ -111,7 +112,6 @@ abstract contract PoolIntegration is BaseIntegration, ReentrancyGuard, IPoolInte
             poolInfo.poolTokensInStrategy
         );
         _validatePostJoinPoolData(poolInfo);
-
         emit PoolEntered(address(poolInfo.strategy), address(poolInfo.garden), poolInfo.pool, _poolTokensOut);
     }
 

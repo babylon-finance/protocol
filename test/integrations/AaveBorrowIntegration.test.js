@@ -5,10 +5,17 @@ const {
   executeStrategy,
   finalizeStrategy,
   DEFAULT_STRATEGY_PARAMS,
+  USDC_STRATEGY_PARAMS,
+  DAI_STRATEGY_PARAMS,
+  WBTC_STRATEGY_PARAMS,
 } = require('../fixtures/StrategyHelper');
-const { ONE_ETH } = require('../../lib/constants.js');
+const { ADDRESS_ZERO, ONE_ETH, STRATEGY_EXECUTE_MAP } = require('../../lib/constants');
+const { from, eth } = require('../../lib/helpers');
 const { setupTests } = require('../fixtures/GardenFixture');
+const { createGarden, depositFunds, transferFunds } = require('../fixtures/GardenHelper');
 const addresses = require('../../lib/addresses');
+const { getAssetWhale } = require('../../lib/whale.js');
+const { impersonateAddress } = require('../../lib/rpc');
 
 describe('AaveBorrowIntegrationTest', function () {
   let aaveBorrowIntegration;
@@ -20,6 +27,73 @@ describe('AaveBorrowIntegrationTest', function () {
   let USDC;
   let DAI;
   let WETH;
+
+  async function supplyBorrowStrategy(asset1, asset2, token) {
+    await transferFunds(token);
+    const garden = await createGarden({ reserveAsset: token });
+    const gardenReserveAsset = await ethers.getContractAt('IERC20', token);
+    await depositFunds(token, garden);
+
+    const strategyContract = await createStrategy(
+      'borrow',
+      'vote',
+      [signer1, signer2, signer3],
+      [aaveLendIntegration.address, aaveBorrowIntegration.address],
+      garden,
+      false,
+      [asset1.address, asset2.address],
+    );
+
+    await executeStrategy(strategyContract, { amount: STRATEGY_EXECUTE_MAP[token] });
+
+    expect(await asset1.balanceOf(strategyContract.address)).to.equal(0);
+    expect(await asset2.balanceOf(strategyContract.address)).to.be.gt(0);
+    const collateral = await aaveBorrowIntegration.getCollateralBalance(strategyContract.address, asset1.address);
+    expect(await aaveBorrowIntegration.getBorrowBalance(strategyContract.address, asset2.address)).to.be.gt(0);
+    const beforeExitingWeth = await gardenReserveAsset.balanceOf(garden.address);
+    await finalizeStrategy(strategyContract);
+    expect(await asset2.balanceOf(strategyContract.address)).to.equal(0);
+    expect(await asset1.balanceOf(strategyContract.address)).to.equal(0);
+    expect(await gardenReserveAsset.balanceOf(garden.address)).to.gt(beforeExitingWeth);
+  }
+  async function supplyBorrowStrategyNAV(asset1, asset2, token) {
+    await transferFunds(token);
+    const garden = await createGarden({ reserveAsset: token });
+    const gardenReserveAsset = await ethers.getContractAt('IERC20', token);
+    await depositFunds(token, garden);
+
+    const strategyContract = await createStrategy(
+      'borrow',
+      'vote',
+      [signer1, signer2, signer3],
+      [aaveLendIntegration.address, aaveBorrowIntegration.address],
+      garden,
+      false,
+      [asset1.address, asset2.address],
+    );
+
+    await executeStrategy(strategyContract, { amount: STRATEGY_EXECUTE_MAP[token] });
+    return strategyContract;
+  }
+
+  async function trySupplyBorrowStrategy(asset1, asset2, token, errorcode) {
+    await transferFunds(token);
+    const garden = await createGarden({ reserveAsset: token });
+    const gardenReserveAsset = await ethers.getContractAt('IERC20', token);
+    await depositFunds(token, garden);
+    const strategyContract = await createStrategy(
+      'borrow',
+      'vote',
+      [signer1, signer2, signer3],
+      [aaveLendIntegration.address, aaveBorrowIntegration.address],
+      garden,
+      false,
+      [asset1.address, asset2.address],
+    );
+    await expect(executeStrategy(strategyContract, { amount: STRATEGY_EXECUTE_MAP[token] })).to.be.revertedWith(
+      errorcode,
+    );
+  }
 
   beforeEach(async () => {
     ({ garden1, aaveLendIntegration, aaveBorrowIntegration, signer1, signer2, signer3 } = await setupTests()());
@@ -35,38 +109,15 @@ describe('AaveBorrowIntegrationTest', function () {
     });
   });
 
-  describe('Aave Borrow', function () {
-    it('can supply DAI and borrow USDC in a WETH Garden', async function () {
+  describe('gets NAV', function () {
+    it(`gets NAV of a borrow/lend strategy at WETH Garden`, async function () {
+      const garden = await createGarden({ WETH });
       const strategyContract = await createStrategy(
         'borrow',
         'vote',
         [signer1, signer2, signer3],
         [aaveLendIntegration.address, aaveBorrowIntegration.address],
-        garden1,
-        DEFAULT_STRATEGY_PARAMS,
-        [DAI.address, USDC.address],
-      );
-
-      await executeStrategy(strategyContract);
-      expect(await DAI.balanceOf(strategyContract.address)).to.equal(0);
-      expect(await USDC.balanceOf(strategyContract.address)).to.be.gt(0);
-      const collateral = await aaveBorrowIntegration.getCollateralBalance(strategyContract.address, DAI.address);
-      expect(collateral).to.be.closeTo(ethers.utils.parseEther('1'), ONE_ETH.div(100));
-      expect(await aaveBorrowIntegration.getBorrowBalance(strategyContract.address, USDC.address)).to.be.gt(0);
-      const beforeExitingWeth = await WETH.balanceOf(garden1.address);
-      await finalizeStrategy(strategyContract);
-      expect(await USDC.balanceOf(strategyContract.address)).to.equal(0);
-      expect(await DAI.balanceOf(strategyContract.address)).to.equal(0);
-      expect(await WETH.balanceOf(garden1.address)).to.gt(beforeExitingWeth);
-    });
-
-    it('gets NAV of a borrow/lend strategy', async function () {
-      const strategyContract = await createStrategy(
-        'borrow',
-        'vote',
-        [signer1, signer2, signer3],
-        [aaveLendIntegration.address, aaveBorrowIntegration.address],
-        garden1,
+        garden,
         DEFAULT_STRATEGY_PARAMS,
         [DAI.address, USDC.address],
       );
@@ -76,57 +127,39 @@ describe('AaveBorrowIntegrationTest', function () {
       const nav = await strategyContract.getNAV();
       expect(nav).to.be.closeTo(ethers.utils.parseEther('1'), ethers.utils.parseEther('1').div(10));
     });
+  });
 
-    it('can supply USDC and borrow DAI in a WETH Garden', async function () {
-      const strategyContract = await createStrategy(
-        'borrow',
-        'vote',
-        [signer1, signer2, signer3],
-        [aaveLendIntegration.address, aaveBorrowIntegration.address],
-        garden1,
-        DEFAULT_STRATEGY_PARAMS,
-        [USDC.address, DAI.address],
-      );
-
-      await executeStrategy(strategyContract);
-      expect(await USDC.balanceOf(strategyContract.address)).to.equal(0);
-      expect(await DAI.balanceOf(strategyContract.address)).to.be.gt(0);
-      const collateral = await aaveBorrowIntegration.getCollateralBalance(strategyContract.address, USDC.address);
-      expect(collateral).to.be.closeTo(ethers.utils.parseEther('1'), ONE_ETH.div(100));
-      expect(await aaveBorrowIntegration.getBorrowBalance(strategyContract.address, DAI.address)).to.be.gt(0);
-      const beforeExitingWeth = await WETH.balanceOf(garden1.address);
-      await finalizeStrategy(strategyContract);
-      expect(await DAI.balanceOf(strategyContract.address)).to.equal(0);
-      expect(await USDC.balanceOf(strategyContract.address)).to.equal(0);
-      expect(await WETH.balanceOf(garden1.address)).to.gt(beforeExitingWeth);
-    });
-
-    it('can supply WETH and borrow DAI in a WETH Garden', async function () {
-      const strategyContract = await createStrategy(
-        'borrow',
-        'vote',
-        [signer1, signer2, signer3],
-        [aaveLendIntegration.address, aaveBorrowIntegration.address],
-        garden1,
-        DEFAULT_STRATEGY_PARAMS,
-        [WETH.address, DAI.address],
-      );
-
-      await executeStrategy(strategyContract);
-
-      expect(await WETH.balanceOf(strategyContract.address)).to.equal(0);
-      expect(await DAI.balanceOf(strategyContract.address)).to.be.gt(0);
-
-      const collateral = await aaveBorrowIntegration.getCollateralBalance(strategyContract.address, WETH.address);
-      expect(collateral).to.be.closeTo(ethers.utils.parseEther('1'), ONE_ETH.div(100));
-      expect(await aaveBorrowIntegration.getBorrowBalance(strategyContract.address, DAI.address)).to.be.gt(0);
-
-      const beforeExitingWeth = await WETH.balanceOf(garden1.address);
-      await finalizeStrategy(strategyContract);
-
-      expect(await DAI.balanceOf(strategyContract.address)).to.equal(0);
-      expect(await WETH.balanceOf(strategyContract.address)).to.equal(0);
-      expect(await WETH.balanceOf(garden1.address)).to.gt(beforeExitingWeth);
+  describe('Aave Borrow', function () {
+    [
+      { token: addresses.tokens.WETH, name: 'WETH' },
+      { token: addresses.tokens.DAI, name: 'DAI' },
+      { token: addresses.tokens.USDC, name: 'USDC' },
+      { token: addresses.tokens.WBTC, name: 'WBTC' },
+    ].forEach(({ token, name }) => {
+      it(`gets NAV of a borrow/lend strategy at ${name} garden`, async function () {
+        const strategyContract = await supplyBorrowStrategyNAV(DAI, WETH, token);
+        // TODO Check DAI-USDC in USDC Garden gets nav 0
+        const nav = await strategyContract.getNAV();
+        expect(nav).to.be.gt(0);
+      });
+      it(`can supply DAI and borrow USDC at Aave in a ${name} Garden`, async function () {
+        await supplyBorrowStrategy(DAI, USDC, token);
+      });
+      it(`can supply USDC and borrow DAI at Aave in a ${name} Garden`, async function () {
+        await supplyBorrowStrategy(USDC, DAI, token);
+      });
+      it(`can supply WETH and borrow DAI at Aave  in a ${name} Garden`, async function () {
+        await supplyBorrowStrategy(WETH, DAI, token);
+      });
+      it(`should fail trying to supply DAI and borrow DAI at Aave  in a ${name} Garden`, async function () {
+        await trySupplyBorrowStrategy(DAI, DAI, token, 'revert There is no collateral locked');
+      });
+      it(`should fail trying to supply WETH and borrow WETH at Aave  in a ${name} Garden`, async function () {
+        await trySupplyBorrowStrategy(WETH, WETH, token, 'There is no collateral locked');
+      });
+      it(`should fail trying to supply USDC and borrow USDC at Aave  in a ${name} Garden`, async function () {
+        await trySupplyBorrowStrategy(USDC, USDC, token, 'There is no collateral locked');
+      });
     });
   });
 });
