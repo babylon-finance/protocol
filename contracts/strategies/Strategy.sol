@@ -422,6 +422,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         _require(executedAt > 0, Errors.STRATEGY_IS_NOT_EXECUTED);
         _require(block.timestamp > executedAt.add(duration), Errors.STRATEGY_IS_NOT_OVER_YET);
         _require(!finalized, Errors.STRATEGY_IS_ALREADY_FINALIZED);
+
         uint256 reserveAssetReturns = IERC20(garden.reserveAsset()).balanceOf(address(this));
         // Execute exit operations
         _exitStrategy(HUNDRED_PERCENT);
@@ -439,6 +440,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         // Send rest to garden if any
         _sendReserveAssetToGarden();
         updatedAt = exitedAt;
+
         emit StrategyFinalized(address(garden), capitalReturned, _fee, block.timestamp);
     }
 
@@ -451,6 +453,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         _onlyGovernorOrGarden();
         _onlyUnpaused();
         _require(active && !finalized, Errors.STRATEGY_NEEDS_TO_BE_ACTIVE);
+
         // Exits and enters the strategy
         _exitStrategy(_amountToUnwind.preciseDiv(capitalAllocated));
         capitalAllocated = capitalAllocated.sub(_amountToUnwind);
@@ -469,6 +472,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
             IERC20(garden.reserveAsset()).balanceOf(address(this))
         );
         updatedAt = block.timestamp;
+
         emit StrategyReduced(address(garden), _amountToUnwind, block.timestamp);
     }
 
@@ -489,20 +493,10 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
     }
 
     /**
-     * Expires a strategy in any state. Can be called only by gov or strategist
-     */
-    function expire() external nonReentrant {
-        _onlyActiveGarden();
-        _onlyStrategistOrGovernor();
-        _deleteCandidateStrategy();
-        emit StrategyExpired(address(garden), block.timestamp);
-    }
-
-    /**
      * Delete a candidate strategy by the strategist
      */
     function deleteCandidateStrategy() external {
-        _onlyStrategist();
+        _onlyStrategistOrGovernor();
         _deleteCandidateStrategy();
         emit StrategyDeleted(address(garden), block.timestamp);
     }
