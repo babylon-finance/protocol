@@ -61,10 +61,11 @@ contract HarvestVaultIntegration is PassiveIntegration {
     }
 
     function _getExpectedShares(address _vault, uint256 _amount) internal view override returns (uint256) {
-        // Normalizing denominator to 18 decimals to support all type of decimals by preciseDiv with multiasset vaults
-        uint256 pricePerShareNormalized =
-            SafeDecimalMath.normalizeAmountTokens(_vault, weth, IHarvestVault(_vault).getPricePerFullShare());
-        return _amount.preciseDiv(pricePerShareNormalized);
+        // Normalizing pricePerShare returned by Harvest
+        return
+            _amount.preciseDiv(IHarvestVault(_vault).getPricePerFullShare()).div(
+                10**PreciseUnitMath.decimals().sub(ERC20(_vault).decimals())
+            );
     }
 
     function _getPricePerShare(address _vault) internal view override returns (uint256) {
