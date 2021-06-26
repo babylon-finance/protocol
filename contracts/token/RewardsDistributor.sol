@@ -402,7 +402,7 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         address _garden,
         address _contributor,
         address[] calldata _finalizedStrategies
-    ) external view override onlyUnpaused returns (uint256[] memory) {
+    ) external view override returns (uint256[] memory) {
         uint256[] memory totalRewards = new uint256[](7);
         _require(IBabController(controller).isGarden(address(_garden)), Errors.ONLY_ACTIVE_GARDEN);
         for (uint256 i = 0; i < _finalizedStrategies.length; i++) {

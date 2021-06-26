@@ -17,55 +17,28 @@
 */
 
 pragma solidity 0.7.6;
-
-//import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
+import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import {IBabController} from '../../interfaces/IBabController.sol';
 import {PoolIntegration} from './PoolIntegration.sol';
 import {PreciseUnitMath} from '../../lib/PreciseUnitMath.sol';
 import {LowGasSafeMath} from '../../lib/LowGasSafeMath.sol';
-import {IBasePool} from '../../interfaces/external/balancer/IBasePool.sol';
-import {IVault} from '../../interfaces/external/balancer/IVault.sol';
-import {IAsset} from '../../interfaces/external/balancer/IAsset.sol';
-
+import {IBFactory} from '../../interfaces/external/balancer/IBFactory.sol';
+import {IBPool} from '../../interfaces/external/balancer/IBPool.sol';
 
 /**
  * @title BalancerIntegration
  * @author Babylon Finance Protocol
  *
- * Balancer V2 protocol pool integration
+ * Kyber protocol trade integration
  */
-contract BalancerIntegration is PoolIntegration {
+contract NEW_BalancerIntegration is PoolIntegration {
     using LowGasSafeMath for uint256;
     using PreciseUnitMath for uint256;
 
     /* ============ State Variables ============ */
 
-    // Address of Balancer Vault
-    IVault public vault; // 0xBA12222222228d8Ba445958a75a0704d566BF2C8
-
-    
-    
-    struct JoinPoolRequest {
-        IAsset[] assets;
-        uint256[] maxAmountsIn;
-        bytes userData;
-        bool fromInternalBalance;
-    }
-        
-    struct ExitPoolRequest {
-        IAsset[] assets;
-        uint256[] minAmountsOut;
-        bytes userData;
-        bool toInternalBalance;
-    }
-    // Mapping for each strategy
-    mapping(address => JoinPoolRequest) private joinRequest;
-    mapping(address => ExitPoolRequest) private exitRequest;
-
-    
-
-
-    
+    // Address of Kyber Network Proxy
+    IBFactory public coreFactory;
 
     /* ============ Constructor ============ */
 
@@ -74,19 +47,18 @@ contract BalancerIntegration is PoolIntegration {
      *
      * @param _controller                   Address of the controller
      * @param _weth                         Address of the WETH ERC20
-     * @param _vaultAddress           Address of Balancer core factory address
+     * @param _coreFactoryAddress           Address of Balancer core factory address
      */
     constructor(
         IBabController _controller,
         address _weth,
-        address _vaultAddress
+        address _coreFactoryAddress
     ) PoolIntegration('balancer', _weth, _controller) {
-        vault = IVault(_vaultAddress);
+        coreFactory = IBFactory(_coreFactoryAddress);
     }
 
     /* ============ External Functions ============ */
 
-    /**
     function getPoolTokens(address _poolAddress) external view override returns (address[] memory) {
         return IBPool(_poolAddress).getCurrentTokens();
     }
@@ -130,23 +102,22 @@ contract BalancerIntegration is PoolIntegration {
 
     /* ============ Internal Functions ============ */
 
-    /**
     function _isPool(address _poolAddress) internal view override returns (bool) {
-        return vault.isBPool(_poolAddress);
+        return coreFactory.isBPool(_poolAddress);
     }
 
     function _getSpender(address _poolAddress) internal pure override returns (address) {
         return _poolAddress;
     }
-    */ 
+
     /**
      * Return join pool calldata which is already generated from the pool API
      *
      * hparam  _strategy                 Address of the strategy
-     * @param  _poolId                   Balancer V2 poolID
-     * @param  _sender                   Sender address
-     * @param  _recipient                Addresses of recipient
-     * @param  _request                  Struct mapping
+     * @param  _poolAddress              Address of the pool
+     * @param  _poolTokensOut            Amount of pool tokens to send
+     * hparam  _tokensIn                 Addresses of tokens to send to the pool
+     * @param  _maxAmountsIn             Amounts of tokens to send to the pool
      *
      * @return address                   Target contract address
      * @return uint256                   Call value
@@ -154,61 +125,60 @@ contract BalancerIntegration is PoolIntegration {
      */
     function _getJoinPoolCalldata(
         address, /* _strategy */
-        bytes32 _poolId,
-        address _sender,
-        address _recipient,
-        JoinPoolRequest memory _request
+        address _poolAddress,
+        uint256 _poolTokensOut,
+        address[] calldata, /* _tokensIn */
+        uint256[] calldata _maxAmountsIn
     )
         internal
         pure
         override
         returns (
-            bytes32,
+            address,
             uint256,
             bytes memory
         )
     {
         // Encode method data for Garden to invoke
-        bytes memory methodData = abi.encodeWithSignature('joinPool(bytes32,address, address, JoinPoolRequest)', _poolId, _sender, _recipient, _request);
+        bytes memory methodData = abi.encodeWithSignature('joinPool(uint256,uint256[])', _poolTokensOut, _maxAmountsIn);
 
-        return (_poolId, 0, methodData);
+        return (_poolAddress, 0, methodData);
     }
 
     /**
      * Return exit pool calldata which is already generated from the pool API
      *
      * hparam  _strategy                 Address of the strategy
-     * @param  _poolId                   PoolID
-     * @param  _sender                   Sender address
-     * @param  _recipient                Recipient address
-     * @param  _request                  Struct request
+     * @param  _poolAddress              Address of the pool
+     * @param  _poolTokensIn             Amount of pool tokens to receive
+     * hparam  _tokensOut                Addresses of tokens to receive
+     * @param  _minAmountsOut            Amounts of pool tokens to receive
      *
-     * @return bytes32                   Target poolId
+     * @return address                   Target contract address
      * @return uint256                   Call value
      * @return bytes                     Trade calldata
      */
     function _getExitPoolCalldata(
         address, /* _strategy */
-        bytes32 _poolId,
-        address _sender,
-        address payable _recipient,
-        ExitPoolRequest memory _request
+        address _poolAddress,
+        uint256 _poolTokensIn,
+        address[] calldata, /* _tokensOut */
+        uint256[] calldata _minAmountsOut
     )
         internal
         pure
         override
         returns (
-            bytes32,
+            address,
             uint256,
             bytes memory
         )
     {
-        require(_request.assets.length > 0, '_Has to provide assets');
-        require(_request.minAmountsOut.length > 1, 'Has to provide _minAmountsOut');
-        require(_request.assets.length == _request.minAmountsOut.length, 'Length mismatch');
+        require(_poolTokensIn > 0, '_poolTokensIn has to not 0');
+        require(_minAmountsOut.length > 1, 'Has to provide _minAmountsOut');
         // Encode method data for Garden to invoke
-        bytes memory methodData = abi.encodeWithSignature('exitPool(bytes32, address, address, ExitPoolRequest)', _poolId, _sender, _recipient, _request);
+        bytes memory methodData = abi.encodeWithSignature('exitPool(uint256,uint256[])', _poolTokensIn, _minAmountsOut);
 
-        return (_poolId, 0, methodData);
+        return (_poolAddress, 0, methodData);
     }
 }
