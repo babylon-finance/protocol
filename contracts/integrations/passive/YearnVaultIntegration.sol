@@ -20,10 +20,10 @@ pragma solidity 0.7.6;
 
 import 'hardhat/console.sol';
 import {ERC20} from '@openzeppelin/contracts/token/ERC20/ERC20.sol';
-import {SafeMath} from '@openzeppelin/contracts/math/SafeMath.sol';
 
 import {IBabController} from '../../interfaces/IBabController.sol';
 import {PreciseUnitMath} from '../../lib/PreciseUnitMath.sol';
+import {LowGasSafeMath} from '../../lib/LowGasSafeMath.sol';
 import {PassiveIntegration} from './PassiveIntegration.sol';
 import {IYearnRegistry} from '../../interfaces/external/yearn/IYearnRegistry.sol';
 import {IYearnVault} from '../../interfaces/external/yearn/IYearnVault.sol';
@@ -35,7 +35,7 @@ import {IYearnVault} from '../../interfaces/external/yearn/IYearnVault.sol';
  * Yearn v2 Vault Integration
  */
 contract YearnVaultIntegration is PassiveIntegration {
-    using SafeMath for uint256;
+    using LowGasSafeMath for uint256;
     using PreciseUnitMath for uint256;
 
     /* ============ State Variables ============ */

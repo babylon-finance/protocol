@@ -4,7 +4,7 @@ const { ethers } = require('hardhat');
 const addresses = require('../../lib/addresses');
 const { ONE_DAY_IN_SECONDS, ONE_ETH, NOW } = require('../../lib/constants.js');
 const { increaseTime } = require('../utils/test-helpers');
-const { GARDEN_PARAMS_STABLE, GARDEN_PARAMS } = require('../../lib/constants');
+const { GARDEN_PARAMS_STABLE, GARDEN_PARAMS, ADDRESS_ZERO } = require('../../lib/constants');
 const { impersonateAddress } = require('../../lib/rpc');
 
 const {
@@ -321,7 +321,7 @@ describe('Garden', function () {
       ethers.provider.send('evm_increaseTime', [1]);
       await daiGarden
         .connect(signer3)
-        .withdraw(await daiGarden.balanceOf(signer3.address), 1, signer3.getAddress(), false);
+        .withdraw(await daiGarden.balanceOf(signer3.address), 1, signer3.getAddress(), false, ADDRESS_ZERO);
       expect(await daiGarden.principal()).to.equal(ethers.utils.parseEther('100'));
       expect(await daiGarden.totalContributors()).to.equal(1);
     });
@@ -340,7 +340,7 @@ describe('Garden', function () {
         gasPrice: 0,
       });
       const params = [...GARDEN_PARAMS_STABLE];
-      params[4] = thousandUSDC.div(10);
+      params[3] = thousandUSDC.div(10);
       await babController
         .connect(signer1)
         .createGarden(
@@ -375,7 +375,7 @@ describe('Garden', function () {
       ethers.provider.send('evm_increaseTime', [1]);
       await usdcGarden
         .connect(signer3)
-        .withdraw(await usdcGarden.balanceOf(signer3.address), 1, signer3.getAddress(), false);
+        .withdraw(await usdcGarden.balanceOf(signer3.address), 1, signer3.getAddress(), false, ADDRESS_ZERO);
       expect(await usdcGarden.principal()).to.equal(thousandUSDC.div(10));
       expect(await usdcGarden.totalContributors()).to.equal(1);
     });
@@ -470,7 +470,7 @@ describe('Garden', function () {
       ethers.provider.send('evm_increaseTime', [ONE_DAY_IN_SECONDS * 90]);
       expect(await garden1.principal()).to.equal(ethers.utils.parseEther('2'));
       expect(await garden1.totalContributors()).to.equal(2);
-      await garden1.connect(signer3).withdraw(90909, 1, signer3.getAddress(), false);
+      await garden1.connect(signer3).withdraw(90909, 1, signer3.getAddress(), false, ADDRESS_ZERO);
     });
 
     it('a contributor cannot withdraw gardens until the time ends', async function () {
@@ -479,8 +479,11 @@ describe('Garden', function () {
       });
       expect(await garden1.principal()).to.equal(ethers.utils.parseEther('2'));
       expect(await garden1.totalContributors()).to.equal(2);
-      await expect(garden1.connect(signer3).withdraw(ethers.utils.parseEther('20'), 1, signer3.getAddress()), false).to
-        .be.reverted;
+      await expect(
+        garden1.connect(signer3).withdraw(ethers.utils.parseEther('20'), 1, signer3.getAddress()),
+        false,
+        ADDRESS_ZERO,
+      ).to.be.reverted;
     });
 
     it('a contributor cannot make a deposit when the garden is disabled', async function () {
@@ -499,10 +502,16 @@ describe('Garden', function () {
       ethers.provider.send('evm_increaseTime', [ONE_DAY_IN_SECONDS * 90]);
       expect(await garden1.principal()).to.equal(ethers.utils.parseEther('2'));
       expect(await garden1.totalContributors()).to.equal(2);
-      await expect(garden1.connect(signer3).withdraw(ethers.utils.parseEther('1.12'), 2, signer3.getAddress()), false)
-        .to.be.reverted;
-      await expect(garden1.connect(signer3).withdraw(ethers.utils.parseEther('20'), 2, signer3.getAddress()), false).to
-        .to.be.reverted;
+      await expect(
+        garden1.connect(signer3).withdraw(ethers.utils.parseEther('1.12'), 2, signer3.getAddress()),
+        false,
+        ADDRESS_ZERO,
+      ).to.be.reverted;
+      await expect(
+        garden1.connect(signer3).withdraw(ethers.utils.parseEther('20'), 2, signer3.getAddress()),
+        false,
+        ADDRESS_ZERO,
+      ).to.to.be.reverted;
     });
 
     it('strategist or voters cannot withdraw more community tokens than they have locked in active strategies', async function () {
@@ -530,6 +539,7 @@ describe('Garden', function () {
             1,
             signer1.getAddress(),
             false,
+            ADDRESS_ZERO,
           ),
       ).to.be.reverted;
       // Cannot withdraw locked stake amount
@@ -541,6 +551,7 @@ describe('Garden', function () {
             1,
             signer2.getAddress(),
             false,
+            ADDRESS_ZERO,
           ),
       ).to.be.reverted;
     });
@@ -566,7 +577,9 @@ describe('Garden', function () {
 
       // Can now withdraw stake amount as it is again unlocked
 
-      await garden1.connect(signer2).withdraw(await garden1.balanceOf(signer2.address), 1, signer2.getAddress(), false);
+      await garden1
+        .connect(signer2)
+        .withdraw(await garden1.balanceOf(signer2.address), 1, signer2.getAddress(), false, ADDRESS_ZERO);
 
       const WITHDRAWsigner2Balance = await garden1.balanceOf(signer2.address);
       await expect(WITHDRAWsigner2Balance).to.be.equal(ethers.utils.parseEther('0'));
@@ -595,7 +608,9 @@ describe('Garden', function () {
 
       // Can now withdraw stake amount as it is again unlocked
       await expect(
-        garden1.connect(signer2).withdraw(await garden1.balanceOf(signer2.address), 1, signer2.getAddress(), false),
+        garden1
+          .connect(signer2)
+          .withdraw(await garden1.balanceOf(signer2.address), 1, signer2.getAddress(), false, ADDRESS_ZERO),
       ).not.to.be.reverted;
 
       const WITHDRAWsigner2Balance = await garden1.balanceOf(signer2.address);
@@ -655,7 +670,11 @@ describe('Garden', function () {
       const lockedBalance = await garden1.getLockedBalance(signer2.address);
 
       // Due to the strategy is under execution the withdrawal without penalty does not allow to withdraw the whole balance if votes had been compromised in the executing strategy
-      await expect(garden1.connect(signer2).withdraw(beforeBalance.sub(lockedBalance), 1, signer2.getAddress(), false));
+      await expect(
+        garden1
+          .connect(signer2)
+          .withdraw(beforeBalance.sub(lockedBalance), 1, signer2.getAddress(), false, ADDRESS_ZERO),
+      );
     });
     it('should not fail if strategist or voters try to withdraw all their comunity tokens during strategy execution with 0 staked amount but some voting amount associated to a running strategy', async function () {
       const strategyContract = await createStrategy(
@@ -679,8 +698,11 @@ describe('Garden', function () {
       const lockedBalance = await garden1.getLockedBalance(signer2.address);
 
       // Due to the strategy is under execution the withdrawal without penalty does not allow to withdraw the whole balance if votes had been compromised in the executing strategy
-      await expect(garden1.connect(signer2).withdraw(beforeBalance.sub(lockedBalance), 1, signer2.getAddress(), false))
-        .to.not.be.reverted;
+      await expect(
+        garden1
+          .connect(signer2)
+          .withdraw(beforeBalance.sub(lockedBalance), 1, signer2.getAddress(), false, ADDRESS_ZERO),
+      ).to.not.be.reverted;
     });
 
     it('should fail if startWithdrawalWindow is called more than once or from a non-strategy address', async function () {

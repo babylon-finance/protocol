@@ -258,4 +258,6 @@ library Errors {
     uint256 internal constant REENTRANT_CALL = 84;
     // Reserve asset not supported
     uint256 internal constant RESERVE_ASSET_NOT_SUPPORTED = 85;
+    // Withdrawal/Deposit check min amount received
+    uint256 internal constant RECEIVE_MIN_AMOUNT = 86;
 }

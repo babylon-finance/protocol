@@ -17,7 +17,7 @@
 */
 
 pragma solidity 0.7.6;
-import {SafeMath} from '@openzeppelin/contracts/math/SafeMath.sol';
+
 import {SafeCast} from '@openzeppelin/contracts/utils/SafeCast.sol';
 import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import {ReentrancyGuard} from '@openzeppelin/contracts/utils/ReentrancyGuard.sol';
@@ -26,7 +26,9 @@ import {IPassiveIntegration} from '../../interfaces/IPassiveIntegration.sol';
 import {IGarden} from '../../interfaces/IGarden.sol';
 import {IStrategy} from '../../interfaces/IStrategy.sol';
 import {IBabController} from '../../interfaces/IBabController.sol';
+
 import {BaseIntegration} from '../BaseIntegration.sol';
+import {LowGasSafeMath} from '../../lib/LowGasSafeMath.sol';
 
 /**
  * @title PassiveIntegration
@@ -35,7 +37,7 @@ import {BaseIntegration} from '../BaseIntegration.sol';
  * Base class for integration with passive investments like Yearn, Indexed
  */
 abstract contract PassiveIntegration is BaseIntegration, ReentrancyGuard, IPassiveIntegration {
-    using SafeMath for uint256;
+    using LowGasSafeMath for uint256;
     using SafeCast for uint256;
 
     /* ============ Struct ============ */
