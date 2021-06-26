@@ -1,57 +1,21 @@
 const { expect } = require('chai');
 const { ethers } = require('hardhat');
-
 const addresses = require('../lib/addresses');
-const { ONE_DAY_IN_SECONDS, ONE_ETH, NOW, STRATEGY_EXECUTE_MAP } = require('../lib/constants.js');
-const { increaseTime, from, parse, eth } = require('./utils/test-helpers');
+const { ONE_DAY_IN_SECONDS, STRATEGY_EXECUTE_MAP } = require('../lib/constants.js');
+const { increaseTime, from, eth } = require('./utils/test-helpers');
 const { createGarden } = require('./fixtures/GardenHelper');
-const { impersonateAddress } = require('../lib/rpc');
 
-const {
-  DEFAULT_STRATEGY_PARAMS,
-  createStrategy,
-  getStrategy,
-  executeStrategy,
-  finalizeStrategy,
-  injectFakeProfits,
-} = require('./fixtures/StrategyHelper');
+const { getStrategy } = require('./fixtures/StrategyHelper');
 
 const { setupTests } = require('./fixtures/GardenFixture');
 
 describe('Keeper', function () {
-  let babController;
-  let rewardsDistributor;
-  let owner;
   let keeper;
   let signer1;
   let signer2;
-  let signer3;
-  let garden1;
-  let ishtarGate;
-  let weth;
-  let dai;
-  let balancerIntegration;
-  let uniswapV3TradeIntegration;
-  let daiGarden;
-  let usdcGarden;
-  let usdc;
-  let gardenNFT;
 
   beforeEach(async () => {
-    ({
-      babController,
-      rewardsDistributor,
-      gardenNFT,
-      keeper,
-      owner,
-      signer1,
-      signer2,
-      signer3,
-      garden1,
-      ishtarGate,
-      balancerIntegration,
-      uniswapV3TradeIntegration,
-    } = await setupTests({ fund: true })());
+    ({ keeper, signer1, signer2 } = await setupTests({ fund: true })());
   });
 
   for (const { func, name, state } of [
@@ -101,7 +65,6 @@ describe('Keeper', function () {
 
         it(`refuse to pay more than max fee at ${name} garden`, async function () {
           const garden = await createGarden({ reserveAsset: token });
-          const tokenContract = await ethers.getContractAt('IERC20', token);
 
           const strategy = await getStrategy({ state: 'deposit', specificParams: addresses.tokens.USDT });
 

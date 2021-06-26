@@ -142,7 +142,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
 
     // Min contribution in the garden
     uint256 public override minContribution; //wei
-    uint256 private minGardenTokenSupply;
+    uint256 private minGardenTokenSupply; // DEPRECATED
 
     // Strategies variables
     uint256 public override totalStake;
@@ -219,7 +219,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
             _creator != address(0) && _controller != address(0) && ERC20Upgradeable(_reserveAsset).decimals() > 0,
             Errors.ADDRESS_IS_ZERO
         );
-        _require(_gardenParams.length == 10, Errors.GARDEN_PARAMS_LENGTH);
+        _require(_gardenParams.length == 9, Errors.GARDEN_PARAMS_LENGTH);
         _require(IBabController(_controller).isValidReserveAsset(_reserveAsset), Errors.MUST_BE_RESERVE_ASSET);
         __ERC20_init(_name, _symbol);
 
@@ -241,8 +241,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
             _gardenParams[5],
             _gardenParams[6],
             _gardenParams[7],
-            _gardenParams[8],
-            _gardenParams[9]
+            _gardenParams[8]
         );
         active = true;
     }
@@ -255,7 +254,6 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
      *
      * @param _creatorDeposit                       Deposit by the creator
      * @param _maxDepositLimit                      Max deposit limit
-     * @param _minGardenTokenSupply                 Min garden token supply
      * @param _minLiquidityAsset                    Number that represents min amount of liquidity denominated in ETH
      * @param _depositHardlock                      Number that represents the time deposits are locked for an user after he deposits
      * @param _minContribution                      Min contribution to the garden
@@ -268,7 +266,6 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
     function _start(
         uint256 _creatorDeposit,
         uint256 _maxDepositLimit,
-        uint256 _minGardenTokenSupply,
         uint256 _minLiquidityAsset,
         uint256 _depositHardlock,
         uint256 _minContribution,
@@ -280,15 +277,13 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
     ) private {
         _require(_minContribution > 0 && _creatorDeposit >= _minContribution, Errors.MIN_CONTRIBUTION);
         _require(
-            _creatorDeposit >= _minGardenTokenSupply &&
-                _minLiquidityAsset >= IBabController(controller).minLiquidityPerReserve(reserveAsset),
+            _minLiquidityAsset >= IBabController(controller).minLiquidityPerReserve(reserveAsset),
             Errors.MIN_LIQUIDITY
         );
         _require(
             _creatorDeposit <= _maxDepositLimit && _maxDepositLimit <= (reserveAsset == WETH ? 1e22 : 1e25),
             Errors.MAX_DEPOSIT_LIMIT
         );
-        _require(_minGardenTokenSupply > 0, Errors.MIN_TOKEN_SUPPLY);
         _require(_depositHardlock > 0, Errors.DEPOSIT_HARDLOCK);
         _require(
             _strategyCooldownPeriod <= IBabController(controller).getMaxCooldownPeriod() &&
@@ -309,7 +304,6 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         minVoters = _minVoters;
         minStrategyDuration = _minStrategyDuration;
         maxStrategyDuration = _maxStrategyDuration;
-        minGardenTokenSupply = _minGardenTokenSupply;
         maxDepositLimit = _maxDepositLimit;
         gardenInitializedAt = block.timestamp;
         minLiquidityAsset = _minLiquidityAsset;
@@ -363,7 +357,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         );
 
         // gardenTokenQuantity has to be at least _minGardenTokenReceiveQuantity
-        _require(_reserveAssetQuantity >= _minGardenTokenReceiveQuantity, Errors.MIN_TOKEN_SUPPLY);
+        _require(_reserveAssetQuantity >= _minGardenTokenReceiveQuantity, Errors.RECEIVE_MIN_AMOUNT);
 
         uint256 previousBalance = balanceOf(_to);
 
@@ -376,11 +370,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
             IGardenNFT(IBabController(controller).gardenNFT()).grantGardenNFT(_to);
         }
 
-        _require(totalSupply() > 0, Errors.MIN_LIQUIDITY);
         emit GardenDeposit(_to, msg.value, _reserveAssetQuantity, block.timestamp);
-
-        // Check that total supply is greater than min supply needed for issuance
-        _require(totalSupply() >= minGardenTokenSupply, Errors.MIN_TOKEN_SUPPLY);
     }
 
     /**
@@ -390,17 +380,19 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
      * @param _minReserveReceiveQuantity     Min quantity of reserve asset to receive
      * @param _to                            Address to send component assets to
      * @param _withPenalty                   Whether or not this is an immediate withdrawal
+     * @param _unwindStrategy                Strategy to unwind
      */
     function withdraw(
         uint256 _gardenTokenQuantity,
         uint256 _minReserveReceiveQuantity,
         address payable _to,
-        bool _withPenalty
+        bool _withPenalty,
+        address _unwindStrategy
     ) external override nonReentrant {
         _onlyContributor();
         // Withdrawal amount has to be equal or less than msg.sender balance minus the locked balance
         uint256 lockedAmount = getLockedBalance(msg.sender);
-        _require(_gardenTokenQuantity <= balanceOf(msg.sender).sub(lockedAmount), Errors.TOKENS_STAKED); // Strategists and Voters cannot withdraw locked stake while in active strategies
+        _require(_gardenTokenQuantity <= balanceOf(msg.sender).sub(lockedAmount), Errors.TOKENS_STAKED); // Strategists cannot withdraw locked stake while in active strategies
         if (!_withPenalty) {
             // Requests an immediate withdrawal taking the EARLY_WITHDRAWAL_PENALTY that stays invested.
             return _withdraw(_gardenTokenQuantity, _minReserveReceiveQuantity, _to);
@@ -409,16 +401,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         _require(!_canWithdrawReserveAmount(msg.sender, _gardenTokenQuantity), Errors.NORMAL_WITHDRAWAL_POSSIBLE);
         uint256 netReserveFlows = _gardenTokenQuantity.sub(_gardenTokenQuantity.preciseMul(EARLY_WITHDRAWAL_PENALTY));
 
-        (, uint256 largestCapital, address maxStrategy) = _getActiveCapital();
-        // Check that strategy has enough capital to support the withdrawal
-        // TODO: This is inaccurate because strategy might be down, i.e, capitalAllocated != capitalAvailable
-        // TODO: _getActiveCapital should be replaced by a parameter _strategy which is precalcualted off-chain;
-        // _getActiveCapital would consume a lot of gas and its cost would grow linearly with number of strategies in the garden.
-        // _require(
-        //     IStrategy(maxStrategy).minRebalanceCapital() <= largestCapital.sub(netReserveFlows),
-        //     Errors.WITHDRAWAL_WITH_PENALTY
-        // );
-        IStrategy(maxStrategy).unwindStrategy(netReserveFlows);
+        IStrategy(_unwindStrategy).unwindStrategy(netReserveFlows);
         // We burn their penalty
         _burn(msg.sender, _gardenTokenQuantity.preciseMul(EARLY_WITHDRAWAL_PENALTY));
         _withdraw(netReserveFlows, _minReserveReceiveQuantity, _to);
@@ -854,10 +837,9 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
 
         _require(_canWithdrawReserveAmount(msg.sender, outflow), Errors.MIN_LIQUIDITY);
 
-        // Check that new supply is more than min supply needed for withdrawal
-        // Note: A min supply amount is needed to avoid division by 0 when withdrawaling garden token to 0
-        _require(totalSupply().sub(_gardenTokenQuantity) >= minGardenTokenSupply, Errors.MIN_TOKEN_SUPPLY);
-        _require(outflow >= _minReserveReceiveQuantity, Errors.MIN_TOKEN_SUPPLY);
+        // Let people withdraw up to the last amount
+        _require(totalSupply().sub(_gardenTokenQuantity) >= 0, Errors.MIN_TOKEN_SUPPLY);
+        _require(outflow >= _minReserveReceiveQuantity, Errors.RECEIVE_MIN_AMOUNT);
 
         _burn(msg.sender, _gardenTokenQuantity);
         _safeSendReserveAsset(msg.sender, outflow);

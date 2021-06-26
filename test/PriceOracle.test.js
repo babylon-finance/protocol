@@ -88,8 +88,8 @@ describe('PriceOracle', function () {
   describe('Uniswap TWAP V3', function () {
     tokens.forEach(({ name, tokenIn, tokenOut, value }) => {
       it(`should get the price of ${name}`, async function () {
-        const { amountOut } = await univ3.getPrice(tokenIn, tokenOut);
-        expect(amountOut).to.be.eq(value);
+        const { price } = await univ3.getPrice(tokenIn, tokenOut);
+        expect(price).to.be.closeTo(value, value.div(50));
       });
     });
   });

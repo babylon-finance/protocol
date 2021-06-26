@@ -65,7 +65,10 @@ contract PriceOracle is Ownable, IPriceOracle {
      * @param _controller                   Address of controller contract
      * @param _adapters                     List of adapters used to price assets created by other protocols
      */
-    constructor(IBabController _controller, address[] memory _adapters) {
+    constructor(
+        IBabController _controller,
+        address[] memory _adapters
+    ) {
         controller = _controller;
         adapters = _adapters;
     }
