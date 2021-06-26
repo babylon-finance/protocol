@@ -89,7 +89,7 @@ describe('YearnVaultIntegrationTest', function () {
           { vault: '0xA696a63cc78DfFa1a63E9E50587C197387FF6C7E', symbol: 'yvWBTC' }, //yvWBTC vault
           { vault: '0x19D3364A399d251E894aC732651be8B0E4e85001', symbol: 'yvDAI' }, //yvDAI vault
         ].forEach(({ vault, symbol }) => {
-          it(`can enter and exit the ${symbol} from a ${name} garden`, async function () {
+          it(`can enter and exit the ${symbol} at Yearn Vault from a ${name} garden`, async function () {
             const vaultContract = await ethers.getContractAt('IYearnVault', vault);
             await transferFunds(token);
 

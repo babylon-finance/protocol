@@ -93,7 +93,7 @@ describe('HarvestVaultIntegrationTest', function () {
         { vault: '0x5d9d25c7C457dD82fc8668FFC6B9746b674d4EcB', symbol: 'vWBTC' }, //vWBTC vault
         { vault: '0xab7FA2B2985BCcfC13c6D86b1D5A17486ab1e04C', symbol: 'vDAI' }, //vDAI vault
       ].forEach(({ vault, symbol }) => {
-        it(`can enter and exit the ${symbol} from a ${name} garden`, async function () {
+        it(`can enter and exit the ${symbol} at Harvest Vault from a ${name} garden`, async function () {
           const vaultContract = await ethers.getContractAt('IHarvestVault', vault);
           await transferFunds(token);
 

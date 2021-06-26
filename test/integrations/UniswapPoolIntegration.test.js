@@ -157,7 +157,7 @@ describe('UniswapPoolIntegrationTest', function () {
           token1: addresses.tokens.WBTC,
         }, //DAI-WBTC pool
       ].forEach(({ pool, symbol, token0, token1 }) => {
-        it(`can enter and exit the ${symbol} UNISWAP pool from a ${name} Garden`, async function () {
+        it(`can enter and exit the ${symbol} at Uniswap pool from a ${name} Garden`, async function () {
           const poolAddress = await ethers.getContractAt('IUniswapV2PairB', pool);
           await transferFunds(token);
 

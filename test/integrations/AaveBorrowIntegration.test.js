@@ -142,22 +142,22 @@ describe('AaveBorrowIntegrationTest', function () {
         const nav = await strategyContract.getNAV();
         expect(nav).to.be.gt(0);
       });
-      it(`can supply DAI and borrow USDC in a ${name} Garden`, async function () {
+      it(`can supply DAI and borrow USDC at Aave in a ${name} Garden`, async function () {
         await supplyBorrowStrategy(DAI, USDC, token);
       });
-      it(`can supply USDC and borrow DAI in a ${name} Garden`, async function () {
+      it(`can supply USDC and borrow DAI at Aave in a ${name} Garden`, async function () {
         await supplyBorrowStrategy(USDC, DAI, token);
       });
-      it(`can supply WETH and borrow DAI in a ${name} Garden`, async function () {
+      it(`can supply WETH and borrow DAI at Aave  in a ${name} Garden`, async function () {
         await supplyBorrowStrategy(WETH, DAI, token);
       });
-      it(`should fail trying to supply DAI and borrow DAI in a ${name} Garden`, async function () {
+      it(`should fail trying to supply DAI and borrow DAI at Aave  in a ${name} Garden`, async function () {
         await trySupplyBorrowStrategy(DAI, DAI, token, 'revert There is no collateral locked');
       });
-      it(`should fail trying to supply WETH and borrow WETH in a ${name} Garden`, async function () {
+      it(`should fail trying to supply WETH and borrow WETH at Aave  in a ${name} Garden`, async function () {
         await trySupplyBorrowStrategy(WETH, WETH, token, 'There is no collateral locked');
       });
-      it(`should fail trying to supply USDC and borrow USDC in a ${name} Garden`, async function () {
+      it(`should fail trying to supply USDC and borrow USDC at Aave  in a ${name} Garden`, async function () {
         await trySupplyBorrowStrategy(USDC, USDC, token, 'There is no collateral locked');
       });
     });

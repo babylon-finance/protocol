@@ -155,7 +155,7 @@ describe('SushiswapPoolIntegrationTest', function () {
         }, //DAI-USDC pool
         //      { pool: addresses.sushiswap.pairs.daiwbtc, symbol: 'DAI-WBTC', token0: addresses.tokens.DAI, token1: addresses.tokens.WBTC}, //DAI-WBTC pool - TODO: check pair address
       ].forEach(({ pool, symbol, token0, token1 }) => {
-        it(`can enter and exit the ${symbol} SUHISWAP pool from a ${name} Garden`, async function () {
+        it(`can enter and exit the ${symbol} at Sushiswap pool from a ${name} Garden`, async function () {
           const poolAddress = await ethers.getContractAt('IUniswapV2PairB', pool);
           expect(await sushiswapPoolIntegration.isPool(pool)).to.equal(true);
           await transferFunds(token);
