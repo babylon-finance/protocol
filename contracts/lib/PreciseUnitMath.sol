@@ -49,6 +49,13 @@ library PreciseUnitMath {
     /**
      * @dev Getter function since constants can't be read directly from libraries.
      */
+    function decimals() internal pure returns (uint256) {
+        return 18;
+    }
+
+    /**
+     * @dev Getter function since constants can't be read directly from libraries.
+     */
     function preciseUnit() internal pure returns (uint256) {
         return PRECISE_UNIT;
     }
