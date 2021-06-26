@@ -62,8 +62,6 @@ interface IBabController {
 
     function editStrategyFactory(address _newStrategyFactory) external;
 
-    function editUniswapFactory(address _newUniswapFactory) external;
-
     function addIntegration(string memory _name, address _integration) external;
 
     function editIntegration(string memory _name, address _integration) external;
@@ -184,6 +182,4 @@ interface IBabController {
     function protocolManagementFee() external view returns (uint256);
 
     function minLiquidityPerReserve(address _reserve) external view returns (uint256);
-
-    function uniswapFactory() external view returns (address);
 }

@@ -48,7 +48,7 @@ describe('Garden', function () {
   let weth;
   let dai;
   let balancerIntegration;
-  let kyberTradeIntegration;
+  let uniswapV3TradeIntegration;
   let daiGarden;
   let usdcGarden;
   let usdc;
@@ -67,7 +67,7 @@ describe('Garden', function () {
       garden1,
       ishtarGate,
       balancerIntegration,
-      kyberTradeIntegration,
+      uniswapV3TradeIntegration,
     } = await setupTests()());
 
     usdc = await ethers.getContractAt('IERC20', addresses.tokens.USDC);
@@ -153,7 +153,7 @@ describe('Garden', function () {
         'buy',
         'vote',
         [signer1, signer2, signer3],
-        kyberTradeIntegration.address,
+        uniswapV3TradeIntegration.address,
         garden1,
       );
 
@@ -519,7 +519,7 @@ describe('Garden', function () {
         'buy',
         'vote',
         [signer1, signer2, signer3],
-        kyberTradeIntegration.address,
+        uniswapV3TradeIntegration.address,
         garden1,
       );
 
@@ -561,7 +561,7 @@ describe('Garden', function () {
         'buy',
         'vote',
         [signer1, signer2, signer3],
-        kyberTradeIntegration.address,
+        uniswapV3TradeIntegration.address,
         garden1,
       );
 
@@ -590,7 +590,7 @@ describe('Garden', function () {
         'buy',
         'vote',
         [signer1, signer2, signer3],
-        kyberTradeIntegration.address,
+        uniswapV3TradeIntegration.address,
         garden1,
       );
 
@@ -622,7 +622,7 @@ describe('Garden', function () {
         'buy',
         'vote',
         [signer1, signer2, signer3],
-        kyberTradeIntegration.address,
+        uniswapV3TradeIntegration.address,
         garden1,
       );
 
@@ -654,7 +654,7 @@ describe('Garden', function () {
         'buy',
         'vote',
         [signer1, signer2, signer3],
-        kyberTradeIntegration.address,
+        uniswapV3TradeIntegration.address,
         garden1,
       );
       // It is executed
@@ -681,7 +681,7 @@ describe('Garden', function () {
         'buy',
         'vote',
         [signer1, signer2, signer3],
-        kyberTradeIntegration.address,
+        uniswapV3TradeIntegration.address,
         garden1,
       );
 
@@ -710,7 +710,7 @@ describe('Garden', function () {
         'buy',
         'vote',
         [signer1, signer2, signer3],
-        kyberTradeIntegration.address,
+        uniswapV3TradeIntegration.address,
         garden1,
       );
       // It is executed

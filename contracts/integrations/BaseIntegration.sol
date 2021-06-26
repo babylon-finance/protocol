@@ -54,7 +54,6 @@ abstract contract BaseIntegration {
     address public immutable weth;
     // Name of the integration
     string public name;
-    mapping(address => bool) public initializedByGarden;
 
     /* ============ Constructor ============ */
 

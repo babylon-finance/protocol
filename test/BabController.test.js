@@ -16,7 +16,7 @@ describe('BabController', function () {
   let signer1;
   let signer2;
   let signer3;
-  let kyberTradeIntegration;
+  let uniswapV3TradeIntegration;
   let rewardsDistributor;
   let strategy11;
   let owner;
@@ -28,7 +28,7 @@ describe('BabController', function () {
         'buy',
         'vote',
         [signer1, signer2, signer3],
-        kyberTradeIntegration.address,
+        uniswapV3TradeIntegration.address,
         strategies[i].garden,
       );
       retVal.push(strategy);
@@ -49,7 +49,7 @@ describe('BabController', function () {
       garden2,
       garden3,
       strategy11,
-      kyberTradeIntegration,
+      uniswapV3TradeIntegration,
       rewardsDistributor,
     } = await setupTests()());
   });

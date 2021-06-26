@@ -28,8 +28,7 @@ async function setUpFixture(
   const rewardsDistributor = await getContract('RewardsDistributor', 'RewardsDistributorProxy');
   const babViewer = await getContract('BabylonViewer');
 
-  const kyberTradeIntegration = await getContract('KyberTradeIntegration');
-  const oneInchTradeIntegration = await getContract('OneInchTradeIntegration');
+  const uniswapV3TradeIntegration = await getContract('UniswapV3TradeIntegration');
   const balancerIntegration = await getContract('BalancerIntegration');
   const uniswapPoolIntegration = await getContract('UniswapPoolIntegration');
   const yearnVaultIntegration = await getContract('YearnVaultIntegration');
@@ -51,14 +50,6 @@ async function setUpFixture(
   const usdc = await ethers.getContractAt('IERC20', addresses.tokens.USDC);
   const weth = await ethers.getContractAt('IERC20', addresses.tokens.WETH);
   const wbtc = await ethers.getContractAt('IERC20', addresses.tokens.WBTC);
-
-  // deploy uniswap v2 adapter for tests
-  await deployments.deploy('UniswapTWAP', {
-    from: deployer.address,
-    args: [babController.address, addresses.uniswap.factory, TWAP_ORACLE_WINDOW, TWAP_ORACLE_GRANULARITY],
-    log: true,
-  });
-  const univ2 = await getContract('UniswapTWAP');
 
   // Gives signer1 creator permissions
   await ishtarGate.connect(owner).setCreatorPermissions(owner.address, true, { gasPrice: 0 });
@@ -150,14 +141,14 @@ async function setUpFixture(
   console.log('create strategies');
   // Create strategies
   const strategy11 = (
-    await createStrategy('buy', 'dataset', [signer1, signer2, signer3], kyberTradeIntegration.address, garden1)
+    await createStrategy('buy', 'dataset', [signer1, signer2, signer3], uniswapV3TradeIntegration.address, garden1)
   ).address;
   const strategy21 = (
-    await createStrategy('buy', 'deposit', [signer1, signer2, signer3], kyberTradeIntegration.address, garden2)
+    await createStrategy('buy', 'deposit', [signer1, signer2, signer3], uniswapV3TradeIntegration.address, garden2)
   ).address;
 
-  await createStrategy('buy', 'deposit', [signer1, signer2, signer3], kyberTradeIntegration.address, garden3);
-  await createStrategy('buy', 'dataset', [signer1, signer2, signer3], kyberTradeIntegration.address, garden3);
+  await createStrategy('buy', 'deposit', [signer1, signer2, signer3], uniswapV3TradeIntegration.address, garden3);
+  await createStrategy('buy', 'dataset', [signer1, signer2, signer3], uniswapV3TradeIntegration.address, garden3);
 
   console.log('Created and started garden', garden1.address);
   console.log('Created manual testing garden', garden3.address);
@@ -193,8 +184,7 @@ async function setUpFixture(
     timeLockRegistry,
     treasury,
     rewardsDistributor,
-    kyberTradeIntegration,
-    oneInchTradeIntegration,
+    uniswapV3TradeIntegration,
     balancerIntegration,
     uniswapPoolIntegration,
     harvestVaultIntegration,
@@ -205,7 +195,6 @@ async function setUpFixture(
     compoundBorrowIntegration,
     aaveLendIntegration,
     aaveBorrowIntegration,
-    univ2,
     babViewer,
 
     garden1,
@@ -237,11 +226,17 @@ async function setUpFixture(
     signer1,
     signer2,
     signer3,
+
     daiWhaleSigner,
     wethWhaleSigner,
 
     deployments,
     upgradesDeployer,
+
+    dai,
+    usdc,
+    weth,
+    wbtc,
   };
 }
 

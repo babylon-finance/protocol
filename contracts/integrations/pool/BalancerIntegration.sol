@@ -29,7 +29,7 @@ import {IBPool} from '../../interfaces/external/balancer/IBPool.sol';
  * @title BalancerIntegration
  * @author Babylon Finance Protocol
  *
- * Kyber protocol trade integration
+ * Balancer protocol trade integration
  */
 contract BalancerIntegration is PoolIntegration {
     using LowGasSafeMath for uint256;
@@ -37,7 +37,6 @@ contract BalancerIntegration is PoolIntegration {
 
     /* ============ State Variables ============ */
 
-    // Address of Kyber Network Proxy
     IBFactory public coreFactory;
 
     /* ============ Constructor ============ */
