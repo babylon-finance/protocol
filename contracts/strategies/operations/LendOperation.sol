@@ -199,7 +199,6 @@ contract LendOperation is Operation {
                 price
             );
         require(NAV != 0, 'NAV has to be bigger 0');
-        console.log('lend NAV', NAV);
         return (NAV, true);
     }
 
