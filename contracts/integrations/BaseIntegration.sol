@@ -64,10 +64,7 @@ abstract contract BaseIntegration {
      * @param _controller             Address of the controller
      */
 
-    constructor(
-        string memory _name,
-        IBabController _controller
-    ) {
+    constructor(string memory _name, IBabController _controller) {
         require(address(_controller) != address(0), 'Controller must be defined');
         name = _name;
         controller = _controller;

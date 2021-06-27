@@ -49,10 +49,9 @@ contract AaveBorrowIntegration is BorrowIntegration {
      * @param _controller             Address of the controller
      * @param _maxCollateralFactor    Max collateral factor allowed (from 0 to a 100)
      */
-    constructor(
-        IBabController _controller,
-        uint256 _maxCollateralFactor
-    ) BorrowIntegration('aaveborrow', _controller, _maxCollateralFactor) {}
+    constructor(IBabController _controller, uint256 _maxCollateralFactor)
+        BorrowIntegration('aaveborrow', _controller, _maxCollateralFactor)
+    {}
 
     /* ============ External Functions ============ */
     /**

@@ -75,10 +75,7 @@ abstract contract LendIntegration is BaseIntegration, ReentrancyGuard, ILendInte
      * @param _name                   Name of the integration
      * @param _controller             Address of the controller
      */
-    constructor(
-        string memory _name,
-        IBabController _controller
-    ) BaseIntegration(_name, _controller) {}
+    constructor(string memory _name, IBabController _controller) BaseIntegration(_name, _controller) {}
 
     /* ============ External Functions ============ */
     function getInvestmentToken(address _assetToken) external view override returns (address) {

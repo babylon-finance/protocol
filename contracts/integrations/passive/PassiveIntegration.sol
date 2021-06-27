@@ -77,10 +77,7 @@ abstract contract PassiveIntegration is BaseIntegration, ReentrancyGuard, IPassi
      * @param _name                   Name of the integration
      * @param _controller             Address of the controller
      */
-    constructor(
-        string memory _name,
-        IBabController _controller
-    ) BaseIntegration(_name, _controller) {}
+    constructor(string memory _name, IBabController _controller) BaseIntegration(_name, _controller) {}
 
     /* ============ External Functions ============ */
 

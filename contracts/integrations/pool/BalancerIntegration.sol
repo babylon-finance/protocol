@@ -47,10 +47,7 @@ contract BalancerIntegration is PoolIntegration {
      * @param _controller                   Address of the controller
      * @param _coreFactoryAddress           Address of Balancer core factory address
      */
-    constructor(
-        IBabController _controller,
-        address _coreFactoryAddress
-    ) PoolIntegration('balancer', _controller) {
+    constructor(IBabController _controller, address _coreFactoryAddress) PoolIntegration('balancer', _controller) {
         coreFactory = IBFactory(_coreFactoryAddress);
     }
 

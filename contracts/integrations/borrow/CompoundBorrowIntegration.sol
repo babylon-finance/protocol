@@ -72,10 +72,9 @@ contract CompoundBorrowIntegration is BorrowIntegration {
      * @param _controller             Address of the controller
      * @param _maxCollateralFactor    Max collateral factor allowed
      */
-    constructor(
-        IBabController _controller,
-        uint256 _maxCollateralFactor
-    ) BorrowIntegration('compoundborrow', _controller, _maxCollateralFactor) {
+    constructor(IBabController _controller, uint256 _maxCollateralFactor)
+        BorrowIntegration('compoundborrow', _controller, _maxCollateralFactor)
+    {
         assetToCToken[0x6B175474E89094C44Da98b954EedeAC495271d0F] = 0x5d3a536E4D6DbD6114cc1Ead35777bAB948E3643; // DAI
         assetToCToken[0x1f9840a85d5aF5bf1D1762F925BDADdC4201F984] = 0x35A18000230DA775CAc24873d00Ff85BccdeD550; // UNI
         assetToCToken[address(0)] = 0x4Ddc2D193948926D02f9B1fE9e1daa0718270ED5; // ETH

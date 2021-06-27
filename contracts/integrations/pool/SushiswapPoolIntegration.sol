@@ -36,10 +36,9 @@ contract SushiswapPoolIntegration is UniswapPoolIntegration {
      * @param _controller                   Address of the controller
      * @param _sushiswapRouterAddress         Address of Sushiswap router
      */
-    constructor(
-        IBabController _controller,
-        address _sushiswapRouterAddress
-    ) UniswapPoolIntegration(_controller, _sushiswapRouterAddress) {
+    constructor(IBabController _controller, address _sushiswapRouterAddress)
+        UniswapPoolIntegration(_controller, _sushiswapRouterAddress)
+    {
         name = 'sushiswap_pool';
     }
 }
