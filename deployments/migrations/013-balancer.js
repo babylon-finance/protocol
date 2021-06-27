@@ -20,14 +20,7 @@ module.exports = async ({
 
   const deployment = await deploy(contract, {
     from: deployer,
-    args: [
-      controller.address,
-      addresses.tokens.WETH,
-      addresses.balancer.vault,
-      addresses.balancer.weigthed_pool_factory,
-      addresses.balancer.oracle_pool_factory,
-      addresses.balancer.stable_pool_factory,
-    ],
+    args: [controller.address, addresses.balancer.factory],
     log: true,
     gasPrice,
   });

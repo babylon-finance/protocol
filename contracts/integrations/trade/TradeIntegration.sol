@@ -85,14 +85,9 @@ abstract contract TradeIntegration is BaseIntegration, ReentrancyGuard, ITradeIn
      * Creates the integration
      *
      * @param _name                   Name of the integration
-     * @param _weth                   Address of the WETH ERC20
      * @param _controller             Address of the controller
      */
-    constructor(
-        string memory _name,
-        address _weth,
-        IBabController _controller
-    ) BaseIntegration(_name, _weth, _controller) {}
+    constructor(string memory _name, IBabController _controller) BaseIntegration(_name, _controller) {}
 
     /* ============ External Functions ============ */
 
@@ -214,16 +209,16 @@ abstract contract TradeIntegration is BaseIntegration, ReentrancyGuard, ITradeIn
         (IUniswapV3Pool pool, ) = _getUniswapPoolWithHighestLiquidity(sendToken, receiveToken);
         uint256 poolLiquidity = uint256(pool.liquidity());
         uint256 liquidityInReserve;
-        if (pool.token0() == weth) {
+        if (pool.token0() == WETH) {
             liquidityInReserve = poolLiquidity.mul(poolLiquidity).div(ERC20(pool.token1()).balanceOf(address(pool)));
         }
-        if (pool.token1() == weth) {
+        if (pool.token1() == WETH) {
             liquidityInReserve = poolLiquidity.mul(poolLiquidity).div(ERC20(pool.token0()).balanceOf(address(pool)));
         }
         // Normalize to reserve asset
-        if (weth != _reserveAsset) {
+        if (WETH != _reserveAsset) {
             IPriceOracle oracle = IPriceOracle(IBabController(controller).priceOracle());
-            uint256 price = oracle.getPrice(weth, _reserveAsset);
+            uint256 price = oracle.getPrice(WETH, _reserveAsset);
             liquidityInReserve = liquidityInReserve.preciseMul(price);
         }
         return liquidityInReserve;
@@ -300,6 +295,6 @@ abstract contract TradeIntegration is BaseIntegration, ReentrancyGuard, ITradeIn
     }
 
     function _getReserveAsWeth(address _token, address _reserveAsset) private view returns (address) {
-        return _reserveAsset == _token ? weth : _token;
+        return _reserveAsset == _token ? WETH : _token;
     }
 }

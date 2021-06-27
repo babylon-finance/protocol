@@ -50,14 +50,11 @@ contract OneInchPoolIntegration is PoolIntegration {
      * Creates the integration
      *
      * @param _controller                   Address of the controller
-     * @param _weth                         Address of the WETH ERC20
      * @param _mooniswapFactoryAddress         Address of the Mooniswap factory
      */
-    constructor(
-        IBabController _controller,
-        address _weth,
-        address _mooniswapFactoryAddress
-    ) PoolIntegration('oneinch_pool', _weth, _controller) {
+    constructor(IBabController _controller, address _mooniswapFactoryAddress)
+        PoolIntegration('oneinch_pool', _controller)
+    {
         mooniswapFactory = IMooniswapFactory(_mooniswapFactoryAddress);
     }
 

@@ -50,10 +50,9 @@ contract UniswapV3TradeIntegration is TradeIntegration {
     /**
      * Creates the integration
      *
-     * @param _weth                         Address of the WETH ERC20
      * @param _controller                   Address of the controller
      */
-    constructor(IBabController _controller, address _weth) TradeIntegration('univ3', _weth, _controller) {}
+    constructor(IBabController _controller) TradeIntegration('univ3', _controller) {}
 
     /* ============ External Functions ============ */
     /**
@@ -79,7 +78,7 @@ contract UniswapV3TradeIntegration is TradeIntegration {
     /* ============ Internal Functions ============ */
 
     /**
-     * Executes the trade through 1Inch.
+     * Executes the trade through UniswapV3.
      *
      * @param _strategy             Address of the strategy
      * @param _sendToken            Address of the token to be sent to the exchange
@@ -102,13 +101,13 @@ contract UniswapV3TradeIntegration is TradeIntegration {
         )
     {
         bytes memory path;
-        if (_sendToken == weth || _receiveToken == weth) {
+        if (_sendToken == WETH || _receiveToken == WETH) {
             (, uint24 fee) = _getUniswapPoolWithHighestLiquidity(_sendToken, _receiveToken);
             path = abi.encodePacked(_sendToken, fee, _receiveToken);
         } else {
-            (, uint24 fee0) = _getUniswapPoolWithHighestLiquidity(_sendToken, weth);
-            (, uint24 fee1) = _getUniswapPoolWithHighestLiquidity(_sendToken, weth);
-            path = abi.encodePacked(_sendToken, fee0, weth, fee1, _receiveToken);
+            (, uint24 fee0) = _getUniswapPoolWithHighestLiquidity(_sendToken, WETH);
+            (, uint24 fee1) = _getUniswapPoolWithHighestLiquidity(_sendToken, WETH);
+            path = abi.encodePacked(_sendToken, fee0, WETH, fee1, _receiveToken);
         }
         ISwapRouter.ExactInputParams memory params =
             ISwapRouter.ExactInputParams(

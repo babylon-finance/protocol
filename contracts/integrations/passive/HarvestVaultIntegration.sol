@@ -48,9 +48,8 @@ contract HarvestVaultIntegration is PassiveIntegration {
      * Creates the integration
      *
      * @param _controller                   Address of the controller
-     * @param _weth                         Address of the WETH ERC20
      */
-    constructor(IBabController _controller, address _weth) PassiveIntegration('harvestvaults', _weth, _controller) {}
+    constructor(IBabController _controller) PassiveIntegration('harvestvaults', _controller) {}
 
     /* ============ External Functions ============ */
 

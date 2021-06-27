@@ -39,8 +39,8 @@ contract BalancerV2Integration is PoolIntegration {
     /* ============ State Variables ============ */
 
     // Address of Balancer Vault
-    IVault public constant vaultV2 = 0xBA12222222228d8Ba445958a75a0704d566BF2C8;
-    IBFactory public coreFactory;
+    IVault public constant vaultV2 = IVault(0xBA12222222228d8Ba445958a75a0704d566BF2C8);
+    // IBFactory public coreFactory;
 
 
     /* ============ Constructor ============ */
@@ -49,13 +49,10 @@ contract BalancerV2Integration is PoolIntegration {
      * Creates the integration
      *
      * @param _controller                   Address of the controller
-     * @param _weth                         Address of the WETH ERC20
-     * @param _vaultAddress           Address of Balancer core factory address
      */
     constructor(
-        IBabController _controller,
+        IBabController _controller
     ) PoolIntegration('balancerv2', _controller) {
-        vault = IVault(_vaultAddress);
     }
 
     /* ============ External Functions ============ */
@@ -64,15 +61,12 @@ contract BalancerV2Integration is PoolIntegration {
     function getPoolTokens(address _poolAddress) external view override returns (address[] memory) {
         //(IERC20[] storage tokens, uint256[] memory balances, uint256 lastChangeBlock) =  IVault(vault).getPoolTokens(_poolId);
         //return (tokens, balances, lastChangeBlock);
+        return new address[](2);
     }
 
     function getPoolWeights(address _poolAddress) external view override returns (uint256[] memory) {
-        address[] memory poolTokens = IBPool(_poolAddress).getCurrentTokens();
-        uint256[] memory result = new uint256[](poolTokens.length);
-        for (uint8 i = 0; i < poolTokens.length; i++) {
-            result[i] = IBPool(_poolAddress).getNormalizedWeight(poolTokens[i]);
-        }
-        return result;
+      return new uint256[](2);
+
     }
 
     function getPoolTokensOut(
@@ -89,17 +83,18 @@ contract BalancerV2Integration is PoolIntegration {
         override
         returns (uint256[] memory _minAmountsOut)
     {
-        //return 0;
+      return new uint256[](2);
     }
 
     /* ============ Internal Functions ============ */
 
     function _isPool(address _poolAddress) internal view override returns (bool) {
-        return IVault(vault).getPool(_poolId);
+        (address poolAdddr,) = IVault(vaultV2).getPool(_poolAddress);
+        return poolAdddr != address(0);
     }
 
     function _getSpender(address _poolAddress) internal pure override returns (address) {
-        return _poolAddress;
+        return address(vaultV2);
     }
 
     function _getJoinPoolCalldata(
