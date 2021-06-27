@@ -104,7 +104,7 @@ contract BalancerV2Integration is PoolIntegration {
 
     /* ============ External Functions ============ */
 
-    
+    /**
     function getPool(bytes32 _poolId) external view override returns (address poolAddress, PoolSpecialization memory specialization) {
         (address poolAddress, PoolSpecialization memory specialization) = IVault(vault).getPool(_poolId); 
 

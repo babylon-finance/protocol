@@ -85,7 +85,7 @@ describe.only('BalancerV2IntegrationTest', function () {
       expect(await vault.getAuthorizer()).to.equal(authorizer.address);
     });
   });
-  
+  /**
   describe.only('Liquidity pools', () => {
     it('get pool id', async () => {
       const { balances: previousPoolBalances } = await balancerV2Integration.getPoolTokens(poolId);
