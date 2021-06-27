@@ -19,6 +19,7 @@ import './IVault.sol';
 import './IPoolSwapStructs.sol';
 
 /**
+ * Balancer V1
  * @dev Interface for adding and removing liquidity that all Pool contracts should implement. Note that this is not
  * the complete Pool contract interface, as it is missing the swap hooks. Pool contracts should also inherit from
  * either IGeneralPool or IMinimalSwapInfoPool

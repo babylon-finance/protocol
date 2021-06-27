@@ -2,6 +2,7 @@
 
 pragma solidity >=0.7.0 <0.9.0;
 
+// Balancer V1
 interface IBPool {
     function isPublicSwap() external view returns (bool);
 

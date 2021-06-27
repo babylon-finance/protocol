@@ -4,6 +4,7 @@ pragma solidity >=0.7.0 <0.9.0;
 
 import {IBPool} from './IBPool.sol';
 
+// Balancer V1
 interface IBFactory {
     function isBPool(address b) external view returns (bool);
 

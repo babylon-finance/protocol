@@ -15,17 +15,17 @@
 pragma experimental ABIEncoderV2;
 
 import '@openzeppelin/contracts/token/ERC20/IERC20.sol';
-import './ISignaturesValidator.sol';
-import './ITemporarilyPausable.sol';
 
 import './IAsset.sol';
-import './IAuthorizer.sol';
-import './IFlashLoanRecipient.sol';
-import './IProtocolFeesCollector.sol';
 
 pragma solidity ^0.7.0;
 
+interface IAsset {
+    // solhint-disable-previous-line no-empty-blocks
+}
+
 /**
+ * Balancer V2
  * @dev Full external interface for the Vault core contract - no external or public methods exist in the contract that
  * don't override one of these declarations.
  */
