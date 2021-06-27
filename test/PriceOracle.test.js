@@ -2,7 +2,6 @@ const { expect } = require('chai');
 const { ethers } = require('hardhat');
 
 const addresses = require('../lib/addresses');
-const { TWAP_ORACLE_WINDOW, TWAP_ORACLE_GRANULARITY } = require('../lib/system.js');
 const { from, eth, parse } = require('../lib/helpers');
 const { setupTests } = require('./fixtures/GardenFixture');
 
@@ -77,21 +76,10 @@ const tokens = [
 
 describe('PriceOracle', function () {
   let priceOracle;
-  let univ3;
   let owner;
 
   beforeEach(async () => {
     ({ priceOracle, owner } = await setupTests()());
-    univ3 = await ethers.getContractAt('UniswapTWAPV3', (await priceOracle.getAdapters())[0]);
-  });
-
-  describe('Uniswap TWAP V3', function () {
-    tokens.forEach(({ name, tokenIn, tokenOut, value }) => {
-      it(`should get the price of ${name}`, async function () {
-        const { price } = await univ3.getPrice(tokenIn, tokenOut);
-        expect(price).to.be.closeTo(value, value.div(50));
-      });
-    });
   });
 
   describe('Price Oracle', function () {
