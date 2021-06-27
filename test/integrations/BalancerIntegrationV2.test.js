@@ -77,65 +77,6 @@ describe.only('BalancerV2IntegrationTest', function () {
     });
   });
   describe.only('Vault Authorizer', () => {
-    it('has an initial authorizer', async () => {
-      //const vault = await deployVault(authorizer.address);
-      const authorizer = await balancerV2Integration.getAuthorizer();
-      console.log('Authorizer', authorizer);
 
-      expect(await vault.getAuthorizer()).to.equal(authorizer.address);
-    });
   });
-  /**
-  describe.only('Liquidity pools', () => {
-    it('get pool id', async () => {
-      const { balances: previousPoolBalances } = await balancerV2Integration.getPoolTokens(poolId);
-      console.log('balances before', balances.toString());
-      await joinPool({ dueProtocolFeeAmounts, fromRelayer, fromInternalBalance, signature });
-      const { balances: currentPoolBalances } = await balancerV2Integration.getPoolTokens(poolId);
-      console.log('balances after', balances.toString());
-  });
-  /**
-    it('assigns tokens to the pool', async () => {
-        const { balances: previousPoolBalances } = await balancerV2Integration.getPoolTokens(poolId);
-        console.log('balances before', balances.toString());
-        await joinPool({ dueProtocolFeeAmounts, fromRelayer, fromInternalBalance, signature });
-        const { balances: currentPoolBalances } = await balancerV2Integration.getPoolTokens(poolId);
-        console.log('balances after', balances.toString());
-    }); */
-  // });
-/**
-  describe('Liquidity Pools', function () {
-    let daiWethPool;
-
-    beforeEach(async () => {
-      daiWethPool = await ethers.getContractAt('IBPool', addresses.balancer.pools.wethdai);
-    });
-
-    it('check that a valid pool is valid', async function () {
-      expect(await balancerIntegration.isPool(addresses.balancer.pools.wethdai)).to.equal(true);
-    });
-
-    it('check that an invalid pool is not valid', async function () {
-      expect(await balancerIntegration.isPool(ADDRESS_ZERO)).to.equal(false);
-    });
-
-    it('can enter and exit the weth dai pool', async function () {
-      const strategyContract = await createStrategy(
-        'lp',
-        'vote',
-        [signer1, signer2, signer3],
-        balancerIntegration.address,
-        garden1,
-        DEFAULT_STRATEGY_PARAMS,
-        addresses.balancer.pools.wethdai,
-      );
-      await executeStrategy(strategyContract);
-      expect(await strategyContract.capitalAllocated()).to.equal(ONE_ETH);
-      expect(await daiWethPool.balanceOf(strategyContract.address)).to.be.gt(0);
-
-      await finalizeStrategy(strategyContract, 0);
-      expect(await daiWethPool.balanceOf(strategyContract.address)).to.equal(0);
-    });
-  });
-   */
 });

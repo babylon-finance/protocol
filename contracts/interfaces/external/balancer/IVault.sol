@@ -16,8 +16,6 @@ pragma experimental ABIEncoderV2;
 
 import '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 
-import './IAsset.sol';
-
 pragma solidity ^0.7.0;
 
 interface IAsset {
@@ -30,10 +28,30 @@ interface IAsset {
  * don't override one of these declarations.
  */
 interface IVault {
+
+  // Pools
+  //
+  // There are three specialization settings for Pools, which allow for cheaper swaps at the cost of reduced
+  // functionality:
+  //
+  //  - General: no specialization, suited for all Pools. IGeneralPool is used for swap request callbacks, passing the
+  // balance of all tokens in the Pool. These Pools have the largest swap costs (because of the extra storage reads),
+  // which increase with the number of registered tokens.
+  //
+  //  - Minimal Swap Info: IMinimalSwapInfoPool is used instead of IGeneralPool, which saves gas by only passing the
+  // balance of the two tokens involved in the swap. This is suitable for some pricing algorithms, like the weighted
+  // constant product one popularized by Balancer V1. Swap costs are smaller compared to general Pools, and are
+  // independent of the number of registered tokens.
+  //
+  //  - Two Token: only allows two tokens to be registered. This achieves the lowest possible swap gas cost. Like
+  // minimal swap info Pools, these are called via IMinimalSwapInfoPool.
+
+  enum PoolSpecialization { GENERAL, MINIMAL_SWAP_INFO, TWO_TOKEN }
+
     /**
      * @dev Returns a Pool's contract address and specialization setting.
      */
-    function getPool(bytes32 poolId) external view returns (address, PoolSpecialization);
+  function getPool(bytes32 poolId) external view returns (address, PoolSpecialization);
 
     /**
      * @dev Returns detailed information for a Pool's registered token.
