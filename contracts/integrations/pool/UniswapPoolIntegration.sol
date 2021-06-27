@@ -52,14 +52,12 @@ contract UniswapPoolIntegration is PoolIntegration {
      * Creates the integration
      *
      * @param _controller                   Address of the controller
-     * @param _weth                         Address of the WETH ERC20
      * @param _uniswapRouterAddress         Address of Uniswap router
      */
     constructor(
         IBabController _controller,
-        address _weth,
         address _uniswapRouterAddress
-    ) PoolIntegration('uniswap_pool', _weth, _controller) {
+    ) PoolIntegration('uniswap_pool', _controller) {
         uniRouter = IUniswapV2Router(_uniswapRouterAddress);
     }
 

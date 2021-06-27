@@ -46,15 +46,13 @@ contract AaveBorrowIntegration is BorrowIntegration {
     /**
      * Creates the integration
      *
-     * @param _weth                   Address of the WETH ERC20
      * @param _controller             Address of the controller
      * @param _maxCollateralFactor    Max collateral factor allowed (from 0 to a 100)
      */
     constructor(
         IBabController _controller,
-        address _weth,
         uint256 _maxCollateralFactor
-    ) BorrowIntegration('aaveborrow', _weth, _controller, _maxCollateralFactor) {}
+    ) BorrowIntegration('aaveborrow', _controller, _maxCollateralFactor) {}
 
     /* ============ External Functions ============ */
     /**

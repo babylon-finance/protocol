@@ -34,14 +34,12 @@ contract SushiswapPoolIntegration is UniswapPoolIntegration {
      * Creates the integration
      *
      * @param _controller                   Address of the controller
-     * @param _weth                         Address of the WETH ERC20
      * @param _sushiswapRouterAddress         Address of Sushiswap router
      */
     constructor(
         IBabController _controller,
-        address _weth,
         address _sushiswapRouterAddress
-    ) UniswapPoolIntegration(_controller, _weth, _sushiswapRouterAddress) {
+    ) UniswapPoolIntegration(_controller, _sushiswapRouterAddress) {
         name = 'sushiswap_pool';
     }
 }

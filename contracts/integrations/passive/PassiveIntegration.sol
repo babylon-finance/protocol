@@ -75,14 +75,12 @@ abstract contract PassiveIntegration is BaseIntegration, ReentrancyGuard, IPassi
      * Creates the integration
      *
      * @param _name                   Name of the integration
-     * @param _weth                   Address of the WETH ERC20
      * @param _controller             Address of the controller
      */
     constructor(
         string memory _name,
-        address _weth,
         IBabController _controller
-    ) BaseIntegration(_name, _weth, _controller) {}
+    ) BaseIntegration(_name, _controller) {}
 
     /* ============ External Functions ============ */
 

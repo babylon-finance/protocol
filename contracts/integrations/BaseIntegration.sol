@@ -51,7 +51,7 @@ abstract contract BaseIntegration {
     // Address of the controller
     IBabController public controller;
     // Wrapped ETH address
-    address public immutable weth;
+    address internal constant WETH = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
     // Name of the integration
     string public name;
 
@@ -61,19 +61,16 @@ abstract contract BaseIntegration {
      * Creates the integration
      *
      * @param _name                   Name of the integration
-     * @param _weth                   Address of the WETH ERC20
      * @param _controller             Address of the controller
      */
 
     constructor(
         string memory _name,
-        address _weth,
         IBabController _controller
     ) {
         require(address(_controller) != address(0), 'Controller must be defined');
         name = _name;
         controller = _controller;
-        weth = _weth;
     }
 
     /* ============ External Functions ============ */
