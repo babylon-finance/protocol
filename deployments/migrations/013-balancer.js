@@ -13,14 +13,14 @@ module.exports = async ({
   const { deployer } = await getNamedAccounts();
   const signer = await getSigner(deployer);
   const gasPrice = await getRapid();
-  const contract = 'BalancerIntegration';
+  const contract = 'BalancerV2Integration';
 
   const controller = await deployments.get('BabControllerProxy');
   const controllerContract = await ethers.getContractAt('BabController', controller.address, signer);
 
   const deployment = await deploy(contract, {
     from: deployer,
-    args: [controller.address, addresses.tokens.WETH, addresses.balancer.factory],
+    args: [controller.address, addresses.tokens.WETH, addresses.balancer.vault, addresses.balancer.weigthed_pool_factory, addresses.balancer.oracle_pool_factory, addresses.balancer.stable_pool_factory],
     log: true,
     gasPrice,
   });
