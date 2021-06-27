@@ -85,7 +85,7 @@ describe.only('BalancerV2IntegrationTest', function () {
       expect(await vault.getAuthorizer()).to.equal(authorizer.address);
     });
   });
-
+  /**
   describe.only('Liquidity pools', () => {
     it('get pool id', async () => {
       const { balances: previousPoolBalances } = await balancerV2Integration.getPoolTokens(poolId);
@@ -93,8 +93,8 @@ describe.only('BalancerV2IntegrationTest', function () {
       await joinPool({ dueProtocolFeeAmounts, fromRelayer, fromInternalBalance, signature });
       const { balances: currentPoolBalances } = await balancerV2Integration.getPoolTokens(poolId);
       console.log('balances after', balances.toString());
-    });
-    /**
+  });
+  /**
     it('assigns tokens to the pool', async () => {
         const { balances: previousPoolBalances } = await balancerV2Integration.getPoolTokens(poolId);
         console.log('balances before', balances.toString());
@@ -103,7 +103,7 @@ describe.only('BalancerV2IntegrationTest', function () {
         console.log('balances after', balances.toString());
     }); */
   });
-  /**
+/**
   describe('Liquidity Pools', function () {
     let daiWethPool;
 
