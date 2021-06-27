@@ -27,7 +27,6 @@ import {IBasePool} from '../../interfaces/external/balancer/IBasePool.sol';
 import {IVault} from '../../interfaces/external/balancer/IVault.sol';
 import {IAsset} from '../../interfaces/external/balancer/IAsset.sol';
 
-
 /**
  * @title BalancerIntegration
  * @author Babylon Finance Protocol
@@ -43,15 +42,13 @@ contract BalancerIntegration is PoolIntegration {
     // Address of Balancer Vault
     IVault public vault; // 0xBA12222222228d8Ba445958a75a0704d566BF2C8
 
-    
-    
     struct JoinPoolRequest {
         IAsset[] assets;
         uint256[] maxAmountsIn;
         bytes userData;
         bool fromInternalBalance;
     }
-        
+
     struct ExitPoolRequest {
         IAsset[] assets;
         uint256[] minAmountsOut;
@@ -60,8 +57,7 @@ contract BalancerIntegration is PoolIntegration {
     }
     // Mapping for each strategy
     mapping(address => JoinPoolRequest) private joinRequest;
-    mapping(address => ExitPoolRequest) private exitRequest;  
-
+    mapping(address => ExitPoolRequest) private exitRequest;
 
     /* ============ Constructor ============ */
 
@@ -134,7 +130,7 @@ contract BalancerIntegration is PoolIntegration {
     function _getSpender(address _poolAddress) internal pure override returns (address) {
         return _poolAddress;
     }
-    */ 
+    */
     /**
      * Return join pool calldata which is already generated from the pool API
      *
@@ -165,7 +161,14 @@ contract BalancerIntegration is PoolIntegration {
         )
     {
         // Encode method data for Garden to invoke
-        bytes memory methodData = abi.encodeWithSignature('joinPool(bytes32,address, address, JoinPoolRequest)', _poolId, _sender, _recipient, _request);
+        bytes memory methodData =
+            abi.encodeWithSignature(
+                'joinPool(bytes32,address, address, JoinPoolRequest)',
+                _poolId,
+                _sender,
+                _recipient,
+                _request
+            );
 
         return (_poolId, 0, methodData);
     }
@@ -203,7 +206,14 @@ contract BalancerIntegration is PoolIntegration {
         require(_request.minAmountsOut.length > 1, 'Has to provide _minAmountsOut');
         require(_request.assets.length == _request.minAmountsOut.length, 'Length mismatch');
         // Encode method data for Garden to invoke
-        bytes memory methodData = abi.encodeWithSignature('exitPool(bytes32, address, address, ExitPoolRequest)', _poolId, _sender, _recipient, _request);
+        bytes memory methodData =
+            abi.encodeWithSignature(
+                'exitPool(bytes32, address, address, ExitPoolRequest)',
+                _poolId,
+                _sender,
+                _recipient,
+                _request
+            );
 
         return (_poolId, 0, methodData);
     }

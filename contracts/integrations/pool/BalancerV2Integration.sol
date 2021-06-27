@@ -32,9 +32,6 @@ import {IAsset} from '../../interfaces/external/balancer/IAsset.sol';
 import {IBPool} from '../../interfaces/external/balancer/IBPool.sol';
 import {IBFactory} from '../../interfaces/external/balancer/IBFactory.sol';
 
-
-
-
 /**
  * @title BalancerIntegration
  * @author Babylon Finance Protocol
@@ -54,14 +51,13 @@ contract BalancerV2Integration is PoolIntegration {
     IBasePool public stableFactory; // 0x791F9fD8CFa2Ea408322e172af10186b2D73baBD
     IBFactory public coreFactory;
 
-    
     struct JoinPoolRequest {
         IAsset[] assets;
         uint256[] maxAmountsIn;
         bytes userData;
         bool fromInternalBalance;
     }
-        
+
     struct ExitPoolRequest {
         IAsset[] assets;
         uint256[] minAmountsOut;
@@ -69,15 +65,15 @@ contract BalancerV2Integration is PoolIntegration {
         bool toInternalBalance;
     }
 
-    struct PoolSpecialization { // GENERAL, MINIMAL_SWAP_INFO, TWO_TOKEN
+    struct PoolSpecialization {
+        // GENERAL, MINIMAL_SWAP_INFO, TWO_TOKEN
         string GENERAL;
         string MINIMAL_SWAP_INFO;
         string TWO_TOKEN;
     }
     // Mapping for each strategy
     mapping(address => JoinPoolRequest) private joinRequest;
-    mapping(address => ExitPoolRequest) private exitRequest;  
-
+    mapping(address => ExitPoolRequest) private exitRequest;
 
     /* ============ Constructor ============ */
 
@@ -104,18 +100,21 @@ contract BalancerV2Integration is PoolIntegration {
 
     /* ============ External Functions ============ */
 
-    
-    function getPool(bytes32 _poolId) external view override returns (address poolAddress, PoolSpecialization memory specialization) {
-        (address poolAddress, PoolSpecialization memory specialization) = IVault(vault).getPool(_poolId); 
-
+    function getPool(bytes32 _poolId)
+        external
+        view
+        override
+        returns (address poolAddress, PoolSpecialization memory specialization)
+    {
+        (address poolAddress, PoolSpecialization memory specialization) = IVault(vault).getPool(_poolId);
     }
-    
+
     /** 
     function getPoolTokens2(bytes32 _poolId) external view returns (IERC20[] memory, uint256[] memory, uint256) {
         //(IERC20[] storage tokens, uint256[] memory balances, uint256 lastChangeBlock) =  IVault(vault).getPoolTokens(_poolId);
         //return (tokens, balances, lastChangeBlock);
     }
-    */ 
+    */
     function getPoolTokens(address _poolAddress) external view override returns (address[] memory) {
         return IBPool(_poolAddress).getCurrentTokens();
     }
@@ -192,7 +191,7 @@ contract BalancerV2Integration is PoolIntegration {
         bytes userData
     ) returns (uint256[] amountsOut, uint256[] dueProtocolFeeAmounts) {
     */
-    
+
     function getPoolTokensOut(
         address _poolAddress,
         address _poolToken,
@@ -200,7 +199,7 @@ contract BalancerV2Integration is PoolIntegration {
     ) external view override returns (uint256) {
         return 0;
     }
-    
+
     function getPoolMinAmountsOut(address _poolAddress, uint256 _liquidity)
         external
         view
@@ -212,19 +211,19 @@ contract BalancerV2Integration is PoolIntegration {
 
     /* ============ Internal Functions ============ */
 
-     function _isPool(address _poolAddress) internal view override returns (bool) {
+    function _isPool(address _poolAddress) internal view override returns (bool) {
         return coreFactory.isBPool(_poolAddress);
     }
 
     function _isPool2(bytes32 _poolId) internal view returns (bool) {
-        (address pool ,)  = IVault(vault).getPool(_poolId);
+        (address pool, ) = IVault(vault).getPool(_poolId);
         return pool != address(0);
     }
 
     function _getSpender(address _poolAddress) internal pure override returns (address) {
         return _poolAddress;
     }
-    
+
     function _getJoinPoolCalldata(
         address, /* _strategy */
         address _poolAddress,
@@ -246,7 +245,7 @@ contract BalancerV2Integration is PoolIntegration {
 
         return (_poolAddress, 0, methodData);
     }
-    
+
     /**
      * Return join pool calldata which is already generated from the pool API
      *
@@ -269,8 +268,8 @@ contract BalancerV2Integration is PoolIntegration {
     )
         internal
         pure
-        /* override */
         returns (
+            /* override */
             bytes32,
             uint256,
             bytes memory
@@ -285,12 +284,18 @@ contract BalancerV2Integration is PoolIntegration {
         // Encode method data for Garden to invoke
         //bytes memory methodData = abi.encodeWithSignature('joinPool(bytes32,address, address, JoinPoolRequest)', _poolId, _sender, _recipient, _request);
 
-        bytes memory methodData = abi.encodeWithSignature('joinPool(bytes32,address, address, JoinPoolRequest)', _poolId, _sender, _recipient);
+        bytes memory methodData =
+            abi.encodeWithSignature(
+                'joinPool(bytes32,address, address, JoinPoolRequest)',
+                _poolId,
+                _sender,
+                _recipient
+            );
 
         return (_poolId, 0, methodData);
     }
 
-   /**
+    /**
      * Return exit pool calldata which is already generated from the pool API
      *
      * hparam  _strategy                 Address of the strategy
@@ -349,8 +354,8 @@ contract BalancerV2Integration is PoolIntegration {
     )
         internal
         pure
-        /* override */
         returns (
+            /* override */
             bytes32,
             uint256,
             bytes memory
@@ -362,7 +367,13 @@ contract BalancerV2Integration is PoolIntegration {
         // Encode method data for Garden to invoke
         //bytes memory methodData = abi.encodeWithSignature('exitPool(bytes32, address, address, ExitPoolRequest)', _poolId, _sender, _recipient, _request);
 
-        bytes memory methodData = abi.encodeWithSignature('exitPool(bytes32, address, address, ExitPoolRequest)', _poolId, _sender, _recipient);
+        bytes memory methodData =
+            abi.encodeWithSignature(
+                'exitPool(bytes32, address, address, ExitPoolRequest)',
+                _poolId,
+                _sender,
+                _recipient
+            );
 
         return (_poolId, 0, methodData);
     }

@@ -30,12 +30,10 @@ interface IAsset {
  * don't override one of these declarations.
  */
 interface IVault {
-
     /**
      * @dev Returns a Pool's contract address and specialization setting.
      */
     function getPool(bytes32 poolId) external view returns (address, PoolSpecialization);
-
 
     /**
      * @dev Returns detailed information for a Pool's registered token.
