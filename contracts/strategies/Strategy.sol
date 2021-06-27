@@ -883,7 +883,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         address _receiveToken
     ) internal returns (uint256) {
         address tradeIntegration = IBabController(controller).defaultTradeIntegration();
-        // Uses on chain oracle for all internal strategy operations to avoid attacks        // Updates UniSwap TWAP
+        // Uses on chain oracle for all internal strategy operations to avoid attacks
         IPriceOracle oracle = IPriceOracle(IBabController(controller).priceOracle());
         uint256 pricePerTokenUnit = oracle.getPrice(_sendToken, _receiveToken);
         // minAmount must have receive token decimals
