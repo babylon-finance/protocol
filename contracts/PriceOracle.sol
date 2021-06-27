@@ -1,8 +1,6 @@
 /*
     Copyright 2021 Babylon Finance
 
-    Modified from (Set Protocol SetValuer)
-
     Licensed under the Apache License, Version 2.0 (the "License");
     you may not use this file except in compliance with the License.
     You may obtain a copy of the License at
@@ -19,148 +17,161 @@
 */
 
 pragma solidity 0.7.6;
+
+import 'hardhat/console.sol';
+
 import {Ownable} from '@openzeppelin/contracts/access/Ownable.sol';
 import {ERC20} from '@openzeppelin/contracts/token/ERC20/ERC20.sol';
+import '@uniswap/v3-core/contracts/interfaces/IUniswapV3Factory.sol';
+import '@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol';
+import '@uniswap/v3-core/contracts/libraries/TickMath.sol';
+import '@uniswap/v3-periphery/contracts/libraries/OracleLibrary.sol';
+import {SafeCast} from '@openzeppelin/contracts/utils/SafeCast.sol';
 
-import {AddressArrayUtils} from './lib/AddressArrayUtils.sol';
-import {PreciseUnitMath} from './lib/PreciseUnitMath.sol';
-
-import {IBabController} from './interfaces/IBabController.sol';
-import {IUniswapAnchoredView} from './interfaces/external/compound/IUniswapAnchoredView.sol';
-import {IOracleAdapter} from './interfaces/IOracleAdapter.sol';
 import {IPriceOracle} from './interfaces/IPriceOracle.sol';
+
+import {PreciseUnitMath} from './lib/PreciseUnitMath.sol';
+import {LowGasSafeMath as SafeMath} from './lib/LowGasSafeMath.sol';
 
 /**
  * @title PriceOracle
- * @author Babylon Finance
+ * @author Babylon Finance Protocol
  *
- * Contract that returns the price for any given asset pair. Price is retrieved either directly from an oracle,
- * calculated using common asset pairs, or uses external data to calculate price.
- * Note: Prices are returned in preciseUnits (i.e. 18 decimals of precision)
+ * Uses Uniswap V3 to get a price of a token pair
  */
 contract PriceOracle is Ownable, IPriceOracle {
+    using PreciseUnitMath for int256;
     using PreciseUnitMath for uint256;
-    using AddressArrayUtils for address[];
-
-    /* ============ Events ============ */
-
-    event AdapterAdded(address _adapter);
-    event AdapterRemoved(address _adapter);
+    using SafeMath for uint256;
 
     /* ============ State Variables ============ */
 
-    // Address of the Controller contract
-    IBabController public controller;
+    /* ============ Constants ============ */
 
-    address public constant WETH = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
+    // Address of Uniswap factory
+    IUniswapV3Factory internal constant factory = IUniswapV3Factory(0x1F98431c8aD98523631AE4a59f267346ea31F984);
 
-    // List of IOracleAdapters used to return prices of third party protocols (e.g. Uniswap, Compound, Balancer)
-    address[] public adapters;
+    address private constant WETH = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
+
+    // the desired seconds agos array passed to the observe method
+    uint32 private constant SECONDS_GRANULARITY = 30;
+
+    uint24 private constant FEE_LOW = 500;
+    uint24 private constant FEE_MEDIUM = 3000;
+    uint24 private constant FEE_HIGH = 10000;
+    int24 private constant maxTwapDeviation = 100;
+    uint160 private constant maxLiquidityDeviationFactor = 50;
+    int24 private constant baseThreshold = 1000;
 
     /* ============ Constructor ============ */
-
-    /**
-     * Set state variables and map asset pairs to their oracles
-     *
-     * @param _controller                   Address of controller contract
-     * @param _adapters                     List of adapters used to price assets created by other protocols
-     */
-    constructor(IBabController _controller, address[] memory _adapters) {
-        controller = _controller;
-        adapters = _adapters;
-    }
 
     /* ============ External Functions ============ */
 
     /**
-     * SYSTEM-ONLY PRIVILEGE: Find price of passed asset pair, if possible. The steps it takes are:
-     *  1) Check to see if a direct or inverse oracle of the pair exists,
-     *  2) If not, use masterQuoteAsset to link pairs together (i.e. BTC/ETH and ETH/USDC
-     *     could be used to calculate BTC/USDC).
-     *  3) If not, check oracle adapters in case one or more of the assets needs external protocol data
-     *     to price.
-     *  4) If all steps fail, revert.
-     *
-     * @param _assetOne         Address of first asset in pair
-     * @param _assetTwo         Address of second asset in pair
-     * @return                  Price of asset pair to 18 decimals of precision
+     * Returns the amount out corresponding to the amount in for a given token
+     * @param _tokenIn              Address of the first token
+     * @param _tokenOut             Address of the second token
+     * @return price                Price of the pair
      */
-    function getPrice(address _assetOne, address _assetTwo) external view override returns (uint256) {
+    function getPrice(address _tokenIn, address _tokenOut) public view override returns (uint256 price) {
+        bool found;
+        uint256 price;
+        int24 tick;
+        IUniswapV3Pool pool;
+
         // Same asset. Returns base unit
-        if (_assetOne == _assetTwo) {
+        if (_tokenIn == _tokenOut) {
             return 10**18;
         }
 
-        (bool found, uint256 price) = _getPriceFromAdapters(_assetOne, _assetTwo);
+        if (_tokenIn != WETH && _tokenOut != WETH) {
+            return getPrice(_tokenIn, WETH).preciseDiv(getPrice(_tokenOut, WETH));
+        }
+        // We try the low pool first
+        (found, pool, tick) = checkPool(_tokenIn, _tokenOut, FEE_LOW);
+        if (!found) {
+            (found, pool, tick) = checkPool(_tokenIn, _tokenOut, FEE_MEDIUM);
+        }
+        if (!found) {
+            (found, pool, tick) = checkPool(_tokenIn, _tokenOut, FEE_HIGH);
+        }
+        // No valid price
         require(found, 'Price not found');
 
+        price = OracleLibrary
+            .getQuoteAtTick(
+            tick,
+            // because we use 1e18 as a precision unit
+            uint128(uint256(1e18).mul(10**(uint256(18).sub(ERC20(_tokenOut).decimals())))),
+            _tokenIn,
+            _tokenOut
+        )
+            .div(10**(uint256(18).sub(ERC20(_tokenIn).decimals())));
         return price;
     }
 
-    /**
-     * GOVERNANCE FUNCTION: Add new oracle adapter.
-     *
-     * @param _adapter         Address of new adapter
-     */
-    function addAdapter(address _adapter) external onlyOwner {
-        require(!adapters.contains(_adapter), 'Adapter already exists');
-        adapters.push(_adapter);
-
-        emit AdapterAdded(_adapter);
-    }
-
-    /**
-     * GOVERNANCE FUNCTION: Remove oracle adapter.
-     *
-     * @param _adapter         Address of  adapter to remove
-     */
-    function removeAdapter(address _adapter) external onlyOwner {
-        adapters = adapters.remove(_adapter);
-
-        emit AdapterRemoved(_adapter);
-    }
-
-    /* ============ External View Functions ============ */
-
-    /**
-     * Returns an array of adapters
-     */
-    function getAdapters() external view returns (address[] memory) {
-        return adapters;
-    }
-
-    /**
-     * Calls the update function in every adapter.
-     * e.g Uniswap TWAP
-     * @param _assetOne       First Asset of the pair
-     * @param _assetTwo       Second Asset of the pair
-     */
-    function updateAdapters(address _assetOne, address _assetTwo) external override {
-        for (uint256 i = 0; i < adapters.length; i += 1) {
-            IOracleAdapter(adapters[i]).update(_assetOne, _assetTwo);
+    function checkPool(
+        address _tokenIn,
+        address _tokenOut,
+        uint24 fee
+    )
+        internal
+        view
+        returns (
+            bool,
+            IUniswapV3Pool,
+            int24
+        )
+    {
+        int24 tick;
+        IUniswapV3Pool pool = IUniswapV3Pool(factory.getPool(_tokenIn, _tokenOut, fee));
+        if (address(pool) != address(0)) {
+            (, tick, , , , , ) = pool.slot0();
+            return (_checkPrice(tick, pool), pool, tick);
         }
+        return (false, IUniswapV3Pool(0), 0);
     }
 
     /* ============ Internal Functions ============ */
 
-    /**
-     * Scan adapters to see if one or more of the assets needs external protocol data to be priced. If
-     * does not exist return false and no price.
-     *
-     * @param _assetOne         Address of first asset in pair
-     * @param _assetTwo         Address of second asset in pair
-     * @return bool             Boolean indicating if oracle exists
-     * @return uint256          Price of asset pair to 18 decimal precision (if exists, otherwise 0)
-     */
-    function _getPriceFromAdapters(address _assetOne, address _assetTwo) internal view returns (bool, uint256) {
-        for (uint256 i = 0; i < adapters.length; i++) {
-            (bool found, uint256 price) = IOracleAdapter(adapters[i]).getPrice(_assetOne, _assetTwo);
-
-            if (found) {
-                return (found, price);
-            }
+    /// @dev Revert if current price is too close to min or max ticks allowed
+    /// by Uniswap, or if it deviates too much from the TWAP. Should be called
+    /// whenever base and limit ranges are updated. In practice, prices should
+    /// only become this extreme if there's no liquidity in the Uniswap pool.
+    function _checkPrice(int24 mid, IUniswapV3Pool _pool) internal view returns (bool) {
+        int24 tickSpacing = _pool.tickSpacing();
+        // TODO: Add the other param from charm
+        if (mid < TickMath.MIN_TICK + baseThreshold + tickSpacing) {
+            // "price too low"
+            return false;
+        }
+        if (mid > TickMath.MAX_TICK - baseThreshold - tickSpacing) {
+            // "price too high"
+            return false;
         }
 
-        return (false, 0);
+        // Check TWAP deviation. This check prevents price manipulation before
+        // the rebalance and also avoids rebalancing when price has just spiked.
+        int56 twap = _getTwap(_pool);
+
+        int56 deviation = mid > twap ? mid - twap : twap - mid;
+        // Fail twap check
+        return deviation < maxTwapDeviation;
+    }
+
+    // given the cumulative prices of the start and end of a period, and the length of the period, compute the average
+    function _getTwap(IUniswapV3Pool _pool) private view returns (int56 twap) {
+        uint32[] memory secondsAgo = new uint32[](2);
+        secondsAgo[0] = SECONDS_GRANULARITY;
+        secondsAgo[1] = 0;
+        // observe fails if the pair has no observations
+        try _pool.observe(secondsAgo) returns (
+            int56[] memory tickCumulatives,
+            uint160[] memory secondsPerLiquidityCumulativeX128s
+        ) {
+            return (tickCumulatives[1] - tickCumulatives[0]) / SECONDS_GRANULARITY;
+        } catch {
+            return 0;
+        }
     }
 }

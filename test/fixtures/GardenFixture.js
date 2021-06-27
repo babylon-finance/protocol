@@ -1,5 +1,4 @@
 const { deployments } = require('hardhat');
-const { TWAP_ORACLE_WINDOW, TWAP_ORACLE_GRANULARITY } = require('../../lib/system.js');
 const { GARDEN_PARAMS } = require('../../lib/constants.js');
 const addresses = require('../../lib/addresses');
 const { impersonateAddress } = require('../../lib/rpc');
