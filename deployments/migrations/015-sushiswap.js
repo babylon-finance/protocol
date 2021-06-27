@@ -20,7 +20,7 @@ module.exports = async ({
 
   const deployment = await deploy(contract, {
     from: deployer,
-    args: [controller.address, addresses.tokens.WETH, addresses.sushiswap.router],
+    args: [controller.address, addresses.sushiswap.router],
     log: true,
     gasPrice,
   });

@@ -70,10 +70,9 @@ contract CompoundLendIntegration is LendIntegration {
     /**
      * Creates the integration
      *
-     * @param _weth                   Address of the WETH ERC20
      * @param _controller             Address of the controller
      */
-    constructor(IBabController _controller, address _weth) LendIntegration('compoundlend', _weth, _controller) {
+    constructor(IBabController _controller) LendIntegration('compoundlend', _controller) {
         assetToCToken[0x6B175474E89094C44Da98b954EedeAC495271d0F] = 0x5d3a536E4D6DbD6114cc1Ead35777bAB948E3643; // DAI
         assetToCToken[0x1f9840a85d5aF5bf1D1762F925BDADdC4201F984] = 0x35A18000230DA775CAc24873d00Ff85BccdeD550; // UNI
         assetToCToken[address(0)] = 0x4Ddc2D193948926D02f9B1fE9e1daa0718270ED5; // ETH

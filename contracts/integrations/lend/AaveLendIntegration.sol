@@ -59,10 +59,9 @@ contract AaveLendIntegration is LendIntegration {
     /**
      * Creates the integration
      *
-     * @param _weth                   Address of the WETH ERC20
      * @param _controller             Address of the controller
      */
-    constructor(IBabController _controller, address _weth) LendIntegration('aavelend', _weth, _controller) {}
+    constructor(IBabController _controller) LendIntegration('aavelend', _controller) {}
 
     function getInvestmentTokenAmount(address _address, address _assetToken) public view override returns (uint256) {
         return IERC20(_getInvestmentToken(_assetToken)).balanceOf(_address);

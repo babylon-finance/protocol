@@ -45,14 +45,9 @@ contract BalancerIntegration is PoolIntegration {
      * Creates the integration
      *
      * @param _controller                   Address of the controller
-     * @param _weth                         Address of the WETH ERC20
      * @param _coreFactoryAddress           Address of Balancer core factory address
      */
-    constructor(
-        IBabController _controller,
-        address _weth,
-        address _coreFactoryAddress
-    ) PoolIntegration('balancer', _weth, _controller) {
+    constructor(IBabController _controller, address _coreFactoryAddress) PoolIntegration('balancer', _controller) {
         coreFactory = IBFactory(_coreFactoryAddress);
     }
 
