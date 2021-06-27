@@ -906,15 +906,15 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
 
     function _transferStrategyPrincipal() internal {
         address reserveAsset = garden.reserveAsset();
-        int256 reserveAssetDelta = capitalReturned.toInt256().sub(capitalAllocated.toInt256());
-        uint256 protocolProfits = 0;
+        int256 strategyReturns = capitalReturned.toInt256().sub(capitalAllocated.toInt256());
+        uint256 protocolProfits;
         // Strategy returns were positive
-        uint256 profits = capitalReturned > capitalAllocated ? capitalReturned.sub(capitalAllocated) : 0; // in reserve asset (weth)
+        uint256 profits = capitalReturned > capitalAllocated ? capitalReturned.sub(capitalAllocated) : 0; // in reserve asset, e.g., WETH, USDC, DAI, WBTC
         if (capitalReturned >= capitalAllocated) {
             // Send weth performance fee to the protocol
             protocolProfits = IBabController(controller).protocolPerformanceFee().preciseMul(profits);
             IERC20(reserveAsset).safeTransfer(IBabController(controller).treasury(), protocolProfits);
-            reserveAssetDelta = reserveAssetDelta.add(int256(-protocolProfits));
+            strategyReturns = strategyReturns.sub(protocolProfits.toInt256());
         } else {
             // Returns were negative
             // Burn strategist stake and add the amount to the garden
@@ -928,7 +928,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
             }
 
             garden.burnStrategistStake(strategist, burningAmount);
-            reserveAssetDelta = reserveAssetDelta.add(int256(burningAmount));
+            strategyReturns = strategyReturns.add(int256(burningAmount));
         }
         // Return the balance back to the garden
         IERC20(reserveAsset).safeTransfer(address(garden), capitalReturned.sub(protocolProfits));
@@ -937,7 +937,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         garden.startWithdrawalWindow(
             capitalReturned.sub(profits).add((profits).preciseMul(lpsProfitSharing)),
             profits.sub(profits.preciseMul(lpsProfitSharing)).sub(protocolProfits),
-            reserveAssetDelta,
+            strategyReturns,
             address(this)
         );
         // Substract the Principal in the Rewards Distributor to update the Protocol power value
