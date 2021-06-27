@@ -60,32 +60,11 @@ contract BalancerV2Integration is PoolIntegration {
 
     /* ============ External Functions ============ */
 
-    /**
-    function getPool(bytes32 _poolId) external view override returns (address poolAddress, PoolSpecialization memory specialization) {
-        (address poolAddress, PoolSpecialization memory specialization) = IVault(vault).getPool(_poolId);
 
-    }
-
-    /**
-    function getPoolTokens2(bytes32 _poolId) external view returns (IERC20[] memory, uint256[] memory, uint256) {
+    function getPoolTokens(address _poolAddress) external view override returns (address[] memory) {
         //(IERC20[] storage tokens, uint256[] memory balances, uint256 lastChangeBlock) =  IVault(vault).getPoolTokens(_poolId);
         //return (tokens, balances, lastChangeBlock);
     }
-    */
-    function getPoolTokens(address _poolAddress) external view override returns (address[] memory) {
-        return IBPool(_poolAddress).getCurrentTokens();
-    }
-
-    /**
-    function getPoolWeights2(bytes32 _poolId) external view override returns (uint256[] memory) {
-        address[] storage poolTokens = IVault(vault).getPoolTokens(_poolId);
-        uint256[] storage result = new uint256[](poolTokens.length);
-        for (uint8 i = 0; i < poolTokens.length; i++) {
-            result[i] = IVault(vault).getNormalizedWeight(poolTokens[i]);
-        }
-        return result;
-    }
-    */
 
     function getPoolWeights(address _poolAddress) external view override returns (uint256[] memory) {
         address[] memory poolTokens = IBPool(_poolAddress).getCurrentTokens();
