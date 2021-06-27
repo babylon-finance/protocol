@@ -56,11 +56,13 @@ describe('BalancerIntegrationTest', function () {
         DEFAULT_STRATEGY_PARAMS,
         addresses.balancer.pools.wethdai,
       );
+      console.log('execute');
       await executeStrategy(strategyContract);
       expect(await strategyContract.capitalAllocated()).to.equal(ONE_ETH);
       expect(await daiWethPool.balanceOf(strategyContract.address)).to.be.gt(0);
-
+      console.log('finalize');
       await finalizeStrategy(strategyContract, 0);
+      console.log('fin');
       expect(await daiWethPool.balanceOf(strategyContract.address)).to.equal(0);
     });
   });
