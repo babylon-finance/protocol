@@ -913,7 +913,10 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         Contributor storage contributor = contributors[msg.sender];
         // If sold everything
         if (balanceOf(msg.sender) == 0) {
-            delete contributors[msg.sender];
+            contributor.lastDepositAt = 0;
+            contributor.initialDepositAt = 0;
+            contributor.withdrawnSince = 0;
+            contributor.totalDeposits = 0;
             totalContributors = totalContributors.sub(1);
         } else {
             contributor.withdrawnSince = contributor.withdrawnSince.add(_netflowQuantity);
