@@ -1,25 +1,80 @@
 const { expect } = require('chai');
 const { ethers } = require('hardhat');
 const { setupTests } = require('../fixtures/GardenFixture');
+const { createGarden, transferFunds, depositFunds } = require('../fixtures/GardenHelper');
 const {
   DEFAULT_STRATEGY_PARAMS,
   createStrategy,
+  getStrategy,
   executeStrategy,
   finalizeStrategy,
 } = require('../fixtures/StrategyHelper');
+const { eth, normalizeDecimals } = require('../utils/test-helpers');
 const addresses = require('../../lib/addresses');
-const { ADDRESS_ZERO, ONE_ETH } = require('../../lib/constants');
+const { ADDRESS_ZERO, ONE_ETH , STRATEGY_EXECUTE_MAP} = require('../../lib/constants');
 
-describe('BalancerIntegrationTest', function () {
+describe.only('BalancerIntegrationTest', function () {
   let balancerIntegration;
   let babController;
   let signer1;
   let signer2;
   let signer3;
   let garden1;
+  let owner;
+  let priceOracle;
+
+
+  async function getExpectedLPTokens(token, amount, poolAddress, token0, token1) {
+    const reservePriceInAsset0 = await priceOracle.connect(owner).getPrice(token, token0);
+    const reservePriceInAsset1 = await priceOracle.connect(owner).getPrice(token, token1);
+
+    const token0Contract = await ethers.getContractAt('ERC20', token0);
+    const token0Decimals = await token0Contract.decimals();
+
+    const token1Contract = await ethers.getContractAt('ERC20', token1);
+    const token1Decimals = await token1Contract.decimals();
+
+    const tokenContract = await ethers.getContractAt('ERC20', token);
+    const tokenDecimals = await tokenContract.decimals();
+
+    const amount0ToAdd = await normalizeDecimals(
+      tokenDecimals,
+      token0Decimals,
+      amount.mul(reservePriceInAsset0).div(2).div(eth(1)),
+    );
+    const amount1ToAdd = await normalizeDecimals(
+      tokenDecimals,
+      token1Decimals,
+      amount.mul(reservePriceInAsset1).div(2).div(eth(1)),
+    );
+
+    // OneInch documentation
+
+    const poolTotalSupply = await poolAddress.totalSupply();
+
+    let balanceToken0 = await token0Contract.balanceOf(poolAddress.address);
+    let balanceToken1 = await token1Contract.balanceOf(poolAddress.address);
+
+    // We take care of WETH vs. ETH when ADDRESS_ZERO is used in certain services like OneInch
+    balanceToken0 =
+      balanceToken0 == 0 && (token0 = addresses.tokens.WETH)
+        ? await ethers.provider.getBalance(poolAddress.address)
+        : balanceToken0;
+    balanceToken1 =
+      balanceToken1 == 0 && (token1 = addresses.tokens.WETH)
+        ? await ethers.provider.getBalance(poolAddress.address)
+        : balanceToken1;
+
+    const liquidityToken1 = amount0ToAdd.mul(poolTotalSupply).div(balanceToken0);
+    const liquidityToken2 = amount1ToAdd.mul(poolTotalSupply).div(balanceToken1);
+
+    LPTokens = liquidityToken1 < liquidityToken2 ? liquidityToken1 : liquidityToken2;
+
+    return LPTokens;
+  }
 
   beforeEach(async () => {
-    ({ balancerIntegration, babController, garden1, signer1, signer2, signer3 } = await setupTests()());
+    ({ balancerIntegration, babController, garden1, signer1, signer2, signer3, owner, priceOracle } = await setupTests()());
   });
 
   describe('Deployment', function () {
@@ -56,14 +111,77 @@ describe('BalancerIntegrationTest', function () {
         DEFAULT_STRATEGY_PARAMS,
         addresses.balancer.pools.wethdai,
       );
-      console.log('execute');
       await executeStrategy(strategyContract);
       expect(await strategyContract.capitalAllocated()).to.equal(ONE_ETH);
       expect(await daiWethPool.balanceOf(strategyContract.address)).to.be.gt(0);
-      console.log('finalize');
+
       await finalizeStrategy(strategyContract, 0);
-      console.log('fin');
       expect(await daiWethPool.balanceOf(strategyContract.address)).to.equal(0);
     });
   });
+  describe.only('Liquidity Pools multi reserve asset garden and multi-pair', function () {
+    [
+      { token: addresses.tokens.WETH, name: 'WETH' },
+      { token: addresses.tokens.DAI, name: 'DAI' },
+      { token: addresses.tokens.USDC, name: 'USDC' },
+      { token: addresses.tokens.WBTC, name: 'WBTC' },
+    ].forEach(({ token, name }) => {
+      [
+        {
+          pool: addresses.balancer.pools.wethdai,
+          symbol: 'WETH-DAI',
+          token0: addresses.tokens.WETH,
+          token1: addresses.tokens.DAI,
+        }, //DAI-WETH pool
+        {
+          pool: addresses.balancer.pools.wethusdc,
+          symbol: 'WETH-USDC',
+          token0: addresses.tokens.WETH,
+          token1: addresses.tokens.USDC,
+        }, //WETH-USDC pool
+        {
+          pool: addresses.balancer.pools.wethwbtc,
+          symbol: 'WETH-WBTC',
+          token0: addresses.tokens.WETH,
+          token1: addresses.tokens.WBTC,
+        }, //WETH-WBTC pool
+        {
+          pool: addresses.balancer.pools.daiusdc,
+          symbol: 'DAI-USDC',
+          token0: addresses.tokens.DAI,
+          token1: addresses.tokens.USDC,
+        }, //DAI-USDC pool
+      ].forEach(({ pool, symbol, token0, token1 }) => {
+        it(`can enter and exit the ${symbol} at Balancer V1 pool from a ${name} Garden`, async function () {
+          const poolAddress = await ethers.getContractAt('IMooniswap', pool);
+          await transferFunds(token);
+
+          const garden = await createGarden({ reserveAsset: token });
+          await depositFunds(token, garden);
+
+          const strategyContract = await getStrategy({
+            kind: 'lp',
+            state: 'vote',
+            integrations: balancerIntegration.address,
+            garden,
+            specificParams: poolAddress.address,
+          });
+          let amount = STRATEGY_EXECUTE_MAP[token];
+
+          await executeStrategy(strategyContract, { amount });
+          const tokenContract = await ethers.getContractAt('ERC20', token);
+          const executionTokenBalance = await tokenContract.balanceOf(garden.address);
+          const LPTokens = await getExpectedLPTokens(token, amount, poolAddress, token0, token1);
+
+          // TODO: Adapt LPTokens to Balancer V1 documentation
+          //expect(await poolAddress.balanceOf(strategyContract.address)).to.be.closeTo(LPTokens, LPTokens.div(50)); // 2% slippage
+
+          await finalizeStrategy(strategyContract, 0);
+          expect(await poolAddress.balanceOf(strategyContract.address)).to.equal(0);
+          expect(await tokenContract.balanceOf(garden.address)).to.be.gt(executionTokenBalance);
+        });
+      });
+    });
+  });
+  
 });

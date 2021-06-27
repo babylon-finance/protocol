@@ -17,31 +17,27 @@
 */
 
 pragma solidity 0.7.6;
-
 import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import {IBabController} from '../../interfaces/IBabController.sol';
 import {PoolIntegration} from './PoolIntegration.sol';
 import {PreciseUnitMath} from '../../lib/PreciseUnitMath.sol';
 import {LowGasSafeMath} from '../../lib/LowGasSafeMath.sol';
-import {IVault} from '../../interfaces/external/balancer/IVault.sol';
+import {IBFactory} from '../../interfaces/external/balancer/IBFactory.sol';
 import {IBPool} from '../../interfaces/external/balancer/IBPool.sol';
 
 /**
  * @title BalancerIntegration
  * @author Babylon Finance Protocol
  *
- * Balancer V2 protocol pool integration
+ * Balancer protocol trade integration
  */
-contract BalancerV2Integration is PoolIntegration {
+contract BalancerIntegration is PoolIntegration {
     using LowGasSafeMath for uint256;
     using PreciseUnitMath for uint256;
 
     /* ============ State Variables ============ */
 
-    // Address of Balancer Vault
-    IVault public constant vaultV2 = IVault(0xBA12222222228d8Ba445958a75a0704d566BF2C8);
-    // IBFactory public coreFactory;
-
+    IBFactory public coreFactory;
 
     /* ============ Constructor ============ */
 
@@ -49,24 +45,25 @@ contract BalancerV2Integration is PoolIntegration {
      * Creates the integration
      *
      * @param _controller                   Address of the controller
+     * @param _coreFactoryAddress           Address of Balancer core factory address
      */
-    constructor(
-        IBabController _controller
-    ) PoolIntegration('balancerV2', _controller) {
+    constructor(IBabController _controller, address _coreFactoryAddress) PoolIntegration('balancer', _controller) {
+        coreFactory = IBFactory(_coreFactoryAddress);
     }
 
     /* ============ External Functions ============ */
 
-
     function getPoolTokens(address _poolAddress) external view override returns (address[] memory) {
-        //(IERC20[] storage tokens, uint256[] memory balances, uint256 lastChangeBlock) =  IVault(vault).getPoolTokens(_poolId);
-        //return (tokens, balances, lastChangeBlock);
-        return new address[](2);
+        return IBPool(_poolAddress).getCurrentTokens();
     }
 
     function getPoolWeights(address _poolAddress) external view override returns (uint256[] memory) {
-      return new uint256[](2);
-
+        address[] memory poolTokens = IBPool(_poolAddress).getCurrentTokens();
+        uint256[] memory result = new uint256[](poolTokens.length);
+        for (uint8 i = 0; i < poolTokens.length; i++) {
+            result[i] = IBPool(_poolAddress).getNormalizedWeight(poolTokens[i]);
+        }
+        return result;
     }
 
     function getPoolTokensOut(
@@ -74,7 +71,8 @@ contract BalancerV2Integration is PoolIntegration {
         address _poolToken,
         uint256 _maxAmountsIn
     ) external view override returns (uint256) {
-        return 0;
+        uint256 tokenBalance = IBPool(_poolAddress).getBalance(_poolToken);
+        return IBPool(_poolAddress).totalSupply().preciseMul(_maxAmountsIn.preciseDiv(tokenBalance));
     }
 
     function getPoolMinAmountsOut(address _poolAddress, uint256 _liquidity)
@@ -83,21 +81,42 @@ contract BalancerV2Integration is PoolIntegration {
         override
         returns (uint256[] memory _minAmountsOut)
     {
-      return new uint256[](2);
+        uint256 lpTokensTotalSupply = IBPool(_poolAddress).totalSupply();
+        address[] memory poolTokens = IBPool(_poolAddress).getCurrentTokens();
+        uint256[] memory result = new uint256[](poolTokens.length);
+        for (uint256 i = 0; i < poolTokens.length; i++) {
+            result[i] = IERC20(poolTokens[i])
+                .balanceOf(_poolAddress)
+                .mul(_liquidity)
+                .div(lpTokensTotalSupply)
+                .preciseMul(1e18 - SLIPPAGE_ALLOWED);
+        }
+        return result;
     }
 
     /* ============ Internal Functions ============ */
 
     function _isPool(address _poolAddress) internal view override returns (bool) {
-        //(address poolAdddr,) = IVault(vaultV2).getPool(_poolAddress);
-        //return poolAdddr != address(0);
-        return false;
+        return coreFactory.isBPool(_poolAddress);
     }
 
     function _getSpender(address _poolAddress) internal pure override returns (address) {
-        return address(vaultV2);
+        return _poolAddress;
     }
 
+    /**
+     * Return join pool calldata which is already generated from the pool API
+     *
+     * hparam  _strategy                 Address of the strategy
+     * @param  _poolAddress              Address of the pool
+     * @param  _poolTokensOut            Amount of pool tokens to send
+     * hparam  _tokensIn                 Addresses of tokens to send to the pool
+     * @param  _maxAmountsIn             Amounts of tokens to send to the pool
+     *
+     * @return address                   Target contract address
+     * @return uint256                   Call value
+     * @return bytes                     Trade calldata
+     */
     function _getJoinPoolCalldata(
         address, /* _strategy */
         address _poolAddress,
@@ -156,5 +175,4 @@ contract BalancerV2Integration is PoolIntegration {
 
         return (_poolAddress, 0, methodData);
     }
-
 }
