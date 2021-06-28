@@ -74,7 +74,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         uint256 reserveTokenQuantity,
         uint256 timestamp
     );
-    event AddStrategy(address indexed _strategy, uint256 _expectedReturn);
+    event AddStrategy(address indexed _strategy, string _name, uint256 _expectedReturn);
 
     event RewardsForContributor(address indexed _contributor, uint256 indexed _amount);
     event BABLRewardsForContributor(address indexed _contributor, uint256 _rewards);
@@ -547,7 +547,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         strategies.push(strategy);
         IStrategy(strategy).setData(_opTypes, _opIntegrations, _opDatas);
         isGardenStrategy[strategy] = true;
-        emit AddStrategy(strategy, _stratParams[3]);
+        emit AddStrategy(strategy, _name, _stratParams[3]);
     }
 
     /**
