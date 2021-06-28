@@ -1,5 +1,5 @@
 /*
-    Copyright 2021 Babylon Finance.
+ Copyright 2021 Babylon Finance.
 
     Licensed under the Apache License, Version 2.0 (the "License");
     you may not use this file except in compliance with the License.
@@ -482,13 +482,11 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         _onlyStrategy();
         keeperDebt = keeperDebt.add(_fee);
         // Pay Keeper in Reserve Asset
-        if (keeperDebt > 0 && IERC20(reserveAsset).balanceOf(address(this)) >= keeperDebt) {
+        if (keeperDebt > 0 && _liquidReserve() >= keeperDebt) {
             IERC20(reserveAsset).safeTransfer(_keeper, keeperDebt);
             keeperDebt = 0;
         }
     }
-
-    /* ============ External Functions ============ */
 
     /**
      * Makes a previously private garden public
@@ -562,7 +560,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         uint256 protocolMgmtFee = IBabController(controller).protocolManagementFee().preciseMul(_capital);
         _require(
             _capital.add(protocolMgmtFee) <=
-                IERC20(reserveAsset).balanceOf(address(this)).sub(reserveAssetPrincipalWindow),
+                ,
             Errors.MIN_LIQUIDITY
         );
 
@@ -720,6 +718,13 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
 
     /* ============ Internal Functions ============ */
     /**
+     * Gets liquid reserve available for to Garden.
+     */
+    function _liquidReserve () view private returns (uint256) {
+      return IERC20(reserveAsset).balanceOf(address(this)).sub(reserveAssetPrincipalWindow).sub(reserveAssetRewardsSetAside);
+    }
+
+    /**
      * When the window of withdrawals finishes, we need to make the capital available again for investments
      * We still keep the profits aside.
      */
@@ -738,13 +743,13 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
      */
     function _canWithdrawReserveAmount(address _contributor, uint256 _amount) private view returns (bool) {
         // Reserve rewards cannot be withdrawn. Only claimed
-        uint256 liquidReserve = IERC20(reserveAsset).balanceOf(address(this));
+        uint256 liquidReserve = IERC20(reserveAsset).balanceOf(address(this)).sub(reserveAssetRewardsSetAside);
         _require(liquidReserve >= _amount, Errors.NOT_ENOUGH_RESERVE);
 
         // Withdrawal open
         if (block.timestamp <= withdrawalsOpenUntil) {
             // There is a window but there is more than needed
-            if (liquidReserve > reserveAssetPrincipalWindow.add(_amount)) {
+            if (liquidReserve.sub(reserveAssetPrincipalWindow) > _amount) {
                 return true;
             }
             // Pro rata withdrawals
@@ -755,11 +760,9 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
                     contributors[_contributor].initialDepositAt,
                     block.timestamp
                 );
-            return reserveAssetPrincipalWindow.preciseMul(contributorPower) >= _amount;
-        } else {
-            // Not in a withdrawal window. Check that there is enough reserve
-            return liquidReserve >= _amount;
+            return reserveAssetPrincipalWindow.preciseMul(contributorPower).add(liquidReserve.sub(reserveAssetPrincipalWindow)) >= _amount;
         }
+        return true;
     }
 
     /**
