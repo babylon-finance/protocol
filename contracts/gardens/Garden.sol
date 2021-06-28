@@ -560,7 +560,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         uint256 protocolMgmtFee = IBabController(controller).protocolManagementFee().preciseMul(_capital);
         _require(
             _capital.add(protocolMgmtFee) <=
-                ,
+                _liquidReserve(),
             Errors.MIN_LIQUIDITY
         );
 
