@@ -558,11 +558,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         _onlyActive();
         _reenableReserveForStrategies();
         uint256 protocolMgmtFee = IBabController(controller).protocolManagementFee().preciseMul(_capital);
-        _require(
-            _capital.add(protocolMgmtFee) <=
-                _liquidReserve(),
-            Errors.MIN_LIQUIDITY
-        );
+        _require(_capital.add(protocolMgmtFee) <= _liquidReserve(), Errors.MIN_LIQUIDITY);
 
         // Take protocol mgmt fee
         _payProtocolFeeFromGarden(reserveAsset, protocolMgmtFee);
@@ -720,8 +716,11 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
     /**
      * Gets liquid reserve available for to Garden.
      */
-    function _liquidReserve () view private returns (uint256) {
-      return IERC20(reserveAsset).balanceOf(address(this)).sub(reserveAssetPrincipalWindow).sub(reserveAssetRewardsSetAside);
+    function _liquidReserve() private view returns (uint256) {
+        return
+            IERC20(reserveAsset).balanceOf(address(this)).sub(reserveAssetPrincipalWindow).sub(
+                reserveAssetRewardsSetAside
+            );
     }
 
     /**
@@ -760,7 +759,10 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
                     contributors[_contributor].initialDepositAt,
                     block.timestamp
                 );
-            return reserveAssetPrincipalWindow.preciseMul(contributorPower).add(liquidReserve.sub(reserveAssetPrincipalWindow)) >= _amount;
+            return
+                reserveAssetPrincipalWindow.preciseMul(contributorPower).add(
+                    liquidReserve.sub(reserveAssetPrincipalWindow)
+                ) >= _amount;
         }
         return true;
     }
