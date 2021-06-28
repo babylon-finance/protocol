@@ -35,7 +35,7 @@ async function depositBatch(owner, garden, walletAddresses) {
   }
 }
 
-describe.only('Garden', function () {
+describe('Garden', function () {
   let babController;
   let rewardsDistributor;
   let owner;
