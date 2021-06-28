@@ -255,7 +255,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
     uint256 public override capitalAllocated; // Current amount of capital allocated
     uint256 public override expectedReturn; // Expect return by this strategy
     uint256 public override capitalReturned; // Actual return by this strategy
-    uint256 private minRebalanceCapital; // Min amount of capital so that it is worth to rebalance the capital here
+    uint256 private minRebalanceCapital; // DEPRECATED Min amount of capital so that it is worth to rebalance the capital here
     address[] private tokensNeeded; // Not used anymore
     uint256[] private tokenAmountsNeeded; // Not used anymore
 
