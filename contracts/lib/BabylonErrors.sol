@@ -260,4 +260,6 @@ library Errors {
     uint256 internal constant RESERVE_ASSET_NOT_SUPPORTED = 85;
     // Withdrawal/Deposit check min amount received
     uint256 internal constant RECEIVE_MIN_AMOUNT = 86;
+    // Total Votes has to be positive
+    uint256 internal constant TOTAL_VOTES_HAVE_TO_BE_POSITIVE = 87;
 }

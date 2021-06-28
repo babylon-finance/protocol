@@ -388,6 +388,8 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
             }
         }
 
+        _require(totalPositiveVotes.sub(totalNegativeVotes) > 0, Errors.TOTAL_VOTES_HAVE_TO_BE_POSITIVE);
+
         // Keeper will account for strategist vote/stake
         voters = _voters;
 

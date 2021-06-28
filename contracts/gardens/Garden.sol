@@ -18,6 +18,7 @@
 pragma solidity 0.7.6;
 
 import 'hardhat/console.sol';
+
 import {Address} from '@openzeppelin/contracts/utils/Address.sol';
 import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import {SafeERC20} from '@openzeppelin/contracts/token/ERC20/SafeERC20.sol';
@@ -375,8 +376,10 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
 
     /**
      * Withdraws the ETH relative to the token participation in the garden and sends it back to the sender.
+     * ATTENTION. Do not call withPenalty unless certain. If penalty is set, it will be applied regardless of the garden state.
+     * It is advised to first try to withdraw with no penalty and it this reverts then try to with penalty.
      *
-     * @param _gardenTokenQuantity             Quantity of the garden token to withdrawal
+     * @param _gardenTokenQuantity           Quantity of the garden token to withdrawal
      * @param _minReserveReceiveQuantity     Min quantity of reserve asset to receive
      * @param _to                            Address to send component assets to
      * @param _withPenalty                   Whether or not this is an immediate withdrawal
@@ -390,21 +393,40 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         address _unwindStrategy
     ) external override nonReentrant {
         _onlyContributor();
+        // Flashloan protection
+        _require(
+            block.timestamp.sub(contributors[msg.sender].lastDepositAt) >= depositHardlock,
+            Errors.DEPOSIT_HARDLOCK
+        );
         // Withdrawal amount has to be equal or less than msg.sender balance minus the locked balance
         uint256 lockedAmount = getLockedBalance(msg.sender);
         _require(_gardenTokenQuantity <= balanceOf(msg.sender).sub(lockedAmount), Errors.TOKENS_STAKED); // Strategists cannot withdraw locked stake while in active strategies
-        if (!_withPenalty) {
-            // Requests an immediate withdrawal taking the EARLY_WITHDRAWAL_PENALTY that stays invested.
-            return _withdraw(_gardenTokenQuantity, _minReserveReceiveQuantity, _to);
-        }
-        // Check that cannot do a normal withdrawal
-        _require(!_canWithdrawReserveAmount(msg.sender, _gardenTokenQuantity), Errors.NORMAL_WITHDRAWAL_POSSIBLE);
-        uint256 netReserveFlows = _gardenTokenQuantity.sub(_gardenTokenQuantity.preciseMul(EARLY_WITHDRAWAL_PENALTY));
 
-        IStrategy(_unwindStrategy).unwindStrategy(netReserveFlows);
-        // We burn their penalty
-        _burn(msg.sender, _gardenTokenQuantity.preciseMul(EARLY_WITHDRAWAL_PENALTY));
-        _withdraw(netReserveFlows, _minReserveReceiveQuantity, _to);
+        uint256 outflow = _getWithdrawalReserveQuantity(reserveAsset, _gardenTokenQuantity);
+
+        // if withPenaltiy then unwind strategy
+        if (_withPenalty) {
+            outflow = outflow.sub(outflow.preciseMul(EARLY_WITHDRAWAL_PENALTY));
+            // When unwinding a strategy, a slippage on integrations will result in receiving less tokens
+            // than desired so we have have to account for this with a 5% slippage.
+            IStrategy(_unwindStrategy).unwindStrategy(outflow.add(outflow.preciseMul(5e16)));
+        }
+
+        _require(outflow >= _minReserveReceiveQuantity, Errors.RECEIVE_MIN_AMOUNT);
+
+        _require(_canWithdrawReserveAmount(msg.sender, outflow), Errors.MIN_LIQUIDITY);
+
+        _reenableReserveForStrategies();
+
+        _burn(msg.sender, _gardenTokenQuantity);
+        _safeSendReserveAsset(msg.sender, outflow);
+        _updateContributorWithdrawalInfo(outflow);
+
+        // Required withdrawable quantity is greater than existing collateral
+        _require(principal >= outflow, Errors.BALANCE_TOO_LOW);
+        principal = principal.sub(outflow);
+
+        emit GardenWithdrawal(msg.sender, _to, outflow, _gardenTokenQuantity, block.timestamp);
     }
 
     /**
@@ -557,6 +579,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         _onlyStrategy();
         _onlyActive();
         _reenableReserveForStrategies();
+
         uint256 protocolMgmtFee = IBabController(controller).protocolManagementFee().preciseMul(_capital);
         _require(_capital.add(protocolMgmtFee) <= _liquidReserve(), Errors.MIN_LIQUIDITY);
 
@@ -743,7 +766,6 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
     function _canWithdrawReserveAmount(address _contributor, uint256 _amount) private view returns (bool) {
         // Reserve rewards cannot be withdrawn. Only claimed
         uint256 liquidReserve = IERC20(reserveAsset).balanceOf(address(this)).sub(reserveAssetRewardsSetAside);
-        _require(liquidReserve >= _amount, Errors.NOT_ENOUGH_RESERVE);
 
         // Withdrawal open
         if (block.timestamp <= withdrawalsOpenUntil) {
@@ -764,7 +786,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
                     liquidReserve.sub(reserveAssetPrincipalWindow)
                 ) >= _amount;
         }
-        return true;
+        return liquidReserve.sub(reserveAssetPrincipalWindow) >= _amount;
     }
 
     /**
@@ -822,39 +844,6 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
                 (IBabController(controller).gardenTokensTransfersEnabled() && !guestListEnabled),
             Errors.GARDEN_TRANSFERS_DISABLED
         );
-    }
-
-    /**
-     * Aux function to withdraw from a garden
-     */
-    function _withdraw(
-        uint256 _gardenTokenQuantity,
-        uint256 _minReserveReceiveQuantity,
-        address payable _to
-    ) private {
-        // Flashloan protection
-        _require(
-            block.timestamp.sub(contributors[msg.sender].lastDepositAt) >= depositHardlock,
-            Errors.DEPOSIT_HARDLOCK
-        );
-        _reenableReserveForStrategies();
-        uint256 outflow = _getWithdrawalReserveQuantity(reserveAsset, _gardenTokenQuantity);
-
-        _require(_canWithdrawReserveAmount(msg.sender, outflow), Errors.MIN_LIQUIDITY);
-
-        // Let people withdraw up to the last amount
-        _require(totalSupply().sub(_gardenTokenQuantity) >= 0, Errors.MIN_TOKEN_SUPPLY);
-        _require(outflow >= _minReserveReceiveQuantity, Errors.RECEIVE_MIN_AMOUNT);
-
-        _burn(msg.sender, _gardenTokenQuantity);
-        _safeSendReserveAsset(msg.sender, outflow);
-        _updateContributorWithdrawalInfo(outflow);
-
-        // Required withdrawable quantity is greater than existing collateral
-        _require(principal >= outflow, Errors.BALANCE_TOO_LOW);
-        principal = principal.sub(outflow);
-
-        emit GardenWithdrawal(msg.sender, _to, outflow, _gardenTokenQuantity, block.timestamp);
     }
 
     function _safeSendReserveAsset(address payable _to, uint256 _amount) private {
