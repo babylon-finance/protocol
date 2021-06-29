@@ -388,7 +388,8 @@ async function createStrategy(kind, state, signers, integrations, garden, params
 async function getStrategy({ garden, kind = 'buy', state = 'dataset', signers, integrations, params, specificParams }) {
   const babController = await getContract('BabController', 'BabControllerProxy');
   const uniswapV3TradeIntegration = await getContract('UniswapV3TradeIntegration');
-  const [signer1, signer2, signer3] = await ethers.getSigners();
+  // Do not remove deployer, keeper and owner
+  const [deployer, keeper, owner, signer1, signer2, signer3] = await ethers.getSigners();
 
   const gardens = await babController.getGardens();
 
