@@ -5,22 +5,15 @@ const {
   executeStrategy,
   finalizeStrategy,
   DEFAULT_STRATEGY_PARAMS,
-  USDC_STRATEGY_PARAMS,
-  DAI_STRATEGY_PARAMS,
-  WBTC_STRATEGY_PARAMS,
 } = require('../fixtures/StrategyHelper');
-const { ADDRESS_ZERO, ONE_ETH, STRATEGY_EXECUTE_MAP } = require('../../lib/constants');
-const { from, eth } = require('../../lib/helpers');
+const { STRATEGY_EXECUTE_MAP } = require('../../lib/constants');
 const { setupTests } = require('../fixtures/GardenFixture');
 const { createGarden, depositFunds, transferFunds } = require('../fixtures/GardenHelper');
 const addresses = require('../../lib/addresses');
-const { getAssetWhale } = require('../../lib/whale.js');
-const { impersonateAddress } = require('../../lib/rpc');
 
 describe('AaveBorrowIntegrationTest', function () {
   let aaveBorrowIntegration;
   let aaveLendIntegration;
-  let garden1;
   let signer1;
   let signer2;
   let signer3;
@@ -48,7 +41,6 @@ describe('AaveBorrowIntegrationTest', function () {
 
     expect(await asset1.balanceOf(strategyContract.address)).to.equal(0);
     expect(await asset2.balanceOf(strategyContract.address)).to.be.gt(0);
-    const collateral = await aaveBorrowIntegration.getCollateralBalance(strategyContract.address, asset1.address);
     expect(await aaveBorrowIntegration.getBorrowBalance(strategyContract.address, asset2.address)).to.be.gt(0);
     const beforeExitingWeth = await gardenReserveAsset.balanceOf(garden.address);
     await finalizeStrategy(strategyContract);
@@ -59,7 +51,6 @@ describe('AaveBorrowIntegrationTest', function () {
   async function supplyBorrowStrategyNAV(asset1, asset2, token) {
     await transferFunds(token);
     const garden = await createGarden({ reserveAsset: token });
-    const gardenReserveAsset = await ethers.getContractAt('IERC20', token);
     await depositFunds(token, garden);
 
     const strategyContract = await createStrategy(
@@ -79,7 +70,6 @@ describe('AaveBorrowIntegrationTest', function () {
   async function trySupplyBorrowStrategy(asset1, asset2, token, errorcode) {
     await transferFunds(token);
     const garden = await createGarden({ reserveAsset: token });
-    const gardenReserveAsset = await ethers.getContractAt('IERC20', token);
     await depositFunds(token, garden);
     const strategyContract = await createStrategy(
       'borrow',
@@ -96,7 +86,7 @@ describe('AaveBorrowIntegrationTest', function () {
   }
 
   beforeEach(async () => {
-    ({ garden1, aaveLendIntegration, aaveBorrowIntegration, signer1, signer2, signer3 } = await setupTests()());
+    ({ aaveLendIntegration, aaveBorrowIntegration, signer1, signer2, signer3 } = await setupTests()());
     USDC = await ethers.getContractAt('IERC20', addresses.tokens.USDC);
     DAI = await ethers.getContractAt('IERC20', addresses.tokens.DAI);
     WETH = await ethers.getContractAt('IERC20', addresses.tokens.WETH);
@@ -111,7 +101,7 @@ describe('AaveBorrowIntegrationTest', function () {
 
   describe('gets NAV', function () {
     it(`gets NAV of a borrow/lend strategy at WETH Garden`, async function () {
-      const garden = await createGarden({ WETH });
+      const garden = await createGarden({});
       const strategyContract = await createStrategy(
         'borrow',
         'vote',

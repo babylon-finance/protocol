@@ -29,15 +29,14 @@ async function createGarden({
   symbol = 'GRDN',
   nftUri = NFT_URI,
   nftSeed = NFT_SEED,
-  params = reserveAssetGarden[reserveAsset],
-  contribution = contributions[reserveAsset],
   signer,
 } = {}) {
   const [deployer, keeper, owner, signer1, signer2, signer3] = await ethers.getSigners();
   signer = signer || signer1;
   const ishtarGate = await getContract('IshtarGate');
   const babController = await getContract('BabController', 'BabControllerProxy');
-
+  const params = reserveAssetGarden[reserveAsset];
+  const contribution = contributions[reserveAsset];
   const erc20 = await ethers.getContractAt('IERC20', reserveAsset);
   for (const sig of [signer1, signer2, signer3]) {
     await erc20.connect(sig).approve(babController.address, params[0], {
