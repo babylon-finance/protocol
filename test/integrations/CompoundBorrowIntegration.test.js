@@ -5,14 +5,11 @@ const {
   executeStrategy,
   finalizeStrategy,
   DEFAULT_STRATEGY_PARAMS,
-  USDC_STRATEGY_PARAMS,
-  DAI_STRATEGY_PARAMS,
-  WBTC_STRATEGY_PARAMS,
 } = require('../fixtures/StrategyHelper');
 const { setupTests } = require('../fixtures/GardenFixture');
 const { createGarden, depositFunds, transferFunds } = require('../fixtures/GardenHelper');
 const addresses = require('../../lib/addresses');
-const { ADDRESS_ZERO, ONE_ETH, STRATEGY_EXECUTE_MAP } = require('../../lib/constants');
+const { ADDRESS_ZERO, STRATEGY_EXECUTE_MAP } = require('../../lib/constants');
 
 describe('CompoundBorrowIntegrationTest', function () {
   let compoundBorrowIntegration;
@@ -31,8 +28,8 @@ describe('CompoundBorrowIntegrationTest', function () {
     const gardenReserveAsset = await ethers.getContractAt('IERC20', token);
     await depositFunds(token, garden);
 
-    let asset1Address = asset1.address == addresses.tokens.WETH ? ADDRESS_ZERO : asset1.address;
-    let asset2Address = asset2.address == addresses.tokens.WETH ? ADDRESS_ZERO : asset2.address;
+    const asset1Address = asset1.address === addresses.tokens.WETH ? ADDRESS_ZERO : asset1.address;
+    const asset2Address = asset2.address === addresses.tokens.WETH ? ADDRESS_ZERO : asset2.address;
 
     const strategyContract = await createStrategy(
       'borrow',
@@ -48,8 +45,6 @@ describe('CompoundBorrowIntegrationTest', function () {
     expect(await asset1.balanceOf(strategyContract.address)).to.equal(0);
     expect(await asset2.balanceOf(strategyContract.address)).to.be.gt(0);
 
-    const collateral = await compoundBorrowIntegration.getCollateralBalance(strategyContract.address, asset1Address);
-
     expect(await compoundBorrowIntegration.getBorrowBalance(strategyContract.address, asset2.address)).to.be.gt(0);
     const balanceBeforeExiting = await gardenReserveAsset.balanceOf(garden.address);
     await finalizeStrategy(strategyContract);
@@ -63,11 +58,10 @@ describe('CompoundBorrowIntegrationTest', function () {
   async function trySupplyBorrowStrategy(asset1, asset2, token, errorcode) {
     await transferFunds(token);
     const garden = await createGarden({ reserveAsset: token });
-    const gardenReserveAsset = await ethers.getContractAt('IERC20', token);
     await depositFunds(token, garden);
 
-    let asset1Address = asset1.address == addresses.tokens.WETH ? ADDRESS_ZERO : asset1.address;
-    let asset2Address = asset2.address == addresses.tokens.WETH ? ADDRESS_ZERO : asset2.address;
+    const asset1Address = asset1.address === addresses.tokens.WETH ? ADDRESS_ZERO : asset1.address;
+    const asset2Address = asset2.address === addresses.tokens.WETH ? ADDRESS_ZERO : asset2.address;
 
     const strategyContract = await createStrategy(
       'borrow',

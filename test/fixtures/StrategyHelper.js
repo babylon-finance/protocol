@@ -1,5 +1,5 @@
 const { ethers } = require('hardhat');
-const { ONE_DAY_IN_SECONDS, ONE_ETH, STRATEGY_EXECUTE_MAP } = require('../../lib/constants.js');
+const { ONE_DAY_IN_SECONDS, STRATEGY_EXECUTE_MAP } = require('../../lib/constants.js');
 const { impersonateAddress } = require('../../lib/rpc');
 const addresses = require('../../lib/addresses');
 const { getAssetWhale } = require('../../lib/whale');
@@ -99,6 +99,27 @@ async function createStrategyWithLendAndBorrowOperation(
   }
   const passedLendBorrowParams = [[3, 4], integrations, data];
   await garden.connect(signer).addStrategy(...STRAT_NAME_PARAMS, params, ...passedLendBorrowParams);
+  const strategies = await garden.getStrategies();
+  const lastStrategyAddr = strategies[strategies.length - 1];
+
+  const strategy = await ethers.getContractAt('Strategy', lastStrategyAddr);
+
+  return strategy;
+}
+
+async function createStrategyWithManyOperations(
+  garden,
+  signer,
+  params = DEFAULT_STRATEGY_PARAMS,
+  integrations,
+  data,
+  ops,
+) {
+  if (integrations.length !== data.length) {
+    throw new Error('Need data and integrations to match');
+  }
+  const passedParams = [ops, integrations, data];
+  await garden.connect(signer).addStrategy(...STRAT_NAME_PARAMS, params, ...passedParams);
   const strategies = await garden.getStrategies();
   const lastStrategyAddr = strategies[strategies.length - 1];
 
@@ -301,7 +322,7 @@ async function substractFakeProfits(strategy, amount) {
   }
 }
 
-async function createStrategy(kind, state, signers, integrations, garden, params, specificParams) {
+async function createStrategy(kind, state, signers, integrations, garden, params, specificParams, customOps) {
   let strategy;
 
   const reserveAsset = await garden.reserveAsset();
@@ -327,6 +348,16 @@ async function createStrategy(kind, state, signers, integrations, garden, params
         params,
         integrations,
         specificParams,
+      );
+      break;
+    case 'custom':
+      strategy = await createStrategyWithManyOperations(
+        garden,
+        signers[0],
+        params,
+        integrations,
+        specificParams,
+        customOps,
       );
       break;
     default:
@@ -357,16 +388,16 @@ async function createStrategy(kind, state, signers, integrations, garden, params
 async function getStrategy({ garden, kind = 'buy', state = 'dataset', signers, integrations, params, specificParams }) {
   const babController = await getContract('BabController', 'BabControllerProxy');
   const uniswapV3TradeIntegration = await getContract('UniswapV3TradeIntegration');
-  const [deployer, keeper, owner, signer1, signer2, signer3] = await ethers.getSigners();
+  const [signer1, signer2, signer3] = await ethers.getSigners();
 
   const gardens = await babController.getGardens();
 
   return await createStrategy(
     kind,
     state,
-    signers ? signers : [signer1, signer2, signer3],
-    integrations ? integrations : uniswapV3TradeIntegration.address,
-    garden ? garden : await ethers.getContractAt('Garden', gardens.slice(-1)[0]),
+    signers || [signer1, signer2, signer3],
+    integrations || uniswapV3TradeIntegration.address,
+    garden || (await ethers.getContractAt('Garden', gardens.slice(-1)[0])),
     params,
     specificParams,
   );
