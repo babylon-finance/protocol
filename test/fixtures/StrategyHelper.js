@@ -388,16 +388,15 @@ async function createStrategy(kind, state, signers, integrations, garden, params
 async function getStrategy({ garden, kind = 'buy', state = 'dataset', signers, integrations, params, specificParams }) {
   const babController = await getContract('BabController', 'BabControllerProxy');
   const uniswapV3TradeIntegration = await getContract('UniswapV3TradeIntegration');
-  const [signer1, signer2, signer3] = await ethers.getSigners();
-
+  const [deployer, keeper, owner, signer1, signer2, signer3] = await ethers.getSigners();
   const gardens = await babController.getGardens();
 
   return await createStrategy(
     kind,
     state,
-    signers || [signer1, signer2, signer3],
-    integrations || uniswapV3TradeIntegration.address,
-    garden || (await ethers.getContractAt('Garden', gardens.slice(-1)[0])),
+    signers ? signers: [signer1, signer2, signer3],
+    integrations ? integrations: uniswapV3TradeIntegration.address,
+    garden ? garden: (await ethers.getContractAt('Garden', gardens.slice(-1)[0])),
     params,
     specificParams,
   );
