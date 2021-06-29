@@ -17,44 +17,42 @@
 */
 
 pragma solidity 0.7.6;
-import {SafeMath} from '@openzeppelin/contracts/math/SafeMath.sol';
-import {IBabController} from '../../interfaces/IBabController.sol';
+pragma abicoder v2;
 
-import {IOneInchExchange} from '../../interfaces/external/1inch/IOneInchExchange.sol';
+import 'hardhat/console.sol';
+
+import {IBabController} from '../../interfaces/IBabController.sol';
+import {ISwapRouter} from '../../interfaces/external/uniswap-v3/ISwapRouter.sol';
+
+import {LowGasSafeMath as SafeMath} from '../../lib/LowGasSafeMath.sol';
+
 import {TradeIntegration} from './TradeIntegration.sol';
 
 /**
- * @title 1InchTradeIntegration
+ * @title UniswapV3TradeIntegration
  * @author Babylon Finance Protocol
  *
- * 1Inch protocol trade integration
+ * UniswapV3 trade integration
  */
-contract OneInchTradeIntegration is TradeIntegration {
+contract UniswapV3TradeIntegration is TradeIntegration {
     using SafeMath for uint256;
 
     /* ============ Modifiers ============ */
 
     /* ============ State Variables ============ */
 
-    // Address of 1Inch exchange address
-    address public oneInchExchangeAddress;
+    /* ============ Constants ============ */
+    // Address of Uniswap V3 SwapRouter contract
+    address private constant swapRouter = 0xE592427A0AEce92De3Edee1F18E0157C05861564;
 
     /* ============ Constructor ============ */
 
     /**
      * Creates the integration
      *
-     * @param _weth                         Address of the WETH ERC20
      * @param _controller                   Address of the controller
-     * @param _oneInchExchangeAddress       Address of 1inch exchange contract
      */
-    constructor(
-        IBabController _controller,
-        address _weth,
-        address _oneInchExchangeAddress
-    ) TradeIntegration('1inch', _weth, _controller) {
-        oneInchExchangeAddress = _oneInchExchangeAddress;
-    }
+    constructor(IBabController _controller) TradeIntegration('univ3', _controller) {}
 
     /* ============ External Functions ============ */
     /**
@@ -80,15 +78,15 @@ contract OneInchTradeIntegration is TradeIntegration {
     /* ============ Internal Functions ============ */
 
     /**
-     * Executes the trade through 1Inch.
+     * Executes the trade through UniswapV3.
      *
-     * hparam _strategy             Address of the strategy
+     * @param _strategy             Address of the strategy
      * @param _sendToken            Address of the token to be sent to the exchange
      * @param _sendQuantity         Units of reserve asset token sent to the exchange
      * @param _receiveToken         Address of the token that will be received from the exchange
      */
     function _getTradeCallData(
-        address, /*_strategy*/
+        address _strategy,
         address _sendToken,
         uint256 _sendQuantity,
         address _receiveToken
@@ -102,20 +100,26 @@ contract OneInchTradeIntegration is TradeIntegration {
             bytes memory
         )
     {
-        (uint256 _returnAmount, uint256[] memory _distribution) =
-            IOneInchExchange(oneInchExchangeAddress).getExpectedReturn(_sendToken, _receiveToken, _sendQuantity, 1, 0);
-
-        bytes memory methodData =
-            abi.encodeWithSignature(
-                'swap(address,address,uint256,uint256,uint256[],uint256)',
-                _sendToken,
-                _receiveToken,
+        bytes memory path;
+        if (_sendToken == WETH || _receiveToken == WETH) {
+            (, uint24 fee) = _getUniswapPoolWithHighestLiquidity(_sendToken, _receiveToken);
+            path = abi.encodePacked(_sendToken, fee, _receiveToken);
+        } else {
+            (, uint24 fee0) = _getUniswapPoolWithHighestLiquidity(_sendToken, WETH);
+            (, uint24 fee1) = _getUniswapPoolWithHighestLiquidity(_sendToken, WETH);
+            path = abi.encodePacked(_sendToken, fee0, WETH, fee1, _receiveToken);
+        }
+        ISwapRouter.ExactInputParams memory params =
+            ISwapRouter.ExactInputParams(
+                path,
+                _strategy,
+                block.timestamp,
                 _sendQuantity,
-                0, // not needed because of post trade check
-                _distribution,
-                0
+                1 // we check for amountOutMinimum in the post trade check
             );
-        return (oneInchExchangeAddress, 0, methodData);
+
+        bytes memory callData = abi.encodeWithSignature('exactInput((bytes,address,uint256,uint256,uint256))', params);
+        return (swapRouter, 0, callData);
     }
 
     /**
@@ -124,6 +128,6 @@ contract OneInchTradeIntegration is TradeIntegration {
      * @return address             Address of the contract to approve tokens to
      */
     function _getSpender() internal view override returns (address) {
-        return oneInchExchangeAddress;
+        return address(swapRouter);
     }
 }

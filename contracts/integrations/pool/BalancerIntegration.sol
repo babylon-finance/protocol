@@ -18,10 +18,10 @@
 
 pragma solidity 0.7.6;
 import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
-import {SafeMath} from '@openzeppelin/contracts/math/SafeMath.sol';
 import {IBabController} from '../../interfaces/IBabController.sol';
 import {PoolIntegration} from './PoolIntegration.sol';
 import {PreciseUnitMath} from '../../lib/PreciseUnitMath.sol';
+import {LowGasSafeMath} from '../../lib/LowGasSafeMath.sol';
 import {IBFactory} from '../../interfaces/external/balancer/IBFactory.sol';
 import {IBPool} from '../../interfaces/external/balancer/IBPool.sol';
 
@@ -29,15 +29,14 @@ import {IBPool} from '../../interfaces/external/balancer/IBPool.sol';
  * @title BalancerIntegration
  * @author Babylon Finance Protocol
  *
- * Kyber protocol trade integration
+ * Balancer protocol trade integration
  */
 contract BalancerIntegration is PoolIntegration {
-    using SafeMath for uint256;
+    using LowGasSafeMath for uint256;
     using PreciseUnitMath for uint256;
 
     /* ============ State Variables ============ */
 
-    // Address of Kyber Network Proxy
     IBFactory public coreFactory;
 
     /* ============ Constructor ============ */
@@ -46,14 +45,9 @@ contract BalancerIntegration is PoolIntegration {
      * Creates the integration
      *
      * @param _controller                   Address of the controller
-     * @param _weth                         Address of the WETH ERC20
      * @param _coreFactoryAddress           Address of Balancer core factory address
      */
-    constructor(
-        IBabController _controller,
-        address _weth,
-        address _coreFactoryAddress
-    ) PoolIntegration('balancer', _weth, _controller) {
+    constructor(IBabController _controller, address _coreFactoryAddress) PoolIntegration('balancer', _controller) {
         coreFactory = IBFactory(_coreFactoryAddress);
     }
 

@@ -19,7 +19,7 @@ pragma solidity 0.7.6;
 import {TimeLockedToken} from './TimeLockedToken.sol';
 
 import {OwnableUpgradeable} from '@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol';
-import {SafeMath} from '@openzeppelin/contracts/math/SafeMath.sol';
+import {LowGasSafeMath} from '../lib/LowGasSafeMath.sol';
 import {Address} from '@openzeppelin/contracts/utils/Address.sol';
 import {SafeERC20} from '@openzeppelin/contracts/token/ERC20/SafeERC20.sol';
 import {ERC20} from '@openzeppelin/contracts/token/ERC20/ERC20.sol';
@@ -49,8 +49,8 @@ import {IPriceOracle} from '../interfaces/IPriceOracle.sol';
  * which are actively contributing to the protocol growth and their communities (Garden creators, Strategists and Stewards).
  */
 contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
-    using SafeMath for uint256;
-    using SafeMath for int256;
+    using LowGasSafeMath for uint256;
+    using LowGasSafeMath for int256;
     using PreciseUnitMath for uint256;
     using PreciseUnitMath for int256;
     using SafeDecimalMath for uint256;
@@ -345,7 +345,13 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
      * @param _to                Address to send the tokens to
      * @param _amount            Amount of tokens to send the address to
      */
-    function sendTokensToContributor(address _to, uint256 _amount) external override nonReentrant onlyMiningActive {
+    function sendTokensToContributor(address _to, uint256 _amount)
+        external
+        override
+        nonReentrant
+        onlyMiningActive
+        onlyUnpaused
+    {
         _require(controller.isSystemContract(msg.sender), Errors.NOT_A_SYSTEM_CONTRACT);
         uint96 amount = Safe3296.safe96(_amount, 'overflow 96 bits');
         _safeBABLTransfer(_to, amount);
@@ -354,7 +360,7 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
     /**
      * Starts BABL Rewards Mining Program from the controller.
      */
-    function startBABLRewards() external override onlyController {
+    function startBABLRewards() external override onlyController onlyUnpaused {
         if (START_TIME == 0) {
             // It can only be activated once to avoid overriding START_TIME
             START_TIME = block.timestamp;
@@ -402,7 +408,7 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         address _garden,
         address _contributor,
         address[] calldata _finalizedStrategies
-    ) external view override onlyUnpaused returns (uint256[] memory) {
+    ) external view override returns (uint256[] memory) {
         uint256[] memory totalRewards = new uint256[](7);
         _require(IBabController(controller).isGarden(address(_garden)), Errors.ONLY_ACTIVE_GARDEN);
         for (uint256 i = 0; i < _finalizedStrategies.length; i++) {
@@ -614,7 +620,7 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         (bool profit, uint256 profitValue, bool distance, uint256 distanceValue) =
             _getStrategyRewardsContext(address(strategy));
 
-        (, uint256 initialDepositAt, uint256 claimedAt, , , ) = IGarden(_garden).getContributor(_contributor);
+        (, uint256 initialDepositAt, uint256 claimedAt, , , , , , ) = IGarden(_garden).getContributor(_contributor);
         // Positive strategies not yet claimed
         if (
             strategy.exitedAt() > claimedAt &&
@@ -1415,4 +1421,4 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
     }
 }
 
-contract RewardsDistributorV2 is RewardsDistributor {}
+contract RewardsDistributorV3 is RewardsDistributor {}

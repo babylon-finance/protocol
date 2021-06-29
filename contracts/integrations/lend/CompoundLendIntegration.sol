@@ -17,15 +17,20 @@
 */
 
 pragma solidity 0.7.6;
+
 import {ERC20} from '@openzeppelin/contracts/token/ERC20/ERC20.sol';
-import {SafeMath} from '@openzeppelin/contracts/math/SafeMath.sol';
 import {SafeCast} from '@openzeppelin/contracts/utils/SafeCast.sol';
 import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import {ReentrancyGuard} from '@openzeppelin/contracts/utils/ReentrancyGuard.sol';
+
 import {ICToken} from '../../interfaces/external/compound/ICToken.sol';
 import {IGarden} from '../../interfaces/IGarden.sol';
 import {IStrategy} from '../../interfaces/IStrategy.sol';
 import {IBabController} from '../../interfaces/IBabController.sol';
+
+import {LowGasSafeMath} from '../../lib/LowGasSafeMath.sol';
+import {UniversalERC20} from '../../lib/UniversalERC20.sol';
+
 import {LendIntegration} from './LendIntegration.sol';
 
 /**
@@ -35,8 +40,9 @@ import {LendIntegration} from './LendIntegration.sol';
  * Compound lend integration.
  */
 contract CompoundLendIntegration is LendIntegration {
-    using SafeMath for uint256;
+    using LowGasSafeMath for uint256;
     using SafeCast for uint256;
+    using UniversalERC20 for IERC20;
 
     /* ============ Modifiers ============ */
 
@@ -64,10 +70,9 @@ contract CompoundLendIntegration is LendIntegration {
     /**
      * Creates the integration
      *
-     * @param _weth                   Address of the WETH ERC20
      * @param _controller             Address of the controller
      */
-    constructor(IBabController _controller, address _weth) LendIntegration('compoundlend', _weth, _controller) {
+    constructor(IBabController _controller) LendIntegration('compoundlend', _controller) {
         assetToCToken[0x6B175474E89094C44Da98b954EedeAC495271d0F] = 0x5d3a536E4D6DbD6114cc1Ead35777bAB948E3643; // DAI
         assetToCToken[0x1f9840a85d5aF5bf1D1762F925BDADdC4201F984] = 0x35A18000230DA775CAc24873d00Ff85BccdeD550; // UNI
         assetToCToken[address(0)] = 0x4Ddc2D193948926D02f9B1fE9e1daa0718270ED5; // ETH
@@ -115,7 +120,7 @@ contract CompoundLendIntegration is LendIntegration {
     function _getExchangeRatePerToken(address _assetToken) internal view override returns (uint256) {
         address cToken = assetToCToken[_assetToken];
         uint256 exchangeRateCurrent = ICToken(cToken).exchangeRateStored();
-        uint8 assetDecimals = _assetToken == address(0) ? 18 : ERC20(_assetToken).decimals();
+        uint256 assetDecimals = IERC20(_assetToken).universalDecimals();
         // cTokens always have 8 decimals.
         if (assetDecimals < 8) {
             uint256 mantissa = 8 - assetDecimals;

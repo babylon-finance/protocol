@@ -20,13 +20,15 @@ pragma solidity 0.7.6;
 
 import 'hardhat/console.sol';
 import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
-import {SafeMath} from '@openzeppelin/contracts/math/SafeMath.sol';
 import {ReentrancyGuard} from '@openzeppelin/contracts/utils/ReentrancyGuard.sol';
+
 import {BaseIntegration} from '../BaseIntegration.sol';
 import {IGarden} from '../../interfaces/IGarden.sol';
 import {IStrategy} from '../../interfaces/IStrategy.sol';
 import {IBabController} from '../../interfaces/IBabController.sol';
 import {IBorrowIntegration} from '../../interfaces/IBorrowIntegration.sol';
+
+import {LowGasSafeMath} from '../../lib/LowGasSafeMath.sol';
 
 /**
  * @title BorrowIntetration
@@ -35,7 +37,7 @@ import {IBorrowIntegration} from '../../interfaces/IBorrowIntegration.sol';
  * Base class for integration with lending protocols
  */
 abstract contract BorrowIntegration is BaseIntegration, ReentrancyGuard, IBorrowIntegration {
-    using SafeMath for uint256;
+    using LowGasSafeMath for uint256;
 
     /* ============ Struct ============ */
 
@@ -66,16 +68,14 @@ abstract contract BorrowIntegration is BaseIntegration, ReentrancyGuard, IBorrow
      * Creates the integration
      *
      * @param _name                   Name of the integration
-     * @param _weth                   Address of the WETH ERC20
      * @param _controller             Address of the controller
      * @param _maxCollateralFactor    Max collateral factor allowed
      */
     constructor(
         string memory _name,
-        address _weth,
         IBabController _controller,
         uint256 _maxCollateralFactor
-    ) BaseIntegration(_name, _weth, _controller) {
+    ) BaseIntegration(_name, _controller) {
         maxCollateralFactor = _maxCollateralFactor;
     }
 

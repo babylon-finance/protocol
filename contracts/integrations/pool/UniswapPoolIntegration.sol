@@ -17,23 +17,24 @@
 */
 
 pragma solidity 0.7.6;
+import 'hardhat/console.sol';
 import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
-import {SafeMath} from '@openzeppelin/contracts/math/SafeMath.sol';
 import '@uniswap/v2-core/contracts/interfaces/IUniswapV2Pair.sol';
 
 import {IBabController} from '../../interfaces/IBabController.sol';
 import {PoolIntegration} from './PoolIntegration.sol';
 import {PreciseUnitMath} from '../../lib/PreciseUnitMath.sol';
+import {LowGasSafeMath} from '../../lib/LowGasSafeMath.sol';
 import {IUniswapV2Router} from '../../interfaces/external/uniswap/IUniswapV2Router.sol';
 
 /**
  * @title BalancerIntegration
  * @author Babylon Finance Protocol
  *
- * Kyber protocol trade integration
+ * UniswapPoolIntegration protocol integration
  */
 contract UniswapPoolIntegration is PoolIntegration {
-    using SafeMath for uint256;
+    using LowGasSafeMath for uint256;
     using PreciseUnitMath for uint256;
 
     /* ============ State Variables ============ */
@@ -51,14 +52,11 @@ contract UniswapPoolIntegration is PoolIntegration {
      * Creates the integration
      *
      * @param _controller                   Address of the controller
-     * @param _weth                         Address of the WETH ERC20
      * @param _uniswapRouterAddress         Address of Uniswap router
      */
-    constructor(
-        IBabController _controller,
-        address _weth,
-        address _uniswapRouterAddress
-    ) PoolIntegration('uniswap_pool', _weth, _controller) {
+    constructor(IBabController _controller, address _uniswapRouterAddress)
+        PoolIntegration('uniswap_pool', _controller)
+    {
         uniRouter = IUniswapV2Router(_uniswapRouterAddress);
     }
 

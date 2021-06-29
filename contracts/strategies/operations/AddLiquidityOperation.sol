@@ -17,14 +17,18 @@
 */
 
 pragma solidity 0.7.6;
+import 'hardhat/console.sol';
 
 import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
-import {SafeMath} from '@openzeppelin/contracts/math/SafeMath.sol';
-import {Operation} from './Operation.sol';
+import {SafeDecimalMath} from '../../lib/SafeDecimalMath.sol';
 import {IGarden} from '../../interfaces/IGarden.sol';
 import {IStrategy} from '../../interfaces/IStrategy.sol';
 import {PreciseUnitMath} from '../../lib/PreciseUnitMath.sol';
 import {IPoolIntegration} from '../../interfaces/IPoolIntegration.sol';
+
+import {LowGasSafeMath as SafeMath} from '../../lib/LowGasSafeMath.sol';
+
+import {Operation} from './Operation.sol';
 
 /**
  * @title AddLiquidityOperation
@@ -35,6 +39,7 @@ import {IPoolIntegration} from '../../interfaces/IPoolIntegration.sol';
 contract AddLiquidityOperation is Operation {
     using SafeMath for uint256;
     using PreciseUnitMath for uint256;
+    using SafeDecimalMath for uint256;
 
     /* ============ Constructor ============ */
 
@@ -161,27 +166,26 @@ contract AddLiquidityOperation is Operation {
     /**
      * Gets the NAV of the add liquidity op in the reserve asset
      *
-     * @param _data         Pool
+     * @param _pool               Pool address
      * @param _garden             Garden the strategy belongs to
      * @param _integration        Status of the asset amount
      * @return _nav               NAV of the strategy
      */
     function getNAV(
-        address _data,
+        address _pool,
         IGarden _garden,
         address _integration
     ) external view override returns (uint256, bool) {
         if (!IStrategy(msg.sender).isStrategyActive()) {
             return (0, true);
         }
-        address pool = _data;
-        address[] memory poolTokens = IPoolIntegration(_integration).getPoolTokens(pool);
+        address[] memory poolTokens = IPoolIntegration(_integration).getPoolTokens(_pool);
         uint256 NAV;
-        uint256 totalSupply = IERC20(pool).totalSupply();
-        uint256 lpTokens = IERC20(pool).balanceOf(msg.sender);
+        uint256 totalSupply = IERC20(_pool).totalSupply();
+        uint256 lpTokens = IERC20(_pool).balanceOf(msg.sender);
         for (uint256 i = 0; i < poolTokens.length; i++) {
             uint256 price = _getPrice(_garden.reserveAsset(), poolTokens[i] != address(0) ? poolTokens[i] : WETH);
-            uint256 balance = poolTokens[i] != address(0) ? IERC20(poolTokens[i]).balanceOf(pool) : pool.balance;
+            uint256 balance = poolTokens[i] != address(0) ? IERC20(poolTokens[i]).balanceOf(_pool) : _pool.balance;
             NAV += balance.mul(lpTokens).div(totalSupply).preciseDiv(price);
         }
         require(NAV != 0, 'NAV has to be bigger 0');
@@ -197,18 +201,26 @@ contract AddLiquidityOperation is Operation {
         uint256 _poolWeight,
         address _poolToken
     ) private returns (uint256) {
-        uint256 normalizedAmount = _capital.preciseMul(_poolWeight);
+        uint256 normalizedAssetAmount = _capital.preciseMul(_poolWeight);
+        uint256 price = _getPrice(_asset, _poolToken != address(0) ? _poolToken : WETH);
+        uint256 normalizedTokenAmount =
+            SafeDecimalMath.normalizeAmountTokens(_asset, _poolToken, normalizedAssetAmount.preciseMul(price));
+
         if (_poolToken != _asset && _poolToken != address(0)) {
-            IStrategy(msg.sender).trade(_asset, normalizedAmount, _poolToken);
+            IStrategy(msg.sender).trade(_asset, normalizedAssetAmount, _poolToken);
             return IERC20(_poolToken).balanceOf(msg.sender);
         }
         if (_poolToken == address(0)) {
             if (_asset != WETH) {
-                IStrategy(msg.sender).trade(_asset, normalizedAmount, WETH);
+                IStrategy(msg.sender).trade(_asset, normalizedAssetAmount, WETH); // normalized amount in original asset decimals
             }
             // Convert WETH to ETH
-            IStrategy(msg.sender).handleWeth(false, normalizedAmount);
+            // We consider the slippage in the trade
+            normalizedTokenAmount = normalizedTokenAmount <= IERC20(WETH).balanceOf(msg.sender)
+                ? normalizedTokenAmount
+                : IERC20(WETH).balanceOf(msg.sender);
+            IStrategy(msg.sender).handleWeth(false, normalizedTokenAmount); // normalized WETH/ETH amount with 18 decimals
         }
-        return normalizedAmount;
+        return normalizedTokenAmount;
     }
 }

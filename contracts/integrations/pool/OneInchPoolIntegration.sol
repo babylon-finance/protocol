@@ -18,12 +18,12 @@
 
 pragma solidity 0.7.6;
 import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
-import {SafeMath} from '@openzeppelin/contracts/math/SafeMath.sol';
 import '@uniswap/v2-core/contracts/interfaces/IUniswapV2Pair.sol';
 
 import {IBabController} from '../../interfaces/IBabController.sol';
 import {PoolIntegration} from './PoolIntegration.sol';
 import {PreciseUnitMath} from '../../lib/PreciseUnitMath.sol';
+import {LowGasSafeMath} from '../../lib/LowGasSafeMath.sol';
 import {IMooniswapFactory} from '../../interfaces/external/1inch/IMooniswapFactory.sol';
 import {IMooniswap} from '../../interfaces/external/1inch/IMooniswap.sol';
 
@@ -31,10 +31,10 @@ import {IMooniswap} from '../../interfaces/external/1inch/IMooniswap.sol';
  * @title BalancerIntegration
  * @author Babylon Finance Protocol
  *
- * Kyber protocol trade integration
+ * OneInchPoolIntegration protocol trade integration
  */
 contract OneInchPoolIntegration is PoolIntegration {
-    using SafeMath for uint256;
+    using LowGasSafeMath for uint256;
     using PreciseUnitMath for uint256;
 
     /* ============ State Variables ============ */
@@ -50,14 +50,11 @@ contract OneInchPoolIntegration is PoolIntegration {
      * Creates the integration
      *
      * @param _controller                   Address of the controller
-     * @param _weth                         Address of the WETH ERC20
      * @param _mooniswapFactoryAddress         Address of the Mooniswap factory
      */
-    constructor(
-        IBabController _controller,
-        address _weth,
-        address _mooniswapFactoryAddress
-    ) PoolIntegration('oneinch_pool', _weth, _controller) {
+    constructor(IBabController _controller, address _mooniswapFactoryAddress)
+        PoolIntegration('oneinch_pool', _controller)
+    {
         mooniswapFactory = IMooniswapFactory(_mooniswapFactoryAddress);
     }
 

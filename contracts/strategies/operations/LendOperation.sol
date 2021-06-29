@@ -18,14 +18,19 @@
 
 pragma solidity 0.7.6;
 
+import 'hardhat/console.sol';
+
 import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
-import {SafeMath} from '@openzeppelin/contracts/math/SafeMath.sol';
-import {Operation} from './Operation.sol';
+
 import {IGarden} from '../../interfaces/IGarden.sol';
 import {IStrategy} from '../../interfaces/IStrategy.sol';
+import {ILendIntegration} from '../../interfaces/ILendIntegration.sol';
+
 import {PreciseUnitMath} from '../../lib/PreciseUnitMath.sol';
 import {SafeDecimalMath} from '../../lib/SafeDecimalMath.sol';
-import {ILendIntegration} from '../../interfaces/ILendIntegration.sol';
+import {LowGasSafeMath as SafeMath} from '../../lib/LowGasSafeMath.sol';
+
+import {Operation} from './Operation.sol';
 
 /**
  * @title LendOperatin
@@ -86,12 +91,8 @@ contract LendOperation is Operation {
             uint8
         )
     {
-        // If it is WETH and Compound replace to zero address
-        if (_assetToken == WETH && ILendIntegration(_integration).getInvestmentToken(_assetToken) == address(0)) {
-            _assetToken = address(0);
-        }
         if (_assetToken != _asset) {
-            // Trade to WETH except if is 0x0 (ETH) and WETH
+            // Trade to WETH if is 0x0 (eth in compound)
             if (_assetToken != address(0) || _asset != WETH) {
                 IStrategy(msg.sender).trade(_asset, _capital, _assetToken == address(0) ? WETH : _assetToken);
             }
@@ -182,23 +183,23 @@ contract LendOperation is Operation {
     /**
      * Gets the NAV of the lend op in the reserve asset
      *
-     * @param _assetToken         Asset lent
+     * @param _lendToken          Asset lent
      * @param _garden             Garden the strategy belongs to
      * @param _integration        Status of the asset amount
      * @return _nav           NAV of the strategy
      */
     function getNAV(
-        address _assetToken,
+        address _lendToken,
         IGarden _garden,
         address _integration
     ) external view override returns (uint256, bool) {
         if (!IStrategy(msg.sender).isStrategyActive()) {
             return (0, true);
         }
-        uint256 assetTokenAmount = ILendIntegration(_integration).getInvestmentTokenAmount(msg.sender, _assetToken);
-        uint256 price = _getPrice(_garden.reserveAsset(), _assetToken);
+        uint256 assetTokenAmount = ILendIntegration(_integration).getInvestmentTokenAmount(msg.sender, _lendToken);
+        uint256 price = _getPrice(_garden.reserveAsset(), _lendToken);
         uint256 NAV =
-            SafeDecimalMath.normalizeAmountTokens(_assetToken, _garden.reserveAsset(), assetTokenAmount).preciseDiv(
+            SafeDecimalMath.normalizeAmountTokens(_lendToken, _garden.reserveAsset(), assetTokenAmount).preciseDiv(
                 price
             );
         require(NAV != 0, 'NAV has to be bigger 0');

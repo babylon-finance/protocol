@@ -19,7 +19,6 @@
 pragma solidity 0.7.6;
 
 import {ERC20} from '@openzeppelin/contracts/token/ERC20/ERC20.sol';
-import {SafeMath} from '@openzeppelin/contracts/math/SafeMath.sol';
 import {SafeCast} from '@openzeppelin/contracts/utils/SafeCast.sol';
 import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import {ReentrancyGuard} from '@openzeppelin/contracts/utils/ReentrancyGuard.sol';
@@ -32,6 +31,7 @@ import {IProtocolDataProvider} from '../../interfaces/external/aave/IProtocolDat
 import {IGarden} from '../../interfaces/IGarden.sol';
 import {IStrategy} from '../../interfaces/IStrategy.sol';
 import {IBabController} from '../../interfaces/IBabController.sol';
+import {LowGasSafeMath as SafeMath} from '../../lib/LowGasSafeMath.sol';
 import {LendIntegration} from './LendIntegration.sol';
 
 /**
@@ -59,10 +59,9 @@ contract AaveLendIntegration is LendIntegration {
     /**
      * Creates the integration
      *
-     * @param _weth                   Address of the WETH ERC20
      * @param _controller             Address of the controller
      */
-    constructor(IBabController _controller, address _weth) LendIntegration('aavelend', _weth, _controller) {}
+    constructor(IBabController _controller) LendIntegration('aavelend', _controller) {}
 
     function getInvestmentTokenAmount(address _address, address _assetToken) public view override returns (uint256) {
         return IERC20(_getInvestmentToken(_assetToken)).balanceOf(_address);

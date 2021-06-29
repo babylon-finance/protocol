@@ -19,13 +19,15 @@
 pragma solidity 0.7.6;
 
 import {ERC20} from '@openzeppelin/contracts/token/ERC20/ERC20.sol';
-import {SafeMath} from '@openzeppelin/contracts/math/SafeMath.sol';
+
 import {IGarden} from '../../interfaces/IGarden.sol';
 import {IStrategy} from '../../interfaces/IStrategy.sol';
 import {IOperation} from '../../interfaces/IOperation.sol';
 import {ITradeIntegration} from '../../interfaces/ITradeIntegration.sol';
 import {IPriceOracle} from '../../interfaces/IPriceOracle.sol';
 import {IBabController} from '../../interfaces/IBabController.sol';
+
+import {LowGasSafeMath as SafeMath} from '../../lib/LowGasSafeMath.sol';
 
 /**
  * @title LongStrategy

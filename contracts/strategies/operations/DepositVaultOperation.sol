@@ -17,13 +17,17 @@
 */
 
 pragma solidity 0.7.6;
+
 import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
-import {SafeMath} from '@openzeppelin/contracts/math/SafeMath.sol';
-import {Operation} from './Operation.sol';
+
 import {IGarden} from '../../interfaces/IGarden.sol';
 import {IStrategy} from '../../interfaces/IStrategy.sol';
-import {PreciseUnitMath} from '../../lib/PreciseUnitMath.sol';
 import {IPassiveIntegration} from '../../interfaces/IPassiveIntegration.sol';
+
+import {PreciseUnitMath} from '../../lib/PreciseUnitMath.sol';
+import {LowGasSafeMath as SafeMath} from '../../lib/LowGasSafeMath.sol';
+
+import {Operation} from './Operation.sol';
 
 /**
  * @title DepositVaultOperation
@@ -139,23 +143,23 @@ contract DepositVaultOperation is Operation {
     /**
      * Gets the NAV of the deposit vault op in the reserve asset
      *
-     * @param _data               Pool
+     * @param _vault              Vault
      * @param _garden             Garden the strategy belongs to
      * @param _integration        Status of the asset amount
      * @return _nav               NAV of the strategy
      */
     function getNAV(
-        address _data,
+        address _vault,
         IGarden _garden,
         address _integration
     ) external view override returns (uint256, bool) {
         if (!IStrategy(msg.sender).isStrategyActive()) {
             return (0, true);
         }
-        address vaultAsset = IPassiveIntegration(_integration).getInvestmentAsset(_data);
+        address vaultAsset = IPassiveIntegration(_integration).getInvestmentAsset(_vault);
         uint256 price = _getPrice(_garden.reserveAsset(), vaultAsset);
         uint256 NAV =
-            IPassiveIntegration(_integration).getPricePerShare(_data).mul(IERC20(_data).balanceOf(msg.sender)).div(
+            IPassiveIntegration(_integration).getPricePerShare(_vault).mul(IERC20(_vault).balanceOf(msg.sender)).div(
                 price
             );
         require(NAV != 0, 'NAV has to be bigger 0');

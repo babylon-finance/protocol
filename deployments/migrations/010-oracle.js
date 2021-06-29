@@ -18,11 +18,9 @@ module.exports = async ({
   const controllerContract = await ethers.getContractAt('BabController', controller.address, signer);
   const contract = 'PriceOracle';
 
-  const uniswapTWAPv3 = await deployments.get('UniswapTWAPV3');
-
   const deployment = await deploy(contract, {
     from: deployer,
-    args: [controller.address, addresses.compound.OpenOracle, [uniswapTWAPv3.address]],
+    args: [],
     log: true,
     gasPrice,
   });

@@ -20,10 +20,11 @@ pragma solidity 0.7.6;
 
 import 'hardhat/console.sol';
 import {ERC20} from '@openzeppelin/contracts/token/ERC20/ERC20.sol';
-import {SafeMath} from '@openzeppelin/contracts/math/SafeMath.sol';
+import {SafeDecimalMath} from '../../lib/SafeDecimalMath.sol';
 
 import {IBabController} from '../../interfaces/IBabController.sol';
 import {PreciseUnitMath} from '../../lib/PreciseUnitMath.sol';
+import {LowGasSafeMath} from '../../lib/LowGasSafeMath.sol';
 import {PassiveIntegration} from './PassiveIntegration.sol';
 import {IYearnRegistry} from '../../interfaces/external/yearn/IYearnRegistry.sol';
 import {IYearnVault} from '../../interfaces/external/yearn/IYearnVault.sol';
@@ -35,8 +36,9 @@ import {IYearnVault} from '../../interfaces/external/yearn/IYearnVault.sol';
  * Yearn v2 Vault Integration
  */
 contract YearnVaultIntegration is PassiveIntegration {
-    using SafeMath for uint256;
+    using LowGasSafeMath for uint256;
     using PreciseUnitMath for uint256;
+    using SafeDecimalMath for uint256;
 
     /* ============ State Variables ============ */
 
@@ -48,9 +50,8 @@ contract YearnVaultIntegration is PassiveIntegration {
      * Creates the integration
      *
      * @param _controller                   Address of the controller
-     * @param _weth                         Address of the WETH ERC20
      */
-    constructor(IBabController _controller, address _weth) PassiveIntegration('yearnvaultsv2', _weth, _controller) {}
+    constructor(IBabController _controller) PassiveIntegration('yearnvaultsv2', _controller) {}
 
     /* ============ Internal Functions ============ */
 
@@ -59,7 +60,11 @@ contract YearnVaultIntegration is PassiveIntegration {
     }
 
     function _getExpectedShares(address _asset, uint256 _amount) internal view override returns (uint256) {
-        return _amount.preciseDiv(IYearnVault(_asset).pricePerShare());
+        // Normalizing pricePerShare returned by Yearn
+        return
+            _amount.preciseDiv(IYearnVault(_asset).pricePerShare()).div(
+                10**PreciseUnitMath.decimals().sub(ERC20(_asset).decimals())
+            );
     }
 
     function _getPricePerShare(address _asset) internal view override returns (uint256) {

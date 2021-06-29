@@ -22,7 +22,7 @@ import {IBabController} from '../interfaces/IBabController.sol';
 import {IIntegration} from '../interfaces/IIntegration.sol';
 import {IStrategy} from '../interfaces/IStrategy.sol';
 import {IGarden} from '../interfaces/IGarden.sol';
-import {SafeMath} from '@openzeppelin/contracts/math/SafeMath.sol';
+import {LowGasSafeMath} from '../lib/LowGasSafeMath.sol';
 import {SignedSafeMath} from '@openzeppelin/contracts/math/SignedSafeMath.sol';
 import {SafeCast} from '@openzeppelin/contracts/utils/SafeCast.sol';
 import {PreciseUnitMath} from '../lib/PreciseUnitMath.sol';
@@ -35,7 +35,7 @@ import {PreciseUnitMath} from '../lib/PreciseUnitMath.sol';
  */
 abstract contract BaseIntegration {
     using SafeCast for int256;
-    using SafeMath for uint256;
+    using LowGasSafeMath for uint256;
     using SignedSafeMath for int256;
     using PreciseUnitMath for uint256;
 
@@ -51,10 +51,9 @@ abstract contract BaseIntegration {
     // Address of the controller
     IBabController public controller;
     // Wrapped ETH address
-    address public immutable weth;
+    address internal constant WETH = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
     // Name of the integration
     string public name;
-    mapping(address => bool) public initializedByGarden;
 
     /* ============ Constructor ============ */
 
@@ -62,19 +61,13 @@ abstract contract BaseIntegration {
      * Creates the integration
      *
      * @param _name                   Name of the integration
-     * @param _weth                   Address of the WETH ERC20
      * @param _controller             Address of the controller
      */
 
-    constructor(
-        string memory _name,
-        address _weth,
-        IBabController _controller
-    ) {
+    constructor(string memory _name, IBabController _controller) {
         require(address(_controller) != address(0), 'Controller must be defined');
         name = _name;
         controller = _controller;
-        weth = _weth;
     }
 
     /* ============ External Functions ============ */
