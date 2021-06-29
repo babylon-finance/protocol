@@ -406,9 +406,9 @@ async function getStrategy({
   return await createStrategy(
     kind,
     state,
-    signers ? signers: [signer1, signer2, signer3],
-    integrations ? integrations: uniswapV3TradeIntegration.address,
-    garden ? garden: (await ethers.getContractAt('Garden', gardens.slice(-1)[0])),
+    signers ? signers : [signer1, signer2, signer3],
+    integrations ? integrations : uniswapV3TradeIntegration.address,
+    garden ? garden : await ethers.getContractAt('Garden', gardens.slice(-1)[0]),
     params,
     specificParams,
   );

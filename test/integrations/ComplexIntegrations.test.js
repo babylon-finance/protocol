@@ -39,7 +39,6 @@ describe('ComplexIntegrationsTest', function () {
 
   describe('getNAV', function () {
     it(`of a leveraged ETH (AaveLend->AaveBorrow->BuyOp)`, async function () {
-
       await transferFunds(dai.address);
 
       const garden = await createGarden({ reserveAsset: dai.address });
