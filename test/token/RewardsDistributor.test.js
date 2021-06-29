@@ -1266,7 +1266,7 @@ describe('BABL Rewards Distributor', function () {
       // Receive BABL token after claim
       const signer1BalanceBABL = await bablToken.balanceOf(signer1.address);
       expect(signer1BalanceBABL).to.equal(signer1BABLUSDC.add(signer1BABLDAI));
-      expect(signer1BABLUSDC).to.be.closeTo(signer1BABLDAI, ethers.utils.parseEther('450'));
+      expect(signer1BABLUSDC).to.be.closeTo(signer1BABLDAI, ethers.utils.parseEther('700'));
     });
     it('should claim and update BABL Rewards of Signer1 in USDC Garden and DAI Garden as contributor of 2 strategies in 2 different gardens with profit below expected return within a quarter', async function () {
       const whaleAddress = '0x6B175474E89094C44Da98b954EedeAC495271d0F'; // Has DAI
