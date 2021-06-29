@@ -165,11 +165,15 @@ async function deposit(garden, signers) {
   }
 }
 
-async function vote(garden, signers, strategy) {
-  const [signer1, signer2] = signers;
+async function vote(strategy) {
+  const garden = await strategy.garden();
+  const gardenContract = await ethers.getContractAt('Garden', garden);
 
-  const signer1Balance = await garden.balanceOf(signer1.getAddress());
-  const signer2Balance = await garden.balanceOf(signer2.getAddress());
+  const signers = await ethers.getSigners();
+  const [, , , signer1, signer2] = signers;
+
+  const signer1Balance = await gardenContract.balanceOf(signer1.getAddress());
+  const signer2Balance = await gardenContract.balanceOf(signer2.getAddress());
 
   return (
     strategy
@@ -371,7 +375,7 @@ async function createStrategy(kind, state, signers, integrations, garden, params
     if (state === 'deposit') {
       return strategy;
     }
-    await vote(garden, signers, strategy);
+    await vote(strategy);
     if (state === 'vote') {
       return strategy;
     }
@@ -385,7 +389,15 @@ async function createStrategy(kind, state, signers, integrations, garden, params
   return strategy;
 }
 
-async function getStrategy({ garden, kind = 'buy', state = 'dataset', signers, integrations, params, specificParams }) {
+async function getStrategy({
+  garden,
+  kind = 'buy',
+  state = 'dataset',
+  signers,
+  integrations,
+  params,
+  specificParams,
+} = {}) {
   const babController = await getContract('BabController', 'BabControllerProxy');
   const uniswapV3TradeIntegration = await getContract('UniswapV3TradeIntegration');
   const [signer1, signer2, signer3] = await ethers.getSigners();
@@ -410,6 +422,7 @@ module.exports = {
   DAI_STRATEGY_PARAMS,
   USDC_STRATEGY_PARAMS,
   executeStrategy,
+  vote,
   executeStrategyImmediate,
   finalizeStrategy,
   finalizeStrategyImmediate,

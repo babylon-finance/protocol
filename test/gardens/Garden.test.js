@@ -2,18 +2,23 @@ const { expect } = require('chai');
 const { ethers } = require('hardhat');
 
 const addresses = require('../../lib/addresses');
-const { ONE_DAY_IN_SECONDS, ONE_ETH, NOW } = require('../../lib/constants.js');
+const { ONE_DAY_IN_SECONDS, ONE_ETH, NOW, PROTOCOL_FEE, PROFIT_PROTOCOL_FEE } = require('../../lib/constants.js');
 const { increaseTime } = require('../utils/test-helpers');
+const { from, eth, parse } = require('../../lib/helpers');
 const { GARDEN_PARAMS_STABLE, GARDEN_PARAMS, ADDRESS_ZERO } = require('../../lib/constants');
 const { impersonateAddress } = require('../../lib/rpc');
 
 const {
   DEFAULT_STRATEGY_PARAMS,
   createStrategy,
+  getStrategy,
   executeStrategy,
+  vote,
   finalizeStrategy,
   injectFakeProfits,
 } = require('../fixtures/StrategyHelper');
+
+const { createGarden } = require('../fixtures/GardenHelper');
 
 const { setupTests } = require('../fixtures/GardenFixture');
 
@@ -554,14 +559,37 @@ describe('Garden', function () {
   });
 
   describe('withdraw', async function () {
-    it('can withdraw funds if they have enough in deposits', async function () {
-      await garden1.connect(signer3).deposit(ethers.utils.parseEther('1'), 1, signer3.getAddress(), false, {
-        value: ethers.utils.parseEther('1'),
+    it('can withdraw funds if garden has free liquidity', async function () {
+      await garden1.connect(signer3).deposit(eth(), 1, signer3.getAddress(), false, {
+        value: eth(),
       });
-      ethers.provider.send('evm_increaseTime', [ONE_DAY_IN_SECONDS * 90]);
-      expect(await garden1.principal()).to.equal(ethers.utils.parseEther('2'));
-      expect(await garden1.totalContributors()).to.equal(2);
-      await garden1.connect(signer3).withdraw(90909, 1, signer3.getAddress(), false, ADDRESS_ZERO);
+
+      const beforeWithdrawal = await ethers.provider.getBalance(signer3.address);
+
+      await garden1.connect(signer3).withdraw(eth(), 1, signer3.getAddress(), false, ADDRESS_ZERO);
+
+      expect((await ethers.provider.getBalance(signer3.address)).sub(beforeWithdrawal)).to.be.closeTo(
+        eth(0.99),
+        eth(0.01),
+      );
+    });
+
+    it('can withdraw funds with a penalty', async function () {
+      const garden = await createGarden();
+
+      const strategy = await getStrategy();
+      await vote(strategy);
+
+      await executeStrategy(strategy, { amount: eth().sub(eth().mul(PROTOCOL_FEE).div(eth())) });
+
+      const beforeWithdrawal = await ethers.provider.getBalance(signer1.address);
+
+      await garden.connect(signer1).withdraw(eth(0.5), 1, signer1.getAddress(), true, strategy.address);
+
+      expect((await ethers.provider.getBalance(signer1.address)).sub(beforeWithdrawal)).to.be.closeTo(
+        eth(0.46),
+        eth(0.01),
+      );
     });
 
     it('cannot withdraw gardens until the time ends', async function () {
@@ -574,15 +602,6 @@ describe('Garden', function () {
         garden1.connect(signer3).withdraw(ethers.utils.parseEther('20'), 1, signer3.getAddress()),
         false,
         ADDRESS_ZERO,
-      ).to.be.reverted;
-    });
-
-    it('cannot make a deposit when the garden is disabled', async function () {
-      await expect(babController.connect(owner).disableGarden(garden1.address)).to.not.be.reverted;
-      await expect(
-        garden1.connect(signer3).deposit(ethers.utils.parseEther('1'), 1, signer3.getAddress(), false, {
-          value: ethers.utils.parseEther('1'),
-        }),
       ).to.be.reverted;
     });
 
@@ -665,8 +684,6 @@ describe('Garden', function () {
       expect(await strategyContract.stake()).to.equal(ethers.utils.parseEther('0.1'));
 
       await finalizeStrategy(strategyContract, 42);
-
-      // Can now withdraw stake amount as it is again unlocked
 
       await garden1
         .connect(signer2)
@@ -824,6 +841,15 @@ describe('Garden', function () {
   });
 
   describe('deposit', async function () {
+    it('cannot make a deposit when the garden is disabled', async function () {
+      await expect(babController.connect(owner).disableGarden(garden1.address)).to.not.be.reverted;
+      await expect(
+        garden1.connect(signer3).deposit(ethers.utils.parseEther('1'), 1, signer3.getAddress(), false, {
+          value: ethers.utils.parseEther('1'),
+        }),
+      ).to.be.reverted;
+    });
+
     it('a contributor can make an initial deposit and withdraw with DAI', async function () {
       const whaleAddress = '0x6B175474E89094C44Da98b954EedeAC495271d0F'; // Has DAI
       const whaleSigner = await impersonateAddress(whaleAddress);
