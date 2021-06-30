@@ -110,7 +110,7 @@ contract BabylonViewer {
                 garden.gardenInitializedAt(),
                 garden.totalContributors(),
                 garden.totalStake(),
-                totalSupply.preciseMul(valuationPerToken),
+                valuationPerToken > 0 ? totalSupply.preciseMul(valuationPerToken) : 0,
                 totalSupply,
                 seed
             ]
