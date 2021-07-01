@@ -23,7 +23,7 @@ module.exports = async ({
     gasPrice,
   });
 
-  if (!deployment.newlyDeployed) {
+  if (deployment.newlyDeployed) {
     console.log(`Setting garden valuer on controller ${deployment.address}`);
     await (await controllerContract.editGardenValuer(deployment.address, { gasPrice })).wait();
   }
