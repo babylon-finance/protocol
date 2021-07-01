@@ -8,8 +8,8 @@ module.exports = async ({
   getRapid,
 }) => {
   const { deploy } = deployments;
-  const { deployer } = await getNamedAccounts();
-  const signer = await getSigner(deployer);
+  const { deployer, owner } = await getNamedAccounts();
+  const signer = await getSigner(owner);
   const gasPrice = await getRapid();
   const contract = 'GardenValuer';
 
@@ -23,7 +23,7 @@ module.exports = async ({
     gasPrice,
   });
 
-  if (deployment.newlyDeployed) {
+  if (!deployment.newlyDeployed) {
     console.log(`Setting garden valuer on controller ${deployment.address}`);
     await (await controllerContract.editGardenValuer(deployment.address, { gasPrice })).wait();
   }
@@ -34,4 +34,3 @@ module.exports = async ({
 };
 
 module.exports.tags = ['Valuer'];
-module.exports.dependencies = ['Controller'];

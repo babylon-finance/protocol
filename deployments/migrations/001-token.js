@@ -21,4 +21,3 @@ module.exports = async ({ getTenderlyContract, getNamedAccounts, deployments, ge
 };
 
 module.exports.tags = ['Token'];
-module.exports.dependencies = ['Controller'];

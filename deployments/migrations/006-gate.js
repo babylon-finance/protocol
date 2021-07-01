@@ -50,4 +50,3 @@ module.exports = async ({
 };
 
 module.exports.tags = ['Gate'];
-module.exports.dependencies = ['Controller'];
