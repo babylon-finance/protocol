@@ -55,6 +55,7 @@ describe('Garden', function () {
   let daiGarden;
   let usdcGarden;
   let gardenNFT;
+  let gardenValuer;
 
   let usdc;
   let weth;
@@ -75,6 +76,7 @@ describe('Garden', function () {
       ishtarGate,
       balancerIntegration,
       uniswapV3TradeIntegration,
+      gardenValuer,
 
       dai,
       usdc,
@@ -862,6 +864,9 @@ describe('Garden', function () {
       await dai.connect(signer1).approve(babController.address, ethers.utils.parseEther('1000'), {
         gasPrice: 0,
       });
+
+      console.log('create');
+
       await babController
         .connect(signer1)
         .createGarden(
@@ -877,24 +882,34 @@ describe('Garden', function () {
       const gardens = await babController.getGardens();
       daiGarden = await ethers.getContractAt('Garden', gardens[4]);
       expect(await daiGarden.totalContributors()).to.equal(1);
+
       const gardenBalance = await dai.balanceOf(daiGarden.address);
       const supplyBefore = await daiGarden.totalSupply();
+
       await ishtarGate.connect(signer1).setGardenAccess(signer3.address, daiGarden.address, 1, { gasPrice: 0 });
       await dai.connect(signer3).approve(daiGarden.address, ethers.utils.parseEther('1000'), { gasPrice: 0 });
-      await daiGarden.connect(signer3).deposit(ethers.utils.parseEther('1000'), 1, signer3.getAddress(), false);
+
+      await daiGarden.connect(signer3).deposit(eth(1000), eth(1000), signer3.getAddress(), false);
       const gardenBalanceAfter = await dai.balanceOf(daiGarden.address);
+
+      await daiGarden.connect(keeper).processDeposit(signer3.address, eth());
+
       const supplyAfter = await daiGarden.totalSupply();
       expect(supplyAfter.sub(supplyBefore)).to.be.closeTo(
         ethers.utils.parseEther('1000'),
         ethers.utils.parseEther('0.1'),
       );
+
       expect(gardenBalanceAfter.sub(gardenBalance)).to.equal(ethers.utils.parseEther('1000'));
       expect(await daiGarden.principal()).to.equal(ethers.utils.parseEther('1100'));
       expect(await daiGarden.totalContributors()).to.equal(2);
+
       ethers.provider.send('evm_increaseTime', [1]);
+
       await daiGarden
         .connect(signer3)
         .withdraw(await daiGarden.balanceOf(signer3.address), 1, signer3.getAddress(), false, ADDRESS_ZERO);
+
       expect(await daiGarden.principal()).to.equal(ethers.utils.parseEther('100'));
       expect(await daiGarden.totalContributors()).to.equal(1);
     });

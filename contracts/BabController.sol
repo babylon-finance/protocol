@@ -240,6 +240,7 @@ contract BabController is OwnableUpgradeable, IBabController {
         isGarden[newGarden] = true;
         gardens.push(newGarden);
         IGarden(newGarden).deposit{value: msg.value}(_initialContribution, _initialContribution, msg.sender, true);
+        IGarden(newGarden).processDeposit(msg.sender, 1e18);
         emit GardenAdded(newGarden, msg.sender);
         return newGarden;
     }

@@ -126,12 +126,18 @@ interface IGarden {
         address[] calldata _opDatas
     ) external;
 
+
     function deposit(
         uint256 _reserveAssetQuantity,
         uint256 _minGardenTokenReceiveQuantity,
         address _to,
         bool mintNFT
     ) external payable;
+
+    function processDeposit(
+        address _to,
+        uint256 _pricePerShare
+    ) external;
 
     function withdraw(
         uint256 _gardenTokenQuantity,
@@ -142,8 +148,6 @@ interface IGarden {
     ) external;
 
     function claimReturns(address[] calldata _finalizedStrategies) external;
-
-    function getGardenTokenMintQuantity(uint256 _netReserveFlows, bool isDeposit) external view returns (uint256);
 
     function getExpectedReserveWithdrawalQuantity(uint256 _gardenTokenQuantity) external view returns (uint256);
 
