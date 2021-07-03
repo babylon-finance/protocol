@@ -67,7 +67,12 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
     using SafeERC20 for IERC20;
 
     /* ============ Events ============ */
-    event GardenDeposit(address indexed _to, uint256 minAmountOutShares, uint256 reserveTokenQuantity, uint256 timestamp);
+    event GardenDeposit(
+        address indexed _to,
+        uint256 minAmountOutShares,
+        uint256 reserveTokenQuantity,
+        uint256 timestamp
+    );
     event GardenWithdrawal(
         address indexed _from,
         address indexed _to,
@@ -130,7 +135,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
     // Keeps track of the garden balance in reserve asset.
     uint256 public override principal;
 
-    // The amount of funds set aside to be paid as rewards. Should NOT be spent
+    // The amount of funds set aside to be paid as rewards. Should NEVER be spent
     // on anything else ever.
     uint256 public override reserveAssetRewardsSetAside;
 
@@ -182,10 +187,6 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
     function _onlyUnpaused() private view {
         // Do not execute if Globally or individually paused
         _require(!IBabController(controller).isPaused(address(this)), Errors.ONLY_UNPAUSED);
-    }
-
-    function _onlyKeeper() private view {
-        _require(IBabController(controller).isValidKeeper(msg.sender), Errors.ONLY_KEEPER);
     }
 
     function _onlyContributor() private view {
@@ -333,18 +334,20 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
      *   Deposits the reserve asset into the garden.
      * @dev
      *   WARN: If the reserve Asset is different than WETH the sender needs to
-     *   have approved the garden.  This method does NOT issue Garden shares to
-     *   contributor. Instead shares are issued by Keeper processing the
-     *   deposit later.  _minAmountOutShares are respected by Keeper so user is
-     *   guranteed to recieve at least _minAmountOutShares.
-     * @param _reserveAssetAmountIn   Amount of the reserve asset that is received
-     * @param _minAmountOutShares     Min amount of Garden shares to receive after issuance
+     *   have approved the garden.
+     *
+     *   This method does NOT issue Garden shares to contributor. Instead
+     *   shares are issued by Keeper processing the deposit later.
+     *   _minAmountOut are respected by Keeper so user is guranteed to
+     *   recieve at least _minAmountOut.
+     * @param _amountIn               Amount of the reserve asset that is received from contributor
+     * @param _minAmountOut           Min amount of Garden shares to receive by contributor
      * @param _to                     Address to mint Garden shares to
      * @param _mintNft                Whether to mint NFT or not
      */
     function deposit(
-        uint256 _reserveAssetAmountIn,
-        uint256 _minAmountOutShares,
+        uint256 _amountIn,
+        uint256 _minAmountOut,
         address _to,
         bool _mintNft
     ) external payable override nonReentrant {
@@ -359,11 +362,11 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
 
         // if deposit limit is 0, then there is no deposit limit
         if (maxDepositLimit > 0) {
-            _require(principal.add(_reserveAssetAmountIn) <= maxDepositLimit, Errors.MAX_DEPOSIT_LIMIT);
+            _require(principal.add(_amountIn) <= maxDepositLimit, Errors.MAX_DEPOSIT_LIMIT);
         }
 
         _require(totalContributors <= maxContributors, Errors.MAX_CONTRIBUTORS);
-        _require(_reserveAssetAmountIn >= minContribution, Errors.MIN_CONTRIBUTION);
+        _require(_amountIn >= minContribution, Errors.MIN_CONTRIBUTION);
 
         uint256 reserveAssetBalanceBefore = IERC20(reserveAsset).balanceOf(address(this));
 
@@ -372,26 +375,26 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
             IWETH(WETH).deposit{value: msg.value}();
         } else {
             // Transfer ERC20 to the garden
-            IERC20(reserveAsset).safeTransferFrom(msg.sender, address(this), _reserveAssetAmountIn);
+            IERC20(reserveAsset).safeTransferFrom(msg.sender, address(this), _amountIn);
         }
 
         // Make sure we received the correct amount of reserve asset
         _require(
-            IERC20(reserveAsset).balanceOf(address(this)).sub(reserveAssetBalanceBefore) == _reserveAssetAmountIn,
+            IERC20(reserveAsset).balanceOf(address(this)).sub(reserveAssetBalanceBefore) == _amountIn,
             Errors.MSG_VALUE_DO_NOT_MATCH
         );
 
         // update contributor record so Keeper can process deposit later and
         // issue Garden shares to contributor
         Contributor storage contributor = contributors[_to];
-        contributor.pendingDeposits = contributor.pendingDeposits.add(_reserveAssetAmountIn);
-        contributor.minAmountShares = contributor.minAmountShares.add(_minAmountOutShares);
+        contributor.pendingDeposits = contributor.pendingDeposits.add(_amountIn);
+        contributor.minAmountShares = contributor.minAmountShares.add(_minAmountOut);
 
         // update total pending deposits so funds can't be spend until they are
         // processed by Keeper
-        totalPendingDeposits = totalPendingDeposits.add(_reserveAssetAmountIn);
+        totalPendingDeposits = totalPendingDeposits.add(_amountIn);
 
-        emit GardenDeposit(_to, _minAmountOutShares, _reserveAssetAmountIn, block.timestamp);
+        emit GardenDeposit(_to, _minAmountOut, _amountIn, block.timestamp);
     }
 
     /**
@@ -402,16 +405,17 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
      * @param _to             Address to mint Garden tokens to
      * @param _pricePerShare  Price per share of Garden according to GardenValuer
      */
-    function processDeposit(
-        address _to,
-        uint256 _pricePerShare
-    ) external override nonReentrant {
+    function processDeposit(address _to, uint256 _pricePerShare) external override nonReentrant {
         _onlyUnpaused();
         _onlyActive();
         _require(IBabController(controller).isValidKeeper(msg.sender) || msg.sender == controller, Errors.ONLY_KEEPER);
 
         _internalDeposit(_to, _pricePerShare, contributors[_to].pendingDeposits, contributors[_to].minAmountShares);
 
+        // update total pending deposits so funds can be spend
+        totalPendingDeposits = totalPendingDeposits.sub(contributors[_to].pendingDeposits);
+
+        // remove pending deposit from contributor
         delete contributors[_to].pendingDeposits;
         delete contributors[_to].minAmountShares;
     }
@@ -460,10 +464,14 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
     }
 
     /**
-     * Withdraws the ETH relative to the token participation in the garden and sends it back to the sender.
-     * ATTENTION. Do not call withPenalty unless certain. If penalty is set, it will be applied regardless of the garden state.
-     * It is advised to first try to withdraw with no penalty and it this reverts then try to with penalty.
-     *
+     * @notice
+     *   Withdraws the reserve asset relative to the token participation in the garden
+     *   and sends it back to the sender.
+     * @dev
+     *   ATTENTION. Do not call withPenalty unless certain. If penalty is set,
+     *   it will be applied regardless of the garden state.
+     *   It is advised to first try to withdraw with no penalty and it this
+     *   reverts then try to with penalty.
      * @param _gardenTokenQuantity           Quantity of the garden token to withdrawal
      * @param _minReserveReceiveQuantity     Min quantity of reserve asset to receive
      * @param _to                            Address to send component assets to
@@ -613,7 +621,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
 
         keeperDebt = keeperDebt.add(_fee);
         // Pay Keeper in Reserve Asset
-        if (keeperDebt > 0 && _liquidReserve() >= keeperDebt) {
+        if (keeperDebt > 0 && _liquidReserve() >= 0) {
             IERC20(reserveAsset).safeTransfer(_keeper, keeperDebt);
             keeperDebt = 0;
         }
@@ -828,10 +836,13 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
      * Gets liquid reserve available for to Garden.
      */
     function _liquidReserve() private view returns (uint256) {
-        return
-            IERC20(reserveAsset).balanceOf(address(this)).sub(reserveAssetPrincipalWindow).sub(
-                reserveAssetRewardsSetAside
-            );
+        uint256 reserve =
+            IERC20(reserveAsset)
+                .balanceOf(address(this))
+                .sub(reserveAssetPrincipalWindow)
+                .sub(reserveAssetRewardsSetAside)
+                .sub(totalPendingDeposits);
+        return reserve > keeperDebt ? reserve.sub(keeperDebt) : 0;
     }
 
     /**
