@@ -16,6 +16,7 @@
     SPDX-License-Identifier: Apache License, Version 2.0
 */
 pragma solidity 0.7.6;
+pragma abicoder v2;
 
 /**
  * @title IGarden
@@ -123,7 +124,7 @@ interface IGarden {
         uint256[] calldata _stratParams,
         uint8[] calldata _opTypes,
         address[] calldata _opIntegrations,
-        address[] calldata _opDatas
+        bytes calldata _opDatas
     ) external;
 
     function deposit(

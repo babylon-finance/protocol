@@ -16,6 +16,7 @@
     SPDX-License-Identifier: Apache License, Version 2.0
 */
 pragma solidity 0.7.6;
+//pragma abicoder v2;
 
 import 'hardhat/console.sol';
 import {Address} from '@openzeppelin/contracts/utils/Address.sol';
@@ -35,6 +36,7 @@ import {Math} from '../lib/Math.sol';
 import {AddressArrayUtils} from '../lib/AddressArrayUtils.sol';
 import {LowGasSafeMath as SafeMath} from '../lib/LowGasSafeMath.sol';
 import {UniversalERC20} from '../lib/UniversalERC20.sol';
+import {BytesLib} from '../lib/BytesLib.sol';
 
 import {IWETH} from '../interfaces/external/weth/IWETH.sol';
 import {IBabController} from '../interfaces/IBabController.sol';
@@ -66,6 +68,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
     using Math for int256;
     using Math for uint256;
     using AddressArrayUtils for address[];
+    using BytesLib for bytes;
     using Address for address;
     using SafeERC20 for IERC20;
     using UniversalERC20 for IERC20;
@@ -228,7 +231,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
     // Types and data for the operations of this strategy
     uint8[] public override opTypes;
     address[] public override opIntegrations;
-    address[] public override opDatas;
+    address[] private opDatas; // DEPRECATED
 
     // Garden that these strategies belong to
     IGarden public override garden;
@@ -264,6 +267,9 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
 
     // Voters mapped to their votes.
     mapping(address => int256) public votes;
+
+    // Strategy opDatas encoded
+    bytes public override opEncodedData; // bytes 4 for signature + 32 bytes each word representing each OpData in multi-step strategies
 
     /* ============ Constructor ============ */
 
@@ -323,22 +329,24 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
      * Sets the data for the operations of this strategy
      * @param _opTypes                    An array with the op types
      * @param _opIntegrations             Addresses with the integration for each op
-     * @param _opDatas                    Bytes with the params for the op in the same position in the opTypes array
+     * @param _opEncodedData              Bytes with the params for the op in the same position in the opTypes array
      */
     function setData(
         uint8[] calldata _opTypes,
         address[] calldata _opIntegrations,
-        address[] calldata _opDatas
+        bytes calldata _opEncodedData
     ) external override {
         _onlyGardenAndNotSet();
+        uint256 dataLength = _opEncodedData.length.sub(4).div(32);
         _require(
-            (_opTypes.length == _opIntegrations.length) && (_opIntegrations.length == _opDatas.length),
+            (_opTypes.length == _opIntegrations.length) && (_opIntegrations.length == dataLength),
             Errors.TOO_MANY_OPS
         );
-        _require(_opDatas.length < MAX_OPERATIONS && _opDatas.length > 0, Errors.TOO_MANY_OPS);
+        _require(dataLength < MAX_OPERATIONS && dataLength > 0, Errors.TOO_MANY_OPS);
+
         for (uint256 i = 0; i < _opTypes.length; i++) {
             IOperation(controller.enabledOperations(_opTypes[i])).validateOperation(
-                _opDatas[i],
+                BytesLib.slice(opEncodedData, 4 + (32 * i), 32), // abi.decode(_opEncodedData[4 + (32 * i): (32 * (i + 1)) + 4], (bytes)),
                 garden,
                 _opIntegrations[i],
                 i
@@ -351,7 +359,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
 
         opTypes = _opTypes;
         opIntegrations = _opIntegrations;
-        opDatas = _opDatas;
+        opEncodedData = _opEncodedData;
         dataSet = true;
     }
 
@@ -686,10 +694,10 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         returns (
             uint8,
             address,
-            address
+            bytes memory
         )
     {
-        return (opTypes[_index], opIntegrations[_index], opDatas[_index]);
+        return (opTypes[_index], opIntegrations[_index], BytesLib.slice(opEncodedData, 4 + (32 * _index), 32));
     }
 
     /**
@@ -699,12 +707,13 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
      * @return _nav           NAV of the strategy
      */
     function getNAV() public view override returns (uint256) {
-        uint256 positiveNav = 0;
-        uint256 negativeNav = 0;
+        uint256 positiveNav;
+        uint256 negativeNav;
         address reserveAsset = garden.reserveAsset();
         for (uint256 i = 0; i < opTypes.length; i++) {
             IOperation operation = IOperation(IBabController(controller).enabledOperations(uint256(opTypes[i])));
-            (uint256 strategyNav, bool positive) = operation.getNAV(opDatas[i], garden, opIntegrations[i]);
+            (uint256 strategyNav, bool positive) =
+                operation.getNAV(BytesLib.slice(opEncodedData, 4 + (32 * i), 32), garden, opIntegrations[i]);
             if (positive) {
                 positiveNav = positiveNav.add(strategyNav);
             } else {
@@ -714,13 +723,12 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         }
         uint256 lastOp = opTypes.length - 1;
         if (opTypes[lastOp] == 4) {
-            uint256 borrowBalance = IERC20(opDatas[lastOp]).universalBalanceOf(address(this));
+            address token = BytesLib.toAddress(opEncodedData, 4 + 12 + (32 * lastOp));
+            uint256 borrowBalance = IERC20(token).universalBalanceOf(address(this));
             if (borrowBalance > 0) {
-                uint256 price = _getPrice(reserveAsset, opDatas[lastOp]);
+                uint256 price = _getPrice(reserveAsset, token);
                 positiveNav = positiveNav.add(
-                    SafeDecimalMath.normalizeAmountTokens(opDatas[lastOp], reserveAsset, borrowBalance).preciseDiv(
-                        price
-                    )
+                    SafeDecimalMath.normalizeAmountTokens(token, reserveAsset, borrowBalance).preciseDiv(price)
                 );
             }
         }
@@ -806,7 +814,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
                 assetAccumulated,
                 capitalForNexOperation,
                 assetStatus,
-                opDatas[i],
+                BytesLib.slice(opEncodedData, 4 + (32 * i), 32),
                 garden,
                 opIntegrations[i]
             );
@@ -829,7 +837,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
                 capitalPending,
                 assetStatus,
                 _percentage,
-                opDatas[i - 1],
+                BytesLib.slice(opEncodedData, 4 + (32 * (i - 1)), 32),
                 garden,
                 opIntegrations[i - 1]
             );

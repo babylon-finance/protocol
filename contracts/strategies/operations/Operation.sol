@@ -17,6 +17,7 @@
 */
 
 pragma solidity 0.7.6;
+pragma abicoder v2;
 
 import {ERC20} from '@openzeppelin/contracts/token/ERC20/ERC20.sol';
 
@@ -74,7 +75,7 @@ abstract contract Operation is IOperation {
     /* ============ Virtual External Functions ============ */
 
     function validateOperation(
-        address _data,
+        bytes calldata _data,
         IGarden _garden,
         address _integration,
         uint256 _index
@@ -84,7 +85,7 @@ abstract contract Operation is IOperation {
         address _asset,
         uint256 _capital,
         uint8 _assetStatus,
-        address _data,
+        bytes calldata _data,
         IGarden _garden,
         address _integration
     )
@@ -102,7 +103,7 @@ abstract contract Operation is IOperation {
         uint256 _remaining,
         uint8 _assetStatus,
         uint256 _percentage,
-        address _data,
+        bytes calldata _data,
         IGarden _garden,
         address _integration
     )
@@ -116,7 +117,7 @@ abstract contract Operation is IOperation {
         );
 
     function getNAV(
-        address _data,
+        bytes calldata _data,
         IGarden _garden,
         address _integration
     ) external view virtual override returns (uint256, bool);

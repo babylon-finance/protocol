@@ -26,7 +26,7 @@ pragma solidity 0.7.6;
 interface IPoolIntegration {
     function joinPool(
         address _strategy,
-        address _poolAddress,
+        bytes calldata _pool,
         uint256 _poolTokensOut,
         address[] memory _poolTokens,
         uint256[] memory _maxAmountsIn
@@ -34,26 +34,26 @@ interface IPoolIntegration {
 
     function exitPool(
         address _strategy,
-        address _poolAddress,
+        bytes calldata _pool,
         uint256 _poolTokensIn,
         address[] memory _poolTokens,
         uint256[] memory _minAmountsOut
     ) external;
 
-    function getPoolTokens(address _poolAddress) external view returns (address[] memory);
+    function getPoolTokens(bytes calldata _pool) external view returns (address[] memory);
 
-    function getPoolWeights(address _poolAddress) external view returns (uint256[] memory);
+    function getPoolWeights(bytes calldata _pool) external view returns (uint256[] memory);
 
     function getPoolTokensOut(
-        address _poolAdress,
+        bytes calldata _pool,
         address _tokenAddress,
         uint256 _maxAmountsIn
     ) external view returns (uint256);
 
-    function getPoolMinAmountsOut(address _poolAddress, uint256 _poolTokenAmount)
+    function getPoolMinAmountsOut(bytes calldata _pool, uint256 _poolTokenAmount)
         external
         view
         returns (uint256[] memory _minAmountsOut);
 
-    function isPool(address _poolAddress) external view returns (bool);
+    function isPool(bytes calldata _pool) external view returns (bool);
 }

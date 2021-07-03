@@ -21,6 +21,7 @@ import 'hardhat/console.sol';
 
 import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import {SafeDecimalMath} from '../../lib/SafeDecimalMath.sol';
+import {BytesLib} from '../../lib/BytesLib.sol';
 import {IGarden} from '../../interfaces/IGarden.sol';
 import {IStrategy} from '../../interfaces/IStrategy.sol';
 import {PreciseUnitMath} from '../../lib/PreciseUnitMath.sol';
@@ -34,12 +35,13 @@ import {Operation} from './Operation.sol';
  * @title AddLiquidityOperation
  * @author Babylon Finance
  *
- * Executes a add liquidity operation
+ * Executes an add liquidity operation
  */
 contract AddLiquidityOperation is Operation {
     using SafeMath for uint256;
     using PreciseUnitMath for uint256;
     using SafeDecimalMath for uint256;
+    using BytesLib for bytes;
 
     /* ============ Constructor ============ */
 
@@ -57,7 +59,7 @@ contract AddLiquidityOperation is Operation {
      * @param _data                   Operation data
      */
     function validateOperation(
-        address _data,
+        bytes calldata _data,
         IGarden, /* _garden */
         address _integration,
         uint256 /* _index */
@@ -70,7 +72,7 @@ contract AddLiquidityOperation is Operation {
      * @param _asset              Asset to receive into this operation
      * @param _capital            Amount of asset received
      * param _assetStatus        Status of the asset amount
-     * @param _pool               Address of the pool to enter
+     * @param _data               OpData e.g. Address of the pool to enter
      * @param _garden             Garden of the strategy
      * @param _integration        Address of the integration to execute
      */
@@ -78,7 +80,7 @@ contract AddLiquidityOperation is Operation {
         address _asset,
         uint256 _capital,
         uint8, /* _assetStatus */
-        address _pool,
+        bytes calldata _data,
         IGarden _garden,
         address _integration
     )
@@ -91,22 +93,33 @@ contract AddLiquidityOperation is Operation {
             uint8
         )
     {
-        address[] memory poolTokens = IPoolIntegration(_integration).getPoolTokens(_pool);
-        uint256[] memory _maxAmountsIn = new uint256[](poolTokens.length);
-        uint256[] memory _poolWeights = IPoolIntegration(_integration).getPoolWeights(_pool);
+        //address pool = abi.decode(_data[4:], (address));
+        //address pool =  BytesLib.toAddress(_data, 4 + 12);
+
+        address[] memory poolTokens = IPoolIntegration(_integration).getPoolTokens(_data);
+        uint256[] memory _poolWeights = IPoolIntegration(_integration).getPoolWeights(_data);
         // Get the tokens needed to enter the pool
-        for (uint256 i = 0; i < poolTokens.length; i++) {
-            _maxAmountsIn[i] = _getMaxAmountTokenPool(_asset, _capital, _garden, _poolWeights[i], poolTokens[i]);
-        }
-        uint256 poolTokensOut = IPoolIntegration(_integration).getPoolTokensOut(_pool, poolTokens[0], _maxAmountsIn[0]);
+        uint256[] memory maxAmountsIn = _maxAmountsIn(_asset, _capital,_garden, _poolWeights, poolTokens);
+        //for (uint256 i = 0; i < poolTokens.length; i++) {
+        //    _maxAmountsIn[i] = _getMaxAmountTokenPool(_asset, _capital, _garden, _poolWeights[i], poolTokens[i]);
+        //}
+        uint256 poolTokensOut = IPoolIntegration(_integration).getPoolTokensOut(_data, poolTokens[0], maxAmountsIn[0]);
         IPoolIntegration(_integration).joinPool(
             msg.sender,
-            _pool,
+            _data,
             poolTokensOut.sub(poolTokensOut.preciseMul(SLIPPAGE_ALLOWED)),
             poolTokens,
-            _maxAmountsIn
+            maxAmountsIn
         );
-        return (_pool, IERC20(_pool).balanceOf(msg.sender), 0); // liquid
+        return (BytesLib.toAddress(_data, 4 + 12), IERC20(BytesLib.toAddress(_data, 4 + 12)).balanceOf(msg.sender), 0); // liquid
+    }
+
+    function _maxAmountsIn(address _asset, uint256 _capital, IGarden _garden, uint256[] memory _poolWeights, address[] memory poolTokens) internal returns (uint256[] memory) {
+        uint256[] memory maxAmountsIn = new uint256[](poolTokens.length);
+        for (uint256 i = 0; i < poolTokens.length; i++) {
+            maxAmountsIn[i] = _getMaxAmountTokenPool(_asset, _capital, _garden, _poolWeights[i], poolTokens[i]);
+        }
+        return maxAmountsIn;
     }
 
     /**
@@ -118,7 +131,7 @@ contract AddLiquidityOperation is Operation {
         uint256, /* _remaining */
         uint8, /* _assetStatus */
         uint256 _percentage,
-        address _data,
+        bytes calldata _data, 
         IGarden _garden,
         address _integration
     )
@@ -132,13 +145,13 @@ contract AddLiquidityOperation is Operation {
         )
     {
         require(_percentage <= 100e18, 'Unwind Percentage <= 100%');
-        address pool = _data;
-        address[] memory poolTokens = IPoolIntegration(_integration).getPoolTokens(pool);
+        address pool = abi.decode(_data[4:], (address)); // First 20 bytes of the first word is used for address
+        address[] memory poolTokens = IPoolIntegration(_integration).getPoolTokens(_data);
         uint256 lpTokens = IERC20(pool).balanceOf(msg.sender).preciseMul(_percentage); // Sell all pool tokens
-        uint256[] memory _minAmountsOut = IPoolIntegration(_integration).getPoolMinAmountsOut(pool, lpTokens);
+        uint256[] memory _minAmountsOut = IPoolIntegration(_integration).getPoolMinAmountsOut(_data, lpTokens);
         IPoolIntegration(_integration).exitPool(
             msg.sender,
-            pool,
+            _data,
             lpTokens, // Sell all pool tokens
             poolTokens,
             _minAmountsOut
@@ -160,32 +173,33 @@ contract AddLiquidityOperation is Operation {
                 }
             }
         }
-        return (_data, 0, 0);
+        return (pool, 0, 0);
     }
 
     /**
      * Gets the NAV of the add liquidity op in the reserve asset
      *
-     * @param _pool               Pool address
+     * @param _data               OpData e.g. PoolId or asset address
      * @param _garden             Garden the strategy belongs to
      * @param _integration        Status of the asset amount
      * @return _nav               NAV of the strategy
      */
     function getNAV(
-        address _pool,
+        bytes calldata _data,
         IGarden _garden,
         address _integration
     ) external view override returns (uint256, bool) {
+        address pool = abi.decode(_data[4:], (address)); // First 20 bytes of the first word is used for address (20 bytes)
         if (!IStrategy(msg.sender).isStrategyActive()) {
             return (0, true);
         }
-        address[] memory poolTokens = IPoolIntegration(_integration).getPoolTokens(_pool);
+        address[] memory poolTokens = IPoolIntegration(_integration).getPoolTokens(_data);
         uint256 NAV;
-        uint256 totalSupply = IERC20(_pool).totalSupply();
-        uint256 lpTokens = IERC20(_pool).balanceOf(msg.sender);
+        uint256 totalSupply = IERC20(pool).totalSupply();
+        uint256 lpTokens = IERC20(pool).balanceOf(msg.sender);
         for (uint256 i = 0; i < poolTokens.length; i++) {
             uint256 price = _getPrice(_garden.reserveAsset(), poolTokens[i] != address(0) ? poolTokens[i] : WETH);
-            uint256 balance = poolTokens[i] != address(0) ? IERC20(poolTokens[i]).balanceOf(_pool) : _pool.balance;
+            uint256 balance = poolTokens[i] != address(0) ? IERC20(poolTokens[i]).balanceOf(pool) : pool.balance;
             NAV += balance.mul(lpTokens).div(totalSupply).preciseDiv(price);
         }
         require(NAV != 0, 'NAV has to be bigger 0');

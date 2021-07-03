@@ -16,6 +16,7 @@
 */
 
 pragma solidity 0.7.6;
+pragma abicoder v2;
 
 import 'hardhat/console.sol';
 import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
@@ -171,14 +172,14 @@ contract BabylonViewer {
         returns (
             uint8[] memory,
             address[] memory,
-            address[] memory
+            bytes[] memory
         )
     {
         IStrategy strategy = IStrategy(_strategy);
         uint256 count = strategy.getOperationsCount();
         uint8[] memory types = new uint8[](count);
         address[] memory integrations = new address[](count);
-        address[] memory datas = new address[](count);
+        bytes[] memory datas = new bytes[](count);
 
         for (uint8 i = 0; i < count; i++) {
             (types[i], integrations[i], datas[i]) = strategy.getOperationByIndex(i);

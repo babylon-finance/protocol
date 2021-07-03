@@ -16,6 +16,7 @@
 */
 
 pragma solidity 0.7.6;
+pragma abicoder v2;
 
 import 'hardhat/console.sol';
 
@@ -544,7 +545,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         uint256[] calldata _stratParams,
         uint8[] calldata _opTypes,
         address[] calldata _opIntegrations,
-        address[] calldata _opDatas
+        bytes calldata _opDatas
     ) external override {
         _onlyActive();
         _onlyContributor();

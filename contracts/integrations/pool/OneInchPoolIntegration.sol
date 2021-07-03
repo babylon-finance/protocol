@@ -60,12 +60,13 @@ contract OneInchPoolIntegration is PoolIntegration {
 
     /* ============ External Functions ============ */
 
-    function getPoolTokens(address _poolAddress) external view override returns (address[] memory) {
-        return IMooniswap(_poolAddress).getTokens();
+    function getPoolTokens(bytes calldata _pool) external view override returns (address[] memory) {
+        address poolAddress = abi.decode(_pool[4:], (address));
+        return IMooniswap(poolAddress).getTokens();
     }
 
     function getPoolWeights(
-        address /* _poolAddress */
+        bytes calldata /* _pool */
     ) external pure override returns (uint256[] memory) {
         uint256[] memory result = new uint256[](2);
         result[0] = 5e17; // 50%
@@ -74,7 +75,7 @@ contract OneInchPoolIntegration is PoolIntegration {
     }
 
     function getPoolTokensOut(
-        address, /* _poolAddress */
+        bytes calldata, /* _pool */
         address, /* _poolToken */
         uint256 /* _maxAmountsIn */
     ) external pure override returns (uint256) {
@@ -82,19 +83,20 @@ contract OneInchPoolIntegration is PoolIntegration {
         return 1;
     }
 
-    function getPoolMinAmountsOut(address _poolAddress, uint256 _liquidity)
+    function getPoolMinAmountsOut(bytes calldata _pool, uint256 _liquidity)
         external
         view
         override
         returns (uint256[] memory _minAmountsOut)
     {
-        address[] memory tokens = IMooniswap(_poolAddress).getTokens();
-        uint256 totalSupply = IMooniswap(_poolAddress).totalSupply();
+        address poolAddress = abi.decode(_pool[4:], (address));
+        address[] memory tokens = IMooniswap(poolAddress).getTokens();
+        uint256 totalSupply = IMooniswap(poolAddress).totalSupply();
         uint256[] memory result = new uint256[](2);
         uint256 token0Balance =
-            (tokens[0] != address(0) ? IERC20(tokens[0]).balanceOf(_poolAddress) : _poolAddress.balance);
+            (tokens[0] != address(0) ? IERC20(tokens[0]).balanceOf(poolAddress) : poolAddress.balance);
         uint256 token1Balance =
-            (tokens[1] != address(0) ? IERC20(tokens[1]).balanceOf(_poolAddress) : _poolAddress.balance);
+            (tokens[1] != address(0) ? IERC20(tokens[1]).balanceOf(poolAddress) : poolAddress.balance);
         result[0] = token0Balance.mul(_liquidity).div(totalSupply).preciseMul(1e18 - SLIPPAGE_ALLOWED);
         result[1] = token1Balance.mul(_liquidity).div(totalSupply).preciseMul(1e18 - SLIPPAGE_ALLOWED);
         return result;
@@ -102,19 +104,21 @@ contract OneInchPoolIntegration is PoolIntegration {
 
     /* ============ Internal Functions ============ */
 
-    function _isPool(address _poolAddress) internal view override returns (bool) {
-        return IMooniswapFactory(mooniswapFactory).isPool(IMooniswap(_poolAddress));
+    function _isPool(bytes calldata _pool) internal view override returns (bool) {
+        address poolAddress = abi.decode(_pool[4:],(address));
+        return IMooniswapFactory(mooniswapFactory).isPool(IMooniswap(poolAddress));
     }
 
-    function _getSpender(address _poolAddress) internal pure override returns (address) {
-        return _poolAddress;
+    function _getSpender(bytes calldata _pool) internal pure override returns (address) {
+        address poolAddress = abi.decode(_pool[4:],(address));
+        return poolAddress;
     }
 
     /**
      * Return join pool calldata which is already generated from the pool API
      *
      * hparam  _strategy                 Address of the strategy
-     * hparam  _poolAddress              Address of the pool
+     * hparam  _pool                     OpData e.g. Address of the pool
      * hparam  _poolTokensOut            Amount of pool tokens to send
      * @param  _tokensIn                 Addresses of tokens to send to the pool
      * @param  _maxAmountsIn             Amounts of tokens to send to the pool
@@ -125,7 +129,7 @@ contract OneInchPoolIntegration is PoolIntegration {
      */
     function _getJoinPoolCalldata(
         address, /* _strategy */
-        address _poolAddress,
+        bytes calldata _pool,
         uint256, /* _poolTokensOut */
         address[] calldata _tokensIn,
         uint256[] calldata _maxAmountsIn
@@ -139,6 +143,7 @@ contract OneInchPoolIntegration is PoolIntegration {
             bytes memory
         )
     {
+        address poolAddress = abi.decode(_pool[4:], (address));
         // Encode method data for Garden to invoke
         require(_tokensIn.length == 2, 'Two tokens required');
         require(_maxAmountsIn.length == 2, 'Two amounts required');
@@ -159,14 +164,14 @@ contract OneInchPoolIntegration is PoolIntegration {
             value = _maxAmountsIn[1];
         }
 
-        return (address(_poolAddress), value, methodData);
+        return (poolAddress, value, methodData);
     }
 
     /**
      * Return exit pool calldata which is already generated from the pool API
      *
      * hparam  _strategy                 Address of the strategy
-     * hparam  _poolAddress              Address of the pool
+     * hparam  _pool              OpData e.g. Address of the pool
      * @param  _poolTokensIn             Amount of pool tokens to receive
      * @param  _tokensOut                Addresses of tokens to receive
      * @param  _minAmountsOut            Amounts of pool tokens to receive
@@ -177,7 +182,7 @@ contract OneInchPoolIntegration is PoolIntegration {
      */
     function _getExitPoolCalldata(
         address, /* _strategy */
-        address _poolAddress,
+        bytes calldata _pool,
         uint256 _poolTokensIn,
         address[] calldata _tokensOut,
         uint256[] calldata _minAmountsOut
@@ -191,11 +196,12 @@ contract OneInchPoolIntegration is PoolIntegration {
             bytes memory
         )
     {
+        address poolAddress = abi.decode(_pool[4:], (address));
         require(_tokensOut.length == 2, 'Two tokens required');
         require(_minAmountsOut.length == 2, 'Two amounts required');
         // Encode method data for Garden to invoke
         bytes memory methodData = abi.encodeWithSignature('withdraw(uint256,uint256[])', _poolTokensIn, _minAmountsOut);
 
-        return (address(_poolAddress), 0, methodData);
+        return (poolAddress, 0, methodData);
     }
 }

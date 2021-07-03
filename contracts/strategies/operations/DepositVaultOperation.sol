@@ -55,7 +55,7 @@ contract DepositVaultOperation is Operation {
      * @param _data                   Operation data
      */
     function validateOperation(
-        address _data,
+        bytes calldata _data,
         IGarden, /* _garden */
         address _integration,
         uint256 /* _index */
@@ -66,7 +66,7 @@ contract DepositVaultOperation is Operation {
      * @param _asset              Asset to receive into this operation
      * @param _capital            Amount of asset received
      * param _assetStatus         Status of the asset amount
-     * @param _data               Address of the vault to enter
+     * @param _data               OpData e.g. Address of the vault to enter
      * param _garden              Garden of the strategy
      * @param _integration        Address of the integration to execute
      */
@@ -74,7 +74,7 @@ contract DepositVaultOperation is Operation {
         address _asset,
         uint256 _capital,
         uint8, /* _assetStatus */
-        address _data,
+        bytes calldata _data,
         IGarden, /* _garden */
         address _integration
     )
@@ -87,13 +87,12 @@ contract DepositVaultOperation is Operation {
             uint8
         )
     {
-        address yieldVault = _data;
+        address yieldVault = abi.decode(_data[4:], (address));
         address vaultAsset = IPassiveIntegration(_integration).getInvestmentAsset(yieldVault);
         if (vaultAsset != _asset) {
             IStrategy(msg.sender).trade(_asset, _capital, vaultAsset);
         }
-        uint256 exactAmount = IPassiveIntegration(_integration).getExpectedShares(yieldVault, _capital);
-        uint256 minAmountExpected = exactAmount.sub(exactAmount.preciseMul(SLIPPAGE_ALLOWED));
+        uint256 minAmountExpected = _getMinAmountExpected(yieldVault, _capital, _integration);
         IPassiveIntegration(_integration).enterInvestment(
             msg.sender,
             yieldVault,
@@ -102,6 +101,11 @@ contract DepositVaultOperation is Operation {
             IERC20(vaultAsset).balanceOf(msg.sender)
         );
         return (yieldVault, IERC20(yieldVault).balanceOf(msg.sender), 0); // liquid
+    }
+
+    function _getMinAmountExpected(address _yieldVault, uint256 _capital, address _integration) internal view returns(uint256) {
+        uint256 exactAmount = IPassiveIntegration(_integration).getExpectedShares(_yieldVault, _capital);
+        return exactAmount.sub(exactAmount.preciseMul(SLIPPAGE_ALLOWED));
     }
 
     /**
@@ -113,7 +117,7 @@ contract DepositVaultOperation is Operation {
         uint256, /* _remaining */
         uint8, /* _assetStatus */
         uint256 _percentage,
-        address _yieldVault,
+        bytes calldata _data,
         IGarden _garden,
         address _integration
     )
@@ -126,40 +130,42 @@ contract DepositVaultOperation is Operation {
             uint8
         )
     {
+        address yieldVault = abi.decode(_data[4:], (address));
         require(_percentage <= HUNDRED_PERCENT, 'Unwind Percentage <= 100%');
-        address vaultAsset = IPassiveIntegration(_integration).getInvestmentAsset(_yieldVault);
-        uint256 amountVault = IERC20(_yieldVault).balanceOf(msg.sender).preciseMul(_percentage);
+        address vaultAsset = IPassiveIntegration(_integration).getInvestmentAsset(yieldVault);
+        uint256 amountVault = IERC20(yieldVault).balanceOf(msg.sender).preciseMul(_percentage);
         uint256 minAmount =
-            IPassiveIntegration(_integration).getPricePerShare(_yieldVault).mul(
+            IPassiveIntegration(_integration).getPricePerShare(yieldVault).mul(
                 amountVault.sub(amountVault.preciseMul(SLIPPAGE_ALLOWED))
             );
-        IPassiveIntegration(_integration).exitInvestment(msg.sender, _yieldVault, amountVault, vaultAsset, minAmount);
+        IPassiveIntegration(_integration).exitInvestment(msg.sender, yieldVault, amountVault, vaultAsset, minAmount);
         if (vaultAsset != _garden.reserveAsset()) {
             IStrategy(msg.sender).trade(vaultAsset, IERC20(vaultAsset).balanceOf(msg.sender), _garden.reserveAsset());
         }
-        return (_yieldVault, 0, 0);
+        return (yieldVault, 0, 0);
     }
 
     /**
      * Gets the NAV of the deposit vault op in the reserve asset
      *
-     * @param _vault              Vault
+     * @param _data               OpData e.g. Vault
      * @param _garden             Garden the strategy belongs to
      * @param _integration        Status of the asset amount
      * @return _nav               NAV of the strategy
      */
     function getNAV(
-        address _vault,
+        bytes calldata _data,
         IGarden _garden,
         address _integration
     ) external view override returns (uint256, bool) {
+        address vault = abi.decode(_data[4:], (address));
         if (!IStrategy(msg.sender).isStrategyActive()) {
             return (0, true);
         }
-        address vaultAsset = IPassiveIntegration(_integration).getInvestmentAsset(_vault);
+        address vaultAsset = IPassiveIntegration(_integration).getInvestmentAsset(vault);
         uint256 price = _getPrice(_garden.reserveAsset(), vaultAsset);
         uint256 NAV =
-            IPassiveIntegration(_integration).getPricePerShare(_vault).mul(IERC20(_vault).balanceOf(msg.sender)).div(
+            IPassiveIntegration(_integration).getPricePerShare(vault).mul(IERC20(vault).balanceOf(msg.sender)).div(
                 price
             );
         require(NAV != 0, 'NAV has to be bigger 0');

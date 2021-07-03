@@ -34,7 +34,7 @@ import {LowGasSafeMath} from '../../lib/LowGasSafeMath.sol';
  * @title BorrowIntetration
  * @author Babylon Finance Protocol
  *
- * Base class for integration with lending protocols
+ * Base class for integration with borrowing protocols
  */
 abstract contract BorrowIntegration is BaseIntegration, ReentrancyGuard, IBorrowIntegration {
     using LowGasSafeMath for uint256;
