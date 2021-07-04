@@ -53,7 +53,7 @@ abstract contract PoolIntegration is BaseIntegration, ReentrancyGuard, IPoolInte
     struct PoolInfo {
         IGarden garden; // Garden address
         IStrategy strategy; // Strategy address
-        bytes pool; // OpData e.g. Pool Id : pool address + metadata 
+        bytes pool; // OpData 64 bytes each OpData
         uint256 totalSupply; // Total Supply of the pool
         uint256 poolTokensInTransaction; // Pool tokens affected by this transaction
         uint256 poolTokensInStrategy; // Pool tokens strategy balance
@@ -100,7 +100,7 @@ abstract contract PoolIntegration is BaseIntegration, ReentrancyGuard, IPoolInte
     ) external override nonReentrant onlySystemContract {
         PoolInfo memory poolInfo = _createPoolInfo(_strategy, _pool, _poolTokensOut, _tokensIn, _maxAmountsIn);
         _validatePreJoinPoolData(poolInfo);
-        address poolAddress = abi.decode(_pool[4:],(address));
+        address poolAddress = abi.decode(_pool[4 + 32:],(address));
         // Approve spending of the tokens
         for (uint256 i = 0; i < _tokensIn.length; i++) {
             // No need to approve ETH
@@ -134,7 +134,7 @@ abstract contract PoolIntegration is BaseIntegration, ReentrancyGuard, IPoolInte
         address[] calldata _tokensOut,
         uint256[] calldata _minAmountsOut
     ) external override nonReentrant onlySystemContract {
-        address poolAddress = abi.decode(_pool[4:],(address));
+        address poolAddress = abi.decode(_pool[4 + 32 :],(address));
         PoolInfo memory poolInfo = _createPoolInfo(_strategy, _pool, _poolTokensIn, _tokensOut, _minAmountsOut);
         _validatePreExitPoolData(poolInfo);
         // Approve spending of the pool token
@@ -186,7 +186,7 @@ abstract contract PoolIntegration is BaseIntegration, ReentrancyGuard, IPoolInte
         address[] calldata, /* _poolTokens */
         uint256[] calldata _limitPoolTokenQuantities
     ) internal view returns (PoolInfo memory) {
-        address poolAddress = abi.decode(_pool[4:],(address));
+        address poolAddress = abi.decode(_pool[4 + 32:],(address));
         PoolInfo memory poolInfo;
         poolInfo.strategy = IStrategy(_strategy);
         poolInfo.garden = IGarden(poolInfo.strategy.garden());
@@ -229,7 +229,7 @@ abstract contract PoolIntegration is BaseIntegration, ReentrancyGuard, IPoolInte
      * @param _poolInfo               Struct containing pool information used in internal functions
      */
     function _validatePostJoinPoolData(PoolInfo memory _poolInfo) internal view {
-        address poolAddress = BytesLib.toAddress(_poolInfo.pool, 4 + 12);
+        address poolAddress = BytesLib.toAddress(_poolInfo.pool, 4 + 32 + 12);
         require(
             (IERC20(poolAddress).balanceOf(address(_poolInfo.strategy)) > _poolInfo.poolTokensInStrategy),
             'The strategy did not receive the pool tokens'
@@ -242,7 +242,7 @@ abstract contract PoolIntegration is BaseIntegration, ReentrancyGuard, IPoolInte
      * @param _poolInfo               Struct containing pool information used in internal functions
      */
     function _validatePostExitPoolData(PoolInfo memory _poolInfo) internal view {
-        address poolAddress = BytesLib.toAddress(_poolInfo.pool, 4 + 12);
+        address poolAddress = BytesLib.toAddress(_poolInfo.pool, 4 + 32 + 12);
         require(
             IERC20(poolAddress).balanceOf(address(_poolInfo.strategy)) ==
                 _poolInfo.poolTokensInStrategy - _poolInfo.poolTokensInTransaction,

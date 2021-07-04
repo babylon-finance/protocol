@@ -46,14 +46,14 @@ interface IStrategy {
     function setData(
         uint8[] calldata _opTypes,
         address[] calldata _opIntegrations,
-        bytes calldata _opEncodedData
+        bytes[] calldata _opEncodedData
     ) external;
 
     function executeStrategy(uint256 _capital, uint256 fee) external;
 
     function getNAV() external view returns (uint256);
 
-    function opEncodedData() external view returns (bytes memory);
+    function opEncodedData(uint256 _index) external view returns (bytes memory);
 
     function opIntegrations(uint256 _index) external view returns (address);
 

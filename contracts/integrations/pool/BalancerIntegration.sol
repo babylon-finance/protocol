@@ -54,12 +54,12 @@ contract BalancerIntegration is PoolIntegration {
     /* ============ External Functions ============ */
 
     function getPoolTokens(bytes calldata _pool) external view override returns (address[] memory) {
-        address poolAddress = abi.decode(_pool[4:],(address));
+        address poolAddress = abi.decode(_pool[4 + 32:],(address));
         return IBPool(poolAddress).getCurrentTokens();
     }
 
     function getPoolWeights(bytes calldata _pool) external view override returns (uint256[] memory) {
-        address poolAddress = abi.decode(_pool[4:],(address));
+        address poolAddress = abi.decode(_pool[4 + 32:],(address));
         address[] memory poolTokens = IBPool(poolAddress).getCurrentTokens();
         uint256[] memory result = new uint256[](poolTokens.length);
         for (uint8 i = 0; i < poolTokens.length; i++) {
@@ -73,7 +73,7 @@ contract BalancerIntegration is PoolIntegration {
         address _poolToken,
         uint256 _maxAmountsIn
     ) external view override returns (uint256) {
-        address poolAddress = abi.decode(_pool[4:],(address));
+        address poolAddress = abi.decode(_pool[4 + 32:],(address));
         uint256 tokenBalance = IBPool(poolAddress).getBalance(_poolToken);
         return IBPool(poolAddress).totalSupply().preciseMul(_maxAmountsIn.preciseDiv(tokenBalance));
     }
@@ -84,7 +84,7 @@ contract BalancerIntegration is PoolIntegration {
         override
         returns (uint256[] memory _minAmountsOut)
     {
-        address poolAddress = abi.decode(_pool[4:],(address));
+        address poolAddress = abi.decode(_pool[4 + 32:],(address));
         uint256 lpTokensTotalSupply = IBPool(poolAddress).totalSupply();
         address[] memory poolTokens = IBPool(poolAddress).getCurrentTokens();
         uint256[] memory result = new uint256[](poolTokens.length);
@@ -101,12 +101,12 @@ contract BalancerIntegration is PoolIntegration {
     /* ============ Internal Functions ============ */
 
     function _isPool(bytes calldata _pool) internal view override returns (bool) {
-        address poolAddress = abi.decode(_pool[4:],(address));
+        address poolAddress = abi.decode(_pool[4 + 32:],(address));
         return coreFactory.isBPool(poolAddress);
     }
 
     function _getSpender(bytes calldata _pool) internal pure override returns (address) {
-        address poolAddress = abi.decode(_pool[4:],(address));
+        address poolAddress = abi.decode(_pool[4 + 32:],(address));
         return poolAddress;
     }
 
@@ -139,7 +139,7 @@ contract BalancerIntegration is PoolIntegration {
             bytes memory
         )
     {
-        address poolAddress = abi.decode(_pool[4:],(address));
+        address poolAddress = abi.decode(_pool[4 + 32:],(address));
         // Encode method data for Garden to invoke
         bytes memory methodData = abi.encodeWithSignature('joinPool(uint256,uint256[])', _poolTokensOut, _maxAmountsIn);
 
@@ -175,7 +175,7 @@ contract BalancerIntegration is PoolIntegration {
             bytes memory
         )
     {
-        address poolAddress = abi.decode(_pool[4:],(address));
+        address poolAddress = abi.decode(_pool[4 + 32:],(address));
         require(_poolTokensIn > 0, '_poolTokensIn has to not 0');
         require(_minAmountsOut.length > 1, 'Has to provide _minAmountsOut');
         // Encode method data for Garden to invoke

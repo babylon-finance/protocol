@@ -87,7 +87,7 @@ contract DepositVaultOperation is Operation {
             uint8
         )
     {
-        address yieldVault = abi.decode(_data[4:], (address));
+        address yieldVault = abi.decode(_data[4 + 32:], (address));
         address vaultAsset = IPassiveIntegration(_integration).getInvestmentAsset(yieldVault);
         if (vaultAsset != _asset) {
             IStrategy(msg.sender).trade(_asset, _capital, vaultAsset);
@@ -130,7 +130,7 @@ contract DepositVaultOperation is Operation {
             uint8
         )
     {
-        address yieldVault = abi.decode(_data[4:], (address));
+        address yieldVault = abi.decode(_data[4 + 32 :], (address));
         require(_percentage <= HUNDRED_PERCENT, 'Unwind Percentage <= 100%');
         address vaultAsset = IPassiveIntegration(_integration).getInvestmentAsset(yieldVault);
         uint256 amountVault = IERC20(yieldVault).balanceOf(msg.sender).preciseMul(_percentage);
@@ -158,7 +158,7 @@ contract DepositVaultOperation is Operation {
         IGarden _garden,
         address _integration
     ) external view override returns (uint256, bool) {
-        address vault = abi.decode(_data[4:], (address));
+        address vault = abi.decode(_data[4 + 32:], (address));
         if (!IStrategy(msg.sender).isStrategyActive()) {
             return (0, true);
         }

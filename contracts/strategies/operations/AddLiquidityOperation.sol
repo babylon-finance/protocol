@@ -111,7 +111,7 @@ contract AddLiquidityOperation is Operation {
             poolTokens,
             maxAmountsIn
         );
-        return (BytesLib.toAddress(_data, 4 + 12), IERC20(BytesLib.toAddress(_data, 4 + 12)).balanceOf(msg.sender), 0); // liquid
+        return (BytesLib.toAddress(_data, 4 + 32 + 12), IERC20(BytesLib.toAddress(_data, 4 + 32 + 12)).balanceOf(msg.sender), 0); // liquid
     }
 
     function _maxAmountsIn(address _asset, uint256 _capital, IGarden _garden, uint256[] memory _poolWeights, address[] memory poolTokens) internal returns (uint256[] memory) {
@@ -145,7 +145,7 @@ contract AddLiquidityOperation is Operation {
         )
     {
         require(_percentage <= 100e18, 'Unwind Percentage <= 100%');
-        address pool = abi.decode(_data[4:], (address)); // First 20 bytes of the first word is used for address
+        address pool = abi.decode(_data[4 + 32:], (address)); // First 20 bytes of the second word is used for address
         address[] memory poolTokens = IPoolIntegration(_integration).getPoolTokens(_data);
         uint256 lpTokens = IERC20(pool).balanceOf(msg.sender).preciseMul(_percentage); // Sell all pool tokens
         uint256[] memory _minAmountsOut = IPoolIntegration(_integration).getPoolMinAmountsOut(_data, lpTokens);
@@ -189,7 +189,7 @@ contract AddLiquidityOperation is Operation {
         IGarden _garden,
         address _integration
     ) external view override returns (uint256, bool) {
-        address pool = abi.decode(_data[4:], (address)); // First 20 bytes of the first word is used for address (20 bytes)
+        address pool = abi.decode(_data[4 + 32 :], (address)); // First 20 bytes of the second word is used for address (20 bytes)
         if (!IStrategy(msg.sender).isStrategyActive()) {
             return (0, true);
         }

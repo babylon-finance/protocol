@@ -56,7 +56,7 @@ contract BuyOperation is Operation {
         address, /* _integration */
         uint256 /* _index */
     ) external view override onlyStrategy {
-        address asset = abi.decode(_data[4:], (address)); // We only use the first 20 bytes from the first 32bytes word
+        address asset = abi.decode(_data[4 + 32:], (address));
         require(asset != _garden.reserveAsset(), 'Receive token must be different');
 
     }
@@ -87,7 +87,7 @@ contract BuyOperation is Operation {
             uint8
         )
     {
-        address token = abi.decode(_data[4:], (address));
+        address token = abi.decode(_data[4 + 32 :], (address));
         IStrategy(msg.sender).trade(_asset, _capital, token);
         return (token, IERC20(token).balanceOf(address(msg.sender)), 0); // liquid
     }
@@ -114,7 +114,7 @@ contract BuyOperation is Operation {
             uint8
         )
     {
-        address token = abi.decode(_data[4:],(address));
+        address token = abi.decode(_data[4 + 32:],(address));
         require(_percentage <= 100e18, 'Unwind Percentage <= 100%');
         IStrategy(msg.sender).trade(
             token,
@@ -136,7 +136,7 @@ contract BuyOperation is Operation {
         IGarden _garden,
         address /* _integration */
     ) external view override returns (uint256, bool) {
-        address token = abi.decode(_data[4:], (address));
+        address token = abi.decode(_data[4 + 32:], (address));
         if (!IStrategy(msg.sender).isStrategyActive()) {
             return (0, true);
         }

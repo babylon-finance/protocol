@@ -142,13 +142,6 @@ async function setUpFixture(
   }
   console.log('create strategies');
 
-  let ABI = ['function transfer(uint metadata, address integration)'];
-  let iface = new ethers.utils.Interface(ABI);
-  let data = iface.encodeFunctionData('transfer', [0, uniswapV3TradeIntegration.address]);
-  // We encode into bytes4 (function) + bytes64 for each OpData
-  // 0xb7760c8f00000000000000000000000000000000000000000000000000000000000000000000000000000000000000004c4a2f8c81640e47606d3fd77b353e87ba015584
-  console.log('bytes data = ' + data.toString(64));
-
   const strategy10 = (
     await createStrategy('buy', 'dataset', [signer1, signer2, signer3], uniswapV3TradeIntegration.address, garden1)
   ).address;
