@@ -44,7 +44,12 @@ const STRAT_NAME_PARAMS = ['Strategy Name', 'STRT']; // [ NAME, SYMBOL ]
 const NFT_ADDRESS = 'https://babylon.mypinata.cloud/ipfs/Qmc7MfvuCkhA8AA2z6aBzmb5G4MaRfPeKgCVTWcKqU2tjB';
 
 async function createStrategyWithBuyOperation(garden, signer, params, integration, data) {
-  const passedLongParams = [[0], [integration], [data || addresses.tokens.DAI]];
+  //const passedLongParams = [[0], [integration], [data || addresses.tokens.DAI]];
+  let ABI = ['function transfer(uint metadata, address integration)'];
+  let iface = new ethers.utils.Interface(ABI);
+  let encodedData = iface.encodeFunctionData('transfer', [0, addresses.tokens.DAI]);
+  const passedLongParams = [[0], [integration], [encodedData]];
+
   await garden.connect(signer).addStrategy(...STRAT_NAME_PARAMS, params, ...passedLongParams);
   const strategies = await garden.getStrategies();
   const lastStrategyAddr = strategies[strategies.length - 1];

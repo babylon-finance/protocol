@@ -24,6 +24,7 @@ describe('BabController', function () {
   async function createStrategies(strategies) {
     const retVal = [];
     for (let i = 0; i < strategies.length; i++) {
+      console.log('CHECK INSIDE BEFORE');
       const strategy = await createStrategy(
         'buy',
         'vote',
@@ -33,6 +34,8 @@ describe('BabController', function () {
       );
       retVal.push(strategy);
     }
+    console.log('CHECK INSIDE AFTER');
+
     return retVal;
   }
 
@@ -55,14 +58,14 @@ describe('BabController', function () {
   });
 
   describe('Deployment', function () {
-    it('should successfully deploy the contract', async function () {
+    it.only('should successfully deploy the contract', async function () {
       const deployed = await babController.deployed();
       expect(!!deployed).to.equal(true);
     });
   });
 
   describe('Interacting with Communities', function () {
-    it('should start with 3 gardens', async function () {
+    it.only('should start with 3 gardens', async function () {
       const gardens = await babController.getGardens();
       expect(gardens.length).to.equal(4);
     });

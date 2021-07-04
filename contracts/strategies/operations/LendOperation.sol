@@ -29,6 +29,7 @@ import {ILendIntegration} from '../../interfaces/ILendIntegration.sol';
 import {PreciseUnitMath} from '../../lib/PreciseUnitMath.sol';
 import {SafeDecimalMath} from '../../lib/SafeDecimalMath.sol';
 import {LowGasSafeMath as SafeMath} from '../../lib/LowGasSafeMath.sol';
+import {BytesLib} from '../../lib/BytesLib.sol';
 
 import {Operation} from './Operation.sol';
 
@@ -42,6 +43,7 @@ contract LendOperation is Operation {
     using SafeMath for uint256;
     using PreciseUnitMath for uint256;
     using SafeDecimalMath for uint256;
+    using BytesLib for bytes;
 
     /* ============ Constructor ============ */
 
@@ -121,7 +123,7 @@ contract LendOperation is Operation {
         uint256 _remaining,
         uint8, /* _assetStatus */
         uint256 _percentage,
-        bytes calldata _data,
+        bytes memory _data,
         IGarden _garden,
         address _integration
     )
@@ -134,38 +136,10 @@ contract LendOperation is Operation {
             uint8
         )
     {
-        address assetToken = abi.decode(_data[4:],(address));
+        address assetToken = BytesLib.toAddress(_data, 4 + 12);
         require(_percentage <= HUNDRED_PERCENT, 'Unwind Percentage <= 100%');
-        // Normalize to underlying asset if any (ctokens for compound)
-        uint256 numTokensToRedeem = ILendIntegration(_integration).getInvestmentTokenAmount(msg.sender, assetToken);
-        // Apply percentage
-        numTokensToRedeem = numTokensToRedeem.mul(_percentage.div(10**(18)));
-        
-
-        if (_remaining > 0) {
-            // Update amount so we can exit if there is debt
-            numTokensToRedeem = numTokensToRedeem.sub(_remainingDebtInCollateral(_percentage, _borrowToken, assetToken, _remaining).mul(130).div(100));
-        }
-        uint256 exchangeRate = ILendIntegration(_integration).getExchangeRatePerToken(assetToken);
-        ILendIntegration(_integration).redeemTokens(
-            msg.sender,
-            assetToken,
-            numTokensToRedeem,
-            exchangeRate.mul(numTokensToRedeem.sub(numTokensToRedeem.preciseMul(SLIPPAGE_ALLOWED)))
-        );
-        address tokenToTradeFrom = assetToken;
-        // if eth, convert it to weth
-        if (assetToken == address(0)) {
-            tokenToTradeFrom = WETH;
-            IStrategy(msg.sender).handleWeth(true, address(msg.sender).balance);
-        }
-        if (tokenToTradeFrom != _garden.reserveAsset()) {
-            IStrategy(msg.sender).trade(
-                tokenToTradeFrom,
-                IERC20(tokenToTradeFrom).balanceOf(msg.sender),
-                _garden.reserveAsset()
-            );
-        }
+        _redeemTokens (_borrowToken, _remaining, _percentage, msg.sender, _integration, assetToken);
+        _tokenToTrade(assetToken, msg.sender, _garden );
         return (
             assetToken,
             IERC20(ILendIntegration(_integration).getInvestmentToken(assetToken)).balanceOf(msg.sender),
@@ -173,14 +147,45 @@ contract LendOperation is Operation {
         );
     }
 
-    function _remainingDebtInCollateral(uint256 _percentage, address _borrowToken, address _assetToken, uint256 _remaining ) internal view returns(uint256) {
+    function _redeemTokens (address _borrowToken, uint256 _remaining, uint256 _percentage, address _sender, address _integration, address _assetToken) internal {
+         // Normalize to underlying asset if any (ctokens for compound)
+        uint256 numTokensToRedeem = ILendIntegration(_integration).getInvestmentTokenAmount(_sender, _assetToken);
+        // Apply percentage
+        numTokensToRedeem = numTokensToRedeem.mul(_percentage.div(10**(18)));
         uint256 remainingDebtInCollateralTokens = _getRemainingDebt(_borrowToken, _assetToken, _remaining);
         remainingDebtInCollateralTokens = SafeDecimalMath.normalizeAmountTokens(
             _borrowToken,
             _assetToken,
             remainingDebtInCollateralTokens
         );
-        return remainingDebtInCollateralTokens;
+
+        if (_remaining > 0) {
+            // Update amount so we can exit if there is debt
+            numTokensToRedeem = numTokensToRedeem.sub(remainingDebtInCollateralTokens.mul(130).div(100));
+        }
+        uint256 exchangeRate = ILendIntegration(_integration).getExchangeRatePerToken(_assetToken);
+        ILendIntegration(_integration).redeemTokens(
+            msg.sender,
+            _assetToken,
+            numTokensToRedeem,
+            exchangeRate.mul(numTokensToRedeem.sub(numTokensToRedeem.preciseMul(SLIPPAGE_ALLOWED)))
+        );
+    }
+
+    function _tokenToTrade(address _assetToken, address _sender, IGarden _garden ) internal {
+        address tokenToTradeFrom = _assetToken;
+        // if eth, convert it to weth
+        if (_assetToken == address(0)) {
+            tokenToTradeFrom = WETH;
+            IStrategy(_sender).handleWeth(true, address(_sender).balance);
+        }
+        if (tokenToTradeFrom != _garden.reserveAsset()) {
+            IStrategy(_sender).trade(
+                tokenToTradeFrom,
+                IERC20(tokenToTradeFrom).balanceOf(_sender),
+                _garden.reserveAsset()
+            );
+        }
     }
 
     /**
