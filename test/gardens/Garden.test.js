@@ -40,7 +40,7 @@ async function depositBatch(owner, garden, walletAddresses) {
   }
 }
 
-describe('Garden', function () {
+describe.only('Garden', function () {
   let babController;
   let rewardsDistributor;
   let owner;
@@ -864,8 +864,6 @@ describe('Garden', function () {
       await dai.connect(signer1).approve(babController.address, ethers.utils.parseEther('1000'), {
         gasPrice: 0,
       });
-
-      console.log('create');
 
       await babController
         .connect(signer1)

@@ -384,15 +384,29 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
             Errors.MSG_VALUE_DO_NOT_MATCH
         );
 
-        // update contributor record so Keeper can process deposit later and
-        // issue Garden shares to contributor
-        Contributor storage contributor = contributors[_to];
-        contributor.pendingDeposits = contributor.pendingDeposits.add(_amountIn);
-        contributor.minAmountShares = contributor.minAmountShares.add(_minAmountOut);
+        // if there are no strategies then NAV === liquidReserve
+        if(strategies.length == 0) {
+          console.log('total', totalSupply());
+          console.log('liquidReserve', liquidReserve());
+          uint256 pricePerShare = totalSupply() == 0 ? PreciseUnitMath.preciseUnit() : liquidReserve().preciseDiv(totalSupply());
+          console.log('price', pricePerShare);
+          console.log('minContribution', minContribution);
+          console.log('_minAmountOut',_minAmountOut);
+          console.log('_amountIn', _amountIn);
+          _internalDeposit(_to, pricePerShare, _amountIn, _minAmountOut);
+        } else {
+          // let Keeper to finish the deposit update contributor record so
+          // Keeper can process deposit later and issue Garden shares to
+          // contributor
+          Contributor storage contributor = contributors[_to];
+          contributor.pendingDeposits = contributor.pendingDeposits.add(_amountIn);
+          contributor.minAmountShares = contributor.minAmountShares.add(_minAmountOut);
 
-        // update total pending deposits so funds can't be spend until they are
-        // processed by Keeper
-        totalPendingDeposits = totalPendingDeposits.add(_amountIn);
+          // update total pending deposits so funds can't be spend until they
+          // are processed by Keeper
+          totalPendingDeposits = totalPendingDeposits.add(_amountIn);
+        }
+
 
         emit GardenDeposit(_to, _minAmountOut, _amountIn, block.timestamp);
     }
@@ -434,12 +448,15 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         uint256 _amountIn,
         uint256 _minAmountOut
     ) private {
+          console.log('_amountIn ',_amountIn );
         // if deposit limit is 0, then there is no deposit limit
         if (maxDepositLimit > 0) {
             _require(principal.add(_amountIn) <= maxDepositLimit, Errors.MAX_DEPOSIT_LIMIT);
         }
 
         _require(totalContributors <= maxContributors, Errors.MAX_CONTRIBUTORS);
+          console.log('minContribution', minContribution);
+          console.log('_pricePerShare',_pricePerShare);
         _require(_amountIn >= minContribution, Errors.MIN_CONTRIBUTION);
 
         uint256 previousBalance = balanceOf(_to);
@@ -454,7 +471,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
 
         _updateContributorDepositInfo(_to, previousBalance, _amountIn);
 
-        // tracke principal
+        // account deposit in the principal
         principal = principal.add(_amountIn);
 
         // Mint the garden NFT
@@ -508,15 +525,15 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
 
         _require(outflow >= _minReserveReceiveQuantity, Errors.RECEIVE_MIN_AMOUNT);
 
-        _require(_canWithdrawReserveAmount(msg.sender, outflow), Errors.MIN_LIQUIDITY);
+        _require(canWithdrawReserveAmount(msg.sender, outflow), Errors.MIN_LIQUIDITY);
 
-        _reenableReserveForStrategies();
+        reenableReserveForStrategies();
 
         _burn(msg.sender, _gardenTokenQuantity);
         _safeSendReserveAsset(msg.sender, outflow);
         _updateContributorWithdrawalInfo(outflow);
 
-        // Required withdrawable quantity is greater than existing collateral
+        // required withdrawable quantity is greater than existing collateral
         _require(principal >= outflow, Errors.BALANCE_TOO_LOW);
         principal = principal.sub(outflow);
 
@@ -621,7 +638,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
 
         keeperDebt = keeperDebt.add(_fee);
         // Pay Keeper in Reserve Asset
-        if (keeperDebt > 0 && _liquidReserve() >= 0) {
+        if (keeperDebt > 0 && liquidReserve() >= 0) {
             IERC20(reserveAsset).safeTransfer(_keeper, keeperDebt);
             keeperDebt = 0;
         }
@@ -697,10 +714,10 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         _onlyStrategy();
         _onlyActive();
 
-        _reenableReserveForStrategies();
+        reenableReserveForStrategies();
 
         uint256 protocolMgmtFee = IBabController(controller).protocolManagementFee().preciseMul(_capital);
-        _require(_capital.add(protocolMgmtFee) <= _liquidReserve(), Errors.MIN_LIQUIDITY);
+        _require(_capital.add(protocolMgmtFee) <= liquidReserve(), Errors.MIN_LIQUIDITY);
 
         // Take protocol mgmt fee
         _payProtocolFeeFromGarden(reserveAsset, protocolMgmtFee);
@@ -835,7 +852,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
     /**
      * Gets liquid reserve available for to Garden.
      */
-    function _liquidReserve() private view returns (uint256) {
+    function liquidReserve() private view returns (uint256) {
         uint256 reserve =
             IERC20(reserveAsset)
                 .balanceOf(address(this))
@@ -849,7 +866,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
      * When the window of withdrawals finishes, we need to make the capital available again for investments
      * We still keep the profits aside.
      */
-    function _reenableReserveForStrategies() private {
+    function reenableReserveForStrategies() private {
         if (block.timestamp >= withdrawalsOpenUntil) {
             withdrawalsOpenUntil = 0;
             reserveAssetPrincipalWindow = 0;
@@ -862,7 +879,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
      * @param _contributor                   Address of the contributors
      * @param _amount                        Amount of ETH to withdraw
      */
-    function _canWithdrawReserveAmount(address _contributor, uint256 _amount) private view returns (bool) {
+    function canWithdrawReserveAmount(address _contributor, uint256 _amount) private view returns (bool) {
         // Reserve rewards cannot be withdrawn. Only claimed
         uint256 liquidReserve = IERC20(reserveAsset).balanceOf(address(this)).sub(reserveAssetRewardsSetAside);
 

@@ -117,7 +117,8 @@ contract GardenValuer {
             valuation = valuation.add(strategy.getNAV());
         }
 
-        // Add garden reserve assets and garden's reserve asset
+        // Add garden reserve assets and garden's reserve asset.
+        // TODO: Probably a bug. Gardens have some reserves such as rewards.
         valuation = valuation.add(ERC20(reserveAsset).balanceOf(address(_garden)));
 
         // Get the valuation in terms of the quote asset
