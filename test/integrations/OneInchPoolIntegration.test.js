@@ -204,6 +204,8 @@ describe('OneInchPoolIntegrationTest', function () {
           let amount = STRATEGY_EXECUTE_MAP[token];
 
           await executeStrategy(strategyContract, { amount });
+          // Check NAV
+          expect(await strategyContract.getNAV()).to.be.closeTo(amount, amount.div(40)); // 2,5% slippage as WETH-WBTC at One Inch pool from a DAI Garden needs more than 2%
           const tokenContract = await ethers.getContractAt('ERC20', token);
           const executionTokenBalance = await tokenContract.balanceOf(garden.address);
           const LPTokens = await getExpectedLPTokens(token, amount, poolAddress, token0, token1);
