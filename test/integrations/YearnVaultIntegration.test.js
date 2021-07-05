@@ -106,6 +106,7 @@ describe('YearnVaultIntegrationTest', function () {
 
             let amount = STRATEGY_EXECUTE_MAP[token];
             await executeStrategy(strategyContract, { amount });
+            console.log('CHECK NAV', (await strategyContract.getNAV()).toString());
 
             const asset = await yearnVaultIntegration.getInvestmentAsset(vault); // USDC, DAI, USDT and etc...
             const assetContract = await ethers.getContractAt('ERC20', asset);

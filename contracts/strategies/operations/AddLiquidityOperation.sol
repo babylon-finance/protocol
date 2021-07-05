@@ -186,8 +186,14 @@ contract AddLiquidityOperation is Operation {
         for (uint256 i = 0; i < poolTokens.length; i++) {
             uint256 price = _getPrice(_garden.reserveAsset(), poolTokens[i] != address(0) ? poolTokens[i] : WETH);
             uint256 balance = poolTokens[i] != address(0) ? IERC20(poolTokens[i]).balanceOf(_pool) : _pool.balance;
-            NAV += balance.mul(lpTokens).div(totalSupply).preciseDiv(price);
+            NAV += SafeDecimalMath.normalizeAmountTokens(
+                poolTokens[i] != address(0) ? poolTokens[i] : WETH,
+                _garden.reserveAsset(),
+                balance.mul(lpTokens).div(totalSupply).preciseDiv(price)
+            );
+            console.log('NAV AddLiquidity', NAV, i);
         }
+        console.log('NAV AddLiquidity TOTAL', NAV);
         require(NAV != 0, 'NAV has to be bigger 0');
         return (NAV, true);
     }
