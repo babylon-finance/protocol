@@ -26,6 +26,7 @@ require('./lib/tasks/upgrade-admin');
 require('./lib/tasks/upgrade-beacon');
 require('./lib/tasks/tvl');
 require('./lib/tasks/gardens');
+require('./lib/tasks/strategy-expire');
 
 const OPTIMIZER = !(process.env.OPTIMIZER === 'false');
 
