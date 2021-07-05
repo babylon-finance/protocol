@@ -146,7 +146,6 @@ describe('SushiswapPoolIntegrationTest', function () {
           token0: addresses.tokens.WETH,
           token1: addresses.tokens.WBTC,
         }, //WETH-WBTC pool
-        //      { pool: addresses.sushiswap.pairs.wethrenBTC, symbol: 'WETH-renBTC', token0: addresses.tokens.WETH, token1: addresses.tokens.renBTC }, //WETH-renBTC pool only works from WETH and WBTC Gardens if not intermediate swaps are done
         {
           pool: addresses.sushiswap.pairs.daiusdc,
           symbol: 'DAI-USDC',
@@ -173,6 +172,8 @@ describe('SushiswapPoolIntegrationTest', function () {
           let amount = STRATEGY_EXECUTE_MAP[token];
 
           await executeStrategy(strategyContract, { amount });
+          // Check NAV
+          expect(await strategyContract.getNAV()).to.be.closeTo(amount, amount.div(50));
           const tokenContract = await ethers.getContractAt('ERC20', token);
           const executionTokenBalance = await tokenContract.balanceOf(garden.address);
           const LPTokens = await getExpectedLPTokens(token, amount, poolAddress, token0, token1);

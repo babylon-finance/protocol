@@ -17,7 +17,6 @@
 */
 
 pragma solidity 0.7.6;
-import 'hardhat/console.sol';
 
 import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import {SafeDecimalMath} from '../../lib/SafeDecimalMath.sol';
@@ -191,9 +190,7 @@ contract AddLiquidityOperation is Operation {
                 _garden.reserveAsset(),
                 balance.mul(lpTokens).div(totalSupply).preciseDiv(price)
             );
-            console.log('NAV AddLiquidity', NAV, i);
         }
-        console.log('NAV AddLiquidity TOTAL', NAV);
         require(NAV != 0, 'NAV has to be bigger 0');
         return (NAV, true);
     }

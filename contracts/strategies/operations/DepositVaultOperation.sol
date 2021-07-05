@@ -17,7 +17,6 @@
 */
 
 pragma solidity 0.7.6;
-import 'hardhat/console.sol';
 import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import {ERC20} from '@openzeppelin/contracts/token/ERC20/ERC20.sol';
 
@@ -167,7 +166,6 @@ contract DepositVaultOperation is Operation {
         //Balance normalization
         balance = SafeDecimalMath.normalizeAmountTokens(vaultAsset, _garden.reserveAsset(), balance);
         uint256 NAV = pricePerShare.preciseMul(balance).preciseDiv(price);
-        console.log('NAV', NAV);
         require(NAV != 0, 'NAV has to be bigger 0');
         return (NAV, true);
     }
