@@ -165,10 +165,10 @@ contract DepositVaultOperation is Operation {
         }
         address vaultAsset = IPassiveIntegration(_integration).getInvestmentAsset(vault);
         uint256 price = _getPrice(_garden.reserveAsset(), vaultAsset);
-        uint256 pricePerShare = IPassiveIntegration(_integration).getPricePerShare(_vault);
+        uint256 pricePerShare = IPassiveIntegration(_integration).getPricePerShare(vault);
         // Normalization of pricePerShare
         pricePerShare = pricePerShare.mul(10**PreciseUnitMath.decimals().sub(ERC20(vaultAsset).decimals()));
-        uint256 balance = IERC20(_vault).balanceOf(msg.sender);
+        uint256 balance = IERC20(vault).balanceOf(msg.sender);
         //Balance normalization
         balance = SafeDecimalMath.normalizeAmountTokens(vaultAsset, _garden.reserveAsset(), balance);
         uint256 NAV = pricePerShare.preciseMul(balance).preciseDiv(price);
