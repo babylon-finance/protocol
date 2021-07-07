@@ -17,8 +17,8 @@
 */
 
 pragma solidity 0.7.6;
-
 import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
+import {ERC20} from '@openzeppelin/contracts/token/ERC20/ERC20.sol';
 
 import {IGarden} from '../../interfaces/IGarden.sol';
 import {IStrategy} from '../../interfaces/IStrategy.sol';
@@ -26,6 +26,7 @@ import {IPassiveIntegration} from '../../interfaces/IPassiveIntegration.sol';
 
 import {PreciseUnitMath} from '../../lib/PreciseUnitMath.sol';
 import {LowGasSafeMath as SafeMath} from '../../lib/LowGasSafeMath.sol';
+import {SafeDecimalMath} from '../../lib/SafeDecimalMath.sol';
 
 import {Operation} from './Operation.sol';
 
@@ -164,10 +165,13 @@ contract DepositVaultOperation is Operation {
         }
         address vaultAsset = IPassiveIntegration(_integration).getInvestmentAsset(vault);
         uint256 price = _getPrice(_garden.reserveAsset(), vaultAsset);
-        uint256 NAV =
-            IPassiveIntegration(_integration).getPricePerShare(vault).mul(IERC20(vault).balanceOf(msg.sender)).div(
-                price
-            );
+        uint256 pricePerShare = IPassiveIntegration(_integration).getPricePerShare(_vault);
+        // Normalization of pricePerShare
+        pricePerShare = pricePerShare.mul(10**PreciseUnitMath.decimals().sub(ERC20(vaultAsset).decimals()));
+        uint256 balance = IERC20(_vault).balanceOf(msg.sender);
+        //Balance normalization
+        balance = SafeDecimalMath.normalizeAmountTokens(vaultAsset, _garden.reserveAsset(), balance);
+        uint256 NAV = pricePerShare.preciseMul(balance).preciseDiv(price);
         require(NAV != 0, 'NAV has to be bigger 0');
         return (NAV, true);
     }

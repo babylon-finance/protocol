@@ -78,8 +78,9 @@ contract BabylonViewer {
     {
         IGarden garden = IGarden(_garden);
         IGardenValuer valuer = IGardenValuer(controller.gardenValuer());
-        uint256 valuationPerToken = valuer.calculateGardenValuation(_garden, garden.reserveAsset());
         uint256 totalSupply = IERC20(_garden).totalSupply();
+        uint256 valuationPerToken =
+            totalSupply > 0 ? valuer.calculateGardenValuation(_garden, garden.reserveAsset()) : 0;
         uint256 seed = _getGardenSeed(_garden);
 
         return (
@@ -111,7 +112,7 @@ contract BabylonViewer {
                 garden.gardenInitializedAt(),
                 garden.totalContributors(),
                 garden.totalStake(),
-                totalSupply.preciseMul(valuationPerToken),
+                valuationPerToken > 0 ? totalSupply.preciseMul(valuationPerToken) : 0,
                 totalSupply,
                 seed
             ]
