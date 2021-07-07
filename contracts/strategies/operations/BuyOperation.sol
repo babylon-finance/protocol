@@ -17,6 +17,7 @@
 */
 
 pragma solidity 0.7.6;
+import 'hardhat/console.sol';
 import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import {Operation} from './Operation.sol';
 import {IGarden} from '../../interfaces/IGarden.sol';
@@ -87,7 +88,7 @@ contract BuyOperation is Operation {
             uint8
         )
     {
-        address token = abi.decode(_data[4 + 32 :], (address));
+        address token = abi.decode(_data[32 :], (address));
         IStrategy(msg.sender).trade(_asset, _capital, token);
         return (token, IERC20(token).balanceOf(address(msg.sender)), 0); // liquid
     }
@@ -136,7 +137,8 @@ contract BuyOperation is Operation {
         IGarden _garden,
         address /* _integration */
     ) external view override returns (uint256, bool) {
-        address token = abi.decode(_data[4 + 32:], (address));
+        address token = abi.decode(_data[32:], (address)); // 64 bytes (w/o signature prefix bytes4)
+        console.log('CHECK getNAV token', token);
         if (!IStrategy(msg.sender).isStrategyActive()) {
             return (0, true);
         }

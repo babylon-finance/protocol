@@ -154,9 +154,12 @@ async function setUpFixture(
   const strategy21 = (
     await createStrategy('buy', 'deposit', [signer1, signer2, signer3], uniswapV3TradeIntegration.address, garden2)
   ).address;
+  console.log('CHECK XXXXXXXX');
 
   await createStrategy('buy', 'deposit', [signer1, signer2, signer3], uniswapV3TradeIntegration.address, garden3);
   await createStrategy('buy', 'dataset', [signer1, signer2, signer3], uniswapV3TradeIntegration.address, garden3);
+
+  console.log('CHECK 2XXXXXXX');
 
   console.log('Created and started garden', garden1.address);
   console.log('Created manual testing garden', garden3.address);

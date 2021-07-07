@@ -98,7 +98,7 @@ contract BorrowOperation is Operation {
             uint8
         )
     {
-        address borrowToken = BytesLib.toAddress(_data, 4 + 32 + 12);
+        address borrowToken = BytesLib.toAddress(_data, 32 + 12);
         uint256 normalizedAmount = _getBorrowAmount(_asset, borrowToken, _capital, _integration);
         require(
             _capital > 0 &&
@@ -172,7 +172,7 @@ contract BorrowOperation is Operation {
         IGarden _garden,
         address _integration
     ) external view override returns (uint256, bool) {
-        address borrowToken = abi.decode(_data[4 + 32 :], (address));
+        address borrowToken = abi.decode(_data[32 :], (address)); // 64 bytes (w/o signature prefix bytes4)
         if (!IStrategy(msg.sender).isStrategyActive()) {
             return (0, true);
         }

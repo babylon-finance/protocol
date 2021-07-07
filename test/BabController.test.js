@@ -58,14 +58,14 @@ describe('BabController', function () {
   });
 
   describe('Deployment', function () {
-    it.only('should successfully deploy the contract', async function () {
+    it('should successfully deploy the contract', async function () {
       const deployed = await babController.deployed();
       expect(!!deployed).to.equal(true);
     });
   });
 
   describe('Interacting with Communities', function () {
-    it.only('should start with 3 gardens', async function () {
+    it('should start with 3 gardens', async function () {
       const gardens = await babController.getGardens();
       expect(gardens.length).to.equal(4);
     });

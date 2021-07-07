@@ -93,7 +93,7 @@ contract AddLiquidityOperation is Operation {
             uint8
         )
     {
-        //address pool = abi.decode(_data[4:], (address));
+        //address pool = abi.decode(_data[32:], (address));
         //address pool =  BytesLib.toAddress(_data, 4 + 12);
 
         address[] memory poolTokens = IPoolIntegration(_integration).getPoolTokens(_data);
@@ -104,6 +104,7 @@ contract AddLiquidityOperation is Operation {
         //    _maxAmountsIn[i] = _getMaxAmountTokenPool(_asset, _capital, _garden, _poolWeights[i], poolTokens[i]);
         //}
         uint256 poolTokensOut = IPoolIntegration(_integration).getPoolTokensOut(_data, poolTokens[0], maxAmountsIn[0]);
+        console.log('CHECK QWERTY');
         IPoolIntegration(_integration).joinPool(
             msg.sender,
             _data,
@@ -111,7 +112,7 @@ contract AddLiquidityOperation is Operation {
             poolTokens,
             maxAmountsIn
         );
-        return (BytesLib.toAddress(_data, 4 + 32 + 12), IERC20(BytesLib.toAddress(_data, 4 + 32 + 12)).balanceOf(msg.sender), 0); // liquid
+        return (abi.decode(_data[32:], (address)), IERC20(abi.decode(_data[32:], (address))).balanceOf(msg.sender), 0); // liquid
     }
 
     function _maxAmountsIn(address _asset, uint256 _capital, IGarden _garden, uint256[] memory _poolWeights, address[] memory poolTokens) internal returns (uint256[] memory) {
@@ -189,7 +190,7 @@ contract AddLiquidityOperation is Operation {
         IGarden _garden,
         address _integration
     ) external view override returns (uint256, bool) {
-        address pool = abi.decode(_data[4 + 32 :], (address)); // First 20 bytes of the second word is used for address (20 bytes)
+        address pool = abi.decode(_data[32 :], (address)); // 64 bytes (w/o signature prefix bytes4)
         if (!IStrategy(msg.sender).isStrategyActive()) {
             return (0, true);
         }

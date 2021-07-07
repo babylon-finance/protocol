@@ -51,7 +51,7 @@ async function createStrategyWithBuyOperation(garden, signer, params, integratio
   console.log('bytes data = ' + encodedData.toString(64));
   //const passedLongParams = [[0], [integration], [encodedData]]; // It does not work mixing bytes with address in the same array
   const passedLongParams = [[0], [integration]];
-  console.log(passedLongParams, encodedData);
+  console.log('createStrategyWithBuyOperation', passedLongParams, encodedData);
 
   await garden.connect(signer).addStrategy(...STRAT_NAME_PARAMS, params, ...passedLongParams, encodedData);
   const strategies = await garden.getStrategies();
@@ -67,6 +67,7 @@ async function createStrategyWithPoolOperation(garden, signer, params, integrati
   let ABI = ['function poolOperation(uint256 metadata, address data)']; // 64 bytes
   let iface = new ethers.utils.Interface(ABI);
   let encodedData = iface.encodeFunctionData('poolOperation', [0, data || addresses.oneinch.pools.wethdai]);
+  console.log('createStrategyWithPoolOperation', passedLongParams, encodedData);
   await garden.connect(signer).addStrategy(...STRAT_NAME_PARAMS, params, ...passedPoolParams, encodedData);
   const strategies = await garden.getStrategies();
   const lastStrategyAddr = strategies[strategies.length - 1];
@@ -81,6 +82,7 @@ async function createStrategyWithVaultOperation(garden, signer, params, integrat
   let ABI = ['function vaultOperation(uint256 metadata, address data)']; // 64 bytes
   let iface = new ethers.utils.Interface(ABI);
   let encodedData = iface.encodeFunctionData('vaultOperation', [0, data || addresses.yearn.vaults.ydai]);
+  console.log('createStrategyWithVaultOperation', passedLongParams, encodedData);
   await garden.connect(signer).addStrategy(...STRAT_NAME_PARAMS, params, ...passedYieldParams, encodedData);
   const strategies = await garden.getStrategies();
   const lastStrategyAddr = strategies[strategies.length - 1];
@@ -95,6 +97,8 @@ async function createStrategyWithLendOperation(garden, signer, params, integrati
   let ABI = ['function lendOperation(uint256 metadata, address data)']; // 64 bytes
   let iface = new ethers.utils.Interface(ABI);
   let encodedData = iface.encodeFunctionData('lendOperation', [0, data || addresses.tokens.USDC]);
+  console.log('createStrategyWithLendOperation', passedLongParams, encodedData);
+
   await garden.connect(signer).addStrategy(...STRAT_NAME_PARAMS, params, ...passedLendParams, encodedData);
   const strategies = await garden.getStrategies();
   const lastStrategyAddr = strategies[strategies.length - 1];
@@ -118,6 +122,7 @@ async function createStrategyWithLendAndBorrowOperation(
   let ABI = ['function lendAndBorrowOperation(uint256 metadata, address data)']; // 64 bytes
   let iface = new ethers.utils.Interface(ABI);
   let encodedData = iface.encodeFunctionData('lendAndBorrowOperation', [0, data]);
+  console.log('createStrategyWithLendAndBorrowOperation', passedLongParams, encodedData);
 
   await garden.connect(signer).addStrategy(...STRAT_NAME_PARAMS, params, ...passedLendBorrowParams, encodedData);
   const strategies = await garden.getStrategies();
@@ -187,6 +192,7 @@ async function deposit(garden, signers) {
           }
         : {},
     );
+    console.log('FINISHED DEPOSIT');
   }
 }
 

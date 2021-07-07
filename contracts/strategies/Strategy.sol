@@ -16,9 +16,8 @@
     SPDX-License-Identifier: Apache License, Version 2.0
 */
 pragma solidity 0.7.6;
-pragma abicoder v2;
 
-//import 'hardhat/console.sol';
+import 'hardhat/console.sol';
 import {Address} from '@openzeppelin/contracts/utils/Address.sol';
 import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import {ERC20} from '@openzeppelin/contracts/token/ERC20/ERC20.sol';
@@ -269,7 +268,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
     mapping(address => int256) public votes;
 
     // Strategy opDatas encoded
-    bytes[] public override opEncodedData; // 64bytes each
+    bytes public override opEncodedData; // we use and reserve 64bytes for each operation as consecutives bytes64 word
 
     /* ============ Constructor ============ */
 
@@ -334,22 +333,22 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
     function setData(
         uint8[] calldata _opTypes,
         address[] calldata _opIntegrations,
-        bytes[] memory _opEncodedData
+        bytes memory _opEncodedData
     ) external override {
         _onlyGardenAndNotSet();
+        uint256 opEncodedLength = _opEncodedData.length.sub(4).div(64);
         //console.log('setData dataLength', dataLength);
         //console.log('_opTypes.length', _opTypes.length);
         //console.log('_opIntegrations.length', _opIntegrations.length);
         //console.log('_opEncodedData.length', _opEncodedData.length);
         _require(
-            (_opTypes.length == _opIntegrations.length) && (_opIntegrations.length == _opEncodedData.length),
+            (_opTypes.length == _opIntegrations.length) && (_opIntegrations.length == opEncodedLength),
             Errors.TOO_MANY_OPS
         );
-        _require(_opEncodedData.length < MAX_OPERATIONS && _opEncodedData.length > 0, Errors.TOO_MANY_OPS);
-
+        _require(opEncodedLength < MAX_OPERATIONS && opEncodedLength > 0, Errors.TOO_MANY_OPS);
         for (uint256 i = 0; i < _opTypes.length; i++) {
             IOperation(controller.enabledOperations(_opTypes[i])).validateOperation(
-                _opEncodedData[i],
+                _opEncodedData,
                 garden,
                 _opIntegrations[i],
                 i
@@ -700,7 +699,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
             bytes memory
         )
     {
-        return (opTypes[_index], opIntegrations[_index], opEncodedData[_index]);
+        return (opTypes[_index], opIntegrations[_index], BytesLib.slice(opEncodedData, 4 + (64 * _index), 64));
     }
 
     /**
@@ -715,7 +714,8 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         address reserveAsset = garden.reserveAsset();
         for (uint256 i = 0; i < opTypes.length; i++) {
             IOperation operation = IOperation(IBabController(controller).enabledOperations(uint256(opTypes[i])));
-            (uint256 strategyNav, bool positive) = operation.getNAV(opEncodedData[i], garden, opIntegrations[i]);
+            (uint256 strategyNav, bool positive) =
+                operation.getNAV(BytesLib.slice(opEncodedData, 4 + (64 * i), 64), garden, opIntegrations[i]);
             if (positive) {
                 positiveNav = positiveNav.add(strategyNav);
             } else {
@@ -725,7 +725,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         }
         uint256 lastOp = opTypes.length - 1;
         if (opTypes[lastOp] == 4) {
-            address token = BytesLib.toAddress(opEncodedData[lastOp], 4 + 32 + 12);
+            address token = BytesLib.toAddress(opEncodedData, 4 + (64 * lastOp) + 32 + 12);
             uint256 borrowBalance = IERC20(token).universalBalanceOf(address(this));
             if (borrowBalance > 0) {
                 uint256 price = _getPrice(reserveAsset, token);
@@ -780,11 +780,17 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
             block.timestamp.sub(enteredCooldownAt) >= garden.strategyCooldownPeriod(),
             Errors.STRATEGY_IN_COOLDOWN
         );
+        console.log('CHECK AAAAAAA');
 
         // Execute enter operation
         garden.allocateCapitalToStrategy(_capital);
+        console.log('CHECK BBBBBBB');
+
         capitalAllocated = capitalAllocated.add(_capital);
+        console.log('CHECK CCCCCC');
+
         _enterStrategy(_capital);
+        console.log('CHECK XXXXXXX');
 
         // Sets the executed timestamp on first execution
         if (executedAt == 0) {
@@ -816,7 +822,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
                 assetAccumulated,
                 capitalForNexOperation,
                 assetStatus,
-                opEncodedData[i],
+                BytesLib.slice(opEncodedData, 4 + (64 * i), 64),
                 garden,
                 opIntegrations[i]
             );
@@ -839,7 +845,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
                 capitalPending,
                 assetStatus,
                 _percentage,
-                opEncodedData[i - 1],
+                BytesLib.slice(opEncodedData, 4 + (64 * (i - 1)), 64),
                 garden,
                 opIntegrations[i - 1]
             );

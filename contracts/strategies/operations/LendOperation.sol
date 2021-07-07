@@ -93,7 +93,7 @@ contract LendOperation is Operation {
             uint8
         )
     {
-        address assetToken = abi.decode(_data[4 + 32 :], (address)); // We just use the first 20 bytes from the whole opEncodedData
+        address assetToken = abi.decode(_data[32 :], (address)); // We just use the first 20 bytes from the whole opEncodedData
         if (assetToken != _asset) {
             // Trade to WETH if is 0x0 (eth in compound)
             if (assetToken != address(0) || _asset != WETH) {
@@ -201,7 +201,7 @@ contract LendOperation is Operation {
         IGarden _garden,
         address _integration
     ) external view override returns (uint256, bool) {
-        address lendToken = abi.decode(_data[4 + 32:], (address));
+        address lendToken = abi.decode(_data[32:], (address)); // 64 bytes (w/o signature prefix bytes4)
         if (!IStrategy(msg.sender).isStrategyActive()) {
             return (0, true);
         }

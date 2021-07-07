@@ -545,7 +545,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         uint256[] calldata _stratParams,
         uint8[] calldata _opTypes,
         address[] calldata _opIntegrations,
-        bytes[] calldata _opEncodedDatas
+        bytes calldata _opEncodedDatas
     ) external override {
         _onlyActive();
         _onlyContributor();
