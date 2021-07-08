@@ -562,21 +562,21 @@ describe('Garden', function () {
   });
 
   describe('withdraw', async function () {
-    it.only('can withdraw funds if garden has free liquidity', async function () {
+    it('can withdraw funds if garden has free liquidity', async function () {
       const amountIn = eth();
       const minAmountOut = eth();
       await garden1.connect(signer3).deposit(amountIn, minAmountOut, signer3.getAddress(), false, {
         value: eth(),
+        gasPrice: 0,
       });
 
       const beforeWithdrawal = await ethers.provider.getBalance(signer3.address);
 
-      await garden1.connect(signer3).withdraw(amountIn, minAmountOut, signer3.getAddress(), false, ADDRESS_ZERO);
+      await garden1.connect(signer3).withdraw(amountIn, minAmountOut, signer3.getAddress(), false, ADDRESS_ZERO, {
+        gasPrice: 0,
+      });
 
-      expect((await ethers.provider.getBalance(signer3.address)).sub(beforeWithdrawal)).to.be.closeTo(
-        eth(0.99),
-        eth(0.01),
-      );
+      expect((await ethers.provider.getBalance(signer3.address)).sub(beforeWithdrawal)).to.be.eq(minAmountOut);
     });
 
     it('can withdraw funds with a penalty', async function () {
