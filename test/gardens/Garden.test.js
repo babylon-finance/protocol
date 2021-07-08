@@ -562,14 +562,16 @@ describe('Garden', function () {
   });
 
   describe('withdraw', async function () {
-    it('can withdraw funds if garden has free liquidity', async function () {
-      await garden1.connect(signer3).deposit(eth(), 1, signer3.getAddress(), false, {
+    it.only('can withdraw funds if garden has free liquidity', async function () {
+      const amountIn = eth();
+      const minAmountOut = eth();
+      await garden1.connect(signer3).deposit(amountIn, minAmountOut, signer3.getAddress(), false, {
         value: eth(),
       });
 
       const beforeWithdrawal = await ethers.provider.getBalance(signer3.address);
 
-      await garden1.connect(signer3).withdraw(eth(), 1, signer3.getAddress(), false, ADDRESS_ZERO);
+      await garden1.connect(signer3).withdraw(amountIn, minAmountOut, signer3.getAddress(), false, ADDRESS_ZERO);
 
       expect((await ethers.provider.getBalance(signer3.address)).sub(beforeWithdrawal)).to.be.closeTo(
         eth(0.99),
@@ -844,15 +846,13 @@ describe('Garden', function () {
   });
 
   describe('depositBySig', async function () {
-    it.only('can deposit', async function () {
+    it('can deposit', async function () {
       const amountIn = from(1000 * 1e6);
       const minAmountOut = eth(1000);
 
       await fund([signer1.address, signer3.address], [addresses.tokens.USDC]);
 
       const garden = await createGarden({reserveAsset: addresses.tokens.USDC});
-
-      await ishtarGate.connect(signer1).setGardenAccess(signer3.address, garden.address, 1, { gasPrice: 0 });
 
       await usdc.connect(signer3).approve(garden.address, amountIn, {
         gasPrice: 0,
@@ -870,6 +870,25 @@ describe('Garden', function () {
       const gardenBalanceAfter = await usdc.balanceOf(garden.address);
       expect(gardenBalanceAfter.sub(gardenBalance)).to.equal(amountIn);
     });
+
+    it('rejects wrong nonce', async function () {
+      const amountIn = from(1000 * 1e6);
+      const minAmountOut = eth(1000);
+
+      await fund([signer1.address, signer3.address], [addresses.tokens.USDC]);
+
+      const garden = await createGarden({reserveAsset: addresses.tokens.USDC});
+
+      await usdc.connect(signer3).approve(garden.address, amountIn, {
+        gasPrice: 0,
+      });
+
+      const sig = await getDepositSig(signer3, amountIn, minAmountOut , false, 7);
+      await expect(garden.connect(keeper).depositBySig(amountIn, minAmountOut , false, 0, eth(), sig.v, sig.r, sig.s)).to.be.revertedWith('revert BAB#029');
+
+    });
+    // TODO: Test minAmountOut is respected
+    // TODO: Test mintNFT is respected
   });
 
   describe('deposit', async function () {

@@ -98,8 +98,6 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
     uint256 private constant EARLY_WITHDRAWAL_PENALTY = 5e16;
     uint256 private constant MAX_TOTAL_STRATEGIES = 20; // Max number of strategies
     uint256 private constant TEN_PERCENT = 1e17;
-    // Window of time after an investment strategy finishes when the capital is available for withdrawals
-    uint256 private constant withdrawalWindowAfterStrategyCompletes = 7 days;
 
     bytes32 private constant DEPOSIT_BY_SIG_TYPEHASH = keccak256("DepositBySig(uint256 _amountIn,uint256 _minAmountOut,bool _mintNft, uint256 _nonce)");
 
@@ -140,16 +138,14 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
     // on anything else ever.
     uint256 public override reserveAssetRewardsSetAside;
 
-    // The amount of funds in reserve asset of pending deposits to be processed
-    // by Keeper. Should NEVER be used for anything else.
-    uint256 public override reserveAssetPrincipalWindow;
+    uint256 private reserveAssetPrincipalWindow; // DEPRECATED
     int256 public override absoluteReturns; // Total profits or losses of this garden
 
     // Indicates the minimum liquidity the asset needs to have to be tradable by this garden
     uint256 public override minLiquidityAsset;
 
     uint256 public override depositHardlock; // Window of time after deposits when withdraws are disabled for that user
-    uint256 public override withdrawalsOpenUntil; // Indicates until when the withdrawals are open and the ETH is set aside
+    uint256 private withdrawalsOpenUntil; // DEPRECATED
 
     // Contributors
     mapping(address => Contributor) private contributors;
@@ -518,15 +514,15 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
      *   it will be applied regardless of the garden state.
      *   It is advised to first try to withdraw with no penalty and it this
      *   reverts then try to with penalty.
-     * @param _gardenTokenQuantity           Quantity of the garden token to withdrawal
-     * @param _minReserveReceiveQuantity     Min quantity of reserve asset to receive
+     * @param _amountIn           Quantity of the garden token to withdrawal
+     * @param _minAmountOut     Min quantity of reserve asset to receive
      * @param _to                            Address to send component assets to
      * @param _withPenalty                   Whether or not this is an immediate withdrawal
      * @param _unwindStrategy                Strategy to unwind
      */
     function withdraw(
-        uint256 _gardenTokenQuantity,
-        uint256 _minReserveReceiveQuantity,
+        uint256 _amountIn,
+        uint256 _minAmountOut,
         address payable _to,
         bool _withPenalty,
         address _unwindStrategy
@@ -540,33 +536,42 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         );
         // Withdrawal amount has to be equal or less than msg.sender balance minus the locked balance
         uint256 lockedAmount = getLockedBalance(msg.sender);
-        _require(_gardenTokenQuantity <= balanceOf(msg.sender).sub(lockedAmount), Errors.TOKENS_STAKED); // Strategists cannot withdraw locked stake while in active strategies
+        _require(_amountIn <= balanceOf(msg.sender).sub(lockedAmount), Errors.TOKENS_STAKED); // Strategists cannot withdraw locked stake while in active strategies
 
-        uint256 outflow = _getWithdrawalReserveQuantity(reserveAsset, _gardenTokenQuantity);
+        // Get valuation of the Garden with the quote asset as the reserve asset. Returns value in precise units (10e18)
+        // Reverts if price is not found
+        uint256 pricePerShare =
+            IGardenValuer(IBabController(controller).gardenValuer()).calculateGardenValuation(
+                address(this),
+                reserveAsset
+            );
+
+        // this value would have 18 decimals even for USDC
+        uint256 amountOutNormalized = _amountIn.preciseMul(pricePerShare);
+        // in case of USDC that would with 6 decimals
+        uint256 amountOut = amountOutNormalized.preciseMul(10**ERC20Upgradeable(reserveAsset).decimals());
 
         // if withPenaltiy then unwind strategy
         if (_withPenalty) {
-            outflow = outflow.sub(outflow.preciseMul(EARLY_WITHDRAWAL_PENALTY));
+            amountOut = amountOut.sub(amountOut.preciseMul(EARLY_WITHDRAWAL_PENALTY));
             // When unwinding a strategy, a slippage on integrations will result in receiving less tokens
             // than desired so we have have to account for this with a 5% slippage.
-            IStrategy(_unwindStrategy).unwindStrategy(outflow.add(outflow.preciseMul(5e16)));
+            IStrategy(_unwindStrategy).unwindStrategy(amountOut.add(amountOut.preciseMul(5e16)));
         }
 
-        _require(outflow >= _minReserveReceiveQuantity, Errors.RECEIVE_MIN_AMOUNT);
+        _require(amountOut >= _minAmountOut, Errors.RECEIVE_MIN_AMOUNT);
 
-        _require(canWithdrawReserveAmount(msg.sender, outflow), Errors.MIN_LIQUIDITY);
+        _require(canWithdrawReserveAmount(msg.sender, amountOut), Errors.MIN_LIQUIDITY);
 
-        reenableReserveForStrategies();
-
-        _burn(msg.sender, _gardenTokenQuantity);
-        _safeSendReserveAsset(msg.sender, outflow);
-        _updateContributorWithdrawalInfo(outflow);
+        _burn(msg.sender, _amountIn);
+        _safeSendReserveAsset(msg.sender, amountOut);
+        _updateContributorWithdrawalInfo(amountOut);
 
         // required withdrawable quantity is greater than existing collateral
-        _require(principal >= outflow, Errors.BALANCE_TOO_LOW);
-        principal = principal.sub(outflow);
+        _require(principal >= amountOut, Errors.BALANCE_TOO_LOW);
+        principal = principal.sub(amountOut);
 
-        emit GardenWithdrawal(msg.sender, _to, outflow, _gardenTokenQuantity, block.timestamp);
+        emit GardenWithdrawal(msg.sender, _to, amountOut, _amountIn, block.timestamp);
     }
 
     /**
@@ -600,39 +605,30 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
     }
 
     /**
-     * When an strategy finishes execution, we want to make that eth available for withdrawals
-     * from members of the garden.
+     * @notice
+     *  When strategy ends puts saves returns, rewards and marks strategy as
+     *  finalized.
      *
-     * @param _amount                        Amount of Reserve Asset to set aside until the window ends
      * @param _rewards                       Amount of Reserve Asset to set aside forever
      * @param _returns                       Profits or losses that the strategy received
      */
-    function startWithdrawalWindow(
-        uint256 _amount,
+    function finalizeStrategy(
         uint256 _rewards,
-        int256 _returns,
-        address _strategy
+        int256 _returns
     ) external override {
         _onlyUnpaused();
         _require(
             (strategyMapping[msg.sender] && address(IStrategy(msg.sender).garden()) == address(this)),
             Errors.ONLY_STRATEGY
         );
-        // Updates reserve asset
-        if (withdrawalsOpenUntil > block.timestamp) {
-            withdrawalsOpenUntil = block.timestamp.add(
-                withdrawalWindowAfterStrategyCompletes.sub(withdrawalsOpenUntil.sub(block.timestamp))
-            );
-        } else {
-            withdrawalsOpenUntil = block.timestamp.add(withdrawalWindowAfterStrategyCompletes);
-        }
+
         reserveAssetRewardsSetAside = reserveAssetRewardsSetAside.add(_rewards);
-        reserveAssetPrincipalWindow = reserveAssetPrincipalWindow.add(_amount);
+
         // Mark strategy as finalized
         absoluteReturns = absoluteReturns.add(_returns);
-        strategies = strategies.remove(_strategy);
-        finalizedStrategies.push(_strategy);
-        strategyMapping[_strategy] = false;
+        strategies = strategies.remove(msg.sender);
+        finalizedStrategies.push(msg.sender);
+        strategyMapping[msg.sender] = false;
     }
 
     /**
@@ -744,8 +740,6 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         _onlyStrategy();
         _onlyActive();
 
-        reenableReserveForStrategies();
-
         uint256 protocolMgmtFee = IBabController(controller).protocolManagementFee().preciseMul(_capital);
         _require(_capital.add(protocolMgmtFee) <= liquidReserve(), Errors.MIN_LIQUIDITY);
 
@@ -845,22 +839,6 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
     }
 
     /**
-     * Get the expected reserve asset to be withdrawaled
-     *
-     * @param _gardenTokenQuantity             Quantity of Garden tokens to withdrawal
-     *
-     * @return  uint256                     Expected reserve asset quantity withdrawaled
-     */
-    function getExpectedReserveWithdrawalQuantity(uint256 _gardenTokenQuantity)
-        external
-        view
-        override
-        returns (uint256)
-    {
-        return _getWithdrawalReserveQuantity(reserveAsset, _gardenTokenQuantity);
-    }
-
-    /**
      * Checks balance locked for strategists in active strategies
      *
      * @param _contributor                 Address of the account
@@ -891,17 +869,6 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
                 .sub(reserveAssetPrincipalWindow)
                 .sub(reserveAssetRewardsSetAside);
         return reserve > keeperDebt ? reserve.sub(keeperDebt) : 0;
-    }
-
-    /**
-     * When the window of withdrawals finishes, we need to make the capital available again for investments
-     * We still keep the profits aside.
-     */
-    function reenableReserveForStrategies() private {
-        if (block.timestamp >= withdrawalsOpenUntil) {
-            withdrawalsOpenUntil = 0;
-            reserveAssetPrincipalWindow = 0;
-        }
     }
 
     /**
@@ -1013,16 +980,6 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         view
         returns (uint256)
     {
-        // Get valuation of the Garden with the quote asset as the reserve asset. Returns value in precise units (10e18)
-        // Reverts if price is not found
-        uint256 gardenValuationPerToken =
-            IGardenValuer(IBabController(controller).gardenValuer()).calculateGardenValuation(
-                address(this),
-                _reserveAsset
-            );
-
-        uint256 totalWithdrawalValueInPreciseUnits = _gardenTokenQuantity.preciseMul(gardenValuationPerToken);
-        return totalWithdrawalValueInPreciseUnits.preciseMul(10**ERC20Upgradeable(_reserveAsset).decimals());
     }
 
     /**

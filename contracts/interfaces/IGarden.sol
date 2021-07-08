@@ -77,8 +77,6 @@ interface IGarden {
 
     function depositHardlock() external view returns (uint256);
 
-    function withdrawalsOpenUntil() external view returns (uint256);
-
     function minLiquidityAsset() external view returns (uint256);
 
     function minStrategyDuration() external view returns (uint256);
@@ -88,8 +86,6 @@ interface IGarden {
     function principal() external view returns (uint256);
 
     function reserveAssetRewardsSetAside() external view returns (uint256);
-
-    function reserveAssetPrincipalWindow() external view returns (uint256);
 
     function absoluteReturns() external view returns (int256);
 
@@ -109,11 +105,9 @@ interface IGarden {
 
     function strategyMapping(address _strategy) external view returns (bool);
 
-    function startWithdrawalWindow(
-        uint256 _amount,
+    function finalizeStrategy(
         uint256 _profits,
-        int256 _returns,
-        address _strategy
+        int256 _returns
     ) external;
 
     function allocateCapitalToStrategy(uint256 _capital) external;
@@ -154,8 +148,6 @@ interface IGarden {
     ) external;
 
     function claimReturns(address[] calldata _finalizedStrategies) external;
-
-    function getExpectedReserveWithdrawalQuantity(uint256 _gardenTokenQuantity) external view returns (uint256);
 
     function getLockedBalance(address _contributor) external view returns (uint256);
 

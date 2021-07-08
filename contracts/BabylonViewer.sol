@@ -71,8 +71,8 @@ contract BabylonViewer {
             bool[2] memory,
             address[] memory,
             address[] memory,
-            uint256[11] memory,
-            uint256[10] memory
+            uint256[10] memory,
+            uint256[9] memory
         )
     {
         IGarden garden = IGarden(_garden);
@@ -92,7 +92,6 @@ contract BabylonViewer {
             garden.getFinalizedStrategies(),
             [
                 garden.depositHardlock(),
-                garden.withdrawalsOpenUntil(),
                 garden.minVotesQuorum(),
                 garden.maxContributors(),
                 garden.maxDepositLimit(),
@@ -106,7 +105,6 @@ contract BabylonViewer {
             [
                 garden.principal(),
                 garden.reserveAssetRewardsSetAside(),
-                garden.reserveAssetPrincipalWindow(),
                 uint256(garden.absoluteReturns()),
                 garden.gardenInitializedAt(),
                 garden.totalContributors(),

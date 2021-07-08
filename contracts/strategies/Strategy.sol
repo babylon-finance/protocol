@@ -917,12 +917,12 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         // Return the balance back to the garden
         IERC20(reserveAsset).safeTransfer(address(garden), capitalReturned.sub(protocolProfits));
         // Start a redemption window in the garden with the capital plus the profits for the lps
+
         (, , uint256 lpsProfitSharing) = IBabController(controller).getProfitSharing();
-        garden.startWithdrawalWindow(
-            capitalReturned.sub(profits).add((profits).preciseMul(lpsProfitSharing)),
+
+        garden.finalizeStrategy(
             profits.sub(profits.preciseMul(lpsProfitSharing)).sub(protocolProfits),
-            strategyReturns,
-            address(this)
+            strategyReturns
         );
         // Substract the Principal in the Rewards Distributor to update the Protocol power value
         if (hasMiningStarted) {
