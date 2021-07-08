@@ -30,14 +30,13 @@ module.exports = async ({ getNamedAccounts, deployments, ethers, getSigner, getC
     await bablToken.connect(deployerSigner).transfer(rewardsDistributor.address, ONE_ETH.mul(500000), { gasPrice })
   ).wait();
 
-  console.log('Send 310k BABL tokens to TimeLockRegistry');
+  console.log('Send 305k BABL tokens to TimeLockRegistry');
   await (
-    await bablToken.connect(deployerSigner).transfer(timeLockRegistry.address, ONE_ETH.mul('310000'), { gasPrice })
+    await bablToken.connect(deployerSigner).transfer(timeLockRegistry.address, ONE_ETH.mul('305000'), { gasPrice })
   ).wait();
 
   console.log('Register investor and team allocations');
   const now = new Date().getTime();
-  // TODO: Add missing investors
   const allocations = JSON.parse(fs.readFileSync('./deployments/allocations.json')).map((alloc) => ({
     receiver: alloc[0],
     distribution: ethers.utils.parseEther(alloc[1].replace(',', '')),
@@ -54,8 +53,8 @@ module.exports = async ({ getNamedAccounts, deployments, ethers, getSigner, getC
     `Total amount of BABL tokens in registrations is ${ethers.utils.formatUnits(await timeLockRegistry.totalTokens())}`,
   );
 
-  console.log('Send 16k to MULTISIG');
-  await (await bablToken.connect(deployerSigner).transfer(MULTISIG, ONE_ETH.mul(16000), { gasPrice })).wait();
+  console.log('Send 23k to MULTISIG');
+  await (await bablToken.connect(deployerSigner).transfer(MULTISIG, ONE_ETH.mul(23000), { gasPrice })).wait();
 
   const balance = await bablToken.balanceOf(deployerSigner.address);
   console.log(`Send ${ethers.utils.formatUnits(balance, 'ether')} to the Treasury`);
