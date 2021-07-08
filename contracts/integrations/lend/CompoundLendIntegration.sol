@@ -24,6 +24,7 @@ import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import {ReentrancyGuard} from '@openzeppelin/contracts/utils/ReentrancyGuard.sol';
 
 import {ICToken} from '../../interfaces/external/compound/ICToken.sol';
+import {IComptroller} from '../../interfaces/external/compound/IComptroller.sol';
 import {IGarden} from '../../interfaces/IGarden.sol';
 import {IStrategy} from '../../interfaces/IStrategy.sol';
 import {IBabController} from '../../interfaces/IBabController.sol';
@@ -58,6 +59,8 @@ contract CompoundLendIntegration is LendIntegration {
 
     address internal constant CompoundComptrollerAddress = 0x3d9819210A31b4961b30EF54bE2aeD79B9c9Cd3B;
     address internal constant cETH = 0x4Ddc2D193948926D02f9B1fE9e1daa0718270ED5;
+    address private constant COMP = 0xc00e94Cb662C3520282E6f5717214004A7f26888;
+
     // Mapping of asset addresses to cToken addresses
     mapping(address => address) public assetToCToken;
 
@@ -101,6 +104,14 @@ contract CompoundLendIntegration is LendIntegration {
     }
 
     /* ============ Internal Functions ============ */
+
+    function _getRewardToken() internal view override returns (address) {
+        return COMP;
+    }
+
+    function _getRewardsAccrued(address _strategy) internal view override returns (uint256) {
+        return IComptroller(CompoundComptrollerAddress).compAccrued(_strategy);
+    }
 
     function _isInvestment(address _assetToken) internal view override returns (bool) {
         return assetToCToken[_assetToken] != address(0);
@@ -149,6 +160,22 @@ contract CompoundLendIntegration is LendIntegration {
         bytes memory methodData = abi.encodeWithSignature('redeemUnderlying(uint256)', _numTokensToSupply);
 
         return (assetToCToken[_assetToken], 0, methodData);
+    }
+
+    function _claimRewardsCallData(address _strategy)
+        internal
+        view
+        override
+        returns (
+            address,
+            uint256,
+            bytes memory
+        )
+    {
+        // Encode method data for Garden to invoke
+        bytes memory methodData = abi.encodeWithSignature('claimComp(address)', _strategy);
+
+        return (CompoundComptrollerAddress, 0, methodData);
     }
 
     /**
