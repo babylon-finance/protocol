@@ -263,6 +263,7 @@ contract BabylonViewer {
             ,
             ,
             contribution[8]
+            ,
         ) = garden.getContributor(_user);
         contribution[6] = IERC20(_garden).balanceOf(_user);
         contribution[7] = garden.getLockedBalance(_user);

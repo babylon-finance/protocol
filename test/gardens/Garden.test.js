@@ -880,12 +880,12 @@ describe('Garden', function () {
         gasPrice: 0,
       });
 
-      const DEPOSIT_BY_SIG_TYPEHASH = ethers.utils.keccak256(ethers.utils.toUtf8Bytes("DepositBySig(uint256 _amountIn,uint256 _minAmountOut,bool _mintNft)"));
+      const DEPOSIT_BY_SIG_TYPEHASH = ethers.utils.keccak256(ethers.utils.toUtf8Bytes("DepositBySig(uint256 _amountIn,uint256 _minAmountOut,bool _mintNft, uint256 _nonce)"));
       console.log('DEPOSIT_BY_SIG_TYPEHASH', DEPOSIT_BY_SIG_TYPEHASH);
 
       let payload = ethers.utils.defaultAbiCoder.encode(
-      ['bytes32', 'uint256', 'uint256', 'bool'],
-      [DEPOSIT_BY_SIG_TYPEHASH, thousandUSDC.toString(), eth(1000).toString(), false]
+      ['bytes32', 'uint256', 'uint256', 'bool', 'uint256'],
+      [DEPOSIT_BY_SIG_TYPEHASH, thousandUSDC.toString(), eth(1000).toString(), false, 0]
     );
       console.log('Payload:', payload);
 
@@ -906,6 +906,7 @@ describe('Garden', function () {
           thousandUSDC,
           eth(1000),
           false,
+          0,
           eth(),
           sig.v,
           sig.r,

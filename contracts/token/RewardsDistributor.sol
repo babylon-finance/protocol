@@ -620,7 +620,7 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         (bool profit, uint256 profitValue, bool distance, uint256 distanceValue) =
             _getStrategyRewardsContext(address(strategy));
 
-        (, uint256 initialDepositAt, uint256 claimedAt, , , , , , ) = IGarden(_garden).getContributor(_contributor);
+        (, uint256 initialDepositAt, uint256 claimedAt, , , , , , , ) = IGarden(_garden).getContributor(_contributor);
         // Positive strategies not yet claimed
         if (
             strategy.exitedAt() > claimedAt &&

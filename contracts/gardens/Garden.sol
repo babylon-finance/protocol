@@ -101,7 +101,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
     // Window of time after an investment strategy finishes when the capital is available for withdrawals
     uint256 private constant withdrawalWindowAfterStrategyCompletes = 7 days;
 
-    bytes32 constant DEPOSIT_BY_SIG_TYPEHASH = keccak256("DepositBySig(uint256 _amountIn,uint256 _minAmountOut,bool _mintNft)");
+    bytes32 private constant DEPOSIT_BY_SIG_TYPEHASH = keccak256("DepositBySig(uint256 _amountIn,uint256 _minAmountOut,bool _mintNft, uint256 _nonce)");
 
     /* ============ Structs ============ */
 
@@ -113,6 +113,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         uint256 claimedRewards;
         uint256 withdrawnSince;
         uint256 totalDeposits;
+        uint256 nonce;
     }
 
     /* ============ State Variables ============ */
@@ -411,6 +412,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         uint256 _amountIn,
         uint256 _minAmountOut,
         bool _mintNft,
+        uint256 _nonce,
         uint256 _pricePerShare,
         uint8 v,
         bytes32 r,
@@ -420,10 +422,18 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         _onlyUnpaused();
         _onlyActive();
 
-        bytes32 hash = keccak256(abi.encode(DEPOSIT_BY_SIG_TYPEHASH, _amountIn, _minAmountOut, _mintNft)).toEthSignedMessageHash();
+        bytes32 hash = keccak256(abi.encode(DEPOSIT_BY_SIG_TYPEHASH, _amountIn,
+                                            _minAmountOut, _mintNft, _nonce)).toEthSignedMessageHash();
         address signer = ECDSA.recover(hash, v, r, s);
+        console.log('singer', signer);
 
         _require(signer != address(0), Errors.INVALID_SIGNER);
+
+        // to prevent replay attacks
+        _require(
+            contributors[signer].nonce == _nonce,
+            Errors.INVALID_NONCE
+        );
 
         _require(
             !guestListEnabled ||
@@ -804,6 +814,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
             uint256,
             uint256,
             uint256,
+            uint256,
             uint256
         )
     {
@@ -828,7 +839,8 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
                 : 0,
             balance,
             lockedBalance,
-            contributorPower
+            contributorPower,
+            contributor.nonce
         );
     }
 
@@ -1031,6 +1043,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         // We make checkpoints around contributor deposits to give the right rewards afterwards
         contributor.totalDeposits = contributor.totalDeposits.add(_reserveAssetQuantity);
         contributor.lastDepositAt = block.timestamp;
+        contributor.nonce = contributor.nonce + 1;
         rewardsDistributor.updateGardenPowerAndContributor(address(this), _contributor, previousBalance, true, pid);
         pid++;
     }
@@ -1051,6 +1064,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
             contributor.withdrawnSince = contributor.withdrawnSince.add(_netflowQuantity);
         }
         rewardsDistributor.updateGardenPowerAndContributor(address(this), msg.sender, 0, false, pid);
+        contributor.nonce = contributor.nonce + 1;
         pid++;
     }
 

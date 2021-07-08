@@ -61,6 +61,7 @@ interface IGarden {
             uint256,
             uint256,
             uint256,
+            uint256,
             uint256
         );
 
@@ -137,6 +138,7 @@ interface IGarden {
         uint256 _amountIn,
         uint256 _minAmountOut,
         bool _mintNft,
+        uint256 _nonce,
         uint256 _pricePerShare,
         uint8 v,
         bytes32 r,
