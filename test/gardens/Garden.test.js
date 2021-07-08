@@ -6,6 +6,7 @@ const { ONE_DAY_IN_SECONDS, ONE_ETH, NOW, PROTOCOL_FEE, PROFIT_PROTOCOL_FEE } = 
 const { increaseTime } = require('../utils/test-helpers');
 const { from, eth, parse } = require('../../lib/helpers');
 const { GARDEN_PARAMS_STABLE, GARDEN_PARAMS, ADDRESS_ZERO } = require('../../lib/constants');
+const { fund } = require('../../lib/whale');
 const { impersonateAddress } = require('../../lib/rpc');
 
 const {
@@ -18,7 +19,7 @@ const {
   injectFakeProfits,
 } = require('../fixtures/StrategyHelper');
 
-const { createGarden } = require('../fixtures/GardenHelper');
+const { createGarden, getDepositSig } = require('../fixtures/GardenHelper');
 
 const { setupTests } = require('../fixtures/GardenFixture');
 
@@ -844,86 +845,33 @@ describe('Garden', function () {
 
   describe('depositBySig', async function () {
     it.only('can deposit', async function () {
-      const whaleAddress = '0x47ac0fb4f2d84898e4d9e7b4dab3c24507a6d503'; // Has USDC
-      const whaleSigner = await impersonateAddress(whaleAddress);
-      const thousandUSDC = ethers.BigNumber.from(1000 * 1000000);
-      await usdc.connect(whaleSigner).transfer(signer1.address, thousandUSDC, {
-        gasPrice: 0,
-      });
-      await usdc.connect(whaleSigner).transfer(signer3.address, thousandUSDC, {
-        gasPrice: 0,
-      });
+      const thousandUSDC = from(1000 * 1e6);
+
+      await fund([signer1.address, signer3.address], [addresses.tokens.USDC]);
+
       await usdc.connect(signer1).approve(babController.address, thousandUSDC, {
         gasPrice: 0,
       });
-      const params = [...GARDEN_PARAMS_STABLE];
-      params[3] = thousandUSDC.div(10);
-      await babController
-        .connect(signer1)
-        .createGarden(
-          addresses.tokens.USDC,
-          'Absolute USDC Return [beta]',
-          'EYFA',
-          'http...',
-          0,
-          params,
-          thousandUSDC.div(10),
-          {},
-        );
-      const gardens = await babController.getGardens();
-      garden = await ethers.getContractAt('Garden', gardens[4]);
-      expect(await garden.totalContributors()).to.equal(1);
+
+      const garden = await createGarden({reserveAsset: addresses.tokens.USDC});
+
       const gardenBalance = await usdc.balanceOf(garden.address);
       const supplyBefore = await garden.totalSupply();
+
       await ishtarGate.connect(signer1).setGardenAccess(signer3.address, garden.address, 1, { gasPrice: 0 });
+
       await usdc.connect(signer3).approve(garden.address, thousandUSDC, {
         gasPrice: 0,
       });
 
-      const DEPOSIT_BY_SIG_TYPEHASH = ethers.utils.keccak256(ethers.utils.toUtf8Bytes("DepositBySig(uint256 _amountIn,uint256 _minAmountOut,bool _mintNft, uint256 _nonce)"));
-      console.log('DEPOSIT_BY_SIG_TYPEHASH', DEPOSIT_BY_SIG_TYPEHASH);
+      const sig = await getDepositSig(signer3, thousandUSDC, eth(1000), false, 0);
+      await garden.connect(keeper).depositBySig(thousandUSDC, eth(1000), false, 0, eth(), sig.v, sig.r, sig.s);
 
-      let payload = ethers.utils.defaultAbiCoder.encode(
-      ['bytes32', 'uint256', 'uint256', 'bool', 'uint256'],
-      [DEPOSIT_BY_SIG_TYPEHASH, thousandUSDC.toString(), eth(1000).toString(), false, 0]
-    );
-      console.log('Payload:', payload);
-
-      let payloadHash = ethers.utils.keccak256(payload);
-      console.log('PayloadHash:', payloadHash);
-
-       // This adds the message prefix
-      let signature = await signer3.signMessage(ethers.utils.arrayify(payloadHash));
-      let sig = ethers.utils.splitSignature(signature);
-      console.log(`Signature: ${sig} ${sig.v} ${sig.r} ${sig.s}`);
-
-      console.log("Recovered:", ethers.utils.verifyMessage(ethers.utils.arrayify(payloadHash), sig));
-      console.log('Signer', signer3.address);
-
-      await garden
-        .connect(keeper)
-        .depositBySig(
-          thousandUSDC,
-          eth(1000),
-          false,
-          0,
-          eth(),
-          sig.v,
-          sig.r,
-          sig.s,
-        );
+      const supplyAfter = await garden.totalSupply();
+      expect(supplyAfter.sub(supplyBefore)).to.be.closeTo(eth(1000), eth(0.1));
 
       const gardenBalanceAfter = await usdc.balanceOf(garden.address);
-      const supplyAfter = await garden.totalSupply();
-      expect(supplyAfter.sub(supplyBefore)).to.be.closeTo(
-        eth(1000),
-        eth(0.1),
-      );
-
       expect(gardenBalanceAfter.sub(gardenBalance)).to.equal(thousandUSDC);
-
-      expect(await garden.principal()).to.equal(thousandUSDC.add(thousandUSDC.div(10)));
-      expect(await garden.totalContributors()).to.equal(2);
     });
   });
 

@@ -9,14 +9,14 @@ const { GARDEN_PARAMS, DAI_GARDEN_PARAMS, USDC_GARDEN_PARAMS, WBTC_GARDEN_PARAMS
 const NFT_URI = 'https://babylon.mypinata.cloud/ipfs/QmcL826qNckBzEk2P11w4GQrrQFwGvR6XmUCuQgBX9ck1v';
 const NFT_SEED = '504592746';
 
-const reserveAssetGarden = {
+const GARDEN_PARAMS_MAP = {
   [addresses.tokens.WETH]: GARDEN_PARAMS,
   [addresses.tokens.DAI]: DAI_GARDEN_PARAMS,
   [addresses.tokens.USDC]: USDC_GARDEN_PARAMS,
   [addresses.tokens.WBTC]: WBTC_GARDEN_PARAMS,
 };
 
-const contributions = {
+const CONTRIBUTORS_MAP = {
   [addresses.tokens.WETH]: parse('1'),
   [addresses.tokens.DAI]: parse('10000'),
   [addresses.tokens.USDC]: from(10000 * 1e6),
@@ -35,8 +35,8 @@ async function createGarden({
   signer = signer || signer1;
   const ishtarGate = await getContract('IshtarGate');
   const babController = await getContract('BabController', 'BabControllerProxy');
-  const params = reserveAssetGarden[reserveAsset];
-  const contribution = contributions[reserveAsset];
+  const params = GARDEN_PARAMS_MAP[reserveAsset];
+  const contribution = CONTRIBUTORS_MAP[reserveAsset];
   const erc20 = await ethers.getContractAt('IERC20', reserveAsset);
   for (const sig of [signer1, signer2, signer3]) {
     await erc20.connect(sig).approve(babController.address, params[0], {
@@ -172,8 +172,25 @@ async function transferFunds(address) {
   }
 }
 
+async function getDepositSig(signer, amountIn, minAmountOut, mintNft, nonce) {
+  const DEPOSIT_BY_SIG_TYPEHASH = ethers.utils.keccak256(
+    ethers.utils.toUtf8Bytes('DepositBySig(uint256 _amountIn,uint256 _minAmountOut,bool _mintNft, uint256 _nonce)'),
+  );
+
+  let payload = ethers.utils.defaultAbiCoder.encode(
+    ['bytes32', 'uint256', 'uint256', 'bool', 'uint256'],
+    [DEPOSIT_BY_SIG_TYPEHASH, amountIn, minAmountOut, mintNft, nonce],
+  );
+
+  let payloadHash = ethers.utils.keccak256(payload);
+
+  let signature = await signer.signMessage(ethers.utils.arrayify(payloadHash));
+  return ethers.utils.splitSignature(signature);
+}
+
 module.exports = {
   createGarden,
   depositFunds,
   transferFunds,
+  getDepositSig,
 };
