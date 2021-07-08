@@ -163,7 +163,7 @@ async function deposit(garden, signers) {
           }
         : {},
     );
-    await garden.connect((await ethers.getSigners())[1]).processDeposit(signer.getAddress(), eth());
+    // await garden.connect((await ethers.getSigners())[1]).processDeposit(signer.getAddress(), eth());
   }
 }
 

@@ -22,8 +22,9 @@ import 'hardhat/console.sol';
 import {Address} from '@openzeppelin/contracts/utils/Address.sol';
 import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import {SafeERC20} from '@openzeppelin/contracts/token/ERC20/SafeERC20.sol';
-import {ERC20Upgradeable} from '@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol';
 import {ReentrancyGuard} from '@openzeppelin/contracts/utils/ReentrancyGuard.sol';
+import {ECDSA} from '@openzeppelin/contracts/cryptography/ECDSA.sol';
+import {ERC20Upgradeable} from '@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol';
 import {LowGasSafeMath} from '../lib/LowGasSafeMath.sol';
 import {SafeDecimalMath} from '../lib/SafeDecimalMath.sol';
 import {SafeCast} from '@openzeppelin/contracts/utils/SafeCast.sol';
@@ -65,6 +66,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
     using AddressArrayUtils for address[];
 
     using SafeERC20 for IERC20;
+    using ECDSA for bytes32;
 
     /* ============ Events ============ */
     event GardenDeposit(
@@ -99,6 +101,8 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
     // Window of time after an investment strategy finishes when the capital is available for withdrawals
     uint256 private constant withdrawalWindowAfterStrategyCompletes = 7 days;
 
+    bytes32 constant DEPOSIT_BY_SIG_TYPEHASH = keccak256("DepositBySig(uint256 _amountIn,uint256 _minAmountOut,bool _mintNft)");
+
     /* ============ Structs ============ */
 
     struct Contributor {
@@ -109,10 +113,6 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         uint256 claimedRewards;
         uint256 withdrawnSince;
         uint256 totalDeposits;
-        // amount of funds in reserve asset deposited but not yet processed by Keeper
-        uint256 pendingDeposits;
-        // amount of Garden shares expected to recive in exchange for pendingDeposits
-        uint256 minAmountShares;
     }
 
     /* ============ State Variables ============ */
@@ -141,7 +141,6 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
 
     // The amount of funds in reserve asset of pending deposits to be processed
     // by Keeper. Should NEVER be used for anything else.
-    uint256 private totalPendingDeposits;
     uint256 public override reserveAssetPrincipalWindow;
     int256 public override absoluteReturns; // Total profits or losses of this garden
 
@@ -336,10 +335,10 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
      *   WARN: If the reserve Asset is different than WETH the sender needs to
      *   have approved the garden.
      *
-     *   This method does NOT issue Garden shares to contributor. Instead
-     *   shares are issued by Keeper processing the deposit later.
-     *   _minAmountOut are respected by Keeper so user is guranteed to
-     *   recieve at least _minAmountOut.
+     *   This method does NOT issue Garden shares to contributor. Instead shares
+     *   are issued by Keeper processing the deposit later.  _minAmountOut are
+     *   respected by Keeper so user is guranteed to recieve at least
+     *   _minAmountOut.
      * @param _amountIn               Amount of the reserve asset that is received from contributor
      * @param _minAmountOut           Min amount of Garden shares to receive by contributor
      * @param _to                     Address to mint Garden shares to
@@ -384,54 +383,75 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
             Errors.MSG_VALUE_DO_NOT_MATCH
         );
 
+        // calculate pricePerShare
+        uint256 pricePerShare;
         // if there are no strategies then NAV === liquidReserve
         if(strategies.length == 0) {
-          console.log('total', totalSupply());
-          console.log('liquidReserve', liquidReserve());
-          uint256 pricePerShare = totalSupply() == 0 ? PreciseUnitMath.preciseUnit() : liquidReserve().preciseDiv(totalSupply());
-          console.log('price', pricePerShare);
-          console.log('minContribution', minContribution);
-          console.log('_minAmountOut',_minAmountOut);
-          console.log('_amountIn', _amountIn);
-          _internalDeposit(_to, pricePerShare, _amountIn, _minAmountOut);
+          pricePerShare = totalSupply() == 0 ?
+            PreciseUnitMath.preciseUnit() : (liquidReserve().sub(_amountIn))
+          .preciseDiv(uint256(10)**ERC20Upgradeable(reserveAsset).decimals())
+          .preciseDiv(totalSupply());
         } else {
-          // let Keeper to finish the deposit update contributor record so
-          // Keeper can process deposit later and issue Garden shares to
-          // contributor
-          Contributor storage contributor = contributors[_to];
-          contributor.pendingDeposits = contributor.pendingDeposits.add(_amountIn);
-          contributor.minAmountShares = contributor.minAmountShares.add(_minAmountOut);
-
-          // update total pending deposits so funds can't be spend until they
-          // are processed by Keeper
-          totalPendingDeposits = totalPendingDeposits.add(_amountIn);
+          uint256 normalizedAmountIn = _amountIn.preciseDiv(uint256(10)**ERC20Upgradeable(reserveAsset).decimals());
+          // Get valuation of the Garden with the quote asset as the reserve asset.
+          pricePerShare =
+              IGardenValuer(IBabController(controller).gardenValuer()).calculateGardenValuation(
+                  address(this),
+                  reserveAsset
+              );
+          pricePerShare = pricePerShare.sub(normalizedAmountIn.preciseDiv(totalSupply()));
         }
 
+        _internalDeposit(_to, pricePerShare, _amountIn, _minAmountOut, _mintNft);
 
         emit GardenDeposit(_to, _minAmountOut, _amountIn, block.timestamp);
     }
 
-    /**
-     * @notice
-     *   Deposits the reserve asset into the garden and mints the Garden token
-     *   of the given quantity to the specified _to address.
-     * @dev
-     * @param _to             Address to mint Garden tokens to
-     * @param _pricePerShare  Price per share of Garden according to GardenValuer
-     */
-    function processDeposit(address _to, uint256 _pricePerShare) external override nonReentrant {
+    function depositBySig(
+        uint256 _amountIn,
+        uint256 _minAmountOut,
+        bool _mintNft,
+        uint256 _pricePerShare,
+        uint8 v,
+        bytes32 r,
+        bytes32 s
+      ) external override nonReentrant {
+        _require(IBabController(controller).isValidKeeper(msg.sender) || msg.sender == controller, Errors.ONLY_KEEPER);
         _onlyUnpaused();
         _onlyActive();
-        _require(IBabController(controller).isValidKeeper(msg.sender) || msg.sender == controller, Errors.ONLY_KEEPER);
 
-        _internalDeposit(_to, _pricePerShare, contributors[_to].pendingDeposits, contributors[_to].minAmountShares);
+        bytes32 hash = keccak256(abi.encode(DEPOSIT_BY_SIG_TYPEHASH, _amountIn, _minAmountOut, _mintNft)).toEthSignedMessageHash();
+        address signer = ECDSA.recover(hash, v, r, s);
 
-        // update total pending deposits so funds can be spend
-        totalPendingDeposits = totalPendingDeposits.sub(contributors[_to].pendingDeposits);
+        _require(signer != address(0), Errors.INVALID_SIGNER);
 
-        // remove pending deposit from contributor
-        delete contributors[_to].pendingDeposits;
-        delete contributors[_to].minAmountShares;
+        _require(
+            !guestListEnabled ||
+                IIshtarGate(IBabController(controller).ishtarGate()).canJoinAGarden(address(this),
+                                                                                   signer) ||
+                creator == signer,
+            Errors.USER_CANNOT_JOIN
+        );
+
+        // if deposit limit is 0, then there is no deposit limit
+        if (maxDepositLimit > 0) {
+            _require(principal.add(_amountIn) <= maxDepositLimit, Errors.MAX_DEPOSIT_LIMIT);
+        }
+
+        _require(totalContributors <= maxContributors, Errors.MAX_CONTRIBUTORS);
+        _require(_amountIn >= minContribution, Errors.MIN_CONTRIBUTION);
+
+        uint256 reserveAssetBalanceBefore = IERC20(reserveAsset).balanceOf(address(this));
+
+        IERC20(reserveAsset).safeTransferFrom(signer, address(this), _amountIn);
+
+        // Make sure we received the correct amount of reserve asset
+        _require(
+            IERC20(reserveAsset).balanceOf(address(this)).sub(reserveAssetBalanceBefore) == _amountIn,
+            Errors.MSG_VALUE_DO_NOT_MATCH
+        );
+
+        _internalDeposit(signer, _pricePerShare, _amountIn, _minAmountOut, _mintNft);
     }
 
     /**
@@ -446,22 +466,21 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         address _to,
         uint256 _pricePerShare,
         uint256 _amountIn,
-        uint256 _minAmountOut
+        uint256 _minAmountOut,
+        bool _mintNft
     ) private {
-          console.log('_amountIn ',_amountIn );
         // if deposit limit is 0, then there is no deposit limit
         if (maxDepositLimit > 0) {
             _require(principal.add(_amountIn) <= maxDepositLimit, Errors.MAX_DEPOSIT_LIMIT);
         }
 
         _require(totalContributors <= maxContributors, Errors.MAX_CONTRIBUTORS);
-          console.log('minContribution', minContribution);
-          console.log('_pricePerShare',_pricePerShare);
         _require(_amountIn >= minContribution, Errors.MIN_CONTRIBUTION);
 
         uint256 previousBalance = balanceOf(_to);
 
-        uint256 sharesToMint = _amountIn.preciseDiv(_pricePerShare);
+        uint256 normalizedAmountIn = _amountIn.preciseDiv(uint256(10)**ERC20Upgradeable(reserveAsset).decimals());
+        uint256 sharesToMint = normalizedAmountIn.preciseDiv(_pricePerShare);
 
         // make sure contributor gets desired amount of shares
         _require(sharesToMint >= _minAmountOut, Errors.RECEIVE_MIN_AMOUNT);
@@ -475,9 +494,9 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         principal = principal.add(_amountIn);
 
         // Mint the garden NFT
-        //if (_mintNft) {
-        //    IGardenNFT(IBabController(controller).gardenNFT()).grantGardenNFT(_to);
-        //}
+        if (_mintNft) {
+            IGardenNFT(IBabController(controller).gardenNFT()).grantGardenNFT(_to);
+        }
     }
 
     /**
@@ -617,6 +636,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
      * @param _fee     The fee paid to keeper to compensate the gas cost
      */
     function payKeeper(address payable _keeper, uint256 _fee) external override {
+        _onlyUnpaused();
         _onlyStrategy();
         _require(IBabController(controller).isValidKeeper(_keeper), Errors.ONLY_KEEPER);
 
@@ -857,8 +877,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
             IERC20(reserveAsset)
                 .balanceOf(address(this))
                 .sub(reserveAssetPrincipalWindow)
-                .sub(reserveAssetRewardsSetAside)
-                .sub(totalPendingDeposits);
+                .sub(reserveAssetRewardsSetAside);
         return reserve > keeperDebt ? reserve.sub(keeperDebt) : 0;
     }
 
@@ -1009,7 +1028,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
             totalContributors = totalContributors.add(1);
             contributor.initialDepositAt = block.timestamp;
         }
-        // We make checkpoints around contributor deposits to avoid fast loans and give the right rewards afterwards
+        // We make checkpoints around contributor deposits to give the right rewards afterwards
         contributor.totalDeposits = contributor.totalDeposits.add(_reserveAssetQuantity);
         contributor.lastDepositAt = block.timestamp;
         rewardsDistributor.updateGardenPowerAndContributor(address(this), _contributor, previousBalance, true, pid);

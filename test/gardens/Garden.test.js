@@ -40,7 +40,7 @@ async function depositBatch(owner, garden, walletAddresses) {
   }
 }
 
-describe.only('Garden', function () {
+describe('Garden', function () {
   let babController;
   let rewardsDistributor;
   let owner;
@@ -842,6 +842,90 @@ describe.only('Garden', function () {
     });
   });
 
+  describe('depositBySig', async function () {
+    it.only('can deposit', async function () {
+      const whaleAddress = '0x47ac0fb4f2d84898e4d9e7b4dab3c24507a6d503'; // Has USDC
+      const whaleSigner = await impersonateAddress(whaleAddress);
+      const thousandUSDC = ethers.BigNumber.from(1000 * 1000000);
+      await usdc.connect(whaleSigner).transfer(signer1.address, thousandUSDC, {
+        gasPrice: 0,
+      });
+      await usdc.connect(whaleSigner).transfer(signer3.address, thousandUSDC, {
+        gasPrice: 0,
+      });
+      await usdc.connect(signer1).approve(babController.address, thousandUSDC, {
+        gasPrice: 0,
+      });
+      const params = [...GARDEN_PARAMS_STABLE];
+      params[3] = thousandUSDC.div(10);
+      await babController
+        .connect(signer1)
+        .createGarden(
+          addresses.tokens.USDC,
+          'Absolute USDC Return [beta]',
+          'EYFA',
+          'http...',
+          0,
+          params,
+          thousandUSDC.div(10),
+          {},
+        );
+      const gardens = await babController.getGardens();
+      garden = await ethers.getContractAt('Garden', gardens[4]);
+      expect(await garden.totalContributors()).to.equal(1);
+      const gardenBalance = await usdc.balanceOf(garden.address);
+      const supplyBefore = await garden.totalSupply();
+      await ishtarGate.connect(signer1).setGardenAccess(signer3.address, garden.address, 1, { gasPrice: 0 });
+      await usdc.connect(signer3).approve(garden.address, thousandUSDC, {
+        gasPrice: 0,
+      });
+
+      const DEPOSIT_BY_SIG_TYPEHASH = ethers.utils.keccak256(ethers.utils.toUtf8Bytes("DepositBySig(uint256 _amountIn,uint256 _minAmountOut,bool _mintNft)"));
+      console.log('DEPOSIT_BY_SIG_TYPEHASH', DEPOSIT_BY_SIG_TYPEHASH);
+
+      let payload = ethers.utils.defaultAbiCoder.encode(
+      ['bytes32', 'uint256', 'uint256', 'bool'],
+      [DEPOSIT_BY_SIG_TYPEHASH, thousandUSDC.toString(), eth(1000).toString(), false]
+    );
+      console.log('Payload:', payload);
+
+      let payloadHash = ethers.utils.keccak256(payload);
+      console.log('PayloadHash:', payloadHash);
+
+       // This adds the message prefix
+      let signature = await signer3.signMessage(ethers.utils.arrayify(payloadHash));
+      let sig = ethers.utils.splitSignature(signature);
+      console.log(`Signature: ${sig} ${sig.v} ${sig.r} ${sig.s}`);
+
+      console.log("Recovered:", ethers.utils.verifyMessage(ethers.utils.arrayify(payloadHash), sig));
+      console.log('Signer', signer3.address);
+
+      await garden
+        .connect(keeper)
+        .depositBySig(
+          thousandUSDC,
+          eth(1000),
+          false,
+          eth(),
+          sig.v,
+          sig.r,
+          sig.s,
+        );
+
+      const gardenBalanceAfter = await usdc.balanceOf(garden.address);
+      const supplyAfter = await garden.totalSupply();
+      expect(supplyAfter.sub(supplyBefore)).to.be.closeTo(
+        eth(1000),
+        eth(0.1),
+      );
+
+      expect(gardenBalanceAfter.sub(gardenBalance)).to.equal(thousandUSDC);
+
+      expect(await garden.principal()).to.equal(thousandUSDC.add(thousandUSDC.div(10)));
+      expect(await garden.totalContributors()).to.equal(2);
+    });
+  });
+
   describe('deposit', async function () {
     it('cannot make a deposit when the garden is disabled', async function () {
       await expect(babController.connect(owner).disableGarden(garden1.address)).to.not.be.reverted;
@@ -852,7 +936,7 @@ describe.only('Garden', function () {
       ).to.be.reverted;
     });
 
-    it.only('a contributor can make an initial deposit and withdraw with DAI', async function () {
+    it('a contributor can make an initial deposit and withdraw with DAI', async function () {
       const whaleAddress = '0x6B175474E89094C44Da98b954EedeAC495271d0F'; // Has DAI
       const whaleSigner = await impersonateAddress(whaleAddress);
       await dai.connect(whaleSigner).transfer(signer1.address, ethers.utils.parseEther('1000'), {
@@ -890,7 +974,7 @@ describe.only('Garden', function () {
       await daiGarden.connect(signer3).deposit(eth(1000), eth(1000), signer3.getAddress(), false);
       const gardenBalanceAfter = await dai.balanceOf(daiGarden.address);
 
-      await daiGarden.connect(keeper).processDeposit(signer3.address, eth());
+      // await daiGarden.connect(keeper).processDeposit(signer3.address, eth());
 
       const supplyAfter = await daiGarden.totalSupply();
       expect(supplyAfter.sub(supplyBefore)).to.be.closeTo(
@@ -948,7 +1032,7 @@ describe.only('Garden', function () {
       await usdc.connect(signer3).approve(usdcGarden.address, thousandUSDC, {
         gasPrice: 0,
       });
-      await usdcGarden.connect(signer3).deposit(thousandUSDC, 1, signer3.getAddress(), false);
+      await usdcGarden.connect(signer3).deposit(thousandUSDC, eth(1000), signer3.getAddress(), false);
       const gardenBalanceAfter = await usdc.balanceOf(usdcGarden.address);
       const supplyAfter = await usdcGarden.totalSupply();
       expect(supplyAfter.sub(supplyBefore)).to.be.closeTo(

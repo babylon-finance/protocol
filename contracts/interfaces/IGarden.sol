@@ -133,7 +133,15 @@ interface IGarden {
         bool mintNFT
     ) external payable;
 
-    function processDeposit(address _to, uint256 _pricePerShare) external;
+    function depositBySig(
+        uint256 _amountIn,
+        uint256 _minAmountOut,
+        bool _mintNft,
+        uint256 _pricePerShare,
+        uint8 v,
+        bytes32 r,
+        bytes32 s
+    ) external;
 
     function withdraw(
         uint256 _gardenTokenQuantity,
