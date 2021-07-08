@@ -845,33 +845,30 @@ describe('Garden', function () {
 
   describe('depositBySig', async function () {
     it.only('can deposit', async function () {
-      const thousandUSDC = from(1000 * 1e6);
+      const amountIn = from(1000 * 1e6);
+      const minAmountOut = eth(1000);
 
       await fund([signer1.address, signer3.address], [addresses.tokens.USDC]);
 
-      await usdc.connect(signer1).approve(babController.address, thousandUSDC, {
+      const garden = await createGarden({reserveAsset: addresses.tokens.USDC});
+
+      await ishtarGate.connect(signer1).setGardenAccess(signer3.address, garden.address, 1, { gasPrice: 0 });
+
+      await usdc.connect(signer3).approve(garden.address, amountIn, {
         gasPrice: 0,
       });
-
-      const garden = await createGarden({reserveAsset: addresses.tokens.USDC});
 
       const gardenBalance = await usdc.balanceOf(garden.address);
       const supplyBefore = await garden.totalSupply();
 
-      await ishtarGate.connect(signer1).setGardenAccess(signer3.address, garden.address, 1, { gasPrice: 0 });
-
-      await usdc.connect(signer3).approve(garden.address, thousandUSDC, {
-        gasPrice: 0,
-      });
-
-      const sig = await getDepositSig(signer3, thousandUSDC, eth(1000), false, 0);
-      await garden.connect(keeper).depositBySig(thousandUSDC, eth(1000), false, 0, eth(), sig.v, sig.r, sig.s);
+      const sig = await getDepositSig(signer3, amountIn, minAmountOut , false, 0);
+      await garden.connect(keeper).depositBySig(amountIn, minAmountOut , false, 0, eth(), sig.v, sig.r, sig.s);
 
       const supplyAfter = await garden.totalSupply();
-      expect(supplyAfter.sub(supplyBefore)).to.be.closeTo(eth(1000), eth(0.1));
+      expect(supplyAfter.sub(supplyBefore)).to.be.eq(minAmountOut);
 
       const gardenBalanceAfter = await usdc.balanceOf(garden.address);
-      expect(gardenBalanceAfter.sub(gardenBalance)).to.equal(thousandUSDC);
+      expect(gardenBalanceAfter.sub(gardenBalance)).to.equal(amountIn);
     });
   });
 
