@@ -337,10 +337,6 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
     ) external override {
         _onlyGardenAndNotSet();
         uint256 opEncodedLength = _opEncodedData.length.sub(4).div(64);
-        //console.log('setData dataLength', dataLength);
-        //console.log('_opTypes.length', _opTypes.length);
-        //console.log('_opIntegrations.length', _opIntegrations.length);
-        //console.log('_opEncodedData.length', _opEncodedData.length);
         _require(
             (_opTypes.length == _opIntegrations.length) && (_opIntegrations.length == opEncodedLength),
             Errors.TOO_MANY_OPS
@@ -348,7 +344,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         _require(opEncodedLength < MAX_OPERATIONS && opEncodedLength > 0, Errors.TOO_MANY_OPS);
         for (uint256 i = 0; i < _opTypes.length; i++) {
             IOperation(controller.enabledOperations(_opTypes[i])).validateOperation(
-                _opEncodedData,
+                BytesLib.slice(_opEncodedData, 4 + (64 * i), 64),
                 garden,
                 _opIntegrations[i],
                 i
@@ -358,7 +354,6 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
                 Errors.ONLY_INTEGRATION
             );
         }
-
         opTypes = _opTypes;
         opIntegrations = _opIntegrations;
         opEncodedData = _opEncodedData;
@@ -780,18 +775,10 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
             block.timestamp.sub(enteredCooldownAt) >= garden.strategyCooldownPeriod(),
             Errors.STRATEGY_IN_COOLDOWN
         );
-        console.log('CHECK AAAAAAA');
-
         // Execute enter operation
         garden.allocateCapitalToStrategy(_capital);
-        console.log('CHECK BBBBBBB');
-
         capitalAllocated = capitalAllocated.add(_capital);
-        console.log('CHECK CCCCCC');
-
         _enterStrategy(_capital);
-        console.log('CHECK XXXXXXX');
-
         // Sets the executed timestamp on first execution
         if (executedAt == 0) {
             executedAt = block.timestamp;

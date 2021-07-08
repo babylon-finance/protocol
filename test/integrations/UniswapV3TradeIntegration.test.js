@@ -49,7 +49,7 @@ describe('UniswapV3TradeIntegration', function () {
             kind: 'buy',
             state: 'vote',
             integration: uniswapV3TradeIntegration.address,
-            specificParams: asset,
+            specificParams: [0, asset],
           });
 
           await executeStrategy(strategyContract);

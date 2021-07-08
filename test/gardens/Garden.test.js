@@ -1192,18 +1192,14 @@ describe('Garden', function () {
       await garden1.connect(signer3).deposit(ethers.utils.parseEther('1'), 1, signer3.getAddress(), false, {
         value: ethers.utils.parseEther('1'),
       });
+      let ABI = ['function poolOperation(uint256 metadata, address data)']; // 64 bytes
+      let iface = new ethers.utils.Interface(ABI);
+      let encodedData = iface.encodeFunctionData('poolOperation', [0, addresses.balancer.pools.wethdai]);
 
       await expect(
         garden1
           .connect(signer3)
-          .addStrategy(
-            'name',
-            'STRT',
-            DEFAULT_STRATEGY_PARAMS,
-            [1],
-            [balancerIntegration.address],
-            [addresses.balancer.pools.wethdai],
-          ),
+          .addStrategy('name', 'STRT', DEFAULT_STRATEGY_PARAMS, [1], [balancerIntegration.address], encodedData),
       ).to.not.be.reverted;
     });
 
@@ -1213,11 +1209,12 @@ describe('Garden', function () {
       });
       const params = [...DEFAULT_STRATEGY_PARAMS];
       params[1] = ethers.utils.parseEther('0');
+      let ABI = ['function poolOperation(uint256 metadata, address data)']; // 64 bytes
+      let iface = new ethers.utils.Interface(ABI);
+      let encodedData = iface.encodeFunctionData('poolOperation', [0, addresses.balancer.pools.wethdai]);
 
       await expect(
-        garden1
-          .connect(signer3)
-          .addStrategy('name', 'STRT', params, [1], [balancerIntegration.address], [addresses.balancer.pools.wethdai]),
+        garden1.connect(signer3).addStrategy('name', 'STRT', params, [1], [balancerIntegration.address], encodedData),
       ).to.be.reverted;
     });
   });

@@ -80,7 +80,7 @@ describe('AaveLendIntegrationTest', function () {
         aaveLendIntegration.address,
         garden1,
         DEFAULT_STRATEGY_PARAMS,
-        WETH.address,
+        [0, WETH.address],
       );
 
       await executeStrategy(strategyContract);

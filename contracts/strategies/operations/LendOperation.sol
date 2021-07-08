@@ -136,7 +136,7 @@ contract LendOperation is Operation {
             uint8
         )
     {
-        address assetToken = BytesLib.toAddress(_data, 4 + 32 + 12);
+        address assetToken = BytesLib.toAddress(_data, 32 + 12);
         require(_percentage <= HUNDRED_PERCENT, 'Unwind Percentage <= 100%');
         _redeemTokens (_borrowToken, _remaining, _percentage, msg.sender, _integration, assetToken);
         _tokenToTrade(assetToken, msg.sender, _garden );

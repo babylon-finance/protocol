@@ -1038,7 +1038,7 @@ describe('BABL Rewards Distributor', function () {
         uniswapV3TradeIntegration.address,
         daiGarden,
         DAI_STRATEGY_PARAMS,
-        usdc.address,
+        [0, usdc.address],
       );
       const signer1DAIBalance2 = await dai.balanceOf(signer1.address);
       await executeStrategy(long1, { amount: ethers.utils.parseEther('1000') });
@@ -1113,7 +1113,7 @@ describe('BABL Rewards Distributor', function () {
         uniswapV3TradeIntegration.address,
         usdcGarden,
         USDC_STRATEGY_PARAMS,
-        weth.address,
+        [0, weth.address],
       );
       const signer1USDCBalance2 = await usdc.balanceOf(signer1.address);
       await executeStrategy(long1, { amount: ethers.BigNumber.from(500 * 1000000) });
@@ -1220,7 +1220,7 @@ describe('BABL Rewards Distributor', function () {
         uniswapV3TradeIntegration.address,
         usdcGarden,
         USDC_STRATEGY_PARAMS,
-        weth.address,
+        [0, weth.address],
       );
 
       const long2 = await createStrategy(
@@ -1230,7 +1230,7 @@ describe('BABL Rewards Distributor', function () {
         uniswapV3TradeIntegration.address,
         daiGarden,
         DAI_STRATEGY_PARAMS,
-        usdc.address,
+        [0, usdc.address],
       );
       // Execute USDC Garden strategy long1
       await executeStrategy(long1, { amount: ethers.BigNumber.from(1000 * 1000000) });
@@ -1345,7 +1345,7 @@ describe('BABL Rewards Distributor', function () {
         uniswapV3TradeIntegration.address,
         usdcGarden,
         USDC_STRATEGY_PARAMS,
-        weth.address,
+        [0, weth.address],
       );
 
       const long2 = await createStrategy(
@@ -1355,7 +1355,7 @@ describe('BABL Rewards Distributor', function () {
         uniswapV3TradeIntegration.address,
         daiGarden,
         DAI_STRATEGY_PARAMS,
-        usdc.address,
+        [0, usdc.address],
       );
       // Execute USDC Garden strategy long1
       await executeStrategy(long1, { amount: ethers.BigNumber.from(1000 * 1000000) });
@@ -1469,7 +1469,7 @@ describe('BABL Rewards Distributor', function () {
         uniswapV3TradeIntegration.address,
         usdcGarden,
         USDC_STRATEGY_PARAMS,
-        weth.address,
+        [0, weth.address],
       );
 
       const long2 = await createStrategy(
@@ -1479,7 +1479,7 @@ describe('BABL Rewards Distributor', function () {
         uniswapV3TradeIntegration.address,
         daiGarden,
         DAI_STRATEGY_PARAMS,
-        usdc.address,
+        [0, usdc.address],
       );
       // Execute USDC Garden strategy long1
       await executeStrategy(long1, { amount: ethers.BigNumber.from(1000 * 1000000) });

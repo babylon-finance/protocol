@@ -75,7 +75,7 @@ describe('CompoundLendIntegrationTest', function () {
         compoundLendIntegration.address,
         garden1,
         DEFAULT_STRATEGY_PARAMS,
-        ADDRESS_ZERO, // ETH
+        [0, ADDRESS_ZERO], // ETH
       );
 
       await executeStrategy(strategyContract);

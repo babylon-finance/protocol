@@ -131,7 +131,7 @@ contract DepositVaultOperation is Operation {
             uint8
         )
     {
-        address yieldVault = abi.decode(_data[4 + 32 :], (address));
+        address yieldVault = abi.decode(_data[32 :], (address));
         require(_percentage <= HUNDRED_PERCENT, 'Unwind Percentage <= 100%');
         address vaultAsset = IPassiveIntegration(_integration).getInvestmentAsset(yieldVault);
         uint256 amountVault = IERC20(yieldVault).balanceOf(msg.sender).preciseMul(_percentage);

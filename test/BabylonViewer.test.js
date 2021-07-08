@@ -22,7 +22,7 @@ describe('Babylon Viewer', function () {
     });
   });
 
-  describe.only('can call getter methods', async function () {
+  describe('can call getter methods', async function () {
     it('calls getGardenDetails', async function () {
       const gardenDetails = await babViewer.getGardenDetails(garden1.address);
       expect(gardenDetails[0]).to.equal('Absolute ETH Return [beta]'); // Name
@@ -31,10 +31,7 @@ describe('Babylon Viewer', function () {
       expect(gardenDetails[3]).to.equal(addresses.tokens.WETH); // Reserve Asset
       expect(gardenDetails[4][0]).to.equal(true); // Active
       expect(gardenDetails[4][1]).to.equal(true); // Private
-      console.log('CHECK gardenDetails[5].length', gardenDetails[5].length.toString());
-      console.log('CHECK gardenDetails[5].length', gardenDetails[5].toString());
-
-      expect(gardenDetails[5].length).to.equal(1); // Active Strategies
+      expect(gardenDetails[5].length).to.equal(2); // Active Strategies Note: there are 2 not 1 in fixture for garden 1
       expect(gardenDetails[6].length).to.equal(0); // Finalized strategies
       const paramsCreation = gardenDetails[7];
       expect(paramsCreation[0]).to.equal(GARDEN_PARAMS[2]); // Hardlock

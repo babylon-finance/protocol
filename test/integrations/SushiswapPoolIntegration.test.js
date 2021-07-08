@@ -96,11 +96,15 @@ describe('SushiswapPoolIntegrationTest', function () {
     });
 
     it('check that a valid pool is valid', async function () {
-      expect(await sushiswapPoolIntegration.isPool(addresses.sushiswap.pairs.wethdai)).to.equal(true);
+      var abiCoder = ethers.utils.defaultAbiCoder;
+      var data = abiCoder.encode(['uint256', 'address'], [0, addresses.sushiswap.pairs.wethdai]);
+      expect(await sushiswapPoolIntegration.isPool(data)).to.equal(true);
     });
 
     it('check that an invalid pool is not valid', async function () {
-      await expect(sushiswapPoolIntegration.isPool(ADDRESS_ZERO)).to.be.reverted;
+      var abiCoder = ethers.utils.defaultAbiCoder;
+      var data = abiCoder.encode(['uint256', 'address'], [0, ADDRESS_ZERO]);
+      await expect(sushiswapPoolIntegration.isPool(data)).to.be.reverted;
     });
 
     it('can enter and exit the weth dai pool', async function () {
@@ -111,7 +115,7 @@ describe('SushiswapPoolIntegrationTest', function () {
         sushiswapPoolIntegration.address,
         garden1,
         DEFAULT_STRATEGY_PARAMS,
-        daiWethPair.address,
+        [0, daiWethPair.address],
       );
       await executeStrategy(strategyContract);
       expect(await daiWethPair.balanceOf(strategyContract.address)).to.be.gt(0);
@@ -156,7 +160,12 @@ describe('SushiswapPoolIntegrationTest', function () {
       ].forEach(({ pool, symbol, token0, token1 }) => {
         it(`can enter and exit the ${symbol} at Sushiswap pool from a ${name} Garden`, async function () {
           const poolAddress = await ethers.getContractAt('IUniswapV2PairB', pool);
-          expect(await sushiswapPoolIntegration.isPool(pool)).to.equal(true);
+
+          var abiCoder = ethers.utils.defaultAbiCoder;
+          var data = abiCoder.encode(['uint256', 'address'], [0, poolAddress.address]);
+          // isPool expects 64bytes (w/o signature) where the pool address is in the 2nd word
+          expect(await sushiswapPoolIntegration.isPool(data)).to.equal(true);
+
           await transferFunds(token);
 
           const garden = await createGarden({ reserveAsset: token });
@@ -167,7 +176,7 @@ describe('SushiswapPoolIntegrationTest', function () {
             state: 'vote',
             integrations: sushiswapPoolIntegration.address,
             garden,
-            specificParams: poolAddress.address,
+            specificParams: [0, poolAddress.address],
           });
           let amount = STRATEGY_EXECUTE_MAP[token];
 

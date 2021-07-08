@@ -52,7 +52,7 @@ describe('ComplexIntegrationsTest', function () {
         [aaveLendIntegration.address, aaveBorrowIntegration.address, uniswapV3TradeIntegration.address],
         garden,
         DAI_STRATEGY_PARAMS,
-        [weth.address, dai.address, weth.address],
+        [0, weth.address, 0, dai.address, 0, weth.address],
         [3, 4, 0],
       );
       await executeStrategy(strategyContract);

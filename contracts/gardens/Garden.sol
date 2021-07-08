@@ -549,14 +549,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
     ) external override {
         _onlyActive();
         _onlyContributor();
-        console.log('Strategy name', _name);
-        console.log('Strategy symbol', _symbol);
-        console.log('Strategy params', _stratParams[0], _stratParams[1]);
-        //console.log('Strategy _opTypes', _opTypes[0], _opTypes[1]);
-        console.log('Strategy _opTypes', _opTypes[0]);
-        console.log('Strategy _opIntegrations', _opIntegrations[0]);
-        //console.log('Strategy _opIntegrations', _opIntegrations[0], _opIntegrations[1]);
-        //console.log('Strategy _opEncodedDatas', _opEncodedDatas);
+
         _require(
             IIshtarGate(IBabController(controller).ishtarGate()).canAddStrategiesInAGarden(address(this), msg.sender),
             Errors.USER_CANNOT_ADD_STRATEGIES

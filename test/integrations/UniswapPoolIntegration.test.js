@@ -92,11 +92,14 @@ describe('UniswapPoolIntegrationTest', function () {
     });
 
     it('check that a valid pool is valid', async function () {
-      expect(await uniswapPoolIntegration.isPool(addresses.uniswap.pairs.wethdai)).to.equal(true);
+      var abiCoder = ethers.utils.defaultAbiCoder;
+      var data = abiCoder.encode(['uint256', 'address'], [0, addresses.uniswap.pairs.wethdai]);
+
+      expect(await uniswapPoolIntegration.isPool(data)).to.equal(true);
     });
 
     it('check that an invalid pool is not valid', async function () {
-      await expect(uniswapPoolIntegration.isPool(ADDRESS_ZERO)).to.be.reverted;
+      await expect(uniswapPoolIntegration.isPool([0, ADDRESS_ZERO])).to.be.reverted;
     });
 
     it('can enter and exit the weth dai pool', async function () {
@@ -107,7 +110,7 @@ describe('UniswapPoolIntegrationTest', function () {
         uniswapPoolIntegration.address,
         garden1,
         DEFAULT_STRATEGY_PARAMS,
-        daiWethPair.address,
+        [0, daiWethPair.address],
       );
       await executeStrategy(strategyContract);
       expect(await daiWethPair.balanceOf(strategyContract.address)).to.be.gt(0);
@@ -168,7 +171,7 @@ describe('UniswapPoolIntegrationTest', function () {
             state: 'vote',
             integrations: uniswapPoolIntegration.address,
             garden,
-            specificParams: poolAddress.address,
+            specificParams: [0, poolAddress.address],
           });
           let amount = STRATEGY_EXECUTE_MAP[token];
 

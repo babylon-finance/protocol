@@ -25,6 +25,7 @@ import {IBabController} from '../../interfaces/IBabController.sol';
 import {PoolIntegration} from './PoolIntegration.sol';
 import {PreciseUnitMath} from '../../lib/PreciseUnitMath.sol';
 import {LowGasSafeMath} from '../../lib/LowGasSafeMath.sol';
+import {BytesLib} from '../../lib/BytesLib.sol';
 import {IUniswapV2Router} from '../../interfaces/external/uniswap/IUniswapV2Router.sol';
 
 /**
@@ -36,6 +37,7 @@ import {IUniswapV2Router} from '../../interfaces/external/uniswap/IUniswapV2Rout
 contract UniswapPoolIntegration is PoolIntegration {
     using LowGasSafeMath for uint256;
     using PreciseUnitMath for uint256;
+    using BytesLib for uint256;
 
     /* ============ State Variables ============ */
 
@@ -63,7 +65,7 @@ contract UniswapPoolIntegration is PoolIntegration {
     /* ============ External Functions ============ */
 
     function getPoolTokens(bytes calldata _pool) external view override returns (address[] memory) {
-        address poolAddress = abi.decode(_pool[4 + 32:], (address));
+        address poolAddress = abi.decode(_pool[32:], (address));
         address[] memory result = new address[](2);
         result[0] = IUniswapV2Pair(poolAddress).token0();
         result[1] = IUniswapV2Pair(poolAddress).token1();
@@ -94,7 +96,7 @@ contract UniswapPoolIntegration is PoolIntegration {
         override
         returns (uint256[] memory _minAmountsOut)
     {
-        address poolAddress = abi.decode(_pool[4 + 32 :], (address));
+        address poolAddress = abi.decode(_pool[32 :], (address));
         uint256 totalSupply = IUniswapV2Pair(poolAddress).totalSupply();
         uint256[] memory result = new uint256[](2);
         result[0] = IERC20(IUniswapV2Pair(poolAddress).token0())
@@ -112,8 +114,8 @@ contract UniswapPoolIntegration is PoolIntegration {
 
     /* ============ Internal Functions ============ */
 
-    function _isPool(bytes calldata _pool) internal pure override returns (bool) {
-        address poolAddress = abi.decode(_pool[4 + 32:], (address));
+    function _isPool(bytes memory _pool) internal view override returns (bool) {
+        address poolAddress = BytesLib.toAddress(_pool, 32 + 12);        
         return IUniswapV2Pair(poolAddress).MINIMUM_LIQUIDITY() > 0;
     }
 

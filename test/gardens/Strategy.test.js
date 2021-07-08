@@ -407,7 +407,7 @@ describe('Strategy', function () {
         balancerIntegration.address,
         garden1,
         DEFAULT_STRATEGY_PARAMS,
-        addresses.balancer.pools.wethdai,
+        [0, addresses.balancer.pools.wethdai],
       );
 
       const nav = await strategyContract.getNAV();
@@ -425,7 +425,7 @@ describe('Strategy', function () {
         oneInchPoolIntegration.address,
         garden1,
         DEFAULT_STRATEGY_PARAMS,
-        addresses.oneinch.pools.wethdai,
+        [0, addresses.oneinch.pools.wethdai],
       );
 
       const nav = await strategyContract.getNAV();
@@ -441,7 +441,7 @@ describe('Strategy', function () {
         uniswapPoolIntegration.address,
         garden1,
         DEFAULT_STRATEGY_PARAMS,
-        addresses.uniswap.pairs.wethdai,
+        [0, addresses.uniswap.pairs.wethdai],
       );
       const nav = await strategyContract.getNAV();
       expect(await strategyContract.capitalAllocated()).to.equal(ONE_ETH);

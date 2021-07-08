@@ -57,7 +57,7 @@ contract BuyOperation is Operation {
         address, /* _integration */
         uint256 /* _index */
     ) external view override onlyStrategy {
-        address asset = abi.decode(_data[4 + 32:], (address));
+        address asset = abi.decode(_data[32:], (address));
         require(asset != _garden.reserveAsset(), 'Receive token must be different');
 
     }
@@ -115,7 +115,7 @@ contract BuyOperation is Operation {
             uint8
         )
     {
-        address token = abi.decode(_data[4 + 32:],(address));
+        address token = abi.decode(_data[32:],(address));
         require(_percentage <= 100e18, 'Unwind Percentage <= 100%');
         IStrategy(msg.sender).trade(
             token,
@@ -138,7 +138,6 @@ contract BuyOperation is Operation {
         address /* _integration */
     ) external view override returns (uint256, bool) {
         address token = abi.decode(_data[32:], (address)); // 64 bytes (w/o signature prefix bytes4)
-        console.log('CHECK getNAV token', token);
         if (!IStrategy(msg.sender).isStrategyActive()) {
             return (0, true);
         }

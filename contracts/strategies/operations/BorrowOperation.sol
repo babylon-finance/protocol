@@ -149,7 +149,7 @@ contract BorrowOperation is Operation {
             uint8
         )
     {
-        address assetToken = abi.decode(_data[4 + 32 :], (address));
+        address assetToken = abi.decode(_data[32 :], (address));
         require(_percentage <= HUNDRED_PERCENT, 'Unwind Percentage <= 100%');
         IBorrowIntegration(_integration).repay(
             msg.sender,

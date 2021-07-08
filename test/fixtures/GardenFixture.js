@@ -54,8 +54,6 @@ async function setUpFixture(
   await ishtarGate.connect(owner).setCreatorPermissions(owner.address, true, { gasPrice: 0 });
   await ishtarGate.connect(owner).setCreatorPermissions(signer1.address, true, { gasPrice: 0 });
 
-  console.log('CHECK AAAAAAAA');
-
   await babController
     .connect(signer1)
     .createGarden(
@@ -70,8 +68,6 @@ async function setUpFixture(
         value: ethers.utils.parseEther('1'),
       },
     );
-  console.log('CHECK ZZZZZZ');
-
   await babController
     .connect(signer1)
     .createGarden(
@@ -149,17 +145,13 @@ async function setUpFixture(
   const strategy11 = (
     await createStrategy('buy', 'dataset', [signer1, signer2, signer3], uniswapV3TradeIntegration.address, garden1)
   ).address;
-  console.log('CHECK YYYYYYYYY');
 
   const strategy21 = (
     await createStrategy('buy', 'deposit', [signer1, signer2, signer3], uniswapV3TradeIntegration.address, garden2)
   ).address;
-  console.log('CHECK XXXXXXXX');
 
   await createStrategy('buy', 'deposit', [signer1, signer2, signer3], uniswapV3TradeIntegration.address, garden3);
   await createStrategy('buy', 'dataset', [signer1, signer2, signer3], uniswapV3TradeIntegration.address, garden3);
-
-  console.log('CHECK 2XXXXXXX');
 
   console.log('Created and started garden', garden1.address);
   console.log('Created manual testing garden', garden3.address);

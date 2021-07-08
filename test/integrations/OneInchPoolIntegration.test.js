@@ -108,11 +108,15 @@ describe('OneInchPoolIntegrationTest', function () {
     });
 
     it('check that a valid pool is valid', async function () {
-      expect(await oneInchPoolIntegration.isPool(addresses.oneinch.pools.wethdai)).to.equal(true);
+      var abiCoder = ethers.utils.defaultAbiCoder;
+      var data = abiCoder.encode(['uint256', 'address'], [0, addresses.oneinch.pools.wethdai]);
+      expect(await oneInchPoolIntegration.isPool(data)).to.equal(true);
     });
 
     it('check that an invalid pool is not valid', async function () {
-      expect(await oneInchPoolIntegration.isPool(ADDRESS_ZERO)).to.equal(false);
+      var abiCoder = ethers.utils.defaultAbiCoder;
+      var data = abiCoder.encode(['uint256', 'address'], [0, ADDRESS_ZERO]);
+      expect(await oneInchPoolIntegration.isPool(data)).to.equal(false);
     });
 
     it('tests mooniswap directly', async function () {
@@ -145,7 +149,7 @@ describe('OneInchPoolIntegrationTest', function () {
         oneInchPoolIntegration.address,
         garden1,
         DEFAULT_STRATEGY_PARAMS,
-        daiWethPair.address,
+        [0, daiWethPair.address],
       );
       await executeStrategy(strategyContract);
       expect(await daiWethPair.balanceOf(strategyContract.address)).to.be.gt(0);
@@ -199,7 +203,7 @@ describe('OneInchPoolIntegrationTest', function () {
             state: 'vote',
             integrations: oneInchPoolIntegration.address,
             garden,
-            specificParams: poolAddress.address,
+            specificParams: [0, poolAddress.address],
           });
           let amount = STRATEGY_EXECUTE_MAP[token];
 

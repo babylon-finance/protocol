@@ -17,6 +17,7 @@
 */
 
 pragma solidity 0.7.6;
+import 'hardhat/console.sol';
 import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import '@uniswap/v2-core/contracts/interfaces/IUniswapV2Pair.sol';
 
@@ -24,6 +25,7 @@ import {IBabController} from '../../interfaces/IBabController.sol';
 import {PoolIntegration} from './PoolIntegration.sol';
 import {PreciseUnitMath} from '../../lib/PreciseUnitMath.sol';
 import {LowGasSafeMath} from '../../lib/LowGasSafeMath.sol';
+import {BytesLib} from '../../lib/BytesLib.sol';
 import {IMooniswapFactory} from '../../interfaces/external/1inch/IMooniswapFactory.sol';
 import {IMooniswap} from '../../interfaces/external/1inch/IMooniswap.sol';
 
@@ -36,6 +38,7 @@ import {IMooniswap} from '../../interfaces/external/1inch/IMooniswap.sol';
 contract OneInchPoolIntegration is PoolIntegration {
     using LowGasSafeMath for uint256;
     using PreciseUnitMath for uint256;
+    using BytesLib for uint256;
 
     /* ============ State Variables ============ */
 
@@ -61,7 +64,7 @@ contract OneInchPoolIntegration is PoolIntegration {
     /* ============ External Functions ============ */
 
     function getPoolTokens(bytes calldata _pool) external view override returns (address[] memory) {
-        address poolAddress = abi.decode(_pool[4 + 32:], (address));
+        address poolAddress = abi.decode(_pool[32:], (address));
         return IMooniswap(poolAddress).getTokens();
     }
 
@@ -89,7 +92,7 @@ contract OneInchPoolIntegration is PoolIntegration {
         override
         returns (uint256[] memory _minAmountsOut)
     {
-        address poolAddress = abi.decode(_pool[4 + 32:], (address));
+        address poolAddress = abi.decode(_pool[32:], (address));
         address[] memory tokens = IMooniswap(poolAddress).getTokens();
         uint256 totalSupply = IMooniswap(poolAddress).totalSupply();
         uint256[] memory result = new uint256[](2);
@@ -104,13 +107,13 @@ contract OneInchPoolIntegration is PoolIntegration {
 
     /* ============ Internal Functions ============ */
 
-    function _isPool(bytes calldata _pool) internal view override returns (bool) {
-        address poolAddress = abi.decode(_pool[4 + 32:],(address));
+    function _isPool(bytes memory _pool) internal view override returns (bool) {
+        address poolAddress = BytesLib.toAddress(_pool, 32 + 12);
         return IMooniswapFactory(mooniswapFactory).isPool(IMooniswap(poolAddress));
     }
 
-    function _getSpender(bytes calldata _pool) internal pure override returns (address) {
-        address poolAddress = abi.decode(_pool[4 + 32:],(address));
+    function _getSpender(bytes calldata _pool) internal view override returns (address) {
+        address poolAddress = abi.decode(_pool[32:],(address));
         return poolAddress;
     }
 
@@ -143,7 +146,7 @@ contract OneInchPoolIntegration is PoolIntegration {
             bytes memory
         )
     {
-        address poolAddress = abi.decode(_pool[4 + 32:], (address));
+        address poolAddress = abi.decode(_pool[32:], (address));
         // Encode method data for Garden to invoke
         require(_tokensIn.length == 2, 'Two tokens required');
         require(_maxAmountsIn.length == 2, 'Two amounts required');
@@ -171,7 +174,7 @@ contract OneInchPoolIntegration is PoolIntegration {
      * Return exit pool calldata which is already generated from the pool API
      *
      * hparam  _strategy                 Address of the strategy
-     * hparam  _pool              OpData e.g. Address of the pool
+     * @param  _pool                     OpData e.g. Address of the pool
      * @param  _poolTokensIn             Amount of pool tokens to receive
      * @param  _tokensOut                Addresses of tokens to receive
      * @param  _minAmountsOut            Amounts of pool tokens to receive
@@ -182,13 +185,13 @@ contract OneInchPoolIntegration is PoolIntegration {
      */
     function _getExitPoolCalldata(
         address, /* _strategy */
-        bytes calldata _pool,
+        bytes memory _pool,
         uint256 _poolTokensIn,
         address[] calldata _tokensOut,
         uint256[] calldata _minAmountsOut
     )
         internal
-        pure
+        view
         override
         returns (
             address,
@@ -196,7 +199,7 @@ contract OneInchPoolIntegration is PoolIntegration {
             bytes memory
         )
     {
-        address poolAddress = abi.decode(_pool[4 + 32:], (address));
+        address poolAddress = BytesLib.toAddress(_pool, 32 + 12);
         require(_tokensOut.length == 2, 'Two tokens required');
         require(_minAmountsOut.length == 2, 'Two amounts required');
         // Encode method data for Garden to invoke

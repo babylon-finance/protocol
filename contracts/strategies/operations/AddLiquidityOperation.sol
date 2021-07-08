@@ -92,18 +92,11 @@ contract AddLiquidityOperation is Operation {
             uint8
         )
     {
-        //address pool = abi.decode(_data[32:], (address));
-        //address pool =  BytesLib.toAddress(_data, 4 + 12);
-
         address[] memory poolTokens = IPoolIntegration(_integration).getPoolTokens(_data);
         uint256[] memory _poolWeights = IPoolIntegration(_integration).getPoolWeights(_data);
         // Get the tokens needed to enter the pool
         uint256[] memory maxAmountsIn = _maxAmountsIn(_asset, _capital,_garden, _poolWeights, poolTokens);
-        //for (uint256 i = 0; i < poolTokens.length; i++) {
-        //    _maxAmountsIn[i] = _getMaxAmountTokenPool(_asset, _capital, _garden, _poolWeights[i], poolTokens[i]);
-        //}
         uint256 poolTokensOut = IPoolIntegration(_integration).getPoolTokensOut(_data, poolTokens[0], maxAmountsIn[0]);
-        console.log('CHECK QWERTY');
         IPoolIntegration(_integration).joinPool(
             msg.sender,
             _data,
@@ -145,7 +138,7 @@ contract AddLiquidityOperation is Operation {
         )
     {
         require(_percentage <= 100e18, 'Unwind Percentage <= 100%');
-        address pool = abi.decode(_data[4 + 32:], (address)); // First 20 bytes of the second word is used for address
+        address pool = abi.decode(_data[32:], (address)); // First 20 bytes of the second word is used for address
         address[] memory poolTokens = IPoolIntegration(_integration).getPoolTokens(_data);
         uint256 lpTokens = IERC20(pool).balanceOf(msg.sender).preciseMul(_percentage); // Sell all pool tokens
         uint256[] memory _minAmountsOut = IPoolIntegration(_integration).getPoolMinAmountsOut(_data, lpTokens);
