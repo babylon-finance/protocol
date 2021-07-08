@@ -100,6 +100,8 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
     uint256 private constant TEN_PERCENT = 1e17;
 
     bytes32 private constant DEPOSIT_BY_SIG_TYPEHASH = keccak256("DepositBySig(uint256 _amountIn,uint256 _minAmountOut,bool _mintNft, uint256 _nonce)");
+    bytes32 private constant WITHDRAW_BY_SIG_TYPEHASH =
+      keccak256("WithdrawBySig(uint256 _amountIn,uint256 _minAmountOut,bool _withPenalty,uint256 _unwindStrategy uint256 _nonce)");
 
     /* ============ Structs ============ */
 
@@ -505,6 +507,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         }
     }
 
+
     /**
      * @notice
      *   Withdraws the reserve asset relative to the token participation in the garden
@@ -527,6 +530,50 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         bool _withPenalty,
         address _unwindStrategy
     ) external override nonReentrant {
+        // Get valuation of the Garden with the quote asset as the reserve asset. Returns value in precise units (10e18)
+        // Reverts if price is not found
+        uint256 pricePerShare =
+            IGardenValuer(IBabController(controller).gardenValuer()).calculateGardenValuation(
+                address(this),
+                reserveAsset
+            );
+        _withdrawInternal(_amountIn, _minAmountOut, _to, _withPenalty, _unwindStrategy, pricePerShare);
+    }
+
+    function withdrawBySig(
+        uint256 _amountIn,
+        uint256 _minAmountOut,
+        bool _withPenalty,
+        address _unwindStrategy,
+        uint256 _nonce,
+        uint256 _pricePerShare,
+        uint8 v,
+        bytes32 r,
+        bytes32 s
+    ) external override nonReentrant {
+        bytes32 hash = keccak256(abi.encode(WITHDRAW_BY_SIG_TYPEHASH, _amountIn, _minAmountOut, _withPenalty, _unwindStrategy, _nonce)).toEthSignedMessageHash();
+        address signer = ECDSA.recover(hash, v, r, s);
+        console.log('singer', signer);
+
+        _require(signer != address(0), Errors.INVALID_SIGNER);
+
+        // to prevent replay attacks
+        _require(
+            contributors[signer].nonce == _nonce,
+            Errors.INVALID_NONCE
+        );
+
+        _withdrawInternal(_amountIn, _minAmountOut, payable(signer), _withPenalty, _unwindStrategy, _pricePerShare);
+    }
+
+    function _withdrawInternal(
+        uint256 _amountIn,
+        uint256 _minAmountOut,
+        address payable _to,
+        bool _withPenalty,
+        address _unwindStrategy,
+        uint256 _pricePerShare
+    ) internal {
         _onlyUnpaused();
         _onlyContributor();
         // Flashloan protection
@@ -538,16 +585,8 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         uint256 lockedAmount = getLockedBalance(msg.sender);
         _require(_amountIn <= balanceOf(msg.sender).sub(lockedAmount), Errors.TOKENS_STAKED); // Strategists cannot withdraw locked stake while in active strategies
 
-        // Get valuation of the Garden with the quote asset as the reserve asset. Returns value in precise units (10e18)
-        // Reverts if price is not found
-        uint256 pricePerShare =
-            IGardenValuer(IBabController(controller).gardenValuer()).calculateGardenValuation(
-                address(this),
-                reserveAsset
-            );
-
         // this value would have 18 decimals even for USDC
-        uint256 amountOutNormalized = _amountIn.preciseMul(pricePerShare);
+        uint256 amountOutNormalized = _amountIn.preciseMul(_pricePerShare);
         // in case of USDC that would with 6 decimals
         uint256 amountOut = amountOutNormalized.preciseMul(10**ERC20Upgradeable(reserveAsset).decimals());
 
@@ -568,11 +607,12 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         _updateContributorWithdrawalInfo(amountOut);
 
         // required withdrawable quantity is greater than existing collateral
-        _require(principal >= amountOut, Errors.BALANCE_TOO_LOW);
+        _require(_minAmountOut >= amountOut, Errors.BALANCE_TOO_LOW);
         principal = principal.sub(amountOut);
 
         emit GardenWithdrawal(msg.sender, _to, amountOut, _amountIn, block.timestamp);
     }
+
 
     /**
      * User can claim the rewards from the strategies that his principal

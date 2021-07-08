@@ -147,6 +147,18 @@ interface IGarden {
         address _unwindStrategy
     ) external;
 
+    function withdrawBySig(
+        uint256 _gardenTokenQuantity,
+        uint256 _minReserveReceiveQuantity,
+        bool _withPenalty,
+        address _unwindStrategy,
+        uint256 _nonce,
+        uint256 _pricePerShare,
+        uint8 v,
+        bytes32 r,
+        bytes32 s
+    ) external;
+
     function claimReturns(address[] calldata _finalizedStrategies) external;
 
     function getLockedBalance(address _contributor) external view returns (uint256);

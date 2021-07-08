@@ -562,9 +562,10 @@ describe('Garden', function () {
   });
 
   describe('withdraw', async function () {
-    it('can withdraw funds if garden has free liquidity', async function () {
+    it.only('can withdraw funds if garden has free liquidity', async function () {
       const amountIn = eth();
       const minAmountOut = eth();
+
       await garden1.connect(signer3).deposit(amountIn, minAmountOut, signer3.getAddress(), false, {
         value: eth(),
         gasPrice: 0,
@@ -819,7 +820,7 @@ describe('Garden', function () {
       ).to.not.be.reverted;
     });
 
-    it('should fail if startWithdrawalWindow is called more than once or from a non-strategy address', async function () {
+    it('should fail if finalizeStrategy is from a non-strategy address', async function () {
       const strategyContract = await createStrategy(
         'buy',
         'vote',
@@ -835,17 +836,15 @@ describe('Garden', function () {
       await expect(finalizeStrategy(strategyContract, 0)).to.be.revertedWith('revert BAB#050');
 
       await expect(
-        garden1.startWithdrawalWindow(
-          ethers.BigNumber.from('1076070704097713768'),
+        garden1.finalizeStrategy(
           ethers.BigNumber.from('14263257018321332'),
           ethers.BigNumber.from('90333961116035100'),
-          '0xd41b236f19726aba094b8b9d130620bfef535fd0',
         ),
       ).to.be.revertedWith('revert BAB#020');
     });
   });
 
-  describe('depositBySig', async function () {
+  describe.only('depositBySig', async function () {
     it('can deposit', async function () {
       const amountIn = from(1000 * 1e6);
       const minAmountOut = eth(1000);
@@ -1192,41 +1191,6 @@ describe('Garden', function () {
       // Note: Garden is initialized with manager as first contributor
       expect(await garden1.totalContributors()).to.equal(3);
       expect(await garden1.principal()).to.equal(ethers.utils.parseEther('3'));
-    });
-  });
-
-  describe('getGardenTokenMintQuantity', async function () {
-    it('get correct amounts of tokens if 1 ETH deposited', async function () {
-      const tokens = await garden1.getGardenTokenMintQuantity(ONE_ETH, false);
-
-      expect(tokens).to.be.equal(ONE_ETH);
-    });
-
-    it('get correct amounts of tokens if 8 ETH deposited', async function () {
-      garden1.connect(signer3).deposit(ONE_ETH.mul(8), 1, signer3.getAddress(), false, {
-        value: ONE_ETH.mul(8),
-      });
-      const tokens = await garden1.getGardenTokenMintQuantity(ONE_ETH.mul(2), false);
-      expect(tokens).to.be.equal(ONE_ETH.mul(2));
-    });
-
-    it('get correct amounts of tokens if 8 ETH deposited and strategy is executed', async function () {
-      garden1.connect(signer3).deposit(ONE_ETH.mul(8), 1, signer3.getAddress(), false, {
-        value: ONE_ETH.mul(8),
-      });
-
-      const strategyContract = await createStrategy(
-        'buy',
-        'vote',
-        [signer1, signer2, signer3],
-        uniswapV3TradeIntegration.address,
-        garden1,
-      );
-
-      await executeStrategy(strategyContract);
-
-      const tokens = await garden1.getGardenTokenMintQuantity(ONE_ETH.mul(3), false);
-      expect(tokens).to.be.closeTo(ONE_ETH.mul(3), ONE_ETH.div(100));
     });
   });
 
