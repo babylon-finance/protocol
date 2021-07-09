@@ -147,6 +147,45 @@ contract LendOperation is Operation {
         );
     }
 
+    /**
+     * Gets the NAV of the lend op in the reserve asset
+     *
+     * @param _data               OpData e.g. Asset lent
+     * @param _garden             Garden the strategy belongs to
+     * @param _integration        Status of the asset amount
+     * @return _nav               NAV of the strategy
+     */
+    function getNAV(
+        bytes calldata _data,
+        IGarden _garden,
+        address _integration
+    ) external view override returns (uint256, bool) {
+        address lendToken = _decodeOpDataAddress(_data); // 64 bytes (w/o signature prefix bytes4)
+        if (!IStrategy(msg.sender).isStrategyActive()) {
+            return (0, true);
+        }
+        uint256 assetTokenAmount = ILendIntegration(_integration).getInvestmentTokenAmount(msg.sender, lendToken);
+        uint256 price = _getPrice(_garden.reserveAsset(), lendToken);
+        uint256 rewardsAmount = ILendIntegration(_integration).getRewardsAccrued(msg.sender);
+        uint256 priceRewards = _getPrice(_garden.reserveAsset(), ILendIntegration(_integration).getRewardToken());
+        uint256 NAV =
+            SafeDecimalMath.normalizeAmountTokens(lendToken, _garden.reserveAsset(), assetTokenAmount).preciseDiv(
+                price
+            );
+        // We add rewards
+        NAV = NAV.add(
+            SafeDecimalMath
+                .normalizeAmountTokens(
+                ILendIntegration(_integration).getRewardToken(),
+                _garden.reserveAsset(),
+                rewardsAmount
+            )
+                .preciseDiv(priceRewards)
+        );
+        require(NAV != 0, 'NAV has to be bigger 0');
+        return (NAV, true);
+    }
+
     function _redeemTokens(
         address _borrowToken,
         uint256 _remaining,
@@ -207,45 +246,6 @@ contract LendOperation is Operation {
                 _garden.reserveAsset()
             );
         }
-    }
-
-    /**
-     * Gets the NAV of the lend op in the reserve asset
-     *
-     * @param _data               OpData e.g. Asset lent
-     * @param _garden             Garden the strategy belongs to
-     * @param _integration        Status of the asset amount
-     * @return _nav               NAV of the strategy
-     */
-    function getNAV(
-        bytes calldata _data,
-        IGarden _garden,
-        address _integration
-    ) external view override returns (uint256, bool) {
-        address lendToken = _decodeOpDataAddress(_data); // 64 bytes (w/o signature prefix bytes4)
-        if (!IStrategy(msg.sender).isStrategyActive()) {
-            return (0, true);
-        }
-        uint256 assetTokenAmount = ILendIntegration(_integration).getInvestmentTokenAmount(msg.sender, lendToken);
-        uint256 price = _getPrice(_garden.reserveAsset(), lendToken);
-        uint256 rewardsAmount = ILendIntegration(_integration).getRewardsAccrued(msg.sender);
-        uint256 priceRewards = _getPrice(_garden.reserveAsset(), ILendIntegration(_integration).getRewardToken());
-        uint256 NAV =
-            SafeDecimalMath.normalizeAmountTokens(lendToken, _garden.reserveAsset(), assetTokenAmount).preciseDiv(
-                price
-            );
-        // We add rewards
-        NAV = NAV.add(
-            SafeDecimalMath
-                .normalizeAmountTokens(
-                ILendIntegration(_integration).getRewardToken(),
-                _garden.reserveAsset(),
-                rewardsAmount
-            )
-                .preciseDiv(priceRewards)
-        );
-        require(NAV != 0, 'NAV has to be bigger 0');
-        return (NAV, true);
     }
 
     function _getRemainingDebt(
