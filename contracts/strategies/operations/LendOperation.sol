@@ -169,6 +169,15 @@ contract LendOperation is Operation {
                 _garden.reserveAsset()
             );
         }
+        uint256 rewardsBalance = IERC20(ILendIntegration(_integration).getRewardToken()).balanceOf(msg.sender);
+        // Add rewards
+        if (rewardsBalance > 1e14) {
+            IStrategy(msg.sender).trade(
+                ILendIntegration(_integration).getRewardToken(),
+                rewardsBalance,
+                _garden.reserveAsset()
+            );
+        }
         return (
             _assetToken,
             IERC20(ILendIntegration(_integration).getInvestmentToken(_assetToken)).balanceOf(msg.sender),
@@ -194,10 +203,22 @@ contract LendOperation is Operation {
         }
         uint256 assetTokenAmount = ILendIntegration(_integration).getInvestmentTokenAmount(msg.sender, _lendToken);
         uint256 price = _getPrice(_garden.reserveAsset(), _lendToken);
+        uint256 rewardsAmount = ILendIntegration(_integration).getRewardsAccrued(msg.sender);
+        uint256 priceRewards = _getPrice(_garden.reserveAsset(), ILendIntegration(_integration).getRewardToken());
         uint256 NAV =
             SafeDecimalMath.normalizeAmountTokens(_lendToken, _garden.reserveAsset(), assetTokenAmount).preciseDiv(
                 price
             );
+        // We add rewards
+        NAV = NAV.add(
+            SafeDecimalMath
+                .normalizeAmountTokens(
+                ILendIntegration(_integration).getRewardToken(),
+                _garden.reserveAsset(),
+                rewardsAmount
+            )
+                .preciseDiv(priceRewards)
+        );
         require(NAV != 0, 'NAV has to be bigger 0');
         return (NAV, true);
     }
