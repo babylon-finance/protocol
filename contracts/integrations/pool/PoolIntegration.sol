@@ -17,11 +17,7 @@
 */
 
 pragma solidity 0.7.6;
-//pragma abicoder v2;
-pragma experimental ABIEncoderV2;
 
-
-import 'hardhat/console.sol';
 import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import {SafeCast} from '@openzeppelin/contracts/utils/SafeCast.sol';
 import {ReentrancyGuard} from '@openzeppelin/contracts/utils/ReentrancyGuard.sol';
