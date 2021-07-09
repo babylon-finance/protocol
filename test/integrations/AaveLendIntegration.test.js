@@ -8,7 +8,8 @@ const {
 } = require('../fixtures/StrategyHelper');
 const { setupTests } = require('../fixtures/GardenFixture');
 const addresses = require('../../lib/addresses');
-const { ADDRESS_ZERO } = require('../../lib/constants');
+const { increaseTime } = require('../utils/test-helpers');
+const { ADDRESS_ZERO, ONE_DAY_IN_SECONDS } = require('../../lib/constants');
 
 describe('AaveLendIntegrationTest', function () {
   let aaveLendIntegration;
@@ -90,6 +91,25 @@ describe('AaveLendIntegrationTest', function () {
       await finalizeStrategy(strategyContract);
       expect(await WETH.balanceOf(strategyContract.address)).to.equal(0);
       expect(await aaveBorrowIntegration.getCollateralBalance(strategyContract.address, WETH.address)).to.equal(0);
+    });
+
+    it('can supply and get NAV including rewards', async function () {
+      const strategyContract = await createStrategy(
+        'lend',
+        'vote',
+        [signer1, signer2, signer3],
+        aaveLendIntegration.address,
+        garden1,
+        DEFAULT_STRATEGY_PARAMS,
+        WETH.address,
+      );
+      await executeStrategy(strategyContract);
+      expect(await WETH.balanceOf(strategyContract.address)).to.be.equal(0);
+      increaseTime(ONE_DAY_IN_SECONDS);
+      console.log('before NAV');
+      const NAV = await strategyContract.getNAV();
+      const aaveAccrued = await aaveLendIntegration.getRewardsAccrued(strategyContract.address);
+      expect(NAV.sub(aaveAccrued)).to.be.closeTo(ethers.utils.parseEther('1'), ethers.utils.parseEther('1').div(100));
     });
   });
 });
