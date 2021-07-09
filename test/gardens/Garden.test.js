@@ -2,10 +2,9 @@ const { expect } = require('chai');
 const { ethers } = require('hardhat');
 
 const addresses = require('../../lib/addresses');
-const { ONE_DAY_IN_SECONDS, ONE_ETH, NOW, PROTOCOL_FEE, PROFIT_PROTOCOL_FEE } = require('../../lib/constants.js');
 const { increaseTime } = require('../utils/test-helpers');
 const { from, eth, parse } = require('../../lib/helpers');
-const { GARDEN_PARAMS_STABLE, GARDEN_PARAMS, ADDRESS_ZERO } = require('../../lib/constants');
+const { ONE_DAY_IN_SECONDS, ONE_ETH, NOW, PROTOCOL_FEE, PROFIT_PROTOCOL_FEE ,GARDEN_PARAMS_STABLE, GARDEN_PARAMS, ADDRESS_ZERO } = require('../../lib/constants');
 const { fund } = require('../../lib/whale');
 const { impersonateAddress } = require('../../lib/rpc');
 
@@ -19,7 +18,7 @@ const {
   injectFakeProfits,
 } = require('../fixtures/StrategyHelper');
 
-const { createGarden, getDepositSig } = require('../fixtures/GardenHelper');
+const { createGarden, getDepositSig, getWithdrawSig } = require('../fixtures/GardenHelper');
 
 const { setupTests } = require('../fixtures/GardenFixture');
 
@@ -41,7 +40,7 @@ async function depositBatch(owner, garden, walletAddresses) {
   }
 }
 
-describe('Garden', function () {
+describe.only('Garden', function () {
   let babController;
   let rewardsDistributor;
   let owner;
@@ -561,8 +560,63 @@ describe('Garden', function () {
     });
   });
 
+  describe('withdrawBySig', async function () {
+    it('can witdraw', async function () {
+      let amountIn = from(1000 * 1e6);
+      let minAmountOut = eth(1000);
+
+      await fund([signer1.address, signer3.address], [addresses.tokens.USDC]);
+
+      const garden = await createGarden({ reserveAsset: addresses.tokens.USDC });
+
+      await usdc.connect(signer3).approve(garden.address, amountIn, {
+        gasPrice: 0,
+      });
+
+      const gardenBalance = await usdc.balanceOf(garden.address);
+      const supplyBefore = await garden.totalSupply();
+
+      await garden.connect(signer3).deposit(amountIn, minAmountOut, signer3.getAddress(), false);
+
+      amountIn = eth(1000);
+      minAmountOut = from(1000 * 1e6);
+      const sig = await getWithdrawSig(signer3, amountIn, minAmountOut, false, ADDRESS_ZERO, 1);
+      await garden
+        .connect(keeper)
+        .withdrawBySig(amountIn, minAmountOut, false, ADDRESS_ZERO, 1, eth(), sig.v, sig.r, sig.s);
+    });
+
+    it('rejects wrong nonce', async function () {
+      let amountIn = from(1000 * 1e6);
+      let minAmountOut = eth(1000);
+
+      await fund([signer1.address, signer3.address], [addresses.tokens.USDC]);
+
+      const garden = await createGarden({ reserveAsset: addresses.tokens.USDC });
+
+      await usdc.connect(signer3).approve(garden.address, amountIn, {
+        gasPrice: 0,
+      });
+
+      const gardenBalance = await usdc.balanceOf(garden.address);
+      const supplyBefore = await garden.totalSupply();
+
+      await garden.connect(signer3).deposit(amountIn, minAmountOut, signer3.getAddress(), false);
+
+      amountIn = eth(1000);
+      minAmountOut = from(1000 * 1e6);
+      const sig = await getWithdrawSig(signer3, amountIn, minAmountOut, false, ADDRESS_ZERO, 8);
+
+      await expect(garden
+        .connect(keeper)
+        .withdrawBySig(amountIn, minAmountOut, false, ADDRESS_ZERO, 8, eth(), sig.v, sig.r, sig.s)
+      ).to.be.revertedWith('revert BAB#089');
+    });
+    // TODO: Test minAmountOut is respected
+  });
+
   describe('withdraw', async function () {
-    it.only('can withdraw funds if garden has free liquidity', async function () {
+    it('can withdraw funds if garden has free liquidity', async function () {
       const amountIn = eth();
       const minAmountOut = eth();
 
@@ -844,14 +898,14 @@ describe('Garden', function () {
     });
   });
 
-  describe.only('depositBySig', async function () {
+  describe('depositBySig', async function () {
     it('can deposit', async function () {
       const amountIn = from(1000 * 1e6);
       const minAmountOut = eth(1000);
 
       await fund([signer1.address, signer3.address], [addresses.tokens.USDC]);
 
-      const garden = await createGarden({reserveAsset: addresses.tokens.USDC});
+      const garden = await createGarden({ reserveAsset: addresses.tokens.USDC });
 
       await usdc.connect(signer3).approve(garden.address, amountIn, {
         gasPrice: 0,
@@ -860,8 +914,8 @@ describe('Garden', function () {
       const gardenBalance = await usdc.balanceOf(garden.address);
       const supplyBefore = await garden.totalSupply();
 
-      const sig = await getDepositSig(signer3, amountIn, minAmountOut , false, 0);
-      await garden.connect(keeper).depositBySig(amountIn, minAmountOut , false, 0, eth(), sig.v, sig.r, sig.s);
+      const sig = await getDepositSig(signer3, amountIn, minAmountOut, false, 0);
+      await garden.connect(keeper).depositBySig(amountIn, minAmountOut, false, 0, eth(), sig.v, sig.r, sig.s);
 
       const supplyAfter = await garden.totalSupply();
       expect(supplyAfter.sub(supplyBefore)).to.be.eq(minAmountOut);
@@ -876,15 +930,16 @@ describe('Garden', function () {
 
       await fund([signer1.address, signer3.address], [addresses.tokens.USDC]);
 
-      const garden = await createGarden({reserveAsset: addresses.tokens.USDC});
+      const garden = await createGarden({ reserveAsset: addresses.tokens.USDC });
 
       await usdc.connect(signer3).approve(garden.address, amountIn, {
         gasPrice: 0,
       });
 
-      const sig = await getDepositSig(signer3, amountIn, minAmountOut , false, 7);
-      await expect(garden.connect(keeper).depositBySig(amountIn, minAmountOut , false, 0, eth(), sig.v, sig.r, sig.s)).to.be.revertedWith('revert BAB#029');
-
+      const sig = await getDepositSig(signer3, amountIn, minAmountOut, false, 7);
+      await expect(
+        garden.connect(keeper).depositBySig(amountIn, minAmountOut, false, 7, eth(), sig.v, sig.r, sig.s),
+      ).to.be.revertedWith('revert BAB#089');
     });
     // TODO: Test minAmountOut is respected
     // TODO: Test mintNFT is respected
