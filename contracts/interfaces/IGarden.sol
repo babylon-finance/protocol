@@ -105,10 +105,7 @@ interface IGarden {
 
     function strategyMapping(address _strategy) external view returns (bool);
 
-    function finalizeStrategy(
-        uint256 _profits,
-        int256 _returns
-    ) external;
+    function finalizeStrategy(uint256 _profits, int256 _returns) external;
 
     function allocateCapitalToStrategy(uint256 _capital) external;
 

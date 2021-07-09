@@ -4,7 +4,16 @@ const { ethers } = require('hardhat');
 const addresses = require('../../lib/addresses');
 const { increaseTime } = require('../utils/test-helpers');
 const { from, eth, parse } = require('../../lib/helpers');
-const { ONE_DAY_IN_SECONDS, ONE_ETH, NOW, PROTOCOL_FEE, PROFIT_PROTOCOL_FEE ,GARDEN_PARAMS_STABLE, GARDEN_PARAMS, ADDRESS_ZERO } = require('../../lib/constants');
+const {
+  ONE_DAY_IN_SECONDS,
+  ONE_ETH,
+  NOW,
+  PROTOCOL_FEE,
+  PROFIT_PROTOCOL_FEE,
+  GARDEN_PARAMS_STABLE,
+  GARDEN_PARAMS,
+  ADDRESS_ZERO,
+} = require('../../lib/constants');
 const { fund } = require('../../lib/whale');
 const { impersonateAddress } = require('../../lib/rpc');
 
@@ -607,9 +616,10 @@ describe.only('Garden', function () {
       minAmountOut = from(1000 * 1e6);
       const sig = await getWithdrawSig(signer3, amountIn, minAmountOut, false, ADDRESS_ZERO, 8);
 
-      await expect(garden
-        .connect(keeper)
-        .withdrawBySig(amountIn, minAmountOut, false, ADDRESS_ZERO, 8, eth(), sig.v, sig.r, sig.s)
+      await expect(
+        garden
+          .connect(keeper)
+          .withdrawBySig(amountIn, minAmountOut, false, ADDRESS_ZERO, 8, eth(), sig.v, sig.r, sig.s),
       ).to.be.revertedWith('revert BAB#089');
     });
     // TODO: Test minAmountOut is respected

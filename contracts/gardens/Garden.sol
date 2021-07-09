@@ -99,9 +99,12 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
     uint256 private constant MAX_TOTAL_STRATEGIES = 20; // Max number of strategies
     uint256 private constant TEN_PERCENT = 1e17;
 
-    bytes32 private constant DEPOSIT_BY_SIG_TYPEHASH = keccak256("DepositBySig(uint256 _amountIn,uint256 _minAmountOut,bool _mintNft, uint256 _nonce)");
+    bytes32 private constant DEPOSIT_BY_SIG_TYPEHASH =
+        keccak256('DepositBySig(uint256 _amountIn,uint256 _minAmountOut,bool _mintNft, uint256 _nonce)');
     bytes32 private constant WITHDRAW_BY_SIG_TYPEHASH =
-      keccak256("WithdrawBySig(uint256 _amountIn,uint256 _minAmountOut,bool _withPenalty,address _unwindStrategy, uint256 _nonce)");
+        keccak256(
+            'WithdrawBySig(uint256 _amountIn,uint256 _minAmountOut,bool _withPenalty,address _unwindStrategy, uint256 _nonce)'
+        );
 
     /* ============ Structs ============ */
 
@@ -352,22 +355,21 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         // calculate pricePerShare
         uint256 pricePerShare;
         // if there are no strategies then NAV === liquidReserve
-        if(strategies.length == 0) {
-          pricePerShare = totalSupply() == 0 ?
-            PreciseUnitMath.preciseUnit() : (liquidReserve().sub(_amountIn))
-          .preciseDiv(uint256(10)**ERC20Upgradeable(reserveAsset).decimals())
-          .preciseDiv(totalSupply());
+        if (strategies.length == 0) {
+            pricePerShare = totalSupply() == 0
+                ? PreciseUnitMath.preciseUnit()
+                : (liquidReserve().sub(_amountIn))
+                    .preciseDiv(uint256(10)**ERC20Upgradeable(reserveAsset).decimals())
+                    .preciseDiv(totalSupply());
         } else {
-          uint256 normalizedAmountIn = _amountIn.preciseDiv(uint256(10)**ERC20Upgradeable(reserveAsset).decimals());
-          // Get valuation of the Garden with the quote asset as the reserve asset.
-          pricePerShare =
-              IGardenValuer(IBabController(controller).gardenValuer()).calculateGardenValuation(
-                  address(this),
-                  reserveAsset
-              );
-          pricePerShare = pricePerShare.sub(normalizedAmountIn.preciseDiv(totalSupply()));
+            uint256 normalizedAmountIn = _amountIn.preciseDiv(uint256(10)**ERC20Upgradeable(reserveAsset).decimals());
+            // Get valuation of the Garden with the quote asset as the reserve asset.
+            pricePerShare = IGardenValuer(IBabController(controller).gardenValuer()).calculateGardenValuation(
+                address(this),
+                reserveAsset
+            );
+            pricePerShare = pricePerShare.sub(normalizedAmountIn.preciseDiv(totalSupply()));
         }
-
 
         _internalDeposit(_amountIn, _minAmountOut, _to, msg.sender, _mintNft, pricePerShare);
     }
@@ -381,18 +383,16 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         uint8 v,
         bytes32 r,
         bytes32 s
-      ) external override nonReentrant {
-        bytes32 hash = keccak256(abi.encode(DEPOSIT_BY_SIG_TYPEHASH, _amountIn,
-                                            _minAmountOut, _mintNft, _nonce)).toEthSignedMessageHash();
+    ) external override nonReentrant {
+        bytes32 hash =
+            keccak256(abi.encode(DEPOSIT_BY_SIG_TYPEHASH, _amountIn, _minAmountOut, _mintNft, _nonce))
+                .toEthSignedMessageHash();
         address signer = ECDSA.recover(hash, v, r, s);
 
         _require(signer != address(0), Errors.INVALID_SIGNER);
 
         // to prevent replay attacks
-        _require(
-            contributors[signer].nonce == _nonce,
-            Errors.INVALID_NONCE
-        );
+        _require(contributors[signer].nonce == _nonce, Errors.INVALID_NONCE);
 
         _internalDeposit(_amountIn, _minAmountOut, signer, signer, _mintNft, _pricePerShare);
     }
@@ -462,7 +462,6 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         emit GardenDeposit(_to, _minAmountOut, _amountIn, block.timestamp);
     }
 
-
     /**
      * @notice
      *   Withdraws the reserve asset relative to the token participation in the garden
@@ -508,16 +507,17 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         bytes32 r,
         bytes32 s
     ) external override nonReentrant {
-        bytes32 hash = keccak256(abi.encode(WITHDRAW_BY_SIG_TYPEHASH, _amountIn, _minAmountOut, _withPenalty, _unwindStrategy, _nonce)).toEthSignedMessageHash();
+        bytes32 hash =
+            keccak256(
+                abi.encode(WITHDRAW_BY_SIG_TYPEHASH, _amountIn, _minAmountOut, _withPenalty, _unwindStrategy, _nonce)
+            )
+                .toEthSignedMessageHash();
         address signer = ECDSA.recover(hash, v, r, s);
 
         _require(signer != address(0), Errors.INVALID_SIGNER);
 
         // to prevent replay attacks
-        _require(
-            contributors[signer].nonce == _nonce,
-            Errors.INVALID_NONCE
-        );
+        _require(contributors[signer].nonce == _nonce, Errors.INVALID_NONCE);
 
         _withdrawInternal(_amountIn, _minAmountOut, payable(signer), _withPenalty, _unwindStrategy, _pricePerShare);
     }
@@ -533,10 +533,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         _onlyUnpaused();
         _require(balanceOf(_to) > 0, Errors.ONLY_CONTRIBUTOR);
         // Flashloan protection
-        _require(
-            block.timestamp.sub(contributors[_to].lastDepositAt) >= depositHardlock,
-            Errors.DEPOSIT_HARDLOCK
-        );
+        _require(block.timestamp.sub(contributors[_to].lastDepositAt) >= depositHardlock, Errors.DEPOSIT_HARDLOCK);
         // Withdrawal amount has to be equal or less than msg.sender balance minus the locked balance
         uint256 lockedAmount = getLockedBalance(_to);
         _require(_amountIn <= balanceOf(_to).sub(lockedAmount), Errors.TOKENS_STAKED); // Strategists cannot withdraw locked stake while in active strategies
@@ -568,7 +565,6 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
 
         emit GardenWithdrawal(_to, _to, amountOut, _amountIn, block.timestamp);
     }
-
 
     /**
      * User can claim the rewards from the strategies that his principal
@@ -608,10 +604,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
      * @param _rewards                       Amount of Reserve Asset to set aside forever
      * @param _returns                       Profits or losses that the strategy received
      */
-    function finalizeStrategy(
-        uint256 _rewards,
-        int256 _returns
-    ) external override {
+    function finalizeStrategy(uint256 _rewards, int256 _returns) external override {
         _onlyUnpaused();
         _require(
             (strategyMapping[msg.sender] && address(IStrategy(msg.sender).garden()) == address(this)),
@@ -860,10 +853,9 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
      */
     function liquidReserve() private view returns (uint256) {
         uint256 reserve =
-            IERC20(reserveAsset)
-                .balanceOf(address(this))
-                .sub(reserveAssetPrincipalWindow)
-                .sub(reserveAssetRewardsSetAside);
+            IERC20(reserveAsset).balanceOf(address(this)).sub(reserveAssetPrincipalWindow).sub(
+                reserveAssetRewardsSetAside
+            );
         return reserve > keeperDebt ? reserve.sub(keeperDebt) : 0;
     }
 
@@ -975,8 +967,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         private
         view
         returns (uint256)
-    {
-    }
+    {}
 
     /**
      * Updates the contributor info in the array
