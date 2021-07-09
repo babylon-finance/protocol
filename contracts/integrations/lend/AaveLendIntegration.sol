@@ -27,6 +27,7 @@ import {AaveToken} from '../../interfaces/external/aave/AaveToken.sol';
 import {ILendingPool} from '../../interfaces/external/aave/ILendingPool.sol';
 import {ILendingPoolAddressesProvider} from '../../interfaces/external/aave/ILendingPoolAddressesProvider.sol';
 import {IProtocolDataProvider} from '../../interfaces/external/aave/IProtocolDataProvider.sol';
+import {IStakedAave} from '../../interfaces/external/aave/IStakedAave.sol';
 
 import {IGarden} from '../../interfaces/IGarden.sol';
 import {IStrategy} from '../../interfaces/IStrategy.sol';
@@ -51,6 +52,7 @@ contract AaveLendIntegration is LendIntegration {
         IProtocolDataProvider(address(0x057835Ad21a177dbdd3090bB1CAE03EaCF78Fc6d)); // Mainnet
 
     address private constant AAVE = 0x7Fc66500c84A76Ad7e9c93437bFc5Ac33E2DDaE9;
+    address private constant stkAAVE = 0x4da27a545c0c5B758a6BA100e3a049001de870f5;
 
     /* ============ Struct ============ */
 
@@ -76,7 +78,7 @@ contract AaveLendIntegration is LendIntegration {
     }
 
     function _getRewardsAccrued(address _strategy) internal view override returns (uint256) {
-        return 0;
+        return IStakedAave(stkAAVE).stakerRewardsToClaim(_strategy);
     }
 
     function _isInvestment(address _assetToken) internal view override returns (bool) {
@@ -108,11 +110,9 @@ contract AaveLendIntegration is LendIntegration {
      * @return uint256                   Call value
      * @return bytes                     Trade calldata
      */
-    function _claimRewardsCallData(
-        address /* _strategy */
-    )
+    function _claimRewardsCallData(address _strategy)
         internal
-        pure
+        view
         override
         returns (
             address,
@@ -120,7 +120,11 @@ contract AaveLendIntegration is LendIntegration {
             bytes memory
         )
     {
-        return (address(0), 0, bytes(''));
+        // Encode method data for Garden to invoke
+        bytes memory methodData =
+            abi.encodeWithSignature('claimRewards(address,uint256)', _strategy, IERC20(stkAAVE).balanceOf(_strategy));
+
+        return (stkAAVE, 0, methodData);
     }
 
     /**
