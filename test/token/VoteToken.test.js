@@ -1,7 +1,7 @@
 const { expect } = require('chai');
 const { ethers } = require('hardhat');
 
-const { ONE_ETH, ADDRESS_ZERO, ONE_DAY_IN_SECONDS } = require('../../lib/constants');
+const { ONE_DAY_IN_SECONDS } = require('../../lib/constants');
 const { increaseTime } = require('../utils/test-helpers');
 const { impersonateAddress } = require('../../lib/rpc');
 
@@ -14,8 +14,7 @@ describe('VoteToken contract', function () {
   let bablToken;
 
   beforeEach(async () => {
-    ({ owner, bablToken, timeLockRegistry, rewardsDistributor, babController, signer1, signer2, signer3 } =
-      await setupTests()());
+    ({ owner, bablToken, signer1, signer2 } = await setupTests()());
   });
 
   describe('Votes', function () {
@@ -37,9 +36,6 @@ describe('VoteToken contract', function () {
       await bablToken.connect(owner).transfer(signer1.address, ethers.utils.parseEther('10000'));
       const votesOwner2 = await bablToken.getCurrentVotes(owner.address);
       const votesSigner1 = await bablToken.getCurrentVotes(signer1.address);
-
-      //await bablToken.connect(signer1).delegate(signer1.address); // Own delegation
-
       const signer1Balance = await bablToken.balanceOf(signer1.address);
       const ownerBalance2 = await bablToken.balanceOf(owner.address);
 
@@ -60,16 +56,13 @@ describe('VoteToken contract', function () {
       await bablToken.connect(owner).transfer(signer1.address, ethers.utils.parseEther('10000'));
       const votesOwner2 = await bablToken.getCurrentVotes(owner.address);
       const votesSigner1 = await bablToken.getCurrentVotes(signer1.address);
-
-      //await bablToken.connect(signer1).delegate(signer1.address); // Own delegation
-
       const signer1Balance = await bablToken.balanceOf(signer1.address);
       const ownerBalance2 = await bablToken.balanceOf(owner.address);
 
       await expect(ownerBalance2).to.be.equal(ownerBalance.sub(signer1Balance));
       // As there were no delegation, there are no real votes yet until they delegate in themselves using their balance
-      await expect(votesOwner1).to.be.equal(ethers.utils.parseEther('16000'));
-      await expect(votesOwner2).to.be.equal(ethers.utils.parseEther('6000'));
+      await expect(votesOwner1).to.be.equal(ethers.utils.parseEther('23000'));
+      await expect(votesOwner2).to.be.equal(ethers.utils.parseEther('13000'));
       await expect(votesSigner1).to.be.equal('0');
     });
     it('Should inherit voting power if before a transfer there was at least a delegation in itself', async function () {
@@ -85,22 +78,18 @@ describe('VoteToken contract', function () {
       const votesOwner2 = await bablToken.getCurrentVotes(owner.address);
       const votesSigner1 = await bablToken.getCurrentVotes(signer1.address);
 
-      //await bablToken.connect(signer1).delegate(signer1.address); // Own delegation
-
       const signer1Balance = await bablToken.balanceOf(signer1.address);
       const ownerBalance2 = await bablToken.balanceOf(owner.address);
 
       await expect(ownerBalance2).to.be.equal(ownerBalance.sub(signer1Balance));
       // As there were no delegation, there are no real votes yet until they delegate in themselves using their balance
-      await expect(votesOwner1).to.be.equal(ethers.utils.parseEther('16000'));
-      await expect(votesOwner2).to.be.equal(ethers.utils.parseEther('6000'));
+      await expect(votesOwner1).to.be.equal(ethers.utils.parseEther('23000'));
+      await expect(votesOwner2).to.be.equal(ethers.utils.parseEther('13000'));
       await expect(votesSigner1).to.be.equal(ethers.utils.parseEther('10000'));
     });
     it('Should fail if trying to get prior voting power within the same block', async function () {
       await bablToken.connect(owner).delegate(owner.address); // Own delegation - does not create checkpoint
       const block = await ethers.provider.getBlock();
-      now = block.timestamp;
-      //await increaseTime(ONE_DAY_IN_SECONDS);
       await expect(bablToken.getPriorVotes(owner.address, block.number)).to.be.revertedWith(
         'revert BABLToken::getPriorVotes: not yet determined',
       );
