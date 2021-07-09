@@ -110,7 +110,7 @@ describe('CompoundLendIntegrationTest', function () {
         compoundLendIntegration.address,
         garden1,
         DEFAULT_STRATEGY_PARAMS,
-        ADDRESS_ZERO, // ETH
+        [0, ADDRESS_ZERO], // ETH
       );
       await executeStrategy(strategyContract);
       expect(await WETH.balanceOf(strategyContract.address)).to.be.equal(0);

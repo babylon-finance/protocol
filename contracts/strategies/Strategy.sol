@@ -249,8 +249,8 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
     uint256 public override totalNegativeVotes; // Total negative votes against the strategy execution
     bool public override finalized; // Flag that indicates whether we exited the strategy
     bool public override active; // Whether the strategy has met the voting quorum
-    bool public dataSet;
-    bool public hasMiningStarted;
+    bool private dataSet;
+    bool private hasMiningStarted;
 
     uint256 public override duration; // Duration of the bet
     uint256 public override stake; // Amount of stake by the strategist (in reserve asset) needs to be positive
