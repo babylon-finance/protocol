@@ -31,6 +31,7 @@ import {PreciseUnitMath} from '../lib/PreciseUnitMath.sol';
 import {SafeDecimalMath} from '../lib/SafeDecimalMath.sol';
 import {Math} from '../lib/Math.sol';
 import {AddressArrayUtils} from '../lib/AddressArrayUtils.sol';
+import {BytesLib} from '../lib/BytesLib.sol';
 
 import {IWETH} from '../interfaces/external/weth/IWETH.sol';
 import {IBabController} from '../interfaces/IBabController.sol';
@@ -59,6 +60,7 @@ contract StrategyV2Mock {
     using PreciseUnitMath for uint256;
     using SafeDecimalMath for int256;
     using SafeDecimalMath for uint256;
+    using BytesLib for uint256;
     using Math for int256;
     using Math for uint256;
     using AddressArrayUtils for address[];
@@ -136,7 +138,7 @@ contract StrategyV2Mock {
     uint256[] private tokenAmountsNeeded; // Amount of these positions
 
     uint256 public strategyRewards; // Rewards allocated for this strategy updated on finalized
-    uint256 private rewardsTotalOverhead; // Potential extra amount we are giving in BABL rewards
+    uint256 private rewardsTotalOverhead; // DEPRECATED Potential extra amount we are giving in BABL rewards
 
     // Voters mapped to their votes.
     mapping(address => int256) public votes;
@@ -163,7 +165,7 @@ contract StrategyV2Mock {
     function setData(
         uint8[] calldata _opTypes,
         address[] calldata _opIntegrations,
-        address[] calldata _opDatas
+        bytes calldata _opEncodedDatas
     ) external {}
 
     function newMethod() public view returns (string memory) {

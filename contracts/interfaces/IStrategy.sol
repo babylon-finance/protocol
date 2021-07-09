@@ -52,6 +52,8 @@ interface IStrategy {
 
     function getNAV() external view returns (uint256);
 
+    function opDatas(uint256 _index) external view returns (address);
+
     function opEncodedData() external view returns (bytes memory);
 
     function opIntegrations(uint256 _index) external view returns (address);
