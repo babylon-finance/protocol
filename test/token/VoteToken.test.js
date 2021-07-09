@@ -14,16 +14,8 @@ describe('VoteToken contract', function () {
   let bablToken;
 
   beforeEach(async () => {
-    ({
-      owner,
-      bablToken,
-      timeLockRegistry,
-      rewardsDistributor,
-      babController,
-      signer1,
-      signer2,
-      signer3,
-    } = await setupTests()());
+    ({ owner, bablToken, timeLockRegistry, rewardsDistributor, babController, signer1, signer2, signer3 } =
+      await setupTests()());
   });
 
   describe('Votes', function () {

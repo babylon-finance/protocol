@@ -24,7 +24,6 @@ describe('BabController', function () {
   async function createStrategies(strategies) {
     const retVal = [];
     for (let i = 0; i < strategies.length; i++) {
-      console.log('CHECK INSIDE BEFORE');
       const strategy = await createStrategy(
         'buy',
         'vote',
@@ -34,7 +33,6 @@ describe('BabController', function () {
       );
       retVal.push(strategy);
     }
-    console.log('CHECK INSIDE AFTER');
 
     return retVal;
   }

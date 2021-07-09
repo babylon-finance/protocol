@@ -95,7 +95,7 @@ contract AddLiquidityOperation is Operation {
         address[] memory poolTokens = IPoolIntegration(_integration).getPoolTokens(_data);
         uint256[] memory _poolWeights = IPoolIntegration(_integration).getPoolWeights(_data);
         // Get the tokens needed to enter the pool
-        uint256[] memory maxAmountsIn = _maxAmountsIn(_asset, _capital,_garden, _poolWeights, poolTokens);
+        uint256[] memory maxAmountsIn = _maxAmountsIn(_asset, _capital, _garden, _poolWeights, poolTokens);
         uint256 poolTokensOut = IPoolIntegration(_integration).getPoolTokensOut(_data, poolTokens[0], maxAmountsIn[0]);
         IPoolIntegration(_integration).joinPool(
             msg.sender,
@@ -104,15 +104,7 @@ contract AddLiquidityOperation is Operation {
             poolTokens,
             maxAmountsIn
         );
-        return (abi.decode(_data[32:], (address)), IERC20(abi.decode(_data[32:], (address))).balanceOf(msg.sender), 0); // liquid
-    }
-
-    function _maxAmountsIn(address _asset, uint256 _capital, IGarden _garden, uint256[] memory _poolWeights, address[] memory poolTokens) internal returns (uint256[] memory) {
-        uint256[] memory maxAmountsIn = new uint256[](poolTokens.length);
-        for (uint256 i = 0; i < poolTokens.length; i++) {
-            maxAmountsIn[i] = _getMaxAmountTokenPool(_asset, _capital, _garden, _poolWeights[i], poolTokens[i]);
-        }
-        return maxAmountsIn;
+        return (_decodeOpDataAddress(_data), IERC20(_decodeOpDataAddress(_data)).balanceOf(msg.sender), 0); // liquid
     }
 
     /**
@@ -124,7 +116,7 @@ contract AddLiquidityOperation is Operation {
         uint256, /* _remaining */
         uint8, /* _assetStatus */
         uint256 _percentage,
-        bytes calldata _data, 
+        bytes calldata _data,
         IGarden _garden,
         address _integration
     )
@@ -138,7 +130,7 @@ contract AddLiquidityOperation is Operation {
         )
     {
         require(_percentage <= 100e18, 'Unwind Percentage <= 100%');
-        address pool = abi.decode(_data[32:], (address)); // First 20 bytes of the second word is used for address
+        address pool = _decodeOpDataAddress(_data);
         address[] memory poolTokens = IPoolIntegration(_integration).getPoolTokens(_data);
         uint256 lpTokens = IERC20(pool).balanceOf(msg.sender).preciseMul(_percentage); // Sell all pool tokens
         uint256[] memory _minAmountsOut = IPoolIntegration(_integration).getPoolMinAmountsOut(_data, lpTokens);
@@ -182,7 +174,7 @@ contract AddLiquidityOperation is Operation {
         IGarden _garden,
         address _integration
     ) external view override returns (uint256, bool) {
-        address pool = abi.decode(_data[32 :], (address)); // 64 bytes (w/o signature prefix bytes4)
+        address pool = _decodeOpDataAddress(_data); // 64 bytes (w/o signature prefix bytes4)
         if (!IStrategy(msg.sender).isStrategyActive()) {
             return (0, true);
         }
@@ -233,5 +225,19 @@ contract AddLiquidityOperation is Operation {
             IStrategy(msg.sender).handleWeth(false, normalizedTokenAmount); // normalized WETH/ETH amount with 18 decimals
         }
         return normalizedTokenAmount;
+    }
+
+    function _maxAmountsIn(
+        address _asset,
+        uint256 _capital,
+        IGarden _garden,
+        uint256[] memory _poolWeights,
+        address[] memory poolTokens
+    ) internal returns (uint256[] memory) {
+        uint256[] memory maxAmountsIn = new uint256[](poolTokens.length);
+        for (uint256 i = 0; i < poolTokens.length; i++) {
+            maxAmountsIn[i] = _getMaxAmountTokenPool(_asset, _capital, _garden, _poolWeights[i], poolTokens[i]);
+        }
+        return maxAmountsIn;
     }
 }

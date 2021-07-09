@@ -25,16 +25,8 @@ describe('YearnVaultIntegrationTest', function () {
   let owner;
 
   beforeEach(async () => {
-    ({
-      garden1,
-      priceOracle,
-      babController,
-      yearnVaultIntegration,
-      owner,
-      signer1,
-      signer2,
-      signer3,
-    } = await setupTests()());
+    ({ garden1, priceOracle, babController, yearnVaultIntegration, owner, signer1, signer2, signer3 } =
+      await setupTests()());
   });
 
   describe('Deployment', function () {

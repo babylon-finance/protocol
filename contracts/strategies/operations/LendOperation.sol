@@ -93,7 +93,7 @@ contract LendOperation is Operation {
             uint8
         )
     {
-        address assetToken = abi.decode(_data[32 :], (address)); // We just use the first 20 bytes from the whole opEncodedData
+        address assetToken = _decodeOpDataAddress(_data); // We just use the first 20 bytes from the whole opEncodedData
         if (assetToken != _asset) {
             // Trade to WETH if is 0x0 (eth in compound)
             if (assetToken != address(0) || _asset != WETH) {
@@ -136,10 +136,10 @@ contract LendOperation is Operation {
             uint8
         )
     {
-        address assetToken = BytesLib.toAddress(_data, 32 + 12);
+        address assetToken = _decodeOpDataAddressAssembly(_data, 32 + 12);
         require(_percentage <= HUNDRED_PERCENT, 'Unwind Percentage <= 100%');
-        _redeemTokens (_borrowToken, _remaining, _percentage, msg.sender, _integration, assetToken);
-        _tokenToTrade(assetToken, msg.sender, _garden );
+        _redeemTokens(_borrowToken, _remaining, _percentage, msg.sender, _integration, assetToken);
+        _tokenToTrade(assetToken, msg.sender, _garden);
         return (
             assetToken,
             IERC20(ILendIntegration(_integration).getInvestmentToken(assetToken)).balanceOf(msg.sender),
@@ -147,8 +147,15 @@ contract LendOperation is Operation {
         );
     }
 
-    function _redeemTokens (address _borrowToken, uint256 _remaining, uint256 _percentage, address _sender, address _integration, address _assetToken) internal {
-         // Normalize to underlying asset if any (ctokens for compound)
+    function _redeemTokens(
+        address _borrowToken,
+        uint256 _remaining,
+        uint256 _percentage,
+        address _sender,
+        address _integration,
+        address _assetToken
+    ) internal {
+        // Normalize to underlying asset if any (ctokens for compound)
         uint256 numTokensToRedeem = ILendIntegration(_integration).getInvestmentTokenAmount(_sender, _assetToken);
         // Apply percentage
         numTokensToRedeem = numTokensToRedeem.mul(_percentage.div(10**(18)));
@@ -172,7 +179,11 @@ contract LendOperation is Operation {
         );
     }
 
-    function _tokenToTrade(address _assetToken, address _sender, IGarden _garden ) internal {
+    function _tokenToTrade(
+        address _assetToken,
+        address _sender,
+        IGarden _garden
+    ) internal {
         address tokenToTradeFrom = _assetToken;
         // if eth, convert it to weth
         if (_assetToken == address(0)) {
@@ -201,7 +212,7 @@ contract LendOperation is Operation {
         IGarden _garden,
         address _integration
     ) external view override returns (uint256, bool) {
-        address lendToken = abi.decode(_data[32:], (address)); // 64 bytes (w/o signature prefix bytes4)
+        address lendToken = _decodeOpDataAddress(_data); // 64 bytes (w/o signature prefix bytes4)
         if (!IStrategy(msg.sender).isStrategyActive()) {
             return (0, true);
         }

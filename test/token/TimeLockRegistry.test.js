@@ -23,16 +23,8 @@ describe('TimeLockRegistry', function () {
   let babController;
 
   beforeEach(async () => {
-    ({
-      owner,
-      bablToken,
-      timeLockRegistry,
-      rewardsDistributor,
-      babController,
-      signer1,
-      signer2,
-      signer3,
-    } = await setupTests()());
+    ({ owner, bablToken, timeLockRegistry, rewardsDistributor, babController, signer1, signer2, signer3 } =
+      await setupTests()());
     const block = await ethers.provider.getBlock();
     now = block.timestamp;
   });

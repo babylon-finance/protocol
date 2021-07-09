@@ -145,6 +145,9 @@ contract StrategyV2Mock {
 
     uint256 internal absoluteMinRebalance; // 1e18 or 1e6 in case of USDC
 
+    // Strategy opDatas encoded
+    bytes public opEncodedData; // we use and reserve 64bytes for each operation as consecutives bytes64 word
+
     function initialize(
         address _strategist,
         address _garden,

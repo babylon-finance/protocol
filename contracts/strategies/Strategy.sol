@@ -262,7 +262,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
     uint256[] private tokenAmountsNeeded; // Not used anymore
 
     uint256 public override strategyRewards; // Rewards allocated for this strategy updated on finalized
-    uint256 private rewardsTotalOverhead; // Potential extra amount we are giving in BABL rewards
+    uint256 private rewardsTotalOverhead; // DEPRECATED
 
     // Voters mapped to their votes.
     mapping(address => int256) public votes;
@@ -344,7 +344,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         _require(opEncodedLength < MAX_OPERATIONS && opEncodedLength > 0, Errors.TOO_MANY_OPS);
         for (uint256 i = 0; i < _opTypes.length; i++) {
             IOperation(controller.enabledOperations(_opTypes[i])).validateOperation(
-                BytesLib.slice(_opEncodedData, 4 + (64 * i), 64),
+                _get64Bytes(_opEncodedData, i),
                 garden,
                 _opIntegrations[i],
                 i
@@ -694,7 +694,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
             bytes memory
         )
     {
-        return (opTypes[_index], opIntegrations[_index], BytesLib.slice(opEncodedData, 4 + (64 * _index), 64));
+        return (opTypes[_index], opIntegrations[_index], _get64Bytes(opEncodedData, _index));
     }
 
     /**
@@ -710,7 +710,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         for (uint256 i = 0; i < opTypes.length; i++) {
             IOperation operation = IOperation(IBabController(controller).enabledOperations(uint256(opTypes[i])));
             (uint256 strategyNav, bool positive) =
-                operation.getNAV(BytesLib.slice(opEncodedData, 4 + (64 * i), 64), garden, opIntegrations[i]);
+                operation.getNAV(_get64Bytes(opEncodedData, i), garden, opIntegrations[i]);
             if (positive) {
                 positiveNav = positiveNav.add(strategyNav);
             } else {
@@ -720,7 +720,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         }
         uint256 lastOp = opTypes.length - 1;
         if (opTypes[lastOp] == 4) {
-            address token = BytesLib.toAddress(opEncodedData, 4 + (64 * lastOp) + 32 + 12);
+            address token = _decodeOpDataAddressAssembly(opEncodedData, 4 + (64 * lastOp) + 32 + 12);
             uint256 borrowBalance = IERC20(token).universalBalanceOf(address(this));
             if (borrowBalance > 0) {
                 uint256 price = _getPrice(reserveAsset, token);
@@ -809,7 +809,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
                 assetAccumulated,
                 capitalForNexOperation,
                 assetStatus,
-                BytesLib.slice(opEncodedData, 4 + (64 * i), 64),
+                _get64Bytes(opEncodedData, i),
                 garden,
                 opIntegrations[i]
             );
@@ -832,7 +832,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
                 capitalPending,
                 assetStatus,
                 _percentage,
-                BytesLib.slice(opEncodedData, 4 + (64 * (i - 1)), 64),
+                _get64Bytes(opEncodedData, i - 1),
                 garden,
                 opIntegrations[i - 1]
             );
@@ -965,6 +965,14 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         uint256 rewardsStartTime = rewardsDistributor.START_TIME();
         bool miningStarted = ((enteredAt > rewardsStartTime) && (rewardsStartTime != 0));
         return miningStarted;
+    }
+
+    function _get64Bytes(bytes memory _data, uint256 _index) internal view returns (bytes memory) {
+        return BytesLib.slice(_data, 4 + (64 * _index), 64);
+    }
+
+    function _decodeOpDataAddressAssembly(bytes memory _data, uint256 _startingByte) internal view returns (address) {
+        return BytesLib.toAddress(_data, _startingByte);
     }
 
     // solhint-disable-next-line

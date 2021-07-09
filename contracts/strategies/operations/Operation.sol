@@ -29,6 +29,7 @@ import {IPriceOracle} from '../../interfaces/IPriceOracle.sol';
 import {IBabController} from '../../interfaces/IBabController.sol';
 
 import {LowGasSafeMath as SafeMath} from '../../lib/LowGasSafeMath.sol';
+import {BytesLib} from '../../lib/BytesLib.sol';
 
 /**
  * @title LongStrategy
@@ -38,6 +39,7 @@ import {LowGasSafeMath as SafeMath} from '../../lib/LowGasSafeMath.sol';
  */
 abstract contract Operation is IOperation {
     using SafeMath for uint256;
+    using BytesLib for uint256;
     /* ============ Modifiers ============ */
 
     modifier onlyStrategy() {
@@ -137,5 +139,13 @@ abstract contract Operation is IOperation {
     function _getPrice(address _assetOne, address _assetTwo) internal view returns (uint256) {
         IPriceOracle oracle = IPriceOracle(IBabController(controller).priceOracle());
         return oracle.getPrice(_assetOne == address(0) ? WETH : _assetOne, _assetTwo == address(0) ? WETH : _assetTwo);
+    }
+
+    function _decodeOpDataAddressAssembly(bytes memory _data, uint256 _startingByte) internal view returns (address) {
+        return BytesLib.toAddress(_data, _startingByte);
+    }
+    
+    function _decodeOpDataAddress(bytes calldata _data) internal view returns(address) { 
+        return abi.decode(_data[32:],(address));
     }
 }

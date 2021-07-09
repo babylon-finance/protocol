@@ -88,7 +88,7 @@ contract DepositVaultOperation is Operation {
             uint8
         )
     {
-        address yieldVault = abi.decode(_data[32:], (address));
+        address yieldVault = _decodeOpDataAddress(_data);
         address vaultAsset = IPassiveIntegration(_integration).getInvestmentAsset(yieldVault);
         if (vaultAsset != _asset) {
             IStrategy(msg.sender).trade(_asset, _capital, vaultAsset);
@@ -104,7 +104,11 @@ contract DepositVaultOperation is Operation {
         return (yieldVault, IERC20(yieldVault).balanceOf(msg.sender), 0); // liquid
     }
 
-    function _getMinAmountExpected(address _yieldVault, uint256 _capital, address _integration) internal view returns(uint256) {
+    function _getMinAmountExpected(
+        address _yieldVault,
+        uint256 _capital,
+        address _integration
+    ) internal view returns (uint256) {
         uint256 exactAmount = IPassiveIntegration(_integration).getExpectedShares(_yieldVault, _capital);
         return exactAmount.sub(exactAmount.preciseMul(SLIPPAGE_ALLOWED));
     }
@@ -131,7 +135,7 @@ contract DepositVaultOperation is Operation {
             uint8
         )
     {
-        address yieldVault = abi.decode(_data[32 :], (address));
+        address yieldVault = _decodeOpDataAddress(_data);
         require(_percentage <= HUNDRED_PERCENT, 'Unwind Percentage <= 100%');
         address vaultAsset = IPassiveIntegration(_integration).getInvestmentAsset(yieldVault);
         uint256 amountVault = IERC20(yieldVault).balanceOf(msg.sender).preciseMul(_percentage);
@@ -159,7 +163,7 @@ contract DepositVaultOperation is Operation {
         IGarden _garden,
         address _integration
     ) external view override returns (uint256, bool) {
-        address vault = abi.decode(_data[32:], (address)); // 64 bytes (w/o signature prefix bytes4)
+        address vault = _decodeOpDataAddress(_data); // 64 bytes (w/o signature prefix bytes4)
         if (!IStrategy(msg.sender).isStrategyActive()) {
             return (0, true);
         }

@@ -98,34 +98,39 @@ contract BorrowOperation is Operation {
             uint8
         )
     {
-        address borrowToken = BytesLib.toAddress(_data, 32 + 12);
+        address borrowToken = _decodeOpDataAddressAssembly(_data, 32 + 12);
         uint256 normalizedAmount = _getBorrowAmount(_asset, borrowToken, _capital, _integration);
-        require(
-            _capital > 0 &&
-                _assetStatus == 1 &&
-                _asset != borrowToken,
-            'There is no collateral locked'
-        );
+        require(_capital > 0 && _assetStatus == 1 && _asset != borrowToken, 'There is no collateral locked');
         _onlyPositiveCollateral(msg.sender, _asset, _integration);
         IBorrowIntegration(_integration).borrow(msg.sender, borrowToken, normalizedAmount);
         borrowToken = borrowToken == address(0) ? WETH : borrowToken;
         return (borrowToken, IERC20(borrowToken).balanceOf(address(msg.sender)), 0); // borrowings are liquid
     }
 
-    function _onlyPositiveCollateral(address _sender, address _asset, address _integration) internal view {
-        require(IBorrowIntegration(_integration).getCollateralBalance(_sender, _asset) > 0, 'There is no collateral locked');
+    function _onlyPositiveCollateral(
+        address _sender,
+        address _asset,
+        address _integration
+    ) internal view {
+        require(
+            IBorrowIntegration(_integration).getCollateralBalance(_sender, _asset) > 0,
+            'There is no collateral locked'
+        );
     }
 
-    function _getBorrowAmount(address _asset, address _borrowToken, uint256 _capital, address _integration) internal view returns(uint256) {
+    function _getBorrowAmount(
+        address _asset,
+        address _borrowToken,
+        uint256 _capital,
+        address _integration
+    ) internal view returns (uint256) {
         uint256 price = _getPrice(_asset, _borrowToken);
         // % of the total collateral value in the borrow token
         uint256 amountToBorrow =
             _capital.preciseMul(price).preciseMul(IBorrowIntegration(_integration).maxCollateralFactor());
         uint256 normalizedAmount = SafeDecimalMath.normalizeAmountTokens(_asset, _borrowToken, amountToBorrow);
         return normalizedAmount;
-
     }
-
 
     /**
      * Exits the borrow operation.
@@ -149,7 +154,7 @@ contract BorrowOperation is Operation {
             uint8
         )
     {
-        address assetToken = abi.decode(_data[32 :], (address));
+        address assetToken = _decodeOpDataAddress(_data);
         require(_percentage <= HUNDRED_PERCENT, 'Unwind Percentage <= 100%');
         IBorrowIntegration(_integration).repay(
             msg.sender,
@@ -172,7 +177,7 @@ contract BorrowOperation is Operation {
         IGarden _garden,
         address _integration
     ) external view override returns (uint256, bool) {
-        address borrowToken = abi.decode(_data[32 :], (address)); // 64 bytes (w/o signature prefix bytes4)
+        address borrowToken = _decodeOpDataAddress(_data); // 64 bytes (w/o signature prefix bytes4)
         if (!IStrategy(msg.sender).isStrategyActive()) {
             return (0, true);
         }

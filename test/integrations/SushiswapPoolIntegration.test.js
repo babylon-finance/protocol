@@ -62,16 +62,8 @@ describe('SushiswapPoolIntegrationTest', function () {
   }
 
   beforeEach(async () => {
-    ({
-      babController,
-      garden1,
-      sushiswapPoolIntegration,
-      owner,
-      signer1,
-      signer2,
-      signer3,
-      priceOracle,
-    } = await setupTests()());
+    ({ babController, garden1, sushiswapPoolIntegration, owner, signer1, signer2, signer3, priceOracle } =
+      await setupTests()());
   });
 
   describe('Deployment', function () {
