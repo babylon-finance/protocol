@@ -139,7 +139,7 @@ contract LendOperation is Operation {
         address assetToken = _decodeOpDataAddressAssembly(_data, 32 + 12);
         require(_percentage <= HUNDRED_PERCENT, 'Unwind Percentage <= 100%');
         _redeemTokens(_borrowToken, _remaining, _percentage, msg.sender, _integration, assetToken);
-        _tokenToTrade(assetToken, msg.sender, _garden);
+        _tokenToTrade(assetToken, msg.sender, _garden, _integration);
         return (
             assetToken,
             IERC20(ILendIntegration(_integration).getInvestmentToken(assetToken)).balanceOf(msg.sender),
@@ -182,13 +182,14 @@ contract LendOperation is Operation {
     function _tokenToTrade(
         address _assetToken,
         address _sender,
-        IGarden _garden
+        IGarden _garden,
+        address _integration
     ) internal {
         address tokenToTradeFrom = _assetToken;
         // if eth, convert it to weth
         if (_assetToken == address(0)) {
             tokenToTradeFrom = WETH;
-            IStrategy(_sender).handleWeth(true, address(_sender).balance);
+            IStrategy(_sender).handleWeth(true, _sender.balance);
         }
         if (tokenToTradeFrom != _garden.reserveAsset()) {
             IStrategy(_sender).trade(
@@ -197,20 +198,15 @@ contract LendOperation is Operation {
                 _garden.reserveAsset()
             );
         }
-        uint256 rewardsBalance = IERC20(ILendIntegration(_integration).getRewardToken()).balanceOf(msg.sender);
+        uint256 rewardsBalance = IERC20(ILendIntegration(_integration).getRewardToken()).balanceOf(_sender);
         // Add rewards
         if (rewardsBalance > 1e14) {
-            IStrategy(msg.sender).trade(
+            IStrategy(_sender).trade(
                 ILendIntegration(_integration).getRewardToken(),
                 rewardsBalance,
                 _garden.reserveAsset()
             );
         }
-        return (
-            _assetToken,
-            IERC20(ILendIntegration(_integration).getInvestmentToken(_assetToken)).balanceOf(msg.sender),
-            1
-        );
     }
 
     /**
