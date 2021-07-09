@@ -1,16 +1,13 @@
 const { expect } = require('chai');
 const { ethers } = require('hardhat');
 
-const { ONE_ETH, ADDRESS_ZERO, ONE_DAY_IN_SECONDS, ONE_YEAR_IN_SECONDS } = require('../../lib/constants');
+const { ONE_ETH, ONE_DAY_IN_SECONDS } = require('../../lib/constants');
 const { impersonateAddress } = require('../../lib/rpc');
 const { increaseTime } = require('../utils/test-helpers');
 
 const { setupTests } = require('../fixtures/GardenFixture');
 
-const OWNER_BALANCE = ONE_ETH.mul(16000);
-const REWARDS_BALANCE = ONE_ETH.mul(500000);
-const REGISTRY_BALANCE = ONE_ETH.mul(310000);
-const TOTAL_REGISTERED_TOKENS = ONE_ETH.mul(268950);
+const TOTAL_REGISTERED_TOKENS = ONE_ETH.mul(272950);
 
 describe('TimeLockRegistry', function () {
   let owner;
@@ -19,20 +16,10 @@ describe('TimeLockRegistry', function () {
   let signer3;
   let bablToken;
   let timeLockRegistry;
-  let rewardsDistributor;
-  let babController;
+  let now;
 
   beforeEach(async () => {
-    ({
-      owner,
-      bablToken,
-      timeLockRegistry,
-      rewardsDistributor,
-      babController,
-      signer1,
-      signer2,
-      signer3,
-    } = await setupTests()());
+    ({ owner, bablToken, timeLockRegistry, signer1, signer2, signer3 } = await setupTests()());
     const block = await ethers.provider.getBlock();
     now = block.timestamp;
   });
@@ -42,13 +29,13 @@ describe('TimeLockRegistry', function () {
       expect(await timeLockRegistry.owner()).to.equal(owner.address);
     });
 
-    it('timeLockRegistry should have 310k tokens after deployment', async function () {
+    it('timeLockRegistry should have 305k tokens after deployment', async function () {
       const ownerBalance = await bablToken.balanceOf(timeLockRegistry.address);
-      expect(ownerBalance).to.equal(ONE_ETH.mul(310000));
+      expect(ownerBalance).to.equal(ONE_ETH.mul(305000));
     });
 
     it('timeLockRegistry should have all registrations', async function () {
-      expect((await timeLockRegistry.getRegistrations()).length).to.be.eq(79);
+      expect((await timeLockRegistry.getRegistrations()).length).to.be.eq(80);
     });
   });
 

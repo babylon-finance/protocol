@@ -6,9 +6,8 @@ const { increaseTime } = require('../utils/test-helpers');
 
 const { setupTests } = require('../fixtures/GardenFixture');
 
-const OWNER_BALANCE = ONE_ETH.mul(16000);
-const REWARDS_BALANCE = ONE_ETH.mul(500000);
-const REGISTRY_BALANCE = ONE_ETH.mul(310000);
+const OWNER_BALANCE = ONE_ETH.mul(23000);
+const REGISTRY_BALANCE = ONE_ETH.mul(305000);
 
 describe('BABLToken contract', function () {
   let owner;
@@ -17,20 +16,11 @@ describe('BABLToken contract', function () {
   let signer3;
   let bablToken;
   let timeLockRegistry;
-  let rewardsDistributor;
-  let babController;
+  let now;
+  let future;
 
   beforeEach(async () => {
-    ({
-      owner,
-      bablToken,
-      timeLockRegistry,
-      rewardsDistributor,
-      babController,
-      signer1,
-      signer2,
-      signer3,
-    } = await setupTests()());
+    ({ owner, bablToken, timeLockRegistry, signer1, signer2, signer3 } = await setupTests()());
 
     const block = await ethers.provider.getBlock();
     now = block.timestamp;
@@ -63,7 +53,7 @@ describe('BABLToken contract', function () {
 
     it('multisig should have 16k tokens after deployment', async function () {
       const ownerBalance = await bablToken.balanceOf(owner.address);
-      expect(ownerBalance).to.equal(ONE_ETH.mul(16000));
+      expect(ownerBalance).to.equal(ONE_ETH.mul(23000));
     });
   });
 
@@ -169,28 +159,26 @@ describe('BABLToken contract', function () {
     });
 
     it('Should fail it trying to approve the zero address', async function () {
-      await expect(bablToken.approve(ADDRESS_ZERO, ethers.utils.parseEther('310000'))).to.be.revertedWith(
+      await expect(bablToken.approve(ADDRESS_ZERO, ethers.utils.parseEther('305000'))).to.be.revertedWith(
         'TimeLockedToken::approve: spender cannot be zero address',
       );
     });
 
     it('Should fail it trying to approve itself', async function () {
       await expect(
-        bablToken.connect(owner).approve(owner.address, ethers.utils.parseEther('310000')),
+        bablToken.connect(owner).approve(owner.address, ethers.utils.parseEther('305000')),
       ).to.be.revertedWith('TimeLockedToken::approve: spender cannot be the msg.sender');
     });
 
     it('Should fail if trying to increase allowance to an address above the unlocked balance', async function () {
       await expect(
-        bablToken.connect(owner).increaseAllowance(signer2.address, ethers.utils.parseEther('310000')),
+        bablToken.connect(owner).increaseAllowance(signer2.address, ethers.utils.parseEther('305000')),
       ).to.be.revertedWith('TimeLockedToken::increaseAllowance:Not enough unlocked tokens');
     });
     it('Should fail if trying to increase allowance to an address above the unlocked balance in small chunks', async function () {
       await timeLockRegistry.connect(owner).register(signer1.address, ethers.utils.parseEther('10'), false, now);
       await bablToken.connect(signer1).claimMyTokens();
       await increaseTime(ONE_DAY_IN_SECONDS * 366);
-
-      const lockedBalance = await bablToken.viewLockedBalance(signer1.address);
       await expect(
         bablToken.connect(signer1).increaseAllowance(signer2.address, ethers.utils.parseEther('4')),
       ).to.be.revertedWith('TimeLockedToken::increaseAllowance:Not enough unlocked tokens');
@@ -228,7 +216,7 @@ describe('BABLToken contract', function () {
     it('Should fail if trying to decrease allowance below 0 (underflow condition)', async function () {
       await bablToken.connect(owner).increaseAllowance(signer1.address, ethers.utils.parseEther('16000'));
       await expect(
-        bablToken.connect(owner).decreaseAllowance(signer1.address, ethers.utils.parseEther('310001')),
+        bablToken.connect(owner).decreaseAllowance(signer1.address, ethers.utils.parseEther('305001')),
       ).to.be.revertedWith('TimeLockedToken::decreaseAllowance:Underflow condition');
     });
 
@@ -389,7 +377,7 @@ describe('BABLToken contract', function () {
     });
 
     it('Time Lock Registry should properly register 1 Team Member, 1 Advisor and 1 Investor with its own vesting conditions', async function () {
-      await timeLockRegistry.connect(owner).register(signer1.address, ethers.utils.parseEther('26000'), true, now);
+      await timeLockRegistry.connect(owner).register(signer1.address, ethers.utils.parseEther('16000'), true, now);
 
       let [isTeam, vestingBegins, vestingEnds] = await timeLockRegistry.connect(owner).checkVesting(signer1.address);
 
