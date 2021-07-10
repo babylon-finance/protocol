@@ -278,8 +278,8 @@ contract CurvePoolIntegration is PoolIntegration {
         }
     }
 
-    function _getLpToken(bytes memory _pool) internal view override returns (address) {
-        return ICurvePoolV3(_decodeOpDataAddressAssembly(_pool, 32 + 12)).lp_token();
+    function _getLpToken(address _pool) internal view override returns (address) {
+        return ICurvePoolV3(_pool).lp_token();
     }
 
     function _getNCoins() private view returns (uint256) {

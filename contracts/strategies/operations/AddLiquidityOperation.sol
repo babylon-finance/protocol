@@ -103,11 +103,7 @@ contract AddLiquidityOperation is Operation {
             poolTokens,
             maxAmountsIn
         );
-        return (
-            BytesLib.decodeOpDataAddress(_data),
-            IERC20(BytesLib.decodeOpDataAddress(_data)).balanceOf(msg.sender),
-            0
-        ); // liquid
+        return (BytesLib.decodeOpDataAddress(_data).decodeOpDataAddress(_data), IERC20(_getLPTokenFromBytes(_integration, _data)).balanceOf(msg.sender), 0); // liquid
     }
 
     /**
@@ -135,7 +131,7 @@ contract AddLiquidityOperation is Operation {
         require(_percentage <= 100e18, 'Unwind Percentage <= 100%');
         address pool = BytesLib.decodeOpDataAddress(_data);
         address[] memory poolTokens = IPoolIntegration(_integration).getPoolTokens(_data);
-        uint256 lpTokens = IERC20(IPoolIntegration(_integration).getLPToken(_data)).balanceOf(msg.sender).preciseMul(_percentage); // Sell all pool tokens
+        uint256 lpTokens = IERC20(IPoolIntegration(_integration).getLPToken(pool)).balanceOf(msg.sender).preciseMul(_percentage); // Sell all pool tokens
         uint256[] memory _minAmountsOut = IPoolIntegration(_integration).getPoolMinAmountsOut(_data, lpTokens);
         IPoolIntegration(_integration).exitPool(
             msg.sender,
@@ -183,7 +179,7 @@ contract AddLiquidityOperation is Operation {
         }
         address[] memory poolTokens = IPoolIntegration(_integration).getPoolTokens(_data);
         uint256 NAV;
-        address lpToken = IPoolIntegration(_integration).getLPToken(_data);
+        address lpToken = IPoolIntegration(_integration).getLPToken(pool);
         uint256 totalSupply = IERC20(lpToken).totalSupply();
         uint256 lpTokens = IERC20(lpToken).balanceOf(msg.sender);
         for (uint256 i = 0; i < poolTokens.length; i++) {
@@ -242,5 +238,12 @@ contract AddLiquidityOperation is Operation {
             maxAmountsIn[i] = _getMaxAmountTokenPool(_asset, _capital, _garden, _poolWeights[i], poolTokens[i]);
         }
         return maxAmountsIn;
+    }
+
+    function _getLPTokenFromBytes(
+      address _integration,
+      bytes calldata _data
+    ) internal view returns (address) {
+      IPoolIntegration(_integration).getLPToken(BytesLib.decodeOpDataAddress.decodeOpDataAddress(_data));
     }
 }

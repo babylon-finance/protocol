@@ -157,10 +157,10 @@ abstract contract PoolIntegration is BaseIntegration, ReentrancyGuard, IPoolInte
 
     /**
     * Returns the actual address of the LP token. Different for curve.
-    * @param _pool                    Bytes data for the pool
+    * @param _pool                    Address of the pool
     * @return address                 Address of the LP token
     */
-    function getLPToken(bytes memory _pool) external view override returns (address) {
+    function getLPToken(address _pool) external view override returns (address) {
         return _getLpToken(_pool);
     }
 
@@ -194,7 +194,7 @@ abstract contract PoolIntegration is BaseIntegration, ReentrancyGuard, IPoolInte
     ) internal view returns (PoolInfo memory) {
         address poolAddress = BytesLib.decodeOpDataAddress(_pool);
         PoolInfo memory poolInfo;
-        poolInfo.lpToken = _getLpToken(_pool);
+        poolInfo.lpToken = _getLpToken(poolAddress);
         poolInfo.strategy = IStrategy(_strategy);
         poolInfo.garden = IGarden(poolInfo.strategy.garden());
         poolInfo.pool = _pool;
@@ -321,4 +321,11 @@ abstract contract PoolIntegration is BaseIntegration, ReentrancyGuard, IPoolInte
     function _getSpender(
         bytes calldata /* _pool */
     ) internal view virtual returns (address);
+
+    function _getLpToken(
+      address _pool
+    ) internal view virtual returns (address) {
+      return _pool;
+    }
+
 }

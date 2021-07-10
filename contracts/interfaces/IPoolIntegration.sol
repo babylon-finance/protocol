@@ -44,7 +44,7 @@ interface IPoolIntegration {
 
     function getPoolWeights(bytes calldata _pool) external view returns (uint256[] memory);
 
-    function getLPToken(bytes calldata _pool) external view returns (address);
+    function getLPToken(address _pool) external view returns (address);
 
     function getPoolTokensOut(
         bytes calldata _pool,
