@@ -12,6 +12,7 @@ const {
   DEFAULT_STRATEGY_PARAMS,
   createStrategy,
   getStrategy,
+  getStrategyState,
   executeStrategy,
   vote,
   finalizeStrategy,
@@ -677,8 +678,8 @@ describe('Garden', function () {
 
       // It is executed
       await executeStrategy(strategyContract, ethers.utils.parseEther('1'), 42);
-
-      expect(await strategyContract.active()).to.equal(true);
+      const { active, finalized, executedAt, exitedAt, updatedAt } = await getStrategyState(strategyContract);
+      expect(active).to.equal(true);
 
       expect(await strategyContract.strategist()).to.equal(signer1.address);
       expect(await strategyContract.stake()).to.equal(ethers.utils.parseEther('0.1'));
@@ -704,8 +705,8 @@ describe('Garden', function () {
 
       // It is executed
       await executeStrategy(strategyContract, ethers.utils.parseEther('1'), 42);
-
-      expect(await strategyContract.active()).to.equal(true);
+      const { active, finalized, executedAt, exitedAt, updatedAt } = await getStrategyState(strategyContract);
+      expect(active).to.equal(true);
 
       expect(await strategyContract.strategist()).to.equal(signer1.address);
       expect(await strategyContract.stake()).to.equal(ethers.utils.parseEther('0.1'));
@@ -736,8 +737,8 @@ describe('Garden', function () {
 
       // It is executed
       await executeStrategy(strategyContract, ethers.utils.parseEther('1'), 42);
-
-      expect(await strategyContract.active()).to.equal(true);
+      const { active, finalized, executedAt, exitedAt, updatedAt } = await getStrategyState(strategyContract);
+      expect(active).to.equal(true);
 
       expect(await strategyContract.strategist()).to.equal(signer1.address);
       expect(await strategyContract.stake()).to.equal(ethers.utils.parseEther('0.1'));

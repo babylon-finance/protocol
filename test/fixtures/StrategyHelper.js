@@ -293,8 +293,8 @@ async function finalizeStrategyAfter2Years(strategy) {
 }
 
 async function injectFakeProfits(strategy, amount) {
-  const kind = await strategy.opTypes(0);
-  if (kind === 0) {
+  const kind = await strategy.getOperationByIndex(0);
+  if (kind[0] === 0) {
     let ABI = ['function buyOperation(uint256 metadata, address data)']; // 64 bytes
     let iface = new ethers.utils.Interface(ABI);
     let decodedData = iface.decodeFunctionData('buyOperation', await strategy.opEncodedData());
@@ -310,7 +310,7 @@ async function injectFakeProfits(strategy, amount) {
       console.error("Couldn't inject fake profits for", asset.address);
     }
   }
-  if (kind === 1) {
+  if (kind[0] === 1) {
     let ABI = ['function poolOperation(uint256 metadata, address data)']; // 64 bytes
     let iface = new ethers.utils.Interface(ABI);
     let decodedData = iface.decodeFunctionData('poolOperation', await strategy.opEncodedData());
@@ -322,7 +322,7 @@ async function injectFakeProfits(strategy, amount) {
       gasPrice: 0,
     });
   }
-  if (kind === 2) {
+  if (kind[0] === 2) {
     let ABI = ['function vaultOperation(uint256 metadata, address data)']; // 64 bytes
     let iface = new ethers.utils.Interface(ABI);
     let decodedData = iface.decodeFunctionData('vaultOperation', await strategy.opEncodedData());
@@ -337,9 +337,9 @@ async function injectFakeProfits(strategy, amount) {
 }
 
 async function substractFakeProfits(strategy, amount) {
-  const kind = await strategy.opTypes(0);
+  const kind = await strategy.getOperationByIndex(0);
   const strategyAddress = await impersonateAddress(strategy.address);
-  if (kind === 0) {
+  if (kind[0] === 0) {
     let ABI = ['function buyOperation(uint256 metadata, address data)']; // 64 bytes
     let iface = new ethers.utils.Interface(ABI);
     let decodedData = iface.decodeFunctionData('buyOperation', await strategy.opEncodedData());
@@ -354,7 +354,7 @@ async function substractFakeProfits(strategy, amount) {
       console.error("Couldn't reduce fake profits for", asset.address);
     }
   }
-  if (kind === 1) {
+  if (kind[0] === 1) {
     let ABI = ['function poolOperation(uint256 metadata, address data)']; // 64 bytes
     let iface = new ethers.utils.Interface(ABI);
     let decodedData = iface.decodeFunctionData('poolOperation', await strategy.opEncodedData());
@@ -366,7 +366,7 @@ async function substractFakeProfits(strategy, amount) {
       gasPrice: 0,
     });
   }
-  if (kind === 2) {
+  if (kind[0] === 2) {
     let ABI = ['function vaultOperation(uint256 metadata, address data)']; // 64 bytes
     let iface = new ethers.utils.Interface(ABI);
     let decodedData = iface.decodeFunctionData('vaultOperation', await strategy.opEncodedData());
@@ -468,9 +468,16 @@ async function getStrategy({
   );
 }
 
+async function getStrategyState(strategy) {
+  const [address, active, dataSet, finalized, executedAt, exitedAt, updatedAt] = await strategy.getStrategyState();
+
+  return { address, active, dataSet, finalized, executedAt, exitedAt, updatedAt };
+}
+
 module.exports = {
   createStrategy,
   getStrategy,
+  getStrategyState,
   DEFAULT_STRATEGY_PARAMS,
   DAI_STRATEGY_PARAMS,
   USDC_STRATEGY_PARAMS,
