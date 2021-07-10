@@ -6,5 +6,4 @@ typechain
 *.bytecode.js
 *.address.js
 contracts.json
-contracts/strategies/operations/Operation.sol
-contracts/integrations/pool/PoolIntegration.sol
+contracts/lib/BytesLib.sol

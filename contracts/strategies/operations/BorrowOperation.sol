@@ -97,7 +97,7 @@ contract BorrowOperation is Operation {
             uint8
         )
     {
-        address borrowToken = _decodeOpDataAddressAssembly(_data, 32 + 12);
+        address borrowToken = BytesLib.decodeOpDataAddressAssembly(_data, 32 + 12);
         uint256 normalizedAmount = _getBorrowAmount(_asset, borrowToken, _capital, _integration);
         require(_capital > 0 && _assetStatus == 1 && _asset != borrowToken, 'There is no collateral locked');
         _onlyPositiveCollateral(msg.sender, _asset, _integration);
@@ -153,7 +153,7 @@ contract BorrowOperation is Operation {
             uint8
         )
     {
-        address assetToken = _decodeOpDataAddress(_data);
+        address assetToken = BytesLib.decodeOpDataAddress(_data);
         require(_percentage <= HUNDRED_PERCENT, 'Unwind Percentage <= 100%');
         IBorrowIntegration(_integration).repay(
             msg.sender,
@@ -176,7 +176,7 @@ contract BorrowOperation is Operation {
         IGarden _garden,
         address _integration
     ) external view override returns (uint256, bool) {
-        address borrowToken = _decodeOpDataAddress(_data); // 64 bytes (w/o signature prefix bytes4)
+        address borrowToken = BytesLib.decodeOpDataAddress(_data); // 64 bytes (w/o signature prefix bytes4)
         if (!IStrategy(msg.sender).isStrategyActive()) {
             return (0, true);
         }

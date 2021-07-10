@@ -500,4 +500,8 @@ library BytesLib {
     function decodeOpDataAddressAssembly(bytes memory _data, uint256 _startingByte) internal view returns (address) {
         return toAddress(_data, _startingByte);
     }
+
+    function decodeOpDataAddress(bytes calldata _data) internal view returns(address) { 
+        return abi.decode(_data[32:],(address));
+    }
 }

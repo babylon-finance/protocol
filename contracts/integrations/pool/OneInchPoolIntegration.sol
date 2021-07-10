@@ -63,7 +63,7 @@ contract OneInchPoolIntegration is PoolIntegration {
     /* ============ External Functions ============ */
 
     function getPoolTokens(bytes calldata _pool) external view override returns (address[] memory) {
-        address poolAddress = _decodeOpDataAddress(_pool);
+        address poolAddress = BytesLib.decodeOpDataAddress(_pool);
         return IMooniswap(poolAddress).getTokens();
     }
 
@@ -91,7 +91,7 @@ contract OneInchPoolIntegration is PoolIntegration {
         override
         returns (uint256[] memory _minAmountsOut)
     {
-        address poolAddress = _decodeOpDataAddress(_pool);
+        address poolAddress = BytesLib.decodeOpDataAddress(_pool);
         address[] memory tokens = IMooniswap(poolAddress).getTokens();
         uint256 totalSupply = IMooniswap(poolAddress).totalSupply();
         uint256[] memory result = new uint256[](2);
@@ -107,12 +107,12 @@ contract OneInchPoolIntegration is PoolIntegration {
     /* ============ Internal Functions ============ */
 
     function _isPool(bytes memory _pool) internal view override returns (bool) {
-        address poolAddress = _decodeOpDataAddressAssembly(_pool, 32 + 12);
+        address poolAddress = BytesLib.decodeOpDataAddressAssembly(_pool, 32 + 12);
         return IMooniswapFactory(mooniswapFactory).isPool(IMooniswap(poolAddress));
     }
 
     function _getSpender(bytes calldata _pool) internal view override returns (address) {
-        address poolAddress = _decodeOpDataAddress(_pool);
+        address poolAddress = BytesLib.decodeOpDataAddress(_pool);
         return poolAddress;
     }
 
@@ -145,7 +145,7 @@ contract OneInchPoolIntegration is PoolIntegration {
             bytes memory
         )
     {
-        address poolAddress = _decodeOpDataAddress(_pool);
+        address poolAddress = BytesLib.decodeOpDataAddress(_pool);
         // Encode method data for Garden to invoke
         require(_tokensIn.length == 2, 'Two tokens required');
         require(_maxAmountsIn.length == 2, 'Two amounts required');
@@ -198,7 +198,7 @@ contract OneInchPoolIntegration is PoolIntegration {
             bytes memory
         )
     {
-        address poolAddress = _decodeOpDataAddressAssembly(_pool, 32 + 12);
+        address poolAddress = BytesLib.decodeOpDataAddressAssembly(_pool, 32 + 12);
         require(_tokensOut.length == 2, 'Two tokens required');
         require(_minAmountsOut.length == 2, 'Two amounts required');
         // Encode method data for Garden to invoke

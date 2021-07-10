@@ -91,7 +91,7 @@ contract LendOperation is Operation {
             uint8
         )
     {
-        address assetToken = _decodeOpDataAddress(_data); // We just use the first 20 bytes from the whole opEncodedData
+        address assetToken = BytesLib.decodeOpDataAddress(_data); // We just use the first 20 bytes from the whole opEncodedData
         if (assetToken != _asset) {
             // Trade to WETH if is 0x0 (eth in compound)
             if (assetToken != address(0) || _asset != WETH) {
@@ -134,7 +134,7 @@ contract LendOperation is Operation {
             uint8
         )
     {
-        address assetToken = _decodeOpDataAddressAssembly(_data, 32 + 12);
+        address assetToken = BytesLib.decodeOpDataAddressAssembly(_data, 32 + 12);
         require(_percentage <= HUNDRED_PERCENT, 'Unwind Percentage <= 100%');
         _redeemTokens(_borrowToken, _remaining, _percentage, msg.sender, _integration, assetToken);
         _tokenToTrade(assetToken, msg.sender, _garden, _integration);
@@ -158,7 +158,7 @@ contract LendOperation is Operation {
         IGarden _garden,
         address _integration
     ) external view override returns (uint256, bool) {
-        address lendToken = _decodeOpDataAddress(_data); // 64 bytes (w/o signature prefix bytes4)
+        address lendToken = BytesLib.decodeOpDataAddress(_data); // 64 bytes (w/o signature prefix bytes4)
         if (!IStrategy(msg.sender).isStrategyActive()) {
             return (0, true);
         }

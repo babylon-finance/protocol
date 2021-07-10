@@ -103,7 +103,11 @@ contract AddLiquidityOperation is Operation {
             poolTokens,
             maxAmountsIn
         );
-        return (_decodeOpDataAddress(_data), IERC20(_decodeOpDataAddress(_data)).balanceOf(msg.sender), 0); // liquid
+        return (
+            BytesLib.decodeOpDataAddress(_data),
+            IERC20(BytesLib.decodeOpDataAddress(_data)).balanceOf(msg.sender),
+            0
+        ); // liquid
     }
 
     /**
@@ -129,7 +133,7 @@ contract AddLiquidityOperation is Operation {
         )
     {
         require(_percentage <= 100e18, 'Unwind Percentage <= 100%');
-        address pool = _decodeOpDataAddress(_data);
+        address pool = BytesLib.decodeOpDataAddress(_data);
         address[] memory poolTokens = IPoolIntegration(_integration).getPoolTokens(_data);
         uint256 lpTokens = IERC20(pool).balanceOf(msg.sender).preciseMul(_percentage); // Sell all pool tokens
         uint256[] memory _minAmountsOut = IPoolIntegration(_integration).getPoolMinAmountsOut(_data, lpTokens);
@@ -173,7 +177,7 @@ contract AddLiquidityOperation is Operation {
         IGarden _garden,
         address _integration
     ) external view override returns (uint256, bool) {
-        address pool = _decodeOpDataAddress(_data); // 64 bytes (w/o signature prefix bytes4)
+        address pool = BytesLib.decodeOpDataAddress(_data); // 64 bytes (w/o signature prefix bytes4)
         if (!IStrategy(msg.sender).isStrategyActive()) {
             return (0, true);
         }

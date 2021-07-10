@@ -96,7 +96,7 @@ abstract contract PoolIntegration is BaseIntegration, ReentrancyGuard, IPoolInte
     ) external override nonReentrant onlySystemContract {
         PoolInfo memory poolInfo = _createPoolInfo(_strategy, _pool, _poolTokensOut, _tokensIn, _maxAmountsIn);
         _validatePreJoinPoolData(poolInfo);
-        address poolAddress = _decodeOpDataAddress(_pool);
+        address poolAddress = BytesLib.decodeOpDataAddress(_pool);
         // Approve spending of the tokens
         for (uint256 i = 0; i < _tokensIn.length; i++) {
             // No need to approve ETH
@@ -130,7 +130,7 @@ abstract contract PoolIntegration is BaseIntegration, ReentrancyGuard, IPoolInte
         address[] calldata _tokensOut,
         uint256[] calldata _minAmountsOut
     ) external override nonReentrant onlySystemContract {
-        address poolAddress = _decodeOpDataAddress(_pool);
+        address poolAddress = BytesLib.decodeOpDataAddress(_pool);
         PoolInfo memory poolInfo = _createPoolInfo(_strategy, _pool, _poolTokensIn, _tokensOut, _minAmountsOut);
         _validatePreExitPoolData(poolInfo);
         // Approve spending of the pool token
@@ -155,11 +155,11 @@ abstract contract PoolIntegration is BaseIntegration, ReentrancyGuard, IPoolInte
     }
 
     function getPoolTokens(
-        bytes calldata  /* _pool */
+        bytes calldata /* _pool */
     ) external view virtual override returns (address[] memory);
 
     function getPoolWeights(
-        bytes calldata  /*_pool */
+        bytes calldata /*_pool */
     ) external view virtual override returns (uint256[] memory);
 
     /* ============ Internal Functions ============ */
@@ -182,7 +182,7 @@ abstract contract PoolIntegration is BaseIntegration, ReentrancyGuard, IPoolInte
         address[] calldata, /* _poolTokens */
         uint256[] calldata _limitPoolTokenQuantities
     ) internal view returns (PoolInfo memory) {
-        address poolAddress = _decodeOpDataAddress(_pool);
+        address poolAddress = BytesLib.decodeOpDataAddress(_pool);
         PoolInfo memory poolInfo;
         poolInfo.strategy = IStrategy(_strategy);
         poolInfo.garden = IGarden(poolInfo.strategy.garden());
@@ -225,7 +225,7 @@ abstract contract PoolIntegration is BaseIntegration, ReentrancyGuard, IPoolInte
      * @param _poolInfo               Struct containing pool information used in internal functions
      */
     function _validatePostJoinPoolData(PoolInfo memory _poolInfo) internal view {
-        address poolAddress = _decodeOpDataAddressAssembly(_poolInfo.pool, 32 + 12);      
+        address poolAddress = BytesLib.decodeOpDataAddressAssembly(_poolInfo.pool, 32 + 12);
         require(
             (IERC20(poolAddress).balanceOf(address(_poolInfo.strategy)) > _poolInfo.poolTokensInStrategy),
             'The strategy did not receive the pool tokens'
@@ -238,7 +238,7 @@ abstract contract PoolIntegration is BaseIntegration, ReentrancyGuard, IPoolInte
      * @param _poolInfo               Struct containing pool information used in internal functions
      */
     function _validatePostExitPoolData(PoolInfo memory _poolInfo) internal view {
-        address poolAddress = _decodeOpDataAddressAssembly(_poolInfo.pool, 32 + 12);
+        address poolAddress = BytesLib.decodeOpDataAddressAssembly(_poolInfo.pool, 32 + 12);
         require(
             IERC20(poolAddress).balanceOf(address(_poolInfo.strategy)) ==
                 _poolInfo.poolTokensInStrategy - _poolInfo.poolTokensInTransaction,
@@ -305,20 +305,9 @@ abstract contract PoolIntegration is BaseIntegration, ReentrancyGuard, IPoolInte
             bytes memory
         );
 
-    function _isPool(
-        bytes memory _pool
-    ) internal view virtual returns (bool);
+    function _isPool(bytes memory _pool) internal view virtual returns (bool);
 
     function _getSpender(
-        bytes calldata  /* _pool */
+        bytes calldata /* _pool */
     ) internal view virtual returns (address);
-
-    function _decodeOpDataAddress(bytes calldata _data) internal view returns(address) { 
-        return abi.decode(_data[32:],(address));
-    }
-
-    function _decodeOpDataAddressAssembly(bytes memory _data, uint256 _startingByte) internal view returns(address) {
-        return BytesLib.toAddress(_data, _startingByte);        
-
-    }
 }

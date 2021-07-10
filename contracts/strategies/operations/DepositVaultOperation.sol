@@ -27,6 +27,7 @@ import {IPassiveIntegration} from '../../interfaces/IPassiveIntegration.sol';
 import {PreciseUnitMath} from '../../lib/PreciseUnitMath.sol';
 import {LowGasSafeMath as SafeMath} from '../../lib/LowGasSafeMath.sol';
 import {SafeDecimalMath} from '../../lib/SafeDecimalMath.sol';
+import {BytesLib} from '../../lib/BytesLib.sol';
 
 import {Operation} from './Operation.sol';
 
@@ -39,6 +40,7 @@ import {Operation} from './Operation.sol';
 contract DepositVaultOperation is Operation {
     using SafeMath for uint256;
     using PreciseUnitMath for uint256;
+    using BytesLib for bytes;
 
     /* ============ Constructor ============ */
 
@@ -88,7 +90,7 @@ contract DepositVaultOperation is Operation {
             uint8
         )
     {
-        address yieldVault = _decodeOpDataAddress(_data);
+        address yieldVault = BytesLib.decodeOpDataAddress(_data);
         address vaultAsset = IPassiveIntegration(_integration).getInvestmentAsset(yieldVault);
         if (vaultAsset != _asset) {
             IStrategy(msg.sender).trade(_asset, _capital, vaultAsset);
@@ -135,7 +137,7 @@ contract DepositVaultOperation is Operation {
             uint8
         )
     {
-        address yieldVault = _decodeOpDataAddress(_data);
+        address yieldVault = BytesLib.decodeOpDataAddress(_data);
         require(_percentage <= HUNDRED_PERCENT, 'Unwind Percentage <= 100%');
         address vaultAsset = IPassiveIntegration(_integration).getInvestmentAsset(yieldVault);
         uint256 amountVault = IERC20(yieldVault).balanceOf(msg.sender).preciseMul(_percentage);
@@ -163,7 +165,7 @@ contract DepositVaultOperation is Operation {
         IGarden _garden,
         address _integration
     ) external view override returns (uint256, bool) {
-        address vault = _decodeOpDataAddress(_data); // 64 bytes (w/o signature prefix bytes4)
+        address vault = BytesLib.decodeOpDataAddress(_data); // 64 bytes (w/o signature prefix bytes4)
         if (!IStrategy(msg.sender).isStrategyActive()) {
             return (0, true);
         }

@@ -24,6 +24,7 @@ import {IGarden} from '../../interfaces/IGarden.sol';
 import {IStrategy} from '../../interfaces/IStrategy.sol';
 import {PreciseUnitMath} from '../../lib/PreciseUnitMath.sol';
 import {SafeDecimalMath} from '../../lib/SafeDecimalMath.sol';
+import {BytesLib} from '../../lib/BytesLib.sol';
 import {ITradeIntegration} from '../../interfaces/ITradeIntegration.sol';
 
 /**
@@ -35,6 +36,7 @@ import {ITradeIntegration} from '../../interfaces/ITradeIntegration.sol';
 contract BuyOperation is Operation {
     using PreciseUnitMath for uint256;
     using SafeDecimalMath for uint256;
+    using BytesLib for bytes;
 
     /* ============ Constructor ============ */
 
@@ -57,7 +59,7 @@ contract BuyOperation is Operation {
         address, /* _integration */
         uint256 /* _index */
     ) external view override onlyStrategy {
-        address asset = _decodeOpDataAddress(_data);
+        address asset = BytesLib.decodeOpDataAddress(_data);
         require(asset != _garden.reserveAsset(), 'Receive token must be different');
     }
 
@@ -87,7 +89,7 @@ contract BuyOperation is Operation {
             uint8
         )
     {
-        address token = _decodeOpDataAddress(_data);
+        address token = BytesLib.decodeOpDataAddress(_data);
         IStrategy(msg.sender).trade(_asset, _capital, token);
         return (token, IERC20(token).balanceOf(address(msg.sender)), 0); // liquid
     }
@@ -114,7 +116,7 @@ contract BuyOperation is Operation {
             uint8
         )
     {
-        address token = _decodeOpDataAddress(_data);
+        address token = BytesLib.decodeOpDataAddress(_data);
         require(_percentage <= 100e18, 'Unwind Percentage <= 100%');
         IStrategy(msg.sender).trade(
             token,
@@ -136,7 +138,7 @@ contract BuyOperation is Operation {
         IGarden _garden,
         address /* _integration */
     ) external view override returns (uint256, bool) {
-        address token = _decodeOpDataAddress(_data); // 64 bytes (w/o signature prefix bytes4)
+        address token = BytesLib.decodeOpDataAddress(_data); // 64 bytes (w/o signature prefix bytes4)
         if (!IStrategy(msg.sender).isStrategyActive()) {
             return (0, true);
         }

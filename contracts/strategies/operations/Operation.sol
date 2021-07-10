@@ -140,12 +140,4 @@ abstract contract Operation is IOperation {
         IPriceOracle oracle = IPriceOracle(IBabController(controller).priceOracle());
         return oracle.getPrice(_assetOne == address(0) ? WETH : _assetOne, _assetTwo == address(0) ? WETH : _assetTwo);
     }
-
-    function _decodeOpDataAddressAssembly(bytes memory _data, uint256 _startingByte) internal view returns (address) {
-        return BytesLib.toAddress(_data, _startingByte);
-    }
-    
-    function _decodeOpDataAddress(bytes calldata _data) internal view returns(address) { 
-        return abi.decode(_data[32:],(address));
-    }
 }
