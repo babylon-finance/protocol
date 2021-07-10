@@ -60,8 +60,16 @@ describe('UniswapPoolIntegrationTest', function () {
   }
 
   beforeEach(async () => {
-    ({ babController, garden1, uniswapPoolIntegration, owner, signer1, signer2, signer3, priceOracle } =
-      await setupTests()());
+    ({
+      babController,
+      garden1,
+      uniswapPoolIntegration,
+      owner,
+      signer1,
+      signer2,
+      signer3,
+      priceOracle,
+    } = await setupTests()());
 
     WETH = await ethers.getContractAt('IERC20', addresses.tokens.WETH);
     DAI = await ethers.getContractAt('IERC20', addresses.tokens.DAI);

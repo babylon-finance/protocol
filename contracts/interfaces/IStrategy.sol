@@ -52,13 +52,7 @@ interface IStrategy {
 
     function getNAV() external view returns (uint256);
 
-    function opDatas(uint256 _index) external view returns (address);
-
     function opEncodedData() external view returns (bytes memory);
-
-    function opIntegrations(uint256 _index) external view returns (address);
-
-    function opTypes(uint256 _index) external view returns (uint8);
 
     function getOperationsCount() external view returns (uint256);
 
@@ -158,17 +152,11 @@ interface IStrategy {
 
     function totalPositiveVotes() external view returns (uint256);
 
-    function totalVotes() external view returns (int256);
-
     function totalNegativeVotes() external view returns (uint256);
 
     function capitalReturned() external view returns (uint256);
 
     function capitalAllocated() external view returns (uint256);
-
-    function finalized() external view returns (bool);
-
-    function active() external view returns (bool);
 
     function garden() external view returns (IGarden);
 }
