@@ -74,8 +74,16 @@ describe('OneInchPoolIntegrationTest', function () {
   }
 
   beforeEach(async () => {
-    ({ babController, garden1, oneInchPoolIntegration, priceOracle, signer1, signer2, signer3, owner } =
-      await setupTests()());
+    ({
+      babController,
+      garden1,
+      oneInchPoolIntegration,
+      priceOracle,
+      signer1,
+      signer2,
+      signer3,
+      owner,
+    } = await setupTests()());
   });
 
   describe('Deployment', function () {
