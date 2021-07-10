@@ -17,6 +17,7 @@
 */
 
 pragma solidity 0.7.6;
+import 'hardhat/console.sol';
 import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import {IBabController} from '../../interfaces/IBabController.sol';
 import {ICurvePoolV3} from '../../interfaces/external/curve/ICurvePoolV3.sol';
@@ -53,8 +54,8 @@ contract CurvePoolIntegration is PoolIntegration {
         address poolAddress = _decodeOpDataAddress(_pool);
         address[] memory result = new address[](_getNCoins());
         for (uint8 i = 0; i < _getNCoins(); i++) {
-          console.log('poolAddress', poolAddress, i, ICurvePoolV3(poolAddress).coins(i));
-          result[i] = ICurvePoolV3(poolAddress).coins(i);
+            console.log('poolAddress', poolAddress, i, ICurvePoolV3(poolAddress).coins(i));
+            result[i] = ICurvePoolV3(poolAddress).coins(i);
         }
         return result;
     }
@@ -277,13 +278,11 @@ contract CurvePoolIntegration is PoolIntegration {
         }
     }
 
-    function _getLpToken(
-      bytes memory _pool
-    ) internal view override returns (address) {
-      return ICurvePoolV3(poolAddress).lp_token();
+    function _getLpToken(bytes memory _pool) internal view override returns (address) {
+        return ICurvePoolV3(poolAddress).lp_token();
     }
 
-    function _getNCoins() private view returns(uint256) {
-      return 3;
+    function _getNCoins() private view returns (uint256) {
+        return 3;
     }
 }
