@@ -64,7 +64,7 @@ describe('HarvestVaultIntegrationTest', function () {
             state: 'vote',
             integrations: harvestVaultIntegration.address,
             garden,
-            specificParams: [0, vault],
+            specificParams: [vault, 0],
           });
 
           expect(await vaultContract.balanceOf(strategyContract.address)).to.equal(0);

@@ -23,15 +23,8 @@ describe('AaveLendIntegrationTest', function () {
   let WETH;
 
   beforeEach(async () => {
-    ({
-      garden1,
-      babController,
-      aaveBorrowIntegration,
-      aaveLendIntegration,
-      signer1,
-      signer2,
-      signer3,
-    } = await setupTests()());
+    ({ garden1, babController, aaveBorrowIntegration, aaveLendIntegration, signer1, signer2, signer3 } =
+      await setupTests()());
     USDC = await ethers.getContractAt('IERC20', addresses.tokens.USDC);
     WETH = await ethers.getContractAt('IERC20', addresses.tokens.WETH);
   });
@@ -81,7 +74,7 @@ describe('AaveLendIntegrationTest', function () {
         aaveLendIntegration.address,
         garden1,
         DEFAULT_STRATEGY_PARAMS,
-        [0, WETH.address],
+        [WETH.address, 0],
       );
 
       await executeStrategy(strategyContract);
@@ -101,7 +94,7 @@ describe('AaveLendIntegrationTest', function () {
         aaveLendIntegration.address,
         garden1,
         DEFAULT_STRATEGY_PARAMS,
-        [0, WETH.address],
+        [WETH.address, 0],
       );
       await executeStrategy(strategyContract);
       expect(await WETH.balanceOf(strategyContract.address)).to.be.equal(0);

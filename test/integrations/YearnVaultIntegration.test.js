@@ -25,16 +25,8 @@ describe('YearnVaultIntegrationTest', function () {
   let owner;
 
   beforeEach(async () => {
-    ({
-      garden1,
-      priceOracle,
-      babController,
-      yearnVaultIntegration,
-      owner,
-      signer1,
-      signer2,
-      signer3,
-    } = await setupTests()());
+    ({ garden1, priceOracle, babController, yearnVaultIntegration, owner, signer1, signer2, signer3 } =
+      await setupTests()());
   });
 
   describe('Deployment', function () {
@@ -99,7 +91,7 @@ describe('YearnVaultIntegrationTest', function () {
               state: 'vote',
               integrations: yearnVaultIntegration.address,
               garden,
-              specificParams: [0, vault],
+              specificParams: [vault, 0],
             });
 
             expect(await vaultContract.balanceOf(strategyContract.address)).to.equal(0);

@@ -103,7 +103,7 @@ contract BalancerIntegration is PoolIntegration {
     /* ============ Internal Functions ============ */
 
     function _isPool(bytes memory _pool) internal view override returns (bool) {
-        address poolAddress = BytesLib.decodeOpDataAddressAssembly(_pool, 32 + 12);
+        address poolAddress = BytesLib.decodeOpDataAddressAssembly(_pool, 12);
         return coreFactory.isBPool(poolAddress);
     }
 
@@ -177,7 +177,7 @@ contract BalancerIntegration is PoolIntegration {
             bytes memory
         )
     {
-        address poolAddress = BytesLib.decodeOpDataAddressAssembly(_pool, 32 + 12);
+        address poolAddress = BytesLib.decodeOpDataAddressAssembly(_pool, 12);
         require(_poolTokensIn > 0, '_poolTokensIn has to not 0');
         require(_minAmountsOut.length > 1, 'Has to provide _minAmountsOut');
         // Encode method data for Garden to invoke

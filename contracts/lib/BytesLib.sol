@@ -502,6 +502,7 @@ library BytesLib {
     }
 
     function decodeOpDataAddress(bytes calldata _data) internal view returns(address) { 
-        return abi.decode(_data[32:],(address));
+        // Expects no prefix (e.g. signature of bytes4 should be removed before using it)
+        return abi.decode(_data,(address));
     }
 }

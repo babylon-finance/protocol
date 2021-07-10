@@ -97,7 +97,7 @@ contract BorrowOperation is Operation {
             uint8
         )
     {
-        address borrowToken = BytesLib.decodeOpDataAddressAssembly(_data, 32 + 12);
+        address borrowToken = BytesLib.decodeOpDataAddressAssembly(_data, 12);
         uint256 normalizedAmount = _getBorrowAmount(_asset, borrowToken, _capital, _integration);
         require(_capital > 0 && _assetStatus == 1 && _asset != borrowToken, 'There is no collateral locked');
         _onlyPositiveCollateral(msg.sender, _asset, _integration);

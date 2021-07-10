@@ -698,7 +698,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         }
         uint256 lastOp = opTypes.length - 1;
         if (opTypes[lastOp] == 4) {
-            address token = BytesLib.decodeOpDataAddressAssembly(opEncodedData, 4 + (64 * lastOp) + 32 + 12); // pointer to the starting byte of the ethereum token address
+            address token = BytesLib.decodeOpDataAddressAssembly(opEncodedData, 4 + (64 * lastOp) + 12); // pointer to the starting byte of the ethereum token address
             uint256 borrowBalance = IERC20(token).universalBalanceOf(address(this));
             if (borrowBalance > 0) {
                 uint256 price = _getPrice(reserveAsset, token);

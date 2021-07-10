@@ -38,7 +38,7 @@ describe('CompoundBorrowIntegrationTest', function () {
       [compoundLendIntegration.address, compoundBorrowIntegration.address],
       garden,
       false,
-      [0, asset1Address, 0, asset2Address],
+      [asset1Address, 0, asset2Address, 0],
     );
     let amount = STRATEGY_EXECUTE_MAP[token];
     await executeStrategy(strategyContract, { amount });
@@ -73,7 +73,7 @@ describe('CompoundBorrowIntegrationTest', function () {
       [compoundLendIntegration.address, compoundBorrowIntegration.address],
       garden,
       false,
-      [0, asset1Address, 0, asset2Address],
+      [asset1Address, 0, asset2Address, 0],
     );
     await expect(executeStrategy(strategyContract, { amount: STRATEGY_EXECUTE_MAP[token] })).to.be.revertedWith(
       errorcode,
@@ -103,7 +103,7 @@ describe('CompoundBorrowIntegrationTest', function () {
         [compoundLendIntegration.address, compoundBorrowIntegration.address],
         garden1,
         DEFAULT_STRATEGY_PARAMS,
-        [0, DAI.address, 0, USDC.address],
+        [DAI.address, 0, USDC.address, 0],
       );
 
       await executeStrategy(strategyContract);
@@ -130,7 +130,7 @@ describe('CompoundBorrowIntegrationTest', function () {
         [compoundLendIntegration.address, compoundBorrowIntegration.address],
         garden1,
         DEFAULT_STRATEGY_PARAMS,
-        [0, USDC.address, 0, DAI.address],
+        [USDC.address, 0, DAI.address, 0],
       );
 
       await executeStrategy(strategyContract);
@@ -154,7 +154,7 @@ describe('CompoundBorrowIntegrationTest', function () {
         [compoundLendIntegration.address, compoundBorrowIntegration.address],
         garden1,
         DEFAULT_STRATEGY_PARAMS,
-        [0, ADDRESS_ZERO, 0, DAI.address], // eth, dai
+        [ADDRESS_ZERO, 0, DAI.address, 0], // eth, dai
       );
 
       await executeStrategy(strategyContract);
@@ -180,7 +180,7 @@ describe('CompoundBorrowIntegrationTest', function () {
         [compoundLendIntegration.address, compoundBorrowIntegration.address],
         garden1,
         DEFAULT_STRATEGY_PARAMS,
-        [0, DAI.address, 0, ADDRESS_ZERO],
+        [DAI.address, 0, ADDRESS_ZERO, 0],
       );
 
       await executeStrategy(strategyContract);

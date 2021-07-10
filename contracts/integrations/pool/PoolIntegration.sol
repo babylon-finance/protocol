@@ -225,7 +225,7 @@ abstract contract PoolIntegration is BaseIntegration, ReentrancyGuard, IPoolInte
      * @param _poolInfo               Struct containing pool information used in internal functions
      */
     function _validatePostJoinPoolData(PoolInfo memory _poolInfo) internal view {
-        address poolAddress = BytesLib.decodeOpDataAddressAssembly(_poolInfo.pool, 32 + 12);
+        address poolAddress = BytesLib.decodeOpDataAddressAssembly(_poolInfo.pool, 12);
         require(
             (IERC20(poolAddress).balanceOf(address(_poolInfo.strategy)) > _poolInfo.poolTokensInStrategy),
             'The strategy did not receive the pool tokens'
@@ -238,7 +238,7 @@ abstract contract PoolIntegration is BaseIntegration, ReentrancyGuard, IPoolInte
      * @param _poolInfo               Struct containing pool information used in internal functions
      */
     function _validatePostExitPoolData(PoolInfo memory _poolInfo) internal view {
-        address poolAddress = BytesLib.decodeOpDataAddressAssembly(_poolInfo.pool, 32 + 12);
+        address poolAddress = BytesLib.decodeOpDataAddressAssembly(_poolInfo.pool, 12);
         require(
             IERC20(poolAddress).balanceOf(address(_poolInfo.strategy)) ==
                 _poolInfo.poolTokensInStrategy - _poolInfo.poolTokensInTransaction,

@@ -60,16 +60,8 @@ describe('UniswapPoolIntegrationTest', function () {
   }
 
   beforeEach(async () => {
-    ({
-      babController,
-      garden1,
-      uniswapPoolIntegration,
-      owner,
-      signer1,
-      signer2,
-      signer3,
-      priceOracle,
-    } = await setupTests()());
+    ({ babController, garden1, uniswapPoolIntegration, owner, signer1, signer2, signer3, priceOracle } =
+      await setupTests()());
 
     WETH = await ethers.getContractAt('IERC20', addresses.tokens.WETH);
     DAI = await ethers.getContractAt('IERC20', addresses.tokens.DAI);
@@ -92,14 +84,14 @@ describe('UniswapPoolIntegrationTest', function () {
     });
 
     it('check that a valid pool is valid', async function () {
-      var abiCoder = ethers.utils.defaultAbiCoder;
-      var data = abiCoder.encode(['uint256', 'address'], [0, addresses.uniswap.pairs.wethdai]);
+      const abiCoder = ethers.utils.defaultAbiCoder;
+      const data = abiCoder.encode(['address', 'uint256'], [addresses.uniswap.pairs.wethdai, 0]);
 
       expect(await uniswapPoolIntegration.isPool(data)).to.equal(true);
     });
 
     it('check that an invalid pool is not valid', async function () {
-      await expect(uniswapPoolIntegration.isPool([0, ADDRESS_ZERO])).to.be.reverted;
+      await expect(uniswapPoolIntegration.isPool([ADDRESS_ZERO, 0])).to.be.reverted;
     });
 
     it('can enter and exit the weth dai pool', async function () {
@@ -110,7 +102,7 @@ describe('UniswapPoolIntegrationTest', function () {
         uniswapPoolIntegration.address,
         garden1,
         DEFAULT_STRATEGY_PARAMS,
-        [0, daiWethPair.address],
+        [daiWethPair.address, 0],
       );
       await executeStrategy(strategyContract);
       expect(await daiWethPair.balanceOf(strategyContract.address)).to.be.gt(0);
@@ -171,7 +163,7 @@ describe('UniswapPoolIntegrationTest', function () {
             state: 'vote',
             integrations: uniswapPoolIntegration.address,
             garden,
-            specificParams: [0, poolAddress.address],
+            specificParams: [poolAddress.address, 0],
           });
           let amount = STRATEGY_EXECUTE_MAP[token];
 

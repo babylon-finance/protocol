@@ -74,16 +74,8 @@ describe('OneInchPoolIntegrationTest', function () {
   }
 
   beforeEach(async () => {
-    ({
-      babController,
-      garden1,
-      oneInchPoolIntegration,
-      priceOracle,
-      signer1,
-      signer2,
-      signer3,
-      owner,
-    } = await setupTests()());
+    ({ babController, garden1, oneInchPoolIntegration, priceOracle, signer1, signer2, signer3, owner } =
+      await setupTests()());
   });
 
   describe('Deployment', function () {
@@ -108,14 +100,14 @@ describe('OneInchPoolIntegrationTest', function () {
     });
 
     it('check that a valid pool is valid', async function () {
-      var abiCoder = ethers.utils.defaultAbiCoder;
-      var data = abiCoder.encode(['uint256', 'address'], [0, addresses.oneinch.pools.wethdai]);
+      const abiCoder = ethers.utils.defaultAbiCoder;
+      const data = abiCoder.encode(['address', 'uint256'], [addresses.oneinch.pools.wethdai, 0]);
       expect(await oneInchPoolIntegration.isPool(data)).to.equal(true);
     });
 
     it('check that an invalid pool is not valid', async function () {
-      var abiCoder = ethers.utils.defaultAbiCoder;
-      var data = abiCoder.encode(['uint256', 'address'], [0, ADDRESS_ZERO]);
+      const abiCoder = ethers.utils.defaultAbiCoder;
+      const data = abiCoder.encode(['address', 'uint256'], [ADDRESS_ZERO, 0]);
       expect(await oneInchPoolIntegration.isPool(data)).to.equal(false);
     });
 
@@ -149,7 +141,7 @@ describe('OneInchPoolIntegrationTest', function () {
         oneInchPoolIntegration.address,
         garden1,
         DEFAULT_STRATEGY_PARAMS,
-        [0, daiWethPair.address],
+        [daiWethPair.address, 0],
       );
       await executeStrategy(strategyContract);
       expect(await daiWethPair.balanceOf(strategyContract.address)).to.be.gt(0);
@@ -203,7 +195,7 @@ describe('OneInchPoolIntegrationTest', function () {
             state: 'vote',
             integrations: oneInchPoolIntegration.address,
             garden,
-            specificParams: [0, poolAddress.address],
+            specificParams: [poolAddress.address, 0],
           });
           let amount = STRATEGY_EXECUTE_MAP[token];
 

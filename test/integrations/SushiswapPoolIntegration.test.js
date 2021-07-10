@@ -62,16 +62,8 @@ describe('SushiswapPoolIntegrationTest', function () {
   }
 
   beforeEach(async () => {
-    ({
-      babController,
-      garden1,
-      sushiswapPoolIntegration,
-      owner,
-      signer1,
-      signer2,
-      signer3,
-      priceOracle,
-    } = await setupTests()());
+    ({ babController, garden1, sushiswapPoolIntegration, owner, signer1, signer2, signer3, priceOracle } =
+      await setupTests()());
   });
 
   describe('Deployment', function () {
@@ -96,14 +88,14 @@ describe('SushiswapPoolIntegrationTest', function () {
     });
 
     it('check that a valid pool is valid', async function () {
-      var abiCoder = ethers.utils.defaultAbiCoder;
-      var data = abiCoder.encode(['uint256', 'address'], [0, addresses.sushiswap.pairs.wethdai]);
+      const abiCoder = ethers.utils.defaultAbiCoder;
+      const data = abiCoder.encode(['address', 'uint256'], [addresses.sushiswap.pairs.wethdai, 0]);
       expect(await sushiswapPoolIntegration.isPool(data)).to.equal(true);
     });
 
     it('check that an invalid pool is not valid', async function () {
-      var abiCoder = ethers.utils.defaultAbiCoder;
-      var data = abiCoder.encode(['uint256', 'address'], [0, ADDRESS_ZERO]);
+      const abiCoder = ethers.utils.defaultAbiCoder;
+      const data = abiCoder.encode(['address', 'uint256'], [ADDRESS_ZERO, 0]);
       await expect(sushiswapPoolIntegration.isPool(data)).to.be.reverted;
     });
 
@@ -115,7 +107,7 @@ describe('SushiswapPoolIntegrationTest', function () {
         sushiswapPoolIntegration.address,
         garden1,
         DEFAULT_STRATEGY_PARAMS,
-        [0, daiWethPair.address],
+        [daiWethPair.address, 0],
       );
       await executeStrategy(strategyContract);
       expect(await daiWethPair.balanceOf(strategyContract.address)).to.be.gt(0);
@@ -161,8 +153,8 @@ describe('SushiswapPoolIntegrationTest', function () {
         it(`can enter and exit the ${symbol} at Sushiswap pool from a ${name} Garden`, async function () {
           const poolAddress = await ethers.getContractAt('IUniswapV2PairB', pool);
 
-          var abiCoder = ethers.utils.defaultAbiCoder;
-          var data = abiCoder.encode(['uint256', 'address'], [0, poolAddress.address]);
+          const abiCoder = ethers.utils.defaultAbiCoder;
+          const data = abiCoder.encode(['address', 'uint256'], [poolAddress.address, 0]);
           // isPool expects 64bytes (w/o signature) where the pool address is in the 2nd word
           expect(await sushiswapPoolIntegration.isPool(data)).to.equal(true);
 
@@ -176,7 +168,7 @@ describe('SushiswapPoolIntegrationTest', function () {
             state: 'vote',
             integrations: sushiswapPoolIntegration.address,
             garden,
-            specificParams: [0, poolAddress.address],
+            specificParams: [poolAddress.address, 0],
           });
           let amount = STRATEGY_EXECUTE_MAP[token];
 

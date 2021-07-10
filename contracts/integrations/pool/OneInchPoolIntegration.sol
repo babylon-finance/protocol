@@ -107,7 +107,7 @@ contract OneInchPoolIntegration is PoolIntegration {
     /* ============ Internal Functions ============ */
 
     function _isPool(bytes memory _pool) internal view override returns (bool) {
-        address poolAddress = BytesLib.decodeOpDataAddressAssembly(_pool, 32 + 12);
+        address poolAddress = BytesLib.decodeOpDataAddressAssembly(_pool, 12);
         return IMooniswapFactory(mooniswapFactory).isPool(IMooniswap(poolAddress));
     }
 
@@ -198,7 +198,7 @@ contract OneInchPoolIntegration is PoolIntegration {
             bytes memory
         )
     {
-        address poolAddress = BytesLib.decodeOpDataAddressAssembly(_pool, 32 + 12);
+        address poolAddress = BytesLib.decodeOpDataAddressAssembly(_pool, 12);
         require(_tokensOut.length == 2, 'Two tokens required');
         require(_minAmountsOut.length == 2, 'Two amounts required');
         // Encode method data for Garden to invoke

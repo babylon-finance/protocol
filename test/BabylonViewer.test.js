@@ -79,7 +79,7 @@ describe('Babylon Viewer', function () {
       expect(strategyOperations[2].length).to.equal(1);
       expect(strategyOperations[0][0]).to.equal(0);
       expect(strategyOperations[1][0]).to.equal(uniswapV3TradeIntegration.address);
-      const decodedData = strategyOperations[2][0].slice(64 + 26, 128); // 64 bytes returned
+      const decodedData = strategyOperations[2][0].slice(26, 64); // 64 bytes returned take the little endian ethereum address last 20 bytes of the 1st word ( 32 bytes)
       expect(decodedData.toLowerCase()).to.equal(addresses.tokens.DAI.slice(2, 40).toLowerCase()); // to match we need toLowerCase and remove 0x
     });
 
