@@ -235,6 +235,9 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
     // Strategy opDatas encoded
     bytes public override opEncodedData; // we use and reserve 64bytes for each operation as consecutives bytes64 word
 
+    // Rewards Distributor address
+    IRewardsDistributor private rewardsDistributor;
+
     /* ============ Constructor ============ */
 
     /**
@@ -277,7 +280,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         enteredAt = block.timestamp;
         stake = _stake;
 
-        IRewardsDistributor rewardsDistributor = IRewardsDistributor(IBabController(controller).rewardsDistributor());
+        rewardsDistributor = IRewardsDistributor(IBabController(controller).rewardsDistributor());
         hasMiningStarted = ((enteredAt > rewardsDistributor.START_TIME()) && (rewardsDistributor.START_TIME() != 0));
         duration = _strategyDuration;
         expectedReturn = _expectedReturn;
@@ -440,8 +443,6 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
 
         // Removes protocol principal for the calculation of rewards
         if (hasMiningStarted) {
-            IRewardsDistributor rewardsDistributor =
-                IRewardsDistributor(IBabController(controller).rewardsDistributor());
             // Only if the Mining program started on time for this strategy
             rewardsDistributor.updateProtocolPrincipal(_amountToUnwind, false);
         }
@@ -500,12 +501,12 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
      * @param _token             Address of the token to sweep
      */
     function sweep(address _token) external {
+        _onlyUnpaused();
         _require(
             IERC20(address(garden)).balanceOf(msg.sender) > 0 &&
                 IBabController(controller).isSystemContract(address(garden)),
             Errors.ONLY_CONTRIBUTOR
         );
-        _onlyUnpaused();
         _require(_token != garden.reserveAsset(), Errors.CANNOT_SWEEP_RESERVE_ASSET);
         _require(!active, Errors.STRATEGY_NEEDS_TO_BE_INACTIVE);
 
@@ -752,8 +753,6 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
             executedAt = block.timestamp;
         }
         if (hasMiningStarted) {
-            IRewardsDistributor rewardsDistributor =
-                IRewardsDistributor(IBabController(controller).rewardsDistributor());
             // The Mining program has not started on time for this strategy
             rewardsDistributor.updateProtocolPrincipal(_capital, true);
         }
@@ -865,8 +864,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
     ) private returns (uint256) {
         address tradeIntegration = IBabController(controller).defaultTradeIntegration();
         // Uses on chain oracle for all internal strategy operations to avoid attacks
-        uint256 pricePerTokenUnit =
-            IPriceOracle(IBabController(controller).priceOracle()).getPrice(_sendToken, _receiveToken);
+        uint256 pricePerTokenUnit = _getPrice(_sendToken, _receiveToken);
         // minAmount must have receive token decimals
         uint256 exactAmount =
             SafeDecimalMath.normalizeAmountTokens(
@@ -923,8 +921,6 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         );
         // Substract the Principal in the Rewards Distributor to update the Protocol power value
         if (hasMiningStarted) {
-            IRewardsDistributor rewardsDistributor =
-                IRewardsDistributor(IBabController(controller).rewardsDistributor());
             // Only if the Mining program started on time for this strategy
             rewardsDistributor.updateProtocolPrincipal(capitalAllocated, false);
             strategyRewards = uint256(rewardsDistributor.getStrategyRewards(address(this))); // Must be zero in case the mining program didnt started on time
