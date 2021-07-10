@@ -27,9 +27,9 @@ import {SafeCast} from '@openzeppelin/contracts/utils/SafeCast.sol';
 import {Errors, _require, _revert} from '../lib/BabylonErrors.sol';
 import {PreciseUnitMath} from '../lib/PreciseUnitMath.sol';
 import {SafeDecimalMath} from '../lib/SafeDecimalMath.sol';
+import {LowGasSafeMath as SafeMath} from '../lib/LowGasSafeMath.sol';
 import {Math} from '../lib/Math.sol';
 import {AddressArrayUtils} from '../lib/AddressArrayUtils.sol';
-import {LowGasSafeMath as SafeMath} from '../lib/LowGasSafeMath.sol';
 import {UniversalERC20} from '../lib/UniversalERC20.sol';
 import {BytesLib} from '../lib/BytesLib.sol';
 import {IWETH} from '../interfaces/external/weth/IWETH.sol';
@@ -722,7 +722,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         uint256 _capital,
         uint256 _fee,
         address payable _keeper
-    ) internal {
+    ) private {
         _require(active, Errors.STRATEGY_NEEDS_TO_BE_ACTIVE);
         _require(capitalAllocated.add(_capital) <= maxCapitalRequested, Errors.MAX_CAPITAL_REACHED);
         _require(
@@ -753,7 +753,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
      * Executes all the operations in order
      * @param _capital  Amount of capital that the strategy receives
      */
-    function _enterStrategy(uint256 _capital) internal {
+    function _enterStrategy(uint256 _capital) private {
         uint256 capitalForNexOperation = _capital;
         address assetAccumulated = garden.reserveAsset();
         uint8 assetStatus; // liquid
@@ -778,7 +778,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
      * Exists all the operations starting by the end.
      * @param _percentage of capital to exit from the strategy
      */
-    function _exitStrategy(uint256 _percentage) internal {
+    function _exitStrategy(uint256 _percentage) private {
         address assetFinalized = garden.reserveAsset();
         uint256 capitalPending;
         uint8 assetStatus;
@@ -802,7 +802,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
     /**
      * Deletes this strategy and returns the stake to the strategist
      */
-    function _deleteCandidateStrategy() internal {
+    function _deleteCandidateStrategy() private {
         _require(executedAt == 0, Errors.STRATEGY_IS_EXECUTED);
         _require(!finalized, Errors.STRATEGY_IS_ALREADY_FINALIZED);
 
@@ -823,7 +823,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         address _target,
         uint256 _value,
         bytes memory _data
-    ) internal returns (bytes memory _returnValue) {
+    ) private returns (bytes memory _returnValue) {
         _returnValue = _target.functionCallWithValue(_data, _value);
         emit Invoked(_target, _value, _data, _returnValue);
         return _returnValue;
@@ -848,7 +848,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         address _sendToken,
         uint256 _sendQuantity,
         address _receiveToken
-    ) internal returns (uint256) {
+    ) private returns (uint256) {
         address tradeIntegration = IBabController(controller).defaultTradeIntegration();
         // Uses on chain oracle for all internal strategy operations to avoid attacks
         uint256 pricePerTokenUnit =
@@ -871,7 +871,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         return minAmountExpected;
     }
 
-    function _transferStrategyPrincipal() internal {
+    function _transferStrategyPrincipal() private {
         address reserveAsset = garden.reserveAsset();
         int256 strategyReturns = capitalReturned.toInt256().sub(capitalAllocated.toInt256());
         uint256 protocolProfits;
@@ -917,7 +917,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         }
     }
 
-    function _getPrice(address _assetOne, address _assetTwo) internal view returns (uint256) {
+    function _getPrice(address _assetOne, address _assetTwo) private view returns (uint256) {
         return IPriceOracle(IBabController(controller).priceOracle()).getPrice(_assetOne, _assetTwo);
     }
 
