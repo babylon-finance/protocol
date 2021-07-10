@@ -134,12 +134,6 @@ interface IStrategy {
 
     function enteredCooldownAt() external view returns (uint256);
 
-    function executedAt() external view returns (uint256);
-
-    function updatedAt() external view returns (uint256);
-
-    function exitedAt() external view returns (uint256);
-
     function stake() external view returns (uint256);
 
     function strategyRewards() external view returns (uint256);

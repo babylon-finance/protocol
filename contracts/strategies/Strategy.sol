@@ -204,9 +204,9 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
 
     uint256 public override enteredAt; // Timestamp when the strategy was submitted
     uint256 public override enteredCooldownAt; // Timestamp when the strategy reached quorum
-    uint256 public override executedAt; // Timestamp when the strategy was executed
-    uint256 public override updatedAt; // Timestamp of last capital allocation update
-    uint256 public override exitedAt; // Timestamp when the strategy was submitted
+    uint256 private executedAt; // Timestamp when the strategy was executed
+    uint256 private updatedAt; // Timestamp of last capital allocation update
+    uint256 private exitedAt; // Timestamp when the strategy was submitted
 
     address[] public voters; // Addresses with the voters
     uint256 public override totalPositiveVotes; // Total positive votes endorsing the strategy execution

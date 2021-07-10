@@ -138,11 +138,10 @@ contract BabylonViewer {
         IStrategy strategy = IStrategy(_strategy);
         bool[] memory status = new bool[](3);
         uint256[] memory ts = new uint256[](4);
+        // ts[0]: executedAt, ts[1]: exitedAt, ts[2]: updatedAt
         (, status[0], status[1], status[2], ts[0], ts[1], ts[2]) = strategy.getStrategyState();
         uint256 rewards =
-            strategy.exitedAt() != 0
-                ? IRewardsDistributor(controller.rewardsDistributor()).getStrategyRewards(_strategy)
-                : 0;
+            ts[1] != 0 ? IRewardsDistributor(controller.rewardsDistributor()).getStrategyRewards(_strategy) : 0;
         ts[3] = strategy.enteredCooldownAt();
         return (
             strategy.strategist(),
