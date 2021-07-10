@@ -505,4 +505,19 @@ library BytesLib {
         // Expects no prefix (e.g. signature of bytes4 should be removed before using it)
         return abi.decode(_data,(address));
     }
+
+    function decodeOpDataAsType(bytes memory _data, uint8 _type, uint8 _offset) internal view returns(bytes memory) {
+        // Expects no prefix (e.g. signature of bytes4 should be removed before using it)
+        // type: 0 - uint8, 1: uint256, 2: bool, 3: address
+        if (_type == 0 || _type == 2) { // boolean is also 1 byte
+            // returning bytes type 
+            return slice(_data, _offset, 1); // to return uint8 type better use toUint8(_data, _offset);
+        } else if ( _type == 1) {
+            // returning bytes type 
+            return slice(_data, _offset, 32); // to return uint256 type better use toUint256(_data, _offset);
+        } else if (_type == 3) {
+            // returning bytes type 
+            return slice(_data, _offset, 20); // to return address type better use toAddress(_data, _offset); 
+        }
+    }
 }
