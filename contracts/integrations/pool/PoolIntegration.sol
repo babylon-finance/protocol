@@ -238,7 +238,7 @@ abstract contract PoolIntegration is BaseIntegration, ReentrancyGuard, IPoolInte
     function _validatePostJoinPoolData(PoolInfo memory _poolInfo) internal view {
         address poolAddress = _decodeOpDataAddressAssembly(_poolInfo.pool, 32 + 12);
         require(
-            (IERC20(poolInfo.lpToken).balanceOf(address(_poolInfo.strategy)) > _poolInfo.poolTokensInStrategy),
+            (IERC20(_poolInfo.lpToken).balanceOf(address(_poolInfo.strategy)) > _poolInfo.poolTokensInStrategy),
             'The strategy did not receive the pool tokens'
         );
     }
@@ -251,7 +251,7 @@ abstract contract PoolIntegration is BaseIntegration, ReentrancyGuard, IPoolInte
     function _validatePostExitPoolData(PoolInfo memory _poolInfo) internal view {
         address poolAddress = _decodeOpDataAddressAssembly(_poolInfo.pool, 32 + 12);
         require(
-            IERC20(poolInfo.lpToken).balanceOf(address(_poolInfo.strategy)) ==
+            IERC20(_poolInfo.lpToken).balanceOf(address(_poolInfo.strategy)) ==
                 _poolInfo.poolTokensInStrategy - _poolInfo.poolTokensInTransaction,
             'The strategy did not return the pool tokens'
         );
@@ -326,8 +326,8 @@ abstract contract PoolIntegration is BaseIntegration, ReentrancyGuard, IPoolInte
 
     function _getLpToken(
       bytes memory _pool
-    ) internal view returns (address) {
-      return _decodeOpDataAddressAssembly(_pool);
+    ) internal view virtual returns (address) {
+      return _decodeOpDataAddressAssembly(_pool, 32 + 12);
     }
 
     function _decodeOpDataAddress(bytes calldata _data) internal view returns(address) {

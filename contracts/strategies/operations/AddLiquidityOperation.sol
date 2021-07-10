@@ -91,7 +91,6 @@ contract AddLiquidityOperation is Operation {
             uint8
         )
     {
-        address lpToken = IPoolIntegration(_integration).getLPToken(pool);
         address[] memory poolTokens = IPoolIntegration(_integration).getPoolTokens(_data);
         uint256[] memory _poolWeights = IPoolIntegration(_integration).getPoolWeights(_data);
         // Get the tokens needed to enter the pool
@@ -104,7 +103,7 @@ contract AddLiquidityOperation is Operation {
             poolTokens,
             maxAmountsIn
         );
-        return (_decodeOpDataAddress(_data), IERC20(lpToken).balanceOf(msg.sender), 0); // liquid
+        return (_decodeOpDataAddress(_data), IERC20(IPoolIntegration(_integration).getLPToken(_data)).balanceOf(msg.sender), 0); // liquid
     }
 
     /**
@@ -132,8 +131,7 @@ contract AddLiquidityOperation is Operation {
         require(_percentage <= 100e18, 'Unwind Percentage <= 100%');
         address pool = _decodeOpDataAddress(_data);
         address[] memory poolTokens = IPoolIntegration(_integration).getPoolTokens(_data);
-        address lpToken = IPoolIntegration(_integration).getLPToken(pool);
-        uint256 lpTokens = IERC20(lpToken).balanceOf(msg.sender).preciseMul(_percentage); // Sell all pool tokens
+        uint256 lpTokens = IERC20(IPoolIntegration(_integration).getLPToken(_data)).balanceOf(msg.sender).preciseMul(_percentage); // Sell all pool tokens
         uint256[] memory _minAmountsOut = IPoolIntegration(_integration).getPoolMinAmountsOut(_data, lpTokens);
         IPoolIntegration(_integration).exitPool(
             msg.sender,
@@ -181,7 +179,7 @@ contract AddLiquidityOperation is Operation {
         }
         address[] memory poolTokens = IPoolIntegration(_integration).getPoolTokens(_data);
         uint256 NAV;
-        address lpToken = IPoolIntegration(_integration).getLPToken(pool);
+        address lpToken = IPoolIntegration(_integration).getLPToken(_data);
         uint256 totalSupply = IERC20(lpToken).totalSupply();
         uint256 lpTokens = IERC20(lpToken).balanceOf(msg.sender);
         for (uint256 i = 0; i < poolTokens.length; i++) {
@@ -210,10 +208,9 @@ contract AddLiquidityOperation is Operation {
         uint256 price = _getPrice(_asset, _poolToken != address(0) ? _poolToken : WETH);
         uint256 normalizedTokenAmount =
             SafeDecimalMath.normalizeAmountTokens(_asset, _poolToken, normalizedAssetAmount.preciseMul(price));
-        address lpToken = IPoolIntegration(_integration).getLPToken(pool);
         if (_poolToken != _asset && _poolToken != address(0)) {
             IStrategy(msg.sender).trade(_asset, normalizedAssetAmount, _poolToken);
-            return IERC20(lpToken).balanceOf(msg.sender);
+            return IERC20(_poolToken).balanceOf(msg.sender);
         }
         if (_poolToken == address(0)) {
             if (_asset != WETH) {
