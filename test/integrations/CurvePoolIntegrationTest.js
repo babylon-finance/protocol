@@ -10,7 +10,7 @@ const {
 const addresses = require('../../lib/addresses');
 const { ADDRESS_ZERO, ONE_ETH } = require('../../lib/constants');
 
-describe('CurveIntegrationTest', function () {
+describe('CurvePoolIntegrationTest', function () {
   let curvePoolIntegration;
   let babController;
   let signer1;
@@ -25,29 +25,29 @@ describe('CurveIntegrationTest', function () {
   describe('Deployment', function () {
     it('should successfully deploy the contract', async function () {
       const deployed = await babController.deployed();
-      const deployedBalancer = await curvePoolIntegration.deployed();
+      const deployedCurve = await curvePoolIntegration.deployed();
       expect(!!deployed).to.equal(true);
-      expect(!!deployedBalancer).to.equal(true);
+      expect(!!deployedCurve).to.equal(true);
     });
   });
 
   describe('Liquidity Pools', function () {
-    let daiWethPool;
+    let triCryptoPool;
 
     beforeEach(async () => {
-      daiWethPool = await ethers.getContractAt('IBPool', addresses.balancer.pools.wethdai);
+      triCryptoPool = await ethers.getContractAt('ICurvePoolV3', addresses.curve.pools.v3.tricrypto);
     });
 
     it('check that a valid pool is valid', async function () {
       const abiCoder = ethers.utils.defaultAbiCoder;
-      const data = abiCoder.encode(['uint256', 'address'], [0, addresses.balancer.pools.wethdai]);
+      const data = abiCoder.encode(['uint256', 'address'], [0, addresses.curve.pools.v3.tricrypto]);
       expect(await curvePoolIntegration.isPool(data)).to.equal(true);
     });
 
     it('check that an invalid pool is not valid', async function () {
       const abiCoder = ethers.utils.defaultAbiCoder;
-      const data = abiCoder.encode(['uint256', 'address'], [0, ADDRESS_ZERO]);
-      expect(await curvePoolIntegration.isPool(data)).to.equal(false);
+      const data = abiCoder.encode(['uint256', 'address'], [0, '0x8b6e6e7b5b3801fed2cafd4b22b8a16c2f2db21a']);
+      await expect(curvePoolIntegration.isPool(data)).to.be.reverted;
     });
 
     it('can enter and exit the weth dai pool', async function () {
@@ -58,14 +58,14 @@ describe('CurveIntegrationTest', function () {
         curvePoolIntegration.address,
         garden1,
         DEFAULT_STRATEGY_PARAMS,
-        [0, addresses.balancer.pools.wethdai],
+        [0, addresses.curve.pools.v3.tricrypto],
       );
       await executeStrategy(strategyContract);
       expect(await strategyContract.capitalAllocated()).to.equal(ONE_ETH);
-      expect(await daiWethPool.balanceOf(strategyContract.address)).to.be.gt(0);
+      expect(await triCryptoPool.balanceOf(strategyContract.address)).to.be.gt(0);
 
       await finalizeStrategy(strategyContract, 0);
-      expect(await daiWethPool.balanceOf(strategyContract.address)).to.equal(0);
+      expect(await triCryptoPool.balanceOf(strategyContract.address)).to.equal(0);
     });
   });
 });

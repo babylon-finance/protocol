@@ -10,13 +10,11 @@ interface ICurvePoolV3 {
     ) external external returns(uint256[4] amounts_returned);
     */
 
-    function coins(int128 arg0) external view returns (address out);
+    function coins(uint256 arg0) external view returns (address out);
 
-    function coins() external view returns (address[] memory);
+    function underlying_coins(uint256 arg0) external view returns (address out);
 
-    function lp_token() external view returns (address lp_token);
+    function balances(uint256 arg0) external view returns (uint256 out);
 
-    function underlying_coins(int128 arg0) external view returns (address out);
-
-    function balances(int128 arg0) external view returns (uint256 out);
+    function lp_token() external view returns (address out);
 }

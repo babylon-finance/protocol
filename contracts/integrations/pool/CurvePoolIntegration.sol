@@ -49,15 +49,20 @@ contract CurvePoolIntegration is PoolIntegration {
 
     /* ============ External Functions ============ */
 
-    function getPoolTokens(bytes calldata _pool) external view override returns (address[] memory) {
+    function getPoolTokens(bytes calldata _pool) public view override returns (address[] memory) {
         address poolAddress = _decodeOpDataAddress(_pool);
-        return ICurvePoolV3(poolAddress).coins();
+        address[] memory result = new address[](_getNCoins());
+        for (uint8 i = 0; i < _getNCoins(); i++) {
+          console.log('poolAddress', poolAddress, i, ICurvePoolV3(poolAddress).coins(i));
+          result[i] = ICurvePoolV3(poolAddress).coins(i);
+        }
+        return result;
     }
 
     function getPoolWeights(bytes calldata _pool) external view override returns (uint256[] memory) {
         address poolAddress = _decodeOpDataAddress(_pool);
-        address[] memory poolTokens = ICurvePoolV3(poolAddress).coins();
-        uint256[] memory result = new uint256[](poolTokens.length);
+        address[] memory poolTokens = getPoolTokens(_pool);
+        uint256[] memory result = new uint256[](_getNCoins());
         for (uint8 i = 0; i < poolTokens.length; i++) {
             result[i] = uint256(1e18).div(poolTokens.length);
         }
@@ -80,8 +85,7 @@ contract CurvePoolIntegration is PoolIntegration {
         returns (uint256[] memory _minAmountsOut)
     {
         address poolAddress = _decodeOpDataAddress(_pool);
-        address[] memory poolTokens = ICurvePoolV3(poolAddress).coins();
-        uint256[] memory result = new uint256[](poolTokens.length);
+        uint256[] memory result = new uint256[](_getNCoins());
         return result;
     }
 
@@ -89,7 +93,7 @@ contract CurvePoolIntegration is PoolIntegration {
 
     function _isPool(bytes memory _pool) internal view override returns (bool) {
         address poolAddress = _decodeOpDataAddressAssembly(_pool, 32 + 12);
-        return ICurvePoolV3(poolAddress).lp_token() != address(0);
+        return ICurvePoolV3(poolAddress).coins(0) != address(0);
     }
 
     function _getSpender(bytes calldata _pool) internal view override returns (address) {
@@ -127,7 +131,7 @@ contract CurvePoolIntegration is PoolIntegration {
         )
     {
         address poolAddress = _decodeOpDataAddress(_pool);
-        uint256 poolCoins = ICurvePoolV3(poolAddress).coins().length; //_decodeOpDataAsUint8(_pool, 0);
+        uint256 poolCoins = _getNCoins(); //_decodeOpDataAsUint8(_pool, 0);
 
         // Encode method data for Garden to invoke
         bytes memory methodData = _getAddLiquidityMethodData(poolCoins, _maxAmountsIn, _poolTokensOut);
@@ -165,7 +169,7 @@ contract CurvePoolIntegration is PoolIntegration {
         )
     {
         address poolAddress = _decodeOpDataAddressAssembly(_pool, 32 + 12);
-        uint256 poolCoins = ICurvePoolV3(poolAddress).coins().length; //_decodeOpDataAsUint8(_pool, 0);
+        uint256 poolCoins = _getNCoins(); //_decodeOpDataAsUint8(_pool, 0);
 
         require(_poolTokensIn > 0, '_poolTokensIn has to not 0');
         require(_minAmountsOut.length > 1, 'Has to provide _minAmountsOut');
@@ -271,5 +275,15 @@ contract CurvePoolIntegration is PoolIntegration {
                     _minAmountsOut[4]
                 );
         }
+    }
+
+    function _getLpToken(
+      bytes memory _pool
+    ) internal view override returns (address) {
+      return ICurvePoolV3(poolAddress).lp_token();
+    }
+
+    function _getNCoins() private view returns(uint256) {
+      return 3;
     }
 }
