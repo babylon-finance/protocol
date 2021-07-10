@@ -89,28 +89,8 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
 
     /* ============ Modifiers ============ */
 
-    function _onlyGovernorOrGarden() private view {
-        _require(
-            (msg.sender == address(garden) && IBabController(controller).isSystemContract(address(garden))) ||
-                msg.sender == controller.owner(),
-            Errors.ONLY_PROTOCOL_OR_GARDEN
-        );
-    }
-
-    function _onlyStrategist() private view {
-        _require(msg.sender == strategist, Errors.ONLY_STRATEGIST);
-    }
-
     function _onlyStrategistOrGovernor() private view {
         _require(msg.sender == strategist || msg.sender == controller.owner(), Errors.ONLY_STRATEGIST);
-    }
-
-    function _onlyContributor() private view {
-        _require(
-            IERC20(address(garden)).balanceOf(msg.sender) > 0 &&
-                IBabController(controller).isSystemContract(address(garden)),
-            Errors.ONLY_CONTRIBUTOR
-        );
     }
 
     /**
@@ -137,16 +117,6 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
     }
 
     /**
-     * Throws if the garden is not the caller or data is already set
-     */
-    function _onlyGardenAndNotSet() private view {
-        _require(
-            msg.sender == address(garden) && !dataSet && IBabController(controller).isSystemContract(address(garden)),
-            Errors.ONLY_GARDEN_AND_DATA_NOT_SET
-        );
-    }
-
-    /**
      * Throws if the garden is not active
      */
     function _onlyActiveGarden() private view {
@@ -163,23 +133,6 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
      */
     function _onlyKeeper(uint256 _fee) private view {
         _require(controller.isValidKeeper(msg.sender), Errors.ONLY_KEEPER);
-        // We assume that calling keeper functions should be less expensive than 1 million gas and the gas price should be lower than 1000 gwei.
-        address reserveAsset = garden.reserveAsset();
-        if (reserveAsset == WETH) {
-            // 1 ETH
-            _require(_fee <= (1e6 * 1e3 gwei), Errors.FEE_TOO_HIGH);
-        } else if (reserveAsset == DAI) {
-            // 2000 DAI
-            _require(_fee <= 2000 * 1e18, Errors.FEE_TOO_HIGH);
-        } else if (reserveAsset == USDC) {
-            // 2000 USDC
-            _require(_fee <= 2000 * 1e6, Errors.FEE_TOO_HIGH);
-        } else if (reserveAsset == WBTC) {
-            // 0.05 WBTC
-            _require(_fee <= 0.05 * 1e8, Errors.FEE_TOO_HIGH);
-        } else {
-            _revert(Errors.RESERVE_ASSET_NOT_SUPPORTED);
-        }
     }
 
     function _onlyUnpaused() private view {
@@ -296,10 +249,8 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
 
         _require(controller.isSystemContract(_garden), Errors.NOT_A_GARDEN);
         garden = IGarden(_garden);
-        uint256 lockedBalance = garden.getLockedBalance(_strategist);
-        uint256 strategistUnlockedBalance = IERC20(address(garden)).balanceOf(_strategist).sub(lockedBalance);
         _require(IERC20(address(garden)).balanceOf(_strategist) > 0, Errors.STRATEGIST_TOKENS_TOO_LOW);
-        _require(strategistUnlockedBalance >= _stake, Errors.TOKENS_STAKED);
+        _require(IERC20(address(garden)).balanceOf(_strategist).sub(garden.getLockedBalance(_strategist)) >= _stake, Errors.TOKENS_STAKED);
         // TODO: adjust this calc
         _require(_stake > 0, Errors.STAKE_HAS_TO_AT_LEAST_ONE);
         _require(
@@ -335,7 +286,10 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         address[] calldata _opIntegrations,
         bytes memory _opEncodedData
     ) external override {
-        _onlyGardenAndNotSet();
+        _require(
+            msg.sender == address(garden) && !dataSet && IBabController(controller).isSystemContract(address(garden)),
+            Errors.ONLY_GARDEN_AND_DATA_NOT_SET
+        );
         uint256 opEncodedLength = _opEncodedData.length.sub(4).div(64); // encoded with signature (4 bytes of signature)
         _require(
             (_opTypes.length == _opIntegrations.length) && (_opIntegrations.length == opEncodedLength),
@@ -430,10 +384,9 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         _require(block.timestamp > executedAt.add(duration), Errors.STRATEGY_IS_NOT_OVER_YET);
         _require(!finalized, Errors.STRATEGY_IS_ALREADY_FINALIZED);
 
-        uint256 reserveAssetReturns = IERC20(garden.reserveAsset()).balanceOf(address(this));
         // Execute exit operations
         _exitStrategy(HUNDRED_PERCENT);
-        capitalReturned = IERC20(garden.reserveAsset()).balanceOf(address(this)).sub(reserveAssetReturns);
+        capitalReturned = IERC20(garden.reserveAsset()).balanceOf(address(this)).sub(IERC20(garden.reserveAsset()).balanceOf(address(this)));
         // Mark as finalized
         finalized = true;
         active = false;
@@ -457,7 +410,11 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
      * @param _amountToUnwind              The amount of capital to unwind
      */
     function unwindStrategy(uint256 _amountToUnwind) external override nonReentrant {
-        _onlyGovernorOrGarden();
+        _require(
+            (msg.sender == address(garden) && IBabController(controller).isSystemContract(address(garden))) ||
+                msg.sender == controller.owner(),
+            Errors.ONLY_PROTOCOL_OR_GARDEN
+        );
         _onlyUnpaused();
         _require(active && !finalized, Errors.STRATEGY_NEEDS_TO_BE_ACTIVE);
 
@@ -527,7 +484,11 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
      * @param _token             Address of the token to sweep
      */
     function sweep(address _token) external {
-        _onlyContributor();
+        _require(
+            IERC20(address(garden)).balanceOf(msg.sender) > 0 &&
+                IBabController(controller).isSystemContract(address(garden)),
+            Errors.ONLY_CONTRIBUTOR
+        );
         _onlyUnpaused();
         _require(_token != garden.reserveAsset(), Errors.CANNOT_SWEEP_RESERVE_ASSET);
         _require(!active, Errors.STRATEGY_NEEDS_TO_BE_INACTIVE);
@@ -876,9 +837,8 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
     }
 
     function _sendReserveAssetToGarden() private {
-        uint256 remainingReserve = IERC20(garden.reserveAsset()).balanceOf(address(this));
         // Sends the rest back if any
-        IERC20(garden.reserveAsset()).safeTransfer(address(garden), remainingReserve);
+        IERC20(garden.reserveAsset()).safeTransfer(address(garden), IERC20(garden.reserveAsset()).balanceOf(address(this)));
     }
 
     /**
@@ -895,8 +855,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
     ) internal returns (uint256) {
         address tradeIntegration = IBabController(controller).defaultTradeIntegration();
         // Uses on chain oracle for all internal strategy operations to avoid attacks
-        IPriceOracle oracle = IPriceOracle(IBabController(controller).priceOracle());
-        uint256 pricePerTokenUnit = oracle.getPrice(_sendToken, _receiveToken);
+        uint256 pricePerTokenUnit = IPriceOracle(IBabController(controller).priceOracle()).getPrice(_sendToken, _receiveToken);
         // minAmount must have receive token decimals
         uint256 exactAmount =
             SafeDecimalMath.normalizeAmountTokens(
@@ -962,14 +921,12 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
     }
 
     function _getPrice(address _assetOne, address _assetTwo) internal view returns (uint256) {
-        IPriceOracle oracle = IPriceOracle(IBabController(controller).priceOracle());
-        return oracle.getPrice(_assetOne, _assetTwo);
+        return IPriceOracle(IBabController(controller).priceOracle()).getPrice(_assetOne, _assetTwo);
     }
 
     function _hasMiningStarted() internal view returns (bool) {
         IRewardsDistributor rewardsDistributor = IRewardsDistributor(IBabController(controller).rewardsDistributor());
-        uint256 rewardsStartTime = rewardsDistributor.START_TIME();
-        bool miningStarted = ((enteredAt > rewardsStartTime) && (rewardsStartTime != 0));
+        bool miningStarted = ((enteredAt > rewardsDistributor.START_TIME()) && (rewardsDistributor.START_TIME() != 0));
         return miningStarted;
     }
 
