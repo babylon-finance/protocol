@@ -19,14 +19,11 @@ pragma solidity 0.7.6;
 
 import {Address} from '@openzeppelin/contracts/utils/Address.sol';
 import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
-import {ERC20} from '@openzeppelin/contracts/token/ERC20/ERC20.sol';
-
 import {Initializable} from '@openzeppelin/contracts-upgradeable/proxy/Initializable.sol';
 import {SafeERC20} from '@openzeppelin/contracts/token/ERC20/SafeERC20.sol';
 import {ReentrancyGuard} from '@openzeppelin/contracts/utils/ReentrancyGuard.sol';
 import {SignedSafeMath} from '@openzeppelin/contracts/math/SignedSafeMath.sol';
 import {SafeCast} from '@openzeppelin/contracts/utils/SafeCast.sol';
-
 import {Errors, _require, _revert} from '../lib/BabylonErrors.sol';
 import {PreciseUnitMath} from '../lib/PreciseUnitMath.sol';
 import {SafeDecimalMath} from '../lib/SafeDecimalMath.sol';
@@ -35,7 +32,6 @@ import {AddressArrayUtils} from '../lib/AddressArrayUtils.sol';
 import {LowGasSafeMath as SafeMath} from '../lib/LowGasSafeMath.sol';
 import {UniversalERC20} from '../lib/UniversalERC20.sol';
 import {BytesLib} from '../lib/BytesLib.sol';
-
 import {IWETH} from '../interfaces/external/weth/IWETH.sol';
 import {IBabController} from '../interfaces/IBabController.sol';
 import {IGarden} from '../interfaces/IGarden.sol';
@@ -572,7 +568,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
     /**
      * Returns whether this strategy is currently active or not
      */
-    function isStrategyActive() public view override returns (bool) {
+    function isStrategyActive() external view override returns (bool) {
         return executedAt > 0 && exitedAt == 0;
     }
 
