@@ -298,8 +298,8 @@ async function finalizeStrategyAfter2Years(strategy) {
 }
 
 async function injectFakeProfits(strategy, amount) {
-  const kind = await strategy.getOperationByIndex(0);
-  if (kind[0] === 0) {
+  const kind = await strategy.getOperationByIndex(0)[0];
+  if (kind === 0) {
     let ABI = ['function babylonFinanceStrategyOpData(address data, uint256 metadata)']; // 64 bytes
     let iface = new ethers.utils.Interface(ABI);
     let decodedData = iface.decodeFunctionData('babylonFinanceStrategyOpData', await strategy.opEncodedData());
@@ -315,7 +315,7 @@ async function injectFakeProfits(strategy, amount) {
       console.error("Couldn't inject fake profits for", asset.address);
     }
   }
-  if (kind[0] === 1) {
+  if (kind === 1) {
     let ABI = ['function babylonFinanceStrategyOpData(address data, uint256 metadata)']; // 64 bytes
     let iface = new ethers.utils.Interface(ABI);
     let decodedData = iface.decodeFunctionData('babylonFinanceStrategyOpData', await strategy.opEncodedData());
@@ -327,7 +327,7 @@ async function injectFakeProfits(strategy, amount) {
       gasPrice: 0,
     });
   }
-  if (kind[0] === 2) {
+  if (kind === 2) {
     let ABI = ['function babylonFinanceStrategyOpData(address data, uint256 metadata)']; // 64 bytes
     let iface = new ethers.utils.Interface(ABI);
     let decodedData = iface.decodeFunctionData('babylonFinanceStrategyOpData', await strategy.opEncodedData());
@@ -342,9 +342,9 @@ async function injectFakeProfits(strategy, amount) {
 }
 
 async function substractFakeProfits(strategy, amount) {
-  const kind = await strategy.getOperationByIndex(0);
+  const kind = await strategy.getOperationByIndex(0)[0];
   const strategyAddress = await impersonateAddress(strategy.address);
-  if (kind[0] === 0) {
+  if (kind === 0) {
     let ABI = ['function babylonFinanceStrategyOpData(address data, uint256 metadata)']; // 64 bytes
     let iface = new ethers.utils.Interface(ABI);
     let decodedData = iface.decodeFunctionData('babylonFinanceStrategyOpData', await strategy.opEncodedData());
@@ -359,7 +359,7 @@ async function substractFakeProfits(strategy, amount) {
       console.error("Couldn't reduce fake profits for", asset.address);
     }
   }
-  if (kind[0] === 1) {
+  if (kind === 1) {
     let ABI = ['function babylonFinanceStrategyOpData(address data, uint256 metadata)']; // 64 bytes
     let iface = new ethers.utils.Interface(ABI);
     let decodedData = iface.decodeFunctionData('babylonFinanceStrategyOpData', await strategy.opEncodedData());
@@ -371,7 +371,7 @@ async function substractFakeProfits(strategy, amount) {
       gasPrice: 0,
     });
   }
-  if (kind[0] === 2) {
+  if (kind === 2) {
     let ABI = ['function babylonFinanceStrategyOpData(address data, uint256 metadata)']; // 64 bytes
     let iface = new ethers.utils.Interface(ABI);
     let decodedData = iface.decodeFunctionData('babylonFinanceStrategyOpData', await strategy.opEncodedData());
