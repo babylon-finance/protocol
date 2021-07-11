@@ -672,10 +672,8 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
             bytes memory
         )
     {
-        // Backward compatibility
-        bytes memory decodedData =
-            opDatas.length > 0 ? abi.encode(opDatas[_index], address(0)) : BytesLib.get64Bytes(opEncodedData, _index);
-        return (opTypes[_index], opIntegrations[_index], decodedData);
+        // _getOpDecodedData guarantee backward compatibility with OpData
+        return (opTypes[_index], opIntegrations[_index], _getOpDecodedData(_index));
     }
 
     /**
@@ -690,10 +688,8 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         address reserveAsset = garden.reserveAsset();
         for (uint256 i = 0; i < opTypes.length; i++) {
             IOperation operation = IOperation(IBabController(controller).enabledOperations(uint256(opTypes[i])));
-            // Backward compatibility
-            bytes memory decodedData =
-                opDatas.length > 0 ? abi.encode(opDatas[i], address(0)) : BytesLib.get64Bytes(opEncodedData, i);
-            (uint256 strategyNav, bool positive) = operation.getNAV(decodedData, garden, opIntegrations[i]);
+            // _getOpDecodedData guarantee backward compatibility with OpData
+            (uint256 strategyNav, bool positive) = operation.getNAV(_getOpDecodedData(i), garden, opIntegrations[i]);
             if (positive) {
                 positiveNav = positiveNav.add(strategyNav);
             } else {
@@ -781,14 +777,12 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         uint8 assetStatus; // liquid
         for (uint256 i = 0; i < opTypes.length; i++) {
             IOperation operation = IOperation(IBabController(controller).enabledOperations(opTypes[i]));
-            // Backward compatibility to old strategy opDatas created before (e.g. in cooldown state) still not using opEncodedData for creation
-            bytes memory decodedData =
-                opDatas.length > 0 ? abi.encode(opDatas[i], address(0)) : BytesLib.get64Bytes(opEncodedData, i);
+            // _getOpDecodedData guarantee backward compatibility with OpData
             (assetAccumulated, capitalForNexOperation, assetStatus) = operation.executeOperation(
                 assetAccumulated,
                 capitalForNexOperation,
                 assetStatus,
-                decodedData,
+                _getOpDecodedData(i),
                 garden,
                 opIntegrations[i]
             );
@@ -806,15 +800,13 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         uint8 assetStatus;
         for (uint256 i = opTypes.length; i > 0; i--) {
             IOperation operation = IOperation(IBabController(controller).enabledOperations(opTypes[i - 1]));
-            // Backward compatibility to old strategy opData under execution still not using opEncodedData
-            bytes memory decodedData =
-                opDatas.length > 0 ? abi.encode(opDatas[i - 1], address(0)) : BytesLib.get64Bytes(opEncodedData, i - 1);
+            // _getOpDecodedData guarantee backward compatibility with OpData
             (assetFinalized, capitalPending, assetStatus) = operation.exitOperation(
                 assetFinalized,
                 capitalPending,
                 assetStatus,
                 _percentage,
-                decodedData,
+                _getOpDecodedData(i - 1),
                 garden,
                 opIntegrations[i - 1]
             );
@@ -938,6 +930,13 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
 
     function _getPrice(address _assetOne, address _assetTwo) private view returns (uint256) {
         return IPriceOracle(IBabController(controller).priceOracle()).getPrice(_assetOne, _assetTwo);
+    }
+
+    // backward compatibility with OpData in case of ongoing strategies with deprecated OpData
+    function _getOpDecodedData(uint256 _index) private view returns (bytes memory) {
+        bytes memory decodedData =
+            opDatas.length > 0 ? abi.encode(opDatas[_index], address(0)) : BytesLib.get64Bytes(opEncodedData, _index);
+        return decodedData;
     }
 
     // solhint-disable-next-line
