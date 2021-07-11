@@ -17,8 +17,6 @@
 
 pragma solidity 0.7.6;
 
-import 'hardhat/console.sol';
-
 import {Address} from '@openzeppelin/contracts/utils/Address.sol';
 import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import {SafeERC20} from '@openzeppelin/contracts/token/ERC20/SafeERC20.sol';
@@ -536,7 +534,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
      * @param _stratParams                   Num params for the strategy
      * @param _opTypes                      Type for every operation in the strategy
      * @param _opIntegrations               Integration to use for every operation
-     * @param _opDatas                      Param for every operation in the strategy
+     * @param _opEncodedDatas               Param for every operation in the strategy
      */
     function addStrategy(
         string memory _name,
@@ -544,10 +542,11 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         uint256[] calldata _stratParams,
         uint8[] calldata _opTypes,
         address[] calldata _opIntegrations,
-        address[] calldata _opDatas
+        bytes calldata _opEncodedDatas
     ) external override {
         _onlyActive();
         _onlyContributor();
+
         _require(
             IIshtarGate(IBabController(controller).ishtarGate()).canAddStrategiesInAGarden(address(this), msg.sender),
             Errors.USER_CANNOT_ADD_STRATEGIES
@@ -565,7 +564,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         strategyMapping[strategy] = true;
         totalStake = totalStake.add(_stratParams[1]);
         strategies.push(strategy);
-        IStrategy(strategy).setData(_opTypes, _opIntegrations, _opDatas);
+        IStrategy(strategy).setData(_opTypes, _opIntegrations, _opEncodedDatas);
         isGardenStrategy[strategy] = true;
         emit AddStrategy(strategy, _name, _stratParams[3]);
     }

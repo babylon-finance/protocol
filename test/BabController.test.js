@@ -33,6 +33,7 @@ describe('BabController', function () {
       );
       retVal.push(strategy);
     }
+
     return retVal;
   }
 

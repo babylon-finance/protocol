@@ -39,11 +39,15 @@ describe('BalancerIntegrationTest', function () {
     });
 
     it('check that a valid pool is valid', async function () {
-      expect(await balancerIntegration.isPool(addresses.balancer.pools.wethdai)).to.equal(true);
+      const abiCoder = ethers.utils.defaultAbiCoder;
+      const data = abiCoder.encode(['address', 'uint256'], [addresses.balancer.pools.wethdai, 0]);
+      expect(await balancerIntegration.isPool(data)).to.equal(true);
     });
 
     it('check that an invalid pool is not valid', async function () {
-      expect(await balancerIntegration.isPool(ADDRESS_ZERO)).to.equal(false);
+      const abiCoder = ethers.utils.defaultAbiCoder;
+      const data = abiCoder.encode(['address', 'uint256'], [ADDRESS_ZERO, 0]);
+      expect(await balancerIntegration.isPool(data)).to.equal(false);
     });
 
     it('can enter and exit the weth dai pool', async function () {
@@ -54,7 +58,7 @@ describe('BalancerIntegrationTest', function () {
         balancerIntegration.address,
         garden1,
         DEFAULT_STRATEGY_PARAMS,
-        addresses.balancer.pools.wethdai,
+        [addresses.balancer.pools.wethdai, 0],
       );
       await executeStrategy(strategyContract);
       expect(await strategyContract.capitalAllocated()).to.equal(ONE_ETH);

@@ -21,7 +21,6 @@ describe('BABLToken contract', function () {
 
   beforeEach(async () => {
     ({ owner, bablToken, timeLockRegistry, signer1, signer2, signer3 } = await setupTests()());
-
     const block = await ethers.provider.getBlock();
     now = block.timestamp;
     future = now + ONE_DAY_IN_SECONDS * 365 * 9.01; // newMAxSupplyAllowedAfter has to be at least 365days ahead of previous time (previous time was 8 years ahead of first mint)

@@ -34,7 +34,7 @@ describe('AaveBorrowIntegrationTest', function () {
       [aaveLendIntegration.address, aaveBorrowIntegration.address],
       garden,
       false,
-      [asset1.address, asset2.address],
+      [asset1.address, 0, asset2.address, 0],
     );
 
     let amount = STRATEGY_EXECUTE_MAP[token];
@@ -63,7 +63,7 @@ describe('AaveBorrowIntegrationTest', function () {
       [aaveLendIntegration.address, aaveBorrowIntegration.address],
       garden,
       false,
-      [asset1.address, asset2.address],
+      [asset1.address, 0, asset2.address, 0],
     );
 
     await executeStrategy(strategyContract, { amount: STRATEGY_EXECUTE_MAP[token] });
@@ -81,7 +81,7 @@ describe('AaveBorrowIntegrationTest', function () {
       [aaveLendIntegration.address, aaveBorrowIntegration.address],
       garden,
       false,
-      [asset1.address, asset2.address],
+      [asset1.address, 0, asset2.address, 0],
     );
     await expect(executeStrategy(strategyContract, { amount: STRATEGY_EXECUTE_MAP[token] })).to.be.revertedWith(
       errorcode,
@@ -112,9 +112,8 @@ describe('AaveBorrowIntegrationTest', function () {
         [aaveLendIntegration.address, aaveBorrowIntegration.address],
         garden,
         DEFAULT_STRATEGY_PARAMS,
-        [DAI.address, USDC.address],
+        [DAI.address, 0, USDC.address, 0],
       );
-
       await executeStrategy(strategyContract);
 
       const nav = await strategyContract.getNAV();

@@ -68,7 +68,6 @@ async function setUpFixture(
         value: ethers.utils.parseEther('1'),
       },
     );
-
   await babController
     .connect(signer1)
     .createGarden(
@@ -138,10 +137,15 @@ async function setUpFixture(
       );
   }
   console.log('create strategies');
+
+  const strategy10 = (
+    await createStrategy('buy', 'dataset', [signer1, signer2, signer3], uniswapV3TradeIntegration.address, garden1)
+  ).address;
   // Create strategies
   const strategy11 = (
     await createStrategy('buy', 'dataset', [signer1, signer2, signer3], uniswapV3TradeIntegration.address, garden1)
   ).address;
+
   const strategy21 = (
     await createStrategy('buy', 'deposit', [signer1, signer2, signer3], uniswapV3TradeIntegration.address, garden2)
   ).address;

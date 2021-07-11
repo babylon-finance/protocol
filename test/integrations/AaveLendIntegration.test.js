@@ -50,7 +50,7 @@ describe('AaveLendIntegrationTest', function () {
       expect(await aaveLendIntegration.isInvestment(addresses.tokens.USDC)).to.equal(true);
     });
 
-    it('fails to suplly to invlaid address', async function () {
+    it('fails to supply to invalid address', async function () {
       expect(await aaveLendIntegration.isInvestment(ADDRESS_ZERO)).to.equal(false);
     });
 
@@ -81,7 +81,7 @@ describe('AaveLendIntegrationTest', function () {
         aaveLendIntegration.address,
         garden1,
         DEFAULT_STRATEGY_PARAMS,
-        WETH.address,
+        [WETH.address, 0],
       );
 
       await executeStrategy(strategyContract);
@@ -101,7 +101,7 @@ describe('AaveLendIntegrationTest', function () {
         aaveLendIntegration.address,
         garden1,
         DEFAULT_STRATEGY_PARAMS,
-        WETH.address,
+        [WETH.address, 0],
       );
       await executeStrategy(strategyContract);
       expect(await WETH.balanceOf(strategyContract.address)).to.be.equal(0);

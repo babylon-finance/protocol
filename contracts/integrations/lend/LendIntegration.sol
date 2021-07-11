@@ -33,7 +33,7 @@ import {BaseIntegration} from '../BaseIntegration.sol';
  * @title LendIntegration
  * @author Babylon Finance Protocol
  *
- * Base class for integration with passive investments like Yearn, Indexed
+ * Base class for integration with lending protocols
  */
 abstract contract LendIntegration is BaseIntegration, ReentrancyGuard, ILendIntegration {
     using LowGasSafeMath for uint256;

@@ -99,7 +99,7 @@ describe('YearnVaultIntegrationTest', function () {
               state: 'vote',
               integrations: yearnVaultIntegration.address,
               garden,
-              specificParams: vault,
+              specificParams: [vault, 0],
             });
 
             expect(await vaultContract.balanceOf(strategyContract.address)).to.equal(0);
