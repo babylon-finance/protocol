@@ -774,7 +774,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
             IOperation operation = IOperation(IBabController(controller).enabledOperations(opTypes[i]));
             // Backward compatibility to old strategy opDatas created before (e.g. in cooldown state) still not using opEncodedData for creation
             bytes memory decodedData =
-                opDatas.length > 0 ? abi.encode(address(0), opDatas[i]) : BytesLib.get64Bytes(opEncodedData, i);
+                opDatas.length > 0 ? abi.encode(opDatas[i], address(0)) : BytesLib.get64Bytes(opEncodedData, i);
             (assetAccumulated, capitalForNexOperation, assetStatus) = operation.executeOperation(
                 assetAccumulated,
                 capitalForNexOperation,
@@ -799,7 +799,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
             IOperation operation = IOperation(IBabController(controller).enabledOperations(opTypes[i - 1]));
             // Backward compatibility to old strategy opData under execution still not using opEncodedData
             bytes memory decodedData =
-                opDatas.length > 0 ? abi.encode(address(0), opDatas[i - 1]) : BytesLib.get64Bytes(opEncodedData, i - 1);
+                opDatas.length > 0 ? abi.encode(opDatas[i - 1], address(0)) : BytesLib.get64Bytes(opEncodedData, i - 1);
             (assetFinalized, capitalPending, assetStatus) = operation.exitOperation(
                 assetFinalized,
                 capitalPending,
