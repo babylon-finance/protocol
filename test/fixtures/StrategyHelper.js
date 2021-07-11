@@ -44,9 +44,11 @@ const STRAT_NAME_PARAMS = ['Strategy Name', 'STRT']; // [ NAME, SYMBOL ]
 const NFT_ADDRESS = 'https://babylon.mypinata.cloud/ipfs/Qmc7MfvuCkhA8AA2z6aBzmb5G4MaRfPeKgCVTWcKqU2tjB';
 
 async function createStrategyWithBuyOperation(garden, signer, params, integration, data) {
-  let ABI = ['function babylonFinanceStrategyOpData(address data, uint256 metadata)']; // 64 bytes
-  let iface = new ethers.utils.Interface(ABI);
-  let encodedData = iface.encodeFunctionData('babylonFinanceStrategyOpData', [...(data || [addresses.tokens.DAI, 0])]);
+  const ABI = ['function babylonFinanceStrategyOpData(address data, uint256 metadata)']; // 64 bytes
+  const iface = new ethers.utils.Interface(ABI);
+  const encodedData = iface.encodeFunctionData('babylonFinanceStrategyOpData', [
+    ...(data || [addresses.tokens.DAI, 0]),
+  ]);
   const passedLongParams = [[0], [integration]];
 
   await garden.connect(signer).addStrategy(...STRAT_NAME_PARAMS, params, ...passedLongParams, encodedData);
@@ -60,9 +62,9 @@ async function createStrategyWithBuyOperation(garden, signer, params, integratio
 
 async function createStrategyWithPoolOperation(garden, signer, params, integration, data) {
   const passedPoolParams = [[1], [integration]];
-  let ABI = ['function babylonFinanceStrategyOpData(address data, uint256 metadata)']; // 64 bytes
-  let iface = new ethers.utils.Interface(ABI);
-  let encodedData = iface.encodeFunctionData('babylonFinanceStrategyOpData', [
+  const ABI = ['function babylonFinanceStrategyOpData(address data, uint256 metadata)']; // 64 bytes
+  const iface = new ethers.utils.Interface(ABI);
+  const encodedData = iface.encodeFunctionData('babylonFinanceStrategyOpData', [
     ...(data || [addresses.oneinch.pools.wethdai, 0]),
   ]);
   await garden.connect(signer).addStrategy(...STRAT_NAME_PARAMS, params, ...passedPoolParams, encodedData);
@@ -76,9 +78,9 @@ async function createStrategyWithPoolOperation(garden, signer, params, integrati
 
 async function createStrategyWithVaultOperation(garden, signer, params, integration, data) {
   const passedYieldParams = [[2], [integration]];
-  let ABI = ['function babylonFinanceStrategyOpData(address data, uint256 metadata)']; // 64 bytes
-  let iface = new ethers.utils.Interface(ABI);
-  let encodedData = iface.encodeFunctionData('babylonFinanceStrategyOpData', [
+  const ABI = ['function babylonFinanceStrategyOpData(address data, uint256 metadata)']; // 64 bytes
+  const iface = new ethers.utils.Interface(ABI);
+  const encodedData = iface.encodeFunctionData('babylonFinanceStrategyOpData', [
     ...(data || [addresses.yearn.vaults.ydai, 0]),
   ]);
   await garden.connect(signer).addStrategy(...STRAT_NAME_PARAMS, params, ...passedYieldParams, encodedData);
@@ -92,9 +94,11 @@ async function createStrategyWithVaultOperation(garden, signer, params, integrat
 
 async function createStrategyWithLendOperation(garden, signer, params, integration, data) {
   const passedLendParams = [[3], [integration]];
-  let ABI = ['function babylonFinanceStrategyOpData(address data, uint256 metadata)']; // 64 bytes
-  let iface = new ethers.utils.Interface(ABI);
-  let encodedData = iface.encodeFunctionData('babylonFinanceStrategyOpData', [...(data || [addresses.tokens.USDC, 0])]);
+  const ABI = ['function babylonFinanceStrategyOpData(address data, uint256 metadata)']; // 64 bytes
+  const iface = new ethers.utils.Interface(ABI);
+  const encodedData = iface.encodeFunctionData('babylonFinanceStrategyOpData', [
+    ...(data || [addresses.tokens.USDC, 0]),
+  ]);
 
   await garden.connect(signer).addStrategy(...STRAT_NAME_PARAMS, params, ...passedLendParams, encodedData);
   const strategies = await garden.getStrategies();
@@ -116,11 +120,11 @@ async function createStrategyWithLendAndBorrowOperation(
     throw new Error('Need two integrations and data to create lend & borrow');
   }
   const passedLendBorrowParams = [[3, 4], integrations];
-  let ABI = [
+  const ABI = [
     'function babylonFinanceStrategyOpData(address data, uint256 metadata, address data2, uint256 metadata2 )',
   ]; // 64 bytes
-  let iface = new ethers.utils.Interface(ABI);
-  let encodedData = iface.encodeFunctionData('babylonFinanceStrategyOpData', [data[0], data[1], data[2], data[3]]);
+  const iface = new ethers.utils.Interface(ABI);
+  const encodedData = iface.encodeFunctionData('babylonFinanceStrategyOpData', [data[0], data[1], data[2], data[3]]);
   await garden.connect(signer).addStrategy(...STRAT_NAME_PARAMS, params, ...passedLendBorrowParams, encodedData);
   const strategies = await garden.getStrategies();
   const lastStrategyAddr = strategies[strategies.length - 1];
@@ -142,11 +146,11 @@ async function createStrategyWithManyOperations(
     throw new Error('Need data and integrations to match');
   }
   const passedParams = [ops, integrations];
-  let ABI = [
+  const ABI = [
     'function babylonFinanceStrategyOpData(address data, uint256 metadata, address data, uint256 metadata, address data, uint256 metadata)',
   ]; // 64 bytes
-  let iface = new ethers.utils.Interface(ABI);
-  let encodedData = iface.encodeFunctionData('babylonFinanceStrategyOpData', [
+  const iface = new ethers.utils.Interface(ABI);
+  const encodedData = iface.encodeFunctionData('babylonFinanceStrategyOpData', [
     data[0],
     data[1],
     data[2],
@@ -300,9 +304,9 @@ async function finalizeStrategyAfter2Years(strategy) {
 async function injectFakeProfits(strategy, amount) {
   const kind = (await strategy.getOperationByIndex(0))[0];
   if (kind === 0) {
-    let ABI = ['function babylonFinanceStrategyOpData(address data, uint256 metadata)']; // 64 bytes
-    let iface = new ethers.utils.Interface(ABI);
-    let decodedData = iface.decodeFunctionData('babylonFinanceStrategyOpData', await strategy.opEncodedData());
+    const ABI = ['function babylonFinanceStrategyOpData(address data, uint256 metadata)']; // 64 bytes
+    const iface = new ethers.utils.Interface(ABI);
+    const decodedData = iface.decodeFunctionData('babylonFinanceStrategyOpData', await strategy.opEncodedData());
 
     const asset = await ethers.getContractAt('IERC20', decodedData[0]);
     const whaleAddress = getAssetWhale(asset.address);
@@ -316,9 +320,9 @@ async function injectFakeProfits(strategy, amount) {
     }
   }
   if (kind === 1) {
-    let ABI = ['function babylonFinanceStrategyOpData(address data, uint256 metadata)']; // 64 bytes
-    let iface = new ethers.utils.Interface(ABI);
-    let decodedData = iface.decodeFunctionData('babylonFinanceStrategyOpData', await strategy.opEncodedData());
+    const ABI = ['function babylonFinanceStrategyOpData(address data, uint256 metadata)']; // 64 bytes
+    const iface = new ethers.utils.Interface(ABI);
+    const decodedData = iface.decodeFunctionData('babylonFinanceStrategyOpData', await strategy.opEncodedData());
 
     const asset = await ethers.getContractAt('IERC20', decodedData[0]);
     const whaleAddress = await strategy.pool();
@@ -328,9 +332,9 @@ async function injectFakeProfits(strategy, amount) {
     });
   }
   if (kind === 2) {
-    let ABI = ['function babylonFinanceStrategyOpData(address data, uint256 metadata)']; // 64 bytes
-    let iface = new ethers.utils.Interface(ABI);
-    let decodedData = iface.decodeFunctionData('babylonFinanceStrategyOpData', await strategy.opEncodedData());
+    const ABI = ['function babylonFinanceStrategyOpData(address data, uint256 metadata)']; // 64 bytes
+    const iface = new ethers.utils.Interface(ABI);
+    const decodedData = iface.decodeFunctionData('babylonFinanceStrategyOpData', await strategy.opEncodedData());
 
     const asset = await ethers.getContractAt('IERC20', decodedData[0]);
     const whaleAddress = await strategy.yieldVault();
@@ -345,9 +349,9 @@ async function substractFakeProfits(strategy, amount) {
   const kind = (await strategy.getOperationByIndex(0))[0];
   const strategyAddress = await impersonateAddress(strategy.address);
   if (kind === 0) {
-    let ABI = ['function babylonFinanceStrategyOpData(address data, uint256 metadata)']; // 64 bytes
-    let iface = new ethers.utils.Interface(ABI);
-    let decodedData = iface.decodeFunctionData('babylonFinanceStrategyOpData', await strategy.opEncodedData());
+    const ABI = ['function babylonFinanceStrategyOpData(address data, uint256 metadata)']; // 64 bytes
+    const iface = new ethers.utils.Interface(ABI);
+    const decodedData = iface.decodeFunctionData('babylonFinanceStrategyOpData', await strategy.opEncodedData());
     const asset = await ethers.getContractAt('IERC20', decodedData[0]);
     const whaleAddress = getAssetWhale(asset.address);
     if (whaleAddress) {
@@ -360,9 +364,9 @@ async function substractFakeProfits(strategy, amount) {
     }
   }
   if (kind === 1) {
-    let ABI = ['function babylonFinanceStrategyOpData(address data, uint256 metadata)']; // 64 bytes
-    let iface = new ethers.utils.Interface(ABI);
-    let decodedData = iface.decodeFunctionData('babylonFinanceStrategyOpData', await strategy.opEncodedData());
+    const ABI = ['function babylonFinanceStrategyOpData(address data, uint256 metadata)']; // 64 bytes
+    const iface = new ethers.utils.Interface(ABI);
+    const decodedData = iface.decodeFunctionData('babylonFinanceStrategyOpData', await strategy.opEncodedData());
 
     const asset = await ethers.getContractAt('IERC20', decodedData[0]);
     const whaleAddress = await strategy.pool();
@@ -372,9 +376,9 @@ async function substractFakeProfits(strategy, amount) {
     });
   }
   if (kind === 2) {
-    let ABI = ['function babylonFinanceStrategyOpData(address data, uint256 metadata)']; // 64 bytes
-    let iface = new ethers.utils.Interface(ABI);
-    let decodedData = iface.decodeFunctionData('babylonFinanceStrategyOpData', await strategy.opEncodedData());
+    const ABI = ['function babylonFinanceStrategyOpData(address data, uint256 metadata)']; // 64 bytes
+    const iface = new ethers.utils.Interface(ABI);
+    const decodedData = iface.decodeFunctionData('babylonFinanceStrategyOpData', await strategy.opEncodedData());
 
     const asset = await ethers.getContractAt('IERC20', decodedData[0]);
     const whaleAddress = await strategy.yieldVault();
@@ -459,15 +463,15 @@ async function getStrategy({
 } = {}) {
   const babController = await getContract('BabController', 'BabControllerProxy');
   const uniswapV3TradeIntegration = await getContract('UniswapV3TradeIntegration');
-  const [deployer, keeper, owner, signer1, signer2, signer3] = await ethers.getSigners();
+  const [_, _, _, signer1, signer2, signer3] = await ethers.getSigners();
   const gardens = await babController.getGardens();
 
   return await createStrategy(
     kind,
     state,
-    signers ? signers : [signer1, signer2, signer3],
-    integrations ? integrations : uniswapV3TradeIntegration.address,
-    garden ? garden : await ethers.getContractAt('Garden', gardens.slice(-1)[0]),
+    signers || [signer1, signer2, signer3],
+    integrations || uniswapV3TradeIntegration.address,
+    garden || (await ethers.getContractAt('Garden', gardens.slice(-1)[0])),
     params,
     specificParams,
   );
