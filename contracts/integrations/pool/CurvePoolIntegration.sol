@@ -51,7 +51,7 @@ contract CurvePoolIntegration is PoolIntegration {
     /* ============ External Functions ============ */
 
     function getPoolTokens(bytes calldata _pool) public view override returns (address[] memory) {
-        address poolAddress = _decodeOpDataAddress(_pool);
+        address poolAddress = BytesLib.decodeOpDataAddress(_pool);
         address[] memory result = new address[](_getNCoins(poolAddress));
         for (uint8 i = 0; i < _getNCoins(poolAddress); i++) {
             console.log('poolAddress', poolAddress, i, ICurvePoolV3(poolAddress).coins(i));
@@ -61,7 +61,7 @@ contract CurvePoolIntegration is PoolIntegration {
     }
 
     function getPoolWeights(bytes calldata _pool) external view override returns (uint256[] memory) {
-        address poolAddress = _decodeOpDataAddress(_pool);
+        address poolAddress = BytesLib.decodeOpDataAddress(_pool);
         address[] memory poolTokens = getPoolTokens(_pool);
         uint256[] memory result = new uint256[](_getNCoins(poolAddress));
         for (uint8 i = 0; i < poolTokens.length; i++) {
@@ -85,7 +85,7 @@ contract CurvePoolIntegration is PoolIntegration {
         override
         returns (uint256[] memory _minAmountsOut)
     {
-        address poolAddress = _decodeOpDataAddress(_pool);
+        address poolAddress = BytesLib.decodeOpDataAddress(_pool);
         uint256[] memory result = new uint256[](_getNCoins(poolAddress));
         return result;
     }
@@ -93,12 +93,12 @@ contract CurvePoolIntegration is PoolIntegration {
     /* ============ Internal Functions ============ */
 
     function _isPool(bytes memory _pool) internal view override returns (bool) {
-        address poolAddress = _decodeOpDataAddressAssembly(_pool, 32 + 12);
+        address poolAddress = BytesLib.decodeOpDataAddressAssembly(_pool, 32 + 12);
         return ICurvePoolV3(poolAddress).coins(0) != address(0);
     }
 
     function _getSpender(bytes calldata _pool) internal view override returns (address) {
-        address poolAddress = _decodeOpDataAddress(_pool);
+        address poolAddress = BytesLib.decodeOpDataAddress(_pool);
         return poolAddress;
     }
 
@@ -131,7 +131,7 @@ contract CurvePoolIntegration is PoolIntegration {
             bytes memory
         )
     {
-        address poolAddress = _decodeOpDataAddress(_pool);
+        address poolAddress = BytesLib.decodeOpDataAddress(_pool);
         uint256 poolCoins = _getNCoins(poolAddress); //_decodeOpDataAsUint8(_pool, 0);
 
         // Encode method data for Garden to invoke
@@ -169,7 +169,7 @@ contract CurvePoolIntegration is PoolIntegration {
             bytes memory
         )
     {
-        address poolAddress = _decodeOpDataAddressAssembly(_pool, 32 + 12);
+        address poolAddress = BytesLib.decodeOpDataAddressAssembly(_pool, 32 + 12);
         uint256 poolCoins = _getNCoins(poolAddress); //_decodeOpDataAsUint8(_pool, 0);
 
         require(_poolTokensIn > 0, '_poolTokensIn has to not 0');

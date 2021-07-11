@@ -103,7 +103,7 @@ contract AddLiquidityOperation is Operation {
             poolTokens,
             maxAmountsIn
         );
-        return (BytesLib.decodeOpDataAddress(_data).decodeOpDataAddress(_data), IERC20(_getLPTokenFromBytes(_integration, _data)).balanceOf(msg.sender), 0); // liquid
+        return (BytesLib.decodeOpDataAddress(_data), IERC20(_getLPTokenFromBytes(_integration, _data)).balanceOf(msg.sender), 0); // liquid
     }
 
     /**
@@ -244,6 +244,6 @@ contract AddLiquidityOperation is Operation {
       address _integration,
       bytes calldata _data
     ) internal view returns (address) {
-      IPoolIntegration(_integration).getLPToken(BytesLib.decodeOpDataAddress.decodeOpDataAddress(_data));
+      IPoolIntegration(_integration).getLPToken(BytesLib.decodeOpDataAddress(_data));
     }
 }
