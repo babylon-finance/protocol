@@ -463,7 +463,7 @@ async function getStrategy({
 } = {}) {
   const babController = await getContract('BabController', 'BabControllerProxy');
   const uniswapV3TradeIntegration = await getContract('UniswapV3TradeIntegration');
-  const [_, _, _, signer1, signer2, signer3] = await ethers.getSigners();
+  const [, , , signer1, signer2, signer3] = await ethers.getSigners();
   const gardens = await babController.getGardens();
 
   return await createStrategy(
