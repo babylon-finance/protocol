@@ -672,7 +672,10 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
             bytes memory
         )
     {
-        return (opTypes[_index], opIntegrations[_index], BytesLib.get64Bytes(opEncodedData, _index));
+        // Backward compatibility
+        bytes memory decodedData =
+            opDatas.length > 0 ? abi.encode(opDatas[_index], address(0)) : BytesLib.get64Bytes(opEncodedData, _index);
+        return (opTypes[_index], opIntegrations[_index], decodedData);
     }
 
     /**
@@ -687,8 +690,10 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         address reserveAsset = garden.reserveAsset();
         for (uint256 i = 0; i < opTypes.length; i++) {
             IOperation operation = IOperation(IBabController(controller).enabledOperations(uint256(opTypes[i])));
-            (uint256 strategyNav, bool positive) =
-                operation.getNAV(BytesLib.get64Bytes(opEncodedData, i), garden, opIntegrations[i]);
+            // Backward compatibility
+            bytes memory decodedData =
+                opDatas.length > 0 ? abi.encode(opDatas[i], address(0)) : BytesLib.get64Bytes(opEncodedData, i);
+            (uint256 strategyNav, bool positive) = operation.getNAV(decodedData, garden, opIntegrations[i]);
             if (positive) {
                 positiveNav = positiveNav.add(strategyNav);
             } else {
@@ -698,7 +703,11 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         }
         uint256 lastOp = opTypes.length - 1;
         if (opTypes[lastOp] == 4) {
-            address token = BytesLib.decodeOpDataAddressAssembly(opEncodedData, 4 + (64 * lastOp) + 12); // pointer to the starting byte of the ethereum token address
+            // Backward compatibility
+            address token =
+                opDatas.length > 0
+                    ? opDatas[lastOp]
+                    : BytesLib.decodeOpDataAddressAssembly(opEncodedData, 4 + (64 * lastOp) + 12); // pointer to the starting byte of the ethereum token address
             uint256 borrowBalance = IERC20(token).universalBalanceOf(address(this));
             if (borrowBalance > 0) {
                 uint256 price = _getPrice(reserveAsset, token);
