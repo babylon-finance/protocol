@@ -52,8 +52,8 @@ contract CurvePoolIntegration is PoolIntegration {
 
     function getPoolTokens(bytes calldata _pool) public view override returns (address[] memory) {
         address poolAddress = _decodeOpDataAddress(_pool);
-        address[] memory result = new address[](_getNCoins());
-        for (uint8 i = 0; i < _getNCoins(); i++) {
+        address[] memory result = new address[](_getNCoins(poolAddress));
+        for (uint8 i = 0; i < _getNCoins(poolAddress); i++) {
             console.log('poolAddress', poolAddress, i, ICurvePoolV3(poolAddress).coins(i));
             result[i] = ICurvePoolV3(poolAddress).coins(i);
         }
@@ -63,7 +63,7 @@ contract CurvePoolIntegration is PoolIntegration {
     function getPoolWeights(bytes calldata _pool) external view override returns (uint256[] memory) {
         address poolAddress = _decodeOpDataAddress(_pool);
         address[] memory poolTokens = getPoolTokens(_pool);
-        uint256[] memory result = new uint256[](_getNCoins());
+        uint256[] memory result = new uint256[](_getNCoins(poolAddress));
         for (uint8 i = 0; i < poolTokens.length; i++) {
             result[i] = uint256(1e18).div(poolTokens.length);
         }
@@ -86,7 +86,7 @@ contract CurvePoolIntegration is PoolIntegration {
         returns (uint256[] memory _minAmountsOut)
     {
         address poolAddress = _decodeOpDataAddress(_pool);
-        uint256[] memory result = new uint256[](_getNCoins());
+        uint256[] memory result = new uint256[](_getNCoins(poolAddress));
         return result;
     }
 
@@ -132,7 +132,7 @@ contract CurvePoolIntegration is PoolIntegration {
         )
     {
         address poolAddress = _decodeOpDataAddress(_pool);
-        uint256 poolCoins = _getNCoins(); //_decodeOpDataAsUint8(_pool, 0);
+        uint256 poolCoins = _getNCoins(poolAddress); //_decodeOpDataAsUint8(_pool, 0);
 
         // Encode method data for Garden to invoke
         bytes memory methodData = _getAddLiquidityMethodData(poolCoins, _maxAmountsIn, _poolTokensOut);
@@ -170,7 +170,7 @@ contract CurvePoolIntegration is PoolIntegration {
         )
     {
         address poolAddress = _decodeOpDataAddressAssembly(_pool, 32 + 12);
-        uint256 poolCoins = _getNCoins(); //_decodeOpDataAsUint8(_pool, 0);
+        uint256 poolCoins = _getNCoins(poolAddress); //_decodeOpDataAsUint8(_pool, 0);
 
         require(_poolTokensIn > 0, '_poolTokensIn has to not 0');
         require(_minAmountsOut.length > 1, 'Has to provide _minAmountsOut');
@@ -279,10 +279,27 @@ contract CurvePoolIntegration is PoolIntegration {
     }
 
     function _getLpToken(address _pool) internal view override returns (address) {
-        return ICurvePoolV3(_pool).lp_token();
+      // For Deposits & stable swaps that support it get the LP token, otherwise get the pool
+      try ICurvePoolV3(_pool).lp_token() returns (address result) {
+          return result;
+      } catch {
+          return _pool;
+      }
     }
 
-    function _getNCoins() private view returns (uint256) {
-        return 3;
+    function _getNCoins(address _pool) private view returns (uint256) {
+      try ICurvePoolV3(_pool).coins(4) returns (address result) {
+          return 4;
+      } catch {
+        try ICurvePoolV3(_pool).coins(3) returns (address result) {
+            return 3;
+        } catch {
+          try ICurvePoolV3(_pool).coins(2) returns (address result) {
+              return 2;
+          } catch {
+              return 1;
+          }
+        }
+      }
     }
 }
