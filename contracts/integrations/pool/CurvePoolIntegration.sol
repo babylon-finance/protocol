@@ -152,7 +152,6 @@ contract CurvePoolIntegration is PoolIntegration {
         address poolAddress = BytesLib.decodeOpDataAddress(_pool);
         uint256 poolCoins = _getNCoins(poolAddress); //_decodeOpDataAsUint8(_pool, 0);
 
-        console.log('poolCoins', poolCoins, _poolTokensOut);
         // Encode method data for Garden to invoke
         bytes memory methodData = _getAddLiquidityMethodData(poolCoins, _maxAmountsIn, _poolTokensOut);
 

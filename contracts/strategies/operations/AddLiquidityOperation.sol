@@ -248,6 +248,6 @@ contract AddLiquidityOperation is Operation {
     }
 
     function _getLPTokenFromBytes(address _integration, bytes calldata _data) internal view returns (address) {
-        IPoolIntegration(_integration).getLPToken(BytesLib.decodeOpDataAddress(_data));
+        return IPoolIntegration(_integration).getLPToken(BytesLib.decodeOpDataAddress(_data));
     }
 }

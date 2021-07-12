@@ -106,7 +106,6 @@ abstract contract PoolIntegration is BaseIntegration, ReentrancyGuard, IPoolInte
                 poolInfo.strategy.invokeApprove(_getSpender(_pool), _tokensIn[i], _maxAmountsIn[i]);
             }
         }
-        console.log('max amounts in', _maxAmountsIn[0], _maxAmountsIn[1], _maxAmountsIn[2]);
         (address targetPool, uint256 callValue, bytes memory methodData) =
             _getJoinPoolCalldata(_strategy, _pool, _poolTokensOut, _tokensIn, _maxAmountsIn);
         poolInfo.strategy.invokeFromIntegration(targetPool, callValue, methodData);
@@ -204,7 +203,6 @@ abstract contract PoolIntegration is BaseIntegration, ReentrancyGuard, IPoolInte
         poolInfo.strategy = IStrategy(_strategy);
         poolInfo.garden = IGarden(poolInfo.strategy.garden());
         poolInfo.pool = _pool;
-        console.log('lp token', poolInfo.lpToken);
         poolInfo.poolTokensInStrategy = IERC20(poolInfo.lpToken).balanceOf(_strategy);
         poolInfo.poolTokensInTransaction = _poolTokensInTransaction;
         poolInfo.limitPoolTokenQuantities = _limitPoolTokenQuantities;
