@@ -106,6 +106,7 @@ abstract contract PoolIntegration is BaseIntegration, ReentrancyGuard, IPoolInte
                 poolInfo.strategy.invokeApprove(_getSpender(_pool), _tokensIn[i], _maxAmountsIn[i]);
             }
         }
+        console.log('max amounts in', _maxAmountsIn[0], _maxAmountsIn[1], _maxAmountsIn[2]);
         (address targetPool, uint256 callValue, bytes memory methodData) =
             _getJoinPoolCalldata(_strategy, _pool, _poolTokensOut, _tokensIn, _maxAmountsIn);
         poolInfo.strategy.invokeFromIntegration(targetPool, callValue, methodData);
@@ -157,16 +158,16 @@ abstract contract PoolIntegration is BaseIntegration, ReentrancyGuard, IPoolInte
     }
 
     /**
-    * Returns the actual address of the LP token. Different for curve.
-    * @param _pool                    Address of the pool
-    * @return address                 Address of the LP token
-    */
+     * Returns the actual address of the LP token. Different for curve.
+     * @param _pool                    Address of the pool
+     * @return address                 Address of the LP token
+     */
     function getLPToken(address _pool) external view override returns (address) {
         return _getLpToken(_pool);
     }
 
     function totalSupply(address _pool) external view returns (uint256) {
-      return _totalSupply(_pool);
+        return _totalSupply(_pool);
     }
 
     function getPoolTokens(
@@ -324,17 +325,14 @@ abstract contract PoolIntegration is BaseIntegration, ReentrancyGuard, IPoolInte
     function _isPool(bytes memory _pool) internal view virtual returns (bool);
 
     function _totalSupply(address _pool) internal view virtual returns (uint256) {
-      return IERC20(_pool).totalSupply();
+        return IERC20(_pool).totalSupply();
     }
 
     function _getSpender(
         bytes calldata /* _pool */
     ) internal view virtual returns (address);
 
-    function _getLpToken(
-      address _pool
-    ) internal view virtual returns (address) {
-      return _pool;
+    function _getLpToken(address _pool) internal view virtual returns (address) {
+        return _pool;
     }
-
 }
