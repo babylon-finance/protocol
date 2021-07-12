@@ -278,7 +278,7 @@ describe('BABL Rewards Distributor', function () {
       // Mining program has to be enabled before the strategy starts its execution
       await babController.connect(owner).enableBABLMiningProgram();
       const block = await ethers.provider.getBlock();
-      now = block.timestamp;
+      const now = block.timestamp;
 
       const [long1] = await createStrategies([{ garden: garden1 }]);
       await executeStrategy(long1, ONE_ETH);
@@ -309,7 +309,7 @@ describe('BABL Rewards Distributor', function () {
       // Mining program has to be enabled before the strategy starts its execution
       await babController.connect(owner).enableBABLMiningProgram();
       const block = await ethers.provider.getBlock();
-      now = block.timestamp;
+      const now = block.timestamp;
       const strategyContract = await createStrategy(
         'buy',
         'vote',
@@ -341,7 +341,7 @@ describe('BABL Rewards Distributor', function () {
       // Mining program has to be enabled before the strategy starts its execution
       await babController.connect(owner).enableBABLMiningProgram();
       const block = await ethers.provider.getBlock();
-      now = block.timestamp;
+      const now = block.timestamp;
 
       // We try to hack the calculation of rewards taking time from 2 different epochs with a strategy lasting less than 1 epoch in total
       await increaseTime(ONE_DAY_IN_SECONDS * 70);
@@ -370,7 +370,7 @@ describe('BABL Rewards Distributor', function () {
       // Mining program has to be enabled before the strategy starts its execution
       await babController.connect(owner).enableBABLMiningProgram();
       const block = await ethers.provider.getBlock();
-      now = block.timestamp;
+      const now = block.timestamp;
 
       const [long1] = await createStrategies([{ garden: garden1 }]);
 
@@ -396,7 +396,7 @@ describe('BABL Rewards Distributor', function () {
       // Mining program has to be enabled before the strategy starts its execution
       await babController.connect(owner).enableBABLMiningProgram();
       const block = await ethers.provider.getBlock();
-      now = block.timestamp;
+      const now = block.timestamp;
 
       const [long1] = await createStrategies([{ garden: garden1 }]);
       await executeStrategy(long1, ONE_ETH);
@@ -429,7 +429,7 @@ describe('BABL Rewards Distributor', function () {
       // Mining program has to be enabled before the strategy starts its execution
       await babController.connect(owner).enableBABLMiningProgram();
       const block = await ethers.provider.getBlock();
-      now = block.timestamp;
+      const now = block.timestamp;
       const [long1, long2] = await createStrategies([{ garden: garden1 }, { garden: garden1 }]);
 
       await executeStrategy(long1, ONE_ETH);
@@ -472,7 +472,7 @@ describe('BABL Rewards Distributor', function () {
       // Mining program has to be enabled before the strategy starts its execution
       await babController.connect(owner).enableBABLMiningProgram();
       const block = await ethers.provider.getBlock();
-      now = block.timestamp;
+      const now = block.timestamp;
 
       const [long1, long2, long3] = await createStrategies([
         { garden: garden1 },
@@ -526,7 +526,7 @@ describe('BABL Rewards Distributor', function () {
       // Mining program has to be enabled before the strategy starts its execution
       await babController.connect(owner).enableBABLMiningProgram();
       const block = await ethers.provider.getBlock();
-      now = block.timestamp;
+      const now = block.timestamp;
 
       const [long1, long2, long3, long4, long5] = await createStrategies([
         { garden: garden1 },
@@ -616,7 +616,7 @@ describe('BABL Rewards Distributor', function () {
       // Mining program has to be enabled before the strategy starts its execution
       await babController.connect(owner).enableBABLMiningProgram();
       const block = await ethers.provider.getBlock();
-      now = block.timestamp;
+      const now = block.timestamp;
 
       const [long1] = await createStrategies([{ garden: garden1 }]);
 
@@ -637,7 +637,7 @@ describe('BABL Rewards Distributor', function () {
       // Mining program has to be enabled before the strategy starts its execution
       await babController.connect(owner).enableBABLMiningProgram();
       const block = await ethers.provider.getBlock();
-      now = block.timestamp;
+      const now = block.timestamp;
 
       // We go to the future 10 years
       increaseTime(ONE_DAY_IN_SECONDS * 3650);
@@ -668,7 +668,7 @@ describe('BABL Rewards Distributor', function () {
       // Mining program has to be enabled before the strategy starts its execution
       await babController.connect(owner).enableBABLMiningProgram();
       const block = await ethers.provider.getBlock();
-      now = block.timestamp;
+      const now = block.timestamp;
 
       const [long1] = await createStrategies([{ garden: garden1 }]);
 
@@ -699,7 +699,7 @@ describe('BABL Rewards Distributor', function () {
       // Mining program has to be enabled before the strategy starts its execution
       await babController.connect(owner).enableBABLMiningProgram();
       const block = await ethers.provider.getBlock();
-      now = block.timestamp;
+      const now = block.timestamp;
 
       const [long1, long2, long3, long4, long5] = await createStrategies([
         { garden: garden1 },
@@ -788,7 +788,7 @@ describe('BABL Rewards Distributor', function () {
       // Mining program has to be enabled before the strategy starts its execution
       await babController.connect(owner).enableBABLMiningProgram();
       const block = await ethers.provider.getBlock();
-      now = block.timestamp;
+      const now = block.timestamp;
 
       const [long1, long2, long3, long4, long5] = await createStrategies([
         { garden: garden1 },
