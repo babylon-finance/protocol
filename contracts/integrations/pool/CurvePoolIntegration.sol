@@ -193,7 +193,7 @@ contract CurvePoolIntegration is PoolIntegration {
             bytes memory
         )
     {
-        address poolAddress = BytesLib.decodeOpDataAddressAssembly(_pool, 32 + 12);
+        address poolAddress = BytesLib.decodeOpDataAddressAssembly(_pool, 12);
         uint256 poolCoins = _getNCoins(poolAddress); //_decodeOpDataAsUint8(_pool, 0);
 
         require(_poolTokensIn > 0, '_poolTokensIn has to not 0');

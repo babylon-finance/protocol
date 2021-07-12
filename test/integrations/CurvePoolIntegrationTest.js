@@ -60,14 +60,13 @@ describe('CurvePoolIntegrationTest', function () {
         DEFAULT_STRATEGY_PARAMS,
         [addresses.curve.pools.v3.tripool, 0],
       );
-      console.log('before execute');
       await executeStrategy(strategyContract);
-      console.log('after execute');
       expect(await strategyContract.capitalAllocated()).to.equal(ONE_ETH);
-      expect(await triCryptoPool.balanceOf(strategyContract.address)).to.be.gt(0);
-
+      const lpToken = await curvePoolIntegration.getLPToken(addresses.curve.pools.v3.tripool);
+      const triPool = await ethers.getContractAt('IERC20', lpToken);
+      expect(await triPool.balanceOf(strategyContract.address)).to.be.gt(0);
       await finalizeStrategy(strategyContract, 0);
-      expect(await triCryptoPool.balanceOf(strategyContract.address)).to.equal(0);
+      expect(await triPool.balanceOf(strategyContract.address)).to.equal(0);
     });
   });
 });

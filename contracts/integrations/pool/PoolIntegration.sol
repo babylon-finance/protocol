@@ -136,7 +136,7 @@ abstract contract PoolIntegration is BaseIntegration, ReentrancyGuard, IPoolInte
         PoolInfo memory poolInfo = _createPoolInfo(_strategy, _pool, _poolTokensIn, _tokensOut, _minAmountsOut);
         _validatePreExitPoolData(poolInfo);
         // Approve spending of the pool token
-        poolInfo.strategy.invokeApprove(_getSpender(_pool), poolAddress, _poolTokensIn);
+        poolInfo.strategy.invokeApprove(_getSpender(_pool), poolInfo.lpToken, _poolTokensIn);
 
         (address targetPool, uint256 callValue, bytes memory methodData) =
             _getExitPoolCalldata(_strategy, _pool, _poolTokensIn, _tokensOut, _minAmountsOut);
