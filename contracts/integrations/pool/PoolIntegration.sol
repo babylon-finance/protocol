@@ -18,6 +18,7 @@
 
 pragma solidity 0.7.6;
 
+import 'hardhat/console.sol';
 import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import {SafeCast} from '@openzeppelin/contracts/utils/SafeCast.sol';
 import {ReentrancyGuard} from '@openzeppelin/contracts/utils/ReentrancyGuard.sol';
@@ -164,6 +165,10 @@ abstract contract PoolIntegration is BaseIntegration, ReentrancyGuard, IPoolInte
         return _getLpToken(_pool);
     }
 
+    function totalSupply(address _pool) external view returns (uint256) {
+      return _totalSupply(_pool);
+    }
+
     function getPoolTokens(
         bytes calldata /* _pool */
     ) external view virtual override returns (address[] memory);
@@ -198,7 +203,7 @@ abstract contract PoolIntegration is BaseIntegration, ReentrancyGuard, IPoolInte
         poolInfo.strategy = IStrategy(_strategy);
         poolInfo.garden = IGarden(poolInfo.strategy.garden());
         poolInfo.pool = _pool;
-        poolInfo.totalSupply = IERC20(poolInfo.lpToken).totalSupply();
+        console.log('lp token', poolInfo.lpToken);
         poolInfo.poolTokensInStrategy = IERC20(poolInfo.lpToken).balanceOf(_strategy);
         poolInfo.poolTokensInTransaction = _poolTokensInTransaction;
         poolInfo.limitPoolTokenQuantities = _limitPoolTokenQuantities;
@@ -317,6 +322,10 @@ abstract contract PoolIntegration is BaseIntegration, ReentrancyGuard, IPoolInte
         );
 
     function _isPool(bytes memory _pool) internal view virtual returns (bool);
+
+    function _totalSupply(address _pool) internal view virtual returns (uint256) {
+      return IERC20(_pool).totalSupply();
+    }
 
     function _getSpender(
         bytes calldata /* _pool */

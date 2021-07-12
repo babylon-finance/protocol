@@ -40,13 +40,13 @@ describe('CurvePoolIntegrationTest', function () {
 
     it('check that a valid pool is valid', async function () {
       const abiCoder = ethers.utils.defaultAbiCoder;
-      const data = abiCoder.encode(['uint256', 'address'], [0, addresses.curve.pools.v3.tricrypto]);
+      const data = abiCoder.encode(['address', 'uint256'], [addresses.curve.pools.v3.tricrypto, 0]);
       expect(await curvePoolIntegration.isPool(data)).to.equal(true);
     });
 
     it('check that an invalid pool is not valid', async function () {
       const abiCoder = ethers.utils.defaultAbiCoder;
-      const data = abiCoder.encode(['uint256', 'address'], [0, '0x8b6e6e7b5b3801fed2cafd4b22b8a16c2f2db21a']);
+      const data = abiCoder.encode(['address', 'uint256'], ['0x8b6e6e7b5b3801fed2cafd4b22b8a16c2f2db21a', 0]);
       await expect(curvePoolIntegration.isPool(data)).to.be.reverted;
     });
 
@@ -58,9 +58,11 @@ describe('CurvePoolIntegrationTest', function () {
         curvePoolIntegration.address,
         garden1,
         DEFAULT_STRATEGY_PARAMS,
-        [0, addresses.curve.pools.v3.tricrypto],
+        [addresses.curve.pools.v3.tripool, 0],
       );
+      console.log('before execute');
       await executeStrategy(strategyContract);
+      console.log('after execute');
       expect(await strategyContract.capitalAllocated()).to.equal(ONE_ETH);
       expect(await triCryptoPool.balanceOf(strategyContract.address)).to.be.gt(0);
 

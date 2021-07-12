@@ -37,7 +37,15 @@ contract CurvePoolIntegration is PoolIntegration {
     using PreciseUnitMath for uint256;
     using BytesLib for uint256;
 
+
+    /* ============ Constant ============ */
+    address private constant TRICRYPTO = 0x331aF2E331bd619DefAa5DAc6c038f53FCF9F785; // Pool only takes ETH
+    address private constant STETH = 0xDC24316b9AE028F1497c275EB9192a3Ea0f67022; // pool requires first amount to match msg.value
+
     /* ============ State Variables ============ */
+    // Mapping of asset addresses to lp tokens
+    // Some curve pools use lp_token() others token() and somes don't even have the methods public
+    mapping(address => address) public depositToToken;
 
     /* ============ Constructor ============ */
 
@@ -46,7 +54,13 @@ contract CurvePoolIntegration is PoolIntegration {
      *
      * @param _controller                   Address of the controller
      */
-    constructor(IBabController _controller) PoolIntegration('curve_pool', _controller) {}
+    constructor(IBabController _controller) PoolIntegration('curve_pool', _controller) {
+      depositToToken[0xbEbc44782C7dB0a1A60Cb6fe97d0b483032FF1C7] = 0x6c3F90f043a72FA612cbac8115EE7e52BDe6E490; // 3pool
+      depositToToken[0x4CA9b3063Ec5866A4B82E437059D2C43d1be596F] = 0xb19059ebb43466C323583928285a49f558E572Fd; // hbtc
+      depositToToken[0x93054188d876f558f4a66B2EF1d97d16eDf0895B] = 0x49849C98ae39Fff122806C06791Fa73784FB3675; // renbtc
+      depositToToken[0x7fC77b5c7614E1533320Ea6DDc2Eb61fa00A9714] = 0x075b1bb99792c9E1041bA13afEf80C91a1e70fB3; // sbtc
+      depositToToken[0xc5424B857f758E906013F3555Dad202e4bdB4567] = 0xA3D87FffcE63B53E0d54fAa1cc983B7eB0b74A9c; // seth
+    }
 
     /* ============ External Functions ============ */
 
@@ -54,7 +68,6 @@ contract CurvePoolIntegration is PoolIntegration {
         address poolAddress = BytesLib.decodeOpDataAddress(_pool);
         address[] memory result = new address[](_getNCoins(poolAddress));
         for (uint8 i = 0; i < _getNCoins(poolAddress); i++) {
-            console.log('poolAddress', poolAddress, i, ICurvePoolV3(poolAddress).coins(i));
             result[i] = ICurvePoolV3(poolAddress).coins(i);
         }
         return result;
@@ -93,13 +106,17 @@ contract CurvePoolIntegration is PoolIntegration {
     /* ============ Internal Functions ============ */
 
     function _isPool(bytes memory _pool) internal view override returns (bool) {
-        address poolAddress = BytesLib.decodeOpDataAddressAssembly(_pool, 32 + 12);
+        address poolAddress = BytesLib.decodeOpDataAddressAssembly(_pool, 12);
         return ICurvePoolV3(poolAddress).coins(0) != address(0);
     }
 
     function _getSpender(bytes calldata _pool) internal view override returns (address) {
         address poolAddress = BytesLib.decodeOpDataAddress(_pool);
         return poolAddress;
+    }
+
+    function _totalSupply(address /* _pool */) internal view override returns (uint256) {
+        return uint256(1e18);
     }
 
     /**
@@ -134,10 +151,17 @@ contract CurvePoolIntegration is PoolIntegration {
         address poolAddress = BytesLib.decodeOpDataAddress(_pool);
         uint256 poolCoins = _getNCoins(poolAddress); //_decodeOpDataAsUint8(_pool, 0);
 
+        console.log('poolCoins', poolCoins, _poolTokensOut);
         // Encode method data for Garden to invoke
         bytes memory methodData = _getAddLiquidityMethodData(poolCoins, _maxAmountsIn, _poolTokensOut);
 
-        return (poolAddress, 0, methodData);
+        uint256 value = 0;
+        if (poolAddress == TRICRYPTO) {
+          // get the value of eth multiplied by 3
+          value = _maxAmountsIn[2].mul(3);
+          // TODO: probably better to override pool tokens and weight to only have ETH
+        }
+        return (poolAddress, value, methodData);
     }
 
     /**
@@ -176,7 +200,6 @@ contract CurvePoolIntegration is PoolIntegration {
         require(_minAmountsOut.length > 1, 'Has to provide _minAmountsOut');
         // Encode method data for Garden to invoke
         bytes memory methodData = _getRemoveLiquidityMethodData(poolCoins, _minAmountsOut, _poolTokensIn);
-
         return (poolAddress, 0, methodData);
     }
 
@@ -283,21 +306,28 @@ contract CurvePoolIntegration is PoolIntegration {
       try ICurvePoolV3(_pool).lp_token() returns (address result) {
           return result;
       } catch {
+        try ICurvePoolV3(_pool).token() returns (address token) {
+          return token;
+        } catch {
+          if (depositToToken[_pool] != address(0)) {
+            return depositToToken[_pool];
+          }
           return _pool;
+        }
       }
     }
 
     function _getNCoins(address _pool) private view returns (uint256) {
       try ICurvePoolV3(_pool).coins(4) returns (address result) {
-          return 4;
+          return 5;
       } catch {
         try ICurvePoolV3(_pool).coins(3) returns (address result) {
-            return 3;
+            return 4;
         } catch {
           try ICurvePoolV3(_pool).coins(2) returns (address result) {
-              return 2;
+              return 3;
           } catch {
-              return 1;
+              return 2;
           }
         }
       }
