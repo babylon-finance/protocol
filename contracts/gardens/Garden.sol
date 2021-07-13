@@ -16,7 +16,7 @@
 */
 
 pragma solidity 0.7.6;
-
+import 'hardhat/console.sol';
 import {Address} from '@openzeppelin/contracts/utils/Address.sol';
 import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import {SafeERC20} from '@openzeppelin/contracts/token/ERC20/SafeERC20.sol';
@@ -40,6 +40,7 @@ import {IStrategy} from '../interfaces/IStrategy.sol';
 import {IGarden} from '../interfaces/IGarden.sol';
 import {IGardenNFT} from '../interfaces/IGardenNFT.sol';
 import {IIshtarGate} from '../interfaces/IIshtarGate.sol';
+import {ERC721} from '@openzeppelin/contracts/token/ERC721/ERC721.sol';
 import {IWETH} from '../interfaces/external/weth/IWETH.sol';
 
 /**
@@ -159,9 +160,6 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
 
     // Keeper debt in reserve asset if any, repaid upon every strategy finalization
     uint256 public keeperDebt;
-
-    // Allow public deposits for certain gardens
-    bool public override publicDeposits;
 
     // Allow public strategy creators for certain gardens
     bool public override publicStrategyCreators;
@@ -335,10 +333,10 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         bool _mintNft
     ) external payable override nonReentrant {
         _onlyActive();
+        address gate = IBabController(controller).ishtarGate();
         _require(
-            !privateGarden ||
-                IIshtarGate(IBabController(controller).ishtarGate()).canJoinAGarden(address(this), msg.sender) ||
-                creator == _to,
+            (ERC721(gate).balanceOf(msg.sender) > 0 &&
+                (!privateGarden || IIshtarGate(gate).canJoinAGarden(address(this), msg.sender))) || creator == _to,
             Errors.USER_CANNOT_JOIN
         );
         // if deposit limit is 0, then there is no deposit limit
@@ -522,6 +520,8 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
      */
     function makeGardenPublic() external override {
         _require(msg.sender == creator, Errors.ONLY_CREATOR);
+        console.log('IBabController(controller).allowPublicGardens()', IBabController(controller).allowPublicGardens());
+        console.log('privateGarden', privateGarden);
         _require(privateGarden && IBabController(controller).allowPublicGardens(), Errors.GARDEN_ALREADY_PUBLIC);
         privateGarden = false;
     }
@@ -529,14 +529,8 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
     /**
      * Makes a previously private garden public
      */
-    function setPublicRights(
-        bool _publicDeposits,
-        bool _publicStrategist,
-        bool _publicStewards
-    ) external override {
+    function setPublicRights(bool _publicStrategist, bool _publicStewards) external override {
         _require(msg.sender == creator, Errors.ONLY_CREATOR);
-        _require(privateGarden, Errors.GARDEN_ALREADY_PUBLIC);
-        publicDeposits = _publicDeposits;
         publicStrategyCreators = _publicStrategist;
         publicStrategyStewards = _publicStewards;
     }

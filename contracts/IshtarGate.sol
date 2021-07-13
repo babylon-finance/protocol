@@ -204,7 +204,7 @@ contract IshtarGate is ERC721, IIshtarGate, Ownable {
             balanceOf(_user) > 0 &&
             (permissionsByCommunity[_garden][_user] >= JUST_LP ||
                 IGarden(_garden).creator() == _user ||
-                IGarden(_garden).publicDeposits());
+                !IGarden(_garden).privateGarden());
     }
 
     /**

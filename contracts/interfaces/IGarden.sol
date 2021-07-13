@@ -37,19 +37,13 @@ interface IGarden {
 
     function makeGardenPublic() external;
 
-    function setPublicRights(
-        bool _publicDeposits,
-        bool _publicStrategist,
-        bool _publicStewards
-    ) external;
+    function setPublicRights(bool _publicStrategist, bool _publicStewards) external;
 
     function setActive(bool _val) external;
 
     function active() external view returns (bool);
 
     function privateGarden() external view returns (bool);
-
-    function publicDeposits() external view returns (bool);
 
     function publicStrategyCreators() external view returns (bool);
 
