@@ -185,19 +185,19 @@ contract AddLiquidityOperation is Operation {
             return (0, true);
         }
         address[] memory poolTokens = IPoolIntegration(_integration).getPoolTokens(_data, true);
+        address[] memory underlyingTokens = IPoolIntegration(_integration).getPoolTokens(_data, false);
         uint256 NAV;
-        address lpToken = IPoolIntegration(_integration).getLPToken(pool);
-        uint256 totalSupply = IERC20(lpToken).totalSupply();
-        uint256 lpTokens = IERC20(lpToken).balanceOf(msg.sender);
+        IERC20 lpToken = IERC20(IPoolIntegration(_integration).getLPToken(pool));
         for (uint256 i = 0; i < poolTokens.length; i++) {
-            uint256 price = _getPrice(_garden.reserveAsset(), poolTokens[i] != address(0) ? poolTokens[i] : WETH);
+            address underlying = poolTokens[i] != address(0) ? underlyingTokens[i] : WETH;
+            uint256 price = _getPrice(_garden.reserveAsset(), underlying);
             address finalPool = IPoolIntegration(_integration).getPool(pool);
             uint256 balance =
                 poolTokens[i] != address(0) ? IERC20(poolTokens[i]).balanceOf(finalPool) : finalPool.balance;
             NAV += SafeDecimalMath.normalizeAmountTokens(
-                poolTokens[i] != address(0) ? poolTokens[i] : WETH,
+                underlying,
                 _garden.reserveAsset(),
-                balance.mul(lpTokens).div(totalSupply).preciseDiv(price)
+                balance.mul(lpToken.balanceOf(msg.sender)).div(lpToken.totalSupply()).preciseDiv(price)
             );
         }
         require(NAV != 0, 'NAV has to be bigger 0');
