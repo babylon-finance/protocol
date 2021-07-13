@@ -184,7 +184,7 @@ abstract contract PoolIntegration is BaseIntegration, ReentrancyGuard, IPoolInte
     }
 
     function getPoolTokens(
-        bytes calldata /* _pool */,
+        bytes calldata, /* _pool */
         bool /* forNAV */
     ) external view virtual override returns (address[] memory);
 

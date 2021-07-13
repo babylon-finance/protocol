@@ -73,14 +73,14 @@ contract CurvePoolIntegration is PoolIntegration {
         address[] memory result = new address[](_getNCoins(poolAddress));
         for (uint8 i = 0; i < _getNCoins(poolAddress); i++) {
             if (usesUnderlying[poolAddress]) {
-              ICurvePoolV3(poolAddress).underlying_coins(i);
+                ICurvePoolV3(poolAddress).underlying_coins(i);
             } else {
-              result[i] = ICurvePoolV3(poolAddress).coins(i);
+                result[i] = ICurvePoolV3(poolAddress).coins(i);
             }
         }
         // Override weth to ETH because it only accepts ETH
         if (poolAddress == TRICRYPTO && !forNAV) {
-          result[2] = address(0);
+            result[2] = address(0);
         }
         return result;
     }
@@ -90,9 +90,9 @@ contract CurvePoolIntegration is PoolIntegration {
         address[] memory poolTokens = getPoolTokens(_pool, false);
         uint256[] memory result = new uint256[](_getNCoins(poolAddress));
         if (poolAddress == TRICRYPTO) {
-          result[0] = 0;
-          result[1] = 0;
-          result[2] = uint256(1e18);
+            result[0] = 0;
+            result[1] = 0;
+            result[2] = uint256(1e18);
         }
         for (uint8 i = 0; i < poolTokens.length; i++) {
             result[i] = uint256(1e18).div(poolTokens.length);
@@ -226,98 +226,96 @@ contract CurvePoolIntegration is PoolIntegration {
         uint256[] calldata _maxAmountsIn,
         uint256 minMintAmount
     ) private view returns (bytes memory) {
-
         if (ncoins == 2) {
             if (usesUnderlying[_poolAddress]) {
-              return
-                  abi.encodeWithSignature(
-                      'add_liquidity(uint256[2],uint256,bool)',
-                      _maxAmountsIn[0],
-                      _maxAmountsIn[1],
-                      minMintAmount,
-                      true
-                  );
+                return
+                    abi.encodeWithSignature(
+                        'add_liquidity(uint256[2],uint256,bool)',
+                        _maxAmountsIn[0],
+                        _maxAmountsIn[1],
+                        minMintAmount,
+                        true
+                    );
             } else {
-              return
-                  abi.encodeWithSignature(
-                      'add_liquidity(uint256[2],uint256)',
-                      _maxAmountsIn[0],
-                      _maxAmountsIn[1],
-                      minMintAmount
-                  );
+                return
+                    abi.encodeWithSignature(
+                        'add_liquidity(uint256[2],uint256)',
+                        _maxAmountsIn[0],
+                        _maxAmountsIn[1],
+                        minMintAmount
+                    );
             }
-
         }
         if (ncoins == 3) {
             if (usesUnderlying[_poolAddress]) {
-              return
-                  abi.encodeWithSignature(
-                      'add_liquidity(uint256[3],uint256,bool)',
-                      _maxAmountsIn[0],
-                      _maxAmountsIn[1],
-                      _maxAmountsIn[2],
-                      minMintAmount,
-                      true
-                  );
+                return
+                    abi.encodeWithSignature(
+                        'add_liquidity(uint256[3],uint256,bool)',
+                        _maxAmountsIn[0],
+                        _maxAmountsIn[1],
+                        _maxAmountsIn[2],
+                        minMintAmount,
+                        true
+                    );
             } else {
-              return
-                  abi.encodeWithSignature(
-                      'add_liquidity(uint256[3],uint256)',
-                      _maxAmountsIn[0],
-                      _maxAmountsIn[1],
-                      _maxAmountsIn[2],
-                      minMintAmount
-                  );
+                return
+                    abi.encodeWithSignature(
+                        'add_liquidity(uint256[3],uint256)',
+                        _maxAmountsIn[0],
+                        _maxAmountsIn[1],
+                        _maxAmountsIn[2],
+                        minMintAmount
+                    );
             }
         }
         if (ncoins == 4) {
             if (usesUnderlying[_poolAddress]) {
-              return
-                  abi.encodeWithSignature(
-                      'add_liquidity(uint256[4],uint256,bool)',
-                      _maxAmountsIn[0],
-                      _maxAmountsIn[1],
-                      _maxAmountsIn[2],
-                      _maxAmountsIn[3],
-                      minMintAmount,
-                      true
-                  );
+                return
+                    abi.encodeWithSignature(
+                        'add_liquidity(uint256[4],uint256,bool)',
+                        _maxAmountsIn[0],
+                        _maxAmountsIn[1],
+                        _maxAmountsIn[2],
+                        _maxAmountsIn[3],
+                        minMintAmount,
+                        true
+                    );
             } else {
-              return
-                  abi.encodeWithSignature(
-                      'add_liquidity(uint256[4],uint256)',
-                      _maxAmountsIn[0],
-                      _maxAmountsIn[1],
-                      _maxAmountsIn[2],
-                      _maxAmountsIn[3],
-                      minMintAmount
-                  );
+                return
+                    abi.encodeWithSignature(
+                        'add_liquidity(uint256[4],uint256)',
+                        _maxAmountsIn[0],
+                        _maxAmountsIn[1],
+                        _maxAmountsIn[2],
+                        _maxAmountsIn[3],
+                        minMintAmount
+                    );
             }
         }
         if (ncoins == 5) {
             if (usesUnderlying[_poolAddress]) {
-              return
-                  abi.encodeWithSignature(
-                      'add_liquidity(uint256[5],uint256,bool)',
-                      _maxAmountsIn[0],
-                      _maxAmountsIn[1],
-                      _maxAmountsIn[2],
-                      _maxAmountsIn[3],
-                      _maxAmountsIn[4],
-                      minMintAmount,
-                      true
-                  );
+                return
+                    abi.encodeWithSignature(
+                        'add_liquidity(uint256[5],uint256,bool)',
+                        _maxAmountsIn[0],
+                        _maxAmountsIn[1],
+                        _maxAmountsIn[2],
+                        _maxAmountsIn[3],
+                        _maxAmountsIn[4],
+                        minMintAmount,
+                        true
+                    );
             } else {
-              return
-                  abi.encodeWithSignature(
-                      'add_liquidity(uint256[5],uint256)',
-                      _maxAmountsIn[0],
-                      _maxAmountsIn[1],
-                      _maxAmountsIn[2],
-                      _maxAmountsIn[3],
-                      _maxAmountsIn[4],
-                      minMintAmount
-                  );
+                return
+                    abi.encodeWithSignature(
+                        'add_liquidity(uint256[5],uint256)',
+                        _maxAmountsIn[0],
+                        _maxAmountsIn[1],
+                        _maxAmountsIn[2],
+                        _maxAmountsIn[3],
+                        _maxAmountsIn[4],
+                        minMintAmount
+                    );
             }
         }
     }
@@ -389,11 +387,11 @@ contract CurvePoolIntegration is PoolIntegration {
 
     // Used when the contract is the Deposit
     function _getPool(address _pool) internal view override returns (address) {
-      try ICurvePoolV3(_pool).pool() returns (address result) {
-          return result;
-      } catch {
-        return _pool;
-      }
+        try ICurvePoolV3(_pool).pool() returns (address result) {
+            return result;
+        } catch {
+            return _pool;
+        }
     }
 
     function _getNCoins(address _pool) private view returns (uint256) {
