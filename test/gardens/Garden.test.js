@@ -153,7 +153,7 @@ describe('Garden', function () {
       await ishtarGate.connect(signer1).setGardenAccess(signer2.address, garden1.address, 0, { gasPrice: 0 });
       expect(await ishtarGate.connect(signer1).canVoteInAGarden(garden1.address, signer2.address)).to.equal(false);
 
-      // Enable strategist creator rights
+      // Enable voting power rights to users
       await garden1.connect(signer1).setPublicRights(false, true);
       expect(await ishtarGate.connect(signer1).canVoteInAGarden(garden1.address, signer2.address)).to.equal(true);
     });
