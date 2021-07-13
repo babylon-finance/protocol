@@ -165,12 +165,27 @@ abstract contract PoolIntegration is BaseIntegration, ReentrancyGuard, IPoolInte
         return _getLpToken(_pool);
     }
 
+    /**
+     * Gets the underlying pool that holds the internal tokens. Different for curve.
+     * @param _pool                    Address of the maybe pool
+     * @return address                 Address of the pool itself
+     */
+    function getPool(address _pool) external view override returns (address) {
+        return _getPool(_pool);
+    }
+
+    /**
+     * Returns the total supply of the pool tokens
+     * @param _pool                    Address of the pool
+     * @return address                 Total supply of the token
+     */
     function totalSupply(address _pool) external view returns (uint256) {
         return _totalSupply(_pool);
     }
 
     function getPoolTokens(
-        bytes calldata /* _pool */
+        bytes calldata /* _pool */,
+        bool /* forNAV */
     ) external view virtual override returns (address[] memory);
 
     function getPoolWeights(
@@ -331,6 +346,10 @@ abstract contract PoolIntegration is BaseIntegration, ReentrancyGuard, IPoolInte
     ) internal view virtual returns (address);
 
     function _getLpToken(address _pool) internal view virtual returns (address) {
+        return _pool;
+    }
+
+    function _getPool(address _pool) internal view virtual returns (address) {
         return _pool;
     }
 }

@@ -40,11 +40,13 @@ interface IPoolIntegration {
         uint256[] memory _minAmountsOut
     ) external;
 
-    function getPoolTokens(bytes calldata _pool) external view returns (address[] memory);
+    function getPoolTokens(bytes calldata _pool, bool forNAV) external view returns (address[] memory);
 
     function getPoolWeights(bytes calldata _pool) external view returns (uint256[] memory);
 
     function getLPToken(address _pool) external view returns (address);
+
+    function getPool(address _pool) external view returns (address);
 
     function getPoolTokensOut(
         bytes calldata _pool,

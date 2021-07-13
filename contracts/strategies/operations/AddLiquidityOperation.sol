@@ -93,7 +93,7 @@ contract AddLiquidityOperation is Operation {
             uint8
         )
     {
-        address[] memory poolTokens = IPoolIntegration(_integration).getPoolTokens(_data);
+        address[] memory poolTokens = IPoolIntegration(_integration).getPoolTokens(_data, false);
         uint256[] memory _poolWeights = IPoolIntegration(_integration).getPoolWeights(_data);
         // Get the tokens needed to enter the pool
         uint256[] memory maxAmountsIn = _maxAmountsIn(_asset, _capital, _garden, _poolWeights, poolTokens);
@@ -136,7 +136,7 @@ contract AddLiquidityOperation is Operation {
     {
         require(_percentage <= 100e18, 'Unwind Percentage <= 100%');
         address pool = BytesLib.decodeOpDataAddress(_data);
-        address[] memory poolTokens = IPoolIntegration(_integration).getPoolTokens(_data);
+        address[] memory poolTokens = IPoolIntegration(_integration).getPoolTokens(_data, false);
         uint256 lpTokens =
             IERC20(IPoolIntegration(_integration).getLPToken(pool)).balanceOf(msg.sender).preciseMul(_percentage); // Sell all pool tokens
         uint256[] memory _minAmountsOut = IPoolIntegration(_integration).getPoolMinAmountsOut(_data, lpTokens);
@@ -184,14 +184,15 @@ contract AddLiquidityOperation is Operation {
         if (!IStrategy(msg.sender).isStrategyActive()) {
             return (0, true);
         }
-        address[] memory poolTokens = IPoolIntegration(_integration).getPoolTokens(_data);
+        address[] memory poolTokens = IPoolIntegration(_integration).getPoolTokens(_data, true);
         uint256 NAV;
         address lpToken = IPoolIntegration(_integration).getLPToken(pool);
         uint256 totalSupply = IERC20(lpToken).totalSupply();
         uint256 lpTokens = IERC20(lpToken).balanceOf(msg.sender);
         for (uint256 i = 0; i < poolTokens.length; i++) {
             uint256 price = _getPrice(_garden.reserveAsset(), poolTokens[i] != address(0) ? poolTokens[i] : WETH);
-            uint256 balance = poolTokens[i] != address(0) ? IERC20(poolTokens[i]).balanceOf(pool) : pool.balance;
+            address finalPool = IPoolIntegration(_integration).getPool(pool);
+            uint256 balance = poolTokens[i] != address(0) ? IERC20(poolTokens[i]).balanceOf(finalPool) : finalPool.balance;
             NAV += SafeDecimalMath.normalizeAmountTokens(
                 poolTokens[i] != address(0) ? poolTokens[i] : WETH,
                 _garden.reserveAsset(),

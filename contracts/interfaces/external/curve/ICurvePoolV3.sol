@@ -19,4 +19,6 @@ interface ICurvePoolV3 {
     function lp_token() external view returns (address out);
 
     function token() external view returns (address out);
+
+    function pool() external view returns (address out);
 }
