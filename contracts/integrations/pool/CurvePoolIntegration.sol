@@ -21,6 +21,7 @@ import 'hardhat/console.sol';
 import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import {IBabController} from '../../interfaces/IBabController.sol';
 import {ICurvePoolV3} from '../../interfaces/external/curve/ICurvePoolV3.sol';
+import {ICurvePoolInt128} from '../../interfaces/external/curve/ICurvePoolInt128.sol';
 import {PoolIntegration} from './PoolIntegration.sol';
 import {PreciseUnitMath} from '../../lib/PreciseUnitMath.sol';
 import {LowGasSafeMath} from '../../lib/LowGasSafeMath.sol';
@@ -49,6 +50,12 @@ contract CurvePoolIntegration is PoolIntegration {
     // Whether to deposit using the underlying coins
     mapping(address => bool) public usesUnderlying;
 
+    // Whether it supports the underlying param in add liquidity and remove liquidity
+    mapping(address => bool) public supportsUnderlyingParam;
+
+    // Whether addresses use the int128 coins method
+    mapping(address => bool) public coinsInt128;
+
     /* ============ Constructor ============ */
 
     /**
@@ -63,7 +70,14 @@ contract CurvePoolIntegration is PoolIntegration {
         depositToToken[0x7fC77b5c7614E1533320Ea6DDc2Eb61fa00A9714] = 0x075b1bb99792c9E1041bA13afEf80C91a1e70fB3; // sbtc
         depositToToken[0xc5424B857f758E906013F3555Dad202e4bdB4567] = 0xA3D87FffcE63B53E0d54fAa1cc983B7eB0b74A9c; // seth
 
-        usesUnderlying[0xDeBF20617708857ebe4F679508E7b7863a8A8EeE] = true;
+        usesUnderlying[0xDeBF20617708857ebe4F679508E7b7863a8A8EeE] = true; // aave
+        usesUnderlying[0xb6c057591E073249F2D9D88Ba59a46CFC9B59EdB] = true; // busd
+        usesUnderlying[0xeB21209ae4C2c9FF2a86ACA31E123764A3B6Bc06] = true; // compound
+
+        supportsUnderlyingParam[0xDeBF20617708857ebe4F679508E7b7863a8A8EeE] = true; // aave
+
+        coinsInt128[0xb6c057591E073249F2D9D88Ba59a46CFC9B59EdB] = true; // busd
+        coinsInt128[0xeB21209ae4C2c9FF2a86ACA31E123764A3B6Bc06] = true; // compound
     }
 
     /* ============ External Functions ============ */
@@ -73,9 +87,17 @@ contract CurvePoolIntegration is PoolIntegration {
         address[] memory result = new address[](_getNCoins(poolAddress));
         for (uint8 i = 0; i < _getNCoins(poolAddress); i++) {
             if (usesUnderlying[poolAddress] && !forNAV) {
-              result[i] = ICurvePoolV3(poolAddress).underlying_coins(i);
+              if (coinsInt128[poolAddress]) {
+                result[i] = ICurvePoolInt128(poolAddress).underlying_coins(i);
+              } else {
+                result[i] = ICurvePoolV3(poolAddress).underlying_coins(i);
+              }
             } else {
-              result[i] = ICurvePoolV3(poolAddress).coins(i);
+              if (coinsInt128[poolAddress]) {
+                result[i] = ICurvePoolInt128(poolAddress).coins(i);
+              } else {
+                result[i] = ICurvePoolV3(poolAddress).coins(i);
+              }
             }
         }
         // Override weth to ETH because it only accepts ETH
@@ -124,7 +146,11 @@ contract CurvePoolIntegration is PoolIntegration {
 
     function _isPool(bytes memory _pool) internal view override returns (bool) {
         address poolAddress = BytesLib.decodeOpDataAddressAssembly(_pool, 12);
-        return ICurvePoolV3(poolAddress).coins(0) != address(0);
+        if (coinsInt128[poolAddress]) {
+          return ICurvePoolInt128(poolAddress).coins(0) != address(0);
+        } else {
+          return ICurvePoolV3(poolAddress).coins(0) != address(0);
+        }
     }
 
     function _getSpender(bytes calldata _pool) internal view override returns (address) {
@@ -228,7 +254,7 @@ contract CurvePoolIntegration is PoolIntegration {
     ) private view returns (bytes memory) {
 
         if (ncoins == 2) {
-            if (usesUnderlying[_poolAddress]) {
+            if (supportsUnderlyingParam[_poolAddress]) {
               return
                   abi.encodeWithSignature(
                       'add_liquidity(uint256[2],uint256,bool)',
@@ -249,7 +275,7 @@ contract CurvePoolIntegration is PoolIntegration {
 
         }
         if (ncoins == 3) {
-            if (usesUnderlying[_poolAddress]) {
+            if (supportsUnderlyingParam[_poolAddress]) {
               return
                   abi.encodeWithSignature(
                       'add_liquidity(uint256[3],uint256,bool)',
@@ -271,7 +297,7 @@ contract CurvePoolIntegration is PoolIntegration {
             }
         }
         if (ncoins == 4) {
-            if (usesUnderlying[_poolAddress]) {
+            if (supportsUnderlyingParam[_poolAddress]) {
               return
                   abi.encodeWithSignature(
                       'add_liquidity(uint256[4],uint256,bool)',
@@ -295,7 +321,7 @@ contract CurvePoolIntegration is PoolIntegration {
             }
         }
         if (ncoins == 5) {
-            if (usesUnderlying[_poolAddress]) {
+            if (supportsUnderlyingParam[_poolAddress]) {
               return
                   abi.encodeWithSignature(
                       'add_liquidity(uint256[5],uint256,bool)',
@@ -329,7 +355,7 @@ contract CurvePoolIntegration is PoolIntegration {
         uint256 _poolTokensIn
     ) private view returns (bytes memory) {
         if (ncoins == 2) {
-            if (usesUnderlying[_poolAddress]) {
+            if (supportsUnderlyingParam[_poolAddress]) {
               return
                   abi.encodeWithSignature(
                       'remove_liquidity(uint256,uint256[2],bool)',
@@ -349,7 +375,7 @@ contract CurvePoolIntegration is PoolIntegration {
             }
         }
         if (ncoins == 3) {
-            if (usesUnderlying[_poolAddress]) {
+            if (supportsUnderlyingParam[_poolAddress]) {
               return
                   abi.encodeWithSignature(
                       'remove_liquidity(uint256,uint256[3],bool)',
@@ -371,7 +397,7 @@ contract CurvePoolIntegration is PoolIntegration {
             }
         }
         if (ncoins == 4) {
-            if (usesUnderlying[_poolAddress]) {
+            if (supportsUnderlyingParam[_poolAddress]) {
               return
                   abi.encodeWithSignature(
                       'remove_liquidity(uint256,uint256[4],bool)',
@@ -395,7 +421,7 @@ contract CurvePoolIntegration is PoolIntegration {
             }
         }
         if (ncoins == 5) {
-            if (usesUnderlying[_poolAddress]) {
+            if (supportsUnderlyingParam[_poolAddress]) {
               return
                   abi.encodeWithSignature(
                       'remove_liquidity(uint256,uint256[5],bool)',
