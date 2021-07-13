@@ -87,7 +87,7 @@ contract BabylonViewer {
             ERC20(_garden).symbol(),
             garden.creator(),
             garden.reserveAsset(),
-            [garden.active(), garden.guestListEnabled()],
+            [garden.active(), garden.privateGarden()],
             garden.getStrategies(),
             garden.getFinalizedStrategies(),
             [
@@ -216,7 +216,7 @@ contract BabylonViewer {
         IIshtarGate gate = IIshtarGate(controller.ishtarGate());
         for (uint256 i = _offset; i < gardens.length; i++) {
             IGarden garden = IGarden(gardens[i]);
-            if (garden.active() && (!garden.guestListEnabled() || gate.canJoinAGarden(gardens[i], _user))) {
+            if (garden.active() && (!garden.privateGarden() || gate.canJoinAGarden(gardens[i], _user))) {
                 userGardens[resultIndex] = gardens[i];
                 hasUserDeposited[resultIndex] = IERC20(gardens[i]).balanceOf(_user) > 0;
                 resultIndex = resultIndex + 1;

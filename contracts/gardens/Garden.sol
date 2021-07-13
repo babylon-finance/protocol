@@ -115,7 +115,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
     address public override creator;
     // Whether the garden is currently active or not
     bool public override active;
-    bool public override guestListEnabled;
+    bool public override privateGarden;
 
     // Keeps track of the reserve balance. In case we receive some through other means
     uint256 public override principal;
@@ -159,6 +159,15 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
 
     // Keeper debt in reserve asset if any, repaid upon every strategy finalization
     uint256 public keeperDebt;
+
+    // Allow public deposits for certain gardens
+    bool public override publicDeposits;
+
+    // Allow public strategy creators for certain gardens
+    bool public override publicStrategyCreators;
+
+    // Allow public strategy stewards for certain gardens
+    bool public override publicStrategyStewards;
 
     /* ============ Modifiers ============ */
 
@@ -228,7 +237,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         maxContributors = IBabController(_controller).maxContributorsPerGarden();
         rewardsDistributor = IRewardsDistributor(IBabController(controller).rewardsDistributor());
         _require(address(rewardsDistributor) != address(0), Errors.ADDRESS_IS_ZERO);
-        guestListEnabled = true;
+        privateGarden = true;
 
         _start(
             _initialContribution,
@@ -327,7 +336,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
     ) external payable override nonReentrant {
         _onlyActive();
         _require(
-            !guestListEnabled ||
+            !privateGarden ||
                 IIshtarGate(IBabController(controller).ishtarGate()).canJoinAGarden(address(this), msg.sender) ||
                 creator == _to,
             Errors.USER_CANNOT_JOIN
@@ -513,8 +522,23 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
      */
     function makeGardenPublic() external override {
         _require(msg.sender == creator, Errors.ONLY_CREATOR);
-        _require(guestListEnabled && IBabController(controller).allowPublicGardens(), Errors.GARDEN_ALREADY_PUBLIC);
-        guestListEnabled = false;
+        _require(privateGarden && IBabController(controller).allowPublicGardens(), Errors.GARDEN_ALREADY_PUBLIC);
+        privateGarden = false;
+    }
+
+    /**
+     * Makes a previously private garden public
+     */
+    function setPublicRights(
+        bool _publicDeposits,
+        bool _publicStrategist,
+        bool _publicStewards
+    ) external override {
+        _require(msg.sender == creator, Errors.ONLY_CREATOR);
+        _require(privateGarden, Errors.GARDEN_ALREADY_PUBLIC);
+        publicDeposits = _publicDeposits;
+        publicStrategyCreators = _publicStrategist;
+        publicStrategyStewards = _publicStewards;
     }
 
     /**
@@ -840,7 +864,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         _require(
             from == address(0) ||
                 to == address(0) ||
-                (IBabController(controller).gardenTokensTransfersEnabled() && !guestListEnabled),
+                (IBabController(controller).gardenTokensTransfersEnabled() && !privateGarden),
             Errors.GARDEN_TRANSFERS_DISABLED
         );
     }
