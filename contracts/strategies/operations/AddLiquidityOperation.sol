@@ -194,6 +194,10 @@ contract AddLiquidityOperation is Operation {
             address finalPool = IPoolIntegration(_integration).getPool(pool);
             uint256 balance =
                 poolTokens[i] != address(0) ? IERC20(poolTokens[i]).balanceOf(finalPool) : finalPool.balance;
+            // If the underlying and the pool token have different decimals need to normalize first
+            if (underlying != poolTokens[i]) {
+              balance = SafeDecimalMath.normalizeAmountTokens(poolTokens[i], underlying, balance);
+            }
             NAV += SafeDecimalMath.normalizeAmountTokens(
                 underlying,
                 _garden.reserveAsset(),

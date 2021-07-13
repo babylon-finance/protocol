@@ -20,5 +20,7 @@ interface ICurvePoolInt128 {
 
     function token() external view returns (address out);
 
+    function curve() external view returns (address out);
+
     function pool() external view returns (address out);
 }
