@@ -524,7 +524,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
     }
 
     /**
-     * Makes a previously private garden public
+     * Gives the right to create strategies and/or voting power to garden users
      */
     function setPublicRights(bool _publicStrategist, bool _publicStewards) external override {
         _require(msg.sender == creator, Errors.ONLY_CREATOR);
