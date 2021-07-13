@@ -16,7 +16,6 @@
 */
 
 pragma solidity 0.7.6;
-import 'hardhat/console.sol';
 import {Address} from '@openzeppelin/contracts/utils/Address.sol';
 import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import {SafeERC20} from '@openzeppelin/contracts/token/ERC20/SafeERC20.sol';
@@ -520,8 +519,6 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
      */
     function makeGardenPublic() external override {
         _require(msg.sender == creator, Errors.ONLY_CREATOR);
-        console.log('IBabController(controller).allowPublicGardens()', IBabController(controller).allowPublicGardens());
-        console.log('privateGarden', privateGarden);
         _require(privateGarden && IBabController(controller).allowPublicGardens(), Errors.GARDEN_ALREADY_PUBLIC);
         privateGarden = false;
     }
