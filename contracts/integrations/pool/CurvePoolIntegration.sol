@@ -73,13 +73,24 @@ contract CurvePoolIntegration is PoolIntegration {
         usesUnderlying[0xDeBF20617708857ebe4F679508E7b7863a8A8EeE] = true; // aave
         usesUnderlying[0xb6c057591E073249F2D9D88Ba59a46CFC9B59EdB] = true; // busd
         usesUnderlying[0xeB21209ae4C2c9FF2a86ACA31E123764A3B6Bc06] = true; // compound
-        usesUnderlying[0xA50cCc70b6a011CffDdf45057E39679379187287] = true; // pax
+        usesUnderlying[0x2dded6Da1BF5DBdF597C45fcFaa3194e53EcfeAF] = true; // ironbank
+        usesUnderlying[0xFCBa3E75865d2d561BE8D220616520c171F12851] = true; // susd
+        usesUnderlying[0xac795D2c97e60DF6a99ff1c814727302fD747a80] = true; // usdt
+        usesUnderlying[0xbBC81d23Ea2c3ec7e56D39296F0cbB648873a5d3] = true; // y
+        usesUnderlying[0x8925D9d9B4569D737a48499DeF3f67BaA5a144b9] = true; // yv2
 
         supportsUnderlyingParam[0xDeBF20617708857ebe4F679508E7b7863a8A8EeE] = true; // aave
+        supportsUnderlyingParam[0x2dded6Da1BF5DBdF597C45fcFaa3194e53EcfeAF] = true; // ironbank
+        supportsUnderlyingParam[0x8925D9d9B4569D737a48499DeF3f67BaA5a144b9] = true; // yv2
 
         coinsInt128[0xb6c057591E073249F2D9D88Ba59a46CFC9B59EdB] = true; // busd
         coinsInt128[0xeB21209ae4C2c9FF2a86ACA31E123764A3B6Bc06] = true; // compound
         coinsInt128[0xA50cCc70b6a011CffDdf45057E39679379187287] = true; // pax
+        coinsInt128[0x93054188d876f558f4a66B2EF1d97d16eDf0895B] = true; // renbtc
+        coinsInt128[0x7fC77b5c7614E1533320Ea6DDc2Eb61fa00A9714] = true; // sbtc
+        coinsInt128[0xFCBa3E75865d2d561BE8D220616520c171F12851] = true; // susd
+        coinsInt128[0xac795D2c97e60DF6a99ff1c814727302fD747a80] = true; // usdt
+        coinsInt128[0xbBC81d23Ea2c3ec7e56D39296F0cbB648873a5d3] = true; // y
     }
 
     /* ============ External Functions ============ */
