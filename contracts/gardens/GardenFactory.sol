@@ -63,7 +63,9 @@ contract GardenFactory is IGardenFactory {
         string memory _tokenURI,
         uint256 _seed,
         uint256[] calldata _gardenParams,
-        uint256 _initialContribution
+        uint256 _initialContribution,
+        bool _publicStrategists,
+        bool _publicStewards
     ) external override returns (address) {
         require(msg.sender == address(controller), 'Only the controller can create gardens');
         address payable proxy =
@@ -78,7 +80,9 @@ contract GardenFactory is IGardenFactory {
                         _name,
                         _symbol,
                         _gardenParams,
-                        _initialContribution
+                        _initialContribution,
+                        _publicStrategists,
+                        _publicStewards
                     )
                 )
             );

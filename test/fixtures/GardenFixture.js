@@ -53,7 +53,6 @@ async function setUpFixture(
   // Gives signer1 creator permissions
   await ishtarGate.connect(owner).setCreatorPermissions(owner.address, true, { gasPrice: 0 });
   await ishtarGate.connect(owner).setCreatorPermissions(signer1.address, true, { gasPrice: 0 });
-
   await babController
     .connect(signer1)
     .createGarden(
@@ -64,6 +63,8 @@ async function setUpFixture(
       0,
       gardenParams,
       ethers.utils.parseEther('1'),
+      false,
+      false,
       {
         value: ethers.utils.parseEther('1'),
       },
@@ -78,6 +79,8 @@ async function setUpFixture(
       1,
       gardenParams,
       ethers.utils.parseEther('1'),
+      false,
+      false,
       {
         value: ethers.utils.parseEther('1'),
       },
@@ -93,6 +96,8 @@ async function setUpFixture(
       2,
       gardenParams,
       ethers.utils.parseEther('1'),
+      false,
+      false,
       {
         value: ethers.utils.parseEther('1'),
       },
@@ -108,6 +113,8 @@ async function setUpFixture(
       3,
       gardenParams,
       ethers.utils.parseEther('1'),
+      false,
+      false,
       {
         value: ethers.utils.parseEther('1'),
       },

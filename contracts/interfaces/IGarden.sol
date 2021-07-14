@@ -32,7 +32,9 @@ interface IGarden {
         string memory _name,
         string memory _symbol,
         uint256[] calldata _gardenParams,
-        uint256 _initialContribution
+        uint256 _initialContribution,
+        bool _publicStrategists,
+        bool _publicStewards
     ) external payable;
 
     function makeGardenPublic() external;
@@ -45,9 +47,9 @@ interface IGarden {
 
     function privateGarden() external view returns (bool);
 
-    function publicStrategyCreators() external view returns (bool);
+    function publicStrategists() external view returns (bool);
 
-    function publicStrategyStewards() external view returns (bool);
+    function publicStewards() external view returns (bool);
 
     function controller() external view returns (address);
 

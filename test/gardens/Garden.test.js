@@ -172,6 +172,8 @@ describe('Garden', function () {
             0,
             GARDEN_PARAMS,
             ethers.utils.parseEther('0.1'),
+            false,
+            false,
             {
               value: ethers.utils.parseEther('0.1'),
             },
@@ -189,6 +191,8 @@ describe('Garden', function () {
             0,
             GARDEN_PARAMS,
             ethers.utils.parseEther('0.1'),
+            false,
+            false,
             {
               value: ethers.utils.parseEther('0.1'),
             },
@@ -936,6 +940,8 @@ describe('Garden', function () {
           0,
           GARDEN_PARAMS_STABLE,
           ethers.utils.parseEther('100'),
+          false,
+          false,
           {},
         );
       const gardens = await babController.getGardens();
@@ -988,6 +994,8 @@ describe('Garden', function () {
           0,
           params,
           thousandUSDC.div(10),
+          false,
+          false,
           {},
         );
       const gardens = await babController.getGardens();
@@ -1080,6 +1088,8 @@ describe('Garden', function () {
             0,
             GARDEN_PARAMS,
             ethers.utils.parseEther('1'),
+            false,
+            false,
             {
               value: ethers.utils.parseEther('1'),
             },

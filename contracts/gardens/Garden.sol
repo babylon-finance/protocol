@@ -161,10 +161,10 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
     uint256 public keeperDebt;
 
     // Allow public strategy creators for certain gardens
-    bool public override publicStrategyCreators;
+    bool public override publicStrategists;
 
     // Allow public strategy stewards for certain gardens
-    bool public override publicStrategyStewards;
+    bool public override publicStewards;
 
     /* ============ Modifiers ============ */
 
@@ -209,6 +209,8 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
      * @param _symbol                 Symbol of the Garden
      * @param _gardenParams           Array of numeric garden params
      * @param _initialContribution    Initial Contribution by the Gardener
+     * @param _publicStrategists      Public Strategists rights
+     * @param _publicStewards         Public Stewards rights
      */
     function initialize(
         address _reserveAsset,
@@ -217,7 +219,9 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         string memory _name,
         string memory _symbol,
         uint256[] calldata _gardenParams,
-        uint256 _initialContribution
+        uint256 _initialContribution,
+        bool _publicStrategists,
+        bool _publicStewards
     ) public payable override initializer {
         _require(bytes(_name).length < 50, Errors.NAME_TOO_LONG);
         _require(
@@ -235,7 +239,8 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         rewardsDistributor = IRewardsDistributor(IBabController(controller).rewardsDistributor());
         _require(address(rewardsDistributor) != address(0), Errors.ADDRESS_IS_ZERO);
         privateGarden = true;
-
+        publicStrategists = _publicStrategists;
+        publicStewards = _publicStewards;
         _start(
             _initialContribution,
             _gardenParams[0],
@@ -526,10 +531,10 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
     /**
      * Gives the right to create strategies and/or voting power to garden users
      */
-    function setPublicRights(bool _publicStrategist, bool _publicStewards) external override {
+    function setPublicRights(bool _publicStrategists, bool _publicStewards) external override {
         _require(msg.sender == creator, Errors.ONLY_CREATOR);
-        publicStrategyCreators = _publicStrategist;
-        publicStrategyStewards = _publicStewards;
+        publicStrategists = _publicStrategists;
+        publicStewards = _publicStewards;
     }
 
     /**

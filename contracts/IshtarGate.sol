@@ -219,7 +219,7 @@ contract IshtarGate is ERC721, IIshtarGate, Ownable {
             balanceOf(_user) > 0 &&
             (permissionsByCommunity[_garden][_user] >= STEWARD ||
                 IGarden(_garden).creator() == _user ||
-                IGarden(_garden).publicStrategyStewards());
+                IGarden(_garden).publicStewards());
     }
 
     /**
@@ -234,7 +234,7 @@ contract IshtarGate is ERC721, IIshtarGate, Ownable {
             balanceOf(_user) > 0 &&
             (permissionsByCommunity[_garden][_user] >= STRATEGIST ||
                 IGarden(_garden).creator() == _user ||
-                IGarden(_garden).publicStrategyCreators());
+                IGarden(_garden).publicStrategists());
     }
 
     /* ============ Internal Functions ============ */

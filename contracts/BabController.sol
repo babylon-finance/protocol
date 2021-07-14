@@ -213,7 +213,9 @@ contract BabController is OwnableUpgradeable, IBabController {
         string memory _tokenURI,
         uint256 _seed,
         uint256[] calldata _gardenParams,
-        uint256 _initialContribution
+        uint256 _initialContribution,
+        bool _publicStrategists,
+        bool _publicStewards
     ) external payable override returns (address) {
         require(defaultTradeIntegration != address(0), 'Need a default trade integration');
         require(enabledOperations.length > 0, 'Need operations enabled');
@@ -230,7 +232,9 @@ contract BabController is OwnableUpgradeable, IBabController {
                 _tokenURI,
                 _seed,
                 _gardenParams,
-                _initialContribution
+                _initialContribution,
+                _publicStrategists,
+                _publicStewards
             );
         if (_reserveAsset != WETH || msg.value == 0) {
             IERC20(_reserveAsset).transferFrom(msg.sender, address(this), _initialContribution);
