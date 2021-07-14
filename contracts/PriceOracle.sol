@@ -70,6 +70,7 @@ contract PriceOracle is Ownable, IPriceOracle {
     /* ============ Constructor ============ */
 
     constructor() {
+        // TODO: get on chain
         cTokenToAsset[0x5d3a536E4D6DbD6114cc1Ead35777bAB948E3643] = 0x6B175474E89094C44Da98b954EedeAC495271d0F; // DAI
         cTokenToAsset[0x35A18000230DA775CAc24873d00Ff85BccdeD550] = 0x1f9840a85d5aF5bf1D1762F925BDADdC4201F984; // UNI
         cTokenToAsset[0x4Ddc2D193948926D02f9B1fE9e1daa0718270ED5] = WETH; // ETH
@@ -84,6 +85,7 @@ contract PriceOracle is Ownable, IPriceOracle {
         cTokenToAsset[0x12392F67bdf24faE0AF363c24aC620a2f67DAd86] = 0x0000000000085d4780B73119b644AE5ecd22b376; // TUSD
         cTokenToAsset[0xB3319f5D18Bc0D84dD1b4825Dcde5d5f7266d407] = 0xE41d2489571d322189246DaFA5ebDe1F4699F498; // ZRX
 
+        // TODO: get on chain
         aTokenToAsset[0xFFC97d72E13E01096502Cb8Eb52dEe56f74DAD7B] = 0x7Fc66500c84A76Ad7e9c93437bFc5Ac33E2DDaE9; // aave
         aTokenToAsset[0x272F97b7a56a387aE942350bBC7Df5700f8a4576] = 0xba100000625a3754423978a60c9317c58a424e3D; // bal
         aTokenToAsset[0x05Ec93c0365baAeAbF7AefFb0972ea7ECdD39CF1] = 0x0D8775F648430679A709E98d2b0Cb6250d2887EF; // bat
@@ -111,13 +113,14 @@ contract PriceOracle is Ownable, IPriceOracle {
         if (_tokenIn == _tokenOut) {
             return 10**18;
         }
+
         // Comp assets
         if (cTokenToAsset[_tokenIn] != address(0)) {
-            uint256 exchangeRateNormalized = _getCompoundExchangeRate(_tokenIn);
+            uint256 exchangeRateNormalized = getCompoundExchangeRate(_tokenIn);
             return getPrice(cTokenToAsset[_tokenIn], _tokenOut).preciseMul(exchangeRateNormalized);
         }
         if (cTokenToAsset[_tokenOut] != address(0)) {
-            uint256 exchangeRateNormalized = _getCompoundExchangeRate(_tokenOut);
+            uint256 exchangeRateNormalized = getCompoundExchangeRate(_tokenOut);
             return getPrice(_tokenIn, cTokenToAsset[_tokenOut]).preciseDiv(exchangeRateNormalized);
         }
 
@@ -128,12 +131,13 @@ contract PriceOracle is Ownable, IPriceOracle {
         if (aTokenToAsset[_tokenOut] != address(0)) {
             return getPrice(_tokenIn, aTokenToAsset[_tokenOut]);
         }
-        // Cream prices 0xde19f5a7cF029275Be9cEC538E81Aa298E297266
-        // Check Synths
+        // crTokens Cream prices 0xde19f5a7cF029275Be9cEC538E81Aa298E297266
+        // Check Synths & integrate synths
+        // Integrate lido
 
-        // other btcs, change pairs
-        // other usd, change pair
-        // other eths, change pair
+        // other btcs, change pairs & change path in uniswap trade
+        // other usd, change pair & change path in uniswap trade
+        // other eths, change pair & change path in uniswap trade
 
         if (_tokenIn != WETH && _tokenOut != WETH) {
             return getPrice(_tokenIn, WETH).preciseDiv(getPrice(_tokenOut, WETH));
@@ -226,7 +230,7 @@ contract PriceOracle is Ownable, IPriceOracle {
         }
     }
 
-    function getCompoundExchangeRate(address _asset) public view returns (uint256) {
+    function getCompoundExchangeRate(address _asset) public view override returns (uint256) {
         uint256 exchangeRateNormalized = ICToken(_asset).exchangeRateStored();
         if (ERC20(cTokenToAsset[_asset]).decimals() > 8) {
             exchangeRateNormalized = exchangeRateNormalized.div(10**(ERC20(cTokenToAsset[_asset]).decimals() - 8));
