@@ -105,11 +105,23 @@ describe('PriceOracle', function () {
 
       it(`should get the price of inverse ctokens ${ctoken}`, async function () {
         const price = await priceOracle.connect(owner).getPrice(addresses.tokens.DAI, ctoken);
-        const priceUnderlying = await priceOracle.connect(owner).getPrice(token, addresses.tokens.DAI);
+        const priceUnderlying = await priceOracle.connect(owner).getPrice(addresses.tokens.DAI, token);
         const ictoken = await ethers.getContractAt('ICToken', ctoken);
         const exchangeRate = (await ictoken.exchangeRateStored()).div(10 ** 10);
-        const floor = Math.floor(parseFloat(ethers.utils.formatEther(price)));
-        expect(floor).to.be.equal(priceUnderlying.div(exchangeRate));
+        expect(price).to.be.equal(
+          priceUnderlying
+            .mul(10 ** 10)
+            .mul(10 ** 8)
+            .div(exchangeRate),
+        );
+      });
+    });
+
+    addresses.aave.atokens.forEach(({ atoken, token }) => {
+      it(`should get the price of atokens ${atoken}`, async function () {
+        const price = await priceOracle.connect(owner).getPrice(atoken, addresses.tokens.DAI);
+        const priceUnderlying = await priceOracle.connect(owner).getPrice(token, addresses.tokens.DAI);
+        expect(price).to.be.equal(priceUnderlying);
       });
     });
   });
