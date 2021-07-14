@@ -226,7 +226,7 @@ contract PriceOracle is Ownable, IPriceOracle {
         }
     }
 
-    function _getCompoundExchangeRate(address _asset) private view returns (uint256) {
+    function getCompoundExchangeRate(address _asset) public view returns (uint256) {
         uint256 exchangeRateNormalized = ICToken(_asset).exchangeRateStored();
         if (ERC20(cTokenToAsset[_asset]).decimals() > 8) {
             exchangeRateNormalized = exchangeRateNormalized.div(10**(ERC20(cTokenToAsset[_asset]).decimals() - 8));
