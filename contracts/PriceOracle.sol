@@ -82,6 +82,13 @@ contract PriceOracle is Ownable, IPriceOracle {
             return 10**18;
         }
 
+        // Check Synths
+        // Check comp tokens
+        // Cream prices 0xde19f5a7cF029275Be9cEC538E81Aa298E297266
+
+        // other btcs, change pairs
+        // other usd, change pair
+
         if (_tokenIn != WETH && _tokenOut != WETH) {
             return getPrice(_tokenIn, WETH).preciseDiv(getPrice(_tokenOut, WETH));
         }
