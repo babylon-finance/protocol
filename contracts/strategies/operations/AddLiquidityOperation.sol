@@ -191,11 +191,10 @@ contract AddLiquidityOperation is Operation {
             address underlying = _isETH(poolTokens[i]) ? WETH : underlyingTokens[i];
             uint256 price = _getPrice(_garden.reserveAsset(), underlying);
             address finalPool = IPoolIntegration(_integration).getPool(pool);
-            uint256 balance =
-                !_isETH(poolTokens[i])? IERC20(poolTokens[i]).balanceOf(finalPool) : finalPool.balance;
+            uint256 balance = !_isETH(poolTokens[i]) ? IERC20(poolTokens[i]).balanceOf(finalPool) : finalPool.balance;
             // If the underlying and the pool token have different decimals need to normalize first
             if (underlying != poolTokens[i]) {
-              balance = SafeDecimalMath.normalizeAmountTokens(poolTokens[i], underlying, balance);
+                balance = SafeDecimalMath.normalizeAmountTokens(poolTokens[i], underlying, balance);
             }
             NAV += SafeDecimalMath.normalizeAmountTokens(
                 underlying,
@@ -257,6 +256,6 @@ contract AddLiquidityOperation is Operation {
     }
 
     function _isETH(address _address) internal view returns (bool) {
-      return _address == 0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE || _address == address(0);
+        return _address == 0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE || _address == address(0);
     }
 }

@@ -168,6 +168,6 @@ library SafeDecimalMath {
     }
 
     function _isETH(address _address) internal view returns (bool) {
-      return _address == 0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE || _address == address(0);
+        return _address == 0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE || _address == address(0);
     }
 }
