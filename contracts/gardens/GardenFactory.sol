@@ -54,6 +54,7 @@ contract GardenFactory is IGardenFactory {
      * @param _seed                   Seed to regenerate the garden NFT
      * @param _gardenParams           Array of numeric params in the garden
      * @param _initialContribution    Initial Contribution by the Gardener
+     * @param _publicGardenStrategistsStewards  Public garden, public strategist rights and public stewards rights
      */
     function createGarden(
         address _reserveAsset,
@@ -64,8 +65,7 @@ contract GardenFactory is IGardenFactory {
         uint256 _seed,
         uint256[] calldata _gardenParams,
         uint256 _initialContribution,
-        bool _publicStrategists,
-        bool _publicStewards
+        bool[] memory _publicGardenStrategistsStewards
     ) external override returns (address) {
         require(msg.sender == address(controller), 'Only the controller can create gardens');
         address payable proxy =
@@ -81,8 +81,7 @@ contract GardenFactory is IGardenFactory {
                         _symbol,
                         _gardenParams,
                         _initialContribution,
-                        _publicStrategists,
-                        _publicStewards
+                        _publicGardenStrategistsStewards
                     )
                 )
             );

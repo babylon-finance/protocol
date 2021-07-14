@@ -1020,8 +1020,7 @@ describe('BABL Rewards Distributor', function () {
           0,
           GARDEN_PARAMS_STABLE,
           ethers.utils.parseEther('500'),
-          false,
-          false,
+          [false, false, false],
           {},
         );
       const gardens = await babController.getGardens();
@@ -1094,8 +1093,7 @@ describe('BABL Rewards Distributor', function () {
           0,
           params,
           thousandUSDC.div(2),
-          false,
-          false,
+          [false, false, false],
           {},
         );
       const gardens = await babController.getGardens();
@@ -1186,8 +1184,7 @@ describe('BABL Rewards Distributor', function () {
           0,
           params,
           thousandUSDC.div(2),
-          false,
-          false,
+          [false, false, false],
           {},
         );
       const gardens = await babController.getGardens();
@@ -1204,8 +1201,7 @@ describe('BABL Rewards Distributor', function () {
           0,
           GARDEN_PARAMS_STABLE,
           ethers.utils.parseEther('500'),
-          false,
-          false,
+          [false, false, false],
           {},
         );
       const gardens2 = await babController.getGardens();
@@ -1315,8 +1311,7 @@ describe('BABL Rewards Distributor', function () {
           0,
           params,
           thousandUSDC.div(2),
-          false,
-          false,
+          [false, false, false],
           {},
         );
       const gardens = await babController.getGardens();
@@ -1333,8 +1328,7 @@ describe('BABL Rewards Distributor', function () {
           0,
           GARDEN_PARAMS_STABLE,
           ethers.utils.parseEther('500'),
-          false,
-          false,
+          [false, false, false],
           {},
         );
       const gardens2 = await babController.getGardens();
@@ -1443,8 +1437,7 @@ describe('BABL Rewards Distributor', function () {
           0,
           params,
           thousandUSDC.div(2),
-          false,
-          false,
+          [false, false, false],
           {},
         );
       const gardens = await babController.getGardens();
@@ -1461,8 +1454,7 @@ describe('BABL Rewards Distributor', function () {
           0,
           GARDEN_PARAMS_STABLE,
           ethers.utils.parseEther('500'),
-          false,
-          false,
+          [false, false, false],
           {},
         );
       const gardens2 = await babController.getGardens();

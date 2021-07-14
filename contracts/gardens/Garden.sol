@@ -202,15 +202,14 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
      * BabController.
      * WARN: If the reserve Asset is different than WETH the gardener needs to have approved the controller.
      *
-     * @param _reserveAsset           Address of the reserve asset ERC20
-     * @param _controller             Address of the controller
-     * @param _creator                Address of the creator
-     * @param _name                   Name of the Garden
-     * @param _symbol                 Symbol of the Garden
-     * @param _gardenParams           Array of numeric garden params
-     * @param _initialContribution    Initial Contribution by the Gardener
-     * @param _publicStrategists      Public Strategists rights
-     * @param _publicStewards         Public Stewards rights
+     * @param _reserveAsset                     Address of the reserve asset ERC20
+     * @param _controller                       Address of the controller
+     * @param _creator                          Address of the creator
+     * @param _name                             Name of the Garden
+     * @param _symbol                           Symbol of the Garden
+     * @param _gardenParams                     Array of numeric garden params
+     * @param _initialContribution              Initial Contribution by the Gardener
+     * @param _publicGardenStrategistsStewards  Public garden, public strategists rights and public stewards rights
      */
     function initialize(
         address _reserveAsset,
@@ -220,8 +219,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         string memory _symbol,
         uint256[] calldata _gardenParams,
         uint256 _initialContribution,
-        bool _publicStrategists,
-        bool _publicStewards
+        bool[] memory _publicGardenStrategistsStewards
     ) public payable override initializer {
         _require(bytes(_name).length < 50, Errors.NAME_TOO_LONG);
         _require(
@@ -238,9 +236,11 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         maxContributors = IBabController(_controller).maxContributorsPerGarden();
         rewardsDistributor = IRewardsDistributor(IBabController(controller).rewardsDistributor());
         _require(address(rewardsDistributor) != address(0), Errors.ADDRESS_IS_ZERO);
-        privateGarden = true;
-        publicStrategists = _publicStrategists;
-        publicStewards = _publicStewards;
+        privateGarden = (IBabController(controller).allowPublicGardens() && _publicGardenStrategistsStewards[0])
+            ? !_publicGardenStrategistsStewards[0]
+            : true;
+        publicStrategists = _publicGardenStrategistsStewards[1];
+        publicStewards = _publicGardenStrategistsStewards[2];
         _start(
             _initialContribution,
             _gardenParams[0],

@@ -63,8 +63,7 @@ async function setUpFixture(
       0,
       gardenParams,
       ethers.utils.parseEther('1'),
-      false,
-      false,
+      [false, false, false],
       {
         value: ethers.utils.parseEther('1'),
       },
@@ -79,8 +78,7 @@ async function setUpFixture(
       1,
       gardenParams,
       ethers.utils.parseEther('1'),
-      false,
-      false,
+      [false, false, false],
       {
         value: ethers.utils.parseEther('1'),
       },
@@ -96,8 +94,7 @@ async function setUpFixture(
       2,
       gardenParams,
       ethers.utils.parseEther('1'),
-      false,
-      false,
+      [false, false, false],
       {
         value: ethers.utils.parseEther('1'),
       },
@@ -113,8 +110,7 @@ async function setUpFixture(
       3,
       gardenParams,
       ethers.utils.parseEther('1'),
-      false,
-      false,
+      [false, false, false],
       {
         value: ethers.utils.parseEther('1'),
       },

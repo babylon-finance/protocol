@@ -35,7 +35,6 @@ interface IGardenFactory {
         uint256 _seed,
         uint256[] calldata _gardenParams,
         uint256 _initialContribution,
-        bool _publicStrategists,
-        bool _publicStewards
+        bool[] memory _publicGardenStrategistsStewards
     ) external returns (address);
 }
