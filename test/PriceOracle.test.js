@@ -1,8 +1,7 @@
 const { expect } = require('chai');
-const { ethers } = require('hardhat');
 
 const addresses = require('../lib/addresses');
-const { from, eth, parse } = require('../lib/helpers');
+const { from, parse } = require('../lib/helpers');
 const { setupTests } = require('./fixtures/GardenFixture');
 
 const tokens = [
@@ -87,6 +86,30 @@ describe('PriceOracle', function () {
       it(`should get the price of ${name}`, async function () {
         const price = await priceOracle.connect(owner).getPrice(tokenIn, tokenOut);
         expect(price).to.be.closeTo(value, value.div(50));
+      });
+    });
+
+    addresses.compound.ctokens.forEach(({ ctoken, token }) => {
+      it(`should get the price of ctokens ${ctoken}`, async function () {
+        const price = await priceOracle.connect(owner).getPrice(ctoken, addresses.tokens.DAI);
+        const priceUnderlying = await priceOracle.connect(owner).getPrice(token, addresses.tokens.DAI);
+        const ictoken = await ethers.getContractAt('ICToken', ctoken);
+        const exchangeRate = (await ictoken.exchangeRateStored()).div(10 ** 10);
+        expect(price).to.be.equal(
+          priceUnderlying
+            .mul(exchangeRate)
+            .div(10 ** 10)
+            .div(10 ** 8),
+        );
+      });
+
+      it(`should get the price of inverse ctokens ${ctoken}`, async function () {
+        const price = await priceOracle.connect(owner).getPrice(addresses.tokens.DAI, ctoken);
+        const priceUnderlying = await priceOracle.connect(owner).getPrice(token, addresses.tokens.DAI);
+        const ictoken = await ethers.getContractAt('ICToken', ctoken);
+        const exchangeRate = (await ictoken.exchangeRateStored()).div(10 ** 10);
+        const floor = Math.floor(parseFloat(ethers.utils.formatEther(price)));
+        expect(floor).to.be.equal(priceUnderlying.div(exchangeRate));
       });
     });
   });
