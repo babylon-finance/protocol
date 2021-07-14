@@ -155,8 +155,8 @@ library SafeDecimalMath {
         address assetTarget,
         uint256 quantity
     ) internal view returns (uint256) {
-        uint256 tokenDecimals = assetFrom == address(0) ? 18 : ERC20(assetFrom).decimals();
-        uint256 tokenDecimalsTarget = assetTarget == address(0) ? 18 : ERC20(assetTarget).decimals();
+        uint256 tokenDecimals = _isETH(assetFrom) ? 18 : ERC20(assetFrom).decimals();
+        uint256 tokenDecimalsTarget = _isETH(assetTarget) ? 18 : ERC20(assetTarget).decimals();
         require(tokenDecimals <= 18 && tokenDecimalsTarget <= 18, 'Unsupported decimals');
         if (tokenDecimals == tokenDecimalsTarget) {
             return quantity;
@@ -165,5 +165,9 @@ library SafeDecimalMath {
             return quantity.mul(10**(tokenDecimalsTarget.sub(tokenDecimals)));
         }
         return quantity.div(10**(tokenDecimals.sub(tokenDecimalsTarget)));
+    }
+
+    function _isETH(address _address) internal view returns (bool) {
+      return _address == 0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE || _address == address(0);
     }
 }

@@ -17,7 +17,7 @@
 */
 
 pragma solidity 0.7.6;
-import 'hardhat/console.sol';
+// import 'hardhat/console.sol';
 import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import {IBabController} from '../../interfaces/IBabController.sol';
 import {ICurvePoolV3} from '../../interfaces/external/curve/ICurvePoolV3.sol';
@@ -265,7 +265,6 @@ contract CurvePoolIntegration is PoolIntegration {
         uint256[] calldata _maxAmountsIn,
         uint256 minMintAmount
     ) private view returns (bytes memory) {
-        console.log('ncoins', ncoins);
         if (ncoins == 2) {
             if (supportsUnderlyingParam[_poolAddress]) {
               return
@@ -496,7 +495,6 @@ contract CurvePoolIntegration is PoolIntegration {
         try ICurvePoolV3(_pool).coins(4) returns (address) {
             return 5;
         } catch {
-          console.log('get n coins', _pool);
             try ICurvePoolV3(_pool).coins(3) returns (address) {
                 return 4;
             } catch {
