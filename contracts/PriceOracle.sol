@@ -88,6 +88,9 @@ contract PriceOracle is Ownable, IPriceOracle {
         aTokenToAsset[0x272F97b7a56a387aE942350bBC7Df5700f8a4576] = 0xba100000625a3754423978a60c9317c58a424e3D; // bal
         aTokenToAsset[0x05Ec93c0365baAeAbF7AefFb0972ea7ECdD39CF1] = 0x0D8775F648430679A709E98d2b0Cb6250d2887EF; // bat
         aTokenToAsset[0xA361718326c15715591c299427c62086F69923D9] = 0x4Fabb145d64652a948d72533023f6E7A623C7C53; // busd
+        aTokenToAsset[0x028171bCA77440897B824Ca71D1c56caC55b68A3] = 0x6B175474E89094C44Da98b954EedeAC495271d0F; // dai
+        aTokenToAsset[0xBcca60bB61934080951369a648Fb03DF4F96263C] = 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48; // usdc
+        aTokenToAsset[0x3Ed3B47Dd13EC9a98b44e6204A523E766B225811] = 0xdAC17F958D2ee523a2206206994597C13D831ec7; // usdt
     }
 
     /* ============ External Functions ============ */
@@ -110,11 +113,11 @@ contract PriceOracle is Ownable, IPriceOracle {
         }
         // Comp assets
         if (cTokenToAsset[_tokenIn] != address(0)) {
-            uint256 exchangeRateNormalized = ICToken(_tokenIn).exchangeRateStored().div(10**10);
+            uint256 exchangeRateNormalized = _getCompoundExchangeRate(_tokenIn);
             return getPrice(cTokenToAsset[_tokenIn], _tokenOut).preciseMul(exchangeRateNormalized);
         }
         if (cTokenToAsset[_tokenOut] != address(0)) {
-            uint256 exchangeRateNormalized = ICToken(_tokenOut).exchangeRateStored().div(10**10);
+            uint256 exchangeRateNormalized = _getCompoundExchangeRate(_tokenOut);
             return getPrice(_tokenIn, cTokenToAsset[_tokenOut]).preciseDiv(exchangeRateNormalized);
         }
 
@@ -221,5 +224,15 @@ contract PriceOracle is Ownable, IPriceOracle {
         } catch {
             return 0;
         }
+    }
+
+    function _getCompoundExchangeRate(address _asset) private view returns (uint256) {
+      uint256 exchangeRateNormalized = ICToken(_asset).exchangeRateStored();
+      if (ERC20(cTokenToAsset[_asset]).decimals() > 8) {
+        exchangeRateNormalized = exchangeRateNormalized.div(10**(ERC20(cTokenToAsset[_asset]).decimals() - 8));
+      } else {
+        exchangeRateNormalized = exchangeRateNormalized.mul(10**(8 - ERC20(cTokenToAsset[_asset]).decimals()));
+      }
+      return exchangeRateNormalized;
     }
 }

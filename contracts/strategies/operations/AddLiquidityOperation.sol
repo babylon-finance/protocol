@@ -184,20 +184,15 @@ contract AddLiquidityOperation is Operation {
             return (0, true);
         }
         address[] memory poolTokens = IPoolIntegration(_integration).getPoolTokens(_data, true);
-        address[] memory underlyingTokens = IPoolIntegration(_integration).getPoolTokens(_data, false);
         uint256 NAV;
         IERC20 lpToken = IERC20(IPoolIntegration(_integration).getLPToken(pool));
         for (uint256 i = 0; i < poolTokens.length; i++) {
-            address underlying = _isETH(poolTokens[i]) ? WETH : underlyingTokens[i];
-            uint256 price = _getPrice(_garden.reserveAsset(), underlying);
+            address asset = _isETH(poolTokens[i]) ? WETH : poolTokens[i];
+            uint256 price = _getPrice(_garden.reserveAsset(), asset);
             address finalPool = IPoolIntegration(_integration).getPool(pool);
             uint256 balance = !_isETH(poolTokens[i]) ? IERC20(poolTokens[i]).balanceOf(finalPool) : finalPool.balance;
-            // If the underlying and the pool token have different decimals need to normalize first
-            if (underlying != poolTokens[i]) {
-                balance = SafeDecimalMath.normalizeAmountTokens(poolTokens[i], underlying, balance);
-            }
             NAV += SafeDecimalMath.normalizeAmountTokens(
-                underlying,
+                asset,
                 _garden.reserveAsset(),
                 balance.mul(lpToken.balanceOf(msg.sender)).div(lpToken.totalSupply()).preciseDiv(price)
             );
