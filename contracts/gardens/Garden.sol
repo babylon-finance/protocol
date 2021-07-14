@@ -39,7 +39,6 @@ import {IStrategy} from '../interfaces/IStrategy.sol';
 import {IGarden} from '../interfaces/IGarden.sol';
 import {IGardenNFT} from '../interfaces/IGardenNFT.sol';
 import {IIshtarGate} from '../interfaces/IIshtarGate.sol';
-import {ERC721} from '@openzeppelin/contracts/token/ERC721/ERC721.sol';
 import {IWETH} from '../interfaces/external/weth/IWETH.sol';
 
 /**
