@@ -112,6 +112,7 @@ describe('Upgrades', function () {
           0,
           GARDEN_PARAMS,
           ethers.utils.parseEther('1'),
+          [false, false, false],
           {
             value: ethers.utils.parseEther('1'),
           },

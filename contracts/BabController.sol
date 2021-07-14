@@ -198,13 +198,14 @@ contract BabController is OwnableUpgradeable, IBabController {
      * Creates a Garden smart contract and registers the Garden with the controller.
      *
      * If asset is not WETH, the creator needs to approve the controller
-     * @param _reserveAsset           Reserve asset of the Garden. Initially just weth
-     * @param _name                   Name of the Garden
-     * @param _symbol                 Symbol of the Garden
-     * @param _gardenParams           Array of numeric garden params
-     * @param _tokenURI               Garden NFT token URI
-     * @param _seed                   Seed to regenerate the garden NFT
-     * @param _initialContribution    Initial contribution by the gardener
+     * @param _reserveAsset                     Reserve asset of the Garden. Initially just weth
+     * @param _name                             Name of the Garden
+     * @param _symbol                           Symbol of the Garden
+     * @param _gardenParams                     Array of numeric garden params
+     * @param _tokenURI                         Garden NFT token URI
+     * @param _seed                             Seed to regenerate the garden NFT
+     * @param _initialContribution              Initial contribution by the gardener
+     * @param _publicGardenStrategistsStewards  Public garden, public strategist rights and public stewards rights
      */
     function createGarden(
         address _reserveAsset,
@@ -213,7 +214,8 @@ contract BabController is OwnableUpgradeable, IBabController {
         string memory _tokenURI,
         uint256 _seed,
         uint256[] calldata _gardenParams,
-        uint256 _initialContribution
+        uint256 _initialContribution,
+        bool[] memory _publicGardenStrategistsStewards
     ) external payable override returns (address) {
         require(defaultTradeIntegration != address(0), 'Need a default trade integration');
         require(enabledOperations.length > 0, 'Need operations enabled');
@@ -230,7 +232,8 @@ contract BabController is OwnableUpgradeable, IBabController {
                 _tokenURI,
                 _seed,
                 _gardenParams,
-                _initialContribution
+                _initialContribution,
+                _publicGardenStrategistsStewards
             );
         if (_reserveAsset != WETH || msg.value == 0) {
             IERC20(_reserveAsset).transferFrom(msg.sender, address(this), _initialContribution);
