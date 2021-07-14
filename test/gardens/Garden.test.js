@@ -136,7 +136,10 @@ describe('Garden', function () {
       expect(await ishtarGate.connect(signer1).canAddStrategiesInAGarden(garden1.address, signer3.address)).to.equal(
         false,
       );
-      // Enable strategist creator rights
+      // Enable strategist creator rights - the garden needs to be public
+      await expect(garden1.connect(signer1).setPublicRights(true, false)).to.be.revertedWith('revert BAB#088');
+      await babController.connect(owner).setAllowPublicGardens();
+      await garden1.connect(signer1).makeGardenPublic();
       await garden1.connect(signer1).setPublicRights(true, false);
       await expect(getStrategy({ garden: garden1, signers: [signer3] })).not.to.be.reverted;
       expect(await ishtarGate.connect(signer1).canAddStrategiesInAGarden(garden1.address, signer3.address)).to.equal(
@@ -153,7 +156,10 @@ describe('Garden', function () {
       await ishtarGate.connect(signer1).setGardenAccess(signer2.address, garden1.address, 0, { gasPrice: 0 });
       expect(await ishtarGate.connect(signer1).canVoteInAGarden(garden1.address, signer2.address)).to.equal(false);
 
-      // Enable voting power rights to users
+      // Enable voting power rights to users - the garden needs to be public
+      await expect(garden1.connect(signer1).setPublicRights(false, true)).to.be.revertedWith('revert BAB#088');
+      await babController.connect(owner).setAllowPublicGardens();
+      await garden1.connect(signer1).makeGardenPublic();
       await garden1.connect(signer1).setPublicRights(false, true);
       expect(await ishtarGate.connect(signer1).canVoteInAGarden(garden1.address, signer2.address)).to.equal(true);
     });

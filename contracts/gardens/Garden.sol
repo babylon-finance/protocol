@@ -239,8 +239,8 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         privateGarden = (IBabController(controller).allowPublicGardens() && _publicGardenStrategistsStewards[0])
             ? !_publicGardenStrategistsStewards[0]
             : true;
-        publicStrategists = _publicGardenStrategistsStewards[1];
-        publicStewards = _publicGardenStrategistsStewards[2];
+        publicStrategists = !privateGarden && _publicGardenStrategistsStewards[1] ? true : false;
+        publicStewards = !privateGarden && _publicGardenStrategistsStewards[2] ? true : false;
         _start(
             _initialContribution,
             _gardenParams[0],
@@ -337,10 +337,9 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         bool _mintNft
     ) external payable override nonReentrant {
         _onlyActive();
-        address gate = IBabController(controller).ishtarGate();
         _require(
-            (ERC721(gate).balanceOf(msg.sender) > 0 &&
-                (!privateGarden || IIshtarGate(gate).canJoinAGarden(address(this), msg.sender))) || creator == _to,
+            IIshtarGate(IBabController(controller).ishtarGate()).canJoinAGarden(address(this), msg.sender) ||
+                creator == _to,
             Errors.USER_CANNOT_JOIN
         );
         // if deposit limit is 0, then there is no deposit limit
@@ -533,6 +532,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
      */
     function setPublicRights(bool _publicStrategists, bool _publicStewards) external override {
         _require(msg.sender == creator, Errors.ONLY_CREATOR);
+        _require(!privateGarden, Errors.GARDEN_IS_NOT_PUBLIC);
         publicStrategists = _publicStrategists;
         publicStewards = _publicStewards;
     }

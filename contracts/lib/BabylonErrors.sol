@@ -262,4 +262,6 @@ library Errors {
     uint256 internal constant RECEIVE_MIN_AMOUNT = 86;
     // Total Votes has to be positive
     uint256 internal constant TOTAL_VOTES_HAVE_TO_BE_POSITIVE = 87;
+    // Garden is not public
+    uint256 internal constant GARDEN_IS_NOT_PUBLIC = 88;
 }
