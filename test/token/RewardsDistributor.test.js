@@ -92,7 +92,6 @@ describe('BABL Rewards Distributor', function () {
   let weth;
   let priceOracle;
   let uniswapV3TradeIntegration;
-  let treasury;
 
   async function createStrategies(strategies) {
     const retVal = [];
@@ -213,7 +212,6 @@ describe('BABL Rewards Distributor', function () {
       ishtarGate,
       uniswapV3TradeIntegration,
       priceOracle,
-      treasury,
     } = await setupTests()());
 
     await bablToken.connect(owner).enableTokensTransfers();
