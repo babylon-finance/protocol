@@ -57,7 +57,6 @@ contract PriceOracle is Ownable, IPriceOracle {
     address private constant WETH = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
     address private constant USDC = 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48;
 
-
     // the desired seconds agos array passed to the observe method
     uint32 private constant SECONDS_GRANULARITY = 30;
 
@@ -76,7 +75,6 @@ contract PriceOracle is Ownable, IPriceOracle {
     mapping(address => address) public crTokenToAsset;
     // Mapping of synths
     mapping(address => bool) public synths;
-
 
     /* ============ Constructor ============ */
 
@@ -276,6 +274,7 @@ contract PriceOracle is Ownable, IPriceOracle {
         }
         return exchangeRateNormalized;
     }
+
     function getCreamExchangeRate(address _asset) public view override returns (uint256) {
         uint256 exchangeRateNormalized = ICToken(_asset).exchangeRateStored();
         if (ERC20(crTokenToAsset[_asset]).decimals() > 8) {
