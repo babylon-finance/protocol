@@ -413,7 +413,7 @@ describe('Strategy', function () {
       const nav = await strategyContract.getNAV();
       expect(await strategyContract.capitalAllocated()).to.equal(ONE_ETH);
       // So much slipage at Balancer 😭
-      expect(nav).to.be.closeTo(ONE_ETH.mul(1), ONE_ETH.div(50));
+      expect(nav).to.be.closeTo(ONE_ETH.mul(1), ONE_ETH.div(30));
     });
 
     it('should get the NAV value of a OneInchPool strategy', async function () {
@@ -545,13 +545,13 @@ describe('Strategy', function () {
 
       const reserveAssetRewardsSetAsideLong1 = await garden1.reserveAssetRewardsSetAside();
       expect(reserveAssetRewardsSetAsideLong1).to.be.closeTo(
-        '6716457765558713',
+        '14600157511291044',
         reserveAssetRewardsSetAsideLong1.div(100),
       );
 
       const reserveAssetPrincipalWindowLong1 = await garden1.reserveAssetPrincipalWindow();
       expect(reserveAssetPrincipalWindowLong1).to.be.closeTo(
-        '1035821108082979798',
+        '1077867506726885563',
         reserveAssetPrincipalWindowLong1.div(100),
       );
 
@@ -563,7 +563,7 @@ describe('Strategy', function () {
 
       const reserveAssetPrincipalWindowLong2 = await garden1.reserveAssetPrincipalWindow();
       expect(reserveAssetPrincipalWindowLong2).to.be.closeTo(
-        '2030018199914909447',
+        '2072039623187283614',
         reserveAssetPrincipalWindowLong2.div(100),
       );
 
@@ -572,13 +572,13 @@ describe('Strategy', function () {
 
       const reserveAssetRewardsSetAsideLong3 = await garden2.reserveAssetRewardsSetAside();
       expect(reserveAssetRewardsSetAsideLong3).to.be.closeTo(
-        '6660467762323188',
+        '14544610528254611',
         reserveAssetRewardsSetAsideLong3.div(100),
       );
 
       const reserveAssetPrincipalWindowLong3 = await garden2.reserveAssetPrincipalWindow();
       expect(reserveAssetPrincipalWindowLong3).to.be.closeTo(
-        '1035522494732390331',
+        '1077571256150691254',
         reserveAssetPrincipalWindowLong3.div(100),
       );
 
@@ -587,13 +587,13 @@ describe('Strategy', function () {
 
       const reserveAssetRewardsSetAsideLong4 = await garden2.reserveAssetRewardsSetAside();
       expect(reserveAssetRewardsSetAsideLong4).to.be.closeTo(
-        '14122110153928795',
+        '30759450342788913',
         reserveAssetRewardsSetAsideLong4.div(100),
       );
 
       const reserveAssetPrincipalWindowLong4 = await garden2.reserveAssetPrincipalWindow();
       expect(reserveAssetPrincipalWindowLong4).to.be.closeTo(
-        '2075317920820953561',
+        '2164050401828207529',
         reserveAssetPrincipalWindowLong4.div(100),
       );
 
@@ -602,13 +602,13 @@ describe('Strategy', function () {
 
       const reserveAssetRewardsSetAsideLong5 = await garden2.reserveAssetRewardsSetAside();
       expect(reserveAssetRewardsSetAsideLong5).to.be.closeTo(
-        '21553283839736272',
+        '46945477482079494',
         reserveAssetRewardsSetAsideLong5.div(100),
       );
 
       const reserveAssetPrincipalWindowLong5 = await garden2.reserveAssetPrincipalWindow();
       expect(reserveAssetPrincipalWindowLong5).to.be.closeTo(
-        '3114950847145260099',
+        '3250375879904423954',
         reserveAssetPrincipalWindowLong5.div(100),
       );
     });
@@ -637,27 +637,27 @@ describe('Strategy', function () {
       await finalizeStrategy(long1);
 
       const treasuryBalance1 = await wethToken.balanceOf(treasury.address);
-      expect(treasuryBalance1).to.be.closeTo(ethers.BigNumber.from('27238819255186237'), treasuryBalance1.div(100));
+      expect(treasuryBalance1).to.be.closeTo(ethers.BigNumber.from('29866719170430347'), treasuryBalance1.div(100));
 
       // Strategy long2 has not profits
       await finalizeStrategy(long2);
       const treasuryBalance2 = await wethToken.balanceOf(treasury.address);
-      expect(treasuryBalance2).to.be.closeTo(ethers.BigNumber.from('27238819255186237'), treasuryBalance2.div(100));
+      expect(treasuryBalance2).to.be.closeTo(ethers.BigNumber.from('29866719170430347'), treasuryBalance2.div(100));
 
       await injectFakeProfits(long3, ONE_ETH.mul(200));
       await finalizeStrategy(long3);
       const treasuryBalance3 = await wethToken.balanceOf(treasury.address);
-      expect(treasuryBalance3).to.be.closeTo(ethers.BigNumber.from('29458975175960632'), treasuryBalance3.div(100));
+      expect(treasuryBalance3).to.be.closeTo(ethers.BigNumber.from('34714922679848550'), treasuryBalance3.div(100));
 
       await injectFakeProfits(long4, ONE_ETH.mul(222));
       await finalizeStrategy(long4);
       const treasuryBalance4 = await wethToken.balanceOf(treasury.address);
-      expect(treasuryBalance4).to.be.closeTo(ethers.BigNumber.from('31946189306495833'), treasuryBalance4.div(100));
+      expect(treasuryBalance4).to.be.closeTo(ethers.BigNumber.from('40119869284693317'), treasuryBalance4.div(100));
 
       await injectFakeProfits(long5, ONE_ETH.mul(222));
       await finalizeStrategy(long5);
       const treasuryBalance5 = await wethToken.balanceOf(treasury.address);
-      expect(treasuryBalance5).to.be.closeTo(ethers.BigNumber.from('34423247201764991'), treasuryBalance5.div(100));
+      expect(treasuryBalance5).to.be.closeTo(ethers.BigNumber.from('45515211664456843'), treasuryBalance5.div(100));
     });
 
     it('capital returned should equals startWithdrawalWindow param 1 + param 2 + protocol performance fee 5% (if any) in all strategies', async function () {
