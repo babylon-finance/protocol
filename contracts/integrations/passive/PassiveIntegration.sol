@@ -87,7 +87,7 @@ abstract contract PassiveIntegration is BaseIntegration, ReentrancyGuard, IPassi
      * @param _strategy                   Address of the strategy
      * @param _investmentAddress          Address of the investment token to join
      * @param _investmentTokensOut        Min amount of investment tokens to receive
-     * @param _tokenIn                    Token aaddress to deposit
+     * @param _tokenIn                    Token address to deposit
      * @param _maxAmountIn                Max amount of the token to deposit
      */
     function enterInvestment(
@@ -100,8 +100,18 @@ abstract contract PassiveIntegration is BaseIntegration, ReentrancyGuard, IPassi
         InvestmentInfo memory investmentInfo =
             _createInvestmentInfo(_strategy, _investmentAddress, _investmentTokensOut, _tokenIn, _maxAmountIn);
         _validatePreJoinInvestmentData(investmentInfo);
+
+        // Pre actions
+        (address targetAddressP, uint256 callValueP, bytes memory methodDataP) =
+            _getPreActionCallData(_investmentAddress, _maxAmountIn, 0);
+        if (targetAddressP != address(0)) {
+            // Invoke protocol specific call
+            investmentInfo.strategy.invokeFromIntegration(targetAddressP, callValueP, methodDataP);
+        }
+
         // Approve spending of the token
-        investmentInfo.strategy.invokeApprove(_getSpender(_investmentAddress), _tokenIn, _maxAmountIn);
+        investmentInfo.strategy.invokeApprove(_getSpender(_investmentAddress, 0), _tokenIn, _maxAmountIn);
+
         (address targetInvestment, uint256 callValue, bytes memory methodData) =
             _getEnterInvestmentCalldata(_strategy, _investmentAddress, _investmentTokensOut, _tokenIn, _maxAmountIn);
         investmentInfo.strategy.invokeFromIntegration(targetInvestment, callValue, methodData);
@@ -120,7 +130,7 @@ abstract contract PassiveIntegration is BaseIntegration, ReentrancyGuard, IPassi
      * Exits an outside passive investment
      *
      * @param _strategy                   Address of the strategy
-     * @param _investmentAddress          Address of the investment token to join
+     * @param _investmentAddress          Address of the investment token to exit
      * @param _investmentTokenIn          Quantity of investment tokens to return
      * @param _tokenOut                   Token address to withdraw
      * @param _minAmountOut               Min token quantities to receive from the investment
@@ -135,8 +145,22 @@ abstract contract PassiveIntegration is BaseIntegration, ReentrancyGuard, IPassi
         InvestmentInfo memory investmentInfo =
             _createInvestmentInfo(_strategy, _investmentAddress, _investmentTokenIn, _tokenOut, _minAmountOut);
         _validatePreExitInvestmentData(investmentInfo);
+
+        // Pre actions
+        (address targetAddressP, uint256 callValueP, bytes memory methodDataP) =
+            _getPreActionCallData(_investmentAddress, _investmentTokenIn, 0);
+
+        if (targetAddressP != address(0)) {
+            // Invoke protocol specific call
+            investmentInfo.strategy.invokeFromIntegration(targetAddressP, callValueP, methodDataP);
+        }
+
         // Approve spending of the investment token
-        investmentInfo.strategy.invokeApprove(_getSpender(_investmentAddress), _investmentAddress, _investmentTokenIn);
+        investmentInfo.strategy.invokeApprove(
+            _getSpender(_investmentAddress, 1),
+            _investmentAddress,
+            _investmentTokenIn
+        );
 
         (address targetInvestment, uint256 callValue, bytes memory methodData) =
             _getExitInvestmentCalldata(_strategy, _investmentAddress, _investmentTokenIn, _tokenOut, _minAmountOut);
@@ -302,6 +326,34 @@ abstract contract PassiveIntegration is BaseIntegration, ReentrancyGuard, IPassi
         );
 
     /**
+     * Return pre action calldata
+     *
+     * hparam  _asset                    Address of the asset to deposit
+     * hparam  _amount                   Amount of the token to deposit
+     * hparam  _borrowOp                Type of Borrow op
+     *
+     * @return address                   Target contract address
+     * @return uint256                   Call value
+     * @return bytes                     Trade calldata
+     */
+    function _getPreActionCallData(
+        address, /* _asset */
+        uint256, /* _amount */
+        uint256 /* _borrowOp */
+    )
+        internal
+        view
+        virtual
+        returns (
+            address,
+            uint256,
+            bytes memory
+        )
+    {
+        return (address(0), 0, bytes(''));
+    }
+
+    /**
      * Return exit investment calldata which is already generated from the investment API
      *
      * hparam  _strategy                       Address of the strategy
@@ -344,6 +396,7 @@ abstract contract PassiveIntegration is BaseIntegration, ReentrancyGuard, IPassi
     ) internal view virtual returns (address);
 
     function _getSpender(
-        address //_investmentAddress
+        address, //_investmentAddress,
+        uint8 // op
     ) internal view virtual returns (address);
 }

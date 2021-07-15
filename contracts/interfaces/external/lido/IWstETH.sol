@@ -3,9 +3,9 @@
 // SPDX-License-Identifier: GPL-3.0
 
 /* See contracts/COMPILERS.md */
-pragma solidity 0.6.12;
+pragma solidity 0.7.6;
 
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 
 /**
  * @title StETH token wrapper with static balances.
@@ -25,7 +25,6 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
  *
  */
 interface IWstETH is IERC20 {
-
     /**
      * @notice Exchanges stETH to wstETH
      * @param _stETHAmount amount of stETH to wrap in exchange for wstETH
@@ -50,8 +49,8 @@ interface IWstETH is IERC20 {
     function unwrap(uint256 _wstETHAmount) external returns (uint256);
 
     /**
-    * @notice Shortcut to stake ETH and auto-wrap returned stETH
-    */
+     * @notice Shortcut to stake ETH and auto-wrap returned stETH
+     */
     // receive() external payable {
     //     uint256 shares = stETH.submit{value: msg.value}(address(0));
     //     _mint(msg.sender, shares);

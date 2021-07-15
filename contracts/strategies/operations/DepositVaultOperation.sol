@@ -93,7 +93,15 @@ contract DepositVaultOperation is Operation {
         address yieldVault = BytesLib.decodeOpDataAddress(_data);
         address vaultAsset = IPassiveIntegration(_integration).getInvestmentAsset(yieldVault);
         if (vaultAsset != _asset) {
-            IStrategy(msg.sender).trade(_asset, _capital, vaultAsset);
+            // get ETH if it's needed
+            if (vaultAsset == address(0)) {
+                if (_asset != WETH) {
+                    IStrategy(msg.sender).trade(_asset, _capital, WETH);
+                }
+                IStrategy(msg.sender).handleWeth(false, IERC20(WETH).balanceOf(msg.sender));
+            } else {
+                IStrategy(msg.sender).trade(_asset, _capital, vaultAsset);
+            }
         }
         uint256 minAmountExpected = _getMinAmountExpected(yieldVault, _capital, _integration);
         IPassiveIntegration(_integration).enterInvestment(
@@ -147,6 +155,10 @@ contract DepositVaultOperation is Operation {
             );
         IPassiveIntegration(_integration).exitInvestment(msg.sender, yieldVault, amountVault, vaultAsset, minAmount);
         if (vaultAsset != _garden.reserveAsset()) {
+            if (vaultAsset == address(0)) {
+                IStrategy(msg.sender).handleWeth(true, IERC20(WETH).balanceOf(msg.sender));
+                vaultAsset = WETH;
+            }
             IStrategy(msg.sender).trade(vaultAsset, IERC20(vaultAsset).balanceOf(msg.sender), _garden.reserveAsset());
         }
         return (yieldVault, 0, 0);
