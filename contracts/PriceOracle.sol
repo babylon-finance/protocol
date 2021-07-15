@@ -28,6 +28,9 @@ import {SafeCast} from '@openzeppelin/contracts/utils/SafeCast.sol';
 
 import {IPriceOracle} from './interfaces/IPriceOracle.sol';
 import {ICToken} from './interfaces/external/compound/ICToken.sol';
+import {ISnxExchangeRates} from './interfaces/external/synthetix/ISnxExchangeRates.sol';
+import {ISnxSynth} from './interfaces/external/synthetix/ISnxSynth.sol';
+import {ISnxProxy} from './interfaces/external/synthetix/ISnxProxy.sol';
 
 import {PreciseUnitMath} from './lib/PreciseUnitMath.sol';
 import {LowGasSafeMath as SafeMath} from './lib/LowGasSafeMath.sol';
@@ -49,8 +52,10 @@ contract PriceOracle is Ownable, IPriceOracle {
 
     // Address of Uniswap factory
     IUniswapV3Factory internal constant factory = IUniswapV3Factory(0x1F98431c8aD98523631AE4a59f267346ea31F984);
+    ISnxExchangeRates internal constant snxEchangeRates = ISnxExchangeRates(0xd69b189020EF614796578AfE4d10378c5e7e1138);
 
     address private constant WETH = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
+    address private constant USDC = 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48;
 
     // the desired seconds agos array passed to the observe method
     uint32 private constant SECONDS_GRANULARITY = 30;
@@ -68,6 +73,8 @@ contract PriceOracle is Ownable, IPriceOracle {
     mapping(address => address) public aTokenToAsset;
     // Mapping of cream tokens
     mapping(address => address) public crTokenToAsset;
+    // Mapping of synths
+    mapping(address => bool) public synths;
 
 
     /* ============ Constructor ============ */
@@ -114,157 +121,73 @@ contract PriceOracle is Ownable, IPriceOracle {
         aTokenToAsset[0xDf7FF54aAcAcbFf42dfe29DD6144A69b629f8C9e] = 0xE41d2489571d322189246DaFA5ebDe1F4699F498; // zrx
 
         crTokenToAsset[0xD06527D5e56A3495252A528C4987003b712860eE] = WETH;
-        crTokenToAsset[0x797AAB1ce7c01eB727ab980762bA88e7133d2157] = USDT;
-        crTokenToAsset[0x44fbebd2f576670a6c33f6fc0b00aa8c5753b322] = USDC;
-        crTokenToAsset[0xCbaE0A83f4f9926997c8339545fb8eE32eDc6b76] = YFI;
-        crTokenToAsset[0xcE4Fe9b4b8Ff61949DCfeB7e03bc9FAca59D2Eb3] = BAL;
-        crTokenToAsset[0x19D1666f543D42ef17F66E376944A22aEa1a8E46] = COMP;
-        crTokenToAsset[0x9baF8a5236d44AC410c0186Fe39178d5AAD0Bb87] = YCRV;
-        crTokenToAsset[0x892B14321a4FCba80669aE30Bd0cd99a7ECF6aC0] = CREAM;
-        crTokenToAsset[0x697256CAA3cCaFD62BB6d3Aa1C7C5671786A5fD9] = LINK;
-        crTokenToAsset[0x8B86e0598616a8d4F1fdAE8b59E55FB5Bc33D0d6] = LEND;
-        crTokenToAsset[0xc7Fd8Dcee4697ceef5a2fd4608a7BD6A94C77480] = CRV;
-        crTokenToAsset[0x17107f40d70f4470d20CB3f138a052cAE8EbD4bE] = RENBTC;
-        crTokenToAsset[0x1FF8CDB51219a8838b52E9cAc09b71e591BC998e] = BUSD;
-        crTokenToAsset[0x3623387773010d9214B10C551d6e7fc375D31F58] = MTA;
-        crTokenToAsset[0x4EE15f44c6F0d8d1136c83EfD2e8E4AC768954c6] = YYCRV;
-        crTokenToAsset[0x338286C0BC081891A4Bda39C7667ae150bf5D206] = SUSHI;
-        crTokenToAsset[0x10FDBD1e48eE2fD9336a482D746138AE19e649Db] = FTT;
-        crTokenToAsset[0x01da76DEa59703578040012357b81ffE62015C2d] = YETH;
-        crTokenToAsset[0xef58b2d5A1b8D3cDE67b8aB054dC5C831E9Bc025] = SRM;
-        crTokenToAsset[0xe89a6D0509faF730BD707bf868d9A2A744a363C7] = UNI;
-        crTokenToAsset[0xeFF039C3c1D668f408d09dD7B63008622a77532C] = WNXM;
-        crTokenToAsset[0x22B243B96495C547598D9042B6f94B01C22B2e9E] = SWAG;
-        crTokenToAsset[0x8b3FF1ed4F36C2c2be675AFb13CC3AA5d73685a5] = CEL;
-        crTokenToAsset[0x2A537Fa9FFaea8C1A41D3C2B68a9cb791529366D] = DPI;
-        crTokenToAsset[0x7ea9C63E216D5565c3940A2B3d150e59C2907Db3] = BBTC;
-        crTokenToAsset[0x3225E3C669B39C7c8B3e204a8614bB218c5e31BC] = AAVE;
-        crTokenToAsset[0xf55BbE0255f7f4E70f63837Ff72A577fbDDbE924] = BOND;
-        crTokenToAsset[0x903560b1CcE601794C584F58898dA8a8b789Fc5d] = KP3R;
-        crTokenToAsset[0x054B7ed3F45714d3091e82aAd64A1588dC4096Ed] = HBTC;
-        crTokenToAsset[0xd5103AfcD0B3fA865997Ef2984C66742c51b2a8b] = HFIL;
-        crTokenToAsset[0xfd609a03B393F1A1cFcAcEdaBf068CAD09a924E2] = CRETH2;
-        crTokenToAsset[0xD692ac3245bb82319A31068D6B8412796eE85d2c] = HUSD;
-        crTokenToAsset[0x92B767185fB3B04F881e3aC8e5B0662a027A1D9f] = DAI;
-        crTokenToAsset[0x10a3da2BB0Fae4D591476fd97D6636fd172923a8] = HEGIC;
-        crTokenToAsset[0x3C6C553A95910F9FC81c98784736bd628636D296] = ESD;
-        crTokenToAsset[0x21011bc93d9e515b9511a817a1ed1d6d468f49fc] = COVER;
-        crTokenToAsset[0x85759961b116f1D36fD697855c57A6ae40793D9B] = 1INCH;
-        crTokenToAsset[0x7Aaa323D7e398be4128c7042d197a2545f0f1fea] = OMG;
-        crTokenToAsset[0x011a014d5e8Eb4771E575bB1000318D509230Afa] = UNI-V2-WBTC-ETH;
-        crTokenToAsset[0xE6C3120F38F56deb38B69b65cC7dcAF916373963] = UNI-V2-ETH-USDT;
-        crTokenToAsset[0x4Fe11BC316B6d7A345493127fBE298b95AdaAd85] = UNI-V2-USDC-ETH;
-        crTokenToAsset[0xcD22C4110c12AC41aCEfA0091c432ef44efaAFA0] = UNI-V2-DAI-ETH;
-        crTokenToAsset[0x228619CCa194Fbe3Ebeb2f835eC1eA5080DaFbb2] = XSUSHI;
-        crTokenToAsset[0x73f6cBA38922960b7092175c0aDD22Ab8d0e81fC] = SLP-WBTC-ETH;
-        crTokenToAsset[0x38f27c03d6609a86FF7716ad03038881320BE4Ad] = SLP-DAI-ETH;
-        crTokenToAsset[0x5EcaD8A75216CEa7DFF978525B2D523a251eEA92] = SLP-USDC-ETH;
-        crTokenToAsset[0x5C291bc83d15f71fB37805878161718eA4b6AEe9] = SLP-ETH-USDT;
-        crTokenToAsset[0x6BA0C66C48641e220CF78177C144323b3838D375] = SLP-SUSHI-ETH;
-        crTokenToAsset[0xd532944df6DFd5Dd629E8772F03D4fC861873abF] = SLP-YFI-ETH;
-        crTokenToAsset[0x197070723CE0D3810a0E47F06E935c30a480D4Fc] = WBTC;
-        crTokenToAsset[0xC25EAE724f189Ba9030B2556a1533E7c8A732E14] = SNX;
-        crTokenToAsset[0x25555933a8246Ab67cbf907CE3d1949884E82B55] = SUSD;
-        crTokenToAsset[0xc68251421edda00a10815e273fa4b1191fac651b] = PICKLE;
-        crTokenToAsset[0x65883978aDA0e707c3b2BE2A6825b1C4BDF76A90] = AKRO;
-        crTokenToAsset[0x8B950f43fCAc4931D408F1fcdA55C6CB6cbF3096] = BBADGER;
-        crTokenToAsset[0x59089279987DD76fC65Bf94Cb40E186b96e03cB3] = OGN;
-        crTokenToAsset[0x2Db6c82CE72C8d7D770ba1b5F5Ed0b6E075066d6] = AMP;
-        crTokenToAsset[0xb092b4601850E23903A42EaCBc9D8A0EeC26A4d5] = FRAX;
-        crTokenToAsset[0x1d0986Fb43985c88Ffa9aD959CC24e6a087C7e35] = ALPHA;
-        crTokenToAsset[0x51F48b638F82e8765F7a26373A2Cb4CcB10C07af] = UST;
-        crTokenToAsset[0xc36080892c64821fa8e396bc1bD8678fA3b82b17] = FTM;
-        crTokenToAsset[0x8379BAA817c5c5aB929b03ee8E3c48e45018Ae41] = RUNE;
-        crTokenToAsset[0x299e254A8a165bBeB76D9D69305013329Eea3a3B] = PERP;
-        crTokenToAsset[0xf8445C529D363cE114148662387eba5E62016e20] = RAI;
-        crTokenToAsset[0x7C3297cFB4c4bbd5f44b450c0872E0ADA5203112] = OCEAN;
-        crTokenToAsset[0xA87e8e61dfAC8af5944D353Cd26B96B20d5f4D01] = YVECRV;
-        crTokenToAsset[0x1bcaFA2C1b3a522E41bAa60C2E318981Ea8D1eb5] = YVSTECRV;
-        crTokenToAsset[0xf7c5314806bb349744Cf5E721F4d3395259B8531] = YVCurve-IB;
-        crTokenToAsset[0x081FE64df6dc6fc70043aedF3713a3ce6F190a21] = RARI;
-        crTokenToAsset[0x28526Bb33d7230E65E735dB64296413731C5402e] = SFI;
-        crTokenToAsset[0x45406ba53bB84Cd32A58e7098a2D4D1b11B107F6] = YVCurve-IB;
-        crTokenToAsset[0x6d1B9e01aF17Dd08d6DEc08E210dfD5984FF1C20] = YVCurve-sETH;
-        crTokenToAsset[0x1F9b4756B008106C806c7E64322d7eD3B72cB284] = YVCurve-stETH;
-        crTokenToAsset[0xab10586C918612BA440482db77549d26B7ABF8f7] = ARMOR;
-        crTokenToAsset[0xdFFf11DFe6436e42a17B86e7F419Ac8292990393] = ARNXM;
-        crTokenToAsset[0xDbb5e3081dEf4b6cdD8864aC2aeDA4cBf778feCf] = MLN;
-        crTokenToAsset[0x71cEFCd324B732d4E058AfAcBA040d908c441847] = VSP;
-        crTokenToAsset[0x1A122348B73B58eA39F822A89e6ec67950c2bBD0] = VVSP;
-        crTokenToAsset[0x523EFFC8bFEfC2948211A05A905F761CBA5E8e9E] = GNO;
-        crTokenToAsset[0x4202D97E00B9189936EdF37f8D01cfF88BDd81d4] = YVWETH;
-        crTokenToAsset[0x4BAa77013ccD6705ab0522853cB0E9d453579Dd4] = YUSD;
-        crTokenToAsset[0x98E329eB5aae2125af273102f3440DE19094b77c] = SWAP;
-        crTokenToAsset[0x8C3B7a4320ba70f8239F83770c4015B5bc4e6F91] = FEI;
-        crTokenToAsset[0xE585c76573D7593ABF21537B607091F76c996E73] = WOO;
-        crTokenToAsset[0x81E346729723C4D15d0FB1c5679b9f2926Ff13C6] = BNT;
-        
-        ATokenToAsset[0xC011a73ee8576Fb46F5E1c5751cA3B9Fe0af2a6F] = true; // proxy SNX
-        ATokenToAsset[0x57Ab1ec28D129707052df4dF418D58a2D46d5f51] = true; // ProxyERC20sUSD
-        ATokenToAsset[0xb440DD674e1243644791a4AdfE3A2AbB0A92d309] = true; // ProxyFeePool
-        ATokenToAsset[0x176C674Ee533C6139B0dc8b458D72A93dCB3e705] = true; // ProxyiAAVE
-        ATokenToAsset[0x8A8079c7149B8A1611e5C5d978DCA3bE16545F83] = true; // ProxyiADA
-        ATokenToAsset[0xAFD870F32CE54EfdBF677466B612bf8ad164454B] = true; // ProxyiBNB
-        ATokenToAsset[0xD6014EA05BDe904448B743833dDF07c3C7837481] = true; // ProxyiBTC
-        ATokenToAsset[0x336213e1DDFC69f4701Fc3F86F4ef4A160c1159d] = true; // ProxyiCEX
-        ATokenToAsset[0x6345728B1ccE16E6f8C509950b5c84FFF88530d9] = true; // ProxyiCOMP
-        ATokenToAsset[0xCB98f42221b2C251A4E74A1609722eE09f0cc08E] = true; // ProxyiDASH
-        ATokenToAsset[0x14d10003807AC60d07BB0ba82cAeaC8d2087c157] = true; // ProxyiDEFI
-        ATokenToAsset[0x46a97629C9C1F58De6EC18C7F536e7E6d6A6ecDe] = true; // ProxyiDOT
-        ATokenToAsset[0xF4EebDD0704021eF2a6Bbe993fdf93030Cd784b4] = true; // ProxyiEOS
-        ATokenToAsset[0xd50c1746D835d2770dDA3703B69187bFfeB14126] = true; // ProxyiETC
-        ATokenToAsset[0xA9859874e1743A32409f75bB11549892138BBA1E] = true; // ProxyiETH
-        ATokenToAsset[0x2d7aC061fc3db53c39fe1607fB8cec1B2C162B01] = true; // ProxyiLINK
-        ATokenToAsset[0x79da1431150C9b82D2E5dfc1C68B33216846851e] = true; // ProxyiLTC
-        ATokenToAsset[0xA5a5DF41883Cdc00c4cCC6E8097130535399d9a3] = true; // ProxyiOIL
-        ATokenToAsset[0x0fEd38108bdb8e62ef7b5680E8E0726E2F29e0De] = true; // ProxyiREN
-        ATokenToAsset[0xC5807183a9661A533CB08CbC297594a0B864dc12] = true; // ProxyiTRX
-        ATokenToAsset[0x36A00FF9072570eF4B9292117850B8FE08d96cce] = true; // ProxyiUNI
-        ATokenToAsset[0x4AdF728E2Df4945082cDD6053869f51278fae196] = true; // ProxyiXMR
-        ATokenToAsset[0x27269b3e45A4D3E79A3D6BFeE0C8fB13d0D711A6] = true; // ProxyiXRP	
-        ATokenToAsset[0x8deef89058090ac5655A99EEB451a4f9183D1678] = true; // ProxyiXTZ
-        ATokenToAsset[0x592244301CeA952d6daB2fdC1fE6bd9E53917306] = true; // ProxyiYFI
-        ATokenToAsset[0xcD39b5434a0A92cf47D1F567a7dF84bE356814F0] = true; // Proxys1INCH
-        ATokenToAsset[0x7537AAe01f3B218DAE75e10d952473823F961B87] = true; // ProxysAAPL
-        ATokenToAsset[0xd2dF355C19471c8bd7D8A3aa27Ff4e26A21b4076] = true; // ProxysAAVE
-        ATokenToAsset[0xe36E2D3c7c34281FA3bC737950a68571736880A1] = true; // ProxysADA
-        ATokenToAsset[0x9CF7E61853ea30A41b02169391b393B901eac457] = true; // ProxysAMZN
-        ATokenToAsset[0xF48e200EAF9906362BB1442fca31e0835773b8B4] = true; // ProxysAUD
-        ATokenToAsset[0x617aeCB6137B5108D1E7D4918e3725C8cEbdB848] = true; // ProxysBNB
-        ATokenToAsset[0xfE18be6b3Bd88A2D2A7f928d00292E7a9963CfC6] = true; // ProxysBTC
-        ATokenToAsset[0xeABACD844A196D7Faf3CE596edeBF9900341B420] = true; // ProxysCEX
-        ATokenToAsset[0x0F83287FF768D1c1e17a42F44d644D7F22e8ee1d] = true; // ProxysCHF
-        ATokenToAsset[0x9EeF4CA7aB9fa8bc0650127341C2d3F707a40f8A] = true; // ProxysCOIN
-        ATokenToAsset[0xEb029507d3e043DD6C87F2917C4E82B902c35618] = true; // ProxysCOMP
-        ATokenToAsset[0xD38aEb759891882e78E957c80656572503D8c1B1] = true; // ProxysCRV
-        ATokenToAsset[0xfE33ae95A9f0DA8A845aF33516EDc240DCD711d6] = true; // ProxysDEFI
-        ATokenToAsset[0x1715AC0743102BF5Cd58EfBB6Cf2dC2685d967b6] = true; // ProxysDOT
-        ATokenToAsset[0x88C8Cf3A212c0369698D13FE98Fcb76620389841] = true; // ProxysEOS
-        ATokenToAsset[0x22602469d704BfFb0936c7A7cfcD18f7aA269375] = true; // ProxysETC
-        ATokenToAsset[0x5e74C9036fb86BD7eCdcb084a0673EFc32eA31cb] = true; // ProxysETH
-        ATokenToAsset[0xD71eCFF9342A5Ced620049e616c5035F1dB98620] = true; // ProxysEUR
-        ATokenToAsset[0xf50B5e535F62a56A9BD2d8e2434204E726c027Fa] = true; // ProxysFB
-        ATokenToAsset[0x23348160D7f5aca21195dF2b70f28Fce2B0be9fC] = true; // ProxysFTSE
-        ATokenToAsset[0x97fe22E7341a0Cd8Db6F6C021A24Dc8f4DAD855F] = true; // ProxysGBP
-        ATokenToAsset[0xC63B8ECCE56aB9C46184eC6aB85e4771fEa4c8AD] = true; // ProxysGOOG
-        ATokenToAsset[0xF6b1C627e95BFc3c1b4c9B825a032Ff0fBf3e07d] = true; // ProxysJPY
-        ATokenToAsset[0x269895a3dF4D73b077Fc823dD6dA1B95f72Aaf9B] = true; // ProxysKRW
-        ATokenToAsset[0xbBC455cb4F1B9e4bFC4B73970d360c8f032EfEE6] = true; // ProxysLINK
-        ATokenToAsset[0xC14103C2141E842e228FBaC594579e798616ce7A] = true; // ProxysLTC
-        ATokenToAsset[0x745a824D6aBBD236AA794b5530062778A6Ad7523] = true; // ProxysMSFT
-        ATokenToAsset[0x5A7E3c07604EB515C16b36cd51906a65f021F609] = true; // ProxysNFLX
-        ATokenToAsset[0x757de3ac6B830a931eF178C6634c5C551773155c] = true; // ProxysNIKKEI
-        ATokenToAsset[0x6d16cF3EC5F763d4d99cB0B0b110eefD93B11B56] = true; // ProxysOIL
-        ATokenToAsset[0xD31533E8d0f3DF62060e94B3F1318137bB6E3525] = true; // ProxysREN
-        ATokenToAsset[0x0352557B007A4Aae1511C114409b932F06F9E2f4] = true; // ProxysRUNE
-        ATokenToAsset[0xf2E08356588EC5cd9E437552Da87C0076b4970B0] = true; // ProxysTSLA
-        ATokenToAsset[0x30635297E450b930f8693297eBa160D9e6c8eBcf] = true; // ProxysUNI
-        ATokenToAsset[0x6A22e5e94388464181578Aa7A6B869e00fE27846] = true; // ProxysXAG
-        ATokenToAsset[0x261EfCdD24CeA98652B9700800a13DfBca4103fF] = true; // ProxysXAU
-        ATokenToAsset[0x5299d6F7472DCc137D7f3C4BcfBBB514BaBF341A] = true; // ProxysXMR
-        ATokenToAsset[0xa2B0fDe6D710e201d0d608e924A484d1A5fEd57c] = true; // ProxysXRP
-        ATokenToAsset[0x2e59005c5c0f0a4D77CcA82653d48b46322EE5Cd] = true; // ProxysXTZ
-        ATokenToAsset[0x992058B7DB08F9734d84485bfbC243C4ee6954A7] = true; // ProxysYFI 
+
+        synths[0xC011a73ee8576Fb46F5E1c5751cA3B9Fe0af2a6F] = true; // proxy SNX
+        synths[0x57Ab1ec28D129707052df4dF418D58a2D46d5f51] = true; // ProxyERC20sUSD
+        synths[0xb440DD674e1243644791a4AdfE3A2AbB0A92d309] = true; // ProxyFeePool
+        synths[0x176C674Ee533C6139B0dc8b458D72A93dCB3e705] = true; // ProxyiAAVE
+        synths[0x8A8079c7149B8A1611e5C5d978DCA3bE16545F83] = true; // ProxyiADA
+        synths[0xAFD870F32CE54EfdBF677466B612bf8ad164454B] = true; // ProxyiBNB
+        synths[0xD6014EA05BDe904448B743833dDF07c3C7837481] = true; // ProxyiBTC
+        synths[0x336213e1DDFC69f4701Fc3F86F4ef4A160c1159d] = true; // ProxyiCEX
+        synths[0x6345728B1ccE16E6f8C509950b5c84FFF88530d9] = true; // ProxyiCOMP
+        synths[0xCB98f42221b2C251A4E74A1609722eE09f0cc08E] = true; // ProxyiDASH
+        synths[0x14d10003807AC60d07BB0ba82cAeaC8d2087c157] = true; // ProxyiDEFI
+        synths[0x46a97629C9C1F58De6EC18C7F536e7E6d6A6ecDe] = true; // ProxyiDOT
+        synths[0xF4EebDD0704021eF2a6Bbe993fdf93030Cd784b4] = true; // ProxyiEOS
+        synths[0xd50c1746D835d2770dDA3703B69187bFfeB14126] = true; // ProxyiETC
+        synths[0xA9859874e1743A32409f75bB11549892138BBA1E] = true; // ProxyiETH
+        synths[0x2d7aC061fc3db53c39fe1607fB8cec1B2C162B01] = true; // ProxyiLINK
+        synths[0x79da1431150C9b82D2E5dfc1C68B33216846851e] = true; // ProxyiLTC
+        synths[0xA5a5DF41883Cdc00c4cCC6E8097130535399d9a3] = true; // ProxyiOIL
+        synths[0x0fEd38108bdb8e62ef7b5680E8E0726E2F29e0De] = true; // ProxyiREN
+        synths[0xC5807183a9661A533CB08CbC297594a0B864dc12] = true; // ProxyiTRX
+        synths[0x36A00FF9072570eF4B9292117850B8FE08d96cce] = true; // ProxyiUNI
+        synths[0x4AdF728E2Df4945082cDD6053869f51278fae196] = true; // ProxyiXMR
+        synths[0x27269b3e45A4D3E79A3D6BFeE0C8fB13d0D711A6] = true; // ProxyiXRP
+        synths[0x8deef89058090ac5655A99EEB451a4f9183D1678] = true; // ProxyiXTZ
+        synths[0x592244301CeA952d6daB2fdC1fE6bd9E53917306] = true; // ProxyiYFI
+        synths[0xcD39b5434a0A92cf47D1F567a7dF84bE356814F0] = true; // Proxys1INCH
+        synths[0x7537AAe01f3B218DAE75e10d952473823F961B87] = true; // ProxysAAPL
+        synths[0xd2dF355C19471c8bd7D8A3aa27Ff4e26A21b4076] = true; // ProxysAAVE
+        synths[0xe36E2D3c7c34281FA3bC737950a68571736880A1] = true; // ProxysADA
+        synths[0x9CF7E61853ea30A41b02169391b393B901eac457] = true; // ProxysAMZN
+        synths[0xF48e200EAF9906362BB1442fca31e0835773b8B4] = true; // ProxysAUD
+        synths[0x617aeCB6137B5108D1E7D4918e3725C8cEbdB848] = true; // ProxysBNB
+        synths[0xfE18be6b3Bd88A2D2A7f928d00292E7a9963CfC6] = true; // ProxysBTC
+        synths[0xeABACD844A196D7Faf3CE596edeBF9900341B420] = true; // ProxysCEX
+        synths[0x0F83287FF768D1c1e17a42F44d644D7F22e8ee1d] = true; // ProxysCHF
+        synths[0x9EeF4CA7aB9fa8bc0650127341C2d3F707a40f8A] = true; // ProxysCOIN
+        synths[0xEb029507d3e043DD6C87F2917C4E82B902c35618] = true; // ProxysCOMP
+        synths[0xD38aEb759891882e78E957c80656572503D8c1B1] = true; // ProxysCRV
+        synths[0xfE33ae95A9f0DA8A845aF33516EDc240DCD711d6] = true; // ProxysDEFI
+        synths[0x1715AC0743102BF5Cd58EfBB6Cf2dC2685d967b6] = true; // ProxysDOT
+        synths[0x88C8Cf3A212c0369698D13FE98Fcb76620389841] = true; // ProxysEOS
+        synths[0x22602469d704BfFb0936c7A7cfcD18f7aA269375] = true; // ProxysETC
+        synths[0x5e74C9036fb86BD7eCdcb084a0673EFc32eA31cb] = true; // ProxysETH
+        synths[0xD71eCFF9342A5Ced620049e616c5035F1dB98620] = true; // ProxysEUR
+        synths[0xf50B5e535F62a56A9BD2d8e2434204E726c027Fa] = true; // ProxysFB
+        synths[0x23348160D7f5aca21195dF2b70f28Fce2B0be9fC] = true; // ProxysFTSE
+        synths[0x97fe22E7341a0Cd8Db6F6C021A24Dc8f4DAD855F] = true; // ProxysGBP
+        synths[0xC63B8ECCE56aB9C46184eC6aB85e4771fEa4c8AD] = true; // ProxysGOOG
+        synths[0xF6b1C627e95BFc3c1b4c9B825a032Ff0fBf3e07d] = true; // ProxysJPY
+        synths[0x269895a3dF4D73b077Fc823dD6dA1B95f72Aaf9B] = true; // ProxysKRW
+        synths[0xbBC455cb4F1B9e4bFC4B73970d360c8f032EfEE6] = true; // ProxysLINK
+        synths[0xC14103C2141E842e228FBaC594579e798616ce7A] = true; // ProxysLTC
+        synths[0x745a824D6aBBD236AA794b5530062778A6Ad7523] = true; // ProxysMSFT
+        synths[0x5A7E3c07604EB515C16b36cd51906a65f021F609] = true; // ProxysNFLX
+        synths[0x757de3ac6B830a931eF178C6634c5C551773155c] = true; // ProxysNIKKEI
+        synths[0x6d16cF3EC5F763d4d99cB0B0b110eefD93B11B56] = true; // ProxysOIL
+        synths[0xD31533E8d0f3DF62060e94B3F1318137bB6E3525] = true; // ProxysREN
+        synths[0x0352557B007A4Aae1511C114409b932F06F9E2f4] = true; // ProxysRUNE
+        synths[0xf2E08356588EC5cd9E437552Da87C0076b4970B0] = true; // ProxysTSLA
+        synths[0x30635297E450b930f8693297eBa160D9e6c8eBcf] = true; // ProxysUNI
+        synths[0x6A22e5e94388464181578Aa7A6B869e00fE27846] = true; // ProxysXAG
+        synths[0x261EfCdD24CeA98652B9700800a13DfBca4103fF] = true; // ProxysXAU
+        synths[0x5299d6F7472DCc137D7f3C4BcfBBB514BaBF341A] = true; // ProxysXMR
+        synths[0xa2B0fDe6D710e201d0d608e924A484d1A5fEd57c] = true; // ProxysXRP
+        synths[0x2e59005c5c0f0a4D77CcA82653d48b46322EE5Cd] = true; // ProxysXTZ
+        synths[0x992058B7DB08F9734d84485bfbC243C4ee6954A7] = true; // ProxysYFI
     }
 
     /* ============ External Functions ============ */
@@ -285,15 +208,16 @@ contract PriceOracle is Ownable, IPriceOracle {
         if (_tokenIn == _tokenOut) {
             return 10**18;
         }
+        uint256 exchangeRate;
 
         // Comp assets
         if (cTokenToAsset[_tokenIn] != address(0)) {
-            uint256 exchangeRateNormalized = getCompoundExchangeRate(_tokenIn);
-            return getPrice(cTokenToAsset[_tokenIn], _tokenOut).preciseMul(exchangeRateNormalized);
+            exchangeRate = getCompoundExchangeRate(_tokenIn);
+            return getPrice(cTokenToAsset[_tokenIn], _tokenOut).preciseMul(exchangeRate);
         }
         if (cTokenToAsset[_tokenOut] != address(0)) {
-            uint256 exchangeRateNormalized = getCompoundExchangeRate(_tokenOut);
-            return getPrice(_tokenIn, cTokenToAsset[_tokenOut]).preciseDiv(exchangeRateNormalized);
+            exchangeRate = getCompoundExchangeRate(_tokenOut);
+            return getPrice(_tokenIn, cTokenToAsset[_tokenOut]).preciseDiv(exchangeRate);
         }
 
         // aave tokens. 1 to 1 with underlying
@@ -307,18 +231,29 @@ contract PriceOracle is Ownable, IPriceOracle {
         // crTokens Cream prices 0xde19f5a7cF029275Be9cEC538E81Aa298E297266
         // cTkens use same interface as compound
         if (crTokenToAsset[_tokenIn] != address(0)) {
-            uint256 exchangeRate = getCreamExchangeRate(_tokenIn);
+            exchangeRate = getCreamExchangeRate(_tokenIn);
             return getPrice(crTokenToAsset[_tokenIn], _tokenOut).preciseMul(exchangeRate);
         }
         if (crTokenToAsset[_tokenOut] != address(0)) {
-            uint256 exchangeRate = getCreamExchangeRate(_tokenOut);
+            exchangeRate = getCreamExchangeRate(_tokenOut);
             return getPrice(_tokenIn, crTokenToAsset[_tokenOut]).preciseDiv(exchangeRate);
         }
 
-        // TODOs
-        // Check Synths & integrate synths
-        // Integrate lido
+        // Checks synthetix
+        if (synths[_tokenIn]) {
+            address targetImpl = ISnxProxy(_tokenIn).target();
+            exchangeRate = snxEchangeRates.rateForCurrency(ISnxSynth(targetImpl).currencyKey());
+            return getPrice(USDC, _tokenOut).preciseMul(exchangeRate);
+        }
 
+        if (synths[_tokenOut]) {
+            address targetImpl = ISnxProxy(_tokenOut).target();
+            exchangeRate = snxEchangeRates.rateForCurrency(ISnxSynth(targetImpl).currencyKey());
+            return getPrice(_tokenIn, USDC).preciseDiv(exchangeRate);
+        }
+
+        // TODOs
+        // Integrate lido
         // other btcs, change pairs & change path in uniswap trade
         // other stables, change pair & change path in uniswap trade
 
