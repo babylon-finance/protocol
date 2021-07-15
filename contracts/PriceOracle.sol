@@ -66,11 +66,13 @@ contract PriceOracle is Ownable, IPriceOracle {
     mapping(address => address) public cTokenToAsset;
     // Mapping of interest bearing aave tokens
     mapping(address => address) public aTokenToAsset;
+    // Mapping of cream tokens
+    mapping(address => address) public crTokenToAsset;
+
 
     /* ============ Constructor ============ */
 
     constructor() {
-        // TODO: get on chain
         cTokenToAsset[0x5d3a536E4D6DbD6114cc1Ead35777bAB948E3643] = 0x6B175474E89094C44Da98b954EedeAC495271d0F; // DAI
         cTokenToAsset[0x35A18000230DA775CAc24873d00Ff85BccdeD550] = 0x1f9840a85d5aF5bf1D1762F925BDADdC4201F984; // UNI
         cTokenToAsset[0x4Ddc2D193948926D02f9B1fE9e1daa0718270ED5] = WETH; // ETH
@@ -85,7 +87,6 @@ contract PriceOracle is Ownable, IPriceOracle {
         cTokenToAsset[0x12392F67bdf24faE0AF363c24aC620a2f67DAd86] = 0x0000000000085d4780B73119b644AE5ecd22b376; // TUSD
         cTokenToAsset[0xB3319f5D18Bc0D84dD1b4825Dcde5d5f7266d407] = 0xE41d2489571d322189246DaFA5ebDe1F4699F498; // ZRX
 
-        // TODO: get on chain
         aTokenToAsset[0xFFC97d72E13E01096502Cb8Eb52dEe56f74DAD7B] = 0x7Fc66500c84A76Ad7e9c93437bFc5Ac33E2DDaE9; // aave
         aTokenToAsset[0x272F97b7a56a387aE942350bBC7Df5700f8a4576] = 0xba100000625a3754423978a60c9317c58a424e3D; // bal
         aTokenToAsset[0x05Ec93c0365baAeAbF7AefFb0972ea7ECdD39CF1] = 0x0D8775F648430679A709E98d2b0Cb6250d2887EF; // bat
@@ -93,6 +94,8 @@ contract PriceOracle is Ownable, IPriceOracle {
         aTokenToAsset[0x028171bCA77440897B824Ca71D1c56caC55b68A3] = 0x6B175474E89094C44Da98b954EedeAC495271d0F; // dai
         aTokenToAsset[0xBcca60bB61934080951369a648Fb03DF4F96263C] = 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48; // usdc
         aTokenToAsset[0x3Ed3B47Dd13EC9a98b44e6204A523E766B225811] = 0xdAC17F958D2ee523a2206206994597C13D831ec7; // usdt
+
+        crTokenToAsset[0xD06527D5e56A3495252A528C4987003b712860eE] = WETH;
     }
 
     /* ============ External Functions ============ */
@@ -131,13 +134,24 @@ contract PriceOracle is Ownable, IPriceOracle {
         if (aTokenToAsset[_tokenOut] != address(0)) {
             return getPrice(_tokenIn, aTokenToAsset[_tokenOut]);
         }
+
         // crTokens Cream prices 0xde19f5a7cF029275Be9cEC538E81Aa298E297266
+        // cTkens use same interface as compound
+        if (crTokenToAsset[_tokenIn] != address(0)) {
+            uint256 exchangeRate = getCreamExchangeRate(_tokenIn);
+            return getPrice(crTokenToAsset[_tokenIn], _tokenOut).preciseMul(exchangeRate);
+        }
+        if (crTokenToAsset[_tokenOut] != address(0)) {
+            uint256 exchangeRate = getCreamExchangeRate(_tokenOut);
+            return getPrice(_tokenIn, crTokenToAsset[_tokenOut]).preciseDiv(exchangeRate);
+        }
+
+        // TODOs
         // Check Synths & integrate synths
         // Integrate lido
 
         // other btcs, change pairs & change path in uniswap trade
-        // other usd, change pair & change path in uniswap trade
-        // other eths, change pair & change path in uniswap trade
+        // other stables, change pair & change path in uniswap trade
 
         if (_tokenIn != WETH && _tokenOut != WETH) {
             return getPrice(_tokenIn, WETH).preciseDiv(getPrice(_tokenOut, WETH));
@@ -236,6 +250,15 @@ contract PriceOracle is Ownable, IPriceOracle {
             exchangeRateNormalized = exchangeRateNormalized.div(10**(ERC20(cTokenToAsset[_asset]).decimals() - 8));
         } else {
             exchangeRateNormalized = exchangeRateNormalized.mul(10**(8 - ERC20(cTokenToAsset[_asset]).decimals()));
+        }
+        return exchangeRateNormalized;
+    }
+    function getCreamExchangeRate(address _asset) public view override returns (uint256) {
+        uint256 exchangeRateNormalized = ICToken(_asset).exchangeRateStored();
+        if (ERC20(crTokenToAsset[_asset]).decimals() > 8) {
+            exchangeRateNormalized = exchangeRateNormalized.div(10**(ERC20(crTokenToAsset[_asset]).decimals() - 8));
+        } else {
+            exchangeRateNormalized = exchangeRateNormalized.mul(10**(8 - ERC20(crTokenToAsset[_asset]).decimals()));
         }
         return exchangeRateNormalized;
     }

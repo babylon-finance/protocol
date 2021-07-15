@@ -122,5 +122,21 @@ describe('PriceOracle', function () {
         expect(price).to.be.equal(priceUnderlying);
       });
     });
+
+    addresses.cream.crtokens.forEach(({ crtoken, token }) => {
+      it(`should get the price of crtokens ${crtoken}`, async function () {
+        const price = await priceOracle.connect(owner).getPrice(crtoken, addresses.tokens.DAI);
+        const priceUnderlying = await priceOracle.connect(owner).getPrice(token, addresses.tokens.DAI);
+        const exchangeRate = await priceOracle.getCreamExchangeRate(crtoken);
+        console.log(ethers.utils.formatEther(price));
+        console.log(ethers.utils.formatEther(priceUnderlying));
+        expect(price).to.be.equal(
+          priceUnderlying
+            .mul(exchangeRate)
+            .div(10 ** 10)
+            .div(10 ** 8),
+        );
+      });
+    });
   });
 });
