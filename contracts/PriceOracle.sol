@@ -28,6 +28,9 @@ import {SafeCast} from '@openzeppelin/contracts/utils/SafeCast.sol';
 
 import {IPriceOracle} from './interfaces/IPriceOracle.sol';
 import {ICToken} from './interfaces/external/compound/ICToken.sol';
+import {ISnxExchangeRates} from './interfaces/external/synthetix/ISnxExchangeRates.sol';
+import {ISnxSynth} from './interfaces/external/synthetix/ISnxSynth.sol';
+import {ISnxProxy} from './interfaces/external/synthetix/ISnxProxy.sol';
 
 import {PreciseUnitMath} from './lib/PreciseUnitMath.sol';
 import {LowGasSafeMath as SafeMath} from './lib/LowGasSafeMath.sol';
@@ -49,8 +52,11 @@ contract PriceOracle is Ownable, IPriceOracle {
 
     // Address of Uniswap factory
     IUniswapV3Factory internal constant factory = IUniswapV3Factory(0x1F98431c8aD98523631AE4a59f267346ea31F984);
+    ISnxExchangeRates internal constant snxEchangeRates = ISnxExchangeRates(0xd69b189020EF614796578AfE4d10378c5e7e1138);
 
     address private constant WETH = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
+    address private constant USDC = 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48;
+
 
     // the desired seconds agos array passed to the observe method
     uint32 private constant SECONDS_GRANULARITY = 30;
@@ -68,6 +74,8 @@ contract PriceOracle is Ownable, IPriceOracle {
     mapping(address => address) public aTokenToAsset;
     // Mapping of cream tokens
     mapping(address => address) public crTokenToAsset;
+    // Mapping of synths
+    mapping(address => bool) public synths;
 
 
     /* ============ Constructor ============ */
@@ -96,6 +104,9 @@ contract PriceOracle is Ownable, IPriceOracle {
         aTokenToAsset[0x3Ed3B47Dd13EC9a98b44e6204A523E766B225811] = 0xdAC17F958D2ee523a2206206994597C13D831ec7; // usdt
 
         crTokenToAsset[0xD06527D5e56A3495252A528C4987003b712860eE] = WETH;
+
+        synths[0xD71eCFF9342A5Ced620049e616c5035F1dB98620] = true; // eur
+        synths[0x5e74C9036fb86BD7eCdcb084a0673EFc32eA31cb] = true; // aave
     }
 
     /* ============ External Functions ============ */
@@ -116,15 +127,16 @@ contract PriceOracle is Ownable, IPriceOracle {
         if (_tokenIn == _tokenOut) {
             return 10**18;
         }
+        uint256 exchangeRate;
 
         // Comp assets
         if (cTokenToAsset[_tokenIn] != address(0)) {
-            uint256 exchangeRateNormalized = getCompoundExchangeRate(_tokenIn);
-            return getPrice(cTokenToAsset[_tokenIn], _tokenOut).preciseMul(exchangeRateNormalized);
+            exchangeRate = getCompoundExchangeRate(_tokenIn);
+            return getPrice(cTokenToAsset[_tokenIn], _tokenOut).preciseMul(exchangeRate);
         }
         if (cTokenToAsset[_tokenOut] != address(0)) {
-            uint256 exchangeRateNormalized = getCompoundExchangeRate(_tokenOut);
-            return getPrice(_tokenIn, cTokenToAsset[_tokenOut]).preciseDiv(exchangeRateNormalized);
+            exchangeRate = getCompoundExchangeRate(_tokenOut);
+            return getPrice(_tokenIn, cTokenToAsset[_tokenOut]).preciseDiv(exchangeRate);
         }
 
         // aave tokens. 1 to 1 with underlying
@@ -138,18 +150,29 @@ contract PriceOracle is Ownable, IPriceOracle {
         // crTokens Cream prices 0xde19f5a7cF029275Be9cEC538E81Aa298E297266
         // cTkens use same interface as compound
         if (crTokenToAsset[_tokenIn] != address(0)) {
-            uint256 exchangeRate = getCreamExchangeRate(_tokenIn);
+            exchangeRate = getCreamExchangeRate(_tokenIn);
             return getPrice(crTokenToAsset[_tokenIn], _tokenOut).preciseMul(exchangeRate);
         }
         if (crTokenToAsset[_tokenOut] != address(0)) {
-            uint256 exchangeRate = getCreamExchangeRate(_tokenOut);
+            exchangeRate = getCreamExchangeRate(_tokenOut);
             return getPrice(_tokenIn, crTokenToAsset[_tokenOut]).preciseDiv(exchangeRate);
         }
 
-        // TODOs
-        // Check Synths & integrate synths
-        // Integrate lido
+        // Checks synthetix
+        if (synths[_tokenIn]) {
+            address targetImpl = ISnxProxy(_tokenIn).target();
+            exchangeRate = snxEchangeRates.rateForCurrency(ISnxSynth(targetImpl).currencyKey());
+            return getPrice(USDC, _tokenOut).preciseMul(exchangeRate);
+        }
 
+        if (synths[_tokenOut]) {
+            address targetImpl = ISnxProxy(_tokenOut).target();
+            exchangeRate = snxEchangeRates.rateForCurrency(ISnxSynth(targetImpl).currencyKey());
+            return getPrice(_tokenIn, USDC).preciseDiv(exchangeRate);
+        }
+
+        // TODOs
+        // Integrate lido
         // other btcs, change pairs & change path in uniswap trade
         // other stables, change pair & change path in uniswap trade
 

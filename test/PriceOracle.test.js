@@ -128,14 +128,23 @@ describe('PriceOracle', function () {
         const price = await priceOracle.connect(owner).getPrice(crtoken, addresses.tokens.DAI);
         const priceUnderlying = await priceOracle.connect(owner).getPrice(token, addresses.tokens.DAI);
         const exchangeRate = await priceOracle.getCreamExchangeRate(crtoken);
-        console.log(ethers.utils.formatEther(price));
-        console.log(ethers.utils.formatEther(priceUnderlying));
         expect(price).to.be.equal(
           priceUnderlying
             .mul(exchangeRate)
             .div(10 ** 10)
             .div(10 ** 8),
         );
+      });
+    });
+
+    addresses.synthetix.synths.forEach(({ synth, token }) => {
+      it(`should get the price of synthetix ${synth}`, async function () {
+        const price = await priceOracle.connect(owner).getPrice(synth, addresses.tokens.DAI);
+        expect(price).to.be.gt(0);
+        if (token) {
+          const priceUnderlying = await priceOracle.connect(owner).getPrice(token, addresses.tokens.DAI);
+          expect(price).to.be.closeTo(priceUnderlying, ethers.utils.parseEther('0.01'));
+        }
       });
     });
   });
