@@ -257,18 +257,18 @@ contract PriceOracle is Ownable, IPriceOracle {
 
         // Checks stETH && wstETH (Lido tokens)
         if (_tokenIn == address(stETH) || _tokenIn == address(wstETH)) {
-          uint shares = 1e18;
-          if (_tokenIn == address(wstETH)) {
-            shares = wstETH.getStETHByWstETH(shares);
-          }
-          return getPrice(WETH, _tokenOut).preciseMul(stETH.getPooledEthByShares(shares));
+            uint256 shares = 1e18;
+            if (_tokenIn == address(wstETH)) {
+                shares = wstETH.getStETHByWstETH(shares);
+            }
+            return getPrice(WETH, _tokenOut).preciseMul(stETH.getPooledEthByShares(shares));
         }
         if (_tokenOut == address(stETH) || _tokenOut == address(wstETH)) {
-          uint shares = 1e18;
-          if (_tokenOut == address(wstETH)) {
-            shares = wstETH.getStETHByWstETH(shares);
-          }
-          return getPrice(_tokenIn, WETH).preciseDiv(stETH.getPooledEthByShares(shares));
+            uint256 shares = 1e18;
+            if (_tokenOut == address(wstETH)) {
+                shares = wstETH.getStETHByWstETH(shares);
+            }
+            return getPrice(_tokenIn, WETH).preciseDiv(stETH.getPooledEthByShares(shares));
         }
 
         // TODOs

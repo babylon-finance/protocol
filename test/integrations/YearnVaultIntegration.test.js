@@ -1,40 +1,20 @@
 const { expect } = require('chai');
 const { ethers } = require('hardhat');
-const {
-  DEFAULT_STRATEGY_PARAMS,
-  createStrategy,
-  getStrategy,
-  executeStrategy,
-  finalizeStrategy,
-  injectFakeProfits,
-} = require('../fixtures/StrategyHelper');
-const { parse, from, eth, normalizeDecimals } = require('../utils/test-helpers');
+const { getStrategy, executeStrategy, finalizeStrategy } = require('../fixtures/StrategyHelper');
+const { eth, normalizeDecimals } = require('../utils/test-helpers');
 const { createGarden, transferFunds } = require('../fixtures/GardenHelper');
 const { setupTests } = require('../fixtures/GardenFixture');
 const addresses = require('../../lib/addresses');
-const { ADDRESS_ZERO, ONE_ETH, STRATEGY_EXECUTE_MAP } = require('../../lib/constants');
+const { ONE_ETH, STRATEGY_EXECUTE_MAP } = require('../../lib/constants');
 
 describe('YearnVaultIntegrationTest', function () {
   let yearnVaultIntegration;
-  let garden1;
-  let signer1;
-  let signer2;
-  let signer3;
   let babController;
   let priceOracle;
   let owner;
 
   beforeEach(async () => {
-    ({
-      garden1,
-      priceOracle,
-      babController,
-      yearnVaultIntegration,
-      owner,
-      signer1,
-      signer2,
-      signer3,
-    } = await setupTests()());
+    ({ priceOracle, babController, yearnVaultIntegration, owner } = await setupTests()());
   });
 
   describe('Deployment', function () {
@@ -47,14 +27,10 @@ describe('YearnVaultIntegrationTest', function () {
   });
 
   describe('Yearn Vaults', function () {
-    let daiToken;
     let daiVault;
-    let WETH;
 
     beforeEach(async () => {
-      daiToken = await ethers.getContractAt('IERC20', addresses.tokens.DAI);
       daiVault = await ethers.getContractAt('IYearnVault', addresses.yearn.vaults.ydai);
-      WETH = await ethers.getContractAt('IERC20', addresses.tokens.WETH);
     });
 
     describe('getPricePerShare', function () {
@@ -83,11 +59,11 @@ describe('YearnVaultIntegrationTest', function () {
         { token: addresses.tokens.WBTC, name: 'WBTC' },
       ].forEach(({ token, name }) => {
         [
-          { vault: '0xa9fE4601811213c340e850ea305481afF02f5b28', symbol: 'yvWETH' }, //yvWETH vault
-          { vault: '0x7Da96a3891Add058AdA2E826306D812C638D87a7', symbol: 'yvUSDT' }, //yvUSDT vault
-          { vault: '0x5f18C75AbDAe578b483E5F43f12a39cF75b973a9', symbol: 'yvUSDC' }, //yvUSDC vault
-          { vault: '0xA696a63cc78DfFa1a63E9E50587C197387FF6C7E', symbol: 'yvWBTC' }, //yvWBTC vault
-          { vault: '0x19D3364A399d251E894aC732651be8B0E4e85001', symbol: 'yvDAI' }, //yvDAI vault
+          { vault: '0xa9fE4601811213c340e850ea305481afF02f5b28', symbol: 'yvWETH' }, // yvWETH vault
+          { vault: '0x7Da96a3891Add058AdA2E826306D812C638D87a7', symbol: 'yvUSDT' }, // yvUSDT vault
+          { vault: '0x5f18C75AbDAe578b483E5F43f12a39cF75b973a9', symbol: 'yvUSDC' }, // yvUSDC vault
+          { vault: '0xA696a63cc78DfFa1a63E9E50587C197387FF6C7E', symbol: 'yvWBTC' }, // yvWBTC vault
+          { vault: '0x19D3364A399d251E894aC732651be8B0E4e85001', symbol: 'yvDAI' }, // yvDAI vault
         ].forEach(({ vault, symbol }) => {
           it(`can enter and exit the ${symbol} at Yearn Vault from a ${name} garden`, async function () {
             const vaultContract = await ethers.getContractAt('IYearnVault', vault);
@@ -118,11 +94,11 @@ describe('YearnVaultIntegrationTest', function () {
 
             const reservePriceInAsset = await priceOracle.connect(owner).getPrice(token, asset);
 
-            let conversionRate = eth(1);
+            const conversionRate = eth(1);
 
             amount = await normalizeDecimals(tokenDecimals, assetDecimals, amount);
 
-            let expectedShares = await yearnVaultIntegration.getExpectedShares(
+            const expectedShares = await yearnVaultIntegration.getExpectedShares(
               vault,
               reservePriceInAsset.mul(amount).div(conversionRate),
             );
