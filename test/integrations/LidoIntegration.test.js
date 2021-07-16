@@ -58,9 +58,9 @@ describe('LidoIntegrationTest', function () {
     describe('enter and exit operation with both assets', function () {
       [
         { token: addresses.tokens.WETH, name: 'WETH' },
-        // { token: addresses.tokens.DAI, name: 'DAI' },
-        // { token: addresses.tokens.USDC, name: 'USDC' },
-        // { token: addresses.tokens.WBTC, name: 'WBTC' },
+        { token: addresses.tokens.DAI, name: 'DAI' },
+        { token: addresses.tokens.USDC, name: 'USDC' },
+        { token: addresses.tokens.WBTC, name: 'WBTC' },
       ].forEach(({ token, name }) => {
         [
           { target: addresses.lido.steth, symbol: 'stETH' }, // stETH
@@ -94,7 +94,7 @@ describe('LidoIntegrationTest', function () {
             const beforeBalance = await reserveContract.balanceOf(garden.address);
             expect(await targetContract.balanceOf(strategyContract.address)).to.be.closeTo(
               expectedShares,
-              expectedShares.div(20), // 2% precision
+              expectedShares.div(10),
             );
             await finalizeStrategy(strategyContract, 0);
             const newBalance = await targetContract.balanceOf(strategyContract.address);
