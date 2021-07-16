@@ -494,7 +494,7 @@ library BytesLib {
     }
 
     function get64Bytes(bytes memory _data, uint256 _index) internal view returns (bytes memory) {
-        return slice(_data, 4 + (64 * _index), 64);
+        return slice(_data, (64 * _index), 64);
     }
 
     function decodeOpDataAddressAssembly(bytes memory _data, uint256 _startingByte) internal view returns (address) {
