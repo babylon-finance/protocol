@@ -8,7 +8,7 @@ const {
   finalizeStrategy,
 } = require('../fixtures/StrategyHelper');
 const addresses = require('../../lib/addresses');
-const { ADDRESS_ZERO, ONE_ETH } = require('../../lib/constants');
+const { ONE_ETH } = require('../../lib/constants');
 
 describe('CurvePoolIntegrationTest', function () {
   let curvePoolIntegration;
