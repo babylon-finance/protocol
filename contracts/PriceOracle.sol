@@ -31,6 +31,8 @@ import {ICToken} from './interfaces/external/compound/ICToken.sol';
 import {ISnxExchangeRates} from './interfaces/external/synthetix/ISnxExchangeRates.sol';
 import {ISnxSynth} from './interfaces/external/synthetix/ISnxSynth.sol';
 import {ISnxProxy} from './interfaces/external/synthetix/ISnxProxy.sol';
+import {IStETH} from './interfaces/external/lido/IStETH.sol';
+import {IWstETH} from './interfaces/external/lido/IWstETH.sol';
 
 import {PreciseUnitMath} from './lib/PreciseUnitMath.sol';
 import {LowGasSafeMath as SafeMath} from './lib/LowGasSafeMath.sol';
@@ -56,6 +58,8 @@ contract PriceOracle is Ownable, IPriceOracle {
 
     address private constant WETH = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
     address private constant USDC = 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48;
+    IStETH private constant stETH = IStETH(0xae7ab96520DE3A18E5e111B5EaAb095312D7fE84);
+    IWstETH private constant wstETH = IWstETH(0x7f39C581F595B53c5cb19bD0b3f8dA6c935E2Ca0);
 
     // the desired seconds agos array passed to the observe method
     uint32 private constant SECONDS_GRANULARITY = 30;
@@ -251,8 +255,23 @@ contract PriceOracle is Ownable, IPriceOracle {
             return getPrice(_tokenIn, USDC).preciseDiv(exchangeRate);
         }
 
+        // Checks stETH && wstETH (Lido tokens)
+        if (_tokenIn == address(stETH) || _tokenIn == address(wstETH)) {
+          uint shares = 1e18;
+          if (_tokenIn == address(wstETH)) {
+            shares = wstETH.getStETHByWstETH(shares);
+          }
+          return getPrice(WETH, _tokenOut).preciseMul(stETH.getPooledEthByShares(shares));
+        }
+        if (_tokenOut == address(stETH) || _tokenOut == address(wstETH)) {
+          uint shares = 1e18;
+          if (_tokenOut == address(wstETH)) {
+            shares = wstETH.getStETHByWstETH(shares);
+          }
+          return getPrice(_tokenIn, WETH).preciseDiv(stETH.getPooledEthByShares(shares));
+        }
+
         // TODOs
-        // Integrate lido
         // other btcs, change pairs & change path in uniswap trade
         // other stables, change pair & change path in uniswap trade
 
