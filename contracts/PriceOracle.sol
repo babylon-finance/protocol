@@ -76,7 +76,6 @@ contract PriceOracle is Ownable, IPriceOracle {
     // Mapping of synths
     mapping(address => bool) public synths;
 
-
     /* ============ Constructor ============ */
 
     constructor() {
@@ -357,6 +356,7 @@ contract PriceOracle is Ownable, IPriceOracle {
         }
         return exchangeRateNormalized;
     }
+
     function getCreamExchangeRate(address _asset) public view override returns (uint256) {
         uint256 exchangeRateNormalized = ICToken(_asset).exchangeRateStored();
         if (ERC20(crTokenToAsset[_asset]).decimals() > 8) {
