@@ -18,6 +18,7 @@
 
 pragma solidity 0.7.6;
 
+import 'hardhat/console.sol';
 import {SafeCast} from '@openzeppelin/contracts/utils/SafeCast.sol';
 import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import {ReentrancyGuard} from '@openzeppelin/contracts/utils/ReentrancyGuard.sol';
@@ -110,7 +111,9 @@ abstract contract PassiveIntegration is BaseIntegration, ReentrancyGuard, IPassi
         }
 
         // Approve spending of the token
-        investmentInfo.strategy.invokeApprove(_getSpender(_investmentAddress, 0), _tokenIn, _maxAmountIn);
+        if (_tokenIn != address(0)) {
+          investmentInfo.strategy.invokeApprove(_getSpender(_investmentAddress, 0), _tokenIn, _maxAmountIn);
+        }
 
         (address targetInvestment, uint256 callValue, bytes memory methodData) =
             _getEnterInvestmentCalldata(_strategy, _investmentAddress, _investmentTokensOut, _tokenIn, _maxAmountIn);
@@ -151,6 +154,7 @@ abstract contract PassiveIntegration is BaseIntegration, ReentrancyGuard, IPassi
             _getPreActionCallData(_investmentAddress, _investmentTokenIn, 0);
 
         if (targetAddressP != address(0)) {
+            // TODO: another approve
             // Invoke protocol specific call
             investmentInfo.strategy.invokeFromIntegration(targetAddressP, callValueP, methodDataP);
         }
@@ -289,9 +293,11 @@ abstract contract PassiveIntegration is BaseIntegration, ReentrancyGuard, IPassi
      * @param _investmentInfo               Struct containing investment information used in internal functions
      */
     function _validatePostExitInvestmentData(InvestmentInfo memory _investmentInfo) internal view {
+        console.log('investment', _investmentInfo.investment, _investmentInfo.investmentTokensInGarden, _investmentInfo.investmentTokensInTransaction);
+        console.log('balance', IERC20(_investmentInfo.investment).balanceOf(address(_investmentInfo.strategy)));
         require(
-            IERC20(_investmentInfo.investment).balanceOf(address(_investmentInfo.strategy)) ==
-                _investmentInfo.investmentTokensInGarden - _investmentInfo.investmentTokensInTransaction,
+            IERC20(_investmentInfo.investment).balanceOf(address(_investmentInfo.strategy)) <=
+                (_investmentInfo.investmentTokensInGarden - _investmentInfo.investmentTokensInTransaction) + 100,
             'The garden did not return the investment tokens'
         );
     }

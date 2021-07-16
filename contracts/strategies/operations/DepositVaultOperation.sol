@@ -17,6 +17,8 @@
 */
 
 pragma solidity 0.7.6;
+
+import 'hardhat/console.sol';
 import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import {ERC20} from '@openzeppelin/contracts/token/ERC20/ERC20.sol';
 
@@ -109,7 +111,7 @@ contract DepositVaultOperation is Operation {
             yieldVault,
             minAmountExpected,
             vaultAsset,
-            IERC20(vaultAsset).balanceOf(msg.sender)
+            vaultAsset == address(0) ? address(msg.sender).balance : IERC20(vaultAsset).balanceOf(msg.sender)
         );
         return (yieldVault, IERC20(yieldVault).balanceOf(msg.sender), 0); // liquid
     }
@@ -155,11 +157,14 @@ contract DepositVaultOperation is Operation {
             );
         IPassiveIntegration(_integration).exitInvestment(msg.sender, yieldVault, amountVault, vaultAsset, minAmount);
         if (vaultAsset != _garden.reserveAsset()) {
+            console.log('vaultAsset', vaultAsset);
             if (vaultAsset == address(0)) {
                 IStrategy(msg.sender).handleWeth(true, IERC20(WETH).balanceOf(msg.sender));
                 vaultAsset = WETH;
             }
-            IStrategy(msg.sender).trade(vaultAsset, IERC20(vaultAsset).balanceOf(msg.sender), _garden.reserveAsset());
+            if (vaultAsset != _garden.reserveAsset()) {
+              IStrategy(msg.sender).trade(vaultAsset, IERC20(vaultAsset).balanceOf(msg.sender), _garden.reserveAsset());
+            }
         }
         return (yieldVault, 0, 0);
     }
@@ -185,7 +190,7 @@ contract DepositVaultOperation is Operation {
         uint256 price = _getPrice(_garden.reserveAsset(), vaultAsset);
         uint256 pricePerShare = IPassiveIntegration(_integration).getPricePerShare(vault);
         // Normalization of pricePerShare
-        pricePerShare = pricePerShare.mul(10**PreciseUnitMath.decimals().sub(ERC20(vaultAsset).decimals()));
+        pricePerShare = pricePerShare.mul(10**PreciseUnitMath.decimals().sub(vaultAsset == address(0) ? 18 : ERC20(vaultAsset).decimals()));
         uint256 balance = IERC20(vault).balanceOf(msg.sender);
         //Balance normalization
         balance = SafeDecimalMath.normalizeAmountTokens(vaultAsset, _garden.reserveAsset(), balance);

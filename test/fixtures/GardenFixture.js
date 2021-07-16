@@ -39,6 +39,7 @@ async function setUpFixture(
   const aaveLendIntegration = await getContract('AaveLendIntegration');
   const aaveBorrowIntegration = await getContract('AaveBorrowIntegration');
   const compoundBorrowIntegration = await getContract('CompoundBorrowIntegration');
+  const lidoIntegration = await getContract('LidoStakeIntegration');
 
   const buyOperation = await getContract('BuyOperation');
   const addLiquidityOperation = await getContract('AddLiquidityOperation');
@@ -200,6 +201,7 @@ async function setUpFixture(
     compoundBorrowIntegration,
     aaveLendIntegration,
     aaveBorrowIntegration,
+    lidoIntegration,
     babViewer,
 
     garden1,

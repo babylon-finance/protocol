@@ -43,6 +43,7 @@ contract LidoStakeIntegration is PassiveIntegration {
 
     IStETH private constant stETH = IStETH(0xae7ab96520DE3A18E5e111B5EaAb095312D7fE84);
     IWstETH private constant wstETH = IWstETH(0x7f39C581F595B53c5cb19bD0b3f8dA6c935E2Ca0);
+    address private constant curveSteth = 0xDC24316b9AE028F1497c275EB9192a3Ea0f67022;
 
     address private constant referrer = address(0);
 
@@ -59,7 +60,7 @@ contract LidoStakeIntegration is PassiveIntegration {
 
     function _getSpender(address _asset, uint8 _op) internal pure override returns (address) {
         if (_op == 1) {
-            return address(stETH);
+            return curveSteth;
         }
         return _asset;
     }
@@ -191,8 +192,8 @@ contract LidoStakeIntegration is PassiveIntegration {
     {
         // Encode method data for Garden to invoke
         bytes memory methodData =
-            abi.encodeWithSignature('burnShares(address,uint256)', _strategy, _investmentTokensIn);
-        // Burn stETH for both stETH and wstETH
-        return (address(stETH), 0, methodData);
+            abi.encodeWithSignature('exchange(int128,int128,uint256,uint256)', 1, 0, _investmentTokensIn, 1);
+        // Need to swap via curve. Lido doesn't implement withdraw yet
+        return (curveSteth, 0, methodData);
     }
 }
