@@ -2,6 +2,7 @@ require('dotenv/config');
 require('@nomiclabs/hardhat-ethers');
 require('@openzeppelin/hardhat-upgrades');
 require('@nomiclabs/hardhat-waffle');
+require('@nomiclabs/hardhat-etherscan');
 
 require('hardhat-deploy');
 require('hardhat-contract-sizer');
@@ -111,6 +112,9 @@ module.exports = {
         },
       },
     ],
+  },
+  etherscan: {
+    apiKey: 'JA61NTCWBMPN56AT7TFQ3IMPHH2M2NHSJJ',
   },
   tenderly: {
     username: 'babylon_finance',
