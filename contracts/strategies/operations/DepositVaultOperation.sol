@@ -157,13 +157,16 @@ contract DepositVaultOperation is Operation {
             );
         IPassiveIntegration(_integration).exitInvestment(msg.sender, yieldVault, amountVault, vaultAsset, minAmount);
         if (vaultAsset != _garden.reserveAsset()) {
-            console.log('vaultAsset', vaultAsset);
             if (vaultAsset == address(0)) {
-                IStrategy(msg.sender).handleWeth(true, IERC20(WETH).balanceOf(msg.sender));
+                IStrategy(msg.sender).handleWeth(true, address(msg.sender).balance);
                 vaultAsset = WETH;
             }
             if (vaultAsset != _garden.reserveAsset()) {
-              IStrategy(msg.sender).trade(vaultAsset, IERC20(vaultAsset).balanceOf(msg.sender), _garden.reserveAsset());
+                IStrategy(msg.sender).trade(
+                    vaultAsset,
+                    IERC20(vaultAsset).balanceOf(msg.sender),
+                    _garden.reserveAsset()
+                );
             }
         }
         return (yieldVault, 0, 0);
@@ -190,7 +193,9 @@ contract DepositVaultOperation is Operation {
         uint256 price = _getPrice(_garden.reserveAsset(), vaultAsset);
         uint256 pricePerShare = IPassiveIntegration(_integration).getPricePerShare(vault);
         // Normalization of pricePerShare
-        pricePerShare = pricePerShare.mul(10**PreciseUnitMath.decimals().sub(vaultAsset == address(0) ? 18 : ERC20(vaultAsset).decimals()));
+        pricePerShare = pricePerShare.mul(
+            10**PreciseUnitMath.decimals().sub(vaultAsset == address(0) ? 18 : ERC20(vaultAsset).decimals())
+        );
         uint256 balance = IERC20(vault).balanceOf(msg.sender);
         //Balance normalization
         balance = SafeDecimalMath.normalizeAmountTokens(vaultAsset, _garden.reserveAsset(), balance);

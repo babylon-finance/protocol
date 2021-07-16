@@ -82,7 +82,9 @@ contract LidoStakeIntegration is PassiveIntegration {
         return stETH.getPooledEthByShares(shares);
     }
 
-    function _getInvestmentAsset(address _asset) internal view override returns (address) {
+    function _getInvestmentAsset(
+        address /* _asset */
+    ) internal pure override returns (address) {
         // Both take ETH
         return address(0);
     }
@@ -145,7 +147,7 @@ contract LidoStakeIntegration is PassiveIntegration {
         uint256 _op
     )
         internal
-        view
+        pure
         override
         returns (
             address,
@@ -165,7 +167,7 @@ contract LidoStakeIntegration is PassiveIntegration {
      * Return exit investment calldata which is already generated from the investment API
      *
      * hparam  _strategy                       Address of the strategy
-     * @param  _asset              Address of the investment
+     * hparam  _asset              Address of the investment
      * @param  _investmentTokensIn             Amount of investment tokens to receive
      * hparam  _tokenOut                       Addresses of tokens to receive
      * hparam  _minAmountOut                   Amounts of investment tokens to receive
@@ -175,8 +177,8 @@ contract LidoStakeIntegration is PassiveIntegration {
      * @return bytes                           Trade calldata
      */
     function _getExitInvestmentCalldata(
-        address _strategy,
-        address _asset,
+        address, /* _strategy */
+        address, /* _asset */
         uint256 _investmentTokensIn,
         address, /* _tokenOut */
         uint256 /* _minAmountOut */
@@ -195,5 +197,15 @@ contract LidoStakeIntegration is PassiveIntegration {
             abi.encodeWithSignature('exchange(int128,int128,uint256,uint256)', 1, 0, _investmentTokensIn, 1);
         // Need to swap via curve. Lido doesn't implement withdraw yet
         return (curveSteth, 0, methodData);
+    }
+
+    function _preActionNeedsApproval() internal pure override returns (bool) {
+        return true;
+    }
+
+    function _getAssetAfterExitAction(
+        address /* _asset */
+    ) internal pure override returns (address) {
+        return address(stETH);
     }
 }

@@ -83,7 +83,7 @@ describe('LidoIntegrationTest', function () {
             });
 
             expect(await targetContract.balanceOf(strategyContract.address)).to.equal(0);
-
+            const reserveContract = await ethers.getContractAt('ERC20', token);
             const amount = STRATEGY_EXECUTE_MAP[token];
             await executeStrategy(strategyContract, { amount });
             // Check NAV
@@ -91,7 +91,6 @@ describe('LidoIntegrationTest', function () {
 
             const reservePriceInAsset = await priceOracle.connect(owner).getPrice(token, addresses.tokens.WETH);
             const expectedShares = await lidoIntegration.getExpectedShares(target, reservePriceInAsset);
-            const reserveContract = await ethers.getContractAt('ERC20', token);
             const beforeBalance = await reserveContract.balanceOf(garden.address);
             expect(await targetContract.balanceOf(strategyContract.address)).to.be.closeTo(
               expectedShares,

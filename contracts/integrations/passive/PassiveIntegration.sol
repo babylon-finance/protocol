@@ -18,7 +18,6 @@
 
 pragma solidity 0.7.6;
 
-import 'hardhat/console.sol';
 import {SafeCast} from '@openzeppelin/contracts/utils/SafeCast.sol';
 import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import {ReentrancyGuard} from '@openzeppelin/contracts/utils/ReentrancyGuard.sol';
@@ -112,7 +111,7 @@ abstract contract PassiveIntegration is BaseIntegration, ReentrancyGuard, IPassi
 
         // Approve spending of the token
         if (_tokenIn != address(0)) {
-          investmentInfo.strategy.invokeApprove(_getSpender(_investmentAddress, 0), _tokenIn, _maxAmountIn);
+            investmentInfo.strategy.invokeApprove(_getSpender(_investmentAddress, 0), _tokenIn, _maxAmountIn);
         }
 
         (address targetInvestment, uint256 callValue, bytes memory methodData) =
@@ -151,12 +150,21 @@ abstract contract PassiveIntegration is BaseIntegration, ReentrancyGuard, IPassi
 
         // Pre actions
         (address targetAddressP, uint256 callValueP, bytes memory methodDataP) =
-            _getPreActionCallData(_investmentAddress, _investmentTokenIn, 0);
+            _getPreActionCallData(_investmentAddress, _investmentTokenIn, 1);
 
         if (targetAddressP != address(0)) {
-            // TODO: another approve
+            // Approve spending of the pre action token
+            if (_preActionNeedsApproval()) {
+                investmentInfo.strategy.invokeApprove(
+                    _getSpender(_investmentAddress, 1),
+                    targetAddressP,
+                    IERC20(targetAddressP).balanceOf(_strategy)
+                );
+            }
             // Invoke protocol specific call
             investmentInfo.strategy.invokeFromIntegration(targetAddressP, callValueP, methodDataP);
+            _investmentAddress = _getAssetAfterExitAction(_investmentAddress);
+            _investmentTokenIn = IERC20(_investmentAddress).balanceOf(_strategy);
         }
 
         // Approve spending of the investment token
@@ -165,7 +173,6 @@ abstract contract PassiveIntegration is BaseIntegration, ReentrancyGuard, IPassi
             _investmentAddress,
             _investmentTokenIn
         );
-
         (address targetInvestment, uint256 callValue, bytes memory methodData) =
             _getExitInvestmentCalldata(_strategy, _investmentAddress, _investmentTokenIn, _tokenOut, _minAmountOut);
         investmentInfo.strategy.invokeFromIntegration(targetInvestment, callValue, methodData);
@@ -251,7 +258,7 @@ abstract contract PassiveIntegration is BaseIntegration, ReentrancyGuard, IPassi
      *
      * @param _investmentInfo               Struct containing investment information used in internal functions
      */
-    function _validatePreJoinInvestmentData(InvestmentInfo memory _investmentInfo) internal view {
+    function _validatePreJoinInvestmentData(InvestmentInfo memory _investmentInfo) internal pure {
         require(
             _investmentInfo.investmentTokensInTransaction > 0,
             'Min investment tokens to receive must be greater than 0'
@@ -263,7 +270,7 @@ abstract contract PassiveIntegration is BaseIntegration, ReentrancyGuard, IPassi
      *
      * @param _investmentInfo               Struct containing investment information used in internal functions
      */
-    function _validatePreExitInvestmentData(InvestmentInfo memory _investmentInfo) internal view {
+    function _validatePreExitInvestmentData(InvestmentInfo memory _investmentInfo) internal pure {
         require(
             _investmentInfo.investmentTokensInTransaction > 0,
             'Investment tokens to exchange must be greater than 0'
@@ -293,8 +300,6 @@ abstract contract PassiveIntegration is BaseIntegration, ReentrancyGuard, IPassi
      * @param _investmentInfo               Struct containing investment information used in internal functions
      */
     function _validatePostExitInvestmentData(InvestmentInfo memory _investmentInfo) internal view {
-        console.log('investment', _investmentInfo.investment, _investmentInfo.investmentTokensInGarden, _investmentInfo.investmentTokensInTransaction);
-        console.log('balance', IERC20(_investmentInfo.investment).balanceOf(address(_investmentInfo.strategy)));
         require(
             IERC20(_investmentInfo.investment).balanceOf(address(_investmentInfo.strategy)) <=
                 (_investmentInfo.investmentTokensInGarden - _investmentInfo.investmentTokensInTransaction) + 100,
@@ -405,4 +410,12 @@ abstract contract PassiveIntegration is BaseIntegration, ReentrancyGuard, IPassi
         address, //_investmentAddress,
         uint8 // op
     ) internal view virtual returns (address);
+
+    function _preActionNeedsApproval() internal view virtual returns (bool) {
+        return false;
+    }
+
+    function _getAssetAfterExitAction(address _asset) internal view virtual returns (address) {
+        return _asset;
+    }
 }
