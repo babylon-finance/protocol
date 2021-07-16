@@ -36,13 +36,18 @@ module.exports = async ({ getNamedAccounts, deployments, ethers, getSigner, getC
   ).wait();
 
   console.log('Register investor and team allocations');
-  const now = new Date().getTime();
-  const allocations = JSON.parse(fs.readFileSync('./deployments/allocations.json')).map((alloc) => ({
-    receiver: alloc[0],
-    distribution: ethers.utils.parseEther(alloc[1].replace(',', '')),
-    investorType: alloc[2],
-    vestingStartingDate: now,
-  }));
+  const investorsVestingStart = new Date();
+  const teamVestingStart = new Date(2021, 2, 15);
+  console.log(`Team vestings starts at ${teamVestingStart}`);
+  console.log(`Investor vestings starts at ${investorsVestingStart}`);
+  const allocations = JSON.parse(fs.readFileSync('./deployments/allocations.json')).map((alloc) => {
+    return {
+      receiver: alloc[0],
+      distribution: ethers.utils.parseEther(alloc[1].replace(',', '')),
+      investorType: alloc[2],
+      vestingStartingDate: alloc[2] ? teamVestingStart.getTime() : investorsVestingStart.getTime(),
+    };
+  });
   const batchSize = 20;
   for (let i = 0; i < allocations.length; i += batchSize) {
     await (

@@ -40,7 +40,7 @@ describe('CompoundBorrowIntegrationTest', function () {
       false,
       [asset1Address, 0, asset2Address, 0],
     );
-    let amount = STRATEGY_EXECUTE_MAP[token];
+    const amount = STRATEGY_EXECUTE_MAP[token];
     await executeStrategy(strategyContract, { amount });
     // Check NAV
     expect(await strategyContract.getNAV()).to.be.closeTo(amount, amount.div(50));

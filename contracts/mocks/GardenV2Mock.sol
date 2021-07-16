@@ -156,7 +156,8 @@ contract GardenV2Mock is ERC20Upgradeable, ReentrancyGuard {
         string memory _name,
         string memory _symbol,
         uint256[] calldata _gardenParams,
-        uint256 _initialContribution
+        uint256 _initialContribution,
+        bool[] memory _publicGardenStrategistsStewards
     ) public payable initializer {
         newVar = 42;
     }
