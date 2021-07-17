@@ -582,7 +582,6 @@ describe('Strategy', function () {
         '21553283839736272',
         reserveAssetRewardsSetAsideLong5.div(100),
       );
-
     });
 
     it('should correctly receive the performance fee (in WETH) by the treasury in profit strategies', async function () {
@@ -633,9 +632,7 @@ describe('Strategy', function () {
     });
 
     it('capital returned should equals profits; param 1 + param 2 + protocol performance fee 5%', async function () {
-      const [long1] = await createStrategies([
-        { garden: garden1 },
-      ]);
+      const [long1] = await createStrategies([{ garden: garden1 }]);
 
       await executeStrategy(long1, ONE_ETH);
 

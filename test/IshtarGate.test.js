@@ -129,8 +129,8 @@ describe('IshtarGate', function () {
       const gardens = await babController.getGardens();
       const newGarden = await ethers.getContractAt('Garden', gardens[gardens.length - 1]);
       await newGarden.connect(signer2).deposit(ethers.utils.parseEther('1'), 1, signer2.getAddress(), false, {
-          value: ethers.utils.parseEther('1'),
-        });
+        value: ethers.utils.parseEther('1'),
+      });
     });
 
     it('creator can create a strategy', async function () {

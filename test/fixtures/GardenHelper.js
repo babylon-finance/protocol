@@ -193,9 +193,7 @@ async function getDepositSig(signer, amountIn, minAmountOut, mintNft, nonce) {
 
 async function getWithdrawSig(signer, amountIn, minAmountOut, nonce) {
   const DEPOSIT_BY_SIG_TYPEHASH = ethers.utils.keccak256(
-    ethers.utils.toUtf8Bytes(
-      'WithdrawBySig(uint256 _amountIn,uint256 _minAmountOut, uint256 _nonce)',
-    ),
+    ethers.utils.toUtf8Bytes('WithdrawBySig(uint256 _amountIn,uint256 _minAmountOut, uint256 _nonce)'),
   );
 
   let payload = ethers.utils.defaultAbiCoder.encode(

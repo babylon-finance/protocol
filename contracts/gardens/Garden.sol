@@ -99,9 +99,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
     bytes32 private constant DEPOSIT_BY_SIG_TYPEHASH =
         keccak256('DepositBySig(uint256 _amountIn,uint256 _minAmountOut,bool _mintNft, uint256 _nonce)');
     bytes32 private constant WITHDRAW_BY_SIG_TYPEHASH =
-        keccak256(
-            'WithdrawBySig(uint256 _amountIn,uint256 _minAmountOut, uint256 _nonce)'
-        );
+        keccak256('WithdrawBySig(uint256 _amountIn,uint256 _minAmountOut, uint256 _nonce)');
 
     /* ============ Structs ============ */
 
@@ -364,9 +362,9 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         if (strategies.length == 0) {
             pricePerShare = totalSupply() == 0
                 ? PreciseUnitMath.preciseUnit()
-                : liquidReserve()
-                    .preciseDiv(uint256(10)**ERC20Upgradeable(reserveAsset).decimals())
-                    .preciseDiv(totalSupply());
+                : liquidReserve().preciseDiv(uint256(10)**ERC20Upgradeable(reserveAsset).decimals()).preciseDiv(
+                    totalSupply()
+                );
         } else {
             // Get valuation of the Garden with the quote asset as the reserve asset.
             pricePerShare = IGardenValuer(IBabController(controller).gardenValuer()).calculateGardenValuation(
@@ -412,8 +410,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         _onlyUnpaused();
         _onlyActive();
         _require(
-                IIshtarGate(IBabController(controller).ishtarGate()).canJoinAGarden(address(this), _to) ||
-                creator == _to,
+            IIshtarGate(IBabController(controller).ishtarGate()).canJoinAGarden(address(this), _to) || creator == _to,
             Errors.USER_CANNOT_JOIN
         );
 
@@ -509,10 +506,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         bytes32 s
     ) external override nonReentrant {
         bytes32 hash =
-            keccak256(
-                abi.encode(WITHDRAW_BY_SIG_TYPEHASH, _amountIn, _minAmountOut, _nonce)
-            )
-                .toEthSignedMessageHash();
+            keccak256(abi.encode(WITHDRAW_BY_SIG_TYPEHASH, _amountIn, _minAmountOut, _nonce)).toEthSignedMessageHash();
         address signer = ECDSA.recover(hash, v, r, s);
 
         _require(signer != address(0), Errors.INVALID_SIGNER);
@@ -654,8 +648,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         keeperDebt = keeperDebt.add(_fee);
         // Pay Keeper in Reserve Asset
         if (keeperDebt > 0 && liquidReserve() >= 0) {
-            uint256 toPay = liquidReserve() > keeperDebt ? keeperDebt :
-              liquidReserve();
+            uint256 toPay = liquidReserve() > keeperDebt ? keeperDebt : liquidReserve();
             IERC20(reserveAsset).safeTransfer(_keeper, toPay);
             keeperDebt = keeperDebt.sub(toPay);
         }
@@ -865,10 +858,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
      * Gets liquid reserve available for to Garden.
      */
     function liquidReserve() private view returns (uint256) {
-        uint256 reserve =
-            IERC20(reserveAsset).balanceOf(address(this)).sub(
-                reserveAssetRewardsSetAside
-            );
+        uint256 reserve = IERC20(reserveAsset).balanceOf(address(this)).sub(reserveAssetRewardsSetAside);
         return reserve > keeperDebt ? reserve.sub(keeperDebt) : 0;
     }
 
