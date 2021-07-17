@@ -1080,6 +1080,8 @@ describe('Garden', function () {
       it('a user can still deposit after a garden reached its max limit of users but new users fail', async function () {
         // Downside the limit of new gardens to 10 to speed up the test
         await babController.connect(owner).setMaxContributorsPerGarden(10);
+        const gardenParams = GARDEN_PARAMS;
+        gardenParams[9] = 10;
         await babController
           .connect(signer1)
           .createGarden(
@@ -1088,7 +1090,7 @@ describe('Garden', function () {
             'NEWG',
             'http...',
             0,
-            GARDEN_PARAMS,
+            gardenParams,
             ethers.utils.parseEther('1'),
             [false, false, false],
             {
