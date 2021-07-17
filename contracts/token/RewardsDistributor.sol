@@ -466,12 +466,13 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
      * @param _lpShare              New % of lpShare
      */
     function setProfitRewards(
+        address _garden,
         uint256 _strategistShare,
         uint256 _stewardsShare,
         uint256 _lpShare
-    ) external override {
-        _require(IBabController(controller).isGarden(msg.sender), Errors.ONLY_ACTIVE_GARDEN);
-        _setProfitRewards(msg.sender, _strategistShare, _stewardsShare, _lpShare);
+    ) external override onlyController {
+        _require(IBabController(controller).isGarden(_garden), Errors.ONLY_ACTIVE_GARDEN);
+        _setProfitRewards(_garden, _strategistShare, _stewardsShare, _lpShare);
     }
 
     /**
@@ -1470,15 +1471,10 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
             _lpShare != PROFIT_LP_SHARE
         ) {
             // Different from standard %
-            // TODO hard lock or intra-limits to avoid malicious behavior between changes
             gardenCustomProfitSharing[_garden] = true;
             gardenProfitSharing[_garden][0] = _strategistShare;
             gardenProfitSharing[_garden][1] = _stewardsShare;
             gardenProfitSharing[_garden][2] = _lpShare;
-        } else {
-            // Rolling back into standard config
-            gardenCustomProfitSharing[_garden] = false;
-            delete gardenProfitSharing[_garden];
         }
     }
 }

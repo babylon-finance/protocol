@@ -633,23 +633,6 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         _burn(_strategist, _amount);
     }
 
-    /*
-     * Change default profit sharing (all must sum 95% - 95e16 - 18 decimals)
-     * @param _strategistShare      Strategist new sharing %
-     * @param _stewardsShare      Strategist new sharing %
-     * @param _strategistShare      Strategist new sharing %
-
-     */
-    function setProfitSharing(
-        uint256 _strategistShare,
-        uint256 _stewardsShare,
-        uint256 _lpShare
-    ) external override {
-        _require(msg.sender == creator, Errors.ONLY_CREATOR);
-        rewardsDistributor.setProfitRewards(_strategistShare, _stewardsShare, _lpShare);
-        emit NewProfitSharing(_strategistShare, _stewardsShare, _lpShare);
-    }
-
     /* ============ External Getter Functions ============ */
 
     /**

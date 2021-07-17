@@ -42,12 +42,6 @@ interface IGarden {
 
     function setActive(bool _val) external;
 
-    function setProfitSharing(
-        uint256 _strategistShare,
-        uint256 _stewardsShare,
-        uint256 _lpShare
-    ) external;
-
     function active() external view returns (bool);
 
     function privateGarden() external view returns (bool);

@@ -59,6 +59,7 @@ interface IRewardsDistributor {
     function getGardenProfitsSharing(address _garden) external view returns (uint256[3] memory);
 
     function setProfitRewards(
+        address _garden,
         uint256 _strategistShare,
         uint256 _stewardsShare,
         uint256 _lpShare

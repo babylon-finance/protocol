@@ -1021,6 +1021,7 @@ describe('BABL Rewards Distributor', function () {
           GARDEN_PARAMS_STABLE,
           ethers.utils.parseEther('500'),
           [false, false, false],
+          [0, 0, 0],
           {},
         );
       const gardens = await babController.getGardens();
@@ -1094,6 +1095,7 @@ describe('BABL Rewards Distributor', function () {
           params,
           thousandUSDC.div(2),
           [false, false, false],
+          [0, 0, 0],
           {},
         );
       const gardens = await babController.getGardens();
@@ -1185,6 +1187,7 @@ describe('BABL Rewards Distributor', function () {
           params,
           thousandUSDC.div(2),
           [false, false, false],
+          [0, 0, 0],
           {},
         );
       const gardens = await babController.getGardens();
@@ -1202,6 +1205,7 @@ describe('BABL Rewards Distributor', function () {
           GARDEN_PARAMS_STABLE,
           ethers.utils.parseEther('500'),
           [false, false, false],
+          [0, 0, 0],
           {},
         );
       const gardens2 = await babController.getGardens();
@@ -1312,6 +1316,7 @@ describe('BABL Rewards Distributor', function () {
           params,
           thousandUSDC.div(2),
           [false, false, false],
+          [0, 0, 0],
           {},
         );
       const gardens = await babController.getGardens();
@@ -1329,6 +1334,7 @@ describe('BABL Rewards Distributor', function () {
           GARDEN_PARAMS_STABLE,
           ethers.utils.parseEther('500'),
           [false, false, false],
+          [0, 0, 0],
           {},
         );
       const gardens2 = await babController.getGardens();
@@ -1438,6 +1444,7 @@ describe('BABL Rewards Distributor', function () {
           params,
           thousandUSDC.div(2),
           [false, false, false],
+          [0, 0, 0],
           {},
         );
       const gardens = await babController.getGardens();
@@ -1455,6 +1462,7 @@ describe('BABL Rewards Distributor', function () {
           GARDEN_PARAMS_STABLE,
           ethers.utils.parseEther('500'),
           [false, false, false],
+          [0, 0, 0],
           {},
         );
       const gardens2 = await babController.getGardens();
