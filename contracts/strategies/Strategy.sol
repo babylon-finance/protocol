@@ -16,7 +16,6 @@
     SPDX-License-Identifier: Apache License, Version 2.0
 */
 pragma solidity 0.7.6;
-
 import {Address} from '@openzeppelin/contracts/utils/Address.sol';
 import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import {Initializable} from '@openzeppelin/contracts-upgradeable/proxy/Initializable.sol';
@@ -310,7 +309,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
             msg.sender == address(garden) && !dataSet && IBabController(controller).isSystemContract(address(garden)),
             Errors.ONLY_GARDEN_AND_DATA_NOT_SET
         );
-        uint256 opEncodedLength = _opEncodedData.length.sub(4).div(64); // encoded with signature (4 bytes of signature)
+        uint256 opEncodedLength = _opEncodedData.length.div(64); // encoded without signature
         _require(
             (_opTypes.length == _opIntegrations.length) && (_opIntegrations.length == opEncodedLength),
             Errors.TOO_MANY_OPS
@@ -703,7 +702,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
             address token =
                 opDatas.length > 0
                     ? opDatas[lastOp]
-                    : BytesLib.decodeOpDataAddressAssembly(opEncodedData, 4 + (64 * lastOp) + 12); // pointer to the starting byte of the ethereum token address
+                    : BytesLib.decodeOpDataAddressAssembly(opEncodedData, (64 * lastOp) + 12); // pointer to the starting byte of the ethereum token address
             uint256 borrowBalance = IERC20(token).universalBalanceOf(address(this));
             if (borrowBalance > 0) {
                 uint256 price = _getPrice(reserveAsset, token);
