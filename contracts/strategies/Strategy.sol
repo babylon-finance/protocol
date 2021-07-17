@@ -309,7 +309,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
             msg.sender == address(garden) && !dataSet && IBabController(controller).isSystemContract(address(garden)),
             Errors.ONLY_GARDEN_AND_DATA_NOT_SET
         );
-        uint256 opEncodedLength = _opEncodedData.length.div(64); // encoded with signature (4 bytes of signature)
+        uint256 opEncodedLength = _opEncodedData.length.div(64); // encoded without signature
         _require(
             (_opTypes.length == _opIntegrations.length) && (_opIntegrations.length == opEncodedLength),
             Errors.TOO_MANY_OPS
