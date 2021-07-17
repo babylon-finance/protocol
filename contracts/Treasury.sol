@@ -74,7 +74,7 @@ contract Treasury is Ownable, ReentrancyGuard {
     ) external onlyOwner nonReentrant {
         require(_asset != address(0), 'Asset must exist');
         require(_to != address(0), 'Target address must exist');
-        IERC20(_asset).safeTransferFrom(address(this), _to, _amount);
+        IERC20(_asset).safeTransfer(_to, _amount);
         emit TreasuryFundsSent(_asset, _amount, _to);
     }
 

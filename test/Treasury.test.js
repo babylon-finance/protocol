@@ -11,19 +11,26 @@ describe('Treasury', function () {
   let weth;
   let owner;
   let wethWhaleSigner;
+  let TOKEN_MAP;
 
   beforeEach(async () => {
-    ({ owner, wethWhaleSigner, signer1, treasury } = await setupTests()());
+    ({ owner, wethWhaleSigner, signer1, treasury, TOKEN_MAP, weth } = await setupTests()());
 
-    weth = await ethers.getContractAt('IERC20', addresses.tokens.WETH);
     await weth.connect(wethWhaleSigner).transfer(treasury.address, ONE_ETH);
   });
 
   describe('sendTreasuryFunds', async function () {
-    it('can send funds', async function () {
-      await expect(() =>
-        treasury.connect(owner).sendTreasuryFunds(addresses.tokens.WETH, ONE_ETH, signer1.address, { gasPrice: 0 }),
-      ).to.changeTokenBalances(weth, [treasury, signer1], [MINUS_ONE_ETH, ONE_ETH]);
+    [
+      { token: addresses.tokens.WETH, name: 'WETH', fee: eth() },
+      { token: addresses.tokens.DAI, name: 'DAI', fee: eth(2000) },
+      { token: addresses.tokens.USDC, name: 'USDC', fee: from(2000 * 1e6) },
+      { token: addresses.tokens.WBTC, name: 'WBTC', fee: from(0.05 * 1e8) },
+    ].forEach(({ token, name, fee }) => {
+      it.only(`can send ${token}`, async function () {
+        await expect(() =>
+          treasury.connect(owner).sendTreasuryFunds(token, ONE_ETH, signer1.address, { gasPrice: 0 }),
+        ).to.changeTokenBalances(weth, [treasury, signer1], [MINUS_ONE_ETH, ONE_ETH]);
+      });
     });
 
     it('fails to send zero address asset', async function () {
