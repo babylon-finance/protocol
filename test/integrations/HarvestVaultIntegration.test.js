@@ -64,13 +64,15 @@ describe('HarvestVaultIntegrationTest', function () {
             state: 'vote',
             integrations: harvestVaultIntegration.address,
             garden,
-            specificParams: vault,
+            specificParams: [vault, 0],
           });
 
           expect(await vaultContract.balanceOf(strategyContract.address)).to.equal(0);
 
           let amount = STRATEGY_EXECUTE_MAP[token];
           await executeStrategy(strategyContract, { amount });
+          // Check NAV
+          expect(await strategyContract.getNAV()).to.be.closeTo(amount, amount.div(50));
 
           const asset = await harvestVaultIntegration.getInvestmentAsset(vault); // USDC, DAI, USDT and etc...
           const assetContract = await ethers.getContractAt('ERC20', asset);

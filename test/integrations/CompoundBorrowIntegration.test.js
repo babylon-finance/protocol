@@ -38,9 +38,12 @@ describe('CompoundBorrowIntegrationTest', function () {
       [compoundLendIntegration.address, compoundBorrowIntegration.address],
       garden,
       false,
-      [asset1Address, asset2Address],
+      [asset1Address, 0, asset2Address, 0],
     );
-    await executeStrategy(strategyContract, { amount: STRATEGY_EXECUTE_MAP[token] });
+    const amount = STRATEGY_EXECUTE_MAP[token];
+    await executeStrategy(strategyContract, { amount });
+    // Check NAV
+    expect(await strategyContract.getNAV()).to.be.closeTo(amount, amount.div(50));
 
     expect(await asset1.balanceOf(strategyContract.address)).to.equal(0);
     expect(await asset2.balanceOf(strategyContract.address)).to.be.gt(0);
@@ -70,7 +73,7 @@ describe('CompoundBorrowIntegrationTest', function () {
       [compoundLendIntegration.address, compoundBorrowIntegration.address],
       garden,
       false,
-      [asset1Address, asset2Address],
+      [asset1Address, 0, asset2Address, 0],
     );
     await expect(executeStrategy(strategyContract, { amount: STRATEGY_EXECUTE_MAP[token] })).to.be.revertedWith(
       errorcode,
@@ -100,7 +103,7 @@ describe('CompoundBorrowIntegrationTest', function () {
         [compoundLendIntegration.address, compoundBorrowIntegration.address],
         garden1,
         DEFAULT_STRATEGY_PARAMS,
-        [DAI.address, USDC.address],
+        [DAI.address, 0, USDC.address, 0],
       );
 
       await executeStrategy(strategyContract);
@@ -127,7 +130,7 @@ describe('CompoundBorrowIntegrationTest', function () {
         [compoundLendIntegration.address, compoundBorrowIntegration.address],
         garden1,
         DEFAULT_STRATEGY_PARAMS,
-        [USDC.address, DAI.address],
+        [USDC.address, 0, DAI.address, 0],
       );
 
       await executeStrategy(strategyContract);
@@ -151,7 +154,7 @@ describe('CompoundBorrowIntegrationTest', function () {
         [compoundLendIntegration.address, compoundBorrowIntegration.address],
         garden1,
         DEFAULT_STRATEGY_PARAMS,
-        [ADDRESS_ZERO, DAI.address], // eth, dai
+        [ADDRESS_ZERO, 0, DAI.address, 0], // eth, dai
       );
 
       await executeStrategy(strategyContract);
@@ -177,7 +180,7 @@ describe('CompoundBorrowIntegrationTest', function () {
         [compoundLendIntegration.address, compoundBorrowIntegration.address],
         garden1,
         DEFAULT_STRATEGY_PARAMS,
-        [DAI.address, ADDRESS_ZERO],
+        [DAI.address, 0, ADDRESS_ZERO, 0],
       );
 
       await executeStrategy(strategyContract);

@@ -30,6 +30,7 @@ async function createGarden({
   nftUri = NFT_URI,
   nftSeed = NFT_SEED,
   signer,
+  publicGardenStrategistsStewards = [false, false, false],
 } = {}) {
   const [deployer, keeper, owner, signer1, signer2, signer3] = await ethers.getSigners();
   signer = signer || signer1;
@@ -44,9 +45,11 @@ async function createGarden({
     });
   }
 
-  await babController.connect(signer).createGarden(reserveAsset, name, symbol, nftUri, nftSeed, params, contribution, {
-    value: reserveAsset === addresses.tokens.WETH ? contribution : 0,
-  });
+  await babController
+    .connect(signer)
+    .createGarden(reserveAsset, name, symbol, nftUri, nftSeed, params, contribution, publicGardenStrategistsStewards, {
+      value: reserveAsset === addresses.tokens.WETH ? contribution : 0,
+    });
   const gardens = await babController.getGardens();
   const garden = await ethers.getContractAt('Garden', gardens.slice(-1)[0]);
   await ishtarGate

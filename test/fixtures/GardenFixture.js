@@ -53,7 +53,6 @@ async function setUpFixture(
   // Gives signer1 creator permissions
   await ishtarGate.connect(owner).setCreatorPermissions(owner.address, true, { gasPrice: 0 });
   await ishtarGate.connect(owner).setCreatorPermissions(signer1.address, true, { gasPrice: 0 });
-
   await babController
     .connect(signer1)
     .createGarden(
@@ -64,11 +63,11 @@ async function setUpFixture(
       0,
       gardenParams,
       ethers.utils.parseEther('1'),
+      [false, false, false],
       {
         value: ethers.utils.parseEther('1'),
       },
     );
-
   await babController
     .connect(signer1)
     .createGarden(
@@ -79,6 +78,7 @@ async function setUpFixture(
       1,
       gardenParams,
       ethers.utils.parseEther('1'),
+      [false, false, false],
       {
         value: ethers.utils.parseEther('1'),
       },
@@ -94,6 +94,7 @@ async function setUpFixture(
       2,
       gardenParams,
       ethers.utils.parseEther('1'),
+      [false, false, false],
       {
         value: ethers.utils.parseEther('1'),
       },
@@ -109,6 +110,7 @@ async function setUpFixture(
       3,
       gardenParams,
       ethers.utils.parseEther('1'),
+      [false, false, false],
       {
         value: ethers.utils.parseEther('1'),
       },
@@ -138,10 +140,15 @@ async function setUpFixture(
       );
   }
   console.log('create strategies');
+
+  const strategy10 = (
+    await createStrategy('buy', 'dataset', [signer1, signer2, signer3], uniswapV3TradeIntegration.address, garden1)
+  ).address;
   // Create strategies
   const strategy11 = (
     await createStrategy('buy', 'dataset', [signer1, signer2, signer3], uniswapV3TradeIntegration.address, garden1)
   ).address;
+
   const strategy21 = (
     await createStrategy('buy', 'deposit', [signer1, signer2, signer3], uniswapV3TradeIntegration.address, garden2)
   ).address;

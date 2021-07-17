@@ -45,18 +45,14 @@ interface IStrategy {
     function setData(
         uint8[] calldata _opTypes,
         address[] calldata _opIntegrations,
-        address[] calldata _opDatas
+        bytes memory _opEncodedData
     ) external;
 
     function executeStrategy(uint256 _capital, uint256 fee) external;
 
     function getNAV() external view returns (uint256);
 
-    function opDatas(uint256 _index) external view returns (address);
-
-    function opIntegrations(uint256 _index) external view returns (address);
-
-    function opTypes(uint256 _index) external view returns (uint8);
+    function opEncodedData() external view returns (bytes memory);
 
     function getOperationsCount() external view returns (uint256);
 
@@ -66,7 +62,7 @@ interface IStrategy {
         returns (
             uint8,
             address,
-            address
+            bytes memory
         );
 
     function finalizeStrategy(uint256 fee, string memory _tokenURI) external;
@@ -138,12 +134,6 @@ interface IStrategy {
 
     function enteredCooldownAt() external view returns (uint256);
 
-    function executedAt() external view returns (uint256);
-
-    function updatedAt() external view returns (uint256);
-
-    function exitedAt() external view returns (uint256);
-
     function stake() external view returns (uint256);
 
     function strategyRewards() external view returns (uint256);
@@ -156,17 +146,11 @@ interface IStrategy {
 
     function totalPositiveVotes() external view returns (uint256);
 
-    function totalVotes() external view returns (int256);
-
     function totalNegativeVotes() external view returns (uint256);
 
     function capitalReturned() external view returns (uint256);
 
     function capitalAllocated() external view returns (uint256);
-
-    function finalized() external view returns (bool);
-
-    function active() external view returns (bool);
 
     function garden() external view returns (IGarden);
 }

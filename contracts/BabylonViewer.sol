@@ -16,8 +16,8 @@
 */
 
 pragma solidity 0.7.6;
+pragma abicoder v2;
 
-import 'hardhat/console.sol';
 import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import {ERC20} from '@openzeppelin/contracts/token/ERC20/ERC20.sol';
 import {IERC721} from '@openzeppelin/contracts/token/ERC721/IERC721.sol';
@@ -68,7 +68,7 @@ contract BabylonViewer {
             string memory,
             address,
             address,
-            bool[2] memory,
+            bool[4] memory,
             address[] memory,
             address[] memory,
             uint256[10] memory,
@@ -87,7 +87,7 @@ contract BabylonViewer {
             ERC20(_garden).symbol(),
             garden.creator(),
             garden.reserveAsset(),
-            [garden.active(), garden.guestListEnabled()],
+            [garden.active(), garden.privateGarden(), garden.publicStrategists(), garden.publicStewards()],
             garden.getStrategies(),
             garden.getFinalizedStrategies(),
             [
@@ -136,11 +136,10 @@ contract BabylonViewer {
         IStrategy strategy = IStrategy(_strategy);
         bool[] memory status = new bool[](3);
         uint256[] memory ts = new uint256[](4);
+        // ts[0]: executedAt, ts[1]: exitedAt, ts[2]: updatedAt
         (, status[0], status[1], status[2], ts[0], ts[1], ts[2]) = strategy.getStrategyState();
         uint256 rewards =
-            strategy.exitedAt() != 0
-                ? IRewardsDistributor(controller.rewardsDistributor()).getStrategyRewards(_strategy)
-                : 0;
+            ts[1] != 0 ? IRewardsDistributor(controller.rewardsDistributor()).getStrategyRewards(_strategy) : 0;
         ts[3] = strategy.enteredCooldownAt();
         return (
             strategy.strategist(),
@@ -170,14 +169,14 @@ contract BabylonViewer {
         returns (
             uint8[] memory,
             address[] memory,
-            address[] memory
+            bytes[] memory
         )
     {
         IStrategy strategy = IStrategy(_strategy);
         uint256 count = strategy.getOperationsCount();
         uint8[] memory types = new uint8[](count);
         address[] memory integrations = new address[](count);
-        address[] memory datas = new address[](count);
+        bytes[] memory datas = new bytes[](count);
 
         for (uint8 i = 0; i < count; i++) {
             (types[i], integrations[i], datas[i]) = strategy.getOperationByIndex(i);
@@ -215,7 +214,7 @@ contract BabylonViewer {
         IIshtarGate gate = IIshtarGate(controller.ishtarGate());
         for (uint256 i = _offset; i < gardens.length; i++) {
             IGarden garden = IGarden(gardens[i]);
-            if (garden.active() && (!garden.guestListEnabled() || gate.canJoinAGarden(gardens[i], _user))) {
+            if (garden.active() && (!garden.privateGarden() || gate.canJoinAGarden(gardens[i], _user))) {
                 userGardens[resultIndex] = gardens[i];
                 hasUserDeposited[resultIndex] = IERC20(gardens[i]).balanceOf(_user) > 0;
                 resultIndex = resultIndex + 1;

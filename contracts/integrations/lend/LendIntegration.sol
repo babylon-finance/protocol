@@ -33,7 +33,7 @@ import {BaseIntegration} from '../BaseIntegration.sol';
  * @title LendIntegration
  * @author Babylon Finance Protocol
  *
- * Base class for integration with passive investments like Yearn, Indexed
+ * Base class for integration with lending protocols
  */
 abstract contract LendIntegration is BaseIntegration, ReentrancyGuard, ILendIntegration {
     using LowGasSafeMath for uint256;
@@ -80,6 +80,25 @@ abstract contract LendIntegration is BaseIntegration, ReentrancyGuard, ILendInte
     /* ============ External Functions ============ */
     function getInvestmentToken(address _assetToken) external view override returns (address) {
         return _getInvestmentToken(_assetToken);
+    }
+
+    /**
+     * Returns the reward token
+     *
+     * @return address       Address of the reward token
+     */
+    function getRewardToken() external view override returns (address) {
+        return _getRewardToken();
+    }
+
+    /**
+     * Returns the number of reward tokens accrued
+     *
+     * @param _strategy      Address of the strategy
+     * @return address       Address of the reward token
+     */
+    function getRewardsAccrued(address _strategy) external view override returns (uint256) {
+        return _getRewardsAccrued(_strategy);
     }
 
     /**
@@ -174,6 +193,13 @@ abstract contract LendIntegration is BaseIntegration, ReentrancyGuard, ILendInte
             _getRedeemCalldata(_strategy, _assetToken, _numTokensToRedeem);
 
         investmentInfo.strategy.invokeFromIntegration(targetInvestment, callValue, methodData);
+
+        // Claim rewards
+        (address targetAddressR, uint256 callValueR, bytes memory methodDataR) = _claimRewardsCallData(_strategy);
+        if (targetAddressR != address(0)) {
+            // Invoke protocol specific call
+            investmentInfo.strategy.invokeFromIntegration(targetAddressR, callValueR, methodDataR);
+        }
 
         _validatePostExitInvestmentData(investmentInfo);
 
@@ -359,15 +385,34 @@ abstract contract LendIntegration is BaseIntegration, ReentrancyGuard, ILendInte
             address,
             uint256,
             bytes memory
-        )
-    {
-        require(false, 'This needs to be overriden');
-        return (address(0), 0, bytes(''));
-    }
+        );
+
+    /**
+     * Return claim rewards action call data
+     *
+     * @return address                   Target contract address
+     * @return uint256                   Call value
+     * @return bytes                     Trade calldata
+     */
+    function _claimRewardsCallData(
+        address /*_strategy */
+    )
+        internal
+        view
+        virtual
+        returns (
+            address,
+            uint256,
+            bytes memory
+        );
 
     function _getSpender(
         address //_investmentAddress
     ) internal view virtual returns (address);
+
+    function _getRewardToken() internal view virtual returns (address);
+
+    function _getRewardsAccrued(address _strategy) internal view virtual returns (uint256);
 
     function _getInvestmentToken(
         address //_investmentAddress

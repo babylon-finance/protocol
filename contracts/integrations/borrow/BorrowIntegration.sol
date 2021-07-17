@@ -18,7 +18,6 @@
 
 pragma solidity 0.7.6;
 
-import 'hardhat/console.sol';
 import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import {ReentrancyGuard} from '@openzeppelin/contracts/utils/ReentrancyGuard.sol';
 
@@ -34,7 +33,7 @@ import {LowGasSafeMath} from '../../lib/LowGasSafeMath.sol';
  * @title BorrowIntetration
  * @author Babylon Finance Protocol
  *
- * Base class for integration with lending protocols
+ * Base class for integration with borrowing protocols
  */
 abstract contract BorrowIntegration is BaseIntegration, ReentrancyGuard, IBorrowIntegration {
     using LowGasSafeMath for uint256;

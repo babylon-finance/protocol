@@ -21,6 +21,7 @@ const {
   DEFAULT_STRATEGY_PARAMS,
   createStrategy,
   getStrategy,
+  getStrategyState,
   executeStrategy,
   vote,
   finalizeStrategy,
@@ -105,6 +106,75 @@ describe('Garden', function () {
       expect(await garden1.maxStrategyDuration()).to.equal(ONE_DAY_IN_SECONDS * 365);
     });
   });
+  describe('pseudo-public rights by gardener', async function () {
+    it('should allow deposits to a Ishar gate owner despite its individual permission is set to 0 but general deposit permission is allowed', async function () {
+      expect(await ishtarGate.connect(signer1).canJoinAGarden(garden1.address, signer3.address)).to.equal(true);
+      // Remove permissions
+      await ishtarGate.connect(signer1).setGardenAccess(signer3.address, garden1.address, 0, { gasPrice: 0 });
+      await expect(
+        garden1.connect(signer3).deposit(ethers.utils.parseEther('1'), 1, signer3.getAddress(), false, {
+          value: ethers.utils.parseEther('1'),
+          gasPrice: 0,
+        }),
+      ).to.be.revertedWith('revert BAB#029');
+      expect(await ishtarGate.connect(signer1).canJoinAGarden(garden1.address, signer3.address)).to.equal(false);
+      // Make garden public first at BabController then at garden level
+      expect(await babController.allowPublicGardens()).to.equal(false);
+      await babController.connect(owner).setAllowPublicGardens();
+      expect(await babController.allowPublicGardens()).to.equal(true);
+      await garden1.connect(signer1).makeGardenPublic();
+      await expect(
+        garden1.connect(signer3).deposit(ethers.utils.parseEther('1'), 1, signer3.getAddress(), false, {
+          value: ethers.utils.parseEther('1'),
+          gasPrice: 0,
+        }),
+      ).not.to.be.reverted;
+      expect(await garden1.balanceOf(signer3.address)).to.equal(ethers.utils.parseEther('1'));
+      expect(await ishtarGate.connect(signer1).canJoinAGarden(garden1.address, signer3.address)).to.equal(true);
+    });
+    it('should allow the strategy creation by an Ishar gate owner despite its individual permission is set to 0 but general strategy creation permission is allowed', async function () {
+      await garden1.connect(signer3).deposit(ethers.utils.parseEther('1'), 1, signer3.getAddress(), false, {
+        value: ethers.utils.parseEther('1'),
+        gasPrice: 0,
+      });
+      expect(await ishtarGate.connect(signer1).canAddStrategiesInAGarden(garden1.address, signer3.address)).to.equal(
+        true,
+      );
+      await expect(getStrategy({ garden: garden1, signers: [signer3] })).not.to.be.reverted;
+      // Remove permissions (0 is below LP even)
+      await ishtarGate.connect(signer1).setGardenAccess(signer3.address, garden1.address, 0, { gasPrice: 0 });
+      await expect(getStrategy({ garden: garden1, signers: [signer3] })).to.be.revertedWith('revert BAB#030');
+      expect(await ishtarGate.connect(signer1).canAddStrategiesInAGarden(garden1.address, signer3.address)).to.equal(
+        false,
+      );
+      // Enable strategist creator rights - the garden needs to be public
+      await expect(garden1.connect(signer1).setPublicRights(true, false)).to.be.revertedWith('revert BAB#088');
+      await babController.connect(owner).setAllowPublicGardens();
+      await garden1.connect(signer1).makeGardenPublic();
+      await garden1.connect(signer1).setPublicRights(true, false);
+      await expect(getStrategy({ garden: garden1, signers: [signer3] })).not.to.be.reverted;
+      expect(await ishtarGate.connect(signer1).canAddStrategiesInAGarden(garden1.address, signer3.address)).to.equal(
+        true,
+      );
+    });
+    it('should allow the vote by an Ishar gate owner despite its individual permission is set to 0 but general voting permission is allowed', async function () {
+      await garden1.connect(signer2).deposit(ethers.utils.parseEther('1'), 1, signer2.getAddress(), false, {
+        value: ethers.utils.parseEther('1'),
+        gasPrice: 0,
+      });
+      expect(await ishtarGate.connect(signer1).canVoteInAGarden(garden1.address, signer2.address)).to.equal(true);
+      // Remove permissions (0 is below LP even)
+      await ishtarGate.connect(signer1).setGardenAccess(signer2.address, garden1.address, 0, { gasPrice: 0 });
+      expect(await ishtarGate.connect(signer1).canVoteInAGarden(garden1.address, signer2.address)).to.equal(false);
+
+      // Enable voting power rights to users - the garden needs to be public
+      await expect(garden1.connect(signer1).setPublicRights(false, true)).to.be.revertedWith('revert BAB#088');
+      await babController.connect(owner).setAllowPublicGardens();
+      await garden1.connect(signer1).makeGardenPublic();
+      await garden1.connect(signer1).setPublicRights(false, true);
+      expect(await ishtarGate.connect(signer1).canVoteInAGarden(garden1.address, signer2.address)).to.equal(true);
+    });
+  });
 
   describe('creation open to public', async function () {
     it('should allow the creation of a garden to a non-Ishtar gate user once garden creation is open to the public', async function () {
@@ -119,6 +189,7 @@ describe('Garden', function () {
             0,
             GARDEN_PARAMS,
             ethers.utils.parseEther('0.1'),
+            [false, false, false],
             {
               value: ethers.utils.parseEther('0.1'),
             },
@@ -136,6 +207,7 @@ describe('Garden', function () {
             0,
             GARDEN_PARAMS,
             ethers.utils.parseEther('0.1'),
+            [false, false, false],
             {
               value: ethers.utils.parseEther('0.1'),
             },
@@ -743,8 +815,8 @@ describe('Garden', function () {
 
       // It is executed
       await executeStrategy(strategyContract, ethers.utils.parseEther('1'), 42);
-
-      expect(await strategyContract.active()).to.equal(true);
+      const { active, finalized, executedAt, exitedAt, updatedAt } = await getStrategyState(strategyContract);
+      expect(active).to.equal(true);
 
       expect(await strategyContract.strategist()).to.equal(signer1.address);
       expect(await strategyContract.stake()).to.equal(ethers.utils.parseEther('0.1'));
@@ -770,8 +842,8 @@ describe('Garden', function () {
 
       // It is executed
       await executeStrategy(strategyContract, ethers.utils.parseEther('1'), 42);
-
-      expect(await strategyContract.active()).to.equal(true);
+      const { active, finalized, executedAt, exitedAt, updatedAt } = await getStrategyState(strategyContract);
+      expect(active).to.equal(true);
 
       expect(await strategyContract.strategist()).to.equal(signer1.address);
       expect(await strategyContract.stake()).to.equal(ethers.utils.parseEther('0.1'));
@@ -802,8 +874,8 @@ describe('Garden', function () {
 
       // It is executed
       await executeStrategy(strategyContract, ethers.utils.parseEther('1'), 42);
-
-      expect(await strategyContract.active()).to.equal(true);
+      const { active, finalized, executedAt, exitedAt, updatedAt } = await getStrategyState(strategyContract);
+      expect(active).to.equal(true);
 
       expect(await strategyContract.strategist()).to.equal(signer1.address);
       expect(await strategyContract.stake()).to.equal(ethers.utils.parseEther('0.1'));
@@ -984,6 +1056,7 @@ describe('Garden', function () {
           0,
           GARDEN_PARAMS_STABLE,
           ethers.utils.parseEther('100'),
+          [false, false, false],
           {},
         );
       const gardens = await babController.getGardens();
@@ -1046,6 +1119,7 @@ describe('Garden', function () {
           0,
           params,
           thousandUSDC.div(10),
+          [false, false, false],
           {},
         );
       const gardens = await babController.getGardens();
@@ -1138,6 +1212,7 @@ describe('Garden', function () {
             0,
             GARDEN_PARAMS,
             ethers.utils.parseEther('1'),
+            [false, false, false],
             {
               value: ethers.utils.parseEther('1'),
             },
@@ -1279,18 +1354,14 @@ describe('Garden', function () {
       await garden1.connect(signer3).deposit(ethers.utils.parseEther('1'), 1, signer3.getAddress(), false, {
         value: ethers.utils.parseEther('1'),
       });
+      const AbiCoder = ethers.utils.AbiCoder;
+      const abiCoder = new AbiCoder();
+      const encodedData = abiCoder.encode(['address', 'uint256'], [addresses.balancer.pools.wethdai, 0]);
 
       await expect(
         garden1
           .connect(signer3)
-          .addStrategy(
-            'name',
-            'STRT',
-            DEFAULT_STRATEGY_PARAMS,
-            [1],
-            [balancerIntegration.address],
-            [addresses.balancer.pools.wethdai],
-          ),
+          .addStrategy('name', 'STRT', DEFAULT_STRATEGY_PARAMS, [1], [balancerIntegration.address], encodedData),
       ).to.not.be.reverted;
     });
 
@@ -1300,11 +1371,12 @@ describe('Garden', function () {
       });
       const params = [...DEFAULT_STRATEGY_PARAMS];
       params[1] = ethers.utils.parseEther('0');
+      let ABI = ['function babylonFinanceStrategyOpData(address data, uint256 metadata)']; // 64 bytes
+      let iface = new ethers.utils.Interface(ABI);
+      let encodedData = iface.encodeFunctionData('babylonFinanceStrategyOpData', [addresses.balancer.pools.wethdai, 0]);
 
       await expect(
-        garden1
-          .connect(signer3)
-          .addStrategy('name', 'STRT', params, [1], [balancerIntegration.address], [addresses.balancer.pools.wethdai]),
+        garden1.connect(signer3).addStrategy('name', 'STRT', params, [1], [balancerIntegration.address], encodedData),
       ).to.be.reverted;
     });
   });

@@ -92,11 +92,14 @@ describe('UniswapPoolIntegrationTest', function () {
     });
 
     it('check that a valid pool is valid', async function () {
-      expect(await uniswapPoolIntegration.isPool(addresses.uniswap.pairs.wethdai)).to.equal(true);
+      const abiCoder = ethers.utils.defaultAbiCoder;
+      const data = abiCoder.encode(['address', 'uint256'], [addresses.uniswap.pairs.wethdai, 0]);
+
+      expect(await uniswapPoolIntegration.isPool(data)).to.equal(true);
     });
 
     it('check that an invalid pool is not valid', async function () {
-      await expect(uniswapPoolIntegration.isPool(ADDRESS_ZERO)).to.be.reverted;
+      await expect(uniswapPoolIntegration.isPool([ADDRESS_ZERO, 0])).to.be.reverted;
     });
 
     it('can enter and exit the weth dai pool', async function () {
@@ -107,7 +110,7 @@ describe('UniswapPoolIntegrationTest', function () {
         uniswapPoolIntegration.address,
         garden1,
         DEFAULT_STRATEGY_PARAMS,
-        daiWethPair.address,
+        [daiWethPair.address, 0],
       );
       await executeStrategy(strategyContract);
       expect(await daiWethPair.balanceOf(strategyContract.address)).to.be.gt(0);
@@ -143,7 +146,6 @@ describe('UniswapPoolIntegrationTest', function () {
           token0: addresses.tokens.WETH,
           token1: addresses.tokens.WBTC,
         }, //WETH-WBTC pool
-        //    { pool: addresses.uniswap.pairs.wethrenBTC, symbol: 'WETH-renBTC', token0: addresses.tokens.WETH, token1: addresses.tokens.renBTC }, //WETH-renBTC pool only works from WETH and WBTC Gardens if not intermediate swaps are done
         {
           pool: addresses.uniswap.pairs.daiusdc,
           symbol: 'DAI-USDC',
@@ -169,11 +171,14 @@ describe('UniswapPoolIntegrationTest', function () {
             state: 'vote',
             integrations: uniswapPoolIntegration.address,
             garden,
-            specificParams: poolAddress.address,
+            specificParams: [poolAddress.address, 0],
           });
           let amount = STRATEGY_EXECUTE_MAP[token];
 
           await executeStrategy(strategyContract, { amount });
+          // Check NAV
+          expect(await strategyContract.getNAV()).to.be.closeTo(amount, amount.div(50));
+
           const tokenContract = await ethers.getContractAt('ERC20', token);
           const executionTokenBalance = await tokenContract.balanceOf(garden.address);
           const LPTokens = await getExpectedLPTokens(token, amount, poolAddress, token0, token1);

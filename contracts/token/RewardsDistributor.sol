@@ -295,11 +295,15 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
      */
     function getStrategyRewards(address _strategy) external view override returns (uint96) {
         IStrategy strategy = IStrategy(_strategy);
-        _require(strategy.exitedAt() != 0, Errors.STRATEGY_IS_NOT_OVER_YET);
+        // ts[0]: executedAt, ts[1]: exitedAt, ts[2]: updatedAt
+        uint256[] memory ts = new uint256[](3);
+        (, , , , ts[0], ts[1], ts[2]) = strategy.getStrategyState();
+        _require(ts[1] != 0, Errors.STRATEGY_IS_NOT_OVER_YET);
         IPriceOracle oracle = IPriceOracle(IBabController(controller).priceOracle());
-        uint256 pricePerTokenUnit = oracle.getPrice(IGarden(strategy.garden()).reserveAsset(), DAI);
-        uint256 allocated = strategy.capitalAllocated().preciseMul(pricePerTokenUnit);
-        uint256 returned = strategy.capitalReturned().preciseMul(pricePerTokenUnit);
+        uint256 allocated =
+            strategy.capitalAllocated().preciseMul(oracle.getPrice(IGarden(strategy.garden()).reserveAsset(), DAI));
+        uint256 returned =
+            strategy.capitalReturned().preciseMul(oracle.getPrice(IGarden(strategy.garden()).reserveAsset(), DAI));
         if ((strategy.enteredAt() >= START_TIME) && (START_TIME != 0)) {
             // We avoid gas consuming once a strategy got its BABL rewards during its finalization
             uint256 rewards = strategy.strategyRewards();
@@ -307,8 +311,7 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
                 return Safe3296.safe96(rewards, 'overflow 96 bits');
             }
             // If the calculation was not done earlier we go for it
-            (uint256 numQuarters, uint256 startingQuarter) =
-                _getRewardsWindow(strategy.executedAt(), strategy.exitedAt());
+            (uint256 numQuarters, uint256 startingQuarter) = _getRewardsWindow(ts[0], ts[1]);
             uint256 percentage = 1e18;
 
             for (uint256 i = 0; i < numQuarters; i++) {
@@ -612,6 +615,9 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         IStrategy strategy = IStrategy(_strategy);
         _require(address(strategy.garden()) == _garden, Errors.STRATEGY_GARDEN_MISMATCH);
         _require(IGarden(_garden).isGardenStrategy(_strategy), Errors.STRATEGY_GARDEN_MISMATCH);
+        // ts[0]: executedAt, ts[1]: exitedAt, ts[2]: updatedAt
+        uint256[] memory ts = new uint256[](3);
+        (, , , , ts[0], ts[1], ts[2]) = strategy.getStrategyState();
         // rewards[0]: Strategist BABL , rewards[1]: Strategist Profit, rewards[2]: Steward BABL, rewards[3]: Steward Profit, rewards[4]: LP BABL, rewards[5]: total BABL, rewards[6]: total Profits
         uint256[] memory rewards = new uint256[](7);
         uint256 contributorProfits;
@@ -622,11 +628,7 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
 
         (, uint256 initialDepositAt, uint256 claimedAt, , , , , , , ) = IGarden(_garden).getContributor(_contributor);
         // Positive strategies not yet claimed
-        if (
-            strategy.exitedAt() > claimedAt &&
-            strategy.executedAt() >= initialDepositAt &&
-            address(strategy.garden()) == _garden
-        ) {
+        if (ts[1] > claimedAt && ts[0] >= initialDepositAt && address(strategy.garden()) == _garden) {
             // If strategy returned money we give out the profits
             if (profit == true) {
                 // We reserve 5% of profits for performance fees
@@ -908,8 +910,10 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         uint256 babl;
         uint256 allocated =
             SafeDecimalMath.normalizeAmountTokens(IGarden(_garden).reserveAsset(), DAI, strategy.capitalAllocated());
-        uint256 contributorPower =
-            _getContributorPower(_garden, _contributor, strategy.executedAt(), strategy.exitedAt());
+        uint256[] memory ts = new uint256[](3);
+        // ts[0]: executedAt, ts[1]: exitedAt, ts[2]: updatedAt
+        (, , , , ts[0], ts[1], ts[2]) = strategy.getStrategyState();
+        uint256 contributorPower = _getContributorPower(_garden, _contributor, ts[0], ts[1]);
         // We take care of normalization into 18 decimals for capital allocated in less decimals than 18
         babl = strategyRewards.multiplyDecimal(BABL_LP_SHARE).preciseMul(contributorPower.preciseDiv(allocated));
         return babl;
@@ -1017,10 +1021,12 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
     ) private onlyMiningActive {
         StrategyPerQuarter storage strategyCheckpoint =
             strategyPerQuarter[address(_strategy)][_getQuarter(block.timestamp)];
-
+        // ts[0]: executedAt, ts[1]: exitedAt, ts[2]: updatedAt
+        uint256[] memory ts = new uint256[](3);
+        (, , , , ts[0], ts[1], ts[2]) = _strategy.getStrategyState();
         if (!strategyCheckpoint.initialized) {
             // The strategy quarter is not yet initialized then we create it
-            if (_getQuarter(block.timestamp) == _getQuarter(_strategy.executedAt())) {
+            if (_getQuarter(block.timestamp) == _getQuarter(ts[0])) {
                 // The first checkpoint in the first executing epoch
                 strategyCheckpoint.quarterPower = 0;
                 strategyCheckpoint.quarterNumber = _getQuarter(block.timestamp);
@@ -1028,12 +1034,11 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
                 // Each time a new epoch starts with either a new strategy execution or finalization
                 // We just take the proportional power for this quarter from previous checkpoint
                 uint256 powerToSplit =
-                    strategyPerQuarter[address(_strategy)][_getQuarter(_strategy.updatedAt())].quarterPrincipal.mul(
-                        block.timestamp.sub(_strategy.updatedAt())
+                    strategyPerQuarter[address(_strategy)][_getQuarter(ts[2])].quarterPrincipal.mul(
+                        block.timestamp.sub(ts[2])
                     );
                 // We need to iterate since last update of the strategy capital
-                (uint256 numQuarters, uint256 startingQuarter) =
-                    _getRewardsWindow(_strategy.updatedAt(), block.timestamp);
+                (uint256 numQuarters, uint256 startingQuarter) = _getRewardsWindow(ts[2], block.timestamp);
 
                 // There were intermediate epochs without checkpoints - we need to create their protocolPerQuarter's and update the last one
                 // We have to update all the quarters including where the previous checkpoint is and the one were we are now
@@ -1045,15 +1050,11 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
                         // We are in the first quarter to update, we add the corresponding part
 
                         newCheckpoint.quarterPower = newCheckpoint.quarterPower.add(
-                            powerToSplit.mul(slotEnding.sub(_strategy.updatedAt())).div(
-                                block.timestamp.sub(_strategy.updatedAt())
-                            )
+                            powerToSplit.mul(slotEnding.sub(ts[2])).div(block.timestamp.sub(ts[2]))
                         );
                     } else if (i > 0 && i.add(1) < numQuarters) {
                         // We are in an intermediate quarter
-                        newCheckpoint.quarterPower = powerToSplit.mul(EPOCH_DURATION).div(
-                            block.timestamp.sub(_strategy.updatedAt())
-                        );
+                        newCheckpoint.quarterPower = powerToSplit.mul(EPOCH_DURATION).div(block.timestamp.sub(ts[2]));
                         newCheckpoint.quarterNumber = startingQuarter.add(i);
                         newCheckpoint.quarterPrincipal = strategyPerQuarter[address(_strategy)][startingQuarter]
                             .quarterPrincipal;
@@ -1066,7 +1067,7 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
                                 START_TIME.add(_getQuarter(block.timestamp).mul(EPOCH_DURATION).sub(EPOCH_DURATION))
                             )
                         )
-                            .div(block.timestamp.sub(_strategy.updatedAt()));
+                            .div(block.timestamp.sub(ts[2]));
                         newCheckpoint.quarterPrincipal = strategyPerQuarter[address(_strategy)][startingQuarter]
                             .quarterPrincipal;
                         newCheckpoint.quarterNumber = _getQuarter(block.timestamp);
@@ -1079,7 +1080,7 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
             // We update the power of the quarter by adding the new difference between last quarter checkpoint and this checkpoint
 
             strategyCheckpoint.quarterPower = strategyCheckpoint.quarterPower.add(
-                strategyCheckpoint.quarterPrincipal.mul(block.timestamp.sub(_strategy.updatedAt()))
+                strategyCheckpoint.quarterPrincipal.mul(block.timestamp.sub(ts[2]))
             );
         }
         if (_addOrSubstract == true) {

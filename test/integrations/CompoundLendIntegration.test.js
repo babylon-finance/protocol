@@ -8,7 +8,8 @@ const {
 } = require('../fixtures/StrategyHelper');
 const { setupTests } = require('../fixtures/GardenFixture');
 const addresses = require('../../lib/addresses');
-const { ADDRESS_ZERO } = require('../../lib/constants');
+const { increaseTime } = require('../utils/test-helpers');
+const { ADDRESS_ZERO, ONE_DAY_IN_SECONDS } = require('../../lib/constants');
 
 describe('CompoundLendIntegrationTest', function () {
   let compoundLendIntegration;
@@ -48,6 +49,14 @@ describe('CompoundLendIntegrationTest', function () {
       expect(await compoundLendIntegration.isInvestment('0xf1cE2ca79D49B431652F9597947151cf21efB9C3')).to.equal(false);
     });
 
+    it('gets the reward token', async function () {
+      expect(await compoundLendIntegration.getRewardToken()).to.equal('0xc00e94Cb662C3520282E6f5717214004A7f26888');
+    });
+
+    it('can get the amount of rewards', async function () {
+      expect(await compoundLendIntegration.getRewardsAccrued(compoundLendIntegration.address)).to.equal(0);
+    });
+
     it('can supply and redeem tokens from Compound', async function () {
       const strategyContract = await createStrategy(
         'lend',
@@ -75,7 +84,7 @@ describe('CompoundLendIntegrationTest', function () {
         compoundLendIntegration.address,
         garden1,
         DEFAULT_STRATEGY_PARAMS,
-        ADDRESS_ZERO, // ETH
+        [ADDRESS_ZERO, 0], // ETH
       );
 
       await executeStrategy(strategyContract);
@@ -91,6 +100,25 @@ describe('CompoundLendIntegrationTest', function () {
         ethers.utils.parseEther('1'),
         ethers.utils.parseEther('0.01'),
       );
+    });
+
+    it('can supply and get NAV including rewards', async function () {
+      const strategyContract = await createStrategy(
+        'lend',
+        'vote',
+        [signer1, signer2, signer3],
+        compoundLendIntegration.address,
+        garden1,
+        DEFAULT_STRATEGY_PARAMS,
+        [ADDRESS_ZERO, 0], // ETH
+      );
+      await executeStrategy(strategyContract);
+      expect(await WETH.balanceOf(strategyContract.address)).to.be.equal(0);
+      expect(await CETH.balanceOf(strategyContract.address)).to.be.gt(0);
+      increaseTime(ONE_DAY_IN_SECONDS);
+      const NAV = await strategyContract.getNAV();
+      const compAccrued = await compoundLendIntegration.getRewardsAccrued(strategyContract.address);
+      expect(NAV.sub(compAccrued)).to.be.closeTo(ethers.utils.parseEther('1'), ethers.utils.parseEther('1').div(100));
     });
   });
 });

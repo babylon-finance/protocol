@@ -278,7 +278,7 @@ describe('BABL Rewards Distributor', function () {
       // Mining program has to be enabled before the strategy starts its execution
       await babController.connect(owner).enableBABLMiningProgram();
       const block = await ethers.provider.getBlock();
-      now = block.timestamp;
+      const now = block.timestamp;
 
       const [long1] = await createStrategies([{ garden: garden1 }]);
       await executeStrategy(long1, ONE_ETH);
@@ -309,7 +309,7 @@ describe('BABL Rewards Distributor', function () {
       // Mining program has to be enabled before the strategy starts its execution
       await babController.connect(owner).enableBABLMiningProgram();
       const block = await ethers.provider.getBlock();
-      now = block.timestamp;
+      const now = block.timestamp;
       const strategyContract = await createStrategy(
         'buy',
         'vote',
@@ -341,7 +341,7 @@ describe('BABL Rewards Distributor', function () {
       // Mining program has to be enabled before the strategy starts its execution
       await babController.connect(owner).enableBABLMiningProgram();
       const block = await ethers.provider.getBlock();
-      now = block.timestamp;
+      const now = block.timestamp;
 
       // We try to hack the calculation of rewards taking time from 2 different epochs with a strategy lasting less than 1 epoch in total
       await increaseTime(ONE_DAY_IN_SECONDS * 70);
@@ -370,7 +370,7 @@ describe('BABL Rewards Distributor', function () {
       // Mining program has to be enabled before the strategy starts its execution
       await babController.connect(owner).enableBABLMiningProgram();
       const block = await ethers.provider.getBlock();
-      now = block.timestamp;
+      const now = block.timestamp;
 
       const [long1] = await createStrategies([{ garden: garden1 }]);
 
@@ -396,7 +396,7 @@ describe('BABL Rewards Distributor', function () {
       // Mining program has to be enabled before the strategy starts its execution
       await babController.connect(owner).enableBABLMiningProgram();
       const block = await ethers.provider.getBlock();
-      now = block.timestamp;
+      const now = block.timestamp;
 
       const [long1] = await createStrategies([{ garden: garden1 }]);
       await executeStrategy(long1, ONE_ETH);
@@ -429,7 +429,7 @@ describe('BABL Rewards Distributor', function () {
       // Mining program has to be enabled before the strategy starts its execution
       await babController.connect(owner).enableBABLMiningProgram();
       const block = await ethers.provider.getBlock();
-      now = block.timestamp;
+      const now = block.timestamp;
       const [long1, long2] = await createStrategies([{ garden: garden1 }, { garden: garden1 }]);
 
       await executeStrategy(long1, ONE_ETH);
@@ -472,7 +472,7 @@ describe('BABL Rewards Distributor', function () {
       // Mining program has to be enabled before the strategy starts its execution
       await babController.connect(owner).enableBABLMiningProgram();
       const block = await ethers.provider.getBlock();
-      now = block.timestamp;
+      const now = block.timestamp;
 
       const [long1, long2, long3] = await createStrategies([
         { garden: garden1 },
@@ -526,7 +526,7 @@ describe('BABL Rewards Distributor', function () {
       // Mining program has to be enabled before the strategy starts its execution
       await babController.connect(owner).enableBABLMiningProgram();
       const block = await ethers.provider.getBlock();
-      now = block.timestamp;
+      const now = block.timestamp;
 
       const [long1, long2, long3, long4, long5] = await createStrategies([
         { garden: garden1 },
@@ -616,7 +616,7 @@ describe('BABL Rewards Distributor', function () {
       // Mining program has to be enabled before the strategy starts its execution
       await babController.connect(owner).enableBABLMiningProgram();
       const block = await ethers.provider.getBlock();
-      now = block.timestamp;
+      const now = block.timestamp;
 
       const [long1] = await createStrategies([{ garden: garden1 }]);
 
@@ -637,7 +637,7 @@ describe('BABL Rewards Distributor', function () {
       // Mining program has to be enabled before the strategy starts its execution
       await babController.connect(owner).enableBABLMiningProgram();
       const block = await ethers.provider.getBlock();
-      now = block.timestamp;
+      const now = block.timestamp;
 
       // We go to the future 10 years
       increaseTime(ONE_DAY_IN_SECONDS * 3650);
@@ -668,7 +668,7 @@ describe('BABL Rewards Distributor', function () {
       // Mining program has to be enabled before the strategy starts its execution
       await babController.connect(owner).enableBABLMiningProgram();
       const block = await ethers.provider.getBlock();
-      now = block.timestamp;
+      const now = block.timestamp;
 
       const [long1] = await createStrategies([{ garden: garden1 }]);
 
@@ -699,7 +699,7 @@ describe('BABL Rewards Distributor', function () {
       // Mining program has to be enabled before the strategy starts its execution
       await babController.connect(owner).enableBABLMiningProgram();
       const block = await ethers.provider.getBlock();
-      now = block.timestamp;
+      const now = block.timestamp;
 
       const [long1, long2, long3, long4, long5] = await createStrategies([
         { garden: garden1 },
@@ -788,7 +788,7 @@ describe('BABL Rewards Distributor', function () {
       // Mining program has to be enabled before the strategy starts its execution
       await babController.connect(owner).enableBABLMiningProgram();
       const block = await ethers.provider.getBlock();
-      now = block.timestamp;
+      const now = block.timestamp;
 
       const [long1, long2, long3, long4, long5] = await createStrategies([
         { garden: garden1 },
@@ -1020,6 +1020,7 @@ describe('BABL Rewards Distributor', function () {
           0,
           GARDEN_PARAMS_STABLE,
           ethers.utils.parseEther('500'),
+          [false, false, false],
           {},
         );
       const gardens = await babController.getGardens();
@@ -1038,7 +1039,7 @@ describe('BABL Rewards Distributor', function () {
         uniswapV3TradeIntegration.address,
         daiGarden,
         DAI_STRATEGY_PARAMS,
-        usdc.address,
+        [usdc.address, 0],
       );
       const signer1DAIBalance2 = await dai.balanceOf(signer1.address);
       await executeStrategy(long1, { amount: ethers.utils.parseEther('1000') });
@@ -1092,6 +1093,7 @@ describe('BABL Rewards Distributor', function () {
           0,
           params,
           thousandUSDC.div(2),
+          [false, false, false],
           {},
         );
       const gardens = await babController.getGardens();
@@ -1113,7 +1115,7 @@ describe('BABL Rewards Distributor', function () {
         uniswapV3TradeIntegration.address,
         usdcGarden,
         USDC_STRATEGY_PARAMS,
-        weth.address,
+        [weth.address, 0],
       );
       const signer1USDCBalance2 = await usdc.balanceOf(signer1.address);
       await executeStrategy(long1, { amount: ethers.BigNumber.from(500 * 1000000) });
@@ -1182,6 +1184,7 @@ describe('BABL Rewards Distributor', function () {
           0,
           params,
           thousandUSDC.div(2),
+          [false, false, false],
           {},
         );
       const gardens = await babController.getGardens();
@@ -1198,6 +1201,7 @@ describe('BABL Rewards Distributor', function () {
           0,
           GARDEN_PARAMS_STABLE,
           ethers.utils.parseEther('500'),
+          [false, false, false],
           {},
         );
       const gardens2 = await babController.getGardens();
@@ -1220,7 +1224,7 @@ describe('BABL Rewards Distributor', function () {
         uniswapV3TradeIntegration.address,
         usdcGarden,
         USDC_STRATEGY_PARAMS,
-        weth.address,
+        [weth.address, 0],
       );
 
       const long2 = await createStrategy(
@@ -1230,7 +1234,7 @@ describe('BABL Rewards Distributor', function () {
         uniswapV3TradeIntegration.address,
         daiGarden,
         DAI_STRATEGY_PARAMS,
-        usdc.address,
+        [usdc.address, 0],
       );
       // Execute USDC Garden strategy long1
       await executeStrategy(long1, { amount: ethers.BigNumber.from(1000 * 1000000) });
@@ -1307,6 +1311,7 @@ describe('BABL Rewards Distributor', function () {
           0,
           params,
           thousandUSDC.div(2),
+          [false, false, false],
           {},
         );
       const gardens = await babController.getGardens();
@@ -1323,6 +1328,7 @@ describe('BABL Rewards Distributor', function () {
           0,
           GARDEN_PARAMS_STABLE,
           ethers.utils.parseEther('500'),
+          [false, false, false],
           {},
         );
       const gardens2 = await babController.getGardens();
@@ -1345,7 +1351,7 @@ describe('BABL Rewards Distributor', function () {
         uniswapV3TradeIntegration.address,
         usdcGarden,
         USDC_STRATEGY_PARAMS,
-        weth.address,
+        [weth.address, 0],
       );
 
       const long2 = await createStrategy(
@@ -1355,7 +1361,7 @@ describe('BABL Rewards Distributor', function () {
         uniswapV3TradeIntegration.address,
         daiGarden,
         DAI_STRATEGY_PARAMS,
-        usdc.address,
+        [usdc.address, 0],
       );
       // Execute USDC Garden strategy long1
       await executeStrategy(long1, { amount: ethers.BigNumber.from(1000 * 1000000) });
@@ -1431,6 +1437,7 @@ describe('BABL Rewards Distributor', function () {
           0,
           params,
           thousandUSDC.div(2),
+          [false, false, false],
           {},
         );
       const gardens = await babController.getGardens();
@@ -1447,6 +1454,7 @@ describe('BABL Rewards Distributor', function () {
           0,
           GARDEN_PARAMS_STABLE,
           ethers.utils.parseEther('500'),
+          [false, false, false],
           {},
         );
       const gardens2 = await babController.getGardens();
@@ -1469,7 +1477,7 @@ describe('BABL Rewards Distributor', function () {
         uniswapV3TradeIntegration.address,
         usdcGarden,
         USDC_STRATEGY_PARAMS,
-        weth.address,
+        [weth.address, 0],
       );
 
       const long2 = await createStrategy(
@@ -1479,7 +1487,7 @@ describe('BABL Rewards Distributor', function () {
         uniswapV3TradeIntegration.address,
         daiGarden,
         DAI_STRATEGY_PARAMS,
-        usdc.address,
+        [usdc.address, 0],
       );
       // Execute USDC Garden strategy long1
       await executeStrategy(long1, { amount: ethers.BigNumber.from(1000 * 1000000) });

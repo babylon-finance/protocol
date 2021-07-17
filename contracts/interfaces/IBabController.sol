@@ -33,7 +33,8 @@ interface IBabController {
         string memory _tokenURI,
         uint256 _seed,
         uint256[] calldata _gardenParams,
-        uint256 _initialContribution
+        uint256 _initialContribution,
+        bool[] memory _publicGardenStrategistsStewards
     ) external payable returns (address);
 
     function removeGarden(address _garden) external;

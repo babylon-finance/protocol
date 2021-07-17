@@ -56,7 +56,7 @@ describe('Keeper', function () {
           const garden = await createGarden({ reserveAsset: token });
           const tokenContract = await ethers.getContractAt('IERC20', token);
 
-          const strategy = await getStrategy({ state, specificParams: addresses.tokens.USDT });
+          const strategy = await getStrategy({ state, specificParams: [addresses.tokens.USDT, 0] });
 
           await func(garden, strategy, keeper, fee, token);
 
@@ -66,7 +66,7 @@ describe('Keeper', function () {
         it(`refuse to pay more than max fee at ${name} garden`, async function () {
           const garden = await createGarden({ reserveAsset: token });
 
-          const strategy = await getStrategy({ state, specificParams: addresses.tokens.USDT });
+          const strategy = await getStrategy({ state: 'deposit', specificParams: [addresses.tokens.USDT, 0] });
 
           await expect(func(garden, strategy, keeper, fee.add(1), token)).to.be.revertedWith(/BAB#019/);
         });

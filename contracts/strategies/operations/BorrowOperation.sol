@@ -18,7 +18,6 @@
 
 pragma solidity 0.7.6;
 
-import 'hardhat/console.sol';
 import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 
 import {IGarden} from '../../interfaces/IGarden.sol';
@@ -27,12 +26,14 @@ import {IBorrowIntegration} from '../../interfaces/IBorrowIntegration.sol';
 
 import {PreciseUnitMath} from '../../lib/PreciseUnitMath.sol';
 import {SafeDecimalMath} from '../../lib/SafeDecimalMath.sol';
+import {BytesLib} from '../../lib/BytesLib.sol';
 import {LowGasSafeMath as SafeMath} from '../../lib/LowGasSafeMath.sol';
+import {Errors, _require} from '../../lib/BabylonErrors.sol';
 
 import {Operation} from './Operation.sol';
 
 /**
- * @title LendOperatin
+ * @title BorrowOperation
  * @author Babylon Finance
  *
  * Executes a borrow operation
@@ -41,6 +42,7 @@ contract BorrowOperation is Operation {
     using SafeMath for uint256;
     using PreciseUnitMath for uint256;
     using SafeDecimalMath for uint256;
+    using BytesLib for bytes;
 
     /* ============ Constructor ============ */
 
@@ -61,7 +63,7 @@ contract BorrowOperation is Operation {
      * @param _index                  Index of this operation
      */
     function validateOperation(
-        address, /* _data */
+        bytes calldata, /* _data */
         IGarden, /* _garden */
         address, /* _integration */
         uint256 _index
@@ -74,7 +76,7 @@ contract BorrowOperation is Operation {
      * @param _asset              Asset to receive into this operation
      * @param _capital            Amount of asset received
      * @param _assetStatus        Status of the asset amount
-     * @param _borrowToken        Token to borrow
+     * @param _data               Operation data (e.g. Token to borrow)
      * param _garden              Garden of the strategy
      * @param _integration        Address of the integration to execute
      */
@@ -82,7 +84,7 @@ contract BorrowOperation is Operation {
         address _asset,
         uint256 _capital,
         uint8 _assetStatus,
-        address _borrowToken,
+        bytes memory _data,
         IGarden, /* _garden */
         address _integration
     )
@@ -95,21 +97,38 @@ contract BorrowOperation is Operation {
             uint8
         )
     {
+        address borrowToken = BytesLib.decodeOpDataAddressAssembly(_data, 12);
+        uint256 normalizedAmount = _getBorrowAmount(_asset, borrowToken, _capital, _integration);
+        require(_capital > 0 && _assetStatus == 1 && _asset != borrowToken, 'There is no collateral locked');
+        _onlyPositiveCollateral(msg.sender, _asset, _integration);
+        IBorrowIntegration(_integration).borrow(msg.sender, borrowToken, normalizedAmount);
+        borrowToken = borrowToken == address(0) ? WETH : borrowToken;
+        return (borrowToken, IERC20(borrowToken).balanceOf(address(msg.sender)), 0); // borrowings are liquid
+    }
+
+    function _onlyPositiveCollateral(
+        address _sender,
+        address _asset,
+        address _integration
+    ) internal view {
         require(
-            _capital > 0 &&
-                _assetStatus == 1 &&
-                _asset != _borrowToken &&
-                IBorrowIntegration(_integration).getCollateralBalance(msg.sender, _asset) > 0,
+            IBorrowIntegration(_integration).getCollateralBalance(_sender, _asset) > 0,
             'There is no collateral locked'
         );
+    }
+
+    function _getBorrowAmount(
+        address _asset,
+        address _borrowToken,
+        uint256 _capital,
+        address _integration
+    ) internal view returns (uint256) {
         uint256 price = _getPrice(_asset, _borrowToken);
         // % of the total collateral value in the borrow token
         uint256 amountToBorrow =
             _capital.preciseMul(price).preciseMul(IBorrowIntegration(_integration).maxCollateralFactor());
         uint256 normalizedAmount = SafeDecimalMath.normalizeAmountTokens(_asset, _borrowToken, amountToBorrow);
-        IBorrowIntegration(_integration).borrow(msg.sender, _borrowToken, normalizedAmount);
-        _borrowToken = _borrowToken == address(0) ? WETH : _borrowToken;
-        return (_borrowToken, IERC20(_borrowToken).balanceOf(address(msg.sender)), 0); // borrowings are liquid
+        return normalizedAmount;
     }
 
     /**
@@ -121,7 +140,7 @@ contract BorrowOperation is Operation {
         uint256, /* _remaining */
         uint8, /* _assetStatus */
         uint256 _percentage,
-        address _assetToken,
+        bytes calldata _data,
         IGarden, /* _garden */
         address _integration
     )
@@ -134,35 +153,37 @@ contract BorrowOperation is Operation {
             uint8
         )
     {
+        address assetToken = BytesLib.decodeOpDataAddress(_data);
         require(_percentage <= HUNDRED_PERCENT, 'Unwind Percentage <= 100%');
         IBorrowIntegration(_integration).repay(
             msg.sender,
-            _assetToken,
-            address(0) == _assetToken ? address(msg.sender).balance : IERC20(_assetToken).balanceOf(address(msg.sender)) // We repay all that we can
+            assetToken,
+            address(0) == assetToken ? address(msg.sender).balance : IERC20(assetToken).balanceOf(address(msg.sender)) // We repay all that we can
         );
-        return (_assetToken, IBorrowIntegration(_integration).getBorrowBalance(msg.sender, _assetToken), 2);
+        return (assetToken, IBorrowIntegration(_integration).getBorrowBalance(msg.sender, assetToken), 2);
     }
 
     /**
      * Gets the NAV of the lend op in the reserve asset
      *
-     * @param _borrowToken        Asset borrowed
+     * @param _data               OpData e.g. Asset borrowed
      * @param _garden             Garden the strategy belongs to
      * @param _integration        Status of the asset amount
      * @return _nav               NAV of the strategy
      */
     function getNAV(
-        address _borrowToken,
+        bytes calldata _data,
         IGarden _garden,
         address _integration
     ) external view override returns (uint256, bool) {
+        address borrowToken = BytesLib.decodeOpDataAddress(_data); // 64 bytes (w/o signature prefix bytes4)
         if (!IStrategy(msg.sender).isStrategyActive()) {
             return (0, true);
         }
-        uint256 tokensOwed = IBorrowIntegration(_integration).getBorrowBalance(msg.sender, _borrowToken);
-        uint256 price = _getPrice(_garden.reserveAsset(), _borrowToken);
+        uint256 tokensOwed = IBorrowIntegration(_integration).getBorrowBalance(msg.sender, borrowToken);
+        uint256 price = _getPrice(_garden.reserveAsset(), borrowToken);
         uint256 NAV =
-            SafeDecimalMath.normalizeAmountTokens(_borrowToken, _garden.reserveAsset(), tokensOwed).preciseDiv(price);
+            SafeDecimalMath.normalizeAmountTokens(borrowToken, _garden.reserveAsset(), tokensOwed).preciseDiv(price);
         return (NAV, false);
     }
 }
