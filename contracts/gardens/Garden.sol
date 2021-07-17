@@ -103,7 +103,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         keccak256('DepositBySig(uint256 _amountIn,uint256 _minAmountOut,bool _mintNft, uint256 _nonce)');
     bytes32 private constant WITHDRAW_BY_SIG_TYPEHASH =
         keccak256(
-            'WithdrawBySig(uint256 _amountIn,uint256 _minAmountOut,bool _withPenalty,address _unwindStrategy, uint256 _nonce)'
+            'WithdrawBySig(uint256 _amountIn,uint256 _minAmountOut, uint256 _nonce)'
         );
 
     /* ============ Structs ============ */
@@ -499,8 +499,6 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
     function withdrawBySig(
         uint256 _amountIn,
         uint256 _minAmountOut,
-        bool _withPenalty,
-        address _unwindStrategy,
         uint256 _nonce,
         uint256 _pricePerShare,
         uint8 v,
@@ -509,7 +507,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
     ) external override nonReentrant {
         bytes32 hash =
             keccak256(
-                abi.encode(WITHDRAW_BY_SIG_TYPEHASH, _amountIn, _minAmountOut, _withPenalty, _unwindStrategy, _nonce)
+                abi.encode(WITHDRAW_BY_SIG_TYPEHASH, _amountIn, _minAmountOut, _nonce)
             )
                 .toEthSignedMessageHash();
         address signer = ECDSA.recover(hash, v, r, s);
@@ -519,7 +517,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         // to prevent replay attacks
         _require(contributors[signer].nonce == _nonce, Errors.INVALID_NONCE);
 
-        _withdrawInternal(_amountIn, _minAmountOut, payable(signer), _withPenalty, _unwindStrategy, _pricePerShare);
+        _withdrawInternal(_amountIn, _minAmountOut, payable(signer), false, address(0), _pricePerShare);
     }
 
     function _withdrawInternal(

@@ -147,8 +147,6 @@ interface IGarden {
     function withdrawBySig(
         uint256 _gardenTokenQuantity,
         uint256 _minReserveReceiveQuantity,
-        bool _withPenalty,
-        address _unwindStrategy,
         uint256 _nonce,
         uint256 _pricePerShare,
         uint8 v,

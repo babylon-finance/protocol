@@ -188,16 +188,16 @@ async function getDepositSig(signer, amountIn, minAmountOut, mintNft, nonce) {
   return ethers.utils.splitSignature(signature);
 }
 
-async function getWithdrawSig(signer, amountIn, minAmountOut, withPenalty, unwindStrategy, nonce) {
+async function getWithdrawSig(signer, amountIn, minAmountOut, nonce) {
   const DEPOSIT_BY_SIG_TYPEHASH = ethers.utils.keccak256(
     ethers.utils.toUtf8Bytes(
-      'WithdrawBySig(uint256 _amountIn,uint256 _minAmountOut,bool _withPenalty,address _unwindStrategy, uint256 _nonce)',
+      'WithdrawBySig(uint256 _amountIn,uint256 _minAmountOut, uint256 _nonce)',
     ),
   );
 
   let payload = ethers.utils.defaultAbiCoder.encode(
-    ['bytes32', 'uint256', 'uint256', 'bool', 'address', 'uint256'],
-    [DEPOSIT_BY_SIG_TYPEHASH, amountIn, minAmountOut, withPenalty, unwindStrategy, nonce],
+    ['bytes32', 'uint256', 'uint256', 'uint256'],
+    [DEPOSIT_BY_SIG_TYPEHASH, amountIn, minAmountOut, nonce],
   );
 
   let payloadHash = ethers.utils.keccak256(payload);
