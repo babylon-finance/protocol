@@ -551,7 +551,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
 
         _require(amountOut >= _minAmountOut, Errors.RECEIVE_MIN_AMOUNT);
 
-        _require(canWithdrawReserveAmount(_to, amountOut), Errors.MIN_LIQUIDITY);
+        _require(liquidReserve() >= amountOut, Errors.MIN_LIQUIDITY);
 
         _burn(_to, _amountIn);
         _safeSendReserveAsset(_to, amountOut);
@@ -851,42 +851,10 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
      */
     function liquidReserve() private view returns (uint256) {
         uint256 reserve =
-            IERC20(reserveAsset).balanceOf(address(this)).sub(reserveAssetPrincipalWindow).sub(
+            IERC20(reserveAsset).balanceOf(address(this)).sub(
                 reserveAssetRewardsSetAside
             );
         return reserve > keeperDebt ? reserve.sub(keeperDebt) : 0;
-    }
-
-    /**
-     * Check if the fund has reserve amount available for withdrawals.
-     * If it returns false, reserve pool would be available.
-     * @param _contributor                   Address of the contributors
-     * @param _amount                        Amount of ETH to withdraw
-     */
-    function canWithdrawReserveAmount(address _contributor, uint256 _amount) private view returns (bool) {
-        // Reserve rewards cannot be withdrawn. Only claimed
-        uint256 liquidReserve = IERC20(reserveAsset).balanceOf(address(this)).sub(reserveAssetRewardsSetAside);
-
-        // Withdrawal open
-        if (block.timestamp <= withdrawalsOpenUntil) {
-            // There is a window but there is more than needed
-            if (liquidReserve.sub(reserveAssetPrincipalWindow) > _amount) {
-                return true;
-            }
-            // Pro rata withdrawals
-            uint256 contributorPower =
-                rewardsDistributor.getContributorPower(
-                    address(this),
-                    _contributor,
-                    contributors[_contributor].initialDepositAt,
-                    block.timestamp
-                );
-            return
-                reserveAssetPrincipalWindow.preciseMul(contributorPower).add(
-                    liquidReserve.sub(reserveAssetPrincipalWindow)
-                ) >= _amount;
-        }
-        return liquidReserve.sub(reserveAssetPrincipalWindow) >= _amount;
     }
 
     /**
