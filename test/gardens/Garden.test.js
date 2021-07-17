@@ -49,7 +49,7 @@ async function depositBatch(owner, garden, walletAddresses) {
   }
 }
 
-describe.only('Garden', function () {
+describe('Garden', function () {
   let babController;
   let rewardsDistributor;
   let owner;
@@ -570,7 +570,7 @@ describe.only('Garden', function () {
   });
 
   describe('withdrawBySig', async function () {
-    it.only('can witdraw', async function () {
+    it('can witdraw', async function () {
       let amountIn = from(1000 * 1e6);
       let minAmountOut = eth(1000);
 
@@ -590,9 +590,7 @@ describe.only('Garden', function () {
       amountIn = eth(1000);
       minAmountOut = from(1000 * 1e6);
       const sig = await getWithdrawSig(signer3, amountIn, minAmountOut, 1);
-      await garden
-        .connect(keeper)
-        .withdrawBySig(amountIn, minAmountOut, 1, eth(), sig.v, sig.r, sig.s);
+      await garden.connect(keeper).withdrawBySig(amountIn, minAmountOut, 1, eth(), sig.v, sig.r, sig.s);
     });
 
     it('rejects wrong nonce', async function () {
@@ -614,12 +612,10 @@ describe.only('Garden', function () {
 
       amountIn = eth(1000);
       minAmountOut = from(1000 * 1e6);
-      const sig = await getWithdrawSig(signer3, amountIn, minAmountOut, false, ADDRESS_ZERO, 8);
+      const sig = await getWithdrawSig(signer3, amountIn, minAmountOut, 8);
 
       await expect(
-        garden
-          .connect(keeper)
-          .withdrawBySig(amountIn, minAmountOut, false, ADDRESS_ZERO, 8, eth(), sig.v, sig.r, sig.s),
+        garden.connect(keeper).withdrawBySig(amountIn, minAmountOut, 8, eth(), sig.v, sig.r, sig.s),
       ).to.be.revertedWith('revert BAB#089');
     });
     // TODO: Test minAmountOut is respected

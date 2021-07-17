@@ -332,15 +332,13 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
 
     /**
      * @notice
-     *   Deposits the reserve asset into the garden.
+     *   Deposits the _amountIn in reserve asset into the garden. Gurantee to
+     *   recieve at least _minAmountOut.
      * @dev
-     *   WARN: If the reserve Asset is different than WETH the sender needs to
+     *   WARN: If the reserve asset is different than ETH the sender needs to
      *   have approved the garden.
-     *
-     *   This method does NOT issue Garden shares to contributor. Instead shares
-     *   are issued by Keeper processing the deposit later.  _minAmountOut are
-     *   respected by Keeper so user is guranteed to recieve at least
-     *   _minAmountOut.
+     *   Efficient to use of strategies.length == 0, otherwise can consume a lot
+     *   of gas ~2kk. Use `depositBySig` for gas efficiency.
      * @param _amountIn               Amount of the reserve asset that is received from contributor
      * @param _minAmountOut           Min amount of Garden shares to receive by contributor
      * @param _to                     Address to mint Garden shares to
@@ -358,17 +356,15 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         if (strategies.length == 0) {
             pricePerShare = totalSupply() == 0
                 ? PreciseUnitMath.preciseUnit()
-                : (liquidReserve().sub(_amountIn))
+                : liquidReserve()
                     .preciseDiv(uint256(10)**ERC20Upgradeable(reserveAsset).decimals())
                     .preciseDiv(totalSupply());
         } else {
-            uint256 normalizedAmountIn = _amountIn.preciseDiv(uint256(10)**ERC20Upgradeable(reserveAsset).decimals());
             // Get valuation of the Garden with the quote asset as the reserve asset.
             pricePerShare = IGardenValuer(IBabController(controller).gardenValuer()).calculateGardenValuation(
                 address(this),
                 reserveAsset
             );
-            pricePerShare = pricePerShare.sub(normalizedAmountIn.preciseDiv(totalSupply()));
         }
 
         _internalDeposit(_amountIn, _minAmountOut, _to, msg.sender, _mintNft, pricePerShare);
@@ -557,8 +553,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         _safeSendReserveAsset(_to, amountOut);
         _updateContributorWithdrawalInfo(amountOut);
 
-        // required withdrawable quantity is greater than existing collateral
-        _require(_minAmountOut >= amountOut, Errors.BALANCE_TOO_LOW);
+        _require(amountOut >= _minAmountOut, Errors.BALANCE_TOO_LOW);
         principal = principal.sub(amountOut);
 
         emit GardenWithdrawal(_to, _to, amountOut, _amountIn, block.timestamp);
@@ -652,8 +647,10 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         keeperDebt = keeperDebt.add(_fee);
         // Pay Keeper in Reserve Asset
         if (keeperDebt > 0 && liquidReserve() >= 0) {
-            IERC20(reserveAsset).safeTransfer(_keeper, keeperDebt);
-            keeperDebt = 0;
+            uint256 toPay = liquidReserve() > keeperDebt ? keeperDebt :
+              liquidReserve();
+            IERC20(reserveAsset).safeTransfer(_keeper, toPay);
+            keeperDebt = keeperDebt.sub(toPay);
         }
     }
 
