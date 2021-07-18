@@ -21,6 +21,7 @@ pragma abicoder v2;
 import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import {ERC20} from '@openzeppelin/contracts/token/ERC20/ERC20.sol';
 import {IERC721} from '@openzeppelin/contracts/token/ERC721/IERC721.sol';
+import {ERC721} from '@openzeppelin/contracts/token/ERC721/ERC721.sol';
 import {SafeMath} from '@openzeppelin/contracts/math/SafeMath.sol';
 
 import {PreciseUnitMath} from './lib/PreciseUnitMath.sol';
@@ -207,9 +208,12 @@ contract BabylonViewer {
     {
         IIshtarGate gate = IIshtarGate(controller.ishtarGate());
         return (
-            gate.canJoinAGarden(_garden, _user),
-            gate.canVoteInAGarden(_garden, _user),
-            gate.canAddStrategiesInAGarden(_garden, _user)
+            gate.canJoinAGarden(_garden, _user) ||
+                (IERC721(address(gate)).balanceOf(_user) > 0 && !IGarden(_garden).privateGarden()),
+            gate.canVoteInAGarden(_garden, _user) ||
+                (IERC721(address(gate)).balanceOf(_user) > 0 && IGarden(_garden).publicStewards()),
+            gate.canAddStrategiesInAGarden(_garden, _user) ||
+                (IERC721(address(gate)).balanceOf(msg.sender) > 0 && IGarden(_garden).publicStrategists())
         );
     }
 
@@ -221,7 +225,11 @@ contract BabylonViewer {
         IIshtarGate gate = IIshtarGate(controller.ishtarGate());
         for (uint256 i = _offset; i < gardens.length; i++) {
             IGarden garden = IGarden(gardens[i]);
-            if (garden.active() && (!garden.privateGarden() || gate.canJoinAGarden(gardens[i], _user))) {
+            if (
+                garden.active() &&
+                ((IERC721(address(gate)).balanceOf(_user) > 0 && !garden.privateGarden()) ||
+                    gate.canJoinAGarden(gardens[i], _user))
+            ) {
                 userGardens[resultIndex] = gardens[i];
                 hasUserDeposited[resultIndex] = IERC20(gardens[i]).balanceOf(_user) > 0;
                 resultIndex = resultIndex + 1;

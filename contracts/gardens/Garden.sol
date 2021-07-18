@@ -18,6 +18,7 @@
 pragma solidity 0.7.6;
 import {Address} from '@openzeppelin/contracts/utils/Address.sol';
 import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
+import {IERC721} from '@openzeppelin/contracts/token/ERC721/IERC721.sol';
 import {SafeERC20} from '@openzeppelin/contracts/token/ERC20/SafeERC20.sol';
 import {ERC20Upgradeable} from '@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol';
 import {ReentrancyGuard} from '@openzeppelin/contracts/utils/ReentrancyGuard.sol';
@@ -346,7 +347,8 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
     ) external payable override nonReentrant {
         _onlyActive();
         _require(
-            IIshtarGate(IBabController(controller).ishtarGate()).canJoinAGarden(address(this), msg.sender) ||
+            (IERC721(address(IBabController(controller).ishtarGate())).balanceOf(msg.sender) > 0 && !privateGarden) ||
+                IIshtarGate(IBabController(controller).ishtarGate()).canJoinAGarden(address(this), msg.sender) ||
                 creator == _to,
             Errors.USER_CANNOT_JOIN
         );
@@ -576,7 +578,12 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         _onlyContributor();
 
         _require(
-            IIshtarGate(IBabController(controller).ishtarGate()).canAddStrategiesInAGarden(address(this), msg.sender),
+            (IERC721(address(IBabController(controller).ishtarGate())).balanceOf(msg.sender) > 0 &&
+                publicStrategists) ||
+                IIshtarGate(IBabController(controller).ishtarGate()).canAddStrategiesInAGarden(
+                    address(this),
+                    msg.sender
+                ),
             Errors.USER_CANNOT_ADD_STRATEGIES
         );
         _require(strategies.length < MAX_TOTAL_STRATEGIES, Errors.VALUE_TOO_HIGH);
