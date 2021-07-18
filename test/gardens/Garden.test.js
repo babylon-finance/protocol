@@ -1193,7 +1193,7 @@ describe('Garden', function () {
     });
 
     describe('after reaching max limit of users', async function () {
-      it.only('can deposit', async function () {
+      it('can deposit', async function () {
         // Downside the limit of new gardens to 10 to speed up the test
         await babController.connect(owner).setMaxContributorsPerGarden(10);
         await babController
