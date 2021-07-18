@@ -2,7 +2,16 @@ const { expect } = require('chai');
 const { ethers } = require('hardhat');
 
 const addresses = require('../../lib/addresses');
-const { ONE_DAY_IN_SECONDS, ONE_ETH, NOW, PROTOCOL_FEE, PROFIT_PROTOCOL_FEE } = require('../../lib/constants.js');
+const {
+  ONE_DAY_IN_SECONDS,
+  ONE_ETH,
+  NOW,
+  PROTOCOL_FEE,
+  PROFIT_PROTOCOL_FEE,
+  PROFIT_STRATEGIST_SHARE,
+  PROFIT_STEWARD_SHARE,
+  PROFIT_LP_SHARE,
+} = require('../../lib/constants.js');
 const { increaseTime } = require('../utils/test-helpers');
 const { from, eth, parse } = require('../../lib/helpers');
 const { GARDEN_PARAMS_STABLE, GARDEN_PARAMS, ADDRESS_ZERO, DAI_STRATEGY_PARAMS } = require('../../lib/constants');
@@ -179,6 +188,7 @@ describe('Garden', function () {
             GARDEN_PARAMS,
             ethers.utils.parseEther('0.1'),
             [false, false, false],
+            [0, 0, 0],
             {
               value: ethers.utils.parseEther('0.1'),
             },
@@ -197,6 +207,7 @@ describe('Garden', function () {
             GARDEN_PARAMS,
             ethers.utils.parseEther('0.1'),
             [false, false, false],
+            [0, 0, 0],
             {
               value: ethers.utils.parseEther('0.1'),
             },
@@ -214,6 +225,202 @@ describe('Garden', function () {
   describe('state', async function () {
     it('only the protocol should be able to update active state', async function () {
       await expect(garden1.connect(signer1).setActive(true)).to.be.revertedWith(/revert BAB#016/i);
+    });
+  });
+  describe('profit sharing', async function () {
+    it('garden is initialized with default profit sharing if not set during initialization', async function () {
+      // TODO CHECK all require at modifier
+      const profitSharing = await rewardsDistributor.getGardenProfitsSharing(garden1.address);
+      expect(profitSharing[0]).to.equal(PROFIT_STRATEGIST_SHARE);
+      expect(profitSharing[1]).to.equal(PROFIT_STEWARD_SHARE);
+      expect(profitSharing[2]).to.equal(PROFIT_LP_SHARE);
+    });
+    it('should fail if trying to set garden profit sharing params by non-contract account', async function () {
+      // TODO CHECK all require at modifier
+      await expect(
+        rewardsDistributor.setProfitRewards(
+          garden1.address,
+          PROFIT_STRATEGIST_SHARE.toString(),
+          PROFIT_STEWARD_SHARE.toString(),
+          PROFIT_LP_SHARE.toString(),
+        ),
+      ).to.be.revertedWith(/Transaction reverted: function call to a non-contract account/i);
+    });
+    it('only the protocol should be able to custom garden profit sharing (95% to LP) while creation', async function () {
+      await babController
+        .connect(signer1)
+        .createGarden(
+          addresses.tokens.WETH,
+          'New Garden',
+          'NEWG',
+          'http...',
+          0,
+          GARDEN_PARAMS,
+          ethers.utils.parseEther('1'),
+          [false, false, false],
+          [ethers.utils.parseEther('0'), ethers.utils.parseEther('0'), ethers.utils.parseEther('0.95')],
+          {
+            value: ethers.utils.parseEther('1'),
+          },
+        );
+      const gardens = await babController.getGardens();
+      const newGarden = await ethers.getContractAt('Garden', gardens[4]);
+      const profitSharing = await rewardsDistributor.getGardenProfitsSharing(newGarden.address);
+      expect(profitSharing[0]).to.equal(ethers.utils.parseEther('0'));
+      expect(profitSharing[1]).to.equal(ethers.utils.parseEther('0'));
+      expect(profitSharing[2]).to.equal(ethers.utils.parseEther('0.95'));
+    });
+    it('only the protocol should be able to custom garden profit sharing (95% to Stewards) while creation', async function () {
+      await babController
+        .connect(signer1)
+        .createGarden(
+          addresses.tokens.WETH,
+          'New Garden',
+          'NEWG',
+          'http...',
+          0,
+          GARDEN_PARAMS,
+          ethers.utils.parseEther('1'),
+          [false, false, false],
+          [ethers.utils.parseEther('0'), ethers.utils.parseEther('0.95'), ethers.utils.parseEther('0')],
+          {
+            value: ethers.utils.parseEther('1'),
+          },
+        );
+      const gardens = await babController.getGardens();
+      const newGarden = await ethers.getContractAt('Garden', gardens[4]);
+      const profitSharing = await rewardsDistributor.getGardenProfitsSharing(newGarden.address);
+      expect(profitSharing[0]).to.equal(ethers.utils.parseEther('0'));
+      expect(profitSharing[1]).to.equal(ethers.utils.parseEther('0.95'));
+      expect(profitSharing[2]).to.equal(ethers.utils.parseEther('0'));
+    });
+    it('only the protocol should be able to custom garden profit sharing (95% to Strategist) while creation', async function () {
+      await babController
+        .connect(signer1)
+        .createGarden(
+          addresses.tokens.WETH,
+          'New Garden',
+          'NEWG',
+          'http...',
+          0,
+          GARDEN_PARAMS,
+          ethers.utils.parseEther('1'),
+          [false, false, false],
+          [ethers.utils.parseEther('0.95'), ethers.utils.parseEther('0'), ethers.utils.parseEther('0')],
+          {
+            value: ethers.utils.parseEther('1'),
+          },
+        );
+      const gardens = await babController.getGardens();
+      const newGarden = await ethers.getContractAt('Garden', gardens[4]);
+      const profitSharing = await rewardsDistributor.getGardenProfitsSharing(newGarden.address);
+      expect(profitSharing[0]).to.equal(ethers.utils.parseEther('0.95'));
+      expect(profitSharing[1]).to.equal(ethers.utils.parseEther('0'));
+      expect(profitSharing[2]).to.equal(ethers.utils.parseEther('0'));
+    });
+    it('only the protocol should be able to custom garden profit sharing (15% , 40%, 40%) while creation', async function () {
+      await babController
+        .connect(signer1)
+        .createGarden(
+          addresses.tokens.WETH,
+          'New Garden',
+          'NEWG',
+          'http...',
+          0,
+          GARDEN_PARAMS,
+          ethers.utils.parseEther('1'),
+          [false, false, false],
+          [ethers.utils.parseEther('0.15'), ethers.utils.parseEther('0.40'), ethers.utils.parseEther('0.40')],
+          {
+            value: ethers.utils.parseEther('1'),
+          },
+        );
+      const gardens = await babController.getGardens();
+      const newGarden = await ethers.getContractAt('Garden', gardens[4]);
+      const profitSharing = await rewardsDistributor.getGardenProfitsSharing(newGarden.address);
+      expect(profitSharing[0]).to.equal(ethers.utils.parseEther('0.15'));
+      expect(profitSharing[1]).to.equal(ethers.utils.parseEther('0.40'));
+      expect(profitSharing[2]).to.equal(ethers.utils.parseEther('0.40'));
+    });
+    it('should fail if the protocol try a custom profit sharing which sum is below 95% while creation', async function () {
+      await expect(
+        babController
+          .connect(signer1)
+          .createGarden(
+            addresses.tokens.WETH,
+            'New Garden',
+            'NEWG',
+            'http...',
+            0,
+            GARDEN_PARAMS,
+            ethers.utils.parseEther('1'),
+            [false, false, false],
+            [ethers.utils.parseEther('0.14'), ethers.utils.parseEther('0.40'), ethers.utils.parseEther('0.40')],
+            {
+              value: ethers.utils.parseEther('1'),
+            },
+          ),
+      ).to.be.revertedWith('revert BAB#090');
+    });
+    it('should fail if the protocol try a custom profit sharing which sum is above 95% while creation', async function () {
+      await expect(
+        babController
+          .connect(signer1)
+          .createGarden(
+            addresses.tokens.WETH,
+            'New Garden',
+            'NEWG',
+            'http...',
+            0,
+            GARDEN_PARAMS,
+            ethers.utils.parseEther('1'),
+            [false, false, false],
+            [ethers.utils.parseEther('0.14'), ethers.utils.parseEther('0.45'), ethers.utils.parseEther('0.40')],
+            {
+              value: ethers.utils.parseEther('1'),
+            },
+          ),
+      ).to.be.revertedWith('revert BAB#090');
+    });
+    it('should fail if the protocol try a custom profit sharing which sum is below 95% while creation (by decimal difference)', async function () {
+      await expect(
+        babController
+          .connect(signer1)
+          .createGarden(
+            addresses.tokens.WETH,
+            'New Garden',
+            'NEWG',
+            'http...',
+            0,
+            GARDEN_PARAMS,
+            ethers.utils.parseEther('1'),
+            [false, false, false],
+            [ethers.utils.parseEther('0.1499999999'), ethers.utils.parseEther('0.40'), ethers.utils.parseEther('0.40')],
+            {
+              value: ethers.utils.parseEther('1'),
+            },
+          ),
+      ).to.be.revertedWith('revert BAB#090');
+    });
+    it('should fail if the protocol try a custom profit sharing which sum is above 95% while creation (by decimal difference)', async function () {
+      await expect(
+        babController
+          .connect(signer1)
+          .createGarden(
+            addresses.tokens.WETH,
+            'New Garden',
+            'NEWG',
+            'http...',
+            0,
+            GARDEN_PARAMS,
+            ethers.utils.parseEther('1'),
+            [false, false, false],
+            [ethers.utils.parseEther('0.15'), ethers.utils.parseEther('0.40000001'), ethers.utils.parseEther('0.40')],
+            {
+              value: ethers.utils.parseEther('1'),
+            },
+          ),
+      ).to.be.revertedWith('revert BAB#090');
     });
   });
 
@@ -945,6 +1152,7 @@ describe('Garden', function () {
           GARDEN_PARAMS_STABLE,
           ethers.utils.parseEther('100'),
           [false, false, false],
+          [0, 0, 0],
           {},
         );
       const gardens = await babController.getGardens();
@@ -998,6 +1206,7 @@ describe('Garden', function () {
           params,
           thousandUSDC.div(10),
           [false, false, false],
+          [0, 0, 0],
           {},
         );
       const gardens = await babController.getGardens();
@@ -1093,6 +1302,7 @@ describe('Garden', function () {
             gardenParams,
             ethers.utils.parseEther('1'),
             [false, false, false],
+            [0, 0, 0],
             {
               value: ethers.utils.parseEther('1'),
             },
