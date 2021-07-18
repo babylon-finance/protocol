@@ -71,17 +71,19 @@ contract BabylonViewer {
             bool[4] memory,
             address[] memory,
             address[] memory,
-            uint256[11] memory,
-            uint256[10] memory
+            uint256[10] memory,
+            uint256[9] memory,
+            uint256[3] memory
         )
     {
         IGarden garden = IGarden(_garden);
-        IGardenValuer valuer = IGardenValuer(controller.gardenValuer());
-        uint256 totalSupply = IERC20(_garden).totalSupply();
-        uint256 valuationPerToken =
-            totalSupply > 0 ? valuer.calculateGardenValuation(_garden, garden.reserveAsset()) : 0;
-        uint256 seed = _getGardenSeed(_garden);
-
+        uint256[] memory totalSupplyValuationAndSeed = new uint256[](3);
+        totalSupplyValuationAndSeed[0] = IERC20(_garden).totalSupply();
+        totalSupplyValuationAndSeed[1] = totalSupplyValuationAndSeed[0] > 0
+            ? IGardenValuer(controller.gardenValuer()).calculateGardenValuation(_garden, garden.reserveAsset())
+            : 0;
+        totalSupplyValuationAndSeed[2] = _getGardenSeed(_garden);
+        uint256[3] memory profits = _getGardenProfitSharing(_garden);
         return (
             ERC20(_garden).name(),
             ERC20(_garden).symbol(),
@@ -92,7 +94,6 @@ contract BabylonViewer {
             garden.getFinalizedStrategies(),
             [
                 garden.depositHardlock(),
-                garden.withdrawalsOpenUntil(),
                 garden.minVotesQuorum(),
                 garden.maxContributors(),
                 garden.maxDepositLimit(),
@@ -106,15 +107,17 @@ contract BabylonViewer {
             [
                 garden.principal(),
                 garden.reserveAssetRewardsSetAside(),
-                garden.reserveAssetPrincipalWindow(),
                 uint256(garden.absoluteReturns()),
                 garden.gardenInitializedAt(),
                 garden.totalContributors(),
                 garden.totalStake(),
-                valuationPerToken > 0 ? totalSupply.preciseMul(valuationPerToken) : 0,
-                totalSupply,
-                seed
-            ]
+                totalSupplyValuationAndSeed[1] > 0
+                    ? totalSupplyValuationAndSeed[0].preciseMul(totalSupplyValuationAndSeed[1])
+                    : 0,
+                totalSupplyValuationAndSeed[0],
+                totalSupplyValuationAndSeed[2]
+            ],
+            profits
         );
     }
 
@@ -261,7 +264,8 @@ contract BabylonViewer {
             contribution[5],
             ,
             ,
-            contribution[8]
+            contribution[8],
+
         ) = garden.getContributor(_user);
         contribution[6] = IERC20(_garden).balanceOf(_user);
         contribution[7] = garden.getLockedBalance(_user);
@@ -278,5 +282,9 @@ contract BabylonViewer {
 
     function _getGardenSeed(address _garden) private view returns (uint256) {
         return IGardenNFT(controller.gardenNFT()).gardenSeeds(_garden);
+    }
+
+    function _getGardenProfitSharing(address _garden) private view returns (uint256[3] memory) {
+        return IRewardsDistributor(controller.rewardsDistributor()).getGardenProfitsSharing(_garden);
     }
 }

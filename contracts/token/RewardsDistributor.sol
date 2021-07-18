@@ -125,12 +125,12 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
     /* ============ Constants ============ */
     // 500K BABL allocated to this BABL Mining Program, the first quarter is Q1_REWARDS
     // and the following quarters will follow the supply curve using a decay rate
-    uint256 public constant override Q1_REWARDS = 53_571_428_571_428_600e6; // First quarter (epoch) BABL rewards
+    uint256 private constant Q1_REWARDS = 53_571_428_571_428_600e6; // First quarter (epoch) BABL rewards
     // 12% quarterly decay rate (each 90 days)
     // (Rewards on Q1 = 1,12 * Rewards on Q2) being Q1= Quarter 1, Q2 = Quarter 2
-    uint256 public constant override DECAY_RATE = 12e16;
+    uint256 private constant DECAY_RATE = 12e16;
     // Duration of its EPOCH in days  // BABL & profits split from the protocol
-    uint256 public constant override EPOCH_DURATION = 90 days;
+    uint256 private constant EPOCH_DURATION = 90 days;
 
     // solhint-disable-next-line
     uint256 public override START_TIME; // Starting time of the rewards distribution
@@ -217,23 +217,23 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
     TimeLockedToken public babltoken;
 
     // Protocol total allocation points. Must be the sum of all allocation points (strategyPrincipal) in all strategy pools.
-    uint256 public override protocolPrincipal;
-    mapping(uint256 => ProtocolPerTimestamp) public protocolPerTimestamp; // Mapping of all protocol checkpoints
-    uint256[] public timeList; // Array of all protocol checkpoints
-    uint256 public override pid; // Initialization of the ID assigning timeListPointer to the checkpoint number
+    uint256 private protocolPrincipal;
+    mapping(uint256 => ProtocolPerTimestamp) private protocolPerTimestamp; // Mapping of all protocol checkpoints
+    uint256[] private timeList; // Array of all protocol checkpoints
+    uint256 private pid; // Initialization of the ID assigning timeListPointer to the checkpoint number
 
-    mapping(uint256 => ProtocolPerQuarter) public protocolPerQuarter; // Mapping of the accumulated protocol per each active quarter
-    mapping(uint256 => bool) public isProtocolPerQuarter; // Check if the protocol per quarter data has been initialized
+    mapping(uint256 => ProtocolPerQuarter) private protocolPerQuarter; // Mapping of the accumulated protocol per each active quarter
+    mapping(uint256 => bool) private isProtocolPerQuarter; // Check if the protocol per quarter data has been initialized
 
     // Strategy overhead control. Only used if each strategy has power overhead due to changes overtime
-    mapping(address => mapping(uint256 => uint256)) public rewardsPowerOverhead; // Overhead control to enable high level accuracy calculations for strategy rewards
+    mapping(address => mapping(uint256 => uint256)) private rewardsPowerOverhead; // DEPRECATED Overhead control to enable high level accuracy calculations for strategy rewards
     // Contributor power control
     mapping(address => mapping(address => ContributorPerGarden)) public contributorPerGarden; // Enable high level accuracy calculations
     mapping(address => mapping(address => Checkpoints)) private checkpoints;
     // Garden power control
     mapping(address => mapping(uint256 => GardenPowerByTimestamp)) public gardenPowerByTimestamp;
-    mapping(address => uint256[]) public gardenTimelist;
-    mapping(address => uint256) public gardenPid;
+    mapping(address => uint256[]) private gardenTimelist;
+    mapping(address => uint256) private gardenPid;
 
     struct StrategyPerQuarter {
         // Acumulated strategy power per each quarter along the time
@@ -252,6 +252,11 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
 
     // Reentrancy guard countermeasure
     uint256 private status;
+
+    // Customized profit sharing (if any)
+    // [0]: _strategistProfit , [1]: _stewardsProfit, [2]: _lpProfit
+    mapping(address => uint256[3]) private gardenProfitSharing;
+    mapping(address => bool) private gardenCustomProfitSharing;
 
     /* ============ Constructor ============ */
 
@@ -455,6 +460,22 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
     }
 
     /**
+     * Set customized profit shares for a specific garden by the gardener
+     * @param _strategistShare      New % of strategistShare
+     * @param _stewardsShare        New % of stewardsShare
+     * @param _lpShare              New % of lpShare
+     */
+    function setProfitRewards(
+        address _garden,
+        uint256 _strategistShare,
+        uint256 _stewardsShare,
+        uint256 _lpShare
+    ) external override onlyController {
+        _require(IBabController(controller).isGarden(_garden), Errors.ONLY_ACTIVE_GARDEN);
+        _setProfitRewards(_garden, _strategistShare, _stewardsShare, _lpShare);
+    }
+
+    /**
      * Check the protocol state in a certain timestamp
      * @param time      Timestamp
      */
@@ -504,6 +525,19 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
             protocolCheckpoint.quarterPower,
             protocolCheckpoint.supplyPerQuarter
         );
+    }
+
+    /**
+     * Check the garden profit sharing % if different from default
+     * @param _garden     Address of the garden
+     */
+    function getGardenProfitsSharing(address _garden) external view override returns (uint256[3] memory) {
+        if (gardenCustomProfitSharing[_garden]) {
+            // It has customized values
+            return gardenProfitSharing[_garden];
+        } else {
+            return [PROFIT_STRATEGIST_SHARE, PROFIT_STEWARD_SHARE, PROFIT_LP_SHARE];
+        }
     }
 
     /* ============ Internal Functions ============ */
@@ -626,7 +660,7 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         (bool profit, uint256 profitValue, bool distance, uint256 distanceValue) =
             _getStrategyRewardsContext(address(strategy));
 
-        (, uint256 initialDepositAt, uint256 claimedAt, , , , , , ) = IGarden(_garden).getContributor(_contributor);
+        (, uint256 initialDepositAt, uint256 claimedAt, , , , , , , ) = IGarden(_garden).getContributor(_contributor);
         // Positive strategies not yet claimed
         if (ts[1] > claimedAt && ts[0] >= initialDepositAt && address(strategy.garden()) == _garden) {
             // If strategy returned money we give out the profits
@@ -636,7 +670,7 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
             }
             // Get strategist rewards in case the contributor is also the strategist of the strategy
             rewards[0] = _getStrategyStrategistBabl(
-                address(strategy),
+                _strategy,
                 _contributor,
                 profit,
                 profitValue,
@@ -644,21 +678,15 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
                 distanceValue
             );
             contributorBABL = contributorBABL.add(rewards[0]);
-            rewards[1] = _getStrategyStrategistProfits(address(strategy), _contributor, profit, profitValue);
+            rewards[1] = _getStrategyStrategistProfits(_garden, _strategy, _contributor, profit, profitValue);
             contributorProfits = contributorProfits.add(rewards[1]);
 
             // Get steward rewards
-            rewards[2] = _getStrategyStewardBabl(
-                address(strategy),
-                _contributor,
-                profit,
-                profitValue,
-                distance,
-                distanceValue
-            );
+            rewards[2] = _getStrategyStewardBabl(_strategy, _contributor, profit, profitValue, distance, distanceValue);
             contributorBABL = contributorBABL.add(rewards[2]);
             rewards[3] = _getStrategyStewardProfits(
-                address(strategy),
+                _garden,
+                _strategy,
                 _contributor,
                 profit,
                 profitValue,
@@ -794,6 +822,7 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
      * @param _distance         If true the results were above expected returns, false means opposite
      */
     function _getStrategyStewardProfits(
+        address _garden,
         address _strategy,
         address _contributor,
         bool _profit,
@@ -803,25 +832,25 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
     ) private view returns (uint256) {
         IStrategy strategy = IStrategy(_strategy);
         // Get proportional voter (stewards) rewards in case the contributor was also a steward of the strategy
-        uint256 profits;
         int256 userVotes = strategy.getUserVotes(_contributor);
+        uint256 profitShare =
+            gardenCustomProfitSharing[_garden] ? gardenProfitSharing[_garden][1] : PROFIT_STEWARD_SHARE;
         if (_profit == true) {
             if (userVotes > 0) {
-                profits = _profitValue.multiplyDecimal(PROFIT_STEWARD_SHARE).preciseMul(uint256(userVotes)).preciseDiv(
-                    strategy.totalPositiveVotes()
-                );
+                return
+                    _profitValue.multiplyDecimal(profitShare).preciseMul(uint256(userVotes)).preciseDiv(
+                        strategy.totalPositiveVotes()
+                    );
             } else if ((userVotes < 0) && _distance == false) {
-                profits = _profitValue
-                    .multiplyDecimal(PROFIT_STEWARD_SHARE)
-                    .preciseMul(uint256(Math.abs(userVotes)))
-                    .preciseDiv(strategy.totalNegativeVotes());
+                return
+                    _profitValue.multiplyDecimal(profitShare).preciseMul(uint256(Math.abs(userVotes))).preciseDiv(
+                        strategy.totalNegativeVotes()
+                    );
             } else if ((userVotes < 0) && _distance == true) {
                 // Voted against a very profit strategy above expected returns, get no profit at all
-                profits = 0;
+                return 0;
             }
-        } else profits = 0; // No profits at all
-
-        return profits;
+        } else return 0; // No profits at all
     }
 
     /**
@@ -876,6 +905,7 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
      * @param _profitValue      The value of profits
      */
     function _getStrategyStrategistProfits(
+        address _garden,
         address _strategy,
         address _contributor,
         bool _profit,
@@ -883,15 +913,14 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
     ) private view returns (uint256) {
         IStrategy strategy = IStrategy(_strategy);
         // Get proportional voter (stewards) rewards in case the contributor was also a steward of the strategy
-        uint256 profits;
         if (_profit == true) {
             if (strategy.strategist() == _contributor) {
                 // If the contributor was the strategist of the strategy
-                profits = _profitValue.multiplyDecimal(PROFIT_STRATEGIST_SHARE);
+                uint256 profitShare =
+                    gardenCustomProfitSharing[_garden] ? gardenProfitSharing[_garden][0] : PROFIT_STRATEGIST_SHARE;
+                return _profitValue.multiplyDecimal(profitShare);
             }
-        } else profits = 0; // No profits at all
-
-        return profits;
+        } else return 0; // No profits at all
     }
 
     /**
@@ -1419,6 +1448,34 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
             quarters = quarters.add(1);
         }
         return (quarters.add(1), startingQuarter.add(1));
+    }
+
+    /**
+     * Set a customized profit rewards
+     * @param _garden           Address of the garden
+     * @param _strategistShare  New sharing profit % for strategist
+     * @param _stewardsShare    New sharing profit % for stewards
+     * @param _lpShare          New sharing profit % for lp
+     */
+    function _setProfitRewards(
+        address _garden,
+        uint256 _strategistShare,
+        uint256 _stewardsShare,
+        uint256 _lpShare
+    ) internal {
+        _require(_strategistShare.add(_stewardsShare).add(_lpShare) == 95e16, Errors.PROFIT_SHARING_MISMATCH);
+        // [0]: _strategistProfit , [1]: _stewardsProfit, [2]: _lpProfit
+        if (
+            _strategistShare != PROFIT_STRATEGIST_SHARE ||
+            _stewardsShare != PROFIT_STEWARD_SHARE ||
+            _lpShare != PROFIT_LP_SHARE
+        ) {
+            // Different from standard %
+            gardenCustomProfitSharing[_garden] = true;
+            gardenProfitSharing[_garden][0] = _strategistShare;
+            gardenProfitSharing[_garden][1] = _stewardsShare;
+            gardenProfitSharing[_garden][2] = _lpShare;
+        }
     }
 }
 
