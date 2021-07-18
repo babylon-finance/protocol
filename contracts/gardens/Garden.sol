@@ -225,14 +225,13 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
             _creator != address(0) && _controller != address(0) && ERC20Upgradeable(_reserveAsset).decimals() > 0,
             Errors.ADDRESS_IS_ZERO
         );
-        _require(_gardenParams.length == 9, Errors.GARDEN_PARAMS_LENGTH);
+        _require(_gardenParams.length == 10, Errors.GARDEN_PARAMS_LENGTH);
         _require(IBabController(_controller).isValidReserveAsset(_reserveAsset), Errors.MUST_BE_RESERVE_ASSET);
         __ERC20_init(_name, _symbol);
 
         controller = _controller;
         reserveAsset = _reserveAsset;
         creator = _creator;
-        maxContributors = IBabController(_controller).maxContributorsPerGarden();
         rewardsDistributor = IRewardsDistributor(IBabController(controller).rewardsDistributor());
         _require(address(rewardsDistributor) != address(0), Errors.ADDRESS_IS_ZERO);
         privateGarden = (IBabController(controller).allowPublicGardens() && _publicGardenStrategistsStewards[0])
@@ -250,7 +249,8 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
             _gardenParams[5],
             _gardenParams[6],
             _gardenParams[7],
-            _gardenParams[8]
+            _gardenParams[8],
+            _gardenParams[9]
         );
         active = true;
     }
@@ -271,6 +271,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
      * @param _minStrategyDuration                  Min duration of an strategy
      * @param _maxStrategyDuration                  Max duration of an strategy
      * @param _minVoters                            The minimum amount of voters needed for quorum
+     * @param _maxContributors                      The maximum amount of contributors allowed in this garden
      */
     function _start(
         uint256 _creatorDeposit,
@@ -282,7 +283,8 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         uint256 _minVotesQuorum,
         uint256 _minStrategyDuration,
         uint256 _maxStrategyDuration,
-        uint256 _minVoters
+        uint256 _minVoters,
+        uint256 _maxContributors
     ) private {
         _require(_minContribution > 0 && _creatorDeposit >= _minContribution, Errors.MIN_CONTRIBUTION);
         _require(
@@ -307,6 +309,11 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
             Errors.DURATION_RANGE
         );
         _require(_minVoters >= 1 && _minVoters < 10, Errors.MIN_VOTERS_CHECK);
+        _require(
+            _maxContributors > 0 && _maxContributors <= IBabController(controller).maxContributorsPerGarden(),
+            Errors.MAX_CONTRIBUTORS_SET
+        );
+        maxContributors = _maxContributors;
         minContribution = _minContribution;
         strategyCooldownPeriod = _strategyCooldownPeriod;
         minVotesQuorum = _minVotesQuorum;

@@ -264,4 +264,6 @@ library Errors {
     uint256 internal constant TOTAL_VOTES_HAVE_TO_BE_POSITIVE = 87;
     // Garden is not public
     uint256 internal constant GARDEN_IS_NOT_PUBLIC = 88;
+    // Setting max contributors
+    uint256 internal constant MAX_CONTRIBUTORS_SET = 89;
 }
