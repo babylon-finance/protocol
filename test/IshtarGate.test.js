@@ -125,7 +125,7 @@ describe('IshtarGate', function () {
           GARDEN_PARAMS,
           ethers.utils.parseEther('0.1'),
           [false, false, false],
-            [0, 0, 0],
+          [0, 0, 0],
           {
             value: ethers.utils.parseEther('0.1'),
           },
