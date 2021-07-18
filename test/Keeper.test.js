@@ -66,7 +66,7 @@ describe('Keeper', function () {
         it(`refuse to pay more than max fee at ${name} garden`, async function () {
           const garden = await createGarden({ reserveAsset: token });
 
-          const strategy = await getStrategy({ state: 'deposit', specificParams: [addresses.tokens.USDT, 0] });
+          const strategy = await getStrategy({ state, specificParams: [addresses.tokens.USDT, 0] });
 
           await expect(func(garden, strategy, keeper, fee.add(1), token)).to.be.revertedWith(/BAB#019/);
         });
