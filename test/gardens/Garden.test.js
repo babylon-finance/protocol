@@ -2,6 +2,7 @@ const { expect } = require('chai');
 const { ethers } = require('hardhat');
 
 const addresses = require('../../lib/addresses');
+const { fund } = require('../../lib/whale');
 const { increaseTime } = require('../utils/test-helpers');
 const { from, eth, parse } = require('../../lib/helpers');
 const {
@@ -14,7 +15,6 @@ const {
   GARDEN_PARAMS,
   ADDRESS_ZERO,
 } = require('../../lib/constants');
-const { fund } = require('../../lib/whale');
 const { impersonateAddress } = require('../../lib/rpc');
 
 const {
@@ -39,15 +39,6 @@ async function createWallets(number) {
     walletAddresses.push(newWallet);
   }
   return walletAddresses;
-}
-
-async function depositBatch(owner, garden, walletAddresses) {
-  for (let i = 0; i < walletAddresses.length; i++) {
-    // TODO Change "owner depositing on behalf of users" by direct deposits by the new generated wallets
-    await garden.connect(owner).deposit(ethers.utils.parseEther('0.1'), 1, walletAddresses[i].address, false, {
-      value: ethers.utils.parseEther('0.1'),
-    });
-  }
 }
 
 describe('Garden', function () {
@@ -119,19 +110,21 @@ describe('Garden', function () {
       ).to.be.revertedWith('revert BAB#029');
       expect(await ishtarGate.connect(signer1).canJoinAGarden(garden1.address, signer3.address)).to.equal(false);
       // Make garden public first at BabController then at garden level
+
       expect(await babController.allowPublicGardens()).to.equal(false);
       await babController.connect(owner).setAllowPublicGardens();
+
       expect(await babController.allowPublicGardens()).to.equal(true);
       await garden1.connect(signer1).makeGardenPublic();
-      await expect(
-        garden1.connect(signer3).deposit(ethers.utils.parseEther('1'), 1, signer3.getAddress(), false, {
-          value: ethers.utils.parseEther('1'),
-          gasPrice: 0,
-        }),
-      ).not.to.be.reverted;
+
+      garden1.connect(signer3).deposit(ethers.utils.parseEther('1'), 1, signer3.getAddress(), false, {
+        value: ethers.utils.parseEther('1'),
+        gasPrice: 0,
+      });
       expect(await garden1.balanceOf(signer3.address)).to.equal(ethers.utils.parseEther('1'));
       expect(await ishtarGate.connect(signer1).canJoinAGarden(garden1.address, signer3.address)).to.equal(true);
     });
+
     it('should allow the strategy creation by an Ishar gate owner despite its individual permission is set to 0 but general strategy creation permission is allowed', async function () {
       await garden1.connect(signer3).deposit(ethers.utils.parseEther('1'), 1, signer3.getAddress(), false, {
         value: ethers.utils.parseEther('1'),
@@ -148,11 +141,12 @@ describe('Garden', function () {
         false,
       );
       // Enable strategist creator rights - the garden needs to be public
-      await expect(garden1.connect(signer1).setPublicRights(true, false)).to.be.revertedWith('revert BAB#088');
+      await expect(garden1.connect(signer1).setPublicRights(true, false)).to.be.revertedWith('revert BAB#090');
       await babController.connect(owner).setAllowPublicGardens();
       await garden1.connect(signer1).makeGardenPublic();
       await garden1.connect(signer1).setPublicRights(true, false);
       await expect(getStrategy({ garden: garden1, signers: [signer3] })).not.to.be.reverted;
+
       expect(await ishtarGate.connect(signer1).canAddStrategiesInAGarden(garden1.address, signer3.address)).to.equal(
         true,
       );
@@ -168,7 +162,7 @@ describe('Garden', function () {
       expect(await ishtarGate.connect(signer1).canVoteInAGarden(garden1.address, signer2.address)).to.equal(false);
 
       // Enable voting power rights to users - the garden needs to be public
-      await expect(garden1.connect(signer1).setPublicRights(false, true)).to.be.revertedWith('revert BAB#088');
+      await expect(garden1.connect(signer1).setPublicRights(false, true)).to.be.revertedWith('revert BAB#090');
       await babController.connect(owner).setAllowPublicGardens();
       await garden1.connect(signer1).makeGardenPublic();
       await garden1.connect(signer1).setPublicRights(false, true);
@@ -1198,8 +1192,8 @@ describe('Garden', function () {
       });
     });
 
-    describe('can be done after reaching max limit of users', async function () {
-      it('a user can still deposit after a garden reached its max limit of users but new users fail', async function () {
+    describe('after reaching max limit of users', async function () {
+      it.only('can deposit', async function () {
         // Downside the limit of new gardens to 10 to speed up the test
         await babController.connect(owner).setMaxContributorsPerGarden(10);
         await babController
@@ -1228,7 +1222,17 @@ describe('Garden', function () {
         });
         // 8 new (random) people joins the garden as well + signer 3 + gardener = 10 = maximum
         const randomWallets = await createWallets(8);
-        await depositBatch(owner, garden4, randomWallets);
+        await fund(
+          randomWallets.map((w) => w.address),
+          [addresses.tokens.ETH],
+        );
+        for (let i = 0; i < randomWallets.length; i++) {
+          await garden4
+            .connect(randomWallets[i].connect(signer1.provider))
+            .deposit(ethers.utils.parseEther('0.1'), 1, randomWallets[i].address, false, {
+              value: ethers.utils.parseEther('0.1'),
+            });
+        }
         // Despite it is a public garden, no more contributors allowed <= 10 so it throws an exception for new users
         await expect(
           garden4.connect(signer2).deposit(ethers.utils.parseEther('1'), 1, signer2.getAddress(), false, {
