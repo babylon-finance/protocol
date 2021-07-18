@@ -1405,9 +1405,6 @@ describe('BABL Rewards Distributor', function () {
       // USDC Garden signer 3 is LP and steward but get 0 profits
 
       await expect(signer3ProfitUSDC).to.equal(0);
-      console.log('signer1ProfitUSDC', signer1ProfitUSDC.toString());
-      console.log('signer1ProfitDAI', signer1ProfitDAI.toString());
-      console.log('signer3ProfitDAI', signer3ProfitDAI.toString());
       // TODO Check exact amounts:
       // signer1ProfitUSDC 83688802
       // signer1ProfitDAI 168999851552735890812
