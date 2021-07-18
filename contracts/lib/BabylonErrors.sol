@@ -262,10 +262,14 @@ library Errors {
     uint256 internal constant RECEIVE_MIN_AMOUNT = 86;
     // Total Votes has to be positive
     uint256 internal constant TOTAL_VOTES_HAVE_TO_BE_POSITIVE = 87;
+    // Signer has to be valid
+    uint256 internal constant INVALID_SIGNER = 88;
+    // Nonce has to be valid
+    uint256 internal constant INVALID_NONCE = 89;
     // Garden is not public
-    uint256 internal constant GARDEN_IS_NOT_PUBLIC = 88;
+    uint256 internal constant GARDEN_IS_NOT_PUBLIC = 90;
     // Setting max contributors
-    uint256 internal constant MAX_CONTRIBUTORS_SET = 89;
+    uint256 internal constant MAX_CONTRIBUTORS_SET = 91;
     // Profit sharing mismatch for customized gardens
-    uint256 internal constant PROFIT_SHARING_MISMATCH = 90;
+    uint256 internal constant PROFIT_SHARING_MISMATCH = 91;
 }
