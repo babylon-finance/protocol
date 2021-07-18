@@ -32,21 +32,8 @@ interface IRewardsDistributor {
         uint256 timeListPointer;
     }
 
-    function protocolPrincipal() external view returns (uint256);
-
-    function pid() external view returns (uint256);
-
-    // solhint-disable-next-line
-    function EPOCH_DURATION() external pure returns (uint256);
-
     // solhint-disable-next-line
     function START_TIME() external view returns (uint256);
-
-    // solhint-disable-next-line
-    function Q1_REWARDS() external pure returns (uint256);
-
-    // solhint-disable-next-line
-    function DECAY_RATE() external pure returns (uint256);
 
     function updateProtocolPrincipal(uint256 _capital, bool _addOrSubstract) external;
 
@@ -68,6 +55,15 @@ interface IRewardsDistributor {
         uint256 _from,
         uint256 _to
     ) external view returns (uint256);
+
+    function getGardenProfitsSharing(address _garden) external view returns (uint256[3] memory);
+
+    function setProfitRewards(
+        address _garden,
+        uint256 _strategistShare,
+        uint256 _stewardsShare,
+        uint256 _lpShare
+    ) external;
 
     function updateGardenPowerAndContributor(
         address _garden,

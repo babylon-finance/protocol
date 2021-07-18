@@ -268,4 +268,8 @@ library Errors {
     uint256 internal constant INVALID_NONCE = 89;
     // Garden is not public
     uint256 internal constant GARDEN_IS_NOT_PUBLIC = 90;
+    // Setting max contributors
+    uint256 internal constant MAX_CONTRIBUTORS_SET = 91;
+    // Profit sharing mismatch for customized gardens
+    uint256 internal constant PROFIT_SHARING_MISMATCH = 91;
 }

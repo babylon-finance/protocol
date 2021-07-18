@@ -206,6 +206,7 @@ contract BabController is OwnableUpgradeable, IBabController {
      * @param _seed                             Seed to regenerate the garden NFT
      * @param _initialContribution              Initial contribution by the gardener
      * @param _publicGardenStrategistsStewards  Public garden, public strategist rights and public stewards rights
+     * @param _profitSharing                    Custom profit sharing (if any)
      */
     function createGarden(
         address _reserveAsset,
@@ -215,7 +216,8 @@ contract BabController is OwnableUpgradeable, IBabController {
         uint256 _seed,
         uint256[] calldata _gardenParams,
         uint256 _initialContribution,
-        bool[] memory _publicGardenStrategistsStewards
+        bool[] memory _publicGardenStrategistsStewards,
+        uint256[] memory _profitSharing
     ) external payable override returns (address) {
         require(defaultTradeIntegration != address(0), 'Need a default trade integration');
         require(enabledOperations.length > 0, 'Need operations enabled');
@@ -243,6 +245,15 @@ contract BabController is OwnableUpgradeable, IBabController {
         isGarden[newGarden] = true;
         gardens.push(newGarden);
         IGarden(newGarden).deposit{value: msg.value}(_initialContribution, _initialContribution, msg.sender, true);
+        // Avoid gas cost if default sharing values are provided (0,0,0)
+        if (_profitSharing[0] != 0 || _profitSharing[1] != 0 || _profitSharing[2] != 0) {
+            IRewardsDistributor(rewardsDistributor).setProfitRewards(
+                newGarden,
+                _profitSharing[0],
+                _profitSharing[1],
+                _profitSharing[2]
+            );
+        }
         emit GardenAdded(newGarden, msg.sender);
         return newGarden;
     }

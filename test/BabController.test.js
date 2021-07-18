@@ -99,6 +99,7 @@ describe('BabController', function () {
           GARDEN_PARAMS_STABLE,
           ethers.utils.parseEther('100'),
           [false, false, false],
+          [0, 0, 0],
           {
             value: ethers.utils.parseEther('100'),
           },
@@ -120,6 +121,7 @@ describe('BabController', function () {
             GARDEN_PARAMS,
             ethers.utils.parseEther('1'),
             [false, false, false],
+            [0, 0, 0],
             {
               value: ethers.utils.parseEther('1'),
             },
