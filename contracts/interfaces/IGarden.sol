@@ -68,6 +68,7 @@ interface IGarden {
             uint256,
             uint256,
             uint256,
+            uint256,
             uint256
         );
 
@@ -83,8 +84,6 @@ interface IGarden {
 
     function depositHardlock() external view returns (uint256);
 
-    function withdrawalsOpenUntil() external view returns (uint256);
-
     function minLiquidityAsset() external view returns (uint256);
 
     function minStrategyDuration() external view returns (uint256);
@@ -94,8 +93,6 @@ interface IGarden {
     function principal() external view returns (uint256);
 
     function reserveAssetRewardsSetAside() external view returns (uint256);
-
-    function reserveAssetPrincipalWindow() external view returns (uint256);
 
     function absoluteReturns() external view returns (int256);
 
@@ -115,12 +112,7 @@ interface IGarden {
 
     function strategyMapping(address _strategy) external view returns (bool);
 
-    function startWithdrawalWindow(
-        uint256 _amount,
-        uint256 _profits,
-        int256 _returns,
-        address _strategy
-    ) external;
+    function finalizeStrategy(uint256 _profits, int256 _returns) external;
 
     function allocateCapitalToStrategy(uint256 _capital) external;
 
@@ -140,6 +132,17 @@ interface IGarden {
         bool mintNFT
     ) external payable;
 
+    function depositBySig(
+        uint256 _amountIn,
+        uint256 _minAmountOut,
+        bool _mintNft,
+        uint256 _nonce,
+        uint256 _pricePerShare,
+        uint8 v,
+        bytes32 r,
+        bytes32 s
+    ) external;
+
     function withdraw(
         uint256 _gardenTokenQuantity,
         uint256 _minReserveReceiveQuantity,
@@ -148,11 +151,17 @@ interface IGarden {
         address _unwindStrategy
     ) external;
 
+    function withdrawBySig(
+        uint256 _gardenTokenQuantity,
+        uint256 _minReserveReceiveQuantity,
+        uint256 _nonce,
+        uint256 _pricePerShare,
+        uint8 v,
+        bytes32 r,
+        bytes32 s
+    ) external;
+
     function claimReturns(address[] calldata _finalizedStrategies) external;
-
-    function getGardenTokenMintQuantity(uint256 _netReserveFlows, bool isDeposit) external view returns (uint256);
-
-    function getExpectedReserveWithdrawalQuantity(uint256 _gardenTokenQuantity) external view returns (uint256);
 
     function getLockedBalance(address _contributor) external view returns (uint256);
 

@@ -99,16 +99,6 @@ contract GardenValuer {
             reservePrice = priceOracle.getPrice(reserveAsset, _quoteAsset);
         }
 
-        uint256 wethPrice;
-        // Get price of the WETH in _quoteAsset
-        if (_quoteAsset == WETH) {
-            // meaning 1 WETH equals to 1 _quoteAsset
-            // this line looks ironic. 10/10.
-            wethPrice = 1 ether;
-        } else {
-            wethPrice = priceOracle.getPrice(WETH, _quoteAsset);
-        }
-
         address[] memory strategies = IGarden(_garden).getStrategies();
         uint256 valuation;
         for (uint256 j = 0; j < strategies.length; j++) {

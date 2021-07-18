@@ -152,6 +152,7 @@ async function createStrategyWithManyOperations(
 }
 
 async function deposit(garden, signers) {
+  const gardenValuer = await getContract('GardenValuer');
   const reserveAsset = await garden.reserveAsset();
   const reserveContract = await ethers.getContractAt('IERC20', reserveAsset);
   let amount;
@@ -176,7 +177,7 @@ async function deposit(garden, signers) {
     }
     await garden.connect(signer).deposit(
       amount,
-      1,
+      amount,
       signer.getAddress(),
       false,
       isWeth
@@ -185,6 +186,7 @@ async function deposit(garden, signers) {
           }
         : {},
     );
+    // await garden.connect((await ethers.getSigners())[1]).processDeposit(signer.getAddress(), eth());
   }
 }
 
