@@ -360,7 +360,7 @@ describe('Garden', function () {
               value: ethers.utils.parseEther('1'),
             },
           ),
-      ).to.be.revertedWith('revert BAB#089');
+      ).to.be.revertedWith('revert BAB#090');
     });
     it('should fail if the protocol try a custom profit sharing which sum is above 95% while creation', async function () {
       await expect(
@@ -380,7 +380,7 @@ describe('Garden', function () {
               value: ethers.utils.parseEther('1'),
             },
           ),
-      ).to.be.revertedWith('revert BAB#089');
+      ).to.be.revertedWith('revert BAB#090');
     });
     it('should fail if the protocol try a custom profit sharing which sum is below 95% while creation (by decimal difference)', async function () {
       await expect(
@@ -400,7 +400,7 @@ describe('Garden', function () {
               value: ethers.utils.parseEther('1'),
             },
           ),
-      ).to.be.revertedWith('revert BAB#089');
+      ).to.be.revertedWith('revert BAB#090');
     });
     it('should fail if the protocol try a custom profit sharing which sum is above 95% while creation (by decimal difference)', async function () {
       await expect(
@@ -420,7 +420,7 @@ describe('Garden', function () {
               value: ethers.utils.parseEther('1'),
             },
           ),
-      ).to.be.revertedWith('revert BAB#089');
+      ).to.be.revertedWith('revert BAB#090');
     });
   });
 
