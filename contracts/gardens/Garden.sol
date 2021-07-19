@@ -42,7 +42,6 @@ import {IGarden} from '../interfaces/IGarden.sol';
 import {IGardenNFT} from '../interfaces/IGardenNFT.sol';
 import {IIshtarGate} from '../interfaces/IIshtarGate.sol';
 import {IWETH} from '../interfaces/external/weth/IWETH.sol';
-import {IBabylonViewer} from '../interfaces/IBabylonViewer.sol';
 
 /**
  * @title BaseGarden
@@ -419,10 +418,8 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
     ) private {
         _onlyUnpaused();
         _onlyActive();
-        (bool depositPermission, , ) =
-            IBabylonViewer(IBabController(controller).babViewer()).getGardenPermissions(address(this), _from);
 
-        _require(depositPermission || creator == _to, Errors.USER_CANNOT_JOIN);
+        _require(_getUserPermission(_from)[0] || creator == _to, Errors.USER_CANNOT_JOIN);
 
         // if deposit limit is 0, then there is no deposit limit
         if (maxDepositLimit > 0) {
@@ -713,9 +710,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         _onlyUnpaused();
         _onlyActive();
         _onlyContributor();
-        (, , bool strategistPermission) =
-            IBabylonViewer(IBabController(controller).babViewer()).getGardenPermissions(address(this), msg.sender);
-        _require(strategistPermission, Errors.USER_CANNOT_ADD_STRATEGIES);
+        _require(_getUserPermission(msg.sender)[2], Errors.USER_CANNOT_ADD_STRATEGIES);
         _require(strategies.length < MAX_TOTAL_STRATEGIES, Errors.VALUE_TOO_HIGH);
         _require(_stratParams.length == 4, Errors.STRAT_PARAMS_LENGTH);
         address strategy =
@@ -989,6 +984,19 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         rewardsDistributor.updateGardenPowerAndContributor(address(this), msg.sender, 0, false, pid);
         contributor.nonce = contributor.nonce + 1;
         pid++;
+    }
+
+    /**
+     * Check contributor permissions for deposit [0], vote [1] and create strategies [2]
+     */
+    function _getUserPermission(address _user) internal view returns (bool[3] memory) {
+        IIshtarGate gate = IIshtarGate(IBabController(controller).ishtarGate());
+        bool hasGate = IERC721(address(gate)).balanceOf(_user) > 0;
+        bool[3] memory permissions;
+        permissions[0] = gate.canJoinAGarden(address(this), _user) || (hasGate && !privateGarden);
+        permissions[1] = gate.canVoteInAGarden(address(this), _user) || (hasGate && publicStewards);
+        permissions[2] = gate.canAddStrategiesInAGarden(address(this), _user) || (hasGate && publicStrategists);
+        return permissions;
     }
 
     // solhint-disable-next-line
