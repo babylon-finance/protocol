@@ -420,7 +420,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         _onlyUnpaused();
         _onlyActive();
         (bool depositPermission, , ) =
-            IBabylonViewer(IBabController(controller).babViewer()).getGardenPermissions(address(this), msg.sender);
+            IBabylonViewer(IBabController(controller).babViewer()).getGardenPermissions(address(this), _from);
 
         _require(depositPermission || creator == _to, Errors.USER_CANNOT_JOIN);
 
