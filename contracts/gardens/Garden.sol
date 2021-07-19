@@ -42,6 +42,7 @@ import {IGarden} from '../interfaces/IGarden.sol';
 import {IGardenNFT} from '../interfaces/IGardenNFT.sol';
 import {IIshtarGate} from '../interfaces/IIshtarGate.sol';
 import {IWETH} from '../interfaces/external/weth/IWETH.sol';
+import {IBabylonViewer} from '../interfaces/IBabylonViewer.sol';
 
 /**
  * @title BaseGarden
@@ -418,12 +419,10 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
     ) private {
         _onlyUnpaused();
         _onlyActive();
-        _require(
-            (IERC721(address(IBabController(controller).ishtarGate())).balanceOf(msg.sender) > 0 && !privateGarden) ||
-                IIshtarGate(IBabController(controller).ishtarGate()).canJoinAGarden(address(this), msg.sender) ||
-                creator == _to,
-            Errors.USER_CANNOT_JOIN
-        );
+        (bool depositPermission, , ) =
+            IBabylonViewer(IBabController(controller).babViewer()).getGardenPermissions(address(this), msg.sender);
+
+        _require(depositPermission || creator == _to, Errors.USER_CANNOT_JOIN);
 
         // if deposit limit is 0, then there is no deposit limit
         if (maxDepositLimit > 0) {
@@ -714,16 +713,9 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         _onlyUnpaused();
         _onlyActive();
         _onlyContributor();
-
-        _require(
-            (IERC721(address(IBabController(controller).ishtarGate())).balanceOf(msg.sender) > 0 &&
-                publicStrategists) ||
-                IIshtarGate(IBabController(controller).ishtarGate()).canAddStrategiesInAGarden(
-                    address(this),
-                    msg.sender
-                ),
-            Errors.USER_CANNOT_ADD_STRATEGIES
-        );
+        (, , bool strategistPermission) =
+            IBabylonViewer(IBabController(controller).babViewer()).getGardenPermissions(address(this), msg.sender);
+        _require(strategistPermission, Errors.USER_CANNOT_ADD_STRATEGIES);
         _require(strategies.length < MAX_TOTAL_STRATEGIES, Errors.VALUE_TOO_HIGH);
         _require(_stratParams.length == 4, Errors.STRAT_PARAMS_LENGTH);
         address strategy =

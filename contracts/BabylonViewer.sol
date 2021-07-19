@@ -196,7 +196,7 @@ contract BabylonViewer {
     }
 
     function getGardenPermissions(address _garden, address _user)
-        external
+        public
         view
         returns (
             bool,
@@ -211,7 +211,7 @@ contract BabylonViewer {
             gate.canVoteInAGarden(_garden, _user) ||
                 (IERC721(address(gate)).balanceOf(_user) > 0 && IGarden(_garden).publicStewards()),
             gate.canAddStrategiesInAGarden(_garden, _user) ||
-                (IERC721(address(gate)).balanceOf(msg.sender) > 0 && IGarden(_garden).publicStrategists())
+                (IERC721(address(gate)).balanceOf(_user) > 0 && IGarden(_garden).publicStrategists())
         );
     }
 
@@ -220,14 +220,10 @@ contract BabylonViewer {
         address[] memory userGardens = new address[](25);
         bool[] memory hasUserDeposited = new bool[](25);
         uint8 resultIndex;
-        IIshtarGate gate = IIshtarGate(controller.ishtarGate());
         for (uint256 i = _offset; i < gardens.length; i++) {
             IGarden garden = IGarden(gardens[i]);
-            if (
-                garden.active() &&
-                ((IERC721(address(gate)).balanceOf(_user) > 0 && !garden.privateGarden()) ||
-                    gate.canJoinAGarden(gardens[i], _user))
-            ) {
+            (bool depositPermission, , ) = getGardenPermissions(gardens[i], _user);
+            if (garden.active() && depositPermission) {
                 userGardens[resultIndex] = gardens[i];
                 hasUserDeposited[resultIndex] = IERC20(gardens[i]).balanceOf(_user) > 0;
                 resultIndex = resultIndex + 1;

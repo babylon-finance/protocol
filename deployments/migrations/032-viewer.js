@@ -9,10 +9,12 @@ module.exports = async ({
 }) => {
   const { deploy } = deployments;
   const { deployer } = await getNamedAccounts();
+  const signer = await getSigner(deployer);
   const gasPrice = await getRapid();
   const contract = 'BabylonViewer';
 
   const controller = await deployments.get('BabControllerProxy');
+  const controllerContract = await ethers.getContractAt('BabController', controller.address, signer);
 
   const deployment = await deploy(contract, {
     from: deployer,
@@ -23,6 +25,9 @@ module.exports = async ({
 
   if (deployment.newlyDeployed) {
     console.log(`Deployed Babylon Viewer on controller ${deployment.address}`);
+
+    console.log(`Setting viewer on controller ${deployment.address}`);
+    await (await controllerContract.editBabylonViewer(deployment.address, { gasPrice })).wait();
   }
 
   if (network.live && deployment.newlyDeployed) {
