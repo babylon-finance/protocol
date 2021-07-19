@@ -1433,6 +1433,9 @@ describe('Garden', function () {
           [addresses.tokens.ETH],
         );
         for (let i = 0; i < randomWallets.length; i++) {
+          await ishtarGate
+            .connect(signer1)
+            .setGardenAccess(randomWallets[i].address, garden4.address, 0, { gasPrice: 0 });
           await garden4
             .connect(randomWallets[i].connect(signer1.provider))
             .deposit(ethers.utils.parseEther('0.1'), 1, randomWallets[i].address, false, {
@@ -1445,7 +1448,6 @@ describe('Garden', function () {
             value: ethers.utils.parseEther('1'),
           }),
         ).to.be.revertedWith('revert BAB#061');
-
         // Previous contributors belonging to the garden can still deposit
         await garden4.connect(signer3).deposit(ethers.utils.parseEther('1'), 1, signer3.getAddress(), false, {
           value: ethers.utils.parseEther('1'),
