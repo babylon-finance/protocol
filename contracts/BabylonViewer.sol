@@ -228,6 +228,16 @@ contract BabylonViewer {
         return (userGardens, hasUserDeposited);
     }
 
+    function getGardenUserAvgPricePerShare(address _garden, address _user) external view returns (uint256) {
+        IGarden garden = IGarden(_garden);
+        uint256[] memory contribution = new uint256[](2);
+        (, , , , , contribution[0], contribution[1], , , ) = garden.getContributor(_user);
+
+        // contributor[0] -> Deposits
+        // contributor[1] -> Balance (Garden tokens)
+        return contribution[1] > 0 ? contribution[0].div(contribution[1]) : 0;
+    }
+
     function getUserStrategyActions(address[] memory _strategies, address _user)
         external
         view
