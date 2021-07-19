@@ -20,7 +20,7 @@ describe('Treasury', function () {
     await fund([treasury.address]);
   });
 
-  describe.only('sendTreasuryFunds', async function () {
+  describe('sendTreasuryFunds', async function () {
     [
       { token: addresses.tokens.WETH, name: 'WETH', amount: eth() },
       { token: addresses.tokens.DAI, name: 'DAI', amount: eth(2000) },
