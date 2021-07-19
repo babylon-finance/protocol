@@ -841,7 +841,7 @@ describe('Garden', function () {
       let amountIn = from(1000 * 1e6);
       let minAmountOut = eth(1000);
 
-      await fund([signer1.address, signer3.address], [addresses.tokens.USDC]);
+      await fund([signer1.address, signer3.address], { tokens: [addresses.tokens.USDC] });
 
       const garden = await createGarden({ reserveAsset: addresses.tokens.USDC });
 
@@ -864,7 +864,7 @@ describe('Garden', function () {
       let amountIn = from(1000 * 1e6);
       let minAmountOut = eth(1000);
 
-      await fund([signer1.address, signer3.address], [addresses.tokens.USDC]);
+      await fund([signer1.address, signer3.address], { tokens: [addresses.tokens.USDC] });
 
       const garden = await createGarden({ reserveAsset: addresses.tokens.USDC });
 
@@ -1176,7 +1176,7 @@ describe('Garden', function () {
       const amountIn = from(1000 * 1e6);
       const minAmountOut = eth(1000);
 
-      await fund([signer1.address, signer3.address], [addresses.tokens.USDC]);
+      await fund([signer1.address, signer3.address], { tokens: [addresses.tokens.USDC] });
 
       const garden = await createGarden({ reserveAsset: addresses.tokens.USDC });
 
@@ -1430,7 +1430,7 @@ describe('Garden', function () {
         const randomWallets = await createWallets(8);
         await fund(
           randomWallets.map((w) => w.address),
-          [addresses.tokens.ETH],
+          { tokens: [addresses.tokens.ETH] },
         );
         for (let i = 0; i < randomWallets.length; i++) {
           await ishtarGate
