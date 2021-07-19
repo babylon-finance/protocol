@@ -418,8 +418,8 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
     ) private {
         _onlyUnpaused();
         _onlyActive();
-
-        _require(_getUserPermission(_from)[0] || creator == _to, Errors.USER_CANNOT_JOIN);
+        (bool canDeposit, , ) = _getUserPermission(_from);
+        _require(canDeposit || creator == _to, Errors.USER_CANNOT_JOIN);
 
         // if deposit limit is 0, then there is no deposit limit
         if (maxDepositLimit > 0) {
@@ -710,7 +710,8 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         _onlyUnpaused();
         _onlyActive();
         _onlyContributor();
-        _require(_getUserPermission(msg.sender)[2], Errors.USER_CANNOT_ADD_STRATEGIES);
+        (, , bool canCreateStrategies) = _getUserPermission(msg.sender);
+        _require(canCreateStrategies, Errors.USER_CANNOT_ADD_STRATEGIES);
         _require(strategies.length < MAX_TOTAL_STRATEGIES, Errors.VALUE_TOO_HIGH);
         _require(_stratParams.length == 4, Errors.STRAT_PARAMS_LENGTH);
         address strategy =
@@ -989,14 +990,20 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
     /**
      * Check contributor permissions for deposit [0], vote [1] and create strategies [2]
      */
-    function _getUserPermission(address _user) internal view returns (bool[3] memory) {
+    function _getUserPermission(address _user)
+        internal
+        view
+        returns (
+            bool canDeposit,
+            bool canVote,
+            bool canCreateStrategy
+        )
+    {
         IIshtarGate gate = IIshtarGate(IBabController(controller).ishtarGate());
         bool hasGate = IERC721(address(gate)).balanceOf(_user) > 0;
-        bool[3] memory permissions;
-        permissions[0] = gate.canJoinAGarden(address(this), _user) || (hasGate && !privateGarden);
-        permissions[1] = gate.canVoteInAGarden(address(this), _user) || (hasGate && publicStewards);
-        permissions[2] = gate.canAddStrategiesInAGarden(address(this), _user) || (hasGate && publicStrategists);
-        return permissions;
+        canDeposit = gate.canJoinAGarden(address(this), _user) || (hasGate && !privateGarden);
+        canVote = gate.canVoteInAGarden(address(this), _user) || (hasGate && publicStewards);
+        canCreateStrategy = gate.canAddStrategiesInAGarden(address(this), _user) || (hasGate && publicStrategists);
     }
 
     // solhint-disable-next-line
