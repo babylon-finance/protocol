@@ -1034,6 +1034,7 @@ describe('BABL Rewards Distributor', function () {
           GARDEN_PARAMS_STABLE,
           ethers.utils.parseEther('500'),
           [false, false, false],
+          [0, 0, 0],
           {},
         );
       const gardens = await babController.getGardens();
@@ -1107,6 +1108,7 @@ describe('BABL Rewards Distributor', function () {
           params,
           thousandUSDC.div(2),
           [false, false, false],
+          [0, 0, 0],
           {},
         );
       const gardens = await babController.getGardens();
@@ -1198,6 +1200,7 @@ describe('BABL Rewards Distributor', function () {
           params,
           thousandUSDC.div(2),
           [false, false, false],
+          [0, 0, 0],
           {},
         );
       const gardens = await babController.getGardens();
@@ -1215,6 +1218,7 @@ describe('BABL Rewards Distributor', function () {
           GARDEN_PARAMS_STABLE,
           ethers.utils.parseEther('500'),
           [false, false, false],
+          [0, 0, 0],
           {},
         );
       const gardens2 = await babController.getGardens();
@@ -1285,6 +1289,140 @@ describe('BABL Rewards Distributor', function () {
       expect(signer1BalanceBABL).to.equal(signer1BABLUSDC.add(signer1BABLDAI));
       expect(signer1BABLUSDC).to.be.closeTo(signer1BABLDAI, signer1BABLDAI.div(50));
     });
+    it('should provide correct % of strategy rewards per profile with profits', async function () {
+      const whaleAddress = '0x6B175474E89094C44Da98b954EedeAC495271d0F'; // Has DAI
+      const whaleSigner = await impersonateAddress(whaleAddress);
+      await dai.connect(whaleSigner).transfer(signer1.address, ethers.utils.parseEther('5000'), {
+        gasPrice: 0,
+      });
+      await dai.connect(whaleSigner).transfer(signer3.address, ethers.utils.parseEther('5000'), {
+        gasPrice: 0,
+      });
+      await dai.connect(signer1).approve(babController.address, ethers.utils.parseEther('2000'), {
+        gasPrice: 0,
+      });
+
+      const whaleAddress2 = '0x0a59649758aa4d66e25f08dd01271e891fe52199'; // Has USDC
+      const whaleSigner2 = await impersonateAddress(whaleAddress2);
+      const thousandUSDC = ethers.BigNumber.from(1e4 * 1e6);
+
+      await usdc.connect(whaleSigner2).transfer(signer1.address, thousandUSDC, {
+        gasPrice: 0,
+      });
+      await usdc.connect(whaleSigner2).transfer(signer3.address, thousandUSDC, {
+        gasPrice: 0,
+      });
+      await usdc.connect(signer1).approve(babController.address, thousandUSDC, {
+        gasPrice: 0,
+      });
+      const params = [...USDC_GARDEN_PARAMS];
+      params[3] = thousandUSDC.div(10);
+      // USC Garden
+      await babController
+        .connect(signer1)
+        .createGarden(
+          addresses.tokens.USDC,
+          'Absolute USDC Return [beta]',
+          'EYFA',
+          'http...',
+          0,
+          params,
+          thousandUSDC.div(2),
+          [false, false, false],
+          [ethers.utils.parseEther('0.95'), ethers.utils.parseEther('0'), ethers.utils.parseEther('0')],
+          {},
+        );
+      const gardens = await babController.getGardens();
+      usdcGarden = await ethers.getContractAt('Garden', gardens[4]);
+
+      // DAI Garden
+      await babController
+        .connect(signer1)
+        .createGarden(
+          addresses.tokens.DAI,
+          'Absolute DAI Return [beta]',
+          'EYFA',
+          'http...',
+          0,
+          GARDEN_PARAMS_STABLE,
+          ethers.utils.parseEther('500'),
+          [false, false, false],
+          [ethers.utils.parseEther('0'), ethers.utils.parseEther('0.95'), ethers.utils.parseEther('0')],
+          {},
+        );
+      const gardens2 = await babController.getGardens();
+      daiGarden = await ethers.getContractAt('Garden', gardens2[5]);
+
+      await ishtarGate.connect(signer1).setGardenAccess(signer3.address, daiGarden.address, 1, { gasPrice: 0 });
+      await dai.connect(signer3).approve(daiGarden.address, ethers.utils.parseEther('500'), { gasPrice: 0 });
+      await daiGarden.connect(signer3).deposit(ethers.utils.parseEther('500'), 1, signer3.getAddress(), false);
+
+      await ishtarGate.connect(signer1).setGardenAccess(signer3.address, usdcGarden.address, 1, { gasPrice: 0 });
+      await usdc.connect(signer3).approve(usdcGarden.address, thousandUSDC, { gasPrice: 0 });
+      await usdcGarden.connect(signer3).deposit(thousandUSDC.div(2), 1, signer3.getAddress(), false);
+
+      // Mining program has to be enabled before the strategy starts its execution
+      await babController.connect(owner).enableBABLMiningProgram();
+      const long1 = await createStrategy(
+        'buy',
+        'vote',
+        [signer1, signer3],
+        uniswapV3TradeIntegration.address,
+        usdcGarden,
+        USDC_STRATEGY_PARAMS,
+        [weth.address, 0],
+      );
+
+      const long2 = await createStrategy(
+        'buy',
+        'vote',
+        [signer1, signer3],
+        uniswapV3TradeIntegration.address,
+        daiGarden,
+        DAI_STRATEGY_PARAMS,
+        [usdc.address, 0],
+      );
+      // Execute USDC Garden strategy long1
+      await executeStrategy(long1, { amount: ethers.BigNumber.from(1000 * 1000000) });
+
+      // Execute DAI Garden strategy long2
+      await executeStrategy(long2, { amount: ethers.utils.parseEther('1000') });
+
+      await injectFakeProfits(long1, ethers.utils.parseEther('0.025')); // Using fake 18 decimals during the strategy execution
+      await injectFakeProfits(long2, ethers.BigNumber.from(200 * 1000000)); // Dai has 18 decimals, we add usdc (6 decimals) during strategy execution
+
+      // Finalize both strategies (long 2 has higher duration -> more rewardss)
+      await finalizeStrategyAfterQuarter(long1);
+      await finalizeStrategyImmediate(long2);
+
+      // Check pending rewards for users at USDC Garden
+      const signer1RewardsUSDC = await rewardsDistributor.getRewards(usdcGarden.address, signer1.address, [
+        long1.address,
+      ]);
+      const signer3RewardsUSDC = await rewardsDistributor.getRewards(usdcGarden.address, signer3.address, [
+        long1.address,
+      ]);
+      const signer1ProfitUSDC = signer1RewardsUSDC[6];
+      const signer3ProfitUSDC = signer3RewardsUSDC[6];
+
+      // Check pending rewards for users at DAI Garden
+      const signer1RewardsDAI = await rewardsDistributor.getRewards(daiGarden.address, signer1.address, [
+        long2.address,
+      ]);
+      const signer3RewardsDAI = await rewardsDistributor.getRewards(daiGarden.address, signer3.address, [
+        long2.address,
+      ]);
+      const signer1ProfitDAI = signer1RewardsDAI[6];
+      const signer3ProfitDAI = signer3RewardsDAI[6];
+
+      // USDC Garden signer 3 is LP and steward but get 0 profits
+
+      await expect(signer3ProfitUSDC).to.equal(0);
+      // TODO Check exact amounts:
+      // signer1ProfitUSDC 83688802
+      // signer1ProfitDAI 168999851552735890812
+      // signer3ProfitDAI 0
+    });
     it('should claim and update BABL Rewards of Signer1 in USDC Garden and DAI Garden as contributor of 2 strategies in 2 different gardens with profit below expected return within a quarter', async function () {
       const whaleAddress = '0x6B175474E89094C44Da98b954EedeAC495271d0F'; // Has DAI
       const whaleSigner = await impersonateAddress(whaleAddress);
@@ -1325,6 +1463,7 @@ describe('BABL Rewards Distributor', function () {
           params,
           thousandUSDC.div(2),
           [false, false, false],
+          [0, 0, 0],
           {},
         );
       const gardens = await babController.getGardens();
@@ -1342,6 +1481,7 @@ describe('BABL Rewards Distributor', function () {
           GARDEN_PARAMS_STABLE,
           ethers.utils.parseEther('500'),
           [false, false, false],
+          [0, 0, 0],
           {},
         );
       const gardens2 = await babController.getGardens();
@@ -1451,6 +1591,7 @@ describe('BABL Rewards Distributor', function () {
           params,
           thousandUSDC.div(2),
           [false, false, false],
+          [0, 0, 0],
           {},
         );
       const gardens = await babController.getGardens();
@@ -1468,6 +1609,7 @@ describe('BABL Rewards Distributor', function () {
           GARDEN_PARAMS_STABLE,
           ethers.utils.parseEther('500'),
           [false, false, false],
+          [0, 0, 0],
           {},
         );
       const gardens2 = await babController.getGardens();
