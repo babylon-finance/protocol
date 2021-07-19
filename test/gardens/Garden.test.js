@@ -920,7 +920,7 @@ describe('Garden', function () {
       await garden.connect(signer1).withdraw(eth(0.5), 1, signer1.getAddress(), true, strategy.address);
 
       expect((await ethers.provider.getBalance(signer1.address)).sub(beforeWithdrawal)).to.be.closeTo(
-        eth(0.46),
+        eth(0.48),
         eth(0.01),
       );
     });
