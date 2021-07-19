@@ -207,9 +207,7 @@ contract PriceOracle is Ownable, IPriceOracle {
         // crTokenToAsset[0xE585c76573D7593ABF21537B607091F76c996E73] = 0x4691937a7508860f876c9c0a2a617e7d9e945d4b; // WOO
         // crTokenToAsset[0x81E346729723C4D15d0FB1c5679b9f2926Ff13C6] = 0x1f573d6fb3f13d689ff844b4ce37794d79a7ff1c; // BNT
 
-        synths[0xC011a73ee8576Fb46F5E1c5751cA3B9Fe0af2a6F] = true; // proxy SNX
         synths[0x57Ab1ec28D129707052df4dF418D58a2D46d5f51] = true; // ProxyERC20sUSD
-        synths[0xb440DD674e1243644791a4AdfE3A2AbB0A92d309] = true; // ProxyFeePool
         synths[0x176C674Ee533C6139B0dc8b458D72A93dCB3e705] = true; // ProxyiAAVE
         synths[0x8A8079c7149B8A1611e5C5d978DCA3bE16545F83] = true; // ProxyiADA
         synths[0xAFD870F32CE54EfdBF677466B612bf8ad164454B] = true; // ProxyiBNB
