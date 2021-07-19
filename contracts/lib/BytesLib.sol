@@ -493,15 +493,15 @@ library BytesLib {
         return success;
     }
 
-    function get64Bytes(bytes memory _data, uint256 _index) internal view returns (bytes memory) {
+    function get64Bytes(bytes memory _data, uint256 _index) internal pure returns (bytes memory) {
         return slice(_data, (64 * _index), 64);
     }
 
-    function decodeOpDataAddressAssembly(bytes memory _data, uint256 _startingByte) internal view returns (address) {
+    function decodeOpDataAddressAssembly(bytes memory _data, uint256 _startingByte) internal pure returns (address) {
         return toAddress(_data, _startingByte);
     }
 
-    function decodeOpDataAddress(bytes calldata _data) internal view returns (address) {
+    function decodeOpDataAddress(bytes calldata _data) internal pure returns (address) {
         // Expects no prefix (e.g. signature of bytes4 should be removed before using it)
         return abi.decode(_data, (address));
     }
@@ -510,7 +510,7 @@ library BytesLib {
         bytes memory _data,
         uint8 _type,
         uint8 _offset
-    ) internal view returns (bytes memory) {
+    ) internal pure returns (bytes memory) {
         // Expects no prefix (e.g. signature of bytes4 should be removed before using it)
         // type: 0 - uint8, 1: uint256, 2: bool, 3: address
         if (_type == 0 || _type == 2) {
