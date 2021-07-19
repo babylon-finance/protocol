@@ -1,7 +1,9 @@
 const { expect } = require('chai');
 
-const { GARDEN_PARAMS } = require('../lib/constants.js');
+const { impersonateAddress } = require('../lib/rpc');
+const { ONE_DAY_IN_SECONDS, GARDEN_PARAMS } = require('../lib/constants.js');
 const addresses = require('../lib/addresses');
+const { increaseTime } = require('./utils/test-helpers');
 const { createStrategy } = require('./fixtures/StrategyHelper.js');
 const { setupTests } = require('./fixtures/GardenFixture');
 
@@ -72,6 +74,35 @@ describe('Upgrades', function () {
       expect(await freshStrategy.connect(owner).newMethod()).to.eq('foobar');
       expect(await freshStrategy.connect(owner).newVar()).to.eq('42');
       expect(await freshStrategy.connect(owner).duration()).to.eq('0');
+    });
+
+    it.skip('can finalizeStrategy after upgrade', async () => {
+      const deployment = await deployments.get('StrategyBeacon');
+      const beacon = new ethers.Contract(deployment.address, deployment.abi);
+
+      const newImpl = await deploy('Strategy', {
+        from: owner.address,
+        args: [],
+        log: true,
+      });
+
+      await beacon.connect(owner).upgradeTo(newImpl.address);
+
+      const leverageEthStrategy = await ethers.getContractAt(
+        'IStrategy',
+        '0x49567812f97369a05e8D92462d744EFd00d7Ea42',
+        owner,
+      );
+
+      const mainnetKeeper = await impersonateAddress('0x74D206186B84d4c2dAFeBD9Fd230878EC161d5B8');
+      await increaseTime(ONE_DAY_IN_SECONDS * 70);
+      await leverageEthStrategy.connect(mainnetKeeper).finalizeStrategy(0, '');
+
+      const [, active, , finalized, , exitedAt] = await leverageEthStrategy.connect(owner).getStrategyState();
+
+      expect(finalized).to.eq(true);
+      expect(active).to.eq(false);
+      expect(exitedAt).to.gt(0);
     });
   });
 
