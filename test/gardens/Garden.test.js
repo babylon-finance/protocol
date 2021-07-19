@@ -863,7 +863,7 @@ describe('Garden', function () {
       let amountIn = from(1000 * 1e6);
       let minAmountOut = eth(1000);
 
-      await fund([signer1.address, signer3.address], [addresses.tokens.USDC]);
+      await fund([signer1.address, signer3.address], { tokens: [addresses.tokens.USDC] });
 
       const garden = await createGarden({ reserveAsset: addresses.tokens.USDC });
 
@@ -886,7 +886,7 @@ describe('Garden', function () {
       let amountIn = from(1000 * 1e6);
       let minAmountOut = eth(1000);
 
-      await fund([signer1.address, signer3.address], [addresses.tokens.USDC]);
+      await fund([signer1.address, signer3.address], { tokens: [addresses.tokens.USDC] });
 
       const garden = await createGarden({ reserveAsset: addresses.tokens.USDC });
 
@@ -942,7 +942,7 @@ describe('Garden', function () {
       await garden.connect(signer1).withdraw(eth(0.5), 1, signer1.getAddress(), true, strategy.address);
 
       expect((await ethers.provider.getBalance(signer1.address)).sub(beforeWithdrawal)).to.be.closeTo(
-        eth(0.46),
+        eth(0.48),
         eth(0.01),
       );
     });
@@ -1198,7 +1198,7 @@ describe('Garden', function () {
       const amountIn = from(1000 * 1e6);
       const minAmountOut = eth(1000);
 
-      await fund([signer1.address, signer3.address], [addresses.tokens.USDC]);
+      await fund([signer1.address, signer3.address], { tokens: [addresses.tokens.USDC] });
 
       const garden = await createGarden({ reserveAsset: addresses.tokens.USDC });
 
@@ -1452,7 +1452,7 @@ describe('Garden', function () {
         const randomWallets = await createWallets(8);
         await fund(
           randomWallets.map((w) => w.address),
-          [addresses.tokens.ETH],
+          { tokens: [addresses.tokens.ETH] },
         );
         for (let i = 0; i < randomWallets.length; i++) {
           await ishtarGate
@@ -1470,7 +1470,6 @@ describe('Garden', function () {
             value: ethers.utils.parseEther('1'),
           }),
         ).to.be.revertedWith('revert BAB#061');
-
         // Previous contributors belonging to the garden can still deposit
         await garden4.connect(signer3).deposit(ethers.utils.parseEther('1'), 1, signer3.getAddress(), false, {
           value: ethers.utils.parseEther('1'),

@@ -50,6 +50,13 @@ async function setUpFixture(
   const weth = await ethers.getContractAt('IERC20', addresses.tokens.WETH);
   const wbtc = await ethers.getContractAt('IERC20', addresses.tokens.WBTC);
 
+  const TOKEN_MAP = {
+    [addresses.tokens.WETH]: weth,
+    [addresses.tokens.DAI]: dai,
+    [addresses.tokens.USDC]: usdc,
+    [addresses.tokens.WBTC]: wbtc,
+  };
+
   // Gives signer1 creator permissions
   await ishtarGate.connect(owner).setCreatorPermissions(owner.address, true, { gasPrice: 0 });
   await ishtarGate.connect(owner).setCreatorPermissions(signer1.address, true, { gasPrice: 0 });
@@ -247,6 +254,8 @@ async function setUpFixture(
     usdc,
     weth,
     wbtc,
+
+    TOKEN_MAP,
   };
 }
 

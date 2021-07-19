@@ -94,7 +94,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
     address private constant USDC = 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48;
     address private constant WBTC = 0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599;
 
-    uint256 private constant EARLY_WITHDRAWAL_PENALTY = 5e16;
+    uint256 private constant EARLY_WITHDRAWAL_PENALTY = 25e15;
     uint256 private constant MAX_TOTAL_STRATEGIES = 20; // Max number of strategies
     uint256 private constant TEN_PERCENT = 1e17;
 
