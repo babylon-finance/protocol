@@ -16,7 +16,6 @@
 */
 
 pragma solidity 0.7.6;
-pragma abicoder v2;
 
 /**
  * @title IBabylonViewer
@@ -53,15 +52,6 @@ interface IBabylonViewer {
             uint256[12] memory,
             bool[] memory,
             uint256[] memory
-        );
-
-    function getOperationsStrategy(address _strategy)
-        external
-        view
-        returns (
-            uint8[] memory,
-            address[] memory,
-            bytes[] memory
         );
 
     function getPermissions(address _user) external view returns (bool, bool);
