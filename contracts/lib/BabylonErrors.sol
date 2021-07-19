@@ -271,5 +271,5 @@ library Errors {
     // Setting max contributors
     uint256 internal constant MAX_CONTRIBUTORS_SET = 91;
     // Profit sharing mismatch for customized gardens
-    uint256 internal constant PROFIT_SHARING_MISMATCH = 91;
+    uint256 internal constant PROFIT_SHARING_MISMATCH = 92;
 }
