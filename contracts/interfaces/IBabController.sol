@@ -64,6 +64,8 @@ interface IBabController {
 
     function editStrategyFactory(address _newStrategyFactory) external;
 
+    function editBabylonViewer(address _newBabylonViewer) external;
+
     function addIntegration(string memory _name, address _integration) external;
 
     function editIntegration(string memory _name, address _integration) external;
@@ -115,6 +117,8 @@ interface IBabController {
     function gardenValuer() external view returns (address);
 
     function gardenNFT() external view returns (address);
+
+    function babViewer() external view returns (address);
 
     function strategyNFT() external view returns (address);
 
