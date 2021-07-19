@@ -79,9 +79,6 @@ contract BabController is OwnableUpgradeable, IBabController {
     /// @notice Emitted when an action is paused individually
     event ActionPausedIndividually(string _action, address _address, bool _pauseState);
 
-    /// @notice Emitted when a new Babylon Viewer is set
-    event BabylonViewerEdited(address _newBabylonViewer, address _oldBabylonViewer);
-
     /* ============ Modifiers ============ */
 
     /* ============ State Variables ============ */
@@ -167,9 +164,6 @@ contract BabController is OwnableUpgradeable, IBabController {
     address public guardian;
     mapping(address => bool) public override guardianPaused;
     bool public override guardianGlobalPaused;
-
-    // Babylon Viewer
-    address public override babViewer;
 
     /* ============ Constructor ============ */
 
@@ -537,20 +531,6 @@ contract BabController is OwnableUpgradeable, IBabController {
         strategyFactory = _newStrategyFactory;
 
         emit StrategyFactoryEdited(_newStrategyFactory, oldStrategyFactory);
-    }
-
-    /**
-     * PRIVILEGED GOVERNANCE FUNCTION. Allows governance to edit the protocol babylon viewer
-     *
-     * @param _newBabylonViewer      Address of the new babylon viewer
-     */
-    function editBabylonViewer(address _newBabylonViewer) external override onlyOwner {
-        require(_newBabylonViewer != address(0), 'Address must not be 0');
-
-        address oldBabylonViewer = babViewer;
-        babViewer = _newBabylonViewer;
-
-        emit BabylonViewerEdited(_newBabylonViewer, oldBabylonViewer);
     }
 
     /**
