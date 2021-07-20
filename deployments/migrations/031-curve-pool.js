@@ -23,17 +23,6 @@ module.exports = async ({
     gasPrice,
   });
 
-  if (deployment.newlyDeployed) {
-    console.log(`Adding integration ${contract}(${deployment.address}) to BabController`);
-    await (
-      await controllerContract.addIntegration(
-        await (await ethers.getContractAt(contract, deployment.address)).getName(),
-        deployment.address,
-        { gasPrice },
-      )
-    ).wait();
-  }
-
   if (network.live && deployment.newlyDeployed) {
     await tenderly.push(await getTenderlyContract(contract));
   }
