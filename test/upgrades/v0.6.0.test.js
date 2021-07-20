@@ -8,28 +8,6 @@ const { increaseTime } = require('../utils/test-helpers');
 const { createStrategy, executeStrategy } = require('../fixtures/StrategyHelper.js');
 
 const { deploy } = deployments;
-const proxyAdminAbi = `
-[
-    {
-      "inputs": [
-        {
-          "internalType": "contract AdminUpgradeabilityProxy",
-          "name": "proxy",
-          "type": "address"
-        },
-        {
-          "internalType": "address",
-          "name": "implementation",
-          "type": "address"
-        }
-      ],
-      "name": "upgrade",
-      "outputs": [],
-      "stateMutability": "nonpayable",
-      "type": "function"
-    }
-  ]
-`;
 
 const upgradeFixture = deployments.createFixture(async (hre, options) => {
   const { network, upgradesDeployer, ethers } = hre;
@@ -55,7 +33,7 @@ const upgradeFixture = deployments.createFixture(async (hre, options) => {
     from: signer.address,
   });
 
-  await proxyAdmin.upgrade(distributor.address, distributorNewImpl.address);
+ // await proxyAdmin.upgrade(distributor.address, distributorNewImpl.address);
 
   // deploy new contracts
   for (const { contract, type, operation, args } of [
