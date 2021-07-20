@@ -228,32 +228,15 @@ contract BabylonViewer {
         return (userGardens, hasUserDeposited);
     }
 
-    function getGardenUserAvgPricePerShare(address _garden, address _user) external view returns (uint256) {
+    function getGardenUserAvgPricePerShare(address _garden, address _user) public view returns (uint256) {
         IGarden garden = IGarden(_garden);
         uint256[] memory contribution = new uint256[](2);
         (, , , , , contribution[0], contribution[1], , , ) = garden.getContributor(_user);
 
-        // contributor[0] -> Deposits (ERC20 reserveAsset decimals)
-        // contributor[1] -> Balance (Garden tokens) - 18 decimals
+        // Avg price per user share = deposits / garden tokens
+        // contributor[0] -> Deposits (ERC20 reserveAsset with X decimals)
+        // contributor[1] -> Balance (Garden tokens) with 18 decimals
         return contribution[1] > 0 ? contribution[0].preciseDiv(contribution[1]) : 0;
-    }
-
-    function getGardenUserPowAvgPricePerShare(address _garden, address _user) external view returns (uint256) {
-        IGarden garden = IGarden(_garden);
-        uint256[] memory contribution = new uint256[](2);
-        (contribution[0], , , , , contribution[1], , , , ) = garden.getContributor(_user);
-        uint256 contributorPower =
-            IRewardsDistributor(controller.rewardsDistributor()).getContributorPower(
-                _garden,
-                _user,
-                contribution[0],
-                block.timestamp
-            );
-        uint256 gardenSupply = IERC20(_garden).totalSupply();
-
-        // contributor[0] -> Deposits (ERC20 reserveAsset decimals)
-        // contributor[1] -> Balance (Garden tokens) - 18 decimals
-        return contributorPower > 0 ? contribution[1].preciseDiv(gardenSupply.mul(contributorPower)) : 0;
     }
 
     function getUserStrategyActions(address[] memory _strategies, address _user)
@@ -282,7 +265,7 @@ contract BabylonViewer {
         returns (uint256[] memory, uint256[] memory)
     {
         IGarden garden = IGarden(_garden);
-        uint256[] memory contribution = new uint256[](9);
+        uint256[] memory contribution = new uint256[](10);
         (
             contribution[0],
             contribution[1],
@@ -303,6 +286,7 @@ contract BabylonViewer {
                 _user,
                 garden.getFinalizedStrategies()
             );
+        contribution[9] = getGardenUserAvgPricePerShare(_garden, _user);
         return (contribution, totalRewards);
     }
 
