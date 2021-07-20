@@ -70,7 +70,7 @@ const upgradeFixture = deployments.createFixture(async (hre, options) => {
   return { controller, owner, deployer, keeper };
 });
 
-describe.only('v0.6.0', function () {
+describe.skip('v0.6.0', function () {
   let controller;
   let owner;
   let deployer;
@@ -80,7 +80,7 @@ describe.only('v0.6.0', function () {
     ({ controller, owner, deployer, keeper } = await upgradeFixture());
   });
 
-  describe.only('after upgrade', function () {
+  describe('after upgrade', function () {
     describe('can finalizeStrategy', function () {
       it('leverageEthStrategy', async () => {
         const leverageEthStrategy = await ethers.getContractAt(
