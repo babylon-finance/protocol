@@ -16,6 +16,9 @@
 */
 
 pragma solidity 0.7.6;
+
+import 'hardhat/console.sol';
+
 import {TimeLockedToken} from './TimeLockedToken.sol';
 
 import {OwnableUpgradeable} from '@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol';
@@ -532,6 +535,7 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
      * @param _garden     Address of the garden
      */
     function getGardenProfitsSharing(address _garden) external view override returns (uint256[3] memory) {
+        console.log('helel');
         if (gardenCustomProfitSharing[_garden]) {
             // It has customized values
             return gardenProfitSharing[_garden];

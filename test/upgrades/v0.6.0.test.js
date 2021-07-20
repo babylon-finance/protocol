@@ -33,7 +33,7 @@ const upgradeFixture = deployments.createFixture(async (hre, options) => {
     from: signer.address,
   });
 
- // await proxyAdmin.upgrade(distributor.address, distributorNewImpl.address);
+  await proxyAdmin.upgrade(distributor.address, distributorNewImpl.address);
 
   // deploy new contracts
   for (const { contract, type, operation, args } of [
