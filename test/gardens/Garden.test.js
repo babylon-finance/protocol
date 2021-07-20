@@ -31,7 +31,13 @@ const {
   injectFakeProfits,
 } = require('../fixtures/StrategyHelper');
 
-const { createGarden, getDepositSig, getWithdrawSig } = require('../fixtures/GardenHelper');
+const {
+  createGarden,
+  getDepositSig,
+  getWithdrawSig,
+  transferFunds,
+  depositFunds,
+} = require('../fixtures/GardenHelper');
 
 const { setupTests } = require('../fixtures/GardenFixture');
 const { encoding } = require('dotenv/lib/env-options');
@@ -1609,6 +1615,34 @@ describe('Garden', function () {
       await expect(
         garden1.connect(signer3).addStrategy('name', 'STRT', params, [1], [balancerIntegration.address], encodedData),
       ).to.be.reverted;
+    });
+  });
+  describe('Avg share price per user', async function () {
+    [
+      { token: addresses.tokens.WETH, name: 'WETH' },
+      { token: addresses.tokens.DAI, name: 'DAI' },
+      { token: addresses.tokens.USDC, name: 'USDC' },
+      { token: addresses.tokens.WBTC, name: 'WBTC' },
+    ].forEach(({ token, name }) => {
+      it(`should get the avg share price of a user in ${name} garden`, async function () {
+        await transferFunds(token);
+        const garden = await createGarden({ reserveAsset: token });
+        await depositFunds(token, garden);
+
+        const user1Balance = await garden.balanceOf(signer1.address);
+        const user2Balance = await garden.balanceOf(signer3.address);
+        const user1Deposits = await garden.getContributor(signer1.address);
+        const user2Deposits = await garden.getContributor(signer3.address);
+        const user1Avg = user1Balance > 0 ? user1Deposits[5].mul(ONE_ETH).div(user1Balance) : 0;
+        const user2Avg = user2Balance > 0 ? user2Deposits[5].mul(ONE_ETH).div(user2Balance) : 0;
+
+        expect(
+          await babViewer.connect(signer1).getGardenUserAvgPricePerShare(garden.address, signer1.address),
+        ).to.equal(user1Avg);
+        expect(
+          await babViewer.connect(signer1).getGardenUserAvgPricePerShare(garden.address, signer3.address),
+        ).to.equal(user2Avg);
+      });
     });
   });
 });
