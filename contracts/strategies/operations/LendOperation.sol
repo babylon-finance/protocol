@@ -237,7 +237,7 @@ contract LendOperation is Operation {
         }
         uint256 rewardsBalance = IERC20(ILendIntegration(_integration).getRewardToken()).balanceOf(_sender);
         // Add rewards
-        if (rewardsBalance > 1e14) {
+        if (rewardsBalance > 1e16) {
             IStrategy(_sender).trade(
                 ILendIntegration(_integration).getRewardToken(),
                 rewardsBalance,
