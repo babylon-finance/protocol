@@ -31,7 +31,13 @@ const {
   injectFakeProfits,
 } = require('../fixtures/StrategyHelper');
 
-const { createGarden, getDepositSig, getWithdrawSig } = require('../fixtures/GardenHelper');
+const {
+  createGarden,
+  getDepositSig,
+  getWithdrawSig,
+  transferFunds,
+  depositFunds,
+} = require('../fixtures/GardenHelper');
 
 const { setupTests } = require('../fixtures/GardenFixture');
 
@@ -60,6 +66,7 @@ describe('Garden', function () {
   let usdcGarden;
   let gardenNFT;
   let gardenValuer;
+  let babViewer;
 
   let usdc;
   let weth;
@@ -81,6 +88,7 @@ describe('Garden', function () {
       balancerIntegration,
       uniswapV3TradeIntegration,
       gardenValuer,
+      babViewer,
 
       dai,
       usdc,
@@ -1590,6 +1598,128 @@ describe('Garden', function () {
       await expect(
         garden1.connect(signer3).addStrategy('name', 'STRT', params, [1], [balancerIntegration.address], encodedData),
       ).to.be.reverted;
+    });
+  });
+  describe.only('Avg share price per user', async function () {
+    [
+      { token: addresses.tokens.WETH, name: 'WETH' },
+      { token: addresses.tokens.DAI, name: 'DAI' },
+      { token: addresses.tokens.USDC, name: 'USDC' },
+      { token: addresses.tokens.WBTC, name: 'WBTC' },
+    ].forEach(({ token, name }) => {
+      it(`should get the static avg share price of a user in ${name} garden`, async function () {
+        await transferFunds(token);
+        const garden = await createGarden({ reserveAsset: token });
+        const gardenReserveAsset = await ethers.getContractAt('IERC20', token);
+        await depositFunds(token, garden);
+
+        console.log(
+          (await babViewer.connect(signer1).getGardenUserAvgPricePerShare(garden.address, signer1.address)).toString(),
+        );
+        console.log(
+          (await babViewer.connect(signer1).getGardenUserAvgPricePerShare(garden.address, signer3.address)).toString(),
+        );
+        const user1Balance = await garden.balanceOf(signer1.address);
+        const user2Balance = await garden.balanceOf(signer3.address);
+        const user1Deposits = await garden.getContributor(signer1.address);
+        const user2Deposits = await garden.getContributor(signer3.address);
+        const user1Power = await rewardsDistributor.getContributorPower(garden.address, signer1.address, 0, NOW);
+        const user2Power = await rewardsDistributor.getContributorPower(garden.address, signer3.address, 0, NOW);
+
+        console.log('Balance 1', user1Balance.toString());
+        console.log('Balance 2', user2Balance.toString());
+        console.log('Struct user 1', user1Deposits.toString());
+        console.log('Struct user 2', user2Deposits.toString());
+        console.log('Power 1', user1Power.toString());
+        console.log('Power 2', user2Power.toString());
+
+        const user1Avg = user1Balance > 0 ? user1Deposits[5].mul(ONE_ETH).div(user1Balance) : 0;
+        const user2Avg = user2Balance > 0 ? user2Deposits[5].mul(ONE_ETH).div(user2Balance) : 0;
+        console.log('Avg user 1', user1Avg.toString());
+        console.log('Avg user 2', user2Avg.toString());
+
+        expect(
+          await babViewer.connect(signer1).getGardenUserAvgPricePerShare(garden.address, signer1.address),
+        ).to.equal(user1Avg);
+        expect(
+          await babViewer.connect(signer1).getGardenUserAvgPricePerShare(garden.address, signer3.address),
+        ).to.equal(user2Avg);
+
+        //Cont power getGardenUserPowAvgPricePerShare
+        // (await rewardsDistributor.getContributorPower(garden1.address, signer3.address, 0, NOW)).toString(),
+        // getContributor returning
+        // contributor.lastDepositAt,
+        //contributor.initialDepositAt,
+        //contributor.claimedAt,
+        //contributor.claimedBABL,
+        //contributor.claimedRewards,
+        //contributor.totalDeposits > contributor.withdrawnSince
+        //    ? contributor.totalDeposits.sub(contributor.withdrawnSince)
+        //    : 0,
+        //balance,
+        //lockedBalance,
+        //contributorPower,
+        //contributor.nonce
+      });
+      it(`should get the dynamic avg share price of a user in ${name} garden using`, async function () {
+        await transferFunds(token);
+        const garden = await createGarden({ reserveAsset: token });
+        const gardenReserveAsset = await ethers.getContractAt('IERC20', token);
+        await depositFunds(token, garden);
+
+        console.log(
+          (
+            await babViewer.connect(signer1).getGardenUserPowAvgPricePerShare(garden.address, signer1.address)
+          ).toString(),
+        );
+        console.log(
+          (
+            await babViewer.connect(signer1).getGardenUserPowAvgPricePerShare(garden.address, signer3.address)
+          ).toString(),
+        );
+        const user1Balance = await garden.balanceOf(signer1.address);
+        const user2Balance = await garden.balanceOf(signer3.address);
+        const user1Deposits = await garden.getContributor(signer1.address);
+        const user2Deposits = await garden.getContributor(signer3.address);
+        const user1Power = await rewardsDistributor.getContributorPower(garden.address, signer1.address, 0, NOW);
+        const user2Power = await rewardsDistributor.getContributorPower(garden.address, signer3.address, 0, NOW);
+
+        console.log('Balance 1', user1Balance.toString());
+        console.log('Balance 2', user2Balance.toString());
+        console.log('Struct user 1', user1Deposits.toString());
+        console.log('Struct user 2', user2Deposits.toString());
+        console.log('Power 1', user1Power.toString());
+        console.log('Power 2', user2Power.toString());
+        const supply = await garden.totalSupply();
+
+        const user1Avg = user1Balance > 0 ? user1Deposits[5].mul(ONE_ETH).div(supply.mul(user1Power).div(ONE_ETH)) : 0;
+        const user2Avg = user2Balance > 0 ? user2Deposits[5].mul(ONE_ETH).div(supply.mul(user2Power).div(ONE_ETH)) : 0;
+        console.log('Avg user 1', user1Avg.toString());
+        console.log('Avg user 2', user2Avg.toString());
+
+        expect(
+          await babViewer.connect(signer1).getGardenUserPowAvgPricePerShare(garden.address, signer1.address),
+        ).to.be.closeTo(user1Avg, ethers.utils.parseEther('0.0005'));
+        expect(
+          await babViewer.connect(signer1).getGardenUserPowAvgPricePerShare(garden.address, signer3.address),
+        ).to.be.closeTo(user2Avg, ethers.utils.parseEther('0.0005'));
+
+        //Cont power getGardenUserPowAvgPricePerShare
+        // (await rewardsDistributor.getContributorPower(garden1.address, signer3.address, 0, NOW)).toString(),
+        // getContributor returning
+        // contributor.lastDepositAt,
+        //contributor.initialDepositAt,
+        //contributor.claimedAt,
+        //contributor.claimedBABL,
+        //contributor.claimedRewards,
+        //contributor.totalDeposits > contributor.withdrawnSince
+        //    ? contributor.totalDeposits.sub(contributor.withdrawnSince)
+        //    : 0,
+        //balance,
+        //lockedBalance,
+        //contributorPower,
+        //contributor.nonce
+      });
     });
   });
 });
