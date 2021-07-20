@@ -157,7 +157,6 @@ interface IBabController {
 
     function isGarden(address _garden) external view returns (bool);
 
-
     function isValidReserveAsset(address _reserveAsset) external view returns (bool);
 
     function isValidKeeper(address _keeper) external view returns (bool);

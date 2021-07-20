@@ -146,7 +146,7 @@ describe.skip('v0.6.0', function () {
         const longWBTC = await ethers.getContractAt('IStrategy', '0x7498decb12acdb1c70e17bdb8481a13000a01ed6', owner);
 
         await increaseTime(ONE_DAY_IN_SECONDS * 120);
-        
+
         await longWBTC.connect(keeper).finalizeStrategy(0, '');
 
         const [address, active, dataSet, finalized, executedAt, exitedAt] = await longWBTC.getStrategyState();
