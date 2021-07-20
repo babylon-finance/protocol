@@ -8,15 +8,54 @@ const { increaseTime } = require('../utils/test-helpers');
 const { createStrategy, executeStrategy } = require('../fixtures/StrategyHelper.js');
 
 const { deploy } = deployments;
+const proxyAdminAbi = `
+[
+    {
+      "inputs": [
+        {
+          "internalType": "contract AdminUpgradeabilityProxy",
+          "name": "proxy",
+          "type": "address"
+        },
+        {
+          "internalType": "address",
+          "name": "implementation",
+          "type": "address"
+        }
+      ],
+      "name": "upgrade",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    }
+  ]
+`;
 
 const upgradeFixture = deployments.createFixture(async (hre, options) => {
+  const { network, upgradesDeployer, ethers } = hre;
+
   owner = await impersonateAddress('0xeA4E1d01Fad05465a84bAd319c93B73Fa12756fB');
   deployer = await impersonateAddress('0x040cC3AF8455F3c34D1df1D2a305e047a062BeBf');
   keeper = await impersonateAddress('0x74D206186B84d4c2dAFeBD9Fd230878EC161d5B8');
+
   controller = await ethers.getContractAt('BabController', '0xd4a5b5fcb561daf3adf86f8477555b92fba43b5f', owner);
+  distributor = await ethers.getContractAt('RewardsDistributor', '0x40154ad8014df019a53440a60ed351dfba47574e', owner);
 
   const signers = await ethers.getSigners();
   const signer = signers[0];
+
+  // upgrade rewards distributor
+  const proxyAdmin = await ethers.getContractAt(
+    'ProxyAdmin',
+    '0x0C085fd8bbFD78db0107bF17047E8fa906D871DC',
+    owner,
+  );
+
+  const distributorNewImpl = await deploy('RewardsDistributor', {
+    from: signer.address,
+  });
+
+  await proxyAdmin.upgrade(distributor.address, distributorNewImpl.address);
 
   // deploy new contracts
   for (const { contract, type, operation, args } of [
@@ -43,10 +82,6 @@ const upgradeFixture = deployments.createFixture(async (hre, options) => {
       args,
     });
     if (type === 'integration') {
-      await controller.editIntegration(
-        await (await ethers.getContractAt(contract, deployment.address)).getName(),
-        deployment.address,
-      );
     }
     if (type === 'operation') {
       await controller.setOperation(operation, deployment.address);
@@ -59,18 +94,18 @@ const upgradeFixture = deployments.createFixture(async (hre, options) => {
     deployer,
   );
 
-  const newImpl = await deploy('Strategy', {
+  const strategyNewImpl = await deploy('Strategy', {
     from: signer.address,
     args: [],
     log: true,
   });
 
-  await beacon.connect(deployer).upgradeTo(newImpl.address);
+  await beacon.connect(deployer).upgradeTo(strategyNewImpl.address);
 
   return { controller, owner, deployer, keeper };
 });
 
-describe.skip('v0.6.0', function () {
+describe.only('v0.6.0', function () {
   let controller;
   let owner;
   let deployer;
