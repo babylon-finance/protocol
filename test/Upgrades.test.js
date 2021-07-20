@@ -4,7 +4,7 @@ const { impersonateAddress } = require('../lib/rpc');
 const { ONE_DAY_IN_SECONDS, GARDEN_PARAMS } = require('../lib/constants.js');
 const addresses = require('../lib/addresses');
 const { increaseTime } = require('./utils/test-helpers');
-const { createStrategy } = require('./fixtures/StrategyHelper.js');
+const { createStrategy, executeStrategy } = require('./fixtures/StrategyHelper.js');
 const { setupTests } = require('./fixtures/GardenFixture');
 
 describe('Upgrades', function () {
@@ -17,6 +17,133 @@ describe('Upgrades', function () {
   let strategy11;
   let garden1;
   let babController;
+
+  async function upgradeFixture() {
+    const { deploy } = deployments;
+    const { deployer } = await getNamedAccounts();
+    const signer = await getSigner(deployer);
+    const gasPrice = await getRapid();
+    const contract1 = 'UniswapPoolIntegration';
+    const contract2 = 'SushiswapPoolIntegration';
+    const contract3 = 'OneInchPoolIntegration';
+    const contract4 = 'BuyOperation';
+    const contract5 = 'AddLiquidityOperation';
+    const contract6 = 'DepositVaultOperation';
+    const contract7 = 'BorrowOperation';
+    const contract8 = 'LendOperation';
+
+    const controller = await deployments.get('BabControllerProxy');
+    const controllerContract = await ethers.getContractAt('BabController', controller.address, signer);
+
+    const deploymentUni = await deploy(contract1, {
+      from: deployer,
+      args: [controller.address, addresses.uniswap.router],
+      log: true,
+      gasPrice,
+    });
+
+    const deploymentSushi = await deploy(contract2, {
+      from: deployer,
+      args: [controller.address, addresses.sushiswap.router],
+      log: true,
+      gasPrice,
+    });
+
+    const deploymentInch = await deploy(contract3, {
+      from: deployer,
+      args: [controller.address, addresses.oneinch.factory],
+      log: true,
+      gasPrice,
+    });
+
+    const deploymentBuyOp = await deploy(contract4, {
+      from: deployer,
+      args: ['buy', controller.address],
+      log: true,
+      gasPrice,
+    });
+
+    const deploymentAddOp = await deploy(contract5, {
+      from: deployer,
+      args: ['lp', controller.address],
+      log: true,
+      gasPrice,
+    });
+
+    const deploymentVaultOp = await deploy(contract6, {
+      from: deployer,
+      args: ['vault', controller.address],
+      log: true,
+      gasPrice,
+    });
+
+    const deploymentBorrowOp = await deploy(contract7, {
+      from: deployer,
+      args: ['borrow', controller.address],
+      log: true,
+      gasPrice,
+    });
+
+    const deploymentLendOp = await deploy(contract8, {
+      from: deployer,
+      args: ['lend', controller.address],
+      log: true,
+      gasPrice,
+    });
+
+    if (
+      deploymentUni.newlyDeployed &&
+      deploymentSushi.newlyDeployed &&
+      deploymentInch.newlyDeployed &&
+      deploymentBuyOp.newlyDeployed &&
+      deploymentAddOp.newlyDeployed &&
+      deploymentVaultOp.newlyDeployed &&
+      deploymentBorrowOp.newlyDeployed &&
+      deploymentLendOp.newlyDeployed
+    ) {
+      await (
+        await controllerContract.addIntegration(
+          await (await ethers.getContractAt(contract1, deploymentUni.address)).getName(),
+          deploymentUni.address,
+          { gasPrice },
+        )
+      ).wait();
+      await (
+        await controllerContract.addIntegration(
+          await (await ethers.getContractAt(contract2, deploymentSushi.address)).getName(),
+          deploymentSushi.address,
+          { gasPrice },
+        )
+      ).wait();
+      await (
+        await controllerContract.addIntegration(
+          await (await ethers.getContractAt(contract3, deploymentInch.address)).getName(),
+          deploymentInch.address,
+          { gasPrice },
+        )
+      ).wait();
+
+      await (await controllerContract.setOperation(0, deploymentBuyOp.address, { gasPrice })).wait();
+      await (await controllerContract.setOperation(1, deploymentAddOp.address, { gasPrice })).wait();
+      await (await controllerContract.setOperation(2, deploymentVaultOp.address, { gasPrice })).wait();
+      await (await controllerContract.setOperation(4, deploymentBorrowOp.address, { gasPrice })).wait();
+      await (await controllerContract.setOperation(3, deploymentLendOp.address, { gasPrice })).wait();
+    }
+
+    const deployment = await deployments.get('StrategyBeacon');
+    const beacon = new ethers.Contract(deployment.address, deployment.abi);
+
+    const newImpl = await deploy('Strategy', {
+      from: owner.address,
+      args: [],
+      log: true,
+    });
+
+    await beacon.connect(owner).upgradeTo(newImpl.address);
+    const mainnetKeeper = await impersonateAddress('0x74D206186B84d4c2dAFeBD9Fd230878EC161d5B8');
+    await increaseTime(ONE_DAY_IN_SECONDS * 120);
+    return mainnetKeeper;
+  }
 
   beforeEach(async () => {
     ({
@@ -76,17 +203,8 @@ describe('Upgrades', function () {
       expect(await freshStrategy.connect(owner).duration()).to.eq('0');
     });
 
-    it.skip('can finalizeStrategy after upgrade', async () => {
-      const deployment = await deployments.get('StrategyBeacon');
-      const beacon = new ethers.Contract(deployment.address, deployment.abi);
-
-      const newImpl = await deploy('Strategy', {
-        from: owner.address,
-        args: [],
-        log: true,
-      });
-
-      await beacon.connect(owner).upgradeTo(newImpl.address);
+    it('can finalizeStrategy leverageEthStrategy in Arkad Garden after upgrade', async () => {
+      const mainnetKeeper = await upgradeFixture();
 
       const leverageEthStrategy = await ethers.getContractAt(
         'IStrategy',
@@ -94,15 +212,58 @@ describe('Upgrades', function () {
         owner,
       );
 
-      const mainnetKeeper = await impersonateAddress('0x74D206186B84d4c2dAFeBD9Fd230878EC161d5B8');
-      await increaseTime(ONE_DAY_IN_SECONDS * 70);
       await leverageEthStrategy.connect(mainnetKeeper).finalizeStrategy(0, '');
+      const [address, active, dataSet, finalized, executedAt, exitedAt] = await leverageEthStrategy.getStrategyState();
+      expect(active).equals(false);
+      expect(finalized).equals(true);
+    });
+    it('can finalizeStrategy Lend Eth Borrow DAI in Arkad Garden after upgrade', async () => {
+      const mainnetKeeper = await upgradeFixture();
 
-      const [, active, , finalized, , exitedAt] = await leverageEthStrategy.connect(owner).getStrategyState();
+      const lendEthBorrowDaiInHarvestDai = await ethers.getContractAt(
+        'IStrategy',
+        '0xcd4fd2a8426c86067836d077eda7fa2a1df549dd',
+        owner,
+      );
 
-      expect(finalized).to.eq(true);
-      expect(active).to.eq(false);
-      expect(exitedAt).to.gt(0);
+      await lendEthBorrowDaiInHarvestDai.connect(mainnetKeeper).finalizeStrategy(0, '');
+
+      const [
+        address,
+        active,
+        dataSet,
+        finalized,
+        executedAt,
+        exitedAt,
+      ] = await lendEthBorrowDaiInHarvestDai.getStrategyState();
+      expect(active).equals(false);
+      expect(finalized).equals(true);
+    });
+    it('can finalizeStrategy USDC-ETH Uniswap pool in Arkad Garden after upgrade', async () => {
+      const mainnetKeeper = await upgradeFixture();
+
+      const usdcEthUniswapLp = await ethers.getContractAt(
+        'IStrategy',
+        '0x13c0afb2d5ccdc5e515241de4447c6104d5bba7b',
+        owner,
+      );
+
+      await usdcEthUniswapLp.connect(mainnetKeeper).finalizeStrategy(0, '');
+
+      const [address, active, dataSet, finalized, executedAt, exitedAt] = await usdcEthUniswapLp.getStrategyState();
+      expect(active).equals(false);
+      expect(finalized).equals(true);
+    });
+    it.skip('can finalizeStrategy long WBTC in Arkad Garden after upgrade', async () => {
+      const mainnetKeeper = await upgradeFixture();
+
+      const longWBTC = await ethers.getContractAt('IStrategy', '0x7498decb12acdb1c70e17bdb8481a13000a01ed6', owner);
+
+      await longWBTC.connect(mainnetKeeper).finalizeStrategy(0, '');
+
+      const [address, active, dataSet, finalized, executedAt, exitedAt] = await longWBTC.getStrategyState();
+      expect(active).equals(false);
+      expect(finalized).equals(true);
     });
   });
 
