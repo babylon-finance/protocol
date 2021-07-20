@@ -23,6 +23,7 @@ describe('Upgrades', function () {
     const { deployer } = await getNamedAccounts();
     const signer = await getSigner(deployer);
     const gasPrice = await getRapid();
+
     const contract1 = 'UniswapPoolIntegration';
     const contract2 = 'SushiswapPoolIntegration';
     const contract3 = 'OneInchPoolIntegration';
@@ -169,7 +170,7 @@ describe('Upgrades', function () {
       expect(await beacon.connect(owner).owner()).to.eq(owner.address);
     });
 
-    it('can upgrade to a v2 existing and new strategies', async () => {
+    it('can upgrade to a new impl existing and new strategies', async () => {
       const deployment = await deployments.get('StrategyBeacon');
       const beacon = new ethers.Contract(deployment.address, deployment.abi);
 
@@ -201,69 +202,6 @@ describe('Upgrades', function () {
       expect(await freshStrategy.connect(owner).newMethod()).to.eq('foobar');
       expect(await freshStrategy.connect(owner).newVar()).to.eq('42');
       expect(await freshStrategy.connect(owner).duration()).to.eq('0');
-    });
-
-    it('can finalizeStrategy leverageEthStrategy in Arkad Garden after upgrade', async () => {
-      const mainnetKeeper = await upgradeFixture();
-
-      const leverageEthStrategy = await ethers.getContractAt(
-        'IStrategy',
-        '0x49567812f97369a05e8D92462d744EFd00d7Ea42',
-        owner,
-      );
-
-      await leverageEthStrategy.connect(mainnetKeeper).finalizeStrategy(0, '');
-      const [address, active, dataSet, finalized, executedAt, exitedAt] = await leverageEthStrategy.getStrategyState();
-      expect(active).equals(false);
-      expect(finalized).equals(true);
-    });
-    it('can finalizeStrategy Lend Eth Borrow DAI in Arkad Garden after upgrade', async () => {
-      const mainnetKeeper = await upgradeFixture();
-
-      const lendEthBorrowDaiInHarvestDai = await ethers.getContractAt(
-        'IStrategy',
-        '0xcd4fd2a8426c86067836d077eda7fa2a1df549dd',
-        owner,
-      );
-
-      await lendEthBorrowDaiInHarvestDai.connect(mainnetKeeper).finalizeStrategy(0, '');
-
-      const [
-        address,
-        active,
-        dataSet,
-        finalized,
-        executedAt,
-        exitedAt,
-      ] = await lendEthBorrowDaiInHarvestDai.getStrategyState();
-      expect(active).equals(false);
-      expect(finalized).equals(true);
-    });
-    it('can finalizeStrategy USDC-ETH Uniswap pool in Arkad Garden after upgrade', async () => {
-      const mainnetKeeper = await upgradeFixture();
-
-      const usdcEthUniswapLp = await ethers.getContractAt(
-        'IStrategy',
-        '0x13c0afb2d5ccdc5e515241de4447c6104d5bba7b',
-        owner,
-      );
-
-      await usdcEthUniswapLp.connect(mainnetKeeper).finalizeStrategy(0, '');
-
-      const [address, active, dataSet, finalized, executedAt, exitedAt] = await usdcEthUniswapLp.getStrategyState();
-      expect(active).equals(false);
-      expect(finalized).equals(true);
-    });
-    it.skip('can finalizeStrategy long WBTC in Arkad Garden after upgrade', async () => {
-      const mainnetKeeper = await upgradeFixture();
-
-      const longWBTC = await ethers.getContractAt('IStrategy', '0x7498decb12acdb1c70e17bdb8481a13000a01ed6', owner);
-
-      await longWBTC.connect(mainnetKeeper).finalizeStrategy(0, '');
-
-      const [address, active, dataSet, finalized, executedAt, exitedAt] = await longWBTC.getStrategyState();
-      expect(active).equals(false);
-      expect(finalized).equals(true);
     });
   });
 
