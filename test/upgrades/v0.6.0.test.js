@@ -23,11 +23,7 @@ const upgradeFixture = deployments.createFixture(async (hre, options) => {
   const signer = signers[0];
 
   // upgrade rewards distributor
-  const proxyAdmin = await ethers.getContractAt(
-    'ProxyAdmin',
-    '0x0C085fd8bbFD78db0107bF17047E8fa906D871DC',
-    owner,
-  );
+  const proxyAdmin = await ethers.getContractAt('ProxyAdmin', '0x0C085fd8bbFD78db0107bF17047E8fa906D871DC', owner);
 
   const distributorNewImpl = await deploy('RewardsDistributor', {
     from: signer.address,
@@ -66,7 +62,8 @@ const upgradeFixture = deployments.createFixture(async (hre, options) => {
     }
   }
 
-  const beacon = await ethers.getContractAt(
+  // upgrade strategy
+  const strategBeacon = await ethers.getContractAt(
     'UpgradeableBeacon',
     '0x31946680978CEFB010e5f5Fa8b8134c058cba7dC',
     deployer,
@@ -78,7 +75,22 @@ const upgradeFixture = deployments.createFixture(async (hre, options) => {
     log: true,
   });
 
-  await beacon.connect(deployer).upgradeTo(strategyNewImpl.address);
+  await strategBeacon.connect(deployer).upgradeTo(strategyNewImpl.address);
+
+  // upgrade garden
+  const gardenBeacon = await ethers.getContractAt(
+    'UpgradeableBeacon',
+    '0xc8f44C560efe396a6e57e48fF07205bD28AF5E75',
+    deployer,
+  );
+
+  const gardenNewImpl = await deploy('Garden', {
+    from: signer.address,
+    args: [],
+    log: true,
+  });
+
+  await gardenBeacon.connect(deployer).upgradeTo(gardenNewImpl.address);
 
   return { controller, owner, deployer, keeper };
 });
@@ -95,77 +107,24 @@ describe.only('v0.6.0', function () {
 
   describe('after upgrade', function () {
     describe('can finalizeStrategy', function () {
-      it('leverageEthStrategy', async () => {
-        const leverageEthStrategy = await ethers.getContractAt(
-          'IStrategy',
-          '0x49567812f97369a05e8D92462d744EFd00d7Ea42',
-          owner,
-        );
+      for (const [name, strategy] of [
+        ['leverageEthStrategy', '0x49567812f97369a05e8D92462d744EFd00d7Ea42'],
+        ['Lend Eth Borrow DAI', '0xcd4fd2a8426c86067836d077eda7fa2a1df549dd'],
+        ['USDC-ETH Uniswap', '0x13c0afb2d5ccdc5e515241de4447c6104d5bba7b'],
+        ['long WBTC', '0x7498decb12acdb1c70e17bdb8481a13000a01ed6'],
+      ]) {
+        it(name, async () => {
+          const strategyContract = await ethers.getContractAt('IStrategy', strategy, owner);
 
-        await increaseTime(ONE_DAY_IN_SECONDS * 120);
+          await increaseTime(ONE_DAY_IN_SECONDS * 120);
 
-        await leverageEthStrategy.connect(keeper).finalizeStrategy(0, '');
-        const [
-          address,
-          active,
-          dataSet,
-          finalized,
-          executedAt,
-          exitedAt,
-        ] = await leverageEthStrategy.getStrategyState();
-        expect(active).equals(false);
-        expect(finalized).equals(true);
-      });
-
-      it('Lend Eth Borrow DAI', async () => {
-        const lendEthBorrowDaiInHarvestDai = await ethers.getContractAt(
-          'IStrategy',
-          '0xcd4fd2a8426c86067836d077eda7fa2a1df549dd',
-          owner,
-        );
-
-        await increaseTime(ONE_DAY_IN_SECONDS * 120);
-
-        await lendEthBorrowDaiInHarvestDai.connect(keeper).finalizeStrategy(0, '');
-
-        const [
-          address,
-          active,
-          dataSet,
-          finalized,
-          executedAt,
-          exitedAt,
-        ] = await lendEthBorrowDaiInHarvestDai.getStrategyState();
-        expect(active).equals(false);
-        expect(finalized).equals(true);
-      });
-
-      it('USDC-ETH Uniswap', async () => {
-        const usdcEthUniswapLp = await ethers.getContractAt(
-          'IStrategy',
-          '0x13c0afb2d5ccdc5e515241de4447c6104d5bba7b',
-          owner,
-        );
-        await increaseTime(ONE_DAY_IN_SECONDS * 120);
-
-        await usdcEthUniswapLp.connect(keeper).finalizeStrategy(0, '');
-
-        const [address, active, dataSet, finalized, executedAt, exitedAt] = await usdcEthUniswapLp.getStrategyState();
-        expect(active).equals(false);
-        expect(finalized).equals(true);
-      });
-
-      it('long WBTC', async () => {
-        const longWBTC = await ethers.getContractAt('IStrategy', '0x7498decb12acdb1c70e17bdb8481a13000a01ed6', owner);
-
-        await increaseTime(ONE_DAY_IN_SECONDS * 120);
-
-        await longWBTC.connect(keeper).finalizeStrategy(0, '');
-
-        const [address, active, dataSet, finalized, executedAt, exitedAt] = await longWBTC.getStrategyState();
-        expect(active).equals(false);
-        expect(finalized).equals(true);
-      });
+          await strategyContract.connect(keeper).finalizeStrategy(0, '');
+          const [address, active, dataSet, finalized, executedAt, exitedAt] = await strategyContract.getStrategyState();
+          expect(active).eq(false);
+          expect(finalized).eq(true);
+          expect(exitedAt).gt(0);
+        });
+      }
     });
   });
 });
