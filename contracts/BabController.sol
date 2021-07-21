@@ -165,6 +165,9 @@ contract BabController is OwnableUpgradeable, IBabController {
     mapping(address => bool) public override guardianPaused;
     bool public override guardianGlobalPaused;
 
+    // Complementary integrations
+    mapping(address => bool) private protocolIntegrations;
+
     /* ============ Constructor ============ */
 
     /**
@@ -536,11 +539,16 @@ contract BabController is OwnableUpgradeable, IBabController {
     /**
      * PRIVILEGED GOVERNANCE FUNCTION. Allows governance to edit the protocol default trde integration
      *
-     * @param _newDefaultTradeIntegation      Address of the new default trade integration
+     * @param _newDefaultTradeIntegation Address of the new default trade integration
      */
     function setDefaultTradeIntegration(address _newDefaultTradeIntegation) external override onlyOwner {
         require(_newDefaultTradeIntegation != address(0), 'Address must not be 0');
         require(_newDefaultTradeIntegation != defaultTradeIntegration, 'Address must be different');
+        require(
+            enabledIntegrations[_nameHash(IIntegration(_newDefaultTradeIntegation).getName())] ==
+                _newDefaultTradeIntegation,
+            'Integration needs to be valid'
+        );
         address oldDefaultTradeIntegration = defaultTradeIntegration;
         defaultTradeIntegration = _newDefaultTradeIntegation;
 
@@ -574,6 +582,68 @@ contract BabController is OwnableUpgradeable, IBabController {
         minLiquidityPerReserve[_reserve] = _newMinLiquidityReserve;
 
         emit LiquidityMinimumEdited(_reserve, _newMinLiquidityReserve);
+    }
+
+    /**
+     * GOVERNANCE FUNCTION: Add a new integration to the registry
+     *
+     * @param _name Human readable string identifying the integration
+     * @param _integration Address of the integration contract to add
+     */
+    function addIntegration(string memory _name, address _integration) public override onlyOwner {
+        bytes32 hashedName = _nameHash(_name);
+        require(
+            enabledIntegrations[hashedName] == address(0) || !protocolIntegrations[_integration],
+            'Integration exists already.'
+        );
+        require(_integration != address(0), 'Integration address must exist.');
+        if (enabledIntegrations[hashedName] != address(0) && enabledIntegrations[hashedName] != _integration) {
+            // Backward compatibility - keep previous integrations valid
+            protocolIntegrations[enabledIntegrations[hashedName]] = true;
+            enabledIntegrations[hashedName] = _integration;
+        } else if (enabledIntegrations[hashedName] == address(0)) {
+            // Set as default for that hash name if it does not exist
+            enabledIntegrations[hashedName] = _integration;
+        }
+        protocolIntegrations[_integration] = true;
+        emit ControllerIntegrationAdded(_integration, _name);
+    }
+
+    /**
+     * GOVERNANCE FUNCTION: Edit an existing integration on the registry
+     *
+     * @param _name Human readable string identifying the integration
+     * @param _integration Address of the integration contract to edit
+     */
+    function editIntegration(string memory _name, address _integration) public override onlyOwner {
+        bytes32 hashedName = _nameHash(_name);
+
+        require(enabledIntegrations[hashedName] != address(0), 'Integration does not exist.');
+        require(_integration != address(0), 'Integration address must exist.');
+        if (enabledIntegrations[hashedName] != _integration) {
+            // Backward compatibility - keep previous integrations valid
+            protocolIntegrations[enabledIntegrations[hashedName]] = true;
+            enabledIntegrations[hashedName] = _integration;
+        }
+        protocolIntegrations[_integration] = true;
+
+        emit ControllerIntegrationEdited(_integration, _name);
+    }
+
+    /**
+     * GOVERNANCE FUNCTION: Remove an existing integration on the registry
+     *
+     * @param _name Human readable string identifying the integration
+     */
+    function removeIntegration(string memory _name, address _integration) external override onlyOwner {
+        bytes32 hashedName = _nameHash(_name);
+        require(
+            enabledIntegrations[hashedName] != address(0) || protocolIntegrations[_integration],
+            'Integration does not exist.'
+        );
+        delete enabledIntegrations[hashedName];
+        delete protocolIntegrations[_integration];
+        emit ControllerIntegrationRemoved(_integration, _name);
     }
 
     // ===========  Protocol security related Gov Functions ======
@@ -705,6 +775,39 @@ contract BabController is OwnableUpgradeable, IBabController {
         )
     {
         return (strategistBABLPercentage, stewardsBABLPercentage, lpsBABLPercentage, gardenCreatorBonus);
+    }
+
+    /**
+     * Get the integration address associated with passed human readable name
+     *
+     * @param  _name         Human readable integration name
+     *
+     * @return               Address of integration
+     */
+    function getIntegrationByName(string memory _name) external view override returns (address) {
+        return enabledIntegrations[_nameHash(_name)];
+    }
+
+    /**
+     * Get integration integration address associated with passed hashed name
+     *
+     * @param  _nameHashP     Hash of human readable integration name
+     *
+     * @return               Address of integration
+     */
+    function getIntegrationWithHash(bytes32 _nameHashP) external view override returns (address) {
+        return enabledIntegrations[_nameHashP];
+    }
+
+    /**
+     * Check if integration name is valid
+     *
+     * @param _name Human readable string identifying the integration
+     *
+     * @return Boolean indicating if valid
+     */
+    function isValidIntegration(string memory _name, address _integration) external view override returns (bool) {
+        return protocolIntegrations[_integration] || enabledIntegrations[_nameHash(_name)] == _integration;
     }
 
     /**

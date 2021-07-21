@@ -31,6 +31,31 @@ const upgradeFixture = deployments.createFixture(async (hre, options) => {
       type: 'integration',
       args: [controller.address, addresses.oneinch.factory],
     },
+    {
+      contract: 'CompoundLendIntegration',
+      type: 'integration',
+      args: [controller.address],
+    },
+    {
+      contract: 'YearnVaultIntegration',
+      type: 'integration',
+      args: [controller.address],
+    },
+    {
+      contract: 'AaveLendIntegration',
+      type: 'integration',
+      args: [controller.address],
+    },
+    {
+      contract: 'AaveBorrowIntegration',
+      type: 'integration',
+      args: [controller.address, ethers.utils.parseEther('0.30')],
+    },
+    {
+      contract: 'UniswapV3TradeIntegration',
+      type: 'trade',
+      args: [controller.address],
+    },
 
     { contract: 'AddLiquidityOperation', type: 'operation', operation: 1, args: ['lp', controller.address] },
     { contract: 'DepositVaultOperation', type: 'operation', operation: 2, args: ['vault', controller.address] },
@@ -51,6 +76,13 @@ const upgradeFixture = deployments.createFixture(async (hre, options) => {
     if (type === 'operation') {
       await controller.setOperation(operation, deployment.address);
     }
+    if (type === 'trade') {
+      await controller.editIntegration(
+        await (await ethers.getContractAt(contract, deployment.address)).getName(),
+        deployment.address,
+      );
+      await (await controller.setDefaultTradeIntegration(deployment.address)).wait();
+    }
   }
 
   const beacon = await ethers.getContractAt(
@@ -70,7 +102,7 @@ const upgradeFixture = deployments.createFixture(async (hre, options) => {
   return { controller, owner, deployer, keeper };
 });
 
-describe.skip('v0.6.0', function () {
+describe('v0.6.0', function () {
   let controller;
   let owner;
   let deployer;

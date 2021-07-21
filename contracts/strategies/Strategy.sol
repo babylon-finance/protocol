@@ -90,6 +90,17 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
     /**
      * Throws if the sender is not a Garden's integration or integration not enabled
      */
+    function _onlyIntegration() private view {
+        // Internal function used to reduce bytecode size
+        _require(
+            controller.isValidIntegration(IIntegration(msg.sender).getName(), msg.sender),
+            Errors.ONLY_INTEGRATION
+        );
+    }
+
+    /**
+     * Throws if the sender is not a Garden's integration or integration not enabled
+     */
     function _onlyOperation() private view {
         bool found = false;
         for (uint8 i = 0; i < opTypes.length; i++) {
@@ -293,6 +304,10 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
                 _opIntegrations[i],
                 i
             );
+            _require(
+                controller.isValidIntegration(IIntegration(_opIntegrations[i]).getName(), _opIntegrations[i]),
+                Errors.ONLY_INTEGRATION
+            );
         }
         opTypes = _opTypes;
         opIntegrations = _opIntegrations;
@@ -492,6 +507,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         address _asset,
         uint256 _quantity
     ) external override {
+        _onlyIntegration();
         IERC20(_asset).safeApprove(_spender, _quantity);
     }
 
@@ -507,6 +523,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         uint256 _value,
         bytes calldata _data
     ) external override returns (bytes memory) {
+        _onlyIntegration();
         return _invoke(_target, _value, _data);
     }
 
