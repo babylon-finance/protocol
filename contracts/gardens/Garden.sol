@@ -185,8 +185,6 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
     // Allow public strategy stewards for certain gardens
     bool public override publicStewards;
 
-    event NewProfitSharing(uint256 _strategistShare, uint256 _stewardsShare, uint256 _lpShare);
-
     /* ============ Modifiers ============ */
 
     function _onlyUnpaused() private view {
