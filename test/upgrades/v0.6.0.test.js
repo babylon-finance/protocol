@@ -2,22 +2,25 @@ const { expect } = require('chai');
 const { deployments } = require('hardhat');
 
 const { impersonateAddress } = require('../../lib/rpc');
-const { ONE_DAY_IN_SECONDS, GARDEN_PARAMS } = require('../../lib/constants.js');
+const { ONE_DAY_IN_SECONDS } = require('../../lib/constants.js');
 const addresses = require('../../lib/addresses');
 const { increaseTime } = require('../utils/test-helpers');
-const { createStrategy, executeStrategy } = require('../fixtures/StrategyHelper.js');
 
 const { deploy } = deployments;
 
 const upgradeFixture = deployments.createFixture(async (hre, options) => {
-  const { network, upgradesDeployer, ethers } = hre;
+  const { ethers } = hre;
 
-  owner = await impersonateAddress('0xeA4E1d01Fad05465a84bAd319c93B73Fa12756fB');
-  deployer = await impersonateAddress('0x040cC3AF8455F3c34D1df1D2a305e047a062BeBf');
-  keeper = await impersonateAddress('0x74D206186B84d4c2dAFeBD9Fd230878EC161d5B8');
+  const owner = await impersonateAddress('0xeA4E1d01Fad05465a84bAd319c93B73Fa12756fB');
+  const deployer = await impersonateAddress('0x040cC3AF8455F3c34D1df1D2a305e047a062BeBf');
+  const keeper = await impersonateAddress('0x74D206186B84d4c2dAFeBD9Fd230878EC161d5B8');
 
-  controller = await ethers.getContractAt('BabController', '0xd4a5b5fcb561daf3adf86f8477555b92fba43b5f', owner);
-  distributor = await ethers.getContractAt('RewardsDistributor', '0x40154ad8014df019a53440a60ed351dfba47574e', owner);
+  const controller = await ethers.getContractAt('BabController', '0xd4a5b5fcb561daf3adf86f8477555b92fba43b5f', owner);
+  const distributor = await ethers.getContractAt(
+    'RewardsDistributor',
+    '0x40154ad8014df019a53440a60ed351dfba47574e',
+    owner,
+  );
 
   const signers = await ethers.getSigners();
   const signer = signers[0];
@@ -40,6 +43,11 @@ const upgradeFixture = deployments.createFixture(async (hre, options) => {
       args: [controller.address, addresses.sushiswap.router],
     },
     {
+      contract: 'CompoundLendIntegration',
+      type: 'integration',
+      args: [controller.address],
+    },
+    {
       contract: 'OneInchPoolIntegration',
       type: 'integration',
       args: [controller.address, addresses.oneinch.factory],
@@ -56,6 +64,7 @@ const upgradeFixture = deployments.createFixture(async (hre, options) => {
       args,
     });
     if (type === 'integration') {
+      console.log(contract, deployment.address);
     }
     if (type === 'operation') {
       await controller.setOperation(operation, deployment.address);
@@ -96,13 +105,11 @@ const upgradeFixture = deployments.createFixture(async (hre, options) => {
 });
 
 describe.only('v0.6.0', function () {
-  let controller;
   let owner;
-  let deployer;
   let keeper;
 
   beforeEach(async () => {
-    ({ controller, owner, deployer, keeper } = await upgradeFixture());
+    ({ owner, keeper } = await upgradeFixture());
   });
 
   describe('after upgrade', function () {
@@ -119,7 +126,7 @@ describe.only('v0.6.0', function () {
           await increaseTime(ONE_DAY_IN_SECONDS * 120);
 
           await strategyContract.connect(keeper).finalizeStrategy(0, '');
-          const [address, active, dataSet, finalized, executedAt, exitedAt] = await strategyContract.getStrategyState();
+          const [, active, , finalized, , exitedAt] = await strategyContract.getStrategyState();
           expect(active).eq(false);
           expect(finalized).eq(true);
           expect(exitedAt).gt(0);
