@@ -22,8 +22,16 @@ const upgradeFixture = deployments.createFixture(async (hre, options) => {
   const signers = await ethers.getSigners();
   const signer = signers[0];
 
-  // upgrade rewards distributor
+  // upgrade BabController
+
   const proxyAdmin = await ethers.getContractAt('ProxyAdmin', '0x0C085fd8bbFD78db0107bF17047E8fa906D871DC', owner);
+
+  const controllerNewImpl = await deploy('BabController', {
+    from: signer.address,
+  });
+  await proxyAdmin.upgrade(controller.address, controllerNewImpl.address);
+
+  // upgrade rewards distributor
 
   const distributorNewImpl = await deploy('RewardsDistributor', {
     from: signer.address,
@@ -81,6 +89,10 @@ const upgradeFixture = deployments.createFixture(async (hre, options) => {
       args,
     });
     if (type === 'integration') {
+      await controller.editIntegration(
+        await (await ethers.getContractAt(contract, deployment.address)).getName(),
+        deployment.address,
+      );
     }
     if (type === 'operation') {
       await controller.setOperation(operation, deployment.address);
@@ -151,12 +163,27 @@ describe('v0.6.0', function () {
           const strategyContract = await ethers.getContractAt('IStrategy', strategy, owner);
 
           await increaseTime(ONE_DAY_IN_SECONDS * 120);
+          const [address, active, dataSet, finalized, executedAt, exitedAt] = await strategyContract.getStrategyState();
+          console.log('Strategy Params before finalization');
+          console.log('executedAt', executedAt.toString());
+          console.log('active', active.toString());
+          console.log('address', address.toString());
+          console.log('finalized', finalized.toString());
+          console.log('exitedAt', exitedAt.toString());
+          console.log('dataset', dataSet.toString());
 
           await strategyContract.connect(keeper).finalizeStrategy(0, '');
-          const [address, active, dataSet, finalized, executedAt, exitedAt] = await strategyContract.getStrategyState();
-          expect(active).eq(false);
-          expect(finalized).eq(true);
-          expect(exitedAt).gt(0);
+          const [
+            address2,
+            active2,
+            dataSet2,
+            finalized2,
+            executedAt2,
+            exitedAt2,
+          ] = await strategyContract.getStrategyState();
+          expect(active2).eq(false);
+          expect(finalized2).eq(true);
+          expect(exitedAt2).gt(0);
         });
       }
     });
