@@ -180,10 +180,10 @@ contract AddLiquidityOperation is Operation {
         IGarden _garden,
         address _integration
     ) external view override returns (uint256, bool) {
-        address pool = BytesLib.decodeOpDataAddress(_data); // 64 bytes (w/o signature prefix bytes4)
         if (!IStrategy(msg.sender).isStrategyActive()) {
             return (0, true);
         }
+        address pool = BytesLib.decodeOpDataAddress(_data); // 64 bytes (w/o signature prefix bytes4)
         address[] memory poolTokens = IPoolIntegration(_integration).getPoolTokens(_data, true);
         uint256 NAV;
         IERC20 lpToken = IERC20(IPoolIntegration(_integration).getLPToken(pool));
