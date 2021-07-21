@@ -930,7 +930,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
     function _getUpdatedIntegration(uint256 _index) private view returns (address) {
         (, bytes32 name) = IBabController(controller).getIntegrationDataWithAddress(opIntegrations[_index]);
         address updatedIntegration = IBabController(controller).getIntegrationWithHash(name);
-        if (updatedIntegration != opIntegrations[_index]) {
+        if (updatedIntegration != opIntegrations[_index] && opTypes[_index] != 2) {
             return updatedIntegration;
         }
         return opIntegrations[_index];
