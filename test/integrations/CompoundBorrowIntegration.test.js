@@ -21,6 +21,7 @@ describe('CompoundBorrowIntegrationTest', function () {
   let USDC;
   let DAI;
   let WETH;
+  let WBTC;
 
   async function supplyBorrowStrategy(asset1, asset2, token) {
     await transferFunds(token);
@@ -85,6 +86,7 @@ describe('CompoundBorrowIntegrationTest', function () {
     USDC = await ethers.getContractAt('IERC20', addresses.tokens.USDC);
     DAI = await ethers.getContractAt('IERC20', addresses.tokens.DAI);
     WETH = await ethers.getContractAt('IERC20', addresses.tokens.WETH);
+    WBTC = await ethers.getContractAt('IERC20', addresses.tokens.WBTC);
   });
 
   describe('Deployment', function () {
@@ -203,6 +205,9 @@ describe('CompoundBorrowIntegrationTest', function () {
     ].forEach(({ token, name }) => {
       it(`can supply DAI and borrow USDC at Compound in a ${name} Garden`, async function () {
         await supplyBorrowStrategy(DAI, USDC, token);
+      });
+      it(`can supply WBTC and borrow DAI at Compound in a ${name} Garden`, async function () {
+        await supplyBorrowStrategy(WBTC, DAI, token);
       });
       it(`can supply USDC and borrow DAI at Compound in a ${name} Garden`, async function () {
         await supplyBorrowStrategy(USDC, DAI, token);
