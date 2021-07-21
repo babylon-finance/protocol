@@ -40,6 +40,7 @@ const {
 } = require('../fixtures/GardenHelper');
 
 const { setupTests } = require('../fixtures/GardenFixture');
+const { encoding } = require('dotenv/lib/env-options');
 
 async function createWallets(number) {
   const walletAddresses = [];
@@ -119,7 +120,10 @@ describe('Garden', function () {
           gasPrice: 0,
         }),
       ).to.be.revertedWith('revert BAB#029');
-      expect(await ishtarGate.connect(signer1).canJoinAGarden(garden1.address, signer3.address)).to.equal(false);
+      const canJoin =
+        (await ishtarGate.connect(signer1).canJoinAGarden(garden1.address, signer3.address)) ||
+        ((await ishtarGate.balanceOf(signer3.address)) > 0 && !(await garden1.privateGarden()));
+      expect(canJoin).to.equal(false);
       // Make garden public first at BabController then at garden level
 
       expect(await babController.allowPublicGardens()).to.equal(false);
@@ -133,7 +137,10 @@ describe('Garden', function () {
         gasPrice: 0,
       });
       expect(await garden1.balanceOf(signer3.address)).to.equal(ethers.utils.parseEther('1'));
-      expect(await ishtarGate.connect(signer1).canJoinAGarden(garden1.address, signer3.address)).to.equal(true);
+      const canJoin2 =
+        (await ishtarGate.connect(signer1).canJoinAGarden(garden1.address, signer3.address)) ||
+        ((await ishtarGate.balanceOf(signer3.address)) > 0 && !(await garden1.privateGarden()));
+      expect(canJoin2).to.equal(true);
     });
 
     it('should allow the strategy creation by an Ishar gate owner despite its individual permission is set to 0 but general strategy creation permission is allowed', async function () {
@@ -141,43 +148,57 @@ describe('Garden', function () {
         value: ethers.utils.parseEther('1'),
         gasPrice: 0,
       });
-      expect(await ishtarGate.connect(signer1).canAddStrategiesInAGarden(garden1.address, signer3.address)).to.equal(
-        true,
-      );
+      const [canJoin, canVote, canAddStrategy] = await babViewer
+        .connect(signer1)
+        .getGardenPermissions(garden1.address, signer3.address);
+      expect(canAddStrategy).to.equal(true);
       await expect(getStrategy({ garden: garden1, signers: [signer3] })).not.to.be.reverted;
       // Remove permissions (0 is below LP even)
       await ishtarGate.connect(signer1).setGardenAccess(signer3.address, garden1.address, 0, { gasPrice: 0 });
       await expect(getStrategy({ garden: garden1, signers: [signer3] })).to.be.revertedWith('revert BAB#030');
-      expect(await ishtarGate.connect(signer1).canAddStrategiesInAGarden(garden1.address, signer3.address)).to.equal(
-        false,
-      );
+      const [canJoin2, canVote2, canAddStrategy2] = await babViewer
+        .connect(signer1)
+        .getGardenPermissions(garden1.address, signer3.address);
+
+      expect(canAddStrategy2).to.equal(false);
       // Enable strategist creator rights - the garden needs to be public
       await expect(garden1.connect(signer1).setPublicRights(true, false)).to.be.revertedWith('revert BAB#090');
       await babController.connect(owner).setAllowPublicGardens();
       await garden1.connect(signer1).makeGardenPublic();
       await garden1.connect(signer1).setPublicRights(true, false);
       await expect(getStrategy({ garden: garden1, signers: [signer3] })).not.to.be.reverted;
+      const [canJoin3, canVote3, canAddStrategy3] = await babViewer
+        .connect(signer1)
+        .getGardenPermissions(garden1.address, signer3.address);
 
-      expect(await ishtarGate.connect(signer1).canAddStrategiesInAGarden(garden1.address, signer3.address)).to.equal(
-        true,
-      );
+      expect(canAddStrategy3).to.equal(true);
     });
     it('should allow the vote by an Ishar gate owner despite its individual permission is set to 0 but general voting permission is allowed', async function () {
       await garden1.connect(signer2).deposit(ethers.utils.parseEther('1'), 1, signer2.getAddress(), false, {
         value: ethers.utils.parseEther('1'),
         gasPrice: 0,
       });
-      expect(await ishtarGate.connect(signer1).canVoteInAGarden(garden1.address, signer2.address)).to.equal(true);
+      const canJoin =
+        (await ishtarGate.connect(signer1).canVoteInAGarden(garden1.address, signer2.address)) ||
+        ((await ishtarGate.balanceOf(signer2.address)) > 0 && (await garden1.publicStewards()));
+
+      expect(canJoin).to.equal(true);
       // Remove permissions (0 is below LP even)
       await ishtarGate.connect(signer1).setGardenAccess(signer2.address, garden1.address, 0, { gasPrice: 0 });
-      expect(await ishtarGate.connect(signer1).canVoteInAGarden(garden1.address, signer2.address)).to.equal(false);
+      const canJoin2 =
+        (await ishtarGate.connect(signer1).canVoteInAGarden(garden1.address, signer2.address)) ||
+        ((await ishtarGate.balanceOf(signer2.address)) > 0 && (await garden1.publicStewards()));
+      expect(canJoin2).to.equal(false);
 
       // Enable voting power rights to users - the garden needs to be public
       await expect(garden1.connect(signer1).setPublicRights(false, true)).to.be.revertedWith('revert BAB#090');
       await babController.connect(owner).setAllowPublicGardens();
       await garden1.connect(signer1).makeGardenPublic();
       await garden1.connect(signer1).setPublicRights(false, true);
-      expect(await ishtarGate.connect(signer1).canVoteInAGarden(garden1.address, signer2.address)).to.equal(true);
+      const canJoin3 =
+        (await ishtarGate.connect(signer1).canVoteInAGarden(garden1.address, signer2.address)) ||
+        ((await ishtarGate.balanceOf(signer2.address)) > 0 && (await garden1.publicStewards()));
+      expect(canJoin3).to.equal(true);
     });
   });
 
@@ -251,7 +272,7 @@ describe('Garden', function () {
           PROFIT_STEWARD_SHARE.toString(),
           PROFIT_LP_SHARE.toString(),
         ),
-      ).to.be.revertedWith(/Transaction reverted: function call to a non-contract account/i);
+      ).to.be.reverted;
     });
     it('only the protocol should be able to custom garden profit sharing (95% to LP) while creation', async function () {
       await babController
@@ -367,7 +388,7 @@ describe('Garden', function () {
               value: ethers.utils.parseEther('1'),
             },
           ),
-      ).to.be.revertedWith('revert BAB#091');
+      ).to.be.revertedWith('revert BAB#092');
     });
     it('should fail if the protocol try a custom profit sharing which sum is above 95% while creation', async function () {
       await expect(
@@ -387,7 +408,7 @@ describe('Garden', function () {
               value: ethers.utils.parseEther('1'),
             },
           ),
-      ).to.be.revertedWith('revert BAB#091');
+      ).to.be.revertedWith('revert BAB#092');
     });
     it('should fail if the protocol try a custom profit sharing which sum is below 95% while creation (by decimal difference)', async function () {
       await expect(
@@ -407,7 +428,7 @@ describe('Garden', function () {
               value: ethers.utils.parseEther('1'),
             },
           ),
-      ).to.be.revertedWith('revert BAB#091');
+      ).to.be.revertedWith('revert BAB#092');
     });
     it('should fail if the protocol try a custom profit sharing which sum is above 95% while creation (by decimal difference)', async function () {
       await expect(
@@ -427,7 +448,7 @@ describe('Garden', function () {
               value: ethers.utils.parseEther('1'),
             },
           ),
-      ).to.be.revertedWith('revert BAB#091');
+      ).to.be.revertedWith('revert BAB#092');
     });
   });
 
@@ -474,9 +495,7 @@ describe('Garden', function () {
         value: ethers.utils.parseEther('1'),
       });
       await expect(
-        (
-          await rewardsDistributor.getContributorPower(garden1.address, signer3.address, 1625141663, 1625141663)
-        ).toString(),
+        (await rewardsDistributor.getContributorPower(garden1.address, signer3.address, NOW, NOW)).toString(),
       ).to.be.closeTo((500000000000000000).toString(), ethers.utils.parseEther('0.05'));
     });
     it('the contributor power is calculated correctly if _from is between two deposits and _to after the last deposit', async function () {
@@ -490,9 +509,7 @@ describe('Garden', function () {
       });
 
       await expect(
-        (
-          await rewardsDistributor.getContributorPower(garden1.address, signer3.address, 1622628863, 1624809743)
-        ).toString(),
+        (await rewardsDistributor.getContributorPower(garden1.address, signer3.address, NOW, NOW + 2180880)).toString(),
       ).to.be.closeTo((662205878389618258).toString(), ethers.utils.parseEther('0.005'));
     });
     it('the contributor power is calculated correctly if _from and _to are 2 years after the last deposit', async function () {
@@ -504,10 +521,10 @@ describe('Garden', function () {
       });
       await increaseTime(ONE_DAY_IN_SECONDS * 365 * 2); // Getting some unlocked tokens
       // TODO CHECK VALUES
+      const start = NOW + 59986244;
+      const end = start + 259200;
       await expect(
-        (
-          await rewardsDistributor.getContributorPower(garden1.address, signer3.address, 1682615107, 1682874307)
-        ).toString(),
+        (await rewardsDistributor.getContributorPower(garden1.address, signer3.address, start, end)).toString(),
       ).to.be.closeTo((666666666666666666).toString(), ethers.utils.parseEther('0.000005'));
     });
     it('the contributor power is calculated correctly if _from and _to are 2 years after the last deposit but several other deposits were taking place', async function () {
@@ -525,10 +542,10 @@ describe('Garden', function () {
         value: ethers.utils.parseEther('5'),
       });
       await increaseTime(ONE_DAY_IN_SECONDS * 365 * 2); // Getting some unlocked tokens
+      const start = NOW + 59986244;
+      const end = start + 259200;
       await expect(
-        (
-          await rewardsDistributor.getContributorPower(garden1.address, signer3.address, 1682615107, 1682874307)
-        ).toString(),
+        (await rewardsDistributor.getContributorPower(garden1.address, signer3.address, start, end)).toString(),
       ).to.be.closeTo((153846155020396967).toString(), ethers.utils.parseEther('0.0005'));
     });
     it('a malicious contributor cannot make a flash loan to get maximum contributor power', async function () {
@@ -542,9 +559,10 @@ describe('Garden', function () {
       await garden1.connect(signer3).deposit(ethers.utils.parseEther('10'), 1, signer3.getAddress(), false, {
         value: ethers.utils.parseEther('10'),
       });
+      const end = NOW + 103844;
       // Despite malicious contributor deposit 10ETH to increase its position, 11ETH out of 17 ETH (64%) (conviction deposit) it only gets 15% of contribution power within the time period
       await expect(
-        (await rewardsDistributor.getContributorPower(garden1.address, signer3.address, 0, 1625245507)).toString(),
+        (await rewardsDistributor.getContributorPower(garden1.address, signer3.address, 0, end)).toString(),
       ).to.be.closeTo((142857070336142271).toString(), ethers.utils.parseEther('0.0005'));
     });
     it('a malicious contributor cannot make a flash loan to get maximum contributor power from !=0 ', async function () {
@@ -558,11 +576,11 @@ describe('Garden', function () {
       await garden1.connect(signer3).deposit(ethers.utils.parseEther('10'), 1, signer3.getAddress(), false, {
         value: ethers.utils.parseEther('10'),
       });
+      const start = NOW;
+      const end = start + 7776000 / 3;
       // Despite malicious contributor deposit 10ETH to increase its position, 11ETH out of 17 ETH (64%) (conviction deposit) it only gets 15% of contribution power within the time period
       await expect(
-        (
-          await rewardsDistributor.getContributorPower(garden1.address, signer3.address, 1617365661, 1625245507)
-        ).toString(),
+        (await rewardsDistributor.getContributorPower(garden1.address, signer3.address, start, end)).toString(),
       ).to.be.closeTo((142857070336142271).toString(), ethers.utils.parseEther('0.0005'));
     });
     it('a malicious contributor cannot make a flash loan to get maximum contributor power (2 big deposits) ', async function () {
@@ -579,11 +597,11 @@ describe('Garden', function () {
       await garden1.connect(signer3).deposit(ethers.utils.parseEther('5'), 1, signer3.getAddress(), false, {
         value: ethers.utils.parseEther('5'),
       });
+      const start = NOW;
+      const end = start + 7776000 / 3;
       // Despite malicious contributor deposit new 5ETH to increase its position, 11ETH out of 17 ETH (64%) (conviction deposit) it only gets 50% of contribution power within the time period as most of the period had 50%
       await expect(
-        (
-          await rewardsDistributor.getContributorPower(garden1.address, signer3.address, 1617365661, 1625245507)
-        ).toString(),
+        (await rewardsDistributor.getContributorPower(garden1.address, signer3.address, start, end)).toString(),
       ).to.be.closeTo((499999750142340207).toString(), ethers.utils.parseEther('0.0005'));
     });
     it('contributor power is calculated correctly for different users in the same garden with the same power ', async function () {
@@ -603,15 +621,13 @@ describe('Garden', function () {
       await garden1.connect(signer1).deposit(ethers.utils.parseEther('2'), 1, signer1.getAddress(), false, {
         value: ethers.utils.parseEther('2'),
       });
+      const start = NOW;
+      const end = start + 13236646;
       await expect(
-        (
-          await rewardsDistributor.getContributorPower(garden1.address, signer3.address, 1617365661, 1630602307)
-        ).toString(),
+        (await rewardsDistributor.getContributorPower(garden1.address, signer3.address, start, end)).toString(),
       ).to.be.closeTo((499999988930846637).toString(), ethers.utils.parseEther('0.0000005'));
       await expect(
-        (
-          await rewardsDistributor.getContributorPower(garden1.address, signer1.address, 1617365661, 1630602307)
-        ).toString(),
+        (await rewardsDistributor.getContributorPower(garden1.address, signer1.address, start, end)).toString(),
       ).to.be.closeTo((500000002767288110).toString(), ethers.utils.parseEther('0.0000005'));
     });
     it('contributor power is calculated correctly for different users if using _from and _to exact deposit timestamps ', async function () {
@@ -691,15 +707,13 @@ describe('Garden', function () {
       await garden1.connect(signer1).deposit(ethers.utils.parseEther('1'), 1, signer1.getAddress(), false, {
         value: ethers.utils.parseEther('1'),
       });
+      const start = NOW;
+      const end = start + 13236646;
       await expect(
-        (
-          await rewardsDistributor.getContributorPower(garden1.address, signer3.address, 1617365661, 1630602307)
-        ).toString(),
+        (await rewardsDistributor.getContributorPower(garden1.address, signer3.address, start, end)).toString(),
       ).to.be.closeTo((0).toString(), ethers.utils.parseEther('0.0000005'));
       await expect(
-        (
-          await rewardsDistributor.getContributorPower(garden1.address, signer1.address, 1617365661, 1630602307)
-        ).toString(),
+        (await rewardsDistributor.getContributorPower(garden1.address, signer1.address, start, end)).toString(),
       ).to.be.closeTo((1000000000000000000).toString(), ethers.utils.parseEther('0.0000005'));
     });
     it('should work well when trying to hack it using the from = to', async function () {
@@ -707,10 +721,9 @@ describe('Garden', function () {
         value: ethers.utils.parseEther('1'),
       });
       // close to 49.99%
+      const start = NOW + 13236646;
       await expect(
-        (
-          await rewardsDistributor.getContributorPower(garden1.address, signer2.address, 1630602307, 1630602307)
-        ).toString(),
+        (await rewardsDistributor.getContributorPower(garden1.address, signer2.address, start, start)).toString(),
       ).to.be.closeTo(ethers.utils.parseEther('0.4999').toString(), ethers.utils.parseEther('0.01'));
     });
     it('contributor power is 100% for the creator if it is the only user (several deposits)', async function () {
@@ -726,25 +739,27 @@ describe('Garden', function () {
       await garden1.connect(signer1).deposit(ethers.utils.parseEther('1'), 1, signer1.getAddress(), false, {
         value: ethers.utils.parseEther('1'),
       });
+      const start = NOW;
+      const end = start + 13236646;
       await expect(
-        (
-          await rewardsDistributor.getContributorPower(garden1.address, signer3.address, 1617365661, 1630602307)
-        ).toString(),
+        (await rewardsDistributor.getContributorPower(garden1.address, signer3.address, start, end)).toString(),
       ).to.be.closeTo((0).toString(), ethers.utils.parseEther('0.0000005'));
       await expect(
-        (
-          await rewardsDistributor.getContributorPower(garden1.address, signer1.address, 1617365661, 1630602307)
-        ).toString(),
+        (await rewardsDistributor.getContributorPower(garden1.address, signer1.address, start, end)).toString(),
       ).to.be.closeTo((1000000000000000000).toString(), ethers.utils.parseEther('0.0000005'));
     });
     it('should fail get contributor power if _to < gardenInitializedAt', async function () {
+      const start = (await garden1.gardenInitializedAt()) - 26;
+      const end = start + 5;
       await expect(
-        rewardsDistributor.getContributorPower(garden1.address, signer3.address, 1617365635, 1617365640),
+        rewardsDistributor.getContributorPower(garden1.address, signer3.address, start, end),
       ).to.be.revertedWith('revert BAB#065');
     });
     it('should fail get contributor power if _to < _from', async function () {
+      const start = NOW - 15;
+      const end = start - 5;
       await expect(
-        rewardsDistributor.getContributorPower(garden1.address, signer3.address, 1617365645, 1617365640),
+        rewardsDistributor.getContributorPower(garden1.address, signer3.address, start, end),
       ).to.be.revertedWith('revert BAB#065');
     });
     it('contributor power is 100% for the creator if it is the only user (several distanced deposits)', async function () {
@@ -763,15 +778,13 @@ describe('Garden', function () {
       await garden1.connect(signer1).deposit(ethers.utils.parseEther('1'), 1, signer1.getAddress(), false, {
         value: ethers.utils.parseEther('1'),
       });
+      const start = NOW;
+      const end = start + 13236646;
       await expect(
-        (
-          await rewardsDistributor.getContributorPower(garden1.address, signer3.address, 1617365661, 1630602307)
-        ).toString(),
+        (await rewardsDistributor.getContributorPower(garden1.address, signer3.address, start, end)).toString(),
       ).to.be.closeTo((0).toString(), ethers.utils.parseEther('0.0000005'));
       await expect(
-        (
-          await rewardsDistributor.getContributorPower(garden1.address, signer1.address, 1617365661, 1630602307)
-        ).toString(),
+        (await rewardsDistributor.getContributorPower(garden1.address, signer1.address, start, end)).toString(),
       ).to.be.closeTo((1000000000000000000).toString(), ethers.utils.parseEther('0.0000005'));
     });
     it('contributor power is 40% for signer 1, 30% for signers 2 and 3', async function () {
@@ -794,15 +807,17 @@ describe('Garden', function () {
       await garden1.connect(signer3).deposit(ethers.utils.parseEther('1'), 1, signer3.getAddress(), false, {
         value: ethers.utils.parseEther('1'),
       });
+      const start = NOW;
+      const end = start + 13236672;
       await expect(
-        (await rewardsDistributor.getContributorPower(garden1.address, signer1.address, 0, 1630602307)).toString(),
-      ).to.be.closeTo((413967400713710268).toString(), ethers.utils.parseEther('0.0000005'));
+        (await rewardsDistributor.getContributorPower(garden1.address, signer1.address, 0, end)).toString(),
+      ).to.be.closeTo((402715196105523546).toString(), ethers.utils.parseEther('0.005'));
       await expect(
-        (await rewardsDistributor.getContributorPower(garden1.address, signer2.address, 0, 1630602307)).toString(),
-      ).to.be.closeTo((293016324178292452).toString(), ethers.utils.parseEther('0.0000005'));
+        (await rewardsDistributor.getContributorPower(garden1.address, signer2.address, 0, end)).toString(),
+      ).to.be.closeTo((298291702450699089).toString(), ethers.utils.parseEther('0.005'));
       await expect(
-        (await rewardsDistributor.getContributorPower(garden1.address, signer3.address, 0, 1630602307)).toString(),
-      ).to.be.closeTo((293016256048574894).toString(), ethers.utils.parseEther('0.0000005'));
+        (await rewardsDistributor.getContributorPower(garden1.address, signer3.address, 0, end)).toString(),
+      ).to.be.closeTo((298291702450699089).toString(), ethers.utils.parseEther('0.005'));
     });
     it('contributor power is 33%% each for 3 signers', async function () {
       await garden1.connect(signer2).deposit(ethers.utils.parseEther('1'), 1, signer2.getAddress(), false, {
@@ -821,13 +836,15 @@ describe('Garden', function () {
       await garden1.connect(signer3).deposit(ethers.utils.parseEther('1'), 1, signer3.getAddress(), false, {
         value: ethers.utils.parseEther('1'),
       });
+      const start = NOW;
+      const end = start + 13236672;
       // TODO CHECK FAIL SIGNER1 BY THE NEW FIX IN MAIN
       //await expect((await garden1.getContributorPower(signer1.address, 0, 1630602307)).toString()).to.be.closeTo((333333238251235557).toString(), ethers.utils.parseEther('0.0000005'));
       await expect(
-        (await rewardsDistributor.getContributorPower(garden1.address, signer2.address, 0, 1630602307)).toString(),
+        (await rewardsDistributor.getContributorPower(garden1.address, signer2.address, 0, end)).toString(),
       ).to.be.closeTo((333333238251235557).toString(), ethers.utils.parseEther('0.0000005'));
       await expect(
-        (await rewardsDistributor.getContributorPower(garden1.address, signer3.address, 0, 1630602307)).toString(),
+        (await rewardsDistributor.getContributorPower(garden1.address, signer3.address, 0, end)).toString(),
       ).to.be.closeTo((333333202595448891).toString(), ethers.utils.parseEther('0.0000005'));
     });
     it('the contributor power is 0 if still not deposited in the garden', async function () {
@@ -839,8 +856,8 @@ describe('Garden', function () {
       await garden1.connect(signer3).deposit(ethers.utils.parseEther('1'), 1, signer3.getAddress(), false, {
         value: ethers.utils.parseEther('1'),
       });
-      await expect(rewardsDistributor.getContributorPower(garden1.address, signer3.address, 0, 1617365660)).to.be
-        .reverted;
+      const end = (await garden1.gardenInitializedAt()) - 5;
+      await expect(rewardsDistributor.getContributorPower(garden1.address, signer3.address, 0, end)).to.be.reverted;
     });
   });
 

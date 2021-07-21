@@ -18,6 +18,7 @@
 pragma solidity 0.7.6;
 import {Address} from '@openzeppelin/contracts/utils/Address.sol';
 import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
+import {IERC721} from '@openzeppelin/contracts/token/ERC721/IERC721.sol';
 import {SafeERC20} from '@openzeppelin/contracts/token/ERC20/SafeERC20.sol';
 import {ReentrancyGuard} from '@openzeppelin/contracts/utils/ReentrancyGuard.sol';
 import {ECDSA} from '@openzeppelin/contracts/cryptography/ECDSA.sol';
@@ -417,10 +418,8 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
     ) private {
         _onlyUnpaused();
         _onlyActive();
-        _require(
-            IIshtarGate(IBabController(controller).ishtarGate()).canJoinAGarden(address(this), _to) || creator == _to,
-            Errors.USER_CANNOT_JOIN
-        );
+        (bool canDeposit, , ) = _getUserPermission(_from);
+        _require(canDeposit || creator == _to, Errors.USER_CANNOT_JOIN);
 
         // if deposit limit is 0, then there is no deposit limit
         if (maxDepositLimit > 0) {
@@ -711,11 +710,8 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         _onlyUnpaused();
         _onlyActive();
         _onlyContributor();
-
-        _require(
-            IIshtarGate(IBabController(controller).ishtarGate()).canAddStrategiesInAGarden(address(this), msg.sender),
-            Errors.USER_CANNOT_ADD_STRATEGIES
-        );
+        (, , bool canCreateStrategies) = _getUserPermission(msg.sender);
+        _require(canCreateStrategies, Errors.USER_CANNOT_ADD_STRATEGIES);
         _require(strategies.length < MAX_TOTAL_STRATEGIES, Errors.VALUE_TOO_HIGH);
         _require(_stratParams.length == 4, Errors.STRAT_PARAMS_LENGTH);
         address strategy =
@@ -989,6 +985,25 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         rewardsDistributor.updateGardenPowerAndContributor(address(this), msg.sender, 0, false, pid);
         contributor.nonce = contributor.nonce + 1;
         pid++;
+    }
+
+    /**
+     * Check contributor permissions for deposit [0], vote [1] and create strategies [2]
+     */
+    function _getUserPermission(address _user)
+        internal
+        view
+        returns (
+            bool canDeposit,
+            bool canVote,
+            bool canCreateStrategy
+        )
+    {
+        IIshtarGate gate = IIshtarGate(IBabController(controller).ishtarGate());
+        bool hasGate = IERC721(address(gate)).balanceOf(_user) > 0;
+        canDeposit = gate.canJoinAGarden(address(this), _user) || (hasGate && !privateGarden);
+        canVote = gate.canVoteInAGarden(address(this), _user) || (hasGate && publicStewards);
+        canCreateStrategy = gate.canAddStrategiesInAGarden(address(this), _user) || (hasGate && publicStrategists);
     }
 
     // solhint-disable-next-line

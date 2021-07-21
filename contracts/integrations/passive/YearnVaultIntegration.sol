@@ -54,7 +54,10 @@ contract YearnVaultIntegration is PassiveIntegration {
 
     /* ============ Internal Functions ============ */
 
-    function _getSpender(address _asset) internal pure override returns (address) {
+    function _getSpender(
+        address _asset,
+        uint8 /* _op */
+    ) internal pure override returns (address) {
         return _asset;
     }
 

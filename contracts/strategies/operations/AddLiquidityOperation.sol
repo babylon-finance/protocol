@@ -17,6 +17,8 @@
 */
 
 pragma solidity 0.7.6;
+
+import 'hardhat/console.sol';
 import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import {SafeDecimalMath} from '../../lib/SafeDecimalMath.sol';
 import {BytesLib} from '../../lib/BytesLib.sol';
@@ -91,7 +93,7 @@ contract AddLiquidityOperation is Operation {
             uint8
         )
     {
-        address[] memory poolTokens = IPoolIntegration(_integration).getPoolTokens(_data);
+        address[] memory poolTokens = IPoolIntegration(_integration).getPoolTokens(_data, false);
         uint256[] memory _poolWeights = IPoolIntegration(_integration).getPoolWeights(_data);
         // Get the tokens needed to enter the pool
         uint256[] memory maxAmountsIn = _maxAmountsIn(_asset, _capital, _garden, _poolWeights, poolTokens);
@@ -105,7 +107,7 @@ contract AddLiquidityOperation is Operation {
         );
         return (
             BytesLib.decodeOpDataAddress(_data),
-            IERC20(BytesLib.decodeOpDataAddress(_data)).balanceOf(msg.sender),
+            IERC20(_getLPTokenFromBytes(_integration, _data)).balanceOf(msg.sender),
             0
         ); // liquid
     }
@@ -134,8 +136,9 @@ contract AddLiquidityOperation is Operation {
     {
         require(_percentage <= 100e18, 'Unwind Percentage <= 100%');
         address pool = BytesLib.decodeOpDataAddress(_data);
-        address[] memory poolTokens = IPoolIntegration(_integration).getPoolTokens(_data);
-        uint256 lpTokens = IERC20(pool).balanceOf(msg.sender).preciseMul(_percentage); // Sell all pool tokens
+        address[] memory poolTokens = IPoolIntegration(_integration).getPoolTokens(_data, false);
+        uint256 lpTokens =
+            IERC20(IPoolIntegration(_integration).getLPToken(pool)).balanceOf(msg.sender).preciseMul(_percentage); // Sell all pool tokens
         uint256[] memory _minAmountsOut = IPoolIntegration(_integration).getPoolMinAmountsOut(_data, lpTokens);
         IPoolIntegration(_integration).exitPool(
             msg.sender,
@@ -148,7 +151,7 @@ contract AddLiquidityOperation is Operation {
         address reserveAsset = _garden.reserveAsset();
         for (uint256 i = 0; i < poolTokens.length; i++) {
             if (poolTokens[i] != reserveAsset) {
-                if (poolTokens[i] == address(0)) {
+                if (_isETH(poolTokens[i])) {
                     IStrategy(msg.sender).handleWeth(true, address(msg.sender).balance);
                     poolTokens[i] = WETH;
                 }
@@ -181,17 +184,18 @@ contract AddLiquidityOperation is Operation {
         if (!IStrategy(msg.sender).isStrategyActive()) {
             return (0, true);
         }
-        address[] memory poolTokens = IPoolIntegration(_integration).getPoolTokens(_data);
+        address[] memory poolTokens = IPoolIntegration(_integration).getPoolTokens(_data, true);
         uint256 NAV;
-        uint256 totalSupply = IERC20(pool).totalSupply();
-        uint256 lpTokens = IERC20(pool).balanceOf(msg.sender);
+        IERC20 lpToken = IERC20(IPoolIntegration(_integration).getLPToken(pool));
         for (uint256 i = 0; i < poolTokens.length; i++) {
-            uint256 price = _getPrice(_garden.reserveAsset(), poolTokens[i] != address(0) ? poolTokens[i] : WETH);
-            uint256 balance = poolTokens[i] != address(0) ? IERC20(poolTokens[i]).balanceOf(pool) : pool.balance;
+            address asset = _isETH(poolTokens[i]) ? WETH : poolTokens[i];
+            uint256 price = _getPrice(_garden.reserveAsset(), asset);
+            address finalPool = IPoolIntegration(_integration).getPool(pool);
+            uint256 balance = !_isETH(poolTokens[i]) ? IERC20(poolTokens[i]).balanceOf(finalPool) : finalPool.balance;
             NAV += SafeDecimalMath.normalizeAmountTokens(
-                poolTokens[i] != address(0) ? poolTokens[i] : WETH,
+                asset,
                 _garden.reserveAsset(),
-                balance.mul(lpTokens).div(totalSupply).preciseDiv(price)
+                balance.mul(lpToken.balanceOf(msg.sender)).div(lpToken.totalSupply()).preciseDiv(price)
             );
         }
         require(NAV != 0, 'NAV has to be bigger 0');
@@ -208,15 +212,14 @@ contract AddLiquidityOperation is Operation {
         address _poolToken
     ) private returns (uint256) {
         uint256 normalizedAssetAmount = _capital.preciseMul(_poolWeight);
-        uint256 price = _getPrice(_asset, _poolToken != address(0) ? _poolToken : WETH);
+        uint256 price = _getPrice(_asset, _isETH(_poolToken) ? WETH : _poolToken);
         uint256 normalizedTokenAmount =
             SafeDecimalMath.normalizeAmountTokens(_asset, _poolToken, normalizedAssetAmount.preciseMul(price));
-
-        if (_poolToken != _asset && _poolToken != address(0)) {
+        if (_poolToken != _asset && !_isETH(_poolToken)) {
             IStrategy(msg.sender).trade(_asset, normalizedAssetAmount, _poolToken);
             return IERC20(_poolToken).balanceOf(msg.sender);
         }
-        if (_poolToken == address(0)) {
+        if (_isETH(_poolToken)) {
             if (_asset != WETH) {
                 IStrategy(msg.sender).trade(_asset, normalizedAssetAmount, WETH); // normalized amount in original asset decimals
             }
@@ -242,5 +245,13 @@ contract AddLiquidityOperation is Operation {
             maxAmountsIn[i] = _getMaxAmountTokenPool(_asset, _capital, _garden, _poolWeights[i], poolTokens[i]);
         }
         return maxAmountsIn;
+    }
+
+    function _getLPTokenFromBytes(address _integration, bytes calldata _data) internal view returns (address) {
+        return IPoolIntegration(_integration).getLPToken(BytesLib.decodeOpDataAddress(_data));
+    }
+
+    function _isETH(address _address) internal view returns (bool) {
+        return _address == 0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE || _address == address(0);
     }
 }

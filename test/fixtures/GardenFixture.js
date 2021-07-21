@@ -33,11 +33,13 @@ async function setUpFixture(
   const yearnVaultIntegration = await getContract('YearnVaultIntegration');
   const harvestVaultIntegration = await getContract('HarvestVaultIntegration');
   const sushiswapPoolIntegration = await getContract('SushiswapPoolIntegration');
+  const curvePoolIntegration = await getContract('CurvePoolIntegration');
   const oneInchPoolIntegration = await getContract('OneInchPoolIntegration');
   const compoundLendIntegration = await getContract('CompoundLendIntegration');
   const aaveLendIntegration = await getContract('AaveLendIntegration');
   const aaveBorrowIntegration = await getContract('AaveBorrowIntegration');
   const compoundBorrowIntegration = await getContract('CompoundBorrowIntegration');
+  const lidoIntegration = await getContract('LidoStakeIntegration');
 
   const buyOperation = await getContract('BuyOperation');
   const addLiquidityOperation = await getContract('AddLiquidityOperation');
@@ -207,11 +209,13 @@ async function setUpFixture(
     harvestVaultIntegration,
     yearnVaultIntegration,
     sushiswapPoolIntegration,
+    curvePoolIntegration,
     oneInchPoolIntegration,
     compoundLendIntegration,
     compoundBorrowIntegration,
     aaveLendIntegration,
     aaveBorrowIntegration,
+    lidoIntegration,
     babViewer,
 
     garden1,

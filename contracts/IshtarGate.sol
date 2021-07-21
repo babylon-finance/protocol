@@ -202,9 +202,7 @@ contract IshtarGate is ERC721, IIshtarGate, Ownable {
     function canJoinAGarden(address _garden, address _user) external view override returns (bool) {
         return
             balanceOf(_user) > 0 &&
-            (permissionsByCommunity[_garden][_user] >= JUST_LP ||
-                IGarden(_garden).creator() == _user ||
-                !IGarden(_garden).privateGarden());
+            (permissionsByCommunity[_garden][_user] >= JUST_LP || IGarden(_garden).creator() == _user);
     }
 
     /**
@@ -217,9 +215,7 @@ contract IshtarGate is ERC721, IIshtarGate, Ownable {
     function canVoteInAGarden(address _garden, address _user) external view override returns (bool) {
         return
             balanceOf(_user) > 0 &&
-            (permissionsByCommunity[_garden][_user] >= STEWARD ||
-                IGarden(_garden).creator() == _user ||
-                IGarden(_garden).publicStewards());
+            (permissionsByCommunity[_garden][_user] >= STEWARD || IGarden(_garden).creator() == _user);
     }
 
     /**
@@ -232,9 +228,7 @@ contract IshtarGate is ERC721, IIshtarGate, Ownable {
     function canAddStrategiesInAGarden(address _garden, address _user) external view override returns (bool) {
         return
             balanceOf(_user) > 0 &&
-            (permissionsByCommunity[_garden][_user] >= STRATEGIST ||
-                IGarden(_garden).creator() == _user ||
-                IGarden(_garden).publicStrategists());
+            (permissionsByCommunity[_garden][_user] >= STRATEGIST || IGarden(_garden).creator() == _user);
     }
 
     /* ============ Internal Functions ============ */
