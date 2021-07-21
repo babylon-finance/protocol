@@ -167,6 +167,8 @@ interface IBabController {
 
     function getIntegrationWithHash(bytes32 _nameHashP) external view returns (address);
 
+    function getIntegrationDataWithAddress(address _integration) external view returns (bool, bytes32);
+
     function isValidReserveAsset(address _reserveAsset) external view returns (bool);
 
     function isValidKeeper(address _keeper) external view returns (bool);

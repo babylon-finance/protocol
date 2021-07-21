@@ -166,7 +166,11 @@ contract BabController is OwnableUpgradeable, IBabController {
     bool public override guardianGlobalPaused;
 
     // Complementary integrations
-    mapping(address => bool) private protocolIntegrations;
+    struct ProtocolIntegrations {
+        bool activated;
+        bytes32 hashedName;
+    }
+    mapping(address => ProtocolIntegrations) private protocolIntegrations;
 
     /* ============ Constructor ============ */
 
@@ -593,19 +597,23 @@ contract BabController is OwnableUpgradeable, IBabController {
     function addIntegration(string memory _name, address _integration) public override onlyOwner {
         bytes32 hashedName = _nameHash(_name);
         require(
-            enabledIntegrations[hashedName] == address(0) || !protocolIntegrations[_integration],
+            enabledIntegrations[hashedName] == address(0) || !protocolIntegrations[_integration].activated,
             'Integration exists already.'
         );
         require(_integration != address(0), 'Integration address must exist.');
         if (enabledIntegrations[hashedName] != address(0) && enabledIntegrations[hashedName] != _integration) {
             // Backward compatibility - keep previous integrations valid
-            protocolIntegrations[enabledIntegrations[hashedName]] = true;
+            ProtocolIntegrations storage prevIntegration = protocolIntegrations[enabledIntegrations[hashedName]];
+            prevIntegration.activated = true;
+            prevIntegration.hashedName = hashedName;
             enabledIntegrations[hashedName] = _integration;
         } else if (enabledIntegrations[hashedName] == address(0)) {
             // Set as default for that hash name if it does not exist
             enabledIntegrations[hashedName] = _integration;
         }
-        protocolIntegrations[_integration] = true;
+        ProtocolIntegrations storage newIntegration = protocolIntegrations[_integration];
+        newIntegration.activated = true;
+        newIntegration.hashedName = hashedName;
         emit ControllerIntegrationAdded(_integration, _name);
     }
 
@@ -622,10 +630,14 @@ contract BabController is OwnableUpgradeable, IBabController {
         require(_integration != address(0), 'Integration address must exist.');
         if (enabledIntegrations[hashedName] != _integration) {
             // Backward compatibility - keep previous integrations valid
-            protocolIntegrations[enabledIntegrations[hashedName]] = true;
+            ProtocolIntegrations storage prevIntegration = protocolIntegrations[enabledIntegrations[hashedName]];
+            prevIntegration.activated = true;
+            prevIntegration.hashedName = hashedName;
             enabledIntegrations[hashedName] = _integration;
         }
-        protocolIntegrations[_integration] = true;
+        ProtocolIntegrations storage newIntegration = protocolIntegrations[_integration];
+        newIntegration.activated = true;
+        newIntegration.hashedName = hashedName;
 
         emit ControllerIntegrationEdited(_integration, _name);
     }
@@ -638,7 +650,7 @@ contract BabController is OwnableUpgradeable, IBabController {
     function removeIntegration(string memory _name, address _integration) external override onlyOwner {
         bytes32 hashedName = _nameHash(_name);
         require(
-            enabledIntegrations[hashedName] != address(0) || protocolIntegrations[_integration],
+            enabledIntegrations[hashedName] != address(0) || protocolIntegrations[_integration].activated,
             'Integration does not exist.'
         );
         delete enabledIntegrations[hashedName];
@@ -789,7 +801,7 @@ contract BabController is OwnableUpgradeable, IBabController {
     }
 
     /**
-     * Get integration integration address associated with passed hashed name
+     * Get enabled integration address associated with passed hashed name
      *
      * @param  _nameHashP     Hash of human readable integration name
      *
@@ -800,6 +812,18 @@ contract BabController is OwnableUpgradeable, IBabController {
     }
 
     /**
+     * Get integration data address associated with passed hashed name
+     *
+     * @param  _integration     Hash of human readable integration name
+     *
+     * @return               Address of integration
+     */
+    function getIntegrationDataWithAddress(address _integration) external view override returns (bool, bytes32) {
+        ProtocolIntegrations memory integration = protocolIntegrations[_integration];
+        return (integration.activated, integration.hashedName);
+    }
+
+    /**
      * Check if integration name is valid
      *
      * @param _name Human readable string identifying the integration
@@ -807,7 +831,7 @@ contract BabController is OwnableUpgradeable, IBabController {
      * @return Boolean indicating if valid
      */
     function isValidIntegration(string memory _name, address _integration) external view override returns (bool) {
-        return protocolIntegrations[_integration] || enabledIntegrations[_nameHash(_name)] == _integration;
+        return protocolIntegrations[_integration].activated || enabledIntegrations[_nameHash(_name)] == _integration;
     }
 
     /**

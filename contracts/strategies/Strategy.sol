@@ -672,7 +672,8 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         for (uint256 i = 0; i < opTypes.length; i++) {
             IOperation operation = IOperation(IBabController(controller).enabledOperations(uint256(opTypes[i])));
             // _getOpDecodedData guarantee backward compatibility with OpData
-            (uint256 strategyNav, bool positive) = operation.getNAV(_getOpDecodedData(i), garden, opIntegrations[i]);
+            (uint256 strategyNav, bool positive) =
+                operation.getNAV(_getOpDecodedData(i), garden, _getUpdatedIntegration(i));
             if (positive) {
                 positiveNav = positiveNav.add(strategyNav);
             } else {
@@ -767,7 +768,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
                 assetStatus,
                 _getOpDecodedData(i),
                 garden,
-                opIntegrations[i]
+                _getUpdatedIntegration(i)
             );
         }
     }
@@ -791,7 +792,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
                 _percentage,
                 _getOpDecodedData(i - 1),
                 garden,
-                opIntegrations[i - 1]
+                _getUpdatedIntegration(i - 1)
             );
         }
     }
@@ -923,6 +924,16 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         bytes memory decodedData =
             opDatas.length > 0 ? abi.encode(opDatas[_index], address(0)) : BytesLib.get64Bytes(opEncodedData, _index);
         return decodedData;
+    }
+
+    // backward compatibility with opIntegrations in case of ongoing strategies with deprecated opIntegrations
+    function _getUpdatedIntegration(uint256 _index) private view returns (address) {
+        (, bytes32 name) = IBabController(controller).getIntegrationDataWithAddress(opIntegrations[_index]);
+        address updatedIntegration = IBabController(controller).getIntegrationWithHash(name);
+        if (updatedIntegration != opIntegrations[_index]) {
+            return updatedIntegration;
+        }
+        return opIntegrations[_index];
     }
 
     // solhint-disable-next-line
