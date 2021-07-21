@@ -164,22 +164,24 @@ contract LendOperation is Operation {
         }
         uint256 assetTokenAmount = ILendIntegration(_integration).getInvestmentTokenAmount(msg.sender, lendToken);
         uint256 price = _getPrice(_garden.reserveAsset(), lendToken);
-        uint256 rewardsAmount = ILendIntegration(_integration).getRewardsAccrued(msg.sender);
-        uint256 priceRewards = _getPrice(_garden.reserveAsset(), ILendIntegration(_integration).getRewardToken());
         uint256 NAV =
             SafeDecimalMath.normalizeAmountTokens(lendToken, _garden.reserveAsset(), assetTokenAmount).preciseDiv(
                 price
             );
-        // We add rewards
-        NAV = NAV.add(
-            SafeDecimalMath
-                .normalizeAmountTokens(
-                ILendIntegration(_integration).getRewardToken(),
-                _garden.reserveAsset(),
-                rewardsAmount
-            )
-                .preciseDiv(priceRewards)
-        );
+        try ILendIntegration(_integration).getRewardToken() returns (address rewardsToken) {
+            uint256 rewardsAmount = ILendIntegration(_integration).getRewardsAccrued(msg.sender);
+            uint256 priceRewards = _getPrice(_garden.reserveAsset(), rewardsToken);
+            // We add rewards
+            NAV = NAV.add(
+                SafeDecimalMath
+                    .normalizeAmountTokens(
+                    ILendIntegration(_integration).getRewardToken(),
+                    _garden.reserveAsset(),
+                    rewardsAmount
+                )
+                    .preciseDiv(priceRewards)
+            );
+        } catch {}
         require(NAV != 0, 'NAV has to be bigger 0');
         return (NAV, true);
     }
@@ -235,15 +237,15 @@ contract LendOperation is Operation {
                 _garden.reserveAsset()
             );
         }
-        uint256 rewardsBalance = IERC20(ILendIntegration(_integration).getRewardToken()).balanceOf(_sender);
-        // Add rewards
-        if (rewardsBalance > 1e16) {
-            IStrategy(_sender).trade(
-                ILendIntegration(_integration).getRewardToken(),
-                rewardsBalance,
-                _garden.reserveAsset()
-            );
-        }
+        // TODO: remove try/catch once all integrations implemenent
+        // ILendIntegration
+        try ILendIntegration(_integration).getRewardToken() returns (address rewardsToken) {
+            uint256 rewardsBalance = IERC20(rewardsToken).balanceOf(_sender);
+            // Add rewards
+            if (rewardsBalance > 1e16) {
+                IStrategy(_sender).trade(rewardsToken, rewardsBalance, _garden.reserveAsset());
+            }
+        } catch {}
     }
 
     function _getRemainingDebt(
