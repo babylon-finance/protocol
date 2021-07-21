@@ -40,6 +40,11 @@ const upgradeFixture = deployments.createFixture(async (hre, options) => {
       args: [controller.address, addresses.sushiswap.router],
     },
     {
+      contract: 'CompoundLendIntegration',
+      type: 'integration',
+      args: [controller.address],
+    },
+    {
       contract: 'OneInchPoolIntegration',
       type: 'integration',
       args: [controller.address, addresses.oneinch.factory],
@@ -56,6 +61,7 @@ const upgradeFixture = deployments.createFixture(async (hre, options) => {
       args,
     });
     if (type === 'integration') {
+      console.log(contract, deployment.address);
     }
     if (type === 'operation') {
       await controller.setOperation(operation, deployment.address);
@@ -108,10 +114,10 @@ describe.only('v0.6.0', function () {
   describe('after upgrade', function () {
     describe('can finalizeStrategy', function () {
       for (const [name, strategy] of [
-        ['leverageEthStrategy', '0x49567812f97369a05e8D92462d744EFd00d7Ea42'],
-        ['Lend Eth Borrow DAI', '0xcd4fd2a8426c86067836d077eda7fa2a1df549dd'],
+        //['leverageEthStrategy', '0x49567812f97369a05e8D92462d744EFd00d7Ea42'],
+        //['Lend Eth Borrow DAI', '0xcd4fd2a8426c86067836d077eda7fa2a1df549dd'],
         ['long WBTC', '0x7498decb12acdb1c70e17bdb8481a13000a01ed6'],
-        ['yearn farm0', '0xc34210736940279DcB67d5796715D24135b76Bfe'],
+        //['yearn farm0', '0xc34210736940279DcB67d5796715D24135b76Bfe'],
       ]) {
         it(name, async () => {
           const strategyContract = await ethers.getContractAt('IStrategy', strategy, owner);
