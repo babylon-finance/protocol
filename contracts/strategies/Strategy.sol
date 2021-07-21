@@ -807,11 +807,6 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
     ) private returns (bytes memory _returnValue) {
         _returnValue = _target.functionCallWithValue(_data, _value);
         emit Invoked(_target, _value, _data, _returnValue);
-        uint x;
-        assembly {
-            x := mload(add(add(_returnValue, 0x20), 0))
-        }
-        console.log('_returnValue', x);
         return _returnValue;
     }
 

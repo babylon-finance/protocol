@@ -18,8 +18,6 @@
 
 pragma solidity 0.7.6;
 
-import 'hardhat/console.sol';
-
 import {SafeCast} from '@openzeppelin/contracts/utils/SafeCast.sol';
 import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import {ReentrancyGuard} from '@openzeppelin/contracts/utils/ReentrancyGuard.sol';
@@ -271,6 +269,10 @@ abstract contract LendIntegration is BaseIntegration, ReentrancyGuard, ILendInte
             _investmentInfo.assetToken == address(0)
                 ? address(_investmentInfo.strategy).balance
                 : IERC20(_investmentInfo.assetToken).balanceOf(address(_investmentInfo.strategy));
+        require(
+            balance >= _investmentInfo.investmentTokensInTransaction,
+            'The garden did not return the investment tokens'
+        );
     }
 
     /**

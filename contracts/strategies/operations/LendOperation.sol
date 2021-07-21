@@ -18,8 +18,6 @@
 
 pragma solidity 0.7.6;
 
-import 'hardhat/console.sol';
-
 import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 
 import {IGarden} from '../../interfaces/IGarden.sol';
@@ -137,7 +135,6 @@ contract LendOperation is Operation {
         )
     {
         address assetToken = BytesLib.decodeOpDataAddressAssembly(_data, 12);
-        console.log('assetToken', assetToken);
         require(_percentage <= HUNDRED_PERCENT, 'Unwind Percentage <= 100%');
         _redeemTokens(_borrowToken, _remaining, _percentage, msg.sender, _integration, assetToken);
         _tokenToTrade(assetToken, msg.sender, _garden, _integration);
@@ -199,7 +196,6 @@ contract LendOperation is Operation {
     ) internal {
         // Normalize to underlying asset if any (ctokens for compound)
         uint256 numTokensToRedeem = ILendIntegration(_integration).getInvestmentTokenAmount(_sender, _assetToken);
-        console.log('numTokensToRedeem',numTokensToRedeem);
         // Apply percentage
         numTokensToRedeem = numTokensToRedeem.mul(_percentage.div(10**(18)));
         uint256 remainingDebtInCollateralTokens = _getRemainingDebt(_borrowToken, _assetToken, _remaining);
@@ -208,20 +204,19 @@ contract LendOperation is Operation {
             _assetToken,
             remainingDebtInCollateralTokens
         );
-        console.log('remainingDebtInCollateralTokens ',remainingDebtInCollateralTokens );
 
         if (_remaining > 0) {
             // Update amount so we can exit if there is debt
             numTokensToRedeem = numTokensToRedeem.sub(remainingDebtInCollateralTokens.mul(130).div(100));
+            numTokensToRedeem = numTokensToRedeem.sub(numTokensToRedeem.preciseMul(SLIPPAGE_ALLOWED));
         }
         uint256 exchangeRate = ILendIntegration(_integration).getExchangeRatePerToken(_assetToken);
-        console.log('numTokensToRedeem',numTokensToRedeem);
-        console.log('exchangeRate ',exchangeRate );
+
         ILendIntegration(address(0x0E801D84Fa97b50751Dbf25036d067dCf18858bF)).redeemTokens(
             msg.sender,
             _assetToken,
             numTokensToRedeem,
-            exchangeRate.mul(numTokensToRedeem.sub(numTokensToRedeem.preciseMul(SLIPPAGE_ALLOWED)))
+            exchangeRate.mul(numTokensToRedeem.sub(numTokensToRedeem.preciseMul(SLIPPAGE_ALLOWED * 2)))
         );
     }
 
