@@ -18,6 +18,35 @@ describe('Keeper', function () {
     ({ keeper, signer1, signer2 } = await setupTests({ fund: true })());
   });
 
+  describe('totalKeeperFees', function () {
+    it(`gets accumulated over multile operations`, async function () {
+      const garden = await createGarden();
+      const fee = eth(0.1);
+
+      const strategy = await getStrategy({ state: 'deposit', specificParams: [addresses.tokens.USDT, 0] });
+
+      await strategy
+        .connect(keeper)
+        .resolveVoting(
+          [signer1.getAddress(), signer2.getAddress()],
+          [await garden.balanceOf(signer1.getAddress()), await garden.balanceOf(signer2.getAddress())],
+          fee,
+          {
+            gasPrice: 0,
+          },
+        );
+
+      expect(await garden.totalKeeperFees()).to.equal(fee);
+
+      await increaseTime(ONE_DAY_IN_SECONDS);
+      await strategy.connect(keeper).executeStrategy(STRATEGY_EXECUTE_MAP[addresses.tokens.WETH], fee, {
+        gasPrice: 0,
+      });
+
+      expect(await garden.totalKeeperFees()).to.equal(fee.add(fee));
+    });
+  });
+
   for (const { func, name, state } of [
     {
       func: async (garden, strategy, keeper, fee) =>
