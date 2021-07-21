@@ -881,8 +881,8 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         // Start a redemption window in the garden with the capital plus the profits for the lps
 
         // profitsSharing[0]: strategistProfit %, profitsSharing[1]: stewardsProfit %, profitsSharing[2]: lpProfit %
-        if(address(rewardsDistributor) == address(0)) {
-          rewardsDistributor = IRewardsDistributor(IBabController(controller).rewardsDistributor());
+        if (address(rewardsDistributor) == address(0)) {
+            rewardsDistributor = IRewardsDistributor(IBabController(controller).rewardsDistributor());
         }
         uint256[3] memory profitsSharing = rewardsDistributor.getGardenProfitsSharing(address(garden));
         garden.finalizeStrategy(

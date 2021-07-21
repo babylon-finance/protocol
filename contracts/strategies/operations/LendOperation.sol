@@ -181,8 +181,7 @@ contract LendOperation is Operation {
                 )
                     .preciseDiv(priceRewards)
             );
-        } catch {
-        }
+        } catch {}
         require(NAV != 0, 'NAV has to be bigger 0');
         return (NAV, true);
     }
@@ -244,14 +243,9 @@ contract LendOperation is Operation {
             uint256 rewardsBalance = IERC20(rewardsToken).balanceOf(_sender);
             // Add rewards
             if (rewardsBalance > 1e16) {
-                IStrategy(_sender).trade(
-                    rewardsToken,
-                    rewardsBalance,
-                    _garden.reserveAsset()
-                );
+                IStrategy(_sender).trade(rewardsToken, rewardsBalance, _garden.reserveAsset());
             }
-        } catch {
-        }
+        } catch {}
     }
 
     function _getRemainingDebt(
