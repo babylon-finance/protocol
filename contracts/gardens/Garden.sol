@@ -16,6 +16,8 @@
 */
 
 pragma solidity 0.7.6;
+
+import 'hardhat/console.sol';
 import {Address} from '@openzeppelin/contracts/utils/Address.sol';
 import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import {IERC721} from '@openzeppelin/contracts/token/ERC721/IERC721.sol';
@@ -177,7 +179,8 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
     mapping(address => bool) public override isGardenStrategy; // Security control mapping
 
     // Keeper debt in reserve asset if any, repaid upon every strategy finalization
-    uint256 public keeperDebt;
+    uint256 public override keeperDebt;
+    uint256 public override totalKeeperFees;
 
     // Allow public strategy creators for certain gardens
     bool public override publicStrategists;
@@ -655,6 +658,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         if (keeperDebt > 0 && liquidReserve() >= 0) {
             uint256 toPay = liquidReserve() > keeperDebt ? keeperDebt : liquidReserve();
             IERC20(reserveAsset).safeTransfer(_keeper, toPay);
+            totalKeeperFees = totalKeeperFees.add(toPay);
             keeperDebt = keeperDebt.sub(toPay);
         }
     }

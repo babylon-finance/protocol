@@ -170,4 +170,8 @@ interface IGarden {
     function burnStrategistStake(address _strategist, uint256 _amount) external;
 
     function payKeeper(address payable _keeper, uint256 _fee) external;
+
+    function keeperDebt() external view returns (uint256);
+
+    function totalKeeperFees() external view returns (uint256);
 }
