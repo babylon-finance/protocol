@@ -16,6 +16,8 @@
     SPDX-License-Identifier: Apache License, Version 2.0
 */
 pragma solidity 0.7.6;
+
+import 'hardhat/console.sol';
 import {Address} from '@openzeppelin/contracts/utils/Address.sol';
 import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import {Initializable} from '@openzeppelin/contracts-upgradeable/proxy/Initializable.sol';
@@ -879,6 +881,9 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         // Start a redemption window in the garden with the capital plus the profits for the lps
 
         // profitsSharing[0]: strategistProfit %, profitsSharing[1]: stewardsProfit %, profitsSharing[2]: lpProfit %
+        if (address(rewardsDistributor) == address(0)) {
+            rewardsDistributor = IRewardsDistributor(IBabController(controller).rewardsDistributor());
+        }
         uint256[3] memory profitsSharing = rewardsDistributor.getGardenProfitsSharing(address(garden));
         garden.finalizeStrategy(
             profits.sub(profits.preciseMul(profitsSharing[2])).sub(protocolProfits),
