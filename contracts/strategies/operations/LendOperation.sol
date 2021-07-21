@@ -212,7 +212,7 @@ contract LendOperation is Operation {
         }
         uint256 exchangeRate = ILendIntegration(_integration).getExchangeRatePerToken(_assetToken);
 
-        ILendIntegration(address(0x0E801D84Fa97b50751Dbf25036d067dCf18858bF)).redeemTokens(
+        ILendIntegration(_integration).redeemTokens(
             msg.sender,
             _assetToken,
             numTokensToRedeem,

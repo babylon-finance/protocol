@@ -270,7 +270,7 @@ abstract contract LendIntegration is BaseIntegration, ReentrancyGuard, ILendInte
                 ? address(_investmentInfo.strategy).balance
                 : IERC20(_investmentInfo.assetToken).balanceOf(address(_investmentInfo.strategy));
         require(
-            balance >= _investmentInfo.investmentTokensInTransaction,
+            balance >= _investmentInfo.investmentTokensInGarden - _investmentInfo.investmentTokensInTransaction,
             'The garden did not return the investment tokens'
         );
     }
