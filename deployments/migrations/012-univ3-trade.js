@@ -26,6 +26,11 @@ module.exports = async ({
   });
 
   if (deployment.newlyDeployed) {
+    console.log('Adding trade integration Uniswap v3');
+    await controllerContract.addIntegration(
+      await (await ethers.getContractAt(contract, deployment.address)).getName(),
+      deployment.address,
+    );
     console.log('Setting default trade integration', deployment.address);
     await (await controllerContract.setDefaultTradeIntegration(deployment.address, { gasPrice })).wait();
   }
