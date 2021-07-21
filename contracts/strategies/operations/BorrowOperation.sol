@@ -155,10 +155,13 @@ contract BorrowOperation is Operation {
     {
         address assetToken = BytesLib.decodeOpDataAddress(_data);
         require(_percentage <= HUNDRED_PERCENT, 'Unwind Percentage <= 100%');
+        uint256 debtAmount = IBorrowIntegration(_integration).getBorrowBalance(msg.sender, assetToken);
+        uint256 debtTokenBalance = address(0) == assetToken ? address(msg.sender).balance : IERC20(assetToken).balanceOf(address(msg.sender));
+        uint256 amountToRepay = debtAmount > debtTokenBalance ? debtTokenBalance : debtAmount;
         IBorrowIntegration(_integration).repay(
             msg.sender,
             assetToken,
-            address(0) == assetToken ? address(msg.sender).balance : IERC20(assetToken).balanceOf(address(msg.sender)) // We repay all that we can
+            amountToRepay // We repay all that we can
         );
         return (assetToken, IBorrowIntegration(_integration).getBorrowBalance(msg.sender, assetToken), 2);
     }
