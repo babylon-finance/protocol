@@ -881,7 +881,7 @@ describe('Garden', function () {
 
       amountIn = eth(1000);
       minAmountOut = from(1000 * 1e6);
-      const sig = await getWithdrawSig(signer3, amountIn, minAmountOut, 1);
+      const sig = await getWithdrawSig(garden.address, signer3, amountIn, minAmountOut, 1);
       await garden.connect(keeper).withdrawBySig(amountIn, minAmountOut, 1, eth(), sig.v, sig.r, sig.s);
     });
 
@@ -904,7 +904,7 @@ describe('Garden', function () {
 
       amountIn = eth(1000);
       minAmountOut = from(1000 * 1e6);
-      const sig = await getWithdrawSig(signer3, amountIn, minAmountOut, 8);
+      const sig = await getWithdrawSig(garden.address, signer3, amountIn, minAmountOut, 8);
 
       await expect(
         garden.connect(keeper).withdrawBySig(amountIn, minAmountOut, 8, eth(), sig.v, sig.r, sig.s),
@@ -1212,7 +1212,7 @@ describe('Garden', function () {
       const gardenBalance = await usdc.balanceOf(garden.address);
       const supplyBefore = await garden.totalSupply();
 
-      const sig = await getDepositSig(signer3, amountIn, minAmountOut, false, 0);
+      const sig = await getDepositSig(garden.address, signer3, amountIn, minAmountOut, false, 0);
       await garden.connect(keeper).depositBySig(amountIn, minAmountOut, false, 0, eth(), sig.v, sig.r, sig.s);
 
       const supplyAfter = await garden.totalSupply();
@@ -1234,7 +1234,7 @@ describe('Garden', function () {
         gasPrice: 0,
       });
 
-      const sig = await getDepositSig(signer3, amountIn, minAmountOut, false, 7);
+      const sig = await getDepositSig(garden.address, signer3, amountIn, minAmountOut, false, 7);
       await expect(
         garden.connect(keeper).depositBySig(amountIn, minAmountOut, false, 7, eth(), sig.v, sig.r, sig.s),
       ).to.be.revertedWith('revert BAB#089');

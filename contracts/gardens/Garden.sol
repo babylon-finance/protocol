@@ -397,7 +397,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         bytes32 s
     ) external override nonReentrant {
         bytes32 hash =
-            keccak256(abi.encode(DEPOSIT_BY_SIG_TYPEHASH, _amountIn, _minAmountOut, _mintNft, _nonce))
+            keccak256(abi.encode(DEPOSIT_BY_SIG_TYPEHASH, address(this), _amountIn, _minAmountOut, _mintNft, _nonce))
                 .toEthSignedMessageHash();
         address signer = ECDSA.recover(hash, v, r, s);
 
@@ -514,7 +514,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         bytes32 s
     ) external override nonReentrant {
         bytes32 hash =
-            keccak256(abi.encode(WITHDRAW_BY_SIG_TYPEHASH, _amountIn, _minAmountOut, _nonce)).toEthSignedMessageHash();
+            keccak256(abi.encode(WITHDRAW_BY_SIG_TYPEHASH, address(this), _amountIn, _minAmountOut, _nonce)).toEthSignedMessageHash();
         address signer = ECDSA.recover(hash, v, r, s);
 
         _require(signer != address(0), Errors.INVALID_SIGNER);
