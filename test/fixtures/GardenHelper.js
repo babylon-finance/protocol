@@ -209,7 +209,7 @@ async function getWithdrawSig(garden, signer, amountIn, minAmountOut, nonce) {
   );
 
   let payload = ethers.utils.defaultAbiCoder.encode(
-    ['bytes32','address', 'uint256', 'uint256', 'uint256'],
+    ['bytes32', 'address', 'uint256', 'uint256', 'uint256'],
     [DEPOSIT_BY_SIG_TYPEHASH, garden, amountIn, minAmountOut, nonce],
   );
 
