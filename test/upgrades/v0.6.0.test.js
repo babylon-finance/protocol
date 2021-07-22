@@ -104,7 +104,7 @@ const upgradeFixture = deployments.createFixture(async (hre, options) => {
   return { controller, owner, deployer, keeper };
 });
 
-describe.only('v0.6.0', function () {
+describe('v0.6.0', function () {
   let owner;
   let keeper;
 
