@@ -10,7 +10,7 @@ module.exports = async ({
   getRapid,
 }) => {
   const { deploy } = deployments;
-  const { deployer } = await getNamedAccounts();
+  const { deployer, owner } = await getNamedAccounts();
   const signer = await getSigner(deployer);
   const gasPrice = await getRapid();
 
