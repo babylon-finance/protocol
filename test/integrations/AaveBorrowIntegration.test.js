@@ -34,10 +34,13 @@ describe('AaveBorrowIntegrationTest', function () {
       [aaveLendIntegration.address, aaveBorrowIntegration.address],
       garden,
       false,
-      [asset1.address, asset2.address],
+      [asset1.address, 0, asset2.address, 0],
     );
 
-    await executeStrategy(strategyContract, { amount: STRATEGY_EXECUTE_MAP[token] });
+    let amount = STRATEGY_EXECUTE_MAP[token];
+    await executeStrategy(strategyContract, { amount });
+    // Check NAV
+    expect(await strategyContract.getNAV()).to.be.closeTo(amount, amount.div(50));
 
     expect(await asset1.balanceOf(strategyContract.address)).to.equal(0);
     expect(await asset2.balanceOf(strategyContract.address)).to.be.gt(0);
@@ -60,7 +63,7 @@ describe('AaveBorrowIntegrationTest', function () {
       [aaveLendIntegration.address, aaveBorrowIntegration.address],
       garden,
       false,
-      [asset1.address, asset2.address],
+      [asset1.address, 0, asset2.address, 0],
     );
 
     await executeStrategy(strategyContract, { amount: STRATEGY_EXECUTE_MAP[token] });
@@ -78,7 +81,7 @@ describe('AaveBorrowIntegrationTest', function () {
       [aaveLendIntegration.address, aaveBorrowIntegration.address],
       garden,
       false,
-      [asset1.address, asset2.address],
+      [asset1.address, 0, asset2.address, 0],
     );
     await expect(executeStrategy(strategyContract, { amount: STRATEGY_EXECUTE_MAP[token] })).to.be.revertedWith(
       errorcode,
@@ -109,9 +112,8 @@ describe('AaveBorrowIntegrationTest', function () {
         [aaveLendIntegration.address, aaveBorrowIntegration.address],
         garden,
         DEFAULT_STRATEGY_PARAMS,
-        [DAI.address, USDC.address],
+        [DAI.address, 0, USDC.address, 0],
       );
-
       await executeStrategy(strategyContract);
 
       const nav = await strategyContract.getNAV();
@@ -128,7 +130,6 @@ describe('AaveBorrowIntegrationTest', function () {
     ].forEach(({ token, name }) => {
       it(`gets NAV of a borrow/lend strategy at ${name} garden`, async function () {
         const strategyContract = await supplyBorrowStrategyNAV(DAI, WETH, token);
-        // TODO Check DAI-USDC in USDC Garden gets nav 0
         const nav = await strategyContract.getNAV();
         expect(nav).to.be.gt(0);
       });

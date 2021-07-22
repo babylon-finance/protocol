@@ -55,7 +55,10 @@ contract HarvestVaultIntegration is PassiveIntegration {
 
     /* ============ Internal Functions ============ */
 
-    function _getSpender(address _vault) internal pure override returns (address) {
+    function _getSpender(
+        address _vault,
+        uint8 /* _op */
+    ) internal pure override returns (address) {
         return _vault;
     }
 

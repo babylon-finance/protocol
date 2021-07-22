@@ -17,7 +17,7 @@
 */
 
 pragma solidity 0.7.6;
-import 'hardhat/console.sol';
+
 import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import '@uniswap/v2-core/contracts/interfaces/IUniswapV2Pair.sol';
 
@@ -25,6 +25,7 @@ import {IBabController} from '../../interfaces/IBabController.sol';
 import {PoolIntegration} from './PoolIntegration.sol';
 import {PreciseUnitMath} from '../../lib/PreciseUnitMath.sol';
 import {LowGasSafeMath} from '../../lib/LowGasSafeMath.sol';
+import {BytesLib} from '../../lib/BytesLib.sol';
 import {IUniswapV2Router} from '../../interfaces/external/uniswap/IUniswapV2Router.sol';
 
 /**
@@ -36,6 +37,7 @@ import {IUniswapV2Router} from '../../interfaces/external/uniswap/IUniswapV2Rout
 contract UniswapPoolIntegration is PoolIntegration {
     using LowGasSafeMath for uint256;
     using PreciseUnitMath for uint256;
+    using BytesLib for uint256;
 
     /* ============ State Variables ============ */
 
@@ -62,15 +64,16 @@ contract UniswapPoolIntegration is PoolIntegration {
 
     /* ============ External Functions ============ */
 
-    function getPoolTokens(address _poolAddress) external view override returns (address[] memory) {
+    function getPoolTokens(bytes calldata _pool, bool forNAV) external view override returns (address[] memory) {
+        address poolAddress = BytesLib.decodeOpDataAddress(_pool);
         address[] memory result = new address[](2);
-        result[0] = IUniswapV2Pair(_poolAddress).token0();
-        result[1] = IUniswapV2Pair(_poolAddress).token1();
+        result[0] = IUniswapV2Pair(poolAddress).token0();
+        result[1] = IUniswapV2Pair(poolAddress).token1();
         return result;
     }
 
     function getPoolWeights(
-        address /* _poolAddress */
+        bytes calldata /* _pool */
     ) external pure override returns (uint256[] memory) {
         uint256[] memory result = new uint256[](2);
         result[0] = 5e17; // 50%
@@ -79,7 +82,7 @@ contract UniswapPoolIntegration is PoolIntegration {
     }
 
     function getPoolTokensOut(
-        address, /* _poolAddress */
+        bytes calldata, /* _pool */
         address, /* _poolToken */
         uint256 /* _maxAmountsIn */
     ) external pure override returns (uint256) {
@@ -87,21 +90,22 @@ contract UniswapPoolIntegration is PoolIntegration {
         return 1;
     }
 
-    function getPoolMinAmountsOut(address _poolAddress, uint256 _liquidity)
+    function getPoolMinAmountsOut(bytes calldata _pool, uint256 _liquidity)
         external
         view
         override
         returns (uint256[] memory _minAmountsOut)
     {
-        uint256 totalSupply = IUniswapV2Pair(_poolAddress).totalSupply();
+        address poolAddress = BytesLib.decodeOpDataAddress(_pool);
+        uint256 totalSupply = IUniswapV2Pair(poolAddress).totalSupply();
         uint256[] memory result = new uint256[](2);
-        result[0] = IERC20(IUniswapV2Pair(_poolAddress).token0())
-            .balanceOf(_poolAddress)
+        result[0] = IERC20(IUniswapV2Pair(poolAddress).token0())
+            .balanceOf(poolAddress)
             .mul(_liquidity)
             .div(totalSupply)
             .preciseMul(1e18 - SLIPPAGE_ALLOWED);
-        result[1] = IERC20(IUniswapV2Pair(_poolAddress).token1())
-            .balanceOf(_poolAddress)
+        result[1] = IERC20(IUniswapV2Pair(poolAddress).token1())
+            .balanceOf(poolAddress)
             .mul(_liquidity)
             .div(totalSupply)
             .preciseMul(1e18 - SLIPPAGE_ALLOWED);
@@ -110,12 +114,13 @@ contract UniswapPoolIntegration is PoolIntegration {
 
     /* ============ Internal Functions ============ */
 
-    function _isPool(address _poolAddress) internal pure override returns (bool) {
-        return IUniswapV2Pair(_poolAddress).MINIMUM_LIQUIDITY() > 0;
+    function _isPool(bytes memory _pool) internal view override returns (bool) {
+        address poolAddress = BytesLib.decodeOpDataAddressAssembly(_pool, 12);
+        return IUniswapV2Pair(poolAddress).MINIMUM_LIQUIDITY() > 0;
     }
 
     function _getSpender(
-        address //_poolAddress
+        bytes calldata /* _pool */
     ) internal view override returns (address) {
         return address(uniRouter);
     }
@@ -124,7 +129,7 @@ contract UniswapPoolIntegration is PoolIntegration {
      * Return join pool calldata which is already generated from the pool API
      *
      * @param  _strategy                 Address of the strategy
-     * hparam  _poolAddress              Address of the pool
+     * hparam  _pool                     OpData e.g. Address of the pool
      * hparam  _poolTokensOut            Amount of pool tokens to send
      * @param  _tokensIn                 Addresses of tokens to send to the pool
      * @param  _maxAmountsIn             Amounts of tokens to send to the pool
@@ -135,7 +140,7 @@ contract UniswapPoolIntegration is PoolIntegration {
      */
     function _getJoinPoolCalldata(
         address _strategy,
-        address, /* _poolAddress */
+        bytes calldata, /* _pool */
         uint256, /* _poolTokensOut */
         address[] calldata _tokensIn,
         uint256[] calldata _maxAmountsIn
@@ -178,7 +183,7 @@ contract UniswapPoolIntegration is PoolIntegration {
      * Return exit pool calldata which is already generated from the pool API
      *
      * @param  _strategy                 Address of the strategy
-     * hparam  _poolAddress              Address of the pool
+     * hparam  _pool                     OpData e.g. Address of the pool
      * @param  _poolTokensIn             Amount of pool tokens to liquidate
      * @param  _tokensOut                Addresses of tokens to receive
      * @param  _minAmountsOut            Amounts of tokens to receive
@@ -189,7 +194,7 @@ contract UniswapPoolIntegration is PoolIntegration {
      */
     function _getExitPoolCalldata(
         address _strategy,
-        address, /* _poolAddress */
+        bytes memory, /* _pool */
         uint256 _poolTokensIn,
         address[] calldata _tokensOut,
         uint256[] calldata _minAmountsOut

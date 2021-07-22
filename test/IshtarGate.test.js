@@ -37,13 +37,6 @@ describe('IshtarGate', function () {
     ];
   });
 
-  describe('Deployment', function () {
-    it('should successfully deploy the contract', async function () {
-      const deployed = await ishtarGate.deployed();
-      expect(!!deployed).to.equal(true);
-    });
-  });
-
   describe('create garden', async function () {
     it('succeeds with the gate NFT awarded', async function () {
       await ishtarGate.connect(owner).setCreatorPermissions(signer2.address, true, { gasPrice: 0 });
@@ -58,6 +51,8 @@ describe('IshtarGate', function () {
             0,
             GARDEN_PARAMS,
             ethers.utils.parseEther('0.1'),
+            [false, false, false],
+            [0, 0, 0],
             {
               value: ethers.utils.parseEther('0.1'),
             },
@@ -78,6 +73,8 @@ describe('IshtarGate', function () {
             1,
             GARDEN_PARAMS,
             ethers.utils.parseEther('0.1'),
+            [false, false, false],
+            [0, 0, 0],
             {
               value: ethers.utils.parseEther('0.1'),
             },
@@ -106,6 +103,8 @@ describe('IshtarGate', function () {
             2,
             GARDEN_PARAMS,
             ethers.utils.parseEther('0.1'),
+            [false, false, false],
+            [0, 0, 0],
             {
               value: ethers.utils.parseEther('0.1'),
             },
@@ -115,29 +114,27 @@ describe('IshtarGate', function () {
 
     it('creator can join a garden', async function () {
       await ishtarGate.connect(owner).setCreatorPermissions(signer2.address, true, { gasPrice: 0 });
-      await expect(
-        babController
-          .connect(signer2)
-          .createGarden(
-            addresses.tokens.WETH,
-            'TEST Ishtar',
-            'AAA',
-            'http:',
-            0,
-            GARDEN_PARAMS,
-            ethers.utils.parseEther('0.1'),
-            {
-              value: ethers.utils.parseEther('0.1'),
-            },
-          ),
-      ).to.not.be.reverted;
+      await babController
+        .connect(signer2)
+        .createGarden(
+          addresses.tokens.WETH,
+          'TEST Ishtar',
+          'AAA',
+          'http:',
+          0,
+          GARDEN_PARAMS,
+          ethers.utils.parseEther('0.1'),
+          [false, false, false],
+          [0, 0, 0],
+          {
+            value: ethers.utils.parseEther('0.1'),
+          },
+        );
       const gardens = await babController.getGardens();
       const newGarden = await ethers.getContractAt('Garden', gardens[gardens.length - 1]);
-      await expect(
-        newGarden.connect(signer2).deposit(ethers.utils.parseEther('1'), 1, signer3.getAddress(), false, {
-          value: ethers.utils.parseEther('1'),
-        }),
-      ).not.to.be.reverted;
+      await newGarden.connect(signer2).deposit(ethers.utils.parseEther('1'), 1, signer2.getAddress(), false, {
+        value: ethers.utils.parseEther('1'),
+      });
     });
 
     it('creator can create a strategy', async function () {
@@ -153,6 +150,8 @@ describe('IshtarGate', function () {
             0,
             GARDEN_PARAMS,
             ethers.utils.parseEther('0.1'),
+            [false, false, false],
+            [0, 0, 0],
             {
               value: ethers.utils.parseEther('0.1'),
             },
@@ -197,6 +196,8 @@ describe('IshtarGate', function () {
             0,
             GARDEN_PARAMS,
             ethers.utils.parseEther('0.1'),
+            [false, false, false],
+            [0, 0, 0],
             {
               value: ethers.utils.parseEther('0.1'),
             },
@@ -226,6 +227,8 @@ describe('IshtarGate', function () {
             0,
             GARDEN_PARAMS,
             ethers.utils.parseEther('0.1'),
+            [false, false, false],
+            [0, 0, 0],
             {
               value: ethers.utils.parseEther('0.1'),
             },
@@ -253,6 +256,8 @@ describe('IshtarGate', function () {
             3,
             GARDEN_PARAMS,
             ethers.utils.parseEther('0.1'),
+            [false, false, false],
+            [0, 0, 0],
             {
               value: ethers.utils.parseEther('0.1'),
             },
@@ -281,6 +286,8 @@ describe('IshtarGate', function () {
             4,
             GARDEN_PARAMS,
             ethers.utils.parseEther('0.1'),
+            [false, false, false],
+            [0, 0, 0],
             {
               value: ethers.utils.parseEther('0.1'),
             },
@@ -310,6 +317,8 @@ describe('IshtarGate', function () {
             5,
             GARDEN_PARAMS,
             ethers.utils.parseEther('0.1'),
+            [false, false, false],
+            [0, 0, 0],
             {
               value: ethers.utils.parseEther('0.1'),
             },
@@ -334,6 +343,8 @@ describe('IshtarGate', function () {
             'http...',
             GARDEN_PARAMS,
             ethers.utils.parseEther('0.1'),
+            [false, false, false],
+            [0, 0, 0],
             {
               value: ethers.utils.parseEther('0.1'),
             },
@@ -362,6 +373,8 @@ describe('IshtarGate', function () {
             'http...',
             GARDEN_PARAMS,
             ethers.utils.parseEther('0.1'),
+            [false, false, false],
+            [0, 0, 0],
             {
               value: ethers.utils.parseEther('0.1'),
             },
@@ -391,6 +404,8 @@ describe('IshtarGate', function () {
             'http...',
             GARDEN_PARAMS,
             ethers.utils.parseEther('0.1'),
+            [false, false, false],
+            [0, 0, 0],
             {
               value: ethers.utils.parseEther('0.1'),
             },

@@ -34,4 +34,3 @@ module.exports = async ({
 };
 
 module.exports.tags = ['Treasury'];
-module.exports.dependencies = ['Controller'];

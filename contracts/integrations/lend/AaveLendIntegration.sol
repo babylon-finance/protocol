@@ -27,6 +27,7 @@ import {AaveToken} from '../../interfaces/external/aave/AaveToken.sol';
 import {ILendingPool} from '../../interfaces/external/aave/ILendingPool.sol';
 import {ILendingPoolAddressesProvider} from '../../interfaces/external/aave/ILendingPoolAddressesProvider.sol';
 import {IProtocolDataProvider} from '../../interfaces/external/aave/IProtocolDataProvider.sol';
+import {IStakedAave} from '../../interfaces/external/aave/IStakedAave.sol';
 
 import {IGarden} from '../../interfaces/IGarden.sol';
 import {IStrategy} from '../../interfaces/IStrategy.sol';
@@ -50,6 +51,9 @@ contract AaveLendIntegration is LendIntegration {
     IProtocolDataProvider constant dataProvider =
         IProtocolDataProvider(address(0x057835Ad21a177dbdd3090bB1CAE03EaCF78Fc6d)); // Mainnet
 
+    address private constant AAVE = 0x7Fc66500c84A76Ad7e9c93437bFc5Ac33E2DDaE9;
+    address private constant stkAAVE = 0x4da27a545c0c5B758a6BA100e3a049001de870f5;
+
     /* ============ Struct ============ */
 
     /* ============ Events ============ */
@@ -69,6 +73,14 @@ contract AaveLendIntegration is LendIntegration {
 
     /* ============ Internal Functions ============ */
 
+    function _getRewardToken() internal view override returns (address) {
+        return AAVE;
+    }
+
+    function _getRewardsAccrued(address _strategy) internal view override returns (uint256) {
+        return IStakedAave(stkAAVE).stakerRewardsToClaim(_strategy);
+    }
+
     function _isInvestment(address _assetToken) internal view override returns (bool) {
         (address aTokenAddress, , ) = dataProvider.getReserveTokensAddresses(_assetToken);
         return aTokenAddress != address(0);
@@ -87,6 +99,60 @@ contract AaveLendIntegration is LendIntegration {
     ) internal pure override returns (uint256) {
         // love it 😍
         return 1;
+    }
+
+    /**
+     * Claim rewards calldata
+     *
+     * hparam  _strategy                 Address of the strategy
+     *
+     * @return address                   Target contract address
+     * @return uint256                   Call value
+     * @return bytes                     Trade calldata
+     */
+    function _claimRewardsCallData(address _strategy)
+        internal
+        view
+        override
+        returns (
+            address,
+            uint256,
+            bytes memory
+        )
+    {
+        // Encode method data for Garden to invoke
+        bytes memory methodData =
+            abi.encodeWithSignature('claimRewards(address,uint256)', _strategy, IERC20(stkAAVE).balanceOf(_strategy));
+
+        return (stkAAVE, 0, methodData);
+    }
+
+    /**
+     * Return pre action calldata
+     *
+     * hparam  _asset                    Address of the asset to deposit
+     * hparam  _amount                   Amount of the token to deposit
+     * hparam  _borrowOp                Type of Borrow op
+     *
+     * @return address                   Target contract address
+     * @return uint256                   Call value
+     * @return bytes                     Trade calldata
+     */
+    function _getPreActionCallData(
+        address, /* _asset */
+        uint256, /* _amount */
+        uint256 /* _borrowOp */
+    )
+        internal
+        pure
+        override
+        returns (
+            address,
+            uint256,
+            bytes memory
+        )
+    {
+        return (address(0), 0, bytes(''));
     }
 
     /**
@@ -147,34 +213,6 @@ contract AaveLendIntegration is LendIntegration {
         bytes memory methodData =
             abi.encodeWithSignature('withdraw(address,uint256,address)', _assetToken, _numTokensToSupply, _strategy);
         return (address(lendingPool), 0, methodData);
-    }
-
-    /**
-     * Return pre action calldata
-     *
-     * hparam  _asset                    Address of the asset to deposit
-     * hparam  _amount                   Amount of the token to deposit
-     * hparam  _borrowOp                Type of Borrow op
-     *
-     * @return address                   Target contract address
-     * @return uint256                   Call value
-     * @return bytes                     Trade calldata
-     */
-    function _getPreActionCallData(
-        address, /* _asset */
-        uint256, /* _amount */
-        uint256 /* _borrowOp */
-    )
-        internal
-        pure
-        override
-        returns (
-            address,
-            uint256,
-            bytes memory
-        )
-    {
-        return (address(0), 0, bytes(''));
     }
 
     function _getSpender(

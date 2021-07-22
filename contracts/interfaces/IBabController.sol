@@ -33,7 +33,9 @@ interface IBabController {
         string memory _tokenURI,
         uint256 _seed,
         uint256[] calldata _gardenParams,
-        uint256 _initialContribution
+        uint256 _initialContribution,
+        bool[] memory _publicGardenStrategistsStewards,
+        uint256[] memory _profitSharing
     ) external payable returns (address);
 
     function removeGarden(address _garden) external;
@@ -61,12 +63,6 @@ interface IBabController {
     function editStrategyNFT(address _newStrategyNFT) external;
 
     function editStrategyFactory(address _newStrategyFactory) external;
-
-    function addIntegration(string memory _name, address _integration) external;
-
-    function editIntegration(string memory _name, address _integration) external;
-
-    function removeIntegration(string memory _name) external;
 
     function setOperation(uint8 _kind, address _operation) external;
 
@@ -161,17 +157,11 @@ interface IBabController {
 
     function isGarden(address _garden) external view returns (bool);
 
-    function getIntegrationByName(string memory _name) external view returns (address);
-
-    function getIntegrationWithHash(bytes32 _nameHashP) external view returns (address);
-
     function isValidReserveAsset(address _reserveAsset) external view returns (bool);
 
     function isValidKeeper(address _keeper) external view returns (bool);
 
     function isSystemContract(address _contractAddress) external view returns (bool);
-
-    function isValidIntegration(string memory _name, address _integration) external view returns (bool);
 
     function getMinCooldownPeriod() external view returns (uint256);
 

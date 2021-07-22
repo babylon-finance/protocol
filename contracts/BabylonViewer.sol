@@ -16,11 +16,12 @@
 */
 
 pragma solidity 0.7.6;
+pragma abicoder v2;
 
-import 'hardhat/console.sol';
 import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import {ERC20} from '@openzeppelin/contracts/token/ERC20/ERC20.sol';
 import {IERC721} from '@openzeppelin/contracts/token/ERC721/IERC721.sol';
+import {ERC721} from '@openzeppelin/contracts/token/ERC721/ERC721.sol';
 import {SafeMath} from '@openzeppelin/contracts/math/SafeMath.sol';
 
 import {PreciseUnitMath} from './lib/PreciseUnitMath.sol';
@@ -68,30 +69,32 @@ contract BabylonViewer {
             string memory,
             address,
             address,
-            bool[2] memory,
+            bool[4] memory,
             address[] memory,
             address[] memory,
-            uint256[11] memory,
-            uint256[10] memory
+            uint256[10] memory,
+            uint256[9] memory,
+            uint256[3] memory
         )
     {
         IGarden garden = IGarden(_garden);
-        IGardenValuer valuer = IGardenValuer(controller.gardenValuer());
-        uint256 valuationPerToken = valuer.calculateGardenValuation(_garden, garden.reserveAsset());
-        uint256 totalSupply = IERC20(_garden).totalSupply();
-        uint256 seed = _getGardenSeed(_garden);
-
+        uint256[] memory totalSupplyValuationAndSeed = new uint256[](3);
+        totalSupplyValuationAndSeed[0] = IERC20(_garden).totalSupply();
+        totalSupplyValuationAndSeed[1] = totalSupplyValuationAndSeed[0] > 0
+            ? IGardenValuer(controller.gardenValuer()).calculateGardenValuation(_garden, garden.reserveAsset())
+            : 0;
+        totalSupplyValuationAndSeed[2] = _getGardenSeed(_garden);
+        uint256[3] memory profits = _getGardenProfitSharing(_garden);
         return (
             ERC20(_garden).name(),
             ERC20(_garden).symbol(),
             garden.creator(),
             garden.reserveAsset(),
-            [garden.active(), garden.guestListEnabled()],
+            [garden.active(), garden.privateGarden(), garden.publicStrategists(), garden.publicStewards()],
             garden.getStrategies(),
             garden.getFinalizedStrategies(),
             [
                 garden.depositHardlock(),
-                garden.withdrawalsOpenUntil(),
                 garden.minVotesQuorum(),
                 garden.maxContributors(),
                 garden.maxDepositLimit(),
@@ -105,15 +108,17 @@ contract BabylonViewer {
             [
                 garden.principal(),
                 garden.reserveAssetRewardsSetAside(),
-                garden.reserveAssetPrincipalWindow(),
                 uint256(garden.absoluteReturns()),
                 garden.gardenInitializedAt(),
                 garden.totalContributors(),
                 garden.totalStake(),
-                totalSupply.preciseMul(valuationPerToken),
-                totalSupply,
-                seed
-            ]
+                totalSupplyValuationAndSeed[1] > 0
+                    ? totalSupplyValuationAndSeed[0].preciseMul(totalSupplyValuationAndSeed[1])
+                    : 0,
+                totalSupplyValuationAndSeed[0],
+                totalSupplyValuationAndSeed[2]
+            ],
+            profits
         );
     }
 
@@ -137,11 +142,10 @@ contract BabylonViewer {
         IStrategy strategy = IStrategy(_strategy);
         bool[] memory status = new bool[](3);
         uint256[] memory ts = new uint256[](4);
+        // ts[0]: executedAt, ts[1]: exitedAt, ts[2]: updatedAt
         (, status[0], status[1], status[2], ts[0], ts[1], ts[2]) = strategy.getStrategyState();
         uint256 rewards =
-            strategy.exitedAt() != 0
-                ? IRewardsDistributor(controller.rewardsDistributor()).getStrategyRewards(_strategy)
-                : 0;
+            ts[1] != 0 ? IRewardsDistributor(controller.rewardsDistributor()).getStrategyRewards(_strategy) : 0;
         ts[3] = strategy.enteredCooldownAt();
         return (
             strategy.strategist(),
@@ -171,14 +175,14 @@ contract BabylonViewer {
         returns (
             uint8[] memory,
             address[] memory,
-            address[] memory
+            bytes[] memory
         )
     {
         IStrategy strategy = IStrategy(_strategy);
         uint256 count = strategy.getOperationsCount();
         uint8[] memory types = new uint8[](count);
         address[] memory integrations = new address[](count);
-        address[] memory datas = new address[](count);
+        bytes[] memory datas = new bytes[](count);
 
         for (uint8 i = 0; i < count; i++) {
             (types[i], integrations[i], datas[i]) = strategy.getOperationByIndex(i);
@@ -192,7 +196,7 @@ contract BabylonViewer {
     }
 
     function getGardenPermissions(address _garden, address _user)
-        external
+        public
         view
         returns (
             bool,
@@ -202,9 +206,12 @@ contract BabylonViewer {
     {
         IIshtarGate gate = IIshtarGate(controller.ishtarGate());
         return (
-            gate.canJoinAGarden(_garden, _user),
-            gate.canVoteInAGarden(_garden, _user),
-            gate.canAddStrategiesInAGarden(_garden, _user)
+            gate.canJoinAGarden(_garden, _user) ||
+                (IERC721(address(gate)).balanceOf(_user) > 0 && !IGarden(_garden).privateGarden()),
+            gate.canVoteInAGarden(_garden, _user) ||
+                (IERC721(address(gate)).balanceOf(_user) > 0 && IGarden(_garden).publicStewards()),
+            gate.canAddStrategiesInAGarden(_garden, _user) ||
+                (IERC721(address(gate)).balanceOf(_user) > 0 && IGarden(_garden).publicStrategists())
         );
     }
 
@@ -213,16 +220,27 @@ contract BabylonViewer {
         address[] memory userGardens = new address[](25);
         bool[] memory hasUserDeposited = new bool[](25);
         uint8 resultIndex;
-        IIshtarGate gate = IIshtarGate(controller.ishtarGate());
         for (uint256 i = _offset; i < gardens.length; i++) {
             IGarden garden = IGarden(gardens[i]);
-            if (garden.active() && (!garden.guestListEnabled() || gate.canJoinAGarden(gardens[i], _user))) {
+            (bool depositPermission, , ) = getGardenPermissions(gardens[i], _user);
+            if (garden.active() && depositPermission) {
                 userGardens[resultIndex] = gardens[i];
                 hasUserDeposited[resultIndex] = IERC20(gardens[i]).balanceOf(_user) > 0;
                 resultIndex = resultIndex + 1;
             }
         }
         return (userGardens, hasUserDeposited);
+    }
+
+    function getGardenUserAvgPricePerShare(address _garden, address _user) public view returns (uint256) {
+        IGarden garden = IGarden(_garden);
+        uint256[] memory contribution = new uint256[](2);
+        (, , , , , contribution[0], contribution[1], , , ) = garden.getContributor(_user);
+
+        // Avg price per user share = deposits / garden tokens
+        // contributor[0] -> Deposits (ERC20 reserveAsset with X decimals)
+        // contributor[1] -> Balance (Garden tokens) with 18 decimals
+        return contribution[1] > 0 ? contribution[0].preciseDiv(contribution[1]) : 0;
     }
 
     function getUserStrategyActions(address[] memory _strategies, address _user)
@@ -251,7 +269,7 @@ contract BabylonViewer {
         returns (uint256[] memory, uint256[] memory)
     {
         IGarden garden = IGarden(_garden);
-        uint256[] memory contribution = new uint256[](9);
+        uint256[] memory contribution = new uint256[](10);
         (
             contribution[0],
             contribution[1],
@@ -261,7 +279,8 @@ contract BabylonViewer {
             contribution[5],
             ,
             ,
-            contribution[8]
+            contribution[8],
+
         ) = garden.getContributor(_user);
         contribution[6] = IERC20(_garden).balanceOf(_user);
         contribution[7] = garden.getLockedBalance(_user);
@@ -271,6 +290,7 @@ contract BabylonViewer {
                 _user,
                 garden.getFinalizedStrategies()
             );
+        contribution[9] = getGardenUserAvgPricePerShare(_garden, _user);
         return (contribution, totalRewards);
     }
 
@@ -278,5 +298,9 @@ contract BabylonViewer {
 
     function _getGardenSeed(address _garden) private view returns (uint256) {
         return IGardenNFT(controller.gardenNFT()).gardenSeeds(_garden);
+    }
+
+    function _getGardenProfitSharing(address _garden) private view returns (uint256[3] memory) {
+        return IRewardsDistributor(controller.rewardsDistributor()).getGardenProfitsSharing(_garden);
     }
 }

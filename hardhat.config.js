@@ -2,6 +2,7 @@ require('dotenv/config');
 require('@nomiclabs/hardhat-ethers');
 require('@openzeppelin/hardhat-upgrades');
 require('@nomiclabs/hardhat-waffle');
+require('@nomiclabs/hardhat-etherscan');
 
 require('hardhat-deploy');
 require('hardhat-contract-sizer');
@@ -26,6 +27,7 @@ require('./lib/tasks/upgrade-admin');
 require('./lib/tasks/upgrade-beacon');
 require('./lib/tasks/tvl');
 require('./lib/tasks/gardens');
+require('./lib/tasks/strategy-expire');
 
 const OPTIMIZER = !(process.env.OPTIMIZER === 'false');
 
@@ -63,7 +65,7 @@ module.exports = {
       allowUnlimitedContractSize: true,
       forking: {
         url: `https://eth-mainnet.alchemyapi.io/v2/${ALCHEMY_KEY}`,
-        blockNumber: 12413620,
+        blockNumber: 12821000,
       },
       saveDeployments: true,
     },
@@ -110,6 +112,9 @@ module.exports = {
         },
       },
     ],
+  },
+  etherscan: {
+    apiKey: 'JA61NTCWBMPN56AT7TFQ3IMPHH2M2NHSJJ',
   },
   tenderly: {
     username: 'babylon_finance',

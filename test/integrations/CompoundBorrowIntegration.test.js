@@ -21,6 +21,7 @@ describe('CompoundBorrowIntegrationTest', function () {
   let USDC;
   let DAI;
   let WETH;
+  let WBTC;
 
   async function supplyBorrowStrategy(asset1, asset2, token) {
     await transferFunds(token);
@@ -38,9 +39,12 @@ describe('CompoundBorrowIntegrationTest', function () {
       [compoundLendIntegration.address, compoundBorrowIntegration.address],
       garden,
       false,
-      [asset1Address, asset2Address],
+      [asset1Address, 0, asset2Address, 0],
     );
-    await executeStrategy(strategyContract, { amount: STRATEGY_EXECUTE_MAP[token] });
+    const amount = STRATEGY_EXECUTE_MAP[token];
+    await executeStrategy(strategyContract, { amount });
+    // Check NAV
+    expect(await strategyContract.getNAV()).to.be.closeTo(amount, amount.div(50));
 
     expect(await asset1.balanceOf(strategyContract.address)).to.equal(0);
     expect(await asset2.balanceOf(strategyContract.address)).to.be.gt(0);
@@ -70,7 +74,7 @@ describe('CompoundBorrowIntegrationTest', function () {
       [compoundLendIntegration.address, compoundBorrowIntegration.address],
       garden,
       false,
-      [asset1Address, asset2Address],
+      [asset1Address, 0, asset2Address, 0],
     );
     await expect(executeStrategy(strategyContract, { amount: STRATEGY_EXECUTE_MAP[token] })).to.be.revertedWith(
       errorcode,
@@ -82,6 +86,7 @@ describe('CompoundBorrowIntegrationTest', function () {
     USDC = await ethers.getContractAt('IERC20', addresses.tokens.USDC);
     DAI = await ethers.getContractAt('IERC20', addresses.tokens.DAI);
     WETH = await ethers.getContractAt('IERC20', addresses.tokens.WETH);
+    WBTC = await ethers.getContractAt('IERC20', addresses.tokens.WBTC);
   });
 
   describe('Deployment', function () {
@@ -100,7 +105,7 @@ describe('CompoundBorrowIntegrationTest', function () {
         [compoundLendIntegration.address, compoundBorrowIntegration.address],
         garden1,
         DEFAULT_STRATEGY_PARAMS,
-        [DAI.address, USDC.address],
+        [DAI.address, 0, USDC.address, 0],
       );
 
       await executeStrategy(strategyContract);
@@ -108,7 +113,7 @@ describe('CompoundBorrowIntegrationTest', function () {
       expect(await DAI.balanceOf(strategyContract.address)).to.equal(0);
       expect(await USDC.balanceOf(strategyContract.address)).to.be.gt(0);
       const collateral = await compoundBorrowIntegration.getCollateralBalance(strategyContract.address, DAI.address);
-      expect(collateral).to.be.gt(ethers.utils.parseEther('2000'));
+      expect(collateral).to.be.gt(ethers.utils.parseEther('1931'));
       expect(await compoundBorrowIntegration.getBorrowBalance(strategyContract.address, USDC.address)).to.be.gt(0);
       const beforeExitingWeth = await WETH.balanceOf(garden1.address);
 
@@ -127,7 +132,7 @@ describe('CompoundBorrowIntegrationTest', function () {
         [compoundLendIntegration.address, compoundBorrowIntegration.address],
         garden1,
         DEFAULT_STRATEGY_PARAMS,
-        [USDC.address, DAI.address],
+        [USDC.address, 0, DAI.address, 0],
       );
 
       await executeStrategy(strategyContract);
@@ -151,7 +156,7 @@ describe('CompoundBorrowIntegrationTest', function () {
         [compoundLendIntegration.address, compoundBorrowIntegration.address],
         garden1,
         DEFAULT_STRATEGY_PARAMS,
-        [ADDRESS_ZERO, DAI.address], // eth, dai
+        [ADDRESS_ZERO, 0, DAI.address, 0], // eth, dai
       );
 
       await executeStrategy(strategyContract);
@@ -160,7 +165,7 @@ describe('CompoundBorrowIntegrationTest', function () {
       const collateral = await compoundBorrowIntegration.getCollateralBalance(strategyContract.address, ADDRESS_ZERO);
       expect(collateral).to.be.closeTo(ethers.utils.parseEther('1'), ethers.utils.parseEther('1').div(100));
       expect(await compoundBorrowIntegration.getBorrowBalance(strategyContract.address, DAI.address)).to.be.gt(
-        ethers.utils.parseEther('1000'),
+        ethers.utils.parseEther('580'),
       );
       const beforeExitingWeth = await WETH.balanceOf(garden1.address);
       await finalizeStrategy(strategyContract);
@@ -177,13 +182,13 @@ describe('CompoundBorrowIntegrationTest', function () {
         [compoundLendIntegration.address, compoundBorrowIntegration.address],
         garden1,
         DEFAULT_STRATEGY_PARAMS,
-        [DAI.address, ADDRESS_ZERO],
+        [DAI.address, 0, ADDRESS_ZERO, 0],
       );
 
       await executeStrategy(strategyContract);
       expect(await DAI.balanceOf(strategyContract.address)).to.equal(0);
       const collateral = await compoundBorrowIntegration.getCollateralBalance(strategyContract.address, DAI.address);
-      expect(collateral).to.be.gt(ethers.utils.parseEther('2000'));
+      expect(collateral).to.be.gt(ethers.utils.parseEther('1930'));
       expect(await compoundBorrowIntegration.getBorrowBalance(strategyContract.address, ADDRESS_ZERO)).to.be.gt(0);
       const beforeExitingWeth = await WETH.balanceOf(garden1.address);
       await finalizeStrategy(strategyContract);
@@ -200,6 +205,9 @@ describe('CompoundBorrowIntegrationTest', function () {
     ].forEach(({ token, name }) => {
       it(`can supply DAI and borrow USDC at Compound in a ${name} Garden`, async function () {
         await supplyBorrowStrategy(DAI, USDC, token);
+      });
+      it(`can supply WBTC and borrow DAI at Compound in a ${name} Garden`, async function () {
+        await supplyBorrowStrategy(WBTC, DAI, token);
       });
       it(`can supply USDC and borrow DAI at Compound in a ${name} Garden`, async function () {
         await supplyBorrowStrategy(USDC, DAI, token);

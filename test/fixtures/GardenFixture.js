@@ -33,11 +33,13 @@ async function setUpFixture(
   const yearnVaultIntegration = await getContract('YearnVaultIntegration');
   const harvestVaultIntegration = await getContract('HarvestVaultIntegration');
   const sushiswapPoolIntegration = await getContract('SushiswapPoolIntegration');
+  const curvePoolIntegration = await getContract('CurvePoolIntegration');
   const oneInchPoolIntegration = await getContract('OneInchPoolIntegration');
   const compoundLendIntegration = await getContract('CompoundLendIntegration');
   const aaveLendIntegration = await getContract('AaveLendIntegration');
   const aaveBorrowIntegration = await getContract('AaveBorrowIntegration');
   const compoundBorrowIntegration = await getContract('CompoundBorrowIntegration');
+  const lidoIntegration = await getContract('LidoStakeIntegration');
 
   const buyOperation = await getContract('BuyOperation');
   const addLiquidityOperation = await getContract('AddLiquidityOperation');
@@ -50,10 +52,16 @@ async function setUpFixture(
   const weth = await ethers.getContractAt('IERC20', addresses.tokens.WETH);
   const wbtc = await ethers.getContractAt('IERC20', addresses.tokens.WBTC);
 
+  const TOKEN_MAP = {
+    [addresses.tokens.WETH]: weth,
+    [addresses.tokens.DAI]: dai,
+    [addresses.tokens.USDC]: usdc,
+    [addresses.tokens.WBTC]: wbtc,
+  };
+
   // Gives signer1 creator permissions
   await ishtarGate.connect(owner).setCreatorPermissions(owner.address, true, { gasPrice: 0 });
   await ishtarGate.connect(owner).setCreatorPermissions(signer1.address, true, { gasPrice: 0 });
-
   await babController
     .connect(signer1)
     .createGarden(
@@ -64,11 +72,12 @@ async function setUpFixture(
       0,
       gardenParams,
       ethers.utils.parseEther('1'),
+      [false, false, false],
+      [0, 0, 0],
       {
         value: ethers.utils.parseEther('1'),
       },
     );
-
   await babController
     .connect(signer1)
     .createGarden(
@@ -79,6 +88,8 @@ async function setUpFixture(
       1,
       gardenParams,
       ethers.utils.parseEther('1'),
+      [false, false, false],
+      [0, 0, 0],
       {
         value: ethers.utils.parseEther('1'),
       },
@@ -94,6 +105,8 @@ async function setUpFixture(
       2,
       gardenParams,
       ethers.utils.parseEther('1'),
+      [false, false, false],
+      [0, 0, 0],
       {
         value: ethers.utils.parseEther('1'),
       },
@@ -109,6 +122,8 @@ async function setUpFixture(
       3,
       gardenParams,
       ethers.utils.parseEther('1'),
+      [false, false, false],
+      [0, 0, 0],
       {
         value: ethers.utils.parseEther('1'),
       },
@@ -138,10 +153,15 @@ async function setUpFixture(
       );
   }
   console.log('create strategies');
+
+  const strategy10 = (
+    await createStrategy('buy', 'dataset', [signer1, signer2, signer3], uniswapV3TradeIntegration.address, garden1)
+  ).address;
   // Create strategies
   const strategy11 = (
     await createStrategy('buy', 'dataset', [signer1, signer2, signer3], uniswapV3TradeIntegration.address, garden1)
   ).address;
+
   const strategy21 = (
     await createStrategy('buy', 'deposit', [signer1, signer2, signer3], uniswapV3TradeIntegration.address, garden2)
   ).address;
@@ -189,11 +209,13 @@ async function setUpFixture(
     harvestVaultIntegration,
     yearnVaultIntegration,
     sushiswapPoolIntegration,
+    curvePoolIntegration,
     oneInchPoolIntegration,
     compoundLendIntegration,
     compoundBorrowIntegration,
     aaveLendIntegration,
     aaveBorrowIntegration,
+    lidoIntegration,
     babViewer,
 
     garden1,
@@ -236,6 +258,8 @@ async function setUpFixture(
     usdc,
     weth,
     wbtc,
+
+    TOKEN_MAP,
   };
 }
 

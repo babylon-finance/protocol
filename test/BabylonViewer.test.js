@@ -31,31 +31,29 @@ describe('Babylon Viewer', function () {
       expect(gardenDetails[3]).to.equal(addresses.tokens.WETH); // Reserve Asset
       expect(gardenDetails[4][0]).to.equal(true); // Active
       expect(gardenDetails[4][1]).to.equal(true); // Private
-      expect(gardenDetails[5].length).to.equal(1); // Active Strategies
+      expect(gardenDetails[5].length).to.equal(2); // Active Strategies Note: there are 2 not 1 in fixture for garden 1
       expect(gardenDetails[6].length).to.equal(0); // Finalized strategies
       const paramsCreation = gardenDetails[7];
       expect(paramsCreation[0]).to.equal(GARDEN_PARAMS[2]); // Hardlock
-      expect(paramsCreation[1]).to.equal(0); // Withdrawals open until
-      expect(paramsCreation[2]).to.equal(GARDEN_PARAMS[5]); // Min Votes Quorum
-      expect(paramsCreation[3]).to.equal(100); // Max contributors
-      expect(paramsCreation[4]).to.equal(GARDEN_PARAMS[0]); // Max deposit limit
-      expect(paramsCreation[5]).to.equal(GARDEN_PARAMS[8]); // Min Voters
-      expect(paramsCreation[6]).to.equal(GARDEN_PARAMS[6]); // Min Strategy Duration
-      expect(paramsCreation[7]).to.equal(GARDEN_PARAMS[7]); // Max Strategy Duration
-      expect(paramsCreation[8]).to.equal(GARDEN_PARAMS[4]); // Strategy cooldown
-      expect(paramsCreation[9]).to.equal(GARDEN_PARAMS[3]); // Min contribution
-      expect(paramsCreation[10]).to.equal(GARDEN_PARAMS[1]); // Min liquidity asset
+      expect(paramsCreation[1]).to.equal(GARDEN_PARAMS[5]); // Min Votes Quorum
+      expect(paramsCreation[2]).to.equal(100); // Max contributors
+      expect(paramsCreation[3]).to.equal(GARDEN_PARAMS[0]); // Max deposit limit
+      expect(paramsCreation[4]).to.equal(GARDEN_PARAMS[8]); // Min Voters
+      expect(paramsCreation[5]).to.equal(GARDEN_PARAMS[6]); // Min Strategy Duration
+      expect(paramsCreation[6]).to.equal(GARDEN_PARAMS[7]); // Max Strategy Duration
+      expect(paramsCreation[7]).to.equal(GARDEN_PARAMS[4]); // Strategy cooldown
+      expect(paramsCreation[8]).to.equal(GARDEN_PARAMS[3]); // Min contribution
+      expect(paramsCreation[9]).to.equal(GARDEN_PARAMS[1]); // Min liquidity asset
       const status = gardenDetails[8];
       expect(status[0]).to.be.gt(0); // Principal
       expect(status[1]).to.equal(0); // Reserve rewards set aside
-      expect(status[2]).to.equal(0); // Reserve asset principal window
-      expect(status[3]).to.equal(0); // Absolute returns
-      expect(status[4]).to.be.gt(0); // Initialized at
-      expect(status[5]).to.equal(1); // Initialized at
-      expect(status[6]).to.be.gt(0); // Stake
-      expect(status[7]).to.be.gt(0); // Valuation
-      expect(status[8]).to.be.gt(0); // totalSupply
-      expect(status[9]).to.equal(0); // Seed
+      expect(status[2]).to.equal(0); // Absolute returns
+      expect(status[3]).to.be.gt(0); // Initialized at
+      expect(status[4]).to.equal(1); // Initialized at
+      expect(status[5]).to.be.gt(0); // Stake
+      expect(status[6]).to.be.gt(0); // Valuation
+      expect(status[7]).to.be.gt(0); // totalSupply
+      expect(status[8]).to.equal(0); // Seed
     });
 
     it('calls get permissions', async function () {
@@ -79,7 +77,8 @@ describe('Babylon Viewer', function () {
       expect(strategyOperations[2].length).to.equal(1);
       expect(strategyOperations[0][0]).to.equal(0);
       expect(strategyOperations[1][0]).to.equal(uniswapV3TradeIntegration.address);
-      expect(strategyOperations[2][0]).to.equal(addresses.tokens.DAI);
+      const decodedData = strategyOperations[2][0].slice(26, 64); // 64 bytes returned take the little endian ethereum address last 20 bytes of the 1st word ( 32 bytes)
+      expect(decodedData.toLowerCase()).to.equal(addresses.tokens.DAI.slice(2, 40).toLowerCase()); // to match we need toLowerCase and remove 0x
     });
 
     it('calls get complete strategy', async function () {

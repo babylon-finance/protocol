@@ -108,11 +108,15 @@ describe('OneInchPoolIntegrationTest', function () {
     });
 
     it('check that a valid pool is valid', async function () {
-      expect(await oneInchPoolIntegration.isPool(addresses.oneinch.pools.wethdai)).to.equal(true);
+      const abiCoder = ethers.utils.defaultAbiCoder;
+      const data = abiCoder.encode(['address', 'uint256'], [addresses.oneinch.pools.wethdai, 0]);
+      expect(await oneInchPoolIntegration.isPool(data)).to.equal(true);
     });
 
     it('check that an invalid pool is not valid', async function () {
-      expect(await oneInchPoolIntegration.isPool(ADDRESS_ZERO)).to.equal(false);
+      const abiCoder = ethers.utils.defaultAbiCoder;
+      const data = abiCoder.encode(['address', 'uint256'], [ADDRESS_ZERO, 0]);
+      expect(await oneInchPoolIntegration.isPool(data)).to.equal(false);
     });
 
     it('tests mooniswap directly', async function () {
@@ -145,7 +149,7 @@ describe('OneInchPoolIntegrationTest', function () {
         oneInchPoolIntegration.address,
         garden1,
         DEFAULT_STRATEGY_PARAMS,
-        daiWethPair.address,
+        [daiWethPair.address, 0],
       );
       await executeStrategy(strategyContract);
       expect(await daiWethPair.balanceOf(strategyContract.address)).to.be.gt(0);
@@ -199,11 +203,13 @@ describe('OneInchPoolIntegrationTest', function () {
             state: 'vote',
             integrations: oneInchPoolIntegration.address,
             garden,
-            specificParams: poolAddress.address,
+            specificParams: [poolAddress.address, 0],
           });
           let amount = STRATEGY_EXECUTE_MAP[token];
 
           await executeStrategy(strategyContract, { amount });
+          // Check NAV
+          expect(await strategyContract.getNAV()).to.be.closeTo(amount, amount.div(40)); // 2,5% slippage as WETH-WBTC at One Inch pool from a DAI Garden needs more than 2%
           const tokenContract = await ethers.getContractAt('ERC20', token);
           const executionTokenBalance = await tokenContract.balanceOf(garden.address);
           const LPTokens = await getExpectedLPTokens(token, amount, poolAddress, token0, token1);

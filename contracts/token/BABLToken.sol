@@ -20,7 +20,6 @@ import {LowGasSafeMath} from '../lib/LowGasSafeMath.sol';
 import {TimeLockedToken} from './TimeLockedToken.sol';
 import {Address} from '@openzeppelin/contracts/utils/Address.sol';
 import {ReentrancyGuard} from '@openzeppelin/contracts/utils/ReentrancyGuard.sol';
-import {TimeLockRegistry} from './TimeLockRegistry.sol';
 import {IBabController} from '../interfaces/IBabController.sol';
 
 /**
@@ -86,7 +85,7 @@ contract BABLToken is TimeLockedToken {
     /**
      * @notice Construct a new BABL token and gives ownership to sender
      */
-    constructor(TimeLockRegistry newTimeLockRegistry, IBabController newController) TimeLockedToken(NAME, SYMBOL) {
+    constructor(IBabController newController) TimeLockedToken(NAME, SYMBOL) {
         // Timestamp of contract deployment
         BABLTokenDeploymentTimestamp = block.timestamp;
 
@@ -98,9 +97,6 @@ contract BABLToken is TimeLockedToken {
 
         //Set-up the minimum time of 8 years for additional mints
         mintingAllowedAfter = block.timestamp.add(FIRST_EPOCH_MINT);
-
-        // Set the Time Lock Registry
-        timeLockRegistry = newTimeLockRegistry;
 
         // Set the Babylon Controller
         controller = newController;
