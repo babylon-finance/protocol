@@ -64,7 +64,6 @@ const upgradeFixture = deployments.createFixture(async (hre, options) => {
       args,
     });
     if (type === 'integration') {
-      console.log(contract, deployment.address);
     }
     if (type === 'operation') {
       await controller.setOperation(operation, deployment.address);
