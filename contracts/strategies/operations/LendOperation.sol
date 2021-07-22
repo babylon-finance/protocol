@@ -216,7 +216,7 @@ contract LendOperation is Operation {
             msg.sender,
             _assetToken,
             numTokensToRedeem,
-            exchangeRate.mul(numTokensToRedeem.sub(numTokensToRedeem.preciseMul(SLIPPAGE_ALLOWED * 2)))
+            exchangeRate.mul(numTokensToRedeem.sub(numTokensToRedeem.preciseMul(SLIPPAGE_ALLOWED.mul(2))))
         );
     }
 
