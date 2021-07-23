@@ -20,13 +20,13 @@ pragma solidity 0.7.6;
 import {ERC20} from '@openzeppelin/contracts/token/ERC20/ERC20.sol';
 import {SafeCast} from '@openzeppelin/contracts/utils/SafeCast.sol';
 import {SignedSafeMath} from '@openzeppelin/contracts/math/SignedSafeMath.sol';
-import {SafeMath} from '@openzeppelin/contracts/math/SafeMath.sol';
 
 import {IBabController} from './interfaces/IBabController.sol';
 import {IGarden} from './interfaces/IGarden.sol';
 import {IStrategy} from './interfaces/IStrategy.sol';
 import {IPriceOracle} from './interfaces/IPriceOracle.sol';
 import {PreciseUnitMath} from './lib/PreciseUnitMath.sol';
+import {LowGasSafeMath as SafeMath} from './lib/LowGasSafeMath.sol';
 
 /**
  * @title GardenValuer
@@ -81,6 +81,11 @@ contract GardenValuer {
     function calculateGardenValuation(address _garden, address _quoteAsset) external view returns (uint256) {
         IPriceOracle priceOracle = IPriceOracle(IBabController(controller).priceOracle());
         address reserveAsset = IGarden(_garden).reserveAsset();
+        uint256 totalSupply = ERC20(_garden).totalSupply();
+        // If there are no tokens return 0
+        if (totalSupply == 0) {
+            return 0;
+        }
 
         // uint8 reserveAssetDecimals = ERC20(reserveAsset).decimals();
         uint8 quoteAssetDecimals = ERC20(_quoteAsset).decimals();
@@ -94,16 +99,6 @@ contract GardenValuer {
             reservePrice = priceOracle.getPrice(reserveAsset, _quoteAsset);
         }
 
-        uint256 wethPrice;
-        // Get price of the WETH in _quoteAsset
-        if (_quoteAsset == WETH) {
-            // meaning 1 WETH equals to 1 _quoteAsset
-            // this line looks ironic. 10/10.
-            wethPrice = 1 ether;
-        } else {
-            wethPrice = priceOracle.getPrice(WETH, _quoteAsset);
-        }
-
         address[] memory strategies = IGarden(_garden).getStrategies();
         uint256 valuation;
         for (uint256 j = 0; j < strategies.length; j++) {
@@ -115,11 +110,11 @@ contract GardenValuer {
         // Add garden reserve assets and garden's reserve asset
         valuation = valuation.add(ERC20(reserveAsset).balanceOf(address(_garden)));
 
+        // Subtract the reserves set aside for rewards
+        valuation = valuation.sub(IGarden(_garden).reserveAssetRewardsSetAside());
+
         // Get the valuation in terms of the quote asset
         valuation = valuation.preciseMul(reservePrice);
-
-        // Adds ETH of garden in _quoteAsset prices
-        valuation = valuation.add(address(_garden).balance.preciseMul(wethPrice));
 
         if (quoteAssetDecimals < 18) {
             valuation = valuation.mul(10**(18 - quoteAssetDecimals));

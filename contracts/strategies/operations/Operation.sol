@@ -17,15 +17,19 @@
 */
 
 pragma solidity 0.7.6;
+pragma abicoder v2;
 
 import {ERC20} from '@openzeppelin/contracts/token/ERC20/ERC20.sol';
-import {SafeMath} from '@openzeppelin/contracts/math/SafeMath.sol';
+
 import {IGarden} from '../../interfaces/IGarden.sol';
 import {IStrategy} from '../../interfaces/IStrategy.sol';
 import {IOperation} from '../../interfaces/IOperation.sol';
 import {ITradeIntegration} from '../../interfaces/ITradeIntegration.sol';
 import {IPriceOracle} from '../../interfaces/IPriceOracle.sol';
 import {IBabController} from '../../interfaces/IBabController.sol';
+
+import {LowGasSafeMath as SafeMath} from '../../lib/LowGasSafeMath.sol';
+import {BytesLib} from '../../lib/BytesLib.sol';
 
 /**
  * @title LongStrategy
@@ -35,6 +39,7 @@ import {IBabController} from '../../interfaces/IBabController.sol';
  */
 abstract contract Operation is IOperation {
     using SafeMath for uint256;
+    using BytesLib for uint256;
     /* ============ Modifiers ============ */
 
     modifier onlyStrategy() {
@@ -72,7 +77,7 @@ abstract contract Operation is IOperation {
     /* ============ Virtual External Functions ============ */
 
     function validateOperation(
-        address _data,
+        bytes calldata _data,
         IGarden _garden,
         address _integration,
         uint256 _index
@@ -82,7 +87,7 @@ abstract contract Operation is IOperation {
         address _asset,
         uint256 _capital,
         uint8 _assetStatus,
-        address _data,
+        bytes calldata _data,
         IGarden _garden,
         address _integration
     )
@@ -96,17 +101,28 @@ abstract contract Operation is IOperation {
         );
 
     function exitOperation(
+        address _asset,
+        uint256 _remaining,
+        uint8 _assetStatus,
         uint256 _percentage,
-        address _data,
+        bytes calldata _data,
         IGarden _garden,
         address _integration
-    ) external virtual override;
+    )
+        external
+        virtual
+        override
+        returns (
+            address,
+            uint256,
+            uint8
+        );
 
     function getNAV(
-        address _data,
+        bytes calldata _data,
         IGarden _garden,
         address _integration
-    ) external view virtual override returns (uint256);
+    ) external view virtual override returns (uint256, bool);
 
     /* ============ External Functions ============ */
 
@@ -122,6 +138,6 @@ abstract contract Operation is IOperation {
      */
     function _getPrice(address _assetOne, address _assetTwo) internal view returns (uint256) {
         IPriceOracle oracle = IPriceOracle(IBabController(controller).priceOracle());
-        return oracle.getPrice(_assetOne, _assetTwo);
+        return oracle.getPrice(_assetOne == address(0) ? WETH : _assetOne, _assetTwo == address(0) ? WETH : _assetTwo);
     }
 }

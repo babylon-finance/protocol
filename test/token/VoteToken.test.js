@@ -1,8 +1,9 @@
 const { expect } = require('chai');
 const { ethers } = require('hardhat');
 
-const { ONE_ETH, ADDRESS_ZERO, ONE_DAY_IN_SECONDS } = require('../../lib/constants');
+const { ONE_DAY_IN_SECONDS } = require('../../lib/constants');
 const { increaseTime } = require('../utils/test-helpers');
+const { impersonateAddress } = require('../../lib/rpc');
 
 const { setupTests } = require('../fixtures/GardenFixture');
 
@@ -13,16 +14,7 @@ describe('VoteToken contract', function () {
   let bablToken;
 
   beforeEach(async () => {
-    ({
-      owner,
-      bablToken,
-      timeLockRegistry,
-      rewardsDistributor,
-      babController,
-      signer1,
-      signer2,
-      signer3,
-    } = await setupTests()());
+    ({ owner, bablToken, signer1, signer2 } = await setupTests()());
   });
 
   describe('Votes', function () {
@@ -44,9 +36,6 @@ describe('VoteToken contract', function () {
       await bablToken.connect(owner).transfer(signer1.address, ethers.utils.parseEther('10000'));
       const votesOwner2 = await bablToken.getCurrentVotes(owner.address);
       const votesSigner1 = await bablToken.getCurrentVotes(signer1.address);
-
-      //await bablToken.connect(signer1).delegate(signer1.address); // Own delegation
-
       const signer1Balance = await bablToken.balanceOf(signer1.address);
       const ownerBalance2 = await bablToken.balanceOf(owner.address);
 
@@ -67,16 +56,13 @@ describe('VoteToken contract', function () {
       await bablToken.connect(owner).transfer(signer1.address, ethers.utils.parseEther('10000'));
       const votesOwner2 = await bablToken.getCurrentVotes(owner.address);
       const votesSigner1 = await bablToken.getCurrentVotes(signer1.address);
-
-      //await bablToken.connect(signer1).delegate(signer1.address); // Own delegation
-
       const signer1Balance = await bablToken.balanceOf(signer1.address);
       const ownerBalance2 = await bablToken.balanceOf(owner.address);
 
       await expect(ownerBalance2).to.be.equal(ownerBalance.sub(signer1Balance));
       // As there were no delegation, there are no real votes yet until they delegate in themselves using their balance
-      await expect(votesOwner1).to.be.equal(ethers.utils.parseEther('16000'));
-      await expect(votesOwner2).to.be.equal(ethers.utils.parseEther('6000'));
+      await expect(votesOwner1).to.be.equal(ethers.utils.parseEther('23000'));
+      await expect(votesOwner2).to.be.equal(ethers.utils.parseEther('13000'));
       await expect(votesSigner1).to.be.equal('0');
     });
     it('Should inherit voting power if before a transfer there was at least a delegation in itself', async function () {
@@ -92,22 +78,18 @@ describe('VoteToken contract', function () {
       const votesOwner2 = await bablToken.getCurrentVotes(owner.address);
       const votesSigner1 = await bablToken.getCurrentVotes(signer1.address);
 
-      //await bablToken.connect(signer1).delegate(signer1.address); // Own delegation
-
       const signer1Balance = await bablToken.balanceOf(signer1.address);
       const ownerBalance2 = await bablToken.balanceOf(owner.address);
 
       await expect(ownerBalance2).to.be.equal(ownerBalance.sub(signer1Balance));
       // As there were no delegation, there are no real votes yet until they delegate in themselves using their balance
-      await expect(votesOwner1).to.be.equal(ethers.utils.parseEther('16000'));
-      await expect(votesOwner2).to.be.equal(ethers.utils.parseEther('6000'));
+      await expect(votesOwner1).to.be.equal(ethers.utils.parseEther('23000'));
+      await expect(votesOwner2).to.be.equal(ethers.utils.parseEther('13000'));
       await expect(votesSigner1).to.be.equal(ethers.utils.parseEther('10000'));
     });
     it('Should fail if trying to get prior voting power within the same block', async function () {
       await bablToken.connect(owner).delegate(owner.address); // Own delegation - does not create checkpoint
       const block = await ethers.provider.getBlock();
-      now = block.timestamp;
-      //await increaseTime(ONE_DAY_IN_SECONDS);
       await expect(bablToken.getPriorVotes(owner.address, block.number)).to.be.revertedWith(
         'revert BABLToken::getPriorVotes: not yet determined',
       );
@@ -291,6 +273,71 @@ describe('VoteToken contract', function () {
       expect(ownerCheckpointVotes.toString()).to.be.equal(ownerBalance);
       expect(signer1CheckpointVotes.toString()).to.be.equal(ownerBalance);
       expect(signer1CheckpointVotes1.toString()).to.be.equal('0');
+    });
+    it('Should admit a delegation vote by a valid signature', async function () {
+      // Signature (signed by signer1.address) 0x90F79bf6EB2c4f870365E785982E1f101E93b906
+      // getChainId: 31337
+      // NEW VoteToken address (address(this)): 0x809d550fca64d94Bd9F66E60752A544199cfAC3D
+      // name(): "Babylon.Finance"
+      // NEW first hash: 0x5d0c3e0c524bdef5470f03a1fe5e911b5210e5e03ddec33fbda09216630cec77
+      // expiration 1653729994 28 may 2022
+      // nonce = 0
+      // delegatee 0x232775eAD28F0C0c750A097bA77302E7d84efd3B
+      // second hash : 0xd7ead66ff6bda9784088e2deae972d920c55438e8a76149605393615ba546a29
+      // NEW Digest 0x627795d6dc266ed0a64c14deb4674cf0f4eb9912c7f97e45d35b8443dc9d99aa
+      // ethSignedMessageHash (digestHash): 0x59a7630a466378d7251a819c0577205d19cb5a5c11e0b3a296ef058eb0b7370d
+      // METAMASK:
+      // NEW signed message by Metamask = 0x2c957a96a5f511fa74efa7f6f261718439309e1b763b1e5ee7f3c27f524f711d20b36a779f1ead53e3de10ccbcae8d30290cb68558189ecf34ba8d03ab52fc381c
+      // Then splitting the signed message: Metamask
+      // const v = '28';
+      // const r = "0x2c957a96a5f511fa74efa7f6f261718439309e1b763b1e5ee7f3c27f524f711d";
+      // const s = "0x20b36a779f1ead53e3de10ccbcae8d30290cb68558189ecf34ba8d03ab52fc38";
+      // LEDGER + METAMASK:
+      // LEDGER signed: 0x3e9140970233a167713ba23429c8ecc48272a60dd6e422cf6f1cead2bbee87af27ca269d6b4e98d3220f62d9f5b99caf75003e7b88d66ab77000a48537fd9b0901
+      // LEDGER signer: 0x232775eAD28F0C0c750A097bA77302E7d84efd3B
+      // LEDGER message hash: 764B2DA7FCBD5AD5F4EF2F1E5AAE23944EC984FD9AAEE7338237255EE96758D7
+      // LEDGER message hash website: 47CCC7A49206F6F21AEEC9928F4AD5F7513304B08180BE46BBD46B65941D0F8F
+      // LEDGER signed split:
+      // bytes32: r 0x3e9140970233a167713ba23429c8ecc48272a60dd6e422cf6f1cead2bbee87af
+      // bytes32: s 0x27ca269d6b4e98d3220f62d9f5b99caf75003e7b88d66ab77000a48537fd9b09
+      // uint8: v 1
+      // TREZOR:
+      // Signer: 0x4632F4120DC68F225e7d24d973Ee57478389e9Fd
+      // Signed message: dbf6a54764d0aa63a21c5ca49aed69195c3531dde0755490817db0764e1a76d44e32366a19416b58cedbb014c4cc67c76294e51f03443f89ae958f77631915121b
+      // bytes32: r 0xdbf6a54764d0aa63a21c5ca49aed69195c3531dde0755490817db0764e1a76d4
+      // bytes32: s 0x4e32366a19416b58cedbb014c4cc67c76294e51f03443f89ae958f7763191512
+      // uint8: v 27
+      // Enable BABL token transfers
+      await bablToken.connect(owner).enableTokensTransfers();
+      await bablToken.connect(owner).transfer(signer1.address, ethers.utils.parseEther('100')); // Let's give stake to have the possibility to delegate
+      const signer1Balance = await bablToken.balanceOf(signer1.address);
+
+      const delegatee = '0x232775eAD28F0C0c750A097bA77302E7d84efd3B';
+      const nonce = 0; // It was signed using 0, it only works (and just once) with 0++ = 1
+      const expiry = 1653729994; // 28 may 2022
+      // METAMASK:
+      const v = '28';
+      const r = '0x2c957a96a5f511fa74efa7f6f261718439309e1b763b1e5ee7f3c27f524f711d';
+      const s = '0x20b36a779f1ead53e3de10ccbcae8d30290cb68558189ecf34ba8d03ab52fc38';
+
+      // LEDGER + METAMASK
+      //const v = '1';
+      //const r = '0x3e9140970233a167713ba23429c8ecc48272a60dd6e422cf6f1cead2bbee87af';
+      //const s = '0x27ca269d6b4e98d3220f62d9f5b99caf75003e7b88d66ab77000a48537fd9b09';
+      // TREZOR
+      //const v = '27';
+      //const r = '0xdbf6a54764d0aa63a21c5ca49aed69195c3531dde0755490817db0764e1a76d4';
+      //const s = '0x4e32366a19416b58cedbb014c4cc67c76294e51f03443f89ae958f7763191512';
+      await bablToken.delegateBySig(delegatee, nonce, expiry, v, r, s, true);
+      const walletDelegatee = await impersonateAddress(delegatee);
+
+      const [, walletDelegateCheckpointVotes] = await bablToken.getCheckpoints(walletDelegatee.address, 0);
+      const signer1Delegatee = await bablToken.connect(signer1).getMyDelegatee();
+      const votesDelegatee = await bablToken.getCurrentVotes(walletDelegatee.address);
+
+      expect(signer1Delegatee).to.equal(delegatee);
+      expect(votesDelegatee).to.be.equal(signer1Balance);
+      expect(walletDelegateCheckpointVotes.toString()).to.be.equal(signer1Balance);
     });
   });
 });

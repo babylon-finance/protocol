@@ -23,8 +23,8 @@ import {UpgradeableBeacon} from '@openzeppelin/contracts/proxy/UpgradeableBeacon
 import {SafeBeaconProxy} from '../proxy/SafeBeaconProxy.sol';
 import {IGardenFactory} from '../interfaces/IGardenFactory.sol';
 import {IBabController} from '../interfaces/IBabController.sol';
+import {IGarden} from '../interfaces/IGarden.sol';
 import {IGardenNFT} from '../interfaces/IGardenNFT.sol';
-import {Garden} from './Garden.sol';
 
 /**
  * @title GardenFactory
@@ -54,6 +54,7 @@ contract GardenFactory is IGardenFactory {
      * @param _seed                   Seed to regenerate the garden NFT
      * @param _gardenParams           Array of numeric params in the garden
      * @param _initialContribution    Initial Contribution by the Gardener
+     * @param _publicGardenStrategistsStewards  Public garden, public strategist rights and public stewards rights
      */
     function createGarden(
         address _reserveAsset,
@@ -63,7 +64,8 @@ contract GardenFactory is IGardenFactory {
         string memory _tokenURI,
         uint256 _seed,
         uint256[] calldata _gardenParams,
-        uint256 _initialContribution
+        uint256 _initialContribution,
+        bool[] memory _publicGardenStrategistsStewards
     ) external override returns (address) {
         require(msg.sender == address(controller), 'Only the controller can create gardens');
         address payable proxy =
@@ -71,14 +73,15 @@ contract GardenFactory is IGardenFactory {
                 new SafeBeaconProxy(
                     address(beacon),
                     abi.encodeWithSelector(
-                        Garden.initialize.selector,
+                        IGarden.initialize.selector,
                         _reserveAsset,
                         controller,
                         _creator,
                         _name,
                         _symbol,
                         _gardenParams,
-                        _initialContribution
+                        _initialContribution,
+                        _publicGardenStrategistsStewards
                     )
                 )
             );

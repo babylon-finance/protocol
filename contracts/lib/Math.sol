@@ -25,7 +25,7 @@ import './SafeDecimalMath.sol';
 
 // https://docs.synthetix.io/contracts/source/libraries/math
 library Math {
-    using SafeMath for uint256;
+    using LowGasSafeMath for uint256;
     using SafeDecimalMath for uint256;
 
     /**

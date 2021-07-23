@@ -18,10 +18,11 @@
 
 pragma solidity 0.7.6;
 import {ERC20} from '@openzeppelin/contracts/token/ERC20/ERC20.sol';
-import {SafeMath} from '@openzeppelin/contracts/math/SafeMath.sol';
+import {SafeDecimalMath} from '../../lib/SafeDecimalMath.sol';
 
 import {IBabController} from '../../interfaces/IBabController.sol';
 import {PreciseUnitMath} from '../../lib/PreciseUnitMath.sol';
+import {LowGasSafeMath} from '../../lib/LowGasSafeMath.sol';
 import {PassiveIntegration} from './PassiveIntegration.sol';
 
 import {IHarvestVault} from '../../interfaces/external/harvest/IVault.sol';
@@ -33,8 +34,9 @@ import {IHarvestVault} from '../../interfaces/external/harvest/IVault.sol';
  * Harvest v2 Vault Integration
  */
 contract HarvestVaultIntegration is PassiveIntegration {
-    using SafeMath for uint256;
+    using LowGasSafeMath for uint256;
     using PreciseUnitMath for uint256;
+    using SafeDecimalMath for uint256;
 
     /* ============ Modifiers ============ */
 
@@ -46,24 +48,26 @@ contract HarvestVaultIntegration is PassiveIntegration {
      * Creates the integration
      *
      * @param _controller                   Address of the controller
-     * @param _weth                         Address of the WETH ERC20
      */
-    constructor(IBabController _controller, address _weth) PassiveIntegration('harvestvaults', _weth, _controller) {}
+    constructor(IBabController _controller) PassiveIntegration('harvestvaults', _controller) {}
 
     /* ============ External Functions ============ */
 
     /* ============ Internal Functions ============ */
 
-    function _isInvestment(address _vault) internal view override returns (bool) {
-        return IHarvestVault(_vault).underlying() != address(0);
-    }
-
-    function _getSpender(address _vault) internal pure override returns (address) {
+    function _getSpender(
+        address _vault,
+        uint8 /* _op */
+    ) internal pure override returns (address) {
         return _vault;
     }
 
     function _getExpectedShares(address _vault, uint256 _amount) internal view override returns (uint256) {
-        return _amount.preciseDiv(IHarvestVault(_vault).getPricePerFullShare());
+        // Normalizing pricePerShare returned by Harvest
+        return
+            _amount.preciseDiv(IHarvestVault(_vault).getPricePerFullShare()).div(
+                10**PreciseUnitMath.decimals().sub(ERC20(_vault).decimals())
+            );
     }
 
     function _getPricePerShare(address _vault) internal view override returns (uint256) {
@@ -104,7 +108,7 @@ contract HarvestVaultIntegration is PassiveIntegration {
         )
     {
         // Encode method data for Garden to invoke
-        bytes memory methodData = abi.encodeWithSignature('deposit(uint256)', _maxAmountIn);
+        bytes memory methodData = abi.encodeWithSelector(IHarvestVault.deposit.selector, _maxAmountIn);
 
         return (_investmentAddress, 0, methodData);
     }
@@ -139,7 +143,7 @@ contract HarvestVaultIntegration is PassiveIntegration {
         )
     {
         // Encode method data for Garden to invoke
-        bytes memory methodData = abi.encodeWithSignature('withdraw(uint256)', _investmentTokensIn);
+        bytes memory methodData = abi.encodeWithSelector(IHarvestVault.withdraw.selector, _investmentTokensIn);
 
         return (_investmentAddress, 0, methodData);
     }

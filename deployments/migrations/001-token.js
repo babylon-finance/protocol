@@ -9,7 +9,7 @@ module.exports = async ({ getTenderlyContract, getNamedAccounts, deployments, ge
 
   const token = await deploy('BABLToken', {
     from: deployer,
-    args: [ADDRESS_ZERO, controller.address],
+    args: [controller.address],
     log: true,
     gasPrice,
   });
@@ -21,4 +21,3 @@ module.exports = async ({ getTenderlyContract, getNamedAccounts, deployments, ge
 };
 
 module.exports.tags = ['Token'];
-module.exports.dependencies = ['Controller'];

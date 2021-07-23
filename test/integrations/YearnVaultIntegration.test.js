@@ -1,20 +1,20 @@
 const { expect } = require('chai');
 const { ethers } = require('hardhat');
-const { createStrategy, executeStrategy, finalizeStrategy } = require('../fixtures/StrategyHelper');
+const { getStrategy, executeStrategy, finalizeStrategy } = require('../fixtures/StrategyHelper');
+const { eth, normalizeDecimals } = require('../utils/test-helpers');
+const { createGarden, transferFunds } = require('../fixtures/GardenHelper');
 const { setupTests } = require('../fixtures/GardenFixture');
 const addresses = require('../../lib/addresses');
-const { ADDRESS_ZERO } = require('../../lib/constants');
+const { ONE_ETH, STRATEGY_EXECUTE_MAP } = require('../../lib/constants');
 
 describe('YearnVaultIntegrationTest', function () {
   let yearnVaultIntegration;
-  let garden1;
-  let signer1;
-  let signer2;
-  let signer3;
   let babController;
+  let priceOracle;
+  let owner;
 
   beforeEach(async () => {
-    ({ garden1, babController, yearnVaultIntegration, signer1, signer2, signer3 } = await setupTests()());
+    ({ priceOracle, babController, yearnVaultIntegration, owner } = await setupTests()());
   });
 
   describe('Deployment', function () {
@@ -27,49 +27,93 @@ describe('YearnVaultIntegrationTest', function () {
   });
 
   describe('Yearn Vaults', function () {
-    let daiToken;
-    let yearnDaiVault;
-    let WETH;
+    let daiVault;
 
     beforeEach(async () => {
-      daiToken = await ethers.getContractAt('IERC20', addresses.tokens.DAI);
-      yearnDaiVault = await ethers.getContractAt('IVault', addresses.yearn.vaults.ydai);
-      WETH = await ethers.getContractAt('IERC20', addresses.tokens.WETH);
+      daiVault = await ethers.getContractAt('IYearnVault', addresses.yearn.vaults.ydai);
     });
 
-    it('check that a vault is valid', async function () {
-      expect(await yearnVaultIntegration.isInvestment(addresses.yearn.vaults.ydai)).to.equal(true);
+    describe('getPricePerShare', function () {
+      it('get price per share', async function () {
+        expect(await yearnVaultIntegration.getPricePerShare(daiVault.address)).to.equal('1053972283161872856');
+      });
     });
 
-    it('check that a vault is not valid', async function () {
-      await expect(yearnVaultIntegration.isInvestment(ADDRESS_ZERO)).to.be.revertedWith(
-        /transaction reverted without a reason/i,
-      );
+    describe('getExpectedShares', function () {
+      it('get expected shares', async function () {
+        expect(await yearnVaultIntegration.getExpectedShares(daiVault.address, ONE_ETH)).to.equal('948791553607123083');
+      });
     });
 
-    it('can enter and exit the yearn dai vault', async function () {
-      const amountToDeposit = ethers.utils.parseEther('1');
-      const sharePrice = await yearnDaiVault.getPricePerFullShare();
-      const expectedShares = await yearnVaultIntegration.getExpectedShares(yearnDaiVault.address, amountToDeposit);
-      const vaultAsset = await yearnVaultIntegration.getInvestmentAsset(yearnDaiVault.address);
-      expect(await yearnVaultIntegration.getPricePerShare(yearnDaiVault.address)).to.equal(sharePrice);
-      expect(vaultAsset).to.equal(addresses.tokens.DAI);
+    describe('getInvestmentAsset', function () {
+      it('get investment asset', async function () {
+        expect(await yearnVaultIntegration.getInvestmentAsset(daiVault.address)).to.equal(addresses.tokens.DAI);
+      });
+    });
 
-      const strategyContract = await createStrategy(
-        'vault',
-        'vote',
-        [signer1, signer2, signer3],
-        yearnVaultIntegration.address,
-        garden1,
-      );
+    describe('enter and exit calldata per Garden per Vault', function () {
+      [
+        { token: addresses.tokens.WETH, name: 'WETH' },
+        { token: addresses.tokens.DAI, name: 'DAI' },
+        { token: addresses.tokens.USDC, name: 'USDC' },
+        { token: addresses.tokens.WBTC, name: 'WBTC' },
+      ].forEach(({ token, name }) => {
+        [
+          { vault: '0xa9fE4601811213c340e850ea305481afF02f5b28', symbol: 'yvWETH' }, // yvWETH vault
+          { vault: '0x7Da96a3891Add058AdA2E826306D812C638D87a7', symbol: 'yvUSDT' }, // yvUSDT vault
+          { vault: '0x5f18C75AbDAe578b483E5F43f12a39cF75b973a9', symbol: 'yvUSDC' }, // yvUSDC vault
+          { vault: '0xA696a63cc78DfFa1a63E9E50587C197387FF6C7E', symbol: 'yvWBTC' }, // yvWBTC vault
+          { vault: '0x19D3364A399d251E894aC732651be8B0E4e85001', symbol: 'yvDAI' }, // yvDAI vault
+        ].forEach(({ vault, symbol }) => {
+          it(`can enter and exit the ${symbol} at Yearn Vault from a ${name} garden`, async function () {
+            const vaultContract = await ethers.getContractAt('IYearnVault', vault);
+            await transferFunds(token);
 
-      await executeStrategy(strategyContract);
-      expect(await yearnDaiVault.balanceOf(strategyContract.address)).to.be.gte(expectedShares);
+            const garden = await createGarden({ reserveAsset: token });
+            const strategyContract = await getStrategy({
+              kind: 'vault',
+              state: 'vote',
+              integrations: yearnVaultIntegration.address,
+              garden,
+              specificParams: [vault, 0],
+            });
 
-      await finalizeStrategy(strategyContract, 0);
-      expect(await yearnDaiVault.balanceOf(strategyContract.address)).to.equal(0);
-      expect(await daiToken.balanceOf(strategyContract.address)).to.equal(0);
-      expect(await WETH.balanceOf(strategyContract.address)).to.equal(0);
+            expect(await vaultContract.balanceOf(strategyContract.address)).to.equal(0);
+
+            let amount = STRATEGY_EXECUTE_MAP[token];
+            await executeStrategy(strategyContract, { amount });
+            // Check NAV
+            expect(await strategyContract.getNAV()).to.be.closeTo(amount, amount.div(50));
+
+            const asset = await yearnVaultIntegration.getInvestmentAsset(vault); // USDC, DAI, USDT and etc...
+            const assetContract = await ethers.getContractAt('ERC20', asset);
+            const assetDecimals = await assetContract.decimals();
+
+            const tokenContract = await ethers.getContractAt('ERC20', token);
+            const tokenDecimals = await tokenContract.decimals();
+
+            const reservePriceInAsset = await priceOracle.connect(owner).getPrice(token, asset);
+
+            const conversionRate = eth(1);
+
+            amount = await normalizeDecimals(tokenDecimals, assetDecimals, amount);
+
+            const expectedShares = await yearnVaultIntegration.getExpectedShares(
+              vault,
+              reservePriceInAsset.mul(amount).div(conversionRate),
+            );
+            const executionTokenBalance = await tokenContract.balanceOf(garden.address);
+            expect(await vaultContract.balanceOf(strategyContract.address)).to.be.closeTo(
+              expectedShares,
+              expectedShares.div(50), // 2% percision
+            );
+
+            await finalizeStrategy(strategyContract, 0);
+            expect(await vaultContract.balanceOf(strategyContract.address)).to.equal(0);
+            expect(await tokenContract.balanceOf(garden.address)).to.be.gt(executionTokenBalance);
+          });
+        });
+      });
     });
   });
 });

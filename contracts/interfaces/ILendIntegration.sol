@@ -38,9 +38,15 @@ interface ILendIntegration {
         uint256 _minAmountExpected
     ) external;
 
+    function getRewardToken() external view returns (address);
+
+    function getRewardsAccrued(address _strategy) external view returns (uint256);
+
     function getExpectedShares(address _assetToken, uint256 _numTokensToSupply) external view returns (uint256);
 
     function getExchangeRatePerToken(address _assetToken) external view returns (uint256);
 
     function getInvestmentToken(address _assetToken) external view returns (address);
+
+    function getInvestmentTokenAmount(address _address, address _assetToken) external view returns (uint256);
 }

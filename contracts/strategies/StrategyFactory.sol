@@ -25,7 +25,7 @@ import {IStrategy} from '../interfaces/IStrategy.sol';
 import {IStrategyNFT} from '../interfaces/IStrategyNFT.sol';
 import {IBabController} from '../interfaces/IBabController.sol';
 import {IStrategyFactory} from '../interfaces/IStrategyFactory.sol';
-import {Strategy} from './Strategy.sol';
+import {IStrategy} from '../interfaces/IStrategy.sol';
 
 /**
  * @title StrategyFactory
@@ -73,8 +73,7 @@ contract StrategyFactory is IStrategyFactory {
                         _stratParams[0],
                         _stratParams[1],
                         _stratParams[2],
-                        _stratParams[3],
-                        _stratParams[4]
+                        _stratParams[3]
                     )
                 )
             );

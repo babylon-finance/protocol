@@ -20,21 +20,10 @@ module.exports = async ({
 
   const deployment = await deploy(contract, {
     from: deployer,
-    args: [controller.address, addresses.tokens.WETH, addresses.balancer.factory],
+    args: [controller.address, addresses.balancer.factory],
     log: true,
     gasPrice,
   });
-
-  if (deployment.newlyDeployed) {
-    console.log(`Adding integration ${contract}(${deployment.address}) to BabController`);
-    await (
-      await controllerContract.addIntegration(
-        await (await ethers.getContractAt(contract, deployment.address)).getName(),
-        deployment.address,
-        { gasPrice },
-      )
-    ).wait();
-  }
 
   if (network.live && deployment.newlyDeployed) {
     await tenderly.push(await getTenderlyContract(contract));

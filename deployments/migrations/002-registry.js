@@ -33,4 +33,3 @@ module.exports = async ({
 };
 
 module.exports.tags = ['Registry'];
-module.exports.dependencies = ['Controller'];

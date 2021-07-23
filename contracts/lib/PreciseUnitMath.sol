@@ -18,8 +18,9 @@
 
 pragma solidity 0.7.6;
 
-import {SafeMath} from '@openzeppelin/contracts/math/SafeMath.sol';
 import {SignedSafeMath} from '@openzeppelin/contracts/math/SignedSafeMath.sol';
+
+import {LowGasSafeMath} from './LowGasSafeMath.sol';
 
 /**
  * @title PreciseUnitMath
@@ -32,7 +33,7 @@ import {SignedSafeMath} from '@openzeppelin/contracts/math/SignedSafeMath.sol';
  * - 9/21/20: Added safePower function
  */
 library PreciseUnitMath {
-    using SafeMath for uint256;
+    using LowGasSafeMath for uint256;
     using SignedSafeMath for int256;
 
     // The number One in precise units.
@@ -44,6 +45,13 @@ library PreciseUnitMath {
     // Max and min signed integer value
     int256 internal constant MAX_INT_256 = type(int256).max;
     int256 internal constant MIN_INT_256 = type(int256).min;
+
+    /**
+     * @dev Getter function since constants can't be read directly from libraries.
+     */
+    function decimals() internal pure returns (uint256) {
+        return 18;
+    }
 
     /**
      * @dev Getter function since constants can't be read directly from libraries.

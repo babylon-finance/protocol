@@ -18,11 +18,11 @@
 pragma solidity 0.7.6;
 import {IBabController} from '../interfaces/IBabController.sol';
 import {TimeLockRegistry} from './TimeLockRegistry.sol';
-import {RewardsDistributor} from './RewardsDistributor.sol';
-import {SafeMath} from '@openzeppelin/contracts/math/SafeMath.sol';
+import {IRewardsDistributor} from '../interfaces/IRewardsDistributor.sol';
 import {VoteToken} from './VoteToken.sol';
 import {Ownable} from '@openzeppelin/contracts/access/Ownable.sol';
 import {Errors, _require} from '../lib/BabylonErrors.sol';
+import {LowGasSafeMath} from '../lib/LowGasSafeMath.sol';
 import {IBabController} from '../interfaces/IBabController.sol';
 
 /**
@@ -42,7 +42,7 @@ import {IBabController} from '../interfaces/IBabController.sol';
  */
 
 abstract contract TimeLockedToken is VoteToken {
-    using SafeMath for uint256;
+    using LowGasSafeMath for uint256;
 
     /* ============ Events ============ */
 
@@ -91,11 +91,7 @@ abstract contract TimeLockedToken is VoteToken {
     }
     modifier onlyUnpaused() {
         // Do not execute if Globally or individually paused
-        _require(
-            !IBabController(controller).guardianGlobalPaused() &&
-                !IBabController(controller).guardianPaused(address(this)),
-            Errors.ONLY_UNPAUSED
-        );
+        _require(!IBabController(controller).isPaused(address(this)), Errors.ONLY_UNPAUSED);
         _;
     }
 
@@ -121,12 +117,6 @@ abstract contract TimeLockedToken is VoteToken {
     /// @notice A record of token owners under vesting conditions for each account, by index
     mapping(address => VestedToken) public vestedToken;
 
-    // vesting duration for Team Members and Advisors
-    uint256 private teamVesting = 365 days * 4;
-
-    // vesting duration for Investors
-    uint256 private investorVesting = 365 days * 3;
-
     // address of Time Lock Registry contract
     IBabController public controller;
 
@@ -134,7 +124,7 @@ abstract contract TimeLockedToken is VoteToken {
     TimeLockRegistry public timeLockRegistry;
 
     // address of Rewards Distriburor contract
-    RewardsDistributor public rewardsDistributor;
+    IRewardsDistributor public rewardsDistributor;
 
     // Enable Transfer of ERC20 BABL Tokens
     // Only Minting or transfers from/to TimeLockRegistry and Rewards Distributor can transfer tokens until the protocol is fully decentralized
@@ -193,7 +183,7 @@ abstract contract TimeLockedToken is VoteToken {
      * @notice Set the Rewards Distriburor contract to control both types of rewards (profit and BABL Mining program)
      * @param newRewardsDistributor Address of Rewards Distributor contract
      */
-    function setRewardsDistributor(RewardsDistributor newRewardsDistributor) external onlyOwner returns (bool) {
+    function setRewardsDistributor(IRewardsDistributor newRewardsDistributor) external onlyOwner returns (bool) {
         require(address(newRewardsDistributor) != address(0), 'cannot be zero address');
         require(address(newRewardsDistributor) != address(this), 'cannot be this contract');
         require(address(newRewardsDistributor) != address(rewardsDistributor), 'must be new Rewards Distributor');
@@ -434,11 +424,7 @@ abstract contract TimeLockedToken is VoteToken {
             'TimeLockedToken::decreaseAllowance:cannot decrease allowance to timeLockRegistry'
         );
 
-        _approve(
-            msg.sender,
-            spender,
-            allowance(msg.sender, spender).sub(subtractedValue, 'ERC20: decreased allowance below zero')
-        );
+        _approve(msg.sender, spender, allowance(msg.sender, spender).sub(subtractedValue));
         return true;
     }
 

@@ -20,11 +20,11 @@
 
 pragma solidity 0.7.6;
 
-import '@openzeppelin/contracts/math/SafeMath.sol';
+import {LowGasSafeMath} from '../lib/LowGasSafeMath.sol';
 import {ERC20} from '@openzeppelin/contracts/token/ERC20/ERC20.sol';
 
 library SafeDecimalMath {
-    using SafeMath for uint256;
+    using LowGasSafeMath for uint256;
 
     /* Number of decimal places in the representations. */
     uint8 internal constant decimals = 18;
@@ -145,13 +145,29 @@ library SafeDecimalMath {
     }
 
     /**
-     * Normalizing decimals for tokens with less than 18 decimals
-     * @param asset    ERC20 asset address
+     * Normalizing amount decimals between tokens
+     * @param assetFrom       ERC20 asset address
+     * @param assetTarget     ERC20 asset address
      * @param quantity Value to normalize (e.g. capital)
      */
-    function normalizeDecimals(address asset, uint256 quantity) internal view returns (uint256) {
-        uint8 tokenDecimals = ERC20(asset).decimals();
-        require(tokenDecimals <= 18, 'Unsupported decimals');
-        return tokenDecimals != 18 ? quantity.mul(10**(uint256(18).sub(tokenDecimals))) : quantity;
+    function normalizeAmountTokens(
+        address assetFrom,
+        address assetTarget,
+        uint256 quantity
+    ) internal view returns (uint256) {
+        uint256 tokenDecimals = _isETH(assetFrom) ? 18 : ERC20(assetFrom).decimals();
+        uint256 tokenDecimalsTarget = _isETH(assetTarget) ? 18 : ERC20(assetTarget).decimals();
+        require(tokenDecimals <= 18 && tokenDecimalsTarget <= 18, 'Unsupported decimals');
+        if (tokenDecimals == tokenDecimalsTarget) {
+            return quantity;
+        }
+        if (tokenDecimalsTarget > tokenDecimals) {
+            return quantity.mul(10**(tokenDecimalsTarget.sub(tokenDecimals)));
+        }
+        return quantity.div(10**(tokenDecimals.sub(tokenDecimalsTarget)));
+    }
+
+    function _isETH(address _address) internal view returns (bool) {
+        return _address == 0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE || _address == address(0);
     }
 }

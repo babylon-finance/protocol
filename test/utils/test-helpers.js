@@ -39,10 +39,32 @@ async function sleep(milliseconds) {
   return new Promise((resolve) => setTimeout(resolve, milliseconds));
 }
 
+async function getContract(contractName, deploymentName) {
+  return await ethers.getContractAt(contractName, (await deployments.get(deploymentName || contractName)).address);
+}
+
+function eth(value = 1) {
+  return ethers.utils.parseEther(value.toString());
+}
+
+function normalizeDecimals(tokenDecimals, tokenDecimalsTarget, quantity) {
+  if (tokenDecimals == tokenDecimalsTarget) {
+    return quantity;
+  }
+  if (tokenDecimalsTarget > tokenDecimals) {
+    return quantity.mul(10 ** (tokenDecimalsTarget - tokenDecimals));
+  }
+  return quantity.div(10 ** (tokenDecimals - tokenDecimalsTarget));
+}
+
 module.exports = {
   increaseTime,
   getTimestamp,
   mineInBlock,
   sleep,
   from: ethers.BigNumber.from,
+  parse: ethers.utils.parseEther,
+  getContract,
+  eth,
+  normalizeDecimals,
 };

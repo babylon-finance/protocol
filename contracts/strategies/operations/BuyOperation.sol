@@ -17,12 +17,14 @@
 */
 
 pragma solidity 0.7.6;
+
 import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import {Operation} from './Operation.sol';
 import {IGarden} from '../../interfaces/IGarden.sol';
 import {IStrategy} from '../../interfaces/IStrategy.sol';
 import {PreciseUnitMath} from '../../lib/PreciseUnitMath.sol';
 import {SafeDecimalMath} from '../../lib/SafeDecimalMath.sol';
+import {BytesLib} from '../../lib/BytesLib.sol';
 import {ITradeIntegration} from '../../interfaces/ITradeIntegration.sol';
 
 /**
@@ -34,6 +36,7 @@ import {ITradeIntegration} from '../../interfaces/ITradeIntegration.sol';
 contract BuyOperation is Operation {
     using PreciseUnitMath for uint256;
     using SafeDecimalMath for uint256;
+    using BytesLib for bytes;
 
     /* ============ Constructor ============ */
 
@@ -51,23 +54,29 @@ contract BuyOperation is Operation {
      * @param _data                   Operation data
      */
     function validateOperation(
-        address _data,
+        bytes calldata _data,
         IGarden _garden,
         address, /* _integration */
         uint256 /* _index */
     ) external view override onlyStrategy {
-        require(_data != _garden.reserveAsset(), 'Receive token must be different');
+        address asset = BytesLib.decodeOpDataAddress(_data);
+        require(asset != _garden.reserveAsset(), 'Receive token must be different');
     }
 
     /**
      * Executes the buy operation
-     * @param _capital      Amount of capital received from the garden
+     * @param _asset              Asset to receive into this operation
+     * @param _capital            Amount of asset received
+     * param _assetStatus        Status of the asset amount
+     * @param _data               OpData e.g. Address of the token to buy
+     * param _garden             Garden of the strategy
+     * param _integration        Address of the integration to execute
      */
     function executeOperation(
         address _asset,
         uint256 _capital,
         uint8, /* _assetStatus */
-        address _data,
+        bytes calldata _data,
         IGarden, /* _garden */
         address /* _integration */
     )
@@ -80,8 +89,9 @@ contract BuyOperation is Operation {
             uint8
         )
     {
-        IStrategy(msg.sender).trade(_asset, _capital, _data);
-        return (_data, IERC20(_data).balanceOf(address(msg.sender)), 0); // liquid
+        address token = BytesLib.decodeOpDataAddress(_data);
+        IStrategy(msg.sender).trade(_asset, _capital, token);
+        return (token, IERC20(token).balanceOf(address(msg.sender)), 0); // liquid
     }
 
     /**
@@ -89,15 +99,28 @@ contract BuyOperation is Operation {
      * @param _percentage of capital to exit from the strategy
      */
     function exitOperation(
+        address, /* _asset */
+        uint256, /* _remaining */
+        uint8, /* _assetStatus */
         uint256 _percentage,
-        address _data,
+        bytes calldata _data,
         IGarden _garden,
         address /* _integration */
-    ) external override onlyStrategy {
+    )
+        external
+        override
+        onlyStrategy
+        returns (
+            address,
+            uint256,
+            uint8
+        )
+    {
+        address token = BytesLib.decodeOpDataAddress(_data);
         require(_percentage <= 100e18, 'Unwind Percentage <= 100%');
         IStrategy(msg.sender).trade(
-            _data,
-            IERC20(_data).balanceOf(address(msg.sender)).preciseMul(_percentage),
+            token,
+            IERC20(token).balanceOf(address(msg.sender)).preciseMul(_percentage),
             _garden.reserveAsset()
         );
     }
@@ -105,19 +128,26 @@ contract BuyOperation is Operation {
     /**
      * Gets the NAV of the buy op in the reserve asset
      *
-     * @return _nav           NAV of the strategy
+     * @param _data               OpData e.g. Asset bought
+     * @param _garden             Garden the strategy belongs to
+     * param _integration         Status of the asset amount
+     * @return _nav               NAV of the strategy
      */
     function getNAV(
-        address _data,
+        bytes calldata _data,
         IGarden _garden,
         address /* _integration */
-    ) external view override returns (uint256) {
+    ) external view override returns (uint256, bool) {
+        address token = BytesLib.decodeOpDataAddress(_data); // 64 bytes (w/o signature prefix bytes4)
         if (!IStrategy(msg.sender).isStrategyActive()) {
-            return 0;
+            return (0, true);
         }
-        uint256 price = _getPrice(_garden.reserveAsset(), _data);
-        uint256 NAV = SafeDecimalMath.normalizeDecimals(_data, IERC20(_data).balanceOf(msg.sender)).preciseDiv(price);
+        uint256 price = _getPrice(_garden.reserveAsset(), token);
+        uint256 NAV =
+            SafeDecimalMath
+                .normalizeAmountTokens(token, _garden.reserveAsset(), IERC20(token).balanceOf(msg.sender))
+                .preciseDiv(price);
         require(NAV != 0, 'NAV has to be bigger 0');
-        return NAV;
+        return (NAV, true);
     }
 }

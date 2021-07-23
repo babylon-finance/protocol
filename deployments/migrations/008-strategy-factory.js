@@ -17,7 +17,7 @@ module.exports = async ({
   const beaconContract = 'StrategyBeacon';
 
   const controller = await deployments.get('BabControllerProxy');
-  const controllerContract = await ethers.getContractAt('BabController', controller.address, signer);
+  const controllerContract = await ethers.getContractAt('IBabController', controller.address, signer);
 
   const strategy = await deploy(strategyContract, {
     from: deployer,

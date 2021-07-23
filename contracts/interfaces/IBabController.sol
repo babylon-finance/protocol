@@ -33,7 +33,9 @@ interface IBabController {
         string memory _tokenURI,
         uint256 _seed,
         uint256[] calldata _gardenParams,
-        uint256 _initialContribution
+        uint256 _initialContribution,
+        bool[] memory _publicGardenStrategistsStewards,
+        uint256[] memory _profitSharing
     ) external payable returns (address);
 
     function removeGarden(address _garden) external;
@@ -61,14 +63,6 @@ interface IBabController {
     function editStrategyNFT(address _newStrategyNFT) external;
 
     function editStrategyFactory(address _newStrategyFactory) external;
-
-    function editUniswapFactory(address _newUniswapFactory) external;
-
-    function addIntegration(string memory _name, address _integration) external;
-
-    function editIntegration(string memory _name, address _integration) external;
-
-    function removeIntegration(string memory _name) external;
 
     function setOperation(uint8 _kind, address _operation) external;
 
@@ -108,6 +102,8 @@ interface IBabController {
 
     function setSomePause(address[] memory _address, bool _state) external returns (bool);
 
+    function isPaused(address _contract) external view returns (bool);
+
     function priceOracle() external view returns (address);
 
     function gardenValuer() external view returns (address);
@@ -127,10 +123,6 @@ interface IBabController {
     function strategyFactory() external view returns (address);
 
     function defaultTradeIntegration() external view returns (address);
-
-    function protocolDepositGardenTokenFee() external view returns (uint256);
-
-    function protocolWithdrawalGardenTokenFee() external view returns (uint256);
 
     function gardenTokensTransfersEnabled() external view returns (bool);
 
@@ -165,17 +157,11 @@ interface IBabController {
 
     function isGarden(address _garden) external view returns (bool);
 
-    function getIntegrationByName(string memory _name) external view returns (address);
-
-    function getIntegrationWithHash(bytes32 _nameHashP) external view returns (address);
-
     function isValidReserveAsset(address _reserveAsset) external view returns (bool);
 
     function isValidKeeper(address _keeper) external view returns (bool);
 
     function isSystemContract(address _contractAddress) external view returns (bool);
-
-    function isValidIntegration(string memory _name, address _integration) external view returns (bool);
 
     function getMinCooldownPeriod() external view returns (uint256);
 
@@ -186,6 +172,4 @@ interface IBabController {
     function protocolManagementFee() external view returns (uint256);
 
     function minLiquidityPerReserve(address _reserve) external view returns (uint256);
-
-    function uniswapFactory() external view returns (address);
 }

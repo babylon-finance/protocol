@@ -18,15 +18,14 @@
 
 pragma solidity 0.7.6;
 
-import 'hardhat/console.sol';
 import {OwnableUpgradeable} from '@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol';
 import {AddressUpgradeable} from '@openzeppelin/contracts-upgradeable/utils/AddressUpgradeable.sol';
-import {SafeMath} from '@openzeppelin/contracts/math/SafeMath.sol';
 import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import {IGarden} from '../interfaces/IGarden.sol';
 import {IGardenFactory} from '../interfaces/IGardenFactory.sol';
 import {IIntegration} from '../interfaces/IIntegration.sol';
 import {AddressArrayUtils} from '../lib/AddressArrayUtils.sol';
+import {LowGasSafeMath} from '../lib/LowGasSafeMath.sol';
 
 /**
  * @title BabController
@@ -38,7 +37,7 @@ import {AddressArrayUtils} from '../lib/AddressArrayUtils.sol';
 contract BabControllerV2Mock is OwnableUpgradeable {
     using AddressArrayUtils for address[];
     using AddressUpgradeable for address;
-    using SafeMath for uint256;
+    using LowGasSafeMath for uint256;
 
     /* ============ Events ============ */
     /* ============ Modifiers ============ */
@@ -110,8 +109,8 @@ contract BabControllerV2Mock is OwnableUpgradeable {
 
     uint256 public protocolPerformanceFee; // 5% (0.01% = 1e14, 1% = 1e16) on profits
     uint256 public protocolManagementFee; // 0.5% (0.01% = 1e14, 1% = 1e16)
-    uint256 public protocolDepositGardenTokenFee; // 0 (0.01% = 1e14, 1% = 1e16)
-    uint256 public protocolWithdrawalGardenTokenFee; // 0 (0.01% = 1e14, 1% = 1e16)
+    uint256 private protocolDepositGardenTokenFee; // 0 (0.01% = 1e14, 1% = 1e16)
+    uint256 private protocolWithdrawalGardenTokenFee; // 0 (0.01% = 1e14, 1% = 1e16)
 
     // Maximum number of contributors per garden
     uint256 public maxContributorsPerGarden;

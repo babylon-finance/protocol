@@ -22,7 +22,7 @@ import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import {Initializable} from '@openzeppelin/contracts-upgradeable/proxy/Initializable.sol';
 import {SafeERC20} from '@openzeppelin/contracts/token/ERC20/SafeERC20.sol';
 import {ReentrancyGuard} from '@openzeppelin/contracts/utils/ReentrancyGuard.sol';
-import {SafeMath} from '@openzeppelin/contracts/math/SafeMath.sol';
+import {LowGasSafeMath} from '../lib/LowGasSafeMath.sol';
 import {SignedSafeMath} from '@openzeppelin/contracts/math/SignedSafeMath.sol';
 import {SafeCast} from '@openzeppelin/contracts/utils/SafeCast.sol';
 
@@ -31,6 +31,7 @@ import {PreciseUnitMath} from '../lib/PreciseUnitMath.sol';
 import {SafeDecimalMath} from '../lib/SafeDecimalMath.sol';
 import {Math} from '../lib/Math.sol';
 import {AddressArrayUtils} from '../lib/AddressArrayUtils.sol';
+import {BytesLib} from '../lib/BytesLib.sol';
 
 import {IWETH} from '../interfaces/external/weth/IWETH.sol';
 import {IBabController} from '../interfaces/IBabController.sol';
@@ -52,13 +53,14 @@ import {IRewardsDistributor} from '../interfaces/IRewardsDistributor.sol';
  */
 contract StrategyV2Mock {
     using SignedSafeMath for int256;
-    using SafeMath for uint256;
+    using LowGasSafeMath for uint256;
     using SafeCast for uint256;
     using SafeCast for int256;
     using PreciseUnitMath for int256;
     using PreciseUnitMath for uint256;
     using SafeDecimalMath for int256;
     using SafeDecimalMath for uint256;
+    using BytesLib for uint256;
     using Math for int256;
     using Math for uint256;
     using AddressArrayUtils for address[];
@@ -70,7 +72,6 @@ contract StrategyV2Mock {
     uint256 internal constant SLIPPAGE_ALLOWED = 5e16; // 1%
     uint256 internal constant HUNDRED_PERCENT = 1e18; // 100%
     uint256 internal constant MAX_CANDIDATE_PERIOD = 7 days;
-    uint256 internal constant ABSOLUTE_MIN_REBALANCE = 1e18;
     address private constant WETH = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
 
     // Max Operations
@@ -132,16 +133,22 @@ contract StrategyV2Mock {
     uint256 public capitalAllocated; // Current amount of capital allocated
     uint256 public expectedReturn; // Expect return by this strategy
     uint256 public capitalReturned; // Actual return by this strategy
-    uint256 public minRebalanceCapital; // Min amount of capital so that it is worth to rebalance the capital here
-    address[] public tokensNeeded; // Positions that need to be taken prior to enter the strategy
-    uint256[] public tokenAmountsNeeded; // Amount of these positions
+    uint256 private minRebalanceCapital; // Min amount of capital so that it is worth to rebalance the capital here
+    address[] private tokensNeeded; // Positions that need to be taken prior to enter the strategy
+    uint256[] private tokenAmountsNeeded; // Amount of these positions
 
     uint256 public strategyRewards; // Rewards allocated for this strategy updated on finalized
+    uint256 private rewardsTotalOverhead; // DEPRECATED Potential extra amount we are giving in BABL rewards
 
     // Voters mapped to their votes.
     mapping(address => int256) public votes;
 
     uint256 public newVar;
+
+    uint256 internal absoluteMinRebalance; // 1e18 or 1e6 in case of USDC
+
+    // Strategy opDatas encoded
+    bytes public opEncodedData; // we use and reserve 64bytes for each operation as consecutives bytes64 word
 
     function initialize(
         address _strategist,
@@ -150,8 +157,7 @@ contract StrategyV2Mock {
         uint256 _maxCapitalRequested,
         uint256 _stake,
         uint256 _strategyDuration,
-        uint256 _expectedReturn,
-        uint256 _minRebalanceCapital
+        uint256 _expectedReturn
     ) external {
         newVar = 42;
     }
@@ -159,7 +165,7 @@ contract StrategyV2Mock {
     function setData(
         uint8[] calldata _opTypes,
         address[] calldata _opIntegrations,
-        address[] calldata _opDatas
+        bytes calldata _opEncodedDatas
     ) external {}
 
     function newMethod() public view returns (string memory) {

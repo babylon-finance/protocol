@@ -17,10 +17,10 @@
 
 pragma solidity 0.7.6;
 
-import '@openzeppelin/contracts/math/SafeMath.sol';
+import {LowGasSafeMath} from '../lib/LowGasSafeMath.sol';
 
 library Safe3296 {
-    using SafeMath for uint256;
+    using LowGasSafeMath for uint256;
 
     /**
      * INTERNAL FUNCTION. Internal function to convert from uint256 to uint32

@@ -13,6 +13,8 @@ module.exports = async ({
   const signer = await getSigner(deployer);
   const gasPrice = await getRapid();
 
+  let KEEPER = process.env.KEEPER;
+
   if (chainId === '31337') {
     // user second signer as Keeper
     KEEPER = signers[1].address;
@@ -21,8 +23,9 @@ module.exports = async ({
   }
 
   console.log('KEEPER', KEEPER);
-  const controller = await upgradesDeployer.deployOrUpgrade(
+  const controller = await upgradesDeployer.deployAdminProxy(
     'BabController',
+    'BabControllerProxy',
     { from: deployer, log: true, gasPrice },
     {
       initializer: { method: 'initialize', args: [] },

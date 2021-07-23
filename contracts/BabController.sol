@@ -19,10 +19,9 @@
 pragma solidity 0.7.6;
 import {OwnableUpgradeable} from '@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol';
 import {AddressUpgradeable} from '@openzeppelin/contracts-upgradeable/utils/AddressUpgradeable.sol';
-import {SafeMath} from '@openzeppelin/contracts/math/SafeMath.sol';
 import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 
-import {RewardsDistributor} from './token/RewardsDistributor.sol';
+import {IRewardsDistributor} from './interfaces/IRewardsDistributor.sol';
 import {IGarden} from './interfaces/IGarden.sol';
 import {IGardenFactory} from './interfaces/IGardenFactory.sol';
 import {IStrategy} from './interfaces/IStrategy.sol';
@@ -31,6 +30,7 @@ import {IIntegration} from './interfaces/IIntegration.sol';
 import {IBabController} from './interfaces/IBabController.sol';
 
 import {AddressArrayUtils} from './lib/AddressArrayUtils.sol';
+import {LowGasSafeMath} from './lib/LowGasSafeMath.sol';
 
 /**
  * @title BabController
@@ -42,7 +42,7 @@ import {AddressArrayUtils} from './lib/AddressArrayUtils.sol';
 contract BabController is OwnableUpgradeable, IBabController {
     using AddressArrayUtils for address[];
     using AddressUpgradeable for address;
-    using SafeMath for uint256;
+    using LowGasSafeMath for uint256;
 
     /* ============ Events ============ */
     event GardenAdded(address indexed _garden, address indexed _factory);
@@ -89,7 +89,7 @@ contract BabController is OwnableUpgradeable, IBabController {
     // List of enabled Communities
     address[] public gardens;
     address[] public reserveAssets;
-    address public override uniswapFactory;
+    address private uniswapFactory; // do not use
     address public override gardenValuer;
     address public override priceOracle;
     address public override gardenFactory;
@@ -100,7 +100,7 @@ contract BabController is OwnableUpgradeable, IBabController {
     address public override strategyNFT;
 
     // Mapping of integration name => integration address
-    mapping(bytes32 => address) private enabledIntegrations;
+    mapping(bytes32 => address) private enabledIntegrations; // DEPRECATED
     // Address of the default trade integration used by the protocol
     address public override defaultTradeIntegration;
     // Mapping of valid operations
@@ -151,8 +151,8 @@ contract BabController is OwnableUpgradeable, IBabController {
 
     uint256 public override protocolPerformanceFee; // 5% (0.01% = 1e14, 1% = 1e16) on profits
     uint256 public override protocolManagementFee; // 0.5% (0.01% = 1e14, 1% = 1e16)
-    uint256 public override protocolDepositGardenTokenFee; // 0 (0.01% = 1e14, 1% = 1e16)
-    uint256 public override protocolWithdrawalGardenTokenFee; // 0 (0.01% = 1e14, 1% = 1e16)
+    uint256 private protocolDepositGardenTokenFee; // 0 (0.01% = 1e14, 1% = 1e16)
+    uint256 private protocolWithdrawalGardenTokenFee; // 0 (0.01% = 1e14, 1% = 1e16)
 
     // Maximum number of contributors per garden
     uint256 public override maxContributorsPerGarden;
@@ -178,13 +178,6 @@ contract BabController is OwnableUpgradeable, IBabController {
         protocolPerformanceFee = 5e16; // 5% (0.01% = 1e14, 1% = 1e16) on profits
         protocolDepositGardenTokenFee = 0; // 0% (0.01% = 1e14, 1% = 1e16) on profits
         protocolWithdrawalGardenTokenFee = 0; // 0% (0.01% = 1e14, 1% = 1e16) on profits
-        gardenTokensTransfersEnabled = false;
-        bablMiningProgramEnabled = false;
-        allowPublicGardens = false;
-        guardianGlobalPaused = false;
-
-        uniswapFactory = 0x1F98431c8aD98523631AE4a59f267346ea31F984;
-
         strategistProfitPercentage = 10e16;
         stewardsProfitPercentage = 5e16;
         lpsProfitPercentage = 80e16;
@@ -205,13 +198,15 @@ contract BabController is OwnableUpgradeable, IBabController {
      * Creates a Garden smart contract and registers the Garden with the controller.
      *
      * If asset is not WETH, the creator needs to approve the controller
-     * @param _reserveAsset           Reserve asset of the Garden. Initially just weth
-     * @param _name                   Name of the Garden
-     * @param _symbol                 Symbol of the Garden
-     * @param _gardenParams           Array of numeric garden params
-     * @param _tokenURI               Garden NFT token URI
-     * @param _seed                   Seed to regenerate the garden NFT
-     * @param _initialContribution    Initial contribution by the gardener
+     * @param _reserveAsset                     Reserve asset of the Garden. Initially just weth
+     * @param _name                             Name of the Garden
+     * @param _symbol                           Symbol of the Garden
+     * @param _gardenParams                     Array of numeric garden params
+     * @param _tokenURI                         Garden NFT token URI
+     * @param _seed                             Seed to regenerate the garden NFT
+     * @param _initialContribution              Initial contribution by the gardener
+     * @param _publicGardenStrategistsStewards  Public garden, public strategist rights and public stewards rights
+     * @param _profitSharing                    Custom profit sharing (if any)
      */
     function createGarden(
         address _reserveAsset,
@@ -220,7 +215,9 @@ contract BabController is OwnableUpgradeable, IBabController {
         string memory _tokenURI,
         uint256 _seed,
         uint256[] calldata _gardenParams,
-        uint256 _initialContribution
+        uint256 _initialContribution,
+        bool[] memory _publicGardenStrategistsStewards,
+        uint256[] memory _profitSharing
     ) external payable override returns (address) {
         require(defaultTradeIntegration != address(0), 'Need a default trade integration');
         require(enabledOperations.length > 0, 'Need operations enabled');
@@ -237,7 +234,8 @@ contract BabController is OwnableUpgradeable, IBabController {
                 _tokenURI,
                 _seed,
                 _gardenParams,
-                _initialContribution
+                _initialContribution,
+                _publicGardenStrategistsStewards
             );
         if (_reserveAsset != WETH || msg.value == 0) {
             IERC20(_reserveAsset).transferFrom(msg.sender, address(this), _initialContribution);
@@ -246,7 +244,16 @@ contract BabController is OwnableUpgradeable, IBabController {
         require(!isGarden[newGarden], 'Garden already exists');
         isGarden[newGarden] = true;
         gardens.push(newGarden);
-        IGarden(newGarden).deposit{value: msg.value}(_initialContribution, _initialContribution, msg.sender);
+        IGarden(newGarden).deposit{value: msg.value}(_initialContribution, _initialContribution, msg.sender, true);
+        // Avoid gas cost if default sharing values are provided (0,0,0)
+        if (_profitSharing[0] != 0 || _profitSharing[1] != 0 || _profitSharing[2] != 0) {
+            IRewardsDistributor(rewardsDistributor).setProfitRewards(
+                newGarden,
+                _profitSharing[0],
+                _profitSharing[1],
+                _profitSharing[2]
+            );
+        }
         emit GardenAdded(newGarden, msg.sender);
         return newGarden;
     }
@@ -316,44 +323,6 @@ contract BabController is OwnableUpgradeable, IBabController {
     }
 
     /**
-     * PRIVILEGED GOVERNANCE FUNCTION. Allows a pause guardian
-     */
-    function setPauseGuardian(address _guardian) external override {
-        require(
-            msg.sender == guardian || msg.sender == owner(),
-            'only pause guardian and owner can update pause guardian'
-        );
-        // Save current value for inclusion in log
-        address oldPauseGuardian = guardian;
-        // Store pauseGuardian with value newPauseGuardian
-        guardian = _guardian;
-        // Emit NewPauseGuardian(OldPauseGuardian, NewPauseGuardian)
-        emit NewPauseGuardian(oldPauseGuardian, _guardian);
-    }
-
-    function setGlobalPause(bool _state) external override returns (bool) {
-        require(msg.sender == guardian || msg.sender == owner(), 'only pause guardian and owner can pause globally');
-        require(msg.sender == owner() || _state == true, 'only admin can unpause');
-
-        guardianGlobalPaused = _state;
-        emit ActionPaused('Guardian global pause', _state);
-        return _state;
-    }
-
-    function setSomePause(address[] memory _address, bool _state) external override returns (bool) {
-        require(
-            msg.sender == guardian || msg.sender == owner(),
-            'only pause guardian and owner can pause individually'
-        );
-        require(msg.sender == owner() || _state == true, 'only admin can unpause');
-        for (uint256 i = 0; i < _address.length; i++) {
-            guardianPaused[_address[i]] = _state;
-            emit ActionPausedIndividually('Guardian individual pause', _address[i], _state);
-        }
-        return _state;
-    }
-
-    /**
      * PRIVILEGED GOVERNANCE FUNCTION. Change the max number of contributors for new Gardens since the change
      */
     function setMaxContributorsPerGarden(uint256 _newMax) external override onlyOwner {
@@ -370,7 +339,7 @@ contract BabController is OwnableUpgradeable, IBabController {
         if (bablMiningProgramEnabled == false) {
             // Can only be activated once
             bablMiningProgramEnabled = true;
-            RewardsDistributor(rewardsDistributor).startBABLRewards(); // Sets the timestamp
+            IRewardsDistributor(rewardsDistributor).startBABLRewards(); // Sets the timestamp
         }
     }
 
@@ -551,20 +520,6 @@ contract BabController is OwnableUpgradeable, IBabController {
     }
 
     /**
-     * PRIVILEGED GOVERNANCE FUNCTION. Allows governance to edit the protocol uniswaps factory
-     *
-     * @param _newUniswapFactory      Address of the new uniswap factory
-     */
-    function editUniswapFactory(address _newUniswapFactory) external override onlyOwner {
-        require(_newUniswapFactory != address(0), 'Address must not be 0');
-
-        address oldUniswapFactory = uniswapFactory;
-        uniswapFactory = _newUniswapFactory;
-
-        emit UniswapFactoryChanged(_newUniswapFactory, oldUniswapFactory);
-    }
-
-    /**
      * PRIVILEGED GOVERNANCE FUNCTION. Allows governance to edit the protocol strategy factory
      *
      * @param _newStrategyFactory      Address of the new strategy factory
@@ -586,63 +541,10 @@ contract BabController is OwnableUpgradeable, IBabController {
     function setDefaultTradeIntegration(address _newDefaultTradeIntegation) external override onlyOwner {
         require(_newDefaultTradeIntegation != address(0), 'Address must not be 0');
         require(_newDefaultTradeIntegation != defaultTradeIntegration, 'Address must be different');
-        require(
-            enabledIntegrations[_nameHash(IIntegration(_newDefaultTradeIntegation).getName())] ==
-                _newDefaultTradeIntegation,
-            'Integration needs to be valid'
-        );
         address oldDefaultTradeIntegration = defaultTradeIntegration;
         defaultTradeIntegration = _newDefaultTradeIntegation;
 
         emit DefaultTradeIntegrationChanged(_newDefaultTradeIntegation, oldDefaultTradeIntegration);
-    }
-
-    /**
-     * GOVERNANCE FUNCTION: Add a new integration to the registry
-     *
-     * @param  _name             Human readable string identifying the integration
-     * @param  _integration      Address of the integration contract to add
-     */
-    function addIntegration(string memory _name, address _integration) public override onlyOwner {
-        bytes32 hashedName = _nameHash(_name);
-        require(enabledIntegrations[hashedName] == address(0), 'Integration exists already.');
-        require(_integration != address(0), 'Integration address must exist.');
-
-        enabledIntegrations[hashedName] = _integration;
-
-        emit ControllerIntegrationAdded(_integration, _name);
-    }
-
-    /**
-     * GOVERNANCE FUNCTION: Edit an existing integration on the registry
-     *
-     * @param  _name         Human readable string identifying the integration
-     * @param  _integration      Address of the integration contract to edit
-     */
-    function editIntegration(string memory _name, address _integration) public override onlyOwner {
-        bytes32 hashedName = _nameHash(_name);
-
-        require(enabledIntegrations[hashedName] != address(0), 'Integration does not exist.');
-        require(_integration != address(0), 'Integration address must exist.');
-
-        enabledIntegrations[hashedName] = _integration;
-
-        emit ControllerIntegrationEdited(_integration, _name);
-    }
-
-    /**
-     * GOVERNANCE FUNCTION: Remove an existing integration on the registry
-     *
-     * @param  _name         Human readable string identifying the integration
-     */
-    function removeIntegration(string memory _name) external override onlyOwner {
-        bytes32 hashedName = _nameHash(_name);
-        require(enabledIntegrations[hashedName] != address(0), 'Integration does not exist.');
-
-        address oldIntegration = enabledIntegrations[hashedName];
-        delete enabledIntegrations[hashedName];
-
-        emit ControllerIntegrationRemoved(oldIntegration, _name);
     }
 
     /**
@@ -672,6 +574,58 @@ contract BabController is OwnableUpgradeable, IBabController {
         minLiquidityPerReserve[_reserve] = _newMinLiquidityReserve;
 
         emit LiquidityMinimumEdited(_reserve, _newMinLiquidityReserve);
+    }
+
+    // ===========  Protocol security related Gov Functions ======
+
+    /**
+     * PRIVILEGED GOVERNANCE FUNCTION. Set-up a pause guardian
+     * @param _guardian               Address of the guardian
+     */
+    function setPauseGuardian(address _guardian) external override {
+        require(
+            msg.sender == guardian || msg.sender == owner(),
+            'only pause guardian and owner can update pause guardian'
+        );
+        // Save current value for inclusion in log
+        address oldPauseGuardian = guardian;
+        // Store pauseGuardian with value newPauseGuardian
+        guardian = _guardian;
+        // Emit NewPauseGuardian(OldPauseGuardian, NewPauseGuardian)
+        emit NewPauseGuardian(oldPauseGuardian, _guardian);
+    }
+
+    /**
+     * PRIVILEGED GOVERNANCE FUNCTION. Pause the protocol globally in case of unexpected issue
+     * Only the governance can unpause it
+     * @param _state               True to pause, false to unpause.
+     */
+    function setGlobalPause(bool _state) external override returns (bool) {
+        require(msg.sender == guardian || msg.sender == owner(), 'only pause guardian and owner can pause globally');
+        require(msg.sender == owner() || _state == true, 'only admin can unpause');
+
+        guardianGlobalPaused = _state;
+        emit ActionPaused('Guardian global pause', _state);
+        return _state;
+    }
+
+    /**
+     * PRIVILEGED GOVERNANCE FUNCTION. Pause some smartcontracts in a batch process in case of unexpected issue
+     * Only the governance can unpause it
+     * @param _address             Addresses of protocol smartcontract to be paused
+     * @param _state               Boolean pause state
+     */
+    function setSomePause(address[] memory _address, bool _state) external override returns (bool) {
+        require(
+            msg.sender == guardian || msg.sender == owner(),
+            'only pause guardian and owner can pause individually'
+        );
+        require(msg.sender == owner() || _state == true, 'only admin can unpause');
+        for (uint256 i = 0; i < _address.length; i++) {
+            guardianPaused[_address[i]] = _state;
+            emit ActionPausedIndividually('Guardian individual pause', _address[i], _state);
+        }
+        return _state;
     }
 
     /* ============ External Getter Functions ============ */
@@ -706,6 +660,14 @@ contract BabController is OwnableUpgradeable, IBabController {
 
     function isValidKeeper(address _keeper) external view override returns (bool) {
         return keeperList[_keeper];
+    }
+
+    /**
+     * Check whether or not there is a global pause or a specific pause of the provided contract address
+     * @param _contract               Smartcontract address to check for a global or specific pause
+     */
+    function isPaused(address _contract) external view override returns (bool) {
+        return guardianGlobalPaused || guardianPaused[_contract];
     }
 
     /**
@@ -746,39 +708,6 @@ contract BabController is OwnableUpgradeable, IBabController {
     }
 
     /**
-     * Get the integration address associated with passed human readable name
-     *
-     * @param  _name         Human readable integration name
-     *
-     * @return               Address of integration
-     */
-    function getIntegrationByName(string memory _name) external view override returns (address) {
-        return enabledIntegrations[_nameHash(_name)];
-    }
-
-    /**
-     * Get integration integration address associated with passed hashed name
-     *
-     * @param  _nameHashP     Hash of human readable integration name
-     *
-     * @return               Address of integration
-     */
-    function getIntegrationWithHash(bytes32 _nameHashP) external view override returns (address) {
-        return enabledIntegrations[_nameHashP];
-    }
-
-    /**
-     * Check if integration name is valid
-     *
-     * @param  _name         Human readable string identifying the integration
-     *
-     * @return               Boolean indicating if valid
-     */
-    function isValidIntegration(string memory _name, address _integration) external view override returns (bool) {
-        return enabledIntegrations[_nameHash(_name)] == _integration;
-    }
-
-    /**
      * Check if a contract address is a garden or one of the system contracts
      *
      * @param  _contractAddress           The contract address to check
@@ -788,6 +717,7 @@ contract BabController is OwnableUpgradeable, IBabController {
             gardenValuer == _contractAddress ||
             priceOracle == _contractAddress ||
             gardenFactory == _contractAddress ||
+            defaultTradeIntegration == _contractAddress ||
             strategyFactory == _contractAddress ||
             rewardsDistributor == _contractAddress ||
             owner() == _contractAddress ||
@@ -815,3 +745,5 @@ contract BabController is OwnableUpgradeable, IBabController {
         return false;
     }
 }
+
+contract BabControllerV5 is BabController {}

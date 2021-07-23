@@ -16,25 +16,14 @@ module.exports = async ({
   const contract = 'CompoundLendIntegration';
 
   const controller = await deployments.get('BabControllerProxy');
-  const controllerContract = await ethers.getContractAt('BabController', controller.address, signer);
+  const controllerContract = await ethers.getContractAt('IBabController', controller.address, signer);
 
   const deployment = await deploy(contract, {
     from: deployer,
-    args: [controller.address, addresses.tokens.WETH],
+    args: [controller.address],
     log: true,
     gasPrice,
   });
-
-  if (deployment.newlyDeployed) {
-    console.log(`Adding integration ${contract}(${deployment.address}) to BabController`);
-    await (
-      await controllerContract.addIntegration(
-        await (await ethers.getContractAt(contract, deployment.address)).getName(),
-        deployment.address,
-        { gasPrice },
-      )
-    ).wait();
-  }
 
   if (network.live && deployment.newlyDeployed) {
     await tenderly.push(await getTenderlyContract(contract));

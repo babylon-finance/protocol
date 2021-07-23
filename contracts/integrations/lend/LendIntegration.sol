@@ -17,7 +17,7 @@
 */
 
 pragma solidity 0.7.6;
-import {SafeMath} from '@openzeppelin/contracts/math/SafeMath.sol';
+
 import {SafeCast} from '@openzeppelin/contracts/utils/SafeCast.sol';
 import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import {ReentrancyGuard} from '@openzeppelin/contracts/utils/ReentrancyGuard.sol';
@@ -27,16 +27,17 @@ import {IStrategy} from '../../interfaces/IStrategy.sol';
 import {IBabController} from '../../interfaces/IBabController.sol';
 import {ILendIntegration} from '../../interfaces/ILendIntegration.sol';
 
+import {LowGasSafeMath} from '../../lib/LowGasSafeMath.sol';
 import {BaseIntegration} from '../BaseIntegration.sol';
 
 /**
  * @title LendIntegration
  * @author Babylon Finance Protocol
  *
- * Base class for integration with passive investments like Yearn, Indexed
+ * Base class for integration with lending protocols
  */
 abstract contract LendIntegration is BaseIntegration, ReentrancyGuard, ILendIntegration {
-    using SafeMath for uint256;
+    using LowGasSafeMath for uint256;
     using SafeCast for uint256;
 
     /* ============ Struct ============ */
@@ -73,18 +74,32 @@ abstract contract LendIntegration is BaseIntegration, ReentrancyGuard, ILendInte
      * Creates the integration
      *
      * @param _name                   Name of the integration
-     * @param _weth                   Address of the WETH ERC20
      * @param _controller             Address of the controller
      */
-    constructor(
-        string memory _name,
-        address _weth,
-        IBabController _controller
-    ) BaseIntegration(_name, _weth, _controller) {}
+    constructor(string memory _name, IBabController _controller) BaseIntegration(_name, _controller) {}
 
     /* ============ External Functions ============ */
     function getInvestmentToken(address _assetToken) external view override returns (address) {
         return _getInvestmentToken(_assetToken);
+    }
+
+    /**
+     * Returns the reward token
+     *
+     * @return address       Address of the reward token
+     */
+    function getRewardToken() external view override returns (address) {
+        return _getRewardToken();
+    }
+
+    /**
+     * Returns the number of reward tokens accrued
+     *
+     * @param _strategy      Address of the strategy
+     * @return address       Address of the reward token
+     */
+    function getRewardsAccrued(address _strategy) external view override returns (uint256) {
+        return _getRewardsAccrued(_strategy);
     }
 
     /**
@@ -97,12 +112,19 @@ abstract contract LendIntegration is BaseIntegration, ReentrancyGuard, ILendInte
         return _isInvestment(_investmentAddress);
     }
 
+    function getInvestmentTokenAmount(address _address, address _assetToken)
+        public
+        view
+        virtual
+        override
+        returns (uint256);
+
     function supplyTokens(
         address _strategy,
         address _assetToken,
         uint256 _numTokensToSupply,
         uint256 _minAmountExpected
-    ) external override {
+    ) external override nonReentrant onlySystemContract {
         InvestmentInfo memory investmentInfo =
             _createInvestmentInfo(
                 _strategy,
@@ -114,7 +136,19 @@ abstract contract LendIntegration is BaseIntegration, ReentrancyGuard, ILendInte
 
         _validatePreJoinInvestmentData(investmentInfo);
 
-        investmentInfo.strategy.invokeApprove(_getSpender(_assetToken), _assetToken, _numTokensToSupply);
+        // Pre actions (enter markets for compound)
+        (address targetAddressP, uint256 callValueP, bytes memory methodDataP) =
+            _getPreActionCallData(_assetToken, _numTokensToSupply, 0);
+
+        if (targetAddressP != address(0)) {
+            // Invoke protocol specific call
+            investmentInfo.strategy.invokeFromIntegration(targetAddressP, callValueP, methodDataP);
+        }
+
+        // not needed for eth
+        if (_assetToken != address(0)) {
+            investmentInfo.strategy.invokeApprove(_getSpender(_assetToken), _assetToken, _numTokensToSupply);
+        }
 
         (address targetInvestment, uint256 callValue, bytes memory methodData) =
             _getSupplyCalldata(_strategy, _assetToken, _numTokensToSupply);
@@ -135,7 +169,7 @@ abstract contract LendIntegration is BaseIntegration, ReentrancyGuard, ILendInte
         address _assetToken,
         uint256 _numTokensToRedeem,
         uint256 _minAmountExpected
-    ) external override {
+    ) external override nonReentrant onlySystemContract {
         InvestmentInfo memory investmentInfo =
             _createInvestmentInfo(
                 _strategy,
@@ -147,10 +181,26 @@ abstract contract LendIntegration is BaseIntegration, ReentrancyGuard, ILendInte
 
         _validatePreExitInvestmentData(investmentInfo);
 
+        // Pre actions (enter markets for compound)
+        (address targetAddressP, uint256 callValueP, bytes memory methodDataP) =
+            _getPreActionCallData(_assetToken, _numTokensToRedeem, 1);
+
+        if (targetAddressP != address(0)) {
+            // Invoke protocol specific call
+            investmentInfo.strategy.invokeFromIntegration(targetAddressP, callValueP, methodDataP);
+        }
+
         (address targetInvestment, uint256 callValue, bytes memory methodData) =
             _getRedeemCalldata(_strategy, _assetToken, _numTokensToRedeem);
 
         investmentInfo.strategy.invokeFromIntegration(targetInvestment, callValue, methodData);
+
+        // Claim rewards
+        (address targetAddressR, uint256 callValueR, bytes memory methodDataR) = _claimRewardsCallData(_strategy);
+        if (targetAddressR != address(0)) {
+            // Invoke protocol specific call
+            investmentInfo.strategy.invokeFromIntegration(targetAddressR, callValueR, methodDataR);
+        }
 
         _validatePostExitInvestmentData(investmentInfo);
 
@@ -215,9 +265,12 @@ abstract contract LendIntegration is BaseIntegration, ReentrancyGuard, ILendInte
      * @param _investmentInfo               Struct containing investment information used in internal functions
      */
     function _validatePostExitInvestmentData(InvestmentInfo memory _investmentInfo) internal view {
+        uint256 balance =
+            _investmentInfo.assetToken == address(0)
+                ? address(_investmentInfo.strategy).balance
+                : IERC20(_investmentInfo.assetToken).balanceOf(address(_investmentInfo.strategy));
         require(
-            IERC20(_investmentInfo.investment).balanceOf(address(_investmentInfo.strategy)) ==
-                _investmentInfo.investmentTokensInGarden - _investmentInfo.investmentTokensInTransaction,
+            balance >= _investmentInfo.investmentTokensInGarden - _investmentInfo.investmentTokensInTransaction,
             'The garden did not return the investment tokens'
         );
     }
@@ -260,7 +313,7 @@ abstract contract LendIntegration is BaseIntegration, ReentrancyGuard, ILendInte
         investmentInfo.garden = IGarden(investmentInfo.strategy.garden());
         investmentInfo.assetToken = _assetToken;
         investmentInfo.investment = _investmentToken;
-        investmentInfo.investmentTokensInGarden = IERC20(_investmentToken).balanceOf(_strategy);
+        investmentInfo.investmentTokensInGarden = getInvestmentTokenAmount(_strategy, _assetToken);
         investmentInfo.investmentTokensInTransaction = _investmentTokensInTransaction;
         investmentInfo.limitDepositTokenQuantity = _limitDepositToken;
 
@@ -310,9 +363,57 @@ abstract contract LendIntegration is BaseIntegration, ReentrancyGuard, ILendInte
             bytes memory
         );
 
+    /**
+     * Return pre action calldata
+     *
+     * hparam  _asset                    Address of the asset to deposit
+     * hparam  _amount                   Amount of the token to deposit
+     * hparam  _borrowOp                Type of Borrow op
+     *
+     * @return address                   Target contract address
+     * @return uint256                   Call value
+     * @return bytes                     Trade calldata
+     */
+    function _getPreActionCallData(
+        address, /* _asset */
+        uint256, /* _amount */
+        uint256 /* _borrowOp */
+    )
+        internal
+        view
+        virtual
+        returns (
+            address,
+            uint256,
+            bytes memory
+        );
+
+    /**
+     * Return claim rewards action call data
+     *
+     * @return address                   Target contract address
+     * @return uint256                   Call value
+     * @return bytes                     Trade calldata
+     */
+    function _claimRewardsCallData(
+        address /*_strategy */
+    )
+        internal
+        view
+        virtual
+        returns (
+            address,
+            uint256,
+            bytes memory
+        );
+
     function _getSpender(
         address //_investmentAddress
     ) internal view virtual returns (address);
+
+    function _getRewardToken() internal view virtual returns (address);
+
+    function _getRewardsAccrued(address _strategy) internal view virtual returns (uint256);
 
     function _getInvestmentToken(
         address //_investmentAddress

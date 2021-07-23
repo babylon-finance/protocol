@@ -10,7 +10,7 @@ module.exports = async ({
   getRapid,
 }) => {
   const { deploy } = deployments;
-  const { deployer } = await getNamedAccounts();
+  const { deployer, owner } = await getNamedAccounts();
   const signer = await getSigner(deployer);
   const gasPrice = await getRapid();
 
@@ -18,11 +18,9 @@ module.exports = async ({
   const controllerContract = await ethers.getContractAt('BabController', controller.address, signer);
   const contract = 'PriceOracle';
 
-  const uniswapTWAPv3 = await deployments.get('UniswapTWAPV3');
-
   const deployment = await deploy(contract, {
     from: deployer,
-    args: [controller.address, addresses.compound.OpenOracle, [uniswapTWAPv3.address]],
+    args: [],
     log: true,
     gasPrice,
   });
