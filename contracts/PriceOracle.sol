@@ -348,7 +348,7 @@ contract PriceOracle is Ownable, IPriceOracle {
             if (_tokenOut == address(wstETH)) {
                 shares = wstETH.getStETHByWstETH(shares);
             }
-            return getPrice(_tokenIn, WETH).preciseDiv(stETH.getPooledEthByShares(shares));
+            return getPrice(_tokenIn, WETH).preciseDiv(stETH.getSharesByPooledEth(shares));
         }
 
         // TODOs
