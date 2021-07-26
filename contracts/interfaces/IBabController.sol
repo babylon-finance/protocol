@@ -66,7 +66,7 @@ interface IBabController {
 
     function setOperation(uint8 _kind, address _operation) external;
 
-    function setDefaultTradeIntegration(address _newDefaultTradeIntegation) external;
+    function setMasterSwapper(address _newMasterSwapper) external;
 
     function addKeeper(address _keeper) external;
 
@@ -122,7 +122,7 @@ interface IBabController {
 
     function strategyFactory() external view returns (address);
 
-    function defaultTradeIntegration() external view returns (address);
+    function masterSwapper() external view returns (address);
 
     function gardenTokensTransfersEnabled() external view returns (bool);
 

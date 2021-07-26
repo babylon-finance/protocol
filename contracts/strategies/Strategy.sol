@@ -828,7 +828,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         uint256 _sendQuantity,
         address _receiveToken
     ) private returns (uint256) {
-        address tradeIntegration = IBabController(controller).defaultTradeIntegration();
+        address tradeIntegration = IBabController(controller).masterSwapper();
         // Uses on chain oracle for all internal strategy operations to avoid attacks
         uint256 pricePerTokenUnit = _getPrice(_sendToken, _receiveToken);
         // minAmount must have receive token decimals
