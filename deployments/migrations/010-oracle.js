@@ -27,7 +27,12 @@ module.exports = async ({
 
   if (deployment.newlyDeployed) {
     console.log(`Setting price oracle on controller ${deployment.address}`);
-    await (await controllerContract.editPriceOracle(deployment.address, { gasPrice })).wait();
+    const isDeployer = (await controllerContract.owner()) === deployer;
+    await (
+      await controllerContract
+        .connect(isDeployer ? signer : await getSigner(owner))
+        .editPriceOracle(deployment.address, { gasPrice })
+    ).wait();
   }
 
   if (network.live && deployment.newlyDeployed) {
