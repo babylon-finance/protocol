@@ -69,12 +69,9 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
     using ECDSA for bytes32;
 
     /* ============ Events ============ */
-    event GardenDeposit(
-        address indexed _to,
-        uint256 minAmountOutShares,
-        uint256 reserveTokenQuantity,
-        uint256 timestamp
-    );
+
+    // DO NOT TOUCH for the love of GOD
+    event GardenDeposit(address indexed _to, uint256 reserveToken, uint256 reserveTokenQuantity, uint256 timestamp);
     event GardenWithdrawal(
         address indexed _from,
         address indexed _to,
