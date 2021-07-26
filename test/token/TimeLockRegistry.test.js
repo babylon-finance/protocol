@@ -22,9 +22,9 @@ describe('TimeLockRegistry', function () {
   async function checkVestingStartingDate(contributor) {
     let vestingData = await timeLockRegistry.checkVesting(contributor);
     expect(vestingData[1]).to.be.gt(1614553200);
-    if (vestingData[0] == false) {
-      expect(vestingData[1]).to.be.closeTo(ethers.BigNumber.from(NOW), ethers.BigNumber.from(NOW).div(50));
-    } else if (vestingData[0] == true) {
+    if (vestingData[0] === false) {
+      expect(vestingData[1]).to.be.closeTo(ethers.BigNumber.from(NOW), ONE_DAY_IN_SECONDS.div(50));
+    } else if (vestingData[0] === true) {
       // 1615762800 March the 15th original Team vesting
       expect(vestingData[1]).to.be.closeTo(
         ethers.BigNumber.from(1615762800),
@@ -35,12 +35,12 @@ describe('TimeLockRegistry', function () {
 
   async function checkVestingEndDate(contributor) {
     let vestingData = await timeLockRegistry.checkVesting(contributor);
-    if (vestingData[0] == false) {
+    if (vestingData[0] === false) {
       expect(vestingData[2]).to.be.closeTo(
         ethers.BigNumber.from(NOW + 3 * (365 * ONE_DAY_IN_SECONDS)),
         ethers.BigNumber.from(ONE_DAY_IN_SECONDS),
       );
-    } else if (vestingData[0] == true) {
+    } else if (vestingData[0] === true) {
       // 1615762800 March the 15th original Team vesting
       expect(vestingData[2]).to.be.closeTo(
         ethers.BigNumber.from(1615762800 + 4 * (365 * ONE_DAY_IN_SECONDS)),
