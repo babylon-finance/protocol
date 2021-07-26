@@ -19,7 +19,6 @@ import {Ownable} from '@openzeppelin/contracts/access/Ownable.sol';
 
 import {ITimelock} from '../interfaces/ITimelock.sol';
 
-// TODO: Do a diff to check for changes
 contract Timelock is ITimelock {
     using LowGasSafeMath for uint256;
 
@@ -81,7 +80,7 @@ contract Timelock is ITimelock {
 
     /* ============ Fallback ============ */
 
-    fallback() external payable {}
+    receive() external payable {}
 
     /* ============ External Functions ============ */
 
