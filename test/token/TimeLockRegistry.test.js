@@ -26,10 +26,7 @@ describe('TimeLockRegistry', function () {
       expect(vestingData[1]).to.be.closeTo(ethers.BigNumber.from(NOW), ONE_DAY_IN_SECONDS.div(50));
     } else if (vestingData[0] === true) {
       // 1615762800 March the 15th original Team vesting
-      expect(vestingData[1]).to.be.closeTo(
-        ethers.BigNumber.from(1615762800),
-        ethers.BigNumber.from(1615762800).div(50),
-      );
+      expect(vestingData[1]).to.be.closeTo(ethers.BigNumber.from(1615762800), ONE_DAY_IN_SECONDS.div(50));
     }
   }
 
@@ -38,13 +35,13 @@ describe('TimeLockRegistry', function () {
     if (vestingData[0] === false) {
       expect(vestingData[2]).to.be.closeTo(
         ethers.BigNumber.from(NOW + 3 * (365 * ONE_DAY_IN_SECONDS)),
-        ethers.BigNumber.from(ONE_DAY_IN_SECONDS),
+        ONE_DAY_IN_SECONDS.div(50),
       );
     } else if (vestingData[0] === true) {
       // 1615762800 March the 15th original Team vesting
       expect(vestingData[2]).to.be.closeTo(
         ethers.BigNumber.from(1615762800 + 4 * (365 * ONE_DAY_IN_SECONDS)),
-        ethers.BigNumber.from(ONE_DAY_IN_SECONDS),
+        ONE_DAY_IN_SECONDS.div(50),
       );
     }
   }
