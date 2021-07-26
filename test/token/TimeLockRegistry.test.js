@@ -71,19 +71,19 @@ describe('TimeLockRegistry', function () {
 
     it('timeLockRegistry vestingStartDate should not be before March 15st PST for Team and NOW for Investors', async function () {
       const registrations = await timeLockRegistry.getRegistrations();
-      for (i = 0; i < registrations.length; i++) {
+      for (let i = 0; i < registrations.length; i++) {
         await checkVestingStartingDate(registrations[i]);
       }
     });
     it('timeLockRegistry vestingEndDate should not be before 3 years for investors and 4 years for team', async function () {
       const registrations = await timeLockRegistry.getRegistrations();
-      for (i = 0; i < registrations.length; i++) {
+      for (let i = 0; i < registrations.length; i++) {
         await checkVestingEndDate(registrations[i]);
       }
     });
     it('timeLockRegistry vesting amount should not be above 24,750', async function () {
       const registrations = await timeLockRegistry.getRegistrations();
-      for (i = 0; i < registrations.length; i++) {
+      for (let i = 0; i < registrations.length; i++) {
         expect(await timeLockRegistry.checkRegisteredDistribution(registrations[i])).to.be.lte(
           ethers.utils.parseEther('24750'),
         );
