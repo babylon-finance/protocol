@@ -352,8 +352,8 @@ contract PriceOracle is Ownable, IPriceOracle {
         }
 
         // TODOs
-        // other btcs, change pairs & change path in uniswap trade
-        // other stables, change pair & change path in uniswap trade
+        // btc pairs, use curve
+        // stable pairs, use curve
 
         if (_tokenIn != WETH && _tokenOut != WETH) {
             return getPrice(_tokenIn, WETH).preciseDiv(getPrice(_tokenOut, WETH));
