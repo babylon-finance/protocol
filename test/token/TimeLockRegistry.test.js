@@ -33,16 +33,10 @@ describe('TimeLockRegistry', function () {
   async function checkVestingEndDate(contributor) {
     let [team, vestingBegins, vestingEnds, lastClaim] = await timeLockRegistry.checkVesting(contributor);
     if (team === false) {
-      expect(vestingEnds).to.be.closeTo(
-        from(NOW + 3 * (365 * ONE_DAY_IN_SECONDS)),
-        ONE_DAY_IN_SECONDS.div(50),
-      );
+      expect(vestingEnds).to.be.closeTo(from(NOW + 3 * (365 * ONE_DAY_IN_SECONDS)), ONE_DAY_IN_SECONDS.div(50));
     } else if (team === true) {
       // 1615762800 March the 15th original Team vesting
-      expect(vestingEnds).to.be.closeTo(
-        from(1615762800 + 4 * (365 * ONE_DAY_IN_SECONDS)),
-        ONE_DAY_IN_SECONDS.div(10),
-      );
+      expect(vestingEnds).to.be.closeTo(from(1615762800 + 4 * (365 * ONE_DAY_IN_SECONDS)), ONE_DAY_IN_SECONDS.div(10));
     }
   }
 
@@ -83,9 +77,7 @@ describe('TimeLockRegistry', function () {
     it('vesting amount should not be above 24,750', async function () {
       const registrations = await timeLockRegistry.getRegistrations();
       for (let i = 0; i < registrations.length; i++) {
-        expect(await timeLockRegistry.checkRegisteredDistribution(registrations[i])).to.be.lte(
-          eth(24750),
-        );
+        expect(await timeLockRegistry.checkRegisteredDistribution(registrations[i])).to.be.lte(eth(24750));
         expect(await timeLockRegistry.checkRegisteredDistribution(registrations[i])).to.be.gt(0);
       }
     });
@@ -186,17 +178,13 @@ describe('TimeLockRegistry', function () {
 
       const teamSignerWrong = await impersonateAddress('0x71763709Da2488F75bc2DB5d194769d801e97Fa8');
 
-      await timeLockRegistry
-        .connect(owner)
-        .register(teamSignerWrong.address, eth(17000), true, 1614618000);
+      await timeLockRegistry.connect(owner).register(teamSignerWrong.address, eth(17000), true, 1614618000);
       expect(await timeLockRegistry.totalTokens()).to.be.eq(TOTAL_REGISTERED_TOKENS);
 
       await timeLockRegistry.connect(owner).cancelRegistration(teamSignerWrong.address);
       expect(await timeLockRegistry.totalTokens()).to.be.eq(TOTAL_REGISTERED_TOKENS.sub(ONE_ETH.mul(17000)));
 
-      await timeLockRegistry
-        .connect(owner)
-        .register(teamSignerOK.address, eth(17000), true, 1614618000);
+      await timeLockRegistry.connect(owner).register(teamSignerOK.address, eth(17000), true, 1614618000);
       expect(await timeLockRegistry.totalTokens()).to.be.eq(TOTAL_REGISTERED_TOKENS);
     });
   });
@@ -284,10 +272,7 @@ describe('TimeLockRegistry', function () {
       await bablToken.connect(signer2).transfer(signer1.address, signer2Balance); // signer 2 sends all its balance to signer 1
       expect(await bablToken.balanceOf(signer2.address)).to.be.equal(0);
       expect(await bablToken.balanceOf(signer1.address)).to.be.equal(signer1Balance.add(signer2Balance));
-      expect(await bablToken.viewLockedBalance(signer1.address)).to.be.closeTo(
-        signer1LockedBalance,
-        eth(0.0005),
-      ); // New received tokens are not locked
+      expect(await bablToken.viewLockedBalance(signer1.address)).to.be.closeTo(signer1LockedBalance, eth(0.0005)); // New received tokens are not locked
 
       await increaseTime(ONE_DAY_IN_SECONDS * 365);
       await bablToken.connect(signer1).transfer(signer2.address, await bablToken.balanceOf(signer1.address)); // signer 1 sends all its balance to signer 2
