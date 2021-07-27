@@ -1,11 +1,12 @@
 const { expect } = require('chai');
 const { ethers } = require('hardhat');
 
-const { ONE_ETH, ONE_DAY_IN_SECONDS } = require('../../lib/constants');
+const { ONE_ETH, ONE_DAY_IN_SECONDS, NOW } = require('../../lib/constants');
 const { impersonateAddress } = require('../../lib/rpc');
 const { increaseTime } = require('../utils/test-helpers');
 
 const { setupTests } = require('../fixtures/GardenFixture');
+const { getCombinedModifierFlags } = require('typescript');
 
 const TOTAL_REGISTERED_TOKENS = ONE_ETH.mul(272950);
 
@@ -17,6 +18,33 @@ describe('TimeLockRegistry', function () {
   let bablToken;
   let timeLockRegistry;
   let now;
+
+  async function checkVestingStartingDate(contributor) {
+    let vestingData = await timeLockRegistry.checkVesting(contributor);
+    expect(vestingData[1]).to.be.gt(1614553200);
+    if (vestingData[0] === false) {
+      expect(vestingData[1]).to.be.closeTo(ethers.BigNumber.from(NOW), ONE_DAY_IN_SECONDS.div(50));
+    } else if (vestingData[0] === true) {
+      // 1615762800 March the 15th original Team vesting
+      expect(vestingData[1]).to.be.closeTo(ethers.BigNumber.from(1615762800), ONE_DAY_IN_SECONDS.div(50));
+    }
+  }
+
+  async function checkVestingEndDate(contributor) {
+    let vestingData = await timeLockRegistry.checkVesting(contributor);
+    if (vestingData[0] === false) {
+      expect(vestingData[2]).to.be.closeTo(
+        ethers.BigNumber.from(NOW + 3 * (365 * ONE_DAY_IN_SECONDS)),
+        ONE_DAY_IN_SECONDS.div(50),
+      );
+    } else if (vestingData[0] === true) {
+      // 1615762800 March the 15th original Team vesting
+      expect(vestingData[2]).to.be.closeTo(
+        ethers.BigNumber.from(1615762800 + 4 * (365 * ONE_DAY_IN_SECONDS)),
+        ONE_DAY_IN_SECONDS.div(50),
+      );
+    }
+  }
 
   beforeEach(async () => {
     ({ owner, bablToken, timeLockRegistry, signer1, signer2, signer3 } = await setupTests()());
@@ -36,6 +64,28 @@ describe('TimeLockRegistry', function () {
 
     it('timeLockRegistry should have all registrations', async function () {
       expect((await timeLockRegistry.getRegistrations()).length).to.be.eq(80);
+    });
+
+    it('timeLockRegistry vestingStartDate should not be before March 15st PST for Team and NOW for Investors', async function () {
+      const registrations = await timeLockRegistry.getRegistrations();
+      for (let i = 0; i < registrations.length; i++) {
+        await checkVestingStartingDate(registrations[i]);
+      }
+    });
+    it('timeLockRegistry vestingEndDate should not be before 3 years for investors and 4 years for team', async function () {
+      const registrations = await timeLockRegistry.getRegistrations();
+      for (let i = 0; i < registrations.length; i++) {
+        await checkVestingEndDate(registrations[i]);
+      }
+    });
+    it('timeLockRegistry vesting amount should not be above 24,750', async function () {
+      const registrations = await timeLockRegistry.getRegistrations();
+      for (let i = 0; i < registrations.length; i++) {
+        expect(await timeLockRegistry.checkRegisteredDistribution(registrations[i])).to.be.lte(
+          ethers.utils.parseEther('24750'),
+        );
+        expect(await timeLockRegistry.checkRegisteredDistribution(registrations[i])).to.be.gt(0);
+      }
     });
   });
 
