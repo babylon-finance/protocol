@@ -320,9 +320,7 @@ contract BabylonViewer {
     }
 
     function _getUniswapHighestLiquidity(address _tokenIn, address _reserveAsset) internal view returns (uint256) {
-        address sendToken = _tokenIn;
-        address receiveToken = WETH;
-        (IUniswapV3Pool pool, ) = _getUniswapPoolWithHighestLiquidity(sendToken, _reserveAsset);
+        (IUniswapV3Pool pool, ) = _getUniswapPoolWithHighestLiquidity(_tokenIn, WETH);
         uint256 poolLiquidity = uint256(pool.liquidity());
         uint256 liquidityInReserve;
         if (pool.token0() == WETH) {
