@@ -23,6 +23,8 @@ import {ERC20} from '@openzeppelin/contracts/token/ERC20/ERC20.sol';
 import {IERC721} from '@openzeppelin/contracts/token/ERC721/IERC721.sol';
 import {ERC721} from '@openzeppelin/contracts/token/ERC721/ERC721.sol';
 import {SafeMath} from '@openzeppelin/contracts/math/SafeMath.sol';
+import '@uniswap/v3-core/contracts/interfaces/IUniswapV3Factory.sol';
+import '@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol';
 
 import {PreciseUnitMath} from './lib/PreciseUnitMath.sol';
 import {IRewardsDistributor} from './interfaces/IRewardsDistributor.sol';
@@ -33,6 +35,7 @@ import {IStrategy} from './interfaces/IStrategy.sol';
 import {IIshtarGate} from './interfaces/IIshtarGate.sol';
 import {IGardenNFT} from './interfaces/IGardenNFT.sol';
 import {IStrategyNFT} from './interfaces/IStrategyNFT.sol';
+import {IPriceOracle} from './interfaces/IPriceOracle.sol';
 import {Math} from './lib/Math.sol';
 
 /**
@@ -47,6 +50,10 @@ contract BabylonViewer {
     using Math for int256;
 
     IBabController public controller;
+    uint24 internal constant FEE_LOW = 500;
+    uint24 internal constant FEE_MEDIUM = 3000;
+    uint24 internal constant FEE_HIGH = 10000;
+    IUniswapV3Factory internal constant uniswapFactory = IUniswapV3Factory(0x1F98431c8aD98523631AE4a59f267346ea31F984);
 
     constructor(IBabController _controller) {
         require(address(_controller) != address(0), 'Controller must exist');
@@ -294,6 +301,11 @@ contract BabylonViewer {
         return (contribution, totalRewards);
     }
 
+    function getPriceAndLiquidity(address _tokenIn, address _tokenOut) public view returns (uint256, uint256) {
+      return (IPriceOracle(controller.priceOracle()).getPrice(_tokenIn, _tokenOut),
+              _getUniswapPoolWithHighestLiquidity(_tokenIn, _tokenOut));
+    }
+
     /* ============ Private Functions ============ */
 
     function _getGardenSeed(address _garden) private view returns (uint256) {
@@ -302,5 +314,26 @@ contract BabylonViewer {
 
     function _getGardenProfitSharing(address _garden) private view returns (uint256[3] memory) {
         return IRewardsDistributor(controller.rewardsDistributor()).getGardenProfitsSharing(_garden);
+    }
+
+    function _getUniswapPoolWithHighestLiquidity(address sendToken, address receiveToken)
+        internal
+        view
+        returns (uint256)
+    {
+        IUniswapV3Pool poolLow = IUniswapV3Pool(uniswapFactory.getPool(sendToken, receiveToken, FEE_LOW));
+        IUniswapV3Pool poolMedium = IUniswapV3Pool(uniswapFactory.getPool(sendToken, receiveToken, FEE_MEDIUM));
+        IUniswapV3Pool poolHigh = IUniswapV3Pool(uniswapFactory.getPool(sendToken, receiveToken, FEE_HIGH));
+
+        uint128 liquidityLow = address(poolLow) != address(0) ? poolLow.liquidity() : 0;
+        uint128 liquidityMedium = address(poolMedium) != address(0) ? poolMedium.liquidity() : 0;
+        uint128 liquidityHigh = address(poolHigh) != address(0) ? poolHigh.liquidity() : 0;
+        if (liquidityLow > liquidityMedium && liquidityLow >= liquidityHigh) {
+            return liquidityLow;
+        }
+        if (liquidityMedium > liquidityLow && liquidityMedium >= liquidityHigh) {
+            return liquidityMedium;
+        }
+        return liquidityHigh;
     }
 }
