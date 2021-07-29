@@ -53,6 +53,7 @@ contract BabylonViewer {
     uint24 internal constant FEE_LOW = 500;
     uint24 internal constant FEE_MEDIUM = 3000;
     uint24 internal constant FEE_HIGH = 10000;
+    address internal constant WETH = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
     IUniswapV3Factory internal constant uniswapFactory = IUniswapV3Factory(0x1F98431c8aD98523631AE4a59f267346ea31F984);
 
     constructor(IBabController _controller) {
@@ -301,10 +302,10 @@ contract BabylonViewer {
         return (contribution, totalRewards);
     }
 
-    function getPriceAndLiquidity(address _tokenIn, address _tokenOut) public view returns (uint256, uint256) {
+    function getPriceAndLiquidity(address _tokenIn, address _reserveAsset) public view returns (uint256, uint256) {
         return (
-            IPriceOracle(controller.priceOracle()).getPrice(_tokenIn, _tokenOut),
-            _getUniswapPoolWithHighestLiquidity(_tokenIn, _tokenOut)
+            IPriceOracle(controller.priceOracle()).getPrice(_tokenIn, _reserveAsset),
+            _getUniswapHighestLiquidity(_tokenIn, _reserveAsset)
         );
     }
 
@@ -318,10 +319,31 @@ contract BabylonViewer {
         return IRewardsDistributor(controller.rewardsDistributor()).getGardenProfitsSharing(_garden);
     }
 
+    function _getUniswapHighestLiquidity(address _tokenIn, address _reserveAsset) internal view returns (uint256) {
+        address sendToken = _tokenIn;
+        address receiveToken = WETH;
+        (IUniswapV3Pool pool, ) = _getUniswapPoolWithHighestLiquidity(sendToken, _reserveAsset);
+        uint256 poolLiquidity = uint256(pool.liquidity());
+        uint256 liquidityInReserve;
+        if (pool.token0() == WETH) {
+            liquidityInReserve = poolLiquidity.mul(poolLiquidity).div(ERC20(pool.token1()).balanceOf(address(pool)));
+        }
+        if (pool.token1() == WETH) {
+            liquidityInReserve = poolLiquidity.mul(poolLiquidity).div(ERC20(pool.token0()).balanceOf(address(pool)));
+        }
+        // Normalize to reserve asset
+        if (WETH != _reserveAsset) {
+            IPriceOracle oracle = IPriceOracle(IBabController(controller).priceOracle());
+            uint256 price = oracle.getPrice(WETH, _reserveAsset);
+            liquidityInReserve = liquidityInReserve.preciseMul(price);
+        }
+        return liquidityInReserve;
+    }
+
     function _getUniswapPoolWithHighestLiquidity(address sendToken, address receiveToken)
         internal
         view
-        returns (uint256)
+        returns (IUniswapV3Pool pool, uint24 fee)
     {
         IUniswapV3Pool poolLow = IUniswapV3Pool(uniswapFactory.getPool(sendToken, receiveToken, FEE_LOW));
         IUniswapV3Pool poolMedium = IUniswapV3Pool(uniswapFactory.getPool(sendToken, receiveToken, FEE_MEDIUM));
@@ -331,11 +353,11 @@ contract BabylonViewer {
         uint128 liquidityMedium = address(poolMedium) != address(0) ? poolMedium.liquidity() : 0;
         uint128 liquidityHigh = address(poolHigh) != address(0) ? poolHigh.liquidity() : 0;
         if (liquidityLow > liquidityMedium && liquidityLow >= liquidityHigh) {
-            return liquidityLow;
+            return (poolLow, FEE_LOW);
         }
         if (liquidityMedium > liquidityLow && liquidityMedium >= liquidityHigh) {
-            return liquidityMedium;
+            return (poolMedium, FEE_MEDIUM);
         }
-        return liquidityHigh;
+        return (poolHigh, FEE_HIGH);
     }
 }
