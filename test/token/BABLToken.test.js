@@ -62,8 +62,8 @@ describe('BABLToken contract', function () {
       expect(ownerBalance).to.equal(OWNER_BALANCE);
 
       const value = ethers.utils.parseEther('1000');
-      await expect(bablToken.connect(owner).transfer(signer1.address, value)).to.be.revertedWith('revert BAB#062');
-      await expect(bablToken.connect(owner).transfer(signer2.address, value)).to.be.revertedWith('revert BAB#062');
+      await expect(bablToken.connect(owner).transfer(signer1.address, value)).to.be.revertedWith('BAB#062');
+      await expect(bablToken.connect(owner).transfer(signer2.address, value)).to.be.revertedWith('BAB#062');
 
       // It should work if from/to is the TimeLockRegistry
       await expect(bablToken.connect(owner).transfer(timeLockRegistry.address, value)).not.to.be.reverted;

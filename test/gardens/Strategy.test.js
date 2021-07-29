@@ -12,11 +12,14 @@ const {
   deposit,
   DEFAULT_STRATEGY_PARAMS,
 } = require('../fixtures/StrategyHelper.js');
+const { createGarden } = require('../fixtures/GardenHelper');
 const { increaseTime } = require('../utils/test-helpers');
+const { MAX_UINT_256 } = require('../../lib/constants');
 
 const addresses = require('../../lib/addresses');
 const { ONE_DAY_IN_SECONDS, ONE_ETH } = require('../../lib/constants.js');
 const { setupTests } = require('../fixtures/GardenFixture');
+const { impersonateAddress } = require('../../lib/rpc');
 
 describe('Strategy', function () {
   let strategyDataset;
@@ -39,6 +42,35 @@ describe('Strategy', function () {
   let balancerIntegration;
   let oneInchPoolIntegration;
   let yearnVaultIntegration;
+  let aaveBorrowIntegration;
+  let DAI;
+  let WETH;
+
+  // Deploys aave oracle with changed ETH price and inject its code into real aave oracle contract
+  // code is available in AaveOracle.sol
+  // constructor args are dai, dai source, fallback oracle, weth, took from etherscan
+  async function changeETHPriceInAaveOracle(WETH) {
+    const oracles = await ethers.getContractFactory('AaveOracleMock');
+    const oracle = await oracles.deploy(
+      ['0x6B175474E89094C44Da98b954EedeAC495271d0F'],
+      ['0x773616E4d11A78F511299002da57A0a94577F1f4'],
+      '0x5B09E578cfEAa23F1b11127A658855434e4F3e09',
+      WETH.address,
+    );
+    const code = await hre.network.provider.send('eth_getCode', [oracle.address]);
+    await hre.network.provider.send('hardhat_setCode', ['0xA50ba011c48153De246E5192C8f9258A2ba79Ca9', code]);
+  }
+
+  // Health factor see aave docs
+  async function getHealthFactor(lendingPool, borrower) {
+    const data = await lendingPool.getUserAccountData(borrower);
+    return data.healthFactor;
+  }
+
+  // useless when amount < 1
+  function normalizeToken(amount) {
+    return amount.div(ethers.utils.parseEther('0.001')).toNumber() / 1000;
+  }
 
   async function createStrategies(strategies) {
     const retVal = [];
@@ -74,12 +106,15 @@ describe('Strategy', function () {
       balancerIntegration,
       oneInchPoolIntegration,
       yearnVaultIntegration,
+      aaveBorrowIntegration,
     } = await setupTests()());
 
     strategyDataset = await ethers.getContractAt('Strategy', strategy11);
     strategyCandidate = await ethers.getContractAt('Strategy', strategy21);
 
     wethToken = await ethers.getContractAt('IERC20', addresses.tokens.WETH);
+    DAI = await ethers.getContractAt('IERC20', addresses.tokens.DAI);
+    WETH = await ethers.getContractAt('IERC20', addresses.tokens.WETH);
   });
 
   describe('Strategy Deployment', async function () {
@@ -96,7 +131,7 @@ describe('Strategy', function () {
 
     it('other member should NOT be able to change the duration of an strategy', async function () {
       await expect(strategyDataset.connect(signer3).changeStrategyDuration(ONE_DAY_IN_SECONDS * 3)).to.be.revertedWith(
-        'revert BAB#032',
+        'BAB#032',
       );
     });
   });
@@ -196,7 +231,7 @@ describe('Strategy', function () {
           .resolveVoting([signer1.getAddress(), signer2.getAddress()], [signer1Balance, signer2Balance], 42, {
             gasPrice: 0,
           }),
-      ).to.be.revertedWith(/revert BAB#043/i);
+      ).to.be.revertedWith(/BAB#043/i);
     });
 
     it("can't push voting results twice", async function () {
@@ -215,7 +250,7 @@ describe('Strategy', function () {
           .resolveVoting([signer1.getAddress(), signer2.getAddress()], [signer1Balance, signer2Balance], 42, {
             gasPrice: 0,
           }),
-      ).to.be.revertedWith(/revert BAB#042/i);
+      ).to.be.revertedWith(/BAB#042/i);
     });
   });
 
@@ -355,7 +390,7 @@ describe('Strategy', function () {
         strategyContract.connect(keeper).executeStrategy(ONE_ETH, ONE_ETH.mul(100), {
           gasPrice: 0,
         }),
-      ).to.be.revertedWith(/revert BAB#019/i);
+      ).to.be.revertedWith(/BAB#019/i);
     });
   });
 
@@ -651,6 +686,109 @@ describe('Strategy', function () {
 
       // TODO: Calculate and test reserveAssetRewardsSetAside, treasury fee, profits
       // expect(capitalReturnedLong1).to.be.closeTo(valueLong1, 10);
+    });
+  });
+
+  describe('Security audit hacks -> checking fixes', function () {
+    it(`should fail if trying to exploit updateMaxCollateralFactor and sweep with stucked funds`, async function () {
+      const token = WETH.address;
+      const asset1 = WETH;
+      const asset2 = DAI;
+      userBalanceBefore = await ethers.provider.getBalance(signer1.address);
+
+      // signer1 creates with 1 ETH contribution
+      const garden = await createGarden({ reserveAsset: token, signer: signer1 });
+      // Create strategy with lend and borrow operations for exploit simplicity
+      const strategyContract = await createStrategy(
+        'borrow',
+        'dataset',
+        [signer1],
+        [aaveLendIntegration.address, aaveBorrowIntegration.address],
+        garden,
+        false,
+        [asset1.address, 0, asset2.address, 0],
+      );
+      const deposited = userBalanceBefore.sub(await ethers.provider.getBalance(signer1.address));
+      const userGardenTokens = await garden.balanceOf(signer1.address);
+      await strategyContract.connect(keeper).resolveVoting([signer1.address], [userGardenTokens], 0, { gasPrice: 0 });
+
+      const lendingPool = await ethers.getContractAt('ILendingPool', '0x7d2768dE32b0b80b7a3454c06BdAc94A69DDc7A9');
+      // Set maxCollateralFactor to 80% before strategy execution, max available for WETH collateral 80%, liquidate rate is 82.5%
+      // The following call reverts "Transaction reverted: function call to a non-contract account" as we added the modifier isSystemContract
+      //await aaveBorrowIntegration.connect(signer2).updateMaxCollateralFactor(ethers.utils.parseEther('0.8'));
+
+      // Now that we avoid anyone calling, only a system contract can call it, we try the hack calling it from the strategy contract to check sweep fix
+      const strategyAddress = await impersonateAddress(strategyContract.address);
+
+      await aaveBorrowIntegration
+        .connect(strategyAddress)
+        .updateMaxCollateralFactor(ethers.utils.parseEther('0.8'), { gasPrice: 0 });
+
+      const amount = ethers.utils.parseEther('0.994');
+      await executeStrategy(strategyContract, { amount });
+
+      // health factor is around 1.03
+      // await getHealthFactor(lendingPool, strategyContract.address));
+      // modify ETH price
+      // for simplicity we changed WETH price
+      await changeETHPriceInAaveOracle(WETH);
+      // here is 0.99
+      //await getHealthFactor(lendingPool, strategyContract.address));
+
+      // Send tokens to signer2 for liquidation
+      whaleSigner = await impersonateAddress('0x5d3a536E4D6DbD6114cc1Ead35777bAB948E3643');
+      await DAI.connect(whaleSigner).transfer(signer2.address, ethers.utils.parseEther('100000'), {
+        gasPrice: 0,
+      });
+
+      // Liquidate CDP with health factor < 1
+      await DAI.connect(signer2).approve(lendingPool.address, MAX_UINT_256, { gasPrice: 0 });
+      const attackerMaxBalance = normalizeToken(await DAI.balanceOf(signer2.address));
+
+      await lendingPool
+        .connect(signer2)
+        .liquidationCall(WETH.address, DAI.address, strategyContract.address, MAX_UINT_256, false, { gasPrice: 0 });
+      // await strategyContract.connect(signer3).sweep(DAI.address, {gasPrice: 0});
+      // finalize strategy
+
+      const attackerNewBalance = normalizeToken(await DAI.balanceOf(signer2.address));
+      const attackUsedBalance = attackerMaxBalance - attackerNewBalance;
+
+      await finalizeStrategy(strategyContract);
+
+      await garden
+        .connect(signer1)
+        .withdraw(await garden.balanceOf(signer1.address), 1, signer1.address, false, strategyContract.address, {
+          gasPrice: 0,
+        });
+      const userBalanceAfter = await ethers.provider.getBalance(signer1.address);
+      // some losses (0.16) due to gas included
+      if (userBalanceAfter.lt(userBalanceBefore)) {
+        const loss = userBalanceBefore.sub(userBalanceAfter);
+      } else {
+        const profit = userBalanceAfter.sub(userBalanceBefore);
+      }
+      // ONLY_CONTRIBUTOR force to be contributor, so we deposit into the garden
+      await garden.connect(signer1).deposit(ethers.utils.parseEther('1'), 1, signer1.getAddress(), false, {
+        value: ethers.utils.parseEther('1'),
+        gasPrice: 0,
+      });
+      await strategyContract.connect(signer1).sweep(DAI.address);
+      const userBalanceAfterSweep = await ethers.provider.getBalance(signer1.address);
+      await garden
+        .connect(signer1)
+        .withdraw(await garden.balanceOf(signer1.address), 1, signer1.address, false, strategyContract.address, {
+          gasPrice: 0,
+        });
+      const userBalanceAfterSweepAndWithdraw = await ethers.provider.getBalance(signer1.address);
+
+      if (userBalanceAfterSweepAndWithdraw.lt(userBalanceBefore)) {
+        const loss = userBalanceBefore.sub(userBalanceAfterSweepAndWithdraw);
+      } else {
+        const profit = userBalanceAfterSweepAndWithdraw.sub(userBalanceBefore);
+      }
+      // We check that we now get funds back after recovering them from the strategy with 2% accuracy
+      expect(userBalanceAfterSweepAndWithdraw).to.be.closeTo(userBalanceBefore, userBalanceBefore.div(50));
     });
   });
 });

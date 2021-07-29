@@ -272,7 +272,7 @@ describe('BABL Rewards Distributor', function () {
 
       await executeStrategy(long, ONE_ETH);
 
-      await expect(rewardsDistributor.getStrategyRewards(long.address)).to.be.revertedWith('revert BAB#049');
+      await expect(rewardsDistributor.getStrategyRewards(long.address)).to.be.revertedWith('BAB#049');
     });
 
     it('should calculate correct BABL in case of 1 strategy with negative profit and total duration of 1 quarter', async function () {
@@ -2001,7 +2001,7 @@ describe('BABL Rewards Distributor', function () {
         garden1
           .connect(signer1)
           .claimReturns([long1.address, long2.address, long3.address, long4.address, long5.address]),
-      ).to.be.revertedWith('revert BAB#073');
+      ).to.be.revertedWith('BAB#073');
     });
     it('A user cannot get rewards from strategies of 2 different gardens at the same time avoiding malicious bypassing of the claimedAt control (e.g. using claimedAtfrom different gardens over the same strategies)', async function () {
       // Mining program has to be enabled before the strategy starts its execution
@@ -2047,7 +2047,7 @@ describe('BABL Rewards Distributor', function () {
           long4.address,
           long5.address,
         ]),
-      ).to.be.revertedWith('revert BAB#073');
+      ).to.be.revertedWith('BAB#073');
     });
   });
 });
