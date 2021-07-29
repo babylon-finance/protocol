@@ -302,8 +302,10 @@ contract BabylonViewer {
     }
 
     function getPriceAndLiquidity(address _tokenIn, address _tokenOut) public view returns (uint256, uint256) {
-      return (IPriceOracle(controller.priceOracle()).getPrice(_tokenIn, _tokenOut),
-              _getUniswapPoolWithHighestLiquidity(_tokenIn, _tokenOut));
+        return (
+            IPriceOracle(controller.priceOracle()).getPrice(_tokenIn, _tokenOut),
+            _getUniswapPoolWithHighestLiquidity(_tokenIn, _tokenOut)
+        );
     }
 
     /* ============ Private Functions ============ */
