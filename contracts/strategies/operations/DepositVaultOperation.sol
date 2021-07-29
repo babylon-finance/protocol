@@ -94,7 +94,7 @@ contract DepositVaultOperation is Operation {
     {
         address yieldVault = BytesLib.decodeOpDataAddress(_data);
         address vaultAsset = IPassiveIntegration(_integration).getInvestmentAsset(yieldVault);
-        console.log('_asset',_asset);
+        console.log('_asset', _asset);
         console.log('yieldVault', yieldVault);
         console.log('vaultAsset', vaultAsset);
         if (vaultAsset != _asset) {

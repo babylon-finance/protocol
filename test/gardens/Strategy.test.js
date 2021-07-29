@@ -803,7 +803,7 @@ describe('Strategy', function () {
       expect(userBalanceAfterSweepAndWithdraw).to.be.closeTo(userBalanceBefore, userBalanceBefore.div(50));
     });
     it('trying to block funds in a strategy using harvest', async function () {
-      console.log("Trying create strategy");
+      console.log('Trying create strategy');
       const strategyContract = await createStrategy(
         'lpStack',
         'vote',
@@ -813,15 +813,15 @@ describe('Strategy', function () {
         false,
         [ethSushiPair.address, 0, ethSushiVault.address, 0],
       );
-      console.log("Strategy created");
+      console.log('Strategy created');
       await executeStrategy(strategyContract);
-      console.log("Strategy executed");
+      console.log('Strategy executed');
       expect(await ethSushiVault.balanceOf(strategyContract.address)).to.be.gt(0);
 
-      console.log("Finalization always reverts because depositVaultOperation tries swap lp tokens to garden tokens");
+      console.log('Finalization always reverts because depositVaultOperation tries swap lp tokens to garden tokens');
       //await strategyContract.connect(signer1).sweep(ethSushiPair.address);
       await finalizeStrategy(strategyContract, 0);
-      console.log("Strategy finalized");
+      console.log('Strategy finalized');
       expect(await ethSushiPair.balanceOf(strategyContract.address)).to.equal(0);
     });
     it.only(`trying to block a strategy having more balance than debt for repay`, async function () {
