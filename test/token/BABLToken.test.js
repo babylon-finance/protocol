@@ -72,7 +72,7 @@ describe('BABLToken contract', function () {
     it('can"t transfer to zero address', async function () {
       const value = ethers.utils.parseEther('260000');
       await expect(bablToken.connect(owner).transfer(ADDRESS_ZERO, value)).to.be.revertedWith(
-        'revert TimeLockedToken:: _transfer: cannot transfer to the zero address',
+        'TimeLockedToken:: _transfer: cannot transfer to the zero address',
       );
     });
 
