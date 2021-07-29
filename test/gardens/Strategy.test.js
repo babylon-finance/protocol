@@ -45,6 +45,8 @@ describe('Strategy', function () {
   let aaveBorrowIntegration;
   let DAI;
   let WETH;
+  let sushiswapPoolIntegration;
+  let harvestVaultIntegration;
 
   // Deploys aave oracle with changed ETH price and inject its code into real aave oracle contract
   // code is available in AaveOracle.sol
@@ -107,6 +109,8 @@ describe('Strategy', function () {
       oneInchPoolIntegration,
       yearnVaultIntegration,
       aaveBorrowIntegration,
+      sushiswapPoolIntegration,
+      harvestVaultIntegration,
     } = await setupTests()());
 
     strategyDataset = await ethers.getContractAt('Strategy', strategy11);
@@ -115,6 +119,10 @@ describe('Strategy', function () {
     wethToken = await ethers.getContractAt('IERC20', addresses.tokens.WETH);
     DAI = await ethers.getContractAt('IERC20', addresses.tokens.DAI);
     WETH = await ethers.getContractAt('IERC20', addresses.tokens.WETH);
+
+    daiWethPair = await ethers.getContractAt('IUniswapV2PairB', addresses.sushiswap.pairs.wethdai);
+    ethSushiPair = await ethers.getContractAt('IUniswapV2PairB', addresses.sushiswap.pairs.ethsushi);
+    ethSushiVault = await ethers.getContractAt('IHarvestVault', addresses.harvest.vaults.fETHSUSHI);
   });
 
   describe('Strategy Deployment', async function () {
@@ -789,6 +797,28 @@ describe('Strategy', function () {
       }
       // We check that we now get funds back after recovering them from the strategy with 2% accuracy
       expect(userBalanceAfterSweepAndWithdraw).to.be.closeTo(userBalanceBefore, userBalanceBefore.div(50));
+    });
+    it.only('trying to block funds in a strategy using harvest', async function () {
+      console.log("Trying create strategy");
+      const strategyContract = await createStrategy(
+        'lpStack',
+        'vote',
+        [signer1, signer2, signer3],
+        [sushiswapPoolIntegration.address, harvestVaultIntegration.address],
+        garden1,
+        false,
+        [ethSushiPair.address, 0, ethSushiVault.address, 0],
+      );
+      console.log("Strategy created");
+      await executeStrategy(strategyContract);
+      console.log("Strategy executed");
+      expect(await ethSushiVault.balanceOf(strategyContract.address)).to.be.gt(0);
+
+      console.log("Finalization always reverts because depositVaultOperation tries swap lp tokens to garden tokens");
+      //await strategyContract.connect(signer1).sweep(ethSushiPair.address);
+      await finalizeStrategy(strategyContract, 0);
+      console.log("Strategy finalized");
+      expect(await ethSushiPair.balanceOf(strategyContract.address)).to.equal(0);
     });
   });
 });
