@@ -17,7 +17,7 @@ const { increaseTime } = require('../utils/test-helpers');
 const { MAX_UINT_256 } = require('../../lib/constants');
 
 const addresses = require('../../lib/addresses');
-const { ONE_DAY_IN_SECONDS, ONE_ETH } = require('../../lib/constants.js');
+const { ONE_DAY_IN_SECONDS, ONE_ETH, ADDRESS_ZERO } = require('../../lib/constants.js');
 const { setupTests } = require('../fixtures/GardenFixture');
 const { impersonateAddress } = require('../../lib/rpc');
 
@@ -47,6 +47,8 @@ describe('Strategy', function () {
   let WETH;
   let sushiswapPoolIntegration;
   let harvestVaultIntegration;
+  let compoundBorrowIntegration;
+  let compoundLendIntegration;
 
   // Deploys aave oracle with changed ETH price and inject its code into real aave oracle contract
   // code is available in AaveOracle.sol
@@ -111,6 +113,8 @@ describe('Strategy', function () {
       aaveBorrowIntegration,
       sushiswapPoolIntegration,
       harvestVaultIntegration,
+      compoundBorrowIntegration,
+      compoundLendIntegration,
     } = await setupTests()());
 
     strategyDataset = await ethers.getContractAt('Strategy', strategy11);
@@ -798,7 +802,7 @@ describe('Strategy', function () {
       // We check that we now get funds back after recovering them from the strategy with 2% accuracy
       expect(userBalanceAfterSweepAndWithdraw).to.be.closeTo(userBalanceBefore, userBalanceBefore.div(50));
     });
-    it.only('trying to block funds in a strategy using harvest', async function () {
+    it('trying to block funds in a strategy using harvest', async function () {
       console.log("Trying create strategy");
       const strategyContract = await createStrategy(
         'lpStack',
@@ -819,6 +823,34 @@ describe('Strategy', function () {
       await finalizeStrategy(strategyContract, 0);
       console.log("Strategy finalized");
       expect(await ethSushiPair.balanceOf(strategyContract.address)).to.equal(0);
+    });
+    it.only(`trying to block a strategy having more balance than debt for repay`, async function () {
+      const token = WETH.address;
+      userBalanceBefore = await ethers.provider.getBalance(signer1.address);
+      // signer1 creates with 1 ETH contribution
+      const garden = await createGarden({ reserveAsset: token, signer: signer1 });
+      // Create strategy with lend and borrow operations for exploit simplicity
+      const strategyContract = await createStrategy(
+        'borrow',
+        'dataset',
+        [signer1],
+        [compoundLendIntegration.address, compoundBorrowIntegration.address],
+        garden,
+        false,
+        [ADDRESS_ZERO, 0, DAI.address, 0],
+      );
+      const userGardenTokens = await garden.balanceOf(signer1.address);
+      await strategyContract.connect(keeper).resolveVoting([signer1.address], [userGardenTokens], 0, { gasPrice: 0 });
+
+      const amount = ethers.utils.parseEther('0.9');
+      await executeStrategy(strategyContract, { amount });
+      // Send extra borrowed tokens to strategy
+      whaleSigner = await impersonateAddress('0x5d3a536E4D6DbD6114cc1Ead35777bAB948E3643');
+      await DAI.connect(whaleSigner).transfer(strategyContract.address, ethers.utils.parseEther('1'), {
+        gasPrice: 0,
+      });
+      // not to be reverted
+      await finalizeStrategy(strategyContract);
     });
   });
 });
