@@ -94,9 +94,6 @@ contract DepositVaultOperation is Operation {
     {
         address yieldVault = BytesLib.decodeOpDataAddress(_data);
         address vaultAsset = IPassiveIntegration(_integration).getInvestmentAsset(yieldVault);
-        console.log('_asset', _asset);
-        console.log('yieldVault', yieldVault);
-        console.log('vaultAsset', vaultAsset);
         if (vaultAsset != _asset) {
             // get ETH if it's needed
             if (vaultAsset == address(0)) {
@@ -105,10 +102,6 @@ contract DepositVaultOperation is Operation {
                 }
                 IStrategy(msg.sender).handleWeth(false, IERC20(WETH).balanceOf(msg.sender));
             } else {
-                console.log('EXECUTE OPERATION BEFORE TRADE');
-                console.log('asset', _asset);
-                console.log('capital', _capital);
-                console.log('vault asset', vaultAsset);
                 IStrategy(msg.sender).trade(_asset, _capital, vaultAsset);
             }
         }
@@ -169,9 +162,6 @@ contract DepositVaultOperation is Operation {
                 vaultAsset = WETH;
             }
             if (vaultAsset != _garden.reserveAsset()) {
-                console.log('TRYING TO TRADE ON EXIT');
-                console.log('VAULT ASSET', vaultAsset);
-                console.log('RESERVE ASSET', _garden.reserveAsset());
                 IStrategy(msg.sender).trade(
                     vaultAsset,
                     IERC20(vaultAsset).balanceOf(msg.sender),
