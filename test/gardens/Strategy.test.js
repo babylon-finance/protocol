@@ -96,7 +96,7 @@ describe('Strategy', function () {
 
     it('other member should NOT be able to change the duration of an strategy', async function () {
       await expect(strategyDataset.connect(signer3).changeStrategyDuration(ONE_DAY_IN_SECONDS * 3)).to.be.revertedWith(
-        'revert BAB#032',
+        'BAB#032',
       );
     });
   });
@@ -196,7 +196,7 @@ describe('Strategy', function () {
           .resolveVoting([signer1.getAddress(), signer2.getAddress()], [signer1Balance, signer2Balance], 42, {
             gasPrice: 0,
           }),
-      ).to.be.revertedWith(/revert BAB#043/i);
+      ).to.be.revertedWith(/BAB#043/i);
     });
 
     it("can't push voting results twice", async function () {
@@ -215,7 +215,7 @@ describe('Strategy', function () {
           .resolveVoting([signer1.getAddress(), signer2.getAddress()], [signer1Balance, signer2Balance], 42, {
             gasPrice: 0,
           }),
-      ).to.be.revertedWith(/revert BAB#042/i);
+      ).to.be.revertedWith(/BAB#042/i);
     });
   });
 
@@ -355,7 +355,7 @@ describe('Strategy', function () {
         strategyContract.connect(keeper).executeStrategy(ONE_ETH, ONE_ETH.mul(100), {
           gasPrice: 0,
         }),
-      ).to.be.revertedWith(/revert BAB#019/i);
+      ).to.be.revertedWith(/BAB#019/i);
     });
   });
 

@@ -80,7 +80,12 @@ abstract contract BorrowIntegration is BaseIntegration, ReentrancyGuard, IBorrow
 
     /* ============ External Functions ============ */
     // Governance function
-    function updateMaxCollateralFactor(uint256 _newMaxCollateralFactor) external override {
+    function updateMaxCollateralFactor(uint256 _newMaxCollateralFactor)
+        external
+        override
+        nonReentrant
+        onlySystemContract
+    {
         maxCollateralFactor = _newMaxCollateralFactor;
     }
 
