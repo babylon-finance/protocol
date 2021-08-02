@@ -51,19 +51,11 @@ describe('Hermes Garden Support Tests', function () {
       babController,
       signer1,
       garden1,
-      garden2,
-      daiGarden,
-      treasury,
       strategy11,
       strategy21,
       signer2,
       signer3,
-      aaveLendIntegration,
       uniswapV3TradeIntegration,
-      uniswapPoolIntegration,
-      balancerIntegration,
-      oneInchPoolIntegration,
-      yearnVaultIntegration,
     } = await setupTests()());
 
     strategyDataset = await ethers.getContractAt('Strategy', strategy11);
@@ -72,7 +64,7 @@ describe('Hermes Garden Support Tests', function () {
     wethToken = await ethers.getContractAt('IERC20', addresses.tokens.WETH);
   });
 
-  describe.only('Strategies support test', async function () {
+  describe('Strategies support test', async function () {
     [
       { token: addresses.tokens.PILOT, name: 'PILOT' },
       { token: addresses.tokens.PERP, name: 'PERP' },
