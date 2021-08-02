@@ -123,7 +123,7 @@ contract BabController is OwnableUpgradeable, IBabController {
     address public override treasury;
 
     // Strategy cooldown period
-    uint256 public constant MIN_COOLDOWN_PERIOD = 6 hours;
+    uint256 public constant MIN_COOLDOWN_PERIOD = 1 hours;
     uint256 public constant MAX_COOLDOWN_PERIOD = 7 days;
 
     // Strategy Profit Sharing
