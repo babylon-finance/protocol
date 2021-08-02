@@ -72,30 +72,33 @@ describe('Hermes Garden Support Tests', function () {
     wethToken = await ethers.getContractAt('IERC20', addresses.tokens.WETH);
   });
 
-  describe('Strategies support test', async function () {
-    it.only('should correctly execute a long strategy in PILOT asset on 20210731 from Hermes garden', async function () {
-      let token = addresses.tokens.DAI;
-      await transferFunds(token);
-      const garden = await createGarden({ reserveAsset: token });
-      const gardenReserveAsset = await ethers.getContractAt('IERC20', token);
-      await depositFunds(token, garden);
+  describe.only('Strategies support test', async function () {
+    [
+      { token: addresses.tokens.PILOT, name: 'PILOT' },
+      { token: addresses.tokens.PERP, name: 'PERP' },
+    ].forEach(({ token, name }) => {
+      it(`should correctly execute a long strategy in ${name} asset on 20210731 from Hermes garden`, async function () {
+        let DAI = addresses.tokens.DAI;
+        await transferFunds(DAI);
+        const garden = await createGarden({ reserveAsset: DAI });
+        const gardenReserveAsset = await ethers.getContractAt('IERC20', DAI);
+        await depositFunds(DAI, garden);
 
-      let asset = '0x37c997b35c619c21323f3518b9357914e8b99525'; // PILOT
+        const long1 = await getStrategy({
+          kind: 'buy',
+          state: 'vote',
+          garden: garden1,
+          integration: uniswapV3TradeIntegration.address,
+          specificParams: [token, 0],
+        });
 
-      const long1 = await getStrategy({
-        kind: 'buy',
-        state: 'vote',
-        garden: garden1,
-        integration: uniswapV3TradeIntegration.address,
-        specificParams: [asset, 0],
+        await executeStrategy(long1, ONE_ETH);
+
+        increaseTime(ONE_DAY_IN_SECONDS * 30);
+
+        //await injectFakeProfits(long1, ONE_ETH.mul(200));
+        await finalizeStrategy(long1);
       });
-
-      await executeStrategy(long1, ONE_ETH);
-
-      increaseTime(ONE_DAY_IN_SECONDS * 30);
-
-      //await injectFakeProfits(long1, ONE_ETH.mul(200));
-      await finalizeStrategy(long1);
     });
   });
 });

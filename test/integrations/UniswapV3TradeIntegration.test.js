@@ -37,6 +37,8 @@ describe('UniswapV3TradeIntegration', function () {
         { asset: addresses.tokens.USDC, symbol: 'USDC' },
         { asset: addresses.tokens.WBTC, symbol: 'WBTC' },
         { asset: addresses.tokens.COMP, symbol: 'COMP' },
+        { asset: addresses.tokens.PILOT, symbol: 'PILOT' }, // Price not found at block 12821000
+        { asset: addresses.tokens.PERP, symbol: 'PERP' },
       ].forEach(({ asset, symbol }) => {
         it(`exchange ${name}->${symbol} in ${name} garden`, async function () {
           if (token === asset) return;
@@ -69,7 +71,7 @@ describe('UniswapV3TradeIntegration', function () {
             .div(eth())
             .div(assetDecimalsDelta);
 
-          expect(expectedBalance).to.be.closeTo(assetBalance, assetBalance.div(40)); // 2.5% slippage
+          expect(expectedBalance).to.be.closeTo(assetBalance, assetBalance.div(25)); // 4% slippage needed for moon tokens
 
           await finalizeStrategy(strategyContract, 0);
 

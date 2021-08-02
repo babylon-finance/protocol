@@ -63,9 +63,9 @@ module.exports = {
       allowUnlimitedContractSize: true,
       forking: {
         url: `https://eth-mainnet.alchemyapi.io/v2/${ALCHEMY_KEY}`,
-        //blockNumber: 12821000, // original
-        //blockNumber: 12935507, // Testing PILOT at Hermes works
-        blockNumber: 12934390, // Testing PILOT at Hermes fails
+        // blockNumber: 12821000, // original -> PILOT Price not found, PERP works btw
+        blockNumber: 12935508, // Testing PILOT at Hermes works
+        // blockNumber: 12934390, // Testing PILOT at Hermes fails
       },
       saveDeployments: true,
     },
