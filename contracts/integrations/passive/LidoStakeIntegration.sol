@@ -29,7 +29,7 @@ import {IStETH} from '../../interfaces/external/lido/IStETH.sol';
 import {IWstETH} from '../../interfaces/external/lido/IWstETH.sol';
 
 /**
- * @title LidoStakeIntegration 
+ * @title LidoStakeIntegration
  * @author Babylon Finance Protocol
  *
  * Lido Integration
