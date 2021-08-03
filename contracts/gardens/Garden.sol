@@ -637,7 +637,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
 
         if (reserveAsset == WETH) {
             // 1 ETH
-            _require(_fee <= (1e6 * 1e3 gwei), Errors.FEE_TOO_HIGH);
+            _require(_fee <= (1e6 * 1e12), Errors.FEE_TOO_HIGH);
         } else if (reserveAsset == DAI) {
             // 2000 DAI
             _require(_fee <= 2000 * 1e18, Errors.FEE_TOO_HIGH);
@@ -687,6 +687,17 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         _require(msg.sender == controller, Errors.ONLY_CONTROLLER);
         _require(active != _newValue, Errors.ONLY_INACTIVE);
         active = _newValue;
+    }
+
+    /**
+     * @notice
+     *   Sets garden's cooldown to min value
+     * @dev
+     *   TODO: Should be removed on the next release
+     */
+    function setCooldown() external {
+        _require(msg.sender == IBabController(controller).owner(), Errors.ONLY_STRATEGIST);
+        strategyCooldownPeriod = 60 seconds;
     }
 
     /* ============ Strategy Functions ============ */

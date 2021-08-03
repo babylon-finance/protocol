@@ -1243,6 +1243,21 @@ describe('Garden', function () {
     // TODO: Test mintNFT is respected
   });
 
+  describe('setCooldown', async function () {
+    it('can set cooldown', async function () {
+      const garden = await createGarden();
+      await garden.connect(owner).setCooldown();
+
+      expect(await garden.strategyCooldownPeriod()).to.eq(from(60));
+    });
+
+    it('only owner can set cooldown', async function () {
+      const garden = await createGarden();
+
+      await expect(garden.connect(signer1).setCooldown()).to.revertedWith('BAB#032');
+    });
+  });
+
   describe('deposit', async function () {
     it('cannot make a deposit when the garden is disabled', async function () {
       await expect(babController.connect(owner).disableGarden(garden1.address)).to.not.be.reverted;
@@ -1617,7 +1632,7 @@ describe('Garden', function () {
       ).to.be.reverted;
     });
   });
-  describe('Avg share price per user', async function () {
+  describe('avg share price per user', async function () {
     [
       { token: addresses.tokens.WETH, name: 'WETH' },
       { token: addresses.tokens.DAI, name: 'DAI' },
@@ -1633,8 +1648,8 @@ describe('Garden', function () {
         const user2Balance = await garden.balanceOf(signer3.address);
         const user1Deposits = await garden.getContributor(signer1.address);
         const user2Deposits = await garden.getContributor(signer3.address);
-        const user1Avg = user1Balance > 0 ? user1Deposits[5].mul(ONE_ETH).div(user1Balance) : 0;
-        const user2Avg = user2Balance > 0 ? user2Deposits[5].mul(ONE_ETH).div(user2Balance) : 0;
+        const user1Avg = user1Balance > 0 ? user1Deposits[5].mul(eth()).div(user1Balance) : 0;
+        const user2Avg = user2Balance > 0 ? user2Deposits[5].mul(eth()).div(user2Balance) : 0;
 
         expect(
           await babViewer.connect(signer1).getGardenUserAvgPricePerShare(garden.address, signer1.address),
