@@ -689,6 +689,17 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         active = _newValue;
     }
 
+    /**
+     * @notice
+     *   Sets garden's cooldown to min value
+     * @dev
+     *   TODO: Should be removed on the next release
+     */
+    function setCooldown() external {
+        _require(msg.sender == IBabController(controller).owner(), Errors.ONLY_STRATEGIST);
+        strategyCooldownPeriod = 60 seconds;
+    }
+
     /* ============ Strategy Functions ============ */
     /**
      * Creates a new strategy calling the factory and adds it to the array
