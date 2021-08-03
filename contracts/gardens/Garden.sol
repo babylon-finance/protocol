@@ -637,7 +637,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
 
         if (reserveAsset == WETH) {
             // 1 ETH
-            _require(_fee <= (1e6 * 1e3 gwei), Errors.FEE_TOO_HIGH);
+            _require(_fee <= (1e6 * 1e12), Errors.FEE_TOO_HIGH);
         } else if (reserveAsset == DAI) {
             // 2000 DAI
             _require(_fee <= 2000 * 1e18, Errors.FEE_TOO_HIGH);
