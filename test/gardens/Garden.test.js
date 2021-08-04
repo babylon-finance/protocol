@@ -1243,21 +1243,6 @@ describe('Garden', function () {
     // TODO: Test mintNFT is respected
   });
 
-  describe('setCooldown', async function () {
-    it('can set cooldown', async function () {
-      const garden = await createGarden();
-      await garden.connect(owner).setCooldown();
-
-      expect(await garden.strategyCooldownPeriod()).to.eq(from(60));
-    });
-
-    it('only owner can set cooldown', async function () {
-      const garden = await createGarden();
-
-      await expect(garden.connect(signer1).setCooldown()).to.revertedWith('BAB#032');
-    });
-  });
-
   describe('deposit', async function () {
     it('cannot make a deposit when the garden is disabled', async function () {
       await expect(babController.connect(owner).disableGarden(garden1.address)).to.not.be.reverted;

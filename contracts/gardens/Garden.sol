@@ -92,6 +92,10 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
     address private constant USDC = 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48;
     address private constant WBTC = 0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599;
 
+    // Strategy cooldown period
+    uint256 public constant MIN_COOLDOWN_PERIOD = 60 seconds;
+    uint256 public constant MAX_COOLDOWN_PERIOD = 7 days;
+
     uint256 private constant EARLY_WITHDRAWAL_PENALTY = 25e15;
     uint256 private constant MAX_TOTAL_STRATEGIES = 20; // Max number of strategies
     uint256 private constant TEN_PERCENT = 1e17;
@@ -314,8 +318,8 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         );
         _require(_depositHardlock > 0, Errors.DEPOSIT_HARDLOCK);
         _require(
-            _strategyCooldownPeriod <= IBabController(controller).getMaxCooldownPeriod() &&
-                _strategyCooldownPeriod >= IBabController(controller).getMinCooldownPeriod(),
+            _strategyCooldownPeriod <= MAX_COOLDOWN_PERIOD &&
+                _strategyCooldownPeriod >= MIN_COOLDOWN_PERIOD,
             Errors.NOT_IN_RANGE
         );
         _require(_minVotesQuorum >= TEN_PERCENT && _minVotesQuorum <= TEN_PERCENT.mul(5), Errors.VALUE_TOO_LOW);
@@ -687,17 +691,6 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         _require(msg.sender == controller, Errors.ONLY_CONTROLLER);
         _require(active != _newValue, Errors.ONLY_INACTIVE);
         active = _newValue;
-    }
-
-    /**
-     * @notice
-     *   Sets garden's cooldown to min value
-     * @dev
-     *   TODO: Should be removed on the next release
-     */
-    function setCooldown() external {
-        _require(msg.sender == IBabController(controller).owner(), Errors.ONLY_STRATEGIST);
-        strategyCooldownPeriod = 60 seconds;
     }
 
     /* ============ Strategy Functions ============ */

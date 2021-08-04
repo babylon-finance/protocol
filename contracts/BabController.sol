@@ -122,10 +122,6 @@ contract BabController is OwnableUpgradeable, IBabController {
     // Recipient of protocol fees
     address public override treasury;
 
-    // Strategy cooldown period
-    uint256 public constant MIN_COOLDOWN_PERIOD = 60 seconds;
-    uint256 public constant MAX_COOLDOWN_PERIOD = 7 days;
-
     // Strategy Profit Sharing
     uint256 public strategistProfitPercentage; // (0.01% = 1e14, 1% = 1e16)
     uint256 public stewardsProfitPercentage; // (0.01% = 1e14, 1% = 1e16)
@@ -644,14 +640,6 @@ contract BabController is OwnableUpgradeable, IBabController {
 
     function getReserveAssets() external view returns (address[] memory) {
         return reserveAssets;
-    }
-
-    function getMinCooldownPeriod() external pure override returns (uint256) {
-        return MIN_COOLDOWN_PERIOD;
-    }
-
-    function getMaxCooldownPeriod() external pure override returns (uint256) {
-        return MAX_COOLDOWN_PERIOD;
     }
 
     function isValidReserveAsset(address _reserveAsset) external view override returns (bool) {
