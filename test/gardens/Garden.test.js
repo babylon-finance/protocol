@@ -1196,7 +1196,7 @@ describe('Garden', function () {
     });
   });
 
-  describe('depositBySig', async function () {
+  describe.only('depositBySig', async function () {
     it('can deposit', async function () {
       const amountIn = from(1000 * 1e6);
       const minAmountOut = eth(1000);
