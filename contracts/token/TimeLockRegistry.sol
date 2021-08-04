@@ -178,6 +178,10 @@ contract TimeLockRegistry is Ownable {
             'TimeLockRegistry::register:Distribution for this address is already registered'
         );
         require(vestingStartingDate >= 1614553200, 'Cannot register earlier than March 2021'); // 1614553200 is UNIX TIME of 2021 March the 1st
+        require(
+            vestingStartingDate <= block.timestamp.add(30 days),
+            'Cannot register more than 30 days ahead in the future'
+        );
         require(totalTokens.add(distribution) <= IERC20(token).balanceOf(address(this)), 'Not enough tokens');
 
         totalTokens = totalTokens.add(distribution);

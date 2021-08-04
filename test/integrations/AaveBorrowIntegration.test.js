@@ -143,7 +143,7 @@ describe('AaveBorrowIntegrationTest', function () {
         await supplyBorrowStrategy(WETH, DAI, token);
       });
       it(`should fail trying to supply DAI and borrow DAI at Aave  in a ${name} Garden`, async function () {
-        await trySupplyBorrowStrategy(DAI, DAI, token, 'revert There is no collateral locked');
+        await trySupplyBorrowStrategy(DAI, DAI, token, 'There is no collateral locked');
       });
       it(`should fail trying to supply WETH and borrow WETH at Aave  in a ${name} Garden`, async function () {
         await trySupplyBorrowStrategy(WETH, WETH, token, 'There is no collateral locked');

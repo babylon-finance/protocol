@@ -122,10 +122,6 @@ contract BabController is OwnableUpgradeable, IBabController {
     // Recipient of protocol fees
     address public override treasury;
 
-    // Strategy cooldown period
-    uint256 public constant MIN_COOLDOWN_PERIOD = 6 hours;
-    uint256 public constant MAX_COOLDOWN_PERIOD = 7 days;
-
     // Strategy Profit Sharing
     uint256 public strategistProfitPercentage; // (0.01% = 1e14, 1% = 1e16)
     uint256 public stewardsProfitPercentage; // (0.01% = 1e14, 1% = 1e16)
@@ -646,14 +642,6 @@ contract BabController is OwnableUpgradeable, IBabController {
         return reserveAssets;
     }
 
-    function getMinCooldownPeriod() external pure override returns (uint256) {
-        return MIN_COOLDOWN_PERIOD;
-    }
-
-    function getMaxCooldownPeriod() external pure override returns (uint256) {
-        return MAX_COOLDOWN_PERIOD;
-    }
-
     function isValidReserveAsset(address _reserveAsset) external view override returns (bool) {
         return validReserveAsset[_reserveAsset];
     }
@@ -724,7 +712,9 @@ contract BabController is OwnableUpgradeable, IBabController {
             _contractAddress == address(this) ||
             _isOperation(_contractAddress) ||
             (isGarden[address(IStrategy(_contractAddress).garden())] &&
-                IGarden(IStrategy(_contractAddress).garden()).strategyMapping(_contractAddress)));
+                IGarden(IStrategy(_contractAddress).garden()).strategyMapping(_contractAddress)) ||
+            (isGarden[address(IStrategy(_contractAddress).garden())] &&
+                IGarden(IStrategy(_contractAddress).garden()).isGardenStrategy(_contractAddress)));
     }
 
     /* ============ Internal Only Function ============ */
@@ -746,4 +736,4 @@ contract BabController is OwnableUpgradeable, IBabController {
     }
 }
 
-contract BabControllerV5 is BabController {}
+contract BabControllerV6 is BabController {}

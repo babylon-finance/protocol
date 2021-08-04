@@ -91,7 +91,7 @@ describe('VoteToken contract', function () {
       await bablToken.connect(owner).delegate(owner.address); // Own delegation - does not create checkpoint
       const block = await ethers.provider.getBlock();
       await expect(bablToken.getPriorVotes(owner.address, block.number)).to.be.revertedWith(
-        'revert BABLToken::getPriorVotes: not yet determined',
+        'BABLToken::getPriorVotes: not yet determined',
       );
     });
     it('Should get priorVoting from a past checkpoint', async function () {

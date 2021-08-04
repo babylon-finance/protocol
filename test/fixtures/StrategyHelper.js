@@ -123,6 +123,29 @@ async function createStrategyWithLendAndBorrowOperation(
   return strategy;
 }
 
+async function createStrategyWithAddAndDepositOperation(
+  garden,
+  signer,
+  params = DEFAULT_STRATEGY_PARAMS,
+  integrations,
+  data,
+) {
+  if (integrations.length !== 2 || data.length / 2 !== 2) {
+    throw new Error('Need two integrations and data to create lend & borrow');
+  }
+  const passedAddandDepositParams = [[1, 2], integrations];
+  const AbiCoder = ethers.utils.AbiCoder;
+  const abiCoder = new AbiCoder();
+  const encoded = abiCoder.encode(['address', 'uint256', 'address', 'uint256'], [data[0], data[1], data[2], data[3]]);
+  await garden.connect(signer).addStrategy(...STRAT_NAME_PARAMS, params, ...passedAddandDepositParams, encoded);
+  const strategies = await garden.getStrategies();
+  const lastStrategyAddr = strategies[strategies.length - 1];
+
+  const strategy = await ethers.getContractAt('Strategy', lastStrategyAddr);
+
+  return strategy;
+}
+
 async function createStrategyWithManyOperations(
   garden,
   signer,
@@ -395,6 +418,15 @@ async function createStrategy(kind, state, signers, integrations, garden, params
       break;
     case 'borrow':
       strategy = await createStrategyWithLendAndBorrowOperation(
+        garden,
+        signers[0],
+        params,
+        integrations,
+        specificParams,
+      );
+      break;
+    case 'lpStack':
+      strategy = await createStrategyWithAddAndDepositOperation(
         garden,
         signers[0],
         params,

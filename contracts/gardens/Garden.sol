@@ -92,6 +92,10 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
     address private constant USDC = 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48;
     address private constant WBTC = 0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599;
 
+    // Strategy cooldown period
+    uint256 public constant MIN_COOLDOWN_PERIOD = 60 seconds;
+    uint256 public constant MAX_COOLDOWN_PERIOD = 7 days;
+
     uint256 private constant EARLY_WITHDRAWAL_PENALTY = 25e15;
     uint256 private constant MAX_TOTAL_STRATEGIES = 20; // Max number of strategies
     uint256 private constant TEN_PERCENT = 1e17;
@@ -314,8 +318,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         );
         _require(_depositHardlock > 0, Errors.DEPOSIT_HARDLOCK);
         _require(
-            _strategyCooldownPeriod <= IBabController(controller).getMaxCooldownPeriod() &&
-                _strategyCooldownPeriod >= IBabController(controller).getMinCooldownPeriod(),
+            _strategyCooldownPeriod <= MAX_COOLDOWN_PERIOD && _strategyCooldownPeriod >= MIN_COOLDOWN_PERIOD,
             Errors.NOT_IN_RANGE
         );
         _require(_minVotesQuorum >= TEN_PERCENT && _minVotesQuorum <= TEN_PERCENT.mul(5), Errors.VALUE_TOO_LOW);
@@ -637,7 +640,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
 
         if (reserveAsset == WETH) {
             // 1 ETH
-            _require(_fee <= (1e6 * 1e3 gwei), Errors.FEE_TOO_HIGH);
+            _require(_fee <= (1e6 * 1e12), Errors.FEE_TOO_HIGH);
         } else if (reserveAsset == DAI) {
             // 2000 DAI
             _require(_fee <= 2000 * 1e18, Errors.FEE_TOO_HIGH);
@@ -1010,4 +1013,4 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
     receive() external payable {}
 }
 
-contract GardenV4 is Garden {}
+contract GardenV5 is Garden {}
