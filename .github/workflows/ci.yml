@@ -64,6 +64,14 @@ jobs:
       - name: Install dependencies
         run: yarn --prefer-offline
 
+      - uses: actions/cache@v2
+        id: hardhat-cache
+        with:
+          path: ./cache
+          key: ${{ runner.os }}-hardhat-${{ hashFiles('hardhat.config.js') }}
+          restore-keys: |
+            ${{ runner.os }}-hardhat-
+
       - name: Run tests
         env:
           ALCHEMY_KEY: ${{ secrets.ALCHEMY_KEY}}
