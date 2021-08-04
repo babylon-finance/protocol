@@ -12,74 +12,168 @@
     SPDX-License-Identifier: Apache License, Version 2.0
 */
 
-pragma solidity 0.7.6;
-pragma abicoder v2;
+pragma solidity ^0.8.0;
 
-import { Governor } from './Governor.sol';
-import { IGovernor } from '../interfaces/IGovernor.sol';
-import { IVoteToken } from '../interfaces/IVoteToken.sol';
+import {GovernorCompatibilityBravo} from './GovernorCompatibilityBravo.sol';
+import {GovernorTimelockControl} from './GovernorTimelockControl.sol';
+import {TimelockController} from './TimelockController.sol';
+import {GovernorVotesComp } from './GovernorVotesComp.sol';
+import {Governor} from './Governor.sol';
+import "@openzeppelin/contracts/utils/math/SafeCast.sol";
+import "@openzeppelin/contracts/access/AccessControl.sol";
+import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
+import "@openzeppelin/contracts/utils/cryptography/draft-EIP712.sol";
+import "@openzeppelin/contracts/utils/introspection/ERC165.sol";
+import "@openzeppelin/contracts/utils/introspection/IERC165.sol";
+import "@openzeppelin/contracts/utils/Context.sol";
+import "@openzeppelin/contracts/utils/Counters.sol";
+import "@openzeppelin/contracts/utils/Strings.sol";
+import {IGovernorTimelock} from '../interfaces/IGovernorTimelock.sol';
+import {IGovernorCompatibilityBravo} from '../interfaces/IGovernorCompatibilityBravo.sol';
 
-contract GovernorBabylon is IGovernor, Governor {
-    
-    IVoteToken public immutable token;
-    
+
+import "../lib/Address.sol";
+
+import {Timers} from '../lib/Timers.sol';
+import "@openzeppelin/contracts/token/ERC20/extensions/ERC20VotesComp.sol";
+import {IGovernor} from '../interfaces/IGovernor.sol';
+
+contract GovernorBabylon is GovernorCompatibilityBravo, GovernorTimelockControl, GovernorVotesComp {
+    using SafeCast for uint256;
+    using Timers for Timers.BlockNumber;
+   
+    struct ProposalTimelock {
+        Timers.Timestamp timer;
+    }
+
+    mapping(uint256 => ProposalTimelock) private _proposalTimelocks;
+    mapping(uint256 => bytes32) private _timelockIds;
+    mapping(uint256 => ProposalDetails) private _proposalDetails;
+
+    TimelockController private _timelock;
+
     /**
      * @dev Sets the value for {name} and {version}
      */
-    constructor(string memory _name, IVoteToken _token) Governor(_name) {
+    constructor(
+        string memory _name,
+        TimelockController _timeLockAddress,
+        ERC20VotesComp _token
+    ) Governor(_name) GovernorTimelockControl(_timeLockAddress) GovernorVotesComp(_token) {
         token = _token;
     }
-    
-    function COUNTING_MODE() public pure virtual override returns (string memory)  {
-        return COUNTING_MODE();
-    }
-    
-    function hasVoted(uint256 proposalId, address account) public view virtual override returns (bool) {
-        return hasVoted(proposalId, account);
-    }
-    
-    function _countVote(
-        uint256 proposalId,
-        address account,
-        uint8 support,
-        uint256 weight
-    ) internal virtual override {
-        _countVote(proposalId, account, support, weight);
-    }
-    
-    function _quorumReached(uint256 proposalId) internal view virtual override returns (bool) {
 
-        return
-            _quorumReached(proposalId);
+
+
+    /**
+     * @dev Public accessor to check the eta of a queued proposal
+     */
+    function proposalEta(uint256 proposalId)
+        public
+        view
+        virtual
+        override(GovernorTimelockControl, GovernorCompatibilityBravo)
+        returns (uint256)
+    {
+        return Timers.getDeadline(_proposalTimelocks[proposalId].timer);
     }
-    
-    function _voteSucceeded(uint256 proposalId) internal view virtual override returns (bool) {
-        return _voteSucceeded(proposalId);
+
+    /**
+     * @dev Overriden execute function that run the already queued proposal through the timelock.
+     */
+    function _execute(
+        uint256, /* proposalId */
+        address[] memory targets,
+        uint256[] memory values,
+        bytes[] memory calldatas,
+        bytes32 descriptionHash
+    ) internal virtual override(Governor, GovernorTimelockControl) {
+        _timelock.executeBatch{value: msg.value}(targets, values, calldatas, 0, descriptionHash);
     }
-    
-    function quorum(uint256 blockNumber) public view virtual override(IGovernor, Governor) returns (uint256){
-        
+
+    /**
+     * @dev Overriden version of the {Governor-_cancel} function to cancel the timelocked proposal if it as already
+     * been queued.
+     */
+    function _cancel(
+        address[] memory targets,
+        uint256[] memory values,
+        bytes[] memory calldatas,
+        bytes32 descriptionHash
+    ) internal virtual override(Governor,GovernorTimelockControl) returns (uint256) {
+        uint256 proposalId = super._cancel(targets, values, calldatas, descriptionHash);
+
+        if (_timelockIds[proposalId] != 0) {
+            _timelock.cancel(_timelockIds[proposalId]);
+            delete _timelockIds[proposalId];
+        }
+
+        return proposalId;
     }
-    
+
+    /**
+     * @dev See {IGovernorCompatibilityBravo-queue}.
+     */
+    function queue(uint256 proposalId) public virtual override(GovernorTimelockControl, GovernorCompatibilityBravo) {
+        ProposalDetails storage details = _proposalDetails[proposalId];
+        queue(
+            details.targets,
+            details.values,
+            _encodeCalldata(details.signatures, details.calldatas),
+            details.descriptionHash
+        );
+    }
      /**
-     * @dev See {IGovernor-votingDelay}
+     * @dev Address through which the governor executes action. In this case, the timelock.
      */
-    function votingDelay() public view virtual override(IGovernor, Governor) returns (uint256){
+    function _executor() internal view virtual override(Governor,GovernorTimelockControl) returns (address) {
+        return address(_timelock);
+    }
+
+    /// @notice The number of votes required in order for a voter to become a proposer
+    function proposalThreshold() public pure override returns (uint256) {
+        return 10_000e18;
+    } // 1% of BABL
+
+    /// @notice The delay before voting on a proposal may take place, once proposed
+    function votingDelay() public pure override(Governor,IGovernor) returns (uint256) {
+        return 1;
+    }
+
+    /// @notice The duration of voting on a proposal, in blocks
+    function votingPeriod() public pure override(Governor,IGovernor) returns (uint256) {
+        return 7 days;
     }
 
     /**
-     * @dev See {IGovernor-votingPeriod}
+     * @dev See {IGovernor-quorum}
      */
-    function votingPeriod() public view virtual override(IGovernor, Governor) returns (uint256){
-    }
-    
-    /**
-     * Read the voting weight from the token's built in snapshot mechanism (see {IGovernor-getVotes}).
-     */
-    function getVotes(address account, uint256 blockNumber) public view virtual override(IGovernor, Governor) returns (uint256) {
-        return token.getPriorVotes(account, blockNumber);
+    function quorum(uint256 blockNumber) public view virtual override(Governor,IGovernor) returns (uint256) {
+        return quorumVotes();
     }
 
+    /// @notice The number of votes in support of a proposal required in order for a quorum to be reached and for a vote to succeed
+    function quorumVotes() public pure override returns (uint256) {
+        return 40_000e18;
+    } // 4% of BABL
 
-   
+      /**
+     * @dev Encodes calldatas with optional function signature.
+     */
+    function _encodeCalldata(string[] memory signatures, bytes[] memory calldatas)
+        internal
+        pure
+        override
+        returns (bytes[] memory)
+    {
+        bytes[] memory fullcalldatas = new bytes[](calldatas.length);
+
+        for (uint256 i = 0; i < signatures.length; ++i) {
+            fullcalldatas[i] = bytes(signatures[i]).length == 0
+                ? calldatas[i]
+                : abi.encodePacked(bytes4(keccak256(bytes(signatures[i]))), calldatas[i]);
+        }
+
+        return fullcalldatas;
+    }
 }

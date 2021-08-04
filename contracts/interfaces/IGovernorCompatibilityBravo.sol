@@ -1,9 +1,8 @@
 // SPDX-License-Identifier: MIT
 
-pragma solidity 0.7.6;
+pragma solidity ^0.8.0;
 
-import './IGovernor.sol';
-pragma abicoder v2;
+import "./IGovernor.sol";
 
 /**
  * @dev Interface extension that adds missing functions to the {Governor} core to provide `GovernorBravo` compatibility.

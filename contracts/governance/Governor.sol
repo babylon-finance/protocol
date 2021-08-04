@@ -12,16 +12,16 @@
     SPDX-License-Identifier: Apache License, Version 2.0
 */
 
-pragma solidity 0.7.6;
-pragma abicoder v2;
+pragma solidity ^0.8.0;
 
-import {ECDSA} from '@openzeppelin/contracts/cryptography/ECDSA.sol';
-import {EIP712} from '@openzeppelin/contracts/drafts/EIP712.sol';
-import {ERC165} from '@openzeppelin/contracts/introspection/ERC165.sol';
-import {SafeCast} from '../lib/SafeCast.sol';
-import {Address} from '../lib/Address.sol';
-import {Context} from '@openzeppelin/contracts/utils/Context.sol';
-import {Timers} from '../lib/Timers.sol';
+import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
+import "@openzeppelin/contracts/utils/cryptography/draft-EIP712.sol";
+import "@openzeppelin/contracts/utils/introspection/ERC165.sol";
+import "@openzeppelin/contracts/utils/math/SafeCast.sol";
+//import "@openzeppelin/contracts/utils/Address.sol";
+import "../lib/Address.sol";
+import "@openzeppelin/contracts/utils/Context.sol";
+import "../lib/Timers.sol";
 import "../interfaces/IGovernor.sol";
 
 /**

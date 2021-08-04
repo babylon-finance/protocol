@@ -11,10 +11,11 @@
     limitations under the License.
     SPDX-License-Identifier: Apache License, Version 2.0
 */
-pragma solidity 0.7.6;
-pragma abicoder v2;
+// SPDX-License-Identifier: MIT
 
-import './IGovernor.sol';
+pragma solidity ^0.8.0;
+
+import "./IGovernor.sol";
 
 /**
  * @dev Extension of the {IGovernor} for timelock supporting modules.

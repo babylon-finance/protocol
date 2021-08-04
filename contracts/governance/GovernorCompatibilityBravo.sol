@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: MIT
 
-pragma solidity 0.7.6;
-pragma abicoder v2;
+pragma solidity ^0.8.0;
 
-import '@openzeppelin/contracts/utils/Counters.sol';
-import './Governor.sol';
-import '../interfaces/IGovernorTimelock.sol';
-import '../interfaces/IGovernorCompatibilityBravo.sol';
+import "@openzeppelin/contracts/utils/Counters.sol";
+import "@openzeppelin/contracts/utils/math/SafeCast.sol";
+import "../interfaces/IGovernorTimelock.sol";
+import "./Governor.sol";
+import "../interfaces/IGovernorCompatibilityBravo.sol";
 
 /**
  * @dev Compatibility layer that implements GovernorBravo compatibility on to of {Governor}.

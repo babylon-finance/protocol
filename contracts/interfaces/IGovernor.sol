@@ -11,10 +11,10 @@
     limitations under the License.
     SPDX-License-Identifier: Apache License, Version 2.0
 */
-pragma solidity 0.7.6;
-pragma abicoder v2;
 
-import '@openzeppelin/contracts/introspection/ERC165.sol';
+pragma solidity ^0.8.0;
+
+import "@openzeppelin/contracts/utils/introspection/ERC165.sol";
 
 /**
  * @dev Interface of the {Governor} core.
