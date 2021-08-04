@@ -2,9 +2,9 @@
 
 pragma solidity ^0.8.0;
 
-import "../interfaces/IGovernorTimelock.sol";
-import "./Governor.sol";
-import "./TimelockController.sol";
+import '../interfaces/IGovernorTimelock.sol';
+import './Governor.sol';
+import './TimelockController.sol';
 
 /**
  * @dev Extension of {Governor} that binds the execution process to an instance of {TimelockController}. This adds a
@@ -87,7 +87,7 @@ abstract contract GovernorTimelockControl is IGovernorTimelock, Governor {
     ) public virtual override returns (uint256) {
         uint256 proposalId = hashProposal(targets, values, calldatas, descriptionHash);
 
-        require(state(proposalId) == ProposalState.Succeeded, "Governor: proposal not successful");
+        require(state(proposalId) == ProposalState.Succeeded, 'Governor: proposal not successful');
 
         uint256 delay = _timelock.getMinDelay();
         _timelockIds[proposalId] = _timelock.hashOperationBatch(targets, values, calldatas, 0, descriptionHash);

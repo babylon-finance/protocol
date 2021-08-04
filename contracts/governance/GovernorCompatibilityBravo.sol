@@ -2,11 +2,11 @@
 
 pragma solidity ^0.8.0;
 
-import "@openzeppelin/contracts/utils/Counters.sol";
-import "@openzeppelin/contracts/utils/math/SafeCast.sol";
-import "../interfaces/IGovernorTimelock.sol";
-import "./Governor.sol";
-import "../interfaces/IGovernorCompatibilityBravo.sol";
+import '@openzeppelin/contracts/utils/Counters.sol';
+import '@openzeppelin/contracts/utils/math/SafeCast.sol';
+import '../interfaces/IGovernorTimelock.sol';
+import './Governor.sol';
+import '../interfaces/IGovernorCompatibilityBravo.sol';
 
 /**
  * @dev Compatibility layer that implements GovernorBravo compatibility on to of {Governor}.
@@ -20,11 +20,7 @@ abstract contract GovernorCompatibilityBravo is IGovernorTimelock, IGovernorComp
     using Counters for Counters.Counter;
     using Timers for Timers.BlockNumber;
 
-    enum VoteType {
-        Against,
-        For,
-        Abstain
-    }
+    enum VoteType {Against, For, Abstain}
 
     struct ProposalDetails {
         address proposer;
@@ -57,7 +53,7 @@ abstract contract GovernorCompatibilityBravo is IGovernorTimelock, IGovernorComp
 
     // solhint-disable-next-line func-name-mixedcase
     function COUNTING_MODE() public pure virtual override returns (string memory) {
-        return "support=bravo&quorum=bravo";
+        return 'support=bravo&quorum=bravo';
     }
 
     // ============================================== Proposal lifecycle ==============================================
@@ -85,7 +81,7 @@ abstract contract GovernorCompatibilityBravo is IGovernorTimelock, IGovernorComp
     ) public virtual override returns (uint256) {
         require(
             getVotes(msg.sender, block.number - 1) >= proposalThreshold(),
-            "GovernorCompatibilityBravo: proposer votes below proposal threshold"
+            'GovernorCompatibilityBravo: proposer votes below proposal threshold'
         );
 
         uint256 proposalId = super.propose(targets, values, _encodeCalldata(signatures, calldatas), description);
@@ -123,8 +119,9 @@ abstract contract GovernorCompatibilityBravo is IGovernorTimelock, IGovernorComp
      * @dev Encodes calldatas with optional function signature.
      */
     function _encodeCalldata(string[] memory signatures, bytes[] memory calldatas)
-        private
+        internal
         pure
+        virtual
         returns (bytes[] memory)
     {
         bytes[] memory fullcalldatas = new bytes[](calldatas.length);
@@ -149,7 +146,7 @@ abstract contract GovernorCompatibilityBravo is IGovernorTimelock, IGovernorComp
         string[] memory signatures,
         bytes[] memory calldatas,
         string memory description
-    ) private {
+    ) internal virtual {
         ProposalDetails storage details = _proposalDetails[proposalId];
 
         details.proposer = proposer;
@@ -267,7 +264,7 @@ abstract contract GovernorCompatibilityBravo is IGovernorTimelock, IGovernorComp
         ProposalDetails storage details = _proposalDetails[proposalId];
         Receipt storage receipt = details.receipts[account];
 
-        require(!receipt.hasVoted, "GovernorCompatibilityBravo: vote already casted");
+        require(!receipt.hasVoted, 'GovernorCompatibilityBravo: vote already casted');
         receipt.hasVoted = true;
         receipt.support = support;
         receipt.votes = SafeCast.toUint96(weight);
@@ -279,7 +276,7 @@ abstract contract GovernorCompatibilityBravo is IGovernorTimelock, IGovernorComp
         } else if (support == uint8(VoteType.Abstain)) {
             details.abstainVotes += weight;
         } else {
-            revert("GovernorCompatibilityBravo: invalid vote type");
+            revert('GovernorCompatibilityBravo: invalid vote type');
         }
     }
 }

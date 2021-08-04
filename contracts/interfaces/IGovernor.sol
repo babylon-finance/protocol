@@ -14,7 +14,7 @@
 
 pragma solidity ^0.8.0;
 
-import "@openzeppelin/contracts/utils/introspection/ERC165.sol";
+import '@openzeppelin/contracts/utils/introspection/ERC165.sol';
 
 /**
  * @dev Interface of the {Governor} core.
@@ -22,16 +22,7 @@ import "@openzeppelin/contracts/utils/introspection/ERC165.sol";
  * _Available since v4.3._
  */
 interface IGovernor is IERC165 {
-    enum ProposalState {
-        Pending,
-        Active,
-        Canceled,
-        Defeated,
-        Succeeded,
-        Queued,
-        Expired,
-        Executed
-    }
+    enum ProposalState {Pending, Active, Canceled, Defeated, Succeeded, Queued, Expired, Executed}
 
     /**
      * @dev Emitted when a proposal is created.

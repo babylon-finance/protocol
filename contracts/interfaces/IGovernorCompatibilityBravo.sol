@@ -2,7 +2,7 @@
 
 pragma solidity ^0.8.0;
 
-import "./IGovernor.sol";
+import './IGovernor.sol';
 
 /**
  * @dev Interface extension that adds missing functions to the {Governor} core to provide `GovernorBravo` compatibility.

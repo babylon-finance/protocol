@@ -6,7 +6,6 @@ import './Context.sol';
 import './Strings.sol';
 import '@openzeppelin/contracts/introspection/ERC165.sol';
 
-
 /**
  * @dev External interface of AccessControl declared to support ERC165 detection.
  */

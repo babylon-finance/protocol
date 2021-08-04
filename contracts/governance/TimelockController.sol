@@ -19,7 +19,7 @@
 
 pragma solidity ^0.8.0;
 
-import "@openzeppelin/contracts/access/AccessControl.sol";
+import '@openzeppelin/contracts/access/AccessControl.sol';
 
 /**
  * @dev Contract module which acts as a timelocked controller. When set as the
@@ -37,9 +37,9 @@ import "@openzeppelin/contracts/access/AccessControl.sol";
  * _Available since v3.3._
  */
 contract TimelockController is AccessControl {
-    bytes32 public constant TIMELOCK_ADMIN_ROLE = keccak256("TIMELOCK_ADMIN_ROLE");
-    bytes32 public constant PROPOSER_ROLE = keccak256("PROPOSER_ROLE");
-    bytes32 public constant EXECUTOR_ROLE = keccak256("EXECUTOR_ROLE");
+    bytes32 public constant TIMELOCK_ADMIN_ROLE = keccak256('TIMELOCK_ADMIN_ROLE');
+    bytes32 public constant PROPOSER_ROLE = keccak256('PROPOSER_ROLE');
+    bytes32 public constant EXECUTOR_ROLE = keccak256('EXECUTOR_ROLE');
     uint256 internal constant _DONE_TIMESTAMP = uint256(1);
 
     mapping(bytes32 => uint256) private _timestamps;
@@ -235,8 +235,8 @@ contract TimelockController is AccessControl {
         bytes32 salt,
         uint256 delay
     ) public virtual onlyRole(PROPOSER_ROLE) {
-        require(targets.length == values.length, "TimelockController: length mismatch");
-        require(targets.length == datas.length, "TimelockController: length mismatch");
+        require(targets.length == values.length, 'TimelockController: length mismatch');
+        require(targets.length == datas.length, 'TimelockController: length mismatch');
 
         bytes32 id = hashOperationBatch(targets, values, datas, predecessor, salt);
         _schedule(id, delay);
@@ -249,8 +249,8 @@ contract TimelockController is AccessControl {
      * @dev Schedule an operation that is to becomes valid after a given delay.
      */
     function _schedule(bytes32 id, uint256 delay) private {
-        require(!isOperation(id), "TimelockController: operation already scheduled");
-        require(delay >= getMinDelay(), "TimelockController: insufficient delay");
+        require(!isOperation(id), 'TimelockController: operation already scheduled');
+        require(delay >= getMinDelay(), 'TimelockController: insufficient delay');
         _timestamps[id] = block.timestamp + delay;
     }
 
@@ -262,7 +262,7 @@ contract TimelockController is AccessControl {
      * - the caller must have the 'proposer' role.
      */
     function cancel(bytes32 id) public virtual onlyRole(PROPOSER_ROLE) {
-        require(isOperationPending(id), "TimelockController: operation cannot be cancelled");
+        require(isOperationPending(id), 'TimelockController: operation cannot be cancelled');
         delete _timestamps[id];
 
         emit Cancelled(id);
@@ -306,8 +306,8 @@ contract TimelockController is AccessControl {
         bytes32 predecessor,
         bytes32 salt
     ) public payable virtual onlyRoleOrOpenRole(EXECUTOR_ROLE) {
-        require(targets.length == values.length, "TimelockController: length mismatch");
-        require(targets.length == datas.length, "TimelockController: length mismatch");
+        require(targets.length == values.length, 'TimelockController: length mismatch');
+        require(targets.length == datas.length, 'TimelockController: length mismatch');
 
         bytes32 id = hashOperationBatch(targets, values, datas, predecessor, salt);
         _beforeCall(predecessor);
@@ -321,14 +321,14 @@ contract TimelockController is AccessControl {
      * @dev Checks before execution of an operation's calls.
      */
     function _beforeCall(bytes32 predecessor) private view {
-        require(predecessor == bytes32(0) || isOperationDone(predecessor), "TimelockController: missing dependency");
+        require(predecessor == bytes32(0) || isOperationDone(predecessor), 'TimelockController: missing dependency');
     }
 
     /**
      * @dev Checks after execution of an operation's calls.
      */
     function _afterCall(bytes32 id) private {
-        require(isOperationReady(id), "TimelockController: operation is not ready");
+        require(isOperationReady(id), 'TimelockController: operation is not ready');
         _timestamps[id] = _DONE_TIMESTAMP;
     }
 
@@ -345,7 +345,7 @@ contract TimelockController is AccessControl {
         bytes calldata data
     ) private {
         (bool success, ) = target.call{value: value}(data);
-        require(success, "TimelockController: underlying transaction reverted");
+        require(success, 'TimelockController: underlying transaction reverted');
 
         emit CallExecuted(id, index, target, value, data);
     }
@@ -361,7 +361,7 @@ contract TimelockController is AccessControl {
      * an operation where the timelock is the target and the data is the ABI-encoded call to this function.
      */
     function updateDelay(uint256 newDelay) external virtual {
-        require(msg.sender == address(this), "TimelockController: caller must be timelock");
+        require(msg.sender == address(this), 'TimelockController: caller must be timelock');
         emit MinDelayChange(_minDelay, newDelay);
         _minDelay = newDelay;
     }
