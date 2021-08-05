@@ -68,9 +68,7 @@ describe('OneInchPoolIntegrationTest', function () {
     const liquidityToken1 = amount0ToAdd.mul(poolTotalSupply).div(balanceToken0);
     const liquidityToken2 = amount1ToAdd.mul(poolTotalSupply).div(balanceToken1);
 
-    LPTokens = liquidityToken1 < liquidityToken2 ? liquidityToken1 : liquidityToken2;
-
-    return LPTokens;
+    return liquidityToken1 < liquidityToken2 ? liquidityToken1 : liquidityToken2;
   }
 
   beforeEach(async () => {

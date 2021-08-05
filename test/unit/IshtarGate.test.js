@@ -14,6 +14,7 @@ describe('IshtarGate', function () {
   let uniswapV3TradeIntegration;
   let owner;
   let WALLET_ADDRESSES;
+  let WALLET_ADDRESSES_13;
 
   beforeEach(async () => {
     ({ owner, babController, signer1, signer2, signer3, ishtarGate, uniswapV3TradeIntegration } = await setupTests()());

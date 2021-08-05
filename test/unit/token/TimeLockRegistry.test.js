@@ -18,6 +18,7 @@ describe('TimeLockRegistry', function () {
   let signer3;
   let bablToken;
   let timeLockRegistry;
+  let now;
 
   async function checkVestingStartingDate(contributor) {
     let [team, vestingBegins, vestingEnds, lastClaim] = await timeLockRegistry.checkVesting(contributor);

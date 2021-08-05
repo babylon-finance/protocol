@@ -22,6 +22,8 @@ describe('UniswapPoolIntegrationTest', function () {
   let priceOracle;
   let owner;
   let babController;
+  let WETH;
+  let DAI;
 
   async function getExpectedLPTokens(token, amount, poolAddress, token0, token1) {
     const reservePriceInAsset0 = await priceOracle.connect(owner).getPrice(token, token0);
@@ -47,7 +49,6 @@ describe('UniswapPoolIntegrationTest', function () {
       amount.mul(reservePriceInAsset1).div(2).div(eth(1)),
     );
 
-    // Uniswap documentation
     const poolTotalSupply = await poolAddress.totalSupply();
     const balanceToken0 = await token0Contract.balanceOf(poolAddress.address);
     const balanceToken1 = await token1Contract.balanceOf(poolAddress.address);
@@ -55,8 +56,7 @@ describe('UniswapPoolIntegrationTest', function () {
     const liquidityToken1 = amount0ToAdd.mul(poolTotalSupply).div(balanceToken0);
     const liquidityToken2 = amount1ToAdd.mul(poolTotalSupply).div(balanceToken1);
 
-    LPTokens = liquidityToken1 < liquidityToken2 ? liquidityToken1 : liquidityToken2;
-    return LPTokens;
+    return liquidityToken1 < liquidityToken2 ? liquidityToken1 : liquidityToken2;
   }
 
   beforeEach(async () => {

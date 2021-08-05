@@ -405,8 +405,8 @@ describe('BABL Rewards Distributor', function () {
       await injectFakeProfits(long1, ONE_ETH.mul(222));
 
       //Here we inject malicious reserveAsset
-      whaleAddress = '0x2f0b23f53734252bda2277357e97e1517d6b042a';
-      whaleSigner = await impersonateAddress(whaleAddress);
+      const whaleAddress = '0x2f0b23f53734252bda2277357e97e1517d6b042a';
+      const whaleSigner = await impersonateAddress(whaleAddress);
       await weth.connect(whaleSigner).transfer(signer1.address, ONE_ETH.mul(100), {
         gasPrice: 0,
       });

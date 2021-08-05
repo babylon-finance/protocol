@@ -17,6 +17,7 @@ describe('Upgrades', function () {
   let strategy11;
   let garden1;
   let babController;
+  let uniswapV3TradeIntegration;
 
   async function upgradeFixture() {
     const { deploy } = deployments;
@@ -251,7 +252,7 @@ describe('Upgrades', function () {
 
       const gardens = await babController.connect(owner).getGardens();
 
-      freshGarden = new ethers.Contract(gardens[4], v2.abi);
+      const freshGarden = new ethers.Contract(gardens[4], v2.abi);
 
       expect(await freshGarden.connect(owner).newMethod()).to.eq('foobar');
       expect(await freshGarden.connect(owner).newVar()).to.eq('42');
