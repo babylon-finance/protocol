@@ -17,31 +17,34 @@ pragma solidity ^0.8.0;
 import {GovernorCompatibilityBravo} from './GovernorCompatibilityBravo.sol';
 import {GovernorTimelockControl} from './GovernorTimelockControl.sol';
 import {TimelockController} from './TimelockController.sol';
-import {GovernorVotesComp } from './GovernorVotesComp.sol';
+import {GovernorVotesComp} from './GovernorVotesComp.sol';
 import {Governor} from './Governor.sol';
-import "@openzeppelin/contracts/utils/math/SafeCast.sol";
-import "@openzeppelin/contracts/access/AccessControl.sol";
-import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
-import "@openzeppelin/contracts/utils/cryptography/draft-EIP712.sol";
-import "@openzeppelin/contracts/utils/introspection/ERC165.sol";
-import "@openzeppelin/contracts/utils/introspection/IERC165.sol";
-import "@openzeppelin/contracts/utils/Context.sol";
-import "@openzeppelin/contracts/utils/Counters.sol";
-import "@openzeppelin/contracts/utils/Strings.sol";
+import '@openzeppelin/contracts/utils/math/SafeCast.sol';
+import '@openzeppelin/contracts/access/AccessControl.sol';
+import '@openzeppelin/contracts/utils/cryptography/ECDSA.sol';
+import '@openzeppelin/contracts/utils/cryptography/draft-EIP712.sol';
+import '@openzeppelin/contracts/utils/introspection/ERC165.sol';
+import '@openzeppelin/contracts/utils/introspection/IERC165.sol';
+import '@openzeppelin/contracts/utils/Context.sol';
+import '@openzeppelin/contracts/utils/Counters.sol';
+import '@openzeppelin/contracts/utils/Strings.sol';
 import {IGovernorTimelock} from '../interfaces/IGovernorTimelock.sol';
 import {IGovernorCompatibilityBravo} from '../interfaces/IGovernorCompatibilityBravo.sol';
 
-
-import "../lib/Address.sol";
+import '../lib/Address.sol';
 
 import {Timers} from '../lib/Timers.sol';
-import "@openzeppelin/contracts/token/ERC20/extensions/ERC20VotesComp.sol";
+import '@openzeppelin/contracts/token/ERC20/extensions/ERC20VotesComp.sol';
 import {IGovernor} from '../interfaces/IGovernor.sol';
 
 contract GovernorBabylon is GovernorCompatibilityBravo, GovernorTimelockControl, GovernorVotesComp {
     using SafeCast for uint256;
     using Timers for Timers.BlockNumber;
-   
+
+    /* ============ Modifiers ================= */
+
+    /* ============ State Variables ============ */
+
     struct ProposalTimelock {
         Timers.Timestamp timer;
     }
@@ -52,6 +55,10 @@ contract GovernorBabylon is GovernorCompatibilityBravo, GovernorTimelockControl,
 
     TimelockController private _timelock;
 
+    /* ============ Functions ============ */
+
+    /* ============ Constructor ============ */
+
     /**
      * @dev Sets the value for {name} and {version}
      */
@@ -59,11 +66,62 @@ contract GovernorBabylon is GovernorCompatibilityBravo, GovernorTimelockControl,
         string memory _name,
         TimelockController _timeLockAddress,
         ERC20VotesComp _token
-    ) Governor(_name) GovernorTimelockControl(_timeLockAddress) GovernorVotesComp(_token) {
-        token = _token;
+    ) Governor(_name) GovernorTimelockControl(_timeLockAddress) GovernorVotesComp(_token) {}
+
+    /* ============ External Functions ============ */
+
+    /**
+     * @dev See {IGovernor-propose}.
+     */
+    function propose(
+        address[] memory targets,
+        uint256[] memory values,
+        bytes[] memory calldatas,
+        string memory description
+    ) public virtual override(IGovernor, Governor, GovernorCompatibilityBravo) returns (uint256) {
+        return propose(targets, values, new string[](calldatas.length), calldatas, description);
     }
 
+    /**
+     * @dev See {IGovernorCompatibilityBravo-propose}.
+     */
+    function propose(
+        address[] memory targets,
+        uint256[] memory values,
+        string[] memory signatures,
+        bytes[] memory calldatas,
+        string memory description
+    ) public virtual override returns (uint256) {
+        require(
+            getVotes(msg.sender, block.number - 1) >= proposalThreshold(),
+            'GovernorCompatibilityBravo: proposer votes below proposal threshold'
+        );
 
+        uint256 proposalId = super.propose(targets, values, _encodeCalldata(signatures, calldatas), description);
+        _storeProposal(proposalId, _msgSender(), targets, values, signatures, calldatas, description);
+        return proposalId;
+    }
+
+    // public for hooking
+    function queue(
+        address[] memory targets,
+        uint256[] memory values,
+        bytes[] memory calldatas,
+        bytes32 descriptionHash
+    ) public virtual override(GovernorCompatibilityBravo, GovernorTimelockControl) returns (uint256) {} // TODO IMPLEMENT
+
+    /**
+     * @dev See {IGovernorCompatibilityBravo-queue}.
+     */
+    function queue(uint256 proposalId) public virtual override {
+        ProposalDetails storage details = _proposalDetails[proposalId];
+        queue(
+            details.targets,
+            details.values,
+            _encodeCalldata(details.signatures, details.calldatas),
+            details.descriptionHash
+        );
+    }
 
     /**
      * @dev Public accessor to check the eta of a queued proposal
@@ -92,6 +150,46 @@ contract GovernorBabylon is GovernorCompatibilityBravo, GovernorTimelockControl,
     }
 
     /**
+     * @dev See {IERC165-supportsInterface}.
+     */
+    function supportsInterface(bytes4 interfaceId)
+        public
+        view
+        virtual
+        override(IERC165, Governor, GovernorTimelockControl)
+        returns (bool)
+    {
+        return interfaceId == type(IGovernorTimelock).interfaceId || super.supportsInterface(interfaceId);
+    }
+
+    /**
+     * @dev Overriden version of the {Governor-state} function with added support for the `Queued` status.
+     */
+    function state(uint256 proposalId)
+        public
+        view
+        virtual
+        override(IGovernor, Governor, GovernorTimelockControl)
+        returns (ProposalState)
+    {
+        ProposalState status = super.state(proposalId);
+
+        if (status != ProposalState.Succeeded) {
+            return status;
+        }
+
+        // core tracks execution, so we just have to check if successful proposal have been queued.
+        bytes32 queueid = _timelockIds[proposalId];
+        if (queueid == bytes32(0)) {
+            return status;
+        } else if (_timelock.isOperationDone(queueid)) {
+            return ProposalState.Executed;
+        } else {
+            return ProposalState.Queued;
+        }
+    }
+
+    /**
      * @dev Overriden version of the {Governor-_cancel} function to cancel the timelocked proposal if it as already
      * been queued.
      */
@@ -100,7 +198,7 @@ contract GovernorBabylon is GovernorCompatibilityBravo, GovernorTimelockControl,
         uint256[] memory values,
         bytes[] memory calldatas,
         bytes32 descriptionHash
-    ) internal virtual override(Governor,GovernorTimelockControl) returns (uint256) {
+    ) internal virtual override(Governor, GovernorTimelockControl) returns (uint256) {
         uint256 proposalId = super._cancel(targets, values, calldatas, descriptionHash);
 
         if (_timelockIds[proposalId] != 0) {
@@ -112,21 +210,87 @@ contract GovernorBabylon is GovernorCompatibilityBravo, GovernorTimelockControl,
     }
 
     /**
-     * @dev See {IGovernorCompatibilityBravo-queue}.
+     * @dev Store proposal metadata for later lookup
      */
-    function queue(uint256 proposalId) public virtual override(GovernorTimelockControl, GovernorCompatibilityBravo) {
+    function _storeProposal(
+        uint256 proposalId,
+        address proposer,
+        address[] memory targets,
+        uint256[] memory values,
+        string[] memory signatures,
+        bytes[] memory calldatas,
+        string memory description
+    ) internal virtual override {
         ProposalDetails storage details = _proposalDetails[proposalId];
-        queue(
-            details.targets,
-            details.values,
-            _encodeCalldata(details.signatures, details.calldatas),
-            details.descriptionHash
-        );
+
+        details.proposer = proposer;
+        details.targets = targets;
+        details.values = values;
+        details.signatures = signatures;
+        details.calldatas = calldatas;
+        details.descriptionHash = keccak256(bytes(description));
     }
-     /**
+
+    /**
+     * @dev See {Governor-_quorumReached}. In this module, only forVotes count toward the quorum.
+     */
+    function _quorumReached(uint256 proposalId)
+        internal
+        view
+        virtual
+        override(GovernorCompatibilityBravo, Governor)
+        returns (bool)
+    {
+        ProposalDetails storage details = _proposalDetails[proposalId];
+        return quorum(proposalSnapshot(proposalId)) < details.forVotes;
+    }
+
+    /**
+     * @dev See {Governor-_voteSucceeded}. In this module, the forVotes must be scritly over the againstVotes.
+     */
+    function _voteSucceeded(uint256 proposalId)
+        internal
+        view
+        virtual
+        override(GovernorCompatibilityBravo, Governor)
+        returns (bool)
+    {
+        ProposalDetails storage details = _proposalDetails[proposalId];
+        return details.forVotes > details.againstVotes;
+    }
+
+    /**
+     * @dev See {Governor-_countVote}. In this module, the support follows Governor Bravo.
+     */
+    function _countVote(
+        uint256 proposalId,
+        address account,
+        uint8 support,
+        uint256 weight
+    ) internal virtual override(GovernorCompatibilityBravo, Governor) {
+        ProposalDetails storage details = _proposalDetails[proposalId];
+        Receipt storage receipt = details.receipts[account];
+
+        require(!receipt.hasVoted, 'GovernorCompatibilityBravo: vote already casted');
+        receipt.hasVoted = true;
+        receipt.support = support;
+        receipt.votes = SafeCast.toUint96(weight);
+
+        if (support == uint8(VoteType.Against)) {
+            details.againstVotes += weight;
+        } else if (support == uint8(VoteType.For)) {
+            details.forVotes += weight;
+        } else if (support == uint8(VoteType.Abstain)) {
+            details.abstainVotes += weight;
+        } else {
+            revert('GovernorCompatibilityBravo: invalid vote type');
+        }
+    }
+
+    /**
      * @dev Address through which the governor executes action. In this case, the timelock.
      */
-    function _executor() internal view virtual override(Governor,GovernorTimelockControl) returns (address) {
+    function _executor() internal view virtual override(Governor, GovernorTimelockControl) returns (address) {
         return address(_timelock);
     }
 
@@ -136,19 +300,20 @@ contract GovernorBabylon is GovernorCompatibilityBravo, GovernorTimelockControl,
     } // 1% of BABL
 
     /// @notice The delay before voting on a proposal may take place, once proposed
-    function votingDelay() public pure override(Governor,IGovernor) returns (uint256) {
+    function votingDelay() public pure override(Governor, IGovernor) returns (uint256) {
         return 1;
     }
 
     /// @notice The duration of voting on a proposal, in blocks
-    function votingPeriod() public pure override(Governor,IGovernor) returns (uint256) {
+    function votingPeriod() public pure override(Governor, IGovernor) returns (uint256) {
         return 7 days;
     }
 
+    // TODO CHANGE QUORUM LOGIC
     /**
      * @dev See {IGovernor-quorum}
      */
-    function quorum(uint256 blockNumber) public view virtual override(Governor,IGovernor) returns (uint256) {
+    function quorum(uint256 blockNumber) public view virtual override(Governor, IGovernor) returns (uint256) {
         return quorumVotes();
     }
 
@@ -157,7 +322,7 @@ contract GovernorBabylon is GovernorCompatibilityBravo, GovernorTimelockControl,
         return 40_000e18;
     } // 4% of BABL
 
-      /**
+    /**
      * @dev Encodes calldatas with optional function signature.
      */
     function _encodeCalldata(string[] memory signatures, bytes[] memory calldatas)
