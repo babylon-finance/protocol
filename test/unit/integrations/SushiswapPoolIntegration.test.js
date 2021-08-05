@@ -57,7 +57,6 @@ describe('SushiswapPoolIntegrationTest', function () {
     const liquidityToken2 = amount1ToAdd.mul(poolTotalSupply).div(balanceToken1);
 
     return liquidityToken1 < liquidityToken2 ? liquidityToken1 : liquidityToken2;
-
   }
 
   beforeEach(async () => {

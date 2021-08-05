@@ -4,7 +4,12 @@
   "main": "index.js",
   "license": "MIT",
   "repository": "git://github.com/babylon-finance/protocol",
-  "files": ["contracts", "artifacts", "typechain", "export"],
+  "files": [
+    "contracts",
+    "artifacts",
+    "typechain",
+    "export"
+  ],
   "devDependencies": {
     "@babel/core": "^7.15.0",
     "@babel/plugin-transform-runtime": "^7.15.0",
@@ -96,7 +101,11 @@
     "gardens": "hardhat gardens --network mainnet"
   },
   "jest": {
-    "moduleDirectories": ["lib", "test", "node_modules"],
+    "moduleDirectories": [
+      "lib",
+      "test",
+      "node_modules"
+    ],
     "moduleNameMapper": {
       "^lib/(.*)$": "<rootDir>/lib/$1",
       "^test/(.*)$": "<rootDir>/test/$1"
