@@ -121,6 +121,7 @@ module.exports = {
     project: 'babylon',
   },
   paths: {
+    tests: './test/unit',
     sources: './contracts',
     integrations: './contracts/integrations',
     artifacts: './artifacts',
