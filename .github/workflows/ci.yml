@@ -75,7 +75,7 @@ jobs:
       - name: Run tests
         env:
           ALCHEMY_KEY: ${{ secrets.ALCHEMY_KEY}}
-        run: yarn test
+        run: yarn test:ci
 
   lint:
     name: Lint
