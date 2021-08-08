@@ -68,6 +68,7 @@ module.exports = {
         blockNumber: 12821000,
       },
       saveDeployments: true,
+      gas: 9e6,
     },
     mainnet: {
       chainId: CHAIN_IDS.mainnet,
