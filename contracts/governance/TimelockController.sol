@@ -1,7 +1,7 @@
 /*
     Copyright 2021 Babylon Finance.
 
-    Original version by openzeppelin Governor
+    Adapted version by Babylon from the original version by openzeppelin
 
     Licensed under the Apache License, Version 2.0 (the "License");
     you may not use this file except in compliance with the License.
@@ -14,8 +14,6 @@
     limitations under the License.
     SPDX-License-Identifier: Apache License, Version 2.0
 */
-
-// SPDX-License-Identifier: MIT
 
 pragma solidity ^0.8.0;
 
@@ -37,13 +35,12 @@ import '@openzeppelin/contracts/access/AccessControl.sol';
  * _Available since v3.3._
  */
 contract TimelockController is AccessControl {
-    bytes32 public constant TIMELOCK_ADMIN_ROLE = keccak256('TIMELOCK_ADMIN_ROLE');
-    bytes32 public constant PROPOSER_ROLE = keccak256('PROPOSER_ROLE');
-    bytes32 public constant EXECUTOR_ROLE = keccak256('EXECUTOR_ROLE');
-    uint256 internal constant _DONE_TIMESTAMP = uint256(1);
+    /* ============ Events ================= */
 
-    mapping(bytes32 => uint256) private _timestamps;
-    uint256 private _minDelay;
+    /**
+     * @dev Emitted when a call is performed as part of operation `id`.
+     */
+    event CallExecuted(bytes32 indexed id, uint256 indexed index, address target, uint256 value, bytes data);
 
     /**
      * @dev Emitted when a call is scheduled as part of operation `id`.
@@ -59,11 +56,6 @@ contract TimelockController is AccessControl {
     );
 
     /**
-     * @dev Emitted when a call is performed as part of operation `id`.
-     */
-    event CallExecuted(bytes32 indexed id, uint256 indexed index, address target, uint256 value, bytes data);
-
-    /**
      * @dev Emitted when operation `id` is cancelled.
      */
     event Cancelled(bytes32 indexed id);
@@ -72,6 +64,35 @@ contract TimelockController is AccessControl {
      * @dev Emitted when the minimum delay for future operations is modified.
      */
     event MinDelayChange(uint256 oldDuration, uint256 newDuration);
+
+    /* ============ Modifiers ================= */
+
+    /**
+     * @dev Modifier to make a function callable only by a certain role. In
+     * addition to checking the sender's role, `address(0)` 's role is also
+     * considered. Granting a role to `address(0)` is equivalent to enabling
+     * this role for everyone.
+     */
+    modifier onlyRoleOrOpenRole(bytes32 role) {
+        if (!hasRole(role, address(0))) {
+            _checkRole(role, _msgSender());
+        }
+        _;
+    }
+
+    /* ============ State Variables ============ */
+
+    bytes32 public constant TIMELOCK_ADMIN_ROLE = keccak256('TIMELOCK_ADMIN_ROLE');
+    bytes32 public constant PROPOSER_ROLE = keccak256('PROPOSER_ROLE');
+    bytes32 public constant EXECUTOR_ROLE = keccak256('EXECUTOR_ROLE');
+    uint256 internal constant _DONE_TIMESTAMP = uint256(1);
+
+    mapping(bytes32 => uint256) private _timestamps;
+    uint256 private _minDelay;
+
+    /* ============ Functions ============ */
+
+    /* ============ Constructor ============ */
 
     /**
      * @dev Initializes the contract with a given `minDelay`.
@@ -103,70 +124,14 @@ contract TimelockController is AccessControl {
         emit MinDelayChange(0, minDelay);
     }
 
-    /**
-     * @dev Modifier to make a function callable only by a certain role. In
-     * addition to checking the sender's role, `address(0)` 's role is also
-     * considered. Granting a role to `address(0)` is equivalent to enabling
-     * this role for everyone.
-     */
-    modifier onlyRoleOrOpenRole(bytes32 role) {
-        if (!hasRole(role, address(0))) {
-            _checkRole(role, _msgSender());
-        }
-        _;
-    }
+    /* ============ Fallback ============ */
 
     /**
      * @dev Contract might receive/hold ETH as part of the maintenance process.
      */
     receive() external payable {}
 
-    /**
-     * @dev Returns whether an id correspond to a registered operation. This
-     * includes both Pending, Ready and Done operations.
-     */
-    function isOperation(bytes32 id) public view virtual returns (bool pending) {
-        return getTimestamp(id) > 0;
-    }
-
-    /**
-     * @dev Returns whether an operation is pending or not.
-     */
-    function isOperationPending(bytes32 id) public view virtual returns (bool pending) {
-        return getTimestamp(id) > _DONE_TIMESTAMP;
-    }
-
-    /**
-     * @dev Returns whether an operation is ready or not.
-     */
-    function isOperationReady(bytes32 id) public view virtual returns (bool ready) {
-        uint256 timestamp = getTimestamp(id);
-        return timestamp > _DONE_TIMESTAMP && timestamp <= block.timestamp;
-    }
-
-    /**
-     * @dev Returns whether an operation is done or not.
-     */
-    function isOperationDone(bytes32 id) public view virtual returns (bool done) {
-        return getTimestamp(id) == _DONE_TIMESTAMP;
-    }
-
-    /**
-     * @dev Returns the timestamp at with an operation becomes ready (0 for
-     * unset operations, 1 for done operations).
-     */
-    function getTimestamp(bytes32 id) public view virtual returns (uint256 timestamp) {
-        return _timestamps[id];
-    }
-
-    /**
-     * @dev Returns the minimum delay for an operation to become valid.
-     *
-     * This value can be changed by executing an operation that calls `updateDelay`.
-     */
-    function getMinDelay() public view virtual returns (uint256 duration) {
-        return _minDelay;
-    }
+    /* ============ External Functions ============ */
 
     /**
      * @dev Returns the identifier of an operation containing a single
@@ -246,15 +211,6 @@ contract TimelockController is AccessControl {
     }
 
     /**
-     * @dev Schedule an operation that is to becomes valid after a given delay.
-     */
-    function _schedule(bytes32 id, uint256 delay) private {
-        require(!isOperation(id), 'TimelockController: operation already scheduled');
-        require(delay >= getMinDelay(), 'TimelockController: insufficient delay');
-        _timestamps[id] = block.timestamp + delay;
-    }
-
-    /**
      * @dev Cancel an operation.
      *
      * Requirements:
@@ -318,6 +274,82 @@ contract TimelockController is AccessControl {
     }
 
     /**
+     * @dev Changes the minimum timelock duration for future operations.
+     *
+     * Emits a {MinDelayChange} event.
+     *
+     * Requirements:
+     *
+     * - the caller must be the timelock itself. This can only be achieved by scheduling and later executing
+     * an operation where the timelock is the target and the data is the ABI-encoded call to this function.
+     */
+    function updateDelay(uint256 newDelay) external virtual {
+        require(msg.sender == address(this), 'TimelockController: caller must be timelock');
+        emit MinDelayChange(_minDelay, newDelay);
+        _minDelay = newDelay;
+    }
+
+    /* ============ View Functions ============ */
+
+    /**
+     * @dev Returns whether an id correspond to a registered operation. This
+     * includes both Pending, Ready and Done operations.
+     */
+    function isOperation(bytes32 id) public view virtual returns (bool pending) {
+        return getTimestamp(id) > 0;
+    }
+
+    /**
+     * @dev Returns whether an operation is pending or not.
+     */
+    function isOperationPending(bytes32 id) public view virtual returns (bool pending) {
+        return getTimestamp(id) > _DONE_TIMESTAMP;
+    }
+
+    /**
+     * @dev Returns whether an operation is ready or not.
+     */
+    function isOperationReady(bytes32 id) public view virtual returns (bool ready) {
+        uint256 timestamp = getTimestamp(id);
+        return timestamp > _DONE_TIMESTAMP && timestamp <= block.timestamp;
+    }
+
+    /**
+     * @dev Returns whether an operation is done or not.
+     */
+    function isOperationDone(bytes32 id) public view virtual returns (bool done) {
+        return getTimestamp(id) == _DONE_TIMESTAMP;
+    }
+
+    /**
+     * @dev Returns the timestamp at with an operation becomes ready (0 for
+     * unset operations, 1 for done operations).
+     */
+    function getTimestamp(bytes32 id) public view virtual returns (uint256 timestamp) {
+        return _timestamps[id];
+    }
+
+    /**
+     * @dev Returns the minimum delay for an operation to become valid.
+     *
+     * This value can be changed by executing an operation that calls `updateDelay`.
+     */
+    function getMinDelay() public view virtual returns (uint256 duration) {
+        return _minDelay;
+    }
+
+    /* ============ Internal Functions ============ */
+
+    /**
+     * @dev Schedule an operation that is to becomes valid after a given delay.
+     */
+    function _schedule(bytes32 id, uint256 delay) private {
+        require(!isOperation(id), 'TimelockController: operation already scheduled');
+        require(delay >= getMinDelay(), 'TimelockController: insufficient delay');
+        _timestamps[id] = block.timestamp + delay;
+    }
+
+    /**
      * @dev Checks before execution of an operation's calls.
      */
     function _beforeCall(bytes32 predecessor) private view {
@@ -348,21 +380,5 @@ contract TimelockController is AccessControl {
         require(success, 'TimelockController: underlying transaction reverted');
 
         emit CallExecuted(id, index, target, value, data);
-    }
-
-    /**
-     * @dev Changes the minimum timelock duration for future operations.
-     *
-     * Emits a {MinDelayChange} event.
-     *
-     * Requirements:
-     *
-     * - the caller must be the timelock itself. This can only be achieved by scheduling and later executing
-     * an operation where the timelock is the target and the data is the ABI-encoded call to this function.
-     */
-    function updateDelay(uint256 newDelay) external virtual {
-        require(msg.sender == address(this), 'TimelockController: caller must be timelock');
-        emit MinDelayChange(_minDelay, newDelay);
-        _minDelay = newDelay;
     }
 }

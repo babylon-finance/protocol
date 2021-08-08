@@ -30,6 +30,7 @@ import '@openzeppelin/contracts/utils/Counters.sol';
 import '@openzeppelin/contracts/utils/Strings.sol';
 import {IGovernorTimelock} from '../interfaces/IGovernorTimelock.sol';
 import {IGovernorCompatibilityBravo} from '../interfaces/IGovernorCompatibilityBravo.sol';
+import {SafeMath} from '@openzeppelin/contracts/utils/math/SafeMath.sol';
 
 import '../lib/Address.sol';
 
@@ -39,20 +40,16 @@ import {IGovernor} from '../interfaces/IGovernor.sol';
 
 contract GovernorBabylon is GovernorCompatibilityBravo, GovernorTimelockControl, GovernorVotesComp {
     using SafeCast for uint256;
+    using SafeMath for uint256;
     using Timers for Timers.BlockNumber;
 
     /* ============ Modifiers ================= */
 
     /* ============ State Variables ============ */
 
-    struct ProposalTimelock {
-        Timers.Timestamp timer;
-    }
-
-    mapping(uint256 => ProposalTimelock) private _proposalTimelocks;
     mapping(uint256 => bytes32) private _timelockIds;
     mapping(uint256 => ProposalDetails) private _proposalDetails;
-
+    mapping(uint256 => ProposalCore) private _proposals;
     TimelockController private _timelock;
 
     /* ============ Functions ============ */
@@ -102,13 +99,27 @@ contract GovernorBabylon is GovernorCompatibilityBravo, GovernorTimelockControl,
         return proposalId;
     }
 
-    // public for hooking
+    /**
+     * @dev Function to queue a proposal to the timelock.
+     */
     function queue(
         address[] memory targets,
         uint256[] memory values,
         bytes[] memory calldatas,
         bytes32 descriptionHash
-    ) public virtual override(GovernorCompatibilityBravo, GovernorTimelockControl) returns (uint256) {} // TODO IMPLEMENT
+    ) public virtual override(GovernorCompatibilityBravo, GovernorTimelockControl) returns (uint256) {
+        uint256 proposalId = hashProposal(targets, values, calldatas, descriptionHash);
+
+        require(state(proposalId) == ProposalState.Succeeded, 'Governor: proposal not successful');
+
+        uint256 delay = _timelock.getMinDelay();
+        _timelockIds[proposalId] = _timelock.hashOperationBatch(targets, values, calldatas, 0, descriptionHash);
+        _timelock.scheduleBatch(targets, values, calldatas, 0, descriptionHash, delay);
+
+        emit ProposalQueued(proposalId, block.timestamp + delay);
+
+        return proposalId;
+    }
 
     /**
      * @dev See {IGovernorCompatibilityBravo-queue}.
@@ -123,6 +134,8 @@ contract GovernorBabylon is GovernorCompatibilityBravo, GovernorTimelockControl,
         );
     }
 
+    /* ============ View Functions ============ */
+
     /**
      * @dev Public accessor to check the eta of a queued proposal
      */
@@ -130,23 +143,11 @@ contract GovernorBabylon is GovernorCompatibilityBravo, GovernorTimelockControl,
         public
         view
         virtual
-        override(GovernorTimelockControl, GovernorCompatibilityBravo)
+        override(GovernorCompatibilityBravo, GovernorTimelockControl)
         returns (uint256)
     {
-        return Timers.getDeadline(_proposalTimelocks[proposalId].timer);
-    }
-
-    /**
-     * @dev Overriden execute function that run the already queued proposal through the timelock.
-     */
-    function _execute(
-        uint256, /* proposalId */
-        address[] memory targets,
-        uint256[] memory values,
-        bytes[] memory calldatas,
-        bytes32 descriptionHash
-    ) internal virtual override(Governor, GovernorTimelockControl) {
-        _timelock.executeBatch{value: msg.value}(targets, values, calldatas, 0, descriptionHash);
+        uint256 eta = _timelock.getTimestamp(_timelockIds[proposalId]);
+        return eta == 1 ? 0 : eta; // _DONE_TIMESTAMP (1) should be replaced with a 0 value
     }
 
     /**
@@ -189,8 +190,50 @@ contract GovernorBabylon is GovernorCompatibilityBravo, GovernorTimelockControl,
         }
     }
 
+    /// @notice The number of votes required in order for a voter to become a proposer
+    function proposalThreshold() public view override returns (uint256) {
+        return token.totalSupply().div(100);
+    } // 1% of BABL (minimum of 10_000e18)
+
+    /// @notice The delay before voting on a proposal may take place, once proposed
+    function votingDelay() public pure override(Governor, IGovernor) returns (uint256) {
+        return 1;
+    }
+
+    /// @notice The duration of voting on a proposal, in blocks
+    function votingPeriod() public pure override(Governor, IGovernor) returns (uint256) {
+        return 7 days;
+    }
+
     /**
-     * @dev Overriden version of the {Governor-_cancel} function to cancel the timelocked proposal if it as already
+     * @dev See {IGovernor-quorum}
+     */
+    function quorum(uint256 blockNumber) public view virtual override(Governor, IGovernor) returns (uint256) {
+        return quorumVotes();
+    }
+
+    /// @notice The number of votes in support of a proposal required in order for a quorum to be reached and for a vote to succeed
+    function quorumVotes() public view override returns (uint256) {
+        return token.totalSupply().div(25);
+    } // 4% of BABL (minimum of 40_000e18)
+
+    /* ============ Internal Functions ============ */
+
+    /**
+     * @dev Overriden execute function that run the already queued proposal through the timelock.
+     */
+    function _execute(
+        uint256, /* proposalId */
+        address[] memory targets,
+        uint256[] memory values,
+        bytes[] memory calldatas,
+        bytes32 descriptionHash
+    ) internal virtual override(Governor, GovernorTimelockControl) {
+        _timelock.executeBatch{value: msg.value}(targets, values, calldatas, 0, descriptionHash);
+    }
+
+    /**
+     * @dev Overriden version of the {Governor-_cancel} function to cancel the timelocked proposal if it has already
      * been queued.
      */
     function _cancel(
@@ -260,6 +303,29 @@ contract GovernorBabylon is GovernorCompatibilityBravo, GovernorTimelockControl,
     }
 
     /**
+     * @dev Internal vote casting mechanism: Check that the vote is pending, that it has not been casted yet, retrieve
+     * voting weight using {IGovernor-getVotes} and call the {_countVote} internal function.
+     *
+     * Emits a {IGovernor-VoteCast} event.
+     */
+    function _castVote(
+        uint256 proposalId,
+        address account,
+        uint8 support,
+        string memory reason
+    ) internal virtual override returns (uint256) {
+        ProposalCore storage proposal = _proposals[proposalId];
+        require(state(proposalId) == ProposalState.Active, 'Governor: vote not currently active');
+
+        uint256 weight = getVotes(account, proposal.voteStart.getDeadline());
+        _countVote(proposalId, account, support, weight);
+
+        emit VoteCast(account, proposalId, support, weight, reason);
+
+        return weight;
+    }
+
+    /**
      * @dev See {Governor-_countVote}. In this module, the support follows Governor Bravo.
      */
     function _countVote(
@@ -293,34 +359,6 @@ contract GovernorBabylon is GovernorCompatibilityBravo, GovernorTimelockControl,
     function _executor() internal view virtual override(Governor, GovernorTimelockControl) returns (address) {
         return address(_timelock);
     }
-
-    /// @notice The number of votes required in order for a voter to become a proposer
-    function proposalThreshold() public pure override returns (uint256) {
-        return 10_000e18;
-    } // 1% of BABL
-
-    /// @notice The delay before voting on a proposal may take place, once proposed
-    function votingDelay() public pure override(Governor, IGovernor) returns (uint256) {
-        return 1;
-    }
-
-    /// @notice The duration of voting on a proposal, in blocks
-    function votingPeriod() public pure override(Governor, IGovernor) returns (uint256) {
-        return 7 days;
-    }
-
-    // TODO CHANGE QUORUM LOGIC
-    /**
-     * @dev See {IGovernor-quorum}
-     */
-    function quorum(uint256 blockNumber) public view virtual override(Governor, IGovernor) returns (uint256) {
-        return quorumVotes();
-    }
-
-    /// @notice The number of votes in support of a proposal required in order for a quorum to be reached and for a vote to succeed
-    function quorumVotes() public pure override returns (uint256) {
-        return 40_000e18;
-    } // 4% of BABL
 
     /**
      * @dev Encodes calldatas with optional function signature.

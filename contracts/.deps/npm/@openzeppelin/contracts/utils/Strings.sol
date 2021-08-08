@@ -6,7 +6,7 @@ pragma solidity ^0.8.0;
  * @dev String operations.
  */
 library Strings {
-    bytes16 private constant _HEX_SYMBOLS = "0123456789abcdef";
+    bytes16 private constant _HEX_SYMBOLS = '0123456789abcdef';
 
     /**
      * @dev Converts a `uint256` to its ASCII `string` decimal representation.
@@ -16,7 +16,7 @@ library Strings {
         // https://github.com/oraclize/ethereum-api/blob/b42146b063c7d6ee1358846c198246239e9360e8/oraclizeAPI_0.4.25.sol
 
         if (value == 0) {
-            return "0";
+            return '0';
         }
         uint256 temp = value;
         uint256 digits;
@@ -38,7 +38,7 @@ library Strings {
      */
     function toHexString(uint256 value) internal pure returns (string memory) {
         if (value == 0) {
-            return "0x00";
+            return '0x00';
         }
         uint256 temp = value;
         uint256 length = 0;
@@ -54,13 +54,13 @@ library Strings {
      */
     function toHexString(uint256 value, uint256 length) internal pure returns (string memory) {
         bytes memory buffer = new bytes(2 * length + 2);
-        buffer[0] = "0";
-        buffer[1] = "x";
+        buffer[0] = '0';
+        buffer[1] = 'x';
         for (uint256 i = 2 * length + 1; i > 1; --i) {
             buffer[i] = _HEX_SYMBOLS[value & 0xf];
             value >>= 4;
         }
-        require(value == 0, "Strings: hex length insufficient");
+        require(value == 0, 'Strings: hex length insufficient');
         return string(buffer);
     }
 }
