@@ -97,7 +97,7 @@ describe('Keeper', function () {
 
           const strategy = await getStrategy({ state, specificParams: [addresses.tokens.USDT, 0] });
 
-          await expect(func(garden, strategy, keeper, fee.add(1), token)).to.be.revertedWith(/BAB#019/);
+          await expect(func(garden, strategy, keeper, fee.add(1), token)).to.be.revertedWith('BAB#019');
         });
       });
     });

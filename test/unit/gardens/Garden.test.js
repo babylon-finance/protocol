@@ -240,13 +240,13 @@ describe('Garden', function () {
 
   describe('payKeeper', async function () {
     it('anyone can NOT invoke payKeeper', async function () {
-      await expect(garden1.connect(signer1).payKeeper(keeper.address, ONE_ETH)).to.be.revertedWith(/BAB#020/i);
+      await expect(garden1.connect(signer1).payKeeper(keeper.address, ONE_ETH)).to.be.revertedWith('BAB#020');
     });
   });
 
   describe('state', async function () {
     it('only the protocol should be able to update active state', async function () {
-      await expect(garden1.connect(signer1).setActive(true)).to.be.revertedWith(/BAB#016/i);
+      await expect(garden1.connect(signer1).setActive(true)).to.be.revertedWith('BAB#016');
     });
   });
   describe('profit sharing', async function () {
