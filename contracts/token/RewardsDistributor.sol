@@ -83,11 +83,7 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
      * Throws if the call is not from a valid active garden
      */
     modifier onlyActiveGarden(address _garden, uint256 _pid) {
-        if (_pid != 0 || gardenPid[address(_garden)] > 1) {
-            // Enable deploying flow with security restrictions
-            _require(IBabController(controller).isSystemContract(address(_garden)), Errors.NOT_A_SYSTEM_CONTRACT);
-            _require(IBabController(controller).isGarden(address(_garden)), Errors.ONLY_ACTIVE_GARDEN);
-        }
+        _require(IBabController(controller).isGarden(address(_garden)), Errors.ONLY_ACTIVE_GARDEN);
         _require(msg.sender == address(_garden), Errors.ONLY_ACTIVE_GARDEN);
         _require(IGarden(_garden).active(), Errors.ONLY_ACTIVE_GARDEN);
         _;
