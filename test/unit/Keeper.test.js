@@ -9,7 +9,7 @@ const { getStrategy } = require('fixtures/StrategyHelper');
 
 const { setupTests } = require('fixtures/GardenFixture');
 
-describe('Keeper', function () {
+describe.only('Keeper', function () {
   let keeper;
   let signer1;
   let signer2;
@@ -97,7 +97,7 @@ describe('Keeper', function () {
 
           const strategy = await getStrategy({ state, specificParams: [addresses.tokens.USDT, 0] });
 
-          await expect(func(garden, strategy, keeper, fee.add(1), token)).to.be.revertedWith(/BAB#019/);
+          await expect(func(garden, strategy, keeper, fee.add(1), token)).to.be.revertedWith('BAB#019');
         });
       });
     });
