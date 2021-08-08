@@ -9,7 +9,7 @@ const { getStrategy } = require('fixtures/StrategyHelper');
 
 const { setupTests } = require('fixtures/GardenFixture');
 
-describe.only('Keeper', function () {
+describe('Keeper', function () {
   let keeper;
   let signer1;
   let signer2;
