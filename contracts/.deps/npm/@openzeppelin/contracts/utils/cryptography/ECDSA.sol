@@ -54,7 +54,7 @@ library ECDSA {
             }
             return recover(hash, r, vs);
         } else {
-            revert('ECDSA: invalid signature length');
+            revert("ECDSA: invalid signature length");
         }
     }
 
@@ -105,7 +105,7 @@ library ECDSA {
 
         // If the signature is valid (and not malleable), return the signer address
         address signer = ecrecover(hash, v, r, s);
-        require(signer != address(0), 'ECDSA: invalid signature');
+        require(signer != address(0), "ECDSA: invalid signature");
 
         return signer;
     }
@@ -121,7 +121,7 @@ library ECDSA {
     function toEthSignedMessageHash(bytes32 hash) internal pure returns (bytes32) {
         // 32 is the length in bytes of hash,
         // enforced by the type signature above
-        return keccak256(abi.encodePacked('\x19Ethereum Signed Message:\n32', hash));
+        return keccak256(abi.encodePacked("\x19Ethereum Signed Message:\n32", hash));
     }
 
     /**
@@ -134,6 +134,6 @@ library ECDSA {
      * See {recover}.
      */
     function toTypedDataHash(bytes32 domainSeparator, bytes32 structHash) internal pure returns (bytes32) {
-        return keccak256(abi.encodePacked('\x19\x01', domainSeparator, structHash));
+        return keccak256(abi.encodePacked("\x19\x01", domainSeparator, structHash));
     }
 }

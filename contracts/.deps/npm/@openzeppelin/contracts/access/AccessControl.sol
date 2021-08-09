@@ -2,9 +2,9 @@
 
 pragma solidity ^0.8.0;
 
-import '../utils/Context.sol';
-import '../utils/Strings.sol';
-import '../utils/introspection/ERC165.sol';
+import "../utils/Context.sol";
+import "../utils/Strings.sol";
+import "../utils/introspection/ERC165.sol";
 
 /**
  * @dev External interface of AccessControl declared to support ERC165 detection.
@@ -137,9 +137,9 @@ abstract contract AccessControl is Context, IAccessControl, ERC165 {
             revert(
                 string(
                     abi.encodePacked(
-                        'AccessControl: account ',
+                        "AccessControl: account ",
                         Strings.toHexString(uint160(account), 20),
-                        ' is missing role ',
+                        " is missing role ",
                         Strings.toHexString(uint256(role), 32)
                     )
                 )
@@ -199,7 +199,7 @@ abstract contract AccessControl is Context, IAccessControl, ERC165 {
      * - the caller must be `account`.
      */
     function renounceRole(bytes32 role, address account) public virtual override {
-        require(account == _msgSender(), 'AccessControl: can only renounce roles for self');
+        require(account == _msgSender(), "AccessControl: can only renounce roles for self");
 
         _revokeRole(role, account);
     }
