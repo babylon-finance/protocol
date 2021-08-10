@@ -197,7 +197,7 @@ contract GovernorBabylon is GovernorCompatibilityBravo, GovernorTimelockControl,
 
     /// @notice The delay before voting on a proposal may take place, once proposed
     function votingDelay() public pure override(Governor, IGovernor) returns (uint256) {
-        return 1;
+        return 4;
     }
 
     /// @notice The duration of voting on a proposal, in blocks
