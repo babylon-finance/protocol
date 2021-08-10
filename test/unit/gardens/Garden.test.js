@@ -34,7 +34,6 @@ const {
 const { createGarden, getDepositSig, getWithdrawSig, transferFunds, depositFunds } = require('fixtures/GardenHelper');
 
 const { setupTests } = require('fixtures/GardenFixture');
-const { encoding } = require('dotenv/lib/env-options');
 
 async function createWallets(number) {
   const walletAddresses = [];
