@@ -1,25 +1,20 @@
 const { expect } = require('chai');
-// const { ethers } = require('hardhat');
 const addresses = require('lib/addresses');
 const { setupTests } = require('fixtures/GardenFixture');
 const { DEFAULT_STRATEGY_PARAMS } = require('fixtures/StrategyHelper');
 const { GARDEN_PARAMS, ADDRESS_ZERO } = require('lib/constants');
+const { from, eth, parse } = require('lib/helpers');
 
 describe('Babylon Viewer', function () {
   let garden1;
   let signer1;
+  let signer2;
+  let signer3;
   let uniswapV3TradeIntegration;
   let babViewer;
 
   beforeEach(async () => {
-    ({ uniswapV3TradeIntegration, signer1, babViewer, garden1 } = await setupTests()());
-  });
-
-  describe('Deployment', function () {
-    it('should successfully deploy the contract', async function () {
-      const deployed = await babViewer.deployed();
-      expect(!!deployed).to.equal(true);
-    });
+    ({ uniswapV3TradeIntegration, signer1, signer2, signer3, babViewer, garden1 } = await setupTests()());
   });
 
   describe('can call getter methods', async function () {
@@ -111,6 +106,16 @@ describe('Babylon Viewer', function () {
       const gardens = userGardens[0].filter((t) => t !== ADDRESS_ZERO);
       expect(gardens.length).to.be.gt(0);
       expect(userGardens[1].filter((t) => t).length).to.equal(gardens.length);
+    });
+
+    it('getPotentialVotes', async function () {
+      const totalVotes = await babViewer.getPotentialVotes(garden1.address, [
+        signer1.address,
+        signer2.address,
+        signer3.address,
+      ]);
+
+      expect(totalVotes).to.be.eq(eth());
     });
   });
 });

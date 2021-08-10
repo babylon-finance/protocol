@@ -18,6 +18,8 @@
 pragma solidity 0.7.6;
 pragma abicoder v2;
 
+import 'hardhat/console.sol';
+
 import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import {ERC20} from '@openzeppelin/contracts/token/ERC20/ERC20.sol';
 import {IERC721} from '@openzeppelin/contracts/token/ERC721/IERC721.sol';
@@ -265,9 +267,9 @@ contract BabylonViewer {
         }
         uint256 total = 0;
         for (uint256 i = 0; i < _members.length; i++) {
-            (bool canDeposit, bool canVote, ) = _getUserPermission(_garden, _members[i]);
+            (bool canDeposit, bool canVote, ) = getUserPermission(_garden, _members[i]);
             if (canDeposit && canVote) {
-                total.add(IERC20(_garden).balanceOf(_members[i]));
+                total = total.add(IERC20(_garden).balanceOf(_members[i]));
             }
         }
         return total;
@@ -381,8 +383,8 @@ contract BabylonViewer {
         return (poolHigh, FEE_HIGH);
     }
 
-    function _getUserPermission(address _garden, address _user)
-        internal
+    function getUserPermission(address _garden, address _user)
+        public
         view
         returns (
             bool canDeposit,
@@ -393,10 +395,7 @@ contract BabylonViewer {
         IGarden garden = IGarden(_garden);
         IIshtarGate gate = IIshtarGate(IBabController(controller).ishtarGate());
         bool hasGate = IERC721(address(gate)).balanceOf(_user) > 0;
-        canDeposit = gate.canJoinAGarden(address(this), _user) || (hasGate && !garden.privateGarden());
-        canVote = gate.canVoteInAGarden(address(this), _user) || (hasGate && garden.publicStewards());
-        canCreateStrategy =
-            gate.canAddStrategiesInAGarden(address(this), _user) ||
-            (hasGate && garden.publicStrategists());
+        canDeposit = gate.canJoinAGarden(_garden, _user) || (hasGate && !garden.privateGarden());
+        canVote = gate.canVoteInAGarden(_garden, _user) || (hasGate && garden.publicStewards());
     }
 }
