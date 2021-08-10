@@ -797,26 +797,6 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         return finalizedStrategies;
     }
 
-    /**
-     * Gets the number of tokens that can vote in this garden
-     *
-     * @param _members All members of a garden
-     * @return uint256 Total number of tokens that can vote
-     */
-    function getPotentialVotes(address[] calldata _members) external view override returns (uint256) {
-        if (publicStewards) {
-            return totalSupply();
-        }
-        uint256 total = 0;
-        for (uint256 i = 0; i < _members.length; i++) {
-            (bool canDeposit, bool canVote, ) = _getUserPermission(_members[i]);
-            if (canDeposit && canVote) {
-                total.add(balanceOf(_members[i]));
-            }
-        }
-        return total;
-    }
-
     function getContributor(address _contributor)
         external
         view

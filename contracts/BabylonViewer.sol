@@ -251,9 +251,26 @@ contract BabylonViewer {
         return contribution[1] > 0 ? contribution[0].preciseDiv(contribution[1]) : 0;
     }
 
+    /**
+     * Gets the number of tokens that can vote in this garden
+     *
+     * @param _garden  Garden to retrieve votes for
+     * @param _members All members of a garden
+     * @return uint256 Total number of tokens that can vote
+     */
     function getPotentialVotes(address _garden, address[] calldata _members) external view returns (uint256) {
         IGarden garden = IGarden(_garden);
-        return garden.getPotentialVotes(_members);
+        if (garden.publicStewards()) {
+            return IERC20(_garden).totalSupply();
+        }
+        uint256 total = 0;
+        for (uint256 i = 0; i < _members.length; i++) {
+            (bool canDeposit, bool canVote, ) = _getUserPermission(_garden, _members[i]);
+            if (canDeposit && canVote) {
+                total.add(IERC20(_garden).balanceOf(_members[i]));
+            }
+        }
+        return total;
     }
 
     function getUserStrategyActions(address[] memory _strategies, address _user)
@@ -362,5 +379,24 @@ contract BabylonViewer {
             return (poolMedium, FEE_MEDIUM);
         }
         return (poolHigh, FEE_HIGH);
+    }
+
+    function _getUserPermission(address _garden, address _user)
+        internal
+        view
+        returns (
+            bool canDeposit,
+            bool canVote,
+            bool canCreateStrategy
+        )
+    {
+        IGarden garden = IGarden(_garden);
+        IIshtarGate gate = IIshtarGate(IBabController(controller).ishtarGate());
+        bool hasGate = IERC721(address(gate)).balanceOf(_user) > 0;
+        canDeposit = gate.canJoinAGarden(address(this), _user) || (hasGate && !garden.privateGarden());
+        canVote = gate.canVoteInAGarden(address(this), _user) || (hasGate && garden.publicStewards());
+        canCreateStrategy =
+            gate.canAddStrategiesInAGarden(address(this), _user) ||
+            (hasGate && garden.publicStrategists());
     }
 }

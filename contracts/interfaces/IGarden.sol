@@ -165,8 +165,6 @@ interface IGarden {
 
     function getLockedBalance(address _contributor) external view returns (uint256);
 
-    function getPotentialVotes(address[] calldata _members) external view returns (uint256);
-
     function expireCandidateStrategy(address _strategy) external;
 
     function burnStrategistStake(address _strategist, uint256 _amount) external;
