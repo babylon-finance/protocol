@@ -122,6 +122,12 @@ module.exports = {
         },
       },
     ],
+    overrides: {
+      'node_modules/@uniswap': {
+        version: '0.7.6',
+        settings: { }
+      }
+    }
   },
   etherscan: {
     apiKey: 'JA61NTCWBMPN56AT7TFQ3IMPHH2M2NHSJJ',
