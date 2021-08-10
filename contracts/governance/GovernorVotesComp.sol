@@ -3,7 +3,7 @@
 pragma solidity ^0.8.0;
 
 import './Governor.sol';
-import '@openzeppelin/contracts/token/ERC20/extensions/ERC20VotesComp.sol';
+import '../.deps/npm/@openzeppelin/contracts/token/ERC20/extensions/ERC20VotesComp.sol';
 
 /**
  * @dev Extension of {Governor} for voting weight extraction from a Comp token.

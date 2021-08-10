@@ -14,7 +14,7 @@
 
 pragma solidity ^0.8.0;
 
-import '@openzeppelin/contracts/utils/introspection/ERC165.sol';
+import '../.deps/npm/@openzeppelin/contracts/utils/introspection/ERC165.sol';
 
 /**
  * @dev Interface of the {Governor} core.

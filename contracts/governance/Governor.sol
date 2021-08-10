@@ -14,13 +14,13 @@
 
 pragma solidity ^0.8.0;
 
-import '@openzeppelin/contracts/utils/cryptography/ECDSA.sol';
-import '@openzeppelin/contracts/utils/cryptography/draft-EIP712.sol';
-import '@openzeppelin/contracts/utils/introspection/ERC165.sol';
-import '@openzeppelin/contracts/utils/math/SafeCast.sol';
+import '../.deps/npm/@openzeppelin/contracts/utils/cryptography/ECDSA.sol';
+import '../.deps/npm/@openzeppelin/contracts/utils/cryptography/draft-EIP712.sol';
+import '../.deps/npm/@openzeppelin/contracts/utils/introspection/ERC165.sol';
+import '../.deps/npm/@openzeppelin/contracts/utils/math/SafeCast.sol';
 //import "@openzeppelin/contracts/utils/Address.sol";
 import '../lib/Address.sol';
-import '@openzeppelin/contracts/utils/Context.sol';
+import '../.deps/npm/@openzeppelin/contracts/utils/Context.sol';
 import '../lib/Timers.sol';
 import '../interfaces/IGovernor.sol';
 

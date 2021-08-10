@@ -63,6 +63,7 @@
     "hardhat": "^2.1.2",
     "hardhat-watcher": "^2.1.1",
     "node-watch": "^0.6.4",
+    "openzeppelin-solidity": "^4.2.0",
     "superagent": "^6.1.0"
   },
   "scripts": {

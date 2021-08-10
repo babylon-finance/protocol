@@ -2,8 +2,8 @@
 
 pragma solidity ^0.8.0;
 
-import '@openzeppelin/contracts/utils/Counters.sol';
-import '@openzeppelin/contracts/utils/math/SafeCast.sol';
+import '../.deps/npm/@openzeppelin/contracts/utils/Counters.sol';
+import '../.deps/npm/@openzeppelin/contracts/utils/math/SafeCast.sol';
 import '../interfaces/IGovernorTimelock.sol';
 import './Governor.sol';
 import '../interfaces/IGovernorCompatibilityBravo.sol';
