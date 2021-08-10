@@ -123,7 +123,7 @@ module.exports = {
       },
     ],
     overrides: {
-      'node_modules/@uniswap': {
+      'node_modules/@uniswap/*.*': {
         version: '0.7.6',
         settings: { }
       }
