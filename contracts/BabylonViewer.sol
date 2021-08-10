@@ -251,6 +251,11 @@ contract BabylonViewer {
         return contribution[1] > 0 ? contribution[0].preciseDiv(contribution[1]) : 0;
     }
 
+    function getPotentialVotes(address _garden, address[] calldata _members) external view returns (uint256) {
+        IGarden garden = IGarden(_garden);
+        return garden.getPotentialVotes(_members);
+    }
+
     function getUserStrategyActions(address[] memory _strategies, address _user)
         external
         view
