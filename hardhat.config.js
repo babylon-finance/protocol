@@ -127,11 +127,11 @@ module.exports = {
         version: '0.7.6',
         settings: {},
       },
-      '@uniswap/v3-core/contracts/libraries/TickMath.sol':  {
+      '@uniswap/v3-core/contracts/libraries/TickMath.sol': {
         version: '0.7.6',
         settings: {},
       },
-      '@uniswap/v3-periphery/contracts/libraries/PoolAddress.sol':  {
+      '@uniswap/v3-periphery/contracts/libraries/PoolAddress.sol': {
         version: '0.7.6',
         settings: {},
       },
