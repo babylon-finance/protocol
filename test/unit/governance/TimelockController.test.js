@@ -1,7 +1,7 @@
 const { expect } = require('chai');
 const { ethers } = require('hardhat');
 
-const { ONE_ETH, ADDRESS_ZERO, ONE_DAY_IN_SECONDS } = require('lib/constants');
+const { ONE_DAY_IN_SECONDS } = require('lib/constants');
 const { increaseTime } = require('utils/test-helpers');
 
 const { setupTests } = require('fixtures/GardenFixture');
@@ -22,6 +22,7 @@ describe('TimelockController contract', function () {
     it('should successfully deploy TimelockController contract', async function () {
       const deployedc = await timelockController.deployed();
       expect(!!deployedc).to.equal(true);
+      expect(await timelockController.getMinDelay()).to.be.equal(ONE_DAY_IN_SECONDS);
     });
   });
 });

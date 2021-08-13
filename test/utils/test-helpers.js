@@ -1,4 +1,5 @@
 const { ethers } = require('hardhat');
+const { BN } = require('@openzeppelin/test-helpers');
 
 /**
  * Advance blockchain time by value. Has a random chance to deviate by 1 second.
@@ -57,6 +58,10 @@ function normalizeDecimals(tokenDecimals, tokenDecimalsTarget, quantity) {
   return quantity.div(10 ** (tokenDecimals - tokenDecimalsTarget));
 }
 
+function enums(...options) {
+  return Object.fromEntries(options.map((key, i) => [key, new BN(i)]));
+}
+
 module.exports = {
   increaseTime,
   getTimestamp,
@@ -67,4 +72,7 @@ module.exports = {
   getContract,
   eth,
   normalizeDecimals,
+  enums,
+  proposalState: enums('Pending', 'Active', 'Canceled', 'Defeated', 'Succeeded', 'Queued', 'Expired', 'Executed'),
+  voteType: enums('Against', 'For', 'Abstain'),
 };
