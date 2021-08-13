@@ -8,7 +8,7 @@ const { increaseTime, voteType, proposalState } = require('utils/test-helpers');
 
 const { setupTests } = require('fixtures/GardenFixture');
 
-describe.only('Governor Babylon contract', function () {
+describe('Governor Babylon contract', function () {
   let owner;
   let signer1;
   let signer2;
@@ -93,7 +93,7 @@ describe.only('Governor Babylon contract', function () {
     });
   });
   describe('Proposals', function () {
-    it.only('hash a proposal', async function () {
+    it('hash a proposal', async function () {
       const ABI = ['function enableBABLMiningProgram()'];
       const iface = new ethers.utils.Interface(ABI);
       const encodedData = iface.encodeFunctionData('enableBABLMiningProgram');
@@ -103,7 +103,7 @@ describe.only('Governor Babylon contract', function () {
       const id = await governorBabylon.hashProposal(...settings.proposal);
       expect(id.toString()).to.equal('31592073516640214093428763406121273246927507816899979568469470593665780044126');
     });
-    it.only('should successfully create a proposal', async function () {
+    it('should successfully create a proposal', async function () {
       const ABI = ['function enableBABLMiningProgram()'];
       const iface = new ethers.utils.Interface(ABI);
       const encodedData = iface.encodeFunctionData('enableBABLMiningProgram');
