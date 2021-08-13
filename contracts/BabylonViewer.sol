@@ -18,6 +18,8 @@
 pragma solidity 0.7.6;
 pragma abicoder v2;
 
+import 'hardhat/console.sol';
+
 import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import {ERC20} from '@openzeppelin/contracts/token/ERC20/ERC20.sol';
 import {IERC721} from '@openzeppelin/contracts/token/ERC721/IERC721.sol';
@@ -251,6 +253,28 @@ contract BabylonViewer {
         return contribution[1] > 0 ? contribution[0].preciseDiv(contribution[1]) : 0;
     }
 
+    /**
+     * Gets the number of tokens that can vote in this garden
+     *
+     * @param _garden  Garden to retrieve votes for
+     * @param _members All members of a garden
+     * @return uint256 Total number of tokens that can vote
+     */
+    function getPotentialVotes(address _garden, address[] calldata _members) external view returns (uint256) {
+        IGarden garden = IGarden(_garden);
+        if (garden.publicStewards()) {
+            return IERC20(_garden).totalSupply();
+        }
+        uint256 total = 0;
+        for (uint256 i = 0; i < _members.length; i++) {
+            (bool canDeposit, bool canVote, ) = getUserPermission(_garden, _members[i]);
+            if (canDeposit && canVote) {
+                total = total.add(IERC20(_garden).balanceOf(_members[i]));
+            }
+        }
+        return total;
+    }
+
     function getUserStrategyActions(address[] memory _strategies, address _user)
         external
         view
@@ -357,5 +381,21 @@ contract BabylonViewer {
             return (poolMedium, FEE_MEDIUM);
         }
         return (poolHigh, FEE_HIGH);
+    }
+
+    function getUserPermission(address _garden, address _user)
+        public
+        view
+        returns (
+            bool canDeposit,
+            bool canVote,
+            bool canCreateStrategy
+        )
+    {
+        IGarden garden = IGarden(_garden);
+        IIshtarGate gate = IIshtarGate(IBabController(controller).ishtarGate());
+        bool hasGate = IERC721(address(gate)).balanceOf(_user) > 0;
+        canDeposit = gate.canJoinAGarden(_garden, _user) || (hasGate && !garden.privateGarden());
+        canVote = gate.canVoteInAGarden(_garden, _user) || (hasGate && garden.publicStewards());
     }
 }
