@@ -36,7 +36,7 @@ module.exports = async ({ getNamedAccounts, deployments, ethers, getSigner, getC
   ).wait();
 
   console.log('Register investor and team allocations');
-  const investorsVestingStart = new Date();
+  const investorsVestingStart = new Date(2021, 6, 27); // Tue Jul 27 2021 16:40:42 GMT+0000 from real token
   const teamVestingStart = new Date(2021, 2, 15);
   console.log(`Team vestings starts at ${teamVestingStart}`);
   console.log(`Investor vestings starts at ${investorsVestingStart}`);
