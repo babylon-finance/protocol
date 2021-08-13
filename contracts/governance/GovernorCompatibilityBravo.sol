@@ -4,9 +4,9 @@ pragma solidity ^0.8.0;
 
 import '../.deps/npm/@openzeppelin/contracts/utils/Counters.sol';
 import '../.deps/npm/@openzeppelin/contracts/utils/math/SafeCast.sol';
-import '../interfaces/IGovernorTimelock.sol';
 import './Governor.sol';
 import '../interfaces/IGovernorCompatibilityBravo.sol';
+import '../interfaces/IGovernorTimelock.sol';
 
 /**
  * @dev Compatibility layer that implements GovernorBravo compatibility on to of {Governor}.

@@ -19,23 +19,23 @@ import {GovernorTimelockControl} from './GovernorTimelockControl.sol';
 import {TimelockController} from './TimelockController.sol';
 import {GovernorVotesComp} from './GovernorVotesComp.sol';
 import {Governor} from './Governor.sol';
-import '../.deps/npm/@openzeppelin/contracts/utils/math/SafeCast.sol';
-import '../.deps/npm/@openzeppelin/contracts/access/AccessControl.sol';
-import '../.deps/npm/@openzeppelin/contracts/utils/cryptography/ECDSA.sol';
+
+import {SafeCast} from '../.deps/npm/@openzeppelin/contracts/utils/math/SafeCast.sol';
+import {AccessControl} from '../.deps/npm/@openzeppelin/contracts/access/AccessControl.sol';
+import {ECDSA} from '../.deps/npm/@openzeppelin/contracts/utils/cryptography/ECDSA.sol';
 import '../.deps/npm/@openzeppelin/contracts/utils/cryptography/draft-EIP712.sol';
-import '../.deps/npm/@openzeppelin/contracts/utils/introspection/ERC165.sol';
-import '../.deps/npm/@openzeppelin/contracts/utils/introspection/IERC165.sol';
-import '../.deps/npm/@openzeppelin/contracts/utils/Context.sol';
-import '../.deps/npm/@openzeppelin/contracts/utils/Counters.sol';
-import '../.deps/npm/@openzeppelin/contracts/utils/Strings.sol';
+import {ERC165} from '../.deps/npm/@openzeppelin/contracts/utils/introspection/ERC165.sol';
+import {IERC165} from '../.deps/npm/@openzeppelin/contracts/utils/introspection/IERC165.sol';
+import {Context} from '../.deps/npm/@openzeppelin/contracts/utils/Context.sol';
+import {Counters} from '../.deps/npm/@openzeppelin/contracts/utils/Counters.sol';
+import {Strings} from '../.deps/npm/@openzeppelin/contracts/utils/Strings.sol';
+import {SafeMath} from '../.deps/npm/@openzeppelin/contracts/utils/math/SafeMath.sol';
+import {Address} from '../.deps/npm/@openzeppelin/contracts/utils/Address.sol';
+import {Timers} from '../.deps/npm/@openzeppelin/contracts/utils/Timers.sol';
+import {ERC20VotesComp} from '../.deps/npm/@openzeppelin/contracts/token/ERC20/extensions/ERC20VotesComp.sol';
+
 import {IGovernorTimelock} from '../interfaces/IGovernorTimelock.sol';
 import {IGovernorCompatibilityBravo} from '../interfaces/IGovernorCompatibilityBravo.sol';
-import {SafeMath} from '../.deps/npm/@openzeppelin/contracts/utils/math/SafeMath.sol';
-
-import '../lib/Address.sol';
-
-import {Timers} from '../lib/Timers.sol';
-import '../.deps/npm/@openzeppelin/contracts/token/ERC20/extensions/ERC20VotesComp.sol';
 import {IGovernor} from '../interfaces/IGovernor.sol';
 
 contract GovernorBabylon is GovernorCompatibilityBravo, GovernorTimelockControl, GovernorVotesComp {

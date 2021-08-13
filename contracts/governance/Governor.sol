@@ -18,10 +18,9 @@ import '../.deps/npm/@openzeppelin/contracts/utils/cryptography/ECDSA.sol';
 import '../.deps/npm/@openzeppelin/contracts/utils/cryptography/draft-EIP712.sol';
 import '../.deps/npm/@openzeppelin/contracts/utils/introspection/ERC165.sol';
 import '../.deps/npm/@openzeppelin/contracts/utils/math/SafeCast.sol';
-//import "@openzeppelin/contracts/utils/Address.sol";
-import '../lib/Address.sol';
+import '../.deps/npm/@openzeppelin/contracts/utils/Address.sol';
 import '../.deps/npm/@openzeppelin/contracts/utils/Context.sol';
-import '../lib/Timers.sol';
+import '../.deps/npm/@openzeppelin/contracts/utils/Timers.sol';
 import '../interfaces/IGovernor.sol';
 
 /**
