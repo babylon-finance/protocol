@@ -4,6 +4,7 @@ const { expectRevert, time } = require('@openzeppelin/test-helpers');
 const EthCrypto = require('eth-crypto');
 
 const { ONE_ETH, ADDRESS_ZERO, ONE_DAY_IN_SECONDS } = require('lib/constants');
+const { from, eth, parse } = require('lib/helpers');
 const { increaseTime, voteType, proposalState } = require('utils/test-helpers');
 
 const { setupTests } = require('fixtures/GardenFixture');
@@ -93,7 +94,7 @@ describe('Governor Babylon contract', function () {
     });
   });
   describe('Proposals', function () {
-    it('hash a proposal', async function () {
+    it('hashProposal', async function () {
       const ABI = ['function enableBABLMiningProgram()'];
       const iface = new ethers.utils.Interface(ABI);
       const encodedData = iface.encodeFunctionData('enableBABLMiningProgram');
@@ -101,9 +102,11 @@ describe('Governor Babylon contract', function () {
       const proposer = signer1;
       const settings = await createProposal(proposer, babController.address, value, encodedData, proposalDescription);
       const id = await governorBabylon.hashProposal(...settings.proposal);
+
       expect(id.toString()).to.equal('31592073516640214093428763406121273246927507816899979568469470593665780044126');
     });
-    it('should successfully create a proposal', async function () {
+
+    it.only('propose', async function () {
       const ABI = ['function enableBABLMiningProgram()'];
       const iface = new ethers.utils.Interface(ABI);
       const encodedData = iface.encodeFunctionData('enableBABLMiningProgram');
@@ -125,8 +128,14 @@ describe('Governor Babylon contract', function () {
 
       console.log('CHECK 0');
 
+      console.log('settings', settings);
+      console.log('settings', ...settings.proposal);
+      console.log('settings', governorBabylon);
+
       // propose
-      await governorBabylon.connect(settings.proposer).propose(...settings.proposal);
+      await governorBabylon
+        .connect(settings.proposer)
+        ['propose(address[],uint256[],bytes[],string)'](...settings.proposal);
 
       console.log('CHECK 1');
 
