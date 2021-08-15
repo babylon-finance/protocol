@@ -66,7 +66,7 @@ describe.only('Governor Babylon contract', function () {
         (
           await bablToken
             .connect(voter.voter)
-            .getPriorVotes(voter.voter.address, (await ethers.provider.getBlock()).number - 1)
+          .getPriorVotes(voter.voter.address, (await ethers.provider.getBlock()).number - 1)
         ).toString(),
       );
     }
@@ -148,8 +148,8 @@ describe.only('Governor Babylon contract', function () {
       const iface = new ethers.utils.Interface(ABI);
       const encodedData = iface.encodeFunctionData('enableBABLMiningProgram');
       // const proposer = await impersonateAddress('0x3E7c4E57A1dc4dD4bBE81bEFBe3E437f69619DaB');
-      const proposer = owner;
-      let settings = await createProposal(
+      const proposer = voter1;
+      let proposalObject = await createProposal(
         proposer,
         babController.address,
         value,
@@ -157,7 +157,7 @@ describe.only('Governor Babylon contract', function () {
         '<proposal description>',
       );
 
-      await claimTokens(settings);
+      await claimTokens(proposalObject);
       await increaseTime(ONE_DAY_IN_SECONDS);
       console.log('owner babl', (await bablToken.balanceOf(owner.address)).toString());
       console.log('voter1 babl', (await bablToken.balanceOf(voter1.address)).toString());
@@ -165,8 +165,8 @@ describe.only('Governor Babylon contract', function () {
       console.log('voter3 babl', (await bablToken.balanceOf(voter3.address)).toString());
       console.log('voter4 babl', (await bablToken.balanceOf(voter4.address)).toString());
 
-      // await selfDelegation(settings);
-      for (const voter of settings.voters) {
+      // await selfDelegation(proposalObject);
+      for (const voter of proposalObject.voters) {
         await bablToken.connect(voter.voter).delegate(voter.voter.address);
         await increaseTime(100);
         console.log(
@@ -183,32 +183,31 @@ describe.only('Governor Babylon contract', function () {
         );
       }
 
-      // console.log(settings.proposer);
+      // console.log(proposalObject.proposer);
       console.log('threshold', (await governorBabylon.proposalThreshold()).toString());
 
       // propose
-      await governorBabylon.connect(voter1)['propose(address[],uint256[],bytes[],string)'](...settings.proposal);
+      await governorBabylon.connect(voter1)['propose(address[],uint256[],bytes[],string)'](...proposalObject.proposal);
 
       console.log('CHECK 1');
 
       // get id to check the created proposal
       const proposalDescription = EthCrypto.hash.keccak256([{ type: 'string', value: '<proposal description>' }]);
-      settings = await createProposal(proposer, babController.address, value, encodedData, proposalDescription);
-      const id = await governorBabylon.hashProposal(...settings.proposal);
+      proposalObject = await createProposal(proposer, babController.address, value, encodedData, proposalDescription);
+      const id = await governorBabylon.hashProposal(...proposalObject.proposal);
 
-      const proposed = await governorBabylon.proposals(id);
-      expect(proposed[0]).to.be.equal(id);
-      expect(proposed[1]).to.be.equal(proposer);
+      const [proposalId, proposerAddress, eta, startBlock, endBlock, forVotes, againstVotes, abstainVotes, canceled, executed] = await governorBabylon.proposals(id);
 
-      // TODO check all params eta, startBlock, etc.
-      // expect(proposed[2]).to.be.equal(eta); // eta
-      // expect(proposed[3]).to.be.equal(startBlock); // startBlock
-      // expect(proposed[4]).to.be.equal(endBlock); // endBlock
-      // expect(proposed[5]).to.be.equal(forVotes); // forVotes
-      // expect(proposed[6]).to.be.equal(againstVotes); // againstVotes
-      // expect(proposed[7]).to.be.equal(abstainVotes); // abstainVotes
-      // expect(proposed[8]).to.be.equal(canceled); // canceled
-      // expect(proposed[9]).to.be.equal(executed); // executed
+      expect(proposalId).to.be.equal(id);
+      expect(proposerAddress).to.be.equal(proposer.address);
+      expect(eta).to.be.equal(0);
+      expect(startBlock).to.be.equal(12821127);
+      expect(endBlock).to.be.equal(13425927);
+      expect(forVotes).to.be.equal(0);
+      expect(againstVotes).to.be.equal(0);
+      expect(abstainVotes).to.be.equal(0);
+      expect(canceled).to.be.equal(false);
+      expect(executed).to.be.equal(false);
     });
   });
 
