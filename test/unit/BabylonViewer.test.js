@@ -45,7 +45,7 @@ describe('Babylon Viewer', function () {
       expect(status[1]).to.equal(0); // Reserve rewards set aside
       expect(status[2]).to.equal(0); // Absolute returns
       expect(status[3]).to.be.gt(0); // Initialized at
-      expect(status[4]).to.equal(1); // Initialized at
+      expect(status[4]).to.equal(1); // Total Contributors
       expect(status[5]).to.be.gt(0); // Stake
       expect(status[6]).to.be.gt(0); // Valuation
       expect(status[7]).to.be.gt(0); // totalSupply
