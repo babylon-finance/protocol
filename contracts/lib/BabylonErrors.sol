@@ -272,4 +272,6 @@ library Errors {
     uint256 internal constant MAX_CONTRIBUTORS_SET = 91;
     // Profit sharing mismatch for customized gardens
     uint256 internal constant PROFIT_SHARING_MISMATCH = 92;
+    // Max allocation percentage
+    uint256 internal constant MAX_STRATEGY_ALLOCATION_PERCENTAGE = 93;
 }

@@ -94,6 +94,7 @@ describe('Babylon Viewer', function () {
       expect(strategyDetails[2][9]).to.be.gt(0); // Entered At
       expect(strategyDetails[2][10]).to.equal(0); // Get NAV
       expect(strategyDetails[2][11]).to.equal(0); // Rewards
+      expect(strategyDetails[2][12]).to.equal(DEFAULT_STRATEGY_PARAMS[4]); // Max Allocation Percentage
       expect(strategyDetails[3][0]).to.equal(false); // Active
       expect(strategyDetails[3][1]).to.equal(true); // Data set
       expect(strategyDetails[3][2]).to.equal(false); // Finalized
