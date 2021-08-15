@@ -146,7 +146,7 @@ contract GovernorBabylon is GovernorCompatibilityBravo, GovernorTimelockControl,
         override(IGovernor, Governor, GovernorTimelockControl)
         returns (ProposalState)
     {
-        return super.state(proposalId);
+        return GovernorTimelockControl.state(proposalId);
     }
 
     /// @notice The number of votes required in order for a voter to become a proposer
@@ -243,21 +243,6 @@ contract GovernorBabylon is GovernorCompatibilityBravo, GovernorTimelockControl,
         returns (bool)
     {
         return super._voteSucceeded(proposalId);
-    }
-
-    /**
-     * @dev Internal vote casting mechanism: Check that the vote is pending, that it has not been casted yet, retrieve
-     * voting weight using {IGovernor-getVotes} and call the {_countVote} internal function.
-     *
-     * Emits a {IGovernor-VoteCast} event.
-     */
-    function _castVote(
-        uint256 proposalId,
-        address account,
-        uint8 support,
-        string memory reason
-    ) internal virtual override returns (uint256) {
-        return super._castVote(proposalId, account, support, reason);
     }
 
     /**

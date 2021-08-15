@@ -45,7 +45,6 @@ abstract contract GovernorTimelockControl is IGovernorTimelock, Governor {
      */
     function state(uint256 proposalId) public view virtual override(IGovernor, Governor) returns (ProposalState) {
         ProposalState status = super.state(proposalId);
-
         if (status != ProposalState.Succeeded) {
             return status;
         }

@@ -14,6 +14,8 @@
 
 pragma solidity ^0.8.0;
 
+import 'hardhat/console.sol';
+
 import '../.deps/npm/@openzeppelin/contracts/utils/cryptography/ECDSA.sol';
 import '../.deps/npm/@openzeppelin/contracts/utils/cryptography/draft-EIP712.sol';
 import '../.deps/npm/@openzeppelin/contracts/utils/introspection/ERC165.sol';
@@ -202,8 +204,6 @@ abstract contract Governor is Context, ERC165, EIP712, IGovernor {
         string memory description
     ) public virtual override returns (uint256) {
         uint256 proposalId = hashProposal(targets, values, calldatas, keccak256(bytes(description)));
-
-        console.log('propse governon');
 
         require(targets.length == values.length, 'Governor: invalid proposal length');
         require(targets.length == calldatas.length, 'Governor: invalid proposal length');

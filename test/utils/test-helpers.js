@@ -1,6 +1,4 @@
 const { ethers } = require('hardhat');
-const { BN } = require('@openzeppelin/test-helpers');
-
 /**
  * Advance blockchain time by value. Has a random chance to deviate by 1 second.
  * Consider this during tests. Use `closeTo`.
@@ -12,6 +10,15 @@ async function increaseTime(value) {
   }
   await ethers.provider.send('evm_increaseTime', [value.toNumber()]);
   await ethers.provider.send('evm_mine');
+}
+async function increaseBlock(blocks) {
+  if (!ethers.BigNumber.isBigNumber(blocks)) {
+    blocks = ethers.BigNumber.from(blocks);
+  }
+  for (let i = 0; i < blocks; i++) {
+    await ethers.provider.send('evm_increaseTime', [1]);
+    await ethers.provider.send('evm_mine');
+  }
 }
 
 /**
@@ -59,11 +66,12 @@ function normalizeDecimals(tokenDecimals, tokenDecimalsTarget, quantity) {
 }
 
 function enums(...options) {
-  return Object.fromEntries(options.map((key, i) => [key, new BN(i)]));
+  return Object.fromEntries(options.map((key, i) => [key, new ethers.BigNumber.from(i)]));
 }
 
 module.exports = {
   increaseTime,
+  increaseBlock,
   getTimestamp,
   mineInBlock,
   sleep,

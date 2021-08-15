@@ -158,23 +158,18 @@ abstract contract VoteToken is Context, ERC20, Ownable, IVoteToken, ReentrancyGu
      */
     function getPriorVotes(address account, uint256 blockNumber) external view virtual override returns (uint96) {
         require(blockNumber < block.number, 'BABLToken::getPriorVotes: not yet determined');
-        console.log('account & blockNumber', account, blockNumber, block.timestamp);
         uint32 nCheckpoints = numCheckpoints[account];
         if (nCheckpoints == 0) {
             return 0;
         }
 
         // First check most recent balance
-        console.log('latest from  block', checkpoints[account][nCheckpoints - 1].fromBlock);
         if (checkpoints[account][nCheckpoints - 1].fromBlock <= blockNumber) {
             return checkpoints[account][nCheckpoints - 1].votes;
         }
 
-        console.log('shoould not be here');
-
         // Next check implicit zero balance
         if (checkpoints[account][0].fromBlock > blockNumber) {
-            console.log('zero balance');
             return 0;
         }
 

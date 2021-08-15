@@ -26,15 +26,11 @@ describe('TimelockController', function () {
     });
   });
 
-  describe('scheduleBatch', function () {
-  });
+  describe('scheduleBatch', function () {});
 
-  describe('cancel', function () {
-  });
+  describe('cancel', function () {});
 
-  describe('execute', function () {
-  });
+  describe('execute', function () {});
 
-  describe('executeBatch', function () {
-  });
+  describe('executeBatch', function () {});
 });
