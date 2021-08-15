@@ -192,8 +192,8 @@ contract GovernorBabylon is GovernorCompatibilityBravo, GovernorTimelockControl,
 
     /// @notice The number of votes required in order for a voter to become a proposer
     function proposalThreshold() public view override returns (uint256) {
-        return token.totalSupply().div(100);
-    } // 1% of BABL (minimum of 10_000e18)
+        return 5_000e18;
+    } // 0.5% of BABL
 
     /// @notice The delay before voting on a proposal may take place, once proposed
     function votingDelay() public pure override(Governor, IGovernor) returns (uint256) {
@@ -214,8 +214,8 @@ contract GovernorBabylon is GovernorCompatibilityBravo, GovernorTimelockControl,
 
     /// @notice The number of votes in support of a proposal required in order for a quorum to be reached and for a vote to succeed
     function quorumVotes() public view override returns (uint256) {
-        return token.totalSupply().div(25);
-    } // 4% of BABL (minimum of 40_000e18)
+        return 40_000e18;
+    } // 4% of BABL
 
     /* ============ Internal Functions ============ */
 
