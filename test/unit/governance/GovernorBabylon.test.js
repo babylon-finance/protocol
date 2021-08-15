@@ -245,6 +245,9 @@ describe.only('Governor Babylon contract', function () {
     });
   });
 
+  describe('execute', function () {
+  });
+
   describe('queue', function () {
     it.skip('can queue proposal', async function () {
       // TODO
