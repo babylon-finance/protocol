@@ -33,7 +33,8 @@ interface IStrategy {
         uint256 _maxCapitalRequested,
         uint256 _stake,
         uint256 _strategyDuration,
-        uint256 _expectedReturn
+        uint256 _expectedReturn,
+        uint256 _maxAllocationPercentage
     ) external;
 
     function resolveVoting(
