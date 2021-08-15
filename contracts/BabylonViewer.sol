@@ -113,7 +113,8 @@ contract BabylonViewer {
                 garden.maxStrategyDuration(),
                 garden.strategyCooldownPeriod(),
                 garden.minContribution(),
-                garden.minLiquidityAsset()
+                garden.minLiquidityAsset(),
+                garden.totalKeeperFees() + garden.keeperDebt()
             ],
             [
                 garden.principal(),
