@@ -9,7 +9,7 @@ const { increaseTime, voteType, proposalState } = require('utils/test-helpers');
 const { setupTests } = require('fixtures/GardenFixture');
 const { impersonateAddress } = require('lib/rpc');
 
-describe('Governor Babylon contract', function () {
+describe.only('Governor Babylon contract', function () {
   let owner;
   let signer1;
   let signer2;
@@ -56,6 +56,7 @@ describe('Governor Babylon contract', function () {
   async function selfDelegation(settings) {
     for (const voter of settings.voters) {
       await bablToken.connect(voter.voter).delegate(voter.voter.address);
+      await increaseTime(100);
       console.log(
         'getCurrentVotes',
         (await bablToken.connect(voter.voter).getCurrentVotes(voter.voter.address)).toString(),
@@ -122,7 +123,7 @@ describe('Governor Babylon contract', function () {
     });
   });
 
-  describe('propose', function () {
+  describe.only('propose', function () {
     it('can NOT propose below a proposal threshold', async function () {
       const ABI = ['function enableBABLMiningProgram()'];
       const iface = new ethers.utils.Interface(ABI);
@@ -164,14 +165,29 @@ describe('Governor Babylon contract', function () {
       console.log('voter3 babl', (await bablToken.balanceOf(voter3.address)).toString());
       console.log('voter4 babl', (await bablToken.balanceOf(voter4.address)).toString());
 
-      await selfDelegation(settings);
+      // await selfDelegation(settings);
+      for (const voter of settings.voters) {
+        await bablToken.connect(voter.voter).delegate(voter.voter.address);
+        await increaseTime(100);
+        console.log(
+          'getCurrentVotes',
+          (await bablToken.connect(voter.voter).getCurrentVotes(voter.voter.address)).toString(),
+        );
+        console.log(
+          'getPriorVotes',
+          (
+            await bablToken
+              .connect(voter.voter)
+              .getPriorVotes(voter.voter.address, (await ethers.provider.getBlock()).number - 1)
+          ).toString(),
+        );
+      }
 
       // console.log(settings.proposer);
       console.log('threshold', (await governorBabylon.proposalThreshold()).toString());
-      await increaseTime(ONE_DAY_IN_SECONDS * 20);
 
       // propose
-      await governorBabylon.connect(owner)['propose(address[],uint256[],bytes[],string)'](...settings.proposal);
+      await governorBabylon.connect(voter1)['propose(address[],uint256[],bytes[],string)'](...settings.proposal);
 
       console.log('CHECK 1');
 

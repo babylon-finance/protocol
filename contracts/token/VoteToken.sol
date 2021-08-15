@@ -174,6 +174,7 @@ abstract contract VoteToken is Context, ERC20, Ownable, IVoteToken, ReentrancyGu
 
         // Next check implicit zero balance
         if (checkpoints[account][0].fromBlock > blockNumber) {
+            console.log('zero balance');
             return 0;
         }
 

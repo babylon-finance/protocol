@@ -23,6 +23,8 @@ import '../.deps/npm/@openzeppelin/contracts/utils/Context.sol';
 import '../.deps/npm/@openzeppelin/contracts/utils/Timers.sol';
 import '../interfaces/IGovernor.sol';
 
+import 'hardhat/console.sol';
+
 /**
  * @dev Core of the governance system, designed to be extended though various modules.
  *
@@ -200,6 +202,8 @@ abstract contract Governor is Context, ERC165, EIP712, IGovernor {
         string memory description
     ) public virtual override returns (uint256) {
         uint256 proposalId = hashProposal(targets, values, calldatas, keccak256(bytes(description)));
+
+        console.log('propse governon');
 
         require(targets.length == values.length, 'Governor: invalid proposal length');
         require(targets.length == calldatas.length, 'Governor: invalid proposal length');
