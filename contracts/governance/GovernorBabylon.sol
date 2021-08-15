@@ -98,16 +98,15 @@ contract GovernorBabylon is GovernorCompatibilityBravo, GovernorTimelockControl,
         bytes[] memory calldatas,
         bytes32 descriptionHash
     ) public virtual override(GovernorCompatibilityBravo, GovernorTimelockControl) returns (uint256) {
-      return super.queue(targets, values, calldatas, descriptionHash);
+        return super.queue(targets, values, calldatas, descriptionHash);
     }
 
     /**
      * @dev See {IGovernorCompatibilityBravo-queue}.
      */
     function queue(uint256 proposalId) public virtual override {
-      return super.queue(proposalId);
+        return super.queue(proposalId);
     }
-
 
     /* ============ View Functions ============ */
 
@@ -121,7 +120,7 @@ contract GovernorBabylon is GovernorCompatibilityBravo, GovernorTimelockControl,
         override(GovernorCompatibilityBravo, GovernorTimelockControl)
         returns (uint256)
     {
-      return super.proposalEta(proposalId);
+        return super.proposalEta(proposalId);
     }
 
     /**
@@ -147,7 +146,7 @@ contract GovernorBabylon is GovernorCompatibilityBravo, GovernorTimelockControl,
         override(IGovernor, Governor, GovernorTimelockControl)
         returns (ProposalState)
     {
-      return super.state(proposalId);
+        return super.state(proposalId);
     }
 
     /// @notice The number of votes required in order for a voter to become a proposer
@@ -183,14 +182,13 @@ contract GovernorBabylon is GovernorCompatibilityBravo, GovernorTimelockControl,
      * @dev Overriden execute function that run the already queued proposal through the timelock.
      */
     function _execute(
-        uint256  proposalId,
+        uint256 proposalId,
         address[] memory targets,
         uint256[] memory values,
         bytes[] memory calldatas,
         bytes32 descriptionHash
     ) internal virtual override(Governor, GovernorTimelockControl) {
-      GovernorTimelockControl._execute(proposalId, targets, values, calldatas,
-                                       descriptionHash);
+        GovernorTimelockControl._execute(proposalId, targets, values, calldatas, descriptionHash);
     }
 
     /**
@@ -218,8 +216,7 @@ contract GovernorBabylon is GovernorCompatibilityBravo, GovernorTimelockControl,
         bytes[] memory calldatas,
         string memory description
     ) internal virtual override {
-      return super._storeProposal(proposalId, proposer, targets, values,
-                                  signatures, calldatas, description);
+        return super._storeProposal(proposalId, proposer, targets, values, signatures, calldatas, description);
     }
 
     /**

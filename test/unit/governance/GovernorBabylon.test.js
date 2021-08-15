@@ -66,7 +66,7 @@ describe.only('Governor Babylon contract', function () {
         (
           await bablToken
             .connect(voter.voter)
-          .getPriorVotes(voter.voter.address, (await ethers.provider.getBlock()).number - 1)
+            .getPriorVotes(voter.voter.address, (await ethers.provider.getBlock()).number - 1)
         ).toString(),
       );
     }
@@ -196,7 +196,18 @@ describe.only('Governor Babylon contract', function () {
       proposalObject = await createProposal(proposer, babController.address, value, encodedData, proposalDescription);
       const id = await governorBabylon.hashProposal(...proposalObject.proposal);
 
-      const [proposalId, proposerAddress, eta, startBlock, endBlock, forVotes, againstVotes, abstainVotes, canceled, executed] = await governorBabylon.proposals(id);
+      const [
+        proposalId,
+        proposerAddress,
+        eta,
+        startBlock,
+        endBlock,
+        forVotes,
+        againstVotes,
+        abstainVotes,
+        canceled,
+        executed,
+      ] = await governorBabylon.proposals(id);
 
       expect(proposalId).to.be.equal(id);
       expect(proposerAddress).to.be.equal(proposer.address);
