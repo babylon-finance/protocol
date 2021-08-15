@@ -39,6 +39,7 @@ describe('Babylon Viewer', function () {
       expect(paramsCreation[7]).to.equal(GARDEN_PARAMS[4]); // Strategy cooldown
       expect(paramsCreation[8]).to.equal(GARDEN_PARAMS[3]); // Min contribution
       expect(paramsCreation[9]).to.equal(GARDEN_PARAMS[1]); // Min liquidity asset
+      expect(paramsCreation[10]).to.equal(0); // Keeper fees
       const status = gardenDetails[8];
       expect(status[0]).to.be.gt(0); // Principal
       expect(status[1]).to.equal(0); // Reserve rewards set aside
