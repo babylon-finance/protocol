@@ -123,7 +123,7 @@ describe.only('Governor Babylon contract', function () {
     });
   });
 
-  describe.only('propose', function () {
+  describe('propose', function () {
     it('can NOT propose below a proposal threshold', async function () {
       const ABI = ['function enableBABLMiningProgram()'];
       const iface = new ethers.utils.Interface(ABI);
@@ -222,21 +222,32 @@ describe.only('Governor Babylon contract', function () {
     });
   });
 
-  it.skip('should successfully vote a proposal', async function () {
-    // TODO
-    // Take the id of the proposal to check votes
-    // const proposalDescription = EthCrypto.hash.keccak256([{ type: 'string', value: '<proposal description>' }]);
-    // const settings = await createProposal(proposer, babController.address, value, encodedData, proposalDescription);
-    // const id = await governorBabylon.hashProposal(...settings.proposal);
-    // expect(await governorBabylon.hasVoted(id, voter1)).to.be.equal(true);
-    // expect(await governorBabylon.hasVoted(id, voter2)).to.be.equal(true);
-    // expect(await governorBabylon.hasVoted(id, voter3)).to.be.equal(true);
-    // expect(await governorBabylon.hasVoted(id, voter4)).to.be.equal(true); // voter 4 is owner
+  describe('castVoteWithReason', function () {
   });
-  it.skip('should successfully vote a proposal by sig', async function () {
-    // TODO
+
+  describe('castVoteBySig', function () {
+    it.skip('can cast a vote by sig', async function () {
+      // TODO
+    });
   });
-  it.skip('should successfully queue a proposal', async function () {
-    // TODO
+
+  describe('castVote', function () {
+    it.skip('can cast a vote', async function () {
+      // TODO
+      // Take the id of the proposal to check votes
+      // const proposalDescription = EthCrypto.hash.keccak256([{ type: 'string', value: '<proposal description>' }]);
+      // const settings = await createProposal(proposer, babController.address, value, encodedData, proposalDescription);
+      // const id = await governorBabylon.hashProposal(...settings.proposal);
+      // expect(await governorBabylon.hasVoted(id, voter1)).to.be.equal(true);
+      // expect(await governorBabylon.hasVoted(id, voter2)).to.be.equal(true);
+      // expect(await governorBabylon.hasVoted(id, voter3)).to.be.equal(true);
+      // expect(await governorBabylon.hasVoted(id, voter4)).to.be.equal(true); // voter 4 is owner
+    });
+  });
+
+  describe('queue', function () {
+    it.skip('can queue proposal', async function () {
+      // TODO
+    });
   });
 });

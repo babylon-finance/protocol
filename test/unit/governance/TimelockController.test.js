@@ -6,7 +6,7 @@ const { increaseTime } = require('utils/test-helpers');
 
 const { setupTests } = require('fixtures/GardenFixture');
 
-describe('TimelockController contract', function () {
+describe('TimelockController', function () {
   let owner;
   let signer1;
   let signer2;
@@ -24,5 +24,17 @@ describe('TimelockController contract', function () {
       expect(!!deployedc).to.equal(true);
       expect(await timelockController.getMinDelay()).to.be.equal(ONE_DAY_IN_SECONDS);
     });
+  });
+
+  describe('scheduleBatch', function () {
+  });
+
+  describe('cancel', function () {
+  });
+
+  describe('execute', function () {
+  });
+
+  describe('executeBatch', function () {
   });
 });

@@ -98,7 +98,7 @@ contract GovernorBabylon is GovernorCompatibilityBravo, GovernorTimelockControl,
         bytes[] memory calldatas,
         bytes32 descriptionHash
     ) public virtual override(GovernorCompatibilityBravo, GovernorTimelockControl) returns (uint256) {
-        return super.queue(targets, values, calldatas, descriptionHash);
+        return GovernorTimelockControl.queue(targets, values, calldatas, descriptionHash);
     }
 
     /**
