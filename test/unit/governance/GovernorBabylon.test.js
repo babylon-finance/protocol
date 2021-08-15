@@ -77,11 +77,9 @@ describe('Governor Babylon contract', function () {
     voter4 = await impersonateAddress('0x232775eAD28F0C0c750A097bA77302E7d84efd3B'); // Team 17K
   });
 
-  describe('Deployment check', function () {
+  describe('deployment', function () {
     it('should successfully deploy Governor Babylon contract', async function () {
-      const deployedc = await governorBabylon.deployed();
       const tokenSupply = await bablToken.totalSupply();
-      expect(!!deployedc).to.equal(true);
       expect(await governorBabylon.name()).to.be.equal(name);
       expect(await governorBabylon.version()).to.be.equal(version);
       expect(await governorBabylon.token()).to.be.equal(bablToken.address);
@@ -97,8 +95,9 @@ describe('Governor Babylon contract', function () {
       expect(await bablToken.symbol()).to.be.equal(tokenSymbol);
     });
   });
-  describe('Proposals', function () {
-    it('hashProposal', async function () {
+
+  describe('hashProposal', function () {
+    it('can hash', async function () {
       const ABI = ['function enableBABLMiningProgram()'];
       const iface = new ethers.utils.Interface(ABI);
       const encodedData = iface.encodeFunctionData('enableBABLMiningProgram');
@@ -109,7 +108,10 @@ describe('Governor Babylon contract', function () {
 
       expect(id.toString()).to.equal('31592073516640214093428763406121273246927507816899979568469470593665780044126');
     });
-    it.only('cannot propose below proposalThreshold', async function () {
+  });
+
+  describe('propose', function () {
+    it.only('can NOT propose below a proposal threshold', async function () {
       const ABI = ['function enableBABLMiningProgram()'];
       const iface = new ethers.utils.Interface(ABI);
       const encodedData = iface.encodeFunctionData('enableBABLMiningProgram');
@@ -124,13 +126,11 @@ describe('Governor Babylon contract', function () {
 
       // propose
       await expect(
-        governorBabylon
-          .connect(settings.proposer)
-          ['propose(address[],uint256[],bytes[],string)'](...settings.proposal)
+        governorBabylon.connect(settings.proposer)['propose(address[],uint256[],bytes[],string)'](...settings.proposal),
       ).to.be.revertedWith('GovernorCompatibilityBravo: proposer votes below proposal threshold');
     });
 
-    it.only('propose', async function () {
+    it.only('make a valid proposal', async function () {
       const ABI = ['function enableBABLMiningProgram()'];
       const iface = new ethers.utils.Interface(ABI);
       const encodedData = iface.encodeFunctionData('enableBABLMiningProgram');
@@ -158,9 +158,7 @@ describe('Governor Babylon contract', function () {
       await increaseTime(ONE_DAY_IN_SECONDS * 20);
 
       // propose
-      await governorBabylon
-        .connect(owner)
-        ['propose(address[],uint256[],bytes[],string)'](...settings.proposal);
+      await governorBabylon.connect(owner)['propose(address[],uint256[],bytes[],string)'](...settings.proposal);
 
       console.log('CHECK 1');
 
@@ -183,22 +181,23 @@ describe('Governor Babylon contract', function () {
       // expect(proposed[8]).to.be.equal(canceled); // canceled
       // expect(proposed[9]).to.be.equal(executed); // executed
     });
-    it.skip('should successfully vote a proposal', async function () {
-      // TODO
-      // Take the id of the proposal to check votes
-      // const proposalDescription = EthCrypto.hash.keccak256([{ type: 'string', value: '<proposal description>' }]);
-      // const settings = await createProposal(proposer, babController.address, value, encodedData, proposalDescription);
-      // const id = await governorBabylon.hashProposal(...settings.proposal);
-      // expect(await governorBabylon.hasVoted(id, voter1)).to.be.equal(true);
-      // expect(await governorBabylon.hasVoted(id, voter2)).to.be.equal(true);
-      // expect(await governorBabylon.hasVoted(id, voter3)).to.be.equal(true);
-      // expect(await governorBabylon.hasVoted(id, voter4)).to.be.equal(true); // voter 4 is owner
-    });
-    it.skip('should successfully vote a proposal by sig', async function () {
-      // TODO
-    });
-    it.skip('should successfully queue a proposal', async function () {
-      // TODO
-    });
+  });
+
+  it.skip('should successfully vote a proposal', async function () {
+    // TODO
+    // Take the id of the proposal to check votes
+    // const proposalDescription = EthCrypto.hash.keccak256([{ type: 'string', value: '<proposal description>' }]);
+    // const settings = await createProposal(proposer, babController.address, value, encodedData, proposalDescription);
+    // const id = await governorBabylon.hashProposal(...settings.proposal);
+    // expect(await governorBabylon.hasVoted(id, voter1)).to.be.equal(true);
+    // expect(await governorBabylon.hasVoted(id, voter2)).to.be.equal(true);
+    // expect(await governorBabylon.hasVoted(id, voter3)).to.be.equal(true);
+    // expect(await governorBabylon.hasVoted(id, voter4)).to.be.equal(true); // voter 4 is owner
+  });
+  it.skip('should successfully vote a proposal by sig', async function () {
+    // TODO
+  });
+  it.skip('should successfully queue a proposal', async function () {
+    // TODO
   });
 });
