@@ -209,7 +209,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
     // Rewards Distributor address
     IRewardsDistributor private rewardsDistributor;
 
-    uint256 maxAllocationPercentage; //  Relative to garden capital. (1% = 1e16, 10% 1e17)
+    uint256 public override maxAllocationPercentage; //  Relative to garden capital. (1% = 1e16, 10% 1e17)
 
     /* ============ Constructor ============ */
 

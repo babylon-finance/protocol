@@ -141,6 +141,8 @@ interface IStrategy {
 
     function maxCapitalRequested() external view returns (uint256);
 
+    function maxAllocationPercentage() external view returns (uint256);
+
     function expectedReturn() external view returns (uint256);
 
     function duration() external view returns (uint256);

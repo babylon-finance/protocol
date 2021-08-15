@@ -145,7 +145,7 @@ contract BabylonViewer {
         returns (
             address,
             string memory,
-            uint256[12] memory,
+            uint256[13] memory,
             bool[] memory,
             uint256[] memory
         )
@@ -173,7 +173,8 @@ contract BabylonViewer {
                 strategy.maxCapitalRequested(),
                 strategy.enteredAt(),
                 strategy.getNAV(),
-                rewards
+                rewards,
+                strategy.maxAllocationPercentage()
             ],
             status,
             ts
