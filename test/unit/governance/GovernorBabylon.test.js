@@ -56,6 +56,18 @@ describe('Governor Babylon contract', function () {
   async function selfDelegation(settings) {
     for (const voter of settings.voters) {
       await bablToken.connect(voter.voter).delegate(voter.voter.address);
+      console.log(
+        'getCurrentVotes',
+        (await bablToken.connect(voter.voter).getCurrentVotes(voter.voter.address)).toString(),
+      );
+      console.log(
+        'getPriorVotes',
+        (
+          await bablToken
+            .connect(voter.voter)
+            .getPriorVotes(voter.voter.address, (await ethers.provider.getBlock()).number - 1)
+        ).toString(),
+      );
     }
   }
 
@@ -111,7 +123,7 @@ describe('Governor Babylon contract', function () {
   });
 
   describe('propose', function () {
-    it.only('can NOT propose below a proposal threshold', async function () {
+    it('can NOT propose below a proposal threshold', async function () {
       const ABI = ['function enableBABLMiningProgram()'];
       const iface = new ethers.utils.Interface(ABI);
       const encodedData = iface.encodeFunctionData('enableBABLMiningProgram');
@@ -130,7 +142,7 @@ describe('Governor Babylon contract', function () {
       ).to.be.revertedWith('GovernorCompatibilityBravo: proposer votes below proposal threshold');
     });
 
-    it.only('make a valid proposal', async function () {
+    it('make a valid proposal', async function () {
       const ABI = ['function enableBABLMiningProgram()'];
       const iface = new ethers.utils.Interface(ABI);
       const encodedData = iface.encodeFunctionData('enableBABLMiningProgram');
@@ -145,6 +157,7 @@ describe('Governor Babylon contract', function () {
       );
 
       await claimTokens(settings);
+      await increaseTime(ONE_DAY_IN_SECONDS);
       console.log('owner babl', (await bablToken.balanceOf(owner.address)).toString());
       console.log('voter1 babl', (await bablToken.balanceOf(voter1.address)).toString());
       console.log('voter2 babl', (await bablToken.balanceOf(voter2.address)).toString());
@@ -154,7 +167,7 @@ describe('Governor Babylon contract', function () {
       await selfDelegation(settings);
 
       // console.log(settings.proposer);
-      console.log((await governorBabylon.proposalThreshold()).toString());
+      console.log('threshold', (await governorBabylon.proposalThreshold()).toString());
       await increaseTime(ONE_DAY_IN_SECONDS * 20);
 
       // propose

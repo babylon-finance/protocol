@@ -16,7 +16,9 @@
 */
 
 pragma solidity 0.7.6;
+
 import 'hardhat/console.sol';
+
 import {ERC20} from '@openzeppelin/contracts/token/ERC20/ERC20.sol';
 import {IVoteToken} from '../interfaces/IVoteToken.sol';
 import {ReentrancyGuard} from '@openzeppelin/contracts/utils/ReentrancyGuard.sol';
@@ -163,9 +165,12 @@ abstract contract VoteToken is Context, ERC20, Ownable, IVoteToken, ReentrancyGu
         }
 
         // First check most recent balance
+        console.log('latest from  block', checkpoints[account][nCheckpoints - 1].fromBlock);
         if (checkpoints[account][nCheckpoints - 1].fromBlock <= blockNumber) {
             return checkpoints[account][nCheckpoints - 1].votes;
         }
+
+        console.log('shoould not be here');
 
         // Next check implicit zero balance
         if (checkpoints[account][0].fromBlock > blockNumber) {
