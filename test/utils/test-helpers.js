@@ -16,7 +16,7 @@ async function increaseBlock(blocks) {
     blocks = ethers.BigNumber.from(blocks);
   }
   for (let i = 0; i < blocks; i++) {
-    await ethers.provider.send('evm_increaseTime', [1]);
+    await ethers.provider.send('evm_increaseTime', [20]); // 20 seconds per block
     await ethers.provider.send('evm_mine');
   }
 }

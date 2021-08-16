@@ -45,9 +45,13 @@ contract GovernorBabylon is GovernorCompatibilityBravo, GovernorTimelockControl,
     using SafeMath for uint256;
     using Timers for Timers.BlockNumber;
 
+    /* ============ Events ================= */
+    
     /* ============ Modifiers ================= */
 
     /* ============ State Variables ============ */
+    uint256 private delay;
+    uint256 private votingDuration;
 
     /* ============ Functions ============ */
 
@@ -59,8 +63,13 @@ contract GovernorBabylon is GovernorCompatibilityBravo, GovernorTimelockControl,
     constructor(
         string memory _name,
         TimelockController _timeLockAddress,
-        ERC20VotesComp _token
-    ) Governor(_name) GovernorTimelockControl(_timeLockAddress) GovernorVotesComp(_token) {}
+        ERC20VotesComp _token,
+        uint256 _delay,
+        uint256 _votingDuration
+    ) Governor(_name) GovernorTimelockControl(_timeLockAddress) GovernorVotesComp(_token) {
+        delay = _delay;
+        votingDuration = _votingDuration;
+    }
 
     /* ============ External Functions ============ */
 
@@ -155,13 +164,13 @@ contract GovernorBabylon is GovernorCompatibilityBravo, GovernorTimelockControl,
     } // 0.5% of BABL
 
     /// @notice The delay before voting on a proposal may take place, once proposed
-    function votingDelay() public pure override(Governor, IGovernor) returns (uint256) {
-        return 4;
+    function votingDelay() public view override(Governor, IGovernor) returns (uint256) {
+        return delay;
     }
 
     /// @notice The duration of voting on a proposal, in blocks
-    function votingPeriod() public pure override(Governor, IGovernor) returns (uint256) {
-        return 7 days;
+    function votingPeriod() public view override(Governor, IGovernor) returns (uint256) {
+        return votingDuration;
     }
 
     /**

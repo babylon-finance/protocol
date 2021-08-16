@@ -1,3 +1,5 @@
+const { ONE_DAY_IN_SECONDS } = require('../../lib/constants');
+
 module.exports = async ({ getTenderlyContract, getNamedAccounts, deployments, getRapid, network, tenderly }) => {
   const { deployer } = await getNamedAccounts();
   const gasPrice = await getRapid();
@@ -15,7 +17,7 @@ module.exports = async ({ getTenderlyContract, getNamedAccounts, deployments, ge
 
   const governor = await deploy('GovernorBabylon', {
     from: deployer,
-    args: [name, timelockController.address, bablToken.address],
+    args: [name, timelockController.address, bablToken.address, 4, ONE_DAY_IN_SECONDS * 7],
     log: true,
     gasPrice,
   });

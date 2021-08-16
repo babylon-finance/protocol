@@ -31,6 +31,35 @@ describe.only('Governor Babylon contract', function () {
   let voter3;
   let voter4;
 
+  async function getGovernorMock(duration) {
+    const { deployer } = await getNamedAccounts();
+    const gasPrice = await getRapid();
+    const { deploy } = deployments;
+    const signer = await getSigner(deployer);
+
+    // We deploy a mock contract with shorter deadline
+    const mockGovernor = await deploy('GovernorBabylon', {
+      from: deployer,
+      args: ['Mock Governor', timelockController.address, bablToken.address, 4, duration],
+      log: true,
+      gasPrice,
+    });
+    const mockGovernorContract = await ethers.getContractAt('GovernorBabylon', mockGovernor.address, signer);
+    return mockGovernorContract;
+  }
+
+  async function grantRoles(contract) {
+    const { deployer } = await getNamedAccounts();
+    const signer = await getSigner(deployer);
+    const gasPrice = await getRapid();
+
+    const PROPOSER_ROLE = await timelockController.PROPOSER_ROLE();
+    const EXECUTOR_ROLE = await timelockController.EXECUTOR_ROLE();
+
+    await (await timelockController.connect(deployer).grantRole(PROPOSER_ROLE, contract.address, { gasPrice })).wait();
+    await (await timelockController.connect(deployer).grantRole(EXECUTOR_ROLE, contract.address, { gasPrice })).wait();
+  }
+
   async function createProposal(proposer, target, value, encodedData, description) {
     const settings = {
       proposal: [[target], [value], [encodedData], description],
@@ -65,7 +94,7 @@ describe.only('Governor Babylon contract', function () {
     }
   }
 
-  async function governanceFixture(proposer) {
+  async function governanceFixture(proposer, contract) {
     const ABI = ['function enableBABLMiningProgram()'];
     const iface = new ethers.utils.Interface(ABI);
     const encodedData = iface.encodeFunctionData('enableBABLMiningProgram');
@@ -85,7 +114,8 @@ describe.only('Governor Babylon contract', function () {
       encodedData,
       proposalDescriptionHash,
     );
-    const id = await governorBabylon.hashProposal(...proposalObjectHashed.proposal);
+
+    const id = await contract.hashProposal(...proposalObjectHashed.proposal);
     await claimTokens(proposalObject);
     await increaseTime(ONE_DAY_IN_SECONDS);
     await selfDelegation(proposalObject);
@@ -131,14 +161,14 @@ describe.only('Governor Babylon contract', function () {
 
   describe('hashProposal', function () {
     it('can hash', async function () {
-      const [, id] = await governanceFixture(voter1);
+      const [, id] = await governanceFixture(voter1, governorBabylon);
       expect(id.toString()).to.equal('31592073516640214093428763406121273246927507816899979568469470593665780044126');
     });
   });
 
   describe('propose', function () {
     it('can NOT propose below a proposal threshold', async function () {
-      const [proposalObject] = await governanceFixture(signer1);
+      const [proposalObject] = await governanceFixture(signer1, governorBabylon);
       // propose
       await expect(
         governorBabylon
@@ -148,7 +178,7 @@ describe.only('Governor Babylon contract', function () {
     });
 
     it('make a valid proposal', async function () {
-      const [proposalObject, id] = await governanceFixture(voter1);
+      const [proposalObject, id] = await governanceFixture(voter1, governorBabylon);
 
       // propose
       await governorBabylon.connect(voter1)['propose(address[],uint256[],bytes[],string)'](...proposalObject.proposal);
@@ -189,7 +219,7 @@ describe.only('Governor Babylon contract', function () {
 
   describe('castVote', function () {
     it('can cast a vote', async function () {
-      const [proposalObject, id] = await governanceFixture(voter1);
+      const [proposalObject, id] = await governanceFixture(voter1, governorBabylon);
 
       // propose
       await governorBabylon.connect(voter1)['propose(address[],uint256[],bytes[],string)'](...proposalObject.proposal);
@@ -219,7 +249,7 @@ describe.only('Governor Babylon contract', function () {
     });
 
     it('can NOT cast a vote before votes start', async function () {
-      const [proposalObject, id] = await governanceFixture(voter1);
+      const [proposalObject, id] = await governanceFixture(voter1, governorBabylon);
 
       // propose
       await governorBabylon.connect(voter1)['propose(address[],uint256[],bytes[],string)'](...proposalObject.proposal);
@@ -229,13 +259,76 @@ describe.only('Governor Babylon contract', function () {
         'Governor: vote not currently active',
       );
     });
-  });
+    it('can NOT cast a vote after voting period ends', async function () {
+      const mockGovernorContract = await getGovernorMock(10);
+      const [proposalObject, id] = await governanceFixture(voter1, mockGovernorContract);
 
-  describe('execute', function () {});
+      // propose
+      await mockGovernorContract
+        .connect(voter1)
+        ['propose(address[],uint256[],bytes[],string)'](...proposalObject.proposal);
 
-  describe('queue', function () {
-    it.skip('can queue proposal', async function () {
-      // TODO
+      // We vote after the deadline
+      await increaseBlock(14);
+
+      await expect(mockGovernorContract.connect(voter1).castVote(id, voteType.For)).to.be.revertedWith(
+        'Governor: vote not currently active',
+      );
+      expect(await mockGovernorContract.proposalDeadline(id)).to.be.lte((await ethers.provider.getBlock()).number);
     });
   });
+  describe('queue', function () {
+    it.skip('can queue proposal', async function () {
+      const mockGovernorContract = await getGovernorMock(10);
+      const [proposalObject, id] = await governanceFixture(voter1, mockGovernorContract);
+      console.log(id.toString());
+
+      // propose
+      await mockGovernorContract
+        .connect(voter1)
+        ['propose(address[],uint256[],bytes[],string)'](...proposalObject.proposal);
+
+      // 4 blocks to reach the block where the voting starts
+      await increaseBlock(4);
+
+      await castVotes(proposalObject, id);
+
+      const [, , eta, , , forVotes, againstVotes, abstainVotes, , ,] = await mockGovernorContract.proposals(id);
+
+      /** 
+      const mockGovernorContract = await getGovernorMock(10);
+      // await grantRoles(mockGovernorContract);
+      const [proposalObject, id] = await governanceFixture(voter1, mockGovernorContract);
+
+      // propose
+      await mockGovernorContract
+        .connect(voter1)
+        ['propose(address[],uint256[],bytes[],string)'](...proposalObject.proposal);
+    
+      console.log('block before', (await ethers.provider.getBlock()).number.toString());
+
+      await increaseBlock(4);
+      console.log('block after 1', (await ethers.provider.getBlock()).number.toString());
+      const [
+        proposalId,
+        proposerAddress,
+        eta,
+        startBlock,
+        endBlock,
+        forVotes,
+        againstVotes,
+        abstainVotes,
+        canceled,
+        executed,
+      ] = await mockGovernorContract.proposals(id);
+      console.log('CHECK', await mockGovernorContract.proposals(id));
+      await castVotes(proposalObject, id);
+      console.log('block after 2', (await ethers.provider.getBlock()).number.toString());
+
+      await increaseBlock(5);
+      console.log('block last', (await ethers.provider.getBlock()).number.toString());
+      */
+    });
+  });
+  describe('execute', function () {});
 });
