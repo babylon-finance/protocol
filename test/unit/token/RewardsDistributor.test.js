@@ -1028,7 +1028,6 @@ describe('BABL Rewards Distributor', function () {
 
         expect(preallocated).to.be.equal(amount);
         const reserveAssetContract = await ethers.getContractAt('IERC20', token);
-        // expect(await reserveAssetContract.balanceOf(garden.address)).to.be.closeTo(amount, amount.div(100));
         expect(await strategyContract.capitalAllocated()).to.equal(amount);
         await increaseTime(ONE_DAY_IN_SECONDS * 70);
         await increaseBlock(100);
@@ -1050,7 +1049,8 @@ describe('BABL Rewards Distributor', function () {
         const [preallocated2, pricePerTokenUnit2] = await rewardsDistributor.getStrategyPricePerTokenUnit(
           strategyContract.address,
         );
-
+        expect(preallocated2).to.be.closeTo(amount, preallocated2.div(100));
+        expect(pricePerTokenUnit2).to.be.closeTo(pricePerTokenUnit, pricePerTokenUnit2.div(100));
         expect(await strategyContract.capitalAllocated()).to.equal(amount);
 
         await increaseTime(ONE_DAY_IN_SECONDS * 70);
