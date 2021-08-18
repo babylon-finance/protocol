@@ -1006,12 +1006,10 @@ describe('BABL Rewards Distributor', function () {
       { token: addresses.tokens.USDC, name: 'USDC' },
       { token: addresses.tokens.WBTC, name: 'WBTC' },
     ].forEach(({ token, name }) => {
-      it(`can reallocate and unwind capital of a strategy in a ${name} Garden`, async function () {
-        // TODO update operation to use DAI
+      it.only(`can reallocate and unwind capital of a strategy in a ${name} Garden`, async function () {
+        // TODO update try other type of strategies to use DAI Garden
         // Mining program has to be enabled before the strategy starts its execution
         await babController.connect(owner).enableBABLMiningProgram();
-        const block = await ethers.provider.getBlock();
-        const now = block.timestamp;
 
         await transferFunds(token);
 
@@ -1028,7 +1026,6 @@ describe('BABL Rewards Distributor', function () {
 
         expect(preallocated).to.be.equal(amount);
         const reserveAssetContract = await ethers.getContractAt('IERC20', token);
-        // expect(await reserveAssetContract.balanceOf(garden.address)).to.be.closeTo(amount, amount.div(100));
         expect(await strategyContract.capitalAllocated()).to.equal(amount);
         await increaseTime(ONE_DAY_IN_SECONDS * 70);
         await increaseBlock(100);
@@ -1050,7 +1047,8 @@ describe('BABL Rewards Distributor', function () {
         const [preallocated2, pricePerTokenUnit2] = await rewardsDistributor.getStrategyPricePerTokenUnit(
           strategyContract.address,
         );
-
+        expect(preallocated2).to.be.closeTo(amount, preallocated2.div(100));
+        expect(pricePerTokenUnit2).to.be.closeTo(pricePerTokenUnit, pricePerTokenUnit2.div(100));
         expect(await strategyContract.capitalAllocated()).to.equal(amount);
 
         await increaseTime(ONE_DAY_IN_SECONDS * 70);
