@@ -1007,9 +1007,11 @@ describe('BABL Rewards Distributor', function () {
       { token: addresses.tokens.WBTC, name: 'WBTC' },
     ].forEach(({ token, name }) => {
       it(`can reallocate and unwind capital of a strategy in a ${name} Garden`, async function () {
-        // TODO update try other type of strategies to use DAI Garden
+        // TODO update operation to use DAI
         // Mining program has to be enabled before the strategy starts its execution
         await babController.connect(owner).enableBABLMiningProgram();
+        const block = await ethers.provider.getBlock();
+        const now = block.timestamp;
 
         await transferFunds(token);
 
