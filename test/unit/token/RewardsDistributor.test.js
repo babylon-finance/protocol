@@ -1006,7 +1006,7 @@ describe('BABL Rewards Distributor', function () {
       { token: addresses.tokens.USDC, name: 'USDC' },
       { token: addresses.tokens.WBTC, name: 'WBTC' },
     ].forEach(({ token, name }) => {
-      it.only(`can reallocate and unwind capital of a strategy in a ${name} Garden`, async function () {
+      it(`can reallocate and unwind capital of a strategy in a ${name} Garden`, async function () {
         // TODO update try other type of strategies to use DAI Garden
         // Mining program has to be enabled before the strategy starts its execution
         await babController.connect(owner).enableBABLMiningProgram();
