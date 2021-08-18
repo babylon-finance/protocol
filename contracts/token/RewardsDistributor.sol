@@ -83,11 +83,7 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
      * Throws if the call is not from a valid active garden
      */
     modifier onlyActiveGarden(address _garden, uint256 _pid) {
-        if (_pid != 0 || gardenPid[address(_garden)] > 1) {
-            // Enable deploying flow with security restrictions
-            _require(IBabController(controller).isSystemContract(address(_garden)), Errors.NOT_A_SYSTEM_CONTRACT);
-            _require(IBabController(controller).isGarden(address(_garden)), Errors.ONLY_ACTIVE_GARDEN);
-        }
+        _require(IBabController(controller).isGarden(address(_garden)), Errors.ONLY_ACTIVE_GARDEN);
         _require(msg.sender == address(_garden), Errors.ONLY_ACTIVE_GARDEN);
         _require(IGarden(_garden).active(), Errors.ONLY_ACTIVE_GARDEN);
         _;
@@ -1369,7 +1365,7 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         uint256 _previousBalance,
         bool _depositOrWithdraw
     ) private {
-        // We make checkpoints around contributor deposits to avoid fast loans and give the right rewards afterwards
+        // We make checkpoints around contributor deposits to give the right rewards afterwards
         ContributorPerGarden storage contributor = contributorPerGarden[address(_garden)][_contributor];
         TimestampContribution storage contributorDetail = contributor.tsContributions[block.timestamp];
         contributorDetail.supply = IERC20(address(IGarden(_garden))).balanceOf(address(_contributor));

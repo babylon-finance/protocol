@@ -163,10 +163,6 @@ interface IBabController {
 
     function isSystemContract(address _contractAddress) external view returns (bool);
 
-    function getMinCooldownPeriod() external view returns (uint256);
-
-    function getMaxCooldownPeriod() external view returns (uint256);
-
     function protocolPerformanceFee() external view returns (uint256);
 
     function protocolManagementFee() external view returns (uint256);

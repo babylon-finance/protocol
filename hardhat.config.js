@@ -68,6 +68,7 @@ module.exports = {
         blockNumber: 12821000,
       },
       saveDeployments: true,
+      gas: 9e6,
     },
     mainnet: {
       chainId: CHAIN_IDS.mainnet,
@@ -121,6 +122,7 @@ module.exports = {
     project: 'babylon',
   },
   paths: {
+    tests: './test/unit',
     sources: './contracts',
     integrations: './contracts/integrations',
     artifacts: './artifacts',
