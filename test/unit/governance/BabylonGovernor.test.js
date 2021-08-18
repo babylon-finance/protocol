@@ -2,14 +2,14 @@ const { expect } = require('chai');
 const { ethers } = require('hardhat');
 const EthCrypto = require('eth-crypto');
 
-const { ONE_ETH, ADDRESS_ZERO, ONE_DAY_IN_SECONDS } = require('lib/constants');
+const { ADDRESS_ZERO, ONE_DAY_IN_SECONDS } = require('lib/constants');
 const { from, eth, parse } = require('lib/helpers');
 const { increaseTime, increaseBlock, voteType, proposalState } = require('utils/test-helpers');
 
 const { setupTests } = require('fixtures/GardenFixture');
 const { impersonateAddress } = require('lib/rpc');
 
-describe('BabylonGovernor', function () {
+describe.only('BabylonGovernor', function () {
   let owner;
   let signer1;
   let signer2;
@@ -22,7 +22,7 @@ describe('BabylonGovernor', function () {
   const version = '1';
   const tokenName = 'Babylon.Finance';
   const tokenSymbol = 'BABL';
-  const value = ethers.utils.parseEther('0');
+  const value = from(0);
 
   let voter1;
   let voter2;
@@ -115,6 +115,8 @@ describe('BabylonGovernor', function () {
 
     const id = await contract.hashProposal(...proposalObjectHashed.proposal);
     await claimTokens(proposalObject);
+
+
     await increaseTime(ONE_DAY_IN_SECONDS);
     await selfDelegation(proposalObject);
     return [proposalObject, id];
@@ -139,7 +141,7 @@ describe('BabylonGovernor', function () {
   });
 
   describe('deployment', function () {
-    it.only('should successfully deploy Governor Babylon contract', async function () {
+    it('should successfully deploy Governor Babylon contract', async function () {
       const tokenSupply = await bablToken.totalSupply();
       expect(await babGovernor.name()).to.be.equal('BabylonGovernor');
       expect(await babGovernor.version()).to.be.equal(version);
