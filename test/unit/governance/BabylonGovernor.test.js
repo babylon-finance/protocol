@@ -62,13 +62,12 @@ describe.only('BabylonGovernor', function () {
   async function selfDelegation(voters) {
     for (const voter of voters) {
       await bablToken.connect(voter.voter).delegate(voter.voter.address);
-      await increaseBlock(1);
     }
   }
 
-  async function castVotes(id, voters) {
+  async function castVotes(id, voters, governor) {
     for (const voter of voters) {
-      await babGovernor.connect(voter.voter).castVote(id, ethers.BigNumber.from(voter.support));
+      await governor.connect(voter.voter).castVote(id, ethers.BigNumber.from(voter.support));
     }
   }
 
@@ -201,7 +200,7 @@ describe.only('BabylonGovernor', function () {
       // 4 blocks to reach the block where the voting starts
       await increaseBlock(4);
 
-      await castVotes(id, voters);
+      await castVotes(id, voters, babGovernor);
 
       const [, , eta, , , forVotes, againstVotes, abstainVotes, , ,] = await babGovernor.proposals(id);
 
@@ -253,9 +252,9 @@ describe.only('BabylonGovernor', function () {
   });
 
   describe('queue', function () {
-    it.skip('can queue proposal', async function () {
+    it('can queue proposal', async function () {
       const mockGovernor = await getGovernorMock(10);
-      const { id, args, votes } = await getProposal(mockGovernor);
+      const { id, args, voters } = await getProposal(mockGovernor);
 
       // propose
       await mockGovernor.connect(voter1)['propose(address[],uint256[],bytes[],string)'](...args);
@@ -263,43 +262,11 @@ describe.only('BabylonGovernor', function () {
       // 4 blocks to reach the block where the voting starts
       await increaseBlock(4);
 
-      await castVotes(id, votes);
+      await castVotes(id, voters, mockGovernor);
 
       const [, , eta, , , forVotes, againstVotes, abstainVotes, , ,] = await mockGovernor.proposals(id);
 
-      /** 
-      const mockGovernor = await getGovernorMock(10);
-      // await grantRoles(mockGovernor);
-      const [proposalObject, id] = await getProposal(voter1, mockGovernor);
-
-      // propose
-      await mockGovernor
-        .connect(voter1)
-        ['propose(address[],uint256[],bytes[],string)'](...proposalObject.proposal);
-    
-      console.log('block before', (await ethers.provider.getBlock()).number.toString());
-
-      await increaseBlock(4);
-      console.log('block after 1', (await ethers.provider.getBlock()).number.toString());
-      const [
-        proposalId,
-        proposerAddress,
-        eta,
-        startBlock,
-        endBlock,
-        forVotes,
-        againstVotes,
-        abstainVotes,
-        canceled,
-        executed,
-      ] = await mockGovernor.proposals(id);
-      console.log('CHECK', await mockGovernor.proposals(id));
-      await castVotes(proposalObject, id);
-      console.log('block after 2', (await ethers.provider.getBlock()).number.toString());
-
-      await increaseBlock(5);
-      console.log('block last', (await ethers.provider.getBlock()).number.toString());
-      */
+     // await mockGovernor.proposals(id);
     });
   });
   describe('execute', function () {});
