@@ -11,13 +11,12 @@ module.exports = async ({ getTenderlyContract, getNamedAccounts, deployments, ge
 
   const timelockControllerContract = await ethers.getContractAt('TimelockController', timelockController.address);
 
-  const name = 'Governor Babylon';
   const PROPOSER_ROLE = await timelockControllerContract.PROPOSER_ROLE();
   const EXECUTOR_ROLE = await timelockControllerContract.EXECUTOR_ROLE();
 
-  const governor = await deploy('GovernorBabylon', {
+  const governor = await deploy('BabylonGovernor', {
     from: deployer,
-    args: [name, timelockController.address, bablToken.address, 4, ONE_DAY_IN_SECONDS * 7],
+    args: [bablToken.address, timelockController.address],
     log: true,
     gasPrice,
   });
@@ -25,7 +24,7 @@ module.exports = async ({ getTenderlyContract, getNamedAccounts, deployments, ge
   console.log('Deployed Governor Babylon at', governor.address);
 
   if (network.live && governor.newlyDeployed) {
-    const contract = await getTenderlyContract('GovernorBabylon');
+    const contract = await getTenderlyContract('BabylonGovernor');
     await tenderly.push(contract);
 
     // We give proposer and executor permissions to Governor
@@ -42,4 +41,4 @@ module.exports = async ({ getTenderlyContract, getNamedAccounts, deployments, ge
   }
 };
 
-module.exports.tags = ['GovernorBabylon'];
+module.exports.tags = ['BabylonGovernor'];

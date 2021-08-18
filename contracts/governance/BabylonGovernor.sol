@@ -17,12 +17,11 @@ pragma solidity ^0.8.2;
 import 'hardhat/console.sol';
 
 import "contracts-next/governance/Governor.sol";
-import "contracts-next/governance/extensions/GovernorProposalThreshold.sol";
-import "contracts-next/governance/extensions/GovernorCountingSimple.sol";
+import "contracts-next/governance/compatibility/GovernorCompatibilityBravo.sol";
 import "contracts-next/governance/extensions/GovernorVotesComp.sol";
 import "contracts-next/governance/extensions/GovernorTimelockControl.sol";
 
-contract BabylonGovernor is Governor, GovernorProposalThreshold, GovernorCountingSimple, GovernorVotesComp, GovernorTimelockControl {
+contract BabylonGovernor is Governor, GovernorCompatibilityBravo, GovernorVotesComp, GovernorTimelockControl {
     constructor(ERC20VotesComp _token, TimelockController _timelock)
         Governor("BabylonGovernor")
         GovernorVotesComp(_token)
@@ -42,7 +41,7 @@ contract BabylonGovernor is Governor, GovernorProposalThreshold, GovernorCountin
     }
 
     function proposalThreshold() public pure override returns (uint256) {
-        return 50_00e18;
+        return 5_000e18;
     }
 
     // The following functions are overrides required by Solidity.
@@ -59,7 +58,7 @@ contract BabylonGovernor is Governor, GovernorProposalThreshold, GovernorCountin
     function state(uint256 proposalId)
         public
         view
-        override(Governor, GovernorTimelockControl)
+        override(Governor, IGovernor, GovernorTimelockControl)
         returns (ProposalState)
     {
         return super.state(proposalId);
@@ -67,7 +66,7 @@ contract BabylonGovernor is Governor, GovernorProposalThreshold, GovernorCountin
 
     function propose(address[] memory targets, uint256[] memory values, bytes[] memory calldatas, string memory description)
         public
-        override(Governor, GovernorProposalThreshold, IGovernor)
+        override(Governor, GovernorCompatibilityBravo, IGovernor)
         returns (uint256)
     {
         return super.propose(targets, values, calldatas, description);
@@ -100,10 +99,9 @@ contract BabylonGovernor is Governor, GovernorProposalThreshold, GovernorCountin
     function supportsInterface(bytes4 interfaceId)
         public
         view
-        override(Governor, GovernorTimelockControl)
+        override(Governor, IERC165, GovernorTimelockControl)
         returns (bool)
     {
         return super.supportsInterface(interfaceId);
     }
 }
-

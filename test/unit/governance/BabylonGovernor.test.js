@@ -9,22 +9,20 @@ const { increaseTime, increaseBlock, voteType, proposalState } = require('utils/
 const { setupTests } = require('fixtures/GardenFixture');
 const { impersonateAddress } = require('lib/rpc');
 
-describe('Governor Babylon contract', function () {
+describe('BabylonGovernor', function () {
   let owner;
   let signer1;
   let signer2;
   let signer3;
   let bablToken;
-  let governorBabylon;
+  let babGovernor;
   let timelockController;
   let babController;
 
-  const name = 'Governor Babylon';
   const version = '1';
   const tokenName = 'Babylon.Finance';
   const tokenSymbol = 'BABL';
   const value = ethers.utils.parseEther('0');
-  const votingPeriod = ONE_DAY_IN_SECONDS * 7;
 
   let voter1;
   let voter2;
@@ -38,13 +36,13 @@ describe('Governor Babylon contract', function () {
     const signer = await getSigner(deployer);
 
     // We deploy a mock contract with shorter deadline
-    const mockGovernor = await deploy('GovernorBabylon', {
+    const mockGovernor = await deploy('BabylonGovernor', {
       from: deployer,
       args: ['Mock Governor', timelockController.address, bablToken.address, 4, duration],
       log: true,
       gasPrice,
     });
-    const mockGovernorContract = await ethers.getContractAt('GovernorBabylon', mockGovernor.address, signer);
+    const mockGovernorContract = await ethers.getContractAt('BabylonGovernor', mockGovernor.address, signer);
     return mockGovernorContract;
   }
 
@@ -90,7 +88,7 @@ describe('Governor Babylon contract', function () {
 
   async function castVotes(settings, id) {
     for (const voter of settings.voters) {
-      await governorBabylon.connect(voter.voter).castVote(id, ethers.BigNumber.from(voter.support));
+      await babGovernor.connect(voter.voter).castVote(id, ethers.BigNumber.from(voter.support));
     }
   }
 
@@ -129,7 +127,7 @@ describe('Governor Babylon contract', function () {
       signer2,
       signer3,
       bablToken,
-      governorBabylon,
+      babGovernor,
       timelockController,
       babController,
     } = await setupTests()());
@@ -141,17 +139,17 @@ describe('Governor Babylon contract', function () {
   });
 
   describe('deployment', function () {
-    it('should successfully deploy Governor Babylon contract', async function () {
+    it.only('should successfully deploy Governor Babylon contract', async function () {
       const tokenSupply = await bablToken.totalSupply();
-      expect(await governorBabylon.name()).to.be.equal(name);
-      expect(await governorBabylon.version()).to.be.equal(version);
-      expect(await governorBabylon.token()).to.be.equal(bablToken.address);
-      expect(await governorBabylon.votingDelay()).to.be.equal('4');
-      expect(await governorBabylon.votingPeriod()).to.be.equal(votingPeriod);
-      expect(await governorBabylon.quorum(0)).to.be.equal(tokenSupply.div(25)); // 4% of totalSupply BABL
-      expect(await governorBabylon.proposalThreshold()).to.be.equal(tokenSupply.div(200)); // 0.5% of totalSupply BABL
-      expect(await governorBabylon.COUNTING_MODE()).to.be.equal('support=bravo&quorum=bravo');
-      expect(await governorBabylon.timelock()).to.be.equal(timelockController.address);
+      expect(await babGovernor.name()).to.be.equal('BabylonGovernor');
+      expect(await babGovernor.version()).to.be.equal(version);
+      expect(await babGovernor.token()).to.be.equal(bablToken.address);
+      expect(await babGovernor.votingDelay()).to.be.equal('1');
+      expect(await babGovernor.votingPeriod()).to.be.equal(45818);
+      expect(await babGovernor.quorum(0)).to.be.equal(tokenSupply.div(25)); // 4% of totalSupply BABL
+      expect(await babGovernor.proposalThreshold()).to.be.equal(tokenSupply.div(200)); // 0.5% of totalSupply BABL
+      expect(await babGovernor.COUNTING_MODE()).to.be.equal('support=bravo&quorum=bravo');
+      expect(await babGovernor.timelock()).to.be.equal(timelockController.address);
 
       // Check the linked BABL Token
       expect(await bablToken.name()).to.be.equal(tokenName);
@@ -161,27 +159,27 @@ describe('Governor Babylon contract', function () {
 
   describe('hashProposal', function () {
     it('can hash', async function () {
-      const [, id] = await governanceFixture(voter1, governorBabylon);
+      const [, id] = await governanceFixture(voter1, babGovernor);
       expect(id.toString()).to.equal('31592073516640214093428763406121273246927507816899979568469470593665780044126');
     });
   });
 
   describe('propose', function () {
     it('can NOT propose below a proposal threshold', async function () {
-      const [proposalObject] = await governanceFixture(signer1, governorBabylon);
+      const [proposalObject] = await governanceFixture(signer1, babGovernor);
       // propose
       await expect(
-        governorBabylon
+        babGovernor
           .connect(proposalObject.proposer)
           ['propose(address[],uint256[],bytes[],string)'](...proposalObject.proposal),
       ).to.be.revertedWith('GovernorCompatibilityBravo: proposer votes below proposal threshold');
     });
 
     it('make a valid proposal', async function () {
-      const [proposalObject, id] = await governanceFixture(voter1, governorBabylon);
+      const [proposalObject, id] = await governanceFixture(voter1, babGovernor);
 
       // propose
-      await governorBabylon.connect(voter1)['propose(address[],uint256[],bytes[],string)'](...proposalObject.proposal);
+      await babGovernor.connect(voter1)['propose(address[],uint256[],bytes[],string)'](...proposalObject.proposal);
 
       const [
         proposalId,
@@ -194,13 +192,13 @@ describe('Governor Babylon contract', function () {
         abstainVotes,
         canceled,
         executed,
-      ] = await governorBabylon.proposals(id);
+      ] = await babGovernor.proposals(id);
 
       expect(proposalId).to.be.equal(id);
       expect(proposerAddress).to.be.equal(voter1.address);
       expect(eta).to.be.equal(0);
-      expect(startBlock).to.be.equal(await governorBabylon.proposalSnapshot(id));
-      expect(endBlock).to.be.equal(await governorBabylon.proposalDeadline(id));
+      expect(startBlock).to.be.equal(await babGovernor.proposalSnapshot(id));
+      expect(endBlock).to.be.equal(await babGovernor.proposalDeadline(id));
       expect(forVotes).to.be.equal(0);
       expect(againstVotes).to.be.equal(0);
       expect(abstainVotes).to.be.equal(0);
@@ -219,23 +217,23 @@ describe('Governor Babylon contract', function () {
 
   describe('castVote', function () {
     it('can cast a vote', async function () {
-      const [proposalObject, id] = await governanceFixture(voter1, governorBabylon);
+      const [proposalObject, id] = await governanceFixture(voter1, babGovernor);
 
       // propose
-      await governorBabylon.connect(voter1)['propose(address[],uint256[],bytes[],string)'](...proposalObject.proposal);
+      await babGovernor.connect(voter1)['propose(address[],uint256[],bytes[],string)'](...proposalObject.proposal);
 
       // 4 blocks to reach the block where the voting starts
       await increaseBlock(4);
 
       await castVotes(proposalObject, id);
 
-      const [, , eta, , , forVotes, againstVotes, abstainVotes, , ,] = await governorBabylon.proposals(id);
+      const [, , eta, , , forVotes, againstVotes, abstainVotes, , ,] = await babGovernor.proposals(id);
 
       // Check all voters have voted
-      expect(await governorBabylon.hasVoted(id, voter1.address)).to.be.equal(true);
-      expect(await governorBabylon.hasVoted(id, voter2.address)).to.be.equal(true);
-      expect(await governorBabylon.hasVoted(id, voter3.address)).to.be.equal(true);
-      expect(await governorBabylon.hasVoted(id, voter4.address)).to.be.equal(true);
+      expect(await babGovernor.hasVoted(id, voter1.address)).to.be.equal(true);
+      expect(await babGovernor.hasVoted(id, voter2.address)).to.be.equal(true);
+      expect(await babGovernor.hasVoted(id, voter3.address)).to.be.equal(true);
+      expect(await babGovernor.hasVoted(id, voter4.address)).to.be.equal(true);
 
       // Check all votes are counted for For, Against and Abstain
       expect(forVotes).to.be.equal(ethers.utils.parseEther('35000'));
@@ -245,17 +243,17 @@ describe('Governor Babylon contract', function () {
       // Other params
       expect(eta).to.be.equal(0);
       // 0:'Pending', 1:'Active', 2:'Canceled', 3:'Defeated', 4:'Succeeded', 5:'Queued', 6:'Expired', 7:'Executed')
-      expect(await governorBabylon.state(id)).to.be.equal(1);
+      expect(await babGovernor.state(id)).to.be.equal(1);
     });
 
     it('can NOT cast a vote before votes start', async function () {
-      const [proposalObject, id] = await governanceFixture(voter1, governorBabylon);
+      const [proposalObject, id] = await governanceFixture(voter1, babGovernor);
 
       // propose
-      await governorBabylon.connect(voter1)['propose(address[],uint256[],bytes[],string)'](...proposalObject.proposal);
+      await babGovernor.connect(voter1)['propose(address[],uint256[],bytes[],string)'](...proposalObject.proposal);
       await increaseTime(100);
 
-      await expect(governorBabylon.connect(voter1).castVote(id, voteType.For)).to.be.revertedWith(
+      await expect(babGovernor.connect(voter1).castVote(id, voteType.For)).to.be.revertedWith(
         'Governor: vote not currently active',
       );
     });

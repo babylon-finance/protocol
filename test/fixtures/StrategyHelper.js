@@ -177,7 +177,7 @@ async function createStrategyWithManyOperations(
 async function deposit(garden, signers) {
   const gardenValuer = await getContract('GardenValuer');
   const reserveAsset = await garden.reserveAsset();
-  const reserveContract = await ethers.getContractAt('IERC20', reserveAsset);
+  const reserveContract = await ethers.getContractAt('@openzeppelin/contracts/token/ERC20/IERC20.sol:IERC20', reserveAsset);
   let amount;
   switch (reserveAsset.toLowerCase()) {
     case addresses.tokens.USDC.toLowerCase():
@@ -315,7 +315,7 @@ async function injectFakeProfits(strategy, amount) {
     const AbiCoder = ethers.utils.AbiCoder;
     const abiCoder = new AbiCoder();
     const decoded = abiCoder.decode(['address', 'uint256'], await strategy.opEncodedData());
-    const asset = await ethers.getContractAt('IERC20', decoded[0]);
+    const asset = await ethers.getContractAt('@openzeppelin/contracts/token/ERC20/IERC20.sol:IERC20', decoded[0]);
     const whaleAddress = getAssetWhale(asset.address);
     if (whaleAddress) {
       const whaleSigner = await impersonateAddress(whaleAddress);
@@ -331,7 +331,7 @@ async function injectFakeProfits(strategy, amount) {
     const abiCoder = new AbiCoder();
     const decoded = abiCoder.decode(['address', 'uint256'], await strategy.opEncodedData());
 
-    const asset = await ethers.getContractAt('IERC20', decoded[0]);
+    const asset = await ethers.getContractAt('@openzeppelin/contracts/token/ERC20/IERC20.sol:IERC20', decoded[0]);
     const whaleAddress = await strategy.pool();
     const whaleSigner = await impersonateAddress(whaleAddress);
     await asset.connect(whaleSigner).transfer(strategy.address, amount, {
@@ -343,7 +343,7 @@ async function injectFakeProfits(strategy, amount) {
     const abiCoder = new AbiCoder();
     const decoded = abiCoder.decode(['address', 'uint256'], await strategy.opEncodedData());
 
-    const asset = await ethers.getContractAt('IERC20', decoded[0]);
+    const asset = await ethers.getContractAt('@openzeppelin/contracts/token/ERC20/IERC20.sol:IERC20', decoded[0]);
     const whaleAddress = await strategy.yieldVault();
     const whaleSigner = await impersonateAddress(whaleAddress);
     await asset.connect(whaleSigner).transfer(strategy.address, amount, {
@@ -360,7 +360,7 @@ async function substractFakeProfits(strategy, amount) {
     const abiCoder = new AbiCoder();
     const decoded = abiCoder.decode(['address', 'uint256'], await strategy.opEncodedData());
 
-    const asset = await ethers.getContractAt('IERC20', decoded[0]);
+    const asset = await ethers.getContractAt('@openzeppelin/contracts/token/ERC20/IERC20.sol:IERC20', decoded[0]);
     const whaleAddress = getAssetWhale(asset.address);
     if (whaleAddress) {
       const whaleSigner = await impersonateAddress(whaleAddress);
@@ -376,7 +376,7 @@ async function substractFakeProfits(strategy, amount) {
     const abiCoder = new AbiCoder();
     const decoded = abiCoder.decode(['address', 'uint256'], await strategy.opEncodedData());
 
-    const asset = await ethers.getContractAt('IERC20', decoded[0]);
+    const asset = await ethers.getContractAt('@openzeppelin/contracts/token/ERC20/IERC20.sol:IERC20', decoded[0]);
     const whaleAddress = await strategy.pool();
     const whaleSigner = await impersonateAddress(whaleAddress);
     await asset.connect(strategyAddress).transfer(whaleSigner.address, amount, {
@@ -388,7 +388,7 @@ async function substractFakeProfits(strategy, amount) {
     const abiCoder = new AbiCoder();
     const decoded = abiCoder.decode(['address', 'uint256'], await strategy.opEncodedData());
 
-    const asset = await ethers.getContractAt('IERC20', decoded[0]);
+    const asset = await ethers.getContractAt('@openzeppelin/contracts/token/ERC20/IERC20.sol:IERC20', decoded[0]);
     const whaleAddress = await strategy.yieldVault();
     const whaleSigner = await impersonateAddress(whaleAddress);
     await asset.connect(strategyAddress).transfer(whaleSigner.address, amount, {

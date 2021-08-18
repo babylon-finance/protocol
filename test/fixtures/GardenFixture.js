@@ -27,7 +27,7 @@ async function setUpFixture(
   const rewardsDistributor = await getContract('RewardsDistributor', 'RewardsDistributorProxy');
   const babViewer = await getContract('BabylonViewer');
   const timelockController = await getContract('TimelockController');
-  const governorBabylon = await getContract('GovernorBabylon');
+  const babGovernor = await getContract('BabylonGovernor');
 
   const uniswapV3TradeIntegration = await getContract('UniswapV3TradeIntegration');
   const balancerIntegration = await getContract('BalancerIntegration');
@@ -49,10 +49,10 @@ async function setUpFixture(
   const lendOperation = await getContract('LendOperation');
   const borrowOperation = await getContract('BorrowOperation');
 
-  const dai = await ethers.getContractAt('IERC20', addresses.tokens.DAI);
-  const usdc = await ethers.getContractAt('IERC20', addresses.tokens.USDC);
-  const weth = await ethers.getContractAt('IERC20', addresses.tokens.WETH);
-  const wbtc = await ethers.getContractAt('IERC20', addresses.tokens.WBTC);
+  const dai = await ethers.getContractAt('@openzeppelin/contracts/token/ERC20/IERC20.sol:IERC20', addresses.tokens.DAI);
+  const usdc = await ethers.getContractAt('@openzeppelin/contracts/token/ERC20/IERC20.sol:IERC20', addresses.tokens.USDC);
+  const weth = await ethers.getContractAt('@openzeppelin/contracts/token/ERC20/IERC20.sol:IERC20', addresses.tokens.WETH);
+  const wbtc = await ethers.getContractAt('@openzeppelin/contracts/token/ERC20/IERC20.sol:IERC20', addresses.tokens.WBTC);
 
   const TOKEN_MAP = {
     [addresses.tokens.WETH]: weth,
@@ -220,7 +220,7 @@ async function setUpFixture(
     lidoIntegration,
     babViewer,
     timelockController,
-    governorBabylon,
+    babGovernor,
 
     garden1,
     garden2,

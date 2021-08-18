@@ -12,11 +12,11 @@ describe('TimelockController', function () {
   let signer2;
   let signer3;
   let bablToken;
-  let governorBabylon;
+  let babGovernor;
   let timelockController;
 
   beforeEach(async () => {
-    ({ owner, signer1, signer2, signer3, bablToken, governorBabylon, timelockController } = await setupTests()());
+    ({ owner, signer1, signer2, signer3, bablToken, babGovernor, timelockController } = await setupTests()());
   });
   describe('Deployment check', function () {
     it('should successfully deploy TimelockController contract', async function () {

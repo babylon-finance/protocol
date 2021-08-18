@@ -5,12 +5,9 @@ module.exports = async ({ getTenderlyContract, getNamedAccounts, deployments, ge
   const gasPrice = await getRapid();
   const { deploy } = deployments;
 
-  const proposer = [deployer];
-  const executor = [deployer];
-
   const timelockController = await deploy('TimelockController', {
     from: deployer,
-    args: [ONE_DAY_IN_SECONDS, proposer, executor],
+    args: [ONE_DAY_IN_SECONDS, [], []],
     log: true,
     gasPrice,
   });
