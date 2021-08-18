@@ -9,7 +9,7 @@ const { increaseTime, increaseBlock, voteType, proposalState } = require('utils/
 const { setupTests } = require('fixtures/GardenFixture');
 const { impersonateAddress } = require('lib/rpc');
 
-describe.only('Governor Babylon contract', function () {
+describe('Governor Babylon contract', function () {
   let owner;
   let signer1;
   let signer2;

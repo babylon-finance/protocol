@@ -46,7 +46,7 @@ contract GovernorBabylon is GovernorCompatibilityBravo, GovernorTimelockControl,
     using Timers for Timers.BlockNumber;
 
     /* ============ Events ================= */
-    
+
     /* ============ Modifiers ================= */
 
     /* ============ State Variables ============ */
