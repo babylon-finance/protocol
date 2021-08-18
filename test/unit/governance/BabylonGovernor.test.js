@@ -45,13 +45,12 @@ describe.only('BabylonGovernor', function () {
   async function grantRoles(contract) {
     const { deployer } = await getNamedAccounts();
     const signer = await getSigner(deployer);
-    const gasPrice = await getRapid();
 
     const PROPOSER_ROLE = await timelockController.PROPOSER_ROLE();
     const EXECUTOR_ROLE = await timelockController.EXECUTOR_ROLE();
 
-    await (await timelockController.connect(deployer).grantRole(PROPOSER_ROLE, contract.address, { gasPrice })).wait();
-    await (await timelockController.connect(deployer).grantRole(EXECUTOR_ROLE, contract.address, { gasPrice })).wait();
+    await (await timelockController.connect(deployer).grantRole(PROPOSER_ROLE, contract.address)).wait();
+    await (await timelockController.connect(deployer).grantRole(EXECUTOR_ROLE, contract.address)).wait();
   }
 
   async function claimTokens(voters) {
@@ -67,23 +66,24 @@ describe.only('BabylonGovernor', function () {
     }
   }
 
-  async function castVotes(settings, id) {
-    for (const voter of settings.voters) {
+  async function castVotes(id, voters) {
+    for (const voter of voters) {
       await babGovernor.connect(voter.voter).castVote(id, ethers.BigNumber.from(voter.support));
     }
   }
 
-  async function getProposal(proposer, contract) {
+  async function getProposal(governor) {
     const ABI = ['function enableBABLMiningProgram()'];
     const iface = new ethers.utils.Interface(ABI);
     const encodedData = iface.encodeFunctionData('enableBABLMiningProgram');
     const description = '<proposal description>';
     const descriptionHash = ethers.utils.keccak256(ethers.utils.toUtf8Bytes('<proposal description>'));
 
+    const id = await governor.hashProposal([babController.address], [value], [encodedData], descriptionHash);
+
     const proposalObject = {
-      proposal: [[babController.address], [value], [encodedData], description],
-      proposer: proposer,
-      tokenHolder: owner,
+      id,
+      args: [[babController.address], [value], [encodedData], description],
       voters: [
         { voter: voter1, support: voteType.For, reason: 'This is nice' },
         { voter: voter2, support: voteType.For },
@@ -92,11 +92,10 @@ describe.only('BabylonGovernor', function () {
       ],
     };
 
-    const id = await contract.hashProposal([babController.address], [value], [encodedData], descriptionHash);
     await claimTokens(proposalObject.voters);
 
     await selfDelegation(proposalObject.voters);
-    return [proposalObject, id];
+    return proposalObject;
   }
 
   beforeEach(async () => {
@@ -138,27 +137,25 @@ describe.only('BabylonGovernor', function () {
 
   describe('hashProposal', function () {
     it('can hash', async function () {
-      const [, id] = await getProposal(voter1, babGovernor);
+      const { id } = await getProposal(babGovernor);
       expect(id.toString()).to.equal('31592073516640214093428763406121273246927507816899979568469470593665780044126');
     });
   });
 
   describe('propose', function () {
     it('can NOT propose below a proposal threshold', async function () {
-      const [proposalObject] = await getProposal(signer1, babGovernor);
+      const { args } = await getProposal(babGovernor);
       // propose
       await expect(
-        babGovernor
-          .connect(proposalObject.proposer)
-          ['propose(address[],uint256[],bytes[],string)'](...proposalObject.proposal),
+        babGovernor.connect(signer1)['propose(address[],uint256[],bytes[],string)'](...args),
       ).to.be.revertedWith('GovernorCompatibilityBravo: proposer votes below proposal threshold');
     });
 
     it('make a valid proposal', async function () {
-      const [proposalObject, id] = await getProposal(voter1, babGovernor);
+      const { id, args } = await getProposal(babGovernor);
 
       // propose
-      await babGovernor.connect(voter1)['propose(address[],uint256[],bytes[],string)'](...proposalObject.proposal);
+      await babGovernor.connect(voter1)['propose(address[],uint256[],bytes[],string)'](...args);
 
       const [
         proposalId,
@@ -196,15 +193,15 @@ describe.only('BabylonGovernor', function () {
 
   describe('castVote', function () {
     it('can cast a vote', async function () {
-      const [proposalObject, id] = await getProposal(voter1, babGovernor);
+      const { id, args, voters } = await getProposal(babGovernor);
 
       // propose
-      await babGovernor.connect(voter1)['propose(address[],uint256[],bytes[],string)'](...proposalObject.proposal);
+      await babGovernor.connect(voter1)['propose(address[],uint256[],bytes[],string)'](...args);
 
       // 4 blocks to reach the block where the voting starts
       await increaseBlock(4);
 
-      await castVotes(proposalObject, id);
+      await castVotes(id, voters);
 
       const [, , eta, , , forVotes, againstVotes, abstainVotes, , ,] = await babGovernor.proposals(id);
 
@@ -215,22 +212,22 @@ describe.only('BabylonGovernor', function () {
       expect(await babGovernor.hasVoted(id, voter4.address)).to.be.equal(true);
 
       // Check all votes are counted for For, Against and Abstain
-      expect(forVotes).to.be.equal(ethers.utils.parseEther('35000'));
-      expect(againstVotes).to.be.equal(ethers.utils.parseEther('24750'));
-      expect(abstainVotes).to.be.equal(ethers.utils.parseEther('17000'));
+      expect(forVotes).to.eq(eth(35000));
+      expect(againstVotes).to.eq(eth(24750));
+      expect(abstainVotes).to.eq(eth(17000));
 
       // Other params
-      expect(eta).to.be.equal(0);
+      expect(eta).to.be.eq(0);
       // 0:'Pending', 1:'Active', 2:'Canceled', 3:'Defeated', 4:'Succeeded', 5:'Queued', 6:'Expired', 7:'Executed')
-      expect(await babGovernor.state(id)).to.be.equal(1);
+      expect(await babGovernor.state(id)).to.eq(1);
     });
 
     it('can NOT cast a vote before votes start', async function () {
       const mockGovernor = await getGovernorMock(10, 10);
-      const [proposalObject, id] = await getProposal(voter1, mockGovernor);
+      const { id, args } = await getProposal(mockGovernor);
 
       // propose
-      await mockGovernor.connect(voter1)['propose(address[],uint256[],bytes[],string)'](...proposalObject.proposal);
+      await mockGovernor.connect(voter1)['propose(address[],uint256[],bytes[],string)'](...args);
 
       await expect(mockGovernor.connect(voter1).castVote(id, voteType.For)).to.be.revertedWith(
         'Governor: vote not currently active',
@@ -239,49 +236,44 @@ describe.only('BabylonGovernor', function () {
     });
 
     it('can NOT cast a vote after voting period ends', async function () {
-      const mockGovernorContract = await getGovernorMock(10);
-      const [proposalObject, id] = await getProposal(voter1, mockGovernorContract);
+      const mockGovernor = await getGovernorMock(10);
+      const { id, args } = await getProposal(mockGovernor);
 
       // propose
-      await mockGovernorContract
-        .connect(voter1)
-        ['propose(address[],uint256[],bytes[],string)'](...proposalObject.proposal);
+      await mockGovernor.connect(voter1)['propose(address[],uint256[],bytes[],string)'](...args);
 
       // We vote after the deadline
       await increaseBlock(14);
 
-      await expect(mockGovernorContract.connect(voter1).castVote(id, voteType.For)).to.be.revertedWith(
+      await expect(mockGovernor.connect(voter1).castVote(id, voteType.For)).to.be.revertedWith(
         'Governor: vote not currently active',
       );
-      expect(await mockGovernorContract.proposalDeadline(id)).to.be.lte((await ethers.provider.getBlock()).number);
+      expect(await mockGovernor.proposalDeadline(id)).to.be.lte((await ethers.provider.getBlock()).number);
     });
   });
 
   describe('queue', function () {
     it.skip('can queue proposal', async function () {
-      const mockGovernorContract = await getGovernorMock(10);
-      const [proposalObject, id] = await getProposal(voter1, mockGovernorContract);
-      console.log(id.toString());
+      const mockGovernor = await getGovernorMock(10);
+      const { id, args, votes } = await getProposal(mockGovernor);
 
       // propose
-      await mockGovernorContract
-        .connect(voter1)
-        ['propose(address[],uint256[],bytes[],string)'](...proposalObject.proposal);
+      await mockGovernor.connect(voter1)['propose(address[],uint256[],bytes[],string)'](...args);
 
       // 4 blocks to reach the block where the voting starts
       await increaseBlock(4);
 
-      await castVotes(proposalObject, id);
+      await castVotes(id, votes);
 
-      const [, , eta, , , forVotes, againstVotes, abstainVotes, , ,] = await mockGovernorContract.proposals(id);
+      const [, , eta, , , forVotes, againstVotes, abstainVotes, , ,] = await mockGovernor.proposals(id);
 
       /** 
-      const mockGovernorContract = await getGovernorMock(10);
-      // await grantRoles(mockGovernorContract);
-      const [proposalObject, id] = await getProposal(voter1, mockGovernorContract);
+      const mockGovernor = await getGovernorMock(10);
+      // await grantRoles(mockGovernor);
+      const [proposalObject, id] = await getProposal(voter1, mockGovernor);
 
       // propose
-      await mockGovernorContract
+      await mockGovernor
         .connect(voter1)
         ['propose(address[],uint256[],bytes[],string)'](...proposalObject.proposal);
     
@@ -300,8 +292,8 @@ describe.only('BabylonGovernor', function () {
         abstainVotes,
         canceled,
         executed,
-      ] = await mockGovernorContract.proposals(id);
-      console.log('CHECK', await mockGovernorContract.proposals(id));
+      ] = await mockGovernor.proposals(id);
+      console.log('CHECK', await mockGovernor.proposals(id));
       await castVotes(proposalObject, id);
       console.log('block after 2', (await ethers.provider.getBlock()).number.toString());
 
