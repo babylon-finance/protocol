@@ -10,6 +10,8 @@ const { setupTests } = require('fixtures/GardenFixture');
 const { getCombinedModifierFlags } = require('typescript');
 
 const TOTAL_REGISTERED_TOKENS = eth(272950);
+const investorsVestingStart = new Date(2021, 6, 27); // July 27th real token vesting start for investors
+const teamVestingStart = new Date(2021, 2, 15); // 15th March
 
 describe('TimeLockRegistry', function () {
   let owner;
@@ -24,20 +26,32 @@ describe('TimeLockRegistry', function () {
     let [team, vestingBegins, vestingEnds, lastClaim] = await timeLockRegistry.checkVesting(contributor);
     expect(vestingBegins).to.be.gt(1614553200);
     if (team === false) {
-      expect(vestingBegins).to.be.closeTo(from(NOW), ONE_DAY_IN_SECONDS.div(50));
+      expect(vestingBegins).to.be.closeTo(
+        from(Math.round(investorsVestingStart.getTime() / 1000)),
+        ONE_DAY_IN_SECONDS.div(50),
+      );
     } else if (team === true) {
       // 1615762800 March the 15th original Team vesting
-      expect(vestingBegins).to.be.closeTo(from(1615762800), ONE_DAY_IN_SECONDS.div(10));
+      expect(vestingBegins).to.be.closeTo(
+        from(Math.round(teamVestingStart.getTime() / 1000)),
+        ONE_DAY_IN_SECONDS.div(10),
+      );
     }
   }
 
   async function checkVestingEndDate(contributor) {
     let [team, vestingBegins, vestingEnds, lastClaim] = await timeLockRegistry.checkVesting(contributor);
     if (team === false) {
-      expect(vestingEnds).to.be.closeTo(from(NOW + 3 * (365 * ONE_DAY_IN_SECONDS)), ONE_DAY_IN_SECONDS.div(50));
+      expect(vestingEnds).to.be.closeTo(
+        from(Math.round(investorsVestingStart.getTime() / 1000) + 3 * (365 * ONE_DAY_IN_SECONDS)),
+        ONE_DAY_IN_SECONDS.div(50),
+      );
     } else if (team === true) {
       // 1615762800 March the 15th original Team vesting
-      expect(vestingEnds).to.be.closeTo(from(1615762800 + 4 * (365 * ONE_DAY_IN_SECONDS)), ONE_DAY_IN_SECONDS.div(10));
+      expect(vestingEnds).to.be.closeTo(
+        from(Math.round(teamVestingStart.getTime() / 1000) + 4 * (365 * ONE_DAY_IN_SECONDS)),
+        ONE_DAY_IN_SECONDS.div(10),
+      );
     }
   }
 
