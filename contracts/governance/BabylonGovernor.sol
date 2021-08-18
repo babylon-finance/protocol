@@ -28,11 +28,11 @@ contract BabylonGovernor is Governor, GovernorCompatibilityBravo, GovernorVotesC
         GovernorTimelockControl(_timelock)
     {}
 
-    function votingDelay() public pure override returns (uint256) {
+    function votingDelay() public view virtual override returns (uint256) {
         return 1; // 1 block
     }
 
-    function votingPeriod() public pure override returns (uint256) {
+    function votingPeriod() public view virtual override returns (uint256) {
         return 45818; // 1 week
     }
 
