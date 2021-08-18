@@ -54,21 +54,6 @@ describe.only('BabylonGovernor', function () {
     await (await timelockController.connect(deployer).grantRole(EXECUTOR_ROLE, contract.address, { gasPrice })).wait();
   }
 
-  async function createProposal(proposer, target, value, encodedData, description) {
-    const settings = {
-      proposal: [[target], [value], [encodedData], description],
-      proposer: proposer,
-      tokenHolder: owner,
-      voters: [
-        { voter: voter1, support: voteType.For, reason: 'This is nice' },
-        { voter: voter2, support: voteType.For },
-        { voter: voter3, support: voteType.Against },
-        { voter: voter4, support: voteType.Abstain },
-      ],
-    };
-    return settings;
-  }
-
   async function claimTokens(settings) {
     for (const voter of settings.voters) {
       await bablToken.connect(voter.voter).claimMyTokens();
@@ -78,7 +63,7 @@ describe.only('BabylonGovernor', function () {
   async function selfDelegation(settings) {
     for (const voter of settings.voters) {
       await bablToken.connect(voter.voter).delegate(voter.voter.address);
-      await increaseTime(100);
+      await increaseBlock(1);
     }
   }
 
@@ -92,29 +77,24 @@ describe.only('BabylonGovernor', function () {
     const ABI = ['function enableBABLMiningProgram()'];
     const iface = new ethers.utils.Interface(ABI);
     const encodedData = iface.encodeFunctionData('enableBABLMiningProgram');
-    const proposalDescription = '<proposal description>';
-    const proposalDescriptionHash = ethers.utils.keccak256(ethers.utils.toUtf8Bytes('<proposal description>'));
+    const description = '<proposal description>';
+    const descriptionHash = ethers.utils.keccak256(ethers.utils.toUtf8Bytes('<proposal description>'));
 
-    const proposalObject = await createProposal(
-      proposer,
-      babController.address,
-      value,
-      encodedData,
-      proposalDescription,
-    );
+    const proposalObject = {
+      proposal: [[babController.address], [value], [encodedData], description],
+      proposer: proposer,
+      tokenHolder: owner,
+      voters: [
+        { voter: voter1, support: voteType.For, reason: 'This is nice' },
+        { voter: voter2, support: voteType.For },
+        { voter: voter3, support: voteType.Against },
+        { voter: voter4, support: voteType.Abstain },
+      ],
+    };
 
-    const proposalObjectHashed = await createProposal(
-      proposer,
-      babController.address,
-      value,
-      encodedData,
-      proposalDescriptionHash,
-    );
-
-    const id = await contract.hashProposal(...proposalObjectHashed.proposal);
+    const id = await contract.hashProposal([babController.address], [value], [encodedData], descriptionHash);
     await claimTokens(proposalObject);
 
-    await increaseTime(ONE_DAY_IN_SECONDS);
     await selfDelegation(proposalObject);
     return [proposalObject, id];
   }
