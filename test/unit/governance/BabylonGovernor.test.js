@@ -1,6 +1,5 @@
 const { expect } = require('chai');
 const { ethers } = require('hardhat');
-const EthCrypto = require('eth-crypto');
 
 const { ADDRESS_ZERO, ONE_DAY_IN_SECONDS } = require('lib/constants');
 const { from, eth, parse } = require('lib/helpers');
@@ -38,7 +37,7 @@ describe.only('BabylonGovernor', function () {
     // We deploy a mock contract with shorter deadline
     const mockGovernor = await deploy('BabylonGovernor', {
       from: deployer,
-      args: ['Mock Governor', timelockController.address, bablToken.address, 4, duration],
+      args: [bablToken.address, timelockController.addres],
       log: true,
       gasPrice,
     });
@@ -97,7 +96,7 @@ describe.only('BabylonGovernor', function () {
     const iface = new ethers.utils.Interface(ABI);
     const encodedData = iface.encodeFunctionData('enableBABLMiningProgram');
     const proposalDescription = '<proposal description>';
-    const proposalDescriptionHash = EthCrypto.hash.keccak256([{ type: 'string', value: '<proposal description>' }]);
+    const proposalDescriptionHash = ethers.utils.keccak256(ethers.utils.toUtf8Bytes('<proposal description>'));
     const proposalObject = await createProposal(
       proposer,
       babController.address,
@@ -115,7 +114,6 @@ describe.only('BabylonGovernor', function () {
 
     const id = await contract.hashProposal(...proposalObjectHashed.proposal);
     await claimTokens(proposalObject);
-
 
     await increaseTime(ONE_DAY_IN_SECONDS);
     await selfDelegation(proposalObject);
