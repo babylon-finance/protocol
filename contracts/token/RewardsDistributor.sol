@@ -539,6 +539,13 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         }
     }
 
+    function getStrategyPricePerTokenUnit(address _strategy) external view override returns (uint256, uint256) {
+        return (
+            strategyPricePerTokenUnit[_strategy].preallocated,
+            strategyPricePerTokenUnit[_strategy].pricePerTokenUnit
+        );
+    }
+
     /* ============ Internal Functions ============ */
     /**
      * Update the protocol principal checkpoints
@@ -615,10 +622,17 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
             // We are controlling pair reserveAsset-DAI fluctuations along the time
             if (_addOrSubstract) {
                 strategyPricePerTokenUnit[_strategy].pricePerTokenUnit = (
-                    strategyPricePerTokenUnit[_strategy].pricePerTokenUnit.add(_capital.mul(pricePerTokenUnit))
+                    (
+                        (
+                            strategyPricePerTokenUnit[_strategy].pricePerTokenUnit.mul(
+                                strategyPricePerTokenUnit[_strategy].preallocated
+                            )
+                        )
+                            .add(_capital.mul(pricePerTokenUnit))
+                    )
+                        .div(1e18)
                 )
-                    .preciseDiv(strategyPricePerTokenUnit[_strategy].preallocated.add(_capital))
-                    .div(1e18);
+                    .preciseDiv(strategyPricePerTokenUnit[_strategy].preallocated.add(_capital));
                 strategyPricePerTokenUnit[_strategy].preallocated = strategyPricePerTokenUnit[_strategy]
                     .preallocated
                     .add(_capital);

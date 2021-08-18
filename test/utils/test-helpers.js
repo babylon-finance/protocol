@@ -12,6 +12,15 @@ async function increaseTime(value) {
   await ethers.provider.send('evm_increaseTime', [value.toNumber()]);
   await ethers.provider.send('evm_mine');
 }
+async function increaseBlock(blocks) {
+  if (!ethers.BigNumber.isBigNumber(blocks)) {
+    blocks = ethers.BigNumber.from(blocks);
+  }
+  for (let i = 0; i < blocks; i++) {
+    await ethers.provider.send('evm_increaseTime', [20]); // 20 seconds per block
+    await ethers.provider.send('evm_mine');
+  }
+}
 
 /**
  * Can't await on transactionSend because it will never resolve due to
@@ -59,6 +68,7 @@ function normalizeDecimals(tokenDecimals, tokenDecimalsTarget, quantity) {
 
 module.exports = {
   increaseTime,
+  increaseBlock,
   getTimestamp,
   mineInBlock,
   sleep,
