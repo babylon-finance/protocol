@@ -268,9 +268,11 @@ describe.only('BabylonGovernor', function () {
       await increaseBlock(10);
 
       const [, , eta, , , forVotes, againstVotes, abstainVotes, , ,] = await mockGovernor.proposals(id);
-      const state = await mockGovernor.state(id);
 
       await mockGovernor.connect(deployer)['queue(uint256)'](id);
+
+      const state = await mockGovernor.state(id);
+      expect(state).to.eq(proposalState.Queued);
     });
   });
 
