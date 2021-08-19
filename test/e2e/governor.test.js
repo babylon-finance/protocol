@@ -42,7 +42,13 @@ describe.only('governor', function () {
     it('can change governor to a new one', async function () {
       const mockGovernor = await getGovernorMock(bablToken, deployer, 10);
       await claimTokens(bablToken, voters);
-      const { id, args } = await getProposal(mockGovernor, bablToken);
+
+      const { id, args } = await getProposal(mockGovernor, bablToken, {
+        targets: [],
+        values: [from(0)],
+        calldatas: [],
+        description: 'upgrade governor to a new version',
+      });
 
       // propose
       await mockGovernor.connect(voters[0])['propose(address[],uint256[],bytes[],string)'](...args);
