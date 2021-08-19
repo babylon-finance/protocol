@@ -299,7 +299,7 @@ describe.only('BabylonGovernor', function () {
 
       await mockGovernor.connect(deployer)['queue(uint256)'](id);
 
-      await increaseTime(ONE_DAY_IN_SECONDS + 1);
+      await increaseTime(ONE_DAY_IN_SECONDS);
 
       await mockGovernor.connect(deployer)['execute(uint256)'](id);
 
