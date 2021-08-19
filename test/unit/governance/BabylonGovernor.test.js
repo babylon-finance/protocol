@@ -140,6 +140,39 @@ describe.only('BabylonGovernor', function () {
         babGovernor.connect(signer1)['propose(address[],uint256[],bytes[],string)'](...args),
       ).to.be.revertedWith('GovernorCompatibilityBravo: proposer votes below proposal threshold');
     });
+    it('can NOT propose with invalid proposal length (targets vs. values)', async function () {
+      const { args } = await getProposal(babGovernor);
+      const args1 = [[ADDRESS_ZERO], [value, value], ['0x'], '<proposal description>'];
+      // propose
+      await expect(
+        babGovernor.connect(voter1)['propose(address[],uint256[],bytes[],string)'](...args1),
+      ).to.be.revertedWith('Governor: invalid proposal length');
+    });
+    it('can NOT propose with invalid proposal length (targets vs. calldatas)', async function () {
+      const { args } = await getProposal(babGovernor);
+      const args1 = [[ADDRESS_ZERO], [value], ['0x', '0x'], '<proposal description>'];
+      // propose
+      await expect(
+        babGovernor.connect(voter1)['propose(address[],uint256[],bytes[],string)'](...args1),
+      ).to.be.revertedWith('Governor: invalid proposal length');
+    });
+    it('can NOT propose an empty proposal', async function () {
+      const { args } = await getProposal(babGovernor);
+      const args1 = [[], [], [], '<proposal description>'];
+      // propose
+      await expect(
+        babGovernor.connect(voter1)['propose(address[],uint256[],bytes[],string)'](...args1),
+      ).to.be.revertedWith('Governor: empty proposal');
+    });
+    it('can NOT repeat a proposal', async function () {
+      const { args } = await getProposal(babGovernor);
+      // propose
+      await expect(babGovernor.connect(voter1)['propose(address[],uint256[],bytes[],string)'](...args)).to.be.not
+        .reverted;
+      await expect(
+        babGovernor.connect(voter1)['propose(address[],uint256[],bytes[],string)'](...args),
+      ).to.be.revertedWith('Governor: proposal already exists');
+    });
 
     it('make a valid proposal', async function () {
       const { id, args } = await getProposal(babGovernor);
@@ -271,6 +304,35 @@ describe.only('BabylonGovernor', function () {
       const state = await mockGovernor.state(id);
       expect(state).to.eq(proposalState.Queued);
     });
+    it.only('can NOT queue a proposal if defeated', async function () {
+      const mockGovernor = await getGovernorMock(10);
+      const { id, args, voters } = await getProposal(mockGovernor, {
+        voters: [
+          { voter: voter1, support: voteType.For, reason: 'This is nice' },
+          { voter: voter2, support: voteType.Against },
+          { voter: voter3, support: voteType.Against },
+          { voter: voter4, support: voteType.Against },
+        ],
+      });
+
+      // propose
+      await mockGovernor.connect(voter1)['propose(address[],uint256[],bytes[],string)'](...args);
+
+      // 1 blocks to reach the block where the voting starts
+      await increaseBlock(1);
+
+      await castVotes(id, voters, mockGovernor);
+
+      await increaseBlock(10);
+
+      const [, , eta, , , forVotes, againstVotes, abstainVotes, , ,] = await mockGovernor.proposals(id);
+
+      await expect(mockGovernor.connect(deployer)['queue(uint256)'](id)).to.be.revertedWith(
+        'Governor: proposal not successful',
+      );
+      const state = await mockGovernor.state(id);
+      expect(state).to.eq(proposalState.Defeated);
+    });
   });
 
   describe('execute', function () {
@@ -305,6 +367,167 @@ describe.only('BabylonGovernor', function () {
 
       const state = await mockGovernor.state(id);
       expect(state).to.eq(proposalState.Executed);
+    });
+    it.only('can NOT execute proposal if defeated', async function () {
+      const mockGovernor = await getGovernorMock(10);
+      const { id, args, voters } = await getProposal(mockGovernor, {
+        voters: [
+          { voter: voter1, support: voteType.For, reason: 'This is nice' },
+          { voter: voter2, support: voteType.Against },
+          { voter: voter3, support: voteType.Against },
+          { voter: voter4, support: voteType.Against },
+        ],
+      });
+
+      // propose
+      await mockGovernor.connect(voter1)['propose(address[],uint256[],bytes[],string)'](...args);
+
+      // 1 blocks to reach the block where the voting starts
+      await increaseBlock(1);
+
+      await castVotes(id, voters, mockGovernor);
+
+      await increaseBlock(10);
+
+      const [, , eta, , , forVotes, againstVotes, abstainVotes, , ,] = await mockGovernor.proposals(id);
+
+      await increaseTime(ONE_DAY_IN_SECONDS);
+
+      await expect(mockGovernor.connect(deployer)['execute(uint256)'](id)).to.be.revertedWith(
+        'Governor: proposal not successful',
+      );
+
+      const state = await mockGovernor.state(id);
+      expect(state).to.eq(proposalState.Defeated);
+    });
+  });
+  describe('cancel', function () {
+    it('can cancel a proposal by the proposer if threshold not reached', async function () {
+      const mockGovernor = await getGovernorMock(10);
+      const { id, args, voters } = await getProposal(mockGovernor, {
+        voters: [
+          { voter: voter1, support: voteType.For, reason: 'This is nice' },
+          { voter: voter2, support: voteType.For },
+          { voter: voter3, support: voteType.For },
+          { voter: voter4, support: voteType.For },
+        ],
+      });
+
+      // propose
+      await mockGovernor.connect(voter1)['propose(address[],uint256[],bytes[],string)'](...args);
+
+      // 1 blocks to reach the block where the voting starts
+      await increaseBlock(1);
+
+      await castVotes(id, voters, mockGovernor);
+
+      await increaseBlock(10);
+
+      const [, , eta, , , forVotes, againstVotes, abstainVotes, , ,] = await mockGovernor.proposals(id);
+
+      await mockGovernor.connect(deployer)['queue(uint256)'](id);
+
+      await increaseTime(ONE_DAY_IN_SECONDS);
+
+      await mockGovernor.connect(deployer)['execute(uint256)'](id);
+
+      const state = await mockGovernor.state(id);
+      expect(state).to.eq(proposalState.Executed);
+    });
+    it('can NOT cancel a proposal by anyone different from proposer if threshold not reached', async function () {
+      const mockGovernor = await getGovernorMock(10);
+      const { id, args, voters } = await getProposal(mockGovernor, {
+        voters: [
+          { voter: voter1, support: voteType.For, reason: 'This is nice' },
+          { voter: voter2, support: voteType.For },
+          { voter: voter3, support: voteType.For },
+          { voter: voter4, support: voteType.For },
+        ],
+      });
+
+      // propose
+      await mockGovernor.connect(voter1)['propose(address[],uint256[],bytes[],string)'](...args);
+
+      // 1 blocks to reach the block where the voting starts
+      await increaseBlock(1);
+
+      await castVotes(id, voters, mockGovernor);
+
+      await increaseBlock(10);
+
+      const [, , eta, , , forVotes, againstVotes, abstainVotes, , ,] = await mockGovernor.proposals(id);
+
+      await mockGovernor.connect(deployer)['queue(uint256)'](id);
+
+      await increaseTime(ONE_DAY_IN_SECONDS);
+
+      await mockGovernor.connect(deployer)['execute(uint256)'](id);
+
+      const state = await mockGovernor.state(id);
+      expect(state).to.eq(proposalState.Executed);
+    });
+  });
+
+  describe('timelock', function () {
+    it('timelock check ', async function () {
+      // TODO
+      // .timelock()
+    });
+    it('can update timelock by timelockcontroller', async function () {
+      // TODO
+      // .timelock()
+      // _executor
+    });
+    it('can NOT update timelock by anyone different from timelockcontroller', async function () {
+      // TODO
+    });
+  });
+  describe('state ', function () {
+    it('state defeated', async function () {
+      // TODO
+    });
+  });
+  describe('proposalEta ', function () {
+    it('proposalEta if done', async function () {
+      // TODO
+    });
+    it('proposalEta if NOT done', async function () {
+      // TODO
+    });
+  });
+  describe('getVotes ', function () {
+    it('can get votes', async function () {
+      // TODO
+    });
+  });
+  describe('counting mode ', function () {
+    it('bravo counting mode', async function () {
+      // TODO
+    });
+  });
+  describe('getActions ', function () {
+    it('getActions', async function () {
+      // TODO
+    });
+  });
+  describe('proposals ', function () {
+    it('proposals', async function () {
+      // TODO
+    });
+  });
+  describe('getReceipt ', function () {
+    it('getReceipt', async function () {
+      // TODO
+    });
+  });
+  describe('quorumVotes ', function () {
+    it('quorumVotes', async function () {
+      // TODO
+    });
+  });
+  describe('hasVoted ', function () {
+    it('hasVotes', async function () {
+      // TODO
     });
   });
 });
