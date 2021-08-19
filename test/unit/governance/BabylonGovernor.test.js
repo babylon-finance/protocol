@@ -10,6 +10,7 @@ const { impersonateAddress } = require('lib/rpc');
 
 describe.only('BabylonGovernor', function () {
   let owner;
+  let deployer;
   let signer1;
   let signer2;
   let signer3;
@@ -28,30 +29,21 @@ describe.only('BabylonGovernor', function () {
   let voter3;
   let voter4;
 
+  // period and delay is in blocks
   async function getGovernorMock(period = 1, delay = 1) {
-    const { deployer } = await getNamedAccounts();
-    const { deploy } = deployments;
-    const signer = await getSigner(deployer);
+    // We deploy a mock contract with a custom period and delay
+    const timelockFactory = await ethers.getContractFactory('TimelockController');
+    const timelock = await timelockFactory.deploy(ONE_DAY_IN_SECONDS, [], []);
 
-    // We deploy a mock contract with shorter voting period
-    const mockGovernor = await deploy('BabylonGovernorMock', {
-      from: deployer,
-      args: [bablToken.address, timelockController.address, delay, period],
-      log: true,
-    });
-    return await ethers.getContractAt('BabylonGovernor', mockGovernor.address, signer);
+    const mockFactory = await ethers.getContractFactory('BabylonGovernorMock');
+    const governor =  await mockFactory.deploy(bablToken.address, timelock.address, delay, period);
+
+    await timelock.connect(deployer).grantRole(await timelock.PROPOSER_ROLE(), governor.address);
+    await timelock.connect(deployer).grantRole(await timelock.EXECUTOR_ROLE(), governor.address);
+
+    return governor;
   }
 
-  async function grantRoles(contract) {
-    const { deployer } = await getNamedAccounts();
-    const signer = await getSigner(deployer);
-
-    const PROPOSER_ROLE = await timelockController.PROPOSER_ROLE();
-    const EXECUTOR_ROLE = await timelockController.EXECUTOR_ROLE();
-
-    await (await timelockController.connect(deployer).grantRole(PROPOSER_ROLE, contract.address)).wait();
-    await (await timelockController.connect(deployer).grantRole(EXECUTOR_ROLE, contract.address)).wait();
-  }
 
   async function claimTokens(voters) {
     for (const voter of voters) {
@@ -71,7 +63,13 @@ describe.only('BabylonGovernor', function () {
     }
   }
 
-  async function getProposal(governor) {
+  async function getProposal(governor, { voters } = {}) {
+    voters = voters || [
+      { voter: voter1, support: voteType.For, reason: 'This is nice' },
+      { voter: voter2, support: voteType.For },
+      { voter: voter3, support: voteType.Against },
+      { voter: voter4, support: voteType.Abstain },
+    ];
     const ABI = ['function enableBABLMiningProgram()'];
     const iface = new ethers.utils.Interface(ABI);
     const encodedData = iface.encodeFunctionData('enableBABLMiningProgram');
@@ -83,12 +81,7 @@ describe.only('BabylonGovernor', function () {
     const proposalObject = {
       id,
       args: [[babController.address], [value], [encodedData], description],
-      voters: [
-        { voter: voter1, support: voteType.For, reason: 'This is nice' },
-        { voter: voter2, support: voteType.For },
-        { voter: voter3, support: voteType.Against },
-        { voter: voter4, support: voteType.Abstain },
-      ],
+      voters,
     };
 
     await claimTokens(proposalObject.voters);
@@ -99,6 +92,7 @@ describe.only('BabylonGovernor', function () {
 
   beforeEach(async () => {
     ({
+      deployer,
       owner,
       signer1,
       signer2,
@@ -198,7 +192,7 @@ describe.only('BabylonGovernor', function () {
       await babGovernor.connect(voter1)['propose(address[],uint256[],bytes[],string)'](...args);
 
       // 4 blocks to reach the block where the voting starts
-      await increaseBlock(4);
+      await increaseBlock(1);
 
       await castVotes(id, voters, babGovernor);
 
@@ -242,7 +236,7 @@ describe.only('BabylonGovernor', function () {
       await mockGovernor.connect(voter1)['propose(address[],uint256[],bytes[],string)'](...args);
 
       // We vote after the deadline
-      await increaseBlock(14);
+      await increaseBlock(11);
 
       await expect(mockGovernor.connect(voter1).castVote(id, voteType.For)).to.be.revertedWith(
         'Governor: vote not currently active',
@@ -254,20 +248,31 @@ describe.only('BabylonGovernor', function () {
   describe('queue', function () {
     it('can queue proposal', async function () {
       const mockGovernor = await getGovernorMock(10);
-      const { id, args, voters } = await getProposal(mockGovernor);
+      const { id, args, voters } = await getProposal(mockGovernor, {
+        voters: [
+          { voter: voter1, support: voteType.For, reason: 'This is nice' },
+          { voter: voter2, support: voteType.For },
+          { voter: voter3, support: voteType.For },
+          { voter: voter4, support: voteType.For },
+        ],
+      });
 
       // propose
       await mockGovernor.connect(voter1)['propose(address[],uint256[],bytes[],string)'](...args);
 
-      // 4 blocks to reach the block where the voting starts
-      await increaseBlock(4);
+      // 1 blocks to reach the block where the voting starts
+      await increaseBlock(1);
 
       await castVotes(id, voters, mockGovernor);
 
-      const [, , eta, , , forVotes, againstVotes, abstainVotes, , ,] = await mockGovernor.proposals(id);
+      await increaseBlock(10);
 
-     // await mockGovernor.proposals(id);
+      const [, , eta, , , forVotes, againstVotes, abstainVotes, , ,] = await mockGovernor.proposals(id);
+      const state = await mockGovernor.state(id);
+
+      await mockGovernor.connect(deployer)['queue(uint256)'](id);
     });
   });
+
   describe('execute', function () {});
 });
