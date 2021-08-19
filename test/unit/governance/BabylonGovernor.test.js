@@ -7,6 +7,7 @@ const { increaseTime, increaseBlock, voteType, proposalState } = require('utils/
 
 const { setupTests } = require('fixtures/GardenFixture');
 const { impersonateAddress } = require('lib/rpc');
+const { ONE_YEAR_IN_SECONDS } = require('../../../lib/constants');
 
 describe('BabylonGovernor', function () {
   let owner;
@@ -448,6 +449,44 @@ describe('BabylonGovernor', function () {
       expect(state).to.eq(proposalState.Defeated);
 
       await mockGovernor.connect(voter1)['cancel(uint256)'](id);
+
+      const state2 = await mockGovernor.state(id);
+      expect(state2).to.eq(proposalState.Canceled);
+    });
+
+    it('can cancel an active proposal by anyone if the proposer is running low on BABL tokens', async function () {
+      const mockGovernor = await getGovernorMock(10);
+      const { id, args, voters } = await getProposal(mockGovernor, {
+        voters: [
+          { voter: voter1, support: voteType.For, reason: 'This is nice' },
+          { voter: voter2, support: voteType.For },
+        ],
+      });
+
+      // propose
+      await mockGovernor.connect(voter1)['propose(address[],uint256[],bytes[],string)'](...args);
+
+      // 1 blocks to reach the block where the voting starts
+      await increaseBlock(1);
+
+      await castVotes(id, voters, mockGovernor);
+
+      await increaseBlock(3);
+
+      // Time travel to avoid vesting lock for transfer tokens despite blocks are not traveling equally
+      await increaseTime(ONE_YEAR_IN_SECONDS * 4);
+      expect(await bablToken.balanceOf(voter1.address)).to.equal(ethers.utils.parseEther('20000'));
+
+      const voter1Balance = await bablToken.balanceOf(voter1.address);
+      // Enable BABL token transfers to remove tokens from proposer running low on babl tokens
+      await bablToken.connect(owner).enableTokensTransfers();
+      await bablToken.connect(voter1).transfer(voter2.address, voter1Balance);
+
+      const state = await mockGovernor.state(id);
+      expect(state).to.eq(proposalState.Active);
+      expect(await bablToken.balanceOf(voter1.address)).to.equal(0);
+      // voter 2 is different from proposer voter 1
+      await mockGovernor.connect(voter2)['cancel(uint256)'](id);
 
       const state2 = await mockGovernor.state(id);
       expect(state2).to.eq(proposalState.Canceled);
