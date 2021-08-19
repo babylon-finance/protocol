@@ -8,7 +8,7 @@ const { increaseTime, increaseBlock, voteType, proposalState } = require('utils/
 const { setupTests } = require('fixtures/GardenFixture');
 const { impersonateAddress } = require('lib/rpc');
 
-describe.only('BabylonGovernor', function () {
+describe('BabylonGovernor', function () {
   let owner;
   let deployer;
   let signer1;
@@ -304,7 +304,7 @@ describe.only('BabylonGovernor', function () {
       const state = await mockGovernor.state(id);
       expect(state).to.eq(proposalState.Queued);
     });
-    it.only('can NOT queue a proposal if defeated', async function () {
+    it('can NOT queue a proposal if defeated', async function () {
       const mockGovernor = await getGovernorMock(10);
       const { id, args, voters } = await getProposal(mockGovernor, {
         voters: [
@@ -357,8 +357,6 @@ describe.only('BabylonGovernor', function () {
 
       await increaseBlock(10);
 
-      const [, , eta, , , forVotes, againstVotes, abstainVotes, , ,] = await mockGovernor.proposals(id);
-
       await mockGovernor.connect(deployer)['queue(uint256)'](id);
 
       await increaseTime(ONE_DAY_IN_SECONDS);
@@ -368,7 +366,7 @@ describe.only('BabylonGovernor', function () {
       const state = await mockGovernor.state(id);
       expect(state).to.eq(proposalState.Executed);
     });
-    it.only('can NOT execute proposal if defeated', async function () {
+    it('can NOT execute proposal if defeated', async function () {
       const mockGovernor = await getGovernorMock(10);
       const { id, args, voters } = await getProposal(mockGovernor, {
         voters: [
@@ -389,8 +387,6 @@ describe.only('BabylonGovernor', function () {
 
       await increaseBlock(10);
 
-      const [, , eta, , , forVotes, againstVotes, abstainVotes, , ,] = await mockGovernor.proposals(id);
-
       await increaseTime(ONE_DAY_IN_SECONDS);
 
       await expect(mockGovernor.connect(deployer)['execute(uint256)'](id)).to.be.revertedWith(
@@ -402,14 +398,12 @@ describe.only('BabylonGovernor', function () {
     });
   });
   describe('cancel', function () {
-    it('can cancel a proposal by the proposer if threshold not reached', async function () {
+    it('can cancel an active proposal by the proposer if still threshold not reached', async function () {
       const mockGovernor = await getGovernorMock(10);
       const { id, args, voters } = await getProposal(mockGovernor, {
         voters: [
           { voter: voter1, support: voteType.For, reason: 'This is nice' },
           { voter: voter2, support: voteType.For },
-          { voter: voter3, support: voteType.For },
-          { voter: voter4, support: voteType.For },
         ],
       });
 
@@ -421,27 +415,22 @@ describe.only('BabylonGovernor', function () {
 
       await castVotes(id, voters, mockGovernor);
 
-      await increaseBlock(10);
-
-      const [, , eta, , , forVotes, againstVotes, abstainVotes, , ,] = await mockGovernor.proposals(id);
-
-      await mockGovernor.connect(deployer)['queue(uint256)'](id);
-
-      await increaseTime(ONE_DAY_IN_SECONDS);
-
-      await mockGovernor.connect(deployer)['execute(uint256)'](id);
+      await increaseBlock(5);
 
       const state = await mockGovernor.state(id);
-      expect(state).to.eq(proposalState.Executed);
+      expect(state).to.eq(proposalState.Active);
+
+      await mockGovernor.connect(voter1)['cancel(uint256)'](id);
+
+      const state2 = await mockGovernor.state(id);
+      expect(state2).to.eq(proposalState.Canceled);
     });
-    it('can NOT cancel a proposal by anyone different from proposer if threshold not reached', async function () {
+    it('can cancel a defeated proposal by the proposer', async function () {
       const mockGovernor = await getGovernorMock(10);
       const { id, args, voters } = await getProposal(mockGovernor, {
         voters: [
           { voter: voter1, support: voteType.For, reason: 'This is nice' },
           { voter: voter2, support: voteType.For },
-          { voter: voter3, support: voteType.For },
-          { voter: voter4, support: voteType.For },
         ],
       });
 
@@ -455,16 +444,65 @@ describe.only('BabylonGovernor', function () {
 
       await increaseBlock(10);
 
-      const [, , eta, , , forVotes, againstVotes, abstainVotes, , ,] = await mockGovernor.proposals(id);
+      const state = await mockGovernor.state(id);
+      expect(state).to.eq(proposalState.Defeated);
 
-      await mockGovernor.connect(deployer)['queue(uint256)'](id);
+      await mockGovernor.connect(voter1)['cancel(uint256)'](id);
 
-      await increaseTime(ONE_DAY_IN_SECONDS);
+      const state2 = await mockGovernor.state(id);
+      expect(state2).to.eq(proposalState.Canceled);
+    });
+    it('can NOT cancel an active proposal by anyone different from proposer if threshold not reached', async function () {
+      const mockGovernor = await getGovernorMock(10);
+      const { id, args, voters } = await getProposal(mockGovernor, {
+        voters: [
+          { voter: voter1, support: voteType.For, reason: 'This is nice' },
+          { voter: voter2, support: voteType.For },
+        ],
+      });
 
-      await mockGovernor.connect(deployer)['execute(uint256)'](id);
+      // propose
+      await mockGovernor.connect(voter1)['propose(address[],uint256[],bytes[],string)'](...args);
+
+      // 1 blocks to reach the block where the voting starts
+      await increaseBlock(1);
+
+      await castVotes(id, voters, mockGovernor);
+
+      await increaseBlock(5);
+
+      await expect(mockGovernor.connect(deployer)['cancel(uint256)'](id)).to.be.revertedWith(
+        'GovernorBravo: proposer above threshold',
+      );
 
       const state = await mockGovernor.state(id);
-      expect(state).to.eq(proposalState.Executed);
+      expect(state).to.eq(proposalState.Active);
+    });
+    it('can NOT cancel a defeated proposal by anyone different from proposer if threshold not reached', async function () {
+      const mockGovernor = await getGovernorMock(10);
+      const { id, args, voters } = await getProposal(mockGovernor, {
+        voters: [
+          { voter: voter1, support: voteType.For, reason: 'This is nice' },
+          { voter: voter2, support: voteType.For },
+        ],
+      });
+
+      // propose
+      await mockGovernor.connect(voter1)['propose(address[],uint256[],bytes[],string)'](...args);
+
+      // 1 blocks to reach the block where the voting starts
+      await increaseBlock(1);
+
+      await castVotes(id, voters, mockGovernor);
+
+      await increaseBlock(10);
+
+      await expect(mockGovernor.connect(deployer)['cancel(uint256)'](id)).to.be.revertedWith(
+        'GovernorBravo: proposer above threshold',
+      );
+
+      const state = await mockGovernor.state(id);
+      expect(state).to.eq(proposalState.Defeated);
     });
   });
 
