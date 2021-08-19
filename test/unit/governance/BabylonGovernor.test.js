@@ -36,14 +36,13 @@ describe.only('BabylonGovernor', function () {
     const timelock = await timelockFactory.deploy(ONE_DAY_IN_SECONDS, [], []);
 
     const mockFactory = await ethers.getContractFactory('BabylonGovernorMock');
-    const governor =  await mockFactory.deploy(bablToken.address, timelock.address, delay, period);
+    const governor = await mockFactory.deploy(bablToken.address, timelock.address, delay, period);
 
     await timelock.connect(deployer).grantRole(await timelock.PROPOSER_ROLE(), governor.address);
     await timelock.connect(deployer).grantRole(await timelock.EXECUTOR_ROLE(), governor.address);
 
     return governor;
   }
-
 
   async function claimTokens(voters) {
     for (const voter of voters) {
@@ -70,23 +69,21 @@ describe.only('BabylonGovernor', function () {
       { voter: voter3, support: voteType.Against },
       { voter: voter4, support: voteType.Abstain },
     ];
-    const ABI = ['function enableBABLMiningProgram()'];
-    const iface = new ethers.utils.Interface(ABI);
-    const encodedData = iface.encodeFunctionData('enableBABLMiningProgram');
+
     const description = '<proposal description>';
     const descriptionHash = ethers.utils.keccak256(ethers.utils.toUtf8Bytes('<proposal description>'));
 
-    const id = await governor.hashProposal([babController.address], [value], [encodedData], descriptionHash);
+    const id = await governor.hashProposal([ADDRESS_ZERO], [value], ['0x'], descriptionHash);
 
     const proposalObject = {
       id,
-      args: [[babController.address], [value], [encodedData], description],
+      args: [[ADDRESS_ZERO], [value], ['0x'], description],
       voters,
     };
 
-    await claimTokens(proposalObject.voters);
+    await claimTokens(voters);
+    await selfDelegation(voters);
 
-    await selfDelegation(proposalObject.voters);
     return proposalObject;
   }
 
@@ -131,7 +128,7 @@ describe.only('BabylonGovernor', function () {
   describe('hashProposal', function () {
     it('can hash', async function () {
       const { id } = await getProposal(babGovernor);
-      expect(id.toString()).to.equal('31592073516640214093428763406121273246927507816899979568469470593665780044126');
+      expect(id.toString()).to.equal('24740913560950340129913657040082387925746871334254749356616935491669344289396');
     });
   });
 
@@ -276,5 +273,38 @@ describe.only('BabylonGovernor', function () {
     });
   });
 
-  describe('execute', function () {});
+  describe('execute', function () {
+    it('can queue proposal', async function () {
+      const mockGovernor = await getGovernorMock(10);
+      const { id, args, voters } = await getProposal(mockGovernor, {
+        voters: [
+          { voter: voter1, support: voteType.For, reason: 'This is nice' },
+          { voter: voter2, support: voteType.For },
+          { voter: voter3, support: voteType.For },
+          { voter: voter4, support: voteType.For },
+        ],
+      });
+
+      // propose
+      await mockGovernor.connect(voter1)['propose(address[],uint256[],bytes[],string)'](...args);
+
+      // 1 blocks to reach the block where the voting starts
+      await increaseBlock(1);
+
+      await castVotes(id, voters, mockGovernor);
+
+      await increaseBlock(10);
+
+      const [, , eta, , , forVotes, againstVotes, abstainVotes, , ,] = await mockGovernor.proposals(id);
+
+      await mockGovernor.connect(deployer)['queue(uint256)'](id);
+
+      await increaseTime(ONE_DAY_IN_SECONDS + 1);
+
+      await mockGovernor.connect(deployer)['execute(uint256)'](id);
+
+      const state = await mockGovernor.state(id);
+      expect(state).to.eq(proposalState.Executed);
+    });
+  });
 });
