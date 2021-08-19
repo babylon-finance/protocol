@@ -44,9 +44,9 @@ describe.only('governor', function () {
       await claimTokens(bablToken, voters);
 
       const { id, args } = await getProposal(mockGovernor, bablToken, {
-        targets: [],
+        targets: [ADDRESS_ZERO],
         values: [from(0)],
-        calldatas: [],
+        calldatas: ['0x'],
         description: 'upgrade governor to a new version',
       });
 
