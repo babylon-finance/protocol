@@ -177,7 +177,10 @@ async function createStrategyWithManyOperations(
 async function deposit(garden, signers) {
   const gardenValuer = await getContract('GardenValuer');
   const reserveAsset = await garden.reserveAsset();
-  const reserveContract = await ethers.getContractAt('@openzeppelin/contracts/token/ERC20/IERC20.sol:IERC20', reserveAsset);
+  const reserveContract = await ethers.getContractAt(
+    '@openzeppelin/contracts/token/ERC20/IERC20.sol:IERC20',
+    reserveAsset,
+  );
   let amount;
   switch (reserveAsset.toLowerCase()) {
     case addresses.tokens.USDC.toLowerCase():
