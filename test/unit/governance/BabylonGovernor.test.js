@@ -274,7 +274,7 @@ describe.only('BabylonGovernor', function () {
   });
 
   describe('execute', function () {
-    it('can queue proposal', async function () {
+    it('can execute proposal', async function () {
       const mockGovernor = await getGovernorMock(10);
       const { id, args, voters } = await getProposal(mockGovernor, {
         voters: [
