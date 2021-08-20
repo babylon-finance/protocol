@@ -40,37 +40,43 @@ describe.only('governor', function () {
 
   describe('upgrades', function () {
     it('can change governor to a new one', async function () {
-      const mockGovernor = await getGovernorMock(bablToken, deployer, 10);
+      // const governor = await getGovernorMock(bablToken, deployer, 10);
+      const governor = babGovernor;
       await claimTokens(bablToken, voters);
 
-      const { id, args } = await getProposal(mockGovernor, bablToken, {
-        targets: [ADDRESS_ZERO],
+      let tokenInterface = new ethers.utils.Interface(['function enableTokensTransfers()']);
+      const data = tokenInterface.encodeFunctionData('enableTokensTransfers');
+
+      const { id, args } = await getProposal(governor, bablToken, {
+        targets: [bablToken.address],
         values: [from(0)],
-        calldatas: ['0x'],
+        calldatas: [data],
         description: 'upgrade governor to a new version',
       });
 
       // propose
-      await mockGovernor.connect(voters[0])['propose(address[],uint256[],bytes[],string)'](...args);
+      await governor.connect(voters[0])['propose(address[],uint256[],bytes[],string)'](...args);
 
       // 1 blocks to reach the block where the voting starts
-      await increaseBlock(1);
+      await increaseBlock(await governor.votingDelay());
 
       const votes = voters.map((vot) => ({ voter: vot, support: voteType.For }));
-      await castVotes(id, votes, mockGovernor);
+      await castVotes(id, votes, governor);
 
-      // 10 block to skip voting period
-      await increaseBlock(10);
+      // this is super slow but hardhat doesn't allow mine multiple blocks right
+      // now should be fixed once this functionality avaiable
+      // mine blocks to skip voting period
+      await increaseBlock(await governor.votingPeriod());
 
-      const [, , eta, , , forVotes, againstVotes, abstainVotes, , ,] = await mockGovernor.proposals(id);
+      const [, , eta, , , forVotes, againstVotes, abstainVotes, , ,] = await governor.proposals(id);
 
-      await mockGovernor.connect(deployer)['queue(uint256)'](id);
+      await governor.connect(deployer)['queue(uint256)'](id);
 
       await increaseTime(ONE_DAY_IN_SECONDS);
 
-      await mockGovernor.connect(deployer)['execute(uint256)'](id);
+      await governor.connect(deployer)['execute(uint256)'](id);
 
-      const state = await mockGovernor.state(id);
+      const state = await governor.state(id);
       expect(state).to.eq(proposalState.Executed);
     });
   });

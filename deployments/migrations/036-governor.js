@@ -7,7 +7,11 @@ module.exports = async ({ getTenderlyContract, getNamedAccounts, deployments, ge
   const bablToken = await deployments.get('BABLToken');
   const timelockController = await deployments.get('TimelockController');
 
-  const timelockControllerContract = await ethers.getContractAt('TimelockController', timelockController.address, signer);
+  const timelockControllerContract = await ethers.getContractAt(
+    'TimelockController',
+    timelockController.address,
+    signer,
+  );
 
   const PROPOSER_ROLE = await timelockControllerContract.PROPOSER_ROLE();
   const EXECUTOR_ROLE = await timelockControllerContract.EXECUTOR_ROLE();
@@ -19,23 +23,16 @@ module.exports = async ({ getTenderlyContract, getNamedAccounts, deployments, ge
     gasPrice,
   });
 
-  console.log('Deployed Governor Babylon at', governor.address);
+  console.log(`Deployed BabylonGovernor ${governor.address}`);
+
+  // We give proposer and executor permissions to Governor
+  console.log('Setting Governor on TimelockController');
+  await (await timelockControllerContract.grantRole(PROPOSER_ROLE, governor.address, { gasPrice })).wait();
+  await (await timelockControllerContract.grantRole(EXECUTOR_ROLE, governor.address, { gasPrice })).wait();
 
   if (network.live && governor.newlyDeployed) {
     const contract = await getTenderlyContract('BabylonGovernor');
     await tenderly.push(contract);
-
-    // We give proposer and executor permissions to Governor
-    console.log('Setting Governor on TimelockController');
-    await (
-      await timelockControllerContract.grantRole(PROPOSER_ROLE, governor.address, { gasPrice })
-    ).wait();
-    await (
-      await timelockControllerContract.grantRole(EXECUTOR_ROLE, governor.address, { gasPrice })
-    ).wait();
-
-    // TODO Deployer renounce TIMELOCK_ADMIN_ROLE
-    //  await (await timelockControllerContract.connect(deployer).renounceRole(TIMELOCK_ADMIN_ROLE, deployer.address, { gasPrice })).wait();
   }
 };
 
