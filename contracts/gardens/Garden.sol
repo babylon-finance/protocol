@@ -93,8 +93,8 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
     address private constant WBTC = 0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599;
 
     // Strategy cooldown period
-    uint256 public constant MIN_COOLDOWN_PERIOD = 60 seconds;
-    uint256 public constant MAX_COOLDOWN_PERIOD = 7 days;
+    uint256 private constant MIN_COOLDOWN_PERIOD = 60 seconds;
+    uint256 private constant MAX_COOLDOWN_PERIOD = 7 days;
 
     uint8 private constant MAX_EXTRA_CREATORS = 4;
     uint256 private constant EARLY_WITHDRAWAL_PENALTY = 25e15;
@@ -191,7 +191,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
     bool public override publicStewards;
 
     // Addresses for extra creators
-    address[MAX_EXTRA_CREATORS] private extraCreators;
+    address[MAX_EXTRA_CREATORS] public extraCreators;
 
     /* ============ Modifiers ============ */
 
@@ -617,31 +617,27 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
     /*
      * Creator transfer his creator rights to another account.
      * Must be a creator or an aux creator
-     * @param _creator  Current creator address
      * @param _newCreator  New creator address
+     * @param _index       Index of the creator if it is in the extra
      */
-    function transferCreatorRights(address _creator, address _newCreator) external override {
-        _onlyCreator(_creator);
+    function transferCreatorRights(address _newCreator, uint8 _index) external override {
+        _onlyCreator(msg.sender);
         _require(!_isCreator(_newCreator), Errors.NEW_CREATOR_MUST_NOT_EXIST);
-        if (creator == _creator) {
+        if (msg.sender == creator) {
             creator = _newCreator;
+            return;
         }
-        if (extraCreators[0] == _creator) {
-            extraCreators[0] = _newCreator;
-        }
-        if (extraCreators[1] == _creator) {
-            extraCreators[1] = _newCreator;
-        }
-        if (extraCreators[2] == _creator) {
-            extraCreators[2] = _newCreator;
-        }
-        if (extraCreators[3] == _creator) {
-            extraCreators[3] = _newCreator;
-        }
+        _require(extraCreators[_index] == msg.sender, Errors.ONLY_CREATOR);
+        extraCreators[_index] = _newCreator;
     }
 
-    function addExtraCreators(address _creator, address[MAX_EXTRA_CREATORS] memory _newCreators) external {
-        _onlyCreator(_creator);
+    /*
+     * Adds extra creators. Only the original creator can call this.
+     * Can only be called if all the addresses are zero
+     * @param _newCreators  Addresses of the new creators
+     */
+    function addExtraCreators(address[MAX_EXTRA_CREATORS] memory _newCreators) external override {
+        _require(msg.sender == creator, Errors.ONLY_FIRST_CREATOR_CAN_ADD);
         _assignExtraCreator(0, _newCreators[0]);
         _assignExtraCreator(1, _newCreators[1]);
         _assignExtraCreator(2, _newCreators[2]);
@@ -1057,17 +1053,18 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
 
     // Checks if an address is a creator
     function _isCreator(address _creator) private view returns (bool) {
-        bool foundInExtra =
-            extraCreators[0] == _creator ||
-                extraCreators[1] == _creator ||
-                extraCreators[2] == _creator ||
-                extraCreators[3] == _creator;
-        return foundInExtra || _creator == creator;
+        return           extraCreators[0] == _creator ||
+                      extraCreators[1] == _creator ||
+                      extraCreators[2] == _creator ||
+                      extraCreators[3] == _creator ||
+                      _creator == creator;
     }
 
-    function _assignExtraCreator(uint8 index, address _newCreator) private {
-      _require(!_isCreator(_newCreator), Errors.NEW_CREATOR_MUST_NOT_EXIST);
-      extraCreators[index] =_newCreator;
+    // Assign extra creators
+    function _assignExtraCreator(uint8 _index, address _newCreator) private {
+        _require(!_isCreator(_newCreator), Errors.NEW_CREATOR_MUST_NOT_EXIST);
+        _require(extraCreators[_index] == address(0), Errors.NEW_CREATOR_MUST_NOT_EXIST);
+        extraCreators[_index] = _newCreator;
     }
 
     // solhint-disable-next-line
