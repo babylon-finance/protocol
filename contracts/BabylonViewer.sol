@@ -98,7 +98,13 @@ contract BabylonViewer {
         return (
             ERC20(_garden).name(),
             ERC20(_garden).symbol(),
-            [garden.creator(), garden.extraCreators(0), garden.extraCreators(1), garden.extraCreators(2), garden.extraCreators(3)],
+            [
+                garden.creator(),
+                garden.extraCreators(0),
+                garden.extraCreators(1),
+                garden.extraCreators(2),
+                garden.extraCreators(3)
+            ],
             garden.reserveAsset(),
             [garden.active(), garden.privateGarden(), garden.publicStrategists(), garden.publicStewards()],
             garden.getStrategies(),

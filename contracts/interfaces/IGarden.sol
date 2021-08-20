@@ -112,7 +112,7 @@ interface IGarden {
 
     function getStrategies() external view returns (address[] memory);
 
-    function extraCreators(uint index) external view returns (address);
+    function extraCreators(uint256 index) external view returns (address);
 
     function getFinalizedStrategies() external view returns (address[] memory);
 
