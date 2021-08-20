@@ -38,6 +38,8 @@ interface IGarden {
 
     function makeGardenPublic() external;
 
+    function transferCreatorRights(address _creator, address _newCreator) external;
+
     function setPublicRights(bool _publicStrategist, bool _publicStewards) external;
 
     function setActive(bool _val) external;
