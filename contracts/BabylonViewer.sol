@@ -77,7 +77,7 @@ contract BabylonViewer {
         returns (
             string memory,
             string memory,
-            address,
+            address[5] memory,
             address,
             bool[4] memory,
             address[] memory,
@@ -98,7 +98,7 @@ contract BabylonViewer {
         return (
             ERC20(_garden).name(),
             ERC20(_garden).symbol(),
-            garden.creator(),
+            [garden.creator(), garden.extraCreators(0), garden.extraCreators(1), garden.extraCreators(2), garden.extraCreators(3)],
             garden.reserveAsset(),
             [garden.active(), garden.privateGarden(), garden.publicStrategists(), garden.publicStewards()],
             garden.getStrategies(),

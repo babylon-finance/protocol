@@ -191,7 +191,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
     bool public override publicStewards;
 
     // Addresses for extra creators
-    address[MAX_EXTRA_CREATORS] public extraCreators;
+    address[MAX_EXTRA_CREATORS] public override extraCreators;
 
     /* ============ Modifiers ============ */
 
@@ -1053,11 +1053,12 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
 
     // Checks if an address is a creator
     function _isCreator(address _creator) private view returns (bool) {
-        return           extraCreators[0] == _creator ||
-                      extraCreators[1] == _creator ||
-                      extraCreators[2] == _creator ||
-                      extraCreators[3] == _creator ||
-                      _creator == creator;
+        return
+            extraCreators[0] == _creator ||
+            extraCreators[1] == _creator ||
+            extraCreators[2] == _creator ||
+            extraCreators[3] == _creator ||
+            _creator == creator;
     }
 
     // Assign extra creators
