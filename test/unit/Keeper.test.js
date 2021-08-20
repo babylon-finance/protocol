@@ -2,6 +2,7 @@ const { expect } = require('chai');
 const { ethers } = require('hardhat');
 const addresses = require('lib/addresses');
 const { ONE_DAY_IN_SECONDS, STRATEGY_EXECUTE_MAP } = require('lib/constants.js');
+const { fund } = require('lib/whale');
 const { increaseTime, from, eth } = require('utils/test-helpers');
 const { createGarden } = require('fixtures/GardenHelper');
 
