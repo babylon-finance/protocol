@@ -642,14 +642,10 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
 
     function addExtraCreators(address _creator, address[MAX_EXTRA_CREATORS] memory _newCreators) external {
         _onlyCreator(_creator);
-        _require(!_isCreator(_newCreators[0]), Errors.NEW_CREATOR_MUST_NOT_EXIST);
-        extraCreators[0] = _newCreators[0];
-        _require(!_isCreator(_newCreators[1]), Errors.NEW_CREATOR_MUST_NOT_EXIST);
-        extraCreators[1] = _newCreators[1];
-        _require(!_isCreator(_newCreators[2]), Errors.NEW_CREATOR_MUST_NOT_EXIST);
-        extraCreators[2] = _newCreators[2];
-        _require(!_isCreator(_newCreators[3]), Errors.NEW_CREATOR_MUST_NOT_EXIST);
-        extraCreators[3] = _newCreators[3];
+        _assignExtraCreator(0, _newCreators[0]);
+        _assignExtraCreator(1, _newCreators[1]);
+        _assignExtraCreator(2, _newCreators[2]);
+        _assignExtraCreator(3, _newCreators[3]);
     }
 
     /* ============ External Getter Functions ============ */
@@ -1067,6 +1063,11 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
                 extraCreators[2] == _creator ||
                 extraCreators[3] == _creator;
         return foundInExtra || _creator == creator;
+    }
+
+    function _assignExtraCreator(uint8 index, address _newCreator) private {
+      _require(!_isCreator(_newCreator), Errors.NEW_CREATOR_MUST_NOT_EXIST);
+      extraCreators[index] =_newCreator;
     }
 
     // solhint-disable-next-line
