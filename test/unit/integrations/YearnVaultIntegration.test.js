@@ -86,10 +86,10 @@ describe('YearnVaultIntegrationTest', function () {
             expect(await strategyContract.getNAV()).to.be.closeTo(amount, amount.div(50));
 
             const asset = await yearnVaultIntegration.getInvestmentAsset(vault); // USDC, DAI, USDT and etc...
-            const assetContract = await ethers.getContractAt('ERC20', asset);
+            const assetContract = await ethers.getContractAt('@openzeppelin/contracts/token/ERC20/ERC20.sol:ERC20', asset);
             const assetDecimals = await assetContract.decimals();
 
-            const tokenContract = await ethers.getContractAt('ERC20', token);
+            const tokenContract = await ethers.getContractAt('@openzeppelin/contracts/token/ERC20/ERC20.sol:ERC20', token);
             const tokenDecimals = await tokenContract.decimals();
 
             const reservePriceInAsset = await priceOracle.connect(owner).getPrice(token, asset);

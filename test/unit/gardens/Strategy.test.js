@@ -81,7 +81,7 @@ describe('Strategy', function () {
     strategyDataset = await ethers.getContractAt('Strategy', strategy11);
     strategyCandidate = await ethers.getContractAt('Strategy', strategy21);
 
-    wethToken = await ethers.getContractAt('IERC20', addresses.tokens.WETH);
+    wethToken = await ethers.getContractAt('@openzeppelin/contracts/token/ERC20/IERC20.sol:IERC20', addresses.tokens.WETH);
   });
 
   describe('Strategy Deployment', async function () {

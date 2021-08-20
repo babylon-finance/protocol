@@ -65,7 +65,7 @@ describe('CurvePoolIntegrationTest', function () {
         await executeStrategy(strategyContract);
         expect(await strategyContract.capitalAllocated()).to.equal(ONE_ETH);
         const lpToken = await curvePoolIntegration.getLPToken(pool);
-        const poolContract = await ethers.getContractAt('IERC20', lpToken);
+        const poolContract = await ethers.getContractAt('@openzeppelin/contracts/token/ERC20/IERC20.sol:IERC20', lpToken);
         expect(await poolContract.balanceOf(strategyContract.address)).to.be.gt(0);
         await finalizeStrategy(strategyContract, 0);
         expect(await poolContract.balanceOf(strategyContract.address)).to.equal(0);
@@ -84,7 +84,7 @@ describe('CurvePoolIntegrationTest', function () {
         await executeStrategy(strategyContract);
         expect(await strategyContract.capitalAllocated()).to.equal(ONE_ETH);
         const lpToken = await curvePoolIntegration.getLPToken(pool);
-        const poolContract = await ethers.getContractAt('IERC20', lpToken);
+        const poolContract = await ethers.getContractAt('@openzeppelin/contracts/token/ERC20/IERC20.sol:IERC20', lpToken);
         expect(await poolContract.balanceOf(strategyContract.address)).to.be.gt(0);
         expect(await strategyContract.getNAV()).to.be.closeTo(
           ethers.utils.parseEther('1'),

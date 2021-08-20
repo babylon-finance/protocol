@@ -45,22 +45,13 @@ module.exports = async ({ getNamedAccounts, deployments, ethers, getSigner, getC
     ['RewardsDistributor', 'RewardsDistributorProxy'],
     ['Treasury', ''],
     ['PriceOracle', ''],
+    ['TimeLockRegistry', ''],
+    ['IshtarGate', ''],
   ]) {
     const contract = await getContract(entry[0], entry[1], signer);
     if ((await contract.owner()) !== timelockAddress) {
       console.log(`Transfer ownership of ${entry[0]}`);
       await (await contract.transferOwnership(timelockAddress, { gasPrice })).wait();
-    }
-  }
-
-  for (const entry of [
-    ['TimeLockRegistry', ''],
-    ['IshtarGate', ''],
-  ]) {
-    const contract = await getContract(entry[0], entry[1], signer);
-    if ((await contract.owner()) !== MULTISIG) {
-      console.log(`Transfer ownership of ${entry[0]}`);
-      await (await contract.transferOwnership(MULTISIG, { gasPrice })).wait();
     }
   }
 };

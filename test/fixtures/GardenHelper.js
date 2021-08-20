@@ -33,7 +33,7 @@ async function createGarden({
   publicGardenStrategistsStewards = [false, false, false],
   publicSharing = [0, 0, 0],
 } = {}) {
-  const [deployer, keeper, owner, signer1, signer2, signer3] = await ethers.getSigners();
+  const [deployer, keeper, , signer1, signer2, signer3] = await ethers.getSigners();
   signer = signer || signer1;
   const ishtarGate = await getContract('IshtarGate');
   const babController = await getContract('BabController', 'BabControllerProxy');
@@ -66,14 +66,9 @@ async function createGarden({
   const garden = await ethers.getContractAt('Garden', gardens.slice(-1)[0]);
   await ishtarGate
     .connect(signer1)
-    .grantGardenAccessBatch(
-      garden.address,
-      [owner.address, signer1.address, signer2.address, signer3.address],
-      [3, 3, 3, 3],
-      {
-        gasPrice: 0,
-      },
-    );
+    .grantGardenAccessBatch(garden.address, [signer1.address, signer2.address, signer3.address], [3, 3, 3], {
+      gasPrice: 0,
+    });
   return garden;
 }
 

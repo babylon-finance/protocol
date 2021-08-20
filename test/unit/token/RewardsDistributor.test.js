@@ -215,9 +215,9 @@ describe('BABL Rewards Distributor', function () {
     } = await setupTests()());
 
     await bablToken.connect(owner).enableTokensTransfers();
-    usdc = await ethers.getContractAt('IERC20', addresses.tokens.USDC);
-    dai = await ethers.getContractAt('IERC20', addresses.tokens.DAI);
-    weth = await ethers.getContractAt('IERC20', addresses.tokens.WETH);
+    usdc = await ethers.getContractAt('@openzeppelin/contracts/token/ERC20/IERC20.sol:IERC20', addresses.tokens.USDC);
+    dai = await ethers.getContractAt('@openzeppelin/contracts/token/ERC20/IERC20.sol:IERC20', addresses.tokens.DAI);
+    weth = await ethers.getContractAt('@openzeppelin/contracts/token/ERC20/IERC20.sol:IERC20', addresses.tokens.WETH);
   });
 
   describe('Deployment', function () {

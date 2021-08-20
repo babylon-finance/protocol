@@ -28,13 +28,13 @@ describe('OneInchPoolIntegrationTest', function () {
     const reservePriceInAsset0 = await priceOracle.connect(owner).getPrice(token, token0);
     const reservePriceInAsset1 = await priceOracle.connect(owner).getPrice(token, token1);
 
-    const token0Contract = await ethers.getContractAt('ERC20', token0);
+    const token0Contract = await ethers.getContractAt('@openzeppelin/contracts/token/ERC20/ERC20.sol:ERC20', token0);
     const token0Decimals = await token0Contract.decimals();
 
-    const token1Contract = await ethers.getContractAt('ERC20', token1);
+    const token1Contract = await ethers.getContractAt('@openzeppelin/contracts/token/ERC20/ERC20.sol:ERC20', token1);
     const token1Decimals = await token1Contract.decimals();
 
-    const tokenContract = await ethers.getContractAt('ERC20', token);
+    const tokenContract = await ethers.getContractAt('@openzeppelin/contracts/token/ERC20/ERC20.sol:ERC20', token);
     const tokenDecimals = await tokenContract.decimals();
 
     const amount0ToAdd = await normalizeDecimals(
@@ -102,7 +102,7 @@ describe('OneInchPoolIntegrationTest', function () {
     beforeEach(async () => {
       whaleSigner = await impersonateAddress(daiWhaleAddress);
       daiWethPair = await ethers.getContractAt('IMooniswap', addresses.oneinch.pools.wethdai);
-      daiToken = await ethers.getContractAt('IERC20', addresses.tokens.DAI);
+      daiToken = await ethers.getContractAt('@openzeppelin/contracts/token/ERC20/IERC20.sol:IERC20', addresses.tokens.DAI);
     });
 
     it('check that a valid pool is valid', async function () {
@@ -208,7 +208,7 @@ describe('OneInchPoolIntegrationTest', function () {
           await executeStrategy(strategyContract, { amount });
           // Check NAV
           expect(await strategyContract.getNAV()).to.be.closeTo(amount, amount.div(40)); // 2,5% slippage as WETH-WBTC at One Inch pool from a DAI Garden needs more than 2%
-          const tokenContract = await ethers.getContractAt('ERC20', token);
+          const tokenContract = await ethers.getContractAt('@openzeppelin/contracts/token/ERC20/ERC20.sol:ERC20', token);
           const executionTokenBalance = await tokenContract.balanceOf(garden.address);
           const LPTokens = await getExpectedLPTokens(token, amount, poolAddress, token0, token1);
 
