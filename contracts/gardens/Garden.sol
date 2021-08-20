@@ -219,10 +219,10 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
     }
 
     /**
-      * Checks if the address passed is a creator in the garden
-    */
-    function _onlyCreator(address _creator) private view  {
-      _require(_isCreator(_creator), Errors.ONLY_CREATOR);
+     * Checks if the address passed is a creator in the garden
+     */
+    function _onlyCreator(address _creator) private view {
+        _require(_isCreator(_creator), Errors.ONLY_CREATOR);
     }
 
     /* ============ Constructor ============ */
@@ -621,23 +621,35 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
      * @param _newCreator  New creator address
      */
     function transferCreatorRights(address _creator, address _newCreator) external override {
+        _onlyCreator(_creator);
+        _require(!_isCreator(_newCreator), Errors.NEW_CREATOR_MUST_NOT_EXIST);
+        if (creator == _creator) {
+            creator = _newCreator;
+        }
+        if (extraCreators[0] == _creator) {
+            extraCreators[0] = _newCreator;
+        }
+        if (extraCreators[1] == _creator) {
+            extraCreators[1] = _newCreator;
+        }
+        if (extraCreators[2] == _creator) {
+            extraCreators[2] = _newCreator;
+        }
+        if (extraCreators[3] == _creator) {
+            extraCreators[3] = _newCreator;
+        }
+    }
+
+    function addExtraCreators(address _creator, address[MAX_EXTRA_CREATORS] memory _newCreators) external {
       _onlyCreator(_creator);
-      _require(_isCreator(_newCreator), Errors.NEW_CREATOR_MUST_NOT_EXIST);
-      if (creator == _creator) {
-        creator = _newCreator;
-      }
-      if (extraCreators[0] == _creator) {
-        extraCreators[0] = _newCreator;
-      }
-      if (extraCreators[1] == _creator) {
-        extraCreators[1] = _newCreator;
-      }
-      if (extraCreators[2] == _creator) {
-        extraCreators[2] = _newCreator;
-      }
-      if (extraCreators[3] == _creator) {
-        extraCreators[3] = _newCreator;
-      }
+      _require(!_isCreator(_newCreators[0]), Errors.NEW_CREATOR_MUST_NOT_EXIST);
+      extraCreators[0] = _newCreators[0];
+      _require(!_isCreator(_newCreators[1]), Errors.NEW_CREATOR_MUST_NOT_EXIST);
+      extraCreators[1] = _newCreators[1];
+      _require(!_isCreator(_newCreators[2]), Errors.NEW_CREATOR_MUST_NOT_EXIST);
+      extraCreators[2] = _newCreators[2];
+      _require(!_isCreator(_newCreators[3]), Errors.NEW_CREATOR_MUST_NOT_EXIST);
+      extraCreators[3] = _newCreators[3];
     }
 
     /* ============ External Getter Functions ============ */
@@ -899,7 +911,6 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         emit GardenDeposit(_to, _minAmountOut, _amountIn, block.timestamp);
     }
 
-
     /**
      * Gets liquid reserve available for to Garden.
      */
@@ -1050,11 +1061,12 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
 
     // Checks if an address is a creator
     function _isCreator(address _creator) private view returns (bool) {
-      bool foundInExtra = extraCreators[0] == _creator ||
-        extraCreators[1] == _creator ||
-        extraCreators[2] == _creator ||
-        extraCreators[3] == _creator;
-      return foundInExtra || _creator == creator;
+        bool foundInExtra =
+            extraCreators[0] == _creator ||
+                extraCreators[1] == _creator ||
+                extraCreators[2] == _creator ||
+                extraCreators[3] == _creator;
+        return foundInExtra || _creator == creator;
     }
 
     // solhint-disable-next-line
