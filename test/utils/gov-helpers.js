@@ -46,7 +46,6 @@ export async function claimTokens(bablToken, voters) {
 
 export async function getProposal(
   governor,
-  bablToken,
   { targets, values, calldatas, description } = {
     targets: [ADDRESS_ZERO],
     values: [from(0)],
