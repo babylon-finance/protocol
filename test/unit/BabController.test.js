@@ -79,7 +79,10 @@ describe('BabController', function () {
     });
 
     it('can create a new garden with DAI as the reserve asset', async function () {
-      const dai = await ethers.getContractAt('@openzeppelin/contracts/token/ERC20/IERC20.sol:IERC20', addresses.tokens.DAI);
+      const dai = await ethers.getContractAt(
+        '@openzeppelin/contracts/token/ERC20/IERC20.sol:IERC20',
+        addresses.tokens.DAI,
+      );
       const whaleAddress = '0x6B175474E89094C44Da98b954EedeAC495271d0F'; // Has DAI
       const whaleSigner = await impersonateAddress(whaleAddress);
       await dai.connect(whaleSigner).transfer(signer1.address, ethers.utils.parseEther('1000'), {

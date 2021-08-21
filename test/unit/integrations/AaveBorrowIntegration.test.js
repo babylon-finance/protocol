@@ -24,7 +24,10 @@ describe('AaveBorrowIntegrationTest', function () {
   async function supplyBorrowStrategy(asset1, asset2, token) {
     await transferFunds(token);
     const garden = await createGarden({ reserveAsset: token });
-    const gardenReserveAsset = await ethers.getContractAt('@openzeppelin/contracts/token/ERC20/IERC20.sol:IERC20', token);
+    const gardenReserveAsset = await ethers.getContractAt(
+      '@openzeppelin/contracts/token/ERC20/IERC20.sol:IERC20',
+      token,
+    );
     await depositFunds(token, garden);
 
     const strategyContract = await createStrategy(

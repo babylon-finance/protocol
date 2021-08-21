@@ -9,7 +9,7 @@ const { getContract, from, eth } = require('../utils/test-helpers');
 async function setUpFixture(
   { upgradesDeployer, deployments, getNamedAccounts, ethers },
   options,
-  { gardenParams = GARDEN_PARAMS},
+  { gardenParams = GARDEN_PARAMS },
 ) {
   const signers = await ethers.getSigners();
   const [deployer, keeper, , signer1, signer2, signer3] = signers;

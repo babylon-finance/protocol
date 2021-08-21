@@ -179,7 +179,10 @@ describe('UniswapPoolIntegrationTest', function () {
           // Check NAV
           expect(await strategyContract.getNAV()).to.be.closeTo(amount, amount.div(50));
 
-          const tokenContract = await ethers.getContractAt('@openzeppelin/contracts/token/ERC20/ERC20.sol:ERC20', token);
+          const tokenContract = await ethers.getContractAt(
+            '@openzeppelin/contracts/token/ERC20/ERC20.sol:ERC20',
+            token,
+          );
           const executionTokenBalance = await tokenContract.balanceOf(garden.address);
           const LPTokens = await getExpectedLPTokens(token, amount, poolAddress, token0, token1);
           expect(await poolAddress.balanceOf(strategyContract.address)).to.be.closeTo(LPTokens, LPTokens.div(50)); // 2% slippage
