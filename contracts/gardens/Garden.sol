@@ -1054,11 +1054,12 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
     // Checks if an address is a creator
     function _isCreator(address _creator) private view returns (bool) {
         return
+            _creator != address(0) && (
             extraCreators[0] == _creator ||
             extraCreators[1] == _creator ||
             extraCreators[2] == _creator ||
             extraCreators[3] == _creator ||
-            _creator == creator;
+            _creator == creator);
     }
 
     // Assign extra creators

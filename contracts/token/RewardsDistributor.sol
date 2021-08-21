@@ -210,10 +210,10 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
     /* ============ State Variables ============ */
 
     // Instance of the Controller contract
-    IBabController public controller;
+    IBabController private controller;
 
     // BABL Token contract
-    TimeLockedToken public babltoken;
+    TimeLockedToken private babltoken;
 
     // Protocol total allocation points. Must be the sum of all allocation points (strategyPrincipal) in all strategy pools.
     uint256 private protocolPrincipal;
@@ -227,10 +227,10 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
     // Strategy overhead control. Only used if each strategy has power overhead due to changes overtime
     mapping(address => mapping(uint256 => uint256)) private rewardsPowerOverhead; // DEPRECATED Overhead control to enable high level accuracy calculations for strategy rewards
     // Contributor power control
-    mapping(address => mapping(address => ContributorPerGarden)) public contributorPerGarden; // Enable high level accuracy calculations
+    mapping(address => mapping(address => ContributorPerGarden)) private contributorPerGarden; // Enable high level accuracy calculations
     mapping(address => mapping(address => Checkpoints)) private checkpoints;
     // Garden power control
-    mapping(address => mapping(uint256 => GardenPowerByTimestamp)) public gardenPowerByTimestamp;
+    mapping(address => mapping(uint256 => GardenPowerByTimestamp)) private gardenPowerByTimestamp;
     mapping(address => uint256[]) private gardenTimelist;
     mapping(address => uint256) private gardenPid;
 
@@ -711,12 +711,10 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
             // Get LP rewards
             rewards[4] = _getStrategyLPBabl(_garden, _strategy, _contributor);
             contributorBABL = contributorBABL.add(rewards[4]);
-
-            // Get a multiplier bonus in case the contributor is the garden creator
-            if (_contributor == IGarden(_garden).creator()) {
-                contributorBABL = contributorBABL.add(contributorBABL.multiplyDecimal(CREATOR_BONUS));
-            }
-            rewards[5] = contributorBABL;
+            //Creator bonus
+            // _getCreatorBonus(_garden, _contributor, contributorBABL)
+            // contributorBABL = contributorBABL.add();
+            rewards[5] = _getCreatorBonus(_garden, _contributor, contributorBABL);
             rewards[6] = contributorProfits;
         }
         return rewards;
@@ -1489,6 +1487,33 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
             gardenProfitSharing[_garden][1] = _stewardsShare;
             gardenProfitSharing[_garden][2] = _lpShare;
         }
+    }
+
+    function _getCreatorBonus(
+      address _garden,
+      address _contributor,
+      uint256 _contributorBABL
+    ) private view returns (uint256) {
+      IGarden garden = IGarden(_garden);
+      // TODO: decrease the size of the contract
+      uint8 creatorCount = 0;
+      // uint8 creatorCount = garden.creator() != address(0) ? 1 : 0;
+      // for (uint8 i= 0; i < 4; i++) {
+      //   if (garden.extraCreators(0) != address(0)) {
+      //     creatorCount++;
+      //   }
+      // }
+      // Get a multiplier bonus in case the contributor is the garden creator
+      if (creatorCount == 0) {
+        // If there is no creator divide the 15% bonus across al members
+        return _contributorBABL.add(_contributorBABL.multiplyDecimal(CREATOR_BONUS).div(IGarden(_garden).totalContributors()));
+      } else {
+        if (_contributor == IGarden(_garden).creator() || _contributor == garden.extraCreators(0) || _contributor == garden.extraCreators(1) || _contributor == garden.extraCreators(2) || _contributor == garden.extraCreators(3)) {
+          // Check other creators and divide by number of creators or members if creator address is 0
+          return _contributorBABL.add(_contributorBABL.multiplyDecimal(CREATOR_BONUS).div(creatorCount));
+        }
+      }
+      return _contributorBABL;
     }
 }
 
