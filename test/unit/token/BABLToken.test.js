@@ -5,8 +5,6 @@ const { ONE_ETH, ADDRESS_ZERO, ONE_DAY_IN_SECONDS } = require('lib/constants');
 const { increaseTime } = require('utils/test-helpers');
 
 const { setupTests } = require('fixtures/GardenFixture');
-const { impersonateAddress } = require('../../../lib/rpc');
-
 
 const MULTISIG_BALANCE = ONE_ETH.mul(23000);
 const REGISTRY_BALANCE = ONE_ETH.mul(305000);
@@ -331,7 +329,9 @@ describe('BABLToken contract', function () {
     });
     it('Should fail as Time Lock Registry contract address cannot be registered itself', async function () {
       await expect(
-        timeLockRegistry.connect(MULTISIG).register(timeLockRegistry.address, ethers.utils.parseEther('26000'), true, now),
+        timeLockRegistry
+          .connect(MULTISIG)
+          .register(timeLockRegistry.address, ethers.utils.parseEther('26000'), true, now),
       ).to.be.revertedWith('TimeLockRegistry::register: Time Lock Registry contract cannot be an investor');
     });
 
