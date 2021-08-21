@@ -711,9 +711,7 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
             // Get LP rewards
             rewards[4] = _getStrategyLPBabl(_garden, _strategy, _contributor);
             contributorBABL = contributorBABL.add(rewards[4]);
-            //Creator bonus
-            // _getCreatorBonus(_garden, _contributor, contributorBABL)
-            // contributorBABL = contributorBABL.add();
+            // Creator bonus
             rewards[5] = _getCreatorBonus(_garden, _contributor, contributorBABL);
             rewards[6] = contributorProfits;
         }
@@ -1503,12 +1501,12 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         IGarden garden = IGarden(_garden);
         bool isCreator = false;
         uint8 creatorCount = garden.creator() != address(0) ? 1 : 0;
-        for (uint8 i= 0; i < 4; i++) {
-          address _extraCreator = garden.extraCreators(i);
-          if (_extraCreator != address(0)) {
-            creatorCount++;
-            isCreator = isCreator || _extraCreator == _contributor;
-          }
+        for (uint8 i = 0; i < 4; i++) {
+            address _extraCreator = garden.extraCreators(i);
+            if (_extraCreator != address(0)) {
+                creatorCount++;
+                isCreator = isCreator || _extraCreator == _contributor;
+            }
         }
         // Get a multiplier bonus in case the contributor is the garden creator
         if (creatorCount == 0) {
