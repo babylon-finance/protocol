@@ -1489,31 +1489,41 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         }
     }
 
+    /**
+     * Gives creator bonus to the user and returns original + bonus
+     * @param _garden           Address of the garden
+     * @param _contributor      Address of the contributor
+     * @param _contributorBABL  BABL obtained in the strategy
+     */
     function _getCreatorBonus(
-      address _garden,
-      address _contributor,
-      uint256 _contributorBABL
+        address _garden,
+        address _contributor,
+        uint256 _contributorBABL
     ) private view returns (uint256) {
-      IGarden garden = IGarden(_garden);
-      // TODO: decrease the size of the contract
-      uint8 creatorCount = 0;
-      // uint8 creatorCount = garden.creator() != address(0) ? 1 : 0;
-      // for (uint8 i= 0; i < 4; i++) {
-      //   if (garden.extraCreators(0) != address(0)) {
-      //     creatorCount++;
-      //   }
-      // }
-      // Get a multiplier bonus in case the contributor is the garden creator
-      if (creatorCount == 0) {
-        // If there is no creator divide the 15% bonus across al members
-        return _contributorBABL.add(_contributorBABL.multiplyDecimal(CREATOR_BONUS).div(IGarden(_garden).totalContributors()));
-      } else {
-        if (_contributor == IGarden(_garden).creator() || _contributor == garden.extraCreators(0) || _contributor == garden.extraCreators(1) || _contributor == garden.extraCreators(2) || _contributor == garden.extraCreators(3)) {
-          // Check other creators and divide by number of creators or members if creator address is 0
-          return _contributorBABL.add(_contributorBABL.multiplyDecimal(CREATOR_BONUS).div(creatorCount));
+        IGarden garden = IGarden(_garden);
+        bool isCreator = false;
+        uint8 creatorCount = garden.creator() != address(0) ? 1 : 0;
+        for (uint8 i= 0; i < 4; i++) {
+          address _extraCreator = garden.extraCreators(i);
+          if (_extraCreator != address(0)) {
+            creatorCount++;
+            isCreator = isCreator || _extraCreator == _contributor;
+          }
         }
-      }
-      return _contributorBABL;
+        // Get a multiplier bonus in case the contributor is the garden creator
+        if (creatorCount == 0) {
+            // If there is no creator divide the 15% bonus across al members
+            return
+                _contributorBABL.add(
+                    _contributorBABL.multiplyDecimal(CREATOR_BONUS).div(IGarden(_garden).totalContributors())
+                );
+        } else {
+            if (isCreator) {
+                // Check other creators and divide by number of creators or members if creator address is 0
+                return _contributorBABL.add(_contributorBABL.multiplyDecimal(CREATOR_BONUS).div(creatorCount));
+            }
+        }
+        return _contributorBABL;
     }
 }
 
