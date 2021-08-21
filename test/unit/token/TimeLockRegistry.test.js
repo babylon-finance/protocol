@@ -235,8 +235,8 @@ describe('TimeLockRegistry', function () {
 
       expect(userSigner1Balance2).to.equal(userSigner1Balance1);
       expect(userSigner2Balance2).to.equal(userSigner2Balance1);
-      expect(userSigner1LockedBalance2).to.be.closeTo(userSigner1Balance2.div(2), eth(0.001)); // Team 4 Y vesting (1/2 available after 2Y)
-      expect(userSigner2LockedBalance2).to.be.closeTo(userSigner2Balance2.div(3), eth(0.001)); // Investor 3Y vesting (2/3 available after 2Y)
+      expect(userSigner1LockedBalance2).to.be.closeTo(userSigner1Balance2.div(2), eth(0.1)); // Team 4 Y vesting (1/2 available after 2Y)
+      expect(userSigner2LockedBalance2).to.be.closeTo(userSigner2Balance2.div(3), eth(0.1)); // Investor 3Y vesting (2/3 available after 2Y)
     });
     it('should unlock all vested tokens after 3Y for investors and after 4Y for team members and advisors', async function () {
       await timeLockRegistry.connect(MULTISIG).register(signer1.address, eth(1000), true, now);
@@ -260,7 +260,7 @@ describe('TimeLockRegistry', function () {
 
       expect(userSigner1Balance2).to.equal(userSigner1Balance1);
       expect(userSigner2Balance2).to.equal(userSigner2Balance1);
-      expect(userSigner1LockedBalance2).to.be.closeTo(userSigner1Balance1.div(4), eth(0.001)); // Team 4 Y vesting (3/4 available after 3Y)
+      expect(userSigner1LockedBalance2).to.be.closeTo(userSigner1Balance1.div(4), eth(0.1)); // Team 4 Y vesting (3/4 available after 3Y)
       expect(userSigner2LockedBalance2).to.be.equal('0'); // Investor 3Y vesting (all available after 3Y)
       // We move ahead 365 days more
       await increaseTime(ONE_DAY_IN_SECONDS * 365);
