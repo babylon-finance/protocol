@@ -10,6 +10,8 @@ const { setupTests } = require('fixtures/GardenFixture');
 const { getCombinedModifierFlags } = require('typescript');
 
 const TOTAL_REGISTERED_TOKENS = eth(272950);
+const investorsVestingStart = new Date(2021, 6, 27); // July 27th real token vesting start for investors
+const teamVestingStart = new Date(2021, 2, 15); // 15th March
 
 describe('TimeLockRegistry', function () {
   let owner;
@@ -19,25 +21,38 @@ describe('TimeLockRegistry', function () {
   let bablToken;
   let timeLockRegistry;
   let now;
+  let MULTISIG;
 
   async function checkVestingStartingDate(contributor) {
     let [team, vestingBegins, vestingEnds, lastClaim] = await timeLockRegistry.checkVesting(contributor);
     expect(vestingBegins).to.be.gt(1614553200);
     if (team === false) {
-      expect(vestingBegins).to.be.closeTo(from(NOW), ONE_DAY_IN_SECONDS.div(50));
+      expect(vestingBegins).to.be.closeTo(
+        from(Math.round(investorsVestingStart.getTime() / 1000)),
+        ONE_DAY_IN_SECONDS.div(50),
+      );
     } else if (team === true) {
-      // 1615762800 March the 15th original Team vesting
-      expect(vestingBegins).to.be.closeTo(from(1615762800), ONE_DAY_IN_SECONDS.div(10));
+      // March the 15th original Team vesting
+      expect(vestingBegins).to.be.closeTo(
+        from(Math.round(teamVestingStart.getTime() / 1000)),
+        ONE_DAY_IN_SECONDS.div(10),
+      );
     }
   }
 
   async function checkVestingEndDate(contributor) {
     let [team, vestingBegins, vestingEnds, lastClaim] = await timeLockRegistry.checkVesting(contributor);
     if (team === false) {
-      expect(vestingEnds).to.be.closeTo(from(NOW + 3 * (365 * ONE_DAY_IN_SECONDS)), ONE_DAY_IN_SECONDS.div(50));
+      expect(vestingEnds).to.be.closeTo(
+        from(Math.round(investorsVestingStart.getTime() / 1000) + 3 * (365 * ONE_DAY_IN_SECONDS)),
+        ONE_DAY_IN_SECONDS.div(50),
+      );
     } else if (team === true) {
-      // 1615762800 March the 15th original Team vesting
-      expect(vestingEnds).to.be.closeTo(from(1615762800 + 4 * (365 * ONE_DAY_IN_SECONDS)), ONE_DAY_IN_SECONDS.div(10));
+      // March the 15th original Team vesting
+      expect(vestingEnds).to.be.closeTo(
+        from(Math.round(teamVestingStart.getTime() / 1000) + 4 * (365 * ONE_DAY_IN_SECONDS)),
+        ONE_DAY_IN_SECONDS.div(10),
+      );
     }
   }
 
@@ -45,11 +60,13 @@ describe('TimeLockRegistry', function () {
     ({ owner, bablToken, timeLockRegistry, signer1, signer2, signer3 } = await setupTests()());
     const block = await ethers.provider.getBlock();
     now = block.timestamp;
+    const signers = await ethers.getSigners();
+    MULTISIG = signers[2];
   });
 
   describe('token allocations', function () {
     it('the owner is correct', async function () {
-      expect(await timeLockRegistry.owner()).to.equal(owner.address);
+      expect(await timeLockRegistry.owner()).to.equal(MULTISIG.address);
     });
 
     it('should have 305k tokens after deployment', async function () {
@@ -86,7 +103,7 @@ describe('TimeLockRegistry', function () {
 
   describe('registerBatch', function () {
     it('can register multiple addresses at once', async function () {
-      await timeLockRegistry.connect(owner).registerBatch([
+      await timeLockRegistry.connect(MULTISIG).registerBatch([
         {
           receiver: signer1.address,
           distribution: eth(1000),
@@ -130,12 +147,12 @@ describe('TimeLockRegistry', function () {
   describe('register', function () {
     it('can NOT register if there are not enough tokens', async function () {
       await expect(
-        timeLockRegistry.connect(owner).register(signer1.address, ONE_ETH.mul(999999999999), true, 1614618000),
+        timeLockRegistry.connect(MULTISIG).register(signer1.address, ONE_ETH.mul(999999999999), true, 1614618000),
       ).to.be.revertedWith('Not enough tokens');
     });
 
     it('totalTokens value is correct', async function () {
-      await timeLockRegistry.connect(owner).register(signer1.address, ONE_ETH, true, 1614618000, { gasPrice: 0 });
+      await timeLockRegistry.connect(MULTISIG).register(signer1.address, ONE_ETH, true, 1614618000, { gasPrice: 0 });
       expect(await timeLockRegistry.totalTokens()).to.be.eq(TOTAL_REGISTERED_TOKENS.add(ONE_ETH));
     });
 
@@ -168,33 +185,33 @@ describe('TimeLockRegistry', function () {
     it('totalTokens value is correct after cancellation', async function () {
       const teamSigner = await impersonateAddress('0x908295e2be3a36021aadaaed0bbb124fd602cbf2');
 
-      await timeLockRegistry.connect(owner).cancelRegistration(teamSigner.address);
+      await timeLockRegistry.connect(MULTISIG).cancelRegistration(teamSigner.address);
       expect(await timeLockRegistry.totalTokens()).to.be.eq(TOTAL_REGISTERED_TOKENS.sub(ONE_ETH.mul(17000)));
     });
     it('cancel a wrong address before claim and re-register the right address', async function () {
       const teamSignerOK = await impersonateAddress('0x232775eAD28F0C0c750A097bA77302E7d84efd3B');
 
-      await timeLockRegistry.connect(owner).cancelRegistration(teamSignerOK.address);
+      await timeLockRegistry.connect(MULTISIG).cancelRegistration(teamSignerOK.address);
       expect(await timeLockRegistry.totalTokens()).to.be.eq(TOTAL_REGISTERED_TOKENS.sub(ONE_ETH.mul(17000)));
 
       const teamSignerWrong = await impersonateAddress('0x71763709Da2488F75bc2DB5d194769d801e97Fa8');
 
-      await timeLockRegistry.connect(owner).register(teamSignerWrong.address, eth(17000), true, 1614618000);
+      await timeLockRegistry.connect(MULTISIG).register(teamSignerWrong.address, eth(17000), true, 1614618000);
       expect(await timeLockRegistry.totalTokens()).to.be.eq(TOTAL_REGISTERED_TOKENS);
 
-      await timeLockRegistry.connect(owner).cancelRegistration(teamSignerWrong.address);
+      await timeLockRegistry.connect(MULTISIG).cancelRegistration(teamSignerWrong.address);
       expect(await timeLockRegistry.totalTokens()).to.be.eq(TOTAL_REGISTERED_TOKENS.sub(ONE_ETH.mul(17000)));
 
-      await timeLockRegistry.connect(owner).register(teamSignerOK.address, eth(17000), true, 1614618000);
+      await timeLockRegistry.connect(MULTISIG).register(teamSignerOK.address, eth(17000), true, 1614618000);
       expect(await timeLockRegistry.totalTokens()).to.be.eq(TOTAL_REGISTERED_TOKENS);
     });
   });
 
   describe('register -> claim -> time passes -> unlocking balances -> transfers', function () {
     it('should unlock correct amount of BABL tokens during the vesting and depending on each personal conditions', async function () {
-      await timeLockRegistry.connect(owner).register(signer1.address, eth(1000), true, now);
+      await timeLockRegistry.connect(MULTISIG).register(signer1.address, eth(1000), true, now);
 
-      await timeLockRegistry.connect(owner).register(signer2.address, eth(500), false, now);
+      await timeLockRegistry.connect(MULTISIG).register(signer2.address, eth(500), false, now);
       // Tokens are claimed by the Team Member and the registration is deleted in Time Lock Registry
       await bablToken.connect(signer1).claimMyTokens();
       await bablToken.connect(signer2).claimMyTokens();
@@ -222,9 +239,9 @@ describe('TimeLockRegistry', function () {
       expect(userSigner2LockedBalance2).to.be.closeTo(userSigner2Balance2.div(3), eth(0.001)); // Investor 3Y vesting (2/3 available after 2Y)
     });
     it('should unlock all vested tokens after 3Y for investors and after 4Y for team members and advisors', async function () {
-      await timeLockRegistry.connect(owner).register(signer1.address, eth(1000), true, now);
+      await timeLockRegistry.connect(MULTISIG).register(signer1.address, eth(1000), true, now);
 
-      await timeLockRegistry.connect(owner).register(signer2.address, eth(500), false, now);
+      await timeLockRegistry.connect(MULTISIG).register(signer2.address, eth(500), false, now);
 
       // Tokens are claimed by the Team Member and the registration is deleted in Time Lock Registry
       await bablToken.connect(signer1).claimMyTokens();
@@ -254,9 +271,9 @@ describe('TimeLockRegistry', function () {
 
     it('be able to transfer all babl tokens after vesting passes (3Y investors, 4Y to team/advisors)', async function () {
       // Vesting starting date 1 March 2021 9h PST Unix Time 1614618000
-      await timeLockRegistry.connect(owner).register(signer1.address, eth(1000), true, now);
+      await timeLockRegistry.connect(MULTISIG).register(signer1.address, eth(1000), true, now);
 
-      await timeLockRegistry.connect(owner).register(signer2.address, eth(500), false, now);
+      await timeLockRegistry.connect(MULTISIG).register(signer2.address, eth(500), false, now);
 
       // Tokens are claimed by the Team Member and the registration is deleted in Time Lock Registry
       await bablToken.connect(signer1).claimMyTokens();
