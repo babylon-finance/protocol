@@ -2,7 +2,7 @@ const { expect } = require('chai');
 const { ethers } = require('hardhat');
 
 const { ONE_DAY_IN_SECONDS } = require('../../lib/constants');
-const { increaseTime, increaseBlock, getTimestamp, mineInBlock } = require('./test-helpers');
+const { increaseTime, increaseBlock, getTimestamp, mineInBlock } = require('utils/test-helpers');
 
 describe('Test Helpers', function () {
   beforeEach(async () => {});
@@ -53,6 +53,6 @@ describe('Test Helpers', function () {
     const afterBlock = await ethers.provider.getBlock();
 
     expect(beforeBlock.number + value).to.be.eq(afterBlock.number);
-    expect(timestampBefore).to.be.closeTo(timestampAfter - ethers.BigNumber.from(value), 1);
+    expect(timestampBefore).to.be.closeTo(timestampAfter - ethers.BigNumber.from(value * 20), 1);
   });
 });
