@@ -28,14 +28,14 @@ module.exports = async ({ getNamedAccounts, deployments, ethers, getSigner, getC
   let deployment = await deployments.get('GardenBeacon');
   let contract = new ethers.Contract(deployment.address, deployment.abi, signer);
   if ((await contract.owner()) !== timelockAddress) {
-    console.log('Transfer ownership of GardenBeacon');
+    console.log(`Transfer ownership of GardenBeacon to ${timelockAddress}`);
     await (await contract.transferOwnership(timelockAddress, { gasPrice })).wait();
   }
 
   deployment = await deployments.get('StrategyBeacon');
   contract = new ethers.Contract(deployment.address, deployment.abi, signer);
   if ((await contract.owner()) !== timelockAddress) {
-    console.log('Transfer ownership of StrategyBeacon');
+    console.log(`Transfer ownership of StrategyBeacon to ${timelockAddress}`);
     await (await contract.transferOwnership(timelockAddress, { gasPrice })).wait();
   }
 
@@ -49,9 +49,12 @@ module.exports = async ({ getNamedAccounts, deployments, ethers, getSigner, getC
     ['IshtarGate', ''],
   ]) {
     const contract = await getContract(entry[0], entry[1], signer);
-    if ((await contract.owner()) !== timelockAddress) {
-      console.log(`Transfer ownership of ${entry[0]}`);
+    if ((await contract.owner()) !== timelockAddress && entry[0] !== 'TimeLockRegistry') {
+      console.log(`Transfer ownership of ${entry[0]} to ${timelockAddress}`);
       await (await contract.transferOwnership(timelockAddress, { gasPrice })).wait();
+    } else if (entry[0] === 'TimeLockRegistry') {
+      console.log(`Transfer ownership of ${entry[0]} to ${MULTISIG}`);
+      await (await contract.transferOwnership(MULTISIG, { gasPrice })).wait();
     }
   }
 };
