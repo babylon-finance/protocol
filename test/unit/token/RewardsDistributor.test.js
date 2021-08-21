@@ -1,6 +1,14 @@
 const { expect } = require('chai');
-const { ONE_DAY_IN_SECONDS, ONE_ETH, GARDEN_PARAMS_STABLE, USDC_GARDEN_PARAMS } = require('lib/constants');
-const { increaseTime } = require('utils/test-helpers');
+const {
+  ONE_DAY_IN_SECONDS,
+  ONE_ETH,
+  DEFAULT_STRATEGY_PARAMS,
+  GARDEN_PARAMS_STABLE,
+  USDC_GARDEN_PARAMS,
+  STRATEGY_EXECUTE_MAP,
+} = require('lib/constants');
+const { increaseTime, increaseBlock } = require('utils/test-helpers');
+
 const { parse } = require('lib/helpers');
 const { impersonateAddress } = require('lib/rpc');
 const addresses = require('lib/addresses');
@@ -8,6 +16,7 @@ const addresses = require('lib/addresses');
 const {
   createStrategy,
   executeStrategy,
+  getStrategy,
   injectFakeProfits,
   substractFakeProfits,
   finalizeStrategyImmediate,
@@ -19,6 +28,7 @@ const {
   USDC_STRATEGY_PARAMS,
   DAI_STRATEGY_PARAMS,
 } = require('fixtures/StrategyHelper.js');
+const { createGarden, transferFunds, depositFunds } = require('fixtures/GardenHelper');
 
 const { setupTests } = require('fixtures/GardenFixture');
 
@@ -986,6 +996,74 @@ describe('BABL Rewards Distributor', function () {
       expect(rewardsLong3).to.be.closeTo(rewards3, rewards3.div(50));
       expect(rewardsLong4).to.be.closeTo(rewards4, rewards4.div(50));
       expect(rewardsLong5).to.be.closeTo(rewards5, rewards5.div(50));
+    });
+  });
+
+  describe('Capital reallocation and unwinding per garden-reserveAsset', function () {
+    [
+      { token: addresses.tokens.WETH, name: 'WETH' },
+      //  { token: addresses.tokens.DAI, name: 'DAI' }, cannot trade the same asset DAI for DAI
+      { token: addresses.tokens.USDC, name: 'USDC' },
+      { token: addresses.tokens.WBTC, name: 'WBTC' },
+    ].forEach(({ token, name }) => {
+      it(`can reallocate and unwind capital of a strategy in a ${name} Garden`, async function () {
+        // TODO update operation to use DAI
+        // Mining program has to be enabled before the strategy starts its execution
+        await babController.connect(owner).enableBABLMiningProgram();
+        const block = await ethers.provider.getBlock();
+        const now = block.timestamp;
+
+        await transferFunds(token);
+
+        const garden = await createGarden({ reserveAsset: token });
+        await depositFunds(token, garden);
+        const [strategyContract] = await createStrategies([{ garden: garden }]);
+
+        let amount = STRATEGY_EXECUTE_MAP[token];
+
+        await executeStrategy(strategyContract, { amount });
+        const [preallocated, pricePerTokenUnit] = await rewardsDistributor.getStrategyPricePerTokenUnit(
+          strategyContract.address,
+        );
+
+        expect(preallocated).to.be.equal(amount);
+        const reserveAssetContract = await ethers.getContractAt('IERC20', token);
+        expect(await strategyContract.capitalAllocated()).to.equal(amount);
+        await increaseTime(ONE_DAY_IN_SECONDS * 70);
+        await increaseBlock(100);
+
+        // We reallocate capital
+        await executeStrategy(strategyContract, { amount: amount });
+        const [preallocated1, pricePerTokenUnit1] = await rewardsDistributor.getStrategyPricePerTokenUnit(
+          strategyContract.address,
+        );
+        expect(preallocated1).to.be.equal(amount.mul(2));
+        expect(pricePerTokenUnit1).to.be.closeTo(pricePerTokenUnit, pricePerTokenUnit1.div(100));
+
+        expect(await strategyContract.capitalAllocated()).to.equal(amount.mul(2));
+
+        await increaseTime(ONE_DAY_IN_SECONDS * 70);
+        await increaseBlock(50);
+        // We unwind capital
+        await strategyContract.connect(owner).unwindStrategy(amount);
+        const [preallocated2, pricePerTokenUnit2] = await rewardsDistributor.getStrategyPricePerTokenUnit(
+          strategyContract.address,
+        );
+        expect(preallocated2).to.be.closeTo(amount, preallocated2.div(100));
+        expect(pricePerTokenUnit2).to.be.closeTo(pricePerTokenUnit, pricePerTokenUnit2.div(100));
+        expect(await strategyContract.capitalAllocated()).to.equal(amount);
+
+        await increaseTime(ONE_DAY_IN_SECONDS * 70);
+        await increaseBlock(10);
+        await finalizeStrategyAfter30Days(strategyContract);
+        const [preallocated3, pricePerTokenUnit3] = await rewardsDistributor.getStrategyPricePerTokenUnit(
+          strategyContract.address,
+        );
+
+        expect(preallocated3).to.be.equal(0);
+        expect(pricePerTokenUnit3).to.be.closeTo(pricePerTokenUnit, pricePerTokenUnit3.div(100));
+        expect(await reserveAssetContract.balanceOf(garden.address)).to.be.gte(amount);
+      });
     });
   });
 

@@ -12,13 +12,11 @@ const {
   deposit,
   DEFAULT_STRATEGY_PARAMS,
 } = require('fixtures/StrategyHelper.js');
-const { createGarden } = require('fixtures/GardenHelper');
 const { increaseTime } = require('utils/test-helpers');
 
 const addresses = require('lib/addresses');
 const { ONE_DAY_IN_SECONDS, ONE_ETH, ADDRESS_ZERO } = require('lib/constants.js');
 const { setupTests } = require('fixtures/GardenFixture');
-const { impersonateAddress } = require('lib/rpc');
 
 describe('Strategy', function () {
   let strategyDataset;

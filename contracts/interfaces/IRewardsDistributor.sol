@@ -35,6 +35,8 @@ interface IRewardsDistributor {
     // solhint-disable-next-line
     function START_TIME() external view returns (uint256);
 
+    function getStrategyPricePerTokenUnit(address _strategy) external view returns (uint256, uint256);
+
     function updateProtocolPrincipal(uint256 _capital, bool _addOrSubstract) external;
 
     function getStrategyRewards(address _strategy) external view returns (uint96);

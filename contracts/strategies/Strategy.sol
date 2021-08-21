@@ -209,6 +209,8 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
     // Rewards Distributor address
     IRewardsDistributor private rewardsDistributor;
 
+    uint256 public override maxAllocationPercentage; //  Relative to garden capital. (1% = 1e16, 10% 1e17)
+
     /* ============ Constructor ============ */
 
     /**
@@ -221,6 +223,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
      * @param _stake                         Stake with garden participations absolute amounts 1e18
      * @param _strategyDuration              Strategy duration in seconds
      * @param _expectedReturn                Expected return
+     * @param _maxAllocationPercentage       Max allocation percentage of garden capital
      */
     function initialize(
         address _strategist,
@@ -229,7 +232,8 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         uint256 _maxCapitalRequested,
         uint256 _stake,
         uint256 _strategyDuration,
-        uint256 _expectedReturn
+        uint256 _expectedReturn,
+        uint256 _maxAllocationPercentage
     ) external override initializer {
         controller = IBabController(_controller);
 
@@ -246,7 +250,8 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
             _strategyDuration >= garden.minStrategyDuration() && _strategyDuration <= garden.maxStrategyDuration(),
             Errors.DURATION_MUST_BE_IN_RANGE
         );
-
+        _require(_maxAllocationPercentage < 1e18, Errors.MAX_STRATEGY_ALLOCATION_PERCENTAGE);
+        maxAllocationPercentage = _maxAllocationPercentage;
         strategist = _strategist;
         enteredAt = block.timestamp;
         stake = _stake;

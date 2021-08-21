@@ -96,4 +96,5 @@ deployments/hardhat
 deployments/localhost
 deployments/artifacts/rinkeby
 deployments/artifacts/hardhat
+deployments/artifacts/localhost
 contracts.json

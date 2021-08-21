@@ -150,6 +150,11 @@ contract StrategyV2Mock {
     // Strategy opDatas encoded
     bytes public opEncodedData; // we use and reserve 64bytes for each operation as consecutives bytes64 word
 
+    // Rewards Distributor address
+    IRewardsDistributor private rewardsDistributor;
+
+    uint256 public maxAllocationPercentage; //  Relative to garden capital. (1% = 1e16, 10% 1e17)
+
     function initialize(
         address _strategist,
         address _garden,
@@ -157,7 +162,8 @@ contract StrategyV2Mock {
         uint256 _maxCapitalRequested,
         uint256 _stake,
         uint256 _strategyDuration,
-        uint256 _expectedReturn
+        uint256 _expectedReturn,
+        uint256 _maxAllocationPercentage
     ) external {
         newVar = 42;
     }
