@@ -1499,7 +1499,7 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         uint256 _contributorBABL
     ) private view returns (uint256) {
         IGarden garden = IGarden(_garden);
-        bool isCreator = false;
+        bool isCreator = garden.creator() == _contributor;
         uint8 creatorCount = garden.creator() != address(0) ? 1 : 0;
         for (uint8 i = 0; i < 4; i++) {
             address _extraCreator = garden.extraCreators(i);
