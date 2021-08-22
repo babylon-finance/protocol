@@ -52,6 +52,8 @@ contract MardukGate is IBabylonGate, Ownable {
     mapping(address => bool) public canCreateAGarden;
     mapping(address => uint256) public gardenAccessCount;
 
+    mapping(address => address[]) public invitesPerGarden;
+
     uint8 public constant NONE = 0;
     uint8 public constant JUST_LP = 1;
     uint8 public constant STEWARD = 2;
@@ -224,6 +226,16 @@ contract MardukGate is IBabylonGate, Ownable {
         return ishtarGate.canAddStrategiesInAGarden(_garden, _user);
     }
 
+    /**
+     * Returns all the invites sent from a specific garden
+     *
+     * @param _garden                     Address of the _garden
+     * @return address[]                  All the invites sent
+     */
+    function getInvitesPerGarden(address _garden) external view returns (address[] memory) {
+        return invitesPerGarden[_garden];
+    }
+
     /* ============ Internal Functions ============ */
 
     /**
@@ -242,6 +254,7 @@ contract MardukGate is IBabylonGate, Ownable {
         if (_permission > 0 && permissionsByCommunity[_garden][_user] == 0) {
             require(gardenAccessCount[_garden] < maxNumberOfInvites, 'Max Number of invites reached');
             gardenAccessCount[_garden] = gardenAccessCount[_garden].add(1);
+            invitesPerGarden[_garden].push(_user);
         }
         if (_permission == 0 && permissionsByCommunity[_garden][_user] > 0) {
             gardenAccessCount[_garden] = gardenAccessCount[_garden].sub(1);
