@@ -5,6 +5,8 @@ const { setupTests } = require('fixtures/GardenFixture');
 const { GARDEN_PARAMS_STABLE, GARDEN_PARAMS, ADDRESS_ZERO, ONE_ETH } = require('lib/constants');
 const { impersonateAddress } = require('lib/rpc');
 const { createStrategy, executeStrategy, finalizeStrategy } = require('fixtures/StrategyHelper');
+const { increaseTime } = require('utils/test-helpers');
+const { ethers } = require('hardhat');
 
 describe('BabController', function () {
   let babController;
@@ -79,7 +81,10 @@ describe('BabController', function () {
     });
 
     it('can create a new garden with DAI as the reserve asset', async function () {
-      const dai = await ethers.getContractAt('IERC20', addresses.tokens.DAI);
+      const dai = await ethers.getContractAt(
+        '@openzeppelin/contracts/token/ERC20/IERC20.sol:IERC20',
+        addresses.tokens.DAI,
+      );
       const whaleAddress = '0x6B175474E89094C44Da98b954EedeAC495271d0F'; // Has DAI
       const whaleSigner = await impersonateAddress(whaleAddress);
       await dai.connect(whaleSigner).transfer(signer1.address, ethers.utils.parseEther('1000'), {
@@ -218,6 +223,17 @@ describe('BabController', function () {
       const recipient = await babController.treasury();
       // TODO(tylerm): Use checksumed addresses
       expect(recipient.toLowerCase()).to.equal(addresses.users.hardhat3);
+    });
+    it('can enable token transfers after 2021', async function () {
+      await expect(babController.connect(owner).enableGardenTokensTransfers()).to.be.revertedWith(
+        'Transfers cannot be enabled yet',
+      );
+      expect(await babController.gardenTokensTransfersEnabled()).to.equal(false);
+      // 1st Jan 2022
+      await ethers.provider.send('evm_setNextBlockTimestamp', [1641024001]);
+      await ethers.provider.send('evm_mine');
+      await expect(babController.connect(owner).enableGardenTokensTransfers()).not.to.be.reverted;
+      expect(await babController.gardenTokensTransfersEnabled()).to.equal(true);
     });
   });
   describe('Pause guardian', function () {

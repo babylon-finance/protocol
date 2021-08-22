@@ -307,7 +307,7 @@ contract BabController is OwnableUpgradeable, IBabController {
      * Can only happen after 2021 is finished.
      */
     function enableGardenTokensTransfers() external override onlyOwner {
-        require(block.timestamp > 1641024000000, 'Transfers cannot be enabled yet');
+        require(block.timestamp > 1641024000, 'Transfers cannot be enabled yet');
         gardenTokensTransfersEnabled = true;
     }
 

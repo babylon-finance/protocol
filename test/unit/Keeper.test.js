@@ -83,7 +83,10 @@ describe('Keeper', function () {
       ].forEach(({ token, name, fee }) => {
         it(`gets paid max fee at ${name} garden`, async function () {
           const garden = await createGarden({ reserveAsset: token });
-          const tokenContract = await ethers.getContractAt('IERC20', token);
+          const tokenContract = await ethers.getContractAt(
+            '@openzeppelin/contracts/token/ERC20/IERC20.sol:IERC20',
+            token,
+          );
 
           const strategy = await getStrategy({ state, specificParams: [addresses.tokens.USDT, 0] });
 

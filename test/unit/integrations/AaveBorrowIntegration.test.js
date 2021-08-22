@@ -24,7 +24,10 @@ describe('AaveBorrowIntegrationTest', function () {
   async function supplyBorrowStrategy(asset1, asset2, token) {
     await transferFunds(token);
     const garden = await createGarden({ reserveAsset: token });
-    const gardenReserveAsset = await ethers.getContractAt('IERC20', token);
+    const gardenReserveAsset = await ethers.getContractAt(
+      '@openzeppelin/contracts/token/ERC20/IERC20.sol:IERC20',
+      token,
+    );
     await depositFunds(token, garden);
 
     const strategyContract = await createStrategy(
@@ -90,9 +93,9 @@ describe('AaveBorrowIntegrationTest', function () {
 
   beforeEach(async () => {
     ({ aaveLendIntegration, aaveBorrowIntegration, signer1, signer2, signer3 } = await setupTests()());
-    USDC = await ethers.getContractAt('IERC20', addresses.tokens.USDC);
-    DAI = await ethers.getContractAt('IERC20', addresses.tokens.DAI);
-    WETH = await ethers.getContractAt('IERC20', addresses.tokens.WETH);
+    USDC = await ethers.getContractAt('@openzeppelin/contracts/token/ERC20/IERC20.sol:IERC20', addresses.tokens.USDC);
+    DAI = await ethers.getContractAt('@openzeppelin/contracts/token/ERC20/IERC20.sol:IERC20', addresses.tokens.DAI);
+    WETH = await ethers.getContractAt('@openzeppelin/contracts/token/ERC20/IERC20.sol:IERC20', addresses.tokens.WETH);
   });
 
   describe('Deployment', function () {

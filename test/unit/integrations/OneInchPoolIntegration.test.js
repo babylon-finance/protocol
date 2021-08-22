@@ -102,7 +102,10 @@ describe('OneInchPoolIntegrationTest', function () {
     beforeEach(async () => {
       whaleSigner = await impersonateAddress(daiWhaleAddress);
       daiWethPair = await ethers.getContractAt('IMooniswap', addresses.oneinch.pools.wethdai);
-      daiToken = await ethers.getContractAt('IERC20', addresses.tokens.DAI);
+      daiToken = await ethers.getContractAt(
+        '@openzeppelin/contracts/token/ERC20/IERC20.sol:IERC20',
+        addresses.tokens.DAI,
+      );
     });
 
     it('check that a valid pool is valid', async function () {
