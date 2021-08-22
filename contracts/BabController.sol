@@ -583,6 +583,7 @@ contract BabController is OwnableUpgradeable, IBabController {
             msg.sender == guardian || msg.sender == owner(),
             'only pause guardian and owner can update pause guardian'
         );
+        require(msg.sender == owner() || _guardian != address(0), 'Guardian cannot remove himself');
         // Save current value for inclusion in log
         address oldPauseGuardian = guardian;
         // Store pauseGuardian with value newPauseGuardian

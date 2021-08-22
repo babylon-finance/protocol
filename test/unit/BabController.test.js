@@ -248,6 +248,21 @@ describe('BabController', function () {
       const guardian = await babController.guardian();
       expect(guardian).to.equal(signer2.address);
     });
+    it('can NOT set zero address as pause guardian from current pause guardian', async function () {
+      await babController.connect(owner).setPauseGuardian(signer1.address);
+      await expect(babController.connect(signer1).setPauseGuardian(ADDRESS_ZERO)).to.be.revertedWith(
+        'Guardian cannot remove himself',
+      );
+      const guardian = await babController.guardian();
+      expect(guardian).to.equal(signer1.address);
+    });
+    it('can set zero address as pause guardian from the owner', async function () {
+      await babController.connect(owner).setPauseGuardian(signer1.address);
+      const guardian = await babController.guardian();
+      expect(guardian).to.equal(signer1.address);
+      await expect(babController.connect(owner).setPauseGuardian(ADDRESS_ZERO)).not.to.be.reverted;
+      expect(await babController.guardian()).to.equal(ADDRESS_ZERO);
+    });
     it('should fail if trying to set a pause a user withour enough rights', async function () {
       await expect(babController.connect(signer2).setPauseGuardian(signer2.address)).to.be.revertedWith(
         'only pause guardian and owner can update pause guardian',
