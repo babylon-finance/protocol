@@ -44,6 +44,7 @@ module.exports = async ({ getNamedAccounts, deployments, ethers, getSigner, getC
     ['Treasury', ''],
     ['PriceOracle', ''],
     ['IshtarGate', ''],
+    ['MardukGate', ''],
   ]) {
     const contract = await getContract(entry[0], entry[1], signer);
     if ((await contract.owner()) !== MULTISIG) {

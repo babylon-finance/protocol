@@ -17,7 +17,6 @@
 
 pragma solidity 0.7.6;
 
-import 'hardhat/console.sol';
 import {Address} from '@openzeppelin/contracts/utils/Address.sol';
 import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import {IERC721} from '@openzeppelin/contracts/token/ERC721/IERC721.sol';
@@ -42,7 +41,7 @@ import {IGardenValuer} from '../interfaces/IGardenValuer.sol';
 import {IStrategy} from '../interfaces/IStrategy.sol';
 import {IGarden} from '../interfaces/IGarden.sol';
 import {IGardenNFT} from '../interfaces/IGardenNFT.sol';
-import {IIshtarGate} from '../interfaces/IIshtarGate.sol';
+import {IBabylonGate} from '../interfaces/IBabylonGate.sol';
 import {IWETH} from '../interfaces/external/weth/IWETH.sol';
 
 /**
@@ -1044,11 +1043,12 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
             bool canCreateStrategy
         )
     {
-        IIshtarGate gate = IIshtarGate(IBabController(controller).ishtarGate());
-        bool hasGate = IERC721(address(gate)).balanceOf(_user) > 0;
-        canDeposit = gate.canJoinAGarden(address(this), _user) || (hasGate && !privateGarden);
-        canVote = gate.canVoteInAGarden(address(this), _user) || (hasGate && publicStewards);
-        canCreateStrategy = gate.canAddStrategiesInAGarden(address(this), _user) || (hasGate && publicStrategists);
+        IBabylonGate igate = IBabylonGate(IBabController(controller).ishtarGate());
+        IBabylonGate mgate = IBabylonGate(IBabController(controller).mardukGate());
+        bool hasGate = IERC721(address(igate)).balanceOf(_user) > 0;
+        canDeposit = mgate.canJoinAGarden(address(this), _user) || (hasGate && !privateGarden);
+        canVote = mgate.canVoteInAGarden(address(this), _user) || (hasGate && publicStewards);
+        canCreateStrategy = mgate.canAddStrategiesInAGarden(address(this), _user) || (hasGate && publicStrategists);
     }
 
     // Checks if an address is a creator

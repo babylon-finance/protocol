@@ -50,6 +50,8 @@ interface IBabController {
 
     function editIshtarGate(address _ishtarGate) external;
 
+    function editMardukGate(address _mardukGate) external;
+
     function editGardenValuer(address _gardenValuer) external;
 
     function editRewardsDistributor(address _rewardsDistributor) external;
@@ -119,6 +121,8 @@ interface IBabController {
     function treasury() external view returns (address);
 
     function ishtarGate() external view returns (address);
+
+    function mardukGate() external view returns (address);
 
     function strategyFactory() external view returns (address);
 

@@ -95,6 +95,7 @@ contract BabController is OwnableUpgradeable, IBabController {
     address public override gardenFactory;
     address public override rewardsDistributor;
     address public override ishtarGate;
+    address public override mardukGate;
     address public override strategyFactory;
     address public override gardenNFT;
     address public override strategyNFT;
@@ -218,7 +219,7 @@ contract BabController is OwnableUpgradeable, IBabController {
         require(defaultTradeIntegration != address(0), 'Need a default trade integration');
         require(enabledOperations.length > 0, 'Need operations enabled');
         require(
-            IIshtarGate(ishtarGate).canCreate(msg.sender) || gardenCreationIsOpen,
+            IIshtarGate(mardukGate).canCreate(msg.sender) || gardenCreationIsOpen,
             'User does not have creation permissions'
         );
         address newGarden =
@@ -427,6 +428,22 @@ contract BabController is OwnableUpgradeable, IBabController {
         ishtarGate = _ishtarGate;
 
         emit IshtarGateChanged(_ishtarGate, oldIshtarGate);
+    }
+
+    /**
+     * PRIVILEGED GOVERNANCE FUNCTION. Allows governance to change the Marduk Gate Address
+     *
+     * @param _mardukGate               Address of the new Marduk Gate
+     */
+    function editMardukGate(address _mardukGate) external override onlyOwner {
+        require(_mardukGate != mardukGate, 'Marduk Gate already exists');
+
+        require(_mardukGate != address(0), 'Marduk Gate oracle must exist');
+
+        address oldMardukGate = mardukGate;
+        mardukGate = _mardukGate;
+
+        emit IshtarGateChanged(_mardukGate, oldMardukGate);
     }
 
     /**

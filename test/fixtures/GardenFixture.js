@@ -19,6 +19,7 @@ async function setUpFixture(
   const bablToken = await getContract('BABLToken');
   const timeLockRegistry = await getContract('TimeLockRegistry');
   const ishtarGate = await getContract('IshtarGate');
+  const mardukGate = await getContract('MardukGate');
   const priceOracle = await getContract('PriceOracle');
   const treasury = await getContract('Treasury');
   const gardenValuer = await getContract('GardenValuer');
@@ -62,6 +63,8 @@ async function setUpFixture(
   // Gives signer1 creator permissions
   await ishtarGate.connect(owner).setCreatorPermissions(owner.address, true, { gasPrice: 0 });
   await ishtarGate.connect(owner).setCreatorPermissions(signer1.address, true, { gasPrice: 0 });
+  await mardukGate.connect(owner).setCreatorPermissions(owner.address, true, { gasPrice: 0 });
+  await mardukGate.connect(owner).setCreatorPermissions(signer1.address, true, { gasPrice: 0 });
   await babController
     .connect(signer1)
     .createGarden(
@@ -152,8 +155,6 @@ async function setUpFixture(
         },
       );
   }
-  console.log('create strategies');
-
   const strategy10 = (
     await createStrategy('buy', 'dataset', [signer1, signer2, signer3], uniswapV3TradeIntegration.address, garden1)
   ).address;
@@ -197,6 +198,8 @@ async function setUpFixture(
     }
   }
 
+  console.log('end garden fixture');
+
   return {
     babController,
     bablToken,
@@ -235,6 +238,7 @@ async function setUpFixture(
     gardenValuer,
     priceOracle,
     ishtarGate,
+    mardukGate,
 
     gardenNFT,
     strategyNFT,
