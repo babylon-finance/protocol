@@ -853,7 +853,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         _onlyUnpaused();
         _onlyActive();
         (bool canDeposit, , ) = _getUserPermission(_from);
-        _require(canDeposit || creator == _to, Errors.USER_CANNOT_JOIN);
+        _require(canDeposit || _isCreator(_to), Errors.USER_CANNOT_JOIN);
 
         // if deposit limit is 0, then there is no deposit limit
         if (maxDepositLimit > 0) {
