@@ -38,6 +38,10 @@ interface IGarden {
 
     function makeGardenPublic() external;
 
+    function transferCreatorRights(address _newCreator, uint8 _index) external;
+
+    function addExtraCreators(address[4] memory _newCreators) external;
+
     function setPublicRights(bool _publicStrategist, bool _publicStewards) external;
 
     function setActive(bool _val) external;
@@ -107,6 +111,8 @@ interface IGarden {
     function strategyCooldownPeriod() external view returns (uint256);
 
     function getStrategies() external view returns (address[] memory);
+
+    function extraCreators(uint256 index) external view returns (address);
 
     function getFinalizedStrategies() external view returns (address[] memory);
 
