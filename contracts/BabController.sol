@@ -262,8 +262,8 @@ contract BabController is OwnableUpgradeable, IBabController {
     function removeGarden(address _garden) external override onlyOwner {
         require(isGarden[_garden], 'Garden does not exist');
         require(!IGarden(_garden).active(), 'The garden needs to be disabled.');
+        require(IGarden(_garden).getStrategies().length == 0, 'Garden has active strategies!');
         gardens = gardens.remove(_garden);
-
         delete isGarden[_garden];
 
         emit GardenRemoved(_garden);
