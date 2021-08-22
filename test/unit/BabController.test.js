@@ -39,6 +39,16 @@ describe('BabController', function () {
     return retVal;
   }
 
+  async function deleteCandidateStrategies(community) {
+    const garden = await ethers.getContractAt('Garden', community);
+    // As the disabled garden has still 2 candidate strategies, we need to expire them before removing the garden
+    const strategies = await garden.getStrategies();
+    for (let i = 0; i < strategies.length; i++) {
+      const strategy = await ethers.getContractAt('Strategy', strategies[i]);
+      await strategy.connect(owner).deleteCandidateStrategy();
+    }
+  }
+
   beforeEach(async () => {
     ({
       babController,
@@ -136,7 +146,7 @@ describe('BabController', function () {
 
     it('cannot disable an inactive garden', async function () {
       const initialCommunities = await babController.getGardens();
-
+      await deleteCandidateStrategies(initialCommunities[0]);
       await expect(babController.connect(owner).disableGarden(initialCommunities[0])).to.not.be.reverted;
       await expect(babController.connect(owner).disableGarden(initialCommunities[0])).to.be.reverted;
     });
@@ -145,19 +155,14 @@ describe('BabController', function () {
       const initialCommunities = await babController.getGardens();
       expect(initialCommunities.length).to.equal(4);
 
-      await expect(babController.connect(owner).disableGarden(initialCommunities[0])).to.not.be.reverted;
-      await expect(babController.connect(owner).removeGarden(initialCommunities[0])).to.be.revertedWith(
+      await expect(babController.connect(owner).disableGarden(initialCommunities[0])).to.be.revertedWith(
         'Garden has active strategies!',
       );
-
-      const garden = await ethers.getContractAt('Garden', initialCommunities[0]);
-      // As the disabled garden has still 2 candidate strategies, we need to expire them before removing the garden
-      const strategies = await garden.getStrategies();
-      const strategy1 = await ethers.getContractAt('Strategy', strategies[0]);
-      const strategy2 = await ethers.getContractAt('Strategy', strategies[1]);
-      // Governance expires them
-      await strategy1.connect(owner).deleteCandidateStrategy();
-      await strategy2.connect(owner).deleteCandidateStrategy();
+      await expect(babController.connect(owner).removeGarden(initialCommunities[0])).to.be.revertedWith(
+        'The garden needs to be disabled',
+      );
+      await deleteCandidateStrategies(initialCommunities[0]);
+      await expect(babController.connect(owner).disableGarden(initialCommunities[0])).not.to.be.reverted;
       // Try garden removal again
       await expect(babController.connect(owner).removeGarden(initialCommunities[0])).to.be.not.reverted;
 
@@ -167,15 +172,15 @@ describe('BabController', function () {
 
     it('can enable and disable a garden', async function () {
       const initialCommunities = await babController.getGardens();
+      await deleteCandidateStrategies(initialCommunities[0]);
 
       await expect(babController.connect(owner).disableGarden(initialCommunities[0])).to.not.be.reverted;
       await expect(babController.connect(owner).enableGarden(initialCommunities[0])).to.not.be.reverted;
     });
-    it('can NOT remove a disabled garden with ongoing strategies', async function () {
+    it('can NOT disable garden with ongoing strategies', async function () {
       const initialCommunities = await babController.getGardens();
 
-      await expect(babController.connect(owner).disableGarden(initialCommunities[0])).to.not.be.reverted;
-      await expect(babController.connect(owner).removeGarden(initialCommunities[0])).to.be.revertedWith(
+      await expect(babController.connect(owner).disableGarden(initialCommunities[0])).to.be.revertedWith(
         'Garden has active strategies!',
       );
     });
