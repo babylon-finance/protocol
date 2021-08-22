@@ -62,6 +62,7 @@ contract BabController is OwnableUpgradeable, IBabController {
     event RewardsDistributorChanged(address indexed _rewardsDistributor, address _oldRewardsDistributor);
     event TreasuryChanged(address _newTreasury, address _oldTreasury);
     event IshtarGateChanged(address _newIshtarGate, address _oldIshtarGate);
+    event MardukGateChanged(address _newMardukGate, address _oldMardukGate);
     event GardenValuerChanged(address indexed _gardenValuer, address _oldGardenValuer);
     event GardenFactoryChanged(address indexed _gardenFactory, address _oldGardenFactory);
     event UniswapFactoryChanged(address indexed _newUniswapFactory, address _oldUniswapFactory);
@@ -443,7 +444,7 @@ contract BabController is OwnableUpgradeable, IBabController {
         address oldMardukGate = mardukGate;
         mardukGate = _mardukGate;
 
-        emit IshtarGateChanged(_mardukGate, oldMardukGate);
+        emit MardukGateChanged(_mardukGate, oldMardukGate);
     }
 
     /**
