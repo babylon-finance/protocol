@@ -483,8 +483,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         }
     }
 
-
-      /**
+    /**
      * User can claim the rewards from the strategies that his principal
      * was invested in.
      */
@@ -511,8 +510,8 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
             // Send BABL rewards
             rewardsDistributor.sendTokensToContributor(msg.sender, rewards[5]);
             emit BABLRewardsForContributor(msg.sender, rewards[5]);
-         }
-     }
+        }
+    }
 
     /**
      * @notice

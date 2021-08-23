@@ -171,6 +171,8 @@ interface IGarden {
         bytes32 s
     ) external;
 
+    function claimReturns(address[] calldata _finalizedStrategies) external;
+
     function getLockedBalance(address _contributor) external view returns (uint256);
 
     function expireCandidateStrategy(address _strategy) external;
