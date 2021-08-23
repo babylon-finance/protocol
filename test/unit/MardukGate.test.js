@@ -138,6 +138,32 @@ describe('MardukGate', function () {
       });
     });
 
+    it('creator can join a garden after renouncing', async function () {
+      await mardukGate.connect(owner).setCreatorPermissions(signer2.address, true, { gasPrice: 0 });
+      await babController
+        .connect(signer2)
+        .createGarden(
+          addresses.tokens.WETH,
+          'TEST Marduk',
+          'AAA',
+          'http:',
+          0,
+          GARDEN_PARAMS,
+          ethers.utils.parseEther('0.1'),
+          [false, false, false],
+          [0, 0, 0],
+          {
+            value: ethers.utils.parseEther('0.1'),
+          },
+        );
+      const gardens = await babController.getGardens();
+      const newGarden = await ethers.getContractAt('Garden', gardens[gardens.length - 1]);
+      await newGarden.connect(signer2).transferCreatorRights(ADDRESS_ZERO, 0);
+      await newGarden.connect(signer2).deposit(ethers.utils.parseEther('1'), 1, signer2.getAddress(), false, {
+        value: ethers.utils.parseEther('1'),
+      });
+    });
+
     it('creator can create a strategy', async function () {
       await mardukGate.connect(owner).setCreatorPermissions(signer2.address, true, { gasPrice: 0 });
       await expect(
@@ -215,7 +241,7 @@ describe('MardukGate', function () {
       ).not.to.be.reverted;
     });
 
-    it.only('creator can still create a strategy after renouncing', async function () {
+    it('creator can still create a strategy after renouncing', async function () {
       await mardukGate.connect(owner).setCreatorPermissions(signer2.address, true, { gasPrice: 0 });
       await expect(
         babController
@@ -238,7 +264,6 @@ describe('MardukGate', function () {
       const gardens = await babController.getGardens();
       const newGarden = await ethers.getContractAt('Garden', gardens[gardens.length - 1]);
       await newGarden.connect(signer2).transferCreatorRights(ADDRESS_ZERO, 0);
-      console.log('before create');
       await createStrategy('buy', 'dataset', [signer2, signer1, signer3], uniswapV3TradeIntegration.address, newGarden);
     });
 
@@ -360,7 +385,7 @@ describe('MardukGate', function () {
         .to.be.reverted;
     });
 
-    it.only('creator cannot grant access to a garden after renouncing', async function () {
+    it('creator cannot grant access to a garden after renouncing', async function () {
       await expect(
         babController
           .connect(signer1)

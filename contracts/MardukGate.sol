@@ -297,7 +297,8 @@ contract MardukGate is IMardukGate, Ownable {
     function _isCreator(IGarden _garden, address _member) private view returns (bool) {
         return
             _member != address(0) &&
-            (_garden.extraCreators(0) == _member ||
+            (_member == address(_garden) || // the garden can also change perms
+                _garden.extraCreators(0) == _member ||
                 _garden.extraCreators(1) == _member ||
                 _garden.extraCreators(2) == _member ||
                 _garden.extraCreators(3) == _member ||
