@@ -105,7 +105,7 @@ describe('governor', function () {
     });
   });
 
-  it.only('can upgrade Governor to a new one', async function () {
+  it('can upgrade Governor to a new one', async function () {
     // create new governor
     const mockFactory = await ethers.getContractFactory('BabylonGovernorMock');
     const newGovernor = await mockFactory.deploy(bablToken.address, timelockController.address, 1, 10);

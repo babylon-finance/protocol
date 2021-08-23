@@ -7,7 +7,7 @@ const { increaseTime } = require('utils/test-helpers');
 const { createStrategy, executeStrategy } = require('fixtures/StrategyHelper.js');
 const { setupTests } = require('fixtures/GardenFixture');
 
-describe.only('Upgrades', function () {
+describe('Upgrades', function () {
   let upgradesDeployer;
   let deployer;
   let owner;
