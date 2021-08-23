@@ -516,25 +516,17 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
      * @param _amountIn       Quantity of the garden tokens to withdraw.
      * @param _minAmountOut   Min quantity of reserve asset to receive.
      * @param _nonce          Current nonce to prevent replay attacks.
-     * @param _maxFee         Max fee user is willing to pay keeper. Fee is
-     *                        substracted from the withdrawn amount. Fee is
-     *                        expressed in reserve asset.
      * @param _pricePerShare  Price per share of the garden calculated off-chain by Keeper.
-     * @param _fee            Actual fee keeper demands. Have to be less than _maxFee.
      */
     function withdrawBySig(
         uint256 _amountIn,
         uint256 _minAmountOut,
         uint256 _nonce,
-        uint256 _maxFee,
         uint256 _pricePerShare,
-        uint256 _fee,
         uint8 v,
         bytes32 r,
         bytes32 s
     ) external override nonReentrant {
-        _require(_fee <= _maxFee, Errors.FEE_TOO_HIGH);
-
         bytes32 hash =
             keccak256(abi.encode(WITHDRAW_BY_SIG_TYPEHASH, address(this), _amountIn, _minAmountOut, _nonce))
                 .toEthSignedMessageHash();
@@ -546,7 +538,6 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         _require(contributors[signer].nonce == _nonce, Errors.INVALID_NONCE);
 
         _withdrawInternal(_amountIn, _minAmountOut, payable(signer), false, address(0), _pricePerShare);
-        payKeeper(msg.sender, _fee);
     }
 
     function _withdrawInternal(
