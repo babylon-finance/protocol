@@ -31,6 +31,7 @@ const {
 const { createGarden, transferFunds, depositFunds } = require('fixtures/GardenHelper');
 
 const { setupTests } = require('fixtures/GardenFixture');
+const { ADDRESS_ZERO } = require('../../../lib/constants');
 
 async function getAndValidateProtocolTimestamp(rewardsDistributor, timestamp, protocolPerTimestamp) {
   const [principal, time, quarterBelonging, timeListPointer, power] = await rewardsDistributor.checkProtocol(timestamp);
@@ -234,6 +235,15 @@ describe('BABL Rewards Distributor', function () {
     it('should successfully deploy BABL Mining Rewards Distributor contract', async function () {
       const deployedc = await rewardsDistributor.deployed(bablToken.address, babController.address);
       expect(!!deployedc).to.equal(true);
+    });
+  });
+  describe('setBABLToken', function () {
+    it('can set a new BABL Token address', async function () {
+      const newToken = await impersonateAddress('0xf4dc48d260c93ad6a96c5ce563e70ca578987c74');
+      await expect(rewardsDistributor.connect(owner).setBablToken(newToken.address)).not.to.be.reverted;
+    });
+    it('can NOT set zero address as a new BABL Token address', async function () {
+      await expect(rewardsDistributor.connect(owner).setBablToken(ADDRESS_ZERO)).to.be.revertedWith('BAB#096');
     });
   });
 

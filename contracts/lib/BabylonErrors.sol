@@ -274,4 +274,10 @@ library Errors {
     uint256 internal constant PROFIT_SHARING_MISMATCH = 92;
     // Max allocation percentage
     uint256 internal constant MAX_STRATEGY_ALLOCATION_PERCENTAGE = 93;
+    // new creator must not exist
+    uint256 internal constant NEW_CREATOR_MUST_NOT_EXIST = 94;
+    // only first creator can add
+    uint256 internal constant ONLY_FIRST_CREATOR_CAN_ADD = 95;
+    // invalid address
+    uint256 internal constant INVALID_ADDRESS = 96;
 }

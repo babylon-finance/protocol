@@ -22,7 +22,7 @@ describe('Babylon Viewer', function () {
       const gardenDetails = await babViewer.getGardenDetails(garden1.address);
       expect(gardenDetails[0]).to.equal('Absolute ETH Return [beta]'); // Name
       expect(gardenDetails[1]).to.equal('EYFA'); // Symbol
-      expect(gardenDetails[2]).to.equal(signer1.address); // Creator
+      expect(gardenDetails[2][0]).to.equal(signer1.address); // Creator
       expect(gardenDetails[3]).to.equal(addresses.tokens.WETH); // Reserve Asset
       expect(gardenDetails[4][0]).to.equal(true); // Active
       expect(gardenDetails[4][1]).to.equal(true); // Private
