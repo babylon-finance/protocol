@@ -28,7 +28,7 @@ describe('Treasury', function () {
       { token: addresses.tokens.WBTC, name: 'WBTC', amount: from(0.05 * 1e8) },
     ].forEach(({ token, name, amount }) => {
       it(`can send ${name}`, async function () {
-        const erc20 = await ethers.getContractAt('IERC20', token);
+        const erc20 = await ethers.getContractAt('@openzeppelin/contracts/token/ERC20/IERC20.sol:IERC20', token);
         await expect(() =>
           treasury.connect(owner).sendTreasuryFunds(token, amount, signer1.address, { gasPrice: 0 }),
         ).to.changeTokenBalances(erc20, [treasury, signer1], [amount.mul(-1), amount]);

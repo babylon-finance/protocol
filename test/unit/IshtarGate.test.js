@@ -14,7 +14,7 @@ describe('IshtarGate', function () {
   let uniswapV3TradeIntegration;
   let owner;
   let WALLET_ADDRESSES;
-  let WALLET_ADDRESSES_13;
+  let WALLET_ADDRESSES_14;
 
   beforeEach(async () => {
     ({ owner, babController, signer1, signer2, signer3, ishtarGate, uniswapV3TradeIntegration } = await setupTests()());
@@ -28,8 +28,9 @@ describe('IshtarGate', function () {
       '0x21584Cc5a52102AbB381286a5119E3be08431CfD',
       '0x232775eAD28F0C0c750A097bA77302E7d84efd3B',
       '0x908295e2be3a36021aadaaed0bbb124fd602cbf2',
+      '0x2d1e16c730fbf2555afd8c7d8740f84ac867afad',
     ];
-    WALLET_ADDRESSES_13 = [
+    WALLET_ADDRESSES_14 = [
       ...WALLET_ADDRESSES,
       '0xFBbA8ceA4e9835B9f304d6E69905cD9403F2b606',
       '0x7caa78e0b71095eebad77757936b7a06cf474558',
@@ -389,7 +390,7 @@ describe('IshtarGate', function () {
       await expect(
         ishtarGate
           .connect(signer1)
-          .grantGardenAccessBatch(newGarden.address, WALLET_ADDRESSES_13, [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1], {
+          .grantGardenAccessBatch(newGarden.address, WALLET_ADDRESSES_14, [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1], {
             gasPrice: 0,
           }),
       ).to.be.revertedWith('Max Number of invites reached');
@@ -420,21 +421,21 @@ describe('IshtarGate', function () {
       await expect(
         ishtarGate
           .connect(signer1)
-          .grantGardenAccessBatch(newGarden.address, WALLET_ADDRESSES, [1, 1, 1, 1, 1, 1, 1, 1, 1], { gasPrice: 0 }),
+          .grantGardenAccessBatch(newGarden.address, WALLET_ADDRESSES, [1, 1, 1, 1, 1, 1, 1, 1, 1, 1], { gasPrice: 0 }),
       ).not.to.be.reverted;
 
-      // Assumes that updating is not adding new users 9 addresses (the same)
+      // Assumes that updating is not adding new users 10 addresses (the same)
       await expect(
         ishtarGate
           .connect(signer1)
-          .grantGardenAccessBatch(newGarden.address, WALLET_ADDRESSES, [3, 2, 3, 2, 3, 2, 3, 2, 3], { gasPrice: 0 }),
+          .grantGardenAccessBatch(newGarden.address, WALLET_ADDRESSES, [3, 2, 3, 2, 3, 2, 3, 2, 3, 2], { gasPrice: 0 }),
       ).not.to.be.reverted;
 
       // New users mixed with previous updates do not stuck the system they are just reverted 13 users
       await expect(
         ishtarGate
           .connect(signer1)
-          .grantGardenAccessBatch(newGarden.address, WALLET_ADDRESSES_13, [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1], {
+          .grantGardenAccessBatch(newGarden.address, WALLET_ADDRESSES_14, [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1], {
             gasPrice: 0,
           }),
       ).to.be.revertedWith('Max Number of invites reached');

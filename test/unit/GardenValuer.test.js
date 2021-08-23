@@ -4,6 +4,7 @@ const addresses = require('lib/addresses');
 const { ONE_ETH } = require('lib/constants');
 const { setupTests } = require('fixtures/GardenFixture');
 const { createStrategy } = require('fixtures/StrategyHelper.js');
+const { ADDRESS_ZERO } = require('../../lib/constants');
 
 describe('GardenValuer', function () {
   let gardenValuer;
@@ -21,6 +22,20 @@ describe('GardenValuer', function () {
     it('should successfully deploy the contract', async function () {
       const deployed = await gardenValuer.deployed();
       expect(!!deployed).to.equal(true);
+    });
+    it('should NOT allow zero address for controller during deployment', async function () {
+      const { deploy } = deployments;
+      const { deployer, owner } = await getNamedAccounts();
+      const gasPrice = await getRapid();
+      const contract = 'GardenValuer';
+      await expect(
+        deploy(contract, {
+          from: deployer,
+          args: [ADDRESS_ZERO],
+          log: true,
+          gasPrice,
+        }),
+      ).to.be.revertedWith('Incorrect address');
     });
   });
 

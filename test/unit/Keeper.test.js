@@ -2,6 +2,7 @@ const { expect } = require('chai');
 const { ethers } = require('hardhat');
 const addresses = require('lib/addresses');
 const { ONE_DAY_IN_SECONDS, STRATEGY_EXECUTE_MAP } = require('lib/constants.js');
+const { fund } = require('lib/whale');
 const { increaseTime, from, eth } = require('utils/test-helpers');
 const { createGarden } = require('fixtures/GardenHelper');
 
@@ -13,9 +14,11 @@ describe('Keeper', function () {
   let keeper;
   let signer1;
   let signer2;
+  let signer3;
 
   beforeEach(async () => {
-    ({ keeper, signer1, signer2 } = await setupTests({ fund: true })());
+    ({ keeper, signer1, signer2, signer3 } = await setupTests()());
+    await fund([signer1.address, signer2.address, signer3.address]);
   });
 
   describe('totalKeeperFees', function () {
@@ -83,7 +86,10 @@ describe('Keeper', function () {
       ].forEach(({ token, name, fee }) => {
         it(`gets paid max fee at ${name} garden`, async function () {
           const garden = await createGarden({ reserveAsset: token });
-          const tokenContract = await ethers.getContractAt('IERC20', token);
+          const tokenContract = await ethers.getContractAt(
+            '@openzeppelin/contracts/token/ERC20/IERC20.sol:IERC20',
+            token,
+          );
 
           const strategy = await getStrategy({ state, specificParams: [addresses.tokens.USDT, 0] });
 

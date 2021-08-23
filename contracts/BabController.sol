@@ -264,8 +264,8 @@ contract BabController is OwnableUpgradeable, IBabController {
     function removeGarden(address _garden) external override onlyOwner {
         require(isGarden[_garden], 'Garden does not exist');
         require(!IGarden(_garden).active(), 'The garden needs to be disabled.');
+        require(IGarden(_garden).getStrategies().length == 0, 'Garden has active strategies!');
         gardens = gardens.remove(_garden);
-
         delete isGarden[_garden];
 
         emit GardenRemoved(_garden);
@@ -280,6 +280,7 @@ contract BabController is OwnableUpgradeable, IBabController {
         require(isGarden[_garden], 'Garden does not exist');
         IGarden garden = IGarden(_garden);
         require(garden.active(), 'The garden needs to be active.');
+        require(garden.getStrategies().length == 0, 'Garden has active strategies!');
         garden.setActive(false);
     }
 
@@ -309,7 +310,7 @@ contract BabController is OwnableUpgradeable, IBabController {
      * Can only happen after 2021 is finished.
      */
     function enableGardenTokensTransfers() external override onlyOwner {
-        require(block.timestamp > 1641024000000, 'Transfers cannot be enabled yet');
+        require(block.timestamp > 1641024000, 'Transfers cannot be enabled yet');
         gardenTokensTransfersEnabled = true;
     }
 
@@ -601,6 +602,7 @@ contract BabController is OwnableUpgradeable, IBabController {
             msg.sender == guardian || msg.sender == owner(),
             'only pause guardian and owner can update pause guardian'
         );
+        require(msg.sender == owner() || _guardian != address(0), 'Guardian cannot remove himself');
         // Save current value for inclusion in log
         address oldPauseGuardian = guardian;
         // Store pauseGuardian with value newPauseGuardian

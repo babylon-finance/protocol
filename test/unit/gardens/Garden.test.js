@@ -67,6 +67,16 @@ describe('Garden', function () {
   let dai;
   let wbtc;
 
+  async function deleteCandidateStrategies(community) {
+    const garden = await ethers.getContractAt('Garden', community);
+    // As the disabled garden has still 2 candidate strategies, we need to expire them before removing the garden
+    const strategies = await garden.getStrategies();
+    for (let i = 0; i < strategies.length; i++) {
+      const strategy = await ethers.getContractAt('Strategy', strategies[i]);
+      await strategy.connect(owner).deleteCandidateStrategy();
+    }
+  }
+
   beforeEach(async () => {
     ({
       babController,
@@ -1315,6 +1325,7 @@ describe('Garden', function () {
 
   describe('deposit', async function () {
     it('cannot make a deposit when the garden is disabled', async function () {
+      await deleteCandidateStrategies(garden1.address);
       await expect(babController.connect(owner).disableGarden(garden1.address)).to.not.be.reverted;
       await expect(
         garden1.connect(signer3).deposit(ethers.utils.parseEther('1'), 1, signer3.getAddress(), false, {
@@ -1466,7 +1477,8 @@ describe('Garden', function () {
     });
 
     describe('can be disabled', async function () {
-      it('reverts if the garden is disabled', async function () {
+      it('reverts deposits if the garden is disabled', async function () {
+        await deleteCandidateStrategies(garden1.address);
         await babController.connect(owner).disableGarden(garden1.address);
         await expect(
           garden1.connect(signer3).deposit(ethers.utils.parseEther('1'), 1, signer3.getAddress(), false, {

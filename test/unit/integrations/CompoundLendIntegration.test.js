@@ -24,10 +24,10 @@ describe('CompoundLendIntegrationTest', function () {
 
   beforeEach(async () => {
     ({ garden1, compoundLendIntegration, signer1, signer2, signer3 } = await setupTests()());
-    CETH = await ethers.getContractAt('IERC20', addresses.tokens.CETH);
-    USDC = await ethers.getContractAt('IERC20', addresses.tokens.USDC);
-    CUSDC = await ethers.getContractAt('IERC20', addresses.tokens.CUSDC);
-    WETH = await ethers.getContractAt('IERC20', addresses.tokens.WETH);
+    CETH = await ethers.getContractAt('@openzeppelin/contracts/token/ERC20/IERC20.sol:IERC20', addresses.tokens.CETH);
+    USDC = await ethers.getContractAt('@openzeppelin/contracts/token/ERC20/IERC20.sol:IERC20', addresses.tokens.USDC);
+    CUSDC = await ethers.getContractAt('@openzeppelin/contracts/token/ERC20/IERC20.sol:IERC20', addresses.tokens.CUSDC);
+    WETH = await ethers.getContractAt('@openzeppelin/contracts/token/ERC20/IERC20.sol:IERC20', addresses.tokens.WETH);
   });
 
   describe('Deployment', function () {

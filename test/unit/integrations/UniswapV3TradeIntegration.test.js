@@ -3,6 +3,7 @@ const { ethers } = require('hardhat');
 
 const { STRATEGY_EXECUTE_MAP } = require('lib/constants.js');
 const { from, parse, eth } = require('lib/helpers');
+const { fund } = require('lib/whale');
 const { setupTests } = require('fixtures/GardenFixture');
 const {
   getStrategy,
@@ -18,9 +19,13 @@ describe('UniswapV3TradeIntegration', function () {
   let uniswapV3TradeIntegration;
   let priceOracle;
   let owner;
+  let signer1;
+  let signer2;
+  let signer3;
 
   beforeEach(async () => {
-    ({ uniswapV3TradeIntegration, owner, priceOracle } = await setupTests({ fund: true })());
+    ({ uniswapV3TradeIntegration, owner, signer1, signer2, signer3, priceOracle } = await setupTests()());
+    await fund([signer1.address, signer2.address, signer3.address]);
   });
 
   describe('exchange', function () {
@@ -42,8 +47,14 @@ describe('UniswapV3TradeIntegration', function () {
           if (token === asset) return;
 
           const garden = await createGarden({ reserveAsset: token });
-          const tokenContract = await ethers.getContractAt('ERC20', token);
-          const assetContract = await ethers.getContractAt('ERC20', asset);
+          const tokenContract = await ethers.getContractAt(
+            '@openzeppelin/contracts/token/ERC20/ERC20.sol:ERC20',
+            token,
+          );
+          const assetContract = await ethers.getContractAt(
+            '@openzeppelin/contracts/token/ERC20/ERC20.sol:ERC20',
+            asset,
+          );
 
           const strategyContract = await getStrategy({
             kind: 'buy',
