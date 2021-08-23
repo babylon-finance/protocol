@@ -47,6 +47,7 @@ module.exports = async ({ getNamedAccounts, deployments, ethers, getSigner, getC
     ['PriceOracle', ''],
     ['TimeLockRegistry', ''],
     ['IshtarGate', ''],
+    ['MardukGate', ''],
   ]) {
     const contract = await getContract(entry[0], entry[1], signer);
     if ((await contract.owner()) !== timelockAddress && entry[0] !== 'TimeLockRegistry') {

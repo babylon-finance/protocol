@@ -280,4 +280,6 @@ library Errors {
     uint256 internal constant ONLY_FIRST_CREATOR_CAN_ADD = 95;
     // invalid address
     uint256 internal constant INVALID_ADDRESS = 96;
+    // creator can only renounce in some circumstances
+    uint256 internal constant CREATOR_CANNOT_RENOUNCE = 97;
 }

@@ -62,6 +62,7 @@ contract BabController is OwnableUpgradeable, IBabController {
     event RewardsDistributorChanged(address indexed _rewardsDistributor, address _oldRewardsDistributor);
     event TreasuryChanged(address _newTreasury, address _oldTreasury);
     event IshtarGateChanged(address _newIshtarGate, address _oldIshtarGate);
+    event MardukGateChanged(address _newMardukGate, address _oldMardukGate);
     event GardenValuerChanged(address indexed _gardenValuer, address _oldGardenValuer);
     event GardenFactoryChanged(address indexed _gardenFactory, address _oldGardenFactory);
     event UniswapFactoryChanged(address indexed _newUniswapFactory, address _oldUniswapFactory);
@@ -160,6 +161,7 @@ contract BabController is OwnableUpgradeable, IBabController {
     address public guardian;
     mapping(address => bool) public override guardianPaused;
     bool public override guardianGlobalPaused;
+    address public override mardukGate;
 
     /* ============ Constructor ============ */
 
@@ -218,7 +220,7 @@ contract BabController is OwnableUpgradeable, IBabController {
         require(defaultTradeIntegration != address(0), 'Need a default trade integration');
         require(enabledOperations.length > 0, 'Need operations enabled');
         require(
-            IIshtarGate(ishtarGate).canCreate(msg.sender) || gardenCreationIsOpen,
+            IIshtarGate(mardukGate).canCreate(msg.sender) || gardenCreationIsOpen,
             'User does not have creation permissions'
         );
         address newGarden =
@@ -428,6 +430,22 @@ contract BabController is OwnableUpgradeable, IBabController {
         ishtarGate = _ishtarGate;
 
         emit IshtarGateChanged(_ishtarGate, oldIshtarGate);
+    }
+
+    /**
+     * PRIVILEGED GOVERNANCE FUNCTION. Allows governance to change the Marduk Gate Address
+     *
+     * @param _mardukGate               Address of the new Marduk Gate
+     */
+    function editMardukGate(address _mardukGate) external override onlyOwner {
+        require(_mardukGate != mardukGate, 'Marduk Gate already exists');
+
+        require(_mardukGate != address(0), 'Marduk Gate oracle must exist');
+
+        address oldMardukGate = mardukGate;
+        mardukGate = _mardukGate;
+
+        emit MardukGateChanged(_mardukGate, oldMardukGate);
     }
 
     /**

@@ -20,6 +20,7 @@ async function setUpFixture(
   const bablToken = await getContract('BABLToken');
   const timeLockRegistry = await getContract('TimeLockRegistry');
   const ishtarGate = await getContract('IshtarGate');
+  const mardukGate = await getContract('MardukGate');
   const priceOracle = await getContract('PriceOracle');
   const treasury = await getContract('Treasury');
   const gardenValuer = await getContract('GardenValuer');
@@ -76,6 +77,8 @@ async function setUpFixture(
 
   // Gives signer1 creator permissions
   await ishtarGate.connect(owner).setCreatorPermissions(signer1.address, true, { gasPrice: 0 });
+  await mardukGate.connect(owner).setCreatorPermissions(owner.address, true, { gasPrice: 0 });
+  await mardukGate.connect(owner).setCreatorPermissions(signer1.address, true, { gasPrice: 0 });
   await babController
     .connect(signer1)
     .createGarden(
@@ -161,8 +164,6 @@ async function setUpFixture(
         gasPrice: 0,
       });
   }
-  console.log('create strategies');
-
   const strategy10 = (
     await createStrategy('buy', 'dataset', [signer1, signer2, signer3], uniswapV3TradeIntegration.address, garden1)
   ).address;
@@ -185,6 +186,28 @@ async function setUpFixture(
   const usdcWhaleSigner = await impersonateAddress('0x0a59649758aa4d66e25f08dd01271e891fe52199');
   const wethWhaleSigner = await impersonateAddress('0xC8dDA504356195ba5344E5a9826Ce07DfEaA97b6');
   const wbtcWhaleSigner = await impersonateAddress('0x9ff58f4ffb29fa2266ab25e75e2a8b3503311656');
+
+  if (fund) {
+    for (const signer of signers.slice(3, 10)) {
+      await dai.connect(daiWhaleSigner).transfer(signer.address, eth(1e6), {
+        gasPrice: 0,
+      });
+
+      await usdc.connect(usdcWhaleSigner).transfer(signer.address, from(1e6 * 1e6), {
+        gasPrice: 0,
+      });
+
+      await weth.connect(wethWhaleSigner).transfer(signer.address, eth(100), {
+        gasPrice: 0,
+      });
+
+      await wbtc.connect(wbtcWhaleSigner).transfer(signer.address, from(10e8), {
+        gasPrice: 0,
+      });
+    }
+  }
+
+  console.log('end garden fixture');
 
   return {
     babController,
@@ -226,6 +249,7 @@ async function setUpFixture(
     gardenValuer,
     priceOracle,
     ishtarGate,
+    mardukGate,
 
     gardenNFT,
     strategyNFT,

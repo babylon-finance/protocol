@@ -1,23 +1,23 @@
 const { expect } = require('chai');
 const { ethers } = require('hardhat');
 const addresses = require('lib/addresses');
-const { GARDEN_PARAMS } = require('lib/constants');
+const { GARDEN_PARAMS, ADDRESS_ZERO } = require('lib/constants');
 const { setupTests } = require('fixtures/GardenFixture');
 const { createStrategy } = require('fixtures/StrategyHelper.js');
 
-describe('IshtarGate', function () {
+describe('MardukGate', function () {
   let signer1;
   let signer2;
   let signer3;
-  let ishtarGate;
+  let mardukGate;
   let babController;
   let uniswapV3TradeIntegration;
   let owner;
   let WALLET_ADDRESSES;
-  let WALLET_ADDRESSES_14;
+  let WALLET_ADDRESSES_13;
 
   beforeEach(async () => {
-    ({ owner, babController, signer1, signer2, signer3, ishtarGate, uniswapV3TradeIntegration } = await setupTests()());
+    ({ owner, babController, signer1, signer2, signer3, mardukGate, uniswapV3TradeIntegration } = await setupTests()());
     WALLET_ADDRESSES = [
       signer1.address,
       signer2.address,
@@ -28,9 +28,8 @@ describe('IshtarGate', function () {
       '0x21584Cc5a52102AbB381286a5119E3be08431CfD',
       '0x232775eAD28F0C0c750A097bA77302E7d84efd3B',
       '0x908295e2be3a36021aadaaed0bbb124fd602cbf2',
-      '0x2d1e16c730fbf2555afd8c7d8740f84ac867afad',
     ];
-    WALLET_ADDRESSES_14 = [
+    WALLET_ADDRESSES_13 = [
       ...WALLET_ADDRESSES,
       '0xFBbA8ceA4e9835B9f304d6E69905cD9403F2b606',
       '0x7caa78e0b71095eebad77757936b7a06cf474558',
@@ -40,8 +39,8 @@ describe('IshtarGate', function () {
   });
 
   describe('create garden', async function () {
-    it('succeeds with the gate NFT awarded', async function () {
-      await ishtarGate.connect(owner).setCreatorPermissions(signer2.address, true, { gasPrice: 0 });
+    it('succeeds with the creator permission awarded', async function () {
+      await mardukGate.connect(owner).setCreatorPermissions(signer2.address, true, { gasPrice: 0 });
       await expect(
         babController
           .connect(signer2)
@@ -62,8 +61,8 @@ describe('IshtarGate', function () {
       ).to.not.be.reverted;
     });
 
-    it('succeeds with the gate NFT awarded through batch creation', async function () {
-      await ishtarGate.connect(owner).grantCreatorsInBatch([signer2.address], [true], { gasPrice: 0 });
+    it('succeeds without permissions awarded through batch creation', async function () {
+      await mardukGate.connect(owner).grantCreatorsInBatch([signer2.address], [true], { gasPrice: 0 });
       await expect(
         babController
           .connect(signer2)
@@ -84,22 +83,22 @@ describe('IshtarGate', function () {
       ).to.not.be.reverted;
     });
 
-    it('fails with the gate NFT awarded through batch creation with different elements', async function () {
-      await expect(ishtarGate.connect(owner).grantCreatorsInBatch([signer2.address], [true, false], { gasPrice: 0 })).to
+    it('fails granting permissions through batch creation with different elements', async function () {
+      await expect(mardukGate.connect(owner).grantCreatorsInBatch([signer2.address], [true, false], { gasPrice: 0 })).to
         .be.reverted;
     });
 
     it('only owner can give creator permissions', async function () {
-      await expect(ishtarGate.connect(signer2).setCreatorPermissions(signer2, true, { gasPrice: 0 })).to.be.reverted;
+      await expect(mardukGate.connect(signer2).setCreatorPermissions(signer2, true, { gasPrice: 0 })).to.be.reverted;
     });
 
-    it('fails without the gate NFT', async function () {
+    it('fails without creator permissions', async function () {
       await expect(
         babController
           .connect(signer2)
           .createGarden(
             addresses.tokens.WETH,
-            'TEST Ishtar',
+            'TEST Marduk',
             'AAA',
             'http...',
             2,
@@ -115,12 +114,12 @@ describe('IshtarGate', function () {
     });
 
     it('creator can join a garden', async function () {
-      await ishtarGate.connect(owner).setCreatorPermissions(signer2.address, true, { gasPrice: 0 });
+      await mardukGate.connect(owner).setCreatorPermissions(signer2.address, true, { gasPrice: 0 });
       await babController
         .connect(signer2)
         .createGarden(
           addresses.tokens.WETH,
-          'TEST Ishtar',
+          'TEST Marduk',
           'AAA',
           'http:',
           0,
@@ -139,8 +138,81 @@ describe('IshtarGate', function () {
       });
     });
 
+    it('creator can join a public garden after renouncing to 0 address', async function () {
+      await mardukGate.connect(owner).setCreatorPermissions(signer2.address, true, { gasPrice: 0 });
+      await babController.connect(owner).setAllowPublicGardens();
+      await babController
+        .connect(signer2)
+        .createGarden(
+          addresses.tokens.WETH,
+          'TEST Marduk',
+          'AAA',
+          'http:',
+          0,
+          GARDEN_PARAMS,
+          ethers.utils.parseEther('0.1'),
+          [true, false, false],
+          [0, 0, 0],
+          {
+            value: ethers.utils.parseEther('0.1'),
+          },
+        );
+      const gardens = await babController.getGardens();
+      const newGarden = await ethers.getContractAt('Garden', gardens[gardens.length - 1]);
+      await newGarden.connect(signer2).transferCreatorRights(ADDRESS_ZERO, 0);
+      await newGarden.connect(signer2).deposit(ethers.utils.parseEther('1'), 1, signer2.getAddress(), false, {
+        value: ethers.utils.parseEther('1'),
+      });
+    });
+
+    it('creator cannot renounce to 0 address if garden is private', async function () {
+      await mardukGate.connect(owner).setCreatorPermissions(signer2.address, true, { gasPrice: 0 });
+      await babController
+        .connect(signer2)
+        .createGarden(
+          addresses.tokens.WETH,
+          'TEST Marduk',
+          'AAA',
+          'http:',
+          0,
+          GARDEN_PARAMS,
+          ethers.utils.parseEther('0.1'),
+          [false, false, false],
+          [0, 0, 0],
+          {
+            value: ethers.utils.parseEther('0.1'),
+          },
+        );
+      const gardens = await babController.getGardens();
+      const newGarden = await ethers.getContractAt('Garden', gardens[gardens.length - 1]);
+      await expect(newGarden.connect(signer2).transferCreatorRights(ADDRESS_ZERO, 0)).to.be.reverted;
+    });
+
+    it.only('creator can renounce to a non 0 address even if garden is private', async function () {
+      await mardukGate.connect(owner).setCreatorPermissions(signer2.address, true, { gasPrice: 0 });
+      await babController
+        .connect(signer2)
+        .createGarden(
+          addresses.tokens.WETH,
+          'TEST Marduk',
+          'AAA',
+          'http:',
+          0,
+          GARDEN_PARAMS,
+          ethers.utils.parseEther('0.1'),
+          [false, false, false],
+          [0, 0, 0],
+          {
+            value: ethers.utils.parseEther('0.1'),
+          },
+        );
+      const gardens = await babController.getGardens();
+      const newGarden = await ethers.getContractAt('Garden', gardens[gardens.length - 1]);
+      await expect(newGarden.connect(signer2).transferCreatorRights(WALLET_ADDRESSES[7], 0)).to.not.be.reverted;
+    });
+
     it('creator can create a strategy', async function () {
-      await ishtarGate.connect(owner).setCreatorPermissions(signer2.address, true, { gasPrice: 0 });
+      await mardukGate.connect(owner).setCreatorPermissions(signer2.address, true, { gasPrice: 0 });
       await expect(
         babController
           .connect(signer2)
@@ -170,23 +242,23 @@ describe('IshtarGate', function () {
 
   describe('garden access', async function () {
     it('number of invites initialized', async function () {
-      const invites = await ishtarGate.connect(owner).maxNumberOfInvites();
+      const invites = await mardukGate.connect(owner).maxNumberOfInvites();
       expect(invites).to.equal(10);
     });
 
     it('can change the number of invites', async function () {
-      await ishtarGate.connect(owner).setMaxNumberOfInvites(25);
-      const invites = await ishtarGate.connect(owner).maxNumberOfInvites();
+      await mardukGate.connect(owner).setMaxNumberOfInvites(25);
+      const invites = await mardukGate.connect(owner).maxNumberOfInvites();
       expect(invites).to.equal(25);
     });
     it('only owner can change the number of invites', async function () {
-      await expect(ishtarGate.connect(signer1).setMaxNumberOfInvites(25)).to.be.reverted;
+      await expect(mardukGate.connect(signer1).setMaxNumberOfInvites(25)).to.be.reverted;
     });
   });
 
   describe('be a strategist', async function () {
-    it('succeeds with the gate NFT awarded with permission 3', async function () {
-      await ishtarGate.connect(owner).setCreatorPermissions(signer2.address, true, { gasPrice: 0 });
+    it('succeeds with permission 3', async function () {
+      await mardukGate.connect(owner).setCreatorPermissions(signer2.address, true, { gasPrice: 0 });
       await expect(
         babController
           .connect(signer2)
@@ -207,7 +279,7 @@ describe('IshtarGate', function () {
       ).to.not.be.reverted;
       const gardens = await babController.getGardens();
       const newGarden = await ethers.getContractAt('Garden', gardens[gardens.length - 1]);
-      await ishtarGate.connect(signer2).setGardenAccess(signer1.address, newGarden.address, 3, { gasPrice: 0 });
+      await mardukGate.connect(signer2).setGardenAccess(signer1.address, newGarden.address, 3, { gasPrice: 0 });
       await newGarden.connect(signer1).deposit(ethers.utils.parseEther('1'), 1, signer1.getAddress(), false, {
         value: ethers.utils.parseEther('1'),
       });
@@ -216,8 +288,8 @@ describe('IshtarGate', function () {
       ).not.to.be.reverted;
     });
 
-    it('fails without the right permissions', async function () {
-      await ishtarGate.connect(owner).setCreatorPermissions(signer2.address, true, { gasPrice: 0 });
+    it('creator can still create a strategy after renouncing', async function () {
+      await mardukGate.connect(owner).setCreatorPermissions(signer2.address, true, { gasPrice: 0 });
       await expect(
         babController
           .connect(signer2)
@@ -238,7 +310,33 @@ describe('IshtarGate', function () {
       ).to.not.be.reverted;
       const gardens = await babController.getGardens();
       const newGarden = await ethers.getContractAt('Garden', gardens[gardens.length - 1]);
-      await ishtarGate.connect(signer2).setGardenAccess(signer1.address, newGarden.address, 2, { gasPrice: 0 });
+      await newGarden.connect(signer2).transferCreatorRights(ADDRESS_ZERO, 0);
+      await createStrategy('buy', 'dataset', [signer2, signer1, signer3], uniswapV3TradeIntegration.address, newGarden);
+    });
+
+    it('fails without the right permissions', async function () {
+      await mardukGate.connect(owner).setCreatorPermissions(signer2.address, true, { gasPrice: 0 });
+      await expect(
+        babController
+          .connect(signer2)
+          .createGarden(
+            addresses.tokens.WETH,
+            'TEST Ishtar',
+            'AAA',
+            'http:',
+            0,
+            GARDEN_PARAMS,
+            ethers.utils.parseEther('0.1'),
+            [false, false, false],
+            [0, 0, 0],
+            {
+              value: ethers.utils.parseEther('0.1'),
+            },
+          ),
+      ).to.not.be.reverted;
+      const gardens = await babController.getGardens();
+      const newGarden = await ethers.getContractAt('Garden', gardens[gardens.length - 1]);
+      await mardukGate.connect(signer2).setGardenAccess(signer1.address, newGarden.address, 2, { gasPrice: 0 });
       await expect(
         createStrategy('buy', 'vote', [signer1, signer2, signer3], uniswapV3TradeIntegration.address, newGarden),
       ).to.be.reverted;
@@ -246,7 +344,7 @@ describe('IshtarGate', function () {
   });
 
   describe('join a garden', async function () {
-    it('succeeds with the gate NFT awarded', async function () {
+    it('succeeds with the perms awarded', async function () {
       await expect(
         babController
           .connect(signer1)
@@ -269,14 +367,14 @@ describe('IshtarGate', function () {
 
       const newGarden = await ethers.getContractAt('Garden', gardens[gardens.length - 1]);
 
-      await ishtarGate.connect(signer1).setGardenAccess(signer3.address, newGarden.address, 1, { gasPrice: 0 });
+      await mardukGate.connect(signer1).setGardenAccess(signer3.address, newGarden.address, 1, { gasPrice: 0 });
 
       await newGarden.connect(signer3).deposit(ethers.utils.parseEther('1'), 1, signer3.getAddress(), false, {
         value: ethers.utils.parseEther('1'),
       });
     });
 
-    it('fails without the gate NFT', async function () {
+    it('fails without the permissions', async function () {
       await expect(
         babController
           .connect(signer1)
@@ -330,7 +428,34 @@ describe('IshtarGate', function () {
 
       const newGarden = await ethers.getContractAt('Garden', gardens[gardens.length - 1]);
 
-      await expect(ishtarGate.connect(signer3).setGardenAccess(signer3.address, newGarden.address, 1, { gasPrice: 0 }))
+      await expect(mardukGate.connect(signer3).setGardenAccess(signer3.address, newGarden.address, 1, { gasPrice: 0 }))
+        .to.be.reverted;
+    });
+
+    it('creator cannot grant access to a garden after renouncing', async function () {
+      await expect(
+        babController
+          .connect(signer1)
+          .createGarden(
+            addresses.tokens.WETH,
+            'TEST Ishtar',
+            'AAA',
+            'http...',
+            5,
+            GARDEN_PARAMS,
+            ethers.utils.parseEther('0.1'),
+            [false, false, false],
+            [0, 0, 0],
+            {
+              value: ethers.utils.parseEther('0.1'),
+            },
+          ),
+      ).to.not.be.reverted;
+      const gardens = await babController.getGardens();
+
+      const newGarden = await ethers.getContractAt('Garden', gardens[gardens.length - 1]);
+      await newGarden.connect(signer1).transferCreatorRights(ADDRESS_ZERO, 0);
+      await expect(mardukGate.connect(signer1).setGardenAccess(signer3.address, newGarden.address, 1, { gasPrice: 0 }))
         .to.be.reverted;
     });
 
@@ -356,7 +481,7 @@ describe('IshtarGate', function () {
 
       const newGarden = await ethers.getContractAt('Garden', gardens[gardens.length - 1]);
 
-      await ishtarGate
+      await mardukGate
         .connect(signer1)
         .grantGardenAccessBatch(newGarden.address, [signer3.address], [1], { gasPrice: 0 });
 
@@ -388,9 +513,9 @@ describe('IshtarGate', function () {
 
       // We try to set-up more than max limit 13 ADDRESSES
       await expect(
-        ishtarGate
+        mardukGate
           .connect(signer1)
-          .grantGardenAccessBatch(newGarden.address, WALLET_ADDRESSES_14, [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1], {
+          .grantGardenAccessBatch(newGarden.address, WALLET_ADDRESSES_13, [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1], {
             gasPrice: 0,
           }),
       ).to.be.revertedWith('Max Number of invites reached');
@@ -419,32 +544,23 @@ describe('IshtarGate', function () {
 
       // 9 additional addresses
       await expect(
-        ishtarGate
+        mardukGate
           .connect(signer1)
-          .grantGardenAccessBatch(newGarden.address, WALLET_ADDRESSES, [1, 1, 1, 1, 1, 1, 1, 1, 1, 1], { gasPrice: 0 }),
+          .grantGardenAccessBatch(newGarden.address, WALLET_ADDRESSES, [1, 1, 1, 1, 1, 1, 1, 1, 1], { gasPrice: 0 }),
       ).not.to.be.reverted;
 
-      // Assumes that updating is not adding new users 10 addresses (the same)
+      // Assumes that updating is not adding new users 9 addresses (the same)
       await expect(
-        ishtarGate
+        mardukGate
           .connect(signer1)
-          .grantGardenAccessBatch(newGarden.address, WALLET_ADDRESSES, [3, 2, 3, 2, 3, 2, 3, 2, 3, 2], { gasPrice: 0 }),
+          .grantGardenAccessBatch(newGarden.address, WALLET_ADDRESSES, [3, 2, 3, 2, 3, 2, 3, 2, 3], { gasPrice: 0 }),
       ).not.to.be.reverted;
 
-      // New users mixed with previous updates do not stuck the system they are just reverted 13 users
+      // New users mixed with previous updates
       await expect(
-        ishtarGate
+        mardukGate
           .connect(signer1)
-          .grantGardenAccessBatch(newGarden.address, WALLET_ADDRESSES_14, [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1], {
-            gasPrice: 0,
-          }),
-      ).to.be.revertedWith('Max Number of invites reached');
-
-      // Only 1 new user do not stuck the system it is just reverted
-      await expect(
-        ishtarGate
-          .connect(signer1)
-          .grantGardenAccessBatch(newGarden.address, ['0x7F6105aB06f5Cd2deAd20b09Ca1fe15AfB4ddf49'], [3], {
+          .grantGardenAccessBatch(newGarden.address, WALLET_ADDRESSES_13, [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1], {
             gasPrice: 0,
           }),
       ).to.be.revertedWith('Max Number of invites reached');

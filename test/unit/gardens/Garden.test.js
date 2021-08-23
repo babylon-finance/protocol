@@ -53,7 +53,7 @@ describe('Garden', function () {
   let signer2;
   let signer3;
   let garden1;
-  let ishtarGate;
+  let mardukGate;
   let balancerIntegration;
   let uniswapV3TradeIntegration;
   let daiGarden;
@@ -88,7 +88,7 @@ describe('Garden', function () {
       signer2,
       signer3,
       garden1,
-      ishtarGate,
+      mardukGate,
       balancerIntegration,
       uniswapV3TradeIntegration,
       gardenValuer,
@@ -196,9 +196,10 @@ describe('Garden', function () {
 
   describe('pseudo-public rights by gardener', async function () {
     it('should allow deposits to a Ishar gate owner despite its individual permission is set to 0 but general deposit permission is allowed', async function () {
-      expect(await ishtarGate.connect(signer1).canJoinAGarden(garden1.address, signer3.address)).to.equal(true);
+      expect(await mardukGate.connect(signer1).canJoinAGarden(garden1.address, signer3.address)).to.equal(true);
       // Remove permissions
-      await ishtarGate.connect(signer1).setGardenAccess(signer3.address, garden1.address, 0, { gasPrice: 0 });
+      await mardukGate.connect(signer1).setGardenAccess(signer3.address, garden1.address, 0, { gasPrice: 0 });
+      expect(await mardukGate.connect(signer1).canJoinAGarden(garden1.address, signer3.address)).to.equal(false);
       await expect(
         garden1.connect(signer3).deposit(ethers.utils.parseEther('1'), 1, signer3.getAddress(), false, {
           value: ethers.utils.parseEther('1'),
@@ -206,8 +207,8 @@ describe('Garden', function () {
         }),
       ).to.be.revertedWith('BAB#029');
       const canJoin =
-        (await ishtarGate.connect(signer1).canJoinAGarden(garden1.address, signer3.address)) ||
-        ((await ishtarGate.balanceOf(signer3.address)) > 0 && !(await garden1.privateGarden()));
+        (await mardukGate.connect(signer1).canJoinAGarden(garden1.address, signer3.address)) ||
+        ((await mardukGate.canAccessBeta(signer3.address)) && !(await garden1.privateGarden()));
       expect(canJoin).to.equal(false);
       // Make garden public first at BabController then at garden level
 
@@ -223,8 +224,8 @@ describe('Garden', function () {
       });
       expect(await garden1.balanceOf(signer3.address)).to.equal(ethers.utils.parseEther('1'));
       const canJoin2 =
-        (await ishtarGate.connect(signer1).canJoinAGarden(garden1.address, signer3.address)) ||
-        ((await ishtarGate.balanceOf(signer3.address)) > 0 && !(await garden1.privateGarden()));
+        (await mardukGate.connect(signer1).canJoinAGarden(garden1.address, signer3.address)) ||
+        ((await mardukGate.canAccessBeta(signer3.address)) && !(await garden1.privateGarden()));
       expect(canJoin2).to.equal(true);
     });
 
@@ -233,46 +234,40 @@ describe('Garden', function () {
         value: ethers.utils.parseEther('1'),
         gasPrice: 0,
       });
-      const [canJoin, canVote, canAddStrategy] = await babViewer
-        .connect(signer1)
-        .getGardenPermissions(garden1.address, signer3.address);
-      expect(canAddStrategy).to.equal(true);
       await expect(getStrategy({ garden: garden1, signers: [signer3] })).not.to.be.reverted;
       // Remove permissions (0 is below LP even)
-      await ishtarGate.connect(signer1).setGardenAccess(signer3.address, garden1.address, 0, { gasPrice: 0 });
+      await mardukGate.connect(signer1).setGardenAccess(signer3.address, garden1.address, 0, { gasPrice: 0 });
       await expect(getStrategy({ garden: garden1, signers: [signer3] })).to.be.revertedWith('BAB#030');
-      const [canJoin2, canVote2, canAddStrategy2] = await babViewer
-        .connect(signer1)
-        .getGardenPermissions(garden1.address, signer3.address);
-
-      expect(canAddStrategy2).to.equal(false);
+      expect(await mardukGate.connect(signer1).canAddStrategiesInAGarden(garden1.address, signer3.address)).to.equal(
+        false,
+      );
       // Enable strategist creator rights - the garden needs to be public
       await expect(garden1.connect(signer1).setPublicRights(true, false)).to.be.revertedWith('BAB#090');
       await babController.connect(owner).setAllowPublicGardens();
       await garden1.connect(signer1).makeGardenPublic();
       await garden1.connect(signer1).setPublicRights(true, false);
       await expect(getStrategy({ garden: garden1, signers: [signer3] })).not.to.be.reverted;
-      const [canJoin3, canVote3, canAddStrategy3] = await babViewer
+      const [, , canAddStrategy3] = await babViewer
         .connect(signer1)
         .getGardenPermissions(garden1.address, signer3.address);
-
       expect(canAddStrategy3).to.equal(true);
     });
+
     it('should allow the vote by an Ishar gate owner despite its individual permission is set to 0 but general voting permission is allowed', async function () {
       await garden1.connect(signer2).deposit(ethers.utils.parseEther('1'), 1, signer2.getAddress(), false, {
         value: ethers.utils.parseEther('1'),
         gasPrice: 0,
       });
       const canJoin =
-        (await ishtarGate.connect(signer1).canVoteInAGarden(garden1.address, signer2.address)) ||
-        ((await ishtarGate.balanceOf(signer2.address)) > 0 && (await garden1.publicStewards()));
+        (await mardukGate.connect(signer1).canVoteInAGarden(garden1.address, signer2.address)) ||
+        ((await mardukGate.balanceOf(signer2.address)) > 0 && (await garden1.publicStewards()));
 
       expect(canJoin).to.equal(true);
       // Remove permissions (0 is below LP even)
-      await ishtarGate.connect(signer1).setGardenAccess(signer2.address, garden1.address, 0, { gasPrice: 0 });
+      await mardukGate.connect(signer1).setGardenAccess(signer2.address, garden1.address, 0, { gasPrice: 0 });
       const canJoin2 =
-        (await ishtarGate.connect(signer1).canVoteInAGarden(garden1.address, signer2.address)) ||
-        ((await ishtarGate.balanceOf(signer2.address)) > 0 && (await garden1.publicStewards()));
+        (await mardukGate.connect(signer1).canVoteInAGarden(garden1.address, signer2.address)) ||
+        ((await mardukGate.balanceOf(signer2.address)) > 0 && (await garden1.publicStewards()));
       expect(canJoin2).to.equal(false);
 
       // Enable voting power rights to users - the garden needs to be public
@@ -281,8 +276,8 @@ describe('Garden', function () {
       await garden1.connect(signer1).makeGardenPublic();
       await garden1.connect(signer1).setPublicRights(false, true);
       const canJoin3 =
-        (await ishtarGate.connect(signer1).canVoteInAGarden(garden1.address, signer2.address)) ||
-        ((await ishtarGate.balanceOf(signer2.address)) > 0 && (await garden1.publicStewards()));
+        (await mardukGate.connect(signer1).canVoteInAGarden(garden1.address, signer2.address)) ||
+        ((await mardukGate.balanceOf(signer2.address)) > 0 && (await garden1.publicStewards()));
       expect(canJoin3).to.equal(true);
     });
   });
@@ -1373,7 +1368,7 @@ describe('Garden', function () {
       const gardenBalance = await dai.balanceOf(daiGarden.address);
       const supplyBefore = await daiGarden.totalSupply();
 
-      await ishtarGate.connect(signer1).setGardenAccess(signer3.address, daiGarden.address, 1, { gasPrice: 0 });
+      await mardukGate.connect(signer1).setGardenAccess(signer3.address, daiGarden.address, 1, { gasPrice: 0 });
       await dai.connect(signer3).approve(daiGarden.address, ethers.utils.parseEther('1000'), { gasPrice: 0 });
 
       await daiGarden.connect(signer3).deposit(eth(1000), eth(1000), signer3.getAddress(), false);
@@ -1435,7 +1430,7 @@ describe('Garden', function () {
       expect(await usdcGarden.totalContributors()).to.equal(1);
       const gardenBalance = await usdc.balanceOf(usdcGarden.address);
       const supplyBefore = await usdcGarden.totalSupply();
-      await ishtarGate.connect(signer1).setGardenAccess(signer3.address, usdcGarden.address, 1, { gasPrice: 0 });
+      await mardukGate.connect(signer1).setGardenAccess(signer3.address, usdcGarden.address, 1, { gasPrice: 0 });
       await usdc.connect(signer3).approve(usdcGarden.address, thousandUSDC, {
         gasPrice: 0,
       });
@@ -1545,7 +1540,7 @@ describe('Garden', function () {
           { tokens: [addresses.tokens.ETH] },
         );
         for (let i = 0; i < randomWallets.length; i++) {
-          await ishtarGate
+          await mardukGate
             .connect(signer1)
             .setGardenAccess(randomWallets[i].address, garden4.address, 0, { gasPrice: 0 });
           await garden4
