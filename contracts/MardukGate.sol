@@ -114,7 +114,10 @@ contract MardukGate is IMardukGate, Ownable {
         address _garden,
         uint8 _permission
     ) external override returns (uint256) {
-        require(_isCreator(IGarden(_garden), msg.sender) || msg.sender == address(_garden), 'Only creator or garden can change params');
+        require(
+            _isCreator(IGarden(_garden), msg.sender) || msg.sender == address(_garden),
+            'Only creator or garden can change params'
+        );
         require(address(_user) != address(0), 'User must exist');
         return _setIndividualGardenAccess(_user, _garden, _permission);
     }
@@ -298,8 +301,7 @@ contract MardukGate is IMardukGate, Ownable {
     function _isCreator(IGarden _garden, address _member) private view returns (bool) {
         return
             _member != address(0) &&
-            (
-                _garden.extraCreators(0) == _member ||
+            (_garden.extraCreators(0) == _member ||
                 _garden.extraCreators(1) == _member ||
                 _garden.extraCreators(2) == _member ||
                 _garden.extraCreators(3) == _member ||
