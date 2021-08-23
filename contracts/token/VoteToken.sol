@@ -17,6 +17,8 @@
 
 pragma solidity 0.7.6;
 
+import 'hardhat/console.sol';
+
 import {ERC20} from '@openzeppelin/contracts/token/ERC20/ERC20.sol';
 import {IVoteToken} from '../interfaces/IVoteToken.sol';
 import {ReentrancyGuard} from '@openzeppelin/contracts/utils/ReentrancyGuard.sol';
@@ -156,7 +158,6 @@ abstract contract VoteToken is Context, ERC20, Ownable, IVoteToken, ReentrancyGu
      */
     function getPriorVotes(address account, uint256 blockNumber) external view virtual override returns (uint96) {
         require(blockNumber < block.number, 'BABLToken::getPriorVotes: not yet determined');
-
         uint32 nCheckpoints = numCheckpoints[account];
         if (nCheckpoints == 0) {
             return 0;

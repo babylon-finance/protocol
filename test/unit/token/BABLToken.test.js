@@ -6,7 +6,7 @@ const { increaseTime } = require('utils/test-helpers');
 
 const { setupTests } = require('fixtures/GardenFixture');
 
-const OWNER_BALANCE = ONE_ETH.mul(23000);
+const MULTISIG_BALANCE = ONE_ETH.mul(23000);
 const REGISTRY_BALANCE = ONE_ETH.mul(305000);
 
 describe('BABLToken contract', function () {
@@ -18,9 +18,12 @@ describe('BABLToken contract', function () {
   let timeLockRegistry;
   let now;
   let future;
+  let MULTISIG;
 
   beforeEach(async () => {
     ({ owner, bablToken, timeLockRegistry, signer1, signer2, signer3 } = await setupTests()());
+    const signers = await ethers.getSigners();
+    MULTISIG = signers[2];
     const block = await ethers.provider.getBlock();
     now = block.timestamp;
     future = now + ONE_DAY_IN_SECONDS * 365 * 9.01; // newMAxSupplyAllowedAfter has to be at least 365days ahead of previous time (previous time was 8 years ahead of first mint)
@@ -47,26 +50,26 @@ describe('BABLToken contract', function () {
     });
 
     it('Should set the right owner to Registry', async function () {
-      expect(await timeLockRegistry.owner()).to.equal(owner.address);
+      expect(await timeLockRegistry.owner()).to.equal(MULTISIG.address);
     });
 
-    it('multisig should have 16k tokens after deployment', async function () {
-      const ownerBalance = await bablToken.balanceOf(owner.address);
-      expect(ownerBalance).to.equal(ONE_ETH.mul(23000));
+    it('multisig should have 23k tokens after deployment', async function () {
+      const multisigBalance = await bablToken.balanceOf(MULTISIG.address);
+      expect(multisigBalance).to.equal(ONE_ETH.mul(23000));
     });
   });
 
   describe('Transfers', function () {
     it('should fail if trying to transfer any tokens between addresses which is not TimeLockRegistry', async function () {
-      const ownerBalance = await bablToken.balanceOf(owner.address);
-      expect(ownerBalance).to.equal(OWNER_BALANCE);
+      const multisigBalance = await bablToken.balanceOf(MULTISIG.address);
+      expect(multisigBalance).to.equal(MULTISIG_BALANCE);
 
       const value = ethers.utils.parseEther('1000');
-      await expect(bablToken.connect(owner).transfer(signer1.address, value)).to.be.revertedWith('BAB#062');
-      await expect(bablToken.connect(owner).transfer(signer2.address, value)).to.be.revertedWith('BAB#062');
+      await expect(bablToken.connect(MULTISIG).transfer(signer1.address, value)).to.be.revertedWith('BAB#062');
+      await expect(bablToken.connect(MULTISIG).transfer(signer2.address, value)).to.be.revertedWith('BAB#062');
 
       // It should work if from/to is the TimeLockRegistry
-      await expect(bablToken.connect(owner).transfer(timeLockRegistry.address, value)).not.to.be.reverted;
+      await expect(bablToken.connect(MULTISIG).transfer(timeLockRegistry.address, value)).not.to.be.reverted;
     });
 
     it('can"t transfer to zero address', async function () {
@@ -79,7 +82,7 @@ describe('BABLToken contract', function () {
     it('Should transfer tokens to TimeLockRegistry without the boolean activated', async function () {
       const value = ethers.utils.parseEther('1000');
 
-      await expect(bablToken.connect(owner).transfer(timeLockRegistry.address, value)).not.to.be.reverted;
+      await expect(bablToken.connect(MULTISIG).transfer(timeLockRegistry.address, value)).not.to.be.reverted;
 
       const timeLockRegistryBalance = await bablToken.balanceOf(timeLockRegistry.address);
 
@@ -90,17 +93,17 @@ describe('BABLToken contract', function () {
       // Enable BABL token transfers
       await bablToken.connect(owner).enableTokensTransfers();
       const value = ethers.utils.parseEther('100');
-      await bablToken.connect(owner).transfer(signer1.address, value);
+      await bablToken.connect(MULTISIG).transfer(signer1.address, value);
       const signer1Balance = await bablToken.balanceOf(signer1.address);
       expect(signer1Balance).to.equal(ethers.utils.parseEther('100'));
     });
 
-    it('can NOT disabled BABL transfers after enabling them', async function () {
+    it('can NOT disable BABL transfers after enabling them', async function () {
       await bablToken.connect(owner).enableTokensTransfers();
       await expect(bablToken.connect(owner).disableTokensTransfers()).to.be.revertedWith('BABL must flow');
 
       const value = ethers.utils.parseEther('1000');
-      await bablToken.connect(owner).transfer(signer1.address, value);
+      await bablToken.connect(MULTISIG).transfer(signer1.address, value);
       const signer1Balance = await bablToken.balanceOf(signer1.address);
       expect(signer1Balance).to.equal(ethers.utils.parseEther('1000'));
     });
@@ -109,7 +112,7 @@ describe('BABLToken contract', function () {
       // Enable BABL token transfers
       await bablToken.connect(owner).enableTokensTransfers();
       const value = ethers.utils.parseEther('1000');
-      await bablToken.connect(owner).transfer(signer1.address, value);
+      await bablToken.connect(MULTISIG).transfer(signer1.address, value);
 
       const addr1Balance = await bablToken.balanceOf(signer1.address);
       expect(addr1Balance).to.equal(value);
@@ -135,18 +138,18 @@ describe('BABLToken contract', function () {
     });
 
     it('Should update balances after transfers', async function () {
-      const initialOwnerBalance = await bablToken.balanceOf(owner.address);
+      const initialOwnerBalance = await bablToken.balanceOf(MULTISIG.address);
       const value = ethers.utils.parseEther('1000');
 
       // Enable BABL token transfers
       await bablToken.connect(owner).enableTokensTransfers();
-      await bablToken.connect(owner).transfer(signer1.address, value);
+      await bablToken.connect(MULTISIG).transfer(signer1.address, value);
       const value2 = ethers.utils.parseEther('2000');
-      await bablToken.connect(owner).transfer(signer2.address, value2);
+      await bablToken.connect(MULTISIG).transfer(signer2.address, value2);
 
       // Check balances.
       const totalsent = ethers.utils.parseEther('3000');
-      const finalOwnerBalance = await bablToken.balanceOf(owner.address);
+      const finalOwnerBalance = await bablToken.balanceOf(MULTISIG.address);
       const differenceBalance = BigInt(initialOwnerBalance) - BigInt(totalsent);
       expect(finalOwnerBalance).to.equal(differenceBalance);
 
@@ -175,7 +178,7 @@ describe('BABLToken contract', function () {
       ).to.be.revertedWith('TimeLockedToken::increaseAllowance:Not enough unlocked tokens');
     });
     it('Should fail if trying to increase allowance to an address above the unlocked balance in small chunks', async function () {
-      await timeLockRegistry.connect(owner).register(signer1.address, ethers.utils.parseEther('10'), false, now);
+      await timeLockRegistry.connect(MULTISIG).register(signer1.address, ethers.utils.parseEther('10'), false, now);
       await bablToken.connect(signer1).claimMyTokens();
       await increaseTime(ONE_DAY_IN_SECONDS * 366);
       await expect(
@@ -190,19 +193,19 @@ describe('BABLToken contract', function () {
 
     it('Should fail if trying to increase allowance to the zero address', async function () {
       await expect(
-        bablToken.connect(owner).increaseAllowance(ADDRESS_ZERO, ethers.utils.parseEther('16000')),
+        bablToken.connect(MULTISIG).increaseAllowance(ADDRESS_ZERO, ethers.utils.parseEther('16000')),
       ).to.be.revertedWith('TimeLockedToken::increaseAllowance:Spender cannot be zero address');
     });
 
     it('Should fail if trying to increase allowance to itself', async function () {
       await expect(
-        bablToken.connect(owner).increaseAllowance(owner.address, ethers.utils.parseEther('16000')),
+        bablToken.connect(MULTISIG).increaseAllowance(MULTISIG.address, ethers.utils.parseEther('16000')),
       ).to.be.revertedWith('TimeLockedToken::increaseAllowance:Spender cannot be the msg.sender');
     });
 
     it('Should increase allowance properly', async function () {
-      await bablToken.connect(owner).increaseAllowance(signer1.address, ethers.utils.parseEther('16000'));
-      const allowSigner1 = await bablToken.allowance(owner.address, signer1.address);
+      await bablToken.connect(MULTISIG).increaseAllowance(signer1.address, ethers.utils.parseEther('16000'));
+      const allowSigner1 = await bablToken.allowance(MULTISIG.address, signer1.address);
       expect(allowSigner1).to.equal(ethers.utils.parseEther('16000'));
     });
 
@@ -213,16 +216,16 @@ describe('BABLToken contract', function () {
     });
 
     it('Should fail if trying to decrease allowance below 0 (underflow condition)', async function () {
-      await bablToken.connect(owner).increaseAllowance(signer1.address, ethers.utils.parseEther('16000'));
+      await bablToken.connect(MULTISIG).increaseAllowance(signer1.address, ethers.utils.parseEther('16000'));
       await expect(
-        bablToken.connect(owner).decreaseAllowance(signer1.address, ethers.utils.parseEther('305001')),
+        bablToken.connect(MULTISIG).decreaseAllowance(signer1.address, ethers.utils.parseEther('305001')),
       ).to.be.revertedWith('TimeLockedToken::decreaseAllowance:Underflow condition');
     });
 
     it('Should fail if trying to decrease allowance to itself', async function () {
-      await bablToken.connect(owner).increaseAllowance(signer1.address, ethers.utils.parseEther('16000'));
+      await bablToken.connect(MULTISIG).increaseAllowance(signer1.address, ethers.utils.parseEther('16000'));
       await expect(
-        bablToken.connect(owner).connect(signer1).decreaseAllowance(signer1.address, ethers.utils.parseEther('16000')),
+        bablToken.connect(signer1).decreaseAllowance(signer1.address, ethers.utils.parseEther('16000')),
       ).to.be.revertedWith('TimeLockedToken::decreaseAllowance:Spender cannot be the msg.sender');
     });
 
@@ -234,11 +237,11 @@ describe('BABLToken contract', function () {
     });
 
     it('Should properly decrease allowance to an address allowed earlier which is not timelockregistry', async function () {
-      await bablToken.connect(owner).increaseAllowance(signer1.address, ethers.utils.parseEther('16000'));
-      const allowSigner1 = await bablToken.allowance(owner.address, signer1.address);
+      await bablToken.connect(MULTISIG).increaseAllowance(signer1.address, ethers.utils.parseEther('16000'));
+      const allowSigner1 = await bablToken.allowance(MULTISIG.address, signer1.address);
       expect(allowSigner1).to.equal(ethers.utils.parseEther('16000'));
-      await bablToken.connect(owner).decreaseAllowance(signer1.address, ethers.utils.parseEther('16000'));
-      const allowSigner2 = await bablToken.allowance(owner.address, signer1.address);
+      await bablToken.connect(MULTISIG).decreaseAllowance(signer1.address, ethers.utils.parseEther('16000'));
+      const allowSigner2 = await bablToken.allowance(MULTISIG.address, signer1.address);
       expect(allowSigner2).to.equal(ethers.utils.parseEther('0'));
     });
 
@@ -261,7 +264,7 @@ describe('BABLToken contract', function () {
     });
 
     it('Should fail a transfer without enough unlocked balance', async function () {
-      await timeLockRegistry.connect(owner).register(signer1.address, ethers.utils.parseEther('26000'), true, now);
+      await timeLockRegistry.connect(MULTISIG).register(signer1.address, ethers.utils.parseEther('26000'), true, now);
       await bablToken.connect(signer1).claimMyTokens();
       await expect(
         bablToken.connect(signer1).transfer(signer2.address, ethers.utils.parseEther('1000')),
@@ -274,7 +277,7 @@ describe('BABLToken contract', function () {
       // Enable BABL token transfers
       await bablToken.connect(owner).enableTokensTransfers();
 
-      await bablToken.connect(owner).transfer(signer1.address, ethers.utils.parseEther('16000'));
+      await bablToken.connect(MULTISIG).transfer(signer1.address, ethers.utils.parseEther('16000'));
 
       await bablToken.connect(signer1).delegate(signer1.address); // Own delegation
 
@@ -291,7 +294,7 @@ describe('BABLToken contract', function () {
       //
       // Enable BABL token transfers
       await bablToken.connect(owner).enableTokensTransfers();
-      await bablToken.connect(owner).transfer(signer1.address, ethers.utils.parseEther('16000'));
+      await bablToken.connect(MULTISIG).transfer(signer1.address, ethers.utils.parseEther('16000'));
 
       const signer1Balance = await bablToken.balanceOf(signer1.address);
       const votesSigner1 = await bablToken.getCurrentVotes(signer1.address);
@@ -314,48 +317,50 @@ describe('BABLToken contract', function () {
     it('Should fail as Time Lock Registry cannot registry the zero address', async function () {
       // Try to register a zero address
       await expect(
-        timeLockRegistry.connect(owner).register(ADDRESS_ZERO, ethers.utils.parseEther('26000'), true, now),
+        timeLockRegistry.connect(MULTISIG).register(ADDRESS_ZERO, ethers.utils.parseEther('26000'), true, now),
       ).to.be.revertedWith('TimeLockRegistry::register: cannot register the zero address');
     });
     it('Should get 0 lockedAmount for a non vested user', async function () {
       // Enable BABL token transfers
       await bablToken.connect(owner).enableTokensTransfers();
-      await bablToken.connect(owner).transfer(signer2.address, ethers.utils.parseEther('1'));
+      await bablToken.connect(MULTISIG).transfer(signer2.address, ethers.utils.parseEther('1'));
       await expect((await bablToken.viewLockedBalance(signer2.address)).toString()).to.be.equal('0');
       await expect((await bablToken.balanceOf(signer2.address)).toString()).to.equal(ethers.utils.parseEther('1'));
     });
     it('Should fail as Time Lock Registry contract address cannot be registered itself', async function () {
       await expect(
-        timeLockRegistry.connect(owner).register(timeLockRegistry.address, ethers.utils.parseEther('26000'), true, now),
+        timeLockRegistry
+          .connect(MULTISIG)
+          .register(timeLockRegistry.address, ethers.utils.parseEther('26000'), true, now),
       ).to.be.revertedWith('TimeLockRegistry::register: Time Lock Registry contract cannot be an investor');
     });
 
     it('should fail if the distribution amount to register equals 0', async function () {
       await expect(
-        timeLockRegistry.connect(owner).register(signer1.address, ethers.utils.parseEther('0'), true, now),
+        timeLockRegistry.connect(MULTISIG).register(signer1.address, ethers.utils.parseEther('0'), true, now),
       ).to.be.revertedWith('TimeLockRegistry::register: Distribution = 0');
     });
 
     it('should fail if the account is already registered', async function () {
       const registeredDistribution = await timeLockRegistry.checkRegisteredDistribution(signer1.address);
       expect(registeredDistribution.toString()).to.equal(ethers.utils.parseEther('0'));
-      await timeLockRegistry.connect(owner).register(signer1.address, ethers.utils.parseEther('26000'), true, now);
+      await timeLockRegistry.connect(MULTISIG).register(signer1.address, ethers.utils.parseEther('26000'), true, now);
 
       await expect(
-        timeLockRegistry.connect(owner).register(signer1.address, ethers.utils.parseEther('26000'), true, now),
+        timeLockRegistry.connect(MULTISIG).register(signer1.address, ethers.utils.parseEther('26000'), true, now),
       ).to.be.revertedWith('TimeLockRegistry::register:Distribution for this address is already registered');
     });
 
     it('should fail if the transfer fails', async function () {
-      await timeLockRegistry.connect(owner).register(signer1.address, ethers.utils.parseEther('26000'), true, now);
+      await timeLockRegistry.connect(MULTISIG).register(signer1.address, ethers.utils.parseEther('26000'), true, now);
 
       await expect(
-        timeLockRegistry.connect(owner).register(signer1.address, ethers.utils.parseEther('1000001'), true, now),
+        timeLockRegistry.connect(MULTISIG).register(signer1.address, ethers.utils.parseEther('1000001'), true, now),
       ).to.be.revertedWith('TimeLockRegistry::register:Distribution for this address is already registered');
     });
 
     it('Should fail when trying to cancel a registration that is not registered', async function () {
-      await expect(timeLockRegistry.connect(owner).cancelRegistration(signer2.address)).to.be.revertedWith(
+      await expect(timeLockRegistry.connect(MULTISIG).cancelRegistration(signer2.address)).to.be.revertedWith(
         'Not registered',
       );
     });
@@ -363,10 +368,10 @@ describe('BABLToken contract', function () {
     it('Should cancel a registration of an Advisor before tokens are claimed', async function () {
       // Register 1 Advisor with 2_000 BABL 4Y of Vesting
       // Vesting starting date 1 March 2021 9h PST Unix Time 1614618000
-      await timeLockRegistry.connect(owner).register(signer2.address, ethers.utils.parseEther('2000'), true, now);
+      await timeLockRegistry.connect(MULTISIG).register(signer2.address, ethers.utils.parseEther('2000'), true, now);
 
       // Cancel the registration of above registered Advisor before the claim is done
-      await timeLockRegistry.connect(owner).cancelRegistration(signer2.address);
+      await timeLockRegistry.connect(MULTISIG).cancelRegistration(signer2.address);
 
       const [isTeam, vestingBegins, vestingEnds] = await timeLockRegistry.connect(owner).checkVesting(signer1.address);
 
@@ -376,14 +381,14 @@ describe('BABLToken contract', function () {
     });
 
     it('Time Lock Registry should properly register 1 Team Member, 1 Advisor and 1 Investor with its own vesting conditions', async function () {
-      await timeLockRegistry.connect(owner).register(signer1.address, ethers.utils.parseEther('16000'), true, now);
+      await timeLockRegistry.connect(MULTISIG).register(signer1.address, ethers.utils.parseEther('16000'), true, now);
 
       let [isTeam, vestingBegins, vestingEnds] = await timeLockRegistry.connect(owner).checkVesting(signer1.address);
 
       expect(isTeam).to.equal(true);
       expect(vestingBegins).to.equal(now);
       expect(vestingEnds).to.equal(now + ONE_DAY_IN_SECONDS * 365 * 4);
-      await timeLockRegistry.connect(owner).register(signer2.address, ethers.utils.parseEther('2000'), true, now);
+      await timeLockRegistry.connect(MULTISIG).register(signer2.address, ethers.utils.parseEther('2000'), true, now);
 
       [isTeam, vestingBegins, vestingEnds] = await timeLockRegistry.checkVesting(signer2.address);
 
@@ -391,7 +396,7 @@ describe('BABLToken contract', function () {
       expect(vestingBegins).to.equal(now);
       expect(vestingEnds).to.equal(now + ONE_DAY_IN_SECONDS * 365 * 4);
 
-      await timeLockRegistry.connect(owner).register(signer3.address, ethers.utils.parseEther('10000'), false, now);
+      await timeLockRegistry.connect(MULTISIG).register(signer3.address, ethers.utils.parseEther('10000'), false, now);
 
       [isTeam, vestingBegins, vestingEnds] = await timeLockRegistry.checkVesting(signer3.address);
 
@@ -401,7 +406,7 @@ describe('BABLToken contract', function () {
     });
 
     it('Should cancel all delivered tokens after a Team Member left', async function () {
-      await timeLockRegistry.connect(owner).register(signer1.address, ethers.utils.parseEther('1000'), true, now);
+      await timeLockRegistry.connect(MULTISIG).register(signer1.address, ethers.utils.parseEther('1000'), true, now);
 
       // Tokens are claimed by the Team Member and the registration is deleted in Time Lock Registry
       await bablToken.connect(signer1).claimMyTokens();
@@ -413,14 +418,14 @@ describe('BABLToken contract', function () {
       expect(userSigner1LockedBalance).to.equal(ethers.utils.parseEther('1000'));
 
       // Cancel the registration of above registered Team Member
-      await timeLockRegistry.connect(owner).cancelDeliveredTokens(signer1.address);
+      await timeLockRegistry.connect(MULTISIG).cancelDeliveredTokens(signer1.address);
 
       expect(await bablToken.balanceOf(timeLockRegistry.address)).to.equal(REGISTRY_BALANCE);
       expect(await bablToken.balanceOf(signer1.address)).to.equal(0);
     });
 
     it('Should fail trying to cancel delivered tokens to an investor', async function () {
-      await timeLockRegistry.connect(owner).register(signer1.address, ethers.utils.parseEther('26000'), false, now);
+      await timeLockRegistry.connect(MULTISIG).register(signer1.address, ethers.utils.parseEther('26000'), false, now);
 
       // Tokens are claimed by the Team Member and the registration is deleted in Time Lock Registry
       await bablToken.connect(signer1).claimMyTokens();
@@ -432,13 +437,13 @@ describe('BABLToken contract', function () {
       expect(userSigner1LockedBalance).to.equal(ethers.utils.parseEther('26000'));
 
       // Try to cancel the registration of above registered Investor
-      await expect(timeLockRegistry.connect(owner).cancelDeliveredTokens(signer1.address)).to.be.revertedWith(
+      await expect(timeLockRegistry.connect(MULTISIG).cancelDeliveredTokens(signer1.address)).to.be.revertedWith(
         'TimeLockedToken::cancelTokens:cannot cancel locked tokens to Investors',
       );
     });
 
     it('Should fail if a cancel on delivered tokens is from the owner', async function () {
-      await timeLockRegistry.connect(owner).register(signer1.address, ethers.utils.parseEther('26000'), true, now);
+      await timeLockRegistry.connect(MULTISIG).register(signer1.address, ethers.utils.parseEther('26000'), true, now);
 
       // Tokens are claimed by the Team Member and the registration is deleted in Time Lock Registry
       await bablToken.connect(signer1).claimMyTokens();
@@ -450,14 +455,14 @@ describe('BABLToken contract', function () {
       expect(userSigner1LockedBalance).to.equal(ethers.utils.parseEther('26000'));
 
       // Cancel the registration of above registered Team Member
-      await expect(bablToken.cancelVestedTokens(signer1.address)).to.be.revertedWith(
+      await expect(bablToken.connect(MULTISIG).cancelVestedTokens(signer1.address)).to.be.revertedWith(
         'TimeLockedToken:: onlyTimeLockRegistry: can only be executed by TimeLockRegistry',
       );
     });
 
     it('Should fail if a cancel on delivered tokens is from a malicious address', async function () {
       // Register 1 Team Member with 26_000 BABL 4Y of Vesting
-      await timeLockRegistry.connect(owner).register(signer1.address, ethers.utils.parseEther('26000'), true, now);
+      await timeLockRegistry.connect(MULTISIG).register(signer1.address, ethers.utils.parseEther('26000'), true, now);
 
       // Tokens are claimed by the Team Member and the registration is deleted in Time Lock Registry
       await bablToken.connect(signer1).claimMyTokens();

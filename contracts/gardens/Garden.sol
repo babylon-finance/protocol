@@ -386,6 +386,20 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         _withdrawInternal(_amountIn, _minAmountOut, _to, _withPenalty, _unwindStrategy, pricePerShare);
     }
 
+    /**
+     * @notice
+     *   Exchanges user's gardens shairs for amount in reserve asset. This
+     *   method allows users to leave garden and reclaim their inital investment
+     *   plus profits or losses.
+     * @dev
+     *   Should be called instead of the `withdraw` to save gas due to
+     *   pricePerShare caculated off-chain. Doesn't allow to unwind strategies
+     *   contrary to `withdraw`.
+     * @param _amountIn       Quantity of the garden tokens to withdraw.
+     * @param _minAmountOut   Min quantity of reserve asset to receive.
+     * @param _nonce          Current nonce to prevent replay attacks.
+     * @param _pricePerShare  Price per share of the garden calculated off-chain by Keeper.
+     */
     function withdrawBySig(
         uint256 _amountIn,
         uint256 _minAmountOut,
@@ -472,9 +486,9 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
      * @param _keeper  Keeper that executed the transaction
      * @param _fee     The fee paid to keeper to compensate the gas cost
      */
-    function payKeeper(address payable _keeper, uint256 _fee) external override {
+    function payKeeper(address payable _keeper, uint256 _fee) public override {
         _onlyUnpaused();
-        _onlyStrategy();
+        _require(msg.sender == address(this) || strategyMapping[msg.sender], Errors.ONLY_STRATEGY);
         _require(IBabController(controller).isValidKeeper(_keeper), Errors.ONLY_KEEPER);
 
         if (reserveAsset == WETH) {

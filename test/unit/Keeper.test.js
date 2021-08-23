@@ -2,6 +2,7 @@ const { expect } = require('chai');
 const { ethers } = require('hardhat');
 const addresses = require('lib/addresses');
 const { ONE_DAY_IN_SECONDS, STRATEGY_EXECUTE_MAP } = require('lib/constants.js');
+const { fund } = require('lib/whale');
 const { increaseTime, from, eth } = require('utils/test-helpers');
 const { createGarden } = require('fixtures/GardenHelper');
 
@@ -13,9 +14,11 @@ describe('Keeper', function () {
   let keeper;
   let signer1;
   let signer2;
+  let signer3;
 
   beforeEach(async () => {
-    ({ keeper, signer1, signer2 } = await setupTests({ fund: true })());
+    ({ keeper, signer1, signer2, signer3 } = await setupTests()());
+    await fund([signer1.address, signer2.address, signer3.address]);
   });
 
   describe('totalKeeperFees', function () {

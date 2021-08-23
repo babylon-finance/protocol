@@ -22,6 +22,7 @@ describe('BabController', function () {
   let rewardsDistributor;
   let strategy11;
   let owner;
+  let MULTISIG;
 
   async function createStrategies(strategies) {
     const retVal = [];
@@ -65,6 +66,8 @@ describe('BabController', function () {
       uniswapV3TradeIntegration,
       rewardsDistributor,
     } = await setupTests()());
+    const signers = await ethers.getSigners();
+    MULTISIG = signers[2];
   });
 
   describe('Deployment', function () {
@@ -396,13 +399,13 @@ describe('BabController', function () {
       await babController.connect(owner).setPauseGuardian(signer1.address);
       await babController.connect(signer1).setSomePause([bablToken.address], true);
       await expect(
-        bablToken.connect(owner).transfer(signer1.address, ethers.utils.parseEther('1000'), {
+        bablToken.connect(MULTISIG).transfer(signer1.address, ethers.utils.parseEther('1000'), {
           gasPrice: 0,
         }),
       ).to.be.revertedWith('BAB#083');
       await babController.connect(owner).setSomePause([bablToken.address], false);
       await expect(
-        bablToken.connect(owner).transfer(signer1.address, ethers.utils.parseEther('10'), {
+        bablToken.connect(MULTISIG).transfer(signer1.address, ethers.utils.parseEther('10'), {
           gasPrice: 0,
         }),
       ).to.not.be.reverted;

@@ -9,6 +9,7 @@ const { setupTests } = require('fixtures/GardenFixture');
 
 describe('Upgrades', function () {
   let upgradesDeployer;
+  let deployer;
   let owner;
   let signer1;
   let signer2;
@@ -19,139 +20,12 @@ describe('Upgrades', function () {
   let babController;
   let uniswapV3TradeIntegration;
 
-  async function upgradeFixture() {
-    const { deploy } = deployments;
-    const { deployer } = await getNamedAccounts();
-    const signer = await getSigner(deployer);
-    const gasPrice = await getRapid();
-
-    const contract1 = 'UniswapPoolIntegration';
-    const contract2 = 'SushiswapPoolIntegration';
-    const contract3 = 'OneInchPoolIntegration';
-    const contract4 = 'BuyOperation';
-    const contract5 = 'AddLiquidityOperation';
-    const contract6 = 'DepositVaultOperation';
-    const contract7 = 'BorrowOperation';
-    const contract8 = 'LendOperation';
-
-    const controller = await deployments.get('BabControllerProxy');
-    const controllerContract = await ethers.getContractAt('BabController', controller.address, signer);
-
-    const deploymentUni = await deploy(contract1, {
-      from: deployer,
-      args: [controller.address, addresses.uniswap.router],
-      log: true,
-      gasPrice,
-    });
-
-    const deploymentSushi = await deploy(contract2, {
-      from: deployer,
-      args: [controller.address, addresses.sushiswap.router],
-      log: true,
-      gasPrice,
-    });
-
-    const deploymentInch = await deploy(contract3, {
-      from: deployer,
-      args: [controller.address, addresses.oneinch.factory],
-      log: true,
-      gasPrice,
-    });
-
-    const deploymentBuyOp = await deploy(contract4, {
-      from: deployer,
-      args: ['buy', controller.address],
-      log: true,
-      gasPrice,
-    });
-
-    const deploymentAddOp = await deploy(contract5, {
-      from: deployer,
-      args: ['lp', controller.address],
-      log: true,
-      gasPrice,
-    });
-
-    const deploymentVaultOp = await deploy(contract6, {
-      from: deployer,
-      args: ['vault', controller.address],
-      log: true,
-      gasPrice,
-    });
-
-    const deploymentBorrowOp = await deploy(contract7, {
-      from: deployer,
-      args: ['borrow', controller.address],
-      log: true,
-      gasPrice,
-    });
-
-    const deploymentLendOp = await deploy(contract8, {
-      from: deployer,
-      args: ['lend', controller.address],
-      log: true,
-      gasPrice,
-    });
-
-    if (
-      deploymentUni.newlyDeployed &&
-      deploymentSushi.newlyDeployed &&
-      deploymentInch.newlyDeployed &&
-      deploymentBuyOp.newlyDeployed &&
-      deploymentAddOp.newlyDeployed &&
-      deploymentVaultOp.newlyDeployed &&
-      deploymentBorrowOp.newlyDeployed &&
-      deploymentLendOp.newlyDeployed
-    ) {
-      await (
-        await controllerContract.addIntegration(
-          await (await ethers.getContractAt(contract1, deploymentUni.address)).getName(),
-          deploymentUni.address,
-          { gasPrice },
-        )
-      ).wait();
-      await (
-        await controllerContract.addIntegration(
-          await (await ethers.getContractAt(contract2, deploymentSushi.address)).getName(),
-          deploymentSushi.address,
-          { gasPrice },
-        )
-      ).wait();
-      await (
-        await controllerContract.addIntegration(
-          await (await ethers.getContractAt(contract3, deploymentInch.address)).getName(),
-          deploymentInch.address,
-          { gasPrice },
-        )
-      ).wait();
-
-      await (await controllerContract.setOperation(0, deploymentBuyOp.address, { gasPrice })).wait();
-      await (await controllerContract.setOperation(1, deploymentAddOp.address, { gasPrice })).wait();
-      await (await controllerContract.setOperation(2, deploymentVaultOp.address, { gasPrice })).wait();
-      await (await controllerContract.setOperation(4, deploymentBorrowOp.address, { gasPrice })).wait();
-      await (await controllerContract.setOperation(3, deploymentLendOp.address, { gasPrice })).wait();
-    }
-
-    const deployment = await deployments.get('StrategyBeacon');
-    const beacon = new ethers.Contract(deployment.address, deployment.abi);
-
-    const newImpl = await deploy('Strategy', {
-      from: owner.address,
-      args: [],
-      log: true,
-    });
-
-    await beacon.connect(owner).upgradeTo(newImpl.address);
-    const mainnetKeeper = await impersonateAddress('0x74D206186B84d4c2dAFeBD9Fd230878EC161d5B8');
-    await increaseTime(ONE_DAY_IN_SECONDS * 120);
-    return mainnetKeeper;
-  }
-
   beforeEach(async () => {
     ({
       babController,
       garden1,
       strategy11,
+      deployer,
       owner,
       signer1,
       signer2,
@@ -176,7 +50,7 @@ describe('Upgrades', function () {
       const beacon = new ethers.Contract(deployment.address, deployment.abi);
 
       const v2 = await deploy('StrategyV2Mock', {
-        from: owner.address,
+        from: deployer.address,
         args: [],
         log: true,
       });
@@ -186,9 +60,9 @@ describe('Upgrades', function () {
       // check that old strategies have changed
       const existingStrategy = new ethers.Contract(strategy11, v2.abi);
 
-      expect(await existingStrategy.connect(owner).newMethod()).to.eq('foobar');
-      expect(await existingStrategy.connect(owner).newVar()).to.eq('0');
-      expect(await existingStrategy.connect(owner).duration()).to.eq('65536');
+      expect(await existingStrategy.connect(deployer).newMethod()).to.eq('foobar');
+      expect(await existingStrategy.connect(deployer).newVar()).to.eq('0');
+      expect(await existingStrategy.connect(deployer).duration()).to.eq('65536');
 
       // check that new strategies have changed
       let freshStrategy = await createStrategy(
@@ -200,9 +74,9 @@ describe('Upgrades', function () {
       );
 
       freshStrategy = new ethers.Contract(freshStrategy.address, v2.abi);
-      expect(await freshStrategy.connect(owner).newMethod()).to.eq('foobar');
-      expect(await freshStrategy.connect(owner).newVar()).to.eq('42');
-      expect(await freshStrategy.connect(owner).duration()).to.eq('0');
+      expect(await freshStrategy.connect(deployer).newMethod()).to.eq('foobar');
+      expect(await freshStrategy.connect(deployer).newVar()).to.eq('42');
+      expect(await freshStrategy.connect(deployer).duration()).to.eq('0');
     });
   });
 
@@ -219,7 +93,7 @@ describe('Upgrades', function () {
       const beacon = new ethers.Contract(deployment.address, deployment.abi);
 
       const v2 = await deploy('GardenV2Mock', {
-        from: owner.address,
+        from: deployer.address,
         args: [],
         log: true,
       });
@@ -228,9 +102,9 @@ describe('Upgrades', function () {
 
       // check that old strategies have changed
       const garden = new ethers.Contract(garden1.address, v2.abi);
-      expect(await garden.connect(owner).newMethod()).to.eq('foobar');
-      expect(await garden.connect(owner).newVar()).to.eq('0');
-      expect(await garden.connect(owner).name()).to.eq('Absolute ETH Return [beta]');
+      expect(await garden.connect(deployer).newMethod()).to.eq('foobar');
+      expect(await garden.connect(deployer).newVar()).to.eq('0');
+      expect(await garden.connect(deployer).name()).to.eq('Absolute ETH Return [beta]');
 
       // check that new strategies have changed
       await babController
@@ -250,13 +124,13 @@ describe('Upgrades', function () {
           },
         );
 
-      const gardens = await babController.connect(owner).getGardens();
+      const gardens = await babController.connect(deployer).getGardens();
 
       const freshGarden = new ethers.Contract(gardens[4], v2.abi);
 
-      expect(await freshGarden.connect(owner).newMethod()).to.eq('foobar');
-      expect(await freshGarden.connect(owner).newVar()).to.eq('42');
-      expect(await freshGarden.connect(owner).name()).to.eq('');
+      expect(await freshGarden.connect(deployer).newMethod()).to.eq('foobar');
+      expect(await freshGarden.connect(deployer).newVar()).to.eq('42');
+      expect(await freshGarden.connect(deployer).name()).to.eq('');
     });
   });
 

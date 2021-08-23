@@ -72,7 +72,10 @@ describe('LidoIntegrationTest', function () {
             });
 
             expect(await targetContract.balanceOf(strategyContract.address)).to.equal(0);
-            const reserveContract = await ethers.getContractAt('ERC20', token);
+            const reserveContract = await ethers.getContractAt(
+              '@openzeppelin/contracts/token/ERC20/ERC20.sol:ERC20',
+              token,
+            );
             const amount = STRATEGY_EXECUTE_MAP[token];
             await executeStrategy(strategyContract, { amount });
             // Check NAV

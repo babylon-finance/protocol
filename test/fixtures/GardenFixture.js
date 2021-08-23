@@ -2,16 +2,17 @@ const { deployments } = require('hardhat');
 const { GARDEN_PARAMS } = require('../../lib/constants.js');
 const addresses = require('../../lib/addresses');
 const { impersonateAddress } = require('../../lib/rpc');
+const { fund } = require('../../lib/whale');
 const { createStrategy } = require('./StrategyHelper.js');
 const { getContract, from, eth } = require('../utils/test-helpers');
 
 async function setUpFixture(
   { upgradesDeployer, deployments, getNamedAccounts, ethers },
   options,
-  { gardenParams = GARDEN_PARAMS, fund },
+  { gardenParams = GARDEN_PARAMS },
 ) {
   const signers = await ethers.getSigners();
-  const [deployer, keeper, owner, signer1, signer2, signer3] = signers;
+  const [deployer, keeper, , signer1, signer2, signer3] = signers;
 
   await deployments.fixture();
 
@@ -26,6 +27,8 @@ async function setUpFixture(
   const strategyNFT = await getContract('StrategyNFT');
   const rewardsDistributor = await getContract('RewardsDistributor', 'RewardsDistributorProxy');
   const babViewer = await getContract('BabylonViewer');
+  const timelockController = await getContract('TimelockController');
+  const babGovernor = await getContract('BabylonGovernor');
 
   const uniswapV3TradeIntegration = await getContract('UniswapV3TradeIntegration');
   const balancerIntegration = await getContract('BalancerIntegration');
@@ -61,6 +64,9 @@ async function setUpFixture(
     addresses.tokens.WBTC,
   );
 
+  const owner = await impersonateAddress(timelockController.address);
+  await fund([owner.address], { tokens: [addresses.tokens.ETH] });
+
   const TOKEN_MAP = {
     [addresses.tokens.WETH]: weth,
     [addresses.tokens.DAI]: dai,
@@ -69,7 +75,6 @@ async function setUpFixture(
   };
 
   // Gives signer1 creator permissions
-  await ishtarGate.connect(owner).setCreatorPermissions(owner.address, true, { gasPrice: 0 });
   await ishtarGate.connect(owner).setCreatorPermissions(signer1.address, true, { gasPrice: 0 });
   await babController
     .connect(signer1)
@@ -152,14 +157,9 @@ async function setUpFixture(
   for (let i = 0; i < gardens.length; i += 1) {
     await ishtarGate
       .connect(signer1)
-      .grantGardenAccessBatch(
-        gardens[i],
-        [owner.address, signer1.address, signer2.address, signer3.address],
-        [3, 3, 3, 3],
-        {
-          gasPrice: 0,
-        },
-      );
+      .grantGardenAccessBatch(gardens[i], [signer1.address, signer2.address, signer3.address], [3, 3, 3], {
+        gasPrice: 0,
+      });
   }
   console.log('create strategies');
 
@@ -186,26 +186,6 @@ async function setUpFixture(
   const wethWhaleSigner = await impersonateAddress('0xC8dDA504356195ba5344E5a9826Ce07DfEaA97b6');
   const wbtcWhaleSigner = await impersonateAddress('0x9ff58f4ffb29fa2266ab25e75e2a8b3503311656');
 
-  if (fund) {
-    for (const signer of signers.slice(3, 10)) {
-      await dai.connect(daiWhaleSigner).transfer(signer.address, eth(1e6), {
-        gasPrice: 0,
-      });
-
-      await usdc.connect(usdcWhaleSigner).transfer(signer.address, from(1e6 * 1e6), {
-        gasPrice: 0,
-      });
-
-      await weth.connect(wethWhaleSigner).transfer(signer.address, eth(100), {
-        gasPrice: 0,
-      });
-
-      await wbtc.connect(wbtcWhaleSigner).transfer(signer.address, from(10e8), {
-        gasPrice: 0,
-      });
-    }
-  }
-
   return {
     babController,
     bablToken,
@@ -226,6 +206,8 @@ async function setUpFixture(
     aaveBorrowIntegration,
     lidoIntegration,
     babViewer,
+    timelockController,
+    babGovernor,
 
     garden1,
     garden2,

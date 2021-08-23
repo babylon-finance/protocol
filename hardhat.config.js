@@ -112,7 +112,30 @@ module.exports = {
           },
         },
       },
+      {
+        version: '0.8.2',
+        settings: {
+          optimizer: {
+            enabled: OPTIMIZER,
+            runs: 999,
+          },
+        },
+      },
     ],
+    overrides: {
+      '@uniswap/v3-core/contracts/libraries/FullMath.sol': {
+        version: '0.7.6',
+        settings: {},
+      },
+      '@uniswap/v3-core/contracts/libraries/TickMath.sol': {
+        version: '0.7.6',
+        settings: {},
+      },
+      '@uniswap/v3-periphery/contracts/libraries/PoolAddress.sol': {
+        version: '0.7.6',
+        settings: {},
+      },
+    },
   },
   etherscan: {
     apiKey: 'JA61NTCWBMPN56AT7TFQ3IMPHH2M2NHSJJ',
