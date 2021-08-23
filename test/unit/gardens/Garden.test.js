@@ -982,7 +982,6 @@ describe('Garden', function () {
         gasPrice: 0,
       });
 
-
       await garden.connect(signer3).deposit(amountIn, minAmountOut, signer3.getAddress(), false);
 
       amountIn = eth(1000);

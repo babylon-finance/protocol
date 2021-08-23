@@ -352,7 +352,9 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         _require(_fee <= _maxFee, Errors.FEE_TOO_HIGH);
 
         bytes32 hash =
-            keccak256(abi.encode(DEPOSIT_BY_SIG_TYPEHASH, address(this), _amountIn, _minAmountOut, _mintNft, _nonce, _maxFee))
+            keccak256(
+                abi.encode(DEPOSIT_BY_SIG_TYPEHASH, address(this), _amountIn, _minAmountOut, _mintNft, _nonce, _maxFee)
+            )
                 .toEthSignedMessageHash();
         address signer = ECDSA.recover(hash, v, r, s);
 
@@ -363,10 +365,18 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
 
         // If a Keeper fee is greater than zero then reduce user shares to
         // exchange and pay keeper the fee.
-        if(_fee > 0) {
+        if (_fee > 0) {
             // account for non 18 decimals ERC20 tokens, e.g. USDC
-            uint256 feeShares = _fee.preciseDiv(10**ERC20Upgradeable(reserveAsset).decimals()).preciseDiv(_pricePerShare);
-            _internalDeposit(_amountIn.sub(_fee), _minAmountOut.sub(feeShares), signer, signer, _mintNft, _pricePerShare);
+            uint256 feeShares =
+                _fee.preciseDiv(10**ERC20Upgradeable(reserveAsset).decimals()).preciseDiv(_pricePerShare);
+            _internalDeposit(
+                _amountIn.sub(_fee),
+                _minAmountOut.sub(feeShares),
+                signer,
+                signer,
+                _mintNft,
+                _pricePerShare
+            );
             // pay Keeper the fee
             IERC20(reserveAsset).safeTransferFrom(signer, msg.sender, _fee);
         } else {
@@ -444,8 +454,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         _require(_fee <= _maxFee, Errors.FEE_TOO_HIGH);
 
         bytes32 hash =
-            keccak256(abi.encode(WITHDRAW_BY_SIG_TYPEHASH, address(this),
-                                 _amountIn, _minAmountOut, _nonce, _maxFee))
+            keccak256(abi.encode(WITHDRAW_BY_SIG_TYPEHASH, address(this), _amountIn, _minAmountOut, _nonce, _maxFee))
                 .toEthSignedMessageHash();
         address signer = ECDSA.recover(hash, v, r, s);
         _require(signer != address(0), Errors.INVALID_SIGNER);
@@ -454,17 +463,24 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
 
         // If a Keeper fee is greater than zero then reduce user shares to
         // exchange and pay keeper the fee.
-        if(_fee > 0) {
+        if (_fee > 0) {
             // account for non 18 decimals ERC20
-            uint256 feeShares = _fee.preciseDiv(10**ERC20Upgradeable(reserveAsset).decimals()).preciseDiv(_pricePerShare);
-            _withdrawInternal(_amountIn.sub(feeShares), _minAmountOut.sub(_maxFee), payable(signer), false, address(0), _pricePerShare);
+            uint256 feeShares =
+                _fee.preciseDiv(10**ERC20Upgradeable(reserveAsset).decimals()).preciseDiv(_pricePerShare);
+            _withdrawInternal(
+                _amountIn.sub(feeShares),
+                _minAmountOut.sub(_maxFee),
+                payable(signer),
+                false,
+                address(0),
+                _pricePerShare
+            );
             // burn shares paid to Keeper
             _burn(signer, feeShares);
             IERC20(reserveAsset).safeTransfer(msg.sender, _fee);
         } else {
             _withdrawInternal(_amountIn, _minAmountOut, payable(signer), false, address(0), _pricePerShare);
         }
-
     }
 
     /**

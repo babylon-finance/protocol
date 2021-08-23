@@ -208,7 +208,9 @@ async function transferFunds(address) {
 
 async function getDepositSig(garden, signer, amountIn, minAmountOut, mintNft, nonce, maxFee) {
   const DEPOSIT_BY_SIG_TYPEHASH = ethers.utils.keccak256(
-    ethers.utils.toUtf8Bytes('DepositBySig(uint256 _amountIn,uint256 _minAmountOut,bool _mintNft,uint256 _nonce,uint256 _maxFee)'),
+    ethers.utils.toUtf8Bytes(
+      'DepositBySig(uint256 _amountIn,uint256 _minAmountOut,bool _mintNft,uint256 _nonce,uint256 _maxFee)',
+    ),
   );
 
   let payload = ethers.utils.defaultAbiCoder.encode(
