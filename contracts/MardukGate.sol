@@ -81,6 +81,7 @@ contract MardukGate is IBabylonGate, Ownable {
      */
     constructor(IBabController _controller, IIshtarGate _ishtarGate) {
         require(address(_controller) != address(0), 'Controller must exist');
+        require(address(_ishtarGate) != address(0), 'Ishtar Gate must exist');
         controller = _controller;
         ishtarGate = _ishtarGate;
         maxNumberOfInvites = ishtarGate.maxNumberOfInvites() > 0 ? ishtarGate.maxNumberOfInvites() : 100;

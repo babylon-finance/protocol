@@ -96,7 +96,6 @@ contract BabController is OwnableUpgradeable, IBabController {
     address public override gardenFactory;
     address public override rewardsDistributor;
     address public override ishtarGate;
-    address public override mardukGate;
     address public override strategyFactory;
     address public override gardenNFT;
     address public override strategyNFT;
@@ -162,6 +161,7 @@ contract BabController is OwnableUpgradeable, IBabController {
     address public guardian;
     mapping(address => bool) public override guardianPaused;
     bool public override guardianGlobalPaused;
+    address public override mardukGate;
 
     /* ============ Constructor ============ */
 
