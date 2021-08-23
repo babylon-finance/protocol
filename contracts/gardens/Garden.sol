@@ -226,7 +226,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
     }
 
     /**
-     * Check is msg.sender is keeper
+     * Check if msg.sender is keeper
      */
     function _onlyKeeper() private view {
         _require(IBabController(controller).isValidKeeper(msg.sender), Errors.ONLY_KEEPER);
@@ -482,6 +482,37 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
             _withdrawInternal(_amountIn, _minAmountOut, payable(signer), false, address(0), _pricePerShare);
         }
     }
+
+
+      /**
+     * User can claim the rewards from the strategies that his principal
+     * was invested in.
+     */
+    function claimReturns(address[] calldata _finalizedStrategies) external override nonReentrant {
+        _onlyUnpaused();
+        _onlyContributor();
+        Contributor storage contributor = contributors[msg.sender];
+        _require(block.timestamp > contributor.claimedAt, Errors.ALREADY_CLAIMED); // race condition check
+        uint256[] memory rewards = new uint256[](7);
+
+        rewards = rewardsDistributor.getRewards(address(this), msg.sender, _finalizedStrategies);
+        _require(rewards[5] > 0 || rewards[6] > 0, Errors.NO_REWARDS_TO_CLAIM);
+
+        if (rewards[6] > 0) {
+            contributor.claimedRewards = contributor.claimedRewards.add(rewards[6]); // Rewards claimed properly
+            reserveAssetRewardsSetAside = reserveAssetRewardsSetAside.sub(rewards[6]);
+            contributor.claimedAt = block.timestamp; // Checkpoint of this claim
+            _safeSendReserveAsset(msg.sender, rewards[6]);
+            emit RewardsForContributor(msg.sender, rewards[6]);
+        }
+        if (rewards[5] > 0) {
+            contributor.claimedBABL = contributor.claimedBABL.add(rewards[5]); // BABL Rewards claimed properly
+            contributor.claimedAt = block.timestamp; // Checkpoint of this claim
+            // Send BABL rewards
+            rewardsDistributor.sendTokensToContributor(msg.sender, rewards[5]);
+            emit BABLRewardsForContributor(msg.sender, rewards[5]);
+         }
+     }
 
     /**
      * @notice
