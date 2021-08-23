@@ -138,7 +138,34 @@ describe('MardukGate', function () {
       });
     });
 
-    it('creator can join a garden after renouncing', async function () {
+    it('creator can join a public garden after renouncing to 0 address', async function () {
+      await mardukGate.connect(owner).setCreatorPermissions(signer2.address, true, { gasPrice: 0 });
+      await babController.connect(owner).setAllowPublicGardens();
+      await babController
+        .connect(signer2)
+        .createGarden(
+          addresses.tokens.WETH,
+          'TEST Marduk',
+          'AAA',
+          'http:',
+          0,
+          GARDEN_PARAMS,
+          ethers.utils.parseEther('0.1'),
+          [true, false, false],
+          [0, 0, 0],
+          {
+            value: ethers.utils.parseEther('0.1'),
+          },
+        );
+      const gardens = await babController.getGardens();
+      const newGarden = await ethers.getContractAt('Garden', gardens[gardens.length - 1]);
+      await newGarden.connect(signer2).transferCreatorRights(ADDRESS_ZERO, 0);
+      await newGarden.connect(signer2).deposit(ethers.utils.parseEther('1'), 1, signer2.getAddress(), false, {
+        value: ethers.utils.parseEther('1'),
+      });
+    });
+
+    it('creator cannot renounce to 0 address if garden is private', async function () {
       await mardukGate.connect(owner).setCreatorPermissions(signer2.address, true, { gasPrice: 0 });
       await babController
         .connect(signer2)
@@ -158,10 +185,30 @@ describe('MardukGate', function () {
         );
       const gardens = await babController.getGardens();
       const newGarden = await ethers.getContractAt('Garden', gardens[gardens.length - 1]);
-      await newGarden.connect(signer2).transferCreatorRights(ADDRESS_ZERO, 0);
-      await newGarden.connect(signer2).deposit(ethers.utils.parseEther('1'), 1, signer2.getAddress(), false, {
-        value: ethers.utils.parseEther('1'),
-      });
+      await expect(newGarden.connect(signer2).transferCreatorRights(ADDRESS_ZERO, 0)).to.be.reverted;
+    });
+
+    it.only('creator can renounce to a non 0 address even if garden is private', async function () {
+      await mardukGate.connect(owner).setCreatorPermissions(signer2.address, true, { gasPrice: 0 });
+      await babController
+        .connect(signer2)
+        .createGarden(
+          addresses.tokens.WETH,
+          'TEST Marduk',
+          'AAA',
+          'http:',
+          0,
+          GARDEN_PARAMS,
+          ethers.utils.parseEther('0.1'),
+          [false, false, false],
+          [0, 0, 0],
+          {
+            value: ethers.utils.parseEther('0.1'),
+          },
+        );
+      const gardens = await babController.getGardens();
+      const newGarden = await ethers.getContractAt('Garden', gardens[gardens.length - 1]);
+      await expect(newGarden.connect(signer2).transferCreatorRights(WALLET_ADDRESSES[7], 0)).to.not.be.reverted;
     });
 
     it('creator can create a strategy', async function () {
