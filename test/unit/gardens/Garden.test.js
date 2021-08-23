@@ -1001,7 +1001,27 @@ describe('Garden', function () {
       expect(supplyBefore.sub(supplyAfter)).to.eq(eth(1000));
     });
 
-    it('rejects if not keeper', async function () {});
+    it('rejects if not keeper', async function () {
+      let amountIn = from(1000 * 1e6);
+      let minAmountOut = eth(1000);
+
+      await fund([signer1.address, signer3.address], { tokens: [addresses.tokens.USDC] });
+
+      const garden = await createGarden({ reserveAsset: addresses.tokens.USDC });
+
+      await usdc.connect(signer3).approve(garden.address, amountIn, {
+        gasPrice: 0,
+      });
+
+      await garden.connect(signer3).deposit(amountIn, minAmountOut, signer3.getAddress(), false);
+
+      amountIn = eth(1000);
+      minAmountOut = from(1000 * 1e6);
+      const sig = await getWithdrawSig(garden.address, signer3, amountIn, minAmountOut, 1, 0);
+      await expect(
+        garden.connect(signer3).withdrawBySig(amountIn, minAmountOut, 1, 0, eth(), 0, sig.v, sig.r, sig.s)
+      ).to.be.revertedWith('BAB#018');
+    });
 
     it('rejects wrong nonce', async function () {
       let amountIn = from(1000 * 1e6);
@@ -1375,7 +1395,28 @@ describe('Garden', function () {
       expect(supplyAfter.sub(supplyBefore)).to.be.eq(minAmountOut.sub(eth(100)));
     });
 
-    it('rejects if not keeper', async function () {});
+    it('rejects if not keeper', async function () {
+      const amountIn = from(1000 * 1e6);
+      const minAmountOut = eth(1000);
+      const fee = from(0);
+      const maxFee = from(0);
+      const nonce = 0;
+
+      await fund([signer1.address, signer3.address], { tokens: [addresses.tokens.USDC] });
+
+      const garden = await createGarden({ reserveAsset: addresses.tokens.USDC });
+
+      await usdc.connect(signer3).approve(garden.address, amountIn, {
+        gasPrice: 0,
+      });
+
+      const sig = await getDepositSig(garden.address, signer3, amountIn, minAmountOut, false, nonce, maxFee);
+      await expect(garden
+        .connect(signer3)
+        .depositBySig(amountIn, minAmountOut, false, nonce, maxFee, eth(), fee, sig.v, sig.r, sig.s)
+      ).to.be.revertedWith('BAB#018');
+
+    });
 
     it('rejects wrong nonce', async function () {
       const amountIn = from(1000 * 1e6);
