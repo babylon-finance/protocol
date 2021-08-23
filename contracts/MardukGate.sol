@@ -113,7 +113,8 @@ contract MardukGate is IMardukGate, Ownable {
         address _user,
         address _garden,
         uint8 _permission
-    ) external override onlyGardenCreator(_garden) returns (uint256) {
+    ) external override returns (uint256) {
+        require(_isCreator(IGarden(_garden), msg.sender) || msg.sender == address(_garden), 'Only creator or garden can change params');
         require(address(_user) != address(0), 'User must exist');
         return _setIndividualGardenAccess(_user, _garden, _permission);
     }
@@ -197,7 +198,7 @@ contract MardukGate is IMardukGate, Ownable {
      * @return _canJoin                   Whether or not the user can join
      */
     function canJoinAGarden(address _garden, address _user) external view override returns (bool) {
-        if (_isCreator(IGarden(_garden), msg.sender)) {
+        if (_isCreator(IGarden(_garden), _user)) {
             return true;
         }
         if (isOverriden[_garden][_user]) {
@@ -214,7 +215,7 @@ contract MardukGate is IMardukGate, Ownable {
      * @return _canVote                   Whether or not the user can vote
      */
     function canVoteInAGarden(address _garden, address _user) external view override returns (bool) {
-        if (_isCreator(IGarden(_garden), msg.sender)) {
+        if (_isCreator(IGarden(_garden), _user)) {
             return true;
         }
         if (isOverriden[_garden][_user]) {
@@ -231,7 +232,7 @@ contract MardukGate is IMardukGate, Ownable {
      * @return _canStrategize             Whether or not the user can create strategies
      */
     function canAddStrategiesInAGarden(address _garden, address _user) external view override returns (bool) {
-        if (_isCreator(IGarden(_garden), msg.sender)) {
+        if (_isCreator(IGarden(_garden), _user)) {
             return true;
         }
         if (isOverriden[_garden][_user]) {
@@ -297,7 +298,7 @@ contract MardukGate is IMardukGate, Ownable {
     function _isCreator(IGarden _garden, address _member) private view returns (bool) {
         return
             _member != address(0) &&
-            (_member == address(_garden) || // the garden can also change perms
+            (
                 _garden.extraCreators(0) == _member ||
                 _garden.extraCreators(1) == _member ||
                 _garden.extraCreators(2) == _member ||

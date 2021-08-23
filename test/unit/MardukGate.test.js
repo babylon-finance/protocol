@@ -352,7 +352,7 @@ describe('MardukGate', function () {
       const newGarden = await ethers.getContractAt('Garden', gardens[gardens.length - 1]);
 
       await expect(
-        newGarden.connect(signer3).deposit(ethers.utils.parseEther('1'), 1, signer3.getAddress(), false, {
+        newGarden.connect(WALLET_ADDRESSES[4]).deposit(ethers.utils.parseEther('1'), 1, signer3.getAddress(), false, {
           value: ethers.utils.parseEther('1'),
         }),
       ).to.be.reverted;
