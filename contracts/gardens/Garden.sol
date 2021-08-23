@@ -622,6 +622,10 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
     function transferCreatorRights(address _newCreator, uint8 _index) external override {
         _onlyCreator(msg.sender);
         _require(!_isCreator(_newCreator), Errors.NEW_CREATOR_MUST_NOT_EXIST);
+        // Make sure creator can still have normal permissions after renouncing
+        if (_newCreator == address(0)) {
+          IMardukGate(IBabController(controller).mardukGate()).setGardenAccess(msg.sender, address(this), 3);
+        }
         if (msg.sender == creator) {
             creator = _newCreator;
             return;

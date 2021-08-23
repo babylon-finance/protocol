@@ -1,7 +1,7 @@
 const { expect } = require('chai');
 const { ethers } = require('hardhat');
 const addresses = require('lib/addresses');
-const { GARDEN_PARAMS } = require('lib/constants');
+const { GARDEN_PARAMS, ADDRESS_ZERO } = require('lib/constants');
 const { setupTests } = require('fixtures/GardenFixture');
 const { createStrategy } = require('fixtures/StrategyHelper.js');
 
@@ -215,6 +215,33 @@ describe('MardukGate', function () {
       ).not.to.be.reverted;
     });
 
+    it.only('creator can still create a strategy after renouncing', async function () {
+      await mardukGate.connect(owner).setCreatorPermissions(signer2.address, true, { gasPrice: 0 });
+      await expect(
+        babController
+          .connect(signer2)
+          .createGarden(
+            addresses.tokens.WETH,
+            'TEST Ishtar',
+            'AAA',
+            'http:',
+            0,
+            GARDEN_PARAMS,
+            ethers.utils.parseEther('0.1'),
+            [false, false, false],
+            [0, 0, 0],
+            {
+              value: ethers.utils.parseEther('0.1'),
+            },
+          ),
+      ).to.not.be.reverted;
+      const gardens = await babController.getGardens();
+      const newGarden = await ethers.getContractAt('Garden', gardens[gardens.length - 1]);
+      await newGarden.connect(signer2).transferCreatorRights(ADDRESS_ZERO, 0);
+      console.log('before create');
+      await createStrategy('buy', 'dataset', [signer2, signer1, signer3], uniswapV3TradeIntegration.address, newGarden);
+    });
+
     it('fails without the right permissions', async function () {
       await mardukGate.connect(owner).setCreatorPermissions(signer2.address, true, { gasPrice: 0 });
       await expect(
@@ -330,6 +357,33 @@ describe('MardukGate', function () {
       const newGarden = await ethers.getContractAt('Garden', gardens[gardens.length - 1]);
 
       await expect(mardukGate.connect(signer3).setGardenAccess(signer3.address, newGarden.address, 1, { gasPrice: 0 }))
+        .to.be.reverted;
+    });
+
+    it.only('creator cannot grant access to a garden after renouncing', async function () {
+      await expect(
+        babController
+          .connect(signer1)
+          .createGarden(
+            addresses.tokens.WETH,
+            'TEST Ishtar',
+            'AAA',
+            'http...',
+            5,
+            GARDEN_PARAMS,
+            ethers.utils.parseEther('0.1'),
+            [false, false, false],
+            [0, 0, 0],
+            {
+              value: ethers.utils.parseEther('0.1'),
+            },
+          ),
+      ).to.not.be.reverted;
+      const gardens = await babController.getGardens();
+
+      const newGarden = await ethers.getContractAt('Garden', gardens[gardens.length - 1]);
+      await newGarden.connect(signer1).transferCreatorRights(ADDRESS_ZERO, 0);
+      await expect(mardukGate.connect(signer1).setGardenAccess(signer3.address, newGarden.address, 1, { gasPrice: 0 }))
         .to.be.reverted;
     });
 
