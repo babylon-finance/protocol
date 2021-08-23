@@ -18,10 +18,12 @@
 
 pragma solidity 0.7.6;
 import {Ownable} from '@openzeppelin/contracts/access/Ownable.sol';
+import {ERC721} from '@openzeppelin/contracts/token/ERC721/ERC721.sol';
+import {IERC721} from '@openzeppelin/contracts/token/ERC721/IERC721.sol';
 import {SafeMath} from '@openzeppelin/contracts/math/SafeMath.sol';
 import {IBabController} from './interfaces/IBabController.sol';
+import {IMardukGate} from './interfaces/IMardukGate.sol';
 import {IIshtarGate} from './interfaces/IIshtarGate.sol';
-import {IBabylonGate} from './interfaces/IBabylonGate.sol';
 import {IGarden} from './interfaces/IGarden.sol';
 
 /**
@@ -30,7 +32,7 @@ import {IGarden} from './interfaces/IGarden.sol';
  *
  * Contract that implements guestlists without NFT and checks Ishtar Gate when needed
  */
-contract MardukGate is IBabylonGate, Ownable {
+contract MardukGate is IMardukGate, Ownable {
     using SafeMath for uint256;
 
     /* ============ Events ============ */
@@ -50,6 +52,7 @@ contract MardukGate is IBabylonGate, Ownable {
     mapping(address => mapping(address => uint8)) public permissionsByCommunity;
     mapping(address => mapping(address => bool)) public isOverriden;
     mapping(address => bool) public canCreateAGarden;
+    mapping(address => bool) public betaAccess;
     mapping(address => uint256) public gardenAccessCount;
 
     mapping(address => address[]) public invitesPerGarden;
@@ -167,6 +170,16 @@ contract MardukGate is IBabylonGate, Ownable {
     /* ============ Getter Functions ============ */
 
     /**
+     * Check if a user can access the beta
+     *
+     * @param _user                     Address of the user
+     * @return bool               Whether or not the user can access the beta
+     */
+    function canAccessBeta(address _user) external view override returns (bool) {
+        return IERC721(address(ishtarGate)).balanceOf(_user) > 0 || betaAccess[_user];
+    }
+
+    /**
      * Check if a user can create gardens
      *
      * @param _user                     Address of the user
@@ -262,6 +275,7 @@ contract MardukGate is IBabylonGate, Ownable {
         }
         permissionsByCommunity[_garden][_user] = _permission;
         isOverriden[_garden][_user] = true;
+        betaAccess[_user] = true;
         emit GardenAccess(_user, _garden, _permission);
         return 0;
     }

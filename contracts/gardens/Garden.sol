@@ -41,7 +41,7 @@ import {IGardenValuer} from '../interfaces/IGardenValuer.sol';
 import {IStrategy} from '../interfaces/IStrategy.sol';
 import {IGarden} from '../interfaces/IGarden.sol';
 import {IGardenNFT} from '../interfaces/IGardenNFT.sol';
-import {IBabylonGate} from '../interfaces/IBabylonGate.sol';
+import {IMardukGate} from '../interfaces/IMardukGate.sol';
 import {IWETH} from '../interfaces/external/weth/IWETH.sol';
 
 /**
@@ -1043,12 +1043,11 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
             bool canCreateStrategy
         )
     {
-        IBabylonGate igate = IBabylonGate(IBabController(controller).ishtarGate());
-        IBabylonGate mgate = IBabylonGate(IBabController(controller).mardukGate());
-        bool hasGate = IERC721(address(igate)).balanceOf(_user) > 0;
-        canDeposit = mgate.canJoinAGarden(address(this), _user) || (hasGate && !privateGarden);
-        canVote = mgate.canVoteInAGarden(address(this), _user) || (hasGate && publicStewards);
-        canCreateStrategy = mgate.canAddStrategiesInAGarden(address(this), _user) || (hasGate && publicStrategists);
+        IMardukGate mgate = IMardukGate(IBabController(controller).mardukGate());
+        bool betaAccess = mgate.canAccessBeta(_user);
+        canDeposit = mgate.canJoinAGarden(address(this), _user) || (betaAccess && !privateGarden);
+        canVote = mgate.canVoteInAGarden(address(this), _user) || (betaAccess && publicStewards);
+        canCreateStrategy = mgate.canAddStrategiesInAGarden(address(this), _user) || (betaAccess && publicStrategists);
     }
 
     // Checks if an address is a creator
