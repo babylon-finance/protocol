@@ -966,9 +966,43 @@ describe('Garden', function () {
 
       amountIn = eth(1000);
       minAmountOut = from(1000 * 1e6);
-      const sig = await getWithdrawSig(garden.address, signer3, amountIn, minAmountOut, 1);
-      await garden.connect(keeper).withdrawBySig(amountIn, minAmountOut, 1, eth(), sig.v, sig.r, sig.s);
+      const sig = await getWithdrawSig(garden.address, signer3, amountIn, minAmountOut, 1, 0);
+      await garden.connect(keeper).withdrawBySig(amountIn, minAmountOut, 1, 0, eth(), 0, sig.v, sig.r, sig.s);
     });
+
+    it('can witdraw with a Keeper fee', async function () {
+      let amountIn = from(1000 * 1e6);
+      let minAmountOut = eth(1000);
+
+      await fund([signer1.address, signer3.address], { tokens: [addresses.tokens.USDC] });
+
+      const garden = await createGarden({ reserveAsset: addresses.tokens.USDC });
+
+      await usdc.connect(signer3).approve(garden.address, amountIn, {
+        gasPrice: 0,
+      });
+
+
+      await garden.connect(signer3).deposit(amountIn, minAmountOut, signer3.getAddress(), false);
+
+      amountIn = eth(1000);
+      minAmountOut = from(1000 * 1e6);
+      const fee = from(100 * 1e6);
+      const maxFee = from(100 * 1e6);
+
+      const supplyBefore = await garden.totalSupply();
+
+      const sig = await getWithdrawSig(garden.address, signer3, amountIn, minAmountOut, 1, maxFee);
+
+      await expect(() =>
+        garden.connect(keeper).withdrawBySig(amountIn, minAmountOut, 1, maxFee, eth(), fee, sig.v, sig.r, sig.s),
+      ).to.changeTokenBalances(usdc, [keeper, garden, signer3], [from(100 * 1e6), from(-1000 * 1e6), from(900 * 1e6)]);
+
+      const supplyAfter = await garden.totalSupply();
+      expect(supplyBefore.sub(supplyAfter)).to.eq(eth(1000));
+    });
+
+    it('rejects if not keeper', async function () {});
 
     it('rejects wrong nonce', async function () {
       let amountIn = from(1000 * 1e6);
@@ -989,10 +1023,10 @@ describe('Garden', function () {
 
       amountIn = eth(1000);
       minAmountOut = from(1000 * 1e6);
-      const sig = await getWithdrawSig(garden.address, signer3, amountIn, minAmountOut, 8);
+      const sig = await getWithdrawSig(garden.address, signer3, amountIn, minAmountOut, 8, 0);
 
       await expect(
-        garden.connect(keeper).withdrawBySig(amountIn, minAmountOut, 8, eth(), sig.v, sig.r, sig.s),
+        garden.connect(keeper).withdrawBySig(amountIn, minAmountOut, 8, 0, eth(), 0, sig.v, sig.r, sig.s),
       ).to.be.revertedWith('BAB#089');
     });
     // TODO: Test minAmountOut is respected
@@ -1285,6 +1319,9 @@ describe('Garden', function () {
     it('can deposit', async function () {
       const amountIn = from(1000 * 1e6);
       const minAmountOut = eth(1000);
+      const fee = from(0);
+      const maxFee = from(0);
+      const nonce = 0;
 
       await fund([signer1.address, signer3.address], { tokens: [addresses.tokens.USDC] });
 
@@ -1297,8 +1334,10 @@ describe('Garden', function () {
       const gardenBalance = await usdc.balanceOf(garden.address);
       const supplyBefore = await garden.totalSupply();
 
-      const sig = await getDepositSig(garden.address, signer3, amountIn, minAmountOut, false, 0);
-      await garden.connect(keeper).depositBySig(amountIn, minAmountOut, false, 0, eth(), sig.v, sig.r, sig.s);
+      const sig = await getDepositSig(garden.address, signer3, amountIn, minAmountOut, false, nonce, maxFee);
+      await garden
+        .connect(keeper)
+        .depositBySig(amountIn, minAmountOut, false, nonce, maxFee, eth(), fee, sig.v, sig.r, sig.s);
 
       const supplyAfter = await garden.totalSupply();
       expect(supplyAfter.sub(supplyBefore)).to.be.eq(minAmountOut);
@@ -1307,9 +1346,44 @@ describe('Garden', function () {
       expect(gardenBalanceAfter.sub(gardenBalance)).to.equal(amountIn);
     });
 
+    it('can deposit with a Keeper fee', async function () {
+      const amountIn = from(1000 * 1e6);
+      const minAmountOut = eth(1000);
+      const fee = from(100 * 1e6);
+      const maxFee = from(100 * 1e6);
+      const nonce = 0;
+
+      await fund([signer1.address, signer3.address], { tokens: [addresses.tokens.USDC] });
+
+      const garden = await createGarden({ reserveAsset: addresses.tokens.USDC });
+
+      await usdc.connect(signer3).approve(garden.address, amountIn, {
+        gasPrice: 0,
+      });
+
+      const gardenBalance = await usdc.balanceOf(garden.address);
+      const supplyBefore = await garden.totalSupply();
+
+      const sig = await getDepositSig(garden.address, signer3, amountIn, minAmountOut, false, nonce, maxFee);
+
+      await expect(() =>
+        garden
+          .connect(keeper)
+          .depositBySig(amountIn, minAmountOut, false, nonce, maxFee, eth(), fee, sig.v, sig.r, sig.s),
+      ).to.changeTokenBalances(usdc, [keeper, garden, signer3], [from(100 * 1e6), from(900 * 1e6), from(-1000 * 1e6)]);
+
+      const supplyAfter = await garden.totalSupply();
+      expect(supplyAfter.sub(supplyBefore)).to.be.eq(minAmountOut.sub(eth(100)));
+    });
+
+    it('rejects if not keeper', async function () {});
+
     it('rejects wrong nonce', async function () {
       const amountIn = from(1000 * 1e6);
       const minAmountOut = eth(1000);
+      const fee = from(0);
+      const maxFee = from(0);
+      const nonce = 7;
 
       await fund([signer1.address, signer3.address], [addresses.tokens.USDC]);
 
@@ -1319,9 +1393,11 @@ describe('Garden', function () {
         gasPrice: 0,
       });
 
-      const sig = await getDepositSig(garden.address, signer3, amountIn, minAmountOut, false, 7);
+      const sig = await getDepositSig(garden.address, signer3, amountIn, minAmountOut, false, nonce, maxFee);
       await expect(
-        garden.connect(keeper).depositBySig(amountIn, minAmountOut, false, 7, eth(), sig.v, sig.r, sig.s),
+        garden
+          .connect(keeper)
+          .depositBySig(amountIn, minAmountOut, false, nonce, maxFee, eth(), fee, sig.v, sig.r, sig.s),
       ).to.be.revertedWith('BAB#089');
     });
     // TODO: Test minAmountOut is respected
