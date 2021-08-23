@@ -71,8 +71,8 @@ describe('UniswapPoolIntegrationTest', function () {
       priceOracle,
     } = await setupTests()());
 
-    WETH = await ethers.getContractAt('IERC20', addresses.tokens.WETH);
-    DAI = await ethers.getContractAt('IERC20', addresses.tokens.DAI);
+    WETH = await ethers.getContractAt('@openzeppelin/contracts/token/ERC20/IERC20.sol:IERC20', addresses.tokens.WETH);
+    DAI = await ethers.getContractAt('@openzeppelin/contracts/token/ERC20/IERC20.sol:IERC20', addresses.tokens.DAI);
   });
 
   describe('Deployment', function () {

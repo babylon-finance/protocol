@@ -398,6 +398,7 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
      * @param _bablToken BABLToken address
      */
     function setBablToken(TimeLockedToken _bablToken) external onlyOwner onlyUnpaused {
+        _require(address(_bablToken) != address(0) && _bablToken != babltoken, Errors.INVALID_ADDRESS);
         babltoken = _bablToken;
     }
 

@@ -60,6 +60,7 @@ contract GardenValuer {
      * @param _controller             Address of controller contract
      */
     constructor(address _controller) {
+        require(_controller != address(0), 'Incorrect address');
         controller = _controller;
     }
 

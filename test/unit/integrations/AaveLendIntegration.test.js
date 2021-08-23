@@ -32,8 +32,8 @@ describe('AaveLendIntegrationTest', function () {
       signer2,
       signer3,
     } = await setupTests()());
-    USDC = await ethers.getContractAt('IERC20', addresses.tokens.USDC);
-    WETH = await ethers.getContractAt('IERC20', addresses.tokens.WETH);
+    USDC = await ethers.getContractAt('@openzeppelin/contracts/token/ERC20/IERC20.sol:IERC20', addresses.tokens.USDC);
+    WETH = await ethers.getContractAt('@openzeppelin/contracts/token/ERC20/IERC20.sol:IERC20', addresses.tokens.WETH);
   });
 
   describe('Deployment', function () {

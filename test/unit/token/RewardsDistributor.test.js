@@ -31,6 +31,7 @@ const {
 const { createGarden, transferFunds, depositFunds } = require('fixtures/GardenHelper');
 
 const { setupTests } = require('fixtures/GardenFixture');
+const { ADDRESS_ZERO } = require('../../../lib/constants');
 
 async function getAndValidateProtocolTimestamp(rewardsDistributor, timestamp, protocolPerTimestamp) {
   const [principal, time, quarterBelonging, timeListPointer, power] = await rewardsDistributor.checkProtocol(timestamp);
@@ -225,15 +226,24 @@ describe('BABL Rewards Distributor', function () {
     } = await setupTests()());
 
     await bablToken.connect(owner).enableTokensTransfers();
-    usdc = await ethers.getContractAt('IERC20', addresses.tokens.USDC);
-    dai = await ethers.getContractAt('IERC20', addresses.tokens.DAI);
-    weth = await ethers.getContractAt('IERC20', addresses.tokens.WETH);
+    usdc = await ethers.getContractAt('@openzeppelin/contracts/token/ERC20/IERC20.sol:IERC20', addresses.tokens.USDC);
+    dai = await ethers.getContractAt('@openzeppelin/contracts/token/ERC20/IERC20.sol:IERC20', addresses.tokens.DAI);
+    weth = await ethers.getContractAt('@openzeppelin/contracts/token/ERC20/IERC20.sol:IERC20', addresses.tokens.WETH);
   });
 
   describe('Deployment', function () {
     it('should successfully deploy BABL Mining Rewards Distributor contract', async function () {
       const deployedc = await rewardsDistributor.deployed(bablToken.address, babController.address);
       expect(!!deployedc).to.equal(true);
+    });
+  });
+  describe('setBABLToken', function () {
+    it('can set a new BABL Token address', async function () {
+      const newToken = await impersonateAddress('0xf4dc48d260c93ad6a96c5ce563e70ca578987c74');
+      await expect(rewardsDistributor.connect(owner).setBablToken(newToken.address)).not.to.be.reverted;
+    });
+    it('can NOT set zero address as a new BABL Token address', async function () {
+      await expect(rewardsDistributor.connect(owner).setBablToken(ADDRESS_ZERO)).to.be.revertedWith('BAB#096');
     });
   });
 
@@ -1027,7 +1037,10 @@ describe('BABL Rewards Distributor', function () {
         );
 
         expect(preallocated).to.be.equal(amount);
-        const reserveAssetContract = await ethers.getContractAt('IERC20', token);
+        const reserveAssetContract = await ethers.getContractAt(
+          '@openzeppelin/contracts/token/ERC20/IERC20.sol:IERC20',
+          token,
+        );
         expect(await strategyContract.capitalAllocated()).to.equal(amount);
         await increaseTime(ONE_DAY_IN_SECONDS * 70);
         await increaseBlock(100);
