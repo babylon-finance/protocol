@@ -44,7 +44,7 @@ describe('BabylonGovernor', function () {
     await timelock.connect(deployer).grantRole(await timelock.PROPOSER_ROLE(), governor.address);
     await timelock.connect(deployer).grantRole(await timelock.EXECUTOR_ROLE(), governor.address);
 
-    return governor;
+    return [governor, timelock];
   }
 
   async function claimTokens(voters) {
@@ -88,6 +88,17 @@ describe('BabylonGovernor', function () {
     await selfDelegation(voters);
 
     return proposalObject;
+  }
+
+  async function castVoteBySig(id, support, signer) {
+    const BALLOT_TYPEHASH = ethers.utils.keccak256(
+      ethers.utils.toUtf8Bytes('Ballot(uint256 proposalId,uint8 support)'),
+    );
+    let payload = ethers.utils.defaultAbiCoder.encode(['bytes32', 'uint256', 'uint8'], [BALLOT_TYPEHASH, id, support]);
+    let payloadHash = ethers.utils.keccak256(payload);
+    let signature = await signer.signMessage(ethers.utils.arrayify(payloadHash));
+
+    return ethers.utils.splitSignature(signature);
   }
 
   beforeEach(async () => {
@@ -215,7 +226,33 @@ describe('BabylonGovernor', function () {
 
   describe('castVoteBySig', function () {
     it.skip('can cast a vote by sig', async function () {
-      // TODO
+      // TODO change signature process into EIP712 signature
+      const [mockGovernor, mockTimelock] = await getGovernorMock(10);
+      const { id, args, voters } = await getProposal(mockGovernor, {
+        voters: [
+          { voter: voter1, support: voteType.For, reason: 'This is nice' },
+          { voter: voter2, support: voteType.For },
+          { voter: voter3, support: voteType.For },
+          { voter: voter4, support: voteType.For },
+        ],
+      });
+      // Enable BABL token transfers to use signer1 account as voter
+      await increaseTime(ONE_YEAR_IN_SECONDS * 4); // get out of vesting
+      await bablToken.connect(owner).enableTokensTransfers();
+      await bablToken.connect(voter1).transfer(signer1.address, ethers.utils.parseEther('100'));
+
+      // propose
+      await mockGovernor.connect(voter1)['propose(address[],uint256[],bytes[],string)'](...args);
+
+      // 1 blocks to reach the block where the voting starts
+      await increaseBlock(1);
+
+      const sig = await castVoteBySig(id, voteType.For, signer1);
+      await mockGovernor.connect(voter2).castVoteBySig(id, voteType.For, sig.v, sig.r, sig.s);
+      await increaseBlock(1);
+      const [, , eta, , , forVotes, againstVotes, abstainVotes, , ,] = await mockGovernor.proposals(id);
+      expect(await bablToken.balanceOf(signer1.address).toString()).to.equal(forVotes);
+      expect(await mockGovernor.hasVoted(id, signer1.address)).to.be.equal(true);
     });
   });
 
@@ -269,7 +306,7 @@ describe('BabylonGovernor', function () {
     });
 
     it('can NOT cast a vote before votes start', async function () {
-      const mockGovernor = await getGovernorMock(10, 10);
+      const [mockGovernor, mockTimelock] = await getGovernorMock(10, 10);
       const { id, args } = await getProposal(mockGovernor);
 
       // propose
@@ -282,7 +319,7 @@ describe('BabylonGovernor', function () {
     });
 
     it('can NOT cast a vote after voting period ends', async function () {
-      const mockGovernor = await getGovernorMock(10);
+      const [mockGovernor, mockTimelock] = await getGovernorMock(10);
       const { id, args } = await getProposal(mockGovernor);
 
       // propose
@@ -300,7 +337,7 @@ describe('BabylonGovernor', function () {
 
   describe('queue', function () {
     it('can queue proposal', async function () {
-      const mockGovernor = await getGovernorMock(10);
+      const [mockGovernor, mockTimelock] = await getGovernorMock(10);
       const { id, args, voters } = await getProposal(mockGovernor, {
         voters: [
           { voter: voter1, support: voteType.For, reason: 'This is nice' },
@@ -328,7 +365,7 @@ describe('BabylonGovernor', function () {
       expect(state).to.eq(proposalState.Queued);
     });
     it('can NOT queue a proposal if defeated', async function () {
-      const mockGovernor = await getGovernorMock(10);
+      const [mockGovernor, mockTimelock] = await getGovernorMock(10);
       const { id, args, voters } = await getProposal(mockGovernor, {
         voters: [
           { voter: voter1, support: voteType.For, reason: 'This is nice' },
@@ -360,7 +397,7 @@ describe('BabylonGovernor', function () {
 
   describe('execute', function () {
     it('can execute proposal', async function () {
-      const mockGovernor = await getGovernorMock(10);
+      const [mockGovernor, mockTimelock] = await getGovernorMock(10);
       const { id, args, voters } = await getProposal(mockGovernor, {
         voters: [
           { voter: voter1, support: voteType.For, reason: 'This is nice' },
@@ -390,7 +427,7 @@ describe('BabylonGovernor', function () {
       expect(state).to.eq(proposalState.Executed);
     });
     it('can NOT execute proposal if defeated', async function () {
-      const mockGovernor = await getGovernorMock(10);
+      const [mockGovernor, mockTimelock] = await getGovernorMock(10);
       const { id, args, voters } = await getProposal(mockGovernor, {
         voters: [
           { voter: voter1, support: voteType.For, reason: 'This is nice' },
@@ -422,7 +459,7 @@ describe('BabylonGovernor', function () {
   });
   describe('cancel', function () {
     it('can cancel an active proposal by the proposer', async function () {
-      const mockGovernor = await getGovernorMock(10);
+      const [mockGovernor, mockTimelock] = await getGovernorMock(10);
       const { id, args, voters } = await getProposal(mockGovernor, {
         voters: [
           { voter: voter1, support: voteType.For, reason: 'This is nice' },
@@ -449,7 +486,7 @@ describe('BabylonGovernor', function () {
       expect(state2).to.eq(proposalState.Canceled);
     });
     it('can cancel a defeated proposal by the proposer', async function () {
-      const mockGovernor = await getGovernorMock(10);
+      const [mockGovernor, mockTimelock] = await getGovernorMock(10);
       const { id, args, voters } = await getProposal(mockGovernor, {
         voters: [
           { voter: voter1, support: voteType.For, reason: 'This is nice' },
@@ -477,7 +514,7 @@ describe('BabylonGovernor', function () {
     });
 
     it('can cancel an active proposal by anyone if the proposer is running low on BABL tokens', async function () {
-      const mockGovernor = await getGovernorMock(10);
+      const [mockGovernor, mockTimelock] = await getGovernorMock(10);
       const { id, args, voters } = await getProposal(mockGovernor, {
         voters: [
           { voter: voter1, support: voteType.For, reason: 'This is nice' },
@@ -514,7 +551,7 @@ describe('BabylonGovernor', function () {
       expect(state2).to.eq(proposalState.Canceled);
     });
     it('can NOT cancel an active proposal by anyone different from proposer if still above threshold', async function () {
-      const mockGovernor = await getGovernorMock(10);
+      const [mockGovernor, mockTimelock] = await getGovernorMock(10);
       const { id, args, voters } = await getProposal(mockGovernor, {
         voters: [
           { voter: voter1, support: voteType.For, reason: 'This is nice' },
@@ -540,7 +577,7 @@ describe('BabylonGovernor', function () {
       expect(state).to.eq(proposalState.Active);
     });
     it('can NOT cancel a defeated proposal by anyone different from proposer if above threshold', async function () {
-      const mockGovernor = await getGovernorMock(10);
+      const [mockGovernor, mockTimelock] = await getGovernorMock(10);
       const { id, args, voters } = await getProposal(mockGovernor, {
         voters: [
           { voter: voter1, support: voteType.For, reason: 'This is nice' },
@@ -571,13 +608,8 @@ describe('BabylonGovernor', function () {
     it('timelock check ', async function () {
       expect(await babGovernor.timelock()).to.equal(timelockController.address);
     });
-    it.skip('can update timelock by timelockcontroller', async function () {
-      // TODO HAS TO BE DONE THROUGH THE TIMELOCKCONTROLLER E-TO-E TEST
-      // .timelock()
-      // _executor
-    });
     it('can NOT update timelock by anyone different from timelockcontroller', async function () {
-      const mockGovernor = await getGovernorMock(10);
+      const [mockGovernor, mockTimelock] = await getGovernorMock(10);
       const mockTimelockAddress = await mockGovernor.timelock();
       await expect(mockGovernor.connect(signer1).updateTimelock(ADDRESS_ZERO)).to.be.revertedWith(
         'Governor: onlyGovernance',
@@ -623,7 +655,7 @@ describe('BabylonGovernor', function () {
       expect(state).to.eq(proposalState.Canceled);
     });
     it('state defeated due to not getting votes on time', async function () {
-      const mockGovernor = await getGovernorMock(10);
+      const [mockGovernor, mockTimelock] = await getGovernorMock(10);
       const { id, args, voters } = await getProposal(mockGovernor, {
         voters: [
           { voter: voter1, support: voteType.For, reason: 'This is cool' },
@@ -641,7 +673,7 @@ describe('BabylonGovernor', function () {
       expect(state).to.eq(proposalState.Defeated);
     });
     it('state defeated due to not reaching quorum', async function () {
-      const mockGovernor = await getGovernorMock(10);
+      const [mockGovernor, mockTimelock] = await getGovernorMock(10);
       const { id, args, voters } = await getProposal(mockGovernor, {
         voters: [
           { voter: voter1, support: voteType.For, reason: 'This is cool' },
@@ -664,7 +696,7 @@ describe('BabylonGovernor', function () {
       expect(state).to.eq(proposalState.Defeated);
     });
     it('state defeated due to not suceeded (more against than for votes)', async function () {
-      const mockGovernor = await getGovernorMock(10);
+      const [mockGovernor, mockTimelock] = await getGovernorMock(10);
       const { id, args, voters } = await getProposal(mockGovernor, {
         voters: [
           { voter: voter1, support: voteType.Against, reason: 'This is bad' },
@@ -690,7 +722,7 @@ describe('BabylonGovernor', function () {
       expect(state).to.eq(proposalState.Defeated);
     });
     it('state succeeded', async function () {
-      const mockGovernor = await getGovernorMock(10);
+      const [mockGovernor, mockTimelock] = await getGovernorMock(10);
       const { id, args, voters } = await getProposal(mockGovernor, {
         voters: [
           { voter: voter1, support: voteType.For, reason: 'This is cool' },
@@ -713,7 +745,7 @@ describe('BabylonGovernor', function () {
       expect(state).to.eq(proposalState.Succeeded);
     });
     it('state queued', async function () {
-      const mockGovernor = await getGovernorMock(10);
+      const [mockGovernor, mockTimelock] = await getGovernorMock(10);
       const { id, args, voters } = await getProposal(mockGovernor, {
         voters: [
           { voter: voter1, support: voteType.For, reason: 'This is cool' },
@@ -737,7 +769,7 @@ describe('BabylonGovernor', function () {
       expect(state).to.eq(proposalState.Queued);
     });
     it.skip('state expired', async function () {
-      const mockGovernor = await getGovernorMock(10);
+      const [mockGovernor, mockTimelock] = await getGovernorMock(10);
       const { id, args, voters } = await getProposal(mockGovernor, {
         voters: [
           { voter: voter1, support: voteType.For, reason: 'This is cool' },
@@ -767,7 +799,7 @@ describe('BabylonGovernor', function () {
       expect(state).to.eq(proposalState.Expired);
     });
     it('state executed', async function () {
-      const mockGovernor = await getGovernorMock(10);
+      const [mockGovernor, mockTimelock] = await getGovernorMock(10);
       const { id, args, voters } = await getProposal(mockGovernor, {
         voters: [
           { voter: voter1, support: voteType.For, reason: 'This is cool' },
@@ -795,16 +827,107 @@ describe('BabylonGovernor', function () {
     });
   });
   describe('proposalEta ', function () {
-    it.skip('proposalEta if done', async function () {
-      // TODO
+    it('get 0 for unset operation', async function () {
+      // timestamp at with an operation becomes ready (0 for unset operations, 1 for done operations)
+      const [mockGovernor, mockTimelock] = await getGovernorMock(10);
+      const { id, args, voters } = await getProposal(mockGovernor, {
+        voters: [
+          { voter: voter1, support: voteType.For, reason: 'This is nice' },
+          { voter: voter2, support: voteType.For },
+        ],
+      });
+      // propose
+      await mockGovernor.connect(voter1)['propose(address[],uint256[],bytes[],string)'](...args);
+      expect(await mockGovernor.proposalEta(id)).to.be.equal(0);
     });
-    it.skip('proposalEta if NOT done', async function () {
-      // TODO
+    it('get timestamp for schedule operation', async function () {
+      const [mockGovernor, mockTimelock] = await getGovernorMock(10);
+      const { id, args, voters } = await getProposal(mockGovernor, {
+        voters: [
+          { voter: voter1, support: voteType.For, reason: 'This is cool' },
+          { voter: voter2, support: voteType.For },
+          { voter: voter3, support: voteType.For, reason: 'This is nice' },
+          { voter: voter4, support: voteType.Abstain, reason: 'Not sure a good idea' },
+          { voter: voter5, support: voteType.For, reason: 'You have my support' },
+        ],
+      });
+      // propose
+      await mockGovernor.connect(voter1)['propose(address[],uint256[],bytes[],string)'](...args);
+      await increaseBlock(1);
+      await castVotes(id, voters, mockGovernor);
+      // increase blocks to reach the voting deadline
+      await increaseBlock(5);
+      const minDelay = await mockTimelock.getMinDelay();
+      const blockTimestamp = (await ethers.provider.getBlock()).timestamp;
+      const executionTime = ethers.BigNumber.from(blockTimestamp).add(minDelay);
+      // Anyone can queue
+      await mockGovernor.connect(voter2)['queue(uint256)'](id);
+      expect(await mockGovernor.proposalEta(id)).to.be.closeTo(
+        ethers.BigNumber.from(executionTime),
+        600, // 10 mins
+      );
+    });
+    it('get again 0 for done operation but eta == 1 AND controller getTimestamp == 1', async function () {
+      const [mockGovernor, mockTimelock] = await getGovernorMock(10);
+      const { id, args, voters } = await getProposal(mockGovernor, {
+        voters: [
+          { voter: voter1, support: voteType.For, reason: 'This is cool' },
+          { voter: voter2, support: voteType.For },
+          { voter: voter3, support: voteType.For, reason: 'This is nice' },
+          { voter: voter4, support: voteType.Abstain, reason: 'Not sure a good idea' },
+          { voter: voter5, support: voteType.For, reason: 'You have my support' },
+        ],
+      });
+      // propose
+      await mockGovernor.connect(voter1)['propose(address[],uint256[],bytes[],string)'](...args);
+      await increaseBlock(1);
+      await castVotes(id, voters, mockGovernor);
+
+      // We calculate the id used in TimelockController which is different from Governor proposalId:
+      // bytes32 id = hashOperationBatch(targets, values, datas, predecessor, salt);
+      const descriptionHash = ethers.utils.keccak256(ethers.utils.toUtf8Bytes('<proposal description>'));
+      const AbiCoder = ethers.utils.AbiCoder;
+      const abiCoder = new AbiCoder();
+      const predecessor = abiCoder.encode(['uint256'], [0]); // 0x00 (32 bytes)
+      const newArgs = [[ADDRESS_ZERO], [value], ['0x'], predecessor, descriptionHash];
+      const timelockId = await mockTimelock.hashOperationBatch(...newArgs);
+      // increase blocks to reach the voting deadline
+      await increaseBlock(5);
+      expect(await await mockTimelock.isOperation(timelockId)).to.equal(false);
+      expect(await await mockTimelock.isOperationPending(timelockId)).to.equal(false);
+      expect(await await mockTimelock.isOperationReady(timelockId)).to.equal(false);
+      expect(await await mockTimelock.isOperationDone(timelockId)).to.equal(false);
+
+      // Anyone can queue
+      await mockGovernor.connect(voter2)['queue(uint256)'](id);
+      // queue calls _timelock.scheduleBatch(targets, values, calldatas, 0, descriptionHash, delay);
+      expect(await await mockTimelock.isOperation(timelockId)).to.equal(true);
+      expect(await await mockTimelock.isOperationPending(timelockId)).to.equal(true);
+      expect(await await mockTimelock.isOperationReady(timelockId)).to.equal(false);
+      expect(await await mockTimelock.isOperationDone(timelockId)).to.equal(false);
+
+      await increaseTime(ONE_DAY_IN_SECONDS * 7);
+      // operation ready
+      expect(await await mockTimelock.isOperation(timelockId)).to.equal(true);
+      expect(await await mockTimelock.isOperationPending(timelockId)).to.equal(true);
+      expect(await await mockTimelock.isOperationReady(timelockId)).to.equal(true);
+      expect(await await mockTimelock.isOperationDone(timelockId)).to.equal(false);
+
+      await mockGovernor.connect(voter2)['execute(uint256)'](id);
+      // operation executed
+      expect(await await mockTimelock.isOperation(timelockId)).to.equal(true);
+      expect(await await mockTimelock.isOperationPending(timelockId)).to.equal(false);
+      expect(await await mockTimelock.isOperationReady(timelockId)).to.equal(false);
+      expect(await await mockTimelock.isOperationDone(timelockId)).to.equal(true);
+
+      // await increaseTime(ONE_DAY_IN_SECONDS);
+      expect(await mockGovernor.proposalEta(id)).to.be.equal(0);
+      expect(await mockTimelock.getTimestamp(timelockId)).to.be.equal(1);
     });
   });
   describe('getVotes ', function () {
     it('can get votes', async function () {
-      const mockGovernor = await getGovernorMock(10);
+      const [mockGovernor, mockTimelock] = await getGovernorMock(10);
       const { id, args, voters } = await getProposal(mockGovernor, {
         voters: [
           { voter: voter1, support: voteType.For, reason: 'This is nice' },
@@ -838,7 +961,7 @@ describe('BabylonGovernor', function () {
   });
   describe('getActions ', function () {
     it('getActions', async function () {
-      const mockGovernor = await getGovernorMock(10);
+      const [mockGovernor, mockTimelock] = await getGovernorMock(10);
       const { id, args } = await getProposal(mockGovernor);
       const [targets, values, signatures, calldatas] = await mockGovernor.getActions(id);
       // empty as still not proposed
@@ -859,7 +982,7 @@ describe('BabylonGovernor', function () {
   });
   describe('getReceipt ', function () {
     it('getReceipt', async function () {
-      const mockGovernor = await getGovernorMock(10);
+      const [mockGovernor, mockTimelock] = await getGovernorMock(10);
       const { id, args, voters } = await getProposal(mockGovernor);
       // propose
       await mockGovernor.connect(voter1)['propose(address[],uint256[],bytes[],string)'](...args);

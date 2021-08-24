@@ -153,4 +153,29 @@ describe('governor', function () {
       description: 'empty',
     });
   });
+  it.only('can update timelock in the Governor', async function () {
+    // create new governor
+    const mockFactory = await ethers.getContractFactory('BabylonGovernorMock');
+    const newGovernor = await mockFactory.deploy(bablToken.address, timelockController.address, 1, 10);
+    // Speed up grantRole to new governor at current timelockcontroller (avoid being part of a proposal)
+    await timelockController.connect(owner).grantRole(PROPOSER_ROLE, newGovernor.address);
+    await timelockController.connect(owner).grantRole(EXECUTOR_ROLE, newGovernor.address);
+
+    // create new timelockcontroller
+    const timelockFactory = await ethers.getContractFactory('TimelockController');
+    const newTimelock = await timelockFactory.deploy(ONE_DAY_IN_SECONDS, [babGovernor.address], [babGovernor.address]);
+
+    expect(await newGovernor.timelock()).to.equal(timelockController.address);
+    await runProposal(newGovernor, {
+      targets: [newGovernor.address],
+      values: [from(0)],
+      calldatas: [
+        new ethers.utils.Interface([
+          'function updateTimelock(address newTimelock)',
+        ]).encodeFunctionData('updateTimelock', [newTimelock.address]),
+      ],
+      description: 'update timelockcontroller to a new one',
+    });
+    expect(await newGovernor.timelock()).to.equal(newTimelock.address);
+  });
 });
