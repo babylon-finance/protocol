@@ -210,6 +210,12 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         _require(active, Errors.ONLY_ACTIVE);
     }
 
+    /**
+     * Check if msg.sender is keeper
+     */
+    function _onlyKeeper() private view {
+        _require(IBabController(controller).isValidKeeper(msg.sender), Errors.ONLY_KEEPER);
+    }
     /* ============ Constructor ============ */
 
     /**
@@ -393,6 +399,8 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         bytes32 r,
         bytes32 s
     ) external override nonReentrant {
+        _onlyKeeper();
+
         bytes32 hash =
             keccak256(abi.encode(DEPOSIT_BY_SIG_TYPEHASH, address(this), _amountIn, _minAmountOut, _mintNft, _nonce))
                 .toEthSignedMessageHash();
@@ -510,6 +518,8 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         bytes32 r,
         bytes32 s
     ) external override nonReentrant {
+        _onlyKeeper();
+
         bytes32 hash =
             keccak256(abi.encode(WITHDRAW_BY_SIG_TYPEHASH, address(this), _amountIn, _minAmountOut, _nonce))
                 .toEthSignedMessageHash();
