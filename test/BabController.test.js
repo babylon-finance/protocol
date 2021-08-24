@@ -246,7 +246,7 @@ describe('BabController', function () {
         garden1.connect(signer1).deposit(ethers.utils.parseEther('1'), 1, signer1.getAddress(), false, {
           value: ethers.utils.parseEther('1'),
         }),
-      ).to.be.revertedWith('revert BAB#083');
+      ).to.be.revertedWith('BAB#083');
     });
     it('should pause individually a garden', async function () {
       await babController.connect(owner).setPauseGuardian(signer1.address);
@@ -263,21 +263,19 @@ describe('BabController', function () {
         garden1.connect(signer1).deposit(ethers.utils.parseEther('1'), 1, signer1.getAddress(), false, {
           value: ethers.utils.parseEther('1'),
         }),
-      ).to.be.revertedWith('revert BAB#083');
+      ).to.be.revertedWith('BAB#083');
     });
     it('should pause individually a strategy', async function () {
       const [long1] = await createStrategies([{ garden: garden1 }]);
       await babController.connect(owner).setPauseGuardian(signer1.address);
       await babController.connect(signer1).setSomePause([long1.address], true);
-      await expect(executeStrategy(long1, ONE_ETH)).to.be.revertedWith('revert BAB#083');
+      await expect(executeStrategy(long1, ONE_ETH)).to.be.revertedWith('BAB#083');
     });
     it('should pause individually the reward distributor main functions', async function () {
       await babController.connect(owner).setPauseGuardian(signer1.address);
       await babController.connect(signer1).setSomePause([rewardsDistributor.address], true);
-      await expect(babController.connect(owner).enableBABLMiningProgram()).to.be.revertedWith('revert BAB#083');
-      await expect(rewardsDistributor.connect(owner).setBablToken(bablToken.address)).to.be.revertedWith(
-        'revert BAB#083',
-      );
+      await expect(babController.connect(owner).enableBABLMiningProgram()).to.be.revertedWith('BAB#083');
+      await expect(rewardsDistributor.connect(owner).setBablToken(bablToken.address)).to.be.revertedWith('BAB#083');
     });
     it('should pause individually the BABL Token main functions as a TimeLockedToken', async function () {
       // Enable BABL token transfers
@@ -288,13 +286,13 @@ describe('BabController', function () {
         bablToken.connect(owner).transfer(signer1.address, ethers.utils.parseEther('1000'), {
           gasPrice: 0,
         }),
-      ).to.be.revertedWith('revert BAB#083');
+      ).to.be.revertedWith('BAB#083');
     });
     it('owner can unpause a strategy', async function () {
       const [long1] = await createStrategies([{ garden: garden1 }]);
       await babController.connect(owner).setPauseGuardian(signer1.address);
       await babController.connect(signer1).setSomePause([long1.address], true);
-      await expect(executeStrategy(long1, ONE_ETH)).to.be.revertedWith('revert BAB#083');
+      await expect(executeStrategy(long1, ONE_ETH)).to.be.revertedWith('BAB#083');
       await babController.connect(owner).setSomePause([long1.address], false);
       await expect(executeStrategy(long1, ONE_ETH)).to.not.be.reverted;
     });
@@ -313,7 +311,7 @@ describe('BabController', function () {
         garden1.connect(signer1).deposit(ethers.utils.parseEther('1'), 1, signer1.getAddress(), false, {
           value: ethers.utils.parseEther('1'),
         }),
-      ).to.be.revertedWith('revert BAB#083');
+      ).to.be.revertedWith('BAB#083');
       await babController.connect(owner).setSomePause([garden1.address], false);
       await expect(
         garden1.connect(signer1).deposit(ethers.utils.parseEther('1'), 1, signer1.getAddress(), false, {
@@ -324,10 +322,8 @@ describe('BabController', function () {
     it('owner can unpause the reward distributor main functions', async function () {
       await babController.connect(owner).setPauseGuardian(signer1.address);
       await babController.connect(signer1).setSomePause([rewardsDistributor.address], true);
-      await expect(babController.connect(owner).enableBABLMiningProgram()).to.be.revertedWith('revert BAB#083');
-      await expect(rewardsDistributor.connect(owner).setBablToken(bablToken.address)).to.be.revertedWith(
-        'revert BAB#083',
-      );
+      await expect(babController.connect(owner).enableBABLMiningProgram()).to.be.revertedWith('BAB#083');
+      await expect(rewardsDistributor.connect(owner).setBablToken(bablToken.address)).to.be.revertedWith('BAB#083');
       await expect(babController.connect(signer1).setSomePause([rewardsDistributor.address], false)).to.be.revertedWith(
         'only admin can unpause',
       );
@@ -344,7 +340,7 @@ describe('BabController', function () {
         bablToken.connect(owner).transfer(signer1.address, ethers.utils.parseEther('1000'), {
           gasPrice: 0,
         }),
-      ).to.be.revertedWith('revert BAB#083');
+      ).to.be.revertedWith('BAB#083');
       await babController.connect(owner).setSomePause([bablToken.address], false);
       await expect(
         bablToken.connect(owner).transfer(signer1.address, ethers.utils.parseEther('10'), {

@@ -18,18 +18,9 @@ describe('LidoIntegrationTest', function () {
     wstETH = await ethers.getContractAt('IWstETH', addresses.lido.wsteth);
   });
 
-  describe('Deployment', function () {
-    it('should successfully deploy the contract', async function () {
-      const deployed = await babController.deployed();
-      const deployedLido = await lidoIntegration.deployed();
-      expect(!!deployed).to.equal(true);
-      expect(!!deployedLido).to.equal(true);
-    });
-  });
-
   describe('Lido Staking', function () {
     describe('getPricePerShare', function () {
-      it('get price per share', async function () {
+      it('gets price per share', async function () {
         const stPrice = await stETH.getPooledEthByShares(ONE_ETH);
         expect(await lidoIntegration.getPricePerShare(stETH.address)).to.equal(stPrice);
         expect(await lidoIntegration.getPricePerShare(wstETH.address)).to.equal(await wstETH.getStETHByWstETH(stPrice));

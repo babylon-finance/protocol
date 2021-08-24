@@ -123,7 +123,7 @@ contract BabController is OwnableUpgradeable, IBabController {
     address public override treasury;
 
     // Strategy cooldown period
-    uint256 public constant MIN_COOLDOWN_PERIOD = 6 hours;
+    uint256 public constant MIN_COOLDOWN_PERIOD = 60 seconds;
     uint256 public constant MAX_COOLDOWN_PERIOD = 7 days;
 
     // Strategy Profit Sharing
@@ -724,7 +724,9 @@ contract BabController is OwnableUpgradeable, IBabController {
             _contractAddress == address(this) ||
             _isOperation(_contractAddress) ||
             (isGarden[address(IStrategy(_contractAddress).garden())] &&
-                IGarden(IStrategy(_contractAddress).garden()).strategyMapping(_contractAddress)));
+                IGarden(IStrategy(_contractAddress).garden()).strategyMapping(_contractAddress)) ||
+            (isGarden[address(IStrategy(_contractAddress).garden())] &&
+                IGarden(IStrategy(_contractAddress).garden()).isGardenStrategy(_contractAddress)));
     }
 
     /* ============ Internal Only Function ============ */

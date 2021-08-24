@@ -1369,7 +1369,7 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         uint256 _previousBalance,
         bool _depositOrWithdraw
     ) private {
-        // We make checkpoints around contributor deposits to avoid fast loans and give the right rewards afterwards
+        // We make checkpoints around contributor deposits to give the right rewards afterwards
         ContributorPerGarden storage contributor = contributorPerGarden[address(_garden)][_contributor];
         TimestampContribution storage contributorDetail = contributor.tsContributions[block.timestamp];
         contributorDetail.supply = IERC20(address(IGarden(_garden))).balanceOf(address(_contributor));
