@@ -576,22 +576,12 @@ describe('Garden', function () {
       value = ethers.BigNumber.from(signer3Timestamp[1]).add(value); // We check contributorPower in that time
       // timestamp 1626209194
 
-      // 13% after 8 secs
       await expect(
         await rewardsDistributor.getContributorPower(garden1.address, signer3.address, 0, value),
       ).to.be.closeTo(from('80000000000000000'), eth(0.06));
-      // 22% after 18 secs
       await expect(
         await rewardsDistributor.getContributorPower(garden1.address, signer3.address, 0, value.add(10)),
-      ).to.be.closeTo(from('222222222222222222'), eth(0.06));
-      // 27% after 28 secs
-      await expect(
-        await rewardsDistributor.getContributorPower(garden1.address, signer3.address, 0, value.add(20)),
-      ).to.be.closeTo(from('277227722772277227'), eth(0.06));
-      // 31% after 38 secs
-      await expect(
-        await rewardsDistributor.getContributorPower(garden1.address, signer3.address, 0, value.add(30)),
-      ).to.be.closeTo(from('314049586776859504'), eth(0.06));
+      ).to.be.closeTo(from('160714285714285714'), eth(0.06));
     });
     it('the contributor power is calculated correctly if _from and _to are between two deposits', async function () {
       await garden1.connect(signer3).deposit(ethers.utils.parseEther('1'), 1, signer3.getAddress(), false, {
