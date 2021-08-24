@@ -119,7 +119,7 @@ describe('Garden', function () {
           value: ethers.utils.parseEther('1'),
           gasPrice: 0,
         }),
-      ).to.be.revertedWith('revert BAB#029');
+      ).to.be.revertedWith('BAB#029');
       const canJoin =
         (await ishtarGate.connect(signer1).canJoinAGarden(garden1.address, signer3.address)) ||
         ((await ishtarGate.balanceOf(signer3.address)) > 0 && !(await garden1.privateGarden()));
@@ -155,14 +155,14 @@ describe('Garden', function () {
       await expect(getStrategy({ garden: garden1, signers: [signer3] })).not.to.be.reverted;
       // Remove permissions (0 is below LP even)
       await ishtarGate.connect(signer1).setGardenAccess(signer3.address, garden1.address, 0, { gasPrice: 0 });
-      await expect(getStrategy({ garden: garden1, signers: [signer3] })).to.be.revertedWith('revert BAB#030');
+      await expect(getStrategy({ garden: garden1, signers: [signer3] })).to.be.revertedWith('BAB#030');
       const [canJoin2, canVote2, canAddStrategy2] = await babViewer
         .connect(signer1)
         .getGardenPermissions(garden1.address, signer3.address);
 
       expect(canAddStrategy2).to.equal(false);
       // Enable strategist creator rights - the garden needs to be public
-      await expect(garden1.connect(signer1).setPublicRights(true, false)).to.be.revertedWith('revert BAB#090');
+      await expect(garden1.connect(signer1).setPublicRights(true, false)).to.be.revertedWith('BAB#090');
       await babController.connect(owner).setAllowPublicGardens();
       await garden1.connect(signer1).makeGardenPublic();
       await garden1.connect(signer1).setPublicRights(true, false);
@@ -191,7 +191,7 @@ describe('Garden', function () {
       expect(canJoin2).to.equal(false);
 
       // Enable voting power rights to users - the garden needs to be public
-      await expect(garden1.connect(signer1).setPublicRights(false, true)).to.be.revertedWith('revert BAB#090');
+      await expect(garden1.connect(signer1).setPublicRights(false, true)).to.be.revertedWith('BAB#090');
       await babController.connect(owner).setAllowPublicGardens();
       await garden1.connect(signer1).makeGardenPublic();
       await garden1.connect(signer1).setPublicRights(false, true);
@@ -221,7 +221,7 @@ describe('Garden', function () {
               value: ethers.utils.parseEther('0.1'),
             },
           ),
-      ).to.be.revertedWith('revert User does not have creation permissions');
+      ).to.be.revertedWith('User does not have creation permissions');
       await babController.connect(owner).openPublicGardenCreation();
       await expect(
         babController
@@ -246,13 +246,13 @@ describe('Garden', function () {
 
   describe('payKeeper', async function () {
     it('anyone can NOT invoke payKeeper', async function () {
-      await expect(garden1.connect(signer1).payKeeper(keeper.address, ONE_ETH)).to.be.revertedWith(/revert BAB#020/i);
+      await expect(garden1.connect(signer1).payKeeper(keeper.address, ONE_ETH)).to.be.revertedWith(/BAB#020/i);
     });
   });
 
   describe('state', async function () {
     it('only the protocol should be able to update active state', async function () {
-      await expect(garden1.connect(signer1).setActive(true)).to.be.revertedWith(/revert BAB#016/i);
+      await expect(garden1.connect(signer1).setActive(true)).to.be.revertedWith(/BAB#016/i);
     });
   });
   describe('profit sharing', async function () {
@@ -388,7 +388,7 @@ describe('Garden', function () {
               value: ethers.utils.parseEther('1'),
             },
           ),
-      ).to.be.revertedWith('revert BAB#092');
+      ).to.be.revertedWith('BAB#092');
     });
     it('should fail if the protocol try a custom profit sharing which sum is above 95% while creation', async function () {
       await expect(
@@ -408,7 +408,7 @@ describe('Garden', function () {
               value: ethers.utils.parseEther('1'),
             },
           ),
-      ).to.be.revertedWith('revert BAB#092');
+      ).to.be.revertedWith('BAB#092');
     });
     it('should fail if the protocol try a custom profit sharing which sum is below 95% while creation (by decimal difference)', async function () {
       await expect(
@@ -428,7 +428,7 @@ describe('Garden', function () {
               value: ethers.utils.parseEther('1'),
             },
           ),
-      ).to.be.revertedWith('revert BAB#092');
+      ).to.be.revertedWith('BAB#092');
     });
     it('should fail if the protocol try a custom profit sharing which sum is above 95% while creation (by decimal difference)', async function () {
       await expect(
@@ -448,7 +448,7 @@ describe('Garden', function () {
               value: ethers.utils.parseEther('1'),
             },
           ),
-      ).to.be.revertedWith('revert BAB#092');
+      ).to.be.revertedWith('BAB#092');
     });
   });
 
@@ -753,14 +753,14 @@ describe('Garden', function () {
       const end = start + 5;
       await expect(
         rewardsDistributor.getContributorPower(garden1.address, signer3.address, start, end),
-      ).to.be.revertedWith('revert BAB#065');
+      ).to.be.revertedWith('BAB#065');
     });
     it('should fail get contributor power if _to < _from', async function () {
       const start = NOW - 15;
       const end = start - 5;
       await expect(
         rewardsDistributor.getContributorPower(garden1.address, signer3.address, start, end),
-      ).to.be.revertedWith('revert BAB#065');
+      ).to.be.revertedWith('BAB#065');
     });
     it('contributor power is 100% for the creator if it is the only user (several distanced deposits)', async function () {
       await garden1.connect(signer1).deposit(ethers.utils.parseEther('1'), 1, signer1.getAddress(), false, {
@@ -908,7 +908,7 @@ describe('Garden', function () {
 
       await expect(
         garden.connect(keeper).withdrawBySig(amountIn, minAmountOut, 8, eth(), sig.v, sig.r, sig.s),
-      ).to.be.revertedWith('revert BAB#089');
+      ).to.be.revertedWith('BAB#089');
     });
     // TODO: Test minAmountOut is respected
   });
@@ -1185,14 +1185,14 @@ describe('Garden', function () {
 
       await injectFakeProfits(strategyContract, ethers.utils.parseEther('200')); // We inject positive profits
       await finalizeStrategy(strategyContract, 0);
-      await expect(finalizeStrategy(strategyContract, 0)).to.be.revertedWith('revert BAB#050');
+      await expect(finalizeStrategy(strategyContract, 0)).to.be.revertedWith('BAB#050');
 
       await expect(
         garden1.finalizeStrategy(
           ethers.BigNumber.from('14263257018321332'),
           ethers.BigNumber.from('90333961116035100'),
         ),
-      ).to.be.revertedWith('revert BAB#020');
+      ).to.be.revertedWith('BAB#020');
     });
   });
 
@@ -1237,10 +1237,25 @@ describe('Garden', function () {
       const sig = await getDepositSig(garden.address, signer3, amountIn, minAmountOut, false, 7);
       await expect(
         garden.connect(keeper).depositBySig(amountIn, minAmountOut, false, 7, eth(), sig.v, sig.r, sig.s),
-      ).to.be.revertedWith('revert BAB#089');
+      ).to.be.revertedWith('BAB#089');
     });
     // TODO: Test minAmountOut is respected
     // TODO: Test mintNFT is respected
+  });
+
+  describe('setCooldown', async function () {
+    it('can set cooldown', async function () {
+      const garden = await createGarden();
+      await garden.connect(owner).setCooldown();
+
+      expect(await garden.strategyCooldownPeriod()).to.eq(from(60));
+    });
+
+    it('only owner can set cooldown', async function () {
+      const garden = await createGarden();
+
+      await expect(garden.connect(signer1).setCooldown()).to.revertedWith('BAB#032');
+    });
   });
 
   describe('deposit', async function () {
@@ -1472,7 +1487,7 @@ describe('Garden', function () {
           garden4.connect(signer2).deposit(ethers.utils.parseEther('1'), 1, signer2.getAddress(), false, {
             value: ethers.utils.parseEther('1'),
           }),
-        ).to.be.revertedWith('revert BAB#061');
+        ).to.be.revertedWith('BAB#061');
         // Previous contributors belonging to the garden can still deposit
         await garden4.connect(signer3).deposit(ethers.utils.parseEther('1'), 1, signer3.getAddress(), false, {
           value: ethers.utils.parseEther('1'),
@@ -1617,7 +1632,7 @@ describe('Garden', function () {
       ).to.be.reverted;
     });
   });
-  describe('Avg share price per user', async function () {
+  describe('avg share price per user', async function () {
     [
       { token: addresses.tokens.WETH, name: 'WETH' },
       { token: addresses.tokens.DAI, name: 'DAI' },
@@ -1633,8 +1648,8 @@ describe('Garden', function () {
         const user2Balance = await garden.balanceOf(signer3.address);
         const user1Deposits = await garden.getContributor(signer1.address);
         const user2Deposits = await garden.getContributor(signer3.address);
-        const user1Avg = user1Balance > 0 ? user1Deposits[5].mul(ONE_ETH).div(user1Balance) : 0;
-        const user2Avg = user2Balance > 0 ? user2Deposits[5].mul(ONE_ETH).div(user2Balance) : 0;
+        const user1Avg = user1Balance > 0 ? user1Deposits[5].mul(eth()).div(user1Balance) : 0;
+        const user2Avg = user2Balance > 0 ? user2Deposits[5].mul(eth()).div(user2Balance) : 0;
 
         expect(
           await babViewer.connect(signer1).getGardenUserAvgPricePerShare(garden.address, signer1.address),

@@ -391,7 +391,7 @@ describe('IshtarGate', function () {
           .grantGardenAccessBatch(newGarden.address, WALLET_ADDRESSES_13, [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1], {
             gasPrice: 0,
           }),
-      ).to.be.revertedWith('revert Max Number of invites reached');
+      ).to.be.revertedWith('Max Number of invites reached');
     });
     it('should give access rights to the maximum limit without stucking the modifier onlyGardenCreator', async function () {
       await expect(
@@ -436,7 +436,7 @@ describe('IshtarGate', function () {
           .grantGardenAccessBatch(newGarden.address, WALLET_ADDRESSES_13, [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1], {
             gasPrice: 0,
           }),
-      ).to.be.revertedWith('revert Max Number of invites reached');
+      ).to.be.revertedWith('Max Number of invites reached');
 
       // Only 1 new user do not stuck the system it is just reverted
       await expect(
@@ -445,7 +445,7 @@ describe('IshtarGate', function () {
           .grantGardenAccessBatch(newGarden.address, ['0x7F6105aB06f5Cd2deAd20b09Ca1fe15AfB4ddf49'], [3], {
             gasPrice: 0,
           }),
-      ).to.be.revertedWith('revert Max Number of invites reached');
+      ).to.be.revertedWith('Max Number of invites reached');
     });
   });
 });

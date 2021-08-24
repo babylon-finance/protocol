@@ -45,7 +45,9 @@ module.exports = async ({ getNamedAccounts, deployments, ethers, getSigner, getC
       receiver: alloc[0],
       distribution: ethers.utils.parseEther(alloc[1].replace(',', '')),
       investorType: alloc[2],
-      vestingStartingDate: alloc[2] ? teamVestingStart.getTime() : investorsVestingStart.getTime(),
+      vestingStartingDate: alloc[2]
+        ? Math.round(teamVestingStart.getTime() / 1000)
+        : Math.round(investorsVestingStart.getTime() / 1000),
     };
   });
   const batchSize = 20;
