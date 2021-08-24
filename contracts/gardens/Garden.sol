@@ -132,7 +132,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
     // The person that creates the garden
     address public override creator;
 
-    bool public active; // DEPRECATED;
+    bool private active; // DEPRECATED;
     bool public override privateGarden;
 
     // Keeps track of the garden balance in reserve asset.
@@ -578,7 +578,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         _require(_capital.add(protocolMgmtFee) <= liquidReserve(), Errors.MIN_LIQUIDITY);
 
         // Take protocol mgmt fee
-        _payProtocolFeeFromGarden(reserveAsset, protocolMgmtFee);
+        IERC20(reserveAsset).safeTransfer(IBabController(controller).treasury(), protocolMgmtFee);
 
         // Send Capital to strategy
         IERC20(reserveAsset).safeTransfer(msg.sender, _capital);
@@ -599,6 +599,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
      * @param _strategy      Strategy
      */
     function burnStrategistStake(address _strategist, uint256 _amount) external override {
+      // TODO: Move to finalizeStrategy method
         _onlyStrategy();
         if (_amount >= balanceOf(_strategist)) {
             // Avoid underflow condition
@@ -905,15 +906,6 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         return reserve > keeperDebt ? reserve.sub(keeperDebt) : 0;
     }
 
-    /**
-     * Pays the _feeQuantity from the _garden denominated in _token to the protocol fee recipient
-     * @param _token                   Address of the token to pay with
-     * @param _feeQuantity             Fee to transfer
-     */
-    function _payProtocolFeeFromGarden(address _token, uint256 _feeQuantity) private {
-        IERC20(_token).safeTransfer(IBabController(controller).treasury(), _feeQuantity);
-    }
-
     // Disable garden token transfers. Allow minting and burning.
     function _beforeTokenTransfer(
         address from,
@@ -943,12 +935,6 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
             IERC20(reserveAsset).safeTransfer(_to, _amount);
         }
     }
-
-    function _getWithdrawalReserveQuantity(address _reserveAsset, uint256 _gardenTokenQuantity)
-        private
-        view
-        returns (uint256)
-    {}
 
     /**
      * Updates the contributor info in the array
