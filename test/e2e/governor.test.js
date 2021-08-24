@@ -153,7 +153,7 @@ describe('governor', function () {
       description: 'empty',
     });
   });
-  it.only('can update timelock in the Governor', async function () {
+  it('can update timelock in the Governor', async function () {
     // create new governor
     const mockFactory = await ethers.getContractFactory('BabylonGovernorMock');
     const newGovernor = await mockFactory.deploy(bablToken.address, timelockController.address, 1, 10);
