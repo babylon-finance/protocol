@@ -188,7 +188,7 @@ describe('MardukGate', function () {
       await expect(newGarden.connect(signer2).transferCreatorRights(ADDRESS_ZERO, 0)).to.be.reverted;
     });
 
-    it.only('creator can renounce to a non 0 address even if garden is private', async function () {
+    it('creator can renounce to a non 0 address even if garden is private', async function () {
       await mardukGate.connect(owner).setCreatorPermissions(signer2.address, true, { gasPrice: 0 });
       await babController
         .connect(signer2)
