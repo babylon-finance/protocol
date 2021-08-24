@@ -144,9 +144,16 @@ describe('Garden', function () {
       expect(await garden1.creator()).to.equal(await signer2.getAddress());
     });
 
-    it('should allow renouncing creator rights', async function () {
+    it('should not allow renouncing creator rights if the garden is private', async function () {
       expect(await garden1.creator()).to.equal(await signer1.getAddress());
-      await garden1.connect(signer1).transferCreatorRights(ADDRESS_ZERO, 0);
+      await expect(garden1.connect(signer1).transferCreatorRights(ADDRESS_ZERO, 0)).to.be.reverted;
+    });
+
+    it('should allow renouncing creator rights if the garden is public', async function () {
+      expect(await garden1.creator()).to.equal(await signer1.getAddress());
+      await babController.connect(owner).setAllowPublicGardens();
+      await garden1.connect(signer1).makeGardenPublic();
+      await expect(garden1.connect(signer1).transferCreatorRights(ADDRESS_ZERO, 0)).to.not.be.reverted;
       expect(await garden1.creator()).to.equal(ADDRESS_ZERO);
     });
 
@@ -260,14 +267,14 @@ describe('Garden', function () {
       });
       const canJoin =
         (await mardukGate.connect(signer1).canVoteInAGarden(garden1.address, signer2.address)) ||
-        ((await mardukGate.balanceOf(signer2.address)) > 0 && (await garden1.publicStewards()));
+        ((await mardukGate.canAccessBeta(signer2.address)) && (await garden1.publicStewards()));
 
       expect(canJoin).to.equal(true);
       // Remove permissions (0 is below LP even)
       await mardukGate.connect(signer1).setGardenAccess(signer2.address, garden1.address, 0, { gasPrice: 0 });
       const canJoin2 =
         (await mardukGate.connect(signer1).canVoteInAGarden(garden1.address, signer2.address)) ||
-        ((await mardukGate.balanceOf(signer2.address)) > 0 && (await garden1.publicStewards()));
+        ((await mardukGate.canAccessBeta(signer2.address)) && (await garden1.publicStewards()));
       expect(canJoin2).to.equal(false);
 
       // Enable voting power rights to users - the garden needs to be public
@@ -277,7 +284,7 @@ describe('Garden', function () {
       await garden1.connect(signer1).setPublicRights(false, true);
       const canJoin3 =
         (await mardukGate.connect(signer1).canVoteInAGarden(garden1.address, signer2.address)) ||
-        ((await mardukGate.balanceOf(signer2.address)) > 0 && (await garden1.publicStewards()));
+        ((await mardukGate.canAccessBeta(signer2.address)) && (await garden1.publicStewards()));
       expect(canJoin3).to.equal(true);
     });
   });

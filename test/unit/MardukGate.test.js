@@ -301,7 +301,7 @@ describe('MardukGate', function () {
             0,
             GARDEN_PARAMS,
             ethers.utils.parseEther('0.1'),
-            [false, false, false],
+            [true, false, true],
             [0, 0, 0],
             {
               value: ethers.utils.parseEther('0.1'),
@@ -433,6 +433,7 @@ describe('MardukGate', function () {
     });
 
     it('creator cannot grant access to a garden after renouncing', async function () {
+      await babController.connect(owner).setAllowPublicGardens();
       await expect(
         babController
           .connect(signer1)
@@ -444,7 +445,7 @@ describe('MardukGate', function () {
             5,
             GARDEN_PARAMS,
             ethers.utils.parseEther('0.1'),
-            [false, false, false],
+            [true, false, false],
             [0, 0, 0],
             {
               value: ethers.utils.parseEther('0.1'),
