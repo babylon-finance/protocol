@@ -1019,7 +1019,7 @@ describe('Garden', function () {
       minAmountOut = from(1000 * 1e6);
       const sig = await getWithdrawSig(garden.address, signer3, amountIn, minAmountOut, 1, 0);
       await expect(
-        garden.connect(signer3).withdrawBySig(amountIn, minAmountOut, 1, 0, eth(), 0, sig.v, sig.r, sig.s)
+        garden.connect(signer3).withdrawBySig(amountIn, minAmountOut, 1, 0, eth(), 0, sig.v, sig.r, sig.s),
       ).to.be.revertedWith('BAB#018');
     });
 
@@ -1411,11 +1411,11 @@ describe('Garden', function () {
       });
 
       const sig = await getDepositSig(garden.address, signer3, amountIn, minAmountOut, false, nonce, maxFee);
-      await expect(garden
-        .connect(signer3)
-        .depositBySig(amountIn, minAmountOut, false, nonce, maxFee, eth(), fee, sig.v, sig.r, sig.s)
+      await expect(
+        garden
+          .connect(signer3)
+          .depositBySig(amountIn, minAmountOut, false, nonce, maxFee, eth(), fee, sig.v, sig.r, sig.s),
       ).to.be.revertedWith('BAB#018');
-
     });
 
     it('rejects wrong nonce', async function () {
