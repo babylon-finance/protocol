@@ -288,8 +288,9 @@ describe('MardukGate', function () {
       ).not.to.be.reverted;
     });
 
-    it('creator can still create a strategy after renouncing', async function () {
+    it('creator can still create a strategy after renouncing and giving him permissions', async function () {
       await mardukGate.connect(owner).setCreatorPermissions(signer2.address, true, { gasPrice: 0 });
+      await babController.connect(owner).setAllowPublicGardens();
       await expect(
         babController
           .connect(signer2)
@@ -301,7 +302,7 @@ describe('MardukGate', function () {
             0,
             GARDEN_PARAMS,
             ethers.utils.parseEther('0.1'),
-            [true, false, true],
+            [true, true, true],
             [0, 0, 0],
             {
               value: ethers.utils.parseEther('0.1'),

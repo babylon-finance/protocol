@@ -265,11 +265,10 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         creator = _creator;
         rewardsDistributor = IRewardsDistributor(IBabController(controller).rewardsDistributor());
         _require(address(rewardsDistributor) != address(0), Errors.ADDRESS_IS_ZERO);
-        privateGarden = (IBabController(controller).allowPublicGardens() && _publicGardenStrategistsStewards[0])
-            ? !_publicGardenStrategistsStewards[0]
-            : true;
-        publicStrategists = !privateGarden && _publicGardenStrategistsStewards[1] ? true : false;
-        publicStewards = !privateGarden && _publicGardenStrategistsStewards[2] ? true : false;
+        privateGarden = !(IBabController(controller).allowPublicGardens() && _publicGardenStrategistsStewards[0]);
+        publicStrategists = !privateGarden && _publicGardenStrategistsStewards[1];
+
+        publicStewards = !privateGarden && _publicGardenStrategistsStewards[2];
         _start(
             _initialContribution,
             _gardenParams[0],
