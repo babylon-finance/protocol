@@ -920,7 +920,6 @@ describe('BabylonGovernor', function () {
       expect(await await mockTimelock.isOperationReady(timelockId)).to.equal(false);
       expect(await await mockTimelock.isOperationDone(timelockId)).to.equal(true);
 
-      // await increaseTime(ONE_DAY_IN_SECONDS);
       expect(await mockGovernor.proposalEta(id)).to.be.equal(0);
       expect(await mockTimelock.getTimestamp(timelockId)).to.be.equal(1);
     });
