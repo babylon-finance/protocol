@@ -568,10 +568,30 @@ describe('Garden', function () {
         value: ethers.utils.parseEther('1'),
       });
       const signer3Timestamp = await garden1.getContributor(signer3.address);
-      const value = ethers.BigNumber.from(signer3Timestamp[1]);
+      // we take the time window between 2 deposits
+      let value = ethers.BigNumber.from(signer3Timestamp[0]).sub(ethers.BigNumber.from(signer3Timestamp[1]));
+      // 86401 seconds
+      value = ethers.BigNumber.from(value).div(10000); // Then we take a % of that window time
+      // 8 seconds ahead of initialDeposit
+      value = ethers.BigNumber.from(signer3Timestamp[1]).add(value); // We check contributorPower in that time
+      // timestamp 1626209194
+
+      // 13% after 8 secs
       await expect(
-        await rewardsDistributor.getContributorPower(garden1.address, signer3.address, 0, value.add(4)),
-      ).to.be.closeTo(from('166666666666666666'), eth(0.1));
+        await rewardsDistributor.getContributorPower(garden1.address, signer3.address, 0, value),
+      ).to.be.closeTo(from('131147540983606557'), eth(0.01));
+      // 22% after 18 secs
+      await expect(
+        await rewardsDistributor.getContributorPower(garden1.address, signer3.address, 0, value.add(10)),
+      ).to.be.closeTo(from('222222222222222222'), eth(0.01));
+      // 27% after 28 secs
+      await expect(
+        await rewardsDistributor.getContributorPower(garden1.address, signer3.address, 0, value.add(20)),
+      ).to.be.closeTo(from('277227722772277227'), eth(0.01));
+      // 31% after 38 secs
+      await expect(
+        await rewardsDistributor.getContributorPower(garden1.address, signer3.address, 0, value.add(30)),
+      ).to.be.closeTo(from('314049586776859504'), eth(0.01));
     });
     it('the contributor power is calculated correctly if _from and _to are between two deposits', async function () {
       await garden1.connect(signer3).deposit(ethers.utils.parseEther('1'), 1, signer3.getAddress(), false, {
@@ -759,6 +779,7 @@ describe('Garden', function () {
       });
       const signer3DepositTimestamp = await garden1.getContributor(signer3.address);
       const signer1DepositTimestamp = await garden1.getContributor(signer1.address);
+
       await expect(
         (
           await rewardsDistributor.getContributorPower(
@@ -778,7 +799,7 @@ describe('Garden', function () {
             signer1DepositTimestamp[0],
           )
         ).toString(),
-      ).to.be.closeTo((833333333333333333).toString(), ethers.utils.parseEther('0.1'));
+      ).to.be.closeTo((903846153846153846).toString(), ethers.utils.parseEther('0.01'));
       await expect(
         (
           await rewardsDistributor.getContributorPower(
