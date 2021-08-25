@@ -30,6 +30,7 @@ async function createGarden({
   nftUri = NFT_URI,
   nftSeed = NFT_SEED,
   signer,
+  params,
   publicGardenStrategistsStewards = [false, false, false],
   publicSharing = [0, 0, 0],
 } = {}) {
@@ -37,7 +38,8 @@ async function createGarden({
   signer = signer || signer1;
   const ishtarGate = await getContract('IshtarGate');
   const babController = await getContract('BabController', 'BabControllerProxy');
-  const params = GARDEN_PARAMS_MAP[reserveAsset];
+  params = params || GARDEN_PARAMS_MAP[reserveAsset];
+  console.log('params', params);
   const contribution = CONTRIBUTORS_MAP[reserveAsset];
   const erc20 = await ethers.getContractAt('@openzeppelin/contracts/token/ERC20/IERC20.sol:IERC20', reserveAsset);
   for (const sig of [signer1, signer2, signer3]) {

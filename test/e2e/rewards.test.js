@@ -58,6 +58,10 @@ describe.only('rewards', function () {
   let dai;
   let wbtc;
 
+  const gardenNum = 30;
+  const strategyNum = 10;
+  const depositNum = 2;
+
   beforeEach(async () => {
     ({
       babController,
@@ -140,7 +144,7 @@ describe.only('rewards', function () {
     for (const garden of gardens) {
       for (let signer of [signer1, signer2]) {
         await reserveContract.connect(signer).approve(garden.address, eth(9999999), { gasPrice: 0 });
-        for (let j = 0; j < 2; j++) {
+        for (let j = 0; j < depositNum; j++) {
           await garden.connect(signer).deposit(eth(0.1), eth(0.1), signer.getAddress(), false, {});
           await increaseTime(3600);
         }
@@ -149,13 +153,10 @@ describe.only('rewards', function () {
   }
 
   it('simulate mining rewards launch', async function () {
-    const gardenNum = 30;
-    const strategyNum = 10;
     const gardens = [];
     for (let i = 0; i < gardenNum; i++) {
-      gardens.push(await createGarden());
+      gardens.push(await createGarden({ params: [eth(1e4), ...GARDEN_PARAMS.slice(1)] }));
     }
-
 
     let strategies = [];
     for (let i = 0; i < strategyNum; i++) {
