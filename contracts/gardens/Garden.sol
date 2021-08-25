@@ -599,7 +599,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
      * @param _strategy      Strategy
      */
     function burnStrategistStake(address _strategist, uint256 _amount) external override {
-      // TODO: Move to finalizeStrategy method
+        // TODO: Move to finalizeStrategy method
         _onlyStrategy();
         if (_amount >= balanceOf(_strategist)) {
             // Avoid underflow condition
