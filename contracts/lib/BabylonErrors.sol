@@ -260,4 +260,26 @@ library Errors {
     uint256 internal constant RESERVE_ASSET_NOT_SUPPORTED = 85;
     // Withdrawal/Deposit check min amount received
     uint256 internal constant RECEIVE_MIN_AMOUNT = 86;
+    // Total Votes has to be positive
+    uint256 internal constant TOTAL_VOTES_HAVE_TO_BE_POSITIVE = 87;
+    // Signer has to be valid
+    uint256 internal constant INVALID_SIGNER = 88;
+    // Nonce has to be valid
+    uint256 internal constant INVALID_NONCE = 89;
+    // Garden is not public
+    uint256 internal constant GARDEN_IS_NOT_PUBLIC = 90;
+    // Setting max contributors
+    uint256 internal constant MAX_CONTRIBUTORS_SET = 91;
+    // Profit sharing mismatch for customized gardens
+    uint256 internal constant PROFIT_SHARING_MISMATCH = 92;
+    // Max allocation percentage
+    uint256 internal constant MAX_STRATEGY_ALLOCATION_PERCENTAGE = 93;
+    // new creator must not exist
+    uint256 internal constant NEW_CREATOR_MUST_NOT_EXIST = 94;
+    // only first creator can add
+    uint256 internal constant ONLY_FIRST_CREATOR_CAN_ADD = 95;
+    // invalid address
+    uint256 internal constant INVALID_ADDRESS = 96;
+    // creator can only renounce in some circumstances
+    uint256 internal constant CREATOR_CANNOT_RENOUNCE = 97;
 }

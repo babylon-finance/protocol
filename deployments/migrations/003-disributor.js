@@ -41,5 +41,4 @@ module.exports = async ({
   }
 };
 
-module.exports.dependencies = ['Controller', 'Token'];
 module.exports.tags = ['Distributor'];

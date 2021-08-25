@@ -32,6 +32,7 @@ module.exports = async ({
     gasPrice,
   });
 
+<<<<<<< HEAD
   if (deployment.newlyDeployed) {
     console.log(`Adding integration ${contract}(${deployment.address}) to BabController`);
     await (
@@ -53,6 +54,8 @@ module.exports = async ({
     ).wait();
   }
 
+=======
+>>>>>>> main
   if (network.live && deployment.newlyDeployed) {
     await tenderly.push(await getTenderlyContract(contract));
   }

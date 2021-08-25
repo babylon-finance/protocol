@@ -62,6 +62,7 @@ contract BabController is OwnableUpgradeable, IBabController {
     event RewardsDistributorChanged(address indexed _rewardsDistributor, address _oldRewardsDistributor);
     event TreasuryChanged(address _newTreasury, address _oldTreasury);
     event IshtarGateChanged(address _newIshtarGate, address _oldIshtarGate);
+    event MardukGateChanged(address _newMardukGate, address _oldMardukGate);
     event GardenValuerChanged(address indexed _gardenValuer, address _oldGardenValuer);
     event GardenFactoryChanged(address indexed _gardenFactory, address _oldGardenFactory);
     event UniswapFactoryChanged(address indexed _newUniswapFactory, address _oldUniswapFactory);
@@ -100,7 +101,7 @@ contract BabController is OwnableUpgradeable, IBabController {
     address public override strategyNFT;
 
     // Mapping of integration name => integration address
-    mapping(bytes32 => address) private enabledIntegrations;
+    mapping(bytes32 => address) private enabledIntegrations; // DEPRECATED
     // Address of the default trade integration used by the protocol
     address public override defaultTradeIntegration;
     // Mapping of valid operations
@@ -121,10 +122,6 @@ contract BabController is OwnableUpgradeable, IBabController {
 
     // Recipient of protocol fees
     address public override treasury;
-
-    // Strategy cooldown period
-    uint256 public constant MIN_COOLDOWN_PERIOD = 6 hours;
-    uint256 public constant MAX_COOLDOWN_PERIOD = 7 days;
 
     // Strategy Profit Sharing
     uint256 public strategistProfitPercentage; // (0.01% = 1e14, 1% = 1e16)
@@ -164,6 +161,7 @@ contract BabController is OwnableUpgradeable, IBabController {
     address public guardian;
     mapping(address => bool) public override guardianPaused;
     bool public override guardianGlobalPaused;
+    address public override mardukGate;
 
     /* ============ Constructor ============ */
 
@@ -198,13 +196,15 @@ contract BabController is OwnableUpgradeable, IBabController {
      * Creates a Garden smart contract and registers the Garden with the controller.
      *
      * If asset is not WETH, the creator needs to approve the controller
-     * @param _reserveAsset           Reserve asset of the Garden. Initially just weth
-     * @param _name                   Name of the Garden
-     * @param _symbol                 Symbol of the Garden
-     * @param _gardenParams           Array of numeric garden params
-     * @param _tokenURI               Garden NFT token URI
-     * @param _seed                   Seed to regenerate the garden NFT
-     * @param _initialContribution    Initial contribution by the gardener
+     * @param _reserveAsset                     Reserve asset of the Garden. Initially just weth
+     * @param _name                             Name of the Garden
+     * @param _symbol                           Symbol of the Garden
+     * @param _gardenParams                     Array of numeric garden params
+     * @param _tokenURI                         Garden NFT token URI
+     * @param _seed                             Seed to regenerate the garden NFT
+     * @param _initialContribution              Initial contribution by the gardener
+     * @param _publicGardenStrategistsStewards  Public garden, public strategist rights and public stewards rights
+     * @param _profitSharing                    Custom profit sharing (if any)
      */
     function createGarden(
         address _reserveAsset,
@@ -213,12 +213,14 @@ contract BabController is OwnableUpgradeable, IBabController {
         string memory _tokenURI,
         uint256 _seed,
         uint256[] calldata _gardenParams,
-        uint256 _initialContribution
+        uint256 _initialContribution,
+        bool[] memory _publicGardenStrategistsStewards,
+        uint256[] memory _profitSharing
     ) external payable override returns (address) {
         require(defaultTradeIntegration != address(0), 'Need a default trade integration');
         require(enabledOperations.length > 0, 'Need operations enabled');
         require(
-            IIshtarGate(ishtarGate).canCreate(msg.sender) || gardenCreationIsOpen,
+            IIshtarGate(mardukGate).canCreate(msg.sender) || gardenCreationIsOpen,
             'User does not have creation permissions'
         );
         address newGarden =
@@ -230,7 +232,8 @@ contract BabController is OwnableUpgradeable, IBabController {
                 _tokenURI,
                 _seed,
                 _gardenParams,
-                _initialContribution
+                _initialContribution,
+                _publicGardenStrategistsStewards
             );
         if (_reserveAsset != WETH || msg.value == 0) {
             IERC20(_reserveAsset).transferFrom(msg.sender, address(this), _initialContribution);
@@ -240,6 +243,15 @@ contract BabController is OwnableUpgradeable, IBabController {
         isGarden[newGarden] = true;
         gardens.push(newGarden);
         IGarden(newGarden).deposit{value: msg.value}(_initialContribution, _initialContribution, msg.sender, true);
+        // Avoid gas cost if default sharing values are provided (0,0,0)
+        if (_profitSharing[0] != 0 || _profitSharing[1] != 0 || _profitSharing[2] != 0) {
+            IRewardsDistributor(rewardsDistributor).setProfitRewards(
+                newGarden,
+                _profitSharing[0],
+                _profitSharing[1],
+                _profitSharing[2]
+            );
+        }
         emit GardenAdded(newGarden, msg.sender);
         return newGarden;
     }
@@ -252,8 +264,8 @@ contract BabController is OwnableUpgradeable, IBabController {
     function removeGarden(address _garden) external override onlyOwner {
         require(isGarden[_garden], 'Garden does not exist');
         require(!IGarden(_garden).active(), 'The garden needs to be disabled.');
+        require(IGarden(_garden).getStrategies().length == 0, 'Garden has active strategies!');
         gardens = gardens.remove(_garden);
-
         delete isGarden[_garden];
 
         emit GardenRemoved(_garden);
@@ -268,6 +280,7 @@ contract BabController is OwnableUpgradeable, IBabController {
         require(isGarden[_garden], 'Garden does not exist');
         IGarden garden = IGarden(_garden);
         require(garden.active(), 'The garden needs to be active.');
+        require(garden.getStrategies().length == 0, 'Garden has active strategies!');
         garden.setActive(false);
     }
 
@@ -297,7 +310,7 @@ contract BabController is OwnableUpgradeable, IBabController {
      * Can only happen after 2021 is finished.
      */
     function enableGardenTokensTransfers() external override onlyOwner {
-        require(block.timestamp > 1641024000000, 'Transfers cannot be enabled yet');
+        require(block.timestamp > 1641024000, 'Transfers cannot be enabled yet');
         gardenTokensTransfersEnabled = true;
     }
 
@@ -420,6 +433,22 @@ contract BabController is OwnableUpgradeable, IBabController {
     }
 
     /**
+     * PRIVILEGED GOVERNANCE FUNCTION. Allows governance to change the Marduk Gate Address
+     *
+     * @param _mardukGate               Address of the new Marduk Gate
+     */
+    function editMardukGate(address _mardukGate) external override onlyOwner {
+        require(_mardukGate != mardukGate, 'Marduk Gate already exists');
+
+        require(_mardukGate != address(0), 'Marduk Gate oracle must exist');
+
+        address oldMardukGate = mardukGate;
+        mardukGate = _mardukGate;
+
+        emit MardukGateChanged(_mardukGate, oldMardukGate);
+    }
+
+    /**
      * PRIVILEGED GOVERNANCE FUNCTION. Allows governance to change the garden valuer
      *
      * @param _gardenValuer Address of the new garden valuer
@@ -527,63 +556,10 @@ contract BabController is OwnableUpgradeable, IBabController {
     function setDefaultTradeIntegration(address _newDefaultTradeIntegation) external override onlyOwner {
         require(_newDefaultTradeIntegation != address(0), 'Address must not be 0');
         require(_newDefaultTradeIntegation != defaultTradeIntegration, 'Address must be different');
-        require(
-            enabledIntegrations[_nameHash(IIntegration(_newDefaultTradeIntegation).getName())] ==
-                _newDefaultTradeIntegation,
-            'Integration needs to be valid'
-        );
         address oldDefaultTradeIntegration = defaultTradeIntegration;
         defaultTradeIntegration = _newDefaultTradeIntegation;
 
         emit DefaultTradeIntegrationChanged(_newDefaultTradeIntegation, oldDefaultTradeIntegration);
-    }
-
-    /**
-     * GOVERNANCE FUNCTION: Add a new integration to the registry
-     *
-     * @param  _name             Human readable string identifying the integration
-     * @param  _integration      Address of the integration contract to add
-     */
-    function addIntegration(string memory _name, address _integration) public override onlyOwner {
-        bytes32 hashedName = _nameHash(_name);
-        require(enabledIntegrations[hashedName] == address(0), 'Integration exists already.');
-        require(_integration != address(0), 'Integration address must exist.');
-
-        enabledIntegrations[hashedName] = _integration;
-
-        emit ControllerIntegrationAdded(_integration, _name);
-    }
-
-    /**
-     * GOVERNANCE FUNCTION: Edit an existing integration on the registry
-     *
-     * @param  _name         Human readable string identifying the integration
-     * @param  _integration      Address of the integration contract to edit
-     */
-    function editIntegration(string memory _name, address _integration) public override onlyOwner {
-        bytes32 hashedName = _nameHash(_name);
-
-        require(enabledIntegrations[hashedName] != address(0), 'Integration does not exist.');
-        require(_integration != address(0), 'Integration address must exist.');
-
-        enabledIntegrations[hashedName] = _integration;
-
-        emit ControllerIntegrationEdited(_integration, _name);
-    }
-
-    /**
-     * GOVERNANCE FUNCTION: Remove an existing integration on the registry
-     *
-     * @param  _name         Human readable string identifying the integration
-     */
-    function removeIntegration(string memory _name) external override onlyOwner {
-        bytes32 hashedName = _nameHash(_name);
-        require(enabledIntegrations[hashedName] != address(0), 'Integration does not exist.');
-
-        address oldIntegration = enabledIntegrations[hashedName];
-        delete enabledIntegrations[hashedName];
-
-        emit ControllerIntegrationRemoved(oldIntegration, _name);
     }
 
     /**
@@ -626,6 +602,7 @@ contract BabController is OwnableUpgradeable, IBabController {
             msg.sender == guardian || msg.sender == owner(),
             'only pause guardian and owner can update pause guardian'
         );
+        require(msg.sender == owner() || _guardian != address(0), 'Guardian cannot remove himself');
         // Save current value for inclusion in log
         address oldPauseGuardian = guardian;
         // Store pauseGuardian with value newPauseGuardian
@@ -685,14 +662,6 @@ contract BabController is OwnableUpgradeable, IBabController {
         return reserveAssets;
     }
 
-    function getMinCooldownPeriod() external pure override returns (uint256) {
-        return MIN_COOLDOWN_PERIOD;
-    }
-
-    function getMaxCooldownPeriod() external pure override returns (uint256) {
-        return MAX_COOLDOWN_PERIOD;
-    }
-
     function isValidReserveAsset(address _reserveAsset) external view override returns (bool) {
         return validReserveAsset[_reserveAsset];
     }
@@ -747,39 +716,6 @@ contract BabController is OwnableUpgradeable, IBabController {
     }
 
     /**
-     * Get the integration address associated with passed human readable name
-     *
-     * @param  _name         Human readable integration name
-     *
-     * @return               Address of integration
-     */
-    function getIntegrationByName(string memory _name) external view override returns (address) {
-        return enabledIntegrations[_nameHash(_name)];
-    }
-
-    /**
-     * Get integration integration address associated with passed hashed name
-     *
-     * @param  _nameHashP     Hash of human readable integration name
-     *
-     * @return               Address of integration
-     */
-    function getIntegrationWithHash(bytes32 _nameHashP) external view override returns (address) {
-        return enabledIntegrations[_nameHashP];
-    }
-
-    /**
-     * Check if integration name is valid
-     *
-     * @param  _name         Human readable string identifying the integration
-     *
-     * @return               Boolean indicating if valid
-     */
-    function isValidIntegration(string memory _name, address _integration) external view override returns (bool) {
-        return enabledIntegrations[_nameHash(_name)] == _integration;
-    }
-
-    /**
      * Check if a contract address is a garden or one of the system contracts
      *
      * @param  _contractAddress           The contract address to check
@@ -796,7 +732,9 @@ contract BabController is OwnableUpgradeable, IBabController {
             _contractAddress == address(this) ||
             _isOperation(_contractAddress) ||
             (isGarden[address(IStrategy(_contractAddress).garden())] &&
-                IGarden(IStrategy(_contractAddress).garden()).strategyMapping(_contractAddress)));
+                IGarden(IStrategy(_contractAddress).garden()).strategyMapping(_contractAddress)) ||
+            (isGarden[address(IStrategy(_contractAddress).garden())] &&
+                IGarden(IStrategy(_contractAddress).garden()).isGardenStrategy(_contractAddress)));
     }
 
     /* ============ Internal Only Function ============ */
@@ -818,4 +756,4 @@ contract BabController is OwnableUpgradeable, IBabController {
     }
 }
 
-contract BabControllerV3 is BabController {}
+contract BabControllerV6 is BabController {}

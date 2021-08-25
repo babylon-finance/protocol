@@ -32,16 +32,27 @@ interface IGarden {
         string memory _name,
         string memory _symbol,
         uint256[] calldata _gardenParams,
-        uint256 _initialContribution
+        uint256 _initialContribution,
+        bool[] memory _publicGardenStrategistsStewards
     ) external payable;
 
     function makeGardenPublic() external;
+
+    function transferCreatorRights(address _newCreator, uint8 _index) external;
+
+    function addExtraCreators(address[4] memory _newCreators) external;
+
+    function setPublicRights(bool _publicStrategist, bool _publicStewards) external;
 
     function setActive(bool _val) external;
 
     function active() external view returns (bool);
 
-    function guestListEnabled() external view returns (bool);
+    function privateGarden() external view returns (bool);
+
+    function publicStrategists() external view returns (bool);
+
+    function publicStewards() external view returns (bool);
 
     function controller() external view returns (address);
 
@@ -53,6 +64,7 @@ interface IGarden {
         external
         view
         returns (
+            uint256,
             uint256,
             uint256,
             uint256,
@@ -76,8 +88,6 @@ interface IGarden {
 
     function depositHardlock() external view returns (uint256);
 
-    function withdrawalsOpenUntil() external view returns (uint256);
-
     function minLiquidityAsset() external view returns (uint256);
 
     function minStrategyDuration() external view returns (uint256);
@@ -87,8 +97,6 @@ interface IGarden {
     function principal() external view returns (uint256);
 
     function reserveAssetRewardsSetAside() external view returns (uint256);
-
-    function reserveAssetPrincipalWindow() external view returns (uint256);
 
     function absoluteReturns() external view returns (int256);
 
@@ -104,16 +112,13 @@ interface IGarden {
 
     function getStrategies() external view returns (address[] memory);
 
+    function extraCreators(uint256 index) external view returns (address);
+
     function getFinalizedStrategies() external view returns (address[] memory);
 
     function strategyMapping(address _strategy) external view returns (bool);
 
-    function startWithdrawalWindow(
-        uint256 _amount,
-        uint256 _profits,
-        int256 _returns,
-        address _strategy
-    ) external;
+    function finalizeStrategy(uint256 _profits, int256 _returns) external;
 
     function allocateCapitalToStrategy(uint256 _capital) external;
 
@@ -123,7 +128,7 @@ interface IGarden {
         uint256[] calldata _stratParams,
         uint8[] calldata _opTypes,
         address[] calldata _opIntegrations,
-        address[] calldata _opDatas
+        bytes calldata _opEncodedDatas
     ) external;
 
     function deposit(
@@ -133,6 +138,17 @@ interface IGarden {
         bool mintNFT
     ) external payable;
 
+    function depositBySig(
+        uint256 _amountIn,
+        uint256 _minAmountOut,
+        bool _mintNft,
+        uint256 _nonce,
+        uint256 _pricePerShare,
+        uint8 v,
+        bytes32 r,
+        bytes32 s
+    ) external;
+
     function withdraw(
         uint256 _gardenTokenQuantity,
         uint256 _minReserveReceiveQuantity,
@@ -141,11 +157,17 @@ interface IGarden {
         address _unwindStrategy
     ) external;
 
+    function withdrawBySig(
+        uint256 _gardenTokenQuantity,
+        uint256 _minReserveReceiveQuantity,
+        uint256 _nonce,
+        uint256 _pricePerShare,
+        uint8 v,
+        bytes32 r,
+        bytes32 s
+    ) external;
+
     function claimReturns(address[] calldata _finalizedStrategies) external;
-
-    function getGardenTokenMintQuantity(uint256 _netReserveFlows, bool isDeposit) external view returns (uint256);
-
-    function getExpectedReserveWithdrawalQuantity(uint256 _gardenTokenQuantity) external view returns (uint256);
 
     function getLockedBalance(address _contributor) external view returns (uint256);
 
@@ -154,4 +176,8 @@ interface IGarden {
     function burnStrategistStake(address _strategist, uint256 _amount) external;
 
     function payKeeper(address payable _keeper, uint256 _fee) external;
+
+    function keeperDebt() external view returns (uint256);
+
+    function totalKeeperFees() external view returns (uint256);
 }

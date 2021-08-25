@@ -8,7 +8,8 @@ module.exports = async ({
   getRapid,
 }) => {
   const { deploy } = deployments;
-  const { deployer } = await getNamedAccounts();
+  const { deployer, owner } = await getNamedAccounts();
+  const signer = await getSigner(deployer);
   const gasPrice = await getRapid();
 
   const bablToken = await deployments.get('BABLToken');
@@ -22,8 +23,11 @@ module.exports = async ({
 
   if (timeLockRegistry.newlyDeployed) {
     const bablTokenContract = await ethers.getContractAt('BABLToken', bablToken.address);
+    const isDeployer = (await bablTokenContract.owner()) === deployer;
     console.log('Setting TimeLockRegistry on BABLToken');
-    await bablTokenContract.setTimeLockRegistry(timeLockRegistry.address);
+    await bablTokenContract
+      .connect(isDeployer ? signer : await getSigner(owner))
+      .setTimeLockRegistry(timeLockRegistry.address);
   }
 
   if (network.live && timeLockRegistry.newlyDeployed) {
@@ -33,4 +37,3 @@ module.exports = async ({
 };
 
 module.exports.tags = ['Registry'];
-module.exports.dependencies = ['Controller'];

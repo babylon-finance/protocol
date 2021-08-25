@@ -19,8 +19,6 @@
 pragma solidity 0.7.6;
 pragma abicoder v2;
 
-import 'hardhat/console.sol';
-
 import {IBabController} from '../../interfaces/IBabController.sol';
 import {ISwapRouter} from '../../interfaces/external/uniswap-v3/ISwapRouter.sol';
 

@@ -60,6 +60,7 @@ contract GardenValuer {
      * @param _controller             Address of controller contract
      */
     constructor(address _controller) {
+        require(_controller != address(0), 'Incorrect address');
         controller = _controller;
     }
 
@@ -81,6 +82,11 @@ contract GardenValuer {
     function calculateGardenValuation(address _garden, address _quoteAsset) external view returns (uint256) {
         IPriceOracle priceOracle = IPriceOracle(IBabController(controller).priceOracle());
         address reserveAsset = IGarden(_garden).reserveAsset();
+        uint256 totalSupply = ERC20(_garden).totalSupply();
+        // If there are no tokens return 0
+        if (totalSupply == 0) {
+            return 0;
+        }
 
         // uint8 reserveAssetDecimals = ERC20(reserveAsset).decimals();
         uint8 quoteAssetDecimals = ERC20(_quoteAsset).decimals();
@@ -94,16 +100,6 @@ contract GardenValuer {
             reservePrice = priceOracle.getPrice(reserveAsset, _quoteAsset);
         }
 
-        uint256 wethPrice;
-        // Get price of the WETH in _quoteAsset
-        if (_quoteAsset == WETH) {
-            // meaning 1 WETH equals to 1 _quoteAsset
-            // this line looks ironic. 10/10.
-            wethPrice = 1 ether;
-        } else {
-            wethPrice = priceOracle.getPrice(WETH, _quoteAsset);
-        }
-
         address[] memory strategies = IGarden(_garden).getStrategies();
         uint256 valuation;
         for (uint256 j = 0; j < strategies.length; j++) {
@@ -115,11 +111,11 @@ contract GardenValuer {
         // Add garden reserve assets and garden's reserve asset
         valuation = valuation.add(ERC20(reserveAsset).balanceOf(address(_garden)));
 
+        // Subtract the reserves set aside for rewards
+        valuation = valuation.sub(IGarden(_garden).reserveAssetRewardsSetAside());
+
         // Get the valuation in terms of the quote asset
         valuation = valuation.preciseMul(reservePrice);
-
-        // Adds ETH of garden in _quoteAsset prices
-        valuation = valuation.add(address(_garden).balance.preciseMul(wethPrice));
 
         if (quoteAssetDecimals < 18) {
             valuation = valuation.mul(10**(18 - quoteAssetDecimals));

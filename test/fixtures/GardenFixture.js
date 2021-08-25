@@ -2,16 +2,17 @@ const { deployments } = require('hardhat');
 const { GARDEN_PARAMS } = require('../../lib/constants.js');
 const addresses = require('../../lib/addresses');
 const { impersonateAddress } = require('../../lib/rpc');
+const { fund } = require('../../lib/whale');
 const { createStrategy } = require('./StrategyHelper.js');
 const { getContract, from, eth } = require('../utils/test-helpers');
 
 async function setUpFixture(
   { upgradesDeployer, deployments, getNamedAccounts, ethers },
   options,
-  { gardenParams = GARDEN_PARAMS, fund },
+  { gardenParams = GARDEN_PARAMS },
 ) {
   const signers = await ethers.getSigners();
-  const [deployer, keeper, owner, signer1, signer2, signer3] = signers;
+  const [deployer, keeper, , signer1, signer2, signer3] = signers;
 
   await deployments.fixture();
 
@@ -19,6 +20,7 @@ async function setUpFixture(
   const bablToken = await getContract('BABLToken');
   const timeLockRegistry = await getContract('TimeLockRegistry');
   const ishtarGate = await getContract('IshtarGate');
+  const mardukGate = await getContract('MardukGate');
   const priceOracle = await getContract('PriceOracle');
   const treasury = await getContract('Treasury');
   const gardenValuer = await getContract('GardenValuer');
@@ -26,6 +28,8 @@ async function setUpFixture(
   const strategyNFT = await getContract('StrategyNFT');
   const rewardsDistributor = await getContract('RewardsDistributor', 'RewardsDistributorProxy');
   const babViewer = await getContract('BabylonViewer');
+  const timelockController = await getContract('TimelockController');
+  const babGovernor = await getContract('BabylonGovernor');
 
   const uniswapV3TradeIntegration = await getContract('UniswapV3TradeIntegration');
   const balancerIntegration = await getContract('BalancerIntegration');
@@ -34,11 +38,13 @@ async function setUpFixture(
   const yearnVaultIntegration = await getContract('YearnVaultIntegration');
   const harvestVaultIntegration = await getContract('HarvestVaultIntegration');
   const sushiswapPoolIntegration = await getContract('SushiswapPoolIntegration');
+  const curvePoolIntegration = await getContract('CurvePoolIntegration');
   const oneInchPoolIntegration = await getContract('OneInchPoolIntegration');
   const compoundLendIntegration = await getContract('CompoundLendIntegration');
   const aaveLendIntegration = await getContract('AaveLendIntegration');
   const aaveBorrowIntegration = await getContract('AaveBorrowIntegration');
   const compoundBorrowIntegration = await getContract('CompoundBorrowIntegration');
+  const lidoIntegration = await getContract('LidoStakeIntegration');
 
   const buyOperation = await getContract('BuyOperation');
   const addLiquidityOperation = await getContract('AddLiquidityOperation');
@@ -46,15 +52,34 @@ async function setUpFixture(
   const lendOperation = await getContract('LendOperation');
   const borrowOperation = await getContract('BorrowOperation');
 
-  const dai = await ethers.getContractAt('IERC20', addresses.tokens.DAI);
-  const usdc = await ethers.getContractAt('IERC20', addresses.tokens.USDC);
-  const weth = await ethers.getContractAt('IERC20', addresses.tokens.WETH);
-  const wbtc = await ethers.getContractAt('IERC20', addresses.tokens.WBTC);
+  const dai = await ethers.getContractAt('@openzeppelin/contracts/token/ERC20/IERC20.sol:IERC20', addresses.tokens.DAI);
+  const usdc = await ethers.getContractAt(
+    '@openzeppelin/contracts/token/ERC20/IERC20.sol:IERC20',
+    addresses.tokens.USDC,
+  );
+  const weth = await ethers.getContractAt(
+    '@openzeppelin/contracts/token/ERC20/IERC20.sol:IERC20',
+    addresses.tokens.WETH,
+  );
+  const wbtc = await ethers.getContractAt(
+    '@openzeppelin/contracts/token/ERC20/IERC20.sol:IERC20',
+    addresses.tokens.WBTC,
+  );
+
+  const owner = await impersonateAddress(timelockController.address);
+  await fund([owner.address], { tokens: [addresses.tokens.ETH] });
+
+  const TOKEN_MAP = {
+    [addresses.tokens.WETH]: weth,
+    [addresses.tokens.DAI]: dai,
+    [addresses.tokens.USDC]: usdc,
+    [addresses.tokens.WBTC]: wbtc,
+  };
 
   // Gives signer1 creator permissions
-  await ishtarGate.connect(owner).setCreatorPermissions(owner.address, true, { gasPrice: 0 });
   await ishtarGate.connect(owner).setCreatorPermissions(signer1.address, true, { gasPrice: 0 });
-
+  await mardukGate.connect(owner).setCreatorPermissions(owner.address, true, { gasPrice: 0 });
+  await mardukGate.connect(owner).setCreatorPermissions(signer1.address, true, { gasPrice: 0 });
   await babController
     .connect(signer1)
     .createGarden(
@@ -65,11 +90,12 @@ async function setUpFixture(
       0,
       gardenParams,
       ethers.utils.parseEther('1'),
+      [false, false, false],
+      [0, 0, 0],
       {
         value: ethers.utils.parseEther('1'),
       },
     );
-
   await babController
     .connect(signer1)
     .createGarden(
@@ -80,6 +106,8 @@ async function setUpFixture(
       1,
       gardenParams,
       ethers.utils.parseEther('1'),
+      [false, false, false],
+      [0, 0, 0],
       {
         value: ethers.utils.parseEther('1'),
       },
@@ -95,6 +123,8 @@ async function setUpFixture(
       2,
       gardenParams,
       ethers.utils.parseEther('1'),
+      [false, false, false],
+      [0, 0, 0],
       {
         value: ethers.utils.parseEther('1'),
       },
@@ -110,6 +140,8 @@ async function setUpFixture(
       3,
       gardenParams,
       ethers.utils.parseEther('1'),
+      [false, false, false],
+      [0, 0, 0],
       {
         value: ethers.utils.parseEther('1'),
       },
@@ -129,20 +161,18 @@ async function setUpFixture(
   for (let i = 0; i < gardens.length; i += 1) {
     await ishtarGate
       .connect(signer1)
-      .grantGardenAccessBatch(
-        gardens[i],
-        [owner.address, signer1.address, signer2.address, signer3.address],
-        [3, 3, 3, 3],
-        {
-          gasPrice: 0,
-        },
-      );
+      .grantGardenAccessBatch(gardens[i], [signer1.address, signer2.address, signer3.address], [3, 3, 3], {
+        gasPrice: 0,
+      });
   }
-  console.log('create strategies');
+  const strategy10 = (
+    await createStrategy('buy', 'dataset', [signer1, signer2, signer3], uniswapV3TradeIntegration.address, garden1)
+  ).address;
   // Create strategies
   const strategy11 = (
     await createStrategy('buy', 'dataset', [signer1, signer2, signer3], uniswapV3TradeIntegration.address, garden1)
   ).address;
+
   const strategy21 = (
     await createStrategy('buy', 'deposit', [signer1, signer2, signer3], uniswapV3TradeIntegration.address, garden2)
   ).address;
@@ -178,6 +208,8 @@ async function setUpFixture(
     }
   }
 
+  console.log('end garden fixture');
+
   return {
     babController,
     bablToken,
@@ -191,12 +223,16 @@ async function setUpFixture(
     harvestVaultIntegration,
     yearnVaultIntegration,
     sushiswapPoolIntegration,
+    curvePoolIntegration,
     oneInchPoolIntegration,
     compoundLendIntegration,
     compoundBorrowIntegration,
     aaveLendIntegration,
     aaveBorrowIntegration,
+    lidoIntegration,
     babViewer,
+    timelockController,
+    babGovernor,
 
     garden1,
     garden2,
@@ -215,6 +251,7 @@ async function setUpFixture(
     gardenValuer,
     priceOracle,
     ishtarGate,
+    mardukGate,
 
     gardenNFT,
     strategyNFT,
@@ -238,6 +275,8 @@ async function setUpFixture(
     usdc,
     weth,
     wbtc,
+
+    TOKEN_MAP,
   };
 }
 
