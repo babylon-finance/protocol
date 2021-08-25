@@ -263,37 +263,11 @@ contract BabController is OwnableUpgradeable, IBabController {
      */
     function removeGarden(address _garden) external override onlyOwner {
         require(isGarden[_garden], 'Garden does not exist');
-        require(!IGarden(_garden).active(), 'The garden needs to be disabled.');
         require(IGarden(_garden).getStrategies().length == 0, 'Garden has active strategies!');
         gardens = gardens.remove(_garden);
         delete isGarden[_garden];
 
         emit GardenRemoved(_garden);
-    }
-
-    /**
-     * PRIVILEGED GOVERNANCE FUNCTION. Allows governance to disable a garden
-     *
-     * @param _garden               Address of the garden
-     */
-    function disableGarden(address _garden) external override onlyOwner {
-        require(isGarden[_garden], 'Garden does not exist');
-        IGarden garden = IGarden(_garden);
-        require(garden.active(), 'The garden needs to be active.');
-        require(garden.getStrategies().length == 0, 'Garden has active strategies!');
-        garden.setActive(false);
-    }
-
-    /**
-     * PRIVILEGED GOVERNANCE FUNCTION. Allows governance to enable a garden
-     *
-     * @param _garden               Address of the garden
-     */
-    function enableGarden(address _garden) external onlyOwner {
-        require(isGarden[_garden], 'Garden does not exist');
-        IGarden garden = IGarden(_garden);
-        require(!garden.active(), 'The garden needs to be disabled.');
-        garden.setActive(true);
     }
 
     /**

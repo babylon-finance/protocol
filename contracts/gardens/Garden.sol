@@ -131,8 +131,8 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
 
     // The person that creates the garden
     address public override creator;
-    // Whether the garden is currently active or not
-    bool public override active;
+
+    bool private active; // DEPRECATED;
     bool public override privateGarden;
 
     // Keeps track of the garden balance in reserve asset.
@@ -211,13 +211,6 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
     }
 
     /**
-     * Throws if the garden is not active
-     */
-    function _onlyActive() private view {
-        _require(active, Errors.ONLY_ACTIVE);
-    }
-
-    /**
      * Checks if the address passed is a creator in the garden
      */
     function _onlyCreator(address _creator) private view {
@@ -282,7 +275,6 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
             _gardenParams[8],
             _gardenParams[9]
         );
-        active = true;
     }
 
     /* ============ External Functions ============ */
@@ -534,15 +526,6 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         publicStewards = _publicStewards;
     }
 
-    /**
-     * PRIVILEGED Manager, protocol FUNCTION. When a Garden is active, deposits are enabled.
-     */
-    function setActive(bool _newValue) external override {
-        _require(msg.sender == controller, Errors.ONLY_CONTROLLER);
-        _require(active != _newValue, Errors.ONLY_INACTIVE);
-        active = _newValue;
-    }
-
     /* ============ Strategy Functions ============ */
     /**
      * Creates a new strategy calling the factory and adds it to the array
@@ -562,7 +545,6 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         bytes calldata _opEncodedDatas
     ) external override {
         _onlyUnpaused();
-        _onlyActive();
         _onlyContributor();
         (, , bool canCreateStrategies) = _getUserPermission(msg.sender);
         _require(canCreateStrategies, Errors.USER_CANNOT_ADD_STRATEGIES);
@@ -591,13 +573,12 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
      */
     function allocateCapitalToStrategy(uint256 _capital) external override {
         _onlyStrategy();
-        _onlyActive();
 
         uint256 protocolMgmtFee = IBabController(controller).protocolManagementFee().preciseMul(_capital);
         _require(_capital.add(protocolMgmtFee) <= liquidReserve(), Errors.MIN_LIQUIDITY);
 
         // Take protocol mgmt fee
-        _payProtocolFeeFromGarden(reserveAsset, protocolMgmtFee);
+        IERC20(reserveAsset).safeTransfer(IBabController(controller).treasury(), protocolMgmtFee);
 
         // Send Capital to strategy
         IERC20(reserveAsset).safeTransfer(msg.sender, _capital);
@@ -618,6 +599,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
      * @param _strategy      Strategy
      */
     function burnStrategistStake(address _strategist, uint256 _amount) external override {
+        // TODO: Move to finalizeStrategy method
         _onlyStrategy();
         if (_amount >= balanceOf(_strategist)) {
             // Avoid underflow condition
@@ -865,7 +847,6 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         uint256 _pricePerShare
     ) private {
         _onlyUnpaused();
-        _onlyActive();
         (bool canDeposit, , ) = _getUserPermission(_from);
         _require(canDeposit || _isCreator(_to), Errors.USER_CANNOT_JOIN);
 
@@ -925,48 +906,6 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         return reserve > keeperDebt ? reserve.sub(keeperDebt) : 0;
     }
 
-    /**
-     * Gets the total active capital currently invested in strategies
-     *
-     * @return uint256       Total amount active
-     * @return uint256       Total amount active in the largest strategy
-     * @return address       Address of the largest strategy
-     */
-    function _getActiveCapital()
-        private
-        view
-        returns (
-            uint256,
-            uint256,
-            address
-        )
-    {
-        uint256 totalActiveCapital;
-        uint256 maxAllocation;
-        address maxStrategy = address(0);
-        for (uint8 i = 0; i < strategies.length; i++) {
-            IStrategy strategy = IStrategy(strategies[i]);
-            if (strategy.isStrategyActive()) {
-                uint256 allocation = strategy.capitalAllocated();
-                totalActiveCapital = totalActiveCapital.add(allocation);
-                if (allocation > maxAllocation) {
-                    maxAllocation = allocation;
-                    maxStrategy = strategies[i];
-                }
-            }
-        }
-        return (totalActiveCapital, maxAllocation, maxStrategy);
-    }
-
-    /**
-     * Pays the _feeQuantity from the _garden denominated in _token to the protocol fee recipient
-     * @param _token                   Address of the token to pay with
-     * @param _feeQuantity             Fee to transfer
-     */
-    function _payProtocolFeeFromGarden(address _token, uint256 _feeQuantity) private {
-        IERC20(_token).safeTransfer(IBabController(controller).treasury(), _feeQuantity);
-    }
-
     // Disable garden token transfers. Allow minting and burning.
     function _beforeTokenTransfer(
         address from,
@@ -996,12 +935,6 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
             IERC20(reserveAsset).safeTransfer(_to, _amount);
         }
     }
-
-    function _getWithdrawalReserveQuantity(address _reserveAsset, uint256 _gardenTokenQuantity)
-        private
-        view
-        returns (uint256)
-    {}
 
     /**
      * Updates the contributor info in the array
