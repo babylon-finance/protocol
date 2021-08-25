@@ -1337,7 +1337,6 @@ describe('Garden', function () {
   });
 
   describe('deposit', async function () {
-
     it('a contributor can make an initial deposit and withdraw with DAI', async function () {
       const whaleAddress = '0x6B175474E89094C44Da98b954EedeAC495271d0F'; // Has DAI
       const whaleSigner = await impersonateAddress(whaleAddress);
