@@ -71,7 +71,6 @@ contract IshtarGate is ERC721, IIshtarGate, Ownable {
         IGarden garden = IGarden(_garden);
         require(garden.controller() == address(controller), 'Controller must match');
         require(msg.sender == garden.creator(), 'Only creator can give access to garden');
-        require(IBabController(controller).isSystemContract(address(_garden)));
         require(IBabController(controller).isGarden(address(_garden)));
         require(gardenAccessCount[_garden] <= maxNumberOfInvites, 'The number of contributors must be below the limit');
         _;

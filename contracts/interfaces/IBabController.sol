@@ -44,11 +44,11 @@ interface IBabController {
 
     function removeReserveAsset(address _reserveAsset) external;
 
-    function disableGarden(address _garden) external;
-
     function editPriceOracle(address _priceOracle) external;
 
     function editIshtarGate(address _ishtarGate) external;
+
+    function editMardukGate(address _mardukGate) external;
 
     function editGardenValuer(address _gardenValuer) external;
 
@@ -120,6 +120,8 @@ interface IBabController {
 
     function ishtarGate() external view returns (address);
 
+    function mardukGate() external view returns (address);
+
     function strategyFactory() external view returns (address);
 
     function masterSwapper() external view returns (address);
@@ -162,10 +164,6 @@ interface IBabController {
     function isValidKeeper(address _keeper) external view returns (bool);
 
     function isSystemContract(address _contractAddress) external view returns (bool);
-
-    function getMinCooldownPeriod() external view returns (uint256);
-
-    function getMaxCooldownPeriod() external view returns (uint256);
 
     function protocolPerformanceFee() external view returns (uint256);
 

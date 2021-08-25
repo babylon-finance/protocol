@@ -101,17 +101,6 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
     }
 
     /**
-     * Throws if the garden is not active
-     */
-    function _onlyActiveGarden() private view {
-        _require(
-            garden.active() == true && IBabController(controller).isSystemContract(address(garden)),
-            Errors.ONLY_ACTIVE_GARDEN
-        );
-        _require(!IBabController(controller).isPaused(address(this)), Errors.ONLY_UNPAUSED);
-    }
-
-    /**
      * Throws if the sender is not a keeper in the protocol
      */
     function _onlyKeeper() private view {
@@ -209,6 +198,8 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
     // Rewards Distributor address
     IRewardsDistributor private rewardsDistributor;
 
+    uint256 public override maxAllocationPercentage; //  Relative to garden capital. (1% = 1e16, 10% 1e17)
+
     /* ============ Constructor ============ */
 
     /**
@@ -221,6 +212,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
      * @param _stake                         Stake with garden participations absolute amounts 1e18
      * @param _strategyDuration              Strategy duration in seconds
      * @param _expectedReturn                Expected return
+     * @param _maxAllocationPercentage       Max allocation percentage of garden capital
      */
     function initialize(
         address _strategist,
@@ -229,10 +221,10 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         uint256 _maxCapitalRequested,
         uint256 _stake,
         uint256 _strategyDuration,
-        uint256 _expectedReturn
+        uint256 _expectedReturn,
+        uint256 _maxAllocationPercentage
     ) external override initializer {
         controller = IBabController(_controller);
-
         _require(controller.isSystemContract(_garden), Errors.NOT_A_GARDEN);
         garden = IGarden(_garden);
         _require(IERC20(address(garden)).balanceOf(_strategist) > 0, Errors.STRATEGIST_TOKENS_TOO_LOW);
@@ -246,7 +238,8 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
             _strategyDuration >= garden.minStrategyDuration() && _strategyDuration <= garden.maxStrategyDuration(),
             Errors.DURATION_MUST_BE_IN_RANGE
         );
-
+        _require(_maxAllocationPercentage < 1e18, Errors.MAX_STRATEGY_ALLOCATION_PERCENTAGE);
+        maxAllocationPercentage = _maxAllocationPercentage;
         strategist = _strategist;
         enteredAt = block.timestamp;
         stake = _stake;
@@ -312,7 +305,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         int256[] calldata _votes,
         uint256 _fee
     ) external override {
-        _onlyActiveGarden();
+        _onlyUnpaused();
         _onlyKeeper();
         _require(_voters.length >= garden.minVoters(), Errors.MIN_VOTERS_CHECK);
         _require(!active && !finalized, Errors.VOTES_ALREADY_RESOLVED);
@@ -351,7 +344,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
      * @param _fee                      The fee paid to keeper to compensate the gas cost.
      */
     function executeStrategy(uint256 _capital, uint256 _fee) external override nonReentrant {
-        _onlyActiveGarden();
+        _onlyUnpaused();
         _onlyKeeper();
         _executesStrategy(_capital, _fee, msg.sender);
     }
@@ -365,7 +358,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
      * @param _tokenURI                URL with the JSON for the strategy
      */
     function finalizeStrategy(uint256 _fee, string memory _tokenURI) external override nonReentrant {
-        _onlyActiveGarden();
+        _onlyUnpaused();
         _onlyKeeper();
         _require(executedAt > 0, Errors.STRATEGY_IS_NOT_EXECUTED);
         _require(block.timestamp > executedAt.add(duration), Errors.STRATEGY_IS_NOT_OVER_YET);
@@ -430,7 +423,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
      * @param _fee              The keeper fee
      */
     function expireStrategy(uint256 _fee) external nonReentrant {
-        _onlyActiveGarden();
+        _onlyUnpaused();
         _onlyKeeper();
         _require(!active, Errors.STRATEGY_NEEDS_TO_BE_INACTIVE);
         _require(block.timestamp.sub(enteredAt) > MAX_CANDIDATE_PERIOD, Errors.VOTING_WINDOW_IS_OPENED);

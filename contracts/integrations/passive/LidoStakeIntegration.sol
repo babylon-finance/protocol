@@ -29,10 +29,10 @@ import {IStETH} from '../../interfaces/external/lido/IStETH.sol';
 import {IWstETH} from '../../interfaces/external/lido/IWstETH.sol';
 
 /**
- * @title YearnIntegration
+ * @title LidoStakeIntegration
  * @author Babylon Finance Protocol
  *
- * Yearn v2 Vault Integration
+ * Lido Integration
  */
 contract LidoStakeIntegration is PassiveIntegration {
     using LowGasSafeMath for uint256;

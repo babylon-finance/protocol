@@ -1,5 +1,4 @@
 const { ethers } = require('hardhat');
-
 /**
  * Advance blockchain time by value. Has a random chance to deviate by 1 second.
  * Consider this during tests. Use `closeTo`.
@@ -11,6 +10,22 @@ async function increaseTime(value) {
   }
   await ethers.provider.send('evm_increaseTime', [value.toNumber()]);
   await ethers.provider.send('evm_mine');
+}
+/**
+ * Advance blockchain time by value. Has a random chance to deviate by 1 second.
+ * Consider this during tests. Use `closeTo`.
+ * @param {number} blocks - Amount of blocks to advance the chain by.
+ */
+// this is super slow but hardhat doesn't allow mine multiple blocks right now
+// should be fixed once this functionality avaiable
+async function increaseBlock(blocks) {
+  if (!ethers.BigNumber.isBigNumber(blocks)) {
+    blocks = ethers.BigNumber.from(blocks);
+  }
+  for (let i = 0; i < blocks; i++) {
+    await ethers.provider.send('evm_increaseTime', [20]); // 20 seconds per block
+    await ethers.provider.send('evm_mine');
+  }
 }
 
 /**
@@ -57,8 +72,13 @@ function normalizeDecimals(tokenDecimals, tokenDecimalsTarget, quantity) {
   return quantity.div(10 ** (tokenDecimals - tokenDecimalsTarget));
 }
 
+function enums(...options) {
+  return Object.fromEntries(options.map((key, i) => [key, new ethers.BigNumber.from(i)]));
+}
+
 module.exports = {
   increaseTime,
+  increaseBlock,
   getTimestamp,
   mineInBlock,
   sleep,
@@ -67,4 +87,7 @@ module.exports = {
   getContract,
   eth,
   normalizeDecimals,
+  enums,
+  proposalState: enums('Pending', 'Active', 'Canceled', 'Defeated', 'Succeeded', 'Queued', 'Expired', 'Executed'),
+  voteType: enums('Against', 'For', 'Abstain'),
 };

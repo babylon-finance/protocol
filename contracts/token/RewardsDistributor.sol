@@ -83,13 +83,8 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
      * Throws if the call is not from a valid active garden
      */
     modifier onlyActiveGarden(address _garden, uint256 _pid) {
-        if (_pid != 0 || gardenPid[address(_garden)] > 1) {
-            // Enable deploying flow with security restrictions
-            _require(IBabController(controller).isSystemContract(address(_garden)), Errors.NOT_A_SYSTEM_CONTRACT);
-            _require(IBabController(controller).isGarden(address(_garden)), Errors.ONLY_ACTIVE_GARDEN);
-        }
+        _require(IBabController(controller).isGarden(address(_garden)), Errors.ONLY_ACTIVE_GARDEN);
         _require(msg.sender == address(_garden), Errors.ONLY_ACTIVE_GARDEN);
-        _require(IGarden(_garden).active(), Errors.ONLY_ACTIVE_GARDEN);
         _;
     }
 
@@ -214,10 +209,10 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
     /* ============ State Variables ============ */
 
     // Instance of the Controller contract
-    IBabController public controller;
+    IBabController private controller;
 
     // BABL Token contract
-    TimeLockedToken public babltoken;
+    TimeLockedToken private babltoken;
 
     // Protocol total allocation points. Must be the sum of all allocation points (strategyPrincipal) in all strategy pools.
     uint256 private protocolPrincipal;
@@ -231,10 +226,10 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
     // Strategy overhead control. Only used if each strategy has power overhead due to changes overtime
     mapping(address => mapping(uint256 => uint256)) private rewardsPowerOverhead; // DEPRECATED Overhead control to enable high level accuracy calculations for strategy rewards
     // Contributor power control
-    mapping(address => mapping(address => ContributorPerGarden)) public contributorPerGarden; // Enable high level accuracy calculations
+    mapping(address => mapping(address => ContributorPerGarden)) private contributorPerGarden; // Enable high level accuracy calculations
     mapping(address => mapping(address => Checkpoints)) private checkpoints;
     // Garden power control
-    mapping(address => mapping(uint256 => GardenPowerByTimestamp)) public gardenPowerByTimestamp;
+    mapping(address => mapping(uint256 => GardenPowerByTimestamp)) private gardenPowerByTimestamp;
     mapping(address => uint256[]) private gardenTimelist;
     mapping(address => uint256) private gardenPid;
 
@@ -402,6 +397,7 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
      * @param _bablToken BABLToken address
      */
     function setBablToken(TimeLockedToken _bablToken) external onlyOwner onlyUnpaused {
+        _require(address(_bablToken) != address(0) && _bablToken != babltoken, Errors.INVALID_ADDRESS);
         babltoken = _bablToken;
     }
 
@@ -543,6 +539,13 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         }
     }
 
+    function getStrategyPricePerTokenUnit(address _strategy) external view override returns (uint256, uint256) {
+        return (
+            strategyPricePerTokenUnit[_strategy].preallocated,
+            strategyPricePerTokenUnit[_strategy].pricePerTokenUnit
+        );
+    }
+
     /* ============ Internal Functions ============ */
     /**
      * Update the protocol principal checkpoints
@@ -619,10 +622,17 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
             // We are controlling pair reserveAsset-DAI fluctuations along the time
             if (_addOrSubstract) {
                 strategyPricePerTokenUnit[_strategy].pricePerTokenUnit = (
-                    strategyPricePerTokenUnit[_strategy].pricePerTokenUnit.add(_capital.mul(pricePerTokenUnit))
+                    (
+                        (
+                            strategyPricePerTokenUnit[_strategy].pricePerTokenUnit.mul(
+                                strategyPricePerTokenUnit[_strategy].preallocated
+                            )
+                        )
+                            .add(_capital.mul(pricePerTokenUnit))
+                    )
+                        .div(1e18)
                 )
-                    .preciseDiv(strategyPricePerTokenUnit[_strategy].preallocated.add(_capital))
-                    .div(1e18);
+                    .preciseDiv(strategyPricePerTokenUnit[_strategy].preallocated.add(_capital));
                 strategyPricePerTokenUnit[_strategy].preallocated = strategyPricePerTokenUnit[_strategy]
                     .preallocated
                     .add(_capital);
@@ -701,12 +711,8 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
             // Get LP rewards
             rewards[4] = _getStrategyLPBabl(_garden, _strategy, _contributor);
             contributorBABL = contributorBABL.add(rewards[4]);
-
-            // Get a multiplier bonus in case the contributor is the garden creator
-            if (_contributor == IGarden(_garden).creator()) {
-                contributorBABL = contributorBABL.add(contributorBABL.multiplyDecimal(CREATOR_BONUS));
-            }
-            rewards[5] = contributorBABL;
+            // Creator bonus
+            rewards[5] = _getCreatorBonus(_garden, _contributor, contributorBABL);
             rewards[6] = contributorProfits;
         }
         return rewards;
@@ -1369,7 +1375,7 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         uint256 _previousBalance,
         bool _depositOrWithdraw
     ) private {
-        // We make checkpoints around contributor deposits to avoid fast loans and give the right rewards afterwards
+        // We make checkpoints around contributor deposits to give the right rewards afterwards
         ContributorPerGarden storage contributor = contributorPerGarden[address(_garden)][_contributor];
         TimestampContribution storage contributorDetail = contributor.tsContributions[block.timestamp];
         contributorDetail.supply = IERC20(address(IGarden(_garden))).balanceOf(address(_contributor));
@@ -1479,6 +1485,43 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
             gardenProfitSharing[_garden][1] = _stewardsShare;
             gardenProfitSharing[_garden][2] = _lpShare;
         }
+    }
+
+    /**
+     * Gives creator bonus to the user and returns original + bonus
+     * @param _garden           Address of the garden
+     * @param _contributor      Address of the contributor
+     * @param _contributorBABL  BABL obtained in the strategy
+     */
+    function _getCreatorBonus(
+        address _garden,
+        address _contributor,
+        uint256 _contributorBABL
+    ) private view returns (uint256) {
+        IGarden garden = IGarden(_garden);
+        bool isCreator = garden.creator() == _contributor;
+        uint8 creatorCount = garden.creator() != address(0) ? 1 : 0;
+        for (uint8 i = 0; i < 4; i++) {
+            address _extraCreator = garden.extraCreators(i);
+            if (_extraCreator != address(0)) {
+                creatorCount++;
+                isCreator = isCreator || _extraCreator == _contributor;
+            }
+        }
+        // Get a multiplier bonus in case the contributor is the garden creator
+        if (creatorCount == 0) {
+            // If there is no creator divide the 15% bonus across al members
+            return
+                _contributorBABL.add(
+                    _contributorBABL.multiplyDecimal(CREATOR_BONUS).div(IGarden(_garden).totalContributors())
+                );
+        } else {
+            if (isCreator) {
+                // Check other creators and divide by number of creators or members if creator address is 0
+                return _contributorBABL.add(_contributorBABL.multiplyDecimal(CREATOR_BONUS).div(creatorCount));
+            }
+        }
+        return _contributorBABL;
     }
 }
 

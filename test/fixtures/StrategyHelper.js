@@ -9,7 +9,8 @@ const DEFAULT_STRATEGY_PARAMS = [
   eth(10), // _maxCapitalRequested
   eth(0.1), // _stake
   ONE_DAY_IN_SECONDS * 30, // _strategyDuration
-  eth(0.05), // 5% _expectedReturn
+  eth(0.05), // 5% _expectedReturn,
+  eth(0.1), // 10% _maxAllocationPercentage
 ];
 
 const DAI_STRATEGY_PARAMS = [
@@ -17,6 +18,7 @@ const DAI_STRATEGY_PARAMS = [
   eth(100), // _stake
   ONE_DAY_IN_SECONDS * 30, // _strategyDuration
   eth(0.05), // 5% _expectedReturn
+  eth(0.1), // 10% _maxAllocationPercentage
 ];
 
 const USDC_STRATEGY_PARAMS = [
@@ -24,6 +26,7 @@ const USDC_STRATEGY_PARAMS = [
   from(100 * 1e6), // _stake
   ONE_DAY_IN_SECONDS * 30, // _strategyDuration
   eth(0.05), // 5% _expectedReturn
+  eth(0.1), // 10% _maxAllocationPercentage
 ];
 
 const WBTC_STRATEGY_PARAMS = [
@@ -31,6 +34,7 @@ const WBTC_STRATEGY_PARAMS = [
   from(1e6), // _stake
   ONE_DAY_IN_SECONDS * 30, // _strategyDuration
   eth(0.05), // 5% _expectedReturn
+  eth(0.1), // 10% _maxAllocationPercentage
 ];
 
 const GARDEN_PARAMS_MAP = {
@@ -123,6 +127,29 @@ async function createStrategyWithLendAndBorrowOperation(
   return strategy;
 }
 
+async function createStrategyWithAddAndDepositOperation(
+  garden,
+  signer,
+  params = DEFAULT_STRATEGY_PARAMS,
+  integrations,
+  data,
+) {
+  if (integrations.length !== 2 || data.length / 2 !== 2) {
+    throw new Error('Need two integrations and data to create lend & borrow');
+  }
+  const passedAddandDepositParams = [[1, 2], integrations];
+  const AbiCoder = ethers.utils.AbiCoder;
+  const abiCoder = new AbiCoder();
+  const encoded = abiCoder.encode(['address', 'uint256', 'address', 'uint256'], [data[0], data[1], data[2], data[3]]);
+  await garden.connect(signer).addStrategy(...STRAT_NAME_PARAMS, params, ...passedAddandDepositParams, encoded);
+  const strategies = await garden.getStrategies();
+  const lastStrategyAddr = strategies[strategies.length - 1];
+
+  const strategy = await ethers.getContractAt('Strategy', lastStrategyAddr);
+
+  return strategy;
+}
+
 async function createStrategyWithManyOperations(
   garden,
   signer,
@@ -154,7 +181,10 @@ async function createStrategyWithManyOperations(
 async function deposit(garden, signers) {
   const gardenValuer = await getContract('GardenValuer');
   const reserveAsset = await garden.reserveAsset();
-  const reserveContract = await ethers.getContractAt('IERC20', reserveAsset);
+  const reserveContract = await ethers.getContractAt(
+    '@openzeppelin/contracts/token/ERC20/IERC20.sol:IERC20',
+    reserveAsset,
+  );
   let amount;
   switch (reserveAsset.toLowerCase()) {
     case addresses.tokens.USDC.toLowerCase():
@@ -292,7 +322,7 @@ async function injectFakeProfits(strategy, amount) {
     const AbiCoder = ethers.utils.AbiCoder;
     const abiCoder = new AbiCoder();
     const decoded = abiCoder.decode(['address', 'uint256'], await strategy.opEncodedData());
-    const asset = await ethers.getContractAt('IERC20', decoded[0]);
+    const asset = await ethers.getContractAt('@openzeppelin/contracts/token/ERC20/IERC20.sol:IERC20', decoded[0]);
     const whaleAddress = getAssetWhale(asset.address);
     if (whaleAddress) {
       const whaleSigner = await impersonateAddress(whaleAddress);
@@ -308,7 +338,7 @@ async function injectFakeProfits(strategy, amount) {
     const abiCoder = new AbiCoder();
     const decoded = abiCoder.decode(['address', 'uint256'], await strategy.opEncodedData());
 
-    const asset = await ethers.getContractAt('IERC20', decoded[0]);
+    const asset = await ethers.getContractAt('@openzeppelin/contracts/token/ERC20/IERC20.sol:IERC20', decoded[0]);
     const whaleAddress = await strategy.pool();
     const whaleSigner = await impersonateAddress(whaleAddress);
     await asset.connect(whaleSigner).transfer(strategy.address, amount, {
@@ -320,7 +350,7 @@ async function injectFakeProfits(strategy, amount) {
     const abiCoder = new AbiCoder();
     const decoded = abiCoder.decode(['address', 'uint256'], await strategy.opEncodedData());
 
-    const asset = await ethers.getContractAt('IERC20', decoded[0]);
+    const asset = await ethers.getContractAt('@openzeppelin/contracts/token/ERC20/IERC20.sol:IERC20', decoded[0]);
     const whaleAddress = await strategy.yieldVault();
     const whaleSigner = await impersonateAddress(whaleAddress);
     await asset.connect(whaleSigner).transfer(strategy.address, amount, {
@@ -337,7 +367,7 @@ async function substractFakeProfits(strategy, amount) {
     const abiCoder = new AbiCoder();
     const decoded = abiCoder.decode(['address', 'uint256'], await strategy.opEncodedData());
 
-    const asset = await ethers.getContractAt('IERC20', decoded[0]);
+    const asset = await ethers.getContractAt('@openzeppelin/contracts/token/ERC20/IERC20.sol:IERC20', decoded[0]);
     const whaleAddress = getAssetWhale(asset.address);
     if (whaleAddress) {
       const whaleSigner = await impersonateAddress(whaleAddress);
@@ -353,7 +383,7 @@ async function substractFakeProfits(strategy, amount) {
     const abiCoder = new AbiCoder();
     const decoded = abiCoder.decode(['address', 'uint256'], await strategy.opEncodedData());
 
-    const asset = await ethers.getContractAt('IERC20', decoded[0]);
+    const asset = await ethers.getContractAt('@openzeppelin/contracts/token/ERC20/IERC20.sol:IERC20', decoded[0]);
     const whaleAddress = await strategy.pool();
     const whaleSigner = await impersonateAddress(whaleAddress);
     await asset.connect(strategyAddress).transfer(whaleSigner.address, amount, {
@@ -365,7 +395,7 @@ async function substractFakeProfits(strategy, amount) {
     const abiCoder = new AbiCoder();
     const decoded = abiCoder.decode(['address', 'uint256'], await strategy.opEncodedData());
 
-    const asset = await ethers.getContractAt('IERC20', decoded[0]);
+    const asset = await ethers.getContractAt('@openzeppelin/contracts/token/ERC20/IERC20.sol:IERC20', decoded[0]);
     const whaleAddress = await strategy.yieldVault();
     const whaleSigner = await impersonateAddress(whaleAddress);
     await asset.connect(strategyAddress).transfer(whaleSigner.address, amount, {
@@ -395,6 +425,15 @@ async function createStrategy(kind, state, signers, integrations, garden, params
       break;
     case 'borrow':
       strategy = await createStrategyWithLendAndBorrowOperation(
+        garden,
+        signers[0],
+        params,
+        integrations,
+        specificParams,
+      );
+      break;
+    case 'lpStack':
+      strategy = await createStrategyWithAddAndDepositOperation(
         garden,
         signers[0],
         params,

@@ -62,6 +62,7 @@ contract BabController is OwnableUpgradeable, IBabController {
     event RewardsDistributorChanged(address indexed _rewardsDistributor, address _oldRewardsDistributor);
     event TreasuryChanged(address _newTreasury, address _oldTreasury);
     event IshtarGateChanged(address _newIshtarGate, address _oldIshtarGate);
+    event MardukGateChanged(address _newMardukGate, address _oldMardukGate);
     event GardenValuerChanged(address indexed _gardenValuer, address _oldGardenValuer);
     event GardenFactoryChanged(address indexed _gardenFactory, address _oldGardenFactory);
     event UniswapFactoryChanged(address indexed _newUniswapFactory, address _oldUniswapFactory);
@@ -122,10 +123,6 @@ contract BabController is OwnableUpgradeable, IBabController {
     // Recipient of protocol fees
     address public override treasury;
 
-    // Strategy cooldown period
-    uint256 public constant MIN_COOLDOWN_PERIOD = 6 hours;
-    uint256 public constant MAX_COOLDOWN_PERIOD = 7 days;
-
     // Strategy Profit Sharing
     uint256 public strategistProfitPercentage; // (0.01% = 1e14, 1% = 1e16)
     uint256 public stewardsProfitPercentage; // (0.01% = 1e14, 1% = 1e16)
@@ -164,6 +161,7 @@ contract BabController is OwnableUpgradeable, IBabController {
     address public guardian;
     mapping(address => bool) public override guardianPaused;
     bool public override guardianGlobalPaused;
+    address public override mardukGate;
 
     /* ============ Constructor ============ */
 
@@ -222,7 +220,7 @@ contract BabController is OwnableUpgradeable, IBabController {
         require(masterSwapper != address(0), 'Need a default trade integration');
         require(enabledOperations.length > 0, 'Need operations enabled');
         require(
-            IIshtarGate(ishtarGate).canCreate(msg.sender) || gardenCreationIsOpen,
+            IIshtarGate(mardukGate).canCreate(msg.sender) || gardenCreationIsOpen,
             'User does not have creation permissions'
         );
         address newGarden =
@@ -265,36 +263,11 @@ contract BabController is OwnableUpgradeable, IBabController {
      */
     function removeGarden(address _garden) external override onlyOwner {
         require(isGarden[_garden], 'Garden does not exist');
-        require(!IGarden(_garden).active(), 'The garden needs to be disabled.');
+        require(IGarden(_garden).getStrategies().length == 0, 'Garden has active strategies!');
         gardens = gardens.remove(_garden);
-
         delete isGarden[_garden];
 
         emit GardenRemoved(_garden);
-    }
-
-    /**
-     * PRIVILEGED GOVERNANCE FUNCTION. Allows governance to disable a garden
-     *
-     * @param _garden               Address of the garden
-     */
-    function disableGarden(address _garden) external override onlyOwner {
-        require(isGarden[_garden], 'Garden does not exist');
-        IGarden garden = IGarden(_garden);
-        require(garden.active(), 'The garden needs to be active.');
-        garden.setActive(false);
-    }
-
-    /**
-     * PRIVILEGED GOVERNANCE FUNCTION. Allows governance to enable a garden
-     *
-     * @param _garden               Address of the garden
-     */
-    function enableGarden(address _garden) external onlyOwner {
-        require(isGarden[_garden], 'Garden does not exist');
-        IGarden garden = IGarden(_garden);
-        require(!garden.active(), 'The garden needs to be disabled.');
-        garden.setActive(true);
     }
 
     /**
@@ -311,7 +284,7 @@ contract BabController is OwnableUpgradeable, IBabController {
      * Can only happen after 2021 is finished.
      */
     function enableGardenTokensTransfers() external override onlyOwner {
-        require(block.timestamp > 1641024000000, 'Transfers cannot be enabled yet');
+        require(block.timestamp > 1641024000, 'Transfers cannot be enabled yet');
         gardenTokensTransfersEnabled = true;
     }
 
@@ -431,6 +404,22 @@ contract BabController is OwnableUpgradeable, IBabController {
         ishtarGate = _ishtarGate;
 
         emit IshtarGateChanged(_ishtarGate, oldIshtarGate);
+    }
+
+    /**
+     * PRIVILEGED GOVERNANCE FUNCTION. Allows governance to change the Marduk Gate Address
+     *
+     * @param _mardukGate               Address of the new Marduk Gate
+     */
+    function editMardukGate(address _mardukGate) external override onlyOwner {
+        require(_mardukGate != mardukGate, 'Marduk Gate already exists');
+
+        require(_mardukGate != address(0), 'Marduk Gate oracle must exist');
+
+        address oldMardukGate = mardukGate;
+        mardukGate = _mardukGate;
+
+        emit MardukGateChanged(_mardukGate, oldMardukGate);
     }
 
     /**
@@ -587,6 +576,7 @@ contract BabController is OwnableUpgradeable, IBabController {
             msg.sender == guardian || msg.sender == owner(),
             'only pause guardian and owner can update pause guardian'
         );
+        require(msg.sender == owner() || _guardian != address(0), 'Guardian cannot remove himself');
         // Save current value for inclusion in log
         address oldPauseGuardian = guardian;
         // Store pauseGuardian with value newPauseGuardian
@@ -644,14 +634,6 @@ contract BabController is OwnableUpgradeable, IBabController {
 
     function getReserveAssets() external view returns (address[] memory) {
         return reserveAssets;
-    }
-
-    function getMinCooldownPeriod() external pure override returns (uint256) {
-        return MIN_COOLDOWN_PERIOD;
-    }
-
-    function getMaxCooldownPeriod() external pure override returns (uint256) {
-        return MAX_COOLDOWN_PERIOD;
     }
 
     function isValidReserveAsset(address _reserveAsset) external view override returns (bool) {
@@ -724,7 +706,9 @@ contract BabController is OwnableUpgradeable, IBabController {
             _contractAddress == address(this) ||
             _isOperation(_contractAddress) ||
             (isGarden[address(IStrategy(_contractAddress).garden())] &&
-                IGarden(IStrategy(_contractAddress).garden()).strategyMapping(_contractAddress)));
+                IGarden(IStrategy(_contractAddress).garden()).strategyMapping(_contractAddress)) ||
+            (isGarden[address(IStrategy(_contractAddress).garden())] &&
+                IGarden(IStrategy(_contractAddress).garden()).isGardenStrategy(_contractAddress)));
     }
 
     /* ============ Internal Only Function ============ */
@@ -746,4 +730,4 @@ contract BabController is OwnableUpgradeable, IBabController {
     }
 }
 
-contract BabControllerV5 is BabController {}
+contract BabControllerV6 is BabController {}

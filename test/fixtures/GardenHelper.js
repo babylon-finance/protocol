@@ -33,13 +33,13 @@ async function createGarden({
   publicGardenStrategistsStewards = [false, false, false],
   publicSharing = [0, 0, 0],
 } = {}) {
-  const [deployer, keeper, owner, signer1, signer2, signer3] = await ethers.getSigners();
+  const [deployer, keeper, , signer1, signer2, signer3] = await ethers.getSigners();
   signer = signer || signer1;
   const ishtarGate = await getContract('IshtarGate');
   const babController = await getContract('BabController', 'BabControllerProxy');
   const params = GARDEN_PARAMS_MAP[reserveAsset];
   const contribution = CONTRIBUTORS_MAP[reserveAsset];
-  const erc20 = await ethers.getContractAt('IERC20', reserveAsset);
+  const erc20 = await ethers.getContractAt('@openzeppelin/contracts/token/ERC20/IERC20.sol:IERC20', reserveAsset);
   for (const sig of [signer1, signer2, signer3]) {
     await erc20.connect(sig).approve(babController.address, params[0], {
       gasPrice: 0,
@@ -66,14 +66,9 @@ async function createGarden({
   const garden = await ethers.getContractAt('Garden', gardens.slice(-1)[0]);
   await ishtarGate
     .connect(signer1)
-    .grantGardenAccessBatch(
-      garden.address,
-      [owner.address, signer1.address, signer2.address, signer3.address],
-      [3, 3, 3, 3],
-      {
-        gasPrice: 0,
-      },
-    );
+    .grantGardenAccessBatch(garden.address, [signer1.address, signer2.address, signer3.address], [3, 3, 3], {
+      gasPrice: 0,
+    });
   return garden;
 }
 
@@ -87,7 +82,10 @@ async function depositFunds(address, garden) {
     case addresses.tokens.DAI.toLowerCase():
       whaleAddress = '0x6B175474E89094C44Da98b954EedeAC495271d0F';
       whaleSigner = await impersonateAddress(whaleAddress);
-      const DAI = await ethers.getContractAt('IERC20', addresses.tokens.DAI);
+      const DAI = await ethers.getContractAt(
+        '@openzeppelin/contracts/token/ERC20/IERC20.sol:IERC20',
+        addresses.tokens.DAI,
+      );
       await ishtarGate.connect(signer1).setGardenAccess(signer3.address, garden.address, 1, { gasPrice: 0 });
       await DAI.connect(signer3).approve(garden.address, ethers.utils.parseEther('10000'), { gasPrice: 0 });
       await garden.connect(signer3).deposit(ethers.utils.parseEther('5000'), 1, signer3.getAddress(), false);
@@ -95,7 +93,10 @@ async function depositFunds(address, garden) {
     case addresses.tokens.USDC.toLowerCase():
       whaleAddress = '0x47ac0fb4f2d84898e4d9e7b4dab3c24507a6d503';
       whaleSigner = await impersonateAddress(whaleAddress);
-      const USDC = await ethers.getContractAt('IERC20', addresses.tokens.USDC);
+      const USDC = await ethers.getContractAt(
+        '@openzeppelin/contracts/token/ERC20/IERC20.sol:IERC20',
+        addresses.tokens.USDC,
+      );
       await ishtarGate.connect(signer1).setGardenAccess(signer3.address, garden.address, 1, { gasPrice: 0 });
       await USDC.connect(signer3).approve(garden.address, from(1e4 * 1e6), { gasPrice: 0 });
       await garden.connect(signer3).deposit(from(1e4 * 1e6), 1, signer3.getAddress(), false);
@@ -103,7 +104,10 @@ async function depositFunds(address, garden) {
     case addresses.tokens.WETH.toLowerCase():
       whaleAddress = '0x2f0b23f53734252bda2277357e97e1517d6b042a';
       whaleSigner = await impersonateAddress(whaleAddress);
-      const WETH = await ethers.getContractAt('IERC20', addresses.tokens.WETH);
+      const WETH = await ethers.getContractAt(
+        '@openzeppelin/contracts/token/ERC20/IERC20.sol:IERC20',
+        addresses.tokens.WETH,
+      );
       await ishtarGate.connect(signer1).setGardenAccess(signer3.address, garden.address, 1, { gasPrice: 0 });
       await WETH.connect(signer3).approve(garden.address, eth(1), { gasPrice: 0 });
       await garden.connect(signer3).deposit(eth(1), 1, signer3.getAddress(), false);
@@ -111,7 +115,10 @@ async function depositFunds(address, garden) {
     case addresses.tokens.WBTC.toLocaleLowerCase():
       whaleAddress = '0x9ff58f4ffb29fa2266ab25e75e2a8b3503311656';
       whaleSigner = await impersonateAddress(whaleAddress);
-      const WBTC = await ethers.getContractAt('IERC20', addresses.tokens.WBTC);
+      const WBTC = await ethers.getContractAt(
+        '@openzeppelin/contracts/token/ERC20/IERC20.sol:IERC20',
+        addresses.tokens.WBTC,
+      );
       await ishtarGate.connect(signer1).setGardenAccess(signer3.address, garden.address, 1, { gasPrice: 0 });
       await WBTC.connect(signer3).approve(garden.address, from(10e6), { gasPrice: 0 });
       await garden.connect(signer3).deposit(from(10e6), 1, signer3.getAddress(), false);
@@ -127,7 +134,10 @@ async function transferFunds(address) {
     case addresses.tokens.DAI.toLowerCase():
       whaleAddress = '0x6B175474E89094C44Da98b954EedeAC495271d0F';
       whaleSigner = await impersonateAddress(whaleAddress);
-      const DAI = await ethers.getContractAt('IERC20', addresses.tokens.DAI);
+      const DAI = await ethers.getContractAt(
+        '@openzeppelin/contracts/token/ERC20/IERC20.sol:IERC20',
+        addresses.tokens.DAI,
+      );
 
       await DAI.connect(whaleSigner).transfer(signer1.address, ethers.utils.parseEther('20000'), {
         gasPrice: 0,
@@ -142,7 +152,10 @@ async function transferFunds(address) {
     case addresses.tokens.USDC.toLowerCase():
       whaleAddress = '0x47ac0fb4f2d84898e4d9e7b4dab3c24507a6d503';
       whaleSigner = await impersonateAddress(whaleAddress);
-      const USDC = await ethers.getContractAt('IERC20', addresses.tokens.USDC);
+      const USDC = await ethers.getContractAt(
+        '@openzeppelin/contracts/token/ERC20/IERC20.sol:IERC20',
+        addresses.tokens.USDC,
+      );
 
       await USDC.connect(whaleSigner).transfer(signer1.address, from(1e6 * 1e6), {
         gasPrice: 0,
@@ -157,7 +170,10 @@ async function transferFunds(address) {
     case addresses.tokens.WETH.toLowerCase():
       whaleAddress = '0x2f0b23f53734252bda2277357e97e1517d6b042a';
       whaleSigner = await impersonateAddress(whaleAddress);
-      const WETH = await ethers.getContractAt('IERC20', addresses.tokens.WETH);
+      const WETH = await ethers.getContractAt(
+        '@openzeppelin/contracts/token/ERC20/IERC20.sol:IERC20',
+        addresses.tokens.WETH,
+      );
 
       await WETH.connect(whaleSigner).transfer(signer1.address, eth(100), {
         gasPrice: 0,
@@ -172,7 +188,10 @@ async function transferFunds(address) {
     case addresses.tokens.WBTC.toLocaleLowerCase():
       whaleAddress = '0x9ff58f4ffb29fa2266ab25e75e2a8b3503311656';
       whaleSigner = await impersonateAddress(whaleAddress);
-      const WBTC = await ethers.getContractAt('IERC20', addresses.tokens.WBTC);
+      const WBTC = await ethers.getContractAt(
+        '@openzeppelin/contracts/token/ERC20/IERC20.sol:IERC20',
+        addresses.tokens.WBTC,
+      );
 
       await WBTC.connect(whaleSigner).transfer(signer1.address, from(10e8), {
         gasPrice: 0,

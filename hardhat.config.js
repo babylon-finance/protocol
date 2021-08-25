@@ -68,6 +68,7 @@ module.exports = {
         blockNumber: 12821000,
       },
       saveDeployments: true,
+      gas: 9e6,
     },
     mainnet: {
       chainId: CHAIN_IDS.mainnet,
@@ -111,7 +112,30 @@ module.exports = {
           },
         },
       },
+      {
+        version: '0.8.2',
+        settings: {
+          optimizer: {
+            enabled: OPTIMIZER,
+            runs: 999,
+          },
+        },
+      },
     ],
+    overrides: {
+      '@uniswap/v3-core/contracts/libraries/FullMath.sol': {
+        version: '0.7.6',
+        settings: {},
+      },
+      '@uniswap/v3-core/contracts/libraries/TickMath.sol': {
+        version: '0.7.6',
+        settings: {},
+      },
+      '@uniswap/v3-periphery/contracts/libraries/PoolAddress.sol': {
+        version: '0.7.6',
+        settings: {},
+      },
+    },
   },
   etherscan: {
     apiKey: 'JA61NTCWBMPN56AT7TFQ3IMPHH2M2NHSJJ',
@@ -121,6 +145,7 @@ module.exports = {
     project: 'babylon',
   },
   paths: {
+    tests: './test/unit',
     sources: './contracts',
     integrations: './contracts/integrations',
     artifacts: './artifacts',
