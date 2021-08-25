@@ -80,19 +80,103 @@ describe.only('rewards', function () {
       weth,
       wbtc,
     } = await setupTests()());
+    await babController.connect(owner).enableBABLMiningProgram();
+    await fund([signer1.address, signer2.address, signer3.address]);
+    const reserveContract = await ethers.getContractAt(
+      '@openzeppelin/contracts/token/ERC20/IERC20.sol:IERC20',
+      addresses.tokens.WETH,
+    );
   });
 
-  it('create gardens', async function () {
-    for (let i = 0; i < 1; i++) {
-      const garden = await createGarden();
-      const strategy = await getStrategy({ state: 'vote', specificParams: [addresses.tokens.DAI, 0] });
+  async function withdraw(gardens) {
+    for (const garden of gardens) {
+      for (let signer of [signer1, signer2]) {
+        await garden.connect(signer).withdraw(eth(2), eth(1), signer.getAddress(), false, ADDRESS_ZERO, {
+          gasPrice: 0,
+        });
+        await increaseTime(3600);
+      }
+    }
+  }
+  async function claim(gardens) {
+    for (const garden of gardens) {
+      for (let signer of [signer1, signer2]) {
+        await garden.connect(signer).claimReturns(await garden.getFinalizedStrategies());
+        await increaseTime(3600);
+      }
+    }
+  }
 
-      await increaseTime(ONE_DAY_IN_SECONDS);
+  async function finalize(strategies) {
+    for (const strategy of strategies) {
+      await strategy.connect(keeper).finalizeStrategy(0, '', { gasPrice: 0 });
+      await increaseTime(3600);
+    }
+  }
+
+  async function execute(strategies) {
+    for (const strategy of strategies) {
       await strategy.connect(keeper).executeStrategy(STRATEGY_EXECUTE_MAP[addresses.tokens.WETH], 0, {
         gasPrice: 0,
       });
-      await increaseTime(ONE_DAY_IN_SECONDS * 30);
-      await strategy.connect(keeper).finalizeStrategy(0, '', { gasPrice: 0 });
+      await increaseTime(3600);
     }
+  }
+
+  async function create(gardens) {
+    const strategies = [];
+    for (const garden of gardens) {
+      await increaseTime(3600);
+      strategies.push(await getStrategy({ garden, state: 'vote', specificParams: [addresses.tokens.DAI, 0] }));
+    }
+    return strategies;
+  }
+
+  async function deposit(gardens) {
+    const reserveContract = await ethers.getContractAt(
+      '@openzeppelin/contracts/token/ERC20/IERC20.sol:IERC20',
+      addresses.tokens.WETH,
+    );
+    for (const garden of gardens) {
+      for (let signer of [signer1, signer2]) {
+        await reserveContract.connect(signer).approve(garden.address, eth(9999999), { gasPrice: 0 });
+        for (let j = 0; j < 2; j++) {
+          await garden.connect(signer).deposit(eth(0.1), eth(0.1), signer.getAddress(), false, {});
+          await increaseTime(3600);
+        }
+      }
+    }
+  }
+
+  it('simulate mining rewards launch', async function () {
+    const gardenNum = 30;
+    const strategyNum = 10;
+    const gardens = [];
+    for (let i = 0; i < gardenNum; i++) {
+      gardens.push(await createGarden());
+    }
+
+
+    let strategies = [];
+    for (let i = 0; i < strategyNum; i++) {
+      const newStrategies = await create(gardens);
+
+      await increaseTime(ONE_DAY_IN_SECONDS);
+      await deposit(gardens);
+
+      await increaseTime(ONE_DAY_IN_SECONDS);
+      await execute(newStrategies);
+
+      strategies = [...strategies, ...newStrategies];
+    }
+
+    await increaseTime(ONE_DAY_IN_SECONDS * 30);
+    await finalize(strategies);
+
+    await increaseTime(ONE_DAY_IN_SECONDS);
+    await claim(gardens);
+
+    await increaseTime(ONE_DAY_IN_SECONDS);
+    await withdraw(gardens);
   });
 });
