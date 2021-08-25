@@ -337,11 +337,6 @@ describe('Garden', function () {
     });
   });
 
-  describe('state', async function () {
-    it('only the protocol should be able to update active state', async function () {
-      await expect(garden1.connect(signer1).setActive(true)).to.be.revertedWith('BAB#016');
-    });
-  });
   describe('profit sharing', async function () {
     it('garden is initialized with default profit sharing if not set during initialization', async function () {
       // TODO CHECK all require at modifier
@@ -1342,15 +1337,6 @@ describe('Garden', function () {
   });
 
   describe('deposit', async function () {
-    it('cannot make a deposit when the garden is disabled', async function () {
-      await deleteCandidateStrategies(garden1.address);
-      await expect(babController.connect(owner).disableGarden(garden1.address)).to.not.be.reverted;
-      await expect(
-        garden1.connect(signer3).deposit(ethers.utils.parseEther('1'), 1, signer3.getAddress(), false, {
-          value: ethers.utils.parseEther('1'),
-        }),
-      ).to.be.reverted;
-    });
 
     it('a contributor can make an initial deposit and withdraw with DAI', async function () {
       const whaleAddress = '0x6B175474E89094C44Da98b954EedeAC495271d0F'; // Has DAI
@@ -1489,18 +1475,6 @@ describe('Garden', function () {
         await expect(
           garden1.connect(signer3).deposit(ethers.utils.parseEther('21'), 1, signer3.getAddress(), false, {
             value: ethers.utils.parseEther('21'),
-          }),
-        ).to.be.reverted;
-      });
-    });
-
-    describe('can be disabled', async function () {
-      it('reverts deposits if the garden is disabled', async function () {
-        await deleteCandidateStrategies(garden1.address);
-        await babController.connect(owner).disableGarden(garden1.address);
-        await expect(
-          garden1.connect(signer3).deposit(ethers.utils.parseEther('1'), 1, signer3.getAddress(), false, {
-            value: ethers.utils.parseEther('1'),
           }),
         ).to.be.reverted;
       });
