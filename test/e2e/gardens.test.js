@@ -4,6 +4,7 @@ const { ethers } = require('hardhat');
 const addresses = require('lib/addresses');
 const { fund } = require('lib/whale');
 const {
+  STRATEGY_EXECUTE_MAP,
   NOW,
   PROFIT_STRATEGIST_SHARE,
   PROFIT_STEWARD_SHARE,
@@ -34,7 +35,7 @@ const { createGarden, getDepositSig, getWithdrawSig, transferFunds, depositFunds
 
 const { setupTests } = require('fixtures/GardenFixture');
 
-describe('gardens', function () {
+describe.only('protocol', function () {
   let babController;
   let rewardsDistributor;
   let owner;
@@ -81,50 +82,17 @@ describe('gardens', function () {
     } = await setupTests()());
   });
 
-  describe('depositBySig', async function () {
-    it('can deposit', async function () {
-      const amountIn = from(1000 * 1e6);
-      const minAmountOut = eth(1000);
+  it('create gardens', async function () {
+    for (let i = 0; i < 1; i++) {
+      const garden = await createGarden();
+      const strategy = await getStrategy({ state: 'vote', specificParams: [addresses.tokens.DAI, 0] });
 
-      await fund([signer1.address, signer3.address], { tokens: [addresses.tokens.USDC] });
-
-      const garden = await createGarden({ reserveAsset: addresses.tokens.USDC });
-
-      await usdc.connect(signer3).approve(garden.address, amountIn, {
+      await increaseTime(ONE_DAY_IN_SECONDS);
+      await strategy.connect(keeper).executeStrategy(STRATEGY_EXECUTE_MAP[addresses.tokens.WETH], 0, {
         gasPrice: 0,
       });
-
-      const gardenBalance = await usdc.balanceOf(garden.address);
-      const supplyBefore = await garden.totalSupply();
-
-      const sig = await getDepositSig(garden.address, signer3, amountIn, minAmountOut, false, 0);
-      await garden.connect(keeper).depositBySig(amountIn, minAmountOut, false, 0, eth(), sig.v, sig.r, sig.s);
-
-      const supplyAfter = await garden.totalSupply();
-      expect(supplyAfter.sub(supplyBefore)).to.be.eq(minAmountOut);
-
-      const gardenBalanceAfter = await usdc.balanceOf(garden.address);
-      expect(gardenBalanceAfter.sub(gardenBalance)).to.equal(amountIn);
-    });
-
-    it('rejects wrong nonce', async function () {
-      const amountIn = from(1000 * 1e6);
-      const minAmountOut = eth(1000);
-
-      await fund([signer1.address, signer3.address], [addresses.tokens.USDC]);
-
-      const garden = await createGarden({ reserveAsset: addresses.tokens.USDC });
-
-      await usdc.connect(signer3).approve(garden.address, amountIn, {
-        gasPrice: 0,
-      });
-
-      const sig = await getDepositSig(garden.address, signer3, amountIn, minAmountOut, false, 7);
-      await expect(
-        garden.connect(keeper).depositBySig(amountIn, minAmountOut, false, 7, eth(), sig.v, sig.r, sig.s),
-      ).to.be.revertedWith('BAB#089');
-    });
-    // TODO: Test minAmountOut is respected
-    // TODO: Test mintNFT is respected
+      await increaseTime(ONE_DAY_IN_SECONDS * 30);
+      await strategy.connect(keeper).finalizeStrategy(0, '', { gasPrice: 0 });
+    }
   });
 });
