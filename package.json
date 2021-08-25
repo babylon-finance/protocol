@@ -103,7 +103,7 @@
     "test": "yarn compile && OPTIMIZER=false mocha --require @babel/register --require hardhat/register --timeout 600000 --recursive --parallel --exit",
     "test:ci": "yarn compile && OPTIMIZER=false mocha --require @babel/register --require hardhat/register ./test/unit/** --timeout 120000 --recursive --parallel --exit",
     "test:watch": "yarn compile && OPTIMIZER=false mocha --require @babel/register --require hardhat/register ./test/** --timeout 600000 --recursive --parallel --exit",
-    "gas-report": "babel ./test/ -d ./dist/ && mv ./test/ ./test-copy/ && mv ./dist/ ./test/ && REPORT_GAS=1 hardhat test ./test/e2e/gardens.test.js --network hardhat --max-memory 8096 && rm -rf ./test/ && mv ./test-copy/ ./test/",
+    "gas-report": "babel ./test/ -d ./dist/ && mv ./test/ ./test-copy/ && mv ./dist/ ./test/ && REPORT_GAS=1 hardhat test ./test/e2e/rewards.test.js --network hardhat --max-memory 8096 && rm -rf ./test/ && mv ./test-copy/ ./test/",
     "estimate-size": "yarn compile && hardhat size-contracts --max-memory 8096",
     "coverage": "hardhat coverage --max-memory 8096",
     "tvl": "yarn compile && hardhat tvl --network mainnet",
