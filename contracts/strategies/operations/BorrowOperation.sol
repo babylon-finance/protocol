@@ -158,11 +158,11 @@ contract BorrowOperation is Operation {
         uint256 debtAmount = IBorrowIntegration(_integration).getBorrowBalance(msg.sender, assetToken);
         uint256 debtTokenBalance =
             address(0) == assetToken ? address(msg.sender).balance : IERC20(assetToken).balanceOf(address(msg.sender));
-        uint256 amountToRepay = debtAmount > debtTokenBalance ? debtTokenBalance : debtAmount;
+        uint256 maxAmountToRepay = debtAmount > debtTokenBalance ? debtTokenBalance : debtAmount;
         IBorrowIntegration(_integration).repay(
             msg.sender,
             assetToken,
-            amountToRepay // We repay all that we can
+            maxAmountToRepay.preciseMul(_percentage) // We repay the percentage of all that we can
         );
         return (assetToken, IBorrowIntegration(_integration).getBorrowBalance(msg.sender, assetToken), 2);
     }
