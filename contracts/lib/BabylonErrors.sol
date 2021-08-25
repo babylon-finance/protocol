@@ -282,4 +282,6 @@ library Errors {
     uint256 internal constant INVALID_ADDRESS = 96;
     // creator can only renounce in some circumstances
     uint256 internal constant CREATOR_CANNOT_RENOUNCE = 97;
+    // Max capital requested
+    uint256 internal constant ZERO_CAPITAL_REQUESTED = 98;
 }
