@@ -44,6 +44,7 @@ async function setUpFixture(
   const aaveBorrowIntegration = await getContract('AaveBorrowIntegration');
   const compoundBorrowIntegration = await getContract('CompoundBorrowIntegration');
   const lidoIntegration = await getContract('LidoStakeIntegration');
+  const curveTradeIntegration = await getContract('CurveTradeIntegration');
 
   const buyOperation = await getContract('BuyOperation');
   const addLiquidityOperation = await getContract('AddLiquidityOperation');
@@ -216,6 +217,7 @@ async function setUpFixture(
     treasury,
     rewardsDistributor,
     uniswapV3TradeIntegration,
+    curveTradeIntegration,
     balancerIntegration,
     uniswapPoolIntegration,
     harvestVaultIntegration,
