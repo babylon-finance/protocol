@@ -15,13 +15,17 @@ module.exports = async ({
 
   const controller = await deployments.get('BabControllerProxy');
 
+  console.log("DEployingggg Curve");
+
   const deployment = await deploy(contract, {
     from: deployer,
     args: [controller.address],
     log: true,
     gasPrice,
   });
-
+  if (deployment.newlyDeployed) {
+    console.log(`Adding curve trade integration ${contract}(${deployment.address})`);
+  }
   if (network.live && deployment.newlyDeployed) {
     await tenderly.push(await getTenderlyContract(contract));
   }

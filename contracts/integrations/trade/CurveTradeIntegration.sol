@@ -19,7 +19,9 @@
 pragma solidity 0.7.6;
 pragma abicoder v2;
 
+import 'hardhat/console.sol';
 import {IBabController} from '../../interfaces/IBabController.sol';
+import {IStrategy} from '../../interfaces/IStrategy.sol';
 import {ICurveAddressProvider} from '../../interfaces/external/curve/ICurveAddressProvider.sol';
 import {ICurveRegistry} from '../../interfaces/external/curve/ICurveRegistry.sol';
 
@@ -43,7 +45,7 @@ contract CurveTradeIntegration is TradeIntegration {
     /* ============ Constants ============ */
     // Address of Curve Registry
     ICurveAddressProvider internal constant curveAddressProvider = ICurveAddressProvider(0x0000000022D53366457F9d5E68Ec105046FC4383);
-    address internal constant ETH = 0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE;
+    address internal constant ETH_ADD = 0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE;
 
 
     /* ============ Constructor ============ */
@@ -80,8 +82,8 @@ contract CurveTradeIntegration is TradeIntegration {
             bytes memory
         )
     {
-      address tokenToSend = _sendToken == WETH ? ETH : _sendToken;
-      address tokenToReceive = _receiveToken == WETH ? ETH : _receiveToken;
+      address tokenToSend = _sendToken == WETH ? ETH_ADD : _sendToken;
+      address tokenToReceive = _receiveToken == WETH ? ETH_ADD : _receiveToken;
       ICurveRegistry curveRegistry = ICurveRegistry(curveAddressProvider.get_registry());
       address curvePool = curveRegistry.find_pool_for_coins(tokenToSend, tokenToReceive, 0);
       (int128 i,int128 j,bool underlying) = curveRegistry.get_coin_indices(curvePool, tokenToSend, tokenToReceive);
@@ -89,7 +91,7 @@ contract CurveTradeIntegration is TradeIntegration {
       if (underlying) {
         methodData = abi.encodeWithSignature('exchange_underlying(int128,int128,uint256,uint256)', i, j, _sendQuantity, 1);
       }
-      return (curvePool, 0, methodData);
+      return (curvePool, _sendToken == WETH ? _sendQuantity : 0, methodData);
     }
 
     /**
@@ -112,6 +114,73 @@ contract CurveTradeIntegration is TradeIntegration {
         uint256 minLiquidityReserveAsset = _tradeInfo.garden.minLiquidityAsset();
         // TODO: Check
         return true;
+    }
+
+    /**
+     * Return pre action calldata
+     *
+     * @param  _sendToken               Address of the asset to send
+     * hparam  _receiveToken            Address of the asset to receive
+     * @param  _sendQuantity            Amount of the asset to send
+     *
+     * @return address                   Target contract address
+     * @return uint256                   Call value
+     * @return bytes                     Trade calldata
+     */
+    function _getPreActionCallData(
+        address _sendToken,
+        address, /* _receiveToken */
+        uint256 _sendQuantity
+    )
+        internal
+        view
+        override
+        returns (
+            address,
+            uint256,
+            bytes memory
+        )
+    {
+        // Unwrap ETH to WETH
+        if (_sendToken == WETH) {
+          bytes memory methodData =
+              abi.encodeWithSignature('withdraw(uint256)', _sendQuantity);
+          return (WETH, 0, methodData);
+        }
+        return (address(0), 0, bytes(''));
+    }
+    /**
+     * Return post action calldata
+     *
+     * hparam  _sendToken               Address of the asset to send
+     * @param  _receiveToken            Address of the asset to receive
+     * @param  _sendQuantity            Amount of the asset to send
+     *
+     * @return address                   Target contract address
+     * @return uint256                   Call value
+     * @return bytes                     Trade calldata
+     */
+    function _getPostActionCallData(
+        address /* _sendToken */,
+        address _receiveToken,
+        uint256  _sendQuantity
+    )
+        internal
+        view
+        override
+        returns (
+            address,
+            uint256,
+            bytes memory
+        )
+    {
+        // Wrap ETH to WETH
+        if (_receiveToken == WETH) {
+          bytes memory methodData =
+              abi.encodeWithSignature('deposit()');
+          return (WETH, _sendQuantity, methodData);
+        }
+        return (address(0), 0, bytes(''));
     }
 
     /* ============ Private Functions ============ */

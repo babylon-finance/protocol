@@ -105,14 +105,33 @@ abstract contract TradeIntegration is BaseIntegration, ReentrancyGuard, ITradeIn
         TradeInfo memory tradeInfo =
             _createTradeInfo(_strategy, name, _sendToken, _receiveToken, _sendQuantity, _minReceiveQuantity);
         _validatePreTradeData(tradeInfo, _sendQuantity);
+
+        // Pre actions
+        (address targetAddressP, uint256 callValueP, bytes memory methodDataP) =
+            _getPreActionCallData(_sendToken, _receiveToken, _sendQuantity);
+
+        if (targetAddressP != address(0)) {
+            // Invoke protocol specific call
+            tradeInfo.strategy.invokeFromIntegration(targetAddressP, callValueP, methodDataP);
+        }
+
         (address targetExchange, uint256 callValue, bytes memory methodData) =
             _getTradeCallData(_strategy, tradeInfo.sendToken, tradeInfo.totalSendQuantity, tradeInfo.receiveToken);
         // Get spender address from exchange adapter and invoke approve for exact amount on sendToken
         tradeInfo.strategy.invokeApprove(_getSpender(targetExchange), tradeInfo.sendToken, tradeInfo.totalSendQuantity);
         tradeInfo.strategy.invokeFromIntegration(targetExchange, callValue, methodData);
 
+        // Post actions
+        (targetAddressP, callValueP, methodDataP) =
+            _getPostActionCallData(_sendToken, _receiveToken, address(_strategy).balance);
+
+        if (targetAddressP != address(0)) {
+            // Invoke protocol specific call
+            tradeInfo.strategy.invokeFromIntegration(targetAddressP, callValueP, methodDataP);
+        }
+
         uint256 exchangedQuantity = _validatePostTrade(tradeInfo);
-        uint256 newAmountSendTokens = tradeInfo.preTradeSendTokenBalance.sub(tradeInfo.totalSendQuantity);
+        uint256 newSendTokens = tradeInfo.preTradeSendTokenBalance.sub(tradeInfo.totalSendQuantity);
         uint256 newAmountReceiveTokens = tradeInfo.preTradeReceiveTokenBalance.add(exchangedQuantity);
         emit ComponentExchanged(
             tradeInfo.garden,
@@ -120,7 +139,7 @@ abstract contract TradeIntegration is BaseIntegration, ReentrancyGuard, ITradeIn
             _sendToken,
             _receiveToken,
             tradeInfo.exchangeName,
-            newAmountSendTokens,
+            newSendTokens,
             newAmountReceiveTokens
         );
     }
@@ -237,6 +256,61 @@ abstract contract TradeIntegration is BaseIntegration, ReentrancyGuard, ITradeIn
         TradeInfo memory, /* _tradeInfo */
         uint256 /*_sendQuantity */
     ) internal view virtual returns (bool);
+
+
+    /**
+     * Return pre action calldata
+     *
+     * hparam  _sendToken               Address of the asset to send
+     * hparam  _receiveToken            Address of the asset to receive
+     * hparam  _sendQuantity            Amount of the asset to send
+     *
+     * @return address                   Target contract address
+     * @return uint256                   Call value
+     * @return bytes                     Trade calldata
+     */
+    function _getPreActionCallData(
+        address, /* _sendToken */
+        address, /* _receiveToken */
+        uint256 /* _sendQuantity */
+    )
+        internal
+        view
+        virtual
+        returns (
+            address,
+            uint256,
+            bytes memory
+    ) {
+      return (address(0), 0, bytes(''));
+    }
+
+    /**
+     * Return pre action calldata
+     *
+     * hparam  _sendToken               Address of the asset to send
+     * hparam  _receiveToken            Address of the asset to receive
+     * hparam  _sendQuantity            Amount of the asset to send
+     *
+     * @return address                   Target contract address
+     * @return uint256                   Call value
+     * @return bytes                     Trade calldata
+     */
+    function _getPostActionCallData(
+        address, /* _sendToken */
+        address, /* _receiveToken */
+        uint256 /* _sendQuantity */
+    )
+        internal
+        view
+        virtual
+        returns (
+            address,
+            uint256,
+            bytes memory
+    ) {
+      return (address(0), 0, bytes(''));
+    }
 
     /**
      * Returns the address to approve source tokens to for trading. This is the TokenTaker address

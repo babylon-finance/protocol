@@ -78,7 +78,7 @@ contract BuyOperation is Operation {
         uint8, /* _assetStatus */
         bytes calldata _data,
         IGarden, /* _garden */
-        address /* _integration */
+        address _integration
     )
         external
         override
@@ -90,7 +90,12 @@ contract BuyOperation is Operation {
         )
     {
         address token = BytesLib.decodeOpDataAddress(_data);
-        IStrategy(msg.sender).trade(_asset, _capital, token);
+        ITradeIntegration(_integration).trade(
+          msg.sender,
+          _asset,
+          _capital,
+          token,
+          0); // TODO: pass as a param
         return (token, IERC20(token).balanceOf(address(msg.sender)), 0); // liquid
     }
 
@@ -105,7 +110,7 @@ contract BuyOperation is Operation {
         uint256 _percentage,
         bytes calldata _data,
         IGarden _garden,
-        address /* _integration */
+        address _integration
     )
         external
         override
@@ -118,11 +123,12 @@ contract BuyOperation is Operation {
     {
         address token = BytesLib.decodeOpDataAddress(_data);
         require(_percentage <= 100e18, 'Unwind Percentage <= 100%');
-        IStrategy(msg.sender).trade(
-            token,
-            IERC20(token).balanceOf(address(msg.sender)).preciseMul(_percentage),
-            _garden.reserveAsset()
-        );
+        ITradeIntegration(_integration).trade(
+          msg.sender,
+          token,
+          IERC20(token).balanceOf(address(msg.sender)).preciseMul(_percentage),
+          _garden.reserveAsset(),
+          0);
     }
 
     /**
