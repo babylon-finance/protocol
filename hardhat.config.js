@@ -153,7 +153,7 @@ module.exports = {
     deployments: 'deployments/artifacts',
   },
   mocha: {
-    timeout: 120000,
+    timeout: 9999999,
   },
 
   watcher: {
