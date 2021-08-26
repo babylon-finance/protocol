@@ -1025,11 +1025,11 @@ describe('Garden', function () {
       expect((await ethers.provider.getBalance(signer3.address)).sub(beforeWithdrawal)).to.be.eq(minAmountOut);
     });
 
-    it('can withdraw funds with a penalty', async function () {
+    it.only('can withdraw funds with a penalty', async function () {
       const garden = await createGarden();
 
       const strategy = await getStrategy();
-      await vote(strategy);
+      await vote(strategy, [signer1, signer2, signer3]);
 
       await executeStrategy(strategy, { amount: eth().sub(eth().mul(PROTOCOL_FEE).div(eth())) });
 
