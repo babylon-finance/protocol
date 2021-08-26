@@ -35,7 +35,7 @@ const { createGarden, getDepositSig, getWithdrawSig, transferFunds, depositFunds
 
 const { setupTests } = require('fixtures/GardenFixture');
 
-describe.only('rewards', function () {
+describe('rewards', function () {
   let babController;
   let rewardsDistributor;
   let owner;
