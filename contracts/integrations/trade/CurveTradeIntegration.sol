@@ -86,6 +86,7 @@ contract CurveTradeIntegration is TradeIntegration {
         address tokenToReceive = _receiveToken == WETH ? ETH_ADD : _receiveToken;
         ICurveRegistry curveRegistry = ICurveRegistry(curveAddressProvider.get_registry());
         address curvePool = curveRegistry.find_pool_for_coins(tokenToSend, tokenToReceive, 0);
+        require(curvePool != address(0), 'No curve pool to trade the pair');
         (int128 i, int128 j, bool underlying) = curveRegistry.get_coin_indices(curvePool, tokenToSend, tokenToReceive);
         bytes memory methodData =
             abi.encodeWithSignature('exchange(int128,int128,uint256,uint256)', i, j, _sendQuantity, 1);

@@ -11,6 +11,11 @@ interface ICurveRegistry {
         uint256 _i
     ) external view returns (address);
 
+    function find_pool_for_coins(
+        address _from,
+        address _to
+    ) external view returns (address);
+
     function get_n_coins(address _pool) external view returns (uint256[2] memory);
 
     function get_virtual_price_from_lp_token(address _lpToken) external view returns (uint256);

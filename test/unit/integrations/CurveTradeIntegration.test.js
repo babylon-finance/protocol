@@ -22,20 +22,47 @@ describe('CurveTradeIntegration', function () {
     await fund([signer1.address, signer2.address, signer3.address]);
   });
 
-  describe('exchanges underlying tokens', function () {
+  describe('exchanges pegged assets directly through curve', function () {
     [
       {
         token: addresses.tokens.WETH,
         name: 'WETH',
         pairs: [
-          // { asset: addresses.tokens.aETHC, symbol: 'aETHc' },
-          // { asset: addresses.tokens.sETH, symbol: 'sETH' },
+          { asset: addresses.tokens.aETHC, symbol: 'aETHc' },
+          { asset: addresses.tokens.sETH, symbol: 'sETH' },
           { asset: addresses.tokens.stETH, symbol: 'stETH' },
         ],
-        // { token: addresses.tokens.DAI, name: 'DAI' },
-        // { token: addresses.tokens.USDC, name: 'USDC' },
-        // { token: addresses.tokens.WBTC, name: 'WBTC' },
       },
+      {
+        token: addresses.tokens.DAI,
+        name: 'DAI',
+        pairs: [
+          { asset: addresses.tokens.USDC, symbol: 'USDC' },
+          { asset: addresses.tokens.sUSD, symbol: 'sUSD' },
+          { asset: addresses.tokens.sUSD, symbol: 'USDT' },
+          // { asset: addresses.tokens.TUSD, symbol: 'TUSD' },
+        ],
+      },
+      {
+        token: addresses.tokens.DAI,
+        name: 'USDC',
+        pairs: [
+          { asset: addresses.tokens.DAI, symbol: 'DAI' },
+          { asset: addresses.tokens.sUSD, symbol: 'sUSD' },
+          { asset: addresses.tokens.sUSD, symbol: 'USDT' },
+          // { asset: addresses.tokens.TUSD, symbol: 'TUSD' },
+        ],
+      },
+      {
+        token: addresses.tokens.WBTC,
+        name: 'WBTC',
+        pairs: [
+          // { asset: addresses.tokens.hBTC, symbol: 'hBTC' },
+          { asset: addresses.tokens.renBTC, symbol: 'renBTC' },
+          // { asset: addresses.tokens.sBTC, symbol: 'sBTC' },
+        ],
+      },
+      // { token: addresses.tokens.WBTC, name: 'WBTC' },
     ].forEach(({ token, name, pairs }) => {
       pairs.forEach(({ asset, symbol }) => {
         it(`exchange ${name}->${symbol} in ${name} garden`, async function () {
@@ -60,7 +87,6 @@ describe('CurveTradeIntegration', function () {
             specificParams: [asset, 0],
           });
 
-          console.log('before execute', asset, symbol);
           await executeStrategy(strategyContract);
 
           const tokenPriceInAsset = await priceOracle.connect(owner).getPrice(token, asset);
@@ -77,13 +103,11 @@ describe('CurveTradeIntegration', function () {
             .mul(STRATEGY_EXECUTE_MAP[token])
             .div(eth())
             .div(assetDecimalsDelta);
-
-          console.log('assetBalance', ethers.utils.formatEther(assetBalance));
-          expect(expectedBalance).to.be.closeTo(assetBalance, assetBalance.div(20)); // 5% slippage
-          console.log('before finalize');
+          // 5% slippage. Doesn't matter we just want to check that the trade can execute
+          // univ3 doesn't have right prices for some of these
+          expect(expectedBalance).to.be.closeTo(assetBalance, assetBalance.div(20));
           await finalizeStrategy(strategyContract, 0);
           const assetBalanceAfter = await assetContract.balanceOf(strategyContract.address);
-          console.log('assetBalance f', ethers.utils.formatEther(assetBalanceAfter));
           expect(assetBalanceAfter).to.be.lt(1000000); // Almost 0
         });
       });
