@@ -56,10 +56,10 @@ describe.only('rewards', function () {
   let dai;
   let wbtc;
 
-  const gardenNum = 1;
-  const strategyNum = 1;
-  const depositNum = 1;
-  const userNum = 3;
+  const gardenNum = 10;
+  const strategyNum = 3;
+  const depositNum = 3;
+  const userNum = 30;
 
   beforeEach(async () => {
     ({
@@ -86,6 +86,7 @@ describe.only('rewards', function () {
       addresses.tokens.WETH,
     );
     users = await createWallets(userNum);
+    await ishtarGate.connect(owner).setMaxNumberOfInvites(999999);
     await ishtarGate.connect(owner).setCreatorPermissions(users[0].address, true, { gasPrice: 0 });
   });
 
@@ -119,7 +120,7 @@ describe.only('rewards', function () {
 
   async function execute(strategies) {
     for (const strategy of strategies) {
-      await strategy.connect(keeper).executeStrategy(STRATEGY_EXECUTE_MAP[addresses.tokens.WETH], 0, {
+      await strategy.connect(keeper).executeStrategy(eth(0.1), 0, {
         gasPrice: 0,
       });
       await increaseTime(3600);
