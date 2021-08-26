@@ -15,7 +15,7 @@ module.exports = async ({
 
   const controller = await deployments.get('BabControllerProxy');
 
-  console.log("DEployingggg Curve");
+  console.log('DEployingggg Curve');
 
   const deployment = await deploy(contract, {
     from: deployer,

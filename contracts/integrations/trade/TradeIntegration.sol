@@ -122,8 +122,11 @@ abstract contract TradeIntegration is BaseIntegration, ReentrancyGuard, ITradeIn
         tradeInfo.strategy.invokeFromIntegration(targetExchange, callValue, methodData);
 
         // Post actions
-        (targetAddressP, callValueP, methodDataP) =
-            _getPostActionCallData(_sendToken, _receiveToken, address(_strategy).balance);
+        (targetAddressP, callValueP, methodDataP) = _getPostActionCallData(
+            _sendToken,
+            _receiveToken,
+            address(_strategy).balance
+        );
 
         if (targetAddressP != address(0)) {
             // Invoke protocol specific call
@@ -257,7 +260,6 @@ abstract contract TradeIntegration is BaseIntegration, ReentrancyGuard, ITradeIn
         uint256 /*_sendQuantity */
     ) internal view virtual returns (bool);
 
-
     /**
      * Return pre action calldata
      *
@@ -281,8 +283,9 @@ abstract contract TradeIntegration is BaseIntegration, ReentrancyGuard, ITradeIn
             address,
             uint256,
             bytes memory
-    ) {
-      return (address(0), 0, bytes(''));
+        )
+    {
+        return (address(0), 0, bytes(''));
     }
 
     /**
@@ -308,8 +311,9 @@ abstract contract TradeIntegration is BaseIntegration, ReentrancyGuard, ITradeIn
             address,
             uint256,
             bytes memory
-    ) {
-      return (address(0), 0, bytes(''));
+        )
+    {
+        return (address(0), 0, bytes(''));
     }
 
     /**

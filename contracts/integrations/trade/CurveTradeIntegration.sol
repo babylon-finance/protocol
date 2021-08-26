@@ -44,9 +44,9 @@ contract CurveTradeIntegration is TradeIntegration {
 
     /* ============ Constants ============ */
     // Address of Curve Registry
-    ICurveAddressProvider internal constant curveAddressProvider = ICurveAddressProvider(0x0000000022D53366457F9d5E68Ec105046FC4383);
+    ICurveAddressProvider internal constant curveAddressProvider =
+        ICurveAddressProvider(0x0000000022D53366457F9d5E68Ec105046FC4383);
     address internal constant ETH_ADD = 0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE;
-
 
     /* ============ Constructor ============ */
 
@@ -82,16 +82,23 @@ contract CurveTradeIntegration is TradeIntegration {
             bytes memory
         )
     {
-      address tokenToSend = _sendToken == WETH ? ETH_ADD : _sendToken;
-      address tokenToReceive = _receiveToken == WETH ? ETH_ADD : _receiveToken;
-      ICurveRegistry curveRegistry = ICurveRegistry(curveAddressProvider.get_registry());
-      address curvePool = curveRegistry.find_pool_for_coins(tokenToSend, tokenToReceive, 0);
-      (int128 i,int128 j,bool underlying) = curveRegistry.get_coin_indices(curvePool, tokenToSend, tokenToReceive);
-      bytes memory methodData = abi.encodeWithSignature('exchange(int128,int128,uint256,uint256)', i, j, _sendQuantity, 1);
-      if (underlying) {
-        methodData = abi.encodeWithSignature('exchange_underlying(int128,int128,uint256,uint256)', i, j, _sendQuantity, 1);
-      }
-      return (curvePool, _sendToken == WETH ? _sendQuantity : 0, methodData);
+        address tokenToSend = _sendToken == WETH ? ETH_ADD : _sendToken;
+        address tokenToReceive = _receiveToken == WETH ? ETH_ADD : _receiveToken;
+        ICurveRegistry curveRegistry = ICurveRegistry(curveAddressProvider.get_registry());
+        address curvePool = curveRegistry.find_pool_for_coins(tokenToSend, tokenToReceive, 0);
+        (int128 i, int128 j, bool underlying) = curveRegistry.get_coin_indices(curvePool, tokenToSend, tokenToReceive);
+        bytes memory methodData =
+            abi.encodeWithSignature('exchange(int128,int128,uint256,uint256)', i, j, _sendQuantity, 1);
+        if (underlying) {
+            methodData = abi.encodeWithSignature(
+                'exchange_underlying(int128,int128,uint256,uint256)',
+                i,
+                j,
+                _sendQuantity,
+                1
+            );
+        }
+        return (curvePool, _sendToken == WETH ? _sendQuantity : 0, methodData);
     }
 
     /**
@@ -109,7 +116,7 @@ contract CurveTradeIntegration is TradeIntegration {
      * @param _tradeInfo            Struct containing trade information used in internal functions
      * @param _sendQuantity         Units of token in SetToken sent to the exchange
      */
-    function _checkLiquidity(TradeInfo memory _tradeInfo, uint256 _sendQuantity) internal override view returns (bool) {
+    function _checkLiquidity(TradeInfo memory _tradeInfo, uint256 _sendQuantity) internal view override returns (bool) {
         address reserveAsset = _tradeInfo.garden.reserveAsset();
         uint256 minLiquidityReserveAsset = _tradeInfo.garden.minLiquidityAsset();
         // TODO: Check
@@ -143,12 +150,12 @@ contract CurveTradeIntegration is TradeIntegration {
     {
         // Unwrap ETH to WETH
         if (_sendToken == WETH) {
-          bytes memory methodData =
-              abi.encodeWithSignature('withdraw(uint256)', _sendQuantity);
-          return (WETH, 0, methodData);
+            bytes memory methodData = abi.encodeWithSignature('withdraw(uint256)', _sendQuantity);
+            return (WETH, 0, methodData);
         }
         return (address(0), 0, bytes(''));
     }
+
     /**
      * Return post action calldata
      *
@@ -161,9 +168,9 @@ contract CurveTradeIntegration is TradeIntegration {
      * @return bytes                     Trade calldata
      */
     function _getPostActionCallData(
-        address /* _sendToken */,
+        address, /* _sendToken */
         address _receiveToken,
-        uint256  _sendQuantity
+        uint256 _sendQuantity
     )
         internal
         view
@@ -176,9 +183,8 @@ contract CurveTradeIntegration is TradeIntegration {
     {
         // Wrap ETH to WETH
         if (_receiveToken == WETH) {
-          bytes memory methodData =
-              abi.encodeWithSignature('deposit()');
-          return (WETH, _sendQuantity, methodData);
+            bytes memory methodData = abi.encodeWithSignature('deposit()');
+            return (WETH, _sendQuantity, methodData);
         }
         return (address(0), 0, bytes(''));
     }

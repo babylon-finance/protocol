@@ -90,12 +90,7 @@ contract BuyOperation is Operation {
         )
     {
         address token = BytesLib.decodeOpDataAddress(_data);
-        ITradeIntegration(_integration).trade(
-          msg.sender,
-          _asset,
-          _capital,
-          token,
-          0); // TODO: pass as a param
+        ITradeIntegration(_integration).trade(msg.sender, _asset, _capital, token, 0); // TODO: pass as a param
         return (token, IERC20(token).balanceOf(address(msg.sender)), 0); // liquid
     }
 
@@ -124,11 +119,12 @@ contract BuyOperation is Operation {
         address token = BytesLib.decodeOpDataAddress(_data);
         require(_percentage <= 100e18, 'Unwind Percentage <= 100%');
         ITradeIntegration(_integration).trade(
-          msg.sender,
-          token,
-          IERC20(token).balanceOf(address(msg.sender)).preciseMul(_percentage),
-          _garden.reserveAsset(),
-          0);
+            msg.sender,
+            token,
+            IERC20(token).balanceOf(address(msg.sender)).preciseMul(_percentage),
+            _garden.reserveAsset(),
+            0
+        );
     }
 
     /**
