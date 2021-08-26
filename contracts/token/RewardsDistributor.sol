@@ -85,7 +85,6 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
     modifier onlyActiveGarden(address _garden, uint256 _pid) {
         _require(IBabController(controller).isGarden(address(_garden)), Errors.ONLY_ACTIVE_GARDEN);
         _require(msg.sender == address(_garden), Errors.ONLY_ACTIVE_GARDEN);
-        _require(IGarden(_garden).active(), Errors.ONLY_ACTIVE_GARDEN);
         _;
     }
 

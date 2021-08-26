@@ -44,8 +44,6 @@ interface IBabController {
 
     function removeReserveAsset(address _reserveAsset) external;
 
-    function disableGarden(address _garden) external;
-
     function editPriceOracle(address _priceOracle) external;
 
     function editIshtarGate(address _ishtarGate) external;

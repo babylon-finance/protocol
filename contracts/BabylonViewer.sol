@@ -106,7 +106,7 @@ contract BabylonViewer {
                 garden.extraCreators(3)
             ],
             garden.reserveAsset(),
-            [garden.active(), garden.privateGarden(), garden.publicStrategists(), garden.publicStewards()],
+            [true, garden.privateGarden(), garden.publicStrategists(), garden.publicStewards()],
             garden.getStrategies(),
             garden.getFinalizedStrategies(),
             [
@@ -241,7 +241,7 @@ contract BabylonViewer {
         for (uint256 i = _offset; i < gardens.length; i++) {
             IGarden garden = IGarden(gardens[i]);
             (bool depositPermission, , ) = getGardenPermissions(gardens[i], _user);
-            if (garden.active() && depositPermission) {
+            if (depositPermission) {
                 userGardens[resultIndex] = gardens[i];
                 hasUserDeposited[resultIndex] = IERC20(gardens[i]).balanceOf(_user) > 0;
                 resultIndex = resultIndex + 1;

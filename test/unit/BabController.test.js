@@ -146,47 +146,6 @@ describe('BabController', function () {
           ),
       ).to.be.reverted;
     });
-
-    it('cannot disable an inactive garden', async function () {
-      const initialCommunities = await babController.getGardens();
-      await deleteCandidateStrategies(initialCommunities[0]);
-      await expect(babController.connect(owner).disableGarden(initialCommunities[0])).to.not.be.reverted;
-      await expect(babController.connect(owner).disableGarden(initialCommunities[0])).to.be.reverted;
-    });
-
-    it('can remove a disabled garden without active strategies', async function () {
-      const initialCommunities = await babController.getGardens();
-      expect(initialCommunities.length).to.equal(4);
-
-      await expect(babController.connect(owner).disableGarden(initialCommunities[0])).to.be.revertedWith(
-        'Garden has active strategies!',
-      );
-      await expect(babController.connect(owner).removeGarden(initialCommunities[0])).to.be.revertedWith(
-        'The garden needs to be disabled',
-      );
-      await deleteCandidateStrategies(initialCommunities[0]);
-      await expect(babController.connect(owner).disableGarden(initialCommunities[0])).not.to.be.reverted;
-      // Try garden removal again
-      await expect(babController.connect(owner).removeGarden(initialCommunities[0])).to.be.not.reverted;
-
-      const updatedCommunities = await babController.getGardens();
-      expect(updatedCommunities.length).to.equal(3);
-    });
-
-    it('can enable and disable a garden', async function () {
-      const initialCommunities = await babController.getGardens();
-      await deleteCandidateStrategies(initialCommunities[0]);
-
-      await expect(babController.connect(owner).disableGarden(initialCommunities[0])).to.not.be.reverted;
-      await expect(babController.connect(owner).enableGarden(initialCommunities[0])).to.not.be.reverted;
-    });
-    it('can NOT disable garden with ongoing strategies', async function () {
-      const initialCommunities = await babController.getGardens();
-
-      await expect(babController.connect(owner).disableGarden(initialCommunities[0])).to.be.revertedWith(
-        'Garden has active strategies!',
-      );
-    });
   });
 
   describe('Keeper List', function () {
@@ -380,6 +339,7 @@ describe('BabController', function () {
         }),
       ).to.not.be.reverted;
     });
+
     it('owner can unpause the reward distributor main functions', async function () {
       await babController.connect(owner).setPauseGuardian(signer1.address);
       await babController.connect(signer1).setSomePause([rewardsDistributor.address], true);
@@ -393,6 +353,7 @@ describe('BabController', function () {
       await expect(babController.connect(owner).enableBABLMiningProgram()).to.not.be.reverted;
       await expect(rewardsDistributor.connect(owner).setBablToken(newBablToken.address)).to.not.be.reverted;
     });
+
     it('owner can unpause the BABL Token main functions as a TimeLockedToken', async function () {
       // Enable BABL token transfers
       await bablToken.connect(owner).enableTokensTransfers();
