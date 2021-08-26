@@ -56,9 +56,9 @@ describe.only('rewards', function () {
   let dai;
   let wbtc;
 
-  const gardenNum = 10;
-  const strategyNum = 3;
-  const depositNum = 3;
+  const gardenNum = 1;
+  const strategyNum = 1;
+  const depositNum = 1;
   const userNum = 30;
 
   beforeEach(async () => {
@@ -85,7 +85,10 @@ describe.only('rewards', function () {
       '@openzeppelin/contracts/token/ERC20/IERC20.sol:IERC20',
       addresses.tokens.WETH,
     );
-    users = await createWallets(userNum);
+    users = await createWallets(userNum, {
+      tokens: [addresses.tokens.WETH, addresses.tokens.ETH],
+      amounts: [eth(900), eth(900)],
+    });
     await ishtarGate.connect(owner).setMaxNumberOfInvites(999999);
     await ishtarGate.connect(owner).setCreatorPermissions(users[0].address, true, { gasPrice: 0 });
   });
