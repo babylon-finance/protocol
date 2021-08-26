@@ -2,7 +2,7 @@ const { expect } = require('chai');
 const { ethers } = require('hardhat');
 
 const addresses = require('lib/addresses');
-const { fund } = require('lib/whale');
+const { fund, createWallets } = require('lib/whale');
 const {
   STRATEGY_EXECUTE_MAP,
   NOW,
@@ -40,9 +40,6 @@ describe.only('rewards', function () {
   let rewardsDistributor;
   let owner;
   let keeper;
-  let signer1;
-  let signer2;
-  let signer3;
   let garden1;
   let ishtarGate;
   let balancerIntegration;
@@ -52,15 +49,17 @@ describe.only('rewards', function () {
   let gardenNFT;
   let gardenValuer;
   let babViewer;
+  let users;
 
   let usdc;
   let weth;
   let dai;
   let wbtc;
 
-  const gardenNum = 30;
-  const strategyNum = 10;
-  const depositNum = 2;
+  const gardenNum = 1;
+  const strategyNum = 1;
+  const depositNum = 1;
+  const userNum = 3;
 
   beforeEach(async () => {
     ({
@@ -69,9 +68,6 @@ describe.only('rewards', function () {
       gardenNFT,
       keeper,
       owner,
-      signer1,
-      signer2,
-      signer3,
       garden1,
       ishtarGate,
       balancerIntegration,
@@ -85,26 +81,29 @@ describe.only('rewards', function () {
       wbtc,
     } = await setupTests()());
     await babController.connect(owner).enableBABLMiningProgram();
-    await fund([signer1.address, signer2.address, signer3.address]);
     const reserveContract = await ethers.getContractAt(
       '@openzeppelin/contracts/token/ERC20/IERC20.sol:IERC20',
       addresses.tokens.WETH,
     );
+    users = await createWallets(userNum);
+    await ishtarGate.connect(owner).setCreatorPermissions(users[0].address, true, { gasPrice: 0 });
   });
 
   async function withdraw(gardens) {
     for (const garden of gardens) {
-      for (let signer of [signer1, signer2]) {
-        await garden.connect(signer).withdraw(eth(2), eth(1), signer.getAddress(), false, ADDRESS_ZERO, {
-          gasPrice: 0,
-        });
+      for (let signer of users) {
+        await garden
+          .connect(signer)
+          .withdraw(await garden.balanceOf(signer.address), 1, signer.getAddress(), false, ADDRESS_ZERO, {
+            gasPrice: 0,
+          });
         await increaseTime(3600);
       }
     }
   }
   async function claim(gardens) {
     for (const garden of gardens) {
-      for (let signer of [signer1, signer2]) {
+      for (let signer of users) {
         await garden.connect(signer).claimReturns(await garden.getFinalizedStrategies());
         await increaseTime(3600);
       }
@@ -131,7 +130,9 @@ describe.only('rewards', function () {
     const strategies = [];
     for (const garden of gardens) {
       await increaseTime(3600);
-      strategies.push(await getStrategy({ garden, state: 'vote', specificParams: [addresses.tokens.DAI, 0] }));
+      strategies.push(
+        await getStrategy({ signers: users, garden, state: 'vote', specificParams: [addresses.tokens.DAI, 0] }),
+      );
     }
     return strategies;
   }
@@ -142,7 +143,7 @@ describe.only('rewards', function () {
       addresses.tokens.WETH,
     );
     for (const garden of gardens) {
-      for (let signer of [signer1, signer2]) {
+      for (let signer of users) {
         await reserveContract.connect(signer).approve(garden.address, eth(9999999), { gasPrice: 0 });
         for (let j = 0; j < depositNum; j++) {
           await garden.connect(signer).deposit(eth(0.1), eth(0.1), signer.getAddress(), false, {});
@@ -153,11 +154,22 @@ describe.only('rewards', function () {
   }
 
   it('simulate mining rewards launch', async function () {
+    console.log('gardens');
     const gardens = [];
     for (let i = 0; i < gardenNum; i++) {
-      gardens.push(await createGarden({ params: [eth(1e4), ...GARDEN_PARAMS.slice(1)] }));
+      const garden = await createGarden({ signer: users[0], params: [eth(1e4), ...GARDEN_PARAMS.slice(1)] });
+      gardens.push(garden);
+      await ishtarGate.connect(users[0]).grantGardenAccessBatch(
+        garden.address,
+        users.map((u) => u.address),
+        users.map((u) => 3),
+        {
+          gasPrice: 0,
+        },
+      );
     }
 
+    console.log('execute');
     let strategies = [];
     for (let i = 0; i < strategyNum; i++) {
       const newStrategies = await create(gardens);
@@ -171,12 +183,15 @@ describe.only('rewards', function () {
       strategies = [...strategies, ...newStrategies];
     }
 
+    console.log('finalize');
     await increaseTime(ONE_DAY_IN_SECONDS * 30);
     await finalize(strategies);
 
+    console.log('claim');
     await increaseTime(ONE_DAY_IN_SECONDS);
     await claim(gardens);
 
+    console.log('withdraw');
     await increaseTime(ONE_DAY_IN_SECONDS);
     await withdraw(gardens);
   });

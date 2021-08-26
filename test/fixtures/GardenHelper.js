@@ -39,7 +39,6 @@ async function createGarden({
   const ishtarGate = await getContract('IshtarGate');
   const babController = await getContract('BabController', 'BabControllerProxy');
   params = params || GARDEN_PARAMS_MAP[reserveAsset];
-  console.log('params', params);
   const contribution = CONTRIBUTORS_MAP[reserveAsset];
   const erc20 = await ethers.getContractAt('@openzeppelin/contracts/token/ERC20/IERC20.sol:IERC20', reserveAsset);
   for (const sig of [signer1, signer2, signer3]) {
@@ -67,7 +66,7 @@ async function createGarden({
   const gardens = await babController.getGardens();
   const garden = await ethers.getContractAt('Garden', gardens.slice(-1)[0]);
   await ishtarGate
-    .connect(signer1)
+    .connect(signer)
     .grantGardenAccessBatch(garden.address, [signer1.address, signer2.address, signer3.address], [3, 3, 3], {
       gasPrice: 0,
     });
