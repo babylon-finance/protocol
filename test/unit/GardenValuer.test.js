@@ -1,12 +1,17 @@
 const { expect } = require('chai');
 
+const { fund } = require('lib/whale');
+const { from, eth, parse } = require('lib/helpers');
+const { impersonateAddress, setCode } = require('lib/rpc');
 const addresses = require('lib/addresses');
-const { ONE_ETH } = require('lib/constants');
+const { ONE_ETH, ADDRESS_ZERO } = require('lib/constants');
 const { setupTests } = require('fixtures/GardenFixture');
 const { createStrategy } = require('fixtures/StrategyHelper.js');
-const { ADDRESS_ZERO } = require('../../lib/constants');
 
 describe('GardenValuer', function () {
+  let dai;
+  let weth;
+  let priceOracle;
   let gardenValuer;
   let garden1;
   let signer1;
@@ -15,14 +20,20 @@ describe('GardenValuer', function () {
   let uniswapV3TradeIntegration;
 
   beforeEach(async () => {
-    ({ gardenValuer, garden1, signer1, signer2, signer3, uniswapV3TradeIntegration } = await setupTests()());
+    ({
+      dai,
+      weth,
+      priceOracle,
+      gardenValuer,
+      garden1,
+      signer1,
+      signer2,
+      signer3,
+      uniswapV3TradeIntegration,
+    } = await setupTests()());
   });
 
-  describe('Deployment', function () {
-    it('should successfully deploy the contract', async function () {
-      const deployed = await gardenValuer.deployed();
-      expect(!!deployed).to.equal(true);
-    });
+  describe('deployment', function () {
     it('should NOT allow zero address for controller during deployment', async function () {
       const { deploy } = deployments;
       const { deployer, owner } = await getNamedAccounts();
@@ -39,7 +50,7 @@ describe('GardenValuer', function () {
     });
   });
 
-  describe('Calls GardenValuer', function () {
+  describe('calculateGardenValuation', function () {
     it('gets correct value for the garden with unallocated capital', async function () {
       const pricePerGardenToken = await gardenValuer.calculateGardenValuation(garden1.address, addresses.tokens.WETH);
       const totalSupply = await garden1.totalSupply();
@@ -75,6 +86,20 @@ describe('GardenValuer', function () {
       const totalSupply = await garden1.totalSupply();
 
       expect(pricePerGardenToken.mul(totalSupply).div(ONE_ETH)).to.closeTo(ONE_ETH.mul(5), ONE_ETH.div(10));
+    });
+
+    it('gets correct value for the garden 0 price asset', async function () {
+      const revertOracleFactory = await ethers.getContractFactory('RevertOracle');
+      const revertOracle = await revertOracleFactory.deploy();
+
+      // add 4 ETH to the garden, trade them for a token, and finish strategy
+      await createStrategy('buy', 'active', [signer1, signer2, signer3], uniswapV3TradeIntegration.address, garden1);
+
+      await setCode(priceOracle.address, revertOracle.address);
+
+      const pricePerGardenToken = await gardenValuer.calculateGardenValuation(garden1.address, addresses.tokens.WETH);
+
+      expect(pricePerGardenToken.mul(await garden1.totalSupply()).div(eth())).to.closeTo(eth().mul(4), eth().div(10));
     });
   });
 });
