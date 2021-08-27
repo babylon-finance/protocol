@@ -28,6 +28,6 @@ import {PriceOracle} from '../PriceOracle.sol';
  */
 contract RevertOracle is PriceOracle {
     function getPrice(address _tokenIn, address _tokenOut) public view override returns (uint256 price) {
-      require(false, 'Price not found');
+        require(false, 'Price not found');
     }
 }
