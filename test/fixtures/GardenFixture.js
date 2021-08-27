@@ -45,6 +45,7 @@ async function setUpFixture(
   const compoundBorrowIntegration = await getContract('CompoundBorrowIntegration');
   const lidoIntegration = await getContract('LidoStakeIntegration');
   const curveTradeIntegration = await getContract('CurveTradeIntegration');
+  const synthetixTradeIntegration = await getContract('SynthetixTradeIntegration');
 
   const buyOperation = await getContract('BuyOperation');
   const addLiquidityOperation = await getContract('AddLiquidityOperation');
@@ -227,6 +228,7 @@ async function setUpFixture(
     oneInchPoolIntegration,
     compoundLendIntegration,
     compoundBorrowIntegration,
+    synthetixTradeIntegration,
     aaveLendIntegration,
     aaveBorrowIntegration,
     lidoIntegration,
