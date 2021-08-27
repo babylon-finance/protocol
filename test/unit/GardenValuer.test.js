@@ -8,7 +8,7 @@ const { ONE_ETH, ADDRESS_ZERO } = require('lib/constants');
 const { setupTests } = require('fixtures/GardenFixture');
 const { createStrategy } = require('fixtures/StrategyHelper.js');
 
-describe.only('GardenValuer', function () {
+describe('GardenValuer', function () {
   let dai;
   let weth;
   let priceOracle;
@@ -92,16 +92,12 @@ describe.only('GardenValuer', function () {
       const revertOracleFactory = await ethers.getContractFactory('RevertOracle');
       const revertOracle = await revertOracleFactory.deploy();
 
-      let pricePerGardenToken = await gardenValuer.calculateGardenValuation(garden1.address, addresses.tokens.WETH);
-      console.log('pricePerGardenToken', pricePerGardenToken.toString());
-
       // add 4 ETH to the garden, trade them for a token, and finish strategy
       await createStrategy('buy', 'active', [signer1, signer2, signer3], uniswapV3TradeIntegration.address, garden1);
 
       await setCode(priceOracle.address, revertOracle.address);
 
-      pricePerGardenToken = await gardenValuer.calculateGardenValuation(garden1.address, addresses.tokens.WETH);
-      console.log('pricePerGardenToken', pricePerGardenToken.toString());
+      const pricePerGardenToken = await gardenValuer.calculateGardenValuation(garden1.address, addresses.tokens.WETH);
 
       expect(pricePerGardenToken.mul(await garden1.totalSupply()).div(eth())).to.closeTo(eth().mul(4), eth().div(10));
     });
