@@ -88,7 +88,7 @@ describe('GardenValuer', function () {
       expect(pricePerGardenToken.mul(totalSupply).div(ONE_ETH)).to.closeTo(ONE_ETH.mul(5), ONE_ETH.div(10));
     });
 
-    it.only('gets correct value for the garden 0 price asset', async function () {
+    it('gets correct value for the garden 0 price asset', async function () {
       const revertOracleFactory = await ethers.getContractFactory('RevertOracle');
       const revertOracle = await revertOracleFactory.deploy();
 
