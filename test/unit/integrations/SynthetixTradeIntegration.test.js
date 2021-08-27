@@ -27,26 +27,22 @@ describe('SynthetixTradeIntegration', function () {
       {
         token: addresses.tokens.WETH,
         name: 'WETH',
-        pairs: [
-        ],
+        pairs: [],
       },
       {
         token: addresses.tokens.DAI,
         name: 'DAI',
-        pairs: [
-        ],
+        pairs: [],
       },
       {
         token: addresses.tokens.DAI,
         name: 'USDC',
-        pairs: [
-        ],
+        pairs: [],
       },
       {
         token: addresses.tokens.WBTC,
         name: 'WBTC',
-        pairs: [
-        ],
+        pairs: [],
       },
       // { token: addresses.tokens.WBTC, name: 'WBTC' },
     ].forEach(({ token, name, pairs }) => {

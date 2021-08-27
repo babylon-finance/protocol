@@ -83,10 +83,15 @@ abstract contract MasterSwapper is BaseIntegration, ReentrancyGuard, ITradeInteg
      * @param _univ3                  Address of uni trade integration
      * @param _synthetix              Address of synthetix trade integration
      */
-    constructor(IBabController _controller, ITradeIntegration _curve, ITradeIntegration _univ3, ITradeIntegration _synthetix) BaseIntegration('master swapper', _controller) {
-      curve = _curve;
-      univ3 = _univ3;
-      synthetix = _synthetix;
+    constructor(
+        IBabController _controller,
+        ITradeIntegration _curve,
+        ITradeIntegration _univ3,
+        ITradeIntegration _synthetix
+    ) BaseIntegration('master swapper', _controller) {
+        curve = _curve;
+        univ3 = _univ3;
+        synthetix = _synthetix;
     }
 
     /* ============ External Functions ============ */
@@ -113,7 +118,7 @@ abstract contract MasterSwapper is BaseIntegration, ReentrancyGuard, ITradeInteg
         // Curve
         bool found = _checkAllCurvePaths(tradeInfo);
         if (found) {
-          return;
+            return;
         }
         // Synthetix
 
@@ -166,40 +171,74 @@ abstract contract MasterSwapper is BaseIntegration, ReentrancyGuard, ITradeInteg
     }
 
     function _checkAllCurvePaths(TradeInfo memory _tradeInfo) private returns (bool) {
-      ICurveRegistry curveRegistry = ICurveRegistry(curveAddressProvider.get_registry());
-      bool found = false;
-      address curvePool = curveRegistry.find_pool_for_coins(_tradeInfo.sendToken, _tradeInfo.receiveToken);
-      // Direct pairs via curve
-      if (curvePool != address(0)) {
-         ITradeIntegration(curve).trade(_tradeInfo.strategy, _tradeInfo.sendToken, _tradeInfo.totalSendQuantity, _tradeInfo.receiveToken, _tradeInfo.totalMinReceiveQuantity);
-         return true;
-      }
-      found = _checkCurveRoutesThroughReserve(WETH, _tradeInfo, curveRegistry);
-      if (!found) {
-        found = _checkCurveRoutesThroughReserve(DAI, _tradeInfo, curveRegistry);
-        if (!found) {
-          found = _checkCurveRoutesThroughReserve(WBTC, _tradeInfo, curveRegistry);
+        ICurveRegistry curveRegistry = ICurveRegistry(curveAddressProvider.get_registry());
+        bool found = false;
+        address curvePool = curveRegistry.find_pool_for_coins(_tradeInfo.sendToken, _tradeInfo.receiveToken);
+        // Direct pairs via curve
+        if (curvePool != address(0)) {
+            ITradeIntegration(curve).trade(
+                _tradeInfo.strategy,
+                _tradeInfo.sendToken,
+                _tradeInfo.totalSendQuantity,
+                _tradeInfo.receiveToken,
+                _tradeInfo.totalMinReceiveQuantity
+            );
+            return true;
         }
-      }
-      return found;
+        found = _checkCurveRoutesThroughReserve(WETH, _tradeInfo, curveRegistry);
+        if (!found) {
+            found = _checkCurveRoutesThroughReserve(DAI, _tradeInfo, curveRegistry);
+            if (!found) {
+                found = _checkCurveRoutesThroughReserve(WBTC, _tradeInfo, curveRegistry);
+            }
+        }
+        return found;
     }
 
-    function _checkCurveRoutesThroughReserve(address _reserve, TradeInfo memory _tradeInfo, ICurveRegistry curveRegistry) private returns (bool) {
-      uint256 reserveBalance = ERC20(_reserve).balanceOf(_tradeInfo.strategy);
-      // Going through curve but switching first to reserve
-      address curvePool = curveRegistry.find_pool_for_coins(_reserve, _tradeInfo.receiveToken);
-      if (curvePool != address(0)) {
-          ITradeIntegration(univ3).trade(_tradeInfo.strategy, _tradeInfo.sendToken,  _tradeInfo.totalSendQuantity, _reserve, 0);
-          ITradeIntegration(curve).trade(_tradeInfo.strategy, _reserve, ERC20(_reserve).balanceOf(_tradeInfo.strategy).sub(reserveBalance), _tradeInfo.receiveToken, _tradeInfo.totalMinReceiveQuantity);
-          return true;
-      }
-      // Going through curve to reserve and then receive Token
-      curvePool = curveRegistry.find_pool_for_coins(_tradeInfo.sendToken, _reserve);
-      if (curvePool != address(0)) {
-          ITradeIntegration(curve).trade(_tradeInfo.strategy, _tradeInfo.sendToken,  _tradeInfo.totalSendQuantity, _reserve, 0);
-          ITradeIntegration(univ3).trade(_tradeInfo.strategy, _reserve, ERC20(_reserve).balanceOf(_tradeInfo.strategy).sub(reserveBalance), _tradeInfo.receiveToken, _tradeInfo.totalMinReceiveQuantity);
-          return true;
-      }
-      return false;
+    function _checkCurveRoutesThroughReserve(
+        address _reserve,
+        TradeInfo memory _tradeInfo,
+        ICurveRegistry curveRegistry
+    ) private returns (bool) {
+        uint256 reserveBalance = ERC20(_reserve).balanceOf(_tradeInfo.strategy);
+        // Going through curve but switching first to reserve
+        address curvePool = curveRegistry.find_pool_for_coins(_reserve, _tradeInfo.receiveToken);
+        if (curvePool != address(0)) {
+            ITradeIntegration(univ3).trade(
+                _tradeInfo.strategy,
+                _tradeInfo.sendToken,
+                _tradeInfo.totalSendQuantity,
+                _reserve,
+                0
+            );
+            ITradeIntegration(curve).trade(
+                _tradeInfo.strategy,
+                _reserve,
+                ERC20(_reserve).balanceOf(_tradeInfo.strategy).sub(reserveBalance),
+                _tradeInfo.receiveToken,
+                _tradeInfo.totalMinReceiveQuantity
+            );
+            return true;
+        }
+        // Going through curve to reserve and then receive Token
+        curvePool = curveRegistry.find_pool_for_coins(_tradeInfo.sendToken, _reserve);
+        if (curvePool != address(0)) {
+            ITradeIntegration(curve).trade(
+                _tradeInfo.strategy,
+                _tradeInfo.sendToken,
+                _tradeInfo.totalSendQuantity,
+                _reserve,
+                0
+            );
+            ITradeIntegration(univ3).trade(
+                _tradeInfo.strategy,
+                _reserve,
+                ERC20(_reserve).balanceOf(_tradeInfo.strategy).sub(reserveBalance),
+                _tradeInfo.receiveToken,
+                _tradeInfo.totalMinReceiveQuantity
+            );
+            return true;
+        }
+        return false;
     }
 }
