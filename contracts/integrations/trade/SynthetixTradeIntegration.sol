@@ -22,9 +22,9 @@ pragma abicoder v2;
 import 'hardhat/console.sol';
 import {IBabController} from '../../interfaces/IBabController.sol';
 import {IStrategy} from '../../interfaces/IStrategy.sol';
-import {ICurveAddressProvider} from '../../interfaces/external/curve/ICurveAddressProvider.sol';
-import {ICurveRegistry} from '../../interfaces/external/curve/ICurveRegistry.sol';
-
+import {ISynthetix} from '../../interfaces/external/synthetix/ISynthetix.sol';
+import {ISnxProxy} from '../../interfaces/external/synthetix/ISnxProxy.sol';
+import {ISnxSynth} from '../../interfaces/external/synthetix/ISnxSynth.sol';
 import {LowGasSafeMath as SafeMath} from '../../lib/LowGasSafeMath.sol';
 
 import {TradeIntegration} from './TradeIntegration.sol';
@@ -41,6 +41,8 @@ contract SynthetixTradeIntegration is TradeIntegration {
     /* ============ Modifiers ============ */
 
     /* ============ State Variables ============ */
+
+    address internal constant SNX = 0xC011a73ee8576Fb46F5E1c5751cA3B9Fe0af2a6F;
 
     /* ============ Constants ============ */
 
@@ -79,7 +81,12 @@ contract SynthetixTradeIntegration is TradeIntegration {
             bytes memory
         )
     {
-
+      ISynthetix synthetix = ISynthetix(ISnxProxy(SNX).target());
+      address sendTokenImpl = ISnxProxy(_sendToken).target();
+      address receiveTokenImpl = ISnxProxy(_receiveToken).target();
+      bytes memory methodData =
+          abi.encodeWithSignature('exchange(bytes32,uint256,bytes32)', ISnxSynth(sendTokenImpl).currencyKey(), _sendQuantity, ISnxSynth(receiveTokenImpl).currencyKey());
+      return (address(synthetix), 0, methodData);
     }
 
     /**
@@ -89,7 +96,7 @@ contract SynthetixTradeIntegration is TradeIntegration {
      * @return address             Address of the contract to approve tokens to
      */
     function _getSpender(address _swapTarget) internal view override returns (address) {
-        return _swapTarget;
+        return ISnxProxy(SNX).target();
     }
 
     /**
