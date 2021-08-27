@@ -1025,7 +1025,7 @@ describe('Garden', function () {
       expect((await ethers.provider.getBalance(signer3.address)).sub(beforeWithdrawal)).to.be.eq(minAmountOut);
     });
 
-    it.only('can withdraw funds with a penalty', async function () {
+    it('can withdraw funds with a penalty', async function () {
       const garden = await createGarden();
 
       const strategy = await getStrategy();
