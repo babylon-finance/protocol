@@ -46,6 +46,7 @@ async function setUpFixture(
   const lidoIntegration = await getContract('LidoStakeIntegration');
   const curveTradeIntegration = await getContract('CurveTradeIntegration');
   const synthetixTradeIntegration = await getContract('SynthetixTradeIntegration');
+  const masterSwapper = await getContract('MasterSwapper');
 
   const buyOperation = await getContract('BuyOperation');
   const addLiquidityOperation = await getContract('AddLiquidityOperation');
@@ -235,6 +236,7 @@ async function setUpFixture(
     babViewer,
     timelockController,
     babGovernor,
+    masterSwapper,
 
     garden1,
     garden2,

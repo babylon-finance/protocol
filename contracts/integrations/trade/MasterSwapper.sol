@@ -78,13 +78,12 @@ abstract contract MasterSwapper is BaseIntegration, ReentrancyGuard, ITradeInteg
     /**
      * Creates the master swapper
      *
-     * @param _name                   Name of the integration
      * @param _controller             Address of the controller
      * @param _curve                  Address of curve trade integration
      * @param _univ3                  Address of uni trade integration
      * @param _synthetix              Address of synthetix trade integration
      */
-    constructor(string memory _name, IBabController _controller, ITradeIntegration _curve, ITradeIntegration _univ3, ITradeIntegration _synthetix) BaseIntegration('master swapper', _controller) {
+    constructor(IBabController _controller, ITradeIntegration _curve, ITradeIntegration _univ3, ITradeIntegration _synthetix) BaseIntegration('master swapper', _controller) {
       curve = _curve;
       univ3 = _univ3;
       synthetix = _synthetix;
@@ -118,7 +117,6 @@ abstract contract MasterSwapper is BaseIntegration, ReentrancyGuard, ITradeInteg
         }
         // Synthetix
 
-        // Swap on synthetix
         // Swap on Univ3
         // Swap on univ2 (only direct trade)
     }
