@@ -15,7 +15,6 @@ module.exports = async ({
 
   const controller = await deployments.get('BabControllerProxy');
 
-
   const deployment = await deploy(contract, {
     from: deployer,
     args: [controller.address],

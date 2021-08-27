@@ -46,7 +46,6 @@ contract SynthetixTradeIntegration is TradeIntegration {
 
     /* ============ Constants ============ */
 
-
     /* ============ Constructor ============ */
 
     /**
@@ -81,12 +80,17 @@ contract SynthetixTradeIntegration is TradeIntegration {
             bytes memory
         )
     {
-      ISynthetix synthetix = ISynthetix(ISnxProxy(SNX).target());
-      address sendTokenImpl = ISnxProxy(_sendToken).target();
-      address receiveTokenImpl = ISnxProxy(_receiveToken).target();
-      bytes memory methodData =
-          abi.encodeWithSignature('exchange(bytes32,uint256,bytes32)', ISnxSynth(sendTokenImpl).currencyKey(), _sendQuantity, ISnxSynth(receiveTokenImpl).currencyKey());
-      return (address(synthetix), 0, methodData);
+        ISynthetix synthetix = ISynthetix(ISnxProxy(SNX).target());
+        address sendTokenImpl = ISnxProxy(_sendToken).target();
+        address receiveTokenImpl = ISnxProxy(_receiveToken).target();
+        bytes memory methodData =
+            abi.encodeWithSignature(
+                'exchange(bytes32,uint256,bytes32)',
+                ISnxSynth(sendTokenImpl).currencyKey(),
+                _sendQuantity,
+                ISnxSynth(receiveTokenImpl).currencyKey()
+            );
+        return (address(synthetix), 0, methodData);
     }
 
     /**
