@@ -46,7 +46,6 @@ contract CurveTradeIntegration is TradeIntegration {
     // Address of Curve Registry
     ICurveAddressProvider internal constant curveAddressProvider =
         ICurveAddressProvider(0x0000000022D53366457F9d5E68Ec105046FC4383);
-    address internal constant ETH_ADD = 0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE;
 
     /* ============ Constructor ============ */
 
@@ -82,12 +81,10 @@ contract CurveTradeIntegration is TradeIntegration {
             bytes memory
         )
     {
-        address tokenToSend = _sendToken == WETH ? ETH_ADD : _sendToken;
-        address tokenToReceive = _receiveToken == WETH ? ETH_ADD : _receiveToken;
         ICurveRegistry curveRegistry = ICurveRegistry(curveAddressProvider.get_registry());
-        address curvePool = curveRegistry.find_pool_for_coins(tokenToSend, tokenToReceive, 0);
+        address curvePool = curveRegistry.find_pool_for_coins(_sendToken, _receiveToken, 0);
         require(curvePool != address(0), 'No curve pool to trade the pair');
-        (int128 i, int128 j, bool underlying) = curveRegistry.get_coin_indices(curvePool, tokenToSend, tokenToReceive);
+        (int128 i, int128 j, bool underlying) = curveRegistry.get_coin_indices(curvePool, _sendToken, _receiveToken);
         bytes memory methodData =
             abi.encodeWithSignature('exchange(int128,int128,uint256,uint256)', i, j, _sendQuantity, 1);
         if (underlying) {
@@ -99,7 +96,7 @@ contract CurveTradeIntegration is TradeIntegration {
                 1
             );
         }
-        return (curvePool, _sendToken == WETH ? _sendQuantity : 0, methodData);
+        return (curvePool, _sendToken == ETH_ADD_CURVE ? _sendQuantity : 0, methodData);
     }
 
     /**
@@ -149,8 +146,8 @@ contract CurveTradeIntegration is TradeIntegration {
             bytes memory
         )
     {
-        // Unwrap ETH to WETH
-        if (_sendToken == WETH) {
+        // Unwrap WETH to ETH
+        if (_sendToken == ETH_ADD_CURVE) {
             bytes memory methodData = abi.encodeWithSignature('withdraw(uint256)', _sendQuantity);
             return (WETH, 0, methodData);
         }

@@ -9,8 +9,8 @@ const { getStrategy, executeStrategy, finalizeStrategy } = require('fixtures/Str
 const { createGarden } = require('fixtures/GardenHelper');
 const addresses = require('lib/addresses');
 
-describe('SynthetixTradeIntegration', function () {
-  let synthetixTradeIntegration;
+describe('MasterSwapper', function () {
+  let masterSwapper;
   let priceOracle;
   let owner;
   let signer1;
@@ -18,7 +18,7 @@ describe('SynthetixTradeIntegration', function () {
   let signer3;
 
   beforeEach(async () => {
-    ({ synthetixTradeIntegration, owner, signer1, signer2, signer3, priceOracle } = await setupTests()());
+    ({ masterSwapper, owner, signer1, signer2, signer3, priceOracle } = await setupTests()());
     await fund([signer1.address, signer2.address, signer3.address]);
   });
 
@@ -27,51 +27,59 @@ describe('SynthetixTradeIntegration', function () {
       {
         token: addresses.tokens.WETH,
         name: 'WETH',
-        pairs: [],
+        pairs: [
+          { to: addresses.tokens.USDC, symbol: 'USDC' },
+          { to: addresses.tokens.DAI, symbol: 'DAI' },
+          { to: addresses.tokens.sUSD, symbol: 'sUSD' },
+          { to: addresses.tokens.USDT, symbol: 'USDT' },
+        ],
       },
       {
         token: addresses.tokens.DAI,
         name: 'DAI',
-        pairs: [],
+        pairs: [
+          { to: addresses.tokens.USDC, symbol: 'USDC' },
+        ],
       },
       {
-        token: addresses.tokens.DAI,
+        token: addresses.tokens.USDC,
         name: 'USDC',
-        pairs: [],
+        pairs: [
+          { to: addresses.tokens.USDC, symbol: 'USDC' },
+        ],
       },
       {
         token: addresses.tokens.WBTC,
         name: 'WBTC',
-        pairs: [],
+        pairs: [
+          { to: addresses.tokens.USDC, symbol: 'USDC' },
+        ],
       },
-      // { token: addresses.tokens.WBTC, name: 'WBTC' },
     ].forEach(({ token, name, pairs }) => {
-      pairs.forEach(({ asset, symbol }) => {
+      pairs.forEach(({ to, symbol }) => {
         it(`exchange ${name}->${symbol} in ${name} garden`, async function () {
-          if (token === asset) return;
+          if (token === to) return;
 
           const tokenContract = await ethers.getContractAt(
             '@openzeppelin/contracts/token/ERC20/ERC20.sol:ERC20',
             token,
           );
-          const assetContract = await ethers.getContractAt(
-            '@openzeppelin/contracts/token/ERC20/ERC20.sol:ERC20',
-            asset,
-          );
+
+          const assetContract = await ethers.getContractAt('@openzeppelin/contracts/token/ERC20/ERC20.sol:ERC20', to);
 
           const garden = await createGarden({ reserveAsset: token, signer: signer1 });
 
           const strategyContract = await getStrategy({
             kind: 'buy',
             state: 'vote',
-            integrations: synthetixTradeIntegration.address,
+            integrations: masterSwapper.address,
             garden: garden,
-            specificParams: [asset, 0],
+            specificParams: [to, 0],
           });
 
           await executeStrategy(strategyContract);
 
-          const tokenPriceInAsset = await priceOracle.connect(owner).getPrice(token, asset);
+          const tokenPriceInAsset = await priceOracle.connect(owner).getPrice(token, to);
 
           const assetDecimals = await assetContract.decimals();
           const assetDecimalsDelta = 10 ** (18 - assetDecimals);
@@ -88,6 +96,7 @@ describe('SynthetixTradeIntegration', function () {
           // 5% slippage. Doesn't matter we just want to check that the trade can execute
           // univ3 doesn't have right prices for some of these
           expect(expectedBalance).to.be.closeTo(assetBalance, assetBalance.div(20));
+          console.log('FINALiZE');
           await finalizeStrategy(strategyContract, 0);
           const assetBalanceAfter = await assetContract.balanceOf(strategyContract.address);
           expect(assetBalanceAfter).to.be.lt(1000000); // Almost 0

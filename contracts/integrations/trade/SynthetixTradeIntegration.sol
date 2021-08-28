@@ -41,9 +41,6 @@ contract SynthetixTradeIntegration is TradeIntegration {
     /* ============ Modifiers ============ */
 
     /* ============ State Variables ============ */
-
-    address internal constant SNX = 0xC011a73ee8576Fb46F5E1c5751cA3B9Fe0af2a6F;
-
     /* ============ Constants ============ */
 
     /* ============ Constructor ============ */
