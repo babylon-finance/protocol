@@ -29,6 +29,7 @@ import {ICurveAddressProvider} from '../../interfaces/external/curve/ICurveAddre
 import {ICurveRegistry} from '../../interfaces/external/curve/ICurveRegistry.sol';
 import {ISynthetix} from '../../interfaces/external/synthetix/ISynthetix.sol';
 import {ISnxProxy} from '../../interfaces/external/synthetix/ISnxProxy.sol';
+import {ISnxEtherWrapper} from '../../interfaces/external/synthetix/ISnxEtherWrapper.sol';
 import {ITradeIntegration} from '../../interfaces/ITradeIntegration.sol';
 import {IGarden} from '../../interfaces/IGarden.sol';
 import {IStrategy} from '../../interfaces/IStrategy.sol';
@@ -81,6 +82,7 @@ contract MasterSwapper is BaseIntegration, ReentrancyGuard, ITradeIntegration {
     IUniswapV3Factory internal constant uniswapFactory = IUniswapV3Factory(0x1F98431c8aD98523631AE4a59f267346ea31F984);
     ICurveAddressProvider internal constant curveAddressProvider =
         ICurveAddressProvider(0x0000000022D53366457F9d5E68Ec105046FC4383);
+    ISnxEtherWrapper internal constant snxEtherWrapper = ISnxEtherWrapper(0xC1AAE9d18bBe386B102435a8632C8063d31e747C);
 
     ITradeIntegration internal immutable curve;
     ITradeIntegration internal immutable univ3;
@@ -131,6 +133,7 @@ contract MasterSwapper is BaseIntegration, ReentrancyGuard, ITradeIntegration {
         }
         TradeInfo memory tradeInfo =
             _createTradeInfo(_strategy, name, _sendToken, _receiveToken, _sendQuantity, _minReceiveQuantity);
+        // Abstract Synths out
         // Go through UNIv3 first
         try
             ITradeIntegration(univ3).trade(
@@ -149,32 +152,9 @@ contract MasterSwapper is BaseIntegration, ReentrancyGuard, ITradeIntegration {
             if (found) {
                 return;
             }
-            // Try Synthetix
-            address _sendTokenSynth = _getSynth(_sendToken);
-            address _receiveTokenSynth = _getSynth(_receiveToken);
-            if (_sendTokenSynth != address(0) && _receiveTokenSynth != address(0)) {
-                try
-                    ITradeIntegration(synthetix).trade(
-                        tradeInfo.strategy,
-                        _sendToken,
-                        _sendQuantity,
-                        tradeInfo.receiveToken,
-                        tradeInfo.totalMinReceiveQuantity
-                    )
-                {
-                    return;
-                } catch {}
-            } else {
-                if (_sendTokenSynth != address(0)) {
-                    // Go to sUSD and then swap sUSD to WETH and then WETH to receive
-                }
-                if (_receiveTokenSynth != address(0)) {
-                    // Swap send token to WETH->sUSD-> receive Synth
-                }
-            }
-            if (_minReceiveQuantity == 0) {
-                // Try on univ2 (only direct trade)
-            }
+        }
+        if (_minReceiveQuantity == 0) {
+            // Try on univ2 (only direct trade)
         }
         require(false, 'Master swapper could not swap');
     }
@@ -357,4 +337,46 @@ contract MasterSwapper is BaseIntegration, ReentrancyGuard, ITradeIntegration {
             return address(0);
         }
     }
+
+    function _trySynthetix(TradeInfo _tradeInfo) private view returns (bool, address, address) {
+      // Try Synthetix
+      address _sendTokenSynth = _getSynth(_tradeInfo.sendToken);
+      address _receiveTokenSynth = _getSynth(_tradeInfo.receiveToken);
+      if (_sendTokenSynth != address(0) && _receiveTokenSynth != address(0)) {
+          try
+              ITradeIntegration(synthetix).trade(
+                  _tradeInfo.strategy,
+                  _tradeInfo.sendToken,
+                  _tradeInfo.totalSendQuantity,
+                  _tradeInfo.receiveToken,
+                  _tradeInfo.totalMinReceiveQuantity
+              )
+          {
+            return (true, _tradeInfo.sendToken, _tradeInfo.receiveToken);
+          } catch {
+            return (false, _tradeInfo.sendToken, _tradeInfo.receiveToken);
+          }
+      }
+      if (_sendTokenSynth != address(0)) {
+          // Go to sETH and then burn to get WETH and then trade to get the receive token
+          if (_sendToken != sETH) {
+            try ITradeIntegration(synthetix).trade(
+                tradeInfo.strategy,
+                _tradeInfo.sendToken,
+                _sendQuantity,
+                sETH,
+                tradeInfo.totalMinReceiveQuantity
+            ) {
+            } catch {
+              return (false, _tradeInfo.sendToken, _tradeInfo.receiveToken);
+            }
+          }
+          snxEtherWrapper.burn(ERC20(sETH).balanceOf(ttradeInfo.strategy));
+          return (false, WETH, _tradeInfo.receiveToken);
+      }
+      if (_receiveTokenSynth != address(0)) {
+          // Swap send token to WETH->sUSD-> receive Synth
+      }
+  }
+
 }

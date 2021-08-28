@@ -57,6 +57,7 @@ abstract contract BaseIntegration {
     address internal constant WBTC = 0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599;
     address internal constant ETH_ADD_CURVE = 0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE;
     address internal constant SNX = 0xC011a73ee8576Fb46F5E1c5751cA3B9Fe0af2a6F;
+    address internal constant sETH = 0x5e74c9036fb86bd7ecdcb084a0673efc32ea31cb;
 
     // Name of the integration
     string public name;
