@@ -368,7 +368,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         if (_fee > 0) {
             // account for non 18 decimals ERC20 tokens, e.g. USDC
             uint256 feeShares =
-                _fee.preciseDiv(10**ERC20Upgradeable(reserveAsset).decimals()).preciseDiv(_pricePerShare);
+                _reserveToShares(_fee, _pricePerShare);
             _internalDeposit(
                 _amountIn.sub(_fee),
                 _minAmountOut.sub(feeShares),
@@ -466,7 +466,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         if (_fee > 0) {
             // account for non 18 decimals ERC20
             uint256 feeShares =
-                _fee.preciseDiv(10**ERC20Upgradeable(reserveAsset).decimals()).preciseDiv(_pricePerShare);
+                _reserveToShares(_fee, _pricePerShare);
             _withdrawInternal(
                 _amountIn.sub(feeShares),
                 _minAmountOut.sub(_maxFee),
@@ -872,6 +872,11 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         gardenInitializedAt = block.timestamp;
         minLiquidityAsset = _minLiquidityAsset;
         depositHardlock = _depositHardlock;
+    }
+
+    function _reserveToShares(uint256 _amount, uint256 _pricePerShare) internal view
+    returns (uint256) {
+        return _amount.preciseDiv(10**ERC20Upgradeable(reserveAsset).decimals()).preciseDiv(_pricePerShare);
     }
 
     function _withdrawInternal(
