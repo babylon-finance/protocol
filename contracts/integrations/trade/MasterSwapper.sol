@@ -44,6 +44,16 @@ import {LowGasSafeMath} from '../../lib/LowGasSafeMath.sol';
  *
  * Master class for integration with trading protocols
  */
+
+ // - MasterSwapper
+ //   * Uni V2 TWAP
+ //   * Synthetix Contract. Exchange
+ //     Support proxy or no proxy between synths
+ //     - Only between pairs of synths. Great for bigger trades
+ //
+ // * Implement CurveTradeIntegration
+ // * Implement SynthetixTradeIntegration
+ // * Implemen  UniswapV2TradeIntegration
 contract MasterSwapper is BaseIntegration, ReentrancyGuard, ITradeIntegration {
     using LowGasSafeMath for uint256;
     using SafeCast for uint256;
@@ -129,38 +139,39 @@ contract MasterSwapper is BaseIntegration, ReentrancyGuard, ITradeIntegration {
             )
         {
             return;
-        } catch {}
-        // Try Curve
-        console.log('checking curve');
-        bool found = _checkAllCurvePaths(tradeInfo);
-        if (found) {
-            return;
-        }
-        // Try Synthetix
-        address _sendTokenSynth = _getSynth(_sendToken);
-        address _receiveTokenSynth = _getSynth(_receiveToken);
-        if (_sendTokenSynth != address(0) && _receiveTokenSynth != address(0)) {
-            try
-                ITradeIntegration(synthetix).trade(
-                    tradeInfo.strategy,
-                    _sendToken,
-                    _sendQuantity,
-                    tradeInfo.receiveToken,
-                    tradeInfo.totalMinReceiveQuantity
-                )
-            {
-                return;
-            } catch {}
-        } else {
-            if (_sendTokenSynth != address(0)) {
-                // Go to sUSD and then swap sUSD to WETH and then WETH to receive
-            }
-            if (_receiveTokenSynth != address(0)) {
-                // Swap send token to WETH->sUSD-> receive Synth
-            }
-        }
-        if (_minReceiveQuantity == 0) {
-            // Try on univ2 (only direct trade)
+        } catch {
+          // Try Curve
+          console.log('checking curve');
+          bool found = _checkAllCurvePaths(tradeInfo);
+          if (found) {
+              return;
+          }
+          // Try Synthetix
+          address _sendTokenSynth = _getSynth(_sendToken);
+          address _receiveTokenSynth = _getSynth(_receiveToken);
+          if (_sendTokenSynth != address(0) && _receiveTokenSynth != address(0)) {
+              try
+                  ITradeIntegration(synthetix).trade(
+                      tradeInfo.strategy,
+                      _sendToken,
+                      _sendQuantity,
+                      tradeInfo.receiveToken,
+                      tradeInfo.totalMinReceiveQuantity
+                  )
+              {
+                  return;
+              } catch {}
+          } else {
+              if (_sendTokenSynth != address(0)) {
+                  // Go to sUSD and then swap sUSD to WETH and then WETH to receive
+              }
+              if (_receiveTokenSynth != address(0)) {
+                  // Swap send token to WETH->sUSD-> receive Synth
+              }
+          }
+          if (_minReceiveQuantity == 0) {
+              // Try on univ2 (only direct trade)
+          }
         }
     }
 

@@ -28,18 +28,18 @@ describe('CurveTradeIntegration', function () {
         token: addresses.tokens.WETH,
         name: 'WETH',
         pairs: [
-          { asset: addresses.tokens.aETHC, symbol: 'aETHc' },
-          { asset: addresses.tokens.sETH, symbol: 'sETH' },
-          { asset: addresses.tokens.stETH, symbol: 'stETH' },
+          // { asset: addresses.tokens.aETHC, symbol: 'aETHc' },
+          // { asset: addresses.tokens.sETH, symbol: 'sETH' },
+          // { asset: addresses.tokens.stETH, symbol: 'stETH' },
         ],
       },
       {
         token: addresses.tokens.DAI,
         name: 'DAI',
         pairs: [
-          { asset: addresses.tokens.USDC, symbol: 'USDC' },
-          { asset: addresses.tokens.sUSD, symbol: 'sUSD' },
-          { asset: addresses.tokens.sUSD, symbol: 'USDT' },
+          // { asset: addresses.tokens.USDC, symbol: 'USDC' },
+          // { asset: addresses.tokens.sUSD, symbol: 'sUSD' },
+          // { asset: addresses.tokens.sUSD, symbol: 'USDT' },
           // { asset: addresses.tokens.TUSD, symbol: 'TUSD' },
         ],
       },
@@ -47,9 +47,9 @@ describe('CurveTradeIntegration', function () {
         token: addresses.tokens.DAI,
         name: 'USDC',
         pairs: [
-          { asset: addresses.tokens.DAI, symbol: 'DAI' },
-          { asset: addresses.tokens.sUSD, symbol: 'sUSD' },
-          { asset: addresses.tokens.sUSD, symbol: 'USDT' },
+          // { asset: addresses.tokens.DAI, symbol: 'DAI' },
+          // { asset: addresses.tokens.sUSD, symbol: 'sUSD' },
+          // { asset: addresses.tokens.sUSD, symbol: 'USDT' },
           // { asset: addresses.tokens.TUSD, symbol: 'TUSD' },
         ],
       },
@@ -65,7 +65,7 @@ describe('CurveTradeIntegration', function () {
       // { token: addresses.tokens.WBTC, name: 'WBTC' },
     ].forEach(({ token, name, pairs }) => {
       pairs.forEach(({ asset, symbol }) => {
-        it(`exchange ${name}->${symbol} in ${name} garden`, async function () {
+        it.only(`exchange ${name}->${symbol} in ${name} garden`, async function () {
           if (token === asset) return;
 
           const tokenContract = await ethers.getContractAt(
@@ -88,6 +88,7 @@ describe('CurveTradeIntegration', function () {
           });
 
           await executeStrategy(strategyContract);
+          console.log('after execute', token, asset);
 
           const tokenPriceInAsset = await priceOracle.connect(owner).getPrice(token, asset);
 
