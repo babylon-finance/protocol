@@ -74,7 +74,7 @@
     "@uniswap/v3-core": "^1.0.0",
     "@uniswap/v3-periphery": "^1.1.0",
     "chalk": "^4.1.1",
-    "contracts-next": "npm:@openzeppelin/contracts",
+    "contracts-next": "npm:@openzeppelin/contracts@4.3.1",
     "ethereum-waffle": "^3.0.2",
     "ethers": "^5.0.7",
     "hardhat-watcher": "^2.1.1",
