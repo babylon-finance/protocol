@@ -101,9 +101,9 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
     uint256 private constant TEN_PERCENT = 1e17;
 
     bytes32 private constant DEPOSIT_BY_SIG_TYPEHASH =
-        keccak256('DepositBySig(uint256 _amountIn,uint256 _minAmountOut,bool _mintNft, uint256 _nonce)');
+        keccak256('DepositBySig(uint256 _amountIn,uint256 _minAmountOut,bool _mintNft,uint256 _nonce,uint256 _maxFee)');
     bytes32 private constant WITHDRAW_BY_SIG_TYPEHASH =
-        keccak256('WithdrawBySig(uint256 _amountIn,uint256 _minAmountOut, uint256 _nonce)');
+        keccak256('WithdrawBySig(uint256 _amountIn,uint256 _minAmountOut,uint256 _nonce,uint256 _maxFee)');
 
     /* ============ Structs ============ */
 
@@ -217,6 +217,13 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         _require(_isCreator(_creator), Errors.ONLY_CREATOR);
     }
 
+    /**
+     * Check if msg.sender is keeper
+     */
+    function _onlyKeeper() private view {
+        _require(IBabController(controller).isValidKeeper(msg.sender), Errors.ONLY_KEEPER);
+    }
+
     /* ============ Constructor ============ */
 
     /**
@@ -324,13 +331,20 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         uint256 _minAmountOut,
         bool _mintNft,
         uint256 _nonce,
+        uint256 _maxFee,
         uint256 _pricePerShare,
+        uint256 _fee,
         uint8 v,
         bytes32 r,
         bytes32 s
     ) external override nonReentrant {
+        _onlyKeeper();
+        _require(_fee <= _maxFee, Errors.FEE_TOO_HIGH);
+
         bytes32 hash =
-            keccak256(abi.encode(DEPOSIT_BY_SIG_TYPEHASH, address(this), _amountIn, _minAmountOut, _mintNft, _nonce))
+            keccak256(
+                abi.encode(DEPOSIT_BY_SIG_TYPEHASH, address(this), _amountIn, _minAmountOut, _mintNft, _nonce, _maxFee)
+            )
                 .toEthSignedMessageHash();
         address signer = ECDSA.recover(hash, v, r, s);
 
@@ -339,7 +353,24 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         // to prevent replay attacks
         _require(contributors[signer].nonce == _nonce, Errors.INVALID_NONCE);
 
-        _internalDeposit(_amountIn, _minAmountOut, signer, signer, _mintNft, _pricePerShare);
+        // If a Keeper fee is greater than zero then reduce user shares to
+        // exchange and pay keeper the fee.
+        if (_fee > 0) {
+            // account for non 18 decimals ERC20 tokens, e.g. USDC
+            uint256 feeShares = _reserveToShares(_fee, _pricePerShare);
+            _internalDeposit(
+                _amountIn.sub(_fee),
+                _minAmountOut.sub(feeShares),
+                signer,
+                signer,
+                _mintNft,
+                _pricePerShare
+            );
+            // pay Keeper the fee
+            IERC20(reserveAsset).safeTransferFrom(signer, msg.sender, _fee);
+        } else {
+            _internalDeposit(_amountIn, _minAmountOut, signer, signer, _mintNft, _pricePerShare);
+        }
     }
 
     /**
@@ -385,31 +416,59 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
      *   Should be called instead of the `withdraw` to save gas due to
      *   pricePerShare caculated off-chain. Doesn't allow to unwind strategies
      *   contrary to `withdraw`.
+     *   The Keeper fee is paid out of user's shares.
+     *   The true _minAmountOut is actually _minAmountOut - _maxFee due to the
+     *   Keeper fee.
      * @param _amountIn       Quantity of the garden tokens to withdraw.
      * @param _minAmountOut   Min quantity of reserve asset to receive.
      * @param _nonce          Current nonce to prevent replay attacks.
+     * @param _maxFee         Max fee user is willing to pay keeper. Fee is
+     *                        substracted from the withdrawn amount. Fee is
+     *                        expressed in reserve asset.
      * @param _pricePerShare  Price per share of the garden calculated off-chain by Keeper.
+     * @param _fee            Actual fee keeper demands. Have to be less than _maxFee.
      */
     function withdrawBySig(
         uint256 _amountIn,
         uint256 _minAmountOut,
         uint256 _nonce,
+        uint256 _maxFee,
         uint256 _pricePerShare,
+        uint256 _fee,
         uint8 v,
         bytes32 r,
         bytes32 s
     ) external override nonReentrant {
+        _onlyKeeper();
+        _require(_fee <= _maxFee, Errors.FEE_TOO_HIGH);
+
         bytes32 hash =
-            keccak256(abi.encode(WITHDRAW_BY_SIG_TYPEHASH, address(this), _amountIn, _minAmountOut, _nonce))
+            keccak256(abi.encode(WITHDRAW_BY_SIG_TYPEHASH, address(this), _amountIn, _minAmountOut, _nonce, _maxFee))
                 .toEthSignedMessageHash();
         address signer = ECDSA.recover(hash, v, r, s);
-
         _require(signer != address(0), Errors.INVALID_SIGNER);
-
         // to prevent replay attacks
         _require(contributors[signer].nonce == _nonce, Errors.INVALID_NONCE);
 
-        _withdrawInternal(_amountIn, _minAmountOut, payable(signer), false, address(0), _pricePerShare);
+        // If a Keeper fee is greater than zero then reduce user shares to
+        // exchange and pay keeper the fee.
+        if (_fee > 0) {
+            // account for non 18 decimals ERC20
+            uint256 feeShares = _reserveToShares(_fee, _pricePerShare);
+            _withdrawInternal(
+                _amountIn.sub(feeShares),
+                _minAmountOut.sub(_maxFee),
+                payable(signer),
+                false,
+                address(0),
+                _pricePerShare
+            );
+            // burn shares paid to Keeper
+            _burn(signer, feeShares);
+            IERC20(reserveAsset).safeTransfer(msg.sender, _fee);
+        } else {
+            _withdrawInternal(_amountIn, _minAmountOut, payable(signer), false, address(0), _pricePerShare);
+        }
     }
 
     /**
@@ -793,6 +852,10 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         gardenInitializedAt = block.timestamp;
         minLiquidityAsset = _minLiquidityAsset;
         depositHardlock = _depositHardlock;
+    }
+
+    function _reserveToShares(uint256 _amount, uint256 _pricePerShare) internal view returns (uint256) {
+        return _amount.preciseDiv(10**ERC20Upgradeable(reserveAsset).decimals()).preciseDiv(_pricePerShare);
     }
 
     function _withdrawInternal(
