@@ -71,6 +71,12 @@ const tokens = [
     tokenOut: addresses.tokens.WETH,
     value: parse('0.000511684548459918'),
   },
+  {
+    name: 'WBTC to renBTC',
+    tokenIn: addresses.tokens.WBTC,
+    tokenOut: addresses.tokens.renBTC,
+    value: parse('0.996'),
+  },
 ];
 
 describe('PriceOracle', function () {

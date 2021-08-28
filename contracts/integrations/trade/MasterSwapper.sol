@@ -126,6 +126,9 @@ contract MasterSwapper is BaseIntegration, ReentrancyGuard, ITradeIntegration {
         address _receiveToken,
         uint256 _minReceiveQuantity
     ) external override nonReentrant {
+        if (_sendToken == _receiveToken) {
+          return;
+        }
         TradeInfo memory tradeInfo =
             _createTradeInfo(_strategy, name, _sendToken, _receiveToken, _sendQuantity, _minReceiveQuantity);
         // Go through UNIv3 first
@@ -238,16 +241,12 @@ contract MasterSwapper is BaseIntegration, ReentrancyGuard, ITradeIntegration {
         console.log('weth reserve path');
         found = _checkCurveRoutesThroughReserve(WETH, _tradeInfo, curveRegistry);
         if (!found) {
-            console.log('find through eth');
-            found = _checkCurveRoutesThroughReserve(ETH_ADD_CURVE, _tradeInfo, curveRegistry);
+            console.log('dai reserve path');
+            found = _checkCurveRoutesThroughReserve(DAI, _tradeInfo, curveRegistry);
             if (!found) {
-                console.log('dai reserve path');
-                found = _checkCurveRoutesThroughReserve(DAI, _tradeInfo, curveRegistry);
-                if (!found) {
-                    console.log('wbtc reserve path');
-                    found = _checkCurveRoutesThroughReserve(WBTC, _tradeInfo, curveRegistry);
-                    console.log('after wbtc');
-                }
+                console.log('wbtc reserve path');
+                found = _checkCurveRoutesThroughReserve(WBTC, _tradeInfo, curveRegistry);
+                console.log('after wbtc');
             }
         }
         console.log('found', found);
@@ -280,33 +279,34 @@ contract MasterSwapper is BaseIntegration, ReentrancyGuard, ITradeIntegration {
                     _tradeInfo.totalMinReceiveQuantity
                 );
                 return true;
-            } catch {}
-        }
-        // Going through curve to reserve and then receive Token
-        curvePool = curveRegistry.find_pool_for_coins(_tradeInfo.sendToken, _reserve);
-        if (curvePool != address(0)) {
-            try
-                ITradeIntegration(curve).trade(
-                    _tradeInfo.strategy,
-                    _tradeInfo.sendToken,
-                    _tradeInfo.totalSendQuantity,
-                    _reserve,
-                    1
-                )
-            {
-                ITradeIntegration(univ3).trade(
-                    _tradeInfo.strategy,
-                    _reserve,
-                    _getTokenOrETHBalance(_tradeInfo.strategy, _reserve).sub(reserveBalance),
-                    _tradeInfo.receiveToken,
-                    _tradeInfo.totalMinReceiveQuantity
-                );
-                return true;
             } catch {
-                return false;
+              // Going through curve to reserve and then receive Token
+              curvePool = curveRegistry.find_pool_for_coins(_tradeInfo.sendToken, _reserve);
+              if (curvePool != address(0)) {
+                  try
+                      ITradeIntegration(curve).trade(
+                          _tradeInfo.strategy,
+                          _tradeInfo.sendToken,
+                          _tradeInfo.totalSendQuantity,
+                          _reserve,
+                          1
+                      )
+                  {
+                      ITradeIntegration(univ3).trade(
+                          _tradeInfo.strategy,
+                          _reserve,
+                          _getTokenOrETHBalance(_tradeInfo.strategy, _reserve).sub(reserveBalance),
+                          _tradeInfo.receiveToken,
+                          _tradeInfo.totalMinReceiveQuantity
+                      );
+                      return true;
+                  } catch {
+                      return false;
+                  }
+              }
+              return false;
             }
         }
-        return false;
     }
 
     function _getTokenOrETHBalance(address _strategy, address _token) private view returns (uint256) {

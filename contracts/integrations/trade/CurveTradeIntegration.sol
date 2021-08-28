@@ -82,9 +82,9 @@ contract CurveTradeIntegration is TradeIntegration {
         )
     {
         ICurveRegistry curveRegistry = ICurveRegistry(curveAddressProvider.get_registry());
-        address curvePool = curveRegistry.find_pool_for_coins(_sendToken, _receiveToken, 0);
+        (address curvePool, address realSendToken, address realReceiveToken) = _getPoolAndTokens(_sendToken, _receiveToken);
         require(curvePool != address(0), 'No curve pool to trade the pair');
-        (int128 i, int128 j, bool underlying) = curveRegistry.get_coin_indices(curvePool, _sendToken, _receiveToken);
+        (int128 i, int128 j, bool underlying) = curveRegistry.get_coin_indices(curvePool, realSendToken, realReceiveToken);
         bytes memory methodData =
             abi.encodeWithSignature('exchange(int128,int128,uint256,uint256)', i, j, _sendQuantity, 1);
         if (underlying) {
@@ -96,7 +96,7 @@ contract CurveTradeIntegration is TradeIntegration {
                 1
             );
         }
-        return (curvePool, _sendToken == ETH_ADD_CURVE ? _sendQuantity : 0, methodData);
+        return (curvePool, realSendToken == ETH_ADD_CURVE ? _sendQuantity : 0, methodData);
     }
 
     /**
@@ -134,7 +134,7 @@ contract CurveTradeIntegration is TradeIntegration {
      */
     function _getPreActionCallData(
         address _sendToken,
-        address, /* _receiveToken */
+        address  _receiveToken,
         uint256 _sendQuantity
     )
         internal
@@ -147,7 +147,8 @@ contract CurveTradeIntegration is TradeIntegration {
         )
     {
         // Unwrap WETH to ETH
-        if (_sendToken == ETH_ADD_CURVE) {
+        (,address _realSendToken,) = _getPoolAndTokens(_sendToken, _receiveToken);
+        if (_realSendToken == ETH_ADD_CURVE) {
             bytes memory methodData = abi.encodeWithSignature('withdraw(uint256)', _sendQuantity);
             return (WETH, 0, methodData);
         }
@@ -166,7 +167,7 @@ contract CurveTradeIntegration is TradeIntegration {
      * @return bytes                     Trade calldata
      */
     function _getPostActionCallData(
-        address, /* _sendToken */
+        address _sendToken,
         address _receiveToken,
         uint256 _sendQuantity
     )
@@ -180,7 +181,8 @@ contract CurveTradeIntegration is TradeIntegration {
         )
     {
         // Wrap ETH to WETH
-        if (_receiveToken == WETH) {
+        (,, address _realReceiveToken) = _getPoolAndTokens(_sendToken, _receiveToken);
+        if (_realReceiveToken == ETH_ADD_CURVE) {
             bytes memory methodData = abi.encodeWithSignature('deposit()');
             return (WETH, _sendQuantity, methodData);
         }
@@ -188,4 +190,18 @@ contract CurveTradeIntegration is TradeIntegration {
     }
 
     /* ============ Private Functions ============ */
+
+    function _getPoolAndTokens(address _sendToken, address _receiveToken) private view returns (address, address, address) {
+      ICurveRegistry curveRegistry = ICurveRegistry(curveAddressProvider.get_registry());
+      address curvePool = curveRegistry.find_pool_for_coins(_sendToken, _receiveToken, 0);
+      if (_sendToken == WETH && curvePool == address(0)) {
+        _sendToken = ETH_ADD_CURVE;
+        curvePool = curveRegistry.find_pool_for_coins(ETH_ADD_CURVE, _receiveToken, 0);
+      }
+      if (_receiveToken == WETH && curvePool == address(0)) {
+        _receiveToken = ETH_ADD_CURVE;
+        curvePool = curveRegistry.find_pool_for_coins(_sendToken, ETH_ADD_CURVE, 0);
+      }
+      return (curvePool, _sendToken, _receiveToken);
+    }
 }

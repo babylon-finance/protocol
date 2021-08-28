@@ -24,48 +24,60 @@ describe('MasterSwapper', function () {
 
   describe('swaps through master swapper', function () {
     [
-      // {
-      //   token: addresses.tokens.WETH,
-      //   name: 'WETH',
-      //   pairs: [
-      //     { to: addresses.tokens.USDC, symbol: 'USDC' },
-      //     { to: addresses.tokens.DAI, symbol: 'DAI' },
-      //     { to: addresses.tokens.sUSD, symbol: 'sUSD' },
-      //     { to: addresses.tokens.USDT, symbol: 'USDT' },
-      //     { to: addresses.tokens.renBTC, symbol: 'renBTC' },
-      //   ],
-      // },
-      // {
-      //   token: addresses.tokens.DAI,
-      //   name: 'DAI',
-      //   pairs: [
-      //     { to: addresses.tokens.USDC, symbol: 'USDC' },
-      //     { to: addresses.tokens.DAI, symbol: 'DAI' },
-      //     { to: addresses.tokens.sUSD, symbol: 'sUSD' },
-      //     { to: addresses.tokens.USDT, symbol: 'USDT' },
-      //     { to: addresses.tokens.renBTC, symbol: 'renBTC' },
-      //   ],
-      // },
-      // {
-      //   token: addresses.tokens.USDC,
-      //   name: 'USDC',
-      //   pairs: [
-      //     // { to: addresses.tokens.USDC, symbol: 'USDC' },
-      //     // { to: addresses.tokens.DAI, symbol: 'DAI' },
-      //     // { to: addresses.tokens.sUSD, symbol: 'sUSD' },
-      //     // { to: addresses.tokens.USDT, symbol: 'USDT' },
-      //     // { to: addresses.tokens.renBTC, symbol: 'renBTC' },
-      //   ],
-      // },
+      {
+        token: addresses.tokens.WETH,
+        name: 'WETH',
+        pairs: [
+          { to: addresses.tokens.USDC, symbol: 'USDC' },
+          { to: addresses.tokens.DAI, symbol: 'DAI' },
+          { to: addresses.tokens.sUSD, symbol: 'sUSD' },
+          { to: addresses.tokens.USDT, symbol: 'USDT' },
+          { to: addresses.tokens.aETHC, symbol: 'aETHc' },
+          { to: addresses.tokens.sETH, symbol: 'sETH' },
+          { to: addresses.tokens.stETH, symbol: 'stETH' },
+          // { to: addresses.tokens.renBTC, symbol: 'renBTC' },
+        ],
+      },
+      {
+        token: addresses.tokens.DAI,
+        name: 'DAI',
+        pairs: [
+          { to: addresses.tokens.USDC, symbol: 'USDC' },
+          { to: addresses.tokens.DAI, symbol: 'DAI' },
+          { to: addresses.tokens.sUSD, symbol: 'sUSD' },
+          { to: addresses.tokens.USDT, symbol: 'USDT' },
+          { to: addresses.tokens.aETHC, symbol: 'aETHc' },
+          { to: addresses.tokens.sETH, symbol: 'sETH' },
+          { to: addresses.tokens.stETH, symbol: 'stETH' },
+          // { to: addresses.tokens.renBTC, symbol: 'renBTC' },
+        ],
+      },
+      {
+        token: addresses.tokens.USDC,
+        name: 'USDC',
+        pairs: [
+          { to: addresses.tokens.USDC, symbol: 'USDC' },
+          { to: addresses.tokens.DAI, symbol: 'DAI' },
+          { to: addresses.tokens.sUSD, symbol: 'sUSD' },
+          { to: addresses.tokens.USDT, symbol: 'USDT' },
+          { to: addresses.tokens.aETHC, symbol: 'aETHc' },
+          { to: addresses.tokens.sETH, symbol: 'sETH' },
+          { to: addresses.tokens.stETH, symbol: 'stETH' },
+          // { to: addresses.tokens.renBTC, symbol: 'renBTC' },
+        ],
+      },
       {
         token: addresses.tokens.WBTC,
         name: 'WBTC',
         pairs: [
-          // { to: addresses.tokens.USDC, symbol: 'USDC' },
-          // { to: addresses.tokens.DAI, symbol: 'DAI' },
-          // { to: addresses.tokens.sUSD, symbol: 'sUSD' },
-          // { to: addresses.tokens.USDT, symbol: 'USDT' },
-          { to: addresses.tokens.renBTC, symbol: 'renBTC' },
+          { to: addresses.tokens.USDC, symbol: 'USDC' },
+          { to: addresses.tokens.DAI, symbol: 'DAI' },
+          { to: addresses.tokens.sUSD, symbol: 'sUSD' },
+          { to: addresses.tokens.USDT, symbol: 'USDT' },
+          { to: addresses.tokens.aETHC, symbol: 'aETHc' },
+          { to: addresses.tokens.sETH, symbol: 'sETH' },
+          { to: addresses.tokens.stETH, symbol: 'stETH' },
+          // { to: addresses.tokens.renBTC, symbol: 'renBTC' },
         ],
       },
     ].forEach(({ token, name, pairs }) => {
