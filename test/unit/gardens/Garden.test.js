@@ -44,7 +44,7 @@ async function createWallets(number) {
   return walletAddresses;
 }
 
-describe('Garden', function () {
+describe.only('Garden', function () {
   let babController;
   let rewardsDistributor;
   let owner;
