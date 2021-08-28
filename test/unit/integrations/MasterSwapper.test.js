@@ -37,23 +37,17 @@ describe('MasterSwapper', function () {
       {
         token: addresses.tokens.DAI,
         name: 'DAI',
-        pairs: [
-          { to: addresses.tokens.USDC, symbol: 'USDC' },
-        ],
+        pairs: [{ to: addresses.tokens.USDC, symbol: 'USDC' }],
       },
       {
         token: addresses.tokens.USDC,
         name: 'USDC',
-        pairs: [
-          { to: addresses.tokens.USDC, symbol: 'USDC' },
-        ],
+        pairs: [{ to: addresses.tokens.USDC, symbol: 'USDC' }],
       },
       {
         token: addresses.tokens.WBTC,
         name: 'WBTC',
-        pairs: [
-          { to: addresses.tokens.USDC, symbol: 'USDC' },
-        ],
+        pairs: [{ to: addresses.tokens.USDC, symbol: 'USDC' }],
       },
     ].forEach(({ token, name, pairs }) => {
       pairs.forEach(({ to, symbol }) => {
