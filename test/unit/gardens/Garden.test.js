@@ -1365,34 +1365,59 @@ describe.only('Garden', function () {
       expect(gardenBalanceAfter.sub(gardenBalance)).to.equal(amountIn);
     });
 
-    it('can deposit with a Keeper fee', async function () {
-      const amountIn = from(1000 * 1e6);
-      const minAmountOut = eth(1000);
-      const fee = from(100 * 1e6);
-      const maxFee = from(100 * 1e6);
-      const nonce = 0;
+    [
+      {
+        token: addresses.tokens.WETH,
+        name: 'WETH',
+        opts: {
+          amountIn: eth(),
+          minAmountOut: eth(),
+          fee: eth(0.01),
+          maxFee: eth(0.01),
+        },
+      },
+      {
+        token: addresses.tokens.USDC,
+        name: 'USDC',
+        opts: {
+          amountIn: from(1000 * 1e6),
+          minAmountOut: eth(1000),
+          fee: from(100 * 1e6),
+          maxFee: from(100 * 1e6),
+        },
+      },
+    ].forEach(({ token, name, opts }) => {
+      it(`can deposit with a Keeper fee into ${name} garden`, async function () {
+        const { amountIn, minAmountOut, fee, maxFee } = opts;
 
-      await fund([signer1.address, signer3.address], { tokens: [addresses.tokens.USDC] });
+        const nonce = 0;
 
-      const garden = await createGarden({ reserveAsset: addresses.tokens.USDC });
+        const erc20 = await ethers.getContractAt('@openzeppelin/contracts/token/ERC20/ERC20.sol:ERC20', token);
 
-      await usdc.connect(signer3).approve(garden.address, amountIn, {
-        gasPrice: 0,
+        await fund([signer1.address, signer3.address], { tokens: [token] });
+
+        const garden = await createGarden({ reserveAsset: token });
+
+        await erc20.connect(signer3).approve(garden.address, amountIn, {
+          gasPrice: 0,
+        });
+
+        const gardenBalance = await erc20.balanceOf(garden.address);
+        const supplyBefore = await garden.totalSupply();
+
+        const sig = await getDepositSig(garden.address, signer3, amountIn, minAmountOut, false, nonce, maxFee);
+
+        await expect(() =>
+          garden
+            .connect(keeper)
+            .depositBySig(amountIn, minAmountOut, false, nonce, maxFee, eth(), fee, sig.v, sig.r, sig.s),
+        ).to.changeTokenBalances(erc20, [keeper, garden, signer3], [fee, amountIn.sub(fee), amountIn.mul(-1)]);
+
+        const supplyAfter = await garden.totalSupply();
+        expect(supplyAfter.sub(supplyBefore)).to.be.eq(
+          minAmountOut.sub(fee.mul(eth()).div(from(10).pow(await erc20.decimals()))),
+        );
       });
-
-      const gardenBalance = await usdc.balanceOf(garden.address);
-      const supplyBefore = await garden.totalSupply();
-
-      const sig = await getDepositSig(garden.address, signer3, amountIn, minAmountOut, false, nonce, maxFee);
-
-      await expect(() =>
-        garden
-          .connect(keeper)
-          .depositBySig(amountIn, minAmountOut, false, nonce, maxFee, eth(), fee, sig.v, sig.r, sig.s),
-      ).to.changeTokenBalances(usdc, [keeper, garden, signer3], [from(100 * 1e6), from(900 * 1e6), from(-1000 * 1e6)]);
-
-      const supplyAfter = await garden.totalSupply();
-      expect(supplyAfter.sub(supplyBefore)).to.be.eq(minAmountOut.sub(eth(100)));
     });
 
     it('rejects if not keeper', async function () {
