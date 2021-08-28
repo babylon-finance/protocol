@@ -1027,7 +1027,11 @@ describe('Garden', function () {
         } else {
           await expect(() =>
             garden.connect(keeper).withdrawBySig(amountIn, minAmountOut, 1, maxFee, eth(), fee, sig.v, sig.r, sig.s),
-          ).to.changeTokenBalances(erc20, [keeper, garden, signer3], [fee, minAmountOut.mul(-1), minAmountOut.sub(fee)]);
+          ).to.changeTokenBalances(
+            erc20,
+            [keeper, garden, signer3],
+            [fee, minAmountOut.mul(-1), minAmountOut.sub(fee)],
+          );
         }
         const supplyAfter = await garden.totalSupply();
         expect(supplyBefore.sub(supplyAfter)).to.eq(amountIn);
