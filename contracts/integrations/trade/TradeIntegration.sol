@@ -120,6 +120,7 @@ abstract contract TradeIntegration is BaseIntegration, ReentrancyGuard, ITradeIn
             _getTradeCallData(_strategy, tradeInfo.sendToken, tradeInfo.totalSendQuantity, tradeInfo.receiveToken);
         // Get spender address from exchange adapter and invoke approve for exact amount on sendToken
         tradeInfo.strategy.invokeApprove(_getSpender(targetExchange), tradeInfo.sendToken, tradeInfo.totalSendQuantity);
+        console.log('invoke', tradeInfo.totalSendQuantity, _minReceiveQuantity);
         tradeInfo.strategy.invokeFromIntegration(targetExchange, callValue, methodData);
 
         // Post actions

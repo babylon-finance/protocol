@@ -133,6 +133,12 @@ contract MasterSwapper is BaseIntegration, ReentrancyGuard, ITradeIntegration {
         }
         TradeInfo memory tradeInfo =
             _createTradeInfo(_strategy, name, _sendToken, _receiveToken, _sendQuantity, _minReceiveQuantity);
+        // Synthetix Direct
+        // Curve Direct
+        console.log('min receive', _minReceiveQuantity);
+        if (_curveSwap(tradeInfo.strategy, _sendToken, _receiveToken, _sendQuantity, _minReceiveQuantity)) {
+            return;
+        }
         // Abstract Synths out
         // Go through UNIv3 first
         try
@@ -147,7 +153,6 @@ contract MasterSwapper is BaseIntegration, ReentrancyGuard, ITradeIntegration {
             return;
         } catch {
             // Try Curve
-            console.log('checking curve');
             bool found = _checkAllCurvePaths(tradeInfo);
             if (found) {
                 return;
@@ -204,29 +209,15 @@ contract MasterSwapper is BaseIntegration, ReentrancyGuard, ITradeIntegration {
     }
 
     function _checkAllCurvePaths(TradeInfo memory _tradeInfo) private returns (bool) {
-        ICurveRegistry curveRegistry = ICurveRegistry(curveAddressProvider.get_registry());
         bool found = false;
-        address curvePool = curveRegistry.find_pool_for_coins(_tradeInfo.sendToken, _tradeInfo.receiveToken);
-        // Direct pairs via curve
-        if (curvePool != address(0)) {
-            console.log('direct path');
-            ITradeIntegration(curve).trade(
-                _tradeInfo.strategy,
-                _tradeInfo.sendToken,
-                _tradeInfo.totalSendQuantity,
-                _tradeInfo.receiveToken,
-                _tradeInfo.totalMinReceiveQuantity
-            );
-            return true;
-        }
         console.log('weth reserve path');
-        found = _checkCurveRoutesThroughReserve(WETH, _tradeInfo, curveRegistry);
+        found = _checkCurveRoutesThroughReserve(WETH, _tradeInfo);
         if (!found) {
             console.log('dai reserve path');
-            found = _checkCurveRoutesThroughReserve(DAI, _tradeInfo, curveRegistry);
+            found = _checkCurveRoutesThroughReserve(DAI, _tradeInfo);
             if (!found) {
                 console.log('wbtc reserve path');
-                found = _checkCurveRoutesThroughReserve(WBTC, _tradeInfo, curveRegistry);
+                found = _checkCurveRoutesThroughReserve(WBTC, _tradeInfo);
                 console.log('after wbtc');
             }
         }
@@ -234,11 +225,7 @@ contract MasterSwapper is BaseIntegration, ReentrancyGuard, ITradeIntegration {
         return found;
     }
 
-    function _checkCurveRoutesThroughReserve(
-        address _reserve,
-        TradeInfo memory _tradeInfo,
-        ICurveRegistry curveRegistry
-    ) private returns (bool) {
+    function _checkCurveRoutesThroughReserve(address _reserve, TradeInfo memory _tradeInfo) private returns (bool) {
         uint256 reserveBalance = 0;
         bool swapped = false;
         // Going through curve but switching first to reserve
@@ -256,51 +243,37 @@ contract MasterSwapper is BaseIntegration, ReentrancyGuard, ITradeIntegration {
                 if (_reserve == _tradeInfo.receiveToken) {
                     return true;
                 }
+                console.log('swapped');
                 swapped = true;
             } catch {}
         }
         if (_tradeInfo.sendToken == _reserve || swapped) {
-            address curvePool = curveRegistry.find_pool_for_coins(_reserve, _tradeInfo.receiveToken);
-            if (curvePool == address(0) && _reserve == WETH) {
-                curvePool = curveRegistry.find_pool_for_coins(ETH_ADD_CURVE, _tradeInfo.receiveToken);
-            }
-            console.log('direct pool', curvePool, _reserve, _tradeInfo.receiveToken);
-            if (curvePool != address(0)) {
-                ITradeIntegration(curve).trade(
+            console.log('eooo');
+            if (
+                _curveSwap(
                     _tradeInfo.strategy,
                     _reserve,
-                    _getTokenOrETHBalance(_tradeInfo.strategy, _reserve).sub(reserveBalance),
                     _tradeInfo.receiveToken,
+                    _getTokenOrETHBalance(_tradeInfo.strategy, _reserve).sub(reserveBalance),
                     _tradeInfo.totalMinReceiveQuantity
-                );
+                )
+            ) {
                 return true;
+            }
+            if (swapped) {
+                require(false, 'Curve Swap failed midway');
             }
         }
 
         // Going through curve to reserve and then receive Token
         if (_tradeInfo.sendToken != _reserve) {
             swapped = false;
-            address curvePool = curveRegistry.find_pool_for_coins(_tradeInfo.sendToken, _reserve);
-            if (curvePool == address(0) && _reserve == WETH) {
-                curvePool = curveRegistry.find_pool_for_coins(_tradeInfo.sendToken, ETH_ADD_CURVE);
-            }
-            console.log('inverse pool', curvePool, _tradeInfo.sendToken, _reserve);
-            if (curvePool != address(0)) {
-                reserveBalance = _getTokenOrETHBalance(_tradeInfo.strategy, _reserve);
-                try
-                    ITradeIntegration(curve).trade(
-                        _tradeInfo.strategy,
-                        _tradeInfo.sendToken,
-                        _tradeInfo.totalSendQuantity,
-                        _reserve,
-                        1
-                    )
-                {
-                    if (_reserve == _tradeInfo.receiveToken) {
-                        return true;
-                    }
-                    swapped = true;
-                } catch {}
+            reserveBalance = _getTokenOrETHBalance(_tradeInfo.strategy, _reserve);
+            if (_curveSwap(_tradeInfo.strategy, _tradeInfo.sendToken, _reserve, _tradeInfo.totalSendQuantity, 1)) {
+                swapped = true;
+                if (_reserve == _tradeInfo.receiveToken) {
+                    return true;
+                }
             }
         }
         if (_tradeInfo.sendToken == _reserve || swapped) {
@@ -316,6 +289,36 @@ contract MasterSwapper is BaseIntegration, ReentrancyGuard, ITradeIntegration {
             {
                 return true;
             } catch {
+                if (swapped) {
+                    require(false, 'Uni Swap failed midway');
+                }
+            }
+        }
+        return false;
+    }
+
+    function _curveSwap(
+        address _strategy,
+        address _fromToken,
+        address _toToken,
+        uint256 _sendTokenAmount,
+        uint256 _minReceiveQuantity
+    ) private returns (bool) {
+        ICurveRegistry curveRegistry = ICurveRegistry(curveAddressProvider.get_registry());
+        address curvePool = curveRegistry.find_pool_for_coins(_fromToken, _toToken);
+        if (curvePool == address(0) && _fromToken == WETH) {
+            curvePool = curveRegistry.find_pool_for_coins(ETH_ADD_CURVE, _toToken);
+        }
+        if (curvePool == address(0) && _toToken == WETH) {
+            curvePool = curveRegistry.find_pool_for_coins(_fromToken, ETH_ADD_CURVE);
+        }
+        console.log('pool', curvePool, _fromToken, _toToken);
+        if (curvePool != address(0)) {
+            try ITradeIntegration(curve).trade(_strategy, _fromToken, _sendTokenAmount, _toToken, _minReceiveQuantity) {
+                console.log('eoo', ERC20(_toToken).balanceOf(_strategy));
+                return true;
+            } catch {
+                console.log('bad');
                 return false;
             }
         }
@@ -338,45 +341,44 @@ contract MasterSwapper is BaseIntegration, ReentrancyGuard, ITradeIntegration {
         }
     }
 
-    function _trySynthetix(TradeInfo _tradeInfo) private view returns (bool, address, address) {
-      // Try Synthetix
-      address _sendTokenSynth = _getSynth(_tradeInfo.sendToken);
-      address _receiveTokenSynth = _getSynth(_tradeInfo.receiveToken);
-      if (_sendTokenSynth != address(0) && _receiveTokenSynth != address(0)) {
-          try
-              ITradeIntegration(synthetix).trade(
-                  _tradeInfo.strategy,
-                  _tradeInfo.sendToken,
-                  _tradeInfo.totalSendQuantity,
-                  _tradeInfo.receiveToken,
-                  _tradeInfo.totalMinReceiveQuantity
-              )
-          {
-            return (true, _tradeInfo.sendToken, _tradeInfo.receiveToken);
-          } catch {
-            return (false, _tradeInfo.sendToken, _tradeInfo.receiveToken);
-          }
-      }
-      if (_sendTokenSynth != address(0)) {
-          // Go to sETH and then burn to get WETH and then trade to get the receive token
-          if (_sendToken != sETH) {
-            try ITradeIntegration(synthetix).trade(
-                tradeInfo.strategy,
-                _tradeInfo.sendToken,
-                _sendQuantity,
-                sETH,
-                tradeInfo.totalMinReceiveQuantity
-            ) {
-            } catch {
-              return (false, _tradeInfo.sendToken, _tradeInfo.receiveToken);
-            }
-          }
-          snxEtherWrapper.burn(ERC20(sETH).balanceOf(ttradeInfo.strategy));
-          return (false, WETH, _tradeInfo.receiveToken);
-      }
-      if (_receiveTokenSynth != address(0)) {
-          // Swap send token to WETH->sUSD-> receive Synth
-      }
-  }
-
+    //   function _trySynthetix(TradeInfo _tradeInfo) private view returns (bool, address, address) {
+    //     // Try Synthetix
+    //     address _sendTokenSynth = _getSynth(_tradeInfo.sendToken);
+    //     address _receiveTokenSynth = _getSynth(_tradeInfo.receiveToken);
+    //     if (_sendTokenSynth != address(0) && _receiveTokenSynth != address(0)) {
+    //         try
+    //             ITradeIntegration(synthetix).trade(
+    //                 _tradeInfo.strategy,
+    //                 _tradeInfo.sendToken,
+    //                 _tradeInfo.totalSendQuantity,
+    //                 _tradeInfo.receiveToken,
+    //                 _tradeInfo.totalMinReceiveQuantity
+    //             )
+    //         {
+    //           return (true, _tradeInfo.sendToken, _tradeInfo.receiveToken);
+    //         } catch {
+    //           return (false, _tradeInfo.sendToken, _tradeInfo.receiveToken);
+    //         }
+    //     }
+    //     if (_sendTokenSynth != address(0)) {
+    //         // Go to sETH and then burn to get WETH and then trade to get the receive token
+    //         if (_sendToken != sETH) {
+    //           try ITradeIntegration(synthetix).trade(
+    //               tradeInfo.strategy,
+    //               _tradeInfo.sendToken,
+    //               _sendQuantity,
+    //               sETH,
+    //               tradeInfo.totalMinReceiveQuantity
+    //           ) {
+    //           } catch {
+    //             return (false, _tradeInfo.sendToken, _tradeInfo.receiveToken);
+    //           }
+    //         }
+    //         snxEtherWrapper.burn(ERC20(sETH).balanceOf(ttradeInfo.strategy));
+    //         return (false, WETH, _tradeInfo.receiveToken);
+    //     }
+    //     if (_receiveTokenSynth != address(0)) {
+    //         // Swap send token to WETH->sUSD-> receive Synth
+    //     }
+    // }
 }

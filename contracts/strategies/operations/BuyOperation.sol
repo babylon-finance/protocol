@@ -90,7 +90,7 @@ contract BuyOperation is Operation {
         )
     {
         address token = BytesLib.decodeOpDataAddress(_data);
-        ITradeIntegration(_integration).trade(msg.sender, _asset, _capital, token, 0); // TODO: pass as a param
+        ITradeIntegration(_integration).trade(msg.sender, _asset, _capital, token, 1); // TODO: pass as a param
         return (token, IERC20(token).balanceOf(address(msg.sender)), 0); // liquid
     }
 
@@ -123,7 +123,7 @@ contract BuyOperation is Operation {
             token,
             IERC20(token).balanceOf(address(msg.sender)).preciseMul(_percentage),
             _garden.reserveAsset(),
-            0
+            1
         );
     }
 

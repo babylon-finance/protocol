@@ -354,6 +354,8 @@ contract PriceOracle is Ownable, IPriceOracle {
         // TODOs
         // btc pairs, use curve
         // stable pairs, use curve
+        // add crv pool tokens -> virtual price
+        // yfi tokens?
 
         if (_tokenIn != WETH && _tokenOut != WETH) {
             return getPrice(_tokenIn, WETH).preciseDiv(getPrice(_tokenOut, WETH));
