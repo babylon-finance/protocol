@@ -492,7 +492,6 @@ contract PriceOracle is Ownable, IPriceOracle {
     function getPriceThroughCurve(address _curvePool, address _tokenIn, address _tokenOut) private view returns (uint256) {
       ICurveRegistry curveRegistry = ICurveRegistry(curveAddressProvider.get_registry());
       (int128 i, int128 j,) = curveRegistry.get_coin_indices(_curvePool, _tokenIn, _tokenOut);
-      console.log('price CURVE', _curvePool, uint(i), uint(j));
       uint256 price = ICurvePoolV3(_curvePool).get_dy(i, j, 10 ** ERC20(_tokenIn).decimals()) * 10 ** (18 - ERC20(_tokenOut).decimals());
       uint256 delta = price.preciseMul(CURVE_SLIPPAGE);
       if (price < price.add(delta) && price > price.sub(delta)) {

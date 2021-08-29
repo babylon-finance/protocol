@@ -328,45 +328,4 @@ contract MasterSwapper is BaseIntegration, ReentrancyGuard, ITradeIntegration {
             return address(0);
         }
     }
-
-    //   function _trySynthetix(TradeInfo _tradeInfo) private view returns (bool, address, address) {
-    //     // Try Synthetix
-    //     address _sendTokenSynth = _getSynth(_tradeInfo.sendToken);
-    //     address _receiveTokenSynth = _getSynth(_tradeInfo.receiveToken);
-    //     if (_sendTokenSynth != address(0) && _receiveTokenSynth != address(0)) {
-    //         try
-    //             ITradeIntegration(synthetix).trade(
-    //                 _tradeInfo.strategy,
-    //                 _tradeInfo.sendToken,
-    //                 _tradeInfo.totalSendQuantity,
-    //                 _tradeInfo.receiveToken,
-    //                 _tradeInfo.totalMinReceiveQuantity
-    //             )
-    //         {
-    //           return (true, _tradeInfo.sendToken, _tradeInfo.receiveToken);
-    //         } catch {
-    //           return (false, _tradeInfo.sendToken, _tradeInfo.receiveToken);
-    //         }
-    //     }
-    //     if (_sendTokenSynth != address(0)) {
-    //         // Go to sETH and then burn to get WETH and then trade to get the receive token
-    //         if (_sendToken != sETH) {
-    //           try ITradeIntegration(synthetix).trade(
-    //               tradeInfo.strategy,
-    //               _tradeInfo.sendToken,
-    //               _sendQuantity,
-    //               sETH,
-    //               tradeInfo.totalMinReceiveQuantity
-    //           ) {
-    //           } catch {
-    //             return (false, _tradeInfo.sendToken, _tradeInfo.receiveToken);
-    //           }
-    //         }
-    //         snxEtherWrapper.burn(ERC20(sETH).balanceOf(ttradeInfo.strategy));
-    //         return (false, WETH, _tradeInfo.receiveToken);
-    //     }
-    //     if (_receiveTokenSynth != address(0)) {
-    //         // Swap send token to WETH->sETH-> receive Synth
-    //     }
-    // }
 }
