@@ -42,13 +42,13 @@ describe('MasterSwapper', function () {
         token: addresses.tokens.DAI,
         name: 'DAI',
         pairs: [
-          { to: addresses.tokens.USDC, symbol: 'USDC' },
-          { to: addresses.tokens.DAI, symbol: 'DAI' },
-          { to: addresses.tokens.sUSD, symbol: 'sUSD' },
-          { to: addresses.tokens.USDT, symbol: 'USDT' },
-          { to: addresses.tokens.aETHC, symbol: 'aETHc' },
-          { to: addresses.tokens.sETH, symbol: 'sETH' },
-          { to: addresses.tokens.stETH, symbol: 'stETH' },
+          // { to: addresses.tokens.USDC, symbol: 'USDC' },
+          // { to: addresses.tokens.DAI, symbol: 'DAI' },
+          // { to: addresses.tokens.sUSD, symbol: 'sUSD' },
+          // { to: addresses.tokens.USDT, symbol: 'USDT' },
+          // { to: addresses.tokens.aETHC, symbol: 'aETHc' },
+          // { to: addresses.tokens.sETH, symbol: 'sETH' },
+          // { to: addresses.tokens.stETH, symbol: 'stETH' },
           // { to: addresses.tokens.renBTC, symbol: 'renBTC' },
         ],
       },
@@ -101,7 +101,7 @@ describe('MasterSwapper', function () {
             garden: garden,
             specificParams: [to, 0],
           });
-
+          console.log('execute');
           await executeStrategy(strategyContract);
 
           const tokenPriceInAsset = await priceOracle.connect(owner).getPrice(token, to);
