@@ -58,6 +58,7 @@ abstract contract BaseIntegration {
     address internal constant ETH_ADD_CURVE = 0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE;
     address internal constant SNX = 0xC011a73ee8576Fb46F5E1c5751cA3B9Fe0af2a6F;
     address internal constant sETH = 0x5e74C9036fb86BD7eCdcb084a0673EFc32eA31cb;
+    address internal constant sUSD = 0x57Ab1ec28D129707052df4dF418D58a2D46d5f51;
 
     // Name of the integration
     string public name;
@@ -84,5 +85,14 @@ abstract contract BaseIntegration {
      */
     function getName() external view returns (string memory) {
         return name;
+    }
+
+    /* ============ Internal Functions ============ */
+
+    function _getTokenOrETHBalance(address _strategy, address _token) internal view returns (uint256) {
+        if (_token == address(0) || _token == ETH_ADD_CURVE) {
+            return _strategy.balance;
+        }
+        return ERC20(_token).balanceOf(_strategy);
     }
 }

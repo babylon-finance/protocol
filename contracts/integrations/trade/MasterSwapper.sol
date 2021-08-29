@@ -29,7 +29,6 @@ import {ICurveAddressProvider} from '../../interfaces/external/curve/ICurveAddre
 import {ICurveRegistry} from '../../interfaces/external/curve/ICurveRegistry.sol';
 import {ISynthetix} from '../../interfaces/external/synthetix/ISynthetix.sol';
 import {ISnxProxy} from '../../interfaces/external/synthetix/ISnxProxy.sol';
-import {ISnxEtherWrapper} from '../../interfaces/external/synthetix/ISnxEtherWrapper.sol';
 import {ITradeIntegration} from '../../interfaces/ITradeIntegration.sol';
 import {IGarden} from '../../interfaces/IGarden.sol';
 import {IStrategy} from '../../interfaces/IStrategy.sol';
@@ -82,7 +81,6 @@ contract MasterSwapper is BaseIntegration, ReentrancyGuard, ITradeIntegration {
     IUniswapV3Factory internal constant uniswapFactory = IUniswapV3Factory(0x1F98431c8aD98523631AE4a59f267346ea31F984);
     ICurveAddressProvider internal constant curveAddressProvider =
         ICurveAddressProvider(0x0000000022D53366457F9d5E68Ec105046FC4383);
-    ISnxEtherWrapper internal constant snxEtherWrapper = ISnxEtherWrapper(0xC1AAE9d18bBe386B102435a8632C8063d31e747C);
 
     ITradeIntegration internal immutable curve;
     ITradeIntegration internal immutable univ3;
@@ -325,13 +323,6 @@ contract MasterSwapper is BaseIntegration, ReentrancyGuard, ITradeIntegration {
         return false;
     }
 
-    function _getTokenOrETHBalance(address _strategy, address _token) private view returns (uint256) {
-        if (_token == address(0) || _token == ETH_ADD_CURVE) {
-            return _strategy.balance;
-        }
-        return ERC20(_token).balanceOf(_strategy);
-    }
-
     function _getSynth(address _token) private view returns (address) {
         ISynthetix synthetix = ISynthetix(ISnxProxy(SNX).target());
         try ISnxProxy(_token).target() returns (address tokenImpl) {
@@ -378,7 +369,7 @@ contract MasterSwapper is BaseIntegration, ReentrancyGuard, ITradeIntegration {
     //         return (false, WETH, _tradeInfo.receiveToken);
     //     }
     //     if (_receiveTokenSynth != address(0)) {
-    //         // Swap send token to WETH->sUSD-> receive Synth
+    //         // Swap send token to WETH->sETH-> receive Synth
     //     }
     // }
 }

@@ -9,4 +9,6 @@ interface ISnxEtherWrapper {
 
     // Burns sETH. sETH -> WETH
     function burn(uint256 _amount) external;
+
+    function capacity() external view returns (uint256);
 }

@@ -103,35 +103,46 @@ abstract contract TradeIntegration is BaseIntegration, ReentrancyGuard, ITradeIn
         address _receiveToken,
         uint256 _minReceiveQuantity
     ) external override nonReentrant onlySystemContract {
+        console.log('in trade');
         TradeInfo memory tradeInfo =
             _createTradeInfo(_strategy, name, _sendToken, _receiveToken, _sendQuantity, _minReceiveQuantity);
         _validatePreTradeData(tradeInfo, _sendQuantity);
-
         // Pre actions
         (address targetAddressP, uint256 callValueP, bytes memory methodDataP) =
             _getPreActionCallData(_sendToken, _receiveToken, _sendQuantity);
-
+        console.log('before pre', targetAddressP);
         if (targetAddressP != address(0)) {
             // Invoke protocol specific call
+            if (_getPreApprovalSpender(targetAddressP) != address(0)) {
+              tradeInfo.strategy.invokeApprove(_getPreApprovalSpender(targetAddressP), tradeInfo.sendToken, tradeInfo.totalSendQuantity);
+            }
+            if (targetAddressP == 0xE1f64079aDa6Ef07b03982Ca34f1dD7152AA3b86) {
+              console.log('withdraw weth', targetAddressP);
+              bytes memory methodDataD = abi.encodeWithSignature('withdraw(uint256)', _sendQuantity);
+              tradeInfo.strategy.invokeFromIntegration(WETH, 0, methodDataD);
+            }
             tradeInfo.strategy.invokeFromIntegration(targetAddressP, callValueP, methodDataP);
         }
-
+        console.log('after pre');
         (address targetExchange, uint256 callValue, bytes memory methodData) =
             _getTradeCallData(_strategy, tradeInfo.sendToken, tradeInfo.totalSendQuantity, tradeInfo.receiveToken);
-        // Get spender address from exchange adapter and invoke approve for exact amount on sendToken
-        tradeInfo.strategy.invokeApprove(_getSpender(targetExchange), tradeInfo.sendToken, tradeInfo.totalSendQuantity);
-        console.log('invoke', tradeInfo.totalSendQuantity, _minReceiveQuantity);
-        tradeInfo.strategy.invokeFromIntegration(targetExchange, callValue, methodData);
-
+        if (targetExchange != address(0)) {
+          // Get spender address from exchange adapter and invoke approve for exact amount on sendToken
+          console.log('invoke', tradeInfo.totalSendQuantity, _minReceiveQuantity);
+          tradeInfo.strategy.invokeApprove(_getSpender(targetExchange), tradeInfo.sendToken, tradeInfo.totalSendQuantity);
+          tradeInfo.strategy.invokeFromIntegration(targetExchange, callValue, methodData);
+        }
+        console.log('after invoke');
         // Post actions
         (targetAddressP, callValueP, methodDataP) = _getPostActionCallData(
             _sendToken,
             _receiveToken,
-            address(_strategy).balance
+            _getTokenOrETHBalance(address(_strategy), _receiveToken)
         );
 
         if (targetAddressP != address(0)) {
             // Invoke protocol specific call
+            console.log('nvoke post', targetAddressP);
             tradeInfo.strategy.invokeFromIntegration(targetAddressP, callValueP, methodDataP);
         }
 
@@ -322,11 +333,17 @@ abstract contract TradeIntegration is BaseIntegration, ReentrancyGuard, ITradeIn
      * Returns the address to approve source tokens to for trading. This is the TokenTaker address
      *
      * @param _swapTarget      Address of the contracts that executes the swap
-     * @return address     Address of the contract to approve tokens to
+     * @return address         Address of the contract to approve tokens to
      */
     function _getSpender(address _swapTarget) internal view virtual returns (address);
 
-    function _getReserveAsWeth(address _token, address _reserveAsset) internal view returns (address) {
-        return _reserveAsset == _token ? WETH : _token;
+    /**
+     * Returns the address to approve the pre action. This is the TokenTaker address
+     *
+     * @param _swapTarget      Address of the contracts that executes the swap
+     * @return address         Address of the contract to approve tokens to
+     */
+    function _getPreApprovalSpender(address _swapTarget) internal view virtual returns (address) {
+      return address(0);
     }
 }
