@@ -157,40 +157,40 @@ contract MasterSwapper is BaseIntegration, ReentrancyGuard, ITradeIntegration {
         }
         console.log('after curve');
         // Abstract Synths out
-        // if (_sendTokenSynth != address(0)) {
-        //   // Trade to DAI through sUSD
-        //   try
-        //       ITradeIntegration(synthetix).trade(
-        //           _strategy,
-        //           _sendToken,
-        //           _sendQuantity,
-        //           DAI,
-        //           1
-        //       )
-        //   {
-        //     // Change DAI to receive token
-        //     // trade(_strategy, DAI, _getTokenOrETHBalance(_strategy, DAI), _receiveToken, _minReceiveQuantity);
-        //     return;
-        //   } catch {
-        //   }
-        // }
+        if (_sendTokenSynth != address(0)) {
+          // Trade to DAI through sUSD
+          try
+              ITradeIntegration(synthetix).trade(
+                  _strategy,
+                  _sendToken,
+                  _sendQuantity,
+                  DAI,
+                  1
+              )
+          {
+            // Change DAI to receive token
+            // trade(_strategy, DAI, _getTokenOrETHBalance(_strategy, DAI), _receiveToken, _minReceiveQuantity);
+            return;
+          } catch {
+          }
+        }
         // Trade to DAI and then do DAI to synh
-        // if (_receiveTokenSynth != address(0)) {
-        //   // trade(_strategy, _sendToken, _sendQuantity, DAI, 1);
-        //   try
-        //       ITradeIntegration(synthetix).trade(
-        //           _strategy,
-        //           DAI,
-        //           _getTokenOrETHBalance(_strategy, DAI),
-        //           _receiveToken,
-        //           _minReceiveQuantity
-        //       )
-        //   {
-        //     return;
-        //   } catch {
-        //     require(false, "Failed midway in out synth");
-        //   }
-        // }
+        if (_receiveTokenSynth != address(0)) {
+          // trade(_strategy, _sendToken, _sendQuantity, DAI, 1);
+          try
+              ITradeIntegration(synthetix).trade(
+                  _strategy,
+                  DAI,
+                  _getTokenOrETHBalance(_strategy, DAI),
+                  _receiveToken,
+                  _minReceiveQuantity
+              )
+          {
+            return;
+          } catch {
+            require(false, "Failed midway in out synth");
+          }
+        }
         // Go through UNIv3 first
         console.log('uni');
         try
@@ -335,10 +335,11 @@ contract MasterSwapper is BaseIntegration, ReentrancyGuard, ITradeIntegration {
 
     function _getSynth(address _token) private view returns (address) {
         ISynthetix synthetix = ISynthetix(ISnxProxy(SNX).target());
-        try ISnxProxy(_token).target() returns (address tokenImpl) {
-            return uint256(synthetix.synthsByAddress(tokenImpl)) != 0 ? tokenImpl : address(0);
-        } catch {
-            return address(0);
-        }
+        // try ISnxProxy(_token).target() returns (address tokenImpl) {
+        //     return tokenImpl;
+        //     // return uint256(synthetix.synthsByAddress(tokenImpl)) != 0 ? tokenImpl : address(0);
+        // } catch {
+        // }
+        return address(0);
     }
 }
