@@ -22,6 +22,7 @@ pragma abicoder v2;
 import 'hardhat/console.sol';
 import {IBabController} from '../../interfaces/IBabController.sol';
 import {IStrategy} from '../../interfaces/IStrategy.sol';
+import {ERC20} from '@openzeppelin/contracts/token/ERC20/ERC20.sol';
 import {ISynthetix} from '../../interfaces/external/synthetix/ISynthetix.sol';
 import {ISnxProxy} from '../../interfaces/external/synthetix/ISnxProxy.sol';
 import {ISnxSynth} from '../../interfaces/external/synthetix/ISnxSynth.sol';
@@ -44,8 +45,8 @@ contract SynthetixTradeIntegration is TradeIntegration {
 
     /* ============ State Variables ============ */
     /* ============ Constants ============ */
-    ISnxEtherWrapper internal constant snxEtherWrapper = ISnxEtherWrapper(0xC1AAE9d18bBe386B102435a8632C8063d31e747C);
-    ISnxDepot internal constant snxDepot = ISnxDepot(0xE1f64079aDa6Ef07b03982Ca34f1dD7152AA3b86);
+
+    address private constant curvesUSD = 0xA5407eAE9Ba41422680e2e00537571bcC53efBfD;
 
     /* ============ Constructor ============ */
 
@@ -81,16 +82,18 @@ contract SynthetixTradeIntegration is TradeIntegration {
             bytes memory
         )
     {
-        (address sendTokenImpl, address receiveTokenImpl) = _getTokens(_sendToken, _receiveToken, _sendQuantity);
-        require(sendTokenImpl != address(0) && receiveTokenImpl != address(0), 'Syntetix needs synth or WETH');
+        (address sendTokenImpl, address receiveTokenImpl, uint256 realSendAmount) = _getTokens(_sendToken, _receiveToken, _sendQuantity, _strategy);
+        require(sendTokenImpl != address(0) && receiveTokenImpl != address(0), 'Syntetix needs synth or DAI or USDC');
         if (sendTokenImpl == receiveTokenImpl) {
           return (address(0), 0, bytes(''));
         }
+        console.log('realSendAmount', realSendAmount, sendTokenImpl, receiveTokenImpl);
+        console.log(uint(ISnxSynth(sendTokenImpl).currencyKey()), uint(ISnxSynth(receiveTokenImpl).currencyKey()));
         bytes memory methodData =
             abi.encodeWithSignature(
                 'exchange(bytes32,uint256,bytes32)',
                 ISnxSynth(sendTokenImpl).currencyKey(),
-                _sendQuantity,
+                realSendAmount,
                 ISnxSynth(receiveTokenImpl).currencyKey()
             );
         return (ISnxProxy(SNX).target(), 0, methodData);
@@ -121,15 +124,15 @@ contract SynthetixTradeIntegration is TradeIntegration {
             bytes memory
         )
     {
-        if (_sendToken == WETH) {
-            if (snxEtherWrapper.capacity() >= _sendQuantity) {
-              // Mint sETH from WETH
-              bytes memory methodData = abi.encodeWithSignature('mint(uint256)', _sendQuantity);
-              return (address(snxEtherWrapper), 0, methodData);
-            } else {
-              bytes memory methodData = abi.encodeWithSignature('exchangeEtherForSynths()');
-              return (address(snxDepot), _sendQuantity, methodData);
-            }
+        if (_sendToken == DAI) {
+          bytes memory methodData =
+              abi.encodeWithSignature('exchange(int128,int128,uint256,uint256)', 0, 3, _sendQuantity, 1);
+          return (curvesUSD, 0, methodData);
+        }
+        if (_sendToken == USDC) {
+          bytes memory methodData =
+              abi.encodeWithSignature('exchange(int128,int128,uint256,uint256)', 0, 1, _sendQuantity, 1);
+          return (curvesUSD, 0, methodData);
         }
         return (address(0), 0, bytes(''));
     }
@@ -160,9 +163,15 @@ contract SynthetixTradeIntegration is TradeIntegration {
         )
     {
         // Burn sETH to WETH if needed
-        if (_receiveToken == WETH) {
-            bytes memory methodData = abi.encodeWithSignature('burn(uint256)', _sendQuantity);
-            return (address(snxEtherWrapper), 0, methodData);
+        if (_receiveToken == DAI) {
+          bytes memory methodData =
+              abi.encodeWithSignature('exchange(int128,int128,uint256,uint256)', 3, 0, _sendQuantity, 1);
+          return (curvesUSD, 0, methodData);
+        }
+        if (_receiveToken == USDC) {
+          bytes memory methodData =
+              abi.encodeWithSignature('exchange(int128,int128,uint256,uint256)', 1, 0, _sendQuantity, 1);
+          return (curvesUSD, 0, methodData);
         }
         return (address(0), 0, bytes(''));
     }
@@ -184,7 +193,24 @@ contract SynthetixTradeIntegration is TradeIntegration {
      * @return address             Address of the contract to approve tokens to
      */
     function _getPreApprovalSpender(address _swapTarget) internal view override returns (address) {
-        return _swapTarget == address(snxDepot) ? address(0) : _swapTarget;
+        return _swapTarget;
+    }
+
+    /**
+     * Returns the address to approve the post action. This is the TokenTaker address
+     *
+     * @param _swapTarget          Address of the contract that will execute the swap
+     * @return address             Address of the contract to approve tokens to
+     */
+    function _getPostApprovalSpender(address _swapTarget) internal view override returns (address) {
+        return _swapTarget;
+    }
+
+    function _getPostActionToken(address _receiveToken) internal view override returns (address) {
+      if (_receiveToken == DAI || _receiveToken == USDC) {
+          return sUSD;
+      }
+      return _receiveToken;
     }
 
     /**
@@ -202,20 +228,21 @@ contract SynthetixTradeIntegration is TradeIntegration {
 
     /* ============ Private Functions ============ */
 
-    function _getTokens(address _sendToken, address _receiveToken, uint256 _sendQuantity)
+    function _getTokens(address _sendToken, address _receiveToken, uint256 _sendQuantity, address _strategy)
         private
         view
         returns (
             address,
-            address
+            address,
+            uint256
         )
     {
         ISynthetix synthetix = ISynthetix(ISnxProxy(SNX).target());
-        if (_sendToken == WETH) {
-            _sendToken = snxEtherWrapper.capacity() >= _sendQuantity ? sETH : sUSD;
+        if (_sendToken == DAI || _sendToken == USDC) {
+            _sendToken = sUSD;
         }
-        if (_receiveToken == WETH) {
-            _receiveToken = sETH;
+        if (_receiveToken == DAI || _receiveToken == USDC) {
+            _receiveToken = sUSD;
         }
         address sendTokenImpl;
         address receiveTokenImpl;
@@ -229,6 +256,7 @@ contract SynthetixTradeIntegration is TradeIntegration {
         } catch {
           receiveTokenImpl = address(0);
         }
-        return (sendTokenImpl, receiveTokenImpl);
+        console.log('addresses', sendTokenImpl, receiveTokenImpl);
+        return (sendTokenImpl, receiveTokenImpl, ERC20(_sendToken).balanceOf(_strategy));
     }
 }

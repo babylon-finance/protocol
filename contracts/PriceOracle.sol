@@ -29,6 +29,9 @@ import {SafeCast} from '@openzeppelin/contracts/utils/SafeCast.sol';
 import {IPriceOracle} from './interfaces/IPriceOracle.sol';
 import {ICToken} from './interfaces/external/compound/ICToken.sol';
 import {ISnxExchangeRates} from './interfaces/external/synthetix/ISnxExchangeRates.sol';
+import {ICurveAddressProvider} from './interfaces/external/curve/ICurveAddressProvider.sol';
+import {ICurveRegistry} from './interfaces/external/curve/ICurveRegistry.sol';
+import {ICurvePoolV3} from './interfaces/external/curve/ICurvePoolV3.sol';
 import {ISnxSynth} from './interfaces/external/synthetix/ISnxSynth.sol';
 import {ISnxProxy} from './interfaces/external/synthetix/ISnxProxy.sol';
 import {IStETH} from './interfaces/external/lido/IStETH.sol';
@@ -55,6 +58,9 @@ contract PriceOracle is Ownable, IPriceOracle {
     // Address of Uniswap factory
     IUniswapV3Factory internal constant factory = IUniswapV3Factory(0x1F98431c8aD98523631AE4a59f267346ea31F984);
     ISnxExchangeRates internal constant snxEchangeRates = ISnxExchangeRates(0xd69b189020EF614796578AfE4d10378c5e7e1138);
+    // Address of Curve Registry
+    ICurveAddressProvider internal constant curveAddressProvider =
+        ICurveAddressProvider(0x0000000022D53366457F9d5E68Ec105046FC4383);
 
     address private constant WETH = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
     address private constant USDC = 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48;
@@ -63,6 +69,7 @@ contract PriceOracle is Ownable, IPriceOracle {
 
     // the desired seconds agos array passed to the observe method
     uint32 private constant SECONDS_GRANULARITY = 30;
+    uint256 private constant CURVE_SLIPPAGE = 3e16;
 
     uint24 private constant FEE_LOW = 500;
     uint24 private constant FEE_MEDIUM = 3000;
@@ -351,10 +358,24 @@ contract PriceOracle is Ownable, IPriceOracle {
             return getPrice(_tokenIn, WETH).preciseDiv(stETH.getSharesByPooledEth(shares));
         }
 
-        // TODOs
-        // btc pairs, use curve
-        // stable pairs, use curve
-        // add crv pool tokens -> virtual price
+        ICurveRegistry curveRegistry = ICurveRegistry(curveAddressProvider.get_registry());
+        // Curve LP tokens
+        if (curveRegistry.get_pool_from_lp_token(_tokenIn) != address(0)) {
+          return getPrice(USDC, _tokenOut).preciseMul(curveRegistry.get_virtual_price_from_lp_token(_tokenIn));
+        }
+        if (curveRegistry.get_pool_from_lp_token(_tokenOut) != address(0)) {
+          return getPrice(_tokenIn, USDC).preciseDiv(curveRegistry.get_virtual_price_from_lp_token(_tokenIn));
+        }
+
+        // Direct curve pair
+        address curvePool = curveRegistry.find_pool_for_coins(_tokenIn, _tokenOut);
+        if (curvePool != address(0)) {
+           uint256 price = getPriceThroughCurve(curvePool, _tokenIn, _tokenOut);
+           if (price != 0 ) {
+             return price;
+           }
+        }
+
         // yfi tokens?
 
         if (_tokenIn != WETH && _tokenOut != WETH) {
@@ -466,5 +487,17 @@ contract PriceOracle is Ownable, IPriceOracle {
             exchangeRateNormalized = exchangeRateNormalized.mul(10**(8 - ERC20(crTokenToAsset[_asset]).decimals()));
         }
         return exchangeRateNormalized;
+    }
+
+    function getPriceThroughCurve(address _curvePool, address _tokenIn, address _tokenOut) private view returns (uint256) {
+      ICurveRegistry curveRegistry = ICurveRegistry(curveAddressProvider.get_registry());
+      (int128 i, int128 j,) = curveRegistry.get_coin_indices(_curvePool, _tokenIn, _tokenOut);
+      console.log('price CURVE', _curvePool, uint(i), uint(j));
+      uint256 price = ICurvePoolV3(_curvePool).get_dy(i, j, 10 ** ERC20(_tokenIn).decimals()) * 10 ** (18 - ERC20(_tokenOut).decimals());
+      uint256 delta = price.preciseMul(CURVE_SLIPPAGE);
+      if (price < price.add(delta) && price > price.sub(delta)) {
+        return price;
+      }
+      return 0;
     }
 }

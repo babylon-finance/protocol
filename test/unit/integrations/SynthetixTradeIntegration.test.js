@@ -1,7 +1,8 @@
 const { expect } = require('chai');
 const { ethers } = require('hardhat');
+const { increaseTime } = require('utils/test-helpers');
 
-const { STRATEGY_EXECUTE_MAP } = require('lib/constants.js');
+const { STRATEGY_EXECUTE_MAP, ONE_DAY_IN_SECONDS } = require('lib/constants.js');
 const { eth } = require('lib/helpers');
 const { fund } = require('lib/whale');
 const { setupTests } = require('fixtures/GardenFixture');
@@ -22,9 +23,9 @@ describe('SynthetixTradeIntegration', function () {
     await fund([signer1.address, signer2.address, signer3.address]);
   });
 
-  describe('exchanges pegged assets directly through curve', function () {
-    it(`cannot exchange between non synths`, async function () {
-      const garden = await createGarden({ reserveAsset: addresses.tokens.DAI, signer: signer1 });
+  describe('exchanges synthetic assets', function () {
+    it(`cannot exchange between non synths (except DAI & synth)`, async function () {
+      const garden = await createGarden({ reserveAsset: addresses.tokens.WETH, signer: signer1 });
 
       const strategyContract = await getStrategy({
         kind: 'buy',
@@ -39,11 +40,12 @@ describe('SynthetixTradeIntegration', function () {
     // Synthetix from WETH garden
     [
       {
-        token: addresses.tokens.WETH,
-        name: 'WETH',
+        token: addresses.tokens.DAI,
+        name: 'DAI',
         pairs: [
-          { asset: addresses.tokens.sETH, symbol: 'sETH' },
-          // { asset: addresses.tokens.sUSD, symbol: 'sUSD' },
+          // { asset: addresses.tokens.sETH, symbol: 'sETH' },
+          { asset: addresses.tokens.sUSD, symbol: 'sUSD' },
+          { asset: addresses.tokens.sBTC, symbol: 'sBTC' },
         ],
       },
     ].forEach(({ token, name, pairs }) => {
@@ -82,6 +84,7 @@ describe('SynthetixTradeIntegration', function () {
           const tokenDecimalsDelta = 10 ** (18 - tokenDecimals);
 
           const assetBalance = await assetContract.balanceOf(strategyContract.address);
+          console.log('assetBalance', ethers.utils.formatEther(assetBalance));
           const expectedBalance = tokenPriceInAsset
             .mul(tokenDecimalsDelta)
             .mul(STRATEGY_EXECUTE_MAP[token])
@@ -89,8 +92,9 @@ describe('SynthetixTradeIntegration', function () {
             .div(assetDecimalsDelta);
           // 5% slippage. Doesn't matter we just want to check that the trade can execute
           // univ3 doesn't have right prices for some of these
-          expect(expectedBalance).to.be.closeTo(assetBalance, assetBalance.div(20));
+          expect(assetBalance).to.be.closeTo(expectedBalance, expectedBalance.div(20));
           console.log('before finalize');
+          await increaseTime(ONE_DAY_IN_SECONDS);
           await finalizeStrategy(strategyContract, 0);
           const assetBalanceAfter = await assetContract.balanceOf(strategyContract.address);
           expect(assetBalanceAfter).to.be.lt(1000000); // Almost 0

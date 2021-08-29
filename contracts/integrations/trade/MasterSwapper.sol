@@ -310,13 +310,10 @@ contract MasterSwapper is BaseIntegration, ReentrancyGuard, ITradeIntegration {
         if (curvePool == address(0) && _toToken == WETH) {
             curvePool = curveRegistry.find_pool_for_coins(_fromToken, ETH_ADD_CURVE);
         }
-        console.log('pool', curvePool, _fromToken, _toToken);
         if (curvePool != address(0)) {
             try ITradeIntegration(curve).trade(_strategy, _fromToken, _sendTokenAmount, _toToken, _minReceiveQuantity) {
-                console.log('eoo', ERC20(_toToken).balanceOf(_strategy));
                 return true;
             } catch {
-                console.log('bad');
                 return false;
             }
         }

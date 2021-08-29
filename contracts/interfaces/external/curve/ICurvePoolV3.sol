@@ -14,6 +14,8 @@ interface ICurvePoolV3 {
 
     function underlying_coins(uint256 arg0) external view returns (address out);
 
+    function get_dy(int128 i, int128 j, uint256 amount) external view returns (uint256);
+
     function balances(uint256 arg0) external view returns (uint256 out);
 
     function lp_token() external view returns (address out);
