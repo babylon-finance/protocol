@@ -101,7 +101,7 @@ describe('MasterSwapper', function () {
             garden: garden,
             specificParams: [to, 0],
           });
-          console.log('execute');
+          let assetBalance = await assetContract.balanceOf(strategyContract.address);
           await executeStrategy(strategyContract);
 
           const tokenPriceInAsset = await priceOracle.connect(owner).getPrice(token, to);
@@ -112,7 +112,7 @@ describe('MasterSwapper', function () {
           const tokenDecimals = await tokenContract.decimals();
           const tokenDecimalsDelta = 10 ** (18 - tokenDecimals);
 
-          const assetBalance = await assetContract.balanceOf(strategyContract.address);
+          assetBalance = await assetContract.balanceOf(strategyContract.address);
           const expectedBalance = tokenPriceInAsset
             .mul(tokenDecimalsDelta)
             .mul(STRATEGY_EXECUTE_MAP[token])
@@ -120,9 +120,19 @@ describe('MasterSwapper', function () {
             .div(assetDecimalsDelta);
           // 5% slippage. Doesn't matter we just want to check that the trade can execute
           // univ3 doesn't have right prices for some of these
-          expect(expectedBalance).to.be.closeTo(assetBalance, assetBalance.div(20));
+          console.log('assetBalance', ethers.utils.formatEther(assetBalance));
+          console.log(
+            'strategyBalance',
+            ethers.utils.formatEther(await tokenContract.balanceOf(strategyContract.address)),
+          );
+          expect(assetBalance).to.be.closeTo(expectedBalance, expectedBalance.div(20));
           console.log('FINALiZE');
           await finalizeStrategy(strategyContract, 0);
+          console.log('assetBalance', ethers.utils.formatEther(assetBalance));
+          console.log(
+            'strategyBalance',
+            ethers.utils.formatEther(await tokenContract.balanceOf(strategyContract.address)),
+          );
           const assetBalanceAfter = await assetContract.balanceOf(strategyContract.address);
           expect(assetBalanceAfter).to.be.lt(1000000); // Almost 0
         });

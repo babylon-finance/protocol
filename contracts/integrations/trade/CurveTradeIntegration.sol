@@ -191,6 +191,10 @@ contract CurveTradeIntegration is TradeIntegration {
         return (address(0), 0, bytes(''));
     }
 
+    function _getPostActionToken(address _receiveToken) internal view override returns (address) {
+      return ETH_ADD_CURVE;
+    }
+
     /* ============ Private Functions ============ */
 
     function _getPoolAndTokens(address _sendToken, address _receiveToken)

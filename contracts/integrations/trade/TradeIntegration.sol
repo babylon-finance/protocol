@@ -30,6 +30,8 @@ import {IGarden} from '../../interfaces/IGarden.sol';
 import {IBabController} from '../../interfaces/IBabController.sol';
 import {BaseIntegration} from '../BaseIntegration.sol';
 import {LowGasSafeMath} from '../../lib/LowGasSafeMath.sol';
+import {PreciseUnitMath} from '../../lib/PreciseUnitMath.sol';
+
 
 /**
  * @title TradeIntegration
@@ -40,6 +42,7 @@ import {LowGasSafeMath} from '../../lib/LowGasSafeMath.sol';
 abstract contract TradeIntegration is BaseIntegration, ReentrancyGuard, ITradeIntegration {
     using LowGasSafeMath for uint256;
     using SafeCast for uint256;
+    using PreciseUnitMath for uint256;
 
     /* ============ Struct ============ */
 
@@ -223,7 +226,9 @@ abstract contract TradeIntegration is BaseIntegration, ReentrancyGuard, ITradeIn
             ERC20(_tradeInfo.receiveToken).balanceOf(address(_tradeInfo.strategy)).sub(
                 _tradeInfo.preTradeReceiveTokenBalance
             );
+        uint spentAmount = _tradeInfo.preTradeSendTokenBalance.sub(ERC20(_tradeInfo.sendToken).balanceOf(address(_tradeInfo.strategy)));
         require(exchangedQuantity >= _tradeInfo.totalMinReceiveQuantity, 'Slippage greater than allowed');
+        require(spentAmount.add(spentAmount.preciseMul(5e16)) >= _tradeInfo.totalSendQuantity, 'Not all trade amount spent, partial liquidity');
         return exchangedQuantity;
     }
 
