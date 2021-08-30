@@ -506,17 +506,22 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
      *  When strategy ends puts saves returns, rewards and marks strategy as
      *  finalized.
      *
-     * @param _rewards                       Amount of Reserve Asset to set aside forever
-     * @param _returns                       Profits or losses that the strategy received
+     * @param _rewards        Amount of Reserve Asset to set aside forever
+     * @param _returns        Profits or losses that the strategy received
+     * @param _burningAmount  The amount of strategist stake to burn in case of
+     *                        strategy losses.
      */
-    function finalizeStrategy(uint256 _rewards, int256 _returns, uint256
-                              _burningAmount) external override {
+    function finalizeStrategy(
+        uint256 _rewards,
+        int256 _returns,
+        uint256 _burningAmount
+    ) external override {
         _onlyUnpaused();
         _onlyStrategy();
 
         // burn statgist stake
-        if(_burningAmount > 0) {
-          _burn(IStrategy(msg.sender).strategist(), _burningAmount);
+        if (_burningAmount > 0) {
+            _burn(IStrategy(msg.sender).strategist(), _burningAmount);
         }
 
         reserveAssetRewardsSetAside = reserveAssetRewardsSetAside.add(_rewards);

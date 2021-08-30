@@ -861,10 +861,9 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
             strategyReturns = strategyReturns.sub(protocolProfits.toInt256());
         } else {
             // Returns were negative so let's burn the strategiest stake
-            burningAmount =
-                (stake.sub(capitalReturned.preciseDiv(capitalAllocated).preciseMul(stake))).multiplyDecimal(
-                    STAKE_QUADRATIC_PENALTY_FOR_LOSSES
-                );
+            burningAmount = (stake.sub(capitalReturned.preciseDiv(capitalAllocated).preciseMul(stake))).multiplyDecimal(
+                STAKE_QUADRATIC_PENALTY_FOR_LOSSES
+            );
         }
         // Return the balance back to the garden
         IERC20(reserveAsset).safeTransfer(address(garden), capitalReturned.sub(protocolProfits));

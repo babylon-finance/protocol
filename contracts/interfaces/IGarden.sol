@@ -114,8 +114,11 @@ interface IGarden {
 
     function strategyMapping(address _strategy) external view returns (bool);
 
-    function finalizeStrategy(uint256 _profits, int256 _returns, uint256
-                              _burningAmount) external;
+    function finalizeStrategy(
+        uint256 _profits,
+        int256 _returns,
+        uint256 _burningAmount
+    ) external;
 
     function allocateCapitalToStrategy(uint256 _capital) external;
 

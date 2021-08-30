@@ -101,5 +101,4 @@ interface IRewardsDistributor {
         bool _depositOrWithdraw,
         uint256 _pid
     ) external;
-
 }
