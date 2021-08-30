@@ -105,7 +105,7 @@ describe('Strategy', function () {
           params: ZEROMAXCAP_STRATEGY_PARAMS,
           specificParams: [addresses.tokens.USDT, 0],
         }),
-      ).to.be.revertedWith('BAB#098');
+      ).to.be.revertedWith('BAB#099');
     });
   });
 
