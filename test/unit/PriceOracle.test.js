@@ -18,10 +18,16 @@ const tokens = [
     value: from('1000493000000000000'),
   },
   {
-    name: 'WETH->USDT',
+    name: 'WETH->TUSD',
     tokenIn: addresses.tokens.WETH,
-    tokenOut: addresses.tokens.USDT,
-    value: parse('1919.641321495927553985'),
+    tokenOut: addresses.tokens.TUSD,
+    value: parse('2000.641321495927553985'),
+  },
+  {
+    name: 'TUSD->WETH',
+    tokenIn: addresses.tokens.TUSD,
+    tokenOut: addresses.tokens.WETH,
+    value: parse('0.000499455855342484'),
   },
   {
     name: 'YFI->DAI',
@@ -33,7 +39,7 @@ const tokens = [
     name: 'SNX->USDT',
     tokenIn: addresses.tokens.SNX,
     tokenOut: addresses.tokens.USDT,
-    value: from('11105964116935941198'),
+    value: from('11336997603037515847'),
   },
   {
     name: 'WBTC->DAI',
@@ -51,7 +57,7 @@ const tokens = [
     name: 'YFI',
     tokenIn: addresses.tokens.WETH,
     tokenOut: addresses.tokens.YFI,
-    value: parse('0.062816170908226538'),
+    value: parse('0.059561311075243854'),
   },
   {
     name: 'WBTC',

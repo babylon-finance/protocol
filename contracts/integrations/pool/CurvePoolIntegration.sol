@@ -49,7 +49,9 @@ contract CurvePoolIntegration is PoolIntegration {
     ICurveAddressProvider internal constant curveAddressProvider =
         ICurveAddressProvider(0x0000000022D53366457F9d5E68Ec105046FC4383);
     /* ============ State Variables ============ */
-    // Mapping of asset addresses to lp tokens
+
+    // Mapping of pools to deposit contract
+    mapping(address => address) public poolToDeposit;
 
     // Whether to deposit using the underlying coins
     mapping(address => bool) public usesUnderlying;
@@ -69,11 +71,19 @@ contract CurvePoolIntegration is PoolIntegration {
         usesUnderlying[0xDeBF20617708857ebe4F679508E7b7863a8A8EeE] = true; // aave
         usesUnderlying[0xA2B47E3D5c44877cca798226B7B8118F9BFb7A56] = true; // compound
         usesUnderlying[0x52EA46506B9CC5Ef470C5bf89f17Dc28bB35D85C] = true; // usdt
-        usesUnderlying[0xb6c057591E073249F2D9D88Ba59a46CFC9B59EdB] = true; // busd
+        usesUnderlying[0x06364f10B501e868329afBc005b3492902d6C763] = true; // PAX
         usesUnderlying[0x2dded6Da1BF5DBdF597C45fcFaa3194e53EcfeAF] = true; // ironbank
-        usesUnderlying[0xFCBa3E75865d2d561BE8D220616520c171F12851] = true; // susd
-        usesUnderlying[0xbBC81d23Ea2c3ec7e56D39296F0cbB648873a5d3] = true; // y
+        usesUnderlying[0x79a8C46DeA5aDa233ABaFFD40F3A0A2B1e5A4F27] = true; // busd
+        usesUnderlying[0x45F783CCE6B7FF23B2ab2D70e416cdb7D6055f51] = true; // y
+        usesUnderlying[0xA5407eAE9Ba41422680e2e00537571bcC53efBfD] = true; // susd
         usesUnderlying[0x8925D9d9B4569D737a48499DeF3f67BaA5a144b9] = true; // yv2
+
+        poolToDeposit[0xA2B47E3D5c44877cca798226B7B8118F9BFb7A56] = 0xeB21209ae4C2c9FF2a86ACA31E123764A3B6Bc06; // compound
+        poolToDeposit[0x52EA46506B9CC5Ef470C5bf89f17Dc28bB35D85C] = 0xac795D2c97e60DF6a99ff1c814727302fD747a80; // usdt
+        poolToDeposit[0x06364f10B501e868329afBc005b3492902d6C763] = 0xA50cCc70b6a011CffDdf45057E39679379187287; // pax
+        poolToDeposit[0x79a8C46DeA5aDa233ABaFFD40F3A0A2B1e5A4F27] = 0xb6c057591E073249F2D9D88Ba59a46CFC9B59EdB; // busd
+        poolToDeposit[0x45F783CCE6B7FF23B2ab2D70e416cdb7D6055f51] = 0xbBC81d23Ea2c3ec7e56D39296F0cbB648873a5d3; // y
+        poolToDeposit[0xA5407eAE9Ba41422680e2e00537571bcC53efBfD] = 0xFCBa3E75865d2d561BE8D220616520c171F12851; // susd
 
         supportsUnderlyingParam[0xDeBF20617708857ebe4F679508E7b7863a8A8EeE] = true; // aave
         supportsUnderlyingParam[0x2dded6Da1BF5DBdF597C45fcFaa3194e53EcfeAF] = true; // ironbank
@@ -151,6 +161,9 @@ contract CurvePoolIntegration is PoolIntegration {
 
     function _getSpender(bytes calldata _pool) internal view override returns (address) {
         address poolAddress = BytesLib.decodeOpDataAddress(_pool);
+        if (poolToDeposit[poolAddress] != address(0)) {
+          poolAddress = poolToDeposit[poolAddress];
+        }
         return poolAddress;
     }
 
@@ -200,6 +213,11 @@ contract CurvePoolIntegration is PoolIntegration {
             // get the value of eth
             value = _maxAmountsIn[2];
         }
+        // If we need a deposit contract to deposit underlying, switch
+        if (poolToDeposit[poolAddress] != address(0)) {
+          poolAddress = poolToDeposit[poolAddress];
+        }
+        console.log('value', value, poolAddress);
         return (poolAddress, value, methodData);
     }
 
@@ -239,6 +257,9 @@ contract CurvePoolIntegration is PoolIntegration {
         require(_minAmountsOut.length > 1, 'Has to provide _minAmountsOut');
         // Encode method data for Garden to invoke
         bytes memory methodData = _getRemoveLiquidityMethodData(poolAddress, poolCoins, _minAmountsOut, _poolTokensIn);
+        if (poolToDeposit[poolAddress] != address(0)) {
+          poolAddress = poolToDeposit[poolAddress];
+        }
         return (poolAddress, 0, methodData);
     }
 

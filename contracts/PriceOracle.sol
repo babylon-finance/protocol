@@ -425,7 +425,7 @@ contract PriceOracle is Ownable, IPriceOracle {
 
     /* ============ Internal Functions ============ */
 
-    function _getUNIV3Price(address _tokenIn, address _tokenOut) internal view returns (uint256) {
+    function _getUNIV3Price(address _tokenIn, address _tokenOut, bool _throw) internal view returns (uint256) {
         bool found;
         uint256 price;
         int24 tick;
@@ -437,6 +437,9 @@ contract PriceOracle is Ownable, IPriceOracle {
         }
         if (!found) {
             (found, pool, tick) = checkPool(_tokenIn, _tokenOut, FEE_HIGH);
+        }
+        if (!found && !_throw) {
+          return 0;
         }
         // No valid price
         require(found, 'Price not found');
@@ -532,5 +535,15 @@ contract PriceOracle is Ownable, IPriceOracle {
             return price;
         }
         return 0;
+    }
+
+    function _checkPairThroughCurve(address _tokenIn, address _tokenOut) private view returns (uint256) {
+      ICurveRegistry curveRegistry = ICurveRegistry(curveAddressProvider.get_registry());
+      address curvePool = curveRegistry.find_pool_for_coins(_tokenIn, _tokenOut);
+      if (curvePool != address(0)) {
+          uint256 price = getPriceThroughCurve(curvePool, _tokenIn, _tokenOut);
+          return price;
+      }
+      return 0;
     }
 }
