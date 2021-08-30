@@ -12,11 +12,19 @@ const {
   deposit,
   DEFAULT_STRATEGY_PARAMS,
 } = require('fixtures/StrategyHelper.js');
-const { increaseTime } = require('utils/test-helpers');
+const { increaseTime, eth } = require('utils/test-helpers');
 
 const addresses = require('lib/addresses');
 const { ONE_DAY_IN_SECONDS, ONE_ETH, ADDRESS_ZERO } = require('lib/constants.js');
 const { setupTests } = require('fixtures/GardenFixture');
+const { getStrategy } = require('../../fixtures/StrategyHelper');
+const ZEROMAXCAP_STRATEGY_PARAMS = [
+  eth(0), // _maxCapitalRequested == 0
+  eth(0.1), // _stake
+  ONE_DAY_IN_SECONDS * 30, // _strategyDuration
+  eth(0.05), // 5% _expectedReturn,
+  eth(0.1), // 10% _maxAllocationPercentage
+];
 
 describe('Strategy', function () {
   let strategyDataset;
@@ -89,6 +97,15 @@ describe('Strategy', function () {
     it('should deploy contract successfully', async function () {
       const deployed = await strategyDataset.deployed();
       expect(!!deployed).to.equal(true);
+    });
+    it('should NOT initialize a strategy with maxcapitalrequested of 0', async function () {
+      await expect(
+        getStrategy({
+          state: 'deposit',
+          params: ZEROMAXCAP_STRATEGY_PARAMS,
+          specificParams: [addresses.tokens.USDT, 0],
+        }),
+      ).to.be.revertedWith('BAB#099');
     });
   });
 

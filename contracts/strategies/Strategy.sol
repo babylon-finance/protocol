@@ -239,6 +239,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
             Errors.DURATION_MUST_BE_IN_RANGE
         );
         _require(_maxAllocationPercentage < 1e18, Errors.MAX_STRATEGY_ALLOCATION_PERCENTAGE);
+        _require(_maxCapitalRequested > 0, Errors.ZERO_CAPITAL_REQUESTED);
         maxAllocationPercentage = _maxAllocationPercentage;
         strategist = _strategist;
         enteredAt = block.timestamp;
