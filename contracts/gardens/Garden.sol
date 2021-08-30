@@ -509,12 +509,15 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
      * @param _rewards                       Amount of Reserve Asset to set aside forever
      * @param _returns                       Profits or losses that the strategy received
      */
-    function finalizeStrategy(uint256 _rewards, int256 _returns) external override {
+    function finalizeStrategy(uint256 _rewards, int256 _returns, uint256
+                              _burningAmount) external override {
         _onlyUnpaused();
-        _require(
-            (strategyMapping[msg.sender] && address(IStrategy(msg.sender).garden()) == address(this)),
-            Errors.ONLY_STRATEGY
-        );
+        _onlyStrategy();
+
+        // burn statgist stake
+        if(_burningAmount > 0) {
+          _burn(IStrategy(msg.sender).strategist(), _burningAmount);
+        }
 
         reserveAssetRewardsSetAside = reserveAssetRewardsSetAside.add(_rewards);
 
@@ -651,20 +654,6 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         _onlyStrategy();
         strategies = strategies.remove(_strategy);
         strategyMapping[_strategy] = false;
-    }
-
-    /*
-     * Burns the stake of the strategist of a given strategy
-     * @param _strategy      Strategy
-     */
-    function burnStrategistStake(address _strategist, uint256 _amount) external override {
-        // TODO: Move to finalizeStrategy method
-        _onlyStrategy();
-        if (_amount >= balanceOf(_strategist)) {
-            // Avoid underflow condition
-            _amount = balanceOf(_strategist);
-        }
-        _burn(_strategist, _amount);
     }
 
     /*
