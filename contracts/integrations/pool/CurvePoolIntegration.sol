@@ -217,7 +217,6 @@ contract CurvePoolIntegration is PoolIntegration {
         if (poolToDeposit[poolAddress] != address(0)) {
           poolAddress = poolToDeposit[poolAddress];
         }
-        console.log('value', value, poolAddress);
         return (poolAddress, value, methodData);
     }
 
