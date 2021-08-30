@@ -82,13 +82,17 @@ contract SynthetixTradeIntegration is TradeIntegration {
             bytes memory
         )
     {
-        (address sendTokenImpl, address receiveTokenImpl, uint256 realSendAmount) = _getTokens(_sendToken, _receiveToken, _sendQuantity, _strategy);
+        (address sendTokenImpl, address receiveTokenImpl, uint256 realSendAmount) =
+            _getTokens(_sendToken, _receiveToken, _sendQuantity, _strategy);
         require(sendTokenImpl != address(0) && receiveTokenImpl != address(0), 'Syntetix needs synth or DAI or USDC');
         if (sendTokenImpl == receiveTokenImpl) {
-          return (address(0), 0, bytes(''));
+            return (address(0), 0, bytes(''));
         }
         console.log('realSendAmount', realSendAmount, sendTokenImpl, receiveTokenImpl);
-        console.log(uint(ISnxSynth(sendTokenImpl).currencyKey()), uint(ISnxSynth(receiveTokenImpl).currencyKey()));
+        console.log(
+            uint256(ISnxSynth(sendTokenImpl).currencyKey()),
+            uint256(ISnxSynth(receiveTokenImpl).currencyKey())
+        );
         bytes memory methodData =
             abi.encodeWithSignature(
                 'exchange(bytes32,uint256,bytes32)',
@@ -125,14 +129,14 @@ contract SynthetixTradeIntegration is TradeIntegration {
         )
     {
         if (_sendToken == DAI) {
-          bytes memory methodData =
-              abi.encodeWithSignature('exchange(int128,int128,uint256,uint256)', 0, 3, _sendQuantity, 1);
-          return (curvesUSD, 0, methodData);
+            bytes memory methodData =
+                abi.encodeWithSignature('exchange(int128,int128,uint256,uint256)', 0, 3, _sendQuantity, 1);
+            return (curvesUSD, 0, methodData);
         }
         if (_sendToken == USDC) {
-          bytes memory methodData =
-              abi.encodeWithSignature('exchange(int128,int128,uint256,uint256)', 0, 1, _sendQuantity, 1);
-          return (curvesUSD, 0, methodData);
+            bytes memory methodData =
+                abi.encodeWithSignature('exchange(int128,int128,uint256,uint256)', 0, 1, _sendQuantity, 1);
+            return (curvesUSD, 0, methodData);
         }
         return (address(0), 0, bytes(''));
     }
@@ -164,14 +168,14 @@ contract SynthetixTradeIntegration is TradeIntegration {
     {
         // Burn sETH to WETH if needed
         if (_receiveToken == DAI) {
-          bytes memory methodData =
-              abi.encodeWithSignature('exchange(int128,int128,uint256,uint256)', 3, 0, _sendQuantity, 1);
-          return (curvesUSD, 0, methodData);
+            bytes memory methodData =
+                abi.encodeWithSignature('exchange(int128,int128,uint256,uint256)', 3, 0, _sendQuantity, 1);
+            return (curvesUSD, 0, methodData);
         }
         if (_receiveToken == USDC) {
-          bytes memory methodData =
-              abi.encodeWithSignature('exchange(int128,int128,uint256,uint256)', 1, 0, _sendQuantity, 1);
-          return (curvesUSD, 0, methodData);
+            bytes memory methodData =
+                abi.encodeWithSignature('exchange(int128,int128,uint256,uint256)', 1, 0, _sendQuantity, 1);
+            return (curvesUSD, 0, methodData);
         }
         return (address(0), 0, bytes(''));
     }
@@ -207,10 +211,10 @@ contract SynthetixTradeIntegration is TradeIntegration {
     }
 
     function _getPostActionToken(address _receiveToken) internal view override returns (address) {
-      if (_receiveToken == DAI || _receiveToken == USDC) {
-          return sUSD;
-      }
-      return _receiveToken;
+        if (_receiveToken == DAI || _receiveToken == USDC) {
+            return sUSD;
+        }
+        return _receiveToken;
     }
 
     /**
@@ -228,7 +232,12 @@ contract SynthetixTradeIntegration is TradeIntegration {
 
     /* ============ Private Functions ============ */
 
-    function _getTokens(address _sendToken, address _receiveToken, uint256 _sendQuantity, address _strategy)
+    function _getTokens(
+        address _sendToken,
+        address _receiveToken,
+        uint256 _sendQuantity,
+        address _strategy
+    )
         private
         view
         returns (
@@ -246,15 +255,15 @@ contract SynthetixTradeIntegration is TradeIntegration {
         }
         address sendTokenImpl;
         address receiveTokenImpl;
-        try ISnxProxy(_sendToken).target() returns(address impl) {
-          sendTokenImpl = impl;
+        try ISnxProxy(_sendToken).target() returns (address impl) {
+            sendTokenImpl = impl;
         } catch {
-          sendTokenImpl = address(0);
+            sendTokenImpl = address(0);
         }
-        try ISnxProxy(_receiveToken).target() returns(address impl) {
-          receiveTokenImpl = impl;
+        try ISnxProxy(_receiveToken).target() returns (address impl) {
+            receiveTokenImpl = impl;
         } catch {
-          receiveTokenImpl = address(0);
+            receiveTokenImpl = address(0);
         }
         console.log('addresses', sendTokenImpl, receiveTokenImpl);
         return (sendTokenImpl, receiveTokenImpl, ERC20(_sendToken).balanceOf(_strategy));

@@ -16,7 +16,6 @@
     SPDX-License-Identifier: Apache License, Version 2.0
 */
 
-
 pragma solidity 0.7.6;
 
 import 'hardhat/console.sol';
@@ -31,7 +30,6 @@ import {IBabController} from '../../interfaces/IBabController.sol';
 import {BaseIntegration} from '../BaseIntegration.sol';
 import {LowGasSafeMath} from '../../lib/LowGasSafeMath.sol';
 import {PreciseUnitMath} from '../../lib/PreciseUnitMath.sol';
-
 
 /**
  * @title TradeIntegration
@@ -116,16 +114,24 @@ abstract contract TradeIntegration is BaseIntegration, ReentrancyGuard, ITradeIn
         if (targetAddressP != address(0)) {
             // Invoke protocol specific call
             if (_getPreApprovalSpender(targetAddressP) != address(0)) {
-              tradeInfo.strategy.invokeApprove(_getPreApprovalSpender(targetAddressP), tradeInfo.sendToken, tradeInfo.totalSendQuantity);
+                tradeInfo.strategy.invokeApprove(
+                    _getPreApprovalSpender(targetAddressP),
+                    tradeInfo.sendToken,
+                    tradeInfo.totalSendQuantity
+                );
             }
             tradeInfo.strategy.invokeFromIntegration(targetAddressP, callValueP, methodDataP);
         }
         (address targetExchange, uint256 callValue, bytes memory methodData) =
             _getTradeCallData(_strategy, tradeInfo.sendToken, tradeInfo.totalSendQuantity, tradeInfo.receiveToken);
         if (targetExchange != address(0)) {
-          // Get spender address from exchange adapter and invoke approve for exact amount on sendToken
-          tradeInfo.strategy.invokeApprove(_getSpender(targetExchange), tradeInfo.sendToken, tradeInfo.totalSendQuantity);
-          tradeInfo.strategy.invokeFromIntegration(targetExchange, callValue, methodData);
+            // Get spender address from exchange adapter and invoke approve for exact amount on sendToken
+            tradeInfo.strategy.invokeApprove(
+                _getSpender(targetExchange),
+                tradeInfo.sendToken,
+                tradeInfo.totalSendQuantity
+            );
+            tradeInfo.strategy.invokeFromIntegration(targetExchange, callValue, methodData);
         }
         // Post actions
         uint256 receiveTokenAmount = _getTokenOrETHBalance(address(_strategy), _getPostActionToken(_receiveToken));
@@ -137,7 +143,11 @@ abstract contract TradeIntegration is BaseIntegration, ReentrancyGuard, ITradeIn
         if (targetAddressP != address(0)) {
             // Invoke protocol specific call
             if (_getPostApprovalSpender(targetAddressP) != address(0)) {
-              tradeInfo.strategy.invokeApprove(_getPostApprovalSpender(targetAddressP), _getPostActionToken(_receiveToken), receiveTokenAmount);
+                tradeInfo.strategy.invokeApprove(
+                    _getPostApprovalSpender(targetAddressP),
+                    _getPostActionToken(_receiveToken),
+                    receiveTokenAmount
+                );
             }
             // Invoke protocol specific call
             tradeInfo.strategy.invokeFromIntegration(targetAddressP, callValueP, methodDataP);
@@ -226,9 +236,15 @@ abstract contract TradeIntegration is BaseIntegration, ReentrancyGuard, ITradeIn
             ERC20(_tradeInfo.receiveToken).balanceOf(address(_tradeInfo.strategy)).sub(
                 _tradeInfo.preTradeReceiveTokenBalance
             );
-        uint spentAmount = _tradeInfo.preTradeSendTokenBalance.sub(ERC20(_tradeInfo.sendToken).balanceOf(address(_tradeInfo.strategy)));
+        uint256 spentAmount =
+            _tradeInfo.preTradeSendTokenBalance.sub(
+                ERC20(_tradeInfo.sendToken).balanceOf(address(_tradeInfo.strategy))
+            );
         require(exchangedQuantity >= _tradeInfo.totalMinReceiveQuantity, 'Slippage greater than allowed');
-        require(spentAmount.add(spentAmount.preciseMul(5e16)) >= _tradeInfo.totalSendQuantity, 'Not all trade amount spent, partial liquidity');
+        require(
+            spentAmount.add(spentAmount.preciseMul(5e16)) >= _tradeInfo.totalSendQuantity,
+            'Not all trade amount spent, partial liquidity'
+        );
         return exchangedQuantity;
     }
 
@@ -342,7 +358,7 @@ abstract contract TradeIntegration is BaseIntegration, ReentrancyGuard, ITradeIn
      * @return address         Address of the contract to approve tokens to
      */
     function _getPreApprovalSpender(address _swapTarget) internal view virtual returns (address) {
-      return address(0);
+        return address(0);
     }
 
     /**
@@ -352,10 +368,10 @@ abstract contract TradeIntegration is BaseIntegration, ReentrancyGuard, ITradeIn
      * @return address         Address of the contract to approve tokens to
      */
     function _getPostApprovalSpender(address _swapTarget) internal view virtual returns (address) {
-      return address(0);
+        return address(0);
     }
 
     function _getPostActionToken(address _receiveToken) internal view virtual returns (address) {
-      return _receiveToken;
+        return _receiveToken;
     }
 }

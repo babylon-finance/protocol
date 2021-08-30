@@ -134,9 +134,11 @@ contract MasterSwapper is BaseIntegration, ReentrancyGuard, ITradeIntegration {
         address _sendTokenSynth = _getSynth(_sendToken);
         address _receiveTokenSynth = _getSynth(_receiveToken);
         console.log('synthetix');
-        if ((_sendTokenSynth != address(0) && _receiveTokenSynth != address(0)) ||
+        if (
+            (_sendTokenSynth != address(0) && _receiveTokenSynth != address(0)) ||
             (_sendTokenSynth != address(0) && (_receiveToken == DAI || _receiveToken == USDC)) ||
-            (_receiveToken != address(0) && (_sendTokenSynth == DAI || _sendTokenSynth == USDC))) {
+            (_receiveToken != address(0) && (_sendTokenSynth == DAI || _sendTokenSynth == USDC))
+        ) {
             try
                 ITradeIntegration(synthetix).trade(
                     _strategy,
@@ -146,9 +148,8 @@ contract MasterSwapper is BaseIntegration, ReentrancyGuard, ITradeIntegration {
                     _minReceiveQuantity
                 )
             {
-              return;
-            } catch {
-            }
+                return;
+            } catch {}
         }
         console.log('before curve');
         // Curve Direct
@@ -158,67 +159,71 @@ contract MasterSwapper is BaseIntegration, ReentrancyGuard, ITradeIntegration {
         console.log('after curve');
         // Abstract Synths out
         if (_sendTokenSynth != address(0)) {
-          // Trade to DAI through sUSD
-          try
-              ITradeIntegration(synthetix).trade(
-                  _strategy,
-                  _sendToken,
-                  _sendQuantity,
-                  DAI,
-                  1
-              )
-          {
-            // Change DAI to receive token
-            // trade(_strategy, DAI, _getTokenOrETHBalance(_strategy, DAI), _receiveToken, _minReceiveQuantity);
-            return;
-          } catch {
-          }
+            // Trade to DAI through sUSD
+            try ITradeIntegration(synthetix).trade(_strategy, _sendToken, _sendQuantity, DAI, 1) {
+                // Change DAI to receive token
+                // trade(_strategy, DAI, _getTokenOrETHBalance(_strategy, DAI), _receiveToken, _minReceiveQuantity);
+                return;
+            } catch {}
         }
         // Trade to DAI and then do DAI to synh
         if (_receiveTokenSynth != address(0)) {
-          // trade(_strategy, _sendToken, _sendQuantity, DAI, 1);
-          try
-              ITradeIntegration(synthetix).trade(
-                  _strategy,
-                  DAI,
-                  _getTokenOrETHBalance(_strategy, DAI),
-                  _receiveToken,
-                  _minReceiveQuantity
-              )
-          {
-            return;
-          } catch {
-            require(false, "Failed midway in out synth");
-          }
+            // trade(_strategy, _sendToken, _sendQuantity, DAI, 1);
+            try
+                ITradeIntegration(synthetix).trade(
+                    _strategy,
+                    DAI,
+                    _getTokenOrETHBalance(_strategy, DAI),
+                    _receiveToken,
+                    _minReceiveQuantity
+                )
+            {
+                return;
+            } catch {
+                require(false, 'Failed midway in out synth');
+            }
         }
         // Go through UNIv3 first
         console.log('uni');
-        try
-            ITradeIntegration(univ3).trade(
-                _strategy,
-                _sendToken,
-                _sendQuantity,
-                _receiveToken,
-                _minReceiveQuantity
-            )
-        {
-          console.log('uni worked');
+        try ITradeIntegration(univ3).trade(_strategy, _sendToken, _sendQuantity, _receiveToken, _minReceiveQuantity) {
+            console.log('uni worked');
             return;
-        } catch {
-        }
+        } catch {}
         console.log('curve reserve');
         // Try Curve through reserve assets
-        bool found = _checkCurveRoutesThroughReserve(WETH, _strategy, _sendToken, _receiveToken, _sendQuantity, _minReceiveQuantity);
+        bool found =
+            _checkCurveRoutesThroughReserve(
+                WETH,
+                _strategy,
+                _sendToken,
+                _receiveToken,
+                _sendQuantity,
+                _minReceiveQuantity
+            );
         if (found) {
-          return;
+            return;
         }
         console.log('dai reserve path');
-        found = _checkCurveRoutesThroughReserve(DAI, _strategy, _sendToken, _receiveToken, _sendQuantity, _minReceiveQuantity);
+        found = _checkCurveRoutesThroughReserve(
+            DAI,
+            _strategy,
+            _sendToken,
+            _receiveToken,
+            _sendQuantity,
+            _minReceiveQuantity
+        );
         if (found) {
-          return;
+            return;
         }
         console.log('wbtc reserve path');
-        found = _checkCurveRoutesThroughReserve(WBTC, _strategy, _sendToken, _receiveToken, _sendQuantity, _minReceiveQuantity);
+        found = _checkCurveRoutesThroughReserve(
+            WBTC,
+            _strategy,
+            _sendToken,
+            _receiveToken,
+            _sendQuantity,
+            _minReceiveQuantity
+        );
         console.log('after wbtc');
         if (found) {
             return;
@@ -231,11 +236,18 @@ contract MasterSwapper is BaseIntegration, ReentrancyGuard, ITradeIntegration {
 
     /* ============ Internal Functions ============ */
 
-    function _checkCurveRoutesThroughReserve(address _reserve, address _strategy, address _sendToken, address _receiveToken, uint256 _sendQuantity, uint256 _minReceiveQuantity) private returns (bool) {
+    function _checkCurveRoutesThroughReserve(
+        address _reserve,
+        address _strategy,
+        address _sendToken,
+        address _receiveToken,
+        uint256 _sendQuantity,
+        uint256 _minReceiveQuantity
+    ) private returns (bool) {
         uint256 reserveBalance = _getTokenOrETHBalance(_strategy, _reserve);
         bool swapped = false;
         console.log('reserve', _reserve);
-        uint diff = reserveBalance;
+        uint256 diff = reserveBalance;
         // Going through curve but switching first to reserve
         if (_sendToken != _reserve) {
             console.log('2');
@@ -255,22 +267,14 @@ contract MasterSwapper is BaseIntegration, ReentrancyGuard, ITradeIntegration {
                 console.log('swapped');
                 swapped = true;
             } catch {
-              console.log('uni failed', _sendToken, _reserve);
+                console.log('uni failed', _sendToken, _reserve);
             }
         }
         console.log('before diff');
         console.log('same', _sendToken, _reserve, swapped);
         if (_sendToken == _reserve || swapped) {
             console.log('eooo', diff);
-            if (
-                _curveSwap(
-                    _strategy,
-                    _reserve,
-                    _receiveToken,
-                    diff,
-                    _minReceiveQuantity
-                )
-            ) {
+            if (_curveSwap(_strategy, _reserve, _receiveToken, diff, _minReceiveQuantity)) {
                 return true;
             }
             if (swapped) {
@@ -291,15 +295,7 @@ contract MasterSwapper is BaseIntegration, ReentrancyGuard, ITradeIntegration {
         }
         if (_sendToken == _reserve || swapped) {
             console.log('balance', diff);
-            try
-                ITradeIntegration(univ3).trade(
-                    _strategy,
-                    _reserve,
-                    diff,
-                    _receiveToken,
-                    _minReceiveQuantity
-                )
-            {
+            try ITradeIntegration(univ3).trade(_strategy, _reserve, diff, _receiveToken, _minReceiveQuantity) {
                 return true;
             } catch {
                 if (swapped) {
