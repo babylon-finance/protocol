@@ -364,41 +364,53 @@ contract PriceOracle is Ownable, IPriceOracle {
         }
 
         // Direct curve pair
-        address curvePool = curveRegistry.find_pool_for_coins(_tokenIn, _tokenOut);
-        if (curvePool != address(0)) {
-            uint256 price = getPriceThroughCurve(curvePool, _tokenIn, _tokenOut);
-            if (price != 0) {
-                return price;
-            }
+        uint256 price = _checkPairThroughCurve(_tokenIn, _tokenOut);
+
+        if (price != 0) {
+            return price;
         }
 
+        uint uniPrice = 0;
         // Curve Pair through WBTC
         if (_tokenIn != WBTC && _tokenOut != WBTC) {
-            curvePool = curveRegistry.find_pool_for_coins(WBTC, _tokenOut);
-            if (curvePool != address(0)) {
-                uint256 price = getPriceThroughCurve(curvePool, WBTC, _tokenOut);
-                if (price != 0) {
-                    return _getUNIV3Price(_tokenIn, WBTC).preciseMul(price);
+            price = _checkPairThroughCurve(WBTC, _tokenOut);
+            if (price != 0) {
+              uniPrice = _getUNIV3Price(_tokenIn, WBTC, false);
+              if (uniPrice != 0) {
+                return uniPrice.preciseMul(price);
+              }
+            }
+            price = _checkPairThroughCurve(_tokenIn, WBTC);
+            if (price != 0) {
+                uniPrice = _getUNIV3Price(WBTC, _tokenOut, false);
+                if (uniPrice != 0) {
+                  return price.preciseMul(uniPrice);
                 }
             }
         }
-
         // Curve pair through DAI
         if (_tokenIn != DAI && _tokenOut != DAI) {
-            curvePool = curveRegistry.find_pool_for_coins(DAI, _tokenOut);
-            if (curvePool != address(0)) {
-                uint256 price = getPriceThroughCurve(curvePool, DAI, _tokenOut);
-                if (price != 0) {
-                    return _getUNIV3Price(_tokenIn, DAI).preciseMul(price);
+            price = _checkPairThroughCurve(DAI, _tokenOut);
+            if (price != 0) {
+                uniPrice = _getUNIV3Price(_tokenIn, DAI, false);
+                if (uniPrice != 0) {
+                  return uniPrice.preciseMul(price);
                 }
+            }
+            price = _checkPairThroughCurve(_tokenIn, DAI);
+            if (price != 0) {
+              uniPrice = _getUNIV3Price(DAI, _tokenOut, false);
+              if (uniPrice != 0) {
+                return price.preciseMul(uniPrice);
+              }
             }
         }
         // yfi tokens?
         // other paths to uni v3?
         if (_tokenIn != WETH && _tokenOut != WETH) {
-            return _getUNIV3Price(_tokenIn, WETH).preciseDiv(_getUNIV3Price(_tokenOut, WETH));
+            return _getUNIV3Price(_tokenIn, WETH, true).preciseDiv(_getUNIV3Price(_tokenOut, WETH, true));
         }
-        return _getUNIV3Price(_tokenIn, _tokenOut);
+        return _getUNIV3Price(_tokenIn, _tokenOut, true);
     }
 
     function checkPool(

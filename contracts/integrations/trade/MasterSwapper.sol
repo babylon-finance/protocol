@@ -244,13 +244,14 @@ contract MasterSwapper is BaseIntegration, ReentrancyGuard, ITradeIntegration {
         uint256 _sendQuantity,
         uint256 _minReceiveQuantity
     ) private returns (bool) {
+        ICurveRegistry curveRegistry = ICurveRegistry(curveAddressProvider.get_registry());
         uint256 reserveBalance = _getTokenOrETHBalance(_strategy, _reserve);
         bool swapped = false;
-        // console.log('reserve', _reserve);
+        console.log('reserve', _reserve);
         uint256 diff = reserveBalance;
         // Going through curve but switching first to reserve
-        if (_sendToken != _reserve) {
-            // console.log('2');
+        if (_sendToken != _reserve && curveRegistry.find_pool_for_coins(_reserve, _receiveToken) != address(0)) {
+            console.log('2');
             try
                 ITradeIntegration(univ3).trade(
                     _strategy,
