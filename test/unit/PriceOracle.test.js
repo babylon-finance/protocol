@@ -6,6 +6,18 @@ const { setupTests } = require('fixtures/GardenFixture');
 
 const tokens = [
   {
+    name: 'DAI->USDT',
+    tokenIn: addresses.tokens.DAI,
+    tokenOut: addresses.tokens.USDT,
+    value: from('1000493000000000000'),
+  },
+  {
+    name: 'WETH->USDT',
+    tokenIn: addresses.tokens.WETH,
+    tokenOut: addresses.tokens.USDT,
+    value: parse('1919.641321495927553985'),
+  },
+  {
     name: 'YFI->DAI',
     tokenIn: addresses.tokens.YFI,
     tokenOut: addresses.tokens.DAI,

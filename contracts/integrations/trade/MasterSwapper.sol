@@ -232,34 +232,36 @@ contract MasterSwapper is BaseIntegration, ReentrancyGuard, ITradeIntegration {
     /* ============ Internal Functions ============ */
 
     function _checkCurveRoutesThroughReserve(address _reserve, address _strategy, address _sendToken, address _receiveToken, uint256 _sendQuantity, uint256 _minReceiveQuantity) private returns (bool) {
-        uint256 reserveBalance = 0;
+        uint256 reserveBalance = _getTokenOrETHBalance(_strategy, _reserve);
         bool swapped = false;
         console.log('reserve', _reserve);
+        uint diff = reserveBalance;
         // Going through curve but switching first to reserve
         if (_sendToken != _reserve) {
             console.log('2');
-            reserveBalance = _getTokenOrETHBalance(_strategy, _reserve);
             try
                 ITradeIntegration(univ3).trade(
                     _strategy,
                     _sendToken,
                     _sendQuantity,
                     _reserve,
-                    1
+                    1 // TODO
                 )
             {
                 if (_reserve == _receiveToken) {
                     return true;
                 }
+                diff = _getTokenOrETHBalance(_strategy, _reserve).sub(reserveBalance);
                 console.log('swapped');
                 swapped = true;
-            } catch {}
+            } catch {
+              console.log('uni failed', _sendToken, _reserve);
+            }
         }
         console.log('before diff');
-        uint diff = _getTokenOrETHBalance(_strategy, _reserve).sub(reserveBalance);
         console.log('same', _sendToken, _reserve, swapped);
         if (_sendToken == _reserve || swapped) {
-            console.log('eooo');
+            console.log('eooo', diff);
             if (
                 _curveSwap(
                     _strategy,
