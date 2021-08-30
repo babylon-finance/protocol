@@ -63,6 +63,8 @@ contract PriceOracle is Ownable, IPriceOracle {
         ICurveAddressProvider(0x0000000022D53366457F9d5E68Ec105046FC4383);
 
     address private constant WETH = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
+    address internal constant DAI = 0x6B175474E89094C44Da98b954EedeAC495271d0F;
+    address internal constant WBTC = 0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599;
     address private constant USDC = 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48;
     IStETH private constant stETH = IStETH(0xae7ab96520DE3A18E5e111B5EaAb095312D7fE84);
     IWstETH private constant wstETH = IWstETH(0x7f39C581F595B53c5cb19bD0b3f8dA6c935E2Ca0);
@@ -289,17 +291,11 @@ contract PriceOracle is Ownable, IPriceOracle {
      * @return price                Price of the pair
      */
     function getPrice(address _tokenIn, address _tokenOut) public view override returns (uint256 price) {
-        bool found;
-        uint256 price;
-        int24 tick;
-        IUniswapV3Pool pool;
-
         // Same asset. Returns base unit
         if (_tokenIn == _tokenOut) {
             return 10**18;
         }
         uint256 exchangeRate;
-
         // Comp assets
         if (cTokenToAsset[_tokenIn] != address(0)) {
             exchangeRate = getCompoundExchangeRate(_tokenIn);
@@ -371,37 +367,38 @@ contract PriceOracle is Ownable, IPriceOracle {
         address curvePool = curveRegistry.find_pool_for_coins(_tokenIn, _tokenOut);
         if (curvePool != address(0)) {
            uint256 price = getPriceThroughCurve(curvePool, _tokenIn, _tokenOut);
-           if (price != 0 ) {
+           if (price != 0) {
              return price;
            }
         }
 
+        // Curve Pair through WBTC
+        if (_tokenIn != WBTC && _tokenOut != WBTC) {
+          curvePool = curveRegistry.find_pool_for_coins(WBTC, _tokenOut);
+          if (curvePool != address(0)) {
+            uint256 price = getPriceThroughCurve(curvePool, WBTC, _tokenOut);
+            if (price != 0) {
+              return _getUNIV3Price(_tokenIn, WBTC).preciseMul(price);
+            }
+          }
+        }
+
+        // Curve pair through DAI
+        if (_tokenIn != DAI && _tokenOut != DAI) {
+          curvePool = curveRegistry.find_pool_for_coins(DAI, _tokenOut);
+          if (curvePool != address(0)) {
+            uint256 price = getPriceThroughCurve(curvePool, DAI, _tokenOut);
+            if (price != 0) {
+              return _getUNIV3Price(_tokenIn, DAI).preciseMul(price);
+            }
+          }
+        }
         // yfi tokens?
-
+        // other paths to uni v3?
         if (_tokenIn != WETH && _tokenOut != WETH) {
-            return getPrice(_tokenIn, WETH).preciseDiv(getPrice(_tokenOut, WETH));
+            return _getUNIV3Price(_tokenIn, WETH).preciseDiv(_getUNIV3Price(_tokenOut, WETH));
         }
-        // We try the low pool first
-        (found, pool, tick) = checkPool(_tokenIn, _tokenOut, FEE_LOW);
-        if (!found) {
-            (found, pool, tick) = checkPool(_tokenIn, _tokenOut, FEE_MEDIUM);
-        }
-        if (!found) {
-            (found, pool, tick) = checkPool(_tokenIn, _tokenOut, FEE_HIGH);
-        }
-        // No valid price
-        require(found, 'Price not found');
-
-        price = OracleLibrary
-            .getQuoteAtTick(
-            tick,
-            // because we use 1e18 as a precision unit
-            uint128(uint256(1e18).mul(10**(uint256(18).sub(ERC20(_tokenOut).decimals())))),
-            _tokenIn,
-            _tokenOut
-        )
-            .div(10**(uint256(18).sub(ERC20(_tokenIn).decimals())));
-        return price;
+        return _getUNIV3Price(_tokenIn, _tokenOut);
     }
 
     function checkPool(
@@ -427,6 +424,32 @@ contract PriceOracle is Ownable, IPriceOracle {
     }
 
     /* ============ Internal Functions ============ */
+
+    function _getUNIV3Price(address _tokenIn, address _tokenOut) internal view returns (uint256) {
+      bool found;
+      uint256 price;
+      int24 tick;
+      IUniswapV3Pool pool;
+      // We try the low pool first
+      (found, pool, tick) = checkPool(_tokenIn, _tokenOut, FEE_LOW);
+      if (!found) {
+          (found, pool, tick) = checkPool(_tokenIn, _tokenOut, FEE_MEDIUM);
+      }
+      if (!found) {
+          (found, pool, tick) = checkPool(_tokenIn, _tokenOut, FEE_HIGH);
+      }
+      // No valid price
+      require(found, 'Price not found');
+      return OracleLibrary
+          .getQuoteAtTick(
+          tick,
+          // because we use 1e18 as a precision unit
+          uint128(uint256(1e18).mul(10**(uint256(18).sub(ERC20(_tokenOut).decimals())))),
+          _tokenIn,
+          _tokenOut
+      )
+          .div(10**(uint256(18).sub(ERC20(_tokenIn).decimals())));
+    }
 
     /// @dev Revert if current price is too close to min or max ticks allowed
     /// by Uniswap, or if it deviates too much from the TWAP. Should be called

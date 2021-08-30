@@ -6,6 +6,12 @@ const { setupTests } = require('fixtures/GardenFixture');
 
 const tokens = [
   {
+    name: 'WETH->renBTC',
+    tokenIn: addresses.tokens.WETH,
+    tokenOut: addresses.tokens.renBTC,
+    value: from('59727425183588800'),
+  },
+  {
     name: 'DAI->USDT',
     tokenIn: addresses.tokens.DAI,
     tokenOut: addresses.tokens.USDT,

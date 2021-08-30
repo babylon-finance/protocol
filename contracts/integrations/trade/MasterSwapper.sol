@@ -283,12 +283,12 @@ contract MasterSwapper is BaseIntegration, ReentrancyGuard, ITradeIntegration {
             reserveBalance = _getTokenOrETHBalance(_strategy, _reserve);
             if (_curveSwap(_strategy, _sendToken, _reserve, _sendQuantity, 1)) {
                 swapped = true;
+                diff = _getTokenOrETHBalance(_strategy, _reserve).sub(reserveBalance);
                 if (_reserve == _receiveToken) {
                     return true;
                 }
             }
         }
-        diff = _getTokenOrETHBalance(_strategy, _reserve).sub(reserveBalance);
         if (_sendToken == _reserve || swapped) {
             console.log('balance', diff);
             try
@@ -318,6 +318,7 @@ contract MasterSwapper is BaseIntegration, ReentrancyGuard, ITradeIntegration {
         uint256 _minReceiveQuantity
     ) private returns (bool) {
         ICurveRegistry curveRegistry = ICurveRegistry(curveAddressProvider.get_registry());
+        console.log('in curve swap', _fromToken, _toToken);
         address curvePool = curveRegistry.find_pool_for_coins(_fromToken, _toToken);
         if (curvePool == address(0) && _fromToken == WETH) {
             curvePool = curveRegistry.find_pool_for_coins(ETH_ADD_CURVE, _toToken);
@@ -325,6 +326,7 @@ contract MasterSwapper is BaseIntegration, ReentrancyGuard, ITradeIntegration {
         if (curvePool == address(0) && _toToken == WETH) {
             curvePool = curveRegistry.find_pool_for_coins(_fromToken, ETH_ADD_CURVE);
         }
+        console.log('curvePool', curvePool);
         if (curvePool != address(0)) {
             try ITradeIntegration(curve).trade(_strategy, _fromToken, _sendTokenAmount, _toToken, _minReceiveQuantity) {
                 return true;
