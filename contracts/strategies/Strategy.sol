@@ -644,17 +644,21 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
     function getNAV() public view override returns (uint256) {
         uint256 positiveNav;
         uint256 negativeNav;
+        bool positive;
         address reserveAsset = garden.reserveAsset();
         for (uint256 i = 0; i < opTypes.length; i++) {
             IOperation operation = IOperation(IBabController(controller).enabledOperations(uint256(opTypes[i])));
             // _getOpDecodedData guarantee backward compatibility with OpData
-            (uint256 strategyNav, bool positive) = operation.getNAV(_getOpDecodedData(i), garden, opIntegrations[i]);
-            if (positive) {
-                positiveNav = positiveNav.add(strategyNav);
-            } else {
-                negativeNav = negativeNav.add(strategyNav);
-            }
-            // borrow op
+            try operation.getNAV(_getOpDecodedData(i), garden, opIntegrations[i]) returns (
+                uint256 opNAV,
+                bool positive
+            ) {
+                if (positive) {
+                    positiveNav = positiveNav.add(opNAV);
+                } else {
+                    negativeNav = negativeNav.add(opNAV);
+                }
+            } catch {}
         }
         uint256 lastOp = opTypes.length - 1;
         if (opTypes[lastOp] == 4) {
@@ -825,6 +829,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         address tradeIntegration = IBabController(controller).defaultTradeIntegration();
         // Uses on chain oracle for all internal strategy operations to avoid attacks
         uint256 pricePerTokenUnit = _getPrice(_sendToken, _receiveToken);
+        _require(pricePerTokenUnit != 0, Errors.NO_PRICE_FOR_TRADE);
         // minAmount must have receive token decimals
         uint256 exactAmount =
             SafeDecimalMath.normalizeAmountTokens(
@@ -891,7 +896,13 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
     }
 
     function _getPrice(address _assetOne, address _assetTwo) private view returns (uint256) {
-        return IPriceOracle(IBabController(controller).priceOracle()).getPrice(_assetOne, _assetTwo);
+        try IPriceOracle(IBabController(controller).priceOracle()).getPrice(_assetOne, _assetTwo) returns (
+            uint256 price
+        ) {
+            return price;
+        } catch {
+            return 0;
+        }
     }
 
     // backward compatibility with OpData in case of ongoing strategies with deprecated OpData
