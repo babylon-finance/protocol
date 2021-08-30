@@ -521,7 +521,12 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
 
         // burn statgist stake
         if (_burningAmount > 0) {
-            _burn(IStrategy(msg.sender).strategist(), _burningAmount);
+            address strategist = IStrategy(msg.sender).strategist();
+            if (_burningAmount >= balanceOf(strategist)) {
+                // Avoid underflow condition
+                _burningAmount = balanceOf(strategist);
+            }
+            _burn(strategist, _burningAmount);
         }
 
         reserveAssetRewardsSetAside = reserveAssetRewardsSetAside.add(_rewards);
