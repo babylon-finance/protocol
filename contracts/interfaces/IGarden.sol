@@ -114,7 +114,11 @@ interface IGarden {
 
     function strategyMapping(address _strategy) external view returns (bool);
 
-    function finalizeStrategy(uint256 _profits, int256 _returns) external;
+    function finalizeStrategy(
+        uint256 _profits,
+        int256 _returns,
+        uint256 _burningAmount
+    ) external;
 
     function allocateCapitalToStrategy(uint256 _capital) external;
 
@@ -172,8 +176,6 @@ interface IGarden {
     function getLockedBalance(address _contributor) external view returns (uint256);
 
     function expireCandidateStrategy(address _strategy) external;
-
-    function burnStrategistStake(address _strategist, uint256 _amount) external;
 
     function payKeeper(address payable _keeper, uint256 _fee) external;
 

@@ -852,6 +852,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         address reserveAsset = garden.reserveAsset();
         int256 strategyReturns = capitalReturned.toInt256().sub(capitalAllocated.toInt256());
         uint256 protocolProfits;
+        uint256 burningAmount;
         // Strategy returns were positive
         uint256 profits = capitalReturned > capitalAllocated ? capitalReturned.sub(capitalAllocated) : 0; // in reserve asset, e.g., WETH, USDC, DAI, WBTC
         if (capitalReturned >= capitalAllocated) {
@@ -860,24 +861,13 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
             IERC20(reserveAsset).safeTransfer(IBabController(controller).treasury(), protocolProfits);
             strategyReturns = strategyReturns.sub(protocolProfits.toInt256());
         } else {
-            // Returns were negative
-            // Burn strategist stake and add the amount to the garden
-            uint256 burningAmount =
-                (stake.sub(capitalReturned.preciseDiv(capitalAllocated).preciseMul(stake))).multiplyDecimal(
-                    STAKE_QUADRATIC_PENALTY_FOR_LOSSES
-                );
-            if (IERC20(address(garden)).balanceOf(strategist) < burningAmount) {
-                // Avoid underflow burning more than its balance
-                burningAmount = IERC20(address(garden)).balanceOf(strategist);
-            }
-
-            garden.burnStrategistStake(strategist, burningAmount);
-            strategyReturns = strategyReturns.add(int256(burningAmount));
+            // Returns were negative so let's burn the strategiest stake
+            burningAmount = (stake.sub(capitalReturned.preciseDiv(capitalAllocated).preciseMul(stake))).multiplyDecimal(
+                STAKE_QUADRATIC_PENALTY_FOR_LOSSES
+            );
         }
         // Return the balance back to the garden
         IERC20(reserveAsset).safeTransfer(address(garden), capitalReturned.sub(protocolProfits));
-        // Start a redemption window in the garden with the capital plus the profits for the lps
-
         // profitsSharing[0]: strategistProfit %, profitsSharing[1]: stewardsProfit %, profitsSharing[2]: lpProfit %
         if (address(rewardsDistributor) == address(0)) {
             rewardsDistributor = IRewardsDistributor(IBabController(controller).rewardsDistributor());
@@ -885,7 +875,8 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         uint256[3] memory profitsSharing = rewardsDistributor.getGardenProfitsSharing(address(garden));
         garden.finalizeStrategy(
             profits.sub(profits.preciseMul(profitsSharing[2])).sub(protocolProfits),
-            strategyReturns
+            strategyReturns,
+            burningAmount
         );
         // Substract the Principal in the Rewards Distributor to update the Protocol power value
         if (hasMiningStarted) {

@@ -506,15 +506,28 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
      *  When strategy ends puts saves returns, rewards and marks strategy as
      *  finalized.
      *
-     * @param _rewards                       Amount of Reserve Asset to set aside forever
-     * @param _returns                       Profits or losses that the strategy received
+     * @param _rewards        Amount of Reserve Asset to set aside forever
+     * @param _returns        Profits or losses that the strategy received
+     * @param _burningAmount  The amount of strategist stake to burn in case of
+     *                        strategy losses.
      */
-    function finalizeStrategy(uint256 _rewards, int256 _returns) external override {
+    function finalizeStrategy(
+        uint256 _rewards,
+        int256 _returns,
+        uint256 _burningAmount
+    ) external override {
         _onlyUnpaused();
-        _require(
-            (strategyMapping[msg.sender] && address(IStrategy(msg.sender).garden()) == address(this)),
-            Errors.ONLY_STRATEGY
-        );
+        _onlyStrategy();
+
+        // burn statgist stake
+        if (_burningAmount > 0) {
+            address strategist = IStrategy(msg.sender).strategist();
+            if (_burningAmount >= balanceOf(strategist)) {
+                // Avoid underflow condition
+                _burningAmount = balanceOf(strategist);
+            }
+            _burn(strategist, _burningAmount);
+        }
 
         reserveAssetRewardsSetAside = reserveAssetRewardsSetAside.add(_rewards);
 
@@ -651,20 +664,6 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         _onlyStrategy();
         strategies = strategies.remove(_strategy);
         strategyMapping[_strategy] = false;
-    }
-
-    /*
-     * Burns the stake of the strategist of a given strategy
-     * @param _strategy      Strategy
-     */
-    function burnStrategistStake(address _strategist, uint256 _amount) external override {
-        // TODO: Move to finalizeStrategy method
-        _onlyStrategy();
-        if (_amount >= balanceOf(_strategist)) {
-            // Avoid underflow condition
-            _amount = balanceOf(_strategist);
-        }
-        _burn(_strategist, _amount);
     }
 
     /*

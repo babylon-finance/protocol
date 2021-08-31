@@ -85,7 +85,7 @@ async function getStrategyState(strategy) {
   return { address, active, dataSet, finalized, executedAt, exitedAt, updatedAt };
 }
 
-describe('BABL Rewards Distributor', function () {
+describe('RewardsDistributor', function () {
   let owner;
   let signer1;
   let signer2;

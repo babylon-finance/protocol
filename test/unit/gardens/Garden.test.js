@@ -1364,17 +1364,14 @@ describe('Garden', function () {
         garden1,
       );
       // It is executed
-      await executeStrategy(strategyContract, ethers.utils.parseEther('1'), 42);
+      await executeStrategy(strategyContract, eth('1'), 42);
 
-      await injectFakeProfits(strategyContract, ethers.utils.parseEther('200')); // We inject positive profits
+      await injectFakeProfits(strategyContract, eth('200')); // We inject positive profits
       await finalizeStrategy(strategyContract, 0);
       await expect(finalizeStrategy(strategyContract, 0)).to.be.revertedWith('BAB#050');
 
       await expect(
-        garden1.finalizeStrategy(
-          ethers.BigNumber.from('14263257018321332'),
-          ethers.BigNumber.from('90333961116035100'),
-        ),
+        garden1.finalizeStrategy(from('14263257018321332'), from('90333961116035100'), from(0)),
       ).to.be.revertedWith('BAB#020');
     });
   });

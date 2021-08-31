@@ -32,18 +32,14 @@ interface IRewardsDistributor {
         uint256 timeListPointer;
     }
 
+    /* ========== View functions ========== */
+
     // solhint-disable-next-line
     function START_TIME() external view returns (uint256);
 
     function getStrategyPricePerTokenUnit(address _strategy) external view returns (uint256, uint256);
 
-    function updateProtocolPrincipal(uint256 _capital, bool _addOrSubstract) external;
-
     function getStrategyRewards(address _strategy) external view returns (uint96);
-
-    function sendTokensToContributor(address _to, uint256 _amount) external;
-
-    function startBABLRewards() external;
 
     function getRewards(
         address _garden,
@@ -59,21 +55,6 @@ interface IRewardsDistributor {
     ) external view returns (uint256);
 
     function getGardenProfitsSharing(address _garden) external view returns (uint256[3] memory);
-
-    function setProfitRewards(
-        address _garden,
-        uint256 _strategistShare,
-        uint256 _stewardsShare,
-        uint256 _lpShare
-    ) external;
-
-    function updateGardenPowerAndContributor(
-        address _garden,
-        address _contributor,
-        uint256 _previousBalance,
-        bool _depositOrWithdraw,
-        uint256 _pid
-    ) external;
 
     function tokenSupplyPerQuarter(uint256 quarter) external view returns (uint96);
 
@@ -97,4 +78,27 @@ interface IRewardsDistributor {
             uint256 quarterPower,
             uint96 supplyPerQuarter
         );
+
+    /* ============ External Functions ============ */
+
+    function startBABLRewards() external;
+
+    function sendTokensToContributor(address _to, uint256 _amount) external;
+
+    function setProfitRewards(
+        address _garden,
+        uint256 _strategistShare,
+        uint256 _stewardsShare,
+        uint256 _lpShare
+    ) external;
+
+    function updateProtocolPrincipal(uint256 _capital, bool _addOrSubstract) external;
+
+    function updateGardenPowerAndContributor(
+        address _garden,
+        address _contributor,
+        uint256 _previousBalance,
+        bool _depositOrWithdraw,
+        uint256 _pid
+    ) external;
 }
