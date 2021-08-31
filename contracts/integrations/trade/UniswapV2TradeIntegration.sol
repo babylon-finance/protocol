@@ -43,6 +43,7 @@ contract UniswapV2TradeIntegration is TradeIntegration {
     // Address of Uniswap V2 SwapRouter contract
     address private constant factory = 0x5C69bEe701ef814a2B6a3EDD4B1652CB9cc5aA6f;
     address private constant router = 0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D;
+
     /* ============ Constructor ============ */
 
     /**
@@ -80,7 +81,15 @@ contract UniswapV2TradeIntegration is TradeIntegration {
         address[] memory path = new address[](2);
         path[0] = _sendToken;
         path[1] = _receiveToken;
-        bytes memory callData = abi.encodeWithSignature('swapExactTokensForTokens(uint256,uint256,address[],address,uint256)', _sendQuantity, 1, path, _strategy, block.timestamp);
+        bytes memory callData =
+            abi.encodeWithSignature(
+                'swapExactTokensForTokens(uint256,uint256,address[],address,uint256)',
+                _sendQuantity,
+                1,
+                path,
+                _strategy,
+                block.timestamp
+            );
         return (router, 0, callData);
     }
 

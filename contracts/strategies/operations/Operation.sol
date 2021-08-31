@@ -146,6 +146,7 @@ abstract contract Operation is IOperation {
      */
     function _getPriceNAV(address _assetOne, address _assetTwo) internal view returns (uint256) {
         IPriceOracle oracle = IPriceOracle(IBabController(controller).priceOracle());
-        return oracle.getPriceNAV(_assetOne == address(0) ? WETH : _assetOne, _assetTwo == address(0) ? WETH : _assetTwo);
+        return
+            oracle.getPriceNAV(_assetOne == address(0) ? WETH : _assetOne, _assetTwo == address(0) ? WETH : _assetTwo);
     }
 }

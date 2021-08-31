@@ -235,13 +235,7 @@ contract MasterSwapper is BaseIntegration, ReentrancyGuard, ITradeIntegration {
         }
         if (_minReceiveQuantity > 1) {
             // Try on univ2 (only direct trade) through WETH
-            ITradeIntegration(univ2).trade(
-                _strategy,
-                _sendToken,
-                _sendQuantity,
-                WETH,
-                1
-            );
+            ITradeIntegration(univ2).trade(_strategy, _sendToken, _sendQuantity, WETH, 1);
             ITradeIntegration(univ2).trade(
                 _strategy,
                 WETH,

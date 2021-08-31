@@ -153,11 +153,15 @@ contract BuyOperation is Operation {
         return (NAV, true);
     }
 
-
     /* Private Function */
 
-    function _trade(bytes calldata _data, address _integration, address _asset, uint256 _capital) private returns (address) {
-      (address token, uint256 minimum) = BytesLib.decodeOpDataAddressAndUint(_data);
-      ITradeIntegration(_integration).trade(msg.sender, _asset, _capital, token, minimum);
+    function _trade(
+        bytes calldata _data,
+        address _integration,
+        address _asset,
+        uint256 _capital
+    ) private returns (address) {
+        (address token, uint256 minimum) = BytesLib.decodeOpDataAddressAndUint(_data);
+        ITradeIntegration(_integration).trade(msg.sender, _asset, _capital, token, minimum);
     }
 }
