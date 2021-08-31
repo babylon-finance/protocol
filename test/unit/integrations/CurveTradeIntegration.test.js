@@ -40,7 +40,7 @@ describe('CurveTradeIntegration', function () {
           { asset: addresses.tokens.USDC, symbol: 'USDC' },
           { asset: addresses.tokens.sUSD, symbol: 'sUSD' },
           { asset: addresses.tokens.USDT, symbol: 'USDT' },
-          // { asset: addresses.tokens.TUSD, symbol: 'TUSD' },
+          { asset: addresses.tokens.TUSD, symbol: 'TUSD' },
         ],
       },
       {
@@ -50,7 +50,7 @@ describe('CurveTradeIntegration', function () {
           { asset: addresses.tokens.DAI, symbol: 'DAI' },
           { asset: addresses.tokens.sUSD, symbol: 'sUSD' },
           { asset: addresses.tokens.USDT, symbol: 'USDT' },
-          // { asset: addresses.tokens.TUSD, symbol: 'TUSD' },
+          { asset: addresses.tokens.TUSD, symbol: 'TUSD' },
         ],
       },
       {

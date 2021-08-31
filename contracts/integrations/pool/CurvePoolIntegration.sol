@@ -190,7 +190,7 @@ contract CurvePoolIntegration is PoolIntegration {
         address, /* _strategy */
         bytes calldata _pool,
         uint256 _poolTokensOut,
-        address[] calldata, /* _tokensIn */
+        address[] calldata  _tokensIn,
         uint256[] calldata _maxAmountsIn
     )
         internal
@@ -212,6 +212,12 @@ contract CurvePoolIntegration is PoolIntegration {
         if (poolAddress == TRICRYPTO) {
             // get the value of eth
             value = _maxAmountsIn[2];
+        }
+        // If any is eth, set as value
+        for (uint i = 0; i < poolCoins; i++) {
+          if (_tokensIn[i] == address(0) || _tokensIn[i] == ETH_ADD_CURVE) {
+            value = _maxAmountsIn[i];
+          }
         }
         // If we need a deposit contract to deposit underlying, switch
         if (poolToDeposit[poolAddress] != address(0)) {
