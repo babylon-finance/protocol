@@ -140,4 +140,12 @@ abstract contract Operation is IOperation {
         IPriceOracle oracle = IPriceOracle(IBabController(controller).priceOracle());
         return oracle.getPrice(_assetOne == address(0) ? WETH : _assetOne, _assetTwo == address(0) ? WETH : _assetTwo);
     }
+
+    /**
+     * Returns the price of the pair through the price oracle including univ2
+     */
+    function _getPriceNAV(address _assetOne, address _assetTwo) internal view returns (uint256) {
+        IPriceOracle oracle = IPriceOracle(IBabController(controller).priceOracle());
+        return oracle.getPriceNAV(_assetOne == address(0) ? WETH : _assetOne, _assetTwo == address(0) ? WETH : _assetTwo);
+    }
 }

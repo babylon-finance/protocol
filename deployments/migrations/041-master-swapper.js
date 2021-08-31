@@ -18,10 +18,11 @@ module.exports = async ({
   const curve = await deployments.get('CurveTradeIntegration');
   const univ3 = await deployments.get('UniswapV3TradeIntegration');
   const synthetix = await deployments.get('SynthetixTradeIntegration');
+  const univ2 = await deployments.get('UniswapV2TradeIntegration');
 
   const deployment = await deploy(contract, {
     from: deployer,
-    args: [controller.address, curve.address, univ3.address, synthetix.address],
+    args: [controller.address, curve.address, univ3.address, synthetix.address, univ2.address],
     log: true,
     gasPrice,
   });

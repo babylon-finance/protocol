@@ -25,13 +25,13 @@ import '@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol';
 import '@uniswap/v3-core/contracts/libraries/TickMath.sol';
 import '@uniswap/v3-periphery/contracts/libraries/OracleLibrary.sol';
 import {SafeCast} from '@openzeppelin/contracts/utils/SafeCast.sol';
-
 import {IPriceOracle} from './interfaces/IPriceOracle.sol';
 import {ICToken} from './interfaces/external/compound/ICToken.sol';
 import {ISnxExchangeRates} from './interfaces/external/synthetix/ISnxExchangeRates.sol';
 import {ICurveAddressProvider} from './interfaces/external/curve/ICurveAddressProvider.sol';
 import {ICurveRegistry} from './interfaces/external/curve/ICurveRegistry.sol';
 import {ICurvePoolV3} from './interfaces/external/curve/ICurvePoolV3.sol';
+import {IUniswapV2Router} from './interfaces/external/uniswap/IUniswapV2Router.sol';
 import {ISnxSynth} from './interfaces/external/synthetix/ISnxSynth.sol';
 import {ISnxProxy} from './interfaces/external/synthetix/ISnxProxy.sol';
 import {IStETH} from './interfaces/external/lido/IStETH.sol';
@@ -61,6 +61,7 @@ contract PriceOracle is Ownable, IPriceOracle {
     // Address of Curve Registry
     ICurveAddressProvider internal constant curveAddressProvider =
         ICurveAddressProvider(0x0000000022D53366457F9d5E68Ec105046FC4383);
+    IUniswapV2Router internal constant uniRouterV2 = IUniswapV2Router(0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D);
 
     address private constant WETH = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
     address internal constant DAI = 0x6B175474E89094C44Da98b954EedeAC495271d0F;
@@ -290,130 +291,205 @@ contract PriceOracle is Ownable, IPriceOracle {
      * @param _tokenOut             Address of the second token
      * @return price                Price of the pair
      */
-    function getPrice(address _tokenIn, address _tokenOut) public view override returns (uint256 price) {
-        // Same asset. Returns base unit
-        if (_tokenIn == _tokenOut) {
-            return 10**18;
-        }
-        uint256 exchangeRate;
-        // Comp assets
-        if (cTokenToAsset[_tokenIn] != address(0)) {
-            exchangeRate = getCompoundExchangeRate(_tokenIn);
-            return getPrice(cTokenToAsset[_tokenIn], _tokenOut).preciseMul(exchangeRate);
-        }
-        if (cTokenToAsset[_tokenOut] != address(0)) {
-            exchangeRate = getCompoundExchangeRate(_tokenOut);
-            return getPrice(_tokenIn, cTokenToAsset[_tokenOut]).preciseDiv(exchangeRate);
-        }
-
-        // aave tokens. 1 to 1 with underlying
-        if (aTokenToAsset[_tokenIn] != address(0)) {
-            return getPrice(aTokenToAsset[_tokenIn], _tokenOut);
-        }
-        if (aTokenToAsset[_tokenOut] != address(0)) {
-            return getPrice(_tokenIn, aTokenToAsset[_tokenOut]);
-        }
-
-        // crTokens Cream prices 0xde19f5a7cF029275Be9cEC538E81Aa298E297266
-        // cTkens use same interface as compound
-        if (crTokenToAsset[_tokenIn] != address(0)) {
-            exchangeRate = getCreamExchangeRate(_tokenIn);
-            return getPrice(crTokenToAsset[_tokenIn], _tokenOut).preciseMul(exchangeRate);
-        }
-        if (crTokenToAsset[_tokenOut] != address(0)) {
-            exchangeRate = getCreamExchangeRate(_tokenOut);
-            return getPrice(_tokenIn, crTokenToAsset[_tokenOut]).preciseDiv(exchangeRate);
-        }
-
-        // Checks synthetix
-        if (synths[_tokenIn]) {
-            address targetImpl = ISnxProxy(_tokenIn).target();
-            exchangeRate = snxEchangeRates.rateForCurrency(ISnxSynth(targetImpl).currencyKey());
-            return getPrice(USDC, _tokenOut).preciseMul(exchangeRate);
-        }
-
-        if (synths[_tokenOut]) {
-            address targetImpl = ISnxProxy(_tokenOut).target();
-            exchangeRate = snxEchangeRates.rateForCurrency(ISnxSynth(targetImpl).currencyKey());
-            return getPrice(_tokenIn, USDC).preciseDiv(exchangeRate);
-        }
-
-        // Checks stETH && wstETH (Lido tokens)
-        if (_tokenIn == address(stETH) || _tokenIn == address(wstETH)) {
-            uint256 shares = 1e18;
-            if (_tokenIn == address(wstETH)) {
-                shares = wstETH.getStETHByWstETH(shares);
-            }
-            return getPrice(WETH, _tokenOut).preciseMul(stETH.getPooledEthByShares(shares));
-        }
-        if (_tokenOut == address(stETH) || _tokenOut == address(wstETH)) {
-            uint256 shares = 1e18;
-            if (_tokenOut == address(wstETH)) {
-                shares = wstETH.getStETHByWstETH(shares);
-            }
-            return getPrice(_tokenIn, WETH).preciseDiv(stETH.getSharesByPooledEth(shares));
-        }
-
-        ICurveRegistry curveRegistry = ICurveRegistry(curveAddressProvider.get_registry());
-        // Curve LP tokens
-        if (curveRegistry.get_pool_from_lp_token(_tokenIn) != address(0)) {
-            return getPrice(USDC, _tokenOut).preciseMul(curveRegistry.get_virtual_price_from_lp_token(_tokenIn));
-        }
-        if (curveRegistry.get_pool_from_lp_token(_tokenOut) != address(0)) {
-            return getPrice(_tokenIn, USDC).preciseDiv(curveRegistry.get_virtual_price_from_lp_token(_tokenIn));
-        }
-
-        // Direct curve pair
-        uint256 price = _checkPairThroughCurve(_tokenIn, _tokenOut);
-
-        if (price != 0) {
-            return price;
-        }
-
-        uint256 uniPrice = 0;
-        // Curve Pair through WBTC
-        if (_tokenIn != WBTC && _tokenOut != WBTC) {
-            price = _checkPairThroughCurve(WBTC, _tokenOut);
-            if (price != 0) {
-                uniPrice = _getUNIV3Price(_tokenIn, WBTC, false);
-                if (uniPrice != 0) {
-                    return uniPrice.preciseMul(price);
-                }
-            }
-            price = _checkPairThroughCurve(_tokenIn, WBTC);
-            if (price != 0) {
-                uniPrice = _getUNIV3Price(WBTC, _tokenOut, false);
-                if (uniPrice != 0) {
-                    return price.preciseMul(uniPrice);
-                }
-            }
-        }
-        // Curve pair through DAI
-        if (_tokenIn != DAI && _tokenOut != DAI) {
-            price = _checkPairThroughCurve(DAI, _tokenOut);
-            if (price != 0) {
-                uniPrice = _getUNIV3Price(_tokenIn, DAI, false);
-                if (uniPrice != 0) {
-                    return uniPrice.preciseMul(price);
-                }
-            }
-            price = _checkPairThroughCurve(_tokenIn, DAI);
-            if (price != 0) {
-                uniPrice = _getUNIV3Price(DAI, _tokenOut, false);
-                if (uniPrice != 0) {
-                    return price.preciseMul(uniPrice);
-                }
-            }
-        }
-        // yfi tokens?
-        // other paths to uni v3?
-        if (_tokenIn != WETH && _tokenOut != WETH) {
-            return _getUNIV3Price(_tokenIn, WETH, true).preciseDiv(_getUNIV3Price(_tokenOut, WETH, true));
-        }
-        return _getUNIV3Price(_tokenIn, _tokenOut, true);
+    function getPriceNAV(address _tokenIn, address _tokenOut) public view override returns (uint256 price) {
+      return _getPrice(_tokenIn, _tokenOut, true);
     }
 
-    function checkPool(
+    /**
+     * Returns the amount out corresponding to the amount in for a given token
+     * @param _tokenIn              Address of the first token
+     * @param _tokenOut             Address of the second token
+     * @return price                Price of the pair
+     */
+    function getPrice(address _tokenIn, address _tokenOut) public view override returns (uint256 price) {
+      return _getPrice(_tokenIn, _tokenOut, false);
+    }
+
+    /**
+     * Returns the amount out corresponding to the amount in for a given token
+     * @param _tokenIn              Address of the first token
+     * @param _tokenOut             Address of the second token
+     * @param _forNAV               Whether it is just for display purposes
+     * @return price                Price of the pair
+     */
+    function _getPrice(address _tokenIn, address _tokenOut, bool _forNAV) public view returns (uint256 price) {
+      // Same asset. Returns base unit
+      if (_tokenIn == _tokenOut) {
+          return 10**18;
+      }
+      uint256 exchangeRate;
+      // Comp assets
+      if (cTokenToAsset[_tokenIn] != address(0)) {
+          exchangeRate = getCompoundExchangeRate(_tokenIn);
+          return getPrice(cTokenToAsset[_tokenIn], _tokenOut).preciseMul(exchangeRate);
+      }
+      if (cTokenToAsset[_tokenOut] != address(0)) {
+          exchangeRate = getCompoundExchangeRate(_tokenOut);
+          return getPrice(_tokenIn, cTokenToAsset[_tokenOut]).preciseDiv(exchangeRate);
+      }
+
+      // aave tokens. 1 to 1 with underlying
+      if (aTokenToAsset[_tokenIn] != address(0)) {
+          return getPrice(aTokenToAsset[_tokenIn], _tokenOut);
+      }
+      if (aTokenToAsset[_tokenOut] != address(0)) {
+          return getPrice(_tokenIn, aTokenToAsset[_tokenOut]);
+      }
+
+      // crTokens Cream prices 0xde19f5a7cF029275Be9cEC538E81Aa298E297266
+      // cTkens use same interface as compound
+      if (crTokenToAsset[_tokenIn] != address(0)) {
+          exchangeRate = getCreamExchangeRate(_tokenIn);
+          return getPrice(crTokenToAsset[_tokenIn], _tokenOut).preciseMul(exchangeRate);
+      }
+      if (crTokenToAsset[_tokenOut] != address(0)) {
+          exchangeRate = getCreamExchangeRate(_tokenOut);
+          return getPrice(_tokenIn, crTokenToAsset[_tokenOut]).preciseDiv(exchangeRate);
+      }
+
+      // Checks synthetix
+      if (synths[_tokenIn]) {
+          address targetImpl = ISnxProxy(_tokenIn).target();
+          exchangeRate = snxEchangeRates.rateForCurrency(ISnxSynth(targetImpl).currencyKey());
+          return getPrice(USDC, _tokenOut).preciseMul(exchangeRate);
+      }
+
+      if (synths[_tokenOut]) {
+          address targetImpl = ISnxProxy(_tokenOut).target();
+          exchangeRate = snxEchangeRates.rateForCurrency(ISnxSynth(targetImpl).currencyKey());
+          return getPrice(_tokenIn, USDC).preciseDiv(exchangeRate);
+      }
+
+      // Checks stETH && wstETH (Lido tokens)
+      if (_tokenIn == address(stETH) || _tokenIn == address(wstETH)) {
+          uint256 shares = 1e18;
+          if (_tokenIn == address(wstETH)) {
+              shares = wstETH.getStETHByWstETH(shares);
+          }
+          return getPrice(WETH, _tokenOut).preciseMul(stETH.getPooledEthByShares(shares));
+      }
+      if (_tokenOut == address(stETH) || _tokenOut == address(wstETH)) {
+          uint256 shares = 1e18;
+          if (_tokenOut == address(wstETH)) {
+              shares = wstETH.getStETHByWstETH(shares);
+          }
+          return getPrice(_tokenIn, WETH).preciseDiv(stETH.getSharesByPooledEth(shares));
+      }
+
+      ICurveRegistry curveRegistry = ICurveRegistry(curveAddressProvider.get_registry());
+      // Curve LP tokens
+      if (curveRegistry.get_pool_from_lp_token(_tokenIn) != address(0)) {
+          return getPrice(USDC, _tokenOut).preciseMul(curveRegistry.get_virtual_price_from_lp_token(_tokenIn));
+      }
+      if (curveRegistry.get_pool_from_lp_token(_tokenOut) != address(0)) {
+          return getPrice(_tokenIn, USDC).preciseDiv(curveRegistry.get_virtual_price_from_lp_token(_tokenIn));
+      }
+
+      // Direct curve pair
+      uint256 price = _checkPairThroughCurve(_tokenIn, _tokenOut);
+
+      if (price != 0) {
+          return price;
+      }
+
+      uint256 uniPrice = 0;
+      // Curve Pair through WBTC
+      if (_tokenIn != WBTC && _tokenOut != WBTC) {
+          price = _checkPairThroughCurve(WBTC, _tokenOut);
+          if (price != 0) {
+              uniPrice = _getUNIV3Price(_tokenIn, WBTC);
+              if (uniPrice != 0) {
+                  return uniPrice.preciseMul(price);
+              }
+          }
+          price = _checkPairThroughCurve(_tokenIn, WBTC);
+          if (price != 0) {
+              uniPrice = _getUNIV3Price(WBTC, _tokenOut);
+              if (uniPrice != 0) {
+                  return price.preciseMul(uniPrice);
+              }
+          }
+      }
+      // Curve pair through DAI
+      if (_tokenIn != DAI && _tokenOut != DAI) {
+          price = _checkPairThroughCurve(DAI, _tokenOut);
+          if (price != 0) {
+              uniPrice = _getUNIV3Price(_tokenIn, DAI);
+              if (uniPrice != 0) {
+                  return uniPrice.preciseMul(price);
+              }
+          }
+          price = _checkPairThroughCurve(_tokenIn, DAI);
+          if (price != 0) {
+              uniPrice = _getUNIV3Price(DAI, _tokenOut);
+              if (uniPrice != 0) {
+                  return price.preciseMul(uniPrice);
+              }
+          }
+      }
+      // yfi tokens?
+      // other paths to uni v3?
+      if (_tokenIn != WETH && _tokenOut != WETH) {
+          price = _getUNIV3Price(_tokenIn, WETH).preciseDiv(_getUNIV3Price(_tokenOut, WETH));
+          if (price != 0) {
+            return price;
+          }
+      }
+      // Use only univ2 for UI
+      if (_forNAV) {
+        price = _getUNIV2Price(_tokenIn, _tokenOut);
+      }
+      // No valid price
+      require(price != 0, 'Price not found');
+      return price;
+    }
+
+    /* ============ Internal Functions ============ */
+
+    // Susceptible to flash loans.
+    // Only use for UI and getNAV
+    function _getUNIV2Price(
+      address _tokenIn,
+      address _tokenOut
+    ) internal view returns (uint256) {
+      address[] memory path = new address[](2);
+      path[0] = _tokenIn;
+      path[1] = _tokenOut;
+      return uniRouterV2.getAmountsOut(ERC20(_tokenIn).decimals(), path)[1];
+    }
+
+    function _getUNIV3Price(
+        address _tokenIn,
+        address _tokenOut
+    ) internal view returns (uint256) {
+        bool found;
+        uint256 price;
+        int24 tick;
+        IUniswapV3Pool pool;
+        // We try the low pool first
+        (found, pool, tick) = _checkPool(_tokenIn, _tokenOut, FEE_LOW);
+        if (!found) {
+            (found, pool, tick) = _checkPool(_tokenIn, _tokenOut, FEE_MEDIUM);
+        }
+        if (!found) {
+            (found, pool, tick) = _checkPool(_tokenIn, _tokenOut, FEE_HIGH);
+        }
+        if (!found) {
+            return 0;
+        }
+        return
+            OracleLibrary
+                .getQuoteAtTick(
+                tick,
+                // because we use 1e18 as a precision unit
+                uint128(uint256(1e18).mul(10**(uint256(18).sub(ERC20(_tokenOut).decimals())))),
+                _tokenIn,
+                _tokenOut
+            )
+                .div(10**(uint256(18).sub(ERC20(_tokenIn).decimals())));
+    }
+
+    function _checkPool(
         address _tokenIn,
         address _tokenOut,
         uint24 fee
@@ -433,42 +509,6 @@ contract PriceOracle is Ownable, IPriceOracle {
             return (_checkPrice(tick, pool), pool, tick);
         }
         return (false, IUniswapV3Pool(0), 0);
-    }
-
-    /* ============ Internal Functions ============ */
-
-    function _getUNIV3Price(
-        address _tokenIn,
-        address _tokenOut,
-        bool _throw
-    ) internal view returns (uint256) {
-        bool found;
-        uint256 price;
-        int24 tick;
-        IUniswapV3Pool pool;
-        // We try the low pool first
-        (found, pool, tick) = checkPool(_tokenIn, _tokenOut, FEE_LOW);
-        if (!found) {
-            (found, pool, tick) = checkPool(_tokenIn, _tokenOut, FEE_MEDIUM);
-        }
-        if (!found) {
-            (found, pool, tick) = checkPool(_tokenIn, _tokenOut, FEE_HIGH);
-        }
-        if (!found && !_throw) {
-            return 0;
-        }
-        // No valid price
-        require(found, 'Price not found');
-        return
-            OracleLibrary
-                .getQuoteAtTick(
-                tick,
-                // because we use 1e18 as a precision unit
-                uint128(uint256(1e18).mul(10**(uint256(18).sub(ERC20(_tokenOut).decimals())))),
-                _tokenIn,
-                _tokenOut
-            )
-                .div(10**(uint256(18).sub(ERC20(_tokenIn).decimals())));
     }
 
     /// @dev Revert if current price is too close to min or max ticks allowed

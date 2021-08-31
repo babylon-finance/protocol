@@ -46,6 +46,7 @@ async function setUpFixture(
   const lidoIntegration = await getContract('LidoStakeIntegration');
   const curveTradeIntegration = await getContract('CurveTradeIntegration');
   const synthetixTradeIntegration = await getContract('SynthetixTradeIntegration');
+  const univ2TradeIntegration = await getContract('UniswapV2TradeIntegration');
   const masterSwapper = await getContract('MasterSwapper');
 
   const buyOperation = await getContract('BuyOperation');
@@ -230,6 +231,7 @@ async function setUpFixture(
     compoundLendIntegration,
     compoundBorrowIntegration,
     synthetixTradeIntegration,
+    univ2TradeIntegration,
     aaveLendIntegration,
     aaveBorrowIntegration,
     lidoIntegration,

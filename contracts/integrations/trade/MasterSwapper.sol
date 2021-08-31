@@ -85,6 +85,7 @@ contract MasterSwapper is BaseIntegration, ReentrancyGuard, ITradeIntegration {
     ITradeIntegration internal immutable curve;
     ITradeIntegration internal immutable univ3;
     ITradeIntegration internal immutable synthetix;
+    ITradeIntegration internal immutable univ2;
 
     /* ============ Constructor ============ */
 
@@ -93,18 +94,21 @@ contract MasterSwapper is BaseIntegration, ReentrancyGuard, ITradeIntegration {
      *
      * @param _controller             Address of the controller
      * @param _curve                  Address of curve trade integration
-     * @param _univ3                  Address of uni trade integration
+     * @param _univ3                  Address of univ3 trade integration
      * @param _synthetix              Address of synthetix trade integration
+     * @param _univ2                  Address of univ2 trade integration
      */
     constructor(
         IBabController _controller,
         ITradeIntegration _curve,
         ITradeIntegration _univ3,
-        ITradeIntegration _synthetix
+        ITradeIntegration _synthetix,
+        ITradeIntegration _univ2
     ) BaseIntegration('master swapper', _controller) {
         curve = _curve;
         univ3 = _univ3;
         synthetix = _synthetix;
+        univ2 = _univ2;
     }
 
     /* ============ External Functions ============ */
@@ -229,8 +233,22 @@ contract MasterSwapper is BaseIntegration, ReentrancyGuard, ITradeIntegration {
         if (found) {
             return;
         }
-        if (_minReceiveQuantity == 0) {
-            // Try on univ2 (only direct trade)
+        if (_minReceiveQuantity > 1) {
+            // Try on univ2 (only direct trade) through WETH
+            ITradeIntegration(univ2).trade(
+                _strategy,
+                _sendToken,
+                _sendQuantity,
+                WETH,
+                1
+            );
+            ITradeIntegration(univ2).trade(
+                _strategy,
+                WETH,
+                _getTokenOrETHBalance(_strategy, WETH),
+                _receiveToken,
+                _minReceiveQuantity
+            );
         }
         require(false, 'Master swapper could not swap');
     }
