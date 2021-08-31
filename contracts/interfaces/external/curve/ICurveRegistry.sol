@@ -21,7 +21,7 @@ interface ICurveRegistry {
 
     function get_pool_name(address _pool) external view returns (string memory);
 
-    function get_A(address _pool) external view returns (uint);
+    function get_A(address _pool) external view returns (uint256);
 
     function get_coins(address _pool) external view returns (address[8] memory);
 

@@ -67,7 +67,6 @@ contract CurvePoolIntegration is PoolIntegration {
      * @param _controller                   Address of the controller
      */
     constructor(IBabController _controller) PoolIntegration('curve_pool', _controller) {
-
         usesUnderlying[0xDeBF20617708857ebe4F679508E7b7863a8A8EeE] = true; // aave
         usesUnderlying[0xA2B47E3D5c44877cca798226B7B8118F9BFb7A56] = true; // compound
         usesUnderlying[0x52EA46506B9CC5Ef470C5bf89f17Dc28bB35D85C] = true; // usdt
@@ -98,9 +97,9 @@ contract CurvePoolIntegration is PoolIntegration {
         address[] memory result = new address[](_getNCoins(poolAddress));
         address[8] memory coins;
         if (usesUnderlying[poolAddress] && !forNAV) {
-          coins = curveRegistry.get_underlying_coins(poolAddress);
+            coins = curveRegistry.get_underlying_coins(poolAddress);
         } else {
-          coins = curveRegistry.get_coins(poolAddress);
+            coins = curveRegistry.get_coins(poolAddress);
         }
         for (uint8 i = 0; i < _getNCoins(poolAddress); i++) {
             result[i] = coins[i];
@@ -152,17 +151,17 @@ contract CurvePoolIntegration is PoolIntegration {
     function _isPool(bytes memory _pool) internal view override returns (bool) {
         address poolAddress = BytesLib.decodeOpDataAddressAssembly(_pool, 12);
         ICurveRegistry curveRegistry = ICurveRegistry(curveAddressProvider.get_registry());
-        try curveRegistry.get_A(poolAddress) returns (uint A) {
-          return true;
+        try curveRegistry.get_A(poolAddress) returns (uint256 A) {
+            return true;
         } catch {
-          return false;
+            return false;
         }
     }
 
     function _getSpender(bytes calldata _pool) internal view override returns (address) {
         address poolAddress = BytesLib.decodeOpDataAddress(_pool);
         if (poolToDeposit[poolAddress] != address(0)) {
-          poolAddress = poolToDeposit[poolAddress];
+            poolAddress = poolToDeposit[poolAddress];
         }
         return poolAddress;
     }
@@ -190,7 +189,7 @@ contract CurvePoolIntegration is PoolIntegration {
         address, /* _strategy */
         bytes calldata _pool,
         uint256 _poolTokensOut,
-        address[] calldata  _tokensIn,
+        address[] calldata _tokensIn,
         uint256[] calldata _maxAmountsIn
     )
         internal
@@ -214,14 +213,14 @@ contract CurvePoolIntegration is PoolIntegration {
             value = _maxAmountsIn[2];
         }
         // If any is eth, set as value
-        for (uint i = 0; i < poolCoins; i++) {
-          if (_tokensIn[i] == address(0) || _tokensIn[i] == ETH_ADD_CURVE) {
-            value = _maxAmountsIn[i];
-          }
+        for (uint256 i = 0; i < poolCoins; i++) {
+            if (_tokensIn[i] == address(0) || _tokensIn[i] == ETH_ADD_CURVE) {
+                value = _maxAmountsIn[i];
+            }
         }
         // If we need a deposit contract to deposit underlying, switch
         if (poolToDeposit[poolAddress] != address(0)) {
-          poolAddress = poolToDeposit[poolAddress];
+            poolAddress = poolToDeposit[poolAddress];
         }
         return (poolAddress, value, methodData);
     }
@@ -263,7 +262,7 @@ contract CurvePoolIntegration is PoolIntegration {
         // Encode method data for Garden to invoke
         bytes memory methodData = _getRemoveLiquidityMethodData(poolAddress, poolCoins, _minAmountsOut, _poolTokensIn);
         if (poolToDeposit[poolAddress] != address(0)) {
-          poolAddress = poolToDeposit[poolAddress];
+            poolAddress = poolToDeposit[poolAddress];
         }
         return (poolAddress, 0, methodData);
     }

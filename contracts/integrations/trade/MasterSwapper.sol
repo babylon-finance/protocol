@@ -191,27 +191,27 @@ contract MasterSwapper is BaseIntegration, ReentrancyGuard, ITradeIntegration {
         } catch {}
         // Try Curve through reserve assets
         console.log('dai reserve path');
-        bool found = _checkCurveRoutesThroughReserve(
-            DAI,
-            _strategy,
-            _sendToken,
-            _receiveToken,
-            _sendQuantity,
-            _minReceiveQuantity
-        );
-        if (found) {
-            return;
-        }
-        console.log('weth reserve path');
-        found =
+        bool found =
             _checkCurveRoutesThroughReserve(
-                WETH,
+                DAI,
                 _strategy,
                 _sendToken,
                 _receiveToken,
                 _sendQuantity,
                 _minReceiveQuantity
             );
+        if (found) {
+            return;
+        }
+        console.log('weth reserve path');
+        found = _checkCurveRoutesThroughReserve(
+            WETH,
+            _strategy,
+            _sendToken,
+            _receiveToken,
+            _sendQuantity,
+            _minReceiveQuantity
+        );
 
         if (found) {
             return;
