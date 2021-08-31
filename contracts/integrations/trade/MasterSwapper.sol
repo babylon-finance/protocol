@@ -29,6 +29,7 @@ import {ICurveAddressProvider} from '../../interfaces/external/curve/ICurveAddre
 import {ICurveRegistry} from '../../interfaces/external/curve/ICurveRegistry.sol';
 import {ISynthetix} from '../../interfaces/external/synthetix/ISynthetix.sol';
 import {ISnxProxy} from '../../interfaces/external/synthetix/ISnxProxy.sol';
+import {ISnxSynth} from '../../interfaces/external/synthetix/ISnxSynth.sol';
 import {ITradeIntegration} from '../../interfaces/ITradeIntegration.sol';
 import {IGarden} from '../../interfaces/IGarden.sol';
 import {IStrategy} from '../../interfaces/IStrategy.sol';
@@ -129,7 +130,17 @@ contract MasterSwapper is BaseIntegration, ReentrancyGuard, ITradeIntegration {
         uint256 _sendQuantity,
         address _receiveToken,
         uint256 _minReceiveQuantity
-    ) external override nonReentrant {
+    ) public override nonReentrant {
+        _trade(_strategy, _sendToken, _sendQuantity, _receiveToken, _minReceiveQuantity);
+    }
+
+    function _trade(
+        address _strategy,
+        address _sendToken,
+        uint256 _sendQuantity,
+        address _receiveToken,
+        uint256 _minReceiveQuantity
+    ) private {
         if (_sendToken == _receiveToken) {
             return;
         }
@@ -166,13 +177,13 @@ contract MasterSwapper is BaseIntegration, ReentrancyGuard, ITradeIntegration {
             // Trade to DAI through sUSD
             try ITradeIntegration(synthetix).trade(_strategy, _sendToken, _sendQuantity, DAI, 1) {
                 // Change DAI to receive token
-                // trade(_strategy, DAI, _getTokenOrETHBalance(_strategy, DAI), _receiveToken, _minReceiveQuantity);
+                _trade(_strategy, DAI, _getTokenOrETHBalance(_strategy, DAI), _receiveToken, _minReceiveQuantity);
                 return;
             } catch {}
         }
         // Trade to DAI and then do DAI to synh
         if (_receiveTokenSynth != address(0)) {
-            // trade(_strategy, _sendToken, _sendQuantity, DAI, 1);
+            _trade(_strategy, _sendToken, _sendQuantity, DAI, 1);
             try
                 ITradeIntegration(synthetix).trade(
                     _strategy,
@@ -348,11 +359,23 @@ contract MasterSwapper is BaseIntegration, ReentrancyGuard, ITradeIntegration {
 
     function _getSynth(address _token) private view returns (address) {
         ISynthetix synthetix = ISynthetix(ISnxProxy(SNX).target());
-        // try ISnxProxy(_token).target() returns (address tokenImpl) {
-        //     return tokenImpl;
-        //     // return uint256(synthetix.synthsByAddress(tokenImpl)) != 0 ? tokenImpl : address(0);
-        // } catch {
-        // }
+        console.log('symbol', ERC20(_token).symbol());
+        try synthetix.synths(stringToBytes32(ERC20(_token).symbol())) returns (ISnxSynth _synth) {
+            console.log('synth', address(_synth));
+            return address(_synth);
+        } catch {
+            return address(0);
+        }
         return address(0);
+    }
+
+    function stringToBytes32(string memory source) private pure returns (bytes32 result) {
+        bytes memory tempEmptyStringTest = bytes(source);
+        if (tempEmptyStringTest.length == 0) {
+            return 0x0;
+        }
+        assembly {
+            result := mload(add(source, 32))
+        }
     }
 }
