@@ -159,7 +159,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
 
     uint256 public override gardenInitializedAt; // Garden Initialized at timestamp
     // Number of garden checkpoints used to control the garden power and each contributor power with accuracy
-    uint256 private pid;
+    uint256 private pid; // DEPRECATED
 
     // Min contribution in the garden
     uint256 public override minContribution; //wei
@@ -892,7 +892,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
 
         _burn(_to, _amountIn);
         _safeSendReserveAsset(_to, amountOut);
-        _updateContributorWithdrawalInfo(amountOut);
+        _updateContributorWithdrawalInfo(_to, amountOut);
 
         _require(amountOut >= _minAmountOut, Errors.BALANCE_TOO_LOW);
         principal = principal.sub(amountOut);
@@ -1003,12 +1003,12 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
      */
     function _updateContributorDepositInfo(
         address _contributor,
-        uint256 previousBalance,
+        uint256 _previousBalance,
         uint256 _reserveAssetQuantity
     ) private {
         Contributor storage contributor = contributors[_contributor];
         // If new contributor, create one, increment count, and set the current TS
-        if (previousBalance == 0 || contributor.initialDepositAt == 0) {
+        if (_previousBalance == 0 || contributor.initialDepositAt == 0) {
             _require(totalContributors < maxContributors, Errors.MAX_CONTRIBUTORS);
             totalContributors = totalContributors.add(1);
             contributor.initialDepositAt = block.timestamp;
@@ -1017,14 +1017,14 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         contributor.totalDeposits = contributor.totalDeposits.add(_reserveAssetQuantity);
         contributor.lastDepositAt = block.timestamp;
         contributor.nonce = contributor.nonce + 1;
-        rewardsDistributor.updateGardenPowerAndContributor(address(this), _contributor, previousBalance, true, pid);
-        pid++;
+
+        rewardsDistributor.updateCheckpointInGarden(_contributor, _reserveAssetQuantity, true);
     }
 
     /**
      * Updates the contributor info in the array
      */
-    function _updateContributorWithdrawalInfo(uint256 _netflowQuantity) private {
+    function _updateContributorWithdrawalInfo(address _to, uint256 _netflowQuantity) private {
         Contributor storage contributor = contributors[msg.sender];
         // If sold everything
         if (balanceOf(msg.sender) == 0) {
@@ -1036,9 +1036,10 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         } else {
             contributor.withdrawnSince = contributor.withdrawnSince.add(_netflowQuantity);
         }
-        rewardsDistributor.updateGardenPowerAndContributor(address(this), msg.sender, 0, false, pid);
         contributor.nonce = contributor.nonce + 1;
-        pid++;
+
+        rewardsDistributor.updateCheckpointInGarden(_to, _netflowQuantity, false);
+
     }
 
     /**

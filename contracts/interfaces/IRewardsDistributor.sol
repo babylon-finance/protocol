@@ -94,11 +94,9 @@ interface IRewardsDistributor {
 
     function updateProtocolPrincipal(uint256 _capital, bool _addOrSubstract) external;
 
-    function updateGardenPowerAndContributor(
-        address _garden,
+    function updateCheckpointInGarden(
         address _contributor,
-        uint256 _previousBalance,
-        bool _depositOrWithdraw,
-        uint256 _pid
-    ) external;
+        uint256 _amount,
+        bool _depositOrWithdraw
+        ) external;
 }
