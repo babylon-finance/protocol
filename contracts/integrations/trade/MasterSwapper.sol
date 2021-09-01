@@ -148,7 +148,6 @@ contract MasterSwapper is BaseIntegration, ReentrancyGuard, ITradeIntegration {
         // Synthetix Direct
         address _sendTokenSynth = _getSynth(_sendToken);
         address _receiveTokenSynth = _getSynth(_receiveToken);
-        console.log('synthetix');
         if (
             (_sendTokenSynth != address(0) && _receiveTokenSynth != address(0)) ||
             (_sendTokenSynth != address(0) && (_receiveToken == DAI || _receiveToken == USDC)) ||
@@ -166,12 +165,10 @@ contract MasterSwapper is BaseIntegration, ReentrancyGuard, ITradeIntegration {
                 return;
             } catch {}
         }
-        console.log('curve direct');
         // Curve Direct
         if (_curveSwap(_strategy, _sendToken, _receiveToken, _sendQuantity, _minReceiveQuantity)) {
             return;
         }
-        console.log('tryng synths');
         // Abstract Synths out
         if (_sendTokenSynth != address(0)) {
             // Trade to DAI through sUSD
@@ -179,7 +176,9 @@ contract MasterSwapper is BaseIntegration, ReentrancyGuard, ITradeIntegration {
                 // Change DAI to receive token
                 _trade(_strategy, DAI, _getTokenOrETHBalance(_strategy, DAI), _receiveToken, _minReceiveQuantity);
                 return;
-            } catch {}
+            } catch {
+                // console.log('synth to DAI failed');
+            }
         }
         // Trade to DAI and then do DAI to synh
         if (_receiveTokenSynth != address(0)) {
@@ -199,13 +198,10 @@ contract MasterSwapper is BaseIntegration, ReentrancyGuard, ITradeIntegration {
             }
         }
         // Go through UNIv3 first
-        // console.log('uni');
         try ITradeIntegration(univ3).trade(_strategy, _sendToken, _sendQuantity, _receiveToken, _minReceiveQuantity) {
-            console.log('uni worked');
             return;
         } catch {}
         // Try Curve through reserve assets
-        console.log('dai reserve path');
         bool found =
             _checkCurveRoutesThroughReserve(
                 DAI,
@@ -218,7 +214,6 @@ contract MasterSwapper is BaseIntegration, ReentrancyGuard, ITradeIntegration {
         if (found) {
             return;
         }
-        console.log('weth reserve path');
         found = _checkCurveRoutesThroughReserve(
             WETH,
             _strategy,
@@ -231,7 +226,6 @@ contract MasterSwapper is BaseIntegration, ReentrancyGuard, ITradeIntegration {
         if (found) {
             return;
         }
-        console.log('wbtc reserve path');
         found = _checkCurveRoutesThroughReserve(
             WBTC,
             _strategy,
@@ -240,7 +234,6 @@ contract MasterSwapper is BaseIntegration, ReentrancyGuard, ITradeIntegration {
             _sendQuantity,
             _minReceiveQuantity
         );
-        console.log('after wbtc');
         if (found) {
             return;
         }
@@ -268,17 +261,16 @@ contract MasterSwapper is BaseIntegration, ReentrancyGuard, ITradeIntegration {
         uint256 _sendQuantity,
         uint256 _minReceiveQuantity
     ) private returns (bool) {
-        ICurveRegistry curveRegistry = ICurveRegistry(curveAddressProvider.get_registry());
         uint256 reserveBalance = _getTokenOrETHBalance(_strategy, _reserve);
         bool swapped = false;
         uint256 diff = reserveBalance;
         // Going through curve but switching first to reserve
-        if (_sendToken != _reserve && curveRegistry.find_pool_for_coins(_reserve, _receiveToken) != address(0)) {
+        if (_sendToken != _reserve && _findCurvePool(_reserve, _receiveToken) != address(0)) {
             try
                 ITradeIntegration(univ3).trade(
                     _strategy,
                     _sendToken,
-                    _sendQuantity,
+                    _getTokenOrETHBalance(_strategy, _sendToken), // can be lower than sendQuantity if we tried swapping
                     _reserve,
                     1 // TODO
                 )
@@ -288,24 +280,14 @@ contract MasterSwapper is BaseIntegration, ReentrancyGuard, ITradeIntegration {
                 }
                 diff = _getTokenOrETHBalance(_strategy, _reserve).sub(reserveBalance);
                 swapped = true;
-            } catch {
-                console.log('uni failed', _sendToken, _reserve);
-            }
+            } catch {}
         }
         if (_sendToken == _reserve || swapped) {
             if (_curveSwap(_strategy, _reserve, _receiveToken, diff, _minReceiveQuantity)) {
                 return true;
             }
             if (swapped) {
-                // require(false, 'Curve Swap failed midway');
-                // Revert
-                ITradeIntegration(univ3).trade(
-                    _strategy,
-                    _reserve,
-                    ERC20(_reserve).balanceOf(_strategy),
-                    _sendToken,
-                    1 // TODO
-                );
+                require(false, 'Curve Swap failed midway'); // Should never happen
             }
         }
         // Going through curve to reserve and then receive Token
@@ -325,11 +307,26 @@ contract MasterSwapper is BaseIntegration, ReentrancyGuard, ITradeIntegration {
                 return true;
             } catch {
                 if (swapped) {
-                    require(false, 'Uni Swap failed midway');
+                    // TODO: check that there is uni3 liquidity instead
+                    // require(false, 'Uni Swap failed midway');
+                    // Revert
+                    _curveSwap(_strategy, _reserve, _sendToken, _getTokenOrETHBalance(_strategy, _reserve), 1);
                 }
             }
         }
         return false;
+    }
+
+    function _findCurvePool(address _fromToken, address _toToken) private view returns (address) {
+        ICurveRegistry curveRegistry = ICurveRegistry(curveAddressProvider.get_registry());
+        address curvePool = curveRegistry.find_pool_for_coins(_fromToken, _toToken);
+        if (curvePool == address(0) && _fromToken == WETH) {
+            curvePool = curveRegistry.find_pool_for_coins(ETH_ADD_CURVE, _toToken);
+        }
+        if (curvePool == address(0) && _toToken == WETH) {
+            curvePool = curveRegistry.find_pool_for_coins(_fromToken, ETH_ADD_CURVE);
+        }
+        return curvePool;
     }
 
     function _curveSwap(
@@ -339,14 +336,7 @@ contract MasterSwapper is BaseIntegration, ReentrancyGuard, ITradeIntegration {
         uint256 _sendTokenAmount,
         uint256 _minReceiveQuantity
     ) private returns (bool) {
-        ICurveRegistry curveRegistry = ICurveRegistry(curveAddressProvider.get_registry());
-        address curvePool = curveRegistry.find_pool_for_coins(_fromToken, _toToken);
-        if (curvePool == address(0) && _fromToken == WETH) {
-            curvePool = curveRegistry.find_pool_for_coins(ETH_ADD_CURVE, _toToken);
-        }
-        if (curvePool == address(0) && _toToken == WETH) {
-            curvePool = curveRegistry.find_pool_for_coins(_fromToken, ETH_ADD_CURVE);
-        }
+        address curvePool = _findCurvePool(_fromToken, _toToken);
         if (curvePool != address(0)) {
             try ITradeIntegration(curve).trade(_strategy, _fromToken, _sendTokenAmount, _toToken, _minReceiveQuantity) {
                 return true;
@@ -359,9 +349,7 @@ contract MasterSwapper is BaseIntegration, ReentrancyGuard, ITradeIntegration {
 
     function _getSynth(address _token) private view returns (address) {
         ISynthetix synthetix = ISynthetix(ISnxProxy(SNX).target());
-        console.log('symbol', ERC20(_token).symbol());
         try synthetix.synths(stringToBytes32(ERC20(_token).symbol())) returns (ISnxSynth _synth) {
-            console.log('synth', address(_synth));
             return address(_synth);
         } catch {
             return address(0);

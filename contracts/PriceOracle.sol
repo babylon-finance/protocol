@@ -63,6 +63,7 @@ contract PriceOracle is Ownable, IPriceOracle {
         ICurveAddressProvider(0x0000000022D53366457F9d5E68Ec105046FC4383);
     IUniswapV2Router internal constant uniRouterV2 = IUniswapV2Router(0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D);
 
+    address internal constant ETH_ADD_CURVE = 0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE;
     address private constant WETH = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
     address internal constant DAI = 0x6B175474E89094C44Da98b954EedeAC495271d0F;
     address internal constant WBTC = 0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599;
@@ -273,7 +274,8 @@ contract PriceOracle is Ownable, IPriceOracle {
         synths[0x6d16cF3EC5F763d4d99cB0B0b110eefD93B11B56] = true; // ProxysOIL
         synths[0xD31533E8d0f3DF62060e94B3F1318137bB6E3525] = true; // ProxysREN
         synths[0x0352557B007A4Aae1511C114409b932F06F9E2f4] = true; // ProxysRUNE
-        synths[0xf2E08356588EC5cd9E437552Da87C0076b4970B0] = true; // ProxysTSLA
+        synths[0xf2E08356588EC5cd9E437552Da87C0076b4970B0] = true; // ProxysTRX
+        synths[0x918dA91Ccbc32B7a6A0cc4eCd5987bbab6E31e6D] = true; // ProxysTSLA
         synths[0x30635297E450b930f8693297eBa160D9e6c8eBcf] = true; // ProxysUNI
         synths[0x6A22e5e94388464181578Aa7A6B869e00fE27846] = true; // ProxysXAG
         synths[0x261EfCdD24CeA98652B9700800a13DfBca4103fF] = true; // ProxysXAU
@@ -431,6 +433,23 @@ contract PriceOracle is Ownable, IPriceOracle {
                 }
             }
         }
+        // Curve pair through WETH
+        if (_tokenIn != WETH && _tokenOut != WETH) {
+            price = _checkPairThroughCurve(WETH, _tokenOut);
+            if (price != 0) {
+                uniPrice = _getUNIV3Price(_tokenIn, WETH);
+                if (uniPrice != 0) {
+                    return uniPrice.preciseMul(price);
+                }
+            }
+            price = _checkPairThroughCurve(_tokenIn, WETH);
+            if (price != 0) {
+                uniPrice = _getUNIV3Price(WETH, _tokenOut);
+                if (uniPrice != 0) {
+                    return price.preciseMul(uniPrice);
+                }
+            }
+        }
         // yfi tokens?
         // other paths to uni v3?
         if (_tokenIn != WETH && _tokenOut != WETH) {
@@ -579,9 +598,17 @@ contract PriceOracle is Ownable, IPriceOracle {
         (int128 i, int128 j, ) = curveRegistry.get_coin_indices(_curvePool, _tokenIn, _tokenOut);
         uint256 price = 0;
         if (_curvePool == 0x80466c64868E1ab14a1Ddf27A676C3fcBE638Fe5) {
-            price = ICurvePoolV3(_curvePool).get_dy(uint256(i), uint256(j), 10**ERC20(_tokenIn).decimals());
+            price = ICurvePoolV3(_curvePool).get_dy(
+                uint256(i),
+                uint256(j),
+                10**(_tokenIn == ETH_ADD_CURVE ? 18 : ERC20(_tokenIn).decimals())
+            );
         } else {
-            price = ICurvePoolV3(_curvePool).get_dy(i, j, 10**ERC20(_tokenIn).decimals());
+            price = ICurvePoolV3(_curvePool).get_dy(
+                i,
+                j,
+                10**(_tokenIn == ETH_ADD_CURVE ? 18 : ERC20(_tokenIn).decimals())
+            );
         }
         price = price.mul(10**(18 - ERC20(_tokenOut).decimals()));
         uint256 delta = price.preciseMul(CURVE_SLIPPAGE);
@@ -594,6 +621,14 @@ contract PriceOracle is Ownable, IPriceOracle {
     function _checkPairThroughCurve(address _tokenIn, address _tokenOut) private view returns (uint256) {
         ICurveRegistry curveRegistry = ICurveRegistry(curveAddressProvider.get_registry());
         address curvePool = curveRegistry.find_pool_for_coins(_tokenIn, _tokenOut);
+        if (_tokenIn == WETH && curvePool == address(0)) {
+            _tokenIn = ETH_ADD_CURVE;
+            curvePool = curveRegistry.find_pool_for_coins(ETH_ADD_CURVE, _tokenOut);
+        }
+        if (_tokenOut == WETH && curvePool == address(0)) {
+            _tokenOut = ETH_ADD_CURVE;
+            curvePool = curveRegistry.find_pool_for_coins(_tokenIn, ETH_ADD_CURVE);
+        }
         if (curvePool != address(0)) {
             uint256 price = getPriceThroughCurve(curvePool, _tokenIn, _tokenOut);
             return price;

@@ -82,17 +82,15 @@ contract SynthetixTradeIntegration is TradeIntegration {
             bytes memory
         )
     {
+        console.log('get trade call');
         (address sendTokenImpl, address receiveTokenImpl, uint256 realSendAmount) =
             _getTokens(_sendToken, _receiveToken, _sendQuantity, _strategy);
         require(sendTokenImpl != address(0) && receiveTokenImpl != address(0), 'Syntetix needs synth or DAI or USDC');
         if (sendTokenImpl == receiveTokenImpl) {
             return (address(0), 0, bytes(''));
         }
+        console.log('balance', ERC20(sendTokenImpl).balanceOf(_strategy));
         console.log('realSendAmount', realSendAmount, sendTokenImpl, receiveTokenImpl);
-        console.log(
-            uint256(ISnxSynth(sendTokenImpl).currencyKey()),
-            uint256(ISnxSynth(receiveTokenImpl).currencyKey())
-        );
         bytes memory methodData =
             abi.encodeWithSignature(
                 'exchange(bytes32,uint256,bytes32)',
@@ -255,17 +253,26 @@ contract SynthetixTradeIntegration is TradeIntegration {
         }
         address sendTokenImpl;
         address receiveTokenImpl;
-        try ISnxProxy(_sendToken).target() returns (address impl) {
-            sendTokenImpl = impl;
+        try synthetix.synths(stringToBytes32(ERC20(_sendToken).symbol())) returns (ISnxSynth _synth) {
+            sendTokenImpl = address(_synth);
         } catch {
             sendTokenImpl = address(0);
         }
-        try ISnxProxy(_receiveToken).target() returns (address impl) {
-            receiveTokenImpl = impl;
+        try synthetix.synths(stringToBytes32(ERC20(_receiveToken).symbol())) returns (ISnxSynth _synth) {
+            receiveTokenImpl = address(_synth);
         } catch {
             receiveTokenImpl = address(0);
         }
-        console.log('addresses', sendTokenImpl, receiveTokenImpl);
         return (sendTokenImpl, receiveTokenImpl, ERC20(_sendToken).balanceOf(_strategy));
+    }
+
+    function stringToBytes32(string memory source) private pure returns (bytes32 result) {
+        bytes memory tempEmptyStringTest = bytes(source);
+        if (tempEmptyStringTest.length == 0) {
+            return 0x0;
+        }
+        assembly {
+            result := mload(add(source, 32))
+        }
     }
 }

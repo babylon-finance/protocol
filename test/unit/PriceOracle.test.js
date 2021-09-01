@@ -12,6 +12,18 @@ const tokens = [
     value: from('59727425183588800'),
   },
   {
+    name: 'WETH->sAAVE',
+    tokenIn: addresses.tokens.WETH,
+    tokenOut: addresses.tokens.sAAVE,
+    value: from('7105665770955090427'),
+  },
+  {
+    name: 'DAI->sAAVE',
+    tokenIn: addresses.tokens.DAI,
+    tokenOut: addresses.tokens.sAAVE,
+    value: from('3668803175566764'),
+  },
+  {
     name: 'DAI->USDT',
     tokenIn: addresses.tokens.DAI,
     tokenOut: addresses.tokens.USDT,

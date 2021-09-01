@@ -43,14 +43,15 @@ describe('SynthetixTradeIntegration', function () {
         token: addresses.tokens.DAI,
         name: 'DAI',
         pairs: [
-          { asset: addresses.tokens.sETH, symbol: 'sETH' },
-          { asset: addresses.tokens.sUSD, symbol: 'sUSD' },
-          { asset: addresses.tokens.sBTC, symbol: 'sBTC' },
+          // { asset: addresses.tokens.sETH, symbol: 'sETH' },
+          // { asset: addresses.tokens.sUSD, symbol: 'sUSD' },
+          // { asset: addresses.tokens.sBTC, symbol: 'sBTC' },
+          { asset: addresses.tokens.sAAVE, symbol: 'sAAVE' },
         ],
       },
     ].forEach(({ token, name, pairs }) => {
       pairs.forEach(({ asset, symbol }) => {
-        it(`exchange ${name}->${symbol} in ${name} garden`, async function () {
+        it.only(`exchange ${name}->${symbol} in ${name} garden`, async function () {
           if (token === asset) return;
 
           const tokenContract = await ethers.getContractAt(
@@ -73,18 +74,17 @@ describe('SynthetixTradeIntegration', function () {
           });
 
           await executeStrategy(strategyContract);
-          console.log('after execute', token, asset);
+          console.log('after execute JS', token, asset);
+          const assetBalance = await assetContract.balanceOf(strategyContract.address);
+          console.log('assetBalance', ethers.utils.formatEther(assetBalance));
 
           const tokenPriceInAsset = await priceOracle.connect(owner).getPrice(token, asset);
-
           const assetDecimals = await assetContract.decimals();
           const assetDecimalsDelta = 10 ** (18 - assetDecimals);
 
           const tokenDecimals = await tokenContract.decimals();
           const tokenDecimalsDelta = 10 ** (18 - tokenDecimals);
 
-          const assetBalance = await assetContract.balanceOf(strategyContract.address);
-          console.log('assetBalance', ethers.utils.formatEther(assetBalance));
           const expectedBalance = tokenPriceInAsset
             .mul(tokenDecimalsDelta)
             .mul(STRATEGY_EXECUTE_MAP[token])
@@ -93,9 +93,7 @@ describe('SynthetixTradeIntegration', function () {
           // 5% slippage. Doesn't matter we just want to check that the trade can execute
           // univ3 doesn't have right prices for some of these
           expect(assetBalance).to.be.closeTo(expectedBalance, expectedBalance.div(20));
-          console.log('before finalize');
           await increaseTime(400);
-          // await increaseBlock(10);
           // Cannot test Finalize on Synthetix because Oracle becomes stale
           // await finalizeStrategy(strategyContract, 0);
           // const assetBalanceAfter = await assetContract.balanceOf(strategyContract.address);

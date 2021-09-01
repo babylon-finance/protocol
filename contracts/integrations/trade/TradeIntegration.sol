@@ -203,10 +203,8 @@ abstract contract TradeIntegration is BaseIntegration, ReentrancyGuard, ITradeIn
         tradeInfo.totalSendQuantity = _sendQuantity;
 
         tradeInfo.totalMinReceiveQuantity = _minReceiveQuantity;
-
         tradeInfo.preTradeSendTokenBalance = ERC20(_sendToken).balanceOf(_strategy);
         tradeInfo.preTradeReceiveTokenBalance = ERC20(_receiveToken).balanceOf(_strategy);
-
         return tradeInfo;
     }
 
