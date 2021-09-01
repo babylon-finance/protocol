@@ -98,5 +98,5 @@ interface IRewardsDistributor {
         address _contributor,
         uint256 _amount,
         bool _depositOrWithdraw
-        ) external;
+    ) external;
 }

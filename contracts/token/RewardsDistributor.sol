@@ -175,13 +175,15 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         uint96 supplyPerQuarter; // Supply per quarter
     }
 
-    struct GardenPowerByTimestamp { // DEPRECATED
+    struct GardenPowerByTimestamp {
+        // DEPRECATED
         // Garden allocation checkpoints per timestamp per each garden
         uint256 supply; // Checkpoint to keep track on garden supply
         uint256 timestamp; // Checkpoint timestamps
         uint256 power; // Garden power checkpoint (power is proportional to = principal * duration)
     }
-    struct ContributorPerGarden { // DEPRECATED
+    struct ContributorPerGarden {
+        // DEPRECATED
         // Checkpoints to keep track on the evolution of each contributor vs. each garden
         uint256 lastDepositAt; // Last deposit timestamp of each contributor in each garden
         uint256 initialDepositAt; // Checkpoint of the initial deposit
@@ -190,7 +192,8 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         mapping(uint256 => TimestampContribution) tsContributions; // Sub-mapping all the contributor checkpoints
     }
 
-    struct TimestampContribution { // DEPRECATED
+    struct TimestampContribution {
+        // DEPRECATED
         // Sub-mapping with all checkpoints for deposits and withdrawals of garden users
         uint256 supply; // Garden token balance of user in each garden along the time
         uint256 timestamp; // Checkpoint time
@@ -223,7 +226,7 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
     mapping(uint256 => bool) private isProtocolPerQuarter; // Check if the protocol per quarter data has been initialized
 
     // Strategy overhead control. Only used if each strategy has power overhead due to changes overtime
-    mapping(address => mapping(uint256 => uint256)) private rewardsPowerOverhead; // DEPRECATED 
+    mapping(address => mapping(uint256 => uint256)) private rewardsPowerOverhead; // DEPRECATED
     // Contributor power control
     mapping(address => mapping(address => ContributorPerGarden)) private contributorPerGarden; // Enable high level accuracy calculations
     mapping(address => mapping(address => Checkpoints)) private checkpoints;
@@ -260,7 +263,6 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         uint256 amount;
         uint256 blockNumber;
         bool depositOrWithdraw;
-        uint256 contributorPower;
     }
 
     // New contributor checkpoints per garden
@@ -388,7 +390,7 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
      * @param _contributor           Address of the contributor
      * @param _amount                Amount depositing
      */
-     /**
+    /**
     function updateDepositInGarden(
         address _contributor,
         uint256 _amount
@@ -428,7 +430,7 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         address _contributor,
         uint256 _amount,
         bool _depositOrWithdrawal
-        ) external override nonReentrant onlyActiveGarden() {
+    ) external override nonReentrant onlyActiveGarden() {
         // ContributorPerGarden storage userGardenData = contributorPerGarden[msg.sender][_contributor];
         // GardenPowerByTimestamp storage gardenTimestamp = gardenPowerByTimestamp[msg.sender][block.timestamp];
         DepositInfo memory newCheckpoint;
@@ -445,13 +447,9 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         // userGardenData.virtualAmount -= _amount;
         // gardenTimestamp.virtualTotalSupply -= _amount;
 
-       
-
         // _updateGardenPower(msg.sender);
         //_setContributorTimestampParams(msg.sender, _contributor, _previousBalance, _depositOrWithdraw);
     }
-
-    
 
     /**
      * Function that set the babl Token address as it is going to be released in a future date
@@ -1224,7 +1222,8 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         _require(_to >= IGarden(_garden).gardenInitializedAt() && _to >= _from, Errors.CONTRIBUTOR_POWER_CHECK_WINDOW);
         return IERC20(_garden).balanceOf(_contributor).preciseDiv(IERC20(_garden).totalSupply());
     }
-        /**
+
+    /**
         ContributorPerGarden storage contributor = contributorPerGarden[address(_garden)][address(_contributor)];
         Checkpoints memory powerCheckpoints = checkpoints[address(_garden)][address(_contributor)];
 
@@ -1342,7 +1341,7 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
      * @param _to          End timestamp
      * @return uint256     Contributor power during that period
      */
-     /**
+    /**
     function _locateCheckpointsContributor(
         address _garden,
         address _contributor,
@@ -1375,7 +1374,7 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
      * @param _to          End timestamp
      * @return uint256     Contributor power during that period
      */
-     /**
+    /**
     function _locateCheckpointsGarden(
         address _garden,
         uint256 _from,
@@ -1403,8 +1402,8 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
     /**
      * Function that keeps checkpoints of the garden power (deposits and withdrawals) per timestamp
      * @param _garden               Garden address
-     */ 
-     /**
+     */
+    /**
     function _updateGardenPower(address _garden) private {
         IGarden garden = IGarden(_garden);
         GardenPowerByTimestamp storage gardenTimestamp = gardenPowerByTimestamp[address(garden)][block.timestamp];
@@ -1438,7 +1437,7 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
      * @param _previousBalance      Previous balance
      * @param _depositOrWithdraw    Whether it is a deposit or a withdraw
      */
-     /**
+    /**
     function _setContributorTimestampParams(
         address _garden,
         address _contributor,

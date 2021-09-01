@@ -1039,7 +1039,6 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         contributor.nonce = contributor.nonce + 1;
 
         rewardsDistributor.updateCheckpointInGarden(_to, _netflowQuantity, false);
-
     }
 
     /**
