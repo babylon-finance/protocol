@@ -19,7 +19,6 @@
 pragma solidity 0.7.6;
 pragma abicoder v2;
 
-import 'hardhat/console.sol';
 import {IBabController} from '../../interfaces/IBabController.sol';
 import {IStrategy} from '../../interfaces/IStrategy.sol';
 import {ERC20} from '@openzeppelin/contracts/token/ERC20/ERC20.sol';
@@ -82,15 +81,12 @@ contract SynthetixTradeIntegration is TradeIntegration {
             bytes memory
         )
     {
-        console.log('get trade call');
         (address sendTokenImpl, address receiveTokenImpl, uint256 realSendAmount) =
             _getTokens(_sendToken, _receiveToken, _sendQuantity, _strategy);
         require(sendTokenImpl != address(0) && receiveTokenImpl != address(0), 'Syntetix needs synth or DAI or USDC');
         if (sendTokenImpl == receiveTokenImpl) {
             return (address(0), 0, bytes(''));
         }
-        console.log('balance', ERC20(sendTokenImpl).balanceOf(_strategy));
-        console.log('realSendAmount', realSendAmount, sendTokenImpl, receiveTokenImpl);
         bytes memory methodData =
             abi.encodeWithSignature(
                 'exchange(bytes32,uint256,bytes32)',
