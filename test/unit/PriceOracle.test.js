@@ -57,7 +57,7 @@ const tokens = [
     name: 'YFI->DAI',
     tokenIn: addresses.tokens.YFI,
     tokenOut: addresses.tokens.DAI,
-    value: from('30475749367415192058580'),
+    value: from('32480025833025606637444'),
   },
   {
     name: 'SNX->USDT',

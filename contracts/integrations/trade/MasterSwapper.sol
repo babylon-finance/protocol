@@ -165,12 +165,10 @@ contract MasterSwapper is BaseIntegration, ReentrancyGuard, ITradeIntegration {
                 return;
             } catch {}
         }
-        console.log('curve direct');
         // Curve Direct
         if (_curveSwap(_strategy, _sendToken, _receiveToken, _sendQuantity, _minReceiveQuantity)) {
             return;
         }
-        console.log('curve direct failed');
         // Abstract Synths out
         if (_sendTokenSynth != address(0)) {
             uint256 reserveBalance = _getTokenOrETHBalance(_strategy, DAI);
@@ -191,14 +189,12 @@ contract MasterSwapper is BaseIntegration, ReentrancyGuard, ITradeIntegration {
         }
         // Trade to DAI and then do DAI to synh
         if (_receiveTokenSynth != address(0)) {
-            console.log('receive token is a synth');
             uint256 reserveBalance = 0;
 
             if (_sendToken != DAI) {
                 reserveBalance = _getTokenOrETHBalance(_strategy, DAI);
                 _trade(_strategy, _sendToken, _sendQuantity, DAI, 1);
             }
-            console.log('do synthetix', DAI, _receiveToken, _getTokenOrETHBalance(_strategy, DAI).sub(reserveBalance));
             try
                 ITradeIntegration(synthetix).trade(
                     _strategy,

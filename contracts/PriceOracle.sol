@@ -483,13 +483,7 @@ contract PriceOracle is Ownable, IPriceOracle {
         int24 tick;
         IUniswapV3Pool pool;
         // We try the low pool first
-        (found, pool, tick) = _checkPool(_tokenIn, _tokenOut, FEE_LOW);
-        if (!found) {
-            (found, pool, tick) = _checkPool(_tokenIn, _tokenOut, FEE_MEDIUM);
-        }
-        if (!found) {
-            (found, pool, tick) = _checkPool(_tokenIn, _tokenOut, FEE_HIGH);
-        }
+        (found, pool, tick) = _checkPool(_tokenIn, _tokenOut);
         if (!found) {
             return 0;
         }
@@ -507,8 +501,7 @@ contract PriceOracle is Ownable, IPriceOracle {
 
     function _checkPool(
         address _tokenIn,
-        address _tokenOut,
-        uint24 fee
+        address _tokenOut
     )
         internal
         view
@@ -519,12 +512,36 @@ contract PriceOracle is Ownable, IPriceOracle {
         )
     {
         int24 tick;
-        IUniswapV3Pool pool = IUniswapV3Pool(factory.getPool(_tokenIn, _tokenOut, fee));
+        IUniswapV3Pool pool = _getUniswapPoolWithHighestLiquidity(_tokenIn, _tokenOut);
         if (address(pool) != address(0)) {
-            (, tick, , , , , ) = pool.slot0();
-            return (_checkPrice(tick, pool), pool, tick);
+            uint256 poolLiquidity = uint256(pool.liquidity());
+            if (poolLiquidity > 0) {
+              (, tick, , , , , ) = pool.slot0();
+              return (_checkPrice(tick, pool), pool, tick);
+            }
         }
         return (false, IUniswapV3Pool(0), 0);
+    }
+
+    function _getUniswapPoolWithHighestLiquidity(address sendToken, address receiveToken)
+        private
+        view
+        returns (IUniswapV3Pool pool)
+    {
+        IUniswapV3Pool poolLow = IUniswapV3Pool(factory.getPool(sendToken, receiveToken, FEE_LOW));
+        IUniswapV3Pool poolMedium = IUniswapV3Pool(factory.getPool(sendToken, receiveToken, FEE_MEDIUM));
+        IUniswapV3Pool poolHigh = IUniswapV3Pool(factory.getPool(sendToken, receiveToken, FEE_HIGH));
+
+        uint128 liquidityLow = address(poolLow) != address(0) ? poolLow.liquidity() : 0;
+        uint128 liquidityMedium = address(poolMedium) != address(0) ? poolMedium.liquidity() : 0;
+        uint128 liquidityHigh = address(poolHigh) != address(0) ? poolHigh.liquidity() : 0;
+        if (liquidityLow > liquidityMedium && liquidityLow >= liquidityHigh) {
+            return poolLow;
+        }
+        if (liquidityMedium > liquidityLow && liquidityMedium >= liquidityHigh) {
+            return poolMedium;
+        }
+        return poolHigh;
     }
 
     /// @dev Revert if current price is too close to min or max ticks allowed
