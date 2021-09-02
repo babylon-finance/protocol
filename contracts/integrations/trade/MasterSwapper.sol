@@ -18,7 +18,7 @@
 
 pragma solidity 0.7.6;
 
-import 'hardhat/console.sol';
+// import 'hardhat/console.sol';
 import {SafeCast} from '@openzeppelin/contracts/utils/SafeCast.sol';
 import {ERC20} from '@openzeppelin/contracts/token/ERC20/ERC20.sol';
 import {ReentrancyGuard} from '@openzeppelin/contracts/utils/ReentrancyGuard.sol';
@@ -144,7 +144,7 @@ contract MasterSwapper is BaseIntegration, ReentrancyGuard, ITradeIntegration {
         if (_sendToken == _receiveToken) {
             return;
         }
-        console.log('--- TRADE ASSET ---', _sendToken, _receiveToken, ERC20(_sendToken).balanceOf(_strategy));
+        // console.log('--- TRADE ASSET ---', _sendToken, _receiveToken, ERC20(_sendToken).balanceOf(_strategy));
         // Synthetix Direct
         address _sendTokenSynth = _getSynth(_sendToken);
         address _receiveTokenSynth = _getSynth(_receiveToken);

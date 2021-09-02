@@ -19,7 +19,6 @@
 pragma solidity 0.7.6;
 pragma abicoder v2;
 
-import 'hardhat/console.sol';
 import {IBabController} from '../../interfaces/IBabController.sol';
 import {IStrategy} from '../../interfaces/IStrategy.sol';
 import {ICurveAddressProvider} from '../../interfaces/external/curve/ICurveAddressProvider.sol';
@@ -89,7 +88,6 @@ contract CurveTradeIntegration is TradeIntegration {
         require(curvePool != address(0), 'No curve pool to trade the pair');
         (int128 i, int128 j, bool underlying) =
             curveRegistry.get_coin_indices(curvePool, realSendToken, realReceiveToken);
-        console.log('trading', underlying, _sendQuantity);
         bytes memory methodData =
             abi.encodeWithSignature('exchange(int128,int128,uint256,uint256)', i, j, _sendQuantity, 1);
         if (tricurvePool == curvePool) {
