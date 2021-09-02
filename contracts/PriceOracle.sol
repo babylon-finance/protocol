@@ -610,7 +610,7 @@ contract PriceOracle is Ownable, IPriceOracle {
                 10**(_tokenIn == ETH_ADD_CURVE ? 18 : ERC20(_tokenIn).decimals())
             );
         }
-        price = price.mul(10**(18 - ERC20(_tokenOut).decimals()));
+        price = price.mul(10**(18 - (_tokenOut == ETH_ADD_CURVE ? 18 : ERC20(_tokenOut).decimals())));
         uint256 delta = price.preciseMul(CURVE_SLIPPAGE);
         if (price < price.add(delta) && price > price.sub(delta)) {
             return price;

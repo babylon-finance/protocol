@@ -82,7 +82,7 @@ describe('MasterSwapper', function () {
       },
     ].forEach(({ token, name, pairs }) => {
       pairs.forEach(({ to, symbol, synth }) => {
-        it.only(`exchange ${name}->${symbol} in ${name} garden`, async function () {
+        it(`exchange ${name}->${symbol} in ${name} garden`, async function () {
           if (token === to) return;
 
           const tokenContract = await ethers.getContractAt(

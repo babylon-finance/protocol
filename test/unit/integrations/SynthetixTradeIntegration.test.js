@@ -43,15 +43,15 @@ describe('SynthetixTradeIntegration', function () {
         token: addresses.tokens.DAI,
         name: 'DAI',
         pairs: [
-          // { asset: addresses.tokens.sETH, symbol: 'sETH' },
-          // { asset: addresses.tokens.sUSD, symbol: 'sUSD' },
-          // { asset: addresses.tokens.sBTC, symbol: 'sBTC' },
+          { asset: addresses.tokens.sETH, symbol: 'sETH' },
+          { asset: addresses.tokens.sUSD, symbol: 'sUSD' },
+          { asset: addresses.tokens.sBTC, symbol: 'sBTC' },
           { asset: addresses.tokens.sAAVE, symbol: 'sAAVE' },
         ],
       },
     ].forEach(({ token, name, pairs }) => {
       pairs.forEach(({ asset, symbol }) => {
-        it.only(`exchange ${name}->${symbol} in ${name} garden`, async function () {
+        it(`exchange ${name}->${symbol} in ${name} garden`, async function () {
           if (token === asset) return;
 
           const tokenContract = await ethers.getContractAt(
