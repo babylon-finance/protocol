@@ -303,7 +303,7 @@ contract PriceOracle is Ownable, IPriceOracle {
      * @param _tokenOut             Address of the second token
      * @return price                Price of the pair
      */
-    function getPrice(address _tokenIn, address _tokenOut) public view override returns (uint256 price) {
+    function getPrice(address _tokenIn, address _tokenOut) public virtual view override returns (uint256 price) {
         return _getPrice(_tokenIn, _tokenOut, false);
     }
 

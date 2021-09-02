@@ -644,7 +644,6 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
     function getNAV() public view override returns (uint256) {
         uint256 positiveNav;
         uint256 negativeNav;
-        bool positive;
         address reserveAsset = garden.reserveAsset();
         for (uint256 i = 0; i < opTypes.length; i++) {
             IOperation operation = IOperation(IBabController(controller).enabledOperations(uint256(opTypes[i])));
