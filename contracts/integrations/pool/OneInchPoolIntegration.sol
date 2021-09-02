@@ -111,7 +111,7 @@ contract OneInchPoolIntegration is PoolIntegration {
         return IMooniswapFactory(mooniswapFactory).isPool(IMooniswap(poolAddress));
     }
 
-    function _getSpender(bytes calldata _pool) internal view override returns (address) {
+    function _getSpender(bytes calldata _pool) internal pure override returns (address) {
         address poolAddress = BytesLib.decodeOpDataAddress(_pool);
         return poolAddress;
     }
@@ -137,7 +137,7 @@ contract OneInchPoolIntegration is PoolIntegration {
         uint256[] calldata _maxAmountsIn
     )
         internal
-        view
+        pure
         override
         returns (
             address,
@@ -190,7 +190,7 @@ contract OneInchPoolIntegration is PoolIntegration {
         uint256[] calldata _minAmountsOut
     )
         internal
-        view
+        pure
         override
         returns (
             address,

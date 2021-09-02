@@ -110,7 +110,7 @@ contract UniswapV3TradeIntegration is TradeIntegration {
      */
     function _getSpender(
         address /* _swapTarget */
-    ) internal view override returns (address) {
+    ) internal pure override returns (address) {
         return address(swapRouter);
     }
 
@@ -179,7 +179,7 @@ contract UniswapV3TradeIntegration is TradeIntegration {
         return (poolHigh, FEE_HIGH);
     }
 
-    function _getReserveAsWeth(address _token, address _reserveAsset) internal view returns (address) {
+    function _getReserveAsWeth(address _token, address _reserveAsset) internal pure returns (address) {
         return _reserveAsset == _token ? WETH : _token;
     }
 }

@@ -251,7 +251,7 @@ contract AddLiquidityOperation is Operation {
         return IPoolIntegration(_integration).getLPToken(BytesLib.decodeOpDataAddress(_data));
     }
 
-    function _isETH(address _address) internal view returns (bool) {
+    function _isETH(address _address) internal pure returns (bool) {
         return _address == 0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE || _address == address(0);
     }
 }

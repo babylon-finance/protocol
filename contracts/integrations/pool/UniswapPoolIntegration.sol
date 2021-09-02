@@ -114,7 +114,7 @@ contract UniswapPoolIntegration is PoolIntegration {
 
     /* ============ Internal Functions ============ */
 
-    function _isPool(bytes memory _pool) internal view override returns (bool) {
+    function _isPool(bytes memory _pool) internal pure override returns (bool) {
         address poolAddress = BytesLib.decodeOpDataAddressAssembly(_pool, 12);
         return IUniswapV2Pair(poolAddress).MINIMUM_LIQUIDITY() > 0;
     }

@@ -100,7 +100,7 @@ contract UniswapV2TradeIntegration is TradeIntegration {
      */
     function _getSpender(
         address /* _swapTarget */
-    ) internal view override returns (address) {
+    ) internal pure override returns (address) {
         return router;
     }
 
@@ -110,7 +110,7 @@ contract UniswapV2TradeIntegration is TradeIntegration {
      * @param _tradeInfo            Struct containing trade information used in internal functions
      * @param _sendQuantity         Units of token in SetToken sent to the exchange
      */
-    function _checkLiquidity(TradeInfo memory _tradeInfo, uint256 _sendQuantity) internal view override returns (bool) {
+    function _checkLiquidity(TradeInfo memory _tradeInfo, uint256 _sendQuantity) internal pure override returns (bool) {
         // Can only use V2 with ops that have minQuantity set
         return _tradeInfo.totalMinReceiveQuantity > 1;
     }

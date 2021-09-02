@@ -130,7 +130,7 @@ contract CurvePoolIntegration is PoolIntegration {
         bytes calldata _pool,
         address _poolToken,
         uint256 _maxAmountsIn
-    ) external view override returns (uint256) {
+    ) external pure override returns (uint256) {
         // return 1 since _poolTokensOut are not used
         return 1;
     }
@@ -168,7 +168,7 @@ contract CurvePoolIntegration is PoolIntegration {
 
     function _totalSupply(
         address /* _pool */
-    ) internal view override returns (uint256) {
+    ) internal pure override returns (uint256) {
         return uint256(1e18);
     }
 

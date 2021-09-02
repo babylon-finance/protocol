@@ -1418,7 +1418,7 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
      * Calculates the BABL rewards supply for each quarter
      * @param _quarter      Number of the epoch (quarter)
      */
-    function _tokenSupplyPerQuarter(uint256 _quarter) internal view returns (uint96) {
+    function _tokenSupplyPerQuarter(uint256 _quarter) internal pure returns (uint96) {
         _require(_quarter >= 1, Errors.QUARTERS_MIN_1);
         if (_quarter >= 513) {
             return 0; // Avoid math overflow

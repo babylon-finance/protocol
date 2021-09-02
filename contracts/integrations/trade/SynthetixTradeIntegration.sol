@@ -114,7 +114,7 @@ contract SynthetixTradeIntegration is TradeIntegration {
         uint256 _sendQuantity
     )
         internal
-        view
+        pure
         override
         returns (
             address,
@@ -152,7 +152,7 @@ contract SynthetixTradeIntegration is TradeIntegration {
         uint256 _sendQuantity
     )
         internal
-        view
+        pure
         override
         returns (
             address,
@@ -180,7 +180,7 @@ contract SynthetixTradeIntegration is TradeIntegration {
      * @param _swapTarget          Address of the contract that will execute the swap
      * @return address             Address of the contract to approve tokens to
      */
-    function _getSpender(address _swapTarget) internal view override returns (address) {
+    function _getSpender(address _swapTarget) internal pure override returns (address) {
         return _swapTarget;
     }
 
@@ -190,7 +190,7 @@ contract SynthetixTradeIntegration is TradeIntegration {
      * @param _swapTarget          Address of the contract that will execute the swap
      * @return address             Address of the contract to approve tokens to
      */
-    function _getPreApprovalSpender(address _swapTarget) internal view override returns (address) {
+    function _getPreApprovalSpender(address _swapTarget) internal pure override returns (address) {
         return _swapTarget;
     }
 
@@ -200,11 +200,11 @@ contract SynthetixTradeIntegration is TradeIntegration {
      * @param _swapTarget          Address of the contract that will execute the swap
      * @return address             Address of the contract to approve tokens to
      */
-    function _getPostApprovalSpender(address _swapTarget) internal view override returns (address) {
+    function _getPostApprovalSpender(address _swapTarget) internal pure override returns (address) {
         return _swapTarget;
     }
 
-    function _getPostActionToken(address _receiveToken) internal view override returns (address) {
+    function _getPostActionToken(address _receiveToken) internal pure override returns (address) {
         if (_receiveToken == DAI || _receiveToken == USDC) {
             return sUSD;
         }

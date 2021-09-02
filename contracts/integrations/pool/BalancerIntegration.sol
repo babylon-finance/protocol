@@ -107,7 +107,7 @@ contract BalancerIntegration is PoolIntegration {
         return coreFactory.isBPool(poolAddress);
     }
 
-    function _getSpender(bytes calldata _pool) internal view override returns (address) {
+    function _getSpender(bytes calldata _pool) internal pure override returns (address) {
         address poolAddress = BytesLib.decodeOpDataAddress(_pool);
         return poolAddress;
     }
@@ -133,7 +133,7 @@ contract BalancerIntegration is PoolIntegration {
         uint256[] calldata _maxAmountsIn
     )
         internal
-        view
+        pure
         override
         returns (
             address,
@@ -169,7 +169,7 @@ contract BalancerIntegration is PoolIntegration {
         uint256[] calldata _minAmountsOut
     )
         internal
-        view
+        pure
         override
         returns (
             address,

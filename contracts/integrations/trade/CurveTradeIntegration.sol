@@ -106,7 +106,7 @@ contract CurveTradeIntegration is TradeIntegration {
      *
      * @return address             Address of the contract to approve tokens to
      */
-    function _getSpender(address _swapTarget) internal view override returns (address) {
+    function _getSpender(address _swapTarget) internal pure override returns (address) {
         return _swapTarget;
     }
 
@@ -191,7 +191,7 @@ contract CurveTradeIntegration is TradeIntegration {
         return (address(0), 0, bytes(''));
     }
 
-    function _getPostActionToken(address _receiveToken) internal view override returns (address) {
+    function _getPostActionToken(address _receiveToken) internal pure override returns (address) {
         return ETH_ADD_CURVE;
     }
 

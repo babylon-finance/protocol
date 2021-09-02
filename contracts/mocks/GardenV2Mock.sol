@@ -169,7 +169,7 @@ contract GardenV2Mock is ERC20Upgradeable, ReentrancyGuard {
         bool mintNFT
     ) external payable {}
 
-    function newMethod() public view returns (string memory) {
+    function newMethod() public pure returns (string memory) {
         return 'foobar';
     }
 }
