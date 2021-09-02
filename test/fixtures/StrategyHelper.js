@@ -220,12 +220,11 @@ async function deposit(garden, signers) {
   }
 }
 
-async function vote(strategy) {
+async function vote(strategy, signers) {
   const garden = await strategy.garden();
   const gardenContract = await ethers.getContractAt('Garden', garden);
 
-  const signers = await ethers.getSigners();
-  const [, , , signer1, signer2] = signers;
+  const [signer1, signer2] = signers;
 
   const signer1Balance = await gardenContract.balanceOf(signer1.getAddress());
   const signer2Balance = await gardenContract.balanceOf(signer2.getAddress());
@@ -462,7 +461,7 @@ async function createStrategy(kind, state, signers, integrations, garden, params
     if (state === 'deposit') {
       return strategy;
     }
-    await vote(strategy);
+    await vote(strategy, signers);
     if (state === 'vote') {
       return strategy;
     }

@@ -239,6 +239,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
             Errors.DURATION_MUST_BE_IN_RANGE
         );
         _require(_maxAllocationPercentage < 1e18, Errors.MAX_STRATEGY_ALLOCATION_PERCENTAGE);
+        _require(_maxCapitalRequested > 0, Errors.ZERO_CAPITAL_REQUESTED);
         maxAllocationPercentage = _maxAllocationPercentage;
         strategist = _strategist;
         enteredAt = block.timestamp;
@@ -643,17 +644,21 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
     function getNAV() public view override returns (uint256) {
         uint256 positiveNav;
         uint256 negativeNav;
+        bool positive;
         address reserveAsset = garden.reserveAsset();
         for (uint256 i = 0; i < opTypes.length; i++) {
             IOperation operation = IOperation(IBabController(controller).enabledOperations(uint256(opTypes[i])));
             // _getOpDecodedData guarantee backward compatibility with OpData
-            (uint256 strategyNav, bool positive) = operation.getNAV(_getOpDecodedData(i), garden, opIntegrations[i]);
-            if (positive) {
-                positiveNav = positiveNav.add(strategyNav);
-            } else {
-                negativeNav = negativeNav.add(strategyNav);
-            }
-            // borrow op
+            try operation.getNAV(_getOpDecodedData(i), garden, opIntegrations[i]) returns (
+                uint256 opNAV,
+                bool positive
+            ) {
+                if (positive) {
+                    positiveNav = positiveNav.add(opNAV);
+                } else {
+                    negativeNav = negativeNav.add(opNAV);
+                }
+            } catch {}
         }
         uint256 lastOp = opTypes.length - 1;
         if (opTypes[lastOp] == 4) {
@@ -824,6 +829,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         address tradeIntegration = IBabController(controller).masterSwapper();
         // Uses on chain oracle for all internal strategy operations to avoid attacks
         uint256 pricePerTokenUnit = _getPrice(_sendToken, _receiveToken);
+        _require(pricePerTokenUnit != 0, Errors.NO_PRICE_FOR_TRADE);
         // minAmount must have receive token decimals
         uint256 exactAmount =
             SafeDecimalMath.normalizeAmountTokens(
@@ -846,6 +852,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         address reserveAsset = garden.reserveAsset();
         int256 strategyReturns = capitalReturned.toInt256().sub(capitalAllocated.toInt256());
         uint256 protocolProfits;
+        uint256 burningAmount;
         // Strategy returns were positive
         uint256 profits = capitalReturned > capitalAllocated ? capitalReturned.sub(capitalAllocated) : 0; // in reserve asset, e.g., WETH, USDC, DAI, WBTC
         if (capitalReturned >= capitalAllocated) {
@@ -854,24 +861,13 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
             IERC20(reserveAsset).safeTransfer(IBabController(controller).treasury(), protocolProfits);
             strategyReturns = strategyReturns.sub(protocolProfits.toInt256());
         } else {
-            // Returns were negative
-            // Burn strategist stake and add the amount to the garden
-            uint256 burningAmount =
-                (stake.sub(capitalReturned.preciseDiv(capitalAllocated).preciseMul(stake))).multiplyDecimal(
-                    STAKE_QUADRATIC_PENALTY_FOR_LOSSES
-                );
-            if (IERC20(address(garden)).balanceOf(strategist) < burningAmount) {
-                // Avoid underflow burning more than its balance
-                burningAmount = IERC20(address(garden)).balanceOf(strategist);
-            }
-
-            garden.burnStrategistStake(strategist, burningAmount);
-            strategyReturns = strategyReturns.add(int256(burningAmount));
+            // Returns were negative so let's burn the strategiest stake
+            burningAmount = (stake.sub(capitalReturned.preciseDiv(capitalAllocated).preciseMul(stake))).multiplyDecimal(
+                STAKE_QUADRATIC_PENALTY_FOR_LOSSES
+            );
         }
         // Return the balance back to the garden
         IERC20(reserveAsset).safeTransfer(address(garden), capitalReturned.sub(protocolProfits));
-        // Start a redemption window in the garden with the capital plus the profits for the lps
-
         // profitsSharing[0]: strategistProfit %, profitsSharing[1]: stewardsProfit %, profitsSharing[2]: lpProfit %
         if (address(rewardsDistributor) == address(0)) {
             rewardsDistributor = IRewardsDistributor(IBabController(controller).rewardsDistributor());
@@ -879,7 +875,8 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         uint256[3] memory profitsSharing = rewardsDistributor.getGardenProfitsSharing(address(garden));
         garden.finalizeStrategy(
             profits.sub(profits.preciseMul(profitsSharing[2])).sub(protocolProfits),
-            strategyReturns
+            strategyReturns,
+            burningAmount
         );
         // Substract the Principal in the Rewards Distributor to update the Protocol power value
         if (hasMiningStarted) {
@@ -890,7 +887,13 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
     }
 
     function _getPrice(address _assetOne, address _assetTwo) private view returns (uint256) {
-        return IPriceOracle(IBabController(controller).priceOracle()).getPrice(_assetOne, _assetTwo);
+        try IPriceOracle(IBabController(controller).priceOracle()).getPrice(_assetOne, _assetTwo) returns (
+            uint256 price
+        ) {
+            return price;
+        } catch {
+            return 0;
+        }
     }
 
     // backward compatibility with OpData in case of ongoing strategies with deprecated OpData

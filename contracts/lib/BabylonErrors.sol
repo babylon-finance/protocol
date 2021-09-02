@@ -282,4 +282,8 @@ library Errors {
     uint256 internal constant INVALID_ADDRESS = 96;
     // creator can only renounce in some circumstances
     uint256 internal constant CREATOR_CANNOT_RENOUNCE = 97;
+    // no price for trade
+    uint256 internal constant NO_PRICE_FOR_TRADE = 98;
+    // Max capital requested
+    uint256 internal constant ZERO_CAPITAL_REQUESTED = 99;
 }

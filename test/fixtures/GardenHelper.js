@@ -30,6 +30,7 @@ async function createGarden({
   nftUri = NFT_URI,
   nftSeed = NFT_SEED,
   signer,
+  params,
   publicGardenStrategistsStewards = [false, false, false],
   publicSharing = [0, 0, 0],
 } = {}) {
@@ -37,7 +38,7 @@ async function createGarden({
   signer = signer || signer1;
   const ishtarGate = await getContract('IshtarGate');
   const babController = await getContract('BabController', 'BabControllerProxy');
-  const params = GARDEN_PARAMS_MAP[reserveAsset];
+  params = params || GARDEN_PARAMS_MAP[reserveAsset];
   const contribution = CONTRIBUTORS_MAP[reserveAsset];
   const erc20 = await ethers.getContractAt('@openzeppelin/contracts/token/ERC20/IERC20.sol:IERC20', reserveAsset);
   for (const sig of [signer1, signer2, signer3]) {
@@ -65,7 +66,7 @@ async function createGarden({
   const gardens = await babController.getGardens();
   const garden = await ethers.getContractAt('Garden', gardens.slice(-1)[0]);
   await ishtarGate
-    .connect(signer1)
+    .connect(signer)
     .grantGardenAccessBatch(garden.address, [signer1.address, signer2.address, signer3.address], [3, 3, 3], {
       gasPrice: 0,
     });
@@ -206,14 +207,16 @@ async function transferFunds(address) {
   }
 }
 
-async function getDepositSig(garden, signer, amountIn, minAmountOut, mintNft, nonce) {
+async function getDepositSig(garden, signer, amountIn, minAmountOut, mintNft, nonce, maxFee) {
   const DEPOSIT_BY_SIG_TYPEHASH = ethers.utils.keccak256(
-    ethers.utils.toUtf8Bytes('DepositBySig(uint256 _amountIn,uint256 _minAmountOut,bool _mintNft, uint256 _nonce)'),
+    ethers.utils.toUtf8Bytes(
+      'DepositBySig(uint256 _amountIn,uint256 _minAmountOut,bool _mintNft,uint256 _nonce,uint256 _maxFee)',
+    ),
   );
 
   let payload = ethers.utils.defaultAbiCoder.encode(
-    ['bytes32', 'address', 'uint256', 'uint256', 'bool', 'uint256'],
-    [DEPOSIT_BY_SIG_TYPEHASH, garden, amountIn, minAmountOut, mintNft, nonce],
+    ['bytes32', 'address', 'uint256', 'uint256', 'bool', 'uint256', 'uint256'],
+    [DEPOSIT_BY_SIG_TYPEHASH, garden, amountIn, minAmountOut, mintNft, nonce, maxFee],
   );
 
   let payloadHash = ethers.utils.keccak256(payload);
@@ -222,14 +225,14 @@ async function getDepositSig(garden, signer, amountIn, minAmountOut, mintNft, no
   return ethers.utils.splitSignature(signature);
 }
 
-async function getWithdrawSig(garden, signer, amountIn, minAmountOut, nonce) {
+async function getWithdrawSig(garden, signer, amountIn, minAmountOut, nonce, maxFee) {
   const DEPOSIT_BY_SIG_TYPEHASH = ethers.utils.keccak256(
-    ethers.utils.toUtf8Bytes('WithdrawBySig(uint256 _amountIn,uint256 _minAmountOut, uint256 _nonce)'),
+    ethers.utils.toUtf8Bytes('WithdrawBySig(uint256 _amountIn,uint256 _minAmountOut,uint256 _nonce,uint256 _maxFee)'),
   );
 
   let payload = ethers.utils.defaultAbiCoder.encode(
-    ['bytes32', 'address', 'uint256', 'uint256', 'uint256'],
-    [DEPOSIT_BY_SIG_TYPEHASH, garden, amountIn, minAmountOut, nonce],
+    ['bytes32', 'address', 'uint256', 'uint256', 'uint256', 'uint256'],
+    [DEPOSIT_BY_SIG_TYPEHASH, garden, amountIn, minAmountOut, nonce, maxFee],
   );
 
   let payloadHash = ethers.utils.keccak256(payload);
