@@ -302,9 +302,10 @@ contract MasterSwapper is BaseIntegration, ReentrancyGuard, ITradeIntegration {
         }
         // Going through curve to reserve and then receive Token
         if (_sendToken != _reserve) {
+            uint256 sendBalance = _getTokenOrETHBalance(_strategy, _sendToken);
             swapped = false;
             reserveBalance = _getTokenOrETHBalance(_strategy, _reserve);
-            if (_curveSwap(_strategy, _sendToken, _reserve, _sendQuantity, 1)) {
+            if (_curveSwap(_strategy, _sendToken, _reserve, sendBalance < _sendQuantity ? sendBalance : _sendQuantity, 1)) {
                 swapped = true;
                 diff = _getTokenOrETHBalance(_strategy, _reserve).sub(reserveBalance);
                 if (_reserve == _receiveToken) {
