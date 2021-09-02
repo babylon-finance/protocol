@@ -43,6 +43,8 @@ contract CurveTradeIntegration is TradeIntegration {
     /* ============ State Variables ============ */
 
     /* ============ Constants ============ */
+
+    address private constant tricurvePool = 0x80466c64868E1ab14a1Ddf27A676C3fcBE638Fe5;
     // Address of Curve Registry
     ICurveAddressProvider internal constant curveAddressProvider =
         ICurveAddressProvider(0x0000000022D53366457F9d5E68Ec105046FC4383);
@@ -87,8 +89,16 @@ contract CurveTradeIntegration is TradeIntegration {
         require(curvePool != address(0), 'No curve pool to trade the pair');
         (int128 i, int128 j, bool underlying) =
             curveRegistry.get_coin_indices(curvePool, realSendToken, realReceiveToken);
+        console.log('trading', underlying, _sendQuantity);
         bytes memory methodData =
             abi.encodeWithSignature('exchange(int128,int128,uint256,uint256)', i, j, _sendQuantity, 1);
+        if (tricurvePool == curvePool) {
+          if (realSendToken == ETH_ADD_CURVE) {
+            methodData = abi.encodeWithSignature('exchange(uint256,uint256,uint256,uint256,bool)', i, j, _sendQuantity, 1, true);
+          } else {
+            methodData = abi.encodeWithSignature('exchange(uint256,uint256,uint256,uint256)', i, j, _sendQuantity, 1);
+          }
+        }
         if (underlying) {
             methodData = abi.encodeWithSignature(
                 'exchange_underlying(int128,int128,uint256,uint256)',

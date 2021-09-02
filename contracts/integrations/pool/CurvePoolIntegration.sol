@@ -76,6 +76,7 @@ contract CurvePoolIntegration is PoolIntegration {
         usesUnderlying[0x45F783CCE6B7FF23B2ab2D70e416cdb7D6055f51] = true; // y
         usesUnderlying[0xA5407eAE9Ba41422680e2e00537571bcC53efBfD] = true; // susd
         usesUnderlying[0x8925D9d9B4569D737a48499DeF3f67BaA5a144b9] = true; // yv2
+        usesUnderlying[0xEB16Ae0052ed37f479f7fe63849198Df1765a733] = true; // saave
 
         poolToDeposit[0xA2B47E3D5c44877cca798226B7B8118F9BFb7A56] = 0xeB21209ae4C2c9FF2a86ACA31E123764A3B6Bc06; // compound
         poolToDeposit[0x52EA46506B9CC5Ef470C5bf89f17Dc28bB35D85C] = 0xac795D2c97e60DF6a99ff1c814727302fD747a80; // usdt
@@ -87,6 +88,7 @@ contract CurvePoolIntegration is PoolIntegration {
         supportsUnderlyingParam[0xDeBF20617708857ebe4F679508E7b7863a8A8EeE] = true; // aave
         supportsUnderlyingParam[0x2dded6Da1BF5DBdF597C45fcFaa3194e53EcfeAF] = true; // ironbank
         supportsUnderlyingParam[0x8925D9d9B4569D737a48499DeF3f67BaA5a144b9] = true; // yv2
+        supportsUnderlyingParam[0xEB16Ae0052ed37f479f7fe63849198Df1765a733] = true; // saave
     }
 
     /* ============ External Functions ============ */

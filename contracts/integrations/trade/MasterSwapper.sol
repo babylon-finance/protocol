@@ -144,7 +144,7 @@ contract MasterSwapper is BaseIntegration, ReentrancyGuard, ITradeIntegration {
         if (_sendToken == _receiveToken) {
             return;
         }
-        console.log('--- TRADE ASSET ---', _sendToken, _receiveToken);
+        console.log('--- TRADE ASSET ---', _sendToken, _receiveToken, ERC20(_sendToken).balanceOf(_strategy));
         // Synthetix Direct
         address _sendTokenSynth = _getSynth(_sendToken);
         address _receiveTokenSynth = _getSynth(_receiveToken);
@@ -218,47 +218,8 @@ contract MasterSwapper is BaseIntegration, ReentrancyGuard, ITradeIntegration {
             return;
         } catch {}
         // Try Curve through reserve assets
-        bool found = false;
-        if (_sendToken != DAI) {
-            found = _checkCurveRoutesThroughReserve(
-                DAI,
-                _strategy,
-                _sendToken,
-                _receiveToken,
-                _sendQuantity,
-                _minReceiveQuantity
-            );
-            if (found) {
-                return;
-            }
-        }
-        if (_sendToken != WETH) {
-            console.log('trying through WETH');
-            found = _checkCurveRoutesThroughReserve(
-                WETH,
-                _strategy,
-                _sendToken,
-                _receiveToken,
-                _sendQuantity,
-                _minReceiveQuantity
-            );
-
-            if (found) {
-                return;
-            }
-        }
-        if (_sendToken != WBTC) {
-            found = _checkCurveRoutesThroughReserve(
-                WBTC,
-                _strategy,
-                _sendToken,
-                _receiveToken,
-                _sendQuantity,
-                _minReceiveQuantity
-            );
-            if (found) {
-                return;
-            }
+        if (_checkCurveThroughReserves([DAI, WETH, WBTC], _strategy, _sendToken, _receiveToken, _sendQuantity, _minReceiveQuantity)) {
+          return;
         }
         if (_minReceiveQuantity > 1) {
             // Try on univ2 (only direct trade) through WETH
@@ -275,6 +236,31 @@ contract MasterSwapper is BaseIntegration, ReentrancyGuard, ITradeIntegration {
     }
 
     /* ============ Internal Functions ============ */
+
+    function _checkCurveThroughReserves(
+      address[3] memory _reserves,
+      address _strategy,
+      address _sendToken,
+      address _receiveToken,
+      uint256 _sendQuantity,
+      uint256 _minReceiveQuantity
+    ) private returns (bool) {
+      for (uint i = 0; i < _reserves.length; i++) {
+        if (_sendToken != _reserves[i]) {
+            if (_checkCurveRoutesThroughReserve(
+                _reserves[i],
+                _strategy,
+                _sendToken,
+                _receiveToken,
+                _sendQuantity,
+                _minReceiveQuantity
+            )) {
+                return true;
+            }
+        }
+      }
+      return false;
+    }
 
     function _checkCurveRoutesThroughReserve(
         address _reserve,
@@ -296,7 +282,7 @@ contract MasterSwapper is BaseIntegration, ReentrancyGuard, ITradeIntegration {
                     _sendToken,
                     sendBalance < _sendQuantity ? sendBalance : _sendQuantity, // can be lower than sendQuantity if we tried swapping
                     _reserve,
-                    1 // TODO
+                    1
                 )
             {
                 if (_reserve == _receiveToken) {
@@ -363,9 +349,9 @@ contract MasterSwapper is BaseIntegration, ReentrancyGuard, ITradeIntegration {
         address curvePool = _findCurvePool(_fromToken, _toToken);
         if (curvePool != address(0)) {
             try ITradeIntegration(curve).trade(_strategy, _fromToken, _sendTokenAmount, _toToken, _minReceiveQuantity) {
-                return true;
+              return true;
             } catch {
-                return false;
+              return false;
             }
         }
         return false;
