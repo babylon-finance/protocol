@@ -258,15 +258,17 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
     mapping(address => uint256[3]) private gardenProfitSharing;
     mapping(address => bool) private gardenCustomProfitSharing;
 
+    /**
     struct DepositInfo {
         address contributor;
         uint256 amount;
-        uint256 blockNumber;
+        uint256 timestamp;
         bool depositOrWithdraw;
     }
 
-    // New contributor checkpoints per garden
+    // New contributor checkpoints per garden per user
     mapping(address => DepositInfo[]) private depositInfo;
+    */
 
     /* ============ Constructor ============ */
 
@@ -426,6 +428,7 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
      * @param _contributor           Address of the contributor
      * @param _amount                Amount depositing
      */
+    /**
     function updateCheckpointInGarden(
         address _contributor,
         uint256 _amount,
@@ -438,7 +441,7 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         // Effects
         newCheckpoint.contributor = _contributor;
         newCheckpoint.amount = _amount;
-        newCheckpoint.blockNumber = block.number;
+        newCheckpoint.timestamp = block.timestamp;
         newCheckpoint.depositOrWithdraw = _depositOrWithdrawal == true ? true : false;
 
         // Add into storage
@@ -450,6 +453,7 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         // _updateGardenPower(msg.sender);
         //_setContributorTimestampParams(msg.sender, _contributor, _previousBalance, _depositOrWithdraw);
     }
+     */
 
     /**
      * Function that set the babl Token address as it is going to be released in a future date
@@ -1218,10 +1222,66 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         uint256 _from,
         uint256 _to
     ) private view returns (uint256) {
+        console.log('CHECK garden user', _garden, _contributor);
         // Out of bounds
         _require(_to >= IGarden(_garden).gardenInitializedAt() && _to >= _from, Errors.CONTRIBUTOR_POWER_CHECK_WINDOW);
-        return IERC20(_garden).balanceOf(_contributor).preciseDiv(IERC20(_garden).totalSupply());
+        (uint256 lastDepositAt, uint256 initialDepositAt, , , , , , , uint256 power, ) =
+            IGarden(_garden).getContributor(_contributor);
+
+        if (initialDepositAt == 0 || initialDepositAt > _to) {
+            return 0;
+        } else {
+            console.log('CHECK balance', IERC20(_garden).balanceOf(_contributor));
+            console.log('CHECK Total Supply', IERC20(_garden).totalSupply());
+            console.log('CHECK user power', power);
+            uint256 updatedPower =
+                power.add(block.timestamp.sub(lastDepositAt).mul(IERC20(_garden).balanceOf(_contributor)));
+            console.log('CHECK updated user power', power);
+            uint256 balancePower = IERC20(_garden).balanceOf(_contributor).preciseDiv(IERC20(_garden).totalSupply());
+            uint256 virtualPower = updatedPower.preciseDiv(IGarden(_garden).accGardenPower());
+            console.log('CHECK balance Power', balancePower);
+            console.log('CHECK virtual Power', virtualPower);
+            return virtualPower;
+        }
     }
+
+    /**
+        console.log('CHECK');
+        // Out of bounds
+        _require(_to >= IGarden(_garden).gardenInitializedAt() && _to >= _from, Errors.CONTRIBUTOR_POWER_CHECK_WINDOW);
+        (, uint256 initialDepositAt, , , , , , , , ) = IGarden(_garden).getContributor(_contributor);
+        console.log('CHECK 1', initialDepositAt);
+
+        if (initialDepositAt == 0 || initialDepositAt > _to) {
+            return 0;
+       
+        } else {
+            uint256 userLiquidity;
+            uint256 gardenLiquidity;
+            console.log('CHECK 2 length', depositInfo[_garden].length);
+
+            for (uint256 i = 0; i < depositInfo[_garden].length; i++) {
+                DepositInfo storage userDeposit = depositInfo[_garden][i];
+                if (userDeposit.timestamp > _to) {
+                    continue;
+                }
+
+                if (userDeposit.contributor == _contributor) {
+                    console.log('userLiquidity', userLiquidity);
+                    userLiquidity = userDeposit.depositOrWithdraw == true ? userLiquidity.add(userDeposit.amount) : userLiquidity.sub(userDeposit.amount);
+                }
+                console.log('gardenLiquidity', gardenLiquidity);
+                gardenLiquidity = userDeposit.depositOrWithdraw == true ? gardenLiquidity.add(userDeposit.amount) : gardenLiquidity.sub(userDeposit.amount);
+            }
+            console.log('EO');
+            console.log('TOTAL userLiquidity', userLiquidity);
+            console.log('TOTAL gardenLiquidity', gardenLiquidity);
+            console.log('contributor power', userLiquidity.preciseDiv(gardenLiquidity));
+
+            return userLiquidity.preciseDiv(gardenLiquidity);
+        }
+    }
+     */
 
     /**
         ContributorPerGarden storage contributor = contributorPerGarden[address(_garden)][address(_contributor)];

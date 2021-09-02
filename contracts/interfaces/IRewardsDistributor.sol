@@ -93,10 +93,11 @@ interface IRewardsDistributor {
     ) external;
 
     function updateProtocolPrincipal(uint256 _capital, bool _addOrSubstract) external;
-
+    /**
     function updateCheckpointInGarden(
         address _contributor,
         uint256 _amount,
         bool _depositOrWithdraw
     ) external;
+     */
 }
