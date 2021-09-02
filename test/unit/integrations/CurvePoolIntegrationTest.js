@@ -52,7 +52,7 @@ describe('CurvePoolIntegrationTest', function () {
     });
 
     pools.forEach(({ name, pool }) => {
-      it.only(`can enter and exit the ${name} pool`, async function () {
+      it(`can enter and exit the ${name} pool`, async function () {
         const strategyContract = await createStrategy(
           'lp',
           'vote',
