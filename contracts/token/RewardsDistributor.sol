@@ -454,7 +454,7 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
      * Calculates the BABL rewards supply for each quarter
      * @param _quarter      Number of the epoch (quarter)
      */
-    function tokenSupplyPerQuarter(uint256 _quarter) external view override returns (uint96) {
+    function tokenSupplyPerQuarter(uint256 _quarter) external pure override returns (uint96) {
         return _tokenSupplyPerQuarter(_quarter);
     }
 
@@ -859,7 +859,8 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
                 // Voted against a very profit strategy above expected returns, get no profit at all
                 return 0;
             }
-        } else return 0; // No profits at all
+        }
+        return 0; // No profits at all
     }
 
     /**
@@ -929,7 +930,8 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
                     gardenCustomProfitSharing[_garden] ? gardenProfitSharing[_garden][0] : PROFIT_STRATEGIST_SHARE;
                 return _profitValue.multiplyDecimal(profitShare);
             }
-        } else return 0; // No profits at all
+        }
+        return 0; // No profits at all
     }
 
     /**

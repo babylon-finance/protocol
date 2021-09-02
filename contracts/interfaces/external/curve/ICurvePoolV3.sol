@@ -3,7 +3,6 @@
 pragma solidity ^0.7.6;
 
 interface ICurvePoolV3 {
-
     function coins(uint256 arg0) external view returns (address out);
 
     function underlying_coins(uint256 arg0) external view returns (address out);

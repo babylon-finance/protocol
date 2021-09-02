@@ -61,13 +61,13 @@ contract CurveTradeIntegration is TradeIntegration {
     /**
      * Executes the trade through curve.
      *
-     * @param _strategy             Address of the strategy
+     * hparam _strategy             Address of the strategy
      * @param _sendToken            Address of the token to be sent to the exchange
      * @param _sendQuantity         Units of reserve asset token sent to the exchange
      * @param _receiveToken         Address of the token that will be received from the exchange
      */
     function _getTradeCallData(
-        address _strategy,
+        address, /* _strategy */
         address _sendToken,
         uint256 _sendQuantity,
         address _receiveToken
@@ -113,12 +113,15 @@ contract CurveTradeIntegration is TradeIntegration {
     /**
      * Checks liquidity of the trade
      *
-     * @param _tradeInfo            Struct containing trade information used in internal functions
-     * @param _sendQuantity         Units of token in SetToken sent to the exchange
+     * hparam _tradeInfo            Struct containing trade information used in internal functions
+     * hparam _sendQuantity         Units of token in SetToken sent to the exchange
      */
-    function _checkLiquidity(TradeInfo memory _tradeInfo, uint256 _sendQuantity) internal view override returns (bool) {
-        address reserveAsset = _tradeInfo.garden.reserveAsset();
-        uint256 minLiquidityReserveAsset = _tradeInfo.garden.minLiquidityAsset();
+    function _checkLiquidity(
+        TradeInfo memory, /* _tradeInfo */
+        uint256 /* _sendQuantity */
+    ) internal pure override returns (bool) {
+        // address reserveAsset = _tradeInfo.garden.reserveAsset();
+        // uint256 minLiquidityReserveAsset = _tradeInfo.garden.minLiquidityAsset();
         // TODO: Check
         return true;
     }
@@ -191,7 +194,9 @@ contract CurveTradeIntegration is TradeIntegration {
         return (address(0), 0, bytes(''));
     }
 
-    function _getPostActionToken(address _receiveToken) internal pure override returns (address) {
+    function _getPostActionToken(
+        address /* _receiveToken */
+    ) internal pure override returns (address) {
         return ETH_ADD_CURVE;
     }
 

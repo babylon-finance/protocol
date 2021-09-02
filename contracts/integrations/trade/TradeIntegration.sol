@@ -352,20 +352,24 @@ abstract contract TradeIntegration is BaseIntegration, ReentrancyGuard, ITradeIn
     /**
      * Returns the address to approve the pre action. This is the TokenTaker address
      *
-     * @param _swapTarget      Address of the contracts that executes the swap
+     * hparam _swapTarget      Address of the contracts that executes the swap
      * @return address         Address of the contract to approve tokens to
      */
-    function _getPreApprovalSpender(address _swapTarget) internal view virtual returns (address) {
+    function _getPreApprovalSpender(
+        address /* _swapTarget */
+    ) internal view virtual returns (address) {
         return address(0);
     }
 
     /**
      * Returns the address to approve the post action. This is the TokenTaker address
      *
-     * @param _swapTarget      Address of the contracts that executes the swap
+     * hparam _swapTarget      Address of the contracts that executes the swap
      * @return address         Address of the contract to approve tokens to
      */
-    function _getPostApprovalSpender(address _swapTarget) internal view virtual returns (address) {
+    function _getPostApprovalSpender(
+        address /* _swapTarget */
+    ) internal view virtual returns (address) {
         return address(0);
     }
 

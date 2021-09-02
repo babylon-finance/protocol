@@ -150,23 +150,23 @@ contract GardenV2Mock is ERC20Upgradeable, ReentrancyGuard {
 
     /* ============ External Functions ============ */
     function initialize(
-        address _reserveAsset,
-        address _controller,
-        address _creator,
-        string memory _name,
-        string memory _symbol,
-        uint256[] calldata _gardenParams,
-        uint256 _initialContribution,
-        bool[] memory _publicGardenStrategistsStewards
+        address, /* _reserveAsset */
+        address, /* _controller */
+        address, /* _creator */
+        string memory, /*_name */
+        string memory, /* _symbol */
+        uint256[] calldata, /* _gardenParams */
+        uint256, /* _initialContribution */
+        bool[] memory /* _publicGardenStrategistsStewards */
     ) public payable initializer {
         newVar = 42;
     }
 
     function deposit(
-        uint256 _reserveAssetQuantity,
-        uint256 _minGardenTokenReceiveQuantity,
-        address _to,
-        bool mintNFT
+        uint256, /* _reserveAssetQuantity */
+        uint256, /* minGardenTokenReceiveQuantity */
+        address, /* _to */
+        bool /* mintNFT */
     ) external payable {}
 
     function newMethod() public pure returns (string memory) {

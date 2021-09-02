@@ -110,7 +110,7 @@ contract SynthetixTradeIntegration is TradeIntegration {
      */
     function _getPreActionCallData(
         address _sendToken,
-        address /* _receiveToken */,
+        address, /* _receiveToken */
         uint256 _sendQuantity
     )
         internal
@@ -147,7 +147,7 @@ contract SynthetixTradeIntegration is TradeIntegration {
      * @return bytes                     Trade calldata
      */
     function _getPostActionCallData(
-        address /* _sendToken */,
+        address, /* _sendToken */
         address _receiveToken,
         uint256 _sendQuantity
     )
@@ -214,10 +214,13 @@ contract SynthetixTradeIntegration is TradeIntegration {
     /**
      * Checks liquidity of the trade
      *
-     * @param _tradeInfo            Struct containing trade information used in internal functions
-     * @param _sendQuantity         Units of token in SetToken sent to the exchange
+     * hparam _tradeInfo            Struct containing trade information used in internal functions
+     * hparam _sendQuantity         Units of token in SetToken sent to the exchange
      */
-    function _checkLiquidity(TradeInfo memory _tradeInfo, uint256 _sendQuantity) internal view override returns (bool) {
+    function _checkLiquidity(
+        TradeInfo memory, /* _tradeInfo */
+        uint256 /* _sendQuantity */
+    ) internal pure override returns (bool) {
         // address reserveAsset = _tradeInfo.garden.reserveAsset();
         // uint256 minLiquidityReserveAsset = _tradeInfo.garden.minLiquidityAsset();
         // TODO: Check
@@ -229,7 +232,7 @@ contract SynthetixTradeIntegration is TradeIntegration {
     function _getTokens(
         address _sendToken,
         address _receiveToken,
-        uint256 _sendQuantity,
+        uint256, /* _sendQuantity */
         address _strategy
     )
         private

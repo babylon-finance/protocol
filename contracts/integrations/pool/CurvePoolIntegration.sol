@@ -127,20 +127,18 @@ contract CurvePoolIntegration is PoolIntegration {
     }
 
     function getPoolTokensOut(
-        bytes calldata _pool,
-        address _poolToken,
-        uint256 _maxAmountsIn
+        bytes calldata, /* _pool */
+        address, /* _poolToken */
+        uint256 /* _maxAmountsIn */
     ) external pure override returns (uint256) {
         // return 1 since _poolTokensOut are not used
         return 1;
     }
 
-    function getPoolMinAmountsOut(bytes calldata _pool, uint256 _liquidity)
-        external
-        view
-        override
-        returns (uint256[] memory _minAmountsOut)
-    {
+    function getPoolMinAmountsOut(
+        bytes calldata _pool,
+        uint256 /* _liquidity */
+    ) external view override returns (uint256[] memory _minAmountsOut) {
         address poolAddress = BytesLib.decodeOpDataAddress(_pool);
         uint256[] memory result = new uint256[](_getNCoins(poolAddress));
         return result;
@@ -151,7 +149,9 @@ contract CurvePoolIntegration is PoolIntegration {
     function _isPool(bytes memory _pool) internal view override returns (bool) {
         address poolAddress = BytesLib.decodeOpDataAddressAssembly(_pool, 12);
         ICurveRegistry curveRegistry = ICurveRegistry(curveAddressProvider.get_registry());
-        try curveRegistry.get_A(poolAddress) returns (uint256 A) {
+        try curveRegistry.get_A(poolAddress) returns (
+            uint256 /* A */
+        ) {
             return true;
         } catch {
             return false;
@@ -365,6 +365,7 @@ contract CurvePoolIntegration is PoolIntegration {
                     );
             }
         }
+        return bytes('');
     }
 
     function _getRemoveLiquidityMethodData(
@@ -464,6 +465,7 @@ contract CurvePoolIntegration is PoolIntegration {
                     );
             }
         }
+        return bytes('');
     }
 
     function _getLpToken(address _pool) internal view override returns (address) {
@@ -473,7 +475,7 @@ contract CurvePoolIntegration is PoolIntegration {
     }
 
     // Used when the contract is the Deposit
-    function _getPool(address _pool) internal view override returns (address) {
+    function _getPool(address _pool) internal pure override returns (address) {
         return _pool;
     }
 

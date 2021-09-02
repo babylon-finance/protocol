@@ -118,9 +118,12 @@ contract UniswapV3TradeIntegration is TradeIntegration {
      * Checks liquidity of the trade
      *
      * @param _tradeInfo            Struct containing trade information used in internal functions
-     * @param _sendQuantity         Units of token in SetToken sent to the exchange
+     * hparam _sendQuantity         Units of token in SetToken sent to the exchange
      */
-    function _checkLiquidity(TradeInfo memory _tradeInfo, uint256 _sendQuantity) internal view override returns (bool) {
+    function _checkLiquidity(
+        TradeInfo memory _tradeInfo,
+        uint256 /* _sendQuantity */
+    ) internal view override returns (bool) {
         address reserveAsset = _tradeInfo.garden.reserveAsset();
         uint256 liquidityInReserve = _getUniswapHighestLiquidity(_tradeInfo, reserveAsset);
         uint256 minLiquidityReserveAsset = _tradeInfo.garden.minLiquidityAsset();

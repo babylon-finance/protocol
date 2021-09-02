@@ -64,7 +64,10 @@ contract UniswapPoolIntegration is PoolIntegration {
 
     /* ============ External Functions ============ */
 
-    function getPoolTokens(bytes calldata _pool, bool forNAV) external view override returns (address[] memory) {
+    function getPoolTokens(
+        bytes calldata _pool,
+        bool /* forNAV */
+    ) external view override returns (address[] memory) {
         address poolAddress = BytesLib.decodeOpDataAddress(_pool);
         address[] memory result = new address[](2);
         result[0] = IUniswapV2Pair(poolAddress).token0();

@@ -108,9 +108,12 @@ contract UniswapV2TradeIntegration is TradeIntegration {
      * Checks liquidity of the trade
      *
      * @param _tradeInfo            Struct containing trade information used in internal functions
-     * @param _sendQuantity         Units of token in SetToken sent to the exchange
+     * hparam _sendQuantity         Units of token in SetToken sent to the exchange
      */
-    function _checkLiquidity(TradeInfo memory _tradeInfo, uint256 _sendQuantity) internal pure override returns (bool) {
+    function _checkLiquidity(
+        TradeInfo memory _tradeInfo,
+        uint256 /* _sendQuantity */
+    ) internal pure override returns (bool) {
         // Can only use V2 with ops that have minQuantity set
         return _tradeInfo.totalMinReceiveQuantity > 1;
     }
