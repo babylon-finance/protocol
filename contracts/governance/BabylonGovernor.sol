@@ -36,7 +36,9 @@ contract BabylonGovernor is Governor, GovernorCompatibilityBravo, GovernorVotesC
         return 45818; // 1 week
     }
 
-    function quorum(uint256 /* blockNumber */) public pure override returns (uint256) {
+    function quorum(
+        uint256 /* blockNumber */
+    ) public pure override returns (uint256) {
         return 40_000e18;
     }
 

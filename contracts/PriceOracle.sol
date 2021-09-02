@@ -499,10 +499,7 @@ contract PriceOracle is Ownable, IPriceOracle {
                 .div(10**(uint256(18).sub(ERC20(_tokenIn).decimals())));
     }
 
-    function _checkPool(
-        address _tokenIn,
-        address _tokenOut
-    )
+    function _checkPool(address _tokenIn, address _tokenOut)
         internal
         view
         returns (
@@ -516,8 +513,8 @@ contract PriceOracle is Ownable, IPriceOracle {
         if (address(pool) != address(0)) {
             uint256 poolLiquidity = uint256(pool.liquidity());
             if (poolLiquidity > 0) {
-              (, tick, , , , , ) = pool.slot0();
-              return (_checkPrice(tick, pool), pool, tick);
+                (, tick, , , , , ) = pool.slot0();
+                return (_checkPrice(tick, pool), pool, tick);
             }
         }
         return (false, IUniswapV3Pool(0), 0);

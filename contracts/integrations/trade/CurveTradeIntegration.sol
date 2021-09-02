@@ -93,11 +93,24 @@ contract CurveTradeIntegration is TradeIntegration {
         bytes memory methodData =
             abi.encodeWithSignature('exchange(int128,int128,uint256,uint256)', i, j, _sendQuantity, 1);
         if (tricurvePool == curvePool) {
-          if (realSendToken == ETH_ADD_CURVE) {
-            methodData = abi.encodeWithSignature('exchange(uint256,uint256,uint256,uint256,bool)', i, j, _sendQuantity, 1, true);
-          } else {
-            methodData = abi.encodeWithSignature('exchange(uint256,uint256,uint256,uint256)', i, j, _sendQuantity, 1);
-          }
+            if (realSendToken == ETH_ADD_CURVE) {
+                methodData = abi.encodeWithSignature(
+                    'exchange(uint256,uint256,uint256,uint256,bool)',
+                    i,
+                    j,
+                    _sendQuantity,
+                    1,
+                    true
+                );
+            } else {
+                methodData = abi.encodeWithSignature(
+                    'exchange(uint256,uint256,uint256,uint256)',
+                    i,
+                    j,
+                    _sendQuantity,
+                    1
+                );
+            }
         }
         if (underlying) {
             methodData = abi.encodeWithSignature(

@@ -214,8 +214,17 @@ contract MasterSwapper is BaseIntegration, ReentrancyGuard, ITradeIntegration {
             return;
         } catch {}
         // Try Curve through reserve assets
-        if (_checkCurveThroughReserves([DAI, WETH, WBTC], _strategy, _sendToken, _receiveToken, _sendQuantity, _minReceiveQuantity)) {
-          return;
+        if (
+            _checkCurveThroughReserves(
+                [DAI, WETH, WBTC],
+                _strategy,
+                _sendToken,
+                _receiveToken,
+                _sendQuantity,
+                _minReceiveQuantity
+            )
+        ) {
+            return;
         }
         if (_minReceiveQuantity > 1) {
             // Try on univ2 (only direct trade) through WETH
@@ -234,28 +243,30 @@ contract MasterSwapper is BaseIntegration, ReentrancyGuard, ITradeIntegration {
     /* ============ Internal Functions ============ */
 
     function _checkCurveThroughReserves(
-      address[3] memory _reserves,
-      address _strategy,
-      address _sendToken,
-      address _receiveToken,
-      uint256 _sendQuantity,
-      uint256 _minReceiveQuantity
+        address[3] memory _reserves,
+        address _strategy,
+        address _sendToken,
+        address _receiveToken,
+        uint256 _sendQuantity,
+        uint256 _minReceiveQuantity
     ) private returns (bool) {
-      for (uint i = 0; i < _reserves.length; i++) {
-        if (_sendToken != _reserves[i]) {
-            if (_checkCurveRoutesThroughReserve(
-                _reserves[i],
-                _strategy,
-                _sendToken,
-                _receiveToken,
-                _sendQuantity,
-                _minReceiveQuantity
-            )) {
-                return true;
+        for (uint256 i = 0; i < _reserves.length; i++) {
+            if (_sendToken != _reserves[i]) {
+                if (
+                    _checkCurveRoutesThroughReserve(
+                        _reserves[i],
+                        _strategy,
+                        _sendToken,
+                        _receiveToken,
+                        _sendQuantity,
+                        _minReceiveQuantity
+                    )
+                ) {
+                    return true;
+                }
             }
         }
-      }
-      return false;
+        return false;
     }
 
     function _checkCurveRoutesThroughReserve(
@@ -301,7 +312,15 @@ contract MasterSwapper is BaseIntegration, ReentrancyGuard, ITradeIntegration {
             uint256 sendBalance = _getTokenOrETHBalance(_strategy, _sendToken);
             swapped = false;
             reserveBalance = _getTokenOrETHBalance(_strategy, _reserve);
-            if (_curveSwap(_strategy, _sendToken, _reserve, sendBalance < _sendQuantity ? sendBalance : _sendQuantity, 1)) {
+            if (
+                _curveSwap(
+                    _strategy,
+                    _sendToken,
+                    _reserve,
+                    sendBalance < _sendQuantity ? sendBalance : _sendQuantity,
+                    1
+                )
+            ) {
                 swapped = true;
                 diff = _getTokenOrETHBalance(_strategy, _reserve).sub(reserveBalance);
                 if (_reserve == _receiveToken) {
@@ -346,9 +365,9 @@ contract MasterSwapper is BaseIntegration, ReentrancyGuard, ITradeIntegration {
         address curvePool = _findCurvePool(_fromToken, _toToken);
         if (curvePool != address(0)) {
             try ITradeIntegration(curve).trade(_strategy, _fromToken, _sendTokenAmount, _toToken, _minReceiveQuantity) {
-              return true;
+                return true;
             } catch {
-              return false;
+                return false;
             }
         }
         return false;
