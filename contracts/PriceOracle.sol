@@ -392,7 +392,7 @@ contract PriceOracle is Ownable, IPriceOracle {
         }
 
         // Direct curve pair
-        uint256 price = _checkPairThroughCurve(_tokenIn, _tokenOut);
+        price = _checkPairThroughCurve(_tokenIn, _tokenOut);
 
         if (price != 0) {
             return price;
@@ -480,7 +480,6 @@ contract PriceOracle is Ownable, IPriceOracle {
 
     function _getUNIV3Price(address _tokenIn, address _tokenOut) internal view returns (uint256) {
         bool found;
-        uint256 price;
         int24 tick;
         IUniswapV3Pool pool;
         // We try the low pool first
@@ -561,7 +560,7 @@ contract PriceOracle is Ownable, IPriceOracle {
         // observe fails if the pair has no observations
         try _pool.observe(secondsAgo) returns (
             int56[] memory tickCumulatives,
-            uint160[] memory secondsPerLiquidityCumulativeX128s
+            uint160[] memory /* secondsPerLiquidityCumulativeX128s */
         ) {
             return (tickCumulatives[1] - tickCumulatives[0]) / SECONDS_GRANULARITY;
         } catch {

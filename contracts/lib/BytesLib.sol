@@ -529,5 +529,7 @@ library BytesLib {
             // returning bytes type
             return slice(_data, _offset, 20); // to return address type better use toAddress(_data, _offset);
         }
+        // Default uint
+        return slice(_data, _offset, 1);
     }
 }

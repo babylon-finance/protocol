@@ -372,13 +372,12 @@ contract MasterSwapper is BaseIntegration, ReentrancyGuard, ITradeIntegration {
     }
 
     function _getSynth(address _token) private view returns (address) {
-        ISynthetix synthetix = ISynthetix(ISnxProxy(SNX).target());
-        try synthetix.synths(stringToBytes32(ERC20(_token).symbol())) returns (ISnxSynth _synth) {
+        ISynthetix snx = ISynthetix(ISnxProxy(SNX).target());
+        try snx.synths(stringToBytes32(ERC20(_token).symbol())) returns (ISnxSynth _synth) {
             return address(_synth);
         } catch {
             return address(0);
         }
-        return address(0);
     }
 
     function stringToBytes32(string memory source) private pure returns (bytes32 result) {

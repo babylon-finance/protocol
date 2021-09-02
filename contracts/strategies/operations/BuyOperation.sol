@@ -125,6 +125,7 @@ contract BuyOperation is Operation {
             _garden.reserveAsset(),
             2 // TO be able to get back an univ2. Univ2 checks more than 1
         );
+        return (_garden.reserveAsset(), IERC20(token).balanceOf(_garden.reserveAsset()), 0);
     }
 
     /**
@@ -160,7 +161,7 @@ contract BuyOperation is Operation {
         address _integration,
         address _asset,
         uint256 _capital
-    ) private returns (address) {
+    ) private {
         (address token, uint256 minimum) = BytesLib.decodeOpDataAddressAndUint(_data);
         ITradeIntegration(_integration).trade(msg.sender, _asset, _capital, token, minimum);
     }

@@ -239,7 +239,6 @@ contract BabylonViewer {
         bool[] memory hasUserDeposited = new bool[](25);
         uint8 resultIndex;
         for (uint256 i = _offset; i < gardens.length; i++) {
-            IGarden garden = IGarden(gardens[i]);
             (bool depositPermission, , ) = getGardenPermissions(gardens[i], _user);
             if (depositPermission) {
                 userGardens[resultIndex] = gardens[i];
@@ -405,5 +404,6 @@ contract BabylonViewer {
         bool hasGate = IERC721(address(gate)).balanceOf(_user) > 0;
         canDeposit = gate.canJoinAGarden(_garden, _user) || (hasGate && !garden.privateGarden());
         canVote = gate.canVoteInAGarden(_garden, _user) || (hasGate && garden.publicStewards());
+        canCreateStrategy = gate.canAddStrategiesInAGarden(_garden, _user) || (hasGate && garden.publicStrategists());
     }
 }

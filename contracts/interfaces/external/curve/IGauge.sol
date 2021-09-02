@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT
+
 interface IGauge {
     function lp_token() external view returns (address);
 
