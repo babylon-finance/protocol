@@ -171,19 +171,19 @@ contract LendOperation is Operation {
         address rewardsToken = ILendIntegration(_integration).getRewardToken();
         uint256 rewardsAmount = ILendIntegration(_integration).getRewardsAccrued(msg.sender);
         if (rewardsAmount > 0) {
-          uint256 priceRewards = _getPrice(_garden.reserveAsset(), rewardsToken);
-          // We add rewards
-          if (priceRewards != 0) {
-            NAV = NAV.add(
-              SafeDecimalMath
-              .normalizeAmountTokens(
-                ILendIntegration(_integration).getRewardToken(),
-                _garden.reserveAsset(),
-                rewardsAmount
-              )
-              .preciseDiv(priceRewards)
-            );
-          }
+            uint256 priceRewards = _getPrice(_garden.reserveAsset(), rewardsToken);
+            // We add rewards
+            if (priceRewards != 0) {
+                NAV = NAV.add(
+                    SafeDecimalMath
+                        .normalizeAmountTokens(
+                        ILendIntegration(_integration).getRewardToken(),
+                        _garden.reserveAsset(),
+                        rewardsAmount
+                    )
+                        .preciseDiv(priceRewards)
+                );
+            }
         }
         require(NAV != 0, 'NAV has to be bigger 0');
         return (NAV, true);

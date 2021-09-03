@@ -390,6 +390,14 @@ contract PriceOracle is Ownable, IPriceOracle {
             return price;
         }
 
+        // Curve LP tokens
+        if (curveRegistry.get_pool_from_lp_token(_tokenIn) != address(0)) {
+            // return getPrice(USDC, _tokenOut).preciseMul(curveRegistry.get_virtual_price_from_lp_token(_tokenIn));
+        }
+        if (curveRegistry.get_pool_from_lp_token(_tokenOut) != address(0)) {
+            // return getPrice(_tokenIn, USDC).preciseDiv(curveRegistry.get_virtual_price_from_lp_token(_tokenIn));
+        }
+
         uint256 uniPrice = 0;
         // Curve Pair through WBTC
         if (_tokenIn != WBTC && _tokenOut != WBTC) {
