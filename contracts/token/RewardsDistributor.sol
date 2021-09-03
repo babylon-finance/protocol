@@ -258,17 +258,17 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
     mapping(address => uint256[3]) private gardenProfitSharing;
     mapping(address => bool) private gardenCustomProfitSharing;
 
-    /**
-    struct DepositInfo {
-        address contributor;
-        uint256 amount;
-        uint256 timestamp;
-        bool depositOrWithdraw;
+    // Cache to speed up calculations during user claims
+    struct StrategyDetails {
+        address strategist;
+        uint256[20] strategyDetails;
+        uint256 strategyRewards;
+        bool profit;
+        uint256 profitValue;
+        bool distance;
+        uint256 distanceValue;
     }
-
-    // New contributor checkpoints per garden per user
-    mapping(address => DepositInfo[]) private depositInfo;
-    */
+    mapping(address => StrategyDetails) private strategyDetails;
 
     /* ============ Constructor ============ */
 
@@ -316,17 +316,20 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         uint256[] memory ts = new uint256[](3);
         (, , , , ts[0], ts[1], ts[2]) = strategy.getStrategyState();
         _require(ts[1] != 0, Errors.STRATEGY_IS_NOT_OVER_YET);
-        IPriceOracle oracle = IPriceOracle(IBabController(controller).priceOracle());
-        uint256 allocated =
-            strategy.capitalAllocated().preciseMul(oracle.getPrice(IGarden(strategy.garden()).reserveAsset(), DAI));
-        uint256 returned =
-            strategy.capitalReturned().preciseMul(oracle.getPrice(IGarden(strategy.garden()).reserveAsset(), DAI));
         if ((strategy.enteredAt() >= START_TIME) && (START_TIME != 0)) {
             // We avoid gas consuming once a strategy got its BABL rewards during its finalization
             uint256 rewards = strategy.strategyRewards();
             if (rewards != 0) {
                 return Safe3296.safe96(rewards, 'overflow 96 bits');
             }
+            // IPriceOracle oracle = IPriceOracle(IBabController(controller).priceOracle());
+            uint256 normalizeAmount =
+                IPriceOracle(IBabController(controller).priceOracle()).getPrice(
+                    IGarden(strategy.garden()).reserveAsset(),
+                    DAI
+                );
+            uint256 allocated = strategy.capitalAllocated().preciseMul(normalizeAmount);
+            uint256 returned = strategy.capitalReturned().preciseMul(normalizeAmount);
             // If the calculation was not done earlier we go for it
             (uint256 numQuarters, uint256 startingQuarter) = _getRewardsWindow(ts[0], ts[1]);
             uint256 percentage = 1e18;
@@ -455,6 +458,29 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
     }
      */
 
+    function updateStrategyRewards(
+        address _strategy,
+        address _strategist,
+        address _reserveAsset,
+        uint256[] memory _data
+    ) external override nonReentrant onlyStrategy {
+        _require(_strategy == msg.sender, Errors.ONLY_STRATEGY);
+        StrategyDetails storage strategyData = strategyDetails[_strategy];
+        strategyData.strategist = _strategist;
+        strategyData.strategyDetails[0] = _data[0]; // executedAt
+        strategyData.strategyDetails[1] = _data[1]; // exitedAt
+        strategyData.strategyDetails[2] = _data[2]; // updatedAt
+        strategyData.strategyDetails[3] = _data[3]; // enteredAt
+        strategyData.strategyDetails[4] = _data[4]; // totalPositiveVotes
+        strategyData.strategyDetails[5] = _data[5]; // totalNegativeVotes
+        strategyData.strategyDetails[6] = _data[6]; // capitalAllocated
+        strategyData.strategyDetails[7] = _data[7]; // capitalReturned
+        strategyData.strategyDetails[8] = _data[8]; // expectedReturn in absolute number
+        strategyData.strategyDetails[9] = _data[9]; // strategyRewards
+        strategyData.strategyDetails[10] = SafeDecimalMath.normalizeAmountTokens(_reserveAsset, DAI, _data[6]); // Normalized into DAI capitalAllocated
+        _setStrategyRewardsContext(_strategy);
+    }
+
     /**
      * Function that set the babl Token address as it is going to be released in a future date
      * @param _bablToken BABLToken address
@@ -479,11 +505,28 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         address _contributor,
         address[] calldata _finalizedStrategies
     ) external view override returns (uint256[] memory) {
-        uint256[] memory totalRewards = new uint256[](7);
         _require(IBabController(controller).isGarden(address(_garden)), Errors.ONLY_ACTIVE_GARDEN);
+        uint256[] memory totalRewards = new uint256[](7);
+        uint256 initialDepositAt;
+        uint256 claimedAt;
+        uint256 contributorPower;
+        // GardenUser memory userData = gardenUser[_garden][_contributor];
+        (, initialDepositAt, claimedAt, , , , , , contributorPower, ) = IGarden(_garden).getContributor(_contributor);
+        // update contributor power
+        contributorPower = _getContributorPower(_garden, _contributor, 0, block.timestamp);
         for (uint256 i = 0; i < _finalizedStrategies.length; i++) {
+            _require(IGarden(_garden).isGardenStrategy(_finalizedStrategies[i]), Errors.STRATEGY_GARDEN_MISMATCH);
+
             uint256[] memory tempRewards = new uint256[](7);
-            tempRewards = _getStrategyProfitsAndBABL(_garden, _finalizedStrategies[i], _contributor);
+
+            tempRewards = _getStrategyProfitsAndBABL(
+                _garden,
+                _finalizedStrategies[i],
+                _contributor,
+                initialDepositAt,
+                claimedAt,
+                contributorPower
+            );
             totalRewards[0] = totalRewards[0].add(tempRewards[0]);
             totalRewards[1] = totalRewards[1].add(tempRewards[1]);
             totalRewards[2] = totalRewards[2].add(tempRewards[2]);
@@ -517,7 +560,7 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
      * Calculates the BABL rewards supply for each quarter
      * @param _quarter      Number of the epoch (quarter)
      */
-    function tokenSupplyPerQuarter(uint256 _quarter) external view override returns (uint96) {
+    function tokenSupplyPerQuarter(uint256 _quarter) external pure override returns (uint96) {
         return _tokenSupplyPerQuarter(_quarter);
     }
 
@@ -541,6 +584,7 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
      * Check the protocol state in a certain timestamp
      * @param time      Timestamp
      */
+    /**
     function checkProtocol(uint256 _time)
         external
         view
@@ -563,11 +607,12 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
             protocolCheckpoint.power
         );
     }
-
+    */
     /**
      * Check the quarter state for a specific quarter
      * @param _num     Number of quarter
      */
+    /**
     function checkQuarter(uint256 _num)
         external
         view
@@ -588,7 +633,7 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
             protocolCheckpoint.supplyPerQuarter
         );
     }
-
+    */
     /**
      * Check the garden profit sharing % if different from default
      * @param _garden     Address of the garden
@@ -711,175 +756,236 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
 
     /**
      * Get the rewards for a specific contributor activately contributing in strategies of a specific garden
-     * @param _garden           Garden address responsible of the strategies to calculate rewards
-     * @param _strategy         Strategy address
-     * @param _contributor      Contributor address
+     * @param _garden               Garden address responsible of the strategies to calculate rewards
+     * @param _strategy             Strategy address
+     * @param _contributor          Contributor address
+     * @param _initialDepositAt     User initial deposit timestamp
+     * @param _claimedAt            User last claim timestamp
+     * @param _contributorPower     User contributor power timestamp
+
      * @return Array of size 7 with the following distribution:
      * rewards[0]: Strategist BABL , rewards[1]: Strategist Profit, rewards[2]: Steward BABL, rewards[3]: Steward Profit, rewards[4]: LP BABL, rewards[5]: total BABL, rewards[6]: total Profits
      */
     function _getStrategyProfitsAndBABL(
         address _garden,
         address _strategy,
-        address _contributor
+        address _contributor,
+        uint256 _initialDepositAt,
+        uint256 _claimedAt,
+        uint256 _contributorPower
     ) private view returns (uint256[] memory) {
-        IStrategy strategy = IStrategy(_strategy);
-        _require(address(strategy.garden()) == _garden, Errors.STRATEGY_GARDEN_MISMATCH);
-        _require(IGarden(_garden).isGardenStrategy(_strategy), Errors.STRATEGY_GARDEN_MISMATCH);
-        // ts[0]: executedAt, ts[1]: exitedAt, ts[2]: updatedAt
-        uint256[] memory ts = new uint256[](3);
-        (, , , , ts[0], ts[1], ts[2]) = strategy.getStrategyState();
+        console.log('CHECK 1');
+        _require(address(IStrategy(_strategy).garden()) == _garden, Errors.STRATEGY_GARDEN_MISMATCH);
         // rewards[0]: Strategist BABL , rewards[1]: Strategist Profit, rewards[2]: Steward BABL, rewards[3]: Steward Profit, rewards[4]: LP BABL, rewards[5]: total BABL, rewards[6]: total Profits
         uint256[] memory rewards = new uint256[](7);
-        uint256 contributorProfits;
-        uint256 contributorBABL;
-        // We get the state of the strategy in terms of profit and distance from expected to accurately calculate profits and rewards
-        (bool profit, uint256 profitValue, bool distance, uint256 distanceValue) =
-            _getStrategyRewardsContext(address(strategy));
+        (address strategist, uint256[] memory strategyDetails, bool[] memory profitData) =
+            _getStrategyDetails(_strategy);
+        console.log('CHECK 2');
 
-        (, uint256 initialDepositAt, uint256 claimedAt, , , , , , , ) = IGarden(_garden).getContributor(_contributor);
+        // strategyDetails[0]: executedAt
+        // strategyDetails[1]: exitedAt
+        // strategyDetails[2]: updatedAt
+        // strategyDetails[3]: enteredAt
+        // strategyDetails[4]: totalPositiveVotes
+        // strategyDetails[5]: totalNegativeVotes
+        // strategyDetails[6]: capitalAllocated
+        // strategyDetails[7]: capitalReturned
+        // strategyDetails[8]: expectedReturn
+        // strategyDetails[9]: strategyRewards
+        // strategyDetails[10]: normalizedCapitalAllocated
+        // strategyDetails[11]: profitValue
+        // strategyDetails[12]: distanceValue
+
+        // profitData[0]: profit
+        // profitData[1]: distance
+
         // Positive strategies not yet claimed
-        if (ts[1] > claimedAt && ts[0] >= initialDepositAt && address(strategy.garden()) == _garden) {
-            // If strategy returned money we give out the profits
-            if (profit == true) {
-                // We reserve 5% of profits for performance fees
-                profitValue = profitValue.sub(profitValue.multiplyDecimal(PROFIT_PROTOCOL_FEE));
-            }
+        if (strategyDetails[1] > _claimedAt && strategyDetails[0] >= _initialDepositAt) {
             // Get strategist rewards in case the contributor is also the strategist of the strategy
-            rewards[0] = _getStrategyStrategistBabl(
-                _strategy,
-                _contributor,
-                profit,
-                profitValue,
-                distance,
-                distanceValue
-            );
-            contributorBABL = contributorBABL.add(rewards[0]);
-            rewards[1] = _getStrategyStrategistProfits(_garden, _strategy, _contributor, profit, profitValue);
-            contributorProfits = contributorProfits.add(rewards[1]);
+            rewards[0] = strategist == _contributor ? _getStrategyStrategistBabl(strategyDetails, profitData) : 0;
+            rewards[1] = (strategist == _contributor && profitData[0] == true)
+                ? _getStrategyStrategistProfits(_garden, strategyDetails[11])
+                : 0;
 
             // Get steward rewards
-            rewards[2] = _getStrategyStewardBabl(_strategy, _contributor, profit, profitValue, distance, distanceValue);
-            contributorBABL = contributorBABL.add(rewards[2]);
-            rewards[3] = _getStrategyStewardProfits(
-                _garden,
-                _strategy,
-                _contributor,
-                profit,
-                profitValue,
-                distance,
-                distanceValue
-            );
-            contributorProfits = contributorProfits.add(rewards[3]);
+            rewards[2] = _getStrategyStewardBabl(_strategy, _contributor, strategyDetails, profitData);
+            rewards[3] = profitData[0] == true
+                ? _getStrategyStewardProfits(_garden, _strategy, _contributor, strategyDetails, profitData)
+                : 0;
 
             // Get LP rewards
-            rewards[4] = _getStrategyLPBabl(_garden, _strategy, _contributor);
-            contributorBABL = contributorBABL.add(rewards[4]);
-            // Creator bonus
-            rewards[5] = _getCreatorBonus(_garden, _contributor, contributorBABL);
-            rewards[6] = contributorProfits;
+            rewards[4] = _getStrategyLPBabl(strategyDetails[9], _contributorPower, strategyDetails[10]);
+            // Creator bonus (if any)
+            rewards[5] = _getCreatorBonus(_garden, _contributor, rewards[0].add(rewards[2]).add(rewards[4]));
+            rewards[6] = rewards[1].add(rewards[3]);
         }
+
         return rewards;
+    }
+
+    function _getStrategyDetails(address _strategy)
+        private
+        view
+        returns (
+            address,
+            uint256[] memory,
+            bool[] memory
+        )
+    {
+        StrategyDetails storage strategyData = strategyDetails[_strategy];
+        uint256[] memory data = new uint256[](13);
+        bool[] memory boolData = new bool[](2);
+        data[0] = strategyData.strategyDetails[0];
+        data[1] = strategyData.strategyDetails[1];
+        data[2] = strategyData.strategyDetails[2];
+        data[3] = strategyData.strategyDetails[3];
+        data[4] = strategyData.strategyDetails[4];
+        data[5] = strategyData.strategyDetails[5];
+        data[6] = strategyData.strategyDetails[6];
+        data[7] = strategyData.strategyDetails[7];
+        data[8] = strategyData.strategyDetails[8];
+        data[9] = strategyData.strategyDetails[9];
+        data[10] = strategyData.strategyDetails[10];
+        data[11] = strategyData.profitValue;
+        data[12] = strategyData.distanceValue;
+        boolData[0] = strategyData.profit;
+        boolData[1] = strategyData.distance;
+        return (strategyData.strategist, data, boolData);
     }
 
     /**
      * Get the context of a specific address depending on their expected returns, capital allocated and capital returned
-     * @param _strategy         Strategy address
+     * @param _strategy    Strategy address
      */
-    function _getStrategyRewardsContext(address _strategy)
-        private
-        view
-        returns (
-            bool,
-            uint256,
-            bool,
-            uint256
-        )
-    {
-        IStrategy strategy = IStrategy(_strategy);
-        uint256 returned = strategy.capitalReturned();
-        uint256 expected =
-            strategy.capitalAllocated().add(strategy.capitalAllocated().preciseMul(strategy.expectedReturn()));
-        uint256 allocated = strategy.capitalAllocated();
+    function _setStrategyRewardsContext(address _strategy) private {
+        // strategyDetails[0]: executedAt
+        // strategyDetails[1]: exitedAt
+        // strategyDetails[2]: updatedAt
+        // strategyDetails[3]: enteredAt
+        // strategyDetails[4]: totalPositiveVotes
+        // strategyDetails[5]: totalNegativeVotes
+        // strategyDetails[6]: capitalAllocated
+        // strategyDetails[7]: capitalReturned
+        // strategyDetails[8]: expectedReturn
+        // strategyDetails[9]: strategyRewards
+        // strategyDetails[10]: normalizedCapitalAllocated
+        // strategyDetails[11]: profitValue
+        // strategyDetails[12]: distanceValue
+
+        // profitData[0]: profit
+        // profitData[1]: distance
+
+        StrategyDetails storage strategyData = strategyDetails[_strategy];
+
         bool profit;
         bool distance;
         uint256 profitValue;
         uint256 distanceValue;
-        if (returned > allocated && returned >= expected) {
+        if (
+            strategyData.strategyDetails[7] > strategyData.strategyDetails[6] &&
+            strategyData.strategyDetails[7] >= strategyData.strategyDetails[8]
+        ) {
             // The strategy went equal or above expectations
             profit = true; // positive
             distance = true; // positive
-            profitValue = returned.sub(allocated);
-            distanceValue = returned.sub(expected);
-        } else if (returned >= allocated && returned < expected) {
+            profitValue = strategyData.strategyDetails[7].sub(strategyData.strategyDetails[6]);
+            distanceValue = strategyData.strategyDetails[7].sub(strategyData.strategyDetails[8]);
+        } else if (
+            strategyData.strategyDetails[7] >= strategyData.strategyDetails[6] &&
+            strategyData.strategyDetails[7] < strategyData.strategyDetails[8]
+        ) {
             // The strategy went worse than expected but with some profits
             profit = true; // positive or zero profits
             distance = false; // negative vs expected return (got less than expected)
-            profitValue = returned.sub(allocated);
-            distanceValue = expected.sub(returned);
-        } else if (returned < allocated && returned < expected) {
+            profitValue = strategyData.strategyDetails[7].sub(strategyData.strategyDetails[6]);
+            distanceValue = strategyData.strategyDetails[8].sub(strategyData.strategyDetails[7]);
+        } else if (
+            strategyData.strategyDetails[7] < strategyData.strategyDetails[6] &&
+            strategyData.strategyDetails[7] < strategyData.strategyDetails[8]
+        ) {
             // Negative profits - bad investments has penalties
             profit = false; // negative - loosing capital
             distance = false; // negative vs expected return (got less than expected)
-            profitValue = allocated.sub(returned); // Negative number, there were no profits at all
-            distanceValue = expected.sub(returned);
+            profitValue = strategyData.strategyDetails[6].sub(strategyData.strategyDetails[7]); // Negative number, there were no profits at all
+            distanceValue = strategyData.strategyDetails[8].sub(strategyData.strategyDetails[7]);
         }
 
-        return (profit, profitValue, distance, distanceValue);
+        strategyData.profit = profit;
+        // If strategy returned money we give out the profits
+        if (strategyData.profit == true) {
+            // We reserve 5% of profits for performance fees
+            strategyData.profitValue = profitValue.sub(profitValue.multiplyDecimal(PROFIT_PROTOCOL_FEE));
+        } else {
+            strategyData.profitValue = profitValue;
+        }
+        strategyData.distance = distance;
+        strategyData.distanceValue = distanceValue;
     }
 
     /**
      * Get the BABL rewards (Mining program) for a Steward profile
      * @param _strategy         Strategy address
      * @param _contributor      Contributor address
-     * @param _profit           Whether or not the strategy had profits
-     * @param _distance         If true the results were above expected returns, false means opposite
-     * @param _distanceValue        The distance from/to expected returns for capital returned
+     * @param _strategyDetails  Strategy details data
+     * @param _profitData       Strategy profit data
      */
     function _getStrategyStewardBabl(
         address _strategy,
         address _contributor,
-        bool _profit,
-        uint256, /* _profitValue */
-        bool _distance,
-        uint256 _distanceValue
+        uint256[] memory _strategyDetails,
+        bool[] memory _profitData
     ) private view returns (uint256) {
-        IStrategy strategy = IStrategy(_strategy);
-        uint256 strategyRewards = strategy.strategyRewards();
-        int256 userVotes = strategy.getUserVotes(_contributor);
-        uint256 allocated = strategy.capitalAllocated();
-        uint256 totalPositiveVotes = strategy.totalPositiveVotes();
+        // strategyDetails[0]: executedAt
+        // strategyDetails[1]: exitedAt
+        // strategyDetails[2]: updatedAt
+        // strategyDetails[3]: enteredAt
+        // strategyDetails[4]: totalPositiveVotes
+        // strategyDetails[5]: totalNegativeVotes
+        // strategyDetails[6]: capitalAllocated
+        // strategyDetails[7]: capitalReturned
+        // strategyDetails[8]: expectedReturn
+        // strategyDetails[9]: strategyRewards
+        // strategyDetails[10]: normalizedCapitalAllocated
+        // strategyDetails[11]: profitValue
+        // strategyDetails[12]: distanceValue
+
+        // profitData[0]: profit
+        // profitData[1]: distance
+
+        int256 userVotes = IStrategy(_strategy).getUserVotes(_contributor);
+        uint256 totalVotes = _strategyDetails[4].add(_strategyDetails[5]);
+
         uint256 bablCap;
-        uint256 expected = allocated.add(allocated.preciseMul(strategy.expectedReturn()));
 
         // Get proportional voter (stewards) rewards in case the contributor was also a steward of the strategy
         uint256 babl;
-        if (userVotes > 0 && _profit == true && _distance == true) {
+        if (userVotes > 0 && _profitData[0] == true && _profitData[1] == true) {
             // Voting in favor of the execution of the strategy with profits and positive distance
-            babl = strategyRewards.multiplyDecimal(BABL_STEWARD_SHARE).preciseMul(
-                uint256(userVotes).preciseDiv(totalPositiveVotes)
+            babl = _strategyDetails[9].multiplyDecimal(BABL_STEWARD_SHARE).preciseMul(
+                uint256(userVotes).preciseDiv(totalVotes)
             );
-        } else if (userVotes > 0 && _profit == true && _distance == false) {
+        } else if (userVotes > 0 && _profitData[0] == true && _profitData[1] == false) {
             // Voting in favor positive profits but below expected return
-            babl = strategyRewards.multiplyDecimal(BABL_STEWARD_SHARE).preciseMul(
-                uint256(userVotes).preciseDiv(totalPositiveVotes)
+            babl = _strategyDetails[9].multiplyDecimal(BABL_STEWARD_SHARE).preciseMul(
+                uint256(userVotes).preciseDiv(totalVotes)
             );
             // We discount the error of expected return vs real returns
-            babl = babl.sub(babl.preciseMul(_distanceValue.preciseDiv(expected)));
-        } else if (userVotes > 0 && _profit == false) {
+            babl = babl.sub(babl.preciseMul(_strategyDetails[12].preciseDiv(_strategyDetails[8])));
+        } else if (userVotes > 0 && _profitData[0] == false) {
             // Voting in favor of a non profitable strategy get nothing
             babl = 0;
-        } else if (userVotes < 0 && _distance == false) {
+        } else if (userVotes < 0 && _profitData[1] == false) {
             // Voting against a strategy that got results below expected return provides rewards
             // to the voter (helping the protocol to only have good strategies)
-            babl = strategyRewards.multiplyDecimal(BABL_STEWARD_SHARE).preciseMul(
-                uint256(Math.abs(userVotes)).preciseDiv(strategy.totalNegativeVotes())
+            babl = _strategyDetails[9].multiplyDecimal(BABL_STEWARD_SHARE).preciseMul(
+                uint256(Math.abs(userVotes)).preciseDiv(totalVotes)
             );
 
             bablCap = babl.mul(2); // Max cap
             // We add a bonus inverse to the error of expected return vs real returns
-            babl = babl.add(babl.preciseMul(_distanceValue.preciseDiv(expected)));
+            babl = babl.add(babl.preciseMul(_strategyDetails[12].preciseDiv(_strategyDetails[8])));
             if (babl > bablCap) babl = bablCap; // We limit 2x by a Cap
-        } else if (userVotes < 0 && _distance == true) {
+        } else if (userVotes < 0 && _profitData[1] == true) {
             babl = 0;
         }
         return babl;
@@ -887,83 +993,98 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
 
     /**
      * Get the rewards for a Steward profile
+     * @param _garden           Garden address
      * @param _strategy         Strategy address
      * @param _contributor      Contributor address
-     * @param _profit           Whether or not the strategy had profits
-     * @param _profitValue      The value of profits
-     * @param _distance         If true the results were above expected returns, false means opposite
+     * @param _strategyDetails  Strategy details data
+     * @param _profitData       Strategy profit data
      */
     function _getStrategyStewardProfits(
         address _garden,
         address _strategy,
         address _contributor,
-        bool _profit,
-        uint256 _profitValue,
-        bool _distance,
-        uint256 /* _distanceValue */
+        uint256[] memory _strategyDetails,
+        bool[] memory _profitData
     ) private view returns (uint256) {
-        IStrategy strategy = IStrategy(_strategy);
+        // strategyDetails[0]: executedAt
+        // strategyDetails[1]: exitedAt
+        // strategyDetails[2]: updatedAt
+        // strategyDetails[3]: enteredAt
+        // strategyDetails[4]: totalPositiveVotes
+        // strategyDetails[5]: totalNegativeVotes
+        // strategyDetails[6]: capitalAllocated
+        // strategyDetails[7]: capitalReturned
+        // strategyDetails[8]: expectedReturn
+        // strategyDetails[9]: strategyRewards
+        // strategyDetails[10]: normalizedCapitalAllocated
+        // strategyDetails[11]: profitValue
+        // strategyDetails[12]: distanceValue
+
+        // profitData[0]: profit
+        // profitData[1]: distance
+
         // Get proportional voter (stewards) rewards in case the contributor was also a steward of the strategy
-        int256 userVotes = strategy.getUserVotes(_contributor);
+        int256 userVotes = IStrategy(_strategy).getUserVotes(_contributor);
+        uint256 totalVotes = _strategyDetails[4].add(_strategyDetails[5]);
+
         uint256 profitShare =
             gardenCustomProfitSharing[_garden] ? gardenProfitSharing[_garden][1] : PROFIT_STEWARD_SHARE;
-        if (_profit == true) {
-            if (userVotes > 0) {
-                return
-                    _profitValue.multiplyDecimal(profitShare).preciseMul(uint256(userVotes)).preciseDiv(
-                        strategy.totalPositiveVotes()
-                    );
-            } else if ((userVotes < 0) && _distance == false) {
-                return
-                    _profitValue.multiplyDecimal(profitShare).preciseMul(uint256(Math.abs(userVotes))).preciseDiv(
-                        strategy.totalNegativeVotes()
-                    );
-            } else if ((userVotes < 0) && _distance == true) {
-                // Voted against a very profit strategy above expected returns, get no profit at all
-                return 0;
-            }
-        } else return 0; // No profits at all
+        if (userVotes > 0) {
+            return
+                _strategyDetails[11].multiplyDecimal(profitShare).preciseMul(uint256(userVotes)).preciseDiv(totalVotes);
+        } else if ((userVotes < 0) && _profitData[1] == false) {
+            return
+                _strategyDetails[11].multiplyDecimal(profitShare).preciseMul(uint256(Math.abs(userVotes))).preciseDiv(
+                    totalVotes
+                );
+        } else if ((userVotes < 0) && _profitData[1] == true) {
+            // Voted against a very profit strategy above expected returns, get no profit at all
+            return 0;
+        }
     }
 
     /**
      * Get the BABL rewards (Mining program) for a Strategist profile
-     * @param _strategy         Strategy address
-     * @param _contributor      Contributor address
-     * @param _profit           Whether or not the strategy had profits
-     * @param _distance         If true the results were above expected returns, false means opposite
+     * @param _strategyDetails     Strategy details data
+     * @param _profitData          Strategy details data
      */
-    function _getStrategyStrategistBabl(
-        address _strategy,
-        address _contributor,
-        bool _profit,
-        uint256, /* _profitValue */
-        bool _distance,
-        uint256 /* _distanceValue */
-    ) private view returns (uint256) {
-        IStrategy strategy = IStrategy(_strategy);
-        uint256 strategyRewards = strategy.strategyRewards();
+    function _getStrategyStrategistBabl(uint256[] memory _strategyDetails, bool[] memory _profitData)
+        private
+        view
+        returns (uint256)
+    {
+        // strategyDetails[0]: executedAt
+        // strategyDetails[1]: exitedAt
+        // strategyDetails[2]: updatedAt
+        // strategyDetails[3]: enteredAt
+        // strategyDetails[4]: totalPositiveVotes
+        // strategyDetails[5]: totalNegativeVotes
+        // strategyDetails[6]: capitalAllocated
+        // strategyDetails[7]: capitalReturned
+        // strategyDetails[8]: expectedReturn
+        // strategyDetails[9]: strategyRewards
+        // strategyDetails[10]: normalizedCapitalAllocated
+        // strategyDetails[11]: profitValue
+        // strategyDetails[12]: distanceValue
+
+        // profitData[0]: profit
+        // profitData[1]: distance
+
         uint256 babl;
-        uint256 allocated = strategy.capitalAllocated();
-        uint256 returned = strategy.capitalReturned();
         uint256 bablCap;
-        uint256 expected = allocated.add(allocated.preciseMul(strategy.expectedReturn()));
-        if (strategy.strategist() == _contributor) {
-            babl = strategyRewards.multiplyDecimal(BABL_STRATEGIST_SHARE); // Standard calculation to be ponderated
-            if (_profit == true && _distance == true) {
-                // Strategy with equal or higher profits than expected
-                bablCap = babl.mul(2); // Max cap
-                // The more the results are close to the expected the more bonus will get (limited by a x2 cap)
-                babl = babl.add(babl.preciseMul(expected.preciseDiv(returned)));
-                if (babl > bablCap) babl = bablCap; // We limit 2x by a Cap
-            } else if (_profit == true && _distance == false) {
-                //under expectations
-                // The more the results are close to the expected the less penalization it might have
-                babl = babl.sub(babl.sub(babl.preciseMul(returned.preciseDiv(expected))));
-            } else {
-                // No positive profit
-                return 0;
-            }
+        babl = _strategyDetails[9].multiplyDecimal(BABL_STRATEGIST_SHARE); // Standard calculation to be ponderated
+        if (_profitData[0] == true && _profitData[1] == true) {
+            // Strategy with equal or higher profits than expected
+            bablCap = babl.mul(2); // Max cap
+            // The more the results are close to the expected the more bonus will get (limited by a x2 cap)
+            babl = babl.add(babl.preciseMul(_strategyDetails[8].preciseDiv(_strategyDetails[7])));
+            if (babl > bablCap) babl = bablCap; // We limit 2x by a Cap
+        } else if (_profitData[0] == true && _profitData[1] == false) {
+            //under expectations
+            // The more the results are close to the expected the less penalization it might have
+            babl = babl.sub(babl.sub(babl.preciseMul(_strategyDetails[7].preciseDiv(_strategyDetails[8]))));
         } else {
+            // No positive profit
             return 0;
         }
         return babl;
@@ -971,52 +1092,48 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
 
     /**
      * Get the rewards for a Strategist profile
-     * @param _strategy         Strategy address
-     * @param _contributor      Contributor address
-     * @param _profit           Whether or not the strategy had profits
-     * @param _profitValue      The value of profits
+     * @param _garden           Garden address
+     * @param _profitValue      Strategy profit value
      */
-    function _getStrategyStrategistProfits(
-        address _garden,
-        address _strategy,
-        address _contributor,
-        bool _profit,
-        uint256 _profitValue
-    ) private view returns (uint256) {
-        IStrategy strategy = IStrategy(_strategy);
-        // Get proportional voter (stewards) rewards in case the contributor was also a steward of the strategy
-        if (_profit == true) {
-            if (strategy.strategist() == _contributor) {
-                // If the contributor was the strategist of the strategy
-                uint256 profitShare =
-                    gardenCustomProfitSharing[_garden] ? gardenProfitSharing[_garden][0] : PROFIT_STRATEGIST_SHARE;
-                return _profitValue.multiplyDecimal(profitShare);
-            }
-        } else return 0; // No profits at all
+    function _getStrategyStrategistProfits(address _garden, uint256 _profitValue) private view returns (uint256) {
+        // Only executes if the contributor was the strategist of the strategy
+        uint256 profitShare =
+            gardenCustomProfitSharing[_garden] ? gardenProfitSharing[_garden][0] : PROFIT_STRATEGIST_SHARE;
+        return _profitValue.multiplyDecimal(profitShare);
     }
 
     /**
      * Get the BABL rewards (Mining program) for a LP profile
-     * @param _garden           Garden address
-     * @param _strategy         Strategy address
-     * @param _contributor      Contributor address
+     * @param _strategyRewards      Strategy rewards
+     * @param _contributorPower     Contributor power
+     * @param _normalizedAllocated  Capital allocated normalized into DAI
      */
     function _getStrategyLPBabl(
-        address _garden,
-        address _strategy,
-        address _contributor
+        uint256 _strategyRewards,
+        uint256 _contributorPower,
+        uint256 _normalizedAllocated
     ) private view returns (uint256) {
-        IStrategy strategy = IStrategy(_strategy);
-        uint256 strategyRewards = strategy.strategyRewards();
+        // strategyDetails[0]: executedAt
+        // strategyDetails[1]: exitedAt
+        // strategyDetails[2]: updatedAt
+        // strategyDetails[3]: enteredAt
+        // strategyDetails[4]: totalPositiveVotes
+        // strategyDetails[5]: totalNegativeVotes
+        // strategyDetails[6]: capitalAllocated
+        // strategyDetails[7]: capitalReturned
+        // strategyDetails[8]: expectedReturn
+        // strategyDetails[9]: strategyRewards
+        // strategyDetails[10]: normalizedCapitalAllocated
+        // strategyDetails[11]: profitValue
+        // strategyDetails[12]: distanceValue
+
+        // profitData[0]: profit
+        // profitData[1]: distance
         uint256 babl;
-        uint256 allocated =
-            SafeDecimalMath.normalizeAmountTokens(IGarden(_garden).reserveAsset(), DAI, strategy.capitalAllocated());
-        uint256[] memory ts = new uint256[](3);
-        // ts[0]: executedAt, ts[1]: exitedAt, ts[2]: updatedAt
-        (, , , , ts[0], ts[1], ts[2]) = strategy.getStrategyState();
-        uint256 contributorPower = _getContributorPower(_garden, _contributor, ts[0], ts[1]);
         // We take care of normalization into 18 decimals for capital allocated in less decimals than 18
-        babl = strategyRewards.multiplyDecimal(BABL_LP_SHARE).preciseMul(contributorPower.preciseDiv(allocated));
+        babl = _strategyRewards.multiplyDecimal(BABL_LP_SHARE).preciseMul(
+            _contributorPower.preciseDiv(_normalizedAllocated)
+        );
         return babl;
     }
 
@@ -1222,7 +1339,6 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         uint256 _from,
         uint256 _to
     ) private view returns (uint256) {
-        console.log('CHECK garden user', _garden, _contributor);
         // Out of bounds
         _require(_to >= IGarden(_garden).gardenInitializedAt() && _to >= _from, Errors.CONTRIBUTOR_POWER_CHECK_WINDOW);
         (uint256 lastDepositAt, uint256 initialDepositAt, , , , , , , uint256 power, ) =
@@ -1237,8 +1353,14 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
             uint256 updatedPower =
                 power.add(block.timestamp.sub(lastDepositAt).mul(IERC20(_garden).balanceOf(_contributor)));
             console.log('CHECK updated user power', power);
+            console.log('CHECK garden power', IGarden(_garden).accGardenPower());
+            uint256 updatedGardenPower =
+                IGarden(_garden).accGardenPower().add(
+                    (block.timestamp.sub(IGarden(_garden).lastDepositAt())).mul(IERC20(_garden).totalSupply())
+                );
+            console.log('CHECK updated garden power', updatedGardenPower);
             uint256 balancePower = IERC20(_garden).balanceOf(_contributor).preciseDiv(IERC20(_garden).totalSupply());
-            uint256 virtualPower = updatedPower.preciseDiv(IGarden(_garden).accGardenPower());
+            uint256 virtualPower = updatedPower.preciseDiv(updatedGardenPower);
             console.log('CHECK balance Power', balancePower);
             console.log('CHECK virtual Power', virtualPower);
             return virtualPower;

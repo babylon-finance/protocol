@@ -117,6 +117,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         uint256 totalDeposits;
         uint256 nonce;
         uint256 power;
+        uint256 gardenPower;
     }
 
     /* ============ State Variables ============ */
@@ -194,7 +195,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
     address[MAX_EXTRA_CREATORS] public override extraCreators;
 
     // Accumulated garden power
-    uint256 private lastDeposit;
+    uint256 public override lastDepositAt;
     uint256 public override accGardenPower;
 
     /* ============ Modifiers ============ */
@@ -955,14 +956,14 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
 
         // TODO Backward compatibility
         // The very first deposit == 0
-        accGardenPower = lastDeposit == 0
-            ? totalSupply()
-            : accGardenPower.add((block.timestamp.sub(lastDeposit)).mul(totalSupply()));
+        accGardenPower = lastDepositAt == 0
+            ? 0
+            : accGardenPower.add((block.timestamp.sub(lastDepositAt)).mul(totalSupply()));
 
         // mint shares
         _mint(_to, sharesToMint);
 
-        lastDeposit = block.timestamp;
+        lastDepositAt = block.timestamp;
 
         _updateContributorDepositInfo(_to, previousBalance, _amountIn);
 
@@ -1035,6 +1036,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         contributor.power = contributor.lastDepositAt == 0
             ? 0
             : contributor.power.add(_previousBalance.mul(block.timestamp.sub(contributor.lastDepositAt)));
+        // TODO USE SCALING factor to use blocks instead of seconds
         contributor.lastDepositAt = block.timestamp;
         contributor.nonce = contributor.nonce + 1;
 
@@ -1049,9 +1051,9 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         uint256 _netflowQuantity,
         uint256 _previousBalance
     ) private {
-        Contributor storage contributor = contributors[msg.sender];
+        Contributor storage contributor = contributors[_to];
         // If sold everything
-        if (balanceOf(msg.sender) == 0) {
+        if (balanceOf(_to) == 0) {
             contributor.lastDepositAt = 0;
             contributor.initialDepositAt = 0;
             contributor.withdrawnSince = 0;

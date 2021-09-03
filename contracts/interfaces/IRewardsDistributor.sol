@@ -58,6 +58,7 @@ interface IRewardsDistributor {
 
     function tokenSupplyPerQuarter(uint256 quarter) external view returns (uint96);
 
+    /**
     function checkProtocol(uint256 _time)
         external
         view
@@ -78,7 +79,7 @@ interface IRewardsDistributor {
             uint256 quarterPower,
             uint96 supplyPerQuarter
         );
-
+    */
     /* ============ External Functions ============ */
 
     function startBABLRewards() external;
@@ -93,11 +94,11 @@ interface IRewardsDistributor {
     ) external;
 
     function updateProtocolPrincipal(uint256 _capital, bool _addOrSubstract) external;
-    /**
-    function updateCheckpointInGarden(
-        address _contributor,
-        uint256 _amount,
-        bool _depositOrWithdraw
+
+    function updateStrategyRewards(
+        address _strategy,
+        address _strategist,
+        address _reserveAsset,
+        uint256[] memory _data
     ) external;
-     */
 }

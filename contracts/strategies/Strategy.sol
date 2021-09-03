@@ -381,7 +381,29 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         // Send rest to garden if any
         _sendReserveAssetToGarden();
         updatedAt = exitedAt;
+        // update struct mapping to speed up end user claims
+        _updateStrategyDetailsForRewards();
         emit StrategyFinalized(address(garden), capitalReturned, _fee, block.timestamp);
+    }
+
+    function _updateStrategyDetailsForRewards() private {
+        uint256[] memory data = new uint256[](10);
+        data[0] = executedAt;
+        data[1] = exitedAt;
+        data[2] = updatedAt;
+        data[3] = enteredAt;
+        data[4] = totalPositiveVotes;
+        data[5] = totalNegativeVotes;
+        data[6] = capitalAllocated;
+        data[7] = capitalReturned;
+        data[8] = capitalAllocated.add(capitalAllocated.preciseMul(expectedReturn));
+        data[9] = strategyRewards;
+        IRewardsDistributor(rewardsDistributor).updateStrategyRewards(
+            address(this),
+            strategist,
+            garden.reserveAsset(),
+            data
+        );
     }
 
     /**
