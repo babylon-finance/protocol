@@ -18,7 +18,7 @@
 
 pragma solidity 0.7.6;
 
-import 'hardhat/console.sol';
+// import 'hardhat/console.sol';
 import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import {SafeDecimalMath} from '../../lib/SafeDecimalMath.sol';
 import {BytesLib} from '../../lib/BytesLib.sol';
@@ -184,12 +184,13 @@ contract AddLiquidityOperation is Operation {
             return (0, true);
         }
         address pool = BytesLib.decodeOpDataAddress(_data); // 64 bytes (w/o signature prefix bytes4)
-        address[] memory poolTokens = IPoolIntegration(_integration).getPoolTokens(_data, true);
-        uint256 NAV;
         IERC20 lpToken = IERC20(IPoolIntegration(_integration).getLPToken(pool));
+        uint256 price = _getPrice(_garden.reserveAsset(), address(lpToken));
+        uint256 NAV;
+        address[] memory poolTokens = IPoolIntegration(_integration).getPoolTokens(_data, true);
         for (uint256 i = 0; i < poolTokens.length; i++) {
             address asset = _isETH(poolTokens[i]) ? WETH : poolTokens[i];
-            uint256 price = _getPrice(_garden.reserveAsset(), asset);
+            price = _getPrice(_garden.reserveAsset(), asset);
             address finalPool = IPoolIntegration(_integration).getPool(pool);
             uint256 balance = !_isETH(poolTokens[i]) ? IERC20(poolTokens[i]).balanceOf(finalPool) : finalPool.balance;
             NAV += SafeDecimalMath.normalizeAmountTokens(

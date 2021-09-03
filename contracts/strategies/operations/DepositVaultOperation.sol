@@ -34,10 +34,10 @@ import {BytesLib} from '../../lib/BytesLib.sol';
 import {Operation} from './Operation.sol';
 
 /**
- * @title DepositVaultOperation
+ * @title DepositVaultOperation/Stake Operation
  * @author Babylon Finance
  *
- * Executes a deposit vault operation
+ * Executes a stake (deposit vault) operation
  */
 contract DepositVaultOperation is Operation {
     using SafeMath for uint256;

@@ -383,14 +383,6 @@ contract PriceOracle is Ownable, IPriceOracle {
         }
 
         ICurveRegistry curveRegistry = ICurveRegistry(curveAddressProvider.get_registry());
-        // Curve LP tokens
-        if (curveRegistry.get_pool_from_lp_token(_tokenIn) != address(0)) {
-            return getPrice(USDC, _tokenOut).preciseMul(curveRegistry.get_virtual_price_from_lp_token(_tokenIn));
-        }
-        if (curveRegistry.get_pool_from_lp_token(_tokenOut) != address(0)) {
-            return getPrice(_tokenIn, USDC).preciseDiv(curveRegistry.get_virtual_price_from_lp_token(_tokenIn));
-        }
-
         // Direct curve pair
         price = _checkPairThroughCurve(_tokenIn, _tokenOut);
 
@@ -450,7 +442,8 @@ contract PriceOracle is Ownable, IPriceOracle {
                 }
             }
         }
-        // yfi tokens?
+        // todo yfi tokens?
+        // todo Curve LP tokens
         // other paths to uni v3?
         if (_tokenIn != WETH && _tokenOut != WETH) {
             price = _getUNIV3Price(_tokenIn, WETH).preciseDiv(_getUNIV3Price(_tokenOut, WETH));

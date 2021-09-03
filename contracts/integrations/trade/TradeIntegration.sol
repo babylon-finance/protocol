@@ -234,10 +234,6 @@ abstract contract TradeIntegration is BaseIntegration, ReentrancyGuard, ITradeIn
             ERC20(_tradeInfo.receiveToken).balanceOf(address(_tradeInfo.strategy)).sub(
                 _tradeInfo.preTradeReceiveTokenBalance
             );
-        uint256 spentAmount =
-            _tradeInfo.preTradeSendTokenBalance.sub(
-                ERC20(_tradeInfo.sendToken).balanceOf(address(_tradeInfo.strategy))
-            );
         require(exchangedQuantity >= _tradeInfo.totalMinReceiveQuantity, 'Slippage greater than allowed');
         return exchangedQuantity;
     }
