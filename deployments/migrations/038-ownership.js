@@ -1,6 +1,15 @@
 let MULTISIG = process.env.MULTISIG || '';
 
-module.exports = async ({ getNamedAccounts, deployments, ethers, getSigner, getChainId, getContract, getRapid }) => {
+module.exports = async ({
+  network,
+  getNamedAccounts,
+  deployments,
+  ethers,
+  getSigner,
+  getChainId,
+  getContract,
+  getRapid,
+}) => {
   const signers = await ethers.getSigners();
   const chainId = await getChainId();
   const gasPrice = await getRapid();
@@ -39,23 +48,26 @@ module.exports = async ({ getNamedAccounts, deployments, ethers, getSigner, getC
     await (await contract.transferOwnership(timelockAddress, { gasPrice })).wait();
   }
 
-  for (const entry of [
-    ['BabController', 'BabControllerProxy'],
-    ['BABLToken', ''],
-    ['RewardsDistributor', 'RewardsDistributorProxy'],
-    ['Treasury', ''],
-    ['PriceOracle', ''],
-    ['TimeLockRegistry', ''],
-    ['IshtarGate', ''],
-    ['MardukGate', ''],
-  ]) {
-    const contract = await getContract(entry[0], entry[1], signer);
-    if ((await contract.owner()) !== timelockAddress && entry[0] !== 'TimeLockRegistry') {
-      console.log(`Transfer ownership of ${entry[0]} to ${timelockAddress}`);
-      await (await contract.transferOwnership(timelockAddress, { gasPrice })).wait();
-    } else if (entry[0] === 'TimeLockRegistry') {
-      console.log(`Transfer ownership of ${entry[0]} to ${MULTISIG}`);
-      await (await contract.transferOwnership(MULTISIG, { gasPrice })).wait();
+  // only do these for mainnet so we can invite accounts for yarn run chain
+  if (network.live) {
+    for (const entry of [
+      ['BabController', 'BabControllerProxy'],
+      ['BABLToken', ''],
+      ['RewardsDistributor', 'RewardsDistributorProxy'],
+      ['Treasury', ''],
+      ['PriceOracle', ''],
+      ['TimeLockRegistry', ''],
+      ['IshtarGate', ''],
+      ['MardukGate', ''],
+    ]) {
+      const contract = await getContract(entry[0], entry[1], signer);
+      if ((await contract.owner()) !== timelockAddress && entry[0] !== 'TimeLockRegistry') {
+        console.log(`Transfer ownership of ${entry[0]} to ${timelockAddress}`);
+        await (await contract.transferOwnership(timelockAddress, { gasPrice })).wait();
+      } else if (entry[0] === 'TimeLockRegistry') {
+        console.log(`Transfer ownership of ${entry[0]} to ${MULTISIG}`);
+        await (await contract.transferOwnership(MULTISIG, { gasPrice })).wait();
+      }
     }
   }
 };
