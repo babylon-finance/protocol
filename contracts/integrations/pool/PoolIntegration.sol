@@ -178,14 +178,25 @@ abstract contract PoolIntegration is BaseIntegration, ReentrancyGuard, IPoolInte
      * @param _pool                    Address of the pool
      * @return address                 Total supply of the token
      */
-    function totalSupply(address _pool) external view returns (uint256) {
+    function totalSupply(address _pool) external view override returns (uint256) {
         return _totalSupply(_pool);
+    }
+
+    /**
+     * Returns the underlying coin
+     * @param _pool                    Address of the pool
+     * @param _i                       Index of coin in the pool
+     * @return address                 Underlying coin
+     * @return uint256                 Rate from coin to underlying
+     */
+    function getUnderlyingAndRate(bytes calldata _pool, uint256 _i) external view override returns (address, uint256) {
+        return _getUnderlyingAndRate(_pool, _i);
     }
 
     function getPoolTokens(
         bytes calldata, /* _pool */
         bool /* forNAV */
-    ) external view virtual override returns (address[] memory);
+    ) public view virtual override returns (address[] memory);
 
     function getPoolWeights(
         bytes calldata /*_pool */
@@ -336,6 +347,10 @@ abstract contract PoolIntegration is BaseIntegration, ReentrancyGuard, IPoolInte
 
     function _totalSupply(address _pool) internal view virtual returns (uint256) {
         return IERC20(_pool).totalSupply();
+    }
+
+    function _getUnderlyingAndRate(bytes calldata _pool, uint256 _i) internal view virtual returns (address, uint256) {
+        return (getPoolTokens(_pool, false)[_i], 1e18);
     }
 
     function _getSpender(

@@ -17,6 +17,8 @@ interface ICurveRegistry {
 
     function get_n_coins(address _pool) external view returns (uint256[2] memory);
 
+    function get_rates(address _pool) external view returns (uint256[8] memory);
+
     function get_virtual_price_from_lp_token(address _lpToken) external view returns (uint256);
 
     function is_meta(address _pool) external view returns (bool);

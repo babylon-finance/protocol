@@ -481,6 +481,12 @@ contract CurvePoolIntegration is PoolIntegration {
         return _pool;
     }
 
+    function _getUnderlyingAndRate(bytes calldata _pool, uint256 _i) internal view override returns (address, uint256) {
+        ICurveRegistry curveRegistry = ICurveRegistry(curveAddressProvider.get_registry());
+        address poolAddress = BytesLib.decodeOpDataAddress(_pool);
+        return (curveRegistry.get_underlying_coins(poolAddress)[_i], curveRegistry.get_rates(poolAddress)[_i]);
+    }
+
     function _getNCoins(address _pool) private view returns (uint256) {
         ICurveRegistry curveRegistry = ICurveRegistry(curveAddressProvider.get_registry());
         return curveRegistry.get_n_coins(_pool)[0];

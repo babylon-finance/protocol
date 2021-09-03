@@ -58,7 +58,7 @@ contract BalancerIntegration is PoolIntegration {
     function getPoolTokens(
         bytes calldata _pool,
         bool /* forNAV */
-    ) external view override returns (address[] memory) {
+    ) public view override returns (address[] memory) {
         address poolAddress = BytesLib.decodeOpDataAddress(_pool);
         return IBPool(poolAddress).getCurrentTokens();
     }

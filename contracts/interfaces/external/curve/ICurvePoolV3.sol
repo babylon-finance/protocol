@@ -7,6 +7,8 @@ interface ICurvePoolV3 {
 
     function underlying_coins(uint256 arg0) external view returns (address out);
 
+    function underlying_coins(int128 arg0) external view returns (address out);
+
     function get_dy(
         int128 i,
         int128 j,
