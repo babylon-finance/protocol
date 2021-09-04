@@ -150,7 +150,10 @@ contract DepositVaultOperation is Operation {
         address yieldVault = BytesLib.decodeOpDataAddress(_data);
         require(_percentage <= HUNDRED_PERCENT, 'Unwind Percentage <= 100%');
         address vaultAsset = IPassiveIntegration(_integration).getInvestmentAsset(yieldVault);
-        uint256 amountVault = IERC20(IPassiveIntegration(_integration).getResultAsset(yieldVault)).balanceOf(msg.sender).preciseMul(_percentage);
+        uint256 amountVault =
+            IERC20(IPassiveIntegration(_integration).getResultAsset(yieldVault)).balanceOf(msg.sender).preciseMul(
+                _percentage
+            );
         uint256 minAmount =
             IPassiveIntegration(_integration).getPricePerShare(yieldVault).mul(
                 amountVault.sub(amountVault.preciseMul(SLIPPAGE_ALLOWED))
@@ -194,8 +197,8 @@ contract DepositVaultOperation is Operation {
         uint256 price = _getPrice(_garden.reserveAsset(), vaultAsset);
         // If we cannot price the result asset, we'll use the investment one as a floor
         if (price == 0) {
-          vaultAsset = IPassiveIntegration(_integration).getInvestmentAsset(vault);
-          price = _getPrice(_garden.reserveAsset(), vaultAsset);
+            vaultAsset = IPassiveIntegration(_integration).getInvestmentAsset(vault);
+            price = _getPrice(_garden.reserveAsset(), vaultAsset);
         }
         uint256 pricePerShare = IPassiveIntegration(_integration).getPricePerShare(vault);
         // Normalization of pricePerShare

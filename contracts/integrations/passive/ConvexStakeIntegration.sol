@@ -55,26 +55,26 @@ contract ConvexStakeIntegration is PassiveIntegration {
      * @param _controller                   Address of the controller
      */
     constructor(IBabController _controller) PassiveIntegration('convex', _controller) {
-      _updateCache();
+        _updateCache();
     }
 
     /**
-    * Gets the PID in convex of a convex lp token
-    * @param _asset                         Address of the convex lp token
-    * @return uint256                       Pid of the pool in convex
-    */
+     * Gets the PID in convex of a convex lp token
+     * @param _asset                         Address of the convex lp token
+     * @return uint256                       Pid of the pool in convex
+     */
     function getPid(address _asset) public view returns (bool, uint256) {
         if (cacheConvexTokenToPid[_asset] > 0) {
             return (true, cacheConvexTokenToPid[_asset] - 1);
         }
-        uint poolLength = booster.poolLength();
+        uint256 poolLength = booster.poolLength();
         if (elementsCached >= poolLength) {
             return (false, 0);
         }
         for (uint256 i = elementsCached; i < poolLength; i++) {
             (, address token, , , , ) = booster.poolInfo(i);
             if (token == _asset) {
-              return (true, i);
+                return (true, i);
             }
         }
         return (false, 0);
@@ -83,41 +83,41 @@ contract ConvexStakeIntegration is PassiveIntegration {
     /* ============ Internal Functions ============ */
 
     function _updateCache() public {
-      uint poolLength = booster.poolLength();
-      if (elementsCached >= poolLength) {
-          return;
-      }
-      for (uint256 i = elementsCached; i < poolLength; i++) {
-          (, address token, , , , ) = booster.poolInfo(i);
-          cacheConvexTokenToPid[token] = i + 1;
-      }
-      elementsCached = poolLength;
+        uint256 poolLength = booster.poolLength();
+        if (elementsCached >= poolLength) {
+            return;
+        }
+        for (uint256 i = elementsCached; i < poolLength; i++) {
+            (, address token, , , , ) = booster.poolInfo(i);
+            cacheConvexTokenToPid[token] = i + 1;
+        }
+        elementsCached = poolLength;
     }
 
-    function _getSpender(
-        address _asset,
-        uint8 _op
-    ) internal view override returns (address) {
+    function _getSpender(address _asset, uint8 _op) internal view override returns (address) {
         if (_op == 0) {
-          return address(booster);
+            return address(booster);
         }
         // Reward pool
         return _getRewardPool(_asset);
     }
 
-    function _getExpectedShares(address /* _asset */, uint256 _amount) internal pure override returns (uint256) {
+    function _getExpectedShares(
+        address, /* _asset */
+        uint256 _amount
+    ) internal pure override returns (uint256) {
         return _amount;
     }
 
-    function _getPricePerShare(address /* _asset */) internal pure override returns (uint256) {
+    function _getPricePerShare(
+        address /* _asset */
+    ) internal pure override returns (uint256) {
         return 1e18;
     }
 
-    function _getInvestmentAsset(
-        address _asset
-    ) internal view override returns (address lptoken) {
+    function _getInvestmentAsset(address _asset) internal view override returns (address lptoken) {
         (bool found, uint256 pid) = getPid(_asset);
-        require(found, "Pid not found");
+        require(found, 'Pid not found');
         (lptoken, , , , , ) = booster.poolInfo(pid);
     }
 
@@ -173,7 +173,7 @@ contract ConvexStakeIntegration is PassiveIntegration {
     function _getExitInvestmentCalldata(
         address, /* _strategy */
         address _asset,
-        uint256 /* _investmentTokensIn */,
+        uint256, /* _investmentTokensIn */
         address, /* _tokenOut */
         uint256 /* _minAmountOut */
     )
@@ -194,19 +194,17 @@ contract ConvexStakeIntegration is PassiveIntegration {
 
     function _getRewardPool(address _asset) private view returns (address reward) {
         (bool found, uint256 pid) = getPid(_asset);
-        require(found, "Pid not found");
+        require(found, 'Pid not found');
         (, , , reward, , ) = booster.poolInfo(pid);
     }
 
-    function _getResultAsset(
-        address _investment
-    ) internal view virtual override returns (address) {
-      return _getRewardPool(_investment);
+    function _getResultAsset(address _investment) internal view virtual override returns (address) {
+        return _getRewardPool(_investment);
     }
 
     function _getConvexLPToken(address _asset) private view returns (address token) {
         (bool found, uint256 pid) = getPid(_asset);
-        require(found, "Pid not found");
+        require(found, 'Pid not found');
         (, token, , , , ) = booster.poolInfo(pid);
     }
 }

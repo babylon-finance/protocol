@@ -188,11 +188,14 @@ contract AddLiquidityOperation is Operation {
         // Price lp token directly if possible
         uint256 price = _getPrice(address(lpToken), _garden.reserveAsset());
         if (price != 0) {
-          return (SafeDecimalMath.normalizeAmountTokens(
-              address(lpToken),
-              _garden.reserveAsset(),
-              lpToken.balanceOf(msg.sender).preciseMul(price)
-          ), true);
+            return (
+                SafeDecimalMath.normalizeAmountTokens(
+                    address(lpToken),
+                    _garden.reserveAsset(),
+                    lpToken.balanceOf(msg.sender).preciseMul(price)
+                ),
+                true
+            );
         }
         uint256 NAV;
         address[] memory poolTokens = IPoolIntegration(_integration).getPoolTokens(_data, true);
