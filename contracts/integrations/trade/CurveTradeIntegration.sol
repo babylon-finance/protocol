@@ -141,9 +141,7 @@ contract CurveTradeIntegration is TradeIntegration {
         TradeInfo memory, /* _tradeInfo */
         uint256 /* _sendQuantity */
     ) internal pure override returns (bool) {
-        // address reserveAsset = _tradeInfo.garden.reserveAsset();
-        // uint256 minLiquidityReserveAsset = _tradeInfo.garden.minLiquidityAsset();
-        // TODO: Check
+        // No need to check liquidity in curve
         return true;
     }
 

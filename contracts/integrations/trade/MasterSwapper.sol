@@ -182,8 +182,7 @@ contract MasterSwapper is BaseIntegration, ReentrancyGuard, ITradeIntegration {
                     _minReceiveQuantity
                 );
                 return;
-            } catch {
-            }
+            } catch {}
         }
         // Trade to DAI and then do DAI to synh
         if (_receiveTokenSynth != address(0)) {
