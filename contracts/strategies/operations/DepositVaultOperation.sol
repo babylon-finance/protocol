@@ -150,7 +150,7 @@ contract DepositVaultOperation is Operation {
         address yieldVault = BytesLib.decodeOpDataAddress(_data);
         require(_percentage <= HUNDRED_PERCENT, 'Unwind Percentage <= 100%');
         address vaultAsset = IPassiveIntegration(_integration).getInvestmentAsset(yieldVault);
-        uint256 amountVault = IERC20(yieldVault).balanceOf(msg.sender).preciseMul(_percentage);
+        uint256 amountVault = IERC20(IPassiveIntegration(_integration).getResultAsset(yieldVault)).balanceOf(msg.sender).preciseMul(_percentage);
         uint256 minAmount =
             IPassiveIntegration(_integration).getPricePerShare(yieldVault).mul(
                 amountVault.sub(amountVault.preciseMul(SLIPPAGE_ALLOWED))
@@ -189,14 +189,19 @@ contract DepositVaultOperation is Operation {
         if (!IStrategy(msg.sender).isStrategyActive()) {
             return (0, true);
         }
-        address vaultAsset = IPassiveIntegration(_integration).getInvestmentAsset(vault);
+        address vaultAsset = IPassiveIntegration(_integration).getResultAsset(vault);
+        uint256 balance = IERC20(vaultAsset).balanceOf(msg.sender);
         uint256 price = _getPrice(_garden.reserveAsset(), vaultAsset);
+        // If we cannot price the result asset, we'll use the investment one as a floor
+        if (price == 0) {
+          vaultAsset = IPassiveIntegration(_integration).getInvestmentAsset(vault);
+          price = _getPrice(_garden.reserveAsset(), vaultAsset);
+        }
         uint256 pricePerShare = IPassiveIntegration(_integration).getPricePerShare(vault);
         // Normalization of pricePerShare
         pricePerShare = pricePerShare.mul(
             10**PreciseUnitMath.decimals().sub(vaultAsset == address(0) ? 18 : ERC20(vaultAsset).decimals())
         );
-        uint256 balance = IERC20(vault).balanceOf(msg.sender);
         //Balance normalization
         balance = SafeDecimalMath.normalizeAmountTokens(vaultAsset, _garden.reserveAsset(), balance);
         uint256 NAV = pricePerShare.preciseMul(balance).preciseDiv(price);

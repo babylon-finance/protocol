@@ -185,7 +185,15 @@ contract AddLiquidityOperation is Operation {
         address pool = BytesLib.decodeOpDataAddress(_data); // 64 bytes (w/o signature prefix bytes4)
         pool = IPoolIntegration(_integration).getPool(pool);
         IERC20 lpToken = IERC20(IPoolIntegration(_integration).getLPToken(pool));
-        uint256 price = 0;
+        // Price lp token directly if possible
+        uint256 price = _getPrice(address(lpToken), _garden.reserveAsset());
+        if (price != 0) {
+          return (SafeDecimalMath.normalizeAmountTokens(
+              address(lpToken),
+              _garden.reserveAsset(),
+              lpToken.balanceOf(msg.sender).preciseMul(price)
+          ), true);
+        }
         uint256 NAV;
         address[] memory poolTokens = IPoolIntegration(_integration).getPoolTokens(_data, true);
         for (uint256 i = 0; i < poolTokens.length; i++) {
