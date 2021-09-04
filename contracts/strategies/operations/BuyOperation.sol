@@ -125,7 +125,7 @@ contract BuyOperation is Operation {
             _garden.reserveAsset(),
             2 // TO be able to get back an univ2. Univ2 checks more than 1
         );
-        return (_garden.reserveAsset(), IERC20(token).balanceOf(_garden.reserveAsset()), 0);
+        return (_garden.reserveAsset(), IERC20(_garden.reserveAsset()).balanceOf(msg.sender), 0);
     }
 
     /**

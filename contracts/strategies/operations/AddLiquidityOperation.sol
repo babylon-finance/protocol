@@ -163,7 +163,7 @@ contract AddLiquidityOperation is Operation {
                 }
             }
         }
-        return (pool, 0, 0);
+        return (reserveAsset, IERC20(reserveAsset).balanceOf(msg.sender), 0);
     }
 
     /**
