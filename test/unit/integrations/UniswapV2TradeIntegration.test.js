@@ -57,7 +57,7 @@ describe('UniswapV2TradeIntegration', function () {
           });
 
           await executeStrategy(strategyContract);
-          console.log('after execute', token, asset);
+
           const tokenPriceInAsset = await priceOracle.connect(owner).getPriceNAV(token, asset);
 
           const assetDecimals = await assetContract.decimals();

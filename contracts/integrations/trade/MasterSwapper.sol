@@ -144,7 +144,6 @@ contract MasterSwapper is BaseIntegration, ReentrancyGuard, ITradeIntegration {
         if (_sendToken == _receiveToken) {
             return;
         }
-        // console.log('--- TRADE ASSET ---', _sendToken, _receiveToken, ERC20(_sendToken).balanceOf(_strategy));
         // Synthetix Direct
         address _sendTokenSynth = _getSynth(_sendToken);
         address _receiveTokenSynth = _getSynth(_receiveToken);
@@ -184,7 +183,6 @@ contract MasterSwapper is BaseIntegration, ReentrancyGuard, ITradeIntegration {
                 );
                 return;
             } catch {
-                // console.log('synth to DAI failed');
             }
         }
         // Trade to DAI and then do DAI to synh

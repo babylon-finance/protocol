@@ -87,7 +87,6 @@ describe('CurveTradeIntegration', function () {
           });
 
           await executeStrategy(strategyContract);
-          console.log('after execute', token, asset);
 
           const tokenPriceInAsset = await priceOracle.connect(owner).getPrice(token, asset);
 
@@ -106,7 +105,6 @@ describe('CurveTradeIntegration', function () {
           // 5% slippage. Doesn't matter we just want to check that the trade can execute
           // univ3 doesn't have right prices for some of these
           expect(expectedBalance).to.be.closeTo(assetBalance, assetBalance.div(20));
-          console.log('before finalize');
           await finalizeStrategy(strategyContract, 0);
           const assetBalanceAfter = await assetContract.balanceOf(strategyContract.address);
           expect(assetBalanceAfter).to.be.lt(1000000); // Almost 0

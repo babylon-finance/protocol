@@ -64,7 +64,7 @@ describe('SynthetixTradeIntegration', function () {
           );
 
           const garden = await createGarden({ reserveAsset: token, signer: signer1 });
-          console.log('before execute', synthetixTradeIntegration.address);
+
           const strategyContract = await getStrategy({
             kind: 'buy',
             state: 'vote',
@@ -74,9 +74,8 @@ describe('SynthetixTradeIntegration', function () {
           });
 
           await executeStrategy(strategyContract);
-          console.log('after execute JS', token, asset);
+
           const assetBalance = await assetContract.balanceOf(strategyContract.address);
-          console.log('assetBalance', ethers.utils.formatEther(assetBalance));
 
           const tokenPriceInAsset = await priceOracle.connect(owner).getPrice(token, asset);
           const assetDecimals = await assetContract.decimals();
